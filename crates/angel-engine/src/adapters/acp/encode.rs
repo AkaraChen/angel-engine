@@ -19,6 +19,15 @@ impl AcpAdapter {
                         }),
                     );
                 }
+                if options.experimental_api {
+                    client_capabilities.insert(
+                        "elicitation".to_string(),
+                        json!({
+                            "form": {},
+                            "url": {},
+                        }),
+                    );
+                }
                 Ok(json!({
                     "protocolVersion": 2,
                     "clientCapabilities": client_capabilities,
@@ -138,6 +147,24 @@ impl AcpAdapter {
             .get("decision")
             .map(String::as_str)
             .unwrap_or("Cancel");
+        if matches!(
+            elicitation.kind,
+            crate::ElicitationKind::UserInput | crate::ElicitationKind::ExternalFlow
+        ) {
+            let result = acp_elicitation_response(decision, &effect.payload.fields);
+            let mut output = TransportOutput::default()
+                .message(JsonRpcMessage::response(remote_request_id, result))
+                .event(EngineEvent::ElicitationResolved {
+                    conversation_id,
+                    elicitation_id,
+                    decision: crate::ElicitationDecision::Raw(decision.to_string()),
+                })
+                .log(TransportLogKind::Send, "answered ACP elicitation request");
+            if let Some(request_id) = &effect.request_id {
+                output.completed_requests.push(request_id.clone());
+            }
+            return Ok(output);
+        }
         let selected_option = select_permission_option(&elicitation.options.choices, decision);
         let result = if let Some(option_id) = selected_option {
             json!({"outcome": {"outcome": "selected", "optionId": option_id}})
@@ -159,6 +186,53 @@ impl AcpAdapter {
     }
 }
 
+fn acp_elicitation_response(
+    decision: &str,
+    fields: &std::collections::BTreeMap<String, String>,
+) -> Value {
+    match decision {
+        "Deny" => json!({"action": "decline"}),
+        "Cancel" => json!({"action": "cancel"}),
+        _ => json!({
+            "action": "accept",
+            "content": acp_elicitation_answer_content(fields),
+        }),
+    }
+}
+
+fn acp_elicitation_answer_content(fields: &std::collections::BTreeMap<String, String>) -> Value {
+    let answer_count = fields
+        .get("answerCount")
+        .and_then(|value| value.parse::<usize>().ok())
+        .unwrap_or(0);
+    let mut grouped: std::collections::BTreeMap<String, Vec<String>> =
+        std::collections::BTreeMap::new();
+    for index in 0..answer_count {
+        let Some(id) = fields.get(&format!("answer.{index}.id")) else {
+            continue;
+        };
+        grouped.entry(id.clone()).or_default().push(
+            fields
+                .get(&format!("answer.{index}.value"))
+                .cloned()
+                .unwrap_or_default(),
+        );
+    }
+    Value::Object(
+        grouped
+            .into_iter()
+            .map(|(id, values)| {
+                let value = if values.len() == 1 {
+                    json!(values[0])
+                } else {
+                    json!(values)
+                };
+                (id, value)
+            })
+            .collect(),
+    )
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -167,7 +241,10 @@ mod tests {
     fn initialize_omits_auth_client_capability_when_authentication_is_unsupported() {
         let adapter = AcpAdapter::without_authentication();
         let engine = AngelEngine::new(crate::ProtocolFlavor::Acp, adapter.capabilities());
-        let options = TransportOptions::default();
+        let options = TransportOptions {
+            experimental_api: false,
+            ..TransportOptions::default()
+        };
         let effect = crate::ProtocolEffect::new(
             crate::ProtocolFlavor::Acp,
             ProtocolMethod::Acp(AcpMethod::Initialize),
@@ -178,6 +255,25 @@ mod tests {
             .expect("initialize params");
 
         assert_eq!(params["clientCapabilities"], json!({}));
+    }
+
+    #[test]
+    fn initialize_advertises_experimental_elicitation_capability() {
+        let adapter = AcpAdapter::without_authentication();
+        let engine = AngelEngine::new(crate::ProtocolFlavor::Acp, adapter.capabilities());
+        let effect = crate::ProtocolEffect::new(
+            crate::ProtocolFlavor::Acp,
+            ProtocolMethod::Acp(AcpMethod::Initialize),
+        );
+
+        let params = adapter
+            .encode_params(&engine, &effect, &TransportOptions::default())
+            .expect("initialize params");
+
+        assert_eq!(
+            params["clientCapabilities"]["elicitation"],
+            json!({"form": {}, "url": {}})
+        );
     }
 }
 

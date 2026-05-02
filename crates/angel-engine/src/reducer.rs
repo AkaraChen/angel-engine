@@ -333,6 +333,26 @@ impl AngelEngine {
                     turn_id,
                 }))
             }
+            EngineEvent::PlanPathUpdated {
+                conversation_id,
+                turn_id,
+                path,
+            } => {
+                let conversation = self.conversation_mut(&conversation_id)?;
+                let turn = conversation.turns.get_mut(&turn_id).ok_or_else(|| {
+                    EngineError::TurnNotFound {
+                        turn_id: turn_id.to_string(),
+                    }
+                })?;
+                turn.plan_path = Some(path);
+                if !turn.is_terminal() {
+                    turn.phase = TurnPhase::Planning;
+                }
+                Ok(TransitionReport::one(UiEvent::TurnChanged {
+                    conversation_id,
+                    turn_id,
+                }))
+            }
             EngineEvent::TurnTerminal {
                 conversation_id,
                 turn_id,
@@ -2798,6 +2818,31 @@ mod tests {
             vec![ContentDelta::Text("# Plan\n".to_string())]
         );
         assert!(turn.output.chunks.is_empty());
+        assert!(matches!(turn.phase, TurnPhase::Planning));
+    }
+
+    #[test]
+    fn plan_path_is_stored_on_turn() {
+        let adapter = CodexAdapter::app_server();
+        let mut engine = engine_with(ProtocolFlavor::CodexAppServer, adapter.capabilities());
+        let conversation_id = insert_ready_conversation(
+            &mut engine,
+            "conv",
+            RemoteConversationId::CodexThread("thread".to_string()),
+            adapter.capabilities(),
+        );
+        let turn_id = start_turn(&mut engine, conversation_id.clone());
+
+        engine
+            .apply_event(EngineEvent::PlanPathUpdated {
+                conversation_id: conversation_id.clone(),
+                turn_id: turn_id.clone(),
+                path: "plans/plan.md".to_string(),
+            })
+            .expect("plan path");
+
+        let turn = &engine.conversations[&conversation_id].turns[&turn_id];
+        assert_eq!(turn.plan_path.as_deref(), Some("plans/plan.md"));
         assert!(matches!(turn.phase, TurnPhase::Planning));
     }
 

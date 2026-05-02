@@ -100,6 +100,11 @@ pub enum EngineEvent {
         turn_id: TurnId,
         plan: PlanState,
     },
+    PlanPathUpdated {
+        conversation_id: ConversationId,
+        turn_id: TurnId,
+        path: String,
+    },
     TurnTerminal {
         conversation_id: ConversationId,
         turn_id: TurnId,

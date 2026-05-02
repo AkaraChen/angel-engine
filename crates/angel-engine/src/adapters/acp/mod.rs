@@ -12,7 +12,7 @@ use crate::state::{
     AvailableCommand, AvailableCommandInput, ContentDelta, ContextPatch, ElicitationKind,
     ElicitationOptions, ElicitationState, ExhaustionReason, PlanEntry, PlanEntryStatus, PlanState,
     SessionConfigOption, SessionConfigValue, SessionMode, SessionModeState, SessionModel,
-    SessionModelState, TurnOutcome,
+    SessionModelState, TurnOutcome, UserQuestion, UserQuestionOption,
 };
 use crate::transport::{
     JsonRpcMessage, ProtocolTransport, TransportLogKind, TransportOptions, TransportOutput,

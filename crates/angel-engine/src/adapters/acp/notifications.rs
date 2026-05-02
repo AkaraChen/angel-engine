@@ -170,6 +170,7 @@ fn decode_acp_update(
             Ok(output)
         }
         "plan" => {
+            let path = plan_update_path(update);
             let entries = update
                 .get("entries")
                 .or_else(|| update.get("plan"))
@@ -197,19 +198,42 @@ fn decode_acp_update(
                         .collect()
                 })
                 .unwrap_or_default();
-            Ok(TransportOutput::default()
+            let mut output = TransportOutput::default()
                 .event(EngineEvent::PlanUpdated {
-                    conversation_id,
-                    turn_id,
+                    conversation_id: conversation_id.clone(),
+                    turn_id: turn_id.clone(),
                     plan: PlanState { entries },
                 })
-                .log(TransportLogKind::State, "plan updated"))
+                .log(TransportLogKind::State, "plan updated");
+            if let Some(path) = path {
+                output.events.push(EngineEvent::PlanPathUpdated {
+                    conversation_id,
+                    turn_id,
+                    path,
+                });
+            }
+            Ok(output)
         }
         _ => Ok(TransportOutput::default().log(
             TransportLogKind::Receive,
             format!("session/update {update_type}"),
         )),
     }
+}
+
+fn plan_update_path(update: &Value) -> Option<String> {
+    [
+        "savedPath",
+        "saved_path",
+        "path",
+        "filePath",
+        "file_path",
+        "planPath",
+        "plan_path",
+    ]
+    .iter()
+    .find_map(|key| update.get(*key).and_then(Value::as_str))
+    .map(str::to_string)
 }
 
 fn available_commands(update: &Value) -> Vec<AvailableCommand> {

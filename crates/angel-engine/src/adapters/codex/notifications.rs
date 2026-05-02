@@ -327,7 +327,12 @@ impl CodexAdapter {
                     delta: ContentDelta::Text(content),
                 });
             }
-            if plan_item_saved_path(item).is_some() {
+            if let Some(path) = plan_item_saved_path(item) {
+                output.events.push(EngineEvent::PlanPathUpdated {
+                    conversation_id: conversation_id.clone(),
+                    turn_id: turn_id.clone(),
+                    path,
+                });
                 output.logs.push(crate::TransportLog::new(
                     TransportLogKind::State,
                     summarize_item(item, completed),
@@ -594,6 +599,10 @@ mod tests {
                 delta: ContentDelta::Text(text),
                 ..
             } if text == "# Plan\n"
+        )));
+        assert!(output.events.iter().any(|event| matches!(
+            event,
+            EngineEvent::PlanPathUpdated { path, .. } if path == "/tmp/plan.md"
         )));
     }
 }
