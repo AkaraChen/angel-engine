@@ -97,8 +97,7 @@ ACP 没有稳定的协议级 `turnId`。一个 prompt turn 的线上身份主要
 
 - `sessionId`: 说明 turn 属于哪条 conversation，不足以区分 turn。
 - `prompt_request_id`: 当前连接内可区分 pending prompt，但不能跨重连持久化。
-- unstable `messageId/userMessageId`: 可作为 user message 级关联线索；它不是稳定 turn id，而且不是所有 agent 都会启用或返回。
-- local `sequence`: Angel Engine在 session 内按 prompt 顺序生成，用于没有 message id 时保持 UI 状态一致。
+- local `sequence`: Angel Engine 在 session 内按 prompt 顺序生成，用于保持 UI 状态一致。
 
 Codex app-server 有显式 `turnId`，adapter 把它保存到 opaque 的 `RemoteTurnId::Known`。
 
@@ -552,8 +551,7 @@ pub enum InvalidEventPolicy {
 4. 如果 cancel 后还有 `session/request_permission` pending，client 必须以 `Cancelled` 响应该 request。
 5. `ToolCallStatus::Pending` 不是 approval 状态。approval 只由 `session/request_permission` 表达。
 6. `session/load` 的 replay update 可能看起来像正常输出；adapter 要用 pending load request 把它们归到 `Hydrating`。
-7. 若启用了 unstable message id，`PromptRequest.messageId`、`PromptResponse.userMessageId` 和 chunk `messageId` 可帮助恢复消息关联；它们仍然是 message 级 id，不能替代协议级 turn id。
-8. ACP 没有 archive、rollback、compact、steer 的标准等价接口；标准 ACP adapter 的能力表应把这些标成 `Unsupported`，目标 agent 暴露扩展方法时由扩展 adapter 覆盖能力表并实现映射。
+7. ACP 没有 archive、rollback、compact、steer 的标准等价接口；标准 ACP adapter 的能力表应把这些标成 `Unsupported`，目标 agent 暴露扩展方法时由扩展 adapter 覆盖能力表并实现映射。
 
 ## Codex app-server adapter
 
@@ -660,7 +658,7 @@ ACP `session/load` 有显式 replay/hydration 语义。Codex `thread/resume` 可
 | 统一语义 | ACP | Codex |
 | --- | --- | --- |
 | start turn | `session/prompt` | `turn/start` |
-| active turn id | Angel Engine本地 `TurnId`，绑定 `sessionId`、pending request id、可选 unstable `userMessageId` | server `turnId` |
+| active turn id | Angel Engine 本地 `TurnId`，由 active prompt lifecycle 维护 | server `turnId` |
 | steer active turn | 标准 ACP 不支持；扩展 adapter 可提供 | `turn/steer` |
 | cancel | `session/cancel` notification | `turn/interrupt` request |
 | normal terminal | `stopReason=end_turn` | `TurnStatus=completed` |

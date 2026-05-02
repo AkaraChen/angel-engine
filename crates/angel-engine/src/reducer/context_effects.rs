@@ -211,15 +211,6 @@ pub(super) fn acp_context_effect_specs(
                     ));
                 }
             }
-            ContextUpdate::Raw { key, value, .. }
-                if key.starts_with("acp.config.") && key.len() > "acp.config.".len() =>
-            {
-                specs.push(set_config_option_spec(
-                    &key["acp.config.".len()..],
-                    value,
-                    update.clone(),
-                ));
-            }
             _ => {}
         }
     }
