@@ -1,0 +1,3 @@
+[submodule "vendor/agent-client-protocol"]
+	path = vendor/agent-client-protocol
+	url = https://github.com/agentclientprotocol/agent-client-protocol.git
