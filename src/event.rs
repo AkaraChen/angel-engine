@@ -1,9 +1,9 @@
-use crate::angel_engine::capabilities::{ConversationCapabilities, RuntimeCapabilities};
-use crate::angel_engine::error::ErrorInfo;
-use crate::angel_engine::ids::{
+use crate::capabilities::{ConversationCapabilities, RuntimeCapabilities};
+use crate::error::ErrorInfo;
+use crate::ids::{
     ActionId, ConversationId, ElicitationId, RemoteConversationId, RemoteTurnId, TurnId,
 };
-use crate::angel_engine::state::{
+use crate::state::{
     ActionPatch, ActionState, ContentDelta, ContextPatch, ConversationLifecycle,
     ElicitationDecision, ElicitationState, HistoryMutationOp, HistoryMutationResult,
     HydrationSource, ObserverState, PlanState, ProvisionOp, TurnOutcome, UserInputRef,
@@ -15,7 +15,7 @@ pub enum EngineEvent {
         capabilities: RuntimeCapabilities,
     },
     RuntimeAuthRequired {
-        methods: Vec<crate::angel_engine::AuthMethod>,
+        methods: Vec<crate::AuthMethod>,
     },
     RuntimeFaulted {
         error: ErrorInfo,

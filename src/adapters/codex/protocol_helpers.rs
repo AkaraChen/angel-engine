@@ -18,16 +18,14 @@ pub(crate) fn text_input(text: String) -> Value {
 pub(crate) fn codex_context_patch(result: &Value) -> ContextPatch {
     let mut patch = ContextPatch::empty();
     if let Some(model) = result.get("model").and_then(Value::as_str) {
-        patch
-            .updates
-            .push(crate::angel_engine::ContextUpdate::Model {
-                scope: crate::angel_engine::ContextScope::Conversation,
-                model: Some(model.to_string()),
-            });
+        patch.updates.push(crate::ContextUpdate::Model {
+            scope: crate::ContextScope::Conversation,
+            model: Some(model.to_string()),
+        });
     }
     if let Some(cwd) = result.get("cwd").and_then(Value::as_str) {
-        patch.updates.push(crate::angel_engine::ContextUpdate::Cwd {
-            scope: crate::angel_engine::ContextScope::Conversation,
+        patch.updates.push(crate::ContextUpdate::Cwd {
+            scope: crate::ContextScope::Conversation,
             cwd: Some(cwd.to_string()),
         });
     }

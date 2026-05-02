@@ -10,7 +10,7 @@ impl CodexAdapter {
         engine: &AngelEngine,
         method: &str,
         params: &Value,
-    ) -> Result<TransportOutput, crate::angel_engine::EngineError> {
+    ) -> Result<TransportOutput, crate::EngineError> {
         match method {
             "thread/status/changed" => self.decode_thread_status(engine, params),
             "turn/started" => self.decode_turn_started(engine, params),
@@ -67,7 +67,7 @@ impl CodexAdapter {
         &self,
         engine: &AngelEngine,
         params: &Value,
-    ) -> Result<TransportOutput, crate::angel_engine::EngineError> {
+    ) -> Result<TransportOutput, crate::EngineError> {
         let Some(thread_id) = params.get("threadId").and_then(Value::as_str) else {
             return Ok(TransportOutput::default());
         };
@@ -115,7 +115,7 @@ impl CodexAdapter {
         &self,
         engine: &AngelEngine,
         params: &Value,
-    ) -> Result<TransportOutput, crate::angel_engine::EngineError> {
+    ) -> Result<TransportOutput, crate::EngineError> {
         let Some((conversation_id, remote_turn_id)) = notification_turn(engine, params) else {
             return Ok(TransportOutput::default());
         };
@@ -127,7 +127,7 @@ impl CodexAdapter {
         if let Some(turn) = params.get("turn")
             && turn.get("status").and_then(Value::as_str) == Some("inProgress")
         {
-            output.logs.push(crate::angel_engine::TransportLog::new(
+            output.logs.push(crate::TransportLog::new(
                 TransportLogKind::State,
                 format!("tracking local {turn_id}"),
             ));
@@ -139,7 +139,7 @@ impl CodexAdapter {
         &self,
         engine: &AngelEngine,
         params: &Value,
-    ) -> Result<TransportOutput, crate::angel_engine::EngineError> {
+    ) -> Result<TransportOutput, crate::EngineError> {
         let Some((conversation_id, remote_turn_id)) = notification_turn(engine, params) else {
             return Ok(TransportOutput::default());
         };
@@ -179,7 +179,7 @@ impl CodexAdapter {
         engine: &AngelEngine,
         params: &Value,
         kind: DeltaKind,
-    ) -> Result<TransportOutput, crate::angel_engine::EngineError> {
+    ) -> Result<TransportOutput, crate::EngineError> {
         let Some((conversation_id, remote_turn_id)) = notification_turn(engine, params) else {
             return Ok(TransportOutput::default());
         };
@@ -201,10 +201,9 @@ impl CodexAdapter {
                     turn_id,
                     delta: ContentDelta::Text(delta.clone()),
                 });
-                output.logs.push(crate::angel_engine::TransportLog::new(
-                    TransportLogKind::Output,
-                    delta,
-                ));
+                output
+                    .logs
+                    .push(crate::TransportLog::new(TransportLogKind::Output, delta));
             }
             DeltaKind::Reasoning => {
                 output.events.push(EngineEvent::ReasoningDelta {
@@ -212,7 +211,7 @@ impl CodexAdapter {
                     turn_id,
                     delta: ContentDelta::Text(delta.clone()),
                 });
-                output.logs.push(crate::angel_engine::TransportLog::new(
+                output.logs.push(crate::TransportLog::new(
                     TransportLogKind::Output,
                     format!("[reasoning] {delta}"),
                 ));
@@ -225,7 +224,7 @@ impl CodexAdapter {
         &self,
         engine: &AngelEngine,
         params: &Value,
-    ) -> Result<TransportOutput, crate::angel_engine::EngineError> {
+    ) -> Result<TransportOutput, crate::EngineError> {
         let Some((conversation_id, remote_turn_id)) = notification_turn(engine, params) else {
             return Ok(TransportOutput::default());
         };
@@ -276,7 +275,7 @@ impl CodexAdapter {
         engine: &AngelEngine,
         params: &Value,
         completed: bool,
-    ) -> Result<TransportOutput, crate::angel_engine::EngineError> {
+    ) -> Result<TransportOutput, crate::EngineError> {
         let Some((conversation_id, remote_turn_id)) = notification_turn(engine, params) else {
             return Ok(TransportOutput::default());
         };
@@ -324,7 +323,7 @@ impl CodexAdapter {
         params: &Value,
         fallback_kind: ActionKind,
         terminal: bool,
-    ) -> Result<TransportOutput, crate::angel_engine::EngineError> {
+    ) -> Result<TransportOutput, crate::EngineError> {
         let Some((conversation_id, remote_turn_id)) = notification_turn(engine, params) else {
             return Ok(TransportOutput::default());
         };
@@ -371,7 +370,7 @@ impl CodexAdapter {
         &self,
         engine: &AngelEngine,
         params: &Value,
-    ) -> Result<TransportOutput, crate::angel_engine::EngineError> {
+    ) -> Result<TransportOutput, crate::EngineError> {
         let Some((conversation_id, remote_turn_id)) = notification_turn(engine, params) else {
             return Ok(TransportOutput::default());
         };
@@ -414,7 +413,7 @@ impl CodexAdapter {
         &self,
         engine: &AngelEngine,
         params: &Value,
-    ) -> Result<TransportOutput, crate::angel_engine::EngineError> {
+    ) -> Result<TransportOutput, crate::EngineError> {
         let request_id = params
             .get("requestId")
             .or_else(|| params.get("id"))
@@ -433,9 +432,7 @@ impl CodexAdapter {
                         .event(EngineEvent::ElicitationResolved {
                             conversation_id: conversation_id.clone(),
                             elicitation_id: elicitation_id.clone(),
-                            decision: crate::angel_engine::ElicitationDecision::Raw(
-                                "resolved".to_string(),
-                            ),
+                            decision: crate::ElicitationDecision::Raw("resolved".to_string()),
                         })
                         .log(TransportLogKind::State, "server request resolved"));
                 }

@@ -1,9 +1,9 @@
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::PathBuf;
 
-use crate::angel_engine::capabilities::{ConversationCapabilities, RuntimeCapabilities};
-use crate::angel_engine::error::ErrorInfo;
-use crate::angel_engine::ids::{
+use crate::capabilities::{ConversationCapabilities, RuntimeCapabilities};
+use crate::error::ErrorInfo;
+use crate::ids::{
     ActionId, ConversationId, ElicitationId, JsonRpcRequestId, RemoteActionId,
     RemoteConversationId, RemoteRequestId, RemoteTurnId, TurnId,
 };
@@ -22,7 +22,7 @@ pub enum RuntimeState {
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct AuthMethod {
-    pub id: crate::angel_engine::AuthMethodId,
+    pub id: crate::AuthMethodId,
     pub label: String,
 }
 

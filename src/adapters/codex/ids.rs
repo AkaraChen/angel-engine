@@ -2,15 +2,17 @@ use super::*;
 
 pub(crate) fn codex_thread_id(
     engine: &AngelEngine,
-    effect: &crate::angel_engine::ProtocolEffect,
-) -> Result<String, crate::angel_engine::EngineError> {
-    let conversation_id = effect.conversation_id.as_ref().ok_or_else(|| {
-        crate::angel_engine::EngineError::InvalidCommand {
-            message: "missing conversation id".to_string(),
-        }
-    })?;
+    effect: &crate::ProtocolEffect,
+) -> Result<String, crate::EngineError> {
+    let conversation_id =
+        effect
+            .conversation_id
+            .as_ref()
+            .ok_or_else(|| crate::EngineError::InvalidCommand {
+                message: "missing conversation id".to_string(),
+            })?;
     let conversation = engine.conversations.get(conversation_id).ok_or_else(|| {
-        crate::angel_engine::EngineError::ConversationNotFound {
+        crate::EngineError::ConversationNotFound {
             conversation_id: conversation_id.to_string(),
         }
     })?;
@@ -18,7 +20,7 @@ pub(crate) fn codex_thread_id(
         .remote
         .as_protocol_id()
         .map(str::to_string)
-        .ok_or_else(|| crate::angel_engine::EngineError::InvalidState {
+        .ok_or_else(|| crate::EngineError::InvalidState {
             expected: "Codex thread id".to_string(),
             actual: format!("{:?}", conversation.remote),
         })
@@ -26,31 +28,35 @@ pub(crate) fn codex_thread_id(
 
 pub(crate) fn codex_turn_id(
     engine: &AngelEngine,
-    effect: &crate::angel_engine::ProtocolEffect,
-) -> Result<String, crate::angel_engine::EngineError> {
-    let conversation_id = effect.conversation_id.as_ref().ok_or_else(|| {
-        crate::angel_engine::EngineError::InvalidCommand {
-            message: "missing conversation id".to_string(),
-        }
-    })?;
-    let turn_id = effect.turn_id.as_ref().ok_or_else(|| {
-        crate::angel_engine::EngineError::InvalidCommand {
+    effect: &crate::ProtocolEffect,
+) -> Result<String, crate::EngineError> {
+    let conversation_id =
+        effect
+            .conversation_id
+            .as_ref()
+            .ok_or_else(|| crate::EngineError::InvalidCommand {
+                message: "missing conversation id".to_string(),
+            })?;
+    let turn_id = effect
+        .turn_id
+        .as_ref()
+        .ok_or_else(|| crate::EngineError::InvalidCommand {
             message: "missing turn id".to_string(),
-        }
-    })?;
+        })?;
     let conversation = engine.conversations.get(conversation_id).ok_or_else(|| {
-        crate::angel_engine::EngineError::ConversationNotFound {
+        crate::EngineError::ConversationNotFound {
             conversation_id: conversation_id.to_string(),
         }
     })?;
-    let turn = conversation.turns.get(turn_id).ok_or_else(|| {
-        crate::angel_engine::EngineError::TurnNotFound {
+    let turn = conversation
+        .turns
+        .get(turn_id)
+        .ok_or_else(|| crate::EngineError::TurnNotFound {
             turn_id: turn_id.to_string(),
-        }
-    })?;
+        })?;
     match &turn.remote {
         RemoteTurnId::CodexTurn(id) => Ok(id.clone()),
-        other => Err(crate::angel_engine::EngineError::InvalidState {
+        other => Err(crate::EngineError::InvalidState {
             expected: "Codex turn id".to_string(),
             actual: format!("{other:?}"),
         }),

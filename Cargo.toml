@@ -1,7 +1,10 @@
 [package]
-name = "agent-runner"
+name = "angel-engine"
 version = "0.1.0"
 edition = "2024"
+
+[lib]
+path = "src/mod.rs"
 
 [dependencies]
 serde_json = "1"

@@ -5,7 +5,7 @@ use std::sync::mpsc::{self, Receiver};
 use std::thread;
 use std::time::Duration;
 
-use agent_runner::angel_engine::{
+use angel_engine::{
     AngelEngine, CommandPlan, ConversationCapabilities, ConversationId, ConversationLifecycle,
     ElicitationDecision, ElicitationId, ElicitationPhase, EngineCommand, JsonRpcMessage,
     ProtocolFlavor, ProtocolTransport, RuntimeState, StartConversationParams, TransportClientInfo,
@@ -291,7 +291,7 @@ where
 
     fn handle_transport_output(
         &mut self,
-        output: &agent_runner::angel_engine::TransportOutput,
+        output: &angel_engine::TransportOutput,
     ) -> Result<(), Box<dyn Error>> {
         for log in &output.logs {
             print_log(log)?;

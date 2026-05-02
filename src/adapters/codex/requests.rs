@@ -9,7 +9,7 @@ impl CodexAdapter {
         id: &JsonRpcRequestId,
         method: &str,
         params: &Value,
-    ) -> Result<TransportOutput, crate::angel_engine::EngineError> {
+    ) -> Result<TransportOutput, crate::EngineError> {
         let Some(thread_id) = params.get("threadId").and_then(Value::as_str) else {
             return Ok(TransportOutput::default().log(
                 TransportLogKind::Warning,

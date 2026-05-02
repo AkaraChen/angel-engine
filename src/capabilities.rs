@@ -19,11 +19,11 @@ impl CapabilitySupport {
         matches!(self, Self::Supported | Self::Extension { .. })
     }
 
-    pub fn require(&self, capability: &str) -> Result<(), crate::angel_engine::EngineError> {
+    pub fn require(&self, capability: &str) -> Result<(), crate::EngineError> {
         if self.is_supported() {
             Ok(())
         } else {
-            Err(crate::angel_engine::EngineError::CapabilityUnsupported {
+            Err(crate::EngineError::CapabilityUnsupported {
                 capability: capability.to_string(),
             })
         }

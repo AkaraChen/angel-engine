@@ -1,10 +1,10 @@
 use serde_json::{Value, json};
 
-use crate::angel_engine::error::EngineError;
-use crate::angel_engine::event::EngineEvent;
-use crate::angel_engine::ids::JsonRpcRequestId;
-use crate::angel_engine::protocol::{AcpMethod, CodexMethod, ProtocolEffect, ProtocolMethod};
-use crate::angel_engine::reducer::AngelEngine;
+use crate::error::EngineError;
+use crate::event::EngineEvent;
+use crate::ids::JsonRpcRequestId;
+use crate::protocol::{AcpMethod, CodexMethod, ProtocolEffect, ProtocolMethod};
+use crate::reducer::AngelEngine;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct TransportClientInfo {

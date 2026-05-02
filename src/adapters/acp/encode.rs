@@ -5,9 +5,9 @@ impl AcpAdapter {
     pub(super) fn encode_params(
         &self,
         engine: &AngelEngine,
-        effect: &crate::angel_engine::ProtocolEffect,
+        effect: &crate::ProtocolEffect,
         options: &TransportOptions,
-    ) -> Result<Value, crate::angel_engine::EngineError> {
+    ) -> Result<Value, crate::EngineError> {
         match &effect.method {
             ProtocolMethod::Acp(AcpMethod::Initialize) => Ok(json!({
                 "protocolVersion": 2,
@@ -60,7 +60,7 @@ impl AcpAdapter {
                 "sessionId": acp_session_id(engine, effect)?,
             })),
             ProtocolMethod::Acp(AcpMethod::RequestPermissionResponse) => {
-                Err(crate::angel_engine::EngineError::InvalidCommand {
+                Err(crate::EngineError::InvalidCommand {
                     message: "permission responses are encoded by encode_permission_response"
                         .to_string(),
                 })
@@ -79,38 +79,40 @@ impl AcpAdapter {
     pub(super) fn encode_permission_response(
         &self,
         engine: &AngelEngine,
-        effect: &crate::angel_engine::ProtocolEffect,
-    ) -> Result<TransportOutput, crate::angel_engine::EngineError> {
-        let conversation_id = effect.conversation_id.clone().ok_or_else(|| {
-            crate::angel_engine::EngineError::InvalidCommand {
-                message: "missing conversation id for permission response".to_string(),
-            }
-        })?;
+        effect: &crate::ProtocolEffect,
+    ) -> Result<TransportOutput, crate::EngineError> {
+        let conversation_id =
+            effect
+                .conversation_id
+                .clone()
+                .ok_or_else(|| crate::EngineError::InvalidCommand {
+                    message: "missing conversation id for permission response".to_string(),
+                })?;
         let elicitation_id = ElicitationId::new(
             effect
                 .payload
                 .fields
                 .get("elicitationId")
                 .cloned()
-                .ok_or_else(|| crate::angel_engine::EngineError::InvalidCommand {
+                .ok_or_else(|| crate::EngineError::InvalidCommand {
                     message: "missing elicitation id".to_string(),
                 })?,
         );
         let conversation = engine.conversations.get(&conversation_id).ok_or_else(|| {
-            crate::angel_engine::EngineError::ConversationNotFound {
+            crate::EngineError::ConversationNotFound {
                 conversation_id: conversation_id.to_string(),
             }
         })?;
         let elicitation = conversation
             .elicitations
             .get(&elicitation_id)
-            .ok_or_else(|| crate::angel_engine::EngineError::ElicitationNotFound {
+            .ok_or_else(|| crate::EngineError::ElicitationNotFound {
                 elicitation_id: elicitation_id.to_string(),
             })?;
         let remote_request_id = match &elicitation.remote_request_id {
             RemoteRequestId::Acp(id) => id.clone(),
             other => {
-                return Err(crate::angel_engine::EngineError::InvalidState {
+                return Err(crate::EngineError::InvalidState {
                     expected: "ACP permission request id".to_string(),
                     actual: format!("{other:?}"),
                 });
@@ -133,7 +135,7 @@ impl AcpAdapter {
             .event(EngineEvent::ElicitationResolved {
                 conversation_id,
                 elicitation_id,
-                decision: crate::angel_engine::ElicitationDecision::Raw(decision.to_string()),
+                decision: crate::ElicitationDecision::Raw(decision.to_string()),
             })
             .log(TransportLogKind::Send, "answered ACP permission request");
         if let Some(request_id) = &effect.request_id {

@@ -7,7 +7,7 @@ impl AcpAdapter {
         engine: &AngelEngine,
         id: &JsonRpcRequestId,
         result: &Value,
-    ) -> Result<TransportOutput, crate::angel_engine::EngineError> {
+    ) -> Result<TransportOutput, crate::EngineError> {
         let Some(pending) = engine.pending.requests.get(id) else {
             return Ok(TransportOutput::default().log(
                 TransportLogKind::Receive,
@@ -25,11 +25,11 @@ impl AcpAdapter {
                 if auth_methods.is_empty() {
                     output = output
                         .event(EngineEvent::RuntimeNegotiated {
-                            capabilities: crate::angel_engine::RuntimeCapabilities {
+                            capabilities: crate::RuntimeCapabilities {
                                 name: "acp".to_string(),
                                 version: result.get("protocolVersion").map(Value::to_string),
-                                discovery: crate::angel_engine::CapabilitySupport::Supported,
-                                authentication: crate::angel_engine::CapabilitySupport::Unknown,
+                                discovery: crate::CapabilitySupport::Supported,
+                                authentication: crate::CapabilitySupport::Unknown,
                             },
                         })
                         .log(TransportLogKind::State, "ACP runtime initialized");
@@ -39,8 +39,8 @@ impl AcpAdapter {
                             .iter()
                             .filter_map(|method| {
                                 let id = method.get("id").and_then(Value::as_str)?;
-                                Some(crate::angel_engine::AuthMethod {
-                                    id: crate::angel_engine::AuthMethodId::new(id.to_string()),
+                                Some(crate::AuthMethod {
+                                    id: crate::AuthMethodId::new(id.to_string()),
                                     label: method
                                         .get("name")
                                         .or_else(|| method.get("label"))
@@ -59,7 +59,7 @@ impl AcpAdapter {
                     result
                         .get("sessionId")
                         .and_then(Value::as_str)
-                        .ok_or_else(|| crate::angel_engine::EngineError::InvalidCommand {
+                        .ok_or_else(|| crate::EngineError::InvalidCommand {
                             message: "ACP session response missing sessionId".to_string(),
                         })?;
                 output = output
@@ -96,11 +96,11 @@ impl AcpAdapter {
             PendingRequest::Authenticate => {
                 output = output
                     .event(EngineEvent::RuntimeNegotiated {
-                        capabilities: crate::angel_engine::RuntimeCapabilities {
+                        capabilities: crate::RuntimeCapabilities {
                             name: "acp".to_string(),
                             version: result.get("protocolVersion").map(Value::to_string),
-                            discovery: crate::angel_engine::CapabilitySupport::Supported,
-                            authentication: crate::angel_engine::CapabilitySupport::Supported,
+                            discovery: crate::CapabilitySupport::Supported,
+                            authentication: crate::CapabilitySupport::Supported,
                         },
                     })
                     .log(TransportLogKind::State, "ACP authentication accepted");
@@ -126,7 +126,7 @@ impl AcpAdapter {
         id: Option<&JsonRpcRequestId>,
         code: i64,
         message: &str,
-    ) -> Result<TransportOutput, crate::angel_engine::EngineError> {
+    ) -> Result<TransportOutput, crate::EngineError> {
         let mut output = TransportOutput::default().log(
             TransportLogKind::Error,
             format!("ACP error {code}: {message}"),

@@ -8,7 +8,7 @@ impl AcpAdapter {
         id: &JsonRpcRequestId,
         method: &str,
         params: &Value,
-    ) -> Result<TransportOutput, crate::angel_engine::EngineError> {
+    ) -> Result<TransportOutput, crate::EngineError> {
         if method != "session/request_permission" {
             return Ok(TransportOutput::default()
                 .message(JsonRpcMessage::error(

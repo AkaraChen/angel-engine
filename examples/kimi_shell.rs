@@ -1,7 +1,7 @@
 use std::error::Error;
 
-use agent_runner::angel_engine::ProtocolFlavor;
-use agent_runner::angel_engine::adapters::acp::AcpAdapter;
+use angel_engine::ProtocolFlavor;
+use angel_engine::adapters::acp::AcpAdapter;
 
 mod common;
 

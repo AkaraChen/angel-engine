@@ -1,6 +1,6 @@
 use std::collections::BTreeMap;
 
-use crate::angel_engine::ids::{ConversationId, JsonRpcRequestId, TurnId};
+use crate::ids::{ConversationId, JsonRpcRequestId, TurnId};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum ProtocolFlavor {

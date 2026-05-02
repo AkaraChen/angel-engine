@@ -6,9 +6,9 @@ impl CodexAdapter {
     pub(super) fn encode_params(
         &self,
         engine: &AngelEngine,
-        effect: &crate::angel_engine::ProtocolEffect,
+        effect: &crate::ProtocolEffect,
         options: &TransportOptions,
-    ) -> Result<Value, crate::angel_engine::EngineError> {
+    ) -> Result<Value, crate::EngineError> {
         match &effect.method {
             ProtocolMethod::Codex(CodexMethod::Initialize) => Ok(json!({
                 "clientInfo": client_info_json(&options.client_info),
@@ -95,7 +95,7 @@ impl CodexAdapter {
             ProtocolMethod::Codex(CodexMethod::ThreadList) => Ok(json!({})),
             ProtocolMethod::Codex(CodexMethod::Initialized) => Ok(Value::Null),
             ProtocolMethod::Codex(CodexMethod::ServerRequestResponse) => {
-                Err(crate::angel_engine::EngineError::InvalidCommand {
+                Err(crate::EngineError::InvalidCommand {
                     message:
                         "server request responses are encoded by encode_server_request_response"
                             .to_string(),
@@ -115,38 +115,40 @@ impl CodexAdapter {
     pub(super) fn encode_server_request_response(
         &self,
         engine: &AngelEngine,
-        effect: &crate::angel_engine::ProtocolEffect,
-    ) -> Result<TransportOutput, crate::angel_engine::EngineError> {
-        let conversation_id = effect.conversation_id.clone().ok_or_else(|| {
-            crate::angel_engine::EngineError::InvalidCommand {
-                message: "missing conversation id for elicitation response".to_string(),
-            }
-        })?;
+        effect: &crate::ProtocolEffect,
+    ) -> Result<TransportOutput, crate::EngineError> {
+        let conversation_id =
+            effect
+                .conversation_id
+                .clone()
+                .ok_or_else(|| crate::EngineError::InvalidCommand {
+                    message: "missing conversation id for elicitation response".to_string(),
+                })?;
         let elicitation_id = ElicitationId::new(
             effect
                 .payload
                 .fields
                 .get("elicitationId")
                 .cloned()
-                .ok_or_else(|| crate::angel_engine::EngineError::InvalidCommand {
+                .ok_or_else(|| crate::EngineError::InvalidCommand {
                     message: "missing elicitation id".to_string(),
                 })?,
         );
         let conversation = engine.conversations.get(&conversation_id).ok_or_else(|| {
-            crate::angel_engine::EngineError::ConversationNotFound {
+            crate::EngineError::ConversationNotFound {
                 conversation_id: conversation_id.to_string(),
             }
         })?;
         let elicitation = conversation
             .elicitations
             .get(&elicitation_id)
-            .ok_or_else(|| crate::angel_engine::EngineError::ElicitationNotFound {
+            .ok_or_else(|| crate::EngineError::ElicitationNotFound {
                 elicitation_id: elicitation_id.to_string(),
             })?;
         let remote_request_id = match &elicitation.remote_request_id {
             RemoteRequestId::Codex(id) => id.clone(),
             other => {
-                return Err(crate::angel_engine::EngineError::InvalidState {
+                return Err(crate::EngineError::InvalidState {
                     expected: "Codex server request id".to_string(),
                     actual: format!("{other:?}"),
                 });
@@ -164,7 +166,7 @@ impl CodexAdapter {
             .event(EngineEvent::ElicitationResolved {
                 conversation_id,
                 elicitation_id,
-                decision: crate::angel_engine::ElicitationDecision::Raw(decision.to_string()),
+                decision: crate::ElicitationDecision::Raw(decision.to_string()),
             })
             .log(TransportLogKind::Send, "answered Codex server request");
         if let Some(request_id) = &effect.request_id {

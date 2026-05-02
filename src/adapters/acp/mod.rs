@@ -1,18 +1,18 @@
-use crate::angel_engine::capabilities::ConversationCapabilities;
-use crate::angel_engine::error::ErrorInfo;
-use crate::angel_engine::event::EngineEvent;
-use crate::angel_engine::ids::{
+use crate::capabilities::ConversationCapabilities;
+use crate::error::ErrorInfo;
+use crate::event::EngineEvent;
+use crate::ids::{
     ActionId, ConversationId, ElicitationId, JsonRpcRequestId, RemoteConversationId,
     RemoteRequestId, TurnId,
 };
-use crate::angel_engine::protocol::{AcpMethod, ProtocolMethod};
-use crate::angel_engine::reducer::{AngelEngine, PendingRequest};
-use crate::angel_engine::state::{
+use crate::protocol::{AcpMethod, ProtocolMethod};
+use crate::reducer::{AngelEngine, PendingRequest};
+use crate::state::{
     ActionInput, ActionKind, ActionOutputDelta, ActionPatch, ActionPhase, ActionState,
     ContentDelta, ContextPatch, ElicitationKind, ElicitationOptions, ElicitationState,
     ExhaustionReason, PlanEntry, PlanEntryStatus, PlanState, TurnOutcome,
 };
-use crate::angel_engine::transport::{
+use crate::transport::{
     JsonRpcMessage, ProtocolTransport, TransportLogKind, TransportOptions, TransportOutput,
     client_info_json, method_name,
 };
@@ -42,8 +42,7 @@ impl AcpAdapter {
 
     pub fn with_steer_extension(name: impl Into<String>) -> Self {
         let mut adapter = Self::standard();
-        adapter.capabilities.turn.steer =
-            crate::angel_engine::CapabilitySupport::Extension { name: name.into() };
+        adapter.capabilities.turn.steer = crate::CapabilitySupport::Extension { name: name.into() };
         adapter
     }
 

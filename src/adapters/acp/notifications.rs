@@ -7,7 +7,7 @@ impl AcpAdapter {
         engine: &AngelEngine,
         method: &str,
         params: &Value,
-    ) -> Result<TransportOutput, crate::angel_engine::EngineError> {
+    ) -> Result<TransportOutput, crate::EngineError> {
         match method {
             "session/update" => decode_acp_update(engine, params),
             _ => Ok(TransportOutput::default().log(
@@ -21,7 +21,7 @@ impl AcpAdapter {
 fn decode_acp_update(
     engine: &AngelEngine,
     params: &Value,
-) -> Result<TransportOutput, crate::angel_engine::EngineError> {
+) -> Result<TransportOutput, crate::EngineError> {
     let session_id = params
         .get("sessionId")
         .and_then(Value::as_str)

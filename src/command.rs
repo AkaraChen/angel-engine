@@ -1,11 +1,11 @@
-use crate::angel_engine::ids::{ConversationId, ElicitationId, TurnId};
-use crate::angel_engine::state::{ContextPatch, HistoryMutationOp};
+use crate::ids::{ConversationId, ElicitationId, TurnId};
+use crate::state::{ContextPatch, HistoryMutationOp};
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum EngineCommand {
     Initialize,
     Authenticate {
-        method: crate::angel_engine::AuthMethodId,
+        method: crate::AuthMethodId,
     },
     DiscoverConversations,
     StartConversation {
@@ -35,7 +35,7 @@ pub enum EngineCommand {
     ResolveElicitation {
         conversation_id: ConversationId,
         elicitation_id: ElicitationId,
-        decision: crate::angel_engine::ElicitationDecision,
+        decision: crate::ElicitationDecision,
     },
     UpdateContext {
         conversation_id: ConversationId,

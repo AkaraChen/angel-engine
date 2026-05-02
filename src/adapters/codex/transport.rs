@@ -5,9 +5,9 @@ impl ProtocolTransport for CodexAdapter {
     fn encode_effect(
         &self,
         engine: &AngelEngine,
-        effect: &crate::angel_engine::ProtocolEffect,
+        effect: &crate::ProtocolEffect,
         options: &TransportOptions,
-    ) -> Result<TransportOutput, crate::angel_engine::EngineError> {
+    ) -> Result<TransportOutput, crate::EngineError> {
         if matches!(
             effect.method,
             ProtocolMethod::Codex(CodexMethod::ServerRequestResponse)
@@ -34,7 +34,7 @@ impl ProtocolTransport for CodexAdapter {
         &self,
         engine: &AngelEngine,
         message: &JsonRpcMessage,
-    ) -> Result<TransportOutput, crate::angel_engine::EngineError> {
+    ) -> Result<TransportOutput, crate::EngineError> {
         match message {
             JsonRpcMessage::Response { id, result } => self.decode_response(engine, id, result),
             JsonRpcMessage::Error {

@@ -7,7 +7,7 @@ impl CodexAdapter {
         engine: &AngelEngine,
         id: &JsonRpcRequestId,
         result: &Value,
-    ) -> Result<TransportOutput, crate::angel_engine::EngineError> {
+    ) -> Result<TransportOutput, crate::EngineError> {
         let Some(pending) = engine.pending.requests.get(id) else {
             return Ok(TransportOutput::default().log(
                 TransportLogKind::Receive,
@@ -20,14 +20,14 @@ impl CodexAdapter {
             PendingRequest::Initialize => {
                 output = output
                     .event(EngineEvent::RuntimeNegotiated {
-                        capabilities: crate::angel_engine::RuntimeCapabilities {
+                        capabilities: crate::RuntimeCapabilities {
                             name: "codex-app-server".to_string(),
                             version: result
                                 .get("userAgent")
                                 .and_then(Value::as_str)
                                 .map(str::to_string),
-                            discovery: crate::angel_engine::CapabilitySupport::Supported,
-                            authentication: crate::angel_engine::CapabilitySupport::Unknown,
+                            discovery: crate::CapabilitySupport::Supported,
+                            authentication: crate::CapabilitySupport::Unknown,
                         },
                     })
                     .message(JsonRpcMessage::notification("initialized", Value::Null))
@@ -40,7 +40,7 @@ impl CodexAdapter {
                     .get("thread")
                     .and_then(|thread| thread.get("id"))
                     .and_then(Value::as_str)
-                    .ok_or_else(|| crate::angel_engine::EngineError::InvalidCommand {
+                    .ok_or_else(|| crate::EngineError::InvalidCommand {
                         message: "Codex conversation response missing thread.id".to_string(),
                     })?;
                 output = output
@@ -93,7 +93,7 @@ impl CodexAdapter {
                 output = output
                     .event(EngineEvent::HistoryMutationFinished {
                         conversation_id: conversation_id.clone(),
-                        result: crate::angel_engine::HistoryMutationResult {
+                        result: crate::HistoryMutationResult {
                             success: true,
                             workspace_reverted: false,
                             message: None,
@@ -120,7 +120,7 @@ impl CodexAdapter {
         id: Option<&JsonRpcRequestId>,
         code: i64,
         message: &str,
-    ) -> Result<TransportOutput, crate::angel_engine::EngineError> {
+    ) -> Result<TransportOutput, crate::EngineError> {
         let mut output = TransportOutput::default().log(
             TransportLogKind::Error,
             format!("Codex error {code}: {message}"),

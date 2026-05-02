@@ -1,21 +1,17 @@
 use std::collections::BTreeMap;
 
-use crate::angel_engine::capabilities::{
-    CapabilitySupport, ConversationCapabilities, RuntimeCapabilities,
-};
-use crate::angel_engine::command::{
+use crate::capabilities::{CapabilitySupport, ConversationCapabilities, RuntimeCapabilities};
+use crate::command::{
     EngineCommand, ResumeTarget, StartConversationParams, TurnOverrides, UserInput,
 };
-use crate::angel_engine::error::{EngineError, ErrorInfo};
-use crate::angel_engine::event::{EngineEvent, TransitionReport, UiEvent};
-use crate::angel_engine::ids::{
+use crate::error::{EngineError, ErrorInfo};
+use crate::event::{EngineEvent, TransitionReport, UiEvent};
+use crate::ids::{
     ActionId, ConversationId, ElicitationId, JsonRpcRequestId, RemoteConversationId, RemoteTurnId,
     TurnId,
 };
-use crate::angel_engine::protocol::{
-    AcpMethod, CodexMethod, ProtocolEffect, ProtocolFlavor, ProtocolMethod,
-};
-use crate::angel_engine::state::{
+use crate::protocol::{AcpMethod, CodexMethod, ProtocolEffect, ProtocolFlavor, ProtocolMethod};
+use crate::state::{
     ActionPhase, ActionState, ContentDelta, ContextPatch, ConversationLifecycle, ConversationState,
     ElicitationDecision, ElicitationPhase, ElicitationState, HistoryMutationOp,
     HistoryMutationResult, HydrationSource, ProvisionOp, RuntimeState, TurnOutcome, TurnPhase,
@@ -369,7 +365,7 @@ impl AngelEngine {
 
     fn plan_authenticate(
         &mut self,
-        method: crate::angel_engine::AuthMethodId,
+        method: crate::AuthMethodId,
     ) -> Result<CommandPlan, EngineError> {
         if !matches!(self.runtime, RuntimeState::AwaitingAuth { .. }) {
             return Err(EngineError::InvalidState {
@@ -1208,7 +1204,7 @@ impl AngelEngine {
         &mut self,
         conversation_id: ConversationId,
         action_id: ActionId,
-        patch: crate::angel_engine::ActionPatch,
+        patch: crate::ActionPatch,
     ) -> Result<TransitionReport, EngineError> {
         let conversation = self.conversation_mut(&conversation_id)?;
         let action = conversation.actions.get_mut(&action_id).ok_or_else(|| {
@@ -1732,17 +1728,17 @@ where
 
 #[cfg(test)]
 mod tests {
-    use crate::angel_engine::adapters::acp::{AcpAdapter, AcpStopReason};
-    use crate::angel_engine::adapters::codex::CodexAdapter;
-    use crate::angel_engine::capabilities::{ConversationCapabilities, RuntimeCapabilities};
-    use crate::angel_engine::command::{EngineCommand, TurnOverrides, UserInput};
-    use crate::angel_engine::event::EngineEvent;
-    use crate::angel_engine::ids::{
+    use crate::adapters::acp::{AcpAdapter, AcpStopReason};
+    use crate::adapters::codex::CodexAdapter;
+    use crate::capabilities::{ConversationCapabilities, RuntimeCapabilities};
+    use crate::command::{EngineCommand, TurnOverrides, UserInput};
+    use crate::event::EngineEvent;
+    use crate::ids::{
         ActionId, ConversationId, ElicitationId, JsonRpcRequestId, RemoteConversationId,
         RemoteRequestId, TurnId,
     };
-    use crate::angel_engine::protocol::{CodexMethod, ProtocolFlavor, ProtocolMethod};
-    use crate::angel_engine::state::{
+    use crate::protocol::{CodexMethod, ProtocolFlavor, ProtocolMethod};
+    use crate::state::{
         ActionKind, ActionPhase, ActionState, ContentDelta, ConversationLifecycle,
         ElicitationDecision, ElicitationKind, ElicitationPhase, ElicitationState,
         HistoryMutationOp, HistoryMutationResult, TurnOutcome, TurnPhase,
@@ -1768,7 +1764,7 @@ mod tests {
         capabilities: ConversationCapabilities,
     ) -> ConversationId {
         let id = ConversationId::new(id);
-        let state = crate::angel_engine::ConversationState::new(
+        let state = crate::ConversationState::new(
             id.clone(),
             remote,
             ConversationLifecycle::Idle,

@@ -2,21 +2,23 @@ use super::*;
 
 pub(super) fn acp_session_id(
     engine: &AngelEngine,
-    effect: &crate::angel_engine::ProtocolEffect,
-) -> Result<String, crate::angel_engine::EngineError> {
-    let conversation_id = effect.conversation_id.as_ref().ok_or_else(|| {
-        crate::angel_engine::EngineError::InvalidCommand {
-            message: "missing conversation id".to_string(),
-        }
-    })?;
+    effect: &crate::ProtocolEffect,
+) -> Result<String, crate::EngineError> {
+    let conversation_id =
+        effect
+            .conversation_id
+            .as_ref()
+            .ok_or_else(|| crate::EngineError::InvalidCommand {
+                message: "missing conversation id".to_string(),
+            })?;
     let conversation = engine.conversations.get(conversation_id).ok_or_else(|| {
-        crate::angel_engine::EngineError::ConversationNotFound {
+        crate::EngineError::ConversationNotFound {
             conversation_id: conversation_id.to_string(),
         }
     })?;
     match &conversation.remote {
         RemoteConversationId::AcpSession(session_id) => Ok(session_id.clone()),
-        other => Err(crate::angel_engine::EngineError::InvalidState {
+        other => Err(crate::EngineError::InvalidState {
             expected: "ACP session id".to_string(),
             actual: format!("{other:?}"),
         }),
