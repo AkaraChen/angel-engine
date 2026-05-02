@@ -1,10 +1,35 @@
 use crate::angel_engine::capabilities::ConversationCapabilities;
 use crate::angel_engine::error::ErrorInfo;
 use crate::angel_engine::event::EngineEvent;
-use crate::angel_engine::ids::ConversationId;
-use crate::angel_engine::state::{
-    ActionPhase, ConversationLifecycle, ElicitationKind, ExhaustionReason, TurnOutcome,
+use crate::angel_engine::ids::{
+    ActionId, ConversationId, ElicitationId, JsonRpcRequestId, RemoteActionId,
+    RemoteConversationId, RemoteRequestId, RemoteTurnId, TurnId,
 };
+use crate::angel_engine::protocol::{CodexMethod, ProtocolMethod};
+use crate::angel_engine::reducer::{AngelEngine, PendingRequest};
+use crate::angel_engine::state::{
+    ActionInput, ActionKind, ActionOutputDelta, ActionPatch, ActionPhase, ActionState,
+    ContentDelta, ContextPatch, ConversationLifecycle, ElicitationKind, ElicitationOptions,
+    ElicitationState, ExhaustionReason, PlanEntry, PlanEntryStatus, PlanState, TurnOutcome,
+};
+use crate::angel_engine::transport::{
+    JsonRpcMessage, ProtocolTransport, TransportLogKind, TransportOptions, TransportOutput,
+    client_info_json, method_name,
+};
+use serde_json::{Value, json};
+
+mod actions;
+mod encode;
+mod ids;
+mod notifications;
+mod protocol_helpers;
+mod requests;
+mod response;
+mod summaries;
+mod transport;
+mod types;
+
+pub use types::*;
 
 #[derive(Clone, Debug)]
 pub struct CodexAdapter {
@@ -71,74 +96,4 @@ impl CodexAdapter {
             CodexServerRequestKind::DynamicToolCall => ElicitationKind::DynamicToolCall,
         }
     }
-}
-
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub enum CodexThreadStatus {
-    NotLoaded,
-    Idle,
-    Active {
-        waiting_on_approval: bool,
-        waiting_on_user_input: bool,
-    },
-    SystemError,
-}
-
-impl From<CodexThreadStatus> for ConversationLifecycle {
-    fn from(value: CodexThreadStatus) -> Self {
-        match value {
-            CodexThreadStatus::NotLoaded => Self::Discovered,
-            CodexThreadStatus::Idle => Self::Idle,
-            CodexThreadStatus::Active { .. } => Self::Active,
-            CodexThreadStatus::SystemError => Self::Faulted(ErrorInfo::new(
-                "codex.system_error",
-                "thread entered systemError",
-            )),
-        }
-    }
-}
-
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum CodexTurnStatus {
-    Completed,
-    Interrupted,
-    Failed,
-    InProgress,
-}
-
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum CodexItemStatus {
-    InProgress,
-    Completed,
-    Failed,
-    Declined,
-    Interrupted,
-}
-
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum CodexErrorKind {
-    ContextWindowExceeded,
-    UsageLimitExceeded,
-    Other,
-}
-
-impl From<CodexErrorKind> for ExhaustionReason {
-    fn from(value: CodexErrorKind) -> Self {
-        match value {
-            CodexErrorKind::ContextWindowExceeded => Self::ContextWindow,
-            CodexErrorKind::UsageLimitExceeded => Self::UsageLimit,
-            CodexErrorKind::Other => Self::Other("codex".to_string()),
-        }
-    }
-}
-
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum CodexServerRequestKind {
-    CommandApproval,
-    FileChangeApproval,
-    PermissionsApproval,
-    ToolUserInput,
-    McpForm,
-    McpUrl,
-    DynamicToolCall,
 }

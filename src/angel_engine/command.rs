@@ -45,6 +45,10 @@ pub enum EngineCommand {
         conversation_id: ConversationId,
         op: HistoryMutationOp,
     },
+    RunShellCommand {
+        conversation_id: ConversationId,
+        command: String,
+    },
     ArchiveConversation {
         conversation_id: ConversationId,
     },

@@ -95,6 +95,7 @@ pub enum CodexMethod {
     ThreadGoalSet,
     ThreadGoalClear,
     ThreadMemoryModeSet,
+    ThreadShellCommand,
     ConfigWrite,
 }
 

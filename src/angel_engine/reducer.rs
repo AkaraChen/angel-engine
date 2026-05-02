@@ -103,6 +103,10 @@ impl AngelEngine {
                 conversation_id,
                 op,
             } => self.plan_mutate_history(conversation_id, op),
+            EngineCommand::RunShellCommand {
+                conversation_id,
+                command,
+            } => self.plan_run_shell_command(conversation_id, command),
             EngineCommand::ArchiveConversation { conversation_id } => {
                 self.plan_archive_conversation(conversation_id, true)
             }
@@ -625,6 +629,7 @@ impl AngelEngine {
         let sequence = self.next_turn_sequence();
         let remote =
             self.remote_turn_for_start(&conversation_id, &request_id, &overrides, sequence)?;
+        let input_text = input_to_text(&input);
         let input_refs = to_input_refs(input);
         let generation = self.generation;
 
@@ -652,7 +657,8 @@ impl AngelEngine {
         let effect = ProtocolEffect::new(self.protocol, self.method_start_turn())
             .request_id(request_id.clone())
             .conversation_id(conversation_id.clone())
-            .turn_id(turn_id.clone());
+            .turn_id(turn_id.clone())
+            .field("input", input_text);
         Ok(CommandPlan {
             effects: vec![effect],
             conversation_id: Some(conversation_id),
@@ -685,6 +691,7 @@ impl AngelEngine {
         };
 
         let request_id = self.next_request_id();
+        let input_text = input_to_text(&input);
         let input_refs = to_input_refs(input);
         {
             let conversation = self.conversation_mut(&conversation_id)?;
@@ -712,7 +719,8 @@ impl AngelEngine {
         let effect = ProtocolEffect::new(self.protocol, method)
             .request_id(request_id.clone())
             .conversation_id(conversation_id.clone())
-            .turn_id(selected_turn_id.clone());
+            .turn_id(selected_turn_id.clone())
+            .field("input", input_text);
         Ok(CommandPlan {
             effects: vec![effect],
             conversation_id: Some(conversation_id),
@@ -900,6 +908,54 @@ impl AngelEngine {
         let effect = ProtocolEffect::new(self.protocol, self.method_history_mutation(&op))
             .request_id(request_id.clone())
             .conversation_id(conversation_id.clone());
+        let effect = match op {
+            HistoryMutationOp::Compact | HistoryMutationOp::ReplaceHistory => effect,
+            HistoryMutationOp::Rollback { num_turns } => {
+                effect.field("numTurns", num_turns.to_string())
+            }
+            HistoryMutationOp::InjectItems { count } => effect.field("count", count.to_string()),
+        };
+        Ok(CommandPlan {
+            effects: vec![effect],
+            conversation_id: Some(conversation_id),
+            request_id: Some(request_id),
+            ..CommandPlan::default()
+        })
+    }
+
+    fn plan_run_shell_command(
+        &mut self,
+        conversation_id: ConversationId,
+        command: String,
+    ) -> Result<CommandPlan, EngineError> {
+        {
+            let conversation = self.conversation(&conversation_id)?;
+            if !conversation.is_loaded() {
+                return Err(EngineError::InvalidState {
+                    expected: "loaded conversation".to_string(),
+                    actual: format!("{:?}", conversation.lifecycle),
+                });
+            }
+            if self.protocol != ProtocolFlavor::CodexAppServer {
+                return Err(EngineError::CapabilityUnsupported {
+                    capability: "thread.shell_command".to_string(),
+                });
+            }
+        }
+        let request_id = self.next_request_id();
+        self.pending.insert(
+            request_id.clone(),
+            PendingRequest::RunShellCommand {
+                conversation_id: conversation_id.clone(),
+            },
+        )?;
+        let effect = ProtocolEffect::new(
+            self.protocol,
+            ProtocolMethod::Codex(CodexMethod::ThreadShellCommand),
+        )
+        .request_id(request_id.clone())
+        .conversation_id(conversation_id.clone())
+        .field("command", command);
         Ok(CommandPlan {
             effects: vec![effect],
             conversation_id: Some(conversation_id),
@@ -1593,6 +1649,9 @@ pub enum PendingRequest {
     HistoryMutation {
         conversation_id: ConversationId,
     },
+    RunShellCommand {
+        conversation_id: ConversationId,
+    },
 }
 
 #[derive(Clone, Debug)]
@@ -1636,6 +1695,14 @@ fn to_input_refs(input: Vec<UserInput>) -> Vec<UserInputRef> {
             content: input.content,
         })
         .collect()
+}
+
+fn input_to_text(input: &[UserInput]) -> String {
+    input
+        .iter()
+        .map(|input| input.content.as_str())
+        .collect::<Vec<_>>()
+        .join("\n")
 }
 
 fn is_terminal_action_phase(phase: &ActionPhase) -> bool {
@@ -1798,6 +1865,33 @@ mod tests {
             &plan.effects[0].method,
             ProtocolMethod::Codex(CodexMethod::TurnSteer)
         ));
+    }
+
+    #[test]
+    fn codex_shell_command_uses_thread_shell_command() {
+        let adapter = CodexAdapter::app_server();
+        let mut engine = engine_with(ProtocolFlavor::CodexAppServer, adapter.capabilities());
+        let conversation_id = insert_ready_conversation(
+            &mut engine,
+            "conv",
+            RemoteConversationId::CodexThread("thread".to_string()),
+            adapter.capabilities(),
+        );
+
+        let plan = engine
+            .plan_command(EngineCommand::RunShellCommand {
+                conversation_id,
+                command: "echo hello".to_string(),
+            })
+            .expect("codex shell command");
+        assert!(matches!(
+            &plan.effects[0].method,
+            ProtocolMethod::Codex(CodexMethod::ThreadShellCommand)
+        ));
+        assert_eq!(
+            plan.effects[0].payload.fields.get("command"),
+            Some(&"echo hello".to_string())
+        );
     }
 
     #[test]

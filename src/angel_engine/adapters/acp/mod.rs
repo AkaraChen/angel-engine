@@ -1,7 +1,32 @@
 use crate::angel_engine::capabilities::ConversationCapabilities;
+use crate::angel_engine::error::ErrorInfo;
 use crate::angel_engine::event::EngineEvent;
-use crate::angel_engine::ids::{ConversationId, TurnId};
-use crate::angel_engine::state::{ActionPhase, ExhaustionReason, TurnOutcome};
+use crate::angel_engine::ids::{
+    ActionId, ConversationId, ElicitationId, JsonRpcRequestId, RemoteConversationId,
+    RemoteRequestId, TurnId,
+};
+use crate::angel_engine::protocol::{AcpMethod, ProtocolMethod};
+use crate::angel_engine::reducer::{AngelEngine, PendingRequest};
+use crate::angel_engine::state::{
+    ActionInput, ActionKind, ActionOutputDelta, ActionPatch, ActionPhase, ActionState,
+    ContentDelta, ContextPatch, ElicitationKind, ElicitationOptions, ElicitationState,
+    ExhaustionReason, PlanEntry, PlanEntryStatus, PlanState, TurnOutcome,
+};
+use crate::angel_engine::transport::{
+    JsonRpcMessage, ProtocolTransport, TransportLogKind, TransportOptions, TransportOutput,
+    client_info_json, method_name,
+};
+use serde_json::{Value, json};
+
+mod encode;
+mod helpers;
+mod notifications;
+mod requests;
+mod response;
+mod transport;
+mod types;
+
+pub use types::*;
 
 #[derive(Clone, Debug)]
 pub struct AcpAdapter {
@@ -47,37 +72,4 @@ impl AcpAdapter {
             AcpToolStatus::Failed => ActionPhase::Failed,
         }
     }
-}
-
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum AcpStopReason {
-    EndTurn,
-    MaxTokens,
-    MaxTurnRequests,
-    Refusal,
-    Cancelled,
-}
-
-impl From<AcpStopReason> for TurnOutcome {
-    fn from(value: AcpStopReason) -> Self {
-        match value {
-            AcpStopReason::EndTurn => Self::Succeeded,
-            AcpStopReason::MaxTokens => Self::Exhausted {
-                reason: ExhaustionReason::MaxTokens,
-            },
-            AcpStopReason::MaxTurnRequests => Self::Exhausted {
-                reason: ExhaustionReason::MaxTurnRequests,
-            },
-            AcpStopReason::Refusal => Self::Refused,
-            AcpStopReason::Cancelled => Self::Interrupted,
-        }
-    }
-}
-
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum AcpToolStatus {
-    Pending,
-    InProgress,
-    Completed,
-    Failed,
 }

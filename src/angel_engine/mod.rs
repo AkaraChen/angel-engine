@@ -7,6 +7,7 @@ pub mod ids;
 pub mod protocol;
 pub mod reducer;
 pub mod state;
+pub mod transport;
 
 pub use capabilities::*;
 pub use command::*;
@@ -16,3 +17,4 @@ pub use ids::*;
 pub use protocol::*;
 pub use reducer::*;
 pub use state::*;
+pub use transport::*;
