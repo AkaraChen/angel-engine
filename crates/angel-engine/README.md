@@ -95,6 +95,7 @@ Start with these design documents when changing behavior:
 - `docs/agent-ui-state-machine.md`
 - `docs/unified-agent-state-machine.md`
 - `docs/angel-engine-state-machine-design.md`
+- `docs/protocol-essential-subset.md`
 
 Keep reducer changes driven by protocol-independent `EngineEvent` values, and
 keep wire-format details in the ACP or Codex adapter modules.

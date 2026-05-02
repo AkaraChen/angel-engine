@@ -107,21 +107,21 @@ impl AcpAdapter {
         id: &JsonRpcRequestId,
         params: &Value,
     ) -> Result<TransportOutput, crate::EngineError> {
-        let session_id = params
-            .get("sessionId")
-            .and_then(Value::as_str)
-            .unwrap_or("");
-        let Some(conversation_id) = find_acp_conversation(engine, session_id) else {
+        let session_id = params.get("sessionId").and_then(Value::as_str);
+        let Some(conversation_id) = session_id
+            .and_then(|session_id| find_acp_conversation(engine, session_id))
+            .or_else(|| engine.selected.clone())
+        else {
             return Ok(TransportOutput::default()
                 .message(JsonRpcMessage::error(
                     Some(id.clone()),
                     -32602,
-                    format!("elicitation request for unknown session {session_id}"),
+                    "elicitation request without a known session".to_string(),
                     None,
                 ))
                 .log(
                     TransportLogKind::Warning,
-                    format!("elicitation request for unknown session {session_id}"),
+                    "elicitation request without a known session",
                 ));
         };
 
@@ -132,7 +132,13 @@ impl AcpAdapter {
             ElicitationKind::UserInput
         };
         let mut elicitation = ElicitationState::new(
-            ElicitationId::new(format!("acp-elicitation-{id}")),
+            ElicitationId::new(
+                params
+                    .get("elicitationId")
+                    .and_then(Value::as_str)
+                    .map(|id| format!("acp-elicitation-{id}"))
+                    .unwrap_or_else(|| format!("acp-elicitation-{id}")),
+            ),
             RemoteRequestId::Acp(id.clone()),
             kind,
         );

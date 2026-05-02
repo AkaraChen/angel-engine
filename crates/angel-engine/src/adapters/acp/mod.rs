@@ -8,11 +8,10 @@ use crate::ids::{
 use crate::protocol::{AcpMethod, ProtocolMethod};
 use crate::reducer::{AngelEngine, PendingRequest};
 use crate::state::{
-    ActionInput, ActionKind, ActionOutputDelta, ActionPatch, ActionPhase, ActionState,
-    AvailableCommand, AvailableCommandInput, ContentDelta, ContextPatch, ElicitationKind,
-    ElicitationOptions, ElicitationState, ExhaustionReason, PlanEntry, PlanEntryStatus, PlanState,
-    SessionConfigOption, SessionConfigValue, SessionMode, SessionModeState, SessionModel,
-    SessionModelState, TurnOutcome, UserQuestion, UserQuestionOption,
+    ActionInput, ActionKind, ActionPhase, ActionState, ContextPatch, ElicitationKind,
+    ElicitationOptions, ElicitationState, ExhaustionReason, SessionConfigOption,
+    SessionConfigValue, SessionMode, SessionModeState, SessionModel, SessionModelState,
+    TurnOutcome, UserQuestion, UserQuestionOption,
 };
 use crate::transport::{
     JsonRpcMessage, ProtocolTransport, TransportLogKind, TransportOptions, TransportOutput,

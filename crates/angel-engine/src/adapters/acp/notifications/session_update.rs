@@ -1,24 +1,10 @@
-use super::helpers::*;
-use super::*;
+use crate::*;
+use serde_json::Value;
 
-impl AcpAdapter {
-    pub(super) fn decode_notification(
-        &self,
-        engine: &AngelEngine,
-        method: &str,
-        params: &Value,
-    ) -> Result<TransportOutput, crate::EngineError> {
-        match method {
-            "session/update" => decode_acp_update(engine, params),
-            _ => Ok(TransportOutput::default().log(
-                TransportLogKind::Receive,
-                format!("{method} (details hidden)"),
-            )),
-        }
-    }
-}
+use super::super::helpers::*;
+use super::super::{AcpAdapter, AcpToolStatus};
 
-fn decode_acp_update(
+pub(super) fn decode_acp_update(
     engine: &AngelEngine,
     params: &Value,
 ) -> Result<TransportOutput, crate::EngineError> {
@@ -270,28 +256,13 @@ fn available_commands(update: &Value) -> Vec<AvailableCommand> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use serde_json::json;
 
     #[test]
     fn available_commands_update_does_not_require_active_turn() {
         let adapter = AcpAdapter::standard();
         let mut engine = AngelEngine::new(crate::ProtocolFlavor::Acp, adapter.capabilities());
-        let conversation_id = ConversationId::new("conv");
-        engine
-            .apply_event(EngineEvent::ConversationProvisionStarted {
-                id: conversation_id.clone(),
-                remote: RemoteConversationId::Pending("conv".to_string()),
-                op: crate::ProvisionOp::New,
-                capabilities: adapter.capabilities(),
-            })
-            .expect("conversation provision");
-        engine
-            .apply_event(EngineEvent::ConversationReady {
-                id: conversation_id.clone(),
-                remote: Some(RemoteConversationId::AcpSession("sess".to_string())),
-                context: ContextPatch::empty(),
-                capabilities: None,
-            })
-            .expect("conversation ready");
+        let conversation_id = ready_conversation(&adapter, &mut engine);
 
         let output = adapter
             .decode_notification(
@@ -321,5 +292,26 @@ mod tests {
                     && commands[0].name == "plan"
                     && commands[0].input.as_ref().map(|input| input.hint.as_str()) == Some("task")
         ));
+    }
+
+    fn ready_conversation(adapter: &AcpAdapter, engine: &mut AngelEngine) -> ConversationId {
+        let conversation_id = ConversationId::new("conv");
+        engine
+            .apply_event(EngineEvent::ConversationProvisionStarted {
+                id: conversation_id.clone(),
+                remote: RemoteConversationId::Pending("conv".to_string()),
+                op: crate::ProvisionOp::New,
+                capabilities: adapter.capabilities(),
+            })
+            .expect("conversation provision");
+        engine
+            .apply_event(EngineEvent::ConversationReady {
+                id: conversation_id.clone(),
+                remote: Some(RemoteConversationId::AcpSession("sess".to_string())),
+                context: ContextPatch::empty(),
+                capabilities: None,
+            })
+            .expect("conversation ready");
+        conversation_id
     }
 }

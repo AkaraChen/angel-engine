@@ -29,7 +29,7 @@ impl AcpAdapter {
                     );
                 }
                 Ok(json!({
-                    "protocolVersion": 2,
+                    "protocolVersion": 1,
                     "clientCapabilities": client_capabilities,
                     "clientInfo": client_info_json(&options.client_info),
                 }))
@@ -274,6 +274,26 @@ mod tests {
             params["clientCapabilities"]["elicitation"],
             json!({"form": {}, "url": {}})
         );
+    }
+
+    #[test]
+    fn initialize_uses_stable_acp_version_and_only_advertised_host_capabilities() {
+        let adapter = AcpAdapter::standard();
+        let engine = AngelEngine::new(crate::ProtocolFlavor::Acp, adapter.capabilities());
+        let effect = crate::ProtocolEffect::new(
+            crate::ProtocolFlavor::Acp,
+            ProtocolMethod::Acp(AcpMethod::Initialize),
+        );
+
+        let params = adapter
+            .encode_params(&engine, &effect, &TransportOptions::default())
+            .expect("initialize params");
+
+        assert_eq!(params["protocolVersion"], json!(1));
+        assert!(params["clientCapabilities"].get("auth").is_some());
+        assert!(params["clientCapabilities"].get("elicitation").is_some());
+        assert!(params["clientCapabilities"].get("fs").is_none());
+        assert!(params["clientCapabilities"].get("terminal").is_none());
     }
 }
 

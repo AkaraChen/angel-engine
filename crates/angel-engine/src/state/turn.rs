@@ -1,0 +1,113 @@
+use crate::error::ErrorInfo;
+use crate::ids::{ActionId, ElicitationId, RemoteTurnId, TurnId};
+
+use super::*;
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct TurnState {
+    pub id: TurnId,
+    pub remote: RemoteTurnId,
+    pub phase: TurnPhase,
+    pub input: Vec<UserInputRef>,
+    pub output: OutputBuffer,
+    pub reasoning: ReasoningBuffer,
+    pub plan: Option<PlanState>,
+    pub plan_text: OutputBuffer,
+    pub plan_path: Option<String>,
+    pub started_at: Timestamp,
+    pub completed_at: Option<Timestamp>,
+    pub outcome: Option<TurnOutcome>,
+}
+
+impl TurnState {
+    pub fn new(id: TurnId, remote: RemoteTurnId, started_at: Timestamp) -> Self {
+        Self {
+            id,
+            remote,
+            phase: TurnPhase::Starting,
+            input: Vec::new(),
+            output: OutputBuffer::default(),
+            reasoning: ReasoningBuffer::default(),
+            plan: None,
+            plan_text: OutputBuffer::default(),
+            plan_path: None,
+            started_at,
+            completed_at: None,
+            outcome: None,
+        }
+    }
+
+    pub fn is_terminal(&self) -> bool {
+        matches!(self.phase, TurnPhase::Terminal(_))
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum TurnPhase {
+    Starting,
+    Reasoning,
+    StreamingOutput,
+    Planning,
+    Acting { action_id: ActionId },
+    AwaitingUser { elicitation_id: ElicitationId },
+    Cancelling,
+    Terminal(TurnOutcome),
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum TurnOutcome {
+    Succeeded,
+    Exhausted { reason: ExhaustionReason },
+    Refused,
+    Interrupted,
+    Failed(ErrorInfo),
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum ExhaustionReason {
+    MaxTokens,
+    MaxTurnRequests,
+    ContextWindow,
+    UsageLimit,
+    Other(String),
+}
+
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct OutputBuffer {
+    pub chunks: Vec<ContentDelta>,
+}
+
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct ReasoningBuffer {
+    pub chunks: Vec<ContentDelta>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum ContentDelta {
+    Text(String),
+    ResourceRef(String),
+    Structured(String),
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct UserInputRef {
+    pub content: String,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct PlanState {
+    pub entries: Vec<PlanEntry>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct PlanEntry {
+    pub content: String,
+    pub status: PlanEntryStatus,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum PlanEntryStatus {
+    Pending,
+    InProgress,
+    Completed,
+}
