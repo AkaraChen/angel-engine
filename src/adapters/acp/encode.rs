@@ -9,15 +9,22 @@ impl AcpAdapter {
         options: &TransportOptions,
     ) -> Result<Value, crate::EngineError> {
         match &effect.method {
-            ProtocolMethod::Acp(AcpMethod::Initialize) => Ok(json!({
-                "protocolVersion": 2,
-                "clientCapabilities": {
-                    "auth": {
-                        "terminal": true,
-                    },
-                },
-                "clientInfo": client_info_json(&options.client_info),
-            })),
+            ProtocolMethod::Acp(AcpMethod::Initialize) => {
+                let mut client_capabilities = serde_json::Map::new();
+                if self.capabilities.runtime.authentication.is_supported() {
+                    client_capabilities.insert(
+                        "auth".to_string(),
+                        json!({
+                            "terminal": true,
+                        }),
+                    );
+                }
+                Ok(json!({
+                    "protocolVersion": 2,
+                    "clientCapabilities": client_capabilities,
+                    "clientInfo": client_info_json(&options.client_info),
+                }))
+            }
             ProtocolMethod::Acp(AcpMethod::Authenticate) => Ok(json!({
                 "methodId": effect
                     .payload
@@ -142,6 +149,28 @@ impl AcpAdapter {
             output.completed_requests.push(request_id.clone());
         }
         Ok(output)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn initialize_omits_auth_client_capability_when_authentication_is_unsupported() {
+        let adapter = AcpAdapter::without_authentication();
+        let engine = AngelEngine::new(crate::ProtocolFlavor::Acp, adapter.capabilities());
+        let options = TransportOptions::default();
+        let effect = crate::ProtocolEffect::new(
+            crate::ProtocolFlavor::Acp,
+            ProtocolMethod::Acp(AcpMethod::Initialize),
+        );
+
+        let params = adapter
+            .encode_params(&engine, &effect, &options)
+            .expect("initialize params");
+
+        assert_eq!(params["clientCapabilities"], json!({}));
     }
 }
 

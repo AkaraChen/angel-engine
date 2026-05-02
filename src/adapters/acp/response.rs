@@ -22,14 +22,20 @@ impl AcpAdapter {
                     .and_then(Value::as_array)
                     .cloned()
                     .unwrap_or_default();
-                if auth_methods.is_empty() {
+                let runtime_authentication = &self.capabilities.runtime.authentication;
+                if auth_methods.is_empty() || !runtime_authentication.is_supported() {
+                    let authentication = if runtime_authentication.is_supported() {
+                        crate::CapabilitySupport::Unknown
+                    } else {
+                        runtime_authentication.clone()
+                    };
                     output = output
                         .event(EngineEvent::RuntimeNegotiated {
                             capabilities: crate::RuntimeCapabilities {
                                 name: "acp".to_string(),
                                 version: result.get("protocolVersion").map(Value::to_string),
                                 discovery: crate::CapabilitySupport::Supported,
-                                authentication: crate::CapabilitySupport::Unknown,
+                                authentication,
                             },
                         })
                         .log(TransportLogKind::State, "ACP runtime initialized");
@@ -149,5 +155,43 @@ impl AcpAdapter {
             }
         }
         Ok(output)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn initialize_ignores_auth_methods_when_authentication_is_unsupported() {
+        let adapter = AcpAdapter::without_authentication();
+        let mut engine = AngelEngine::new(crate::ProtocolFlavor::Acp, adapter.capabilities());
+        let request_id = engine
+            .plan_command(crate::EngineCommand::Initialize)
+            .expect("initialize plan")
+            .request_id
+            .expect("request id");
+
+        let output = adapter
+            .decode_response(
+                &engine,
+                &request_id,
+                &json!({
+                    "protocolVersion": 1,
+                    "authMethods": [
+                        {
+                            "id": "opencode-login",
+                            "name": "Login with opencode"
+                        }
+                    ]
+                }),
+            )
+            .expect("initialize response");
+
+        assert!(matches!(
+            output.events.as_slice(),
+            [EngineEvent::RuntimeNegotiated { capabilities }]
+                if capabilities.authentication == crate::CapabilitySupport::Unsupported
+        ));
     }
 }

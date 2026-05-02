@@ -1,4 +1,4 @@
-use crate::capabilities::ConversationCapabilities;
+use crate::capabilities::{CapabilitySupport, ConversationCapabilities};
 use crate::error::ErrorInfo;
 use crate::event::EngineEvent;
 use crate::ids::{
@@ -30,24 +30,62 @@ pub use types::*;
 
 #[derive(Clone, Debug)]
 pub struct AcpAdapter {
-    capabilities: ConversationCapabilities,
+    capabilities: AcpAdapterCapabilities,
+}
+
+#[derive(Clone, Debug)]
+pub struct AcpAdapterCapabilities {
+    pub runtime: AcpRuntimeCapabilities,
+    pub conversation: ConversationCapabilities,
+}
+
+#[derive(Clone, Debug)]
+pub struct AcpRuntimeCapabilities {
+    pub authentication: CapabilitySupport,
+}
+
+impl AcpAdapterCapabilities {
+    pub fn standard() -> Self {
+        Self {
+            runtime: AcpRuntimeCapabilities {
+                authentication: CapabilitySupport::Supported,
+            },
+            conversation: ConversationCapabilities::acp_standard(),
+        }
+    }
+
+    pub fn without_authentication(mut self) -> Self {
+        self.runtime.authentication = CapabilitySupport::Unsupported;
+        self
+    }
 }
 
 impl AcpAdapter {
+    pub fn new(capabilities: AcpAdapterCapabilities) -> Self {
+        Self { capabilities }
+    }
+
     pub fn standard() -> Self {
-        Self {
-            capabilities: ConversationCapabilities::acp_standard(),
-        }
+        Self::new(AcpAdapterCapabilities::standard())
     }
 
     pub fn with_steer_extension(name: impl Into<String>) -> Self {
         let mut adapter = Self::standard();
-        adapter.capabilities.turn.steer = crate::CapabilitySupport::Extension { name: name.into() };
+        adapter.capabilities.conversation.turn.steer =
+            crate::CapabilitySupport::Extension { name: name.into() };
         adapter
     }
 
+    pub fn without_authentication() -> Self {
+        Self::new(AcpAdapterCapabilities::standard().without_authentication())
+    }
+
     pub fn capabilities(&self) -> ConversationCapabilities {
-        self.capabilities.clone()
+        self.capabilities.conversation.clone()
+    }
+
+    pub fn adapter_capabilities(&self) -> &AcpAdapterCapabilities {
+        &self.capabilities
     }
 
     pub fn stop_reason_event(
