@@ -133,12 +133,20 @@ impl AcpAdapter {
             PendingRequest::ResolveElicitation { .. } => {
                 output = output.log(TransportLogKind::State, "permission response accepted");
             }
-            PendingRequest::UpdateContext { conversation_id } => {
+            PendingRequest::UpdateContext {
+                conversation_id,
+                patch,
+            } => {
                 let config_options = session_config_options(result);
                 if !config_options.is_empty() {
                     output = output.event(EngineEvent::SessionConfigOptionsUpdated {
                         conversation_id: conversation_id.clone(),
                         options: config_options,
+                    });
+                } else {
+                    output = output.event(EngineEvent::ContextUpdated {
+                        conversation_id: conversation_id.clone(),
+                        patch: patch.clone(),
                     });
                 }
                 output = output.log(TransportLogKind::Receive, format!("response {id}"));

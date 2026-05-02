@@ -213,11 +213,12 @@ where
                 if value.is_empty() {
                     self.print_model_state()?;
                 } else {
-                    self.update_context(ContextPatch::one(ContextUpdate::Model {
+                    if self.update_context(ContextPatch::one(ContextUpdate::Model {
                         scope: ContextScope::TurnAndFuture,
                         model: Some(value.to_string()),
-                    }))?;
-                    println!("[state] model set to {value}");
+                    }))? {
+                        println!("[state] model set to {value}");
+                    }
                 }
                 Ok(true)
             }
@@ -225,20 +226,21 @@ where
                 if value.is_empty() {
                     self.print_mode_state()?;
                 } else {
-                    self.update_context(ContextPatch::one(ContextUpdate::Mode {
+                    if self.update_context(ContextPatch::one(ContextUpdate::Mode {
                         scope: ContextScope::TurnAndFuture,
                         mode: Some(AgentMode {
                             id: value.to_string(),
                         }),
-                    }))?;
-                    println!("[state] mode set to {value}");
-                    if self.config.protocol == ProtocolFlavor::CodexAppServer
-                        && matches!(value, "plan" | "default")
-                        && self.current_model().is_none()
-                    {
-                        println!(
-                            "[warn] Codex collaborationMode requires a model in turn/start; set /model first if the next turn does not switch mode"
-                        );
+                    }))? {
+                        println!("[state] mode set to {value}");
+                        if self.config.protocol == ProtocolFlavor::CodexAppServer
+                            && matches!(value, "plan" | "default")
+                            && self.current_model().is_none()
+                        {
+                            println!(
+                                "[warn] Codex collaborationMode requires a model in turn/start; set /model first if the next turn does not switch mode"
+                            );
+                        }
                     }
                 }
                 Ok(true)
@@ -247,13 +249,14 @@ where
                 if value.is_empty() {
                     self.print_permission_state()?;
                 } else {
-                    self.update_context(ContextPatch::one(ContextUpdate::Permissions {
+                    if self.update_context(ContextPatch::one(ContextUpdate::Permissions {
                         scope: ContextScope::TurnAndFuture,
                         permissions: PermissionProfile {
                             name: value.to_string(),
                         },
-                    }))?;
-                    println!("[state] permission profile set to {value}");
+                    }))? {
+                        println!("[state] permission profile set to {value}");
+                    }
                 }
                 Ok(true)
             }
@@ -261,11 +264,12 @@ where
                 if value.is_empty() {
                     self.print_permission_state()?;
                 } else if let Some(policy) = parse_approval_policy(value) {
-                    self.update_context(ContextPatch::one(ContextUpdate::ApprovalPolicy {
+                    if self.update_context(ContextPatch::one(ContextUpdate::ApprovalPolicy {
                         scope: ContextScope::TurnAndFuture,
                         policy,
-                    }))?;
-                    println!("[state] approval policy set to {value}");
+                    }))? {
+                        println!("[state] approval policy set to {value}");
+                    }
                 } else {
                     println!("[warn] use one of: never, on-request, on-failure, untrusted");
                 }
@@ -275,11 +279,12 @@ where
                 if value.is_empty() {
                     self.print_permission_state()?;
                 } else if let Some(sandbox) = parse_sandbox_profile(value) {
-                    self.update_context(ContextPatch::one(ContextUpdate::Sandbox {
+                    if self.update_context(ContextPatch::one(ContextUpdate::Sandbox {
                         scope: ContextScope::TurnAndFuture,
                         sandbox,
-                    }))?;
-                    println!("[state] sandbox set to {value}");
+                    }))? {
+                        println!("[state] sandbox set to {value}");
+                    }
                 } else {
                     println!("[warn] use one of: read-only, workspace-write, danger-full-access");
                 }
@@ -289,10 +294,11 @@ where
         }
     }
 
-    fn update_context(&mut self, patch: ContextPatch) -> Result<(), Box<dyn Error>> {
+    fn update_context(&mut self, patch: ContextPatch) -> Result<bool, Box<dyn Error>> {
         let conversation_id = self.selected_conversation()?;
+        let before = self.context_snapshot(&conversation_id);
         let plan = self.engine.plan_command(EngineCommand::UpdateContext {
-            conversation_id,
+            conversation_id: conversation_id.clone(),
             patch,
         })?;
         let request_id = plan.request_id.clone();
@@ -309,7 +315,7 @@ where
                 println!("[warn] no ACP config or mode endpoint was advertised for that setting");
             }
         }
-        Ok(())
+        Ok(before != self.context_snapshot(&conversation_id))
     }
 
     fn run_shell_command(&mut self, command: String) -> Result<(), Box<dyn Error>> {
@@ -536,6 +542,22 @@ where
             .and_then(|id| self.engine.conversations.get(id))
             .map(|conversation| conversation.active_turn_count())
             .unwrap_or(0)
+    }
+
+    fn context_snapshot(&self, conversation_id: &ConversationId) -> String {
+        self.engine
+            .conversations
+            .get(conversation_id)
+            .map(|conversation| {
+                format!(
+                    "{:?}{:?}{:?}{:?}",
+                    conversation.context,
+                    conversation.config_options,
+                    conversation.mode_state,
+                    conversation.model_state
+                )
+            })
+            .unwrap_or_default()
     }
 
     fn selected_available_commands(&self) -> &[AvailableCommand] {

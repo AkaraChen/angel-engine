@@ -924,7 +924,7 @@ impl AngelEngine {
             Vec::new()
         };
         {
-            let conversation = self.conversation_mut(&conversation_id)?;
+            let conversation = self.conversation(&conversation_id)?;
             if matches!(
                 conversation.lifecycle,
                 ConversationLifecycle::Closed | ConversationLifecycle::Faulted(_)
@@ -934,6 +934,9 @@ impl AngelEngine {
                     actual: format!("{:?}", conversation.lifecycle),
                 });
             }
+        }
+        if self.protocol == ProtocolFlavor::CodexAppServer {
+            let conversation = self.conversation_mut(&conversation_id)?;
             conversation.context.apply_patch(patch.clone());
         }
         let mut effects = Vec::new();
@@ -947,6 +950,7 @@ impl AngelEngine {
                 request_id.clone(),
                 PendingRequest::UpdateContext {
                     conversation_id: conversation_id.clone(),
+                    patch: spec.patch,
                 },
             )?;
             let mut effect = ProtocolEffect::new(self.protocol, spec.method)
@@ -1741,6 +1745,7 @@ pub enum PendingRequest {
     },
     UpdateContext {
         conversation_id: ConversationId,
+        patch: ContextPatch,
     },
     HistoryMutation {
         conversation_id: ConversationId,
@@ -1787,6 +1792,7 @@ enum DeltaKind {
 struct ContextEffectSpec {
     method: ProtocolMethod,
     fields: Vec<(String, String)>,
+    patch: ContextPatch,
 }
 
 fn sync_context_from_config_options(
@@ -1878,11 +1884,12 @@ fn acp_context_effect_specs(
                 if let Some(option) =
                     find_config_option(&conversation.config_options, "model", &["model"])
                 {
-                    specs.push(set_config_option_spec(&option.id, model));
+                    specs.push(set_config_option_spec(&option.id, model, update.clone()));
                 } else {
                     specs.push(ContextEffectSpec {
                         method: ProtocolMethod::Acp(AcpMethod::SetSessionModel),
                         fields: vec![("modelId".to_string(), model.clone())],
+                        patch: ContextPatch::one(update.clone()),
                     });
                 }
             }
@@ -1892,11 +1899,12 @@ fn acp_context_effect_specs(
                 if let Some(option) =
                     find_config_option(&conversation.config_options, "mode", &["mode"])
                 {
-                    specs.push(set_config_option_spec(&option.id, &mode.id));
+                    specs.push(set_config_option_spec(&option.id, &mode.id, update.clone()));
                 } else {
                     specs.push(ContextEffectSpec {
                         method: ProtocolMethod::Acp(AcpMethod::SetSessionMode),
                         fields: vec![("modeId".to_string(), mode.id.clone())],
+                        patch: ContextPatch::one(update.clone()),
                     });
                 }
             }
@@ -1917,6 +1925,7 @@ fn acp_context_effect_specs(
                     specs.push(set_config_option_spec(
                         &option.id,
                         codex_approval_policy(policy),
+                        update.clone(),
                     ));
                 }
             }
@@ -1927,6 +1936,7 @@ fn acp_context_effect_specs(
                     specs.push(set_config_option_spec(
                         &option.id,
                         codex_sandbox_policy(sandbox),
+                        update.clone(),
                     ));
                 }
             }
@@ -1938,13 +1948,21 @@ fn acp_context_effect_specs(
                 )
                 .or_else(|| find_config_option(&conversation.config_options, "mode", &["mode"]))
                 {
-                    specs.push(set_config_option_spec(&option.id, &permissions.name));
+                    specs.push(set_config_option_spec(
+                        &option.id,
+                        &permissions.name,
+                        update.clone(),
+                    ));
                 }
             }
             ContextUpdate::Raw { key, value, .. }
                 if key.starts_with("acp.config.") && key.len() > "acp.config.".len() =>
             {
-                specs.push(set_config_option_spec(&key["acp.config.".len()..], value));
+                specs.push(set_config_option_spec(
+                    &key["acp.config.".len()..],
+                    value,
+                    update.clone(),
+                ));
             }
             _ => {}
         }
@@ -1952,13 +1970,18 @@ fn acp_context_effect_specs(
     specs
 }
 
-fn set_config_option_spec(config_id: &str, value: &str) -> ContextEffectSpec {
+fn set_config_option_spec(
+    config_id: &str,
+    value: &str,
+    update: ContextUpdate,
+) -> ContextEffectSpec {
     ContextEffectSpec {
         method: ProtocolMethod::Acp(AcpMethod::SetSessionConfigOption),
         fields: vec![
             ("configId".to_string(), config_id.to_string()),
             ("value".to_string(), value.to_string()),
         ],
+        patch: ContextPatch::one(update),
     }
 }
 
@@ -2250,6 +2273,9 @@ mod tests {
             plan.effects[0].payload.fields.get("value"),
             Some(&"gpt-5.5".to_string())
         );
+        let conversation_id = plan.conversation_id.as_ref().unwrap();
+        let conversation = engine.conversations.get(conversation_id).unwrap();
+        assert_eq!(conversation.context.model.effective(), None);
     }
 
     #[test]
