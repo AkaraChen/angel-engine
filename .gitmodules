@@ -1,3 +1,3 @@
-[submodule "vendor/agent-client-protocol"]
-	path = vendor/agent-client-protocol
+[submodule "crates/angel-engine/vendor/agent-client-protocol"]
+	path = crates/angel-engine/vendor/agent-client-protocol
 	url = https://github.com/agentclientprotocol/agent-client-protocol.git
