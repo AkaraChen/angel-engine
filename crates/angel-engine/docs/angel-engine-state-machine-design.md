@@ -233,7 +233,7 @@ pub enum CapabilitySupport {
 `plan_command()` 的规则是：
 
 - `StartTurn` 只在 `active_turns < max_active_turns` 时允许。
-- `SteerTurn` 只在 `turn.steer.is_supported()` 且有 active turn 时允许。
+- `Extension(SteerTurn)` 只在 `turn.steer.is_supported()` 且有 active turn 时允许。
 - `CapabilitySupport::Unsupported` 返回 `CapabilityUnsupported`，不是静默丢弃输入。
 - `CapabilitySupport::Unknown` 应先走能力探测或保守拒绝，不能冒充支持。
 - 协议扩展 adapter 可以把 ACP 的非标准 steer 映射成自定义 JSON-RPC method、extension request 或 proxy-local effect；reducer 不需要知道细节。
@@ -403,18 +403,26 @@ pub enum EngineCommand {
     DiscoverConversations { params: DiscoverConversationsParams },
     StartConversation { params: StartConversationParams },
     ResumeConversation { target: ResumeTarget },
-    ForkConversation { source: ConversationId, at: Option<TurnId> },
     StartTurn { conversation_id: ConversationId, input: Vec<UserInput>, overrides: TurnOverrides },
-    SteerTurn { conversation_id: ConversationId, input: Vec<UserInput> },
     CancelTurn { conversation_id: ConversationId },
     ResolveElicitation { conversation_id: ConversationId, elicitation_id: ElicitationId, decision: ElicitationDecision },
     UpdateContext { conversation_id: ConversationId, patch: ContextPatch },
+    Extension(EngineExtensionCommand),
+}
+
+pub enum EngineExtensionCommand {
+    ForkConversation { source: ConversationId, at: Option<TurnId> },
+    SteerTurn { conversation_id: ConversationId, input: Vec<UserInput> },
     MutateHistory { conversation_id: ConversationId, op: HistoryMutationOp },
+    RunShellCommand { conversation_id: ConversationId, command: String },
     ArchiveConversation { conversation_id: ConversationId },
+    UnarchiveConversation { conversation_id: ConversationId },
     CloseConversation { conversation_id: ConversationId },
     Unsubscribe { conversation_id: ConversationId },
 }
 ```
+
+顶层 `EngineCommand` 是 common subset。`EngineExtensionCommand` 保留单边或扩展能力，必须由 capability gate 决定是否可用，不能被 UI 当成两边都能执行的基础协议。
 
 `ResumeTarget` 只暴露通用锚点：已发现的 `ConversationId`，或当前 adapter 可解释的 opaque remote id。`hydrate=true` 表示恢复时需要回放/返回历史；adapter 负责映射到 ACP `session/load` 或 Codex `thread/resume`。
 
@@ -512,12 +520,12 @@ pub enum InvalidEventPolicy {
 | `ResumeConversation(hydrate=true)` | `session/load` request | capability 支持 load | before send -> `Hydrating`；首个 replay -> `HydrationStarted`；response -> `ConversationReady`。 |
 | `ResumeConversation(hydrate=false)` | `session/resume` request | capability 支持 resume | before send -> `Provisioning(Resume)`；response -> `ConversationReady`。 |
 | `StartTurn` | `session/prompt` request | conversation `Idle` | before send -> synthetic `TurnStarted`；updates -> deltas/actions；response `stopReason` -> `TurnTerminal`。 |
-| `SteerTurn` | 无标准 ACP 等价；可由 ACP extension adapter 自定义映射 | conversation `Active` 且 `turn.steer` 支持 | 支持时 -> `TurnSteered`；不支持时返回 `CapabilityUnsupported`；不要退化成第二个 `session/prompt`。 |
+| `Extension(SteerTurn)` | 无标准 ACP 等价；可由 ACP extension adapter 自定义映射 | conversation `Active` 且 `turn.steer` 支持 | 支持时 -> `TurnSteered`；不支持时返回 `CapabilityUnsupported`；不要退化成第二个 `session/prompt`。 |
 | `CancelTurn` | `session/cancel` notification | conversation `Active` | before send -> `Cancelling`；原 `prompt` response `cancelled` -> `TurnTerminal(Interrupted)`。 |
 | `ResolveElicitation` | reply to `session/request_permission` | elicitation open | selected option -> `ElicitationResolved`；若 cancelling 则必须回复 cancelled。 |
 | `UpdateContext(mode)` | `session/set_mode` request | session exists, mode supported | response/notification -> `ContextUpdated`。 |
 | `UpdateContext(config)` | `session/set_config_option` request | option exists | response returns full options -> replace config context。 |
-| `CloseConversation` | `session/close` request | capability 支持 close | response -> `ConversationClosed`。 |
+| `Extension(CloseConversation)` | `session/close` request | capability 支持 close | response -> `ConversationClosed`。 |
 
 ### ACP 输入到统一事件
 
@@ -563,9 +571,9 @@ pub enum InvalidEventPolicy {
 | `DiscoverConversations` | `thread/list` request | runtime available | response -> 多个 `ConversationDiscovered` + `ConversationDiscoveryPage(next_cursor)`。 |
 | `StartConversation` | `thread/start` request | runtime available | response/thread notification -> `ConversationReady(Idle)`。 |
 | `ResumeConversation` | `thread/resume` request | known conversation/remote id | response -> `ConversationReady`；`hydrate=false` 时 adapter 请求跳过 turns。 |
-| `ForkConversation` | `thread/fork` request | source thread exists | response -> new `ConversationReady`。 |
+| `Extension(ForkConversation)` | `thread/fork` request | source thread exists | response -> new `ConversationReady`。 |
 | `StartTurn` | `turn/start` request | conversation `Idle` | response/`turn/started` -> `TurnStarted`；overrides -> `ContextUpdated(TurnAndFuture)`。 |
-| `SteerTurn` | `turn/steer` request | conversation `Active` 且 `turn.steer` 支持 | uses `expectedTurnId`; success -> `TurnSteered`。 |
+| `Extension(SteerTurn)` | `turn/steer` request | conversation `Active` 且 `turn.steer` 支持 | uses `expectedTurnId`; success -> `TurnSteered`。 |
 | `CancelTurn` | `turn/interrupt` request | active turn exists | before send -> `Cancelling`; `turn/completed(interrupted)` -> terminal。 |
 | `ResolveElicitation(command approval)` | response to `item/commandExecution/requestApproval` | request open | decision -> resolving; `serverRequest/resolved` closes it。 |
 | `ResolveElicitation(file approval)` | response to `item/fileChange/requestApproval` | request open | same。 |
@@ -576,10 +584,10 @@ pub enum InvalidEventPolicy {
 | `UpdateContext(goal)` | `thread/goal/set/get/clear` | loaded thread | goal notifications update context。 |
 | `UpdateContext(memory)` | `thread/memoryMode/set`, `memory/reset` | loaded/runtime | updates memory context。 |
 | `UpdateContext(config)` | `config/value/write`, `config/batchWrite` | runtime available | global/default context only，不代表 active turn 立即变化。 |
-| `MutateHistory(compact)` | `thread/compact/start` | loaded thread | notifications/items -> mutation finished。 |
-| `MutateHistory(rollback)` | `thread/rollback` | loaded thread | response -> replace history; workspace changes remain。 |
-| `ArchiveConversation` | `thread/archive` / `thread/unarchive` | loaded thread | notification -> archived/idle。 |
-| `Unsubscribe` | `thread/unsubscribe` | subscribed thread | observer changes only，不 close。 |
+| `Extension(MutateHistory(compact))` | `thread/compact/start` | loaded thread | notifications/items -> mutation finished。 |
+| `Extension(MutateHistory(rollback))` | `thread/rollback` | loaded thread | response -> replace history; workspace changes remain。 |
+| `Extension(ArchiveConversation)` | `thread/archive` / `thread/unarchive` | loaded thread | notification -> archived/idle。 |
+| `Extension(Unsubscribe)` | `thread/unsubscribe` | subscribed thread | observer changes only，不 close。 |
 
 ### Codex 输入到统一事件
 
@@ -711,12 +719,12 @@ Codex 有 `serverRequest/resolved`，可用它做确认。ACP 没有统一 resol
 | `StartConversation` | `RuntimeState::Available` | offline/auth/faulted | 创建 conversation 不依赖 selected。 |
 | `ResumeConversation` | `Available` | offline/auth/faulted | 如果 local 已有同 remote active conversation，应返回 existing。 |
 | `StartTurn` | conversation 可接收新 turn，且 `active_turns < turn.max_active_turns` | `Cancelling/Hydrating/MutatingHistory/Closed` 或达到并发上限 | 默认上限是 1；是否支持并发 turn 由能力表决定。 |
-| `SteerTurn` | conversation `Active` 且 `turn.steer` 支持 | 非 active、能力不支持、当前 turn 不可 steer | Codex 用 active turn id 填 `expectedTurnId`；ACP 扩展 adapter 自行映射。 |
+| `Extension(SteerTurn)` | conversation `Active` 且 `turn.steer` 支持 | 非 active、能力不支持、当前 turn 不可 steer | Codex 用 active turn id 填 `expectedTurnId`；ACP 扩展 adapter 自行映射。 |
 | `CancelTurn` | `Active` | `Idle/Closed` | active 有 open elicitation 时先标 cancelling，不主动 drop。 |
 | `ResolveElicitation` | elicitation `Open` | resolved/cancelled/stale | cancelling 下 ACP permission 必须回复 cancelled。 |
 | `UpdateContext` | `Idle` 或 `Active` | `Closed/Faulted` | active 时只承诺后续步骤或后续 turn 生效。 |
-| `MutateHistory` | 通常 `Idle` | `Active/Cancelling/Hydrating` | rollback/compact 不应与 active turn 并行。 |
-| `Unsubscribe` | loaded/subscribed | unknown remote | observer only。 |
+| `Extension(MutateHistory)` | 通常 `Idle` | `Active/Cancelling/Hydrating` | rollback/compact 不应与 active turn 并行。 |
+| `Extension(Unsubscribe)` | loaded/subscribed | unknown remote | observer only。 |
 
 ## 典型转移序列
 
@@ -760,7 +768,7 @@ UI StartTurn(input)
   -> thread/status/changed active([])
   -> Conversation Active
 
-UI SteerTurn(extra input)
+UI Extension(SteerTurn(extra input))
   -> turn/steer(expectedTurnId = active turnId)
   -> TurnSteered
   -> deltas/items continue on same turn
@@ -788,7 +796,7 @@ UI CancelTurn
 ### Codex: rollback
 
 ```text
-UI MutateHistory(Rollback { num_turns })
+UI Extension(MutateHistory(Rollback { num_turns }))
   -> precondition: Conversation Idle
   -> thread/rollback
   -> HistoryMutationStarted(Rollback)
@@ -825,7 +833,7 @@ Reducer 应该用 table-driven unit tests 覆盖，不依赖真实协议 transpo
 - Codex normal turn: `turn/started -> item/delta -> turn/completed -> idle`。
 - Codex approval: ServerRequest 打开 elicitation，decision 后 `serverRequest/resolved` 关闭。
 - Codex steer: active turn id 匹配成功，不匹配保持原状态。
-- Capability guard: ACP 标准 adapter 的 `SteerTurn` 返回 `CapabilityUnsupported`；ACP 扩展 adapter 声明 steer 后可以通过同一 reducer 转移到 `TurnSteered`。
+- Capability guard: ACP 标准 adapter 的 `Extension(SteerTurn)` 返回 `CapabilityUnsupported`；ACP 扩展 adapter 声明 steer 后可以通过同一 reducer 转移到 `TurnSteered`。
 - Codex rollback: history 替换且 `workspace_reverted=false`。
 - stale events: terminal 后 delta 不复活 turn。
 - context scope: Codex `turn/start` overrides 写 `TurnAndFuture`，ACP config 写 `Conversation`。

@@ -1,6 +1,6 @@
 use crate::adapters::acp::AcpAdapter;
 use crate::adapters::codex::CodexAdapter;
-use crate::command::{EngineCommand, TurnOverrides, UserInput};
+use crate::command::{EngineCommand, EngineExtensionCommand, TurnOverrides, UserInput};
 use crate::error::EngineError;
 use crate::event::EngineEvent;
 use crate::ids::RemoteConversationId;
@@ -23,11 +23,13 @@ fn acp_standard_steer_is_capability_unsupported() {
     start_turn(&mut engine, conversation_id.clone());
 
     let err = engine
-        .plan_command(EngineCommand::SteerTurn {
-            conversation_id,
-            turn_id: None,
-            input: vec![UserInput::text("extra")],
-        })
+        .plan_command(EngineCommand::Extension(
+            EngineExtensionCommand::SteerTurn {
+                conversation_id,
+                turn_id: None,
+                input: vec![UserInput::text("extra")],
+            },
+        ))
         .expect_err("standard ACP does not support steer");
     assert!(matches!(
         err,
@@ -48,11 +50,13 @@ fn acp_extension_steer_uses_extension_method() {
     let turn_id = start_turn(&mut engine, conversation_id.clone());
 
     let plan = engine
-        .plan_command(EngineCommand::SteerTurn {
-            conversation_id,
-            turn_id: None,
-            input: vec![UserInput::text("extra")],
-        })
+        .plan_command(EngineCommand::Extension(
+            EngineExtensionCommand::SteerTurn {
+                conversation_id,
+                turn_id: None,
+                input: vec![UserInput::text("extra")],
+            },
+        ))
         .expect("extension steer");
     assert_eq!(plan.turn_id, Some(turn_id));
     assert!(matches!(
@@ -114,11 +118,13 @@ fn codex_standard_steer_uses_turn_steer() {
     accept_codex_turn(&mut engine, conversation_id.clone(), turn_id);
 
     let plan = engine
-        .plan_command(EngineCommand::SteerTurn {
-            conversation_id,
-            turn_id: None,
-            input: vec![UserInput::text("extra")],
-        })
+        .plan_command(EngineCommand::Extension(
+            EngineExtensionCommand::SteerTurn {
+                conversation_id,
+                turn_id: None,
+                input: vec![UserInput::text("extra")],
+            },
+        ))
         .expect("codex steer");
     assert!(matches!(
         &plan.effects[0].method,

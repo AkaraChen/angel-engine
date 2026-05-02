@@ -212,11 +212,13 @@ fn codex_rejects_steer_and_cancel_before_remote_turn_id_without_mutation() {
     let pending_len = engine.pending.requests.len();
 
     let steer = engine
-        .plan_command(EngineCommand::SteerTurn {
-            conversation_id: conversation_id.clone(),
-            turn_id: None,
-            input: vec![UserInput::text("too early")],
-        })
+        .plan_command(EngineCommand::Extension(
+            EngineExtensionCommand::SteerTurn {
+                conversation_id: conversation_id.clone(),
+                turn_id: None,
+                input: vec![UserInput::text("too early")],
+            },
+        ))
         .expect_err("steer needs remote turn id");
     assert!(matches!(steer, EngineError::InvalidState { .. }));
 

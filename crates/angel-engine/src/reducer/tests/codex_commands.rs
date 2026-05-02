@@ -1,5 +1,5 @@
 use crate::adapters::codex::CodexAdapter;
-use crate::command::EngineCommand;
+use crate::command::{EngineCommand, EngineExtensionCommand};
 use crate::ids::RemoteConversationId;
 use crate::protocol::{CodexMethod, ProtocolFlavor, ProtocolMethod};
 
@@ -17,10 +17,12 @@ fn codex_shell_command_uses_thread_shell_command() {
     );
 
     let plan = engine
-        .plan_command(EngineCommand::RunShellCommand {
-            conversation_id,
-            command: "echo hello".to_string(),
-        })
+        .plan_command(EngineCommand::Extension(
+            EngineExtensionCommand::RunShellCommand {
+                conversation_id,
+                command: "echo hello".to_string(),
+            },
+        ))
         .expect("codex shell command");
     assert!(matches!(
         &plan.effects[0].method,

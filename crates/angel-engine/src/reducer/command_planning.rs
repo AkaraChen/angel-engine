@@ -1,4 +1,4 @@
-use crate::command::EngineCommand;
+use crate::command::{EngineCommand, EngineExtensionCommand};
 use crate::error::EngineError;
 
 use super::{AngelEngine, CommandPlan};
@@ -13,19 +13,11 @@ impl AngelEngine {
             }
             EngineCommand::StartConversation { params } => self.plan_start_conversation(params),
             EngineCommand::ResumeConversation { target } => self.plan_resume_conversation(target),
-            EngineCommand::ForkConversation { source, at } => {
-                self.plan_fork_conversation(source, at)
-            }
             EngineCommand::StartTurn {
                 conversation_id,
                 input,
                 overrides,
             } => self.plan_start_turn(conversation_id, input, overrides),
-            EngineCommand::SteerTurn {
-                conversation_id,
-                turn_id,
-                input,
-            } => self.plan_steer_turn(conversation_id, turn_id, input),
             EngineCommand::CancelTurn {
                 conversation_id,
                 turn_id,
@@ -39,24 +31,41 @@ impl AngelEngine {
                 conversation_id,
                 patch,
             } => self.plan_update_context(conversation_id, patch),
-            EngineCommand::MutateHistory {
+            EngineCommand::Extension(extension) => self.plan_extension_command(extension),
+        }
+    }
+
+    fn plan_extension_command(
+        &mut self,
+        command: EngineExtensionCommand,
+    ) -> Result<CommandPlan, EngineError> {
+        match command {
+            EngineExtensionCommand::ForkConversation { source, at } => {
+                self.plan_fork_conversation(source, at)
+            }
+            EngineExtensionCommand::SteerTurn {
+                conversation_id,
+                turn_id,
+                input,
+            } => self.plan_steer_turn(conversation_id, turn_id, input),
+            EngineExtensionCommand::MutateHistory {
                 conversation_id,
                 op,
             } => self.plan_mutate_history(conversation_id, op),
-            EngineCommand::RunShellCommand {
+            EngineExtensionCommand::RunShellCommand {
                 conversation_id,
                 command,
             } => self.plan_run_shell_command(conversation_id, command),
-            EngineCommand::ArchiveConversation { conversation_id } => {
+            EngineExtensionCommand::ArchiveConversation { conversation_id } => {
                 self.plan_archive_conversation(conversation_id, true)
             }
-            EngineCommand::UnarchiveConversation { conversation_id } => {
+            EngineExtensionCommand::UnarchiveConversation { conversation_id } => {
                 self.plan_archive_conversation(conversation_id, false)
             }
-            EngineCommand::CloseConversation { conversation_id } => {
+            EngineExtensionCommand::CloseConversation { conversation_id } => {
                 self.plan_close_conversation(conversation_id)
             }
-            EngineCommand::Unsubscribe { conversation_id } => {
+            EngineExtensionCommand::Unsubscribe { conversation_id } => {
                 self.plan_unsubscribe(conversation_id)
             }
         }

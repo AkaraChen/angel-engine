@@ -1,5 +1,5 @@
 use crate::adapters::codex::CodexAdapter;
-use crate::command::EngineCommand;
+use crate::command::{EngineCommand, EngineExtensionCommand};
 use crate::event::EngineEvent;
 use crate::ids::RemoteConversationId;
 use crate::protocol::{CodexMethod, ProtocolFlavor, ProtocolMethod};
@@ -19,10 +19,12 @@ fn codex_rollback_marks_workspace_not_reverted() {
     );
 
     let plan = engine
-        .plan_command(EngineCommand::MutateHistory {
-            conversation_id: conversation_id.clone(),
-            op: HistoryMutationOp::Rollback { num_turns: 1 },
-        })
+        .plan_command(EngineCommand::Extension(
+            EngineExtensionCommand::MutateHistory {
+                conversation_id: conversation_id.clone(),
+                op: HistoryMutationOp::Rollback { num_turns: 1 },
+            },
+        ))
         .expect("rollback");
     assert!(matches!(
         &plan.effects[0].method,

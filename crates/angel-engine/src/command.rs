@@ -16,19 +16,10 @@ pub enum EngineCommand {
     ResumeConversation {
         target: ResumeTarget,
     },
-    ForkConversation {
-        source: ConversationId,
-        at: Option<TurnId>,
-    },
     StartTurn {
         conversation_id: ConversationId,
         input: Vec<UserInput>,
         overrides: TurnOverrides,
-    },
-    SteerTurn {
-        conversation_id: ConversationId,
-        turn_id: Option<TurnId>,
-        input: Vec<UserInput>,
     },
     CancelTurn {
         conversation_id: ConversationId,
@@ -42,6 +33,20 @@ pub enum EngineCommand {
     UpdateContext {
         conversation_id: ConversationId,
         patch: ContextPatch,
+    },
+    Extension(EngineExtensionCommand),
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum EngineExtensionCommand {
+    ForkConversation {
+        source: ConversationId,
+        at: Option<TurnId>,
+    },
+    SteerTurn {
+        conversation_id: ConversationId,
+        turn_id: Option<TurnId>,
+        input: Vec<UserInput>,
     },
     MutateHistory {
         conversation_id: ConversationId,

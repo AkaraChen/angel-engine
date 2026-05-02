@@ -2,7 +2,10 @@ use std::error::Error;
 use std::io::{self, Write};
 use std::time::Duration;
 
-use angel_engine::{EngineCommand, ProtocolFlavor, ProtocolTransport, TurnOverrides, UserInput};
+use angel_engine::{
+    EngineCommand, EngineExtensionCommand, ProtocolFlavor, ProtocolTransport, TurnOverrides,
+    UserInput,
+};
 
 use super::ProtocolShell;
 
@@ -62,10 +65,12 @@ where
 
     fn run_shell_command(&mut self, command: String) -> Result<(), Box<dyn Error>> {
         let conversation_id = self.selected_conversation()?;
-        let plan = self.engine.plan_command(EngineCommand::RunShellCommand {
-            conversation_id,
-            command,
-        })?;
+        let plan = self.engine.plan_command(EngineCommand::Extension(
+            EngineExtensionCommand::RunShellCommand {
+                conversation_id,
+                command,
+            },
+        ))?;
         let request_id = plan.request_id.clone();
         self.send_plan(plan)?;
 
