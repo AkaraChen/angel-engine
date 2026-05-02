@@ -16,7 +16,6 @@ fn main() -> Result<(), Box<dyn Error>> {
         protocol: ProtocolFlavor::CodexAppServer,
         client_name: "codex-shell-demo",
         client_title: "Codex Shell Demo",
-        service_name: "codex-shell-demo",
         process_label: "codex",
         banner: "codex-shell demo",
         prompt: "codex-shell> ",

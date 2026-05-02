@@ -16,3 +16,9 @@ pub struct AuthMethod {
     pub id: crate::AuthMethodId,
     pub label: String,
 }
+
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct ConversationDiscoveryState {
+    pub cursor: Option<String>,
+    pub next_cursor: Option<String>,
+}

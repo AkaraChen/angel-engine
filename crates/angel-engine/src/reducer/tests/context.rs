@@ -116,6 +116,40 @@ fn acp_context_update_uses_advertised_effort_config_option() {
 }
 
 #[test]
+fn acp_start_turn_rejects_unsupported_turn_overrides() {
+    let adapter = AcpAdapter::standard();
+    let mut engine = engine_with(ProtocolFlavor::Acp, adapter.capabilities());
+    let conversation_id = insert_ready_conversation(
+        &mut engine,
+        "conv",
+        RemoteConversationId::AcpSession("sess".to_string()),
+        adapter.capabilities(),
+    );
+
+    let error = engine
+        .plan_command(EngineCommand::StartTurn {
+            conversation_id: conversation_id.clone(),
+            input: vec![UserInput::text("hello")],
+            overrides: TurnOverrides {
+                context: ContextPatch::one(ContextUpdate::Model {
+                    scope: ContextScope::CurrentTurn,
+                    model: Some("gpt-5.5".to_string()),
+                }),
+                user_message_id: None,
+            },
+        })
+        .expect_err("turn overrides should be gated");
+
+    assert!(matches!(
+        error,
+        crate::EngineError::CapabilityUnsupported { capability }
+            if capability == "context.turn_overrides"
+    ));
+    let conversation = engine.conversations.get(&conversation_id).unwrap();
+    assert_eq!(conversation.context.model.effective(), None);
+}
+
+#[test]
 fn codex_start_turn_includes_sticky_context_overrides() {
     let adapter = CodexAdapter::app_server();
     let mut engine = engine_with(ProtocolFlavor::CodexAppServer, adapter.capabilities());

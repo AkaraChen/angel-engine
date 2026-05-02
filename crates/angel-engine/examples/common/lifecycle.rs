@@ -64,9 +64,7 @@ where
         let plan = self.engine.plan_command(EngineCommand::StartConversation {
             params: StartConversationParams {
                 cwd: Some(std::env::current_dir()?.display().to_string()),
-                service_name: Some(self.config.service_name.to_string()),
                 context: Default::default(),
-                ephemeral: true,
             },
         })?;
         let conversation_id = plan.conversation_id.clone();

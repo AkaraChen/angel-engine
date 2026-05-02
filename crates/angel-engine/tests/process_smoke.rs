@@ -173,13 +173,11 @@ where
         }
     }
 
-    fn start_conversation(&mut self, service_name: &str) -> Result<ConversationId, Box<dyn Error>> {
+    fn start_conversation(&mut self) -> Result<ConversationId, Box<dyn Error>> {
         let plan = self.engine.plan_command(EngineCommand::StartConversation {
             params: StartConversationParams {
                 cwd: Some(std::env::current_dir()?.display().to_string()),
-                service_name: Some(service_name.to_string()),
                 context: ContextPatch::empty(),
-                ephemeral: true,
             },
         })?;
         let conversation_id = plan
@@ -280,7 +278,7 @@ fn codex_app_server_process_smoke_enters_and_exits_plan_mode() -> TestResult {
         capabilities,
     )?;
     process.initialize_runtime()?;
-    let conversation_id = process.start_conversation("codex-process-smoke")?;
+    let conversation_id = process.start_conversation()?;
     let model =
         codex_model(&process.engine, &conversation_id).unwrap_or_else(|| "gpt-5.5".to_string());
 
@@ -339,7 +337,7 @@ fn kimi_acp_process_smoke_enters_and_exits_plan_mode() -> TestResult {
     let mut process =
         AgentProcess::spawn("kimi", &["acp"], adapter, ProtocolFlavor::Acp, capabilities)?;
     process.initialize_runtime()?;
-    let conversation_id = process.start_conversation("kimi-process-smoke")?;
+    let conversation_id = process.start_conversation()?;
     assert!(
         process.engine.conversations[&conversation_id]
             .available_commands

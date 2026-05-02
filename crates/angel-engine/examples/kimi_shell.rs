@@ -16,7 +16,6 @@ fn main() -> Result<(), Box<dyn Error>> {
         protocol: ProtocolFlavor::Acp,
         client_name: "kimi-shell-demo",
         client_title: "Kimi Shell Demo",
-        service_name: "kimi-shell-demo",
         process_label: "kimi",
         banner: "kimi-shell demo",
         prompt: "kimi-shell> ",

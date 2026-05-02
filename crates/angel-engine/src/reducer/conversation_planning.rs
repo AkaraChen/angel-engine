@@ -1,6 +1,6 @@
 use std::collections::BTreeMap;
 
-use crate::command::{ResumeTarget, StartConversationParams};
+use crate::command::{DiscoverConversationsParams, ResumeTarget, StartConversationParams};
 use crate::error::EngineError;
 use crate::ids::{ConversationId, RemoteConversationId, TurnId};
 use crate::protocol::{CodexMethod, ProtocolEffect, ProtocolFlavor, ProtocolMethod};
@@ -51,16 +51,32 @@ impl AngelEngine {
         })
     }
 
-    pub(super) fn plan_discover_conversations(&mut self) -> Result<CommandPlan, EngineError> {
+    pub(super) fn plan_discover_conversations(
+        &mut self,
+        params: DiscoverConversationsParams,
+    ) -> Result<CommandPlan, EngineError> {
         self.ensure_runtime_available()?;
+        self.default_capabilities
+            .lifecycle
+            .list
+            .require("conversation.list")?;
         let request_id = self.next_request_id();
-        self.pending
-            .insert(request_id.clone(), PendingRequest::DiscoverConversations)?;
+        self.pending.insert(
+            request_id.clone(),
+            PendingRequest::DiscoverConversations {
+                params: params.clone(),
+            },
+        )?;
+        let mut effect = ProtocolEffect::new(self.protocol, self.method_list_conversations())
+            .request_id(request_id.clone());
+        if let Some(cwd) = params.cwd {
+            effect = effect.field("cwd", cwd);
+        }
+        if let Some(cursor) = params.cursor {
+            effect = effect.field("cursor", cursor);
+        }
         Ok(CommandPlan {
-            effects: vec![
-                ProtocolEffect::new(self.protocol, self.method_list_conversations())
-                    .request_id(request_id.clone()),
-            ],
+            effects: vec![effect],
             request_id: Some(request_id),
             ..CommandPlan::default()
         })
@@ -108,12 +124,6 @@ impl AngelEngine {
         if let Some(cwd) = params.cwd {
             effect = effect.field("cwd", cwd);
         }
-        if let Some(service_name) = params.service_name {
-            effect = effect.field("serviceName", service_name);
-        }
-        if params.ephemeral {
-            effect = effect.field("ephemeral", "true");
-        }
         for (key, value) in codex_context_fields {
             effect = effect.field(key, value);
         }
@@ -130,92 +140,82 @@ impl AngelEngine {
         target: ResumeTarget,
     ) -> Result<CommandPlan, EngineError> {
         self.ensure_runtime_available()?;
-        let (conversation_id, remote, op, method, fields) = match target {
+        let (conversation_id, remote, hydrate, mut fields, reuse_existing) = match target {
             ResumeTarget::Conversation(conversation_id) => {
                 let conversation = self.conversation(&conversation_id)?;
                 let remote = conversation.remote.clone();
+                let remote_id =
+                    remote
+                        .as_protocol_id()
+                        .ok_or_else(|| EngineError::InvalidState {
+                            expected: "remote conversation id".to_string(),
+                            actual: format!("{:?}", remote),
+                        })?;
+                let mut fields = BTreeMap::new();
+                fields.insert("remoteConversationId".to_string(), remote_id.to_string());
                 (
                     conversation_id,
                     remote,
-                    ProvisionOp::Resume,
-                    self.method_resume_conversation(false),
-                    BTreeMap::new(),
+                    matches!(conversation.lifecycle, ConversationLifecycle::Discovered),
+                    fields,
+                    true,
                 )
             }
-            ResumeTarget::AcpSession {
-                session_id,
-                load_history,
-            } => {
+            ResumeTarget::Remote { id, hydrate } => {
                 let conversation_id = self.next_conversation_id();
                 let mut fields = BTreeMap::new();
-                fields.insert("sessionId".to_string(), session_id.clone());
-                (
-                    conversation_id,
-                    RemoteConversationId::AcpSession(session_id),
-                    if load_history {
-                        ProvisionOp::Load
-                    } else {
-                        ProvisionOp::Resume
-                    },
-                    self.method_resume_conversation(load_history),
-                    fields,
-                )
-            }
-            ResumeTarget::CodexThread { thread_id } => {
-                let conversation_id = self.next_conversation_id();
-                let mut fields = BTreeMap::new();
-                fields.insert("threadId".to_string(), thread_id.clone());
-                (
-                    conversation_id,
-                    RemoteConversationId::CodexThread(thread_id),
-                    ProvisionOp::Resume,
-                    self.method_resume_conversation(false),
-                    fields,
-                )
-            }
-            ResumeTarget::Path(path) => {
-                let conversation_id = self.next_conversation_id();
-                let mut fields = BTreeMap::new();
-                fields.insert("path".to_string(), path.clone());
-                (
-                    conversation_id,
-                    RemoteConversationId::Pending(path),
-                    ProvisionOp::Resume,
-                    self.method_resume_conversation(false),
-                    fields,
-                )
-            }
-            ResumeTarget::History(history_id) => {
-                let conversation_id = self.next_conversation_id();
-                let mut fields = BTreeMap::new();
-                fields.insert("history".to_string(), history_id.clone());
-                (
-                    conversation_id,
-                    RemoteConversationId::Pending(history_id),
-                    ProvisionOp::Resume,
-                    self.method_resume_conversation(false),
-                    fields,
-                )
+                fields.insert("remoteConversationId".to_string(), id.clone());
+                let remote = match self.protocol {
+                    ProtocolFlavor::Acp => RemoteConversationId::AcpSession(id),
+                    ProtocolFlavor::CodexAppServer => RemoteConversationId::CodexThread(id),
+                };
+                (conversation_id, remote, hydrate, fields, false)
             }
         };
 
-        let request_id = self.next_request_id();
-        let source = if matches!(op, ProvisionOp::Load) {
-            HydrationSource::AcpLoad
+        let capabilities = if reuse_existing {
+            &self.conversation(&conversation_id)?.capabilities
         } else {
-            HydrationSource::CodexResume
+            &self.default_capabilities
         };
-        let state = ConversationState::new(
-            conversation_id.clone(),
-            remote,
-            if matches!(op, ProvisionOp::Load) {
-                ConversationLifecycle::Hydrating { source }
-            } else {
-                ConversationLifecycle::Provisioning { op }
-            },
-            self.default_capabilities.clone(),
-        );
-        self.conversations.insert(conversation_id.clone(), state);
+        if hydrate {
+            capabilities.lifecycle.load.require("conversation.load")?;
+        } else {
+            capabilities
+                .lifecycle
+                .resume
+                .require("conversation.resume")?;
+        }
+
+        let request_id = self.next_request_id();
+        let op = if hydrate {
+            ProvisionOp::Load
+        } else {
+            ProvisionOp::Resume
+        };
+        let lifecycle = if hydrate {
+            ConversationLifecycle::Hydrating {
+                source: match self.protocol {
+                    ProtocolFlavor::Acp => HydrationSource::AcpLoad,
+                    ProtocolFlavor::CodexAppServer => HydrationSource::CodexResume,
+                },
+            }
+        } else {
+            ConversationLifecycle::Provisioning { op }
+        };
+        if reuse_existing {
+            let conversation = self.conversation_mut(&conversation_id)?;
+            conversation.remote = remote;
+            conversation.lifecycle = lifecycle;
+        } else {
+            let state = ConversationState::new(
+                conversation_id.clone(),
+                remote,
+                lifecycle,
+                self.default_capabilities.clone(),
+            );
+            self.conversations.insert(conversation_id.clone(), state);
+        }
         self.selected = Some(conversation_id.clone());
         self.pending.insert(
             request_id.clone(),
@@ -224,9 +224,11 @@ impl AngelEngine {
             },
         )?;
 
+        let method = self.method_resume_conversation(hydrate);
         let mut effect = ProtocolEffect::new(self.protocol, method)
             .request_id(request_id.clone())
             .conversation_id(conversation_id.clone());
+        fields.insert("hydrate".to_string(), hydrate.to_string());
         for (key, value) in fields {
             effect = effect.field(key, value);
         }

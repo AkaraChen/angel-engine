@@ -16,7 +16,6 @@ fn main() -> Result<(), Box<dyn Error>> {
         protocol: ProtocolFlavor::Acp,
         client_name: "opencode-shell-demo",
         client_title: "OpenCode Shell Demo",
-        service_name: "opencode-shell-demo",
         process_label: "opencode",
         banner: "opencode-shell demo",
         prompt: "opencode-shell> ",

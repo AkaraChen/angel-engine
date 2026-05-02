@@ -53,7 +53,13 @@ impl AcpAdapter {
             })),
             ProtocolMethod::Acp(AcpMethod::SessionLoad)
             | ProtocolMethod::Acp(AcpMethod::SessionResume) => Ok(json!({
-                "sessionId": effect.payload.fields.get("sessionId").cloned().unwrap_or_default(),
+                "sessionId": effect
+                    .payload
+                    .fields
+                    .get("remoteConversationId")
+                    .or_else(|| effect.payload.fields.get("sessionId"))
+                    .cloned()
+                    .unwrap_or_default(),
             })),
             ProtocolMethod::Acp(AcpMethod::SessionPrompt) => Ok(json!({
                 "sessionId": acp_session_id(engine, effect)?,
@@ -68,7 +74,16 @@ impl AcpAdapter {
             | ProtocolMethod::Acp(AcpMethod::SessionClose) => Ok(json!({
                 "sessionId": acp_session_id(engine, effect)?,
             })),
-            ProtocolMethod::Acp(AcpMethod::SessionList) => Ok(json!({})),
+            ProtocolMethod::Acp(AcpMethod::SessionList) => {
+                let mut params = serde_json::Map::new();
+                if let Some(cwd) = effect.payload.fields.get("cwd") {
+                    params.insert("cwd".to_string(), json!(cwd));
+                }
+                if let Some(cursor) = effect.payload.fields.get("cursor") {
+                    params.insert("cursor".to_string(), json!(cursor));
+                }
+                Ok(Value::Object(params))
+            }
             ProtocolMethod::Acp(AcpMethod::SetSessionConfigOption) => Ok(json!({
                 "sessionId": acp_session_id(engine, effect)?,
                 "configId": effect.payload.fields.get("configId").cloned().unwrap_or_default(),
@@ -294,6 +309,41 @@ mod tests {
         assert!(params["clientCapabilities"].get("elicitation").is_some());
         assert!(params["clientCapabilities"].get("fs").is_none());
         assert!(params["clientCapabilities"].get("terminal").is_none());
+    }
+
+    #[test]
+    fn session_list_encodes_common_discovery_params() {
+        let adapter = AcpAdapter::standard();
+        let engine = AngelEngine::new(crate::ProtocolFlavor::Acp, adapter.capabilities());
+        let effect = crate::ProtocolEffect::new(
+            crate::ProtocolFlavor::Acp,
+            ProtocolMethod::Acp(AcpMethod::SessionList),
+        )
+        .field("cwd", "/tmp/project")
+        .field("cursor", "opaque");
+
+        let params = adapter
+            .encode_params(&engine, &effect, &TransportOptions::default())
+            .expect("session list params");
+
+        assert_eq!(params, json!({"cwd": "/tmp/project", "cursor": "opaque"}));
+    }
+
+    #[test]
+    fn session_resume_encodes_common_remote_conversation_id() {
+        let adapter = AcpAdapter::standard();
+        let engine = AngelEngine::new(crate::ProtocolFlavor::Acp, adapter.capabilities());
+        let effect = crate::ProtocolEffect::new(
+            crate::ProtocolFlavor::Acp,
+            ProtocolMethod::Acp(AcpMethod::SessionResume),
+        )
+        .field("remoteConversationId", "sess");
+
+        let params = adapter
+            .encode_params(&engine, &effect, &TransportOptions::default())
+            .expect("session resume params");
+
+        assert_eq!(params, json!({"sessionId": "sess"}));
     }
 }
 

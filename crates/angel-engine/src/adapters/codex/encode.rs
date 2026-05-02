@@ -40,13 +40,19 @@ impl CodexAdapter {
                         effect
                             .payload
                             .fields
-                            .get("threadId")
+                            .get("remoteConversationId")
+                            .or_else(|| effect.payload.fields.get("threadId"))
                             .cloned()
                             .unwrap_or_default()
                     ),
                 );
-                if let Some(path) = effect.payload.fields.get("path") {
-                    params.insert("path".to_string(), json!(path));
+                if effect
+                    .payload
+                    .fields
+                    .get("hydrate")
+                    .is_some_and(|hydrate| hydrate == "false")
+                {
+                    params.insert("excludeTurns".to_string(), json!(true));
                 }
                 params.insert("persistExtendedHistory".to_string(), json!(true));
                 Ok(Value::Object(params))
@@ -109,7 +115,16 @@ impl CodexAdapter {
                 "threadId": codex_thread_id(engine, effect)?,
             })),
             ProtocolMethod::Codex(CodexMethod::ConfigWrite) => Ok(json!({})),
-            ProtocolMethod::Codex(CodexMethod::ThreadList) => Ok(json!({})),
+            ProtocolMethod::Codex(CodexMethod::ThreadList) => {
+                let mut params = serde_json::Map::new();
+                if let Some(cwd) = effect.payload.fields.get("cwd") {
+                    params.insert("cwd".to_string(), json!(cwd));
+                }
+                if let Some(cursor) = effect.payload.fields.get("cursor") {
+                    params.insert("cursor".to_string(), json!(cursor));
+                }
+                Ok(Value::Object(params))
+            }
             ProtocolMethod::Codex(CodexMethod::Initialized) => Ok(Value::Null),
             ProtocolMethod::Codex(CodexMethod::ServerRequestResponse) => {
                 Err(crate::EngineError::InvalidCommand {
@@ -282,5 +297,59 @@ fn sandbox_policy(policy: &str) -> Option<Value> {
             Some(json!({ "type": "dangerFullAccess" }))
         }
         _ => None,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn thread_list_encodes_common_discovery_params() {
+        let adapter = CodexAdapter::app_server();
+        let engine = AngelEngine::new(
+            crate::ProtocolFlavor::CodexAppServer,
+            adapter.capabilities(),
+        );
+        let effect = crate::ProtocolEffect::new(
+            crate::ProtocolFlavor::CodexAppServer,
+            ProtocolMethod::Codex(CodexMethod::ThreadList),
+        )
+        .field("cwd", "/tmp/project")
+        .field("cursor", "opaque");
+
+        let params = adapter
+            .encode_params(&engine, &effect, &TransportOptions::default())
+            .expect("thread list params");
+
+        assert_eq!(params, json!({"cwd": "/tmp/project", "cursor": "opaque"}));
+    }
+
+    #[test]
+    fn thread_resume_encodes_common_remote_conversation_id() {
+        let adapter = CodexAdapter::app_server();
+        let engine = AngelEngine::new(
+            crate::ProtocolFlavor::CodexAppServer,
+            adapter.capabilities(),
+        );
+        let effect = crate::ProtocolEffect::new(
+            crate::ProtocolFlavor::CodexAppServer,
+            ProtocolMethod::Codex(CodexMethod::ThreadResume),
+        )
+        .field("remoteConversationId", "thread")
+        .field("hydrate", "false");
+
+        let params = adapter
+            .encode_params(&engine, &effect, &TransportOptions::default())
+            .expect("thread resume params");
+
+        assert_eq!(
+            params,
+            json!({
+                "threadId": "thread",
+                "excludeTurns": true,
+                "persistExtendedHistory": true
+            })
+        );
     }
 }

@@ -12,8 +12,14 @@ use super::event_helpers::DeltaKind;
 impl AngelEngine {
     pub fn apply_event(&mut self, event: EngineEvent) -> Result<TransitionReport, EngineError> {
         match event {
-            EngineEvent::RuntimeNegotiated { capabilities } => {
+            EngineEvent::RuntimeNegotiated {
+                capabilities,
+                conversation_capabilities,
+            } => {
                 self.runtime = RuntimeState::Available { capabilities };
+                if let Some(conversation_capabilities) = conversation_capabilities {
+                    self.default_capabilities = conversation_capabilities;
+                }
                 Ok(TransitionReport::one(UiEvent::RuntimeChanged))
             }
             EngineEvent::RuntimeAuthRequired { methods } => {
@@ -27,16 +33,32 @@ impl AngelEngine {
             EngineEvent::ConversationDiscovered {
                 id,
                 remote,
+                context,
                 capabilities,
             } => {
-                let state = ConversationState::new(
-                    id.clone(),
-                    remote,
-                    ConversationLifecycle::Discovered,
-                    capabilities,
-                );
-                self.conversations.insert(id.clone(), state);
+                if let Some(conversation) = self.conversations.get_mut(&id) {
+                    conversation.remote = remote;
+                    conversation.capabilities = capabilities;
+                    conversation.context.apply_patch(context);
+                } else {
+                    let mut state = ConversationState::new(
+                        id.clone(),
+                        remote,
+                        ConversationLifecycle::Discovered,
+                        capabilities,
+                    );
+                    state.context.apply_patch(context);
+                    self.conversations.insert(id.clone(), state);
+                }
                 Ok(TransitionReport::one(UiEvent::ConversationChanged(id)))
+            }
+            EngineEvent::ConversationDiscoveryPage {
+                cursor,
+                next_cursor,
+            } => {
+                self.discovery.cursor = cursor;
+                self.discovery.next_cursor = next_cursor;
+                Ok(TransitionReport::one(UiEvent::DiscoveryChanged))
             }
             EngineEvent::ConversationProvisionStarted {
                 id,

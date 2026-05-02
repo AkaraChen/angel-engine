@@ -17,6 +17,13 @@ impl AngelEngine {
         {
             let conversation = self.conversation(&conversation_id)?;
             self.ensure_can_start_turn(conversation)?;
+            if !overrides.context.is_empty() {
+                conversation
+                    .capabilities
+                    .context
+                    .turn_overrides
+                    .require("context.turn_overrides")?;
+            }
         }
 
         let request_id = self.next_request_id();

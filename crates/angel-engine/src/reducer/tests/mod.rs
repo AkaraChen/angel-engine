@@ -9,6 +9,7 @@ use super::AngelEngine;
 
 mod codex_commands;
 mod context;
+mod discovery;
 mod elicitation;
 mod events;
 mod history;

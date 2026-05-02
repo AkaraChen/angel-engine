@@ -4,7 +4,7 @@ use crate::capabilities::ConversationCapabilities;
 use crate::error::EngineError;
 use crate::ids::{ConversationId, JsonRpcRequestId, TurnId};
 use crate::protocol::ProtocolFlavor;
-use crate::state::{ConversationState, RuntimeState};
+use crate::state::{ConversationDiscoveryState, ConversationState, RuntimeState};
 
 mod action_events;
 mod command_planning;
@@ -32,6 +32,7 @@ mod tests;
 #[derive(Clone, Debug)]
 pub struct AngelEngine {
     pub runtime: RuntimeState,
+    pub discovery: ConversationDiscoveryState,
     pub selected: Option<ConversationId>,
     pub conversations: BTreeMap<ConversationId, ConversationState>,
     pub pending: PendingTable,
@@ -48,6 +49,7 @@ impl AngelEngine {
     pub fn new(protocol: ProtocolFlavor, default_capabilities: ConversationCapabilities) -> Self {
         Self {
             runtime: RuntimeState::Offline,
+            discovery: ConversationDiscoveryState::default(),
             selected: None,
             conversations: BTreeMap::new(),
             pending: PendingTable::default(),

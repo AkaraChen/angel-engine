@@ -8,7 +8,9 @@ impl AngelEngine {
         match command {
             EngineCommand::Initialize => self.plan_initialize(),
             EngineCommand::Authenticate { method } => self.plan_authenticate(method),
-            EngineCommand::DiscoverConversations => self.plan_discover_conversations(),
+            EngineCommand::DiscoverConversations { params } => {
+                self.plan_discover_conversations(params)
+            }
             EngineCommand::StartConversation { params } => self.plan_start_conversation(params),
             EngineCommand::ResumeConversation { target } => self.plan_resume_conversation(target),
             EngineCommand::ForkConversation { source, at } => {

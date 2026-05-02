@@ -21,7 +21,6 @@ pub struct ShellConfig {
     pub protocol: ProtocolFlavor,
     pub client_name: &'static str,
     pub client_title: &'static str,
-    pub service_name: &'static str,
     pub process_label: &'static str,
     pub banner: &'static str,
     pub prompt: &'static str,

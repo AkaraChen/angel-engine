@@ -14,6 +14,7 @@ use crate::state::{
 pub enum EngineEvent {
     RuntimeNegotiated {
         capabilities: RuntimeCapabilities,
+        conversation_capabilities: Option<ConversationCapabilities>,
     },
     RuntimeAuthRequired {
         methods: Vec<crate::AuthMethod>,
@@ -24,7 +25,12 @@ pub enum EngineEvent {
     ConversationDiscovered {
         id: ConversationId,
         remote: RemoteConversationId,
+        context: ContextPatch,
         capabilities: ConversationCapabilities,
+    },
+    ConversationDiscoveryPage {
+        cursor: Option<String>,
+        next_cursor: Option<String>,
     },
     ConversationProvisionStarted {
         id: ConversationId,
@@ -157,6 +163,7 @@ pub enum EngineEvent {
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum UiEvent {
     RuntimeChanged,
+    DiscoveryChanged,
     ConversationChanged(ConversationId),
     TurnChanged {
         conversation_id: ConversationId,

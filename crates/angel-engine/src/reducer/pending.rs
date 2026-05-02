@@ -1,5 +1,6 @@
 use std::collections::BTreeMap;
 
+use crate::DiscoverConversationsParams;
 use crate::error::EngineError;
 use crate::ids::{ConversationId, ElicitationId, JsonRpcRequestId, TurnId};
 use crate::state::ContextPatch;
@@ -33,7 +34,9 @@ impl PendingTable {
 pub enum PendingRequest {
     Initialize,
     Authenticate,
-    DiscoverConversations,
+    DiscoverConversations {
+        params: DiscoverConversationsParams,
+    },
     StartConversation {
         conversation_id: ConversationId,
     },

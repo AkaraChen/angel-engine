@@ -7,7 +7,9 @@ pub enum EngineCommand {
     Authenticate {
         method: crate::AuthMethodId,
     },
-    DiscoverConversations,
+    DiscoverConversations {
+        params: DiscoverConversationsParams,
+    },
     StartConversation {
         params: StartConversationParams,
     },
@@ -64,25 +66,21 @@ pub enum EngineCommand {
 }
 
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct DiscoverConversationsParams {
+    pub cwd: Option<String>,
+    pub cursor: Option<String>,
+}
+
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct StartConversationParams {
     pub cwd: Option<String>,
-    pub service_name: Option<String>,
     pub context: ContextPatch,
-    pub ephemeral: bool,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum ResumeTarget {
     Conversation(ConversationId),
-    AcpSession {
-        session_id: String,
-        load_history: bool,
-    },
-    CodexThread {
-        thread_id: String,
-    },
-    Path(String),
-    History(String),
+    Remote { id: String, hydrate: bool },
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]

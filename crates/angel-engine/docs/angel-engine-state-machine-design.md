@@ -345,14 +345,28 @@ Angel Engine reducer 只接受协议无关事件：
 
 ```rust
 pub enum EngineEvent {
-    RuntimeNegotiated { capabilities: RuntimeCapabilities },
+    RuntimeNegotiated {
+        capabilities: RuntimeCapabilities,
+        conversation_capabilities: Option<ConversationCapabilities>,
+    },
     RuntimeAuthRequired { methods: Vec<AuthMethod> },
     RuntimeFaulted { error: ErrorInfo },
 
-    ConversationDiscovered { id: ConversationId, remote: RemoteConversationId },
+    ConversationDiscovered {
+        id: ConversationId,
+        remote: RemoteConversationId,
+        context: ContextPatch,
+        capabilities: ConversationCapabilities,
+    },
+    ConversationDiscoveryPage { cursor: Option<String>, next_cursor: Option<String> },
     ConversationProvisionStarted { id: ConversationId, remote: RemoteConversationId, op: ProvisionOp },
     ConversationHydrationStarted { id: ConversationId, source: HydrationSource },
-    ConversationReady { id: ConversationId, context: EffectiveContext },
+    ConversationReady {
+        id: ConversationId,
+        remote: Option<RemoteConversationId>,
+        context: ContextPatch,
+        capabilities: Option<ConversationCapabilities>,
+    },
     ConversationStatusChanged { id: ConversationId, lifecycle: ConversationLifecycle },
     ConversationClosed { id: ConversationId },
 
@@ -386,7 +400,7 @@ UI 不直接调用 ACP/Codex 方法，而是提交 `EngineCommand`：
 pub enum EngineCommand {
     Initialize,
     Authenticate { method: AuthMethodId },
-    DiscoverConversations,
+    DiscoverConversations { params: DiscoverConversationsParams },
     StartConversation { params: StartConversationParams },
     ResumeConversation { target: ResumeTarget },
     ForkConversation { source: ConversationId, at: Option<TurnId> },
@@ -401,6 +415,8 @@ pub enum EngineCommand {
     Unsubscribe { conversation_id: ConversationId },
 }
 ```
+
+`ResumeTarget` 只暴露通用锚点：已发现的 `ConversationId`，或当前 adapter 可解释的 opaque remote id。`hydrate=true` 表示恢复时需要回放/返回历史；adapter 负责映射到 ACP `session/load` 或 Codex `thread/resume`。
 
 `plan_command()` 做三件事：
 
@@ -491,10 +507,10 @@ pub enum InvalidEventPolicy {
 | --- | --- | --- | --- |
 | `Initialize` | `initialize` request | transport connected | response -> `RuntimeNegotiated` 或 `RuntimeAuthRequired`。 |
 | `Authenticate` | `authenticate` request | `AwaitingAuth` | success -> `RuntimeNegotiated/Available`。 |
-| `DiscoverConversations` | `session/list` request | capability 支持 list | response -> 多个 `ConversationDiscovered`。 |
+| `DiscoverConversations` | `session/list` request | capability 支持 list | response -> 多个 `ConversationDiscovered` + `ConversationDiscoveryPage(next_cursor)`。 |
 | `StartConversation` | `session/new` request | runtime available | before send -> `ConversationProvisionStarted(New)`；response -> `ConversationReady`。 |
-| `ResumeConversation(load)` | `session/load` request | capability 支持 load | before send -> `Provisioning(Load)`；首个 replay -> `HydrationStarted`；response -> `ConversationReady`。 |
-| `ResumeConversation(resume)` | `session/resume` request | capability 支持 resume | before send -> `Provisioning(Resume)`；response -> `ConversationReady`。 |
+| `ResumeConversation(hydrate=true)` | `session/load` request | capability 支持 load | before send -> `Hydrating`；首个 replay -> `HydrationStarted`；response -> `ConversationReady`。 |
+| `ResumeConversation(hydrate=false)` | `session/resume` request | capability 支持 resume | before send -> `Provisioning(Resume)`；response -> `ConversationReady`。 |
 | `StartTurn` | `session/prompt` request | conversation `Idle` | before send -> synthetic `TurnStarted`；updates -> deltas/actions；response `stopReason` -> `TurnTerminal`。 |
 | `SteerTurn` | 无标准 ACP 等价；可由 ACP extension adapter 自定义映射 | conversation `Active` 且 `turn.steer` 支持 | 支持时 -> `TurnSteered`；不支持时返回 `CapabilityUnsupported`；不要退化成第二个 `session/prompt`。 |
 | `CancelTurn` | `session/cancel` notification | conversation `Active` | before send -> `Cancelling`；原 `prompt` response `cancelled` -> `TurnTerminal(Interrupted)`。 |
@@ -507,7 +523,7 @@ pub enum InvalidEventPolicy {
 
 | ACP 来源 | 统一事件 | 备注 |
 | --- | --- | --- |
-| `InitializeResponse` | `RuntimeNegotiated` 或 `RuntimeAuthRequired` | auth methods 非空且未认证时进入 AwaitingAuth。 |
+| `InitializeResponse` | `RuntimeNegotiated` 或 `RuntimeAuthRequired` | auth methods 非空且未认证时进入 AwaitingAuth；`agentCapabilities` 映射到 common lifecycle capabilities。 |
 | `NewSessionResponse/LoadSessionResponse/ResumeSessionResponse` | `ConversationReady` | 写入 session id、modes、config options。 |
 | `session/update: UserMessageChunk` | append hydrated/user message | 在 load replay 中写 history；在 active turn 中补 user echo。 |
 | `session/update: AgentMessageChunk` | `AssistantDelta` | 若 active turn 不存在，adapter 可合成 hydration message 或报错。 |
@@ -544,9 +560,9 @@ pub enum InvalidEventPolicy {
 | --- | --- | --- | --- |
 | `Initialize` | `initialize` request + `initialized` notification | transport connected | response -> `RuntimeNegotiated`。 |
 | `Authenticate` | `account/login/start` 或 transport auth | runtime/account 要求 | login notifications -> runtime/account context update。 |
-| `DiscoverConversations` | `thread/list`, `thread/loaded/list`, `thread/read` | runtime available | response -> `ConversationDiscovered` 或 hydrated state。 |
+| `DiscoverConversations` | `thread/list` request | runtime available | response -> 多个 `ConversationDiscovered` + `ConversationDiscoveryPage(next_cursor)`。 |
 | `StartConversation` | `thread/start` request | runtime available | response/thread notification -> `ConversationReady(Idle)`。 |
-| `ResumeConversation` | `thread/resume` request | known thread/path/history | response -> `ConversationReady`；若返回 turns 则 hydrate history。 |
+| `ResumeConversation` | `thread/resume` request | known conversation/remote id | response -> `ConversationReady`；`hydrate=false` 时 adapter 请求跳过 turns。 |
 | `ForkConversation` | `thread/fork` request | source thread exists | response -> new `ConversationReady`。 |
 | `StartTurn` | `turn/start` request | conversation `Idle` | response/`turn/started` -> `TurnStarted`；overrides -> `ContextUpdated(TurnAndFuture)`。 |
 | `SteerTurn` | `turn/steer` request | conversation `Active` 且 `turn.steer` 支持 | uses `expectedTurnId`; success -> `TurnSteered`。 |

@@ -34,9 +34,13 @@ impl AcpAdapter {
                             capabilities: crate::RuntimeCapabilities {
                                 name: "acp".to_string(),
                                 version: result.get("protocolVersion").map(Value::to_string),
-                                discovery: crate::CapabilitySupport::Supported,
+                                discovery: acp_session_capability(result, "list"),
                                 authentication,
                             },
+                            conversation_capabilities: Some(acp_conversation_capabilities(
+                                result,
+                                self.capabilities(),
+                            )),
                         })
                         .log(TransportLogKind::State, "ACP runtime initialized");
                 } else {
@@ -73,7 +77,7 @@ impl AcpAdapter {
                         id: conversation_id.clone(),
                         remote: Some(RemoteConversationId::AcpSession(session_id.to_string())),
                         context: ContextPatch::empty(),
-                        capabilities: Some(self.capabilities()),
+                        capabilities: Some(engine.default_capabilities.clone()),
                     })
                     .log(
                         TransportLogKind::State,
@@ -124,9 +128,13 @@ impl AcpAdapter {
                         capabilities: crate::RuntimeCapabilities {
                             name: "acp".to_string(),
                             version: result.get("protocolVersion").map(Value::to_string),
-                            discovery: crate::CapabilitySupport::Supported,
+                            discovery: acp_session_capability(result, "list"),
                             authentication: crate::CapabilitySupport::Supported,
                         },
+                        conversation_capabilities: Some(acp_conversation_capabilities(
+                            result,
+                            self.capabilities(),
+                        )),
                     })
                     .log(TransportLogKind::State, "ACP authentication accepted");
             }
@@ -151,8 +159,42 @@ impl AcpAdapter {
                 }
                 output = output.log(TransportLogKind::Receive, format!("response {id}"));
             }
-            PendingRequest::DiscoverConversations
-            | PendingRequest::ForkConversation { .. }
+            PendingRequest::DiscoverConversations { params } => {
+                for session in result
+                    .get("sessions")
+                    .and_then(Value::as_array)
+                    .into_iter()
+                    .flatten()
+                {
+                    let Some(session_id) = session.get("sessionId").and_then(Value::as_str) else {
+                        output = output.log(
+                            TransportLogKind::Warning,
+                            "ignoring ACP session/list entry without sessionId",
+                        );
+                        continue;
+                    };
+                    let remote = RemoteConversationId::AcpSession(session_id.to_string());
+                    output = output.event(EngineEvent::ConversationDiscovered {
+                        id: discovered_conversation_id(
+                            engine,
+                            &remote,
+                            format!("acp-session-{session_id}"),
+                        ),
+                        remote,
+                        context: acp_session_info_context(session),
+                        capabilities: engine.default_capabilities.clone(),
+                    });
+                }
+                output = output.event(EngineEvent::ConversationDiscoveryPage {
+                    cursor: params.cursor.clone(),
+                    next_cursor: result
+                        .get("nextCursor")
+                        .and_then(Value::as_str)
+                        .map(str::to_string),
+                });
+                output = output.log(TransportLogKind::Receive, format!("response {id}"));
+            }
+            PendingRequest::ForkConversation { .. }
             | PendingRequest::SteerTurn { .. }
             | PendingRequest::HistoryMutation { .. }
             | PendingRequest::RunShellCommand { .. } => {
@@ -194,6 +236,80 @@ impl AcpAdapter {
     }
 }
 
+fn acp_conversation_capabilities(
+    result: &Value,
+    mut capabilities: crate::ConversationCapabilities,
+) -> crate::ConversationCapabilities {
+    capabilities.lifecycle.list = acp_session_capability(result, "list");
+    capabilities.lifecycle.load = if result
+        .get("agentCapabilities")
+        .and_then(|capabilities| capabilities.get("loadSession"))
+        .and_then(Value::as_bool)
+        .unwrap_or(false)
+    {
+        crate::CapabilitySupport::Supported
+    } else {
+        crate::CapabilitySupport::Unsupported
+    };
+    capabilities.history.hydrate = capabilities.lifecycle.load.clone();
+    capabilities.lifecycle.resume = acp_session_capability(result, "resume");
+    capabilities.lifecycle.close = acp_session_capability(result, "close");
+    capabilities
+}
+
+fn acp_session_capability(result: &Value, name: &str) -> crate::CapabilitySupport {
+    if result
+        .get("agentCapabilities")
+        .and_then(|capabilities| capabilities.get("sessionCapabilities"))
+        .and_then(|capabilities| capabilities.get(name))
+        .is_some()
+    {
+        crate::CapabilitySupport::Supported
+    } else {
+        crate::CapabilitySupport::Unsupported
+    }
+}
+
+fn discovered_conversation_id(
+    engine: &AngelEngine,
+    remote: &RemoteConversationId,
+    fallback: String,
+) -> ConversationId {
+    engine
+        .conversations
+        .iter()
+        .find(|(_, conversation)| &conversation.remote == remote)
+        .map(|(id, _)| id.clone())
+        .unwrap_or_else(|| ConversationId::new(fallback))
+}
+
+fn acp_session_info_context(session: &Value) -> ContextPatch {
+    let mut updates = Vec::new();
+    if let Some(cwd) = session.get("cwd").and_then(Value::as_str) {
+        updates.push(crate::ContextUpdate::Cwd {
+            scope: crate::ContextScope::Conversation,
+            cwd: Some(cwd.to_string()),
+        });
+    }
+    if let Some(title) = session.get("title").and_then(Value::as_str)
+        && !title.is_empty()
+    {
+        updates.push(crate::ContextUpdate::Raw {
+            scope: crate::ContextScope::Conversation,
+            key: "conversation.title".to_string(),
+            value: title.to_string(),
+        });
+    }
+    if let Some(updated_at) = session.get("updatedAt").and_then(Value::as_str) {
+        updates.push(crate::ContextUpdate::Raw {
+            scope: crate::ContextScope::Conversation,
+            key: "conversation.updatedAt".to_string(),
+            value: updated_at.to_string(),
+        });
+    }
+    ContextPatch { updates }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -226,8 +342,109 @@ mod tests {
 
         assert!(matches!(
             output.events.as_slice(),
-            [EngineEvent::RuntimeNegotiated { capabilities }]
+            [EngineEvent::RuntimeNegotiated { capabilities, .. }]
                 if capabilities.authentication == crate::CapabilitySupport::Unsupported
+        ));
+    }
+
+    #[test]
+    fn initialize_maps_session_capabilities_to_common_capabilities() {
+        let adapter = AcpAdapter::standard();
+        let mut engine = AngelEngine::new(crate::ProtocolFlavor::Acp, adapter.capabilities());
+        let request_id = engine
+            .plan_command(crate::EngineCommand::Initialize)
+            .expect("initialize plan")
+            .request_id
+            .expect("request id");
+
+        let output = adapter
+            .decode_response(
+                &engine,
+                &request_id,
+                &json!({
+                    "protocolVersion": 1,
+                    "agentCapabilities": {
+                        "loadSession": true,
+                        "sessionCapabilities": {
+                            "list": {},
+                            "resume": {},
+                            "close": {}
+                        }
+                    }
+                }),
+            )
+            .expect("initialize response");
+
+        assert!(matches!(
+            output.events.as_slice(),
+            [EngineEvent::RuntimeNegotiated {
+                capabilities,
+                conversation_capabilities: Some(conversation_capabilities),
+            }] if capabilities.discovery == crate::CapabilitySupport::Supported
+                && conversation_capabilities.lifecycle.list == crate::CapabilitySupport::Supported
+                && conversation_capabilities.lifecycle.load == crate::CapabilitySupport::Supported
+                && conversation_capabilities.lifecycle.resume == crate::CapabilitySupport::Supported
+                && conversation_capabilities.lifecycle.close == crate::CapabilitySupport::Supported
+        ));
+    }
+
+    #[test]
+    fn session_list_discovers_sessions_with_common_metadata() {
+        let adapter = AcpAdapter::standard();
+        let mut engine = AngelEngine::with_available_runtime(
+            crate::ProtocolFlavor::Acp,
+            crate::RuntimeCapabilities::new("test"),
+            adapter.capabilities(),
+        );
+        let request_id = engine
+            .plan_command(crate::EngineCommand::DiscoverConversations {
+                params: crate::DiscoverConversationsParams::default(),
+            })
+            .expect("discover plan")
+            .request_id
+            .expect("request id");
+
+        let output = adapter
+            .decode_response(
+                &engine,
+                &request_id,
+                &json!({
+                    "sessions": [
+                        {
+                            "sessionId": "sess_1",
+                            "cwd": "/tmp/project",
+                            "title": "Fix tests",
+                            "updatedAt": "2026-05-03T10:00:00Z"
+                        }
+                    ],
+                    "nextCursor": "next-page"
+                }),
+            )
+            .expect("session list response");
+
+        assert!(matches!(
+            output.events.as_slice(),
+            [EngineEvent::ConversationDiscovered {
+                id,
+                remote: RemoteConversationId::AcpSession(session_id),
+                context,
+                ..
+            }, EngineEvent::ConversationDiscoveryPage {
+                cursor,
+                next_cursor,
+            }] if id.as_str() == "acp-session-sess_1"
+                && session_id == "sess_1"
+                && cursor.is_none()
+                && next_cursor.as_deref() == Some("next-page")
+                && context.updates.iter().any(|update| matches!(
+                    update,
+                    crate::ContextUpdate::Cwd { cwd: Some(cwd), .. } if cwd == "/tmp/project"
+                ))
+                && context.updates.iter().any(|update| matches!(
+                    update,
+                    crate::ContextUpdate::Raw { key, value, .. }
+                        if key == "conversation.title" && value == "Fix tests"
+                ))
         ));
     }
 }
