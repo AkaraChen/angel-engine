@@ -140,8 +140,7 @@ fn start_conversation_carries_only_common_create_fields() {
         plan.effects[0].payload.fields.get("cwd"),
         Some(&"/tmp/project".to_string())
     );
-    assert!(!plan.effects[0].payload.fields.contains_key("serviceName"));
-    assert!(!plan.effects[0].payload.fields.contains_key("ephemeral"));
+    assert_eq!(plan.effects[0].payload.fields.len(), 1);
 }
 
 #[test]
