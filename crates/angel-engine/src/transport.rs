@@ -317,7 +317,7 @@ pub fn client_info_json(client_info: &TransportClientInfo) -> Value {
     })
 }
 
-pub fn method_name(method: &ProtocolMethod) -> String {
+pub(crate) fn method_name(method: &ProtocolMethod) -> String {
     match method {
         ProtocolMethod::Acp(method) => acp_method_name(method).to_string(),
         ProtocolMethod::Codex(method) => codex_method_name(method).to_string(),
@@ -325,7 +325,7 @@ pub fn method_name(method: &ProtocolMethod) -> String {
     }
 }
 
-pub fn acp_method_name(method: &AcpMethod) -> &'static str {
+pub(crate) fn acp_method_name(method: &AcpMethod) -> &'static str {
     match method {
         AcpMethod::Initialize => "initialize",
         AcpMethod::Authenticate => "authenticate",
@@ -343,10 +343,9 @@ pub fn acp_method_name(method: &AcpMethod) -> &'static str {
     }
 }
 
-pub fn codex_method_name(method: &CodexMethod) -> &'static str {
+pub(crate) fn codex_method_name(method: &CodexMethod) -> &'static str {
     match method {
         CodexMethod::Initialize => "initialize",
-        CodexMethod::Initialized => "initialized",
         CodexMethod::ThreadList => "thread/list",
         CodexMethod::ThreadStart => "thread/start",
         CodexMethod::ThreadResume => "thread/resume",
@@ -361,11 +360,7 @@ pub fn codex_method_name(method: &CodexMethod) -> &'static str {
         CodexMethod::TurnSteer => "turn/steer",
         CodexMethod::TurnInterrupt => "turn/interrupt",
         CodexMethod::ServerRequestResponse => "serverRequest/response",
-        CodexMethod::ThreadGoalSet => "thread/goal/set",
-        CodexMethod::ThreadGoalClear => "thread/goal/clear",
-        CodexMethod::ThreadMemoryModeSet => "thread/memoryMode/set",
         CodexMethod::ThreadShellCommand => "thread/shellCommand",
-        CodexMethod::ConfigWrite => "config/value/write",
     }
 }
 

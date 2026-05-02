@@ -18,10 +18,6 @@ fn acp_plan_mode_round_trip_handles_question_plan_path_and_exit() {
             patch: set_mode("plan"),
         })
         .expect("enter plan mode");
-    assert!(matches!(
-        enter_plan.effects[0].method,
-        ProtocolMethod::Acp(AcpMethod::SetSessionMode)
-    ));
     let encoded_enter = adapter
         .encode_effect(
             &engine,
@@ -29,9 +25,10 @@ fn acp_plan_mode_round_trip_handles_question_plan_path_and_exit() {
             &TransportOptions::default(),
         )
         .expect("encode enter plan");
-    let JsonRpcMessage::Request { params, .. } = &encoded_enter.messages[0] else {
+    let JsonRpcMessage::Request { method, params, .. } = &encoded_enter.messages[0] else {
         panic!("expected session/set_mode request");
     };
+    assert_eq!(method, "session/set_mode");
     assert_eq!(params["sessionId"], json!("sess"));
     assert_eq!(params["modeId"], json!("plan"));
     decode_and_apply(
@@ -169,16 +166,13 @@ fn acp_plan_mode_round_trip_handles_question_plan_path_and_exit() {
             patch: set_mode("default"),
         })
         .expect("exit plan mode");
-    assert!(matches!(
-        exit_plan.effects[0].method,
-        ProtocolMethod::Acp(AcpMethod::SetSessionMode)
-    ));
     let encoded_exit = adapter
         .encode_effect(&engine, &exit_plan.effects[0], &TransportOptions::default())
         .expect("encode exit plan");
-    let JsonRpcMessage::Request { params, .. } = &encoded_exit.messages[0] else {
+    let JsonRpcMessage::Request { method, params, .. } = &encoded_exit.messages[0] else {
         panic!("expected session/set_mode request");
     };
+    assert_eq!(method, "session/set_mode");
     assert_eq!(params["modeId"], json!("default"));
     decode_and_apply(
         &adapter,

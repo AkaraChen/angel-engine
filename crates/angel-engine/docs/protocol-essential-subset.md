@@ -60,6 +60,8 @@ but they must translate those details into the subset above before they reach
 the reducer.
 
 - Encode uses `ProtocolEffect` plus engine state to produce protocol frames.
+  `ProtocolEffect` is opaque outside the crate; UI/application code should pass
+  it to an adapter rather than inspecting ACP or Codex method enums.
 - Decode turns protocol responses, requests, and notifications into
   `EngineEvent` values.
 - Capability differences are represented in `ConversationCapabilities`.

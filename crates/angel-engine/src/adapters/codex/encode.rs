@@ -107,14 +107,6 @@ impl CodexAdapter {
                 "threadId": codex_thread_id(engine, effect)?,
                 "command": effect.payload.fields.get("command").cloned().unwrap_or_default(),
             })),
-            ProtocolMethod::Codex(CodexMethod::ThreadGoalSet) => Ok(json!({
-                "threadId": codex_thread_id(engine, effect)?,
-            })),
-            ProtocolMethod::Codex(CodexMethod::ThreadGoalClear)
-            | ProtocolMethod::Codex(CodexMethod::ThreadMemoryModeSet) => Ok(json!({
-                "threadId": codex_thread_id(engine, effect)?,
-            })),
-            ProtocolMethod::Codex(CodexMethod::ConfigWrite) => Ok(json!({})),
             ProtocolMethod::Codex(CodexMethod::ThreadList) => {
                 let mut params = serde_json::Map::new();
                 if let Some(cwd) = effect.payload.fields.get("cwd") {
@@ -125,7 +117,6 @@ impl CodexAdapter {
                 }
                 Ok(Value::Object(params))
             }
-            ProtocolMethod::Codex(CodexMethod::Initialized) => Ok(Value::Null),
             ProtocolMethod::Codex(CodexMethod::ServerRequestResponse) => {
                 Err(crate::EngineError::InvalidCommand {
                     message:

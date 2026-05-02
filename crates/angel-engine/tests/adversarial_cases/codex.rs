@@ -87,10 +87,8 @@ fn codex_bad_server_request_returns_json_rpc_error_and_followup_can_run() {
     assert_error_message(&unknown_thread, "bad-2", -32602);
 
     let plan = start_turn(&mut engine, conversation_id, "still works");
-    assert!(matches!(
-        plan.effects[0].method,
-        ProtocolMethod::Codex(CodexMethod::TurnStart)
-    ));
+    let (_, method, _) = encode_request(&adapter, &engine, &plan.effects[0]);
+    assert_eq!(method, "turn/start");
 }
 
 #[test]
@@ -191,10 +189,8 @@ fn codex_start_turn_rpc_error_terminalizes_and_allows_next_turn() {
     ));
 
     let next = start_turn(&mut engine, conversation_id, "recover");
-    assert!(matches!(
-        next.effects[0].method,
-        ProtocolMethod::Codex(CodexMethod::TurnStart)
-    ));
+    let (_, method, _) = encode_request(&adapter, &engine, &next.effects[0]);
+    assert_eq!(method, "turn/start");
 }
 
 #[test]

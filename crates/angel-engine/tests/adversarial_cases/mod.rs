@@ -72,6 +72,20 @@ fn decode_and_apply<T: ProtocolTransport>(
     output
 }
 
+fn encode_request<T: ProtocolTransport>(
+    adapter: &T,
+    engine: &AngelEngine,
+    effect: &ProtocolEffect,
+) -> (JsonRpcRequestId, String, serde_json::Value) {
+    let output = adapter
+        .encode_effect(engine, effect, &TransportOptions::default())
+        .expect("encode effect");
+    let Some(JsonRpcMessage::Request { id, method, params }) = output.messages.first() else {
+        panic!("expected JSON-RPC request");
+    };
+    (id.clone(), method.clone(), params.clone())
+}
+
 fn assert_error_message(output: &TransportOutput, id: &str, code: i64) {
     assert!(matches!(
         output.messages.as_slice(),

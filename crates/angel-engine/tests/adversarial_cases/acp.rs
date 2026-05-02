@@ -118,36 +118,28 @@ fn acp_bad_model_and_effort_updates_are_server_validated_without_local_context_m
         .expect("acp context update");
 
     assert_eq!(plan.effects.len(), 2);
-    assert_eq!(
-        plan.effects[0].payload.fields.get("value"),
-        Some(&"not-a-real-model".to_string())
-    );
-    assert_eq!(
-        plan.effects[1].payload.fields.get("value"),
-        Some(&"sideways".to_string())
-    );
+    let encoded_effects = plan
+        .effects
+        .iter()
+        .map(|effect| encode_request(&adapter, &engine, effect))
+        .collect::<Vec<_>>();
+    assert_eq!(encoded_effects[0].2["value"], json!("not-a-real-model"));
+    assert_eq!(encoded_effects[1].2["value"], json!("sideways"));
     let conversation = &engine.conversations[&conversation_id];
     assert_eq!(conversation.context.model.effective(), None);
     assert_eq!(conversation.context.reasoning.effective(), None);
 
-    for effect in &plan.effects {
+    for (request_id, _, _) in encoded_effects {
         decode_and_apply(
             &adapter,
             &mut engine,
-            JsonRpcMessage::error(
-                effect.request_id.clone(),
-                -32602,
-                "invalid config value",
-                None,
-            ),
+            JsonRpcMessage::error(Some(request_id), -32602, "invalid config value", None),
         );
     }
 
     let next = start_turn(&mut engine, conversation_id, "recover");
-    assert!(matches!(
-        next.effects[0].method,
-        ProtocolMethod::Acp(AcpMethod::SessionPrompt)
-    ));
+    let (_, method, _) = encode_request(&adapter, &engine, &next.effects[0]);
+    assert_eq!(method, "session/prompt");
 }
 
 #[test]
@@ -216,8 +208,6 @@ fn acp_start_turn_rpc_error_terminalizes_and_allows_next_turn() {
     ));
 
     let next = start_turn(&mut engine, conversation_id, "recover");
-    assert!(matches!(
-        next.effects[0].method,
-        ProtocolMethod::Acp(AcpMethod::SessionPrompt)
-    ));
+    let (_, method, _) = encode_request(&adapter, &engine, &next.effects[0]);
+    assert_eq!(method, "session/prompt");
 }
