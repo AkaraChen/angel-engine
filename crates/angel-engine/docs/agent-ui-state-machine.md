@@ -162,11 +162,7 @@ UI 的主状态应该优先从这些通知维护：
 | `turn/interrupt` | 当前 turn in progress 时 | 中断 turn。返回 `{}`；之后应看到 `turn/completed`，turn 状态为 `interrupted`，thread 回到 idle。 |
 | `thread/compact/start` | thread 已加载时，通常在 idle 时触发最安全 | 请求上下文压缩。返回 `{}`；通过 `contextCompaction` item 或 `thread/compacted` 通知观察结果。 |
 | `thread/rollback` | 需要回滚对话历史时 | 丢弃末尾 `numTurns` 个 turns，返回更新后的 thread。注意只改历史，不会 revert agent 已经写入工作区的文件。 |
-| `thread/memoryMode/set` | thread 已加载时 | 设置 thread memory 为 `enabled` 或 `disabled`，返回 `{}`。 |
-| `memory/reset` | 需要清空记忆状态时 | 重置 memory，返回 `{}`。影响范围按 Codex 实现处理，UI 应视为全局/跨 thread 的高影响操作。 |
 | `thread/name/set` | thread 已加载时 | 设置用户可见名称；返回 `{}`，并可收到 `thread/name/updated`。 |
-| `thread/goal/set` | thread 已加载时 | 设置或更新 long-running goal 的 objective/status/token budget，返回 `goal`。 |
-| `thread/goal/clear` | thread 有 goal 时 | 清除 goal，返回 `cleared`；可收到 `thread/goal/cleared`。 |
 | `thread/metadata/update` | thread 已加载时 | 更新持久化 metadata，例如 Git 信息；不直接改变当前 turn。 |
 | `thread/archive` / `thread/unarchive` | 管理历史列表时 | 改变 thread 在列表中的可见/归档状态；archive 返回 `{}`，unarchive 返回 `thread`；对应通知 `thread/archived`、`thread/unarchived`。 |
 | `thread/unsubscribe` | UI 不再需要接收某 thread 流时 | 取消订阅该 thread 的后续通知，返回 unsubscribe status；不等于删除或 interrupt。 |
@@ -220,7 +216,7 @@ Codex app-server 有三种配置入口，UI 需要区分：
 4. 审批是 active 的子状态。看到 approval request 时，把 thread 标为 waiting；响应后等待 `serverRequest/resolved` 或 item 状态更新。
 5. 配置变更要记录作用域。区分本 turn、后续 turns、本 session、全局默认值，避免 UI 显示和实际行为错位。
 6. rollback 只回滚对话，不回滚文件系统。若 UI 提供“撤回到某 turn”，必须另行处理工作区 diff。
-7. 对 `thread/shellCommand`、`thread/inject_items`、`memory/reset` 这类高影响接口加明确确认或隐藏在开发工具里。
+7. 对 `thread/shellCommand`、`thread/inject_items` 这类高影响接口加明确确认或隐藏在开发工具里。
 
 ## 参考
 

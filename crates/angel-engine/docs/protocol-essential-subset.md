@@ -48,6 +48,8 @@ protocol mentions them:
 - ACP next-edit-suggestion APIs.
 - Generic JSON-RPC passthrough or raw protocol command surfaces.
 - Provider/account/login management methods that do not map to runtime auth.
+- Codex memory/goal/global config management methods without ACP-compatible
+  runtime semantics.
 - Protocol-specific schema generation, websocket serving, or transport proxy
   controls.
 - Any draft or RFD feature unless an adapter advertises it as a named extension

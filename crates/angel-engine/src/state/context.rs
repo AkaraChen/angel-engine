@@ -10,8 +10,6 @@ pub struct EffectiveContext {
     pub approvals: ScopedValue<ApprovalPolicy>,
     pub sandbox: ScopedValue<SandboxProfile>,
     pub permissions: ScopedValue<PermissionProfile>,
-    pub memory: ScopedValue<MemoryMode>,
-    pub goal: Option<GoalState>,
     pub raw: BTreeMap<String, ScopedValue<String>>,
 }
 
@@ -32,8 +30,6 @@ impl EffectiveContext {
                 ContextUpdate::Permissions { scope, permissions } => {
                     self.permissions.set(scope, permissions)
                 }
-                ContextUpdate::Memory { scope, memory } => self.memory.set(scope, memory),
-                ContextUpdate::Goal(goal) => self.goal = goal,
                 ContextUpdate::Raw { scope, key, value } => {
                     self.raw.entry(key).or_default().set(scope, value);
                 }
@@ -134,11 +130,6 @@ pub enum ContextUpdate {
         scope: ContextScope,
         permissions: PermissionProfile,
     },
-    Memory {
-        scope: ContextScope,
-        memory: MemoryMode,
-    },
-    Goal(Option<GoalState>),
     Raw {
         scope: ContextScope,
         key: String,
@@ -186,26 +177,4 @@ impl Default for PermissionProfile {
             name: "default".to_string(),
         }
     }
-}
-
-#[derive(Clone, Debug, Default, PartialEq, Eq)]
-pub enum MemoryMode {
-    #[default]
-    Enabled,
-    Disabled,
-}
-
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct GoalState {
-    pub objective: String,
-    pub status: GoalStatus,
-    pub token_budget: Option<u64>,
-}
-
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub enum GoalStatus {
-    Active,
-    Paused,
-    BudgetLimited,
-    Complete,
 }

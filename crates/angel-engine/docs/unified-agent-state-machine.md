@@ -17,7 +17,7 @@
 - Turn: 当前用户回合是否正在推理、执行动作、等待用户、取消或结束。
 - Action: 单个工具、命令、文件修改、MCP 调用、动态工具或子 agent 调用的生命周期。
 - Elicitation: agent 是否正在等待授权、选择、表单、OAuth 或其他用户输入。
-- Context: 模型、模式、权限、cwd、环境、记忆、目标、历史等可变上下文。
+- Context: 模型、模式、权限、cwd、环境、历史等可变上下文。
 
 这些层次是正交的。例如 conversation 可以是 `Active`，同时 turn 是 `AwaitingDecision`，同时 context 有一个 turn-scoped model override，action 里有一个 command 正在等待审批。
 
@@ -30,7 +30,7 @@
 | Turn | 一次用户意图驱动的完整交互 | prompt turn | turn |
 | Action | agent 在 turn 内发起的外部动作 | tool call、file/terminal/client capability request | item，尤其 command/file/MCP/dynamic/collab tool |
 | Elicitation | agent 等待人或外部 UI 给决定 | permission request、可选 elicitation | approval request、requestUserInput、MCP elicitation |
-| Context | 影响后续行为的设置和边界 | mode、config option、cwd、MCP servers | model、effort、approval policy、permission profile、cwd、memory、goal |
+| Context | 影响后续行为的设置和边界 | mode、config option、cwd、MCP servers | model、effort、approval policy、permission profile、cwd |
 | History Mutation | 对历史或上下文摘要的结构性改动 | load/resume/replay、close；部分能力扩展 | resume、fork、rollback、compact、inject history |
 | Observer | UI 是否仍订阅这条 conversation | client 是否接收 update | thread subscription / unsubscribe |
 
@@ -242,11 +242,12 @@ effective context =
 | Mode | ask/plan/code 等行为模式 | mode 或 config option | collaboration mode、personality、instructions |
 | Permissions | 是否能执行命令、写文件、联网 | permission option、client capabilities | approval policy、sandbox、permission profile |
 | Workspace | cwd、可访问目录、环境 | session cwd、MCP servers | cwd、environment、filesystem permissions |
-| Memory | 长期记忆是否参与 | 扩展或 agent-specific meta | memory mode、memory reset |
-| Goal | 长时间任务目标和预算 | 扩展或 meta | thread goal |
 | History | 历史、摘要、分支 | load/resume/replay | resume、fork、rollback、compact |
 
 Context 变更规则：
+
+Memory 和 long-running goal 是 Codex-specific extension，不属于 Angel Engine
+common context。
 
 - 变更 context 不一定代表 turn 开始或结束。
 - 在 idle 时变更 context，影响下一轮。
@@ -309,7 +310,7 @@ stateDiagram-v2
 This unified model covers:
 
 - ACP initialization, optional authentication, session creation, listing, loading, resuming, prompting, cancellation, closing, config options, modes, plans, tool calls, permission requests, stop reasons, and session metadata updates.
-- Codex app-server connection setup, thread start/resume/fork/archive/unarchive/unsubscribe/read/list, turn start/steer/interrupt, thread active flags, item lifecycle, approvals, user input requests, MCP elicitation, dynamic tool calls, plan/diff/message/reasoning streams, compact, rollback, memory, goals, config changes, and system errors.
+- Codex app-server connection setup, thread start/resume/fork/archive/unarchive/unsubscribe/read/list, turn start/steer/interrupt, thread active flags, item lifecycle, approvals, user input requests, MCP elicitation, dynamic tool calls, plan/diff/message/reasoning streams, compact, rollback, and system errors.
 
 这些状态名刻意保持协议中立。UI 适配层应把 ACP 或 Codex 信号翻译成这套统一状态，再由统一状态模型驱动展示。
 

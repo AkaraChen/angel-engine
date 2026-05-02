@@ -321,8 +321,6 @@ pub struct EffectiveContext {
     pub approvals: ScopedValue<ApprovalPolicy>,
     pub sandbox: ScopedValue<SandboxProfile>,
     pub permissions: ScopedValue<PermissionProfile>,
-    pub memory: ScopedValue<MemoryMode>,
-    pub goal: Option<GoalState>,
 }
 
 pub enum ContextScope {
@@ -578,9 +576,6 @@ pub enum InvalidEventPolicy {
 | `ResolveElicitation(user input)` | response to `item/tool/requestUserInput` | request open | answers unblock tool。 |
 | `ResolveElicitation(MCP)` | response to `mcpServer/elicitation/request` | request open | `accept/decline/cancel` maps to decision。 |
 | `ResolveElicitation(dynamic tool)` | response to `item/tool/call` | request open | tool output becomes action result. |
-| `UpdateContext(goal)` | `thread/goal/set/get/clear` | loaded thread | goal notifications update context。 |
-| `UpdateContext(memory)` | `thread/memoryMode/set`, `memory/reset` | loaded/runtime | updates memory context。 |
-| `UpdateContext(config)` | `config/value/write`, `config/batchWrite` | runtime available | global/default context only，不代表 active turn 立即变化。 |
 | `Extension(MutateHistory(compact))` | `thread/compact/start` | loaded thread | notifications/items -> mutation finished。 |
 | `Extension(MutateHistory(rollback))` | `thread/rollback` | loaded thread | response -> replace history; workspace changes remain。 |
 | `Extension(ArchiveConversation)` | `thread/archive` / `thread/unarchive` | loaded thread | notification -> archived/idle。 |
@@ -612,7 +607,7 @@ pub enum InvalidEventPolicy {
 | `serverRequest/resolved` | `ElicitationResolved` 或 close resolving | 按 request id 查 pending。 |
 | `thread/compacted` | `HistoryMutationFinished(compact)` | 更新 compact summary/context。 |
 | `thread/archived/unarchived/closed` | lifecycle update | archive 不等于 close。 |
-| `thread/name/updated`, `thread/goal/*`, `thread/tokenUsage/updated` | `ContextUpdated`/metadata | 不改变 turn phase。 |
+| `thread/name/updated`, `thread/tokenUsage/updated` | `ContextUpdated`/metadata | 不改变 turn phase。 |
 
 ### Codex ServerRequest 到 elicitation
 

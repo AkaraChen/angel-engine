@@ -99,8 +99,6 @@ impl ConversationCapabilities {
             context: ContextCapabilities {
                 mode: CapabilitySupport::Unknown,
                 config: CapabilitySupport::Unknown,
-                goal: CapabilitySupport::Unsupported,
-                memory: CapabilitySupport::Unsupported,
                 turn_overrides: CapabilitySupport::Unsupported,
             },
             observer: ObserverCapabilities {
@@ -147,8 +145,6 @@ impl ConversationCapabilities {
             context: ContextCapabilities {
                 mode: CapabilitySupport::Supported,
                 config: CapabilitySupport::Supported,
-                goal: CapabilitySupport::Supported,
-                memory: CapabilitySupport::Supported,
                 turn_overrides: CapabilitySupport::Supported,
             },
             observer: ObserverCapabilities {
@@ -205,8 +201,6 @@ pub struct HistoryCapabilities {
 pub struct ContextCapabilities {
     pub mode: CapabilitySupport,
     pub config: CapabilitySupport,
-    pub goal: CapabilitySupport,
-    pub memory: CapabilitySupport,
     pub turn_overrides: CapabilitySupport,
 }
 
