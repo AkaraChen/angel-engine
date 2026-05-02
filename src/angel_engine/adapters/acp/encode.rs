@@ -11,8 +11,21 @@ impl AcpAdapter {
         match &effect.method {
             ProtocolMethod::Acp(AcpMethod::Initialize) => Ok(json!({
                 "protocolVersion": 2,
-                "clientCapabilities": {},
+                "clientCapabilities": {
+                    "auth": {
+                        "terminal": true,
+                    },
+                },
                 "clientInfo": client_info_json(&options.client_info),
+            })),
+            ProtocolMethod::Acp(AcpMethod::Authenticate) => Ok(json!({
+                "methodId": effect
+                    .payload
+                    .fields
+                    .get("methodId")
+                    .or_else(|| effect.payload.fields.get("method"))
+                    .cloned()
+                    .unwrap_or_default(),
             })),
             ProtocolMethod::Acp(AcpMethod::SessionNew) => Ok(json!({
                 "cwd": effect.payload.fields.get("cwd").cloned().unwrap_or_else(|| {
@@ -109,8 +122,9 @@ impl AcpAdapter {
             .get("decision")
             .map(String::as_str)
             .unwrap_or("Cancel");
-        let result = if matches!(decision, "Allow" | "AllowForSession") {
-            json!({"outcome": {"outcome": "selected", "optionId": "allow"}})
+        let selected_option = select_permission_option(&elicitation.options.choices, decision);
+        let result = if let Some(option_id) = selected_option {
+            json!({"outcome": {"outcome": "selected", "optionId": option_id}})
         } else {
             json!({"outcome": {"outcome": "cancelled"}})
         };
@@ -127,4 +141,32 @@ impl AcpAdapter {
         }
         Ok(output)
     }
+}
+
+fn select_permission_option(choices: &[String], decision: &str) -> Option<String> {
+    let desired = match decision {
+        "AllowForSession" => choices
+            .iter()
+            .find(|choice| {
+                let choice = choice.to_ascii_lowercase();
+                choice.contains("session") || choice.contains("always")
+            })
+            .or_else(|| find_allow_choice(choices)),
+        "Allow" => find_allow_choice(choices),
+        "Deny" => choices.iter().find(|choice| {
+            let choice = choice.to_ascii_lowercase();
+            choice.contains("deny") || choice.contains("reject")
+        }),
+        _ => None,
+    };
+    desired.cloned()
+}
+
+fn find_allow_choice(choices: &[String]) -> Option<&String> {
+    choices.iter().find(|choice| {
+        let choice = choice.to_ascii_lowercase();
+        (choice.contains("allow") || choice.contains("approve"))
+            && !choice.contains("session")
+            && !choice.contains("always")
+    })
 }

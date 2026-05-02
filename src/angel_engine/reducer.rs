@@ -384,7 +384,7 @@ impl AngelEngine {
             effects: vec![
                 ProtocolEffect::new(self.protocol, self.method_authenticate())
                     .request_id(request_id.clone())
-                    .field("method", method.to_string()),
+                    .field("methodId", method.to_string()),
             ],
             request_id: Some(request_id),
             ..CommandPlan::default()

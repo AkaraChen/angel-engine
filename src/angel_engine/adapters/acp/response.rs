@@ -93,11 +93,22 @@ impl AcpAdapter {
             PendingRequest::CancelTurn { .. } => {
                 output = output.log(TransportLogKind::State, "cancel accepted");
             }
+            PendingRequest::Authenticate => {
+                output = output
+                    .event(EngineEvent::RuntimeNegotiated {
+                        capabilities: crate::angel_engine::RuntimeCapabilities {
+                            name: "acp".to_string(),
+                            version: result.get("protocolVersion").map(Value::to_string),
+                            discovery: crate::angel_engine::CapabilitySupport::Supported,
+                            authentication: crate::angel_engine::CapabilitySupport::Supported,
+                        },
+                    })
+                    .log(TransportLogKind::State, "ACP authentication accepted");
+            }
             PendingRequest::ResolveElicitation { .. } => {
                 output = output.log(TransportLogKind::State, "permission response accepted");
             }
             PendingRequest::DiscoverConversations
-            | PendingRequest::Authenticate
             | PendingRequest::ForkConversation { .. }
             | PendingRequest::SteerTurn { .. }
             | PendingRequest::UpdateContext { .. }
