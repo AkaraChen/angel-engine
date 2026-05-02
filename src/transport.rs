@@ -338,6 +338,7 @@ pub fn acp_method_name(method: &AcpMethod) -> &'static str {
         AcpMethod::SessionClose => "session/close",
         AcpMethod::SetSessionMode => "session/set_mode",
         AcpMethod::SetSessionConfigOption => "session/set_config_option",
+        AcpMethod::SetSessionModel => "session/set_model",
         AcpMethod::RequestPermissionResponse => "session/request_permission",
     }
 }

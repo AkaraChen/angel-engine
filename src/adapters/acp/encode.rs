@@ -62,9 +62,16 @@ impl AcpAdapter {
             ProtocolMethod::Acp(AcpMethod::SessionList) => Ok(json!({})),
             ProtocolMethod::Acp(AcpMethod::SetSessionConfigOption) => Ok(json!({
                 "sessionId": acp_session_id(engine, effect)?,
+                "configId": effect.payload.fields.get("configId").cloned().unwrap_or_default(),
+                "value": effect.payload.fields.get("value").cloned().unwrap_or_default(),
             })),
             ProtocolMethod::Acp(AcpMethod::SetSessionMode) => Ok(json!({
                 "sessionId": acp_session_id(engine, effect)?,
+                "modeId": effect.payload.fields.get("modeId").cloned().unwrap_or_default(),
+            })),
+            ProtocolMethod::Acp(AcpMethod::SetSessionModel) => Ok(json!({
+                "sessionId": acp_session_id(engine, effect)?,
+                "modelId": effect.payload.fields.get("modelId").cloned().unwrap_or_default(),
             })),
             ProtocolMethod::Acp(AcpMethod::RequestPermissionResponse) => {
                 Err(crate::EngineError::InvalidCommand {

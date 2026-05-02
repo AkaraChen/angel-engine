@@ -27,6 +27,7 @@ impl CodexAdapter {
                 if effect.payload.fields.get("ephemeral").is_some() {
                     params.insert("ephemeral".to_string(), json!(true));
                 }
+                insert_codex_thread_overrides(&mut params, &effect.payload.fields);
                 params.insert("experimentalRawEvents".to_string(), json!(false));
                 params.insert("persistExtendedHistory".to_string(), json!(true));
                 Ok(Value::Object(params))
@@ -67,10 +68,26 @@ impl CodexAdapter {
                 "threadId": codex_thread_id(engine, effect)?,
                 "items": [],
             })),
-            ProtocolMethod::Codex(CodexMethod::TurnStart) => Ok(json!({
-                "threadId": codex_thread_id(engine, effect)?,
-                "input": text_input(effect.payload.fields.get("input").cloned().unwrap_or_default()),
-            })),
+            ProtocolMethod::Codex(CodexMethod::TurnStart) => {
+                let mut params = serde_json::Map::new();
+                params.insert(
+                    "threadId".to_string(),
+                    json!(codex_thread_id(engine, effect)?),
+                );
+                params.insert(
+                    "input".to_string(),
+                    text_input(
+                        effect
+                            .payload
+                            .fields
+                            .get("input")
+                            .cloned()
+                            .unwrap_or_default(),
+                    ),
+                );
+                insert_codex_overrides(&mut params, &effect.payload.fields);
+                Ok(Value::Object(params))
+            }
             ProtocolMethod::Codex(CodexMethod::TurnSteer) => Ok(json!({
                 "threadId": codex_thread_id(engine, effect)?,
                 "input": text_input(effect.payload.fields.get("input").cloned().unwrap_or_default()),
@@ -173,5 +190,97 @@ impl CodexAdapter {
             output.completed_requests.push(request_id.clone());
         }
         Ok(output)
+    }
+}
+
+fn insert_codex_overrides(
+    params: &mut serde_json::Map<String, Value>,
+    fields: &std::collections::BTreeMap<String, String>,
+) {
+    if let Some(model) = fields.get("model") {
+        params.insert("model".to_string(), json!(model));
+    }
+    if let Some(effort) = fields.get("effort") {
+        params.insert("effort".to_string(), json!(effort));
+    }
+    if let Some(summary) = fields.get("summary") {
+        params.insert("summary".to_string(), json!(summary));
+    }
+    if let Some(policy) = fields.get("approvalPolicy") {
+        params.insert("approvalPolicy".to_string(), json!(policy));
+    }
+    if let Some(profile) = fields.get("permissions") {
+        params.insert(
+            "permissions".to_string(),
+            json!({
+                "type": "profile",
+                "id": profile,
+                "modifications": null,
+            }),
+        );
+    }
+    if !fields.contains_key("permissions") {
+        if let Some(policy) = fields
+            .get("sandboxPolicy")
+            .and_then(|policy| sandbox_policy(policy))
+        {
+            params.insert("sandboxPolicy".to_string(), policy);
+        }
+    }
+    if let (Some(mode), Some(model)) = (
+        fields.get("collaborationMode"),
+        fields
+            .get("collaborationModel")
+            .or_else(|| fields.get("model")),
+    ) {
+        params.insert(
+            "collaborationMode".to_string(),
+            json!({
+                "mode": mode,
+                "settings": {
+                    "model": model,
+                    "developer_instructions": null,
+                    "reasoning_effort": fields.get("effort"),
+                }
+            }),
+        );
+    }
+}
+
+fn insert_codex_thread_overrides(
+    params: &mut serde_json::Map<String, Value>,
+    fields: &std::collections::BTreeMap<String, String>,
+) {
+    if let Some(model) = fields.get("model") {
+        params.insert("model".to_string(), json!(model));
+    }
+    if let Some(policy) = fields.get("approvalPolicy") {
+        params.insert("approvalPolicy".to_string(), json!(policy));
+    }
+    if let Some(profile) = fields.get("permissions") {
+        params.insert(
+            "permissions".to_string(),
+            json!({
+                "type": "profile",
+                "id": profile,
+                "modifications": null,
+            }),
+        );
+    }
+    if !fields.contains_key("permissions")
+        && let Some(policy) = fields.get("sandboxPolicy")
+    {
+        params.insert("sandbox".to_string(), json!(policy));
+    }
+}
+
+fn sandbox_policy(policy: &str) -> Option<Value> {
+    match policy {
+        "read-only" | "readOnly" => Some(json!({ "type": "readOnly" })),
+        "workspace-write" | "workspaceWrite" => Some(json!({ "type": "workspaceWrite" })),
+        "danger-full-access" | "dangerFullAccess" | "full-access" => {
+            Some(json!({ "type": "dangerFullAccess" }))
+        }
+        _ => None,
     }
 }

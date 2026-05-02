@@ -50,6 +50,32 @@ fn decode_acp_update(
                 format!("available commands updated: {}", commands.len()),
             ));
     }
+    if update_type == "config_option_update" {
+        let options = session_config_options(update);
+        return Ok(TransportOutput::default()
+            .event(EngineEvent::SessionConfigOptionsUpdated {
+                conversation_id,
+                options: options.clone(),
+            })
+            .log(
+                TransportLogKind::State,
+                format!("config options updated: {}", options.len()),
+            ));
+    }
+    if update_type == "current_mode_update" {
+        let mode_id = update
+            .get("modeId")
+            .or_else(|| update.get("currentModeId"))
+            .and_then(Value::as_str)
+            .unwrap_or_default()
+            .to_string();
+        return Ok(TransportOutput::default()
+            .event(EngineEvent::SessionModeChanged {
+                conversation_id,
+                mode_id: mode_id.clone(),
+            })
+            .log(TransportLogKind::State, format!("mode changed: {mode_id}")));
+    }
 
     let Some(turn_id) = active_turn_id(engine, &conversation_id) else {
         return Ok(TransportOutput::default().log(

@@ -6,7 +6,8 @@ use crate::ids::{
 use crate::state::{
     ActionPatch, ActionState, AvailableCommand, ContentDelta, ContextPatch, ConversationLifecycle,
     ElicitationDecision, ElicitationState, HistoryMutationOp, HistoryMutationResult,
-    HydrationSource, ObserverState, PlanState, ProvisionOp, TurnOutcome, UserInputRef,
+    HydrationSource, ObserverState, PlanState, ProvisionOp, SessionConfigOption, SessionModeState,
+    SessionModelState, TurnOutcome, UserInputRef,
 };
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -48,6 +49,22 @@ pub enum EngineEvent {
     AvailableCommandsUpdated {
         conversation_id: ConversationId,
         commands: Vec<AvailableCommand>,
+    },
+    SessionConfigOptionsUpdated {
+        conversation_id: ConversationId,
+        options: Vec<SessionConfigOption>,
+    },
+    SessionModesUpdated {
+        conversation_id: ConversationId,
+        modes: SessionModeState,
+    },
+    SessionModeChanged {
+        conversation_id: ConversationId,
+        mode_id: String,
+    },
+    SessionModelsUpdated {
+        conversation_id: ConversationId,
+        models: SessionModelState,
     },
     ConversationClosed {
         id: ConversationId,

@@ -11,7 +11,8 @@ use crate::state::{
     ActionInput, ActionKind, ActionOutputDelta, ActionPatch, ActionPhase, ActionState,
     AvailableCommand, AvailableCommandInput, ContentDelta, ContextPatch, ElicitationKind,
     ElicitationOptions, ElicitationState, ExhaustionReason, PlanEntry, PlanEntryStatus, PlanState,
-    TurnOutcome,
+    SessionConfigOption, SessionConfigValue, SessionMode, SessionModeState, SessionModel,
+    SessionModelState, TurnOutcome,
 };
 use crate::transport::{
     JsonRpcMessage, ProtocolTransport, TransportLogKind, TransportOptions, TransportOutput,

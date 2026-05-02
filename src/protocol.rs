@@ -71,6 +71,7 @@ pub enum AcpMethod {
     SessionClose,
     SetSessionMode,
     SetSessionConfigOption,
+    SetSessionModel,
     RequestPermissionResponse,
 }
 

@@ -71,6 +71,9 @@ pub struct ConversationState {
     pub history: HistoryState,
     pub observer: ObserverState,
     pub available_commands: Vec<AvailableCommand>,
+    pub config_options: Vec<SessionConfigOption>,
+    pub mode_state: Option<SessionModeState>,
+    pub model_state: Option<SessionModelState>,
     pub capabilities: ConversationCapabilities,
     pub generation: u64,
 }
@@ -95,6 +98,9 @@ impl ConversationState {
             history: HistoryState::default(),
             observer: ObserverState::default(),
             available_commands: Vec::new(),
+            config_options: Vec::new(),
+            mode_state: None,
+            model_state: None,
             capabilities,
             generation: 0,
         }
@@ -132,6 +138,49 @@ pub struct AvailableCommand {
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct AvailableCommandInput {
     pub hint: String,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct SessionConfigOption {
+    pub id: String,
+    pub name: String,
+    pub description: Option<String>,
+    pub category: Option<String>,
+    pub current_value: String,
+    pub values: Vec<SessionConfigValue>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct SessionConfigValue {
+    pub value: String,
+    pub name: String,
+    pub description: Option<String>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct SessionModeState {
+    pub current_mode_id: String,
+    pub available_modes: Vec<SessionMode>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct SessionMode {
+    pub id: String,
+    pub name: String,
+    pub description: Option<String>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct SessionModelState {
+    pub current_model_id: String,
+    pub available_models: Vec<SessionModel>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct SessionModel {
+    pub id: String,
+    pub name: String,
+    pub description: Option<String>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]

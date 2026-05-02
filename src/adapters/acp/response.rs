@@ -79,6 +79,25 @@ impl AcpAdapter {
                         TransportLogKind::State,
                         format!("session {session_id} ready"),
                     );
+                let config_options = session_config_options(result);
+                if !config_options.is_empty() {
+                    output = output.event(EngineEvent::SessionConfigOptionsUpdated {
+                        conversation_id: conversation_id.clone(),
+                        options: config_options,
+                    });
+                }
+                if let Some(modes) = session_mode_state(result) {
+                    output = output.event(EngineEvent::SessionModesUpdated {
+                        conversation_id: conversation_id.clone(),
+                        modes,
+                    });
+                }
+                if let Some(models) = session_model_state(result) {
+                    output = output.event(EngineEvent::SessionModelsUpdated {
+                        conversation_id: conversation_id.clone(),
+                        models,
+                    });
+                }
             }
             PendingRequest::StartTurn {
                 conversation_id,
@@ -114,10 +133,19 @@ impl AcpAdapter {
             PendingRequest::ResolveElicitation { .. } => {
                 output = output.log(TransportLogKind::State, "permission response accepted");
             }
+            PendingRequest::UpdateContext { conversation_id } => {
+                let config_options = session_config_options(result);
+                if !config_options.is_empty() {
+                    output = output.event(EngineEvent::SessionConfigOptionsUpdated {
+                        conversation_id: conversation_id.clone(),
+                        options: config_options,
+                    });
+                }
+                output = output.log(TransportLogKind::Receive, format!("response {id}"));
+            }
             PendingRequest::DiscoverConversations
             | PendingRequest::ForkConversation { .. }
             | PendingRequest::SteerTurn { .. }
-            | PendingRequest::UpdateContext { .. }
             | PendingRequest::HistoryMutation { .. }
             | PendingRequest::RunShellCommand { .. } => {
                 output = output.log(TransportLogKind::Receive, format!("response {id}"));

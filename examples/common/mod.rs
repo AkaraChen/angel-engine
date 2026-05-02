@@ -6,11 +6,12 @@ use std::thread;
 use std::time::Duration;
 
 use angel_engine::{
-    AngelEngine, AvailableCommand, CommandPlan, ConversationCapabilities, ConversationId,
-    ConversationLifecycle, ElicitationDecision, ElicitationId, ElicitationPhase, EngineCommand,
-    JsonRpcMessage, ProtocolFlavor, ProtocolTransport, RuntimeState, StartConversationParams,
-    TransportClientInfo, TransportLog, TransportLogKind, TransportOptions, UserInput,
-    apply_transport_output,
+    AgentMode, AngelEngine, ApprovalPolicy, AvailableCommand, CommandPlan, ContextPatch,
+    ContextScope, ContextUpdate, ConversationCapabilities, ConversationId, ConversationLifecycle,
+    ConversationState, ElicitationDecision, ElicitationId, ElicitationPhase, EngineCommand,
+    JsonRpcMessage, PermissionProfile, ProtocolFlavor, ProtocolTransport, RuntimeState,
+    SandboxProfile, SessionConfigOption, StartConversationParams, TransportClientInfo,
+    TransportLog, TransportLogKind, TransportOptions, UserInput, apply_transport_output,
 };
 
 #[derive(Clone, Copy, Debug)]
@@ -107,9 +108,9 @@ where
     pub fn run_repl(&mut self) -> Result<(), Box<dyn Error>> {
         println!("{}", self.config.banner);
         if self.config.direct_shell {
-            println!("Type a message, /shell <command> for direct shell execution, or :quit.");
+            println!("Type a message, /shell <command>, /model, /mode, /permission, or :quit.");
         } else {
-            println!("Type a message, or :quit.");
+            println!("Type a message, /model, /mode, /permission, or :quit.");
         }
         self.print_command_summary();
 
@@ -131,6 +132,9 @@ where
             }
             if line == "/commands" {
                 self.print_available_commands();
+                continue;
+            }
+            if self.handle_setting_command(line)? {
                 continue;
             }
 
@@ -196,6 +200,114 @@ where
         let mut timeout = Duration::from_millis(500);
         while self.process_next_line(Some(timeout))? {
             timeout = Duration::from_millis(50);
+        }
+        Ok(())
+    }
+
+    fn handle_setting_command(&mut self, line: &str) -> Result<bool, Box<dyn Error>> {
+        let mut parts = line.splitn(2, char::is_whitespace);
+        let command = parts.next().unwrap_or_default();
+        let value = parts.next().unwrap_or_default().trim();
+        match command {
+            "/model" => {
+                if value.is_empty() {
+                    self.print_model_state()?;
+                } else {
+                    self.update_context(ContextPatch::one(ContextUpdate::Model {
+                        scope: ContextScope::TurnAndFuture,
+                        model: Some(value.to_string()),
+                    }))?;
+                    println!("[state] model set to {value}");
+                }
+                Ok(true)
+            }
+            "/mode" => {
+                if value.is_empty() {
+                    self.print_mode_state()?;
+                } else {
+                    self.update_context(ContextPatch::one(ContextUpdate::Mode {
+                        scope: ContextScope::TurnAndFuture,
+                        mode: Some(AgentMode {
+                            id: value.to_string(),
+                        }),
+                    }))?;
+                    println!("[state] mode set to {value}");
+                    if self.config.protocol == ProtocolFlavor::CodexAppServer
+                        && matches!(value, "plan" | "default")
+                        && self.current_model().is_none()
+                    {
+                        println!(
+                            "[warn] Codex collaborationMode requires a model in turn/start; set /model first if the next turn does not switch mode"
+                        );
+                    }
+                }
+                Ok(true)
+            }
+            "/permission" => {
+                if value.is_empty() {
+                    self.print_permission_state()?;
+                } else {
+                    self.update_context(ContextPatch::one(ContextUpdate::Permissions {
+                        scope: ContextScope::TurnAndFuture,
+                        permissions: PermissionProfile {
+                            name: value.to_string(),
+                        },
+                    }))?;
+                    println!("[state] permission profile set to {value}");
+                }
+                Ok(true)
+            }
+            "/approval" => {
+                if value.is_empty() {
+                    self.print_permission_state()?;
+                } else if let Some(policy) = parse_approval_policy(value) {
+                    self.update_context(ContextPatch::one(ContextUpdate::ApprovalPolicy {
+                        scope: ContextScope::TurnAndFuture,
+                        policy,
+                    }))?;
+                    println!("[state] approval policy set to {value}");
+                } else {
+                    println!("[warn] use one of: never, on-request, on-failure, untrusted");
+                }
+                Ok(true)
+            }
+            "/sandbox" => {
+                if value.is_empty() {
+                    self.print_permission_state()?;
+                } else if let Some(sandbox) = parse_sandbox_profile(value) {
+                    self.update_context(ContextPatch::one(ContextUpdate::Sandbox {
+                        scope: ContextScope::TurnAndFuture,
+                        sandbox,
+                    }))?;
+                    println!("[state] sandbox set to {value}");
+                } else {
+                    println!("[warn] use one of: read-only, workspace-write, danger-full-access");
+                }
+                Ok(true)
+            }
+            _ => Ok(false),
+        }
+    }
+
+    fn update_context(&mut self, patch: ContextPatch) -> Result<(), Box<dyn Error>> {
+        let conversation_id = self.selected_conversation()?;
+        let plan = self.engine.plan_command(EngineCommand::UpdateContext {
+            conversation_id,
+            patch,
+        })?;
+        let request_id = plan.request_id.clone();
+        let has_effects = !plan.effects.is_empty();
+        self.send_plan(plan)?;
+        if let Some(request_id) = request_id {
+            while self.engine.pending.requests.contains_key(&request_id) {
+                self.process_next_line(None)?;
+            }
+        } else if !has_effects {
+            if self.config.protocol == ProtocolFlavor::CodexAppServer {
+                println!("[state] local setting will be sent with the next turn");
+            } else {
+                println!("[warn] no ACP config or mode endpoint was advertised for that setting");
+            }
         }
         Ok(())
     }
@@ -435,6 +547,117 @@ where
             .unwrap_or(&[])
     }
 
+    fn current_model(&self) -> Option<String> {
+        self.engine
+            .selected
+            .as_ref()
+            .and_then(|id| self.engine.conversations.get(id))
+            .and_then(|conversation| conversation.context.model.effective())
+            .and_then(|model| model.clone())
+    }
+
+    fn print_model_state(&self) -> Result<(), Box<dyn Error>> {
+        let conversation_id = self.selected_conversation()?;
+        let conversation = self
+            .engine
+            .conversations
+            .get(&conversation_id)
+            .ok_or("selected conversation missing")?;
+        let current = self
+            .current_model()
+            .unwrap_or_else(|| "(default)".to_string());
+        println!("[model] current: {current}");
+        if let Some(option) = config_option(conversation, "model", &["model"]) {
+            print_config_values("[model]", option);
+        } else if let Some(models) = &conversation.model_state {
+            let values = models
+                .available_models
+                .iter()
+                .map(|model| model.id.as_str())
+                .collect::<Vec<_>>();
+            print_values("[model]", &values);
+        }
+        Ok(())
+    }
+
+    fn print_mode_state(&self) -> Result<(), Box<dyn Error>> {
+        let conversation_id = self.selected_conversation()?;
+        let conversation = self
+            .engine
+            .conversations
+            .get(&conversation_id)
+            .ok_or("selected conversation missing")?;
+        let current = conversation
+            .context
+            .mode
+            .effective()
+            .and_then(|mode| mode.as_ref())
+            .map(|mode| mode.id.as_str())
+            .unwrap_or("(default)");
+        println!("[mode] current: {current}");
+        if let Some(option) = config_option(conversation, "mode", &["mode"]) {
+            print_config_values("[mode]", option);
+        } else if let Some(modes) = &conversation.mode_state {
+            let values = modes
+                .available_modes
+                .iter()
+                .map(|mode| mode.id.as_str())
+                .collect::<Vec<_>>();
+            print_values("[mode]", &values);
+        } else if self.config.protocol == ProtocolFlavor::CodexAppServer {
+            println!("[mode] available: plan, default");
+        }
+        Ok(())
+    }
+
+    fn print_permission_state(&self) -> Result<(), Box<dyn Error>> {
+        let conversation_id = self.selected_conversation()?;
+        let conversation = self
+            .engine
+            .conversations
+            .get(&conversation_id)
+            .ok_or("selected conversation missing")?;
+        let profile = conversation
+            .context
+            .permissions
+            .effective()
+            .map(|permissions| permissions.name.as_str())
+            .unwrap_or("(default)");
+        let approval = conversation
+            .context
+            .approvals
+            .effective()
+            .map(format_approval_policy)
+            .unwrap_or("(default)");
+        let sandbox = conversation
+            .context
+            .sandbox
+            .effective()
+            .map(format_sandbox_profile)
+            .unwrap_or("(default)");
+        println!("[permission] profile: {profile}; approval: {approval}; sandbox: {sandbox}");
+        if let Some(option) = config_option(
+            conversation,
+            "permission",
+            &[
+                "permission",
+                "permissions",
+                "permission_profile",
+                "approval",
+                "approval_policy",
+            ],
+        )
+        .or_else(|| config_option(conversation, "mode", &["mode"]))
+        {
+            print_config_values("[permission]", option);
+        } else if self.config.protocol == ProtocolFlavor::CodexAppServer {
+            println!(
+                "[permission] commands: /permission <profile>, /approval <policy>, /sandbox <mode>"
+            );
+        }
+        Ok(())
+    }
+
     fn print_command_summary(&self) {
         let commands = self.selected_available_commands();
         if commands.is_empty() {
@@ -482,6 +705,104 @@ fn compact_text(text: &str, max_chars: usize) -> String {
         .collect::<String>();
     truncated.push_str("...");
     truncated
+}
+
+fn config_option<'a>(
+    conversation: &'a ConversationState,
+    category: &str,
+    ids: &[&str],
+) -> Option<&'a SessionConfigOption> {
+    conversation
+        .config_options
+        .iter()
+        .find(|option| option.category.as_deref() == Some(category))
+        .or_else(|| {
+            conversation.config_options.iter().find(|option| {
+                ids.iter().any(|id| {
+                    option.id.eq_ignore_ascii_case(id) || normalize(&option.id) == normalize(id)
+                })
+            })
+        })
+        .or_else(|| {
+            conversation.config_options.iter().find(|option| {
+                let name = normalize(&option.name);
+                ids.iter().any(|id| name == normalize(id))
+            })
+        })
+}
+
+fn print_config_values(prefix: &str, option: &SessionConfigOption) {
+    if option.values.is_empty() {
+        println!("{prefix} option: {}", option.id);
+        return;
+    }
+    let values = option
+        .values
+        .iter()
+        .map(|value| value.value.as_str())
+        .collect::<Vec<_>>();
+    print_values(prefix, &values);
+}
+
+fn print_values(prefix: &str, values: &[&str]) {
+    if values.is_empty() {
+        return;
+    }
+    let shown = values
+        .iter()
+        .take(16)
+        .copied()
+        .collect::<Vec<_>>()
+        .join(", ");
+    let suffix = if values.len() > 16 { ", ..." } else { "" };
+    println!("{prefix} available: {shown}{suffix}");
+}
+
+fn normalize(value: &str) -> String {
+    value
+        .chars()
+        .filter(|ch| ch.is_ascii_alphanumeric())
+        .flat_map(char::to_lowercase)
+        .collect()
+}
+
+fn parse_approval_policy(value: &str) -> Option<ApprovalPolicy> {
+    match value.to_ascii_lowercase().as_str() {
+        "never" => Some(ApprovalPolicy::Never),
+        "on-request" | "on_request" | "request" => Some(ApprovalPolicy::OnRequest),
+        "on-failure" | "on_failure" | "failure" => Some(ApprovalPolicy::OnFailure),
+        "untrusted" | "unless-trusted" | "unless_trusted" => Some(ApprovalPolicy::UnlessTrusted),
+        _ => None,
+    }
+}
+
+fn parse_sandbox_profile(value: &str) -> Option<SandboxProfile> {
+    match value.to_ascii_lowercase().as_str() {
+        "read-only" | "read_only" | "readonly" => Some(SandboxProfile::ReadOnly),
+        "workspace-write" | "workspace_write" | "workspace" => Some(SandboxProfile::WorkspaceWrite),
+        "danger-full-access" | "danger_full_access" | "full-access" | "full" => {
+            Some(SandboxProfile::FullAccess)
+        }
+        _ => None,
+    }
+}
+
+fn format_approval_policy(policy: &ApprovalPolicy) -> &'static str {
+    match policy {
+        ApprovalPolicy::Never => "never",
+        ApprovalPolicy::OnRequest => "on-request",
+        ApprovalPolicy::OnFailure => "on-failure",
+        ApprovalPolicy::UnlessTrusted => "untrusted",
+    }
+}
+
+fn format_sandbox_profile(sandbox: &SandboxProfile) -> &str {
+    match sandbox {
+        SandboxProfile::ReadOnly => "read-only",
+        SandboxProfile::WorkspaceWrite => "workspace-write",
+        SandboxProfile::FullAccess => "danger-full-access",
+        SandboxProfile::Custom(value) => value,
+    }
 }
 
 impl<A> Drop for ProtocolShell<A> {

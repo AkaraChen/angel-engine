@@ -12,10 +12,11 @@ use crate::ids::{
 };
 use crate::protocol::{AcpMethod, CodexMethod, ProtocolEffect, ProtocolFlavor, ProtocolMethod};
 use crate::state::{
-    ActionPhase, ActionState, ContentDelta, ContextPatch, ConversationLifecycle, ConversationState,
-    ElicitationDecision, ElicitationPhase, ElicitationState, HistoryMutationOp,
-    HistoryMutationResult, HydrationSource, ProvisionOp, RuntimeState, TurnOutcome, TurnPhase,
-    TurnState, UserInputRef,
+    ActionPhase, ActionState, AgentMode, ApprovalPolicy, ContentDelta, ContextPatch, ContextScope,
+    ContextUpdate, ConversationLifecycle, ConversationState, ElicitationDecision, ElicitationPhase,
+    ElicitationState, HistoryMutationOp, HistoryMutationResult, HydrationSource, ProvisionOp,
+    RuntimeState, SandboxProfile, SessionConfigOption, TurnOutcome, TurnPhase, TurnState,
+    UserInputRef,
 };
 
 #[derive(Clone, Debug)]
@@ -199,6 +200,69 @@ impl AngelEngine {
                 let conversation = self.conversation_mut(&conversation_id)?;
                 conversation.available_commands = commands;
                 Ok(TransitionReport::one(UiEvent::ConversationChanged(
+                    conversation_id,
+                )))
+            }
+            EngineEvent::SessionConfigOptionsUpdated {
+                conversation_id,
+                options,
+            } => {
+                let conversation = self.conversation_mut(&conversation_id)?;
+                sync_context_from_config_options(&mut conversation.context, &options);
+                conversation.config_options = options;
+                Ok(TransitionReport::one(UiEvent::ContextChanged(
+                    conversation_id,
+                )))
+            }
+            EngineEvent::SessionModesUpdated {
+                conversation_id,
+                modes,
+            } => {
+                let conversation = self.conversation_mut(&conversation_id)?;
+                conversation
+                    .context
+                    .apply_patch(ContextPatch::one(ContextUpdate::Mode {
+                        scope: ContextScope::TurnAndFuture,
+                        mode: Some(AgentMode {
+                            id: modes.current_mode_id.clone(),
+                        }),
+                    }));
+                conversation.mode_state = Some(modes);
+                Ok(TransitionReport::one(UiEvent::ContextChanged(
+                    conversation_id,
+                )))
+            }
+            EngineEvent::SessionModeChanged {
+                conversation_id,
+                mode_id,
+            } => {
+                let conversation = self.conversation_mut(&conversation_id)?;
+                if let Some(modes) = &mut conversation.mode_state {
+                    modes.current_mode_id = mode_id.clone();
+                }
+                conversation
+                    .context
+                    .apply_patch(ContextPatch::one(ContextUpdate::Mode {
+                        scope: ContextScope::TurnAndFuture,
+                        mode: Some(AgentMode { id: mode_id }),
+                    }));
+                Ok(TransitionReport::one(UiEvent::ContextChanged(
+                    conversation_id,
+                )))
+            }
+            EngineEvent::SessionModelsUpdated {
+                conversation_id,
+                models,
+            } => {
+                let conversation = self.conversation_mut(&conversation_id)?;
+                conversation
+                    .context
+                    .apply_patch(ContextPatch::one(ContextUpdate::Model {
+                        scope: ContextScope::TurnAndFuture,
+                        model: Some(models.current_model_id.clone()),
+                    }));
+                conversation.model_state = Some(models);
+                Ok(TransitionReport::one(UiEvent::ContextChanged(
                     conversation_id,
                 )))
             }
@@ -433,6 +497,11 @@ impl AngelEngine {
             self.default_capabilities.clone(),
         );
         conversation.context.apply_patch(params.context.clone());
+        let codex_context_fields = if self.protocol == ProtocolFlavor::CodexAppServer {
+            codex_context_fields(&conversation.context)
+        } else {
+            Vec::new()
+        };
         self.conversations
             .insert(conversation_id.clone(), conversation);
         self.selected = Some(conversation_id.clone());
@@ -454,6 +523,9 @@ impl AngelEngine {
         }
         if params.ephemeral {
             effect = effect.field("ephemeral", "true");
+        }
+        for (key, value) in codex_context_fields {
+            effect = effect.field(key, value);
         }
         Ok(CommandPlan {
             effects: vec![effect],
@@ -651,6 +723,12 @@ impl AngelEngine {
             conversation.focused_turn = Some(turn_id.clone());
             conversation.lifecycle = ConversationLifecycle::Active;
         }
+        let codex_context_fields = if self.protocol == ProtocolFlavor::CodexAppServer {
+            let conversation = self.conversation(&conversation_id)?;
+            codex_context_fields(&conversation.context)
+        } else {
+            Vec::new()
+        };
 
         self.pending.insert(
             request_id.clone(),
@@ -660,11 +738,14 @@ impl AngelEngine {
             },
         )?;
 
-        let effect = ProtocolEffect::new(self.protocol, self.method_start_turn())
+        let mut effect = ProtocolEffect::new(self.protocol, self.method_start_turn())
             .request_id(request_id.clone())
             .conversation_id(conversation_id.clone())
             .turn_id(turn_id.clone())
             .field("input", input_text);
+        for (key, value) in codex_context_fields {
+            effect = effect.field(key, value);
+        }
         Ok(CommandPlan {
             effects: vec![effect],
             conversation_id: Some(conversation_id),
@@ -836,6 +917,12 @@ impl AngelEngine {
         conversation_id: ConversationId,
         patch: ContextPatch,
     ) -> Result<CommandPlan, EngineError> {
+        let effect_specs = if self.protocol == ProtocolFlavor::Acp {
+            let conversation = self.conversation(&conversation_id)?;
+            acp_context_effect_specs(conversation, &patch)
+        } else {
+            Vec::new()
+        };
         {
             let conversation = self.conversation_mut(&conversation_id)?;
             if matches!(
@@ -849,21 +936,31 @@ impl AngelEngine {
             }
             conversation.context.apply_patch(patch.clone());
         }
-        let request_id = self.next_request_id();
-        self.pending.insert(
-            request_id.clone(),
-            PendingRequest::UpdateContext {
-                conversation_id: conversation_id.clone(),
-            },
-        )?;
-        let effect = ProtocolEffect::new(self.protocol, self.method_update_context())
-            .request_id(request_id.clone())
-            .conversation_id(conversation_id.clone())
-            .field("updates", patch.updates.len().to_string());
+        let mut effects = Vec::new();
+        let mut first_request_id = None;
+        for spec in effect_specs {
+            let request_id = self.next_request_id();
+            if first_request_id.is_none() {
+                first_request_id = Some(request_id.clone());
+            }
+            self.pending.insert(
+                request_id.clone(),
+                PendingRequest::UpdateContext {
+                    conversation_id: conversation_id.clone(),
+                },
+            )?;
+            let mut effect = ProtocolEffect::new(self.protocol, spec.method)
+                .request_id(request_id)
+                .conversation_id(conversation_id.clone());
+            for (key, value) in spec.fields {
+                effect = effect.field(key, value);
+            }
+            effects.push(effect);
+        }
         Ok(CommandPlan {
-            effects: vec![effect],
+            effects,
             conversation_id: Some(conversation_id),
-            request_id: Some(request_id),
+            request_id: first_request_id,
             ..CommandPlan::default()
         })
     }
@@ -1515,13 +1612,6 @@ impl AngelEngine {
         }
     }
 
-    fn method_update_context(&self) -> ProtocolMethod {
-        match self.protocol {
-            ProtocolFlavor::Acp => ProtocolMethod::Acp(AcpMethod::SetSessionConfigOption),
-            ProtocolFlavor::CodexAppServer => ProtocolMethod::Codex(CodexMethod::ConfigWrite),
-        }
-    }
-
     fn method_history_mutation(&self, op: &HistoryMutationOp) -> ProtocolMethod {
         match (self.protocol, op) {
             (ProtocolFlavor::CodexAppServer, HistoryMutationOp::Compact) => {
@@ -1694,6 +1784,218 @@ enum DeltaKind {
     Reasoning,
 }
 
+struct ContextEffectSpec {
+    method: ProtocolMethod,
+    fields: Vec<(String, String)>,
+}
+
+fn sync_context_from_config_options(
+    context: &mut crate::EffectiveContext,
+    options: &[SessionConfigOption],
+) {
+    if let Some(option) = find_config_option(options, "model", &["model"]) {
+        context.apply_patch(ContextPatch::one(ContextUpdate::Model {
+            scope: ContextScope::TurnAndFuture,
+            model: Some(option.current_value.clone()),
+        }));
+    }
+    if let Some(option) = find_config_option(options, "mode", &["mode"]) {
+        context.apply_patch(ContextPatch::one(ContextUpdate::Mode {
+            scope: ContextScope::TurnAndFuture,
+            mode: Some(AgentMode {
+                id: option.current_value.clone(),
+            }),
+        }));
+    }
+}
+
+fn codex_context_fields(context: &crate::EffectiveContext) -> Vec<(String, String)> {
+    let mut fields = Vec::new();
+    if let Some(Some(model)) = context.model.effective() {
+        fields.push(("model".to_string(), model.clone()));
+    }
+    if let Some(reasoning) = context.reasoning.effective().and_then(Option::as_ref) {
+        if let Some(effort) = &reasoning.effort {
+            fields.push(("effort".to_string(), effort.clone()));
+        }
+        if let Some(summary) = &reasoning.summary {
+            fields.push(("summary".to_string(), summary.clone()));
+        }
+    }
+    if let Some(policy) = context.approvals.effective() {
+        fields.push((
+            "approvalPolicy".to_string(),
+            codex_approval_policy(policy).to_string(),
+        ));
+    }
+    if let Some(permissions) = context.permissions.effective() {
+        fields.push(("permissions".to_string(), permissions.name.clone()));
+    } else if let Some(sandbox) = context.sandbox.effective() {
+        fields.push((
+            "sandboxPolicy".to_string(),
+            codex_sandbox_policy(sandbox).to_string(),
+        ));
+    }
+    if let Some(mode) = context.mode.effective().and_then(Option::as_ref)
+        && matches!(mode.id.as_str(), "plan" | "default")
+    {
+        fields.push(("collaborationMode".to_string(), mode.id.clone()));
+        if let Some(Some(model)) = context.model.effective() {
+            fields.push(("collaborationModel".to_string(), model.clone()));
+        }
+    }
+    fields
+}
+
+fn codex_approval_policy(policy: &ApprovalPolicy) -> &'static str {
+    match policy {
+        ApprovalPolicy::Never => "never",
+        ApprovalPolicy::OnRequest => "on-request",
+        ApprovalPolicy::OnFailure => "on-failure",
+        ApprovalPolicy::UnlessTrusted => "untrusted",
+    }
+}
+
+fn codex_sandbox_policy(sandbox: &SandboxProfile) -> &str {
+    match sandbox {
+        SandboxProfile::ReadOnly => "read-only",
+        SandboxProfile::WorkspaceWrite => "workspace-write",
+        SandboxProfile::FullAccess => "danger-full-access",
+        SandboxProfile::Custom(value) => value,
+    }
+}
+
+fn acp_context_effect_specs(
+    conversation: &ConversationState,
+    patch: &ContextPatch,
+) -> Vec<ContextEffectSpec> {
+    let mut specs = Vec::new();
+    for update in &patch.updates {
+        match update {
+            ContextUpdate::Model {
+                model: Some(model), ..
+            } => {
+                if let Some(option) =
+                    find_config_option(&conversation.config_options, "model", &["model"])
+                {
+                    specs.push(set_config_option_spec(&option.id, model));
+                } else {
+                    specs.push(ContextEffectSpec {
+                        method: ProtocolMethod::Acp(AcpMethod::SetSessionModel),
+                        fields: vec![("modelId".to_string(), model.clone())],
+                    });
+                }
+            }
+            ContextUpdate::Mode {
+                mode: Some(mode), ..
+            } => {
+                if let Some(option) =
+                    find_config_option(&conversation.config_options, "mode", &["mode"])
+                {
+                    specs.push(set_config_option_spec(&option.id, &mode.id));
+                } else {
+                    specs.push(ContextEffectSpec {
+                        method: ProtocolMethod::Acp(AcpMethod::SetSessionMode),
+                        fields: vec![("modeId".to_string(), mode.id.clone())],
+                    });
+                }
+            }
+            ContextUpdate::ApprovalPolicy { policy, .. } => {
+                if let Some(option) = find_config_option(
+                    &conversation.config_options,
+                    "approval",
+                    &[
+                        "approval",
+                        "approvals",
+                        "approval_policy",
+                        "permission",
+                        "permissions",
+                    ],
+                )
+                .or_else(|| find_config_option(&conversation.config_options, "mode", &["mode"]))
+                {
+                    specs.push(set_config_option_spec(
+                        &option.id,
+                        codex_approval_policy(policy),
+                    ));
+                }
+            }
+            ContextUpdate::Sandbox { sandbox, .. } => {
+                if let Some(option) =
+                    find_config_option(&conversation.config_options, "sandbox", &["sandbox"])
+                {
+                    specs.push(set_config_option_spec(
+                        &option.id,
+                        codex_sandbox_policy(sandbox),
+                    ));
+                }
+            }
+            ContextUpdate::Permissions { permissions, .. } => {
+                if let Some(option) = find_config_option(
+                    &conversation.config_options,
+                    "permission",
+                    &["permission", "permissions", "permission_profile"],
+                )
+                .or_else(|| find_config_option(&conversation.config_options, "mode", &["mode"]))
+                {
+                    specs.push(set_config_option_spec(&option.id, &permissions.name));
+                }
+            }
+            ContextUpdate::Raw { key, value, .. }
+                if key.starts_with("acp.config.") && key.len() > "acp.config.".len() =>
+            {
+                specs.push(set_config_option_spec(&key["acp.config.".len()..], value));
+            }
+            _ => {}
+        }
+    }
+    specs
+}
+
+fn set_config_option_spec(config_id: &str, value: &str) -> ContextEffectSpec {
+    ContextEffectSpec {
+        method: ProtocolMethod::Acp(AcpMethod::SetSessionConfigOption),
+        fields: vec![
+            ("configId".to_string(), config_id.to_string()),
+            ("value".to_string(), value.to_string()),
+        ],
+    }
+}
+
+fn find_config_option<'a>(
+    options: &'a [SessionConfigOption],
+    category: &str,
+    ids: &[&str],
+) -> Option<&'a SessionConfigOption> {
+    options
+        .iter()
+        .find(|option| option.category.as_deref() == Some(category))
+        .or_else(|| {
+            options.iter().find(|option| {
+                ids.iter()
+                    .any(|id| option.id.eq_ignore_ascii_case(id) || normalized_eq(&option.id, id))
+            })
+        })
+        .or_else(|| {
+            options.iter().find(|option| {
+                let name = normalize_name(&option.name);
+                ids.iter().any(|id| name == normalize_name(id))
+            })
+        })
+}
+
+fn normalized_eq(left: &str, right: &str) -> bool {
+    normalize_name(left) == normalize_name(right)
+}
+
+fn normalize_name(value: &str) -> String {
+    value
+        .chars()
+        .filter(|ch| ch.is_ascii_alphanumeric())
+        .flat_map(char::to_lowercase)
+        .collect()
+}
+
 fn to_input_refs(input: Vec<UserInput>) -> Vec<UserInputRef> {
     input
         .into_iter()
@@ -1747,11 +2049,13 @@ mod tests {
         ActionId, ConversationId, ElicitationId, JsonRpcRequestId, RemoteConversationId,
         RemoteRequestId, TurnId,
     };
-    use crate::protocol::{CodexMethod, ProtocolFlavor, ProtocolMethod};
+    use crate::protocol::{AcpMethod, CodexMethod, ProtocolFlavor, ProtocolMethod};
     use crate::state::{
-        ActionKind, ActionPhase, ActionState, ContentDelta, ConversationLifecycle,
-        ElicitationDecision, ElicitationKind, ElicitationPhase, ElicitationState,
-        HistoryMutationOp, HistoryMutationResult, TurnOutcome, TurnPhase,
+        ActionKind, ActionPhase, ActionState, AgentMode, ApprovalPolicy, ContentDelta,
+        ContextPatch, ContextScope, ContextUpdate, ConversationLifecycle, ElicitationDecision,
+        ElicitationKind, ElicitationPhase, ElicitationState, HistoryMutationOp,
+        HistoryMutationResult, PermissionProfile, SandboxProfile, SessionConfigOption, TurnOutcome,
+        TurnPhase,
     };
 
     use super::{AngelEngine, EngineError, EnginePolicy, InvalidEventPolicy};
@@ -1898,6 +2202,114 @@ mod tests {
             plan.effects[0].payload.fields.get("command"),
             Some(&"echo hello".to_string())
         );
+    }
+
+    #[test]
+    fn acp_context_update_uses_advertised_model_config_option() {
+        let adapter = AcpAdapter::standard();
+        let mut engine = engine_with(ProtocolFlavor::Acp, adapter.capabilities());
+        let conversation_id = insert_ready_conversation(
+            &mut engine,
+            "conv",
+            RemoteConversationId::AcpSession("sess".to_string()),
+            adapter.capabilities(),
+        );
+        engine
+            .conversations
+            .get_mut(&conversation_id)
+            .unwrap()
+            .config_options
+            .push(SessionConfigOption {
+                id: "model".to_string(),
+                name: "Model".to_string(),
+                description: None,
+                category: Some("model".to_string()),
+                current_value: "old".to_string(),
+                values: Vec::new(),
+            });
+
+        let plan = engine
+            .plan_command(EngineCommand::UpdateContext {
+                conversation_id,
+                patch: ContextPatch::one(ContextUpdate::Model {
+                    scope: ContextScope::TurnAndFuture,
+                    model: Some("gpt-5.5".to_string()),
+                }),
+            })
+            .expect("model update");
+
+        assert!(matches!(
+            &plan.effects[0].method,
+            ProtocolMethod::Acp(AcpMethod::SetSessionConfigOption)
+        ));
+        assert_eq!(
+            plan.effects[0].payload.fields.get("configId"),
+            Some(&"model".to_string())
+        );
+        assert_eq!(
+            plan.effects[0].payload.fields.get("value"),
+            Some(&"gpt-5.5".to_string())
+        );
+    }
+
+    #[test]
+    fn codex_start_turn_includes_sticky_context_overrides() {
+        let adapter = CodexAdapter::app_server();
+        let mut engine = engine_with(ProtocolFlavor::CodexAppServer, adapter.capabilities());
+        let conversation_id = insert_ready_conversation(
+            &mut engine,
+            "conv",
+            RemoteConversationId::CodexThread("thread".to_string()),
+            adapter.capabilities(),
+        );
+        let plan = engine
+            .plan_command(EngineCommand::UpdateContext {
+                conversation_id: conversation_id.clone(),
+                patch: ContextPatch {
+                    updates: vec![
+                        ContextUpdate::Model {
+                            scope: ContextScope::TurnAndFuture,
+                            model: Some("gpt-5.5".to_string()),
+                        },
+                        ContextUpdate::Mode {
+                            scope: ContextScope::TurnAndFuture,
+                            mode: Some(AgentMode {
+                                id: "plan".to_string(),
+                            }),
+                        },
+                        ContextUpdate::ApprovalPolicy {
+                            scope: ContextScope::TurnAndFuture,
+                            policy: ApprovalPolicy::Never,
+                        },
+                        ContextUpdate::Sandbox {
+                            scope: ContextScope::TurnAndFuture,
+                            sandbox: SandboxProfile::WorkspaceWrite,
+                        },
+                        ContextUpdate::Permissions {
+                            scope: ContextScope::TurnAndFuture,
+                            permissions: PermissionProfile {
+                                name: "default".to_string(),
+                            },
+                        },
+                    ],
+                },
+            })
+            .expect("context update");
+        assert!(plan.effects.is_empty());
+
+        let turn = engine
+            .plan_command(EngineCommand::StartTurn {
+                conversation_id,
+                input: vec![UserInput::text("hello")],
+                overrides: TurnOverrides::default(),
+            })
+            .expect("start turn");
+        let fields = &turn.effects[0].payload.fields;
+        assert_eq!(fields.get("model"), Some(&"gpt-5.5".to_string()));
+        assert_eq!(fields.get("collaborationMode"), Some(&"plan".to_string()));
+        assert_eq!(fields.get("approvalPolicy"), Some(&"never".to_string()));
+        assert_eq!(fields.get("permissions"), Some(&"default".to_string()));
+        assert_eq!(fields.get("sandboxPolicy"), None);
     }
 
     #[test]
