@@ -9,8 +9,9 @@ use crate::protocol::{AcpMethod, ProtocolMethod};
 use crate::reducer::{AngelEngine, PendingRequest};
 use crate::state::{
     ActionInput, ActionKind, ActionOutputDelta, ActionPatch, ActionPhase, ActionState,
-    ContentDelta, ContextPatch, ElicitationKind, ElicitationOptions, ElicitationState,
-    ExhaustionReason, PlanEntry, PlanEntryStatus, PlanState, TurnOutcome,
+    AvailableCommand, AvailableCommandInput, ContentDelta, ContextPatch, ElicitationKind,
+    ElicitationOptions, ElicitationState, ExhaustionReason, PlanEntry, PlanEntryStatus, PlanState,
+    TurnOutcome,
 };
 use crate::transport::{
     JsonRpcMessage, ProtocolTransport, TransportLogKind, TransportOptions, TransportOutput,

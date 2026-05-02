@@ -192,6 +192,16 @@ impl AngelEngine {
                 conversation.lifecycle = lifecycle;
                 Ok(TransitionReport::one(UiEvent::ConversationChanged(id)))
             }
+            EngineEvent::AvailableCommandsUpdated {
+                conversation_id,
+                commands,
+            } => {
+                let conversation = self.conversation_mut(&conversation_id)?;
+                conversation.available_commands = commands;
+                Ok(TransitionReport::one(UiEvent::ConversationChanged(
+                    conversation_id,
+                )))
+            }
             EngineEvent::ConversationClosed { id } => {
                 let conversation = self.conversation_mut(&id)?;
                 conversation.lifecycle = ConversationLifecycle::Closed;

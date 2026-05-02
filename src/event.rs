@@ -4,7 +4,7 @@ use crate::ids::{
     ActionId, ConversationId, ElicitationId, RemoteConversationId, RemoteTurnId, TurnId,
 };
 use crate::state::{
-    ActionPatch, ActionState, ContentDelta, ContextPatch, ConversationLifecycle,
+    ActionPatch, ActionState, AvailableCommand, ContentDelta, ContextPatch, ConversationLifecycle,
     ElicitationDecision, ElicitationState, HistoryMutationOp, HistoryMutationResult,
     HydrationSource, ObserverState, PlanState, ProvisionOp, TurnOutcome, UserInputRef,
 };
@@ -44,6 +44,10 @@ pub enum EngineEvent {
     ConversationStatusChanged {
         id: ConversationId,
         lifecycle: ConversationLifecycle,
+    },
+    AvailableCommandsUpdated {
+        conversation_id: ConversationId,
+        commands: Vec<AvailableCommand>,
     },
     ConversationClosed {
         id: ConversationId,

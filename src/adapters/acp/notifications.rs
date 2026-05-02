@@ -32,17 +32,31 @@ fn decode_acp_update(
             format!("update for unknown session {session_id}"),
         ));
     };
+    let update = params.get("update").unwrap_or(&Value::Null);
+    let update_type = update
+        .get("sessionUpdate")
+        .and_then(Value::as_str)
+        .unwrap_or("");
+
+    if update_type == "available_commands_update" {
+        let commands = available_commands(update);
+        return Ok(TransportOutput::default()
+            .event(EngineEvent::AvailableCommandsUpdated {
+                conversation_id,
+                commands: commands.clone(),
+            })
+            .log(
+                TransportLogKind::State,
+                format!("available commands updated: {}", commands.len()),
+            ));
+    }
+
     let Some(turn_id) = active_turn_id(engine, &conversation_id) else {
         return Ok(TransportOutput::default().log(
             TransportLogKind::Receive,
             "session update without active turn",
         ));
     };
-    let update = params.get("update").unwrap_or(&Value::Null);
-    let update_type = update
-        .get("sessionUpdate")
-        .and_then(Value::as_str)
-        .unwrap_or("");
 
     match update_type {
         "agent_message_chunk" => {
@@ -152,5 +166,93 @@ fn decode_acp_update(
             TransportLogKind::Receive,
             format!("session/update {update_type}"),
         )),
+    }
+}
+
+fn available_commands(update: &Value) -> Vec<AvailableCommand> {
+    update
+        .get("availableCommands")
+        .and_then(Value::as_array)
+        .map(|commands| {
+            commands
+                .iter()
+                .filter_map(|command| {
+                    let name = command.get("name").and_then(Value::as_str)?;
+                    let description = command
+                        .get("description")
+                        .and_then(Value::as_str)
+                        .unwrap_or_default();
+                    let input = command
+                        .get("input")
+                        .and_then(|input| input.get("hint"))
+                        .and_then(Value::as_str)
+                        .map(|hint| AvailableCommandInput {
+                            hint: hint.to_string(),
+                        });
+                    Some(AvailableCommand {
+                        name: name.to_string(),
+                        description: description.to_string(),
+                        input,
+                    })
+                })
+                .collect()
+        })
+        .unwrap_or_default()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn available_commands_update_does_not_require_active_turn() {
+        let adapter = AcpAdapter::standard();
+        let mut engine = AngelEngine::new(crate::ProtocolFlavor::Acp, adapter.capabilities());
+        let conversation_id = ConversationId::new("conv");
+        engine
+            .apply_event(EngineEvent::ConversationProvisionStarted {
+                id: conversation_id.clone(),
+                remote: RemoteConversationId::Pending("conv".to_string()),
+                op: crate::ProvisionOp::New,
+                capabilities: adapter.capabilities(),
+            })
+            .expect("conversation provision");
+        engine
+            .apply_event(EngineEvent::ConversationReady {
+                id: conversation_id.clone(),
+                remote: Some(RemoteConversationId::AcpSession("sess".to_string())),
+                context: ContextPatch::empty(),
+                capabilities: None,
+            })
+            .expect("conversation ready");
+
+        let output = adapter
+            .decode_notification(
+                &engine,
+                "session/update",
+                &json!({
+                    "sessionId": "sess",
+                    "update": {
+                        "sessionUpdate": "available_commands_update",
+                        "availableCommands": [
+                            {
+                                "name": "plan",
+                                "description": "Create a plan",
+                                "input": { "hint": "task" }
+                            }
+                        ]
+                    }
+                }),
+            )
+            .expect("available commands update");
+
+        assert!(matches!(
+            output.events.as_slice(),
+            [EngineEvent::AvailableCommandsUpdated { conversation_id: id, commands }]
+                if id == &conversation_id
+                    && commands.len() == 1
+                    && commands[0].name == "plan"
+                    && commands[0].input.as_ref().map(|input| input.hint.as_str()) == Some("task")
+        ));
     }
 }

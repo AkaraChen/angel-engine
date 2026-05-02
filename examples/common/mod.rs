@@ -6,10 +6,11 @@ use std::thread;
 use std::time::Duration;
 
 use angel_engine::{
-    AngelEngine, CommandPlan, ConversationCapabilities, ConversationId, ConversationLifecycle,
-    ElicitationDecision, ElicitationId, ElicitationPhase, EngineCommand, JsonRpcMessage,
-    ProtocolFlavor, ProtocolTransport, RuntimeState, StartConversationParams, TransportClientInfo,
-    TransportLog, TransportLogKind, TransportOptions, UserInput, apply_transport_output,
+    AngelEngine, AvailableCommand, CommandPlan, ConversationCapabilities, ConversationId,
+    ConversationLifecycle, ElicitationDecision, ElicitationId, ElicitationPhase, EngineCommand,
+    JsonRpcMessage, ProtocolFlavor, ProtocolTransport, RuntimeState, StartConversationParams,
+    TransportClientInfo, TransportLog, TransportLogKind, TransportOptions, UserInput,
+    apply_transport_output,
 };
 
 #[derive(Clone, Copy, Debug)]
@@ -99,6 +100,7 @@ where
         let conversation_id = plan.conversation_id.clone();
         self.send_plan(plan)?;
         self.wait_for_conversation_idle(conversation_id)?;
+        self.drain_startup_notifications()?;
         Ok(())
     }
 
@@ -109,6 +111,7 @@ where
         } else {
             println!("Type a message, or :quit.");
         }
+        self.print_command_summary();
 
         let mut input = String::new();
         loop {
@@ -126,6 +129,10 @@ where
             if matches!(line, ":q" | ":quit" | "exit") {
                 break;
             }
+            if line == "/commands" {
+                self.print_available_commands();
+                continue;
+            }
 
             if let Some(command) = line.strip_prefix("/shell ") {
                 if self.config.direct_shell {
@@ -133,6 +140,8 @@ where
                 } else {
                     println!("[warn] direct shell command is not available for this protocol");
                 }
+            } else if line.starts_with('/') {
+                self.run_slash_command(line.to_string())?;
             } else {
                 self.run_turn(line.to_string())?;
             }
@@ -183,6 +192,14 @@ where
         Ok(())
     }
 
+    fn drain_startup_notifications(&mut self) -> Result<(), Box<dyn Error>> {
+        let mut timeout = Duration::from_millis(500);
+        while self.process_next_line(Some(timeout))? {
+            timeout = Duration::from_millis(50);
+        }
+        Ok(())
+    }
+
     fn run_shell_command(&mut self, command: String) -> Result<(), Box<dyn Error>> {
         let conversation_id = self.selected_conversation()?;
         let plan = self.engine.plan_command(EngineCommand::RunShellCommand {
@@ -216,6 +233,26 @@ where
         }
         println!();
         Ok(())
+    }
+
+    fn run_slash_command(&mut self, command_line: String) -> Result<(), Box<dyn Error>> {
+        let command = command_line[1..].split_whitespace().next().unwrap_or("");
+        let available_commands = self.selected_available_commands();
+        if let Some(available) = available_commands
+            .iter()
+            .find(|available| available.name == command)
+        {
+            let has_input = command_line
+                .strip_prefix(&format!("/{}", available.name))
+                .map(str::trim)
+                .is_some_and(|input| !input.is_empty());
+            if !has_input && let Some(input) = &available.input {
+                println!("[command] /{} {}", available.name, input.hint);
+            }
+        } else if !available_commands.is_empty() {
+            println!("[warn] slash command /{command} was not advertised; sending anyway");
+        }
+        self.run_turn(command_line)
     }
 
     fn run_turn(&mut self, prompt: String) -> Result<(), Box<dyn Error>> {
@@ -388,6 +425,63 @@ where
             .map(|conversation| conversation.active_turn_count())
             .unwrap_or(0)
     }
+
+    fn selected_available_commands(&self) -> &[AvailableCommand] {
+        self.engine
+            .selected
+            .as_ref()
+            .and_then(|id| self.engine.conversations.get(id))
+            .map(|conversation| conversation.available_commands.as_slice())
+            .unwrap_or(&[])
+    }
+
+    fn print_command_summary(&self) {
+        let commands = self.selected_available_commands();
+        if commands.is_empty() {
+            return;
+        }
+        let names = commands
+            .iter()
+            .take(8)
+            .map(|command| format!("/{}", command.name))
+            .collect::<Vec<_>>()
+            .join(", ");
+        let suffix = if commands.len() > 8 { ", ..." } else { "" };
+        println!(
+            "[commands] {} available: {names}{suffix}; type /commands to list",
+            commands.len()
+        );
+    }
+
+    fn print_available_commands(&self) {
+        let commands = self.selected_available_commands();
+        if commands.is_empty() {
+            println!("[commands] no slash commands advertised");
+            return;
+        }
+        for command in commands {
+            let input = command
+                .input
+                .as_ref()
+                .map(|input| format!(" <{}>", compact_text(&input.hint, 40)))
+                .unwrap_or_default();
+            let description = compact_text(&command.description, 160);
+            println!("[commands] /{}{} - {}", command.name, input, description);
+        }
+    }
+}
+
+fn compact_text(text: &str, max_chars: usize) -> String {
+    let compact = text.split_whitespace().collect::<Vec<_>>().join(" ");
+    if compact.chars().count() <= max_chars {
+        return compact;
+    }
+    let mut truncated = compact
+        .chars()
+        .take(max_chars.saturating_sub(3))
+        .collect::<String>();
+    truncated.push_str("...");
+    truncated
 }
 
 impl<A> Drop for ProtocolShell<A> {

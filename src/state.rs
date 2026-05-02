@@ -70,6 +70,7 @@ pub struct ConversationState {
     pub context: EffectiveContext,
     pub history: HistoryState,
     pub observer: ObserverState,
+    pub available_commands: Vec<AvailableCommand>,
     pub capabilities: ConversationCapabilities,
     pub generation: u64,
 }
@@ -93,6 +94,7 @@ impl ConversationState {
             context: EffectiveContext::default(),
             history: HistoryState::default(),
             observer: ObserverState::default(),
+            available_commands: Vec::new(),
             capabilities,
             generation: 0,
         }
@@ -118,6 +120,18 @@ impl ConversationState {
                 | ConversationLifecycle::Closed
         )
     }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct AvailableCommand {
+    pub name: String,
+    pub description: String,
+    pub input: Option<AvailableCommandInput>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct AvailableCommandInput {
+    pub hint: String,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
