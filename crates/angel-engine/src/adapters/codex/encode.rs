@@ -21,12 +21,6 @@ impl CodexAdapter {
                 if let Some(cwd) = effect.payload.fields.get("cwd") {
                     params.insert("cwd".to_string(), json!(cwd));
                 }
-                if let Some(service_name) = effect.payload.fields.get("serviceName") {
-                    params.insert("serviceName".to_string(), json!(service_name));
-                }
-                if effect.payload.fields.get("ephemeral").is_some() {
-                    params.insert("ephemeral".to_string(), json!(true));
-                }
                 insert_codex_thread_overrides(&mut params, &effect.payload.fields);
                 params.insert("experimentalRawEvents".to_string(), json!(false));
                 params.insert("persistExtendedHistory".to_string(), json!(true));
