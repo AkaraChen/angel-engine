@@ -14,7 +14,7 @@ fn codex_rollback_marks_workspace_not_reverted() {
     let conversation_id = insert_ready_conversation(
         &mut engine,
         "conv",
-        RemoteConversationId::CodexThread("thread".to_string()),
+        RemoteConversationId::Known("thread".to_string()),
         adapter.capabilities(),
     );
 

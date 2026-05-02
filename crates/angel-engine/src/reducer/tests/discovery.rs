@@ -154,7 +154,7 @@ fn acp_discovered_conversation_resumes_with_remote_id() {
     engine
         .apply_event(EngineEvent::ConversationDiscovered {
             id: conversation_id.clone(),
-            remote: RemoteConversationId::AcpSession("sess".to_string()),
+            remote: RemoteConversationId::Known("sess".to_string()),
             context: title_patch("Fix tests"),
             capabilities,
         })
@@ -202,7 +202,7 @@ fn codex_discovered_conversation_resumes_with_remote_id() {
     engine
         .apply_event(EngineEvent::ConversationDiscovered {
             id: conversation_id.clone(),
-            remote: RemoteConversationId::CodexThread("thread".to_string()),
+            remote: RemoteConversationId::Known("thread".to_string()),
             context: ContextPatch::empty(),
             capabilities: adapter.capabilities(),
         })

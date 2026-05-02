@@ -154,7 +154,7 @@ mod tests {
             conversation_id.clone(),
             crate::ConversationState::new(
                 conversation_id.clone(),
-                RemoteConversationId::CodexThread("thread".to_string()),
+                RemoteConversationId::Known("thread".to_string()),
                 ConversationLifecycle::Idle,
                 adapter.capabilities(),
             ),

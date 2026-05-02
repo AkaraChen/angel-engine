@@ -1,6 +1,6 @@
 use crate::command::{TurnOverrides, UserInput};
 use crate::error::EngineError;
-use crate::ids::{ConversationId, JsonRpcRequestId, RemoteConversationId, RemoteTurnId, TurnId};
+use crate::ids::{ConversationId, JsonRpcRequestId, RemoteTurnId, TurnId};
 use crate::protocol::{ProtocolEffect, ProtocolFlavor};
 use crate::state::{ConversationLifecycle, ConversationState, TurnPhase, TurnState, UserInputRef};
 
@@ -29,8 +29,7 @@ impl AngelEngine {
         let request_id = self.next_request_id();
         let turn_id = self.next_turn_id();
         let sequence = self.next_turn_sequence();
-        let remote =
-            self.remote_turn_for_start(&conversation_id, &request_id, &overrides, sequence)?;
+        let remote = self.remote_turn_for_start(&conversation_id, &request_id, sequence)?;
         let input_text = input_to_text(&input);
         let input_refs = to_input_refs(input);
         let generation = self.generation;
@@ -237,30 +236,21 @@ impl AngelEngine {
         &self,
         conversation_id: &ConversationId,
         request_id: &JsonRpcRequestId,
-        overrides: &TurnOverrides,
         sequence: u64,
     ) -> Result<RemoteTurnId, EngineError> {
         let conversation = self.conversation(conversation_id)?;
         match self.protocol {
             ProtocolFlavor::Acp => {
-                let session_id = match &conversation.remote {
-                    RemoteConversationId::AcpSession(session_id) => session_id.clone(),
-                    other => {
-                        return Err(EngineError::InvalidState {
-                            expected: "ACP session id".to_string(),
-                            actual: format!("{other:?}"),
-                        });
-                    }
-                };
-                Ok(RemoteTurnId::AcpLocal {
-                    session_id,
-                    prompt_request_id: Some(request_id.clone()),
-                    user_message_id: overrides.user_message_id.clone(),
-                    sequence,
-                })
+                conversation
+                    .remote
+                    .as_protocol_id()
+                    .ok_or_else(|| EngineError::InvalidState {
+                        expected: "remote conversation id".to_string(),
+                        actual: format!("{:?}", conversation.remote),
+                    })?;
+                Ok(RemoteTurnId::Local(format!("turn-{sequence}")))
             }
             ProtocolFlavor::CodexAppServer => Ok(RemoteTurnId::Pending {
-                protocol: "codex",
                 request_id: request_id.clone(),
             }),
         }
@@ -297,7 +287,7 @@ fn ensure_codex_turn_id_available(
         .ok_or_else(|| EngineError::TurnNotFound {
             turn_id: turn_id.to_string(),
         })?;
-    if !matches!(turn.remote, RemoteTurnId::CodexTurn(_)) {
+    if !matches!(turn.remote, RemoteTurnId::Known(_)) {
         return Err(EngineError::InvalidState {
             expected: format!("remote turn id available for {operation}"),
             actual: format!("{:?}", turn.remote),

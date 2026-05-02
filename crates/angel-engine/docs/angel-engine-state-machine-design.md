@@ -79,22 +79,19 @@ pub struct ConversationState {
 
 ```rust
 pub enum RemoteConversationId {
-    AcpSession(String),
-    CodexThread(String),
+    Known(String),
+    Pending(String),
+    Local(String),
 }
 
 pub enum RemoteTurnId {
-    AcpLocal {
-        session_id: String,
-        prompt_request_id: Option<JsonRpcRequestId>,
-        user_message_id: Option<String>,
-        sequence: u64,
-    },
-    CodexTurn(String),
+    Known(String),
+    Pending { request_id: JsonRpcRequestId },
+    Local(String),
 }
 ```
 
-ACP 的稳定远端标识是 `sessionId`，它用于恢复 conversation：`session/load` 会用该 session id 重放历史，`session/resume` 会用该 session id 恢复上下文但不重放历史。这个 id 应进入 `RemoteConversationId::AcpSession`。
+远端 conversation id 在 core 中是 opaque 的 `RemoteConversationId::Known`。ACP adapter 可以把它解释为 `sessionId`，Codex adapter 可以把它解释为 `threadId`，但 core 不把这两个协议名暴露为公共状态 variant。
 
 ACP 没有稳定的协议级 `turnId`。一个 prompt turn 的线上身份主要由“当前 pending 的 `session/prompt` JSON-RPC 请求”隐式表示，结束时由该请求返回 `stopReason`。因此 Angel Engine 需要维护自己的 `TurnId`，并把它绑定到可用的 ACP 线索：
 
@@ -103,7 +100,7 @@ ACP 没有稳定的协议级 `turnId`。一个 prompt turn 的线上身份主要
 - unstable `messageId/userMessageId`: 可作为 user message 级关联线索；它不是稳定 turn id，而且不是所有 agent 都会启用或返回。
 - local `sequence`: Angel Engine在 session 内按 prompt 顺序生成，用于没有 message id 时保持 UI 状态一致。
 
-Codex app-server 有显式 `turnId`，可以直接保存到 `RemoteTurnId::CodexTurn`。
+Codex app-server 有显式 `turnId`，adapter 把它保存到 opaque 的 `RemoteTurnId::Known`。
 
 ## 状态 enum
 
@@ -738,7 +735,7 @@ UI StartConversation
   -> ConversationReady(Idle)
 
 UI StartTurn(input)
-  -> create local TurnId and RemoteTurnId::AcpLocal(sessionId, request id, optional messageId, sequence)
+  -> create local TurnId and local RemoteTurnId
   -> session/prompt pending
   -> TurnStarted
   -> session/update AgentThoughtChunk

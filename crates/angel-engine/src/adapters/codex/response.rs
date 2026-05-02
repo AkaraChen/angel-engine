@@ -47,7 +47,7 @@ impl CodexAdapter {
                 output = output
                     .event(EngineEvent::ConversationReady {
                         id: conversation_id.clone(),
-                        remote: Some(RemoteConversationId::CodexThread(thread_id.to_string())),
+                        remote: Some(RemoteConversationId::Known(thread_id.to_string())),
                         context: codex_context_patch(result),
                         capabilities: Some(engine.default_capabilities.clone()),
                     })
@@ -66,7 +66,7 @@ impl CodexAdapter {
                         .event(EngineEvent::TurnStarted {
                             conversation_id: conversation_id.clone(),
                             turn_id: turn_id.clone(),
-                            remote: RemoteTurnId::CodexTurn(remote_turn_id.to_string()),
+                            remote: RemoteTurnId::Known(remote_turn_id.to_string()),
                             input: Vec::new(),
                         })
                         .log(
@@ -119,7 +119,7 @@ impl CodexAdapter {
                         );
                         continue;
                     };
-                    let remote = RemoteConversationId::CodexThread(thread_id.to_string());
+                    let remote = RemoteConversationId::Known(thread_id.to_string());
                     output = output.event(EngineEvent::ConversationDiscovered {
                         id: discovered_conversation_id(
                             engine,
@@ -273,7 +273,7 @@ mod tests {
             output.events.as_slice(),
             [EngineEvent::ConversationDiscovered {
                 id,
-                remote: RemoteConversationId::CodexThread(thread_id),
+                remote: RemoteConversationId::Known(thread_id),
                 context,
                 ..
             }, EngineEvent::ConversationDiscoveryPage {

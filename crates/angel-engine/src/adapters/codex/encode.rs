@@ -178,7 +178,7 @@ impl CodexAdapter {
                 elicitation_id: elicitation_id.to_string(),
             })?;
         let remote_request_id = match &elicitation.remote_request_id {
-            RemoteRequestId::Codex(id) => id.clone(),
+            RemoteRequestId::JsonRpc(id) => id.clone(),
             other => {
                 return Err(crate::EngineError::InvalidState {
                     expected: "Codex server request id".to_string(),

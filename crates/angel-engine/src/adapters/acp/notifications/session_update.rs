@@ -307,7 +307,7 @@ mod tests {
         engine
             .apply_event(EngineEvent::ConversationReady {
                 id: conversation_id.clone(),
-                remote: Some(RemoteConversationId::AcpSession("sess".to_string())),
+                remote: Some(RemoteConversationId::Known("sess".to_string())),
                 context: ContextPatch::empty(),
                 capabilities: None,
             })

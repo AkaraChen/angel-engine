@@ -55,7 +55,7 @@ pub(crate) fn codex_turn_id(
             turn_id: turn_id.to_string(),
         })?;
     match &turn.remote {
-        RemoteTurnId::CodexTurn(id) => Ok(id.clone()),
+        RemoteTurnId::Known(id) => Ok(id.clone()),
         other => Err(crate::EngineError::InvalidState {
             expected: "Codex turn id".to_string(),
             actual: format!("{other:?}"),
@@ -71,7 +71,7 @@ pub(crate) fn find_codex_conversation(
         .conversations
         .iter()
         .find_map(|(id, conversation)| match &conversation.remote {
-            RemoteConversationId::CodexThread(remote) if remote == thread_id => Some(id.clone()),
+            RemoteConversationId::Known(remote) if remote == thread_id => Some(id.clone()),
             _ => None,
         })
         .or_else(|| {
@@ -108,7 +108,7 @@ pub(crate) fn local_turn_started_event(
         EngineEvent::TurnStarted {
             conversation_id: conversation_id.clone(),
             turn_id,
-            remote: RemoteTurnId::CodexTurn(remote_turn_id.to_string()),
+            remote: RemoteTurnId::Known(remote_turn_id.to_string()),
             input: Vec::new(),
         },
     )
@@ -124,7 +124,7 @@ pub(crate) fn ensure_local_turn_event(
         .get(conversation_id)
         .and_then(|conversation| {
             conversation.turns.iter().find_map(|(turn_id, turn)| {
-                matches!(&turn.remote, RemoteTurnId::CodexTurn(id) if id == remote_turn_id)
+                matches!(&turn.remote, RemoteTurnId::Known(id) if id == remote_turn_id)
                     .then(|| turn_id.clone())
             })
         })
@@ -145,7 +145,7 @@ pub(crate) fn local_turn_id(
         .turns
         .iter()
         .find_map(|(turn_id, turn)| {
-            matches!(&turn.remote, RemoteTurnId::CodexTurn(id) if id == remote_turn_id)
+            matches!(&turn.remote, RemoteTurnId::Known(id) if id == remote_turn_id)
                 .then(|| turn_id.clone())
         })
         .or_else(|| {

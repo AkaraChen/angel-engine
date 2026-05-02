@@ -1,5 +1,3 @@
-use crate::ids::JsonRpcRequestId;
-
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct HistoryState {
     pub hydrated: bool,
@@ -35,10 +33,4 @@ impl Default for ObserverState {
             visible: true,
         }
     }
-}
-
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct PromptCorrelation {
-    pub request_id: JsonRpcRequestId,
-    pub user_message_id: Option<String>,
 }

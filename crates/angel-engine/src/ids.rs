@@ -124,8 +124,7 @@ impl fmt::Display for JsonRpcRequestId {
 
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum RemoteConversationId {
-    AcpSession(String),
-    CodexThread(String),
+    Known(String),
     Pending(String),
     Local(String),
 }
@@ -133,7 +132,7 @@ pub enum RemoteConversationId {
 impl RemoteConversationId {
     pub fn as_protocol_id(&self) -> Option<&str> {
         match self {
-            Self::AcpSession(value) | Self::CodexThread(value) | Self::Local(value) => Some(value),
+            Self::Known(value) | Self::Local(value) => Some(value),
             Self::Pending(_) => None,
         }
     }
@@ -141,31 +140,19 @@ impl RemoteConversationId {
 
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum RemoteTurnId {
-    AcpLocal {
-        session_id: String,
-        prompt_request_id: Option<JsonRpcRequestId>,
-        user_message_id: Option<String>,
-        sequence: u64,
-    },
-    CodexTurn(String),
-    Pending {
-        protocol: &'static str,
-        request_id: JsonRpcRequestId,
-    },
+    Known(String),
+    Pending { request_id: JsonRpcRequestId },
     Local(String),
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum RemoteActionId {
-    AcpToolCall(String),
-    CodexItem(String),
-    CodexDynamicCall(String),
+    Known(String),
     Local(String),
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum RemoteRequestId {
-    Acp(JsonRpcRequestId),
-    Codex(JsonRpcRequestId),
+    JsonRpc(JsonRpcRequestId),
     Local(String),
 }

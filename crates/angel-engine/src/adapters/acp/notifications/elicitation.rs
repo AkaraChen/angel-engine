@@ -89,7 +89,7 @@ fn find_acp_elicitation_by_request(
                 .elicitations
                 .iter()
                 .find_map(|(elicitation_id, elicitation)| {
-                    matches!(&elicitation.remote_request_id, RemoteRequestId::Acp(id) if id == request_id)
+                    matches!(&elicitation.remote_request_id, RemoteRequestId::JsonRpc(id) if id == request_id)
                         .then(|| (conversation_id.clone(), elicitation_id.clone()))
                 })
         })
@@ -111,7 +111,7 @@ mod tests {
                 conversation_id: conversation_id.clone(),
                 elicitation: ElicitationState::new(
                     ElicitationId::new("acp-elicitation-url-1"),
-                    RemoteRequestId::Acp(JsonRpcRequestId::new("request-1")),
+                    RemoteRequestId::JsonRpc(JsonRpcRequestId::new("request-1")),
                     ElicitationKind::ExternalFlow,
                 ),
             })
@@ -145,7 +145,7 @@ mod tests {
                 conversation_id: conversation_id.clone(),
                 elicitation: ElicitationState::new(
                     ElicitationId::new("permission"),
-                    RemoteRequestId::Acp(JsonRpcRequestId::number("9")),
+                    RemoteRequestId::JsonRpc(JsonRpcRequestId::number("9")),
                     ElicitationKind::Approval,
                 ),
             })
@@ -181,7 +181,7 @@ mod tests {
         engine
             .apply_event(EngineEvent::ConversationReady {
                 id: conversation_id.clone(),
-                remote: Some(RemoteConversationId::AcpSession("sess".to_string())),
+                remote: Some(RemoteConversationId::Known("sess".to_string())),
                 context: ContextPatch::empty(),
                 capabilities: None,
             })

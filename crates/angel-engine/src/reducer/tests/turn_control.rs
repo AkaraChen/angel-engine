@@ -17,7 +17,7 @@ fn acp_standard_steer_is_capability_unsupported() {
     let conversation_id = insert_ready_conversation(
         &mut engine,
         "conv",
-        RemoteConversationId::AcpSession("sess".to_string()),
+        RemoteConversationId::Known("sess".to_string()),
         adapter.capabilities(),
     );
     start_turn(&mut engine, conversation_id.clone());
@@ -44,7 +44,7 @@ fn acp_extension_steer_uses_extension_method() {
     let conversation_id = insert_ready_conversation(
         &mut engine,
         "conv",
-        RemoteConversationId::AcpSession("sess".to_string()),
+        RemoteConversationId::Known("sess".to_string()),
         adapter.capabilities(),
     );
     let turn_id = start_turn(&mut engine, conversation_id.clone());
@@ -72,7 +72,7 @@ fn acp_cancel_turn_is_notification_not_public_raw_protocol() {
     let conversation_id = insert_ready_conversation(
         &mut engine,
         "conv",
-        RemoteConversationId::AcpSession("sess".to_string()),
+        RemoteConversationId::Known("sess".to_string()),
         adapter.capabilities(),
     );
     let turn_id = start_turn(&mut engine, conversation_id.clone());
@@ -111,7 +111,7 @@ fn codex_standard_steer_uses_turn_steer() {
     let conversation_id = insert_ready_conversation(
         &mut engine,
         "conv",
-        RemoteConversationId::CodexThread("thread".to_string()),
+        RemoteConversationId::Known("thread".to_string()),
         adapter.capabilities(),
     );
     let turn_id = start_turn(&mut engine, conversation_id.clone());
@@ -138,7 +138,7 @@ fn active_turn_limit_blocks_second_start_by_default() {
     let conversation_id = insert_ready_conversation(
         &mut engine,
         "conv",
-        RemoteConversationId::CodexThread("thread".to_string()),
+        RemoteConversationId::Known("thread".to_string()),
         adapter.capabilities(),
     );
     start_turn(&mut engine, conversation_id.clone());
@@ -160,7 +160,7 @@ fn cancel_is_two_phase_until_terminal_event() {
     let conversation_id = insert_ready_conversation(
         &mut engine,
         "conv",
-        RemoteConversationId::CodexThread("thread".to_string()),
+        RemoteConversationId::Known("thread".to_string()),
         adapter.capabilities(),
     );
     let turn_id = start_turn(&mut engine, conversation_id.clone());

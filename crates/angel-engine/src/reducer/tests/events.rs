@@ -21,7 +21,7 @@ fn ignore_stale_delta_does_not_revive_terminal_turn() {
     let conversation_id = insert_ready_conversation(
         &mut engine,
         "conv",
-        RemoteConversationId::CodexThread("thread".to_string()),
+        RemoteConversationId::Known("thread".to_string()),
         adapter.capabilities(),
     );
     let turn_id = start_turn(&mut engine, conversation_id.clone());
@@ -52,7 +52,7 @@ fn plan_delta_is_stored_on_turn_without_assistant_output() {
     let conversation_id = insert_ready_conversation(
         &mut engine,
         "conv",
-        RemoteConversationId::CodexThread("thread".to_string()),
+        RemoteConversationId::Known("thread".to_string()),
         adapter.capabilities(),
     );
     let turn_id = start_turn(&mut engine, conversation_id.clone());
@@ -81,7 +81,7 @@ fn plan_path_is_stored_on_turn() {
     let conversation_id = insert_ready_conversation(
         &mut engine,
         "conv",
-        RemoteConversationId::CodexThread("thread".to_string()),
+        RemoteConversationId::Known("thread".to_string()),
         adapter.capabilities(),
     );
     let turn_id = start_turn(&mut engine, conversation_id.clone());
@@ -106,14 +106,14 @@ fn rediscovery_updates_context_without_resetting_loaded_conversation() {
     let conversation_id = insert_ready_conversation(
         &mut engine,
         "conv",
-        RemoteConversationId::CodexThread("thread".to_string()),
+        RemoteConversationId::Known("thread".to_string()),
         adapter.capabilities(),
     );
 
     engine
         .apply_event(EngineEvent::ConversationDiscovered {
             id: conversation_id.clone(),
-            remote: RemoteConversationId::CodexThread("thread".to_string()),
+            remote: RemoteConversationId::Known("thread".to_string()),
             context: ContextPatch::one(ContextUpdate::Raw {
                 scope: ContextScope::Conversation,
                 key: "conversation.title".to_string(),

@@ -44,7 +44,7 @@ impl AcpAdapter {
         };
         let mut elicitation = ElicitationState::new(
             ElicitationId::new(format!("acp-request-{id}")),
-            RemoteRequestId::Acp(id.clone()),
+            RemoteRequestId::JsonRpc(id.clone()),
             ElicitationKind::Approval,
         );
         let active_turn_id = active_turn_id(engine, &conversation_id);
@@ -139,7 +139,7 @@ impl AcpAdapter {
                     .map(|id| format!("acp-elicitation-{id}"))
                     .unwrap_or_else(|| format!("acp-elicitation-{id}")),
             ),
-            RemoteRequestId::Acp(id.clone()),
+            RemoteRequestId::JsonRpc(id.clone()),
             kind,
         );
         let active_turn_id = active_turn_id(engine, &conversation_id);

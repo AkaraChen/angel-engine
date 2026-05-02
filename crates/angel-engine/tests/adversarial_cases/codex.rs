@@ -8,7 +8,7 @@ fn codex_unknown_thread_notifications_do_not_mutate_selected_conversation() {
     let conversation_id = insert_ready_conversation(
         &mut engine,
         "conv",
-        RemoteConversationId::CodexThread("thread-a".to_string()),
+        RemoteConversationId::Known("thread-a".to_string()),
         adapter.capabilities(),
     );
 
@@ -47,7 +47,7 @@ fn codex_bad_server_request_returns_json_rpc_error_and_followup_can_run() {
     let conversation_id = insert_ready_conversation(
         &mut engine,
         "conv",
-        RemoteConversationId::CodexThread("thread".to_string()),
+        RemoteConversationId::Known("thread".to_string()),
         adapter.capabilities(),
     );
 
@@ -100,7 +100,7 @@ fn codex_request_before_turn_started_creates_missing_turn_and_action() {
     let conversation_id = insert_ready_conversation(
         &mut engine,
         "conv",
-        RemoteConversationId::CodexThread("thread".to_string()),
+        RemoteConversationId::Known("thread".to_string()),
         adapter.capabilities(),
     );
 
@@ -137,7 +137,7 @@ fn codex_item_request_without_turn_id_opens_detached_elicitation() {
     let conversation_id = insert_ready_conversation(
         &mut engine,
         "conv",
-        RemoteConversationId::CodexThread("thread".to_string()),
+        RemoteConversationId::Known("thread".to_string()),
         adapter.capabilities(),
     );
 
@@ -169,7 +169,7 @@ fn codex_start_turn_rpc_error_terminalizes_and_allows_next_turn() {
     let conversation_id = insert_ready_conversation(
         &mut engine,
         "conv",
-        RemoteConversationId::CodexThread("thread".to_string()),
+        RemoteConversationId::Known("thread".to_string()),
         adapter.capabilities(),
     );
     let plan = start_turn(&mut engine, conversation_id.clone(), "bad effort please");
@@ -204,7 +204,7 @@ fn codex_rejects_steer_and_cancel_before_remote_turn_id_without_mutation() {
     let conversation_id = insert_ready_conversation(
         &mut engine,
         "conv",
-        RemoteConversationId::CodexThread("thread".to_string()),
+        RemoteConversationId::Known("thread".to_string()),
         adapter.capabilities(),
     );
     let plan = start_turn(&mut engine, conversation_id.clone(), "initial");
@@ -247,7 +247,7 @@ fn codex_encodes_invalid_model_and_effort_as_server_validated_overrides() {
     let conversation_id = insert_ready_conversation(
         &mut engine,
         "conv",
-        RemoteConversationId::CodexThread("thread".to_string()),
+        RemoteConversationId::Known("thread".to_string()),
         adapter.capabilities(),
     );
 

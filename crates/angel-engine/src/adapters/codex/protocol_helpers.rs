@@ -160,7 +160,7 @@ mod tests {
     fn tool_request_user_input_response_groups_answers_by_question() {
         let mut elicitation = ElicitationState::new(
             ElicitationId::new("input"),
-            RemoteRequestId::Codex(JsonRpcRequestId::new("request")),
+            RemoteRequestId::JsonRpc(JsonRpcRequestId::new("request")),
             ElicitationKind::UserInput,
         );
         elicitation.options.title = Some("item/tool/requestUserInput".to_string());

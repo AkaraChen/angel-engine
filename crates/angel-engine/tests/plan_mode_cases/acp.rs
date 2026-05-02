@@ -8,7 +8,7 @@ fn acp_plan_mode_round_trip_handles_question_plan_path_and_exit() {
     let conversation_id = insert_ready_conversation(
         &mut engine,
         "conv",
-        RemoteConversationId::AcpSession("sess".to_string()),
+        RemoteConversationId::Known("sess".to_string()),
         adapter.capabilities(),
     );
 

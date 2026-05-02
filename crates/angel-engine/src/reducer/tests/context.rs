@@ -17,7 +17,7 @@ fn acp_context_update_uses_advertised_model_config_option() {
     let conversation_id = insert_ready_conversation(
         &mut engine,
         "conv",
-        RemoteConversationId::AcpSession("sess".to_string()),
+        RemoteConversationId::Known("sess".to_string()),
         adapter.capabilities(),
     );
     engine
@@ -68,7 +68,7 @@ fn acp_context_update_uses_advertised_effort_config_option() {
     let conversation_id = insert_ready_conversation(
         &mut engine,
         "conv",
-        RemoteConversationId::AcpSession("sess".to_string()),
+        RemoteConversationId::Known("sess".to_string()),
         adapter.capabilities(),
     );
     engine
@@ -122,7 +122,7 @@ fn acp_start_turn_rejects_unsupported_turn_overrides() {
     let conversation_id = insert_ready_conversation(
         &mut engine,
         "conv",
-        RemoteConversationId::AcpSession("sess".to_string()),
+        RemoteConversationId::Known("sess".to_string()),
         adapter.capabilities(),
     );
 
@@ -135,7 +135,6 @@ fn acp_start_turn_rejects_unsupported_turn_overrides() {
                     scope: ContextScope::CurrentTurn,
                     model: Some("gpt-5.5".to_string()),
                 }),
-                user_message_id: None,
             },
         })
         .expect_err("turn overrides should be gated");
@@ -156,7 +155,7 @@ fn codex_start_turn_includes_sticky_context_overrides() {
     let conversation_id = insert_ready_conversation(
         &mut engine,
         "conv",
-        RemoteConversationId::CodexThread("thread".to_string()),
+        RemoteConversationId::Known("thread".to_string()),
         adapter.capabilities(),
     );
     let plan = engine

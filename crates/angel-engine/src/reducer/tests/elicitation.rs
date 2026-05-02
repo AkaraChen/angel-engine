@@ -19,7 +19,7 @@ fn elicitation_drives_action_and_turn_overlay() {
     let conversation_id = insert_ready_conversation(
         &mut engine,
         "conv",
-        RemoteConversationId::CodexThread("thread".to_string()),
+        RemoteConversationId::Known("thread".to_string()),
         adapter.capabilities(),
     );
     let turn_id = start_turn(&mut engine, conversation_id.clone());
@@ -35,7 +35,7 @@ fn elicitation_drives_action_and_turn_overlay() {
     let elicitation_id = ElicitationId::new("approval");
     let mut elicitation = ElicitationState::new(
         elicitation_id.clone(),
-        RemoteRequestId::Codex(JsonRpcRequestId::new("request")),
+        RemoteRequestId::JsonRpc(JsonRpcRequestId::new("request")),
         ElicitationKind::Approval,
     );
     elicitation.turn_id = Some(turn_id.clone());
@@ -86,7 +86,7 @@ fn resolve_elicitation_encodes_user_answers() {
     let conversation_id = insert_ready_conversation(
         &mut engine,
         "conv",
-        RemoteConversationId::CodexThread("thread".to_string()),
+        RemoteConversationId::Known("thread".to_string()),
         adapter.capabilities(),
     );
     let elicitation_id = ElicitationId::new("input");
@@ -95,7 +95,7 @@ fn resolve_elicitation_encodes_user_answers() {
             conversation_id: conversation_id.clone(),
             elicitation: ElicitationState::new(
                 elicitation_id.clone(),
-                RemoteRequestId::Codex(JsonRpcRequestId::new("request")),
+                RemoteRequestId::JsonRpc(JsonRpcRequestId::new("request")),
                 ElicitationKind::UserInput,
             ),
         })

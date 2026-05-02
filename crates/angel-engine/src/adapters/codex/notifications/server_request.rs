@@ -15,7 +15,7 @@ impl CodexAdapter {
         };
         for (conversation_id, conversation) in &engine.conversations {
             for (elicitation_id, elicitation) in &conversation.elicitations {
-                if elicitation.remote_request_id == RemoteRequestId::Codex(request_id.clone()) {
+                if elicitation.remote_request_id == RemoteRequestId::JsonRpc(request_id.clone()) {
                     return Ok(TransportOutput::default()
                         .event(EngineEvent::ElicitationResolved {
                             conversation_id: conversation_id.clone(),

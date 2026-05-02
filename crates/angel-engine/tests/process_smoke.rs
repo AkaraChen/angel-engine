@@ -244,7 +244,7 @@ where
                     .conversations
                     .get(&conversation_id)
                     .and_then(|conversation| conversation.turns.get(&turn_id))
-                    .is_some_and(|turn| matches!(turn.remote, RemoteTurnId::CodexTurn(_)))
+                    .is_some_and(|turn| matches!(turn.remote, RemoteTurnId::Known(_)))
         })?;
         let cancel = self.engine.plan_command(EngineCommand::CancelTurn {
             conversation_id: conversation_id.clone(),
@@ -304,7 +304,7 @@ fn codex_app_server_process_smoke_enters_and_exits_plan_mode() -> TestResult {
         process.start_turn_and_interrupt(conversation_id.clone(), "codex process smoke: plan")?;
     assert!(matches!(
         process.engine.conversations[&conversation_id].turns[&plan_turn].remote,
-        RemoteTurnId::CodexTurn(_)
+        RemoteTurnId::Known(_)
     ));
 
     let exit_plan = process.engine.plan_command(EngineCommand::UpdateContext {

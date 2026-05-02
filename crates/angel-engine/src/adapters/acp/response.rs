@@ -75,7 +75,7 @@ impl AcpAdapter {
                 output = output
                     .event(EngineEvent::ConversationReady {
                         id: conversation_id.clone(),
-                        remote: Some(RemoteConversationId::AcpSession(session_id.to_string())),
+                        remote: Some(RemoteConversationId::Known(session_id.to_string())),
                         context: ContextPatch::empty(),
                         capabilities: Some(engine.default_capabilities.clone()),
                     })
@@ -173,7 +173,7 @@ impl AcpAdapter {
                         );
                         continue;
                     };
-                    let remote = RemoteConversationId::AcpSession(session_id.to_string());
+                    let remote = RemoteConversationId::Known(session_id.to_string());
                     output = output.event(EngineEvent::ConversationDiscovered {
                         id: discovered_conversation_id(
                             engine,
@@ -426,7 +426,7 @@ mod tests {
             output.events.as_slice(),
             [EngineEvent::ConversationDiscovered {
                 id,
-                remote: RemoteConversationId::AcpSession(session_id),
+                remote: RemoteConversationId::Known(session_id),
                 context,
                 ..
             }, EngineEvent::ConversationDiscoveryPage {

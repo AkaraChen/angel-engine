@@ -30,7 +30,7 @@ fn acp_permission_before_tool_call_creates_fallback_action_and_safe_choices() {
     let conversation_id = insert_ready_conversation(
         &mut engine,
         "conv",
-        RemoteConversationId::AcpSession("sess".to_string()),
+        RemoteConversationId::Known("sess".to_string()),
         adapter.capabilities(),
     );
     let turn_id = start_turn(&mut engine, conversation_id.clone(), "active")
@@ -73,7 +73,7 @@ fn acp_bad_model_and_effort_updates_are_server_validated_without_local_context_m
     let conversation_id = insert_ready_conversation(
         &mut engine,
         "conv",
-        RemoteConversationId::AcpSession("sess".to_string()),
+        RemoteConversationId::Known("sess".to_string()),
         adapter.capabilities(),
     );
     {
@@ -157,7 +157,7 @@ fn acp_tool_update_before_tool_call_creates_fallback_action() {
     let conversation_id = insert_ready_conversation(
         &mut engine,
         "conv",
-        RemoteConversationId::AcpSession("sess".to_string()),
+        RemoteConversationId::Known("sess".to_string()),
         adapter.capabilities(),
     );
     start_turn(&mut engine, conversation_id.clone(), "active");
@@ -194,7 +194,7 @@ fn acp_start_turn_rpc_error_terminalizes_and_allows_next_turn() {
     let conversation_id = insert_ready_conversation(
         &mut engine,
         "conv",
-        RemoteConversationId::AcpSession("sess".to_string()),
+        RemoteConversationId::Known("sess".to_string()),
         adapter.capabilities(),
     );
     let plan = start_turn(&mut engine, conversation_id.clone(), "bad model");

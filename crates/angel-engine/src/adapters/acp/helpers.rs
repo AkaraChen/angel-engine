@@ -17,7 +17,7 @@ pub(super) fn acp_session_id(
         }
     })?;
     match &conversation.remote {
-        RemoteConversationId::AcpSession(session_id) => Ok(session_id.clone()),
+        RemoteConversationId::Known(session_id) => Ok(session_id.clone()),
         other => Err(crate::EngineError::InvalidState {
             expected: "ACP session id".to_string(),
             actual: format!("{other:?}"),
@@ -33,7 +33,7 @@ pub(super) fn find_acp_conversation(
         .conversations
         .iter()
         .find_map(|(id, conversation)| match &conversation.remote {
-            RemoteConversationId::AcpSession(remote) if remote == session_id => Some(id.clone()),
+            RemoteConversationId::Known(remote) if remote == session_id => Some(id.clone()),
             _ => None,
         })
 }

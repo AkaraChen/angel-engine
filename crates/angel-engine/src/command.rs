@@ -104,5 +104,4 @@ impl UserInput {
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct TurnOverrides {
     pub context: ContextPatch,
-    pub user_message_id: Option<String>,
 }

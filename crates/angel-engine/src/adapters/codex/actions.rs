@@ -14,7 +14,7 @@ pub(crate) fn action_from_item(item: &Value, turn_id: &TurnId) -> Option<ActionS
         _ => return None,
     };
     let mut action = ActionState::new(ActionId::new(id.to_string()), turn_id.clone(), kind);
-    action.remote = Some(RemoteActionId::CodexItem(id.to_string()));
+    action.remote = Some(RemoteActionId::Known(id.to_string()));
     action.title = action_title(item);
     action.input = ActionInput {
         summary: action.title.clone(),
@@ -32,7 +32,7 @@ pub(crate) fn fallback_action(
     kind: ActionKind,
 ) -> ActionState {
     let mut action = ActionState::new(action_id.clone(), turn_id, kind);
-    action.remote = Some(RemoteActionId::CodexItem(action_id.to_string()));
+    action.remote = Some(RemoteActionId::Known(action_id.to_string()));
     action.phase = ActionPhase::Running;
     action
 }

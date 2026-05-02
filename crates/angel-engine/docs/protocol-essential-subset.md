@@ -63,6 +63,9 @@ the reducer.
 - Decode turns protocol responses, requests, and notifications into
   `EngineEvent` values.
 - Capability differences are represented in `ConversationCapabilities`.
+- Remote protocol identifiers are opaque in core state; ACP `sessionId`, Codex
+  `threadId`, turn ids, item ids, and JSON-RPC request ids are interpreted only
+  by their adapters.
 - Unsupported protocol features should return capability errors or adapter logs,
   not new public raw commands.
 - Extension support must be opt-in through `CapabilitySupport::Extension`.

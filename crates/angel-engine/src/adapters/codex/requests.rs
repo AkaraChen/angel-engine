@@ -65,7 +65,7 @@ impl CodexAdapter {
         };
         let mut elicitation = ElicitationState::new(
             ElicitationId::new(format!("codex-request-{id}")),
-            RemoteRequestId::Codex(id.clone()),
+            RemoteRequestId::JsonRpc(id.clone()),
             kind,
         );
         let mut local_turn_id = None;

@@ -65,7 +65,7 @@ pub(super) fn accept_codex_turn(
         .apply_event(EngineEvent::TurnStarted {
             conversation_id,
             turn_id,
-            remote: RemoteTurnId::CodexTurn("remote-turn".to_string()),
+            remote: RemoteTurnId::Known("remote-turn".to_string()),
             input: Vec::new(),
         })
         .expect("codex turn accepted");

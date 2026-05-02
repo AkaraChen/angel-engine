@@ -166,8 +166,8 @@ impl AngelEngine {
                 let mut fields = BTreeMap::new();
                 fields.insert("remoteConversationId".to_string(), id.clone());
                 let remote = match self.protocol {
-                    ProtocolFlavor::Acp => RemoteConversationId::AcpSession(id),
-                    ProtocolFlavor::CodexAppServer => RemoteConversationId::CodexThread(id),
+                    ProtocolFlavor::Acp => RemoteConversationId::Known(id),
+                    ProtocolFlavor::CodexAppServer => RemoteConversationId::Known(id),
                 };
                 (conversation_id, remote, hydrate, fields, false)
             }
