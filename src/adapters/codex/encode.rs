@@ -177,7 +177,7 @@ impl CodexAdapter {
             .get("decision")
             .map(String::as_str)
             .unwrap_or("Cancel");
-        let result = codex_elicitation_response(elicitation.kind.clone(), decision);
+        let result = codex_elicitation_response(elicitation, &effect.payload.fields);
         let mut output = TransportOutput::default()
             .message(JsonRpcMessage::response(remote_request_id, result))
             .event(EngineEvent::ElicitationResolved {

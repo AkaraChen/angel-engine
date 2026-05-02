@@ -8,10 +8,11 @@ use std::time::Duration;
 use angel_engine::{
     AgentMode, AngelEngine, ApprovalPolicy, AvailableCommand, CommandPlan, ContextPatch,
     ContextScope, ContextUpdate, ConversationCapabilities, ConversationId, ConversationLifecycle,
-    ConversationState, ElicitationDecision, ElicitationId, ElicitationPhase, EngineCommand,
-    JsonRpcMessage, PermissionProfile, ProtocolFlavor, ProtocolTransport, RuntimeState,
-    SandboxProfile, SessionConfigOption, StartConversationParams, TransportClientInfo,
-    TransportLog, TransportLogKind, TransportOptions, UserInput, apply_transport_output,
+    ConversationState, ElicitationDecision, ElicitationKind, ElicitationPhase, ElicitationState,
+    EngineCommand, JsonRpcMessage, PermissionProfile, ProtocolFlavor, ProtocolTransport,
+    ReasoningProfile, RuntimeState, SandboxProfile, SessionConfigOption, StartConversationParams,
+    TransportClientInfo, TransportLog, TransportLogKind, TransportOptions, UserAnswer, UserInput,
+    UserQuestion, apply_transport_output,
 };
 
 #[derive(Clone, Copy, Debug)]
@@ -108,9 +109,11 @@ where
     pub fn run_repl(&mut self) -> Result<(), Box<dyn Error>> {
         println!("{}", self.config.banner);
         if self.config.direct_shell {
-            println!("Type a message, /shell <command>, /model, /mode, /permission, or :quit.");
+            println!(
+                "Type a message, /shell <command>, /model, /effort, /mode, /permission, or :quit."
+            );
         } else {
-            println!("Type a message, /model, /mode, /permission, or :quit.");
+            println!("Type a message, /model, /effort, /mode, /permission, or :quit.");
         }
         self.print_command_summary();
 
@@ -218,6 +221,31 @@ where
                         model: Some(value.to_string()),
                     }))? {
                         println!("[state] model set to {value}");
+                    }
+                }
+                Ok(true)
+            }
+            "/effort" | "/reasoning" => {
+                if value.is_empty() {
+                    self.print_effort_state()?;
+                } else if self.config.protocol == ProtocolFlavor::CodexAppServer
+                    && !is_codex_reasoning_effort(value)
+                {
+                    println!("[warn] use one of: none, minimal, low, medium, high, xhigh");
+                } else {
+                    let effort = if self.config.protocol == ProtocolFlavor::CodexAppServer {
+                        value.to_ascii_lowercase()
+                    } else {
+                        value.to_string()
+                    };
+                    if self.update_context(ContextPatch::one(ContextUpdate::Reasoning {
+                        scope: ContextScope::TurnAndFuture,
+                        reasoning: Some(ReasoningProfile {
+                            effort: Some(effort),
+                            summary: None,
+                        }),
+                    }))? {
+                        println!("[state] reasoning effort set to {value}");
                     }
                 }
                 Ok(true)
@@ -460,31 +488,38 @@ where
     }
 
     fn resolve_open_elicitation(&mut self) -> Result<bool, Box<dyn Error>> {
-        let Some((conversation_id, elicitation_id, title, body, choices)) =
-            self.next_open_elicitation()
-        else {
+        let Some((conversation_id, elicitation)) = self.next_open_elicitation() else {
             return Ok(false);
         };
 
+        if matches!(elicitation.kind, ElicitationKind::UserInput) {
+            self.resolve_user_input_elicitation(conversation_id, elicitation)?;
+            return Ok(true);
+        }
+
         println!(
             "[approval] {}",
-            title.unwrap_or_else(|| "approval requested".to_string())
+            elicitation
+                .options
+                .title
+                .clone()
+                .unwrap_or_else(|| "approval requested".to_string())
         );
-        if let Some(body) = body
+        if let Some(body) = elicitation.options.body.clone()
             && !body.is_empty()
         {
             println!("[approval] {body}");
         }
-        if !choices.is_empty() {
-            println!("[approval] options: {}", choices.join(", "));
+        if !elicitation.options.choices.is_empty() {
+            println!(
+                "[approval] options: {}",
+                elicitation.options.choices.join(", ")
+            );
         }
         print!("Allow? [y]es/[s]ession/[n]o/[c]ancel: ");
         io::stdout().flush()?;
 
-        let mut input = String::new();
-        if io::stdin().read_line(&mut input)? == 0 {
-            input.clear();
-        }
+        let input = read_stdin_line()?;
         let decision = match input.trim().to_ascii_lowercase().as_str() {
             "y" | "yes" | "allow" => ElicitationDecision::Allow,
             "s" | "session" | "always" => ElicitationDecision::AllowForSession,
@@ -495,37 +530,103 @@ where
             .engine
             .plan_command(EngineCommand::ResolveElicitation {
                 conversation_id,
-                elicitation_id,
+                elicitation_id: elicitation.id,
                 decision,
             })?;
         self.send_plan(plan)?;
         Ok(true)
     }
 
-    fn next_open_elicitation(
-        &self,
-    ) -> Option<(
-        ConversationId,
-        ElicitationId,
-        Option<String>,
-        Option<String>,
-        Vec<String>,
-    )> {
+    fn resolve_user_input_elicitation(
+        &mut self,
+        conversation_id: ConversationId,
+        elicitation: ElicitationState,
+    ) -> Result<(), Box<dyn Error>> {
+        println!(
+            "[input] {}",
+            elicitation
+                .options
+                .title
+                .clone()
+                .unwrap_or_else(|| "input requested".to_string())
+        );
+        let decision = match self.read_user_answers(&elicitation)? {
+            Some(answers) => ElicitationDecision::Answers(answers),
+            None => ElicitationDecision::Cancel,
+        };
+        let plan = self
+            .engine
+            .plan_command(EngineCommand::ResolveElicitation {
+                conversation_id,
+                elicitation_id: elicitation.id,
+                decision,
+            })?;
+        self.send_plan(plan)?;
+        Ok(())
+    }
+
+    fn read_user_answers(
+        &mut self,
+        elicitation: &ElicitationState,
+    ) -> Result<Option<Vec<UserAnswer>>, Box<dyn Error>> {
+        if elicitation.options.questions.is_empty() {
+            if let Some(body) = &elicitation.options.body
+                && !body.is_empty()
+            {
+                println!("[input] {body}");
+            }
+            print!("Type your answer, or :cancel to cancel: ");
+            io::stdout().flush()?;
+            let input = read_stdin_line()?;
+            if input.trim() == ":cancel" {
+                return Ok(None);
+            }
+            return Ok(Some(vec![UserAnswer {
+                id: "answer".to_string(),
+                value: input.trim().to_string(),
+            }]));
+        }
+
+        let mut answers = Vec::new();
+        for question in &elicitation.options.questions {
+            print_question(question);
+            if question.options.is_empty() {
+                print!("Type your answer, or :cancel to cancel: ");
+            } else {
+                print!(
+                    "Choose 1-{} (or exact option text); use commas for multiple; :cancel to cancel: ",
+                    question.options.len()
+                );
+            }
+            io::stdout().flush()?;
+            let input = read_stdin_line()?;
+            if input.trim() == ":cancel" {
+                return Ok(None);
+            }
+            let values = answer_values(question, input.trim());
+            if values.is_empty() {
+                answers.push(UserAnswer {
+                    id: question.id.clone(),
+                    value: String::new(),
+                });
+            } else {
+                answers.extend(values.into_iter().map(|value| UserAnswer {
+                    id: question.id.clone(),
+                    value,
+                }));
+            }
+        }
+        Ok(Some(answers))
+    }
+
+    fn next_open_elicitation(&self) -> Option<(ConversationId, ElicitationState)> {
         let conversation_id = self.engine.selected.as_ref()?;
         let conversation = self.engine.conversations.get(conversation_id)?;
         conversation
             .elicitations
             .values()
             .find(|elicitation| matches!(elicitation.phase, ElicitationPhase::Open))
-            .map(|elicitation| {
-                (
-                    conversation_id.clone(),
-                    elicitation.id.clone(),
-                    elicitation.options.title.clone(),
-                    elicitation.options.body.clone(),
-                    elicitation.options.choices.clone(),
-                )
-            })
+            .map(|elicitation| (conversation_id.clone(), elicitation.clone()))
     }
 
     fn selected_conversation(&self) -> Result<ConversationId, Box<dyn Error>> {
@@ -598,6 +699,40 @@ where
                 .map(|model| model.id.as_str())
                 .collect::<Vec<_>>();
             print_values("[model]", &values);
+        }
+        Ok(())
+    }
+
+    fn print_effort_state(&self) -> Result<(), Box<dyn Error>> {
+        let conversation_id = self.selected_conversation()?;
+        let conversation = self
+            .engine
+            .conversations
+            .get(&conversation_id)
+            .ok_or("selected conversation missing")?;
+        let current = conversation
+            .context
+            .reasoning
+            .effective()
+            .and_then(|reasoning| reasoning.as_ref())
+            .and_then(|reasoning| reasoning.effort.as_deref())
+            .unwrap_or("(default)");
+        println!("[effort] current: {current}");
+        if let Some(option) = config_option(
+            conversation,
+            "thought_level",
+            &[
+                "thought_level",
+                "reasoning",
+                "reasoning_effort",
+                "effort",
+                "thinking",
+                "thought",
+            ],
+        ) {
+            print_config_values("[effort]", option);
+        } else if self.config.protocol == ProtocolFlavor::CodexAppServer {
+            println!("[effort] available: none, minimal, low, medium, high, xhigh");
         }
         Ok(())
     }
@@ -716,6 +851,58 @@ where
     }
 }
 
+fn print_question(question: &UserQuestion) {
+    if !question.header.is_empty() {
+        println!("[input] {}", question.header);
+    }
+    println!("[input] {}", question.question);
+    for (index, option) in question.options.iter().enumerate() {
+        if option.description.is_empty() {
+            println!("[input] {}. {}", index + 1, option.label);
+        } else {
+            println!(
+                "[input] {}. {} - {}",
+                index + 1,
+                option.label,
+                option.description
+            );
+        }
+    }
+}
+
+fn answer_values(question: &UserQuestion, input: &str) -> Vec<String> {
+    if question.options.is_empty() {
+        return if input.is_empty() {
+            Vec::new()
+        } else {
+            vec![input.to_string()]
+        };
+    }
+
+    input
+        .split(',')
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+        .map(|value| {
+            value
+                .parse::<usize>()
+                .ok()
+                .and_then(|index| index.checked_sub(1))
+                .and_then(|index| question.options.get(index))
+                .map(|option| option.label.clone())
+                .unwrap_or_else(|| value.to_string())
+        })
+        .collect()
+}
+
+fn read_stdin_line() -> io::Result<String> {
+    let mut input = String::new();
+    if io::stdin().read_line(&mut input)? == 0 {
+        input.clear();
+    }
+    Ok(input)
+}
+
 fn compact_text(text: &str, max_chars: usize) -> String {
     let compact = text.split_whitespace().collect::<Vec<_>>().join(" ");
     if compact.chars().count() <= max_chars {
@@ -796,6 +983,13 @@ fn parse_approval_policy(value: &str) -> Option<ApprovalPolicy> {
         "untrusted" | "unless-trusted" | "unless_trusted" => Some(ApprovalPolicy::UnlessTrusted),
         _ => None,
     }
+}
+
+fn is_codex_reasoning_effort(value: &str) -> bool {
+    matches!(
+        value.to_ascii_lowercase().as_str(),
+        "none" | "minimal" | "low" | "medium" | "high" | "xhigh"
+    )
 }
 
 fn parse_sandbox_profile(value: &str) -> Option<SandboxProfile> {

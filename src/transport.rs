@@ -164,7 +164,7 @@ impl JsonRpcMessage {
         match self {
             Self::Request { id, method, params } => json!({
                 "jsonrpc": "2.0",
-                "id": id.as_str(),
+                "id": id.to_json_value(),
                 "method": method,
                 "params": params,
             }),
@@ -184,7 +184,7 @@ impl JsonRpcMessage {
             }
             Self::Response { id, result } => json!({
                 "jsonrpc": "2.0",
-                "id": id.as_str(),
+                "id": id.to_json_value(),
                 "result": result,
             }),
             Self::Error {
@@ -204,7 +204,7 @@ impl JsonRpcMessage {
                 }
                 json!({
                     "jsonrpc": "2.0",
-                    "id": id.as_ref().map(JsonRpcRequestId::as_str),
+                    "id": id.as_ref().map(JsonRpcRequestId::to_json_value),
                     "error": error,
                 })
             }
@@ -370,10 +370,34 @@ pub fn codex_method_name(method: &CodexMethod) -> &'static str {
 }
 
 fn request_id_from_value(value: &Value) -> JsonRpcRequestId {
-    match value {
-        Value::String(value) => JsonRpcRequestId::new(value.clone()),
-        Value::Number(value) => JsonRpcRequestId::new(value.to_string()),
-        Value::Null => JsonRpcRequestId::new("null"),
-        other => JsonRpcRequestId::new(other.to_string()),
+    JsonRpcRequestId::from_json_value(value)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn json_rpc_numeric_request_id_round_trips_as_number() {
+        let message = JsonRpcMessage::from_value(json!({
+            "jsonrpc": "2.0",
+            "id": 60,
+            "method": "item/tool/requestUserInput",
+            "params": {}
+        }))
+        .expect("request");
+        let JsonRpcMessage::Request { id, .. } = message else {
+            panic!("expected request");
+        };
+
+        assert_eq!(id.to_json_value(), json!(60));
+        assert_eq!(
+            JsonRpcMessage::response(id, json!({"answers": {}})).to_value(),
+            json!({
+                "jsonrpc": "2.0",
+                "id": 60,
+                "result": {"answers": {}}
+            })
+        );
     }
 }

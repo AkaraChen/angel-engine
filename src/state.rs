@@ -192,6 +192,7 @@ pub struct TurnState {
     pub output: OutputBuffer,
     pub reasoning: ReasoningBuffer,
     pub plan: Option<PlanState>,
+    pub plan_text: OutputBuffer,
     pub started_at: Timestamp,
     pub completed_at: Option<Timestamp>,
     pub outcome: Option<TurnOutcome>,
@@ -207,6 +208,7 @@ impl TurnState {
             output: OutputBuffer::default(),
             reasoning: ReasoningBuffer::default(),
             plan: None,
+            plan_text: OutputBuffer::default(),
             started_at,
             completed_at: None,
             outcome: None,
@@ -394,6 +396,23 @@ pub struct ElicitationOptions {
     pub title: Option<String>,
     pub body: Option<String>,
     pub choices: Vec<String>,
+    pub questions: Vec<UserQuestion>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct UserQuestion {
+    pub id: String,
+    pub header: String,
+    pub question: String,
+    pub is_secret: bool,
+    pub is_other: bool,
+    pub options: Vec<UserQuestionOption>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct UserQuestionOption {
+    pub label: String,
+    pub description: String,
 }
 
 #[derive(Clone, Debug, Default, PartialEq, Eq)]

@@ -15,8 +15,8 @@ use crate::state::{
     ActionPhase, ActionState, AgentMode, ApprovalPolicy, ContentDelta, ContextPatch, ContextScope,
     ContextUpdate, ConversationLifecycle, ConversationState, ElicitationDecision, ElicitationPhase,
     ElicitationState, HistoryMutationOp, HistoryMutationResult, HydrationSource, ProvisionOp,
-    RuntimeState, SandboxProfile, SessionConfigOption, TurnOutcome, TurnPhase, TurnState,
-    UserInputRef,
+    ReasoningProfile, RuntimeState, SandboxProfile, SessionConfigOption, TurnOutcome, TurnPhase,
+    TurnState, UserInputRef,
 };
 
 #[derive(Clone, Debug)]
@@ -308,6 +308,11 @@ impl AngelEngine {
                 turn_id,
                 delta,
             } => self.apply_content_delta(conversation_id, turn_id, delta, DeltaKind::Reasoning),
+            EngineEvent::PlanDelta {
+                conversation_id,
+                turn_id,
+                delta,
+            } => self.apply_content_delta(conversation_id, turn_id, delta, DeltaKind::Plan),
             EngineEvent::PlanUpdated {
                 conversation_id,
                 turn_id,
@@ -899,11 +904,25 @@ impl AngelEngine {
                 elicitation_id: elicitation_id.clone(),
             },
         )?;
-        let effect = ProtocolEffect::new(self.protocol, self.method_resolve_elicitation())
+        let mut effect = ProtocolEffect::new(self.protocol, self.method_resolve_elicitation())
             .request_id(request_id.clone())
             .conversation_id(conversation_id.clone())
-            .field("elicitationId", elicitation_id.to_string())
-            .field("decision", format!("{decision:?}"));
+            .field("elicitationId", elicitation_id.to_string());
+        match &decision {
+            ElicitationDecision::Answers(answers) => {
+                effect = effect
+                    .field("decision", "Answers")
+                    .field("answerCount", answers.len().to_string());
+                for (index, answer) in answers.iter().enumerate() {
+                    effect = effect
+                        .field(format!("answer.{index}.id"), answer.id.clone())
+                        .field(format!("answer.{index}.value"), answer.value.clone());
+                }
+            }
+            _ => {
+                effect = effect.field("decision", format!("{decision:?}"));
+            }
+        }
         Ok(CommandPlan {
             effects: vec![effect],
             conversation_id: Some(conversation_id),
@@ -1224,6 +1243,10 @@ impl AngelEngine {
             DeltaKind::Reasoning => {
                 turn.reasoning.chunks.push(delta);
                 turn.phase = TurnPhase::Reasoning;
+            }
+            DeltaKind::Plan => {
+                turn.plan_text.chunks.push(delta);
+                turn.phase = TurnPhase::Planning;
             }
         }
         Ok(TransitionReport::one(UiEvent::TurnChanged {
@@ -1787,6 +1810,7 @@ pub struct CommandPlan {
 enum DeltaKind {
     Assistant,
     Reasoning,
+    Plan,
 }
 
 struct ContextEffectSpec {
@@ -1810,6 +1834,26 @@ fn sync_context_from_config_options(
             scope: ContextScope::TurnAndFuture,
             mode: Some(AgentMode {
                 id: option.current_value.clone(),
+            }),
+        }));
+    }
+    if let Some(option) = find_config_option(
+        options,
+        "thought_level",
+        &[
+            "thought_level",
+            "reasoning",
+            "reasoning_effort",
+            "effort",
+            "thinking",
+            "thought",
+        ],
+    ) {
+        context.apply_patch(ContextPatch::one(ContextUpdate::Reasoning {
+            scope: ContextScope::TurnAndFuture,
+            reasoning: Some(ReasoningProfile {
+                effort: Some(option.current_value.clone()),
+                summary: None,
             }),
         }));
     }
@@ -1906,6 +1950,27 @@ fn acp_context_effect_specs(
                         fields: vec![("modeId".to_string(), mode.id.clone())],
                         patch: ContextPatch::one(update.clone()),
                     });
+                }
+            }
+            ContextUpdate::Reasoning {
+                reasoning: Some(reasoning),
+                ..
+            } => {
+                if let Some(effort) = &reasoning.effort
+                    && let Some(option) = find_config_option(
+                        &conversation.config_options,
+                        "thought_level",
+                        &[
+                            "thought_level",
+                            "reasoning",
+                            "reasoning_effort",
+                            "effort",
+                            "thinking",
+                            "thought",
+                        ],
+                    )
+                {
+                    specs.push(set_config_option_spec(&option.id, effort, update.clone()));
                 }
             }
             ContextUpdate::ApprovalPolicy { policy, .. } => {
@@ -2077,8 +2142,8 @@ mod tests {
         ActionKind, ActionPhase, ActionState, AgentMode, ApprovalPolicy, ContentDelta,
         ContextPatch, ContextScope, ContextUpdate, ConversationLifecycle, ElicitationDecision,
         ElicitationKind, ElicitationPhase, ElicitationState, HistoryMutationOp,
-        HistoryMutationResult, PermissionProfile, SandboxProfile, SessionConfigOption, TurnOutcome,
-        TurnPhase,
+        HistoryMutationResult, PermissionProfile, ReasoningProfile, SandboxProfile,
+        SessionConfigOption, TurnOutcome, TurnPhase, UserAnswer,
     };
 
     use super::{AngelEngine, EngineError, EnginePolicy, InvalidEventPolicy};
@@ -2279,6 +2344,60 @@ mod tests {
     }
 
     #[test]
+    fn acp_context_update_uses_advertised_effort_config_option() {
+        let adapter = AcpAdapter::standard();
+        let mut engine = engine_with(ProtocolFlavor::Acp, adapter.capabilities());
+        let conversation_id = insert_ready_conversation(
+            &mut engine,
+            "conv",
+            RemoteConversationId::AcpSession("sess".to_string()),
+            adapter.capabilities(),
+        );
+        engine
+            .conversations
+            .get_mut(&conversation_id)
+            .unwrap()
+            .config_options
+            .push(SessionConfigOption {
+                id: "thought_level".to_string(),
+                name: "Thought level".to_string(),
+                description: None,
+                category: Some("thought_level".to_string()),
+                current_value: "medium".to_string(),
+                values: Vec::new(),
+            });
+
+        let plan = engine
+            .plan_command(EngineCommand::UpdateContext {
+                conversation_id,
+                patch: ContextPatch::one(ContextUpdate::Reasoning {
+                    scope: ContextScope::TurnAndFuture,
+                    reasoning: Some(ReasoningProfile {
+                        effort: Some("high".to_string()),
+                        summary: None,
+                    }),
+                }),
+            })
+            .expect("effort update");
+
+        assert!(matches!(
+            &plan.effects[0].method,
+            ProtocolMethod::Acp(AcpMethod::SetSessionConfigOption)
+        ));
+        assert_eq!(
+            plan.effects[0].payload.fields.get("configId"),
+            Some(&"thought_level".to_string())
+        );
+        assert_eq!(
+            plan.effects[0].payload.fields.get("value"),
+            Some(&"high".to_string())
+        );
+        let conversation_id = plan.conversation_id.as_ref().unwrap();
+        let conversation = engine.conversations.get(conversation_id).unwrap();
+        assert_eq!(conversation.context.reasoning.effective(), None);
+    }
+
+    #[test]
     fn codex_start_turn_includes_sticky_context_overrides() {
         let adapter = CodexAdapter::app_server();
         let mut engine = engine_with(ProtocolFlavor::CodexAppServer, adapter.capabilities());
@@ -2301,6 +2420,13 @@ mod tests {
                             scope: ContextScope::TurnAndFuture,
                             mode: Some(AgentMode {
                                 id: "plan".to_string(),
+                            }),
+                        },
+                        ContextUpdate::Reasoning {
+                            scope: ContextScope::TurnAndFuture,
+                            reasoning: Some(ReasoningProfile {
+                                effort: Some("high".to_string()),
+                                summary: None,
                             }),
                         },
                         ContextUpdate::ApprovalPolicy {
@@ -2333,6 +2459,7 @@ mod tests {
         let fields = &turn.effects[0].payload.fields;
         assert_eq!(fields.get("model"), Some(&"gpt-5.5".to_string()));
         assert_eq!(fields.get("collaborationMode"), Some(&"plan".to_string()));
+        assert_eq!(fields.get("effort"), Some(&"high".to_string()));
         assert_eq!(fields.get("approvalPolicy"), Some(&"never".to_string()));
         assert_eq!(fields.get("permissions"), Some(&"default".to_string()));
         assert_eq!(fields.get("sandboxPolicy"), None);
@@ -2468,6 +2595,54 @@ mod tests {
     }
 
     #[test]
+    fn resolve_elicitation_encodes_user_answers() {
+        let adapter = CodexAdapter::app_server();
+        let mut engine = engine_with(ProtocolFlavor::CodexAppServer, adapter.capabilities());
+        let conversation_id = insert_ready_conversation(
+            &mut engine,
+            "conv",
+            RemoteConversationId::CodexThread("thread".to_string()),
+            adapter.capabilities(),
+        );
+        let elicitation_id = ElicitationId::new("input");
+        engine
+            .apply_event(EngineEvent::ElicitationOpened {
+                conversation_id: conversation_id.clone(),
+                elicitation: ElicitationState::new(
+                    elicitation_id.clone(),
+                    RemoteRequestId::Codex(JsonRpcRequestId::new("request")),
+                    ElicitationKind::UserInput,
+                ),
+            })
+            .expect("open");
+
+        let plan = engine
+            .plan_command(EngineCommand::ResolveElicitation {
+                conversation_id,
+                elicitation_id,
+                decision: ElicitationDecision::Answers(vec![
+                    UserAnswer {
+                        id: "choice".to_string(),
+                        value: "first".to_string(),
+                    },
+                    UserAnswer {
+                        id: "choice".to_string(),
+                        value: "second".to_string(),
+                    },
+                ]),
+            })
+            .expect("resolve");
+
+        let fields = &plan.effects[0].payload.fields;
+        assert_eq!(fields.get("decision"), Some(&"Answers".to_string()));
+        assert_eq!(fields.get("answerCount"), Some(&"2".to_string()));
+        assert_eq!(fields.get("answer.0.id"), Some(&"choice".to_string()));
+        assert_eq!(fields.get("answer.0.value"), Some(&"first".to_string()));
+        assert_eq!(fields.get("answer.1.id"), Some(&"choice".to_string()));
+        assert_eq!(fields.get("answer.1.value"), Some(&"second".to_string()));
+    }
+
+    #[test]
     fn codex_rollback_marks_workspace_not_reverted() {
         let adapter = CodexAdapter::app_server();
         let mut engine = engine_with(ProtocolFlavor::CodexAppServer, adapter.capabilities());
@@ -2536,6 +2711,35 @@ mod tests {
         let turn = &engine.conversations[&conversation_id].turns[&turn_id];
         assert!(matches!(turn.phase, TurnPhase::Terminal(_)));
         assert!(turn.output.chunks.is_empty());
+    }
+
+    #[test]
+    fn plan_delta_is_stored_on_turn_without_assistant_output() {
+        let adapter = CodexAdapter::app_server();
+        let mut engine = engine_with(ProtocolFlavor::CodexAppServer, adapter.capabilities());
+        let conversation_id = insert_ready_conversation(
+            &mut engine,
+            "conv",
+            RemoteConversationId::CodexThread("thread".to_string()),
+            adapter.capabilities(),
+        );
+        let turn_id = start_turn(&mut engine, conversation_id.clone());
+
+        engine
+            .apply_event(EngineEvent::PlanDelta {
+                conversation_id: conversation_id.clone(),
+                turn_id: turn_id.clone(),
+                delta: ContentDelta::Text("# Plan\n".to_string()),
+            })
+            .expect("plan delta");
+
+        let turn = &engine.conversations[&conversation_id].turns[&turn_id];
+        assert_eq!(
+            turn.plan_text.chunks,
+            vec![ContentDelta::Text("# Plan\n".to_string())]
+        );
+        assert!(turn.output.chunks.is_empty());
+        assert!(matches!(turn.phase, TurnPhase::Planning));
     }
 
     #[test]

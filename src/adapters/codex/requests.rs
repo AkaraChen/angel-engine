@@ -61,14 +61,19 @@ impl CodexAdapter {
         if let Some(item_id) = params.get("itemId").and_then(Value::as_str) {
             elicitation.action_id = Some(ActionId::new(item_id.to_string()));
         }
-        elicitation.options = ElicitationOptions {
-            title: Some(method.to_string()),
-            body: approval_body(method, params),
-            choices: vec![
-                "allow".to_string(),
-                "deny".to_string(),
-                "cancel".to_string(),
-            ],
+        elicitation.options = if method == "item/tool/requestUserInput" {
+            user_input_options(method, params)
+        } else {
+            ElicitationOptions {
+                title: Some(method.to_string()),
+                body: approval_body(method, params),
+                choices: vec![
+                    "allow".to_string(),
+                    "deny".to_string(),
+                    "cancel".to_string(),
+                ],
+                questions: Vec::new(),
+            }
         };
 
         let mut output = TransportOutput::default().log(
@@ -93,5 +98,117 @@ impl CodexAdapter {
             elicitation,
         });
         Ok(output)
+    }
+}
+
+fn user_input_options(method: &str, params: &Value) -> ElicitationOptions {
+    let questions = params
+        .get("questions")
+        .and_then(Value::as_array)
+        .map(|questions| {
+            questions
+                .iter()
+                .filter_map(user_question)
+                .collect::<Vec<_>>()
+        })
+        .unwrap_or_default();
+    let body = if questions.is_empty() {
+        approval_body(method, params)
+    } else {
+        Some(
+            questions
+                .iter()
+                .map(|question| question.question.as_str())
+                .collect::<Vec<_>>()
+                .join("\n"),
+        )
+    };
+    ElicitationOptions {
+        title: Some(method.to_string()),
+        body,
+        choices: if questions.len() == 1 {
+            questions[0]
+                .options
+                .iter()
+                .map(|option| option.label.clone())
+                .collect()
+        } else {
+            Vec::new()
+        },
+        questions,
+    }
+}
+
+fn user_question(value: &Value) -> Option<UserQuestion> {
+    let id = value.get("id").and_then(Value::as_str)?;
+    let question = value.get("question").and_then(Value::as_str)?;
+    Some(UserQuestion {
+        id: id.to_string(),
+        header: value
+            .get("header")
+            .and_then(Value::as_str)
+            .unwrap_or_default()
+            .to_string(),
+        question: question.to_string(),
+        is_secret: value
+            .get("isSecret")
+            .and_then(Value::as_bool)
+            .unwrap_or(false),
+        is_other: value
+            .get("isOther")
+            .and_then(Value::as_bool)
+            .unwrap_or(false),
+        options: value
+            .get("options")
+            .and_then(Value::as_array)
+            .map(|options| {
+                options
+                    .iter()
+                    .filter_map(|option| {
+                        let label = option.get("label").and_then(Value::as_str)?;
+                        Some(UserQuestionOption {
+                            label: label.to_string(),
+                            description: option
+                                .get("description")
+                                .and_then(Value::as_str)
+                                .unwrap_or_default()
+                                .to_string(),
+                        })
+                    })
+                    .collect()
+            })
+            .unwrap_or_default(),
+    })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn user_input_options_preserve_questions_and_choices() {
+        let options = user_input_options(
+            "item/tool/requestUserInput",
+            &json!({
+                "questions": [
+                    {
+                        "id": "mode",
+                        "header": "Plan mode",
+                        "question": "Pick a path",
+                        "options": [
+                            {"label": "allow", "description": "Continue"},
+                            {"label": "deny", "description": "Stop"}
+                        ]
+                    }
+                ]
+            }),
+        );
+
+        assert_eq!(options.title.as_deref(), Some("item/tool/requestUserInput"));
+        assert_eq!(options.choices, vec!["allow", "deny"]);
+        assert_eq!(options.questions.len(), 1);
+        assert_eq!(options.questions[0].id, "mode");
+        assert_eq!(options.questions[0].header, "Plan mode");
+        assert_eq!(options.questions[0].options[0].description, "Continue");
     }
 }

@@ -21,6 +21,7 @@ impl CodexAdapter {
             "item/reasoning/textDelta" | "item/reasoning/summaryTextDelta" => {
                 self.decode_text_delta(engine, params, DeltaKind::Reasoning)
             }
+            "item/plan/delta" => self.decode_plan_delta(engine, params),
             "turn/plan/updated" => self.decode_plan(engine, params),
             "item/started" => self.decode_item(engine, params, false),
             "item/completed" => self.decode_item(engine, params, true),
@@ -220,6 +221,33 @@ impl CodexAdapter {
         Ok(output)
     }
 
+    fn decode_plan_delta(
+        &self,
+        engine: &AngelEngine,
+        params: &Value,
+    ) -> Result<TransportOutput, crate::EngineError> {
+        let Some((conversation_id, remote_turn_id)) = notification_turn(engine, params) else {
+            return Ok(TransportOutput::default());
+        };
+        let delta = params
+            .get("delta")
+            .and_then(Value::as_str)
+            .unwrap_or_default()
+            .to_string();
+        let (turn_id, maybe_start) =
+            ensure_local_turn_event(engine, &conversation_id, remote_turn_id);
+        let mut output = TransportOutput::default();
+        if let Some(event) = maybe_start {
+            output.events.push(event);
+        }
+        output.events.push(EngineEvent::PlanDelta {
+            conversation_id,
+            turn_id,
+            delta: ContentDelta::Text(delta),
+        });
+        Ok(output)
+    }
+
     fn decode_plan(
         &self,
         engine: &AngelEngine,
@@ -284,9 +312,36 @@ impl CodexAdapter {
         let Some(item) = params.get("item") else {
             return Ok(TransportOutput::default());
         };
+        if item.get("type").and_then(Value::as_str) == Some("plan") {
+            let mut output = TransportOutput::default();
+            if let Some(event) = maybe_start {
+                output.events.push(event);
+            }
+            if completed
+                && !turn_has_plan_text(engine, &conversation_id, &turn_id)
+                && let Some(content) = plan_item_content(item)
+            {
+                output.events.push(EngineEvent::PlanDelta {
+                    conversation_id: conversation_id.clone(),
+                    turn_id: turn_id.clone(),
+                    delta: ContentDelta::Text(content),
+                });
+            }
+            if plan_item_saved_path(item).is_some() {
+                output.logs.push(crate::TransportLog::new(
+                    TransportLogKind::State,
+                    summarize_item(item, completed),
+                ));
+            }
+            return Ok(output);
+        }
         let Some(action) = action_from_item(item, &turn_id) else {
-            return Ok(TransportOutput::default()
-                .log(TransportLogKind::State, summarize_item(item, completed)));
+            let mut output = TransportOutput::default()
+                .log(TransportLogKind::State, summarize_item(item, completed));
+            if let Some(event) = maybe_start {
+                output.events.push(event);
+            }
+            return Ok(output);
         };
         let action_id = action.id.clone();
         let mut output = TransportOutput::default()
@@ -417,11 +472,7 @@ impl CodexAdapter {
         let request_id = params
             .get("requestId")
             .or_else(|| params.get("id"))
-            .map(|value| match value {
-                Value::String(value) => JsonRpcRequestId::new(value.clone()),
-                Value::Number(value) => JsonRpcRequestId::new(value.to_string()),
-                other => JsonRpcRequestId::new(other.to_string()),
-            });
+            .map(JsonRpcRequestId::from_json_value);
         let Some(request_id) = request_id else {
             return Ok(TransportOutput::default());
         };
@@ -439,5 +490,110 @@ impl CodexAdapter {
             }
         }
         Ok(TransportOutput::default())
+    }
+}
+
+fn turn_has_plan_text(
+    engine: &AngelEngine,
+    conversation_id: &ConversationId,
+    turn_id: &TurnId,
+) -> bool {
+    engine
+        .conversations
+        .get(conversation_id)
+        .and_then(|conversation| conversation.turns.get(turn_id))
+        .map(|turn| !turn.plan_text.chunks.is_empty())
+        .unwrap_or(false)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn engine_with_thread(adapter: &CodexAdapter) -> AngelEngine {
+        let mut engine = AngelEngine::with_available_runtime(
+            crate::ProtocolFlavor::CodexAppServer,
+            crate::RuntimeCapabilities::new("test"),
+            adapter.capabilities(),
+        );
+        let conversation_id = ConversationId::new("conv");
+        engine.conversations.insert(
+            conversation_id.clone(),
+            crate::ConversationState::new(
+                conversation_id.clone(),
+                RemoteConversationId::CodexThread("thread".to_string()),
+                ConversationLifecycle::Idle,
+                adapter.capabilities(),
+            ),
+        );
+        engine.selected = Some(conversation_id);
+        engine
+    }
+
+    #[test]
+    fn plan_delta_emits_state_event_without_terminal_log() {
+        let adapter = CodexAdapter::app_server();
+        let engine = engine_with_thread(&adapter);
+
+        let output = adapter
+            .decode_notification(
+                &engine,
+                "item/plan/delta",
+                &json!({
+                    "threadId": "thread",
+                    "turnId": "turn",
+                    "itemId": "plan",
+                    "delta": "# Plan\n",
+                }),
+            )
+            .expect("plan delta");
+
+        assert!(output.logs.is_empty());
+        assert!(output.events.iter().any(|event| matches!(
+            event,
+            EngineEvent::PlanDelta {
+                delta: ContentDelta::Text(text),
+                ..
+            } if text == "# Plan\n"
+        )));
+    }
+
+    #[test]
+    fn completed_plan_item_logs_saved_path_and_emits_content() {
+        let adapter = CodexAdapter::app_server();
+        let engine = engine_with_thread(&adapter);
+
+        let output = adapter
+            .decode_notification(
+                &engine,
+                "item/completed",
+                &json!({
+                    "threadId": "thread",
+                    "turnId": "turn",
+                    "item": {
+                        "id": "plan",
+                        "type": "plan",
+                        "status": "completed",
+                        "savedPath": "/tmp/plan.md",
+                        "content": "# Plan\n"
+                    }
+                }),
+            )
+            .expect("plan item");
+
+        assert_eq!(
+            output.logs,
+            vec![crate::TransportLog::new(
+                TransportLogKind::State,
+                "plan path: /tmp/plan.md"
+            )]
+        );
+        assert!(output.events.iter().any(|event| matches!(
+            event,
+            EngineEvent::PlanDelta {
+                delta: ContentDelta::Text(text),
+                ..
+            } if text == "# Plan\n"
+        )));
     }
 }

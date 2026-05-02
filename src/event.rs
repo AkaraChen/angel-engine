@@ -90,6 +90,11 @@ pub enum EngineEvent {
         turn_id: TurnId,
         delta: ContentDelta,
     },
+    PlanDelta {
+        conversation_id: ConversationId,
+        turn_id: TurnId,
+        delta: ContentDelta,
+    },
     PlanUpdated {
         conversation_id: ConversationId,
         turn_id: TurnId,

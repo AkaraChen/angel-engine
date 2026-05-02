@@ -4,9 +4,54 @@ use super::*;
 pub(crate) fn summarize_item(item: &Value, completed: bool) -> String {
     let verb = if completed { "completed" } else { "started" };
     let item_type = item.get("type").and_then(Value::as_str).unwrap_or("item");
+    if item_type == "plan" {
+        return summarize_plan_item(item, verb);
+    }
     match action_title(item) {
         Some(title) => format!("{item_type} {verb}: {title}"),
         None => format!("{item_type} {verb}"),
+    }
+}
+
+pub(crate) fn summarize_plan_item(item: &Value, verb: &str) -> String {
+    match plan_item_saved_path(item) {
+        Some(path) => format!("plan path: {path}"),
+        None => format!("plan {verb}"),
+    }
+}
+
+pub(crate) fn plan_item_saved_path(item: &Value) -> Option<String> {
+    ["savedPath", "saved_path", "path", "filePath", "file_path"]
+        .iter()
+        .find_map(|key| item.get(*key).and_then(Value::as_str))
+        .map(str::to_string)
+}
+
+pub(crate) fn plan_item_content(item: &Value) -> Option<String> {
+    [
+        "content",
+        "fragments",
+        "aggregatedOutput",
+        "text",
+        "markdown",
+    ]
+    .iter()
+    .filter_map(|key| item.get(*key))
+    .filter_map(text_from_value)
+    .find(|text| !text.is_empty())
+}
+
+fn text_from_value(value: &Value) -> Option<String> {
+    match value {
+        Value::String(text) => Some(text.clone()),
+        Value::Array(items) => {
+            let text = items.iter().filter_map(text_from_value).collect::<String>();
+            (!text.is_empty()).then_some(text)
+        }
+        Value::Object(object) => ["text", "content", "markdown", "delta"]
+            .iter()
+            .find_map(|key| object.get(*key).and_then(text_from_value)),
+        _ => None,
     }
 }
 

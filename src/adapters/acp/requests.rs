@@ -61,6 +61,7 @@ impl AcpAdapter {
                 .map(str::to_string)
                 .or_else(|| tool_call.and_then(tool_call_summary)),
             choices: permission_option_ids(params),
+            questions: Vec::new(),
         };
         Ok(TransportOutput::default()
             .event(EngineEvent::ElicitationOpened {
