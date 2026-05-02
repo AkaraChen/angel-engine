@@ -11,16 +11,30 @@ impl CodexAdapter {
         params: &Value,
     ) -> Result<TransportOutput, crate::EngineError> {
         let Some(thread_id) = params.get("threadId").and_then(Value::as_str) else {
-            return Ok(TransportOutput::default().log(
-                TransportLogKind::Warning,
-                format!("{method} request without thread id"),
-            ));
+            return Ok(TransportOutput::default()
+                .message(JsonRpcMessage::error(
+                    Some(id.clone()),
+                    -32602,
+                    format!("{method} request missing threadId"),
+                    None,
+                ))
+                .log(
+                    TransportLogKind::Warning,
+                    format!("{method} request without thread id"),
+                ));
         };
         let Some(conversation_id) = find_codex_conversation(engine, thread_id) else {
-            return Ok(TransportOutput::default().log(
-                TransportLogKind::Warning,
-                format!("{method} request for unknown thread {thread_id}"),
-            ));
+            return Ok(TransportOutput::default()
+                .message(JsonRpcMessage::error(
+                    Some(id.clone()),
+                    -32602,
+                    format!("{method} request for unknown thread {thread_id}"),
+                    None,
+                ))
+                .log(
+                    TransportLogKind::Warning,
+                    format!("{method} request for unknown thread {thread_id}"),
+                ));
         };
         let kind = match method {
             "item/commandExecution/requestApproval" => ElicitationKind::Approval,
@@ -54,12 +68,19 @@ impl CodexAdapter {
             RemoteRequestId::Codex(id.clone()),
             kind,
         );
+        let mut local_turn_id = None;
+        let mut turn_started = None;
         if let Some(turn_id) = params.get("turnId").and_then(Value::as_str) {
-            let (local_turn_id, _) = ensure_local_turn_event(engine, &conversation_id, turn_id);
-            elicitation.turn_id = Some(local_turn_id);
+            let (turn_id, event) = ensure_local_turn_event(engine, &conversation_id, turn_id);
+            elicitation.turn_id = Some(turn_id.clone());
+            local_turn_id = Some(turn_id);
+            turn_started = event;
         }
         if let Some(item_id) = params.get("itemId").and_then(Value::as_str) {
-            elicitation.action_id = Some(ActionId::new(item_id.to_string()));
+            let action_id = ActionId::new(item_id.to_string());
+            if local_turn_id.is_some() || action_exists(engine, &conversation_id, &action_id) {
+                elicitation.action_id = Some(action_id);
+            }
         }
         elicitation.options = if method == "item/tool/requestUserInput" {
             user_input_options(method, params)
@@ -84,6 +105,9 @@ impl CodexAdapter {
                 elicitation.options.body.clone().unwrap_or_default()
             ),
         );
+        if let Some(event) = turn_started {
+            output.events.push(event);
+        }
         if let Some(action_id) = elicitation.action_id.clone()
             && let Some(turn_id) = elicitation.turn_id.clone()
             && !action_exists(engine, &conversation_id, &action_id)

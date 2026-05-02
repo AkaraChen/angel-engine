@@ -765,22 +765,7 @@ impl AngelEngine {
         turn_id: Option<TurnId>,
         input: Vec<UserInput>,
     ) -> Result<CommandPlan, EngineError> {
-        let selected_turn_id = {
-            let conversation = self.conversation(&conversation_id)?;
-            conversation.capabilities.turn.steer.require("turn.steer")?;
-            let selected = turn_id
-                .or_else(|| conversation.primary_active_turn().cloned())
-                .ok_or_else(|| EngineError::MissingActiveTurn {
-                    conversation_id: conversation_id.to_string(),
-                })?;
-            if !conversation.active_turns.contains(&selected) {
-                return Err(EngineError::InvalidState {
-                    expected: "active turn".to_string(),
-                    actual: selected.to_string(),
-                });
-            }
-            selected
-        };
+        let selected_turn_id = self.select_turn_for_steer(&conversation_id, turn_id)?;
 
         let request_id = self.next_request_id();
         let input_text = input_to_text(&input);
@@ -826,28 +811,10 @@ impl AngelEngine {
         conversation_id: ConversationId,
         turn_id: Option<TurnId>,
     ) -> Result<CommandPlan, EngineError> {
-        let selected_turn_id = {
-            let conversation = self.conversation(&conversation_id)?;
-            conversation
-                .capabilities
-                .turn
-                .cancel
-                .require("turn.cancel")?;
-            turn_id
-                .or_else(|| conversation.primary_active_turn().cloned())
-                .ok_or_else(|| EngineError::MissingActiveTurn {
-                    conversation_id: conversation_id.to_string(),
-                })?
-        };
+        let selected_turn_id = self.select_turn_for_cancel(&conversation_id, turn_id)?;
         let request_id = self.next_request_id();
         {
             let conversation = self.conversation_mut(&conversation_id)?;
-            if !conversation.active_turns.contains(&selected_turn_id) {
-                return Err(EngineError::InvalidState {
-                    expected: "active turn".to_string(),
-                    actual: selected_turn_id.to_string(),
-                });
-            }
             conversation.lifecycle = ConversationLifecycle::Cancelling {
                 turn_id: selected_turn_id.clone(),
             };
@@ -1182,6 +1149,42 @@ impl AngelEngine {
             request_id: Some(request_id),
             ..CommandPlan::default()
         })
+    }
+
+    fn select_turn_for_steer(
+        &self,
+        conversation_id: &ConversationId,
+        turn_id: Option<TurnId>,
+    ) -> Result<TurnId, EngineError> {
+        let conversation = self.conversation(conversation_id)?;
+        conversation.capabilities.turn.steer.require("turn.steer")?;
+        let selected = active_or_requested_turn(conversation, conversation_id, turn_id)?;
+        if conversation
+            .capabilities
+            .turn
+            .requires_expected_turn_id_for_steer
+        {
+            ensure_codex_turn_id_available(conversation, &selected, "steer")?;
+        }
+        Ok(selected)
+    }
+
+    fn select_turn_for_cancel(
+        &self,
+        conversation_id: &ConversationId,
+        turn_id: Option<TurnId>,
+    ) -> Result<TurnId, EngineError> {
+        let conversation = self.conversation(conversation_id)?;
+        conversation
+            .capabilities
+            .turn
+            .cancel
+            .require("turn.cancel")?;
+        let selected = active_or_requested_turn(conversation, conversation_id, turn_id)?;
+        if self.protocol == ProtocolFlavor::CodexAppServer {
+            ensure_codex_turn_id_available(conversation, &selected, "cancel")?;
+        }
+        Ok(selected)
     }
 
     fn apply_turn_started(
@@ -2072,6 +2075,45 @@ fn find_config_option<'a>(
         })
 }
 
+fn active_or_requested_turn(
+    conversation: &ConversationState,
+    conversation_id: &ConversationId,
+    turn_id: Option<TurnId>,
+) -> Result<TurnId, EngineError> {
+    let selected = turn_id
+        .or_else(|| conversation.primary_active_turn().cloned())
+        .ok_or_else(|| EngineError::MissingActiveTurn {
+            conversation_id: conversation_id.to_string(),
+        })?;
+    if !conversation.active_turns.contains(&selected) {
+        return Err(EngineError::InvalidState {
+            expected: "active turn".to_string(),
+            actual: selected.to_string(),
+        });
+    }
+    Ok(selected)
+}
+
+fn ensure_codex_turn_id_available(
+    conversation: &ConversationState,
+    turn_id: &TurnId,
+    operation: &str,
+) -> Result<(), EngineError> {
+    let turn = conversation
+        .turns
+        .get(turn_id)
+        .ok_or_else(|| EngineError::TurnNotFound {
+            turn_id: turn_id.to_string(),
+        })?;
+    if !matches!(turn.remote, RemoteTurnId::CodexTurn(_)) {
+        return Err(EngineError::InvalidState {
+            expected: format!("remote turn id available for {operation}"),
+            actual: format!("{:?}", turn.remote),
+        });
+    }
+    Ok(())
+}
+
 fn normalized_eq(left: &str, right: &str) -> bool {
     normalize_name(left) == normalize_name(right)
 }
@@ -2135,7 +2177,7 @@ mod tests {
     use crate::event::EngineEvent;
     use crate::ids::{
         ActionId, ConversationId, ElicitationId, JsonRpcRequestId, RemoteConversationId,
-        RemoteRequestId, TurnId,
+        RemoteRequestId, RemoteTurnId, TurnId,
     };
     use crate::protocol::{AcpMethod, CodexMethod, ProtocolFlavor, ProtocolMethod};
     use crate::state::{
@@ -2187,6 +2229,21 @@ mod tests {
             .expect("start turn")
             .turn_id
             .expect("turn id")
+    }
+
+    fn accept_codex_turn(
+        engine: &mut AngelEngine,
+        conversation_id: ConversationId,
+        turn_id: TurnId,
+    ) {
+        engine
+            .apply_event(EngineEvent::TurnStarted {
+                conversation_id,
+                turn_id,
+                remote: RemoteTurnId::CodexTurn("remote-turn".to_string()),
+                input: Vec::new(),
+            })
+            .expect("codex turn accepted");
     }
 
     #[test]
@@ -2250,7 +2307,8 @@ mod tests {
             RemoteConversationId::CodexThread("thread".to_string()),
             adapter.capabilities(),
         );
-        start_turn(&mut engine, conversation_id.clone());
+        let turn_id = start_turn(&mut engine, conversation_id.clone());
+        accept_codex_turn(&mut engine, conversation_id.clone(), turn_id);
 
         let plan = engine
             .plan_command(EngineCommand::SteerTurn {
@@ -2498,6 +2556,7 @@ mod tests {
             adapter.capabilities(),
         );
         let turn_id = start_turn(&mut engine, conversation_id.clone());
+        accept_codex_turn(&mut engine, conversation_id.clone(), turn_id.clone());
 
         engine
             .plan_command(EngineCommand::CancelTurn {

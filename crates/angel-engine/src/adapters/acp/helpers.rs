@@ -48,6 +48,18 @@ pub(super) fn active_turn_id(
         .and_then(|conversation| conversation.primary_active_turn().cloned())
 }
 
+pub(super) fn acp_action_exists(
+    engine: &AngelEngine,
+    conversation_id: &ConversationId,
+    action_id: &ActionId,
+) -> bool {
+    engine
+        .conversations
+        .get(conversation_id)
+        .map(|conversation| conversation.actions.contains_key(action_id))
+        .unwrap_or(false)
+}
+
 pub(super) fn acp_stop_reason(value: &str) -> AcpStopReason {
     match value {
         "max_tokens" => AcpStopReason::MaxTokens,

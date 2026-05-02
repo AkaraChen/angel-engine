@@ -27,17 +27,25 @@ impl AcpAdapter {
             .and_then(Value::as_str)
             .unwrap_or("");
         let Some(conversation_id) = find_acp_conversation(engine, session_id) else {
-            return Ok(TransportOutput::default().log(
-                TransportLogKind::Warning,
-                format!("permission request for unknown session {session_id}"),
-            ));
+            return Ok(TransportOutput::default()
+                .message(JsonRpcMessage::error(
+                    Some(id.clone()),
+                    -32602,
+                    format!("permission request for unknown session {session_id}"),
+                    None,
+                ))
+                .log(
+                    TransportLogKind::Warning,
+                    format!("permission request for unknown session {session_id}"),
+                ));
         };
         let mut elicitation = ElicitationState::new(
             ElicitationId::new(format!("acp-request-{id}")),
             RemoteRequestId::Acp(id.clone()),
             ElicitationKind::Approval,
         );
-        if let Some(turn_id) = active_turn_id(engine, &conversation_id) {
+        let active_turn_id = active_turn_id(engine, &conversation_id);
+        if let Some(turn_id) = active_turn_id.clone() {
             elicitation.turn_id = Some(turn_id);
         }
         let tool_call = params.get("toolCall");
@@ -46,7 +54,10 @@ impl AcpAdapter {
             .or_else(|| tool_call.and_then(|tool_call| tool_call.get("toolCallId")))
             .and_then(Value::as_str)
         {
-            elicitation.action_id = Some(ActionId::new(tool_call_id.to_string()));
+            let action_id = ActionId::new(tool_call_id.to_string());
+            if active_turn_id.is_some() || acp_action_exists(engine, &conversation_id, &action_id) {
+                elicitation.action_id = Some(action_id);
+            }
         }
         elicitation.options = ElicitationOptions {
             title: params
@@ -63,12 +74,28 @@ impl AcpAdapter {
             choices: permission_option_ids(params),
             questions: Vec::new(),
         };
-        Ok(TransportOutput::default()
-            .event(EngineEvent::ElicitationOpened {
-                conversation_id,
-                elicitation,
-            })
-            .log(TransportLogKind::Warning, "ACP permission requested"))
+        let mut output =
+            TransportOutput::default().log(TransportLogKind::Warning, "ACP permission requested");
+        if let Some(action_id) = elicitation.action_id.clone()
+            && let Some(turn_id) = elicitation.turn_id.clone()
+            && !acp_action_exists(engine, &conversation_id, &action_id)
+        {
+            let mut action = ActionState::new(action_id.clone(), turn_id, ActionKind::McpTool);
+            action.title = elicitation.options.title.clone();
+            action.input = ActionInput {
+                summary: elicitation.options.body.clone(),
+                raw: Some(params.to_string()),
+            };
+            output.events.push(EngineEvent::ActionObserved {
+                conversation_id: conversation_id.clone(),
+                action,
+            });
+        }
+        output.events.push(EngineEvent::ElicitationOpened {
+            conversation_id,
+            elicitation,
+        });
+        Ok(output)
     }
 }
 

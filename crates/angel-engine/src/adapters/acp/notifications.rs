@@ -133,24 +133,41 @@ fn decode_acp_update(
                 .or_else(|| update.get("id"))
                 .and_then(Value::as_str)
                 .unwrap_or("tool");
+            let action_id = ActionId::new(id.to_string());
             let status = update
                 .get("status")
                 .and_then(Value::as_str)
                 .map(acp_tool_status)
                 .unwrap_or(AcpToolStatus::InProgress);
             let text = update_text(update);
-            Ok(TransportOutput::default()
-                .event(EngineEvent::ActionUpdated {
-                    conversation_id,
-                    action_id: ActionId::new(id.to_string()),
-                    patch: ActionPatch {
-                        phase: Some(AcpAdapter::tool_status_to_phase(status)),
-                        output_delta: (!text.is_empty()).then_some(ActionOutputDelta::Text(text)),
-                        error: None,
-                        title: None,
-                    },
-                })
-                .log(TransportLogKind::State, format!("tool call {status:?}")))
+            let mut output = TransportOutput::default()
+                .log(TransportLogKind::State, format!("tool call {status:?}"));
+            if !acp_action_exists(engine, &conversation_id, &action_id) {
+                let mut action =
+                    ActionState::new(action_id.clone(), turn_id.clone(), ActionKind::McpTool);
+                action.input = ActionInput {
+                    summary: update
+                        .get("title")
+                        .and_then(Value::as_str)
+                        .map(str::to_string),
+                    raw: Some(update.to_string()),
+                };
+                output.events.push(EngineEvent::ActionObserved {
+                    conversation_id: conversation_id.clone(),
+                    action,
+                });
+            }
+            output.events.push(EngineEvent::ActionUpdated {
+                conversation_id,
+                action_id,
+                patch: ActionPatch {
+                    phase: Some(AcpAdapter::tool_status_to_phase(status)),
+                    output_delta: (!text.is_empty()).then_some(ActionOutputDelta::Text(text)),
+                    error: None,
+                    title: None,
+                },
+            });
+            Ok(output)
         }
         "plan" => {
             let entries = update

@@ -74,7 +74,11 @@ pub(crate) fn find_codex_conversation(
             RemoteConversationId::CodexThread(remote) if remote == thread_id => Some(id.clone()),
             _ => None,
         })
-        .or_else(|| engine.selected.clone())
+        .or_else(|| {
+            let selected_id = engine.selected.as_ref()?;
+            let selected = engine.conversations.get(selected_id)?;
+            matches!(selected.remote, RemoteConversationId::Pending(_)).then(|| selected_id.clone())
+        })
 }
 
 pub(crate) fn notification_turn<'a>(
