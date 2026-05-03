@@ -376,33 +376,6 @@ fn discovered_conversation_id(
         .unwrap_or_else(|| ConversationId::new(fallback))
 }
 
-fn acp_session_info_context(session: &Value) -> ContextPatch {
-    let mut updates = Vec::new();
-    if let Some(cwd) = session.get("cwd").and_then(Value::as_str) {
-        updates.push(crate::ContextUpdate::Cwd {
-            scope: crate::ContextScope::Conversation,
-            cwd: Some(cwd.to_string()),
-        });
-    }
-    if let Some(title) = session.get("title").and_then(Value::as_str)
-        && !title.is_empty()
-    {
-        updates.push(crate::ContextUpdate::Raw {
-            scope: crate::ContextScope::Conversation,
-            key: "conversation.title".to_string(),
-            value: title.to_string(),
-        });
-    }
-    if let Some(updated_at) = session.get("updatedAt").and_then(Value::as_str) {
-        updates.push(crate::ContextUpdate::Raw {
-            scope: crate::ContextScope::Conversation,
-            key: "conversation.updatedAt".to_string(),
-            value: updated_at.to_string(),
-        });
-    }
-    ContextPatch { updates }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;

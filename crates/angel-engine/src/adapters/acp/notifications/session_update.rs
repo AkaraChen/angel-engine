@@ -62,6 +62,15 @@ pub(super) fn decode_acp_update(
             })
             .log(TransportLogKind::State, format!("mode changed: {mode_id}")));
     }
+    if update_type == "session_info_update" {
+        let patch = acp_session_info_context(update);
+        return Ok(TransportOutput::default()
+            .event(EngineEvent::ContextUpdated {
+                conversation_id,
+                patch,
+            })
+            .log(TransportLogKind::State, "session info updated"));
+    }
 
     let Some(turn_id) = active_turn_id(engine, &conversation_id) else {
         return Ok(TransportOutput::default().log(
@@ -291,6 +300,76 @@ mod tests {
                     && commands.len() == 1
                     && commands[0].name == "plan"
                     && commands[0].input.as_ref().map(|input| input.hint.as_str()) == Some("task")
+        ));
+    }
+
+    #[test]
+    fn session_info_update_updates_context_without_active_turn() {
+        let adapter = AcpAdapter::standard();
+        let mut engine = AngelEngine::new(crate::ProtocolFlavor::Acp, adapter.capabilities());
+        let conversation_id = ready_conversation(&adapter, &mut engine);
+
+        let output = adapter
+            .decode_notification(
+                &engine,
+                "session/update",
+                &json!({
+                    "sessionId": "sess",
+                    "update": {
+                        "sessionUpdate": "session_info_update",
+                        "title": "Investigate ACP",
+                        "updatedAt": "2026-05-03T12:00:00Z"
+                    }
+                }),
+            )
+            .expect("session info update");
+
+        assert!(matches!(
+            output.events.as_slice(),
+            [EngineEvent::ContextUpdated { conversation_id: id, patch }]
+                if id == &conversation_id
+                    && patch.updates.iter().any(|update| matches!(
+                        update,
+                        crate::ContextUpdate::Raw { key, value, .. }
+                            if key == "conversation.title" && value == "Investigate ACP"
+                    ))
+                    && patch.updates.iter().any(|update| matches!(
+                        update,
+                        crate::ContextUpdate::Raw { key, value, .. }
+                            if key == "conversation.updatedAt" && value == "2026-05-03T12:00:00Z"
+                    ))
+        ));
+    }
+
+    #[test]
+    fn session_info_update_can_clear_optional_fields() {
+        let adapter = AcpAdapter::standard();
+        let mut engine = AngelEngine::new(crate::ProtocolFlavor::Acp, adapter.capabilities());
+        let conversation_id = ready_conversation(&adapter, &mut engine);
+
+        let output = adapter
+            .decode_notification(
+                &engine,
+                "session/update",
+                &json!({
+                    "sessionId": "sess",
+                    "update": {
+                        "sessionUpdate": "session_info_update",
+                        "title": null
+                    }
+                }),
+            )
+            .expect("session info update");
+
+        assert!(matches!(
+            output.events.as_slice(),
+            [EngineEvent::ContextUpdated { conversation_id: id, patch }]
+                if id == &conversation_id
+                    && patch.updates.iter().any(|update| matches!(
+                        update,
+                        crate::ContextUpdate::Raw { key, value, .. }
+                            if key == "conversation.title" && value.is_empty()
+                    ))
         ));
     }
 

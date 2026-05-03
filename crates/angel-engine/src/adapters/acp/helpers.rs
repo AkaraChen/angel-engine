@@ -93,6 +93,39 @@ pub(super) fn update_text(update: &Value) -> String {
         .to_string()
 }
 
+pub(super) fn acp_session_info_context(value: &Value) -> ContextPatch {
+    let mut updates = Vec::new();
+    if let Some(cwd) = value.get("cwd").and_then(Value::as_str) {
+        updates.push(crate::ContextUpdate::Cwd {
+            scope: crate::ContextScope::Conversation,
+            cwd: Some(cwd.to_string()),
+        });
+    }
+    if let Some(title) = optional_string_field(value, "title") {
+        updates.push(crate::ContextUpdate::Raw {
+            scope: crate::ContextScope::Conversation,
+            key: "conversation.title".to_string(),
+            value: title,
+        });
+    }
+    if let Some(updated_at) = optional_string_field(value, "updatedAt") {
+        updates.push(crate::ContextUpdate::Raw {
+            scope: crate::ContextScope::Conversation,
+            key: "conversation.updatedAt".to_string(),
+            value: updated_at,
+        });
+    }
+    ContextPatch { updates }
+}
+
+fn optional_string_field(value: &Value, key: &str) -> Option<String> {
+    match value.get(key) {
+        Some(Value::String(value)) => Some(value.clone()),
+        Some(Value::Null) => Some(String::new()),
+        _ => None,
+    }
+}
+
 pub(super) fn session_config_options(value: &Value) -> Vec<SessionConfigOption> {
     value
         .get("configOptions")
