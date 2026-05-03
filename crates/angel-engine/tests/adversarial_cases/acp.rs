@@ -182,6 +182,115 @@ fn acp_cancel_turn_responds_cancel_to_pending_form_elicitation() {
 }
 
 #[test]
+fn acp_elicitation_schema_preserves_typed_constraints_without_stringly_metadata() {
+    let adapter = AcpAdapter::standard();
+    let mut engine = acp_engine(&adapter);
+    let conversation_id = insert_ready_conversation(
+        &mut engine,
+        "conv",
+        RemoteConversationId::Known("sess".to_string()),
+        adapter.capabilities(),
+    );
+
+    decode_and_apply(
+        &adapter,
+        &mut engine,
+        JsonRpcMessage::request(
+            JsonRpcRequestId::new("ask-schema"),
+            "elicitation/create",
+            json!({
+                "mode": "form",
+                "sessionId": "sess",
+                "message": "Configure run",
+                "requestedSchema": {
+                    "type": "object",
+                    "required": ["path", "retries"],
+                    "properties": {
+                        "path": {
+                            "type": "string",
+                            "title": "Path",
+                            "format": "uri",
+                            "pattern": "^file://",
+                            "default": "file:///repo/src/lib.rs"
+                        },
+                        "retries": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "maximum": 5,
+                            "default": 2
+                        },
+                        "tags": {
+                            "type": "array",
+                            "items": {
+                                "type": "string",
+                                "enum": ["fast", "slow"]
+                            },
+                            "minItems": 1,
+                            "uniqueItems": true
+                        }
+                    }
+                }
+            }),
+        ),
+    );
+
+    let elicitation = engine.conversations[&conversation_id]
+        .elicitations
+        .values()
+        .next()
+        .expect("elicitation");
+    let path_schema = elicitation
+        .options
+        .questions
+        .iter()
+        .find(|question| question.id == "path")
+        .and_then(|question| question.schema.as_ref())
+        .expect("path schema");
+    assert_eq!(path_schema.value_type, QuestionValueType::String);
+    assert!(path_schema.required);
+    assert_eq!(path_schema.format.as_deref(), Some("uri"));
+    assert_eq!(path_schema.constraints.pattern.as_deref(), Some("^file://"));
+    assert_eq!(
+        path_schema.default_value.as_deref(),
+        Some("file:///repo/src/lib.rs")
+    );
+
+    let retries_schema = elicitation
+        .options
+        .questions
+        .iter()
+        .find(|question| question.id == "retries")
+        .and_then(|question| question.schema.as_ref())
+        .expect("retries schema");
+    assert_eq!(retries_schema.value_type, QuestionValueType::Integer);
+    assert!(retries_schema.required);
+    assert_eq!(retries_schema.constraints.minimum.as_deref(), Some("1"));
+    assert_eq!(retries_schema.constraints.maximum.as_deref(), Some("5"));
+    assert_eq!(retries_schema.default_value.as_deref(), Some("2"));
+
+    let tags = elicitation
+        .options
+        .questions
+        .iter()
+        .find(|question| question.id == "tags")
+        .expect("tags question");
+    let tags_schema = tags.schema.as_ref().expect("tags schema");
+    assert_eq!(tags_schema.value_type, QuestionValueType::Array);
+    assert_eq!(tags_schema.item_value_type, Some(QuestionValueType::String));
+    assert!(tags_schema.multiple);
+    assert!(!tags_schema.required);
+    assert_eq!(tags_schema.constraints.min_items.as_deref(), Some("1"));
+    assert_eq!(tags_schema.constraints.unique_items, Some(true));
+    assert_eq!(
+        tags.options
+            .iter()
+            .map(|option| option.label.as_str())
+            .collect::<Vec<_>>(),
+        vec!["fast", "slow"]
+    );
+}
+
+#[test]
 fn acp_bad_model_and_effort_updates_are_server_validated_without_local_context_mutation() {
     let adapter = AcpAdapter::standard();
     let mut engine = acp_engine(&adapter);

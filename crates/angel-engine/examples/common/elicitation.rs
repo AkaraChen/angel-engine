@@ -230,6 +230,7 @@ mod tests {
                     description: "Use the repository root".to_string(),
                 },
             ],
+            schema: None,
         };
 
         assert_eq!(

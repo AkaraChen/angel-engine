@@ -202,6 +202,7 @@ fn user_question(value: &Value) -> Option<UserQuestion> {
                     .collect()
             })
             .unwrap_or_default(),
+        schema: None,
     })
 }
 

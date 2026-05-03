@@ -83,6 +83,42 @@ pub struct UserQuestion {
     pub is_secret: bool,
     pub is_other: bool,
     pub options: Vec<UserQuestionOption>,
+    pub schema: Option<UserQuestionSchema>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct UserQuestionSchema {
+    pub value_type: QuestionValueType,
+    pub item_value_type: Option<QuestionValueType>,
+    pub required: bool,
+    pub multiple: bool,
+    pub format: Option<String>,
+    pub default_value: Option<String>,
+    pub constraints: QuestionConstraints,
+    pub raw_schema: Option<String>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum QuestionValueType {
+    String,
+    Number,
+    Integer,
+    Boolean,
+    Array,
+    Object,
+    Unknown(String),
+}
+
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct QuestionConstraints {
+    pub pattern: Option<String>,
+    pub minimum: Option<String>,
+    pub maximum: Option<String>,
+    pub min_length: Option<String>,
+    pub max_length: Option<String>,
+    pub min_items: Option<String>,
+    pub max_items: Option<String>,
+    pub unique_items: Option<bool>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]

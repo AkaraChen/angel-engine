@@ -197,6 +197,17 @@ impl AcpAdapter {
 }
 
 fn acp_elicitation_form_options(message: &str, params: &Value) -> ElicitationOptions {
+    let required = params
+        .get("requestedSchema")
+        .and_then(|schema| schema.get("required"))
+        .and_then(Value::as_array)
+        .map(|required| {
+            required
+                .iter()
+                .filter_map(Value::as_str)
+                .collect::<std::collections::BTreeSet<_>>()
+        })
+        .unwrap_or_default();
     let questions = params
         .get("requestedSchema")
         .and_then(|schema| schema.get("properties"))
@@ -204,7 +215,9 @@ fn acp_elicitation_form_options(message: &str, params: &Value) -> ElicitationOpt
         .map(|properties| {
             properties
                 .iter()
-                .map(|(id, schema)| acp_elicitation_question(id, message, schema))
+                .map(|(id, schema)| {
+                    acp_elicitation_question(id, message, schema, required.contains(id.as_str()))
+                })
                 .collect::<Vec<_>>()
         })
         .unwrap_or_default();
@@ -224,7 +237,12 @@ fn acp_elicitation_form_options(message: &str, params: &Value) -> ElicitationOpt
     }
 }
 
-fn acp_elicitation_question(id: &str, message: &str, schema: &Value) -> UserQuestion {
+fn acp_elicitation_question(
+    id: &str,
+    message: &str,
+    schema: &Value,
+    required: bool,
+) -> UserQuestion {
     let header = schema
         .get("title")
         .and_then(Value::as_str)
@@ -246,30 +264,35 @@ fn acp_elicitation_question(id: &str, message: &str, schema: &Value) -> UserQues
             .is_some_and(|format| format == "password"),
         is_other: false,
         options: acp_elicitation_question_options(schema),
+        schema: Some(acp_elicitation_question_schema(schema, required)),
     }
 }
 
 fn acp_elicitation_question_options(schema: &Value) -> Vec<UserQuestionOption> {
-    if let Some(values) = schema.get("enum").and_then(Value::as_array) {
+    let option_schema = if schema.get("type").and_then(Value::as_str) == Some("array") {
+        schema.get("items").unwrap_or(schema)
+    } else {
+        schema
+    };
+    if let Some(values) = option_schema.get("enum").and_then(Value::as_array) {
         return values
             .iter()
-            .filter_map(Value::as_str)
-            .map(|label| UserQuestionOption {
-                label: label.to_string(),
+            .map(|value| UserQuestionOption {
+                label: json_label(value),
                 description: String::new(),
             })
             .collect();
     }
-    if let Some(options) = schema.get("oneOf").and_then(Value::as_array) {
+    if let Some(options) = option_schema.get("oneOf").and_then(Value::as_array) {
         return options
             .iter()
             .filter_map(|option| {
-                let label = option
-                    .get("title")
-                    .or_else(|| option.get("const"))
-                    .and_then(Value::as_str)?;
+                let label = option.get("title").and_then(Value::as_str).map_or_else(
+                    || option.get("const").map(json_label),
+                    |title| Some(title.to_string()),
+                )?;
                 Some(UserQuestionOption {
-                    label: label.to_string(),
+                    label,
                     description: option
                         .get("description")
                         .and_then(Value::as_str)
@@ -279,7 +302,7 @@ fn acp_elicitation_question_options(schema: &Value) -> Vec<UserQuestionOption> {
             })
             .collect();
     }
-    if schema.get("type").and_then(Value::as_str) == Some("boolean") {
+    if option_schema.get("type").and_then(Value::as_str) == Some("boolean") {
         return vec![
             UserQuestionOption {
                 label: "true".to_string(),
@@ -292,6 +315,68 @@ fn acp_elicitation_question_options(schema: &Value) -> Vec<UserQuestionOption> {
         ];
     }
     Vec::new()
+}
+
+fn acp_elicitation_question_schema(schema: &Value, required: bool) -> crate::UserQuestionSchema {
+    let value_type = question_value_type(schema);
+    let item_value_type = schema.get("items").map(question_value_type);
+    crate::UserQuestionSchema {
+        multiple: matches!(value_type, crate::QuestionValueType::Array),
+        value_type,
+        item_value_type,
+        required,
+        format: schema
+            .get("format")
+            .and_then(Value::as_str)
+            .map(str::to_string),
+        default_value: schema.get("default").map(json_label),
+        constraints: crate::QuestionConstraints {
+            pattern: string_constraint(schema, "pattern"),
+            minimum: scalar_constraint(schema, "minimum"),
+            maximum: scalar_constraint(schema, "maximum"),
+            min_length: scalar_constraint(schema, "minLength"),
+            max_length: scalar_constraint(schema, "maxLength"),
+            min_items: scalar_constraint(schema, "minItems"),
+            max_items: scalar_constraint(schema, "maxItems"),
+            unique_items: schema.get("uniqueItems").and_then(Value::as_bool),
+        },
+        raw_schema: Some(json_string(schema)),
+    }
+}
+
+fn question_value_type(schema: &Value) -> crate::QuestionValueType {
+    match schema
+        .get("type")
+        .and_then(Value::as_str)
+        .unwrap_or("unknown")
+    {
+        "string" => crate::QuestionValueType::String,
+        "number" => crate::QuestionValueType::Number,
+        "integer" => crate::QuestionValueType::Integer,
+        "boolean" => crate::QuestionValueType::Boolean,
+        "array" => crate::QuestionValueType::Array,
+        "object" => crate::QuestionValueType::Object,
+        other => crate::QuestionValueType::Unknown(other.to_string()),
+    }
+}
+
+fn string_constraint(schema: &Value, key: &str) -> Option<String> {
+    schema.get(key).and_then(Value::as_str).map(str::to_string)
+}
+
+fn scalar_constraint(schema: &Value, key: &str) -> Option<String> {
+    schema.get(key).map(json_label)
+}
+
+fn json_label(value: &Value) -> String {
+    value
+        .as_str()
+        .map(str::to_string)
+        .unwrap_or_else(|| value.to_string())
+}
+
+fn json_string(value: &Value) -> String {
+    serde_json::to_string(value).unwrap_or_else(|_| value.to_string())
 }
 
 fn permission_option_ids(params: &Value) -> Vec<String> {
