@@ -36,7 +36,7 @@ const nestedItems = ['Recent thread', 'Build notes', 'Release checklist'];
 export function App() {
   return (
     <SidebarProvider>
-      <Sidebar variant="inset" className="border-r">
+      <Sidebar variant="inset">
         <SidebarHeader className="px-2 py-3">
           <SidebarMenu>
             {primaryItems.map(({ label, icon: Icon }) => (
