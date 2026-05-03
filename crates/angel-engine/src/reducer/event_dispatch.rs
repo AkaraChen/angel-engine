@@ -338,7 +338,22 @@ impl AngelEngine {
                 patch,
             } => {
                 let conversation = self.conversation_mut(&conversation_id)?;
+                let model = patch.updates.iter().find_map(|update| {
+                    if let ContextUpdate::Model {
+                        model: Some(model), ..
+                    } = update
+                    {
+                        Some(model.clone())
+                    } else {
+                        None
+                    }
+                });
                 conversation.context.apply_patch(patch);
+                if let Some(model) = model
+                    && let Some(models) = &mut conversation.model_state
+                {
+                    models.current_model_id = model;
+                }
                 Ok(TransitionReport::one(UiEvent::ContextChanged(
                     conversation_id,
                 )))

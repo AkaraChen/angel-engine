@@ -367,6 +367,122 @@ fn acp_bad_model_and_effort_updates_are_server_validated_without_local_context_m
 }
 
 #[test]
+fn acp_set_model_empty_response_updates_current_model_state() {
+    let adapter = AcpAdapter::standard();
+    let mut engine = acp_engine(&adapter);
+    let conversation_id = insert_ready_conversation(
+        &mut engine,
+        "conv",
+        RemoteConversationId::Known("sess".to_string()),
+        adapter.capabilities(),
+    );
+    engine
+        .apply_event(EngineEvent::SessionModelsUpdated {
+            conversation_id: conversation_id.clone(),
+            models: SessionModelState {
+                current_model_id: "old-model".to_string(),
+                available_models: vec![
+                    SessionModel {
+                        id: "old-model".to_string(),
+                        name: "Old".to_string(),
+                        description: None,
+                    },
+                    SessionModel {
+                        id: "new-model".to_string(),
+                        name: "New".to_string(),
+                        description: None,
+                    },
+                ],
+            },
+        })
+        .expect("models update");
+
+    let plan = engine
+        .plan_command(EngineCommand::UpdateContext {
+            conversation_id: conversation_id.clone(),
+            patch: ContextPatch::one(ContextUpdate::Model {
+                scope: ContextScope::TurnAndFuture,
+                model: Some("new-model".to_string()),
+            }),
+        })
+        .expect("set model");
+    let request_id = plan.request_id.clone().unwrap();
+    let (_, method, params) = encode_request(&adapter, &engine, &plan.effects[0]);
+    assert_eq!(method, "session/set_model");
+    assert_eq!(params["sessionId"], json!("sess"));
+    assert_eq!(params["modelId"], json!("new-model"));
+
+    decode_and_apply(
+        &adapter,
+        &mut engine,
+        JsonRpcMessage::response(request_id, json!({})),
+    );
+
+    let conversation = &engine.conversations[&conversation_id];
+    assert_eq!(
+        conversation
+            .context
+            .model
+            .effective()
+            .and_then(|model| model.as_ref())
+            .map(String::as_str),
+        Some("new-model")
+    );
+    assert_eq!(
+        conversation
+            .model_state
+            .as_ref()
+            .map(|models| models.current_model_id.as_str()),
+        Some("new-model")
+    );
+}
+
+#[test]
+fn acp_set_model_rpc_error_leaves_current_model_state_unchanged() {
+    let adapter = AcpAdapter::standard();
+    let mut engine = acp_engine(&adapter);
+    let conversation_id = insert_ready_conversation(
+        &mut engine,
+        "conv",
+        RemoteConversationId::Known("sess".to_string()),
+        adapter.capabilities(),
+    );
+    engine
+        .apply_event(EngineEvent::SessionModelsUpdated {
+            conversation_id: conversation_id.clone(),
+            models: SessionModelState {
+                current_model_id: "old-model".to_string(),
+                available_models: Vec::new(),
+            },
+        })
+        .expect("models update");
+    let plan = engine
+        .plan_command(EngineCommand::UpdateContext {
+            conversation_id: conversation_id.clone(),
+            patch: ContextPatch::one(ContextUpdate::Model {
+                scope: ContextScope::TurnAndFuture,
+                model: Some("new-model".to_string()),
+            }),
+        })
+        .expect("set model");
+    let request_id = plan.request_id.clone().unwrap();
+
+    decode_and_apply(
+        &adapter,
+        &mut engine,
+        JsonRpcMessage::error(Some(request_id), -32602, "invalid model", None),
+    );
+
+    assert_eq!(
+        engine.conversations[&conversation_id]
+            .model_state
+            .as_ref()
+            .map(|models| models.current_model_id.as_str()),
+        Some("old-model")
+    );
+}
+
+#[test]
 fn acp_tool_update_before_tool_call_creates_fallback_action() {
     let adapter = AcpAdapter::standard();
     let mut engine = acp_engine(&adapter);
