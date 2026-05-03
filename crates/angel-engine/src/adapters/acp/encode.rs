@@ -44,11 +44,7 @@ impl AcpAdapter {
                     .unwrap_or_default(),
             })),
             ProtocolMethod::Acp(AcpMethod::SessionNew) => Ok(json!({
-                "cwd": effect.payload.fields.get("cwd").cloned().unwrap_or_else(|| {
-                    std::env::current_dir()
-                        .map(|path| path.display().to_string())
-                        .unwrap_or_else(|_| ".".to_string())
-                }),
+                "cwd": acp_effect_cwd(engine, effect),
                 "mcpServers": [],
             })),
             ProtocolMethod::Acp(AcpMethod::SessionLoad)
@@ -60,6 +56,8 @@ impl AcpAdapter {
                     .or_else(|| effect.payload.fields.get("sessionId"))
                     .cloned()
                     .unwrap_or_default(),
+                "cwd": acp_effect_cwd(engine, effect),
+                "mcpServers": [],
             })),
             ProtocolMethod::Acp(AcpMethod::SessionPrompt) => Ok(json!({
                 "sessionId": acp_session_id(engine, effect)?,
@@ -201,6 +199,24 @@ impl AcpAdapter {
     }
 }
 
+fn acp_effect_cwd(engine: &AngelEngine, effect: &crate::ProtocolEffect) -> String {
+    if let Some(cwd) = effect.payload.fields.get("cwd") {
+        return cwd.clone();
+    }
+    if let Some(cwd) = effect
+        .conversation_id
+        .as_ref()
+        .and_then(|id| engine.conversations.get(id))
+        .and_then(|conversation| conversation.context.cwd.effective())
+        .and_then(|cwd| cwd.as_ref())
+    {
+        return cwd.display().to_string();
+    }
+    std::env::current_dir()
+        .map(|path| path.display().to_string())
+        .unwrap_or_else(|_| ".".to_string())
+}
+
 fn acp_elicitation_response(
     decision: &str,
     fields: &std::collections::BTreeMap<String, String>,
@@ -337,13 +353,56 @@ mod tests {
             crate::ProtocolFlavor::Acp,
             ProtocolMethod::Acp(AcpMethod::SessionResume),
         )
-        .field("remoteConversationId", "sess");
+        .field("remoteConversationId", "sess")
+        .field("cwd", "/tmp/project");
 
         let params = adapter
             .encode_params(&engine, &effect, &TransportOptions::default())
             .expect("session resume params");
 
-        assert_eq!(params, json!({"sessionId": "sess"}));
+        assert_eq!(
+            params,
+            json!({"sessionId": "sess", "cwd": "/tmp/project", "mcpServers": []})
+        );
+    }
+
+    #[test]
+    fn session_load_uses_conversation_cwd_when_effect_omits_it() {
+        let adapter = AcpAdapter::standard();
+        let mut engine = AngelEngine::new(crate::ProtocolFlavor::Acp, adapter.capabilities());
+        let conversation_id = ConversationId::new("conv");
+        engine
+            .apply_event(EngineEvent::ConversationProvisionStarted {
+                id: conversation_id.clone(),
+                remote: RemoteConversationId::Known("sess".to_string()),
+                op: crate::ProvisionOp::Load,
+                capabilities: adapter.capabilities(),
+            })
+            .expect("conversation provision");
+        engine
+            .apply_event(EngineEvent::ContextUpdated {
+                conversation_id: conversation_id.clone(),
+                patch: ContextPatch::one(crate::ContextUpdate::Cwd {
+                    scope: crate::ContextScope::Conversation,
+                    cwd: Some("/tmp/from-context".to_string()),
+                }),
+            })
+            .expect("context update");
+        let effect = crate::ProtocolEffect::new(
+            crate::ProtocolFlavor::Acp,
+            ProtocolMethod::Acp(AcpMethod::SessionLoad),
+        )
+        .conversation_id(conversation_id)
+        .field("sessionId", "sess");
+
+        let params = adapter
+            .encode_params(&engine, &effect, &TransportOptions::default())
+            .expect("session load params");
+
+        assert_eq!(
+            params,
+            json!({"sessionId": "sess", "cwd": "/tmp/from-context", "mcpServers": []})
+        );
     }
 }
 
