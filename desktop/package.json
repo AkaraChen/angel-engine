@@ -1,8 +1,8 @@
 {
   "name": "desktop",
-  "productName": "desktop",
+  "productName": "Angel Engine Desktop",
   "version": "1.0.0",
-  "description": "My Electron application description",
+  "description": "Desktop shell for Angel Engine.",
   "main": ".vite/build/main.js",
   "private": true,
   "scripts": {
@@ -10,7 +10,8 @@
     "package": "electron-forge package",
     "make": "electron-forge make",
     "publish": "electron-forge publish",
-    "lint": "eslint --ext .ts,.tsx ."
+    "lint": "eslint --ext .ts,.tsx,.mts .",
+    "typecheck": "tsc --noEmit"
   },
   "keywords": [],
   "author": {
@@ -37,17 +38,18 @@
     "@vitejs/plugin-react": "^5.2.0",
     "electron": "41.5.0",
     "eslint": "^8.57.1",
+    "eslint-import-resolver-typescript": "^4.4.4",
     "eslint-plugin-import": "^2.32.0",
     "tailwindcss": "^4.2.4",
-    "typescript": "^6.0.3",
+    "typescript": "^5.9.3",
     "vite": "^5.4.21"
   },
   "dependencies": {
-    "@radix-ui/react-slot": "^1.2.4",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "electron-squirrel-startup": "^1.0.1",
     "lucide-react": "^1.14.0",
+    "radix-ui": "^1.4.3",
     "react": "^19.2.5",
     "react-dom": "^19.2.5",
     "shadcn": "^4.6.0",

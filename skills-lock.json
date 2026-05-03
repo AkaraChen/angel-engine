@@ -1,0 +1,40 @@
+{
+  "version": 1,
+  "skills": {
+    "agent-browser": {
+      "source": "vercel-labs/agent-browser",
+      "sourceType": "github",
+      "computedHash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "agentcore": {
+      "source": "vercel-labs/agent-browser",
+      "sourceType": "github",
+      "computedHash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "core": {
+      "source": "vercel-labs/agent-browser",
+      "sourceType": "github",
+      "computedHash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "dogfood": {
+      "source": "vercel-labs/agent-browser",
+      "sourceType": "github",
+      "computedHash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "electron": {
+      "source": "vercel-labs/agent-browser",
+      "sourceType": "github",
+      "computedHash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "slack": {
+      "source": "vercel-labs/agent-browser",
+      "sourceType": "github",
+      "computedHash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "vercel-sandbox": {
+      "source": "vercel-labs/agent-browser",
+      "sourceType": "github",
+      "computedHash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  }
+}

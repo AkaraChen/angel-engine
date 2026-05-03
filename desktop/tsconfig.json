@@ -1,15 +1,23 @@
 {
   "compilerOptions": {
-    "target": "ESNext",
-    "module": "commonjs",
+    "target": "ES2022",
+    "module": "ESNext",
+    "lib": ["DOM", "DOM.Iterable", "ES2022"],
     "allowJs": true,
     "skipLibCheck": true,
     "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
     "noImplicitAny": true,
     "sourceMap": true,
+    "jsx": "react-jsx",
     "baseUrl": ".",
+    "paths": {
+      "@/*": ["./src/*"]
+    },
     "outDir": "dist",
-    "moduleResolution": "node",
-    "resolveJsonModule": true
-  }
+    "moduleResolution": "bundler",
+    "resolveJsonModule": true,
+    "types": ["vite/client"]
+  },
+  "include": ["src", "*.ts", "*.mts", "*.d.ts"]
 }
