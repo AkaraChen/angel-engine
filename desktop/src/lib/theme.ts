@@ -1,5 +1,10 @@
 const systemDarkQuery = '(prefers-color-scheme: dark)';
 
+export function applyDesktopPlatform() {
+  document.documentElement.dataset.platform =
+    window.desktopEnvironment.platform;
+}
+
 export function syncSystemColorScheme() {
   const media = window.matchMedia(systemDarkQuery);
 

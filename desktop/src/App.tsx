@@ -49,7 +49,6 @@ import {
   Pencil,
   Quote,
   RefreshCw,
-  Search,
   Settings,
   Sparkles,
   ThumbsDown,
@@ -74,7 +73,6 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarProvider,
-  SidebarTrigger,
 } from '@/components/ui/sidebar';
 import { ToastProvider, useToast } from '@/components/ui/toast';
 import { ipc } from '@/lib/ipc';
@@ -83,7 +81,6 @@ import type { Project } from './shared/projects';
 
 const primaryItems = [
   { label: 'New chat', icon: MessageSquarePlus },
-  { label: 'Search', icon: Search },
   { label: 'Automation', icon: Workflow },
 ];
 
@@ -283,6 +280,7 @@ export function App() {
 
 function AppContent() {
   const toast = useToast();
+  const isMacOS = window.desktopEnvironment.platform === 'darwin';
   const [isProjectsLoading, setIsProjectsLoading] = useState(true);
   const [projects, setProjects] = useState<Project[]>([]);
 
@@ -343,7 +341,11 @@ function AppContent() {
   return (
     <SidebarProvider>
       <Sidebar variant="inset">
-        <SidebarHeader className="px-2 py-3">
+        <SidebarHeader
+          className="px-2 pb-3 pt-2"
+          data-electron-drag
+        >
+          {isMacOS ? <div aria-hidden className="h-8 shrink-0" /> : null}
           <SidebarMenu>
             {primaryItems.map(({ label, icon: Icon }) => (
               <SidebarMenuItem key={label}>
@@ -439,7 +441,7 @@ function AppContent() {
           </SidebarGroup>
         </SidebarContent>
 
-        <SidebarFooter className="p-4">
+        <SidebarFooter className="p-2">
           <SidebarMenu>
             <SidebarMenuItem>
               <SidebarMenuButton>
@@ -467,8 +469,10 @@ function AppContent() {
 
 function WorkspaceHeader() {
   return (
-    <header className="flex h-14 shrink-0 items-center gap-3 border-b px-4">
-      <SidebarTrigger />
+    <header
+      className="flex h-14 shrink-0 items-center gap-3 border-b px-4"
+      data-electron-drag
+    >
       <h1 className="min-w-0 truncate text-sm font-medium">
         Angel Engine Assistant
       </h1>

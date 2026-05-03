@@ -3,8 +3,9 @@ import { createRoot } from 'react-dom/client';
 
 import { App } from './App';
 import './index.css';
-import { syncSystemColorScheme } from './lib/theme';
+import { applyDesktopPlatform, syncSystemColorScheme } from './lib/theme';
 
+applyDesktopPlatform();
 const stopSystemColorSchemeSync = syncSystemColorScheme();
 
 if (import.meta.hot) {

@@ -6,6 +6,8 @@ import { registerIpcMain } from '@egoist/tipc/main';
 import { closeProjectsDatabase } from './main/projects/repository';
 import { appRouter } from './main/router';
 
+const isMacOS = process.platform === 'darwin';
+
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
 if (started) {
   app.quit();
@@ -14,6 +16,16 @@ if (started) {
 const createWindow = () => {
   // Create the browser window.
   const mainWindow = new BrowserWindow({
+    ...(isMacOS
+      ? {
+          backgroundColor: '#00000000',
+          titleBarStyle: 'hidden' as const,
+          trafficLightPosition: { x: 16, y: 18 },
+          transparent: true,
+          vibrancy: 'under-window' as const,
+          visualEffectState: 'active' as const,
+        }
+      : {}),
     height: 820,
     minHeight: 640,
     minWidth: 960,
@@ -22,6 +34,12 @@ const createWindow = () => {
       preload: path.join(__dirname, 'preload.js'),
     },
   });
+
+  if (isMacOS) {
+    mainWindow.setBackgroundColor('#00000000');
+    mainWindow.setVibrancy('under-window', { animationDuration: 0 });
+    mainWindow.setWindowButtonPosition({ x: 16, y: 18 });
+  }
 
   // and load the index.html of the app.
   if (MAIN_WINDOW_VITE_DEV_SERVER_URL) {
