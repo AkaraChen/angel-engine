@@ -42,6 +42,7 @@ pub enum PendingRequest {
     },
     ResumeConversation {
         conversation_id: ConversationId,
+        hydrate: bool,
     },
     ForkConversation {
         conversation_id: ConversationId,

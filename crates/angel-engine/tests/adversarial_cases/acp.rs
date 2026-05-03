@@ -550,3 +550,125 @@ fn acp_start_turn_rpc_error_terminalizes_and_allows_next_turn() {
     let (_, method, _) = encode_request(&adapter, &engine, &next.effects[0]);
     assert_eq!(method, "session/prompt");
 }
+
+#[test]
+fn acp_load_hydrates_replay_updates_before_response_without_session_id() {
+    let adapter = AcpAdapter::standard();
+    let mut engine = acp_engine(&adapter);
+    engine.default_capabilities.lifecycle.load = CapabilitySupport::Supported;
+    let plan = engine
+        .plan_command(EngineCommand::ResumeConversation {
+            target: ResumeTarget::Remote {
+                id: "sess".to_string(),
+                hydrate: true,
+            },
+        })
+        .expect("load session");
+    let conversation_id = plan.conversation_id.clone().unwrap();
+    let request_id = plan.request_id.clone().unwrap();
+    assert!(matches!(
+        engine.conversations[&conversation_id].lifecycle,
+        ConversationLifecycle::Hydrating { .. }
+    ));
+
+    decode_and_apply(
+        &adapter,
+        &mut engine,
+        JsonRpcMessage::notification(
+            "session/update",
+            json!({
+                "sessionId": "sess",
+                "update": {
+                    "sessionUpdate": "user_message_chunk",
+                    "content": {"type": "text", "text": "old user prompt"}
+                }
+            }),
+        ),
+    );
+    decode_and_apply(
+        &adapter,
+        &mut engine,
+        JsonRpcMessage::notification(
+            "session/update",
+            json!({
+                "sessionId": "sess",
+                "update": {
+                    "sessionUpdate": "agent_message_chunk",
+                    "content": {
+                        "type": "resource_link",
+                        "name": "README",
+                        "uri": "file:///repo/README.md"
+                    }
+                }
+            }),
+        ),
+    );
+    decode_and_apply(
+        &adapter,
+        &mut engine,
+        JsonRpcMessage::response(
+            request_id,
+            json!({
+                "modes": {
+                    "currentModeId": "default",
+                    "availableModes": [{"id": "default", "name": "Default"}]
+                }
+            }),
+        ),
+    );
+
+    let conversation = &engine.conversations[&conversation_id];
+    assert_eq!(conversation.lifecycle, ConversationLifecycle::Idle);
+    assert!(conversation.history.hydrated);
+    assert_eq!(conversation.history.turn_count, 1);
+    assert!(matches!(
+        conversation.history.replay.as_slice(),
+        [
+            HistoryReplayEntry {
+                role: HistoryRole::User,
+                content: ContentDelta::Text(user),
+            },
+            HistoryReplayEntry {
+                role: HistoryRole::Assistant,
+                content: ContentDelta::ResourceRef(resource),
+            },
+        ] if user == "old user prompt" && resource == "file:///repo/README.md"
+    ));
+    assert_eq!(
+        conversation
+            .mode_state
+            .as_ref()
+            .map(|modes| modes.current_mode_id.as_str()),
+        Some("default")
+    );
+}
+
+#[test]
+fn acp_resume_response_without_session_id_keeps_existing_remote_session() {
+    let adapter = AcpAdapter::standard();
+    let mut engine = acp_engine(&adapter);
+    engine.default_capabilities.lifecycle.resume = CapabilitySupport::Supported;
+    let plan = engine
+        .plan_command(EngineCommand::ResumeConversation {
+            target: ResumeTarget::Remote {
+                id: "sess".to_string(),
+                hydrate: false,
+            },
+        })
+        .expect("resume session");
+    let conversation_id = plan.conversation_id.clone().unwrap();
+    let request_id = plan.request_id.clone().unwrap();
+
+    decode_and_apply(
+        &adapter,
+        &mut engine,
+        JsonRpcMessage::response(request_id, json!({})),
+    );
+
+    let conversation = &engine.conversations[&conversation_id];
+    assert_eq!(
+        conversation.remote,
+        RemoteConversationId::Known("sess".to_string())
+    );
+    assert_eq!(conversation.lifecycle, ConversationLifecycle::Idle);
+}

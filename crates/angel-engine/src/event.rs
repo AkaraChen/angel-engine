@@ -6,8 +6,8 @@ use crate::ids::{
 use crate::state::{
     ActionPatch, ActionState, AvailableCommand, ContentDelta, ContextPatch, ConversationLifecycle,
     ElicitationDecision, ElicitationState, HistoryMutationOp, HistoryMutationResult,
-    HydrationSource, ObserverState, PlanState, ProvisionOp, SessionConfigOption, SessionModeState,
-    SessionModelState, TurnOutcome, UserInputRef,
+    HistoryReplayEntry, HydrationSource, ObserverState, PlanState, ProvisionOp,
+    SessionConfigOption, SessionModeState, SessionModelState, TurnOutcome, UserInputRef,
 };
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -153,6 +153,10 @@ pub enum EngineEvent {
     HistoryMutationFinished {
         conversation_id: ConversationId,
         result: HistoryMutationResult,
+    },
+    HistoryReplayChunk {
+        conversation_id: ConversationId,
+        entry: HistoryReplayEntry,
     },
     ObserverChanged {
         conversation_id: ConversationId,

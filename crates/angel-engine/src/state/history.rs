@@ -3,6 +3,22 @@ pub struct HistoryState {
     pub hydrated: bool,
     pub turn_count: usize,
     pub workspace_reverted: Option<bool>,
+    pub replay: Vec<HistoryReplayEntry>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct HistoryReplayEntry {
+    pub role: HistoryRole,
+    pub content: super::ContentDelta,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum HistoryRole {
+    User,
+    Assistant,
+    Reasoning,
+    Tool,
+    Unknown(String),
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]

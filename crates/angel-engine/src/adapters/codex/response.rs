@@ -36,7 +36,9 @@ impl CodexAdapter {
                     .log(TransportLogKind::State, "Codex runtime initialized");
             }
             PendingRequest::StartConversation { conversation_id }
-            | PendingRequest::ResumeConversation { conversation_id }
+            | PendingRequest::ResumeConversation {
+                conversation_id, ..
+            }
             | PendingRequest::ForkConversation { conversation_id } => {
                 let thread_id = result
                     .get("thread")

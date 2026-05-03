@@ -221,6 +221,7 @@ impl AngelEngine {
             request_id.clone(),
             PendingRequest::ResumeConversation {
                 conversation_id: conversation_id.clone(),
+                hydrate,
             },
         )?;
 

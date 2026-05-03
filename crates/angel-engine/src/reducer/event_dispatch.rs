@@ -2,7 +2,7 @@ use crate::error::EngineError;
 use crate::event::{EngineEvent, TransitionReport, UiEvent};
 use crate::state::{
     AgentMode, ContextPatch, ContextScope, ContextUpdate, ConversationLifecycle, ConversationState,
-    ElicitationPhase, RuntimeState, TurnPhase,
+    ElicitationPhase, HistoryRole, RuntimeState, TurnPhase,
 };
 
 use super::AngelEngine;
@@ -347,6 +347,19 @@ impl AngelEngine {
                 conversation_id,
                 result,
             } => self.apply_history_mutation_finished(conversation_id, result),
+            EngineEvent::HistoryReplayChunk {
+                conversation_id,
+                entry,
+            } => {
+                let conversation = self.conversation_mut(&conversation_id)?;
+                if entry.role == HistoryRole::User {
+                    conversation.history.turn_count += 1;
+                }
+                conversation.history.replay.push(entry);
+                Ok(TransitionReport::one(UiEvent::HistoryChanged(
+                    conversation_id,
+                )))
+            }
             EngineEvent::ObserverChanged {
                 conversation_id,
                 observer,

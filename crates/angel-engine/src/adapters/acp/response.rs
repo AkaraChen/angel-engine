@@ -74,8 +74,7 @@ impl AcpAdapter {
                     });
                 }
             }
-            PendingRequest::StartConversation { conversation_id }
-            | PendingRequest::ResumeConversation { conversation_id } => {
+            PendingRequest::StartConversation { conversation_id } => {
                 let session_id =
                     result
                         .get("sessionId")
@@ -83,36 +82,36 @@ impl AcpAdapter {
                         .ok_or_else(|| crate::EngineError::InvalidCommand {
                             message: "ACP session response missing sessionId".to_string(),
                         })?;
-                output = output
-                    .event(EngineEvent::ConversationReady {
-                        id: conversation_id.clone(),
-                        remote: Some(RemoteConversationId::Known(session_id.to_string())),
-                        context: ContextPatch::empty(),
-                        capabilities: Some(engine.default_capabilities.clone()),
-                    })
-                    .log(
-                        TransportLogKind::State,
-                        format!("session {session_id} ready"),
-                    );
-                let config_options = session_config_options(result);
-                if !config_options.is_empty() {
-                    output = output.event(EngineEvent::SessionConfigOptionsUpdated {
-                        conversation_id: conversation_id.clone(),
-                        options: config_options,
-                    });
-                }
-                if let Some(modes) = session_mode_state(result) {
-                    output = output.event(EngineEvent::SessionModesUpdated {
-                        conversation_id: conversation_id.clone(),
-                        modes,
-                    });
-                }
-                if let Some(models) = session_model_state(result) {
-                    output = output.event(EngineEvent::SessionModelsUpdated {
-                        conversation_id: conversation_id.clone(),
-                        models,
-                    });
-                }
+                append_session_ready_events(
+                    &mut output,
+                    engine,
+                    conversation_id,
+                    Some(session_id.to_string()),
+                    result,
+                );
+            }
+            PendingRequest::ResumeConversation {
+                conversation_id,
+                hydrate,
+            } => {
+                append_session_ready_events(
+                    &mut output,
+                    engine,
+                    conversation_id,
+                    result
+                        .get("sessionId")
+                        .and_then(Value::as_str)
+                        .map(str::to_string),
+                    result,
+                );
+                output = output.log(
+                    TransportLogKind::State,
+                    if *hydrate {
+                        "session load complete"
+                    } else {
+                        "session resume complete"
+                    },
+                );
             }
             PendingRequest::StartTurn {
                 conversation_id,
@@ -242,6 +241,54 @@ impl AcpAdapter {
             }
         }
         Ok(output)
+    }
+}
+
+fn append_session_ready_events(
+    output: &mut TransportOutput,
+    engine: &AngelEngine,
+    conversation_id: &ConversationId,
+    session_id: Option<String>,
+    result: &Value,
+) {
+    output.events.push(EngineEvent::ConversationReady {
+        id: conversation_id.clone(),
+        remote: session_id.clone().map(RemoteConversationId::Known),
+        context: ContextPatch::empty(),
+        capabilities: Some(engine.default_capabilities.clone()),
+    });
+    let session_label = session_id.unwrap_or_else(|| {
+        engine
+            .conversations
+            .get(conversation_id)
+            .and_then(|conversation| conversation.remote.as_protocol_id())
+            .map(str::to_string)
+            .unwrap_or_else(|| conversation_id.to_string())
+    });
+    output.logs.push(crate::TransportLog::new(
+        TransportLogKind::State,
+        format!("session {session_label} ready"),
+    ));
+    let config_options = session_config_options(result);
+    if !config_options.is_empty() {
+        output
+            .events
+            .push(EngineEvent::SessionConfigOptionsUpdated {
+                conversation_id: conversation_id.clone(),
+                options: config_options,
+            });
+    }
+    if let Some(modes) = session_mode_state(result) {
+        output.events.push(EngineEvent::SessionModesUpdated {
+            conversation_id: conversation_id.clone(),
+            modes,
+        });
+    }
+    if let Some(models) = session_model_state(result) {
+        output.events.push(EngineEvent::SessionModelsUpdated {
+            conversation_id: conversation_id.clone(),
+            models,
+        });
     }
 }
 

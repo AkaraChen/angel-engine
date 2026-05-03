@@ -73,6 +73,9 @@ pub(super) fn decode_acp_update(
     }
 
     let Some(turn_id) = active_turn_id(engine, &conversation_id) else {
+        if let Some(output) = hydration_update(engine, &conversation_id, update_type, update) {
+            return Ok(output);
+        }
         return Ok(TransportOutput::default().log(
             TransportLogKind::Receive,
             "session update without active turn",
@@ -214,6 +217,48 @@ pub(super) fn decode_acp_update(
             format!("session/update {update_type}"),
         )),
     }
+}
+
+fn hydration_update(
+    engine: &AngelEngine,
+    conversation_id: &ConversationId,
+    update_type: &str,
+    update: &Value,
+) -> Option<TransportOutput> {
+    let conversation = engine.conversations.get(conversation_id)?;
+    if !matches!(
+        conversation.lifecycle,
+        ConversationLifecycle::Hydrating { .. }
+    ) {
+        return None;
+    }
+    let entry = match update_type {
+        "user_message_chunk" => HistoryReplayEntry {
+            role: HistoryRole::User,
+            content: content_delta_from_update(update),
+        },
+        "agent_message_chunk" => HistoryReplayEntry {
+            role: HistoryRole::Assistant,
+            content: content_delta_from_update(update),
+        },
+        "agent_thought_chunk" => HistoryReplayEntry {
+            role: HistoryRole::Reasoning,
+            content: content_delta_from_update(update),
+        },
+        "tool_call" | "tool_call_update" => HistoryReplayEntry {
+            role: HistoryRole::Tool,
+            content: ContentDelta::Structured(json_string(update)),
+        },
+        _ => return None,
+    };
+    Some(
+        TransportOutput::default()
+            .event(EngineEvent::HistoryReplayChunk {
+                conversation_id: conversation_id.clone(),
+                entry,
+            })
+            .log(TransportLogKind::State, format!("hydrated {update_type}")),
+    )
 }
 
 fn tool_status_from_update(update: &Value) -> AcpToolStatus {
