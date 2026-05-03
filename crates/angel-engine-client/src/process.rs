@@ -9,7 +9,7 @@ use crate::core::{AngelClientCore, process_log};
 use crate::error::{ClientError, ClientResult};
 use crate::event::{ClientLogKind, ClientUpdate};
 use crate::snapshot::{RuntimeSnapshot, TurnSnapshot};
-use crate::{ClientCommandResult, ElicitationSnapshot};
+use crate::{ClientCommandResult, ElicitationSnapshot, ThreadEvent};
 
 pub struct AngelClient {
     child: Child,
@@ -112,6 +112,63 @@ impl AngelClient {
         Ok(result)
     }
 
+    pub fn send_thread_event(
+        &mut self,
+        conversation_id: impl Into<String>,
+        event: ThreadEvent,
+    ) -> ClientResult<ClientCommandResult> {
+        let conversation_id = conversation_id.into();
+        let mut result = match event {
+            ThreadEvent::UserMessage { text } => self.core.send_text(conversation_id, text)?,
+            ThreadEvent::Inputs { input } => self.core.send_inputs(conversation_id, input)?,
+            ThreadEvent::Steer { text, turn_id } => {
+                let turn_id = turn_id.or_else(|| self.focused_turn_id(&conversation_id));
+                self.core.steer_text(conversation_id, turn_id, text)?
+            }
+            ThreadEvent::Cancel { turn_id } => {
+                let turn_id = turn_id.or_else(|| self.focused_turn_id(&conversation_id));
+                self.core.cancel_turn(conversation_id, turn_id)?
+            }
+            ThreadEvent::SetModel { model } => self.core.set_model(conversation_id, model)?,
+            ThreadEvent::SetMode { mode } => self.core.set_mode(conversation_id, mode)?,
+            ThreadEvent::SetReasoningEffort { effort } => {
+                self.core.set_reasoning_effort(conversation_id, effort)?
+            }
+            ThreadEvent::ResolveElicitation {
+                elicitation_id,
+                response,
+            } => self
+                .core
+                .resolve_elicitation(conversation_id, elicitation_id, response)?,
+            ThreadEvent::ResolveFirstElicitation { response } => {
+                let elicitation_id = self.first_open_elicitation_id(&conversation_id)?;
+                self.core
+                    .resolve_elicitation(conversation_id, elicitation_id, response)?
+            }
+            ThreadEvent::Fork { at_turn_id } => {
+                self.core
+                    .fork_conversation(crate::ForkConversationRequest {
+                        source_conversation_id: conversation_id,
+                        at_turn_id,
+                    })?
+            }
+            ThreadEvent::Close => self.core.close_conversation(conversation_id)?,
+            ThreadEvent::Unsubscribe => self.core.unsubscribe(conversation_id)?,
+            ThreadEvent::Archive => self.core.archive_conversation(conversation_id)?,
+            ThreadEvent::Unarchive => self.core.unarchive_conversation(conversation_id)?,
+            ThreadEvent::CompactHistory => self.core.compact_history(conversation_id)?,
+            ThreadEvent::RollbackHistory { num_turns } => {
+                self.core.rollback_history(conversation_id, num_turns)?
+            }
+            ThreadEvent::RunShellCommand { command } => {
+                self.core.run_shell_command(conversation_id, command)?
+            }
+        };
+        let sent = self.flush_update(&result.update)?;
+        result.update.merge(sent);
+        Ok(result)
+    }
+
     pub fn ask_text(
         &mut self,
         conversation_id: impl Into<String>,
@@ -179,12 +236,33 @@ impl AngelClient {
         self.core.open_elicitations(conversation_id)
     }
 
+    fn focused_turn_id(&self, conversation_id: &str) -> Option<String> {
+        self.snapshot()
+            .conversations
+            .into_iter()
+            .find(|conversation| conversation.id == conversation_id)
+            .and_then(|conversation| conversation.focused_turn_id)
+    }
+
+    fn first_open_elicitation_id(&self, conversation_id: &str) -> ClientResult<String> {
+        self.open_elicitations(conversation_id)
+            .into_iter()
+            .next()
+            .map(|elicitation| elicitation.id)
+            .ok_or_else(|| ClientError::InvalidInput {
+                message: format!("conversation {conversation_id} has no open elicitation"),
+            })
+    }
+
     fn wait_for_runtime(&mut self) -> ClientResult<ClientUpdate> {
         let mut update = ClientUpdate::default();
+        let mut auth_sent = false;
         loop {
             match self.snapshot().runtime {
                 RuntimeSnapshot::Available { .. } => return Ok(update),
-                RuntimeSnapshot::AwaitingAuth { methods } if self.core.auto_authenticate() => {
+                RuntimeSnapshot::AwaitingAuth { methods }
+                    if self.core.auto_authenticate() && !auth_sent =>
+                {
                     let method = methods
                         .first()
                         .ok_or_else(|| ClientError::InvalidInput {
@@ -193,6 +271,7 @@ impl AngelClient {
                         })?
                         .id
                         .clone();
+                    auth_sent = true;
                     let auth = self.core.authenticate(method)?;
                     update.merge(self.send_command_result(auth)?);
                 }
