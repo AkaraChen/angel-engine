@@ -64,6 +64,7 @@ where
         let plan = self.engine.plan_command(EngineCommand::StartConversation {
             params: StartConversationParams {
                 cwd: Some(std::env::current_dir()?.display().to_string()),
+                additional_directories: Vec::new(),
                 context: Default::default(),
             },
         })?;

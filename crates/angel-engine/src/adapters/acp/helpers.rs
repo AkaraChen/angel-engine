@@ -147,6 +147,16 @@ pub(super) fn acp_session_info_context(value: &Value) -> ContextPatch {
             cwd: Some(cwd.to_string()),
         });
     }
+    if let Some(directories) = value.get("additionalDirectories").and_then(Value::as_array) {
+        updates.push(crate::ContextUpdate::AdditionalDirectories {
+            scope: crate::ContextScope::Conversation,
+            directories: directories
+                .iter()
+                .filter_map(Value::as_str)
+                .map(str::to_string)
+                .collect(),
+        });
+    }
     if let Some(title) = optional_string_field(value, "title") {
         updates.push(crate::ContextUpdate::Raw {
             scope: crate::ContextScope::Conversation,

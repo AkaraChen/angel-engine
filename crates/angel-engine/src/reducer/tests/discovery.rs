@@ -21,6 +21,7 @@ fn acp_discovery_carries_common_filters() {
         .plan_command(EngineCommand::DiscoverConversations {
             params: DiscoverConversationsParams {
                 cwd: Some("/tmp/project".to_string()),
+                additional_directories: Vec::new(),
                 cursor: Some("opaque".to_string()),
             },
         })
@@ -56,6 +57,7 @@ fn codex_discovery_carries_common_filters() {
         .plan_command(EngineCommand::DiscoverConversations {
             params: DiscoverConversationsParams {
                 cwd: Some("/tmp/project".to_string()),
+                additional_directories: Vec::new(),
                 cursor: Some("opaque".to_string()),
             },
         })
@@ -131,6 +133,7 @@ fn start_conversation_carries_only_common_create_fields() {
         .plan_command(EngineCommand::StartConversation {
             params: StartConversationParams {
                 cwd: Some("/tmp/project".to_string()),
+                additional_directories: Vec::new(),
                 context: ContextPatch::empty(),
             },
         })

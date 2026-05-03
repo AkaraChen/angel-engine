@@ -745,3 +745,68 @@ fn acp_session_fork_uses_source_remote_session_and_marks_fork_ready() {
         Some("plan")
     );
 }
+
+#[test]
+fn acp_additional_directories_are_capability_gated_and_encoded() {
+    let adapter = AcpAdapter::standard();
+    let mut unsupported = acp_engine(&adapter);
+    let blocked = unsupported
+        .plan_command(EngineCommand::DiscoverConversations {
+            params: DiscoverConversationsParams {
+                cwd: Some("/repo/main".to_string()),
+                additional_directories: vec!["/repo/extra".to_string()],
+                cursor: None,
+            },
+        })
+        .expect_err("additional directories require capability");
+    assert!(matches!(
+        blocked,
+        EngineError::CapabilityUnsupported { capability }
+            if capability == "context.additional_directories"
+    ));
+
+    let mut engine = acp_engine(&adapter);
+    engine.default_capabilities.context.additional_directories = CapabilitySupport::Supported;
+    engine.default_capabilities.lifecycle.load = CapabilitySupport::Supported;
+    let discover = engine
+        .plan_command(EngineCommand::DiscoverConversations {
+            params: DiscoverConversationsParams {
+                cwd: Some("/repo/main".to_string()),
+                additional_directories: vec!["/repo/extra".to_string()],
+                cursor: Some("next".to_string()),
+            },
+        })
+        .expect("discover with additional directories");
+    let (_, method, params) = encode_request(&adapter, &engine, &discover.effects[0]);
+    assert_eq!(method, "session/list");
+    assert_eq!(params["additionalDirectories"], json!(["/repo/extra"]));
+
+    let start = engine
+        .plan_command(EngineCommand::StartConversation {
+            params: StartConversationParams {
+                cwd: Some("/repo/main".to_string()),
+                additional_directories: vec!["/repo/extra".to_string()],
+                context: ContextPatch::empty(),
+            },
+        })
+        .expect("start with additional directories");
+    let (_, method, params) = encode_request(&adapter, &engine, &start.effects[0]);
+    assert_eq!(method, "session/new");
+    assert_eq!(params["additionalDirectories"], json!(["/repo/extra"]));
+
+    let resume = engine
+        .plan_command(EngineCommand::ResumeConversation {
+            target: ResumeTarget::RemoteWithContext {
+                id: "sess".to_string(),
+                hydrate: true,
+                additional_directories: vec!["/repo/extra".to_string(), "/repo/lib".to_string()],
+            },
+        })
+        .expect("load with additional directories");
+    let (_, method, params) = encode_request(&adapter, &engine, &resume.effects[0]);
+    assert_eq!(method, "session/load");
+    assert_eq!(
+        params["additionalDirectories"],
+        json!(["/repo/extra", "/repo/lib"])
+    );
+}

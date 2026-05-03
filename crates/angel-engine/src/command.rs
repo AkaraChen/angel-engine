@@ -73,19 +73,29 @@ pub enum EngineExtensionCommand {
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct DiscoverConversationsParams {
     pub cwd: Option<String>,
+    pub additional_directories: Vec<String>,
     pub cursor: Option<String>,
 }
 
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct StartConversationParams {
     pub cwd: Option<String>,
+    pub additional_directories: Vec<String>,
     pub context: ContextPatch,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum ResumeTarget {
     Conversation(ConversationId),
-    Remote { id: String, hydrate: bool },
+    Remote {
+        id: String,
+        hydrate: bool,
+    },
+    RemoteWithContext {
+        id: String,
+        hydrate: bool,
+        additional_directories: Vec<String>,
+    },
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]

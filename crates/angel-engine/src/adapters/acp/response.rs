@@ -410,6 +410,8 @@ fn acp_conversation_capabilities(
     capabilities.lifecycle.resume = acp_session_capability(result, "resume");
     capabilities.lifecycle.fork = acp_session_capability(result, "fork");
     capabilities.lifecycle.close = acp_session_capability(result, "close");
+    capabilities.context.additional_directories =
+        acp_session_capability(result, "additionalDirectories");
     capabilities
 }
 
@@ -512,6 +514,7 @@ mod tests {
                             "list": {},
                             "resume": {},
                             "fork": {},
+                            "additionalDirectories": {},
                             "close": {}
                         }
                     }
@@ -535,6 +538,7 @@ mod tests {
                 && conversation_capabilities.lifecycle.load == crate::CapabilitySupport::Supported
                 && conversation_capabilities.lifecycle.resume == crate::CapabilitySupport::Supported
                 && conversation_capabilities.lifecycle.fork == crate::CapabilitySupport::Supported
+                && conversation_capabilities.context.additional_directories == crate::CapabilitySupport::Supported
                 && conversation_capabilities.lifecycle.close == crate::CapabilitySupport::Supported
         ));
     }
@@ -597,6 +601,7 @@ mod tests {
                         {
                             "sessionId": "sess_1",
                             "cwd": "/tmp/project",
+                            "additionalDirectories": ["/tmp/extra"],
                             "title": "Fix tests",
                             "updatedAt": "2026-05-03T10:00:00Z"
                         }
@@ -628,6 +633,11 @@ mod tests {
                     update,
                     crate::ContextUpdate::Raw { key, value, .. }
                         if key == "conversation.title" && value == "Fix tests"
+                ))
+                && context.updates.iter().any(|update| matches!(
+                    update,
+                    crate::ContextUpdate::AdditionalDirectories { directories, .. }
+                        if directories == &vec!["/tmp/extra".to_string()]
                 ))
         ));
     }

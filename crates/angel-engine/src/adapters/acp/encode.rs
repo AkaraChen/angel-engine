@@ -48,22 +48,33 @@ impl AcpAdapter {
                     .cloned()
                     .unwrap_or_default(),
             })),
-            ProtocolMethod::Acp(AcpMethod::SessionNew) => Ok(json!({
-                "cwd": acp_effect_cwd(engine, effect),
-                "mcpServers": [],
-            })),
+            ProtocolMethod::Acp(AcpMethod::SessionNew) => {
+                let mut params = serde_json::Map::new();
+                params.insert("cwd".to_string(), json!(acp_effect_cwd(engine, effect)));
+                insert_additional_directories(&mut params, effect);
+                params.insert("mcpServers".to_string(), json!([]));
+                Ok(Value::Object(params))
+            }
             ProtocolMethod::Acp(AcpMethod::SessionLoad)
-            | ProtocolMethod::Acp(AcpMethod::SessionResume) => Ok(json!({
-                "sessionId": effect
-                    .payload
-                    .fields
-                    .get("remoteConversationId")
-                    .or_else(|| effect.payload.fields.get("sessionId"))
-                    .cloned()
-                    .unwrap_or_default(),
-                "cwd": acp_effect_cwd(engine, effect),
-                "mcpServers": [],
-            })),
+            | ProtocolMethod::Acp(AcpMethod::SessionResume) => {
+                let mut params = serde_json::Map::new();
+                params.insert(
+                    "sessionId".to_string(),
+                    json!(
+                        effect
+                            .payload
+                            .fields
+                            .get("remoteConversationId")
+                            .or_else(|| effect.payload.fields.get("sessionId"))
+                            .cloned()
+                            .unwrap_or_default()
+                    ),
+                );
+                params.insert("cwd".to_string(), json!(acp_effect_cwd(engine, effect)));
+                insert_additional_directories(&mut params, effect);
+                params.insert("mcpServers".to_string(), json!([]));
+                Ok(Value::Object(params))
+            }
             ProtocolMethod::Acp(AcpMethod::SessionPrompt) => Ok(json!({
                 "sessionId": acp_session_id(engine, effect)?,
                 "prompt": acp_prompt_blocks(effect),
@@ -80,6 +91,7 @@ impl AcpAdapter {
                 if let Some(cursor) = effect.payload.fields.get("cursor") {
                     params.insert("cursor".to_string(), json!(cursor));
                 }
+                insert_additional_directories(&mut params, effect);
                 Ok(Value::Object(params))
             }
             ProtocolMethod::Acp(AcpMethod::SetSessionConfigOption) => Ok(json!({
@@ -231,11 +243,12 @@ fn acp_fork_params(
         .and_then(|cwd| cwd.as_ref())
         .map(|cwd| cwd.display().to_string())
         .unwrap_or_else(|| acp_effect_cwd(engine, effect));
-    Ok(json!({
-        "sessionId": session_id,
-        "cwd": cwd,
-        "mcpServers": [],
-    }))
+    let mut params = serde_json::Map::new();
+    params.insert("sessionId".to_string(), json!(session_id));
+    params.insert("cwd".to_string(), json!(cwd));
+    insert_additional_directories(&mut params, effect);
+    params.insert("mcpServers".to_string(), json!([]));
+    Ok(Value::Object(params))
 }
 
 fn acp_effect_cwd(engine: &AngelEngine, effect: &crate::ProtocolEffect) -> String {
@@ -254,6 +267,37 @@ fn acp_effect_cwd(engine: &AngelEngine, effect: &crate::ProtocolEffect) -> Strin
     std::env::current_dir()
         .map(|path| path.display().to_string())
         .unwrap_or_else(|_| ".".to_string())
+}
+
+fn acp_additional_directories(effect: &crate::ProtocolEffect) -> Vec<Value> {
+    let count = effect
+        .payload
+        .fields
+        .get("additionalDirectoryCount")
+        .and_then(|value| value.parse::<usize>().ok())
+        .unwrap_or(0);
+    (0..count)
+        .filter_map(|index| {
+            effect
+                .payload
+                .fields
+                .get(&format!("additionalDirectory.{index}"))
+                .map(|directory| json!(directory))
+        })
+        .collect()
+}
+
+fn insert_additional_directories(
+    target: &mut serde_json::Map<String, Value>,
+    effect: &crate::ProtocolEffect,
+) {
+    let additional_directories = acp_additional_directories(effect);
+    if !additional_directories.is_empty() {
+        target.insert(
+            "additionalDirectories".to_string(),
+            Value::Array(additional_directories),
+        );
+    }
 }
 
 fn acp_prompt_blocks(effect: &crate::ProtocolEffect) -> Vec<Value> {

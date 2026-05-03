@@ -7,6 +7,7 @@ pub struct EffectiveContext {
     pub reasoning: ScopedValue<Option<ReasoningProfile>>,
     pub mode: ScopedValue<Option<AgentMode>>,
     pub cwd: ScopedValue<Option<PathBuf>>,
+    pub additional_directories: ScopedValue<Vec<PathBuf>>,
     pub approvals: ScopedValue<ApprovalPolicy>,
     pub sandbox: ScopedValue<SandboxProfile>,
     pub permissions: ScopedValue<PermissionProfile>,
@@ -23,6 +24,9 @@ impl EffectiveContext {
                 }
                 ContextUpdate::Mode { scope, mode } => self.mode.set(scope, mode),
                 ContextUpdate::Cwd { scope, cwd } => self.cwd.set(scope, cwd.map(PathBuf::from)),
+                ContextUpdate::AdditionalDirectories { scope, directories } => self
+                    .additional_directories
+                    .set(scope, directories.into_iter().map(PathBuf::from).collect()),
                 ContextUpdate::ApprovalPolicy { scope, policy } => {
                     self.approvals.set(scope, policy)
                 }
@@ -117,6 +121,10 @@ pub enum ContextUpdate {
     Cwd {
         scope: ContextScope,
         cwd: Option<String>,
+    },
+    AdditionalDirectories {
+        scope: ContextScope,
+        directories: Vec<String>,
     },
     ApprovalPolicy {
         scope: ContextScope,

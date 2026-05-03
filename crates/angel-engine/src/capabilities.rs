@@ -103,6 +103,7 @@ impl ConversationCapabilities {
             context: ContextCapabilities {
                 mode: CapabilitySupport::Unknown,
                 config: CapabilitySupport::Unknown,
+                additional_directories: CapabilitySupport::Unknown,
                 turn_overrides: CapabilitySupport::Unsupported,
             },
             observer: ObserverCapabilities {
@@ -149,6 +150,7 @@ impl ConversationCapabilities {
             context: ContextCapabilities {
                 mode: CapabilitySupport::Supported,
                 config: CapabilitySupport::Supported,
+                additional_directories: CapabilitySupport::Unsupported,
                 turn_overrides: CapabilitySupport::Supported,
             },
             observer: ObserverCapabilities {
@@ -205,6 +207,7 @@ pub struct HistoryCapabilities {
 pub struct ContextCapabilities {
     pub mode: CapabilitySupport,
     pub config: CapabilitySupport,
+    pub additional_directories: CapabilitySupport,
     pub turn_overrides: CapabilitySupport,
 }
 
