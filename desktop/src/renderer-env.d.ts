@@ -1,3 +1,5 @@
+import type { ChatStreamApi } from './shared/chat';
+
 declare global {
   type DesktopPlatform =
     | 'aix'
@@ -16,6 +18,7 @@ declare global {
     desktopEnvironment: {
       platform: DesktopPlatform;
     };
+    chatStream: ChatStreamApi;
     ipcInvoke: (
       channel: string,
       input?: unknown

@@ -1,10 +1,12 @@
 import { BrowserWindow, dialog, Menu, shell } from 'electron';
 import { tipc } from '@egoist/tipc/main';
 
+import type { ChatSendInput } from '../shared/chat';
 import type {
   CreateProjectInput,
   UpdateProjectInput,
 } from '../shared/projects';
+import { sendChat } from './chat/angel-client';
 import {
   createProject,
   deleteProject,
@@ -16,6 +18,10 @@ import {
 const t = tipc.create();
 
 export const appRouter = {
+  chatSend: t.procedure
+    .input<ChatSendInput>()
+    .action(async ({ input }) => sendChat(assertChatSendInput(input))),
+
   projectsChooseDirectory: t.procedure.action(async () => {
     const result = await dialog.showOpenDialog({
       properties: ['openDirectory'],
@@ -83,6 +89,17 @@ export const appRouter = {
 };
 
 export type AppRouter = typeof appRouter;
+
+function assertChatSendInput(input: ChatSendInput): ChatSendInput {
+  if (!input || typeof input !== 'object') {
+    throw new Error('Chat input is required.');
+  }
+
+  return {
+    cwd: typeof input.cwd === 'string' && input.cwd.trim() ? input.cwd : undefined,
+    text: assertString(input.text, 'Chat text is required.'),
+  };
+}
 
 function assertCreateInput(input: CreateProjectInput): CreateProjectInput {
   if (!input || typeof input !== 'object') {

@@ -3,6 +3,8 @@ import path from 'node:path';
 import started from 'electron-squirrel-startup';
 import { registerIpcMain } from '@egoist/tipc/main';
 
+import { closeChatSession } from './main/chat/angel-client';
+import { registerChatStreamIpc } from './main/chat/stream-ipc';
 import { closeProjectsDatabase } from './main/projects/repository';
 import { appRouter } from './main/router';
 
@@ -59,10 +61,14 @@ const createWindow = () => {
 // Some APIs can only be used after this event occurs.
 app.whenReady().then(() => {
   registerIpcMain(appRouter);
+  registerChatStreamIpc();
   createWindow();
 });
 
-app.on('before-quit', closeProjectsDatabase);
+app.on('before-quit', () => {
+  closeChatSession();
+  closeProjectsDatabase();
+});
 
 // Quit when all windows are closed, except on macOS. There, it's common
 // for applications and their menu bar to stay active until the user quits

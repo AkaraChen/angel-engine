@@ -19,13 +19,11 @@ import {
   ThreadPrimitive,
   useLocalRuntime,
   type Attachment,
-  type ChatModelAdapter,
   type CompleteAttachment,
   type DictationAdapter,
   type EnrichedPartState,
   type FeedbackAdapter,
   type SpeechSynthesisAdapter,
-  type ThreadMessageLike,
 } from '@assistant-ui/react';
 import {
   ArrowUp,
@@ -73,6 +71,7 @@ import {
   SidebarProvider,
 } from '@/components/ui/sidebar';
 import { ToastProvider, useToast } from '@/components/ui/toast';
+import { createEngineModelAdapter } from '@/lib/engine-model-adapter';
 import { ipc } from '@/lib/ipc';
 import { cn } from '@/lib/utils';
 import type { Project } from './shared/projects';
@@ -82,166 +81,26 @@ const primaryItems = [
   { label: 'Automation', icon: Workflow },
 ];
 
-const initialMockMessages: readonly ThreadMessageLike[] = [
-  {
-    id: 'mock-user-setup',
-    role: 'user',
-    content:
-      'Turn the desktop right pane into a production-feeling agent workspace mock.',
-    createdAt: new Date('2026-05-03T09:30:00+08:00'),
-  },
-  {
-    id: 'mock-assistant-setup',
-    role: 'assistant',
-    createdAt: new Date('2026-05-03T09:30:12+08:00'),
-    metadata: {
-      timing: {
-        streamStartTime: 0,
-        firstTokenTime: 318,
-        totalStreamTime: 1760,
-        tokenCount: 168,
-        tokensPerSecond: 95,
-        totalChunks: 7,
-        toolCallCount: 1,
-      },
-      custom: {
-        runId: 'run_desktop_mock',
-        model: 'Mock Agent Pro',
-      },
-    },
-    content: [
-      {
-        type: 'reasoning',
-        text: 'Located SidebarInset as the right-pane boundary and kept the existing navigation untouched.',
-      },
-      {
-        type: 'tool-call',
-        toolCallId: 'tool-read-app',
-        toolName: 'repo.read',
-        args: {
-          paths: ['desktop/src/App.tsx', 'desktop/package.json'],
-        },
-        argsText:
-          '{"paths":["desktop/src/App.tsx","desktop/package.json"]}',
-        result: {
-          files: 2,
-          boundary: 'SidebarInset',
-          dependency: '@assistant-ui/react',
-        },
-      },
-      {
-        type: 'text',
-        text:
-          'The right pane is mocked as a full coding-agent workspace: streaming chat, action bars, branch controls, attachments, dictation, speech, feedback, quick prompts, and a run inspector all sit on assistant-ui primitives.',
-      },
-      {
-        type: 'source',
-        sourceType: 'url',
-        id: 'source-thread',
-        url: 'https://www.assistant-ui.com/docs/primitives/thread',
-        title: 'assistant-ui Thread primitive',
-      },
-    ],
-  },
-];
-
 const iconButtonClass =
   'inline-flex size-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:pointer-events-none disabled:opacity-40';
 const messageActionFooterClass =
   'flex h-7 max-w-full shrink-0 flex-nowrap items-center gap-1 overflow-hidden';
 
-const mockModelAdapter: ChatModelAdapter = {
-  async *run({ messages, abortSignal }) {
-    const prompt = getLastUserText(messages);
-    const startedAt = Date.now();
-    const toolArgs = {
-      query: prompt || 'desktop agent workspace',
-      scope: 'desktop/src',
-      include: ['App.tsx', 'components/ui', 'package.json'],
-    };
-    const reasoning = {
-      type: 'reasoning' as const,
-      text: 'Mapping the request to the existing desktop shell, checking package capabilities, and preparing a bounded UI-only mock.',
-    };
-    const toolCall = {
-      type: 'tool-call' as const,
-      toolCallId: `mock-search-${startedAt}`,
-      toolName: 'workspace.search',
-      args: toolArgs,
-      argsText: JSON.stringify(toolArgs),
-      result: {
-        matches: [
-          'desktop/src/App.tsx',
-          'desktop/src/components/ui/sidebar.tsx',
-          'desktop/package.json',
-        ],
-        decision: 'Replace only the SidebarInset content.',
-      },
-    };
-    const source = {
-      type: 'source' as const,
-      sourceType: 'url' as const,
-      id: `assistant-ui-docs-${startedAt}`,
-      url: 'https://www.assistant-ui.com/docs/runtimes/custom/local-runtime',
-      title: 'assistant-ui LocalRuntime',
-    };
-    const response = [
-      `I would treat "${prompt || 'the current request'}" as a UI shell task first: keep navigation stable, make the right pane feel like an agent cockpit, and leave backend wiring behind a local adapter.`,
-      '',
-      'Mock coverage in this run:',
-      '- Streaming response with cumulative updates',
-      '- Tool-call rendering with inputs and results',
-      '- Editable user messages and regenerated assistant branches',
-      '- Composer attachments, dictation, cancel, and quick prompts',
-      '- Feedback, copy, export, speech, and run-inspector states',
-      '',
-      'The next real integration point is replacing the mock adapter with the engine session transport while keeping the primitives and layout intact.',
-    ].join('\n');
-
-    await waitForMockStep(180, abortSignal);
-    if (abortSignal.aborted) return;
-    yield { content: [reasoning] };
-
-    await waitForMockStep(360, abortSignal);
-    if (abortSignal.aborted) return;
-    yield { content: [reasoning, toolCall] };
-
-    let text = '';
-    for (const chunk of response.match(/[\s\S]{1,80}/g) ?? []) {
-      await waitForMockStep(90, abortSignal);
-      if (abortSignal.aborted) return;
-      text += chunk;
-      yield {
-        content: [reasoning, toolCall, { type: 'text', text }],
-      };
-    }
-
-    yield {
-      content: [reasoning, toolCall, { type: 'text', text }, source],
-      metadata: {
-        timing: {
-          streamStartTime: startedAt,
-          firstTokenTime: 540,
-          totalStreamTime: Date.now() - startedAt,
-          tokenCount: Math.max(96, Math.round(text.length / 4)),
-          tokensPerSecond: 72,
-          totalChunks: 8,
-          toolCallCount: 1,
-        },
-        custom: {
-          model: 'Mock Agent Pro',
-          mode: 'desktop',
-        },
-      },
-    };
-  },
-};
-
 const mockFeedbackAdapter: FeedbackAdapter = {
   submit: () => undefined,
 };
 
-function AppRuntimeProvider({ children }: { children: ReactNode }) {
+function AppRuntimeProvider({
+  children,
+  projectPath,
+}: {
+  children: ReactNode;
+  projectPath?: string;
+}) {
+  const modelAdapter = useMemo(
+    () => createEngineModelAdapter(projectPath),
+    [projectPath]
+  );
   const adapters = useMemo(
     () => ({
       attachments: new CompositeAttachmentAdapter([
@@ -255,9 +114,8 @@ function AppRuntimeProvider({ children }: { children: ReactNode }) {
     []
   );
 
-  const runtime = useLocalRuntime(mockModelAdapter, {
+  const runtime = useLocalRuntime(modelAdapter, {
     adapters,
-    initialMessages: initialMockMessages,
     maxSteps: 3,
   });
 
@@ -451,7 +309,7 @@ function AppContent() {
         </SidebarFooter>
       </Sidebar>
 
-      <AppRuntimeProvider>
+      <AppRuntimeProvider projectPath={projects[0]?.path}>
         <SidebarInset className="h-svh max-h-svh overflow-hidden md:h-[calc(100svh-1rem)] md:max-h-[calc(100svh-1rem)]">
           <WorkspaceHeader />
           <main className="flex min-h-0 flex-1 overflow-hidden">
@@ -796,16 +654,18 @@ function MessagePart({ part }: { part: EnrichedPartState }) {
   }
 
   if (part.type === 'reasoning') {
+    if (!part.text.trim()) return null;
+
     return (
-      <details className="mb-3 rounded-md border bg-background/60 p-2" open>
-        <summary className="flex cursor-pointer list-none items-center gap-2 text-xs font-medium text-muted-foreground">
+      <div className="mb-3 w-full text-muted-foreground">
+        <div className="flex items-center gap-2 text-xs font-medium">
           <BrainCircuit className="size-3.5" />
           Reasoning
-        </summary>
-        <div className="mt-2 whitespace-pre-wrap text-xs leading-5 text-muted-foreground">
+        </div>
+        <div className="mt-2 whitespace-pre-wrap border-l border-border pl-3 text-xs leading-5">
           {part.text}
         </div>
-      </details>
+      </div>
     );
   }
 
@@ -866,30 +726,10 @@ function MessageAttachment({ attachment }: { attachment: CompleteAttachment }) {
   );
 }
 
-function getLastUserText(messages: readonly { role: string; content: readonly unknown[] }[]) {
-  for (let index = messages.length - 1; index >= 0; index -= 1) {
-    const message = messages[index];
-    if (message.role !== 'user') continue;
-    return message.content
-      .map((part) =>
-        typeof part === 'object' &&
-        part !== null &&
-        'type' in part &&
-        part.type === 'text' &&
-        'text' in part
-          ? String(part.text)
-          : ''
-      )
-      .join('\n')
-      .trim();
-  }
-  return '';
-}
-
 function getPartKey(part: EnrichedPartState) {
   if ('toolCallId' in part) return part.toolCallId;
   if ('id' in part && typeof part.id === 'string') return part.id;
-  if ('text' in part) return `${part.type}-${part.text.slice(0, 24)}`;
+  if ('text' in part) return part.type;
   return part.type;
 }
 
@@ -903,24 +743,6 @@ function getErrorMessage(error: unknown) {
     return error.message;
   }
   return String(error);
-}
-
-function waitForMockStep(ms: number, signal: AbortSignal) {
-  return new Promise<void>((resolve) => {
-    if (signal.aborted) {
-      resolve();
-      return;
-    }
-    const timeout = window.setTimeout(resolve, ms);
-    signal.addEventListener(
-      'abort',
-      () => {
-        window.clearTimeout(timeout);
-        resolve();
-      },
-      { once: true }
-    );
-  });
 }
 
 function createMockSpeechAdapter(): SpeechSynthesisAdapter {
