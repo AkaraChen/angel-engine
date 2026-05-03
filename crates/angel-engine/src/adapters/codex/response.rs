@@ -28,6 +28,7 @@ impl CodexAdapter {
                                 .map(str::to_string),
                             discovery: crate::CapabilitySupport::Supported,
                             authentication: crate::CapabilitySupport::Unknown,
+                            metadata: Default::default(),
                         },
                         conversation_capabilities: Some(self.capabilities()),
                     })

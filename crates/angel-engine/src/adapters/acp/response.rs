@@ -17,6 +17,22 @@ impl AcpAdapter {
         let mut output = TransportOutput::default().completed(id.clone());
         match pending {
             PendingRequest::Initialize => {
+                if !acp_protocol_version_is_supported(result) {
+                    return Ok(output
+                        .event(EngineEvent::RuntimeFaulted {
+                            error: ErrorInfo::new(
+                                "acp.unsupported_protocol_version",
+                                format!(
+                                    "unsupported ACP protocol version {}",
+                                    result
+                                        .get("protocolVersion")
+                                        .map(acp_value_label)
+                                        .unwrap_or_else(|| "missing".to_string())
+                                ),
+                            ),
+                        })
+                        .log(TransportLogKind::Error, "unsupported ACP protocol version"));
+                }
                 let auth_methods = result
                     .get("authMethods")
                     .and_then(Value::as_array)
@@ -31,12 +47,7 @@ impl AcpAdapter {
                     };
                     output = output
                         .event(EngineEvent::RuntimeNegotiated {
-                            capabilities: crate::RuntimeCapabilities {
-                                name: "acp".to_string(),
-                                version: result.get("protocolVersion").map(Value::to_string),
-                                discovery: acp_session_capability(result, "list"),
-                                authentication,
-                            },
+                            capabilities: acp_runtime_capabilities(result, authentication),
                             conversation_capabilities: Some(acp_conversation_capabilities(
                                 result,
                                 self.capabilities(),
@@ -125,12 +136,10 @@ impl AcpAdapter {
             PendingRequest::Authenticate => {
                 output = output
                     .event(EngineEvent::RuntimeNegotiated {
-                        capabilities: crate::RuntimeCapabilities {
-                            name: "acp".to_string(),
-                            version: result.get("protocolVersion").map(Value::to_string),
-                            discovery: acp_session_capability(result, "list"),
-                            authentication: crate::CapabilitySupport::Supported,
-                        },
+                        capabilities: acp_runtime_capabilities(
+                            result,
+                            crate::CapabilitySupport::Supported,
+                        ),
                         conversation_capabilities: Some(acp_conversation_capabilities(
                             result,
                             self.capabilities(),
@@ -234,6 +243,90 @@ impl AcpAdapter {
         }
         Ok(output)
     }
+}
+
+fn acp_runtime_capabilities(
+    result: &Value,
+    authentication: crate::CapabilitySupport,
+) -> crate::RuntimeCapabilities {
+    let mut capabilities = crate::RuntimeCapabilities {
+        name: result
+            .get("agentInfo")
+            .and_then(|agent| agent.get("name"))
+            .and_then(Value::as_str)
+            .unwrap_or("acp")
+            .to_string(),
+        version: result
+            .get("agentInfo")
+            .and_then(|agent| agent.get("version"))
+            .and_then(Value::as_str)
+            .map(str::to_string)
+            .or_else(|| result.get("protocolVersion").map(acp_value_label)),
+        discovery: acp_session_capability(result, "list"),
+        authentication,
+        metadata: Default::default(),
+    };
+    if let Some(title) = result
+        .get("agentInfo")
+        .and_then(|agent| agent.get("title"))
+        .and_then(Value::as_str)
+    {
+        capabilities
+            .metadata
+            .insert("acp.agentInfo.title".to_string(), title.to_string());
+    }
+    if let Some(version) = result.get("protocolVersion").map(acp_value_label) {
+        capabilities
+            .metadata
+            .insert("acp.protocolVersion".to_string(), version);
+    }
+    for (key, value) in [
+        (
+            "acp.promptCapabilities",
+            result
+                .get("agentCapabilities")
+                .and_then(|capabilities| capabilities.get("promptCapabilities")),
+        ),
+        (
+            "acp.mcpCapabilities",
+            result
+                .get("agentCapabilities")
+                .and_then(|capabilities| capabilities.get("mcpCapabilities")),
+        ),
+        (
+            "acp.sessionCapabilities",
+            result
+                .get("agentCapabilities")
+                .and_then(|capabilities| capabilities.get("sessionCapabilities")),
+        ),
+    ] {
+        if let Some(value) = value {
+            capabilities
+                .metadata
+                .insert(key.to_string(), compact_json(value));
+        }
+    }
+    capabilities
+}
+
+fn acp_protocol_version_is_supported(result: &Value) -> bool {
+    match result.get("protocolVersion") {
+        Some(Value::Number(number)) => number.as_u64() == Some(1),
+        Some(Value::String(version)) => version == "1",
+        Some(_) => false,
+        None => true,
+    }
+}
+
+fn acp_value_label(value: &Value) -> String {
+    value
+        .as_str()
+        .map(str::to_string)
+        .unwrap_or_else(|| value.to_string())
+}
+
+fn compact_json(value: &Value) -> String {
+    serde_json::to_string(value).unwrap_or_else(|_| value.to_string())
 }
 
 fn acp_conversation_capabilities(
@@ -363,8 +456,22 @@ mod tests {
                 &request_id,
                 &json!({
                     "protocolVersion": 1,
+                    "agentInfo": {
+                        "name": "kimi",
+                        "title": "Kimi CLI",
+                        "version": "0.9.0"
+                    },
                     "agentCapabilities": {
                         "loadSession": true,
+                        "promptCapabilities": {
+                            "image": true,
+                            "audio": false,
+                            "embeddedContext": true
+                        },
+                        "mcpCapabilities": {
+                            "http": true,
+                            "sse": false
+                        },
                         "sessionCapabilities": {
                             "list": {},
                             "resume": {},
@@ -380,11 +487,50 @@ mod tests {
             [EngineEvent::RuntimeNegotiated {
                 capabilities,
                 conversation_capabilities: Some(conversation_capabilities),
-            }] if capabilities.discovery == crate::CapabilitySupport::Supported
+            }] if capabilities.name == "kimi"
+                && capabilities.version.as_deref() == Some("0.9.0")
+                && capabilities.discovery == crate::CapabilitySupport::Supported
+                && capabilities.metadata.get("acp.agentInfo.title").map(String::as_str) == Some("Kimi CLI")
+                && capabilities.metadata.get("acp.protocolVersion").map(String::as_str) == Some("1")
+                && capabilities.metadata.get("acp.promptCapabilities").is_some_and(|value| value.contains("\"embeddedContext\":true"))
+                && capabilities.metadata.get("acp.mcpCapabilities").is_some_and(|value| value.contains("\"http\":true"))
                 && conversation_capabilities.lifecycle.list == crate::CapabilitySupport::Supported
                 && conversation_capabilities.lifecycle.load == crate::CapabilitySupport::Supported
                 && conversation_capabilities.lifecycle.resume == crate::CapabilitySupport::Supported
                 && conversation_capabilities.lifecycle.close == crate::CapabilitySupport::Supported
+        ));
+    }
+
+    #[test]
+    fn initialize_faults_when_agent_selects_unsupported_protocol_version() {
+        let adapter = AcpAdapter::standard();
+        let mut engine = AngelEngine::new(crate::ProtocolFlavor::Acp, adapter.capabilities());
+        let request_id = engine
+            .plan_command(crate::EngineCommand::Initialize)
+            .expect("initialize plan")
+            .request_id
+            .expect("request id");
+
+        let output = adapter
+            .decode_response(
+                &engine,
+                &request_id,
+                &json!({
+                    "protocolVersion": 2,
+                    "agentCapabilities": {
+                        "sessionCapabilities": {
+                            "list": {}
+                        }
+                    }
+                }),
+            )
+            .expect("initialize response");
+
+        assert!(matches!(
+            output.events.as_slice(),
+            [EngineEvent::RuntimeFaulted { error }]
+                if error.code == "acp.unsupported_protocol_version"
+                    && error.message.contains("2")
         ));
     }
 

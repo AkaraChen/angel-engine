@@ -1,3 +1,5 @@
+use std::collections::BTreeMap;
+
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum CapabilitySupport {
     Unsupported,
@@ -36,6 +38,7 @@ pub struct RuntimeCapabilities {
     pub version: Option<String>,
     pub discovery: CapabilitySupport,
     pub authentication: CapabilitySupport,
+    pub metadata: BTreeMap<String, String>,
 }
 
 impl RuntimeCapabilities {
@@ -45,6 +48,7 @@ impl RuntimeCapabilities {
             version: None,
             discovery: CapabilitySupport::Unknown,
             authentication: CapabilitySupport::Unknown,
+            metadata: BTreeMap::new(),
         }
     }
 }
