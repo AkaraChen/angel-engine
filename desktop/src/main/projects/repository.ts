@@ -1,10 +1,7 @@
-import BetterSqliteDatabase from 'better-sqlite3';
 import { randomUUID } from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
-import { app } from 'electron';
 import { asc, eq } from 'drizzle-orm';
-import { drizzle, type BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
 
 import type {
   CreateProjectInput,
@@ -12,30 +9,7 @@ import type {
   UpdateProjectInput,
 } from '../../shared/projects';
 import { projects } from '../db/schema';
-
-type AppDatabase = BetterSQLite3Database<{ projects: typeof projects }>;
-
-let sqlite: BetterSqliteDatabase.Database | undefined;
-let db: AppDatabase | undefined;
-
-function getDatabase() {
-  if (db) return db;
-
-  const dbDirectory = app.getPath('userData');
-  fs.mkdirSync(dbDirectory, { recursive: true });
-
-  sqlite = new BetterSqliteDatabase(path.join(dbDirectory, 'angel-engine.sqlite'));
-  sqlite.pragma('journal_mode = WAL');
-  sqlite.exec(`
-    CREATE TABLE IF NOT EXISTS projects (
-      id TEXT PRIMARY KEY NOT NULL,
-      path TEXT NOT NULL UNIQUE
-    );
-  `);
-
-  db = drizzle(sqlite, { schema: { projects } });
-  return db;
-}
+import { closeDatabase, getDatabase } from '../db/database';
 
 export function listProjects(): Project[] {
   return getDatabase().select().from(projects).orderBy(asc(projects.path)).all();
@@ -86,9 +60,7 @@ export function deleteProject(id: string): void {
 }
 
 export function closeProjectsDatabase() {
-  sqlite?.close();
-  sqlite = undefined;
-  db = undefined;
+  closeDatabase();
 }
 
 function requireProjectId(id: string) {

@@ -2,6 +2,7 @@ import {
   useCallback,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ChangeEvent,
   type KeyboardEvent,
@@ -27,6 +28,7 @@ import {
   type EnrichedPartState,
   type FeedbackAdapter,
   type SpeechSynthesisAdapter,
+  type ThreadMessageLike,
 } from '@assistant-ui/react';
 import {
   ArrowUp,
@@ -86,6 +88,7 @@ import { ToastProvider, useToast } from '@/components/ui/toast';
 import { createEngineModelAdapter } from '@/lib/engine-model-adapter';
 import { ipc } from '@/lib/ipc';
 import { cn } from '@/lib/utils';
+import type { Chat, ChatHistoryMessage } from './shared/chat';
 import type { Project } from './shared/projects';
 
 const primaryItems = [
@@ -103,15 +106,31 @@ const mockFeedbackAdapter: FeedbackAdapter = {
 };
 
 function AppRuntimeProvider({
+  chatId,
   children,
+  historyMessages,
+  historyRevision,
+  onChatUpdated,
+  projectId,
   projectPath,
 }: {
+  chatId?: string;
   children: ReactNode;
+  historyMessages: ChatHistoryMessage[];
+  historyRevision: number;
+  onChatUpdated: (chat: Chat) => void;
+  projectId?: string | null;
   projectPath?: string;
 }) {
   const modelAdapter = useMemo(
-    () => createEngineModelAdapter(projectPath),
-    [projectPath]
+    () =>
+      createEngineModelAdapter({
+        chatId,
+        onChatUpdated,
+        projectId,
+        projectPath,
+      }),
+    [chatId, onChatUpdated, projectId, projectPath]
   );
   const adapters = useMemo(
     () => ({
@@ -132,9 +151,52 @@ function AppRuntimeProvider({
 
   return (
     <AssistantRuntimeProvider runtime={runtime}>
+      <ThreadHistoryHydrator
+        messages={historyMessages}
+        revision={historyRevision}
+      />
       {children}
     </AssistantRuntimeProvider>
   );
+}
+
+function ThreadHistoryHydrator({
+  messages,
+  revision,
+}: {
+  messages: ChatHistoryMessage[];
+  revision: number;
+}): null {
+  const aui = useAui();
+  const appliedKey = useRef<string | undefined>(undefined);
+
+  useEffect(() => {
+    const key = String(revision);
+    if (appliedKey.current === key) return;
+
+    appliedKey.current = key;
+    aui.thread().reset(messages.map(toThreadMessageLike));
+  }, [aui, messages, revision]);
+
+  return null;
+}
+
+function toThreadMessageLike(message: ChatHistoryMessage): ThreadMessageLike {
+  const createdAt = message.createdAt ? new Date(message.createdAt) : undefined;
+
+  return {
+    content: message.content,
+    createdAt: createdAt && Number.isFinite(createdAt.getTime()) ? createdAt : undefined,
+    id: message.id,
+    role: message.role,
+    status:
+      message.role === 'assistant'
+        ? {
+            reason: 'stop',
+            type: 'complete',
+          }
+        : undefined,
+  };
 }
 
 export function App() {
@@ -148,8 +210,28 @@ export function App() {
 function AppContent() {
   const toast = useToast();
   const isMacOS = window.desktopEnvironment.platform === 'darwin';
+  const [chats, setChats] = useState<Chat[]>([]);
+  const [historyMessages, setHistoryMessages] = useState<ChatHistoryMessage[]>([]);
+  const [historyRevision, setHistoryRevision] = useState(0);
+  const [isChatsLoading, setIsChatsLoading] = useState(true);
   const [isProjectsLoading, setIsProjectsLoading] = useState(true);
   const [projects, setProjects] = useState<Project[]>([]);
+  const [selectedChatId, setSelectedChatId] = useState<string | undefined>();
+  const [selectedProjectId, setSelectedProjectId] = useState<string | undefined>();
+
+  const selectedProject = projects.find((project) => project.id === selectedProjectId);
+  const selectedChat = chats.find((chat) => chat.id === selectedChatId);
+
+  const upsertChat = useCallback((chat: Chat) => {
+    setChats((current) => {
+      const next = current.filter((item) => item.id !== chat.id);
+      next.unshift(chat);
+      return next.sort((left, right) =>
+        right.updatedAt.localeCompare(left.updatedAt)
+      );
+    });
+    setSelectedChatId(chat.id);
+  }, []);
 
   const refreshProjects = useCallback(async () => {
     setIsProjectsLoading(true);
@@ -171,12 +253,63 @@ function AppContent() {
     void refreshProjects();
   }, [refreshProjects]);
 
+  useEffect(() => {
+    if (!selectedProjectId && projects.length > 0) {
+      setSelectedProjectId(projects[0].id);
+    }
+  }, [projects, selectedProjectId]);
+
+  const loadChat = useCallback(
+    async (chatId: string) => {
+      setSelectedChatId(chatId);
+
+      try {
+        const result = await ipc.chatsLoad(chatId);
+        upsertChat(result.chat);
+        setHistoryMessages(result.messages);
+        setHistoryRevision((revision) => revision + 1);
+      } catch (error) {
+        toast({
+          description: getErrorMessage(error),
+          title: 'Could not load chat',
+          variant: 'destructive',
+        });
+      }
+    },
+    [toast, upsertChat]
+  );
+
+  const refreshChats = useCallback(async () => {
+    setIsChatsLoading(true);
+
+    try {
+      const nextChats = await ipc.chatsList();
+      setChats(nextChats);
+      if (!selectedChatId && nextChats.length > 0) {
+        await loadChat(nextChats[0].id);
+      }
+    } catch (error) {
+      toast({
+        description: getErrorMessage(error),
+        title: 'Could not load chats',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsChatsLoading(false);
+    }
+  }, [loadChat, selectedChatId, toast]);
+
+  useEffect(() => {
+    void refreshChats();
+  }, [refreshChats]);
+
   const createProjectFromPicker = useCallback(async () => {
     try {
       const selectedPath = await ipc.projectsChooseDirectory();
       if (!selectedPath) return;
 
-      await ipc.projectsCreate({ path: selectedPath });
+      const project = await ipc.projectsCreate({ path: selectedPath });
+      setSelectedProjectId(project.id);
       await refreshProjects();
     } catch (error) {
       toast({
@@ -205,6 +338,24 @@ function AppContent() {
     [refreshProjects, toast]
   );
 
+  const createChatForSelection = useCallback(async () => {
+    try {
+      const chat = await ipc.chatsCreate({
+        cwd: selectedProject?.path,
+        projectId: selectedProject?.id ?? null,
+      });
+      upsertChat(chat);
+      setHistoryMessages([]);
+      setHistoryRevision((revision) => revision + 1);
+    } catch (error) {
+      toast({
+        description: getErrorMessage(error),
+        title: 'Could not create chat',
+        variant: 'destructive',
+      });
+    }
+  }, [selectedProject, toast, upsertChat]);
+
   return (
     <SidebarProvider>
       <Sidebar variant="inset">
@@ -216,7 +367,11 @@ function AppContent() {
           <SidebarMenu>
             {primaryItems.map(({ label, icon: Icon }) => (
               <SidebarMenuItem key={label}>
-                <SidebarMenuButton>
+                <SidebarMenuButton
+                  onClick={
+                    label === 'New chat' ? createChatForSelection : undefined
+                  }
+                >
                   <Icon />
                   <span>{label}</span>
                 </SidebarMenuButton>
@@ -272,10 +427,11 @@ function AppContent() {
                   </SidebarMenuItem>
                 ) : null}
 
-                {projects.map((project, index) => (
+                {projects.map((project) => (
                   <SidebarMenuItem key={project.id}>
                     <SidebarMenuButton
-                      isActive={index === 0}
+                      isActive={project.id === selectedProjectId}
+                      onClick={() => setSelectedProjectId(project.id)}
                       onContextMenu={(event) => {
                         event.preventDefault();
                         void showProjectContextMenu(project);
@@ -297,12 +453,36 @@ function AppContent() {
             <SidebarGroupLabel>Chats</SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu>
-                <SidebarMenuItem>
-                  <SidebarMenuButton>
-                    <MessageSquare />
-                    <span className="truncate">Standalone thread</span>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
+                {isChatsLoading ? (
+                  <SidebarMenuItem>
+                    <SidebarMenuButton disabled>
+                      <Loader2 className="animate-spin" />
+                      <span>Loading chats</span>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                ) : null}
+
+                {!isChatsLoading && chats.length === 0 ? (
+                  <SidebarMenuItem>
+                    <SidebarMenuButton disabled>
+                      <MessageSquare />
+                      <span>No chats yet</span>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                ) : null}
+
+                {chats.map((chat) => (
+                  <SidebarMenuItem key={chat.id}>
+                    <SidebarMenuButton
+                      isActive={chat.id === selectedChatId}
+                      onClick={() => void loadChat(chat.id)}
+                      title={chat.cwd ?? chat.title}
+                    >
+                      <MessageSquare />
+                      <span className="truncate">{chat.title}</span>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                ))}
               </SidebarMenu>
             </SidebarGroupContent>
           </SidebarGroup>
@@ -320,7 +500,22 @@ function AppContent() {
         </SidebarFooter>
       </Sidebar>
 
-      <AppRuntimeProvider projectPath={projects[0]?.path}>
+      <AppRuntimeProvider
+        chatId={selectedChatId}
+        historyMessages={historyMessages}
+        historyRevision={historyRevision}
+        onChatUpdated={upsertChat}
+        projectId={
+          selectedChatId
+            ? selectedChat?.projectId ?? null
+            : selectedProject?.id ?? null
+        }
+        projectPath={
+          selectedChatId
+            ? selectedChat?.cwd ?? undefined
+            : selectedProject?.path
+        }
+      >
         <SidebarInset className="h-svh max-h-svh overflow-hidden md:h-[calc(100svh-1rem)] md:max-h-[calc(100svh-1rem)]">
           <WorkspaceHeader />
           <main className="flex min-h-0 flex-1 overflow-hidden">

@@ -4,14 +4,26 @@ import type {
 } from '@assistant-ui/react';
 
 import { streamChatEvents } from '@/lib/chat-stream';
-import type { ChatSendResult, ChatStreamEvent } from '@/shared/chat';
+import type { Chat, ChatSendResult, ChatStreamEvent } from '@/shared/chat';
 
 type RuntimeMessage = {
   content: readonly unknown[];
   role: string;
 };
 
-export function createEngineModelAdapter(projectPath?: string): ChatModelAdapter {
+export type EngineModelAdapterOptions = {
+  chatId?: string;
+  onChatUpdated?: (chat: Chat) => void;
+  projectId?: string | null;
+  projectPath?: string;
+};
+
+export function createEngineModelAdapter({
+  chatId,
+  onChatUpdated,
+  projectId,
+  projectPath,
+}: EngineModelAdapterOptions): ChatModelAdapter {
   return {
     async *run({ messages, abortSignal }) {
       const prompt = getLastUserText(messages);
@@ -21,10 +33,14 @@ export function createEngineModelAdapter(projectPath?: string): ChatModelAdapter
       yield run.toModelResult();
 
       for await (const event of streamChatEvents(
-        { cwd: projectPath, text: prompt },
+        { chatId, cwd: projectPath, projectId, text: prompt },
         abortSignal
       )) {
         if (event.type === 'done') break;
+
+        if (event.type === 'result') {
+          onChatUpdated?.(event.result.chat);
+        }
 
         run.accept(event);
         yield run.toModelResult();

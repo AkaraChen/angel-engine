@@ -1,9 +1,49 @@
-export type ChatSendInput = {
+export type Chat = {
+  id: string;
+  title: string;
+  projectId: string | null;
+  cwd: string | null;
+  runtime: string;
+  remoteThreadId: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type ChatCreateInput = {
   cwd?: string;
+  projectId?: string | null;
+  runtime?: string;
+  title?: string;
+};
+
+export type ChatHistoryMessage = {
+  content: ChatHistoryMessagePart[];
+  createdAt?: string;
+  id: string;
+  role: 'assistant' | 'system' | 'user';
+};
+
+export type ChatHistoryMessagePart =
+  | {
+      text: string;
+      type: 'reasoning' | 'text';
+    };
+
+export type ChatLoadResult = {
+  chat: Chat;
+  messages: ChatHistoryMessage[];
+};
+
+export type ChatSendInput = {
+  chatId?: string;
+  cwd?: string;
+  projectId?: string | null;
   text: string;
 };
 
 export type ChatSendResult = {
+  chat: Chat;
+  chatId: string;
   model?: string;
   reasoning?: string;
   text: string;

@@ -36,9 +36,6 @@ impl CodexAdapter {
                     .log(TransportLogKind::State, "Codex runtime initialized");
             }
             PendingRequest::StartConversation { conversation_id }
-            | PendingRequest::ResumeConversation {
-                conversation_id, ..
-            }
             | PendingRequest::ForkConversation { conversation_id } => {
                 let thread_id = result
                     .get("thread")
@@ -55,6 +52,29 @@ impl CodexAdapter {
                         capabilities: Some(engine.default_capabilities.clone()),
                     })
                     .log(TransportLogKind::State, format!("thread {thread_id} ready"));
+            }
+            PendingRequest::ResumeConversation {
+                conversation_id,
+                hydrate,
+            } => {
+                let thread_id = result
+                    .get("thread")
+                    .and_then(|thread| thread.get("id"))
+                    .and_then(Value::as_str)
+                    .ok_or_else(|| crate::EngineError::InvalidCommand {
+                        message: "Codex conversation response missing thread.id".to_string(),
+                    })?;
+                output = output
+                    .event(EngineEvent::ConversationReady {
+                        id: conversation_id.clone(),
+                        remote: Some(RemoteConversationId::Known(thread_id.to_string())),
+                        context: codex_context_patch(result),
+                        capabilities: Some(engine.default_capabilities.clone()),
+                    })
+                    .log(TransportLogKind::State, format!("thread {thread_id} ready"));
+                if *hydrate {
+                    append_hydrated_turns(&mut output, conversation_id, result);
+                }
             }
             PendingRequest::StartTurn {
                 conversation_id,
@@ -184,6 +204,84 @@ impl CodexAdapter {
     }
 }
 
+fn append_hydrated_turns(
+    output: &mut TransportOutput,
+    conversation_id: &ConversationId,
+    result: &Value,
+) {
+    let Some(turns) = result
+        .get("thread")
+        .and_then(|thread| thread.get("turns"))
+        .and_then(Value::as_array)
+    else {
+        return;
+    };
+
+    for turn in turns {
+        for item in turn
+            .get("items")
+            .and_then(Value::as_array)
+            .into_iter()
+            .flatten()
+        {
+            let (role, text) = match item.get("type").and_then(Value::as_str) {
+                Some("userMessage") => (HistoryRole::User, codex_content_text(item)),
+                Some("agentMessage") => (
+                    HistoryRole::Assistant,
+                    item.get("text")
+                        .and_then(Value::as_str)
+                        .unwrap_or_default()
+                        .to_string(),
+                ),
+                Some("reasoning") => (HistoryRole::Reasoning, codex_reasoning_text(item)),
+                _ => continue,
+            };
+            if text.trim().is_empty() {
+                continue;
+            }
+            output.events.push(EngineEvent::HistoryReplayChunk {
+                conversation_id: conversation_id.clone(),
+                entry: HistoryReplayEntry {
+                    role,
+                    content: ContentDelta::Text(text),
+                },
+            });
+        }
+    }
+}
+
+fn codex_content_text(item: &Value) -> String {
+    item.get("content")
+        .and_then(Value::as_array)
+        .into_iter()
+        .flatten()
+        .filter_map(|part| {
+            if part.get("type").and_then(Value::as_str) == Some("text") {
+                part.get("text").and_then(Value::as_str)
+            } else {
+                None
+            }
+        })
+        .collect::<Vec<_>>()
+        .join("")
+}
+
+fn codex_reasoning_text(item: &Value) -> String {
+    let summary = item
+        .get("summary")
+        .and_then(Value::as_array)
+        .into_iter()
+        .flatten()
+        .filter_map(Value::as_str)
+        .collect::<Vec<_>>()
+        .join("\n\n");
+    if summary.trim().is_empty() {
+        codex_content_text(item)
+    } else {
+        summary
+    }
+}
+
 fn discovered_conversation_id(
     engine: &AngelEngine,
     remote: &RemoteConversationId,
@@ -294,7 +392,80 @@ mod tests {
                     update,
                     crate::ContextUpdate::Raw { key, value, .. }
                         if key == "conversation.title" && value == "Fix tests"
-                ))
+            ))
         ));
+    }
+
+    #[test]
+    fn thread_resume_hydrates_turn_items_into_history_replay() {
+        let adapter = CodexAdapter::app_server();
+        let mut engine = AngelEngine::with_available_runtime(
+            crate::ProtocolFlavor::CodexAppServer,
+            crate::RuntimeCapabilities::new("test"),
+            adapter.capabilities(),
+        );
+        let request_id = engine
+            .plan_command(crate::EngineCommand::ResumeConversation {
+                target: crate::ResumeTarget::Remote {
+                    id: "thread_1".to_string(),
+                    hydrate: true,
+                },
+            })
+            .expect("resume plan")
+            .request_id
+            .expect("request id");
+
+        let output = adapter
+            .decode_response(
+                &engine,
+                &request_id,
+                &json!({
+                    "thread": {
+                        "id": "thread_1",
+                        "cwd": "/tmp/project",
+                        "turns": [
+                            {
+                                "id": "turn_1",
+                                "items": [
+                                    {
+                                        "type": "userMessage",
+                                        "content": [{ "type": "text", "text": "hello" }]
+                                    },
+                                    {
+                                        "type": "reasoning",
+                                        "summary": ["thinking"]
+                                    },
+                                    {
+                                        "type": "agentMessage",
+                                        "text": "hi"
+                                    }
+                                ]
+                            }
+                        ]
+                    }
+                }),
+            )
+            .expect("thread resume response");
+
+        let replay = output
+            .events
+            .iter()
+            .filter_map(|event| match event {
+                EngineEvent::HistoryReplayChunk { entry, .. } => match &entry.content {
+                    ContentDelta::Text(text) => Some((entry.role.clone(), text.clone())),
+                    _ => None,
+                },
+                _ => None,
+            })
+            .collect::<Vec<_>>();
+
+        assert_eq!(
+            replay,
+            vec![
+                (HistoryRole::User, "hello".to_string()),
+                (HistoryRole::Reasoning, "thinking".to_string()),
+                (HistoryRole::Assistant, "hi".to_string()),
+            ]
+        );
     }
 }

@@ -1,12 +1,17 @@
 import { BrowserWindow, dialog, Menu, shell } from 'electron';
 import { tipc } from '@egoist/tipc/main';
 
-import type { ChatSendInput } from '../shared/chat';
+import type { ChatCreateInput, ChatSendInput } from '../shared/chat';
 import type {
   CreateProjectInput,
   UpdateProjectInput,
 } from '../shared/projects';
-import { sendChat } from './chat/angel-client';
+import { loadChatSession, sendChat } from './chat/angel-client';
+import {
+  createChat,
+  getChat,
+  listChats,
+} from './chat/repository';
 import {
   createProject,
   deleteProject,
@@ -18,6 +23,24 @@ import {
 const t = tipc.create();
 
 export const appRouter = {
+  chatsCreate: t.procedure
+    .input<ChatCreateInput>()
+    .action(async ({ input }) => createChat(assertChatCreateInput(input))),
+
+  chatsGet: t.procedure
+    .input<string>()
+    .action(async ({ input }) =>
+      getChat(assertString(input, 'Chat id is required.'))
+    ),
+
+  chatsList: t.procedure.action(async () => listChats()),
+
+  chatsLoad: t.procedure
+    .input<string>()
+    .action(async ({ input }) =>
+      loadChatSession(assertString(input, 'Chat id is required.'))
+    ),
+
   chatSend: t.procedure
     .input<ChatSendInput>()
     .action(async ({ input }) => sendChat(assertChatSendInput(input))),
@@ -96,8 +119,38 @@ function assertChatSendInput(input: ChatSendInput): ChatSendInput {
   }
 
   return {
+    chatId:
+      typeof input.chatId === 'string' && input.chatId.trim()
+        ? input.chatId.trim()
+        : undefined,
     cwd: typeof input.cwd === 'string' && input.cwd.trim() ? input.cwd : undefined,
+    projectId:
+      typeof input.projectId === 'string' && input.projectId.trim()
+        ? input.projectId.trim()
+        : null,
     text: assertString(input.text, 'Chat text is required.'),
+  };
+}
+
+function assertChatCreateInput(input: ChatCreateInput): ChatCreateInput {
+  if (!input || typeof input !== 'object') {
+    return {};
+  }
+
+  return {
+    cwd: typeof input.cwd === 'string' && input.cwd.trim() ? input.cwd : undefined,
+    projectId:
+      typeof input.projectId === 'string' && input.projectId.trim()
+        ? input.projectId.trim()
+        : null,
+    runtime:
+      typeof input.runtime === 'string' && input.runtime.trim()
+        ? input.runtime.trim()
+        : undefined,
+    title:
+      typeof input.title === 'string' && input.title.trim()
+        ? input.title.trim()
+        : undefined,
   };
 }
 

@@ -69,7 +69,15 @@ function assertChatSendInput(input: unknown): ChatSendInput {
 
   const value = input as Partial<ChatSendInput>;
   return {
+    chatId:
+      typeof value.chatId === 'string' && value.chatId.trim()
+        ? value.chatId.trim()
+        : undefined,
     cwd: typeof value.cwd === 'string' && value.cwd.trim() ? value.cwd : undefined,
+    projectId:
+      typeof value.projectId === 'string' && value.projectId.trim()
+        ? value.projectId.trim()
+        : null,
     text: assertString(value.text, 'Chat text is required.'),
   };
 }

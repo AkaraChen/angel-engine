@@ -5,10 +5,20 @@ import path from 'node:path';
 import { app } from 'electron';
 
 import type {
+  Chat,
+  ChatHistoryMessage,
+  ChatLoadResult,
   ChatSendInput,
   ChatSendResult,
   ChatStreamDelta,
 } from '../../shared/chat';
+import {
+  createChat,
+  renameChatFromPrompt,
+  requireChat,
+  setChatRemoteThreadId,
+  touchChat,
+} from './repository';
 
 type RuntimeLine = {
   kind: 'stderr' | 'stdout';
@@ -25,6 +35,32 @@ type ClientCommandResult = {
   conversationId?: string;
   turnId?: string;
   update?: ClientUpdate;
+};
+
+type ConversationSnapshot = {
+  context?: {
+    cwd?: string | null;
+  };
+  history?: {
+    replay?: HistoryReplaySnapshot[];
+  };
+  id: string;
+  remoteId?: string | null;
+  turns?: TurnSnapshot[];
+};
+
+type HistoryReplaySnapshot = {
+  content?: {
+    text?: string;
+  };
+  role?: string;
+};
+
+type TurnSnapshot = {
+  id: string;
+  inputText?: string;
+  outputText?: string;
+  reasoningText?: string;
 };
 
 type ClientEvent = {
@@ -47,6 +83,11 @@ type AngelEngineClient = {
   initialize(): ClientCommandResult;
   openElicitations(conversationId: string): unknown[];
   receiveJson(value: unknown): ClientCommandResult;
+  resumeThread(request: {
+    additionalDirectories?: string[];
+    hydrate?: boolean;
+    remoteId: string;
+  }): ClientCommandResult;
   sendThreadEvent(conversationId: string, event: unknown): ClientCommandResult;
   sendText(conversationId: string, text: string): ClientCommandResult;
   snapshot(): {
@@ -58,6 +99,7 @@ type AngelEngineClient = {
     };
   };
   startThread(request?: { cwd?: string }): ClientCommandResult;
+  threadState(conversationId: string): ConversationSnapshot | null;
   threadIsIdle(conversationId: string): boolean;
   turnIsTerminal(conversationId: string, turnId: string): boolean;
   turnState(conversationId: string, turnId: string): {
@@ -68,13 +110,34 @@ type AngelEngineClient = {
 
 type AngelEngineClientConstructor = new (options: unknown) => AngelEngineClient;
 type ChatStreamObserver = (event: ChatStreamDelta) => void;
+type RuntimeOptions = Record<string, unknown> & {
+  args: string[];
+  command: string;
+  runtime: string;
+};
 
 const nodeRequire = createRequire(import.meta.url);
 
-let chatSession: AngelChatSession | undefined;
+const chatSessions = new Map<string, AngelChatSession>();
 
 export async function sendChat(input: ChatSendInput): Promise<ChatSendResult> {
   return streamChat(input);
+}
+
+export async function loadChatSession(chatId: string): Promise<ChatLoadResult> {
+  const chat = requireChat(chatId);
+  const session = chatSessions.get(chat.id);
+
+  if (!chat.remoteThreadId && !session?.hasConversation()) {
+    return { chat, messages: [] };
+  }
+
+  const snapshot = await getChatSession(chat).hydrate(chat);
+  const updatedChat = persistRemoteThreadId(chat, snapshot);
+  return {
+    chat: updatedChat,
+    messages: messagesFromConversationSnapshot(snapshot),
+  };
 }
 
 export async function streamChat(
@@ -87,13 +150,152 @@ export async function streamChat(
     throw new Error('Chat text is required.');
   }
 
-  chatSession ??= new AngelChatSession(createRuntimeOptions());
-  return chatSession.send({ ...input, text }, onEvent, abortSignal);
+  const chat = input.chatId
+    ? requireChat(input.chatId)
+    : createChat({
+        cwd: input.cwd,
+        projectId: input.projectId,
+        runtime: defaultRuntimeName(),
+      });
+
+  const result = await getChatSession(chat).send(
+    chat,
+    { ...input, text },
+    onEvent,
+    abortSignal
+  );
+  renameChatFromPrompt(chat.id, text);
+  const finalChat = result.remoteThreadId
+    ? setChatRemoteThreadId(chat.id, result.remoteThreadId)
+    : touchChat(chat.id);
+
+  return {
+    chat: finalChat,
+    chatId: finalChat.id,
+    reasoning: result.reasoning,
+    text: result.text,
+    turnId: result.turnId,
+  };
 }
 
 export function closeChatSession() {
-  chatSession?.close();
-  chatSession = undefined;
+  for (const session of chatSessions.values()) {
+    session.close();
+  }
+  chatSessions.clear();
+}
+
+function getChatSession(chat: Chat) {
+  const existing = chatSessions.get(chat.id);
+  if (existing) return existing;
+
+  const session = new AngelChatSession(createRuntimeOptions(chat.runtime));
+  chatSessions.set(chat.id, session);
+  return session;
+}
+
+function persistRemoteThreadId(chat: Chat, snapshot: ConversationSnapshot) {
+  if (!snapshot.remoteId || snapshot.remoteId === chat.remoteThreadId) {
+    return chat;
+  }
+  return setChatRemoteThreadId(chat.id, snapshot.remoteId);
+}
+
+function messagesFromConversationSnapshot(
+  snapshot: ConversationSnapshot
+): ChatHistoryMessage[] {
+  const replayMessages = messagesFromHistoryReplay(snapshot.history?.replay ?? []);
+  const turnMessages = messagesFromTurns(snapshot.turns ?? []);
+  return [...replayMessages, ...turnMessages];
+}
+
+function messagesFromTurns(turns: TurnSnapshot[]): ChatHistoryMessage[] {
+  const messages: ChatHistoryMessage[] = [];
+
+  for (const turn of turns) {
+    const inputText = turn.inputText?.trim();
+    if (inputText) {
+      messages.push({
+        content: [{ text: inputText, type: 'text' }],
+        id: `${turn.id}:user`,
+        role: 'user',
+      });
+    }
+
+    const reasoningText = turn.reasoningText?.trim();
+    const outputText = turn.outputText?.trim();
+    if (reasoningText || outputText) {
+      messages.push({
+        content: [
+          ...(reasoningText
+            ? [{ text: reasoningText, type: 'reasoning' as const }]
+            : []),
+          ...(outputText ? [{ text: outputText, type: 'text' as const }] : []),
+        ],
+        id: `${turn.id}:assistant`,
+        role: 'assistant',
+      });
+    }
+  }
+
+  return messages;
+}
+
+function messagesFromHistoryReplay(
+  replay: HistoryReplaySnapshot[]
+): ChatHistoryMessage[] {
+  const messages: ChatHistoryMessage[] = [];
+  let userText = '';
+  let assistantReasoning = '';
+  let assistantText = '';
+  let messageIndex = 0;
+
+  const flushUser = () => {
+    const text = userText.trim();
+    if (!text) return;
+    messages.push({
+      content: [{ text, type: 'text' }],
+      id: `history-${messageIndex++}:user`,
+      role: 'user',
+    });
+    userText = '';
+  };
+
+  const flushAssistant = () => {
+    const reasoning = assistantReasoning.trim();
+    const text = assistantText.trim();
+    if (!reasoning && !text) return;
+    messages.push({
+      content: [
+        ...(reasoning ? [{ text: reasoning, type: 'reasoning' as const }] : []),
+        ...(text ? [{ text, type: 'text' as const }] : []),
+      ],
+      id: `history-${messageIndex++}:assistant`,
+      role: 'assistant',
+    });
+    assistantReasoning = '';
+    assistantText = '';
+  };
+
+  for (const entry of replay) {
+    const text = entry.content?.text;
+    if (!text) continue;
+
+    if (entry.role === 'user') {
+      flushAssistant();
+      userText += text;
+    } else if (entry.role === 'assistant') {
+      flushUser();
+      assistantText += text;
+    } else if (entry.role === 'reasoning') {
+      flushUser();
+      assistantReasoning += text;
+    }
+  }
+
+  flushUser();
+  flushAssistant();
+  return messages;
 }
 
 class AngelChatSession {
@@ -101,9 +303,9 @@ class AngelChatSession {
   private readonly process: RuntimeProcess;
   private conversationId: string | undefined;
   private startPromise: Promise<void> | undefined;
-  private sendQueue: Promise<void> = Promise.resolve();
+  private operationQueue: Promise<void> = Promise.resolve();
 
-  constructor(private readonly options: Record<string, unknown>) {
+  constructor(private readonly options: RuntimeOptions) {
     const Client = loadAngelEngineClient();
     this.client = new Client(options);
     this.process = new RuntimeProcess(
@@ -113,18 +315,37 @@ class AngelChatSession {
   }
 
   async send(
+    chat: Chat,
     input: ChatSendInput,
     onEvent?: ChatStreamObserver,
     abortSignal?: AbortSignal
-  ): Promise<ChatSendResult> {
-    const run = this.sendQueue.then(() =>
-      this.sendNow(input, onEvent, abortSignal)
+  ): Promise<{
+    reasoning?: string;
+    remoteThreadId?: string;
+    text: string;
+    turnId?: string;
+  }> {
+    const run = this.operationQueue.then(() =>
+      this.sendNow(chat, input, onEvent, abortSignal)
     );
-    this.sendQueue = run.then(
+    this.operationQueue = run.then(
       (): void => undefined,
       (): void => undefined
     );
     return run;
+  }
+
+  async hydrate(chat: Chat): Promise<ConversationSnapshot> {
+    const run = this.operationQueue.then(() => this.hydrateNow(chat));
+    this.operationQueue = run.then(
+      (): void => undefined,
+      (): void => undefined
+    );
+    return run;
+  }
+
+  hasConversation() {
+    return Boolean(this.conversationId);
   }
 
   close() {
@@ -132,12 +353,18 @@ class AngelChatSession {
   }
 
   private async sendNow(
+    chat: Chat,
     input: ChatSendInput,
     onEvent?: ChatStreamObserver,
     abortSignal?: AbortSignal
-  ): Promise<ChatSendResult> {
+  ): Promise<{
+    reasoning?: string;
+    remoteThreadId?: string;
+    text: string;
+    turnId?: string;
+  }> {
     throwIfAborted(abortSignal);
-    await this.ensureStarted(input.cwd);
+    await this.ensureStarted(chat, true, input.cwd);
     throwIfAborted(abortSignal);
 
     const conversationId = this.requireConversationId();
@@ -147,6 +374,7 @@ class AngelChatSession {
 
     if (!result.turnId) {
       return {
+        remoteThreadId: this.threadRemoteId(),
         text: collector.text || 'The runtime accepted the message without starting a turn.',
       };
     }
@@ -165,9 +393,20 @@ class AngelChatSession {
     const turn = this.client.turnState(conversationId, result.turnId);
     return {
       reasoning: turn?.reasoningText || collector.reasoning || undefined,
+      remoteThreadId: this.threadRemoteId(),
       text: turn?.outputText || collector.text || 'The runtime finished without text output.',
       turnId: result.turnId,
     };
+  }
+
+  private async hydrateNow(chat: Chat): Promise<ConversationSnapshot> {
+    await this.ensureStarted(chat, false);
+    const conversationId = this.requireConversationId();
+    const snapshot = this.client.threadState(conversationId);
+    if (!snapshot) {
+      throw new Error('Chat runtime did not return a conversation snapshot.');
+    }
+    return snapshot;
   }
 
   private async cancelTurn(
@@ -182,16 +421,40 @@ class AngelChatSession {
     await this.handleUpdate(result.update, collector);
   }
 
-  private async ensureStarted(cwd?: string) {
-    this.startPromise ??= this.start(cwd);
+  private async ensureStarted(
+    chat: Chat,
+    allowStart: boolean,
+    cwdOverride?: string
+  ) {
+    this.startPromise ??= this.start(chat, allowStart, cwdOverride).catch(
+      (error: unknown) => {
+        this.startPromise = undefined;
+        throw error;
+      }
+    );
     await this.startPromise;
   }
 
-  private async start(cwd?: string) {
+  private async start(chat: Chat, allowStart: boolean, cwdOverride?: string) {
     await this.handleUpdate(this.client.initialize().update);
     await this.waitForRuntime();
 
-    const result = this.client.startThread({ cwd: cwd || process.cwd() });
+    const result = chat.remoteThreadId
+      ? this.client.resumeThread({
+          additionalDirectories: [],
+          hydrate: true,
+          remoteId: chat.remoteThreadId,
+        })
+      : allowStart
+        ? this.client.startThread({
+            cwd: cwdOverride || chat.cwd || process.cwd(),
+          })
+        : undefined;
+
+    if (!result) {
+      throw new Error('Chat has no remote thread to resume.');
+    }
+
     this.conversationId = result.conversationId;
     await this.handleUpdate(result.update);
 
@@ -278,6 +541,11 @@ class AngelChatSession {
       throw new Error('Chat runtime did not start a conversation.');
     }
     return this.conversationId;
+  }
+
+  private threadRemoteId() {
+    if (!this.conversationId) return undefined;
+    return this.client.threadState(this.conversationId)?.remoteId ?? undefined;
   }
 }
 
@@ -423,8 +691,8 @@ function attachLines(
   });
 }
 
-function createRuntimeOptions() {
-  const runtime = process.env.ANGEL_ENGINE_RUNTIME ?? 'codex';
+function createRuntimeOptions(runtimeName = defaultRuntimeName()): RuntimeOptions {
+  const runtime = normalizeRuntimeName(runtimeName);
   if (runtime === 'kimi') {
     return {
       args: ['acp'],
@@ -432,15 +700,17 @@ function createRuntimeOptions() {
       command: process.env.ANGEL_ENGINE_COMMAND ?? 'kimi',
       identity: desktopIdentity(),
       protocol: 'acp',
+      runtime,
     };
   }
-  if (runtime === 'opencode' || runtime === 'open-code') {
+  if (runtime === 'opencode') {
     return {
       args: ['acp'],
       auth: { autoAuthenticate: false, needAuth: false },
       command: process.env.ANGEL_ENGINE_COMMAND ?? 'opencode',
       identity: desktopIdentity(),
       protocol: 'acp',
+      runtime,
     };
   }
   return {
@@ -448,7 +718,19 @@ function createRuntimeOptions() {
     command: process.env.ANGEL_ENGINE_COMMAND ?? 'codex',
     identity: desktopIdentity(),
     protocol: 'codexAppServer',
+    runtime: 'codex',
   };
+}
+
+function defaultRuntimeName() {
+  return normalizeRuntimeName(process.env.ANGEL_ENGINE_RUNTIME);
+}
+
+function normalizeRuntimeName(runtime: string | undefined) {
+  const normalized = runtime?.trim().toLowerCase();
+  if (normalized === 'kimi') return 'kimi';
+  if (normalized === 'opencode' || normalized === 'open-code') return 'opencode';
+  return 'codex';
 }
 
 function desktopIdentity() {

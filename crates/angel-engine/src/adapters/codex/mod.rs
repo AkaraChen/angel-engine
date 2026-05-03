@@ -10,8 +10,8 @@ use crate::reducer::{AngelEngine, PendingRequest};
 use crate::state::{
     ActionInput, ActionKind, ActionOutputDelta, ActionPatch, ActionPhase, ActionState,
     ContentDelta, ContextPatch, ConversationLifecycle, ElicitationKind, ElicitationOptions,
-    ElicitationState, ExhaustionReason, PlanEntry, PlanEntryStatus, PlanState, TurnOutcome,
-    UserQuestion, UserQuestionOption,
+    ElicitationState, ExhaustionReason, HistoryReplayEntry, HistoryRole, PlanEntry,
+    PlanEntryStatus, PlanState, TurnOutcome, UserQuestion, UserQuestionOption,
 };
 use crate::transport::{
     JsonRpcMessage, ProtocolTransport, TransportLogKind, TransportOptions, TransportOutput,
