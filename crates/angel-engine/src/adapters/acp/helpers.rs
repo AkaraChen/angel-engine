@@ -79,16 +79,6 @@ pub(super) fn acp_tool_status(value: &str) -> AcpToolStatus {
     }
 }
 
-pub(super) fn update_text(update: &Value) -> String {
-    content_text(
-        update
-            .get("content")
-            .or_else(|| update.get("text"))
-            .unwrap_or(&Value::Null),
-    )
-    .unwrap_or_default()
-}
-
 pub(super) fn content_delta_from_update(update: &Value) -> ContentDelta {
     update
         .get("content")
@@ -145,7 +135,7 @@ fn resource_uri(value: &Value) -> Option<String> {
     value.get("uri").and_then(Value::as_str).map(str::to_string)
 }
 
-fn json_string(value: &Value) -> String {
+pub(super) fn json_string(value: &Value) -> String {
     serde_json::to_string(value).unwrap_or_else(|_| value.to_string())
 }
 

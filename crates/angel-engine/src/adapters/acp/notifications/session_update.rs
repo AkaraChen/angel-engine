@@ -108,15 +108,17 @@ pub(super) fn decode_acp_update(
                 .or_else(|| update.get("id"))
                 .and_then(Value::as_str)
                 .unwrap_or("tool");
-            let mut action =
-                ActionState::new(ActionId::new(id.to_string()), turn_id, ActionKind::McpTool);
-            action.input = ActionInput {
-                summary: update
-                    .get("title")
-                    .and_then(Value::as_str)
-                    .map(str::to_string),
-                raw: Some(update.to_string()),
-            };
+            let status = tool_status_from_update(update);
+            let mut action = ActionState::new(
+                ActionId::new(id.to_string()),
+                turn_id,
+                acp_action_kind(update),
+            );
+            action.phase = AcpAdapter::tool_status_to_phase(status);
+            action.title = tool_title(update);
+            action.input = acp_tool_input(update);
+            action.output.chunks = acp_tool_output_deltas(update);
+            action.error = acp_tool_error(update, status);
             Ok(TransportOutput::default()
                 .event(EngineEvent::ActionObserved {
                     conversation_id,
@@ -136,34 +138,30 @@ pub(super) fn decode_acp_update(
                 .and_then(Value::as_str)
                 .map(acp_tool_status)
                 .unwrap_or(AcpToolStatus::InProgress);
-            let text = update_text(update);
+            let title = tool_title(update);
+            let deltas = acp_tool_output_deltas(update);
+            let error = acp_tool_error(update, status);
             let mut output = TransportOutput::default()
                 .log(TransportLogKind::State, format!("tool call {status:?}"));
             if !acp_action_exists(engine, &conversation_id, &action_id) {
                 let mut action =
-                    ActionState::new(action_id.clone(), turn_id.clone(), ActionKind::McpTool);
-                action.input = ActionInput {
-                    summary: update
-                        .get("title")
-                        .and_then(Value::as_str)
-                        .map(str::to_string),
-                    raw: Some(update.to_string()),
-                };
+                    ActionState::new(action_id.clone(), turn_id.clone(), acp_action_kind(update));
+                action.title = title.clone();
+                action.input = acp_tool_input(update);
                 output.events.push(EngineEvent::ActionObserved {
                     conversation_id: conversation_id.clone(),
                     action,
                 });
             }
-            output.events.push(EngineEvent::ActionUpdated {
+            push_tool_action_updates(
+                &mut output,
                 conversation_id,
                 action_id,
-                patch: ActionPatch {
-                    phase: Some(AcpAdapter::tool_status_to_phase(status)),
-                    output_delta: (!text.is_empty()).then_some(ActionOutputDelta::Text(text)),
-                    error: None,
-                    title: None,
-                },
-            });
+                Some(AcpAdapter::tool_status_to_phase(status)),
+                title,
+                error,
+                deltas,
+            );
             Ok(output)
         }
         "plan" => {
@@ -215,6 +213,147 @@ pub(super) fn decode_acp_update(
             TransportLogKind::Receive,
             format!("session/update {update_type}"),
         )),
+    }
+}
+
+fn tool_status_from_update(update: &Value) -> AcpToolStatus {
+    update
+        .get("status")
+        .and_then(Value::as_str)
+        .map(acp_tool_status)
+        .unwrap_or(AcpToolStatus::Pending)
+}
+
+fn tool_title(update: &Value) -> Option<String> {
+    update
+        .get("title")
+        .and_then(Value::as_str)
+        .map(str::to_string)
+}
+
+fn acp_tool_input(update: &Value) -> ActionInput {
+    ActionInput {
+        summary: tool_title(update),
+        raw: Some(json_string(update)),
+    }
+}
+
+fn acp_action_kind(update: &Value) -> ActionKind {
+    match update
+        .get("kind")
+        .and_then(Value::as_str)
+        .unwrap_or("other")
+    {
+        "read" => ActionKind::Read,
+        "edit" | "delete" | "move" => ActionKind::FileChange,
+        "execute" => ActionKind::Command,
+        "search" => ActionKind::WebSearch,
+        "think" => ActionKind::Reasoning,
+        "fetch" => ActionKind::DynamicTool,
+        "switch_mode" => ActionKind::HostCapability,
+        _ => ActionKind::McpTool,
+    }
+}
+
+fn acp_tool_output_deltas(update: &Value) -> Vec<ActionOutputDelta> {
+    let Some(content) = update.get("content") else {
+        return Vec::new();
+    };
+    if let Some(items) = content.as_array() {
+        return items.iter().filter_map(tool_content_delta).collect();
+    }
+    tool_content_delta(content).into_iter().collect()
+}
+
+fn tool_content_delta(value: &Value) -> Option<ActionOutputDelta> {
+    match value.get("type").and_then(Value::as_str) {
+        Some("content") => value
+            .get("content")
+            .map(content_block_action_delta)
+            .or_else(|| Some(ActionOutputDelta::Structured(json_string(value)))),
+        Some("diff") => Some(ActionOutputDelta::Patch(acp_diff_text(value))),
+        Some("terminal") => value
+            .get("terminalId")
+            .and_then(Value::as_str)
+            .map(|terminal_id| ActionOutputDelta::Terminal(terminal_id.to_string()))
+            .or_else(|| Some(ActionOutputDelta::Structured(json_string(value)))),
+        Some("text") => content_text(value).map(ActionOutputDelta::Text),
+        Some(_) => Some(ActionOutputDelta::Structured(json_string(value))),
+        None => content_text(value)
+            .map(ActionOutputDelta::Text)
+            .or_else(|| Some(ActionOutputDelta::Structured(json_string(value)))),
+    }
+}
+
+fn content_block_action_delta(value: &Value) -> ActionOutputDelta {
+    content_text(value)
+        .map(ActionOutputDelta::Text)
+        .unwrap_or_else(|| ActionOutputDelta::Structured(json_string(value)))
+}
+
+fn acp_diff_text(value: &Value) -> String {
+    let path = value
+        .get("path")
+        .and_then(Value::as_str)
+        .unwrap_or("<unknown>");
+    let old_text = value
+        .get("oldText")
+        .and_then(Value::as_str)
+        .unwrap_or_default();
+    let new_text = value
+        .get("newText")
+        .and_then(Value::as_str)
+        .unwrap_or_default();
+    format!("diff -- {path}\n--- old\n{old_text}\n+++ new\n{new_text}")
+}
+
+fn acp_tool_error(update: &Value, status: AcpToolStatus) -> Option<crate::ErrorInfo> {
+    if status != AcpToolStatus::Failed {
+        return None;
+    }
+    let message = update
+        .get("error")
+        .and_then(Value::as_str)
+        .map(str::to_string)
+        .or_else(|| update.get("rawOutput").map(json_string))
+        .or_else(|| update.get("content").and_then(content_text))
+        .unwrap_or_else(|| "ACP tool call failed".to_string());
+    Some(crate::ErrorInfo::new("acp.tool_call_failed", message))
+}
+
+fn push_tool_action_updates(
+    output: &mut TransportOutput,
+    conversation_id: ConversationId,
+    action_id: ActionId,
+    phase: Option<ActionPhase>,
+    title: Option<String>,
+    error: Option<crate::ErrorInfo>,
+    deltas: Vec<ActionOutputDelta>,
+) {
+    if deltas.is_empty() {
+        output.events.push(EngineEvent::ActionUpdated {
+            conversation_id,
+            action_id,
+            patch: ActionPatch {
+                phase,
+                output_delta: None,
+                error,
+                title,
+            },
+        });
+        return;
+    }
+    for (index, delta) in deltas.into_iter().enumerate() {
+        output.events.push(EngineEvent::ActionUpdated {
+            conversation_id: conversation_id.clone(),
+            action_id: action_id.clone(),
+            patch: ActionPatch {
+                phase: (index == 0).then(|| phase.clone()).flatten(),
+                output_delta: Some(delta),
+                error: (index == 0).then(|| error.clone()).flatten(),
+                title: (index == 0).then(|| title.clone()).flatten(),
+            },
+        });
     }
 }
 
