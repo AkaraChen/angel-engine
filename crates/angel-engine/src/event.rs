@@ -7,7 +7,8 @@ use crate::state::{
     ActionPatch, ActionState, AvailableCommand, ContentDelta, ContextPatch, ConversationLifecycle,
     ElicitationDecision, ElicitationState, HistoryMutationOp, HistoryMutationResult,
     HistoryReplayEntry, HydrationSource, ObserverState, PlanState, ProvisionOp,
-    SessionConfigOption, SessionModeState, SessionModelState, TurnOutcome, UserInputRef,
+    SessionConfigOption, SessionModeState, SessionModelState, SessionUsageState, TurnOutcome,
+    UserInputRef,
 };
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -71,6 +72,10 @@ pub enum EngineEvent {
     SessionModelsUpdated {
         conversation_id: ConversationId,
         models: SessionModelState,
+    },
+    SessionUsageUpdated {
+        conversation_id: ConversationId,
+        usage: SessionUsageState,
     },
     ConversationClosed {
         id: ConversationId,

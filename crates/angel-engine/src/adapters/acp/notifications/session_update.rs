@@ -71,6 +71,20 @@ pub(super) fn decode_acp_update(
             })
             .log(TransportLogKind::State, "session info updated"));
     }
+    if update_type == "usage_update" {
+        let Some(usage) = session_usage_state(update) else {
+            return Ok(TransportOutput::default().log(
+                TransportLogKind::Warning,
+                "ignoring invalid ACP usage update",
+            ));
+        };
+        return Ok(TransportOutput::default()
+            .event(EngineEvent::SessionUsageUpdated {
+                conversation_id,
+                usage,
+            })
+            .log(TransportLogKind::State, "usage updated"));
+    }
 
     let Some(turn_id) = active_turn_id(engine, &conversation_id) else {
         if let Some(output) = hydration_update(engine, &conversation_id, update_type, update) {
@@ -556,6 +570,43 @@ mod tests {
                         crate::ContextUpdate::Raw { key, value, .. }
                             if key == "conversation.title" && value.is_empty()
                     ))
+        ));
+    }
+
+    #[test]
+    fn usage_update_updates_session_usage_without_active_turn() {
+        let adapter = AcpAdapter::standard();
+        let mut engine = AngelEngine::new(crate::ProtocolFlavor::Acp, adapter.capabilities());
+        let conversation_id = ready_conversation(&adapter, &mut engine);
+
+        let output = adapter
+            .decode_notification(
+                &engine,
+                "session/update",
+                &json!({
+                    "sessionId": "sess",
+                    "update": {
+                        "sessionUpdate": "usage_update",
+                        "used": 512,
+                        "size": 4096,
+                        "cost": {
+                            "amount": 0.013,
+                            "currency": "USD"
+                        }
+                    }
+                }),
+            )
+            .expect("usage update");
+
+        assert!(matches!(
+            output.events.as_slice(),
+            [EngineEvent::SessionUsageUpdated { conversation_id: id, usage }]
+                if id == &conversation_id
+                    && usage.used == 512
+                    && usage.size == 4096
+                    && usage.cost.as_ref().is_some_and(|cost| {
+                        cost.amount == "0.013" && cost.currency == "USD"
+                    })
         ));
     }
 

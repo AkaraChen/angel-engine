@@ -54,6 +54,7 @@ pub struct ConversationState {
     pub config_options: Vec<SessionConfigOption>,
     pub mode_state: Option<SessionModeState>,
     pub model_state: Option<SessionModelState>,
+    pub usage_state: Option<SessionUsageState>,
     pub capabilities: ConversationCapabilities,
     pub generation: u64,
 }
@@ -81,6 +82,7 @@ impl ConversationState {
             config_options: Vec::new(),
             mode_state: None,
             model_state: None,
+            usage_state: None,
             capabilities,
             generation: 0,
         }
@@ -161,4 +163,17 @@ pub struct SessionModel {
     pub id: String,
     pub name: String,
     pub description: Option<String>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct SessionUsageState {
+    pub used: u64,
+    pub size: u64,
+    pub cost: Option<SessionUsageCost>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct SessionUsageCost {
+    pub amount: String,
+    pub currency: String,
 }

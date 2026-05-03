@@ -275,6 +275,27 @@ pub(super) fn session_model_state(value: &Value) -> Option<SessionModelState> {
     })
 }
 
+pub(super) fn session_usage_state(value: &Value) -> Option<SessionUsageState> {
+    let used = value.get("used").and_then(Value::as_u64)?;
+    let size = value.get("size").and_then(Value::as_u64)?;
+    let cost = value.get("cost").and_then(|cost| {
+        let amount = cost.get("amount")?;
+        let currency = cost.get("currency").and_then(Value::as_str)?;
+        Some(SessionUsageCost {
+            amount: json_label(amount),
+            currency: currency.to_string(),
+        })
+    });
+    Some(SessionUsageState { used, size, cost })
+}
+
+fn json_label(value: &Value) -> String {
+    value
+        .as_str()
+        .map(str::to_string)
+        .unwrap_or_else(|| value.to_string())
+}
+
 fn config_current_value(option: &Value) -> String {
     option
         .get("currentValue")

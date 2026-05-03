@@ -179,6 +179,16 @@ impl AngelEngine {
                     conversation_id,
                 )))
             }
+            EngineEvent::SessionUsageUpdated {
+                conversation_id,
+                usage,
+            } => {
+                let conversation = self.conversation_mut(&conversation_id)?;
+                conversation.usage_state = Some(usage);
+                Ok(TransitionReport::one(UiEvent::ConversationChanged(
+                    conversation_id,
+                )))
+            }
             EngineEvent::ConversationClosed { id } => {
                 let conversation = self.conversation_mut(&id)?;
                 conversation.lifecycle = ConversationLifecycle::Closed;
