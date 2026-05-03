@@ -1,4 +1,10 @@
-import { useMemo, type ReactNode } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+  type ReactNode,
+} from 'react';
 import {
   ActionBarPrimitive,
   AuiIf,
@@ -34,6 +40,7 @@ import {
   Copy,
   FileText,
   Folder,
+  FolderPlus,
   Loader2,
   MessageSquare,
   MessageSquarePlus,
@@ -69,15 +76,16 @@ import {
   SidebarProvider,
   SidebarTrigger,
 } from '@/components/ui/sidebar';
+import { ToastProvider, useToast } from '@/components/ui/toast';
+import { ipc } from '@/lib/ipc';
 import { cn } from '@/lib/utils';
+import type { Project } from './shared/projects';
 
 const primaryItems = [
   { label: 'New chat', icon: MessageSquarePlus },
   { label: 'Search', icon: Search },
   { label: 'Automation', icon: Workflow },
 ];
-const projectItems = ['Project Alpha', 'Project Beta', 'Project Gamma'];
-const nestedItems = ['Recent thread', 'Build notes', 'Release checklist'];
 
 const initialMockMessages: readonly ThreadMessageLike[] = [
   {
@@ -267,6 +275,72 @@ function AppRuntimeProvider({ children }: { children: ReactNode }) {
 
 export function App() {
   return (
+    <ToastProvider>
+      <AppContent />
+    </ToastProvider>
+  );
+}
+
+function AppContent() {
+  const toast = useToast();
+  const [isProjectsLoading, setIsProjectsLoading] = useState(true);
+  const [projects, setProjects] = useState<Project[]>([]);
+
+  const refreshProjects = useCallback(async () => {
+    setIsProjectsLoading(true);
+
+    try {
+      setProjects(await ipc.projectsList());
+    } catch (error) {
+      toast({
+        description: getErrorMessage(error),
+        title: 'Could not load projects',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsProjectsLoading(false);
+    }
+  }, [toast]);
+
+  useEffect(() => {
+    void refreshProjects();
+  }, [refreshProjects]);
+
+  const createProjectFromPicker = useCallback(async () => {
+    try {
+      const selectedPath = await ipc.projectsChooseDirectory();
+      if (!selectedPath) return;
+
+      await ipc.projectsCreate({ path: selectedPath });
+      await refreshProjects();
+    } catch (error) {
+      toast({
+        description: getErrorMessage(error),
+        title: 'Could not add project',
+        variant: 'destructive',
+      });
+    }
+  }, [refreshProjects, toast]);
+
+  const showProjectContextMenu = useCallback(
+    async (project: Project) => {
+      try {
+        const action = await ipc.projectsShowContextMenu(project.id);
+        if (action === 'deleted') {
+          await refreshProjects();
+        }
+      } catch (error) {
+        toast({
+          description: getErrorMessage(error),
+          title: 'Project action failed',
+          variant: 'destructive',
+        });
+      }
+    },
+    [refreshProjects, toast]
+  );
+
+  return (
     <SidebarProvider>
       <Sidebar variant="inset">
         <SidebarHeader className="px-2 py-3">
@@ -284,28 +358,65 @@ export function App() {
 
         <SidebarContent>
           <SidebarGroup>
-            <SidebarGroupLabel>Projects</SidebarGroupLabel>
+            <div className="flex items-center justify-between gap-2 pr-2">
+              <SidebarGroupLabel>Projects</SidebarGroupLabel>
+              <div className="flex items-center gap-1">
+                <Button
+                  onClick={refreshProjects}
+                  size="icon-xs"
+                  title="Refresh projects"
+                  type="button"
+                  variant="ghost"
+                >
+                  <RefreshCw />
+                  <span className="sr-only">Refresh projects</span>
+                </Button>
+                <Button
+                  onClick={createProjectFromPicker}
+                  size="icon-xs"
+                  title="Add project"
+                  type="button"
+                  variant="ghost"
+                >
+                  <FolderPlus />
+                  <span className="sr-only">Add project</span>
+                </Button>
+              </div>
+            </div>
             <SidebarGroupContent>
               <SidebarMenu>
-                <SidebarMenuItem>
-                  <SidebarMenuButton isActive>
-                    <Folder />
-                    <span>Active Project</span>
-                  </SidebarMenuButton>
-                  <div className="ml-6 mt-1 grid gap-1 border-l pl-3">
-                    {nestedItems.map((item) => (
-                      <SidebarMenuButton key={item} size="sm">
-                        <span className="truncate">{item}</span>
-                      </SidebarMenuButton>
-                    ))}
-                  </div>
-                </SidebarMenuItem>
+                {isProjectsLoading ? (
+                  <SidebarMenuItem>
+                    <SidebarMenuButton disabled>
+                      <Loader2 className="animate-spin" />
+                      <span>Loading projects</span>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                ) : null}
 
-                {projectItems.map((item) => (
-                  <SidebarMenuItem key={item}>
-                    <SidebarMenuButton>
+                {!isProjectsLoading && projects.length === 0 ? (
+                  <SidebarMenuItem>
+                    <SidebarMenuButton disabled>
                       <Folder />
-                      <span>{item}</span>
+                      <span>No projects yet</span>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                ) : null}
+
+                {projects.map((project, index) => (
+                  <SidebarMenuItem key={project.id}>
+                    <SidebarMenuButton
+                      isActive={index === 0}
+                      onContextMenu={(event) => {
+                        event.preventDefault();
+                        void showProjectContextMenu(project);
+                      }}
+                      title={project.path}
+                    >
+                      <Folder />
+                      <span className="truncate">
+                        {getProjectDisplayName(project.path)}
+                      </span>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                 ))}
@@ -818,6 +929,18 @@ function getHostname(url: string) {
   } catch {
     return url;
   }
+}
+
+function getProjectDisplayName(projectPath: string) {
+  const parts = projectPath.split(/[\\/]/).filter(Boolean);
+  return parts[parts.length - 1] ?? projectPath;
+}
+
+function getErrorMessage(error: unknown) {
+  if (error instanceof Error) {
+    return error.message;
+  }
+  return String(error);
 }
 
 function waitForMockStep(ms: number, signal: AbortSignal) {

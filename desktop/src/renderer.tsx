@@ -3,6 +3,13 @@ import { createRoot } from 'react-dom/client';
 
 import { App } from './App';
 import './index.css';
+import { syncSystemColorScheme } from './lib/theme';
+
+const stopSystemColorSchemeSync = syncSystemColorScheme();
+
+if (import.meta.hot) {
+  import.meta.hot.dispose(stopSystemColorSchemeSync);
+}
 
 createRoot(document.getElementById('root') as HTMLElement).render(
   <StrictMode>
