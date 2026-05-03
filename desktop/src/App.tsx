@@ -28,7 +28,6 @@ import {
   type ThreadMessageLike,
 } from '@assistant-ui/react';
 import {
-  ArrowDown,
   ArrowUp,
   BrainCircuit,
   Check,
@@ -36,7 +35,6 @@ import {
   ChevronRight,
   CircleStop,
   Clipboard,
-  Code2,
   Copy,
   FileText,
   Folder,
@@ -486,7 +484,6 @@ function AssistantThread() {
       <ThreadPrimitive.Viewport
         className="relative flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto px-4 py-5 sm:px-6"
         scrollToBottomOnRunStart
-        turnAnchor="top"
       >
         <AuiIf condition={(state) => state.thread.isEmpty}>
           <EmptyThread />
@@ -508,11 +505,6 @@ function AssistantThread() {
             Quote
           </SelectionToolbarPrimitive.Quote>
         </SelectionToolbarPrimitive.Root>
-
-        <ThreadPrimitive.ScrollToBottom className="absolute bottom-4 right-6 z-10 inline-flex size-8 items-center justify-center rounded-md border bg-background text-muted-foreground shadow-sm hover:bg-muted hover:text-foreground">
-          <ArrowDown className="size-4" />
-          <span className="sr-only">Scroll to bottom</span>
-        </ThreadPrimitive.ScrollToBottom>
       </ThreadPrimitive.Viewport>
       <div className="shrink-0 bg-background px-4 pb-4 pt-2 sm:px-6">
         <AssistantComposer />
@@ -694,8 +686,8 @@ function UserEditComposer() {
 function AssistantMessage() {
   return (
     <MessagePrimitive.Root className="group flex justify-start">
-      <div className="flex max-w-[82%] flex-col items-start gap-1.5">
-        <div className="rounded-md border bg-muted/30 px-3 py-3 text-sm leading-6">
+      <div className="flex w-full max-w-[82%] flex-col items-start gap-1.5 text-sm leading-6">
+        <div className="w-full">
           <MessageParts />
         </div>
         <div className={messageActionFooterClass}>
@@ -818,37 +810,11 @@ function MessagePart({ part }: { part: EnrichedPartState }) {
   }
 
   if (part.type === 'tool-call') {
-    return (
-      <div className="my-3 overflow-hidden rounded-md border bg-background">
-        <div className="flex items-center justify-between gap-2 border-b px-3 py-2">
-          <span className="inline-flex min-w-0 items-center gap-2 text-xs font-medium">
-            <Code2 className="size-3.5 shrink-0" />
-            <span className="truncate">{part.toolName}</span>
-          </span>
-          <span className="rounded-sm bg-sky-500/10 px-1.5 py-0.5 text-[11px] text-sky-700">
-            {part.status.type}
-          </span>
-        </div>
-        <div className="grid gap-2 p-3 text-xs sm:grid-cols-2">
-          <JsonBlock label="args" value={part.args} />
-          <JsonBlock label="result" value={part.result ?? 'pending'} />
-        </div>
-      </div>
-    );
+    return null;
   }
 
   if (part.type === 'source') {
-    return (
-      <a
-        className="mt-3 inline-flex max-w-full items-center gap-2 rounded-md border bg-background px-2 py-1 text-xs text-muted-foreground hover:text-foreground"
-        href={part.url}
-        rel="noreferrer"
-        target="_blank"
-      >
-        <FileText className="size-3.5 shrink-0" />
-        <span className="truncate">{part.title ?? getHostname(part.url)}</span>
-      </a>
-    );
+    return null;
   }
 
   if (part.type === 'image') {
@@ -925,14 +891,6 @@ function getPartKey(part: EnrichedPartState) {
   if ('id' in part && typeof part.id === 'string') return part.id;
   if ('text' in part) return `${part.type}-${part.text.slice(0, 24)}`;
   return part.type;
-}
-
-function getHostname(url: string) {
-  try {
-    return new URL(url).hostname;
-  } catch {
-    return url;
-  }
 }
 
 function getProjectDisplayName(projectPath: string) {
