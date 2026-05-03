@@ -1,4 +1,4 @@
-use crate::command::{TurnOverrides, UserInput};
+use crate::command::{TurnOverrides, UserInput, UserInputKind};
 use crate::error::EngineError;
 use crate::ids::{ConversationId, JsonRpcRequestId, RemoteTurnId, TurnId};
 use crate::protocol::{ProtocolEffect, ProtocolFlavor};
@@ -31,6 +31,7 @@ impl AngelEngine {
         let sequence = self.next_turn_sequence();
         let remote = self.remote_turn_for_start(&conversation_id, &request_id, sequence)?;
         let input_text = input_to_text(&input);
+        let effect_fields = input_effect_fields(&input);
         let input_refs = to_input_refs(input);
         let generation = self.generation;
 
@@ -66,6 +67,9 @@ impl AngelEngine {
             .conversation_id(conversation_id.clone())
             .turn_id(turn_id.clone())
             .field("input", input_text);
+        for (key, value) in effect_fields {
+            effect = effect.field(key, value);
+        }
         for (key, value) in codex_context_fields {
             effect = effect.field(key, value);
         }
@@ -87,6 +91,7 @@ impl AngelEngine {
 
         let request_id = self.next_request_id();
         let input_text = input_to_text(&input);
+        let effect_fields = input_effect_fields(&input);
         let input_refs = to_input_refs(input);
         {
             let conversation = self.conversation_mut(&conversation_id)?;
@@ -116,6 +121,10 @@ impl AngelEngine {
             .conversation_id(conversation_id.clone())
             .turn_id(selected_turn_id.clone())
             .field("input", input_text);
+        let mut effect = effect;
+        for (key, value) in effect_fields {
+            effect = effect.field(key, value);
+        }
         Ok(CommandPlan {
             effects: vec![effect],
             conversation_id: Some(conversation_id),
@@ -311,4 +320,49 @@ fn input_to_text(input: &[UserInput]) -> String {
         .map(|input| input.content.as_str())
         .collect::<Vec<_>>()
         .join("\n")
+}
+
+fn input_effect_fields(input: &[UserInput]) -> Vec<(String, String)> {
+    let mut fields = Vec::new();
+    fields.push(("inputCount".to_string(), input.len().to_string()));
+    for (index, item) in input.iter().enumerate() {
+        fields.push((format!("input.{index}.content"), item.content.clone()));
+        match &item.kind {
+            UserInputKind::Text => {
+                fields.push((format!("input.{index}.type"), "text".to_string()));
+            }
+            UserInputKind::ResourceLink {
+                name,
+                uri,
+                mime_type,
+                title,
+                description,
+            } => {
+                fields.push((format!("input.{index}.type"), "resource_link".to_string()));
+                fields.push((format!("input.{index}.name"), name.clone()));
+                fields.push((format!("input.{index}.uri"), uri.clone()));
+                if let Some(mime_type) = mime_type {
+                    fields.push((format!("input.{index}.mimeType"), mime_type.clone()));
+                }
+                if let Some(title) = title {
+                    fields.push((format!("input.{index}.title"), title.clone()));
+                }
+                if let Some(description) = description {
+                    fields.push((format!("input.{index}.description"), description.clone()));
+                }
+            }
+            UserInputKind::EmbeddedTextResource { uri, mime_type } => {
+                fields.push((format!("input.{index}.type"), "resource".to_string()));
+                fields.push((format!("input.{index}.uri"), uri.clone()));
+                if let Some(mime_type) = mime_type {
+                    fields.push((format!("input.{index}.mimeType"), mime_type.clone()));
+                }
+            }
+            UserInputKind::RawContentBlock(block) => {
+                fields.push((format!("input.{index}.type"), "raw".to_string()));
+                fields.push((format!("input.{index}.raw"), block.clone()));
+            }
+        }
+    }
+    fields
 }

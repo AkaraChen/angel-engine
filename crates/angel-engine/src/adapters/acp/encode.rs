@@ -61,12 +61,7 @@ impl AcpAdapter {
             })),
             ProtocolMethod::Acp(AcpMethod::SessionPrompt) => Ok(json!({
                 "sessionId": acp_session_id(engine, effect)?,
-                "prompt": [
-                    {
-                        "type": "text",
-                        "text": effect.payload.fields.get("input").cloned().unwrap_or_default(),
-                    }
-                ],
+                "prompt": acp_prompt_blocks(effect),
             })),
             ProtocolMethod::Acp(AcpMethod::SessionCancel)
             | ProtocolMethod::Acp(AcpMethod::SessionClose) => Ok(json!({
@@ -215,6 +210,118 @@ fn acp_effect_cwd(engine: &AngelEngine, effect: &crate::ProtocolEffect) -> Strin
     std::env::current_dir()
         .map(|path| path.display().to_string())
         .unwrap_or_else(|_| ".".to_string())
+}
+
+fn acp_prompt_blocks(effect: &crate::ProtocolEffect) -> Vec<Value> {
+    let Some(count) = effect
+        .payload
+        .fields
+        .get("inputCount")
+        .and_then(|value| value.parse::<usize>().ok())
+    else {
+        return vec![json!({
+            "type": "text",
+            "text": effect.payload.fields.get("input").cloned().unwrap_or_default(),
+        })];
+    };
+    let mut blocks = Vec::new();
+    for index in 0..count {
+        let prefix = format!("input.{index}");
+        let block_type = effect
+            .payload
+            .fields
+            .get(&format!("{prefix}.type"))
+            .map(String::as_str)
+            .unwrap_or("text");
+        let content = effect
+            .payload
+            .fields
+            .get(&format!("{prefix}.content"))
+            .cloned()
+            .unwrap_or_default();
+        let block = match block_type {
+            "resource_link" => {
+                let mut block = serde_json::Map::new();
+                block.insert("type".to_string(), json!("resource_link"));
+                block.insert(
+                    "name".to_string(),
+                    json!(
+                        effect
+                            .payload
+                            .fields
+                            .get(&format!("{prefix}.name"))
+                            .cloned()
+                            .unwrap_or_else(|| content.clone())
+                    ),
+                );
+                block.insert(
+                    "uri".to_string(),
+                    json!(
+                        effect
+                            .payload
+                            .fields
+                            .get(&format!("{prefix}.uri"))
+                            .cloned()
+                            .unwrap_or(content)
+                    ),
+                );
+                insert_optional_prompt_field(effect, &prefix, &mut block, "mimeType");
+                insert_optional_prompt_field(effect, &prefix, &mut block, "title");
+                insert_optional_prompt_field(effect, &prefix, &mut block, "description");
+                Value::Object(block)
+            }
+            "resource" => {
+                let mut resource = serde_json::Map::new();
+                resource.insert(
+                    "uri".to_string(),
+                    json!(
+                        effect
+                            .payload
+                            .fields
+                            .get(&format!("{prefix}.uri"))
+                            .cloned()
+                            .unwrap_or_else(|| content.clone())
+                    ),
+                );
+                resource.insert("text".to_string(), json!(content));
+                insert_optional_prompt_field(effect, &prefix, &mut resource, "mimeType");
+                json!({
+                    "type": "resource",
+                    "resource": Value::Object(resource),
+                })
+            }
+            "raw" => effect
+                .payload
+                .fields
+                .get(&format!("{prefix}.raw"))
+                .and_then(|raw| serde_json::from_str::<Value>(raw).ok())
+                .filter(Value::is_object)
+                .unwrap_or_else(|| json!({"type": "text", "text": content})),
+            _ => json!({
+                "type": "text",
+                "text": content,
+            }),
+        };
+        blocks.push(block);
+    }
+    if blocks.is_empty() {
+        blocks.push(json!({
+            "type": "text",
+            "text": effect.payload.fields.get("input").cloned().unwrap_or_default(),
+        }));
+    }
+    blocks
+}
+
+fn insert_optional_prompt_field(
+    effect: &crate::ProtocolEffect,
+    prefix: &str,
+    target: &mut serde_json::Map<String, Value>,
+    field: &str,
+) {
+    if let Some(value) = effect.payload.fields.get(&format!("{prefix}.{field}")) {
+        target.insert(field.to_string(), json!(value));
+    }
 }
 
 fn acp_elicitation_response(
@@ -403,6 +510,83 @@ mod tests {
             params,
             json!({"sessionId": "sess", "cwd": "/tmp/from-context", "mcpServers": []})
         );
+    }
+
+    #[test]
+    fn session_prompt_encodes_structured_content_blocks() {
+        let adapter = AcpAdapter::standard();
+        let mut engine = AngelEngine::with_available_runtime(
+            crate::ProtocolFlavor::Acp,
+            crate::RuntimeCapabilities::new("test"),
+            adapter.capabilities(),
+        );
+        let conversation_id = ConversationId::new("conv");
+        engine
+            .apply_event(EngineEvent::ConversationProvisionStarted {
+                id: conversation_id.clone(),
+                remote: RemoteConversationId::Known("sess".to_string()),
+                op: crate::ProvisionOp::New,
+                capabilities: adapter.capabilities(),
+            })
+            .expect("conversation provision");
+        engine
+            .apply_event(EngineEvent::ConversationReady {
+                id: conversation_id.clone(),
+                remote: Some(RemoteConversationId::Known("sess".to_string())),
+                context: ContextPatch::empty(),
+                capabilities: None,
+            })
+            .expect("conversation ready");
+        let plan = engine
+            .plan_command(crate::EngineCommand::StartTurn {
+                conversation_id,
+                input: vec![
+                    crate::UserInput::text("summarize this"),
+                    crate::UserInput::resource_link("README", "file:///repo/README.md"),
+                    crate::UserInput::embedded_text_resource(
+                        "file:///repo/context.txt",
+                        "important context",
+                        Some("text/plain".to_string()),
+                    ),
+                    crate::UserInput::raw_content_block(json!({
+                        "type": "image",
+                        "data": "ZmFrZQ==",
+                        "mimeType": "image/png"
+                    })),
+                ],
+                overrides: crate::TurnOverrides::default(),
+            })
+            .expect("start turn");
+
+        let params = adapter
+            .encode_params(&engine, &plan.effects[0], &TransportOptions::default())
+            .expect("prompt params");
+
+        assert_eq!(params["sessionId"], json!("sess"));
+        assert_eq!(
+            params["prompt"][0],
+            json!({"type": "text", "text": "summarize this"})
+        );
+        assert_eq!(
+            params["prompt"][1],
+            json!({
+                "type": "resource_link",
+                "name": "README",
+                "uri": "file:///repo/README.md"
+            })
+        );
+        assert_eq!(
+            params["prompt"][2],
+            json!({
+                "type": "resource",
+                "resource": {
+                    "uri": "file:///repo/context.txt",
+                    "text": "important context",
+                    "mimeType": "text/plain"
+                }
+            })
+        );
+        assert_eq!(params["prompt"][3]["type"], json!("image"));
     }
 }
 

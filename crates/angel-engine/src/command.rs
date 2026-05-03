@@ -91,14 +91,68 @@ pub enum ResumeTarget {
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct UserInput {
     pub content: String,
+    pub kind: UserInputKind,
 }
 
 impl UserInput {
     pub fn text(value: impl Into<String>) -> Self {
         Self {
             content: value.into(),
+            kind: UserInputKind::Text,
         }
     }
+
+    pub fn resource_link(name: impl Into<String>, uri: impl Into<String>) -> Self {
+        let uri = uri.into();
+        Self {
+            content: uri.clone(),
+            kind: UserInputKind::ResourceLink {
+                name: name.into(),
+                uri,
+                mime_type: None,
+                title: None,
+                description: None,
+            },
+        }
+    }
+
+    pub fn embedded_text_resource(
+        uri: impl Into<String>,
+        text: impl Into<String>,
+        mime_type: Option<String>,
+    ) -> Self {
+        Self {
+            content: text.into(),
+            kind: UserInputKind::EmbeddedTextResource {
+                uri: uri.into(),
+                mime_type,
+            },
+        }
+    }
+
+    pub fn raw_content_block(value: serde_json::Value) -> Self {
+        Self {
+            content: value.to_string(),
+            kind: UserInputKind::RawContentBlock(value.to_string()),
+        }
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum UserInputKind {
+    Text,
+    ResourceLink {
+        name: String,
+        uri: String,
+        mime_type: Option<String>,
+        title: Option<String>,
+        description: Option<String>,
+    },
+    EmbeddedTextResource {
+        uri: String,
+        mime_type: Option<String>,
+    },
+    RawContentBlock(String),
 }
 
 #[derive(Clone, Debug, Default, PartialEq, Eq)]

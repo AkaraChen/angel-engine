@@ -80,17 +80,73 @@ pub(super) fn acp_tool_status(value: &str) -> AcpToolStatus {
 }
 
 pub(super) fn update_text(update: &Value) -> String {
+    content_text(
+        update
+            .get("content")
+            .or_else(|| update.get("text"))
+            .unwrap_or(&Value::Null),
+    )
+    .unwrap_or_default()
+}
+
+pub(super) fn content_delta_from_update(update: &Value) -> ContentDelta {
     update
         .get("content")
-        .and_then(|content| {
-            content
-                .get("text")
-                .and_then(Value::as_str)
-                .or_else(|| content.as_str())
-        })
-        .or_else(|| update.get("text").and_then(Value::as_str))
-        .unwrap_or_default()
-        .to_string()
+        .map(content_delta)
+        .or_else(|| update.get("text").map(content_delta))
+        .unwrap_or_else(|| ContentDelta::Text(String::new()))
+}
+
+pub(super) fn content_delta_log_text(delta: &ContentDelta) -> String {
+    match delta {
+        ContentDelta::Text(text) => text.clone(),
+        ContentDelta::ResourceRef(uri) => format!("[resource] {uri}"),
+        ContentDelta::Structured(value) => value.clone(),
+    }
+}
+
+pub(super) fn content_text(value: &Value) -> Option<String> {
+    if let Some(text) = value.as_str() {
+        return Some(text.to_string());
+    }
+    if value.get("type").and_then(Value::as_str) == Some("text") {
+        return value
+            .get("text")
+            .and_then(Value::as_str)
+            .map(str::to_string);
+    }
+    value
+        .get("text")
+        .and_then(Value::as_str)
+        .map(str::to_string)
+}
+
+fn content_delta(value: &Value) -> ContentDelta {
+    if let Some(text) = content_text(value) {
+        return ContentDelta::Text(text);
+    }
+    match value.get("type").and_then(Value::as_str) {
+        Some("resource_link") => value
+            .get("uri")
+            .or_else(|| value.get("name"))
+            .and_then(Value::as_str)
+            .map(|uri| ContentDelta::ResourceRef(uri.to_string()))
+            .unwrap_or_else(|| ContentDelta::Structured(json_string(value))),
+        Some("resource") => value
+            .get("resource")
+            .and_then(resource_uri)
+            .map(ContentDelta::ResourceRef)
+            .unwrap_or_else(|| ContentDelta::Structured(json_string(value))),
+        _ => ContentDelta::Structured(json_string(value)),
+    }
+}
+
+fn resource_uri(value: &Value) -> Option<String> {
+    value.get("uri").and_then(Value::as_str).map(str::to_string)
+}
+
+fn json_string(value: &Value) -> String {
+    serde_json::to_string(value).unwrap_or_else(|_| value.to_string())
 }
 
 pub(super) fn acp_session_info_context(value: &Value) -> ContextPatch {

@@ -81,24 +81,26 @@ pub(super) fn decode_acp_update(
 
     match update_type {
         "agent_message_chunk" => {
-            let text = update_text(update);
+            let delta = content_delta_from_update(update);
+            let log_text = content_delta_log_text(&delta);
             Ok(TransportOutput::default()
                 .event(EngineEvent::AssistantDelta {
                     conversation_id,
                     turn_id,
-                    delta: ContentDelta::Text(text.clone()),
+                    delta,
                 })
-                .log(TransportLogKind::Output, text))
+                .log(TransportLogKind::Output, log_text))
         }
         "agent_thought_chunk" => {
-            let text = update_text(update);
+            let delta = content_delta_from_update(update);
+            let log_text = content_delta_log_text(&delta);
             Ok(TransportOutput::default()
                 .event(EngineEvent::ReasoningDelta {
                     conversation_id,
                     turn_id,
-                    delta: ContentDelta::Text(text.clone()),
+                    delta,
                 })
-                .log(TransportLogKind::Output, format!("[reasoning] {text}")))
+                .log(TransportLogKind::Output, format!("[reasoning] {log_text}")))
         }
         "tool_call" => {
             let id = update
@@ -373,6 +375,81 @@ mod tests {
         ));
     }
 
+    #[test]
+    fn agent_message_chunk_maps_resource_link_to_resource_ref() {
+        let adapter = AcpAdapter::standard();
+        let mut engine = AngelEngine::new(crate::ProtocolFlavor::Acp, adapter.capabilities());
+        let conversation_id = ready_conversation(&adapter, &mut engine);
+        let turn_id = start_ready_turn(&mut engine, &conversation_id);
+
+        let output = adapter
+            .decode_notification(
+                &engine,
+                "session/update",
+                &json!({
+                    "sessionId": "sess",
+                    "update": {
+                        "sessionUpdate": "agent_message_chunk",
+                        "content": {
+                            "type": "resource_link",
+                            "name": "README",
+                            "uri": "file:///repo/README.md"
+                        }
+                    }
+                }),
+            )
+            .expect("agent message update");
+
+        assert!(matches!(
+            output.events.as_slice(),
+            [EngineEvent::AssistantDelta {
+                conversation_id: id,
+                turn_id: actual_turn_id,
+                delta: ContentDelta::ResourceRef(uri),
+            }] if id == &conversation_id
+                && actual_turn_id == &turn_id
+                && uri == "file:///repo/README.md"
+        ));
+    }
+
+    #[test]
+    fn agent_thought_chunk_preserves_unknown_content_as_structured_delta() {
+        let adapter = AcpAdapter::standard();
+        let mut engine = AngelEngine::new(crate::ProtocolFlavor::Acp, adapter.capabilities());
+        let conversation_id = ready_conversation(&adapter, &mut engine);
+        let turn_id = start_ready_turn(&mut engine, &conversation_id);
+
+        let output = adapter
+            .decode_notification(
+                &engine,
+                "session/update",
+                &json!({
+                    "sessionId": "sess",
+                    "update": {
+                        "sessionUpdate": "agent_thought_chunk",
+                        "content": {
+                            "type": "image",
+                            "data": "ZmFrZQ==",
+                            "mimeType": "image/png"
+                        }
+                    }
+                }),
+            )
+            .expect("agent thought update");
+
+        assert!(matches!(
+            output.events.as_slice(),
+            [EngineEvent::ReasoningDelta {
+                conversation_id: id,
+                turn_id: actual_turn_id,
+                delta: ContentDelta::Structured(value),
+            }] if id == &conversation_id
+                && actual_turn_id == &turn_id
+                && value.contains("\"type\":\"image\"")
+                && value.contains("\"mimeType\":\"image/png\"")
+        ));
+    }
+
     fn ready_conversation(adapter: &AcpAdapter, engine: &mut AngelEngine) -> ConversationId {
         let conversation_id = ConversationId::new("conv");
         engine
@@ -392,5 +469,18 @@ mod tests {
             })
             .expect("conversation ready");
         conversation_id
+    }
+
+    fn start_ready_turn(engine: &mut AngelEngine, conversation_id: &ConversationId) -> TurnId {
+        let turn_id = TurnId::new("turn");
+        engine
+            .apply_event(EngineEvent::TurnStarted {
+                conversation_id: conversation_id.clone(),
+                turn_id: turn_id.clone(),
+                remote: crate::RemoteTurnId::Local("remote-turn".to_string()),
+                input: Vec::new(),
+            })
+            .expect("turn started");
+        turn_id
     }
 }
