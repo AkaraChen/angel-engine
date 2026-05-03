@@ -1,6 +1,21 @@
 {
   "version": 1,
   "skills": {
+    "add-function-examples": {
+      "source": "vercel/ai",
+      "sourceType": "github",
+      "computedHash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "add-provider-package": {
+      "source": "vercel/ai",
+      "sourceType": "github",
+      "computedHash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "adr-skill": {
+      "source": "vercel/ai",
+      "sourceType": "github",
+      "computedHash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
     "agent-browser": {
       "source": "vercel-labs/agent-browser",
       "sourceType": "github",
@@ -11,8 +26,33 @@
       "sourceType": "github",
       "computedHash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
     },
+    "ai-sdk": {
+      "source": "vercel/ai",
+      "sourceType": "github",
+      "computedHash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "assistant-ui": {
+      "source": "assistant-ui/skills",
+      "sourceType": "github",
+      "computedHash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "capture-api-response-test-fixture": {
+      "source": "vercel/ai",
+      "sourceType": "github",
+      "computedHash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "cloud": {
+      "source": "assistant-ui/skills",
+      "sourceType": "github",
+      "computedHash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
     "core": {
       "source": "vercel-labs/agent-browser",
+      "sourceType": "github",
+      "computedHash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "develop-ai-functions-example": {
+      "source": "vercel/ai",
       "sourceType": "github",
       "computedHash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
     },
@@ -26,8 +66,63 @@
       "sourceType": "github",
       "computedHash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
     },
+    "island-rescue": {
+      "source": "vercel/ai",
+      "sourceType": "github",
+      "computedHash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "list-npm-package-content": {
+      "source": "vercel/ai",
+      "sourceType": "github",
+      "computedHash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "major-version-mode": {
+      "source": "vercel/ai",
+      "sourceType": "github",
+      "computedHash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "primitives": {
+      "source": "assistant-ui/skills",
+      "sourceType": "github",
+      "computedHash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "runtime": {
+      "source": "assistant-ui/skills",
+      "sourceType": "github",
+      "computedHash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "setup": {
+      "source": "assistant-ui/skills",
+      "sourceType": "github",
+      "computedHash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
     "slack": {
       "source": "vercel-labs/agent-browser",
+      "sourceType": "github",
+      "computedHash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "streaming": {
+      "source": "assistant-ui/skills",
+      "sourceType": "github",
+      "computedHash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "thread-list": {
+      "source": "assistant-ui/skills",
+      "sourceType": "github",
+      "computedHash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "tools": {
+      "source": "assistant-ui/skills",
+      "sourceType": "github",
+      "computedHash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "update": {
+      "source": "assistant-ui/skills",
+      "sourceType": "github",
+      "computedHash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "update-provider-models": {
+      "source": "vercel/ai",
       "sourceType": "github",
       "computedHash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
     },
