@@ -47,7 +47,9 @@ pub enum ClientProtocol {
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ClientAuthOptions {
+    #[serde(default = "default_need_auth")]
     pub need_auth: bool,
+    #[serde(default = "default_auto_authenticate")]
     pub auto_authenticate: bool,
 }
 
@@ -208,4 +210,31 @@ impl StartConversationRequest {
 
 fn default_experimental_api() -> bool {
     true
+}
+
+fn default_need_auth() -> bool {
+    true
+}
+
+fn default_auto_authenticate() -> bool {
+    true
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn auth_options_apply_field_defaults_when_partially_deserialized() {
+        let options: ClientOptions = serde_json::from_value(serde_json::json!({
+            "command": "opencode",
+            "auth": {
+                "needAuth": false
+            }
+        }))
+        .unwrap();
+
+        assert!(!options.auth.need_auth);
+        assert!(options.auth.auto_authenticate);
+    }
 }

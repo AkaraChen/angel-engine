@@ -102,5 +102,13 @@ let conversation_id = start.conversation_id.unwrap();
 let turn = client.send_text(&conversation_id, "Explain this workspace")?;
 ```
 
-For `napi`, prefer `Client` over `AngelClient`: JavaScript can own the process
-and pass JSON-RPC lines through `receive_json_line`.
+The sibling `crates/angel-engine-client-napi` package wraps this API for
+Node.js. It keeps JavaScript in charge of process IO and passes JSON-RPC
+messages through `receiveJson`/`receiveJsonLine`.
+
+```sh
+cd crates/angel-engine-client-napi
+bun install
+bun run build:debug
+bun run demo:codex
+```

@@ -1,0 +1,49 @@
+{
+  "name": "@angel-engine/client",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Node.js N-API binding for angel-engine-client",
+  "main": "index.js",
+  "types": "index.d.ts",
+  "packageManager": "bun@1.3.6",
+  "files": [
+    "README.md",
+    "index.js",
+    "index.d.ts",
+    "*.node",
+    "examples"
+  ],
+  "napi": {
+    "binaryName": "angel_engine_client",
+    "targets": [
+      "x86_64-apple-darwin",
+      "aarch64-apple-darwin",
+      "x86_64-unknown-linux-gnu",
+      "x86_64-unknown-linux-musl",
+      "aarch64-unknown-linux-gnu",
+      "aarch64-unknown-linux-musl",
+      "x86_64-pc-windows-msvc",
+      "aarch64-pc-windows-msvc"
+    ]
+  },
+  "scripts": {
+    "build": "napi build --platform --release",
+    "build:debug": "napi build --platform",
+    "demo": "node examples/angel-cli.mjs",
+    "demo:codex": "node examples/angel-cli.mjs codex",
+    "demo:kimi": "node examples/angel-cli.mjs kimi",
+    "demo:opencode": "node examples/angel-cli.mjs opencode"
+  },
+  "devDependencies": {
+    "@napi-rs/cli": "^3.2.0"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "keywords": [
+    "angel-engine",
+    "napi-rs",
+    "node-addon"
+  ],
+  "license": "MIT"
+}
