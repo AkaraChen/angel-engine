@@ -38,6 +38,9 @@ for message in init.update.outgoing {
 
 // Feed runtime messages back in:
 let update = client.receive_json_line(runtime_line)?;
+for delta in update.stream_deltas() {
+    // Render assistant/reasoning/plan/action output incrementally.
+}
 
 let start = client.start_thread(StartConversationRequest::new().cwd("/repo"))?;
 let thread_id = start.conversation_id.unwrap();
@@ -102,9 +105,11 @@ let conversation_id = start.conversation_id.unwrap();
 let turn = client.send_text(&conversation_id, "Explain this workspace")?;
 ```
 
-The sibling `crates/angel-engine-client-napi` package wraps this API for
-Node.js. It keeps JavaScript in charge of process IO and passes JSON-RPC
-messages through `receiveJson`/`receiveJsonLine`.
+The sibling `crates/angel-engine-client-napi` package wraps this process-owning
+API for Node.js. Use its `AngelClient` class when JavaScript should receive
+already-decoded `ClientUpdate` objects through `nextUpdate()`, including
+`streamDeltas`. The lower-level `AngelEngineClient` class remains available for
+hosts that intentionally own runtime process IO themselves.
 
 ```sh
 cd crates/angel-engine-client-napi

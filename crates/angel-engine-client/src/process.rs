@@ -9,7 +9,7 @@ use crate::core::{AngelClientCore, process_log};
 use crate::error::{ClientError, ClientResult};
 use crate::event::{ClientLogKind, ClientUpdate};
 use crate::snapshot::{RuntimeSnapshot, TurnSnapshot};
-use crate::{ClientCommandResult, ElicitationSnapshot, ThreadEvent};
+use crate::{ClientCommandResult, ElicitationSnapshot, ResumeConversationRequest, ThreadEvent};
 
 pub struct AngelClient {
     child: Child,
@@ -90,6 +90,22 @@ impl AngelClient {
         request: StartConversationRequest,
     ) -> ClientResult<ClientCommandResult> {
         let mut result = self.core.start_conversation(request)?;
+        let sent = self.flush_update(&result.update)?;
+        result.update.merge(sent);
+        if let Some(conversation_id) = result.conversation_id.clone() {
+            result
+                .update
+                .merge(self.wait_for_conversation_idle(&conversation_id)?);
+            result.update.merge(self.drain(Duration::from_millis(150))?);
+        }
+        Ok(result)
+    }
+
+    pub fn resume_conversation(
+        &mut self,
+        request: ResumeConversationRequest,
+    ) -> ClientResult<ClientCommandResult> {
+        let mut result = self.core.resume_conversation(request)?;
         let sent = self.flush_update(&result.update)?;
         result.update.merge(sent);
         if let Some(conversation_id) = result.conversation_id.clone() {
@@ -236,6 +252,11 @@ impl AngelClient {
         self.core.open_elicitations(conversation_id)
     }
 
+    pub fn close(&mut self) {
+        let _ = self.child.kill();
+        let _ = self.child.wait();
+    }
+
     fn focused_turn_id(&self, conversation_id: &str) -> Option<String> {
         self.snapshot()
             .conversations
@@ -311,8 +332,7 @@ impl AngelClient {
 
 impl Drop for AngelClient {
     fn drop(&mut self) {
-        let _ = self.child.kill();
-        let _ = self.child.wait();
+        self.close();
     }
 }
 

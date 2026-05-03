@@ -26,7 +26,8 @@ pub use core::{
 };
 pub use error::{ClientError, ClientResult};
 pub use event::{
-    ClientEvent, ClientLog, ClientLogKind, ClientUpdate, JsonRpcOutbound, RuntimeAuthMethod,
+    ClientEvent, ClientLog, ClientLogKind, ClientStreamDelta, ClientUpdate, JsonRpcOutbound,
+    RuntimeAuthMethod,
 };
 pub use process::AngelClient;
 pub use snapshot::{

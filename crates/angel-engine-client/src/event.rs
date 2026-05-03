@@ -5,8 +5,8 @@ use serde::{Deserialize, Serialize};
 
 use crate::error::ClientResult;
 use crate::snapshot::{
-    ActionSnapshot, ContentChunk, ConversationSnapshot, ElicitationSnapshot, SessionUsageSnapshot,
-    conversation_snapshot, runtime_auth_methods,
+    ActionOutputSnapshot, ActionSnapshot, ContentChunk, ConversationSnapshot, ElicitationSnapshot,
+    SessionUsageSnapshot, conversation_snapshot, runtime_auth_methods,
 };
 
 #[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
@@ -17,6 +17,8 @@ pub struct ClientUpdate {
     #[serde(default)]
     pub events: Vec<ClientEvent>,
     #[serde(default)]
+    pub stream_deltas: Vec<ClientStreamDelta>,
+    #[serde(default)]
     pub logs: Vec<ClientLog>,
     #[serde(default)]
     pub completed_request_ids: Vec<String>,
@@ -26,6 +28,7 @@ impl ClientUpdate {
     pub fn is_empty(&self) -> bool {
         self.outgoing.is_empty()
             && self.events.is_empty()
+            && self.stream_deltas.is_empty()
             && self.logs.is_empty()
             && self.completed_request_ids.is_empty()
     }
@@ -33,9 +36,14 @@ impl ClientUpdate {
     pub fn merge(&mut self, mut other: Self) {
         self.outgoing.append(&mut other.outgoing);
         self.events.append(&mut other.events);
+        self.stream_deltas.append(&mut other.stream_deltas);
         self.logs.append(&mut other.logs);
         self.completed_request_ids
             .append(&mut other.completed_request_ids);
+    }
+
+    pub fn stream_deltas(&self) -> &[ClientStreamDelta] {
+        &self.stream_deltas
     }
 }
 
@@ -92,7 +100,11 @@ pub enum ClientLogKind {
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
-#[serde(tag = "type", rename_all = "camelCase")]
+#[serde(
+    tag = "type",
+    rename_all = "camelCase",
+    rename_all_fields = "camelCase"
+)]
 pub enum ClientEvent {
     Log {
         log: ClientLog,
@@ -178,6 +190,36 @@ pub enum ClientEvent {
     },
     HistoryUpdated {
         conversation_id: String,
+    },
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(
+    tag = "type",
+    rename_all = "camelCase",
+    rename_all_fields = "camelCase"
+)]
+pub enum ClientStreamDelta {
+    AssistantDelta {
+        conversation_id: String,
+        turn_id: String,
+        content: ContentChunk,
+    },
+    ReasoningDelta {
+        conversation_id: String,
+        turn_id: String,
+        content: ContentChunk,
+    },
+    PlanDelta {
+        conversation_id: String,
+        turn_id: String,
+        content: ContentChunk,
+    },
+    ActionOutputDelta {
+        conversation_id: String,
+        turn_id: String,
+        action_id: String,
+        content: ActionOutputSnapshot,
     },
 }
 
@@ -390,6 +432,78 @@ pub(crate) fn events_from_engine_event(
         } => vec![ClientEvent::HistoryUpdated {
             conversation_id: conversation_id.to_string(),
         }],
+    }
+}
+
+pub(crate) fn stream_deltas_from_engine_event(
+    engine: &angel_engine::AngelEngine,
+    event: &EngineEvent,
+) -> Vec<ClientStreamDelta> {
+    match event {
+        EngineEvent::AssistantDelta {
+            conversation_id,
+            turn_id,
+            delta,
+        } => vec![ClientStreamDelta::AssistantDelta {
+            conversation_id: conversation_id.to_string(),
+            turn_id: turn_id.to_string(),
+            content: content_chunk(delta),
+        }],
+        EngineEvent::ReasoningDelta {
+            conversation_id,
+            turn_id,
+            delta,
+        } => vec![ClientStreamDelta::ReasoningDelta {
+            conversation_id: conversation_id.to_string(),
+            turn_id: turn_id.to_string(),
+            content: content_chunk(delta),
+        }],
+        EngineEvent::PlanDelta {
+            conversation_id,
+            turn_id,
+            delta,
+        } => vec![ClientStreamDelta::PlanDelta {
+            conversation_id: conversation_id.to_string(),
+            turn_id: turn_id.to_string(),
+            content: content_chunk(delta),
+        }],
+        EngineEvent::ActionObserved {
+            conversation_id,
+            action,
+        } => action
+            .output
+            .chunks
+            .iter()
+            .map(|delta| ClientStreamDelta::ActionOutputDelta {
+                conversation_id: conversation_id.to_string(),
+                turn_id: action.turn_id.to_string(),
+                action_id: action.id.to_string(),
+                content: ActionOutputSnapshot::from(delta),
+            })
+            .collect(),
+        EngineEvent::ActionUpdated {
+            conversation_id,
+            action_id,
+            patch,
+        } => {
+            let Some(delta) = patch.output_delta.as_ref() else {
+                return Vec::new();
+            };
+            engine
+                .conversations
+                .get(conversation_id)
+                .and_then(|conversation| conversation.actions.get(action_id))
+                .map(|action| {
+                    vec![ClientStreamDelta::ActionOutputDelta {
+                        conversation_id: conversation_id.to_string(),
+                        turn_id: action.turn_id.to_string(),
+                        action_id: action_id.to_string(),
+                        content: ActionOutputSnapshot::from(delta),
+                    }]
+                })
+                .unwrap_or_default()
+        }
+        _ => Vec::new(),
     }
 }
 

@@ -1,6 +1,6 @@
 use angel_engine_client::{
-    Client, ClientBuilder, ClientEvent, ClientOptions, RuntimeSnapshot, StartConversationRequest,
-    ThreadEvent,
+    Client, ClientBuilder, ClientEvent, ClientOptions, ClientStreamDelta, RuntimeSnapshot,
+    StartConversationRequest, ThreadEvent,
 };
 use serde_json::json;
 
@@ -162,6 +162,27 @@ fn thread_send_event_streams_turn_deltas_and_terminal_state() {
                     && content.text == "The file defines a client facade."
         )
     }));
+    assert!(delta.stream_deltas.iter().any(|delta| {
+        matches!(
+            delta,
+            ClientStreamDelta::AssistantDelta { conversation_id: id, turn_id: tid, content }
+                if id == &conversation_id
+                    && tid == &turn_id
+                    && content.text == "The file defines a client facade."
+        )
+    }));
+    let delta_value = serde_json::to_value(&delta).expect("serialize update");
+    assert_eq!(
+        delta_value["streamDeltas"][0]["type"],
+        json!("assistantDelta")
+    );
+    assert_eq!(
+        delta_value["streamDeltas"][0]["conversationId"],
+        json!(&conversation_id)
+    );
+    assert!(delta_value["streamDeltas"][0]["conversation_id"].is_null());
+    assert_eq!(delta_value["events"][1]["turnId"], json!(&turn_id));
+    assert!(delta_value["events"][1]["turn_id"].is_null());
 
     let terminal = client
         .receive_json_value(response(
@@ -231,6 +252,15 @@ fn codex_completed_reasoning_item_surfaces_reasoning_updates() {
         matches!(
             event,
             ClientEvent::ReasoningDelta { conversation_id: id, turn_id: tid, content }
+                if id == &conversation_id
+                    && tid == &turn_id
+                    && content.text == "Checking adapter notifications."
+        )
+    }));
+    assert!(update.stream_deltas.iter().any(|delta| {
+        matches!(
+            delta,
+            ClientStreamDelta::ReasoningDelta { conversation_id: id, turn_id: tid, content }
                 if id == &conversation_id
                     && tid == &turn_id
                     && content.text == "Checking adapter notifications."

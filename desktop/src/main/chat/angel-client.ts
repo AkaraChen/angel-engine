@@ -1,4 +1,3 @@
-import { spawn, type ChildProcessWithoutNullStreams } from 'node:child_process';
 import fs from 'node:fs';
 import { createRequire } from 'node:module';
 import path from 'node:path';
@@ -20,15 +19,10 @@ import {
   touchChat,
 } from './repository';
 
-type RuntimeLine = {
-  kind: 'stderr' | 'stdout';
-  text: string;
-};
-
 type ClientUpdate = {
   events?: ClientEvent[];
   logs?: ClientLog[];
-  outgoing?: Array<{ line: string }>;
+  streamDeltas?: EngineStreamDelta[];
 };
 
 type ClientCommandResult = {
@@ -73,21 +67,29 @@ type ClientEvent = {
   [key: string]: unknown;
 };
 
+type EngineStreamDelta = {
+  actionId?: string;
+  content?: { kind?: string; text?: string };
+  conversationId?: string;
+  turnId?: string;
+  type: 'actionOutputDelta' | 'assistantDelta' | 'planDelta' | 'reasoningDelta';
+};
+
 type ClientLog = {
   kind: string;
   message: string;
 };
 
-type AngelEngineClient = {
-  authenticate(methodId: string): ClientCommandResult;
-  initialize(): ClientCommandResult;
+type AngelClient = {
+  close(): void;
+  initialize(): Promise<ClientUpdate>;
+  nextUpdate(timeoutMs?: number): Promise<ClientUpdate | null>;
   openElicitations(conversationId: string): unknown[];
-  receiveJson(value: unknown): ClientCommandResult;
   resumeThread(request: {
     additionalDirectories?: string[];
     hydrate?: boolean;
     remoteId: string;
-  }): ClientCommandResult;
+  }): Promise<ClientCommandResult>;
   sendThreadEvent(conversationId: string, event: unknown): ClientCommandResult;
   sendText(conversationId: string, text: string): ClientCommandResult;
   snapshot(): {
@@ -98,7 +100,7 @@ type AngelEngineClient = {
       status?: string;
     };
   };
-  startThread(request?: { cwd?: string }): ClientCommandResult;
+  startThread(request?: { cwd?: string }): Promise<ClientCommandResult>;
   threadState(conversationId: string): ConversationSnapshot | null;
   threadIsIdle(conversationId: string): boolean;
   turnIsTerminal(conversationId: string, turnId: string): boolean;
@@ -108,7 +110,7 @@ type AngelEngineClient = {
   } | null;
 };
 
-type AngelEngineClientConstructor = new (options: unknown) => AngelEngineClient;
+type AngelClientConstructor = new (options: unknown) => AngelClient;
 type ChatStreamObserver = (event: ChatStreamDelta) => void;
 type RuntimeOptions = Record<string, unknown> & {
   args: string[];
@@ -305,19 +307,14 @@ function messagesFromHistoryReplay(
 }
 
 class AngelChatSession {
-  private readonly client: AngelEngineClient;
-  private readonly process: RuntimeProcess;
+  private readonly client: AngelClient;
   private conversationId: string | undefined;
   private startPromise: Promise<void> | undefined;
   private operationQueue: Promise<void> = Promise.resolve();
 
   constructor(private readonly options: RuntimeOptions) {
-    const Client = loadAngelEngineClient();
+    const Client = loadAngelClient();
     this.client = new Client(options);
-    this.process = new RuntimeProcess(
-      assertStringOption(options.command, 'runtime command'),
-      Array.isArray(options.args) ? options.args.map(String) : []
-    );
   }
 
   async send(
@@ -355,7 +352,7 @@ class AngelChatSession {
   }
 
   close() {
-    this.process.close();
+    this.client.close();
   }
 
   private async sendNow(
@@ -393,7 +390,8 @@ class AngelChatSession {
       if (this.client.openElicitations(conversationId).length > 0) {
         throw new Error('The runtime requested user input or approval, which is not wired yet.');
       }
-      await this.processNextLine(undefined, collector);
+      await this.processNextUpdate(50, collector);
+      await yieldToEventLoop();
     }
 
     const turn = this.client.turnState(conversationId, result.turnId);
@@ -442,17 +440,16 @@ class AngelChatSession {
   }
 
   private async start(chat: Chat, allowStart: boolean, cwdOverride?: string) {
-    await this.handleUpdate(this.client.initialize().update);
-    await this.waitForRuntime();
+    await this.handleUpdate(await this.client.initialize());
 
     const result = chat.remoteThreadId
-      ? this.client.resumeThread({
+      ? await this.client.resumeThread({
           additionalDirectories: [],
           hydrate: true,
           remoteId: chat.remoteThreadId,
         })
       : allowStart
-        ? this.client.startThread({
+        ? await this.client.startThread({
             cwd: cwdOverride || chat.cwd || process.cwd(),
           })
         : undefined;
@@ -463,83 +460,30 @@ class AngelChatSession {
 
     this.conversationId = result.conversationId;
     await this.handleUpdate(result.update);
-
-    const conversationId = this.requireConversationId();
-    while (!this.client.threadIsIdle(conversationId)) {
-      await this.processNextLine();
-    }
-    await this.drainStartupNotifications();
   }
 
-  private async waitForRuntime() {
-    let authSent = false;
-
-    let runtimeReady = false;
-    while (!runtimeReady) {
-      const runtime = this.client.snapshot().runtime;
-      if (runtime?.status === 'available') {
-        runtimeReady = true;
-        continue;
-      }
-
-      if (runtime?.status === 'faulted') {
-        throw new Error(`Runtime faulted (${runtime.code}): ${runtime.message}`);
-      }
-
-      if (runtime?.status === 'awaitingAuth') {
-        const method = runtime.methods?.[0];
-        const auth = this.options.auth as { autoAuthenticate?: boolean } | undefined;
-        if (!auth?.autoAuthenticate || authSent || !method) {
-          const labels = runtime.methods?.map((item) => item.label).join(', ');
-          throw new Error(`Runtime requires authentication: ${labels || 'unknown method'}`);
-        }
-        authSent = true;
-        await this.handleUpdate(this.client.authenticate(method.id).update);
-        continue;
-      }
-
-      await this.processNextLine();
-    }
-  }
-
-  private async drainStartupNotifications() {
-    let timeout = 500;
-    while (await this.processNextLine(timeout)) {
-      timeout = 50;
-    }
-  }
-
-  private async processNextLine(timeout?: number, collector?: TurnCollector) {
-    const line = await this.process.nextLine(timeout);
-    if (!line) return false;
-
-    if (line.kind === 'stderr') {
-      return true;
-    }
-
-    let value: unknown;
-    try {
-      value = JSON.parse(line.text);
-    } catch {
-      return true;
-    }
-
-    const result = this.client.receiveJson(value);
-    await this.handleUpdate(result.update, collector);
+  private async processNextUpdate(timeout?: number, collector?: TurnCollector) {
+    const update = await this.client.nextUpdate(timeout);
+    if (!update) return false;
+    await this.handleUpdate(update, collector);
     return true;
   }
 
   private async handleUpdate(update?: ClientUpdate, collector?: TurnCollector) {
+    const streamDeltas = update?.streamDeltas ?? [];
+    for (const delta of streamDeltas) {
+      collector?.acceptDelta(delta);
+    }
+
     for (const event of update?.events ?? []) {
       if (event.type === 'runtimeFaulted') {
         throw new Error(`Runtime faulted (${event.code}): ${event.message}`);
       }
-      collector?.accept(event);
+      if (streamDeltas.length === 0) {
+        collector?.acceptEvent(event);
+      }
     }
 
-    for (const message of update?.outgoing ?? []) {
-      this.process.writeLine(message.line);
-    }
   }
 
   private requireConversationId() {
@@ -564,7 +508,15 @@ class TurnCollector {
     private readonly onEvent: ChatStreamObserver | undefined
   ) {}
 
-  accept(event: ClientEvent) {
+  acceptDelta(delta: EngineStreamDelta) {
+    this.accept(delta);
+  }
+
+  acceptEvent(event: ClientEvent) {
+    this.accept(event);
+  }
+
+  private accept(event: ClientEvent | EngineStreamDelta) {
     if (event.turnId && this.turnId && event.turnId !== this.turnId) return;
 
     const text = event.content?.text;
@@ -591,110 +543,6 @@ class TurnCollector {
       });
     }
   }
-}
-
-class RuntimeProcess {
-  private readonly child: ChildProcessWithoutNullStreams;
-  private readonly queue = new AsyncLineQueue<RuntimeLine>();
-
-  constructor(command: string, args: string[]) {
-    this.child = spawn(command, args, {
-      stdio: ['pipe', 'pipe', 'pipe'],
-    });
-    this.child.on('error', (error) => this.queue.fail(error));
-    this.child.on('exit', (code, signal) => {
-      this.queue.fail(new Error(`Runtime process exited (${signal || code})`));
-    });
-    attachLines(this.child.stdout, 'stdout', this.queue);
-    attachLines(this.child.stderr, 'stderr', this.queue);
-  }
-
-  close() {
-    this.child.kill();
-  }
-
-  nextLine(timeout?: number) {
-    return this.queue.next(timeout);
-  }
-
-  writeLine(line: string) {
-    this.child.stdin.write(`${line}\n`);
-  }
-}
-
-class AsyncLineQueue<T> {
-  private error: Error | undefined;
-  private readonly items: T[] = [];
-  private readonly waiters: Array<{
-    reject: (error: Error) => void;
-    resolve: (value: T | null) => void;
-    timer?: NodeJS.Timeout;
-  }> = [];
-
-  fail(error: Error) {
-    this.error = error;
-    while (this.waiters.length > 0) {
-      const waiter = this.waiters.shift();
-      if (!waiter) continue;
-      if (waiter.timer) clearTimeout(waiter.timer);
-      waiter.reject(error);
-    }
-  }
-
-  next(timeout?: number) {
-    if (this.items.length > 0) {
-      return Promise.resolve(this.items.shift() ?? null);
-    }
-    if (this.error) {
-      return Promise.reject(this.error);
-    }
-
-    return new Promise<T | null>((resolve, reject) => {
-      const waiter = { reject, resolve, timer: undefined as NodeJS.Timeout | undefined };
-      if (timeout !== undefined) {
-        waiter.timer = setTimeout(() => {
-          const index = this.waiters.indexOf(waiter);
-          if (index >= 0) this.waiters.splice(index, 1);
-          resolve(null);
-        }, timeout);
-      }
-      this.waiters.push(waiter);
-    });
-  }
-
-  push(item: T) {
-    const waiter = this.waiters.shift();
-    if (waiter) {
-      if (waiter.timer) clearTimeout(waiter.timer);
-      waiter.resolve(item);
-    } else {
-      this.items.push(item);
-    }
-  }
-}
-
-function attachLines(
-  stream: NodeJS.ReadableStream,
-  kind: RuntimeLine['kind'],
-  queue: AsyncLineQueue<RuntimeLine>
-) {
-  let buffer = '';
-  stream.setEncoding('utf8');
-  stream.on('data', (chunk: string) => {
-    buffer += chunk;
-    while (buffer.includes('\n')) {
-      const index = buffer.indexOf('\n');
-      const text = buffer.slice(0, index).replace(/\r$/, '');
-      buffer = buffer.slice(index + 1);
-      queue.push({ kind, text });
-    }
-  });
-  stream.on('end', () => {
-    if (buffer) {
-      queue.push({ kind, text: buffer });
-      buffer = '';
-    }
-  });
 }
 
 function createRuntimeOptions(runtimeName = defaultRuntimeName()): RuntimeOptions {
@@ -746,11 +594,11 @@ function desktopIdentity() {
   };
 }
 
-function loadAngelEngineClient() {
+function loadAngelClient() {
   const modulePath = resolveClientModulePath();
   return (nodeRequire(modulePath) as {
-    AngelEngineClient: AngelEngineClientConstructor;
-  }).AngelEngineClient;
+    AngelClient: AngelClientConstructor;
+  }).AngelClient;
 }
 
 function resolveClientModulePath() {
@@ -772,15 +620,12 @@ function resolveClientModulePath() {
   return modulePath;
 }
 
-function assertStringOption(value: unknown, label: string) {
-  if (typeof value !== 'string' || !value) {
-    throw new Error(`Missing ${label}.`);
-  }
-  return value;
-}
-
 function throwIfAborted(signal?: AbortSignal) {
   if (signal?.aborted) {
     throw new Error('Chat request cancelled.');
   }
+}
+
+function yieldToEventLoop() {
+  return new Promise<void>((resolve) => setImmediate(resolve));
 }

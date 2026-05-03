@@ -4,13 +4,13 @@ use std::time::Duration;
 
 use angel_engine_client::{
     AvailableCommandSnapshot, Client, ClientAnswer, ClientBuilder, ClientEvent, ClientLog,
-    ClientOptions, ClientUpdate, ConversationSnapshot, ElicitationResponse, ElicitationSnapshot,
-    QuestionSnapshot, RuntimeSnapshot, SessionConfigOptionSnapshot, StartConversationRequest,
-    ThreadEvent,
+    ClientOptions, ClientStreamDelta, ClientUpdate, ConversationSnapshot, ElicitationResponse,
+    ElicitationSnapshot, QuestionSnapshot, RuntimeSnapshot, SessionConfigOptionSnapshot,
+    StartConversationRequest, ThreadEvent,
 };
 use test_cli::{
     AppLine, ApprovalChoice, CliAnswer, CliCommandInfo, CliQuestion, CliQuestionOption,
-    InlinePrinter, RuntimeProcess, TaggedLog, TaggedLogKind, is_quit_command,
+    InlinePrinter, InlineStreamKind, RuntimeProcess, TaggedLog, TaggedLogKind, is_quit_command,
     print_available_commands, print_command_summary, prompt_answers, prompt_approval,
     read_prompt_line,
 };
@@ -280,7 +280,15 @@ impl MultiRuntimeCli {
     }
 
     fn handle_update(&mut self, update: ClientUpdate) -> Result<(), Box<dyn Error>> {
+        for delta in &update.stream_deltas {
+            self.print_stream_delta(delta)?;
+        }
         for log in &update.logs {
+            if log.kind == angel_engine_client::ClientLogKind::Output
+                && !update.stream_deltas.is_empty()
+            {
+                continue;
+            }
             self.printer.print_log(&client_log(log))?;
         }
         for event in &update.events {
@@ -292,6 +300,24 @@ impl MultiRuntimeCli {
         for message in &update.outgoing {
             self.printer.before_tagged_output()?;
             self.process.write_line(&message.line)?;
+        }
+        Ok(())
+    }
+
+    fn print_stream_delta(&mut self, delta: &ClientStreamDelta) -> Result<(), Box<dyn Error>> {
+        match delta {
+            ClientStreamDelta::AssistantDelta { content, .. } => self
+                .printer
+                .print_inline_text(InlineStreamKind::Assistant, &content.text)?,
+            ClientStreamDelta::ActionOutputDelta { content, .. } => self
+                .printer
+                .print_inline_text(InlineStreamKind::Assistant, &content.text)?,
+            ClientStreamDelta::ReasoningDelta { content, .. } => self
+                .printer
+                .print_inline_text(InlineStreamKind::Reasoning, &content.text)?,
+            ClientStreamDelta::PlanDelta { content, .. } => self
+                .printer
+                .print_inline_text(InlineStreamKind::Reasoning, &content.text)?,
         }
         Ok(())
     }

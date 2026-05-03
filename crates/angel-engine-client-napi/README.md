@@ -20,5 +20,11 @@ bun run demo:codex
 bun run demo:opencode
 ```
 
-The demo spawns the selected runtime process from Node.js and uses the native
-binding as the protocol/state client.
+The demo uses the native `AngelClient` binding to spawn the selected runtime
+process, write protocol messages, read runtime output, and return decoded
+updates to JavaScript.
+
+`initialize`, `startThread`, and `nextUpdate` return update objects. Use
+`update.streamDeltas` for incremental assistant, reasoning, plan, and action
+output instead of parsing output logs or calling the lower-level `receiveJson`
+path.

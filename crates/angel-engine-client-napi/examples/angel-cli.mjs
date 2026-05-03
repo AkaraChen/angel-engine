@@ -1,34 +1,27 @@
 #!/usr/bin/env node
 
-import { spawn } from 'node:child_process'
 import { createRequire } from 'node:module'
 import process from 'node:process'
 import readline from 'node:readline'
 
 const require = createRequire(import.meta.url)
-const { AngelEngineClient } = require('../index.js')
+const { AngelClient } = require('../index.js')
 
 class NodeAngelCli {
   constructor(runtime) {
     this.runtime = runtime
-    this.process = new RuntimeProcess(runtime.options.command, runtime.options.args)
-    this.client = new AngelEngineClient(runtime.options)
+    this.client = new AngelClient(runtime.options)
     this.conversationId = null
-    this.authSent = false
     this.inlineOutput = null
     this.input = null
   }
 
   async start() {
-    const init = this.client.initialize()
-    await this.handleUpdate(init.update)
-    await this.waitForRuntime()
+    await this.handleUpdate(await this.client.initialize())
 
-    const start = this.client.startThread({ cwd: process.cwd() })
+    const start = await this.client.startThread({ cwd: process.cwd() })
     this.conversationId = required(start.conversationId, 'startThread did not return a conversation id')
     await this.handleUpdate(start.update)
-    await this.waitForThreadIdle(this.conversationId)
-    await this.drainStartupNotifications()
     this.printBanner()
   }
 
@@ -135,7 +128,7 @@ class NodeAngelCli {
       if (await this.resolveOpenElicitation()) {
         continue
       }
-      await this.processNextLine()
+      await this.processNextUpdate()
     }
     console.log()
   }
@@ -145,75 +138,31 @@ class NodeAngelCli {
   }
 
   async sendAndFlush(command) {
-    const result = command()
+    const result = await command()
     await this.handleUpdate(result.update)
     return result
   }
 
-  async waitForRuntime() {
-    while (true) {
-      const runtime = this.client.snapshot().runtime
-      if (runtime.status === 'available') {
-        return
-      }
-      if (runtime.status === 'awaitingAuth' && this.runtime.autoAuthenticate && !this.authSent) {
-        const method = required(runtime.methods?.[0], 'runtime requested auth without advertising a method')
-        console.log(`[warn] runtime requires authentication: ${method.label}`)
-        this.authSent = true
-        await this.sendAndFlush(() => this.client.authenticate(method.id))
-        continue
-      }
-      if (runtime.status === 'faulted') {
-        throw new Error(`runtime faulted (${runtime.code}): ${runtime.message}`)
-      }
-      if (runtime.status === 'awaitingAuth' && !this.runtime.autoAuthenticate) {
-        const labels = (runtime.methods || []).map((method) => method.label).join(', ')
-        throw new Error(`runtime requires auth and auto auth is disabled: ${labels}`)
-      }
-      await this.processNextLine()
-    }
-  }
-
-  async waitForThreadIdle(conversationId) {
-    while (!this.client.threadIsIdle(conversationId)) {
-      await this.processNextLine()
-    }
-  }
-
-  async drainStartupNotifications() {
-    let timeout = 500
-    while (await this.processNextLine(timeout)) {
-      timeout = 50
-    }
-  }
-
   async pumpUntilNoActivity(timeout) {
-    while (await this.processNextLine(timeout)) {}
+    while (await this.processNextUpdate(timeout)) {}
   }
 
-  async processNextLine(timeout) {
-    const line = await this.process.nextLine(timeout)
-    if (!line) {
-      return false
-    }
-    if (line.kind === 'stdout') {
-      let value
-      try {
-        value = JSON.parse(line.text)
-      } catch {
-        this.printProcessLine(this.runtime.label, line.text)
-        return true
-      }
-      const update = this.client.receiveJson(value)
-      await this.handleUpdate(update)
-    } else {
-      this.printProcessLine(this.runtime.label, line.text)
-    }
+  async processNextUpdate(timeout) {
+    const update = await this.client.nextUpdate(timeout)
+    if (!update) return false
+    await this.handleUpdate(update)
     return true
   }
 
-  async handleUpdate(update) {
+  async handleUpdate(update = {}) {
+    const streamDeltas = update.streamDeltas || []
+    for (const delta of streamDeltas) {
+      this.printStreamDelta(delta)
+    }
     for (const log of update.logs || []) {
+      if (log.kind === 'output' && streamDeltas.length > 0) {
+        continue
+      }
       this.printLog(log)
     }
     for (const event of update.events || []) {
@@ -221,10 +170,6 @@ class NodeAngelCli {
         this.finishInlineOutput()
       }
       printEvent(event)
-    }
-    for (const message of update.outgoing || []) {
-      this.finishInlineOutput()
-      this.process.writeLine(message.line)
     }
   }
 
@@ -439,9 +384,25 @@ class NodeAngelCli {
     process.stdout.write(log.message)
   }
 
-  printProcessLine(label, line) {
-    this.finishInlineOutput()
-    console.log(`[${label}] ${line}`)
+  printStreamDelta(delta) {
+    const text = delta.content?.text || ''
+    if (!text) {
+      return
+    }
+    if (delta.type === 'reasoningDelta' || delta.type === 'planDelta') {
+      if (this.inlineOutput !== 'reasoning') {
+        this.finishInlineOutput()
+        process.stdout.write('[reasoning] ')
+        this.inlineOutput = 'reasoning'
+      }
+      process.stdout.write(text)
+      return
+    }
+    if (this.inlineOutput === 'reasoning') {
+      this.finishInlineOutput()
+    }
+    this.inlineOutput = 'assistant'
+    process.stdout.write(text)
   }
 
   finishInlineOutput() {
@@ -466,7 +427,7 @@ class NodeAngelCli {
   close() {
     this.finishInlineOutput()
     this.input?.close()
-    this.process.close()
+    this.client.close()
   }
 }
 
@@ -515,117 +476,6 @@ class StdinLineQueue {
   close() {
     this.rl.close()
   }
-}
-
-class RuntimeProcess {
-  constructor(command, args) {
-    this.child = spawn(command, args, {
-      stdio: ['pipe', 'pipe', 'pipe'],
-    })
-    this.queue = new AsyncLineQueue()
-    this.child.on('error', (error) => this.queue.fail(error))
-    this.child.on('exit', (code, signal) => {
-      this.queue.fail(new Error(`runtime process exited (${signal || code})`))
-    })
-    attachLines(this.child.stdout, 'stdout', this.queue)
-    attachLines(this.child.stderr, 'stderr', this.queue)
-  }
-
-  nextLine(timeout) {
-    return this.queue.next(timeout)
-  }
-
-  writeLine(line) {
-    this.child.stdin.write(`${line}\n`)
-  }
-
-  close() {
-    this.child.kill()
-  }
-}
-
-class AsyncLineQueue {
-  constructor() {
-    this.items = []
-    this.waiters = []
-    this.error = null
-  }
-
-  push(item) {
-    const waiter = this.waiters.shift()
-    if (waiter) {
-      waiter.resolve(item)
-    } else {
-      this.items.push(item)
-    }
-  }
-
-  fail(error) {
-    this.error = error
-    while (this.waiters.length > 0) {
-      const waiter = this.waiters.shift()
-      if (waiter.timer) {
-        clearTimeout(waiter.timer)
-      }
-      waiter.reject(error)
-    }
-  }
-
-  next(timeout) {
-    if (this.items.length > 0) {
-      return Promise.resolve(this.items.shift())
-    }
-    if (this.error) {
-      return Promise.reject(this.error)
-    }
-    return new Promise((resolve, reject) => {
-      const waiter = {
-        timer: null,
-        resolve: (value) => {
-          if (waiter.timer) {
-            clearTimeout(waiter.timer)
-          }
-          resolve(value)
-        },
-        reject: (error) => {
-          if (waiter.timer) {
-            clearTimeout(waiter.timer)
-          }
-          reject(error)
-        },
-      }
-      if (timeout !== undefined) {
-        waiter.timer = setTimeout(() => {
-          this.waiters = this.waiters.filter((candidate) => candidate !== waiter)
-          resolve(null)
-        }, timeout)
-      }
-      this.waiters.push(waiter)
-    })
-  }
-}
-
-function attachLines(stream, kind, queue) {
-  let buffer = ''
-  stream.setEncoding('utf8')
-  stream.on('data', (chunk) => {
-    buffer += chunk
-    while (true) {
-      const index = buffer.indexOf('\n')
-      if (index === -1) {
-        break
-      }
-      const line = buffer.slice(0, index).replace(/\r$/, '')
-      buffer = buffer.slice(index + 1)
-      queue.push({ kind, text: line })
-    }
-  })
-  stream.on('end', () => {
-    if (buffer) {
-      queue.push({ kind, text: buffer })
-      buffer = ''
-    }
-  })
 }
 
 function runtimeFromArg(value = 'kimi') {

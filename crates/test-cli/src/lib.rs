@@ -130,6 +130,12 @@ enum InlineOutput {
     Reasoning,
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum InlineStreamKind {
+    Assistant,
+    Reasoning,
+}
+
 #[derive(Clone, Debug, Default)]
 pub struct InlinePrinter {
     inline_output: InlineOutput,
@@ -143,20 +149,35 @@ impl InlinePrinter {
         }
 
         if let Some(reasoning) = log.message.strip_prefix("[reasoning] ") {
-            if self.inline_output != InlineOutput::Reasoning {
-                self.finish_inline_output()?;
-                print!("[reasoning] ");
-                self.inline_output = InlineOutput::Reasoning;
-            }
-            print!("{reasoning}");
-            return io::stdout().flush();
+            return self.print_inline_text(InlineStreamKind::Reasoning, reasoning);
         }
 
+        self.print_inline_text(InlineStreamKind::Assistant, &log.message)
+    }
+
+    pub fn print_inline_text(&mut self, kind: InlineStreamKind, text: &str) -> io::Result<()> {
+        match kind {
+            InlineStreamKind::Assistant => self.print_assistant_text(text),
+            InlineStreamKind::Reasoning => self.print_reasoning_text(text),
+        }
+    }
+
+    fn print_assistant_text(&mut self, text: &str) -> io::Result<()> {
         if self.inline_output == InlineOutput::Reasoning {
             self.finish_inline_output()?;
         }
         self.inline_output = InlineOutput::Assistant;
-        print!("{}", log.message);
+        print!("{text}");
+        io::stdout().flush()
+    }
+
+    fn print_reasoning_text(&mut self, text: &str) -> io::Result<()> {
+        if self.inline_output != InlineOutput::Reasoning {
+            self.finish_inline_output()?;
+            print!("[reasoning] ");
+            self.inline_output = InlineOutput::Reasoning;
+        }
+        print!("{text}");
         io::stdout().flush()
     }
 

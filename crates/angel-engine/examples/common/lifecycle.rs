@@ -2,11 +2,12 @@ use std::error::Error;
 use std::time::Duration;
 
 use angel_engine::{
-    AngelEngine, CommandPlan, ConversationCapabilities, ConversationId, ConversationLifecycle,
-    EngineCommand, JsonRpcMessage, ProtocolTransport, RuntimeState, StartConversationParams,
-    TransportClientInfo, TransportOptions, apply_transport_output,
+    ActionOutputDelta, AngelEngine, CommandPlan, ContentDelta, ConversationCapabilities,
+    ConversationId, ConversationLifecycle, EngineCommand, EngineEvent, JsonRpcMessage,
+    ProtocolTransport, RuntimeState, StartConversationParams, TransportClientInfo,
+    TransportOptions, apply_transport_output,
 };
-use test_cli::{AppLine, RuntimeProcess, TaggedLog, TaggedLogKind};
+use test_cli::{AppLine, InlineStreamKind, RuntimeProcess, TaggedLog, TaggedLogKind};
 
 use super::{ProtocolShell, ShellConfig};
 
@@ -157,7 +158,11 @@ where
         output: &angel_engine::TransportOutput,
     ) -> Result<(), Box<dyn Error>> {
         let plan_ready_hints = self.plan_ready_hints(output);
+        let printed_stream_delta = self.print_transport_stream_deltas(output)?;
         for log in &output.logs {
+            if printed_stream_delta && log.kind == angel_engine::TransportLogKind::Output {
+                continue;
+            }
             self.printer.print_log(&transport_log(log))?;
         }
         for message in &output.messages {
@@ -170,6 +175,52 @@ where
         }
         self.print_plan_ready_hint_if_interactive()?;
         Ok(())
+    }
+
+    fn print_transport_stream_deltas(
+        &mut self,
+        output: &angel_engine::TransportOutput,
+    ) -> Result<bool, Box<dyn Error>> {
+        let mut printed = false;
+        for event in &output.events {
+            match event {
+                EngineEvent::AssistantDelta { delta, .. } => {
+                    self.printer.print_inline_text(
+                        InlineStreamKind::Assistant,
+                        content_delta_text(delta),
+                    )?;
+                    printed = true;
+                }
+                EngineEvent::ReasoningDelta { delta, .. }
+                | EngineEvent::PlanDelta { delta, .. } => {
+                    self.printer.print_inline_text(
+                        InlineStreamKind::Reasoning,
+                        content_delta_text(delta),
+                    )?;
+                    printed = true;
+                }
+                EngineEvent::ActionObserved { action, .. } => {
+                    for delta in &action.output.chunks {
+                        self.printer.print_inline_text(
+                            InlineStreamKind::Assistant,
+                            action_output_delta_text(delta),
+                        )?;
+                        printed = true;
+                    }
+                }
+                EngineEvent::ActionUpdated { patch, .. } => {
+                    if let Some(delta) = patch.output_delta.as_ref() {
+                        self.printer.print_inline_text(
+                            InlineStreamKind::Assistant,
+                            action_output_delta_text(delta),
+                        )?;
+                        printed = true;
+                    }
+                }
+                _ => {}
+            }
+        }
+        Ok(printed)
     }
 }
 
@@ -185,4 +236,21 @@ fn transport_log(log: &angel_engine::TransportLog) -> TaggedLog {
         },
         log.message.clone(),
     )
+}
+
+fn content_delta_text(delta: &ContentDelta) -> &str {
+    match delta {
+        ContentDelta::Text(text)
+        | ContentDelta::ResourceRef(text)
+        | ContentDelta::Structured(text) => text,
+    }
+}
+
+fn action_output_delta_text(delta: &ActionOutputDelta) -> &str {
+    match delta {
+        ActionOutputDelta::Text(text)
+        | ActionOutputDelta::Patch(text)
+        | ActionOutputDelta::Terminal(text)
+        | ActionOutputDelta::Structured(text) => text,
+    }
 }
