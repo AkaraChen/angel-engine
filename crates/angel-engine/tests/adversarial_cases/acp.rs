@@ -672,3 +672,76 @@ fn acp_resume_response_without_session_id_keeps_existing_remote_session() {
     );
     assert_eq!(conversation.lifecycle, ConversationLifecycle::Idle);
 }
+
+#[test]
+fn acp_session_fork_uses_source_remote_session_and_marks_fork_ready() {
+    let adapter = AcpAdapter::standard();
+    let mut engine = acp_engine(&adapter);
+    engine.default_capabilities.lifecycle.fork = CapabilitySupport::Supported;
+    let capabilities = engine.default_capabilities.clone();
+    let source_id = insert_ready_conversation(
+        &mut engine,
+        "source",
+        RemoteConversationId::Known("source-sess".to_string()),
+        capabilities,
+    );
+    engine
+        .apply_event(EngineEvent::ContextUpdated {
+            conversation_id: source_id.clone(),
+            patch: ContextPatch::one(ContextUpdate::Cwd {
+                scope: ContextScope::Conversation,
+                cwd: Some("/repo/source".to_string()),
+            }),
+        })
+        .expect("source cwd");
+
+    let plan = engine
+        .plan_command(EngineCommand::Extension(
+            EngineExtensionCommand::ForkConversation {
+                source: source_id.clone(),
+                at: None,
+            },
+        ))
+        .expect("fork conversation");
+    let fork_id = plan.conversation_id.clone().unwrap();
+    let request_id = plan.request_id.clone().unwrap();
+    let (_, method, params) = encode_request(&adapter, &engine, &plan.effects[0]);
+
+    assert_eq!(method, "session/fork");
+    assert_eq!(
+        params,
+        json!({
+            "sessionId": "source-sess",
+            "cwd": "/repo/source",
+            "mcpServers": []
+        })
+    );
+
+    decode_and_apply(
+        &adapter,
+        &mut engine,
+        JsonRpcMessage::response(
+            request_id,
+            json!({
+                "sessionId": "fork-sess",
+                "modes": {
+                    "currentModeId": "plan",
+                    "availableModes": [{"id": "plan", "name": "Plan"}]
+                }
+            }),
+        ),
+    );
+
+    let fork = &engine.conversations[&fork_id];
+    assert_eq!(
+        fork.remote,
+        RemoteConversationId::Known("fork-sess".to_string())
+    );
+    assert_eq!(fork.lifecycle, ConversationLifecycle::Idle);
+    assert_eq!(
+        fork.mode_state
+            .as_ref()
+            .map(|modes| modes.current_mode_id.as_str()),
+        Some("plan")
+    );
+}

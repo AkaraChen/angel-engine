@@ -8,6 +8,11 @@ impl AcpAdapter {
         effect: &crate::ProtocolEffect,
         options: &TransportOptions,
     ) -> Result<Value, crate::EngineError> {
+        if let ProtocolMethod::Extension(method) = &effect.method
+            && method == "session/fork"
+        {
+            return acp_fork_params(engine, effect);
+        }
         match &effect.method {
             ProtocolMethod::Acp(AcpMethod::Initialize) => {
                 let mut client_capabilities = serde_json::Map::new();
@@ -192,6 +197,45 @@ impl AcpAdapter {
         }
         Ok(output)
     }
+}
+
+fn acp_fork_params(
+    engine: &AngelEngine,
+    effect: &crate::ProtocolEffect,
+) -> Result<Value, crate::EngineError> {
+    let source_id = effect
+        .payload
+        .fields
+        .get("sourceConversationId")
+        .ok_or_else(|| crate::EngineError::InvalidCommand {
+            message: "missing source conversation id for ACP fork".to_string(),
+        })?;
+    let source = engine
+        .conversations
+        .get(&ConversationId::new(source_id.clone()))
+        .ok_or_else(|| crate::EngineError::ConversationNotFound {
+            conversation_id: source_id.clone(),
+        })?;
+    let session_id =
+        source
+            .remote
+            .as_protocol_id()
+            .ok_or_else(|| crate::EngineError::InvalidState {
+                expected: "source ACP session id".to_string(),
+                actual: format!("{:?}", source.remote),
+            })?;
+    let cwd = source
+        .context
+        .cwd
+        .effective()
+        .and_then(|cwd| cwd.as_ref())
+        .map(|cwd| cwd.display().to_string())
+        .unwrap_or_else(|| acp_effect_cwd(engine, effect));
+    Ok(json!({
+        "sessionId": session_id,
+        "cwd": cwd,
+        "mcpServers": [],
+    }))
 }
 
 fn acp_effect_cwd(engine: &AngelEngine, effect: &crate::ProtocolEffect) -> String {

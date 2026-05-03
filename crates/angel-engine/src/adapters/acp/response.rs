@@ -113,6 +113,22 @@ impl AcpAdapter {
                     },
                 );
             }
+            PendingRequest::ForkConversation { conversation_id } => {
+                let session_id =
+                    result
+                        .get("sessionId")
+                        .and_then(Value::as_str)
+                        .ok_or_else(|| crate::EngineError::InvalidCommand {
+                            message: "ACP fork response missing sessionId".to_string(),
+                        })?;
+                append_session_ready_events(
+                    &mut output,
+                    engine,
+                    conversation_id,
+                    Some(session_id.to_string()),
+                    result,
+                );
+            }
             PendingRequest::StartTurn {
                 conversation_id,
                 turn_id,
@@ -202,8 +218,7 @@ impl AcpAdapter {
                 });
                 output = output.log(TransportLogKind::Receive, format!("response {id}"));
             }
-            PendingRequest::ForkConversation { .. }
-            | PendingRequest::SteerTurn { .. }
+            PendingRequest::SteerTurn { .. }
             | PendingRequest::HistoryMutation { .. }
             | PendingRequest::RunShellCommand { .. } => {
                 output = output.log(TransportLogKind::Receive, format!("response {id}"));
@@ -393,6 +408,7 @@ fn acp_conversation_capabilities(
     };
     capabilities.history.hydrate = capabilities.lifecycle.load.clone();
     capabilities.lifecycle.resume = acp_session_capability(result, "resume");
+    capabilities.lifecycle.fork = acp_session_capability(result, "fork");
     capabilities.lifecycle.close = acp_session_capability(result, "close");
     capabilities
 }
@@ -495,6 +511,7 @@ mod tests {
                         "sessionCapabilities": {
                             "list": {},
                             "resume": {},
+                            "fork": {},
                             "close": {}
                         }
                     }
@@ -517,6 +534,7 @@ mod tests {
                 && conversation_capabilities.lifecycle.list == crate::CapabilitySupport::Supported
                 && conversation_capabilities.lifecycle.load == crate::CapabilitySupport::Supported
                 && conversation_capabilities.lifecycle.resume == crate::CapabilitySupport::Supported
+                && conversation_capabilities.lifecycle.fork == crate::CapabilitySupport::Supported
                 && conversation_capabilities.lifecycle.close == crate::CapabilitySupport::Supported
         ));
     }
