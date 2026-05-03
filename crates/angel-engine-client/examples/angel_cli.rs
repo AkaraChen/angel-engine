@@ -27,6 +27,7 @@ struct MultiRuntimeCli {
     runtime: RuntimeKind,
     conversation_id: Option<String>,
     auth_sent: bool,
+    inline_output: InlineOutput,
 }
 
 impl MultiRuntimeCli {
@@ -55,6 +56,7 @@ impl MultiRuntimeCli {
             runtime,
             conversation_id: None,
             auth_sent: false,
+            inline_output: InlineOutput::None,
         })
     }
 
@@ -253,6 +255,7 @@ impl MultiRuntimeCli {
                 self.handle_update(update)?;
             }
             AppLine::Stderr(line) => {
+                self.finish_inline_output()?;
                 println!("[{}] {line}", self.runtime.label());
             }
         }
@@ -261,16 +264,52 @@ impl MultiRuntimeCli {
 
     fn handle_update(&mut self, update: ClientUpdate) -> Result<(), Box<dyn Error>> {
         for log in &update.logs {
-            print_log(log)?;
+            self.print_log(log)?;
         }
         for event in &update.events {
+            if event_prints(event) {
+                self.finish_inline_output()?;
+            }
             print_event(event);
         }
         for message in &update.outgoing {
+            self.finish_inline_output()?;
             writeln!(self.child_stdin, "{}", message.line)?;
         }
         if !update.outgoing.is_empty() {
             self.child_stdin.flush()?;
+        }
+        Ok(())
+    }
+
+    fn print_log(&mut self, log: &ClientLog) -> io::Result<()> {
+        if log.kind != ClientLogKind::Output {
+            self.finish_inline_output()?;
+            return print_log_line(log);
+        }
+
+        if let Some(reasoning) = log.message.strip_prefix("[reasoning] ") {
+            if self.inline_output != InlineOutput::Reasoning {
+                self.finish_inline_output()?;
+                print!("[reasoning] ");
+                self.inline_output = InlineOutput::Reasoning;
+            }
+            print!("{reasoning}");
+            return io::stdout().flush();
+        }
+
+        if self.inline_output == InlineOutput::Reasoning {
+            self.finish_inline_output()?;
+        }
+        self.inline_output = InlineOutput::Assistant;
+        print!("{}", log.message);
+        io::stdout().flush()
+    }
+
+    fn finish_inline_output(&mut self) -> io::Result<()> {
+        if self.inline_output != InlineOutput::None {
+            println!();
+            self.inline_output = InlineOutput::None;
         }
         Ok(())
     }
@@ -523,6 +562,13 @@ enum AppLine {
     Stderr(String),
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum InlineOutput {
+    None,
+    Assistant,
+    Reasoning,
+}
+
 fn spawn_line_reader<R, F>(reader: R, tx: mpsc::Sender<AppLine>, wrap: F)
 where
     R: io::Read + Send + 'static,
@@ -537,12 +583,9 @@ where
     });
 }
 
-fn print_log(log: &ClientLog) -> io::Result<()> {
+fn print_log_line(log: &ClientLog) -> io::Result<()> {
     match log.kind {
-        ClientLogKind::Output => {
-            print!("{}", log.message);
-            io::stdout().flush()
-        }
+        ClientLogKind::Output => Ok(()),
         ClientLogKind::Send => {
             println!("[send] {}", log.message);
             Ok(())
@@ -616,6 +659,17 @@ fn print_event(event: &ClientEvent) {
         }
         _ => {}
     }
+}
+
+fn event_prints(event: &ClientEvent) -> bool {
+    matches!(
+        event,
+        ClientEvent::RuntimeAuthRequired { .. }
+            | ClientEvent::RuntimeReady { .. }
+            | ClientEvent::ConversationReady { .. }
+            | ClientEvent::AvailableCommandsUpdated { .. }
+            | ClientEvent::SessionUsageUpdated { .. }
+    )
 }
 
 fn read_stdin_line() -> io::Result<String> {
