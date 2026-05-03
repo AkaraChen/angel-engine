@@ -283,7 +283,7 @@ fn codex_encodes_invalid_model_and_effort_as_server_validated_overrides() {
 
     assert_eq!(params["model"], json!("definitely-not-a-model"));
     assert_eq!(params["effort"], json!("sideways"));
-    assert_eq!(params["summary"], json!("detailed"));
+    assert_eq!(params["summary"], json!("auto"));
     assert_eq!(params["collaborationMode"]["mode"], json!("plan"));
     assert_eq!(
         params["collaborationMode"]["settings"]["model"],

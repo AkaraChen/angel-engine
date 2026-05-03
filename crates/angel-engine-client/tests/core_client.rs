@@ -275,7 +275,7 @@ fn codex_completed_reasoning_item_surfaces_reasoning_updates() {
 }
 
 #[test]
-fn codex_turn_start_defaults_to_detailed_summary_without_effort() {
+fn codex_turn_start_defaults_to_auto_summary_without_effort() {
     let (mut client, conversation_id) = ready_codex_client();
 
     let sent = client
@@ -291,7 +291,7 @@ fn codex_turn_start_defaults_to_detailed_summary_without_effort() {
     );
     assert_eq!(
         sent.update.outgoing[0].value["params"]["summary"],
-        json!("detailed")
+        json!("auto")
     );
 }
 
@@ -315,7 +315,31 @@ fn codex_explicit_reasoning_effort_keeps_default_summary() {
     );
     assert_eq!(
         sent.update.outgoing[0].value["params"]["summary"],
-        json!("detailed")
+        json!("auto")
+    );
+}
+
+#[test]
+fn codex_high_reasoning_effort_uses_visible_summary_profile() {
+    let (mut client, conversation_id) = ready_codex_client();
+
+    client
+        .thread(&conversation_id)
+        .send_event(ThreadEvent::set_reasoning_effort("high"))
+        .expect("set reasoning effort");
+
+    let sent = client
+        .thread(&conversation_id)
+        .send_event(ThreadEvent::text("show reasoning"))
+        .expect("send codex text");
+
+    assert_eq!(
+        sent.update.outgoing[0].value["params"]["effort"],
+        json!("xhigh")
+    );
+    assert_eq!(
+        sent.update.outgoing[0].value["params"]["summary"],
+        json!("auto")
     );
 }
 

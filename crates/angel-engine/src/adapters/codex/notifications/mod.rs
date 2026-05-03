@@ -26,6 +26,7 @@ impl CodexAdapter {
             "item/reasoning/textDelta" | "item/reasoning/summaryTextDelta" => {
                 self.decode_text_delta(engine, params, DeltaKind::Reasoning)
             }
+            "item/reasoning/summaryPartAdded" => Ok(TransportOutput::default()),
             "item/plan/delta" => self.decode_plan_delta(engine, params),
             "turn/plan/updated" => self.decode_plan(engine, params),
             "item/started" => self.decode_item(engine, params, false),

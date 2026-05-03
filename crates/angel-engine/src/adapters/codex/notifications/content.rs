@@ -160,6 +160,28 @@ mod tests {
         )));
     }
 
+    #[test]
+    fn reasoning_summary_part_added_is_quiet() {
+        let adapter = CodexAdapter::app_server();
+        let engine = engine_with_thread(&adapter);
+
+        let output = adapter
+            .decode_notification(
+                &engine,
+                "item/reasoning/summaryPartAdded",
+                &json!({
+                    "threadId": "thread",
+                    "turnId": "turn",
+                    "itemId": "reasoning",
+                    "summaryIndex": 0,
+                }),
+            )
+            .expect("reasoning summary part");
+
+        assert!(output.logs.is_empty());
+        assert!(output.events.is_empty());
+    }
+
     fn engine_with_thread(adapter: &CodexAdapter) -> AngelEngine {
         let mut engine = AngelEngine::with_available_runtime(
             crate::ProtocolFlavor::CodexAppServer,

@@ -22,7 +22,7 @@ impl CodexAdapter {
                     params.insert("cwd".to_string(), json!(cwd));
                 }
                 insert_codex_thread_overrides(&mut params, &effect.payload.fields);
-                params.insert("experimentalRawEvents".to_string(), json!(false));
+                params.insert("experimentalRawEvents".to_string(), json!(true));
                 params.insert("persistExtendedHistory".to_string(), json!(true));
                 Ok(Value::Object(params))
             }
@@ -201,9 +201,9 @@ fn insert_codex_overrides(
         params.insert("model".to_string(), json!(model));
     }
     if let Some(effort) = fields.get("effort") {
-        params.insert("effort".to_string(), json!(effort));
+        params.insert("effort".to_string(), json!(codex_reasoning_effort(effort)));
     }
-    params.insert("summary".to_string(), json!("detailed"));
+    params.insert("summary".to_string(), json!("auto"));
     if let Some(policy) = fields.get("approvalPolicy") {
         params.insert("approvalPolicy".to_string(), json!(policy));
     }
@@ -238,11 +238,17 @@ fn insert_codex_overrides(
                 "settings": {
                     "model": model,
                     "developer_instructions": null,
-                    "reasoning_effort": fields.get("effort"),
+                    "reasoning_effort": fields
+                        .get("effort")
+                        .map(|effort| codex_reasoning_effort(effort)),
                 }
             }),
         );
     }
+}
+
+fn codex_reasoning_effort(effort: &str) -> &str {
+    if effort == "high" { "xhigh" } else { effort }
 }
 
 fn insert_codex_thread_overrides(
@@ -306,6 +312,33 @@ mod tests {
             .expect("thread list params");
 
         assert_eq!(params, json!({"cwd": "/tmp/project", "cursor": "opaque"}));
+    }
+
+    #[test]
+    fn thread_start_enables_raw_response_events() {
+        let adapter = CodexAdapter::app_server();
+        let engine = AngelEngine::new(
+            crate::ProtocolFlavor::CodexAppServer,
+            adapter.capabilities(),
+        );
+        let effect = crate::ProtocolEffect::new(
+            crate::ProtocolFlavor::CodexAppServer,
+            ProtocolMethod::Codex(CodexMethod::ThreadStart),
+        )
+        .field("cwd", "/tmp/project");
+
+        let params = adapter
+            .encode_params(&engine, &effect, &TransportOptions::default())
+            .expect("thread start params");
+
+        assert_eq!(
+            params,
+            json!({
+                "cwd": "/tmp/project",
+                "experimentalRawEvents": true,
+                "persistExtendedHistory": true
+            })
+        );
     }
 
     #[test]
