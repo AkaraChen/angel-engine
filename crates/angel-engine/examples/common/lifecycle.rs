@@ -1,6 +1,4 @@
 use std::error::Error;
-use std::process::{Command, Stdio};
-use std::sync::mpsc;
 use std::time::Duration;
 
 use angel_engine::{
@@ -8,8 +6,8 @@ use angel_engine::{
     EngineCommand, JsonRpcMessage, ProtocolTransport, RuntimeState, StartConversationParams,
     TransportClientInfo, TransportOptions, apply_transport_output,
 };
+use test_cli::{AppLine, RuntimeProcess, TaggedLog, TaggedLogKind};
 
-use super::transport_io::{AppLine, print_log, spawn_line_reader};
 use super::{ProtocolShell, ShellConfig};
 
 impl<A> ProtocolShell<A>
@@ -21,21 +19,6 @@ where
         capabilities: ConversationCapabilities,
         config: ShellConfig,
     ) -> Result<Self, Box<dyn Error>> {
-        let mut child = Command::new(config.binary)
-            .args(config.args)
-            .stdin(Stdio::piped())
-            .stdout(Stdio::piped())
-            .stderr(Stdio::piped())
-            .spawn()?;
-
-        let child_stdin = child.stdin.take().ok_or("missing agent stdin")?;
-        let stdout = child.stdout.take().ok_or("missing agent stdout")?;
-        let stderr = child.stderr.take().ok_or("missing agent stderr")?;
-        let (tx, rx) = mpsc::channel();
-
-        spawn_line_reader(stdout, tx.clone(), AppLine::Stdout);
-        spawn_line_reader(stderr, tx, AppLine::Stderr);
-
         let engine = AngelEngine::new(config.protocol, capabilities);
         let options = TransportOptions {
             client_info: TransportClientInfo::new(config.client_name, env!("CARGO_PKG_VERSION"))
@@ -44,9 +27,8 @@ where
         };
 
         Ok(Self {
-            child,
-            child_stdin,
-            lines: rx,
+            process: RuntimeProcess::spawn(config.binary, config.args)?,
+            printer: Default::default(),
             engine,
             adapter,
             options,
@@ -141,12 +123,11 @@ where
         timeout: Option<Duration>,
     ) -> Result<bool, Box<dyn Error>> {
         let line = match timeout {
-            Some(timeout) => match self.lines.recv_timeout(timeout) {
-                Ok(line) => line,
-                Err(mpsc::RecvTimeoutError::Timeout) => return Ok(false),
-                Err(error) => return Err(Box::new(error)),
+            Some(timeout) => match self.process.recv_timeout(timeout)? {
+                Some(line) => line,
+                None => return Ok(false),
             },
-            None => self.lines.recv()?,
+            None => self.process.recv()?,
         };
 
         match line {
@@ -154,7 +135,8 @@ where
                 let value = match serde_json::from_str(&line) {
                     Ok(value) => value,
                     Err(_) => {
-                        println!("[{}] {line}", self.config.process_label);
+                        self.printer
+                            .print_process_line(self.config.process_label, &line)?;
                         return Ok(true);
                     }
                 };
@@ -163,7 +145,8 @@ where
                 self.handle_transport_output(&output)?;
             }
             AppLine::Stderr(line) => {
-                println!("[{}] {line}", self.config.process_label);
+                self.printer
+                    .print_process_line(self.config.process_label, &line)?;
             }
         }
         Ok(true)
@@ -175,12 +158,11 @@ where
     ) -> Result<(), Box<dyn Error>> {
         let plan_ready_hints = self.plan_ready_hints(output);
         for log in &output.logs {
-            print_log(log)?;
+            self.printer.print_log(&transport_log(log))?;
         }
         for message in &output.messages {
-            use std::io::Write;
-            writeln!(self.child_stdin, "{}", message.to_json_line()?)?;
-            self.child_stdin.flush()?;
+            self.printer.before_tagged_output()?;
+            self.process.write_line(&message.to_json_line()?)?;
         }
         apply_transport_output(&mut self.engine, output)?;
         for hint in plan_ready_hints {
@@ -189,4 +171,18 @@ where
         self.print_plan_ready_hint_if_interactive()?;
         Ok(())
     }
+}
+
+fn transport_log(log: &angel_engine::TransportLog) -> TaggedLog {
+    TaggedLog::new(
+        match log.kind {
+            angel_engine::TransportLogKind::Send => TaggedLogKind::Send,
+            angel_engine::TransportLogKind::Receive => TaggedLogKind::Receive,
+            angel_engine::TransportLogKind::State => TaggedLogKind::State,
+            angel_engine::TransportLogKind::Output => TaggedLogKind::Output,
+            angel_engine::TransportLogKind::Warning => TaggedLogKind::Warning,
+            angel_engine::TransportLogKind::Error => TaggedLogKind::Error,
+        },
+        log.message.clone(),
+    )
 }

@@ -1,11 +1,11 @@
 use std::error::Error;
-use std::io::{self, Write};
 use std::time::Duration;
 
 use angel_engine::{
     EngineCommand, EngineExtensionCommand, ProtocolFlavor, ProtocolTransport, TurnOverrides,
     UserInput,
 };
+use test_cli::{is_quit_command, read_prompt_line};
 
 use super::ProtocolShell;
 
@@ -24,20 +24,15 @@ where
         }
         self.print_command_summary();
 
-        let mut input = String::new();
         loop {
-            print!("{}", self.config.prompt);
-            io::stdout().flush()?;
-
-            input.clear();
-            if io::stdin().read_line(&mut input)? == 0 {
+            let Some(input) = read_prompt_line(self.config.prompt)? else {
                 break;
-            }
+            };
             let line = input.trim();
             if line.is_empty() {
                 continue;
             }
-            if matches!(line, ":q" | ":quit" | "exit") {
+            if is_quit_command(line) {
                 break;
             }
             if line == "/commands" {

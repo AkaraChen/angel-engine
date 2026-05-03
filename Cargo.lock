@@ -7,6 +7,7 @@ name = "angel-engine"
 version = "0.1.0"
 dependencies = [
  "serde_json",
+ "test-cli",
 ]
 
 [[package]]
@@ -16,6 +17,7 @@ dependencies = [
  "angel-engine",
  "serde",
  "serde_json",
+ "test-cli",
 ]
 
 [[package]]
@@ -101,6 +103,10 @@ dependencies = [
  "quote",
  "unicode-ident",
 ]
+
+[[package]]
+name = "test-cli"
+version = "0.1.0"
 
 [[package]]
 name = "unicode-ident"

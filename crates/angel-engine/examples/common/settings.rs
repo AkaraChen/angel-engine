@@ -5,6 +5,7 @@ use angel_engine::{
     ConversationId, ConversationState, PermissionProfile, ProtocolFlavor, ProtocolTransport,
     ReasoningProfile, SandboxProfile, SessionConfigOption,
 };
+use test_cli::{CliCommandInfo, print_available_commands, print_command_summary};
 
 use super::ProtocolShell;
 
@@ -322,52 +323,23 @@ where
     }
 
     pub(super) fn print_command_summary(&self) {
-        let commands = self.selected_available_commands();
-        if commands.is_empty() {
-            return;
-        }
-        let names = commands
-            .iter()
-            .take(8)
-            .map(|command| format!("/{}", command.name))
-            .collect::<Vec<_>>()
-            .join(", ");
-        let suffix = if commands.len() > 8 { ", ..." } else { "" };
-        println!(
-            "[commands] {} available: {names}{suffix}; type /commands to list",
-            commands.len()
-        );
+        print_command_summary(&cli_commands(self.selected_available_commands()));
     }
 
     pub(super) fn print_available_commands(&self) {
-        let commands = self.selected_available_commands();
-        if commands.is_empty() {
-            println!("[commands] no slash commands advertised");
-            return;
-        }
-        for command in commands {
-            let input = command
-                .input
-                .as_ref()
-                .map(|input| format!(" <{}>", compact_text(&input.hint, 40)))
-                .unwrap_or_default();
-            let description = compact_text(&command.description, 160);
-            println!("[commands] /{}{} - {}", command.name, input, description);
-        }
+        print_available_commands(&cli_commands(self.selected_available_commands()));
     }
 }
 
-fn compact_text(text: &str, max_chars: usize) -> String {
-    let compact = text.split_whitespace().collect::<Vec<_>>().join(" ");
-    if compact.chars().count() <= max_chars {
-        return compact;
-    }
-    let mut truncated = compact
-        .chars()
-        .take(max_chars.saturating_sub(3))
-        .collect::<String>();
-    truncated.push_str("...");
-    truncated
+fn cli_commands(commands: &[AvailableCommand]) -> Vec<CliCommandInfo> {
+    commands
+        .iter()
+        .map(|command| CliCommandInfo {
+            name: command.name.clone(),
+            description: command.description.clone(),
+            input_hint: command.input.as_ref().map(|input| input.hint.clone()),
+        })
+        .collect()
 }
 
 fn config_option<'a>(

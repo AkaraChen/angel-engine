@@ -8,3 +8,6 @@ path = "src/mod.rs"
 
 [dependencies]
 serde_json = "1"
+
+[dev-dependencies]
+test-cli = { path = "../test-cli" }

@@ -1,15 +1,17 @@
 use std::env;
 use std::error::Error;
-use std::io::{self, BufRead, BufReader, Write};
-use std::process::{Child, ChildStdin, Command, Stdio};
-use std::sync::mpsc::{self, Receiver};
-use std::thread;
 use std::time::Duration;
 
 use angel_engine_client::{
-    Client, ClientAnswer, ClientBuilder, ClientEvent, ClientLog, ClientLogKind, ClientOptions,
-    ClientUpdate, ElicitationResponse, ElicitationSnapshot, RuntimeSnapshot,
-    StartConversationRequest, ThreadEvent,
+    AvailableCommandSnapshot, Client, ClientAnswer, ClientBuilder, ClientEvent, ClientLog,
+    ClientOptions, ClientUpdate, ElicitationResponse, ElicitationSnapshot, QuestionSnapshot,
+    RuntimeSnapshot, StartConversationRequest, ThreadEvent,
+};
+use test_cli::{
+    AppLine, ApprovalChoice, CliAnswer, CliCommandInfo, CliQuestion, CliQuestionOption,
+    InlinePrinter, RuntimeProcess, TaggedLog, TaggedLogKind, is_quit_command,
+    print_available_commands, print_command_summary, prompt_answers, prompt_approval,
+    read_prompt_line,
 };
 
 fn main() -> Result<(), Box<dyn Error>> {
@@ -20,43 +22,26 @@ fn main() -> Result<(), Box<dyn Error>> {
 }
 
 struct MultiRuntimeCli {
-    child: Child,
-    child_stdin: ChildStdin,
-    lines: Receiver<AppLine>,
+    process: RuntimeProcess,
+    printer: InlinePrinter,
     client: Client,
     runtime: RuntimeKind,
     conversation_id: Option<String>,
     auth_sent: bool,
-    inline_output: InlineOutput,
 }
 
 impl MultiRuntimeCli {
     fn spawn(runtime: RuntimeKind) -> Result<Self, Box<dyn Error>> {
         let options = runtime.options();
-        let mut child = Command::new(&options.command)
-            .args(&options.args)
-            .stdin(Stdio::piped())
-            .stdout(Stdio::piped())
-            .stderr(Stdio::piped())
-            .spawn()?;
-
-        let child_stdin = child.stdin.take().ok_or("missing runtime stdin")?;
-        let stdout = child.stdout.take().ok_or("missing runtime stdout")?;
-        let stderr = child.stderr.take().ok_or("missing runtime stderr")?;
-        let (tx, rx) = mpsc::channel();
-        spawn_line_reader(stdout, tx.clone(), AppLine::Stdout);
-        spawn_line_reader(stderr, tx, AppLine::Stderr);
-
+        let process = RuntimeProcess::spawn(&options.command, &options.args)?;
         let client = ClientBuilder::new(options).build();
         Ok(Self {
-            child,
-            child_stdin,
-            lines: rx,
+            process,
+            printer: Default::default(),
             client,
             runtime,
             conversation_id: None,
             auth_sent: false,
-            inline_output: InlineOutput::None,
         })
     }
 
@@ -81,23 +66,19 @@ impl MultiRuntimeCli {
     }
 
     fn run_repl(&mut self) -> Result<(), Box<dyn Error>> {
-        let mut input = String::new();
         loop {
-            print!("{}", self.runtime.prompt());
-            io::stdout().flush()?;
-            input.clear();
-            if io::stdin().read_line(&mut input)? == 0 {
+            let Some(input) = read_prompt_line(self.runtime.prompt())? else {
                 break;
-            }
+            };
             let line = input.trim();
             if line.is_empty() {
                 continue;
             }
-            if matches!(line, ":q" | ":quit" | "exit") {
+            if is_quit_command(line) {
                 break;
             }
             if line == "/commands" {
-                self.print_available_commands();
+                self.print_available_command_list();
                 continue;
             }
             if self.handle_setting_command(line)? {
@@ -234,12 +215,11 @@ impl MultiRuntimeCli {
 
     fn process_next_line(&mut self, timeout: Option<Duration>) -> Result<bool, Box<dyn Error>> {
         let line = match timeout {
-            Some(timeout) => match self.lines.recv_timeout(timeout) {
-                Ok(line) => line,
-                Err(mpsc::RecvTimeoutError::Timeout) => return Ok(false),
-                Err(error) => return Err(Box::new(error)),
+            Some(timeout) => match self.process.recv_timeout(timeout)? {
+                Some(line) => line,
+                None => return Ok(false),
             },
-            None => self.lines.recv()?,
+            None => self.process.recv()?,
         };
 
         match line {
@@ -247,7 +227,8 @@ impl MultiRuntimeCli {
                 let value = match serde_json::from_str(&line) {
                     Ok(value) => value,
                     Err(_) => {
-                        println!("[{}] {line}", self.runtime.label());
+                        self.printer
+                            .print_process_line(self.runtime.label(), &line)?;
                         return Ok(true);
                     }
                 };
@@ -255,8 +236,8 @@ impl MultiRuntimeCli {
                 self.handle_update(update)?;
             }
             AppLine::Stderr(line) => {
-                self.finish_inline_output()?;
-                println!("[{}] {line}", self.runtime.label());
+                self.printer
+                    .print_process_line(self.runtime.label(), &line)?;
             }
         }
         Ok(true)
@@ -264,52 +245,17 @@ impl MultiRuntimeCli {
 
     fn handle_update(&mut self, update: ClientUpdate) -> Result<(), Box<dyn Error>> {
         for log in &update.logs {
-            self.print_log(log)?;
+            self.printer.print_log(&client_log(log))?;
         }
         for event in &update.events {
             if event_prints(event) {
-                self.finish_inline_output()?;
+                self.printer.before_tagged_output()?;
             }
             print_event(event);
         }
         for message in &update.outgoing {
-            self.finish_inline_output()?;
-            writeln!(self.child_stdin, "{}", message.line)?;
-        }
-        if !update.outgoing.is_empty() {
-            self.child_stdin.flush()?;
-        }
-        Ok(())
-    }
-
-    fn print_log(&mut self, log: &ClientLog) -> io::Result<()> {
-        if log.kind != ClientLogKind::Output {
-            self.finish_inline_output()?;
-            return print_log_line(log);
-        }
-
-        if let Some(reasoning) = log.message.strip_prefix("[reasoning] ") {
-            if self.inline_output != InlineOutput::Reasoning {
-                self.finish_inline_output()?;
-                print!("[reasoning] ");
-                self.inline_output = InlineOutput::Reasoning;
-            }
-            print!("{reasoning}");
-            return io::stdout().flush();
-        }
-
-        if self.inline_output == InlineOutput::Reasoning {
-            self.finish_inline_output()?;
-        }
-        self.inline_output = InlineOutput::Assistant;
-        print!("{}", log.message);
-        io::stdout().flush()
-    }
-
-    fn finish_inline_output(&mut self) -> io::Result<()> {
-        if self.inline_output != InlineOutput::None {
-            println!();
-            self.inline_output = InlineOutput::None;
+            self.printer.before_tagged_output()?;
+            self.process.write_line(&message.line)?;
         }
         Ok(())
     }
@@ -342,29 +288,15 @@ impl MultiRuntimeCli {
         &self,
         elicitation: &ElicitationSnapshot,
     ) -> Result<ElicitationResponse, Box<dyn Error>> {
-        println!(
-            "[approval] {}",
-            elicitation
-                .title
-                .clone()
-                .unwrap_or_else(|| "approval requested".to_string())
-        );
-        if let Some(body) = &elicitation.body
-            && !body.is_empty()
-        {
-            println!("[approval] {body}");
-        }
-        if !elicitation.choices.is_empty() {
-            println!("[approval] options: {}", elicitation.choices.join(", "));
-        }
-        print!("Allow? [y]es/[s]ession/[n]o/[c]ancel: ");
-        io::stdout().flush()?;
-        let input = read_stdin_line()?;
-        let response = match input.trim().to_ascii_lowercase().as_str() {
-            "y" | "yes" | "allow" => ElicitationResponse::Allow,
-            "s" | "session" | "always" => ElicitationResponse::AllowForSession,
-            "c" | "cancel" => ElicitationResponse::Cancel,
-            _ => ElicitationResponse::Deny,
+        let response = match prompt_approval(
+            elicitation.title.as_deref(),
+            elicitation.body.as_deref(),
+            &elicitation.choices,
+        )? {
+            ApprovalChoice::Allow => ElicitationResponse::Allow,
+            ApprovalChoice::AllowForSession => ElicitationResponse::AllowForSession,
+            ApprovalChoice::Deny => ElicitationResponse::Deny,
+            ApprovalChoice::Cancel => ElicitationResponse::Cancel,
         };
         Ok(response)
     }
@@ -373,46 +305,20 @@ impl MultiRuntimeCli {
         &self,
         elicitation: &ElicitationSnapshot,
     ) -> Result<ElicitationResponse, Box<dyn Error>> {
-        println!(
-            "[input] {}",
-            elicitation
-                .title
-                .clone()
-                .unwrap_or_else(|| "input requested".to_string())
-        );
-        if elicitation.questions.is_empty() {
-            if let Some(body) = &elicitation.body
-                && !body.is_empty()
-            {
-                println!("[input] {body}");
-            }
-            print!("Type your answer, or :cancel to cancel: ");
-            io::stdout().flush()?;
-            let input = read_stdin_line()?;
-            if input.trim() == ":cancel" {
-                return Ok(ElicitationResponse::Cancel);
-            }
-            return Ok(ElicitationResponse::answers([ClientAnswer::new(
-                "answer",
-                input.trim(),
-            )]));
-        }
-
-        let mut answers = Vec::new();
-        for question in &elicitation.questions {
-            println!("[input] {}", question.question);
-            for (index, option) in question.options.iter().enumerate() {
-                println!("[input] {}. {}", index + 1, option.label);
-            }
-            print!("Answer, or :cancel to cancel: ");
-            io::stdout().flush()?;
-            let input = read_stdin_line()?;
-            if input.trim() == ":cancel" {
-                return Ok(ElicitationResponse::Cancel);
-            }
-            answers.push(ClientAnswer::new(&question.id, input.trim()));
-        }
-        Ok(ElicitationResponse::answers(answers))
+        Ok(
+            match prompt_answers(
+                elicitation.title.as_deref(),
+                elicitation.body.as_deref(),
+                &elicitation
+                    .questions
+                    .iter()
+                    .map(cli_question)
+                    .collect::<Vec<_>>(),
+            )? {
+                Some(answers) => ElicitationResponse::answers(to_client_answers(answers)),
+                None => ElicitationResponse::Cancel,
+            },
+        )
     }
 
     fn print_banner(&self) {
@@ -426,8 +332,20 @@ impl MultiRuntimeCli {
     }
 
     fn print_available_commands(&self) {
+        if let Some(commands) = self.current_commands() {
+            print_command_summary(&commands);
+        }
+    }
+
+    fn print_available_command_list(&self) {
+        if let Some(commands) = self.current_commands() {
+            print_available_commands(&commands);
+        }
+    }
+
+    fn current_commands(&self) -> Option<Vec<CliCommandInfo>> {
         let Some(conversation_id) = &self.conversation_id else {
-            return;
+            return None;
         };
         let snapshot = self.client.snapshot();
         let Some(state) = snapshot
@@ -435,28 +353,9 @@ impl MultiRuntimeCli {
             .iter()
             .find(|conversation| &conversation.id == conversation_id)
         else {
-            return;
+            return None;
         };
-        if state.available_commands.is_empty() {
-            return;
-        }
-        let names = state
-            .available_commands
-            .iter()
-            .take(8)
-            .map(|command| format!("/{}", command.name))
-            .collect::<Vec<_>>();
-        let suffix = if state.available_commands.len() > names.len() {
-            ", ..."
-        } else {
-            ""
-        };
-        println!(
-            "[commands] {} available: {}{}; type /commands to list",
-            state.available_commands.len(),
-            names.join(", "),
-            suffix
-        );
+        Some(cli_commands(&state.available_commands))
     }
 
     fn conversation_id(&self) -> Result<String, Box<dyn Error>> {
@@ -471,13 +370,6 @@ impl MultiRuntimeCli {
             .turn(turn_id)
             .map(|turn| turn.phase.contains("terminal"))
             .unwrap_or(false)
-    }
-}
-
-impl Drop for MultiRuntimeCli {
-    fn drop(&mut self) {
-        let _ = self.child.kill();
-        let _ = self.child.wait();
     }
 }
 
@@ -557,64 +449,54 @@ impl RuntimeKind {
     }
 }
 
-enum AppLine {
-    Stdout(String),
-    Stderr(String),
+fn client_log(log: &ClientLog) -> TaggedLog {
+    TaggedLog::new(
+        match log.kind {
+            angel_engine_client::ClientLogKind::Send => TaggedLogKind::Send,
+            angel_engine_client::ClientLogKind::Receive => TaggedLogKind::Receive,
+            angel_engine_client::ClientLogKind::State => TaggedLogKind::State,
+            angel_engine_client::ClientLogKind::Output => TaggedLogKind::Output,
+            angel_engine_client::ClientLogKind::Warning => TaggedLogKind::Warning,
+            angel_engine_client::ClientLogKind::Error => TaggedLogKind::Error,
+            angel_engine_client::ClientLogKind::ProcessStdout => TaggedLogKind::ProcessStdout,
+            angel_engine_client::ClientLogKind::ProcessStderr => TaggedLogKind::ProcessStderr,
+        },
+        log.message.clone(),
+    )
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-enum InlineOutput {
-    None,
-    Assistant,
-    Reasoning,
+fn cli_commands(commands: &[AvailableCommandSnapshot]) -> Vec<CliCommandInfo> {
+    commands
+        .iter()
+        .map(|command| CliCommandInfo {
+            name: command.name.clone(),
+            description: command.description.clone(),
+            input_hint: command.input_hint.clone(),
+        })
+        .collect()
 }
 
-fn spawn_line_reader<R, F>(reader: R, tx: mpsc::Sender<AppLine>, wrap: F)
-where
-    R: io::Read + Send + 'static,
-    F: Fn(String) -> AppLine + Send + 'static + Copy,
-{
-    thread::spawn(move || {
-        for line in BufReader::new(reader).lines().map_while(Result::ok) {
-            if tx.send(wrap(line)).is_err() {
-                break;
-            }
-        }
-    });
-}
-
-fn print_log_line(log: &ClientLog) -> io::Result<()> {
-    match log.kind {
-        ClientLogKind::Output => Ok(()),
-        ClientLogKind::Send => {
-            println!("[send] {}", log.message);
-            Ok(())
-        }
-        ClientLogKind::Receive => {
-            println!("[recv] {}", log.message);
-            Ok(())
-        }
-        ClientLogKind::State => {
-            println!("[state] {}", log.message);
-            Ok(())
-        }
-        ClientLogKind::Warning => {
-            println!("[warn] {}", log.message);
-            Ok(())
-        }
-        ClientLogKind::Error => {
-            println!("[error] {}", log.message);
-            Ok(())
-        }
-        ClientLogKind::ProcessStdout => {
-            println!("[stdout] {}", log.message);
-            Ok(())
-        }
-        ClientLogKind::ProcessStderr => {
-            println!("[stderr] {}", log.message);
-            Ok(())
-        }
+fn cli_question(question: &QuestionSnapshot) -> CliQuestion {
+    CliQuestion {
+        id: question.id.clone(),
+        header: question.header.clone(),
+        question: question.question.clone(),
+        options: question
+            .options
+            .iter()
+            .map(|option| CliQuestionOption {
+                label: option.label.clone(),
+                description: option.description.clone(),
+            })
+            .collect(),
     }
+}
+
+fn to_client_answers(answers: Vec<CliAnswer>) -> Vec<ClientAnswer> {
+    answers
+        .into_iter()
+        .map(|answer| ClientAnswer::new(answer.id, answer.value))
+        .collect()
 }
 
 fn print_event(event: &ClientEvent) {
@@ -670,12 +552,4 @@ fn event_prints(event: &ClientEvent) -> bool {
             | ClientEvent::AvailableCommandsUpdated { .. }
             | ClientEvent::SessionUsageUpdated { .. }
     )
-}
-
-fn read_stdin_line() -> io::Result<String> {
-    let mut input = String::new();
-    if io::stdin().read_line(&mut input)? == 0 {
-        input.clear();
-    }
-    Ok(input)
 }
