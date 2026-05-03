@@ -178,7 +178,13 @@ export async function streamChat(
   };
 }
 
-export function closeChatSession() {
+export function closeChatSession(chatId?: string) {
+  if (chatId) {
+    chatSessions.get(chatId)?.close();
+    chatSessions.delete(chatId);
+    return;
+  }
+
   for (const session of chatSessions.values()) {
     session.close();
   }

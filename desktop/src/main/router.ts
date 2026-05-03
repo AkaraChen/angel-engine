@@ -6,9 +6,10 @@ import type {
   CreateProjectInput,
   UpdateProjectInput,
 } from '../shared/projects';
-import { loadChatSession, sendChat } from './chat/angel-client';
+import { closeChatSession, loadChatSession, sendChat } from './chat/angel-client';
 import {
   createChat,
+  deleteChat,
   getChat,
   listChats,
 } from './chat/repository';
@@ -40,6 +41,33 @@ export const appRouter = {
     .action(async ({ input }) =>
       loadChatSession(assertString(input, 'Chat id is required.'))
     ),
+
+  chatsShowContextMenu: t.procedure
+    .input<string>()
+    .action(async ({ context, input }) => {
+      const chat = getChat(assertString(input, 'Chat id is required.'));
+      if (!chat) {
+        throw new Error('Chat not found.');
+      }
+
+      return new Promise<'cancelled' | 'deleted'>((resolve) => {
+        const menu = Menu.buildFromTemplate([
+          {
+            click: () => {
+              closeChatSession(chat.id);
+              deleteChat(chat.id);
+              resolve('deleted');
+            },
+            label: 'Delete',
+          },
+        ]);
+
+        menu.popup({
+          callback: () => resolve('cancelled'),
+          window: BrowserWindow.fromWebContents(context.sender) ?? undefined,
+        });
+      });
+    }),
 
   chatSend: t.procedure
     .input<ChatSendInput>()

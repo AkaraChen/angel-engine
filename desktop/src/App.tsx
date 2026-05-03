@@ -47,6 +47,7 @@ import {
   MessageSquarePlus,
   Paperclip,
   Pencil,
+  Plus,
   Quote,
   RefreshCw,
   Settings,
@@ -80,8 +81,12 @@ import {
   SidebarHeader,
   SidebarInset,
   SidebarMenu,
+  SidebarMenuAction,
   SidebarMenuButton,
   SidebarMenuItem,
+  SidebarMenuSub,
+  SidebarMenuSubButton,
+  SidebarMenuSubItem,
   SidebarProvider,
 } from '@/components/ui/sidebar';
 import { ToastProvider, useToast } from '@/components/ui/toast';
@@ -221,6 +226,30 @@ function AppContent() {
 
   const selectedProject = projects.find((project) => project.id === selectedProjectId);
   const selectedChat = chats.find((chat) => chat.id === selectedChatId);
+  const projectIds = useMemo(
+    () => new Set(projects.map((project) => project.id)),
+    [projects]
+  );
+  const projectChatsByProjectId = useMemo(() => {
+    const groupedChats = new Map<string, Chat[]>();
+
+    for (const chat of chats) {
+      if (!chat.projectId) continue;
+
+      const projectChats = groupedChats.get(chat.projectId) ?? [];
+      projectChats.push(chat);
+      groupedChats.set(chat.projectId, projectChats);
+    }
+
+    return groupedChats;
+  }, [chats]);
+  const standaloneChats = useMemo(
+    () =>
+      chats.filter(
+        (chat) => !chat.projectId || !projectIds.has(chat.projectId)
+      ),
+    [chats, projectIds]
+  );
 
   const upsertChat = useCallback((chat: Chat) => {
     setChats((current) => {
@@ -254,10 +283,10 @@ function AppContent() {
   }, [refreshProjects]);
 
   useEffect(() => {
-    if (!selectedProjectId && projects.length > 0) {
+    if (!selectedChatId && !selectedProjectId && projects.length > 0) {
       setSelectedProjectId(projects[0].id);
     }
-  }, [projects, selectedProjectId]);
+  }, [projects, selectedChatId, selectedProjectId]);
 
   const loadChat = useCallback(
     async (chatId: string) => {
@@ -265,6 +294,7 @@ function AppContent() {
 
       try {
         const result = await ipc.chatsLoad(chatId);
+        setSelectedProjectId(result.chat.projectId ?? undefined);
         upsertChat(result.chat);
         setHistoryMessages(result.messages);
         setHistoryRevision((revision) => revision + 1);
@@ -338,12 +368,63 @@ function AppContent() {
     [refreshProjects, toast]
   );
 
+  const removeChatFromState = useCallback(
+    (chatId: string) => {
+      setChats((current) => current.filter((chat) => chat.id !== chatId));
+
+      if (selectedChatId === chatId) {
+        setSelectedChatId(undefined);
+        setHistoryMessages([]);
+        setHistoryRevision((revision) => revision + 1);
+      }
+    },
+    [selectedChatId]
+  );
+
+  const showChatContextMenu = useCallback(
+    async (chat: Chat) => {
+      try {
+        const action = await ipc.chatsShowContextMenu(chat.id);
+        if (action === 'deleted') {
+          removeChatFromState(chat.id);
+        }
+      } catch (error) {
+        toast({
+          description: getErrorMessage(error),
+          title: 'Chat action failed',
+          variant: 'destructive',
+        });
+      }
+    },
+    [removeChatFromState, toast]
+  );
+
+  const createChatForProject = useCallback(
+    async (project: Project) => {
+      try {
+        const chat = await ipc.chatsCreate({
+          cwd: project.path,
+          projectId: project.id,
+        });
+        setSelectedProjectId(project.id);
+        upsertChat(chat);
+        setHistoryMessages([]);
+        setHistoryRevision((revision) => revision + 1);
+      } catch (error) {
+        toast({
+          description: getErrorMessage(error),
+          title: 'Could not create chat',
+          variant: 'destructive',
+        });
+      }
+    },
+    [toast, upsertChat]
+  );
+
   const createChatForSelection = useCallback(async () => {
     try {
-      const chat = await ipc.chatsCreate({
-        cwd: selectedProject?.path,
-        projectId: selectedProject?.id ?? null,
-      });
+      const chat = await ipc.chatsCreate({ projectId: null });
+      setSelectedProjectId(undefined);
       upsertChat(chat);
       setHistoryMessages([]);
       setHistoryRevision((revision) => revision + 1);
@@ -354,7 +435,7 @@ function AppContent() {
         variant: 'destructive',
       });
     }
-  }, [selectedProject, toast, upsertChat]);
+  }, [toast, upsertChat]);
 
   return (
     <SidebarProvider>
@@ -427,24 +508,67 @@ function AppContent() {
                   </SidebarMenuItem>
                 ) : null}
 
-                {projects.map((project) => (
-                  <SidebarMenuItem key={project.id}>
-                    <SidebarMenuButton
-                      isActive={project.id === selectedProjectId}
-                      onClick={() => setSelectedProjectId(project.id)}
-                      onContextMenu={(event) => {
-                        event.preventDefault();
-                        void showProjectContextMenu(project);
-                      }}
-                      title={project.path}
-                    >
-                      <Folder />
-                      <span className="truncate">
-                        {getProjectDisplayName(project.path)}
-                      </span>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                ))}
+                {projects.map((project) => {
+                  const projectDisplayName = getProjectDisplayName(project.path);
+                  const projectChats =
+                    projectChatsByProjectId.get(project.id) ?? [];
+
+                  return (
+                    <SidebarMenuItem key={project.id}>
+                      <SidebarMenuButton
+                        isActive={project.id === selectedProjectId}
+                        onClick={() => setSelectedProjectId(project.id)}
+                        onContextMenu={(event) => {
+                          event.preventDefault();
+                          void showProjectContextMenu(project);
+                        }}
+                        title={project.path}
+                      >
+                        <Folder />
+                        <span className="truncate">{projectDisplayName}</span>
+                      </SidebarMenuButton>
+                      <SidebarMenuAction
+                        aria-label={`New chat in ${projectDisplayName}`}
+                        onClick={(event) => {
+                          event.preventDefault();
+                          event.stopPropagation();
+                          void createChatForProject(project);
+                        }}
+                        showOnHover
+                        title={`New chat in ${projectDisplayName}`}
+                        type="button"
+                      >
+                        <Plus />
+                      </SidebarMenuAction>
+
+                      {projectChats.length > 0 ? (
+                        <SidebarMenuSub>
+                          {projectChats.map((chat) => (
+                            <SidebarMenuSubItem key={chat.id}>
+                              <SidebarMenuSubButton
+                                asChild
+                                isActive={chat.id === selectedChatId}
+                                title={chat.cwd ?? chat.title}
+                              >
+                                <button
+                                  onClick={() => void loadChat(chat.id)}
+                                  onContextMenu={(event) => {
+                                    event.preventDefault();
+                                    void showChatContextMenu(chat);
+                                  }}
+                                  type="button"
+                                >
+                                  <MessageSquare />
+                                  <span>{chat.title}</span>
+                                </button>
+                              </SidebarMenuSubButton>
+                            </SidebarMenuSubItem>
+                          ))}
+                        </SidebarMenuSub>
+                      ) : null}
+                    </SidebarMenuItem>
+                  );
+                })}
               </SidebarMenu>
             </SidebarGroupContent>
           </SidebarGroup>
@@ -462,20 +586,24 @@ function AppContent() {
                   </SidebarMenuItem>
                 ) : null}
 
-                {!isChatsLoading && chats.length === 0 ? (
+                {!isChatsLoading && standaloneChats.length === 0 ? (
                   <SidebarMenuItem>
                     <SidebarMenuButton disabled>
                       <MessageSquare />
-                      <span>No chats yet</span>
+                      <span>No standalone chats</span>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                 ) : null}
 
-                {chats.map((chat) => (
+                {standaloneChats.map((chat) => (
                   <SidebarMenuItem key={chat.id}>
                     <SidebarMenuButton
                       isActive={chat.id === selectedChatId}
                       onClick={() => void loadChat(chat.id)}
+                      onContextMenu={(event) => {
+                        event.preventDefault();
+                        void showChatContextMenu(chat);
+                      }}
                       title={chat.cwd ?? chat.title}
                     >
                       <MessageSquare />

@@ -44,6 +44,14 @@ export function createChat(input: ChatCreateInput = {}): Chat {
   return chat;
 }
 
+export function deleteChat(id: string): Chat {
+  const chat = requireChat(id);
+
+  getDatabase().delete(chats).where(eq(chats.id, chat.id)).run();
+
+  return chat;
+}
+
 export function touchChat(id: string): Chat {
   return updateChat(id, { updatedAt: new Date().toISOString() });
 }
