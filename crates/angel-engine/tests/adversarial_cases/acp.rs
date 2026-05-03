@@ -67,6 +67,121 @@ fn acp_permission_before_tool_call_creates_fallback_action_and_safe_choices() {
 }
 
 #[test]
+fn acp_cancel_turn_responds_cancelled_to_pending_permission_request() {
+    let adapter = AcpAdapter::standard();
+    let mut engine = acp_engine(&adapter);
+    let conversation_id = insert_ready_conversation(
+        &mut engine,
+        "conv",
+        RemoteConversationId::Known("sess".to_string()),
+        adapter.capabilities(),
+    );
+    let turn_id = start_turn(&mut engine, conversation_id.clone(), "active")
+        .turn_id
+        .unwrap();
+
+    decode_and_apply(
+        &adapter,
+        &mut engine,
+        JsonRpcMessage::request(
+            JsonRpcRequestId::new("perm"),
+            "session/request_permission",
+            json!({
+                "sessionId": "sess",
+                "toolCallId": "tool-1",
+                "title": "Run tool"
+            }),
+        ),
+    );
+    let elicitation_id = engine.conversations[&conversation_id]
+        .elicitations
+        .keys()
+        .next()
+        .cloned()
+        .unwrap();
+
+    let cancel = engine
+        .plan_command(EngineCommand::CancelTurn {
+            conversation_id: conversation_id.clone(),
+            turn_id: Some(turn_id),
+        })
+        .expect("cancel turn");
+    let output = adapter
+        .encode_effect(&engine, &cancel.effects[0], &TransportOptions::default())
+        .expect("encode cancel");
+
+    assert!(matches!(
+        output.messages.as_slice(),
+        [
+            JsonRpcMessage::Notification { method, .. },
+            JsonRpcMessage::Response { id, result },
+        ] if method == "session/cancel"
+            && id == &JsonRpcRequestId::new("perm")
+            && result["outcome"]["outcome"] == json!("cancelled")
+    ));
+    apply_transport_output(&mut engine, &output).expect("apply cancel output");
+    assert!(matches!(
+        engine.conversations[&conversation_id].elicitations[&elicitation_id].phase,
+        ElicitationPhase::Cancelled
+    ));
+}
+
+#[test]
+fn acp_cancel_turn_responds_cancel_to_pending_form_elicitation() {
+    let adapter = AcpAdapter::standard();
+    let mut engine = acp_engine(&adapter);
+    let conversation_id = insert_ready_conversation(
+        &mut engine,
+        "conv",
+        RemoteConversationId::Known("sess".to_string()),
+        adapter.capabilities(),
+    );
+    let turn_id = start_turn(&mut engine, conversation_id.clone(), "active")
+        .turn_id
+        .unwrap();
+
+    decode_and_apply(
+        &adapter,
+        &mut engine,
+        JsonRpcMessage::request(
+            JsonRpcRequestId::new("ask"),
+            "elicitation/create",
+            json!({
+                "mode": "form",
+                "sessionId": "sess",
+                "message": "Need input",
+                "requestedSchema": {
+                    "type": "object",
+                    "properties": {
+                        "answer": {"type": "string", "title": "Answer"}
+                    }
+                }
+            }),
+        ),
+    );
+
+    let cancel = engine
+        .plan_command(EngineCommand::CancelTurn {
+            conversation_id,
+            turn_id: Some(turn_id),
+        })
+        .expect("cancel turn");
+    let output = adapter
+        .encode_effect(&engine, &cancel.effects[0], &TransportOptions::default())
+        .expect("encode cancel");
+
+    assert!(matches!(
+        output.messages.as_slice(),
+        [
+            JsonRpcMessage::Notification { method, .. },
+            JsonRpcMessage::Response { id, result },
+        ] if method == "session/cancel"
+            && id == &JsonRpcRequestId::new("ask")
+            && result["action"] == json!("cancel")
+    ));
+}
+
+#[test]
 fn acp_bad_model_and_effort_updates_are_server_validated_without_local_context_mutation() {
     let adapter = AcpAdapter::standard();
     let mut engine = acp_engine(&adapter);

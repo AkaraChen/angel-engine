@@ -27,6 +27,9 @@ impl ProtocolTransport for AcpAdapter {
             JsonRpcMessage::notification(method, params)
         };
         output.messages.push(message);
+        if matches!(effect.method, ProtocolMethod::Acp(AcpMethod::SessionCancel)) {
+            append_cancelled_elicitation_responses(engine, effect, &mut output);
+        }
         Ok(output)
     }
 
@@ -47,5 +50,55 @@ impl ProtocolTransport for AcpAdapter {
                 self.decode_request(engine, id, method, params)
             }
         }
+    }
+}
+
+fn append_cancelled_elicitation_responses(
+    engine: &AngelEngine,
+    effect: &crate::ProtocolEffect,
+    output: &mut TransportOutput,
+) {
+    let Some(conversation_id) = effect.conversation_id.as_ref() else {
+        return;
+    };
+    let Some(conversation) = engine.conversations.get(conversation_id) else {
+        return;
+    };
+    for (elicitation_id, elicitation) in &conversation.elicitations {
+        if effect
+            .turn_id
+            .as_ref()
+            .is_some_and(|turn_id| elicitation.turn_id.as_ref() != Some(turn_id))
+        {
+            continue;
+        }
+        if !matches!(
+            elicitation.phase,
+            ElicitationPhase::Open | ElicitationPhase::Resolving
+        ) {
+            continue;
+        }
+        let RemoteRequestId::JsonRpc(request_id) = &elicitation.remote_request_id else {
+            continue;
+        };
+        output.messages.push(JsonRpcMessage::response(
+            request_id.clone(),
+            cancelled_elicitation_result(elicitation),
+        ));
+        output.events.push(EngineEvent::ElicitationCancelled {
+            conversation_id: conversation_id.clone(),
+            elicitation_id: elicitation_id.clone(),
+        });
+        output.logs.push(crate::TransportLog {
+            kind: TransportLogKind::State,
+            message: "cancelled pending ACP elicitation".to_string(),
+        });
+    }
+}
+
+fn cancelled_elicitation_result(elicitation: &ElicitationState) -> Value {
+    match elicitation.kind {
+        ElicitationKind::UserInput | ElicitationKind::ExternalFlow => json!({"action": "cancel"}),
+        _ => json!({"outcome": {"outcome": "cancelled"}}),
     }
 }

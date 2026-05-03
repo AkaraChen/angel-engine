@@ -9,7 +9,7 @@ use crate::protocol::{AcpMethod, ProtocolMethod};
 use crate::reducer::{AngelEngine, PendingRequest};
 use crate::state::{
     ActionInput, ActionKind, ActionPhase, ActionState, ContentDelta, ContextPatch, ElicitationKind,
-    ElicitationOptions, ElicitationState, ExhaustionReason, SessionConfigOption,
+    ElicitationOptions, ElicitationPhase, ElicitationState, ExhaustionReason, SessionConfigOption,
     SessionConfigValue, SessionMode, SessionModeState, SessionModel, SessionModelState,
     TurnOutcome, UserQuestion, UserQuestionOption,
 };
