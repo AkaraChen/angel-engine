@@ -4,8 +4,9 @@ use std::time::Duration;
 
 use angel_engine_client::{
     AvailableCommandSnapshot, Client, ClientAnswer, ClientBuilder, ClientEvent, ClientLog,
-    ClientOptions, ClientUpdate, ElicitationResponse, ElicitationSnapshot, QuestionSnapshot,
-    RuntimeSnapshot, StartConversationRequest, ThreadEvent,
+    ClientOptions, ClientUpdate, ConversationSnapshot, ElicitationResponse, ElicitationSnapshot,
+    QuestionSnapshot, RuntimeSnapshot, SessionConfigOptionSnapshot, StartConversationRequest,
+    ThreadEvent,
 };
 use test_cli::{
     AppLine, ApprovalChoice, CliAnswer, CliCommandInfo, CliQuestion, CliQuestionOption,
@@ -130,17 +131,52 @@ impl MultiRuntimeCli {
     }
 
     fn handle_setting_command(&mut self, line: &str) -> Result<bool, Box<dyn Error>> {
-        let Some((command, value)) = line.split_once(' ') else {
-            return Ok(false);
-        };
-        let event = match command {
-            "/model" => ThreadEvent::set_model(value.trim()),
-            "/mode" => ThreadEvent::set_mode(value.trim()),
-            "/effort" | "/reasoning" => ThreadEvent::set_reasoning_effort(value.trim()),
+        let mut parts = line.splitn(2, char::is_whitespace);
+        let command = parts.next().unwrap_or_default();
+        let value = parts.next().unwrap_or_default().trim();
+
+        match command {
+            "/model" => {
+                if value.is_empty() {
+                    self.print_model_state()?;
+                } else {
+                    self.send_thread_event(ThreadEvent::set_model(value))?;
+                    self.pump_until_no_activity(Duration::from_millis(250))?;
+                    println!("[state] model set to {value}");
+                }
+            }
+            "/mode" => {
+                if value.is_empty() {
+                    self.print_mode_state()?;
+                } else {
+                    self.send_thread_event(ThreadEvent::set_mode(value))?;
+                    self.pump_until_no_activity(Duration::from_millis(250))?;
+                    println!("[state] mode set to {value}");
+                    if self.codex_mode_needs_model_warning(value) {
+                        println!(
+                            "[warn] Codex collaborationMode requires a model in turn/start; set /model first if the next turn does not switch mode"
+                        );
+                    }
+                }
+            }
+            "/effort" | "/reasoning" => {
+                if value.is_empty() {
+                    self.print_effort_state()?;
+                } else if self.runtime.is_codex() && !is_codex_reasoning_effort(value) {
+                    println!("[warn] use one of: none, minimal, low, medium, high, xhigh");
+                } else {
+                    let effort = if self.runtime.is_codex() {
+                        value.to_ascii_lowercase()
+                    } else {
+                        value.to_string()
+                    };
+                    self.send_thread_event(ThreadEvent::set_reasoning_effort(effort))?;
+                    self.pump_until_no_activity(Duration::from_millis(250))?;
+                    println!("[state] reasoning effort set to {value}");
+                }
+            }
             _ => return Ok(false),
-        };
-        self.send_thread_event(event)?;
-        self.pump_until_no_activity(Duration::from_millis(250))?;
+        }
         Ok(true)
     }
 
@@ -343,19 +379,116 @@ impl MultiRuntimeCli {
         }
     }
 
-    fn current_commands(&self) -> Option<Vec<CliCommandInfo>> {
-        let Some(conversation_id) = &self.conversation_id else {
-            return None;
-        };
-        let snapshot = self.client.snapshot();
-        let Some(state) = snapshot
+    fn current_conversation(&self) -> Option<ConversationSnapshot> {
+        let conversation_id = self.conversation_id.as_ref()?;
+        self.client
+            .snapshot()
             .conversations
-            .iter()
+            .into_iter()
             .find(|conversation| &conversation.id == conversation_id)
-        else {
-            return None;
-        };
-        Some(cli_commands(&state.available_commands))
+    }
+
+    fn current_commands(&self) -> Option<Vec<CliCommandInfo>> {
+        let conversation = self.current_conversation()?;
+        Some(cli_commands(&conversation.available_commands))
+    }
+
+    fn print_model_state(&self) -> Result<(), Box<dyn Error>> {
+        let conversation = self
+            .current_conversation()
+            .ok_or("selected conversation missing")?;
+        let current = conversation
+            .context
+            .model
+            .as_deref()
+            .or_else(|| {
+                conversation
+                    .models
+                    .as_ref()
+                    .map(|models| models.current_model_id.as_str())
+            })
+            .unwrap_or("(default)");
+        println!("[model] current: {current}");
+        if let Some(option) = config_option(&conversation, "model", &["model"]) {
+            print_config_values("[model]", option);
+        } else if let Some(models) = &conversation.models {
+            let values = models
+                .available_models
+                .iter()
+                .map(|model| model.id.as_str())
+                .collect::<Vec<_>>();
+            print_values("[model]", &values);
+        }
+        Ok(())
+    }
+
+    fn print_mode_state(&self) -> Result<(), Box<dyn Error>> {
+        let conversation = self
+            .current_conversation()
+            .ok_or("selected conversation missing")?;
+        let current = conversation
+            .context
+            .mode
+            .as_deref()
+            .or_else(|| {
+                conversation
+                    .modes
+                    .as_ref()
+                    .map(|modes| modes.current_mode_id.as_str())
+            })
+            .unwrap_or("(default)");
+        println!("[mode] current: {current}");
+        if let Some(option) = config_option(&conversation, "mode", &["mode"]) {
+            print_config_values("[mode]", option);
+        } else if let Some(modes) = &conversation.modes {
+            let values = modes
+                .available_modes
+                .iter()
+                .map(|mode| mode.id.as_str())
+                .collect::<Vec<_>>();
+            print_values("[mode]", &values);
+        } else if self.runtime.is_codex() {
+            println!("[mode] available: plan, default");
+        }
+        Ok(())
+    }
+
+    fn print_effort_state(&self) -> Result<(), Box<dyn Error>> {
+        let conversation = self
+            .current_conversation()
+            .ok_or("selected conversation missing")?;
+        let current = conversation
+            .context
+            .reasoning_effort
+            .as_deref()
+            .unwrap_or("(default)");
+        println!("[effort] current: {current}");
+        if let Some(option) = config_option(
+            &conversation,
+            "thought_level",
+            &[
+                "thought_level",
+                "reasoning",
+                "reasoning_effort",
+                "effort",
+                "thinking",
+                "thought",
+            ],
+        ) {
+            print_config_values("[effort]", option);
+        } else if self.runtime.is_codex() {
+            println!("[effort] available: none, minimal, low, medium, high, xhigh");
+        }
+        Ok(())
+    }
+
+    fn codex_mode_needs_model_warning(&self, value: &str) -> bool {
+        self.runtime.is_codex()
+            && matches!(value, "plan" | "default")
+            && self
+                .current_conversation()
+                .and_then(|conversation| conversation.context.model)
+                .is_none()
     }
 
     fn conversation_id(&self) -> Result<String, Box<dyn Error>> {
@@ -444,6 +577,10 @@ impl RuntimeKind {
         matches!(self, Self::Codex)
     }
 
+    fn is_codex(self) -> bool {
+        matches!(self, Self::Codex)
+    }
+
     fn auto_authenticate(self) -> bool {
         matches!(self, Self::Kimi)
     }
@@ -474,6 +611,60 @@ fn cli_commands(commands: &[AvailableCommandSnapshot]) -> Vec<CliCommandInfo> {
             input_hint: command.input_hint.clone(),
         })
         .collect()
+}
+
+fn config_option<'a>(
+    conversation: &'a ConversationSnapshot,
+    preferred_id: &str,
+    categories: &[&str],
+) -> Option<&'a SessionConfigOptionSnapshot> {
+    conversation
+        .config_options
+        .iter()
+        .find(|option| option.id == preferred_id)
+        .or_else(|| {
+            conversation.config_options.iter().find(|option| {
+                option
+                    .category
+                    .as_deref()
+                    .is_some_and(|category| categories.contains(&category))
+            })
+        })
+}
+
+fn print_config_values(prefix: &str, option: &SessionConfigOptionSnapshot) {
+    if option.values.is_empty() {
+        println!("{prefix} current option: {}", option.current_value);
+        return;
+    }
+    let values = option
+        .values
+        .iter()
+        .map(|value| {
+            if value.value == option.current_value {
+                format!("{}*", value.value)
+            } else {
+                value.value.clone()
+            }
+        })
+        .collect::<Vec<_>>();
+    print_values(
+        prefix,
+        &values.iter().map(String::as_str).collect::<Vec<_>>(),
+    );
+}
+
+fn print_values(prefix: &str, values: &[&str]) {
+    if !values.is_empty() {
+        println!("{prefix} available: {}", values.join(", "));
+    }
+}
+
+fn is_codex_reasoning_effort(value: &str) -> bool {
+    matches!(
+        value.to_ascii_lowercase().as_str(),
+        "none" | "minimal" | "low" | "medium" | "high" | "xhigh"
+    )
 }
 
 fn cli_question(question: &QuestionSnapshot) -> CliQuestion {

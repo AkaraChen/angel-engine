@@ -333,7 +333,6 @@ fn acp_bad_model_and_effort_updates_are_server_validated_without_local_context_m
                         scope: ContextScope::TurnAndFuture,
                         reasoning: Some(ReasoningProfile {
                             effort: Some("sideways".to_string()),
-                            summary: None,
                         }),
                     },
                 ],

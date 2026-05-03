@@ -184,7 +184,6 @@ pub(crate) fn conversation_snapshot(conversation: &ConversationState) -> Convers
 pub struct ContextSnapshot {
     pub model: Option<String>,
     pub reasoning_effort: Option<String>,
-    pub reasoning_summary: Option<String>,
     pub mode: Option<String>,
     pub cwd: Option<String>,
     pub additional_directories: Vec<String>,
@@ -200,7 +199,6 @@ impl From<&EffectiveContext> for ContextSnapshot {
         Self {
             model: context.model.effective().and_then(Clone::clone),
             reasoning_effort: reasoning.and_then(|profile| profile.effort.clone()),
-            reasoning_summary: reasoning.and_then(|profile| profile.summary.clone()),
             mode: context
                 .mode
                 .effective()

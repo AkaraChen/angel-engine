@@ -44,7 +44,6 @@ pub(super) fn sync_context_from_config_options(
             scope: ContextScope::TurnAndFuture,
             reasoning: Some(ReasoningProfile {
                 effort: Some(option.current_value.clone()),
-                summary: None,
             }),
         }));
     }
@@ -58,9 +57,6 @@ pub(super) fn codex_context_fields(context: &crate::EffectiveContext) -> Vec<(St
     if let Some(reasoning) = context.reasoning.effective().and_then(Option::as_ref) {
         if let Some(effort) = &reasoning.effort {
             fields.push(("effort".to_string(), effort.clone()));
-        }
-        if let Some(summary) = &reasoning.summary {
-            fields.push(("summary".to_string(), summary.clone()));
         }
     }
     if let Some(policy) = context.approvals.effective() {
@@ -144,6 +140,7 @@ pub(super) fn acp_context_effect_specs(
                 }
             }
             ContextUpdate::Reasoning {
+                scope,
                 reasoning: Some(reasoning),
                 ..
             } => {
@@ -162,6 +159,22 @@ pub(super) fn acp_context_effect_specs(
                     )
                 {
                     specs.push(set_config_option_spec(&option.id, effort, update.clone()));
+                } else if let Some(effort) = &reasoning.effort
+                    && let Some(model) = thinking_model_for_effort(conversation, effort)
+                {
+                    specs.push(ContextEffectSpec {
+                        method: ProtocolMethod::Acp(AcpMethod::SetSessionModel),
+                        fields: vec![("modelId".to_string(), model.clone())],
+                        patch: ContextPatch {
+                            updates: vec![
+                                ContextUpdate::Model {
+                                    scope: *scope,
+                                    model: Some(model),
+                                },
+                                update.clone(),
+                            ],
+                        },
+                    });
                 }
             }
             ContextUpdate::ApprovalPolicy { policy, .. } => {
@@ -230,6 +243,33 @@ fn set_config_option_spec(
         ],
         patch: ContextPatch::one(update),
     }
+}
+
+fn thinking_model_for_effort(conversation: &ConversationState, effort: &str) -> Option<String> {
+    const THINKING_SUFFIX: &str = ",thinking";
+
+    let models = conversation.model_state.as_ref()?;
+    let current = models.current_model_id.as_str();
+    let target = if disables_reasoning(effort) {
+        current.strip_suffix(THINKING_SUFFIX).map(str::to_string)?
+    } else if current.ends_with(THINKING_SUFFIX) {
+        return None;
+    } else {
+        format!("{current}{THINKING_SUFFIX}")
+    };
+
+    models
+        .available_models
+        .iter()
+        .any(|model| model.id == target)
+        .then_some(target)
+}
+
+fn disables_reasoning(effort: &str) -> bool {
+    matches!(
+        effort.to_ascii_lowercase().as_str(),
+        "none" | "off" | "false" | "disabled" | "disable"
+    )
 }
 
 fn find_config_option<'a>(

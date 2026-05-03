@@ -30,6 +30,7 @@ impl CodexAdapter {
             "turn/plan/updated" => self.decode_plan(engine, params),
             "item/started" => self.decode_item(engine, params, false),
             "item/completed" => self.decode_item(engine, params, true),
+            "rawResponseItem/completed" => self.decode_item(engine, params, true),
             "item/commandExecution/outputDelta" => {
                 self.decode_action_output(engine, params, ActionKind::Command, true)
             }

@@ -5,7 +5,7 @@ use crate::ids::RemoteConversationId;
 use crate::protocol::{AcpMethod, ProtocolFlavor, ProtocolMethod};
 use crate::state::{
     AgentMode, ApprovalPolicy, ContextPatch, ContextScope, ContextUpdate, PermissionProfile,
-    ReasoningProfile, SandboxProfile, SessionConfigOption,
+    ReasoningProfile, SandboxProfile, SessionConfigOption, SessionModel, SessionModelState,
 };
 
 use super::{engine_with, insert_ready_conversation};
@@ -92,7 +92,6 @@ fn acp_context_update_uses_advertised_effort_config_option() {
                 scope: ContextScope::TurnAndFuture,
                 reasoning: Some(ReasoningProfile {
                     effort: Some("high".to_string()),
-                    summary: None,
                 }),
             }),
         })
@@ -113,6 +112,104 @@ fn acp_context_update_uses_advertised_effort_config_option() {
     let conversation_id = plan.conversation_id.as_ref().unwrap();
     let conversation = engine.conversations.get(conversation_id).unwrap();
     assert_eq!(conversation.context.reasoning.effective(), None);
+}
+
+#[test]
+fn acp_reasoning_effort_uses_thinking_model_variant_when_available() {
+    let adapter = AcpAdapter::standard();
+    let mut engine = engine_with(ProtocolFlavor::Acp, adapter.capabilities());
+    let conversation_id = insert_ready_conversation(
+        &mut engine,
+        "conv",
+        RemoteConversationId::Known("sess".to_string()),
+        adapter.capabilities(),
+    );
+    let conversation = engine.conversations.get_mut(&conversation_id).unwrap();
+    conversation.model_state = Some(SessionModelState {
+        current_model_id: "kimi-code/kimi-for-coding".to_string(),
+        available_models: vec![
+            SessionModel {
+                id: "kimi-code/kimi-for-coding".to_string(),
+                name: "Kimi Coding".to_string(),
+                description: None,
+            },
+            SessionModel {
+                id: "kimi-code/kimi-for-coding,thinking".to_string(),
+                name: "Kimi Coding (thinking)".to_string(),
+                description: None,
+            },
+        ],
+    });
+
+    let plan = engine
+        .plan_command(EngineCommand::UpdateContext {
+            conversation_id,
+            patch: ContextPatch::one(ContextUpdate::Reasoning {
+                scope: ContextScope::TurnAndFuture,
+                reasoning: Some(ReasoningProfile {
+                    effort: Some("high".to_string()),
+                }),
+            }),
+        })
+        .expect("effort update");
+
+    assert!(matches!(
+        &plan.effects[0].method,
+        ProtocolMethod::Acp(AcpMethod::SetSessionModel)
+    ));
+    assert_eq!(
+        plan.effects[0].payload.fields.get("modelId"),
+        Some(&"kimi-code/kimi-for-coding,thinking".to_string())
+    );
+}
+
+#[test]
+fn acp_reasoning_none_disables_thinking_model_variant_when_available() {
+    let adapter = AcpAdapter::standard();
+    let mut engine = engine_with(ProtocolFlavor::Acp, adapter.capabilities());
+    let conversation_id = insert_ready_conversation(
+        &mut engine,
+        "conv",
+        RemoteConversationId::Known("sess".to_string()),
+        adapter.capabilities(),
+    );
+    let conversation = engine.conversations.get_mut(&conversation_id).unwrap();
+    conversation.model_state = Some(SessionModelState {
+        current_model_id: "kimi-code/kimi-for-coding,thinking".to_string(),
+        available_models: vec![
+            SessionModel {
+                id: "kimi-code/kimi-for-coding".to_string(),
+                name: "Kimi Coding".to_string(),
+                description: None,
+            },
+            SessionModel {
+                id: "kimi-code/kimi-for-coding,thinking".to_string(),
+                name: "Kimi Coding (thinking)".to_string(),
+                description: None,
+            },
+        ],
+    });
+
+    let plan = engine
+        .plan_command(EngineCommand::UpdateContext {
+            conversation_id,
+            patch: ContextPatch::one(ContextUpdate::Reasoning {
+                scope: ContextScope::TurnAndFuture,
+                reasoning: Some(ReasoningProfile {
+                    effort: Some("none".to_string()),
+                }),
+            }),
+        })
+        .expect("effort update");
+
+    assert!(matches!(
+        &plan.effects[0].method,
+        ProtocolMethod::Acp(AcpMethod::SetSessionModel)
+    ));
+    assert_eq!(
+        plan.effects[0].payload.fields.get("modelId"),
+        Some(&"kimi-code/kimi-for-coding".to_string())
+    );
 }
 
 #[test]
@@ -177,7 +274,6 @@ fn codex_start_turn_includes_sticky_context_overrides() {
                         scope: ContextScope::TurnAndFuture,
                         reasoning: Some(ReasoningProfile {
                             effort: Some("high".to_string()),
-                            summary: None,
                         }),
                     },
                     ContextUpdate::ApprovalPolicy {

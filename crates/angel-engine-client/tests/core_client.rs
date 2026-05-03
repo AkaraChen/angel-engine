@@ -186,6 +186,110 @@ fn thread_send_event_streams_turn_deltas_and_terminal_state() {
 }
 
 #[test]
+fn codex_completed_reasoning_item_surfaces_reasoning_updates() {
+    let (mut client, conversation_id) = ready_codex_client();
+
+    let sent = client
+        .thread(&conversation_id)
+        .send_event(ThreadEvent::text("find the bug"))
+        .expect("send codex text");
+    assert_eq!(sent.update.outgoing[0].value["method"], json!("turn/start"));
+    let turn_id = sent.turn_id.expect("turn id");
+    client
+        .receive_json_value(response(
+            &sent.request_id.expect("turn request id"),
+            json!({
+                "turn": {
+                    "id": "turn-1",
+                    "status": "inProgress"
+                }
+            }),
+        ))
+        .expect("turn accepted");
+
+    let update = client
+        .receive_json_value(json!({
+            "jsonrpc": "2.0",
+            "method": "item/completed",
+            "params": {
+                "threadId": "thread-1",
+                "turnId": "turn-1",
+                "item": {
+                    "id": "reasoning-1",
+                    "type": "reasoning",
+                    "summary": ["Checking adapter notifications."]
+                }
+            }
+        }))
+        .expect("reasoning item");
+
+    assert!(update.logs.iter().any(|log| {
+        log.kind == angel_engine_client::ClientLogKind::Output
+            && log.message == "[reasoning] Checking adapter notifications."
+    }));
+    assert!(update.events.iter().any(|event| {
+        matches!(
+            event,
+            ClientEvent::ReasoningDelta { conversation_id: id, turn_id: tid, content }
+                if id == &conversation_id
+                    && tid == &turn_id
+                    && content.text == "Checking adapter notifications."
+        )
+    }));
+
+    let snapshot = client
+        .thread(&conversation_id)
+        .turn(&turn_id)
+        .expect("turn snapshot");
+    assert_eq!(snapshot.reasoning_text, "Checking adapter notifications.");
+}
+
+#[test]
+fn codex_turn_start_defaults_to_detailed_summary_without_effort() {
+    let (mut client, conversation_id) = ready_codex_client();
+
+    let sent = client
+        .thread(&conversation_id)
+        .send_event(ThreadEvent::text("show reasoning"))
+        .expect("send codex text");
+
+    assert_eq!(sent.update.outgoing[0].value["method"], json!("turn/start"));
+    assert!(
+        sent.update.outgoing[0].value["params"]
+            .get("effort")
+            .is_none()
+    );
+    assert_eq!(
+        sent.update.outgoing[0].value["params"]["summary"],
+        json!("detailed")
+    );
+}
+
+#[test]
+fn codex_explicit_reasoning_effort_keeps_default_summary() {
+    let (mut client, conversation_id) = ready_codex_client();
+
+    client
+        .thread(&conversation_id)
+        .send_event(ThreadEvent::set_reasoning_effort("none"))
+        .expect("set reasoning effort");
+
+    let sent = client
+        .thread(&conversation_id)
+        .send_event(ThreadEvent::text("no reasoning"))
+        .expect("send codex text");
+
+    assert_eq!(
+        sent.update.outgoing[0].value["params"]["effort"],
+        json!("none")
+    );
+    assert_eq!(
+        sent.update.outgoing[0].value["params"]["summary"],
+        json!("detailed")
+    );
+}
+
+#[test]
 fn thread_set_model_event_updates_snapshot_after_runtime_ack() {
     let (mut client, conversation_id) = ready_client();
 
@@ -248,6 +352,36 @@ fn ready_client() -> (Client, String) {
         .receive_json_value(response(
             &start.request_id.expect("start id"),
             json!({"sessionId": "sess-1"}),
+        ))
+        .expect("start response");
+    (client, conversation_id)
+}
+
+fn ready_codex_client() -> (Client, String) {
+    let mut client = ClientOptions::builder()
+        .codex_app_server("codex")
+        .build_client();
+    let initialize = client.initialize().expect("initialize");
+    client
+        .receive_json_value(response(
+            &initialize.request_id.expect("initialize id"),
+            json!({"userAgent": "codex-test"}),
+        ))
+        .expect("initialize response");
+
+    let start = client
+        .start_thread(StartConversationRequest::new().cwd("/repo"))
+        .expect("start");
+    let conversation_id = start.conversation_id.expect("conversation id");
+    client
+        .receive_json_value(response(
+            &start.request_id.expect("start id"),
+            json!({
+                "thread": {
+                    "id": "thread-1"
+                },
+                "cwd": "/repo"
+            }),
         ))
         .expect("start response");
     (client, conversation_id)

@@ -203,9 +203,7 @@ fn insert_codex_overrides(
     if let Some(effort) = fields.get("effort") {
         params.insert("effort".to_string(), json!(effort));
     }
-    if let Some(summary) = fields.get("summary") {
-        params.insert("summary".to_string(), json!(summary));
-    }
+    params.insert("summary".to_string(), json!("detailed"));
     if let Some(policy) = fields.get("approvalPolicy") {
         params.insert("approvalPolicy".to_string(), json!(policy));
     }

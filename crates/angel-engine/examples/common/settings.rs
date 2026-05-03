@@ -42,12 +42,11 @@ where
                     } else {
                         value.to_string()
                     };
+                    let mut reasoning = self.current_reasoning_profile()?;
+                    reasoning.effort = Some(effort);
                     if self.update_context(ContextPatch::one(ContextUpdate::Reasoning {
                         scope: ContextScope::TurnAndFuture,
-                        reasoning: Some(ReasoningProfile {
-                            effort: Some(effort),
-                            summary: None,
-                        }),
+                        reasoning: Some(reasoning),
                     }))? {
                         println!("[state] reasoning effort set to {value}");
                     }
@@ -175,6 +174,21 @@ where
                 )
             })
             .unwrap_or_default()
+    }
+
+    fn current_reasoning_profile(&self) -> Result<ReasoningProfile, Box<dyn Error>> {
+        let conversation_id = self.selected_conversation()?;
+        let conversation = self
+            .engine
+            .conversations
+            .get(&conversation_id)
+            .ok_or("selected conversation missing")?;
+        Ok(conversation
+            .context
+            .reasoning
+            .effective()
+            .and_then(Clone::clone)
+            .unwrap_or(ReasoningProfile { effort: None }))
     }
 
     pub(super) fn selected_available_commands(&self) -> &[AvailableCommand] {

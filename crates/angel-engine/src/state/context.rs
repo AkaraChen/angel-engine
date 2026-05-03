@@ -148,7 +148,6 @@ pub enum ContextUpdate {
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct ReasoningProfile {
     pub effort: Option<String>,
-    pub summary: Option<String>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]

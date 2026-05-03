@@ -90,8 +90,26 @@ pub(crate) fn summarize_inbound(method: &str, params: &Value) -> String {
 pub(crate) fn one_line(value: &str, limit: usize) -> String {
     let mut text = value.split_whitespace().collect::<Vec<_>>().join(" ");
     if text.len() > limit {
-        text.truncate(limit.saturating_sub(1));
+        let new_len = text
+            .char_indices()
+            .map(|(index, _)| index)
+            .take_while(|index| *index <= limit.saturating_sub(1))
+            .last()
+            .unwrap_or(0);
+        text.truncate(new_len);
         text.push_str("...");
     }
     text
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn one_line_truncates_on_utf8_boundary() {
+        let text = one_line("请检查当前仓库根目录的 Cargo.toml", 10);
+
+        assert_eq!(text, "请检查...");
+    }
 }

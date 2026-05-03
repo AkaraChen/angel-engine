@@ -305,14 +305,14 @@ impl AngelClientCore {
         conversation_id: impl Into<String>,
         effort: impl Into<String>,
     ) -> ClientResult<ClientCommandResult> {
+        let conversation_id = conversation_id.into();
+        let mut reasoning = self.reasoning_profile(&conversation_id);
+        reasoning.effort = Some(effort.into());
         self.update_context(
             conversation_id,
             ContextUpdate::Reasoning {
                 scope: ContextScope::TurnAndFuture,
-                reasoning: Some(ReasoningProfile {
-                    effort: Some(effort.into()),
-                    summary: None,
-                }),
+                reasoning: Some(reasoning),
             },
         )
     }
@@ -400,6 +400,17 @@ impl AngelClientCore {
             conversation_id: angel_engine::ConversationId::new(conversation_id.into()),
             patch: ContextPatch::one(update),
         })
+    }
+
+    fn reasoning_profile(&self, conversation_id: &str) -> ReasoningProfile {
+        self.engine
+            .conversations
+            .get(&angel_engine::ConversationId::new(
+                conversation_id.to_string(),
+            ))
+            .and_then(|conversation| conversation.context.reasoning.effective())
+            .and_then(Clone::clone)
+            .unwrap_or(ReasoningProfile { effort: None })
     }
 
     fn plan_command(&mut self, command: EngineCommand) -> ClientResult<ClientCommandResult> {
