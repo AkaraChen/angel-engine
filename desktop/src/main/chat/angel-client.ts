@@ -6,10 +6,19 @@ import { app } from 'electron';
 import type {
   Chat,
   ChatHistoryMessage,
+  ChatHistoryMessagePart,
   ChatLoadResult,
   ChatSendInput,
   ChatSendResult,
   ChatStreamDelta,
+  ChatToolAction,
+  ChatToolActionOutput,
+} from '../../shared/chat';
+import {
+  appendChatTextPart,
+  chatPartsText,
+  chatToolActionToPart,
+  cloneChatHistoryPart,
 } from '../../shared/chat';
 import {
   createChat,
@@ -34,6 +43,7 @@ type ConversationSnapshot = {
   context?: {
     cwd?: string | null;
   };
+  actions?: ChatToolAction[];
   history?: {
     replay?: HistoryReplaySnapshot[];
   };
@@ -60,10 +70,12 @@ type TurnSnapshot = {
   id: string;
   inputText?: string;
   outputText?: string;
+  planText?: string;
   reasoningText?: string;
 };
 
 type ClientEvent = {
+  action?: ChatToolAction;
   code?: string;
   content?: { text?: string };
   conversationId?: string;
@@ -75,7 +87,7 @@ type ClientEvent = {
 
 type EngineStreamDelta = {
   actionId?: string;
-  content?: { kind?: string; text?: string };
+  content?: ChatToolActionOutput;
   conversationId?: string;
   turnId?: string;
   type: 'actionOutputDelta' | 'assistantDelta' | 'planDelta' | 'reasoningDelta';
@@ -113,7 +125,9 @@ type AngelClient = {
 };
 
 type AngelClientConstructor = new (options: unknown) => AngelClient;
-type ChatStreamObserver = (event: ChatStreamDelta) => void;
+type ChatStreamObserver = (
+  event: ChatStreamDelta | { action: ChatToolAction; type: 'tool' }
+) => void;
 type RuntimeOptions = Record<string, unknown> & {
   args: string[];
   command: string;
@@ -176,6 +190,7 @@ export async function streamChat(
   return {
     chat: finalChat,
     chatId: finalChat.id,
+    content: result.content,
     reasoning: result.reasoning,
     text: result.text,
     turnId: result.turnId,
@@ -215,11 +230,14 @@ function messagesFromConversationSnapshot(
   snapshot: ConversationSnapshot
 ): ChatHistoryMessage[] {
   const replayMessages = messagesFromHistoryReplay(snapshot.history?.replay ?? []);
-  const turnMessages = messagesFromTurns(snapshot.turns ?? []);
+  const turnMessages = messagesFromTurns(snapshot.turns ?? [], snapshot.actions ?? []);
   return [...replayMessages, ...turnMessages];
 }
 
-function messagesFromTurns(turns: TurnSnapshot[]): ChatHistoryMessage[] {
+function messagesFromTurns(
+  turns: TurnSnapshot[],
+  actions: ChatToolAction[]
+): ChatHistoryMessage[] {
   const messages: ChatHistoryMessage[] = [];
 
   for (const turn of turns) {
@@ -232,16 +250,10 @@ function messagesFromTurns(turns: TurnSnapshot[]): ChatHistoryMessage[] {
       });
     }
 
-    const reasoningText = turn.reasoningText?.trim();
-    const outputText = turn.outputText?.trim();
-    if (reasoningText || outputText) {
+    const content = contentFromTurnSnapshot(turn, actionsForTurn(actions, turn.id));
+    if (content.length > 0) {
       messages.push({
-        content: [
-          ...(reasoningText
-            ? [{ text: reasoningText, type: 'reasoning' as const }]
-            : []),
-          ...(outputText ? [{ text: outputText, type: 'text' as const }] : []),
-        ],
+        content,
         id: `${turn.id}:assistant`,
         role: 'assistant',
       });
@@ -256,8 +268,7 @@ function messagesFromHistoryReplay(
 ): ChatHistoryMessage[] {
   const messages: ChatHistoryMessage[] = [];
   let userText = '';
-  let assistantReasoning = '';
-  let assistantText = '';
+  let assistantParts: ChatHistoryMessagePart[] = [];
   let messageIndex = 0;
 
   const flushUser = () => {
@@ -272,22 +283,19 @@ function messagesFromHistoryReplay(
   };
 
   const flushAssistant = () => {
-    const reasoning = assistantReasoning.trim();
-    const text = assistantText.trim();
-    if (!reasoning && !text) return;
+    assistantParts = assistantParts.filter(
+      (part) => part.type === 'tool-call' || part.text.trim()
+    );
+    if (assistantParts.length === 0) return;
     messages.push({
-      content: [
-        ...(reasoning ? [{ text: reasoning, type: 'reasoning' as const }] : []),
-        ...(text ? [{ text, type: 'text' as const }] : []),
-      ],
+      content: assistantParts.map(cloneChatHistoryPart),
       id: `history-${messageIndex++}:assistant`,
       role: 'assistant',
     });
-    assistantReasoning = '';
-    assistantText = '';
+    assistantParts = [];
   };
 
-  for (const entry of replay) {
+  for (const [index, entry] of replay.entries()) {
     const text = entry.content?.text;
     if (!text) continue;
 
@@ -296,16 +304,118 @@ function messagesFromHistoryReplay(
       userText += text;
     } else if (entry.role === 'assistant') {
       flushUser();
-      assistantText += text;
+      appendChatTextPart(assistantParts, 'text', text);
     } else if (entry.role === 'reasoning') {
       flushUser();
-      assistantReasoning += text;
+      appendChatTextPart(assistantParts, 'reasoning', text);
+    } else if (entry.role === 'tool') {
+      flushUser();
+      assistantParts.push(historyToolPartFromText(text, index));
     }
   }
 
   flushUser();
   flushAssistant();
   return messages;
+}
+
+function contentFromTurnSnapshot(
+  turn?: Pick<TurnSnapshot, 'outputText' | 'planText' | 'reasoningText'> | null,
+  actions: ChatToolAction[] = []
+): ChatHistoryMessagePart[] {
+  const parts: ChatHistoryMessagePart[] = [];
+  const reasoningText = [turn?.reasoningText, turn?.planText]
+    .filter((text): text is string => Boolean(text?.trim()))
+    .join('\n');
+
+  appendChatTextPart(parts, 'reasoning', reasoningText);
+  for (const action of actions) {
+    parts.push(chatToolActionToPart(action));
+  }
+  appendChatTextPart(parts, 'text', turn?.outputText ?? '');
+
+  return parts;
+}
+
+function actionsForTurn(actions: ChatToolAction[], turnId: string) {
+  return actions.filter((action) => action.turnId === turnId);
+}
+
+function historyToolPartFromText(text: string, index: number): ChatHistoryMessagePart {
+  return chatToolActionToPart(historyToolActionFromText(text, index));
+}
+
+function historyToolActionFromText(text: string, index: number): ChatToolAction {
+  const parsed = parseJsonObject(text);
+  const id =
+    getString(parsed, 'toolCallId') ||
+    getString(parsed, 'tool_call_id') ||
+    getString(parsed, 'id') ||
+    `history-tool-${index}`;
+  const outputText = toolHistoryOutputText(parsed);
+
+  return {
+    id,
+    kind: getString(parsed, 'kind') || getString(parsed, 'type') || 'tool',
+    outputText,
+    phase: getString(parsed, 'status') || 'completed',
+    rawInput:
+      getJsonString(parsed, 'rawInput') ||
+      getJsonString(parsed, 'raw_input') ||
+      undefined,
+    title: getString(parsed, 'title') || getString(parsed, 'name') || 'Tool call',
+  };
+}
+
+function parseJsonObject(text: string): Record<string, unknown> | undefined {
+  try {
+    const parsed: unknown = JSON.parse(text);
+    if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+      return parsed as Record<string, unknown>;
+    }
+  } catch {
+    return undefined;
+  }
+  return undefined;
+}
+
+function getString(
+  object: Record<string, unknown> | undefined,
+  key: string
+): string | undefined {
+  const value = object?.[key];
+  return typeof value === 'string' && value ? value : undefined;
+}
+
+function getJsonString(
+  object: Record<string, unknown> | undefined,
+  key: string
+): string | undefined {
+  const value = object?.[key];
+  if (value === undefined || value === null) return undefined;
+  return typeof value === 'string' ? value : JSON.stringify(value);
+}
+
+function toolHistoryOutputText(object: Record<string, unknown> | undefined) {
+  const rawOutput =
+    getJsonString(object, 'rawOutput') || getJsonString(object, 'raw_output');
+  if (rawOutput) return rawOutput;
+
+  const content = object?.content;
+  if (!Array.isArray(content)) return '';
+
+  return content
+    .map((item) => {
+      if (!item || typeof item !== 'object') return '';
+      const contentItem = item as Record<string, unknown>;
+      const nested = contentItem.content;
+      if (nested && typeof nested === 'object' && !Array.isArray(nested)) {
+        return getString(nested as Record<string, unknown>, 'text') ?? '';
+      }
+      return getString(contentItem, 'text') ?? '';
+    })
+    .filter(Boolean)
+    .join('\n');
 }
 
 class AngelChatSession {
@@ -325,6 +435,7 @@ class AngelChatSession {
     onEvent?: ChatStreamObserver,
     abortSignal?: AbortSignal
   ): Promise<{
+    content: ChatHistoryMessagePart[];
     reasoning?: string;
     remoteThreadId?: string;
     text: string;
@@ -363,6 +474,7 @@ class AngelChatSession {
     onEvent?: ChatStreamObserver,
     abortSignal?: AbortSignal
   ): Promise<{
+    content: ChatHistoryMessagePart[];
     reasoning?: string;
     remoteThreadId?: string;
     text: string;
@@ -379,9 +491,18 @@ class AngelChatSession {
     await this.handleUpdate(result.update, collector);
 
     if (!result.turnId) {
+      const content = collector.content();
+      if (content.length === 0) {
+        appendChatTextPart(
+          content,
+          'text',
+          'The runtime accepted the message without starting a turn.'
+        );
+      }
       return {
+        content,
         remoteThreadId: this.threadRemoteId(),
-        text: collector.text || 'The runtime accepted the message without starting a turn.',
+        text: chatPartsText(content, 'text'),
       };
     }
 
@@ -398,10 +519,31 @@ class AngelChatSession {
     }
 
     const turn = this.client.turnState(conversationId, result.turnId);
+    const snapshot = this.client.threadState(conversationId);
+    const snapshotActions = snapshot?.actions ?? [];
+    collector.reconcileActions(snapshotActions);
+    const snapshotTurn = snapshot?.turns?.find((item) => item.id === result.turnId);
+    const content = collector.content();
+    const finalContent =
+      content.length > 0
+        ? content
+        : contentFromTurnSnapshot(snapshotTurn ?? turn, actionsForTurn(snapshotActions, result.turnId));
+    const text =
+      turn?.outputText ||
+      snapshotTurn?.outputText ||
+      chatPartsText(finalContent, 'text') ||
+      'The runtime finished without text output.';
+    const reasoning =
+      turn?.reasoningText ||
+      snapshotTurn?.reasoningText ||
+      chatPartsText(finalContent, 'reasoning') ||
+      undefined;
+
     return {
-      reasoning: turn?.reasoningText || collector.reasoning || undefined,
+      content: finalContent,
+      reasoning,
       remoteThreadId: this.threadRemoteId(),
-      text: turn?.outputText || collector.text || 'The runtime finished without text output.',
+      text,
       turnId: result.turnId,
     };
   }
@@ -489,19 +631,20 @@ class AngelChatSession {
 
   private async handleUpdate(update?: ClientUpdate, collector?: TurnCollector) {
     const streamDeltas = update?.streamDeltas ?? [];
-    for (const delta of streamDeltas) {
-      collector?.acceptDelta(delta);
-    }
+    const events = update?.events ?? [];
 
-    for (const event of update?.events ?? []) {
+    for (const event of events) {
       if (event.type === 'runtimeFaulted') {
         throw new Error(`Runtime faulted (${event.code}): ${event.message}`);
       }
-      if (streamDeltas.length === 0) {
-        collector?.acceptEvent(event);
-      }
+      collector?.acceptEvent(event);
     }
 
+    if (events.length === 0) {
+      for (const delta of streamDeltas) {
+        collector?.acceptDelta(delta);
+      }
+    }
   }
 
   private requireConversationId() {
@@ -518,8 +661,8 @@ class AngelChatSession {
 }
 
 class TurnCollector {
-  reasoning = '';
-  text = '';
+  private readonly actionPartIndexes = new Map<string, number>();
+  private readonly parts: ChatHistoryMessagePart[] = [];
 
   constructor(
     private readonly turnId: string | undefined,
@@ -534,17 +677,43 @@ class TurnCollector {
     this.accept(event);
   }
 
+  content() {
+    return this.parts.map(cloneChatHistoryPart);
+  }
+
+  reconcileActions(actions: ChatToolAction[]) {
+    for (const action of actions) {
+      if (!this.acceptsTurn(action.turnId)) continue;
+      if (!this.actionPartIndexes.has(action.id)) continue;
+      this.upsertAction(action);
+    }
+  }
+
   private accept(event: ClientEvent | EngineStreamDelta) {
-    if (event.turnId && this.turnId && event.turnId !== this.turnId) return;
+    if (
+      (event.type === 'actionObserved' || event.type === 'actionUpdated') &&
+      event.action
+    ) {
+      this.upsertAction(event.action);
+      return;
+    }
+
+    if (event.type === 'actionOutputDelta') {
+      const delta = event as EngineStreamDelta;
+      if (delta.actionId) this.acceptActionOutputDelta(delta);
+      return;
+    }
+
+    if (!this.acceptsTurn(event.turnId)) return;
 
     const text = event.content?.text;
     if (!text) return;
 
     if (event.type === 'assistantDelta') {
-      this.text += text;
+      appendChatTextPart(this.parts, 'text', text);
       this.onEvent?.({ part: 'text', text, turnId: event.turnId, type: 'delta' });
     } else if (event.type === 'reasoningDelta') {
-      this.reasoning += text;
+      appendChatTextPart(this.parts, 'reasoning', text);
       this.onEvent?.({
         part: 'reasoning',
         text,
@@ -552,7 +721,7 @@ class TurnCollector {
         type: 'delta',
       });
     } else if (event.type === 'planDelta') {
-      this.reasoning += text;
+      appendChatTextPart(this.parts, 'reasoning', text);
       this.onEvent?.({
         part: 'reasoning',
         text,
@@ -560,6 +729,50 @@ class TurnCollector {
         type: 'delta',
       });
     }
+  }
+
+  private acceptsTurn(turnId: string | undefined) {
+    return !turnId || !this.turnId || turnId === this.turnId;
+  }
+
+  private acceptActionOutputDelta(delta: EngineStreamDelta) {
+    if (!delta.actionId || !this.acceptsTurn(delta.turnId)) return;
+
+    const currentIndex = this.actionPartIndexes.get(delta.actionId);
+    const current =
+      currentIndex === undefined ? undefined : this.parts[currentIndex];
+    const currentAction =
+      current?.type === 'tool-call' ? current.artifact : undefined;
+    const output = [
+      ...(currentAction?.output ?? []),
+      ...(delta.content ? [delta.content] : []),
+    ];
+    const outputText = output.map((item) => item.text).join('');
+
+    this.upsertAction({
+      id: delta.actionId,
+      kind: currentAction?.kind ?? 'tool',
+      output,
+      outputText,
+      phase: currentAction?.phase ?? 'streamingResult',
+      title: currentAction?.title ?? 'Tool call',
+      turnId: delta.turnId,
+    });
+  }
+
+  private upsertAction(action: ChatToolAction) {
+    if (!this.acceptsTurn(action.turnId)) return;
+
+    const part = chatToolActionToPart(action);
+    const index = this.actionPartIndexes.get(action.id);
+    if (index === undefined) {
+      this.actionPartIndexes.set(action.id, this.parts.length);
+      this.parts.push(part);
+    } else {
+      this.parts[index] = part;
+    }
+
+    this.onEvent?.({ action, type: 'tool' });
   }
 }
 

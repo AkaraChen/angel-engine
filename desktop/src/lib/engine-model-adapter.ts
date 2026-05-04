@@ -12,8 +12,16 @@ import { streamChatEvents } from '@/lib/chat-stream';
 import type {
   Chat,
   ChatHistoryMessage,
+  ChatHistoryMessagePart,
   ChatSendInput,
   ChatSendResult,
+  ChatToolAction,
+} from '@/shared/chat';
+import {
+  appendChatTextPart,
+  chatPartsText,
+  chatToolActionToPart,
+  cloneChatHistoryPart,
 } from '@/shared/chat';
 
 const STREAM_FLUSH_MIN_CHARS = 24;
@@ -44,10 +52,9 @@ type ActiveRun = {
 type AssistantAccumulator = {
   chunkCount: number;
   error?: string;
-  reasoning: string;
+  parts: ChatHistoryMessagePart[];
   result?: ChatSendResult;
   status: MessageStatus;
-  text: string;
 };
 
 export function useEngineRuntime({
@@ -132,9 +139,8 @@ export function useEngineRuntime({
 
       const accumulator: AssistantAccumulator = {
         chunkCount: 0,
-        reasoning: '',
+        parts: [],
         status: { type: 'running' },
-        text: '',
       };
       const assistantMessage = createAssistantMessage(
         assistantMessageId,
@@ -237,7 +243,12 @@ async function consumeRunStream({
           reason: 'error',
           type: 'incomplete',
         };
-        accumulator.text = `Backend chat failed: ${event.message}`;
+        accumulator.parts = [
+          {
+            text: `Backend chat failed: ${event.message}`,
+            type: 'text',
+          },
+        ];
         dirty = true;
         await flush();
         break;
@@ -246,20 +257,21 @@ async function consumeRunStream({
       if (event.type === 'result') {
         onChatUpdated?.(event.result.chat);
         accumulator.result = event.result;
-        accumulator.reasoning = event.result.reasoning || accumulator.reasoning;
-        accumulator.text = event.result.text || accumulator.text;
+        if (accumulator.parts.length === 0) {
+          accumulator.parts = event.result.content.map(cloneChatHistoryPart);
+        }
         dirty = true;
         await flush();
         continue;
       }
 
       accumulator.chunkCount += 1;
-      if (event.part === 'reasoning') {
-        accumulator.reasoning += event.text;
+      if (event.type === 'tool') {
+        upsertToolActionPart(accumulator.parts, event.action);
       } else {
-        accumulator.text += event.text;
+        appendChatTextPart(accumulator.parts, event.part, event.text);
+        pendingDeltaChars += event.text.length;
       }
-      pendingDeltaChars += event.text.length;
       dirty = true;
 
       const now = performance.now();
@@ -287,10 +299,32 @@ async function consumeRunStream({
     const message = getErrorMessage(error);
     accumulator.error = message;
     accumulator.status = { error: message, reason: 'error', type: 'incomplete' };
-    accumulator.text = `Backend chat failed: ${message}`;
+    accumulator.parts = [
+      {
+        text: `Backend chat failed: ${message}`,
+        type: 'text',
+      },
+    ];
     dirty = true;
     await flush();
   }
+}
+
+function upsertToolActionPart(
+  parts: ChatHistoryMessagePart[],
+  action: ChatToolAction
+) {
+  const nextPart = chatToolActionToPart(action);
+  const index = parts.findIndex(
+    (part) => part.type === 'tool-call' && part.toolCallId === nextPart.toolCallId
+  );
+
+  if (index === -1) {
+    parts.push(nextPart);
+    return;
+  }
+
+  parts[index] = nextPart;
 }
 
 function createAssistantMessage(
@@ -298,13 +332,13 @@ function createAssistantMessage(
   accumulator: AssistantAccumulator,
   startedAt: number
 ): EngineMessage {
+  const text = chatPartsText(accumulator.parts, 'text');
+  const toolCallCount = accumulator.parts.filter(
+    (part) => part.type === 'tool-call'
+  ).length;
+
   return {
-    content: [
-      ...(accumulator.reasoning.trim()
-        ? [{ text: accumulator.reasoning, type: 'reasoning' as const }]
-        : []),
-      { text: accumulator.text, type: 'text' as const },
-    ],
+    content: accumulator.parts.map(cloneChatHistoryPart),
     createdAt: new Date(),
     id,
     metadata: {
@@ -314,8 +348,8 @@ function createAssistantMessage(
       },
       timing: {
         streamStartTime: startedAt,
-        tokenCount: Math.max(1, Math.round(accumulator.text.length / 4)),
-        toolCallCount: 0,
+        tokenCount: Math.max(1, Math.round(text.length / 4)),
+        toolCallCount,
         totalChunks: Math.max(1, accumulator.chunkCount),
         totalStreamTime: performance.now() - startedAt,
       },
@@ -344,7 +378,7 @@ function historyMessageToEngineMessage(message: ChatHistoryMessage): EngineMessa
   const createdAt = message.createdAt ? new Date(message.createdAt) : undefined;
 
   return {
-    content: message.content,
+    content: message.content.map(cloneChatHistoryPart),
     createdAt:
       createdAt && Number.isFinite(createdAt.getTime()) ? createdAt : undefined,
     id: message.id,

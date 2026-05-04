@@ -6,8 +6,10 @@ import {
   MessagePrimitive,
   type CompleteAttachment,
   type EnrichedPartState,
+  type ToolCallMessagePartProps,
 } from '@assistant-ui/react';
 import {
+  AlertCircleIcon,
   BrainCircuit,
   Check,
   ChevronLeft,
@@ -26,6 +28,7 @@ import {
 
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import { isChatToolAction, type ChatToolAction } from '@/shared/chat';
 import {
   iconButtonClass,
   messageActionFooterClass,
@@ -187,6 +190,9 @@ const messagePartComponents = {
   Source: NullMessagePart,
   Image: ImageMessagePart,
   File: FileMessagePart,
+  tools: {
+    Fallback: ToolActionMessagePart,
+  },
   data: {
     Fallback: DataMessagePart,
   },
@@ -243,6 +249,118 @@ function FileMessagePart(part: Extract<EnrichedPartState, { type: 'file' }>) {
       {part.filename ?? part.mimeType}
     </div>
   );
+}
+
+function ToolActionMessagePart(part: ToolCallMessagePartProps) {
+  const action = isChatToolAction(part.artifact) ? part.artifact : undefined;
+  const phase = action?.phase ?? part.status.type;
+  const title = action?.title || action?.inputSummary || part.toolName;
+  const outputText = getToolOutputText(action, part.result);
+  const errorText = action?.error?.message;
+  const isRunning = isRunningToolPhase(phase);
+  const isFailed = Boolean(errorText) || phase === 'failed';
+
+  return (
+    <div className="my-2 w-full overflow-hidden rounded-md border bg-muted/20 text-xs">
+      <div className="flex min-h-9 items-center gap-2 border-b px-3 py-2">
+        <ToolStatusIcon failed={isFailed} running={isRunning} />
+        <div className="min-w-0 flex-1">
+          <div className="truncate font-medium">{title}</div>
+          <div className="mt-0.5 flex items-center gap-1.5 text-muted-foreground">
+            <span>{action?.kind || part.toolName}</span>
+            <span aria-hidden>·</span>
+            <span>{formatToolPhase(phase)}</span>
+          </div>
+        </div>
+      </div>
+      {(part.argsText || outputText || errorText) && (
+        <div className="space-y-2 px-3 py-2">
+          {part.argsText && <ToolPreBlock label="Input" value={part.argsText} />}
+          {errorText && <ToolPreBlock label="Error" tone="error" value={errorText} />}
+          {!errorText && outputText && (
+            <ToolPreBlock label="Output" value={outputText} />
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ToolStatusIcon({
+  failed,
+  running,
+}: {
+  failed: boolean;
+  running: boolean;
+}) {
+  if (failed) return <AlertCircleIcon className="size-3.5 shrink-0 text-rose-600" />;
+  if (running) return <Loader2 className="size-3.5 shrink-0 animate-spin" />;
+  return <Check className="size-3.5 shrink-0 text-emerald-600" />;
+}
+
+function ToolPreBlock({
+  label,
+  tone,
+  value,
+}: {
+  label: string;
+  tone?: 'error';
+  value: string;
+}) {
+  return (
+    <div>
+      <div
+        className={cn(
+          'mb-1 text-[11px] font-medium uppercase text-muted-foreground',
+          tone === 'error' && 'text-rose-600'
+        )}
+      >
+        {label}
+      </div>
+      <pre className="max-h-48 overflow-auto whitespace-pre-wrap break-words rounded-sm bg-background/70 p-2 font-mono text-[11px] leading-4">
+        {value}
+      </pre>
+    </div>
+  );
+}
+
+function getToolOutputText(action: ChatToolAction | undefined, result: unknown) {
+  if (action?.outputText?.trim()) return action.outputText;
+  if (typeof result === 'string') return result;
+  if (result === undefined || result === null) return '';
+  return JSON.stringify(result, null, 2);
+}
+
+function isRunningToolPhase(phase: string) {
+  return (
+    phase === 'proposed' ||
+    phase === 'awaitingDecision' ||
+    phase === 'running' ||
+    phase === 'streamingResult'
+  );
+}
+
+function formatToolPhase(phase: string) {
+  switch (phase) {
+    case 'awaitingDecision':
+      return 'Awaiting decision';
+    case 'streamingResult':
+      return 'Streaming result';
+    case 'completed':
+      return 'Completed';
+    case 'failed':
+      return 'Failed';
+    case 'declined':
+      return 'Declined';
+    case 'cancelled':
+      return 'Cancelled';
+    case 'running':
+      return 'Running';
+    case 'proposed':
+      return 'Proposed';
+    default:
+      return phase;
+  }
 }
 
 function DataMessagePart(part: Extract<EnrichedPartState, { type: 'data' }>) {
