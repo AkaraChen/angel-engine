@@ -203,7 +203,7 @@ async function consumeRunStream({
   let pendingDeltaChars = 0;
   let lastFlushAt = performance.now();
 
-  const flush = async (reason: string) => {
+  const flush = async () => {
     if (!dirty) return;
 
     const nextAssistantMessage = createAssistantMessage(
@@ -239,7 +239,7 @@ async function consumeRunStream({
         };
         accumulator.text = `Backend chat failed: ${event.message}`;
         dirty = true;
-        await flush('error');
+        await flush();
         break;
       }
 
@@ -249,7 +249,7 @@ async function consumeRunStream({
         accumulator.reasoning = event.result.reasoning || accumulator.reasoning;
         accumulator.text = event.result.text || accumulator.text;
         dirty = true;
-        await flush('result');
+        await flush();
         continue;
       }
 
@@ -267,7 +267,7 @@ async function consumeRunStream({
         pendingDeltaChars >= STREAM_FLUSH_MIN_CHARS ||
         now - lastFlushAt >= STREAM_FLUSH_MAX_MS
       ) {
-        await flush('delta');
+        await flush();
       }
     }
 
@@ -275,12 +275,12 @@ async function consumeRunStream({
       ? { reason: 'cancelled', type: 'incomplete' }
       : { reason: 'stop', type: 'complete' };
     dirty = true;
-    await flush(activeRun.cancelled ? 'cancelled' : 'complete');
+    await flush();
   } catch (error) {
     if (activeRun.abortController.signal.aborted) {
       accumulator.status = { reason: 'cancelled', type: 'incomplete' };
       dirty = true;
-      await flush('abort');
+      await flush();
       return;
     }
 
@@ -289,7 +289,7 @@ async function consumeRunStream({
     accumulator.status = { error: message, reason: 'error', type: 'incomplete' };
     accumulator.text = `Backend chat failed: ${message}`;
     dirty = true;
-    await flush('throw');
+    await flush();
   }
 }
 

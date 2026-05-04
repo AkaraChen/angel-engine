@@ -9,6 +9,7 @@ import type {
 import { closeChatSession, loadChatSession, sendChat } from './chat/angel-client';
 import {
   createChat,
+  deleteAllChats,
   deleteChat,
   getChat,
   listChats,
@@ -41,6 +42,11 @@ export const appRouter = {
     .action(async ({ input }) =>
       loadChatSession(assertString(input, 'Chat id is required.'))
     ),
+
+  chatsDeleteAll: t.procedure.action(async () => {
+    closeChatSession();
+    return { deletedCount: deleteAllChats() };
+  }),
 
   chatsShowContextMenu: t.procedure
     .input<string>()

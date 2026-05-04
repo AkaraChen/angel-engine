@@ -52,6 +52,12 @@ export function deleteChat(id: string): Chat {
   return chat;
 }
 
+export function deleteAllChats(): number {
+  const deletedCount = listChats().length;
+  getDatabase().delete(chats).run();
+  return deletedCount;
+}
+
 export function touchChat(id: string): Chat {
   return updateChat(id, { updatedAt: new Date().toISOString() });
 }
