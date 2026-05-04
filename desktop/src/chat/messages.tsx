@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import {
   ActionBarPrimitive,
   AuiIf,
@@ -313,12 +313,7 @@ function ToolActionMessagePart(part: ToolCallMessagePartProps) {
   const isFailed = Boolean(errorText) || phase === 'failed';
   const hasDetails = Boolean(part.argsText || outputText || errorText);
   const [manualOpen, setManualOpen] = useState(false);
-
-  useEffect(() => {
-    if (!isRunning) setManualOpen(false);
-  }, [isRunning]);
-
-  const open = hasDetails && (isRunning || manualOpen);
+  const open = hasDetails && manualOpen;
 
   return (
     <Collapsible

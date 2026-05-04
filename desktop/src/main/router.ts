@@ -2,6 +2,7 @@ import { BrowserWindow, dialog, Menu, shell } from 'electron';
 import { tipc } from '@egoist/tipc/main';
 
 import type { ChatCreateInput, ChatSendInput } from '../shared/chat';
+import { normalizeAgentRuntime } from '../shared/agents';
 import type {
   CreateProjectInput,
   UpdateProjectInput,
@@ -162,6 +163,9 @@ function assertChatSendInput(input: ChatSendInput): ChatSendInput {
       typeof input.projectId === 'string' && input.projectId.trim()
         ? input.projectId.trim()
         : null,
+    mode: normalizeOptionalConfigInput(input.mode),
+    reasoningEffort: normalizeOptionalConfigInput(input.reasoningEffort),
+    runtime: normalizeOptionalRuntime(input.runtime),
     text: assertString(input.text, 'Chat text is required.'),
   };
 }
@@ -177,10 +181,9 @@ function assertChatCreateInput(input: ChatCreateInput): ChatCreateInput {
       typeof input.projectId === 'string' && input.projectId.trim()
         ? input.projectId.trim()
         : null,
-    runtime:
-      typeof input.runtime === 'string' && input.runtime.trim()
-        ? input.runtime.trim()
-        : undefined,
+    mode: normalizeOptionalConfigInput(input.mode),
+    reasoningEffort: normalizeOptionalConfigInput(input.reasoningEffort),
+    runtime: normalizeOptionalRuntime(input.runtime),
     title:
       typeof input.title === 'string' && input.title.trim()
         ? input.title.trim()
@@ -215,4 +218,15 @@ function assertString(value: unknown, message: string) {
     throw new Error(message);
   }
   return value;
+}
+
+function normalizeOptionalRuntime(value: unknown) {
+  if (typeof value !== 'string' || !value.trim()) return undefined;
+  return normalizeAgentRuntime(value);
+}
+
+function normalizeOptionalConfigInput(value: unknown) {
+  if (typeof value !== 'string') return undefined;
+  const trimmed = value.trim();
+  return trimmed || undefined;
 }

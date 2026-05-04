@@ -3,6 +3,7 @@ import {
   useState,
   type ChangeEvent,
   type KeyboardEvent,
+  type ReactNode,
 } from 'react';
 import {
   ComposerPrimitive,
@@ -12,18 +13,27 @@ import {
 } from '@assistant-ui/react';
 import {
   ArrowUp,
+  Bot,
+  Brain,
   CircleStop,
   FileText,
   Paperclip,
   Quote,
+  SlidersHorizontal,
   X,
 } from 'lucide-react';
 
+import { useChatOptions } from '@/chat/chat-options-context';
 import {
   PromptInput,
   PromptInputBody,
   PromptInputFooter,
   PromptInputHeader,
+  PromptInputSelect,
+  PromptInputSelectContent,
+  PromptInputSelectItem,
+  PromptInputSelectTrigger,
+  PromptInputSelectValue,
   PromptInputTextarea,
   PromptInputTools,
   usePromptInputAttachments,
@@ -31,6 +41,13 @@ import {
 } from '@/components/ai-elements/prompt-input';
 import { Button } from '@/components/ui/button';
 import { iconButtonClass } from '@/chat/thread-styles';
+import {
+  AGENT_OPTIONS,
+  getAgentModes,
+  getAgentReasoningEfforts,
+  normalizeAgentRuntime,
+  type AgentValueOption,
+} from '@/shared/agents';
 
 export function AssistantComposer() {
   const aui = useAui();
@@ -146,20 +163,58 @@ function AssistantComposerHeader() {
 function AssistantComposerFooter({ draftText }: { draftText: string }) {
   const aui = useAui();
   const attachments = usePromptInputAttachments();
+  const chatOptions = useChatOptions();
   const isRunning = useAuiState((state) => state.thread.isRunning);
   const isEmpty =
     draftText.trim().length === 0 && attachments.files.length === 0;
+  const reasoningEfforts = getAgentReasoningEfforts(chatOptions.runtime);
+  const modes = getAgentModes(chatOptions.runtime);
 
   const stopRun = useCallback(() => {
     aui.composer().cancel();
   }, [aui]);
 
   return (
-    <PromptInputFooter className="border-t !px-2 !py-2">
-      <PromptInputTools>
+    <PromptInputFooter className="flex-wrap border-t !px-2 !py-2">
+      <PromptInputTools className="flex-wrap">
         <PromptAttachmentButton />
+        <ComposerOptionSelect
+          disabled={chatOptions.runtimeLocked || isRunning}
+          icon={<Bot />}
+          label="Agent"
+          onValueChange={(value) =>
+            chatOptions.setRuntime(normalizeAgentRuntime(value))
+          }
+          options={AGENT_OPTIONS.map((agent) => ({
+            label: agent.label,
+            value: agent.id,
+          }))}
+          title={
+            chatOptions.runtimeLocked
+              ? 'Agent is fixed for this chat'
+              : 'Agent'
+          }
+          value={chatOptions.runtime}
+        />
+        <ComposerOptionSelect
+          disabled={isRunning || reasoningEfforts.length < 2}
+          icon={<Brain />}
+          label="Reasoning effort"
+          onValueChange={chatOptions.setReasoningEffort}
+          options={reasoningEfforts}
+          value={chatOptions.reasoningEffort}
+        />
       </PromptInputTools>
-      <div className="flex items-center gap-2">
+      <div className="flex min-w-0 items-center gap-2">
+        <ComposerOptionSelect
+          className="max-w-28"
+          disabled={isRunning || modes.length < 2}
+          icon={<SlidersHorizontal />}
+          label="Mode"
+          onValueChange={chatOptions.setMode}
+          options={modes}
+          value={chatOptions.mode}
+        />
         {isRunning ? (
           <Button onClick={stopRun} size="sm" type="button" variant="outline">
             <CircleStop />
@@ -172,6 +227,64 @@ function AssistantComposerFooter({ draftText }: { draftText: string }) {
         </Button>
       </div>
     </PromptInputFooter>
+  );
+}
+
+function ComposerOptionSelect({
+  className,
+  disabled,
+  icon,
+  label,
+  onValueChange,
+  options,
+  title,
+  value,
+}: {
+  className?: string;
+  disabled?: boolean;
+  icon: ReactNode;
+  label: string;
+  onValueChange: (value: string) => void;
+  options: AgentValueOption[];
+  title?: string;
+  value: string;
+}) {
+  return (
+    <PromptInputSelect
+      disabled={disabled}
+      onValueChange={onValueChange}
+      value={value}
+    >
+      <PromptInputSelectTrigger
+        aria-label={label}
+        className={[
+          'h-8 max-w-36 rounded-md border border-border bg-background/70 px-2 text-xs',
+          className,
+        ]
+          .filter(Boolean)
+          .join(' ')}
+        size="sm"
+        title={title ?? label}
+      >
+        <span className="flex min-w-0 items-center gap-1.5">
+          <span className="flex size-4 shrink-0 items-center justify-center [&_svg]:size-3.5">
+            {icon}
+          </span>
+          <PromptInputSelectValue />
+        </span>
+      </PromptInputSelectTrigger>
+      <PromptInputSelectContent className="rounded-md">
+        {options.map((option) => (
+          <PromptInputSelectItem
+            className="rounded-sm"
+            key={option.value}
+            value={option.value}
+          >
+            {option.label}
+          </PromptInputSelectItem>
+        ))}
+      </PromptInputSelectContent>
+    </PromptInputSelect>
   );
 }
 

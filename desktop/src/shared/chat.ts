@@ -11,7 +11,9 @@ export type Chat = {
 
 export type ChatCreateInput = {
   cwd?: string;
+  mode?: string | null;
   projectId?: string | null;
+  reasoningEffort?: string | null;
   runtime?: string;
   title?: string;
 };
@@ -183,7 +185,10 @@ export type ChatLoadResult = {
 export type ChatSendInput = {
   chatId?: string;
   cwd?: string;
+  mode?: string | null;
   projectId?: string | null;
+  reasoningEffort?: string | null;
+  runtime?: string;
   text: string;
 };
 

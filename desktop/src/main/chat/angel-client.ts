@@ -21,6 +21,10 @@ import {
   cloneChatHistoryPart,
 } from '../../shared/chat';
 import {
+  normalizeAgentRuntime,
+  selectedAgentConfigValue,
+} from '../../shared/agents';
+import {
   createChat,
   renameChatFromPrompt,
   requireChat,
@@ -42,12 +46,15 @@ type ClientCommandResult = {
 type ConversationSnapshot = {
   context?: {
     cwd?: string | null;
+    mode?: string | null;
   };
   actions?: ChatToolAction[];
+  configOptions?: ConfigOptionsSnapshot;
   history?: {
     replay?: HistoryReplaySnapshot[];
   };
   id: string;
+  modes?: SessionModeStateSnapshot;
   reasoning?: ReasoningOptionsSnapshot;
   remoteId?: string | null;
   turns?: TurnSnapshot[];
@@ -57,6 +64,24 @@ type ReasoningOptionsSnapshot = {
   availableEfforts?: string[];
   canSet?: boolean;
   currentEffort?: string | null;
+};
+
+type ConfigOptionsSnapshot = {
+  options?: Array<{
+    category?: string;
+    id?: string;
+    options?: Array<{ label?: string; value?: string }>;
+    value?: string | null;
+  }>;
+};
+
+type SessionModeStateSnapshot = {
+  availableModes?: Array<{
+    description?: string;
+    id: string;
+    name?: string;
+  }>;
+  currentModeId?: string | null;
 };
 
 type HistoryReplaySnapshot = {
@@ -105,6 +130,7 @@ type AngelClient = {
   }): Promise<ClientCommandResult>;
   sendThreadEvent(conversationId: string, event: unknown): ClientCommandResult;
   sendText(conversationId: string, text: string): ClientCommandResult;
+  setMode(conversationId: string, mode: string): ClientCommandResult;
   setReasoningEffort(conversationId: string, effort: string): ClientCommandResult;
   snapshot(): {
     runtime?: {
@@ -173,7 +199,7 @@ export async function streamChat(
     : createChat({
         cwd: input.cwd,
         projectId: input.projectId,
-        runtime: defaultRuntimeName(),
+        runtime: input.runtime ?? defaultRuntimeName(),
       });
 
   const result = await getChatSession(chat).send(
@@ -485,7 +511,8 @@ class AngelChatSession {
     throwIfAborted(abortSignal);
 
     const conversationId = this.requireConversationId();
-    await this.ensureReasoningEffort(conversationId);
+    await this.ensureMode(conversationId, input.mode);
+    await this.ensureReasoningEffort(conversationId, input.reasoningEffort);
     const result = this.client.sendText(conversationId, input.text);
     const collector = new TurnCollector(result.turnId, onEvent);
     await this.handleUpdate(result.update, collector);
@@ -607,10 +634,13 @@ class AngelChatSession {
     await this.handleUpdate(result.update);
   }
 
-  private async ensureReasoningEffort(conversationId: string) {
-    if (this.options.runtime !== 'codex') return;
-
-    const effort = (process.env.ANGEL_ENGINE_REASONING_EFFORT ?? 'high').trim();
+  private async ensureReasoningEffort(
+    conversationId: string,
+    requestedEffort?: string | null
+  ) {
+    const effort =
+      selectedAgentConfigValue(requestedEffort) ??
+      defaultReasoningEffort(this.options.runtime);
     if (!effort || effort === 'default') return;
 
     const reasoning = this.client.threadState(conversationId)?.reasoning;
@@ -619,6 +649,23 @@ class AngelChatSession {
     }
 
     const result = this.client.setReasoningEffort(conversationId, effort);
+    await this.handleUpdate(result.update);
+  }
+
+  private async ensureMode(
+    conversationId: string,
+    requestedMode?: string | null
+  ) {
+    const mode = requestedMode?.trim();
+    if (!mode) return;
+
+    const snapshot = this.client.threadState(conversationId);
+    const currentMode = snapshot?.context?.mode ?? snapshot?.modes?.currentModeId;
+    if (mode === 'default' && !currentMode) return;
+    if (currentMode === mode) return;
+    if (!canSetMode(this.options.runtime, snapshot, mode)) return;
+
+    const result = this.client.setMode(conversationId, mode);
     await this.handleUpdate(result.update);
   }
 
@@ -787,7 +834,8 @@ function isOrderedStreamEvent(event: ClientEvent) {
   );
 }
 
-function createRuntimeOptions(runtimeName = defaultRuntimeName()): RuntimeOptions {
+function createRuntimeOptions(runtimeName?: string): RuntimeOptions {
+  runtimeName ??= defaultRuntimeName();
   const runtime = normalizeRuntimeName(runtimeName);
   if (runtime === 'kimi') {
     return {
@@ -823,10 +871,25 @@ function defaultRuntimeName() {
 }
 
 function normalizeRuntimeName(runtime: string | undefined) {
-  const normalized = runtime?.trim().toLowerCase();
-  if (normalized === 'kimi') return 'kimi';
-  if (normalized === 'opencode' || normalized === 'open-code') return 'opencode';
-  return 'codex';
+  return normalizeAgentRuntime(runtime);
+}
+
+function defaultReasoningEffort(runtime: unknown) {
+  const configured = process.env.ANGEL_ENGINE_REASONING_EFFORT?.trim();
+  if (configured) return selectedAgentConfigValue(configured);
+  return runtime === 'codex' ? 'high' : undefined;
+}
+
+function canSetMode(
+  runtime: unknown,
+  snapshot: ConversationSnapshot | null,
+  mode: string
+) {
+  const availableModes = snapshot?.modes?.availableModes ?? [];
+  if (availableModes.length > 0) {
+    return availableModes.some((availableMode) => availableMode.id === mode);
+  }
+  return runtime === 'codex' && (mode === 'default' || mode === 'plan');
 }
 
 function desktopIdentity() {

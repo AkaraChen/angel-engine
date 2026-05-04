@@ -20,17 +20,23 @@ export function AppRuntimeProvider({
   children,
   historyMessages,
   historyRevision,
+  mode,
   onChatUpdated,
   projectId,
   projectPath,
+  reasoningEffort,
+  runtime: selectedRuntime,
 }: {
   chatId?: string;
   children: ReactNode;
   historyMessages: ChatHistoryMessage[];
   historyRevision: number;
+  mode?: string;
   onChatUpdated: (chat: Chat, messages?: ChatHistoryMessage[]) => void;
   projectId?: string | null;
   projectPath?: string;
+  reasoningEffort?: string;
+  runtime?: string;
 }) {
   const adapters = useMemo(
     () => ({
@@ -44,18 +50,21 @@ export function AppRuntimeProvider({
     []
   );
 
-  const runtime = useEngineRuntime({
+  const assistantRuntime = useEngineRuntime({
     adapters,
     chatId,
     historyMessages,
     historyRevision,
+    mode,
     onChatUpdated,
     projectId,
     projectPath,
+    reasoningEffort,
+    runtime: selectedRuntime,
   });
 
   return (
-    <AssistantRuntimeProvider runtime={runtime}>
+    <AssistantRuntimeProvider runtime={assistantRuntime}>
       {children}
     </AssistantRuntimeProvider>
   );

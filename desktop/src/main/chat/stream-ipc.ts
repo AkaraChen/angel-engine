@@ -8,6 +8,7 @@ import {
   type ChatStreamEvent,
   type ChatStreamStartInput,
 } from '../../shared/chat';
+import { normalizeAgentRuntime } from '../../shared/agents';
 import { streamChat } from './angel-client';
 
 const activeStreams = new Map<string, () => void>();
@@ -78,6 +79,9 @@ function assertChatSendInput(input: unknown): ChatSendInput {
       typeof value.projectId === 'string' && value.projectId.trim()
         ? value.projectId.trim()
         : null,
+    mode: normalizeOptionalConfigInput(value.mode),
+    reasoningEffort: normalizeOptionalConfigInput(value.reasoningEffort),
+    runtime: normalizeOptionalRuntime(value.runtime),
     text: assertString(value.text, 'Chat text is required.'),
   };
 }
@@ -91,4 +95,15 @@ function assertString(value: unknown, message: string) {
 
 function getErrorMessage(error: unknown) {
   return error instanceof Error ? error.message : String(error);
+}
+
+function normalizeOptionalRuntime(value: unknown) {
+  if (typeof value !== 'string' || !value.trim()) return undefined;
+  return normalizeAgentRuntime(value);
+}
+
+function normalizeOptionalConfigInput(value: unknown) {
+  if (typeof value !== 'string') return undefined;
+  const trimmed = value.trim();
+  return trimmed || undefined;
 }

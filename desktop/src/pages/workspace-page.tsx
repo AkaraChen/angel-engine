@@ -9,8 +9,10 @@ import { Redirect, useLocation } from 'wouter';
 import { AppRuntimeProvider } from '@/app/app-runtime-provider';
 import { WorkspaceHeader } from '@/app/workspace-header';
 import { WorkspaceSidebar } from '@/app/workspace-sidebar';
+import { ChatOptionsProvider } from '@/chat/chat-options-context';
 import { AssistantThread } from '@/chat/assistant-thread';
 import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar';
+import { useAgentSettings } from '@/hooks/use-agent-settings';
 import { useToast } from '@/components/ui/toast';
 import { useApi } from '@/hooks/use-api';
 import { SettingsPage } from '@/pages/settings-page';
@@ -27,6 +29,12 @@ import {
   projectContextMenuMutationOptions,
   projectListQueryOptions,
 } from '@/requests/projects';
+import {
+  normalizeAgentMode,
+  normalizeAgentReasoningEffort,
+  normalizeAgentRuntime,
+  type AgentRuntime,
+} from '@/shared/agents';
 import type { Chat, ChatHistoryMessage, ChatLoadResult } from '@/shared/chat';
 import type { Project } from '@/shared/projects';
 
@@ -46,6 +54,7 @@ export function WorkspacePage({ route }: { route: WorkspaceRoute }) {
   const queryClient = useQueryClient();
   const [location, navigate] = useLocation();
   const isMacOS = window.desktopEnvironment.platform === 'darwin';
+  const [agentSettings, updateAgentSettings] = useAgentSettings();
 
   const selectedChatId =
     route.type === 'chat' || route.type === 'projectChat'
@@ -78,6 +87,18 @@ export function WorkspacePage({ route }: { route: WorkspaceRoute }) {
   const historyRevision = selectedChatId
     ? chatLoadQuery.dataUpdatedAt
     : 0;
+  const lockedRuntime = selectedChat
+    ? normalizeAgentRuntime(selectedChat.runtime)
+    : undefined;
+  const activeRuntime = lockedRuntime ?? agentSettings.defaultRuntime;
+  const activeReasoningEffort = normalizeAgentReasoningEffort(
+    activeRuntime,
+    agentSettings.reasoningEfforts[activeRuntime]
+  );
+  const activeMode = normalizeAgentMode(
+    activeRuntime,
+    agentSettings.modes[activeRuntime]
+  );
 
   const projectIds = useMemo(
     () => new Set(projects.map((project) => project.id)),
@@ -102,6 +123,60 @@ export function WorkspacePage({ route }: { route: WorkspaceRoute }) {
         (chat) => !chat.projectId || !projectIds.has(chat.projectId)
       ),
     [chats, projectIds]
+  );
+  const setDefaultRuntime = useCallback(
+    (runtime: AgentRuntime) => {
+      updateAgentSettings((current) => ({
+        ...current,
+        defaultRuntime: runtime,
+      }));
+    },
+    [updateAgentSettings]
+  );
+  const setAgentReasoningEffort = useCallback(
+    (runtime: AgentRuntime, effort: string) => {
+      updateAgentSettings((current) => ({
+        ...current,
+        reasoningEfforts: {
+          ...current.reasoningEfforts,
+          [runtime]: normalizeAgentReasoningEffort(runtime, effort),
+        },
+      }));
+    },
+    [updateAgentSettings]
+  );
+  const setAgentMode = useCallback(
+    (runtime: AgentRuntime, mode: string) => {
+      updateAgentSettings((current) => ({
+        ...current,
+        modes: {
+          ...current.modes,
+          [runtime]: normalizeAgentMode(runtime, mode),
+        },
+      }));
+    },
+    [updateAgentSettings]
+  );
+  const chatOptions = useMemo(
+    () => ({
+      mode: activeMode,
+      reasoningEffort: activeReasoningEffort,
+      runtime: activeRuntime,
+      runtimeLocked: Boolean(lockedRuntime),
+      setMode: (mode: string) => setAgentMode(activeRuntime, mode),
+      setReasoningEffort: (effort: string) =>
+        setAgentReasoningEffort(activeRuntime, effort),
+      setRuntime: setDefaultRuntime,
+    }),
+    [
+      activeMode,
+      activeReasoningEffort,
+      activeRuntime,
+      lockedRuntime,
+      setAgentMode,
+      setAgentReasoningEffort,
+      setDefaultRuntime,
+    ]
   );
 
   const setChatInCache = useCallback(
@@ -148,7 +223,11 @@ export function WorkspacePage({ route }: { route: WorkspaceRoute }) {
     ...createProjectMutationOptions({ api, queryClient }),
   });
   const createProjectChatMutation = useMutation({
-    ...createProjectChatMutationOptions({ api, queryClient }),
+    ...createProjectChatMutationOptions({
+      api,
+      queryClient,
+      runtime: agentSettings.defaultRuntime,
+    }),
   });
   const deleteAllChatsMutation = useMutation({
     ...deleteAllChatsMutationOptions({ api, queryClient }),
@@ -335,28 +414,37 @@ export function WorkspacePage({ route }: { route: WorkspaceRoute }) {
         <SidebarInset className="h-svh max-h-svh overflow-hidden md:h-[calc(100svh-1rem)] md:max-h-[calc(100svh-1rem)]">
           <WorkspaceHeader />
           <SettingsPage
+            agentSettings={agentSettings}
             isDeletingChats={deleteAllChatsMutation.isPending}
+            onAgentModeChange={setAgentMode}
+            onAgentReasoningEffortChange={setAgentReasoningEffort}
             onDeleteAllChats={deleteAllChats}
+            onDefaultAgentChange={setDefaultRuntime}
           />
         </SidebarInset>
       ) : (
-        <AppRuntimeProvider
-          chatId={selectedChatId}
-          historyMessages={historyMessages}
-          historyRevision={historyRevision}
-          onChatUpdated={upsertChat}
-          projectId={selectedChat?.projectId ?? null}
-          projectPath={selectedChat?.cwd ?? undefined}
-        >
-          <SidebarInset className="h-svh max-h-svh overflow-hidden md:h-[calc(100svh-1rem)] md:max-h-[calc(100svh-1rem)]">
-            <WorkspaceHeader />
-            <main className="flex min-h-0 flex-1 overflow-hidden">
-              <section className="flex min-h-0 min-w-0 flex-1 flex-col">
-                <AssistantThread />
-              </section>
-            </main>
-          </SidebarInset>
-        </AppRuntimeProvider>
+        <ChatOptionsProvider value={chatOptions}>
+          <AppRuntimeProvider
+            chatId={selectedChatId}
+            historyMessages={historyMessages}
+            historyRevision={historyRevision}
+            mode={activeMode}
+            onChatUpdated={upsertChat}
+            projectId={selectedChat?.projectId ?? null}
+            projectPath={selectedChat?.cwd ?? undefined}
+            reasoningEffort={activeReasoningEffort}
+            runtime={activeRuntime}
+          >
+            <SidebarInset className="h-svh max-h-svh overflow-hidden md:h-[calc(100svh-1rem)] md:max-h-[calc(100svh-1rem)]">
+              <WorkspaceHeader />
+              <main className="flex min-h-0 flex-1 overflow-hidden">
+                <section className="flex min-h-0 min-w-0 flex-1 flex-col">
+                  <AssistantThread />
+                </section>
+              </main>
+            </SidebarInset>
+          </AppRuntimeProvider>
+        </ChatOptionsProvider>
       )}
     </SidebarProvider>
   );

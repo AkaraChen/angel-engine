@@ -26,6 +26,7 @@ interface CreateProjectChatMutationParams {
   api: ApiClient;
   onSuccess?: (data: Chat, variables: Project) => Promise<void> | void;
   queryClient: QueryClient;
+  runtime?: string;
 }
 
 type DeleteAllChatsResult = Awaited<ReturnType<ApiClient['chats']['deleteAll']>>;
@@ -86,12 +87,14 @@ export function createProjectChatMutationOptions({
   api,
   onSuccess,
   queryClient,
+  runtime,
 }: CreateProjectChatMutationParams) {
   return mutationOptions({
     mutationFn: (project: Project) =>
       api.chats.create({
         cwd: project.path,
         projectId: project.id,
+        runtime,
       }),
     onSuccess: async (data, variables) => {
       await invalidateChatQueries(queryClient);

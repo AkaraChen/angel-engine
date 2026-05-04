@@ -1,7 +1,6 @@
 import {
   memo,
   useCallback,
-  useEffect,
   useRef,
   useState,
   type ComponentProps,
@@ -206,12 +205,8 @@ const ToolGroupImpl: FC<
   );
   const [manualOpen, setManualOpen] = useState(false);
 
-  useEffect(() => {
-    if (!active) setManualOpen(false);
-  }, [active]);
-
   return (
-    <ToolGroupRoot onOpenChange={setManualOpen} open={active || manualOpen}>
+    <ToolGroupRoot onOpenChange={setManualOpen} open={manualOpen}>
       <ToolGroupTrigger active={active} count={toolCount} />
       <ToolGroupContent>{children}</ToolGroupContent>
     </ToolGroupRoot>

@@ -38,9 +38,12 @@ export type EngineRuntimeOptions = {
   chatId?: string;
   historyMessages: ChatHistoryMessage[];
   historyRevision: number;
+  mode?: string;
   onChatUpdated?: (chat: Chat, messages?: ChatHistoryMessage[]) => void;
   projectId?: string | null;
   projectPath?: string;
+  reasoningEffort?: string;
+  runtime?: string;
 };
 
 type ActiveRun = {
@@ -69,9 +72,12 @@ export function useEngineRuntime({
   chatId,
   historyMessages,
   historyRevision,
+  mode,
   onChatUpdated,
   projectId,
   projectPath,
+  reasoningEffort,
+  runtime,
 }: EngineRuntimeOptions): AssistantRuntime {
   const [isRunning, setIsRunning] = useState(false);
   const [messages, setMessages] = useState<EngineMessage[]>(() =>
@@ -80,16 +86,22 @@ export function useEngineRuntime({
   const activeRunRef = useRef<ActiveRun | null>(null);
   const latestOptionsRef = useRef({
     chatId,
+    mode,
     onChatUpdated,
     projectId,
     projectPath,
+    reasoningEffort,
+    runtime,
   });
 
   latestOptionsRef.current = {
     chatId,
+    mode,
     onChatUpdated,
     projectId,
     projectPath,
+    reasoningEffort,
+    runtime,
   };
 
   useEffect(() => {
@@ -170,7 +182,10 @@ export function useEngineRuntime({
           input: {
             chatId: latestOptionsRef.current.chatId,
             cwd: latestOptionsRef.current.projectPath,
+            mode: latestOptionsRef.current.mode,
             projectId: latestOptionsRef.current.projectId,
+            reasoningEffort: latestOptionsRef.current.reasoningEffort,
+            runtime: latestOptionsRef.current.runtime,
             text: prompt,
           },
           replaceAssistantMessage,
