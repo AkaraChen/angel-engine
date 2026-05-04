@@ -14,7 +14,10 @@
     "demo": "node examples/angel-cli.mjs",
     "demo:codex": "node examples/angel-cli.mjs codex",
     "demo:kimi": "node examples/angel-cli.mjs kimi",
-    "demo:opencode": "node examples/angel-cli.mjs opencode"
+    "demo:opencode": "node examples/angel-cli.mjs opencode",
+    "build": "node --experimental-strip-types src/build.ts",
+    "start": "node --experimental-strip-types src/cli.ts",
+    "cli": "node examples/angel-cli.mjs"
   },
   "dependencies": {
     "@angel-engine/client-napi": "file:../../crates/angel-engine-client-napi"
@@ -22,5 +25,6 @@
   "engines": {
     "node": ">=18"
   },
-  "license": "MIT"
+  "license": "MIT",
+  "type": "module"
 }
