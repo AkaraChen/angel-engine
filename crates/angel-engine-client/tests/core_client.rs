@@ -89,7 +89,20 @@ fn client_hides_engine_behind_thread_updates_and_snapshots() {
                     "availableModels": [
                         {"id": "kimi-k2", "name": "Kimi K2"}
                     ]
-                }
+                },
+                "configOptions": [
+                    {
+                        "id": "thought_level",
+                        "name": "Reasoning",
+                        "category": "thought_level",
+                        "currentValue": "medium",
+                        "options": [
+                            {"value": "low", "name": "Low"},
+                            {"value": "medium", "name": "Medium"},
+                            {"value": "high", "name": "High"}
+                        ]
+                    }
+                ]
             }),
         ))
         .expect("start response");
@@ -115,6 +128,19 @@ fn client_hides_engine_behind_thread_updates_and_snapshots() {
             .as_ref()
             .map(|models| models.current_model_id.as_str()),
         Some("kimi-k2")
+    );
+    assert_eq!(conversation.reasoning.source, "configOption");
+    assert_eq!(
+        conversation.reasoning.config_option_id.as_deref(),
+        Some("thought_level")
+    );
+    assert_eq!(
+        conversation.reasoning.current_effort.as_deref(),
+        Some("medium")
+    );
+    assert_eq!(
+        conversation.reasoning.available_efforts,
+        vec!["low", "medium", "high"]
     );
 }
 
@@ -278,6 +304,19 @@ fn codex_completed_reasoning_item_surfaces_reasoning_updates() {
 fn codex_turn_start_defaults_to_auto_summary_without_effort() {
     let (mut client, conversation_id) = ready_codex_client();
 
+    let conversation = client
+        .snapshot()
+        .conversations
+        .into_iter()
+        .find(|conversation| conversation.id == conversation_id)
+        .expect("conversation snapshot");
+    assert_eq!(conversation.reasoning.source, "codexDefaults");
+    assert!(conversation.reasoning.can_set);
+    assert_eq!(
+        conversation.reasoning.available_efforts,
+        vec!["none", "minimal", "low", "medium", "high", "xhigh"]
+    );
+
     let sent = client
         .thread(&conversation_id)
         .send_event(ThreadEvent::text("show reasoning"))
@@ -292,6 +331,60 @@ fn codex_turn_start_defaults_to_auto_summary_without_effort() {
     assert_eq!(
         sent.update.outgoing[0].value["params"]["summary"],
         json!("auto")
+    );
+}
+
+#[test]
+fn acp_thinking_model_variant_surfaces_reasoning_options() {
+    let mut client = ClientOptions::builder()
+        .acp("fake-agent")
+        .need_auth(false)
+        .build_client();
+    let initialize = client.initialize().expect("initialize");
+    client
+        .receive_json_value(response(
+            &initialize.request_id.expect("initialize id"),
+            json!({
+                "protocolVersion": 1,
+                "agentInfo": {"name": "fake-agent"}
+            }),
+        ))
+        .expect("initialize response");
+
+    let start = client
+        .start_thread(StartConversationRequest::new().cwd("/repo"))
+        .expect("start");
+    let conversation_id = start.conversation_id.expect("conversation id");
+    client
+        .receive_json_value(response(
+            &start.request_id.expect("start id"),
+            json!({
+                "sessionId": "sess-1",
+                "models": {
+                    "currentModelId": "kimi-k2",
+                    "availableModels": [
+                        {"id": "kimi-k2", "name": "Kimi K2"},
+                        {"id": "kimi-k2,thinking", "name": "Kimi K2 Thinking"}
+                    ]
+                }
+            }),
+        ))
+        .expect("start response");
+
+    let conversation = client
+        .snapshot()
+        .conversations
+        .into_iter()
+        .find(|conversation| conversation.id == conversation_id)
+        .expect("conversation snapshot");
+    assert_eq!(conversation.reasoning.source, "modelVariant");
+    assert_eq!(
+        conversation.reasoning.current_effort.as_deref(),
+        Some("none")
+    );
+    assert_eq!(
+        conversation.reasoning.available_efforts,
+        vec!["none", "thinking"]
     );
 }
 

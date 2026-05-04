@@ -1,9 +1,7 @@
 use serde::{Deserialize, Serialize};
 
 use crate::client::Client;
-use crate::core::{
-    ClientAnswer, ClientCommandResult, ClientInput, ElicitationResponse, ForkConversationRequest,
-};
+use crate::core::{ClientAnswer, ClientCommandResult, ClientInput, ElicitationResponse};
 use crate::error::{ClientError, ClientResult};
 use crate::snapshot::{ConversationSnapshot, ElicitationSnapshot, TurnSnapshot};
 
@@ -63,100 +61,10 @@ impl<'a> Thread<'a> {
     }
 
     pub fn send_event(&mut self, event: ThreadEvent) -> ClientResult<ClientCommandResult> {
-        match event {
-            ThreadEvent::UserMessage { text } => self
-                .client
-                .core
-                .send_text(self.conversation_id.clone(), text),
-            ThreadEvent::Inputs { input } => self
-                .client
-                .core
-                .send_inputs(self.conversation_id.clone(), input),
-            ThreadEvent::Steer { text, turn_id } => {
-                let turn_id = turn_id.or_else(|| self.focused_turn_id());
-                self.client
-                    .core
-                    .steer_text(self.conversation_id.clone(), turn_id, text)
-            }
-            ThreadEvent::Cancel { turn_id } => {
-                let turn_id = turn_id.or_else(|| self.focused_turn_id());
-                self.client
-                    .core
-                    .cancel_turn(self.conversation_id.clone(), turn_id)
-            }
-            ThreadEvent::SetModel { model } => self
-                .client
-                .core
-                .set_model(self.conversation_id.clone(), model),
-            ThreadEvent::SetMode { mode } => self
-                .client
-                .core
-                .set_mode(self.conversation_id.clone(), mode),
-            ThreadEvent::SetReasoningEffort { effort } => self
-                .client
-                .core
-                .set_reasoning_effort(self.conversation_id.clone(), effort),
-            ThreadEvent::ResolveElicitation {
-                elicitation_id,
-                response,
-            } => self.client.core.resolve_elicitation(
-                self.conversation_id.clone(),
-                elicitation_id,
-                response,
-            ),
-            ThreadEvent::ResolveFirstElicitation { response } => {
-                let elicitation_id = self.first_open_elicitation_id()?;
-                self.client.core.resolve_elicitation(
-                    self.conversation_id.clone(),
-                    elicitation_id,
-                    response,
-                )
-            }
-            ThreadEvent::Fork { at_turn_id } => {
-                self.client.core.fork_conversation(ForkConversationRequest {
-                    source_conversation_id: self.conversation_id.clone(),
-                    at_turn_id,
-                })
-            }
-            ThreadEvent::Close => self
-                .client
-                .core
-                .close_conversation(self.conversation_id.clone()),
-            ThreadEvent::Unsubscribe => self.client.core.unsubscribe(self.conversation_id.clone()),
-            ThreadEvent::Archive => self
-                .client
-                .core
-                .archive_conversation(self.conversation_id.clone()),
-            ThreadEvent::Unarchive => self
-                .client
-                .core
-                .unarchive_conversation(self.conversation_id.clone()),
-            ThreadEvent::CompactHistory => self
-                .client
-                .core
-                .compact_history(self.conversation_id.clone()),
-            ThreadEvent::RollbackHistory { num_turns } => self
-                .client
-                .core
-                .rollback_history(self.conversation_id.clone(), num_turns),
-            ThreadEvent::RunShellCommand { command } => self
-                .client
-                .core
-                .run_shell_command(self.conversation_id.clone(), command),
-        }
-    }
-
-    fn first_open_elicitation_id(&self) -> ClientResult<String> {
-        self.open_elicitations()
-            .into_iter()
-            .next()
-            .map(|elicitation| elicitation.id)
-            .ok_or_else(|| ClientError::InvalidInput {
-                message: format!(
-                    "conversation {} has no open elicitation",
-                    self.conversation_id
-                ),
-            })
+        let focused_turn_id = self.focused_turn_id();
+        self.client
+            .core
+            .send_thread_event(self.conversation_id.clone(), event, focused_turn_id)
     }
 }
 

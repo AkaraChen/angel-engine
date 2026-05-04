@@ -252,13 +252,13 @@ pub(crate) fn events_from_engine_event(
         EngineEvent::ConversationDiscovered { id, .. } => engine
             .conversations
             .get(id)
-            .map(conversation_snapshot)
+            .map(|conversation| conversation_snapshot(engine.protocol, conversation))
             .map(|conversation| vec![ClientEvent::ConversationDiscovered { conversation }])
             .unwrap_or_default(),
         EngineEvent::ConversationReady { id, .. } => engine
             .conversations
             .get(id)
-            .map(conversation_snapshot)
+            .map(|conversation| conversation_snapshot(engine.protocol, conversation))
             .map(|conversation| vec![ClientEvent::ConversationReady { conversation }])
             .unwrap_or_default(),
         EngineEvent::ConversationProvisionStarted { id, .. }

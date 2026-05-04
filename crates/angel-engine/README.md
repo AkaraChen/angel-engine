@@ -39,7 +39,9 @@ comes from responses, server notifications, or request failure.
   effects and events.
 - `src/adapters/codex/` maps Codex app-server messages to and from engine
   effects and events.
-- `examples/` contains small stdio shell demos for Codex, OpenCode, and Kimi.
+- `examples/` contains low-level adapter/state-machine smoke demos for Codex,
+  OpenCode, and Kimi. Application integrations should prefer
+  `angel-engine-client::AngelClient`.
 - `docs/` contains the state-machine design notes and protocol mapping
   rationale.
 - `vendor/agent-client-protocol/` is the vendored ACP reference material.

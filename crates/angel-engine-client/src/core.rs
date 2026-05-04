@@ -15,6 +15,7 @@ use crate::event::{
     stream_deltas_from_engine_event,
 };
 use crate::snapshot::{ClientSnapshot, ElicitationSnapshot, TurnSnapshot};
+use crate::thread::ThreadEvent;
 
 #[derive(Debug)]
 pub(crate) struct AngelClientCore {
@@ -273,6 +274,53 @@ impl AngelClientCore {
         })
     }
 
+    pub fn send_thread_event(
+        &mut self,
+        conversation_id: impl Into<String>,
+        event: ThreadEvent,
+        focused_turn_id: Option<String>,
+    ) -> ClientResult<ClientCommandResult> {
+        let conversation_id = conversation_id.into();
+        match event {
+            ThreadEvent::UserMessage { text } => self.send_text(conversation_id, text),
+            ThreadEvent::Inputs { input } => self.send_inputs(conversation_id, input),
+            ThreadEvent::Steer { text, turn_id } => {
+                self.steer_text(conversation_id, turn_id.or(focused_turn_id), text)
+            }
+            ThreadEvent::Cancel { turn_id } => {
+                self.cancel_turn(conversation_id, turn_id.or(focused_turn_id))
+            }
+            ThreadEvent::SetModel { model } => self.set_model(conversation_id, model),
+            ThreadEvent::SetMode { mode } => self.set_mode(conversation_id, mode),
+            ThreadEvent::SetReasoningEffort { effort } => {
+                self.set_reasoning_effort(conversation_id, effort)
+            }
+            ThreadEvent::ResolveElicitation {
+                elicitation_id,
+                response,
+            } => self.resolve_elicitation(conversation_id, elicitation_id, response),
+            ThreadEvent::ResolveFirstElicitation { response } => {
+                let elicitation_id = self.first_open_elicitation_id(&conversation_id)?;
+                self.resolve_elicitation(conversation_id, elicitation_id, response)
+            }
+            ThreadEvent::Fork { at_turn_id } => self.fork_conversation(ForkConversationRequest {
+                source_conversation_id: conversation_id,
+                at_turn_id,
+            }),
+            ThreadEvent::Close => self.close_conversation(conversation_id),
+            ThreadEvent::Unsubscribe => self.unsubscribe(conversation_id),
+            ThreadEvent::Archive => self.archive_conversation(conversation_id),
+            ThreadEvent::Unarchive => self.unarchive_conversation(conversation_id),
+            ThreadEvent::CompactHistory => self.compact_history(conversation_id),
+            ThreadEvent::RollbackHistory { num_turns } => {
+                self.rollback_history(conversation_id, num_turns)
+            }
+            ThreadEvent::RunShellCommand { command } => {
+                self.run_shell_command(conversation_id, command)
+            }
+        }
+    }
+
     pub fn set_model(
         &mut self,
         conversation_id: impl Into<String>,
@@ -412,6 +460,16 @@ impl AngelClientCore {
             .and_then(|conversation| conversation.context.reasoning.effective())
             .and_then(Clone::clone)
             .unwrap_or(ReasoningProfile { effort: None })
+    }
+
+    fn first_open_elicitation_id(&self, conversation_id: &str) -> ClientResult<String> {
+        self.open_elicitations(conversation_id)
+            .into_iter()
+            .next()
+            .map(|elicitation| elicitation.id)
+            .ok_or_else(|| crate::ClientError::InvalidInput {
+                message: format!("conversation {conversation_id} has no open elicitation"),
+            })
     }
 
     fn plan_command(&mut self, command: EngineCommand) -> ClientResult<ClientCommandResult> {

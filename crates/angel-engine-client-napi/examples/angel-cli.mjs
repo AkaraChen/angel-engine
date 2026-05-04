@@ -90,10 +90,14 @@ class NodeAngelCli {
     } else if (command === '/effort' || command === '/reasoning') {
       if (!value) {
         this.printEffortState()
-      } else if (this.runtime.options.protocol === 'codexAppServer' && !isCodexReasoningEffort(value)) {
-        console.log('[warn] use one of: none, minimal, low, medium, high, xhigh')
       } else {
-        const effort = this.runtime.options.protocol === 'codexAppServer' ? value.toLowerCase() : value
+        const reasoning = required(this.currentConversation(), 'selected conversation missing').reasoning
+        const effort = normalizeReasoningEffort(reasoning, value)
+        if (!effort) {
+          const values = reasoning?.availableEfforts || []
+          console.log(values.length ? `[warn] use one of: ${values.join(', ')}` : '[warn] reasoning effort is unavailable for this runtime')
+          return true
+        }
         await this.sendAndFlush(() => this.client.setReasoningEffort(this.requireConversationId(), effort))
         await this.pumpUntilNoActivity(250)
         console.log(`[state] reasoning effort set to ${value}`)
@@ -314,20 +318,13 @@ class NodeAngelCli {
 
   printEffortState() {
     const conversation = required(this.currentConversation(), 'selected conversation missing')
-    const current = conversation.context?.reasoningEffort || '(default)'
+    const reasoning = conversation.reasoning || {}
+    const current = reasoning.currentEffort || '(default)'
     console.log(`[effort] current: ${current}`)
-    const option = configOption(conversation, 'thought_level', [
-      'thought_level',
-      'reasoning',
-      'reasoning_effort',
-      'effort',
-      'thinking',
-      'thought',
-    ])
-    if (option) {
-      printConfigValues('[effort]', option)
-    } else if (this.runtime.options.protocol === 'codexAppServer') {
-      console.log('[effort] available: none, minimal, low, medium, high, xhigh')
+    if (reasoning.availableEfforts?.length) {
+      printValues('[effort]', reasoning.availableEfforts)
+    } else if (!reasoning.canSet) {
+      console.log('[effort] unavailable for this runtime')
     }
   }
 
@@ -639,8 +636,15 @@ function normalize(value) {
     .toLowerCase()
 }
 
-function isCodexReasoningEffort(value) {
-  return ['none', 'minimal', 'low', 'medium', 'high', 'xhigh'].includes(value.toLowerCase())
+function normalizeReasoningEffort(reasoning, value) {
+  if (!reasoning?.canSet) {
+    return null
+  }
+  const values = reasoning.availableEfforts || []
+  if (!values.length) {
+    return value
+  }
+  return values.find((effort) => effort.toLowerCase() === value.toLowerCase()) || null
 }
 
 function isQuitCommand(line) {
