@@ -17,7 +17,6 @@ import { math } from '@streamdown/math';
 import { mermaid } from '@streamdown/mermaid';
 import {
   AlertCircleIcon,
-  BrainCircuit,
   Check,
   ChevronDown,
   ChevronLeft,
@@ -34,6 +33,10 @@ import {
   VolumeX,
 } from 'lucide-react';
 
+import {
+  Reasoning,
+  ReasoningGroup,
+} from '@/components/assistant-ui/reasoning';
 import { ToolGroup } from '@/components/assistant-ui/tool-group';
 import { Button } from '@/components/ui/button';
 import {
@@ -219,7 +222,8 @@ const userMessagePartComponents = {
 
 const assistantMessagePartComponents = {
   Text: AssistantTextMessagePart,
-  Reasoning: ReasoningMessagePart,
+  Reasoning,
+  ReasoningGroup,
   Source: NullMessagePart,
   Image: ImageMessagePart,
   File: FileMessagePart,
@@ -278,24 +282,6 @@ function AssistantTextMessagePart(
       plugins={{ cjk, code: streamdownCode, math, mermaid }}
       shikiTheme={['github-light', 'github-dark']}
     />
-  );
-}
-
-function ReasoningMessagePart(
-  part: Extract<EnrichedPartState, { type: 'reasoning' }>
-) {
-  if (!part.text.trim()) return null;
-
-  return (
-    <div className="mb-3 w-full text-muted-foreground">
-      <div className="flex items-center gap-2 text-xs font-medium">
-        <BrainCircuit className="size-3.5" />
-        Reasoning
-      </div>
-      <div className="mt-2 whitespace-pre-wrap border-l border-border pl-3 text-xs leading-5">
-        {part.text}
-      </div>
-    </div>
   );
 }
 
