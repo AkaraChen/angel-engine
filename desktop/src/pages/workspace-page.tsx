@@ -345,16 +345,6 @@ export function WorkspacePage({ route }: { route: WorkspaceRoute }) {
     [navigateToChat]
   );
 
-  const openProject = useCallback(
-    (project: Project) => {
-      const firstProjectChat = projectChatsByProjectId.get(project.id)?.[0];
-      if (firstProjectChat) {
-        navigateToChat(firstProjectChat);
-      }
-    },
-    [navigateToChat, projectChatsByProjectId]
-  );
-
   const deleteAllChats = useCallback(async () => {
     try {
       const result = await deleteAllChatsMutation.mutateAsync();
@@ -397,7 +387,6 @@ export function WorkspacePage({ route }: { route: WorkspaceRoute }) {
         onCreateProjectChat={createChatForProject}
         onCreateStandaloneChat={createChatForSelection}
         onOpenChat={openChat}
-        onOpenProject={openProject}
         onOpenSettings={openSettings}
         onRefreshProjects={refreshProjects}
         onShowChatContextMenu={showChatContextMenu}

@@ -1,7 +1,8 @@
-import type { ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import type { HTMLMotionProps, Transition } from 'framer-motion';
 import {
+  ChevronRight,
   Folder,
   FolderPlus,
   Loader2,
@@ -53,7 +54,6 @@ export function WorkspaceSidebar({
   onCreateProjectChat,
   onCreateStandaloneChat,
   onOpenChat,
-  onOpenProject,
   onOpenSettings,
   onRefreshProjects,
   onShowChatContextMenu,
@@ -72,7 +72,6 @@ export function WorkspaceSidebar({
   onCreateProjectChat: (project: Project) => MaybeAsync;
   onCreateStandaloneChat: () => MaybeAsync;
   onOpenChat: (chat: Chat) => MaybeAsync;
-  onOpenProject: (project: Project) => MaybeAsync;
   onOpenSettings: () => MaybeAsync;
   onRefreshProjects: () => MaybeAsync;
   onShowChatContextMenu: (chat: Chat) => MaybeAsync;
@@ -84,6 +83,46 @@ export function WorkspaceSidebar({
   settingsActive: boolean;
   standaloneChats: Chat[];
 }) {
+  const [expandedProjectIds, setExpandedProjectIds] = useState<Set<string>>(
+    () => new Set(projects.map((project) => project.id))
+  );
+
+  useEffect(() => {
+    setExpandedProjectIds((current) => {
+      let changed = false;
+      const next = new Set(current);
+      for (const project of projects) {
+        if (!next.has(project.id)) {
+          next.add(project.id);
+          changed = true;
+        }
+      }
+      return changed ? next : current;
+    });
+  }, [projects]);
+
+  useEffect(() => {
+    if (!selectedProjectId) return;
+    setExpandedProjectIds((current) => {
+      if (current.has(selectedProjectId)) return current;
+      const next = new Set(current);
+      next.add(selectedProjectId);
+      return next;
+    });
+  }, [selectedProjectId]);
+
+  const toggleProjectExpanded = (projectId: string) => {
+    setExpandedProjectIds((current) => {
+      const next = new Set(current);
+      if (next.has(projectId)) {
+        next.delete(projectId);
+      } else {
+        next.add(projectId);
+      }
+      return next;
+    });
+  };
+
   return (
     <Sidebar variant="inset">
       <SidebarHeader
@@ -177,12 +216,17 @@ export function WorkspaceSidebar({
                   );
                   const projectChats =
                     projectChatsByProjectId.get(project.id) ?? [];
+                  const isExpanded = expandedProjectIds.has(project.id);
+                  const hasChats = projectChats.length > 0;
 
                   return (
                     <AnimatedSidebarMenuItem key={project.id}>
                       <MacSidebarMenuButton
+                        aria-expanded={hasChats ? isExpanded : undefined}
                         isActive={project.id === selectedProjectId}
-                        onClick={() => void onOpenProject(project)}
+                        onClick={() => {
+                          toggleProjectExpanded(project.id);
+                        }}
                         onContextMenu={(event) => {
                           event.preventDefault();
                           void onShowProjectContextMenu(project);
@@ -193,6 +237,15 @@ export function WorkspaceSidebar({
                         <span className="min-w-0 flex-1 truncate">
                           {projectDisplayName}
                         </span>
+                        {hasChats ? (
+                          <motion.span
+                            animate={{ rotate: isExpanded ? 90 : 0 }}
+                            className="ml-1 shrink-0 opacity-80"
+                            transition={sidebarMotion}
+                          >
+                            <ChevronRight className="size-4" />
+                          </motion.span>
+                        ) : null}
                       </MacSidebarMenuButton>
                       <MacSidebarMenuAction
                         aria-label={`New chat in ${projectDisplayName}`}
@@ -209,14 +262,15 @@ export function WorkspaceSidebar({
                       </MacSidebarMenuAction>
 
                       <AnimatePresence initial={false}>
-                        {projectChats.length > 0 ? (
+                        {hasChats && isExpanded ? (
                           <motion.div
                             animate={{ height: 'auto', opacity: 1 }}
                             className="overflow-hidden"
                             exit={{ height: 0, opacity: 0 }}
                             initial={{ height: 0, opacity: 0 }}
-                            key="project-chats"
+                            key={`project-chats-${project.id}`}
                             transition={sidebarMotion}
+                            layout="position"
                           >
                             <SidebarMenuSub>
                               {projectChats.map((chat) => (
