@@ -22,7 +22,7 @@ import { isChatToolAction, isTerminalChatToolPhase } from '@/shared/chat';
 
 const ANIMATION_DURATION = 200;
 
-const toolGroupVariants = cva('aui-tool-group-root group/tool-group w-full', {
+const toolGroupVariants = cva('aui-tool-group-root group/tool-group my-2 w-full', {
   defaultVariants: { variant: 'outline' },
   variants: {
     variant: {
