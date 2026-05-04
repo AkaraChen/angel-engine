@@ -1,3 +1,6 @@
+import type { ReactNode } from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
+import type { HTMLMotionProps, Transition } from 'framer-motion';
 import {
   Folder,
   FolderPlus,
@@ -22,11 +25,11 @@ import {
   SidebarMenu,
   SidebarMenuAction,
   SidebarMenuButton,
-  SidebarMenuItem,
   SidebarMenuSub,
   SidebarMenuSubButton,
   SidebarMenuSubItem,
 } from '@/components/ui/sidebar';
+import { cn } from '@/lib/utils';
 import type { Chat } from '@/shared/chat';
 import type { Project } from '@/shared/projects';
 
@@ -34,6 +37,11 @@ const primaryItems = [
   { label: 'New chat', icon: MessageSquarePlus },
   { label: 'Automation', icon: Workflow },
 ];
+
+const sidebarMotion = {
+  duration: 0.16,
+  ease: 'easeOut',
+} satisfies Transition;
 
 type MaybeAsync = void | Promise<void>;
 
@@ -79,14 +87,15 @@ export function WorkspaceSidebar({
   return (
     <Sidebar variant="inset">
       <SidebarHeader
-        className="px-2 pb-3 pt-2"
+        className="px-2 pb-2 pt-2"
         data-electron-drag
       >
         {isMacOS ? <div aria-hidden className="h-8 shrink-0" /> : null}
-        <SidebarMenu>
+
+        <SidebarMenu className="gap-1">
           {primaryItems.map(({ label, icon: Icon }) => (
-            <SidebarMenuItem key={label}>
-              <SidebarMenuButton
+            <AnimatedSidebarMenuItem key={label}>
+              <MacSidebarMenuButton
                 onClick={
                   label === 'New chat'
                     ? () => void onCreateStandaloneChat()
@@ -95,161 +104,188 @@ export function WorkspaceSidebar({
               >
                 <Icon />
                 <span>{label}</span>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
+              </MacSidebarMenuButton>
+            </AnimatedSidebarMenuItem>
           ))}
         </SidebarMenu>
       </SidebarHeader>
 
-      <SidebarContent>
-        <SidebarGroup>
-          <div className="flex items-center justify-between gap-2 pr-2">
-            <SidebarGroupLabel>Projects</SidebarGroupLabel>
-            <div className="flex items-center gap-1">
+      <SidebarContent className="gap-1 pb-1">
+        <SidebarGroup className="py-1">
+          <SidebarSectionHeader label="Projects">
+            <>
               <Button
-                onClick={() => void onRefreshProjects()}
+                asChild
                 size="icon-xs"
                 title="Refresh projects"
-                type="button"
                 variant="ghost"
               >
-                <RefreshCw />
-                <span className="sr-only">Refresh projects</span>
+                <motion.button
+                  onClick={() => void onRefreshProjects()}
+                  title="Refresh projects"
+                  transition={sidebarMotion}
+                  type="button"
+                  whileTap={{ scale: 0.96 }}
+                >
+                  <RefreshCw />
+                  <span className="sr-only">Refresh projects</span>
+                </motion.button>
               </Button>
               <Button
-                onClick={() => void onCreateProject()}
+                asChild
                 size="icon-xs"
                 title="Add project"
-                type="button"
                 variant="ghost"
               >
-                <FolderPlus />
-                <span className="sr-only">Add project</span>
+                <motion.button
+                  onClick={() => void onCreateProject()}
+                  title="Add project"
+                  transition={sidebarMotion}
+                  type="button"
+                  whileTap={{ scale: 0.96 }}
+                >
+                  <FolderPlus />
+                  <span className="sr-only">Add project</span>
+                </motion.button>
               </Button>
-            </div>
-          </div>
+            </>
+          </SidebarSectionHeader>
           <SidebarGroupContent>
             <SidebarMenu>
-              {isProjectsLoading ? (
-                <SidebarMenuItem>
-                  <SidebarMenuButton disabled>
-                    <Loader2 className="animate-spin" />
-                    <span>Loading projects</span>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ) : null}
+              <AnimatePresence initial={false}>
+                {isProjectsLoading ? (
+                  <AnimatedSidebarMenuItem key="projects-loading">
+                    <MacSidebarMenuButton disabled>
+                      <Loader2 className="animate-spin" />
+                      <span>Loading projects</span>
+                    </MacSidebarMenuButton>
+                  </AnimatedSidebarMenuItem>
+                ) : null}
 
-              {!isProjectsLoading && projects.length === 0 ? (
-                <SidebarMenuItem>
-                  <SidebarMenuButton disabled>
-                    <Folder />
-                    <span>No projects yet</span>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ) : null}
-
-              {projects.map((project) => {
-                const projectDisplayName = getProjectDisplayName(project.path);
-                const projectChats =
-                  projectChatsByProjectId.get(project.id) ?? [];
-
-                return (
-                  <SidebarMenuItem key={project.id}>
-                    <SidebarMenuButton
-                      isActive={project.id === selectedProjectId}
-                      onClick={() => void onOpenProject(project)}
-                      onContextMenu={(event) => {
-                        event.preventDefault();
-                        void onShowProjectContextMenu(project);
-                      }}
-                      title={project.path}
-                    >
+                {!isProjectsLoading && projects.length === 0 ? (
+                  <AnimatedSidebarMenuItem key="projects-empty">
+                    <MacSidebarMenuButton disabled>
                       <Folder />
-                      <span className="truncate">{projectDisplayName}</span>
-                    </SidebarMenuButton>
-                    <SidebarMenuAction
-                      aria-label={`New chat in ${projectDisplayName}`}
-                      onClick={(event) => {
-                        event.preventDefault();
-                        event.stopPropagation();
-                        void onCreateProjectChat(project);
-                      }}
-                      showOnHover
-                      title={`New chat in ${projectDisplayName}`}
-                      type="button"
-                    >
-                      <Plus />
-                    </SidebarMenuAction>
+                      <span>No projects yet</span>
+                    </MacSidebarMenuButton>
+                  </AnimatedSidebarMenuItem>
+                ) : null}
 
-                    {projectChats.length > 0 ? (
-                      <SidebarMenuSub>
-                        {projectChats.map((chat) => (
-                          <SidebarMenuSubItem key={chat.id}>
-                            <SidebarMenuSubButton
-                              asChild
-                              isActive={chat.id === selectedChatId}
-                              title={chat.cwd ?? chat.title}
-                            >
-                              <button
-                                onClick={() => void onOpenChat(chat)}
-                                onContextMenu={(event) => {
-                                  event.preventDefault();
-                                  void onShowChatContextMenu(chat);
-                                }}
-                                type="button"
-                              >
-                                <span>{chat.title}</span>
-                              </button>
-                            </SidebarMenuSubButton>
-                          </SidebarMenuSubItem>
-                        ))}
-                      </SidebarMenuSub>
-                    ) : null}
-                  </SidebarMenuItem>
-                );
-              })}
+                {projects.map((project) => {
+                  const projectDisplayName = getProjectDisplayName(
+                    project.path
+                  );
+                  const projectChats =
+                    projectChatsByProjectId.get(project.id) ?? [];
+
+                  return (
+                    <AnimatedSidebarMenuItem key={project.id}>
+                      <MacSidebarMenuButton
+                        isActive={project.id === selectedProjectId}
+                        onClick={() => void onOpenProject(project)}
+                        onContextMenu={(event) => {
+                          event.preventDefault();
+                          void onShowProjectContextMenu(project);
+                        }}
+                        title={project.path}
+                      >
+                        <Folder />
+                        <span className="min-w-0 flex-1 truncate">
+                          {projectDisplayName}
+                        </span>
+                      </MacSidebarMenuButton>
+                      <MacSidebarMenuAction
+                        aria-label={`New chat in ${projectDisplayName}`}
+                        onClick={(event) => {
+                          event.preventDefault();
+                          event.stopPropagation();
+                          void onCreateProjectChat(project);
+                        }}
+                        showOnHover
+                        title={`New chat in ${projectDisplayName}`}
+                        type="button"
+                      >
+                        <Plus />
+                      </MacSidebarMenuAction>
+
+                      <AnimatePresence initial={false}>
+                        {projectChats.length > 0 ? (
+                          <motion.div
+                            animate={{ height: 'auto', opacity: 1 }}
+                            className="overflow-hidden"
+                            exit={{ height: 0, opacity: 0 }}
+                            initial={{ height: 0, opacity: 0 }}
+                            key="project-chats"
+                            transition={sidebarMotion}
+                          >
+                            <SidebarMenuSub>
+                              {projectChats.map((chat) => (
+                                <SidebarMenuSubItem key={chat.id}>
+                                  <MacSidebarMenuSubButton
+                                    isActive={chat.id === selectedChatId}
+                                    onClick={() => void onOpenChat(chat)}
+                                    onContextMenu={(event) => {
+                                      event.preventDefault();
+                                      void onShowChatContextMenu(chat);
+                                    }}
+                                    title={chat.cwd ?? chat.title}
+                                  >
+                                    <span>{chat.title}</span>
+                                  </MacSidebarMenuSubButton>
+                                </SidebarMenuSubItem>
+                              ))}
+                            </SidebarMenuSub>
+                          </motion.div>
+                        ) : null}
+                      </AnimatePresence>
+                    </AnimatedSidebarMenuItem>
+                  );
+                })}
+              </AnimatePresence>
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
 
-        <SidebarGroup>
-          <SidebarGroupLabel>Chats</SidebarGroupLabel>
+        <SidebarGroup className="py-1">
+          <SidebarSectionHeader label="Chats" />
           <SidebarGroupContent>
             <SidebarMenu>
-              {isChatsLoading ? (
-                <SidebarMenuItem>
-                  <SidebarMenuButton disabled>
-                    <Loader2 className="animate-spin" />
-                    <span>Loading chats</span>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ) : null}
+              <AnimatePresence initial={false}>
+                {isChatsLoading ? (
+                  <AnimatedSidebarMenuItem key="chats-loading">
+                    <MacSidebarMenuButton disabled>
+                      <Loader2 className="animate-spin" />
+                      <span>Loading chats</span>
+                    </MacSidebarMenuButton>
+                  </AnimatedSidebarMenuItem>
+                ) : null}
 
-              {!isChatsLoading && standaloneChats.length === 0 ? (
-                <SidebarMenuItem>
-                  <SidebarMenuButton disabled>
-                    <MessageSquare />
-                    <span>No standalone chats</span>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ) : null}
+                {!isChatsLoading && standaloneChats.length === 0 ? (
+                  <AnimatedSidebarMenuItem key="chats-empty">
+                    <MacSidebarMenuButton disabled>
+                      <MessageSquare />
+                      <span>No standalone chats</span>
+                    </MacSidebarMenuButton>
+                  </AnimatedSidebarMenuItem>
+                ) : null}
 
-              {standaloneChats.map((chat) => (
-                <SidebarMenuItem key={chat.id}>
-                  <SidebarMenuButton
-                    isActive={chat.id === selectedChatId}
-                    onClick={() => void onOpenChat(chat)}
-                    onContextMenu={(event) => {
-                      event.preventDefault();
-                      void onShowChatContextMenu(chat);
-                    }}
-                    title={chat.cwd ?? chat.title}
-                  >
-                    <MessageSquare />
-                    <span className="truncate">{chat.title}</span>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
+                {standaloneChats.map((chat) => (
+                  <AnimatedSidebarMenuItem key={chat.id}>
+                    <MacSidebarMenuButton
+                      isActive={chat.id === selectedChatId}
+                      onClick={() => void onOpenChat(chat)}
+                      onContextMenu={(event) => {
+                        event.preventDefault();
+                        void onShowChatContextMenu(chat);
+                      }}
+                      title={chat.cwd ?? chat.title}
+                    >
+                      <MessageSquare />
+                      <span className="truncate">{chat.title}</span>
+                    </MacSidebarMenuButton>
+                  </AnimatedSidebarMenuItem>
+                ))}
+              </AnimatePresence>
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
@@ -257,18 +293,129 @@ export function WorkspaceSidebar({
 
       <SidebarFooter className="p-2">
         <SidebarMenu>
-          <SidebarMenuItem>
-            <SidebarMenuButton
+          <AnimatedSidebarMenuItem>
+            <MacSidebarMenuButton
               isActive={settingsActive}
               onClick={() => void onOpenSettings()}
             >
               <Settings />
               <span>Settings</span>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
+            </MacSidebarMenuButton>
+          </AnimatedSidebarMenuItem>
         </SidebarMenu>
       </SidebarFooter>
     </Sidebar>
+  );
+}
+
+function AnimatedSidebarMenuItem({
+  children,
+  className,
+}: {
+  children: ReactNode;
+  className?: string;
+}) {
+  return (
+    <motion.li
+      animate="visible"
+      className={cn('group/menu-item relative', className)}
+      data-sidebar="menu-item"
+      data-slot="sidebar-menu-item"
+      exit={{ opacity: 0 }}
+      layout="position"
+      transition={sidebarMotion}
+    >
+      {children}
+    </motion.li>
+  );
+}
+
+function SidebarSectionHeader({
+  children,
+  label,
+}: {
+  children?: ReactNode;
+  label: string;
+}) {
+  return (
+    <motion.div
+      className="flex items-center justify-between gap-2 pr-2"
+      layout
+      transition={sidebarMotion}
+    >
+      <div className="flex min-w-0 items-center gap-1">
+        <SidebarGroupLabel className="h-7">{label}</SidebarGroupLabel>
+      </div>
+      {children ? (
+        <div className="flex items-center gap-1 group-data-[collapsible=icon]:hidden">
+          {children}
+        </div>
+      ) : null}
+    </motion.div>
+  );
+}
+
+function MacSidebarMenuButton({
+  children,
+  className,
+  isActive,
+  type = 'button',
+  ...props
+}: HTMLMotionProps<'button'> & { isActive?: boolean }) {
+  return (
+    <SidebarMenuButton asChild isActive={isActive}>
+      <motion.button
+        className={cn('relative', className)}
+        transition={sidebarMotion}
+        type={type}
+        {...props}
+      >
+        {children}
+      </motion.button>
+    </SidebarMenuButton>
+  );
+}
+
+function MacSidebarMenuSubButton({
+  children,
+  className,
+  isActive,
+  type = 'button',
+  ...props
+}: HTMLMotionProps<'button'> & { isActive?: boolean }) {
+  return (
+    <SidebarMenuSubButton asChild isActive={isActive}>
+      <motion.button
+        className={cn('relative', className)}
+        transition={sidebarMotion}
+        type={type}
+        {...props}
+      >
+        {children}
+      </motion.button>
+    </SidebarMenuSubButton>
+  );
+}
+
+function MacSidebarMenuAction({
+  children,
+  className,
+  showOnHover,
+  type = 'button',
+  ...props
+}: HTMLMotionProps<'button'> & { showOnHover?: boolean }) {
+  return (
+    <SidebarMenuAction asChild showOnHover={showOnHover}>
+      <motion.button
+        className={className}
+        transition={sidebarMotion}
+        type={type}
+        whileTap={{ scale: 0.96 }}
+        {...props}
+      >
+        {children}
+      </motion.button>
+    </SidebarMenuAction>
   );
 }
 
