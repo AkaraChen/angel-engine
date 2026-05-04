@@ -11,7 +11,6 @@ import {
   Plus,
   RefreshCw,
   Settings,
-  Workflow,
 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
@@ -36,7 +35,6 @@ import type { Project } from '@/shared/projects';
 
 const primaryItems = [
   { label: 'New chat', icon: MessageSquarePlus },
-  { label: 'Automation', icon: Workflow },
 ];
 
 const sidebarMotion = {
