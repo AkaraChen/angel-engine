@@ -5,7 +5,7 @@ import {
   type AssistantRuntime,
   type ExternalStoreAdapter,
   type MessageStatus,
-  type ThreadMessageLike,
+  type ThreadMessage,
 } from '@assistant-ui/react';
 
 import { streamChatEvents } from '@/lib/chat-stream';
@@ -31,7 +31,7 @@ import {
 const STREAM_FLUSH_MIN_CHARS = 24;
 const STREAM_FLUSH_MAX_MS = 80;
 
-type EngineMessage = ThreadMessageLike & { id: string };
+type EngineMessage = ThreadMessage;
 type EngineRuntimeAdapters = NonNullable<
   ExternalStoreAdapter<EngineMessage>['adapters']
 >;
@@ -245,7 +245,6 @@ export function useEngineRuntime({
   const store = useMemo<ExternalStoreAdapter<EngineMessage>>(
     () => ({
       adapters,
-      convertMessage: (message) => message,
       isRunning,
       messages,
       onCancel: cancelRun,
@@ -478,6 +477,7 @@ function createAssistantMessage(
         model: accumulator.result?.model ?? 'angel-engine-client',
         turnId: accumulator.result?.turnId,
       },
+      steps: [],
       timing: {
         streamStartTime: startedAt,
         tokenCount: Math.max(1, Math.round(text.length / 4)),
@@ -485,6 +485,9 @@ function createAssistantMessage(
         totalChunks: Math.max(1, accumulator.chunkCount),
         totalStreamTime: performance.now() - startedAt,
       },
+      unstable_annotations: [],
+      unstable_data: [],
+      unstable_state: null,
     },
     role: 'assistant',
     status: accumulator.status,
@@ -496,6 +499,7 @@ function appendMessageToEngineMessage(
   id: string
 ): EngineMessage {
   return {
+    ...message,
     attachments: message.attachments,
     content: message.content,
     createdAt: new Date(),
@@ -508,20 +512,42 @@ function appendMessageToEngineMessage(
 
 function historyMessageToEngineMessage(message: ChatHistoryMessage): EngineMessage {
   const createdAt = message.createdAt ? new Date(message.createdAt) : undefined;
+  const normalizedCreatedAt =
+    createdAt && Number.isFinite(createdAt.getTime()) ? createdAt : new Date();
+  const content = message.content.map(cloneChatHistoryPart);
+
+  if (message.role === 'assistant') {
+    return {
+      content,
+      createdAt: normalizedCreatedAt,
+      id: message.id,
+      metadata: {
+        custom: {},
+        steps: [],
+        unstable_annotations: [],
+        unstable_data: [],
+        unstable_state: null,
+      },
+      role: 'assistant',
+      status: {
+        reason: 'stop',
+        type: 'complete',
+      },
+    } as EngineMessage;
+  }
 
   return {
-    content: message.content.map(cloneChatHistoryPart),
-    createdAt:
-      createdAt && Number.isFinite(createdAt.getTime()) ? createdAt : undefined,
+    attachments: [],
+    content:
+      message.role === 'system'
+        ? [{ text: chatPartsText(content, 'text'), type: 'text' }]
+        : content,
+    createdAt: normalizedCreatedAt,
     id: message.id,
+    metadata: {
+      custom: {},
+    },
     role: message.role,
-    status:
-      message.role === 'assistant'
-        ? {
-            reason: 'stop',
-            type: 'complete',
-          }
-        : undefined,
   } as EngineMessage;
 }
 
@@ -543,12 +569,8 @@ function engineMessageToHistoryMessage(message: EngineMessage): ChatHistoryMessa
 }
 
 function engineMessageContentToHistoryParts(
-  content: ThreadMessageLike['content']
+  content: ThreadMessage['content']
 ): ChatHistoryMessagePart[] {
-  if (typeof content === 'string') {
-    return content.trim() ? [{ text: content, type: 'text' }] : [];
-  }
-
   return content.flatMap((part) => {
     switch (part.type) {
       case 'reasoning':
@@ -564,9 +586,7 @@ function engineMessageContentToHistoryParts(
   });
 }
 
-function getMessageText(message: Pick<ThreadMessageLike, 'content'>) {
-  if (typeof message.content === 'string') return message.content.trim();
-
+function getMessageText(message: Pick<ThreadMessage, 'content'>) {
   return message.content
     .map((part) => (part.type === 'text' ? part.text : ''))
     .join('\n')
