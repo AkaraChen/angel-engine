@@ -1,5 +1,10 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { useLocation } from 'wouter';
+import { useCallback, useMemo } from 'react';
+import {
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from '@tanstack/react-query';
+import { Redirect, useLocation } from 'wouter';
 
 import { AppRuntimeProvider } from '@/app/app-runtime-provider';
 import { WorkspaceHeader } from '@/app/workspace-header';
@@ -9,7 +14,7 @@ import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar';
 import { useToast } from '@/components/ui/toast';
 import { ipc } from '@/lib/ipc';
 import { SettingsPage } from '@/pages/settings-page';
-import type { Chat, ChatHistoryMessage } from '@/shared/chat';
+import type { Chat, ChatHistoryMessage, ChatLoadResult } from '@/shared/chat';
 import type { Project } from '@/shared/projects';
 
 export type WorkspaceRoute =
@@ -18,27 +23,72 @@ export type WorkspaceRoute =
   | { chatId: string; projectId: string; type: 'projectChat' }
   | { type: 'settings' };
 
+const EMPTY_CHATS: Chat[] = [];
+const EMPTY_MESSAGES: ChatHistoryMessage[] = [];
+const EMPTY_PROJECTS: Project[] = [];
+
+const chatKeys = {
+  detail: (chatId: string) => ['chat', chatId] as const,
+  details: ['chat'] as const,
+  list: ['chats'] as const,
+};
+
+const projectKeys = {
+  list: ['projects'] as const,
+};
+
 export function WorkspacePage({ route }: { route: WorkspaceRoute }) {
   const toast = useToast();
+  const queryClient = useQueryClient();
   const [location, navigate] = useLocation();
   const isMacOS = window.desktopEnvironment.platform === 'darwin';
-  const [chats, setChats] = useState<Chat[]>([]);
-  const [historyMessages, setHistoryMessages] = useState<ChatHistoryMessage[]>([]);
-  const [historyRevision, setHistoryRevision] = useState(0);
-  const [isChatsLoading, setIsChatsLoading] = useState(true);
-  const [isProjectsLoading, setIsProjectsLoading] = useState(true);
-  const [projects, setProjects] = useState<Project[]>([]);
 
   const selectedChatId =
     route.type === 'chat' || route.type === 'projectChat'
       ? route.chatId
       : undefined;
   const currentRoutePath = routePath(route);
-  const selectedChat = chats.find((chat) => chat.id === selectedChatId);
+
+  const chatDetailKey = selectedChatId
+    ? chatKeys.detail(selectedChatId)
+    : chatKeys.details;
+
+  const projectsQuery = useQuery({
+    queryFn: () => ipc.projectsList(),
+    queryKey: projectKeys.list,
+  });
+  const chatsQuery = useQuery({
+    queryFn: () => ipc.chatsList(),
+    queryKey: chatKeys.list,
+  });
+  const chatLoadQuery = useQuery({
+    enabled: Boolean(selectedChatId),
+    queryFn: () => {
+      if (!selectedChatId) {
+        throw new Error('No chat selected');
+      }
+      return ipc.chatsLoad(selectedChatId);
+    },
+    queryKey: chatDetailKey,
+    retry: false,
+  });
+
+  const projects = projectsQuery.data ?? EMPTY_PROJECTS;
+  const chats = chatsQuery.data ?? EMPTY_CHATS;
+  const selectedChat =
+    chatLoadQuery.data?.chat ??
+    chats.find((chat) => chat.id === selectedChatId);
   const selectedProjectId =
     route.type === 'projectChat'
       ? route.projectId
       : selectedChat?.projectId ?? undefined;
+  const historyMessages = selectedChatId
+    ? chatLoadQuery.data?.messages ?? EMPTY_MESSAGES
+    : EMPTY_MESSAGES;
+  const historyRevision = selectedChatId
+    ? chatLoadQuery.dataUpdatedAt
+    : 0;
+
   const projectIds = useMemo(
     () => new Set(projects.map((project) => project.id)),
     [projects]
@@ -64,15 +114,27 @@ export function WorkspacePage({ route }: { route: WorkspaceRoute }) {
     [chats, projectIds]
   );
 
-  const mergeChat = useCallback((chat: Chat) => {
-    setChats((current) => {
-      const next = current.filter((item) => item.id !== chat.id);
-      next.unshift(chat);
-      return next.sort((left, right) =>
-        right.updatedAt.localeCompare(left.updatedAt)
+  const setChatInCache = useCallback(
+    (chat: Chat, messages?: ChatHistoryMessage[]) => {
+      queryClient.setQueryData<Chat[]>(chatKeys.list, (current = []) =>
+        upsertChatInList(current, chat)
       );
-    });
-  }, []);
+
+      queryClient.setQueryData<ChatLoadResult | undefined>(
+        chatKeys.detail(chat.id),
+        (current) => {
+          if (messages) {
+            return { chat, messages };
+          }
+          if (current) {
+            return { ...current, chat };
+          }
+          return current;
+        }
+      );
+    },
+    [queryClient]
+  );
 
   const navigateToChat = useCallback(
     (chat: Chat, options?: { replace?: boolean }) => {
@@ -86,101 +148,44 @@ export function WorkspacePage({ route }: { route: WorkspaceRoute }) {
 
   const upsertChat = useCallback(
     (chat: Chat) => {
-      mergeChat(chat);
+      setChatInCache(chat);
       navigateToChat(chat);
     },
-    [mergeChat, navigateToChat]
+    [navigateToChat, setChatInCache]
   );
 
-  const refreshProjects = useCallback(async () => {
-    setIsProjectsLoading(true);
+  const createProjectMutation = useMutation({
+    mutationFn: (path: string) => ipc.projectsCreate({ path }),
+  });
+  const createProjectChatMutation = useMutation({
+    mutationFn: (project: Project) =>
+      ipc.chatsCreate({
+        cwd: project.path,
+        projectId: project.id,
+      }),
+  });
+  const deleteAllChatsMutation = useMutation({
+    mutationFn: () => ipc.chatsDeleteAll(),
+  });
 
-    try {
-      setProjects(await ipc.projectsList());
-    } catch (error) {
+  const refreshProjects = useCallback(async () => {
+    const result = await projectsQuery.refetch();
+    if (result.error) {
       toast({
-        description: getErrorMessage(error),
+        description: getErrorMessage(result.error),
         title: 'Could not load projects',
         variant: 'destructive',
       });
-    } finally {
-      setIsProjectsLoading(false);
     }
-  }, [toast]);
-
-  useEffect(() => {
-    void refreshProjects();
-  }, [refreshProjects]);
-
-  useEffect(() => {
-    if (!selectedChatId) {
-      setHistoryMessages([]);
-      setHistoryRevision((revision) => revision + 1);
-      return;
-    }
-
-    let cancelled = false;
-    setHistoryMessages([]);
-    setHistoryRevision((revision) => revision + 1);
-
-    const loadRouteChat = async () => {
-      try {
-        const result = await ipc.chatsLoad(selectedChatId);
-        if (cancelled) return;
-
-        mergeChat(result.chat);
-        setHistoryMessages(result.messages);
-        setHistoryRevision((revision) => revision + 1);
-
-        const canonicalPath = chatRoutePath(result.chat);
-        if (canonicalPath !== currentRoutePath) {
-          navigate(canonicalPath, { replace: true });
-        }
-      } catch (error) {
-        if (cancelled) return;
-        toast({
-          description: getErrorMessage(error),
-          title: 'Could not load chat',
-          variant: 'destructive',
-        });
-        navigate('/', { replace: true });
-      }
-    };
-
-    void loadRouteChat();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [currentRoutePath, mergeChat, navigate, selectedChatId, toast]);
-
-  const refreshChats = useCallback(async () => {
-    setIsChatsLoading(true);
-
-    try {
-      setChats(await ipc.chatsList());
-    } catch (error) {
-      toast({
-        description: getErrorMessage(error),
-        title: 'Could not load chats',
-        variant: 'destructive',
-      });
-    } finally {
-      setIsChatsLoading(false);
-    }
-  }, [toast]);
-
-  useEffect(() => {
-    void refreshChats();
-  }, [refreshChats]);
+  }, [projectsQuery, toast]);
 
   const createProjectFromPicker = useCallback(async () => {
     try {
       const selectedPath = await ipc.projectsChooseDirectory();
       if (!selectedPath) return;
 
-      await ipc.projectsCreate({ path: selectedPath });
-      await refreshProjects();
+      await createProjectMutation.mutateAsync(selectedPath);
+      await queryClient.invalidateQueries({ queryKey: projectKeys.list });
     } catch (error) {
       toast({
         description: getErrorMessage(error),
@@ -188,14 +193,14 @@ export function WorkspacePage({ route }: { route: WorkspaceRoute }) {
         variant: 'destructive',
       });
     }
-  }, [refreshProjects, toast]);
+  }, [createProjectMutation, queryClient, toast]);
 
   const showProjectContextMenu = useCallback(
     async (project: Project) => {
       try {
         const action = await ipc.projectsShowContextMenu(project.id);
         if (action === 'deleted') {
-          await refreshProjects();
+          await queryClient.invalidateQueries({ queryKey: projectKeys.list });
         }
       } catch (error) {
         toast({
@@ -205,18 +210,21 @@ export function WorkspacePage({ route }: { route: WorkspaceRoute }) {
         });
       }
     },
-    [refreshProjects, toast]
+    [queryClient, toast]
   );
 
-  const removeChatFromState = useCallback(
+  const removeChatFromCache = useCallback(
     (chatId: string) => {
-      setChats((current) => current.filter((chat) => chat.id !== chatId));
+      queryClient.setQueryData<Chat[]>(chatKeys.list, (current = []) =>
+        current.filter((chat) => chat.id !== chatId)
+      );
+      queryClient.removeQueries({ queryKey: chatKeys.detail(chatId) });
 
       if (selectedChatId === chatId) {
         navigate('/', { replace: true });
       }
     },
-    [navigate, selectedChatId]
+    [navigate, queryClient, selectedChatId]
   );
 
   const showChatContextMenu = useCallback(
@@ -224,7 +232,7 @@ export function WorkspacePage({ route }: { route: WorkspaceRoute }) {
       try {
         const action = await ipc.chatsShowContextMenu(chat.id);
         if (action === 'deleted') {
-          removeChatFromState(chat.id);
+          removeChatFromCache(chat.id);
         }
       } catch (error) {
         toast({
@@ -234,19 +242,15 @@ export function WorkspacePage({ route }: { route: WorkspaceRoute }) {
         });
       }
     },
-    [removeChatFromState, toast]
+    [removeChatFromCache, toast]
   );
 
   const createChatForProject = useCallback(
     async (project: Project) => {
       try {
-        const chat = await ipc.chatsCreate({
-          cwd: project.path,
-          projectId: project.id,
-        });
-        upsertChat(chat);
-        setHistoryMessages([]);
-        setHistoryRevision((revision) => revision + 1);
+        const chat = await createProjectChatMutation.mutateAsync(project);
+        setChatInCache(chat, EMPTY_MESSAGES);
+        navigateToChat(chat);
       } catch (error) {
         toast({
           description: getErrorMessage(error),
@@ -255,7 +259,7 @@ export function WorkspacePage({ route }: { route: WorkspaceRoute }) {
         });
       }
     },
-    [toast, upsertChat]
+    [createProjectChatMutation, navigateToChat, setChatInCache, toast]
   );
 
   const createChatForSelection = useCallback(() => {
@@ -284,24 +288,43 @@ export function WorkspacePage({ route }: { route: WorkspaceRoute }) {
   );
 
   const deleteAllChats = useCallback(async () => {
-    const result = await ipc.chatsDeleteAll();
-    setChats([]);
-    setHistoryMessages([]);
-    setHistoryRevision((revision) => revision + 1);
-    toast({
-      description: `Deleted ${result.deletedCount} chat${
-        result.deletedCount === 1 ? '' : 's'
-      }.`,
-      title: 'Chats deleted',
-    });
-  }, [toast]);
+    try {
+      const result = await deleteAllChatsMutation.mutateAsync();
+      queryClient.setQueryData<Chat[]>(chatKeys.list, EMPTY_CHATS);
+      queryClient.removeQueries({ queryKey: ['chat'] });
+      navigate('/', { replace: true });
+      toast({
+        description: `Deleted ${result.deletedCount} chat${
+          result.deletedCount === 1 ? '' : 's'
+        }.`,
+        title: 'Chats deleted',
+      });
+    } catch (error) {
+      toast({
+        description: getErrorMessage(error),
+        title: 'Could not delete chats',
+        variant: 'destructive',
+      });
+    }
+  }, [deleteAllChatsMutation, navigate, queryClient, toast]);
+
+  if (selectedChatId && chatLoadQuery.isError) {
+    return <Redirect replace to="/" />;
+  }
+
+  if (selectedChat) {
+    const canonicalPath = chatRoutePath(selectedChat);
+    if (canonicalPath !== currentRoutePath) {
+      return <Redirect replace to={canonicalPath} />;
+    }
+  }
 
   return (
     <SidebarProvider>
       <WorkspaceSidebar
-        isChatsLoading={isChatsLoading}
+        isChatsLoading={chatsQuery.isPending}
         isMacOS={isMacOS}
-        isProjectsLoading={isProjectsLoading}
+        isProjectsLoading={projectsQuery.isPending}
         onCreateProject={createProjectFromPicker}
         onCreateProjectChat={createChatForProject}
         onCreateStandaloneChat={createChatForSelection}
@@ -322,7 +345,10 @@ export function WorkspacePage({ route }: { route: WorkspaceRoute }) {
       {route.type === 'settings' ? (
         <SidebarInset className="h-svh max-h-svh overflow-hidden md:h-[calc(100svh-1rem)] md:max-h-[calc(100svh-1rem)]">
           <WorkspaceHeader />
-          <SettingsPage onDeleteAllChats={deleteAllChats} />
+          <SettingsPage
+            isDeletingChats={deleteAllChatsMutation.isPending}
+            onDeleteAllChats={deleteAllChats}
+          />
         </SidebarInset>
       ) : (
         <AppRuntimeProvider
@@ -344,6 +370,14 @@ export function WorkspacePage({ route }: { route: WorkspaceRoute }) {
         </AppRuntimeProvider>
       )}
     </SidebarProvider>
+  );
+}
+
+function upsertChatInList(chats: Chat[], chat: Chat) {
+  const next = chats.filter((item) => item.id !== chat.id);
+  next.unshift(chat);
+  return next.sort((left, right) =>
+    right.updatedAt.localeCompare(left.updatedAt)
   );
 }
 

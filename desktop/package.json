@@ -48,6 +48,7 @@
   "dependencies": {
     "@assistant-ui/react": "^0.12.28",
     "@egoist/tipc": "^0.3.2",
+    "@tanstack/react-query": "^5.100.9",
     "ai": "^6.0.174",
     "better-sqlite3": "^12.9.0",
     "class-variance-authority": "^0.7.1",

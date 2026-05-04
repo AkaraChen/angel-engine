@@ -11,12 +11,13 @@ const settingsTabs: Array<{ id: SettingsTab; label: string }> = [
 ];
 
 export function SettingsPage({
+  isDeletingChats,
   onDeleteAllChats,
 }: {
+  isDeletingChats: boolean;
   onDeleteAllChats: () => Promise<void>;
 }) {
   const [activeTab, setActiveTab] = useState<SettingsTab>('danger');
-  const [isDeletingChats, setIsDeletingChats] = useState(false);
 
   const deleteAllChats = useCallback(async () => {
     const confirmed = window.confirm(
@@ -24,12 +25,7 @@ export function SettingsPage({
     );
     if (!confirmed) return;
 
-    setIsDeletingChats(true);
-    try {
-      await onDeleteAllChats();
-    } finally {
-      setIsDeletingChats(false);
-    }
+    await onDeleteAllChats();
   }, [onDeleteAllChats]);
 
   return (
