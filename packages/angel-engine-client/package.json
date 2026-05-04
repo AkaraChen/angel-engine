@@ -1,0 +1,19 @@
+{
+  "name": "@angel-engine/client",
+  "version": "0.1.0",
+  "private": true,
+  "description": "High-level JavaScript client wrapper for angel-engine-client N-API bindings.",
+  "main": "client.cjs",
+  "types": "client.d.ts",
+  "files": [
+    "client.cjs",
+    "client.d.ts"
+  ],
+  "dependencies": {
+    "@angel-engine/client-napi": "file:../../crates/angel-engine-client-napi"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "license": "MIT"
+}

@@ -2,15 +2,19 @@ use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
 use angel_engine_client::{
-    AngelClient as ProcessAngelClient, Client as EngineClient, ClientAnswer, ClientCommandResult,
-    ClientOptions, ElicitationResponse, ResumeConversationRequest, StartConversationRequest,
-    ThreadEvent,
+    AngelClient as ProcessAngelClient, Client as EngineClient, ClientAnswer as EngineClientAnswer,
+    ClientCommandResult as EngineClientCommandResult, ClientOptions as EngineClientOptions,
+    ElicitationResponse as EngineElicitationResponse,
+    ResumeConversationRequest as EngineResumeConversationRequest,
+    StartConversationRequest as EngineStartConversationRequest, ThreadEvent as EngineThreadEvent,
 };
 use napi::ScopedTask;
 use napi::bindgen_prelude::*;
 use napi_derive::napi;
 use serde::Serialize;
 use serde::de::DeserializeOwned;
+
+mod types;
 
 #[napi]
 pub struct AngelClient {
@@ -19,7 +23,7 @@ pub struct AngelClient {
 
 #[napi]
 impl AngelClient {
-    #[napi(constructor)]
+    #[napi(constructor, ts_args_type = "options: ClientOptions")]
     pub fn new(options: serde_json::Value) -> Result<Self> {
         Ok(Self {
             client: Arc::new(Mutex::new(client_result(ProcessAngelClient::spawn(
@@ -28,41 +32,57 @@ impl AngelClient {
         })
     }
 
-    #[napi]
+    #[napi(ts_return_type = "Promise<ClientUpdate>")]
     pub fn initialize(&self) -> AsyncTask<ClientJsonTask> {
         self.task(|client| client.initialize())
     }
 
-    #[napi(js_name = "initializeAndStart")]
+    #[napi(
+        js_name = "initializeAndStart",
+        ts_args_type = "request?: StartConversationRequest | null",
+        ts_return_type = "Promise<ClientCommandResult>"
+    )]
     pub fn initialize_and_start(
         &self,
         request: Option<serde_json::Value>,
     ) -> Result<AsyncTask<ClientJsonTask>> {
-        let request = optional_json::<StartConversationRequest>(request)?;
+        let request = optional_json::<EngineStartConversationRequest>(request)?;
         Ok(self.task(move |client| client.initialize_and_start(request)))
     }
 
-    #[napi(js_name = "startThread")]
+    #[napi(
+        js_name = "startThread",
+        ts_args_type = "request?: StartConversationRequest | null",
+        ts_return_type = "Promise<ClientCommandResult>"
+    )]
     pub fn start_thread(
         &self,
         request: Option<serde_json::Value>,
     ) -> Result<AsyncTask<ClientJsonTask>> {
-        let request = optional_json::<StartConversationRequest>(request)?.unwrap_or_default();
+        let request = optional_json::<EngineStartConversationRequest>(request)?.unwrap_or_default();
         Ok(self.task(move |client| client.start_conversation(request)))
     }
 
-    #[napi(js_name = "resumeThread")]
+    #[napi(
+        js_name = "resumeThread",
+        ts_args_type = "request: ResumeConversationRequest",
+        ts_return_type = "Promise<ClientCommandResult>"
+    )]
     pub fn resume_thread(&self, request: serde_json::Value) -> Result<AsyncTask<ClientJsonTask>> {
-        let request = from_json::<ResumeConversationRequest>(request)?;
+        let request = from_json::<EngineResumeConversationRequest>(request)?;
         Ok(self.task(move |client| client.resume_conversation(request)))
     }
 
-    #[napi(js_name = "sendText")]
+    #[napi(js_name = "sendText", ts_return_type = "ClientCommandResult")]
     pub fn send_text(&self, conversation_id: String, text: String) -> Result<serde_json::Value> {
         self.with_client_json(move |client| client.send_text(conversation_id, text))
     }
 
-    #[napi(js_name = "sendThreadEvent")]
+    #[napi(
+        js_name = "sendThreadEvent",
+        ts_args_type = "conversationId: string, event: ThreadEvent",
+        ts_return_type = "ClientCommandResult"
+    )]
     pub fn send_thread_event(
         &self,
         conversation_id: String,
@@ -72,24 +92,31 @@ impl AngelClient {
         self.with_client_json(move |client| client.send_thread_event(conversation_id, event))
     }
 
-    #[napi(js_name = "nextUpdate")]
+    #[napi(
+        js_name = "nextUpdate",
+        ts_args_type = "timeoutMs?: number | null",
+        ts_return_type = "Promise<ClientUpdate | null>"
+    )]
     pub fn next_update(&self, timeout_ms: Option<u32>) -> AsyncTask<ClientJsonTask> {
         self.task(move |client| {
             client.next_update(timeout_ms.map(|ms| Duration::from_millis(ms as u64)))
         })
     }
 
-    #[napi]
+    #[napi(ts_return_type = "Promise<ClientUpdate>")]
     pub fn drain(&self, timeout_ms: u32) -> AsyncTask<ClientJsonTask> {
         self.task(move |client| client.drain(Duration::from_millis(timeout_ms as u64)))
     }
 
-    #[napi]
+    #[napi(ts_return_type = "ClientSnapshot")]
     pub fn snapshot(&self) -> Result<serde_json::Value> {
         self.with_client_json(|client| Ok(client.snapshot()))
     }
 
-    #[napi(js_name = "threadState")]
+    #[napi(
+        js_name = "threadState",
+        ts_return_type = "ConversationSnapshot | null"
+    )]
     pub fn thread_state(&self, conversation_id: String) -> Result<Option<serde_json::Value>> {
         let state = self.with_client(|client| {
             conversation_state_from_snapshot(client.snapshot(), &conversation_id)
@@ -97,7 +124,7 @@ impl AngelClient {
         optional_to_json(state)
     }
 
-    #[napi(js_name = "turnState")]
+    #[napi(js_name = "turnState", ts_return_type = "TurnSnapshot | null")]
     pub fn turn_state(
         &self,
         conversation_id: String,
@@ -116,7 +143,7 @@ impl AngelClient {
         optional_to_json(turn)
     }
 
-    #[napi(js_name = "openElicitations")]
+    #[napi(js_name = "openElicitations", ts_return_type = "ElicitationSnapshot[]")]
     pub fn open_elicitations(&self, conversation_id: String) -> Result<serde_json::Value> {
         self.with_client_json(move |client| Ok(client.open_elicitations(&conversation_id)))
     }
@@ -145,67 +172,78 @@ impl AngelClient {
         })
     }
 
-    #[napi(js_name = "setModel")]
+    #[napi(js_name = "setModel", ts_return_type = "ClientCommandResult")]
     pub fn set_model(&self, conversation_id: String, model: String) -> Result<serde_json::Value> {
         self.with_client_json(move |client| {
-            client.send_thread_event(conversation_id, ThreadEvent::set_model(model))
+            client.send_thread_event(conversation_id, EngineThreadEvent::set_model(model))
         })
     }
 
-    #[napi(js_name = "setMode")]
+    #[napi(js_name = "setMode", ts_return_type = "ClientCommandResult")]
     pub fn set_mode(&self, conversation_id: String, mode: String) -> Result<serde_json::Value> {
         self.with_client_json(move |client| {
-            client.send_thread_event(conversation_id, ThreadEvent::set_mode(mode))
+            client.send_thread_event(conversation_id, EngineThreadEvent::set_mode(mode))
         })
     }
 
-    #[napi(js_name = "setReasoningEffort")]
+    #[napi(js_name = "setReasoningEffort", ts_return_type = "ClientCommandResult")]
     pub fn set_reasoning_effort(
         &self,
         conversation_id: String,
         effort: String,
     ) -> Result<serde_json::Value> {
         self.with_client_json(move |client| {
-            client.send_thread_event(conversation_id, ThreadEvent::set_reasoning_effort(effort))
+            client.send_thread_event(
+                conversation_id,
+                EngineThreadEvent::set_reasoning_effort(effort),
+            )
         })
     }
 
-    #[napi(js_name = "runShellCommand")]
+    #[napi(js_name = "runShellCommand", ts_return_type = "ClientCommandResult")]
     pub fn run_shell_command(
         &self,
         conversation_id: String,
         command: String,
     ) -> Result<serde_json::Value> {
         self.with_client_json(move |client| {
-            client.send_thread_event(conversation_id, ThreadEvent::shell(command))
+            client.send_thread_event(conversation_id, EngineThreadEvent::shell(command))
         })
     }
 
-    #[napi(js_name = "resolveElicitation")]
+    #[napi(
+        js_name = "resolveElicitation",
+        ts_args_type = "conversationId: string, elicitationId: string, response: ElicitationResponse",
+        ts_return_type = "ClientCommandResult"
+    )]
     pub fn resolve_elicitation(
         &self,
         conversation_id: String,
         elicitation_id: String,
         response: serde_json::Value,
     ) -> Result<serde_json::Value> {
-        let response = from_json::<ElicitationResponse>(response)?;
+        let response = from_json::<EngineElicitationResponse>(response)?;
         self.with_client_json(move |client| {
             client.send_thread_event(
                 conversation_id,
-                ThreadEvent::resolve(elicitation_id, response),
+                EngineThreadEvent::resolve(elicitation_id, response),
             )
         })
     }
 
-    #[napi(js_name = "resolveFirstElicitation")]
+    #[napi(
+        js_name = "resolveFirstElicitation",
+        ts_args_type = "conversationId: string, response: ElicitationResponse",
+        ts_return_type = "ClientCommandResult"
+    )]
     pub fn resolve_first_elicitation(
         &self,
         conversation_id: String,
         response: serde_json::Value,
     ) -> Result<serde_json::Value> {
-        let response = from_json::<ElicitationResponse>(response)?;
+        let response = from_json::<EngineElicitationResponse>(response)?;
         self.with_client_json(move |client| {
-            client.send_thread_event(conversation_id, ThreadEvent::resolve_first(response))
+            client.send_thread_event(conversation_id, EngineThreadEvent::resolve_first(response))
         })
     }
 
@@ -291,24 +329,28 @@ pub struct AngelEngineClient {
 
 #[napi]
 impl AngelEngineClient {
-    #[napi(constructor)]
+    #[napi(constructor, ts_args_type = "options: ClientOptions")]
     pub fn new(options: serde_json::Value) -> Result<Self> {
         Ok(Self {
             client: EngineClient::new(from_json(options)?),
         })
     }
 
-    #[napi]
+    #[napi(ts_return_type = "ClientCommandResult")]
     pub fn initialize(&mut self) -> Result<serde_json::Value> {
         to_json(client_result(self.client.initialize())?)
     }
 
-    #[napi]
+    #[napi(ts_return_type = "ClientCommandResult")]
     pub fn authenticate(&mut self, method_id: String) -> Result<serde_json::Value> {
         to_json(client_result(self.client.authenticate(method_id))?)
     }
 
-    #[napi(js_name = "discoverThreads")]
+    #[napi(
+        js_name = "discoverThreads",
+        ts_args_type = "request?: { cwd?: string | null; additionalDirectories?: string[]; cursor?: string | null } | null",
+        ts_return_type = "ClientCommandResult"
+    )]
     pub fn discover_threads(
         &mut self,
         request: Option<serde_json::Value>,
@@ -317,7 +359,11 @@ impl AngelEngineClient {
         to_json(client_result(self.client.discover_threads(request))?)
     }
 
-    #[napi(js_name = "startThread")]
+    #[napi(
+        js_name = "startThread",
+        ts_args_type = "request?: StartConversationRequest | null",
+        ts_return_type = "ClientCommandResult"
+    )]
     pub fn start_thread(
         &mut self,
         request: Option<serde_json::Value>,
@@ -326,23 +372,31 @@ impl AngelEngineClient {
         to_json(client_result(self.client.start_thread(request))?)
     }
 
-    #[napi(js_name = "resumeThread")]
+    #[napi(
+        js_name = "resumeThread",
+        ts_args_type = "request: ResumeConversationRequest",
+        ts_return_type = "ClientCommandResult"
+    )]
     pub fn resume_thread(&mut self, request: serde_json::Value) -> Result<serde_json::Value> {
-        let request = from_json::<ResumeConversationRequest>(request)?;
+        let request = from_json::<EngineResumeConversationRequest>(request)?;
         to_json(client_result(self.client.resume_thread(request))?)
     }
 
-    #[napi(js_name = "receiveJsonLine")]
+    #[napi(js_name = "receiveJsonLine", ts_return_type = "ClientUpdate")]
     pub fn receive_json_line(&mut self, line: String) -> Result<serde_json::Value> {
         to_json(client_result(self.client.receive_json_line(&line))?)
     }
 
-    #[napi(js_name = "receiveJson")]
+    #[napi(
+        js_name = "receiveJson",
+        ts_args_type = "value: unknown",
+        ts_return_type = "ClientUpdate"
+    )]
     pub fn receive_json(&mut self, value: serde_json::Value) -> Result<serde_json::Value> {
         to_json(client_result(self.client.receive_json_value(value))?)
     }
 
-    #[napi]
+    #[napi(ts_return_type = "ClientSnapshot")]
     pub fn snapshot(&self) -> Result<serde_json::Value> {
         to_json(self.client.snapshot())
     }
@@ -352,12 +406,15 @@ impl AngelEngineClient {
         self.client.selected_thread_id()
     }
 
-    #[napi(js_name = "threadState")]
+    #[napi(
+        js_name = "threadState",
+        ts_return_type = "ConversationSnapshot | null"
+    )]
     pub fn thread_state(&self, conversation_id: String) -> Result<Option<serde_json::Value>> {
         optional_to_json(conversation_state(&self.client, &conversation_id))
     }
 
-    #[napi(js_name = "turnState")]
+    #[napi(js_name = "turnState", ts_return_type = "TurnSnapshot | null")]
     pub fn turn_state(
         &self,
         conversation_id: String,
@@ -373,7 +430,7 @@ impl AngelEngineClient {
         ))
     }
 
-    #[napi(js_name = "openElicitations")]
+    #[napi(js_name = "openElicitations", ts_return_type = "ElicitationSnapshot[]")]
     pub fn open_elicitations(&mut self, conversation_id: String) -> Result<serde_json::Value> {
         to_json(self.client.thread(conversation_id).open_elicitations())
     }
@@ -398,7 +455,11 @@ impl AngelEngineClient {
             .unwrap_or(false)
     }
 
-    #[napi(js_name = "sendThreadEvent")]
+    #[napi(
+        js_name = "sendThreadEvent",
+        ts_args_type = "conversationId: string, event: ThreadEvent",
+        ts_return_type = "ClientCommandResult"
+    )]
     pub fn send_thread_event(
         &mut self,
         conversation_id: String,
@@ -408,48 +469,55 @@ impl AngelEngineClient {
         self.with_thread(conversation_id, event)
     }
 
-    #[napi(js_name = "sendText")]
+    #[napi(js_name = "sendText", ts_return_type = "ClientCommandResult")]
     pub fn send_text(
         &mut self,
         conversation_id: String,
         text: String,
     ) -> Result<serde_json::Value> {
-        self.with_thread(conversation_id, ThreadEvent::text(text))
+        self.with_thread(conversation_id, EngineThreadEvent::text(text))
     }
 
-    #[napi(js_name = "setModel")]
+    #[napi(js_name = "setModel", ts_return_type = "ClientCommandResult")]
     pub fn set_model(
         &mut self,
         conversation_id: String,
         model: String,
     ) -> Result<serde_json::Value> {
-        self.with_thread(conversation_id, ThreadEvent::set_model(model))
+        self.with_thread(conversation_id, EngineThreadEvent::set_model(model))
     }
 
-    #[napi(js_name = "setMode")]
+    #[napi(js_name = "setMode", ts_return_type = "ClientCommandResult")]
     pub fn set_mode(&mut self, conversation_id: String, mode: String) -> Result<serde_json::Value> {
-        self.with_thread(conversation_id, ThreadEvent::set_mode(mode))
+        self.with_thread(conversation_id, EngineThreadEvent::set_mode(mode))
     }
 
-    #[napi(js_name = "setReasoningEffort")]
+    #[napi(js_name = "setReasoningEffort", ts_return_type = "ClientCommandResult")]
     pub fn set_reasoning_effort(
         &mut self,
         conversation_id: String,
         effort: String,
     ) -> Result<serde_json::Value> {
-        self.with_thread(conversation_id, ThreadEvent::set_reasoning_effort(effort))
+        self.with_thread(
+            conversation_id,
+            EngineThreadEvent::set_reasoning_effort(effort),
+        )
     }
 
-    #[napi(js_name = "runShellCommand")]
+    #[napi(js_name = "runShellCommand", ts_return_type = "ClientCommandResult")]
     pub fn run_shell_command(
         &mut self,
         conversation_id: String,
         command: String,
     ) -> Result<serde_json::Value> {
-        self.with_thread(conversation_id, ThreadEvent::shell(command))
+        self.with_thread(conversation_id, EngineThreadEvent::shell(command))
     }
 
-    #[napi(js_name = "resolveElicitation")]
+    #[napi(
+        js_name = "resolveElicitation",
+        ts_args_type = "conversationId: string, elicitationId: string, response: ElicitationResponse",
+        ts_return_type = "ClientCommandResult"
+    )]
     pub fn resolve_elicitation(
         &mut self,
         conversation_id: String,
@@ -458,11 +526,18 @@ impl AngelEngineClient {
     ) -> Result<serde_json::Value> {
         self.with_thread(
             conversation_id,
-            ThreadEvent::resolve(elicitation_id, from_json::<ElicitationResponse>(response)?),
+            EngineThreadEvent::resolve(
+                elicitation_id,
+                from_json::<EngineElicitationResponse>(response)?,
+            ),
         )
     }
 
-    #[napi(js_name = "resolveFirstElicitation")]
+    #[napi(
+        js_name = "resolveFirstElicitation",
+        ts_args_type = "conversationId: string, response: ElicitationResponse",
+        ts_return_type = "ClientCommandResult"
+    )]
     pub fn resolve_first_elicitation(
         &mut self,
         conversation_id: String,
@@ -470,7 +545,7 @@ impl AngelEngineClient {
     ) -> Result<serde_json::Value> {
         self.with_thread(
             conversation_id,
-            ThreadEvent::resolve_first(from_json::<ElicitationResponse>(response)?),
+            EngineThreadEvent::resolve_first(from_json::<EngineElicitationResponse>(response)?),
         )
     }
 }
@@ -479,9 +554,9 @@ impl AngelEngineClient {
     fn with_thread(
         &mut self,
         conversation_id: String,
-        event: ThreadEvent,
+        event: EngineThreadEvent,
     ) -> Result<serde_json::Value> {
-        let result: ClientCommandResult = {
+        let result: EngineClientCommandResult = {
             let mut thread = self.client.thread(conversation_id);
             client_result(thread.send_event(event))?
         };
@@ -489,20 +564,28 @@ impl AngelEngineClient {
     }
 }
 
-#[napi(js_name = "normalizeClientOptions")]
+#[napi(
+    js_name = "normalizeClientOptions",
+    ts_args_type = "options: ClientOptions",
+    ts_return_type = "ClientOptions"
+)]
 pub fn normalize_client_options(options: serde_json::Value) -> Result<serde_json::Value> {
-    to_json(from_json::<ClientOptions>(options)?)
+    to_json(from_json::<EngineClientOptions>(options)?)
 }
 
-#[napi(js_name = "textThreadEvent")]
+#[napi(js_name = "textThreadEvent", ts_return_type = "ThreadEvent")]
 pub fn text_thread_event(text: String) -> Result<serde_json::Value> {
-    to_json(ThreadEvent::text(text))
+    to_json(EngineThreadEvent::text(text))
 }
 
-#[napi(js_name = "answersResponse")]
+#[napi(
+    js_name = "answersResponse",
+    ts_args_type = "answers: ElicitationAnswer[]",
+    ts_return_type = "ElicitationResponse"
+)]
 pub fn answers_response(answers: serde_json::Value) -> Result<serde_json::Value> {
-    let answers = from_json::<Vec<ClientAnswer>>(answers)?;
-    to_json(ElicitationResponse::answers(answers))
+    let answers = from_json::<Vec<EngineClientAnswer>>(answers)?;
+    to_json(EngineElicitationResponse::answers(answers))
 }
 
 fn conversation_state(

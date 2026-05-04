@@ -1,34 +1,26 @@
-import fs from 'node:fs';
 import { createRequire } from 'node:module';
-import path from 'node:path';
-import { app } from 'electron';
+
+import type {
+  AngelSession as AngelSessionInstance,
+  ConversationSnapshot,
+  RuntimeConfig,
+  RuntimeOptions,
+  RunTurnResult,
+} from '@angel-engine/client';
 
 import type {
   Chat,
-  ChatElicitation,
   ChatElicitationResponse,
   ChatHistoryMessage,
   ChatHistoryMessagePart,
   ChatLoadResult,
   ChatRuntimeConfig,
   ChatRuntimeConfigInput,
-  ChatRuntimeConfigOption,
   ChatSendInput,
   ChatSendResult,
   ChatStreamDelta,
   ChatToolAction,
-  ChatToolActionOutput,
 } from '../../shared/chat';
-import {
-  appendChatTextPart,
-  chatPartsText,
-  chatToolActionToPart,
-  cloneChatHistoryPart,
-} from '../../shared/chat';
-import {
-  normalizeAgentRuntime,
-  selectedAgentConfigValue,
-} from '../../shared/agents';
 import {
   createChat,
   renameChatFromPrompt,
@@ -37,146 +29,7 @@ import {
   touchChat,
 } from './repository';
 
-type ClientUpdate = {
-  events?: ClientEvent[];
-  streamDeltas?: EngineStreamDelta[];
-};
-
-type ClientCommandResult = {
-  conversationId?: string;
-  turnId?: string;
-  update?: ClientUpdate;
-};
-
-type ConversationSnapshot = {
-  context?: {
-    cwd?: string | null;
-    model?: string | null;
-    mode?: string | null;
-  };
-  actions?: ChatToolAction[];
-  configOptions?: ConfigOptionSnapshot[];
-  history?: {
-    replay?: HistoryReplaySnapshot[];
-  };
-  id: string;
-  modes?: SessionModeStateSnapshot;
-  models?: SessionModelStateSnapshot;
-  reasoning?: ReasoningOptionsSnapshot;
-  remoteId?: string | null;
-  turns?: TurnSnapshot[];
-};
-
-type ReasoningOptionsSnapshot = {
-  availableEfforts?: string[];
-  canSet?: boolean;
-  currentEffort?: string | null;
-};
-
-type ConfigOptionSnapshot = {
-  category?: string | null;
-  currentValue?: string | null;
-  description?: string | null;
-  id?: string;
-  name?: string;
-  values?: Array<{
-    description?: string | null;
-    name?: string;
-    value?: string;
-  }>;
-};
-
-type SessionModeStateSnapshot = {
-  availableModes?: Array<{
-    description?: string;
-    id: string;
-    name?: string;
-  }>;
-  currentModeId?: string | null;
-};
-
-type SessionModelStateSnapshot = {
-  availableModels?: Array<{
-    description?: string | null;
-    id: string;
-    name?: string;
-  }>;
-  currentModelId?: string | null;
-};
-
-type HistoryReplaySnapshot = {
-  content?: {
-    text?: string;
-  };
-  role?: string;
-};
-
-type TurnSnapshot = {
-  id: string;
-  inputText?: string;
-  outputText?: string;
-  planText?: string;
-  reasoningText?: string;
-};
-
-type ClientEvent = {
-  action?: ChatToolAction;
-  code?: string;
-  content?: { text?: string };
-  conversationId?: string;
-  message?: string;
-  turnId?: string;
-  type: string;
-  [key: string]: unknown;
-};
-
-type EngineStreamDelta = {
-  actionId?: string;
-  content?: ChatToolActionOutput;
-  conversationId?: string;
-  turnId?: string;
-  type: 'actionOutputDelta' | 'assistantDelta' | 'planDelta' | 'reasoningDelta';
-};
-
-type AngelClient = {
-  close(): void;
-  initialize(): Promise<ClientUpdate>;
-  nextUpdate(timeoutMs?: number): Promise<ClientUpdate | null>;
-  openElicitations(conversationId: string): ChatElicitation[];
-  resolveElicitation(
-    conversationId: string,
-    elicitationId: string,
-    response: ChatElicitationResponse
-  ): ClientCommandResult;
-  resumeThread(request: {
-    additionalDirectories?: string[];
-    hydrate?: boolean;
-    remoteId: string;
-  }): Promise<ClientCommandResult>;
-  sendThreadEvent(conversationId: string, event: unknown): ClientCommandResult;
-  sendText(conversationId: string, text: string): ClientCommandResult;
-  setModel(conversationId: string, model: string): ClientCommandResult;
-  setMode(conversationId: string, mode: string): ClientCommandResult;
-  setReasoningEffort(conversationId: string, effort: string): ClientCommandResult;
-  snapshot(): {
-    runtime?: {
-      code?: string;
-      message?: string;
-      methods?: Array<{ id: string; label: string }>;
-      status?: string;
-    };
-  };
-  startThread(request?: { cwd?: string }): Promise<ClientCommandResult>;
-  threadState(conversationId: string): ConversationSnapshot | null;
-  threadIsIdle(conversationId: string): boolean;
-  turnIsTerminal(conversationId: string, turnId: string): boolean;
-  turnState(conversationId: string, turnId: string): {
-    outputText?: string;
-    reasoningText?: string;
-  } | null;
-};
-
-type AngelClientConstructor = new (options: unknown) => AngelClient;
+type AngelClientModule = typeof import('@angel-engine/client');
 type ChatStreamObserver = (
   event:
     | ChatStreamDelta
@@ -191,15 +44,17 @@ export type ChatStreamControls = {
     ) => Promise<void>
   ) => void;
 };
-type RuntimeOptions = Record<string, unknown> & {
-  args: string[];
-  command: string;
-  runtime: string;
-};
 
 const nodeRequire = createRequire(import.meta.url);
+const clientModule = nodeRequire('@angel-engine/client') as AngelClientModule;
+const {
+  AngelSession,
+  conversationMessages,
+  createRuntimeOptions,
+  runtimeConfigFromConversationSnapshot,
+} = clientModule;
 
-const chatSessions = new Map<string, AngelChatSession>();
+const chatSessions = new Map<string, AngelSessionInstance>();
 
 export async function sendChat(input: ChatSendInput): Promise<ChatSendResult> {
   return streamChat(input);
@@ -213,21 +68,27 @@ export async function loadChatSession(chatId: string): Promise<ChatLoadResult> {
     return { chat, messages: [] };
   }
 
-  const snapshot = await getChatSession(chat).hydrate(chat);
+  const snapshot = await getChatSession(chat).hydrate({
+    cwd: chat.cwd ?? undefined,
+    remoteId: chat.remoteThreadId ?? undefined,
+  });
   const updatedChat = persistRemoteThreadId(chat, snapshot);
+  const messages = conversationMessages(snapshot) as ChatHistoryMessage[];
   return {
     chat: updatedChat,
-    config: configFromConversationSnapshot(snapshot),
-    messages: messagesFromConversationSnapshot(snapshot),
+    config: runtimeConfigFromConversationSnapshot(
+      snapshot
+    ) as ChatRuntimeConfig,
+    messages,
   };
 }
 
 export async function inspectChatRuntimeConfig(
   input: ChatRuntimeConfigInput
 ): Promise<ChatRuntimeConfig> {
-  const session = new AngelChatSession(createRuntimeOptions(input.runtime));
+  const session = createChatSession(input.runtime);
   try {
-    return await session.inspect(input.cwd);
+    return (await session.inspect(input.cwd)) as ChatRuntimeConfig;
   } finally {
     session.close();
   }
@@ -250,29 +111,35 @@ export async function streamChat(
     : createChat({
         cwd: input.cwd,
         projectId: input.projectId,
-        runtime: input.runtime ?? defaultRuntimeName(),
+        runtime: input.runtime,
       });
   if (isNewChat) {
     onEvent?.({ chat, type: 'chat' });
   }
 
-  const result = await getChatSession(chat).send(
-    chat,
-    { ...input, text },
+  const result = await getChatSession(chat).sendText({
+    cwd: input.cwd ?? chat.cwd ?? undefined,
+    model: input.model,
+    mode: input.mode,
     onEvent,
-    abortSignal,
-    controls
-  );
+    onResolveElicitation: controls?.setResolveElicitation,
+    reasoningEffort: input.reasoningEffort,
+    remoteId: chat.remoteThreadId ?? undefined,
+    signal: abortSignal,
+    text,
+  });
+
   renameChatFromPrompt(chat.id, text);
   const finalChat = result.remoteThreadId
     ? setChatRemoteThreadId(chat.id, result.remoteThreadId)
     : touchChat(chat.id);
+  const content = result.content as ChatHistoryMessagePart[];
 
   return {
     chat: finalChat,
     chatId: finalChat.id,
-    config: result.config,
-    content: result.content,
+    config: result.config as ChatRuntimeConfig | undefined,
+    content,
     model: result.model,
     reasoning: result.reasoning,
     text: result.text,
@@ -297,9 +164,18 @@ function getChatSession(chat: Chat) {
   const existing = chatSessions.get(chat.id);
   if (existing) return existing;
 
-  const session = new AngelChatSession(createRuntimeOptions(chat.runtime));
+  const session = createChatSession(chat.runtime);
   chatSessions.set(chat.id, session);
   return session;
+}
+
+function createChatSession(runtime?: string) {
+  return new AngelSession(
+    createRuntimeOptions(runtime, {
+      clientName: 'angel-engine-desktop',
+      clientTitle: 'Angel Engine Desktop',
+    }) as RuntimeOptions
+  ) as AngelSessionInstance;
 }
 
 function persistRemoteThreadId(chat: Chat, snapshot: ConversationSnapshot) {
@@ -309,1082 +185,4 @@ function persistRemoteThreadId(chat: Chat, snapshot: ConversationSnapshot) {
   return setChatRemoteThreadId(chat.id, snapshot.remoteId);
 }
 
-function messagesFromConversationSnapshot(
-  snapshot: ConversationSnapshot
-): ChatHistoryMessage[] {
-  const replayMessages = messagesFromHistoryReplay(snapshot.history?.replay ?? []);
-  const turnMessages = messagesFromTurns(snapshot.turns ?? [], snapshot.actions ?? []);
-  return [...replayMessages, ...turnMessages];
-}
-
-function messagesFromTurns(
-  turns: TurnSnapshot[],
-  actions: ChatToolAction[]
-): ChatHistoryMessage[] {
-  const messages: ChatHistoryMessage[] = [];
-
-  for (const turn of turns) {
-    const inputText = turn.inputText?.trim();
-    if (inputText) {
-      messages.push({
-        content: [{ text: inputText, type: 'text' }],
-        id: `${turn.id}:user`,
-        role: 'user',
-      });
-    }
-
-    const content = contentFromTurnSnapshot(turn, actionsForTurn(actions, turn.id));
-    if (content.length > 0) {
-      messages.push({
-        content,
-        id: `${turn.id}:assistant`,
-        role: 'assistant',
-      });
-    }
-  }
-
-  return messages;
-}
-
-function messagesFromHistoryReplay(
-  replay: HistoryReplaySnapshot[]
-): ChatHistoryMessage[] {
-  const messages: ChatHistoryMessage[] = [];
-  let userText = '';
-  let assistantParts: ChatHistoryMessagePart[] = [];
-  let messageIndex = 0;
-
-  const flushUser = () => {
-    const text = userText.trim();
-    if (!text) return;
-    messages.push({
-      content: [{ text, type: 'text' }],
-      id: `history-${messageIndex++}:user`,
-      role: 'user',
-    });
-    userText = '';
-  };
-
-  const flushAssistant = () => {
-    assistantParts = assistantParts.filter(
-      (part) => part.type === 'tool-call' || part.text.trim()
-    );
-    if (assistantParts.length === 0) return;
-    messages.push({
-      content: assistantParts.map(cloneChatHistoryPart),
-      id: `history-${messageIndex++}:assistant`,
-      role: 'assistant',
-    });
-    assistantParts = [];
-  };
-
-  for (const [index, entry] of replay.entries()) {
-    const text = entry.content?.text;
-    if (!text) continue;
-
-    if (entry.role === 'user') {
-      flushAssistant();
-      userText += text;
-    } else if (entry.role === 'assistant') {
-      flushUser();
-      appendChatTextPart(assistantParts, 'text', text);
-    } else if (entry.role === 'reasoning') {
-      flushUser();
-      appendChatTextPart(assistantParts, 'reasoning', text);
-    } else if (entry.role === 'tool') {
-      flushUser();
-      assistantParts.push(historyToolPartFromText(text, index));
-    }
-  }
-
-  flushUser();
-  flushAssistant();
-  return messages;
-}
-
-function contentFromTurnSnapshot(
-  turn?: Pick<TurnSnapshot, 'outputText' | 'planText' | 'reasoningText'> | null,
-  actions: ChatToolAction[] = []
-): ChatHistoryMessagePart[] {
-  const parts: ChatHistoryMessagePart[] = [];
-  const reasoningText = [turn?.reasoningText, turn?.planText]
-    .filter((text): text is string => Boolean(text?.trim()))
-    .join('\n');
-
-  appendChatTextPart(parts, 'reasoning', reasoningText);
-  for (const action of actions) {
-    parts.push(chatToolActionToPart(action));
-  }
-  appendChatTextPart(parts, 'text', turn?.outputText ?? '');
-
-  return parts;
-}
-
-function actionsForTurn(actions: ChatToolAction[], turnId: string) {
-  return actions.filter((action) => action.turnId === turnId);
-}
-
-function historyToolPartFromText(text: string, index: number): ChatHistoryMessagePart {
-  return chatToolActionToPart(historyToolActionFromText(text, index));
-}
-
-function historyToolActionFromText(text: string, index: number): ChatToolAction {
-  const parsed = parseJsonObject(text);
-  const id =
-    getString(parsed, 'toolCallId') ||
-    getString(parsed, 'tool_call_id') ||
-    getString(parsed, 'id') ||
-    `history-tool-${index}`;
-  const outputText = toolHistoryOutputText(parsed);
-
-  return {
-    id,
-    kind: getString(parsed, 'kind') || getString(parsed, 'type') || 'tool',
-    outputText,
-    phase: getString(parsed, 'status') || 'completed',
-    rawInput:
-      getJsonString(parsed, 'rawInput') ||
-      getJsonString(parsed, 'raw_input') ||
-      undefined,
-    title: getString(parsed, 'title') || getString(parsed, 'name') || 'Tool call',
-  };
-}
-
-function parseJsonObject(text: string): Record<string, unknown> | undefined {
-  try {
-    const parsed: unknown = JSON.parse(text);
-    if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
-      return parsed as Record<string, unknown>;
-    }
-  } catch {
-    return undefined;
-  }
-  return undefined;
-}
-
-function getString(
-  object: Record<string, unknown> | undefined,
-  key: string
-): string | undefined {
-  const value = object?.[key];
-  return typeof value === 'string' && value ? value : undefined;
-}
-
-function getJsonString(
-  object: Record<string, unknown> | undefined,
-  key: string
-): string | undefined {
-  const value = object?.[key];
-  if (value === undefined || value === null) return undefined;
-  return typeof value === 'string' ? value : JSON.stringify(value);
-}
-
-function toolHistoryOutputText(object: Record<string, unknown> | undefined) {
-  const rawOutput =
-    getJsonString(object, 'rawOutput') || getJsonString(object, 'raw_output');
-  if (rawOutput) return rawOutput;
-
-  const content = object?.content;
-  if (!Array.isArray(content)) return '';
-
-  return content
-    .map((item) => {
-      if (!item || typeof item !== 'object') return '';
-      const contentItem = item as Record<string, unknown>;
-      const nested = contentItem.content;
-      if (nested && typeof nested === 'object' && !Array.isArray(nested)) {
-        return getString(nested as Record<string, unknown>, 'text') ?? '';
-      }
-      return getString(contentItem, 'text') ?? '';
-    })
-    .filter(Boolean)
-    .join('\n');
-}
-
-class AngelChatSession {
-  private readonly client: AngelClient;
-  private conversationId: string | undefined;
-  private startPromise: Promise<void> | undefined;
-  private operationQueue: Promise<void> = Promise.resolve();
-  private readonly pendingElicitations = new Map<
-    string,
-    {
-      conversationId: string;
-      reject: (error: Error) => void;
-      resolve: () => void;
-    }
-  >();
-
-  constructor(private readonly options: RuntimeOptions) {
-    const Client = loadAngelClient();
-    this.client = new Client(options);
-  }
-
-  async send(
-    chat: Chat,
-    input: ChatSendInput,
-    onEvent?: ChatStreamObserver,
-    abortSignal?: AbortSignal,
-    controls?: ChatStreamControls
-  ): Promise<{
-    config?: ChatRuntimeConfig;
-    content: ChatHistoryMessagePart[];
-    model?: string;
-    reasoning?: string;
-    remoteThreadId?: string;
-    text: string;
-    turnId?: string;
-  }> {
-    const run = this.operationQueue.then(() =>
-      this.sendNow(chat, input, onEvent, abortSignal, controls)
-    );
-    this.operationQueue = run.then(
-      (): void => undefined,
-      (): void => undefined
-    );
-    return run;
-  }
-
-  async hydrate(chat: Chat): Promise<ConversationSnapshot> {
-    const run = this.operationQueue.then(() => this.hydrateNow(chat));
-    this.operationQueue = run.then(
-      (): void => undefined,
-      (): void => undefined
-    );
-    return run;
-  }
-
-  async inspect(cwd?: string): Promise<ChatRuntimeConfig> {
-    const run = this.operationQueue.then(() => this.inspectNow(cwd));
-    this.operationQueue = run.then(
-      (): void => undefined,
-      (): void => undefined
-    );
-    return run;
-  }
-
-  hasConversation() {
-    return Boolean(this.conversationId);
-  }
-
-  close() {
-    for (const pending of this.pendingElicitations.values()) {
-      pending.reject(new Error('Chat session closed.'));
-    }
-    this.pendingElicitations.clear();
-    this.client.close();
-  }
-
-  private async sendNow(
-    chat: Chat,
-    input: ChatSendInput,
-    onEvent?: ChatStreamObserver,
-    abortSignal?: AbortSignal,
-    controls?: ChatStreamControls
-  ): Promise<{
-    config?: ChatRuntimeConfig;
-    content: ChatHistoryMessagePart[];
-    model?: string;
-    reasoning?: string;
-    remoteThreadId?: string;
-    text: string;
-    turnId?: string;
-  }> {
-    throwIfAborted(abortSignal);
-    await this.ensureStarted(chat, true, input.cwd);
-    throwIfAborted(abortSignal);
-
-    const conversationId = this.requireConversationId();
-    await this.ensureModel(conversationId, input.model);
-    await this.ensureMode(conversationId, input.mode);
-    await this.ensureReasoningEffort(conversationId, input.reasoningEffort);
-    const result = this.client.sendText(conversationId, input.text);
-    const collector = new TurnCollector(result.turnId, onEvent);
-    controls?.setResolveElicitation?.((elicitationId, response) =>
-      this.resolveElicitationNow(
-        conversationId,
-        elicitationId,
-        response,
-        collector
-      )
-    );
-    await this.handleUpdate(result.update, collector);
-
-    if (!result.turnId) {
-      const content = collector.content();
-      if (content.length === 0) {
-        appendChatTextPart(
-          content,
-          'text',
-          'The runtime accepted the message without starting a turn.'
-        );
-      }
-      const snapshot = this.client.threadState(conversationId);
-      return {
-        config: snapshot ? configFromConversationSnapshot(snapshot) : undefined,
-        content,
-        model: currentModelFromSnapshot(snapshot),
-        remoteThreadId: this.threadRemoteId(),
-        text: chatPartsText(content, 'text'),
-      };
-    }
-
-    while (!this.client.turnIsTerminal(conversationId, result.turnId)) {
-      if (abortSignal?.aborted) {
-        await this.cancelTurn(conversationId, result.turnId, collector);
-        throwIfAborted(abortSignal);
-      }
-      const [elicitation] = this.client.openElicitations(conversationId);
-      if (elicitation) {
-        await this.waitForElicitation(
-          conversationId,
-          elicitation,
-          collector,
-          abortSignal
-        );
-        continue;
-      }
-      await this.processNextUpdate(50, collector);
-      await yieldToEventLoop();
-    }
-
-    const turn = this.client.turnState(conversationId, result.turnId);
-    const snapshot = this.client.threadState(conversationId);
-    const snapshotActions = snapshot?.actions ?? [];
-    collector.reconcileActions(snapshotActions);
-    const snapshotTurn = snapshot?.turns?.find((item) => item.id === result.turnId);
-    const content = collector.content();
-    const finalContent =
-      content.length > 0
-        ? content
-        : contentFromTurnSnapshot(snapshotTurn ?? turn, actionsForTurn(snapshotActions, result.turnId));
-    const text =
-      turn?.outputText ||
-      snapshotTurn?.outputText ||
-      chatPartsText(finalContent, 'text') ||
-      'The runtime finished without text output.';
-    const reasoning =
-      turn?.reasoningText ||
-      snapshotTurn?.reasoningText ||
-      chatPartsText(finalContent, 'reasoning') ||
-      undefined;
-
-    return {
-      config: snapshot ? configFromConversationSnapshot(snapshot) : undefined,
-      content: finalContent,
-      model: currentModelFromSnapshot(snapshot),
-      reasoning,
-      remoteThreadId: this.threadRemoteId(),
-      text,
-      turnId: result.turnId,
-    };
-  }
-
-  private async hydrateNow(chat: Chat): Promise<ConversationSnapshot> {
-    await this.ensureStarted(chat, false);
-    const conversationId = this.requireConversationId();
-    const snapshot = this.client.threadState(conversationId);
-    if (!snapshot) {
-      throw new Error('Chat runtime did not return a conversation snapshot.');
-    }
-    return snapshot;
-  }
-
-  private async inspectNow(cwd?: string): Promise<ChatRuntimeConfig> {
-    await this.ensureStarted(previewChat(this.options.runtime, cwd), true, cwd);
-    const conversationId = this.requireConversationId();
-    const snapshot = this.client.threadState(conversationId);
-    if (!snapshot) {
-      throw new Error('Chat runtime did not return a configuration snapshot.');
-    }
-    return configFromConversationSnapshot(snapshot);
-  }
-
-  private async cancelTurn(
-    conversationId: string,
-    turnId: string,
-    collector: TurnCollector
-  ) {
-    const result = this.client.sendThreadEvent(conversationId, {
-      turnId,
-      type: 'cancel',
-    });
-    await this.handleUpdate(result.update, collector);
-  }
-
-  private async waitForElicitation(
-    conversationId: string,
-    elicitation: ChatElicitation,
-    collector: TurnCollector,
-    abortSignal?: AbortSignal
-  ) {
-    collector.acceptElicitation(elicitation);
-
-    await new Promise<void>((resolve, reject) => {
-      const rejectWithError = (error: Error) => {
-        abortSignal?.removeEventListener('abort', abort);
-        this.pendingElicitations.delete(elicitation.id);
-        reject(error);
-      };
-      const resolvePending = () => {
-        abortSignal?.removeEventListener('abort', abort);
-        resolve();
-      };
-      const abort = () => rejectWithError(new Error('Chat request cancelled.'));
-
-      if (abortSignal?.aborted) {
-        abort();
-        return;
-      }
-
-      this.pendingElicitations.set(elicitation.id, {
-        conversationId,
-        reject: rejectWithError,
-        resolve: resolvePending,
-      });
-      abortSignal?.addEventListener('abort', abort, { once: true });
-    });
-  }
-
-  private async resolveElicitationNow(
-    conversationId: string,
-    elicitationId: string,
-    response: ChatElicitationResponse,
-    collector: TurnCollector
-  ) {
-    const pending = this.pendingElicitations.get(elicitationId);
-    if (!pending || pending.conversationId !== conversationId) {
-      throw new Error('Chat stream is not waiting for this user input.');
-    }
-
-    try {
-      collector.resolveElicitation(elicitationId, response);
-      const result = this.client.resolveElicitation(
-        conversationId,
-        elicitationId,
-        response
-      );
-      await this.handleUpdate(result.update, collector);
-      pending.resolve();
-    } catch (error) {
-      pending.reject(error instanceof Error ? error : new Error(String(error)));
-      throw error;
-    } finally {
-      this.pendingElicitations.delete(elicitationId);
-    }
-  }
-
-  private async ensureStarted(
-    chat: Chat,
-    allowStart: boolean,
-    cwdOverride?: string
-  ) {
-    this.startPromise ??= this.start(chat, allowStart, cwdOverride).catch(
-      (error: unknown) => {
-        this.startPromise = undefined;
-        throw error;
-      }
-    );
-    await this.startPromise;
-  }
-
-  private async start(chat: Chat, allowStart: boolean, cwdOverride?: string) {
-    await this.handleUpdate(await this.client.initialize());
-
-    const result = chat.remoteThreadId
-      ? await this.client.resumeThread({
-          additionalDirectories: [],
-          hydrate: true,
-          remoteId: chat.remoteThreadId,
-        })
-      : allowStart
-        ? await this.client.startThread({
-            cwd: cwdOverride || chat.cwd || process.cwd(),
-          })
-        : undefined;
-
-    if (!result) {
-      throw new Error('Chat has no remote thread to resume.');
-    }
-
-    this.conversationId = result.conversationId;
-    await this.handleUpdate(result.update);
-  }
-
-  private async ensureReasoningEffort(
-    conversationId: string,
-    requestedEffort?: string | null
-  ) {
-    const effort =
-      selectedAgentConfigValue(requestedEffort) ??
-      defaultReasoningEffort(this.options.runtime);
-    if (!effort || effort === 'default') return;
-
-    const reasoning = this.client.threadState(conversationId)?.reasoning;
-    if (
-      reasoning?.canSet === false ||
-      reasoning?.currentEffort === effort ||
-      (reasoning?.availableEfforts?.length &&
-        !reasoning.availableEfforts.includes(effort))
-    ) {
-      return;
-    }
-
-    const result = this.client.setReasoningEffort(conversationId, effort);
-    await this.handleUpdate(result.update);
-    await this.drainConfigurationUpdates();
-  }
-
-  private async ensureModel(
-    conversationId: string,
-    requestedModel?: string | null
-  ) {
-    const model = selectedAgentConfigValue(requestedModel);
-    if (!model) return;
-
-    const snapshot = this.client.threadState(conversationId);
-    const currentModel = currentModelFromSnapshot(snapshot);
-    if (currentModel === model) return;
-    if (!canSetModel(snapshot, model)) return;
-
-    const result = this.client.setModel(conversationId, model);
-    await this.handleUpdate(result.update);
-    await this.drainConfigurationUpdates();
-  }
-
-  private async ensureMode(
-    conversationId: string,
-    requestedMode?: string | null
-  ) {
-    const mode = requestedMode?.trim();
-    if (!mode) return;
-
-    const snapshot = this.client.threadState(conversationId);
-    const currentMode = snapshot?.context?.mode ?? snapshot?.modes?.currentModeId;
-    if (mode === 'default' && !currentMode) return;
-    if (currentMode === mode) return;
-    if (!canSetMode(this.options.runtime, snapshot, mode)) return;
-
-    const result = this.client.setMode(conversationId, mode);
-    await this.handleUpdate(result.update);
-    await this.drainConfigurationUpdates();
-  }
-
-  private async drainConfigurationUpdates() {
-    while (await this.processNextUpdate(250)) {
-      await yieldToEventLoop();
-    }
-  }
-
-  private async processNextUpdate(timeout?: number, collector?: TurnCollector) {
-    const update = await this.client.nextUpdate(timeout);
-    if (!update) return false;
-    await this.handleUpdate(update, collector);
-    return true;
-  }
-
-  private async handleUpdate(update?: ClientUpdate, collector?: TurnCollector) {
-    const streamDeltas = update?.streamDeltas ?? [];
-    const events = update?.events ?? [];
-    const hasOrderedStreamEvents = events.some(isOrderedStreamEvent);
-
-    for (const event of events) {
-      if (event.type === 'runtimeFaulted') {
-        throw new Error(`Runtime faulted (${event.code}): ${event.message}`);
-      }
-      collector?.acceptEvent(event);
-    }
-
-    if (!hasOrderedStreamEvents) {
-      for (const delta of streamDeltas) {
-        collector?.acceptDelta(delta);
-      }
-    }
-  }
-
-  private requireConversationId() {
-    if (!this.conversationId) {
-      throw new Error('Chat runtime did not start a conversation.');
-    }
-    return this.conversationId;
-  }
-
-  private threadRemoteId() {
-    if (!this.conversationId) return undefined;
-    return this.client.threadState(this.conversationId)?.remoteId ?? undefined;
-  }
-}
-
-class TurnCollector {
-  private readonly actionPartIndexes = new Map<string, number>();
-  private readonly parts: ChatHistoryMessagePart[] = [];
-
-  constructor(
-    private readonly turnId: string | undefined,
-    private readonly onEvent: ChatStreamObserver | undefined
-  ) {}
-
-  acceptDelta(delta: EngineStreamDelta) {
-    this.accept(delta);
-  }
-
-  acceptEvent(event: ClientEvent) {
-    this.accept(event);
-  }
-
-  acceptElicitation(elicitation: ChatElicitation) {
-    if (!this.acceptsTurn(elicitation.turnId ?? undefined)) return;
-    this.upsertAction(chatActionFromElicitation(elicitation));
-  }
-
-  resolveElicitation(
-    elicitationId: string,
-    response: ChatElicitationResponse
-  ) {
-    const current = this.actionForId(elicitationId);
-    this.upsertAction({
-      id: elicitationId,
-      kind: current?.kind ?? 'elicitation',
-      outputText: elicitationResponseText(response),
-      phase: phaseFromElicitationResponse(response),
-      rawInput: current?.rawInput,
-      title: current?.title ?? 'User input',
-      turnId: current?.turnId ?? this.turnId,
-    });
-  }
-
-  content() {
-    return this.parts.map(cloneChatHistoryPart);
-  }
-
-  reconcileActions(actions: ChatToolAction[]) {
-    for (const action of actions) {
-      if (!this.acceptsTurn(action.turnId)) continue;
-      if (!this.actionPartIndexes.has(action.id)) continue;
-      this.upsertAction(action);
-    }
-  }
-
-  private accept(event: ClientEvent | EngineStreamDelta) {
-    if (
-      (event.type === 'actionObserved' || event.type === 'actionUpdated') &&
-      event.action
-    ) {
-      this.upsertAction(event.action);
-      return;
-    }
-
-    if (event.type === 'actionOutputDelta') {
-      const delta = event as EngineStreamDelta;
-      if (delta.actionId) this.acceptActionOutputDelta(delta);
-      return;
-    }
-
-    if (!this.acceptsTurn(event.turnId)) return;
-
-    const text = event.content?.text;
-    if (!text) return;
-
-    if (event.type === 'assistantDelta') {
-      appendChatTextPart(this.parts, 'text', text);
-      this.onEvent?.({ part: 'text', text, turnId: event.turnId, type: 'delta' });
-    } else if (event.type === 'reasoningDelta') {
-      appendChatTextPart(this.parts, 'reasoning', text);
-      this.onEvent?.({
-        part: 'reasoning',
-        text,
-        turnId: event.turnId,
-        type: 'delta',
-      });
-    } else if (event.type === 'planDelta') {
-      appendChatTextPart(this.parts, 'reasoning', text);
-      this.onEvent?.({
-        part: 'reasoning',
-        text,
-        turnId: event.turnId,
-        type: 'delta',
-      });
-    }
-  }
-
-  private acceptsTurn(turnId: string | undefined) {
-    return !turnId || !this.turnId || turnId === this.turnId;
-  }
-
-  private acceptActionOutputDelta(delta: EngineStreamDelta) {
-    if (!delta.actionId || !this.acceptsTurn(delta.turnId)) return;
-
-    const currentIndex = this.actionPartIndexes.get(delta.actionId);
-    const current =
-      currentIndex === undefined ? undefined : this.parts[currentIndex];
-    const currentAction =
-      current?.type === 'tool-call' ? current.artifact : undefined;
-    const output = [
-      ...(currentAction?.output ?? []),
-      ...(delta.content ? [delta.content] : []),
-    ];
-    const outputText = output.map((item) => item.text).join('');
-
-    this.upsertAction({
-      id: delta.actionId,
-      kind: currentAction?.kind ?? 'tool',
-      output,
-      outputText,
-      phase: currentAction?.phase ?? 'streamingResult',
-      title: currentAction?.title ?? 'Tool call',
-      turnId: delta.turnId,
-    });
-  }
-
-  private actionForId(actionId: string) {
-    const index = this.actionPartIndexes.get(actionId);
-    const part = index === undefined ? undefined : this.parts[index];
-    return part?.type === 'tool-call' ? part.artifact : undefined;
-  }
-
-  private upsertAction(action: ChatToolAction) {
-    if (!this.acceptsTurn(action.turnId)) return;
-
-    const part = chatToolActionToPart(action);
-    const index = this.actionPartIndexes.get(action.id);
-    if (index === undefined) {
-      this.actionPartIndexes.set(action.id, this.parts.length);
-      this.parts.push(part);
-    } else {
-      this.parts[index] = part;
-    }
-
-    this.onEvent?.({ action, type: 'tool' });
-  }
-}
-
-function chatActionFromElicitation(
-  elicitation: ChatElicitation
-): ChatToolAction {
-  return {
-    id: elicitation.id,
-    inputSummary: elicitationInputSummary(elicitation),
-    kind: 'elicitation',
-    phase: 'awaitingDecision',
-    rawInput: JSON.stringify(elicitation),
-    title: elicitation.title || titleFromElicitationKind(elicitation.kind),
-    turnId: elicitation.turnId ?? undefined,
-  };
-}
-
-function elicitationInputSummary(elicitation: ChatElicitation) {
-  if (elicitation.body?.trim()) return elicitation.body;
-
-  const questions = elicitation.questions ?? [];
-  if (questions.length > 0) {
-    return questions
-      .map((question) => question.question || question.header)
-      .filter(Boolean)
-      .join('\n');
-  }
-
-  if (elicitation.choices?.length) {
-    return elicitation.choices.join(', ');
-  }
-
-  return undefined;
-}
-
-function titleFromElicitationKind(kind: string) {
-  switch (kind) {
-    case 'approval':
-    case 'permission':
-      return 'Approval requested';
-    case 'externalFlow':
-      return 'External action requested';
-    case 'userInput':
-      return 'Input requested';
-    default:
-      return 'User input requested';
-  }
-}
-
-function phaseFromElicitationResponse(response: ChatElicitationResponse) {
-  if (response.type === 'deny') return 'declined';
-  if (response.type === 'cancel') return 'cancelled';
-  return 'completed';
-}
-
-function elicitationResponseText(response: ChatElicitationResponse) {
-  switch (response.type) {
-    case 'allow':
-      return 'Allowed';
-    case 'allowForSession':
-      return 'Allowed for session';
-    case 'deny':
-      return 'Denied';
-    case 'cancel':
-      return 'Cancelled';
-    case 'answers':
-      return response.answers
-        .map((answer) => `${answer.id}: ${answer.value}`)
-        .join('\n');
-    case 'dynamicToolResult':
-      return response.success ? 'Succeeded' : 'Failed';
-    case 'externalComplete':
-      return 'Completed externally';
-    case 'raw':
-      return response.value;
-  }
-}
-
-function isOrderedStreamEvent(event: ClientEvent) {
-  return (
-    event.type === 'actionObserved' ||
-    event.type === 'actionUpdated' ||
-    event.type === 'assistantDelta' ||
-    event.type === 'planDelta' ||
-    event.type === 'reasoningDelta'
-  );
-}
-
-function createRuntimeOptions(runtimeName?: string): RuntimeOptions {
-  runtimeName ??= defaultRuntimeName();
-  const runtime = normalizeRuntimeName(runtimeName);
-  if (runtime === 'kimi') {
-    return {
-      args: ['acp'],
-      auth: { autoAuthenticate: true, needAuth: true },
-      command: process.env.ANGEL_ENGINE_COMMAND ?? 'kimi',
-      identity: desktopIdentity(),
-      protocol: 'acp',
-      runtime,
-    };
-  }
-  if (runtime === 'opencode') {
-    return {
-      args: ['acp'],
-      auth: { autoAuthenticate: false, needAuth: false },
-      command: process.env.ANGEL_ENGINE_COMMAND ?? 'opencode',
-      identity: desktopIdentity(),
-      protocol: 'acp',
-      runtime,
-    };
-  }
-  return {
-    args: ['app-server'],
-    command: process.env.ANGEL_ENGINE_COMMAND ?? 'codex',
-    identity: desktopIdentity(),
-    protocol: 'codexAppServer',
-    runtime: 'codex',
-  };
-}
-
-function defaultRuntimeName() {
-  return normalizeRuntimeName(process.env.ANGEL_ENGINE_RUNTIME);
-}
-
-function normalizeRuntimeName(runtime: string | undefined) {
-  return normalizeAgentRuntime(runtime);
-}
-
-function defaultReasoningEffort(runtime: unknown) {
-  const configured = process.env.ANGEL_ENGINE_REASONING_EFFORT?.trim();
-  if (configured) return selectedAgentConfigValue(configured);
-  return runtime === 'codex' ? 'high' : undefined;
-}
-
-function canSetMode(
-  runtime: unknown,
-  snapshot: ConversationSnapshot | null,
-  mode: string
-) {
-  const option = findConfigOption(snapshot, 'mode', ['mode']);
-  if (option?.values?.length) {
-    return option.values.some((value) => value.value === mode);
-  }
-
-  const availableModes = snapshot?.modes?.availableModes ?? [];
-  if (availableModes.length > 0) {
-    return availableModes.some((availableMode) => availableMode.id === mode);
-  }
-  return runtime === 'codex' && (mode === 'default' || mode === 'plan');
-}
-
-function canSetModel(snapshot: ConversationSnapshot | null, model: string) {
-  const option = findConfigOption(snapshot, 'model', ['model']);
-  if (option?.values?.length) {
-    return option.values.some((value) => value.value === model);
-  }
-
-  const availableModels = snapshot?.models?.availableModels ?? [];
-  if (availableModels.length > 0) {
-    return availableModels.some((availableModel) => availableModel.id === model);
-  }
-
-  return true;
-}
-
-function configFromConversationSnapshot(
-  snapshot: ConversationSnapshot
-): ChatRuntimeConfig {
-  const modelOption = findConfigOption(snapshot, 'model', ['model']);
-  const modeOption = findConfigOption(snapshot, 'mode', ['mode']);
-
-  return {
-    canSetReasoningEffort: snapshot.reasoning?.canSet,
-    currentMode: currentModeFromSnapshot(snapshot) ?? null,
-    currentModel: currentModelFromSnapshot(snapshot) ?? null,
-    currentReasoningEffort: snapshot.reasoning?.currentEffort ?? null,
-    modes: optionsFromConfigOption(modeOption).length
-      ? optionsFromConfigOption(modeOption)
-      : optionsFromModes(snapshot),
-    models: optionsFromConfigOption(modelOption).length
-      ? optionsFromConfigOption(modelOption)
-      : optionsFromModels(snapshot),
-    reasoningEfforts: optionsFromReasoning(snapshot),
-  };
-}
-
-function currentModelFromSnapshot(snapshot?: ConversationSnapshot | null) {
-  return snapshot?.context?.model ?? snapshot?.models?.currentModelId ?? undefined;
-}
-
-function currentModeFromSnapshot(snapshot?: ConversationSnapshot | null) {
-  return snapshot?.context?.mode ?? snapshot?.modes?.currentModeId ?? undefined;
-}
-
-function optionsFromConfigOption(
-  option: ConfigOptionSnapshot | undefined
-): ChatRuntimeConfigOption[] {
-  return (option?.values ?? [])
-    .filter(
-      (
-        value
-      ): value is {
-        description?: string | null;
-        name?: string;
-        value: string;
-      } => Boolean(value.value)
-    )
-    .map((value) => ({
-      description: value.description,
-      label: value.name || value.value,
-      value: value.value,
-    }));
-}
-
-function optionsFromModels(
-  snapshot: ConversationSnapshot
-): ChatRuntimeConfigOption[] {
-  return (snapshot.models?.availableModels ?? []).map((model) => ({
-    description: model.description,
-    label: model.name || model.id,
-    value: model.id,
-  }));
-}
-
-function optionsFromModes(
-  snapshot: ConversationSnapshot
-): ChatRuntimeConfigOption[] {
-  return (snapshot.modes?.availableModes ?? []).map((mode) => ({
-    description: mode.description,
-    label: mode.name || mode.id,
-    value: mode.id,
-  }));
-}
-
-function optionsFromReasoning(
-  snapshot: ConversationSnapshot
-): ChatRuntimeConfigOption[] {
-  return (snapshot.reasoning?.availableEfforts ?? []).map((effort) => ({
-    label: labelFromConfigValue(effort),
-    value: effort,
-  }));
-}
-
-function findConfigOption(
-  snapshot: ConversationSnapshot | null | undefined,
-  category: string,
-  ids: string[]
-) {
-  const options = snapshot?.configOptions ?? [];
-  return (
-    options.find((option) => option.category === category) ??
-    options.find((option) =>
-      ids.some(
-        (id) =>
-          option.id?.toLowerCase() === id.toLowerCase() ||
-          normalizeConfigName(option.id) === normalizeConfigName(id)
-      )
-    ) ??
-    options.find((option) =>
-      ids.some((id) => normalizeConfigName(option.name) === normalizeConfigName(id))
-    )
-  );
-}
-
-function labelFromConfigValue(value: string) {
-  if (value === 'xhigh') return 'XHigh';
-  return value
-    .split(/[_\s-]+/)
-    .filter(Boolean)
-    .map((part) => `${part.slice(0, 1).toUpperCase()}${part.slice(1)}`)
-    .join(' ');
-}
-
-function normalizeConfigName(value: string | undefined) {
-  return (value ?? '').toLowerCase().replace(/[^a-z0-9]/g, '');
-}
-
-function previewChat(runtime: string, cwd?: string): Chat {
-  const now = new Date().toISOString();
-  return {
-    createdAt: now,
-    cwd: cwd ?? null,
-    id: 'runtime-config-preview',
-    projectId: null,
-    remoteThreadId: null,
-    runtime,
-    title: 'Runtime config preview',
-    updatedAt: now,
-  };
-}
-
-function desktopIdentity() {
-  return {
-    name: 'angel-engine-desktop',
-    title: 'Angel Engine Desktop',
-  };
-}
-
-function loadAngelClient() {
-  const modulePath = resolveClientModulePath();
-  return (nodeRequire(modulePath) as {
-    AngelClient: AngelClientConstructor;
-  }).AngelClient;
-}
-
-function resolveClientModulePath() {
-  const candidates = [
-    process.env.ANGEL_ENGINE_CLIENT_NAPI_PATH,
-    path.resolve(app.getAppPath(), '../crates/angel-engine-client-napi/index.js'),
-    path.resolve(process.cwd(), '../crates/angel-engine-client-napi/index.js'),
-    path.resolve(process.cwd(), 'crates/angel-engine-client-napi/index.js'),
-  ].filter(Boolean);
-
-  const modulePath = candidates.find((candidate) =>
-    fs.existsSync(candidate as string)
-  );
-  if (!modulePath) {
-    throw new Error(
-      `Could not find angel-engine-client-napi. Tried: ${candidates.join(', ')}`
-    );
-  }
-  return modulePath;
-}
-
-function throwIfAborted(signal?: AbortSignal) {
-  if (signal?.aborted) {
-    throw new Error('Chat request cancelled.');
-  }
-}
-
-function yieldToEventLoop() {
-  return new Promise<void>((resolve) => setImmediate(resolve));
-}
+export type { RuntimeConfig as EngineRuntimeConfig, RunTurnResult };
