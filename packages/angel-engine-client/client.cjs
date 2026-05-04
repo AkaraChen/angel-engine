@@ -124,6 +124,7 @@ class AngelSession {
 
       if (event.type === 'delta') {
         request.onEvent?.({
+          messagePart: event.messagePart,
           part: event.part,
           text: event.text,
           turnId: event.turnId,
@@ -133,12 +134,20 @@ class AngelSession {
       }
 
       if (event.type === 'actionObserved') {
-        request.onEvent?.({ action: event.action, type: 'actionObserved' });
+        request.onEvent?.({
+          action: event.action,
+          messagePart: event.messagePart,
+          type: 'actionObserved',
+        });
         continue;
       }
 
       if (event.type === 'actionUpdated') {
-        request.onEvent?.({ action: event.action, type: 'actionUpdated' });
+        request.onEvent?.({
+          action: event.action,
+          messagePart: event.messagePart,
+          type: 'actionUpdated',
+        });
         continue;
       }
 
@@ -146,6 +155,7 @@ class AngelSession {
         request.onEvent?.({
           actionId: event.actionId,
           content: event.content,
+          messagePart: event.messagePart,
           turnId: event.turnId,
           type: 'actionOutputDelta',
         });
@@ -153,7 +163,11 @@ class AngelSession {
       }
 
       if (event.type === 'elicitation') {
-        request.onEvent?.({ elicitation: event.elicitation, type: 'elicitation' });
+        request.onEvent?.({
+          elicitation: event.elicitation,
+          messagePart: event.messagePart,
+          type: 'elicitation',
+        });
         const followup = await this.waitForElicitation(
           event.elicitation,
           request.signal,

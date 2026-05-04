@@ -1,6 +1,6 @@
 use angel_engine_client::{
-    Client, ClientBuilder, ClientEvent, ClientOptions, ClientStreamDelta, RuntimeSnapshot,
-    StartConversationRequest, ThreadEvent,
+    Client, ClientBuilder, ClientEvent, ClientOptions, ClientStreamDelta,
+    ResumeConversationRequest, RuntimeSnapshot, StartConversationRequest, ThreadEvent,
 };
 use serde_json::json;
 
@@ -298,6 +298,217 @@ fn codex_completed_reasoning_item_surfaces_reasoning_updates() {
         .turn(&turn_id)
         .expect("turn snapshot");
     assert_eq!(snapshot.reasoning_text, "Checking adapter notifications.");
+}
+
+#[test]
+fn codex_resume_projects_raw_tool_history_into_display_messages() {
+    let mut client = ClientOptions::builder()
+        .codex_app_server("codex")
+        .build_client();
+    let initialize = client.initialize().expect("initialize");
+    client
+        .receive_json_value(response(
+            &initialize.request_id.expect("initialize id"),
+            json!({"userAgent": "codex-test"}),
+        ))
+        .expect("initialize response");
+
+    let resume = client
+        .resume_thread(ResumeConversationRequest {
+            additional_directories: Vec::new(),
+            hydrate: true,
+            remote_id: "thread-1".to_string(),
+        })
+        .expect("resume thread");
+    let conversation_id = resume.conversation_id.expect("conversation id");
+    client
+        .receive_json_value(response(
+            &resume.request_id.expect("resume id"),
+            json!({
+                "thread": {
+                    "id": "thread-1",
+                    "turns": [
+                        {
+                            "id": "turn-1",
+                            "items": [
+                                {
+                                    "type": "userMessage",
+                                    "content": [{ "type": "text", "text": "status" }]
+                                },
+                                {
+                                    "type": "response_item",
+                                    "payload": {
+                                        "type": "function_call",
+                                        "call_id": "call_1",
+                                        "name": "shell",
+                                        "arguments": "{\"command\":[\"zsh\",\"-lc\",\"git status -sb\"]}"
+                                    }
+                                },
+                                {
+                                    "type": "response_item",
+                                    "payload": {
+                                        "type": "function_call_output",
+                                        "call_id": "call_1",
+                                        "output": "{\"output\":\"## main\\n\",\"metadata\":{\"exit_code\":0}}"
+                                    }
+                                },
+                                {
+                                    "type": "agentMessage",
+                                    "text": "done"
+                                }
+                            ]
+                        }
+                    ]
+                }
+            }),
+        ))
+        .expect("resume response");
+
+    let conversation = client
+        .snapshot()
+        .conversations
+        .into_iter()
+        .find(|conversation| conversation.id == conversation_id)
+        .expect("conversation snapshot");
+    assert_eq!(conversation.messages.len(), 2);
+    assert_eq!(conversation.messages[0].role, "user");
+    assert_eq!(
+        conversation.messages[0].content[0].text.as_deref(),
+        Some("status")
+    );
+
+    let assistant = &conversation.messages[1];
+    let tool = assistant
+        .content
+        .iter()
+        .find(|part| part.kind == "tool-call")
+        .and_then(|part| part.action.as_ref())
+        .expect("tool call part");
+    assert_eq!(tool.id, "call_1");
+    assert_eq!(tool.kind, "command");
+    assert_eq!(tool.phase, "completed");
+    assert_eq!(tool.output_text, "## main\n");
+    assert_eq!(
+        assistant
+            .content
+            .last()
+            .and_then(|part| part.text.as_deref()),
+        Some("done")
+    );
+}
+
+#[test]
+fn acp_resume_projects_tool_history_into_display_messages() {
+    let mut client = ClientOptions::builder()
+        .acp("fake-agent")
+        .need_auth(false)
+        .build_client();
+    let initialize = client.initialize().expect("initialize");
+    client
+        .receive_json_value(response(
+            &initialize.request_id.expect("initialize id"),
+            json!({
+                "protocolVersion": 1,
+                "agentInfo": {"name": "fake-agent"},
+                "agentCapabilities": {
+                    "loadSession": true
+                }
+            }),
+        ))
+        .expect("initialize response");
+
+    let resume = client
+        .resume_thread(ResumeConversationRequest {
+            additional_directories: Vec::new(),
+            hydrate: true,
+            remote_id: "sess-1".to_string(),
+        })
+        .expect("resume thread");
+    assert_eq!(
+        resume.update.outgoing[0].value["method"],
+        json!("session/load")
+    );
+    let conversation_id = resume.conversation_id.expect("conversation id");
+
+    client
+        .receive_json_value(json!({
+            "jsonrpc": "2.0",
+            "method": "session/update",
+            "params": {
+                "sessionId": "sess-1",
+                "update": {
+                    "sessionUpdate": "user_message_chunk",
+                    "content": {"type": "text", "text": "run tests"}
+                }
+            }
+        }))
+        .expect("user replay");
+    client
+        .receive_json_value(json!({
+            "jsonrpc": "2.0",
+            "method": "session/update",
+            "params": {
+                "sessionId": "sess-1",
+                "update": {
+                    "sessionUpdate": "tool_call",
+                    "toolCallId": "tool-1",
+                    "kind": "execute",
+                    "title": "npm test",
+                    "status": "in_progress",
+                    "rawInput": {"command": "npm test"}
+                }
+            }
+        }))
+        .expect("tool replay");
+    client
+        .receive_json_value(json!({
+            "jsonrpc": "2.0",
+            "method": "session/update",
+            "params": {
+                "sessionId": "sess-1",
+                "update": {
+                    "sessionUpdate": "tool_call_update",
+                    "toolCallId": "tool-1",
+                    "kind": "execute",
+                    "title": "npm test",
+                    "status": "completed",
+                    "content": [
+                        {
+                            "type": "content",
+                            "content": {"type": "text", "text": "ok\n"}
+                        }
+                    ]
+                }
+            }
+        }))
+        .expect("tool output replay");
+    client
+        .receive_json_value(response(
+            &resume.request_id.expect("resume id"),
+            json!({"sessionId": "sess-1"}),
+        ))
+        .expect("resume response");
+
+    let conversation = client
+        .snapshot()
+        .conversations
+        .into_iter()
+        .find(|conversation| conversation.id == conversation_id)
+        .expect("conversation snapshot");
+    assert_eq!(conversation.messages.len(), 2);
+    assert_eq!(
+        conversation.messages[0].content[0].text.as_deref(),
+        Some("run tests")
+    );
+    let tool = conversation.messages[1].content[0]
+        .action
+        .as_ref()
+        .expect("tool action");
+    assert_eq!(tool.id, "tool-1");
+    assert_eq!(tool.kind, "command");
+    assert_eq!(tool.phase, "completed");
+    assert_eq!(tool.title.as_deref(), Some("npm test"));
+    assert_eq!(tool.output_text, "ok\n");
 }
 
 #[test]

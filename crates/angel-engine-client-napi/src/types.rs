@@ -346,6 +346,7 @@ pub struct ConversationSnapshot {
     pub context: ContextSnapshot,
     pub turns: Vec<TurnSnapshot>,
     pub actions: Vec<ActionSnapshot>,
+    pub messages: Vec<DisplayMessageSnapshot>,
     pub elicitations: Vec<ElicitationSnapshot>,
     pub history: HistorySnapshot,
     pub reasoning: ReasoningOptionsSnapshot,
@@ -354,6 +355,34 @@ pub struct ConversationSnapshot {
     pub modes: Option<SessionModeStateSnapshot>,
     pub models: Option<SessionModelStateSnapshot>,
     pub usage: Option<SessionUsageSnapshot>,
+}
+
+#[napi(object)]
+pub struct DisplayMessageSnapshot {
+    pub id: String,
+    pub role: String,
+    pub content: Vec<DisplayMessagePartSnapshot>,
+}
+
+#[napi(object)]
+pub struct DisplayMessagePartSnapshot {
+    pub r#type: String,
+    pub text: Option<String>,
+    pub action: Option<DisplayToolActionSnapshot>,
+}
+
+#[napi(object)]
+pub struct DisplayToolActionSnapshot {
+    pub id: String,
+    pub turn_id: Option<String>,
+    pub kind: String,
+    pub phase: String,
+    pub title: Option<String>,
+    pub input_summary: Option<String>,
+    pub raw_input: Option<String>,
+    pub output: Vec<ActionOutputSnapshot>,
+    pub output_text: String,
+    pub error: Option<ErrorSnapshot>,
 }
 
 #[napi(object)]
@@ -667,6 +696,7 @@ pub struct TurnRunResult {
     pub conversation: Option<ConversationSnapshot>,
     pub turn: Option<TurnSnapshot>,
     pub actions: Vec<ActionSnapshot>,
+    pub message: Option<DisplayMessageSnapshot>,
 }
 
 #[napi(object)]
@@ -680,6 +710,7 @@ pub struct TurnRunEvent {
     pub action: Option<ActionSnapshot>,
     pub action_id: Option<String>,
     pub content: Option<ActionOutputSnapshot>,
+    pub message_part: Option<DisplayMessagePartSnapshot>,
     pub elicitation: Option<ElicitationSnapshot>,
     pub result: Option<TurnRunResult>,
 }

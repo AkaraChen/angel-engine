@@ -5,11 +5,13 @@ use serde::{Deserialize, Serialize};
 
 use crate::error::{ClientError, ClientResult};
 use crate::event::{ClientEvent, ClientStreamDelta, ClientUpdate};
+use crate::snapshot::{display_message_for_turn, display_message_from_parts};
 use crate::{
     ActionOutputSnapshot, ActionSnapshot, AngelClient, ConversationSnapshot, ElicitationResponse,
     ElicitationSnapshot, ResumeConversationRequest, RuntimeOptions, RuntimeOptionsOverrides,
     StartConversationRequest, ThreadEvent, TurnSnapshot, create_runtime_options,
 };
+use crate::{DisplayMessagePartSnapshot, DisplayMessageSnapshot, DisplayToolActionSnapshot};
 
 pub struct AngelSession {
     client: AngelClient,
@@ -68,6 +70,8 @@ pub struct TurnRunResult {
     pub turn: Option<TurnSnapshot>,
     #[serde(default)]
     pub actions: Vec<ActionSnapshot>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub message: Option<DisplayMessageSnapshot>,
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
@@ -82,20 +86,25 @@ pub enum TurnRunEvent {
         text: String,
         #[serde(default, skip_serializing_if = "Option::is_none")]
         turn_id: Option<String>,
+        message_part: DisplayMessagePartSnapshot,
     },
     ActionObserved {
         action: ActionSnapshot,
+        message_part: DisplayMessagePartSnapshot,
     },
     ActionUpdated {
         action: ActionSnapshot,
+        message_part: DisplayMessagePartSnapshot,
     },
     ActionOutputDelta {
         turn_id: String,
         action_id: String,
         content: ActionOutputSnapshot,
+        message_part: DisplayMessagePartSnapshot,
     },
     Elicitation {
         elicitation: ElicitationSnapshot,
+        message_part: DisplayMessagePartSnapshot,
     },
     Result {
         result: TurnRunResult,
@@ -443,10 +452,41 @@ impl AngelSession {
         let reasoning = turn_reasoning_text(turn.as_ref()).or_else(|| {
             (!active.collector.reasoning.is_empty()).then_some(active.collector.reasoning.clone())
         });
+        let message = turn
+            .as_ref()
+            .and_then(|turn| display_message_for_turn(turn, &actions))
+            .or_else(|| {
+                let mut content = Vec::new();
+                if !active.collector.reasoning.is_empty() {
+                    content.push(DisplayMessagePartSnapshot::text(
+                        "reasoning",
+                        active.collector.reasoning.clone(),
+                    ));
+                }
+                for action in &active.collector.actions {
+                    content.push(DisplayMessagePartSnapshot::tool(action.into()));
+                }
+                if !active.collector.text.is_empty() {
+                    content.push(DisplayMessagePartSnapshot::text(
+                        "text",
+                        active.collector.text.clone(),
+                    ));
+                }
+                display_message_from_parts(
+                    active
+                        .turn_id
+                        .as_ref()
+                        .map(|turn_id| format!("{turn_id}:assistant"))
+                        .unwrap_or_else(|| "result:assistant".to_string()),
+                    "assistant",
+                    content,
+                )
+            });
 
         TurnRunResult {
             actions,
             conversation: snapshot.clone(),
+            message,
             model: snapshot.as_ref().and_then(current_model),
             reasoning,
             remote_thread_id: snapshot
@@ -554,8 +594,13 @@ impl ActiveTurn {
             return;
         }
         self.pending_elicitation_id = Some(elicitation.id.clone());
-        self.events
-            .push_back(TurnRunEvent::Elicitation { elicitation });
+        let message_part = DisplayMessagePartSnapshot::tool(
+            DisplayToolActionSnapshot::from_elicitation(&elicitation),
+        );
+        self.events.push_back(TurnRunEvent::Elicitation {
+            elicitation,
+            message_part,
+        });
     }
 }
 
@@ -597,9 +642,17 @@ impl TurnCollector {
                 ..
             } => {
                 if self.accepts_turn(Some(&turn_id)) {
+                    let message_part = DisplayMessagePartSnapshot::tool(
+                        DisplayToolActionSnapshot::from_output_delta(
+                            turn_id.clone(),
+                            action_id.clone(),
+                            content.clone(),
+                        ),
+                    );
                     events.push_back(TurnRunEvent::ActionOutputDelta {
                         action_id,
                         content,
+                        message_part,
                         turn_id,
                     });
                 }
@@ -611,11 +664,17 @@ impl TurnCollector {
         match event {
             ClientEvent::ActionObserved { action, .. } => {
                 self.upsert_action(action.clone());
-                events.push_back(TurnRunEvent::ActionObserved { action });
+                events.push_back(TurnRunEvent::ActionObserved {
+                    message_part: DisplayMessagePartSnapshot::tool((&action).into()),
+                    action,
+                });
             }
             ClientEvent::ActionUpdated { action, .. } => {
                 self.upsert_action(action.clone());
-                events.push_back(TurnRunEvent::ActionUpdated { action });
+                events.push_back(TurnRunEvent::ActionUpdated {
+                    message_part: DisplayMessagePartSnapshot::tool((&action).into()),
+                    action,
+                });
             }
             ClientEvent::AssistantDelta {
                 turn_id, content, ..
@@ -644,9 +703,11 @@ impl TurnCollector {
             "reasoning" => self.reasoning.push_str(&text),
             _ => self.text.push_str(&text),
         }
+        let message_part = DisplayMessagePartSnapshot::text(part, text.clone());
         events.push_back(TurnRunEvent::Delta {
             part: part.to_string(),
             text,
+            message_part,
             turn_id: Some(turn_id),
         });
     }
@@ -828,6 +889,7 @@ mod tests {
         let value = serde_json::to_value(TurnRunResult {
             actions: Vec::new(),
             conversation: None,
+            message: None,
             model: None,
             reasoning: None,
             remote_thread_id: None,

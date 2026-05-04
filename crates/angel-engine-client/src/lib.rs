@@ -42,10 +42,11 @@ pub use session::{
 };
 pub use snapshot::{
     ActionOutputSnapshot, ActionSnapshot, AvailableCommandSnapshot, ClientSnapshot, ContentChunk,
-    ContextSnapshot, ConversationSnapshot, ElicitationSnapshot, ErrorSnapshot,
-    HistoryReplaySnapshot, HistorySnapshot, PlanEntrySnapshot, QuestionConstraintsSnapshot,
-    QuestionOptionSnapshot, QuestionSchemaSnapshot, QuestionSnapshot, ReasoningOptionsSnapshot,
-    RuntimeSnapshot, SessionConfigOptionSnapshot, SessionConfigValueSnapshot, SessionModeSnapshot,
+    ContextSnapshot, ConversationSnapshot, DisplayMessagePartSnapshot, DisplayMessageSnapshot,
+    DisplayToolActionSnapshot, ElicitationSnapshot, ErrorSnapshot, HistoryReplaySnapshot,
+    HistorySnapshot, PlanEntrySnapshot, QuestionConstraintsSnapshot, QuestionOptionSnapshot,
+    QuestionSchemaSnapshot, QuestionSnapshot, ReasoningOptionsSnapshot, RuntimeSnapshot,
+    SessionConfigOptionSnapshot, SessionConfigValueSnapshot, SessionModeSnapshot,
     SessionModeStateSnapshot, SessionModelSnapshot, SessionModelStateSnapshot,
     SessionUsageCostSnapshot, SessionUsageSnapshot, TurnSnapshot,
 };

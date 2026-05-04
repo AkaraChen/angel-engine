@@ -13,6 +13,9 @@ export type {
   ClientOptions,
   ClientUpdate,
   ConversationSnapshot,
+  DisplayMessagePartSnapshot,
+  DisplayMessageSnapshot,
+  DisplayToolActionSnapshot,
   ElicitationResponse,
   ElicitationSnapshot,
   HydrateRequest,
@@ -29,6 +32,7 @@ import type {
   ActionOutputSnapshot,
   ActionSnapshot,
   ConversationSnapshot,
+  DisplayMessagePartSnapshot,
   ElicitationResponse,
   ElicitationSnapshot,
   HydrateRequest,
@@ -47,24 +51,29 @@ export type RunTurnStreamEvent =
       part: 'reasoning' | 'text';
       text: string;
       turnId?: string;
+      messagePart?: DisplayMessagePartSnapshot;
       type: 'delta';
     }
   | {
       action: ActionSnapshot;
+      messagePart?: DisplayMessagePartSnapshot;
       type: 'actionObserved';
     }
   | {
       action: ActionSnapshot;
+      messagePart?: DisplayMessagePartSnapshot;
       type: 'actionUpdated';
     }
   | {
       actionId: string;
       content: ActionOutputSnapshot;
+      messagePart?: DisplayMessagePartSnapshot;
       turnId: string;
       type: 'actionOutputDelta';
     }
   | {
       elicitation: ElicitationSnapshot;
+      messagePart?: DisplayMessagePartSnapshot;
       type: 'elicitation';
     };
 

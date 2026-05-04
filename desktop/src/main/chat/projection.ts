@@ -2,6 +2,9 @@ import type {
   ActionOutputSnapshot,
   ActionSnapshot,
   ConversationSnapshot,
+  DisplayMessagePartSnapshot,
+  DisplayMessageSnapshot,
+  DisplayToolActionSnapshot,
   ElicitationSnapshot,
   TurnRunResult,
   TurnSnapshot,
@@ -17,93 +20,72 @@ import type {
 } from '../../shared/chat';
 import { appendChatTextPart, chatToolActionToPart } from '../../shared/chat';
 
-type HistoryReplayEntrySnapshot =
-  ConversationSnapshot['history']['replay'][number];
+type ToolActionSnapshotLike = ActionSnapshot | DisplayToolActionSnapshot;
 
 export type RawTurnStreamEvent =
-  | ChatStreamDelta
-  | { action: ActionSnapshot; type: 'actionObserved' }
-  | { action: ActionSnapshot; type: 'actionUpdated' }
+  | (ChatStreamDelta & { messagePart?: DisplayMessagePartSnapshot })
+  | {
+      action: ActionSnapshot;
+      messagePart?: DisplayMessagePartSnapshot;
+      type: 'actionObserved';
+    }
+  | {
+      action: ActionSnapshot;
+      messagePart?: DisplayMessagePartSnapshot;
+      type: 'actionUpdated';
+    }
   | {
       actionId: string;
       content: ActionOutputSnapshot;
+      messagePart?: DisplayMessagePartSnapshot;
       turnId: string;
       type: 'actionOutputDelta';
     }
-  | { elicitation: ElicitationSnapshot; type: 'elicitation' };
+  | {
+      elicitation: ElicitationSnapshot;
+      messagePart?: DisplayMessagePartSnapshot;
+      type: 'elicitation';
+    };
 
 export function conversationMessages(
   snapshot: ConversationSnapshot
 ): ChatHistoryMessage[] {
-  const messages: ChatHistoryMessage[] = [];
-
-  for (const entry of snapshot.history.replay) {
-    appendHistoryReplayEntry(messages, entry);
-  }
-
-  for (const turn of snapshot.turns) {
-    const inputText = turn.inputText?.trim();
-    if (inputText) {
-      messages.push({
-        content: [{ text: inputText, type: 'text' }],
-        id: `${turn.id}:user`,
-        role: 'user',
-      });
-    }
-
-    const content = contentFromTurnSnapshot(
-      turn,
-      snapshot.actions.filter((action) => action.turnId === turn.id)
-    );
-    if (content.length > 0) {
-      messages.push({
-        content,
-        id: `${turn.id}:assistant`,
-        role: 'assistant',
-      });
-    }
-  }
-
-  return messages;
+  return snapshot.messages
+    .map(displayMessageToChatMessage)
+    .filter((message) => message.content.length > 0);
 }
 
-function appendHistoryReplayEntry(
-  messages: ChatHistoryMessage[],
-  entry: HistoryReplayEntrySnapshot
-) {
-  const text = entry.content.text;
-  if (!text.trim()) return;
-
-  if (entry.role === 'user') {
-    messages.push({
-      content: [{ text, type: 'text' }],
-      id: `history-${messages.length}`,
-      role: 'user',
-    });
-    return;
-  }
-
-  const assistantParts = ensureHistoryAssistantMessage(messages);
-  appendChatTextPart(
-    assistantParts,
-    entry.role === 'reasoning' ? 'reasoning' : 'text',
-    text
-  );
-}
-
-function ensureHistoryAssistantMessage(
-  messages: ChatHistoryMessage[]
-): ChatHistoryMessagePart[] {
-  const last = messages.at(-1);
-  if (last?.role === 'assistant') return last.content;
-
-  const message: ChatHistoryMessage = {
-    content: [],
-    id: `history-${messages.length}`,
-    role: 'assistant',
+function displayMessageToChatMessage(
+  message: DisplayMessageSnapshot
+): ChatHistoryMessage {
+  return {
+    content: displayMessagePartsToChatParts(message.content),
+    id: message.id,
+    role:
+      message.role === 'user' || message.role === 'system'
+        ? message.role
+        : 'assistant',
   };
-  messages.push(message);
-  return message.content;
+}
+
+function displayMessagePartsToChatParts(
+  parts: DisplayMessagePartSnapshot[]
+): ChatHistoryMessagePart[] {
+  return parts.flatMap(displayMessagePartToChatParts);
+}
+
+function displayMessagePartToChatParts(
+  part: DisplayMessagePartSnapshot
+): ChatHistoryMessagePart[] {
+  switch (part.type) {
+    case 'reasoning':
+    case 'text':
+      return part.text?.trim() ? [{ text: part.text, type: part.type }] : [];
+    case 'tool-call':
+      return part.action ? [chatToolActionToPart(toChatAction(part.action))] : [];
+    default:
+      return part.text?.trim() ? [{ text: part.text, type: 'text' }] : [];
+  }
 }
 
 export function runtimeConfigFromConversationSnapshot(
@@ -136,9 +118,11 @@ export function runtimeConfigFromConversationSnapshot(
 }
 
 export function projectRunResult(result: TurnRunResult) {
-  const content = result.turn
-    ? contentFromTurnSnapshot(result.turn, result.actions)
-    : [];
+  const content = result.message
+    ? displayMessagePartsToChatParts(result.message.content)
+    : result.turn
+      ? contentFromTurnSnapshot(result.turn, result.actions)
+      : [];
   if (content.length === 0 && result.text.trim()) {
     content.push({ text: result.text, type: 'text' });
   }
@@ -175,6 +159,12 @@ export function createTurnEventProjector(
       );
     },
     handle(event: RawTurnStreamEvent) {
+      const messagePart = 'messagePart' in event ? event.messagePart : undefined;
+      const turnId = 'turnId' in event ? event.turnId : undefined;
+      if (messagePart && acceptDisplayMessagePart(messagePart, turnId)) {
+        return;
+      }
+
       if (event.type === 'delta') {
         appendChatTextPart(parts, event.part, event.text);
         onEvent?.(event);
@@ -214,9 +204,31 @@ export function createTurnEventProjector(
     },
   };
 
+  function acceptDisplayMessagePart(
+    part: DisplayMessagePartSnapshot,
+    turnId?: string
+  ) {
+    if (part.type === 'text' || part.type === 'reasoning') {
+      const text = part.text ?? '';
+      appendChatTextPart(parts, part.type, text);
+      onEvent?.({ part: part.type, text, turnId, type: 'delta' });
+      return true;
+    }
+
+    if (part.type === 'tool-call' && part.action) {
+      upsertAction(toChatAction(part.action));
+      return true;
+    }
+
+    return false;
+  }
+
   function upsertAction(action: ChatToolAction) {
-    actions.set(action.id, action);
-    const part = chatToolActionToPart(action);
+    const merged = actions.has(action.id)
+      ? mergeToolActions(actions.get(action.id) as ChatToolAction, action)
+      : action;
+    actions.set(merged.id, merged);
+    const part = chatToolActionToPart(merged);
     const index = parts.findIndex(
       (item) => item.type === 'tool-call' && item.toolCallId === part.toolCallId
     );
@@ -225,8 +237,30 @@ export function createTurnEventProjector(
     } else {
       parts[index] = part;
     }
-    onEvent?.({ action, type: 'tool' });
+    onEvent?.({ action: merged, type: 'tool' });
   }
+}
+
+function mergeToolActions(
+  previous: ChatToolAction,
+  next: ChatToolAction
+): ChatToolAction {
+  const output = next.output?.length ? next.output : previous.output;
+  return {
+    ...previous,
+    ...next,
+    error: next.error ?? previous.error,
+    inputSummary: next.inputSummary ?? previous.inputSummary,
+    kind:
+      next.kind && !(next.kind === 'tool' && previous.kind !== 'tool')
+        ? next.kind
+        : previous.kind,
+    output,
+    outputText: next.outputText?.trim() ? next.outputText : previous.outputText,
+    phase: next.phase ?? previous.phase,
+    rawInput: next.rawInput ?? previous.rawInput,
+    title: next.title ?? previous.title,
+  };
 }
 
 function contentFromTurnSnapshot(
@@ -283,7 +317,7 @@ function actionFromElicitation(
   };
 }
 
-function toChatAction(action: ActionSnapshot): ChatToolAction {
+function toChatAction(action: ToolActionSnapshotLike): ChatToolAction {
   return {
     error: action.error,
     id: action.id,
@@ -294,7 +328,7 @@ function toChatAction(action: ActionSnapshot): ChatToolAction {
     phase: action.phase,
     rawInput: action.rawInput,
     title: action.title,
-    turnId: action.turnId,
+    turnId: action.turnId ?? undefined,
   };
 }
 

@@ -224,29 +224,101 @@ fn append_hydrated_turns(
             .into_iter()
             .flatten()
         {
-            let (role, text) = match item.get("type").and_then(Value::as_str) {
-                Some("userMessage") => (HistoryRole::User, codex_content_text(item)),
+            let replay_item = codex_history_replay_item(item);
+            let (role, content) = match replay_item.get("type").and_then(Value::as_str) {
+                Some("userMessage") => (
+                    HistoryRole::User,
+                    ContentDelta::Text(codex_content_text(replay_item)),
+                ),
+                Some("message")
+                    if replay_item.get("role").and_then(Value::as_str) == Some("user") =>
+                {
+                    (
+                        HistoryRole::User,
+                        ContentDelta::Text(codex_content_text(replay_item)),
+                    )
+                }
+                Some("message")
+                    if replay_item.get("role").and_then(Value::as_str) == Some("assistant") =>
+                {
+                    (
+                        HistoryRole::Assistant,
+                        ContentDelta::Text(codex_content_text(replay_item)),
+                    )
+                }
+                Some("message") => (
+                    HistoryRole::Assistant,
+                    ContentDelta::Text(codex_content_text(replay_item)),
+                ),
                 Some("agentMessage") => (
                     HistoryRole::Assistant,
-                    item.get("text")
-                        .and_then(Value::as_str)
-                        .unwrap_or_default()
-                        .to_string(),
+                    ContentDelta::Text(
+                        replay_item
+                            .get("text")
+                            .and_then(Value::as_str)
+                            .unwrap_or_default()
+                            .to_string(),
+                    ),
                 ),
-                Some("reasoning") => (HistoryRole::Reasoning, codex_reasoning_text(item)),
+                Some("reasoning") => (
+                    HistoryRole::Reasoning,
+                    ContentDelta::Text(codex_reasoning_text(replay_item)),
+                ),
+                Some(item_type) if codex_history_replay_tool_item_type(item_type) => (
+                    HistoryRole::Tool,
+                    ContentDelta::Structured(replay_item.to_string()),
+                ),
                 _ => continue,
             };
-            if text.trim().is_empty() {
+            if content_delta_is_empty(&content) {
                 continue;
             }
             output.events.push(EngineEvent::HistoryReplayChunk {
                 conversation_id: conversation_id.clone(),
-                entry: HistoryReplayEntry {
-                    role,
-                    content: ContentDelta::Text(text),
-                },
+                entry: HistoryReplayEntry { role, content },
             });
         }
+    }
+}
+
+fn codex_history_replay_item(item: &Value) -> &Value {
+    if item.get("type").and_then(Value::as_str) == Some("response_item")
+        && let Some(payload) = item.get("payload").filter(|payload| payload.is_object())
+    {
+        return payload;
+    }
+    item
+}
+
+fn codex_history_replay_tool_item_type(item_type: &str) -> bool {
+    matches!(
+        item_type,
+        "commandExecution"
+            | "fileChange"
+            | "mcpToolCall"
+            | "dynamicToolCall"
+            | "webSearch"
+            | "imageView"
+            | "imageGeneration"
+            | "contextCompaction"
+            | "function_call"
+            | "function_call_output"
+            | "custom_tool_call"
+            | "custom_tool_call_output"
+            | "local_shell_call"
+            | "mcp_call"
+            | "computer_call"
+            | "web_search_call"
+            | "tool_search_call"
+            | "tool_search_output"
+    )
+}
+
+fn content_delta_is_empty(content: &ContentDelta) -> bool {
+    match content {
+        ContentDelta::Text(text)
+        | ContentDelta::ResourceRef(text)
+        | ContentDelta::Structured(text) => text.trim().is_empty(),
     }
 }
 
@@ -255,13 +327,7 @@ fn codex_content_text(item: &Value) -> String {
         .and_then(Value::as_array)
         .into_iter()
         .flatten()
-        .filter_map(|part| {
-            if part.get("type").and_then(Value::as_str) == Some("text") {
-                part.get("text").and_then(Value::as_str)
-            } else {
-                None
-            }
-        })
+        .filter_map(|part| part.get("text").and_then(Value::as_str))
         .collect::<Vec<_>>()
         .join("")
 }
@@ -436,6 +502,29 @@ mod tests {
                                         "summary": ["thinking"]
                                     },
                                     {
+                                        "id": "exec-1",
+                                        "type": "commandExecution",
+                                        "status": "completed",
+                                        "command": "cargo test"
+                                    },
+                                    {
+                                        "type": "response_item",
+                                        "payload": {
+                                            "type": "function_call",
+                                            "call_id": "call_1",
+                                            "name": "shell",
+                                            "arguments": "{\"command\":[\"zsh\",\"-lc\",\"git status -sb\"]}"
+                                        }
+                                    },
+                                    {
+                                        "type": "response_item",
+                                        "payload": {
+                                            "type": "function_call_output",
+                                            "call_id": "call_1",
+                                            "output": "{\"output\":\"## main\\n\",\"metadata\":{\"exit_code\":0}}"
+                                        }
+                                    },
+                                    {
                                         "type": "agentMessage",
                                         "text": "hi"
                                     }
@@ -452,20 +541,66 @@ mod tests {
             .iter()
             .filter_map(|event| match event {
                 EngineEvent::HistoryReplayChunk { entry, .. } => match &entry.content {
-                    ContentDelta::Text(text) => Some((entry.role.clone(), text.clone())),
-                    _ => None,
+                    ContentDelta::Text(text) => {
+                        Some((entry.role.clone(), "text".to_string(), text.clone()))
+                    }
+                    ContentDelta::Structured(text) => {
+                        Some((entry.role.clone(), "structured".to_string(), text.clone()))
+                    }
+                    ContentDelta::ResourceRef(text) => {
+                        Some((entry.role.clone(), "resource".to_string(), text.clone()))
+                    }
                 },
                 _ => None,
             })
             .collect::<Vec<_>>();
 
+        assert_eq!(replay.len(), 6);
         assert_eq!(
-            replay,
-            vec![
-                (HistoryRole::User, "hello".to_string()),
-                (HistoryRole::Reasoning, "thinking".to_string()),
-                (HistoryRole::Assistant, "hi".to_string()),
-            ]
+            replay[0],
+            (HistoryRole::User, "text".to_string(), "hello".to_string())
+        );
+        assert_eq!(
+            replay[1],
+            (
+                HistoryRole::Reasoning,
+                "text".to_string(),
+                "thinking".to_string()
+            )
+        );
+        assert_eq!(replay[2].0, HistoryRole::Tool);
+        assert_eq!(replay[2].1, "structured");
+        let tool_item: Value = serde_json::from_str(&replay[2].2).expect("tool item");
+        assert_eq!(
+            tool_item.get("type").and_then(Value::as_str),
+            Some("commandExecution")
+        );
+        assert_eq!(tool_item.get("id").and_then(Value::as_str), Some("exec-1"));
+        assert_eq!(replay[3].0, HistoryRole::Tool);
+        assert_eq!(replay[3].1, "structured");
+        let raw_call_item: Value = serde_json::from_str(&replay[3].2).expect("raw call item");
+        assert_eq!(
+            raw_call_item.get("type").and_then(Value::as_str),
+            Some("function_call")
+        );
+        assert_eq!(
+            raw_call_item.get("call_id").and_then(Value::as_str),
+            Some("call_1")
+        );
+        assert_eq!(replay[4].0, HistoryRole::Tool);
+        assert_eq!(replay[4].1, "structured");
+        let raw_output_item: Value = serde_json::from_str(&replay[4].2).expect("raw output item");
+        assert_eq!(
+            raw_output_item.get("type").and_then(Value::as_str),
+            Some("function_call_output")
+        );
+        assert_eq!(
+            raw_output_item.get("call_id").and_then(Value::as_str),
+            Some("call_1")
+        );
+        assert_eq!(
+            replay[5],
+            (HistoryRole::Assistant, "text".to_string(), "hi".to_string())
         );
     }
 }
