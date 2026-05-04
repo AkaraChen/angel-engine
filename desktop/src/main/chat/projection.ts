@@ -17,6 +17,9 @@ import type {
 } from '../../shared/chat';
 import { appendChatTextPart, chatToolActionToPart } from '../../shared/chat';
 
+type HistoryReplayEntrySnapshot =
+  ConversationSnapshot['history']['replay'][number];
+
 export type RawTurnStreamEvent =
   | ChatStreamDelta
   | { action: ActionSnapshot; type: 'actionObserved' }
@@ -35,13 +38,7 @@ export function conversationMessages(
   const messages: ChatHistoryMessage[] = [];
 
   for (const entry of snapshot.history.replay) {
-    const text = entry.content.text;
-    if (!text.trim()) continue;
-    messages.push({
-      content: [{ text, type: entry.role === 'reasoning' ? 'reasoning' : 'text' }],
-      id: `history-${messages.length}`,
-      role: entry.role === 'user' ? 'user' : 'assistant',
-    });
+    appendHistoryReplayEntry(messages, entry);
   }
 
   for (const turn of snapshot.turns) {
@@ -68,6 +65,45 @@ export function conversationMessages(
   }
 
   return messages;
+}
+
+function appendHistoryReplayEntry(
+  messages: ChatHistoryMessage[],
+  entry: HistoryReplayEntrySnapshot
+) {
+  const text = entry.content.text;
+  if (!text.trim()) return;
+
+  if (entry.role === 'user') {
+    messages.push({
+      content: [{ text, type: 'text' }],
+      id: `history-${messages.length}`,
+      role: 'user',
+    });
+    return;
+  }
+
+  const assistantParts = ensureHistoryAssistantMessage(messages);
+  appendChatTextPart(
+    assistantParts,
+    entry.role === 'reasoning' ? 'reasoning' : 'text',
+    text
+  );
+}
+
+function ensureHistoryAssistantMessage(
+  messages: ChatHistoryMessage[]
+): ChatHistoryMessagePart[] {
+  const last = messages.at(-1);
+  if (last?.role === 'assistant') return last.content;
+
+  const message: ChatHistoryMessage = {
+    content: [],
+    id: `history-${messages.length}`,
+    role: 'assistant',
+  };
+  messages.push(message);
+  return message.content;
 }
 
 export function runtimeConfigFromConversationSnapshot(
