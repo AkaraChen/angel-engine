@@ -12,8 +12,21 @@ import { WorkspaceSidebar } from '@/app/workspace-sidebar';
 import { AssistantThread } from '@/chat/assistant-thread';
 import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar';
 import { useToast } from '@/components/ui/toast';
-import { ipc } from '@/lib/ipc';
+import { useApi } from '@/hooks/use-api';
 import { SettingsPage } from '@/pages/settings-page';
+import {
+  chatContextMenuMutationOptions,
+  chatListQueryOptions,
+  chatLoadQueryOptions,
+  createProjectChatMutationOptions,
+  deleteAllChatsMutationOptions,
+} from '@/requests/chats';
+import { queryKeys } from '@/requests/keys';
+import {
+  createProjectMutationOptions,
+  projectContextMenuMutationOptions,
+  projectListQueryOptions,
+} from '@/requests/projects';
 import type { Chat, ChatHistoryMessage, ChatLoadResult } from '@/shared/chat';
 import type { Project } from '@/shared/projects';
 
@@ -27,17 +40,8 @@ const EMPTY_CHATS: Chat[] = [];
 const EMPTY_MESSAGES: ChatHistoryMessage[] = [];
 const EMPTY_PROJECTS: Project[] = [];
 
-const chatKeys = {
-  detail: (chatId: string) => ['chat', chatId] as const,
-  details: ['chat'] as const,
-  list: ['chats'] as const,
-};
-
-const projectKeys = {
-  list: ['projects'] as const,
-};
-
 export function WorkspacePage({ route }: { route: WorkspaceRoute }) {
+  const api = useApi();
   const toast = useToast();
   const queryClient = useQueryClient();
   const [location, navigate] = useLocation();
@@ -49,28 +53,14 @@ export function WorkspacePage({ route }: { route: WorkspaceRoute }) {
       : undefined;
   const currentRoutePath = routePath(route);
 
-  const chatDetailKey = selectedChatId
-    ? chatKeys.detail(selectedChatId)
-    : chatKeys.details;
-
   const projectsQuery = useQuery({
-    queryFn: () => ipc.projectsList(),
-    queryKey: projectKeys.list,
+    ...projectListQueryOptions({ api }),
   });
   const chatsQuery = useQuery({
-    queryFn: () => ipc.chatsList(),
-    queryKey: chatKeys.list,
+    ...chatListQueryOptions({ api }),
   });
   const chatLoadQuery = useQuery({
-    enabled: Boolean(selectedChatId),
-    queryFn: () => {
-      if (!selectedChatId) {
-        throw new Error('No chat selected');
-      }
-      return ipc.chatsLoad(selectedChatId);
-    },
-    queryKey: chatDetailKey,
-    retry: false,
+    ...chatLoadQueryOptions({ api, chatId: selectedChatId }),
   });
 
   const projects = projectsQuery.data ?? EMPTY_PROJECTS;
@@ -116,12 +106,12 @@ export function WorkspacePage({ route }: { route: WorkspaceRoute }) {
 
   const setChatInCache = useCallback(
     (chat: Chat, messages?: ChatHistoryMessage[]) => {
-      queryClient.setQueryData<Chat[]>(chatKeys.list, (current = []) =>
+      queryClient.setQueryData<Chat[]>(queryKeys.chats.list(), (current = []) =>
         upsertChatInList(current, chat)
       );
 
       queryClient.setQueryData<ChatLoadResult | undefined>(
-        chatKeys.detail(chat.id),
+        queryKeys.chats.detail(chat.id),
         (current) => {
           if (messages) {
             return { chat, messages };
@@ -155,17 +145,19 @@ export function WorkspacePage({ route }: { route: WorkspaceRoute }) {
   );
 
   const createProjectMutation = useMutation({
-    mutationFn: (path: string) => ipc.projectsCreate({ path }),
+    ...createProjectMutationOptions({ api, queryClient }),
   });
   const createProjectChatMutation = useMutation({
-    mutationFn: (project: Project) =>
-      ipc.chatsCreate({
-        cwd: project.path,
-        projectId: project.id,
-      }),
+    ...createProjectChatMutationOptions({ api, queryClient }),
   });
   const deleteAllChatsMutation = useMutation({
-    mutationFn: () => ipc.chatsDeleteAll(),
+    ...deleteAllChatsMutationOptions({ api, queryClient }),
+  });
+  const showProjectContextMenuMutation = useMutation({
+    ...projectContextMenuMutationOptions({ api, queryClient }),
+  });
+  const showChatContextMenuMutation = useMutation({
+    ...chatContextMenuMutationOptions({ api, queryClient }),
   });
 
   const refreshProjects = useCallback(async () => {
@@ -181,11 +173,10 @@ export function WorkspacePage({ route }: { route: WorkspaceRoute }) {
 
   const createProjectFromPicker = useCallback(async () => {
     try {
-      const selectedPath = await ipc.projectsChooseDirectory();
+      const selectedPath = await api.projects.chooseDirectory();
       if (!selectedPath) return;
 
       await createProjectMutation.mutateAsync(selectedPath);
-      await queryClient.invalidateQueries({ queryKey: projectKeys.list });
     } catch (error) {
       toast({
         description: getErrorMessage(error),
@@ -193,15 +184,12 @@ export function WorkspacePage({ route }: { route: WorkspaceRoute }) {
         variant: 'destructive',
       });
     }
-  }, [createProjectMutation, queryClient, toast]);
+  }, [api, createProjectMutation, toast]);
 
   const showProjectContextMenu = useCallback(
     async (project: Project) => {
       try {
-        const action = await ipc.projectsShowContextMenu(project.id);
-        if (action === 'deleted') {
-          await queryClient.invalidateQueries({ queryKey: projectKeys.list });
-        }
+        await showProjectContextMenuMutation.mutateAsync(project);
       } catch (error) {
         toast({
           description: getErrorMessage(error),
@@ -210,15 +198,16 @@ export function WorkspacePage({ route }: { route: WorkspaceRoute }) {
         });
       }
     },
-    [queryClient, toast]
+    [showProjectContextMenuMutation, toast]
   );
 
   const removeChatFromCache = useCallback(
     (chatId: string) => {
-      queryClient.setQueryData<Chat[]>(chatKeys.list, (current = []) =>
-        current.filter((chat) => chat.id !== chatId)
+      queryClient.setQueryData<Chat[]>(
+        queryKeys.chats.list(),
+        (current = []) => current.filter((chat) => chat.id !== chatId)
       );
-      queryClient.removeQueries({ queryKey: chatKeys.detail(chatId) });
+      queryClient.removeQueries({ queryKey: queryKeys.chats.detail(chatId) });
 
       if (selectedChatId === chatId) {
         navigate('/', { replace: true });
@@ -230,7 +219,7 @@ export function WorkspacePage({ route }: { route: WorkspaceRoute }) {
   const showChatContextMenu = useCallback(
     async (chat: Chat) => {
       try {
-        const action = await ipc.chatsShowContextMenu(chat.id);
+        const action = await showChatContextMenuMutation.mutateAsync(chat);
         if (action === 'deleted') {
           removeChatFromCache(chat.id);
         }
@@ -242,7 +231,7 @@ export function WorkspacePage({ route }: { route: WorkspaceRoute }) {
         });
       }
     },
-    [removeChatFromCache, toast]
+    [removeChatFromCache, showChatContextMenuMutation, toast]
   );
 
   const createChatForProject = useCallback(
@@ -290,8 +279,8 @@ export function WorkspacePage({ route }: { route: WorkspaceRoute }) {
   const deleteAllChats = useCallback(async () => {
     try {
       const result = await deleteAllChatsMutation.mutateAsync();
-      queryClient.setQueryData<Chat[]>(chatKeys.list, EMPTY_CHATS);
-      queryClient.removeQueries({ queryKey: ['chat'] });
+      queryClient.setQueryData<Chat[]>(queryKeys.chats.list(), EMPTY_CHATS);
+      queryClient.removeQueries({ queryKey: queryKeys.chats.details() });
       navigate('/', { replace: true });
       toast({
         description: `Deleted ${result.deletedCount} chat${
