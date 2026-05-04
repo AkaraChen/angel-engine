@@ -4,11 +4,18 @@
   "private": true,
   "description": "High-level JavaScript client wrapper for angel-engine-client N-API bindings.",
   "main": "client.cjs",
-  "types": "client.d.ts",
+  "types": "client.ts",
   "files": [
     "client.cjs",
-    "client.d.ts"
+    "client.ts",
+    "examples"
   ],
+  "scripts": {
+    "demo": "node examples/angel-cli.mjs",
+    "demo:codex": "node examples/angel-cli.mjs codex",
+    "demo:kimi": "node examples/angel-cli.mjs kimi",
+    "demo:opencode": "node examples/angel-cli.mjs opencode"
+  },
   "dependencies": {
     "@angel-engine/client-napi": "file:../../crates/angel-engine-client-napi"
   },

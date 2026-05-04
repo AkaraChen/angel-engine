@@ -3,7 +3,6 @@ import { createRequire } from 'node:module';
 import type {
   AngelSession as AngelSessionInstance,
   ConversationSnapshot,
-  RuntimeConfig,
   RuntimeOptions,
   RunTurnResult,
 } from '@angel-engine/client';
@@ -12,7 +11,6 @@ import type {
   Chat,
   ChatElicitationResponse,
   ChatHistoryMessage,
-  ChatHistoryMessagePart,
   ChatLoadResult,
   ChatRuntimeConfig,
   ChatRuntimeConfigInput,
@@ -28,6 +26,12 @@ import {
   setChatRemoteThreadId,
   touchChat,
 } from './repository';
+import {
+  conversationMessages,
+  createTurnEventProjector,
+  projectRunResult,
+  runtimeConfigFromConversationSnapshot,
+} from './projection';
 
 type AngelClientModule = typeof import('@angel-engine/client');
 type ChatStreamObserver = (
@@ -47,12 +51,7 @@ export type ChatStreamControls = {
 
 const nodeRequire = createRequire(import.meta.url);
 const clientModule = nodeRequire('@angel-engine/client') as AngelClientModule;
-const {
-  AngelSession,
-  conversationMessages,
-  createRuntimeOptions,
-  runtimeConfigFromConversationSnapshot,
-} = clientModule;
+const { AngelSession, createRuntimeOptions } = clientModule;
 
 const chatSessions = new Map<string, AngelSessionInstance>();
 
@@ -88,7 +87,7 @@ export async function inspectChatRuntimeConfig(
 ): Promise<ChatRuntimeConfig> {
   const session = createChatSession(input.runtime);
   try {
-    return (await session.inspect(input.cwd)) as ChatRuntimeConfig;
+    return runtimeConfigFromConversationSnapshot(await session.inspect(input.cwd));
   } finally {
     session.close();
   }
@@ -118,10 +117,10 @@ export async function streamChat(
   }
 
   const result = await getChatSession(chat).sendText({
+    ...createProjectedTurn(onEvent),
     cwd: input.cwd ?? chat.cwd ?? undefined,
     model: input.model,
     mode: input.mode,
-    onEvent,
     onResolveElicitation: controls?.setResolveElicitation,
     reasoningEffort: input.reasoningEffort,
     remoteId: chat.remoteThreadId ?? undefined,
@@ -133,17 +132,18 @@ export async function streamChat(
   const finalChat = result.remoteThreadId
     ? setChatRemoteThreadId(chat.id, result.remoteThreadId)
     : touchChat(chat.id);
-  const content = result.content as ChatHistoryMessagePart[];
+  const projected = projectRunResult(result);
+  const content = projected.content;
 
   return {
     chat: finalChat,
     chatId: finalChat.id,
-    config: result.config as ChatRuntimeConfig | undefined,
+    config: projected.config,
     content,
-    model: result.model,
-    reasoning: result.reasoning,
-    text: result.text,
-    turnId: result.turnId,
+    model: projected.model,
+    reasoning: projected.reasoning,
+    text: projected.text,
+    turnId: projected.turnId,
   };
 }
 
@@ -185,4 +185,11 @@ function persistRemoteThreadId(chat: Chat, snapshot: ConversationSnapshot) {
   return setChatRemoteThreadId(chat.id, snapshot.remoteId);
 }
 
-export type { RuntimeConfig as EngineRuntimeConfig, RunTurnResult };
+function createProjectedTurn(onEvent?: ChatStreamObserver) {
+  const projector = createTurnEventProjector(onEvent);
+  return {
+    onEvent: projector.handle,
+  };
+}
+
+export type { ChatRuntimeConfig as EngineRuntimeConfig, RunTurnResult };

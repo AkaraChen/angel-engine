@@ -2,11 +2,18 @@ use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
 use angel_engine_client::{
-    AngelClient as ProcessAngelClient, Client as EngineClient, ClientAnswer as EngineClientAnswer,
+    AgentRuntime as EngineAgentRuntime, AngelClient as ProcessAngelClient,
+    AngelSession as EngineAngelSession, Client as EngineClient, ClientAnswer as EngineClientAnswer,
     ClientCommandResult as EngineClientCommandResult, ClientOptions as EngineClientOptions,
-    ElicitationResponse as EngineElicitationResponse,
+    ElicitationResponse as EngineElicitationResponse, HydrateRequest as EngineHydrateRequest,
+    InspectRequest as EngineInspectRequest,
     ResumeConversationRequest as EngineResumeConversationRequest,
+    RuntimeOptions as EngineRuntimeOptions,
+    RuntimeOptionsOverrides as EngineRuntimeOptionsOverrides,
+    SendTextRequest as EngineSendTextRequest,
     StartConversationRequest as EngineStartConversationRequest, ThreadEvent as EngineThreadEvent,
+    create_runtime_options as engine_create_runtime_options,
+    normalize_runtime_name as engine_normalize_runtime_name,
 };
 use napi::ScopedTask;
 use napi::bindgen_prelude::*;
@@ -323,6 +330,157 @@ impl<'task> ScopedTask<'task> for ClientJsonTask {
 }
 
 #[napi]
+pub struct AngelSession {
+    session: SharedSession,
+}
+
+#[napi]
+impl AngelSession {
+    #[napi(constructor, ts_args_type = "options: RuntimeOptions")]
+    pub fn new(options: serde_json::Value) -> Result<Self> {
+        Ok(Self {
+            session: Arc::new(Mutex::new(client_result(EngineAngelSession::new(
+                from_json::<EngineRuntimeOptions>(options)?,
+            ))?)),
+        })
+    }
+
+    #[napi(js_name = "hasConversation")]
+    pub fn has_conversation(&self) -> Result<bool> {
+        let session = self.session.lock().map_err(lock_error)?;
+        Ok(session.has_conversation())
+    }
+
+    #[napi(
+        js_name = "hydrate",
+        ts_args_type = "request?: HydrateRequest | null",
+        ts_return_type = "Promise<ConversationSnapshot>"
+    )]
+    pub fn hydrate(
+        &self,
+        request: Option<serde_json::Value>,
+    ) -> Result<AsyncTask<SessionJsonTask>> {
+        let request = optional_json::<EngineHydrateRequest>(request)?.unwrap_or_default();
+        Ok(self.task(move |session| session.hydrate(request)))
+    }
+
+    #[napi(
+        js_name = "inspect",
+        ts_args_type = "request?: InspectRequest | null",
+        ts_return_type = "Promise<ConversationSnapshot>"
+    )]
+    pub fn inspect(
+        &self,
+        request: Option<serde_json::Value>,
+    ) -> Result<AsyncTask<SessionJsonTask>> {
+        let request = optional_json::<EngineInspectRequest>(request)?.unwrap_or_default();
+        Ok(self.task(move |session| session.inspect(request)))
+    }
+
+    #[napi(
+        js_name = "startTextTurn",
+        ts_args_type = "request: SendTextRequest",
+        ts_return_type = "Promise<TurnRunEvent[]>"
+    )]
+    pub fn start_text_turn(
+        &self,
+        request: serde_json::Value,
+    ) -> Result<AsyncTask<SessionJsonTask>> {
+        let request = from_json::<EngineSendTextRequest>(request)?;
+        Ok(self.task(move |session| session.start_text_turn(request)))
+    }
+
+    #[napi(
+        js_name = "nextTurnEvent",
+        ts_args_type = "timeoutMs?: number | null",
+        ts_return_type = "Promise<TurnRunEvent | null>"
+    )]
+    pub fn next_turn_event(&self, timeout_ms: Option<u32>) -> AsyncTask<SessionJsonTask> {
+        self.task(move |session| {
+            session.next_turn_event(Duration::from_millis(timeout_ms.unwrap_or(50) as u64))
+        })
+    }
+
+    #[napi(
+        js_name = "resolveElicitation",
+        ts_args_type = "elicitationId: string, response: ElicitationResponse",
+        ts_return_type = "Promise<TurnRunEvent[]>"
+    )]
+    pub fn resolve_elicitation(
+        &self,
+        elicitation_id: String,
+        response: serde_json::Value,
+    ) -> Result<AsyncTask<SessionJsonTask>> {
+        let response = from_json::<EngineElicitationResponse>(response)?;
+        Ok(self.task(move |session| session.resolve_elicitation(elicitation_id, response)))
+    }
+
+    #[napi(js_name = "cancelTurn", ts_return_type = "Promise<TurnRunEvent[]>")]
+    pub fn cancel_turn(&self) -> AsyncTask<SessionJsonTask> {
+        self.task(|session| session.cancel_turn())
+    }
+
+    #[napi]
+    pub fn close(&self) -> Result<()> {
+        let mut session = self.session.lock().map_err(lock_error)?;
+        session.close();
+        Ok(())
+    }
+}
+
+impl AngelSession {
+    fn task<F, T>(&self, action: F) -> AsyncTask<SessionJsonTask>
+    where
+        F: FnOnce(&mut EngineAngelSession) -> angel_engine_client::ClientResult<T> + Send + 'static,
+        T: Serialize + Send + 'static,
+    {
+        SessionJsonTask::new(self.session.clone(), action)
+    }
+}
+
+type SharedSession = Arc<Mutex<EngineAngelSession>>;
+type SessionAction =
+    Box<dyn FnOnce(&mut EngineAngelSession) -> Result<serde_json::Value> + Send + 'static>;
+
+pub struct SessionJsonTask {
+    session: SharedSession,
+    action: Option<SessionAction>,
+}
+
+impl SessionJsonTask {
+    fn new<F, T>(session: SharedSession, action: F) -> AsyncTask<Self>
+    where
+        F: FnOnce(&mut EngineAngelSession) -> angel_engine_client::ClientResult<T> + Send + 'static,
+        T: Serialize + Send + 'static,
+    {
+        AsyncTask::new(Self {
+            session,
+            action: Some(Box::new(move |session| {
+                to_json(client_result(action(session))?)
+            })),
+        })
+    }
+}
+
+impl<'task> ScopedTask<'task> for SessionJsonTask {
+    type Output = serde_json::Value;
+    type JsValue = Unknown<'task>;
+
+    fn compute(&mut self) -> Result<Self::Output> {
+        let action = self
+            .action
+            .take()
+            .ok_or_else(|| Error::from_reason("session task was already consumed".to_string()))?;
+        let mut session = self.session.lock().map_err(lock_error)?;
+        action(&mut session)
+    }
+
+    fn resolve(&mut self, env: &'task Env, output: Self::Output) -> Result<Self::JsValue> {
+        env.to_js_value(&output)
+    }
+}
+
+#[napi]
 pub struct AngelEngineClient {
     client: EngineClient,
 }
@@ -588,6 +746,29 @@ pub fn answers_response(answers: serde_json::Value) -> Result<serde_json::Value>
     to_json(EngineElicitationResponse::answers(answers))
 }
 
+#[napi(
+    js_name = "createRuntimeOptions",
+    ts_args_type = "runtimeName?: string | null, overrides?: RuntimeOptionsOverrides | null",
+    ts_return_type = "RuntimeOptions"
+)]
+pub fn create_runtime_options(
+    runtime_name: Option<String>,
+    overrides: Option<serde_json::Value>,
+) -> Result<serde_json::Value> {
+    let env_runtime = std::env::var("ANGEL_ENGINE_RUNTIME").ok();
+    let runtime_name = runtime_name.as_deref().or(env_runtime.as_deref());
+    let overrides = optional_json::<EngineRuntimeOptionsOverrides>(overrides)?.unwrap_or_default();
+    to_json(engine_create_runtime_options(runtime_name, overrides))
+}
+
+#[napi(
+    js_name = "normalizeRuntimeName",
+    ts_return_type = "'codex' | 'kimi' | 'opencode'"
+)]
+pub fn normalize_runtime_name(runtime: Option<String>) -> String {
+    agent_runtime_name(engine_normalize_runtime_name(runtime.as_deref()))
+}
+
 fn conversation_state(
     client: &EngineClient,
     conversation_id: &str,
@@ -635,6 +816,14 @@ where
 
 fn client_result<T>(result: angel_engine_client::ClientResult<T>) -> Result<T> {
     result.map_err(to_napi_error)
+}
+
+fn agent_runtime_name(runtime: EngineAgentRuntime) -> String {
+    match runtime {
+        EngineAgentRuntime::Codex => "codex".to_string(),
+        EngineAgentRuntime::Kimi => "kimi".to_string(),
+        EngineAgentRuntime::Opencode => "opencode".to_string(),
+    }
 }
 
 fn lock_error<T>(_: std::sync::PoisonError<T>) -> Error {

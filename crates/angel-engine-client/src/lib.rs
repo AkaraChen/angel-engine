@@ -13,6 +13,8 @@ mod core;
 mod error;
 mod event;
 mod process;
+mod runtime;
+mod session;
 mod snapshot;
 mod thread;
 
@@ -31,6 +33,13 @@ pub use event::{
     RuntimeAuthMethod,
 };
 pub use process::AngelClient;
+pub use runtime::{
+    AgentRuntime, RuntimeOptions, RuntimeOptionsOverrides, create_runtime_options,
+    normalize_runtime_name,
+};
+pub use session::{
+    AngelSession, HydrateRequest, InspectRequest, SendTextRequest, TurnRunEvent, TurnRunResult,
+};
 pub use snapshot::{
     ActionOutputSnapshot, ActionSnapshot, AvailableCommandSnapshot, ClientSnapshot, ContentChunk,
     ContextSnapshot, ConversationSnapshot, ElicitationSnapshot, ErrorSnapshot,

@@ -1,0 +1,749 @@
+use std::collections::{HashMap, VecDeque};
+use std::time::Duration;
+
+use serde::{Deserialize, Serialize};
+
+use crate::error::{ClientError, ClientResult};
+use crate::event::{ClientEvent, ClientStreamDelta, ClientUpdate};
+use crate::{
+    ActionOutputSnapshot, ActionSnapshot, AngelClient, ConversationSnapshot, ElicitationResponse,
+    ElicitationSnapshot, ResumeConversationRequest, RuntimeOptions, RuntimeOptionsOverrides,
+    StartConversationRequest, ThreadEvent, TurnSnapshot, create_runtime_options,
+};
+
+pub struct AngelSession {
+    client: AngelClient,
+    options: RuntimeOptions,
+    conversation_id: Option<String>,
+    active_turn: Option<ActiveTurn>,
+}
+
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SendTextRequest {
+    pub text: String,
+    #[serde(default)]
+    pub cwd: Option<String>,
+    #[serde(default)]
+    pub remote_id: Option<String>,
+    #[serde(default)]
+    pub model: Option<String>,
+    #[serde(default)]
+    pub mode: Option<String>,
+    #[serde(default)]
+    pub reasoning_effort: Option<String>,
+}
+
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct HydrateRequest {
+    #[serde(default)]
+    pub cwd: Option<String>,
+    #[serde(default)]
+    pub remote_id: Option<String>,
+}
+
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct InspectRequest {
+    #[serde(default)]
+    pub cwd: Option<String>,
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TurnRunResult {
+    pub text: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub reasoning: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub model: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub remote_thread_id: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub turn_id: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub conversation: Option<ConversationSnapshot>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub turn: Option<TurnSnapshot>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub actions: Vec<ActionSnapshot>,
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(
+    tag = "type",
+    rename_all = "camelCase",
+    rename_all_fields = "camelCase"
+)]
+pub enum TurnRunEvent {
+    Delta {
+        part: String,
+        text: String,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        turn_id: Option<String>,
+    },
+    Action {
+        action: ActionSnapshot,
+    },
+    ActionOutputDelta {
+        turn_id: String,
+        action_id: String,
+        content: ActionOutputSnapshot,
+    },
+    Elicitation {
+        elicitation: ElicitationSnapshot,
+    },
+    Result {
+        result: TurnRunResult,
+    },
+}
+
+impl AngelSession {
+    pub fn new(options: RuntimeOptions) -> ClientResult<Self> {
+        let client = AngelClient::spawn(options.client_options())?;
+        Ok(Self {
+            client,
+            options,
+            conversation_id: None,
+            active_turn: None,
+        })
+    }
+
+    pub fn from_runtime(
+        runtime_name: Option<&str>,
+        overrides: RuntimeOptionsOverrides,
+    ) -> ClientResult<Self> {
+        Self::new(create_runtime_options(runtime_name, overrides))
+    }
+
+    pub fn has_conversation(&self) -> bool {
+        self.conversation_id.is_some()
+    }
+
+    pub fn close(&mut self) {
+        self.client.close();
+    }
+
+    pub fn hydrate(&mut self, request: HydrateRequest) -> ClientResult<ConversationSnapshot> {
+        self.ensure_started(false, request.cwd, request.remote_id)?;
+        self.thread_state()
+            .ok_or_else(|| invalid_input("Runtime did not return a conversation snapshot."))
+    }
+
+    pub fn inspect(&mut self, request: InspectRequest) -> ClientResult<ConversationSnapshot> {
+        self.ensure_started(true, request.cwd, None)?;
+        self.thread_state()
+            .ok_or_else(|| invalid_input("Runtime did not return a conversation snapshot."))
+    }
+
+    pub fn start_text_turn(&mut self, request: SendTextRequest) -> ClientResult<Vec<TurnRunEvent>> {
+        let text = request.text.trim().to_string();
+        if text.is_empty() {
+            return Err(invalid_input("Text is required."));
+        }
+        if self.active_turn.is_some() {
+            return Err(invalid_input("A chat turn is already running."));
+        }
+
+        self.ensure_started(true, request.cwd, request.remote_id)?;
+        let conversation_id = self.require_conversation_id()?.to_string();
+        self.ensure_model(&conversation_id, request.model.as_deref())?;
+        self.ensure_mode(&conversation_id, request.mode.as_deref())?;
+        self.ensure_reasoning_effort(&conversation_id, request.reasoning_effort.as_deref())?;
+
+        let command = self.client.send_text(conversation_id.clone(), text)?;
+        let mut active = ActiveTurn::new(conversation_id, command.turn_id.clone());
+        active.handle_update(command.update)?;
+
+        if command.turn_id.is_none() {
+            let snapshot = self.thread_state();
+            let result = self.final_result(active, snapshot);
+            return Ok(vec![TurnRunEvent::Result { result }]);
+        }
+
+        let events = active.drain_events();
+        self.active_turn = Some(active);
+        Ok(events)
+    }
+
+    pub fn next_turn_event(&mut self, timeout: Duration) -> ClientResult<Option<TurnRunEvent>> {
+        let Some(active) = self.active_turn.as_mut() else {
+            return Ok(None);
+        };
+        if let Some(event) = active.pop_event() {
+            return Ok(Some(event));
+        }
+        if active.pending_elicitation_id.is_some() {
+            return Ok(None);
+        }
+
+        if self.turn_is_active_terminal()? {
+            return self.finish_active_turn();
+        }
+
+        if self.queue_open_elicitation()? {
+            return Ok(self.active_turn.as_mut().and_then(ActiveTurn::pop_event));
+        }
+
+        if let Some(update) = self.client.next_update(Some(timeout))? {
+            self.active_turn_mut()?.handle_update(update)?;
+        } else {
+            return Ok(None);
+        }
+
+        if let Some(event) = self.active_turn.as_mut().and_then(ActiveTurn::pop_event) {
+            return Ok(Some(event));
+        }
+        if self.turn_is_active_terminal()? {
+            return self.finish_active_turn();
+        }
+        if self.queue_open_elicitation()? {
+            return Ok(self.active_turn.as_mut().and_then(ActiveTurn::pop_event));
+        }
+        Ok(None)
+    }
+
+    pub fn resolve_elicitation(
+        &mut self,
+        elicitation_id: String,
+        response: ElicitationResponse,
+    ) -> ClientResult<Vec<TurnRunEvent>> {
+        let conversation_id = self.require_conversation_id()?.to_string();
+        {
+            let active = self.active_turn_mut()?;
+            if active.pending_elicitation_id.as_deref() != Some(elicitation_id.as_str()) {
+                return Err(invalid_input(
+                    "Chat stream is not waiting for this user input.",
+                ));
+            }
+            active.pending_elicitation_id = None;
+        }
+
+        let result = self.client.send_thread_event(
+            conversation_id,
+            ThreadEvent::resolve(elicitation_id, response),
+        )?;
+        self.active_turn_mut()?.handle_update(result.update)?;
+        Ok(self.active_turn_mut()?.drain_events())
+    }
+
+    pub fn cancel_turn(&mut self) -> ClientResult<Vec<TurnRunEvent>> {
+        let conversation_id = self.require_conversation_id()?.to_string();
+        let turn_id = self
+            .active_turn
+            .as_ref()
+            .and_then(|active| active.turn_id.clone());
+        let result = self
+            .client
+            .send_thread_event(conversation_id, ThreadEvent::Cancel { turn_id })?;
+        self.active_turn_mut()?.handle_update(result.update)?;
+        Ok(self.active_turn_mut()?.drain_events())
+    }
+
+    fn ensure_started(
+        &mut self,
+        allow_start: bool,
+        cwd: Option<String>,
+        remote_id: Option<String>,
+    ) -> ClientResult<()> {
+        if self.conversation_id.is_some() {
+            return Ok(());
+        }
+
+        let initialize_update = self.client.initialize()?;
+        check_update_fault(&initialize_update)?;
+        let result = if let Some(remote_id) = remote_id {
+            self.client.resume_conversation(ResumeConversationRequest {
+                additional_directories: Vec::new(),
+                hydrate: true,
+                remote_id,
+            })?
+        } else if allow_start {
+            self.client.start_conversation(StartConversationRequest {
+                additional_directories: Vec::new(),
+                cwd: Some(cwd.unwrap_or_else(current_dir_string)),
+            })?
+        } else {
+            return Err(invalid_input(
+                "Conversation has no remote thread to resume.",
+            ));
+        };
+        check_update_fault(&result.update)?;
+
+        self.conversation_id = result.conversation_id;
+        Ok(())
+    }
+
+    fn ensure_reasoning_effort(
+        &mut self,
+        conversation_id: &str,
+        requested_effort: Option<&str>,
+    ) -> ClientResult<()> {
+        let env_effort = std::env::var("ANGEL_ENGINE_REASONING_EFFORT").ok();
+        let effort = selected_config_value(requested_effort)
+            .or_else(|| selected_config_value(self.options.default_reasoning_effort.as_deref()))
+            .or_else(|| selected_config_value(env_effort.as_deref()));
+        let Some(effort) = effort else {
+            return Ok(());
+        };
+
+        let Some(snapshot) = self.thread_state_by_id(conversation_id) else {
+            return Ok(());
+        };
+        let reasoning = snapshot.reasoning;
+        if !reasoning.can_set
+            || reasoning.current_effort.as_deref() == Some(effort.as_str())
+            || (!reasoning.available_efforts.is_empty()
+                && !reasoning.available_efforts.contains(&effort))
+        {
+            return Ok(());
+        }
+
+        let result = self.client.send_thread_event(
+            conversation_id.to_string(),
+            ThreadEvent::set_reasoning_effort(effort),
+        )?;
+        self.drain_configuration_updates(result.update)
+    }
+
+    fn ensure_model(
+        &mut self,
+        conversation_id: &str,
+        requested_model: Option<&str>,
+    ) -> ClientResult<()> {
+        let Some(model) = selected_config_value(requested_model) else {
+            return Ok(());
+        };
+        let Some(snapshot) = self.thread_state_by_id(conversation_id) else {
+            return Ok(());
+        };
+        if current_model(&snapshot).as_deref() == Some(model.as_str()) {
+            return Ok(());
+        }
+        let result = self
+            .client
+            .send_thread_event(conversation_id.to_string(), ThreadEvent::set_model(model))?;
+        self.drain_configuration_updates(result.update)
+    }
+
+    fn ensure_mode(
+        &mut self,
+        conversation_id: &str,
+        requested_mode: Option<&str>,
+    ) -> ClientResult<()> {
+        let Some(mode) = requested_mode
+            .map(str::trim)
+            .filter(|mode| !mode.is_empty())
+        else {
+            return Ok(());
+        };
+        let Some(snapshot) = self.thread_state_by_id(conversation_id) else {
+            return Ok(());
+        };
+        let current_mode = current_mode(&snapshot);
+        if (mode == "default" && current_mode.is_none()) || current_mode.as_deref() == Some(mode) {
+            return Ok(());
+        }
+        let result = self.client.send_thread_event(
+            conversation_id.to_string(),
+            ThreadEvent::set_mode(mode.to_string()),
+        )?;
+        self.drain_configuration_updates(result.update)
+    }
+
+    fn drain_configuration_updates(&mut self, initial: ClientUpdate) -> ClientResult<()> {
+        check_update_fault(&initial)?;
+        while let Some(update) = self.client.next_update(Some(Duration::from_millis(250)))? {
+            check_update_fault(&update)?;
+        }
+        Ok(())
+    }
+
+    fn queue_open_elicitation(&mut self) -> ClientResult<bool> {
+        let conversation_id = self.require_conversation_id()?.to_string();
+        let Some(elicitation) = self
+            .client
+            .open_elicitations(&conversation_id)
+            .first()
+            .cloned()
+        else {
+            return Ok(false);
+        };
+        let active = self.active_turn_mut()?;
+        if !active.accepts_turn(elicitation.turn_id.as_deref()) {
+            return Ok(false);
+        }
+        active.accept_elicitation(elicitation);
+        Ok(true)
+    }
+
+    fn turn_is_active_terminal(&self) -> ClientResult<bool> {
+        let Some(active) = self.active_turn.as_ref() else {
+            return Ok(false);
+        };
+        let Some(turn_id) = active.turn_id.as_deref() else {
+            return Ok(true);
+        };
+        Ok(self.client_turn_is_terminal(&active.conversation_id, turn_id))
+    }
+
+    fn client_turn_is_terminal(&self, conversation_id: &str, turn_id: &str) -> bool {
+        self.thread_state_by_id(conversation_id)
+            .and_then(|conversation| {
+                conversation
+                    .turns
+                    .into_iter()
+                    .find(|turn| turn.id == turn_id)
+            })
+            .map(|turn| turn.phase.contains("terminal"))
+            .unwrap_or(false)
+    }
+
+    fn finish_active_turn(&mut self) -> ClientResult<Option<TurnRunEvent>> {
+        let active = self
+            .active_turn
+            .take()
+            .ok_or_else(|| invalid_input("No active chat turn."))?;
+        let conversation_id = active.conversation_id.clone();
+        let snapshot = self.thread_state_by_id(&conversation_id);
+        let result = self.final_result(active, snapshot);
+        Ok(Some(TurnRunEvent::Result { result }))
+    }
+
+    fn final_result(
+        &self,
+        active: ActiveTurn,
+        snapshot: Option<ConversationSnapshot>,
+    ) -> TurnRunResult {
+        let turn_id = active.turn_id.clone();
+        let turn = snapshot.as_ref().and_then(|snapshot| {
+            turn_id
+                .as_ref()
+                .and_then(|turn_id| find_turn(snapshot, turn_id))
+        });
+        let actions = snapshot
+            .as_ref()
+            .zip(turn_id.as_deref())
+            .map(|(snapshot, turn_id)| actions_for_turn(snapshot, turn_id))
+            .unwrap_or_default();
+
+        let text = turn
+            .as_ref()
+            .map(|turn| turn.output_text.as_str())
+            .filter(|text| !text.trim().is_empty())
+            .map(ToString::to_string)
+            .or_else(|| {
+                (!active.collector.text.is_empty()).then_some(active.collector.text.clone())
+            })
+            .unwrap_or_else(|| "The runtime finished without text output.".to_string());
+        let reasoning = turn_reasoning_text(turn.as_ref()).or_else(|| {
+            (!active.collector.reasoning.is_empty()).then_some(active.collector.reasoning.clone())
+        });
+
+        TurnRunResult {
+            actions,
+            conversation: snapshot.clone(),
+            model: snapshot.as_ref().and_then(current_model),
+            reasoning,
+            remote_thread_id: snapshot
+                .as_ref()
+                .and_then(|snapshot| snapshot.remote_id.clone()),
+            text,
+            turn,
+            turn_id,
+        }
+    }
+
+    fn thread_state(&self) -> Option<ConversationSnapshot> {
+        let conversation_id = self.conversation_id.as_deref()?;
+        self.thread_state_by_id(conversation_id)
+    }
+
+    fn thread_state_by_id(&self, conversation_id: &str) -> Option<ConversationSnapshot> {
+        self.client
+            .snapshot()
+            .conversations
+            .into_iter()
+            .find(|conversation| conversation.id == conversation_id)
+    }
+
+    fn require_conversation_id(&self) -> ClientResult<&str> {
+        self.conversation_id
+            .as_deref()
+            .ok_or_else(|| invalid_input("Runtime did not start a conversation."))
+    }
+
+    fn active_turn_mut(&mut self) -> ClientResult<&mut ActiveTurn> {
+        self.active_turn
+            .as_mut()
+            .ok_or_else(|| invalid_input("No active chat turn."))
+    }
+}
+
+#[derive(Debug)]
+struct ActiveTurn {
+    conversation_id: String,
+    turn_id: Option<String>,
+    collector: TurnCollector,
+    pending_elicitation_id: Option<String>,
+    events: VecDeque<TurnRunEvent>,
+}
+
+impl ActiveTurn {
+    fn new(conversation_id: String, turn_id: Option<String>) -> Self {
+        Self {
+            collector: TurnCollector::new(turn_id.clone()),
+            conversation_id,
+            turn_id,
+            pending_elicitation_id: None,
+            events: VecDeque::new(),
+        }
+    }
+
+    fn pop_event(&mut self) -> Option<TurnRunEvent> {
+        self.events.pop_front()
+    }
+
+    fn drain_events(&mut self) -> Vec<TurnRunEvent> {
+        self.events.drain(..).collect()
+    }
+
+    fn handle_update(&mut self, update: ClientUpdate) -> ClientResult<()> {
+        let has_ordered_stream_events = update.events.iter().any(is_ordered_stream_event);
+
+        for event in update.events {
+            if let ClientEvent::RuntimeFaulted { code, message } = &event {
+                return Err(ClientError::RuntimeFaulted {
+                    code: code.clone(),
+                    message: message.clone(),
+                });
+            }
+            match event {
+                ClientEvent::ElicitationOpened { elicitation, .. }
+                | ClientEvent::ElicitationUpdated { elicitation, .. } => {
+                    self.accept_elicitation(elicitation);
+                }
+                event => self.collector.accept_event(event, &mut self.events),
+            }
+        }
+
+        if !has_ordered_stream_events {
+            for delta in update.stream_deltas {
+                self.collector.accept_delta(delta, &mut self.events);
+            }
+        }
+        Ok(())
+    }
+
+    fn accepts_turn(&self, turn_id: Option<&str>) -> bool {
+        self.collector.accepts_turn(turn_id)
+    }
+
+    fn accept_elicitation(&mut self, elicitation: ElicitationSnapshot) {
+        if !self.accepts_turn(elicitation.turn_id.as_deref()) {
+            return;
+        }
+        if self.pending_elicitation_id.as_deref() == Some(elicitation.id.as_str()) {
+            return;
+        }
+        self.pending_elicitation_id = Some(elicitation.id.clone());
+        self.events
+            .push_back(TurnRunEvent::Elicitation { elicitation });
+    }
+}
+
+#[derive(Debug)]
+struct TurnCollector {
+    turn_id: Option<String>,
+    action_indexes: HashMap<String, usize>,
+    actions: Vec<ActionSnapshot>,
+    reasoning: String,
+    text: String,
+}
+
+impl TurnCollector {
+    fn new(turn_id: Option<String>) -> Self {
+        Self {
+            turn_id,
+            action_indexes: HashMap::new(),
+            actions: Vec::new(),
+            reasoning: String::new(),
+            text: String::new(),
+        }
+    }
+
+    fn accept_delta(&mut self, delta: ClientStreamDelta, events: &mut VecDeque<TurnRunEvent>) {
+        match delta {
+            ClientStreamDelta::AssistantDelta {
+                turn_id, content, ..
+            } => self.accept_text_delta("text", turn_id, content.text, events),
+            ClientStreamDelta::ReasoningDelta {
+                turn_id, content, ..
+            }
+            | ClientStreamDelta::PlanDelta {
+                turn_id, content, ..
+            } => self.accept_text_delta("reasoning", turn_id, content.text, events),
+            ClientStreamDelta::ActionOutputDelta {
+                turn_id,
+                action_id,
+                content,
+                ..
+            } => {
+                if self.accepts_turn(Some(&turn_id)) {
+                    events.push_back(TurnRunEvent::ActionOutputDelta {
+                        action_id,
+                        content,
+                        turn_id,
+                    });
+                }
+            }
+        }
+    }
+
+    fn accept_event(&mut self, event: ClientEvent, events: &mut VecDeque<TurnRunEvent>) {
+        match event {
+            ClientEvent::ActionObserved { action, .. }
+            | ClientEvent::ActionUpdated { action, .. } => {
+                self.upsert_action(action.clone());
+                events.push_back(TurnRunEvent::Action { action });
+            }
+            ClientEvent::AssistantDelta {
+                turn_id, content, ..
+            } => self.accept_text_delta("text", turn_id, content.text, events),
+            ClientEvent::ReasoningDelta {
+                turn_id, content, ..
+            }
+            | ClientEvent::PlanDelta {
+                turn_id, content, ..
+            } => self.accept_text_delta("reasoning", turn_id, content.text, events),
+            _ => {}
+        }
+    }
+
+    fn accept_text_delta(
+        &mut self,
+        part: &str,
+        turn_id: String,
+        text: String,
+        events: &mut VecDeque<TurnRunEvent>,
+    ) {
+        if !self.accepts_turn(Some(&turn_id)) || text.is_empty() {
+            return;
+        }
+        match part {
+            "reasoning" => self.reasoning.push_str(&text),
+            _ => self.text.push_str(&text),
+        }
+        events.push_back(TurnRunEvent::Delta {
+            part: part.to_string(),
+            text,
+            turn_id: Some(turn_id),
+        });
+    }
+
+    fn accepts_turn(&self, turn_id: Option<&str>) -> bool {
+        turn_id.is_none() || self.turn_id.is_none() || self.turn_id.as_deref() == turn_id
+    }
+
+    fn upsert_action(&mut self, action: ActionSnapshot) {
+        if !self.accepts_turn(Some(&action.turn_id)) {
+            return;
+        }
+        if let Some(index) = self.action_indexes.get(&action.id).copied() {
+            self.actions[index] = action;
+        } else {
+            self.action_indexes
+                .insert(action.id.clone(), self.actions.len());
+            self.actions.push(action);
+        }
+    }
+}
+
+fn is_ordered_stream_event(event: &ClientEvent) -> bool {
+    matches!(
+        event,
+        ClientEvent::ActionObserved { .. }
+            | ClientEvent::ActionUpdated { .. }
+            | ClientEvent::AssistantDelta { .. }
+            | ClientEvent::PlanDelta { .. }
+            | ClientEvent::ReasoningDelta { .. }
+    )
+}
+
+fn current_model(snapshot: &ConversationSnapshot) -> Option<String> {
+    snapshot.context.model.clone().or_else(|| {
+        snapshot
+            .models
+            .as_ref()
+            .map(|models| models.current_model_id.clone())
+    })
+}
+
+fn current_mode(snapshot: &ConversationSnapshot) -> Option<String> {
+    snapshot.context.mode.clone().or_else(|| {
+        snapshot
+            .modes
+            .as_ref()
+            .map(|modes| modes.current_mode_id.clone())
+    })
+}
+
+fn find_turn(snapshot: &ConversationSnapshot, turn_id: &str) -> Option<TurnSnapshot> {
+    snapshot
+        .turns
+        .iter()
+        .find(|turn| turn.id == turn_id)
+        .cloned()
+}
+
+fn actions_for_turn(snapshot: &ConversationSnapshot, turn_id: &str) -> Vec<ActionSnapshot> {
+    snapshot
+        .actions
+        .iter()
+        .filter(|action| action.turn_id == turn_id)
+        .cloned()
+        .collect()
+}
+
+fn turn_reasoning_text(turn: Option<&TurnSnapshot>) -> Option<String> {
+    let turn = turn?;
+    let text = [turn.reasoning_text.as_str(), turn.plan_text.as_str()]
+        .into_iter()
+        .filter(|text| !text.trim().is_empty())
+        .collect::<Vec<_>>()
+        .join("\n");
+    (!text.is_empty()).then_some(text)
+}
+
+fn selected_config_value(value: Option<&str>) -> Option<String> {
+    value
+        .map(str::trim)
+        .filter(|value| !value.is_empty() && *value != "default")
+        .map(ToString::to_string)
+}
+
+fn current_dir_string() -> String {
+    std::env::current_dir()
+        .ok()
+        .map(|path| path.display().to_string())
+        .unwrap_or_else(|| ".".to_string())
+}
+
+fn invalid_input(message: impl Into<String>) -> ClientError {
+    ClientError::InvalidInput {
+        message: message.into(),
+    }
+}
+
+fn check_update_fault(update: &ClientUpdate) -> ClientResult<()> {
+    for event in &update.events {
+        if let ClientEvent::RuntimeFaulted { code, message } = event {
+            return Err(ClientError::RuntimeFaulted {
+                code: code.clone(),
+                message: message.clone(),
+            });
+        }
+    }
+    Ok(())
+}

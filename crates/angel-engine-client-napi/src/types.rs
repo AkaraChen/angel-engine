@@ -390,3 +390,83 @@ pub struct ThreadEvent {
     pub num_turns: Option<u32>,
     pub command: Option<String>,
 }
+
+#[napi(object)]
+pub struct RuntimeOptionsOverrides {
+    pub command: Option<String>,
+    pub args: Option<Vec<String>>,
+    pub auth: Option<ClientAuthOptions>,
+    pub identity: Option<ClientIdentity>,
+    pub cwd: Option<String>,
+    pub additional_directories: Option<Vec<String>>,
+    pub experimental_api: Option<bool>,
+    pub process_label: Option<String>,
+    pub client_name: Option<String>,
+    pub client_title: Option<String>,
+    pub default_reasoning_effort: Option<String>,
+}
+
+#[napi(object)]
+pub struct RuntimeOptions {
+    pub command: String,
+    pub args: Option<Vec<String>>,
+    #[napi(ts_type = "'acp' | 'codexAppServer'")]
+    pub protocol: Option<String>,
+    pub auth: Option<ClientAuthOptions>,
+    pub identity: Option<ClientIdentity>,
+    pub cwd: Option<String>,
+    pub additional_directories: Option<Vec<String>>,
+    pub experimental_api: Option<bool>,
+    pub process_label: Option<String>,
+    #[napi(ts_type = "'codex' | 'kimi' | 'opencode'")]
+    pub runtime: String,
+    pub default_reasoning_effort: Option<String>,
+}
+
+#[napi(object)]
+pub struct SendTextRequest {
+    pub text: String,
+    pub cwd: Option<String>,
+    pub remote_id: Option<String>,
+    pub model: Option<String>,
+    pub mode: Option<String>,
+    pub reasoning_effort: Option<String>,
+}
+
+#[napi(object)]
+pub struct HydrateRequest {
+    pub cwd: Option<String>,
+    pub remote_id: Option<String>,
+}
+
+#[napi(object)]
+pub struct InspectRequest {
+    pub cwd: Option<String>,
+}
+
+#[napi(object)]
+pub struct TurnRunResult {
+    pub text: String,
+    pub reasoning: Option<String>,
+    pub model: Option<String>,
+    pub remote_thread_id: Option<String>,
+    pub turn_id: Option<String>,
+    pub conversation: Option<ConversationSnapshot>,
+    pub turn: Option<TurnSnapshot>,
+    pub actions: Vec<ActionSnapshot>,
+}
+
+#[napi(object)]
+pub struct TurnRunEvent {
+    #[napi(ts_type = "'delta' | 'action' | 'actionOutputDelta' | 'elicitation' | 'result'")]
+    pub r#type: String,
+    #[napi(ts_type = "'reasoning' | 'text'")]
+    pub part: Option<String>,
+    pub text: Option<String>,
+    pub turn_id: Option<String>,
+    pub action: Option<ActionSnapshot>,
+    pub action_id: Option<String>,
+    pub content: Option<ActionOutputSnapshot>,
+    pub elicitation: Option<ElicitationSnapshot>,
+    pub result: Option<TurnRunResult>,
+}

@@ -645,6 +645,12 @@ fn print_event(event: &ClientEvent) {
         } => {
             println!("[usage] {conversation_id}: {}/{}", usage.used, usage.size);
         }
+        ClientEvent::ActionObserved { action, .. } => {
+            println!(
+                "[tool call] {}",
+                action.title.as_deref().unwrap_or(action.kind.as_str())
+            );
+        }
         _ => {}
     }
 }
@@ -657,5 +663,6 @@ fn event_prints(event: &ClientEvent) -> bool {
             | ClientEvent::ConversationReady { .. }
             | ClientEvent::AvailableCommandsUpdated { .. }
             | ClientEvent::SessionUsageUpdated { .. }
+            | ClientEvent::ActionObserved { .. }
     )
 }

@@ -200,6 +200,14 @@ where
                     printed = true;
                 }
                 EngineEvent::ActionObserved { action, .. } => {
+                    self.printer.before_tagged_output()?;
+                    println!(
+                        "[tool call] {}",
+                        action
+                            .title
+                            .as_deref()
+                            .unwrap_or(action_kind_label(&action.kind))
+                    );
                     for delta in &action.output.chunks {
                         self.printer.print_inline_text(
                             InlineStreamKind::Assistant,
@@ -252,5 +260,22 @@ fn action_output_delta_text(delta: &ActionOutputDelta) -> &str {
         | ActionOutputDelta::Patch(text)
         | ActionOutputDelta::Terminal(text)
         | ActionOutputDelta::Structured(text) => text,
+    }
+}
+
+fn action_kind_label(kind: &angel_engine::ActionKind) -> &'static str {
+    match kind {
+        angel_engine::ActionKind::Command => "command",
+        angel_engine::ActionKind::FileChange => "file change",
+        angel_engine::ActionKind::Read => "read",
+        angel_engine::ActionKind::Write => "write",
+        angel_engine::ActionKind::McpTool => "mcp tool",
+        angel_engine::ActionKind::DynamicTool => "dynamic tool",
+        angel_engine::ActionKind::SubAgent => "sub-agent",
+        angel_engine::ActionKind::WebSearch => "web search",
+        angel_engine::ActionKind::Media => "media",
+        angel_engine::ActionKind::Reasoning => "reasoning",
+        angel_engine::ActionKind::Plan => "plan",
+        angel_engine::ActionKind::HostCapability => "host capability",
     }
 }

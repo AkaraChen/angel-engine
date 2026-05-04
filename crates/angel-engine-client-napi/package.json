@@ -1,5 +1,5 @@
 {
-  "name": "@angel-engine/client",
+  "name": "@angel-engine/client-napi",
   "version": "0.1.0",
   "private": true,
   "description": "Node.js N-API binding for angel-engine-client",
@@ -10,8 +10,7 @@
     "README.md",
     "index.js",
     "index.d.ts",
-    "*.node",
-    "examples"
+    "*.node"
   ],
   "napi": {
     "binaryName": "angel_engine_client",
@@ -28,11 +27,7 @@
   },
   "scripts": {
     "build": "napi build --platform --release",
-    "build:debug": "napi build --platform",
-    "demo": "node examples/angel-cli.mjs",
-    "demo:codex": "node examples/angel-cli.mjs codex",
-    "demo:kimi": "node examples/angel-cli.mjs kimi",
-    "demo:opencode": "node examples/angel-cli.mjs opencode"
+    "build:debug": "napi build --platform"
   },
   "devDependencies": {
     "@napi-rs/cli": "^3.2.0"
