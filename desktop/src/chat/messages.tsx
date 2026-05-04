@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import {
   ActionBarPrimitive,
   AuiIf,
@@ -8,10 +9,16 @@ import {
   type EnrichedPartState,
   type ToolCallMessagePartProps,
 } from '@assistant-ui/react';
+import { StreamdownTextPrimitive } from '@assistant-ui/react-streamdown';
+import { cjk } from '@streamdown/cjk';
+import { code as streamdownCode } from '@streamdown/code';
+import { math } from '@streamdown/math';
+import { mermaid } from '@streamdown/mermaid';
 import {
   AlertCircleIcon,
   BrainCircuit,
   Check,
+  ChevronDown,
   ChevronLeft,
   ChevronRight,
   Clipboard,
@@ -26,7 +33,13 @@ import {
   VolumeX,
 } from 'lucide-react';
 
+import { ToolGroup } from '@/components/assistant-ui/tool-group';
 import { Button } from '@/components/ui/button';
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from '@/components/ui/collapsible';
 import { cn } from '@/lib/utils';
 import { isChatToolAction, type ChatToolAction } from '@/shared/chat';
 import {
@@ -44,7 +57,7 @@ export function UserMessage() {
           )}
         </MessagePrimitive.Attachments>
         <div className="rounded-md bg-primary px-3 py-2 text-sm leading-6 text-primary-foreground">
-          <MessageParts />
+          <UserMessageParts />
         </div>
         <div className={messageActionFooterClass}>
           <MessageBranchPicker />
@@ -98,7 +111,7 @@ export function AssistantMessage() {
     <MessagePrimitive.Root className="group flex justify-start">
       <div className="flex w-full max-w-[82%] flex-col items-start gap-1.5 text-sm leading-6">
         <div className="w-full">
-          <MessageParts />
+          <AssistantMessageParts />
         </div>
         <div className={messageActionFooterClass}>
           <MessageBranchPicker />
@@ -180,16 +193,31 @@ function MessageBranchPicker() {
   );
 }
 
-function MessageParts() {
-  return <MessagePrimitive.Parts components={messagePartComponents} />;
+function UserMessageParts() {
+  return <MessagePrimitive.Parts components={userMessagePartComponents} />;
 }
 
-const messagePartComponents = {
-  Text: TextMessagePart,
+function AssistantMessageParts() {
+  return <MessagePrimitive.Parts components={assistantMessagePartComponents} />;
+}
+
+const userMessagePartComponents = {
+  Text: PlainTextMessagePart,
+  Source: NullMessagePart,
+  Image: ImageMessagePart,
+  File: FileMessagePart,
+  data: {
+    Fallback: DataMessagePart,
+  },
+};
+
+const assistantMessagePartComponents = {
+  Text: AssistantTextMessagePart,
   Reasoning: ReasoningMessagePart,
   Source: NullMessagePart,
   Image: ImageMessagePart,
   File: FileMessagePart,
+  ToolGroup,
   tools: {
     Fallback: ToolActionMessagePart,
   },
@@ -198,7 +226,7 @@ const messagePartComponents = {
   },
 };
 
-function TextMessagePart(part: Extract<EnrichedPartState, { type: 'text' }>) {
+function PlainTextMessagePart(part: Extract<EnrichedPartState, { type: 'text' }>) {
   if (part.type === 'text') {
     if (part.status.type === 'running' && !part.text) {
       return (
@@ -212,6 +240,30 @@ function TextMessagePart(part: Extract<EnrichedPartState, { type: 'text' }>) {
   }
 
   return null;
+}
+
+function AssistantTextMessagePart(
+  part: Extract<EnrichedPartState, { type: 'text' }>
+) {
+  if (part.type === 'text' && part.status.type === 'running' && !part.text) {
+    return (
+      <span className="inline-flex items-center gap-2 text-muted-foreground">
+        <Loader2 className="size-3.5 animate-spin" />
+        Thinking
+      </span>
+    );
+  }
+
+  return (
+    <StreamdownTextPrimitive
+      caret="block"
+      containerClassName="min-w-0 max-w-none text-sm leading-6 [&_a]:underline [&_blockquote]:my-3 [&_blockquote]:border-l-2 [&_blockquote]:border-border [&_blockquote]:pl-3 [&_blockquote]:text-muted-foreground [&_code]:rounded-sm [&_code]:bg-muted [&_code]:px-1 [&_code]:py-0.5 [&_code]:font-mono [&_code]:text-[0.86em] [&_h1]:mb-3 [&_h1]:mt-1 [&_h1]:text-xl [&_h1]:font-semibold [&_h2]:mb-2 [&_h2]:mt-4 [&_h2]:text-lg [&_h2]:font-semibold [&_h3]:mb-2 [&_h3]:mt-3 [&_h3]:font-semibold [&_li]:my-1 [&_ol]:my-2 [&_ol]:list-decimal [&_ol]:pl-5 [&_p]:my-0 [&_p+p]:mt-3 [&_pre]:my-3 [&_pre]:max-w-full [&_pre]:overflow-x-auto [&_pre]:rounded-md [&_pre]:border [&_pre]:bg-muted/40 [&_pre]:p-3 [&_pre_code]:bg-transparent [&_pre_code]:p-0 [&_table]:my-3 [&_table]:w-full [&_table]:border-collapse [&_td]:border [&_td]:border-border [&_td]:px-2 [&_td]:py-1 [&_th]:border [&_th]:border-border [&_th]:px-2 [&_th]:py-1 [&_ul]:my-2 [&_ul]:list-disc [&_ul]:pl-5"
+      controls
+      mode="streaming"
+      plugins={{ cjk, code: streamdownCode, math, mermaid }}
+      shikiTheme={['github-light', 'github-dark']}
+    />
+  );
 }
 
 function ReasoningMessagePart(
@@ -259,30 +311,99 @@ function ToolActionMessagePart(part: ToolCallMessagePartProps) {
   const errorText = action?.error?.message;
   const isRunning = isRunningToolPhase(phase);
   const isFailed = Boolean(errorText) || phase === 'failed';
+  const hasDetails = Boolean(part.argsText || outputText || errorText);
+  const [manualOpen, setManualOpen] = useState(false);
+
+  useEffect(() => {
+    if (!isRunning) setManualOpen(false);
+  }, [isRunning]);
+
+  const open = hasDetails && (isRunning || manualOpen);
 
   return (
-    <div className="my-2 w-full overflow-hidden rounded-md border bg-muted/20 text-xs">
-      <div className="flex min-h-9 items-center gap-2 border-b px-3 py-2">
-        <ToolStatusIcon failed={isFailed} running={isRunning} />
-        <div className="min-w-0 flex-1">
-          <div className="truncate font-medium">{title}</div>
-          <div className="mt-0.5 flex items-center gap-1.5 text-muted-foreground">
-            <span>{action?.kind || part.toolName}</span>
-            <span aria-hidden>·</span>
-            <span>{formatToolPhase(phase)}</span>
+    <Collapsible
+      className="w-full overflow-hidden rounded-md border bg-muted/20 text-xs"
+      onOpenChange={setManualOpen}
+      open={open}
+    >
+      <ToolActionHeader
+        details={hasDetails}
+        failed={isFailed}
+        kind={action?.kind || part.toolName}
+        open={open}
+        phase={phase}
+        running={isRunning}
+        title={title}
+      />
+      {hasDetails && (
+        <CollapsibleContent className="overflow-hidden data-[state=closed]:animate-collapsible-up data-[state=open]:animate-collapsible-down">
+          <div className="space-y-2 border-t px-3 py-2">
+            {part.argsText && <ToolPreBlock label="Input" value={part.argsText} />}
+            {errorText && (
+              <ToolPreBlock label="Error" tone="error" value={errorText} />
+            )}
+            {!errorText && outputText && (
+              <ToolPreBlock label="Output" value={outputText} />
+            )}
           </div>
+        </CollapsibleContent>
+      )}
+    </Collapsible>
+  );
+}
+
+function ToolActionHeader({
+  details,
+  failed,
+  kind,
+  open,
+  phase,
+  running,
+  title,
+}: {
+  details: boolean;
+  failed: boolean;
+  kind: string;
+  open: boolean;
+  phase: string;
+  running: boolean;
+  title: string;
+}) {
+  const content = (
+    <>
+      <ToolStatusIcon failed={failed} running={running} />
+      <div className="min-w-0 flex-1">
+        <div className="truncate font-medium">{title}</div>
+        <div className="mt-0.5 flex items-center gap-1.5 text-muted-foreground">
+          <span>{kind}</span>
+          <span aria-hidden>·</span>
+          <span>{formatToolPhase(phase)}</span>
         </div>
       </div>
-      {(part.argsText || outputText || errorText) && (
-        <div className="space-y-2 px-3 py-2">
-          {part.argsText && <ToolPreBlock label="Input" value={part.argsText} />}
-          {errorText && <ToolPreBlock label="Error" tone="error" value={errorText} />}
-          {!errorText && outputText && (
-            <ToolPreBlock label="Output" value={outputText} />
+      {details && (
+        <ChevronDown
+          className={cn(
+            'size-4 shrink-0 text-muted-foreground transition-transform',
+            !open && '-rotate-90'
           )}
-        </div>
+        />
       )}
-    </div>
+    </>
+  );
+
+  const className = cn(
+    'flex min-h-9 w-full items-center gap-2 px-3 py-2 text-left',
+    details && 'hover:bg-muted/40'
+  );
+
+  if (!details) {
+    return <div className={className}>{content}</div>;
+  }
+
+  return (
+    <CollapsibleTrigger className={className} type="button">
+      {content}
+    </CollapsibleTrigger>
   );
 }
 

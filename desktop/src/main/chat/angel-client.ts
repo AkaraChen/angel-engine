@@ -632,6 +632,7 @@ class AngelChatSession {
   private async handleUpdate(update?: ClientUpdate, collector?: TurnCollector) {
     const streamDeltas = update?.streamDeltas ?? [];
     const events = update?.events ?? [];
+    const hasOrderedStreamEvents = events.some(isOrderedStreamEvent);
 
     for (const event of events) {
       if (event.type === 'runtimeFaulted') {
@@ -640,7 +641,7 @@ class AngelChatSession {
       collector?.acceptEvent(event);
     }
 
-    if (events.length === 0) {
+    if (!hasOrderedStreamEvents) {
       for (const delta of streamDeltas) {
         collector?.acceptDelta(delta);
       }
@@ -774,6 +775,16 @@ class TurnCollector {
 
     this.onEvent?.({ action, type: 'tool' });
   }
+}
+
+function isOrderedStreamEvent(event: ClientEvent) {
+  return (
+    event.type === 'actionObserved' ||
+    event.type === 'actionUpdated' ||
+    event.type === 'assistantDelta' ||
+    event.type === 'planDelta' ||
+    event.type === 'reasoningDelta'
+  );
 }
 
 function createRuntimeOptions(runtimeName = defaultRuntimeName()): RuntimeOptions {

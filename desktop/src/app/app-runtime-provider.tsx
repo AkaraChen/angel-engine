@@ -28,7 +28,7 @@ export function AppRuntimeProvider({
   children: ReactNode;
   historyMessages: ChatHistoryMessage[];
   historyRevision: number;
-  onChatUpdated: (chat: Chat) => void;
+  onChatUpdated: (chat: Chat, messages?: ChatHistoryMessage[]) => void;
   projectId?: string | null;
   projectPath?: string;
 }) {

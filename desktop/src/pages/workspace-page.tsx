@@ -137,8 +137,8 @@ export function WorkspacePage({ route }: { route: WorkspaceRoute }) {
   );
 
   const upsertChat = useCallback(
-    (chat: Chat) => {
-      setChatInCache(chat);
+    (chat: Chat, messages?: ChatHistoryMessage[]) => {
+      setChatInCache(chat, messages);
       navigateToChat(chat);
     },
     [navigateToChat, setChatInCache]

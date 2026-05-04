@@ -22,6 +22,7 @@ import {
   chatPartsText,
   chatToolActionToPart,
   cloneChatHistoryPart,
+  isChatToolAction,
 } from '@/shared/chat';
 
 const STREAM_FLUSH_MIN_CHARS = 24;
@@ -37,7 +38,7 @@ export type EngineRuntimeOptions = {
   chatId?: string;
   historyMessages: ChatHistoryMessage[];
   historyRevision: number;
-  onChatUpdated?: (chat: Chat) => void;
+  onChatUpdated?: (chat: Chat, messages?: ChatHistoryMessage[]) => void;
   projectId?: string | null;
   projectPath?: string;
 };
@@ -46,6 +47,7 @@ type ActiveRun = {
   abortController: AbortController;
   assistantMessageId: string;
   cancelled: boolean;
+  chatId?: string;
   startedAt: number;
 };
 
@@ -55,6 +57,11 @@ type AssistantAccumulator = {
   parts: ChatHistoryMessagePart[];
   result?: ChatSendResult;
   status: MessageStatus;
+};
+
+type RunCompletion = {
+  assistantMessage: EngineMessage;
+  result?: ChatSendResult;
 };
 
 export function useEngineRuntime({
@@ -88,6 +95,8 @@ export function useEngineRuntime({
   useEffect(() => {
     const activeRun = activeRunRef.current;
     if (activeRun) {
+      if (activeRun.chatId === chatId) return;
+
       activeRun.cancelled = true;
       activeRun.abortController.abort();
       activeRunRef.current = null;
@@ -95,7 +104,7 @@ export function useEngineRuntime({
 
     setIsRunning(false);
     setMessages(historyMessages.map(historyMessageToEngineMessage));
-  }, [historyMessages, historyRevision]);
+  }, [chatId, historyMessages, historyRevision]);
 
   const replaceAssistantMessage = useCallback(
     (assistantMessageId: string, message: EngineMessage) => {
@@ -133,6 +142,7 @@ export function useEngineRuntime({
         abortController: new AbortController(),
         assistantMessageId,
         cancelled: false,
+        chatId: latestOptionsRef.current.chatId,
         startedAt,
       };
       activeRunRef.current = activeRun;
@@ -147,12 +157,14 @@ export function useEngineRuntime({
         accumulator,
         startedAt
       );
+      const baseMessages = messages;
+      let completion: RunCompletion | undefined;
 
       setIsRunning(true);
-      setMessages((current) => [...current, userMessage, assistantMessage]);
+      setMessages([...baseMessages, userMessage, assistantMessage]);
 
       try {
-        await consumeRunStream({
+        completion = await consumeRunStream({
           activeRun,
           accumulator,
           input: {
@@ -161,7 +173,6 @@ export function useEngineRuntime({
             projectId: latestOptionsRef.current.projectId,
             text: prompt,
           },
-          onChatUpdated: latestOptionsRef.current.onChatUpdated,
           replaceAssistantMessage,
         });
       } finally {
@@ -170,8 +181,19 @@ export function useEngineRuntime({
           setIsRunning(false);
         }
       }
+
+      if (!activeRun.cancelled && completion?.result) {
+        latestOptionsRef.current.onChatUpdated?.(
+          completion.result.chat,
+          engineMessagesToHistoryMessages([
+            ...baseMessages,
+            userMessage,
+            completion.assistantMessage,
+          ])
+        );
+      }
     },
-    [replaceAssistantMessage]
+    [messages, replaceAssistantMessage]
   );
 
   const store = useMemo<ExternalStoreAdapter<EngineMessage>>(
@@ -193,21 +215,24 @@ async function consumeRunStream({
   activeRun,
   accumulator,
   input,
-  onChatUpdated,
   replaceAssistantMessage,
 }: {
   activeRun: ActiveRun;
   accumulator: AssistantAccumulator;
   input: ChatSendInput;
-  onChatUpdated?: (chat: Chat) => void;
   replaceAssistantMessage: (
     assistantMessageId: string,
     message: EngineMessage
   ) => void;
-}) {
+}): Promise<RunCompletion> {
   let dirty = false;
   let pendingDeltaChars = 0;
   let lastFlushAt = performance.now();
+  let currentAssistantMessage = createAssistantMessage(
+    activeRun.assistantMessageId,
+    accumulator,
+    activeRun.startedAt
+  );
 
   const flush = async () => {
     if (!dirty) return;
@@ -221,6 +246,7 @@ async function consumeRunStream({
       activeRun.assistantMessageId,
       nextAssistantMessage
     );
+    currentAssistantMessage = nextAssistantMessage;
     dirty = false;
     pendingDeltaChars = 0;
     lastFlushAt = performance.now();
@@ -255,7 +281,6 @@ async function consumeRunStream({
       }
 
       if (event.type === 'result') {
-        onChatUpdated?.(event.result.chat);
         accumulator.result = event.result;
         if (accumulator.parts.length === 0) {
           accumulator.parts = event.result.content.map(cloneChatHistoryPart);
@@ -293,7 +318,10 @@ async function consumeRunStream({
       accumulator.status = { reason: 'cancelled', type: 'incomplete' };
       dirty = true;
       await flush();
-      return;
+      return {
+        assistantMessage: currentAssistantMessage,
+        result: accumulator.result,
+      };
     }
 
     const message = getErrorMessage(error);
@@ -308,6 +336,11 @@ async function consumeRunStream({
     dirty = true;
     await flush();
   }
+
+  return {
+    assistantMessage: currentAssistantMessage,
+    result: accumulator.result,
+  };
 }
 
 function upsertToolActionPart(
@@ -391,6 +424,45 @@ function historyMessageToEngineMessage(message: ChatHistoryMessage): EngineMessa
           }
         : undefined,
   } as EngineMessage;
+}
+
+function engineMessagesToHistoryMessages(
+  messages: EngineMessage[]
+): ChatHistoryMessage[] {
+  return messages
+    .map(engineMessageToHistoryMessage)
+    .filter((message) => message.content.length > 0);
+}
+
+function engineMessageToHistoryMessage(message: EngineMessage): ChatHistoryMessage {
+  return {
+    content: engineMessageContentToHistoryParts(message.content),
+    createdAt: message.createdAt?.toISOString(),
+    id: message.id,
+    role: message.role,
+  };
+}
+
+function engineMessageContentToHistoryParts(
+  content: ThreadMessageLike['content']
+): ChatHistoryMessagePart[] {
+  if (typeof content === 'string') {
+    return content.trim() ? [{ text: content, type: 'text' }] : [];
+  }
+
+  return content.flatMap((part) => {
+    switch (part.type) {
+      case 'reasoning':
+      case 'text':
+        return part.text.trim() ? [{ ...part }] : [];
+      case 'tool-call':
+        return isChatToolAction(part.artifact)
+          ? [cloneChatHistoryPart(chatToolActionToPart(part.artifact))]
+          : [];
+      default:
+        return [];
+    }
+  });
 }
 
 function getMessageText(message: Pick<ThreadMessageLike, 'content'>) {
