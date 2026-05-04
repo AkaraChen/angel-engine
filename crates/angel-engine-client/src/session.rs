@@ -541,6 +541,9 @@ impl ActiveTurn {
     }
 
     fn accept_elicitation(&mut self, elicitation: ElicitationSnapshot) {
+        if elicitation.phase != "open" {
+            return;
+        }
         if !self.accepts_turn(elicitation.turn_id.as_deref()) {
             return;
         }
@@ -746,4 +749,56 @@ fn check_update_fault(update: &ClientUpdate) -> ClientResult<()> {
         }
     }
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn active_turn_ignores_resolved_elicitation_updates() {
+        let mut active = ActiveTurn::new("conversation".to_string(), Some("turn".to_string()));
+        active
+            .handle_update(ClientUpdate {
+                events: vec![ClientEvent::ElicitationOpened {
+                    conversation_id: "conversation".to_string(),
+                    elicitation: elicitation("open"),
+                }],
+                ..ClientUpdate::default()
+            })
+            .unwrap();
+
+        assert!(matches!(
+            active.pop_event(),
+            Some(TurnRunEvent::Elicitation { .. })
+        ));
+        active.pending_elicitation_id = None;
+
+        active
+            .handle_update(ClientUpdate {
+                events: vec![ClientEvent::ElicitationUpdated {
+                    conversation_id: "conversation".to_string(),
+                    elicitation: elicitation("resolved:Allow"),
+                }],
+                ..ClientUpdate::default()
+            })
+            .unwrap();
+
+        assert!(active.pop_event().is_none());
+        assert!(active.pending_elicitation_id.is_none());
+    }
+
+    fn elicitation(phase: &str) -> ElicitationSnapshot {
+        ElicitationSnapshot {
+            action_id: None,
+            body: None,
+            choices: Vec::new(),
+            id: "elicitation".to_string(),
+            kind: "approval".to_string(),
+            phase: phase.to_string(),
+            questions: Vec::new(),
+            title: None,
+            turn_id: Some("turn".to_string()),
+        }
+    }
 }
