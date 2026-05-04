@@ -66,7 +66,7 @@ pub struct TurnRunResult {
     pub conversation: Option<ConversationSnapshot>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub turn: Option<TurnSnapshot>,
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    #[serde(default)]
     pub actions: Vec<ActionSnapshot>,
 }
 
@@ -821,6 +821,23 @@ mod tests {
             active.pop_event(),
             Some(TurnRunEvent::ActionUpdated { .. })
         ));
+    }
+
+    #[test]
+    fn turn_run_result_serializes_empty_actions() {
+        let value = serde_json::to_value(TurnRunResult {
+            actions: Vec::new(),
+            conversation: None,
+            model: None,
+            reasoning: None,
+            remote_thread_id: None,
+            text: "done".to_string(),
+            turn: None,
+            turn_id: None,
+        })
+        .unwrap();
+
+        assert_eq!(value.get("actions"), Some(&serde_json::json!([])));
     }
 
     fn elicitation(phase: &str) -> ElicitationSnapshot {

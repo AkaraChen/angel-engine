@@ -195,11 +195,12 @@ type ToolGroupComponent = FC<
 const ToolGroupImpl: FC<
   PropsWithChildren<{ endIndex: number; startIndex: number }>
 > = ({ children, endIndex, startIndex }) => {
-  const parts = useAuiState((state) =>
-    state.message.parts.slice(startIndex, endIndex + 1)
+  const active = useAuiState((state) =>
+    hasActiveToolGroupPart(state.message.parts, startIndex, endIndex)
   );
-  const active = parts.some((part) => isActiveToolPart(part));
-  const label = formatToolGroupLabel(parts);
+  const label = useAuiState((state) =>
+    formatToolGroupLabel(state.message.parts, startIndex, endIndex)
+  );
   const [manualOpen, setManualOpen] = useState(false);
 
   return (
@@ -210,9 +211,20 @@ const ToolGroupImpl: FC<
   );
 };
 
-function formatToolGroupLabel(parts: PartState[]) {
-  const approvalCount = parts.filter((part) => isElicitationToolPart(part)).length;
-  const toolCount = Math.max(0, parts.length - approvalCount);
+function formatToolGroupLabel(
+  parts: readonly PartState[],
+  startIndex: number,
+  endIndex: number
+) {
+  let approvalCount = 0;
+  let partCount = 0;
+
+  forEachToolGroupPart(parts, startIndex, endIndex, (part) => {
+    partCount += 1;
+    if (isElicitationToolPart(part)) approvalCount += 1;
+  });
+
+  const toolCount = Math.max(0, partCount - approvalCount);
   const labels = [
     toolCount > 0
       ? `${toolCount} tool ${toolCount === 1 ? 'call' : 'calls'}`
@@ -223,6 +235,32 @@ function formatToolGroupLabel(parts: PartState[]) {
   ].filter(Boolean);
 
   return labels.join(' · ') || '0 tool calls';
+}
+
+function hasActiveToolGroupPart(
+  parts: readonly PartState[],
+  startIndex: number,
+  endIndex: number
+) {
+  let active = false;
+  forEachToolGroupPart(parts, startIndex, endIndex, (part) => {
+    if (isActiveToolPart(part)) active = true;
+  });
+  return active;
+}
+
+function forEachToolGroupPart(
+  parts: readonly PartState[],
+  startIndex: number,
+  endIndex: number,
+  visit: (part: PartState) => void
+) {
+  const start = Math.max(0, startIndex);
+  const end = Math.min(endIndex, parts.length - 1);
+  for (let index = start; index <= end; index += 1) {
+    const part = parts[index];
+    if (part) visit(part);
+  }
 }
 
 function isActiveToolPart(part: PartState) {
