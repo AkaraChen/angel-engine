@@ -2,9 +2,11 @@
 
 IDE-facing client API over `angel-engine`.
 
-The public shape is intentionally object-oriented:
+The public shape is intentionally object-oriented. Use `AngelClient` when Rust
+should own the runtime process; use `Client` only when the host owns JSON-RPC IO.
 
 ```text
+ClientOptionsBuilder -> AngelClient -> send_thread_event(ThreadEvent)
 ClientOptionsBuilder -> ClientBuilder -> Client -> Thread -> send_event(ThreadEvent)
 ```
 
@@ -49,6 +51,12 @@ let mut thread = client.thread(thread_id);
 let result = thread.send_event(ThreadEvent::text("Explain this workspace"))?;
 ```
 
+Thread and process clients share the same `ThreadEvent` dispatch path. A
+conversation snapshot also exposes `conversation.reasoning`, which gives the
+current reasoning effort, available efforts, source (`configOption`,
+`codexDefaults`, `modelVariant`, or `unsupported`), and whether the runtime can
+set it.
+
 For opencode ACP:
 
 ```rust
@@ -87,7 +95,7 @@ let open_questions = thread.open_elicitations();
 
 ## Process Client
 
-Use `AngelClient` only when Rust should spawn and own the runtime process:
+Use `AngelClient` when Rust should spawn and own the runtime process:
 
 ```rust
 use angel_engine_client::{AngelClient, ClientOptions};

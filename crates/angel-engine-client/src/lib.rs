@@ -3,6 +3,7 @@
 //! `angel-engine` remains the protocol/state-machine crate. This crate exposes
 //! the ergonomic layer expected by IDE integrations:
 //!
+//! `ClientOptionsBuilder -> AngelClient -> ThreadEvent`
 //! `ClientOptionsBuilder -> ClientBuilder -> Client -> Thread -> ThreadEvent`.
 
 mod adapter;
@@ -34,8 +35,8 @@ pub use snapshot::{
     ActionOutputSnapshot, ActionSnapshot, AvailableCommandSnapshot, ClientSnapshot, ContentChunk,
     ContextSnapshot, ConversationSnapshot, ElicitationSnapshot, ErrorSnapshot,
     HistoryReplaySnapshot, HistorySnapshot, PlanEntrySnapshot, QuestionConstraintsSnapshot,
-    QuestionOptionSnapshot, QuestionSchemaSnapshot, QuestionSnapshot, RuntimeSnapshot,
-    SessionConfigOptionSnapshot, SessionConfigValueSnapshot, SessionModeSnapshot,
+    QuestionOptionSnapshot, QuestionSchemaSnapshot, QuestionSnapshot, ReasoningOptionsSnapshot,
+    RuntimeSnapshot, SessionConfigOptionSnapshot, SessionConfigValueSnapshot, SessionModeSnapshot,
     SessionModeStateSnapshot, SessionModelSnapshot, SessionModelStateSnapshot,
     SessionUsageCostSnapshot, SessionUsageSnapshot, TurnSnapshot,
 };

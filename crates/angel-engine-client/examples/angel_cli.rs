@@ -3,16 +3,15 @@ use std::error::Error;
 use std::time::Duration;
 
 use angel_engine_client::{
-    AvailableCommandSnapshot, Client, ClientAnswer, ClientBuilder, ClientEvent, ClientLog,
-    ClientOptions, ClientStreamDelta, ClientUpdate, ConversationSnapshot, ElicitationResponse,
-    ElicitationSnapshot, QuestionSnapshot, RuntimeSnapshot, SessionConfigOptionSnapshot,
-    StartConversationRequest, ThreadEvent,
+    AngelClient, AvailableCommandSnapshot, ClientAnswer, ClientCommandResult, ClientEvent,
+    ClientLog, ClientOptions, ClientStreamDelta, ClientUpdate, ConversationSnapshot,
+    ElicitationResponse, ElicitationSnapshot, QuestionSnapshot, ReasoningOptionsSnapshot,
+    SessionConfigOptionSnapshot, StartConversationRequest, ThreadEvent,
 };
 use test_cli::{
-    AppLine, ApprovalChoice, CliAnswer, CliCommandInfo, CliQuestion, CliQuestionOption,
-    InlinePrinter, InlineStreamKind, RuntimeProcess, TaggedLog, TaggedLogKind, is_quit_command,
-    print_available_commands, print_command_summary, prompt_answers, prompt_approval,
-    read_prompt_line,
+    ApprovalChoice, CliAnswer, CliCommandInfo, CliQuestion, CliQuestionOption, InlinePrinter,
+    InlineStreamKind, TaggedLog, TaggedLogKind, is_quit_command, print_available_commands,
+    print_command_summary, prompt_answers, prompt_approval, read_prompt_line,
 };
 
 fn main() -> Result<(), Box<dyn Error>> {
@@ -23,45 +22,31 @@ fn main() -> Result<(), Box<dyn Error>> {
 }
 
 struct MultiRuntimeCli {
-    process: RuntimeProcess,
     printer: InlinePrinter,
-    client: Client,
+    client: AngelClient,
     runtime: RuntimeKind,
     conversation_id: Option<String>,
-    auth_sent: bool,
 }
 
 impl MultiRuntimeCli {
     fn spawn(runtime: RuntimeKind) -> Result<Self, Box<dyn Error>> {
-        let options = runtime.options();
-        let process = RuntimeProcess::spawn(&options.command, &options.args)?;
-        let client = ClientBuilder::new(options).build();
         Ok(Self {
-            process,
             printer: Default::default(),
-            client,
+            client: AngelClient::spawn(runtime.options())?,
             runtime,
             conversation_id: None,
-            auth_sent: false,
         })
     }
 
     fn initialize_and_start(&mut self) -> Result<(), Box<dyn Error>> {
-        let init = self.client.initialize()?;
-        self.handle_update(init.update)?;
-        self.wait_for_runtime()?;
-
-        let start = self.client.start_thread(
-            StartConversationRequest::new().cwd(env::current_dir()?.display().to_string()),
-        )?;
-        let conversation_id = start
-            .conversation_id
-            .clone()
-            .ok_or("start_thread did not return a conversation id")?;
-        self.handle_update(start.update)?;
-        self.wait_for_thread_idle(&conversation_id)?;
-        self.conversation_id = Some(conversation_id);
-        self.drain_startup_notifications()?;
+        let request =
+            StartConversationRequest::new().cwd(env::current_dir()?.display().to_string());
+        let result = self.client.initialize_and_start(Some(request))?;
+        self.handle_update(result.update)?;
+        self.conversation_id = result.conversation_id;
+        if self.conversation_id.is_none() {
+            return Err("start_thread did not return a conversation id".into());
+        }
         self.print_banner();
         Ok(())
     }
@@ -111,7 +96,7 @@ impl MultiRuntimeCli {
             if self.resolve_open_elicitation()? {
                 continue;
             }
-            self.process_next_line(None)?;
+            self.process_next_update(None)?;
         }
         println!();
         Ok(())
@@ -120,12 +105,9 @@ impl MultiRuntimeCli {
     fn send_thread_event(
         &mut self,
         event: ThreadEvent,
-    ) -> Result<angel_engine_client::ClientCommandResult, Box<dyn Error>> {
+    ) -> Result<ClientCommandResult, Box<dyn Error>> {
         let conversation_id = self.conversation_id()?;
-        let result = {
-            let mut thread = self.client.thread(conversation_id);
-            thread.send_event(event)?
-        };
+        let result = self.client.send_thread_event(conversation_id, event)?;
         self.handle_update(result.update.clone())?;
         Ok(result)
     }
@@ -162,13 +144,18 @@ impl MultiRuntimeCli {
             "/effort" | "/reasoning" => {
                 if value.is_empty() {
                     self.print_effort_state()?;
-                } else if self.runtime.is_codex() && !is_codex_reasoning_effort(value) {
-                    println!("[warn] use one of: none, minimal, low, medium, high, xhigh");
                 } else {
-                    let effort = if self.runtime.is_codex() {
-                        value.to_ascii_lowercase()
-                    } else {
-                        value.to_string()
+                    let reasoning = self.current_conversation()?.reasoning;
+                    let Some(effort) = reasoning.normalize_effort(value) else {
+                        if reasoning.available_efforts.is_empty() {
+                            println!("[warn] reasoning effort is unavailable for this runtime");
+                        } else {
+                            println!(
+                                "[warn] use one of: {}",
+                                reasoning.available_efforts.join(", ")
+                            );
+                        }
+                        return Ok(true);
                     };
                     self.send_thread_event(ThreadEvent::set_reasoning_effort(effort))?;
                     self.pump_until_no_activity(Duration::from_millis(250))?;
@@ -180,103 +167,17 @@ impl MultiRuntimeCli {
         Ok(true)
     }
 
-    fn wait_for_runtime(&mut self) -> Result<(), Box<dyn Error>> {
-        loop {
-            match self.client.snapshot().runtime {
-                RuntimeSnapshot::Available { .. } => return Ok(()),
-                RuntimeSnapshot::AwaitingAuth { methods }
-                    if !self.auth_sent && self.runtime.auto_authenticate() =>
-                {
-                    let method = methods
-                        .first()
-                        .ok_or("runtime advertised no auth methods")?;
-                    println!("[warn] runtime requires authentication: {}", method.label);
-                    self.auth_sent = true;
-                    let auth = self.client.authenticate(method.id.clone())?;
-                    self.handle_update(auth.update)?;
-                }
-                RuntimeSnapshot::AwaitingAuth { .. }
-                    if self.auth_sent && self.runtime.auto_authenticate() =>
-                {
-                    self.process_next_line(None)?;
-                }
-                RuntimeSnapshot::Faulted { code, message, .. } => {
-                    return Err(format!("runtime faulted ({code}): {message}").into());
-                }
-                RuntimeSnapshot::AwaitingAuth { methods } => {
-                    println!(
-                        "[auth] available methods: {}",
-                        methods
-                            .iter()
-                            .map(|method| method.label.as_str())
-                            .collect::<Vec<_>>()
-                            .join(", ")
-                    );
-                    return Err("runtime requires auth and auto auth is disabled".into());
-                }
-                _ => {
-                    self.process_next_line(None)?;
-                }
-            }
-        }
-    }
-
-    fn wait_for_thread_idle(&mut self, conversation_id: &str) -> Result<(), Box<dyn Error>> {
-        loop {
-            let idle = self
-                .client
-                .thread(conversation_id)
-                .state()
-                .map(|state| state.lifecycle == "idle")
-                .unwrap_or(false);
-            if idle {
-                return Ok(());
-            }
-            self.process_next_line(None)?;
-        }
-    }
-
-    fn drain_startup_notifications(&mut self) -> Result<(), Box<dyn Error>> {
-        let mut timeout = Duration::from_millis(500);
-        while self.process_next_line(Some(timeout))? {
-            timeout = Duration::from_millis(50);
-        }
-        Ok(())
+    fn process_next_update(&mut self, timeout: Option<Duration>) -> Result<bool, Box<dyn Error>> {
+        let Some(update) = self.client.next_update(timeout)? else {
+            return Ok(false);
+        };
+        self.handle_update(update)?;
+        Ok(true)
     }
 
     fn pump_until_no_activity(&mut self, timeout: Duration) -> Result<(), Box<dyn Error>> {
-        while self.process_next_line(Some(timeout))? {}
+        while self.process_next_update(Some(timeout))? {}
         Ok(())
-    }
-
-    fn process_next_line(&mut self, timeout: Option<Duration>) -> Result<bool, Box<dyn Error>> {
-        let line = match timeout {
-            Some(timeout) => match self.process.recv_timeout(timeout)? {
-                Some(line) => line,
-                None => return Ok(false),
-            },
-            None => self.process.recv()?,
-        };
-
-        match line {
-            AppLine::Stdout(line) => {
-                let value = match serde_json::from_str(&line) {
-                    Ok(value) => value,
-                    Err(_) => {
-                        self.printer
-                            .print_process_line(self.runtime.label(), &line)?;
-                        return Ok(true);
-                    }
-                };
-                let update = self.client.receive_json_value(value)?;
-                self.handle_update(update)?;
-            }
-            AppLine::Stderr(line) => {
-                self.printer
-                    .print_process_line(self.runtime.label(), &line)?;
-            }
-        }
-        Ok(true)
     }
 
     fn handle_update(&mut self, update: ClientUpdate) -> Result<(), Box<dyn Error>> {
@@ -297,10 +198,6 @@ impl MultiRuntimeCli {
             }
             print_event(event);
         }
-        for message in &update.outgoing {
-            self.printer.before_tagged_output()?;
-            self.process.write_line(&message.line)?;
-        }
         Ok(())
     }
 
@@ -312,10 +209,8 @@ impl MultiRuntimeCli {
             ClientStreamDelta::ActionOutputDelta { content, .. } => self
                 .printer
                 .print_inline_text(InlineStreamKind::Assistant, &content.text)?,
-            ClientStreamDelta::ReasoningDelta { content, .. } => self
-                .printer
-                .print_inline_text(InlineStreamKind::Reasoning, &content.text)?,
-            ClientStreamDelta::PlanDelta { content, .. } => self
+            ClientStreamDelta::ReasoningDelta { content, .. }
+            | ClientStreamDelta::PlanDelta { content, .. } => self
                 .printer
                 .print_inline_text(InlineStreamKind::Reasoning, &content.text)?,
         }
@@ -326,8 +221,7 @@ impl MultiRuntimeCli {
         let conversation_id = self.conversation_id()?;
         let Some(elicitation) = self
             .client
-            .thread(&conversation_id)
-            .open_elicitations()
+            .open_elicitations(&conversation_id)
             .first()
             .cloned()
         else {
@@ -338,10 +232,10 @@ impl MultiRuntimeCli {
         } else {
             self.read_approval_response(&elicitation)?
         };
-        let result = {
-            let mut thread = self.client.thread(conversation_id);
-            thread.send_event(ThreadEvent::resolve(elicitation.id, response))?
-        };
+        let result = self.client.send_thread_event(
+            conversation_id,
+            ThreadEvent::resolve(elicitation.id, response),
+        )?;
         self.handle_update(result.update)?;
         Ok(true)
     }
@@ -350,17 +244,18 @@ impl MultiRuntimeCli {
         &self,
         elicitation: &ElicitationSnapshot,
     ) -> Result<ElicitationResponse, Box<dyn Error>> {
-        let response = match prompt_approval(
-            elicitation.title.as_deref(),
-            elicitation.body.as_deref(),
-            &elicitation.choices,
-        )? {
-            ApprovalChoice::Allow => ElicitationResponse::Allow,
-            ApprovalChoice::AllowForSession => ElicitationResponse::AllowForSession,
-            ApprovalChoice::Deny => ElicitationResponse::Deny,
-            ApprovalChoice::Cancel => ElicitationResponse::Cancel,
-        };
-        Ok(response)
+        Ok(
+            match prompt_approval(
+                elicitation.title.as_deref(),
+                elicitation.body.as_deref(),
+                &elicitation.choices,
+            )? {
+                ApprovalChoice::Allow => ElicitationResponse::Allow,
+                ApprovalChoice::AllowForSession => ElicitationResponse::AllowForSession,
+                ApprovalChoice::Deny => ElicitationResponse::Deny,
+                ApprovalChoice::Cancel => ElicitationResponse::Cancel,
+            },
+        )
     }
 
     fn read_user_input_response(
@@ -394,35 +289,33 @@ impl MultiRuntimeCli {
     }
 
     fn print_available_commands(&self) {
-        if let Some(commands) = self.current_commands() {
-            print_command_summary(&commands);
-        }
+        let commands = self.current_commands();
+        print_command_summary(&commands);
     }
 
     fn print_available_command_list(&self) {
-        if let Some(commands) = self.current_commands() {
-            print_available_commands(&commands);
-        }
+        let commands = self.current_commands();
+        print_available_commands(&commands);
     }
 
-    fn current_conversation(&self) -> Option<ConversationSnapshot> {
-        let conversation_id = self.conversation_id.as_ref()?;
+    fn current_conversation(&self) -> Result<ConversationSnapshot, Box<dyn Error>> {
+        let conversation_id = self.conversation_id()?;
         self.client
             .snapshot()
             .conversations
             .into_iter()
-            .find(|conversation| &conversation.id == conversation_id)
+            .find(|conversation| conversation.id == conversation_id)
+            .ok_or_else(|| "selected conversation missing".into())
     }
 
-    fn current_commands(&self) -> Option<Vec<CliCommandInfo>> {
-        let conversation = self.current_conversation()?;
-        Some(cli_commands(&conversation.available_commands))
+    fn current_commands(&self) -> Vec<CliCommandInfo> {
+        self.current_conversation()
+            .map(|conversation| cli_commands(&conversation.available_commands))
+            .unwrap_or_default()
     }
 
     fn print_model_state(&self) -> Result<(), Box<dyn Error>> {
-        let conversation = self
-            .current_conversation()
-            .ok_or("selected conversation missing")?;
+        let conversation = self.current_conversation()?;
         let current = conversation
             .context
             .model
@@ -449,9 +342,7 @@ impl MultiRuntimeCli {
     }
 
     fn print_mode_state(&self) -> Result<(), Box<dyn Error>> {
-        let conversation = self
-            .current_conversation()
-            .ok_or("selected conversation missing")?;
+        let conversation = self.current_conversation()?;
         let current = conversation
             .context
             .mode
@@ -480,30 +371,19 @@ impl MultiRuntimeCli {
     }
 
     fn print_effort_state(&self) -> Result<(), Box<dyn Error>> {
-        let conversation = self
-            .current_conversation()
-            .ok_or("selected conversation missing")?;
-        let current = conversation
-            .context
-            .reasoning_effort
-            .as_deref()
-            .unwrap_or("(default)");
+        let conversation = self.current_conversation()?;
+        let reasoning = conversation.reasoning;
+        let current = reasoning.current_effort.as_deref().unwrap_or("(default)");
         println!("[effort] current: {current}");
-        if let Some(option) = config_option(
-            &conversation,
-            "thought_level",
-            &[
-                "thought_level",
-                "reasoning",
-                "reasoning_effort",
-                "effort",
-                "thinking",
-                "thought",
-            ],
-        ) {
-            print_config_values("[effort]", option);
-        } else if self.runtime.is_codex() {
-            println!("[effort] available: none, minimal, low, medium, high, xhigh");
+        if !reasoning.available_efforts.is_empty() {
+            let values = reasoning
+                .available_efforts
+                .iter()
+                .map(String::as_str)
+                .collect::<Vec<_>>();
+            print_values("[effort]", &values);
+        } else if !reasoning.can_set {
+            println!("[effort] unavailable for this runtime");
         }
         Ok(())
     }
@@ -513,7 +393,8 @@ impl MultiRuntimeCli {
             && matches!(value, "plan" | "default")
             && self
                 .current_conversation()
-                .and_then(|conversation| conversation.context.model)
+                .map(|conversation| conversation.context.model)
+                .unwrap_or_default()
                 .is_none()
     }
 
@@ -523,12 +404,39 @@ impl MultiRuntimeCli {
             .ok_or_else(|| "conversation has not been started".into())
     }
 
-    fn turn_is_terminal(&mut self, conversation_id: &str, turn_id: &str) -> bool {
+    fn turn_is_terminal(&self, conversation_id: &str, turn_id: &str) -> bool {
         self.client
-            .thread(conversation_id)
-            .turn(turn_id)
+            .snapshot()
+            .conversations
+            .into_iter()
+            .find(|conversation| conversation.id == conversation_id)
+            .and_then(|conversation| {
+                conversation
+                    .turns
+                    .into_iter()
+                    .find(|turn| turn.id == turn_id)
+            })
             .map(|turn| turn.phase.contains("terminal"))
             .unwrap_or(false)
+    }
+}
+
+trait ReasoningOptionsExt {
+    fn normalize_effort(&self, value: &str) -> Option<String>;
+}
+
+impl ReasoningOptionsExt for ReasoningOptionsSnapshot {
+    fn normalize_effort(&self, value: &str) -> Option<String> {
+        if !self.can_set {
+            return None;
+        }
+        if self.available_efforts.is_empty() {
+            return Some(value.to_string());
+        }
+        self.available_efforts
+            .iter()
+            .find(|effort| effort.eq_ignore_ascii_case(value))
+            .cloned()
     }
 }
 
@@ -575,14 +483,6 @@ impl RuntimeKind {
         }
     }
 
-    fn label(self) -> &'static str {
-        match self {
-            Self::Kimi => "kimi",
-            Self::Codex => "codex",
-            Self::OpenCode => "opencode",
-        }
-    }
-
     fn banner(self) -> &'static str {
         match self {
             Self::Kimi => "angel-client kimi cli",
@@ -605,10 +505,6 @@ impl RuntimeKind {
 
     fn is_codex(self) -> bool {
         matches!(self, Self::Codex)
-    }
-
-    fn auto_authenticate(self) -> bool {
-        matches!(self, Self::Kimi)
     }
 }
 
@@ -684,13 +580,6 @@ fn print_values(prefix: &str, values: &[&str]) {
     if !values.is_empty() {
         println!("{prefix} available: {}", values.join(", "));
     }
-}
-
-fn is_codex_reasoning_effort(value: &str) -> bool {
-    matches!(
-        value.to_ascii_lowercase().as_str(),
-        "none" | "minimal" | "low" | "medium" | "high" | "xhigh"
-    )
 }
 
 fn cli_question(question: &QuestionSnapshot) -> CliQuestion {
