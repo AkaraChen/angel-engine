@@ -26,6 +26,7 @@ export function AppRuntimeProvider({
   historyRevision,
   model,
   mode,
+  onChatCreated,
   onChatUpdated,
   projectId,
   projectPath,
@@ -38,6 +39,7 @@ export function AppRuntimeProvider({
   historyRevision: number;
   model?: string;
   mode?: string;
+  onChatCreated?: (chat: Chat) => void;
   onChatUpdated: (
     chat: Chat,
     messages?: ChatHistoryMessage[],
@@ -67,6 +69,7 @@ export function AppRuntimeProvider({
     historyRevision,
     model,
     mode,
+    onChatCreated,
     onChatUpdated,
     projectId,
     projectPath,

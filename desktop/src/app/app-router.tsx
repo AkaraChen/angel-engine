@@ -19,6 +19,7 @@ export function AppRouter() {
           component={ProjectChatRoutePage}
           path="/project/:projectId/:chatId"
         />
+        <Route component={ProjectCreateRoutePage} path="/project/:projectId" />
         <Route>
           <Redirect replace to="/" />
         </Route>
@@ -33,6 +34,12 @@ function ChatRoutePage({
   return <WorkspacePage route={chatRoute(params.chatId)} />;
 }
 
+function ProjectCreateRoutePage({
+  params,
+}: RouteComponentProps<{ projectId: string }>) {
+  return <WorkspacePage route={projectCreateRoute(params.projectId)} />;
+}
+
 function ProjectChatRoutePage({
   params,
 }: RouteComponentProps<{ chatId: string; projectId: string }>) {
@@ -45,6 +52,10 @@ function ProjectChatRoutePage({
 
 function chatRoute(chatId: string): WorkspaceRoute {
   return { chatId, type: 'chat' };
+}
+
+function projectCreateRoute(projectId: string): WorkspaceRoute {
+  return { projectId, type: 'projectCreate' };
 }
 
 function projectChatRoute(projectId: string, chatId: string): WorkspaceRoute {

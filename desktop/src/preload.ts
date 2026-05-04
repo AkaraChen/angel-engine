@@ -2,9 +2,11 @@ import { contextBridge, ipcRenderer, type IpcRendererEvent } from 'electron';
 
 import {
   CHAT_STREAM_CANCEL_CHANNEL,
+  CHAT_STREAM_ELICITATION_RESOLVE_CHANNEL,
   CHAT_STREAM_START_CHANNEL,
   chatStreamEventChannel,
   type ChatStreamApi,
+  type ChatStreamElicitationResolveInput,
   type ChatSendInput,
   type ChatStreamEvent,
   type ChatStreamStartInput,
@@ -41,10 +43,18 @@ const chatStreamApi = {
         onEvent({ type: 'done' });
       });
 
-    return () => {
-      disposed = true;
-      ipcRenderer.removeListener(channel, listener);
-      void ipcRenderer.invoke(CHAT_STREAM_CANCEL_CHANNEL, streamId);
+    return {
+      cancel() {
+        disposed = true;
+        ipcRenderer.removeListener(channel, listener);
+        void ipcRenderer.invoke(CHAT_STREAM_CANCEL_CHANNEL, streamId);
+      },
+      async resolveElicitation(input) {
+        await ipcRenderer.invoke(CHAT_STREAM_ELICITATION_RESOLVE_CHANNEL, {
+          ...input,
+          streamId,
+        } satisfies ChatStreamElicitationResolveInput);
+      },
     };
   },
 } satisfies ChatStreamApi;

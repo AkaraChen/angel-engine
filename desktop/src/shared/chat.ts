@@ -88,6 +88,47 @@ export type ChatToolAction = {
   turnId?: string;
 };
 
+export type ChatElicitationQuestionOption = {
+  description?: string;
+  label: string;
+};
+
+export type ChatElicitationQuestion = {
+  header?: string;
+  id: string;
+  isOther?: boolean;
+  isSecret?: boolean;
+  options?: ChatElicitationQuestionOption[];
+  question?: string;
+};
+
+export type ChatElicitation = {
+  actionId?: string | null;
+  body?: string | null;
+  choices?: string[];
+  id: string;
+  kind: string;
+  phase: string;
+  questions?: ChatElicitationQuestion[];
+  title?: string | null;
+  turnId?: string | null;
+};
+
+export type ChatElicitationAnswer = {
+  id: string;
+  value: string;
+};
+
+export type ChatElicitationResponse =
+  | { type: 'allow' }
+  | { type: 'allowForSession' }
+  | { type: 'deny' }
+  | { type: 'cancel' }
+  | { answers: ChatElicitationAnswer[]; type: 'answers' }
+  | { success: boolean; type: 'dynamicToolResult' }
+  | { type: 'externalComplete' }
+  | { type: 'raw'; value: string };
+
 export type ChatToolCallPart = {
   args: ChatJsonObject;
   argsText: string;
@@ -243,6 +284,10 @@ export type ChatStreamEvent =
       type: 'tool';
     }
   | {
+      chat: Chat;
+      type: 'chat';
+    }
+  | {
       result: ChatSendResult;
       type: 'result';
     }
@@ -259,14 +304,29 @@ export type ChatStreamStartInput = {
   streamId: string;
 };
 
+export type ChatStreamElicitationResolveInput = {
+  elicitationId: string;
+  response: ChatElicitationResponse;
+  streamId: string;
+};
+
+export type ChatStreamController = {
+  cancel: () => void;
+  resolveElicitation: (
+    input: Omit<ChatStreamElicitationResolveInput, 'streamId'>
+  ) => Promise<void>;
+};
+
 export type ChatStreamApi = {
   send(
     input: ChatSendInput,
     onEvent: (streamEvent: ChatStreamEvent) => void
-  ): () => void;
+  ): ChatStreamController;
 };
 
 export const CHAT_STREAM_CANCEL_CHANNEL = 'chat:stream:cancel';
+export const CHAT_STREAM_ELICITATION_RESOLVE_CHANNEL =
+  'chat:stream:elicitation:resolve';
 export const CHAT_STREAM_START_CHANNEL = 'chat:stream:start';
 
 export function chatStreamEventChannel(streamId: string) {

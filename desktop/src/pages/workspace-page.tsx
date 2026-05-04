@@ -21,7 +21,6 @@ import {
   chatListQueryOptions,
   chatLoadQueryOptions,
   chatRuntimeConfigQueryOptions,
-  createProjectChatMutationOptions,
   deleteAllChatsMutationOptions,
 } from '@/requests/chats';
 import { queryKeys } from '@/requests/keys';
@@ -51,6 +50,7 @@ import type { Project } from '@/shared/projects';
 export type WorkspaceRoute =
   | { type: 'create' }
   | { chatId: string; type: 'chat' }
+  | { projectId: string; type: 'projectCreate' }
   | { chatId: string; projectId: string; type: 'projectChat' }
   | { type: 'settings' };
 
@@ -65,9 +65,9 @@ export function WorkspacePage({ route }: { route: WorkspaceRoute }) {
   const [location, navigate] = useLocation();
   const isMacOS = window.desktopEnvironment.platform === 'darwin';
   const [agentSettings, updateAgentSettings] = useAgentSettings();
-  const [draftRuntime, setDraftRuntime] = useState<AgentRuntime>(
-    agentSettings.defaultRuntime
-  );
+  const [draftRuntimes, setDraftRuntimes] = useState<
+    Partial<Record<string, AgentRuntime>>
+  >({});
 
   const selectedChatId =
     route.type === 'chat' || route.type === 'projectChat'
@@ -90,10 +90,16 @@ export function WorkspacePage({ route }: { route: WorkspaceRoute }) {
   const selectedChat =
     chatLoadQuery.data?.chat ??
     chats.find((chat) => chat.id === selectedChatId);
-  const selectedProjectId =
-    route.type === 'projectChat'
+  const routeProjectId =
+    route.type === 'projectChat' || route.type === 'projectCreate'
       ? route.projectId
-      : selectedChat?.projectId ?? undefined;
+      : undefined;
+  const selectedProjectId =
+    routeProjectId ?? selectedChat?.projectId ?? undefined;
+  const selectedProject = selectedProjectId
+    ? projects.find((project) => project.id === selectedProjectId)
+    : undefined;
+  const selectedProjectPath = selectedChat?.cwd ?? selectedProject?.path;
   const historyMessages = selectedChatId
     ? chatLoadQuery.data?.messages ?? EMPTY_MESSAGES
     : EMPTY_MESSAGES;
@@ -103,15 +109,22 @@ export function WorkspacePage({ route }: { route: WorkspaceRoute }) {
   const chatRuntime = selectedChat
     ? normalizeAgentRuntime(selectedChat.runtime)
     : undefined;
+  const draftRuntimeKey = draftRuntimeKeyFromRoute(route);
+  const draftRuntime = draftRuntimeKey
+    ? draftRuntimes[draftRuntimeKey] ?? agentSettings.defaultRuntime
+    : agentSettings.defaultRuntime;
   const activeRuntime = chatRuntime ?? draftRuntime;
   const runtimePageKey = selectedChatId
     ? `chat:${selectedChatId}:${chatRuntime ?? 'pending'}`
-    : `create:${draftRuntime}`;
-  const shouldInspectRuntimeConfig = route.type === 'create';
+    : route.type === 'projectCreate'
+      ? `project-create:${route.projectId}`
+    : 'create';
+  const shouldInspectRuntimeConfig =
+    route.type === 'create' || route.type === 'projectCreate';
   const runtimeConfigQuery = useQuery({
     ...chatRuntimeConfigQueryOptions({
       api,
-      cwd: selectedChat?.cwd ?? undefined,
+      cwd: selectedProjectPath ?? undefined,
       enabled: shouldInspectRuntimeConfig,
       runtime: activeRuntime,
     }),
@@ -167,9 +180,15 @@ export function WorkspacePage({ route }: { route: WorkspaceRoute }) {
       ),
     [chats, projectIds]
   );
+  const setDraftAgentRuntime = useCallback((runtime: AgentRuntime) => {
+    if (!draftRuntimeKey) return;
+    setDraftRuntimes((current) => ({
+      ...current,
+      [draftRuntimeKey]: runtime,
+    }));
+  }, [draftRuntimeKey]);
   const setDefaultRuntime = useCallback(
     (runtime: AgentRuntime) => {
-      setDraftRuntime(runtime);
       updateAgentSettings((current) => ({
         ...current,
         defaultRuntime: runtime,
@@ -228,7 +247,7 @@ export function WorkspacePage({ route }: { route: WorkspaceRoute }) {
       setMode: (mode: string) => setAgentMode(activeRuntime, mode),
       setReasoningEffort: (effort: string) =>
         setAgentReasoningEffort(activeRuntime, effort),
-      setRuntime: setDefaultRuntime,
+      setRuntime: setDraftAgentRuntime,
     }),
     [
       activeMode,
@@ -243,7 +262,7 @@ export function WorkspacePage({ route }: { route: WorkspaceRoute }) {
       setAgentModel,
       setAgentMode,
       setAgentReasoningEffort,
-      setDefaultRuntime,
+      setDraftAgentRuntime,
     ]
   );
 
@@ -297,13 +316,6 @@ export function WorkspacePage({ route }: { route: WorkspaceRoute }) {
 
   const createProjectMutation = useMutation({
     ...createProjectMutationOptions({ api, queryClient }),
-  });
-  const createProjectChatMutation = useMutation({
-    ...createProjectChatMutationOptions({
-      api,
-      queryClient,
-      runtime: draftRuntime,
-    }),
   });
   const deleteAllChatsMutation = useMutation({
     ...deleteAllChatsMutationOptions({ api, queryClient }),
@@ -390,20 +402,10 @@ export function WorkspacePage({ route }: { route: WorkspaceRoute }) {
   );
 
   const createChatForProject = useCallback(
-    async (project: Project) => {
-      try {
-        const chat = await createProjectChatMutation.mutateAsync(project);
-        setChatInCache(chat, EMPTY_MESSAGES);
-        navigateToChat(chat);
-      } catch (error) {
-        toast({
-          description: getErrorMessage(error),
-          title: 'Could not create chat',
-          variant: 'destructive',
-        });
-      }
+    (project: Project) => {
+      navigate(`/project/${encodeURIComponent(project.id)}`);
     },
-    [createProjectChatMutation, navigateToChat, setChatInCache, toast]
+    [navigate]
   );
 
   const createChatForSelection = useCallback(() => {
@@ -496,9 +498,10 @@ export function WorkspacePage({ route }: { route: WorkspaceRoute }) {
             key={runtimePageKey}
             model={activeModel}
             mode={activeMode}
+            onChatCreated={setChatInCache}
             onChatUpdated={upsertChat}
-            projectId={selectedChat?.projectId ?? null}
-            projectPath={selectedChat?.cwd ?? undefined}
+            projectId={selectedChat?.projectId ?? selectedProject?.id ?? null}
+            projectPath={selectedProjectPath ?? undefined}
             reasoningEffort={activeReasoningEffort}
             runtime={activeRuntime}
           >
@@ -582,6 +585,9 @@ function routePath(route: WorkspaceRoute) {
   if (route.type === 'projectChat') {
     return `/project/${encodeURIComponent(route.projectId)}/${encodeURIComponent(route.chatId)}`;
   }
+  if (route.type === 'projectCreate') {
+    return `/project/${encodeURIComponent(route.projectId)}`;
+  }
   if (route.type === 'chat') {
     return `/chat/${encodeURIComponent(route.chatId)}`;
   }
@@ -589,4 +595,10 @@ function routePath(route: WorkspaceRoute) {
     return '/settings';
   }
   return '/';
+}
+
+function draftRuntimeKeyFromRoute(route: WorkspaceRoute) {
+  if (route.type === 'create') return 'create';
+  if (route.type === 'projectCreate') return `project:${route.projectId}`;
+  return undefined;
 }

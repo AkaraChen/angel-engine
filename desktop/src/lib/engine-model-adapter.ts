@@ -13,7 +13,9 @@ import type {
   Chat,
   ChatHistoryMessage,
   ChatHistoryMessagePart,
+  ChatElicitationResponse,
   ChatRuntimeConfig,
+  ChatStreamController,
   ChatSendInput,
   ChatSendResult,
   ChatToolAction,
@@ -41,6 +43,7 @@ export type EngineRuntimeOptions = {
   historyRevision: number;
   model?: string;
   mode?: string;
+  onChatCreated?: (chat: Chat) => void;
   onChatUpdated?: (
     chat: Chat,
     messages?: ChatHistoryMessage[],
@@ -58,6 +61,7 @@ type ActiveRun = {
   cancelled: boolean;
   chatId?: string;
   startedAt: number;
+  streamController?: ChatStreamController;
 };
 
 type AssistantAccumulator = {
@@ -80,6 +84,7 @@ export function useEngineRuntime({
   historyRevision,
   model,
   mode,
+  onChatCreated,
   onChatUpdated,
   projectId,
   projectPath,
@@ -95,6 +100,7 @@ export function useEngineRuntime({
     chatId,
     model,
     mode,
+    onChatCreated,
     onChatUpdated,
     projectId,
     projectPath,
@@ -106,6 +112,7 @@ export function useEngineRuntime({
     chatId,
     model,
     mode,
+    onChatCreated,
     onChatUpdated,
     projectId,
     projectPath,
@@ -144,6 +151,18 @@ export function useEngineRuntime({
     activeRun.abortController.abort();
     setIsRunning(false);
   }, []);
+
+  const resumeToolCall = useCallback(
+    ({ payload, toolCallId }: { payload: unknown; toolCallId: string }) => {
+      const response = normalizeElicitationResponse(payload);
+      if (!response) return;
+      void activeRunRef.current?.streamController?.resolveElicitation({
+        elicitationId: toolCallId,
+        response,
+      });
+    },
+    []
+  );
 
   const runMessage = useCallback(
     async (message: AppendMessage) => {
@@ -198,6 +217,7 @@ export function useEngineRuntime({
             runtime: latestOptionsRef.current.runtime,
             text: prompt,
           },
+          onChatCreated: latestOptionsRef.current.onChatCreated,
           replaceAssistantMessage,
         });
       } finally {
@@ -229,9 +249,10 @@ export function useEngineRuntime({
       isRunning,
       messages,
       onCancel: cancelRun,
+      onResumeToolCall: resumeToolCall,
       onNew: runMessage,
     }),
-    [adapters, cancelRun, isRunning, messages, runMessage]
+    [adapters, cancelRun, isRunning, messages, resumeToolCall, runMessage]
   );
 
   return useExternalStoreRuntime(store);
@@ -241,11 +262,13 @@ async function consumeRunStream({
   activeRun,
   accumulator,
   input,
+  onChatCreated,
   replaceAssistantMessage,
 }: {
   activeRun: ActiveRun;
   accumulator: AssistantAccumulator;
   input: ChatSendInput;
+  onChatCreated?: (chat: Chat) => void;
   replaceAssistantMessage: (
     assistantMessageId: string,
     message: EngineMessage
@@ -282,11 +305,20 @@ async function consumeRunStream({
   try {
     for await (const event of streamChatEvents(
       input,
-      activeRun.abortController.signal
+      activeRun.abortController.signal,
+      (controller) => {
+        activeRun.streamController = controller;
+      }
     )) {
       if (activeRun.cancelled) break;
 
       if (event.type === 'done') break;
+
+      if (event.type === 'chat') {
+        activeRun.chatId = event.chat.id;
+        onChatCreated?.(event.chat);
+        continue;
+      }
 
       if (event.type === 'error') {
         accumulator.error = event.message;
@@ -384,6 +416,47 @@ function upsertToolActionPart(
   }
 
   parts[index] = nextPart;
+}
+
+function normalizeElicitationResponse(
+  payload: unknown
+): ChatElicitationResponse | undefined {
+  if (!payload || typeof payload !== 'object') return undefined;
+  const response = payload as Partial<ChatElicitationResponse>;
+
+  switch (response.type) {
+    case 'allow':
+    case 'allowForSession':
+    case 'deny':
+    case 'cancel':
+    case 'externalComplete':
+      return { type: response.type };
+    case 'answers':
+      return Array.isArray(response.answers)
+        ? {
+            answers: response.answers
+              .filter(
+                (answer) =>
+                  answer &&
+                  typeof answer === 'object' &&
+                  typeof answer.id === 'string' &&
+                  typeof answer.value === 'string'
+              )
+              .map((answer) => ({ id: answer.id, value: answer.value })),
+            type: 'answers',
+          }
+        : undefined;
+    case 'dynamicToolResult':
+      return typeof response.success === 'boolean'
+        ? { success: response.success, type: 'dynamicToolResult' }
+        : undefined;
+    case 'raw':
+      return typeof response.value === 'string'
+        ? { type: 'raw', value: response.value }
+        : undefined;
+    default:
+      return undefined;
+  }
 }
 
 function createAssistantMessage(

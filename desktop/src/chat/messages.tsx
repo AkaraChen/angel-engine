@@ -5,6 +5,7 @@ import {
   BranchPickerPrimitive,
   ComposerPrimitive,
   MessagePrimitive,
+  useAuiState,
   type CompleteAttachment,
   type EnrichedPartState,
   type ToolCallMessagePartProps,
@@ -41,7 +42,12 @@ import {
   CollapsibleTrigger,
 } from '@/components/ui/collapsible';
 import { cn } from '@/lib/utils';
-import { isChatToolAction, type ChatToolAction } from '@/shared/chat';
+import {
+  isChatToolAction,
+  type ChatElicitation,
+  type ChatElicitationResponse,
+  type ChatToolAction,
+} from '@/shared/chat';
 import {
   iconButtonClass,
   messageActionFooterClass,
@@ -245,8 +251,17 @@ function PlainTextMessagePart(part: Extract<EnrichedPartState, { type: 'text' }>
 function AssistantTextMessagePart(
   part: Extract<EnrichedPartState, { type: 'text' }>
 ) {
+  const hasReasoningOrTool = useAuiState((state) =>
+    state.message.parts.some(
+      (messagePart) =>
+        messagePart.type === 'tool-call' ||
+        (messagePart.type === 'reasoning' &&
+          (messagePart.text.trim() || messagePart.status.type === 'running'))
+    )
+  );
+
   if (part.type === 'text' && part.status.type === 'running' && !part.text) {
-    return (
+    return hasReasoningOrTool ? null : (
       <span className="inline-flex items-center gap-2 text-muted-foreground">
         <Loader2 className="size-3.5 animate-spin" />
         Thinking
@@ -305,6 +320,20 @@ function FileMessagePart(part: Extract<EnrichedPartState, { type: 'file' }>) {
 
 function ToolActionMessagePart(part: ToolCallMessagePartProps) {
   const action = isChatToolAction(part.artifact) ? part.artifact : undefined;
+  if (action?.kind === 'elicitation') {
+    return <ElicitationToolPart action={action} part={part} />;
+  }
+
+  return <GenericToolActionMessagePart action={action} part={part} />;
+}
+
+function GenericToolActionMessagePart({
+  action,
+  part,
+}: {
+  action?: ChatToolAction;
+  part: ToolCallMessagePartProps;
+}) {
   const phase = action?.phase ?? part.status.type;
   const title = action?.title || action?.inputSummary || part.toolName;
   const outputText = getToolOutputText(action, part.result);
@@ -344,6 +373,226 @@ function ToolActionMessagePart(part: ToolCallMessagePartProps) {
         </CollapsibleContent>
       )}
     </Collapsible>
+  );
+}
+
+function ElicitationToolPart({
+  action,
+  part,
+}: {
+  action: ChatToolAction;
+  part: ToolCallMessagePartProps;
+}) {
+  const elicitation = parseElicitation(action.rawInput);
+  const phase = action.phase ?? part.status.type;
+  const title = action.title || elicitation?.title || 'User input';
+  const outputText = getToolOutputText(action, part.result);
+  const questions = elicitation?.questions ?? [];
+  const [answers, setAnswers] = useState<Record<string, string>>({});
+  const [fallbackAnswer, setFallbackAnswer] = useState('');
+  const [manualOpen, setManualOpen] = useState(false);
+  const awaitingInput = phase === 'awaitingDecision';
+  const hasInputQuestions = elicitation?.kind === 'userInput' || questions.length > 0;
+  const open = manualOpen;
+
+  const resume = (response: ChatElicitationResponse) => {
+    if (!awaitingInput) return;
+    part.resume(response);
+  };
+
+  const submitAnswers = () => {
+    const responseAnswers =
+      questions.length > 0
+        ? questions.map((question) => ({
+            id: question.id,
+            value: (answers[question.id] ?? '').trim(),
+          }))
+        : [{ id: 'answer', value: fallbackAnswer.trim() }];
+    resume({ answers: responseAnswers, type: 'answers' });
+  };
+
+  return (
+    <Collapsible
+      className="w-full overflow-hidden rounded-md border bg-muted/20 text-xs"
+      onOpenChange={setManualOpen}
+      open={open}
+    >
+      <ToolActionHeader
+        details
+        failed={phase === 'failed'}
+        kind={elicitation?.kind || 'elicitation'}
+        open={open}
+        phase={phase}
+        running={awaitingInput}
+        title={title}
+      />
+      <CollapsibleContent className="overflow-hidden data-[state=closed]:animate-collapsible-up data-[state=open]:animate-collapsible-down">
+        <div className="space-y-3 border-t px-3 py-2">
+          {elicitation?.body?.trim() ? (
+            <div className="whitespace-pre-wrap text-sm leading-5">
+              {elicitation.body}
+            </div>
+          ) : null}
+
+          {hasInputQuestions ? (
+            <div className="space-y-3">
+              {questions.length > 0 ? (
+                questions.map((question) => (
+                  <ElicitationQuestionInput
+                    disabled={!awaitingInput}
+                    key={question.id}
+                    onChange={(value) =>
+                      setAnswers((current) => ({
+                        ...current,
+                        [question.id]: value,
+                      }))
+                    }
+                    question={question}
+                    value={answers[question.id] ?? ''}
+                  />
+                ))
+              ) : (
+                <textarea
+                  className="min-h-20 w-full resize-y rounded-md border bg-background px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring/30"
+                  disabled={!awaitingInput}
+                  onChange={(event) => setFallbackAnswer(event.target.value)}
+                  value={fallbackAnswer}
+                />
+              )}
+              <div className="flex flex-wrap justify-end gap-2">
+                <Button
+                  disabled={!awaitingInput}
+                  onClick={() => resume({ type: 'cancel' })}
+                  size="xs"
+                  type="button"
+                  variant="ghost"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  disabled={!awaitingInput}
+                  onClick={submitAnswers}
+                  size="xs"
+                  type="button"
+                >
+                  Submit
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <div className="flex flex-wrap justify-end gap-2">
+              <Button
+                disabled={!awaitingInput}
+                onClick={() => resume({ type: 'deny' })}
+                size="xs"
+                type="button"
+                variant="ghost"
+              >
+                Deny
+              </Button>
+              <Button
+                disabled={!awaitingInput}
+                onClick={() => resume({ type: 'cancel' })}
+                size="xs"
+                type="button"
+                variant="ghost"
+              >
+                Cancel
+              </Button>
+              <Button
+                disabled={!awaitingInput}
+                onClick={() => resume({ type: 'allowForSession' })}
+                size="xs"
+                type="button"
+                variant="outline"
+              >
+                Allow session
+              </Button>
+              <Button
+                disabled={!awaitingInput}
+                onClick={() => resume({ type: 'allow' })}
+                size="xs"
+                type="button"
+              >
+                Allow
+              </Button>
+            </div>
+          )}
+
+          {outputText ? <ToolPreBlock label="Response" value={outputText} /> : null}
+        </div>
+      </CollapsibleContent>
+    </Collapsible>
+  );
+}
+
+function ElicitationQuestionInput({
+  disabled,
+  onChange,
+  question,
+  value,
+}: {
+  disabled: boolean;
+  onChange: (value: string) => void;
+  question: NonNullable<ChatElicitation['questions']>[number];
+  value: string;
+}) {
+  const options = question.options ?? [];
+
+  return (
+    <div className="space-y-2">
+      <div>
+        {question.header ? (
+          <div className="text-[11px] font-medium uppercase text-muted-foreground">
+            {question.header}
+          </div>
+        ) : null}
+        {question.question ? (
+          <div className="text-sm leading-5">{question.question}</div>
+        ) : null}
+      </div>
+
+      {options.length > 0 ? (
+        <div className="flex flex-wrap gap-2">
+          {options.map((option) => (
+            <Button
+              aria-pressed={value === option.label}
+              className={cn(
+                'max-w-full justify-start',
+                value === option.label && 'border-primary bg-primary/10'
+              )}
+              disabled={disabled}
+              key={option.label}
+              onClick={() => onChange(option.label)}
+              size="xs"
+              type="button"
+              variant="outline"
+            >
+              <span className="truncate">{option.label}</span>
+            </Button>
+          ))}
+        </div>
+      ) : null}
+
+      {options.length === 0 || question.isOther ? (
+        question.isSecret ? (
+          <input
+            className="h-8 w-full rounded-md border bg-background px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring/30"
+            disabled={disabled}
+            onChange={(event) => onChange(event.target.value)}
+            type="password"
+            value={value}
+          />
+        ) : (
+          <textarea
+            className="min-h-16 w-full resize-y rounded-md border bg-background px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring/30"
+            disabled={disabled}
+            onChange={(event) => onChange(event.target.value)}
+            value={value}
+          />
+        )
+      ) : null}
+    </div>
   );
 }
 
@@ -445,6 +694,25 @@ function getToolOutputText(action: ChatToolAction | undefined, result: unknown) 
   if (typeof result === 'string') return result;
   if (result === undefined || result === null) return '';
   return JSON.stringify(result, null, 2);
+}
+
+function parseElicitation(rawInput?: string | null): ChatElicitation | undefined {
+  if (!rawInput) return undefined;
+
+  try {
+    const parsed: unknown = JSON.parse(rawInput);
+    if (
+      parsed &&
+      typeof parsed === 'object' &&
+      typeof (parsed as Partial<ChatElicitation>).id === 'string'
+    ) {
+      return parsed as ChatElicitation;
+    }
+  } catch {
+    return undefined;
+  }
+
+  return undefined;
 }
 
 function isRunningToolPhase(phase: string) {

@@ -5,6 +5,8 @@ import { app } from 'electron';
 
 import type {
   Chat,
+  ChatElicitation,
+  ChatElicitationResponse,
   ChatHistoryMessage,
   ChatHistoryMessagePart,
   ChatLoadResult,
@@ -140,7 +142,12 @@ type AngelClient = {
   close(): void;
   initialize(): Promise<ClientUpdate>;
   nextUpdate(timeoutMs?: number): Promise<ClientUpdate | null>;
-  openElicitations(conversationId: string): unknown[];
+  openElicitations(conversationId: string): ChatElicitation[];
+  resolveElicitation(
+    conversationId: string,
+    elicitationId: string,
+    response: ChatElicitationResponse
+  ): ClientCommandResult;
   resumeThread(request: {
     additionalDirectories?: string[];
     hydrate?: boolean;
@@ -171,8 +178,19 @@ type AngelClient = {
 
 type AngelClientConstructor = new (options: unknown) => AngelClient;
 type ChatStreamObserver = (
-  event: ChatStreamDelta | { action: ChatToolAction; type: 'tool' }
+  event:
+    | ChatStreamDelta
+    | { action: ChatToolAction; type: 'tool' }
+    | { chat: Chat; type: 'chat' }
 ) => void;
+export type ChatStreamControls = {
+  setResolveElicitation?: (
+    handler: (
+      elicitationId: string,
+      response: ChatElicitationResponse
+    ) => Promise<void>
+  ) => void;
+};
 type RuntimeOptions = Record<string, unknown> & {
   args: string[];
   command: string;
@@ -218,13 +236,15 @@ export async function inspectChatRuntimeConfig(
 export async function streamChat(
   input: ChatSendInput,
   onEvent?: ChatStreamObserver,
-  abortSignal?: AbortSignal
+  abortSignal?: AbortSignal,
+  controls?: ChatStreamControls
 ): Promise<ChatSendResult> {
   const text = input.text.trim();
   if (!text) {
     throw new Error('Chat text is required.');
   }
 
+  const isNewChat = !input.chatId;
   const chat = input.chatId
     ? requireChat(input.chatId)
     : createChat({
@@ -232,12 +252,16 @@ export async function streamChat(
         projectId: input.projectId,
         runtime: input.runtime ?? defaultRuntimeName(),
       });
+  if (isNewChat) {
+    onEvent?.({ chat, type: 'chat' });
+  }
 
   const result = await getChatSession(chat).send(
     chat,
     { ...input, text },
     onEvent,
-    abortSignal
+    abortSignal,
+    controls
   );
   renameChatFromPrompt(chat.id, text);
   const finalChat = result.remoteThreadId
@@ -482,6 +506,14 @@ class AngelChatSession {
   private conversationId: string | undefined;
   private startPromise: Promise<void> | undefined;
   private operationQueue: Promise<void> = Promise.resolve();
+  private readonly pendingElicitations = new Map<
+    string,
+    {
+      conversationId: string;
+      reject: (error: Error) => void;
+      resolve: () => void;
+    }
+  >();
 
   constructor(private readonly options: RuntimeOptions) {
     const Client = loadAngelClient();
@@ -492,7 +524,8 @@ class AngelChatSession {
     chat: Chat,
     input: ChatSendInput,
     onEvent?: ChatStreamObserver,
-    abortSignal?: AbortSignal
+    abortSignal?: AbortSignal,
+    controls?: ChatStreamControls
   ): Promise<{
     config?: ChatRuntimeConfig;
     content: ChatHistoryMessagePart[];
@@ -503,7 +536,7 @@ class AngelChatSession {
     turnId?: string;
   }> {
     const run = this.operationQueue.then(() =>
-      this.sendNow(chat, input, onEvent, abortSignal)
+      this.sendNow(chat, input, onEvent, abortSignal, controls)
     );
     this.operationQueue = run.then(
       (): void => undefined,
@@ -535,6 +568,10 @@ class AngelChatSession {
   }
 
   close() {
+    for (const pending of this.pendingElicitations.values()) {
+      pending.reject(new Error('Chat session closed.'));
+    }
+    this.pendingElicitations.clear();
     this.client.close();
   }
 
@@ -542,7 +579,8 @@ class AngelChatSession {
     chat: Chat,
     input: ChatSendInput,
     onEvent?: ChatStreamObserver,
-    abortSignal?: AbortSignal
+    abortSignal?: AbortSignal,
+    controls?: ChatStreamControls
   ): Promise<{
     config?: ChatRuntimeConfig;
     content: ChatHistoryMessagePart[];
@@ -562,6 +600,14 @@ class AngelChatSession {
     await this.ensureReasoningEffort(conversationId, input.reasoningEffort);
     const result = this.client.sendText(conversationId, input.text);
     const collector = new TurnCollector(result.turnId, onEvent);
+    controls?.setResolveElicitation?.((elicitationId, response) =>
+      this.resolveElicitationNow(
+        conversationId,
+        elicitationId,
+        response,
+        collector
+      )
+    );
     await this.handleUpdate(result.update, collector);
 
     if (!result.turnId) {
@@ -588,8 +634,15 @@ class AngelChatSession {
         await this.cancelTurn(conversationId, result.turnId, collector);
         throwIfAborted(abortSignal);
       }
-      if (this.client.openElicitations(conversationId).length > 0) {
-        throw new Error('The runtime requested user input or approval, which is not wired yet.');
+      const [elicitation] = this.client.openElicitations(conversationId);
+      if (elicitation) {
+        await this.waitForElicitation(
+          conversationId,
+          elicitation,
+          collector,
+          abortSignal
+        );
+        continue;
       }
       await this.processNextUpdate(50, collector);
       await yieldToEventLoop();
@@ -657,6 +710,68 @@ class AngelChatSession {
       type: 'cancel',
     });
     await this.handleUpdate(result.update, collector);
+  }
+
+  private async waitForElicitation(
+    conversationId: string,
+    elicitation: ChatElicitation,
+    collector: TurnCollector,
+    abortSignal?: AbortSignal
+  ) {
+    collector.acceptElicitation(elicitation);
+
+    await new Promise<void>((resolve, reject) => {
+      const rejectWithError = (error: Error) => {
+        abortSignal?.removeEventListener('abort', abort);
+        this.pendingElicitations.delete(elicitation.id);
+        reject(error);
+      };
+      const resolvePending = () => {
+        abortSignal?.removeEventListener('abort', abort);
+        resolve();
+      };
+      const abort = () => rejectWithError(new Error('Chat request cancelled.'));
+
+      if (abortSignal?.aborted) {
+        abort();
+        return;
+      }
+
+      this.pendingElicitations.set(elicitation.id, {
+        conversationId,
+        reject: rejectWithError,
+        resolve: resolvePending,
+      });
+      abortSignal?.addEventListener('abort', abort, { once: true });
+    });
+  }
+
+  private async resolveElicitationNow(
+    conversationId: string,
+    elicitationId: string,
+    response: ChatElicitationResponse,
+    collector: TurnCollector
+  ) {
+    const pending = this.pendingElicitations.get(elicitationId);
+    if (!pending || pending.conversationId !== conversationId) {
+      throw new Error('Chat stream is not waiting for this user input.');
+    }
+
+    try {
+      collector.resolveElicitation(elicitationId, response);
+      const result = this.client.resolveElicitation(
+        conversationId,
+        elicitationId,
+        response
+      );
+      await this.handleUpdate(result.update, collector);
+      pending.resolve();
+    } catch (error) {
+      pending.reject(error instanceof Error ? error : new Error(String(error)));
+      throw error;
+    } finally {
+      this.pendingElicitations.delete(elicitationId);
+    }
   }
 
   private async ensureStarted(
@@ -817,6 +932,27 @@ class TurnCollector {
     this.accept(event);
   }
 
+  acceptElicitation(elicitation: ChatElicitation) {
+    if (!this.acceptsTurn(elicitation.turnId ?? undefined)) return;
+    this.upsertAction(chatActionFromElicitation(elicitation));
+  }
+
+  resolveElicitation(
+    elicitationId: string,
+    response: ChatElicitationResponse
+  ) {
+    const current = this.actionForId(elicitationId);
+    this.upsertAction({
+      id: elicitationId,
+      kind: current?.kind ?? 'elicitation',
+      outputText: elicitationResponseText(response),
+      phase: phaseFromElicitationResponse(response),
+      rawInput: current?.rawInput,
+      title: current?.title ?? 'User input',
+      turnId: current?.turnId ?? this.turnId,
+    });
+  }
+
   content() {
     return this.parts.map(cloneChatHistoryPart);
   }
@@ -900,6 +1036,12 @@ class TurnCollector {
     });
   }
 
+  private actionForId(actionId: string) {
+    const index = this.actionPartIndexes.get(actionId);
+    const part = index === undefined ? undefined : this.parts[index];
+    return part?.type === 'tool-call' ? part.artifact : undefined;
+  }
+
   private upsertAction(action: ChatToolAction) {
     if (!this.acceptsTurn(action.turnId)) return;
 
@@ -913,6 +1055,81 @@ class TurnCollector {
     }
 
     this.onEvent?.({ action, type: 'tool' });
+  }
+}
+
+function chatActionFromElicitation(
+  elicitation: ChatElicitation
+): ChatToolAction {
+  return {
+    id: elicitation.id,
+    inputSummary: elicitationInputSummary(elicitation),
+    kind: 'elicitation',
+    phase: 'awaitingDecision',
+    rawInput: JSON.stringify(elicitation),
+    title: elicitation.title || titleFromElicitationKind(elicitation.kind),
+    turnId: elicitation.turnId ?? undefined,
+  };
+}
+
+function elicitationInputSummary(elicitation: ChatElicitation) {
+  if (elicitation.body?.trim()) return elicitation.body;
+
+  const questions = elicitation.questions ?? [];
+  if (questions.length > 0) {
+    return questions
+      .map((question) => question.question || question.header)
+      .filter(Boolean)
+      .join('\n');
+  }
+
+  if (elicitation.choices?.length) {
+    return elicitation.choices.join(', ');
+  }
+
+  return undefined;
+}
+
+function titleFromElicitationKind(kind: string) {
+  switch (kind) {
+    case 'approval':
+    case 'permission':
+      return 'Approval requested';
+    case 'externalFlow':
+      return 'External action requested';
+    case 'userInput':
+      return 'Input requested';
+    default:
+      return 'User input requested';
+  }
+}
+
+function phaseFromElicitationResponse(response: ChatElicitationResponse) {
+  if (response.type === 'deny') return 'declined';
+  if (response.type === 'cancel') return 'cancelled';
+  return 'completed';
+}
+
+function elicitationResponseText(response: ChatElicitationResponse) {
+  switch (response.type) {
+    case 'allow':
+      return 'Allowed';
+    case 'allowForSession':
+      return 'Allowed for session';
+    case 'deny':
+      return 'Denied';
+    case 'cancel':
+      return 'Cancelled';
+    case 'answers':
+      return response.answers
+        .map((answer) => `${answer.id}: ${answer.value}`)
+        .join('\n');
+    case 'dynamicToolResult':
+      return response.success ? 'Succeeded' : 'Failed';
+    case 'externalComplete':
+      return 'Completed externally';
+    case 'raw':
+      return response.value;
   }
 }
 
