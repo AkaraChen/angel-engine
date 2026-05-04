@@ -95,14 +95,12 @@ function ToolGroupRoot({
 function ToolGroupTrigger({
   active = false,
   className,
-  count,
+  label,
   ...props
 }: ComponentProps<typeof CollapsibleTrigger> & {
   active?: boolean;
-  count: number;
+  label: string;
 }) {
-  const label = `${count} tool ${count === 1 ? 'call' : 'calls'}`;
-
   return (
     <CollapsibleTrigger
       className={cn(
@@ -197,21 +195,35 @@ type ToolGroupComponent = FC<
 const ToolGroupImpl: FC<
   PropsWithChildren<{ endIndex: number; startIndex: number }>
 > = ({ children, endIndex, startIndex }) => {
-  const toolCount = endIndex - startIndex + 1;
-  const active = useAuiState((state) =>
-    state.message.parts
-      .slice(startIndex, endIndex + 1)
-      .some((part) => isActiveToolPart(part))
+  const parts = useAuiState((state) =>
+    state.message.parts.slice(startIndex, endIndex + 1)
   );
+  const active = parts.some((part) => isActiveToolPart(part));
+  const label = formatToolGroupLabel(parts);
   const [manualOpen, setManualOpen] = useState(false);
 
   return (
     <ToolGroupRoot onOpenChange={setManualOpen} open={manualOpen}>
-      <ToolGroupTrigger active={active} count={toolCount} />
+      <ToolGroupTrigger active={active} label={label} />
       <ToolGroupContent>{children}</ToolGroupContent>
     </ToolGroupRoot>
   );
 };
+
+function formatToolGroupLabel(parts: PartState[]) {
+  const approvalCount = parts.filter((part) => isElicitationToolPart(part)).length;
+  const toolCount = Math.max(0, parts.length - approvalCount);
+  const labels = [
+    toolCount > 0
+      ? `${toolCount} tool ${toolCount === 1 ? 'call' : 'calls'}`
+      : undefined,
+    approvalCount > 0
+      ? `${approvalCount} approval${approvalCount === 1 ? '' : 's'}`
+      : undefined,
+  ].filter(Boolean);
+
+  return labels.join(' · ') || '0 tool calls';
+}
 
 function isActiveToolPart(part: PartState) {
   if (part.type !== 'tool-call') return false;
@@ -221,6 +233,14 @@ function isActiveToolPart(part: PartState) {
   }
 
   return part.status.type === 'running' || part.status.type === 'requires-action';
+}
+
+function isElicitationToolPart(part: PartState) {
+  return (
+    part.type === 'tool-call' &&
+    isChatToolAction(part.artifact) &&
+    part.artifact.kind === 'elicitation'
+  );
 }
 
 const ToolGroup = memo(ToolGroupImpl) as unknown as ToolGroupComponent;
