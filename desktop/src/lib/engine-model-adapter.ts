@@ -13,6 +13,7 @@ import type {
   Chat,
   ChatHistoryMessage,
   ChatHistoryMessagePart,
+  ChatRuntimeConfig,
   ChatSendInput,
   ChatSendResult,
   ChatToolAction,
@@ -38,8 +39,13 @@ export type EngineRuntimeOptions = {
   chatId?: string;
   historyMessages: ChatHistoryMessage[];
   historyRevision: number;
+  model?: string;
   mode?: string;
-  onChatUpdated?: (chat: Chat, messages?: ChatHistoryMessage[]) => void;
+  onChatUpdated?: (
+    chat: Chat,
+    messages?: ChatHistoryMessage[],
+    config?: ChatRuntimeConfig
+  ) => void;
   projectId?: string | null;
   projectPath?: string;
   reasoningEffort?: string;
@@ -72,6 +78,7 @@ export function useEngineRuntime({
   chatId,
   historyMessages,
   historyRevision,
+  model,
   mode,
   onChatUpdated,
   projectId,
@@ -86,6 +93,7 @@ export function useEngineRuntime({
   const activeRunRef = useRef<ActiveRun | null>(null);
   const latestOptionsRef = useRef({
     chatId,
+    model,
     mode,
     onChatUpdated,
     projectId,
@@ -96,6 +104,7 @@ export function useEngineRuntime({
 
   latestOptionsRef.current = {
     chatId,
+    model,
     mode,
     onChatUpdated,
     projectId,
@@ -182,6 +191,7 @@ export function useEngineRuntime({
           input: {
             chatId: latestOptionsRef.current.chatId,
             cwd: latestOptionsRef.current.projectPath,
+            model: latestOptionsRef.current.model,
             mode: latestOptionsRef.current.mode,
             projectId: latestOptionsRef.current.projectId,
             reasoningEffort: latestOptionsRef.current.reasoningEffort,
@@ -204,7 +214,8 @@ export function useEngineRuntime({
             ...baseMessages,
             userMessage,
             completion.assistantMessage,
-          ])
+          ]),
+          completion.result.config
         );
       }
     },

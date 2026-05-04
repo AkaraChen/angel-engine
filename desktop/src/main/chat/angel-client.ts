@@ -8,6 +8,9 @@ import type {
   ChatHistoryMessage,
   ChatHistoryMessagePart,
   ChatLoadResult,
+  ChatRuntimeConfig,
+  ChatRuntimeConfigInput,
+  ChatRuntimeConfigOption,
   ChatSendInput,
   ChatSendResult,
   ChatStreamDelta,
@@ -46,15 +49,17 @@ type ClientCommandResult = {
 type ConversationSnapshot = {
   context?: {
     cwd?: string | null;
+    model?: string | null;
     mode?: string | null;
   };
   actions?: ChatToolAction[];
-  configOptions?: ConfigOptionsSnapshot;
+  configOptions?: ConfigOptionSnapshot[];
   history?: {
     replay?: HistoryReplaySnapshot[];
   };
   id: string;
   modes?: SessionModeStateSnapshot;
+  models?: SessionModelStateSnapshot;
   reasoning?: ReasoningOptionsSnapshot;
   remoteId?: string | null;
   turns?: TurnSnapshot[];
@@ -66,12 +71,16 @@ type ReasoningOptionsSnapshot = {
   currentEffort?: string | null;
 };
 
-type ConfigOptionsSnapshot = {
-  options?: Array<{
-    category?: string;
-    id?: string;
-    options?: Array<{ label?: string; value?: string }>;
-    value?: string | null;
+type ConfigOptionSnapshot = {
+  category?: string | null;
+  currentValue?: string | null;
+  description?: string | null;
+  id?: string;
+  name?: string;
+  values?: Array<{
+    description?: string | null;
+    name?: string;
+    value?: string;
   }>;
 };
 
@@ -82,6 +91,15 @@ type SessionModeStateSnapshot = {
     name?: string;
   }>;
   currentModeId?: string | null;
+};
+
+type SessionModelStateSnapshot = {
+  availableModels?: Array<{
+    description?: string | null;
+    id: string;
+    name?: string;
+  }>;
+  currentModelId?: string | null;
 };
 
 type HistoryReplaySnapshot = {
@@ -130,6 +148,7 @@ type AngelClient = {
   }): Promise<ClientCommandResult>;
   sendThreadEvent(conversationId: string, event: unknown): ClientCommandResult;
   sendText(conversationId: string, text: string): ClientCommandResult;
+  setModel(conversationId: string, model: string): ClientCommandResult;
   setMode(conversationId: string, mode: string): ClientCommandResult;
   setReasoningEffort(conversationId: string, effort: string): ClientCommandResult;
   snapshot(): {
@@ -180,8 +199,20 @@ export async function loadChatSession(chatId: string): Promise<ChatLoadResult> {
   const updatedChat = persistRemoteThreadId(chat, snapshot);
   return {
     chat: updatedChat,
+    config: configFromConversationSnapshot(snapshot),
     messages: messagesFromConversationSnapshot(snapshot),
   };
+}
+
+export async function inspectChatRuntimeConfig(
+  input: ChatRuntimeConfigInput
+): Promise<ChatRuntimeConfig> {
+  const session = new AngelChatSession(createRuntimeOptions(input.runtime));
+  try {
+    return await session.inspect(input.cwd);
+  } finally {
+    session.close();
+  }
 }
 
 export async function streamChat(
@@ -216,7 +247,9 @@ export async function streamChat(
   return {
     chat: finalChat,
     chatId: finalChat.id,
+    config: result.config,
     content: result.content,
+    model: result.model,
     reasoning: result.reasoning,
     text: result.text,
     turnId: result.turnId,
@@ -461,7 +494,9 @@ class AngelChatSession {
     onEvent?: ChatStreamObserver,
     abortSignal?: AbortSignal
   ): Promise<{
+    config?: ChatRuntimeConfig;
     content: ChatHistoryMessagePart[];
+    model?: string;
     reasoning?: string;
     remoteThreadId?: string;
     text: string;
@@ -486,6 +521,15 @@ class AngelChatSession {
     return run;
   }
 
+  async inspect(cwd?: string): Promise<ChatRuntimeConfig> {
+    const run = this.operationQueue.then(() => this.inspectNow(cwd));
+    this.operationQueue = run.then(
+      (): void => undefined,
+      (): void => undefined
+    );
+    return run;
+  }
+
   hasConversation() {
     return Boolean(this.conversationId);
   }
@@ -500,7 +544,9 @@ class AngelChatSession {
     onEvent?: ChatStreamObserver,
     abortSignal?: AbortSignal
   ): Promise<{
+    config?: ChatRuntimeConfig;
     content: ChatHistoryMessagePart[];
+    model?: string;
     reasoning?: string;
     remoteThreadId?: string;
     text: string;
@@ -511,6 +557,7 @@ class AngelChatSession {
     throwIfAborted(abortSignal);
 
     const conversationId = this.requireConversationId();
+    await this.ensureModel(conversationId, input.model);
     await this.ensureMode(conversationId, input.mode);
     await this.ensureReasoningEffort(conversationId, input.reasoningEffort);
     const result = this.client.sendText(conversationId, input.text);
@@ -526,8 +573,11 @@ class AngelChatSession {
           'The runtime accepted the message without starting a turn.'
         );
       }
+      const snapshot = this.client.threadState(conversationId);
       return {
+        config: snapshot ? configFromConversationSnapshot(snapshot) : undefined,
         content,
+        model: currentModelFromSnapshot(snapshot),
         remoteThreadId: this.threadRemoteId(),
         text: chatPartsText(content, 'text'),
       };
@@ -567,7 +617,9 @@ class AngelChatSession {
       undefined;
 
     return {
+      config: snapshot ? configFromConversationSnapshot(snapshot) : undefined,
       content: finalContent,
+      model: currentModelFromSnapshot(snapshot),
       reasoning,
       remoteThreadId: this.threadRemoteId(),
       text,
@@ -583,6 +635,16 @@ class AngelChatSession {
       throw new Error('Chat runtime did not return a conversation snapshot.');
     }
     return snapshot;
+  }
+
+  private async inspectNow(cwd?: string): Promise<ChatRuntimeConfig> {
+    await this.ensureStarted(previewChat(this.options.runtime, cwd), true, cwd);
+    const conversationId = this.requireConversationId();
+    const snapshot = this.client.threadState(conversationId);
+    if (!snapshot) {
+      throw new Error('Chat runtime did not return a configuration snapshot.');
+    }
+    return configFromConversationSnapshot(snapshot);
   }
 
   private async cancelTurn(
@@ -644,12 +706,35 @@ class AngelChatSession {
     if (!effort || effort === 'default') return;
 
     const reasoning = this.client.threadState(conversationId)?.reasoning;
-    if (reasoning?.canSet === false || reasoning?.currentEffort === effort) {
+    if (
+      reasoning?.canSet === false ||
+      reasoning?.currentEffort === effort ||
+      (reasoning?.availableEfforts?.length &&
+        !reasoning.availableEfforts.includes(effort))
+    ) {
       return;
     }
 
     const result = this.client.setReasoningEffort(conversationId, effort);
     await this.handleUpdate(result.update);
+    await this.drainConfigurationUpdates();
+  }
+
+  private async ensureModel(
+    conversationId: string,
+    requestedModel?: string | null
+  ) {
+    const model = selectedAgentConfigValue(requestedModel);
+    if (!model) return;
+
+    const snapshot = this.client.threadState(conversationId);
+    const currentModel = currentModelFromSnapshot(snapshot);
+    if (currentModel === model) return;
+    if (!canSetModel(snapshot, model)) return;
+
+    const result = this.client.setModel(conversationId, model);
+    await this.handleUpdate(result.update);
+    await this.drainConfigurationUpdates();
   }
 
   private async ensureMode(
@@ -667,6 +752,13 @@ class AngelChatSession {
 
     const result = this.client.setMode(conversationId, mode);
     await this.handleUpdate(result.update);
+    await this.drainConfigurationUpdates();
+  }
+
+  private async drainConfigurationUpdates() {
+    while (await this.processNextUpdate(250)) {
+      await yieldToEventLoop();
+    }
   }
 
   private async processNextUpdate(timeout?: number, collector?: TurnCollector) {
@@ -885,11 +977,156 @@ function canSetMode(
   snapshot: ConversationSnapshot | null,
   mode: string
 ) {
+  const option = findConfigOption(snapshot, 'mode', ['mode']);
+  if (option?.values?.length) {
+    return option.values.some((value) => value.value === mode);
+  }
+
   const availableModes = snapshot?.modes?.availableModes ?? [];
   if (availableModes.length > 0) {
     return availableModes.some((availableMode) => availableMode.id === mode);
   }
   return runtime === 'codex' && (mode === 'default' || mode === 'plan');
+}
+
+function canSetModel(snapshot: ConversationSnapshot | null, model: string) {
+  const option = findConfigOption(snapshot, 'model', ['model']);
+  if (option?.values?.length) {
+    return option.values.some((value) => value.value === model);
+  }
+
+  const availableModels = snapshot?.models?.availableModels ?? [];
+  if (availableModels.length > 0) {
+    return availableModels.some((availableModel) => availableModel.id === model);
+  }
+
+  return true;
+}
+
+function configFromConversationSnapshot(
+  snapshot: ConversationSnapshot
+): ChatRuntimeConfig {
+  const modelOption = findConfigOption(snapshot, 'model', ['model']);
+  const modeOption = findConfigOption(snapshot, 'mode', ['mode']);
+
+  return {
+    canSetReasoningEffort: snapshot.reasoning?.canSet,
+    currentMode: currentModeFromSnapshot(snapshot) ?? null,
+    currentModel: currentModelFromSnapshot(snapshot) ?? null,
+    currentReasoningEffort: snapshot.reasoning?.currentEffort ?? null,
+    modes: optionsFromConfigOption(modeOption).length
+      ? optionsFromConfigOption(modeOption)
+      : optionsFromModes(snapshot),
+    models: optionsFromConfigOption(modelOption).length
+      ? optionsFromConfigOption(modelOption)
+      : optionsFromModels(snapshot),
+    reasoningEfforts: optionsFromReasoning(snapshot),
+  };
+}
+
+function currentModelFromSnapshot(snapshot?: ConversationSnapshot | null) {
+  return snapshot?.context?.model ?? snapshot?.models?.currentModelId ?? undefined;
+}
+
+function currentModeFromSnapshot(snapshot?: ConversationSnapshot | null) {
+  return snapshot?.context?.mode ?? snapshot?.modes?.currentModeId ?? undefined;
+}
+
+function optionsFromConfigOption(
+  option: ConfigOptionSnapshot | undefined
+): ChatRuntimeConfigOption[] {
+  return (option?.values ?? [])
+    .filter(
+      (
+        value
+      ): value is {
+        description?: string | null;
+        name?: string;
+        value: string;
+      } => Boolean(value.value)
+    )
+    .map((value) => ({
+      description: value.description,
+      label: value.name || value.value,
+      value: value.value,
+    }));
+}
+
+function optionsFromModels(
+  snapshot: ConversationSnapshot
+): ChatRuntimeConfigOption[] {
+  return (snapshot.models?.availableModels ?? []).map((model) => ({
+    description: model.description,
+    label: model.name || model.id,
+    value: model.id,
+  }));
+}
+
+function optionsFromModes(
+  snapshot: ConversationSnapshot
+): ChatRuntimeConfigOption[] {
+  return (snapshot.modes?.availableModes ?? []).map((mode) => ({
+    description: mode.description,
+    label: mode.name || mode.id,
+    value: mode.id,
+  }));
+}
+
+function optionsFromReasoning(
+  snapshot: ConversationSnapshot
+): ChatRuntimeConfigOption[] {
+  return (snapshot.reasoning?.availableEfforts ?? []).map((effort) => ({
+    label: labelFromConfigValue(effort),
+    value: effort,
+  }));
+}
+
+function findConfigOption(
+  snapshot: ConversationSnapshot | null | undefined,
+  category: string,
+  ids: string[]
+) {
+  const options = snapshot?.configOptions ?? [];
+  return (
+    options.find((option) => option.category === category) ??
+    options.find((option) =>
+      ids.some(
+        (id) =>
+          option.id?.toLowerCase() === id.toLowerCase() ||
+          normalizeConfigName(option.id) === normalizeConfigName(id)
+      )
+    ) ??
+    options.find((option) =>
+      ids.some((id) => normalizeConfigName(option.name) === normalizeConfigName(id))
+    )
+  );
+}
+
+function labelFromConfigValue(value: string) {
+  if (value === 'xhigh') return 'XHigh';
+  return value
+    .split(/[_\s-]+/)
+    .filter(Boolean)
+    .map((part) => `${part.slice(0, 1).toUpperCase()}${part.slice(1)}`)
+    .join(' ');
+}
+
+function normalizeConfigName(value: string | undefined) {
+  return (value ?? '').toLowerCase().replace(/[^a-z0-9]/g, '');
+}
+
+function previewChat(runtime: string, cwd?: string): Chat {
+  const now = new Date().toISOString();
+  return {
+    createdAt: now,
+    cwd: cwd ?? null,
+    id: 'runtime-config-preview',
+    projectId: null,
+    remoteThreadId: null,
+    runtime,
+    title: 'Runtime config preview',
+    updatedAt: now,
+  };
 }
 
 function desktopIdentity() {

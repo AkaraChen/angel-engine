@@ -16,6 +16,7 @@ import {
   Bot,
   Brain,
   CircleStop,
+  Cpu,
   FileText,
   Paperclip,
   Quote,
@@ -43,8 +44,6 @@ import { Button } from '@/components/ui/button';
 import { iconButtonClass } from '@/chat/thread-styles';
 import {
   AGENT_OPTIONS,
-  getAgentModes,
-  getAgentReasoningEfforts,
   normalizeAgentRuntime,
   type AgentValueOption,
 } from '@/shared/agents';
@@ -167,8 +166,6 @@ function AssistantComposerFooter({ draftText }: { draftText: string }) {
   const isRunning = useAuiState((state) => state.thread.isRunning);
   const isEmpty =
     draftText.trim().length === 0 && attachments.files.length === 0;
-  const reasoningEfforts = getAgentReasoningEfforts(chatOptions.runtime);
-  const modes = getAgentModes(chatOptions.runtime);
 
   const stopRun = useCallback(() => {
     aui.composer().cancel();
@@ -197,22 +194,38 @@ function AssistantComposerFooter({ draftText }: { draftText: string }) {
           value={chatOptions.runtime}
         />
         <ComposerOptionSelect
-          disabled={isRunning || reasoningEfforts.length < 2}
+          className="max-w-44"
+          disabled={
+            isRunning ||
+            chatOptions.configLoading ||
+            chatOptions.modelOptions.length < 2
+          }
+          icon={<Cpu />}
+          label="Model"
+          onValueChange={chatOptions.setModel}
+          options={chatOptions.modelOptions}
+          title={
+            chatOptions.configLoading ? 'Loading models from agent' : 'Model'
+          }
+          value={chatOptions.model}
+        />
+        <ComposerOptionSelect
+          disabled={isRunning || chatOptions.reasoningEffortOptions.length < 2}
           icon={<Brain />}
           label="Reasoning effort"
           onValueChange={chatOptions.setReasoningEffort}
-          options={reasoningEfforts}
+          options={chatOptions.reasoningEffortOptions}
           value={chatOptions.reasoningEffort}
         />
       </PromptInputTools>
       <div className="flex min-w-0 items-center gap-2">
         <ComposerOptionSelect
           className="max-w-28"
-          disabled={isRunning || modes.length < 2}
+          disabled={isRunning || chatOptions.modeOptions.length < 2}
           icon={<SlidersHorizontal />}
           label="Mode"
           onValueChange={chatOptions.setMode}
-          options={modes}
+          options={chatOptions.modeOptions}
           value={chatOptions.mode}
         />
         {isRunning ? (

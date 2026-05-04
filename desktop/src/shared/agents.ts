@@ -14,6 +14,7 @@ export type AgentValueOption = {
 
 export type AgentSettings = {
   defaultRuntime: AgentRuntime;
+  models: Record<AgentRuntime, string>;
   modes: Record<AgentRuntime, string>;
   reasoningEfforts: Record<AgentRuntime, string>;
 };
@@ -40,6 +41,11 @@ export const DEFAULT_AGENT_RUNTIME: AgentRuntime = 'codex';
 
 export const DEFAULT_AGENT_SETTINGS: AgentSettings = {
   defaultRuntime: DEFAULT_AGENT_RUNTIME,
+  models: {
+    codex: 'default',
+    kimi: 'default',
+    opencode: 'default',
+  },
   modes: {
     codex: 'default',
     kimi: 'default',
@@ -139,22 +145,40 @@ export function sanitizeAgentSettings(value: unknown): AgentSettings {
       ? (value as Partial<AgentSettings>)
       : {};
   const defaultRuntime = normalizeAgentRuntime(settings.defaultRuntime);
+  const models = { ...DEFAULT_AGENT_SETTINGS.models };
   const reasoningEfforts = { ...DEFAULT_AGENT_SETTINGS.reasoningEfforts };
   const modes = { ...DEFAULT_AGENT_SETTINGS.modes };
 
   for (const agent of AGENT_OPTIONS) {
-    reasoningEfforts[agent.id] = normalizeAgentReasoningEffort(
-      agent.id,
-      settings.reasoningEfforts?.[agent.id]
+    models[agent.id] = normalizeAgentModel(settings.models?.[agent.id]);
+    reasoningEfforts[agent.id] = normalizeAgentConfigValue(
+      settings.reasoningEfforts?.[agent.id],
+      DEFAULT_AGENT_SETTINGS.reasoningEfforts[agent.id]
     );
-    modes[agent.id] = normalizeAgentMode(agent.id, settings.modes?.[agent.id]);
+    modes[agent.id] = normalizeAgentConfigValue(
+      settings.modes?.[agent.id],
+      DEFAULT_AGENT_SETTINGS.modes[agent.id]
+    );
   }
 
   return {
     defaultRuntime,
+    models,
     modes,
     reasoningEfforts,
   };
+}
+
+export function normalizeAgentModel(model: string | null | undefined) {
+  return normalizeAgentConfigValue(model);
+}
+
+export function normalizeAgentConfigValue(
+  value: string | null | undefined,
+  fallback = 'default'
+) {
+  const trimmed = value?.trim();
+  return trimmed || fallback;
 }
 
 export function selectedAgentConfigValue(value: string | null | undefined) {

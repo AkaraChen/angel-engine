@@ -1,13 +1,22 @@
 import { BrowserWindow, dialog, Menu, shell } from 'electron';
 import { tipc } from '@egoist/tipc/main';
 
-import type { ChatCreateInput, ChatSendInput } from '../shared/chat';
+import type {
+  ChatCreateInput,
+  ChatRuntimeConfigInput,
+  ChatSendInput,
+} from '../shared/chat';
 import { normalizeAgentRuntime } from '../shared/agents';
 import type {
   CreateProjectInput,
   UpdateProjectInput,
 } from '../shared/projects';
-import { closeChatSession, loadChatSession, sendChat } from './chat/angel-client';
+import {
+  closeChatSession,
+  inspectChatRuntimeConfig,
+  loadChatSession,
+  sendChat,
+} from './chat/angel-client';
 import {
   createChat,
   deleteAllChats,
@@ -37,6 +46,12 @@ export const appRouter = {
     ),
 
   chatsList: t.procedure.action(async () => listChats()),
+
+  chatsRuntimeConfig: t.procedure
+    .input<ChatRuntimeConfigInput>()
+    .action(async ({ input }) =>
+      inspectChatRuntimeConfig(assertChatRuntimeConfigInput(input))
+    ),
 
   chatsLoad: t.procedure
     .input<string>()
@@ -159,6 +174,7 @@ function assertChatSendInput(input: ChatSendInput): ChatSendInput {
         ? input.chatId.trim()
         : undefined,
     cwd: typeof input.cwd === 'string' && input.cwd.trim() ? input.cwd : undefined,
+    model: normalizeOptionalConfigInput(input.model),
     projectId:
       typeof input.projectId === 'string' && input.projectId.trim()
         ? input.projectId.trim()
@@ -177,6 +193,7 @@ function assertChatCreateInput(input: ChatCreateInput): ChatCreateInput {
 
   return {
     cwd: typeof input.cwd === 'string' && input.cwd.trim() ? input.cwd : undefined,
+    model: normalizeOptionalConfigInput(input.model),
     projectId:
       typeof input.projectId === 'string' && input.projectId.trim()
         ? input.projectId.trim()
@@ -188,6 +205,19 @@ function assertChatCreateInput(input: ChatCreateInput): ChatCreateInput {
       typeof input.title === 'string' && input.title.trim()
         ? input.title.trim()
         : undefined,
+  };
+}
+
+function assertChatRuntimeConfigInput(
+  input: ChatRuntimeConfigInput
+): ChatRuntimeConfigInput {
+  if (!input || typeof input !== 'object') {
+    return {};
+  }
+
+  return {
+    cwd: typeof input.cwd === 'string' && input.cwd.trim() ? input.cwd : undefined,
+    runtime: normalizeOptionalRuntime(input.runtime),
   };
 }
 

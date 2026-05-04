@@ -75,6 +75,7 @@ function assertChatSendInput(input: unknown): ChatSendInput {
         ? value.chatId.trim()
         : undefined,
     cwd: typeof value.cwd === 'string' && value.cwd.trim() ? value.cwd : undefined,
+    model: normalizeOptionalConfigInput(value.model),
     projectId:
       typeof value.projectId === 'string' && value.projectId.trim()
         ? value.projectId.trim()

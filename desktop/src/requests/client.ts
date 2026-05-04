@@ -1,5 +1,5 @@
 import { ipc } from '@/lib/ipc';
-import type { ChatCreateInput } from '@/shared/chat';
+import type { ChatCreateInput, ChatRuntimeConfigInput } from '@/shared/chat';
 import type { CreateProjectInput } from '@/shared/projects';
 
 export function createApiClient() {
@@ -7,6 +7,8 @@ export function createApiClient() {
     chats: {
       create: (input: ChatCreateInput = {}) => ipc.chatsCreate(input),
       deleteAll: () => ipc.chatsDeleteAll(),
+      inspectConfig: (input: ChatRuntimeConfigInput = {}) =>
+        ipc.chatsRuntimeConfig(input),
       list: () => ipc.chatsList(),
       load: (chatId: string) => ipc.chatsLoad(chatId),
       showContextMenu: (chatId: string) => ipc.chatsShowContextMenu(chatId),

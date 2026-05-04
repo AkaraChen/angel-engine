@@ -9,7 +9,11 @@ import {
 } from '@assistant-ui/react';
 
 import { useEngineRuntime } from '@/lib/engine-model-adapter';
-import type { Chat, ChatHistoryMessage } from '@/shared/chat';
+import type {
+  Chat,
+  ChatHistoryMessage,
+  ChatRuntimeConfig,
+} from '@/shared/chat';
 
 const mockFeedbackAdapter: FeedbackAdapter = {
   submit: () => undefined,
@@ -20,6 +24,7 @@ export function AppRuntimeProvider({
   children,
   historyMessages,
   historyRevision,
+  model,
   mode,
   onChatUpdated,
   projectId,
@@ -31,8 +36,13 @@ export function AppRuntimeProvider({
   children: ReactNode;
   historyMessages: ChatHistoryMessage[];
   historyRevision: number;
+  model?: string;
   mode?: string;
-  onChatUpdated: (chat: Chat, messages?: ChatHistoryMessage[]) => void;
+  onChatUpdated: (
+    chat: Chat,
+    messages?: ChatHistoryMessage[],
+    config?: ChatRuntimeConfig
+  ) => void;
   projectId?: string | null;
   projectPath?: string;
   reasoningEffort?: string;
@@ -55,6 +65,7 @@ export function AppRuntimeProvider({
     chatId,
     historyMessages,
     historyRevision,
+    model,
     mode,
     onChatUpdated,
     projectId,

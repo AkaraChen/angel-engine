@@ -4,6 +4,8 @@ export const queryKeys = {
     detail: (id: string | null) => ['chats', 'detail', id] as const,
     details: () => ['chats', 'detail'] as const,
     list: () => ['chats', 'list'] as const,
+    runtimeConfig: (runtime: string | null, cwd: string | null) =>
+      ['chats', 'runtime-config', runtime, cwd] as const,
   },
   projects: {
     all: () => ['projects'] as const,

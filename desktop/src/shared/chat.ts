@@ -11,11 +11,33 @@ export type Chat = {
 
 export type ChatCreateInput = {
   cwd?: string;
+  model?: string | null;
   mode?: string | null;
   projectId?: string | null;
   reasoningEffort?: string | null;
   runtime?: string;
   title?: string;
+};
+
+export type ChatRuntimeConfigInput = {
+  cwd?: string;
+  runtime?: string;
+};
+
+export type ChatRuntimeConfigOption = {
+  description?: string | null;
+  label: string;
+  value: string;
+};
+
+export type ChatRuntimeConfig = {
+  canSetReasoningEffort?: boolean;
+  currentMode?: string | null;
+  currentModel?: string | null;
+  currentReasoningEffort?: string | null;
+  modes: ChatRuntimeConfigOption[];
+  models: ChatRuntimeConfigOption[];
+  reasoningEfforts: ChatRuntimeConfigOption[];
 };
 
 export type ChatHistoryMessage = {
@@ -179,12 +201,14 @@ export function isTerminalChatToolPhase(phase?: string) {
 
 export type ChatLoadResult = {
   chat: Chat;
+  config?: ChatRuntimeConfig;
   messages: ChatHistoryMessage[];
 };
 
 export type ChatSendInput = {
   chatId?: string;
   cwd?: string;
+  model?: string | null;
   mode?: string | null;
   projectId?: string | null;
   reasoningEffort?: string | null;
@@ -195,6 +219,7 @@ export type ChatSendInput = {
 export type ChatSendResult = {
   chat: Chat;
   chatId: string;
+  config?: ChatRuntimeConfig;
   content: ChatHistoryMessagePart[];
   model?: string;
   reasoning?: string;

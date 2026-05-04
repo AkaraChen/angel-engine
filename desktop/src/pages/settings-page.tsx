@@ -204,6 +204,10 @@ function SettingsSelect({
   options: AgentValueOption[];
   value: string;
 }) {
+  const resolvedOptions = options.some((option) => option.value === value)
+    ? options
+    : [...options, { label: labelFromConfigValue(value), value }];
+
   return (
     <label className="flex min-w-44 flex-col gap-1.5 text-xs font-medium text-muted-foreground">
       {label}
@@ -220,7 +224,7 @@ function SettingsSelect({
           </span>
         </SelectTrigger>
         <SelectContent className="rounded-md">
-          {options.map((option) => (
+          {resolvedOptions.map((option) => (
             <SelectItem
               className="rounded-sm"
               key={option.value}
@@ -233,4 +237,14 @@ function SettingsSelect({
       </Select>
     </label>
   );
+}
+
+function labelFromConfigValue(value: string) {
+  if (value === 'xhigh') return 'XHigh';
+  if (value === 'default') return 'Default';
+  return value
+    .split(/[_\s-]+/)
+    .filter(Boolean)
+    .map((part) => `${part.slice(0, 1).toUpperCase()}${part.slice(1)}`)
+    .join(' ');
 }

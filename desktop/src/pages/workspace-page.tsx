@@ -1,4 +1,4 @@
-import { useCallback, useMemo } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import {
   useMutation,
   useQuery,
@@ -20,6 +20,7 @@ import {
   chatContextMenuMutationOptions,
   chatListQueryOptions,
   chatLoadQueryOptions,
+  chatRuntimeConfigQueryOptions,
   createProjectChatMutationOptions,
   deleteAllChatsMutationOptions,
 } from '@/requests/chats';
@@ -30,12 +31,21 @@ import {
   projectListQueryOptions,
 } from '@/requests/projects';
 import {
-  normalizeAgentMode,
-  normalizeAgentReasoningEffort,
+  getAgentModes,
+  getAgentReasoningEfforts,
+  normalizeAgentConfigValue,
+  normalizeAgentModel,
   normalizeAgentRuntime,
+  type AgentValueOption,
   type AgentRuntime,
 } from '@/shared/agents';
-import type { Chat, ChatHistoryMessage, ChatLoadResult } from '@/shared/chat';
+import type {
+  Chat,
+  ChatHistoryMessage,
+  ChatLoadResult,
+  ChatRuntimeConfig,
+  ChatRuntimeConfigOption,
+} from '@/shared/chat';
 import type { Project } from '@/shared/projects';
 
 export type WorkspaceRoute =
@@ -55,6 +65,9 @@ export function WorkspacePage({ route }: { route: WorkspaceRoute }) {
   const [location, navigate] = useLocation();
   const isMacOS = window.desktopEnvironment.platform === 'darwin';
   const [agentSettings, updateAgentSettings] = useAgentSettings();
+  const [draftRuntime, setDraftRuntime] = useState<AgentRuntime>(
+    agentSettings.defaultRuntime
+  );
 
   const selectedChatId =
     route.type === 'chat' || route.type === 'projectChat'
@@ -87,18 +100,48 @@ export function WorkspacePage({ route }: { route: WorkspaceRoute }) {
   const historyRevision = selectedChatId
     ? chatLoadQuery.dataUpdatedAt
     : 0;
-  const lockedRuntime = selectedChat
+  const chatRuntime = selectedChat
     ? normalizeAgentRuntime(selectedChat.runtime)
     : undefined;
-  const activeRuntime = lockedRuntime ?? agentSettings.defaultRuntime;
-  const activeReasoningEffort = normalizeAgentReasoningEffort(
-    activeRuntime,
+  const activeRuntime = chatRuntime ?? draftRuntime;
+  const runtimePageKey = selectedChatId
+    ? `chat:${selectedChatId}:${chatRuntime ?? 'pending'}`
+    : `create:${draftRuntime}`;
+  const shouldInspectRuntimeConfig = route.type === 'create';
+  const runtimeConfigQuery = useQuery({
+    ...chatRuntimeConfigQueryOptions({
+      api,
+      cwd: selectedChat?.cwd ?? undefined,
+      enabled: shouldInspectRuntimeConfig,
+      runtime: activeRuntime,
+    }),
+  });
+  const runtimeConfig = chatLoadQuery.data?.config ?? runtimeConfigQuery.data;
+  const modelOptions = ensureConfigOption(
+    runtimeConfigOptionsToAgentOptions(runtimeConfig?.models, [
+      { label: 'Default', value: 'default' },
+    ]),
+    agentSettings.models[activeRuntime]
+  );
+  const reasoningEffortOptions = ensureConfigOption(
+    runtimeConfigOptionsToAgentOptions(
+      runtimeConfig?.reasoningEfforts,
+      getAgentReasoningEfforts(activeRuntime)
+    ),
     agentSettings.reasoningEfforts[activeRuntime]
   );
-  const activeMode = normalizeAgentMode(
-    activeRuntime,
+  const modeOptions = ensureConfigOption(
+    runtimeConfigOptionsToAgentOptions(
+      runtimeConfig?.modes,
+      getAgentModes(activeRuntime)
+    ),
     agentSettings.modes[activeRuntime]
   );
+  const activeModel = normalizeAgentModel(agentSettings.models[activeRuntime]);
+  const activeReasoningEffort = normalizeAgentConfigValue(
+    agentSettings.reasoningEfforts[activeRuntime]
+  );
+  const activeMode = normalizeAgentConfigValue(agentSettings.modes[activeRuntime]);
 
   const projectIds = useMemo(
     () => new Set(projects.map((project) => project.id)),
@@ -126,9 +169,22 @@ export function WorkspacePage({ route }: { route: WorkspaceRoute }) {
   );
   const setDefaultRuntime = useCallback(
     (runtime: AgentRuntime) => {
+      setDraftRuntime(runtime);
       updateAgentSettings((current) => ({
         ...current,
         defaultRuntime: runtime,
+      }));
+    },
+    [updateAgentSettings]
+  );
+  const setAgentModel = useCallback(
+    (runtime: AgentRuntime, model: string) => {
+      updateAgentSettings((current) => ({
+        ...current,
+        models: {
+          ...current.models,
+          [runtime]: normalizeAgentModel(model),
+        },
       }));
     },
     [updateAgentSettings]
@@ -139,7 +195,7 @@ export function WorkspacePage({ route }: { route: WorkspaceRoute }) {
         ...current,
         reasoningEfforts: {
           ...current.reasoningEfforts,
-          [runtime]: normalizeAgentReasoningEffort(runtime, effort),
+          [runtime]: normalizeAgentConfigValue(effort),
         },
       }));
     },
@@ -151,7 +207,7 @@ export function WorkspacePage({ route }: { route: WorkspaceRoute }) {
         ...current,
         modes: {
           ...current.modes,
-          [runtime]: normalizeAgentMode(runtime, mode),
+          [runtime]: normalizeAgentConfigValue(mode),
         },
       }));
     },
@@ -159,10 +215,16 @@ export function WorkspacePage({ route }: { route: WorkspaceRoute }) {
   );
   const chatOptions = useMemo(
     () => ({
+      configLoading: runtimeConfigQuery.isFetching,
+      model: activeModel,
+      modelOptions,
       mode: activeMode,
+      modeOptions,
       reasoningEffort: activeReasoningEffort,
+      reasoningEffortOptions,
       runtime: activeRuntime,
-      runtimeLocked: Boolean(lockedRuntime),
+      runtimeLocked: Boolean(chatRuntime),
+      setModel: (model: string) => setAgentModel(activeRuntime, model),
       setMode: (mode: string) => setAgentMode(activeRuntime, mode),
       setReasoningEffort: (effort: string) =>
         setAgentReasoningEffort(activeRuntime, effort),
@@ -170,9 +232,15 @@ export function WorkspacePage({ route }: { route: WorkspaceRoute }) {
     }),
     [
       activeMode,
+      activeModel,
       activeReasoningEffort,
       activeRuntime,
-      lockedRuntime,
+      chatRuntime,
+      modelOptions,
+      modeOptions,
+      reasoningEffortOptions,
+      runtimeConfigQuery.isFetching,
+      setAgentModel,
       setAgentMode,
       setAgentReasoningEffort,
       setDefaultRuntime,
@@ -180,7 +248,11 @@ export function WorkspacePage({ route }: { route: WorkspaceRoute }) {
   );
 
   const setChatInCache = useCallback(
-    (chat: Chat, messages?: ChatHistoryMessage[]) => {
+    (
+      chat: Chat,
+      messages?: ChatHistoryMessage[],
+      config?: ChatRuntimeConfig
+    ) => {
       queryClient.setQueryData<Chat[]>(queryKeys.chats.list(), (current = []) =>
         upsertChatInList(current, chat)
       );
@@ -189,10 +261,10 @@ export function WorkspacePage({ route }: { route: WorkspaceRoute }) {
         queryKeys.chats.detail(chat.id),
         (current) => {
           if (messages) {
-            return { chat, messages };
+            return { chat, config: config ?? current?.config, messages };
           }
           if (current) {
-            return { ...current, chat };
+            return { ...current, chat, config: config ?? current.config };
           }
           return current;
         }
@@ -212,8 +284,12 @@ export function WorkspacePage({ route }: { route: WorkspaceRoute }) {
   );
 
   const upsertChat = useCallback(
-    (chat: Chat, messages?: ChatHistoryMessage[]) => {
-      setChatInCache(chat, messages);
+    (
+      chat: Chat,
+      messages?: ChatHistoryMessage[],
+      config?: ChatRuntimeConfig
+    ) => {
+      setChatInCache(chat, messages, config);
       navigateToChat(chat);
     },
     [navigateToChat, setChatInCache]
@@ -226,7 +302,7 @@ export function WorkspacePage({ route }: { route: WorkspaceRoute }) {
     ...createProjectChatMutationOptions({
       api,
       queryClient,
-      runtime: agentSettings.defaultRuntime,
+      runtime: draftRuntime,
     }),
   });
   const deleteAllChatsMutation = useMutation({
@@ -417,6 +493,8 @@ export function WorkspacePage({ route }: { route: WorkspaceRoute }) {
             chatId={selectedChatId}
             historyMessages={historyMessages}
             historyRevision={historyRevision}
+            key={runtimePageKey}
+            model={activeModel}
             mode={activeMode}
             onChatUpdated={upsertChat}
             projectId={selectedChat?.projectId ?? null}
@@ -445,6 +523,45 @@ function upsertChatInList(chats: Chat[], chat: Chat) {
   return next.sort((left, right) =>
     right.updatedAt.localeCompare(left.updatedAt)
   );
+}
+
+function runtimeConfigOptionsToAgentOptions(
+  options: ChatRuntimeConfigOption[] | undefined,
+  fallback: AgentValueOption[]
+): AgentValueOption[] {
+  if (!options?.length) return fallback;
+  return options.map((option) => ({
+    description: option.description ?? undefined,
+    label: option.label,
+    value: option.value,
+  }));
+}
+
+function ensureConfigOption(
+  options: AgentValueOption[],
+  value: string | null | undefined
+) {
+  const normalizedValue = value?.trim() || 'default';
+  if (options.some((option) => option.value === normalizedValue)) {
+    return options;
+  }
+  return [
+    ...options,
+    {
+      label: labelFromConfigValue(normalizedValue),
+      value: normalizedValue,
+    },
+  ];
+}
+
+function labelFromConfigValue(value: string) {
+  if (value === 'xhigh') return 'XHigh';
+  if (value === 'default') return 'Default';
+  return value
+    .split(/[_\s-]+/)
+    .filter(Boolean)
+    .map((part) => `${part.slice(0, 1).toUpperCase()}${part.slice(1)}`)
+    .join(' ');
 }
 
 function getErrorMessage(error: unknown) {

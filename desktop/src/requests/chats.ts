@@ -6,7 +6,11 @@ import {
 
 import type { ApiClient } from '@/requests/client';
 import { queryKeys } from '@/requests/keys';
-import type { Chat, ChatLoadResult } from '@/shared/chat';
+import type {
+  Chat,
+  ChatLoadResult,
+  ChatRuntimeConfig,
+} from '@/shared/chat';
 import type { Project } from '@/shared/projects';
 
 interface ChatListQueryParams {
@@ -19,6 +23,14 @@ interface ChatLoadQueryParams {
   api: ApiClient;
   chatId?: string;
   enabled?: boolean;
+  staleTime?: number;
+}
+
+interface ChatRuntimeConfigQueryParams {
+  api: ApiClient;
+  cwd?: string | null;
+  enabled?: boolean;
+  runtime?: string | null;
   staleTime?: number;
 }
 
@@ -78,6 +90,26 @@ export function chatLoadQueryOptions({
       return api.chats.load(chatId);
     },
     queryKey: queryKeys.chats.detail(chatId ?? null),
+    retry: false,
+    staleTime,
+  });
+}
+
+export function chatRuntimeConfigQueryOptions({
+  api,
+  cwd,
+  enabled = true,
+  runtime,
+  staleTime = 300_000,
+}: ChatRuntimeConfigQueryParams) {
+  return queryOptions({
+    enabled: enabled && Boolean(runtime),
+    queryFn: (): Promise<ChatRuntimeConfig> =>
+      api.chats.inspectConfig({
+        cwd: cwd ?? undefined,
+        runtime: runtime ?? undefined,
+      }),
+    queryKey: queryKeys.chats.runtimeConfig(runtime ?? null, cwd ?? null),
     retry: false,
     staleTime,
   });
