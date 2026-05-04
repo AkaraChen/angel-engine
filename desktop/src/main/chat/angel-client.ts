@@ -38,8 +38,15 @@ type ConversationSnapshot = {
     replay?: HistoryReplaySnapshot[];
   };
   id: string;
+  reasoning?: ReasoningOptionsSnapshot;
   remoteId?: string | null;
   turns?: TurnSnapshot[];
+};
+
+type ReasoningOptionsSnapshot = {
+  availableEfforts?: string[];
+  canSet?: boolean;
+  currentEffort?: string | null;
 };
 
 type HistoryReplaySnapshot = {
@@ -86,6 +93,7 @@ type AngelClient = {
   }): Promise<ClientCommandResult>;
   sendThreadEvent(conversationId: string, event: unknown): ClientCommandResult;
   sendText(conversationId: string, text: string): ClientCommandResult;
+  setReasoningEffort(conversationId: string, effort: string): ClientCommandResult;
   snapshot(): {
     runtime?: {
       code?: string;
@@ -303,7 +311,6 @@ function messagesFromHistoryReplay(
 class AngelChatSession {
   private readonly client: AngelClient;
   private conversationId: string | undefined;
-  private readonly configuredReasoningEfforts = new Set<string>();
   private startPromise: Promise<void> | undefined;
   private operationQueue: Promise<void> = Promise.resolve();
 
@@ -464,14 +471,12 @@ class AngelChatSession {
     const effort = (process.env.ANGEL_ENGINE_REASONING_EFFORT ?? 'high').trim();
     if (!effort || effort === 'default') return;
 
-    const key = `${conversationId}:${effort}`;
-    if (this.configuredReasoningEfforts.has(key)) return;
+    const reasoning = this.client.threadState(conversationId)?.reasoning;
+    if (reasoning?.canSet === false || reasoning?.currentEffort === effort) {
+      return;
+    }
 
-    const result = this.client.sendThreadEvent(conversationId, {
-      effort,
-      type: 'setReasoningEffort',
-    });
-    this.configuredReasoningEfforts.add(key);
+    const result = this.client.setReasoningEffort(conversationId, effort);
     await this.handleUpdate(result.update);
   }
 
