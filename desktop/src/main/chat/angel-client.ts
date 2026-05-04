@@ -21,7 +21,6 @@ import {
 
 type ClientUpdate = {
   events?: ClientEvent[];
-  logs?: ClientLog[];
   streamDeltas?: EngineStreamDelta[];
 };
 
@@ -73,11 +72,6 @@ type EngineStreamDelta = {
   conversationId?: string;
   turnId?: string;
   type: 'actionOutputDelta' | 'assistantDelta' | 'planDelta' | 'reasoningDelta';
-};
-
-type ClientLog = {
-  kind: string;
-  message: string;
 };
 
 type AngelClient = {
@@ -309,6 +303,7 @@ function messagesFromHistoryReplay(
 class AngelChatSession {
   private readonly client: AngelClient;
   private conversationId: string | undefined;
+  private readonly configuredReasoningEfforts = new Set<string>();
   private startPromise: Promise<void> | undefined;
   private operationQueue: Promise<void> = Promise.resolve();
 
@@ -371,6 +366,7 @@ class AngelChatSession {
     throwIfAborted(abortSignal);
 
     const conversationId = this.requireConversationId();
+    await this.ensureReasoningEffort(conversationId);
     const result = this.client.sendText(conversationId, input.text);
     const collector = new TurnCollector(result.turnId, onEvent);
     await this.handleUpdate(result.update, collector);
@@ -459,6 +455,23 @@ class AngelChatSession {
     }
 
     this.conversationId = result.conversationId;
+    await this.handleUpdate(result.update);
+  }
+
+  private async ensureReasoningEffort(conversationId: string) {
+    if (this.options.runtime !== 'codex') return;
+
+    const effort = (process.env.ANGEL_ENGINE_REASONING_EFFORT ?? 'high').trim();
+    if (!effort || effort === 'default') return;
+
+    const key = `${conversationId}:${effort}`;
+    if (this.configuredReasoningEfforts.has(key)) return;
+
+    const result = this.client.sendThreadEvent(conversationId, {
+      effort,
+      type: 'setReasoningEffort',
+    });
+    this.configuredReasoningEfforts.add(key);
     await this.handleUpdate(result.update);
   }
 

@@ -2,7 +2,6 @@ import {
   useCallback,
   useEffect,
   useMemo,
-  useRef,
   useState,
   type ChangeEvent,
   type KeyboardEvent,
@@ -22,13 +21,11 @@ import {
   ThreadPrimitive,
   useAui,
   useAuiState,
-  useLocalRuntime,
   type CompleteAttachment,
   type CreateAttachment,
   type EnrichedPartState,
   type FeedbackAdapter,
   type SpeechSynthesisAdapter,
-  type ThreadMessageLike,
 } from '@assistant-ui/react';
 import {
   ArrowUp,
@@ -90,7 +87,7 @@ import {
   SidebarProvider,
 } from '@/components/ui/sidebar';
 import { ToastProvider, useToast } from '@/components/ui/toast';
-import { createEngineModelAdapter } from '@/lib/engine-model-adapter';
+import { useEngineRuntime } from '@/lib/engine-model-adapter';
 import { ipc } from '@/lib/ipc';
 import { cn } from '@/lib/utils';
 import type { Chat, ChatHistoryMessage } from './shared/chat';
@@ -127,16 +124,6 @@ function AppRuntimeProvider({
   projectId?: string | null;
   projectPath?: string;
 }) {
-  const modelAdapter = useMemo(
-    () =>
-      createEngineModelAdapter({
-        chatId,
-        onChatUpdated,
-        projectId,
-        projectPath,
-      }),
-    [chatId, onChatUpdated, projectId, projectPath]
-  );
   const adapters = useMemo(
     () => ({
       attachments: new CompositeAttachmentAdapter([
@@ -149,59 +136,21 @@ function AppRuntimeProvider({
     []
   );
 
-  const runtime = useLocalRuntime(modelAdapter, {
+  const runtime = useEngineRuntime({
     adapters,
-    maxSteps: 3,
+    chatId,
+    historyMessages,
+    historyRevision,
+    onChatUpdated,
+    projectId,
+    projectPath,
   });
 
   return (
     <AssistantRuntimeProvider runtime={runtime}>
-      <ThreadHistoryHydrator
-        messages={historyMessages}
-        revision={historyRevision}
-      />
       {children}
     </AssistantRuntimeProvider>
   );
-}
-
-function ThreadHistoryHydrator({
-  messages,
-  revision,
-}: {
-  messages: ChatHistoryMessage[];
-  revision: number;
-}): null {
-  const aui = useAui();
-  const appliedKey = useRef<string | undefined>(undefined);
-
-  useEffect(() => {
-    const key = String(revision);
-    if (appliedKey.current === key) return;
-
-    appliedKey.current = key;
-    aui.thread().reset(messages.map(toThreadMessageLike));
-  }, [aui, messages, revision]);
-
-  return null;
-}
-
-function toThreadMessageLike(message: ChatHistoryMessage): ThreadMessageLike {
-  const createdAt = message.createdAt ? new Date(message.createdAt) : undefined;
-
-  return {
-    content: message.content,
-    createdAt: createdAt && Number.isFinite(createdAt.getTime()) ? createdAt : undefined,
-    id: message.id,
-    role: message.role,
-    status:
-      message.role === 'assistant'
-        ? {
-            reason: 'stop',
-            type: 'complete',
-          }
-        : undefined,
-  };
 }
 
 export function App() {
@@ -1057,18 +1006,21 @@ function MessageBranchPicker() {
 }
 
 function MessageParts() {
-  return (
-    <MessagePrimitive.Parts>
-      {renderMessagePart}
-    </MessagePrimitive.Parts>
-  );
+  return <MessagePrimitive.Parts components={messagePartComponents} />;
 }
 
-function renderMessagePart({ part }: { part: EnrichedPartState }) {
-  return <MessagePart key={getPartKey(part)} part={part} />;
-}
+const messagePartComponents = {
+  Text: TextMessagePart,
+  Reasoning: ReasoningMessagePart,
+  Source: NullMessagePart,
+  Image: ImageMessagePart,
+  File: FileMessagePart,
+  data: {
+    Fallback: DataMessagePart,
+  },
+};
 
-function MessagePart({ part }: { part: EnrichedPartState }) {
+function TextMessagePart(part: Extract<EnrichedPartState, { type: 'text' }>) {
   if (part.type === 'text') {
     if (part.status.type === 'running' && !part.text) {
       return (
@@ -1081,53 +1033,51 @@ function MessagePart({ part }: { part: EnrichedPartState }) {
     return <div className="whitespace-pre-wrap">{part.text}</div>;
   }
 
-  if (part.type === 'reasoning') {
-    if (!part.text.trim()) return null;
+  return null;
+}
 
-    return (
-      <div className="mb-3 w-full text-muted-foreground">
-        <div className="flex items-center gap-2 text-xs font-medium">
-          <BrainCircuit className="size-3.5" />
-          Reasoning
-        </div>
-        <div className="mt-2 whitespace-pre-wrap border-l border-border pl-3 text-xs leading-5">
-          {part.text}
-        </div>
+function ReasoningMessagePart(
+  part: Extract<EnrichedPartState, { type: 'reasoning' }>
+) {
+  if (!part.text.trim()) return null;
+
+  return (
+    <div className="mb-3 w-full text-muted-foreground">
+      <div className="flex items-center gap-2 text-xs font-medium">
+        <BrainCircuit className="size-3.5" />
+        Reasoning
       </div>
-    );
-  }
-
-  if (part.type === 'tool-call') {
-    return null;
-  }
-
-  if (part.type === 'source') {
-    return null;
-  }
-
-  if (part.type === 'image') {
-    return (
-      <img
-        alt={part.filename ?? 'image attachment'}
-        className="my-2 max-h-80 rounded-md border object-contain"
-        src={part.image}
-      />
-    );
-  }
-
-  if (part.type === 'file') {
-    return (
-      <div className="my-2 inline-flex items-center gap-2 rounded-md border bg-background px-2 py-1 text-xs">
-        <FileText className="size-3.5" />
-        {part.filename ?? part.mimeType}
+      <div className="mt-2 whitespace-pre-wrap border-l border-border pl-3 text-xs leading-5">
+        {part.text}
       </div>
-    );
-  }
+    </div>
+  );
+}
 
-  if (part.type === 'data') {
-    return <JsonBlock label={part.name} value={part.data} />;
-  }
+function ImageMessagePart(part: Extract<EnrichedPartState, { type: 'image' }>) {
+  return (
+    <img
+      alt={part.filename ?? 'image attachment'}
+      className="my-2 max-h-80 rounded-md border object-contain"
+      src={part.image}
+    />
+  );
+}
 
+function FileMessagePart(part: Extract<EnrichedPartState, { type: 'file' }>) {
+  return (
+    <div className="my-2 inline-flex items-center gap-2 rounded-md border bg-background px-2 py-1 text-xs">
+      <FileText className="size-3.5" />
+      {part.filename ?? part.mimeType}
+    </div>
+  );
+}
+
+function DataMessagePart(part: Extract<EnrichedPartState, { type: 'data' }>) {
+  return <JsonBlock label={part.name} value={part.data} />;
+}
+
+function NullMessagePart(): null {
   return null;
 }
 
@@ -1152,13 +1102,6 @@ function MessageAttachment({ attachment }: { attachment: CompleteAttachment }) {
       <span className="text-muted-foreground">{attachment.type}</span>
     </div>
   );
-}
-
-function getPartKey(part: EnrichedPartState) {
-  if ('toolCallId' in part) return part.toolCallId;
-  if ('id' in part && typeof part.id === 'string') return part.id;
-  if ('text' in part) return part.type;
-  return part.type;
 }
 
 function getProjectDisplayName(projectPath: string) {
