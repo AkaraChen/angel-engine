@@ -12,7 +12,7 @@ import {
   UserMessage,
 } from '@/chat/messages';
 
-export function AssistantThread() {
+export function AssistantThread({ projectName }: { projectName?: string }) {
   return (
     <ThreadPrimitive.Root className="flex h-full min-h-0 flex-col">
       <ThreadPrimitive.Viewport
@@ -20,7 +20,7 @@ export function AssistantThread() {
         scrollToBottomOnRunStart
       >
         <AuiIf condition={(state) => state.thread.isEmpty}>
-          <EmptyThread />
+          <EmptyThread projectName={projectName} />
         </AuiIf>
 
         <ThreadPrimitive.Messages>
@@ -47,18 +47,51 @@ export function AssistantThread() {
   );
 }
 
-function EmptyThread() {
+function EmptyThread({ projectName }: { projectName?: string }) {
   return (
     <div className="mx-auto flex max-w-2xl flex-1 flex-col justify-center gap-5 text-center">
       <div className="mx-auto flex size-11 items-center justify-center rounded-md border bg-muted/40">
         <Sparkles className="size-5" />
       </div>
       <div>
-        <h2 className="text-lg font-semibold">Start a desktop run</h2>
+        <h2 className="text-lg font-semibold">
+          {projectName ? (
+            <>
+              Start a run in <ProjectNameUnderline name={projectName} />
+            </>
+          ) : (
+            'Start a desktop run'
+          )}
+        </h2>
         <p className="mt-1 text-sm text-muted-foreground">
-          Describe the workspace slice to inspect.
+          {projectName
+            ? `Ask Angel Engine to inspect, patch, or test ${projectName}.`
+            : 'Describe the workspace slice to inspect.'}
         </p>
       </div>
     </div>
+  );
+}
+
+function ProjectNameUnderline({ name }: { name: string }) {
+  return (
+    <span className="relative inline-block max-w-full align-baseline text-primary">
+      <span className="relative z-10 break-words">{name}</span>
+      <svg
+        aria-hidden
+        className="pointer-events-none absolute -bottom-1.5 -left-[5%] h-3 w-[110%] overflow-visible text-primary/70"
+        focusable="false"
+        preserveAspectRatio="none"
+        viewBox="0 0 120 12"
+      >
+        <path
+          d="M3 7.8 C13 3.1 24 10.4 35 6.2 C48 1.3 55 8.6 67 6.8 C78 5.2 81 2.6 91 4.9 C101 7.3 108 6.7 117 3.8"
+          fill="none"
+          stroke="currentColor"
+          strokeLinecap="round"
+          strokeWidth="1.55"
+        />
+      </svg>
+    </span>
   );
 }

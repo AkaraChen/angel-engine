@@ -100,6 +100,9 @@ export function WorkspacePage({ route }: { route: WorkspaceRoute }) {
     ? projects.find((project) => project.id === selectedProjectId)
     : undefined;
   const selectedProjectPath = selectedChat?.cwd ?? selectedProject?.path;
+  const selectedProjectName = selectedProjectPath
+    ? getProjectDisplayName(selectedProjectPath)
+    : undefined;
   const historyMessages = selectedChatId
     ? chatLoadQuery.data?.messages ?? EMPTY_MESSAGES
     : EMPTY_MESSAGES;
@@ -509,7 +512,7 @@ export function WorkspacePage({ route }: { route: WorkspaceRoute }) {
               <WorkspaceHeader />
               <main className="flex min-h-0 flex-1 overflow-hidden">
                 <section className="flex min-h-0 min-w-0 flex-1 flex-col">
-                  <AssistantThread />
+                  <AssistantThread projectName={selectedProjectName} />
                 </section>
               </main>
             </SidebarInset>
@@ -601,4 +604,9 @@ function draftRuntimeKeyFromRoute(route: WorkspaceRoute) {
   if (route.type === 'create') return 'create';
   if (route.type === 'projectCreate') return `project:${route.projectId}`;
   return undefined;
+}
+
+function getProjectDisplayName(projectPath: string) {
+  const parts = projectPath.split(/[\\/]/).filter(Boolean);
+  return parts[parts.length - 1] ?? projectPath;
 }
