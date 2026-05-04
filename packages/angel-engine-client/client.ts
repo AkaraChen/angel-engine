@@ -21,6 +21,7 @@ export type {
   RuntimeOptionsOverrides,
   SendTextRequest,
   TurnSnapshot,
+  TurnRunEvent,
   TurnRunResult,
 } from '../../crates/angel-engine-client-napi';
 
@@ -50,7 +51,11 @@ export type RunTurnStreamEvent =
     }
   | {
       action: ActionSnapshot;
-      type: 'action';
+      type: 'actionObserved';
+    }
+  | {
+      action: ActionSnapshot;
+      type: 'actionUpdated';
     }
   | {
       actionId: string;

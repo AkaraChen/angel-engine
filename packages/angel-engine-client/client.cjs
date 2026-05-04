@@ -132,8 +132,13 @@ class AngelSession {
         continue;
       }
 
-      if (event.type === 'action') {
-        request.onEvent?.({ action: event.action, type: 'action' });
+      if (event.type === 'actionObserved') {
+        request.onEvent?.({ action: event.action, type: 'actionObserved' });
+        continue;
+      }
+
+      if (event.type === 'actionUpdated') {
+        request.onEvent?.({ action: event.action, type: 'actionUpdated' });
         continue;
       }
 

@@ -86,7 +86,7 @@ function handleEvent(event) {
     return;
   }
 
-  if (event.type === 'action') {
+  if (event.type === 'actionObserved') {
     const action = event.action;
     const title = action?.title || action?.kind || action?.id || 'action';
     console.log(`\n[tool call] ${title}`);

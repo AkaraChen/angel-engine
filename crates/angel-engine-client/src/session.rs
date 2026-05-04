@@ -83,7 +83,10 @@ pub enum TurnRunEvent {
         #[serde(default, skip_serializing_if = "Option::is_none")]
         turn_id: Option<String>,
     },
-    Action {
+    ActionObserved {
+        action: ActionSnapshot,
+    },
+    ActionUpdated {
         action: ActionSnapshot,
     },
     ActionOutputDelta {
@@ -606,10 +609,13 @@ impl TurnCollector {
 
     fn accept_event(&mut self, event: ClientEvent, events: &mut VecDeque<TurnRunEvent>) {
         match event {
-            ClientEvent::ActionObserved { action, .. }
-            | ClientEvent::ActionUpdated { action, .. } => {
+            ClientEvent::ActionObserved { action, .. } => {
                 self.upsert_action(action.clone());
-                events.push_back(TurnRunEvent::Action { action });
+                events.push_back(TurnRunEvent::ActionObserved { action });
+            }
+            ClientEvent::ActionUpdated { action, .. } => {
+                self.upsert_action(action.clone());
+                events.push_back(TurnRunEvent::ActionUpdated { action });
             }
             ClientEvent::AssistantDelta {
                 turn_id, content, ..
@@ -788,6 +794,35 @@ mod tests {
         assert!(active.pending_elicitation_id.is_none());
     }
 
+    #[test]
+    fn active_turn_preserves_action_lifecycle_events() {
+        let mut active = ActiveTurn::new("conversation".to_string(), Some("turn".to_string()));
+        active
+            .handle_update(ClientUpdate {
+                events: vec![
+                    ClientEvent::ActionObserved {
+                        conversation_id: "conversation".to_string(),
+                        action: action("running"),
+                    },
+                    ClientEvent::ActionUpdated {
+                        conversation_id: "conversation".to_string(),
+                        action: action("completed"),
+                    },
+                ],
+                ..ClientUpdate::default()
+            })
+            .unwrap();
+
+        assert!(matches!(
+            active.pop_event(),
+            Some(TurnRunEvent::ActionObserved { .. })
+        ));
+        assert!(matches!(
+            active.pop_event(),
+            Some(TurnRunEvent::ActionUpdated { .. })
+        ));
+    }
+
     fn elicitation(phase: &str) -> ElicitationSnapshot {
         ElicitationSnapshot {
             action_id: None,
@@ -799,6 +834,21 @@ mod tests {
             questions: Vec::new(),
             title: None,
             turn_id: Some("turn".to_string()),
+        }
+    }
+
+    fn action(phase: &str) -> ActionSnapshot {
+        ActionSnapshot {
+            error: None,
+            id: "action".to_string(),
+            input_summary: None,
+            kind: "command".to_string(),
+            output: Vec::new(),
+            output_text: String::new(),
+            phase: phase.to_string(),
+            raw_input: None,
+            title: Some("Shell".to_string()),
+            turn_id: "turn".to_string(),
         }
     }
 }

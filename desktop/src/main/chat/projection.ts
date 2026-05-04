@@ -19,7 +19,8 @@ import { appendChatTextPart, chatToolActionToPart } from '../../shared/chat';
 
 export type RawTurnStreamEvent =
   | ChatStreamDelta
-  | { action: ActionSnapshot; type: 'action' }
+  | { action: ActionSnapshot; type: 'actionObserved' }
+  | { action: ActionSnapshot; type: 'actionUpdated' }
   | {
       actionId: string;
       content: ActionOutputSnapshot;
@@ -144,7 +145,10 @@ export function createTurnEventProjector(
         return;
       }
 
-      if (event.type === 'action') {
+      if (
+        event.type === 'actionObserved' ||
+        event.type === 'actionUpdated'
+      ) {
         upsertAction(toChatAction(event.action));
         return;
       }

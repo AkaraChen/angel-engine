@@ -458,7 +458,9 @@ pub struct TurnRunResult {
 
 #[napi(object)]
 pub struct TurnRunEvent {
-    #[napi(ts_type = "'delta' | 'action' | 'actionOutputDelta' | 'elicitation' | 'result'")]
+    #[napi(
+        ts_type = "'delta' | 'actionObserved' | 'actionUpdated' | 'actionOutputDelta' | 'elicitation' | 'result'"
+    )]
     pub r#type: String,
     #[napi(ts_type = "'reasoning' | 'text'")]
     pub part: Option<String>,
