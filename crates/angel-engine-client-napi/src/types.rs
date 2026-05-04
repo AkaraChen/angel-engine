@@ -4,12 +4,206 @@ use std::collections::HashMap;
 
 use napi_derive::napi;
 
+#[napi(string_enum = "lowercase")]
+pub enum AgentRuntime {
+    Codex,
+    Kimi,
+    Opencode,
+}
+
+#[napi(string_enum = "camelCase")]
+pub enum ClientProtocol {
+    Acp,
+    CodexAppServer,
+}
+
+#[napi(string_enum = "camelCase")]
+pub enum ClientLogKind {
+    Send,
+    Receive,
+    State,
+    Output,
+    Warning,
+    Error,
+    ProcessStdout,
+    ProcessStderr,
+}
+
+#[napi(string_enum = "camelCase")]
+pub enum ClientEventType {
+    Log,
+    RuntimeAuthRequired,
+    RuntimeReady,
+    RuntimeFaulted,
+    ConversationDiscovered,
+    ConversationReady,
+    ConversationUpdated,
+    AvailableCommandsUpdated,
+    SessionUsageUpdated,
+    TurnStarted,
+    TurnSteered,
+    AssistantDelta,
+    ReasoningDelta,
+    PlanDelta,
+    PlanUpdated,
+    TurnTerminal,
+    ActionObserved,
+    ActionUpdated,
+    ElicitationOpened,
+    ElicitationUpdated,
+    ContextUpdated,
+    HistoryUpdated,
+}
+
+#[napi(string_enum = "camelCase")]
+pub enum ClientStreamDeltaType {
+    AssistantDelta,
+    ReasoningDelta,
+    PlanDelta,
+    ActionOutputDelta,
+}
+
+#[napi(string_enum = "camelCase")]
+pub enum RuntimeStatus {
+    Offline,
+    Connecting,
+    Negotiating,
+    AwaitingAuth,
+    Available,
+    Faulted,
+}
+
+#[napi(string_enum = "lowercase")]
+pub enum RemoteKind {
+    Known,
+    Pending,
+    Local,
+}
+
+#[napi(string_enum = "camelCase")]
+pub enum ContentChunkKind {
+    Text,
+    ResourceRef,
+    Structured,
+}
+
+#[napi(string_enum = "camelCase")]
+pub enum PlanEntryStatus {
+    Pending,
+    InProgress,
+    Completed,
+}
+
+#[napi(string_enum = "camelCase")]
+pub enum ActionKind {
+    Command,
+    FileChange,
+    Read,
+    Write,
+    McpTool,
+    DynamicTool,
+    SubAgent,
+    WebSearch,
+    Media,
+    Reasoning,
+    Plan,
+    HostCapability,
+}
+
+#[napi(string_enum = "camelCase")]
+pub enum ActionPhase {
+    Proposed,
+    AwaitingDecision,
+    Running,
+    StreamingResult,
+    Completed,
+    Failed,
+    Declined,
+    Cancelled,
+}
+
+#[napi(string_enum = "lowercase")]
+pub enum ActionOutputKind {
+    Text,
+    Patch,
+    Terminal,
+    Structured,
+}
+
+#[napi(string_enum = "camelCase")]
+pub enum ElicitationKind {
+    Approval,
+    UserInput,
+    ExternalFlow,
+    DynamicToolCall,
+    PermissionProfile,
+}
+
+#[napi(string_enum = "lowercase")]
+pub enum QuestionValueType {
+    String,
+    Number,
+    Integer,
+    Boolean,
+    Array,
+    Object,
+}
+
+#[napi(string_enum = "camelCase")]
+pub enum ElicitationResponseType {
+    Allow,
+    AllowForSession,
+    Deny,
+    Cancel,
+    Answers,
+    DynamicToolResult,
+    ExternalComplete,
+    Raw,
+}
+
+#[napi(string_enum = "camelCase")]
+pub enum ThreadEventType {
+    UserMessage,
+    Inputs,
+    Steer,
+    Cancel,
+    SetModel,
+    SetMode,
+    SetReasoningEffort,
+    ResolveElicitation,
+    ResolveFirstElicitation,
+    Fork,
+    Close,
+    Unsubscribe,
+    Archive,
+    Unarchive,
+    CompactHistory,
+    RollbackHistory,
+    RunShellCommand,
+}
+
+#[napi(string_enum = "camelCase")]
+pub enum TurnRunEventType {
+    Delta,
+    ActionObserved,
+    ActionUpdated,
+    ActionOutputDelta,
+    Elicitation,
+    Result,
+}
+
+#[napi(string_enum = "lowercase")]
+pub enum TurnRunDeltaPart {
+    Reasoning,
+    Text,
+}
+
 #[napi(object)]
 pub struct ClientOptions {
     pub command: String,
     pub args: Option<Vec<String>>,
-    #[napi(ts_type = "'acp' | 'codexAppServer'")]
-    pub protocol: Option<String>,
+    #[napi(ts_type = "`${ClientProtocol}`")]
+    pub protocol: Option<ClientProtocol>,
     pub auth: Option<ClientAuthOptions>,
     pub identity: Option<ClientIdentity>,
     pub cwd: Option<String>,
@@ -77,7 +271,8 @@ pub struct JsonRpcOutbound {
 
 #[napi(object)]
 pub struct ClientLog {
-    pub kind: String,
+    #[napi(ts_type = "`${ClientLogKind}`")]
+    pub kind: ClientLogKind,
     pub message: String,
 }
 
@@ -89,7 +284,8 @@ pub struct RuntimeAuthMethod {
 
 #[napi(object)]
 pub struct ClientEvent {
-    pub r#type: String,
+    #[napi(ts_type = "`${ClientEventType}`")]
+    pub r#type: ClientEventType,
     pub log: Option<ClientLog>,
     pub methods: Option<Vec<RuntimeAuthMethod>>,
     pub name: Option<String>,
@@ -109,8 +305,8 @@ pub struct ClientEvent {
 
 #[napi(object)]
 pub struct ClientStreamDelta {
-    #[napi(ts_type = "'assistantDelta' | 'reasoningDelta' | 'planDelta' | 'actionOutputDelta'")]
-    pub r#type: String,
+    #[napi(ts_type = "`${ClientStreamDeltaType}`")]
+    pub r#type: ClientStreamDeltaType,
     pub conversation_id: Option<String>,
     pub turn_id: Option<String>,
     pub action_id: Option<String>,
@@ -127,7 +323,8 @@ pub struct ClientSnapshot {
 
 #[napi(object)]
 pub struct RuntimeSnapshot {
-    pub status: String,
+    #[napi(ts_type = "`${RuntimeStatus}`")]
+    pub status: RuntimeStatus,
     pub methods: Option<Vec<RuntimeAuthMethod>>,
     pub name: Option<String>,
     pub version: Option<String>,
@@ -141,7 +338,8 @@ pub struct RuntimeSnapshot {
 pub struct ConversationSnapshot {
     pub id: String,
     pub remote_id: Option<String>,
-    pub remote_kind: String,
+    #[napi(ts_type = "`${RemoteKind}`")]
+    pub remote_kind: RemoteKind,
     pub lifecycle: String,
     pub active_turn_ids: Vec<String>,
     pub focused_turn_id: Option<String>,
@@ -182,7 +380,7 @@ pub struct ReasoningOptionsSnapshot {
 #[napi(object)]
 pub struct AvailableCommandSnapshot {
     pub name: String,
-    pub description: Option<String>,
+    pub description: String,
     pub input_hint: Option<String>,
 }
 
@@ -192,7 +390,7 @@ pub struct SessionConfigOptionSnapshot {
     pub name: String,
     pub description: Option<String>,
     pub category: Option<String>,
-    pub current_value: Option<String>,
+    pub current_value: String,
     pub values: Vec<SessionConfigValueSnapshot>,
 }
 
@@ -205,7 +403,7 @@ pub struct SessionConfigValueSnapshot {
 
 #[napi(object)]
 pub struct SessionModeStateSnapshot {
-    pub current_mode_id: Option<String>,
+    pub current_mode_id: String,
     pub available_modes: Vec<SessionModeSnapshot>,
 }
 
@@ -218,7 +416,7 @@ pub struct SessionModeSnapshot {
 
 #[napi(object)]
 pub struct SessionModelStateSnapshot {
-    pub current_model_id: Option<String>,
+    pub current_model_id: String,
     pub available_models: Vec<SessionModelSnapshot>,
 }
 
@@ -231,17 +429,14 @@ pub struct SessionModelSnapshot {
 
 #[napi(object)]
 pub struct SessionUsageSnapshot {
-    pub input_tokens: Option<u32>,
-    pub output_tokens: Option<u32>,
-    pub cache_creation_input_tokens: Option<u32>,
-    pub cache_read_input_tokens: Option<u32>,
-    pub total_tokens: Option<u32>,
-    pub costs: Vec<SessionUsageCostSnapshot>,
+    pub used: u32,
+    pub size: u32,
+    pub cost: Option<SessionUsageCostSnapshot>,
 }
 
 #[napi(object)]
 pub struct SessionUsageCostSnapshot {
-    pub amount: f64,
+    pub amount: String,
     pub currency: String,
 }
 
@@ -262,43 +457,54 @@ pub struct HistoryReplaySnapshot {
 pub struct TurnSnapshot {
     pub id: String,
     pub remote_id: Option<String>,
+    #[napi(ts_type = "`${RemoteKind}`")]
+    pub remote_kind: RemoteKind,
     pub phase: String,
+    pub input_text: String,
+    pub output_text: String,
+    pub reasoning_text: String,
+    pub plan_text: String,
+    pub plan_path: Option<String>,
     pub outcome: Option<String>,
-    pub input_text: Option<String>,
-    pub output_text: Option<String>,
-    pub reasoning_text: Option<String>,
-    pub plan_text: Option<String>,
+    pub output: Vec<ContentChunk>,
+    pub reasoning: Vec<ContentChunk>,
+    pub plan: Vec<PlanEntrySnapshot>,
 }
 
 #[napi(object)]
 pub struct ContentChunk {
-    pub kind: String,
+    #[napi(ts_type = "`${ContentChunkKind}`")]
+    pub kind: ContentChunkKind,
     pub text: String,
 }
 
 #[napi(object)]
 pub struct PlanEntrySnapshot {
     pub text: String,
-    pub status: String,
+    #[napi(ts_type = "`${PlanEntryStatus}`")]
+    pub status: PlanEntryStatus,
 }
 
 #[napi(object)]
 pub struct ActionSnapshot {
     pub id: String,
-    pub turn_id: Option<String>,
-    pub kind: String,
-    pub phase: String,
+    pub turn_id: String,
+    #[napi(ts_type = "`${ActionKind}`")]
+    pub kind: ActionKind,
+    #[napi(ts_type = "`${ActionPhase}`")]
+    pub phase: ActionPhase,
     pub title: Option<String>,
     pub input_summary: Option<String>,
     pub raw_input: Option<String>,
     pub output: Vec<ActionOutputSnapshot>,
-    pub output_text: Option<String>,
+    pub output_text: String,
     pub error: Option<ErrorSnapshot>,
 }
 
 #[napi(object)]
 pub struct ActionOutputSnapshot {
-    pub kind: String,
+    #[napi(ts_type = "`${ActionOutputKind}`")]
+    pub kind: ActionOutputKind,
     pub text: String,
 }
 
@@ -314,7 +520,8 @@ pub struct ElicitationSnapshot {
     pub id: String,
     pub turn_id: Option<String>,
     pub action_id: Option<String>,
-    pub kind: String,
+    #[napi(ts_type = "`${ElicitationKind}`")]
+    pub kind: ElicitationKind,
     pub phase: String,
     pub title: Option<String>,
     pub body: Option<String>,
@@ -325,8 +532,8 @@ pub struct ElicitationSnapshot {
 #[napi(object)]
 pub struct QuestionSnapshot {
     pub id: String,
-    pub header: Option<String>,
-    pub question: Option<String>,
+    pub header: String,
+    pub question: String,
     pub is_secret: bool,
     pub is_other: bool,
     pub options: Vec<QuestionOptionSnapshot>,
@@ -336,23 +543,33 @@ pub struct QuestionSnapshot {
 #[napi(object)]
 pub struct QuestionOptionSnapshot {
     pub label: String,
-    pub description: Option<String>,
+    pub description: String,
 }
 
 #[napi(object)]
 pub struct QuestionSchemaSnapshot {
-    #[napi(ts_type = "'string' | 'integer' | 'number' | 'boolean'")]
+    #[napi(ts_type = "QuestionValueType | string")]
     pub value_type: String,
-    pub constraints: Option<QuestionConstraintsSnapshot>,
+    #[napi(ts_type = "QuestionValueType | string | null")]
+    pub item_value_type: Option<String>,
+    pub required: bool,
+    pub multiple: bool,
+    pub format: Option<String>,
+    pub default_value: Option<String>,
+    pub constraints: QuestionConstraintsSnapshot,
+    pub raw_schema: Option<String>,
 }
 
 #[napi(object)]
 pub struct QuestionConstraintsSnapshot {
-    pub min_length: Option<u32>,
-    pub max_length: Option<u32>,
-    pub minimum: Option<f64>,
-    pub maximum: Option<f64>,
     pub pattern: Option<String>,
+    pub minimum: Option<String>,
+    pub maximum: Option<String>,
+    pub min_length: Option<String>,
+    pub max_length: Option<String>,
+    pub min_items: Option<String>,
+    pub max_items: Option<String>,
+    pub unique_items: Option<bool>,
 }
 
 #[napi(object)]
@@ -363,10 +580,8 @@ pub struct ElicitationAnswer {
 
 #[napi(object)]
 pub struct ElicitationResponse {
-    #[napi(
-        ts_type = "'allow' | 'allowForSession' | 'deny' | 'cancel' | 'answers' | 'dynamicToolResult' | 'externalComplete' | 'raw'"
-    )]
-    pub r#type: String,
+    #[napi(ts_type = "`${ElicitationResponseType}`")]
+    pub r#type: ElicitationResponseType,
     pub answers: Option<Vec<ElicitationAnswer>>,
     pub success: Option<bool>,
     pub value: Option<String>,
@@ -374,10 +589,8 @@ pub struct ElicitationResponse {
 
 #[napi(object)]
 pub struct ThreadEvent {
-    #[napi(
-        ts_type = "'userMessage' | 'inputs' | 'steer' | 'cancel' | 'setModel' | 'setMode' | 'setReasoningEffort' | 'resolveElicitation' | 'resolveFirstElicitation' | 'fork' | 'close' | 'unsubscribe' | 'archive' | 'unarchive' | 'compactHistory' | 'rollbackHistory' | 'runShellCommand'"
-    )]
-    pub r#type: String,
+    #[napi(ts_type = "`${ThreadEventType}`")]
+    pub r#type: ThreadEventType,
     pub text: Option<String>,
     pub input: Option<Vec<serde_json::Value>>,
     pub turn_id: Option<String>,
@@ -410,16 +623,16 @@ pub struct RuntimeOptionsOverrides {
 pub struct RuntimeOptions {
     pub command: String,
     pub args: Option<Vec<String>>,
-    #[napi(ts_type = "'acp' | 'codexAppServer'")]
-    pub protocol: Option<String>,
+    #[napi(ts_type = "`${ClientProtocol}`")]
+    pub protocol: Option<ClientProtocol>,
     pub auth: Option<ClientAuthOptions>,
     pub identity: Option<ClientIdentity>,
     pub cwd: Option<String>,
     pub additional_directories: Option<Vec<String>>,
     pub experimental_api: Option<bool>,
     pub process_label: Option<String>,
-    #[napi(ts_type = "'codex' | 'kimi' | 'opencode'")]
-    pub runtime: String,
+    #[napi(ts_type = "`${AgentRuntime}`")]
+    pub runtime: AgentRuntime,
     pub default_reasoning_effort: Option<String>,
 }
 
@@ -458,12 +671,10 @@ pub struct TurnRunResult {
 
 #[napi(object)]
 pub struct TurnRunEvent {
-    #[napi(
-        ts_type = "'delta' | 'actionObserved' | 'actionUpdated' | 'actionOutputDelta' | 'elicitation' | 'result'"
-    )]
-    pub r#type: String,
-    #[napi(ts_type = "'reasoning' | 'text'")]
-    pub part: Option<String>,
+    #[napi(ts_type = "`${TurnRunEventType}`")]
+    pub r#type: TurnRunEventType,
+    #[napi(ts_type = "`${TurnRunDeltaPart}`")]
+    pub part: Option<TurnRunDeltaPart>,
     pub text: Option<String>,
     pub turn_id: Option<String>,
     pub action: Option<ActionSnapshot>,

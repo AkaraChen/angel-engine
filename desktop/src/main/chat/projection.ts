@@ -156,14 +156,15 @@ export function createTurnEventProjector(
       if (event.type === 'actionOutputDelta') {
         const current =
           actions.get(event.actionId) ??
-          toChatAction({
+          ({
             id: event.actionId,
             kind: 'tool',
             output: [],
+            outputText: '',
             phase: 'streamingResult',
             title: 'Tool call',
             turnId: event.turnId,
-          } as ActionSnapshot);
+          } satisfies ChatToolAction);
         const output = [...(current.output ?? []), event.content];
         upsertAction({
           ...current,

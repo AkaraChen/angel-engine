@@ -761,10 +761,7 @@ pub fn create_runtime_options(
     to_json(engine_create_runtime_options(runtime_name, overrides))
 }
 
-#[napi(
-    js_name = "normalizeRuntimeName",
-    ts_return_type = "'codex' | 'kimi' | 'opencode'"
-)]
+#[napi(js_name = "normalizeRuntimeName", ts_return_type = "`${AgentRuntime}`")]
 pub fn normalize_runtime_name(runtime: Option<String>) -> String {
     agent_runtime_name(engine_normalize_runtime_name(runtime.as_deref()))
 }
