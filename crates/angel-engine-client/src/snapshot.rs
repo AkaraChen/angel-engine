@@ -9,7 +9,6 @@ use angel_engine::{
     TurnPhase, TurnState, UserQuestion, UserQuestionOption, UserQuestionSchema,
 };
 use serde::{Deserialize, Serialize};
-use serde_json::Value;
 
 use crate::event::RuntimeAuthMethod;
 
@@ -151,7 +150,10 @@ pub(crate) fn conversation_snapshot(
             .collect(),
         focused_turn_id: conversation.focused_turn.as_ref().map(ToString::to_string),
         context: ContextSnapshot::from(&conversation.context),
-        messages: display_messages(protocol, &conversation.history.replay, &turns, &actions),
+        messages: angel_engine::conversation_display_messages(protocol, conversation)
+            .iter()
+            .map(DisplayMessageSnapshot::from)
+            .collect(),
         turns,
         actions,
         elicitations: conversation
@@ -227,6 +229,33 @@ impl DisplayMessagePartSnapshot {
     }
 }
 
+impl From<&angel_engine::DisplayMessage> for DisplayMessageSnapshot {
+    fn from(message: &angel_engine::DisplayMessage) -> Self {
+        Self {
+            id: message.id.clone(),
+            role: display_message_role_label(&message.role),
+            content: message
+                .content
+                .iter()
+                .map(DisplayMessagePartSnapshot::from)
+                .collect(),
+        }
+    }
+}
+
+impl From<&angel_engine::DisplayMessagePart> for DisplayMessagePartSnapshot {
+    fn from(part: &angel_engine::DisplayMessagePart) -> Self {
+        match part {
+            angel_engine::DisplayMessagePart::Text { kind, text } => {
+                Self::text(&display_text_part_kind_label(kind), text.clone())
+            }
+            angel_engine::DisplayMessagePart::ToolCall { action } => {
+                Self::tool(DisplayToolActionSnapshot::from(action))
+            }
+        }
+    }
+}
+
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct DisplayToolActionSnapshot {
@@ -260,6 +289,32 @@ impl From<&ActionSnapshot> for DisplayToolActionSnapshot {
             output_text: action.output_text.clone(),
             output: action.output.clone(),
             error: action.error.clone(),
+        }
+    }
+}
+
+impl From<&angel_engine::DisplayToolAction> for DisplayToolActionSnapshot {
+    fn from(action: &angel_engine::DisplayToolAction) -> Self {
+        let output = action
+            .output
+            .iter()
+            .map(ActionOutputSnapshot::from)
+            .collect::<Vec<_>>();
+        Self {
+            id: action.id.clone(),
+            turn_id: action.turn_id.as_ref().map(ToString::to_string),
+            kind: action
+                .kind
+                .as_ref()
+                .map(action_kind_label)
+                .unwrap_or_else(|| "tool".to_string()),
+            phase: action_phase_label(&action.phase),
+            title: action.title.clone(),
+            input_summary: action.input_summary.clone(),
+            raw_input: action.raw_input.clone(),
+            output_text: action.output_text.clone(),
+            output,
+            error: action.error.as_ref().map(ErrorSnapshot::from),
         }
     }
 }
@@ -321,18 +376,6 @@ impl DisplayToolActionSnapshot {
     }
 }
 
-pub(crate) fn display_message_for_turn(
-    turn: &TurnSnapshot,
-    actions: &[ActionSnapshot],
-) -> Option<DisplayMessageSnapshot> {
-    let content = display_content_from_turn(turn, actions);
-    (!content.is_empty()).then(|| DisplayMessageSnapshot {
-        id: format!("{}:assistant", turn.id),
-        role: "assistant".to_string(),
-        content,
-    })
-}
-
 pub(crate) fn display_message_from_parts(
     id: impl Into<String>,
     role: impl Into<String>,
@@ -343,597 +386,6 @@ pub(crate) fn display_message_from_parts(
         role: role.into(),
         content,
     })
-}
-
-fn display_messages(
-    protocol: ProtocolFlavor,
-    replay: &[HistoryReplayEntry],
-    turns: &[TurnSnapshot],
-    actions: &[ActionSnapshot],
-) -> Vec<DisplayMessageSnapshot> {
-    let mut messages = Vec::new();
-
-    for (index, entry) in replay.iter().enumerate() {
-        append_history_display_message(&mut messages, protocol, entry, index);
-    }
-
-    for turn in turns {
-        let input_text = turn.input_text.trim();
-        if !input_text.is_empty() {
-            messages.push(DisplayMessageSnapshot {
-                id: format!("{}:user", turn.id),
-                role: "user".to_string(),
-                content: vec![DisplayMessagePartSnapshot::text(
-                    "text",
-                    input_text.to_string(),
-                )],
-            });
-        }
-
-        if let Some(message) = display_message_for_turn(
-            turn,
-            &actions
-                .iter()
-                .filter(|action| action.turn_id == turn.id)
-                .cloned()
-                .collect::<Vec<_>>(),
-        ) {
-            messages.push(message);
-        }
-    }
-
-    messages
-}
-
-fn display_content_from_turn(
-    turn: &TurnSnapshot,
-    actions: &[ActionSnapshot],
-) -> Vec<DisplayMessagePartSnapshot> {
-    let mut parts = Vec::new();
-    append_display_text_part(
-        &mut parts,
-        "reasoning",
-        [turn.reasoning_text.as_str(), turn.plan_text.as_str()]
-            .into_iter()
-            .filter(|text| !text.trim().is_empty())
-            .collect::<Vec<_>>()
-            .join("\n"),
-    );
-    for action in actions {
-        parts.push(DisplayMessagePartSnapshot::tool(action.into()));
-    }
-    append_display_text_part(&mut parts, "text", turn.output_text.clone());
-    parts
-}
-
-fn append_history_display_message(
-    messages: &mut Vec<DisplayMessageSnapshot>,
-    protocol: ProtocolFlavor,
-    entry: &HistoryReplayEntry,
-    index: usize,
-) {
-    let text = content_delta_text(&entry.content);
-    if text.trim().is_empty() {
-        return;
-    }
-
-    match &entry.role {
-        HistoryRole::User => messages.push(DisplayMessageSnapshot {
-            id: format!("history-{index}"),
-            role: "user".to_string(),
-            content: vec![DisplayMessagePartSnapshot::text("text", text)],
-        }),
-        HistoryRole::Tool => {
-            let fallback_id = format!("history-tool-{index}");
-            let action = history_tool_action(protocol, &entry.content, fallback_id);
-            upsert_display_tool_part(ensure_history_assistant_message(messages), action);
-        }
-        HistoryRole::Reasoning => append_display_text_part(
-            ensure_history_assistant_message(messages),
-            "reasoning",
-            text,
-        ),
-        HistoryRole::Assistant | HistoryRole::Unknown(_) => {
-            append_display_text_part(ensure_history_assistant_message(messages), "text", text)
-        }
-    }
-}
-
-fn ensure_history_assistant_message(
-    messages: &mut Vec<DisplayMessageSnapshot>,
-) -> &mut Vec<DisplayMessagePartSnapshot> {
-    if messages
-        .last()
-        .map(|message| message.role.as_str() == "assistant")
-        .unwrap_or(false)
-    {
-        return &mut messages.last_mut().expect("last message").content;
-    }
-
-    let id = format!("history-{}", messages.len());
-    messages.push(DisplayMessageSnapshot {
-        id,
-        role: "assistant".to_string(),
-        content: Vec::new(),
-    });
-    &mut messages.last_mut().expect("inserted message").content
-}
-
-fn append_display_text_part(parts: &mut Vec<DisplayMessagePartSnapshot>, kind: &str, text: String) {
-    if text.is_empty() {
-        return;
-    }
-    if let Some(last) = parts.last_mut()
-        && last.kind == kind
-        && let Some(existing) = last.text.as_mut()
-    {
-        existing.push_str(&text);
-        return;
-    }
-    parts.push(DisplayMessagePartSnapshot::text(kind, text));
-}
-
-fn upsert_display_tool_part(
-    parts: &mut Vec<DisplayMessagePartSnapshot>,
-    next: DisplayToolActionSnapshot,
-) {
-    let Some(index) = parts.iter().position(|part| {
-        part.kind == "tool-call"
-            && part
-                .action
-                .as_ref()
-                .map(|action| action.id.as_str() == next.id.as_str())
-                .unwrap_or(false)
-    }) else {
-        parts.push(DisplayMessagePartSnapshot::tool(next));
-        return;
-    };
-
-    let Some(previous) = parts[index].action.take() else {
-        parts[index] = DisplayMessagePartSnapshot::tool(next);
-        return;
-    };
-    parts[index] = DisplayMessagePartSnapshot::tool(merge_display_tool_actions(previous, next));
-}
-
-fn merge_display_tool_actions(
-    previous: DisplayToolActionSnapshot,
-    next: DisplayToolActionSnapshot,
-) -> DisplayToolActionSnapshot {
-    let output = if next.output.is_empty() {
-        previous.output
-    } else {
-        next.output
-    };
-    DisplayToolActionSnapshot {
-        id: next.id,
-        turn_id: next.turn_id.or(previous.turn_id),
-        kind: if next.kind.is_empty() || (next.kind == "tool" && previous.kind != "tool") {
-            previous.kind
-        } else {
-            next.kind
-        },
-        phase: if next.phase.is_empty() {
-            previous.phase
-        } else {
-            next.phase
-        },
-        title: next.title.or(previous.title),
-        input_summary: next.input_summary.or(previous.input_summary),
-        raw_input: next.raw_input.or(previous.raw_input),
-        output_text: if next.output_text.trim().is_empty() {
-            previous.output_text
-        } else {
-            next.output_text
-        },
-        output,
-        error: next.error.or(previous.error),
-    }
-}
-
-fn history_tool_action(
-    protocol: ProtocolFlavor,
-    content: &ContentDelta,
-    fallback_id: String,
-) -> DisplayToolActionSnapshot {
-    let raw = content_delta_text(content);
-    let value = serde_json::from_str::<Value>(&raw).ok();
-    if let Some(value) = value.as_ref() {
-        if is_acp_tool_update(value) {
-            return acp_history_tool_action(value, fallback_id);
-        }
-        if is_codex_tool_item(value) || matches!(protocol, ProtocolFlavor::CodexAppServer) {
-            return codex_history_tool_action(value, fallback_id);
-        }
-    }
-    DisplayToolActionSnapshot {
-        id: fallback_id,
-        turn_id: None,
-        kind: "tool".to_string(),
-        phase: "completed".to_string(),
-        title: Some("Tool call".to_string()),
-        input_summary: None,
-        raw_input: Some(raw),
-        output_text: String::new(),
-        output: Vec::new(),
-        error: None,
-    }
-}
-
-fn is_acp_tool_update(value: &Value) -> bool {
-    matches!(
-        string_field(value, &["sessionUpdate"]).as_deref(),
-        Some("tool_call" | "tool_call_update")
-    )
-}
-
-fn acp_history_tool_action(value: &Value, fallback_id: String) -> DisplayToolActionSnapshot {
-    let output = action_outputs_from_value(value.get("content").or_else(|| value.get("rawOutput")));
-    let output_text = action_output_text(&output);
-    let phase = normalize_tool_phase(string_field(value, &["status"]).as_deref());
-    let error = if phase == "failed" {
-        Some(ErrorSnapshot {
-            code: "acp.tool_call_failed".to_string(),
-            message: string_field(value, &["error"])
-                .or_else(|| (!output_text.trim().is_empty()).then_some(output_text.clone()))
-                .unwrap_or_else(|| "ACP tool call failed".to_string()),
-            recoverable: false,
-        })
-    } else {
-        None
-    };
-    DisplayToolActionSnapshot {
-        id: string_field(value, &["toolCallId", "id"]).unwrap_or(fallback_id),
-        turn_id: None,
-        kind: acp_tool_kind(string_field(value, &["kind"]).as_deref()),
-        phase,
-        title: string_field(value, &["title"]),
-        input_summary: string_field(value, &["title"]),
-        raw_input: value
-            .get("rawInput")
-            .map(json_string)
-            .or_else(|| Some(json_string(value))),
-        output_text,
-        output,
-        error,
-    }
-}
-
-fn is_codex_tool_item(value: &Value) -> bool {
-    let item = codex_replay_value(value);
-    matches!(
-        string_field(item, &["type"]).as_deref(),
-        Some(
-            "commandExecution"
-                | "fileChange"
-                | "mcpToolCall"
-                | "dynamicToolCall"
-                | "webSearch"
-                | "imageView"
-                | "imageGeneration"
-                | "contextCompaction"
-                | "function_call"
-                | "function_call_output"
-                | "custom_tool_call"
-                | "custom_tool_call_output"
-                | "local_shell_call"
-                | "mcp_call"
-                | "computer_call"
-                | "web_search_call"
-                | "tool_search_call"
-                | "tool_search_output"
-        )
-    )
-}
-
-fn codex_history_tool_action(value: &Value, fallback_id: String) -> DisplayToolActionSnapshot {
-    let item = codex_replay_value(value);
-    let output = codex_tool_output(item);
-    let output_text = action_output_text(&output);
-    DisplayToolActionSnapshot {
-        id: string_field(item, &["id", "callId", "call_id", "itemId"]).unwrap_or(fallback_id),
-        turn_id: None,
-        kind: codex_tool_kind(item).unwrap_or_else(|| "tool".to_string()),
-        phase: codex_tool_phase(item),
-        title: codex_tool_title(item),
-        input_summary: codex_tool_title(item),
-        raw_input: codex_tool_raw_input(item),
-        output_text,
-        output,
-        error: None,
-    }
-}
-
-fn codex_replay_value(value: &Value) -> &Value {
-    if string_field(value, &["type"]).as_deref() == Some("response_item")
-        && let Some(payload) = value.get("payload").filter(|payload| payload.is_object())
-    {
-        return payload;
-    }
-    value
-}
-
-fn codex_tool_kind(item: &Value) -> Option<String> {
-    let kind = match string_field(item, &["type"]).as_deref()? {
-        "commandExecution" | "local_shell_call" => "command",
-        "fileChange" => "fileChange",
-        "mcpToolCall" | "mcp_call" => "mcpTool",
-        "dynamicToolCall" | "tool_search_call" => "dynamicTool",
-        "webSearch" | "web_search_call" => "webSearch",
-        "imageView" | "imageGeneration" => "media",
-        "contextCompaction" => "reasoning",
-        "function_call" => {
-            if is_codex_command_tool_name(string_field(item, &["name"]).as_deref()) {
-                "command"
-            } else {
-                "dynamicTool"
-            }
-        }
-        "custom_tool_call" => {
-            if string_field(item, &["name"]).as_deref() == Some("apply_patch") {
-                "fileChange"
-            } else {
-                "dynamicTool"
-            }
-        }
-        "computer_call" => "hostCapability",
-        _ => return None,
-    };
-    Some(kind.to_string())
-}
-
-fn codex_tool_phase(item: &Value) -> String {
-    if let Some(status) = string_field(item, &["status"]) {
-        return normalize_tool_phase(Some(&status));
-    }
-    match string_field(item, &["type"]).as_deref() {
-        Some("function_call_output" | "custom_tool_call_output" | "tool_search_output") => {
-            "completed".to_string()
-        }
-        _ => "running".to_string(),
-    }
-}
-
-fn codex_tool_title(item: &Value) -> Option<String> {
-    match string_field(item, &["type"]).as_deref()? {
-        "commandExecution" | "local_shell_call" => {
-            string_field(item, &["command"]).or_else(|| Some("Command".to_string()))
-        }
-        "mcpToolCall" => Some(format!(
-            "{}.{}",
-            string_field(item, &["server"]).unwrap_or_else(|| "mcp".to_string()),
-            string_field(item, &["tool"]).unwrap_or_else(|| "tool".to_string())
-        )),
-        "mcp_call" => string_field(item, &["name"]).or_else(|| Some("mcp.call".to_string())),
-        "dynamicToolCall" => {
-            let tool = string_field(item, &["tool"]).unwrap_or_else(|| "tool".to_string());
-            Some(
-                string_field(item, &["namespace"])
-                    .map(|namespace| format!("{namespace}.{tool}"))
-                    .unwrap_or(tool),
-            )
-        }
-        "webSearch" => string_field(item, &["query"]).or_else(|| Some("Web search".to_string())),
-        "web_search_call" => item
-            .get("action")
-            .and_then(|action| string_field(action, &["query"]))
-            .or_else(|| Some("Web search".to_string())),
-        "function_call" => codex_function_call_title(item),
-        "custom_tool_call" => {
-            string_field(item, &["name"]).or_else(|| Some("Custom tool".to_string()))
-        }
-        "tool_search_call" => Some("tool_search".to_string()),
-        "computer_call" => Some("computer".to_string()),
-        "function_call_output" | "custom_tool_call_output" | "tool_search_output" => None,
-        _ => string_field(item, &["title", "name", "type"]),
-    }
-}
-
-fn codex_function_call_title(item: &Value) -> Option<String> {
-    let name = string_field(item, &["name"]);
-    let args = string_field(item, &["arguments"])
-        .and_then(|arguments| serde_json::from_str::<Value>(&arguments).ok());
-    if is_codex_command_tool_name(name.as_deref())
-        && let Some(command) = args
-            .as_ref()
-            .and_then(|args| args.get("command"))
-            .and_then(command_value_text)
-    {
-        return Some(command);
-    }
-    name.or_else(|| Some("Function call".to_string()))
-}
-
-fn command_value_text(value: &Value) -> Option<String> {
-    if let Some(text) = value.as_str().filter(|text| !text.trim().is_empty()) {
-        return Some(text.to_string());
-    }
-    let command = value
-        .as_array()?
-        .iter()
-        .filter_map(Value::as_str)
-        .collect::<Vec<_>>()
-        .join(" ");
-    (!command.is_empty()).then_some(command)
-}
-
-fn codex_tool_raw_input(item: &Value) -> Option<String> {
-    match string_field(item, &["type"]).as_deref() {
-        Some("function_call") => {
-            string_field(item, &["arguments"]).or_else(|| item.get("arguments").map(json_string))
-        }
-        Some("custom_tool_call") => {
-            string_field(item, &["input"]).or_else(|| item.get("input").map(json_string))
-        }
-        Some("web_search_call") => item.get("action").map(json_string),
-        Some("function_call_output" | "custom_tool_call_output" | "tool_search_output") => None,
-        _ => Some(json_string(item)),
-    }
-}
-
-fn codex_tool_output(item: &Value) -> Vec<ActionOutputSnapshot> {
-    let value = [
-        "output",
-        "result",
-        "content",
-        "aggregatedOutput",
-        "stdout",
-        "stderr",
-    ]
-    .iter()
-    .find_map(|key| item.get(*key));
-    action_outputs_from_value(value.map(codex_raw_output_value).as_ref())
-}
-
-fn codex_raw_output_value(value: &Value) -> Value {
-    let Some(text) = value.as_str() else {
-        return value.clone();
-    };
-    let Ok(parsed) = serde_json::from_str::<Value>(text) else {
-        return value.clone();
-    };
-    ["output", "stdout", "stderr", "content"]
-        .iter()
-        .find_map(|key| parsed.get(*key).cloned())
-        .unwrap_or_else(|| value.clone())
-}
-
-fn is_codex_command_tool_name(name: Option<&str>) -> bool {
-    matches!(name, Some("shell" | "exec_command" | "write_stdin"))
-}
-
-fn action_outputs_from_value(value: Option<&Value>) -> Vec<ActionOutputSnapshot> {
-    let Some(value) = value else {
-        return Vec::new();
-    };
-    match value {
-        Value::Null => Vec::new(),
-        Value::Array(items) => items
-            .iter()
-            .flat_map(|item| action_outputs_from_value(Some(item)))
-            .collect(),
-        Value::String(text) => vec![ActionOutputSnapshot {
-            kind: "text".to_string(),
-            text: text.clone(),
-        }],
-        Value::Bool(value) => vec![ActionOutputSnapshot {
-            kind: "text".to_string(),
-            text: value.to_string(),
-        }],
-        Value::Number(value) => vec![ActionOutputSnapshot {
-            kind: "text".to_string(),
-            text: value.to_string(),
-        }],
-        Value::Object(_) => action_output_from_object(value),
-    }
-}
-
-fn action_output_from_object(value: &Value) -> Vec<ActionOutputSnapshot> {
-    match string_field(value, &["type", "kind"]).as_deref() {
-        Some("diff") => vec![ActionOutputSnapshot {
-            kind: "patch".to_string(),
-            text: acp_diff_text(value),
-        }],
-        Some("terminal") => vec![ActionOutputSnapshot {
-            kind: "terminal".to_string(),
-            text: string_field(value, &["terminalId"]).unwrap_or_else(|| json_string(value)),
-        }],
-        Some("content") => value
-            .get("content")
-            .map(|content| action_outputs_from_value(Some(content)))
-            .filter(|output| !output.is_empty())
-            .unwrap_or_else(|| structured_output(value)),
-        Some("patch") => vec![ActionOutputSnapshot {
-            kind: "patch".to_string(),
-            text: content_text(value).unwrap_or_else(|| json_string(value)),
-        }],
-        Some(_) | None => content_text(value)
-            .map(|text| {
-                vec![ActionOutputSnapshot {
-                    kind: "text".to_string(),
-                    text,
-                }]
-            })
-            .unwrap_or_else(|| structured_output(value)),
-    }
-}
-
-fn structured_output(value: &Value) -> Vec<ActionOutputSnapshot> {
-    vec![ActionOutputSnapshot {
-        kind: "structured".to_string(),
-        text: json_string(value),
-    }]
-}
-
-fn acp_tool_kind(kind: Option<&str>) -> String {
-    match kind {
-        Some("read") => "read",
-        Some("edit" | "delete" | "move") => "fileChange",
-        Some("execute") => "command",
-        Some("search") => "webSearch",
-        Some("think") => "reasoning",
-        Some("fetch") => "dynamicTool",
-        Some("switch_mode") => "hostCapability",
-        _ => "mcpTool",
-    }
-    .to_string()
-}
-
-fn normalize_tool_phase(status: Option<&str>) -> String {
-    match status {
-        Some("completed") => "completed",
-        Some("failed") => "failed",
-        Some("declined") => "declined",
-        Some("cancelled" | "canceled" | "interrupted") => "cancelled",
-        Some("pending" | "proposed") => "proposed",
-        Some("streamingResult") => "streamingResult",
-        Some("awaitingDecision") => "awaitingDecision",
-        _ => "running",
-    }
-    .to_string()
-}
-
-fn content_delta_text(delta: &ContentDelta) -> String {
-    match delta {
-        ContentDelta::Text(text)
-        | ContentDelta::ResourceRef(text)
-        | ContentDelta::Structured(text) => text.clone(),
-    }
-}
-
-fn content_text(value: &Value) -> Option<String> {
-    match value {
-        Value::String(text) => Some(text.clone()),
-        Value::Array(items) => {
-            let text = items.iter().filter_map(content_text).collect::<String>();
-            (!text.is_empty()).then_some(text)
-        }
-        Value::Object(_) => ["text", "content", "summary", "delta", "message"]
-            .iter()
-            .find_map(|key| value.get(*key).and_then(content_text)),
-        _ => None,
-    }
-}
-
-fn acp_diff_text(value: &Value) -> String {
-    let path = string_field(value, &["path"]).unwrap_or_else(|| "<unknown>".to_string());
-    let old_text = string_field(value, &["oldText"]).unwrap_or_default();
-    let new_text = string_field(value, &["newText"]).unwrap_or_default();
-    format!("diff -- {path}\n--- old\n{old_text}\n+++ new\n{new_text}")
-}
-
-fn string_field(value: &Value, keys: &[&str]) -> Option<String> {
-    keys.iter().find_map(|key| {
-        value
-            .get(*key)
-            .and_then(Value::as_str)
-            .filter(|text| !text.trim().is_empty())
-            .map(str::to_string)
-    })
-}
-
-fn json_string(value: &Value) -> String {
-    serde_json::to_string(value).unwrap_or_else(|_| value.to_string())
 }
 
 #[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
@@ -1715,6 +1167,22 @@ fn action_kind_label(kind: &ActionKind) -> String {
         ActionKind::HostCapability => "hostCapability",
     }
     .to_string()
+}
+
+fn display_message_role_label(role: &angel_engine::DisplayMessageRole) -> String {
+    match role {
+        angel_engine::DisplayMessageRole::User => "user".to_string(),
+        angel_engine::DisplayMessageRole::Assistant => "assistant".to_string(),
+        angel_engine::DisplayMessageRole::Unknown(value) => value.clone(),
+    }
+}
+
+fn display_text_part_kind_label(kind: &angel_engine::DisplayTextPartKind) -> String {
+    match kind {
+        angel_engine::DisplayTextPartKind::Text => "text".to_string(),
+        angel_engine::DisplayTextPartKind::Reasoning => "reasoning".to_string(),
+        angel_engine::DisplayTextPartKind::Unknown(value) => value.clone(),
+    }
 }
 
 fn action_phase_label(phase: &ActionPhase) -> String {

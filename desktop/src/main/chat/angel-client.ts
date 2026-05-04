@@ -1,11 +1,15 @@
 import { createRequire } from 'node:module';
 
 import type {
-  AngelSession as AngelSessionInstance,
   ConversationSnapshot,
+  ElicitationResponse,
+  HydrateRequest,
+  InspectRequest,
   RuntimeOptions,
-  RunTurnResult,
-} from '@angel-engine/client';
+  SendTextRequest,
+  TurnRunEvent,
+  TurnRunResult,
+} from '@angel-engine/client-napi';
 
 import type {
   Chat,
@@ -31,9 +35,10 @@ import {
   createTurnEventProjector,
   projectRunResult,
   runtimeConfigFromConversationSnapshot,
+  type RawTurnStreamEvent,
 } from './projection';
 
-type AngelClientModule = typeof import('@angel-engine/client');
+type AngelClientModule = typeof import('@angel-engine/client-napi');
 type ChatStreamObserver = (
   event:
     | ChatStreamDelta
@@ -50,10 +55,10 @@ export type ChatStreamControls = {
 };
 
 const nodeRequire = createRequire(import.meta.url);
-const clientModule = nodeRequire('@angel-engine/client') as AngelClientModule;
-const { AngelSession, createRuntimeOptions } = clientModule;
+const clientModule = nodeRequire('@angel-engine/client-napi') as AngelClientModule;
+const { AngelSession: NativeAngelSession, createRuntimeOptions } = clientModule;
 
-const chatSessions = new Map<string, AngelSessionInstance>();
+const chatSessions = new Map<string, DesktopAngelSession>();
 
 export async function sendChat(input: ChatSendInput): Promise<ChatSendResult> {
   return streamChat(input);
@@ -169,13 +174,13 @@ function getChatSession(chat: Chat) {
   return session;
 }
 
-function createChatSession(runtime?: string) {
-  return new AngelSession(
+function createChatSession(runtime?: string): DesktopAngelSession {
+  return new DesktopAngelSession(
     createRuntimeOptions(runtime, {
       clientName: 'angel-engine-desktop',
       clientTitle: 'Angel Engine Desktop',
     }) as RuntimeOptions
-  ) as AngelSessionInstance;
+  );
 }
 
 function persistRemoteThreadId(chat: Chat, snapshot: ConversationSnapshot) {
@@ -192,4 +197,279 @@ function createProjectedTurn(onEvent?: ChatStreamObserver) {
   };
 }
 
-export type { ChatRuntimeConfig as EngineRuntimeConfig, RunTurnResult };
+type NativeAngelSessionInstance = InstanceType<typeof NativeAngelSession>;
+type DesktopSendTextRequest = SendTextRequest & {
+  onEvent?: (event: RawTurnStreamEvent) => void;
+  onResolveElicitation?: (
+    handler: (
+      elicitationId: string,
+      response: ChatElicitationResponse
+    ) => Promise<void>
+  ) => void;
+  signal?: AbortSignal;
+};
+type PendingElicitation = {
+  promise: Promise<TurnRunEvent[]>;
+  reject: (error: Error) => void;
+  resolve: (events?: TurnRunEvent[]) => void;
+};
+
+class DesktopAngelSession {
+  private readonly pendingElicitations = new Map<string, PendingElicitation>();
+  private readonly session: NativeAngelSessionInstance;
+  private operationQueue = Promise.resolve();
+
+  constructor(options: RuntimeOptions) {
+    this.session = new NativeAngelSession(options);
+  }
+
+  close(): void {
+    for (const pending of this.pendingElicitations.values()) {
+      pending.reject(new Error('Chat session closed.'));
+    }
+    this.pendingElicitations.clear();
+    this.session.close();
+  }
+
+  hasConversation(): boolean {
+    return this.session.hasConversation();
+  }
+
+  hydrate(request: HydrateRequest = {}): Promise<ConversationSnapshot> {
+    return this.enqueue(() => this.session.hydrate(request));
+  }
+
+  inspect(cwd?: string | InspectRequest): Promise<ConversationSnapshot> {
+    const request: InspectRequest =
+      typeof cwd === 'string' ? { cwd } : (cwd ?? {});
+    return this.enqueue(() => this.session.inspect(request));
+  }
+
+  sendText(request: DesktopSendTextRequest): Promise<TurnRunResult> {
+    return this.enqueue(() => this.sendTextNow(request));
+  }
+
+  private async sendTextNow(
+    request: DesktopSendTextRequest
+  ): Promise<TurnRunResult> {
+    const text = String(request.text || '').trim();
+    if (!text) {
+      throw new Error('Text is required.');
+    }
+
+    throwIfAborted(request.signal);
+    request.onResolveElicitation?.((elicitationId, response) =>
+      this.resolveElicitationNow(elicitationId, response)
+    );
+
+    let events = await this.session.startTextTurn({
+      cwd: request.cwd,
+      mode: request.mode,
+      model: request.model,
+      reasoningEffort: request.reasoningEffort,
+      remoteId: request.remoteId,
+      text,
+    });
+
+    for (;;) {
+      const result = await this.dispatchEvents(events, request);
+      if (result) return result;
+
+      if (request.signal?.aborted) {
+        await this.cancelNativeTurn().catch((): undefined => undefined);
+        throwIfAborted(request.signal);
+      }
+
+      const event = await this.session.nextTurnEvent(50);
+      events = event ? [event] : [];
+      if (events.length === 0) {
+        await yieldToEventLoop();
+      }
+    }
+  }
+
+  private async dispatchEvents(
+    events: TurnRunEvent[],
+    request: DesktopSendTextRequest
+  ): Promise<TurnRunResult | undefined> {
+    for (const event of events) {
+      if (event.type === 'delta' && event.part && event.text !== undefined) {
+        request.onEvent?.({
+          messagePart: event.messagePart,
+          part: event.part,
+          text: event.text,
+          turnId: event.turnId,
+          type: 'delta',
+        });
+        continue;
+      }
+
+      if (event.type === 'actionObserved' && event.action) {
+        request.onEvent?.({
+          action: event.action,
+          messagePart: event.messagePart,
+          type: 'actionObserved',
+        });
+        continue;
+      }
+
+      if (event.type === 'actionUpdated' && event.action) {
+        request.onEvent?.({
+          action: event.action,
+          messagePart: event.messagePart,
+          type: 'actionUpdated',
+        });
+        continue;
+      }
+
+      if (
+        event.type === 'actionOutputDelta' &&
+        event.actionId &&
+        event.content &&
+        event.turnId
+      ) {
+        request.onEvent?.({
+          actionId: event.actionId,
+          content: event.content,
+          messagePart: event.messagePart,
+          turnId: event.turnId,
+          type: 'actionOutputDelta',
+        });
+        continue;
+      }
+
+      if (event.type === 'elicitation' && event.elicitation) {
+        request.onEvent?.({
+          elicitation: event.elicitation,
+          messagePart: event.messagePart,
+          type: 'elicitation',
+        });
+        const followup = await this.waitForElicitation(
+          event.elicitation.id,
+          request.signal
+        );
+        const result = await this.dispatchEvents(followup, request);
+        if (result) return result;
+        continue;
+      }
+
+      if (event.type === 'result' && event.result) {
+        return event.result;
+      }
+    }
+
+    return undefined;
+  }
+
+  private enqueue<T>(action: () => Promise<T>): Promise<T> {
+    const run = this.operationQueue.then(action);
+    this.operationQueue = run.then(
+      (): undefined => undefined,
+      (): undefined => undefined
+    );
+    return run;
+  }
+
+  private waitForElicitation(
+    elicitationId: string,
+    signal?: AbortSignal
+  ): Promise<TurnRunEvent[]> {
+    if (!elicitationId) {
+      return Promise.reject(new Error('Runtime opened an invalid elicitation.'));
+    }
+    return this.preparePendingElicitation(elicitationId, signal).promise;
+  }
+
+  private preparePendingElicitation(
+    elicitationId: string,
+    signal?: AbortSignal
+  ): PendingElicitation {
+    const existing = this.pendingElicitations.get(elicitationId);
+    if (existing) return existing;
+
+    let cleanup: () => void = () => undefined;
+    let resolvePending!: (events?: TurnRunEvent[]) => void;
+    let rejectPending!: (error: Error) => void;
+    const promise = new Promise<TurnRunEvent[]>((resolve, reject) => {
+      const abort = (): void => {
+        this.cancelNativeTurn().catch((): undefined => undefined);
+        rejectPending(abortError(signal));
+      };
+      cleanup = (): void => {
+        signal?.removeEventListener?.('abort', abort);
+        this.pendingElicitations.delete(elicitationId);
+      };
+      resolvePending = (events: TurnRunEvent[] = []): void => {
+        cleanup();
+        resolve(events);
+      };
+      rejectPending = (error: Error): void => {
+        cleanup();
+        reject(error);
+      };
+      signal?.addEventListener?.('abort', abort, { once: true });
+    });
+
+    const pending = {
+      promise,
+      reject: rejectPending,
+      resolve: resolvePending,
+    };
+    this.pendingElicitations.set(elicitationId, pending);
+    if (signal?.aborted) {
+      pending.reject(abortError(signal));
+    }
+    return pending;
+  }
+
+  private async resolveElicitationNow(
+    elicitationId: string,
+    response: ChatElicitationResponse
+  ) {
+    const pending = this.pendingElicitations.get(elicitationId);
+    if (!pending) {
+      throw new Error('Chat stream is not waiting for this user input.');
+    }
+
+    try {
+      pending.resolve(
+        await this.session.resolveElicitation(
+          elicitationId,
+          response as ElicitationResponse
+        )
+      );
+    } catch (error) {
+      pending.reject(error instanceof Error ? error : new Error(String(error)));
+      throw error;
+    }
+  }
+
+  private async cancelNativeTurn() {
+    for (const pending of this.pendingElicitations.values()) {
+      pending.reject(new Error('Chat request cancelled.'));
+    }
+    this.pendingElicitations.clear();
+    return this.session.cancelTurn();
+  }
+}
+
+function throwIfAborted(signal?: AbortSignal) {
+  if (signal?.aborted) {
+    throw abortError(signal);
+  }
+}
+
+function abortError(signal?: AbortSignal) {
+  if (signal?.reason instanceof Error) {
+    return signal.reason;
+  }
+  const error = new Error('Chat request cancelled.');
+  error.name = 'AbortError';
+  return error;
+}
+
+function yieldToEventLoop() {
+  return new Promise<void>((resolve) => setTimeout(resolve, 0));
+}
+
+export type { ChatRuntimeConfig as EngineRuntimeConfig, TurnRunResult as RunTurnResult };

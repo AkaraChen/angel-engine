@@ -3,7 +3,7 @@
   "configVersion": 1,
   "workspaces": {
     "": {
-      "name": "@angel-engine/client",
+      "name": "@angel-engine/client-napi",
       "devDependencies": {
         "@napi-rs/cli": "^3.2.0",
       },

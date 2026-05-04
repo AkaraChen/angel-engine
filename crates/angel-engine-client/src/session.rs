@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::error::{ClientError, ClientResult};
 use crate::event::{ClientEvent, ClientStreamDelta, ClientUpdate};
-use crate::snapshot::{display_message_for_turn, display_message_from_parts};
+use crate::snapshot::display_message_from_parts;
 use crate::{
     ActionOutputSnapshot, ActionSnapshot, AngelClient, ConversationSnapshot, ElicitationResponse,
     ElicitationSnapshot, ResumeConversationRequest, RuntimeOptions, RuntimeOptionsOverrides,
@@ -452,9 +452,10 @@ impl AngelSession {
         let reasoning = turn_reasoning_text(turn.as_ref()).or_else(|| {
             (!active.collector.reasoning.is_empty()).then_some(active.collector.reasoning.clone())
         });
-        let message = turn
+        let message = snapshot
             .as_ref()
-            .and_then(|turn| display_message_for_turn(turn, &actions))
+            .zip(turn_id.as_deref())
+            .and_then(|(snapshot, turn_id)| assistant_message_for_turn(snapshot, turn_id))
             .or_else(|| {
                 let mut content = Vec::new();
                 if !active.collector.reasoning.is_empty() {
@@ -774,6 +775,18 @@ fn actions_for_turn(snapshot: &ConversationSnapshot, turn_id: &str) -> Vec<Actio
         .filter(|action| action.turn_id == turn_id)
         .cloned()
         .collect()
+}
+
+fn assistant_message_for_turn(
+    snapshot: &ConversationSnapshot,
+    turn_id: &str,
+) -> Option<DisplayMessageSnapshot> {
+    let message_id = format!("{turn_id}:assistant");
+    snapshot
+        .messages
+        .iter()
+        .find(|message| message.id == message_id)
+        .cloned()
 }
 
 fn turn_reasoning_text(turn: Option<&TurnSnapshot>) -> Option<String> {

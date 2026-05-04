@@ -4,7 +4,7 @@ import { defineConfig } from 'vite';
 export default defineConfig({
   build: {
     rollupOptions: {
-      external: ['@angel-engine/client', 'better-sqlite3'],
+      external: ['@angel-engine/client-napi', 'better-sqlite3'],
     },
   },
 });

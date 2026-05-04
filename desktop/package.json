@@ -46,7 +46,6 @@
     "vite": "^5.4.21"
   },
   "dependencies": {
-    "@angel-engine/client": "file:../packages/angel-engine-client",
     "@angel-engine/client-napi": "file:../crates/angel-engine-client-napi",
     "@assistant-ui/react": "^0.12.28",
     "@assistant-ui/react-streamdown": "^0.1.11",

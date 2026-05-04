@@ -1,4 +1,4 @@
-# @angel-engine/client
+# @angel-engine/client-napi
 
 Node.js N-API binding for `angel-engine-client`.
 

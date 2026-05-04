@@ -8,7 +8,7 @@ import type {
   ElicitationSnapshot,
   TurnRunResult,
   TurnSnapshot,
-} from '@angel-engine/client';
+} from '@angel-engine/client-napi';
 
 import type {
   ChatHistoryMessage,
