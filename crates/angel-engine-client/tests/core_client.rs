@@ -174,6 +174,13 @@ fn client_hides_engine_behind_thread_updates_and_snapshots() {
             .available_levels,
         vec!["low", "medium", "high"]
     );
+    let reasoning_options = client
+        .thread_settings(&conversation_id)
+        .expect("thread settings")
+        .reasoning_level
+        .available_options;
+    assert_eq!(reasoning_options[1].label, "Medium");
+    assert!(reasoning_options[1].selected);
     assert!(
         client
             .model_list(&conversation_id)

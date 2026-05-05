@@ -14,7 +14,6 @@ import type {
   ChatHistoryMessage,
   ChatHistoryMessagePart,
   ChatRuntimeConfig,
-  ChatRuntimeConfigOption,
   ChatStreamDelta,
   ChatToolAction,
 } from "../../shared/chat";
@@ -94,55 +93,31 @@ export function runtimeConfigFromConversationSnapshot(
   snapshot: ConversationSnapshot,
 ): ChatRuntimeConfig {
   const settings = snapshot.settings;
-  const modelList = settings?.modelList;
-  const availableModes = settings?.availableModes;
-  const reasoningLevel = settings?.reasoningLevel;
+  const modelList = settings.modelList;
+  const availableModes = settings.availableModes;
+  const reasoningLevel = settings.reasoningLevel;
 
   return {
-    canSetModel: modelList?.canSet ?? Boolean(snapshot.models),
-    canSetMode: availableModes?.canSet ?? Boolean(snapshot.modes),
-    canSetReasoningEffort: reasoningLevel?.canSet ?? snapshot.reasoning.canSet,
-    currentMode:
-      availableModes?.currentModeId ??
-      snapshot.context.mode ??
-      snapshot.modes?.currentModeId ??
-      null,
-    currentModel:
-      modelList?.currentModelId ??
-      snapshot.context.model ??
-      snapshot.models?.currentModelId ??
-      null,
-    currentReasoningEffort:
-      reasoningLevel?.currentLevel ?? snapshot.reasoning.currentEffort ?? null,
-    modes:
-      availableModes?.availableModes.map((mode) => ({
-        description: mode.description,
-        label: mode.name || mode.id,
-        value: mode.id,
-      })) ??
-      snapshot.modes?.availableModes.map((mode) => ({
-        description: mode.description,
-        label: mode.name || mode.id,
-        value: mode.id,
-      })) ??
-      optionsForConfig(snapshot, "mode"),
-    models:
-      modelList?.availableModels.map((model) => ({
-        description: model.description,
-        label: model.name || model.id,
-        value: model.id,
-      })) ??
-      snapshot.models?.availableModels.map((model) => ({
-        description: model.description,
-        label: model.name || model.id,
-        value: model.id,
-      })) ??
-      optionsForConfig(snapshot, "model"),
-    reasoningEfforts: (
-      reasoningLevel?.availableLevels ?? snapshot.reasoning.availableEfforts
-    ).map((effort) => ({
-      label: labelFromConfigValue(effort),
-      value: effort,
+    canSetModel: modelList.canSet,
+    canSetMode: availableModes.canSet,
+    canSetReasoningEffort: reasoningLevel.canSet,
+    currentMode: availableModes.currentModeId ?? null,
+    currentModel: modelList.currentModelId ?? null,
+    currentReasoningEffort: reasoningLevel.currentLevel ?? null,
+    modes: availableModes.availableModes.map((mode) => ({
+      description: mode.description,
+      label: mode.name || mode.id,
+      value: mode.id,
+    })),
+    models: modelList.availableModels.map((model) => ({
+      description: model.description,
+      label: model.name || model.id,
+      value: model.id,
+    })),
+    reasoningEfforts: reasoningLevel.availableOptions.map((effort) => ({
+      description: effort.description,
+      label: effort.label,
+      value: effort.value,
     })),
   };
 }
@@ -309,22 +284,6 @@ function contentFromTurnSnapshot(
   return parts;
 }
 
-function optionsForConfig(
-  snapshot: ConversationSnapshot,
-  category: string,
-): ChatRuntimeConfigOption[] {
-  return (
-    snapshot.configOptions
-      .find((option) => option.category === category || option.id === category)
-      ?.values.filter((value) => value.value)
-      .map((value) => ({
-        description: value.description,
-        label: value.name || value.value,
-        value: value.value,
-      })) ?? []
-  );
-}
-
 function actionFromElicitation(
   elicitation: ElicitationSnapshot,
 ): ChatToolAction {
@@ -367,14 +326,4 @@ function cloneAction(action: ChatToolAction): ChatToolAction {
     error: action.error ? { ...action.error } : action.error,
     output: action.output?.map((item) => ({ ...item })),
   };
-}
-
-function labelFromConfigValue(value: string) {
-  if (value === "xhigh") return "XHigh";
-  if (value === "default") return "Default";
-  return value
-    .split(/[_\s-]+/)
-    .filter(Boolean)
-    .map((part) => `${part[0]?.toUpperCase() ?? ""}${part.slice(1)}`)
-    .join(" ");
 }

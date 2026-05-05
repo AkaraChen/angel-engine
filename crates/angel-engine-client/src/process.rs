@@ -4,7 +4,7 @@ use std::sync::mpsc::{self, Receiver};
 use std::thread;
 use std::time::Duration;
 
-use crate::config::{ClientOptions, StartConversationRequest};
+use crate::config::{ClientOptions, ClientProtocol, StartConversationRequest};
 use crate::core::{AngelClientCore, process_log};
 use crate::error::{ClientError, ClientResult};
 use crate::event::{ClientLogKind, ClientUpdate};
@@ -22,10 +22,14 @@ pub struct AngelClient {
     core: AngelClientCore,
     default_cwd: Option<String>,
     default_additional_directories: Vec<String>,
+    runtime_model_catalog_command: Option<String>,
+    runtime_model_catalog: RuntimeModelCatalogCache,
 }
 
 impl AngelClient {
     pub fn spawn(options: ClientOptions) -> ClientResult<Self> {
+        let runtime_model_catalog_command =
+            (options.protocol == ClientProtocol::CodexAppServer).then(|| options.command.clone());
         let mut child = Command::new(&options.command)
             .args(&options.args)
             .stdin(Stdio::piped())
@@ -64,6 +68,8 @@ impl AngelClient {
             core: AngelClientCore::new(options),
             default_cwd,
             default_additional_directories,
+            runtime_model_catalog_command,
+            runtime_model_catalog: RuntimeModelCatalogCache::NotLoaded,
         })
     }
 
@@ -105,6 +111,7 @@ impl AngelClient {
                 .update
                 .merge(self.wait_for_conversation_idle(&conversation_id)?);
             result.update.merge(self.drain(Duration::from_millis(150))?);
+            self.hydrate_runtime_model_catalog(&conversation_id)?;
         }
         Ok(result)
     }
@@ -121,6 +128,7 @@ impl AngelClient {
                 .update
                 .merge(self.wait_for_conversation_idle(&conversation_id)?);
             result.update.merge(self.drain(Duration::from_millis(150))?);
+            self.hydrate_runtime_model_catalog(&conversation_id)?;
         }
         Ok(result)
     }
@@ -308,6 +316,38 @@ impl AngelClient {
             .and_then(|conversation| conversation.focused_turn_id)
     }
 
+    fn hydrate_runtime_model_catalog(&mut self, conversation_id: &str) -> ClientResult<()> {
+        if !self.core.needs_runtime_model_catalog(conversation_id)? {
+            return Ok(());
+        }
+
+        let Some(catalog) = self.runtime_model_catalog().cloned() else {
+            return Ok(());
+        };
+
+        self.core
+            .hydrate_model_catalog_from_runtime_debug(conversation_id, &catalog)
+    }
+
+    fn runtime_model_catalog(&mut self) -> Option<&serde_json::Value> {
+        if matches!(
+            self.runtime_model_catalog,
+            RuntimeModelCatalogCache::NotLoaded
+        ) {
+            self.runtime_model_catalog = self
+                .runtime_model_catalog_command
+                .as_deref()
+                .and_then(load_runtime_model_catalog)
+                .map(RuntimeModelCatalogCache::Loaded)
+                .unwrap_or(RuntimeModelCatalogCache::Unavailable);
+        }
+
+        match &self.runtime_model_catalog {
+            RuntimeModelCatalogCache::Loaded(catalog) => Some(catalog),
+            RuntimeModelCatalogCache::NotLoaded | RuntimeModelCatalogCache::Unavailable => None,
+        }
+    }
+
     fn wait_for_runtime(&mut self) -> ClientResult<ClientUpdate> {
         let mut update = ClientUpdate::default();
         let mut auth_sent = false;
@@ -361,6 +401,24 @@ impl AngelClient {
         }
         Ok(ClientUpdate::default())
     }
+}
+
+fn load_runtime_model_catalog(command: &str) -> Option<serde_json::Value> {
+    let output = Command::new(command)
+        .args(["debug", "models"])
+        .output()
+        .ok()?;
+    if !output.status.success() {
+        return None;
+    }
+
+    serde_json::from_slice(&output.stdout).ok()
+}
+
+enum RuntimeModelCatalogCache {
+    NotLoaded,
+    Unavailable,
+    Loaded(serde_json::Value),
 }
 
 impl Drop for AngelClient {

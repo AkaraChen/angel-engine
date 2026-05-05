@@ -1,6 +1,6 @@
 use angel_engine::{
     AvailableModeState, ConversationSettingsState, ModelListState, ProtocolFlavor,
-    ReasoningLevelState, SessionMode, SessionModel,
+    ReasoningLevelOption, ReasoningLevelState, SessionMode, SessionModel,
 };
 use serde::{Deserialize, Serialize};
 
@@ -36,6 +36,7 @@ impl From<ConversationSettingsState> for ThreadSettingsSnapshot {
 pub struct ReasoningLevelSettingSnapshot {
     pub current_level: Option<String>,
     pub available_levels: Vec<String>,
+    pub available_options: Vec<ReasoningLevelOptionSnapshot>,
     pub source: String,
     pub config_option_id: Option<String>,
     pub can_set: bool,
@@ -43,12 +44,40 @@ pub struct ReasoningLevelSettingSnapshot {
 
 impl From<ReasoningLevelState> for ReasoningLevelSettingSnapshot {
     fn from(reasoning: ReasoningLevelState) -> Self {
+        let current_level = reasoning.current_level;
         Self {
-            current_level: reasoning.current_level,
+            available_options: reasoning
+                .available_options
+                .iter()
+                .map(|option| {
+                    ReasoningLevelOptionSnapshot::from_option(option, current_level.as_deref())
+                })
+                .collect(),
             available_levels: reasoning.available_levels,
             source: reasoning.source.as_str().to_string(),
             config_option_id: reasoning.config_option_id,
             can_set: reasoning.can_set,
+            current_level,
+        }
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ReasoningLevelOptionSnapshot {
+    pub value: String,
+    pub label: String,
+    pub description: Option<String>,
+    pub selected: bool,
+}
+
+impl ReasoningLevelOptionSnapshot {
+    fn from_option(option: &ReasoningLevelOption, current_level: Option<&str>) -> Self {
+        Self {
+            value: option.value.clone(),
+            label: option.name.clone(),
+            description: option.description.clone(),
+            selected: current_level == Some(option.value.as_str()),
         }
     }
 }

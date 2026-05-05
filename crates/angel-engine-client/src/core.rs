@@ -480,6 +480,38 @@ impl AngelClientCore {
             .into())
     }
 
+    pub(crate) fn hydrate_model_catalog_from_runtime_debug(
+        &mut self,
+        conversation_id: impl Into<String>,
+        result: &serde_json::Value,
+    ) -> ClientResult<()> {
+        let conversation_id = conversation_id.into();
+        let current_model_id = self
+            .engine
+            .get_model_list(angel_engine::ConversationId::new(conversation_id.clone()))?
+            .current_model_id;
+
+        let Some(models) = self
+            .adapter
+            .model_catalog_from_runtime_debug(result, current_model_id.as_deref())
+        else {
+            return Ok(());
+        };
+        self.engine
+            .hydrate_model_list(angel_engine::ConversationId::new(conversation_id), models)?;
+        Ok(())
+    }
+
+    pub(crate) fn needs_runtime_model_catalog(
+        &self,
+        conversation_id: impl Into<String>,
+    ) -> ClientResult<bool> {
+        let model_list = self
+            .engine
+            .get_model_list(angel_engine::ConversationId::new(conversation_id.into()))?;
+        Ok(model_list.can_set && model_list.available_models.is_empty())
+    }
+
     pub fn available_modes(
         &self,
         conversation_id: impl Into<String>,

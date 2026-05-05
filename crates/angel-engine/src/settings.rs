@@ -32,6 +32,7 @@ impl ConversationSettingsState {
 pub struct ReasoningLevelState {
     pub current_level: Option<String>,
     pub available_levels: Vec<String>,
+    pub available_options: Vec<ReasoningLevelOption>,
     pub source: ReasoningLevelSource,
     pub config_option_id: Option<String>,
     pub can_set: bool,
@@ -40,13 +41,11 @@ pub struct ReasoningLevelState {
 impl ReasoningLevelState {
     pub fn from_conversation(protocol: ProtocolFlavor, conversation: &ConversationState) -> Self {
         if let Some(option) = find_reasoning_config_option(&conversation.config_options) {
+            let available_options = reasoning_options_from_config(option);
             return Self {
                 current_level: Some(option.current_value.clone()),
-                available_levels: option
-                    .values
-                    .iter()
-                    .map(|value| value.value.clone())
-                    .collect(),
+                available_levels: reasoning_option_values(&available_options),
+                available_options,
                 source: ReasoningLevelSource::ConfigOption,
                 config_option_id: Some(option.id.clone()),
                 can_set: true,
@@ -61,12 +60,11 @@ impl ReasoningLevelState {
             .and_then(|reasoning| reasoning.effort.clone());
 
         if protocol == ProtocolFlavor::CodexAppServer {
+            let available_options = reasoning_options_from_values(CODEX_REASONING_LEVELS);
             return Self {
                 current_level: context_level,
-                available_levels: CODEX_REASONING_LEVELS
-                    .iter()
-                    .map(ToString::to_string)
-                    .collect(),
+                available_levels: reasoning_option_values(&available_options),
+                available_options,
                 source: ReasoningLevelSource::CodexDefaults,
                 config_option_id: None,
                 can_set: true,
@@ -74,9 +72,11 @@ impl ReasoningLevelState {
         }
 
         if let Some(inferred_level) = model_variant_reasoning_level(conversation) {
+            let available_options = reasoning_options_from_values(&["none", "thinking"]);
             return Self {
                 current_level: context_level.or(Some(inferred_level)),
-                available_levels: vec!["none".to_string(), "thinking".to_string()],
+                available_levels: reasoning_option_values(&available_options),
+                available_options,
                 source: ReasoningLevelSource::ModelVariant,
                 config_option_id: None,
                 can_set: true,
@@ -86,11 +86,19 @@ impl ReasoningLevelState {
         Self {
             current_level: context_level,
             available_levels: Vec::new(),
+            available_options: Vec::new(),
             source: ReasoningLevelSource::Unsupported,
             config_option_id: None,
             can_set: false,
         }
     }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct ReasoningLevelOption {
+    pub value: String,
+    pub name: String,
+    pub description: Option<String>,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -159,7 +167,10 @@ impl ModelListState {
             current_model_id: context_model,
             available_models: Vec::new(),
             config_option_id: None,
-            can_set: protocol == ProtocolFlavor::CodexAppServer,
+            can_set: matches!(
+                protocol,
+                ProtocolFlavor::Acp | ProtocolFlavor::CodexAppServer
+            ),
         }
     }
 }
@@ -231,7 +242,7 @@ impl AvailableModeState {
             current_mode_id: context_mode,
             available_modes: Vec::new(),
             config_option_id: None,
-            can_set: false,
+            can_set: protocol == ProtocolFlavor::Acp,
         }
     }
 }
@@ -301,8 +312,18 @@ impl AngelEngine {
         level: impl Into<String>,
     ) -> Result<CommandPlan, EngineError> {
         let conversation_id = conversation_id.into();
+        let level = level.into().trim().to_string();
+        let settings = self.get_reasoning_level(conversation_id.clone())?;
+        if level.is_empty()
+            || !settings.can_set
+            || settings.current_level.as_deref() == Some(level.as_str())
+            || !known_reasoning_level(&settings, &level)
+        {
+            return Ok(settings_noop_plan(conversation_id));
+        }
+
         let mut reasoning = self.current_reasoning_profile(&conversation_id)?;
-        reasoning.effort = Some(level.into());
+        reasoning.effort = Some(level);
         self.plan_command(EngineCommand::UpdateContext {
             conversation_id,
             patch: ContextPatch::one(ContextUpdate::Reasoning {
@@ -317,11 +338,22 @@ impl AngelEngine {
         conversation_id: impl Into<ConversationId>,
         model: impl Into<String>,
     ) -> Result<CommandPlan, EngineError> {
+        let conversation_id = conversation_id.into();
+        let model = model.into().trim().to_string();
+        let settings = self.get_model_list(conversation_id.clone())?;
+        if model.is_empty()
+            || !settings.can_set
+            || settings.current_model_id.as_deref() == Some(model.as_str())
+            || !known_model(&settings, &model)
+        {
+            return Ok(settings_noop_plan(conversation_id));
+        }
+
         self.plan_command(EngineCommand::UpdateContext {
-            conversation_id: conversation_id.into(),
+            conversation_id,
             patch: ContextPatch::one(ContextUpdate::Model {
                 scope: ContextScope::TurnAndFuture,
-                model: Some(model.into()),
+                model: Some(model),
             }),
         })
     }
@@ -345,16 +377,41 @@ impl AngelEngine {
         })
     }
 
+    pub fn hydrate_model_list(
+        &mut self,
+        conversation_id: impl Into<ConversationId>,
+        models: SessionModelState,
+    ) -> Result<Option<TransitionReport>, EngineError> {
+        let conversation_id = conversation_id.into();
+        let settings = self.get_model_list(conversation_id.clone())?;
+        if !settings.can_set || !settings.available_models.is_empty() {
+            return Ok(None);
+        }
+
+        self.replace_model_list(conversation_id, models).map(Some)
+    }
+
     pub fn set_mode(
         &mut self,
         conversation_id: impl Into<ConversationId>,
         mode: impl Into<String>,
     ) -> Result<CommandPlan, EngineError> {
+        let conversation_id = conversation_id.into();
+        let mode = mode.into().trim().to_string();
+        let settings = self.get_available_modes(conversation_id.clone())?;
+        if mode.is_empty()
+            || !settings.can_set
+            || settings.current_mode_id.as_deref() == Some(mode.as_str())
+            || !known_mode(&settings, &mode)
+        {
+            return Ok(settings_noop_plan(conversation_id));
+        }
+
         self.plan_command(EngineCommand::UpdateContext {
-            conversation_id: conversation_id.into(),
+            conversation_id,
             patch: ContextPatch::one(ContextUpdate::Mode {
                 scope: ContextScope::TurnAndFuture,
-                mode: Some(AgentMode { id: mode.into() }),
+                mode: Some(AgentMode { id: mode }),
             }),
         })
     }
@@ -438,6 +495,90 @@ pub(crate) fn find_config_option<'a>(
                 ids.iter().any(|id| name == normalize_name(id))
             })
         })
+}
+
+fn reasoning_options_from_config(option: &SessionConfigOption) -> Vec<ReasoningLevelOption> {
+    option
+        .values
+        .iter()
+        .map(|value| ReasoningLevelOption {
+            value: value.value.clone(),
+            name: if value.name.is_empty() {
+                label_from_config_value(&value.value)
+            } else {
+                value.name.clone()
+            },
+            description: value.description.clone(),
+        })
+        .collect()
+}
+
+fn reasoning_options_from_values(values: &[&str]) -> Vec<ReasoningLevelOption> {
+    values
+        .iter()
+        .map(|value| ReasoningLevelOption {
+            value: (*value).to_string(),
+            name: label_from_config_value(value),
+            description: None,
+        })
+        .collect()
+}
+
+fn reasoning_option_values(options: &[ReasoningLevelOption]) -> Vec<String> {
+    options.iter().map(|option| option.value.clone()).collect()
+}
+
+fn label_from_config_value(value: &str) -> String {
+    if value == "xhigh" {
+        return "XHigh".to_string();
+    }
+    if value == "default" {
+        return "Default".to_string();
+    }
+
+    value
+        .split(['_', '-', ' '])
+        .filter(|part| !part.is_empty())
+        .map(|part| {
+            let mut chars = part.chars();
+            match chars.next() {
+                Some(first) => first.to_uppercase().collect::<String>() + chars.as_str(),
+                None => String::new(),
+            }
+        })
+        .collect::<Vec<_>>()
+        .join(" ")
+}
+
+fn settings_noop_plan(conversation_id: ConversationId) -> CommandPlan {
+    CommandPlan {
+        conversation_id: Some(conversation_id),
+        ..CommandPlan::default()
+    }
+}
+
+fn known_reasoning_level(settings: &ReasoningLevelState, level: &str) -> bool {
+    settings.available_levels.is_empty()
+        || settings
+            .available_levels
+            .iter()
+            .any(|available| available == level)
+}
+
+fn known_model(settings: &ModelListState, model: &str) -> bool {
+    settings.available_models.is_empty()
+        || settings
+            .available_models
+            .iter()
+            .any(|available| available.id == model)
+}
+
+fn known_mode(settings: &AvailableModeState, mode: &str) -> bool {
+    settings.available_modes.is_empty()
+        || settings
+            .available_modes
+            .iter()
+            .any(|available| available.id == mode)
 }
 
 pub(crate) fn thinking_model_for_level(

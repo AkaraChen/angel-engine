@@ -155,11 +155,18 @@ fn settings_api_reports_reasoning_models_and_modes() {
             conversation_id: conversation_id.clone(),
             models: SessionModelState {
                 current_model_id: "kimi-k2".to_string(),
-                available_models: vec![SessionModel {
-                    id: "kimi-k2".to_string(),
-                    name: "Kimi K2".to_string(),
-                    description: None,
-                }],
+                available_models: vec![
+                    SessionModel {
+                        id: "kimi-k2".to_string(),
+                        name: "Kimi K2".to_string(),
+                        description: None,
+                    },
+                    SessionModel {
+                        id: "moonshot-v1-128k".to_string(),
+                        name: "Moonshot 128K".to_string(),
+                        description: None,
+                    },
+                ],
             },
         })
         .expect("models");
@@ -189,6 +196,8 @@ fn settings_api_reports_reasoning_models_and_modes() {
         .expect("settings");
     assert_eq!(settings.reasoning.current_level.as_deref(), Some("medium"));
     assert_eq!(settings.reasoning.available_levels, vec!["low", "medium"]);
+    assert_eq!(settings.reasoning.available_options[0].name, "Low");
+    assert_eq!(settings.reasoning.available_options[1].value, "medium");
     assert_eq!(
         settings.model_list.current_model_id.as_deref(),
         Some("kimi-k2")
@@ -213,12 +222,17 @@ fn settings_api_reports_reasoning_models_and_modes() {
     );
 
     let plan = engine
-        .set_model_list(conversation_id, "kimi-k2")
+        .set_model_list(conversation_id.clone(), "moonshot-v1-128k")
         .expect("set model");
     assert!(matches!(
         &plan.effects[0].method,
         ProtocolMethod::Acp(AcpMethod::SetSessionModel)
     ));
+
+    let plan = engine
+        .set_model_list(conversation_id, "kimi-k2")
+        .expect("set current model");
+    assert!(plan.effects.is_empty());
 }
 
 #[test]

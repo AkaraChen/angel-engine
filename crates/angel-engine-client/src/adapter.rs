@@ -2,8 +2,9 @@ use angel_engine::adapters::acp::AcpAdapter;
 use angel_engine::adapters::codex::CodexAdapter;
 use angel_engine::{
     AngelEngine, ConversationCapabilities, EngineError, ProtocolEffect, ProtocolFlavor,
-    ProtocolTransport, TransportOptions, TransportOutput,
+    ProtocolTransport, SessionModelState, TransportOptions, TransportOutput,
 };
+use serde_json::Value;
 
 use crate::config::{ClientOptions, ClientProtocol};
 
@@ -33,6 +34,19 @@ impl RuntimeAdapter {
         match self {
             Self::Acp(adapter) => adapter.capabilities(),
             Self::Codex(adapter) => adapter.capabilities(),
+        }
+    }
+
+    pub(crate) fn model_catalog_from_runtime_debug(
+        &self,
+        result: &Value,
+        current_model_id: Option<&str>,
+    ) -> Option<SessionModelState> {
+        match self {
+            Self::Acp(_) => None,
+            Self::Codex(adapter) => {
+                adapter.model_catalog_from_debug_models(result, current_model_id)
+            }
         }
     }
 }

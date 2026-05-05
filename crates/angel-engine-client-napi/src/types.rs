@@ -409,9 +409,18 @@ pub struct ThreadSettingsSnapshot {
 pub struct ReasoningLevelSettingSnapshot {
     pub current_level: Option<String>,
     pub available_levels: Vec<String>,
+    pub available_options: Vec<ReasoningLevelOptionSnapshot>,
     pub source: String,
     pub config_option_id: Option<String>,
     pub can_set: bool,
+}
+
+#[napi(object)]
+pub struct ReasoningLevelOptionSnapshot {
+    pub value: String,
+    pub label: String,
+    pub description: Option<String>,
+    pub selected: bool,
 }
 
 #[napi(object)]

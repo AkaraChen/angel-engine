@@ -300,18 +300,6 @@ impl AngelSession {
             return Ok(());
         };
 
-        let Some(snapshot) = self.thread_state_by_id(conversation_id) else {
-            return Ok(());
-        };
-        let reasoning = snapshot.reasoning;
-        if !reasoning.can_set
-            || reasoning.current_effort.as_deref() == Some(effort.as_str())
-            || (!reasoning.available_efforts.is_empty()
-                && !reasoning.available_efforts.contains(&effort))
-        {
-            return Ok(());
-        }
-
         let result = self.client.send_thread_event(
             conversation_id.to_string(),
             ThreadEvent::set_reasoning_effort(effort),
@@ -327,12 +315,6 @@ impl AngelSession {
         let Some(model) = selected_config_value(requested_model) else {
             return Ok(());
         };
-        let Some(snapshot) = self.thread_state_by_id(conversation_id) else {
-            return Ok(());
-        };
-        if current_model(&snapshot).as_deref() == Some(model.as_str()) {
-            return Ok(());
-        }
         let result = self
             .client
             .send_thread_event(conversation_id.to_string(), ThreadEvent::set_model(model))?;
@@ -350,13 +332,6 @@ impl AngelSession {
         else {
             return Ok(());
         };
-        let Some(snapshot) = self.thread_state_by_id(conversation_id) else {
-            return Ok(());
-        };
-        let current_mode = current_mode(&snapshot);
-        if (mode == "default" && current_mode.is_none()) || current_mode.as_deref() == Some(mode) {
-            return Ok(());
-        }
         let result = self.client.send_thread_event(
             conversation_id.to_string(),
             ThreadEvent::set_mode(mode.to_string()),
@@ -743,21 +718,7 @@ fn is_ordered_stream_event(event: &ClientEvent) -> bool {
 }
 
 fn current_model(snapshot: &ConversationSnapshot) -> Option<String> {
-    snapshot.context.model.clone().or_else(|| {
-        snapshot
-            .models
-            .as_ref()
-            .map(|models| models.current_model_id.clone())
-    })
-}
-
-fn current_mode(snapshot: &ConversationSnapshot) -> Option<String> {
-    snapshot.context.mode.clone().or_else(|| {
-        snapshot
-            .modes
-            .as_ref()
-            .map(|modes| modes.current_mode_id.clone())
-    })
+    snapshot.settings.model_list.current_model_id.clone()
 }
 
 fn find_turn(snapshot: &ConversationSnapshot, turn_id: &str) -> Option<TurnSnapshot> {
