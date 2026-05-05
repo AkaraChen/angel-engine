@@ -50,9 +50,7 @@ pub use snapshot::{
     ContextSnapshot, ConversationSnapshot, DisplayMessagePartSnapshot, DisplayMessageSnapshot,
     DisplayToolActionSnapshot, ElicitationSnapshot, ErrorSnapshot, HistoryReplaySnapshot,
     HistorySnapshot, PlanEntrySnapshot, QuestionConstraintsSnapshot, QuestionOptionSnapshot,
-    QuestionSchemaSnapshot, QuestionSnapshot, ReasoningOptionsSnapshot, RuntimeSnapshot,
-    SessionConfigOptionSnapshot, SessionConfigValueSnapshot, SessionModeSnapshot,
-    SessionModeStateSnapshot, SessionModelSnapshot, SessionModelStateSnapshot,
-    SessionUsageCostSnapshot, SessionUsageSnapshot, TurnSnapshot,
+    QuestionSchemaSnapshot, QuestionSnapshot, RuntimeSnapshot, SessionUsageCostSnapshot,
+    SessionUsageSnapshot, TurnSnapshot,
 };
 pub use thread::{Conversation, Thread, ThreadEvent};

@@ -1,11 +1,10 @@
 import type {
-  ActionOutputSnapshot,
   ActionSnapshot,
   ConversationSnapshot,
   DisplayMessagePartSnapshot,
   DisplayMessageSnapshot,
   DisplayToolActionSnapshot,
-  ElicitationSnapshot,
+  TurnRunEvent,
   TurnRunResult,
   TurnSnapshot,
 } from "@angel-engine/client-napi";
@@ -20,31 +19,9 @@ import type {
 import { appendChatTextPart, chatToolActionToPart } from "../../shared/chat";
 
 type ToolActionSnapshotLike = ActionSnapshot | DisplayToolActionSnapshot;
-
-export type RawTurnStreamEvent =
-  | (ChatStreamDelta & { messagePart?: DisplayMessagePartSnapshot })
-  | {
-      action: ActionSnapshot;
-      messagePart?: DisplayMessagePartSnapshot;
-      type: "actionObserved";
-    }
-  | {
-      action: ActionSnapshot;
-      messagePart?: DisplayMessagePartSnapshot;
-      type: "actionUpdated";
-    }
-  | {
-      actionId: string;
-      content: ActionOutputSnapshot;
-      messagePart?: DisplayMessagePartSnapshot;
-      turnId: string;
-      type: "actionOutputDelta";
-    }
-  | {
-      elicitation: ElicitationSnapshot;
-      messagePart?: DisplayMessagePartSnapshot;
-      type: "elicitation";
-    };
+export type ProjectedTurnEvent =
+  | ChatStreamDelta
+  | { action: ChatToolAction; type: "tool" };
 
 export function conversationMessages(
   snapshot: ConversationSnapshot,
@@ -145,124 +122,16 @@ export function projectRunResult(result: TurnRunResult) {
   };
 }
 
-export function createTurnEventProjector(
-  onEvent?: (
-    event: ChatStreamDelta | { action: ChatToolAction; type: "tool" },
-  ) => void,
-) {
-  const actions = new Map<string, ChatToolAction>();
-  const parts: ChatHistoryMessagePart[] = [];
-
-  return {
-    content() {
-      return parts.map((part) =>
-        part.type === "tool-call"
-          ? { ...part, artifact: cloneAction(part.artifact) }
-          : { ...part },
-      );
-    },
-    handle(event: RawTurnStreamEvent) {
-      const messagePart =
-        "messagePart" in event ? event.messagePart : undefined;
-      const turnId = "turnId" in event ? event.turnId : undefined;
-      if (messagePart && acceptDisplayMessagePart(messagePart, turnId)) {
-        return;
-      }
-
-      if (event.type === "delta") {
-        appendChatTextPart(parts, event.part, event.text);
-        onEvent?.(event);
-        return;
-      }
-
-      if (event.type === "actionObserved" || event.type === "actionUpdated") {
-        upsertAction(toChatAction(event.action));
-        return;
-      }
-
-      if (event.type === "actionOutputDelta") {
-        const current =
-          actions.get(event.actionId) ??
-          ({
-            id: event.actionId,
-            kind: "tool",
-            output: [],
-            outputText: "",
-            phase: "streamingResult",
-            title: "Tool call",
-            turnId: event.turnId,
-          } satisfies ChatToolAction);
-        const output = [...(current.output ?? []), event.content];
-        upsertAction({
-          ...current,
-          output,
-          outputText: output.map((item) => item.text).join(""),
-        });
-        return;
-      }
-
-      upsertAction(actionFromElicitation(event.elicitation));
-    },
-  };
-
-  function acceptDisplayMessagePart(
-    part: DisplayMessagePartSnapshot,
-    turnId?: string,
-  ) {
-    if (part.type === "text" || part.type === "reasoning") {
-      const text = part.text ?? "";
-      appendChatTextPart(parts, part.type, text);
-      onEvent?.({ part: part.type, text, turnId, type: "delta" });
-      return true;
-    }
-
-    if (part.type === "tool-call" && part.action) {
-      upsertAction(toChatAction(part.action));
-      return true;
-    }
-
-    return false;
+export function projectTurnRunEvent(
+  event: TurnRunEvent,
+): ProjectedTurnEvent | undefined {
+  if (!("messagePart" in event) || !event.messagePart) {
+    return undefined;
   }
-
-  function upsertAction(action: ChatToolAction) {
-    const merged = actions.has(action.id)
-      ? mergeToolActions(actions.get(action.id) as ChatToolAction, action)
-      : action;
-    actions.set(merged.id, merged);
-    const part = chatToolActionToPart(merged);
-    const index = parts.findIndex(
-      (item) =>
-        item.type === "tool-call" && item.toolCallId === part.toolCallId,
-    );
-    if (index === -1) {
-      parts.push(part);
-    } else {
-      parts[index] = part;
-    }
-    onEvent?.({ action: merged, type: "tool" });
-  }
-}
-
-function mergeToolActions(
-  previous: ChatToolAction,
-  next: ChatToolAction,
-): ChatToolAction {
-  const output = next.output?.length ? next.output : previous.output;
-  return {
-    ...previous,
-    ...next,
-    error: next.error ?? previous.error,
-    inputSummary: next.inputSummary ?? previous.inputSummary,
-    kind:
-      next.kind && !(next.kind === "tool" && previous.kind !== "tool")
-        ? next.kind
-        : previous.kind,
-    output,
-    outputText: next.outputText?.trim() ? next.outputText : previous.outputText,
-    phase: next.phase ?? previous.phase,
-    rawInput: next.rawInput ?? previous.rawInput,
-    title: next.title ?? previous.title,
-  };
+  return projectMessagePart(
+    event.messagePart,
+    "turnId" in event ? event.turnId : undefined,
+  );
 }
 
 function contentFromTurnSnapshot(
@@ -284,25 +153,27 @@ function contentFromTurnSnapshot(
   return parts;
 }
 
-function actionFromElicitation(
-  elicitation: ElicitationSnapshot,
-): ChatToolAction {
-  return {
-    id: elicitation.id,
-    inputSummary:
-      elicitation.body ??
-      elicitation.questions
-        .map((question) => question.question || question.header)
-        .filter(Boolean)
-        .join("\n") ??
-      undefined,
-    kind: "elicitation",
-    output: [],
-    phase: "awaitingDecision",
-    rawInput: JSON.stringify(elicitation),
-    title: elicitation.title ?? "User input requested",
-    turnId: elicitation.turnId ?? undefined,
-  };
+function projectMessagePart(
+  part: DisplayMessagePartSnapshot,
+  turnId?: string,
+): ProjectedTurnEvent | undefined {
+  if (part.type === "text" || part.type === "reasoning") {
+    return {
+      part: part.type,
+      text: part.text ?? "",
+      turnId,
+      type: "delta",
+    };
+  }
+
+  if (part.type === "tool-call" && part.action) {
+    return {
+      action: toChatAction(part.action),
+      type: "tool",
+    };
+  }
+
+  return undefined;
 }
 
 function toChatAction(action: ToolActionSnapshotLike): ChatToolAction {
@@ -317,13 +188,5 @@ function toChatAction(action: ToolActionSnapshotLike): ChatToolAction {
     rawInput: action.rawInput,
     title: action.title,
     turnId: action.turnId ?? undefined,
-  };
-}
-
-function cloneAction(action: ChatToolAction): ChatToolAction {
-  return {
-    ...action,
-    error: action.error ? { ...action.error } : action.error,
-    output: action.output?.map((item) => ({ ...item })),
   };
 }

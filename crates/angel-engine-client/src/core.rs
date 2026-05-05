@@ -336,14 +336,6 @@ impl AngelClientCore {
         self.apply_plan(plan)
     }
 
-    pub fn set_model_list(
-        &mut self,
-        conversation_id: impl Into<String>,
-        model: impl Into<String>,
-    ) -> ClientResult<ClientCommandResult> {
-        self.set_model(conversation_id, model)
-    }
-
     pub fn set_mode(
         &mut self,
         conversation_id: impl Into<String>,

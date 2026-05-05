@@ -350,11 +350,7 @@ pub struct ConversationSnapshot {
     pub elicitations: Vec<ElicitationSnapshot>,
     pub history: HistorySnapshot,
     pub settings: ThreadSettingsSnapshot,
-    pub reasoning: ReasoningOptionsSnapshot,
     pub available_commands: Vec<AvailableCommandSnapshot>,
-    pub config_options: Vec<SessionConfigOptionSnapshot>,
-    pub modes: Option<SessionModeStateSnapshot>,
-    pub models: Option<SessionModelStateSnapshot>,
     pub usage: Option<SessionUsageSnapshot>,
 }
 
@@ -456,62 +452,10 @@ pub struct ModeOptionSnapshot {
 }
 
 #[napi(object)]
-pub struct ReasoningOptionsSnapshot {
-    pub can_set: bool,
-    pub current_effort: Option<String>,
-    pub available_efforts: Vec<String>,
-    pub config_option_id: Option<String>,
-    pub source: String,
-}
-
-#[napi(object)]
 pub struct AvailableCommandSnapshot {
     pub name: String,
     pub description: String,
     pub input_hint: Option<String>,
-}
-
-#[napi(object)]
-pub struct SessionConfigOptionSnapshot {
-    pub id: String,
-    pub name: String,
-    pub description: Option<String>,
-    pub category: Option<String>,
-    pub current_value: String,
-    pub values: Vec<SessionConfigValueSnapshot>,
-}
-
-#[napi(object)]
-pub struct SessionConfigValueSnapshot {
-    pub value: String,
-    pub name: String,
-    pub description: Option<String>,
-}
-
-#[napi(object)]
-pub struct SessionModeStateSnapshot {
-    pub current_mode_id: String,
-    pub available_modes: Vec<SessionModeSnapshot>,
-}
-
-#[napi(object)]
-pub struct SessionModeSnapshot {
-    pub id: String,
-    pub name: String,
-    pub description: Option<String>,
-}
-
-#[napi(object)]
-pub struct SessionModelStateSnapshot {
-    pub current_model_id: String,
-    pub available_models: Vec<SessionModelSnapshot>,
-}
-
-#[napi(object)]
-pub struct SessionModelSnapshot {
-    pub id: String,
-    pub name: String,
-    pub description: Option<String>,
 }
 
 #[napi(object)]

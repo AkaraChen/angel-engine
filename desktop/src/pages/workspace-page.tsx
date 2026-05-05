@@ -49,12 +49,14 @@ export type WorkspaceRoute =
 const EMPTY_CHATS: Chat[] = [];
 const EMPTY_MESSAGES: ChatHistoryMessage[] = [];
 const EMPTY_PROJECTS: Project[] = [];
-const DEFAULT_CONFIG_VALUE = "default";
-const DEFAULT_CONFIG_OPTION: AgentValueOption = {
-  label: "Default",
-  value: DEFAULT_CONFIG_VALUE,
+const NO_CONFIG_OVERRIDE_VALUE = "__angel_no_override__";
+const NO_CONFIG_OVERRIDE_OPTION: AgentValueOption = {
+  label: "Use default",
+  value: NO_CONFIG_OVERRIDE_VALUE,
 };
-const DEFAULT_CONFIG_OPTIONS: AgentValueOption[] = [DEFAULT_CONFIG_OPTION];
+const NO_CONFIG_OVERRIDE_OPTIONS: AgentValueOption[] = [
+  NO_CONFIG_OVERRIDE_OPTION,
+];
 
 type DraftAgentConfig = {
   model?: string;
@@ -547,16 +549,13 @@ function upsertChatInList(chats: Chat[], chat: Chat) {
 function runtimeConfigOptionsToAgentOptions(
   options: ChatRuntimeConfigOption[] | undefined,
 ): AgentValueOption[] {
-  if (!options?.length) return DEFAULT_CONFIG_OPTIONS;
+  if (!options?.length) return NO_CONFIG_OVERRIDE_OPTIONS;
   const runtimeOptions = options.map((option) => ({
     description: option.description ?? undefined,
     label: option.label,
     value: option.value,
   }));
-  if (runtimeOptions.some((option) => option.value === DEFAULT_CONFIG_VALUE)) {
-    return runtimeOptions;
-  }
-  return [DEFAULT_CONFIG_OPTION, ...runtimeOptions];
+  return [NO_CONFIG_OVERRIDE_OPTION, ...runtimeOptions];
 }
 
 function ensureConfigOption(
@@ -577,12 +576,12 @@ function ensureConfigOption(
 }
 
 function normalizeConfigDisplayValue(value: string | null | undefined) {
-  return value?.trim() || DEFAULT_CONFIG_VALUE;
+  return value?.trim() || NO_CONFIG_OVERRIDE_VALUE;
 }
 
 function selectedConfigOverride(value: string | null | undefined) {
   const normalizedValue = value?.trim();
-  if (!normalizedValue || normalizedValue === DEFAULT_CONFIG_VALUE) {
+  if (!normalizedValue || normalizedValue === NO_CONFIG_OVERRIDE_VALUE) {
     return undefined;
   }
   return normalizedValue;

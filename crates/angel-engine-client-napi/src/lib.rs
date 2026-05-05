@@ -212,15 +212,6 @@ impl AngelClient {
         })
     }
 
-    #[napi(js_name = "setModelList", ts_return_type = "ClientCommandResult")]
-    pub fn set_model_list(
-        &self,
-        conversation_id: String,
-        model: String,
-    ) -> Result<serde_json::Value> {
-        self.with_client_json(move |client| client.set_model_list(conversation_id, model))
-    }
-
     #[napi(js_name = "setMode", ts_return_type = "ClientCommandResult")]
     pub fn set_mode(&self, conversation_id: String, mode: String) -> Result<serde_json::Value> {
         self.with_client_json(move |client| {
@@ -714,17 +705,6 @@ impl AngelEngineClient {
     ) -> Result<serde_json::Value> {
         to_json(client_result(
             self.client.set_model(conversation_id, model),
-        )?)
-    }
-
-    #[napi(js_name = "setModelList", ts_return_type = "ClientCommandResult")]
-    pub fn set_model_list(
-        &mut self,
-        conversation_id: String,
-        model: String,
-    ) -> Result<serde_json::Value> {
-        to_json(client_result(
-            self.client.set_model_list(conversation_id, model),
         )?)
     }
 

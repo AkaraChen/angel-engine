@@ -4,8 +4,7 @@ use angel_engine::{
     ActionKind, ActionOutputDelta, ActionPhase, ActionState, AgentMode, AvailableCommand,
     ContentDelta, ConversationLifecycle, ConversationState, EffectiveContext, ElicitationKind,
     ElicitationPhase, ElicitationState, HistoryReplayEntry, HistoryRole, PlanEntryStatus,
-    ProtocolFlavor, QuestionValueType, RuntimeState, SessionConfigOption, SessionMode,
-    SessionModeState, SessionModel, SessionModelState, SessionUsageCost, SessionUsageState,
+    ProtocolFlavor, QuestionValueType, RuntimeState, SessionUsageCost, SessionUsageState,
     TurnPhase, TurnState, UserQuestion, UserQuestionOption, UserQuestionSchema,
 };
 use serde::{Deserialize, Serialize};
@@ -101,11 +100,7 @@ pub struct ConversationSnapshot {
     pub elicitations: Vec<ElicitationSnapshot>,
     pub history: HistorySnapshot,
     pub settings: ThreadSettingsSnapshot,
-    pub reasoning: ReasoningOptionsSnapshot,
     pub available_commands: Vec<AvailableCommandSnapshot>,
-    pub config_options: Vec<SessionConfigOptionSnapshot>,
-    pub modes: Option<SessionModeStateSnapshot>,
-    pub models: Option<SessionModelStateSnapshot>,
     pub usage: Option<SessionUsageSnapshot>,
 }
 
@@ -169,25 +164,11 @@ pub(crate) fn conversation_snapshot(
             replay: history_replay,
         },
         settings: ThreadSettingsSnapshot::from_conversation(protocol, conversation),
-        reasoning: ReasoningOptionsSnapshot::from_conversation(protocol, conversation),
         available_commands: conversation
             .available_commands
             .iter()
             .map(AvailableCommandSnapshot::from)
             .collect(),
-        config_options: conversation
-            .config_options
-            .iter()
-            .map(SessionConfigOptionSnapshot::from)
-            .collect(),
-        modes: conversation
-            .mode_state
-            .as_ref()
-            .map(SessionModeStateSnapshot::from),
-        models: conversation
-            .model_state
-            .as_ref()
-            .map(SessionModelStateSnapshot::from),
         usage: conversation
             .usage_state
             .as_ref()
@@ -447,30 +428,6 @@ impl From<&EffectiveContext> for ContextSnapshot {
                     value.effective().map(|value| (key.clone(), value.clone()))
                 })
                 .collect(),
-        }
-    }
-}
-
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct ReasoningOptionsSnapshot {
-    pub current_effort: Option<String>,
-    pub available_efforts: Vec<String>,
-    pub source: String,
-    pub config_option_id: Option<String>,
-    pub can_set: bool,
-}
-
-impl ReasoningOptionsSnapshot {
-    fn from_conversation(protocol: ProtocolFlavor, conversation: &ConversationState) -> Self {
-        let reasoning =
-            angel_engine::ReasoningLevelState::from_conversation(protocol, conversation);
-        Self {
-            current_effort: reasoning.current_level,
-            available_efforts: reasoning.available_levels,
-            source: reasoning.source.as_str().to_string(),
-            config_option_id: reasoning.config_option_id,
-            can_set: reasoning.can_set,
         }
     }
 }
@@ -807,122 +764,6 @@ impl From<&AvailableCommand> for AvailableCommandSnapshot {
             name: command.name.clone(),
             description: command.description.clone(),
             input_hint: command.input.as_ref().map(|input| input.hint.clone()),
-        }
-    }
-}
-
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct SessionConfigOptionSnapshot {
-    pub id: String,
-    pub name: String,
-    pub description: Option<String>,
-    pub category: Option<String>,
-    pub current_value: String,
-    pub values: Vec<SessionConfigValueSnapshot>,
-}
-
-impl From<&SessionConfigOption> for SessionConfigOptionSnapshot {
-    fn from(option: &SessionConfigOption) -> Self {
-        Self {
-            id: option.id.clone(),
-            name: option.name.clone(),
-            description: option.description.clone(),
-            category: option.category.clone(),
-            current_value: option.current_value.clone(),
-            values: option
-                .values
-                .iter()
-                .map(|value| SessionConfigValueSnapshot {
-                    value: value.value.clone(),
-                    name: value.name.clone(),
-                    description: value.description.clone(),
-                })
-                .collect(),
-        }
-    }
-}
-
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct SessionConfigValueSnapshot {
-    pub value: String,
-    pub name: String,
-    pub description: Option<String>,
-}
-
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct SessionModeStateSnapshot {
-    pub current_mode_id: String,
-    pub available_modes: Vec<SessionModeSnapshot>,
-}
-
-impl From<&SessionModeState> for SessionModeStateSnapshot {
-    fn from(state: &SessionModeState) -> Self {
-        Self {
-            current_mode_id: state.current_mode_id.clone(),
-            available_modes: state
-                .available_modes
-                .iter()
-                .map(SessionModeSnapshot::from)
-                .collect(),
-        }
-    }
-}
-
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct SessionModeSnapshot {
-    pub id: String,
-    pub name: String,
-    pub description: Option<String>,
-}
-
-impl From<&SessionMode> for SessionModeSnapshot {
-    fn from(mode: &SessionMode) -> Self {
-        Self {
-            id: mode.id.clone(),
-            name: mode.name.clone(),
-            description: mode.description.clone(),
-        }
-    }
-}
-
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct SessionModelStateSnapshot {
-    pub current_model_id: String,
-    pub available_models: Vec<SessionModelSnapshot>,
-}
-
-impl From<&SessionModelState> for SessionModelStateSnapshot {
-    fn from(state: &SessionModelState) -> Self {
-        Self {
-            current_model_id: state.current_model_id.clone(),
-            available_models: state
-                .available_models
-                .iter()
-                .map(SessionModelSnapshot::from)
-                .collect(),
-        }
-    }
-}
-
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct SessionModelSnapshot {
-    pub id: String,
-    pub name: String,
-    pub description: Option<String>,
-}
-
-impl From<&SessionModel> for SessionModelSnapshot {
-    fn from(model: &SessionModel) -> Self {
-        Self {
-            id: model.id.clone(),
-            name: model.name.clone(),
-            description: model.description.clone(),
         }
     }
 }

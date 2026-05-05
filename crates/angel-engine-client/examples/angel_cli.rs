@@ -5,8 +5,8 @@ use std::time::Duration;
 use angel_engine_client::{
     AngelClient, AvailableCommandSnapshot, ClientAnswer, ClientCommandResult, ClientEvent,
     ClientLog, ClientOptions, ClientStreamDelta, ClientUpdate, ConversationSnapshot,
-    ElicitationResponse, ElicitationSnapshot, QuestionSnapshot, ReasoningOptionsSnapshot,
-    SessionConfigOptionSnapshot, StartConversationRequest, ThreadEvent,
+    ElicitationResponse, ElicitationSnapshot, QuestionSnapshot, ReasoningLevelSettingSnapshot,
+    StartConversationRequest, ThreadEvent,
 };
 use test_cli::{
     ApprovalChoice, CliAnswer, CliCommandInfo, CliQuestion, CliQuestionOption, InlinePrinter,
@@ -145,14 +145,14 @@ impl MultiRuntimeCli {
                 if value.is_empty() {
                     self.print_effort_state()?;
                 } else {
-                    let reasoning = self.current_conversation()?.reasoning;
+                    let reasoning = self.current_conversation()?.settings.reasoning_level;
                     let Some(effort) = reasoning.normalize_effort(value) else {
-                        if reasoning.available_efforts.is_empty() {
+                        if reasoning.available_levels.is_empty() {
                             println!("[warn] reasoning effort is unavailable for this runtime");
                         } else {
                             println!(
                                 "[warn] use one of: {}",
-                                reasoning.available_efforts.join(", ")
+                                reasoning.available_levels.join(", ")
                             );
                         }
                         return Ok(true);
@@ -316,68 +316,47 @@ impl MultiRuntimeCli {
 
     fn print_model_state(&self) -> Result<(), Box<dyn Error>> {
         let conversation = self.current_conversation()?;
-        let current = conversation
-            .context
-            .model
+        let model_list = conversation.settings.model_list;
+        let current = model_list
+            .current_model_id
             .as_deref()
-            .or_else(|| {
-                conversation
-                    .models
-                    .as_ref()
-                    .map(|models| models.current_model_id.as_str())
-            })
             .unwrap_or("(default)");
         println!("[model] current: {current}");
-        if let Some(option) = config_option(&conversation, "model", &["model"]) {
-            print_config_values("[model]", option);
-        } else if let Some(models) = &conversation.models {
-            let values = models
-                .available_models
-                .iter()
-                .map(|model| model.id.as_str())
-                .collect::<Vec<_>>();
-            print_values("[model]", &values);
-        }
+        let values = model_list
+            .available_models
+            .iter()
+            .map(|model| model.id.as_str())
+            .collect::<Vec<_>>();
+        print_values("[model]", &values);
         Ok(())
     }
 
     fn print_mode_state(&self) -> Result<(), Box<dyn Error>> {
         let conversation = self.current_conversation()?;
-        let current = conversation
-            .context
-            .mode
-            .as_deref()
-            .or_else(|| {
-                conversation
-                    .modes
-                    .as_ref()
-                    .map(|modes| modes.current_mode_id.as_str())
-            })
-            .unwrap_or("(default)");
+        let modes = conversation.settings.available_modes;
+        let current = modes.current_mode_id.as_deref().unwrap_or("(default)");
         println!("[mode] current: {current}");
-        if let Some(option) = config_option(&conversation, "mode", &["mode"]) {
-            print_config_values("[mode]", option);
-        } else if let Some(modes) = &conversation.modes {
-            let values = modes
-                .available_modes
-                .iter()
-                .map(|mode| mode.id.as_str())
-                .collect::<Vec<_>>();
-            print_values("[mode]", &values);
-        } else if self.runtime.is_codex() {
+        let values = modes
+            .available_modes
+            .iter()
+            .map(|mode| mode.id.as_str())
+            .collect::<Vec<_>>();
+        if values.is_empty() && self.runtime.is_codex() {
             println!("[mode] available: plan, default");
+        } else {
+            print_values("[mode]", &values);
         }
         Ok(())
     }
 
     fn print_effort_state(&self) -> Result<(), Box<dyn Error>> {
         let conversation = self.current_conversation()?;
-        let reasoning = conversation.reasoning;
-        let current = reasoning.current_effort.as_deref().unwrap_or("(default)");
+        let reasoning = conversation.settings.reasoning_level;
+        let current = reasoning.current_level.as_deref().unwrap_or("(default)");
         println!("[effort] current: {current}");
-        if !reasoning.available_efforts.is_empty() {
+        if !reasoning.available_levels.is_empty() {
             let values = reasoning
-                .available_efforts
+                .available_levels
                 .iter()
                 .map(String::as_str)
                 .collect::<Vec<_>>();
@@ -425,15 +404,15 @@ trait ReasoningOptionsExt {
     fn normalize_effort(&self, value: &str) -> Option<String>;
 }
 
-impl ReasoningOptionsExt for ReasoningOptionsSnapshot {
+impl ReasoningOptionsExt for ReasoningLevelSettingSnapshot {
     fn normalize_effort(&self, value: &str) -> Option<String> {
         if !self.can_set {
             return None;
         }
-        if self.available_efforts.is_empty() {
+        if self.available_levels.is_empty() {
             return Some(value.to_string());
         }
-        self.available_efforts
+        self.available_levels
             .iter()
             .find(|effort| effort.eq_ignore_ascii_case(value))
             .cloned()
@@ -533,47 +512,6 @@ fn cli_commands(commands: &[AvailableCommandSnapshot]) -> Vec<CliCommandInfo> {
             input_hint: command.input_hint.clone(),
         })
         .collect()
-}
-
-fn config_option<'a>(
-    conversation: &'a ConversationSnapshot,
-    preferred_id: &str,
-    categories: &[&str],
-) -> Option<&'a SessionConfigOptionSnapshot> {
-    conversation
-        .config_options
-        .iter()
-        .find(|option| option.id == preferred_id)
-        .or_else(|| {
-            conversation.config_options.iter().find(|option| {
-                option
-                    .category
-                    .as_deref()
-                    .is_some_and(|category| categories.contains(&category))
-            })
-        })
-}
-
-fn print_config_values(prefix: &str, option: &SessionConfigOptionSnapshot) {
-    if option.values.is_empty() {
-        println!("{prefix} current option: {}", option.current_value);
-        return;
-    }
-    let values = option
-        .values
-        .iter()
-        .map(|value| {
-            if value.value == option.current_value {
-                format!("{}*", value.value)
-            } else {
-                value.value.clone()
-            }
-        })
-        .collect::<Vec<_>>();
-    print_values(
-        prefix,
-        &values.iter().map(String::as_str).collect::<Vec<_>>(),
-    );
 }
 
 fn print_values(prefix: &str, values: &[&str]) {

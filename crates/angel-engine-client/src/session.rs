@@ -1,4 +1,4 @@
-use std::collections::{HashMap, VecDeque};
+use std::collections::{HashMap, VecDeque, hash_map::Entry};
 use std::time::Duration;
 
 use serde::{Deserialize, Serialize};
@@ -585,6 +585,7 @@ struct TurnCollector {
     turn_id: Option<String>,
     action_indexes: HashMap<String, usize>,
     actions: Vec<ActionSnapshot>,
+    streaming_actions: HashMap<String, DisplayToolActionSnapshot>,
     reasoning: String,
     text: String,
 }
@@ -595,6 +596,7 @@ impl TurnCollector {
             turn_id,
             action_indexes: HashMap::new(),
             actions: Vec::new(),
+            streaming_actions: HashMap::new(),
             reasoning: String::new(),
             text: String::new(),
         }
@@ -618,13 +620,12 @@ impl TurnCollector {
                 ..
             } => {
                 if self.accepts_turn(Some(&turn_id)) {
-                    let message_part = DisplayMessagePartSnapshot::tool(
-                        DisplayToolActionSnapshot::from_output_delta(
-                            turn_id.clone(),
-                            action_id.clone(),
-                            content.clone(),
-                        ),
+                    let action = self.accept_output_delta(
+                        turn_id.clone(),
+                        action_id.clone(),
+                        content.clone(),
                     );
+                    let message_part = DisplayMessagePartSnapshot::tool(action);
                     events.push_back(TurnRunEvent::ActionOutputDelta {
                         action_id,
                         content,
@@ -696,12 +697,41 @@ impl TurnCollector {
         if !self.accepts_turn(Some(&action.turn_id)) {
             return;
         }
+        self.streaming_actions
+            .insert(action.id.clone(), DisplayToolActionSnapshot::from(&action));
         if let Some(index) = self.action_indexes.get(&action.id).copied() {
             self.actions[index] = action;
         } else {
             self.action_indexes
                 .insert(action.id.clone(), self.actions.len());
             self.actions.push(action);
+        }
+    }
+
+    fn accept_output_delta(
+        &mut self,
+        turn_id: String,
+        action_id: String,
+        content: ActionOutputSnapshot,
+    ) -> DisplayToolActionSnapshot {
+        match self.streaming_actions.entry(action_id.clone()) {
+            Entry::Vacant(entry) => entry
+                .insert(DisplayToolActionSnapshot::from_output_delta(
+                    turn_id, action_id, content,
+                ))
+                .clone(),
+            Entry::Occupied(mut entry) => {
+                let action = entry.get_mut();
+                action.phase = "streamingResult".to_string();
+                action.output.push(content);
+                action.output_text = action
+                    .output
+                    .iter()
+                    .map(|item| item.text.as_str())
+                    .collect::<Vec<_>>()
+                    .join("");
+                action.clone()
+            }
         }
     }
 }
@@ -763,7 +793,7 @@ fn turn_reasoning_text(turn: Option<&TurnSnapshot>) -> Option<String> {
 fn selected_config_value(value: Option<&str>) -> Option<String> {
     value
         .map(str::trim)
-        .filter(|value| !value.is_empty() && *value != "default")
+        .filter(|value| !value.is_empty())
         .map(ToString::to_string)
 }
 

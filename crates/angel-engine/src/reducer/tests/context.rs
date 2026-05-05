@@ -222,7 +222,7 @@ fn settings_api_reports_reasoning_models_and_modes() {
     );
 
     let plan = engine
-        .set_model_list(conversation_id.clone(), "moonshot-v1-128k")
+        .set_model(conversation_id.clone(), "moonshot-v1-128k")
         .expect("set model");
     assert!(matches!(
         &plan.effects[0].method,
@@ -230,7 +230,7 @@ fn settings_api_reports_reasoning_models_and_modes() {
     ));
 
     let plan = engine
-        .set_model_list(conversation_id, "kimi-k2")
+        .set_model(conversation_id, "kimi-k2")
         .expect("set current model");
     assert!(plan.effects.is_empty());
 }

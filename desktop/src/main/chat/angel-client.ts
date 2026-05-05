@@ -32,10 +32,10 @@ import {
 } from "./repository";
 import {
   conversationMessages,
-  createTurnEventProjector,
   projectRunResult,
+  projectTurnRunEvent,
   runtimeConfigFromConversationSnapshot,
-  type RawTurnStreamEvent,
+  type ProjectedTurnEvent,
 } from "./projection";
 
 type AngelClientModule = typeof import("@angel-engine/client-napi");
@@ -126,10 +126,10 @@ export async function streamChat(
   }
 
   const result = await getChatSession(chat).sendText({
-    ...createProjectedTurn(onEvent),
     cwd: input.cwd ?? chat.cwd ?? undefined,
     model: input.model,
     mode: input.mode,
+    onEvent,
     onResolveElicitation: controls?.setResolveElicitation,
     reasoningEffort: input.reasoningEffort,
     remoteId: chat.remoteThreadId ?? undefined,
@@ -194,16 +194,9 @@ function persistRemoteThreadId(chat: Chat, snapshot: ConversationSnapshot) {
   return setChatRemoteThreadId(chat.id, snapshot.remoteId);
 }
 
-function createProjectedTurn(onEvent?: ChatStreamObserver) {
-  const projector = createTurnEventProjector(onEvent);
-  return {
-    onEvent: projector.handle,
-  };
-}
-
 type NativeAngelSessionInstance = InstanceType<typeof NativeAngelSession>;
 type DesktopSendTextRequest = SendTextRequest & {
-  onEvent?: (event: RawTurnStreamEvent) => void;
+  onEvent?: (event: ProjectedTurnEvent) => void;
   onResolveElicitation?: (
     handler: (
       elicitationId: string,
@@ -297,57 +290,10 @@ class DesktopAngelSession {
     request: DesktopSendTextRequest,
   ): Promise<TurnRunResult | undefined> {
     for (const event of events) {
-      if (event.type === "delta" && event.part && event.text !== undefined) {
-        request.onEvent?.({
-          messagePart: event.messagePart,
-          part: event.part,
-          text: event.text,
-          turnId: event.turnId,
-          type: "delta",
-        });
-        continue;
-      }
-
-      if (event.type === "actionObserved" && event.action) {
-        request.onEvent?.({
-          action: event.action,
-          messagePart: event.messagePart,
-          type: "actionObserved",
-        });
-        continue;
-      }
-
-      if (event.type === "actionUpdated" && event.action) {
-        request.onEvent?.({
-          action: event.action,
-          messagePart: event.messagePart,
-          type: "actionUpdated",
-        });
-        continue;
-      }
-
-      if (
-        event.type === "actionOutputDelta" &&
-        event.actionId &&
-        event.content &&
-        event.turnId
-      ) {
-        request.onEvent?.({
-          actionId: event.actionId,
-          content: event.content,
-          messagePart: event.messagePart,
-          turnId: event.turnId,
-          type: "actionOutputDelta",
-        });
-        continue;
-      }
+      const projected = projectTurnRunEvent(event);
+      if (projected) request.onEvent?.(projected);
 
       if (event.type === "elicitation" && event.elicitation) {
-        request.onEvent?.({
-          elicitation: event.elicitation,
-          messagePart: event.messagePart,
-          type: "elicitation",
-        });
         const followup = await this.waitForElicitation(
           event.elicitation.id,
           request.signal,

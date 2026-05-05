@@ -358,14 +358,6 @@ impl AngelEngine {
         })
     }
 
-    pub fn set_model_list(
-        &mut self,
-        conversation_id: impl Into<ConversationId>,
-        model: impl Into<String>,
-    ) -> Result<CommandPlan, EngineError> {
-        self.set_model(conversation_id, model)
-    }
-
     pub fn replace_model_list(
         &mut self,
         conversation_id: impl Into<ConversationId>,

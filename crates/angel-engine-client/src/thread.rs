@@ -99,13 +99,6 @@ impl<'a> Thread<'a> {
             .set_model(self.conversation_id.clone(), model.into())
     }
 
-    pub fn set_model_list(
-        &mut self,
-        model: impl Into<String>,
-    ) -> ClientResult<ClientCommandResult> {
-        self.set_model(model)
-    }
-
     pub fn set_mode(&mut self, mode: impl Into<String>) -> ClientResult<ClientCommandResult> {
         self.client
             .core
@@ -223,10 +216,6 @@ impl ThreadEvent {
         Self::SetModel {
             model: model.into(),
         }
-    }
-
-    pub fn set_model_list(model: impl Into<String>) -> Self {
-        Self::set_model(model)
     }
 
     pub fn set_mode(mode: impl Into<String>) -> Self {

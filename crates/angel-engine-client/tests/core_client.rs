@@ -123,23 +123,28 @@ fn client_hides_engine_behind_thread_updates_and_snapshots() {
     assert_eq!(conversation.lifecycle, "idle");
     assert_eq!(conversation.context.model.as_deref(), Some("kimi-k2"));
     assert_eq!(
-        conversation
-            .models
-            .as_ref()
-            .map(|models| models.current_model_id.as_str()),
+        conversation.settings.model_list.current_model_id.as_deref(),
         Some("kimi-k2")
     );
-    assert_eq!(conversation.reasoning.source, "configOption");
+    assert_eq!(conversation.settings.reasoning_level.source, "configOption");
     assert_eq!(
-        conversation.reasoning.config_option_id.as_deref(),
+        conversation
+            .settings
+            .reasoning_level
+            .config_option_id
+            .as_deref(),
         Some("thought_level")
     );
     assert_eq!(
-        conversation.reasoning.current_effort.as_deref(),
+        conversation
+            .settings
+            .reasoning_level
+            .current_level
+            .as_deref(),
         Some("medium")
     );
     assert_eq!(
-        conversation.reasoning.available_efforts,
+        conversation.settings.reasoning_level.available_levels,
         vec!["low", "medium", "high"]
     );
     assert_eq!(
@@ -577,10 +582,13 @@ fn codex_turn_start_defaults_to_auto_summary_without_effort() {
         .into_iter()
         .find(|conversation| conversation.id == conversation_id)
         .expect("conversation snapshot");
-    assert_eq!(conversation.reasoning.source, "codexDefaults");
-    assert!(conversation.reasoning.can_set);
     assert_eq!(
-        conversation.reasoning.available_efforts,
+        conversation.settings.reasoning_level.source,
+        "codexDefaults"
+    );
+    assert!(conversation.settings.reasoning_level.can_set);
+    assert_eq!(
+        conversation.settings.reasoning_level.available_levels,
         vec!["none", "minimal", "low", "medium", "high", "xhigh"]
     );
 
@@ -644,13 +652,17 @@ fn acp_thinking_model_variant_surfaces_reasoning_options() {
         .into_iter()
         .find(|conversation| conversation.id == conversation_id)
         .expect("conversation snapshot");
-    assert_eq!(conversation.reasoning.source, "modelVariant");
+    assert_eq!(conversation.settings.reasoning_level.source, "modelVariant");
     assert_eq!(
-        conversation.reasoning.current_effort.as_deref(),
+        conversation
+            .settings
+            .reasoning_level
+            .current_level
+            .as_deref(),
         Some("none")
     );
     assert_eq!(
-        conversation.reasoning.available_efforts,
+        conversation.settings.reasoning_level.available_levels,
         vec!["none", "thinking"]
     );
 }
