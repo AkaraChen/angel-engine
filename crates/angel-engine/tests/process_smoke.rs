@@ -268,6 +268,7 @@ impl<A> Drop for AgentProcess<A> {
 }
 
 #[test]
+#[ignore = "requires installed and authenticated codex CLI"]
 fn codex_app_server_process_smoke_enters_and_exits_plan_mode() -> TestResult {
     let adapter = CodexAdapter::app_server();
     let capabilities = adapter.capabilities();
@@ -332,6 +333,7 @@ fn codex_app_server_process_smoke_enters_and_exits_plan_mode() -> TestResult {
 }
 
 #[test]
+#[ignore = "requires installed and authenticated kimi CLI"]
 fn kimi_acp_process_smoke_enters_and_exits_plan_mode() -> TestResult {
     let adapter = AcpAdapter::standard();
     let capabilities = adapter.capabilities();
