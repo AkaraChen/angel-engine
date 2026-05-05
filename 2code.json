@@ -1,0 +1,15 @@
+{
+  "setup_script": [],
+  "teardown_script": [],
+  "init_script": [],
+  "terminal_templates": [
+    {
+      "id": "44955597-cf72-4690-86aa-d38c2a2ab79a",
+      "name": "Start",
+      "cwd": "desktop",
+      "commands": [
+        "nr start"
+      ]
+    }
+  ]
+}
