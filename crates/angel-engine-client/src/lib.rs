@@ -15,6 +15,7 @@ mod event;
 mod process;
 mod runtime;
 mod session;
+mod settings;
 mod snapshot;
 mod thread;
 
@@ -39,6 +40,10 @@ pub use runtime::{
 };
 pub use session::{
     AngelSession, HydrateRequest, InspectRequest, SendTextRequest, TurnRunEvent, TurnRunResult,
+};
+pub use settings::{
+    AvailableModeSettingSnapshot, ModeOptionSnapshot, ModelListSettingSnapshot,
+    ModelOptionSnapshot, ReasoningLevelSettingSnapshot, ThreadSettingsSnapshot,
 };
 pub use snapshot::{
     ActionOutputSnapshot, ActionSnapshot, AvailableCommandSnapshot, ClientSnapshot, ContentChunk,

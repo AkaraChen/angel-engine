@@ -349,6 +349,7 @@ pub struct ConversationSnapshot {
     pub messages: Vec<DisplayMessageSnapshot>,
     pub elicitations: Vec<ElicitationSnapshot>,
     pub history: HistorySnapshot,
+    pub settings: ThreadSettingsSnapshot,
     pub reasoning: ReasoningOptionsSnapshot,
     pub available_commands: Vec<AvailableCommandSnapshot>,
     pub config_options: Vec<SessionConfigOptionSnapshot>,
@@ -395,6 +396,54 @@ pub struct ContextSnapshot {
     pub sandbox: Option<String>,
     pub permission_profile: Option<String>,
     pub raw: HashMap<String, String>,
+}
+
+#[napi(object)]
+pub struct ThreadSettingsSnapshot {
+    pub reasoning_level: ReasoningLevelSettingSnapshot,
+    pub model_list: ModelListSettingSnapshot,
+    pub available_modes: AvailableModeSettingSnapshot,
+}
+
+#[napi(object)]
+pub struct ReasoningLevelSettingSnapshot {
+    pub current_level: Option<String>,
+    pub available_levels: Vec<String>,
+    pub source: String,
+    pub config_option_id: Option<String>,
+    pub can_set: bool,
+}
+
+#[napi(object)]
+pub struct ModelListSettingSnapshot {
+    pub current_model_id: Option<String>,
+    pub available_models: Vec<ModelOptionSnapshot>,
+    pub config_option_id: Option<String>,
+    pub can_set: bool,
+}
+
+#[napi(object)]
+pub struct AvailableModeSettingSnapshot {
+    pub current_mode_id: Option<String>,
+    pub available_modes: Vec<ModeOptionSnapshot>,
+    pub config_option_id: Option<String>,
+    pub can_set: bool,
+}
+
+#[napi(object)]
+pub struct ModelOptionSnapshot {
+    pub id: String,
+    pub name: String,
+    pub description: Option<String>,
+    pub selected: bool,
+}
+
+#[napi(object)]
+pub struct ModeOptionSnapshot {
+    pub id: String,
+    pub name: String,
+    pub description: Option<String>,
+    pub selected: bool,
 }
 
 #[napi(object)]

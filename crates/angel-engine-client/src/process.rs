@@ -8,6 +8,10 @@ use crate::config::{ClientOptions, StartConversationRequest};
 use crate::core::{AngelClientCore, process_log};
 use crate::error::{ClientError, ClientResult};
 use crate::event::{ClientLogKind, ClientUpdate};
+use crate::settings::{
+    AvailableModeSettingSnapshot, ModelListSettingSnapshot, ReasoningLevelSettingSnapshot,
+    ThreadSettingsSnapshot,
+};
 use crate::snapshot::{RuntimeSnapshot, TurnSnapshot};
 use crate::{ClientCommandResult, ElicitationSnapshot, ResumeConversationRequest, ThreadEvent};
 
@@ -212,6 +216,83 @@ impl AngelClient {
 
     pub fn open_elicitations(&self, conversation_id: &str) -> Vec<ElicitationSnapshot> {
         self.core.open_elicitations(conversation_id)
+    }
+
+    pub fn thread_settings(
+        &self,
+        conversation_id: impl Into<String>,
+    ) -> ClientResult<ThreadSettingsSnapshot> {
+        self.core.thread_settings(conversation_id)
+    }
+
+    pub fn reasoning_level(
+        &self,
+        conversation_id: impl Into<String>,
+    ) -> ClientResult<ReasoningLevelSettingSnapshot> {
+        self.core.reasoning_level(conversation_id)
+    }
+
+    pub fn model_list(
+        &self,
+        conversation_id: impl Into<String>,
+    ) -> ClientResult<ModelListSettingSnapshot> {
+        self.core.model_list(conversation_id)
+    }
+
+    pub fn available_modes(
+        &self,
+        conversation_id: impl Into<String>,
+    ) -> ClientResult<AvailableModeSettingSnapshot> {
+        self.core.available_modes(conversation_id)
+    }
+
+    pub fn set_model(
+        &mut self,
+        conversation_id: impl Into<String>,
+        model: impl Into<String>,
+    ) -> ClientResult<ClientCommandResult> {
+        let mut result = self.core.set_model(conversation_id, model)?;
+        let sent = self.flush_update(&result.update)?;
+        result.update.merge(sent);
+        Ok(result)
+    }
+
+    pub fn set_model_list(
+        &mut self,
+        conversation_id: impl Into<String>,
+        model: impl Into<String>,
+    ) -> ClientResult<ClientCommandResult> {
+        self.set_model(conversation_id, model)
+    }
+
+    pub fn set_mode(
+        &mut self,
+        conversation_id: impl Into<String>,
+        mode: impl Into<String>,
+    ) -> ClientResult<ClientCommandResult> {
+        let mut result = self.core.set_mode(conversation_id, mode)?;
+        let sent = self.flush_update(&result.update)?;
+        result.update.merge(sent);
+        Ok(result)
+    }
+
+    pub fn set_reasoning_level(
+        &mut self,
+        conversation_id: impl Into<String>,
+        level: impl Into<String>,
+    ) -> ClientResult<ClientCommandResult> {
+        let mut result = self.core.set_reasoning_level(conversation_id, level)?;
+        let sent = self.flush_update(&result.update)?;
+        result.update.merge(sent);
+        Ok(result)
+    }
+
+    pub fn set_reasoning_effort(
+        &mut self,
+        conversation_id: impl Into<String>,
+        effort: impl Into<String>,
+    ) -> ClientResult<ClientCommandResult> {
+        self.set_reasoning_level(conversation_id, effort)
     }
 
     pub fn close(&mut self) {

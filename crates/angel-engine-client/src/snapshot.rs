@@ -11,6 +11,7 @@ use angel_engine::{
 use serde::{Deserialize, Serialize};
 
 use crate::event::RuntimeAuthMethod;
+use crate::settings::ThreadSettingsSnapshot;
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -99,6 +100,7 @@ pub struct ConversationSnapshot {
     pub messages: Vec<DisplayMessageSnapshot>,
     pub elicitations: Vec<ElicitationSnapshot>,
     pub history: HistorySnapshot,
+    pub settings: ThreadSettingsSnapshot,
     pub reasoning: ReasoningOptionsSnapshot,
     pub available_commands: Vec<AvailableCommandSnapshot>,
     pub config_options: Vec<SessionConfigOptionSnapshot>,
@@ -166,6 +168,7 @@ pub(crate) fn conversation_snapshot(
             turn_count: conversation.history.turn_count,
             replay: history_replay,
         },
+        settings: ThreadSettingsSnapshot::from_conversation(protocol, conversation),
         reasoning: ReasoningOptionsSnapshot::from_conversation(protocol, conversation),
         available_commands: conversation
             .available_commands
@@ -460,119 +463,16 @@ pub struct ReasoningOptionsSnapshot {
 
 impl ReasoningOptionsSnapshot {
     fn from_conversation(protocol: ProtocolFlavor, conversation: &ConversationState) -> Self {
-        if let Some(option) = reasoning_config_option(&conversation.config_options) {
-            return Self {
-                current_effort: Some(option.current_value.clone()),
-                available_efforts: option
-                    .values
-                    .iter()
-                    .map(|value| value.value.clone())
-                    .collect(),
-                source: "configOption".to_string(),
-                config_option_id: Some(option.id.clone()),
-                can_set: true,
-            };
-        }
-
-        let context_effort = conversation
-            .context
-            .reasoning
-            .effective()
-            .and_then(Option::as_ref)
-            .and_then(|reasoning| reasoning.effort.clone());
-
-        if protocol == ProtocolFlavor::CodexAppServer {
-            return Self {
-                current_effort: context_effort,
-                available_efforts: CODEX_REASONING_EFFORTS
-                    .iter()
-                    .map(ToString::to_string)
-                    .collect(),
-                source: "codexDefaults".to_string(),
-                config_option_id: None,
-                can_set: true,
-            };
-        }
-
-        if let Some(inferred_effort) = model_variant_reasoning_effort(conversation) {
-            return Self {
-                current_effort: context_effort.or(Some(inferred_effort)),
-                available_efforts: vec!["none".to_string(), "thinking".to_string()],
-                source: "modelVariant".to_string(),
-                config_option_id: None,
-                can_set: true,
-            };
-        }
-
+        let reasoning =
+            angel_engine::ReasoningLevelState::from_conversation(protocol, conversation);
         Self {
-            current_effort: context_effort,
-            available_efforts: Vec::new(),
-            source: "unsupported".to_string(),
-            config_option_id: None,
-            can_set: false,
+            current_effort: reasoning.current_level,
+            available_efforts: reasoning.available_levels,
+            source: reasoning.source.as_str().to_string(),
+            config_option_id: reasoning.config_option_id,
+            can_set: reasoning.can_set,
         }
     }
-}
-
-const CODEX_REASONING_EFFORTS: &[&str] = &["none", "minimal", "low", "medium", "high", "xhigh"];
-
-fn reasoning_config_option(options: &[SessionConfigOption]) -> Option<&SessionConfigOption> {
-    const IDS: &[&str] = &[
-        "thought_level",
-        "reasoning",
-        "reasoning_effort",
-        "effort",
-        "thinking",
-        "thought",
-    ];
-    options
-        .iter()
-        .find(|option| option.category.as_deref() == Some("thought_level"))
-        .or_else(|| {
-            options.iter().find(|option| {
-                IDS.iter()
-                    .any(|id| option.id.eq_ignore_ascii_case(id) || normalized_eq(&option.id, id))
-            })
-        })
-        .or_else(|| {
-            options.iter().find(|option| {
-                let name = normalize_name(&option.name);
-                IDS.iter().any(|id| name == normalize_name(id))
-            })
-        })
-}
-
-fn model_variant_reasoning_effort(conversation: &ConversationState) -> Option<String> {
-    const THINKING_SUFFIX: &str = ",thinking";
-
-    let models = conversation.model_state.as_ref()?;
-    let current = models.current_model_id.as_str();
-    if current.ends_with(THINKING_SUFFIX) {
-        let base = current.strip_suffix(THINKING_SUFFIX)?;
-        return models
-            .available_models
-            .iter()
-            .any(|model| model.id == base)
-            .then(|| "thinking".to_string());
-    }
-
-    models
-        .available_models
-        .iter()
-        .any(|model| model.id == format!("{current}{THINKING_SUFFIX}"))
-        .then(|| "none".to_string())
-}
-
-fn normalized_eq(left: &str, right: &str) -> bool {
-    normalize_name(left) == normalize_name(right)
-}
-
-fn normalize_name(value: &str) -> String {
-    value
-        .chars()
-        .filter(|ch| ch.is_ascii_alphanumeric())
-        .flat_map(char::to_lowercase)
-        .collect()
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]

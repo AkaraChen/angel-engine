@@ -1,9 +1,8 @@
 use angel_engine::{
-    AgentMode, AngelEngine, AuthMethodId, ContextPatch, ContextScope, ContextUpdate,
-    DiscoverConversationsParams, ElicitationDecision, ElicitationId, EngineCommand,
-    EngineExtensionCommand, JsonRpcMessage, ProtocolTransport, ReasoningProfile, ResumeTarget,
-    StartConversationParams, TransportClientInfo, TransportOptions, TransportOutput, TurnOverrides,
-    UserAnswer, UserInput, UserInputKind,
+    AngelEngine, AuthMethodId, ContextPatch, DiscoverConversationsParams, ElicitationDecision,
+    ElicitationId, EngineCommand, EngineExtensionCommand, JsonRpcMessage, ProtocolTransport,
+    ResumeTarget, StartConversationParams, TransportClientInfo, TransportOptions, TransportOutput,
+    TurnOverrides, UserAnswer, UserInput, UserInputKind,
 };
 use serde::{Deserialize, Serialize};
 
@@ -13,6 +12,10 @@ use crate::error::ClientResult;
 use crate::event::{
     ClientLog, ClientLogKind, ClientUpdate, JsonRpcOutbound, events_from_engine_event, log_event,
     stream_deltas_from_engine_event,
+};
+use crate::settings::{
+    AvailableModeSettingSnapshot, ModelListSettingSnapshot, ReasoningLevelSettingSnapshot,
+    ThreadSettingsSnapshot,
 };
 use crate::snapshot::{ClientSnapshot, ElicitationSnapshot, TurnSnapshot};
 use crate::thread::ThreadEvent;
@@ -326,13 +329,19 @@ impl AngelClientCore {
         conversation_id: impl Into<String>,
         model: impl Into<String>,
     ) -> ClientResult<ClientCommandResult> {
-        self.update_context(
-            conversation_id,
-            ContextUpdate::Model {
-                scope: ContextScope::TurnAndFuture,
-                model: Some(model.into()),
-            },
-        )
+        let plan = self.engine.set_model(
+            angel_engine::ConversationId::new(conversation_id.into()),
+            model.into(),
+        )?;
+        self.apply_plan(plan)
+    }
+
+    pub fn set_model_list(
+        &mut self,
+        conversation_id: impl Into<String>,
+        model: impl Into<String>,
+    ) -> ClientResult<ClientCommandResult> {
+        self.set_model(conversation_id, model)
     }
 
     pub fn set_mode(
@@ -340,13 +349,23 @@ impl AngelClientCore {
         conversation_id: impl Into<String>,
         mode: impl Into<String>,
     ) -> ClientResult<ClientCommandResult> {
-        self.update_context(
-            conversation_id,
-            ContextUpdate::Mode {
-                scope: ContextScope::TurnAndFuture,
-                mode: Some(AgentMode { id: mode.into() }),
-            },
-        )
+        let plan = self.engine.set_mode(
+            angel_engine::ConversationId::new(conversation_id.into()),
+            mode.into(),
+        )?;
+        self.apply_plan(plan)
+    }
+
+    pub fn set_reasoning_level(
+        &mut self,
+        conversation_id: impl Into<String>,
+        level: impl Into<String>,
+    ) -> ClientResult<ClientCommandResult> {
+        let plan = self.engine.set_reasoning_level(
+            angel_engine::ConversationId::new(conversation_id.into()),
+            level.into(),
+        )?;
+        self.apply_plan(plan)
     }
 
     pub fn set_reasoning_effort(
@@ -354,16 +373,7 @@ impl AngelClientCore {
         conversation_id: impl Into<String>,
         effort: impl Into<String>,
     ) -> ClientResult<ClientCommandResult> {
-        let conversation_id = conversation_id.into();
-        let mut reasoning = self.reasoning_profile(&conversation_id);
-        reasoning.effort = Some(effort.into());
-        self.update_context(
-            conversation_id,
-            ContextUpdate::Reasoning {
-                scope: ContextScope::TurnAndFuture,
-                reasoning: Some(reasoning),
-            },
-        )
+        self.set_reasoning_level(conversation_id, effort)
     }
 
     pub fn receive_json_line(&mut self, line: &str) -> ClientResult<ClientUpdate> {
@@ -440,26 +450,44 @@ impl AngelClientCore {
             .unwrap_or_default()
     }
 
-    fn update_context(
-        &mut self,
+    pub fn thread_settings(
+        &self,
         conversation_id: impl Into<String>,
-        update: ContextUpdate,
-    ) -> ClientResult<ClientCommandResult> {
-        self.plan_command(EngineCommand::UpdateContext {
-            conversation_id: angel_engine::ConversationId::new(conversation_id.into()),
-            patch: ContextPatch::one(update),
-        })
+    ) -> ClientResult<ThreadSettingsSnapshot> {
+        Ok(self
+            .engine
+            .conversation_settings(angel_engine::ConversationId::new(conversation_id.into()))?
+            .into())
     }
 
-    fn reasoning_profile(&self, conversation_id: &str) -> ReasoningProfile {
-        self.engine
-            .conversations
-            .get(&angel_engine::ConversationId::new(
-                conversation_id.to_string(),
-            ))
-            .and_then(|conversation| conversation.context.reasoning.effective())
-            .and_then(Clone::clone)
-            .unwrap_or(ReasoningProfile { effort: None })
+    pub fn reasoning_level(
+        &self,
+        conversation_id: impl Into<String>,
+    ) -> ClientResult<ReasoningLevelSettingSnapshot> {
+        Ok(self
+            .engine
+            .get_reasoning_level(angel_engine::ConversationId::new(conversation_id.into()))?
+            .into())
+    }
+
+    pub fn model_list(
+        &self,
+        conversation_id: impl Into<String>,
+    ) -> ClientResult<ModelListSettingSnapshot> {
+        Ok(self
+            .engine
+            .get_model_list(angel_engine::ConversationId::new(conversation_id.into()))?
+            .into())
+    }
+
+    pub fn available_modes(
+        &self,
+        conversation_id: impl Into<String>,
+    ) -> ClientResult<AvailableModeSettingSnapshot> {
+        Ok(self
+            .engine
+            .get_available_modes(angel_engine::ConversationId::new(conversation_id.into()))?
+            .into())
     }
 
     fn first_open_elicitation_id(&self, conversation_id: &str) -> ClientResult<String> {
@@ -474,6 +502,10 @@ impl AngelClientCore {
 
     fn plan_command(&mut self, command: EngineCommand) -> ClientResult<ClientCommandResult> {
         let plan = self.engine.plan_command(command)?;
+        self.apply_plan(plan)
+    }
+
+    fn apply_plan(&mut self, plan: angel_engine::CommandPlan) -> ClientResult<ClientCommandResult> {
         let conversation_id = plan.conversation_id.as_ref().map(ToString::to_string);
         let turn_id = plan.turn_id.as_ref().map(ToString::to_string);
         let request_id = plan.request_id.as_ref().map(ToString::to_string);

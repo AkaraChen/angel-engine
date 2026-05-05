@@ -131,6 +131,32 @@ impl AngelClient {
         optional_to_json(state)
     }
 
+    #[napi(js_name = "threadSettings", ts_return_type = "ThreadSettingsSnapshot")]
+    pub fn thread_settings(&self, conversation_id: String) -> Result<serde_json::Value> {
+        self.with_client_json(move |client| client.thread_settings(conversation_id))
+    }
+
+    #[napi(
+        js_name = "reasoningLevel",
+        ts_return_type = "ReasoningLevelSettingSnapshot"
+    )]
+    pub fn reasoning_level(&self, conversation_id: String) -> Result<serde_json::Value> {
+        self.with_client_json(move |client| client.reasoning_level(conversation_id))
+    }
+
+    #[napi(js_name = "modelList", ts_return_type = "ModelListSettingSnapshot")]
+    pub fn model_list(&self, conversation_id: String) -> Result<serde_json::Value> {
+        self.with_client_json(move |client| client.model_list(conversation_id))
+    }
+
+    #[napi(
+        js_name = "availableModes",
+        ts_return_type = "AvailableModeSettingSnapshot"
+    )]
+    pub fn available_modes(&self, conversation_id: String) -> Result<serde_json::Value> {
+        self.with_client_json(move |client| client.available_modes(conversation_id))
+    }
+
     #[napi(js_name = "turnState", ts_return_type = "TurnSnapshot | null")]
     pub fn turn_state(
         &self,
@@ -186,6 +212,15 @@ impl AngelClient {
         })
     }
 
+    #[napi(js_name = "setModelList", ts_return_type = "ClientCommandResult")]
+    pub fn set_model_list(
+        &self,
+        conversation_id: String,
+        model: String,
+    ) -> Result<serde_json::Value> {
+        self.with_client_json(move |client| client.set_model_list(conversation_id, model))
+    }
+
     #[napi(js_name = "setMode", ts_return_type = "ClientCommandResult")]
     pub fn set_mode(&self, conversation_id: String, mode: String) -> Result<serde_json::Value> {
         self.with_client_json(move |client| {
@@ -205,6 +240,15 @@ impl AngelClient {
                 EngineThreadEvent::set_reasoning_effort(effort),
             )
         })
+    }
+
+    #[napi(js_name = "setReasoningLevel", ts_return_type = "ClientCommandResult")]
+    pub fn set_reasoning_level(
+        &self,
+        conversation_id: String,
+        level: String,
+    ) -> Result<serde_json::Value> {
+        self.with_client_json(move |client| client.set_reasoning_level(conversation_id, level))
     }
 
     #[napi(js_name = "runShellCommand", ts_return_type = "ClientCommandResult")]
@@ -572,6 +616,32 @@ impl AngelEngineClient {
         optional_to_json(conversation_state(&self.client, &conversation_id))
     }
 
+    #[napi(js_name = "threadSettings", ts_return_type = "ThreadSettingsSnapshot")]
+    pub fn thread_settings(&self, conversation_id: String) -> Result<serde_json::Value> {
+        to_json(client_result(self.client.thread_settings(conversation_id))?)
+    }
+
+    #[napi(
+        js_name = "reasoningLevel",
+        ts_return_type = "ReasoningLevelSettingSnapshot"
+    )]
+    pub fn reasoning_level(&self, conversation_id: String) -> Result<serde_json::Value> {
+        to_json(client_result(self.client.reasoning_level(conversation_id))?)
+    }
+
+    #[napi(js_name = "modelList", ts_return_type = "ModelListSettingSnapshot")]
+    pub fn model_list(&self, conversation_id: String) -> Result<serde_json::Value> {
+        to_json(client_result(self.client.model_list(conversation_id))?)
+    }
+
+    #[napi(
+        js_name = "availableModes",
+        ts_return_type = "AvailableModeSettingSnapshot"
+    )]
+    pub fn available_modes(&self, conversation_id: String) -> Result<serde_json::Value> {
+        to_json(client_result(self.client.available_modes(conversation_id))?)
+    }
+
     #[napi(js_name = "turnState", ts_return_type = "TurnSnapshot | null")]
     pub fn turn_state(
         &self,
@@ -642,12 +712,25 @@ impl AngelEngineClient {
         conversation_id: String,
         model: String,
     ) -> Result<serde_json::Value> {
-        self.with_thread(conversation_id, EngineThreadEvent::set_model(model))
+        to_json(client_result(
+            self.client.set_model(conversation_id, model),
+        )?)
+    }
+
+    #[napi(js_name = "setModelList", ts_return_type = "ClientCommandResult")]
+    pub fn set_model_list(
+        &mut self,
+        conversation_id: String,
+        model: String,
+    ) -> Result<serde_json::Value> {
+        to_json(client_result(
+            self.client.set_model_list(conversation_id, model),
+        )?)
     }
 
     #[napi(js_name = "setMode", ts_return_type = "ClientCommandResult")]
     pub fn set_mode(&mut self, conversation_id: String, mode: String) -> Result<serde_json::Value> {
-        self.with_thread(conversation_id, EngineThreadEvent::set_mode(mode))
+        to_json(client_result(self.client.set_mode(conversation_id, mode))?)
     }
 
     #[napi(js_name = "setReasoningEffort", ts_return_type = "ClientCommandResult")]
@@ -656,10 +739,20 @@ impl AngelEngineClient {
         conversation_id: String,
         effort: String,
     ) -> Result<serde_json::Value> {
-        self.with_thread(
-            conversation_id,
-            EngineThreadEvent::set_reasoning_effort(effort),
-        )
+        to_json(client_result(
+            self.client.set_reasoning_effort(conversation_id, effort),
+        )?)
+    }
+
+    #[napi(js_name = "setReasoningLevel", ts_return_type = "ClientCommandResult")]
+    pub fn set_reasoning_level(
+        &mut self,
+        conversation_id: String,
+        level: String,
+    ) -> Result<serde_json::Value> {
+        to_json(client_result(
+            self.client.set_reasoning_level(conversation_id, level),
+        )?)
     }
 
     #[napi(js_name = "runShellCommand", ts_return_type = "ClientCommandResult")]

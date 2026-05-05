@@ -1,4 +1,8 @@
 use crate::protocol::{AcpMethod, ProtocolMethod};
+use crate::settings::{
+    find_config_option, find_mode_config_option, find_model_config_option,
+    find_reasoning_config_option, thinking_model_for_level,
+};
 use crate::state::{
     AgentMode, ApprovalPolicy, ContextPatch, ContextScope, ContextUpdate, ConversationState,
     ReasoningProfile, SandboxProfile, SessionConfigOption,
@@ -14,13 +18,13 @@ pub(super) fn sync_context_from_config_options(
     context: &mut crate::EffectiveContext,
     options: &[SessionConfigOption],
 ) {
-    if let Some(option) = find_config_option(options, "model", &["model"]) {
+    if let Some(option) = find_model_config_option(options) {
         context.apply_patch(ContextPatch::one(ContextUpdate::Model {
             scope: ContextScope::TurnAndFuture,
             model: Some(option.current_value.clone()),
         }));
     }
-    if let Some(option) = find_config_option(options, "mode", &["mode"]) {
+    if let Some(option) = find_mode_config_option(options) {
         context.apply_patch(ContextPatch::one(ContextUpdate::Mode {
             scope: ContextScope::TurnAndFuture,
             mode: Some(AgentMode {
@@ -28,18 +32,7 @@ pub(super) fn sync_context_from_config_options(
             }),
         }));
     }
-    if let Some(option) = find_config_option(
-        options,
-        "thought_level",
-        &[
-            "thought_level",
-            "reasoning",
-            "reasoning_effort",
-            "effort",
-            "thinking",
-            "thought",
-        ],
-    ) {
+    if let Some(option) = find_reasoning_config_option(options) {
         context.apply_patch(ContextPatch::one(ContextUpdate::Reasoning {
             scope: ContextScope::TurnAndFuture,
             reasoning: Some(ReasoningProfile {
@@ -112,9 +105,7 @@ pub(super) fn acp_context_effect_specs(
             ContextUpdate::Model {
                 model: Some(model), ..
             } => {
-                if let Some(option) =
-                    find_config_option(&conversation.config_options, "model", &["model"])
-                {
+                if let Some(option) = find_model_config_option(&conversation.config_options) {
                     specs.push(set_config_option_spec(&option.id, model, update.clone()));
                 } else {
                     specs.push(ContextEffectSpec {
@@ -127,9 +118,7 @@ pub(super) fn acp_context_effect_specs(
             ContextUpdate::Mode {
                 mode: Some(mode), ..
             } => {
-                if let Some(option) =
-                    find_config_option(&conversation.config_options, "mode", &["mode"])
-                {
+                if let Some(option) = find_mode_config_option(&conversation.config_options) {
                     specs.push(set_config_option_spec(&option.id, &mode.id, update.clone()));
                 } else {
                     specs.push(ContextEffectSpec {
@@ -145,22 +134,11 @@ pub(super) fn acp_context_effect_specs(
                 ..
             } => {
                 if let Some(effort) = &reasoning.effort
-                    && let Some(option) = find_config_option(
-                        &conversation.config_options,
-                        "thought_level",
-                        &[
-                            "thought_level",
-                            "reasoning",
-                            "reasoning_effort",
-                            "effort",
-                            "thinking",
-                            "thought",
-                        ],
-                    )
+                    && let Some(option) = find_reasoning_config_option(&conversation.config_options)
                 {
                     specs.push(set_config_option_spec(&option.id, effort, update.clone()));
                 } else if let Some(effort) = &reasoning.effort
-                    && let Some(model) = thinking_model_for_effort(conversation, effort)
+                    && let Some(model) = thinking_model_for_level(conversation, effort)
                 {
                     specs.push(ContextEffectSpec {
                         method: ProtocolMethod::Acp(AcpMethod::SetSessionModel),
@@ -189,7 +167,7 @@ pub(super) fn acp_context_effect_specs(
                         "permissions",
                     ],
                 )
-                .or_else(|| find_config_option(&conversation.config_options, "mode", &["mode"]))
+                .or_else(|| find_mode_config_option(&conversation.config_options))
                 {
                     specs.push(set_config_option_spec(
                         &option.id,
@@ -215,7 +193,7 @@ pub(super) fn acp_context_effect_specs(
                     "permission",
                     &["permission", "permissions", "permission_profile"],
                 )
-                .or_else(|| find_config_option(&conversation.config_options, "mode", &["mode"]))
+                .or_else(|| find_mode_config_option(&conversation.config_options))
                 {
                     specs.push(set_config_option_spec(
                         &option.id,
@@ -243,65 +221,4 @@ fn set_config_option_spec(
         ],
         patch: ContextPatch::one(update),
     }
-}
-
-fn thinking_model_for_effort(conversation: &ConversationState, effort: &str) -> Option<String> {
-    const THINKING_SUFFIX: &str = ",thinking";
-
-    let models = conversation.model_state.as_ref()?;
-    let current = models.current_model_id.as_str();
-    let target = if disables_reasoning(effort) {
-        current.strip_suffix(THINKING_SUFFIX).map(str::to_string)?
-    } else if current.ends_with(THINKING_SUFFIX) {
-        return None;
-    } else {
-        format!("{current}{THINKING_SUFFIX}")
-    };
-
-    models
-        .available_models
-        .iter()
-        .any(|model| model.id == target)
-        .then_some(target)
-}
-
-fn disables_reasoning(effort: &str) -> bool {
-    matches!(
-        effort.to_ascii_lowercase().as_str(),
-        "none" | "off" | "false" | "disabled" | "disable"
-    )
-}
-
-fn find_config_option<'a>(
-    options: &'a [SessionConfigOption],
-    category: &str,
-    ids: &[&str],
-) -> Option<&'a SessionConfigOption> {
-    options
-        .iter()
-        .find(|option| option.category.as_deref() == Some(category))
-        .or_else(|| {
-            options.iter().find(|option| {
-                ids.iter()
-                    .any(|id| option.id.eq_ignore_ascii_case(id) || normalized_eq(&option.id, id))
-            })
-        })
-        .or_else(|| {
-            options.iter().find(|option| {
-                let name = normalize_name(&option.name);
-                ids.iter().any(|id| name == normalize_name(id))
-            })
-        })
-}
-
-fn normalized_eq(left: &str, right: &str) -> bool {
-    normalize_name(left) == normalize_name(right)
-}
-
-fn normalize_name(value: &str) -> String {
-    value
-        .chars()
-        .filter(|ch| ch.is_ascii_alphanumeric())
-        .flat_map(char::to_lowercase)
-        .collect()
 }

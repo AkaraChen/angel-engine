@@ -142,6 +142,55 @@ fn client_hides_engine_behind_thread_updates_and_snapshots() {
         conversation.reasoning.available_efforts,
         vec!["low", "medium", "high"]
     );
+    assert_eq!(
+        conversation
+            .settings
+            .reasoning_level
+            .current_level
+            .as_deref(),
+        Some("medium")
+    );
+    assert_eq!(
+        conversation.settings.model_list.current_model_id.as_deref(),
+        Some("kimi-k2")
+    );
+    assert_eq!(
+        conversation.settings.model_list.available_models[0].id,
+        "kimi-k2"
+    );
+    assert_eq!(
+        conversation
+            .settings
+            .available_modes
+            .current_mode_id
+            .as_deref(),
+        Some("default")
+    );
+    assert_eq!(
+        client
+            .thread_settings(&conversation_id)
+            .expect("thread settings")
+            .reasoning_level
+            .available_levels,
+        vec!["low", "medium", "high"]
+    );
+    assert!(
+        client
+            .model_list(&conversation_id)
+            .expect("model list")
+            .available_models[0]
+            .selected
+    );
+    assert_eq!(
+        client
+            .available_modes(&conversation_id)
+            .expect("available modes")
+            .available_modes
+            .iter()
+            .map(|mode| mode.id.as_str())
+            .collect::<Vec<_>>(),
+        vec!["default", "plan"]
+    );
 }
 
 #[test]
@@ -653,7 +702,7 @@ fn thread_set_model_event_updates_snapshot_after_runtime_ack() {
 
     let update = client
         .thread(&conversation_id)
-        .send_event(ThreadEvent::set_model("moonshot-v1-128k"))
+        .set_model("moonshot-v1-128k")
         .expect("set model");
     assert_eq!(
         update.update.outgoing[0].value["method"],

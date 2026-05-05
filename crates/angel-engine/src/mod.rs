@@ -6,6 +6,7 @@ pub mod event;
 pub mod ids;
 pub mod protocol;
 pub mod reducer;
+pub mod settings;
 pub mod state;
 pub mod transport;
 
@@ -16,5 +17,6 @@ pub use event::*;
 pub use ids::*;
 pub use protocol::*;
 pub use reducer::*;
+pub use settings::*;
 pub use state::*;
 pub use transport::*;

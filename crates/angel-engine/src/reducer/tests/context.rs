@@ -1,11 +1,13 @@
 use crate::adapters::acp::AcpAdapter;
 use crate::adapters::codex::CodexAdapter;
 use crate::command::{EngineCommand, TurnOverrides, UserInput};
+use crate::event::EngineEvent;
 use crate::ids::RemoteConversationId;
 use crate::protocol::{AcpMethod, ProtocolFlavor, ProtocolMethod};
 use crate::state::{
     AgentMode, ApprovalPolicy, ContextPatch, ContextScope, ContextUpdate, PermissionProfile,
-    ReasoningProfile, SandboxProfile, SessionConfigOption, SessionModel, SessionModelState,
+    ReasoningProfile, SandboxProfile, SessionConfigOption, SessionConfigValue, SessionMode,
+    SessionModeState, SessionModel, SessionModelState,
 };
 
 use super::{engine_with, insert_ready_conversation};
@@ -112,6 +114,111 @@ fn acp_context_update_uses_advertised_effort_config_option() {
     let conversation_id = plan.conversation_id.as_ref().unwrap();
     let conversation = engine.conversations.get(conversation_id).unwrap();
     assert_eq!(conversation.context.reasoning.effective(), None);
+}
+
+#[test]
+fn settings_api_reports_reasoning_models_and_modes() {
+    let adapter = AcpAdapter::standard();
+    let mut engine = engine_with(ProtocolFlavor::Acp, adapter.capabilities());
+    let conversation_id = insert_ready_conversation(
+        &mut engine,
+        "conv",
+        RemoteConversationId::Known("sess".to_string()),
+        adapter.capabilities(),
+    );
+    engine
+        .apply_event(EngineEvent::SessionConfigOptionsUpdated {
+            conversation_id: conversation_id.clone(),
+            options: vec![SessionConfigOption {
+                id: "thought_level".to_string(),
+                name: "Reasoning".to_string(),
+                description: None,
+                category: Some("thought_level".to_string()),
+                current_value: "medium".to_string(),
+                values: vec![
+                    SessionConfigValue {
+                        value: "low".to_string(),
+                        name: "Low".to_string(),
+                        description: None,
+                    },
+                    SessionConfigValue {
+                        value: "medium".to_string(),
+                        name: "Medium".to_string(),
+                        description: None,
+                    },
+                ],
+            }],
+        })
+        .expect("config options");
+    engine
+        .apply_event(EngineEvent::SessionModelsUpdated {
+            conversation_id: conversation_id.clone(),
+            models: SessionModelState {
+                current_model_id: "kimi-k2".to_string(),
+                available_models: vec![SessionModel {
+                    id: "kimi-k2".to_string(),
+                    name: "Kimi K2".to_string(),
+                    description: None,
+                }],
+            },
+        })
+        .expect("models");
+    engine
+        .apply_event(EngineEvent::SessionModesUpdated {
+            conversation_id: conversation_id.clone(),
+            modes: SessionModeState {
+                current_mode_id: "default".to_string(),
+                available_modes: vec![
+                    SessionMode {
+                        id: "default".to_string(),
+                        name: "Default".to_string(),
+                        description: None,
+                    },
+                    SessionMode {
+                        id: "plan".to_string(),
+                        name: "Plan".to_string(),
+                        description: None,
+                    },
+                ],
+            },
+        })
+        .expect("modes");
+
+    let settings = engine
+        .conversation_settings(conversation_id.clone())
+        .expect("settings");
+    assert_eq!(settings.reasoning.current_level.as_deref(), Some("medium"));
+    assert_eq!(settings.reasoning.available_levels, vec!["low", "medium"]);
+    assert_eq!(
+        settings.model_list.current_model_id.as_deref(),
+        Some("kimi-k2")
+    );
+    assert_eq!(settings.model_list.available_models[0].id, "kimi-k2");
+    assert_eq!(
+        settings.available_modes.current_mode_id.as_deref(),
+        Some("default")
+    );
+    assert_eq!(settings.available_modes.available_modes[1].id, "plan");
+
+    let plan = engine
+        .set_reasoning_level(conversation_id.clone(), "low")
+        .expect("set reasoning");
+    assert!(matches!(
+        &plan.effects[0].method,
+        ProtocolMethod::Acp(AcpMethod::SetSessionConfigOption)
+    ));
+    assert_eq!(
+        plan.effects[0].payload.fields.get("value"),
+        Some(&"low".to_string())
+    );
+
+    let plan = engine
+        .set_model_list(conversation_id, "kimi-k2")
+        .expect("set model");
+    assert!(matches!(
+        &plan.effects[0].method,
+        ProtocolMethod::Acp(AcpMethod::SetSessionModel)
+    ));
 }
 
 #[test]

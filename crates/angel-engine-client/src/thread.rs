@@ -3,6 +3,10 @@ use serde::{Deserialize, Serialize};
 use crate::client::Client;
 use crate::core::{ClientAnswer, ClientCommandResult, ClientInput, ElicitationResponse};
 use crate::error::{ClientError, ClientResult};
+use crate::settings::{
+    AvailableModeSettingSnapshot, ModelListSettingSnapshot, ReasoningLevelSettingSnapshot,
+    ThreadSettingsSnapshot,
+};
 use crate::snapshot::{ConversationSnapshot, ElicitationSnapshot, TurnSnapshot};
 
 pub type Conversation<'a> = Thread<'a>;
@@ -60,11 +64,68 @@ impl<'a> Thread<'a> {
         self.client.core.open_elicitations(&self.conversation_id)
     }
 
+    pub fn settings(&self) -> ClientResult<ThreadSettingsSnapshot> {
+        self.client
+            .core
+            .thread_settings(self.conversation_id.clone())
+    }
+
+    pub fn reasoning_level(&self) -> ClientResult<ReasoningLevelSettingSnapshot> {
+        self.client
+            .core
+            .reasoning_level(self.conversation_id.clone())
+    }
+
+    pub fn model_list(&self) -> ClientResult<ModelListSettingSnapshot> {
+        self.client.core.model_list(self.conversation_id.clone())
+    }
+
+    pub fn available_modes(&self) -> ClientResult<AvailableModeSettingSnapshot> {
+        self.client
+            .core
+            .available_modes(self.conversation_id.clone())
+    }
+
     pub fn send_event(&mut self, event: ThreadEvent) -> ClientResult<ClientCommandResult> {
         let focused_turn_id = self.focused_turn_id();
         self.client
             .core
             .send_thread_event(self.conversation_id.clone(), event, focused_turn_id)
+    }
+
+    pub fn set_model(&mut self, model: impl Into<String>) -> ClientResult<ClientCommandResult> {
+        self.client
+            .core
+            .set_model(self.conversation_id.clone(), model.into())
+    }
+
+    pub fn set_model_list(
+        &mut self,
+        model: impl Into<String>,
+    ) -> ClientResult<ClientCommandResult> {
+        self.set_model(model)
+    }
+
+    pub fn set_mode(&mut self, mode: impl Into<String>) -> ClientResult<ClientCommandResult> {
+        self.client
+            .core
+            .set_mode(self.conversation_id.clone(), mode.into())
+    }
+
+    pub fn set_reasoning_level(
+        &mut self,
+        level: impl Into<String>,
+    ) -> ClientResult<ClientCommandResult> {
+        self.client
+            .core
+            .set_reasoning_level(self.conversation_id.clone(), level.into())
+    }
+
+    pub fn set_reasoning_effort(
+        &mut self,
+        effort: impl Into<String>,
+    ) -> ClientResult<ClientCommandResult> {
+        self.set_reasoning_level(effort)
     }
 }
 
@@ -164,6 +225,10 @@ impl ThreadEvent {
         }
     }
 
+    pub fn set_model_list(model: impl Into<String>) -> Self {
+        Self::set_model(model)
+    }
+
     pub fn set_mode(mode: impl Into<String>) -> Self {
         Self::SetMode { mode: mode.into() }
     }
@@ -172,6 +237,10 @@ impl ThreadEvent {
         Self::SetReasoningEffort {
             effort: effort.into(),
         }
+    }
+
+    pub fn set_reasoning_level(level: impl Into<String>) -> Self {
+        Self::set_reasoning_effort(level)
     }
 
     pub fn resolve(elicitation_id: impl Into<String>, response: ElicitationResponse) -> Self {

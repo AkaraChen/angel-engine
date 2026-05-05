@@ -82,6 +82,8 @@ thread.send_event(ThreadEvent::approve_first())?;
 
 let state = thread.require_state()?;
 let open_questions = thread.open_elicitations();
+let settings = thread.settings()?;
+let models = thread.model_list()?;
 ```
 
 `ThreadEvent` covers the thread-facing command surface:
@@ -92,6 +94,11 @@ let open_questions = thread.open_elicitations();
 - elicitation: `resolve`, `resolve_first`, `approve_first`, `deny_first`, `answer_first`
 - lifecycle/history: `fork`, `close`, `unsubscribe`, `archive`, `compact_history`, `rollback_history`
 - shell: `shell`
+
+For desktop-style settings surfaces, `Client`, `AngelClient`, and `Thread`
+also expose direct primitives for `thread_settings`, `reasoning_level`,
+`model_list`, `available_modes`, `set_model`, `set_mode`, and
+`set_reasoning_level`.
 
 ## Process Client
 
