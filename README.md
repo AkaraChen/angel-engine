@@ -18,6 +18,13 @@ Build and verify all workspace crates:
 cargo test --workspace --all-targets
 ```
 
+External agent process smoke tests require installed and authenticated `codex`
+and `kimi` CLIs, so they are ignored by default. Run them explicitly with:
+
+```sh
+cargo test -p angel-engine --test process_smoke -- --ignored
+```
+
 Format Rust and desktop JS/TS:
 
 ```sh
