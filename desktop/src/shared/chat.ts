@@ -31,6 +31,8 @@ export type ChatRuntimeConfigOption = {
 };
 
 export type ChatRuntimeConfig = {
+  canSetModel?: boolean;
+  canSetMode?: boolean;
   canSetReasoningEffort?: boolean;
   currentMode?: string | null;
   currentModel?: string | null;

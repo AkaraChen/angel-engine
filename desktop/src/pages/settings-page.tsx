@@ -1,11 +1,5 @@
 import { useCallback, useState, type ReactNode } from "react";
-import {
-  AlertTriangle,
-  Bot,
-  Brain,
-  SlidersHorizontal,
-  Trash2,
-} from "lucide-react";
+import { AlertTriangle, Bot, Trash2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -18,12 +12,9 @@ import {
 import { cn } from "@/lib/utils";
 import {
   AGENT_OPTIONS,
-  getAgentModes,
-  getAgentReasoningEfforts,
   normalizeAgentRuntime,
   type AgentRuntime,
   type AgentSettings,
-  type AgentValueOption,
 } from "@/shared/agents";
 
 type SettingsTab = "agents" | "danger";
@@ -36,15 +27,11 @@ const settingsTabs: Array<{ id: SettingsTab; label: string }> = [
 export function SettingsPage({
   agentSettings,
   isDeletingChats,
-  onAgentModeChange,
-  onAgentReasoningEffortChange,
   onDeleteAllChats,
   onDefaultAgentChange,
 }: {
   agentSettings: AgentSettings;
   isDeletingChats: boolean;
-  onAgentModeChange: (runtime: AgentRuntime, mode: string) => void;
-  onAgentReasoningEffortChange: (runtime: AgentRuntime, effort: string) => void;
   onDeleteAllChats: () => Promise<void>;
   onDefaultAgentChange: (runtime: AgentRuntime) => void;
 }) {
@@ -129,27 +116,6 @@ export function SettingsPage({
                         {agent.description}
                       </p>
                     </div>
-
-                    <div className="grid gap-2 sm:grid-cols-2">
-                      <SettingsSelect
-                        icon={<Brain />}
-                        label="Reasoning"
-                        onValueChange={(effort) =>
-                          onAgentReasoningEffortChange(agent.id, effort)
-                        }
-                        options={getAgentReasoningEfforts(agent.id)}
-                        value={agentSettings.reasoningEfforts[agent.id]}
-                      />
-                      <SettingsSelect
-                        icon={<SlidersHorizontal />}
-                        label="Mode"
-                        onValueChange={(mode) =>
-                          onAgentModeChange(agent.id, mode)
-                        }
-                        options={getAgentModes(agent.id)}
-                        value={agentSettings.modes[agent.id]}
-                      />
-                    </div>
                   </div>
                 </section>
               ))}
@@ -197,13 +163,9 @@ function SettingsSelect({
   icon: ReactNode;
   label: string;
   onValueChange: (value: string) => void;
-  options: AgentValueOption[];
+  options: Array<{ label: string; value: string }>;
   value: string;
 }) {
-  const resolvedOptions = options.some((option) => option.value === value)
-    ? options
-    : [...options, { label: labelFromConfigValue(value), value }];
-
   return (
     <label className="flex min-w-44 flex-col gap-1.5 text-xs font-medium text-muted-foreground">
       {label}
@@ -220,7 +182,7 @@ function SettingsSelect({
           </span>
         </SelectTrigger>
         <SelectContent className="rounded-md">
-          {resolvedOptions.map((option) => (
+          {options.map((option) => (
             <SelectItem
               className="rounded-sm"
               key={option.value}
@@ -233,14 +195,4 @@ function SettingsSelect({
       </Select>
     </label>
   );
-}
-
-function labelFromConfigValue(value: string) {
-  if (value === "xhigh") return "XHigh";
-  if (value === "default") return "Default";
-  return value
-    .split(/[_\s-]+/)
-    .filter(Boolean)
-    .map((part) => `${part.slice(0, 1).toUpperCase()}${part.slice(1)}`)
-    .join(" ");
 }

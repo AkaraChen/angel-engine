@@ -196,6 +196,7 @@ function AssistantComposerFooter({ draftText }: { draftText: string }) {
           disabled={
             isRunning ||
             chatOptions.configLoading ||
+            !chatOptions.canSetModel ||
             chatOptions.modelOptions.length < 2
           }
           icon={<Cpu />}
@@ -208,7 +209,11 @@ function AssistantComposerFooter({ draftText }: { draftText: string }) {
           value={chatOptions.model}
         />
         <ComposerOptionSelect
-          disabled={isRunning || chatOptions.reasoningEffortOptions.length < 2}
+          disabled={
+            isRunning ||
+            !chatOptions.canSetReasoningEffort ||
+            chatOptions.reasoningEffortOptions.length < 2
+          }
           icon={<Brain />}
           label="Reasoning effort"
           onValueChange={chatOptions.setReasoningEffort}
@@ -219,7 +224,11 @@ function AssistantComposerFooter({ draftText }: { draftText: string }) {
       <div className="flex min-w-0 items-center gap-2">
         <ComposerOptionSelect
           className="max-w-28"
-          disabled={isRunning || chatOptions.modeOptions.length < 2}
+          disabled={
+            isRunning ||
+            !chatOptions.canSetMode ||
+            chatOptions.modeOptions.length < 2
+          }
           icon={<SlidersHorizontal />}
           label="Mode"
           onValueChange={chatOptions.setMode}

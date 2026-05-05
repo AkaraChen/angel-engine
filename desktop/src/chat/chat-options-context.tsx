@@ -3,6 +3,9 @@ import { createContext, useContext } from "react";
 import type { AgentRuntime, AgentValueOption } from "@/shared/agents";
 
 export type ChatOptionsContextValue = {
+  canSetModel: boolean;
+  canSetMode: boolean;
+  canSetReasoningEffort: boolean;
   configLoading: boolean;
   model: string;
   modelOptions: AgentValueOption[];

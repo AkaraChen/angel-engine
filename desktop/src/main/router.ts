@@ -263,5 +263,6 @@ function normalizeOptionalRuntime(value: unknown) {
 function normalizeOptionalConfigInput(value: unknown) {
   if (typeof value !== "string") return undefined;
   const trimmed = value.trim();
+  if (trimmed === "default") return undefined;
   return trimmed || undefined;
 }

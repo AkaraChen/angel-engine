@@ -93,25 +93,54 @@ function displayMessagePartToChatParts(
 export function runtimeConfigFromConversationSnapshot(
   snapshot: ConversationSnapshot,
 ): ChatRuntimeConfig {
+  const settings = snapshot.settings;
+  const modelList = settings?.modelList;
+  const availableModes = settings?.availableModes;
+  const reasoningLevel = settings?.reasoningLevel;
+
   return {
-    canSetReasoningEffort: snapshot.reasoning.canSet,
-    currentMode: snapshot.context.mode ?? snapshot.modes?.currentModeId ?? null,
+    canSetModel: modelList?.canSet ?? Boolean(snapshot.models),
+    canSetMode: availableModes?.canSet ?? Boolean(snapshot.modes),
+    canSetReasoningEffort: reasoningLevel?.canSet ?? snapshot.reasoning.canSet,
+    currentMode:
+      availableModes?.currentModeId ??
+      snapshot.context.mode ??
+      snapshot.modes?.currentModeId ??
+      null,
     currentModel:
-      snapshot.context.model ?? snapshot.models?.currentModelId ?? null,
-    currentReasoningEffort: snapshot.reasoning.currentEffort ?? null,
+      modelList?.currentModelId ??
+      snapshot.context.model ??
+      snapshot.models?.currentModelId ??
+      null,
+    currentReasoningEffort:
+      reasoningLevel?.currentLevel ?? snapshot.reasoning.currentEffort ?? null,
     modes:
+      availableModes?.availableModes.map((mode) => ({
+        description: mode.description,
+        label: mode.name || mode.id,
+        value: mode.id,
+      })) ??
       snapshot.modes?.availableModes.map((mode) => ({
         description: mode.description,
         label: mode.name || mode.id,
         value: mode.id,
-      })) ?? optionsForConfig(snapshot, "mode"),
+      })) ??
+      optionsForConfig(snapshot, "mode"),
     models:
+      modelList?.availableModels.map((model) => ({
+        description: model.description,
+        label: model.name || model.id,
+        value: model.id,
+      })) ??
       snapshot.models?.availableModels.map((model) => ({
         description: model.description,
         label: model.name || model.id,
         value: model.id,
-      })) ?? optionsForConfig(snapshot, "model"),
-    reasoningEfforts: snapshot.reasoning.availableEfforts.map((effort) => ({
+      })) ??
+      optionsForConfig(snapshot, "model"),
+    reasoningEfforts: (
+      reasoningLevel?.availableLevels ?? snapshot.reasoning.availableEfforts
+    ).map((effort) => ({
       label: labelFromConfigValue(effort),
       value: effort,
     })),

@@ -26,10 +26,6 @@ import {
   projectListQueryOptions,
 } from "@/requests/projects";
 import {
-  getAgentModes,
-  getAgentReasoningEfforts,
-  normalizeAgentConfigValue,
-  normalizeAgentModel,
   normalizeAgentRuntime,
   type AgentValueOption,
   type AgentRuntime,
@@ -53,6 +49,20 @@ export type WorkspaceRoute =
 const EMPTY_CHATS: Chat[] = [];
 const EMPTY_MESSAGES: ChatHistoryMessage[] = [];
 const EMPTY_PROJECTS: Project[] = [];
+const DEFAULT_CONFIG_VALUE = "default";
+const DEFAULT_CONFIG_OPTION: AgentValueOption = {
+  label: "Default",
+  value: DEFAULT_CONFIG_VALUE,
+};
+const DEFAULT_CONFIG_OPTIONS: AgentValueOption[] = [DEFAULT_CONFIG_OPTION];
+
+type DraftAgentConfig = {
+  model?: string;
+  mode?: string;
+  reasoningEffort?: string;
+};
+
+const EMPTY_DRAFT_AGENT_CONFIG: DraftAgentConfig = {};
 
 export function WorkspacePage({ route }: { route: WorkspaceRoute }) {
   const api = useApi();
@@ -63,6 +73,9 @@ export function WorkspacePage({ route }: { route: WorkspaceRoute }) {
   const [agentSettings, updateAgentSettings] = useAgentSettings();
   const [draftRuntimes, setDraftRuntimes] = useState<
     Partial<Record<string, AgentRuntime>>
+  >({});
+  const [draftAgentConfigs, setDraftAgentConfigs] = useState<
+    Partial<Record<string, DraftAgentConfig>>
   >({});
 
   const selectedChatId =
@@ -116,6 +129,9 @@ export function WorkspacePage({ route }: { route: WorkspaceRoute }) {
     : route.type === "projectCreate"
       ? `project-create:${route.projectId}`
       : "create";
+  const draftAgentConfigKey = `${runtimePageKey}:${activeRuntime}`;
+  const draftAgentConfig =
+    draftAgentConfigs[draftAgentConfigKey] ?? EMPTY_DRAFT_AGENT_CONFIG;
   const shouldInspectRuntimeConfig =
     route.type === "create" || route.type === "projectCreate";
   const runtimeConfigQuery = useQuery({
@@ -127,33 +143,35 @@ export function WorkspacePage({ route }: { route: WorkspaceRoute }) {
     }),
   });
   const runtimeConfig = chatLoadQuery.data?.config ?? runtimeConfigQuery.data;
+  const activeModel = normalizeConfigDisplayValue(
+    draftAgentConfig.model ?? runtimeConfig?.currentModel,
+  );
+  const activeReasoningEffort = normalizeConfigDisplayValue(
+    draftAgentConfig.reasoningEffort ?? runtimeConfig?.currentReasoningEffort,
+  );
+  const activeMode = normalizeConfigDisplayValue(
+    draftAgentConfig.mode ?? runtimeConfig?.currentMode,
+  );
+  const modelOverride = selectedConfigOverride(draftAgentConfig.model);
+  const reasoningEffortOverride = selectedConfigOverride(
+    draftAgentConfig.reasoningEffort,
+  );
+  const modeOverride = selectedConfigOverride(draftAgentConfig.mode);
   const modelOptions = ensureConfigOption(
-    runtimeConfigOptionsToAgentOptions(runtimeConfig?.models, [
-      { label: "Default", value: "default" },
-    ]),
-    agentSettings.models[activeRuntime],
+    runtimeConfigOptionsToAgentOptions(runtimeConfig?.models),
+    activeModel,
   );
   const reasoningEffortOptions = ensureConfigOption(
-    runtimeConfigOptionsToAgentOptions(
-      runtimeConfig?.reasoningEfforts,
-      getAgentReasoningEfforts(activeRuntime),
-    ),
-    agentSettings.reasoningEfforts[activeRuntime],
+    runtimeConfigOptionsToAgentOptions(runtimeConfig?.reasoningEfforts),
+    activeReasoningEffort,
   );
   const modeOptions = ensureConfigOption(
-    runtimeConfigOptionsToAgentOptions(
-      runtimeConfig?.modes,
-      getAgentModes(activeRuntime),
-    ),
-    agentSettings.modes[activeRuntime],
+    runtimeConfigOptionsToAgentOptions(runtimeConfig?.modes),
+    activeMode,
   );
-  const activeModel = normalizeAgentModel(agentSettings.models[activeRuntime]);
-  const activeReasoningEffort = normalizeAgentConfigValue(
-    agentSettings.reasoningEfforts[activeRuntime],
-  );
-  const activeMode = normalizeAgentConfigValue(
-    agentSettings.modes[activeRuntime],
-  );
+  const canSetModel = runtimeConfig?.canSetModel ?? true;
+  const canSetMode = runtimeConfig?.canSetMode ?? true;
+  const canSetReasoningEffort = runtimeConfig?.canSetReasoningEffort ?? true;
 
   const projectIds = useMemo(
     () => new Set(projects.map((project) => project.id)),
@@ -198,44 +216,41 @@ export function WorkspacePage({ route }: { route: WorkspaceRoute }) {
     },
     [updateAgentSettings],
   );
-  const setAgentModel = useCallback(
-    (runtime: AgentRuntime, model: string) => {
-      updateAgentSettings((current) => ({
+  const setDraftAgentConfigValue = useCallback(
+    (field: keyof DraftAgentConfig, value: string) => {
+      setDraftAgentConfigs((current) => ({
         ...current,
-        models: {
-          ...current.models,
-          [runtime]: normalizeAgentModel(model),
+        [draftAgentConfigKey]: {
+          ...current[draftAgentConfigKey],
+          [field]: normalizeConfigDisplayValue(value),
         },
       }));
     },
-    [updateAgentSettings],
+    [draftAgentConfigKey],
+  );
+  const setAgentModel = useCallback(
+    (model: string) => {
+      setDraftAgentConfigValue("model", model);
+    },
+    [setDraftAgentConfigValue],
   );
   const setAgentReasoningEffort = useCallback(
-    (runtime: AgentRuntime, effort: string) => {
-      updateAgentSettings((current) => ({
-        ...current,
-        reasoningEfforts: {
-          ...current.reasoningEfforts,
-          [runtime]: normalizeAgentConfigValue(effort),
-        },
-      }));
+    (effort: string) => {
+      setDraftAgentConfigValue("reasoningEffort", effort);
     },
-    [updateAgentSettings],
+    [setDraftAgentConfigValue],
   );
   const setAgentMode = useCallback(
-    (runtime: AgentRuntime, mode: string) => {
-      updateAgentSettings((current) => ({
-        ...current,
-        modes: {
-          ...current.modes,
-          [runtime]: normalizeAgentConfigValue(mode),
-        },
-      }));
+    (mode: string) => {
+      setDraftAgentConfigValue("mode", mode);
     },
-    [updateAgentSettings],
+    [setDraftAgentConfigValue],
   );
   const chatOptions = useMemo(
     () => ({
+      canSetModel,
+      canSetMode,
+      canSetReasoningEffort,
       configLoading: runtimeConfigQuery.isFetching,
       model: activeModel,
       modelOptions,
@@ -245,10 +260,9 @@ export function WorkspacePage({ route }: { route: WorkspaceRoute }) {
       reasoningEffortOptions,
       runtime: activeRuntime,
       runtimeLocked: Boolean(chatRuntime),
-      setModel: (model: string) => setAgentModel(activeRuntime, model),
-      setMode: (mode: string) => setAgentMode(activeRuntime, mode),
-      setReasoningEffort: (effort: string) =>
-        setAgentReasoningEffort(activeRuntime, effort),
+      setModel: setAgentModel,
+      setMode: setAgentMode,
+      setReasoningEffort: setAgentReasoningEffort,
       setRuntime: setDraftAgentRuntime,
     }),
     [
@@ -256,6 +270,9 @@ export function WorkspacePage({ route }: { route: WorkspaceRoute }) {
       activeModel,
       activeReasoningEffort,
       activeRuntime,
+      canSetModel,
+      canSetMode,
+      canSetReasoningEffort,
       chatRuntime,
       modelOptions,
       modeOptions,
@@ -484,8 +501,6 @@ export function WorkspacePage({ route }: { route: WorkspaceRoute }) {
           <SettingsPage
             agentSettings={agentSettings}
             isDeletingChats={deleteAllChatsMutation.isPending}
-            onAgentModeChange={setAgentMode}
-            onAgentReasoningEffortChange={setAgentReasoningEffort}
             onDeleteAllChats={deleteAllChats}
             onDefaultAgentChange={setDefaultRuntime}
           />
@@ -497,13 +512,13 @@ export function WorkspacePage({ route }: { route: WorkspaceRoute }) {
             historyMessages={historyMessages}
             historyRevision={historyRevision}
             key={runtimePageKey}
-            model={activeModel}
-            mode={activeMode}
+            model={modelOverride}
+            mode={modeOverride}
             onChatCreated={setChatInCache}
             onChatUpdated={upsertChat}
             projectId={selectedChat?.projectId ?? selectedProject?.id ?? null}
             projectPath={selectedProjectPath ?? undefined}
-            reasoningEffort={activeReasoningEffort}
+            reasoningEffort={reasoningEffortOverride}
             runtime={activeRuntime}
           >
             <SidebarInset className="h-svh max-h-svh overflow-hidden md:h-[calc(100svh-1rem)] md:max-h-[calc(100svh-1rem)]">
@@ -531,21 +546,24 @@ function upsertChatInList(chats: Chat[], chat: Chat) {
 
 function runtimeConfigOptionsToAgentOptions(
   options: ChatRuntimeConfigOption[] | undefined,
-  fallback: AgentValueOption[],
 ): AgentValueOption[] {
-  if (!options?.length) return fallback;
-  return options.map((option) => ({
+  if (!options?.length) return DEFAULT_CONFIG_OPTIONS;
+  const runtimeOptions = options.map((option) => ({
     description: option.description ?? undefined,
     label: option.label,
     value: option.value,
   }));
+  if (runtimeOptions.some((option) => option.value === DEFAULT_CONFIG_VALUE)) {
+    return runtimeOptions;
+  }
+  return [DEFAULT_CONFIG_OPTION, ...runtimeOptions];
 }
 
 function ensureConfigOption(
   options: AgentValueOption[],
   value: string | null | undefined,
 ) {
-  const normalizedValue = value?.trim() || "default";
+  const normalizedValue = normalizeConfigDisplayValue(value);
   if (options.some((option) => option.value === normalizedValue)) {
     return options;
   }
@@ -556,6 +574,18 @@ function ensureConfigOption(
       value: normalizedValue,
     },
   ];
+}
+
+function normalizeConfigDisplayValue(value: string | null | undefined) {
+  return value?.trim() || DEFAULT_CONFIG_VALUE;
+}
+
+function selectedConfigOverride(value: string | null | undefined) {
+  const normalizedValue = value?.trim();
+  if (!normalizedValue || normalizedValue === DEFAULT_CONFIG_VALUE) {
+    return undefined;
+  }
+  return normalizedValue;
 }
 
 function labelFromConfigValue(value: string) {
