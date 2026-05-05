@@ -1,36 +1,36 @@
-import { BrowserWindow, dialog, Menu, shell } from 'electron';
-import { tipc } from '@egoist/tipc/main';
+import { BrowserWindow, dialog, Menu, shell } from "electron";
+import { tipc } from "@egoist/tipc/main";
 
 import type {
   ChatCreateInput,
   ChatRuntimeConfigInput,
   ChatSendInput,
-} from '../shared/chat';
-import { normalizeAgentRuntime } from '../shared/agents';
+} from "../shared/chat";
+import { normalizeAgentRuntime } from "../shared/agents";
 import type {
   CreateProjectInput,
   UpdateProjectInput,
-} from '../shared/projects';
+} from "../shared/projects";
 import {
   closeChatSession,
   inspectChatRuntimeConfig,
   loadChatSession,
   sendChat,
-} from './chat/angel-client';
+} from "./chat/angel-client";
 import {
   createChat,
   deleteAllChats,
   deleteChat,
   getChat,
   listChats,
-} from './chat/repository';
+} from "./chat/repository";
 import {
   createProject,
   deleteProject,
   getProject,
   listProjects,
   updateProject,
-} from './projects/repository';
+} from "./projects/repository";
 
 const t = tipc.create();
 
@@ -42,7 +42,7 @@ export const appRouter = {
   chatsGet: t.procedure
     .input<string>()
     .action(async ({ input }) =>
-      getChat(assertString(input, 'Chat id is required.'))
+      getChat(assertString(input, "Chat id is required.")),
     ),
 
   chatsList: t.procedure.action(async () => listChats()),
@@ -50,13 +50,13 @@ export const appRouter = {
   chatsRuntimeConfig: t.procedure
     .input<ChatRuntimeConfigInput>()
     .action(async ({ input }) =>
-      inspectChatRuntimeConfig(assertChatRuntimeConfigInput(input))
+      inspectChatRuntimeConfig(assertChatRuntimeConfigInput(input)),
     ),
 
   chatsLoad: t.procedure
     .input<string>()
     .action(async ({ input }) =>
-      loadChatSession(assertString(input, 'Chat id is required.'))
+      loadChatSession(assertString(input, "Chat id is required.")),
     ),
 
   chatsDeleteAll: t.procedure.action(async () => {
@@ -67,25 +67,25 @@ export const appRouter = {
   chatsShowContextMenu: t.procedure
     .input<string>()
     .action(async ({ context, input }) => {
-      const chat = getChat(assertString(input, 'Chat id is required.'));
+      const chat = getChat(assertString(input, "Chat id is required."));
       if (!chat) {
-        throw new Error('Chat not found.');
+        throw new Error("Chat not found.");
       }
 
-      return new Promise<'cancelled' | 'deleted'>((resolve) => {
+      return new Promise<"cancelled" | "deleted">((resolve) => {
         const menu = Menu.buildFromTemplate([
           {
             click: () => {
               closeChatSession(chat.id);
               deleteChat(chat.id);
-              resolve('deleted');
+              resolve("deleted");
             },
-            label: 'Delete',
+            label: "Delete",
           },
         ]);
 
         menu.popup({
-          callback: () => resolve('cancelled'),
+          callback: () => resolve("cancelled"),
           window: BrowserWindow.fromWebContents(context.sender) ?? undefined,
         });
       });
@@ -97,8 +97,8 @@ export const appRouter = {
 
   projectsChooseDirectory: t.procedure.action(async () => {
     const result = await dialog.showOpenDialog({
-      properties: ['openDirectory'],
-      title: 'Choose project folder',
+      properties: ["openDirectory"],
+      title: "Choose project folder",
     });
 
     return result.canceled ? null : result.filePaths[0];
@@ -111,13 +111,13 @@ export const appRouter = {
   projectsDelete: t.procedure
     .input<string>()
     .action(async ({ input }) =>
-      deleteProject(assertString(input, 'Project id is required.'))
+      deleteProject(assertString(input, "Project id is required.")),
     ),
 
   projectsGet: t.procedure
     .input<string>()
     .action(async ({ input }) =>
-      getProject(assertString(input, 'Project id is required.'))
+      getProject(assertString(input, "Project id is required.")),
     ),
 
   projectsList: t.procedure.action(async () => listProjects()),
@@ -125,32 +125,34 @@ export const appRouter = {
   projectsShowContextMenu: t.procedure
     .input<string>()
     .action(async ({ context, input }) => {
-      const project = getProject(assertString(input, 'Project id is required.'));
+      const project = getProject(
+        assertString(input, "Project id is required."),
+      );
       if (!project) {
-        throw new Error('Project not found.');
+        throw new Error("Project not found.");
       }
 
-      return new Promise<'cancelled' | 'deleted' | 'opened'>((resolve) => {
+      return new Promise<"cancelled" | "deleted" | "opened">((resolve) => {
         const menu = Menu.buildFromTemplate([
           {
             click: async () => {
               await shell.openPath(project.path);
-              resolve('opened');
+              resolve("opened");
             },
-            label: 'Open in Finder',
+            label: "Open in Finder",
           },
-          { type: 'separator' },
+          { type: "separator" },
           {
             click: () => {
               deleteProject(project.id);
-              resolve('deleted');
+              resolve("deleted");
             },
-            label: 'Delete',
+            label: "Delete",
           },
         ]);
 
         menu.popup({
-          callback: () => resolve('cancelled'),
+          callback: () => resolve("cancelled"),
           window: BrowserWindow.fromWebContents(context.sender) ?? undefined,
         });
       });
@@ -164,99 +166,102 @@ export const appRouter = {
 export type AppRouter = typeof appRouter;
 
 function assertChatSendInput(input: ChatSendInput): ChatSendInput {
-  if (!input || typeof input !== 'object') {
-    throw new Error('Chat input is required.');
+  if (!input || typeof input !== "object") {
+    throw new Error("Chat input is required.");
   }
 
   return {
     chatId:
-      typeof input.chatId === 'string' && input.chatId.trim()
+      typeof input.chatId === "string" && input.chatId.trim()
         ? input.chatId.trim()
         : undefined,
-    cwd: typeof input.cwd === 'string' && input.cwd.trim() ? input.cwd : undefined,
+    cwd:
+      typeof input.cwd === "string" && input.cwd.trim() ? input.cwd : undefined,
     model: normalizeOptionalConfigInput(input.model),
     projectId:
-      typeof input.projectId === 'string' && input.projectId.trim()
+      typeof input.projectId === "string" && input.projectId.trim()
         ? input.projectId.trim()
         : null,
     mode: normalizeOptionalConfigInput(input.mode),
     reasoningEffort: normalizeOptionalConfigInput(input.reasoningEffort),
     runtime: normalizeOptionalRuntime(input.runtime),
-    text: assertString(input.text, 'Chat text is required.'),
+    text: assertString(input.text, "Chat text is required."),
   };
 }
 
 function assertChatCreateInput(input: ChatCreateInput): ChatCreateInput {
-  if (!input || typeof input !== 'object') {
+  if (!input || typeof input !== "object") {
     return {};
   }
 
   return {
-    cwd: typeof input.cwd === 'string' && input.cwd.trim() ? input.cwd : undefined,
+    cwd:
+      typeof input.cwd === "string" && input.cwd.trim() ? input.cwd : undefined,
     model: normalizeOptionalConfigInput(input.model),
     projectId:
-      typeof input.projectId === 'string' && input.projectId.trim()
+      typeof input.projectId === "string" && input.projectId.trim()
         ? input.projectId.trim()
         : null,
     mode: normalizeOptionalConfigInput(input.mode),
     reasoningEffort: normalizeOptionalConfigInput(input.reasoningEffort),
     runtime: normalizeOptionalRuntime(input.runtime),
     title:
-      typeof input.title === 'string' && input.title.trim()
+      typeof input.title === "string" && input.title.trim()
         ? input.title.trim()
         : undefined,
   };
 }
 
 function assertChatRuntimeConfigInput(
-  input: ChatRuntimeConfigInput
+  input: ChatRuntimeConfigInput,
 ): ChatRuntimeConfigInput {
-  if (!input || typeof input !== 'object') {
+  if (!input || typeof input !== "object") {
     return {};
   }
 
   return {
-    cwd: typeof input.cwd === 'string' && input.cwd.trim() ? input.cwd : undefined,
+    cwd:
+      typeof input.cwd === "string" && input.cwd.trim() ? input.cwd : undefined,
     runtime: normalizeOptionalRuntime(input.runtime),
   };
 }
 
 function assertCreateInput(input: CreateProjectInput): CreateProjectInput {
-  if (!input || typeof input !== 'object') {
-    throw new Error('Project input is required.');
+  if (!input || typeof input !== "object") {
+    throw new Error("Project input is required.");
   }
 
   return {
-    id: typeof input.id === 'string' ? input.id : undefined,
-    path: assertString(input.path, 'Project path is required.'),
+    id: typeof input.id === "string" ? input.id : undefined,
+    path: assertString(input.path, "Project path is required."),
   };
 }
 
 function assertUpdateInput(input: UpdateProjectInput): UpdateProjectInput {
-  if (!input || typeof input !== 'object') {
-    throw new Error('Project input is required.');
+  if (!input || typeof input !== "object") {
+    throw new Error("Project input is required.");
   }
 
   return {
-    id: assertString(input.id, 'Project id is required.'),
-    path: assertString(input.path, 'Project path is required.'),
+    id: assertString(input.id, "Project id is required."),
+    path: assertString(input.path, "Project path is required."),
   };
 }
 
 function assertString(value: unknown, message: string) {
-  if (typeof value !== 'string') {
+  if (typeof value !== "string") {
     throw new Error(message);
   }
   return value;
 }
 
 function normalizeOptionalRuntime(value: unknown) {
-  if (typeof value !== 'string' || !value.trim()) return undefined;
+  if (typeof value !== "string" || !value.trim()) return undefined;
   return normalizeAgentRuntime(value);
 }
 
 function normalizeOptionalConfigInput(value: unknown) {
-  if (typeof value !== 'string') return undefined;
+  if (typeof value !== "string") return undefined;
   const trimmed = value.trim();
   return trimmed || undefined;
 }

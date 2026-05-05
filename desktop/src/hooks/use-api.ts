@@ -1,6 +1,6 @@
-import { useMemo } from 'react';
+import { useMemo } from "react";
 
-import { getApiClient } from '@/requests/client';
+import { getApiClient } from "@/requests/client";
 
 export function useApi() {
   return useMemo(() => getApiClient(), []);

@@ -1,4 +1,4 @@
-import { contextBridge, ipcRenderer, type IpcRendererEvent } from 'electron';
+import { contextBridge, ipcRenderer, type IpcRendererEvent } from "electron";
 
 import {
   CHAT_STREAM_CANCEL_CHANNEL,
@@ -10,23 +10,20 @@ import {
   type ChatSendInput,
   type ChatStreamEvent,
   type ChatStreamStartInput,
-} from './shared/chat';
+} from "./shared/chat";
 
-contextBridge.exposeInMainWorld('desktopEnvironment', {
+contextBridge.exposeInMainWorld("desktopEnvironment", {
   platform: process.platform,
 });
-contextBridge.exposeInMainWorld('ipcInvoke', ipcRenderer.invoke);
+contextBridge.exposeInMainWorld("ipcInvoke", ipcRenderer.invoke);
 const chatStreamApi = {
-  send(
-    input: ChatSendInput,
-    onEvent: (streamEvent: ChatStreamEvent) => void
-  ) {
+  send(input: ChatSendInput, onEvent: (streamEvent: ChatStreamEvent) => void) {
     const streamId = createStreamId();
     const channel = chatStreamEventChannel(streamId);
     let disposed = false;
     const listener = (
       _event: IpcRendererEvent,
-      streamEvent: ChatStreamEvent
+      streamEvent: ChatStreamEvent,
     ) => {
       if (!disposed) onEvent(streamEvent);
     };
@@ -39,8 +36,8 @@ const chatStreamApi = {
       } satisfies ChatStreamStartInput)
       .catch((error: unknown) => {
         if (disposed) return;
-        onEvent({ message: getErrorMessage(error), type: 'error' });
-        onEvent({ type: 'done' });
+        onEvent({ message: getErrorMessage(error), type: "error" });
+        onEvent({ type: "done" });
       });
 
     return {
@@ -59,7 +56,7 @@ const chatStreamApi = {
   },
 } satisfies ChatStreamApi;
 
-contextBridge.exposeInMainWorld('chatStream', chatStreamApi);
+contextBridge.exposeInMainWorld("chatStream", chatStreamApi);
 
 function getErrorMessage(error: unknown) {
   return error instanceof Error ? error.message : String(error);

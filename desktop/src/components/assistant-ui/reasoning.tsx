@@ -6,39 +6,39 @@ import {
   useState,
   type ComponentProps,
   type CSSProperties,
-} from 'react';
+} from "react";
 import {
   useAuiState,
   useScrollLock,
   type ReasoningGroupComponent,
   type ReasoningMessagePartComponent,
-} from '@assistant-ui/react';
-import { cva, type VariantProps } from 'class-variance-authority';
-import { BrainIcon, ChevronDownIcon } from 'lucide-react';
+} from "@assistant-ui/react";
+import { cva, type VariantProps } from "class-variance-authority";
+import { BrainIcon, ChevronDownIcon } from "lucide-react";
 
 import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
-} from '@/components/ui/collapsible';
-import { cn } from '@/lib/utils';
+} from "@/components/ui/collapsible";
+import { cn } from "@/lib/utils";
 
 const ANIMATION_DURATION = 200;
 
-const reasoningVariants = cva('aui-reasoning-root mb-3 w-full', {
-  defaultVariants: { variant: 'ghost' },
+const reasoningVariants = cva("aui-reasoning-root mb-3 w-full", {
+  defaultVariants: { variant: "ghost" },
   variants: {
     variant: {
-      ghost: '',
-      muted: 'rounded-md bg-muted/40 px-3 py-2',
-      outline: 'rounded-md border px-3 py-2',
+      ghost: "",
+      muted: "rounded-md bg-muted/40 px-3 py-2",
+      outline: "rounded-md border px-3 py-2",
     },
   },
 });
 
 export type ReasoningRootProps = Omit<
   ComponentProps<typeof Collapsible>,
-  'onOpenChange' | 'open'
+  "onOpenChange" | "open"
 > &
   VariantProps<typeof reasoningVariants> & {
     defaultOpen?: boolean;
@@ -68,23 +68,23 @@ function ReasoningRoot({
       if (!isControlled) setUncontrolledOpen(open);
       controlledOnOpenChange?.(open);
     },
-    [controlledOnOpenChange, isControlled, lockScroll]
+    [controlledOnOpenChange, isControlled, lockScroll],
   );
 
   return (
     <Collapsible
       className={cn(
-        'group/reasoning-root',
-        reasoningVariants({ className, variant })
+        "group/reasoning-root",
+        reasoningVariants({ className, variant }),
       )}
       data-slot="reasoning-root"
-      data-variant={variant ?? 'ghost'}
+      data-variant={variant ?? "ghost"}
       onOpenChange={handleOpenChange}
       open={isOpen}
       ref={collapsibleRef}
       style={
         {
-          '--animation-duration': `${ANIMATION_DURATION}ms`,
+          "--animation-duration": `${ANIMATION_DURATION}ms`,
         } as CSSProperties
       }
       {...props}
@@ -104,8 +104,8 @@ function ReasoningTrigger({
   return (
     <CollapsibleTrigger
       className={cn(
-        'aui-reasoning-trigger group/trigger flex max-w-full items-center gap-2 py-1 text-sm text-muted-foreground transition-colors hover:text-foreground',
-        className
+        "aui-reasoning-trigger group/trigger flex max-w-full items-center gap-2 py-1 text-sm text-muted-foreground transition-colors hover:text-foreground",
+        className,
       )}
       data-slot="reasoning-trigger"
       {...props}
@@ -124,10 +124,10 @@ function ReasoningTrigger({
       </span>
       <ChevronDownIcon
         className={cn(
-          'aui-reasoning-trigger-chevron mt-0.5 size-4 shrink-0',
-          'transition-transform duration-(--animation-duration) ease-out',
-          'group-data-[state=closed]/trigger:-rotate-90',
-          'group-data-[state=open]/trigger:rotate-0'
+          "aui-reasoning-trigger-chevron mt-0.5 size-4 shrink-0",
+          "transition-transform duration-(--animation-duration) ease-out",
+          "group-data-[state=closed]/trigger:-rotate-90",
+          "group-data-[state=open]/trigger:rotate-0",
         )}
       />
     </CollapsibleTrigger>
@@ -142,15 +142,15 @@ function ReasoningContent({
   return (
     <CollapsibleContent
       className={cn(
-        'aui-reasoning-content relative overflow-hidden text-sm text-muted-foreground outline-none',
-        'group/collapsible-content ease-out',
-        'data-[state=closed]:animate-collapsible-up',
-        'data-[state=open]:animate-collapsible-down',
-        'data-[state=closed]:fill-mode-forwards',
-        'data-[state=closed]:pointer-events-none',
-        'data-[state=open]:duration-(--animation-duration)',
-        'data-[state=closed]:duration-(--animation-duration)',
-        className
+        "aui-reasoning-content relative overflow-hidden text-sm text-muted-foreground outline-none",
+        "group/collapsible-content ease-out",
+        "data-[state=closed]:animate-collapsible-up",
+        "data-[state=open]:animate-collapsible-down",
+        "data-[state=closed]:fill-mode-forwards",
+        "data-[state=closed]:pointer-events-none",
+        "data-[state=open]:duration-(--animation-duration)",
+        "data-[state=closed]:duration-(--animation-duration)",
+        className,
       )}
       data-slot="reasoning-content"
       {...props}
@@ -164,13 +164,13 @@ function ReasoningText({
   children,
   className,
   ...props
-}: ComponentProps<'div'>) {
+}: ComponentProps<"div">) {
   return (
     <div
       className={cn(
-        'aui-reasoning-text max-h-64 overflow-y-auto border-l border-border pl-3 pt-2 pb-2 text-xs leading-5',
-        'whitespace-pre-wrap',
-        className
+        "aui-reasoning-text max-h-64 overflow-y-auto border-l border-border pl-3 pt-2 pb-2 text-xs leading-5",
+        "whitespace-pre-wrap",
+        className,
       )}
       data-slot="reasoning-text"
       {...props}
@@ -191,12 +191,12 @@ const ReasoningGroupImpl: ReasoningGroupComponent = ({
   startIndex,
 }) => {
   const isReasoningStreaming = useAuiState((state) => {
-    if (state.message.status?.type !== 'running') return false;
+    if (state.message.status?.type !== "running") return false;
 
     const lastIndex = state.message.parts.length - 1;
     if (lastIndex < startIndex || lastIndex > endIndex) return false;
 
-    return state.message.parts[lastIndex]?.type === 'reasoning';
+    return state.message.parts[lastIndex]?.type === "reasoning";
   });
   const [open, setOpen] = useState(isReasoningStreaming);
 
@@ -215,7 +215,7 @@ const ReasoningGroupImpl: ReasoningGroupComponent = ({
 };
 
 const Reasoning = memo(
-  ReasoningImpl
+  ReasoningImpl,
 ) as unknown as ReasoningMessagePartComponent & {
   Content: typeof ReasoningContent;
   Root: typeof ReasoningRoot;
@@ -225,12 +225,12 @@ const Reasoning = memo(
 
 const ReasoningGroup = memo(ReasoningGroupImpl) as ReasoningGroupComponent;
 
-Reasoning.displayName = 'Reasoning';
+Reasoning.displayName = "Reasoning";
 Reasoning.Root = ReasoningRoot;
 Reasoning.Trigger = ReasoningTrigger;
 Reasoning.Content = ReasoningContent;
 Reasoning.Text = ReasoningText;
-ReasoningGroup.displayName = 'ReasoningGroup';
+ReasoningGroup.displayName = "ReasoningGroup";
 
 export {
   Reasoning,

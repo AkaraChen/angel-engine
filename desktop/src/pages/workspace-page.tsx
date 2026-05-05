@@ -1,34 +1,30 @@
-import { useCallback, useMemo, useState } from 'react';
-import {
-  useMutation,
-  useQuery,
-  useQueryClient,
-} from '@tanstack/react-query';
-import { Redirect, useLocation } from 'wouter';
+import { useCallback, useMemo, useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Redirect, useLocation } from "wouter";
 
-import { AppRuntimeProvider } from '@/app/app-runtime-provider';
-import { WorkspaceHeader } from '@/app/workspace-header';
-import { WorkspaceSidebar } from '@/app/workspace-sidebar';
-import { ChatOptionsProvider } from '@/chat/chat-options-context';
-import { AssistantThread } from '@/chat/assistant-thread';
-import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar';
-import { useAgentSettings } from '@/hooks/use-agent-settings';
-import { useToast } from '@/components/ui/toast';
-import { useApi } from '@/hooks/use-api';
-import { SettingsPage } from '@/pages/settings-page';
+import { AppRuntimeProvider } from "@/app/app-runtime-provider";
+import { WorkspaceHeader } from "@/app/workspace-header";
+import { WorkspaceSidebar } from "@/app/workspace-sidebar";
+import { ChatOptionsProvider } from "@/chat/chat-options-context";
+import { AssistantThread } from "@/chat/assistant-thread";
+import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
+import { useAgentSettings } from "@/hooks/use-agent-settings";
+import { useToast } from "@/components/ui/toast";
+import { useApi } from "@/hooks/use-api";
+import { SettingsPage } from "@/pages/settings-page";
 import {
   chatContextMenuMutationOptions,
   chatListQueryOptions,
   chatLoadQueryOptions,
   chatRuntimeConfigQueryOptions,
   deleteAllChatsMutationOptions,
-} from '@/requests/chats';
-import { queryKeys } from '@/requests/keys';
+} from "@/requests/chats";
+import { queryKeys } from "@/requests/keys";
 import {
   createProjectMutationOptions,
   projectContextMenuMutationOptions,
   projectListQueryOptions,
-} from '@/requests/projects';
+} from "@/requests/projects";
 import {
   getAgentModes,
   getAgentReasoningEfforts,
@@ -37,22 +33,22 @@ import {
   normalizeAgentRuntime,
   type AgentValueOption,
   type AgentRuntime,
-} from '@/shared/agents';
+} from "@/shared/agents";
 import type {
   Chat,
   ChatHistoryMessage,
   ChatLoadResult,
   ChatRuntimeConfig,
   ChatRuntimeConfigOption,
-} from '@/shared/chat';
-import type { Project } from '@/shared/projects';
+} from "@/shared/chat";
+import type { Project } from "@/shared/projects";
 
 export type WorkspaceRoute =
-  | { type: 'create' }
-  | { chatId: string; type: 'chat' }
-  | { projectId: string; type: 'projectCreate' }
-  | { chatId: string; projectId: string; type: 'projectChat' }
-  | { type: 'settings' };
+  | { type: "create" }
+  | { chatId: string; type: "chat" }
+  | { projectId: string; type: "projectCreate" }
+  | { chatId: string; projectId: string; type: "projectChat" }
+  | { type: "settings" };
 
 const EMPTY_CHATS: Chat[] = [];
 const EMPTY_MESSAGES: ChatHistoryMessage[] = [];
@@ -63,14 +59,14 @@ export function WorkspacePage({ route }: { route: WorkspaceRoute }) {
   const toast = useToast();
   const queryClient = useQueryClient();
   const [location, navigate] = useLocation();
-  const isMacOS = window.desktopEnvironment.platform === 'darwin';
+  const isMacOS = window.desktopEnvironment.platform === "darwin";
   const [agentSettings, updateAgentSettings] = useAgentSettings();
   const [draftRuntimes, setDraftRuntimes] = useState<
     Partial<Record<string, AgentRuntime>>
   >({});
 
   const selectedChatId =
-    route.type === 'chat' || route.type === 'projectChat'
+    route.type === "chat" || route.type === "projectChat"
       ? route.chatId
       : undefined;
   const currentRoutePath = routePath(route);
@@ -91,7 +87,7 @@ export function WorkspacePage({ route }: { route: WorkspaceRoute }) {
     chatLoadQuery.data?.chat ??
     chats.find((chat) => chat.id === selectedChatId);
   const routeProjectId =
-    route.type === 'projectChat' || route.type === 'projectCreate'
+    route.type === "projectChat" || route.type === "projectCreate"
       ? route.projectId
       : undefined;
   const selectedProjectId =
@@ -104,26 +100,24 @@ export function WorkspacePage({ route }: { route: WorkspaceRoute }) {
     ? getProjectDisplayName(selectedProjectPath)
     : undefined;
   const historyMessages = selectedChatId
-    ? chatLoadQuery.data?.messages ?? EMPTY_MESSAGES
+    ? (chatLoadQuery.data?.messages ?? EMPTY_MESSAGES)
     : EMPTY_MESSAGES;
-  const historyRevision = selectedChatId
-    ? chatLoadQuery.dataUpdatedAt
-    : 0;
+  const historyRevision = selectedChatId ? chatLoadQuery.dataUpdatedAt : 0;
   const chatRuntime = selectedChat
     ? normalizeAgentRuntime(selectedChat.runtime)
     : undefined;
   const draftRuntimeKey = draftRuntimeKeyFromRoute(route);
   const draftRuntime = draftRuntimeKey
-    ? draftRuntimes[draftRuntimeKey] ?? agentSettings.defaultRuntime
+    ? (draftRuntimes[draftRuntimeKey] ?? agentSettings.defaultRuntime)
     : agentSettings.defaultRuntime;
   const activeRuntime = chatRuntime ?? draftRuntime;
   const runtimePageKey = selectedChatId
-    ? `chat:${selectedChatId}:${chatRuntime ?? 'pending'}`
-    : route.type === 'projectCreate'
+    ? `chat:${selectedChatId}:${chatRuntime ?? "pending"}`
+    : route.type === "projectCreate"
       ? `project-create:${route.projectId}`
-    : 'create';
+      : "create";
   const shouldInspectRuntimeConfig =
-    route.type === 'create' || route.type === 'projectCreate';
+    route.type === "create" || route.type === "projectCreate";
   const runtimeConfigQuery = useQuery({
     ...chatRuntimeConfigQueryOptions({
       api,
@@ -135,33 +129,35 @@ export function WorkspacePage({ route }: { route: WorkspaceRoute }) {
   const runtimeConfig = chatLoadQuery.data?.config ?? runtimeConfigQuery.data;
   const modelOptions = ensureConfigOption(
     runtimeConfigOptionsToAgentOptions(runtimeConfig?.models, [
-      { label: 'Default', value: 'default' },
+      { label: "Default", value: "default" },
     ]),
-    agentSettings.models[activeRuntime]
+    agentSettings.models[activeRuntime],
   );
   const reasoningEffortOptions = ensureConfigOption(
     runtimeConfigOptionsToAgentOptions(
       runtimeConfig?.reasoningEfforts,
-      getAgentReasoningEfforts(activeRuntime)
+      getAgentReasoningEfforts(activeRuntime),
     ),
-    agentSettings.reasoningEfforts[activeRuntime]
+    agentSettings.reasoningEfforts[activeRuntime],
   );
   const modeOptions = ensureConfigOption(
     runtimeConfigOptionsToAgentOptions(
       runtimeConfig?.modes,
-      getAgentModes(activeRuntime)
+      getAgentModes(activeRuntime),
     ),
-    agentSettings.modes[activeRuntime]
+    agentSettings.modes[activeRuntime],
   );
   const activeModel = normalizeAgentModel(agentSettings.models[activeRuntime]);
   const activeReasoningEffort = normalizeAgentConfigValue(
-    agentSettings.reasoningEfforts[activeRuntime]
+    agentSettings.reasoningEfforts[activeRuntime],
   );
-  const activeMode = normalizeAgentConfigValue(agentSettings.modes[activeRuntime]);
+  const activeMode = normalizeAgentConfigValue(
+    agentSettings.modes[activeRuntime],
+  );
 
   const projectIds = useMemo(
     () => new Set(projects.map((project) => project.id)),
-    [projects]
+    [projects],
   );
   const projectChatsByProjectId = useMemo(() => {
     const groupedChats = new Map<string, Chat[]>();
@@ -179,17 +175,20 @@ export function WorkspacePage({ route }: { route: WorkspaceRoute }) {
   const standaloneChats = useMemo(
     () =>
       chats.filter(
-        (chat) => !chat.projectId || !projectIds.has(chat.projectId)
+        (chat) => !chat.projectId || !projectIds.has(chat.projectId),
       ),
-    [chats, projectIds]
+    [chats, projectIds],
   );
-  const setDraftAgentRuntime = useCallback((runtime: AgentRuntime) => {
-    if (!draftRuntimeKey) return;
-    setDraftRuntimes((current) => ({
-      ...current,
-      [draftRuntimeKey]: runtime,
-    }));
-  }, [draftRuntimeKey]);
+  const setDraftAgentRuntime = useCallback(
+    (runtime: AgentRuntime) => {
+      if (!draftRuntimeKey) return;
+      setDraftRuntimes((current) => ({
+        ...current,
+        [draftRuntimeKey]: runtime,
+      }));
+    },
+    [draftRuntimeKey],
+  );
   const setDefaultRuntime = useCallback(
     (runtime: AgentRuntime) => {
       updateAgentSettings((current) => ({
@@ -197,7 +196,7 @@ export function WorkspacePage({ route }: { route: WorkspaceRoute }) {
         defaultRuntime: runtime,
       }));
     },
-    [updateAgentSettings]
+    [updateAgentSettings],
   );
   const setAgentModel = useCallback(
     (runtime: AgentRuntime, model: string) => {
@@ -209,7 +208,7 @@ export function WorkspacePage({ route }: { route: WorkspaceRoute }) {
         },
       }));
     },
-    [updateAgentSettings]
+    [updateAgentSettings],
   );
   const setAgentReasoningEffort = useCallback(
     (runtime: AgentRuntime, effort: string) => {
@@ -221,7 +220,7 @@ export function WorkspacePage({ route }: { route: WorkspaceRoute }) {
         },
       }));
     },
-    [updateAgentSettings]
+    [updateAgentSettings],
   );
   const setAgentMode = useCallback(
     (runtime: AgentRuntime, mode: string) => {
@@ -233,7 +232,7 @@ export function WorkspacePage({ route }: { route: WorkspaceRoute }) {
         },
       }));
     },
-    [updateAgentSettings]
+    [updateAgentSettings],
   );
   const chatOptions = useMemo(
     () => ({
@@ -266,17 +265,17 @@ export function WorkspacePage({ route }: { route: WorkspaceRoute }) {
       setAgentMode,
       setAgentReasoningEffort,
       setDraftAgentRuntime,
-    ]
+    ],
   );
 
   const setChatInCache = useCallback(
     (
       chat: Chat,
       messages?: ChatHistoryMessage[],
-      config?: ChatRuntimeConfig
+      config?: ChatRuntimeConfig,
     ) => {
       queryClient.setQueryData<Chat[]>(queryKeys.chats.list(), (current = []) =>
-        upsertChatInList(current, chat)
+        upsertChatInList(current, chat),
       );
 
       queryClient.setQueryData<ChatLoadResult | undefined>(
@@ -289,10 +288,10 @@ export function WorkspacePage({ route }: { route: WorkspaceRoute }) {
             return { ...current, chat, config: config ?? current.config };
           }
           return current;
-        }
+        },
       );
     },
-    [queryClient]
+    [queryClient],
   );
 
   const navigateToChat = useCallback(
@@ -302,19 +301,19 @@ export function WorkspacePage({ route }: { route: WorkspaceRoute }) {
         navigate(path, options);
       }
     },
-    [location, navigate]
+    [location, navigate],
   );
 
   const upsertChat = useCallback(
     (
       chat: Chat,
       messages?: ChatHistoryMessage[],
-      config?: ChatRuntimeConfig
+      config?: ChatRuntimeConfig,
     ) => {
       setChatInCache(chat, messages, config);
       navigateToChat(chat);
     },
-    [navigateToChat, setChatInCache]
+    [navigateToChat, setChatInCache],
   );
 
   const createProjectMutation = useMutation({
@@ -335,8 +334,8 @@ export function WorkspacePage({ route }: { route: WorkspaceRoute }) {
     if (result.error) {
       toast({
         description: getErrorMessage(result.error),
-        title: 'Could not load projects',
-        variant: 'destructive',
+        title: "Could not load projects",
+        variant: "destructive",
       });
     }
   }, [projectsQuery, toast]);
@@ -350,8 +349,8 @@ export function WorkspacePage({ route }: { route: WorkspaceRoute }) {
     } catch (error) {
       toast({
         description: getErrorMessage(error),
-        title: 'Could not add project',
-        variant: 'destructive',
+        title: "Could not add project",
+        variant: "destructive",
       });
     }
   }, [api, createProjectMutation, toast]);
@@ -363,67 +362,66 @@ export function WorkspacePage({ route }: { route: WorkspaceRoute }) {
       } catch (error) {
         toast({
           description: getErrorMessage(error),
-          title: 'Project action failed',
-          variant: 'destructive',
+          title: "Project action failed",
+          variant: "destructive",
         });
       }
     },
-    [showProjectContextMenuMutation, toast]
+    [showProjectContextMenuMutation, toast],
   );
 
   const removeChatFromCache = useCallback(
     (chatId: string) => {
-      queryClient.setQueryData<Chat[]>(
-        queryKeys.chats.list(),
-        (current = []) => current.filter((chat) => chat.id !== chatId)
+      queryClient.setQueryData<Chat[]>(queryKeys.chats.list(), (current = []) =>
+        current.filter((chat) => chat.id !== chatId),
       );
       queryClient.removeQueries({ queryKey: queryKeys.chats.detail(chatId) });
 
       if (selectedChatId === chatId) {
-        navigate('/', { replace: true });
+        navigate("/", { replace: true });
       }
     },
-    [navigate, queryClient, selectedChatId]
+    [navigate, queryClient, selectedChatId],
   );
 
   const showChatContextMenu = useCallback(
     async (chat: Chat) => {
       try {
         const action = await showChatContextMenuMutation.mutateAsync(chat);
-        if (action === 'deleted') {
+        if (action === "deleted") {
           removeChatFromCache(chat.id);
         }
       } catch (error) {
         toast({
           description: getErrorMessage(error),
-          title: 'Chat action failed',
-          variant: 'destructive',
+          title: "Chat action failed",
+          variant: "destructive",
         });
       }
     },
-    [removeChatFromCache, showChatContextMenuMutation, toast]
+    [removeChatFromCache, showChatContextMenuMutation, toast],
   );
 
   const createChatForProject = useCallback(
     (project: Project) => {
       navigate(`/project/${encodeURIComponent(project.id)}`);
     },
-    [navigate]
+    [navigate],
   );
 
   const createChatForSelection = useCallback(() => {
-    navigate('/');
+    navigate("/");
   }, [navigate]);
 
   const openSettings = useCallback(() => {
-    navigate('/settings');
+    navigate("/settings");
   }, [navigate]);
 
   const openChat = useCallback(
     (chat: Chat) => {
       navigateToChat(chat);
     },
-    [navigateToChat]
+    [navigateToChat],
   );
 
   const deleteAllChats = useCallback(async () => {
@@ -431,18 +429,18 @@ export function WorkspacePage({ route }: { route: WorkspaceRoute }) {
       const result = await deleteAllChatsMutation.mutateAsync();
       queryClient.setQueryData<Chat[]>(queryKeys.chats.list(), EMPTY_CHATS);
       queryClient.removeQueries({ queryKey: queryKeys.chats.details() });
-      navigate('/', { replace: true });
+      navigate("/", { replace: true });
       toast({
         description: `Deleted ${result.deletedCount} chat${
-          result.deletedCount === 1 ? '' : 's'
+          result.deletedCount === 1 ? "" : "s"
         }.`,
-        title: 'Chats deleted',
+        title: "Chats deleted",
       });
     } catch (error) {
       toast({
         description: getErrorMessage(error),
-        title: 'Could not delete chats',
-        variant: 'destructive',
+        title: "Could not delete chats",
+        variant: "destructive",
       });
     }
   }, [deleteAllChatsMutation, navigate, queryClient, toast]);
@@ -476,11 +474,11 @@ export function WorkspacePage({ route }: { route: WorkspaceRoute }) {
         projects={projects}
         selectedChatId={selectedChatId}
         selectedProjectId={selectedProjectId}
-        settingsActive={route.type === 'settings'}
+        settingsActive={route.type === "settings"}
         standaloneChats={standaloneChats}
       />
 
-      {route.type === 'settings' ? (
+      {route.type === "settings" ? (
         <SidebarInset className="h-svh max-h-svh overflow-hidden md:h-[calc(100svh-1rem)] md:max-h-[calc(100svh-1rem)]">
           <WorkspaceHeader />
           <SettingsPage
@@ -527,13 +525,13 @@ function upsertChatInList(chats: Chat[], chat: Chat) {
   const next = chats.filter((item) => item.id !== chat.id);
   next.unshift(chat);
   return next.sort((left, right) =>
-    right.updatedAt.localeCompare(left.updatedAt)
+    right.updatedAt.localeCompare(left.updatedAt),
   );
 }
 
 function runtimeConfigOptionsToAgentOptions(
   options: ChatRuntimeConfigOption[] | undefined,
-  fallback: AgentValueOption[]
+  fallback: AgentValueOption[],
 ): AgentValueOption[] {
   if (!options?.length) return fallback;
   return options.map((option) => ({
@@ -545,9 +543,9 @@ function runtimeConfigOptionsToAgentOptions(
 
 function ensureConfigOption(
   options: AgentValueOption[],
-  value: string | null | undefined
+  value: string | null | undefined,
 ) {
-  const normalizedValue = value?.trim() || 'default';
+  const normalizedValue = value?.trim() || "default";
   if (options.some((option) => option.value === normalizedValue)) {
     return options;
   }
@@ -561,13 +559,13 @@ function ensureConfigOption(
 }
 
 function labelFromConfigValue(value: string) {
-  if (value === 'xhigh') return 'XHigh';
-  if (value === 'default') return 'Default';
+  if (value === "xhigh") return "XHigh";
+  if (value === "default") return "Default";
   return value
     .split(/[_\s-]+/)
     .filter(Boolean)
     .map((part) => `${part.slice(0, 1).toUpperCase()}${part.slice(1)}`)
-    .join(' ');
+    .join(" ");
 }
 
 function getErrorMessage(error: unknown) {
@@ -585,24 +583,24 @@ function chatRoutePath(chat: Chat) {
 }
 
 function routePath(route: WorkspaceRoute) {
-  if (route.type === 'projectChat') {
+  if (route.type === "projectChat") {
     return `/project/${encodeURIComponent(route.projectId)}/${encodeURIComponent(route.chatId)}`;
   }
-  if (route.type === 'projectCreate') {
+  if (route.type === "projectCreate") {
     return `/project/${encodeURIComponent(route.projectId)}`;
   }
-  if (route.type === 'chat') {
+  if (route.type === "chat") {
     return `/chat/${encodeURIComponent(route.chatId)}`;
   }
-  if (route.type === 'settings') {
-    return '/settings';
+  if (route.type === "settings") {
+    return "/settings";
   }
-  return '/';
+  return "/";
 }
 
 function draftRuntimeKeyFromRoute(route: WorkspaceRoute) {
-  if (route.type === 'create') return 'create';
-  if (route.type === 'projectCreate') return `project:${route.projectId}`;
+  if (route.type === "create") return "create";
+  if (route.type === "projectCreate") return `project:${route.projectId}`;
   return undefined;
 }
 

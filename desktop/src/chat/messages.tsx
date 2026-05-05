@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState } from "react";
 import {
   ActionBarPrimitive,
   AuiIf,
@@ -9,12 +9,12 @@ import {
   type CompleteAttachment,
   type EnrichedPartState,
   type ToolCallMessagePartProps,
-} from '@assistant-ui/react';
-import { StreamdownTextPrimitive } from '@assistant-ui/react-streamdown';
-import { cjk } from '@streamdown/cjk';
-import { code as streamdownCode } from '@streamdown/code';
-import { math } from '@streamdown/math';
-import { mermaid } from '@streamdown/mermaid';
+} from "@assistant-ui/react";
+import { StreamdownTextPrimitive } from "@assistant-ui/react-streamdown";
+import { cjk } from "@streamdown/cjk";
+import { code as streamdownCode } from "@streamdown/code";
+import { math } from "@streamdown/math";
+import { mermaid } from "@streamdown/mermaid";
 import {
   AlertCircleIcon,
   Check,
@@ -31,47 +31,43 @@ import {
   ThumbsUp,
   Volume2,
   VolumeX,
-} from 'lucide-react';
+} from "lucide-react";
 
-import {
-  Reasoning,
-  ReasoningGroup,
-} from '@/components/assistant-ui/reasoning';
-import { ToolGroup } from '@/components/assistant-ui/tool-group';
-import { Button } from '@/components/ui/button';
+import { Reasoning, ReasoningGroup } from "@/components/assistant-ui/reasoning";
+import { ToolGroup } from "@/components/assistant-ui/tool-group";
+import { Button } from "@/components/ui/button";
 import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
-} from '@/components/ui/collapsible';
-import { cn } from '@/lib/utils';
+} from "@/components/ui/collapsible";
+import { cn } from "@/lib/utils";
 import {
   isChatToolAction,
   type ChatElicitation,
   type ChatElicitationResponse,
   type ChatToolAction,
-} from '@/shared/chat';
+} from "@/shared/chat";
 import {
   iconButtonClass,
   messageActionFooterClass,
-} from '@/chat/thread-styles';
+} from "@/chat/thread-styles";
 
-const assistantTextContainerClassName =
-  [
-    'min-w-0 max-w-none text-sm leading-6',
-    '[&_a]:underline',
-    '[&_blockquote]:my-3 [&_blockquote]:border-l-2 [&_blockquote]:border-border [&_blockquote]:pl-3 [&_blockquote]:text-muted-foreground',
-    '[&_h1]:mb-3 [&_h1]:mt-1 [&_h1]:text-xl [&_h1]:font-semibold',
-    '[&_h2]:mb-2 [&_h2]:mt-4 [&_h2]:text-lg [&_h2]:font-semibold',
-    '[&_h3]:mb-2 [&_h3]:mt-3 [&_h3]:font-semibold',
-    '[&_li]:my-1 [&_ol]:my-2 [&_ol]:list-decimal [&_ol]:pl-5',
-    '[&_p]:my-0 [&_p+p]:mt-3',
-    '[&_table]:my-3 [&_table]:w-full [&_table]:border-collapse',
-    '[&_td]:border [&_td]:border-border [&_td]:px-2 [&_td]:py-1',
-    '[&_th]:border [&_th]:border-border [&_th]:px-2 [&_th]:py-1',
-    '[&_ul]:my-2 [&_ul]:list-disc [&_ul]:pl-5',
-    '[&_[data-streamdown=inline-code]]:rounded-sm [&_[data-streamdown=inline-code]]:bg-muted [&_[data-streamdown=inline-code]]:px-1 [&_[data-streamdown=inline-code]]:py-0.5 [&_[data-streamdown=inline-code]]:font-mono [&_[data-streamdown=inline-code]]:text-[0.86em]',
-  ].join(' ');
+const assistantTextContainerClassName = [
+  "min-w-0 max-w-none text-sm leading-6",
+  "[&_a]:underline",
+  "[&_blockquote]:my-3 [&_blockquote]:border-l-2 [&_blockquote]:border-border [&_blockquote]:pl-3 [&_blockquote]:text-muted-foreground",
+  "[&_h1]:mb-3 [&_h1]:mt-1 [&_h1]:text-xl [&_h1]:font-semibold",
+  "[&_h2]:mb-2 [&_h2]:mt-4 [&_h2]:text-lg [&_h2]:font-semibold",
+  "[&_h3]:mb-2 [&_h3]:mt-3 [&_h3]:font-semibold",
+  "[&_li]:my-1 [&_ol]:my-2 [&_ol]:list-decimal [&_ol]:pl-5",
+  "[&_p]:my-0 [&_p+p]:mt-3",
+  "[&_table]:my-3 [&_table]:w-full [&_table]:border-collapse",
+  "[&_td]:border [&_td]:border-border [&_td]:px-2 [&_td]:py-1",
+  "[&_th]:border [&_th]:border-border [&_th]:px-2 [&_th]:py-1",
+  "[&_ul]:my-2 [&_ul]:list-disc [&_ul]:pl-5",
+  "[&_[data-streamdown=inline-code]]:rounded-sm [&_[data-streamdown=inline-code]]:bg-muted [&_[data-streamdown=inline-code]]:px-1 [&_[data-streamdown=inline-code]]:py-0.5 [&_[data-streamdown=inline-code]]:font-mono [&_[data-streamdown=inline-code]]:text-[0.86em]",
+].join(" ");
 
 export function UserMessage() {
   return (
@@ -97,7 +93,9 @@ export function UserMessage() {
               <Pencil className="size-3.5" />
               <span className="sr-only">Edit</span>
             </ActionBarPrimitive.Edit>
-            <ActionBarPrimitive.Copy className={cn(iconButtonClass, 'group/copy')}>
+            <ActionBarPrimitive.Copy
+              className={cn(iconButtonClass, "group/copy")}
+            >
               <Copy className="size-3.5 group-data-[copied]/copy:hidden" />
               <Check className="hidden size-3.5 group-data-[copied]/copy:block" />
               <span className="sr-only">Copy</span>
@@ -147,7 +145,9 @@ export function AssistantMessage() {
             className="flex gap-0.5 data-[floating]:opacity-0 data-[floating]:transition-opacity group-hover:data-[floating]:opacity-100"
             hideWhenRunning
           >
-            <ActionBarPrimitive.Copy className={cn(iconButtonClass, 'group/copy')}>
+            <ActionBarPrimitive.Copy
+              className={cn(iconButtonClass, "group/copy")}
+            >
               <Copy className="size-3.5 group-data-[copied]/copy:hidden" />
               <Check className="hidden size-3.5 group-data-[copied]/copy:block" />
               <span className="sr-only">Copy</span>
@@ -171,7 +171,7 @@ export function AssistantMessage() {
             <ActionBarPrimitive.FeedbackPositive
               className={cn(
                 iconButtonClass,
-                'data-[submitted]:bg-emerald-500/10 data-[submitted]:text-emerald-700'
+                "data-[submitted]:bg-emerald-500/10 data-[submitted]:text-emerald-700",
               )}
             >
               <ThumbsUp className="size-3.5" />
@@ -180,7 +180,7 @@ export function AssistantMessage() {
             <ActionBarPrimitive.FeedbackNegative
               className={cn(
                 iconButtonClass,
-                'data-[submitted]:bg-rose-500/10 data-[submitted]:text-rose-700'
+                "data-[submitted]:bg-rose-500/10 data-[submitted]:text-rose-700",
               )}
             >
               <ThumbsDown className="size-3.5" />
@@ -253,9 +253,11 @@ const assistantMessagePartComponents = {
   },
 };
 
-function PlainTextMessagePart(part: Extract<EnrichedPartState, { type: 'text' }>) {
-  if (part.type === 'text') {
-    if (part.status.type === 'running' && !part.text) {
+function PlainTextMessagePart(
+  part: Extract<EnrichedPartState, { type: "text" }>,
+) {
+  if (part.type === "text") {
+    if (part.status.type === "running" && !part.text) {
       return (
         <span className="inline-flex items-center gap-2 text-muted-foreground">
           <Loader2 className="size-3.5 animate-spin" />
@@ -270,18 +272,18 @@ function PlainTextMessagePart(part: Extract<EnrichedPartState, { type: 'text' }>
 }
 
 function AssistantTextMessagePart(
-  part: Extract<EnrichedPartState, { type: 'text' }>
+  part: Extract<EnrichedPartState, { type: "text" }>,
 ) {
   const hasReasoningOrTool = useAuiState((state) =>
     state.message.parts.some(
       (messagePart) =>
-        messagePart.type === 'tool-call' ||
-        (messagePart.type === 'reasoning' &&
-          (messagePart.text.trim() || messagePart.status.type === 'running'))
-    )
+        messagePart.type === "tool-call" ||
+        (messagePart.type === "reasoning" &&
+          (messagePart.text.trim() || messagePart.status.type === "running")),
+    ),
   );
 
-  if (part.type === 'text' && part.status.type === 'running' && !part.text) {
+  if (part.type === "text" && part.status.type === "running" && !part.text) {
     return hasReasoningOrTool ? null : (
       <span className="inline-flex items-center gap-2 text-muted-foreground">
         <Loader2 className="size-3.5 animate-spin" />
@@ -297,22 +299,22 @@ function AssistantTextMessagePart(
       controls
       mode="streaming"
       plugins={{ cjk, code: streamdownCode, math, mermaid }}
-      shikiTheme={['github-light', 'github-dark']}
+      shikiTheme={["github-light", "github-dark"]}
     />
   );
 }
 
-function ImageMessagePart(part: Extract<EnrichedPartState, { type: 'image' }>) {
+function ImageMessagePart(part: Extract<EnrichedPartState, { type: "image" }>) {
   return (
     <img
-      alt={part.filename ?? 'image attachment'}
+      alt={part.filename ?? "image attachment"}
       className="my-2 max-h-80 rounded-md border object-contain"
       src={part.image}
     />
   );
 }
 
-function FileMessagePart(part: Extract<EnrichedPartState, { type: 'file' }>) {
+function FileMessagePart(part: Extract<EnrichedPartState, { type: "file" }>) {
   return (
     <div className="my-2 inline-flex items-center gap-2 rounded-md border bg-background px-2 py-1 text-xs">
       <FileText className="size-3.5" />
@@ -323,7 +325,7 @@ function FileMessagePart(part: Extract<EnrichedPartState, { type: 'file' }>) {
 
 function ToolActionMessagePart(part: ToolCallMessagePartProps) {
   const action = isChatToolAction(part.artifact) ? part.artifact : undefined;
-  if (action?.kind === 'elicitation') {
+  if (action?.kind === "elicitation") {
     return <ElicitationToolPart action={action} part={part} />;
   }
 
@@ -342,7 +344,7 @@ function GenericToolActionMessagePart({
   const outputText = getToolOutputText(action, part.result);
   const errorText = action?.error?.message;
   const isRunning = isRunningToolPhase(phase);
-  const isFailed = Boolean(errorText) || phase === 'failed';
+  const isFailed = Boolean(errorText) || phase === "failed";
   const hasDetails = Boolean(part.argsText || outputText || errorText);
   const [manualOpen, setManualOpen] = useState(false);
   const open = hasDetails && manualOpen;
@@ -365,7 +367,9 @@ function GenericToolActionMessagePart({
       {hasDetails && (
         <CollapsibleContent className="overflow-hidden data-[state=closed]:animate-collapsible-up data-[state=open]:animate-collapsible-down">
           <div className="space-y-2 border-t px-3 py-2">
-            {part.argsText && <ToolPreBlock label="Input" value={part.argsText} />}
+            {part.argsText && (
+              <ToolPreBlock label="Input" value={part.argsText} />
+            )}
             {errorText && (
               <ToolPreBlock label="Error" tone="error" value={errorText} />
             )}
@@ -388,14 +392,15 @@ function ElicitationToolPart({
 }) {
   const elicitation = parseElicitation(action.rawInput);
   const phase = action.phase ?? part.status.type;
-  const title = action.title || elicitation?.title || 'User input';
+  const title = action.title || elicitation?.title || "User input";
   const outputText = getToolOutputText(action, part.result);
   const questions = elicitation?.questions ?? [];
   const [answers, setAnswers] = useState<Record<string, string>>({});
-  const [fallbackAnswer, setFallbackAnswer] = useState('');
+  const [fallbackAnswer, setFallbackAnswer] = useState("");
   const [manualOpen, setManualOpen] = useState(false);
-  const awaitingInput = phase === 'awaitingDecision';
-  const hasInputQuestions = elicitation?.kind === 'userInput' || questions.length > 0;
+  const awaitingInput = phase === "awaitingDecision";
+  const hasInputQuestions =
+    elicitation?.kind === "userInput" || questions.length > 0;
   const open = manualOpen;
 
   const resume = (response: ChatElicitationResponse) => {
@@ -408,10 +413,10 @@ function ElicitationToolPart({
       questions.length > 0
         ? questions.map((question) => ({
             id: question.id,
-            value: (answers[question.id] ?? '').trim(),
+            value: (answers[question.id] ?? "").trim(),
           }))
-        : [{ id: 'answer', value: fallbackAnswer.trim() }];
-    resume({ answers: responseAnswers, type: 'answers' });
+        : [{ id: "answer", value: fallbackAnswer.trim() }];
+    resume({ answers: responseAnswers, type: "answers" });
   };
 
   return (
@@ -422,8 +427,8 @@ function ElicitationToolPart({
     >
       <ToolActionHeader
         details
-        failed={phase === 'failed'}
-        kind={elicitation?.kind || 'elicitation'}
+        failed={phase === "failed"}
+        kind={elicitation?.kind || "elicitation"}
         open={open}
         phase={phase}
         running={awaitingInput}
@@ -451,7 +456,7 @@ function ElicitationToolPart({
                       }))
                     }
                     question={question}
-                    value={answers[question.id] ?? ''}
+                    value={answers[question.id] ?? ""}
                   />
                 ))
               ) : (
@@ -465,7 +470,7 @@ function ElicitationToolPart({
               <div className="flex flex-wrap justify-end gap-2">
                 <Button
                   disabled={!awaitingInput}
-                  onClick={() => resume({ type: 'cancel' })}
+                  onClick={() => resume({ type: "cancel" })}
                   size="xs"
                   type="button"
                   variant="ghost"
@@ -486,7 +491,7 @@ function ElicitationToolPart({
             <div className="flex flex-wrap justify-end gap-2">
               <Button
                 disabled={!awaitingInput}
-                onClick={() => resume({ type: 'deny' })}
+                onClick={() => resume({ type: "deny" })}
                 size="xs"
                 type="button"
                 variant="ghost"
@@ -495,7 +500,7 @@ function ElicitationToolPart({
               </Button>
               <Button
                 disabled={!awaitingInput}
-                onClick={() => resume({ type: 'cancel' })}
+                onClick={() => resume({ type: "cancel" })}
                 size="xs"
                 type="button"
                 variant="ghost"
@@ -504,7 +509,7 @@ function ElicitationToolPart({
               </Button>
               <Button
                 disabled={!awaitingInput}
-                onClick={() => resume({ type: 'allowForSession' })}
+                onClick={() => resume({ type: "allowForSession" })}
                 size="xs"
                 type="button"
                 variant="outline"
@@ -513,7 +518,7 @@ function ElicitationToolPart({
               </Button>
               <Button
                 disabled={!awaitingInput}
-                onClick={() => resume({ type: 'allow' })}
+                onClick={() => resume({ type: "allow" })}
                 size="xs"
                 type="button"
               >
@@ -522,7 +527,9 @@ function ElicitationToolPart({
             </div>
           )}
 
-          {outputText ? <ToolPreBlock label="Response" value={outputText} /> : null}
+          {outputText ? (
+            <ToolPreBlock label="Response" value={outputText} />
+          ) : null}
         </div>
       </CollapsibleContent>
     </Collapsible>
@@ -537,7 +544,7 @@ function ElicitationQuestionInput({
 }: {
   disabled: boolean;
   onChange: (value: string) => void;
-  question: NonNullable<ChatElicitation['questions']>[number];
+  question: NonNullable<ChatElicitation["questions"]>[number];
   value: string;
 }) {
   const options = question.options ?? [];
@@ -561,8 +568,8 @@ function ElicitationQuestionInput({
             <Button
               aria-pressed={value === option.label}
               className={cn(
-                'max-w-full justify-start',
-                value === option.label && 'border-primary bg-primary/10'
+                "max-w-full justify-start",
+                value === option.label && "border-primary bg-primary/10",
               )}
               disabled={disabled}
               key={option.label}
@@ -630,8 +637,8 @@ function ToolActionHeader({
       {details && (
         <ChevronDown
           className={cn(
-            'size-4 shrink-0 text-muted-foreground transition-transform',
-            !open && '-rotate-90'
+            "size-4 shrink-0 text-muted-foreground transition-transform",
+            !open && "-rotate-90",
           )}
         />
       )}
@@ -639,8 +646,8 @@ function ToolActionHeader({
   );
 
   const className = cn(
-    'flex min-h-9 w-full items-center gap-2 px-3 py-2 text-left',
-    details && 'hover:bg-muted/40'
+    "flex min-h-9 w-full items-center gap-2 px-3 py-2 text-left",
+    details && "hover:bg-muted/40",
   );
 
   if (!details) {
@@ -661,7 +668,8 @@ function ToolStatusIcon({
   failed: boolean;
   running: boolean;
 }) {
-  if (failed) return <AlertCircleIcon className="size-3.5 shrink-0 text-rose-600" />;
+  if (failed)
+    return <AlertCircleIcon className="size-3.5 shrink-0 text-rose-600" />;
   if (running) return <Loader2 className="size-3.5 shrink-0 animate-spin" />;
   return <Check className="size-3.5 shrink-0 text-emerald-600" />;
 }
@@ -672,15 +680,15 @@ function ToolPreBlock({
   value,
 }: {
   label: string;
-  tone?: 'error';
+  tone?: "error";
   value: string;
 }) {
   return (
     <div>
       <div
         className={cn(
-          'mb-1 text-[11px] font-medium uppercase text-muted-foreground',
-          tone === 'error' && 'text-rose-600'
+          "mb-1 text-[11px] font-medium uppercase text-muted-foreground",
+          tone === "error" && "text-rose-600",
         )}
       >
         {label}
@@ -692,22 +700,27 @@ function ToolPreBlock({
   );
 }
 
-function getToolOutputText(action: ChatToolAction | undefined, result: unknown) {
+function getToolOutputText(
+  action: ChatToolAction | undefined,
+  result: unknown,
+) {
   if (action?.outputText?.trim()) return action.outputText;
-  if (typeof result === 'string') return result;
-  if (result === undefined || result === null) return '';
+  if (typeof result === "string") return result;
+  if (result === undefined || result === null) return "";
   return JSON.stringify(result, null, 2);
 }
 
-function parseElicitation(rawInput?: string | null): ChatElicitation | undefined {
+function parseElicitation(
+  rawInput?: string | null,
+): ChatElicitation | undefined {
   if (!rawInput) return undefined;
 
   try {
     const parsed: unknown = JSON.parse(rawInput);
     if (
       parsed &&
-      typeof parsed === 'object' &&
-      typeof (parsed as Partial<ChatElicitation>).id === 'string'
+      typeof parsed === "object" &&
+      typeof (parsed as Partial<ChatElicitation>).id === "string"
     ) {
       return parsed as ChatElicitation;
     }
@@ -720,37 +733,37 @@ function parseElicitation(rawInput?: string | null): ChatElicitation | undefined
 
 function isRunningToolPhase(phase: string) {
   return (
-    phase === 'proposed' ||
-    phase === 'awaitingDecision' ||
-    phase === 'running' ||
-    phase === 'streamingResult'
+    phase === "proposed" ||
+    phase === "awaitingDecision" ||
+    phase === "running" ||
+    phase === "streamingResult"
   );
 }
 
 function formatToolPhase(phase: string) {
   switch (phase) {
-    case 'awaitingDecision':
-      return 'Awaiting decision';
-    case 'streamingResult':
-      return 'Streaming result';
-    case 'completed':
-      return 'Completed';
-    case 'failed':
-      return 'Failed';
-    case 'declined':
-      return 'Declined';
-    case 'cancelled':
-      return 'Cancelled';
-    case 'running':
-      return 'Running';
-    case 'proposed':
-      return 'Proposed';
+    case "awaitingDecision":
+      return "Awaiting decision";
+    case "streamingResult":
+      return "Streaming result";
+    case "completed":
+      return "Completed";
+    case "failed":
+      return "Failed";
+    case "declined":
+      return "Declined";
+    case "cancelled":
+      return "Cancelled";
+    case "running":
+      return "Running";
+    case "proposed":
+      return "Proposed";
     default:
       return phase;
   }
 }
 
-function DataMessagePart(part: Extract<EnrichedPartState, { type: 'data' }>) {
+function DataMessagePart(part: Extract<EnrichedPartState, { type: "data" }>) {
   return <JsonBlock label={part.name} value={part.data} />;
 }
 
@@ -765,7 +778,7 @@ function JsonBlock({ label, value }: { label: string; value: unknown }) {
         {label}
       </div>
       <pre className="max-h-40 overflow-auto whitespace-pre-wrap break-words font-mono text-[11px] leading-4">
-        {typeof value === 'string' ? value : JSON.stringify(value, null, 2)}
+        {typeof value === "string" ? value : JSON.stringify(value, null, 2)}
       </pre>
     </div>
   );

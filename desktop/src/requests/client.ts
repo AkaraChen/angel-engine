@@ -1,6 +1,6 @@
-import { ipc } from '@/lib/ipc';
-import type { ChatCreateInput, ChatRuntimeConfigInput } from '@/shared/chat';
-import type { CreateProjectInput } from '@/shared/projects';
+import { ipc } from "@/lib/ipc";
+import type { ChatCreateInput, ChatRuntimeConfigInput } from "@/shared/chat";
+import type { CreateProjectInput } from "@/shared/projects";
 
 export function createApiClient() {
   return {

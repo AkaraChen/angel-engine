@@ -1,6 +1,6 @@
-import { createContext, useContext } from 'react';
+import { createContext, useContext } from "react";
 
-import type { AgentRuntime, AgentValueOption } from '@/shared/agents';
+import type { AgentRuntime, AgentValueOption } from "@/shared/agents";
 
 export type ChatOptionsContextValue = {
   configLoading: boolean;
@@ -25,7 +25,7 @@ export const ChatOptionsProvider = ChatOptionsContext.Provider;
 export function useChatOptions() {
   const value = useContext(ChatOptionsContext);
   if (!value) {
-    throw new Error('useChatOptions must be used inside ChatOptionsProvider.');
+    throw new Error("useChatOptions must be used inside ChatOptionsProvider.");
   }
   return value;
 }

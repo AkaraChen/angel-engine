@@ -1,21 +1,21 @@
-import { useCallback, useState, type ReactNode } from 'react';
+import { useCallback, useState, type ReactNode } from "react";
 import {
   AlertTriangle,
   Bot,
   Brain,
   SlidersHorizontal,
   Trash2,
-} from 'lucide-react';
+} from "lucide-react";
 
-import { Button } from '@/components/ui/button';
+import { Button } from "@/components/ui/button";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
-import { cn } from '@/lib/utils';
+} from "@/components/ui/select";
+import { cn } from "@/lib/utils";
 import {
   AGENT_OPTIONS,
   getAgentModes,
@@ -24,13 +24,13 @@ import {
   type AgentRuntime,
   type AgentSettings,
   type AgentValueOption,
-} from '@/shared/agents';
+} from "@/shared/agents";
 
-type SettingsTab = 'agents' | 'danger';
+type SettingsTab = "agents" | "danger";
 
 const settingsTabs: Array<{ id: SettingsTab; label: string }> = [
-  { id: 'agents', label: 'Agents' },
-  { id: 'danger', label: 'Danger Area' },
+  { id: "agents", label: "Agents" },
+  { id: "danger", label: "Danger Area" },
 ];
 
 export function SettingsPage({
@@ -44,18 +44,15 @@ export function SettingsPage({
   agentSettings: AgentSettings;
   isDeletingChats: boolean;
   onAgentModeChange: (runtime: AgentRuntime, mode: string) => void;
-  onAgentReasoningEffortChange: (
-    runtime: AgentRuntime,
-    effort: string
-  ) => void;
+  onAgentReasoningEffortChange: (runtime: AgentRuntime, effort: string) => void;
   onDeleteAllChats: () => Promise<void>;
   onDefaultAgentChange: (runtime: AgentRuntime) => void;
 }) {
-  const [activeTab, setActiveTab] = useState<SettingsTab>('agents');
+  const [activeTab, setActiveTab] = useState<SettingsTab>("agents");
 
   const deleteAllChats = useCallback(async () => {
     const confirmed = window.confirm(
-      'Delete all chats? This cannot be undone.'
+      "Delete all chats? This cannot be undone.",
     );
     if (!confirmed) return;
 
@@ -76,10 +73,10 @@ export function SettingsPage({
           {settingsTabs.map((tab) => (
             <button
               className={cn(
-                'border-b-2 px-1 pb-2 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground',
+                "border-b-2 px-1 pb-2 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground",
                 activeTab === tab.id
-                  ? 'border-foreground text-foreground'
-                  : 'border-transparent'
+                  ? "border-foreground text-foreground"
+                  : "border-transparent",
               )}
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
@@ -90,14 +87,15 @@ export function SettingsPage({
           ))}
         </div>
 
-        {activeTab === 'agents' ? (
+        {activeTab === "agents" ? (
           <div className="space-y-4">
             <section className="rounded-md border bg-card p-4">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div className="min-w-0">
                   <h3 className="text-sm font-semibold">Default agent</h3>
                   <p className="mt-1 text-sm text-muted-foreground">
-                    Used for new chats started from the composer or project list.
+                    Used for new chats started from the composer or project
+                    list.
                   </p>
                 </div>
                 <SettingsSelect
@@ -125,9 +123,7 @@ export function SettingsPage({
                     <div className="min-w-0">
                       <div className="flex items-center gap-2">
                         <Bot className="size-4 text-muted-foreground" />
-                        <h3 className="text-sm font-semibold">
-                          {agent.label}
-                        </h3>
+                        <h3 className="text-sm font-semibold">{agent.label}</h3>
                       </div>
                       <p className="mt-1 text-sm text-muted-foreground">
                         {agent.description}
@@ -161,7 +157,7 @@ export function SettingsPage({
           </div>
         ) : null}
 
-        {activeTab === 'danger' ? (
+        {activeTab === "danger" ? (
           <div className="rounded-md border border-destructive/30 bg-destructive/5 p-4">
             <div className="flex items-start gap-3">
               <AlertTriangle className="mt-0.5 size-5 shrink-0 text-destructive" />
@@ -181,7 +177,7 @@ export function SettingsPage({
                 variant="destructive"
               >
                 <Trash2 />
-                {isDeletingChats ? 'Deleting' : 'Delete all chats'}
+                {isDeletingChats ? "Deleting" : "Delete all chats"}
               </Button>
             </div>
           </div>
@@ -240,11 +236,11 @@ function SettingsSelect({
 }
 
 function labelFromConfigValue(value: string) {
-  if (value === 'xhigh') return 'XHigh';
-  if (value === 'default') return 'Default';
+  if (value === "xhigh") return "XHigh";
+  if (value === "default") return "Default";
   return value
     .split(/[_\s-]+/)
     .filter(Boolean)
     .map((part) => `${part.slice(0, 1).toUpperCase()}${part.slice(1)}`)
-    .join(' ');
+    .join(" ");
 }

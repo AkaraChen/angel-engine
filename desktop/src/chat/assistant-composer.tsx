@@ -4,13 +4,13 @@ import {
   type ChangeEvent,
   type KeyboardEvent,
   type ReactNode,
-} from 'react';
+} from "react";
 import {
   ComposerPrimitive,
   useAui,
   useAuiState,
   type CreateAttachment,
-} from '@assistant-ui/react';
+} from "@assistant-ui/react";
 import {
   ArrowUp,
   Bot,
@@ -22,9 +22,9 @@ import {
   Quote,
   SlidersHorizontal,
   X,
-} from 'lucide-react';
+} from "lucide-react";
 
-import { useChatOptions } from '@/chat/chat-options-context';
+import { useChatOptions } from "@/chat/chat-options-context";
 import {
   PromptInput,
   PromptInputBody,
@@ -39,26 +39,26 @@ import {
   PromptInputTools,
   usePromptInputAttachments,
   type PromptInputMessage,
-} from '@/components/ai-elements/prompt-input';
-import { Button } from '@/components/ui/button';
-import { iconButtonClass } from '@/chat/thread-styles';
+} from "@/components/ai-elements/prompt-input";
+import { Button } from "@/components/ui/button";
+import { iconButtonClass } from "@/chat/thread-styles";
 import {
   AGENT_OPTIONS,
   normalizeAgentRuntime,
   type AgentValueOption,
-} from '@/shared/agents';
+} from "@/shared/agents";
 
 export function AssistantComposer() {
   const aui = useAui();
   const canCancel = useAuiState((state) => state.composer.canCancel);
   const isInputDisabled = useAuiState((state) => state.thread.isDisabled);
   const isRunning = useAuiState((state) => state.thread.isRunning);
-  const [draftText, setDraftText] = useState('');
+  const [draftText, setDraftText] = useState("");
 
   const handleSubmit = useCallback(
     async (message: PromptInputMessage) => {
       const composer = aui.composer();
-      const text = message.text.trim() ? message.text : '';
+      const text = message.text.trim() ? message.text : "";
 
       composer.setText(text);
 
@@ -68,32 +68,32 @@ export function AssistantComposer() {
 
       if (!composer.getState().isEmpty) {
         composer.send();
-        setDraftText('');
+        setDraftText("");
       }
     },
-    [aui]
+    [aui],
   );
 
   const handleTextChange = useCallback(
     (event: ChangeEvent<HTMLTextAreaElement>) => {
       setDraftText(event.currentTarget.value);
     },
-    []
+    [],
   );
 
   const handleTextKeyDown = useCallback(
     (event: KeyboardEvent<HTMLTextAreaElement>) => {
-      if (event.key === 'Escape' && canCancel) {
+      if (event.key === "Escape" && canCancel) {
         event.preventDefault();
         aui.composer().cancel();
         return;
       }
 
-      if (event.key === 'Enter' && !event.shiftKey && isRunning) {
+      if (event.key === "Enter" && !event.shiftKey && isRunning) {
         event.preventDefault();
       }
     },
-    [aui, canCancel, isRunning]
+    [aui, canCancel, isRunning],
   );
 
   return (
@@ -149,7 +149,7 @@ function AssistantComposerHeader() {
               type="button"
             >
               <FileText className="size-3.5 shrink-0" />
-              <span className="truncate">{file.filename ?? 'Attachment'}</span>
+              <span className="truncate">{file.filename ?? "Attachment"}</span>
               <X className="size-3.5 shrink-0" />
             </button>
           ))}
@@ -187,9 +187,7 @@ function AssistantComposerFooter({ draftText }: { draftText: string }) {
             value: agent.id,
           }))}
           title={
-            chatOptions.runtimeLocked
-              ? 'Agent is fixed for this chat'
-              : 'Agent'
+            chatOptions.runtimeLocked ? "Agent is fixed for this chat" : "Agent"
           }
           value={chatOptions.runtime}
         />
@@ -205,7 +203,7 @@ function AssistantComposerFooter({ draftText }: { draftText: string }) {
           onValueChange={chatOptions.setModel}
           options={chatOptions.modelOptions}
           title={
-            chatOptions.configLoading ? 'Loading models from agent' : 'Model'
+            chatOptions.configLoading ? "Loading models from agent" : "Model"
           }
           value={chatOptions.model}
         />
@@ -271,11 +269,11 @@ function ComposerOptionSelect({
       <PromptInputSelectTrigger
         aria-label={label}
         className={[
-          'h-8 max-w-36 rounded-md border border-border bg-background/70 px-2 text-xs',
+          "h-8 max-w-36 rounded-md border border-border bg-background/70 px-2 text-xs",
           className,
         ]
           .filter(Boolean)
-          .join(' ')}
+          .join(" ")}
         size="sm"
         title={title ?? label}
       >
@@ -319,12 +317,12 @@ function PromptAttachmentButton() {
 }
 
 function createAttachmentFromPromptFile(
-  file: PromptInputMessage['files'][number]
+  file: PromptInputMessage["files"][number],
 ): CreateAttachment {
-  const filename = file.filename ?? 'Attachment';
-  const mediaType = file.mediaType ?? 'application/octet-stream';
-  const url = file.url ?? '';
-  const isImage = mediaType.startsWith('image/');
+  const filename = file.filename ?? "Attachment";
+  const mediaType = file.mediaType ?? "application/octet-stream";
+  const url = file.url ?? "";
+  const isImage = mediaType.startsWith("image/");
 
   return {
     content: [
@@ -332,17 +330,17 @@ function createAttachmentFromPromptFile(
         ? {
             filename,
             image: url,
-            type: 'image',
+            type: "image",
           }
         : {
             data: url,
             filename,
             mimeType: mediaType,
-            type: 'file',
+            type: "file",
           },
     ],
     contentType: mediaType,
     name: filename,
-    type: isImage ? 'image' : 'file',
+    type: isImage ? "image" : "file",
   };
 }

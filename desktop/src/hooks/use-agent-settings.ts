@@ -1,15 +1,12 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from "react";
 
-import {
-  sanitizeAgentSettings,
-  type AgentSettings,
-} from '@/shared/agents';
+import { sanitizeAgentSettings, type AgentSettings } from "@/shared/agents";
 
-const STORAGE_KEY = 'angel-engine.agent-settings.v1';
+const STORAGE_KEY = "angel-engine.agent-settings.v1";
 
 export function useAgentSettings() {
   const [settings, setSettings] = useState<AgentSettings>(() =>
-    readAgentSettings()
+    readAgentSettings(),
   );
 
   useEffect(() => {
@@ -20,7 +17,7 @@ export function useAgentSettings() {
     (updater: (settings: AgentSettings) => AgentSettings) => {
       setSettings((current) => sanitizeAgentSettings(updater(current)));
     },
-    []
+    [],
   );
 
   return [settings, updateSettings] as const;

@@ -1,10 +1,13 @@
-import BetterSqliteDatabase from 'better-sqlite3';
-import fs from 'node:fs';
-import path from 'node:path';
-import { app } from 'electron';
-import { drizzle, type BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
+import BetterSqliteDatabase from "better-sqlite3";
+import fs from "node:fs";
+import path from "node:path";
+import { app } from "electron";
+import {
+  drizzle,
+  type BetterSQLite3Database,
+} from "drizzle-orm/better-sqlite3";
 
-import { chats, projects } from './schema';
+import { chats, projects } from "./schema";
 
 export type AppDatabase = BetterSQLite3Database<{
   chats: typeof chats;
@@ -17,11 +20,13 @@ let db: AppDatabase | undefined;
 export function getDatabase() {
   if (db) return db;
 
-  const dbDirectory = app.getPath('userData');
+  const dbDirectory = app.getPath("userData");
   fs.mkdirSync(dbDirectory, { recursive: true });
 
-  sqlite = new BetterSqliteDatabase(path.join(dbDirectory, 'angel-engine.sqlite'));
-  sqlite.pragma('journal_mode = WAL');
+  sqlite = new BetterSqliteDatabase(
+    path.join(dbDirectory, "angel-engine.sqlite"),
+  );
+  sqlite.pragma("journal_mode = WAL");
   sqlite.exec(`
     CREATE TABLE IF NOT EXISTS projects (
       id TEXT PRIMARY KEY NOT NULL,

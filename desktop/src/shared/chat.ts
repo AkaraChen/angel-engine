@@ -44,13 +44,13 @@ export type ChatHistoryMessage = {
   content: ChatHistoryMessagePart[];
   createdAt?: string;
   id: string;
-  role: 'assistant' | 'system' | 'user';
+  role: "assistant" | "system" | "user";
 };
 
 export type ChatHistoryMessagePart =
   | {
       text: string;
-      type: 'reasoning' | 'text';
+      type: "reasoning" | "text";
     }
   | ChatToolCallPart;
 
@@ -120,14 +120,14 @@ export type ChatElicitationAnswer = {
 };
 
 export type ChatElicitationResponse =
-  | { type: 'allow' }
-  | { type: 'allowForSession' }
-  | { type: 'deny' }
-  | { type: 'cancel' }
-  | { answers: ChatElicitationAnswer[]; type: 'answers' }
-  | { success: boolean; type: 'dynamicToolResult' }
-  | { type: 'externalComplete' }
-  | { type: 'raw'; value: string };
+  | { type: "allow" }
+  | { type: "allowForSession" }
+  | { type: "deny" }
+  | { type: "cancel" }
+  | { answers: ChatElicitationAnswer[]; type: "answers" }
+  | { success: boolean; type: "dynamicToolResult" }
+  | { type: "externalComplete" }
+  | { type: "raw"; value: string };
 
 export type ChatToolCallPart = {
   args: ChatJsonObject;
@@ -137,29 +137,29 @@ export type ChatToolCallPart = {
   result?: unknown;
   toolCallId: string;
   toolName: string;
-  type: 'tool-call';
+  type: "tool-call";
 };
 
-export function chatToolActionToPart(
-  action: ChatToolAction
-): ChatToolCallPart {
+export function chatToolActionToPart(action: ChatToolAction): ChatToolCallPart {
   const outputText = action.outputText?.trim() ? action.outputText : undefined;
   const errorText = action.error?.message;
   const result = outputText ?? errorText;
 
   return {
     args: parseChatJsonObject(action.rawInput) ?? {},
-    argsText: action.rawInput || action.inputSummary || '',
+    argsText: action.rawInput || action.inputSummary || "",
     artifact: action,
     ...(action.error ? { isError: true } : {}),
     ...(result ? { result } : {}),
     toolCallId: action.id,
-    toolName: action.kind || 'tool',
-    type: 'tool-call',
+    toolName: action.kind || "tool",
+    type: "tool-call",
   };
 }
 
-function parseChatJsonObject(value?: string | null): ChatJsonObject | undefined {
+function parseChatJsonObject(
+  value?: string | null,
+): ChatJsonObject | undefined {
   if (!value) return undefined;
 
   try {
@@ -171,21 +171,21 @@ function parseChatJsonObject(value?: string | null): ChatJsonObject | undefined 
 }
 
 function isChatJsonObject(value: unknown): value is ChatJsonObject {
-  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
 }
 
 export function isChatToolAction(value: unknown): value is ChatToolAction {
   return (
     Boolean(value) &&
-    typeof value === 'object' &&
-    typeof (value as Partial<ChatToolAction>).id === 'string'
+    typeof value === "object" &&
+    typeof (value as Partial<ChatToolAction>).id === "string"
   );
 }
 
 export function appendChatTextPart(
   parts: ChatHistoryMessagePart[],
-  type: 'reasoning' | 'text',
-  text: string
+  type: "reasoning" | "text",
+  text: string,
 ) {
   if (!text) return;
 
@@ -199,16 +199,16 @@ export function appendChatTextPart(
 }
 
 export function cloneChatHistoryPart(
-  part: ChatHistoryMessagePart
+  part: ChatHistoryMessagePart,
 ): ChatHistoryMessagePart {
   switch (part.type) {
-    case 'tool-call':
+    case "tool-call":
       return {
         ...part,
         artifact: cloneChatToolAction(part.artifact),
       };
-    case 'reasoning':
-    case 'text':
+    case "reasoning":
+    case "text":
       return { ...part };
   }
 }
@@ -223,20 +223,20 @@ function cloneChatToolAction(action: ChatToolAction): ChatToolAction {
 
 export function chatPartsText(
   parts: ChatHistoryMessagePart[],
-  type: 'reasoning' | 'text'
+  type: "reasoning" | "text",
 ) {
   return parts.reduce(
     (text, part) => (part.type === type ? text + part.text : text),
-    ''
+    "",
   );
 }
 
 export function isTerminalChatToolPhase(phase?: string) {
   return (
-    phase === 'completed' ||
-    phase === 'failed' ||
-    phase === 'declined' ||
-    phase === 'cancelled'
+    phase === "completed" ||
+    phase === "failed" ||
+    phase === "declined" ||
+    phase === "cancelled"
   );
 }
 
@@ -268,35 +268,35 @@ export type ChatSendResult = {
   turnId?: string;
 };
 
-export type ChatStreamPart = 'reasoning' | 'text';
+export type ChatStreamPart = "reasoning" | "text";
 
 export type ChatStreamDelta = {
   part: ChatStreamPart;
   text: string;
   turnId?: string;
-  type: 'delta';
+  type: "delta";
 };
 
 export type ChatStreamEvent =
   | ChatStreamDelta
   | {
       action: ChatToolAction;
-      type: 'tool';
+      type: "tool";
     }
   | {
       chat: Chat;
-      type: 'chat';
+      type: "chat";
     }
   | {
       result: ChatSendResult;
-      type: 'result';
+      type: "result";
     }
   | {
       message: string;
-      type: 'error';
+      type: "error";
     }
   | {
-      type: 'done';
+      type: "done";
     };
 
 export type ChatStreamStartInput = {
@@ -313,21 +313,21 @@ export type ChatStreamElicitationResolveInput = {
 export type ChatStreamController = {
   cancel: () => void;
   resolveElicitation: (
-    input: Omit<ChatStreamElicitationResolveInput, 'streamId'>
+    input: Omit<ChatStreamElicitationResolveInput, "streamId">,
   ) => Promise<void>;
 };
 
 export type ChatStreamApi = {
   send(
     input: ChatSendInput,
-    onEvent: (streamEvent: ChatStreamEvent) => void
+    onEvent: (streamEvent: ChatStreamEvent) => void,
   ): ChatStreamController;
 };
 
-export const CHAT_STREAM_CANCEL_CHANNEL = 'chat:stream:cancel';
+export const CHAT_STREAM_CANCEL_CHANNEL = "chat:stream:cancel";
 export const CHAT_STREAM_ELICITATION_RESOLVE_CHANNEL =
-  'chat:stream:elicitation:resolve';
-export const CHAT_STREAM_START_CHANNEL = 'chat:stream:start';
+  "chat:stream:elicitation:resolve";
+export const CHAT_STREAM_START_CHANNEL = "chat:stream:start";
 
 export function chatStreamEventChannel(streamId: string) {
   return `chat:stream:event:${streamId}`;

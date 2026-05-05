@@ -1,18 +1,18 @@
-import { Redirect, Route, Router, Switch } from 'wouter';
-import type { RouteComponentProps } from 'wouter';
-import { useHashLocation } from 'wouter/use-hash-location';
+import { Redirect, Route, Router, Switch } from "wouter";
+import type { RouteComponentProps } from "wouter";
+import { useHashLocation } from "wouter/use-hash-location";
 
-import { WorkspacePage, type WorkspaceRoute } from '@/pages/workspace-page';
+import { WorkspacePage, type WorkspaceRoute } from "@/pages/workspace-page";
 
 export function AppRouter() {
   return (
     <Router hook={useHashLocation}>
       <Switch>
         <Route path="/">
-          <WorkspacePage route={{ type: 'create' }} />
+          <WorkspacePage route={{ type: "create" }} />
         </Route>
         <Route path="/settings">
-          <WorkspacePage route={{ type: 'settings' }} />
+          <WorkspacePage route={{ type: "settings" }} />
         </Route>
         <Route component={ChatRoutePage} path="/chat/:chatId" />
         <Route
@@ -28,9 +28,7 @@ export function AppRouter() {
   );
 }
 
-function ChatRoutePage({
-  params,
-}: RouteComponentProps<{ chatId: string }>) {
+function ChatRoutePage({ params }: RouteComponentProps<{ chatId: string }>) {
   return <WorkspacePage route={chatRoute(params.chatId)} />;
 }
 
@@ -44,20 +42,18 @@ function ProjectChatRoutePage({
   params,
 }: RouteComponentProps<{ chatId: string; projectId: string }>) {
   return (
-    <WorkspacePage
-      route={projectChatRoute(params.projectId, params.chatId)}
-    />
+    <WorkspacePage route={projectChatRoute(params.projectId, params.chatId)} />
   );
 }
 
 function chatRoute(chatId: string): WorkspaceRoute {
-  return { chatId, type: 'chat' };
+  return { chatId, type: "chat" };
 }
 
 function projectCreateRoute(projectId: string): WorkspaceRoute {
-  return { projectId, type: 'projectCreate' };
+  return { projectId, type: "projectCreate" };
 }
 
 function projectChatRoute(projectId: string, chatId: string): WorkspaceRoute {
-  return { chatId, projectId, type: 'projectChat' };
+  return { chatId, projectId, type: "projectChat" };
 }

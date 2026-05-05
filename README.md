@@ -15,5 +15,18 @@ This repository is a Cargo workspace.
 Build and verify all workspace crates:
 
 ```sh
-cargo test --workspace --no-run
+cargo test --workspace --all-targets
+```
+
+Format Rust and desktop JS/TS:
+
+```sh
+cargo fmt --all
+npm --prefix desktop run format
+```
+
+Enable the repository pre-commit hook:
+
+```sh
+git config core.hooksPath .githooks
 ```

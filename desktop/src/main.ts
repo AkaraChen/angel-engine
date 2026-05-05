@@ -1,14 +1,14 @@
-import { app, BrowserWindow } from 'electron';
-import path from 'node:path';
-import started from 'electron-squirrel-startup';
-import { registerIpcMain } from '@egoist/tipc/main';
+import { app, BrowserWindow } from "electron";
+import path from "node:path";
+import started from "electron-squirrel-startup";
+import { registerIpcMain } from "@egoist/tipc/main";
 
-import { closeChatSession } from './main/chat/angel-client';
-import { registerChatStreamIpc } from './main/chat/stream-ipc';
-import { closeProjectsDatabase } from './main/projects/repository';
-import { appRouter } from './main/router';
+import { closeChatSession } from "./main/chat/angel-client";
+import { registerChatStreamIpc } from "./main/chat/stream-ipc";
+import { closeProjectsDatabase } from "./main/projects/repository";
+import { appRouter } from "./main/router";
 
-const isMacOS = process.platform === 'darwin';
+const isMacOS = process.platform === "darwin";
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
 if (started) {
@@ -20,12 +20,12 @@ const createWindow = () => {
   const mainWindow = new BrowserWindow({
     ...(isMacOS
       ? {
-          backgroundColor: '#00000000',
-          titleBarStyle: 'hidden' as const,
+          backgroundColor: "#00000000",
+          titleBarStyle: "hidden" as const,
           trafficLightPosition: { x: 16, y: 18 },
           transparent: true,
-          vibrancy: 'under-window' as const,
-          visualEffectState: 'active' as const,
+          vibrancy: "under-window" as const,
+          visualEffectState: "active" as const,
         }
       : {}),
     height: 820,
@@ -33,13 +33,13 @@ const createWindow = () => {
     minWidth: 960,
     width: 1200,
     webPreferences: {
-      preload: path.join(__dirname, 'preload.js'),
+      preload: path.join(__dirname, "preload.js"),
     },
   });
 
   if (isMacOS) {
-    mainWindow.setBackgroundColor('#00000000');
-    mainWindow.setVibrancy('under-window', { animationDuration: 0 });
+    mainWindow.setBackgroundColor("#00000000");
+    mainWindow.setVibrancy("under-window", { animationDuration: 0 });
     mainWindow.setWindowButtonPosition({ x: 16, y: 18 });
   }
 
@@ -65,7 +65,7 @@ app.whenReady().then(() => {
   createWindow();
 });
 
-app.on('before-quit', () => {
+app.on("before-quit", () => {
   closeChatSession();
   closeProjectsDatabase();
 });
@@ -73,13 +73,13 @@ app.on('before-quit', () => {
 // Quit when all windows are closed, except on macOS. There, it's common
 // for applications and their menu bar to stay active until the user quits
 // explicitly with Cmd + Q.
-app.on('window-all-closed', () => {
-  if (process.platform !== 'darwin') {
+app.on("window-all-closed", () => {
+  if (process.platform !== "darwin") {
     app.quit();
   }
 });
 
-app.on('activate', () => {
+app.on("activate", () => {
   // On OS X it's common to re-create a window in the app when the
   // dock icon is clicked and there are no other windows open.
   if (BrowserWindow.getAllWindows().length === 0) {

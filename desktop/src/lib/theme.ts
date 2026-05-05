@@ -1,4 +1,4 @@
-const systemDarkQuery = '(prefers-color-scheme: dark)';
+const systemDarkQuery = "(prefers-color-scheme: dark)";
 
 export function applyDesktopPlatform() {
   document.documentElement.dataset.platform =
@@ -14,14 +14,14 @@ export function syncSystemColorScheme() {
     applyColorScheme(event.matches);
   };
 
-  media.addEventListener('change', handleChange);
+  media.addEventListener("change", handleChange);
 
   return () => {
-    media.removeEventListener('change', handleChange);
+    media.removeEventListener("change", handleChange);
   };
 }
 
 function applyColorScheme(isDark: boolean) {
-  document.documentElement.classList.toggle('dark', isDark);
-  document.documentElement.style.colorScheme = isDark ? 'dark' : 'light';
+  document.documentElement.classList.toggle("dark", isDark);
+  document.documentElement.style.colorScheme = isDark ? "dark" : "light";
 }

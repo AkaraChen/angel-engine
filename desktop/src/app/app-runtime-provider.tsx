@@ -1,4 +1,4 @@
-import { useMemo, type ReactNode } from 'react';
+import { useMemo, type ReactNode } from "react";
 import {
   AssistantRuntimeProvider,
   CompositeAttachmentAdapter,
@@ -6,14 +6,14 @@ import {
   SimpleTextAttachmentAdapter,
   type FeedbackAdapter,
   type SpeechSynthesisAdapter,
-} from '@assistant-ui/react';
+} from "@assistant-ui/react";
 
-import { useEngineRuntime } from '@/lib/engine-model-adapter';
+import { useEngineRuntime } from "@/lib/engine-model-adapter";
 import type {
   Chat,
   ChatHistoryMessage,
   ChatRuntimeConfig,
-} from '@/shared/chat';
+} from "@/shared/chat";
 
 const mockFeedbackAdapter: FeedbackAdapter = {
   submit: () => undefined,
@@ -43,7 +43,7 @@ export function AppRuntimeProvider({
   onChatUpdated: (
     chat: Chat,
     messages?: ChatHistoryMessage[],
-    config?: ChatRuntimeConfig
+    config?: ChatRuntimeConfig,
   ) => void;
   projectId?: string | null;
   projectPath?: string;
@@ -59,7 +59,7 @@ export function AppRuntimeProvider({
       feedback: mockFeedbackAdapter,
       speech: createMockSpeechAdapter(),
     }),
-    []
+    [],
   );
 
   const assistantRuntime = useEngineRuntime({
@@ -92,21 +92,21 @@ function createMockSpeechAdapter(): SpeechSynthesisAdapter {
         cancel() {
           window.clearTimeout(startTimeout);
           window.clearTimeout(endTimeout);
-          utterance.status = { type: 'ended', reason: 'cancelled' };
+          utterance.status = { type: "ended", reason: "cancelled" };
           listeners.forEach((listener) => listener());
         },
-        status: { type: 'starting' },
+        status: { type: "starting" },
         subscribe(callback) {
           listeners.add(callback);
           return () => listeners.delete(callback);
         },
       };
       const startTimeout = window.setTimeout(() => {
-        utterance.status = { type: 'running' };
+        utterance.status = { type: "running" };
         listeners.forEach((listener) => listener());
       }, 120);
       const endTimeout = window.setTimeout(() => {
-        utterance.status = { type: 'ended', reason: 'finished' };
+        utterance.status = { type: "ended", reason: "finished" };
         listeners.forEach((listener) => listener());
       }, 2200);
       return utterance;

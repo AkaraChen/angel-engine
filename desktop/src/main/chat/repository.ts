@@ -1,17 +1,21 @@
-import { randomUUID } from 'node:crypto';
-import fs from 'node:fs';
-import path from 'node:path';
-import { desc, eq } from 'drizzle-orm';
+import { randomUUID } from "node:crypto";
+import fs from "node:fs";
+import path from "node:path";
+import { desc, eq } from "drizzle-orm";
 
-import type { Chat, ChatCreateInput } from '../../shared/chat';
-import { normalizeAgentRuntime } from '../../shared/agents';
-import { chats } from '../db/schema';
-import { getDatabase } from '../db/database';
+import type { Chat, ChatCreateInput } from "../../shared/chat";
+import { normalizeAgentRuntime } from "../../shared/agents";
+import { chats } from "../db/schema";
+import { getDatabase } from "../db/database";
 
-const DEFAULT_CHAT_TITLE = 'New chat';
+const DEFAULT_CHAT_TITLE = "New chat";
 
 export function listChats(): Chat[] {
-  return getDatabase().select().from(chats).orderBy(desc(chats.updatedAt)).all();
+  return getDatabase()
+    .select()
+    .from(chats)
+    .orderBy(desc(chats.updatedAt))
+    .all();
 }
 
 export function getChat(id: string): Chat | null {
@@ -65,7 +69,7 @@ export function touchChat(id: string): Chat {
 
 export function setChatRemoteThreadId(
   id: string,
-  remoteThreadId: string | null
+  remoteThreadId: string | null,
 ): Chat {
   return updateChat(id, {
     remoteThreadId: normalizeOptionalString(remoteThreadId),
@@ -86,14 +90,14 @@ export function renameChatFromPrompt(id: string, prompt: string): Chat {
 export function requireChat(id: string): Chat {
   const chat = getChat(id);
   if (!chat) {
-    throw new Error('Chat not found.');
+    throw new Error("Chat not found.");
   }
   return chat;
 }
 
 function updateChat(
   id: string,
-  patch: Partial<Pick<Chat, 'remoteThreadId' | 'title' | 'updatedAt'>>
+  patch: Partial<Pick<Chat, "remoteThreadId" | "title" | "updatedAt">>,
 ): Chat {
   const chat = getDatabase()
     .update(chats)
@@ -103,7 +107,7 @@ function updateChat(
     .get();
 
   if (!chat) {
-    throw new Error('Chat not found.');
+    throw new Error("Chat not found.");
   }
 
   return chat;
@@ -112,7 +116,7 @@ function updateChat(
 function requireChatId(id: string) {
   const trimmed = id.trim();
   if (!trimmed) {
-    throw new Error('Chat id is required.');
+    throw new Error("Chat id is required.");
   }
   return trimmed;
 }
@@ -127,7 +131,7 @@ function normalizeTitle(title: string | undefined) {
 }
 
 function normalizeOptionalString(value: string | null | undefined) {
-  if (typeof value !== 'string') return null;
+  if (typeof value !== "string") return null;
   const trimmed = value.trim();
   return trimmed || null;
 }
@@ -138,18 +142,18 @@ function normalizeOptionalDirectory(value: string | null | undefined) {
 
   const resolvedPath = path.resolve(trimmed);
   if (!fs.existsSync(resolvedPath)) {
-    throw new Error('Chat cwd does not exist.');
+    throw new Error("Chat cwd does not exist.");
   }
 
   if (!fs.statSync(resolvedPath).isDirectory()) {
-    throw new Error('Chat cwd must be a directory.');
+    throw new Error("Chat cwd must be a directory.");
   }
 
   return resolvedPath;
 }
 
 function titleFromPrompt(prompt: string) {
-  const title = prompt.replace(/\s+/g, ' ').trim();
+  const title = prompt.replace(/\s+/g, " ").trim();
   if (!title) return DEFAULT_CHAT_TITLE;
   return title.length > 48 ? `${title.slice(0, 47)}...` : title;
 }

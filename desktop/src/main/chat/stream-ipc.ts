@@ -1,4 +1,4 @@
-import { ipcMain } from 'electron';
+import { ipcMain } from "electron";
 
 import {
   CHAT_STREAM_CANCEL_CHANNEL,
@@ -10,15 +10,15 @@ import {
   type ChatStreamElicitationResolveInput,
   type ChatStreamEvent,
   type ChatStreamStartInput,
-} from '../../shared/chat';
-import { normalizeAgentRuntime } from '../../shared/agents';
-import { streamChat, type ChatStreamControls } from './angel-client';
+} from "../../shared/chat";
+import { normalizeAgentRuntime } from "../../shared/agents";
+import { streamChat, type ChatStreamControls } from "./angel-client";
 
 type ActiveStream = {
   cancel: () => void;
   resolveElicitation?: (
     elicitationId: string,
-    response: ChatElicitationResponse
+    response: ChatElicitationResponse,
   ) => Promise<void>;
 };
 
@@ -53,12 +53,12 @@ export function registerChatStreamIpc() {
     };
 
     void streamChat(request.input, sendEvent, abortController.signal, controls)
-      .then((result) => sendEvent({ result, type: 'result' }))
+      .then((result) => sendEvent({ result, type: "result" }))
       .catch((error: unknown) =>
-        sendEvent({ message: getErrorMessage(error), type: 'error' })
+        sendEvent({ message: getErrorMessage(error), type: "error" }),
       )
       .finally(() => {
-        sendEvent({ type: 'done' });
+        sendEvent({ type: "done" });
         activeStreams.delete(request.streamId);
       });
 
@@ -67,7 +67,7 @@ export function registerChatStreamIpc() {
 
   ipcMain.handle(CHAT_STREAM_CANCEL_CHANNEL, (_event, streamId: unknown) => {
     const activeStream = activeStreams.get(
-      assertString(streamId, 'Stream id is required.')
+      assertString(streamId, "Stream id is required."),
     );
     activeStream?.cancel();
     return { cancelled: Boolean(activeStream) };
@@ -79,55 +79,56 @@ export function registerChatStreamIpc() {
       const request = assertChatStreamElicitationResolveInput(payload);
       const activeStream = activeStreams.get(request.streamId);
       if (!activeStream?.resolveElicitation) {
-        throw new Error('Chat stream is not waiting for user input.');
+        throw new Error("Chat stream is not waiting for user input.");
       }
       await activeStream.resolveElicitation(
         request.elicitationId,
-        request.response
+        request.response,
       );
       return { resolved: true };
-    }
+    },
   );
 }
 
 function assertChatStreamStartInput(input: unknown): ChatStreamStartInput {
-  if (!input || typeof input !== 'object') {
-    throw new Error('Chat stream input is required.');
+  if (!input || typeof input !== "object") {
+    throw new Error("Chat stream input is required.");
   }
 
   const value = input as Partial<ChatStreamStartInput>;
   return {
     input: assertChatSendInput(value.input),
-    streamId: assertString(value.streamId, 'Stream id is required.'),
+    streamId: assertString(value.streamId, "Stream id is required."),
   };
 }
 
 function assertChatSendInput(input: unknown): ChatSendInput {
-  if (!input || typeof input !== 'object') {
-    throw new Error('Chat input is required.');
+  if (!input || typeof input !== "object") {
+    throw new Error("Chat input is required.");
   }
 
   const value = input as Partial<ChatSendInput>;
   return {
     chatId:
-      typeof value.chatId === 'string' && value.chatId.trim()
+      typeof value.chatId === "string" && value.chatId.trim()
         ? value.chatId.trim()
         : undefined,
-    cwd: typeof value.cwd === 'string' && value.cwd.trim() ? value.cwd : undefined,
+    cwd:
+      typeof value.cwd === "string" && value.cwd.trim() ? value.cwd : undefined,
     model: normalizeOptionalConfigInput(value.model),
     projectId:
-      typeof value.projectId === 'string' && value.projectId.trim()
+      typeof value.projectId === "string" && value.projectId.trim()
         ? value.projectId.trim()
         : null,
     mode: normalizeOptionalConfigInput(value.mode),
     reasoningEffort: normalizeOptionalConfigInput(value.reasoningEffort),
     runtime: normalizeOptionalRuntime(value.runtime),
-    text: assertString(value.text, 'Chat text is required.'),
+    text: assertString(value.text, "Chat text is required."),
   };
 }
 
 function assertString(value: unknown, message: string) {
-  if (typeof value !== 'string') {
+  if (typeof value !== "string") {
     throw new Error(message);
   }
   return value;
@@ -138,77 +139,77 @@ function getErrorMessage(error: unknown) {
 }
 
 function normalizeOptionalRuntime(value: unknown) {
-  if (typeof value !== 'string' || !value.trim()) return undefined;
+  if (typeof value !== "string" || !value.trim()) return undefined;
   return normalizeAgentRuntime(value);
 }
 
 function normalizeOptionalConfigInput(value: unknown) {
-  if (typeof value !== 'string') return undefined;
+  if (typeof value !== "string") return undefined;
   const trimmed = value.trim();
   return trimmed || undefined;
 }
 
 function assertChatStreamElicitationResolveInput(
-  input: unknown
+  input: unknown,
 ): ChatStreamElicitationResolveInput {
-  if (!input || typeof input !== 'object') {
-    throw new Error('Elicitation response is required.');
+  if (!input || typeof input !== "object") {
+    throw new Error("Elicitation response is required.");
   }
 
   const value = input as Partial<ChatStreamElicitationResolveInput>;
   return {
     elicitationId: assertString(
       value.elicitationId,
-      'Elicitation id is required.'
+      "Elicitation id is required.",
     ),
     response: assertChatElicitationResponse(value.response),
-    streamId: assertString(value.streamId, 'Stream id is required.'),
+    streamId: assertString(value.streamId, "Stream id is required."),
   };
 }
 
 function assertChatElicitationResponse(
-  response: unknown
+  response: unknown,
 ): ChatElicitationResponse {
-  if (!response || typeof response !== 'object') {
-    throw new Error('Elicitation response is required.');
+  if (!response || typeof response !== "object") {
+    throw new Error("Elicitation response is required.");
   }
 
   const value = response as Partial<ChatElicitationResponse>;
   switch (value.type) {
-    case 'allow':
-    case 'allowForSession':
-    case 'deny':
-    case 'cancel':
-    case 'externalComplete':
+    case "allow":
+    case "allowForSession":
+    case "deny":
+    case "cancel":
+    case "externalComplete":
       return { type: value.type };
-    case 'answers':
+    case "answers":
       if (!Array.isArray(value.answers)) {
-        throw new Error('Elicitation answers are required.');
+        throw new Error("Elicitation answers are required.");
       }
       return {
         answers: value.answers.map((answer) => {
-          if (!answer || typeof answer !== 'object') {
-            throw new Error('Elicitation answer is invalid.');
+          if (!answer || typeof answer !== "object") {
+            throw new Error("Elicitation answer is invalid.");
           }
           const answerValue = answer as { id?: unknown; value?: unknown };
           return {
-            id: assertString(answerValue.id, 'Answer id is required.'),
-            value: assertString(answerValue.value, 'Answer value is required.'),
+            id: assertString(answerValue.id, "Answer id is required."),
+            value: assertString(answerValue.value, "Answer value is required."),
           };
         }),
-        type: 'answers',
+        type: "answers",
       };
-    case 'dynamicToolResult':
-      if (typeof value.success !== 'boolean') {
-        throw new Error('Dynamic tool result success is required.');
+    case "dynamicToolResult":
+      if (typeof value.success !== "boolean") {
+        throw new Error("Dynamic tool result success is required.");
       }
-      return { success: value.success, type: 'dynamicToolResult' };
-    case 'raw':
+      return { success: value.success, type: "dynamicToolResult" };
+    case "raw":
       return {
-        type: 'raw',
-        value: assertString(value.value, 'Raw response value is required.'),
+        type: "raw",
+        value: assertString(value.value, "Raw response value is required."),
       };
     default:
-      throw new Error('Unsupported elicitation response.');
+      throw new Error("Unsupported elicitation response.");
   }
 }

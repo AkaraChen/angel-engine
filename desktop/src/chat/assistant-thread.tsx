@@ -2,15 +2,15 @@ import {
   AuiIf,
   SelectionToolbarPrimitive,
   ThreadPrimitive,
-} from '@assistant-ui/react';
-import { Quote, Sparkles } from 'lucide-react';
+} from "@assistant-ui/react";
+import { Quote, Sparkles } from "lucide-react";
 
-import { AssistantComposer } from '@/chat/assistant-composer';
+import { AssistantComposer } from "@/chat/assistant-composer";
 import {
   AssistantMessage,
   UserEditComposer,
   UserMessage,
-} from '@/chat/messages';
+} from "@/chat/messages";
 
 export function AssistantThread({ projectName }: { projectName?: string }) {
   return (
@@ -25,7 +25,7 @@ export function AssistantThread({ projectName }: { projectName?: string }) {
 
         <ThreadPrimitive.Messages>
           {({ message }) => {
-            if (message.role === 'user') {
+            if (message.role === "user") {
               if (message.composer.isEditing) return <UserEditComposer />;
               return <UserMessage />;
             }
@@ -60,13 +60,13 @@ function EmptyThread({ projectName }: { projectName?: string }) {
               Start a run in <ProjectNameUnderline name={projectName} />
             </>
           ) : (
-            'Start a desktop run'
+            "Start a desktop run"
           )}
         </h2>
         <p className="mt-1 text-sm text-muted-foreground">
           {projectName
             ? `Ask Angel Engine to inspect, patch, or test ${projectName}.`
-            : 'Describe the workspace slice to inspect.'}
+            : "Describe the workspace slice to inspect."}
         </p>
       </div>
     </div>

@@ -1,26 +1,26 @@
-import * as React from "react"
-import { Toast as ToastPrimitive } from "radix-ui"
-import { XIcon } from "lucide-react"
+import * as React from "react";
+import { Toast as ToastPrimitive } from "radix-ui";
+import { XIcon } from "lucide-react";
 
-import { cn } from "@/lib/utils"
+import { cn } from "@/lib/utils";
 
-type ToastVariant = "default" | "destructive"
+type ToastVariant = "default" | "destructive";
 
 type ToastMessage = {
-  id: string
-  title: string
-  description?: string
-  variant?: ToastVariant
-}
+  id: string;
+  title: string;
+  description?: string;
+  variant?: ToastVariant;
+};
 
-type ToastInput = Omit<ToastMessage, "id">
+type ToastInput = Omit<ToastMessage, "id">;
 
 const ToastContext = React.createContext<((toast: ToastInput) => void) | null>(
-  null
-)
+  null,
+);
 
 function ToastProvider({ children }: { children: React.ReactNode }) {
-  const [toasts, setToasts] = React.useState<ToastMessage[]>([])
+  const [toasts, setToasts] = React.useState<ToastMessage[]>([]);
 
   const toast = React.useCallback((input: ToastInput) => {
     setToasts((current) => [
@@ -29,12 +29,12 @@ function ToastProvider({ children }: { children: React.ReactNode }) {
         ...input,
         id: crypto.randomUUID(),
       },
-    ])
-  }, [])
+    ]);
+  }, []);
 
   const dismiss = React.useCallback((id: string) => {
-    setToasts((current) => current.filter((toast) => toast.id !== id))
-  }, [])
+    setToasts((current) => current.filter((toast) => toast.id !== id));
+  }, []);
 
   return (
     <ToastContext.Provider value={toast}>
@@ -45,11 +45,11 @@ function ToastProvider({ children }: { children: React.ReactNode }) {
             className={cn(
               "grid w-full max-w-sm gap-1 rounded-md border bg-popover p-3 text-popover-foreground shadow-lg data-closed:animate-out data-closed:fade-out-0 data-closed:slide-out-to-right-4 data-open:animate-in data-open:fade-in-0 data-open:slide-in-from-right-4",
               toast.variant === "destructive" &&
-                "border-destructive/40 text-destructive"
+                "border-destructive/40 text-destructive",
             )}
             key={toast.id}
             onOpenChange={(open) => {
-              if (!open) dismiss(toast.id)
+              if (!open) dismiss(toast.id);
             }}
           >
             <div className="flex items-start gap-3">
@@ -73,15 +73,15 @@ function ToastProvider({ children }: { children: React.ReactNode }) {
         <ToastPrimitive.Viewport className="fixed right-4 bottom-4 z-50 flex w-[calc(100vw-2rem)] max-w-sm flex-col gap-2 outline-none" />
       </ToastPrimitive.Provider>
     </ToastContext.Provider>
-  )
+  );
 }
 
 function useToast() {
-  const toast = React.useContext(ToastContext)
+  const toast = React.useContext(ToastContext);
   if (!toast) {
-    throw new Error("useToast must be used within ToastProvider.")
+    throw new Error("useToast must be used within ToastProvider.");
   }
-  return toast
+  return toast;
 }
 
-export { ToastProvider, useToast }
+export { ToastProvider, useToast };

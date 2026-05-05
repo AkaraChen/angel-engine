@@ -2,16 +2,12 @@ import {
   mutationOptions,
   queryOptions,
   type QueryClient,
-} from '@tanstack/react-query';
+} from "@tanstack/react-query";
 
-import type { ApiClient } from '@/requests/client';
-import { queryKeys } from '@/requests/keys';
-import type {
-  Chat,
-  ChatLoadResult,
-  ChatRuntimeConfig,
-} from '@/shared/chat';
-import type { Project } from '@/shared/projects';
+import type { ApiClient } from "@/requests/client";
+import { queryKeys } from "@/requests/keys";
+import type { Chat, ChatLoadResult, ChatRuntimeConfig } from "@/shared/chat";
+import type { Project } from "@/shared/projects";
 
 interface ChatListQueryParams {
   api: ApiClient;
@@ -41,7 +37,9 @@ interface CreateProjectChatMutationParams {
   runtime?: string;
 }
 
-type DeleteAllChatsResult = Awaited<ReturnType<ApiClient['chats']['deleteAll']>>;
+type DeleteAllChatsResult = Awaited<
+  ReturnType<ApiClient["chats"]["deleteAll"]>
+>;
 
 interface DeleteAllChatsMutationParams {
   api: ApiClient;
@@ -50,14 +48,14 @@ interface DeleteAllChatsMutationParams {
 }
 
 type ChatContextMenuResult = Awaited<
-  ReturnType<ApiClient['chats']['showContextMenu']>
+  ReturnType<ApiClient["chats"]["showContextMenu"]>
 >;
 
 interface ChatContextMenuMutationParams {
   api: ApiClient;
   onSuccess?: (
     data: ChatContextMenuResult,
-    variables: Chat
+    variables: Chat,
   ) => Promise<void> | void;
   queryClient: QueryClient;
 }
@@ -85,7 +83,7 @@ export function chatLoadQueryOptions({
     enabled: enabled && Boolean(chatId),
     queryFn: (): Promise<ChatLoadResult> => {
       if (!chatId) {
-        throw new Error('No chat selected');
+        throw new Error("No chat selected");
       }
       return api.chats.load(chatId);
     },
@@ -157,7 +155,7 @@ export function chatContextMenuMutationOptions({
   return mutationOptions({
     mutationFn: (chat: Chat) => api.chats.showContextMenu(chat.id),
     onSuccess: async (data, variables) => {
-      if (data === 'deleted') {
+      if (data === "deleted") {
         await invalidateChatQueries(queryClient);
       }
       await onSuccess?.(data, variables);
@@ -168,10 +166,10 @@ export function chatContextMenuMutationOptions({
 export async function invalidateChatQueries(queryClient: QueryClient) {
   await queryClient.invalidateQueries({
     queryKey: queryKeys.chats.all(),
-    refetchType: 'none',
+    refetchType: "none",
   });
   await queryClient.refetchQueries({
     queryKey: queryKeys.chats.list(),
-    type: 'active',
+    type: "active",
   });
 }

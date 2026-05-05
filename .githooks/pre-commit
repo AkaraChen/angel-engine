@@ -1,0 +1,25 @@
+#!/bin/sh
+set -eu
+
+ROOT="$(git rev-parse --show-toplevel)"
+cd "$ROOT"
+
+BEFORE="$(mktemp)"
+AFTER="$(mktemp)"
+trap 'rm -f "$BEFORE" "$AFTER"' EXIT
+
+git diff --binary >"$BEFORE"
+
+echo "Formatting Rust..."
+cargo fmt --all
+
+echo "Formatting desktop JS/TS..."
+npm --prefix desktop run format
+
+git diff --binary >"$AFTER"
+
+if ! cmp -s "$BEFORE" "$AFTER"; then
+  echo
+  echo "Formatting changed files. Review and stage them, then commit again."
+  exit 1
+fi

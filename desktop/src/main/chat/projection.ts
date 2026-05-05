@@ -8,7 +8,7 @@ import type {
   ElicitationSnapshot,
   TurnRunResult,
   TurnSnapshot,
-} from '@angel-engine/client-napi';
+} from "@angel-engine/client-napi";
 
 import type {
   ChatHistoryMessage,
@@ -17,8 +17,8 @@ import type {
   ChatRuntimeConfigOption,
   ChatStreamDelta,
   ChatToolAction,
-} from '../../shared/chat';
-import { appendChatTextPart, chatToolActionToPart } from '../../shared/chat';
+} from "../../shared/chat";
+import { appendChatTextPart, chatToolActionToPart } from "../../shared/chat";
 
 type ToolActionSnapshotLike = ActionSnapshot | DisplayToolActionSnapshot;
 
@@ -27,28 +27,28 @@ export type RawTurnStreamEvent =
   | {
       action: ActionSnapshot;
       messagePart?: DisplayMessagePartSnapshot;
-      type: 'actionObserved';
+      type: "actionObserved";
     }
   | {
       action: ActionSnapshot;
       messagePart?: DisplayMessagePartSnapshot;
-      type: 'actionUpdated';
+      type: "actionUpdated";
     }
   | {
       actionId: string;
       content: ActionOutputSnapshot;
       messagePart?: DisplayMessagePartSnapshot;
       turnId: string;
-      type: 'actionOutputDelta';
+      type: "actionOutputDelta";
     }
   | {
       elicitation: ElicitationSnapshot;
       messagePart?: DisplayMessagePartSnapshot;
-      type: 'elicitation';
+      type: "elicitation";
     };
 
 export function conversationMessages(
-  snapshot: ConversationSnapshot
+  snapshot: ConversationSnapshot,
 ): ChatHistoryMessage[] {
   return snapshot.messages
     .map(displayMessageToChatMessage)
@@ -56,45 +56,46 @@ export function conversationMessages(
 }
 
 function displayMessageToChatMessage(
-  message: DisplayMessageSnapshot
+  message: DisplayMessageSnapshot,
 ): ChatHistoryMessage {
   return {
     content: displayMessagePartsToChatParts(message.content),
     id: message.id,
     role:
-      message.role === 'user' || message.role === 'system'
+      message.role === "user" || message.role === "system"
         ? message.role
-        : 'assistant',
+        : "assistant",
   };
 }
 
 function displayMessagePartsToChatParts(
-  parts: DisplayMessagePartSnapshot[]
+  parts: DisplayMessagePartSnapshot[],
 ): ChatHistoryMessagePart[] {
   return parts.flatMap(displayMessagePartToChatParts);
 }
 
 function displayMessagePartToChatParts(
-  part: DisplayMessagePartSnapshot
+  part: DisplayMessagePartSnapshot,
 ): ChatHistoryMessagePart[] {
   switch (part.type) {
-    case 'reasoning':
-    case 'text':
+    case "reasoning":
+    case "text":
       return part.text?.trim() ? [{ text: part.text, type: part.type }] : [];
-    case 'tool-call':
-      return part.action ? [chatToolActionToPart(toChatAction(part.action))] : [];
+    case "tool-call":
+      return part.action
+        ? [chatToolActionToPart(toChatAction(part.action))]
+        : [];
     default:
-      return part.text?.trim() ? [{ text: part.text, type: 'text' }] : [];
+      return part.text?.trim() ? [{ text: part.text, type: "text" }] : [];
   }
 }
 
 export function runtimeConfigFromConversationSnapshot(
-  snapshot: ConversationSnapshot
+  snapshot: ConversationSnapshot,
 ): ChatRuntimeConfig {
   return {
     canSetReasoningEffort: snapshot.reasoning.canSet,
-    currentMode:
-      snapshot.context.mode ?? snapshot.modes?.currentModeId ?? null,
+    currentMode: snapshot.context.mode ?? snapshot.modes?.currentModeId ?? null,
     currentModel:
       snapshot.context.model ?? snapshot.models?.currentModelId ?? null,
     currentReasoningEffort: snapshot.reasoning.currentEffort ?? null,
@@ -103,13 +104,13 @@ export function runtimeConfigFromConversationSnapshot(
         description: mode.description,
         label: mode.name || mode.id,
         value: mode.id,
-      })) ?? optionsForConfig(snapshot, 'mode'),
+      })) ?? optionsForConfig(snapshot, "mode"),
     models:
       snapshot.models?.availableModels.map((model) => ({
         description: model.description,
         label: model.name || model.id,
         value: model.id,
-      })) ?? optionsForConfig(snapshot, 'model'),
+      })) ?? optionsForConfig(snapshot, "model"),
     reasoningEfforts: snapshot.reasoning.availableEfforts.map((effort) => ({
       label: labelFromConfigValue(effort),
       value: effort,
@@ -124,7 +125,7 @@ export function projectRunResult(result: TurnRunResult) {
       ? contentFromTurnSnapshot(result.turn, result.actions)
       : [];
   if (content.length === 0 && result.text.trim()) {
-    content.push({ text: result.text, type: 'text' });
+    content.push({ text: result.text, type: "text" });
   }
 
   return {
@@ -142,10 +143,8 @@ export function projectRunResult(result: TurnRunResult) {
 
 export function createTurnEventProjector(
   onEvent?: (
-    event:
-      | ChatStreamDelta
-      | { action: ChatToolAction; type: 'tool' }
-  ) => void
+    event: ChatStreamDelta | { action: ChatToolAction; type: "tool" },
+  ) => void,
 ) {
   const actions = new Map<string, ChatToolAction>();
   const parts: ChatHistoryMessagePart[] = [];
@@ -153,49 +152,47 @@ export function createTurnEventProjector(
   return {
     content() {
       return parts.map((part) =>
-        part.type === 'tool-call'
+        part.type === "tool-call"
           ? { ...part, artifact: cloneAction(part.artifact) }
-          : { ...part }
+          : { ...part },
       );
     },
     handle(event: RawTurnStreamEvent) {
-      const messagePart = 'messagePart' in event ? event.messagePart : undefined;
-      const turnId = 'turnId' in event ? event.turnId : undefined;
+      const messagePart =
+        "messagePart" in event ? event.messagePart : undefined;
+      const turnId = "turnId" in event ? event.turnId : undefined;
       if (messagePart && acceptDisplayMessagePart(messagePart, turnId)) {
         return;
       }
 
-      if (event.type === 'delta') {
+      if (event.type === "delta") {
         appendChatTextPart(parts, event.part, event.text);
         onEvent?.(event);
         return;
       }
 
-      if (
-        event.type === 'actionObserved' ||
-        event.type === 'actionUpdated'
-      ) {
+      if (event.type === "actionObserved" || event.type === "actionUpdated") {
         upsertAction(toChatAction(event.action));
         return;
       }
 
-      if (event.type === 'actionOutputDelta') {
+      if (event.type === "actionOutputDelta") {
         const current =
           actions.get(event.actionId) ??
           ({
             id: event.actionId,
-            kind: 'tool',
+            kind: "tool",
             output: [],
-            outputText: '',
-            phase: 'streamingResult',
-            title: 'Tool call',
+            outputText: "",
+            phase: "streamingResult",
+            title: "Tool call",
             turnId: event.turnId,
           } satisfies ChatToolAction);
         const output = [...(current.output ?? []), event.content];
         upsertAction({
           ...current,
           output,
-          outputText: output.map((item) => item.text).join(''),
+          outputText: output.map((item) => item.text).join(""),
         });
         return;
       }
@@ -206,16 +203,16 @@ export function createTurnEventProjector(
 
   function acceptDisplayMessagePart(
     part: DisplayMessagePartSnapshot,
-    turnId?: string
+    turnId?: string,
   ) {
-    if (part.type === 'text' || part.type === 'reasoning') {
-      const text = part.text ?? '';
+    if (part.type === "text" || part.type === "reasoning") {
+      const text = part.text ?? "";
       appendChatTextPart(parts, part.type, text);
-      onEvent?.({ part: part.type, text, turnId, type: 'delta' });
+      onEvent?.({ part: part.type, text, turnId, type: "delta" });
       return true;
     }
 
-    if (part.type === 'tool-call' && part.action) {
+    if (part.type === "tool-call" && part.action) {
       upsertAction(toChatAction(part.action));
       return true;
     }
@@ -230,20 +227,21 @@ export function createTurnEventProjector(
     actions.set(merged.id, merged);
     const part = chatToolActionToPart(merged);
     const index = parts.findIndex(
-      (item) => item.type === 'tool-call' && item.toolCallId === part.toolCallId
+      (item) =>
+        item.type === "tool-call" && item.toolCallId === part.toolCallId,
     );
     if (index === -1) {
       parts.push(part);
     } else {
       parts[index] = part;
     }
-    onEvent?.({ action: merged, type: 'tool' });
+    onEvent?.({ action: merged, type: "tool" });
   }
 }
 
 function mergeToolActions(
   previous: ChatToolAction,
-  next: ChatToolAction
+  next: ChatToolAction,
 ): ChatToolAction {
   const output = next.output?.length ? next.output : previous.output;
   return {
@@ -252,7 +250,7 @@ function mergeToolActions(
     error: next.error ?? previous.error,
     inputSummary: next.inputSummary ?? previous.inputSummary,
     kind:
-      next.kind && !(next.kind === 'tool' && previous.kind !== 'tool')
+      next.kind && !(next.kind === "tool" && previous.kind !== "tool")
         ? next.kind
         : previous.kind,
     output,
@@ -265,39 +263,41 @@ function mergeToolActions(
 
 function contentFromTurnSnapshot(
   turn: TurnSnapshot,
-  actions: ActionSnapshot[]
+  actions: ActionSnapshot[],
 ): ChatHistoryMessagePart[] {
   const parts: ChatHistoryMessagePart[] = [];
   appendChatTextPart(
     parts,
-    'reasoning',
+    "reasoning",
     [turn.reasoningText, turn.planText]
       .filter((text) => Boolean(text?.trim()))
-      .join('\n')
+      .join("\n"),
   );
   for (const action of actions) {
     parts.push(chatToolActionToPart(toChatAction(action)));
   }
-  appendChatTextPart(parts, 'text', turn.outputText ?? '');
+  appendChatTextPart(parts, "text", turn.outputText ?? "");
   return parts;
 }
 
 function optionsForConfig(
   snapshot: ConversationSnapshot,
-  category: string
+  category: string,
 ): ChatRuntimeConfigOption[] {
-  return snapshot.configOptions
-    .find((option) => option.category === category || option.id === category)
-    ?.values.filter((value) => value.value)
-    .map((value) => ({
-      description: value.description,
-      label: value.name || value.value,
-      value: value.value,
-    })) ?? [];
+  return (
+    snapshot.configOptions
+      .find((option) => option.category === category || option.id === category)
+      ?.values.filter((value) => value.value)
+      .map((value) => ({
+        description: value.description,
+        label: value.name || value.value,
+        value: value.value,
+      })) ?? []
+  );
 }
 
 function actionFromElicitation(
-  elicitation: ElicitationSnapshot
+  elicitation: ElicitationSnapshot,
 ): ChatToolAction {
   return {
     id: elicitation.id,
@@ -306,13 +306,13 @@ function actionFromElicitation(
       elicitation.questions
         .map((question) => question.question || question.header)
         .filter(Boolean)
-        .join('\n') ??
+        .join("\n") ??
       undefined,
-    kind: 'elicitation',
+    kind: "elicitation",
     output: [],
-    phase: 'awaitingDecision',
+    phase: "awaitingDecision",
     rawInput: JSON.stringify(elicitation),
-    title: elicitation.title ?? 'User input requested',
+    title: elicitation.title ?? "User input requested",
     turnId: elicitation.turnId ?? undefined,
   };
 }
@@ -341,11 +341,11 @@ function cloneAction(action: ChatToolAction): ChatToolAction {
 }
 
 function labelFromConfigValue(value: string) {
-  if (value === 'xhigh') return 'XHigh';
-  if (value === 'default') return 'Default';
+  if (value === "xhigh") return "XHigh";
+  if (value === "default") return "Default";
   return value
     .split(/[_\s-]+/)
     .filter(Boolean)
-    .map((part) => `${part[0]?.toUpperCase() ?? ''}${part.slice(1)}`)
-    .join(' ');
+    .map((part) => `${part[0]?.toUpperCase() ?? ""}${part.slice(1)}`)
+    .join(" ");
 }

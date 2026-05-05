@@ -2,28 +2,30 @@ import type {
   ChatStreamController,
   ChatSendInput,
   ChatStreamEvent,
-} from '@/shared/chat';
+} from "@/shared/chat";
 
 export async function* streamChatEvents(
   input: ChatSendInput,
   abortSignal: AbortSignal,
-  onController?: (controller: ChatStreamController) => void
+  onController?: (controller: ChatStreamController) => void,
 ) {
   const events = new AsyncEventQueue<ChatStreamEvent>();
-  const controller = window.chatStream.send(input, (event) => events.push(event));
-  const abort = () => events.push({ type: 'done' });
+  const controller = window.chatStream.send(input, (event) =>
+    events.push(event),
+  );
+  const abort = () => events.push({ type: "done" });
   onController?.(controller);
 
-  abortSignal.addEventListener('abort', abort, { once: true });
+  abortSignal.addEventListener("abort", abort, { once: true });
 
   try {
     while (!abortSignal.aborted) {
       const event = await events.next();
       yield event;
-      if (event.type === 'done') break;
+      if (event.type === "done") break;
     }
   } finally {
-    abortSignal.removeEventListener('abort', abort);
+    abortSignal.removeEventListener("abort", abort);
     controller.cancel();
   }
 }

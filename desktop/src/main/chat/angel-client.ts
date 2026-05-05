@@ -1,4 +1,4 @@
-import { createRequire } from 'node:module';
+import { createRequire } from "node:module";
 
 import type {
   ConversationSnapshot,
@@ -9,7 +9,7 @@ import type {
   SendTextRequest,
   TurnRunEvent,
   TurnRunResult,
-} from '@angel-engine/client-napi';
+} from "@angel-engine/client-napi";
 
 import type {
   Chat,
@@ -22,40 +22,42 @@ import type {
   ChatSendResult,
   ChatStreamDelta,
   ChatToolAction,
-} from '../../shared/chat';
+} from "../../shared/chat";
 import {
   createChat,
   renameChatFromPrompt,
   requireChat,
   setChatRemoteThreadId,
   touchChat,
-} from './repository';
+} from "./repository";
 import {
   conversationMessages,
   createTurnEventProjector,
   projectRunResult,
   runtimeConfigFromConversationSnapshot,
   type RawTurnStreamEvent,
-} from './projection';
+} from "./projection";
 
-type AngelClientModule = typeof import('@angel-engine/client-napi');
+type AngelClientModule = typeof import("@angel-engine/client-napi");
 type ChatStreamObserver = (
   event:
     | ChatStreamDelta
-    | { action: ChatToolAction; type: 'tool' }
-    | { chat: Chat; type: 'chat' }
+    | { action: ChatToolAction; type: "tool" }
+    | { chat: Chat; type: "chat" },
 ) => void;
 export type ChatStreamControls = {
   setResolveElicitation?: (
     handler: (
       elicitationId: string,
-      response: ChatElicitationResponse
-    ) => Promise<void>
+      response: ChatElicitationResponse,
+    ) => Promise<void>,
   ) => void;
 };
 
 const nodeRequire = createRequire(import.meta.url);
-const clientModule = nodeRequire('@angel-engine/client-napi') as AngelClientModule;
+const clientModule = nodeRequire(
+  "@angel-engine/client-napi",
+) as AngelClientModule;
 const { AngelSession: NativeAngelSession, createRuntimeOptions } = clientModule;
 
 const chatSessions = new Map<string, DesktopAngelSession>();
@@ -81,18 +83,20 @@ export async function loadChatSession(chatId: string): Promise<ChatLoadResult> {
   return {
     chat: updatedChat,
     config: runtimeConfigFromConversationSnapshot(
-      snapshot
+      snapshot,
     ) as ChatRuntimeConfig,
     messages,
   };
 }
 
 export async function inspectChatRuntimeConfig(
-  input: ChatRuntimeConfigInput
+  input: ChatRuntimeConfigInput,
 ): Promise<ChatRuntimeConfig> {
   const session = createChatSession(input.runtime);
   try {
-    return runtimeConfigFromConversationSnapshot(await session.inspect(input.cwd));
+    return runtimeConfigFromConversationSnapshot(
+      await session.inspect(input.cwd),
+    );
   } finally {
     session.close();
   }
@@ -102,11 +106,11 @@ export async function streamChat(
   input: ChatSendInput,
   onEvent?: ChatStreamObserver,
   abortSignal?: AbortSignal,
-  controls?: ChatStreamControls
+  controls?: ChatStreamControls,
 ): Promise<ChatSendResult> {
   const text = input.text.trim();
   if (!text) {
-    throw new Error('Chat text is required.');
+    throw new Error("Chat text is required.");
   }
 
   const isNewChat = !input.chatId;
@@ -118,7 +122,7 @@ export async function streamChat(
         runtime: input.runtime,
       });
   if (isNewChat) {
-    onEvent?.({ chat, type: 'chat' });
+    onEvent?.({ chat, type: "chat" });
   }
 
   const result = await getChatSession(chat).sendText({
@@ -177,9 +181,9 @@ function getChatSession(chat: Chat) {
 function createChatSession(runtime?: string): DesktopAngelSession {
   return new DesktopAngelSession(
     createRuntimeOptions(runtime, {
-      clientName: 'angel-engine-desktop',
-      clientTitle: 'Angel Engine Desktop',
-    }) as RuntimeOptions
+      clientName: "angel-engine-desktop",
+      clientTitle: "Angel Engine Desktop",
+    }) as RuntimeOptions,
   );
 }
 
@@ -203,8 +207,8 @@ type DesktopSendTextRequest = SendTextRequest & {
   onResolveElicitation?: (
     handler: (
       elicitationId: string,
-      response: ChatElicitationResponse
-    ) => Promise<void>
+      response: ChatElicitationResponse,
+    ) => Promise<void>,
   ) => void;
   signal?: AbortSignal;
 };
@@ -225,7 +229,7 @@ class DesktopAngelSession {
 
   close(): void {
     for (const pending of this.pendingElicitations.values()) {
-      pending.reject(new Error('Chat session closed.'));
+      pending.reject(new Error("Chat session closed."));
     }
     this.pendingElicitations.clear();
     this.session.close();
@@ -241,7 +245,7 @@ class DesktopAngelSession {
 
   inspect(cwd?: string | InspectRequest): Promise<ConversationSnapshot> {
     const request: InspectRequest =
-      typeof cwd === 'string' ? { cwd } : (cwd ?? {});
+      typeof cwd === "string" ? { cwd } : (cwd ?? {});
     return this.enqueue(() => this.session.inspect(request));
   }
 
@@ -250,16 +254,16 @@ class DesktopAngelSession {
   }
 
   private async sendTextNow(
-    request: DesktopSendTextRequest
+    request: DesktopSendTextRequest,
   ): Promise<TurnRunResult> {
-    const text = String(request.text || '').trim();
+    const text = String(request.text || "").trim();
     if (!text) {
-      throw new Error('Text is required.');
+      throw new Error("Text is required.");
     }
 
     throwIfAborted(request.signal);
     request.onResolveElicitation?.((elicitationId, response) =>
-      this.resolveElicitationNow(elicitationId, response)
+      this.resolveElicitationNow(elicitationId, response),
     );
 
     let events = await this.session.startTextTurn({
@@ -290,40 +294,40 @@ class DesktopAngelSession {
 
   private async dispatchEvents(
     events: TurnRunEvent[],
-    request: DesktopSendTextRequest
+    request: DesktopSendTextRequest,
   ): Promise<TurnRunResult | undefined> {
     for (const event of events) {
-      if (event.type === 'delta' && event.part && event.text !== undefined) {
+      if (event.type === "delta" && event.part && event.text !== undefined) {
         request.onEvent?.({
           messagePart: event.messagePart,
           part: event.part,
           text: event.text,
           turnId: event.turnId,
-          type: 'delta',
+          type: "delta",
         });
         continue;
       }
 
-      if (event.type === 'actionObserved' && event.action) {
+      if (event.type === "actionObserved" && event.action) {
         request.onEvent?.({
           action: event.action,
           messagePart: event.messagePart,
-          type: 'actionObserved',
+          type: "actionObserved",
         });
         continue;
       }
 
-      if (event.type === 'actionUpdated' && event.action) {
+      if (event.type === "actionUpdated" && event.action) {
         request.onEvent?.({
           action: event.action,
           messagePart: event.messagePart,
-          type: 'actionUpdated',
+          type: "actionUpdated",
         });
         continue;
       }
 
       if (
-        event.type === 'actionOutputDelta' &&
+        event.type === "actionOutputDelta" &&
         event.actionId &&
         event.content &&
         event.turnId
@@ -333,27 +337,27 @@ class DesktopAngelSession {
           content: event.content,
           messagePart: event.messagePart,
           turnId: event.turnId,
-          type: 'actionOutputDelta',
+          type: "actionOutputDelta",
         });
         continue;
       }
 
-      if (event.type === 'elicitation' && event.elicitation) {
+      if (event.type === "elicitation" && event.elicitation) {
         request.onEvent?.({
           elicitation: event.elicitation,
           messagePart: event.messagePart,
-          type: 'elicitation',
+          type: "elicitation",
         });
         const followup = await this.waitForElicitation(
           event.elicitation.id,
-          request.signal
+          request.signal,
         );
         const result = await this.dispatchEvents(followup, request);
         if (result) return result;
         continue;
       }
 
-      if (event.type === 'result' && event.result) {
+      if (event.type === "result" && event.result) {
         return event.result;
       }
     }
@@ -365,24 +369,26 @@ class DesktopAngelSession {
     const run = this.operationQueue.then(action);
     this.operationQueue = run.then(
       (): undefined => undefined,
-      (): undefined => undefined
+      (): undefined => undefined,
     );
     return run;
   }
 
   private waitForElicitation(
     elicitationId: string,
-    signal?: AbortSignal
+    signal?: AbortSignal,
   ): Promise<TurnRunEvent[]> {
     if (!elicitationId) {
-      return Promise.reject(new Error('Runtime opened an invalid elicitation.'));
+      return Promise.reject(
+        new Error("Runtime opened an invalid elicitation."),
+      );
     }
     return this.preparePendingElicitation(elicitationId, signal).promise;
   }
 
   private preparePendingElicitation(
     elicitationId: string,
-    signal?: AbortSignal
+    signal?: AbortSignal,
   ): PendingElicitation {
     const existing = this.pendingElicitations.get(elicitationId);
     if (existing) return existing;
@@ -396,7 +402,7 @@ class DesktopAngelSession {
         rejectPending(abortError(signal));
       };
       cleanup = (): void => {
-        signal?.removeEventListener?.('abort', abort);
+        signal?.removeEventListener?.("abort", abort);
         this.pendingElicitations.delete(elicitationId);
       };
       resolvePending = (events: TurnRunEvent[] = []): void => {
@@ -407,7 +413,7 @@ class DesktopAngelSession {
         cleanup();
         reject(error);
       };
-      signal?.addEventListener?.('abort', abort, { once: true });
+      signal?.addEventListener?.("abort", abort, { once: true });
     });
 
     const pending = {
@@ -424,19 +430,19 @@ class DesktopAngelSession {
 
   private async resolveElicitationNow(
     elicitationId: string,
-    response: ChatElicitationResponse
+    response: ChatElicitationResponse,
   ) {
     const pending = this.pendingElicitations.get(elicitationId);
     if (!pending) {
-      throw new Error('Chat stream is not waiting for this user input.');
+      throw new Error("Chat stream is not waiting for this user input.");
     }
 
     try {
       pending.resolve(
         await this.session.resolveElicitation(
           elicitationId,
-          response as ElicitationResponse
-        )
+          response as ElicitationResponse,
+        ),
       );
     } catch (error) {
       pending.reject(error instanceof Error ? error : new Error(String(error)));
@@ -446,7 +452,7 @@ class DesktopAngelSession {
 
   private async cancelNativeTurn() {
     for (const pending of this.pendingElicitations.values()) {
-      pending.reject(new Error('Chat request cancelled.'));
+      pending.reject(new Error("Chat request cancelled."));
     }
     this.pendingElicitations.clear();
     return this.session.cancelTurn();
@@ -463,8 +469,8 @@ function abortError(signal?: AbortSignal) {
   if (signal?.reason instanceof Error) {
     return signal.reason;
   }
-  const error = new Error('Chat request cancelled.');
-  error.name = 'AbortError';
+  const error = new Error("Chat request cancelled.");
+  error.name = "AbortError";
   return error;
 }
 
@@ -472,4 +478,7 @@ function yieldToEventLoop() {
   return new Promise<void>((resolve) => setTimeout(resolve, 0));
 }
 
-export type { ChatRuntimeConfig as EngineRuntimeConfig, TurnRunResult as RunTurnResult };
+export type {
+  ChatRuntimeConfig as EngineRuntimeConfig,
+  TurnRunResult as RunTurnResult,
+};

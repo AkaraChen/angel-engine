@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   useExternalStoreRuntime,
   type AppendMessage,
@@ -6,9 +6,9 @@ import {
   type ExternalStoreAdapter,
   type MessageStatus,
   type ThreadMessage,
-} from '@assistant-ui/react';
+} from "@assistant-ui/react";
 
-import { streamChatEvents } from '@/lib/chat-stream';
+import { streamChatEvents } from "@/lib/chat-stream";
 import type {
   Chat,
   ChatHistoryMessage,
@@ -19,21 +19,21 @@ import type {
   ChatSendInput,
   ChatSendResult,
   ChatToolAction,
-} from '@/shared/chat';
+} from "@/shared/chat";
 import {
   appendChatTextPart,
   chatPartsText,
   chatToolActionToPart,
   cloneChatHistoryPart,
   isChatToolAction,
-} from '@/shared/chat';
+} from "@/shared/chat";
 
 const STREAM_FLUSH_MIN_CHARS = 24;
 const STREAM_FLUSH_MAX_MS = 80;
 
 type EngineMessage = ThreadMessage;
 type EngineRuntimeAdapters = NonNullable<
-  ExternalStoreAdapter<EngineMessage>['adapters']
+  ExternalStoreAdapter<EngineMessage>["adapters"]
 >;
 
 export type EngineRuntimeOptions = {
@@ -47,7 +47,7 @@ export type EngineRuntimeOptions = {
   onChatUpdated?: (
     chat: Chat,
     messages?: ChatHistoryMessage[],
-    config?: ChatRuntimeConfig
+    config?: ChatRuntimeConfig,
   ) => void;
   projectId?: string | null;
   projectPath?: string;
@@ -93,7 +93,7 @@ export function useEngineRuntime({
 }: EngineRuntimeOptions): AssistantRuntime {
   const [isRunning, setIsRunning] = useState(false);
   const [messages, setMessages] = useState<EngineMessage[]>(() =>
-    historyMessages.map(historyMessageToEngineMessage)
+    historyMessages.map(historyMessageToEngineMessage),
   );
   const activeRunRef = useRef<ActiveRun | null>(null);
   const latestOptionsRef = useRef({
@@ -137,10 +137,12 @@ export function useEngineRuntime({
   const replaceAssistantMessage = useCallback(
     (assistantMessageId: string, message: EngineMessage) => {
       setMessages((current) =>
-        current.map((item) => (item.id === assistantMessageId ? message : item))
+        current.map((item) =>
+          item.id === assistantMessageId ? message : item,
+        ),
       );
     },
-    []
+    [],
   );
 
   const cancelRun = useCallback(async () => {
@@ -161,7 +163,7 @@ export function useEngineRuntime({
         response,
       });
     },
-    []
+    [],
   );
 
   const runMessage = useCallback(
@@ -175,8 +177,11 @@ export function useEngineRuntime({
         previousRun.abortController.abort();
       }
 
-      const assistantMessageId = createId('assistant');
-      const userMessage = appendMessageToEngineMessage(message, createId('user'));
+      const assistantMessageId = createId("assistant");
+      const userMessage = appendMessageToEngineMessage(
+        message,
+        createId("user"),
+      );
       const startedAt = performance.now();
       const activeRun: ActiveRun = {
         abortController: new AbortController(),
@@ -190,12 +195,12 @@ export function useEngineRuntime({
       const accumulator: AssistantAccumulator = {
         chunkCount: 0,
         parts: [],
-        status: { type: 'running' },
+        status: { type: "running" },
       };
       const assistantMessage = createAssistantMessage(
         assistantMessageId,
         accumulator,
-        startedAt
+        startedAt,
       );
       const baseMessages = messages;
       let completion: RunCompletion | undefined;
@@ -235,11 +240,11 @@ export function useEngineRuntime({
             userMessage,
             completion.assistantMessage,
           ]),
-          completion.result.config
+          completion.result.config,
         );
       }
     },
-    [messages, replaceAssistantMessage]
+    [messages, replaceAssistantMessage],
   );
 
   const store = useMemo<ExternalStoreAdapter<EngineMessage>>(
@@ -251,7 +256,7 @@ export function useEngineRuntime({
       onResumeToolCall: resumeToolCall,
       onNew: runMessage,
     }),
-    [adapters, cancelRun, isRunning, messages, resumeToolCall, runMessage]
+    [adapters, cancelRun, isRunning, messages, resumeToolCall, runMessage],
   );
 
   return useExternalStoreRuntime(store);
@@ -270,7 +275,7 @@ async function consumeRunStream({
   onChatCreated?: (chat: Chat) => void;
   replaceAssistantMessage: (
     assistantMessageId: string,
-    message: EngineMessage
+    message: EngineMessage,
   ) => void;
 }): Promise<RunCompletion> {
   let dirty = false;
@@ -279,7 +284,7 @@ async function consumeRunStream({
   let currentAssistantMessage = createAssistantMessage(
     activeRun.assistantMessageId,
     accumulator,
-    activeRun.startedAt
+    activeRun.startedAt,
   );
 
   const flush = async () => {
@@ -288,12 +293,9 @@ async function consumeRunStream({
     const nextAssistantMessage = createAssistantMessage(
       activeRun.assistantMessageId,
       accumulator,
-      activeRun.startedAt
+      activeRun.startedAt,
     );
-    replaceAssistantMessage(
-      activeRun.assistantMessageId,
-      nextAssistantMessage
-    );
+    replaceAssistantMessage(activeRun.assistantMessageId, nextAssistantMessage);
     currentAssistantMessage = nextAssistantMessage;
     dirty = false;
     pendingDeltaChars = 0;
@@ -307,29 +309,29 @@ async function consumeRunStream({
       activeRun.abortController.signal,
       (controller) => {
         activeRun.streamController = controller;
-      }
+      },
     )) {
       if (activeRun.cancelled) break;
 
-      if (event.type === 'done') break;
+      if (event.type === "done") break;
 
-      if (event.type === 'chat') {
+      if (event.type === "chat") {
         activeRun.chatId = event.chat.id;
         onChatCreated?.(event.chat);
         continue;
       }
 
-      if (event.type === 'error') {
+      if (event.type === "error") {
         accumulator.error = event.message;
         accumulator.status = {
           error: event.message,
-          reason: 'error',
-          type: 'incomplete',
+          reason: "error",
+          type: "incomplete",
         };
         accumulator.parts = [
           {
             text: `Backend chat failed: ${event.message}`,
-            type: 'text',
+            type: "text",
           },
         ];
         dirty = true;
@@ -337,7 +339,7 @@ async function consumeRunStream({
         break;
       }
 
-      if (event.type === 'result') {
+      if (event.type === "result") {
         accumulator.result = event.result;
         if (accumulator.parts.length === 0) {
           accumulator.parts = event.result.content.map(cloneChatHistoryPart);
@@ -348,7 +350,7 @@ async function consumeRunStream({
       }
 
       accumulator.chunkCount += 1;
-      if (event.type === 'tool') {
+      if (event.type === "tool") {
         upsertToolActionPart(accumulator.parts, event.action);
       } else {
         appendChatTextPart(accumulator.parts, event.part, event.text);
@@ -366,13 +368,13 @@ async function consumeRunStream({
     }
 
     accumulator.status = activeRun.cancelled
-      ? { reason: 'cancelled', type: 'incomplete' }
-      : { reason: 'stop', type: 'complete' };
+      ? { reason: "cancelled", type: "incomplete" }
+      : { reason: "stop", type: "complete" };
     dirty = true;
     await flush();
   } catch (error) {
     if (activeRun.abortController.signal.aborted) {
-      accumulator.status = { reason: 'cancelled', type: 'incomplete' };
+      accumulator.status = { reason: "cancelled", type: "incomplete" };
       dirty = true;
       await flush();
       return {
@@ -383,11 +385,15 @@ async function consumeRunStream({
 
     const message = getErrorMessage(error);
     accumulator.error = message;
-    accumulator.status = { error: message, reason: 'error', type: 'incomplete' };
+    accumulator.status = {
+      error: message,
+      reason: "error",
+      type: "incomplete",
+    };
     accumulator.parts = [
       {
         text: `Backend chat failed: ${message}`,
-        type: 'text',
+        type: "text",
       },
     ];
     dirty = true;
@@ -402,11 +408,12 @@ async function consumeRunStream({
 
 function upsertToolActionPart(
   parts: ChatHistoryMessagePart[],
-  action: ChatToolAction
+  action: ChatToolAction,
 ) {
   const nextPart = chatToolActionToPart(action);
   const index = parts.findIndex(
-    (part) => part.type === 'tool-call' && part.toolCallId === nextPart.toolCallId
+    (part) =>
+      part.type === "tool-call" && part.toolCallId === nextPart.toolCallId,
   );
 
   if (index === -1) {
@@ -418,40 +425,40 @@ function upsertToolActionPart(
 }
 
 function normalizeElicitationResponse(
-  payload: unknown
+  payload: unknown,
 ): ChatElicitationResponse | undefined {
-  if (!payload || typeof payload !== 'object') return undefined;
+  if (!payload || typeof payload !== "object") return undefined;
   const response = payload as Partial<ChatElicitationResponse>;
 
   switch (response.type) {
-    case 'allow':
-    case 'allowForSession':
-    case 'deny':
-    case 'cancel':
-    case 'externalComplete':
+    case "allow":
+    case "allowForSession":
+    case "deny":
+    case "cancel":
+    case "externalComplete":
       return { type: response.type };
-    case 'answers':
+    case "answers":
       return Array.isArray(response.answers)
         ? {
             answers: response.answers
               .filter(
                 (answer) =>
                   answer &&
-                  typeof answer === 'object' &&
-                  typeof answer.id === 'string' &&
-                  typeof answer.value === 'string'
+                  typeof answer === "object" &&
+                  typeof answer.id === "string" &&
+                  typeof answer.value === "string",
               )
               .map((answer) => ({ id: answer.id, value: answer.value })),
-            type: 'answers',
+            type: "answers",
           }
         : undefined;
-    case 'dynamicToolResult':
-      return typeof response.success === 'boolean'
-        ? { success: response.success, type: 'dynamicToolResult' }
+    case "dynamicToolResult":
+      return typeof response.success === "boolean"
+        ? { success: response.success, type: "dynamicToolResult" }
         : undefined;
-    case 'raw':
-      return typeof response.value === 'string'
-        ? { type: 'raw', value: response.value }
+    case "raw":
+      return typeof response.value === "string"
+        ? { type: "raw", value: response.value }
         : undefined;
     default:
       return undefined;
@@ -461,11 +468,11 @@ function normalizeElicitationResponse(
 function createAssistantMessage(
   id: string,
   accumulator: AssistantAccumulator,
-  startedAt: number
+  startedAt: number,
 ): EngineMessage {
-  const text = chatPartsText(accumulator.parts, 'text');
+  const text = chatPartsText(accumulator.parts, "text");
   const toolCallCount = accumulator.parts.filter(
-    (part) => part.type === 'tool-call'
+    (part) => part.type === "tool-call",
   ).length;
 
   return {
@@ -474,7 +481,7 @@ function createAssistantMessage(
     id,
     metadata: {
       custom: {
-        model: accumulator.result?.model ?? 'angel-engine-client',
+        model: accumulator.result?.model ?? "angel-engine-client",
         turnId: accumulator.result?.turnId,
       },
       steps: [],
@@ -489,14 +496,14 @@ function createAssistantMessage(
       unstable_data: [],
       unstable_state: null,
     },
-    role: 'assistant',
+    role: "assistant",
     status: accumulator.status,
   };
 }
 
 function appendMessageToEngineMessage(
   message: AppendMessage,
-  id: string
+  id: string,
 ): EngineMessage {
   return {
     ...message,
@@ -510,13 +517,15 @@ function appendMessageToEngineMessage(
   } as EngineMessage;
 }
 
-function historyMessageToEngineMessage(message: ChatHistoryMessage): EngineMessage {
+function historyMessageToEngineMessage(
+  message: ChatHistoryMessage,
+): EngineMessage {
   const createdAt = message.createdAt ? new Date(message.createdAt) : undefined;
   const normalizedCreatedAt =
     createdAt && Number.isFinite(createdAt.getTime()) ? createdAt : new Date();
   const content = message.content.map(cloneChatHistoryPart);
 
-  if (message.role === 'assistant') {
+  if (message.role === "assistant") {
     return {
       content,
       createdAt: normalizedCreatedAt,
@@ -528,10 +537,10 @@ function historyMessageToEngineMessage(message: ChatHistoryMessage): EngineMessa
         unstable_data: [],
         unstable_state: null,
       },
-      role: 'assistant',
+      role: "assistant",
       status: {
-        reason: 'stop',
-        type: 'complete',
+        reason: "stop",
+        type: "complete",
       },
     } as EngineMessage;
   }
@@ -539,8 +548,8 @@ function historyMessageToEngineMessage(message: ChatHistoryMessage): EngineMessa
   return {
     attachments: [],
     content:
-      message.role === 'system'
-        ? [{ text: chatPartsText(content, 'text'), type: 'text' }]
+      message.role === "system"
+        ? [{ text: chatPartsText(content, "text"), type: "text" }]
         : content,
     createdAt: normalizedCreatedAt,
     id: message.id,
@@ -552,14 +561,16 @@ function historyMessageToEngineMessage(message: ChatHistoryMessage): EngineMessa
 }
 
 function engineMessagesToHistoryMessages(
-  messages: EngineMessage[]
+  messages: EngineMessage[],
 ): ChatHistoryMessage[] {
   return messages
     .map(engineMessageToHistoryMessage)
     .filter((message) => message.content.length > 0);
 }
 
-function engineMessageToHistoryMessage(message: EngineMessage): ChatHistoryMessage {
+function engineMessageToHistoryMessage(
+  message: EngineMessage,
+): ChatHistoryMessage {
   return {
     content: engineMessageContentToHistoryParts(message.content),
     createdAt: message.createdAt?.toISOString(),
@@ -569,14 +580,14 @@ function engineMessageToHistoryMessage(message: EngineMessage): ChatHistoryMessa
 }
 
 function engineMessageContentToHistoryParts(
-  content: ThreadMessage['content']
+  content: ThreadMessage["content"],
 ): ChatHistoryMessagePart[] {
   return content.flatMap((part) => {
     switch (part.type) {
-      case 'reasoning':
-      case 'text':
+      case "reasoning":
+      case "text":
         return part.text.trim() ? [{ ...part }] : [];
-      case 'tool-call':
+      case "tool-call":
         return isChatToolAction(part.artifact)
           ? [cloneChatHistoryPart(chatToolActionToPart(part.artifact))]
           : [];
@@ -586,15 +597,15 @@ function engineMessageContentToHistoryParts(
   });
 }
 
-function getMessageText(message: Pick<ThreadMessage, 'content'>) {
+function getMessageText(message: Pick<ThreadMessage, "content">) {
   return message.content
-    .map((part) => (part.type === 'text' ? part.text : ''))
-    .join('\n')
+    .map((part) => (part.type === "text" ? part.text : ""))
+    .join("\n")
     .trim();
 }
 
 function yieldToRendererTask() {
-  if (typeof MessageChannel === 'function') {
+  if (typeof MessageChannel === "function") {
     return new Promise<void>((resolve) => {
       const channel = new MessageChannel();
       channel.port1.onmessage = () => {

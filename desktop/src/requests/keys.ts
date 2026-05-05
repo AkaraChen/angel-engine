@@ -1,16 +1,16 @@
 export const queryKeys = {
   chats: {
-    all: () => ['chats'] as const,
-    detail: (id: string | null) => ['chats', 'detail', id] as const,
-    details: () => ['chats', 'detail'] as const,
-    list: () => ['chats', 'list'] as const,
+    all: () => ["chats"] as const,
+    detail: (id: string | null) => ["chats", "detail", id] as const,
+    details: () => ["chats", "detail"] as const,
+    list: () => ["chats", "list"] as const,
     runtimeConfig: (runtime: string | null, cwd: string | null) =>
-      ['chats', 'runtime-config', runtime, cwd] as const,
+      ["chats", "runtime-config", runtime, cwd] as const,
   },
   projects: {
-    all: () => ['projects'] as const,
-    detail: (id: string | null) => ['projects', 'detail', id] as const,
-    details: () => ['projects', 'detail'] as const,
-    list: () => ['projects', 'list'] as const,
+    all: () => ["projects"] as const,
+    detail: (id: string | null) => ["projects", "detail", id] as const,
+    details: () => ["projects", "detail"] as const,
+    list: () => ["projects", "list"] as const,
   },
 } as const;

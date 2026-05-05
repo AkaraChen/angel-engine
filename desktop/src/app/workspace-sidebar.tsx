@@ -1,6 +1,6 @@
-import { useEffect, useState, type ReactNode } from 'react';
-import { AnimatePresence, motion } from 'framer-motion';
-import type { HTMLMotionProps, Transition } from 'framer-motion';
+import { useEffect, useState, type ReactNode } from "react";
+import { AnimatePresence, motion } from "framer-motion";
+import type { HTMLMotionProps, Transition } from "framer-motion";
 import {
   ChevronRight,
   Folder,
@@ -11,9 +11,9 @@ import {
   Plus,
   RefreshCw,
   Settings,
-} from 'lucide-react';
+} from "lucide-react";
 
-import { Button } from '@/components/ui/button';
+import { Button } from "@/components/ui/button";
 import {
   Sidebar,
   SidebarContent,
@@ -28,18 +28,16 @@ import {
   SidebarMenuSub,
   SidebarMenuSubButton,
   SidebarMenuSubItem,
-} from '@/components/ui/sidebar';
-import { cn } from '@/lib/utils';
-import type { Chat } from '@/shared/chat';
-import type { Project } from '@/shared/projects';
+} from "@/components/ui/sidebar";
+import { cn } from "@/lib/utils";
+import type { Chat } from "@/shared/chat";
+import type { Project } from "@/shared/projects";
 
-const primaryItems = [
-  { label: 'New chat', icon: MessageSquarePlus },
-];
+const primaryItems = [{ label: "New chat", icon: MessageSquarePlus }];
 
 const sidebarMotion = {
   duration: 0.16,
-  ease: 'easeOut',
+  ease: "easeOut",
 } satisfies Transition;
 
 type MaybeAsync = void | Promise<void>;
@@ -82,7 +80,7 @@ export function WorkspaceSidebar({
   standaloneChats: Chat[];
 }) {
   const [expandedProjectIds, setExpandedProjectIds] = useState<Set<string>>(
-    () => new Set(projects.map((project) => project.id))
+    () => new Set(projects.map((project) => project.id)),
   );
 
   useEffect(() => {
@@ -123,10 +121,7 @@ export function WorkspaceSidebar({
 
   return (
     <Sidebar variant="inset">
-      <SidebarHeader
-        className="px-2 pb-2 pt-2"
-        data-electron-drag
-      >
+      <SidebarHeader className="px-2 pb-2 pt-2" data-electron-drag>
         {isMacOS ? <div aria-hidden className="h-8 shrink-0" /> : null}
 
         <SidebarMenu className="gap-1">
@@ -134,7 +129,7 @@ export function WorkspaceSidebar({
             <AnimatedSidebarMenuItem key={label}>
               <MacSidebarMenuButton
                 onClick={
-                  label === 'New chat'
+                  label === "New chat"
                     ? () => void onCreateStandaloneChat()
                     : undefined
                 }
@@ -210,7 +205,7 @@ export function WorkspaceSidebar({
 
                 {projects.map((project) => {
                   const projectDisplayName = getProjectDisplayName(
-                    project.path
+                    project.path,
                   );
                   const projectChats =
                     projectChatsByProjectId.get(project.id) ?? [];
@@ -262,7 +257,7 @@ export function WorkspaceSidebar({
                       <AnimatePresence initial={false}>
                         {hasChats && isExpanded ? (
                           <motion.div
-                            animate={{ height: 'auto', opacity: 1 }}
+                            animate={{ height: "auto", opacity: 1 }}
                             className="overflow-hidden"
                             exit={{ height: 0, opacity: 0 }}
                             initial={{ height: 0, opacity: 0 }}
@@ -370,7 +365,7 @@ function AnimatedSidebarMenuItem({
   return (
     <motion.li
       animate="visible"
-      className={cn('group/menu-item relative', className)}
+      className={cn("group/menu-item relative", className)}
       data-sidebar="menu-item"
       data-slot="sidebar-menu-item"
       exit={{ opacity: 0 }}
@@ -411,13 +406,13 @@ function MacSidebarMenuButton({
   children,
   className,
   isActive,
-  type = 'button',
+  type = "button",
   ...props
-}: HTMLMotionProps<'button'> & { isActive?: boolean }) {
+}: HTMLMotionProps<"button"> & { isActive?: boolean }) {
   return (
     <SidebarMenuButton asChild isActive={isActive}>
       <motion.button
-        className={cn('relative', className)}
+        className={cn("relative", className)}
         transition={sidebarMotion}
         type={type}
         {...props}
@@ -432,13 +427,13 @@ function MacSidebarMenuSubButton({
   children,
   className,
   isActive,
-  type = 'button',
+  type = "button",
   ...props
-}: HTMLMotionProps<'button'> & { isActive?: boolean }) {
+}: HTMLMotionProps<"button"> & { isActive?: boolean }) {
   return (
     <SidebarMenuSubButton asChild isActive={isActive}>
       <motion.button
-        className={cn('relative', className)}
+        className={cn("relative", className)}
         transition={sidebarMotion}
         type={type}
         {...props}
@@ -453,9 +448,9 @@ function MacSidebarMenuAction({
   children,
   className,
   showOnHover,
-  type = 'button',
+  type = "button",
   ...props
-}: HTMLMotionProps<'button'> & { showOnHover?: boolean }) {
+}: HTMLMotionProps<"button"> & { showOnHover?: boolean }) {
   return (
     <SidebarMenuAction asChild showOnHover={showOnHover}>
       <motion.button
