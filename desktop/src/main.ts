@@ -1,4 +1,5 @@
 import { app, BrowserWindow } from "electron";
+import { execFileSync } from "node:child_process";
 import path from "node:path";
 import started from "electron-squirrel-startup";
 import { registerIpcMain } from "@egoist/tipc/main";
@@ -13,6 +14,39 @@ const isMacOS = process.platform === "darwin";
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
 if (started) {
   app.quit();
+}
+
+restoreShellPath();
+
+function restoreShellPath() {
+  if (!isMacOS) {
+    return;
+  }
+
+  try {
+    const shell = process.env.SHELL || "/bin/zsh";
+    const shellPath = execFileSync(shell, ["-l", "-c", 'printf %s "$PATH"'], {
+      encoding: "utf8",
+      timeout: 5000,
+    });
+    process.env.PATH = mergePathEntries(shellPath, process.env.PATH);
+  } catch {
+    process.env.PATH = mergePathEntries(
+      process.env.PATH,
+      "/opt/homebrew/bin:/opt/homebrew/sbin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin",
+      `${process.env.HOME ?? ""}/.local/bin`,
+      `${process.env.HOME ?? ""}/.2code/bin`,
+    );
+  }
+}
+
+function mergePathEntries(...paths: Array<string | undefined>) {
+  const entries = paths
+    .flatMap((value) => value?.split(":") ?? [])
+    .map((entry) => entry.trim())
+    .filter(Boolean);
+
+  return Array.from(new Set(entries)).join(":");
 }
 
 const createWindow = () => {
@@ -46,14 +80,12 @@ const createWindow = () => {
   // and load the index.html of the app.
   if (MAIN_WINDOW_VITE_DEV_SERVER_URL) {
     mainWindow.loadURL(MAIN_WINDOW_VITE_DEV_SERVER_URL);
+    mainWindow.webContents.openDevTools();
   } else {
     mainWindow.loadFile(
       path.join(__dirname, `../renderer/${MAIN_WINDOW_VITE_NAME}/index.html`),
     );
   }
-
-  // Open the DevTools.
-  mainWindow.webContents.openDevTools();
 };
 
 // This method will be called when Electron has finished

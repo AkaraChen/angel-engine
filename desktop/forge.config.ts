@@ -1,3 +1,5 @@
+import fs from "node:fs";
+import path from "node:path";
 import type { ForgeConfig } from "@electron-forge/shared-types";
 import { MakerSquirrel } from "@electron-forge/maker-squirrel";
 import { MakerZIP } from "@electron-forge/maker-zip";
@@ -8,7 +10,62 @@ import { VitePlugin } from "@electron-forge/plugin-vite";
 import { FusesPlugin } from "@electron-forge/plugin-fuses";
 import { FuseV1Options, FuseVersion } from "@electron/fuses";
 
+const nativeRuntimeModules = ["better-sqlite3", "bindings", "file-uri-to-path"];
+
+const projectRoot = __dirname;
+
+function copyRuntimePath(buildPath: string, relativePath: string) {
+  fs.cpSync(
+    path.join(projectRoot, relativePath),
+    path.join(buildPath, relativePath),
+    {
+      dereference: true,
+      force: true,
+      recursive: true,
+    },
+  );
+}
+
+function copyNativeRuntimeDependencies(buildPath: string) {
+  for (const moduleName of nativeRuntimeModules) {
+    copyRuntimePath(buildPath, path.join("node_modules", moduleName));
+  }
+
+  const clientNapiSource = path.resolve(
+    projectRoot,
+    "../crates/angel-engine-client-napi",
+  );
+  const clientNapiTarget = path.join(
+    buildPath,
+    "node_modules/@angel-engine/client-napi",
+  );
+
+  fs.mkdirSync(clientNapiTarget, { recursive: true });
+  for (const fileName of ["package.json", "index.js", "index.d.ts"]) {
+    fs.copyFileSync(
+      path.join(clientNapiSource, fileName),
+      path.join(clientNapiTarget, fileName),
+    );
+  }
+
+  for (const fileName of fs.readdirSync(clientNapiSource)) {
+    if (!fileName.endsWith(".node")) {
+      continue;
+    }
+
+    fs.copyFileSync(
+      path.join(clientNapiSource, fileName),
+      path.join(clientNapiTarget, fileName),
+    );
+  }
+}
+
 const config: ForgeConfig = {
+  hooks: {
+    packageAfterCopy: async (_config, buildPath) => {
+      copyNativeRuntimeDependencies(buildPath);
+    },
+  },
   packagerConfig: {
     asar: true,
   },
