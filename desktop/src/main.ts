@@ -78,7 +78,7 @@ const createWindow = () => {
       preload: path.join(__dirname, "preload.js"),
     },
   });
-  configureExternalLinkHandling(mainWindow, rendererEntryUrl);
+  configureExternalLinkHandling(mainWindow);
 
   if (isMacOS) {
     mainWindow.setBackgroundColor("#00000000");
@@ -95,61 +95,11 @@ const createWindow = () => {
   }
 };
 
-function configureExternalLinkHandling(
-  mainWindow: BrowserWindow,
-  rendererEntryUrl: string,
-) {
+function configureExternalLinkHandling(mainWindow: BrowserWindow) {
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
-    openExternalHttpUrl(url);
+    shell.openExternal(url);
     return { action: "deny" };
   });
-
-  mainWindow.webContents.on("will-navigate", (event, url) => {
-    if (isRendererNavigation(url, rendererEntryUrl)) {
-      return;
-    }
-
-    event.preventDefault();
-    openExternalHttpUrl(url);
-  });
-}
-
-function openExternalHttpUrl(url: string) {
-  if (!isExternalHttpUrl(url)) {
-    return false;
-  }
-
-  shell.openExternal(url).catch((error: unknown) => {
-    console.error("Failed to open external link", error);
-  });
-  return true;
-}
-
-function isExternalHttpUrl(url: string) {
-  try {
-    const parsed = new URL(url);
-    return parsed.protocol === "http:" || parsed.protocol === "https:";
-  } catch {
-    return false;
-  }
-}
-
-function isRendererNavigation(url: string, rendererEntryUrl: string) {
-  try {
-    const navigationUrl = new URL(url);
-    const entryUrl = new URL(rendererEntryUrl);
-
-    if (entryUrl.protocol === "file:") {
-      return (
-        navigationUrl.protocol === "file:" &&
-        navigationUrl.pathname === entryUrl.pathname
-      );
-    }
-
-    return navigationUrl.origin === entryUrl.origin;
-  } catch {
-    return false;
-  }
 }
 
 // This method will be called when Electron has finished
