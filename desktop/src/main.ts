@@ -1,6 +1,7 @@
-import { app, BrowserWindow } from "electron";
+import { app, BrowserWindow, shell } from "electron";
 import { execFileSync } from "node:child_process";
 import path from "node:path";
+import { pathToFileURL } from "node:url";
 import started from "electron-squirrel-startup";
 import { registerIpcMain } from "@egoist/tipc/main";
 
@@ -50,6 +51,13 @@ function mergePathEntries(...paths: Array<string | undefined>) {
 }
 
 const createWindow = () => {
+  const rendererFilePath = path.join(
+    __dirname,
+    `../renderer/${MAIN_WINDOW_VITE_NAME}/index.html`,
+  );
+  const rendererEntryUrl =
+    MAIN_WINDOW_VITE_DEV_SERVER_URL ?? pathToFileURL(rendererFilePath).href;
+
   // Create the browser window.
   const mainWindow = new BrowserWindow({
     ...(isMacOS
@@ -70,6 +78,7 @@ const createWindow = () => {
       preload: path.join(__dirname, "preload.js"),
     },
   });
+  configureExternalLinkHandling(mainWindow, rendererEntryUrl);
 
   if (isMacOS) {
     mainWindow.setBackgroundColor("#00000000");
@@ -79,14 +88,69 @@ const createWindow = () => {
 
   // and load the index.html of the app.
   if (MAIN_WINDOW_VITE_DEV_SERVER_URL) {
-    mainWindow.loadURL(MAIN_WINDOW_VITE_DEV_SERVER_URL);
+    mainWindow.loadURL(rendererEntryUrl);
     mainWindow.webContents.openDevTools();
   } else {
-    mainWindow.loadFile(
-      path.join(__dirname, `../renderer/${MAIN_WINDOW_VITE_NAME}/index.html`),
-    );
+    mainWindow.loadFile(rendererFilePath);
   }
 };
+
+function configureExternalLinkHandling(
+  mainWindow: BrowserWindow,
+  rendererEntryUrl: string,
+) {
+  mainWindow.webContents.setWindowOpenHandler(({ url }) => {
+    openExternalHttpUrl(url);
+    return { action: "deny" };
+  });
+
+  mainWindow.webContents.on("will-navigate", (event, url) => {
+    if (isRendererNavigation(url, rendererEntryUrl)) {
+      return;
+    }
+
+    event.preventDefault();
+    openExternalHttpUrl(url);
+  });
+}
+
+function openExternalHttpUrl(url: string) {
+  if (!isExternalHttpUrl(url)) {
+    return false;
+  }
+
+  shell.openExternal(url).catch((error: unknown) => {
+    console.error("Failed to open external link", error);
+  });
+  return true;
+}
+
+function isExternalHttpUrl(url: string) {
+  try {
+    const parsed = new URL(url);
+    return parsed.protocol === "http:" || parsed.protocol === "https:";
+  } catch {
+    return false;
+  }
+}
+
+function isRendererNavigation(url: string, rendererEntryUrl: string) {
+  try {
+    const navigationUrl = new URL(url);
+    const entryUrl = new URL(rendererEntryUrl);
+
+    if (entryUrl.protocol === "file:") {
+      return (
+        navigationUrl.protocol === "file:" &&
+        navigationUrl.pathname === entryUrl.pathname
+      );
+    }
+
+    return navigationUrl.origin === entryUrl.origin;
+  } catch {
+    return false;
+  }
+}
 
 // This method will be called when Electron has finished
 // initialization and is ready to create browser windows.

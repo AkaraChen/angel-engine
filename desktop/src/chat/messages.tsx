@@ -7,6 +7,7 @@ import {
   MessagePrimitive,
   useAuiState,
   type CompleteAttachment,
+  type DataMessagePartProps,
   type EnrichedPartState,
   type ToolCallMessagePartProps,
 } from "@assistant-ui/react";
@@ -763,7 +764,7 @@ function formatToolPhase(phase: string) {
   }
 }
 
-function DataMessagePart(part: Extract<EnrichedPartState, { type: "data" }>) {
+function DataMessagePart(part: DataMessagePartProps) {
   return <JsonBlock label={part.name} value={part.data} />;
 }
 

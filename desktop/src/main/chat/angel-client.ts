@@ -127,11 +127,11 @@ export async function streamChat(
 
   const result = await getChatSession(chat).sendText({
     cwd: input.cwd ?? chat.cwd ?? undefined,
-    model: input.model,
-    mode: input.mode,
+    model: input.model ?? undefined,
+    mode: input.mode ?? undefined,
     onEvent,
     onResolveElicitation: controls?.setResolveElicitation,
-    reasoningEffort: input.reasoningEffort,
+    reasoningEffort: input.reasoningEffort ?? undefined,
     remoteId: chat.remoteThreadId ?? undefined,
     signal: abortSignal,
     text,
