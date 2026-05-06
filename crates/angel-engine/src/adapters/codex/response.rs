@@ -266,7 +266,9 @@ fn append_hydrated_turns(
                 ),
                 Some(item_type) if codex_history_replay_tool_item_type(item_type) => (
                     HistoryRole::Tool,
-                    ContentDelta::Structured(replay_item.to_string()),
+                    ContentDelta::Structured(
+                        codex_history_replay_tool_item(replay_item).to_string(),
+                    ),
                 ),
                 _ => continue,
             };
@@ -288,6 +290,57 @@ fn codex_history_replay_item(item: &Value) -> &Value {
         return payload;
     }
     item
+}
+
+fn codex_history_replay_tool_item(item: &Value) -> Value {
+    let mut replay_item = item.clone();
+    let Value::Object(fields) = &mut replay_item else {
+        return replay_item;
+    };
+    let item_type = fields
+        .get("type")
+        .and_then(Value::as_str)
+        .unwrap_or_default()
+        .to_string();
+
+    if codex_history_replay_tool_uses_call_id(&item_type)
+        && let Some(call_id) = string_field(fields, &["callId", "call_id"])
+    {
+        if let Some(original_id) = fields
+            .get("id")
+            .and_then(Value::as_str)
+            .filter(|id| *id != call_id)
+            .map(str::to_string)
+        {
+            fields
+                .entry("itemId".to_string())
+                .or_insert_with(|| Value::String(original_id));
+        }
+        fields.insert("id".to_string(), Value::String(call_id));
+    }
+
+    fields
+        .entry("status".to_string())
+        .or_insert_with(|| Value::String("completed".to_string()));
+    replay_item
+}
+
+fn codex_history_replay_tool_uses_call_id(item_type: &str) -> bool {
+    matches!(
+        item_type,
+        "function_call"
+            | "function_call_output"
+            | "custom_tool_call"
+            | "custom_tool_call_output"
+            | "tool_search_call"
+            | "tool_search_output"
+    )
+}
+
+fn string_field(fields: &serde_json::Map<String, Value>, keys: &[&str]) -> Option<String> {
+    keys.iter()
+        .find_map(|key| fields.get(*key).and_then(Value::as_str))
+        .map(str::to_string)
 }
 
 fn codex_history_replay_tool_item_type(item_type: &str) -> bool {
@@ -502,6 +555,14 @@ mod tests {
                                         "summary": ["thinking"]
                                     },
                                     {
+                                        "type": "response_item",
+                                        "payload": {
+                                            "type": "webSearch",
+                                            "id": "search_1",
+                                            "query": "keyboard lock"
+                                        }
+                                    },
+                                    {
                                         "id": "exec-1",
                                         "type": "commandExecution",
                                         "status": "completed",
@@ -511,6 +572,7 @@ mod tests {
                                         "type": "response_item",
                                         "payload": {
                                             "type": "function_call",
+                                            "id": "fc_item_1",
                                             "call_id": "call_1",
                                             "name": "shell",
                                             "arguments": "{\"command\":[\"zsh\",\"-lc\",\"git status -sb\"]}"
@@ -520,6 +582,7 @@ mod tests {
                                         "type": "response_item",
                                         "payload": {
                                             "type": "function_call_output",
+                                            "id": "out_item_1",
                                             "call_id": "call_1",
                                             "output": "{\"output\":\"## main\\n\",\"metadata\":{\"exit_code\":0}}"
                                         }
@@ -555,7 +618,7 @@ mod tests {
             })
             .collect::<Vec<_>>();
 
-        assert_eq!(replay.len(), 6);
+        assert_eq!(replay.len(), 7);
         assert_eq!(
             replay[0],
             (HistoryRole::User, "text".to_string(), "hello".to_string())
@@ -570,36 +633,75 @@ mod tests {
         );
         assert_eq!(replay[2].0, HistoryRole::Tool);
         assert_eq!(replay[2].1, "structured");
-        let tool_item: Value = serde_json::from_str(&replay[2].2).expect("tool item");
+        let search_item: Value = serde_json::from_str(&replay[2].2).expect("search item");
+        assert_eq!(
+            search_item.get("type").and_then(Value::as_str),
+            Some("webSearch")
+        );
+        assert_eq!(
+            search_item.get("id").and_then(Value::as_str),
+            Some("search_1")
+        );
+        assert_eq!(
+            search_item.get("status").and_then(Value::as_str),
+            Some("completed")
+        );
+        assert_eq!(replay[3].0, HistoryRole::Tool);
+        assert_eq!(replay[3].1, "structured");
+        let tool_item: Value = serde_json::from_str(&replay[3].2).expect("tool item");
         assert_eq!(
             tool_item.get("type").and_then(Value::as_str),
             Some("commandExecution")
         );
         assert_eq!(tool_item.get("id").and_then(Value::as_str), Some("exec-1"));
-        assert_eq!(replay[3].0, HistoryRole::Tool);
-        assert_eq!(replay[3].1, "structured");
-        let raw_call_item: Value = serde_json::from_str(&replay[3].2).expect("raw call item");
+        assert_eq!(replay[4].0, HistoryRole::Tool);
+        assert_eq!(replay[4].1, "structured");
+        let raw_call_item: Value = serde_json::from_str(&replay[4].2).expect("raw call item");
         assert_eq!(
             raw_call_item.get("type").and_then(Value::as_str),
             Some("function_call")
         );
         assert_eq!(
+            raw_call_item.get("id").and_then(Value::as_str),
+            Some("call_1")
+        );
+        assert_eq!(
+            raw_call_item.get("itemId").and_then(Value::as_str),
+            Some("fc_item_1")
+        );
+        assert_eq!(
             raw_call_item.get("call_id").and_then(Value::as_str),
             Some("call_1")
         );
-        assert_eq!(replay[4].0, HistoryRole::Tool);
-        assert_eq!(replay[4].1, "structured");
-        let raw_output_item: Value = serde_json::from_str(&replay[4].2).expect("raw output item");
+        assert_eq!(
+            raw_call_item.get("status").and_then(Value::as_str),
+            Some("completed")
+        );
+        assert_eq!(replay[5].0, HistoryRole::Tool);
+        assert_eq!(replay[5].1, "structured");
+        let raw_output_item: Value = serde_json::from_str(&replay[5].2).expect("raw output item");
         assert_eq!(
             raw_output_item.get("type").and_then(Value::as_str),
             Some("function_call_output")
+        );
+        assert_eq!(
+            raw_output_item.get("id").and_then(Value::as_str),
+            Some("call_1")
+        );
+        assert_eq!(
+            raw_output_item.get("itemId").and_then(Value::as_str),
+            Some("out_item_1")
         );
         assert_eq!(
             raw_output_item.get("call_id").and_then(Value::as_str),
             Some("call_1")
         );
         assert_eq!(
-            replay[5],
+            raw_output_item.get("status").and_then(Value::as_str),
+            Some("completed")
+        );
+        assert_eq!(
+            replay[6],
             (HistoryRole::Assistant, "text".to_string(), "hi".to_string())
         );
     }

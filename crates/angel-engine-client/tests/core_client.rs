@@ -399,7 +399,16 @@ fn codex_resume_projects_raw_tool_history_into_display_messages() {
                                 {
                                     "type": "response_item",
                                     "payload": {
+                                        "type": "webSearch",
+                                        "id": "search_1",
+                                        "query": "keyboard lock"
+                                    }
+                                },
+                                {
+                                    "type": "response_item",
+                                    "payload": {
                                         "type": "function_call",
+                                        "id": "fc_item_1",
                                         "call_id": "call_1",
                                         "name": "shell",
                                         "arguments": "{\"command\":[\"zsh\",\"-lc\",\"git status -sb\"]}"
@@ -409,6 +418,7 @@ fn codex_resume_projects_raw_tool_history_into_display_messages() {
                                     "type": "response_item",
                                     "payload": {
                                         "type": "function_call_output",
+                                        "id": "out_item_1",
                                         "call_id": "call_1",
                                         "output": "{\"output\":\"## main\\n\",\"metadata\":{\"exit_code\":0}}"
                                     }
@@ -439,10 +449,35 @@ fn codex_resume_projects_raw_tool_history_into_display_messages() {
     );
 
     let assistant = &conversation.messages[1];
+    assert_eq!(
+        assistant
+            .content
+            .iter()
+            .filter(|part| part.kind == "tool-call")
+            .count(),
+        2
+    );
+    let search = assistant
+        .content
+        .iter()
+        .find(|part| {
+            part.action
+                .as_ref()
+                .is_some_and(|action| action.id == "search_1")
+        })
+        .and_then(|part| part.action.as_ref())
+        .expect("search tool call");
+    assert_eq!(search.kind, "webSearch");
+    assert_eq!(search.phase, "completed");
+    assert_eq!(search.output_text, "");
     let tool = assistant
         .content
         .iter()
-        .find(|part| part.kind == "tool-call")
+        .find(|part| {
+            part.action
+                .as_ref()
+                .is_some_and(|action| action.id == "call_1")
+        })
         .and_then(|part| part.action.as_ref())
         .expect("tool call part");
     assert_eq!(tool.id, "call_1");

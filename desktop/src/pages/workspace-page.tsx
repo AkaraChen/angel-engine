@@ -114,6 +114,11 @@ export function WorkspacePage({ route }: { route: WorkspaceRoute }) {
   const selectedProjectName = selectedProjectPath
     ? getProjectDisplayName(selectedProjectPath)
     : undefined;
+  const workspaceTitle = getWorkspaceTitle({
+    route,
+    selectedChat,
+    selectedProjectName,
+  });
   const historyMessages = selectedChatId
     ? (chatLoadQuery.data?.messages ?? EMPTY_MESSAGES)
     : EMPTY_MESSAGES;
@@ -499,7 +504,7 @@ export function WorkspacePage({ route }: { route: WorkspaceRoute }) {
 
       {route.type === "settings" ? (
         <SidebarInset className="h-svh max-h-svh overflow-hidden md:h-[calc(100svh-1rem)] md:max-h-[calc(100svh-1rem)]">
-          <WorkspaceHeader />
+          <WorkspaceHeader title={workspaceTitle} />
           <SettingsPage
             agentSettings={agentSettings}
             isDeletingChats={deleteAllChatsMutation.isPending}
@@ -524,7 +529,7 @@ export function WorkspacePage({ route }: { route: WorkspaceRoute }) {
             runtime={activeRuntime}
           >
             <SidebarInset className="h-svh max-h-svh overflow-hidden md:h-[calc(100svh-1rem)] md:max-h-[calc(100svh-1rem)]">
-              <WorkspaceHeader />
+              <WorkspaceHeader title={workspaceTitle} />
               <main className="flex min-h-0 flex-1 overflow-hidden">
                 <section className="flex min-h-0 min-w-0 flex-1 flex-col">
                   <AssistantThread projectName={selectedProjectName} />
@@ -625,6 +630,23 @@ function routePath(route: WorkspaceRoute) {
     return "/settings";
   }
   return "/";
+}
+
+function getWorkspaceTitle({
+  route,
+  selectedChat,
+  selectedProjectName,
+}: {
+  route: WorkspaceRoute;
+  selectedChat?: Chat;
+  selectedProjectName?: string;
+}) {
+  if (route.type === "settings") return "Settings";
+  if (selectedChat) return selectedChat.title;
+  if (route.type === "projectCreate" && selectedProjectName) {
+    return `New chat in ${selectedProjectName}`;
+  }
+  return "New chat";
 }
 
 function draftRuntimeKeyFromRoute(route: WorkspaceRoute) {
