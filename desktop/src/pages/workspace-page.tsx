@@ -558,7 +558,7 @@ function WorkspacePageContent({
                 selectedChatIsRunning && selectedChat ? (
                   <ActiveChatThread
                     draftAgentConfig={draftAgentConfig}
-                    onChatCreated={setChatInCache}
+                    onChatCreated={updateChatFromRun}
                     onChatUpdated={updateChatFromRun}
                     projects={projects}
                     route={route}
@@ -575,7 +575,7 @@ function WorkspacePageContent({
                         api={api}
                         currentRoutePath={currentRoutePath}
                         draftAgentConfig={draftAgentConfig}
-                        onChatCreated={setChatInCache}
+                        onChatCreated={updateChatFromRun}
                         onChatUpdated={updateChatFromRun}
                         projects={projects}
                         route={route}
@@ -597,7 +597,7 @@ function WorkspacePageContent({
                     key={runtimePageKey}
                     model={modelOverride}
                     mode={modeOverride}
-                    onChatCreated={setChatInCache}
+                    onChatCreated={updateChatFromRun}
                     onChatUpdated={updateChatFromRun}
                     prewarmId={prewarmQuery.data?.prewarmId}
                     projectId={

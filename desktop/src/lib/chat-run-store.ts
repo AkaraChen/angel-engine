@@ -3,7 +3,8 @@ import type {
   MessageStatus,
   ThreadMessage,
 } from "@assistant-ui/react";
-import { create } from "zustand";
+import { useSyncExternalStore } from "react";
+import { assign, createActor, setup } from "xstate";
 
 import { streamChatEvents } from "@/lib/chat-stream";
 import type {
@@ -41,15 +42,25 @@ type ActiveRun = {
   streamController?: ChatStreamController;
 };
 
-type ChatRunSlot = {
-  activeRun?: ActiveRun;
+type BaseChatRunSlot = {
   chatId?: string;
   config?: ChatRuntimeConfig;
   historyRevision: number;
-  isRunning: boolean;
   key: string;
   messages: EngineMessage[];
 };
+
+type IdleChatRunSlot = BaseChatRunSlot & {
+  activeRun?: undefined;
+  status: "idle";
+};
+
+type StreamingChatRunSlot = BaseChatRunSlot & {
+  activeRun: ActiveRun;
+  status: "streaming";
+};
+
+type ChatRunSlot = IdleChatRunSlot | StreamingChatRunSlot;
 
 type AssistantAccumulator = {
   chunkCount: number;
@@ -102,133 +113,147 @@ type ChatRunStore = {
   startRun: (input: StartRunInput) => Promise<void>;
 };
 
-export const useChatRunStore = create<ChatRunStore>((set, get) => ({
-  aliases: {},
+type ChatRunContext = Pick<ChatRunStore, "aliases" | "slots">;
+
+type ChatRunEvent =
+  | {
+      input: InitializeSlotInput;
+      messages: EngineMessage[];
+      type: "slot.initialized";
+    }
+  | { slotKey: string; type: "run.cancelled" }
+  | { slotKey: string; type: "slot.dropped" }
+  | { type: "slots.dropped" }
+  | {
+      activeRun: ActiveRun;
+      assistantMessage: EngineMessage;
+      slotKey: string;
+      type: "run.started";
+      userMessage: EngineMessage;
+    }
+  | {
+      assistantMessageId: string;
+      message: EngineMessage;
+      runId: string;
+      slotKey: string;
+      type: "assistant.replaced";
+    }
+  | { chat: Chat; runId: string; slotKey: string; type: "run.movedToChat" }
+  | {
+      result?: ChatSendResult;
+      runId: string;
+      slotKey: string;
+      type: "run.finished";
+    };
+
+const chatRunMachine = setup({
+  types: {} as {
+    context: ChatRunContext;
+    events: ChatRunEvent;
+  },
+}).createMachine({
+  context: {
+    aliases: {},
+    slots: {},
+  },
+  id: "chatRunRegistry",
+  initial: "ready",
+  states: {
+    ready: {
+      on: {
+        "assistant.replaced": {
+          actions: assign(({ context, event }) =>
+            replaceAssistantMessageContext(context, event),
+          ),
+        },
+        "run.cancelled": {
+          actions: assign(({ context, event }) =>
+            cancelRunContext(context, event.slotKey),
+          ),
+        },
+        "run.finished": {
+          actions: assign(({ context, event }) =>
+            finishRunContext(context, event),
+          ),
+        },
+        "run.movedToChat": {
+          actions: assign(({ context, event }) =>
+            moveActiveRunToChatContext(context, event),
+          ),
+        },
+        "run.started": {
+          actions: assign(({ context, event }) =>
+            startRunContext(context, event),
+          ),
+        },
+        "slot.dropped": {
+          actions: assign(({ context, event }) =>
+            dropRunContext(context, event.slotKey),
+          ),
+        },
+        "slot.initialized": {
+          actions: assign(({ context, event }) =>
+            initializeSlotContext(context, event.input, event.messages),
+          ),
+        },
+        "slots.dropped": {
+          actions: assign(() => ({ aliases: {}, slots: {} })),
+        },
+      },
+    },
+  },
+});
+
+const chatRunActor = createActor(chatRunMachine).start();
+let cachedChatRunContext: ChatRunContext | undefined;
+let cachedChatRunStore: ChatRunStore | undefined;
+
+const chatRunActions: Omit<ChatRunStore, "aliases" | "slots"> = {
   cancelRun(slotKey) {
-    const state = get();
-    const resolvedKey = resolveSlotKey(state, slotKey);
-    const slot = state.slots[resolvedKey];
+    const state = getChatRunContext();
+    const slot = selectSlot(state, slotKey);
     const activeRun = slot?.activeRun;
-    if (!slot || !activeRun) return;
+    if (!activeRun) return;
 
     activeRun.cancelled = true;
     activeRun.abortController.abort();
-    set({
-      slots: {
-        ...state.slots,
-        [resolvedKey]: {
-          ...slot,
-          activeRun: undefined,
-          isRunning: false,
-          messages: markAssistantMessageCancelled(
-            slot.messages,
-            activeRun.assistantMessageId,
-          ),
-        },
-      },
-    });
+    chatRunActor.send({ slotKey, type: "run.cancelled" });
   },
   dropAllRuns() {
-    for (const slot of Object.values(get().slots)) {
+    for (const slot of Object.values(getChatRunContext().slots)) {
       const activeRun = slot.activeRun;
       if (!activeRun) continue;
       activeRun.cancelled = true;
       activeRun.abortController.abort();
     }
-    set({ aliases: {}, slots: {} });
+    chatRunActor.send({ type: "slots.dropped" });
   },
   dropRun(slotKey) {
-    const state = get();
-    const resolvedKey = resolveSlotKey(state, slotKey);
-    const slot = state.slots[resolvedKey];
+    const slot = selectSlot(getChatRunContext(), slotKey);
     if (slot?.activeRun) {
       slot.activeRun.cancelled = true;
       slot.activeRun.abortController.abort();
     }
 
-    const slots = { ...state.slots };
-    delete slots[resolvedKey];
-
-    const aliases = { ...state.aliases };
-    for (const [alias, target] of Object.entries(aliases)) {
-      if (
-        alias === slotKey ||
-        alias === resolvedKey ||
-        target === resolvedKey
-      ) {
-        delete aliases[alias];
-      }
-    }
-
-    set({ aliases, slots });
+    chatRunActor.send({ slotKey, type: "slot.dropped" });
   },
   initializeSlot(input) {
-    const messages = input.historyMessages.map(historyMessageToEngineMessage);
-    set((state) => {
-      const resolvedKey = resolveSlotKey(state, input.slotKey);
-      const existing = state.slots[resolvedKey];
-      const isDraftSlot = !input.chatId;
-
-      if (isDraftSlot && state.aliases[input.slotKey] && !existing?.isRunning) {
-        const aliases = { ...state.aliases };
-        delete aliases[input.slotKey];
-        return {
-          aliases,
-          slots: {
-            ...state.slots,
-            [input.slotKey]: createIdleSlot(input.slotKey, input, messages),
-          },
-        };
-      }
-
-      if (existing?.isRunning) {
-        const nextChatId = input.chatId ?? existing.chatId;
-        const nextConfig = input.config ?? existing.config;
-        if (nextChatId === existing.chatId && nextConfig === existing.config) {
-          return state;
-        }
-
-        const nextSlot = {
-          ...existing,
-          chatId: nextChatId,
-          config: nextConfig,
-        };
-        return {
-          slots: {
-            ...state.slots,
-            [resolvedKey]: nextSlot,
-          },
-        };
-      }
-
-      if (
-        existing &&
-        existing.historyRevision === input.historyRevision &&
-        existing.config === input.config &&
-        existing.chatId === (input.chatId ?? existing.chatId)
-      ) {
-        return state;
-      }
-
-      return {
-        slots: {
-          ...state.slots,
-          [resolvedKey]: createIdleSlot(resolvedKey, input, messages, existing),
-        },
-      };
+    chatRunActor.send({
+      input,
+      messages: input.historyMessages.map(historyMessageToEngineMessage),
+      type: "slot.initialized",
     });
   },
   resolveElicitation(slotKey, payload, toolCallId) {
     const response = normalizeElicitationResponse(payload);
     if (!response) return;
 
-    const slot = selectSlot(get(), slotKey);
+    const slot = selectSlot(getChatRunContext(), slotKey);
     void slot?.activeRun?.streamController?.resolveElicitation({
       elicitationId: toolCallId,
       response,
     });
   },
-  slots: {},
   async startRun({ callbacks, input, message, slotKey }) {
     const prompt = getMessageText(message);
     if (!prompt) return;
@@ -257,37 +282,20 @@ export const useChatRunStore = create<ChatRunStore>((set, get) => ({
     const userMessage = appendMessageToEngineMessage(message, createId("user"));
     let runSlotKey = slotKey;
 
-    set((state) => {
-      const resolvedKey = resolveSlotKey(state, slotKey);
-      const existing =
-        state.slots[resolvedKey] ??
-        createIdleSlot(resolvedKey, {
-          historyRevision: 0,
-          slotKey: resolvedKey,
-        });
-      if (existing.activeRun) {
-        existing.activeRun.cancelled = true;
-        existing.activeRun.abortController.abort();
-      }
-      const existingMessages = existing.activeRun
-        ? markAssistantMessageCancelled(
-            existing.messages,
-            existing.activeRun.assistantMessageId,
-          )
-        : existing.messages;
-      runSlotKey = resolvedKey;
-
-      return {
-        slots: {
-          ...state.slots,
-          [resolvedKey]: {
-            ...existing,
-            activeRun,
-            isRunning: true,
-            messages: [...existingMessages, userMessage, assistantMessage],
-          },
-        },
-      };
+    const state = getChatRunContext();
+    const resolvedKey = resolveSlotKey(state, slotKey);
+    const existing = state.slots[resolvedKey];
+    if (existing?.activeRun) {
+      existing.activeRun.cancelled = true;
+      existing.activeRun.abortController.abort();
+    }
+    runSlotKey = resolvedKey;
+    chatRunActor.send({
+      activeRun,
+      assistantMessage,
+      slotKey,
+      type: "run.started",
+      userMessage,
     });
 
     const completion = await consumeRunStream({
@@ -314,7 +322,15 @@ export const useChatRunStore = create<ChatRunStore>((set, get) => ({
       finishRun(completion.slotKey, runId, completion.result);
     }
   },
-}));
+};
+
+export function useChatRunStore<T>(selector: (state: ChatRunStore) => T): T {
+  return useSyncExternalStore(
+    subscribeChatRunActor,
+    () => selector(getChatRunStore()),
+    () => selector(getChatRunStore()),
+  );
+}
 
 export function useChatRunMessages(slotKey: string) {
   return useChatRunStore(
@@ -324,7 +340,7 @@ export function useChatRunMessages(slotKey: string) {
 
 export function useChatRunIsRunning(slotKey?: string) {
   return useChatRunStore((state) =>
-    slotKey ? Boolean(selectSlot(state, slotKey)?.isRunning) : false,
+    slotKey ? selectSlot(state, slotKey)?.status === "streaming" : false,
   );
 }
 
@@ -335,11 +351,263 @@ export function useChatRunConfig(slotKey?: string) {
 }
 
 export function cancelChatRun(slotKey: string) {
-  useChatRunStore.getState().dropRun(slotKey);
+  chatRunActions.dropRun(slotKey);
 }
 
 export function cancelAllChatRuns() {
-  useChatRunStore.getState().dropAllRuns();
+  chatRunActions.dropAllRuns();
+}
+
+function subscribeChatRunActor(onStoreChange: () => void) {
+  const subscription = chatRunActor.subscribe(() => onStoreChange());
+  return () => subscription.unsubscribe();
+}
+
+function getChatRunContext(): ChatRunContext {
+  return chatRunActor.getSnapshot().context;
+}
+
+function getChatRunStore(): ChatRunStore {
+  const context = getChatRunContext();
+  if (cachedChatRunContext === context && cachedChatRunStore) {
+    return cachedChatRunStore;
+  }
+
+  cachedChatRunContext = context;
+  cachedChatRunStore = {
+    ...context,
+    ...chatRunActions,
+  };
+  return cachedChatRunStore;
+}
+
+function initializeSlotContext(
+  state: ChatRunContext,
+  input: InitializeSlotInput,
+  messages: EngineMessage[],
+): Partial<ChatRunContext> {
+  const resolvedKey = resolveSlotKey(state, input.slotKey);
+  const existing = state.slots[resolvedKey];
+  const isDraftSlot = !input.chatId;
+
+  if (
+    isDraftSlot &&
+    state.aliases[input.slotKey] &&
+    !isSlotStreaming(existing)
+  ) {
+    const aliases = { ...state.aliases };
+    delete aliases[input.slotKey];
+    return {
+      aliases,
+      slots: {
+        ...state.slots,
+        [input.slotKey]: createIdleSlot(input.slotKey, input, messages),
+      },
+    };
+  }
+
+  if (isSlotStreaming(existing)) {
+    const nextChatId = input.chatId ?? existing.chatId;
+    const nextConfig = input.config ?? existing.config;
+    if (nextChatId === existing.chatId && nextConfig === existing.config) {
+      return {};
+    }
+
+    return {
+      slots: {
+        ...state.slots,
+        [resolvedKey]: {
+          ...existing,
+          chatId: nextChatId,
+          config: nextConfig,
+        },
+      },
+    };
+  }
+
+  if (
+    existing &&
+    existing.historyRevision === input.historyRevision &&
+    existing.config === input.config &&
+    existing.chatId === (input.chatId ?? existing.chatId)
+  ) {
+    return {};
+  }
+
+  return {
+    slots: {
+      ...state.slots,
+      [resolvedKey]: createIdleSlot(resolvedKey, input, messages, existing),
+    },
+  };
+}
+
+function startRunContext(
+  state: ChatRunContext,
+  event: Extract<ChatRunEvent, { type: "run.started" }>,
+): Partial<ChatRunContext> {
+  const resolvedKey = resolveSlotKey(state, event.slotKey);
+  const existing =
+    state.slots[resolvedKey] ??
+    createIdleSlot(resolvedKey, {
+      historyRevision: 0,
+      slotKey: resolvedKey,
+    });
+  const existingMessages = existing.activeRun
+    ? markAssistantMessageCancelled(
+        existing.messages,
+        existing.activeRun.assistantMessageId,
+      )
+    : existing.messages;
+
+  return {
+    slots: {
+      ...state.slots,
+      [resolvedKey]: {
+        ...existing,
+        activeRun: event.activeRun,
+        messages: [
+          ...existingMessages,
+          event.userMessage,
+          event.assistantMessage,
+        ],
+        status: "streaming",
+      },
+    },
+  };
+}
+
+function cancelRunContext(
+  state: ChatRunContext,
+  slotKey: string,
+): Partial<ChatRunContext> {
+  const resolvedKey = resolveSlotKey(state, slotKey);
+  const slot = state.slots[resolvedKey];
+  const activeRun = slot?.activeRun;
+  if (!slot || !activeRun) return {};
+
+  return {
+    slots: {
+      ...state.slots,
+      [resolvedKey]: {
+        ...slot,
+        activeRun: undefined,
+        messages: markAssistantMessageCancelled(
+          slot.messages,
+          activeRun.assistantMessageId,
+        ),
+        status: "idle",
+      },
+    },
+  };
+}
+
+function dropRunContext(
+  state: ChatRunContext,
+  slotKey: string,
+): Partial<ChatRunContext> {
+  const resolvedKey = resolveSlotKey(state, slotKey);
+  const slots = { ...state.slots };
+  delete slots[resolvedKey];
+
+  const aliases = { ...state.aliases };
+  for (const [alias, target] of Object.entries(aliases)) {
+    if (alias === slotKey || alias === resolvedKey || target === resolvedKey) {
+      delete aliases[alias];
+    }
+  }
+
+  return { aliases, slots };
+}
+
+function replaceAssistantMessageContext(
+  state: ChatRunContext,
+  event: Extract<ChatRunEvent, { type: "assistant.replaced" }>,
+): Partial<ChatRunContext> {
+  const resolvedKey = resolveSlotKey(state, event.slotKey);
+  const slot = state.slots[resolvedKey];
+  if (slot?.activeRun?.runId !== event.runId) return {};
+
+  return {
+    slots: {
+      ...state.slots,
+      [resolvedKey]: {
+        ...slot,
+        messages: slot.messages.map((item) =>
+          item.id === event.assistantMessageId ? event.message : item,
+        ),
+      },
+    },
+  };
+}
+
+function moveActiveRunToChatContext(
+  state: ChatRunContext,
+  event: Extract<ChatRunEvent, { type: "run.movedToChat" }>,
+): Partial<ChatRunContext> {
+  const resolvedKey = resolveSlotKey(state, event.slotKey);
+  const slot = state.slots[resolvedKey];
+  if (slot?.activeRun?.runId !== event.runId) return {};
+
+  if (resolvedKey === event.chat.id) {
+    return {
+      slots: {
+        ...state.slots,
+        [resolvedKey]: {
+          ...slot,
+          chatId: event.chat.id,
+        },
+      },
+    };
+  }
+
+  const slots = { ...state.slots };
+  const existingTarget = slots[event.chat.id];
+  delete slots[resolvedKey];
+  slots[event.chat.id] = {
+    ...slot,
+    chatId: event.chat.id,
+    config: slot.config ?? existingTarget?.config,
+    key: event.chat.id,
+  };
+
+  return {
+    aliases: {
+      ...state.aliases,
+      [slot.activeRun.initialSlotKey]: event.chat.id,
+      [resolvedKey]: event.chat.id,
+    },
+    slots,
+  };
+}
+
+function finishRunContext(
+  state: ChatRunContext,
+  event: Extract<ChatRunEvent, { type: "run.finished" }>,
+): Partial<ChatRunContext> {
+  const resolvedKey = resolveSlotKey(state, event.slotKey);
+  const slot = state.slots[resolvedKey];
+  if (slot?.activeRun?.runId !== event.runId) return {};
+
+  return {
+    slots: {
+      ...state.slots,
+      [resolvedKey]: {
+        ...slot,
+        activeRun: undefined,
+        chatId: event.result?.chatId ?? slot.chatId,
+        config: event.result?.config ?? slot.config,
+        status: "idle",
+      },
+    },
+  };
+}
+
+function isSlotStreaming(slot?: ChatRunSlot): slot is ChatRunSlot & {
+  activeRun: ActiveRun;
+  status: "streaming";
+} {
+  return slot?.status === "streaming" && Boolean(slot.activeRun);
 }
 
 function createIdleSlot(
@@ -355,9 +623,9 @@ function createIdleSlot(
     chatId: input.chatId ?? existing?.chatId,
     config: input.config ?? existing?.config,
     historyRevision: input.historyRevision,
-    isRunning: false,
     key,
     messages,
+    status: "idle",
   };
 }
 
@@ -525,26 +793,17 @@ function replaceAssistantMessage(
   assistantMessageId: string,
   message: EngineMessage,
 ) {
-  let replaced = false;
-  useChatRunStore.setState((state) => {
-    const resolvedKey = resolveSlotKey(state, slotKey);
-    const slot = state.slots[resolvedKey];
-    if (slot?.activeRun?.runId !== runId) return state;
+  const slot = selectSlot(getChatRunContext(), slotKey);
+  if (slot?.activeRun?.runId !== runId) return false;
 
-    replaced = true;
-    return {
-      slots: {
-        ...state.slots,
-        [resolvedKey]: {
-          ...slot,
-          messages: slot.messages.map((item) =>
-            item.id === assistantMessageId ? message : item,
-          ),
-        },
-      },
-    };
+  chatRunActor.send({
+    assistantMessageId,
+    message,
+    runId,
+    slotKey,
+    type: "assistant.replaced",
   });
-  return replaced;
+  return true;
 }
 
 function markAssistantMessageCancelled(
@@ -562,71 +821,30 @@ function markAssistantMessageCancelled(
 }
 
 function moveActiveRunToChat(slotKey: string, chat: Chat, runId: string) {
-  let nextSlotKey = slotKey;
-  useChatRunStore.setState((state) => {
-    const resolvedKey = resolveSlotKey(state, slotKey);
-    const slot = state.slots[resolvedKey];
-    if (slot?.activeRun?.runId !== runId) return state;
+  const slot = selectSlot(getChatRunContext(), slotKey);
+  if (slot?.activeRun?.runId !== runId) return slotKey;
 
-    nextSlotKey = chat.id;
-    if (resolvedKey === chat.id) {
-      return {
-        slots: {
-          ...state.slots,
-          [resolvedKey]: {
-            ...slot,
-            chatId: chat.id,
-          },
-        },
-      };
-    }
-
-    const slots = { ...state.slots };
-    const existingTarget = slots[chat.id];
-    delete slots[resolvedKey];
-    slots[chat.id] = {
-      ...slot,
-      chatId: chat.id,
-      config: slot.config ?? existingTarget?.config,
-      key: chat.id,
-    };
-
-    return {
-      aliases: {
-        ...state.aliases,
-        [slot.activeRun.initialSlotKey]: chat.id,
-        [resolvedKey]: chat.id,
-      },
-      slots,
-    };
+  chatRunActor.send({
+    chat,
+    runId,
+    slotKey,
+    type: "run.movedToChat",
   });
-  return nextSlotKey;
+  return chat.id;
 }
 
 function getActiveRunMessages(slotKey: string, runId: string) {
-  const state = useChatRunStore.getState();
+  const state = getChatRunContext();
   const slot = selectSlot(state, slotKey);
   return slot?.activeRun?.runId === runId ? slot.messages : EMPTY_MESSAGES;
 }
 
 function finishRun(slotKey: string, runId: string, result?: ChatSendResult) {
-  useChatRunStore.setState((state) => {
-    const resolvedKey = resolveSlotKey(state, slotKey);
-    const slot = state.slots[resolvedKey];
-    if (slot?.activeRun?.runId !== runId) return state;
-
-    return {
-      slots: {
-        ...state.slots,
-        [resolvedKey]: {
-          ...slot,
-          activeRun: undefined,
-          chatId: result?.chatId ?? slot.chatId,
-          config: result?.config ?? slot.config,
-          isRunning: false,
-        },
-      },
-    };
+  chatRunActor.send({
+    result,
+    runId,
+    slotKey,
+    type: "run.finished",
   });
 }
 

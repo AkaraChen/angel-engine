@@ -369,10 +369,10 @@ function ChatRunningPulse({ chatId }: { chatId: string }) {
   return (
     <i
       aria-hidden
-      className="relative ml-auto flex size-2.5 shrink-0 rounded-full"
+      className="relative ml-auto flex size-2 shrink-0 rounded-full"
     >
       <i className="absolute inline-flex size-full animate-ping rounded-full bg-emerald-400 opacity-60" />
-      <i className="relative inline-flex size-2.5 rounded-full bg-emerald-500 shadow-[0_0_0_1px_rgba(16,185,129,0.35)]" />
+      <i className="relative inline-flex size-2 rounded-full bg-emerald-500 shadow-[0_0_0_1px_rgba(16,185,129,0.35)]" />
     </i>
   );
 }
