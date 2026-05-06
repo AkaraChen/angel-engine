@@ -3,7 +3,7 @@ use serde_json::{Value, json};
 use crate::error::EngineError;
 use crate::event::EngineEvent;
 use crate::ids::JsonRpcRequestId;
-use crate::protocol::{AcpMethod, CodexMethod, ProtocolEffect, ProtocolMethod};
+use crate::protocol::{AcpMethod, CodexMethod, ProtocolMethod};
 use crate::reducer::AngelEngine;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -281,21 +281,6 @@ impl TransportOutput {
     }
 }
 
-pub trait ProtocolTransport {
-    fn encode_effect(
-        &self,
-        engine: &AngelEngine,
-        effect: &ProtocolEffect,
-        options: &TransportOptions,
-    ) -> Result<TransportOutput, EngineError>;
-
-    fn decode_message(
-        &self,
-        engine: &AngelEngine,
-        message: &JsonRpcMessage,
-    ) -> Result<TransportOutput, EngineError>;
-}
-
 pub fn apply_transport_output(
     engine: &mut AngelEngine,
     output: &TransportOutput,
@@ -317,7 +302,7 @@ pub fn client_info_json(client_info: &TransportClientInfo) -> Value {
     })
 }
 
-pub(crate) fn method_name(method: &ProtocolMethod) -> String {
+pub fn method_name(method: &ProtocolMethod) -> String {
     match method {
         ProtocolMethod::Acp(method) => acp_method_name(method).to_string(),
         ProtocolMethod::Codex(method) => codex_method_name(method).to_string(),

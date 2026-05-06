@@ -1,20 +1,20 @@
-use crate::adapters::acp::{AcpAdapter, AcpStopReason};
-use crate::adapters::codex::CodexAdapter;
 use crate::event::EngineEvent;
-use crate::ids::{ConversationId, RemoteConversationId, TurnId};
+use crate::ids::RemoteConversationId;
 use crate::protocol::ProtocolFlavor;
 use crate::state::{
     ContentDelta, ContextPatch, ContextScope, ContextUpdate, ConversationLifecycle, TurnOutcome,
     TurnPhase,
 };
 
-use super::{engine_with, insert_ready_conversation, start_turn};
+use super::{
+    acp_capabilities, codex_capabilities, engine_with, insert_ready_conversation, start_turn,
+};
 use crate::reducer::{EnginePolicy, InvalidEventPolicy};
 
 #[test]
 fn ignore_stale_delta_does_not_revive_terminal_turn() {
-    let adapter = CodexAdapter::app_server();
-    let mut engine = engine_with(ProtocolFlavor::CodexAppServer, adapter.capabilities());
+    let capabilities = codex_capabilities();
+    let mut engine = engine_with(ProtocolFlavor::CodexAppServer, capabilities.clone());
     engine.policy = EnginePolicy {
         invalid_event_policy: InvalidEventPolicy::IgnoreStale,
     };
@@ -22,7 +22,7 @@ fn ignore_stale_delta_does_not_revive_terminal_turn() {
         &mut engine,
         "conv",
         RemoteConversationId::Known("thread".to_string()),
-        adapter.capabilities(),
+        capabilities.clone(),
     );
     let turn_id = start_turn(&mut engine, conversation_id.clone());
     engine
@@ -47,13 +47,13 @@ fn ignore_stale_delta_does_not_revive_terminal_turn() {
 
 #[test]
 fn plan_delta_is_stored_on_turn_without_assistant_output() {
-    let adapter = CodexAdapter::app_server();
-    let mut engine = engine_with(ProtocolFlavor::CodexAppServer, adapter.capabilities());
+    let capabilities = codex_capabilities();
+    let mut engine = engine_with(ProtocolFlavor::CodexAppServer, capabilities.clone());
     let conversation_id = insert_ready_conversation(
         &mut engine,
         "conv",
         RemoteConversationId::Known("thread".to_string()),
-        adapter.capabilities(),
+        capabilities.clone(),
     );
     let turn_id = start_turn(&mut engine, conversation_id.clone());
 
@@ -76,13 +76,13 @@ fn plan_delta_is_stored_on_turn_without_assistant_output() {
 
 #[test]
 fn plan_path_is_stored_on_turn() {
-    let adapter = CodexAdapter::app_server();
-    let mut engine = engine_with(ProtocolFlavor::CodexAppServer, adapter.capabilities());
+    let capabilities = codex_capabilities();
+    let mut engine = engine_with(ProtocolFlavor::CodexAppServer, capabilities.clone());
     let conversation_id = insert_ready_conversation(
         &mut engine,
         "conv",
         RemoteConversationId::Known("thread".to_string()),
-        adapter.capabilities(),
+        capabilities.clone(),
     );
     let turn_id = start_turn(&mut engine, conversation_id.clone());
 
@@ -101,13 +101,13 @@ fn plan_path_is_stored_on_turn() {
 
 #[test]
 fn rediscovery_updates_context_without_resetting_loaded_conversation() {
-    let adapter = CodexAdapter::app_server();
-    let mut engine = engine_with(ProtocolFlavor::CodexAppServer, adapter.capabilities());
+    let capabilities = codex_capabilities();
+    let mut engine = engine_with(ProtocolFlavor::CodexAppServer, capabilities.clone());
     let conversation_id = insert_ready_conversation(
         &mut engine,
         "conv",
         RemoteConversationId::Known("thread".to_string()),
-        adapter.capabilities(),
+        capabilities.clone(),
     );
 
     engine
@@ -119,7 +119,7 @@ fn rediscovery_updates_context_without_resetting_loaded_conversation() {
                 key: "conversation.title".to_string(),
                 value: "Updated".to_string(),
             }),
-            capabilities: adapter.capabilities(),
+            capabilities: capabilities.clone(),
         })
         .expect("rediscovery");
 
@@ -140,8 +140,8 @@ fn rediscovery_updates_context_without_resetting_loaded_conversation() {
 
 #[test]
 fn discovery_page_updates_common_pagination_state() {
-    let adapter = AcpAdapter::standard();
-    let mut engine = engine_with(ProtocolFlavor::Acp, adapter.capabilities());
+    let capabilities = acp_capabilities();
+    let mut engine = engine_with(ProtocolFlavor::Acp, capabilities.clone());
 
     engine
         .apply_event(EngineEvent::ConversationDiscoveryPage {
@@ -152,21 +152,4 @@ fn discovery_page_updates_common_pagination_state() {
 
     assert_eq!(engine.discovery.cursor.as_deref(), Some("page-1"));
     assert_eq!(engine.discovery.next_cursor.as_deref(), Some("page-2"));
-}
-
-#[test]
-fn acp_stop_reason_maps_to_refused_terminal() {
-    let adapter = AcpAdapter::standard();
-    let event = adapter.stop_reason_event(
-        ConversationId::new("conv"),
-        TurnId::new("turn"),
-        AcpStopReason::Refusal,
-    );
-    assert!(matches!(
-        event,
-        EngineEvent::TurnTerminal {
-            outcome: TurnOutcome::Refused,
-            ..
-        }
-    ));
 }

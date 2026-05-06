@@ -17,19 +17,23 @@ protocol-neutral engine concept by an adapter.
 ## Packages
 
 - `crates/angel-engine/`
-  - Rust engine library and protocol normalization layer.
+  - Rust engine library and protocol-neutral state machine.
   - Owns protocol-neutral commands, events, state, reducers, capabilities,
-    display-message construction, and adapter implementations.
-  - Adapter folders:
-    - `src/adapters/codex/` owns all Codex app-server wire format, hydrate
-      replay normalization, request/response/notification decoding, model
-      catalog parsing, and Codex-specific command encoding.
-    - `src/adapters/acp/` owns all ACP wire format, session update decoding,
-      config option parsing, tool call mapping, and ACP-specific command
-      encoding.
+    display-message construction, protocol effects, and transport primitives.
   - Shared state/reducer folders must not inspect provider names or raw provider
     JSON shapes. They should operate on `EngineCommand`, `EngineEvent`,
     `ConversationCapabilities`, and protocol-neutral state types only.
+
+- `crates/angel-provider/`
+  - Rust provider adapter crate over `angel-engine`.
+  - Owns the `ProtocolAdapter` interface plus built-in Codex and ACP
+    implementations.
+  - Adapter folders:
+    - `src/codex/` owns all Codex app-server wire format, hydrate replay
+      normalization, request/response/notification decoding, model catalog
+      parsing, and Codex-specific command encoding.
+    - `src/acp/` owns all ACP wire format, session update decoding, config
+      option parsing, tool call mapping, and ACP-specific command encoding.
 
 - `crates/angel-engine-client/`
   - Rust client API over `angel-engine`.
@@ -40,7 +44,7 @@ protocol-neutral engine concept by an adapter.
   - It may orchestrate when to initialize, hydrate, inspect, drain, or send
     thread events. It must not parse provider wire formats or invent
     provider-specific behavior. If a runtime needs special interpretation, add
-    it to the corresponding `angel-engine` adapter and expose the normalized
+    it to the corresponding `angel-provider` adapter and expose the normalized
     result through engine state.
 
 - `crates/angel-engine-client-napi/`

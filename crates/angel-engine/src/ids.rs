@@ -2,7 +2,7 @@ use std::fmt;
 
 macro_rules! id_type {
     ($name:ident) => {
-        #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+        #[derive(serde::Serialize, serde::Deserialize, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
         pub struct $name(String);
 
         impl $name {
@@ -45,7 +45,9 @@ id_type!(ActionId);
 id_type!(ElicitationId);
 id_type!(AuthMethodId);
 
-#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(
+    serde::Serialize, serde::Deserialize, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash,
+)]
 pub enum JsonRpcRequestId {
     String(String),
     Number(String),
@@ -122,7 +124,9 @@ impl fmt::Display for JsonRpcRequestId {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(
+    serde::Serialize, serde::Deserialize, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash,
+)]
 pub enum RemoteConversationId {
     Known(String),
     Pending(String),
@@ -138,20 +142,26 @@ impl RemoteConversationId {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(
+    serde::Serialize, serde::Deserialize, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash,
+)]
 pub enum RemoteTurnId {
     Known(String),
     Pending { request_id: JsonRpcRequestId },
     Local(String),
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(
+    serde::Serialize, serde::Deserialize, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash,
+)]
 pub enum RemoteActionId {
     Known(String),
     Local(String),
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(
+    serde::Serialize, serde::Deserialize, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash,
+)]
 pub enum RemoteRequestId {
     JsonRpc(JsonRpcRequestId),
     Local(String),

@@ -1,21 +1,20 @@
-use crate::adapters::codex::CodexAdapter;
 use crate::command::{EngineCommand, EngineExtensionCommand};
 use crate::event::EngineEvent;
 use crate::ids::RemoteConversationId;
 use crate::protocol::{CodexMethod, ProtocolFlavor, ProtocolMethod};
 use crate::state::{ConversationLifecycle, HistoryMutationOp, HistoryMutationResult};
 
-use super::{engine_with, insert_ready_conversation};
+use super::{codex_capabilities, engine_with, insert_ready_conversation};
 
 #[test]
 fn codex_rollback_marks_workspace_not_reverted() {
-    let adapter = CodexAdapter::app_server();
-    let mut engine = engine_with(ProtocolFlavor::CodexAppServer, adapter.capabilities());
+    let capabilities = codex_capabilities();
+    let mut engine = engine_with(ProtocolFlavor::CodexAppServer, capabilities.clone());
     let conversation_id = insert_ready_conversation(
         &mut engine,
         "conv",
         RemoteConversationId::Known("thread".to_string()),
-        adapter.capabilities(),
+        capabilities.clone(),
     );
 
     let plan = engine

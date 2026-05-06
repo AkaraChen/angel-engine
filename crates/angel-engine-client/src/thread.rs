@@ -1,3 +1,4 @@
+use angel_provider::ProtocolAdapter;
 use serde::{Deserialize, Serialize};
 
 use crate::client::Client;
@@ -9,15 +10,18 @@ use crate::settings::{
 };
 use crate::snapshot::{ConversationSnapshot, ElicitationSnapshot, TurnSnapshot};
 
-pub type Conversation<'a> = Thread<'a>;
+pub type Conversation<'a, A = crate::adapter::RuntimeAdapter> = Thread<'a, A>;
 
-pub struct Thread<'a> {
-    client: &'a mut Client,
+pub struct Thread<'a, A = crate::adapter::RuntimeAdapter> {
+    client: &'a mut Client<A>,
     conversation_id: String,
 }
 
-impl<'a> Thread<'a> {
-    pub(crate) fn new(client: &'a mut Client, conversation_id: String) -> Self {
+impl<'a, A> Thread<'a, A>
+where
+    A: ProtocolAdapter,
+{
+    pub(crate) fn new(client: &'a mut Client<A>, conversation_id: String) -> Self {
         Self {
             client,
             conversation_id,

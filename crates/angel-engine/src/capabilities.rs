@@ -1,6 +1,6 @@
 use std::collections::BTreeMap;
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug, PartialEq, Eq)]
 pub enum CapabilitySupport {
     Unsupported,
     Supported,
@@ -32,7 +32,7 @@ impl CapabilitySupport {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug, PartialEq, Eq)]
 pub struct RuntimeCapabilities {
     pub name: String,
     pub version: Option<String>,
@@ -53,7 +53,7 @@ impl RuntimeCapabilities {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug, PartialEq, Eq)]
 pub struct ConversationCapabilities {
     pub lifecycle: LifecycleCapabilities,
     pub turn: TurnCapabilities,
@@ -160,7 +160,7 @@ impl ConversationCapabilities {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug, PartialEq, Eq)]
 pub struct LifecycleCapabilities {
     pub create: CapabilitySupport,
     pub list: CapabilitySupport,
@@ -171,7 +171,7 @@ pub struct LifecycleCapabilities {
     pub close: CapabilitySupport,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug, PartialEq, Eq)]
 pub struct TurnCapabilities {
     pub start: CapabilitySupport,
     pub steer: CapabilitySupport,
@@ -180,14 +180,14 @@ pub struct TurnCapabilities {
     pub requires_expected_turn_id_for_steer: bool,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug, PartialEq, Eq)]
 pub struct ActionCapabilities {
     pub observe: CapabilitySupport,
     pub stream_output: CapabilitySupport,
     pub decline: CapabilitySupport,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug, PartialEq, Eq)]
 pub struct ElicitationCapabilities {
     pub approval: CapabilitySupport,
     pub user_input: CapabilitySupport,
@@ -195,7 +195,7 @@ pub struct ElicitationCapabilities {
     pub dynamic_tool_call: CapabilitySupport,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug, PartialEq, Eq)]
 pub struct HistoryCapabilities {
     pub hydrate: CapabilitySupport,
     pub compact: CapabilitySupport,
@@ -203,7 +203,7 @@ pub struct HistoryCapabilities {
     pub inject_items: CapabilitySupport,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug, PartialEq, Eq)]
 pub struct ContextCapabilities {
     pub mode: CapabilitySupport,
     pub config: CapabilitySupport,
@@ -211,7 +211,7 @@ pub struct ContextCapabilities {
     pub turn_overrides: CapabilitySupport,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug, PartialEq, Eq)]
 pub struct ObserverCapabilities {
     pub unsubscribe: CapabilitySupport,
 }

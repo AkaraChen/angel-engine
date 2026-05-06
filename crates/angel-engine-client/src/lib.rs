@@ -19,6 +19,7 @@ mod settings;
 mod snapshot;
 mod thread;
 
+pub use adapter::RuntimeAdapter;
 pub use client::{Client, ClientBuilder};
 pub use config::{
     ClientAuthOptions, ClientIdentity, ClientOptions, ClientOptionsBuilder, ClientProtocol,

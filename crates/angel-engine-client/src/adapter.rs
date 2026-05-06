@@ -1,67 +1,46 @@
-use angel_engine::adapters::acp::AcpAdapter;
-use angel_engine::adapters::codex::CodexAdapter;
 use angel_engine::{
     AngelEngine, ConversationCapabilities, EngineError, ProtocolEffect, ProtocolFlavor,
-    ProtocolTransport, SessionModelState, TransportOptions, TransportOutput,
+    SessionModelState, TransportOptions, TransportOutput,
 };
+use angel_provider::ProtocolAdapter;
+use angel_provider::acp::AcpAdapter;
+use angel_provider::codex::CodexAdapter;
 use serde_json::Value;
 
 use crate::config::{ClientOptions, ClientProtocol};
 
-#[derive(Clone, Debug)]
-pub(crate) enum RuntimeAdapter {
-    Acp(AcpAdapter),
-    Codex(CodexAdapter),
+#[derive(Debug)]
+pub struct RuntimeAdapter {
+    inner: Box<dyn ProtocolAdapter + Send + Sync>,
 }
 
 impl RuntimeAdapter {
-    pub(crate) fn from_options(options: &ClientOptions) -> Self {
-        match options.protocol {
-            ClientProtocol::Acp if options.auth.need_auth => Self::Acp(AcpAdapter::standard()),
-            ClientProtocol::Acp => Self::Acp(AcpAdapter::without_authentication()),
-            ClientProtocol::CodexAppServer => Self::Codex(CodexAdapter::app_server()),
-        }
-    }
-
-    pub(crate) fn protocol_flavor(&self) -> ProtocolFlavor {
-        match self {
-            Self::Acp(_) => ProtocolFlavor::Acp,
-            Self::Codex(_) => ProtocolFlavor::CodexAppServer,
-        }
-    }
-
-    pub(crate) fn capabilities(&self) -> ConversationCapabilities {
-        match self {
-            Self::Acp(adapter) => adapter.capabilities(),
-            Self::Codex(adapter) => adapter.capabilities(),
-        }
-    }
-
-    pub(crate) fn model_catalog_from_runtime_debug(
-        &self,
-        result: &Value,
-        current_model_id: Option<&str>,
-    ) -> Option<SessionModelState> {
-        match self {
-            Self::Acp(_) => None,
-            Self::Codex(adapter) => {
-                adapter.model_catalog_from_debug_models(result, current_model_id)
-            }
-        }
+    pub fn from_options(options: &ClientOptions) -> Self {
+        let inner: Box<dyn ProtocolAdapter + Send + Sync> = match options.protocol {
+            ClientProtocol::Acp if options.auth.need_auth => Box::new(AcpAdapter::standard()),
+            ClientProtocol::Acp => Box::new(AcpAdapter::without_authentication()),
+            ClientProtocol::CodexAppServer => Box::new(CodexAdapter::app_server()),
+        };
+        Self { inner }
     }
 }
 
-impl ProtocolTransport for RuntimeAdapter {
+impl ProtocolAdapter for RuntimeAdapter {
+    fn protocol_flavor(&self) -> ProtocolFlavor {
+        self.inner.protocol_flavor()
+    }
+
+    fn capabilities(&self) -> ConversationCapabilities {
+        self.inner.capabilities()
+    }
+
     fn encode_effect(
         &self,
         engine: &AngelEngine,
         effect: &ProtocolEffect,
         options: &TransportOptions,
     ) -> Result<TransportOutput, EngineError> {
-        match self {
-            Self::Acp(adapter) => adapter.encode_effect(engine, effect, options),
-            Self::Codex(adapter) => adapter.encode_effect(engine, effect, options),
-        }
+        self.inner.encode_effect(engine, effect, options)
     }
 
     fn decode_message(
@@ -69,9 +48,15 @@ impl ProtocolTransport for RuntimeAdapter {
         engine: &AngelEngine,
         message: &angel_engine::JsonRpcMessage,
     ) -> Result<TransportOutput, EngineError> {
-        match self {
-            Self::Acp(adapter) => adapter.decode_message(engine, message),
-            Self::Codex(adapter) => adapter.decode_message(engine, message),
-        }
+        self.inner.decode_message(engine, message)
+    }
+
+    fn model_catalog_from_runtime_debug(
+        &self,
+        result: &Value,
+        current_model_id: Option<&str>,
+    ) -> Option<SessionModelState> {
+        self.inner
+            .model_catalog_from_runtime_debug(result, current_model_id)
     }
 }

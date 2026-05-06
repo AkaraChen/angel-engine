@@ -1,5 +1,3 @@
-use crate::adapters::acp::AcpAdapter;
-use crate::adapters::codex::CodexAdapter;
 use crate::command::{EngineCommand, TurnOverrides, UserInput};
 use crate::event::EngineEvent;
 use crate::ids::RemoteConversationId;
@@ -10,17 +8,17 @@ use crate::state::{
     SessionModeState, SessionModel, SessionModelState,
 };
 
-use super::{engine_with, insert_ready_conversation};
+use super::{acp_capabilities, codex_capabilities, engine_with, insert_ready_conversation};
 
 #[test]
 fn acp_context_update_uses_advertised_model_config_option() {
-    let adapter = AcpAdapter::standard();
-    let mut engine = engine_with(ProtocolFlavor::Acp, adapter.capabilities());
+    let capabilities = acp_capabilities();
+    let mut engine = engine_with(ProtocolFlavor::Acp, capabilities.clone());
     let conversation_id = insert_ready_conversation(
         &mut engine,
         "conv",
         RemoteConversationId::Known("sess".to_string()),
-        adapter.capabilities(),
+        capabilities.clone(),
     );
     engine
         .conversations
@@ -65,13 +63,13 @@ fn acp_context_update_uses_advertised_model_config_option() {
 
 #[test]
 fn acp_context_update_uses_advertised_effort_config_option() {
-    let adapter = AcpAdapter::standard();
-    let mut engine = engine_with(ProtocolFlavor::Acp, adapter.capabilities());
+    let capabilities = acp_capabilities();
+    let mut engine = engine_with(ProtocolFlavor::Acp, capabilities.clone());
     let conversation_id = insert_ready_conversation(
         &mut engine,
         "conv",
         RemoteConversationId::Known("sess".to_string()),
-        adapter.capabilities(),
+        capabilities.clone(),
     );
     engine
         .conversations
@@ -118,13 +116,13 @@ fn acp_context_update_uses_advertised_effort_config_option() {
 
 #[test]
 fn settings_api_reports_reasoning_models_and_modes() {
-    let adapter = AcpAdapter::standard();
-    let mut engine = engine_with(ProtocolFlavor::Acp, adapter.capabilities());
+    let capabilities = acp_capabilities();
+    let mut engine = engine_with(ProtocolFlavor::Acp, capabilities.clone());
     let conversation_id = insert_ready_conversation(
         &mut engine,
         "conv",
         RemoteConversationId::Known("sess".to_string()),
-        adapter.capabilities(),
+        capabilities.clone(),
     );
     engine
         .apply_event(EngineEvent::SessionConfigOptionsUpdated {
@@ -237,13 +235,13 @@ fn settings_api_reports_reasoning_models_and_modes() {
 
 #[test]
 fn acp_reasoning_effort_uses_thinking_model_variant_when_available() {
-    let adapter = AcpAdapter::standard();
-    let mut engine = engine_with(ProtocolFlavor::Acp, adapter.capabilities());
+    let capabilities = acp_capabilities();
+    let mut engine = engine_with(ProtocolFlavor::Acp, capabilities.clone());
     let conversation_id = insert_ready_conversation(
         &mut engine,
         "conv",
         RemoteConversationId::Known("sess".to_string()),
-        adapter.capabilities(),
+        capabilities.clone(),
     );
     let conversation = engine.conversations.get_mut(&conversation_id).unwrap();
     conversation.model_state = Some(SessionModelState {
@@ -286,13 +284,13 @@ fn acp_reasoning_effort_uses_thinking_model_variant_when_available() {
 
 #[test]
 fn acp_reasoning_none_disables_thinking_model_variant_when_available() {
-    let adapter = AcpAdapter::standard();
-    let mut engine = engine_with(ProtocolFlavor::Acp, adapter.capabilities());
+    let capabilities = acp_capabilities();
+    let mut engine = engine_with(ProtocolFlavor::Acp, capabilities.clone());
     let conversation_id = insert_ready_conversation(
         &mut engine,
         "conv",
         RemoteConversationId::Known("sess".to_string()),
-        adapter.capabilities(),
+        capabilities.clone(),
     );
     let conversation = engine.conversations.get_mut(&conversation_id).unwrap();
     conversation.model_state = Some(SessionModelState {
@@ -335,13 +333,13 @@ fn acp_reasoning_none_disables_thinking_model_variant_when_available() {
 
 #[test]
 fn acp_start_turn_rejects_unsupported_turn_overrides() {
-    let adapter = AcpAdapter::standard();
-    let mut engine = engine_with(ProtocolFlavor::Acp, adapter.capabilities());
+    let capabilities = acp_capabilities();
+    let mut engine = engine_with(ProtocolFlavor::Acp, capabilities.clone());
     let conversation_id = insert_ready_conversation(
         &mut engine,
         "conv",
         RemoteConversationId::Known("sess".to_string()),
-        adapter.capabilities(),
+        capabilities.clone(),
     );
 
     let error = engine
@@ -368,13 +366,13 @@ fn acp_start_turn_rejects_unsupported_turn_overrides() {
 
 #[test]
 fn codex_start_turn_includes_sticky_context_overrides() {
-    let adapter = CodexAdapter::app_server();
-    let mut engine = engine_with(ProtocolFlavor::CodexAppServer, adapter.capabilities());
+    let capabilities = codex_capabilities();
+    let mut engine = engine_with(ProtocolFlavor::CodexAppServer, capabilities.clone());
     let conversation_id = insert_ready_conversation(
         &mut engine,
         "conv",
         RemoteConversationId::Known("thread".to_string()),
-        adapter.capabilities(),
+        capabilities.clone(),
     );
     let plan = engine
         .plan_command(EngineCommand::UpdateContext {

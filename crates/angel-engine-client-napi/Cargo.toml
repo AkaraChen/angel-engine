@@ -8,7 +8,9 @@ crate-type = ["cdylib"]
 path = "src/lib.rs"
 
 [dependencies]
+angel-engine = { path = "../angel-engine" }
 angel-engine-client = { path = "../angel-engine-client" }
+angel-provider = { path = "../angel-provider" }
 napi = { version = "3", features = ["serde-json"] }
 napi-derive = "3"
 serde = "1"

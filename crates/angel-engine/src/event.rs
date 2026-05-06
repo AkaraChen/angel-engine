@@ -11,7 +11,7 @@ use crate::state::{
     UserInputRef,
 };
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug, PartialEq, Eq)]
 pub enum EngineEvent {
     RuntimeNegotiated {
         capabilities: RuntimeCapabilities,
@@ -169,7 +169,7 @@ pub enum EngineEvent {
     },
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug, PartialEq, Eq)]
 pub enum UiEvent {
     RuntimeChanged,
     DiscoveryChanged,
@@ -190,7 +190,7 @@ pub enum UiEvent {
     HistoryChanged(ConversationId),
 }
 
-#[derive(Clone, Debug, Default, PartialEq, Eq)]
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug, Default, PartialEq, Eq)]
 pub struct TransitionReport {
     pub ui_events: Vec<UiEvent>,
 }

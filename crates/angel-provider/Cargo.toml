@@ -1,0 +1,14 @@
+[package]
+name = "angel-provider"
+version = "0.1.0"
+edition = "2024"
+
+[lib]
+path = "src/mod.rs"
+
+[dependencies]
+angel-engine = { path = "../angel-engine" }
+serde_json = "1"
+
+[dev-dependencies]
+test-cli = { path = "../test-cli" }

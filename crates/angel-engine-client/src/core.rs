@@ -1,9 +1,10 @@
 use angel_engine::{
     AngelEngine, AuthMethodId, ContextPatch, DiscoverConversationsParams, ElicitationDecision,
-    ElicitationId, EngineCommand, EngineExtensionCommand, JsonRpcMessage, ProtocolTransport,
-    ResumeTarget, StartConversationParams, TransportClientInfo, TransportOptions, TransportOutput,
-    TurnOverrides, UserAnswer, UserInput, UserInputKind,
+    ElicitationId, EngineCommand, EngineExtensionCommand, JsonRpcMessage, ResumeTarget,
+    StartConversationParams, TransportClientInfo, TransportOptions, TransportOutput, TurnOverrides,
+    UserAnswer, UserInput, UserInputKind,
 };
+use angel_provider::ProtocolAdapter;
 use serde::{Deserialize, Serialize};
 
 use crate::adapter::RuntimeAdapter;
@@ -21,16 +22,25 @@ use crate::snapshot::{ClientSnapshot, ElicitationSnapshot, TurnSnapshot};
 use crate::thread::ThreadEvent;
 
 #[derive(Debug)]
-pub(crate) struct AngelClientCore {
+pub struct AngelClientCore<A = RuntimeAdapter> {
     engine: AngelEngine,
-    adapter: RuntimeAdapter,
+    adapter: A,
     options: TransportOptions,
     auto_authenticate: bool,
 }
 
-impl AngelClientCore {
+impl AngelClientCore<RuntimeAdapter> {
     pub fn new(options: ClientOptions) -> Self {
         let adapter = RuntimeAdapter::from_options(&options);
+        Self::new_with_adapter(options, adapter)
+    }
+}
+
+impl<A> AngelClientCore<A>
+where
+    A: ProtocolAdapter,
+{
+    pub fn new_with_adapter(options: ClientOptions, adapter: A) -> Self {
         let mut client_info = TransportClientInfo::new(
             options.identity.name,
             options

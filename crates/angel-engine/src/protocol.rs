@@ -2,24 +2,24 @@ use std::collections::BTreeMap;
 
 use crate::ids::{ConversationId, JsonRpcRequestId, TurnId};
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(serde::Serialize, serde::Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
 pub enum ProtocolFlavor {
     Acp,
     CodexAppServer,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug, PartialEq, Eq)]
 pub struct ProtocolEffect {
-    pub(crate) flavor: ProtocolFlavor,
-    pub(crate) method: ProtocolMethod,
-    pub(crate) request_id: Option<JsonRpcRequestId>,
-    pub(crate) conversation_id: Option<ConversationId>,
-    pub(crate) turn_id: Option<TurnId>,
-    pub(crate) payload: EffectPayload,
+    pub flavor: ProtocolFlavor,
+    pub method: ProtocolMethod,
+    pub request_id: Option<JsonRpcRequestId>,
+    pub conversation_id: Option<ConversationId>,
+    pub turn_id: Option<TurnId>,
+    pub payload: EffectPayload,
 }
 
 impl ProtocolEffect {
-    pub(crate) fn new(flavor: ProtocolFlavor, method: ProtocolMethod) -> Self {
+    pub fn new(flavor: ProtocolFlavor, method: ProtocolMethod) -> Self {
         Self {
             flavor,
             method,
@@ -30,36 +30,36 @@ impl ProtocolEffect {
         }
     }
 
-    pub(crate) fn request_id(mut self, request_id: JsonRpcRequestId) -> Self {
+    pub fn request_id(mut self, request_id: JsonRpcRequestId) -> Self {
         self.request_id = Some(request_id);
         self
     }
 
-    pub(crate) fn conversation_id(mut self, conversation_id: ConversationId) -> Self {
+    pub fn conversation_id(mut self, conversation_id: ConversationId) -> Self {
         self.conversation_id = Some(conversation_id);
         self
     }
 
-    pub(crate) fn turn_id(mut self, turn_id: TurnId) -> Self {
+    pub fn turn_id(mut self, turn_id: TurnId) -> Self {
         self.turn_id = Some(turn_id);
         self
     }
 
-    pub(crate) fn field(mut self, key: impl Into<String>, value: impl Into<String>) -> Self {
+    pub fn field(mut self, key: impl Into<String>, value: impl Into<String>) -> Self {
         self.payload.fields.insert(key.into(), value.into());
         self
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub(crate) enum ProtocolMethod {
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug, PartialEq, Eq)]
+pub enum ProtocolMethod {
     Acp(AcpMethod),
     Codex(CodexMethod),
     Extension(String),
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub(crate) enum AcpMethod {
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug, PartialEq, Eq)]
+pub enum AcpMethod {
     Initialize,
     Authenticate,
     SessionList,
@@ -75,8 +75,8 @@ pub(crate) enum AcpMethod {
     RequestPermissionResponse,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub(crate) enum CodexMethod {
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug, PartialEq, Eq)]
+pub enum CodexMethod {
     Initialize,
     ThreadList,
     ThreadStart,
@@ -95,7 +95,7 @@ pub(crate) enum CodexMethod {
     ThreadShellCommand,
 }
 
-#[derive(Clone, Debug, Default, PartialEq, Eq)]
-pub(crate) struct EffectPayload {
-    pub(crate) fields: BTreeMap<String, String>,
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug, Default, PartialEq, Eq)]
+pub struct EffectPayload {
+    pub fields: BTreeMap<String, String>,
 }

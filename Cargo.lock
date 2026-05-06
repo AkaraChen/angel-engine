@@ -6,6 +6,7 @@ version = 4
 name = "angel-engine"
 version = "0.1.0"
 dependencies = [
+ "serde",
  "serde_json",
  "test-cli",
 ]
@@ -15,6 +16,7 @@ name = "angel-engine-client"
 version = "0.1.0"
 dependencies = [
  "angel-engine",
+ "angel-provider",
  "serde",
  "serde_json",
  "test-cli",
@@ -24,7 +26,9 @@ dependencies = [
 name = "angel-engine-client-napi"
 version = "0.1.0"
 dependencies = [
+ "angel-engine",
  "angel-engine-client",
+ "angel-provider",
  "napi",
  "napi-build",
  "napi-derive",
@@ -40,6 +44,15 @@ dependencies = [
  "open",
  "serde",
  "serde_json",
+]
+
+[[package]]
+name = "angel-provider"
+version = "0.1.0"
+dependencies = [
+ "angel-engine",
+ "serde_json",
+ "test-cli",
 ]
 
 [[package]]

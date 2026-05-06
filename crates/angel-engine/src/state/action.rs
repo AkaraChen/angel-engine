@@ -1,7 +1,7 @@
 use crate::error::ErrorInfo;
 use crate::ids::{ActionId, ElicitationId, RemoteActionId, TurnId};
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug, PartialEq, Eq)]
 pub struct ActionState {
     pub id: ActionId,
     pub turn_id: TurnId,
@@ -30,7 +30,7 @@ impl ActionState {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug, PartialEq, Eq)]
 pub enum ActionKind {
     Command,
     FileChange,
@@ -46,7 +46,7 @@ pub enum ActionKind {
     HostCapability,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug, PartialEq, Eq)]
 pub enum ActionPhase {
     Proposed,
     AwaitingDecision { elicitation_id: ElicitationId },
@@ -58,18 +58,18 @@ pub enum ActionPhase {
     Cancelled,
 }
 
-#[derive(Clone, Debug, Default, PartialEq, Eq)]
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug, Default, PartialEq, Eq)]
 pub struct ActionInput {
     pub summary: Option<String>,
     pub raw: Option<String>,
 }
 
-#[derive(Clone, Debug, Default, PartialEq, Eq)]
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug, Default, PartialEq, Eq)]
 pub struct ActionOutput {
     pub chunks: Vec<ActionOutputDelta>,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug, PartialEq, Eq)]
 pub enum ActionOutputDelta {
     Text(String),
     Patch(String),
@@ -77,7 +77,7 @@ pub enum ActionOutputDelta {
     Structured(String),
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug, PartialEq, Eq)]
 pub struct ActionPatch {
     pub phase: Option<ActionPhase>,
     pub output_delta: Option<ActionOutputDelta>,

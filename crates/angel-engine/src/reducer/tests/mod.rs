@@ -1,4 +1,4 @@
-use crate::capabilities::{ConversationCapabilities, RuntimeCapabilities};
+use crate::capabilities::{CapabilitySupport, ConversationCapabilities, RuntimeCapabilities};
 use crate::command::{EngineCommand, TurnOverrides, UserInput};
 use crate::event::EngineEvent;
 use crate::ids::{ConversationId, RemoteConversationId, RemoteTurnId, TurnId};
@@ -17,6 +17,22 @@ mod turn_control;
 
 pub(super) fn runtime(name: &str) -> RuntimeCapabilities {
     RuntimeCapabilities::new(name)
+}
+
+pub(super) fn acp_capabilities() -> ConversationCapabilities {
+    ConversationCapabilities::acp_standard()
+}
+
+pub(super) fn acp_capabilities_with_steer_extension(name: &str) -> ConversationCapabilities {
+    let mut capabilities = ConversationCapabilities::acp_standard();
+    capabilities.turn.steer = CapabilitySupport::Extension {
+        name: name.to_string(),
+    };
+    capabilities
+}
+
+pub(super) fn codex_capabilities() -> ConversationCapabilities {
+    ConversationCapabilities::codex_app_server()
 }
 
 pub(super) fn engine_with(

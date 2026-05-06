@@ -1,7 +1,7 @@
 use std::collections::BTreeMap;
 use std::path::PathBuf;
 
-#[derive(Clone, Debug, Default, PartialEq, Eq)]
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug, Default, PartialEq, Eq)]
 pub struct EffectiveContext {
     pub model: ScopedValue<Option<String>>,
     pub reasoning: ScopedValue<Option<ReasoningProfile>>,
@@ -42,7 +42,7 @@ impl EffectiveContext {
     }
 }
 
-#[derive(Clone, Debug, Default, PartialEq, Eq)]
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug, Default, PartialEq, Eq)]
 pub struct ScopedValue<T> {
     pub runtime_default: Option<T>,
     pub conversation: Option<T>,
@@ -72,7 +72,7 @@ impl<T> ScopedValue<T> {
     }
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(serde::Serialize, serde::Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
 pub enum ContextScope {
     RuntimeDefault,
     Conversation,
@@ -81,7 +81,7 @@ pub enum ContextScope {
     TemporaryGrant,
 }
 
-#[derive(Clone, Debug, Default, PartialEq, Eq)]
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug, Default, PartialEq, Eq)]
 pub struct ContextPatch {
     pub updates: Vec<ContextUpdate>,
 }
@@ -104,7 +104,7 @@ impl ContextPatch {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug, PartialEq, Eq)]
 pub enum ContextUpdate {
     Model {
         scope: ContextScope,
@@ -145,17 +145,17 @@ pub enum ContextUpdate {
     },
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug, PartialEq, Eq)]
 pub struct ReasoningProfile {
     pub effort: Option<String>,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug, PartialEq, Eq)]
 pub struct AgentMode {
     pub id: String,
 }
 
-#[derive(Clone, Debug, Default, PartialEq, Eq)]
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug, Default, PartialEq, Eq)]
 pub enum ApprovalPolicy {
     Never,
     #[default]
@@ -164,7 +164,7 @@ pub enum ApprovalPolicy {
     UnlessTrusted,
 }
 
-#[derive(Clone, Debug, Default, PartialEq, Eq)]
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug, Default, PartialEq, Eq)]
 pub enum SandboxProfile {
     #[default]
     ReadOnly,
@@ -173,7 +173,7 @@ pub enum SandboxProfile {
     Custom(String),
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug, PartialEq, Eq)]
 pub struct PermissionProfile {
     pub name: String,
 }

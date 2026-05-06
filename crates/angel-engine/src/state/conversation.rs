@@ -6,7 +6,7 @@ use crate::ids::{ActionId, ConversationId, ElicitationId, RemoteConversationId, 
 
 use super::*;
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug, PartialEq, Eq)]
 pub enum ConversationLifecycle {
     Discovered,
     Provisioning { op: ProvisionOp },
@@ -21,7 +21,7 @@ pub enum ConversationLifecycle {
     Faulted(ErrorInfo),
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(serde::Serialize, serde::Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
 pub enum ProvisionOp {
     New,
     Load,
@@ -29,7 +29,7 @@ pub enum ProvisionOp {
     Fork,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug, PartialEq, Eq)]
 pub enum HydrationSource {
     AcpLoad,
     CodexResume,
@@ -37,7 +37,7 @@ pub enum HydrationSource {
     Imported,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug, PartialEq, Eq)]
 pub struct ConversationState {
     pub id: ConversationId,
     pub remote: RemoteConversationId,
@@ -110,19 +110,19 @@ impl ConversationState {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug, PartialEq, Eq)]
 pub struct AvailableCommand {
     pub name: String,
     pub description: String,
     pub input: Option<AvailableCommandInput>,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug, PartialEq, Eq)]
 pub struct AvailableCommandInput {
     pub hint: String,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug, PartialEq, Eq)]
 pub struct SessionConfigOption {
     pub id: String,
     pub name: String,
@@ -132,47 +132,47 @@ pub struct SessionConfigOption {
     pub values: Vec<SessionConfigValue>,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug, PartialEq, Eq)]
 pub struct SessionConfigValue {
     pub value: String,
     pub name: String,
     pub description: Option<String>,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug, PartialEq, Eq)]
 pub struct SessionModeState {
     pub current_mode_id: String,
     pub available_modes: Vec<SessionMode>,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug, PartialEq, Eq)]
 pub struct SessionMode {
     pub id: String,
     pub name: String,
     pub description: Option<String>,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug, PartialEq, Eq)]
 pub struct SessionModelState {
     pub current_model_id: String,
     pub available_models: Vec<SessionModel>,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug, PartialEq, Eq)]
 pub struct SessionModel {
     pub id: String,
     pub name: String,
     pub description: Option<String>,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug, PartialEq, Eq)]
 pub struct SessionUsageState {
     pub used: u64,
     pub size: u64,
     pub cost: Option<SessionUsageCost>,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug, PartialEq, Eq)]
 pub struct SessionUsageCost {
     pub amount: String,
     pub currency: String,

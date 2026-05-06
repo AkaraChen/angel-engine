@@ -1,4 +1,7 @@
+use angel_provider::ProtocolAdapter;
+
 use crate::ClientCommandResult;
+use crate::adapter::RuntimeAdapter;
 use crate::config::{ClientOptions, ClientOptionsBuilder, StartConversationRequest};
 use crate::core::{AngelClientCore, DiscoveryRequest, ResumeConversationRequest};
 use crate::error::ClientResult;
@@ -12,11 +15,11 @@ use crate::snapshot::ClientSnapshot;
 use crate::thread::Thread;
 
 #[derive(Debug)]
-pub struct Client {
-    pub(crate) core: AngelClientCore,
+pub struct Client<A = RuntimeAdapter> {
+    pub(crate) core: AngelClientCore<A>,
 }
 
-impl Client {
+impl Client<RuntimeAdapter> {
     pub fn builder() -> ClientOptionsBuilder {
         ClientOptions::builder()
     }
@@ -24,6 +27,17 @@ impl Client {
     pub fn new(options: ClientOptions) -> Self {
         Self {
             core: AngelClientCore::new(options),
+        }
+    }
+}
+
+impl<A> Client<A>
+where
+    A: ProtocolAdapter,
+{
+    pub fn new_with_adapter(options: ClientOptions, adapter: A) -> Self {
+        Self {
+            core: AngelClientCore::new_with_adapter(options, adapter),
         }
     }
 
@@ -135,19 +149,19 @@ impl Client {
         self.core.set_reasoning_effort(conversation_id, effort)
     }
 
-    pub fn get_thread(&mut self, conversation_id: impl Into<String>) -> Thread<'_> {
+    pub fn get_thread(&mut self, conversation_id: impl Into<String>) -> Thread<'_, A> {
         Thread::new(self, conversation_id.into())
     }
 
-    pub fn thread(&mut self, conversation_id: impl Into<String>) -> Thread<'_> {
+    pub fn thread(&mut self, conversation_id: impl Into<String>) -> Thread<'_, A> {
         self.get_thread(conversation_id)
     }
 
-    pub fn conversation(&mut self, conversation_id: impl Into<String>) -> Thread<'_> {
+    pub fn conversation(&mut self, conversation_id: impl Into<String>) -> Thread<'_, A> {
         self.get_thread(conversation_id)
     }
 
-    pub fn selected_thread(&mut self) -> Option<Thread<'_>> {
+    pub fn selected_thread(&mut self) -> Option<Thread<'_, A>> {
         let conversation_id = self.selected_thread_id()?;
         Some(Thread::new(self, conversation_id))
     }

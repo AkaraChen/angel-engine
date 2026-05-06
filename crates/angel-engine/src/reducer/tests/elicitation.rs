@@ -1,4 +1,3 @@
-use crate::adapters::codex::CodexAdapter;
 use crate::command::EngineCommand;
 use crate::event::EngineEvent;
 use crate::ids::{
@@ -10,17 +9,17 @@ use crate::state::{
     ElicitationState, TurnPhase, UserAnswer,
 };
 
-use super::{engine_with, insert_ready_conversation, start_turn};
+use super::{codex_capabilities, engine_with, insert_ready_conversation, start_turn};
 
 #[test]
 fn elicitation_drives_action_and_turn_overlay() {
-    let adapter = CodexAdapter::app_server();
-    let mut engine = engine_with(ProtocolFlavor::CodexAppServer, adapter.capabilities());
+    let capabilities = codex_capabilities();
+    let mut engine = engine_with(ProtocolFlavor::CodexAppServer, capabilities.clone());
     let conversation_id = insert_ready_conversation(
         &mut engine,
         "conv",
         RemoteConversationId::Known("thread".to_string()),
-        adapter.capabilities(),
+        capabilities.clone(),
     );
     let turn_id = start_turn(&mut engine, conversation_id.clone());
     let action_id = ActionId::new("action");
@@ -81,13 +80,13 @@ fn elicitation_drives_action_and_turn_overlay() {
 
 #[test]
 fn resolve_elicitation_encodes_user_answers() {
-    let adapter = CodexAdapter::app_server();
-    let mut engine = engine_with(ProtocolFlavor::CodexAppServer, adapter.capabilities());
+    let capabilities = codex_capabilities();
+    let mut engine = engine_with(ProtocolFlavor::CodexAppServer, capabilities.clone());
     let conversation_id = insert_ready_conversation(
         &mut engine,
         "conv",
         RemoteConversationId::Known("thread".to_string()),
-        adapter.capabilities(),
+        capabilities.clone(),
     );
     let elicitation_id = ElicitationId::new("input");
     engine

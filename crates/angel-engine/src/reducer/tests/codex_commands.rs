@@ -1,19 +1,18 @@
-use crate::adapters::codex::CodexAdapter;
 use crate::command::{EngineCommand, EngineExtensionCommand};
 use crate::ids::RemoteConversationId;
 use crate::protocol::{CodexMethod, ProtocolFlavor, ProtocolMethod};
 
-use super::{engine_with, insert_ready_conversation};
+use super::{codex_capabilities, engine_with, insert_ready_conversation};
 
 #[test]
 fn codex_shell_command_uses_thread_shell_command() {
-    let adapter = CodexAdapter::app_server();
-    let mut engine = engine_with(ProtocolFlavor::CodexAppServer, adapter.capabilities());
+    let capabilities = codex_capabilities();
+    let mut engine = engine_with(ProtocolFlavor::CodexAppServer, capabilities.clone());
     let conversation_id = insert_ready_conversation(
         &mut engine,
         "conv",
         RemoteConversationId::Known("thread".to_string()),
-        adapter.capabilities(),
+        capabilities.clone(),
     );
 
     let plan = engine

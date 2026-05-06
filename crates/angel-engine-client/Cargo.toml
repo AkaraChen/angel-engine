@@ -8,6 +8,7 @@ path = "src/lib.rs"
 
 [dependencies]
 angel-engine = { path = "../angel-engine" }
+angel-provider = { path = "../angel-provider" }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 

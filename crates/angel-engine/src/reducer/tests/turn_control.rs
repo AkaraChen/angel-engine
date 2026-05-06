@@ -1,5 +1,3 @@
-use crate::adapters::acp::AcpAdapter;
-use crate::adapters::codex::CodexAdapter;
 use crate::command::{EngineCommand, EngineExtensionCommand, TurnOverrides, UserInput};
 use crate::error::EngineError;
 use crate::event::EngineEvent;
@@ -8,17 +6,20 @@ use crate::protocol::{AcpMethod, CodexMethod, ProtocolFlavor, ProtocolMethod};
 use crate::reducer::PendingRequest;
 use crate::state::{ConversationLifecycle, TurnOutcome, TurnPhase};
 
-use super::{accept_codex_turn, engine_with, insert_ready_conversation, start_turn};
+use super::{
+    accept_codex_turn, acp_capabilities, acp_capabilities_with_steer_extension, codex_capabilities,
+    engine_with, insert_ready_conversation, start_turn,
+};
 
 #[test]
 fn acp_standard_steer_is_capability_unsupported() {
-    let adapter = AcpAdapter::standard();
-    let mut engine = engine_with(ProtocolFlavor::Acp, adapter.capabilities());
+    let capabilities = acp_capabilities();
+    let mut engine = engine_with(ProtocolFlavor::Acp, capabilities.clone());
     let conversation_id = insert_ready_conversation(
         &mut engine,
         "conv",
         RemoteConversationId::Known("sess".to_string()),
-        adapter.capabilities(),
+        capabilities.clone(),
     );
     start_turn(&mut engine, conversation_id.clone());
 
@@ -39,13 +40,13 @@ fn acp_standard_steer_is_capability_unsupported() {
 
 #[test]
 fn acp_extension_steer_uses_extension_method() {
-    let adapter = AcpAdapter::with_steer_extension("acp/session/steer");
-    let mut engine = engine_with(ProtocolFlavor::Acp, adapter.capabilities());
+    let capabilities = acp_capabilities_with_steer_extension("acp/session/steer");
+    let mut engine = engine_with(ProtocolFlavor::Acp, capabilities.clone());
     let conversation_id = insert_ready_conversation(
         &mut engine,
         "conv",
         RemoteConversationId::Known("sess".to_string()),
-        adapter.capabilities(),
+        capabilities.clone(),
     );
     let turn_id = start_turn(&mut engine, conversation_id.clone());
 
@@ -67,13 +68,13 @@ fn acp_extension_steer_uses_extension_method() {
 
 #[test]
 fn acp_cancel_turn_is_notification_not_public_raw_protocol() {
-    let adapter = AcpAdapter::standard();
-    let mut engine = engine_with(ProtocolFlavor::Acp, adapter.capabilities());
+    let capabilities = acp_capabilities();
+    let mut engine = engine_with(ProtocolFlavor::Acp, capabilities.clone());
     let conversation_id = insert_ready_conversation(
         &mut engine,
         "conv",
         RemoteConversationId::Known("sess".to_string()),
-        adapter.capabilities(),
+        capabilities.clone(),
     );
     let turn_id = start_turn(&mut engine, conversation_id.clone());
 
@@ -106,13 +107,13 @@ fn acp_cancel_turn_is_notification_not_public_raw_protocol() {
 
 #[test]
 fn codex_standard_steer_uses_turn_steer() {
-    let adapter = CodexAdapter::app_server();
-    let mut engine = engine_with(ProtocolFlavor::CodexAppServer, adapter.capabilities());
+    let capabilities = codex_capabilities();
+    let mut engine = engine_with(ProtocolFlavor::CodexAppServer, capabilities.clone());
     let conversation_id = insert_ready_conversation(
         &mut engine,
         "conv",
         RemoteConversationId::Known("thread".to_string()),
-        adapter.capabilities(),
+        capabilities.clone(),
     );
     let turn_id = start_turn(&mut engine, conversation_id.clone());
     accept_codex_turn(&mut engine, conversation_id.clone(), turn_id);
@@ -133,13 +134,13 @@ fn codex_standard_steer_uses_turn_steer() {
 }
 #[test]
 fn active_turn_limit_blocks_second_start_by_default() {
-    let adapter = CodexAdapter::app_server();
-    let mut engine = engine_with(ProtocolFlavor::CodexAppServer, adapter.capabilities());
+    let capabilities = codex_capabilities();
+    let mut engine = engine_with(ProtocolFlavor::CodexAppServer, capabilities.clone());
     let conversation_id = insert_ready_conversation(
         &mut engine,
         "conv",
         RemoteConversationId::Known("thread".to_string()),
-        adapter.capabilities(),
+        capabilities.clone(),
     );
     start_turn(&mut engine, conversation_id.clone());
 
@@ -155,13 +156,13 @@ fn active_turn_limit_blocks_second_start_by_default() {
 
 #[test]
 fn cancel_is_two_phase_until_terminal_event() {
-    let adapter = CodexAdapter::app_server();
-    let mut engine = engine_with(ProtocolFlavor::CodexAppServer, adapter.capabilities());
+    let capabilities = codex_capabilities();
+    let mut engine = engine_with(ProtocolFlavor::CodexAppServer, capabilities.clone());
     let conversation_id = insert_ready_conversation(
         &mut engine,
         "conv",
         RemoteConversationId::Known("thread".to_string()),
-        adapter.capabilities(),
+        capabilities.clone(),
     );
     let turn_id = start_turn(&mut engine, conversation_id.clone());
     accept_codex_turn(&mut engine, conversation_id.clone(), turn_id.clone());

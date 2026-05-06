@@ -7,8 +7,8 @@ and UI updates.
 
 The crate is intentionally centered on state reduction rather than protocol enum
 mirroring. Protocol-specific JSON-RPC transport, request encoding, response
-decoding, and notification handling live in adapters; the core engine keeps the
-conversation model stable for UI and product code.
+decoding, and notification handling live in `angel-provider`; the core engine
+keeps the conversation model stable for UI and product code.
 
 ## Architecture
 
@@ -35,16 +35,12 @@ comes from responses, server notifications, or request failure.
 
 - `src/` contains the protocol-independent engine, state, commands, events,
   reducer, ids, capabilities, errors, and transport traits.
-- `src/adapters/acp/` maps Agent Client Protocol messages to and from engine
-  effects and events.
-- `src/adapters/codex/` maps Codex app-server messages to and from engine
-  effects and events.
-- `examples/` contains low-level adapter/state-machine smoke demos for Codex,
-  OpenCode, and Kimi. Application integrations should prefer
-  `angel-engine-client::AngelClient`.
 - `docs/` contains the state-machine design notes and protocol mapping
   rationale.
 - `vendor/agent-client-protocol/` is the vendored ACP reference material.
+
+Provider implementations and low-level adapter demos live in the
+`angel-provider` crate.
 
 ## Quick Start
 
@@ -57,14 +53,14 @@ cargo test --workspace --no-run
 Run the Codex shell demo if `codex app-server` is available locally:
 
 ```sh
-cargo run -p angel-engine --example codex_shell
+cargo run -p angel-provider --example codex_shell
 ```
 
 Run the ACP shell demos if the corresponding ACP server binaries are available:
 
 ```sh
-cargo run -p angel-engine --example opencode_shell
-cargo run -p angel-engine --example kimi_shell
+cargo run -p angel-provider --example opencode_shell
+cargo run -p angel-provider --example kimi_shell
 ```
 
 Inside the demos, type a message to start a turn. Common commands include

@@ -1,4 +1,4 @@
-#[derive(Clone, Debug, Default, PartialEq, Eq)]
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug, Default, PartialEq, Eq)]
 pub struct HistoryState {
     pub hydrated: bool,
     pub turn_count: usize,
@@ -6,13 +6,13 @@ pub struct HistoryState {
     pub replay: Vec<HistoryReplayEntry>,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug, PartialEq, Eq)]
 pub struct HistoryReplayEntry {
     pub role: HistoryRole,
     pub content: super::ContentDelta,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug, PartialEq, Eq)]
 pub enum HistoryRole {
     User,
     Assistant,
@@ -21,7 +21,7 @@ pub enum HistoryRole {
     Unknown(String),
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug, PartialEq, Eq)]
 pub enum HistoryMutationOp {
     Compact,
     Rollback { num_turns: usize },
@@ -29,14 +29,14 @@ pub enum HistoryMutationOp {
     ReplaceHistory,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug, PartialEq, Eq)]
 pub struct HistoryMutationResult {
     pub success: bool,
     pub workspace_reverted: bool,
     pub message: Option<String>,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug, PartialEq, Eq)]
 pub struct ObserverState {
     pub subscribed: bool,
     pub visible: bool,

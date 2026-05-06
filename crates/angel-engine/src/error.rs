@@ -1,7 +1,7 @@
 use std::error::Error;
 use std::fmt;
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug, PartialEq, Eq)]
 pub struct ErrorInfo {
     pub code: String,
     pub message: String,
@@ -23,7 +23,7 @@ impl ErrorInfo {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug, PartialEq, Eq)]
 pub enum EngineError {
     RuntimeUnavailable { actual: String },
     ConversationNotFound { conversation_id: String },

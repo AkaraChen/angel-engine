@@ -2,7 +2,7 @@ use crate::ids::{ActionId, ElicitationId, RemoteRequestId, TurnId};
 
 use super::*;
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug, PartialEq, Eq)]
 pub struct ElicitationState {
     pub id: ElicitationId,
     pub turn_id: Option<TurnId>,
@@ -31,7 +31,7 @@ impl ElicitationState {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug, PartialEq, Eq)]
 pub enum ElicitationKind {
     Approval,
     UserInput,
@@ -40,7 +40,7 @@ pub enum ElicitationKind {
     PermissionProfile,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug, PartialEq, Eq)]
 pub enum ElicitationPhase {
     Open,
     Resolving,
@@ -48,7 +48,7 @@ pub enum ElicitationPhase {
     Cancelled,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug, PartialEq, Eq)]
 pub enum ElicitationDecision {
     Allow,
     AllowForSession,
@@ -61,13 +61,13 @@ pub enum ElicitationDecision {
     Raw(String),
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug, PartialEq, Eq)]
 pub struct UserAnswer {
     pub id: String,
     pub value: String,
 }
 
-#[derive(Clone, Debug, Default, PartialEq, Eq)]
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug, Default, PartialEq, Eq)]
 pub struct ElicitationOptions {
     pub title: Option<String>,
     pub body: Option<String>,
@@ -75,7 +75,7 @@ pub struct ElicitationOptions {
     pub questions: Vec<UserQuestion>,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug, PartialEq, Eq)]
 pub struct UserQuestion {
     pub id: String,
     pub header: String,
@@ -86,7 +86,7 @@ pub struct UserQuestion {
     pub schema: Option<UserQuestionSchema>,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug, PartialEq, Eq)]
 pub struct UserQuestionSchema {
     pub value_type: QuestionValueType,
     pub item_value_type: Option<QuestionValueType>,
@@ -98,7 +98,7 @@ pub struct UserQuestionSchema {
     pub raw_schema: Option<String>,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug, PartialEq, Eq)]
 pub enum QuestionValueType {
     String,
     Number,
@@ -109,7 +109,7 @@ pub enum QuestionValueType {
     Unknown(String),
 }
 
-#[derive(Clone, Debug, Default, PartialEq, Eq)]
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug, Default, PartialEq, Eq)]
 pub struct QuestionConstraints {
     pub pattern: Option<String>,
     pub minimum: Option<String>,
@@ -121,7 +121,7 @@ pub struct QuestionConstraints {
     pub unique_items: Option<bool>,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug, PartialEq, Eq)]
 pub struct UserQuestionOption {
     pub label: String,
     pub description: String,

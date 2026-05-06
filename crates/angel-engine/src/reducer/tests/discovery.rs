@@ -1,5 +1,3 @@
-use crate::adapters::acp::AcpAdapter;
-use crate::adapters::codex::CodexAdapter;
 use crate::capabilities::{CapabilitySupport, RuntimeCapabilities};
 use crate::command::{
     DiscoverConversationsParams, EngineCommand, ResumeTarget, StartConversationParams,
@@ -10,12 +8,12 @@ use crate::protocol::{AcpMethod, CodexMethod, ProtocolFlavor, ProtocolMethod};
 use crate::reducer::{AngelEngine, PendingRequest};
 use crate::state::{ContextPatch, ContextScope, ContextUpdate, ConversationLifecycle};
 
-use super::engine_with;
+use super::{acp_capabilities, codex_capabilities, engine_with};
 
 #[test]
 fn acp_discovery_carries_common_filters() {
-    let adapter = AcpAdapter::standard();
-    let mut engine = engine_with(ProtocolFlavor::Acp, adapter.capabilities());
+    let capabilities = acp_capabilities();
+    let mut engine = engine_with(ProtocolFlavor::Acp, capabilities.clone());
 
     let plan = engine
         .plan_command(EngineCommand::DiscoverConversations {
@@ -50,8 +48,8 @@ fn acp_discovery_carries_common_filters() {
 
 #[test]
 fn codex_discovery_carries_common_filters() {
-    let adapter = CodexAdapter::app_server();
-    let mut engine = engine_with(ProtocolFlavor::CodexAppServer, adapter.capabilities());
+    let capabilities = codex_capabilities();
+    let mut engine = engine_with(ProtocolFlavor::CodexAppServer, capabilities.clone());
 
     let plan = engine
         .plan_command(EngineCommand::DiscoverConversations {
@@ -79,9 +77,9 @@ fn codex_discovery_carries_common_filters() {
 
 #[test]
 fn negotiated_capabilities_gate_common_discovery() {
-    let adapter = AcpAdapter::standard();
-    let mut engine = AngelEngine::new(ProtocolFlavor::Acp, adapter.capabilities());
-    let mut capabilities = adapter.capabilities();
+    let capabilities = acp_capabilities();
+    let mut engine = AngelEngine::new(ProtocolFlavor::Acp, capabilities.clone());
+    let mut capabilities = capabilities.clone();
     capabilities.lifecycle.list = CapabilitySupport::Unsupported;
     engine
         .apply_event(EngineEvent::RuntimeNegotiated {
@@ -105,8 +103,8 @@ fn negotiated_capabilities_gate_common_discovery() {
 
 #[test]
 fn resume_requires_negotiated_common_capability() {
-    let adapter = AcpAdapter::standard();
-    let mut engine = engine_with(ProtocolFlavor::Acp, adapter.capabilities());
+    let capabilities = acp_capabilities();
+    let mut engine = engine_with(ProtocolFlavor::Acp, capabilities.clone());
 
     let error = engine
         .plan_command(EngineCommand::ResumeConversation {
@@ -126,8 +124,8 @@ fn resume_requires_negotiated_common_capability() {
 
 #[test]
 fn start_conversation_carries_only_common_create_fields() {
-    let adapter = CodexAdapter::app_server();
-    let mut engine = engine_with(ProtocolFlavor::CodexAppServer, adapter.capabilities());
+    let capabilities = codex_capabilities();
+    let mut engine = engine_with(ProtocolFlavor::CodexAppServer, capabilities.clone());
 
     let plan = engine
         .plan_command(EngineCommand::StartConversation {
@@ -148,9 +146,9 @@ fn start_conversation_carries_only_common_create_fields() {
 
 #[test]
 fn acp_discovered_conversation_resumes_with_remote_id() {
-    let adapter = AcpAdapter::standard();
-    let mut engine = engine_with(ProtocolFlavor::Acp, adapter.capabilities());
-    let mut capabilities = adapter.capabilities();
+    let capabilities = acp_capabilities();
+    let mut engine = engine_with(ProtocolFlavor::Acp, capabilities.clone());
+    let mut capabilities = capabilities.clone();
     capabilities.lifecycle.load = CapabilitySupport::Supported;
     let conversation_id = ConversationId::new("disc");
     engine
@@ -198,15 +196,15 @@ fn acp_discovered_conversation_resumes_with_remote_id() {
 
 #[test]
 fn codex_discovered_conversation_resumes_with_remote_id() {
-    let adapter = CodexAdapter::app_server();
-    let mut engine = engine_with(ProtocolFlavor::CodexAppServer, adapter.capabilities());
+    let capabilities = codex_capabilities();
+    let mut engine = engine_with(ProtocolFlavor::CodexAppServer, capabilities.clone());
     let conversation_id = ConversationId::new("disc");
     engine
         .apply_event(EngineEvent::ConversationDiscovered {
             id: conversation_id.clone(),
             remote: RemoteConversationId::Known("thread".to_string()),
             context: ContextPatch::empty(),
-            capabilities: adapter.capabilities(),
+            capabilities: capabilities.clone(),
         })
         .expect("discover");
 

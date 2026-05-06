@@ -21,7 +21,10 @@ use napi_derive::napi;
 use serde::Serialize;
 use serde::de::DeserializeOwned;
 
+mod adapter;
 mod types;
+
+use adapter::NapiRuntimeAdapter;
 
 #[napi]
 pub struct AngelClient {
@@ -517,15 +520,20 @@ impl<'task> ScopedTask<'task> for SessionJsonTask {
 
 #[napi]
 pub struct AngelEngineClient {
-    client: EngineClient,
+    client: EngineClient<NapiRuntimeAdapter>,
 }
 
 #[napi]
 impl AngelEngineClient {
-    #[napi(constructor, ts_args_type = "options: ClientOptions")]
-    pub fn new(options: serde_json::Value) -> Result<Self> {
+    #[napi(
+        constructor,
+        ts_args_type = "options: ClientOptions, adapter?: AcpAdapter | { protocolFlavor?: () => `${ClientProtocol}`; capabilities?: () => unknown; encodeEffect: (input: AdapterEncodeInput) => TransportOutput; decodeMessage: (input: AdapterDecodeInput) => TransportOutput; modelCatalogFromRuntimeDebug?: (result: unknown, currentModelId?: string | null) => unknown | null } | null"
+    )]
+    pub fn new(options: serde_json::Value, adapter: Option<Object<'_>>) -> Result<Self> {
+        let options = from_json::<EngineClientOptions>(options)?;
+        let adapter = NapiRuntimeAdapter::new(&options, adapter)?;
         Ok(Self {
-            client: EngineClient::new(from_json(options)?),
+            client: EngineClient::new_with_adapter(options, adapter),
         })
     }
 
@@ -840,7 +848,7 @@ pub fn normalize_runtime_name(runtime: Option<String>) -> String {
 }
 
 fn conversation_state(
-    client: &EngineClient,
+    client: &EngineClient<NapiRuntimeAdapter>,
     conversation_id: &str,
 ) -> Option<angel_engine_client::ConversationSnapshot> {
     conversation_state_from_snapshot(client.snapshot(), conversation_id)

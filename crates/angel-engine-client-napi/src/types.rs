@@ -30,6 +30,16 @@ pub enum ClientLogKind {
 }
 
 #[napi(string_enum = "camelCase")]
+pub enum TransportLogKind {
+    Send,
+    Receive,
+    State,
+    Output,
+    Warning,
+    Error,
+}
+
+#[napi(string_enum = "camelCase")]
 pub enum ClientEventType {
     Log,
     RuntimeAuthRequired,
@@ -223,6 +233,46 @@ pub struct ClientIdentity {
     pub name: String,
     pub title: Option<String>,
     pub version: Option<String>,
+}
+
+#[napi(object)]
+pub struct AdapterEncodeInput {
+    #[napi(ts_type = "ClientSnapshot")]
+    pub engine: Option<serde_json::Value>,
+    #[napi(ts_type = "unknown")]
+    pub effect: Option<serde_json::Value>,
+    #[napi(ts_type = "unknown")]
+    pub options: Option<serde_json::Value>,
+    #[napi(ts_type = "TransportOutput")]
+    pub base_output: Option<serde_json::Value>,
+}
+
+#[napi(object)]
+pub struct AdapterDecodeInput {
+    #[napi(ts_type = "ClientSnapshot")]
+    pub engine: Option<serde_json::Value>,
+    #[napi(ts_type = "unknown")]
+    pub message: Option<serde_json::Value>,
+    #[napi(ts_type = "TransportOutput")]
+    pub base_output: Option<serde_json::Value>,
+}
+
+#[napi(object)]
+pub struct TransportOutput {
+    #[napi(ts_type = "unknown[]")]
+    pub messages: Option<Vec<serde_json::Value>>,
+    #[napi(ts_type = "unknown[]")]
+    pub events: Option<Vec<serde_json::Value>>,
+    #[napi(ts_type = "unknown[]")]
+    pub completed_requests: Option<Vec<serde_json::Value>>,
+    pub logs: Option<Vec<TransportLog>>,
+}
+
+#[napi(object)]
+pub struct TransportLog {
+    #[napi(ts_type = "`${TransportLogKind}`")]
+    pub kind: Option<TransportLogKind>,
+    pub message: Option<String>,
 }
 
 #[napi(object)]

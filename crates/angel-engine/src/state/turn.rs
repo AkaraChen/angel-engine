@@ -3,7 +3,7 @@ use crate::ids::{ActionId, ElicitationId, RemoteTurnId, TurnId};
 
 use super::*;
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug, PartialEq, Eq)]
 pub struct TurnState {
     pub id: TurnId,
     pub remote: RemoteTurnId,
@@ -42,7 +42,7 @@ impl TurnState {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug, PartialEq, Eq)]
 pub enum TurnPhase {
     Starting,
     Reasoning,
@@ -54,7 +54,7 @@ pub enum TurnPhase {
     Terminal(TurnOutcome),
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug, PartialEq, Eq)]
 pub enum TurnOutcome {
     Succeeded,
     Exhausted { reason: ExhaustionReason },
@@ -63,7 +63,7 @@ pub enum TurnOutcome {
     Failed(ErrorInfo),
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug, PartialEq, Eq)]
 pub enum ExhaustionReason {
     MaxTokens,
     MaxTurnRequests,
@@ -72,40 +72,40 @@ pub enum ExhaustionReason {
     Other(String),
 }
 
-#[derive(Clone, Debug, Default, PartialEq, Eq)]
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug, Default, PartialEq, Eq)]
 pub struct OutputBuffer {
     pub chunks: Vec<ContentDelta>,
 }
 
-#[derive(Clone, Debug, Default, PartialEq, Eq)]
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug, Default, PartialEq, Eq)]
 pub struct ReasoningBuffer {
     pub chunks: Vec<ContentDelta>,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug, PartialEq, Eq)]
 pub enum ContentDelta {
     Text(String),
     ResourceRef(String),
     Structured(String),
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug, PartialEq, Eq)]
 pub struct UserInputRef {
     pub content: String,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug, PartialEq, Eq)]
 pub struct PlanState {
     pub entries: Vec<PlanEntry>,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug, PartialEq, Eq)]
 pub struct PlanEntry {
     pub content: String,
     pub status: PlanEntryStatus,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug, PartialEq, Eq)]
 pub enum PlanEntryStatus {
     Pending,
     InProgress,
