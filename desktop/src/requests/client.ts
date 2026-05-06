@@ -1,5 +1,9 @@
 import { ipc } from "@/lib/ipc";
-import type { ChatCreateInput, ChatRuntimeConfigInput } from "@/shared/chat";
+import type {
+  ChatCreateInput,
+  ChatPrewarmInput,
+  ChatRuntimeConfigInput,
+} from "@/shared/chat";
 import type { CreateProjectInput } from "@/shared/projects";
 
 export function createApiClient() {
@@ -11,6 +15,7 @@ export function createApiClient() {
         ipc.chatsRuntimeConfig(input),
       list: () => ipc.chatsList(),
       load: (chatId: string) => ipc.chatsLoad(chatId),
+      prewarm: (input: ChatPrewarmInput = {}) => ipc.chatsPrewarm(input),
       showContextMenu: (chatId: string) => ipc.chatsShowContextMenu(chatId),
     },
     projects: {

@@ -30,7 +30,7 @@ import {
   chatContextMenuMutationOptions,
   chatListQueryOptions,
   chatLoadSuspenseQueryOptions,
-  chatRuntimeConfigQueryOptions,
+  chatPrewarmQueryOptions,
   deleteAllChatsMutationOptions,
 } from "@/requests/chats";
 import { queryKeys } from "@/requests/keys";
@@ -162,17 +162,21 @@ function WorkspacePageContent({
   const draftAgentConfigKey = `${runtimePageKey}:${activeRuntime}`;
   const draftAgentConfig =
     draftAgentConfigs[draftAgentConfigKey] ?? EMPTY_DRAFT_AGENT_CONFIG;
-  const shouldInspectRuntimeConfig =
+  const shouldPrewarmRoute =
     route.type === "create" || route.type === "projectCreate";
-  const runtimeConfigQuery = useQuery({
-    ...chatRuntimeConfigQueryOptions({
+  const shouldPrewarmChat =
+    shouldPrewarmRoute &&
+    (route.type !== "projectCreate" || Boolean(selectedProjectPath));
+  const prewarmQuery = useQuery({
+    ...chatPrewarmQueryOptions({
       api,
       cwd: selectedProjectPath ?? undefined,
-      enabled: shouldInspectRuntimeConfig,
+      enabled: shouldPrewarmChat,
+      projectId: route.type === "projectCreate" ? route.projectId : null,
       runtime: activeRuntime,
     }),
   });
-  const runtimeConfig = runtimeConfigQuery.data;
+  const runtimeConfig = prewarmQuery.data?.config;
   const activeModel = normalizeConfigDisplayValue(
     draftAgentConfig.model ?? runtimeConfig?.currentModel,
   );
@@ -281,7 +285,7 @@ function WorkspacePageContent({
       canSetModel,
       canSetMode,
       canSetReasoningEffort,
-      configLoading: runtimeConfigQuery.isFetching,
+      configLoading: prewarmQuery.isFetching,
       model: activeModel,
       modelOptions,
       mode: activeMode,
@@ -307,7 +311,7 @@ function WorkspacePageContent({
       modelOptions,
       modeOptions,
       reasoningEffortOptions,
-      runtimeConfigQuery.isFetching,
+      prewarmQuery.isFetching,
       setAgentModel,
       setAgentMode,
       setAgentReasoningEffort,
@@ -566,6 +570,7 @@ function WorkspacePageContent({
                     mode={modeOverride}
                     onChatCreated={setChatInCache}
                     onChatUpdated={upsertChat}
+                    prewarmId={prewarmQuery.data?.prewarmId}
                     projectId={
                       selectedChat?.projectId ?? selectedProject?.id ?? null
                     }

@@ -19,6 +19,12 @@ export type ChatCreateInput = {
   title?: string;
 };
 
+export type ChatPrewarmInput = {
+  cwd?: string;
+  projectId?: string | null;
+  runtime?: string;
+};
+
 export type ChatRuntimeConfigInput = {
   cwd?: string;
   runtime?: string;
@@ -248,11 +254,17 @@ export type ChatLoadResult = {
   messages: ChatHistoryMessage[];
 };
 
+export type ChatPrewarmResult = {
+  config?: ChatRuntimeConfig;
+  prewarmId: string;
+};
+
 export type ChatSendInput = {
   chatId?: string;
   cwd?: string;
   model?: string | null;
   mode?: string | null;
+  prewarmId?: string;
   projectId?: string | null;
   reasoningEffort?: string | null;
   runtime?: string;

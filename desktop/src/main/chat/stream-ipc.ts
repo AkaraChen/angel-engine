@@ -121,6 +121,10 @@ function assertChatSendInput(input: unknown): ChatSendInput {
         ? value.projectId.trim()
         : null,
     mode: normalizeOptionalConfigInput(value.mode),
+    prewarmId:
+      typeof value.prewarmId === "string" && value.prewarmId.trim()
+        ? value.prewarmId.trim()
+        : undefined,
     reasoningEffort: normalizeOptionalConfigInput(value.reasoningEffort),
     runtime: normalizeOptionalRuntime(value.runtime),
     text: assertString(value.text, "Chat text is required."),

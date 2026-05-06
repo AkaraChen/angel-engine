@@ -3,6 +3,7 @@ import { tipc } from "@egoist/tipc/main";
 
 import type {
   ChatCreateInput,
+  ChatPrewarmInput,
   ChatRuntimeConfigInput,
   ChatSendInput,
 } from "../shared/chat";
@@ -15,6 +16,7 @@ import {
   closeChatSession,
   inspectChatRuntimeConfig,
   loadChatSession,
+  prewarmChat,
   sendChat,
 } from "./chat/angel-client";
 import {
@@ -52,6 +54,10 @@ export const appRouter = {
     .action(async ({ input }) =>
       inspectChatRuntimeConfig(assertChatRuntimeConfigInput(input)),
     ),
+
+  chatsPrewarm: t.procedure
+    .input<ChatPrewarmInput>()
+    .action(async ({ input }) => prewarmChat(assertChatPrewarmInput(input))),
 
   chatsLoad: t.procedure
     .input<string>()
@@ -183,6 +189,10 @@ function assertChatSendInput(input: ChatSendInput): ChatSendInput {
         ? input.projectId.trim()
         : null,
     mode: normalizeOptionalConfigInput(input.mode),
+    prewarmId:
+      typeof input.prewarmId === "string" && input.prewarmId.trim()
+        ? input.prewarmId.trim()
+        : undefined,
     reasoningEffort: normalizeOptionalConfigInput(input.reasoningEffort),
     runtime: normalizeOptionalRuntime(input.runtime),
     text: assertString(input.text, "Chat text is required."),
@@ -209,6 +219,22 @@ function assertChatCreateInput(input: ChatCreateInput): ChatCreateInput {
       typeof input.title === "string" && input.title.trim()
         ? input.title.trim()
         : undefined,
+  };
+}
+
+function assertChatPrewarmInput(input: ChatPrewarmInput): ChatPrewarmInput {
+  if (!input || typeof input !== "object") {
+    return {};
+  }
+
+  return {
+    cwd:
+      typeof input.cwd === "string" && input.cwd.trim() ? input.cwd : undefined,
+    projectId:
+      typeof input.projectId === "string" && input.projectId.trim()
+        ? input.projectId.trim()
+        : null,
+    runtime: normalizeOptionalRuntime(input.runtime),
   };
 }
 

@@ -16,6 +16,8 @@ import type {
   ChatElicitationResponse,
   ChatHistoryMessage,
   ChatLoadResult,
+  ChatPrewarmInput,
+  ChatPrewarmResult,
   ChatRuntimeConfig,
   ChatRuntimeConfigInput,
   ChatSendInput,
@@ -61,6 +63,23 @@ const clientModule = nodeRequire(
 const { AngelSession: NativeAngelSession, createRuntimeOptions } = clientModule;
 
 const chatSessions = new Map<string, DesktopAngelSession>();
+const chatPrewarms = new Map<string, ChatPrewarm>();
+const MAX_PREWARM_SESSIONS = 4;
+
+type ChatPrewarm = {
+  closed: boolean;
+  config?: ChatRuntimeConfig;
+  createdAt: number;
+  input: ChatPrewarmInput;
+  key: string;
+  promise: Promise<void>;
+  session: DesktopAngelSession;
+  snapshot?: ConversationSnapshot;
+};
+type ReadyChatPrewarm = ChatPrewarm & {
+  config: ChatRuntimeConfig;
+  snapshot: ConversationSnapshot;
+};
 
 export async function sendChat(input: ChatSendInput): Promise<ChatSendResult> {
   return streamChat(input);
@@ -102,6 +121,23 @@ export async function inspectChatRuntimeConfig(
   }
 }
 
+export async function prewarmChat(
+  input: ChatPrewarmInput,
+): Promise<ChatPrewarmResult> {
+  const key = chatPrewarmKey(input);
+  const existing = chatPrewarms.get(key);
+  if (existing) {
+    await existing.promise;
+    return chatPrewarmResult(existing);
+  }
+
+  const prewarm = createChatPrewarm(input, key);
+  chatPrewarms.set(key, prewarm);
+  trimChatPrewarms();
+  await prewarm.promise;
+  return chatPrewarmResult(prewarm);
+}
+
 export async function streamChat(
   input: ChatSendInput,
   onEvent?: ChatStreamObserver,
@@ -113,19 +149,13 @@ export async function streamChat(
     throw new Error("Chat text is required.");
   }
 
-  const isNewChat = !input.chatId;
-  const chat = input.chatId
-    ? requireChat(input.chatId)
-    : createChat({
-        cwd: input.cwd,
-        projectId: input.projectId,
-        runtime: input.runtime,
-      });
+  const preparedChat = prepareChatForSend(input);
+  const { chat, isNewChat, session } = preparedChat;
   if (isNewChat) {
     onEvent?.({ chat, type: "chat" });
   }
 
-  const result = await getChatSession(chat).sendText({
+  const result = await session.sendText({
     cwd: input.cwd ?? chat.cwd ?? undefined,
     model: input.model ?? undefined,
     mode: input.mode ?? undefined,
@@ -167,6 +197,7 @@ export function closeChatSession(chatId?: string) {
     session.close();
   }
   chatSessions.clear();
+  closeChatPrewarms();
 }
 
 function getChatSession(chat: Chat) {
@@ -187,11 +218,151 @@ function createChatSession(runtime?: string): DesktopAngelSession {
   );
 }
 
+function prepareChatForSend(input: ChatSendInput): {
+  chat: Chat;
+  isNewChat: boolean;
+  session: DesktopAngelSession;
+} {
+  if (input.chatId) {
+    const chat = requireChat(input.chatId);
+    return { chat, isNewChat: false, session: getChatSession(chat) };
+  }
+
+  const prewarm = input.prewarmId
+    ? takeChatPrewarm(input.prewarmId, input)
+    : undefined;
+  if (prewarm) {
+    const createdChat = createChat({
+      cwd: prewarm.input.cwd,
+      projectId: prewarm.input.projectId,
+      runtime: prewarm.input.runtime,
+    });
+    chatSessions.set(createdChat.id, prewarm.session);
+    const chat = persistRemoteThreadId(createdChat, prewarm.snapshot);
+    return { chat, isNewChat: true, session: prewarm.session };
+  }
+
+  const chat = createChat({
+    cwd: input.cwd,
+    projectId: input.projectId,
+    runtime: input.runtime,
+  });
+  return { chat, isNewChat: true, session: getChatSession(chat) };
+}
+
 function persistRemoteThreadId(chat: Chat, snapshot: ConversationSnapshot) {
   if (!snapshot.remoteId || snapshot.remoteId === chat.remoteThreadId) {
     return chat;
   }
   return setChatRemoteThreadId(chat.id, snapshot.remoteId);
+}
+
+function chatPrewarmResult(prewarm: ChatPrewarm): ChatPrewarmResult {
+  if (!isReadyChatPrewarm(prewarm)) {
+    throw new Error("Chat prewarm did not produce runtime config.");
+  }
+
+  return {
+    config: prewarm.config,
+    prewarmId: prewarm.key,
+  };
+}
+
+function takeChatPrewarm(
+  prewarmId: string,
+  input: ChatSendInput,
+): ReadyChatPrewarm | undefined {
+  const prewarm = chatPrewarms.get(prewarmId);
+  if (!prewarm || !isReadyChatPrewarm(prewarm)) return undefined;
+
+  chatPrewarms.delete(prewarm.key);
+
+  if (!chatPrewarmMatches(prewarm.input, input)) {
+    closeChatPrewarm(prewarm);
+    return undefined;
+  }
+
+  return prewarm;
+}
+
+function isReadyChatPrewarm(prewarm: ChatPrewarm): prewarm is ReadyChatPrewarm {
+  return Boolean(prewarm.config && prewarm.snapshot);
+}
+
+function createChatPrewarm(input: ChatPrewarmInput, key: string): ChatPrewarm {
+  const session = createChatSession(input.runtime);
+  const prewarm: ChatPrewarm = {
+    closed: false,
+    createdAt: Date.now(),
+    input,
+    key,
+    promise: Promise.resolve(),
+    session,
+  };
+
+  prewarm.promise = session
+    .inspect({ cwd: input.cwd })
+    .then((snapshot) => {
+      if (prewarm.closed) {
+        throw new Error("Chat prewarm was closed.");
+      }
+
+      prewarm.snapshot = snapshot;
+      prewarm.config = runtimeConfigFromConversationSnapshot(
+        snapshot,
+      ) as ChatRuntimeConfig;
+    })
+    .catch((error: unknown) => {
+      closeChatPrewarm(prewarm);
+      throw error;
+    });
+
+  return prewarm;
+}
+
+function chatPrewarmMatches(
+  prewarmInput: ChatPrewarmInput,
+  sendInput: ChatSendInput,
+) {
+  return (
+    (prewarmInput.cwd ?? undefined) === (sendInput.cwd ?? undefined) &&
+    (prewarmInput.projectId ?? null) === (sendInput.projectId ?? null) &&
+    (prewarmInput.runtime ?? undefined) === (sendInput.runtime ?? undefined)
+  );
+}
+
+function chatPrewarmKey(input: ChatPrewarmInput) {
+  return JSON.stringify([
+    input.runtime ?? "",
+    input.cwd ?? "",
+    input.projectId ?? "",
+  ]);
+}
+
+function trimChatPrewarms() {
+  const prewarms = Array.from(chatPrewarms.values()).sort(
+    (left, right) => left.createdAt - right.createdAt,
+  );
+  while (prewarms.length > MAX_PREWARM_SESSIONS) {
+    const prewarm = prewarms.shift();
+    if (!prewarm) return;
+    closeChatPrewarm(prewarm);
+  }
+}
+
+function closeChatPrewarms() {
+  for (const prewarm of chatPrewarms.values()) {
+    closeChatPrewarm(prewarm);
+  }
+  chatPrewarms.clear();
+}
+
+function closeChatPrewarm(prewarm: ChatPrewarm) {
+  if (prewarm.closed) return;
+
+  prewarm.closed = true;
+  chatPrewarms.delete(prewarm.key);
+  prewarm.session.close();
 }
 
 type NativeAngelSessionInstance = InstanceType<typeof NativeAngelSession>;

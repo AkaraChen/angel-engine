@@ -28,6 +28,7 @@ export function AppRuntimeProvider({
   mode,
   onChatCreated,
   onChatUpdated,
+  prewarmId,
   projectId,
   projectPath,
   reasoningEffort,
@@ -45,6 +46,7 @@ export function AppRuntimeProvider({
     messages?: ChatHistoryMessage[],
     config?: ChatRuntimeConfig,
   ) => void;
+  prewarmId?: string;
   projectId?: string | null;
   projectPath?: string;
   reasoningEffort?: string;
@@ -71,6 +73,7 @@ export function AppRuntimeProvider({
     mode,
     onChatCreated,
     onChatUpdated,
+    prewarmId,
     projectId,
     projectPath,
     reasoningEffort,

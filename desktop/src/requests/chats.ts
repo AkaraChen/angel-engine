@@ -6,7 +6,12 @@ import {
 
 import type { ApiClient } from "@/requests/client";
 import { queryKeys } from "@/requests/keys";
-import type { Chat, ChatLoadResult, ChatRuntimeConfig } from "@/shared/chat";
+import type {
+  Chat,
+  ChatLoadResult,
+  ChatPrewarmResult,
+  ChatRuntimeConfig,
+} from "@/shared/chat";
 import type { Project } from "@/shared/projects";
 
 interface ChatListQueryParams {
@@ -26,6 +31,15 @@ interface ChatRuntimeConfigQueryParams {
   api: ApiClient;
   cwd?: string | null;
   enabled?: boolean;
+  runtime?: string | null;
+  staleTime?: number;
+}
+
+interface ChatPrewarmQueryParams {
+  api: ApiClient;
+  cwd?: string | null;
+  enabled?: boolean;
+  projectId?: string | null;
   runtime?: string | null;
   staleTime?: number;
 }
@@ -121,6 +135,33 @@ export function chatRuntimeConfigQueryOptions({
         runtime: runtime ?? undefined,
       }),
     queryKey: queryKeys.chats.runtimeConfig(runtime ?? null, cwd ?? null),
+    retry: false,
+    staleTime,
+  });
+}
+
+export function chatPrewarmQueryOptions({
+  api,
+  cwd,
+  enabled = true,
+  projectId,
+  runtime,
+  staleTime = 0,
+}: ChatPrewarmQueryParams) {
+  return queryOptions({
+    enabled: enabled && Boolean(runtime),
+    gcTime: 300_000,
+    queryFn: (): Promise<ChatPrewarmResult> =>
+      api.chats.prewarm({
+        cwd: cwd ?? undefined,
+        projectId: projectId ?? null,
+        runtime: runtime ?? undefined,
+      }),
+    queryKey: queryKeys.chats.prewarm(
+      runtime ?? null,
+      cwd ?? null,
+      projectId ?? null,
+    ),
     retry: false,
     staleTime,
   });

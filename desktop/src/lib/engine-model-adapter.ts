@@ -49,6 +49,7 @@ export type EngineRuntimeOptions = {
     messages?: ChatHistoryMessage[],
     config?: ChatRuntimeConfig,
   ) => void;
+  prewarmId?: string;
   projectId?: string | null;
   projectPath?: string;
   reasoningEffort?: string;
@@ -86,6 +87,7 @@ export function useEngineRuntime({
   mode,
   onChatCreated,
   onChatUpdated,
+  prewarmId,
   projectId,
   projectPath,
   reasoningEffort,
@@ -102,6 +104,7 @@ export function useEngineRuntime({
     mode,
     onChatCreated,
     onChatUpdated,
+    prewarmId,
     projectId,
     projectPath,
     reasoningEffort,
@@ -114,6 +117,7 @@ export function useEngineRuntime({
     mode,
     onChatCreated,
     onChatUpdated,
+    prewarmId,
     projectId,
     projectPath,
     reasoningEffort,
@@ -217,6 +221,7 @@ export function useEngineRuntime({
             cwd: latestOptionsRef.current.projectPath,
             model: latestOptionsRef.current.model,
             mode: latestOptionsRef.current.mode,
+            prewarmId: latestOptionsRef.current.prewarmId,
             projectId: latestOptionsRef.current.projectId,
             reasoningEffort: latestOptionsRef.current.reasoningEffort,
             runtime: latestOptionsRef.current.runtime,
