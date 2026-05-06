@@ -29,6 +29,7 @@ import {
   SidebarMenuSubButton,
   SidebarMenuSubItem,
 } from "@/components/ui/sidebar";
+import { useChatRunIsRunning } from "@/lib/chat-run-store";
 import { cn } from "@/lib/utils";
 import type { Chat } from "@/shared/chat";
 import type { Project } from "@/shared/projects";
@@ -277,7 +278,10 @@ export function WorkspaceSidebar({
                                     }}
                                     title={chat.cwd ?? chat.title}
                                   >
-                                    <span>{chat.title}</span>
+                                    <span className="min-w-0 flex-1 truncate">
+                                      {chat.title}
+                                    </span>
+                                    <ChatRunningPulse chatId={chat.id} />
                                   </MacSidebarMenuSubButton>
                                 </SidebarMenuSubItem>
                               ))}
@@ -328,7 +332,10 @@ export function WorkspaceSidebar({
                       title={chat.cwd ?? chat.title}
                     >
                       <MessageSquare />
-                      <span className="truncate">{chat.title}</span>
+                      <span className="min-w-0 flex-1 truncate">
+                        {chat.title}
+                      </span>
+                      <ChatRunningPulse chatId={chat.id} />
                     </MacSidebarMenuButton>
                   </AnimatedSidebarMenuItem>
                 ))}
@@ -352,6 +359,21 @@ export function WorkspaceSidebar({
         </SidebarMenu>
       </SidebarFooter>
     </Sidebar>
+  );
+}
+
+function ChatRunningPulse({ chatId }: { chatId: string }) {
+  const isRunning = useChatRunIsRunning(chatId);
+  if (!isRunning) return null;
+
+  return (
+    <i
+      aria-hidden
+      className="relative ml-auto flex size-2.5 shrink-0 rounded-full"
+    >
+      <i className="absolute inline-flex size-full animate-ping rounded-full bg-emerald-400 opacity-60" />
+      <i className="relative inline-flex size-2.5 rounded-full bg-emerald-500 shadow-[0_0_0_1px_rgba(16,185,129,0.35)]" />
+    </i>
   );
 }
 

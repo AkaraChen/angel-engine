@@ -25,6 +25,12 @@ import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { useAgentSettings } from "@/hooks/use-agent-settings";
 import { useToast } from "@/components/ui/toast";
 import { useApi } from "@/hooks/use-api";
+import {
+  cancelAllChatRuns,
+  cancelChatRun,
+  useChatRunConfig,
+  useChatRunIsRunning,
+} from "@/lib/chat-run-store";
 import { SettingsPage } from "@/pages/settings-page";
 import {
   chatContextMenuMutationOptions,
@@ -122,6 +128,7 @@ function WorkspacePageContent({
   const chatsQuery = useQuery({
     ...chatListQueryOptions({ api }),
   });
+  const selectedChatIsRunning = useChatRunIsRunning(selectedChatId);
 
   const projects = projectsQuery.data ?? EMPTY_PROJECTS;
   const chats = chatsQuery.data ?? EMPTY_CHATS;
@@ -355,16 +362,21 @@ function WorkspacePageContent({
     [location, navigate],
   );
 
-  const upsertChat = useCallback(
+  const updateChatFromRun = useCallback(
     (
       chat: Chat,
       messages?: ChatHistoryMessage[],
       config?: ChatRuntimeConfig,
     ) => {
       setChatInCache(chat, messages, config);
-      navigateToChat(chat);
+      if (
+        (route.type === "create" || route.type === "projectCreate") &&
+        currentHashRoutePath() === currentRoutePath
+      ) {
+        navigateToChat(chat);
+      }
     },
-    [navigateToChat, setChatInCache],
+    [currentRoutePath, navigateToChat, route.type, setChatInCache],
   );
 
   const createProjectMutation = useMutation({
@@ -423,6 +435,7 @@ function WorkspacePageContent({
 
   const removeChatFromCache = useCallback(
     (chatId: string) => {
+      cancelChatRun(chatId);
       queryClient.setQueryData<Chat[]>(queryKeys.chats.list(), (current = []) =>
         current.filter((chat) => chat.id !== chatId),
       );
@@ -478,6 +491,7 @@ function WorkspacePageContent({
   const deleteAllChats = useCallback(async () => {
     try {
       const result = await deleteAllChatsMutation.mutateAsync();
+      cancelAllChatRuns();
       queryClient.setQueryData<Chat[]>(queryKeys.chats.list(), EMPTY_CHATS);
       queryClient.removeQueries({ queryKey: queryKeys.chats.details() });
       navigate("/", { replace: true });
@@ -541,24 +555,39 @@ function WorkspacePageContent({
           <main className="flex min-h-0 flex-1 overflow-hidden">
             <section className="flex min-h-0 min-w-0 flex-1 flex-col">
               {selectedChatId ? (
-                <ChatRestoreErrorBoundary key={selectedChatId}>
-                  <Suspense fallback={<ChatRestoreLoading />}>
-                    <RestoredChatThread
-                      api={api}
-                      currentRoutePath={currentRoutePath}
-                      draftAgentConfig={draftAgentConfig}
-                      onChatCreated={setChatInCache}
-                      onChatUpdated={upsertChat}
-                      projects={projects}
-                      route={route}
-                      selectedChatId={selectedChatId}
-                      setAgentMode={setAgentMode}
-                      setAgentModel={setAgentModel}
-                      setAgentReasoningEffort={setAgentReasoningEffort}
-                      setDraftAgentRuntime={setDraftAgentRuntime}
-                    />
-                  </Suspense>
-                </ChatRestoreErrorBoundary>
+                selectedChatIsRunning && selectedChat ? (
+                  <ActiveChatThread
+                    draftAgentConfig={draftAgentConfig}
+                    onChatCreated={setChatInCache}
+                    onChatUpdated={updateChatFromRun}
+                    projects={projects}
+                    route={route}
+                    selectedChat={selectedChat}
+                    setAgentMode={setAgentMode}
+                    setAgentModel={setAgentModel}
+                    setAgentReasoningEffort={setAgentReasoningEffort}
+                    setDraftAgentRuntime={setDraftAgentRuntime}
+                  />
+                ) : (
+                  <ChatRestoreErrorBoundary key={selectedChatId}>
+                    <Suspense fallback={<ChatRestoreLoading />}>
+                      <RestoredChatThread
+                        api={api}
+                        currentRoutePath={currentRoutePath}
+                        draftAgentConfig={draftAgentConfig}
+                        onChatCreated={setChatInCache}
+                        onChatUpdated={updateChatFromRun}
+                        projects={projects}
+                        route={route}
+                        selectedChatId={selectedChatId}
+                        setAgentMode={setAgentMode}
+                        setAgentModel={setAgentModel}
+                        setAgentReasoningEffort={setAgentReasoningEffort}
+                        setDraftAgentRuntime={setDraftAgentRuntime}
+                      />
+                    </Suspense>
+                  </ChatRestoreErrorBoundary>
+                )
               ) : (
                 <ChatOptionsProvider value={chatOptions}>
                   <AppRuntimeProvider
@@ -569,7 +598,7 @@ function WorkspacePageContent({
                     model={modelOverride}
                     mode={modeOverride}
                     onChatCreated={setChatInCache}
-                    onChatUpdated={upsertChat}
+                    onChatUpdated={updateChatFromRun}
                     prewarmId={prewarmQuery.data?.prewarmId}
                     projectId={
                       selectedChat?.projectId ?? selectedProject?.id ?? null
@@ -577,6 +606,8 @@ function WorkspacePageContent({
                     projectPath={selectedProjectPath ?? undefined}
                     reasoningEffort={reasoningEffortOverride}
                     runtime={activeRuntime}
+                    runtimeConfig={runtimeConfig}
+                    slotKey={runtimePageKey}
                   >
                     <AssistantThread projectName={selectedProjectName} />
                   </AppRuntimeProvider>
@@ -594,6 +625,135 @@ function selectedChatIdFromRoute(route: WorkspaceRoute) {
   return route.type === "chat" || route.type === "projectChat"
     ? route.chatId
     : undefined;
+}
+
+function ActiveChatThread({
+  draftAgentConfig,
+  onChatCreated,
+  onChatUpdated,
+  projects,
+  route,
+  selectedChat,
+  setAgentMode,
+  setAgentModel,
+  setAgentReasoningEffort,
+  setDraftAgentRuntime,
+}: {
+  draftAgentConfig: DraftAgentConfig;
+  onChatCreated: (chat: Chat) => void;
+  onChatUpdated: (
+    chat: Chat,
+    messages?: ChatHistoryMessage[],
+    config?: ChatRuntimeConfig,
+  ) => void;
+  projects: Project[];
+  route: WorkspaceRoute;
+  selectedChat: Chat;
+  setAgentMode: (mode: string) => void;
+  setAgentModel: (model: string) => void;
+  setAgentReasoningEffort: (effort: string) => void;
+  setDraftAgentRuntime: (runtime: AgentRuntime) => void;
+}) {
+  const runtimeConfig = useChatRunConfig(selectedChat.id);
+  const chatRuntime = normalizeAgentRuntime(selectedChat.runtime);
+  const routeProjectId =
+    route.type === "projectChat" || route.type === "projectCreate"
+      ? route.projectId
+      : undefined;
+  const selectedProjectId =
+    routeProjectId ?? selectedChat.projectId ?? undefined;
+  const selectedProject = selectedProjectId
+    ? projects.find((project) => project.id === selectedProjectId)
+    : undefined;
+  const selectedProjectPath = selectedChat.cwd ?? selectedProject?.path;
+  const selectedProjectName = selectedProjectPath
+    ? getProjectDisplayName(selectedProjectPath)
+    : undefined;
+  const activeModel = normalizeConfigDisplayValue(
+    draftAgentConfig.model ?? runtimeConfig?.currentModel,
+  );
+  const activeReasoningEffort = normalizeConfigDisplayValue(
+    draftAgentConfig.reasoningEffort ?? runtimeConfig?.currentReasoningEffort,
+  );
+  const activeMode = normalizeConfigDisplayValue(
+    draftAgentConfig.mode ?? runtimeConfig?.currentMode,
+  );
+  const modelOverride = selectedConfigOverride(draftAgentConfig.model);
+  const reasoningEffortOverride = selectedConfigOverride(
+    draftAgentConfig.reasoningEffort,
+  );
+  const modeOverride = selectedConfigOverride(draftAgentConfig.mode);
+  const modelOptions = ensureConfigOption(
+    runtimeConfigOptionsToAgentOptions(runtimeConfig?.models),
+    activeModel,
+  );
+  const reasoningEffortOptions = ensureConfigOption(
+    runtimeConfigOptionsToAgentOptions(runtimeConfig?.reasoningEfforts),
+    activeReasoningEffort,
+  );
+  const modeOptions = ensureConfigOption(
+    runtimeConfigOptionsToAgentOptions(runtimeConfig?.modes),
+    activeMode,
+  );
+  const chatOptions = useMemo(
+    () => ({
+      canSetModel: runtimeConfig?.canSetModel ?? true,
+      canSetMode: runtimeConfig?.canSetMode ?? true,
+      canSetReasoningEffort: runtimeConfig?.canSetReasoningEffort ?? true,
+      configLoading: false,
+      model: activeModel,
+      modelOptions,
+      mode: activeMode,
+      modeOptions,
+      reasoningEffort: activeReasoningEffort,
+      reasoningEffortOptions,
+      runtime: chatRuntime,
+      runtimeLocked: true,
+      setModel: setAgentModel,
+      setMode: setAgentMode,
+      setReasoningEffort: setAgentReasoningEffort,
+      setRuntime: setDraftAgentRuntime,
+    }),
+    [
+      activeMode,
+      activeModel,
+      activeReasoningEffort,
+      chatRuntime,
+      modelOptions,
+      modeOptions,
+      reasoningEffortOptions,
+      runtimeConfig?.canSetMode,
+      runtimeConfig?.canSetModel,
+      runtimeConfig?.canSetReasoningEffort,
+      setAgentMode,
+      setAgentModel,
+      setAgentReasoningEffort,
+      setDraftAgentRuntime,
+    ],
+  );
+
+  return (
+    <ChatOptionsProvider value={chatOptions}>
+      <AppRuntimeProvider
+        chatId={selectedChat.id}
+        historyMessages={EMPTY_MESSAGES}
+        historyRevision={0}
+        key={`chat:${selectedChat.id}:${chatRuntime}:active`}
+        model={modelOverride}
+        mode={modeOverride}
+        onChatCreated={onChatCreated}
+        onChatUpdated={onChatUpdated}
+        projectId={selectedChat.projectId ?? selectedProject?.id ?? null}
+        projectPath={selectedProjectPath ?? undefined}
+        reasoningEffort={reasoningEffortOverride}
+        runtime={chatRuntime}
+        runtimeConfig={runtimeConfig}
+        slotKey={selectedChat.id}
+      >
+        <AssistantThread projectName={selectedProjectName} />
+      </AppRuntimeProvider>
+    </ChatOptionsProvider>
+  );
 }
 
 function RestoredChatThread({
@@ -731,6 +891,8 @@ function RestoredChatThread({
         projectPath={selectedProjectPath ?? undefined}
         reasoningEffort={reasoningEffortOverride}
         runtime={chatRuntime}
+        runtimeConfig={runtimeConfig}
+        slotKey={selectedChatId}
       >
         <AssistantThread projectName={selectedProjectName} />
       </AppRuntimeProvider>
@@ -848,6 +1010,11 @@ function routePath(route: WorkspaceRoute) {
     return "/settings";
   }
   return "/";
+}
+
+function currentHashRoutePath() {
+  const path = window.location.hash.replace(/^#/, "");
+  return path || "/";
 }
 
 function getWorkspaceTitle({
