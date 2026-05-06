@@ -4,6 +4,7 @@
 @import "shadcn/tailwind.css";
 @import "katex/dist/katex.min.css";
 @import "streamdown/styles.css";
+@import "@fontsource-variable/playwrite-de-la/wght.css";
 
 @source "../node_modules/streamdown/dist/*.js";
 @source "../node_modules/@streamdown/code/dist/*.js";
@@ -174,5 +175,48 @@
 @layer components {
   html[data-platform="darwin"] [data-slot="sidebar-inner"] {
     backdrop-filter: none;
+  }
+
+  .chat-restore-mark {
+    color: color-mix(in oklch, var(--foreground) 72%, transparent);
+  }
+
+  .chat-restore-signature {
+    animation: chat-restore-signature-pulse 1.7s ease-in-out infinite;
+    fill: currentColor;
+    font-family: "Playwrite DE LA Variable", cursive;
+    font-size: 56px;
+    font-style: normal;
+    font-weight: 400;
+    letter-spacing: 0;
+    opacity: 0.62;
+    transform-box: fill-box;
+    transform-origin: center;
+    text-transform: lowercase;
+  }
+}
+
+@keyframes chat-restore-signature-pulse {
+  0% {
+    opacity: 0.38;
+    transform: translateY(1px);
+  }
+
+  45% {
+    opacity: 0.78;
+    transform: translateY(0);
+  }
+
+  100% {
+    opacity: 0.38;
+    transform: translateY(-1px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .chat-restore-signature {
+    animation: none;
+    opacity: 0.68;
+    transform: none;
   }
 }

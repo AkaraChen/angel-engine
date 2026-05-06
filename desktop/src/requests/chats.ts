@@ -93,6 +93,19 @@ export function chatLoadQueryOptions({
   });
 }
 
+export function chatLoadSuspenseQueryOptions({
+  api,
+  chatId,
+  staleTime = 60_000,
+}: Omit<ChatLoadQueryParams, "enabled" | "chatId"> & { chatId: string }) {
+  return queryOptions({
+    queryFn: (): Promise<ChatLoadResult> => api.chats.load(chatId),
+    queryKey: queryKeys.chats.detail(chatId),
+    retry: false,
+    staleTime,
+  });
+}
+
 export function chatRuntimeConfigQueryOptions({
   api,
   cwd,

@@ -54,7 +54,7 @@ export type ChatStreamControls = {
   ) => void;
 };
 
-const nodeRequire = createRequire(import.meta.url);
+const nodeRequire = createRequire(__filename);
 const clientModule = nodeRequire(
   "@angel-engine/client-napi",
 ) as AngelClientModule;
