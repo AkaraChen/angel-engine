@@ -33,6 +33,8 @@ export function AppRuntimeProvider({
   projectPath,
   reasoningEffort,
   runtime: selectedRuntime,
+  runtimeConfig,
+  slotKey,
 }: {
   chatId?: string;
   children: ReactNode;
@@ -51,6 +53,8 @@ export function AppRuntimeProvider({
   projectPath?: string;
   reasoningEffort?: string;
   runtime?: string;
+  runtimeConfig?: ChatRuntimeConfig;
+  slotKey: string;
 }) {
   const adapters = useMemo(
     () => ({
@@ -78,6 +82,8 @@ export function AppRuntimeProvider({
     projectPath,
     reasoningEffort,
     runtime: selectedRuntime,
+    runtimeConfig,
+    slotKey,
   });
 
   return (
