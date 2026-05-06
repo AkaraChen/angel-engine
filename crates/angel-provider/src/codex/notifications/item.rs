@@ -84,6 +84,7 @@ impl CodexAdapter {
             return Ok(output);
         };
         let action_id = action.id.clone();
+        let action_kind = action.kind.clone();
         let mut output = TransportOutput::default()
             .log(TransportLogKind::State, summarize_item(item, completed));
         if let Some(event) = maybe_start {
@@ -100,7 +101,10 @@ impl CodexAdapter {
                 action,
             });
         }
-        if completed && let Some(phase) = phase_from_item(item) {
+        let completed_phase = phase_from_item(item).or_else(|| {
+            (completed && action_kind == ActionKind::WebSearch).then_some(ActionPhase::Completed)
+        });
+        if completed && let Some(phase) = completed_phase {
             output.events.push(EngineEvent::ActionUpdated {
                 conversation_id,
                 action_id,
@@ -335,6 +339,159 @@ mod tests {
                 delta: ContentDelta::Text(text),
                 ..
             } if text == "Mapped raw response reasoning."
+        )));
+    }
+
+    #[test]
+    fn next_stream_item_completes_open_web_search() {
+        let adapter = CodexAdapter::app_server();
+        let mut engine = engine_with_thread(&adapter);
+
+        let search = adapter
+            .decode_notification(
+                &engine,
+                "item/started",
+                &json!({
+                    "threadId": "thread",
+                    "turnId": "turn",
+                    "item": {
+                        "id": "search_1",
+                        "type": "webSearch",
+                        "status": "inProgress",
+                        "query": "adapter lifecycle"
+                    }
+                }),
+            )
+            .expect("web search started");
+        angel_engine::apply_transport_output(&mut engine, &search).expect("apply search");
+
+        let output = adapter
+            .decode_notification(
+                &engine,
+                "item/started",
+                &json!({
+                    "threadId": "thread",
+                    "turnId": "turn",
+                    "item": {
+                        "id": "cmd_1",
+                        "type": "commandExecution",
+                        "status": "inProgress",
+                        "command": "git status"
+                    }
+                }),
+            )
+            .expect("next item");
+
+        assert!(output.events.iter().any(|event| matches!(
+            event,
+            EngineEvent::ActionUpdated {
+                action_id,
+                patch:
+                    ActionPatch {
+                        phase: Some(ActionPhase::Completed),
+                        ..
+                    },
+                ..
+            } if action_id.as_str() == "search_1"
+        )));
+        assert!(output.events.iter().any(|event| matches!(
+            event,
+            EngineEvent::ActionObserved {
+                action,
+                ..
+            } if action.id.as_str() == "cmd_1"
+        )));
+    }
+
+    #[test]
+    fn turn_completed_completes_open_web_search() {
+        let adapter = CodexAdapter::app_server();
+        let mut engine = engine_with_thread(&adapter);
+
+        let search = adapter
+            .decode_notification(
+                &engine,
+                "item/started",
+                &json!({
+                    "threadId": "thread",
+                    "turnId": "turn",
+                    "item": {
+                        "id": "search_1",
+                        "type": "webSearch",
+                        "status": "inProgress",
+                        "query": "adapter lifecycle"
+                    }
+                }),
+            )
+            .expect("web search started");
+        angel_engine::apply_transport_output(&mut engine, &search).expect("apply search");
+
+        let output = adapter
+            .decode_notification(
+                &engine,
+                "turn/completed",
+                &json!({
+                    "threadId": "thread",
+                    "turn": {
+                        "id": "turn",
+                        "status": "completed"
+                    }
+                }),
+            )
+            .expect("turn completed");
+
+        assert!(output.events.iter().any(|event| matches!(
+            event,
+            EngineEvent::ActionUpdated {
+                action_id,
+                patch:
+                    ActionPatch {
+                        phase: Some(ActionPhase::Completed),
+                        ..
+                    },
+                ..
+            } if action_id.as_str() == "search_1"
+        )));
+        assert!(
+            output
+                .events
+                .iter()
+                .any(|event| matches!(event, EngineEvent::TurnTerminal { .. }))
+        );
+    }
+
+    #[test]
+    fn completed_web_search_item_without_status_is_completed() {
+        let adapter = CodexAdapter::app_server();
+        let engine = engine_with_thread(&adapter);
+
+        let output = adapter
+            .decode_notification(
+                &engine,
+                "item/completed",
+                &json!({
+                    "threadId": "thread",
+                    "turnId": "turn",
+                    "item": {
+                        "id": "search_1",
+                        "type": "webSearch",
+                        "query": "adapter lifecycle"
+                    }
+                }),
+            )
+            .expect("web search completed");
+
+        assert!(output.events.iter().any(|event| matches!(
+            event,
+            EngineEvent::ActionUpdated {
+                action_id,
+                patch:
+                    ActionPatch {
+                        phase: Some(ActionPhase::Completed),
+                        ..
+                    },
+                ..
+            } if action_id.as_str() == "search_1"
         )));
     }
 

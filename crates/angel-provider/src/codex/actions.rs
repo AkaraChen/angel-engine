@@ -49,6 +49,33 @@ pub(crate) fn action_exists(
         .unwrap_or(false)
 }
 
+pub(crate) fn append_completed_web_searches(
+    engine: &AngelEngine,
+    conversation_id: &ConversationId,
+    turn_id: &TurnId,
+    except_action_id: Option<&ActionId>,
+    output: &mut TransportOutput,
+) {
+    let Some(conversation) = engine.conversations.get(conversation_id) else {
+        return;
+    };
+    for action in conversation.actions.values() {
+        if action.kind != ActionKind::WebSearch || action.turn_id != *turn_id {
+            continue;
+        }
+        if except_action_id.is_some_and(|id| id == &action.id)
+            || action_phase_is_terminal(&action.phase)
+        {
+            continue;
+        }
+        output.events.push(EngineEvent::ActionUpdated {
+            conversation_id: conversation_id.clone(),
+            action_id: action.id.clone(),
+            patch: ActionPatch::phase(ActionPhase::Completed),
+        });
+    }
+}
+
 pub(crate) fn phase_from_item(item: &Value) -> Option<ActionPhase> {
     let status = item.get("status").and_then(Value::as_str)?;
     Some(match status {
@@ -59,6 +86,16 @@ pub(crate) fn phase_from_item(item: &Value) -> Option<ActionPhase> {
         "interrupted" => ActionPhase::Cancelled,
         _ => ActionPhase::Running,
     })
+}
+
+fn action_phase_is_terminal(phase: &ActionPhase) -> bool {
+    matches!(
+        phase,
+        ActionPhase::Completed
+            | ActionPhase::Failed
+            | ActionPhase::Declined
+            | ActionPhase::Cancelled
+    )
 }
 
 pub(crate) fn action_title(item: &Value) -> Option<String> {

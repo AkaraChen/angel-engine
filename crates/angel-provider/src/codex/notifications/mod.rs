@@ -1,3 +1,5 @@
+use super::actions::append_completed_web_searches;
+use super::ids::*;
 use super::protocol_helpers::DeltaKind;
 use super::summaries::*;
 use super::*;
@@ -16,7 +18,7 @@ impl CodexAdapter {
         method: &str,
         params: &Value,
     ) -> Result<TransportOutput, angel_engine::EngineError> {
-        match method {
+        let mut output = match method {
             "thread/status/changed" => self.decode_thread_status(engine, params),
             "turn/started" => self.decode_turn_started(engine, params),
             "turn/completed" => self.decode_turn_completed(engine, params),
@@ -68,6 +70,55 @@ impl CodexAdapter {
                 TransportLogKind::Receive,
                 format!("{} {}", method, summarize_inbound(method, params)),
             )),
+        }?;
+        self.normalize_live_web_search_completion(engine, method, params, &mut output);
+        Ok(output)
+    }
+
+    fn normalize_live_web_search_completion(
+        &self,
+        engine: &AngelEngine,
+        method: &str,
+        params: &Value,
+        output: &mut TransportOutput,
+    ) {
+        let Some((conversation_id, remote_turn_id)) = notification_turn(engine, params) else {
+            return;
+        };
+        let Some(turn_id) = local_turn_id(engine, &conversation_id, remote_turn_id) else {
+            return;
+        };
+        let current_web_search = current_web_search_action_id(method, params);
+        let mut web_search_output = TransportOutput::default();
+        // Codex app-server commonly emits webSearch as a started item without a
+        // live result or terminal item. The next turn-scoped notification means
+        // control has moved on, so close older searches here at the adapter
+        // boundary instead of leaking Codex-specific behavior downstream.
+        append_completed_web_searches(
+            engine,
+            &conversation_id,
+            &turn_id,
+            current_web_search.as_ref(),
+            &mut web_search_output,
+        );
+        if !web_search_output.events.is_empty() {
+            output.events.splice(0..0, web_search_output.events);
         }
     }
+}
+
+fn current_web_search_action_id(method: &str, params: &Value) -> Option<ActionId> {
+    if !matches!(
+        method,
+        "item/started" | "item/completed" | "rawResponseItem/completed"
+    ) {
+        return None;
+    }
+    let item = params.get("item")?;
+    if item.get("type").and_then(Value::as_str) != Some("webSearch") {
+        return None;
+    }
+    item.get("id")
+        .and_then(Value::as_str)
+        .map(|id| ActionId::new(id.to_string()))
 }
