@@ -1,0 +1,21 @@
+[package]
+name = "angel-profiler"
+version = "0.1.0"
+edition = "2024"
+
+[lib]
+path = "src/lib.rs"
+
+[[bin]]
+name = "angel-profiler"
+path = "src/main.rs"
+
+[[bin]]
+name = "angel-profile-report"
+path = "src/bin/profile_report.rs"
+
+[dependencies]
+angel-engine-client = { path = "../angel-engine-client" }
+open = "5"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
