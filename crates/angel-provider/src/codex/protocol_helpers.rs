@@ -33,6 +33,7 @@ pub(crate) fn codex_user_input(effect: &ProtocolEffect) -> Value {
     };
 
     let mut input = Vec::new();
+    let mut mentioned_files = Vec::new();
     for index in 0..count {
         let prefix = format!("input.{index}");
         let input_type = effect
@@ -66,7 +67,13 @@ pub(crate) fn codex_user_input(effect: &ProtocolEffect) -> Value {
                     "url": codex_image_url(&data, &mime_type),
                 }));
             }
-            "resource_link" => input.push(codex_resource_link_item(effect, &prefix, content)),
+            "resource_link" => {
+                if let Some(item) =
+                    codex_resource_link_item(effect, &prefix, content, &mut mentioned_files)
+                {
+                    input.push(item);
+                }
+            }
             "resource" => input.push(codex_text_item(codex_text_resource_text(
                 effect, &prefix, content,
             ))),
@@ -87,6 +94,8 @@ pub(crate) fn codex_user_input(effect: &ProtocolEffect) -> Value {
         }
     }
 
+    apply_codex_mentioned_files_prompt(&mut input, &mentioned_files);
+
     if input.is_empty() {
         text_input(
             effect
@@ -101,6 +110,12 @@ pub(crate) fn codex_user_input(effect: &ProtocolEffect) -> Value {
     }
 }
 
+#[derive(Clone, Debug, PartialEq, Eq)]
+struct CodexMentionedFile {
+    name: String,
+    path: String,
+}
+
 fn codex_text_item(text: String) -> Value {
     json!({
         "type": "text",
@@ -109,25 +124,91 @@ fn codex_text_item(text: String) -> Value {
     })
 }
 
-fn codex_resource_link_item(effect: &ProtocolEffect, prefix: &str, content: String) -> Value {
-    let name = field(effect, prefix, "name").unwrap_or(content.as_str());
+fn codex_resource_link_item(
+    effect: &ProtocolEffect,
+    prefix: &str,
+    content: String,
+    mentioned_files: &mut Vec<CodexMentionedFile>,
+) -> Option<Value> {
     let uri = field(effect, prefix, "uri").unwrap_or(content.as_str());
     if let Some(path) = local_file_path_from_uri(uri) {
         if is_image_mime_type(field(effect, prefix, "mimeType")) {
-            return json!({
+            return Some(json!({
                 "type": "localImage",
                 "path": path,
-            });
+            }));
         }
 
-        return json!({
-            "type": "mention",
-            "name": name,
-            "path": path,
+        mentioned_files.push(CodexMentionedFile {
+            name: codex_file_mention_name(effect, prefix, content.as_str(), &path),
+            path,
         });
+        return None;
     }
 
-    codex_text_item(codex_resource_link_text(effect, prefix, content))
+    Some(codex_text_item(codex_resource_link_text(
+        effect, prefix, content,
+    )))
+}
+
+fn codex_file_mention_name(
+    effect: &ProtocolEffect,
+    prefix: &str,
+    content: &str,
+    path: &str,
+) -> String {
+    if let Some(name) = field(effect, prefix, "name").filter(|name| !name.trim().is_empty()) {
+        return name.to_string();
+    }
+
+    std::path::Path::new(path)
+        .file_name()
+        .and_then(|name| name.to_str())
+        .filter(|name| !name.trim().is_empty())
+        .unwrap_or(content)
+        .to_string()
+}
+
+fn apply_codex_mentioned_files_prompt(input: &mut Vec<Value>, files: &[CodexMentionedFile]) {
+    if files.is_empty() {
+        return;
+    }
+
+    let text_index = input
+        .iter()
+        .position(|item| item.get("type").and_then(Value::as_str) == Some("text"));
+    let request = text_index
+        .and_then(|index| input[index].get("text").and_then(Value::as_str))
+        .unwrap_or_default()
+        .to_string();
+    let prompt = codex_mentioned_files_prompt(files, &request);
+
+    if let Some(index) = text_index {
+        if let Some(object) = input[index].as_object_mut() {
+            object.insert("text".to_string(), json!(prompt));
+            return;
+        }
+    }
+
+    input.insert(0, codex_text_item(prompt));
+}
+
+fn codex_mentioned_files_prompt(files: &[CodexMentionedFile], request: &str) -> String {
+    let mut prompt = String::from("\n# Files mentioned by the user:\n");
+    for file in files {
+        prompt.push('\n');
+        prompt.push_str("## ");
+        prompt.push_str(&file.name);
+        prompt.push_str(": ");
+        prompt.push_str(&file.path);
+        prompt.push('\n');
+    }
+    prompt.push_str("\n## My request for Codex:\n");
+    prompt.push_str(request);
+    if !request.ends_with('\n') {
+        prompt.push('\n');
+    }
+    prompt
 }
 
 fn codex_resource_link_text(effect: &ProtocolEffect, prefix: &str, content: String) -> String {

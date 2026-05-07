@@ -430,13 +430,12 @@ mod tests {
         assert_eq!(
             params["input"],
             json!([
-                {"type": "text", "text": "describe this", "text_elements": []},
-                {"type": "image", "url": "data:image/png;base64,ZmFrZQ=="},
                 {
-                    "type": "mention",
-                    "name": "Project Notes.pdf",
-                    "path": "/repo/Project Notes.pdf"
+                    "type": "text",
+                    "text": "\n# Files mentioned by the user:\n\n## Project Notes.pdf: /repo/Project Notes.pdf\n\n## My request for Codex:\ndescribe this\n",
+                    "text_elements": []
                 },
+                {"type": "image", "url": "data:image/png;base64,ZmFrZQ=="},
                 {"type": "localImage", "path": "/repo/shot.png"},
                 {
                     "type": "text",

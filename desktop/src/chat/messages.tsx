@@ -481,6 +481,32 @@ function ElicitationToolPart({
 }) {
   const elicitation = parseElicitation(action.rawInput);
   const phase = action.phase ?? part.status.type;
+  const hasOutput = hasToolOutput(action, part.result);
+
+  if (isInlinePermissionElicitation(elicitation)) {
+    if (hasOutput) return null;
+    return <InlinePermissionApprovalButtons part={part} phase={phase} />;
+  }
+
+  return (
+    <StandaloneElicitationToolPart
+      action={action}
+      elicitation={elicitation}
+      part={part}
+    />
+  );
+}
+
+function StandaloneElicitationToolPart({
+  action,
+  elicitation,
+  part,
+}: {
+  action: ChatToolAction;
+  elicitation?: ChatElicitation;
+  part: ToolCallMessagePartProps;
+}) {
+  const phase = action.phase ?? part.status.type;
   const title = action.title || elicitation?.title || "User input";
   const outputText = getToolOutputText(action, part.result);
   const questions = elicitation?.questions ?? [];
@@ -578,43 +604,10 @@ function ElicitationToolPart({
               </div>
             </div>
           ) : (
-            <div className="flex flex-wrap justify-end gap-2">
-              <Button
-                disabled={!awaitingInput}
-                onClick={() => resume({ type: "deny" })}
-                size="xs"
-                type="button"
-                variant="ghost"
-              >
-                Deny
-              </Button>
-              <Button
-                disabled={!awaitingInput}
-                onClick={() => resume({ type: "cancel" })}
-                size="xs"
-                type="button"
-                variant="ghost"
-              >
-                Cancel
-              </Button>
-              <Button
-                disabled={!awaitingInput}
-                onClick={() => resume({ type: "allowForSession" })}
-                size="xs"
-                type="button"
-                variant="outline"
-              >
-                Allow session
-              </Button>
-              <Button
-                disabled={!awaitingInput}
-                onClick={() => resume({ type: "allow" })}
-                size="xs"
-                type="button"
-              >
-                Allow
-              </Button>
-            </div>
+            <PermissionApprovalActions
+              disabled={!awaitingInput}
+              onResume={resume}
+            />
           )}
 
           {outputText ? (
@@ -623,6 +616,93 @@ function ElicitationToolPart({
         </div>
       </CollapsibleContent>
     </Collapsible>
+  );
+}
+
+function InlinePermissionApprovalButtons({
+  part,
+  phase,
+}: {
+  part: ToolCallMessagePartProps;
+  phase: string;
+}) {
+  const [submitted, setSubmitted] = useState(false);
+  const awaitingInput = phase === "awaitingDecision";
+  const resume = (response: ChatElicitationResponse) => {
+    if (!awaitingInput) return;
+    setSubmitted(true);
+    part.resume(response);
+  };
+
+  if (submitted || !awaitingInput) return null;
+
+  return (
+    <PermissionApprovalActions
+      className="px-1 pt-1"
+      disabled={false}
+      onResume={resume}
+    />
+  );
+}
+
+function PermissionApprovalActions({
+  className,
+  disabled,
+  onResume,
+}: {
+  className?: string;
+  disabled: boolean;
+  onResume: (response: ChatElicitationResponse) => void;
+}) {
+  return (
+    <div className={cn("flex flex-wrap justify-end gap-2", className)}>
+      <Button
+        disabled={disabled}
+        onClick={() => onResume({ type: "deny" })}
+        size="xs"
+        type="button"
+        variant="ghost"
+      >
+        Deny
+      </Button>
+      <Button
+        disabled={disabled}
+        onClick={() => onResume({ type: "cancel" })}
+        size="xs"
+        type="button"
+        variant="ghost"
+      >
+        Cancel
+      </Button>
+      <Button
+        disabled={disabled}
+        onClick={() => onResume({ type: "allowForSession" })}
+        size="xs"
+        type="button"
+        variant="outline"
+      >
+        Allow session
+      </Button>
+      <Button
+        disabled={disabled}
+        onClick={() => onResume({ type: "allow" })}
+        size="xs"
+        type="button"
+      >
+        Allow
+      </Button>
+    </div>
+  );
+}
+
+function isInlinePermissionElicitation(
+  elicitation?: ChatElicitation,
+): elicitation is ChatElicitation {
+  return Boolean(
+    elicitation &&
+    (elicitation.kind === "approval" ||
+      elicitation.kind === "permissionProfile") &&
+    (elicitation.questions?.length ?? 0) === 0,
   );
 }
 
@@ -822,6 +902,11 @@ function getToolOutputText(
   if (typeof result === "string") return result;
   if (result === undefined || result === null) return "";
   return JSON.stringify(result, null, 2);
+}
+
+function hasToolOutput(action: ChatToolAction | undefined, result: unknown) {
+  if (getToolOutputText(action, result).trim()) return true;
+  return Boolean(action?.output?.some((output) => output.text.trim()));
 }
 
 function parseElicitation(
