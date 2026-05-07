@@ -15,6 +15,7 @@ import {
   ArrowUp,
   Bot,
   Brain,
+  Check,
   CircleStop,
   Cpu,
   Paperclip,
@@ -24,7 +25,10 @@ import {
 } from "lucide-react";
 
 import { ChatAttachmentTile } from "@/chat/attachment-tile";
-import { useChatOptions } from "@/chat/chat-options-context";
+import {
+  useChatOptions,
+  type ChatOptionsContextValue,
+} from "@/chat/chat-options-context";
 import {
   PromptInput,
   PromptInputBody,
@@ -41,6 +45,16 @@ import {
   type PromptInputMessage,
 } from "@/components/ai-elements/prompt-input";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { iconButtonClass } from "@/chat/thread-styles";
 import {
   AGENT_OPTIONS,
@@ -205,51 +219,7 @@ function AssistantComposerFooter({ draftText }: { draftText: string }) {
     <PromptInputFooter className="flex-wrap border-t !px-2 !py-2">
       <PromptInputTools className="flex-wrap">
         <PromptAttachmentButton />
-        <ComposerOptionSelect
-          disabled={chatOptions.runtimeLocked || isRunning}
-          icon={<Bot />}
-          label="Agent"
-          onValueChange={(value) =>
-            chatOptions.setRuntime(normalizeAgentRuntime(value))
-          }
-          options={AGENT_OPTIONS.map((agent) => ({
-            label: agent.label,
-            value: agent.id,
-          }))}
-          title={
-            chatOptions.runtimeLocked ? "Agent is fixed for this chat" : "Agent"
-          }
-          value={chatOptions.runtime}
-        />
-        <ComposerOptionSelect
-          className="max-w-44"
-          disabled={
-            isRunning ||
-            chatOptions.configLoading ||
-            !chatOptions.canSetModel ||
-            chatOptions.modelOptions.length < 2
-          }
-          icon={<Cpu />}
-          label="Model"
-          onValueChange={chatOptions.setModel}
-          options={chatOptions.modelOptions}
-          title={
-            chatOptions.configLoading ? "Loading models from agent" : "Model"
-          }
-          value={chatOptions.model}
-        />
-        <ComposerOptionSelect
-          disabled={
-            isRunning ||
-            !chatOptions.canSetReasoningEffort ||
-            chatOptions.reasoningEffortOptions.length < 2
-          }
-          icon={<Brain />}
-          label="Reasoning effort"
-          onValueChange={chatOptions.setReasoningEffort}
-          options={chatOptions.reasoningEffortOptions}
-          value={chatOptions.reasoningEffort}
-        />
+        <ComposerModelMenu disabled={isRunning} options={chatOptions} />
       </PromptInputTools>
       <div className="flex min-w-0 items-center gap-2">
         <ComposerOptionSelect
@@ -353,6 +323,178 @@ function PromptAttachmentButton() {
       <span className="sr-only">Attach files</span>
     </Button>
   );
+}
+
+function ComposerModelMenu({
+  disabled,
+  options,
+}: {
+  disabled?: boolean;
+  options: ChatOptionsContextValue;
+}) {
+  const providerOptions = AGENT_OPTIONS.map((agent) => ({
+    label: agent.label,
+    value: agent.id,
+  }));
+  const providerLabel =
+    AGENT_OPTIONS.find((agent) => agent.id === options.runtime)?.label ??
+    options.runtime;
+  const modelLabel = optionLabel(options.modelOptions, options.model);
+  const effortLabel = optionLabel(
+    options.reasoningEffortOptions,
+    options.reasoningEffort,
+  );
+  const modelDisabled =
+    disabled ||
+    options.configLoading ||
+    !options.canSetModel ||
+    options.modelOptions.length < 2;
+  const effortDisabled =
+    disabled ||
+    !options.canSetReasoningEffort ||
+    options.reasoningEffortOptions.length < 2;
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button
+          className="h-8 max-w-[22rem] gap-1.5 rounded-md border border-border bg-background/70 px-2 text-xs"
+          disabled={disabled}
+          size="sm"
+          title="Provider, model, and reasoning effort"
+          type="button"
+          variant="outline"
+        >
+          <Bot className="size-3.5 shrink-0" />
+          <span className="min-w-0 truncate">{providerLabel}</span>
+          <span className="text-muted-foreground">/</span>
+          <span className="min-w-0 truncate">{modelLabel}</span>
+          <span className="text-muted-foreground">/</span>
+          <span className="min-w-0 truncate">
+            {shortEffortLabel(effortLabel)}
+          </span>
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent className="w-72 rounded-md" align="start">
+        <DropdownMenuLabel>Agent settings</DropdownMenuLabel>
+        <ComposerModelMenuSub
+          disabled={options.runtimeLocked || disabled}
+          icon={<Bot />}
+          label="Provider"
+          value={providerLabel}
+        >
+          {providerOptions.map((provider) => (
+            <ComposerModelMenuItem
+              key={provider.value}
+              label={provider.label}
+              onSelect={() =>
+                options.setRuntime(normalizeAgentRuntime(provider.value))
+              }
+              selected={provider.value === options.runtime}
+            />
+          ))}
+        </ComposerModelMenuSub>
+        <ComposerModelMenuSub
+          disabled={modelDisabled}
+          icon={<Cpu />}
+          label="Model"
+          value={options.configLoading ? "Loading..." : modelLabel}
+        >
+          {options.modelOptions.map((model) => (
+            <ComposerModelMenuItem
+              key={model.value}
+              label={model.label}
+              onSelect={() => options.setModel(model.value)}
+              selected={model.value === options.model}
+            />
+          ))}
+        </ComposerModelMenuSub>
+        <ComposerModelMenuSub
+          disabled={effortDisabled}
+          icon={<Brain />}
+          label="Effort"
+          value={effortLabel}
+        >
+          {options.reasoningEffortOptions.map((effort) => (
+            <ComposerModelMenuItem
+              key={effort.value}
+              label={effort.label}
+              onSelect={() => options.setReasoningEffort(effort.value)}
+              selected={effort.value === options.reasoningEffort}
+            />
+          ))}
+        </ComposerModelMenuSub>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
+function ComposerModelMenuSub({
+  children,
+  disabled,
+  icon,
+  label,
+  value,
+}: {
+  children: ReactNode;
+  disabled?: boolean;
+  icon: ReactNode;
+  label: string;
+  value: string;
+}) {
+  return (
+    <DropdownMenuSub>
+      <DropdownMenuSubTrigger
+        className="rounded-sm"
+        disabled={disabled}
+        title={label}
+      >
+        <span className="flex size-4 shrink-0 items-center justify-center [&_svg]:size-3.5">
+          {icon}
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="block text-xs text-muted-foreground">{label}</span>
+          <span className="block truncate">{value}</span>
+        </span>
+      </DropdownMenuSubTrigger>
+      <DropdownMenuSubContent className="max-h-80 w-64 rounded-md overflow-y-auto">
+        {children}
+      </DropdownMenuSubContent>
+    </DropdownMenuSub>
+  );
+}
+
+function ComposerModelMenuItem({
+  label,
+  onSelect,
+  selected,
+}: {
+  label: string;
+  onSelect: () => void;
+  selected: boolean;
+}) {
+  return (
+    <DropdownMenuItem
+      className="rounded-sm"
+      onSelect={(event) => {
+        event.preventDefault();
+        if (!selected) onSelect();
+      }}
+    >
+      <span className="flex size-4 shrink-0 items-center justify-center">
+        {selected ? <Check className="size-3.5" /> : null}
+      </span>
+      <span className="min-w-0 flex-1 truncate">{label}</span>
+    </DropdownMenuItem>
+  );
+}
+
+function optionLabel(options: AgentValueOption[], value: string) {
+  return options.find((option) => option.value === value)?.label ?? value;
+}
+
+function shortEffortLabel(label: string) {
+  return label.toLowerCase() === "use default" ? "Default" : label;
 }
 
 function createAttachmentFromPromptFile(
