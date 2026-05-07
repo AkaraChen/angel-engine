@@ -1292,6 +1292,7 @@ function attachmentInputFromMessagePart(
       data: parsed.data,
       mimeType: parsed.mimeType,
       name: part.filename ?? fallbackName ?? null,
+      path: messagePartPath(part),
       type: "image",
     };
   }
@@ -1303,6 +1304,7 @@ function attachmentInputFromMessagePart(
       data: parsed?.data ?? part.data,
       mimeType: parsed?.mimeType ?? part.mimeType,
       name: part.filename ?? fallbackName ?? null,
+      path: messagePartPath(part),
       type: "image",
     };
   }
@@ -1314,11 +1316,21 @@ function attachmentInputFromMessagePart(
       data: parsed?.data ?? part.data,
       mimeType: parsed?.mimeType ?? part.mimeType,
       name: part.filename ?? fallbackName ?? null,
+      path: messagePartPath(part),
       type: "file",
     };
   }
 
   return undefined;
+}
+
+function messagePartPath(part: ThreadMessage["content"][number]) {
+  const path = (
+    part as ThreadMessage["content"][number] & {
+      path?: unknown;
+    }
+  ).path;
+  return typeof path === "string" && path.trim() ? path.trim() : null;
 }
 
 function attachmentInputToHistoryPart(

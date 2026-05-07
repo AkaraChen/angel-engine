@@ -3,8 +3,10 @@ import {
   AssistantRuntimeProvider,
   CompositeAttachmentAdapter,
   SimpleImageAttachmentAdapter,
-  SimpleTextAttachmentAdapter,
+  type AttachmentAdapter,
+  type CompleteAttachment,
   type FeedbackAdapter,
+  type PendingAttachment,
   type SpeechSynthesisAdapter,
 } from "@assistant-ui/react";
 
@@ -60,7 +62,7 @@ export function AppRuntimeProvider({
     () => ({
       attachments: new CompositeAttachmentAdapter([
         new SimpleImageAttachmentAdapter(),
-        new SimpleTextAttachmentAdapter(),
+        new GenericFileAttachmentAdapter(),
       ]),
       feedback: mockFeedbackAdapter,
       speech: createMockSpeechAdapter(),
@@ -91,6 +93,69 @@ export function AppRuntimeProvider({
       {children}
     </AssistantRuntimeProvider>
   );
+}
+
+class GenericFileAttachmentAdapter implements AttachmentAdapter {
+  public accept = "*";
+
+  public async add(state: { file: File }): Promise<PendingAttachment> {
+    return {
+      contentType: fileContentType(state.file),
+      file: state.file,
+      id: state.file.name,
+      name: state.file.name,
+      status: { reason: "composer-send", type: "requires-action" },
+      type: "file",
+    };
+  }
+
+  public async send(
+    attachment: PendingAttachment,
+  ): Promise<CompleteAttachment> {
+    const contentType = fileContentType(
+      attachment.file,
+      attachment.contentType,
+    );
+    const localPath = getLocalFilePath(attachment.file);
+    const content = {
+      ...(localPath ? { path: localPath } : {}),
+      data: await readFileAsDataUrl(attachment.file),
+      filename: attachment.name,
+      mimeType: contentType,
+      type: "file" as const,
+    };
+
+    return {
+      ...attachment,
+      content: [content] as CompleteAttachment["content"],
+      contentType,
+      status: { type: "complete" },
+      type: "file",
+    };
+  }
+
+  public async remove() {
+    // noop
+  }
+}
+
+function fileContentType(file: File, fallback?: string) {
+  return file.type || fallback || "application/octet-stream";
+}
+
+function getLocalFilePath(file: File) {
+  if (typeof window === "undefined") return null;
+  const path = window.desktopEnvironment?.getPathForFile?.(file);
+  return typeof path === "string" && path.trim() ? path.trim() : null;
+}
+
+function readFileAsDataUrl(file: File) {
+  return new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = (error) => reject(error);
+    reader.readAsDataURL(file);
+  });
 }
 
 function createMockSpeechAdapter(): SpeechSynthesisAdapter {

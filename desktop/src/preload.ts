@@ -1,4 +1,9 @@
-import { contextBridge, ipcRenderer, type IpcRendererEvent } from "electron";
+import {
+  contextBridge,
+  ipcRenderer,
+  webUtils,
+  type IpcRendererEvent,
+} from "electron";
 
 import {
   CHAT_STREAM_CANCEL_CHANNEL,
@@ -13,6 +18,9 @@ import {
 } from "./shared/chat";
 
 contextBridge.exposeInMainWorld("desktopEnvironment", {
+  getPathForFile(file: File) {
+    return webUtils.getPathForFile(file) || null;
+  },
   platform: process.platform,
 });
 contextBridge.exposeInMainWorld("ipcInvoke", ipcRenderer.invoke);

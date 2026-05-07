@@ -392,6 +392,20 @@ mod tests {
                         "image/png",
                         Some("shot.png".to_string()),
                     ),
+                    angel_engine::UserInput::resource_link(
+                        "Project Notes.pdf",
+                        "file:///repo/Project%20Notes.pdf",
+                    ),
+                    angel_engine::UserInput {
+                        content: "file:///repo/shot.png".to_string(),
+                        kind: angel_engine::UserInputKind::ResourceLink {
+                            name: "shot.png".to_string(),
+                            uri: "file:///repo/shot.png".to_string(),
+                            mime_type: Some("image/png".to_string()),
+                            title: None,
+                            description: None,
+                        },
+                    },
                     angel_engine::UserInput::embedded_text_resource(
                         "attachment://notes.txt",
                         "hello from a file",
@@ -418,6 +432,12 @@ mod tests {
             json!([
                 {"type": "text", "text": "describe this", "text_elements": []},
                 {"type": "image", "url": "data:image/png;base64,ZmFrZQ=="},
+                {
+                    "type": "mention",
+                    "name": "Project Notes.pdf",
+                    "path": "/repo/Project Notes.pdf"
+                },
+                {"type": "localImage", "path": "/repo/shot.png"},
                 {
                     "type": "text",
                     "text": "Attached text resource: attachment://notes.txt\nMIME type: text/plain\n\nhello from a file",

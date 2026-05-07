@@ -66,9 +66,7 @@ pub(crate) fn codex_user_input(effect: &ProtocolEffect) -> Value {
                     "url": codex_image_url(&data, &mime_type),
                 }));
             }
-            "resource_link" => input.push(codex_text_item(codex_resource_link_text(
-                effect, &prefix, content,
-            ))),
+            "resource_link" => input.push(codex_resource_link_item(effect, &prefix, content)),
             "resource" => input.push(codex_text_item(codex_text_resource_text(
                 effect, &prefix, content,
             ))),
@@ -111,6 +109,27 @@ fn codex_text_item(text: String) -> Value {
     })
 }
 
+fn codex_resource_link_item(effect: &ProtocolEffect, prefix: &str, content: String) -> Value {
+    let name = field(effect, prefix, "name").unwrap_or(content.as_str());
+    let uri = field(effect, prefix, "uri").unwrap_or(content.as_str());
+    if let Some(path) = local_file_path_from_uri(uri) {
+        if is_image_mime_type(field(effect, prefix, "mimeType")) {
+            return json!({
+                "type": "localImage",
+                "path": path,
+            });
+        }
+
+        return json!({
+            "type": "mention",
+            "name": name,
+            "path": path,
+        });
+    }
+
+    codex_text_item(codex_resource_link_text(effect, prefix, content))
+}
+
 fn codex_resource_link_text(effect: &ProtocolEffect, prefix: &str, content: String) -> String {
     let name = field(effect, prefix, "name").unwrap_or(content.as_str());
     let uri = field(effect, prefix, "uri").unwrap_or(content.as_str());
@@ -125,6 +144,54 @@ fn codex_resource_link_text(effect: &ProtocolEffect, prefix: &str, content: Stri
         text.push_str(&format!("\nDescription: {description}"));
     }
     text
+}
+
+fn is_image_mime_type(mime_type: Option<&str>) -> bool {
+    mime_type.is_some_and(|mime_type| mime_type.to_ascii_lowercase().starts_with("image/"))
+}
+
+fn local_file_path_from_uri(uri: &str) -> Option<String> {
+    let file_path = uri.strip_prefix("file://")?;
+    let path = if let Some(path) = file_path.strip_prefix("localhost/") {
+        format!("/{path}")
+    } else if file_path.starts_with('/') {
+        file_path.to_string()
+    } else {
+        return None;
+    };
+
+    percent_decode_path(&path)
+}
+
+fn percent_decode_path(path: &str) -> Option<String> {
+    let bytes = path.as_bytes();
+    let mut decoded = Vec::with_capacity(bytes.len());
+    let mut index = 0;
+    while index < bytes.len() {
+        if bytes[index] == b'%' && index + 2 < bytes.len() {
+            if let (Some(high), Some(low)) =
+                (hex_digit(bytes[index + 1]), hex_digit(bytes[index + 2]))
+            {
+                decoded.push((high << 4) | low);
+                index += 3;
+                continue;
+            }
+        }
+
+        decoded.push(bytes[index]);
+        index += 1;
+    }
+
+    String::from_utf8(decoded).ok()
+}
+
+fn hex_digit(byte: u8) -> Option<u8> {
+    match byte {
+        b'0'..=b'9' => Some(byte - b'0'),
+        b'a'..=b'f' => Some(byte - b'a' + 10),
+        b'A'..=b'F' => Some(byte - b'A' + 10),
+        _ => None,
+    }
 }
 
 fn codex_text_resource_text(effect: &ProtocolEffect, prefix: &str, content: String) -> String {

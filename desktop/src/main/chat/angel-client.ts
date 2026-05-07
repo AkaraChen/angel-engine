@@ -1,4 +1,6 @@
 import { createRequire } from "node:module";
+import path from "node:path";
+import { pathToFileURL } from "node:url";
 
 import type {
   ConversationSnapshot,
@@ -228,6 +230,17 @@ function chatAttachmentsToClientInput(
   attachments: ChatAttachmentInput[],
 ): NonNullable<SendTextRequest["input"]> {
   return attachments.map((attachment) => {
+    const localPath = attachment.path?.trim();
+    if (localPath) {
+      return {
+        mimeType: attachment.mimeType,
+        name:
+          attachment.name?.trim() || path.basename(localPath) || "attachment",
+        type: "resourceLink",
+        uri: pathToFileURL(localPath).href,
+      };
+    }
+
     if (attachment.type === "image") {
       return {
         data: attachment.data,

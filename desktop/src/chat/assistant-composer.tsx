@@ -47,12 +47,14 @@ import {
   normalizeAgentRuntime,
   type AgentValueOption,
 } from "@/shared/agents";
+import { useToast } from "@/components/ui/toast";
 
 export function AssistantComposer() {
   const aui = useAui();
   const canCancel = useAuiState((state) => state.composer.canCancel);
   const isInputDisabled = useAuiState((state) => state.thread.isDisabled);
   const isRunning = useAuiState((state) => state.thread.isRunning);
+  const toast = useToast();
   const [draftText, setDraftText] = useState("");
 
   const handleSubmit = useCallback(
@@ -67,16 +69,32 @@ export function AssistantComposer() {
 
       composer.setText(text);
 
-      await Promise.all(
-        message.files.map((file) =>
-          composer.addAttachment(createAttachmentFromPromptFile(file)),
-        ),
-      );
+      try {
+        await Promise.all(
+          message.files.map((file) =>
+            composer.addAttachment(createAttachmentFromPromptFile(file)),
+          ),
+        );
 
-      composer.send();
-      setDraftText("");
+        await composer.send();
+        setDraftText("");
+      } catch (error) {
+        await composer.clearAttachments().catch(() => undefined);
+        throw error;
+      }
     },
     [aui],
+  );
+
+  const handleAttachmentError = useCallback(
+    (error: AttachmentInputError) => {
+      toast({
+        description: error.message,
+        title: attachmentErrorTitle(error.code),
+        variant: "destructive",
+      });
+    },
+    [toast],
   );
 
   const handleTextChange = useCallback(
@@ -105,6 +123,7 @@ export function AssistantComposer() {
     <PromptInput
       inputGroupClassName="!rounded-md !border !border-border !bg-card shadow-sm has-[textarea]:!rounded-md has-[>[data-align=block-end]]:!rounded-md has-[>[data-align=block-start]]:!rounded-md"
       multiple
+      onError={handleAttachmentError}
       onSubmit={handleSubmit}
     >
       <AssistantComposerHeader />
@@ -342,25 +361,57 @@ function createAttachmentFromPromptFile(
   const filename = file.filename ?? "Attachment";
   const mediaType = file.mediaType ?? "application/octet-stream";
   const url = file.url ?? "";
+  const path = promptFilePath(file);
   const isImage = mediaType.startsWith("image/");
 
+  if (!url || url.startsWith("blob:")) {
+    throw new Error(`Could not read ${filename}. Try attaching it again.`);
+  }
+
+  const content = isImage
+    ? {
+        ...(path ? { path } : {}),
+        filename,
+        image: url,
+        type: "image" as const,
+      }
+    : {
+        ...(path ? { path } : {}),
+        data: url,
+        filename,
+        mimeType: mediaType,
+        type: "file" as const,
+      };
+
   return {
-    content: [
-      isImage
-        ? {
-            filename,
-            image: url,
-            type: "image",
-          }
-        : {
-            data: url,
-            filename,
-            mimeType: mediaType,
-            type: "file",
-          },
-    ],
+    content: [content] as CreateAttachment["content"],
     contentType: mediaType,
     name: filename,
     type: isImage ? "image" : "file",
   };
+}
+
+function promptFilePath(file: PromptInputMessage["files"][number]) {
+  const path = file.path;
+  return typeof path === "string" && path.trim() ? path.trim() : undefined;
+}
+
+type AttachmentInputError = {
+  code: "max_files" | "max_file_size" | "accept" | "file_read" | "submit";
+  message: string;
+};
+
+function attachmentErrorTitle(code: AttachmentInputError["code"]) {
+  switch (code) {
+    case "accept":
+      return "File type blocked";
+    case "max_file_size":
+      return "File is too large";
+    case "max_files":
+      return "Too many files";
+    case "file_read":
+      return "Could not read file";
+    case "submit":
+      return "Could not send attachment";
+  }
 }

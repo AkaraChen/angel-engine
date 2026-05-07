@@ -105,6 +105,18 @@ const convertFileToDataUrl = (file: File): Promise<string | null> =>
     reader.readAsDataURL(file);
   });
 
+function getErrorMessage(error: unknown) {
+  if (error instanceof Error && error.message) return error.message;
+  if (typeof error === "string" && error.trim()) return error;
+  return "Unknown error";
+}
+
+function getLocalFilePath(file: File) {
+  if (typeof window === "undefined") return null;
+  const path = window.desktopEnvironment?.getPathForFile?.(file);
+  return typeof path === "string" && path.trim() ? path.trim() : null;
+}
+
 const captureScreenshot = async (): Promise<File | null> => {
   if (
     typeof navigator === "undefined" ||
@@ -195,7 +207,13 @@ export interface AttachmentsContext {
   fileInputRef: RefObject<HTMLInputElement | null>;
 }
 
-export type PromptInputFile = FileUIPart & { file?: File; id: string };
+export type PromptInputSubmittedFile = FileUIPart & {
+  path?: string | null;
+};
+export type PromptInputFile = PromptInputSubmittedFile & {
+  file?: File;
+  id: string;
+};
 
 export interface TextInputContext {
   value: string;
@@ -282,6 +300,7 @@ export const PromptInputProvider = ({
         filename: file.name,
         id: nanoid(),
         mediaType: file.type,
+        path: getLocalFilePath(file),
         type: "file" as const,
         url: URL.createObjectURL(file),
       })),
@@ -492,7 +511,7 @@ export const PromptInputActionAddScreenshot = ({
 
 export interface PromptInputMessage {
   text: string;
-  files: FileUIPart[];
+  files: PromptInputSubmittedFile[];
 }
 
 export type PromptInputProps = Omit<
@@ -512,7 +531,7 @@ export type PromptInputProps = Omit<
   // bytes
   maxFileSize?: number;
   onError?: (err: {
-    code: "max_files" | "max_file_size" | "accept";
+    code: "max_files" | "max_file_size" | "accept" | "file_read" | "submit";
     message: string;
   }) => void;
   onSubmit: (
@@ -628,6 +647,7 @@ export const PromptInput = ({
             filename: file.name,
             id: nanoid(),
             mediaType: file.type,
+            path: getLocalFilePath(file),
             type: "file",
             url: URL.createObjectURL(file),
           });
@@ -871,11 +891,12 @@ export const PromptInput = ({
         form.reset();
       }
 
+      // Convert blob URLs to data URLs asynchronously
+      let convertedFiles: PromptInputSubmittedFile[];
       try {
-        // Convert blob URLs to data URLs asynchronously
-        const convertedFiles: FileUIPart[] = await Promise.all(
+        convertedFiles = await Promise.all(
           files.map(async (file) => {
-            const item = { ...file } as FileUIPart & {
+            const item = { ...file } as PromptInputSubmittedFile & {
               file?: File;
               id?: string;
             };
@@ -887,16 +908,29 @@ export const PromptInput = ({
               const dataUrl = sourceFile
                 ? await convertFileToDataUrl(sourceFile)
                 : await convertBlobUrlToDataUrl(item.url);
-              // If conversion failed, keep the original blob URL
+              if (!dataUrl) {
+                throw new Error(
+                  `Could not read ${item.filename ?? "attachment"}.`,
+                );
+              }
               return {
                 ...item,
-                url: dataUrl ?? item.url,
+                url: dataUrl,
               };
             }
             return item;
           }),
         );
+      } catch (error) {
+        // Don't clear on error - user may want to retry
+        onError?.({
+          code: "file_read",
+          message: getErrorMessage(error),
+        });
+        return;
+      }
 
+      try {
         const result = onSubmit({ files: convertedFiles, text }, event);
 
         // Handle both sync and async onSubmit
@@ -907,8 +941,12 @@ export const PromptInput = ({
             if (usingProvider) {
               controller.textInput.clear();
             }
-          } catch {
+          } catch (error) {
             // Don't clear on error - user may want to retry
+            onError?.({
+              code: "submit",
+              message: getErrorMessage(error),
+            });
           }
         } else {
           // Sync function completed without throwing, clear inputs
@@ -917,11 +955,15 @@ export const PromptInput = ({
             controller.textInput.clear();
           }
         }
-      } catch {
+      } catch (error) {
         // Don't clear on error - user may want to retry
+        onError?.({
+          code: "submit",
+          message: getErrorMessage(error),
+        });
       }
     },
-    [usingProvider, controller, files, onSubmit, clear],
+    [usingProvider, controller, files, onSubmit, clear, onError],
   );
 
   // Render with or without local provider

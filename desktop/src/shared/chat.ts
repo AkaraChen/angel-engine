@@ -298,12 +298,14 @@ export type ChatAttachmentInput =
       data: string;
       mimeType: string;
       name?: string | null;
+      path?: string | null;
       type: "image";
     }
   | {
       data: string;
       mimeType: string;
       name?: string | null;
+      path?: string | null;
       type: "file";
     };
 
@@ -433,6 +435,10 @@ export function normalizeChatAttachmentsInput(
       name:
         typeof value.name === "string" && value.name.trim()
           ? value.name.trim()
+          : null,
+      path:
+        typeof value.path === "string" && value.path.trim()
+          ? value.path.trim()
           : null,
       type: mimeType.startsWith("image/") ? "image" : "file",
     };

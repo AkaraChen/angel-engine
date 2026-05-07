@@ -16,6 +16,7 @@ declare global {
 
   interface Window {
     desktopEnvironment: {
+      getPathForFile: (file: File) => string | null;
       platform: DesktopPlatform;
     };
     chatStream: ChatStreamApi;
