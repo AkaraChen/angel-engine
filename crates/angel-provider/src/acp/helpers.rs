@@ -95,6 +95,7 @@ pub(super) fn content_delta_log_text(delta: &ContentDelta) -> String {
             .filter_map(|part| match part {
                 ContentPart::Text(text) => Some(text.as_str()),
                 ContentPart::Image { name, .. } => name.as_deref(),
+                ContentPart::File { name, .. } => name.as_deref(),
             })
             .collect::<Vec<_>>()
             .join(""),

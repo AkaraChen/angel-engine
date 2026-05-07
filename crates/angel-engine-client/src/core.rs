@@ -657,6 +657,14 @@ pub enum ClientInput {
         #[serde(default)]
         mime_type: Option<String>,
     },
+    EmbeddedBlobResource {
+        uri: String,
+        data: String,
+        #[serde(default)]
+        mime_type: Option<String>,
+        #[serde(default)]
+        name: Option<String>,
+    },
     RawContentBlock {
         value: serde_json::Value,
     },
@@ -682,6 +690,20 @@ impl ClientInput {
             uri: uri.into(),
             text: text.into(),
             mime_type: None,
+        }
+    }
+
+    pub fn embedded_blob_resource(
+        uri: impl Into<String>,
+        data: impl Into<String>,
+        mime_type: Option<String>,
+        name: Option<String>,
+    ) -> Self {
+        Self::EmbeddedBlobResource {
+            uri: uri.into(),
+            data: data.into(),
+            mime_type,
+            name,
         }
     }
 
@@ -732,6 +754,12 @@ impl From<ClientInput> for UserInput {
                 text,
                 mime_type,
             } => UserInput::embedded_text_resource(uri, text, mime_type),
+            ClientInput::EmbeddedBlobResource {
+                uri,
+                data,
+                mime_type,
+                name,
+            } => UserInput::embedded_blob_resource(uri, data, mime_type, name),
             ClientInput::RawContentBlock { value } => UserInput::raw_content_block(value),
         }
     }

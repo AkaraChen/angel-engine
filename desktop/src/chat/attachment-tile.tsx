@@ -14,6 +14,7 @@ type ChatAttachmentTileProps = {
   contentType?: string;
   name: string;
   onRemove?: () => void;
+  previewText?: string;
   previewUrl?: string;
   removeLabel?: string;
   typeLabel: string;
@@ -24,6 +25,7 @@ export function ChatAttachmentTile({
   contentType,
   name,
   onRemove,
+  previewText,
   previewUrl,
   removeLabel,
   typeLabel,
@@ -39,7 +41,7 @@ export function ChatAttachmentTile({
 
   return (
     <div className={cn("relative inline-flex max-w-full", className)}>
-      {previewUrl ? (
+      {previewUrl || previewText !== undefined ? (
         <Dialog>
           <DialogTrigger asChild>
             <button
@@ -55,13 +57,19 @@ export function ChatAttachmentTile({
           </DialogTrigger>
           <DialogContent className="max-h-[88dvh] max-w-[min(56rem,calc(100vw-2rem))] gap-3 rounded-md p-3">
             <DialogTitle className="truncate pr-10 text-sm">{name}</DialogTitle>
-            <div className="flex min-h-0 items-center justify-center overflow-auto rounded-sm bg-muted/30">
-              <img
-                alt={name}
-                className="max-h-[76dvh] max-w-full object-contain"
-                src={previewUrl}
-              />
-            </div>
+            {previewUrl ? (
+              <div className="flex min-h-0 items-center justify-center overflow-auto rounded-sm bg-muted/30">
+                <img
+                  alt={name}
+                  className="max-h-[76dvh] max-w-full object-contain"
+                  src={previewUrl}
+                />
+              </div>
+            ) : (
+              <pre className="max-h-[76dvh] overflow-auto whitespace-pre-wrap break-words rounded-sm bg-muted/30 p-3 font-mono text-xs leading-5">
+                {previewText}
+              </pre>
+            )}
           </DialogContent>
         </Dialog>
       ) : (

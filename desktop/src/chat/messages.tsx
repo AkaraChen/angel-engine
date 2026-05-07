@@ -45,6 +45,7 @@ import {
 import { cn } from "@/lib/utils";
 import {
   isChatToolAction,
+  parseDataUrl,
   type ChatElicitation,
   type ChatElicitationResponse,
   type ChatToolAction,
@@ -358,12 +359,16 @@ function ImageMessagePart(part: Extract<EnrichedPartState, { type: "image" }>) {
 
 function FileMessagePart(part: Extract<EnrichedPartState, { type: "file" }>) {
   const isImage = part.mimeType.startsWith("image/");
+  const previewText = isImage
+    ? undefined
+    : textFilePreview(part.data, part.mimeType);
 
   return (
     <ChatAttachmentTile
       className="my-2 max-w-64"
       contentType={part.mimeType}
       name={part.filename ?? part.mimeType}
+      previewText={previewText}
       previewUrl={
         isImage ? imageFilePreviewUrl(part.data, part.mimeType) : undefined
       }
@@ -374,6 +379,36 @@ function FileMessagePart(part: Extract<EnrichedPartState, { type: "file" }>) {
 
 function imageFilePreviewUrl(data: string, mimeType: string) {
   return data.startsWith("data:") ? data : `data:${mimeType};base64,${data}`;
+}
+
+function textFilePreview(data: string, mimeType: string) {
+  if (!isTextLikeMimeType(mimeType)) return undefined;
+  const parsed = parseDataUrl(data);
+  const encoded = parsed?.data ?? data;
+  try {
+    const binary = atob(encoded);
+    const bytes = Uint8Array.from(binary, (char) => char.charCodeAt(0));
+    const decoded = new TextDecoder().decode(bytes);
+    return decoded.includes("\uFFFD") ? data : decoded;
+  } catch {
+    return data;
+  }
+}
+
+function isTextLikeMimeType(mimeType: string) {
+  const normalized = mimeType.toLowerCase();
+  return (
+    normalized.startsWith("text/") ||
+    normalized === "application/json" ||
+    normalized === "application/xml" ||
+    normalized === "application/javascript" ||
+    normalized === "application/typescript" ||
+    normalized === "application/x-ndjson" ||
+    normalized === "application/yaml" ||
+    normalized === "application/toml" ||
+    normalized.endsWith("+json") ||
+    normalized.endsWith("+xml")
+  );
 }
 
 function ToolActionMessagePart(part: ToolCallMessagePartProps) {
@@ -838,15 +873,24 @@ function JsonBlock({ label, value }: { label: string; value: unknown }) {
 }
 
 function MessageAttachment({ attachment }: { attachment: CompleteAttachment }) {
-  const previewUrl = attachment.content.find(
-    (part) => part.type === "image",
-  )?.image;
+  const imagePart = attachment.content.find((part) => part.type === "image");
+  const filePart = attachment.content.find((part) => part.type === "file");
+  const previewUrl =
+    imagePart?.image ??
+    (filePart?.mimeType.startsWith("image/")
+      ? imageFilePreviewUrl(filePart.data, filePart.mimeType)
+      : undefined);
+  const previewText =
+    !previewUrl && filePart
+      ? textFilePreview(filePart.data, filePart.mimeType)
+      : undefined;
 
   return (
     <ChatAttachmentTile
       className="max-w-64"
-      contentType={attachment.contentType}
+      contentType={attachment.contentType ?? filePart?.mimeType}
       name={attachment.name}
+      previewText={previewText}
       previewUrl={previewUrl}
       typeLabel={attachment.type}
     />

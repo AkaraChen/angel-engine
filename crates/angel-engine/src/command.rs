@@ -140,6 +140,25 @@ impl UserInput {
         }
     }
 
+    pub fn embedded_blob_resource(
+        uri: impl Into<String>,
+        data: impl Into<String>,
+        mime_type: Option<String>,
+        name: Option<String>,
+    ) -> Self {
+        let uri = uri.into();
+        let name = name.filter(|name| !name.trim().is_empty());
+        Self {
+            content: name.clone().unwrap_or_else(|| uri.clone()),
+            kind: UserInputKind::EmbeddedBlobResource {
+                uri,
+                data: data.into(),
+                mime_type,
+                name,
+            },
+        }
+    }
+
     pub fn raw_content_block(value: serde_json::Value) -> Self {
         Self {
             content: value.to_string(),
@@ -177,6 +196,12 @@ pub enum UserInputKind {
     EmbeddedTextResource {
         uri: String,
         mime_type: Option<String>,
+    },
+    EmbeddedBlobResource {
+        uri: String,
+        data: String,
+        mime_type: Option<String>,
+        name: Option<String>,
     },
     Image {
         data: String,

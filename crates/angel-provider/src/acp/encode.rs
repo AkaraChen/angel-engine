@@ -376,6 +376,36 @@ fn acp_prompt_blocks(effect: &angel_engine::ProtocolEffect) -> Vec<Value> {
                     "resource": Value::Object(resource),
                 })
             }
+            "resource_blob" => {
+                let mut resource = serde_json::Map::new();
+                resource.insert(
+                    "uri".to_string(),
+                    json!(
+                        effect
+                            .payload
+                            .fields
+                            .get(&format!("{prefix}.uri"))
+                            .cloned()
+                            .unwrap_or_else(|| content.clone())
+                    ),
+                );
+                resource.insert(
+                    "blob".to_string(),
+                    json!(
+                        effect
+                            .payload
+                            .fields
+                            .get(&format!("{prefix}.data"))
+                            .cloned()
+                            .unwrap_or_default()
+                    ),
+                );
+                insert_optional_prompt_field(effect, &prefix, &mut resource, "mimeType");
+                json!({
+                    "type": "resource",
+                    "resource": Value::Object(resource),
+                })
+            }
             "image" => json!({
                 "type": "image",
                 "data": effect
@@ -650,6 +680,12 @@ mod tests {
                         "important context",
                         Some("text/plain".to_string()),
                     ),
+                    angel_engine::UserInput::embedded_blob_resource(
+                        "attachment://archive.zip",
+                        "UEsDBAo=",
+                        Some("application/zip".to_string()),
+                        Some("archive.zip".to_string()),
+                    ),
                     angel_engine::UserInput::image(
                         "ZmFrZQ==",
                         "image/png",
@@ -690,6 +726,17 @@ mod tests {
         );
         assert_eq!(
             params["prompt"][3],
+            json!({
+                "type": "resource",
+                "resource": {
+                    "uri": "attachment://archive.zip",
+                    "blob": "UEsDBAo=",
+                    "mimeType": "application/zip"
+                }
+            })
+        );
+        assert_eq!(
+            params["prompt"][4],
             json!({
                 "type": "image",
                 "data": "ZmFrZQ==",

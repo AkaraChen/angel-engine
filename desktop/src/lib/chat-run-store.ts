@@ -27,6 +27,7 @@ import {
   cloneChatHistoryPart,
   imageDataUrl,
   isChatToolAction,
+  parseDataUrl,
 } from "@/shared/chat";
 
 const STREAM_FLUSH_MIN_CHARS = 24;
@@ -1089,15 +1090,7 @@ function engineMessageContentToHistoryParts(
         return imagePart ? [imagePart] : [];
       }
       case "file":
-        if (!part.mimeType.startsWith("image/")) return [];
-        const imagePart = imageHistoryPartFromDataUrl(
-          part.data,
-          part.filename ?? null,
-          {
-            fallbackMimeType: part.mimeType,
-          },
-        );
-        return imagePart ? [imagePart] : [];
+        return [fileHistoryPartFromMessagePart(part)];
       default:
         return [];
     }
@@ -1107,8 +1100,17 @@ function engineMessageContentToHistoryParts(
 function historyPartToEngineMessagePart(
   part: ChatHistoryMessagePart,
 ): ThreadMessage["content"][number] {
-  if (part.type !== "image") {
+  if (part.type !== "image" && part.type !== "file") {
     return part as ThreadMessage["content"][number];
+  }
+
+  if (part.type === "file") {
+    return {
+      data: part.data,
+      filename: part.filename ?? undefined,
+      mimeType: part.mimeType,
+      type: "file",
+    } as ThreadMessage["content"][number];
   }
 
   return {
@@ -1131,6 +1133,10 @@ function userHistoryMessageContentToEngineMessage(
   for (const [index, part] of parts.entries()) {
     if (part.type === "image") {
       attachments.push(historyImagePartToAttachment(messageId, index, part));
+      continue;
+    }
+    if (part.type === "file") {
+      attachments.push(historyFilePartToAttachment(messageId, index, part));
       continue;
     }
 
@@ -1164,6 +1170,28 @@ function historyImagePartToAttachment(
   };
 }
 
+function historyFilePartToAttachment(
+  messageId: string,
+  index: number,
+  part: Extract<ChatHistoryMessagePart, { type: "file" }>,
+): CompleteAttachment {
+  return {
+    content: [
+      {
+        data: part.data,
+        filename: part.filename,
+        mimeType: part.mimeType,
+        type: "file",
+      },
+    ],
+    contentType: part.mimeType,
+    id: `${messageId}-attachment-${index}`,
+    name: part.filename ?? "file",
+    status: { type: "complete" },
+    type: "file",
+  };
+}
+
 function imageHistoryPartFromDataUrl(
   image: string,
   filename: string | null,
@@ -1182,30 +1210,44 @@ function imageHistoryPartFromDataUrl(
   };
 }
 
+function fileHistoryPartFromMessagePart(
+  part: Extract<ThreadMessage["content"][number], { type: "file" }>,
+): ChatHistoryMessagePart {
+  const parsed = parseDataUrl(part.data);
+  const mimeType = parsed?.mimeType ?? part.mimeType;
+  const data = parsed?.data ?? part.data;
+  if (mimeType.startsWith("image/")) {
+    return {
+      filename: part.filename ?? undefined,
+      image: imageDataUrl(data, mimeType),
+      mimeType,
+      type: "image",
+    };
+  }
+  return {
+    data,
+    filename: part.filename ?? undefined,
+    mimeType,
+    type: "file",
+  };
+}
+
 function engineMessageAttachmentsToHistoryParts(
   attachments: ThreadMessage["attachments"] | undefined,
   existingParts: ChatHistoryMessagePart[],
 ): ChatHistoryMessagePart[] {
-  const existingImages = new Set(
-    existingParts
-      .filter((part) => part.type === "image")
-      .map((part) => part.image),
-  );
+  const existingKeys = new Set(existingParts.map(historyPartKey));
   const parts: ChatHistoryMessagePart[] = [];
 
   for (const attachment of attachments ?? []) {
     for (const part of attachment.content ?? []) {
-      const input = imageInputFromMessagePart(part, attachment.name);
+      const input = attachmentInputFromMessagePart(part, attachment.name);
       if (!input) continue;
-      const image = imageDataUrl(input.data, input.mimeType);
-      if (existingImages.has(image)) continue;
-      existingImages.add(image);
-      parts.push({
-        filename: input.name ?? undefined,
-        image,
-        mimeType: input.mimeType,
-        type: "image",
-      });
+      const historyPart = attachmentInputToHistoryPart(input);
+      const key = historyPartKey(historyPart);
+      if (existingKeys.has(key)) continue;
+      existingKeys.add(key);
+      parts.push(historyPart);
     }
   }
 
@@ -1226,20 +1268,20 @@ function getMessageAttachments(
 
   for (const attachment of message.attachments ?? []) {
     for (const part of attachment.content ?? []) {
-      const input = imageInputFromMessagePart(part, attachment.name);
+      const input = attachmentInputFromMessagePart(part, attachment.name);
       if (input) inputs.push(input);
     }
   }
 
   for (const part of message.content) {
-    const input = imageInputFromMessagePart(part);
+    const input = attachmentInputFromMessagePart(part);
     if (input) inputs.push(input);
   }
 
   return inputs;
 }
 
-function imageInputFromMessagePart(
+function attachmentInputFromMessagePart(
   part: ThreadMessage["content"][number],
   fallbackName?: string,
 ): ChatAttachmentInput | undefined {
@@ -1255,7 +1297,7 @@ function imageInputFromMessagePart(
   }
 
   if (part.type === "file" && part.mimeType.startsWith("image/")) {
-    const parsed = parseImageDataUrl(part.data);
+    const parsed = parseDataUrl(part.data);
     if (!parsed && part.data.startsWith("data:")) return undefined;
     return {
       data: parsed?.data ?? part.data,
@@ -1265,17 +1307,52 @@ function imageInputFromMessagePart(
     };
   }
 
+  if (part.type === "file") {
+    const parsed = parseDataUrl(part.data);
+    if (!parsed && part.data.startsWith("data:")) return undefined;
+    return {
+      data: parsed?.data ?? part.data,
+      mimeType: parsed?.mimeType ?? part.mimeType,
+      name: part.filename ?? fallbackName ?? null,
+      type: "file",
+    };
+  }
+
   return undefined;
+}
+
+function attachmentInputToHistoryPart(
+  input: ChatAttachmentInput,
+): ChatHistoryMessagePart {
+  if (input.type === "image") {
+    return {
+      filename: input.name ?? undefined,
+      image: imageDataUrl(input.data, input.mimeType),
+      mimeType: input.mimeType,
+      type: "image",
+    };
+  }
+
+  return {
+    data: input.data,
+    filename: input.name ?? undefined,
+    mimeType: input.mimeType,
+    type: "file",
+  };
+}
+
+function historyPartKey(part: ChatHistoryMessagePart) {
+  if (part.type === "image") return `image:${part.image}`;
+  if (part.type === "file") return `file:${part.mimeType}:${part.data}`;
+  return `${part.type}:${JSON.stringify(part)}`;
 }
 
 function parseImageDataUrl(
   value: string,
 ): { data: string; mimeType: string } | undefined {
-  const match = /^data:([^;,]+)(?:;[^,]*)*;base64,(.*)$/i.exec(value);
-  if (!match) return undefined;
-
-  const mimeType = match[1] ?? "";
-  const data = match[2] ?? "";
+  const parsed = parseDataUrl(value);
+  const mimeType = parsed?.mimeType ?? "";
+  const data = parsed?.data ?? "";
   if (!mimeType.startsWith("image/") || !data) return undefined;
   return { data, mimeType };
 }

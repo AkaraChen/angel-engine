@@ -358,7 +358,7 @@ mod tests {
     }
 
     #[test]
-    fn turn_start_encodes_image_user_input() {
+    fn turn_start_encodes_structured_user_input_as_codex_dto() {
         let adapter = CodexAdapter::app_server();
         let mut engine = AngelEngine::with_available_runtime(
             angel_engine::ProtocolFlavor::CodexAppServer,
@@ -392,6 +392,17 @@ mod tests {
                         "image/png",
                         Some("shot.png".to_string()),
                     ),
+                    angel_engine::UserInput::embedded_text_resource(
+                        "attachment://notes.txt",
+                        "hello from a file",
+                        Some("text/plain".to_string()),
+                    ),
+                    angel_engine::UserInput::embedded_blob_resource(
+                        "attachment://archive.zip",
+                        "UEsDBAo=",
+                        Some("application/zip".to_string()),
+                        Some("archive.zip".to_string()),
+                    ),
                 ],
                 overrides: angel_engine::TurnOverrides::default(),
             })
@@ -406,7 +417,17 @@ mod tests {
             params["input"],
             json!([
                 {"type": "text", "text": "describe this", "text_elements": []},
-                {"type": "image", "url": "data:image/png;base64,ZmFrZQ=="}
+                {"type": "image", "url": "data:image/png;base64,ZmFrZQ=="},
+                {
+                    "type": "text",
+                    "text": "Attached text resource: attachment://notes.txt\nMIME type: text/plain\n\nhello from a file",
+                    "text_elements": []
+                },
+                {
+                    "type": "text",
+                    "text": "Attached file: archive.zip\nURI: attachment://archive.zip\nMIME type: application/zip\nEncoding: base64\n\nUEsDBAo=",
+                    "text_elements": []
+                }
             ])
         );
     }

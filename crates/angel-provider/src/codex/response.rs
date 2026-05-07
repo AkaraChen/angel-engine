@@ -365,6 +365,7 @@ fn content_delta_is_empty(content: &ContentDelta) -> bool {
             ContentPart::Image {
                 data, mime_type, ..
             } => data.is_empty() || !mime_type.starts_with("image/"),
+            ContentPart::File { data, .. } => data.is_empty(),
         }),
     }
 }
@@ -373,7 +374,7 @@ fn codex_content_delta(item: &Value) -> ContentDelta {
     let parts = codex_content_parts(item);
     if parts
         .iter()
-        .any(|part| matches!(part, ContentPart::Image { .. }))
+        .any(|part| matches!(part, ContentPart::Image { .. } | ContentPart::File { .. }))
     {
         return ContentDelta::Parts(parts);
     }
@@ -401,13 +402,74 @@ fn codex_content_parts(item: &Value) -> Vec<ContentPart> {
 
 fn codex_content_part(part: &Value) -> Option<ContentPart> {
     match part.get("type").and_then(Value::as_str) {
-        Some("text") | Some("input_text") | Some("output_text") => part
-            .get("text")
-            .and_then(Value::as_str)
-            .map(|text| ContentPart::text(text.to_string())),
+        Some("text") | Some("input_text") | Some("output_text") => {
+            let text = part.get("text").and_then(Value::as_str)?;
+            Some(
+                codex_file_part_from_text(text)
+                    .unwrap_or_else(|| ContentPart::text(text.to_string())),
+            )
+        }
         Some("image") | Some("input_image") => codex_image_part(part),
         _ => None,
     }
+}
+
+fn codex_file_part_from_text(text: &str) -> Option<ContentPart> {
+    parse_codex_blob_resource_text(text).or_else(|| parse_codex_text_resource_text(text))
+}
+
+fn parse_codex_blob_resource_text(text: &str) -> Option<ContentPart> {
+    let (header, data) = text.split_once("\n\n")?;
+    let mut lines = header.lines();
+    let name = lines.next()?.strip_prefix("Attached file: ")?;
+    let _uri = lines.next()?.strip_prefix("URI: ")?;
+    let mut mime_type = "application/octet-stream";
+    let mut encoding = None;
+    for line in lines {
+        if let Some(value) = line.strip_prefix("MIME type: ") {
+            mime_type = value;
+        } else if let Some(value) = line.strip_prefix("Encoding: ") {
+            encoding = Some(value);
+        }
+    }
+    if encoding != Some("base64") || data.trim().is_empty() {
+        return None;
+    }
+    Some(ContentPart::file(
+        data.to_string(),
+        mime_type.to_string(),
+        non_empty_name(name),
+    ))
+}
+
+fn parse_codex_text_resource_text(text: &str) -> Option<ContentPart> {
+    let (header, data) = text.split_once("\n\n")?;
+    let mut lines = header.lines();
+    let uri = lines.next()?.strip_prefix("Attached text resource: ")?;
+    let mut mime_type = "text/plain";
+    for line in lines {
+        if let Some(value) = line.strip_prefix("MIME type: ") {
+            mime_type = value;
+        }
+    }
+    if data.is_empty() {
+        return None;
+    }
+    Some(ContentPart::file(
+        data.to_string(),
+        mime_type.to_string(),
+        non_empty_name(file_name_from_uri(uri)),
+    ))
+}
+
+fn file_name_from_uri(uri: &str) -> &str {
+    uri.rsplit('/')
+        .find(|part| !part.trim().is_empty())
+        .unwrap_or(uri)
+}
+
+fn non_empty_name(name: &str) -> Option<String> {
+    (!name.trim().is_empty()).then(|| name.to_string())
 }
 
 fn codex_image_part(part: &Value) -> Option<ContentPart> {
@@ -671,7 +733,7 @@ mod tests {
                             .iter()
                             .filter_map(|part| match part {
                                 ContentPart::Text(text) => Some(text.as_str()),
-                                ContentPart::Image { .. } => None,
+                                ContentPart::Image { .. } | ContentPart::File { .. } => None,
                             })
                             .collect::<Vec<_>>()
                             .join(""),
@@ -839,6 +901,84 @@ mod tests {
                         && data == "ZmFrZQ=="
                         && mime_type == "image/png"
                         && name.as_deref() == Some("sample.png")
+            )
+        ));
+    }
+
+    #[test]
+    fn thread_resume_restores_codex_text_file_fallback_parts() {
+        let adapter = CodexAdapter::app_server();
+        let mut engine = AngelEngine::with_available_runtime(
+            angel_engine::ProtocolFlavor::CodexAppServer,
+            angel_engine::RuntimeCapabilities::new("test"),
+            adapter.capabilities(),
+        );
+        let request_id = engine
+            .plan_command(angel_engine::EngineCommand::ResumeConversation {
+                target: angel_engine::ResumeTarget::Remote {
+                    id: "thread_1".to_string(),
+                    hydrate: true,
+                },
+            })
+            .expect("resume plan")
+            .request_id
+            .expect("request id");
+
+        let output = adapter
+            .decode_response(
+                &engine,
+                &request_id,
+                &json!({
+                    "thread": {
+                        "id": "thread_1",
+                        "turns": [
+                            {
+                                "items": [
+                                    {
+                                        "type": "userMessage",
+                                        "content": [
+                                            {
+                                                "type": "text",
+                                                "text": "Attached text resource: attachment:///notes.txt\nMIME type: text/plain\n\nhello from a file"
+                                            },
+                                            {
+                                                "type": "text",
+                                                "text": "Attached file: archive.zip\nURI: attachment:///archive.zip\nMIME type: application/zip\nEncoding: base64\n\nUEsDBAo="
+                                            }
+                                        ]
+                                    }
+                                ]
+                            }
+                        ]
+                    }
+                }),
+            )
+            .expect("thread resume response");
+
+        let entry = output
+            .events
+            .iter()
+            .find_map(|event| match event {
+                EngineEvent::HistoryReplayChunk { entry, .. } => Some(entry),
+                _ => None,
+            })
+            .expect("history replay entry");
+
+        assert_eq!(entry.role, HistoryRole::User);
+        assert!(matches!(
+            &entry.content,
+            ContentDelta::Parts(parts)
+                if matches!(
+                    parts.as_slice(),
+                    [
+                        ContentPart::File { data: text_data, mime_type: text_mime, name: text_name },
+                        ContentPart::File { data: blob_data, mime_type: blob_mime, name: blob_name },
+                    ] if text_data == "hello from a file"
+                        && text_mime == "text/plain"
+                        && text_name.as_deref() == Some("notes.txt")
+                        && blob_data == "UEsDBAo="
+                        && blob_mime == "application/zip"
+                        && blob_name.as_deref() == Some("archive.zip")
                 )
         ));
     }

@@ -76,6 +76,17 @@ function displayMessagePartToChatParts(
             },
           ]
         : [];
+    case "file":
+      return part.data && part.mimeType
+        ? [
+            {
+              data: part.data,
+              filename: part.name ?? undefined,
+              mimeType: part.mimeType,
+              type: "file",
+            },
+          ]
+        : [];
     default:
       return part.text?.trim() ? [{ text: part.text, type: "text" }] : [];
   }

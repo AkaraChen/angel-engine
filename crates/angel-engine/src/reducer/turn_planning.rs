@@ -3,7 +3,8 @@ use crate::error::EngineError;
 use crate::ids::{ConversationId, JsonRpcRequestId, RemoteTurnId, TurnId};
 use crate::protocol::{ProtocolEffect, ProtocolFlavor};
 use crate::state::{
-    ConversationLifecycle, ConversationState, TurnPhase, TurnState, UserImageInputRef, UserInputRef,
+    ConversationLifecycle, ConversationState, TurnPhase, TurnState, UserFileInputRef,
+    UserImageInputRef, UserInputRef,
 };
 
 use super::context_effects::codex_context_fields;
@@ -323,9 +324,25 @@ fn to_input_refs(input: Vec<UserInput>) -> Vec<UserInputRef> {
                 }),
                 _ => None,
             };
+            let file = match &input.kind {
+                UserInputKind::EmbeddedBlobResource {
+                    data,
+                    mime_type,
+                    name,
+                    ..
+                } => Some(UserFileInputRef {
+                    data: data.clone(),
+                    mime_type: mime_type
+                        .clone()
+                        .unwrap_or_else(|| "application/octet-stream".to_string()),
+                    name: name.clone(),
+                }),
+                _ => None,
+            };
             UserInputRef {
                 content: input.content,
                 image,
+                file,
             }
         })
         .collect()
@@ -373,6 +390,22 @@ fn input_effect_fields(input: &[UserInput]) -> Vec<(String, String)> {
                 fields.push((format!("input.{index}.uri"), uri.clone()));
                 if let Some(mime_type) = mime_type {
                     fields.push((format!("input.{index}.mimeType"), mime_type.clone()));
+                }
+            }
+            UserInputKind::EmbeddedBlobResource {
+                uri,
+                data,
+                mime_type,
+                name,
+            } => {
+                fields.push((format!("input.{index}.type"), "resource_blob".to_string()));
+                fields.push((format!("input.{index}.uri"), uri.clone()));
+                fields.push((format!("input.{index}.data"), data.clone()));
+                if let Some(mime_type) = mime_type {
+                    fields.push((format!("input.{index}.mimeType"), mime_type.clone()));
+                }
+                if let Some(name) = name {
+                    fields.push((format!("input.{index}.name"), name.clone()));
                 }
             }
             UserInputKind::Image {

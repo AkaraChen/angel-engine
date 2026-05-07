@@ -227,12 +227,55 @@ function createChatSession(runtime?: string): DesktopAngelSession {
 function chatAttachmentsToClientInput(
   attachments: ChatAttachmentInput[],
 ): NonNullable<SendTextRequest["input"]> {
-  return attachments.map((attachment) => ({
-    data: attachment.data,
-    mimeType: attachment.mimeType,
-    name: attachment.name ?? null,
-    type: "image",
-  }));
+  return attachments.map((attachment) => {
+    if (attachment.type === "image") {
+      return {
+        data: attachment.data,
+        mimeType: attachment.mimeType,
+        name: attachment.name ?? null,
+        type: "image",
+      };
+    }
+
+    const uri = attachmentUri(attachment);
+    if (isTextLikeMimeType(attachment.mimeType)) {
+      return {
+        mimeType: attachment.mimeType,
+        text: Buffer.from(attachment.data, "base64").toString("utf8"),
+        type: "embeddedTextResource",
+        uri,
+      };
+    }
+
+    return {
+      data: attachment.data,
+      mimeType: attachment.mimeType,
+      name: attachment.name ?? null,
+      type: "embeddedBlobResource",
+      uri,
+    };
+  });
+}
+
+function attachmentUri(attachment: ChatAttachmentInput) {
+  const name = attachment.name?.trim() || "attachment";
+  return `attachment:///${encodeURIComponent(name)}`;
+}
+
+function isTextLikeMimeType(mimeType: string) {
+  const normalized = mimeType.toLowerCase();
+  return (
+    normalized.startsWith("text/") ||
+    normalized === "application/json" ||
+    normalized === "application/xml" ||
+    normalized === "application/javascript" ||
+    normalized === "application/typescript" ||
+    normalized === "application/x-ndjson" ||
+    normalized === "application/yaml" ||
+    normalized === "application/toml" ||
+    normalized.endsWith("+json") ||
+    normalized.endsWith("+xml")
+  );
 }
 
 function prepareChatForSend(input: ChatSendInput): {

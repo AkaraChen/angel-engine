@@ -98,6 +98,11 @@ pub enum ContentPart {
         mime_type: String,
         name: Option<String>,
     },
+    File {
+        data: String,
+        mime_type: String,
+        name: Option<String>,
+    },
 }
 
 impl ContentPart {
@@ -116,6 +121,18 @@ impl ContentPart {
             name,
         }
     }
+
+    pub fn file(
+        data: impl Into<String>,
+        mime_type: impl Into<String>,
+        name: Option<String>,
+    ) -> Self {
+        Self::File {
+            data: data.into(),
+            mime_type: mime_type.into(),
+            name,
+        }
+    }
 }
 
 #[derive(serde::Serialize, serde::Deserialize, Clone, Debug, PartialEq, Eq)]
@@ -123,10 +140,19 @@ pub struct UserInputRef {
     pub content: String,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub image: Option<UserImageInputRef>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub file: Option<UserFileInputRef>,
 }
 
 #[derive(serde::Serialize, serde::Deserialize, Clone, Debug, PartialEq, Eq)]
 pub struct UserImageInputRef {
+    pub data: String,
+    pub mime_type: String,
+    pub name: Option<String>,
+}
+
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug, PartialEq, Eq)]
+pub struct UserFileInputRef {
     pub data: String,
     pub mime_type: String,
     pub name: Option<String>,

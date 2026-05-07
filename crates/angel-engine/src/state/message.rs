@@ -34,6 +34,11 @@ pub enum DisplayMessagePart {
         mime_type: String,
         name: Option<String>,
     },
+    File {
+        data: String,
+        mime_type: String,
+        name: Option<String>,
+    },
     ToolCall {
         action: DisplayToolAction,
     },
@@ -53,6 +58,18 @@ impl DisplayMessagePart {
         name: Option<String>,
     ) -> Self {
         Self::Image {
+            data: data.into(),
+            mime_type: mime_type.into(),
+            name,
+        }
+    }
+
+    pub fn file(
+        data: impl Into<String>,
+        mime_type: impl Into<String>,
+        name: Option<String>,
+    ) -> Self {
+        Self::File {
             data: data.into(),
             mime_type: mime_type.into(),
             name,
@@ -325,6 +342,11 @@ fn append_display_parts(parts: &mut Vec<DisplayMessagePart>, next: Vec<DisplayMe
                 mime_type,
                 name,
             } => parts.push(DisplayMessagePart::image(data, mime_type, name)),
+            DisplayMessagePart::File {
+                data,
+                mime_type,
+                name,
+            } => parts.push(DisplayMessagePart::file(data, mime_type, name)),
             DisplayMessagePart::ToolCall { action } => parts.push(DisplayMessagePart::tool(action)),
         }
     }
@@ -335,6 +357,7 @@ fn upsert_display_tool_part(parts: &mut Vec<DisplayMessagePart>, next: DisplayTo
         DisplayMessagePart::ToolCall { action } => action.id == next.id,
         DisplayMessagePart::Text { .. } => false,
         DisplayMessagePart::Image { .. } => false,
+        DisplayMessagePart::File { .. } => false,
     }) else {
         parts.push(DisplayMessagePart::tool(next));
         return;
@@ -722,6 +745,12 @@ fn turn_input_display_parts(turn: &TurnState) -> Vec<DisplayMessagePart> {
                 image.mime_type.clone(),
                 image.name.clone(),
             ));
+        } else if let Some(file) = &input.file {
+            parts.push(DisplayMessagePart::file(
+                file.data.clone(),
+                file.mime_type.clone(),
+                file.name.clone(),
+            ));
         } else if !input.content.trim().is_empty() {
             parts.push(DisplayMessagePart::text(
                 DisplayTextPartKind::Text,
@@ -742,7 +771,7 @@ fn buffer_text(chunks: &[ContentDelta]) -> String {
                     .iter()
                     .filter_map(|part| match part {
                         ContentPart::Text(text) => Some(text.as_str()),
-                        ContentPart::Image { .. } => None,
+                        ContentPart::Image { .. } | ContentPart::File { .. } => None,
                     })
                     .collect::<Vec<_>>()
                     .join(""),
@@ -762,7 +791,7 @@ fn content_delta_text(delta: &ContentDelta) -> String {
             .iter()
             .filter_map(|part| match part {
                 ContentPart::Text(text) => Some(text.as_str()),
-                ContentPart::Image { .. } => None,
+                ContentPart::Image { .. } | ContentPart::File { .. } => None,
             })
             .collect::<Vec<_>>()
             .join(""),
@@ -794,6 +823,13 @@ fn content_delta_display_parts(delta: &ContentDelta) -> Vec<DisplayMessagePart> 
                     name,
                 } => (!data.is_empty() && mime_type.starts_with("image/")).then(|| {
                     DisplayMessagePart::image(data.clone(), mime_type.clone(), name.clone())
+                }),
+                ContentPart::File {
+                    data,
+                    mime_type,
+                    name,
+                } => (!data.is_empty()).then(|| {
+                    DisplayMessagePart::file(data.clone(), mime_type.clone(), name.clone())
                 }),
             })
             .collect(),
@@ -913,6 +949,7 @@ mod tests {
                 DisplayMessagePart::ToolCall { action } => Some(action),
                 DisplayMessagePart::Text { .. } => None,
                 DisplayMessagePart::Image { .. } => None,
+                DisplayMessagePart::File { .. } => None,
             })
             .expect("tool action");
         assert_eq!(tool.id, "call_1");
@@ -976,6 +1013,7 @@ mod tests {
             DisplayMessagePart::ToolCall { action } => action,
             DisplayMessagePart::Text { .. } => panic!("expected tool action"),
             DisplayMessagePart::Image { .. } => panic!("expected tool action"),
+            DisplayMessagePart::File { .. } => panic!("expected tool action"),
         };
         assert_eq!(tool.id, "tool-1");
         assert_eq!(tool.kind, Some(ActionKind::Command));
@@ -995,6 +1033,7 @@ mod tests {
         );
         turn.input.push(UserInputRef {
             content: "status".to_string(),
+            file: None,
             image: None,
         });
         turn.reasoning
@@ -1047,10 +1086,12 @@ mod tests {
         );
         turn.input.push(UserInputRef {
             content: "describe this".to_string(),
+            file: None,
             image: None,
         });
         turn.input.push(UserInputRef {
             content: "sample.png".to_string(),
+            file: None,
             image: Some(UserImageInputRef {
                 data: "ZmFrZQ==".to_string(),
                 mime_type: "image/png".to_string(),

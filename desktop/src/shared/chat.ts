@@ -66,6 +66,12 @@ export type ChatHistoryMessagePart =
       mimeType?: string;
       type: "image";
     }
+  | {
+      data: string;
+      filename?: string;
+      mimeType: string;
+      type: "file";
+    }
   | ChatToolCallPart;
 
 export type ChatJsonValue =
@@ -223,6 +229,8 @@ export function cloneChatHistoryPart(
       };
     case "image":
       return { ...part };
+    case "file":
+      return { ...part };
     case "reasoning":
     case "text":
       return { ...part };
@@ -251,6 +259,20 @@ export function imageDataUrl(data: string, mimeType: string) {
   return `data:${mimeType};base64,${data}`;
 }
 
+export function parseDataUrl(value: string):
+  | {
+      data: string;
+      mimeType: string;
+    }
+  | undefined {
+  const match = /^data:([^;,]+)(?:;[^,]*)*;base64,(.*)$/i.exec(value);
+  if (!match) return undefined;
+  const mimeType = match[1] ?? "";
+  const data = match[2] ?? "";
+  if (!mimeType || !data) return undefined;
+  return { data, mimeType };
+}
+
 export function isTerminalChatToolPhase(phase?: string) {
   return (
     phase === "completed" ||
@@ -271,12 +293,19 @@ export type ChatPrewarmResult = {
   prewarmId: string;
 };
 
-export type ChatAttachmentInput = {
-  data: string;
-  mimeType: string;
-  name?: string | null;
-  type: "image";
-};
+export type ChatAttachmentInput =
+  | {
+      data: string;
+      mimeType: string;
+      name?: string | null;
+      type: "image";
+    }
+  | {
+      data: string;
+      mimeType: string;
+      name?: string | null;
+      type: "file";
+    };
 
 export type ChatSendInput = {
   attachments?: ChatAttachmentInput[];
@@ -381,27 +410,31 @@ export function normalizeChatAttachmentsInput(
     }
 
     const value = item as Partial<ChatAttachmentInput>;
-    if (value.type !== "image") {
+    if (value.type !== "image" && value.type !== "file") {
       throw new Error("Unsupported chat attachment type.");
     }
     if (typeof value.data !== "string" || !value.data.trim()) {
-      throw new Error("Image attachment data is required.");
+      throw new Error("Chat attachment data is required.");
     }
-    if (
-      typeof value.mimeType !== "string" ||
-      !value.mimeType.startsWith("image/")
-    ) {
+    if (typeof value.mimeType !== "string" || !value.mimeType.trim()) {
+      throw new Error("Chat attachment MIME type is required.");
+    }
+
+    const parsed = parseDataUrl(value.data);
+    const mimeType = parsed?.mimeType ?? value.mimeType.trim();
+    const data = parsed?.data ?? value.data;
+    if (value.type === "image" && !mimeType.startsWith("image/")) {
       throw new Error("Image attachment MIME type is required.");
     }
 
     return {
-      data: value.data,
-      mimeType: value.mimeType,
+      data,
+      mimeType,
       name:
         typeof value.name === "string" && value.name.trim()
           ? value.name.trim()
           : null,
-      type: "image",
+      type: mimeType.startsWith("image/") ? "image" : "file",
     };
   });
 }

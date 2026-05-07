@@ -228,6 +228,21 @@ impl DisplayMessagePartSnapshot {
         }
     }
 
+    pub(crate) fn file(
+        data: impl Into<String>,
+        mime_type: impl Into<String>,
+        name: Option<String>,
+    ) -> Self {
+        Self {
+            kind: "file".to_string(),
+            text: None,
+            data: Some(data.into()),
+            mime_type: Some(mime_type.into()),
+            name,
+            action: None,
+        }
+    }
+
     pub(crate) fn tool(action: DisplayToolActionSnapshot) -> Self {
         Self {
             kind: "tool-call".to_string(),
@@ -265,6 +280,11 @@ impl From<&angel_engine::DisplayMessagePart> for DisplayMessagePartSnapshot {
                 mime_type,
                 name,
             } => Self::image(data.clone(), mime_type.clone(), name.clone()),
+            angel_engine::DisplayMessagePart::File {
+                data,
+                mime_type,
+                name,
+            } => Self::file(data.clone(), mime_type.clone(), name.clone()),
             angel_engine::DisplayMessagePart::ToolCall { action } => {
                 Self::tool(DisplayToolActionSnapshot::from(action))
             }
@@ -1022,7 +1042,7 @@ fn parts_text(parts: &[ContentPart]) -> String {
         .iter()
         .filter_map(|part| match part {
             ContentPart::Text(text) => Some(text.as_str()),
-            ContentPart::Image { .. } => None,
+            ContentPart::Image { .. } | ContentPart::File { .. } => None,
         })
         .collect::<Vec<_>>()
         .join("")

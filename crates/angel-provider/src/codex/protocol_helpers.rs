@@ -66,7 +66,16 @@ pub(crate) fn codex_user_input(effect: &ProtocolEffect) -> Value {
                     "url": codex_image_url(&data, &mime_type),
                 }));
             }
-            "text" | "resource_link" | "resource" => input.push(codex_text_item(content)),
+            "resource_link" => input.push(codex_text_item(codex_resource_link_text(
+                effect, &prefix, content,
+            ))),
+            "resource" => input.push(codex_text_item(codex_text_resource_text(
+                effect, &prefix, content,
+            ))),
+            "resource_blob" => input.push(codex_text_item(codex_blob_resource_text(
+                effect, &prefix, content,
+            ))),
+            "text" => input.push(codex_text_item(content)),
             "raw" => {
                 let raw_text = effect
                     .payload
@@ -100,6 +109,55 @@ fn codex_text_item(text: String) -> Value {
         "text": text,
         "text_elements": [],
     })
+}
+
+fn codex_resource_link_text(effect: &ProtocolEffect, prefix: &str, content: String) -> String {
+    let name = field(effect, prefix, "name").unwrap_or(content.as_str());
+    let uri = field(effect, prefix, "uri").unwrap_or(content.as_str());
+    let mut text = format!("Attached resource link: {name}\nURI: {uri}");
+    if let Some(mime_type) = field(effect, prefix, "mimeType") {
+        text.push_str(&format!("\nMIME type: {mime_type}"));
+    }
+    if let Some(title) = field(effect, prefix, "title") {
+        text.push_str(&format!("\nTitle: {title}"));
+    }
+    if let Some(description) = field(effect, prefix, "description") {
+        text.push_str(&format!("\nDescription: {description}"));
+    }
+    text
+}
+
+fn codex_text_resource_text(effect: &ProtocolEffect, prefix: &str, content: String) -> String {
+    let uri = field(effect, prefix, "uri").unwrap_or("attachment://text");
+    let mut text = format!("Attached text resource: {uri}");
+    if let Some(mime_type) = field(effect, prefix, "mimeType") {
+        text.push_str(&format!("\nMIME type: {mime_type}"));
+    }
+    text.push_str("\n\n");
+    text.push_str(&content);
+    text
+}
+
+fn codex_blob_resource_text(effect: &ProtocolEffect, prefix: &str, content: String) -> String {
+    let name = field(effect, prefix, "name").unwrap_or(content.as_str());
+    let uri = field(effect, prefix, "uri").unwrap_or(content.as_str());
+    let data = field(effect, prefix, "data").unwrap_or_default();
+    let mut text = format!("Attached file: {name}\nURI: {uri}");
+    if let Some(mime_type) = field(effect, prefix, "mimeType") {
+        text.push_str(&format!("\nMIME type: {mime_type}"));
+    }
+    text.push_str("\nEncoding: base64\n\n");
+    text.push_str(data);
+    text
+}
+
+fn field<'a>(effect: &'a ProtocolEffect, prefix: &str, name: &str) -> Option<&'a str> {
+    effect
+        .payload
+        .fields
+        .get(&format!("{prefix}.{name}"))
+        .map(String::as_str)
+        .filter(|value| !value.trim().is_empty())
 }
 
 fn codex_image_url(data: &str, mime_type: &str) -> String {
