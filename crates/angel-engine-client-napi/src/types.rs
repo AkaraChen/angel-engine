@@ -415,6 +415,9 @@ pub struct DisplayMessageSnapshot {
 pub struct DisplayMessagePartSnapshot {
     pub r#type: String,
     pub text: Option<String>,
+    pub data: Option<String>,
+    pub mime_type: Option<String>,
+    pub name: Option<String>,
     pub action: Option<DisplayToolActionSnapshot>,
 }
 
@@ -720,6 +723,10 @@ pub struct RuntimeOptions {
 #[napi(object)]
 pub struct SendTextRequest {
     pub text: String,
+    #[napi(
+        ts_type = "Array<{ type: 'text'; text: string } | { type: 'image'; data: string; mimeType: string; name?: string | null } | { type: 'resourceLink'; name: string; uri: string; mimeType?: string | null; title?: string | null; description?: string | null } | { type: 'embeddedTextResource'; uri: string; text: string; mimeType?: string | null } | { type: 'rawContentBlock'; value: unknown }>"
+    )]
+    pub input: Option<Vec<serde_json::Value>>,
     pub cwd: Option<String>,
     pub remote_id: Option<String>,
     pub model: Option<String>,

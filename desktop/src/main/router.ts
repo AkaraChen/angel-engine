@@ -7,6 +7,7 @@ import type {
   ChatRuntimeConfigInput,
   ChatSendInput,
 } from "../shared/chat";
+import { normalizeChatAttachmentsInput } from "../shared/chat";
 import { normalizeAgentRuntime } from "../shared/agents";
 import type {
   CreateProjectInput,
@@ -177,6 +178,7 @@ function assertChatSendInput(input: ChatSendInput): ChatSendInput {
   }
 
   return {
+    attachments: normalizeChatAttachmentsInput(input.attachments),
     chatId:
       typeof input.chatId === "string" && input.chatId.trim()
         ? input.chatId.trim()

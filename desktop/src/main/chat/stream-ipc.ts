@@ -5,6 +5,7 @@ import {
   CHAT_STREAM_ELICITATION_RESOLVE_CHANNEL,
   CHAT_STREAM_START_CHANNEL,
   chatStreamEventChannel,
+  normalizeChatAttachmentsInput,
   type ChatElicitationResponse,
   type ChatSendInput,
   type ChatStreamElicitationResolveInput,
@@ -109,6 +110,7 @@ function assertChatSendInput(input: unknown): ChatSendInput {
 
   const value = input as Partial<ChatSendInput>;
   return {
+    attachments: normalizeChatAttachmentsInput(value.attachments),
     chatId:
       typeof value.chatId === "string" && value.chatId.trim()
         ? value.chatId.trim()

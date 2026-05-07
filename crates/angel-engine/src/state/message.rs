@@ -5,8 +5,8 @@ use crate::ids::{ActionId, TurnId};
 use crate::protocol::ProtocolFlavor;
 
 use super::{
-    ActionKind, ActionOutputDelta, ActionPhase, ActionState, ContentDelta, ConversationState,
-    ElicitationState, HistoryReplayEntry, HistoryRole, TurnState,
+    ActionKind, ActionOutputDelta, ActionPhase, ActionState, ContentDelta, ContentPart,
+    ConversationState, ElicitationState, HistoryReplayEntry, HistoryRole, TurnState,
 };
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -29,6 +29,11 @@ pub enum DisplayMessagePart {
         kind: DisplayTextPartKind,
         text: String,
     },
+    Image {
+        data: String,
+        mime_type: String,
+        name: Option<String>,
+    },
     ToolCall {
         action: DisplayToolAction,
     },
@@ -39,6 +44,18 @@ impl DisplayMessagePart {
         Self::Text {
             kind,
             text: text.into(),
+        }
+    }
+
+    pub fn image(
+        data: impl Into<String>,
+        mime_type: impl Into<String>,
+        name: Option<String>,
+    ) -> Self {
+        Self::Image {
+            data: data.into(),
+            mime_type: mime_type.into(),
+            name,
         }
     }
 
@@ -156,15 +173,12 @@ pub fn conversation_display_messages(
     }
 
     for turn in conversation.turns.values() {
-        let input_text = turn_input_text(turn);
-        if !input_text.trim().is_empty() {
+        let input_content = turn_input_display_parts(turn);
+        if !input_content.is_empty() {
             messages.push(DisplayMessage {
                 id: format!("{}:user", turn.id),
                 role: DisplayMessageRole::User,
-                content: vec![DisplayMessagePart::text(
-                    DisplayTextPartKind::Text,
-                    input_text.trim().to_string(),
-                )],
+                content: input_content,
             });
         }
 
@@ -230,7 +244,8 @@ fn append_history_display_message(
     index: usize,
 ) {
     let text = content_delta_text(&entry.content);
-    if text.trim().is_empty() {
+    let parts = content_delta_display_parts(&entry.content);
+    if parts.is_empty() {
         return;
     }
 
@@ -238,7 +253,7 @@ fn append_history_display_message(
         HistoryRole::User => messages.push(DisplayMessage {
             id: format!("history-{index}"),
             role: DisplayMessageRole::User,
-            content: vec![DisplayMessagePart::text(DisplayTextPartKind::Text, text)],
+            content: parts,
         }),
         HistoryRole::Tool => {
             let fallback_id = format!("history-tool-{index}");
@@ -250,11 +265,9 @@ fn append_history_display_message(
             DisplayTextPartKind::Reasoning,
             text,
         ),
-        HistoryRole::Assistant => append_display_text_part(
-            ensure_history_assistant_message(messages),
-            DisplayTextPartKind::Text,
-            text,
-        ),
+        HistoryRole::Assistant => {
+            append_display_parts(ensure_history_assistant_message(messages), parts)
+        }
         HistoryRole::Unknown(role) => append_display_text_part(
             ensure_history_assistant_message(messages),
             DisplayTextPartKind::Unknown(role.clone()),
@@ -303,10 +316,25 @@ fn append_display_text_part(
     parts.push(DisplayMessagePart::text(kind, text));
 }
 
+fn append_display_parts(parts: &mut Vec<DisplayMessagePart>, next: Vec<DisplayMessagePart>) {
+    for part in next {
+        match part {
+            DisplayMessagePart::Text { kind, text } => append_display_text_part(parts, kind, text),
+            DisplayMessagePart::Image {
+                data,
+                mime_type,
+                name,
+            } => parts.push(DisplayMessagePart::image(data, mime_type, name)),
+            DisplayMessagePart::ToolCall { action } => parts.push(DisplayMessagePart::tool(action)),
+        }
+    }
+}
+
 fn upsert_display_tool_part(parts: &mut Vec<DisplayMessagePart>, next: DisplayToolAction) {
     let Some(index) = parts.iter().position(|part| match part {
         DisplayMessagePart::ToolCall { action } => action.id == next.id,
         DisplayMessagePart::Text { .. } => false,
+        DisplayMessagePart::Image { .. } => false,
     }) else {
         parts.push(DisplayMessagePart::tool(next));
         return;
@@ -685,19 +713,40 @@ fn normalize_tool_phase(status: Option<&str>) -> ActionPhase {
     }
 }
 
-fn turn_input_text(turn: &TurnState) -> String {
-    turn.input
-        .iter()
-        .map(|input| input.content.as_str())
-        .collect::<Vec<_>>()
-        .join("\n")
+fn turn_input_display_parts(turn: &TurnState) -> Vec<DisplayMessagePart> {
+    let mut parts = Vec::new();
+    for input in &turn.input {
+        if let Some(image) = &input.image {
+            parts.push(DisplayMessagePart::image(
+                image.data.clone(),
+                image.mime_type.clone(),
+                image.name.clone(),
+            ));
+        } else if !input.content.trim().is_empty() {
+            parts.push(DisplayMessagePart::text(
+                DisplayTextPartKind::Text,
+                input.content.clone(),
+            ));
+        }
+    }
+    parts
 }
 
 fn buffer_text(chunks: &[ContentDelta]) -> String {
     chunks
         .iter()
         .filter_map(|chunk| match chunk {
-            ContentDelta::Text(text) => Some(text.as_str()),
+            ContentDelta::Text(text) => Some(text.clone()),
+            ContentDelta::Parts(parts) => Some(
+                parts
+                    .iter()
+                    .filter_map(|part| match part {
+                        ContentPart::Text(text) => Some(text.as_str()),
+                        ContentPart::Image { .. } => None,
+                    })
+                    .collect::<Vec<_>>()
+                    .join(""),
+            ),
             ContentDelta::ResourceRef(_) | ContentDelta::Structured(_) => None,
         })
         .collect::<Vec<_>>()
@@ -709,6 +758,45 @@ fn content_delta_text(delta: &ContentDelta) -> String {
         ContentDelta::Text(text)
         | ContentDelta::ResourceRef(text)
         | ContentDelta::Structured(text) => text.clone(),
+        ContentDelta::Parts(parts) => parts
+            .iter()
+            .filter_map(|part| match part {
+                ContentPart::Text(text) => Some(text.as_str()),
+                ContentPart::Image { .. } => None,
+            })
+            .collect::<Vec<_>>()
+            .join(""),
+    }
+}
+
+fn content_delta_display_parts(delta: &ContentDelta) -> Vec<DisplayMessagePart> {
+    match delta {
+        ContentDelta::Text(text)
+        | ContentDelta::ResourceRef(text)
+        | ContentDelta::Structured(text) => {
+            if text.trim().is_empty() {
+                Vec::new()
+            } else {
+                vec![DisplayMessagePart::text(
+                    DisplayTextPartKind::Text,
+                    text.clone(),
+                )]
+            }
+        }
+        ContentDelta::Parts(parts) => parts
+            .iter()
+            .filter_map(|part| match part {
+                ContentPart::Text(text) => (!text.trim().is_empty())
+                    .then(|| DisplayMessagePart::text(DisplayTextPartKind::Text, text.clone())),
+                ContentPart::Image {
+                    data,
+                    mime_type,
+                    name,
+                } => (!data.is_empty() && mime_type.starts_with("image/")).then(|| {
+                    DisplayMessagePart::image(data.clone(), mime_type.clone(), name.clone())
+                }),
+            })
+            .collect(),
     }
 }
 
@@ -767,7 +855,7 @@ mod tests {
     use super::*;
     use crate::{
         ConversationCapabilities, ConversationId, ConversationLifecycle, RemoteConversationId,
-        RemoteTurnId, UserInputRef,
+        RemoteTurnId, UserImageInputRef, UserInputRef,
     };
 
     #[test]
@@ -824,6 +912,7 @@ mod tests {
             .find_map(|part| match part {
                 DisplayMessagePart::ToolCall { action } => Some(action),
                 DisplayMessagePart::Text { .. } => None,
+                DisplayMessagePart::Image { .. } => None,
             })
             .expect("tool action");
         assert_eq!(tool.id, "call_1");
@@ -886,6 +975,7 @@ mod tests {
         let tool = match &messages[1].content[0] {
             DisplayMessagePart::ToolCall { action } => action,
             DisplayMessagePart::Text { .. } => panic!("expected tool action"),
+            DisplayMessagePart::Image { .. } => panic!("expected tool action"),
         };
         assert_eq!(tool.id, "tool-1");
         assert_eq!(tool.kind, Some(ActionKind::Command));
@@ -905,6 +995,7 @@ mod tests {
         );
         turn.input.push(UserInputRef {
             content: "status".to_string(),
+            image: None,
         });
         turn.reasoning
             .chunks
@@ -942,6 +1033,71 @@ mod tests {
                 && action.id == "call_1"
                 && action.output_text == "## main\n"
                 && text == "done"
+        ));
+    }
+
+    #[test]
+    fn live_turn_projects_image_input_parts() {
+        let mut conversation = conversation(ConversationCapabilities::codex_app_server());
+        let turn_id = TurnId::new("turn-1");
+        let mut turn = TurnState::new(
+            turn_id.clone(),
+            RemoteTurnId::Known("remote-turn-1".to_string()),
+            0,
+        );
+        turn.input.push(UserInputRef {
+            content: "describe this".to_string(),
+            image: None,
+        });
+        turn.input.push(UserInputRef {
+            content: "sample.png".to_string(),
+            image: Some(UserImageInputRef {
+                data: "ZmFrZQ==".to_string(),
+                mime_type: "image/png".to_string(),
+                name: Some("sample.png".to_string()),
+            }),
+        });
+        conversation.turns.insert(turn_id, turn);
+
+        let messages = conversation_display_messages(ProtocolFlavor::CodexAppServer, &conversation);
+
+        assert_eq!(messages.len(), 1);
+        assert_eq!(messages[0].role, DisplayMessageRole::User);
+        assert!(matches!(
+            messages[0].content.as_slice(),
+            [
+                DisplayMessagePart::Text { kind: DisplayTextPartKind::Text, text },
+                DisplayMessagePart::Image { data, mime_type, name }
+            ] if text == "describe this"
+                && data == "ZmFrZQ=="
+                && mime_type == "image/png"
+                && name.as_deref() == Some("sample.png")
+        ));
+    }
+
+    #[test]
+    fn hydrated_history_projects_image_parts() {
+        let mut conversation = conversation(ConversationCapabilities::codex_app_server());
+        conversation.history.replay = vec![HistoryReplayEntry {
+            role: HistoryRole::User,
+            content: ContentDelta::Parts(vec![
+                ContentPart::text("look"),
+                ContentPart::image("ZmFrZQ==", "image/png", Some("sample.png".to_string())),
+            ]),
+        }];
+
+        let messages = conversation_display_messages(ProtocolFlavor::CodexAppServer, &conversation);
+
+        assert_eq!(messages.len(), 1);
+        assert!(matches!(
+            messages[0].content.as_slice(),
+            [
+                DisplayMessagePart::Text { kind: DisplayTextPartKind::Text, text },
+                DisplayMessagePart::Image { data, mime_type, name }
+            ] if text == "look"
+                && data == "ZmFrZQ=="
+                && mime_type == "image/png"
+                && name.as_deref() == Some("sample.png")
         ));
     }
 

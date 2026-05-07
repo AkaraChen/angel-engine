@@ -1,5 +1,6 @@
 import type {
   AppendMessage,
+  CompleteAttachment,
   MessageStatus,
   ThreadMessage,
 } from "@assistant-ui/react";
@@ -9,6 +10,7 @@ import { assign, createActor, setup } from "xstate";
 import { streamChatEvents } from "@/lib/chat-stream";
 import type {
   Chat,
+  ChatAttachmentInput,
   ChatElicitationResponse,
   ChatHistoryMessage,
   ChatHistoryMessagePart,
@@ -23,6 +25,7 @@ import {
   chatPartsText,
   chatToolActionToPart,
   cloneChatHistoryPart,
+  imageDataUrl,
   isChatToolAction,
 } from "@/shared/chat";
 
@@ -256,7 +259,8 @@ const chatRunActions: Omit<ChatRunStore, "aliases" | "slots"> = {
   },
   async startRun({ callbacks, input, message, slotKey }) {
     const prompt = getMessageText(message);
-    if (!prompt) return;
+    const attachments = getMessageAttachments(message);
+    if (!prompt && attachments.length === 0) return;
 
     const assistantMessageId = createId("assistant");
     const runId = createId("run");
@@ -303,6 +307,7 @@ const chatRunActions: Omit<ChatRunStore, "aliases" | "slots"> = {
       accumulator,
       input: {
         ...input,
+        attachments,
         text: prompt,
       },
       onChatCreated: callbacks?.onChatCreated,
@@ -940,7 +945,9 @@ function createAssistantMessage(
   ).length;
 
   return {
-    content: accumulator.parts.map(cloneChatHistoryPart),
+    content: accumulator.parts
+      .map(cloneChatHistoryPart)
+      .map(historyPartToEngineMessagePart) as EngineMessage["content"],
     createdAt: new Date(),
     id,
     metadata: {
@@ -962,7 +969,7 @@ function createAssistantMessage(
     },
     role: "assistant",
     status: accumulator.status,
-  };
+  } as EngineMessage;
 }
 
 function appendMessageToEngineMessage(
@@ -991,7 +998,7 @@ function historyMessageToEngineMessage(
 
   if (message.role === "assistant") {
     return {
-      content,
+      content: content.map(historyPartToEngineMessagePart),
       createdAt: normalizedCreatedAt,
       id: message.id,
       metadata: {
@@ -1009,18 +1016,32 @@ function historyMessageToEngineMessage(
     } as EngineMessage;
   }
 
+  if (message.role === "system") {
+    return {
+      content: [{ text: chatPartsText(content, "text"), type: "text" }],
+      createdAt: normalizedCreatedAt,
+      id: message.id,
+      metadata: {
+        custom: {},
+      },
+      role: "system",
+    } as EngineMessage;
+  }
+
+  const userMessage = userHistoryMessageContentToEngineMessage(
+    message.id,
+    content,
+  );
+
   return {
-    attachments: [],
-    content:
-      message.role === "system"
-        ? [{ text: chatPartsText(content, "text"), type: "text" }]
-        : content,
+    attachments: userMessage.attachments,
+    content: userMessage.content,
     createdAt: normalizedCreatedAt,
     id: message.id,
     metadata: {
       custom: {},
     },
-    role: message.role,
+    role: "user",
   } as EngineMessage;
 }
 
@@ -1035,8 +1056,13 @@ function engineMessagesToHistoryMessages(
 function engineMessageToHistoryMessage(
   message: EngineMessage,
 ): ChatHistoryMessage {
+  const contentParts = engineMessageContentToHistoryParts(message.content);
+  const attachmentParts = engineMessageAttachmentsToHistoryParts(
+    message.attachments,
+    contentParts,
+  );
   return {
-    content: engineMessageContentToHistoryParts(message.content),
+    content: [...contentParts, ...attachmentParts],
     createdAt: message.createdAt?.toISOString(),
     id: message.id,
     role: message.role,
@@ -1055,10 +1081,135 @@ function engineMessageContentToHistoryParts(
         return isChatToolAction(part.artifact)
           ? [cloneChatHistoryPart(chatToolActionToPart(part.artifact))]
           : [];
+      case "image": {
+        const imagePart = imageHistoryPartFromDataUrl(
+          part.image,
+          part.filename ?? null,
+        );
+        return imagePart ? [imagePart] : [];
+      }
+      case "file":
+        if (!part.mimeType.startsWith("image/")) return [];
+        const imagePart = imageHistoryPartFromDataUrl(
+          part.data,
+          part.filename ?? null,
+          {
+            fallbackMimeType: part.mimeType,
+          },
+        );
+        return imagePart ? [imagePart] : [];
       default:
         return [];
     }
   });
+}
+
+function historyPartToEngineMessagePart(
+  part: ChatHistoryMessagePart,
+): ThreadMessage["content"][number] {
+  if (part.type !== "image") {
+    return part as ThreadMessage["content"][number];
+  }
+
+  return {
+    filename: part.filename ?? undefined,
+    image: part.image,
+    type: "image",
+  } as ThreadMessage["content"][number];
+}
+
+function userHistoryMessageContentToEngineMessage(
+  messageId: string,
+  parts: ChatHistoryMessagePart[],
+): {
+  attachments: CompleteAttachment[];
+  content: ThreadMessage["content"];
+} {
+  const attachments: CompleteAttachment[] = [];
+  const content: ThreadMessage["content"][number][] = [];
+
+  for (const [index, part] of parts.entries()) {
+    if (part.type === "image") {
+      attachments.push(historyImagePartToAttachment(messageId, index, part));
+      continue;
+    }
+
+    content.push(historyPartToEngineMessagePart(part));
+  }
+
+  return {
+    attachments,
+    content: content as ThreadMessage["content"],
+  };
+}
+
+function historyImagePartToAttachment(
+  messageId: string,
+  index: number,
+  part: Extract<ChatHistoryMessagePart, { type: "image" }>,
+): CompleteAttachment {
+  return {
+    content: [
+      {
+        filename: part.filename,
+        image: part.image,
+        type: "image",
+      },
+    ],
+    contentType: part.mimeType,
+    id: `${messageId}-attachment-${index}`,
+    name: part.filename ?? "image",
+    status: { type: "complete" },
+    type: "image",
+  };
+}
+
+function imageHistoryPartFromDataUrl(
+  image: string,
+  filename: string | null,
+  options?: { fallbackMimeType?: string },
+): ChatHistoryMessagePart | undefined {
+  const parsed = parseImageDataUrl(image);
+  if (!parsed && !options?.fallbackMimeType?.startsWith("image/")) {
+    return undefined;
+  }
+
+  return {
+    filename: filename ?? undefined,
+    image: parsed ? imageDataUrl(parsed.data, parsed.mimeType) : image,
+    mimeType: parsed?.mimeType ?? options?.fallbackMimeType,
+    type: "image",
+  };
+}
+
+function engineMessageAttachmentsToHistoryParts(
+  attachments: ThreadMessage["attachments"] | undefined,
+  existingParts: ChatHistoryMessagePart[],
+): ChatHistoryMessagePart[] {
+  const existingImages = new Set(
+    existingParts
+      .filter((part) => part.type === "image")
+      .map((part) => part.image),
+  );
+  const parts: ChatHistoryMessagePart[] = [];
+
+  for (const attachment of attachments ?? []) {
+    for (const part of attachment.content ?? []) {
+      const input = imageInputFromMessagePart(part, attachment.name);
+      if (!input) continue;
+      const image = imageDataUrl(input.data, input.mimeType);
+      if (existingImages.has(image)) continue;
+      existingImages.add(image);
+      parts.push({
+        filename: input.name ?? undefined,
+        image,
+        mimeType: input.mimeType,
+        type: "image",
+      });
+    }
+  }
+
+  return parts;
 }
 
 function getMessageText(message: Pick<ThreadMessage, "content">) {
@@ -1066,6 +1217,67 @@ function getMessageText(message: Pick<ThreadMessage, "content">) {
     .map((part) => (part.type === "text" ? part.text : ""))
     .join("\n")
     .trim();
+}
+
+function getMessageAttachments(
+  message: Pick<ThreadMessage, "attachments" | "content">,
+): ChatAttachmentInput[] {
+  const inputs: ChatAttachmentInput[] = [];
+
+  for (const attachment of message.attachments ?? []) {
+    for (const part of attachment.content ?? []) {
+      const input = imageInputFromMessagePart(part, attachment.name);
+      if (input) inputs.push(input);
+    }
+  }
+
+  for (const part of message.content) {
+    const input = imageInputFromMessagePart(part);
+    if (input) inputs.push(input);
+  }
+
+  return inputs;
+}
+
+function imageInputFromMessagePart(
+  part: ThreadMessage["content"][number],
+  fallbackName?: string,
+): ChatAttachmentInput | undefined {
+  if (part.type === "image") {
+    const parsed = parseImageDataUrl(part.image);
+    if (!parsed) return undefined;
+    return {
+      data: parsed.data,
+      mimeType: parsed.mimeType,
+      name: part.filename ?? fallbackName ?? null,
+      type: "image",
+    };
+  }
+
+  if (part.type === "file" && part.mimeType.startsWith("image/")) {
+    const parsed = parseImageDataUrl(part.data);
+    if (!parsed && part.data.startsWith("data:")) return undefined;
+    return {
+      data: parsed?.data ?? part.data,
+      mimeType: parsed?.mimeType ?? part.mimeType,
+      name: part.filename ?? fallbackName ?? null,
+      type: "image",
+    };
+  }
+
+  return undefined;
+}
+
+function parseImageDataUrl(
+  value: string,
+): { data: string; mimeType: string } | undefined {
+  const match = /^data:([^;,]+)(?:;[^,]*)*;base64,(.*)$/i.exec(value);
+  if (!match) return undefined;
+
+  const mimeType = match[1] ?? "";
+  const data = match[2] ?? "";
+  if (!mimeType.startsWith("image/") || !data) return undefined;
+  return { data, mimeType };
 }
 
 function yieldToRendererTask() {

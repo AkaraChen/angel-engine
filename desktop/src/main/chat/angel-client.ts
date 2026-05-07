@@ -13,6 +13,7 @@ import type {
 
 import type {
   Chat,
+  ChatAttachmentInput,
   ChatElicitationResponse,
   ChatHistoryMessage,
   ChatLoadResult,
@@ -25,6 +26,7 @@ import type {
   ChatStreamDelta,
   ChatToolAction,
 } from "../../shared/chat";
+import { normalizeChatAttachmentsInput } from "../../shared/chat";
 import {
   createChat,
   renameChatFromPrompt,
@@ -145,8 +147,9 @@ export async function streamChat(
   controls?: ChatStreamControls,
 ): Promise<ChatSendResult> {
   const text = input.text.trim();
-  if (!text) {
-    throw new Error("Chat text is required.");
+  const attachments = normalizeChatAttachmentsInput(input.attachments);
+  if (!text && attachments.length === 0) {
+    throw new Error("Chat text or attachment is required.");
   }
 
   const preparedChat = prepareChatForSend(input);
@@ -164,10 +167,13 @@ export async function streamChat(
     reasoningEffort: input.reasoningEffort ?? undefined,
     remoteId: chat.remoteThreadId ?? undefined,
     signal: abortSignal,
+    input: chatAttachmentsToClientInput(attachments),
     text,
   });
 
-  renameChatFromPrompt(chat.id, text);
+  if (text) {
+    renameChatFromPrompt(chat.id, text);
+  }
   const finalChat = result.remoteThreadId
     ? setChatRemoteThreadId(chat.id, result.remoteThreadId)
     : touchChat(chat.id);
@@ -216,6 +222,17 @@ function createChatSession(runtime?: string): DesktopAngelSession {
       clientTitle: "Angel Engine Desktop",
     }) as RuntimeOptions,
   );
+}
+
+function chatAttachmentsToClientInput(
+  attachments: ChatAttachmentInput[],
+): NonNullable<SendTextRequest["input"]> {
+  return attachments.map((attachment) => ({
+    data: attachment.data,
+    mimeType: attachment.mimeType,
+    name: attachment.name ?? null,
+    type: "image",
+  }));
 }
 
 function prepareChatForSend(input: ChatSendInput): {
@@ -421,8 +438,9 @@ class DesktopAngelSession {
     request: DesktopSendTextRequest,
   ): Promise<TurnRunResult> {
     const text = String(request.text || "").trim();
-    if (!text) {
-      throw new Error("Text is required.");
+    const input = request.input ?? [];
+    if (!text && input.length === 0) {
+      throw new Error("Text or input is required.");
     }
 
     throwIfAborted(request.signal);
@@ -434,6 +452,7 @@ class DesktopAngelSession {
       cwd: request.cwd,
       mode: request.mode,
       model: request.model,
+      input,
       reasoningEffort: request.reasoningEffort,
       remoteId: request.remoteId,
       text,

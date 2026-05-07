@@ -635,6 +635,12 @@ pub enum ClientInput {
     Text {
         text: String,
     },
+    Image {
+        data: String,
+        mime_type: String,
+        #[serde(default)]
+        name: Option<String>,
+    },
     ResourceLink {
         name: String,
         uri: String,
@@ -679,6 +685,18 @@ impl ClientInput {
         }
     }
 
+    pub fn image(
+        data: impl Into<String>,
+        mime_type: impl Into<String>,
+        name: Option<String>,
+    ) -> Self {
+        Self::Image {
+            data: data.into(),
+            mime_type: mime_type.into(),
+            name,
+        }
+    }
+
     pub fn raw_content_block(value: serde_json::Value) -> Self {
         Self::RawContentBlock { value }
     }
@@ -688,6 +706,11 @@ impl From<ClientInput> for UserInput {
     fn from(input: ClientInput) -> Self {
         match input {
             ClientInput::Text { text } => UserInput::text(text),
+            ClientInput::Image {
+                data,
+                mime_type,
+                name,
+            } => UserInput::image(data, mime_type, name),
             ClientInput::ResourceLink {
                 name,
                 uri,

@@ -7,9 +7,10 @@ use crate::error::{ClientError, ClientResult};
 use crate::event::{ClientEvent, ClientStreamDelta, ClientUpdate};
 use crate::snapshot::display_message_from_parts;
 use crate::{
-    ActionOutputSnapshot, ActionSnapshot, AngelClient, ConversationSnapshot, ElicitationResponse,
-    ElicitationSnapshot, ResumeConversationRequest, RuntimeOptions, RuntimeOptionsOverrides,
-    StartConversationRequest, ThreadEvent, TurnSnapshot, create_runtime_options,
+    ActionOutputSnapshot, ActionSnapshot, AngelClient, ClientInput, ConversationSnapshot,
+    ElicitationResponse, ElicitationSnapshot, ResumeConversationRequest, RuntimeOptions,
+    RuntimeOptionsOverrides, StartConversationRequest, ThreadEvent, TurnSnapshot,
+    create_runtime_options,
 };
 use crate::{DisplayMessagePartSnapshot, DisplayMessageSnapshot, DisplayToolActionSnapshot};
 
@@ -20,10 +21,12 @@ pub struct AngelSession {
     active_turn: Option<ActiveTurn>,
 }
 
-#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct SendTextRequest {
     pub text: String,
+    #[serde(default)]
+    pub input: Vec<ClientInput>,
     #[serde(default)]
     pub cwd: Option<String>,
     #[serde(default)]
@@ -151,8 +154,13 @@ impl AngelSession {
 
     pub fn start_text_turn(&mut self, request: SendTextRequest) -> ClientResult<Vec<TurnRunEvent>> {
         let text = request.text.trim().to_string();
-        if text.is_empty() {
-            return Err(invalid_input("Text is required."));
+        let mut input = Vec::new();
+        if !text.is_empty() {
+            input.push(ClientInput::text(text.clone()));
+        }
+        input.extend(request.input);
+        if input.is_empty() {
+            return Err(invalid_input("Text or input is required."));
         }
         if self.active_turn.is_some() {
             return Err(invalid_input("A chat turn is already running."));
@@ -164,7 +172,9 @@ impl AngelSession {
         self.ensure_mode(&conversation_id, request.mode.as_deref())?;
         self.ensure_reasoning_effort(&conversation_id, request.reasoning_effort.as_deref())?;
 
-        let command = self.client.send_text(conversation_id.clone(), text)?;
+        let command = self
+            .client
+            .send_thread_event(conversation_id.clone(), ThreadEvent::input(input))?;
         let mut active = ActiveTurn::new(conversation_id, command.turn_id.clone());
         active.handle_update(command.update)?;
 

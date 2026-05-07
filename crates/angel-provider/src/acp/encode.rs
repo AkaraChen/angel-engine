@@ -376,6 +376,21 @@ fn acp_prompt_blocks(effect: &angel_engine::ProtocolEffect) -> Vec<Value> {
                     "resource": Value::Object(resource),
                 })
             }
+            "image" => json!({
+                "type": "image",
+                "data": effect
+                    .payload
+                    .fields
+                    .get(&format!("{prefix}.data"))
+                    .cloned()
+                    .unwrap_or(content),
+                "mimeType": effect
+                    .payload
+                    .fields
+                    .get(&format!("{prefix}.mimeType"))
+                    .cloned()
+                    .unwrap_or_else(|| "image/png".to_string()),
+            }),
             "raw" => effect
                 .payload
                 .fields
@@ -635,11 +650,11 @@ mod tests {
                         "important context",
                         Some("text/plain".to_string()),
                     ),
-                    angel_engine::UserInput::raw_content_block(json!({
-                        "type": "image",
-                        "data": "ZmFrZQ==",
-                        "mimeType": "image/png"
-                    })),
+                    angel_engine::UserInput::image(
+                        "ZmFrZQ==",
+                        "image/png",
+                        Some("shot.png".to_string()),
+                    ),
                 ],
                 overrides: angel_engine::TurnOverrides::default(),
             })
@@ -673,7 +688,14 @@ mod tests {
                 }
             })
         );
-        assert_eq!(params["prompt"][3]["type"], json!("image"));
+        assert_eq!(
+            params["prompt"][3],
+            json!({
+                "type": "image",
+                "data": "ZmFrZQ==",
+                "mimeType": "image/png"
+            })
+        );
     }
 }
 

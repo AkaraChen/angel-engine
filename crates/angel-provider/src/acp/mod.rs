@@ -9,10 +9,11 @@ use angel_engine::ids::{
 use angel_engine::protocol::{AcpMethod, ProtocolFlavor, ProtocolMethod};
 use angel_engine::reducer::{AngelEngine, PendingRequest};
 use angel_engine::state::{
-    ActionInput, ActionKind, ActionPhase, ActionState, ContentDelta, ContextPatch, ElicitationKind,
-    ElicitationOptions, ElicitationPhase, ElicitationState, ExhaustionReason, SessionConfigOption,
-    SessionConfigValue, SessionMode, SessionModeState, SessionModel, SessionModelState,
-    SessionUsageCost, SessionUsageState, TurnOutcome, UserQuestion, UserQuestionOption,
+    ActionInput, ActionKind, ActionPhase, ActionState, ContentDelta, ContentPart, ContextPatch,
+    ElicitationKind, ElicitationOptions, ElicitationPhase, ElicitationState, ExhaustionReason,
+    SessionConfigOption, SessionConfigValue, SessionMode, SessionModeState, SessionModel,
+    SessionModelState, SessionUsageCost, SessionUsageState, TurnOutcome, UserQuestion,
+    UserQuestionOption,
 };
 use angel_engine::transport::{
     JsonRpcMessage, TransportLogKind, TransportOptions, TransportOutput, client_info_json,

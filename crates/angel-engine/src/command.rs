@@ -146,6 +146,22 @@ impl UserInput {
             kind: UserInputKind::RawContentBlock(value.to_string()),
         }
     }
+
+    pub fn image(
+        data: impl Into<String>,
+        mime_type: impl Into<String>,
+        name: Option<String>,
+    ) -> Self {
+        let name = name.filter(|name| !name.trim().is_empty());
+        Self {
+            content: name.clone().unwrap_or_else(|| "image".to_string()),
+            kind: UserInputKind::Image {
+                data: data.into(),
+                mime_type: mime_type.into(),
+                name,
+            },
+        }
+    }
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -161,6 +177,11 @@ pub enum UserInputKind {
     EmbeddedTextResource {
         uri: String,
         mime_type: Option<String>,
+    },
+    Image {
+        data: String,
+        mime_type: String,
+        name: Option<String>,
     },
     RawContentBlock(String),
 }

@@ -226,30 +226,18 @@ fn append_hydrated_turns(
         {
             let replay_item = codex_history_replay_item(item);
             let (role, content) = match replay_item.get("type").and_then(Value::as_str) {
-                Some("userMessage") => (
-                    HistoryRole::User,
-                    ContentDelta::Text(codex_content_text(replay_item)),
-                ),
+                Some("userMessage") => (HistoryRole::User, codex_content_delta(replay_item)),
                 Some("message")
                     if replay_item.get("role").and_then(Value::as_str) == Some("user") =>
                 {
-                    (
-                        HistoryRole::User,
-                        ContentDelta::Text(codex_content_text(replay_item)),
-                    )
+                    (HistoryRole::User, codex_content_delta(replay_item))
                 }
                 Some("message")
                     if replay_item.get("role").and_then(Value::as_str) == Some("assistant") =>
                 {
-                    (
-                        HistoryRole::Assistant,
-                        ContentDelta::Text(codex_content_text(replay_item)),
-                    )
+                    (HistoryRole::Assistant, codex_content_delta(replay_item))
                 }
-                Some("message") => (
-                    HistoryRole::Assistant,
-                    ContentDelta::Text(codex_content_text(replay_item)),
-                ),
+                Some("message") => (HistoryRole::Assistant, codex_content_delta(replay_item)),
                 Some("agentMessage") => (
                     HistoryRole::Assistant,
                     ContentDelta::Text(
@@ -372,7 +360,24 @@ fn content_delta_is_empty(content: &ContentDelta) -> bool {
         ContentDelta::Text(text)
         | ContentDelta::ResourceRef(text)
         | ContentDelta::Structured(text) => text.trim().is_empty(),
+        ContentDelta::Parts(parts) => parts.iter().all(|part| match part {
+            ContentPart::Text(text) => text.trim().is_empty(),
+            ContentPart::Image {
+                data, mime_type, ..
+            } => data.is_empty() || !mime_type.starts_with("image/"),
+        }),
     }
+}
+
+fn codex_content_delta(item: &Value) -> ContentDelta {
+    let parts = codex_content_parts(item);
+    if parts
+        .iter()
+        .any(|part| matches!(part, ContentPart::Image { .. }))
+    {
+        return ContentDelta::Parts(parts);
+    }
+    ContentDelta::Text(codex_content_text(item))
 }
 
 fn codex_content_text(item: &Value) -> String {
@@ -383,6 +388,52 @@ fn codex_content_text(item: &Value) -> String {
         .filter_map(|part| part.get("text").and_then(Value::as_str))
         .collect::<Vec<_>>()
         .join("")
+}
+
+fn codex_content_parts(item: &Value) -> Vec<ContentPart> {
+    item.get("content")
+        .and_then(Value::as_array)
+        .into_iter()
+        .flatten()
+        .filter_map(codex_content_part)
+        .collect()
+}
+
+fn codex_content_part(part: &Value) -> Option<ContentPart> {
+    match part.get("type").and_then(Value::as_str) {
+        Some("text") | Some("input_text") | Some("output_text") => part
+            .get("text")
+            .and_then(Value::as_str)
+            .map(|text| ContentPart::text(text.to_string())),
+        Some("image") | Some("input_image") => codex_image_part(part),
+        _ => None,
+    }
+}
+
+fn codex_image_part(part: &Value) -> Option<ContentPart> {
+    let raw_url = part
+        .get("url")
+        .or_else(|| part.get("image_url"))
+        .or_else(|| part.get("image"))
+        .and_then(Value::as_str)?;
+    let (mime_type, data) = data_image_url(raw_url)?;
+    let name = part
+        .get("name")
+        .or_else(|| part.get("filename"))
+        .and_then(Value::as_str)
+        .filter(|name| !name.trim().is_empty())
+        .map(str::to_string);
+    Some(ContentPart::image(data, mime_type, name))
+}
+
+fn data_image_url(value: &str) -> Option<(String, String)> {
+    let rest = value.strip_prefix("data:")?;
+    let (meta, data) = rest.split_once(',')?;
+    let mime_type = meta.split(';').next()?.to_string();
+    if !mime_type.starts_with("image/") || data.is_empty() || !meta.contains(";base64") {
+        return None;
+    }
+    Some((mime_type, data.to_string()))
 }
 
 fn codex_reasoning_text(item: &Value) -> String {
@@ -613,6 +664,18 @@ mod tests {
                     ContentDelta::ResourceRef(text) => {
                         Some((entry.role.clone(), "resource".to_string(), text.clone()))
                     }
+                    ContentDelta::Parts(parts) => Some((
+                        entry.role.clone(),
+                        "parts".to_string(),
+                        parts
+                            .iter()
+                            .filter_map(|part| match part {
+                                ContentPart::Text(text) => Some(text.as_str()),
+                                ContentPart::Image { .. } => None,
+                            })
+                            .collect::<Vec<_>>()
+                            .join(""),
+                    )),
                 },
                 _ => None,
             })
@@ -704,5 +767,79 @@ mod tests {
             replay[6],
             (HistoryRole::Assistant, "text".to_string(), "hi".to_string())
         );
+    }
+
+    #[test]
+    fn thread_resume_preserves_user_image_content_parts() {
+        let adapter = CodexAdapter::app_server();
+        let mut engine = AngelEngine::with_available_runtime(
+            angel_engine::ProtocolFlavor::CodexAppServer,
+            angel_engine::RuntimeCapabilities::new("test"),
+            adapter.capabilities(),
+        );
+        let request_id = engine
+            .plan_command(angel_engine::EngineCommand::ResumeConversation {
+                target: angel_engine::ResumeTarget::Remote {
+                    id: "thread_1".to_string(),
+                    hydrate: true,
+                },
+            })
+            .expect("resume plan")
+            .request_id
+            .expect("request id");
+
+        let output = adapter
+            .decode_response(
+                &engine,
+                &request_id,
+                &json!({
+                    "thread": {
+                        "id": "thread_1",
+                        "turns": [
+                            {
+                                "items": [
+                                    {
+                                        "type": "userMessage",
+                                        "content": [
+                                            { "type": "text", "text": "look" },
+                                            {
+                                                "type": "image",
+                                                "url": "data:image/png;base64,ZmFrZQ==",
+                                                "name": "sample.png"
+                                            }
+                                        ]
+                                    }
+                                ]
+                            }
+                        ]
+                    }
+                }),
+            )
+            .expect("thread resume response");
+
+        let entry = output
+            .events
+            .iter()
+            .find_map(|event| match event {
+                EngineEvent::HistoryReplayChunk { entry, .. } => Some(entry),
+                _ => None,
+            })
+            .expect("history replay entry");
+
+        assert_eq!(entry.role, HistoryRole::User);
+        assert!(matches!(
+            &entry.content,
+            ContentDelta::Parts(parts)
+                if matches!(
+                    parts.as_slice(),
+                    [
+                        ContentPart::Text(text),
+                        ContentPart::Image { data, mime_type, name }
+                    ] if text == "look"
+                        && data == "ZmFrZQ=="
+                        && mime_type == "image/png"
+                        && name.as_deref() == Some("sample.png")
+                )
+        ));
     }
 }

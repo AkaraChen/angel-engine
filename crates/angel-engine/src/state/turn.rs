@@ -87,11 +87,49 @@ pub enum ContentDelta {
     Text(String),
     ResourceRef(String),
     Structured(String),
+    Parts(Vec<ContentPart>),
+}
+
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug, PartialEq, Eq)]
+pub enum ContentPart {
+    Text(String),
+    Image {
+        data: String,
+        mime_type: String,
+        name: Option<String>,
+    },
+}
+
+impl ContentPart {
+    pub fn text(value: impl Into<String>) -> Self {
+        Self::Text(value.into())
+    }
+
+    pub fn image(
+        data: impl Into<String>,
+        mime_type: impl Into<String>,
+        name: Option<String>,
+    ) -> Self {
+        Self::Image {
+            data: data.into(),
+            mime_type: mime_type.into(),
+            name,
+        }
+    }
 }
 
 #[derive(serde::Serialize, serde::Deserialize, Clone, Debug, PartialEq, Eq)]
 pub struct UserInputRef {
     pub content: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub image: Option<UserImageInputRef>,
+}
+
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug, PartialEq, Eq)]
+pub struct UserImageInputRef {
+    pub data: String,
+    pub mime_type: String,
+    pub name: Option<String>,
 }
 
 #[derive(serde::Serialize, serde::Deserialize, Clone, Debug, PartialEq, Eq)]

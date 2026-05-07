@@ -15,6 +15,101 @@ pub(crate) fn text_input(text: String) -> Value {
     ])
 }
 
+pub(crate) fn codex_user_input(effect: &ProtocolEffect) -> Value {
+    let Some(count) = effect
+        .payload
+        .fields
+        .get("inputCount")
+        .and_then(|value| value.parse::<usize>().ok())
+    else {
+        return text_input(
+            effect
+                .payload
+                .fields
+                .get("input")
+                .cloned()
+                .unwrap_or_default(),
+        );
+    };
+
+    let mut input = Vec::new();
+    for index in 0..count {
+        let prefix = format!("input.{index}");
+        let input_type = effect
+            .payload
+            .fields
+            .get(&format!("{prefix}.type"))
+            .map(String::as_str)
+            .unwrap_or("text");
+        let content = effect
+            .payload
+            .fields
+            .get(&format!("{prefix}.content"))
+            .cloned()
+            .unwrap_or_default();
+        match input_type {
+            "image" => {
+                let data = effect
+                    .payload
+                    .fields
+                    .get(&format!("{prefix}.data"))
+                    .cloned()
+                    .unwrap_or_default();
+                let mime_type = effect
+                    .payload
+                    .fields
+                    .get(&format!("{prefix}.mimeType"))
+                    .cloned()
+                    .unwrap_or_else(|| "image/png".to_string());
+                input.push(json!({
+                    "type": "image",
+                    "url": codex_image_url(&data, &mime_type),
+                }));
+            }
+            "text" | "resource_link" | "resource" => input.push(codex_text_item(content)),
+            "raw" => {
+                let raw_text = effect
+                    .payload
+                    .fields
+                    .get(&format!("{prefix}.raw"))
+                    .cloned()
+                    .unwrap_or(content);
+                input.push(codex_text_item(raw_text));
+            }
+            _ => input.push(codex_text_item(content)),
+        }
+    }
+
+    if input.is_empty() {
+        text_input(
+            effect
+                .payload
+                .fields
+                .get("input")
+                .cloned()
+                .unwrap_or_default(),
+        )
+    } else {
+        Value::Array(input)
+    }
+}
+
+fn codex_text_item(text: String) -> Value {
+    json!({
+        "type": "text",
+        "text": text,
+        "text_elements": [],
+    })
+}
+
+fn codex_image_url(data: &str, mime_type: &str) -> String {
+    if data.starts_with("data:") {
+        data.to_string()
+    } else {
+        format!("data:{mime_type};base64,{data}")
+    }
+}
+
 pub(crate) fn codex_context_patch(result: &Value) -> ContextPatch {
     let mut patch = ContextPatch::empty();
     if let Some(model) = result.get("model").and_then(Value::as_str) {

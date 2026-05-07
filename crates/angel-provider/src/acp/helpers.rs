@@ -90,6 +90,14 @@ pub(super) fn content_delta_log_text(delta: &ContentDelta) -> String {
         ContentDelta::Text(text) => text.clone(),
         ContentDelta::ResourceRef(uri) => format!("[resource] {uri}"),
         ContentDelta::Structured(value) => value.clone(),
+        ContentDelta::Parts(parts) => parts
+            .iter()
+            .filter_map(|part| match part {
+                ContentPart::Text(text) => Some(text.as_str()),
+                ContentPart::Image { name, .. } => name.as_deref(),
+            })
+            .collect::<Vec<_>>()
+            .join(""),
     }
 }
 
@@ -110,6 +118,12 @@ pub(super) fn content_text(value: &Value) -> Option<String> {
 }
 
 fn content_delta(value: &Value) -> ContentDelta {
+    if let Some(parts) = content_parts(value)
+        && !parts.is_empty()
+        && value.is_array()
+    {
+        return ContentDelta::Parts(parts);
+    }
     if let Some(text) = content_text(value) {
         return ContentDelta::Text(text);
     }
@@ -126,6 +140,40 @@ fn content_delta(value: &Value) -> ContentDelta {
             .map(ContentDelta::ResourceRef)
             .unwrap_or_else(|| ContentDelta::Structured(json_string(value))),
         _ => ContentDelta::Structured(json_string(value)),
+    }
+}
+
+fn content_parts(value: &Value) -> Option<Vec<ContentPart>> {
+    if let Some(items) = value.as_array() {
+        return Some(items.iter().filter_map(content_part).collect());
+    }
+    content_part(value).map(|part| vec![part])
+}
+
+fn content_part(value: &Value) -> Option<ContentPart> {
+    match value.get("type").and_then(Value::as_str) {
+        Some("text") => value
+            .get("text")
+            .and_then(Value::as_str)
+            .map(|text| ContentPart::text(text.to_string())),
+        Some("image") => {
+            let data = value.get("data").and_then(Value::as_str)?.to_string();
+            let mime_type = value
+                .get("mimeType")
+                .or_else(|| value.get("mime_type"))
+                .and_then(Value::as_str)?
+                .to_string();
+            if !mime_type.starts_with("image/") || data.is_empty() {
+                return None;
+            }
+            let name = value
+                .get("name")
+                .and_then(Value::as_str)
+                .filter(|name| !name.trim().is_empty())
+                .map(str::to_string);
+            Some(ContentPart::image(data, mime_type, name))
+        }
+        _ => None,
     }
 }
 

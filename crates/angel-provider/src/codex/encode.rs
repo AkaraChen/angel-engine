@@ -74,23 +74,13 @@ impl CodexAdapter {
                     "threadId".to_string(),
                     json!(codex_thread_id(engine, effect)?),
                 );
-                params.insert(
-                    "input".to_string(),
-                    text_input(
-                        effect
-                            .payload
-                            .fields
-                            .get("input")
-                            .cloned()
-                            .unwrap_or_default(),
-                    ),
-                );
+                params.insert("input".to_string(), codex_user_input(effect));
                 insert_codex_overrides(&mut params, &effect.payload.fields);
                 Ok(Value::Object(params))
             }
             ProtocolMethod::Codex(CodexMethod::TurnSteer) => Ok(json!({
                 "threadId": codex_thread_id(engine, effect)?,
-                "input": text_input(effect.payload.fields.get("input").cloned().unwrap_or_default()),
+                "input": codex_user_input(effect),
                 "expectedTurnId": codex_turn_id(engine, effect)?,
             })),
             ProtocolMethod::Codex(CodexMethod::TurnInterrupt) => Ok(json!({
@@ -364,6 +354,60 @@ mod tests {
                 "excludeTurns": true,
                 "persistExtendedHistory": true
             })
+        );
+    }
+
+    #[test]
+    fn turn_start_encodes_image_user_input() {
+        let adapter = CodexAdapter::app_server();
+        let mut engine = AngelEngine::with_available_runtime(
+            angel_engine::ProtocolFlavor::CodexAppServer,
+            angel_engine::RuntimeCapabilities::new("test"),
+            adapter.capabilities(),
+        );
+        let conversation_id = ConversationId::new("conv");
+        engine
+            .apply_event(EngineEvent::ConversationProvisionStarted {
+                id: conversation_id.clone(),
+                remote: RemoteConversationId::Known("thread".to_string()),
+                op: angel_engine::ProvisionOp::New,
+                capabilities: adapter.capabilities(),
+            })
+            .expect("conversation provision");
+        engine
+            .apply_event(EngineEvent::ConversationReady {
+                id: conversation_id.clone(),
+                remote: Some(RemoteConversationId::Known("thread".to_string())),
+                context: ContextPatch::empty(),
+                capabilities: None,
+            })
+            .expect("conversation ready");
+        let plan = engine
+            .plan_command(angel_engine::EngineCommand::StartTurn {
+                conversation_id,
+                input: vec![
+                    angel_engine::UserInput::text("describe this"),
+                    angel_engine::UserInput::image(
+                        "ZmFrZQ==",
+                        "image/png",
+                        Some("shot.png".to_string()),
+                    ),
+                ],
+                overrides: angel_engine::TurnOverrides::default(),
+            })
+            .expect("start turn");
+
+        let params = adapter
+            .encode_params(&engine, &plan.effects[0], &TransportOptions::default())
+            .expect("turn start params");
+
+        assert_eq!(params["threadId"], json!("thread"));
+        assert_eq!(
+            params["input"],
+            json!([
+                {"type": "text", "text": "describe this", "text_elements": []},
+                {"type": "image", "url": "data:image/png;base64,ZmFrZQ=="}
+            ])
         );
     }
 }

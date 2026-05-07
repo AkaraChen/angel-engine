@@ -17,13 +17,13 @@ import {
   Brain,
   CircleStop,
   Cpu,
-  FileText,
   Paperclip,
   Quote,
   SlidersHorizontal,
   X,
 } from "lucide-react";
 
+import { ChatAttachmentTile } from "@/chat/attachment-tile";
 import { useChatOptions } from "@/chat/chat-options-context";
 import {
   PromptInput,
@@ -57,19 +57,24 @@ export function AssistantComposer() {
 
   const handleSubmit = useCallback(
     async (message: PromptInputMessage) => {
-      const composer = aui.composer();
       const text = message.text.trim() ? message.text : "";
+      const hasMessage = text.length > 0 || message.files.length > 0;
+      if (!hasMessage) {
+        return;
+      }
+
+      const composer = aui.composer();
 
       composer.setText(text);
 
-      for (const file of message.files) {
-        await composer.addAttachment(createAttachmentFromPromptFile(file));
-      }
+      await Promise.all(
+        message.files.map((file) =>
+          composer.addAttachment(createAttachmentFromPromptFile(file)),
+        ),
+      );
 
-      if (!composer.getState().isEmpty) {
-        composer.send();
-        setDraftText("");
-      }
+      composer.send();
+      setDraftText("");
     },
     [aui],
   );
@@ -141,18 +146,24 @@ function AssistantComposerHeader() {
 
       {attachments.files.length > 0 ? (
         <div className="flex flex-wrap gap-2">
-          {attachments.files.map((file) => (
-            <button
-              className="inline-flex max-w-full items-center gap-2 rounded-md border bg-muted/30 px-2 py-1 text-xs text-muted-foreground hover:bg-muted hover:text-foreground"
-              key={file.id}
-              onClick={() => attachments.remove(file.id)}
-              type="button"
-            >
-              <FileText className="size-3.5 shrink-0" />
-              <span className="truncate">{file.filename ?? "Attachment"}</span>
-              <X className="size-3.5 shrink-0" />
-            </button>
-          ))}
+          {attachments.files.map((file) => {
+            const mediaType = file.mediaType ?? "application/octet-stream";
+            const isImage = mediaType.startsWith("image/");
+            const name = file.filename ?? "Attachment";
+
+            return (
+              <ChatAttachmentTile
+                className="max-w-64"
+                contentType={mediaType}
+                key={file.id}
+                name={name}
+                onRemove={() => attachments.remove(file.id)}
+                previewUrl={isImage ? file.url : undefined}
+                removeLabel={`Remove ${name}`}
+                typeLabel={isImage ? "Image" : "File"}
+              />
+            );
+          })}
         </div>
       ) : null}
     </PromptInputHeader>

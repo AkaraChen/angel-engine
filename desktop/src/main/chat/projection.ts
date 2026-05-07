@@ -16,7 +16,11 @@ import type {
   ChatStreamDelta,
   ChatToolAction,
 } from "../../shared/chat";
-import { appendChatTextPart, chatToolActionToPart } from "../../shared/chat";
+import {
+  appendChatTextPart,
+  chatToolActionToPart,
+  imageDataUrl,
+} from "../../shared/chat";
 
 type ToolActionSnapshotLike = ActionSnapshot | DisplayToolActionSnapshot;
 export type ProjectedTurnEvent =
@@ -60,6 +64,17 @@ function displayMessagePartToChatParts(
     case "tool-call":
       return part.action
         ? [chatToolActionToPart(toChatAction(part.action))]
+        : [];
+    case "image":
+      return part.data && part.mimeType?.startsWith("image/")
+        ? [
+            {
+              filename: part.name ?? undefined,
+              image: imageDataUrl(part.data, part.mimeType),
+              mimeType: part.mimeType,
+              type: "image",
+            },
+          ]
         : [];
     default:
       return part.text?.trim() ? [{ text: part.text, type: "text" }] : [];

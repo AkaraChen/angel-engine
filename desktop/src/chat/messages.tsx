@@ -24,7 +24,6 @@ import {
   ChevronRight,
   Clipboard,
   Copy,
-  FileText,
   Loader2,
   Pencil,
   RefreshCw,
@@ -34,6 +33,7 @@ import {
   VolumeX,
 } from "lucide-react";
 
+import { ChatAttachmentTile } from "@/chat/attachment-tile";
 import { Reasoning, ReasoningGroup } from "@/components/assistant-ui/reasoning";
 import { ToolGroup } from "@/components/assistant-ui/tool-group";
 import { Button } from "@/components/ui/button";
@@ -71,6 +71,10 @@ const assistantTextContainerClassName = [
 ].join(" ");
 
 export function UserMessage() {
+  const hasBubbleContent = useAuiState((state) =>
+    state.message.parts.some(isUserBubblePart),
+  );
+
   return (
     <MessagePrimitive.Root className="group flex justify-end">
       <div className="flex max-w-[78%] flex-col items-end gap-1.5">
@@ -79,9 +83,12 @@ export function UserMessage() {
             <MessageAttachment attachment={attachment} key={attachment.id} />
           )}
         </MessagePrimitive.Attachments>
-        <div className="rounded-md bg-primary px-3 py-2 text-sm leading-6 text-primary-foreground">
-          <UserMessageParts />
-        </div>
+        <UserMessageAttachmentParts />
+        {hasBubbleContent ? (
+          <div className="rounded-md bg-primary px-3 py-2 text-sm leading-6 text-primary-foreground">
+            <UserMessageParts />
+          </div>
+        ) : null}
         <div className={messageActionFooterClass}>
           <MessageBranchPicker />
           <ActionBarPrimitive.Root
@@ -224,6 +231,12 @@ function UserMessageParts() {
   return <MessagePrimitive.Parts components={userMessagePartComponents} />;
 }
 
+function UserMessageAttachmentParts() {
+  return (
+    <MessagePrimitive.Parts components={userMessageAttachmentPartComponents} />
+  );
+}
+
 function AssistantMessageParts() {
   return <MessagePrimitive.Parts components={assistantMessagePartComponents} />;
 }
@@ -231,10 +244,20 @@ function AssistantMessageParts() {
 const userMessagePartComponents = {
   Text: PlainTextMessagePart,
   Source: NullMessagePart,
+  Image: NullMessagePart,
+  File: NullMessagePart,
+  data: {
+    Fallback: DataMessagePart,
+  },
+};
+
+const userMessageAttachmentPartComponents = {
+  Text: NullMessagePart,
+  Source: NullMessagePart,
   Image: ImageMessagePart,
   File: FileMessagePart,
   data: {
-    Fallback: DataMessagePart,
+    Fallback: NullMessagePart,
   },
 };
 
@@ -305,23 +328,52 @@ function AssistantTextMessagePart(
   );
 }
 
+function isUserBubblePart(part: {
+  status?: { type: string };
+  text?: string;
+  type: string;
+}) {
+  switch (part.type) {
+    case "file":
+    case "image":
+    case "source":
+      return false;
+    case "text":
+      return part.status?.type === "running" || Boolean(part.text?.trim());
+    default:
+      return true;
+  }
+}
+
 function ImageMessagePart(part: Extract<EnrichedPartState, { type: "image" }>) {
   return (
-    <img
-      alt={part.filename ?? "image attachment"}
-      className="my-2 max-h-80 rounded-md border object-contain"
-      src={part.image}
+    <ChatAttachmentTile
+      className="my-2 max-w-64"
+      name={part.filename ?? "image"}
+      previewUrl={part.image}
+      typeLabel="Image"
     />
   );
 }
 
 function FileMessagePart(part: Extract<EnrichedPartState, { type: "file" }>) {
+  const isImage = part.mimeType.startsWith("image/");
+
   return (
-    <div className="my-2 inline-flex items-center gap-2 rounded-md border bg-background px-2 py-1 text-xs">
-      <FileText className="size-3.5" />
-      {part.filename ?? part.mimeType}
-    </div>
+    <ChatAttachmentTile
+      className="my-2 max-w-64"
+      contentType={part.mimeType}
+      name={part.filename ?? part.mimeType}
+      previewUrl={
+        isImage ? imageFilePreviewUrl(part.data, part.mimeType) : undefined
+      }
+      typeLabel={isImage ? "Image" : "File"}
+    />
   );
+}
+
+function imageFilePreviewUrl(data: string, mimeType: string) {
+  return data.startsWith("data:") ? data : `data:${mimeType};base64,${data}`;
 }
 
 function ToolActionMessagePart(part: ToolCallMessagePartProps) {
@@ -786,11 +838,17 @@ function JsonBlock({ label, value }: { label: string; value: unknown }) {
 }
 
 function MessageAttachment({ attachment }: { attachment: CompleteAttachment }) {
+  const previewUrl = attachment.content.find(
+    (part) => part.type === "image",
+  )?.image;
+
   return (
-    <div className="inline-flex max-w-full items-center gap-2 rounded-md border bg-background px-2 py-1 text-xs">
-      <FileText className="size-3.5 shrink-0 text-muted-foreground" />
-      <span className="truncate">{attachment.name}</span>
-      <span className="text-muted-foreground">{attachment.type}</span>
-    </div>
+    <ChatAttachmentTile
+      className="max-w-64"
+      contentType={attachment.contentType}
+      name={attachment.name}
+      previewUrl={previewUrl}
+      typeLabel={attachment.type}
+    />
   );
 }

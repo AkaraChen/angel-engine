@@ -252,6 +252,7 @@ fn content_delta_text(delta: &ContentDelta) -> &str {
         ContentDelta::Text(text)
         | ContentDelta::ResourceRef(text)
         | ContentDelta::Structured(text) => text,
+        ContentDelta::Parts(_) => "",
     }
 }
 

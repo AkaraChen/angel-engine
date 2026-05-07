@@ -2,7 +2,9 @@ use crate::command::{TurnOverrides, UserInput, UserInputKind};
 use crate::error::EngineError;
 use crate::ids::{ConversationId, JsonRpcRequestId, RemoteTurnId, TurnId};
 use crate::protocol::{ProtocolEffect, ProtocolFlavor};
-use crate::state::{ConversationLifecycle, ConversationState, TurnPhase, TurnState, UserInputRef};
+use crate::state::{
+    ConversationLifecycle, ConversationState, TurnPhase, TurnState, UserImageInputRef, UserInputRef,
+};
 
 use super::context_effects::codex_context_fields;
 use super::{AngelEngine, CommandPlan, PendingRequest};
@@ -308,8 +310,23 @@ fn ensure_codex_turn_id_available(
 fn to_input_refs(input: Vec<UserInput>) -> Vec<UserInputRef> {
     input
         .into_iter()
-        .map(|input| UserInputRef {
-            content: input.content,
+        .map(|input| {
+            let image = match &input.kind {
+                UserInputKind::Image {
+                    data,
+                    mime_type,
+                    name,
+                } => Some(UserImageInputRef {
+                    data: data.clone(),
+                    mime_type: mime_type.clone(),
+                    name: name.clone(),
+                }),
+                _ => None,
+            };
+            UserInputRef {
+                content: input.content,
+                image,
+            }
         })
         .collect()
 }
@@ -356,6 +373,18 @@ fn input_effect_fields(input: &[UserInput]) -> Vec<(String, String)> {
                 fields.push((format!("input.{index}.uri"), uri.clone()));
                 if let Some(mime_type) = mime_type {
                     fields.push((format!("input.{index}.mimeType"), mime_type.clone()));
+                }
+            }
+            UserInputKind::Image {
+                data,
+                mime_type,
+                name,
+            } => {
+                fields.push((format!("input.{index}.type"), "image".to_string()));
+                fields.push((format!("input.{index}.data"), data.clone()));
+                fields.push((format!("input.{index}.mimeType"), mime_type.clone()));
+                if let Some(name) = name {
+                    fields.push((format!("input.{index}.name"), name.clone()));
                 }
             }
             UserInputKind::RawContentBlock(block) => {

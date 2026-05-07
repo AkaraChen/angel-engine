@@ -60,6 +60,12 @@ export type ChatHistoryMessagePart =
       text: string;
       type: "reasoning" | "text";
     }
+  | {
+      filename?: string;
+      image: string;
+      mimeType?: string;
+      type: "image";
+    }
   | ChatToolCallPart;
 
 export type ChatJsonValue =
@@ -215,6 +221,8 @@ export function cloneChatHistoryPart(
         ...part,
         artifact: cloneChatToolAction(part.artifact),
       };
+    case "image":
+      return { ...part };
     case "reasoning":
     case "text":
       return { ...part };
@@ -239,6 +247,10 @@ export function chatPartsText(
   );
 }
 
+export function imageDataUrl(data: string, mimeType: string) {
+  return `data:${mimeType};base64,${data}`;
+}
+
 export function isTerminalChatToolPhase(phase?: string) {
   return (
     phase === "completed" ||
@@ -259,7 +271,15 @@ export type ChatPrewarmResult = {
   prewarmId: string;
 };
 
+export type ChatAttachmentInput = {
+  data: string;
+  mimeType: string;
+  name?: string | null;
+  type: "image";
+};
+
 export type ChatSendInput = {
+  attachments?: ChatAttachmentInput[];
   chatId?: string;
   cwd?: string;
   model?: string | null;
@@ -345,4 +365,43 @@ export const CHAT_STREAM_START_CHANNEL = "chat:stream:start";
 
 export function chatStreamEventChannel(streamId: string) {
   return `chat:stream:event:${streamId}`;
+}
+
+export function normalizeChatAttachmentsInput(
+  input: unknown,
+): ChatAttachmentInput[] {
+  if (input == null) return [];
+  if (!Array.isArray(input)) {
+    throw new Error("Chat attachments must be an array.");
+  }
+
+  return input.map((item) => {
+    if (!item || typeof item !== "object") {
+      throw new Error("Chat attachment is invalid.");
+    }
+
+    const value = item as Partial<ChatAttachmentInput>;
+    if (value.type !== "image") {
+      throw new Error("Unsupported chat attachment type.");
+    }
+    if (typeof value.data !== "string" || !value.data.trim()) {
+      throw new Error("Image attachment data is required.");
+    }
+    if (
+      typeof value.mimeType !== "string" ||
+      !value.mimeType.startsWith("image/")
+    ) {
+      throw new Error("Image attachment MIME type is required.");
+    }
+
+    return {
+      data: value.data,
+      mimeType: value.mimeType,
+      name:
+        typeof value.name === "string" && value.name.trim()
+          ? value.name.trim()
+          : null,
+      type: "image",
+    };
+  });
 }

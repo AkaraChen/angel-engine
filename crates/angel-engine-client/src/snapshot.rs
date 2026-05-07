@@ -2,10 +2,10 @@ use std::collections::BTreeMap;
 
 use angel_engine::{
     ActionKind, ActionOutputDelta, ActionPhase, ActionState, AgentMode, AvailableCommand,
-    ContentDelta, ConversationLifecycle, ConversationState, EffectiveContext, ElicitationKind,
-    ElicitationPhase, ElicitationState, HistoryReplayEntry, HistoryRole, PlanEntryStatus,
-    ProtocolFlavor, QuestionValueType, RuntimeState, SessionUsageCost, SessionUsageState,
-    TurnPhase, TurnState, UserQuestion, UserQuestionOption, UserQuestionSchema,
+    ContentDelta, ContentPart, ConversationLifecycle, ConversationState, EffectiveContext,
+    ElicitationKind, ElicitationPhase, ElicitationState, HistoryReplayEntry, HistoryRole,
+    PlanEntryStatus, ProtocolFlavor, QuestionValueType, RuntimeState, SessionUsageCost,
+    SessionUsageState, TurnPhase, TurnState, UserQuestion, UserQuestionOption, UserQuestionSchema,
 };
 use serde::{Deserialize, Serialize};
 
@@ -192,6 +192,12 @@ pub struct DisplayMessagePartSnapshot {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub text: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub data: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub mime_type: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub name: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub action: Option<DisplayToolActionSnapshot>,
 }
 
@@ -200,6 +206,24 @@ impl DisplayMessagePartSnapshot {
         Self {
             kind: kind.to_string(),
             text: Some(text.into()),
+            data: None,
+            mime_type: None,
+            name: None,
+            action: None,
+        }
+    }
+
+    pub(crate) fn image(
+        data: impl Into<String>,
+        mime_type: impl Into<String>,
+        name: Option<String>,
+    ) -> Self {
+        Self {
+            kind: "image".to_string(),
+            text: None,
+            data: Some(data.into()),
+            mime_type: Some(mime_type.into()),
+            name,
             action: None,
         }
     }
@@ -208,6 +232,9 @@ impl DisplayMessagePartSnapshot {
         Self {
             kind: "tool-call".to_string(),
             text: None,
+            data: None,
+            mime_type: None,
+            name: None,
             action: Some(action),
         }
     }
@@ -233,6 +260,11 @@ impl From<&angel_engine::DisplayMessagePart> for DisplayMessagePartSnapshot {
             angel_engine::DisplayMessagePart::Text { kind, text } => {
                 Self::text(&display_text_part_kind_label(kind), text.clone())
             }
+            angel_engine::DisplayMessagePart::Image {
+                data,
+                mime_type,
+                name,
+            } => Self::image(data.clone(), mime_type.clone(), name.clone()),
             angel_engine::DisplayMessagePart::ToolCall { action } => {
                 Self::tool(DisplayToolActionSnapshot::from(action))
             }
@@ -525,6 +557,10 @@ impl From<&ContentDelta> for ContentChunk {
             ContentDelta::Structured(value) => Self {
                 kind: "structured".to_string(),
                 text: value.clone(),
+            },
+            ContentDelta::Parts(parts) => Self {
+                kind: "parts".to_string(),
+                text: parts_text(parts),
             },
         }
     }
@@ -975,8 +1011,19 @@ fn question_value_type(value_type: &QuestionValueType) -> String {
 fn chunks_text(chunks: &[ContentChunk]) -> String {
     chunks
         .iter()
-        .filter(|chunk| chunk.kind == "text")
+        .filter(|chunk| chunk.kind == "text" || chunk.kind == "parts")
         .map(|chunk| chunk.text.as_str())
+        .collect::<Vec<_>>()
+        .join("")
+}
+
+fn parts_text(parts: &[ContentPart]) -> String {
+    parts
+        .iter()
+        .filter_map(|part| match part {
+            ContentPart::Text(text) => Some(text.as_str()),
+            ContentPart::Image { .. } => None,
+        })
         .collect::<Vec<_>>()
         .join("")
 }
