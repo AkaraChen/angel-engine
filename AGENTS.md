@@ -78,7 +78,7 @@ protocol-neutral engine concept by an adapter.
   - Test/support CLI crate. Keep it as a consumer of public APIs rather than a
     place for engine behavior.
 
-- `crates/angel-engine/vendor/agent-client-protocol/`
+- `vendor/agent-client-protocol/`
   - Vendored ACP reference material. Treat as third-party code and avoid edits
     unless intentionally updating the vendored dependency.
 

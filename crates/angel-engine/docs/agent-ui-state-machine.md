@@ -2,8 +2,8 @@
 
 本文整理两层协议模型：
 
-- ACP: `vendor/agent-client-protocol` 中的 Agent Client Protocol。它定义通用 Client 和 Agent 之间的 JSON-RPC 方法、通知、能力协商和 session/prompt 生命周期。
-- Codex app-server: `codex app-server --help` 暴露的本地 app server，并用 `codex app-server generate-ts --experimental` 生成的协议类型查看具体接口。它不是 ACP 的同名实现，而是 Codex UI 面向的更细粒度 `thread` / `turn` / `item` 模型。
+- ACP: `../../../vendor/agent-client-protocol` 中的 Agent Client Protocol。它定义通用 Client 和 Agent 之间的 JSON-RPC 方法、通知、能力协商和 session/prompt 生命周期。
+- Codex app-server: `codex app-server --help` 暴露的本地 app server，并用 `codex app-server generate-ts --out ../../../vendor/codex/ts` 和 `codex app-server generate-json-schema --out ../../../vendor/codex/json-schema` 生成的协议类型查看具体接口。它不是 ACP 的同名实现，而是 Codex UI 面向的更细粒度 `thread` / `turn` / `item` 模型。
 
 这里说的“状态机”是 UI 可观察、可维护的外部状态机，不等于 agent 内部代码必须有同名 enum。UI 应该用请求响应和通知来归纳状态，而不是假设内部实现细节。
 
@@ -112,7 +112,7 @@ Disconnected
 - `ws://IP:PORT`。
 - `off`。
 
-非 loopback websocket listener 支持 `capability-token` 或 `signed-bearer-token` 鉴权。`codex app-server proxy --sock <SOCKET_PATH>` 可以把 stdio bytes 转发到正在运行的 app-server control socket。协议类型可用 `codex app-server generate-ts --experimental --out <DIR>` 生成。
+非 loopback websocket listener 支持 `capability-token` 或 `signed-bearer-token` 鉴权。`codex app-server proxy --sock <SOCKET_PATH>` 可以把 stdio bytes 转发到正在运行的 app-server control socket。协议类型可用 `codex app-server generate-ts --out <DIR>` 生成，JSON schema 可用 `codex app-server generate-json-schema --out <DIR>` 生成。
 
 ### Codex 状态对象
 
@@ -220,10 +220,10 @@ Codex app-server 有三种配置入口，UI 需要区分：
 
 ## 参考
 
-- ACP docs: `vendor/agent-client-protocol/docs/protocol/overview.mdx`
-- ACP prompt lifecycle: `vendor/agent-client-protocol/docs/protocol/prompt-turn.mdx`
-- ACP session setup: `vendor/agent-client-protocol/docs/protocol/session-setup.mdx`
-- ACP config/modes: `vendor/agent-client-protocol/docs/protocol/session-config-options.mdx`、`vendor/agent-client-protocol/docs/protocol/session-modes.mdx`
-- ACP tool permissions: `vendor/agent-client-protocol/docs/protocol/tool-calls.mdx`
+- ACP docs: `../../../vendor/agent-client-protocol/docs/protocol/overview.mdx`
+- ACP prompt lifecycle: `../../../vendor/agent-client-protocol/docs/protocol/prompt-turn.mdx`
+- ACP session setup: `../../../vendor/agent-client-protocol/docs/protocol/session-setup.mdx`
+- ACP config/modes: `../../../vendor/agent-client-protocol/docs/protocol/session-config-options.mdx`、`../../../vendor/agent-client-protocol/docs/protocol/session-modes.mdx`
+- ACP tool permissions: `../../../vendor/agent-client-protocol/docs/protocol/tool-calls.mdx`
 - Codex app-server help: `codex app-server --help`
-- Codex generated protocol: `codex app-server generate-ts --experimental --out <DIR>`
+- Codex generated protocol: `../../../vendor/codex/ts` and `../../../vendor/codex/json-schema`

@@ -842,9 +842,9 @@ Reducer 应该用 table-driven unit tests 覆盖，不依赖真实协议 transpo
 
 ## 参考
 
-- ACP source: `vendor/agent-client-protocol/src/v2/agent.rs`
-- ACP source: `vendor/agent-client-protocol/src/v2/client.rs`
-- ACP source: `vendor/agent-client-protocol/src/v2/tool_call.rs`
-- ACP docs: `vendor/agent-client-protocol/docs/protocol/*.mdx`
+- ACP source: `../../../vendor/agent-client-protocol/src/v2/agent.rs`
+- ACP source: `../../../vendor/agent-client-protocol/src/v2/client.rs`
+- ACP source: `../../../vendor/agent-client-protocol/src/v2/tool_call.rs`
+- ACP docs: `../../../vendor/agent-client-protocol/docs/protocol/*.mdx`
 - Codex help: `codex app-server --help`
-- Codex generated protocol: `codex app-server generate-ts --experimental --out <DIR>`
+- Codex generated protocol: `../../../vendor/codex/ts` and `../../../vendor/codex/json-schema`

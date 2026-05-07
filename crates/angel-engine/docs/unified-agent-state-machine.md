@@ -316,9 +316,9 @@ This unified model covers:
 
 ## 参考来源
 
-- ACP overview: `vendor/agent-client-protocol/docs/protocol/overview.mdx`
-- ACP session setup: `vendor/agent-client-protocol/docs/protocol/session-setup.mdx`
-- ACP prompt lifecycle: `vendor/agent-client-protocol/docs/protocol/prompt-turn.mdx`
-- ACP tool calls and permissions: `vendor/agent-client-protocol/docs/protocol/tool-calls.mdx`
-- ACP plans, modes, config: `vendor/agent-client-protocol/docs/protocol/agent-plan.mdx`、`session-modes.mdx`、`session-config-options.mdx`
-- Codex app-server protocol: `codex app-server --help` and `codex app-server generate-ts --experimental`
+- ACP overview: `../../../vendor/agent-client-protocol/docs/protocol/overview.mdx`
+- ACP session setup: `../../../vendor/agent-client-protocol/docs/protocol/session-setup.mdx`
+- ACP prompt lifecycle: `../../../vendor/agent-client-protocol/docs/protocol/prompt-turn.mdx`
+- ACP tool calls and permissions: `../../../vendor/agent-client-protocol/docs/protocol/tool-calls.mdx`
+- ACP plans, modes, config: `../../../vendor/agent-client-protocol/docs/protocol/agent-plan.mdx`、`session-modes.mdx`、`session-config-options.mdx`
+- Codex app-server protocol: `codex app-server --help`, `../../../vendor/codex/ts`, and `../../../vendor/codex/json-schema`

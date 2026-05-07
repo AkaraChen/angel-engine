@@ -37,7 +37,7 @@ comes from responses, server notifications, or request failure.
   reducer, ids, capabilities, errors, and transport traits.
 - `docs/` contains the state-machine design notes and protocol mapping
   rationale.
-- `vendor/agent-client-protocol/` is the vendored ACP reference material.
+- `../../vendor/agent-client-protocol/` is the vendored ACP reference material.
 
 Provider implementations and low-level adapter demos live in the
 `angel-provider` crate.
