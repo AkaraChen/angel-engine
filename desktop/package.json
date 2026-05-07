@@ -51,7 +51,7 @@
   "dependencies": {
     "@angel-engine/client-napi": "file:../crates/angel-engine-client-napi",
     "@assistant-ui/react": "^0.12.28",
-    "@assistant-ui/react-streamdown": "^0.1.11",
+    "@assistant-ui/react-streamdown": "^0.3.0",
     "@egoist/tipc": "^0.3.2",
     "@fontsource-variable/playwrite-de-la": "^5.2.7",
     "@radix-ui/react-collapsible": "^1.1.12",
