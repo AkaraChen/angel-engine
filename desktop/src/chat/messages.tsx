@@ -434,8 +434,9 @@ function GenericToolActionMessagePart({
   const isRunning = isRunningToolPhase(phase);
   const isFailed = Boolean(errorText) || phase === "failed";
   const hasDetails = Boolean(part.argsText || outputText || errorText);
-  const [manualOpen, setManualOpen] = useState(false);
-  const open = hasDetails && manualOpen;
+  const hasTextAfterTool = useHasTextAfterToolCall(part.toolCallId);
+  const [manualOpen, setManualOpen] = useState<boolean | undefined>();
+  const open = hasDetails && (manualOpen ?? !hasTextAfterTool);
 
   return (
     <Collapsible
@@ -485,11 +486,12 @@ function ElicitationToolPart({
   const questions = elicitation?.questions ?? [];
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [fallbackAnswer, setFallbackAnswer] = useState("");
-  const [manualOpen, setManualOpen] = useState(false);
+  const hasTextAfterTool = useHasTextAfterToolCall(part.toolCallId);
+  const [manualOpen, setManualOpen] = useState<boolean | undefined>();
   const awaitingInput = phase === "awaitingDecision";
   const hasInputQuestions =
     elicitation?.kind === "userInput" || questions.length > 0;
-  const open = manualOpen;
+  const open = manualOpen ?? (awaitingInput || !hasTextAfterTool);
 
   const resume = (response: ChatElicitationResponse) => {
     if (!awaitingInput) return;
@@ -622,6 +624,30 @@ function ElicitationToolPart({
       </CollapsibleContent>
     </Collapsible>
   );
+}
+
+function useHasTextAfterToolCall(toolCallId: string) {
+  return useAuiState((state) => {
+    const toolIndex = state.message.parts.findIndex(
+      (part) => part.type === "tool-call" && part.toolCallId === toolCallId,
+    );
+    return hasTextContentAfterIndex(state.message.parts, toolIndex);
+  });
+}
+
+function hasTextContentAfterIndex(
+  parts: readonly { text?: string; type: string }[],
+  index: number,
+) {
+  for (
+    let partIndex = Math.max(0, index + 1);
+    partIndex < parts.length;
+    partIndex += 1
+  ) {
+    const part = parts[partIndex];
+    if (part?.type === "text" && part.text?.trim()) return true;
+  }
+  return false;
 }
 
 function ElicitationQuestionInput({

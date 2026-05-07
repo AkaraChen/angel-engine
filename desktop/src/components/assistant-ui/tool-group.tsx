@@ -208,10 +208,14 @@ const ToolGroupImpl: FC<
   const label = useAuiState((state) =>
     formatToolGroupLabel(state.message.parts, startIndex, endIndex),
   );
-  const [manualOpen, setManualOpen] = useState(false);
+  const hasTextAfterGroup = useAuiState((state) =>
+    hasTextContentAfterIndex(state.message.parts, endIndex),
+  );
+  const [manualOpen, setManualOpen] = useState<boolean | undefined>();
+  const open = manualOpen ?? !hasTextAfterGroup;
 
   return (
-    <ToolGroupRoot onOpenChange={setManualOpen} open={manualOpen}>
+    <ToolGroupRoot onOpenChange={setManualOpen} open={open}>
       <ToolGroupTrigger active={active} label={label} />
       <ToolGroupContent>{children}</ToolGroupContent>
     </ToolGroupRoot>
@@ -254,6 +258,18 @@ function hasActiveToolGroupPart(
     if (isActiveToolPart(part)) active = true;
   });
   return active;
+}
+
+function hasTextContentAfterIndex(parts: readonly PartState[], index: number) {
+  for (
+    let partIndex = Math.max(0, index + 1);
+    partIndex < parts.length;
+    partIndex += 1
+  ) {
+    const part = parts[partIndex];
+    if (part?.type === "text" && part.text.trim()) return true;
+  }
+  return false;
 }
 
 function forEachToolGroupPart(
