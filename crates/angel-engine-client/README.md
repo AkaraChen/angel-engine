@@ -23,7 +23,7 @@ use angel_engine_client::{
 };
 
 let options = ClientOptions::builder()
-    .acp("kimi")
+    .kimi("kimi")
     .arg("acp")
     .need_auth(true)
     .auto_authenticate(true)
@@ -109,7 +109,7 @@ use angel_engine_client::{AngelClient, ClientOptions};
 
 let mut client = AngelClient::spawn(
     ClientOptions::builder()
-        .acp("kimi")
+        .kimi("kimi")
         .arg("acp")
         .client_name("my-ide")
         .build(),

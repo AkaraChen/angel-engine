@@ -4,6 +4,7 @@ use angel_engine::{
 };
 use angel_provider::acp::AcpAdapter;
 use angel_provider::codex::CodexAdapter;
+use angel_provider::kimi::KimiAdapter;
 use angel_provider::{InterpretedUserInput, ProtocolAdapter};
 use serde_json::Value;
 
@@ -19,6 +20,8 @@ impl RuntimeAdapter {
         let inner: Box<dyn ProtocolAdapter + Send + Sync> = match options.protocol {
             ClientProtocol::Acp if options.auth.need_auth => Box::new(AcpAdapter::standard()),
             ClientProtocol::Acp => Box::new(AcpAdapter::without_authentication()),
+            ClientProtocol::Kimi if options.auth.need_auth => Box::new(KimiAdapter::standard()),
+            ClientProtocol::Kimi => Box::new(KimiAdapter::without_authentication()),
             ClientProtocol::CodexAppServer => Box::new(CodexAdapter::app_server()),
         };
         Self { inner }

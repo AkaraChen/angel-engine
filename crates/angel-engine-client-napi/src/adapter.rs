@@ -503,6 +503,7 @@ fn protocol_flavor_from_js(
     }
     Ok(match options.protocol {
         EngineClientProtocol::Acp => ProtocolFlavor::Acp,
+        EngineClientProtocol::Kimi => ProtocolFlavor::Acp,
         EngineClientProtocol::CodexAppServer => ProtocolFlavor::CodexAppServer,
     })
 }
@@ -526,10 +527,8 @@ fn capabilities_from_js(
 
 fn parse_protocol_flavor(value: &str) -> Result<ProtocolFlavor> {
     match value {
-        "acp" | "Acp" => Ok(ProtocolFlavor::Acp),
-        "codexAppServer" | "codex-app-server" | "CodexAppServer" => {
-            Ok(ProtocolFlavor::CodexAppServer)
-        }
+        "acp" => Ok(ProtocolFlavor::Acp),
+        "codexAppServer" => Ok(ProtocolFlavor::CodexAppServer),
         other => Err(Error::from_reason(format!(
             "unsupported adapter protocol flavor: {other}"
         ))),

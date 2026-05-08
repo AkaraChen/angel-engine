@@ -106,7 +106,7 @@ pub fn create_runtime_options(
             }),
             command: command_override.unwrap_or_else(|| "kimi".to_string()),
             identity,
-            protocol: ClientProtocol::Acp,
+            protocol: ClientProtocol::Kimi,
             ..ClientOptions::builder().build()
         },
         AgentRuntime::Opencode => ClientOptions {
@@ -152,5 +152,30 @@ pub fn create_runtime_options(
         client,
         runtime,
         default_reasoning_effort: overrides.default_reasoning_effort,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn kimi_runtime_uses_kimi_adapter_protocol() {
+        let options = create_runtime_options(Some("kimi"), RuntimeOptionsOverrides::default());
+
+        assert_eq!(options.runtime, AgentRuntime::Kimi);
+        assert_eq!(options.client.protocol, ClientProtocol::Kimi);
+        assert_eq!(options.client.command, "kimi");
+        assert_eq!(options.client.args, vec!["acp"]);
+    }
+
+    #[test]
+    fn opencode_runtime_stays_on_generic_acp_adapter() {
+        let options = create_runtime_options(Some("opencode"), RuntimeOptionsOverrides::default());
+
+        assert_eq!(options.runtime, AgentRuntime::Opencode);
+        assert_eq!(options.client.protocol, ClientProtocol::Acp);
+        assert_eq!(options.client.command, "opencode");
+        assert_eq!(options.client.args, vec!["acp"]);
     }
 }

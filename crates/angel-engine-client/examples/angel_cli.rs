@@ -477,7 +477,7 @@ impl RuntimeKind {
     fn options(self) -> ClientOptions {
         match self {
             Self::Kimi => ClientOptions::builder()
-                .acp("kimi")
+                .kimi("kimi")
                 .arg("acp")
                 .need_auth(true)
                 .auto_authenticate(true)

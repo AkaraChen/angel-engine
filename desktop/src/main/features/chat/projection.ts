@@ -174,6 +174,14 @@ export function projectRunResult(result: TurnRunResult) {
 export function projectTurnRunEvent(
   event: TurnRunEvent,
 ): ProjectedTurnEvent | undefined {
+  if ("messagePart" in event && event.messagePart) {
+    const projected = projectMessagePart(
+      event.messagePart,
+      "turnId" in event ? event.turnId : undefined,
+    );
+    if (projected) return projected;
+  }
+
   if (event.type === "elicitation" && event.elicitation) {
     return {
       elicitation: toChatElicitation(event.elicitation),
@@ -181,13 +189,7 @@ export function projectTurnRunEvent(
     };
   }
 
-  if (!("messagePart" in event) || !event.messagePart) {
-    return undefined;
-  }
-  return projectMessagePart(
-    event.messagePart,
-    "turnId" in event ? event.turnId : undefined,
-  );
+  return undefined;
 }
 
 function contentFromTurnSnapshot(

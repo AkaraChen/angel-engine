@@ -14,6 +14,7 @@ pub enum AgentRuntime {
 #[napi(string_enum = "camelCase")]
 pub enum ClientProtocol {
     Acp,
+    Kimi,
     CodexAppServer,
 }
 

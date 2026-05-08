@@ -7,8 +7,8 @@ use std::time::{Duration, Instant};
 
 use angel_engine::*;
 use angel_provider::ProtocolAdapter;
-use angel_provider::acp::AcpAdapter;
 use angel_provider::codex::CodexAdapter;
+use angel_provider::kimi::KimiAdapter;
 
 type TestResult = Result<(), Box<dyn Error>>;
 
@@ -336,7 +336,7 @@ fn codex_app_server_process_smoke_enters_and_exits_plan_mode() -> TestResult {
 #[test]
 #[ignore = "requires installed and authenticated kimi CLI"]
 fn kimi_acp_process_smoke_enters_and_exits_plan_mode() -> TestResult {
-    let adapter = AcpAdapter::standard();
+    let adapter = KimiAdapter::standard();
     let capabilities = adapter.capabilities();
     let mut process =
         AgentProcess::spawn("kimi", &["acp"], adapter, ProtocolFlavor::Acp, capabilities)?;

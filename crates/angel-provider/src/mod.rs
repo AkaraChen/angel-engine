@@ -5,6 +5,7 @@ use serde_json::Value;
 
 pub mod acp;
 pub mod codex;
+pub mod kimi;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct InterpretedUserInput {

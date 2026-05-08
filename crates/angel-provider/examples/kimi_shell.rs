@@ -1,14 +1,14 @@
 use std::error::Error;
 
 use angel_engine::ProtocolFlavor;
-use angel_provider::acp::AcpAdapter;
+use angel_provider::kimi::KimiAdapter;
 
 mod common;
 
 use common::{ProtocolShell, ShellConfig};
 
 fn main() -> Result<(), Box<dyn Error>> {
-    let adapter = AcpAdapter::standard();
+    let adapter = KimiAdapter::standard();
     let capabilities = adapter.capabilities();
     let config = ShellConfig {
         binary: "kimi",

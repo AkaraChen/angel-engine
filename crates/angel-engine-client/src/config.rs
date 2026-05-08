@@ -31,6 +31,10 @@ impl ClientOptions {
         Self::builder().acp(command).build()
     }
 
+    pub fn kimi(command: impl Into<String>) -> Self {
+        Self::builder().kimi(command).build()
+    }
+
     pub fn codex_app_server(command: impl Into<String>) -> Self {
         Self::builder().codex_app_server(command).build()
     }
@@ -41,6 +45,7 @@ impl ClientOptions {
 pub enum ClientProtocol {
     #[default]
     Acp,
+    Kimi,
     CodexAppServer,
 }
 
@@ -90,6 +95,12 @@ pub struct ClientOptionsBuilder {
 impl ClientOptionsBuilder {
     pub fn acp(mut self, command: impl Into<String>) -> Self {
         self.options.protocol = ClientProtocol::Acp;
+        self.options.command = command.into();
+        self
+    }
+
+    pub fn kimi(mut self, command: impl Into<String>) -> Self {
+        self.options.protocol = ClientProtocol::Kimi;
         self.options.command = command.into();
         self
     }
