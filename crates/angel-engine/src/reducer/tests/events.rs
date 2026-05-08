@@ -197,7 +197,7 @@ fn completed_turn_display_preserves_event_order() {
         .expect("final assistant");
 
     let conversation = &engine.conversations[&conversation_id];
-    let messages = conversation_display_messages(engine.protocol.clone(), conversation);
+    let messages = conversation_display_messages(engine.protocol, conversation);
     let assistant = messages
         .iter()
         .find(|message| message.id == format!("{turn_id}:assistant"))

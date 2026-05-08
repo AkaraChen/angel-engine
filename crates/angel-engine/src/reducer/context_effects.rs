@@ -47,10 +47,10 @@ pub(super) fn codex_context_fields(context: &crate::EffectiveContext) -> Vec<(St
     if let Some(Some(model)) = context.model.effective() {
         fields.push(("model".to_string(), model.clone()));
     }
-    if let Some(reasoning) = context.reasoning.effective().and_then(Option::as_ref) {
-        if let Some(effort) = &reasoning.effort {
-            fields.push(("effort".to_string(), effort.clone()));
-        }
+    if let Some(reasoning) = context.reasoning.effective().and_then(Option::as_ref)
+        && let Some(effort) = &reasoning.effort
+    {
+        fields.push(("effort".to_string(), effort.clone()));
     }
     if let Some(policy) = context.approvals.effective() {
         fields.push((

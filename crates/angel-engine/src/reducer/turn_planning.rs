@@ -119,12 +119,11 @@ impl AngelEngine {
         )?;
 
         let method = self.method_steer_turn(&conversation_id)?;
-        let effect = ProtocolEffect::new(self.protocol, method)
+        let mut effect = ProtocolEffect::new(self.protocol, method)
             .request_id(request_id.clone())
             .conversation_id(conversation_id.clone())
             .turn_id(selected_turn_id.clone())
             .field("input", input_text);
-        let mut effect = effect;
         for (key, value) in effect_fields {
             effect = effect.field(key, value);
         }
@@ -309,43 +308,55 @@ fn ensure_codex_turn_id_available(
 }
 
 fn to_input_refs(input: Vec<UserInput>) -> Vec<UserInputRef> {
-    input
-        .into_iter()
-        .map(|input| {
-            let image = match &input.kind {
-                UserInputKind::Image {
-                    data,
-                    mime_type,
-                    name,
-                } => Some(UserImageInputRef {
-                    data: data.clone(),
-                    mime_type: mime_type.clone(),
-                    name: name.clone(),
-                }),
-                _ => None,
-            };
-            let file = match &input.kind {
-                UserInputKind::EmbeddedBlobResource {
-                    data,
-                    mime_type,
-                    name,
-                    ..
-                } => Some(UserFileInputRef {
-                    data: data.clone(),
-                    mime_type: mime_type
-                        .clone()
-                        .unwrap_or_else(|| "application/octet-stream".to_string()),
-                    name: name.clone(),
-                }),
-                _ => None,
-            };
-            UserInputRef {
-                content: input.content,
-                image,
-                file,
-            }
-        })
-        .collect()
+    input.into_iter().map(to_input_ref).collect()
+}
+
+fn to_input_ref(input: UserInput) -> UserInputRef {
+    let (image, file) = input_attachment_refs(&input.kind);
+    UserInputRef {
+        content: input.content,
+        image,
+        file,
+    }
+}
+
+fn input_attachment_refs(
+    kind: &UserInputKind,
+) -> (Option<UserImageInputRef>, Option<UserFileInputRef>) {
+    match kind {
+        UserInputKind::Image {
+            data,
+            mime_type,
+            name,
+        } => (
+            Some(UserImageInputRef {
+                data: data.clone(),
+                mime_type: mime_type.clone(),
+                name: name.clone(),
+            }),
+            None,
+        ),
+        UserInputKind::EmbeddedBlobResource {
+            data,
+            mime_type,
+            name,
+            ..
+        } => (
+            None,
+            Some(UserFileInputRef {
+                data: data.clone(),
+                mime_type: mime_type
+                    .clone()
+                    .unwrap_or_else(|| "application/octet-stream".to_string()),
+                name: name.clone(),
+            }),
+        ),
+        UserInputKind::Text
+        | UserInputKind::ResourceLink { .. }
+        | UserInputKind::FileMention { .. }
+        | UserInputKind::EmbeddedTextResource { .. }
+        | UserInputKind::RawContentBlock(_) => (None, None),
+    }
 }
 
 fn input_to_text(input: &[UserInput]) -> String {
@@ -360,10 +371,10 @@ fn input_effect_fields(input: &[UserInput]) -> Vec<(String, String)> {
     let mut fields = Vec::new();
     fields.push(("inputCount".to_string(), input.len().to_string()));
     for (index, item) in input.iter().enumerate() {
-        fields.push((format!("input.{index}.content"), item.content.clone()));
+        push_input_field(&mut fields, index, "content", item.content.clone());
         match &item.kind {
             UserInputKind::Text => {
-                fields.push((format!("input.{index}.type"), "text".to_string()));
+                push_input_field(&mut fields, index, "type", "text");
             }
             UserInputKind::ResourceLink {
                 name,
@@ -372,37 +383,27 @@ fn input_effect_fields(input: &[UserInput]) -> Vec<(String, String)> {
                 title,
                 description,
             } => {
-                fields.push((format!("input.{index}.type"), "resource_link".to_string()));
-                fields.push((format!("input.{index}.name"), name.clone()));
-                fields.push((format!("input.{index}.uri"), uri.clone()));
-                if let Some(mime_type) = mime_type {
-                    fields.push((format!("input.{index}.mimeType"), mime_type.clone()));
-                }
-                if let Some(title) = title {
-                    fields.push((format!("input.{index}.title"), title.clone()));
-                }
-                if let Some(description) = description {
-                    fields.push((format!("input.{index}.description"), description.clone()));
-                }
+                push_input_field(&mut fields, index, "type", "resource_link");
+                push_input_field(&mut fields, index, "name", name.clone());
+                push_input_field(&mut fields, index, "uri", uri.clone());
+                push_optional_input_field(&mut fields, index, "mimeType", mime_type);
+                push_optional_input_field(&mut fields, index, "title", title);
+                push_optional_input_field(&mut fields, index, "description", description);
             }
             UserInputKind::FileMention {
                 name,
                 path,
                 mime_type,
             } => {
-                fields.push((format!("input.{index}.type"), "file_mention".to_string()));
-                fields.push((format!("input.{index}.name"), name.clone()));
-                fields.push((format!("input.{index}.path"), path.clone()));
-                if let Some(mime_type) = mime_type {
-                    fields.push((format!("input.{index}.mimeType"), mime_type.clone()));
-                }
+                push_input_field(&mut fields, index, "type", "file_mention");
+                push_input_field(&mut fields, index, "name", name.clone());
+                push_input_field(&mut fields, index, "path", path.clone());
+                push_optional_input_field(&mut fields, index, "mimeType", mime_type);
             }
             UserInputKind::EmbeddedTextResource { uri, mime_type } => {
-                fields.push((format!("input.{index}.type"), "resource".to_string()));
-                fields.push((format!("input.{index}.uri"), uri.clone()));
-                if let Some(mime_type) = mime_type {
-                    fields.push((format!("input.{index}.mimeType"), mime_type.clone()));
-                }
+                push_input_field(&mut fields, index, "type", "resource");
+                push_input_field(&mut fields, index, "uri", uri.clone());
+                push_optional_input_field(&mut fields, index, "mimeType", mime_type);
             }
             UserInputKind::EmbeddedBlobResource {
                 uri,
@@ -410,33 +411,47 @@ fn input_effect_fields(input: &[UserInput]) -> Vec<(String, String)> {
                 mime_type,
                 name,
             } => {
-                fields.push((format!("input.{index}.type"), "resource_blob".to_string()));
-                fields.push((format!("input.{index}.uri"), uri.clone()));
-                fields.push((format!("input.{index}.data"), data.clone()));
-                if let Some(mime_type) = mime_type {
-                    fields.push((format!("input.{index}.mimeType"), mime_type.clone()));
-                }
-                if let Some(name) = name {
-                    fields.push((format!("input.{index}.name"), name.clone()));
-                }
+                push_input_field(&mut fields, index, "type", "resource_blob");
+                push_input_field(&mut fields, index, "uri", uri.clone());
+                push_input_field(&mut fields, index, "data", data.clone());
+                push_optional_input_field(&mut fields, index, "mimeType", mime_type);
+                push_optional_input_field(&mut fields, index, "name", name);
             }
             UserInputKind::Image {
                 data,
                 mime_type,
                 name,
             } => {
-                fields.push((format!("input.{index}.type"), "image".to_string()));
-                fields.push((format!("input.{index}.data"), data.clone()));
-                fields.push((format!("input.{index}.mimeType"), mime_type.clone()));
-                if let Some(name) = name {
-                    fields.push((format!("input.{index}.name"), name.clone()));
-                }
+                push_input_field(&mut fields, index, "type", "image");
+                push_input_field(&mut fields, index, "data", data.clone());
+                push_input_field(&mut fields, index, "mimeType", mime_type.clone());
+                push_optional_input_field(&mut fields, index, "name", name);
             }
             UserInputKind::RawContentBlock(block) => {
-                fields.push((format!("input.{index}.type"), "raw".to_string()));
-                fields.push((format!("input.{index}.raw"), block.clone()));
+                push_input_field(&mut fields, index, "type", "raw");
+                push_input_field(&mut fields, index, "raw", block.clone());
             }
         }
     }
     fields
+}
+
+fn push_input_field(
+    fields: &mut Vec<(String, String)>,
+    index: usize,
+    name: &str,
+    value: impl Into<String>,
+) {
+    fields.push((format!("input.{index}.{name}"), value.into()));
+}
+
+fn push_optional_input_field(
+    fields: &mut Vec<(String, String)>,
+    index: usize,
+    name: &str,
+    value: &Option<String>,
+) {
+    if let Some(value) = value {
+        push_input_field(fields, index, name, value.clone());
+    }
 }

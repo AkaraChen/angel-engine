@@ -82,8 +82,7 @@ impl AngelEngine {
             }
             DeltaKind::Plan => {
                 turn.plan_text.chunks.push(delta);
-                append_turn_plan_display_part(turn);
-                turn.phase = TurnPhase::Planning;
+                mark_turn_planning(turn);
             }
         }
         Ok(TransitionReport::one(UiEvent::TurnChanged {
@@ -152,5 +151,12 @@ pub(super) fn append_turn_plan_display_part(turn: &mut TurnState) {
         .any(|part| matches!(part, TurnDisplayPart::Plan))
     {
         turn.display_parts.push(TurnDisplayPart::Plan);
+    }
+}
+
+pub(super) fn mark_turn_planning(turn: &mut TurnState) {
+    append_turn_plan_display_part(turn);
+    if !turn.is_terminal() {
+        turn.phase = TurnPhase::Planning;
     }
 }

@@ -9,7 +9,7 @@ use crate::protocol::ProtocolFlavor;
 use super::{
     ActionKind, ActionOutputDelta, ActionPhase, ActionState, ContentDelta, ContentPart,
     ConversationState, ElicitationState, HistoryReplayEntry, HistoryRole, PlanEntry,
-    PlanEntryStatus, TurnDisplayContentKind, TurnDisplayPart, TurnState,
+    PlanEntryStatus, TurnDisplayContentKind, TurnDisplayPart, TurnState, UserInputRef,
 };
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -155,23 +155,6 @@ impl DisplayToolAction {
     }
 
     pub fn from_elicitation(elicitation: &ElicitationState) -> Self {
-        let input_summary = elicitation.options.body.clone().or_else(|| {
-            let questions = elicitation
-                .options
-                .questions
-                .iter()
-                .map(|question| {
-                    if question.question.is_empty() {
-                        question.header.as_str()
-                    } else {
-                        question.question.as_str()
-                    }
-                })
-                .filter(|text| !text.is_empty())
-                .collect::<Vec<_>>()
-                .join("\n");
-            (!questions.is_empty()).then_some(questions)
-        });
         Self {
             id: elicitation.id.to_string(),
             turn_id: elicitation.turn_id.clone(),
@@ -186,13 +169,33 @@ impl DisplayToolAction {
                     .clone()
                     .unwrap_or_else(|| "User input requested".to_string()),
             ),
-            input_summary,
+            input_summary: elicitation_input_summary(elicitation),
             raw_input: None,
             output_text: String::new(),
             output: Vec::new(),
             error: None,
         }
     }
+}
+
+fn elicitation_input_summary(elicitation: &ElicitationState) -> Option<String> {
+    elicitation.options.body.clone().or_else(|| {
+        let questions = elicitation
+            .options
+            .questions
+            .iter()
+            .map(|question| {
+                if question.question.is_empty() {
+                    question.header.as_str()
+                } else {
+                    question.question.as_str()
+                }
+            })
+            .filter(|text| !text.is_empty())
+            .collect::<Vec<_>>()
+            .join("\n");
+        (!questions.is_empty()).then_some(questions)
+    })
 }
 
 pub fn conversation_display_messages(
@@ -363,8 +366,7 @@ fn ensure_history_assistant_message(
 ) -> &mut Vec<DisplayMessagePart> {
     if messages
         .last()
-        .map(|message| message.role == DisplayMessageRole::Assistant)
-        .unwrap_or(false)
+        .is_some_and(|message| message.role == DisplayMessageRole::Assistant)
     {
         return &mut messages.last_mut().expect("last message").content;
     }
@@ -416,22 +418,7 @@ fn append_display_parts(parts: &mut Vec<DisplayMessagePart>, next: Vec<DisplayMe
     for part in next {
         match part {
             DisplayMessagePart::Text { kind, text } => append_display_text_part(parts, kind, text),
-            DisplayMessagePart::Image {
-                data,
-                mime_type,
-                name,
-            } => parts.push(DisplayMessagePart::image(data, mime_type, name)),
-            DisplayMessagePart::File {
-                data,
-                mime_type,
-                name,
-            } => parts.push(DisplayMessagePart::file(data, mime_type, name)),
-            DisplayMessagePart::Plan {
-                entries,
-                text,
-                path,
-            } => parts.push(DisplayMessagePart::plan(entries, text, path)),
-            DisplayMessagePart::ToolCall { action } => parts.push(DisplayMessagePart::tool(action)),
+            other => parts.push(other),
         }
     }
 }
@@ -439,20 +426,17 @@ fn append_display_parts(parts: &mut Vec<DisplayMessagePart>, next: Vec<DisplayMe
 fn upsert_display_tool_part(parts: &mut Vec<DisplayMessagePart>, next: DisplayToolAction) {
     let Some(index) = parts.iter().position(|part| match part {
         DisplayMessagePart::ToolCall { action } => action.id == next.id,
-        DisplayMessagePart::Text { .. } => false,
-        DisplayMessagePart::Image { .. } => false,
-        DisplayMessagePart::File { .. } => false,
-        DisplayMessagePart::Plan { .. } => false,
+        _ => false,
     }) else {
         parts.push(DisplayMessagePart::tool(next));
         return;
     };
 
-    let DisplayMessagePart::ToolCall { action: previous } = parts[index].clone() else {
-        parts[index] = DisplayMessagePart::tool(next);
-        return;
+    let DisplayMessagePart::ToolCall { action } = &mut parts[index] else {
+        unreachable!("tool action position should contain a tool action");
     };
-    parts[index] = DisplayMessagePart::tool(merge_display_tool_actions(previous, next));
+    let previous = action.clone();
+    *action = merge_display_tool_actions(previous, next);
 }
 
 fn merge_display_tool_actions(
@@ -522,6 +506,7 @@ fn acp_history_tool_action(value: &Value, fallback_id: String) -> DisplayToolAct
     let output = action_outputs_from_value(value.get("content").or_else(|| value.get("rawOutput")));
     let output_text = action_output_text(&output);
     let phase = normalize_tool_phase(string_field(value, &["status"]).as_deref());
+    let title = string_field(value, &["title"]);
     let error = if phase == ActionPhase::Failed {
         Some(ErrorInfo::new(
             "acp.tool_call_failed",
@@ -537,12 +522,13 @@ fn acp_history_tool_action(value: &Value, fallback_id: String) -> DisplayToolAct
         turn_id: None,
         kind: Some(acp_tool_kind(string_field(value, &["kind"]).as_deref())),
         phase,
-        title: string_field(value, &["title"]),
-        input_summary: string_field(value, &["title"]),
-        raw_input: value
-            .get("rawInput")
-            .map(json_string)
-            .or_else(|| Some(json_string(value))),
+        title: title.clone(),
+        input_summary: title,
+        raw_input: Some(
+            value
+                .get("rawInput")
+                .map_or_else(|| json_string(value), json_string),
+        ),
         output_text,
         output,
         error,
@@ -580,13 +566,14 @@ fn codex_history_tool_action(value: &Value, fallback_id: String) -> DisplayToolA
     let item = codex_replay_value(value);
     let output = codex_tool_output(item);
     let output_text = action_output_text(&output);
+    let title = codex_tool_title(item);
     DisplayToolAction {
         id: string_field(item, &["id", "callId", "call_id", "itemId"]).unwrap_or(fallback_id),
         turn_id: None,
         kind: codex_tool_kind(item),
         phase: codex_tool_phase(item),
-        title: codex_tool_title(item),
-        input_summary: codex_tool_input_summary(item).or_else(|| codex_tool_title(item)),
+        title: title.clone(),
+        input_summary: codex_tool_input_summary(item).or(title),
         raw_input: codex_tool_raw_input(item),
         output_text,
         output,
@@ -736,10 +723,11 @@ fn command_value_text(value: &Value) -> Option<String> {
 
 fn codex_tool_raw_input(item: &Value) -> Option<String> {
     if let Some(raw_input) = item.get("rawInput").or_else(|| item.get("raw_input")) {
-        return raw_input
-            .as_str()
-            .map(str::to_string)
-            .or_else(|| Some(json_string(raw_input)));
+        return Some(
+            raw_input
+                .as_str()
+                .map_or_else(|| json_string(raw_input), str::to_string),
+        );
     }
     match string_field(item, &["type"]).as_deref() {
         Some("function_call") => {
@@ -760,7 +748,7 @@ fn codex_tool_raw_input(item: &Value) -> Option<String> {
 }
 
 fn codex_tool_output(item: &Value) -> Vec<ActionOutputDelta> {
-    let value = [
+    let raw_output = [
         "output",
         "result",
         "content",
@@ -772,7 +760,8 @@ fn codex_tool_output(item: &Value) -> Vec<ActionOutputDelta> {
     ]
     .iter()
     .find_map(|key| item.get(*key));
-    action_outputs_from_value(value.map(codex_raw_output_value).as_ref())
+    let output = raw_output.map(codex_raw_output_value);
+    action_outputs_from_value(output.as_ref())
 }
 
 fn codex_raw_output_value(value: &Value) -> Value {
@@ -864,47 +853,47 @@ fn normalize_tool_phase(status: Option<&str>) -> ActionPhase {
 fn turn_input_display_parts(turn: &TurnState) -> Vec<DisplayMessagePart> {
     let mut parts = Vec::new();
     for input in &turn.input {
-        if let Some(image) = &input.image {
-            parts.push(DisplayMessagePart::image(
-                image.data.clone(),
-                image.mime_type.clone(),
-                image.name.clone(),
-            ));
-        } else if let Some(file) = &input.file {
-            parts.push(DisplayMessagePart::file(
-                file.data.clone(),
-                file.mime_type.clone(),
-                file.name.clone(),
-            ));
-        } else if !input.content.trim().is_empty() {
-            parts.push(DisplayMessagePart::text(
-                DisplayTextPartKind::Text,
-                input.content.clone(),
-            ));
+        if let Some(part) = input_display_part(input) {
+            parts.push(part);
         }
     }
     parts
 }
 
+fn input_display_part(input: &UserInputRef) -> Option<DisplayMessagePart> {
+    if let Some(image) = &input.image {
+        return Some(DisplayMessagePart::image(
+            image.data.clone(),
+            image.mime_type.clone(),
+            image.name.clone(),
+        ));
+    }
+    if let Some(file) = &input.file {
+        return Some(DisplayMessagePart::file(
+            file.data.clone(),
+            file.mime_type.clone(),
+            file.name.clone(),
+        ));
+    }
+    if input.content.trim().is_empty() {
+        return None;
+    }
+    Some(DisplayMessagePart::text(
+        DisplayTextPartKind::Text,
+        input.content.clone(),
+    ))
+}
+
 fn buffer_text(chunks: &[ContentDelta]) -> String {
-    chunks
-        .iter()
-        .filter_map(|chunk| match chunk {
-            ContentDelta::Text(text) => Some(text.clone()),
-            ContentDelta::Parts(parts) => Some(
-                parts
-                    .iter()
-                    .filter_map(|part| match part {
-                        ContentPart::Text(text) => Some(text.as_str()),
-                        ContentPart::Image { .. } | ContentPart::File { .. } => None,
-                    })
-                    .collect::<Vec<_>>()
-                    .join(""),
-            ),
-            ContentDelta::ResourceRef(_) | ContentDelta::Structured(_) => None,
-        })
-        .collect::<Vec<_>>()
-        .join("")
+    let mut text = String::new();
+    for chunk in chunks {
+        match chunk {
+            ContentDelta::Text(chunk_text) => text.push_str(chunk_text),
+            ContentDelta::Parts(parts) => text.push_str(&content_parts_text(parts)),
+            ContentDelta::ResourceRef(_) | ContentDelta::Structured(_) => {}
+        }
+    }
+    text
 }
 
 fn content_delta_text(delta: &ContentDelta) -> String {
@@ -912,15 +901,18 @@ fn content_delta_text(delta: &ContentDelta) -> String {
         ContentDelta::Text(text)
         | ContentDelta::ResourceRef(text)
         | ContentDelta::Structured(text) => text.clone(),
-        ContentDelta::Parts(parts) => parts
-            .iter()
-            .filter_map(|part| match part {
-                ContentPart::Text(text) => Some(text.as_str()),
-                ContentPart::Image { .. } | ContentPart::File { .. } => None,
-            })
-            .collect::<Vec<_>>()
-            .join(""),
+        ContentDelta::Parts(parts) => content_parts_text(parts),
     }
+}
+
+fn content_parts_text(parts: &[ContentPart]) -> String {
+    let mut text = String::new();
+    for part in parts {
+        if let ContentPart::Text(part_text) = part {
+            text.push_str(part_text);
+        }
+    }
+    text
 }
 
 fn content_delta_display_parts(delta: &ContentDelta) -> Vec<DisplayMessagePart> {
@@ -929,25 +921,9 @@ fn content_delta_display_parts(delta: &ContentDelta) -> Vec<DisplayMessagePart> 
             if let Some(plan) = structured_plan_display_part(text) {
                 return vec![plan];
             }
-            if text.trim().is_empty() {
-                Vec::new()
-            } else {
-                vec![DisplayMessagePart::text(
-                    DisplayTextPartKind::Text,
-                    text.clone(),
-                )]
-            }
+            text_display_parts(text)
         }
-        ContentDelta::Text(text) | ContentDelta::ResourceRef(text) => {
-            if text.trim().is_empty() {
-                Vec::new()
-            } else {
-                vec![DisplayMessagePart::text(
-                    DisplayTextPartKind::Text,
-                    text.clone(),
-                )]
-            }
-        }
+        ContentDelta::Text(text) | ContentDelta::ResourceRef(text) => text_display_parts(text),
         ContentDelta::Parts(parts) => parts
             .iter()
             .filter_map(|part| match part {
@@ -969,6 +945,17 @@ fn content_delta_display_parts(delta: &ContentDelta) -> Vec<DisplayMessagePart> 
                 }),
             })
             .collect(),
+    }
+}
+
+fn text_display_parts(text: &str) -> Vec<DisplayMessagePart> {
+    if text.trim().is_empty() {
+        Vec::new()
+    } else {
+        vec![DisplayMessagePart::text(
+            DisplayTextPartKind::Text,
+            text.to_string(),
+        )]
     }
 }
 
@@ -1029,16 +1016,16 @@ fn structured_plan_entry_status(status: &str) -> PlanEntryStatus {
 }
 
 fn action_output_text(chunks: &[ActionOutputDelta]) -> String {
-    chunks
-        .iter()
-        .filter_map(|chunk| match chunk {
-            ActionOutputDelta::Text(text) | ActionOutputDelta::Terminal(text) => {
-                Some(text.as_str())
+    let mut text = String::new();
+    for chunk in chunks {
+        match chunk {
+            ActionOutputDelta::Text(chunk_text) | ActionOutputDelta::Terminal(chunk_text) => {
+                text.push_str(chunk_text);
             }
-            ActionOutputDelta::Patch(_) | ActionOutputDelta::Structured(_) => None,
-        })
-        .collect::<Vec<_>>()
-        .join("")
+            ActionOutputDelta::Patch(_) | ActionOutputDelta::Structured(_) => {}
+        }
+    }
+    text
 }
 
 fn content_text(value: &Value) -> Option<String> {
