@@ -2,7 +2,7 @@ import * as React from "react";
 import { Toast as ToastPrimitive } from "radix-ui";
 import { XIcon } from "lucide-react";
 
-import { cn } from "@/lib/utils";
+import { cn } from "@/platform/utils";
 
 type ToastVariant = "default" | "destructive";
 

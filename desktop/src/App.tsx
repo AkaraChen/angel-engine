@@ -1,8 +1,8 @@
 import { QueryClientProvider } from "@tanstack/react-query";
 
-import { AppRouter } from "@/app/app-router";
+import { AppRouter } from "@/app/router";
 import { ToastProvider } from "@/components/ui/toast";
-import { queryClient } from "@/lib/query-client";
+import { queryClient } from "@/app/query-client";
 
 export function App() {
   return (

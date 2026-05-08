@@ -1,0 +1,428 @@
+import type {
+  ActionSnapshot,
+  ConversationSnapshot,
+  DisplayMessagePartSnapshot,
+  DisplayMessageSnapshot,
+  DisplayToolActionSnapshot,
+  ElicitationSnapshot,
+  TurnRunEvent,
+  TurnRunResult,
+  TurnSnapshot,
+} from "@angel-engine/client-napi";
+
+import type {
+  ChatElicitation,
+  ChatHistoryMessage,
+  ChatHistoryMessagePart,
+  ChatPlanData,
+  ChatPlanEntryStatus,
+  ChatRuntimeConfig,
+  ChatStreamDelta,
+  ChatToolAction,
+} from "../../../shared/chat";
+import {
+  appendChatTextPart,
+  chatToolActionToPart,
+  imageDataUrl,
+  isChatPlanData,
+  normalizeChatPlanMessages,
+  upsertChatPlanPart,
+} from "../../../shared/chat";
+
+type ToolActionSnapshotLike = ActionSnapshot | DisplayToolActionSnapshot;
+export type ProjectedTurnEvent =
+  | ChatStreamDelta
+  | { plan: ChatPlanData; turnId?: string; type: "plan" }
+  | { elicitation: ChatElicitation; type: "elicitation" }
+  | { action: ChatToolAction; type: "tool" };
+
+export function conversationMessages(
+  snapshot: ConversationSnapshot,
+): ChatHistoryMessage[] {
+  return normalizeChatPlanMessages(
+    snapshot.messages
+      .map(displayMessageToChatMessage)
+      .filter((message) => message.content.length > 0),
+  );
+}
+
+function displayMessageToChatMessage(
+  message: DisplayMessageSnapshot,
+): ChatHistoryMessage {
+  return {
+    content: displayMessagePartsToChatParts(message.content),
+    id: message.id,
+    role:
+      message.role === "user" || message.role === "system"
+        ? message.role
+        : "assistant",
+  };
+}
+
+function displayMessagePartsToChatParts(
+  parts: DisplayMessagePartSnapshot[],
+): ChatHistoryMessagePart[] {
+  return parts.flatMap(displayMessagePartToChatParts);
+}
+
+function displayMessagePartToChatParts(
+  part: DisplayMessagePartSnapshot,
+): ChatHistoryMessagePart[] {
+  switch (part.type) {
+    case "reasoning":
+    case "text":
+      return part.text?.trim() ? [{ text: part.text, type: part.type }] : [];
+    case "tool-call":
+      return part.action ? [chatPartFromAction(toChatAction(part.action))] : [];
+    case "plan":
+      return part.plan ? planMessagePart(part.plan) : [];
+    case "image":
+      return part.data && part.mimeType?.startsWith("image/")
+        ? [
+            {
+              filename: part.name ?? undefined,
+              image: imageDataUrl(part.data, part.mimeType),
+              mimeType: part.mimeType,
+              type: "image",
+            },
+          ]
+        : [];
+    case "file":
+      return part.data && part.mimeType
+        ? [
+            {
+              data: part.data,
+              filename: part.name ?? undefined,
+              mimeType: part.mimeType,
+              type: "file",
+            },
+          ]
+        : [];
+    default:
+      return part.text?.trim() ? [{ text: part.text, type: "text" }] : [];
+  }
+}
+
+export function runtimeConfigFromConversationSnapshot(
+  snapshot: ConversationSnapshot,
+): ChatRuntimeConfig {
+  const settings = snapshot.settings;
+  const modelList = settings.modelList;
+  const availableModes = settings.availableModes;
+  const reasoningLevel = settings.reasoningLevel;
+  const currentMode =
+    snapshot.agentState?.currentMode ?? availableModes.currentModeId ?? null;
+
+  return {
+    agentState: {
+      currentMode,
+    },
+    canSetModel: modelList.canSet,
+    canSetMode: availableModes.canSet,
+    canSetReasoningEffort: reasoningLevel.canSet,
+    availableCommands: snapshot.availableCommands.map((command) => ({
+      description: command.description,
+      inputHint: command.inputHint ?? null,
+      name: command.name,
+    })),
+    currentMode,
+    currentModel: modelList.currentModelId ?? null,
+    currentReasoningEffort: reasoningLevel.currentLevel ?? null,
+    modes: availableModes.availableModes.map((mode) => ({
+      description: mode.description,
+      label: mode.name || mode.id,
+      value: mode.id,
+    })),
+    models: modelList.availableModels.map((model) => ({
+      description: model.description,
+      label: model.name || model.id,
+      value: model.id,
+    })),
+    reasoningEfforts: reasoningLevel.availableOptions.map((effort) => ({
+      description: effort.description,
+      label: effort.label,
+      value: effort.value,
+    })),
+  };
+}
+
+export function projectRunResult(result: TurnRunResult) {
+  let content: ChatHistoryMessagePart[] = [];
+  if (result.message) {
+    content = displayMessagePartsToChatParts(result.message.content);
+  } else if (result.turn) {
+    content = contentFromTurnSnapshot(result.turn, result.actions);
+  }
+
+  if (content.length === 0 && result.text.trim()) {
+    content.push({ text: result.text, type: "text" });
+  }
+
+  return {
+    config: result.conversation
+      ? runtimeConfigFromConversationSnapshot(result.conversation)
+      : undefined,
+    content,
+    model: result.model,
+    reasoning: result.reasoning,
+    remoteThreadId: result.remoteThreadId,
+    text: result.text,
+    turnId: result.turnId,
+  };
+}
+
+export function projectTurnRunEvent(
+  event: TurnRunEvent,
+): ProjectedTurnEvent | undefined {
+  if (event.type === "elicitation" && event.elicitation) {
+    return {
+      elicitation: toChatElicitation(event.elicitation),
+      type: "elicitation",
+    };
+  }
+
+  if (!("messagePart" in event) || !event.messagePart) {
+    return undefined;
+  }
+  return projectMessagePart(
+    event.messagePart,
+    "turnId" in event ? event.turnId : undefined,
+  );
+}
+
+function contentFromTurnSnapshot(
+  turn: TurnSnapshot,
+  actions: ActionSnapshot[],
+): ChatHistoryMessagePart[] {
+  const parts: ChatHistoryMessagePart[] = [];
+  appendChatTextPart(parts, "reasoning", turn.reasoningText ?? "");
+  const plan = planFromTurnSnapshot(turn);
+  if (plan) upsertChatPlanPart(parts, plan);
+  for (const action of actions) {
+    parts.push(chatPartFromAction(toChatAction(action)));
+  }
+  appendChatTextPart(parts, "text", turn.outputText ?? "");
+  return parts;
+}
+
+function projectMessagePart(
+  part: DisplayMessagePartSnapshot,
+  turnId?: string,
+): ProjectedTurnEvent | undefined {
+  if (part.type === "text" || part.type === "reasoning") {
+    return {
+      part: part.type,
+      text: part.text ?? "",
+      turnId,
+      type: "delta",
+    };
+  }
+
+  if (part.type === "tool-call" && part.action) {
+    const action = toChatAction(part.action);
+    const elicitation = questionElicitationFromAction(action);
+    if (elicitation) {
+      return {
+        elicitation,
+        type: "elicitation",
+      };
+    }
+
+    return {
+      action,
+      type: "tool",
+    };
+  }
+
+  if (part.type === "plan" && part.plan) {
+    return {
+      plan: toChatPlanData(part.plan),
+      turnId,
+      type: "plan",
+    };
+  }
+
+  return undefined;
+}
+
+function planMessagePart(plan: unknown): ChatHistoryMessagePart[] {
+  const data = toChatPlanData(plan);
+  return isChatPlanData(data)
+    ? [
+        {
+          data,
+          name: "plan",
+          type: "data",
+        },
+      ]
+    : [];
+}
+
+function planFromTurnSnapshot(turn: TurnSnapshot): ChatPlanData | undefined {
+  const data = {
+    entries: (turn.plan ?? []).map((entry) => ({
+      content: entry.content,
+      status: normalizePlanEntryStatus(entry.status),
+    })),
+    path: turn.planPath ?? null,
+    text: turn.planText ?? "",
+  };
+  return isEmptyPlan(data) ? undefined : data;
+}
+
+function toChatPlanData(plan: unknown): ChatPlanData {
+  const value = plan as {
+    entries?: Array<{ content?: string; status?: string; text?: string }>;
+    path?: string | null;
+    text?: string;
+  };
+  return {
+    entries: (value.entries ?? []).map((entry) => ({
+      content: entry.content ?? entry.text ?? "",
+      status: normalizePlanEntryStatus(entry.status),
+    })),
+    path: value.path ?? null,
+    text: value.text ?? "",
+  };
+}
+
+function isEmptyPlan(plan: ChatPlanData) {
+  return (
+    plan.entries.length === 0 &&
+    !plan.text.trim() &&
+    !(typeof plan.path === "string" && plan.path.trim())
+  );
+}
+
+function normalizePlanEntryStatus(status?: string): ChatPlanEntryStatus {
+  switch (status) {
+    case "completed":
+      return "completed";
+    case "inProgress":
+    case "in_progress":
+      return "inProgress";
+    default:
+      return "pending";
+  }
+}
+
+function toChatAction(action: ToolActionSnapshotLike): ChatToolAction {
+  return {
+    error: action.error,
+    id: action.id,
+    inputSummary: action.inputSummary,
+    kind: action.kind,
+    output: action.output,
+    outputText: action.outputText,
+    phase: action.phase,
+    rawInput: action.rawInput,
+    title: action.title,
+    turnId: action.turnId ?? undefined,
+  };
+}
+
+function chatPartFromAction(action: ChatToolAction): ChatHistoryMessagePart {
+  const elicitation = questionElicitationFromAction(action);
+  if (elicitation) {
+    return {
+      data: elicitation,
+      name: "elicitation",
+      type: "data",
+    };
+  }
+  return chatToolActionToPart(action);
+}
+
+function questionElicitationFromAction(
+  action: ChatToolAction,
+): ChatElicitation | undefined {
+  const elicitation = parseChatElicitation(action.rawInput);
+  if (!elicitation) return undefined;
+  if (!shouldRenderAsQuestionElicitation(elicitation)) return undefined;
+  return {
+    ...elicitation,
+    phase: elicitationPhaseFromAction(
+      action.phase,
+      elicitation.phase,
+      actionHasOutput(action),
+    ),
+  };
+}
+
+function shouldRenderAsQuestionElicitation(elicitation: ChatElicitation) {
+  return (
+    elicitation.kind === "userInput" || (elicitation.questions?.length ?? 0) > 0
+  );
+}
+
+function parseChatElicitation(
+  rawInput?: string | null,
+): ChatElicitation | undefined {
+  if (!rawInput) return undefined;
+  try {
+    const parsed: unknown = JSON.parse(rawInput);
+    if (
+      parsed &&
+      typeof parsed === "object" &&
+      typeof (parsed as Partial<ChatElicitation>).id === "string" &&
+      typeof (parsed as Partial<ChatElicitation>).kind === "string" &&
+      typeof (parsed as Partial<ChatElicitation>).phase === "string"
+    ) {
+      return parsed as ChatElicitation;
+    }
+  } catch {
+    return undefined;
+  }
+  return undefined;
+}
+
+function elicitationPhaseFromAction(
+  actionPhase: string | undefined,
+  fallback: string,
+  hasOutput: boolean,
+) {
+  if (hasOutput) return "resolved:Answers";
+  switch (actionPhase) {
+    case "completed":
+      return "resolved:Answers";
+    case "cancelled":
+    case "declined":
+    case "failed":
+      return "cancelled";
+    case "awaitingDecision":
+      return "open";
+    default:
+      return fallback;
+  }
+}
+
+function actionHasOutput(action: ChatToolAction) {
+  return Boolean(
+    action.outputText?.trim() ||
+    action.output?.some((output) => output.text.trim()),
+  );
+}
+
+function toChatElicitation(elicitation: ElicitationSnapshot): ChatElicitation {
+  return {
+    actionId: elicitation.actionId ?? null,
+    body: elicitation.body ?? null,
+    choices: elicitation.choices,
+    id: elicitation.id,
+    kind: elicitation.kind,
+    phase: elicitation.phase,
+    questions: elicitation.questions.map((question) => ({
+      header: question.header || undefined,
+      id: question.id,
+      isOther: question.isOther,
+      isSecret: question.isSecret,
+      options: question.options.map((option) => ({
+        description: option.description || undefined,
+        label: option.label,
+      })),
+      question: question.question || undefined,
+    })),
+    title: elicitation.title ?? null,
+    turnId: elicitation.turnId ?? null,
+  };
+}

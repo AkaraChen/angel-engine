@@ -3,7 +3,7 @@ import { createRoot } from "react-dom/client";
 
 import { App } from "./App";
 import "./index.css";
-import { applyDesktopPlatform, syncSystemColorScheme } from "./lib/theme";
+import { applyDesktopPlatform, syncSystemColorScheme } from "./platform/theme";
 
 applyDesktopPlatform();
 const stopSystemColorSchemeSync = syncSystemColorScheme();

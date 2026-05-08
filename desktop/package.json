@@ -4,6 +4,7 @@
   "version": "1.0.0",
   "description": "Desktop shell for Angel Engine.",
   "main": ".vite/build/main.js",
+  "packageManager": "yarn@4.14.1",
   "private": true,
   "scripts": {
     "start": "electron-forge start",
@@ -61,6 +62,7 @@
     "@streamdown/mermaid": "^1.0.2",
     "@tanstack/react-query": "^5.100.9",
     "ai": "^6.0.175",
+    "arktype": "^2.2.0",
     "better-sqlite3": "^12.9.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",

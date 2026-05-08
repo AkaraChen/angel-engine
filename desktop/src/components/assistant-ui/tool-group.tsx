@@ -21,7 +21,7 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
-import { cn } from "@/lib/utils";
+import { cn } from "@/platform/utils";
 import { isChatToolAction, isTerminalChatToolPhase } from "@/shared/chat";
 
 const ANIMATION_DURATION = 200;

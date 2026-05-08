@@ -5,10 +5,10 @@ import { pathToFileURL } from "node:url";
 import started from "electron-squirrel-startup";
 import { registerIpcMain } from "@egoist/tipc/main";
 
-import { closeChatSession } from "./main/chat/angel-client";
-import { registerChatStreamIpc } from "./main/chat/stream-ipc";
-import { closeProjectsDatabase } from "./main/projects/repository";
-import { appRouter } from "./main/router";
+import { closeChatSession } from "./main/features/chat/angel-client";
+import { registerChatStreamIpc } from "./main/features/chat/stream-ipc";
+import { closeProjectsDatabase } from "./main/features/projects/repository";
+import { appRouter } from "./main/ipc/app-router";
 
 const isMacOS = process.platform === "darwin";
 
@@ -36,7 +36,6 @@ function restoreShellPath() {
       process.env.PATH,
       "/opt/homebrew/bin:/opt/homebrew/sbin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin",
       `${process.env.HOME ?? ""}/.local/bin`,
-      `${process.env.HOME ?? ""}/.2code/bin`,
     );
   }
 }
