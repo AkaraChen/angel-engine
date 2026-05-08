@@ -331,6 +331,7 @@ fn codex_hydrate_restores_host_capability_question_and_answer() {
             target: ResumeTarget::Remote {
                 id: "thread".to_string(),
                 hydrate: true,
+                cwd: None,
             },
         })
         .expect("resume thread");

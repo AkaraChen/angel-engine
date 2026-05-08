@@ -287,6 +287,7 @@ pub struct StartConversationRequest {
 pub struct ResumeConversationRequest {
     pub remote_id: String,
     pub hydrate: Option<bool>,
+    pub cwd: Option<String>,
     pub additional_directories: Option<Vec<String>>,
 }
 

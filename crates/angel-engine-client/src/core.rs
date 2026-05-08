@@ -121,11 +121,13 @@ where
             ResumeTarget::Remote {
                 id: request.remote_id,
                 hydrate: request.hydrate,
+                cwd: request.cwd,
             }
         } else {
             ResumeTarget::RemoteWithContext {
                 id: request.remote_id,
                 hydrate: request.hydrate,
+                cwd: request.cwd,
                 additional_directories: request.additional_directories,
             }
         };
@@ -600,6 +602,8 @@ pub struct ResumeConversationRequest {
     pub remote_id: String,
     #[serde(default)]
     pub hydrate: bool,
+    #[serde(default)]
+    pub cwd: Option<String>,
     #[serde(default)]
     pub additional_directories: Vec<String>,
 }

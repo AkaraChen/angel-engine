@@ -324,6 +324,7 @@ impl AngelSession {
         let result = if let Some(remote_id) = remote_id {
             self.client.resume_conversation(ResumeConversationRequest {
                 additional_directories: Vec::new(),
+                cwd,
                 hydrate: true,
                 remote_id,
             })?

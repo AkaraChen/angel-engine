@@ -111,6 +111,7 @@ fn resume_requires_negotiated_common_capability() {
             target: ResumeTarget::Remote {
                 id: "sess".to_string(),
                 hydrate: false,
+                cwd: None,
             },
         })
         .expect_err("resume should be gated");
@@ -142,6 +143,38 @@ fn start_conversation_carries_only_common_create_fields() {
         Some(&"/tmp/project".to_string())
     );
     assert_eq!(plan.effects[0].payload.fields.len(), 1);
+}
+
+#[test]
+fn remote_resume_carries_requested_cwd() {
+    let mut capabilities = acp_capabilities();
+    capabilities.lifecycle.load = CapabilitySupport::Supported;
+    let mut engine = engine_with(ProtocolFlavor::Acp, capabilities);
+
+    let plan = engine
+        .plan_command(EngineCommand::ResumeConversation {
+            target: ResumeTarget::Remote {
+                id: "sess".to_string(),
+                hydrate: true,
+                cwd: Some("/tmp/project".to_string()),
+            },
+        })
+        .expect("resume remote conversation");
+    let conversation_id = plan.conversation_id.expect("conversation id");
+
+    assert_eq!(
+        plan.effects[0].payload.fields.get("cwd"),
+        Some(&"/tmp/project".to_string())
+    );
+    assert_eq!(
+        engine.conversations[&conversation_id]
+            .context
+            .cwd
+            .effective()
+            .and_then(|cwd| cwd.as_ref())
+            .map(|cwd| cwd.display().to_string()),
+        Some("/tmp/project".to_string())
+    );
 }
 
 #[test]

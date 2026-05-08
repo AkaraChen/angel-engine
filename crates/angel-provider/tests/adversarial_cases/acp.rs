@@ -676,6 +676,7 @@ fn acp_load_hydrates_replay_updates_before_response_without_session_id() {
             target: ResumeTarget::Remote {
                 id: "sess".to_string(),
                 hydrate: true,
+                cwd: None,
             },
         })
         .expect("load session");
@@ -768,6 +769,7 @@ fn acp_resume_response_without_session_id_keeps_existing_remote_session() {
             target: ResumeTarget::Remote {
                 id: "sess".to_string(),
                 hydrate: false,
+                cwd: None,
             },
         })
         .expect("resume session");
@@ -914,6 +916,7 @@ fn acp_additional_directories_are_capability_gated_and_encoded() {
             target: ResumeTarget::RemoteWithContext {
                 id: "sess".to_string(),
                 hydrate: true,
+                cwd: None,
                 additional_directories: vec!["/repo/extra".to_string(), "/repo/lib".to_string()],
             },
         })

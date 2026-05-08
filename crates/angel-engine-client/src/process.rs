@@ -109,8 +109,11 @@ impl AngelClient {
 
     pub fn resume_conversation(
         &mut self,
-        request: ResumeConversationRequest,
+        mut request: ResumeConversationRequest,
     ) -> ClientResult<ClientCommandResult> {
+        if request.cwd.is_none() {
+            request.cwd = self.default_cwd.clone().or_else(current_dir_string);
+        }
         let result = self.core.resume_conversation(request)?;
         self.finish_conversation_command(result)
     }

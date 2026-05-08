@@ -1,4 +1,4 @@
-use std::fmt;
+use std::{fmt, time::Instant};
 
 use angel_engine::{
     AngelEngine, ConversationCapabilities, ConversationId, EngineError, EngineEvent,
@@ -16,6 +16,8 @@ use napi::bindgen_prelude::*;
 use napi_derive::napi;
 use serde_json::{Value, json};
 
+use crate::{json_shape, napi_trace, trace_napi_result};
+
 type EngineResult<T> = std::result::Result<T, EngineError>;
 
 #[napi(js_name = "AcpAdapter")]
@@ -30,26 +32,40 @@ impl AcpAdapter {
         ts_args_type = "options?: { needAuthentication?: boolean } | null"
     )]
     pub fn new(options: Option<Value>) -> Result<Self> {
+        let started = Instant::now();
         let need_authentication = options
             .as_ref()
             .and_then(|value| value.get("needAuthentication"))
             .and_then(Value::as_bool)
             .unwrap_or(true);
+        napi_trace(format!(
+            "AcpAdapter.new start need_authentication={need_authentication} options={}",
+            options
+                .as_ref()
+                .map(json_shape)
+                .unwrap_or_else(|| "<none>".to_string())
+        ));
         let adapter = if need_authentication {
             EngineAcpAdapter::standard()
         } else {
             EngineAcpAdapter::without_authentication()
         };
+        napi_trace(format!(
+            "AcpAdapter.new ok elapsed_ms={}",
+            started.elapsed().as_millis()
+        ));
         Ok(Self { adapter })
     }
 
     #[napi(js_name = "_angelNativeAdapterKind")]
     pub fn native_adapter_kind(&self) -> String {
+        napi_trace("AcpAdapter._angelNativeAdapterKind called");
         "acp".to_string()
     }
 
     #[napi(js_name = "_angelNativeAcpNeedAuthentication")]
     pub fn native_acp_need_authentication(&self) -> bool {
+        napi_trace("AcpAdapter._angelNativeAcpNeedAuthentication called");
         self.adapter
             .adapter_capabilities()
             .runtime
@@ -59,11 +75,13 @@ impl AcpAdapter {
 
     #[napi(js_name = "protocolFlavor", ts_return_type = "`${ClientProtocol}`")]
     pub fn protocol_flavor(&self) -> String {
+        napi_trace("AcpAdapter.protocolFlavor called");
         "acp".to_string()
     }
 
     #[napi(ts_return_type = "unknown")]
     pub fn capabilities(&self) -> Result<Value> {
+        napi_trace("AcpAdapter.capabilities called");
         to_json(self.adapter.capabilities())
     }
 
@@ -73,6 +91,10 @@ impl AcpAdapter {
         ts_return_type = "TransportOutput"
     )]
     pub fn encode_effect(&self, input: Value) -> Result<Value> {
+        napi_trace(format!(
+            "AcpAdapter.encodeEffect called input={}",
+            json_shape(&input)
+        ));
         input
             .get("baseOutput")
             .cloned()
@@ -85,6 +107,10 @@ impl AcpAdapter {
         ts_return_type = "TransportOutput"
     )]
     pub fn decode_message(&self, input: Value) -> Result<Value> {
+        napi_trace(format!(
+            "AcpAdapter.decodeMessage called input={}",
+            json_shape(&input)
+        ));
         input
             .get("baseOutput")
             .cloned()
@@ -98,9 +124,14 @@ impl AcpAdapter {
     )]
     pub fn model_catalog_from_runtime_debug(
         &self,
-        _result: Value,
-        _current_model_id: Option<String>,
+        result: Value,
+        current_model_id: Option<String>,
     ) -> Option<Value> {
+        napi_trace(format!(
+            "AcpAdapter.modelCatalogFromRuntimeDebug called result={} current_model_id={}",
+            json_shape(&result),
+            current_model_id.as_deref().unwrap_or("<none>")
+        ));
         None
     }
 }
@@ -112,9 +143,23 @@ pub(crate) enum NapiRuntimeAdapter {
 
 impl NapiRuntimeAdapter {
     pub(crate) fn new(options: &EngineClientOptions, adapter: Option<Object<'_>>) -> Result<Self> {
+        let started = Instant::now();
+        napi_trace(format!(
+            "NapiRuntimeAdapter.new start protocol={:?} adapter_present={}",
+            options.protocol,
+            adapter.is_some()
+        ));
         match adapter {
-            Some(adapter) => Ok(Self::Js(JsProtocolAdapter::new(options, adapter)?)),
-            None => Ok(Self::Builtin(EngineRuntimeAdapter::from_options(options))),
+            Some(adapter) => {
+                let result = JsProtocolAdapter::new(options, adapter).map(Self::Js);
+                trace_napi_result("NapiRuntimeAdapter.new", started, &result);
+                result
+            }
+            None => {
+                let result = Ok(Self::Builtin(EngineRuntimeAdapter::from_options(options)));
+                trace_napi_result("NapiRuntimeAdapter.new", started, &result);
+                result
+            }
         }
     }
 }
@@ -130,6 +175,7 @@ impl fmt::Debug for NapiRuntimeAdapter {
 
 impl EngineProtocolAdapter for NapiRuntimeAdapter {
     fn protocol_flavor(&self) -> ProtocolFlavor {
+        napi_trace("NapiRuntimeAdapter.protocol_flavor called");
         match self {
             Self::Builtin(adapter) => adapter.protocol_flavor(),
             Self::Js(adapter) => adapter.protocol_flavor(),
@@ -137,6 +183,7 @@ impl EngineProtocolAdapter for NapiRuntimeAdapter {
     }
 
     fn capabilities(&self) -> ConversationCapabilities {
+        napi_trace("NapiRuntimeAdapter.capabilities called");
         match self {
             Self::Builtin(adapter) => adapter.capabilities(),
             Self::Js(adapter) => adapter.capabilities(),
@@ -149,10 +196,29 @@ impl EngineProtocolAdapter for NapiRuntimeAdapter {
         effect: &ProtocolEffect,
         options: &TransportOptions,
     ) -> EngineResult<TransportOutput> {
-        match self {
+        let started = Instant::now();
+        napi_trace(format!(
+            "NapiRuntimeAdapter.encode_effect start adapter_kind={} flavor={} method={} conversation_id={} turn_id={}",
+            self.adapter_kind_name(),
+            protocol_flavor_name(effect.flavor),
+            method_name(&effect.method),
+            effect
+                .conversation_id
+                .as_ref()
+                .map(ToString::to_string)
+                .unwrap_or_else(|| "<none>".to_string()),
+            effect
+                .turn_id
+                .as_ref()
+                .map(ToString::to_string)
+                .unwrap_or_else(|| "<none>".to_string())
+        ));
+        let result = match self {
             Self::Builtin(adapter) => adapter.encode_effect(engine, effect, options),
             Self::Js(adapter) => adapter.encode_effect(engine, effect, options),
-        }
+        };
+        trace_transport_output_result("NapiRuntimeAdapter.encode_effect", started, &result);
+        result
     }
 
     fn decode_message(
@@ -160,10 +226,18 @@ impl EngineProtocolAdapter for NapiRuntimeAdapter {
         engine: &AngelEngine,
         message: &JsonRpcMessage,
     ) -> EngineResult<TransportOutput> {
-        match self {
+        let started = Instant::now();
+        napi_trace(format!(
+            "NapiRuntimeAdapter.decode_message start adapter_kind={} message={}",
+            self.adapter_kind_name(),
+            json_shape(&message.to_value())
+        ));
+        let result = match self {
             Self::Builtin(adapter) => adapter.decode_message(engine, message),
             Self::Js(adapter) => adapter.decode_message(engine, message),
-        }
+        };
+        trace_transport_output_result("NapiRuntimeAdapter.decode_message", started, &result);
+        result
     }
 
     fn model_catalog_from_runtime_debug(
@@ -171,12 +245,23 @@ impl EngineProtocolAdapter for NapiRuntimeAdapter {
         result: &Value,
         current_model_id: Option<&str>,
     ) -> Option<SessionModelState> {
-        match self {
-            Self::Builtin(adapter) => {
-                adapter.model_catalog_from_runtime_debug(result, current_model_id)
-            }
-            Self::Js(adapter) => adapter.model_catalog_from_runtime_debug(result, current_model_id),
-        }
+        trace_optional_value(
+            "NapiRuntimeAdapter.model_catalog_from_runtime_debug",
+            format!(
+                "adapter_kind={} result={} current_model_id={}",
+                self.adapter_kind_name(),
+                json_shape(result),
+                current_model_id.unwrap_or("<none>")
+            ),
+            || match self {
+                Self::Builtin(adapter) => {
+                    adapter.model_catalog_from_runtime_debug(result, current_model_id)
+                }
+                Self::Js(adapter) => {
+                    adapter.model_catalog_from_runtime_debug(result, current_model_id)
+                }
+            },
+        )
     }
 
     fn interpret_user_input(
@@ -185,9 +270,27 @@ impl EngineProtocolAdapter for NapiRuntimeAdapter {
         conversation_id: &ConversationId,
         input: &[UserInput],
     ) -> EngineResult<Option<InterpretedUserInput>> {
-        match self {
+        let started = Instant::now();
+        napi_trace(format!(
+            "NapiRuntimeAdapter.interpret_user_input start adapter_kind={} conversation_id={} input_len={}",
+            self.adapter_kind_name(),
+            conversation_id,
+            input.len()
+        ));
+        let result = match self {
             Self::Builtin(adapter) => adapter.interpret_user_input(engine, conversation_id, input),
             Self::Js(adapter) => adapter.interpret_user_input(engine, conversation_id, input),
+        };
+        trace_engine_result("NapiRuntimeAdapter.interpret_user_input", started, &result);
+        result
+    }
+}
+
+impl NapiRuntimeAdapter {
+    fn adapter_kind_name(&self) -> &'static str {
+        match self {
+            Self::Builtin(_) => "builtin",
+            Self::Js(_) => "js",
         }
     }
 }
@@ -202,19 +305,26 @@ pub(crate) struct JsProtocolAdapter {
 
 impl JsProtocolAdapter {
     fn new(options: &EngineClientOptions, adapter: Object<'_>) -> Result<Self> {
+        let started = Instant::now();
+        napi_trace(format!(
+            "JsProtocolAdapter.new start protocol={:?}",
+            options.protocol
+        ));
         let env = Env::from(adapter.value().env);
         let native_base = native_acp_adapter(&adapter)
             .map(NativeBaseAdapter::Acp)
             .or_else(|| native_base_adapter_from_js(&adapter).ok().flatten());
         let flavor = protocol_flavor_from_js(&adapter, native_base.as_ref(), options)?;
         let capabilities = capabilities_from_js(&adapter, native_base.as_ref(), flavor)?;
-        Ok(Self {
+        let result = Ok(Self {
             env,
             object: Some(adapter.create_ref::<false>()?),
             flavor,
             capabilities,
             native_base,
-        })
+        });
+        trace_napi_result("JsProtocolAdapter.new", started, &result);
+        result
     }
 
     fn call_transport_method(
@@ -222,6 +332,11 @@ impl JsProtocolAdapter {
         method: &str,
         mut input: Value,
     ) -> EngineResult<TransportOutput> {
+        let started = Instant::now();
+        napi_trace(format!(
+            "JsProtocolAdapter.{method} start input={}",
+            json_shape(&input)
+        ));
         let object = self.object_value()?;
         let object_ref = self.object_ref()?;
         let function: Function<'_, Value, Value> =
@@ -231,7 +346,9 @@ impl JsProtocolAdapter {
         let output = function
             .apply(object_ref, input.take())
             .map_err(|error| invalid_command(format!("adapter.{method} threw: {error}")))?;
-        transport_output_from_json(output)
+        let result = transport_output_from_json(output);
+        trace_transport_output_result(&format!("JsProtocolAdapter.{method}"), started, &result);
+        result
     }
 
     fn object_value(&self) -> EngineResult<Object<'_>> {
@@ -270,6 +387,14 @@ impl fmt::Debug for JsProtocolAdapter {
 
 impl Drop for JsProtocolAdapter {
     fn drop(&mut self) {
+        napi_trace(format!(
+            "JsProtocolAdapter.drop flavor={} native_base={}",
+            protocol_flavor_name(self.flavor),
+            self.native_base
+                .as_ref()
+                .map(NativeBaseAdapter::kind_name)
+                .unwrap_or("<none>")
+        ));
         if let Some(object) = self.object.take() {
             let _ = object.unref(&self.env);
         }
@@ -291,6 +416,15 @@ impl EngineProtocolAdapter for JsProtocolAdapter {
         effect: &ProtocolEffect,
         options: &TransportOptions,
     ) -> EngineResult<TransportOutput> {
+        napi_trace(format!(
+            "JsProtocolAdapter.encode_effect dispatch method={} native_base={} overridden={}",
+            method_name(&effect.method),
+            self.native_base
+                .as_ref()
+                .map(NativeBaseAdapter::kind_name)
+                .unwrap_or("<none>"),
+            self.method_is_overridden("encodeEffect")
+        ));
         if let Some(base) = &self.native_base
             && !self.method_is_overridden("encodeEffect")
         {
@@ -311,6 +445,15 @@ impl EngineProtocolAdapter for JsProtocolAdapter {
         engine: &AngelEngine,
         message: &JsonRpcMessage,
     ) -> EngineResult<TransportOutput> {
+        napi_trace(format!(
+            "JsProtocolAdapter.decode_message dispatch message={} native_base={} overridden={}",
+            json_shape(&message.to_value()),
+            self.native_base
+                .as_ref()
+                .map(NativeBaseAdapter::kind_name)
+                .unwrap_or("<none>"),
+            self.method_is_overridden("decodeMessage")
+        ));
         if let Some(base) = &self.native_base
             && !self.method_is_overridden("decodeMessage")
         {
@@ -330,6 +473,12 @@ impl EngineProtocolAdapter for JsProtocolAdapter {
         result: &Value,
         current_model_id: Option<&str>,
     ) -> Option<SessionModelState> {
+        let started = Instant::now();
+        napi_trace(format!(
+            "JsProtocolAdapter.model_catalog_from_runtime_debug start result={} current_model_id={}",
+            json_shape(result),
+            current_model_id.unwrap_or("<none>")
+        ));
         let object_ref = self.object.as_ref()?;
         let object = object_ref.get_value(&self.env).ok()?;
         let function: Function<'_, FnArgs<(Value, Option<String>)>, Value> = object
@@ -342,9 +491,23 @@ impl EngineProtocolAdapter for JsProtocolAdapter {
             )
             .ok()?;
         if value.is_null() {
+            napi_trace(format!(
+                "JsProtocolAdapter.model_catalog_from_runtime_debug ok elapsed_ms={} returned=null",
+                started.elapsed().as_millis()
+            ));
             return None;
         }
-        serde_json::from_value(value).ok()
+        let parsed = serde_json::from_value(value).ok();
+        napi_trace(format!(
+            "JsProtocolAdapter.model_catalog_from_runtime_debug ok elapsed_ms={} returned={}",
+            started.elapsed().as_millis(),
+            if parsed.is_some() {
+                "catalog"
+            } else {
+                "invalid"
+            }
+        ));
+        parsed
     }
 
     fn interpret_user_input(
@@ -353,6 +516,16 @@ impl EngineProtocolAdapter for JsProtocolAdapter {
         conversation_id: &ConversationId,
         input: &[UserInput],
     ) -> EngineResult<Option<InterpretedUserInput>> {
+        napi_trace(format!(
+            "JsProtocolAdapter.interpret_user_input dispatch conversation_id={} input_len={} native_base={} overridden={}",
+            conversation_id,
+            input.len(),
+            self.native_base
+                .as_ref()
+                .map(NativeBaseAdapter::kind_name)
+                .unwrap_or("<none>"),
+            self.method_is_overridden("interpretUserInput")
+        ));
         if let Some(base) = &self.native_base
             && !self.method_is_overridden("interpretUserInput")
         {
@@ -368,13 +541,27 @@ enum NativeBaseAdapter {
 }
 
 impl NativeBaseAdapter {
+    fn kind_name(&self) -> &'static str {
+        match self {
+            Self::Acp(_) => "acp",
+        }
+    }
+
     fn protocol_flavor(&self) -> ProtocolFlavor {
+        napi_trace(format!(
+            "NativeBaseAdapter.protocol_flavor kind={}",
+            self.kind_name()
+        ));
         match self {
             Self::Acp(adapter) => adapter.protocol_flavor(),
         }
     }
 
     fn capabilities(&self) -> ConversationCapabilities {
+        napi_trace(format!(
+            "NativeBaseAdapter.capabilities kind={}",
+            self.kind_name()
+        ));
         match self {
             Self::Acp(adapter) => adapter.capabilities(),
         }
@@ -386,9 +573,17 @@ impl NativeBaseAdapter {
         effect: &ProtocolEffect,
         options: &TransportOptions,
     ) -> EngineResult<TransportOutput> {
-        match self {
+        let started = Instant::now();
+        napi_trace(format!(
+            "NativeBaseAdapter.encode_effect start kind={} method={}",
+            self.kind_name(),
+            method_name(&effect.method)
+        ));
+        let result = match self {
             Self::Acp(adapter) => adapter.encode_effect(engine, effect, options),
-        }
+        };
+        trace_transport_output_result("NativeBaseAdapter.encode_effect", started, &result);
+        result
     }
 
     fn decode_message(
@@ -396,9 +591,17 @@ impl NativeBaseAdapter {
         engine: &AngelEngine,
         message: &JsonRpcMessage,
     ) -> EngineResult<TransportOutput> {
-        match self {
+        let started = Instant::now();
+        napi_trace(format!(
+            "NativeBaseAdapter.decode_message start kind={} message={}",
+            self.kind_name(),
+            json_shape(&message.to_value())
+        ));
+        let result = match self {
             Self::Acp(adapter) => adapter.decode_message(engine, message),
-        }
+        };
+        trace_transport_output_result("NativeBaseAdapter.decode_message", started, &result);
+        result
     }
 
     fn interpret_user_input(
@@ -407,9 +610,18 @@ impl NativeBaseAdapter {
         conversation_id: &ConversationId,
         input: &[UserInput],
     ) -> EngineResult<Option<InterpretedUserInput>> {
-        match self {
+        let started = Instant::now();
+        napi_trace(format!(
+            "NativeBaseAdapter.interpret_user_input start kind={} conversation_id={} input_len={}",
+            self.kind_name(),
+            conversation_id,
+            input.len()
+        ));
+        let result = match self {
             Self::Acp(adapter) => adapter.interpret_user_input(engine, conversation_id, input),
-        }
+        };
+        trace_engine_result("NativeBaseAdapter.interpret_user_input", started, &result);
+        result
     }
 }
 
@@ -693,6 +905,58 @@ fn transport_log_kind_from_name(name: &str) -> EngineResult<TransportLogKind> {
             "unknown adapter log kind: {other}"
         ))),
     }
+}
+
+fn trace_engine_result<T>(operation: &str, started: Instant, result: &EngineResult<T>) {
+    match result {
+        Ok(_) => napi_trace(format!(
+            "{operation} ok elapsed_ms={}",
+            started.elapsed().as_millis()
+        )),
+        Err(error) => napi_trace(format!(
+            "{operation} error elapsed_ms={} error={}",
+            started.elapsed().as_millis(),
+            error
+        )),
+    }
+}
+
+fn trace_transport_output_result(
+    operation: &str,
+    started: Instant,
+    result: &EngineResult<TransportOutput>,
+) {
+    match result {
+        Ok(output) => napi_trace(format!(
+            "{operation} ok elapsed_ms={} messages={} events={} completed_requests={} logs={}",
+            started.elapsed().as_millis(),
+            output.messages.len(),
+            output.events.len(),
+            output.completed_requests.len(),
+            output.logs.len()
+        )),
+        Err(error) => napi_trace(format!(
+            "{operation} error elapsed_ms={} error={}",
+            started.elapsed().as_millis(),
+            error
+        )),
+    }
+}
+
+fn trace_optional_value<T, F>(operation: &str, detail: impl Into<String>, action: F) -> Option<T>
+where
+    F: FnOnce() -> Option<T>,
+{
+    let detail = detail.into();
+    let started = Instant::now();
+    napi_trace(format!("{operation} start {detail}"));
+    let value = action();
+    napi_trace(format!(
+        "{operation} ok elapsed_ms={} returned={}",
+        started.elapsed().as_millis(),
+        if value.is_some() { "some" } else { "none" }
+    ));
+    value
 }
 
 fn to_json<T>(value: T) -> Result<Value>

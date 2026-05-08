@@ -522,6 +522,7 @@ fn codex_resume_projects_raw_tool_history_into_display_messages() {
     let resume = client
         .resume_thread(ResumeConversationRequest {
             additional_directories: Vec::new(),
+            cwd: None,
             hydrate: true,
             remote_id: "thread-1".to_string(),
         })
@@ -661,6 +662,7 @@ fn acp_resume_projects_tool_history_into_display_messages() {
     let resume = client
         .resume_thread(ResumeConversationRequest {
             additional_directories: Vec::new(),
+            cwd: None,
             hydrate: true,
             remote_id: "sess-1".to_string(),
         })

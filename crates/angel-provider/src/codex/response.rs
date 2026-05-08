@@ -910,6 +910,7 @@ mod tests {
                 target: angel_engine::ResumeTarget::Remote {
                     id: "thread_1".to_string(),
                     hydrate: true,
+                    cwd: None,
                 },
             })
             .expect("resume plan")
@@ -1113,6 +1114,7 @@ mod tests {
                 target: angel_engine::ResumeTarget::Remote {
                     id: "thread_1".to_string(),
                     hydrate: true,
+                    cwd: None,
                 },
             })
             .expect("resume plan")
@@ -1187,6 +1189,7 @@ mod tests {
                 target: angel_engine::ResumeTarget::Remote {
                     id: "thread_1".to_string(),
                     hydrate: true,
+                    cwd: None,
                 },
             })
             .expect("resume plan")

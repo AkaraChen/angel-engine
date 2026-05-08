@@ -179,72 +179,96 @@ impl AngelEngine {
         target: ResumeTarget,
     ) -> Result<CommandPlan, EngineError> {
         self.ensure_runtime_available()?;
-        let (conversation_id, remote, hydrate, mut fields, reuse_existing, additional_directories) =
-            match target {
-                ResumeTarget::Conversation(conversation_id) => {
-                    let conversation = self.conversation(&conversation_id)?;
-                    let remote = conversation.remote.clone();
-                    let remote_id =
-                        remote
-                            .as_protocol_id()
-                            .ok_or_else(|| EngineError::InvalidState {
-                                expected: "remote conversation id".to_string(),
-                                actual: format!("{:?}", remote),
-                            })?;
-                    let mut fields = BTreeMap::new();
-                    fields.insert("remoteConversationId".to_string(), remote_id.to_string());
-                    let additional_directories = conversation
-                        .context
-                        .additional_directories
-                        .effective()
-                        .map(|directories| {
-                            directories
-                                .iter()
-                                .map(|directory| directory.display().to_string())
-                                .collect::<Vec<_>>()
-                        })
-                        .unwrap_or_default();
-                    (
-                        conversation_id,
-                        remote,
-                        matches!(conversation.lifecycle, ConversationLifecycle::Discovered),
-                        fields,
-                        true,
-                        additional_directories,
-                    )
-                }
-                ResumeTarget::Remote { id, hydrate } => {
-                    let conversation_id = self.next_conversation_id();
-                    let mut fields = BTreeMap::new();
-                    fields.insert("remoteConversationId".to_string(), id.clone());
-                    let remote = match self.protocol {
-                        ProtocolFlavor::Acp => RemoteConversationId::Known(id),
-                        ProtocolFlavor::CodexAppServer => RemoteConversationId::Known(id),
-                    };
-                    (conversation_id, remote, hydrate, fields, false, Vec::new())
-                }
-                ResumeTarget::RemoteWithContext {
-                    id,
-                    hydrate,
+        let (
+            conversation_id,
+            remote,
+            hydrate,
+            mut fields,
+            reuse_existing,
+            cwd,
+            additional_directories,
+        ) = match target {
+            ResumeTarget::Conversation(conversation_id) => {
+                let conversation = self.conversation(&conversation_id)?;
+                let remote = conversation.remote.clone();
+                let remote_id =
+                    remote
+                        .as_protocol_id()
+                        .ok_or_else(|| EngineError::InvalidState {
+                            expected: "remote conversation id".to_string(),
+                            actual: format!("{:?}", remote),
+                        })?;
+                let mut fields = BTreeMap::new();
+                fields.insert("remoteConversationId".to_string(), remote_id.to_string());
+                let additional_directories = conversation
+                    .context
+                    .additional_directories
+                    .effective()
+                    .map(|directories| {
+                        directories
+                            .iter()
+                            .map(|directory| directory.display().to_string())
+                            .collect::<Vec<_>>()
+                    })
+                    .unwrap_or_default();
+                (
+                    conversation_id,
+                    remote,
+                    matches!(conversation.lifecycle, ConversationLifecycle::Discovered),
+                    fields,
+                    true,
+                    None,
                     additional_directories,
-                } => {
-                    let conversation_id = self.next_conversation_id();
-                    let mut fields = BTreeMap::new();
-                    fields.insert("remoteConversationId".to_string(), id.clone());
-                    let remote = match self.protocol {
-                        ProtocolFlavor::Acp => RemoteConversationId::Known(id),
-                        ProtocolFlavor::CodexAppServer => RemoteConversationId::Known(id),
-                    };
-                    (
-                        conversation_id,
-                        remote,
-                        hydrate,
-                        fields,
-                        false,
-                        additional_directories,
-                    )
+                )
+            }
+            ResumeTarget::Remote { id, hydrate, cwd } => {
+                let conversation_id = self.next_conversation_id();
+                let mut fields = BTreeMap::new();
+                fields.insert("remoteConversationId".to_string(), id.clone());
+                if let Some(cwd) = cwd.as_ref() {
+                    fields.insert("cwd".to_string(), cwd.clone());
                 }
-            };
+                let remote = match self.protocol {
+                    ProtocolFlavor::Acp => RemoteConversationId::Known(id),
+                    ProtocolFlavor::CodexAppServer => RemoteConversationId::Known(id),
+                };
+                (
+                    conversation_id,
+                    remote,
+                    hydrate,
+                    fields,
+                    false,
+                    cwd,
+                    Vec::new(),
+                )
+            }
+            ResumeTarget::RemoteWithContext {
+                id,
+                hydrate,
+                cwd,
+                additional_directories,
+            } => {
+                let conversation_id = self.next_conversation_id();
+                let mut fields = BTreeMap::new();
+                fields.insert("remoteConversationId".to_string(), id.clone());
+                if let Some(cwd) = cwd.as_ref() {
+                    fields.insert("cwd".to_string(), cwd.clone());
+                }
+                let remote = match self.protocol {
+                    ProtocolFlavor::Acp => RemoteConversationId::Known(id),
+                    ProtocolFlavor::CodexAppServer => RemoteConversationId::Known(id),
+                };
+                (
+                    conversation_id,
+                    remote,
+                    hydrate,
+                    fields,
+                    false,
+                    cwd,
+                    additional_directories,
+                )
+            }
+        };
 
         let capabilities = if reuse_existing {
             &self.conversation(&conversation_id)?.capabilities
@@ -286,6 +310,14 @@ impl AngelEngine {
             let conversation = self.conversation_mut(&conversation_id)?;
             conversation.remote = remote;
             conversation.lifecycle = lifecycle;
+            if let Some(cwd) = cwd.as_ref() {
+                conversation
+                    .context
+                    .apply_patch(ContextPatch::one(crate::ContextUpdate::Cwd {
+                        scope: crate::ContextScope::Conversation,
+                        cwd: Some(cwd.clone()),
+                    }));
+            }
             if !additional_directories.is_empty() {
                 conversation.context.apply_patch(ContextPatch::one(
                     crate::ContextUpdate::AdditionalDirectories {
@@ -301,6 +333,14 @@ impl AngelEngine {
                 lifecycle,
                 self.default_capabilities.clone(),
             );
+            if let Some(cwd) = cwd.as_ref() {
+                state
+                    .context
+                    .apply_patch(ContextPatch::one(crate::ContextUpdate::Cwd {
+                        scope: crate::ContextScope::Conversation,
+                        cwd: Some(cwd.clone()),
+                    }));
+            }
             if !additional_directories.is_empty() {
                 state.context.apply_patch(ContextPatch::one(
                     crate::ContextUpdate::AdditionalDirectories {

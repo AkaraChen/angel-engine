@@ -90,10 +90,12 @@ pub enum ResumeTarget {
     Remote {
         id: String,
         hydrate: bool,
+        cwd: Option<String>,
     },
     RemoteWithContext {
         id: String,
         hydrate: bool,
+        cwd: Option<String>,
         additional_directories: Vec<String>,
     },
 }
