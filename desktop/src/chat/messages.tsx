@@ -1210,6 +1210,10 @@ function PlanMessagePart({ plan }: { plan: ChatPlanData }) {
     chatOptions.canSetMode &&
     Boolean(buildMode);
 
+  if (plan.presentation === "created" || plan.presentation === "updated") {
+    return <PlanMarkerPart presentation={plan.presentation} />;
+  }
+
   const startImplementation = async () => {
     if (!buildMode || startingImplementation) return;
     setStartingImplementation(true);
@@ -1335,6 +1339,21 @@ function PlanMessagePart({ plan }: { plan: ChatPlanData }) {
         </CollapsibleContent>
       ) : null}
     </Collapsible>
+  );
+}
+
+function PlanMarkerPart({
+  presentation,
+}: {
+  presentation: "created" | "updated";
+}) {
+  return (
+    <div className="flex min-h-9 w-full items-center gap-2 rounded-md border px-3 py-2 text-xs">
+      <ListChecks className="size-3.5 shrink-0 text-muted-foreground" />
+      <div className="truncate font-medium">
+        Plan {presentation === "created" ? "created" : "updated"}
+      </div>
+    </div>
   );
 }
 

@@ -25,6 +25,7 @@ import {
   chatToolActionToPart,
   imageDataUrl,
   isChatPlanData,
+  normalizeChatPlanMessages,
   upsertChatPlanPart,
 } from "../../shared/chat";
 
@@ -38,9 +39,11 @@ export type ProjectedTurnEvent =
 export function conversationMessages(
   snapshot: ConversationSnapshot,
 ): ChatHistoryMessage[] {
-  return snapshot.messages
-    .map(displayMessageToChatMessage)
-    .filter((message) => message.content.length > 0);
+  return normalizeChatPlanMessages(
+    snapshot.messages
+      .map(displayMessageToChatMessage)
+      .filter((message) => message.content.length > 0),
+  );
 }
 
 function displayMessageToChatMessage(

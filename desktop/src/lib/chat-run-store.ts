@@ -16,6 +16,7 @@ import type {
   ChatElicitationResponse,
   ChatHistoryMessage,
   ChatHistoryMessagePart,
+  ChatPlanData,
   ChatRuntimeConfig,
   ChatSendInput,
   ChatSendResult,
@@ -26,11 +27,13 @@ import {
   appendChatTextPart,
   chatPartsText,
   chatToolActionToPart,
+  cloneChatPlanData,
   cloneChatHistoryPart,
   imageDataUrl,
   isChatElicitationData,
   isChatPlanData,
   isChatToolAction,
+  normalizeChatPlanMessages,
   parseDataUrl,
   upsertChatElicitationPart,
   upsertChatPlanPart,
@@ -444,7 +447,11 @@ function initializeSlotContext(
       aliases,
       slots: {
         ...state.slots,
-        [input.slotKey]: createIdleSlot(input.slotKey, input, messages),
+        [input.slotKey]: createIdleSlot(
+          input.slotKey,
+          input,
+          normalizeEnginePlanMessages(messages),
+        ),
       },
     };
   }
@@ -480,7 +487,12 @@ function initializeSlotContext(
   return {
     slots: {
       ...state.slots,
-      [resolvedKey]: createIdleSlot(resolvedKey, input, messages, existing),
+      [resolvedKey]: createIdleSlot(
+        resolvedKey,
+        input,
+        normalizeEnginePlanMessages(messages),
+        existing,
+      ),
     },
   };
 }
@@ -509,11 +521,11 @@ function startRunContext(
       [resolvedKey]: {
         ...existing,
         activeRun: event.activeRun,
-        messages: [
+        messages: normalizeEnginePlanMessages([
           ...existingMessages,
           event.userMessage,
           event.assistantMessage,
-        ],
+        ]),
         status: "streaming",
       },
     },
@@ -576,8 +588,10 @@ function replaceAssistantMessageContext(
       ...state.slots,
       [resolvedKey]: {
         ...slot,
-        messages: slot.messages.map((item) =>
-          item.id === event.assistantMessageId ? event.message : item,
+        messages: normalizeEnginePlanMessages(
+          slot.messages.map((item) =>
+            item.id === event.assistantMessageId ? event.message : item,
+          ),
         ),
       },
     },
@@ -795,6 +809,8 @@ async function consumeRunStream({
         accumulator.result = event.result;
         if (accumulator.parts.length === 0) {
           accumulator.parts = event.result.content.map(cloneChatHistoryPart);
+        } else {
+          mergeFinalResultParts(accumulator.parts, event.result.content);
         }
         dirty = true;
         if (!(await flush())) break;
@@ -954,6 +970,78 @@ function resolveSlotKey(
   return current;
 }
 
+function normalizeEnginePlanMessages(
+  messages: EngineMessage[],
+): EngineMessage[] {
+  const locations = enginePlanPartLocations(messages);
+  if (locations.length === 0) return messages;
+
+  const latest = locations.at(-1);
+  return messages.map((message, messageIndex) => {
+    const hasPlan = locations.some(
+      (location) => location.messageIndex === messageIndex,
+    );
+    if (!hasPlan) return message;
+
+    return {
+      ...message,
+      content: message.content.map((part, partIndex) => {
+        if (!isEnginePlanPart(part)) return part;
+
+        const locationIndex = locations.findIndex(
+          (location) =>
+            location.messageIndex === messageIndex &&
+            location.partIndex === partIndex,
+        );
+        if (locationIndex === -1) return part;
+
+        const presentation =
+          latest &&
+          latest.messageIndex === messageIndex &&
+          latest.partIndex === partIndex
+            ? null
+            : locationIndex === 0
+              ? "created"
+              : "updated";
+
+        return {
+          ...part,
+          data: {
+            ...cloneChatPlanData(part.data),
+            presentation,
+          },
+        };
+      }) as EngineMessage["content"],
+    } as EngineMessage;
+  });
+}
+
+function enginePlanPartLocations(messages: EngineMessage[]) {
+  const locations: Array<{ messageIndex: number; partIndex: number }> = [];
+  messages.forEach((message, messageIndex) => {
+    message.content.forEach((part, partIndex) => {
+      if (isEnginePlanPart(part)) {
+        locations.push({ messageIndex, partIndex });
+      }
+    });
+  });
+  return locations;
+}
+
+function isEnginePlanPart(
+  part: EngineMessage["content"][number],
+): part is EngineMessage["content"][number] & {
+  data: ChatPlanData;
+  name: "plan";
+  type: "data";
+} {
+  return (
+    part.type === "data" &&
+    (part as { name?: unknown }).name === "plan" &&
+    isChatPlanData((part as { data?: unknown }).data)
+  );
+}
+
 function upsertToolActionPart(
   parts: ChatHistoryMessagePart[],
   action: ChatToolAction,
@@ -986,6 +1074,21 @@ function upsertToolActionPart(
   }
 
   parts[index] = nextPart;
+}
+
+function mergeFinalResultParts(
+  parts: ChatHistoryMessagePart[],
+  finalParts: ChatHistoryMessagePart[],
+) {
+  for (const part of finalParts) {
+    if (part.type === "data" && part.name === "plan") {
+      upsertChatPlanPart(parts, part.data);
+    } else if (part.type === "data" && part.name === "elicitation") {
+      upsertElicitationPart(parts, part.data);
+    } else if (part.type === "tool-call") {
+      upsertToolActionPart(parts, part.artifact);
+    }
+  }
 }
 
 function upsertElicitationPart(
@@ -1328,9 +1431,11 @@ function historyMessageToEngineMessage(
 function engineMessagesToHistoryMessages(
   messages: EngineMessage[],
 ): ChatHistoryMessage[] {
-  return messages
-    .map(engineMessageToHistoryMessage)
-    .filter((message) => message.content.length > 0);
+  return normalizeChatPlanMessages(
+    messages
+      .map(engineMessageToHistoryMessage)
+      .filter((message) => message.content.length > 0),
+  );
 }
 
 function engineMessageToHistoryMessage(

@@ -86,6 +86,7 @@ export type ChatPlanEntry = {
 export type ChatPlanData = {
   entries: ChatPlanEntry[];
   path?: string | null;
+  presentation?: "created" | "updated" | null;
   text: string;
 };
 
@@ -317,6 +318,10 @@ export function isChatPlanData(value: unknown): value is ChatPlanData {
         isChatPlanEntryStatus((entry as Partial<ChatPlanEntry>).status),
     ) &&
     typeof data.text === "string" &&
+    (data.presentation === undefined ||
+      data.presentation === null ||
+      data.presentation === "created" ||
+      data.presentation === "updated") &&
     (data.path === undefined ||
       data.path === null ||
       typeof data.path === "string")
@@ -357,8 +362,67 @@ export function cloneChatPlanData(data: ChatPlanData): ChatPlanData {
   return {
     entries: data.entries.map((entry) => ({ ...entry })),
     path: data.path ?? null,
+    presentation: data.presentation ?? null,
     text: data.text,
   };
+}
+
+export function normalizeChatPlanMessages(
+  messages: ChatHistoryMessage[],
+): ChatHistoryMessage[] {
+  const locations = planPartLocations(messages);
+  if (locations.length === 0) return messages;
+
+  const latest = locations.at(-1);
+  return messages.map((message, messageIndex) => {
+    const hasPlan = locations.some(
+      (location) => location.messageIndex === messageIndex,
+    );
+    if (!hasPlan) return message;
+
+    return {
+      ...message,
+      content: message.content.map((part, partIndex) => {
+        if (part.type !== "data" || part.name !== "plan") return part;
+
+        const locationIndex = locations.findIndex(
+          (location) =>
+            location.messageIndex === messageIndex &&
+            location.partIndex === partIndex,
+        );
+        if (locationIndex === -1) return part;
+
+        const presentation =
+          latest &&
+          latest.messageIndex === messageIndex &&
+          latest.partIndex === partIndex
+            ? null
+            : locationIndex === 0
+              ? "created"
+              : "updated";
+
+        return {
+          ...part,
+          data: {
+            ...cloneChatPlanData(part.data),
+            presentation,
+          },
+        };
+      }),
+    };
+  });
+}
+
+function planPartLocations(messages: ChatHistoryMessage[]) {
+  const locations: Array<{ messageIndex: number; partIndex: number }> = [];
+  messages.forEach((message, messageIndex) => {
+    message.content.forEach((part, partIndex) => {
+      if (part.type === "data" && part.name === "plan") {
+        locations.push({ messageIndex, partIndex });
+      }
+    });
+  });
+  return locations;
 }
 
 export function cloneChatElicitation(data: ChatElicitation): ChatElicitation {
