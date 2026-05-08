@@ -385,6 +385,18 @@ fn input_effect_fields(input: &[UserInput]) -> Vec<(String, String)> {
                     fields.push((format!("input.{index}.description"), description.clone()));
                 }
             }
+            UserInputKind::FileMention {
+                name,
+                path,
+                mime_type,
+            } => {
+                fields.push((format!("input.{index}.type"), "file_mention".to_string()));
+                fields.push((format!("input.{index}.name"), name.clone()));
+                fields.push((format!("input.{index}.path"), path.clone()));
+                if let Some(mime_type) = mime_type {
+                    fields.push((format!("input.{index}.mimeType"), mime_type.clone()));
+                }
+            }
             UserInputKind::EmbeddedTextResource { uri, mime_type } => {
                 fields.push((format!("input.{index}.type"), "resource".to_string()));
                 fields.push((format!("input.{index}.uri"), uri.clone()));

@@ -120,6 +120,11 @@ export function runtimeConfigFromConversationSnapshot(
     canSetModel: modelList.canSet,
     canSetMode: availableModes.canSet,
     canSetReasoningEffort: reasoningLevel.canSet,
+    availableCommands: snapshot.availableCommands.map((command) => ({
+      description: command.description,
+      inputHint: command.inputHint ?? null,
+      name: command.name,
+    })),
     currentMode,
     currentModel: modelList.currentModelId ?? null,
     currentReasoningEffort: reasoningLevel.currentLevel ?? null,

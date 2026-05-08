@@ -42,6 +42,12 @@ export type ChatRuntimeConfigOption = {
   value: string;
 };
 
+export type ChatAvailableCommand = {
+  description: string;
+  inputHint?: string | null;
+  name: string;
+};
+
 export type ChatAgentState = {
   currentMode?: string | null;
 };
@@ -54,6 +60,7 @@ export type ChatRuntimeConfig = {
   currentMode?: string | null;
   currentModel?: string | null;
   currentReasoningEffort?: string | null;
+  availableCommands?: ChatAvailableCommand[];
   modes: ChatRuntimeConfigOption[];
   models: ChatRuntimeConfigOption[];
   reasoningEfforts: ChatRuntimeConfigOption[];
@@ -105,6 +112,8 @@ export type ChatHistoryMessagePart =
       data: string;
       filename?: string;
       mimeType: string;
+      mention?: boolean;
+      path?: string | null;
       type: "file";
     }
   | {
@@ -575,7 +584,26 @@ export type ChatAttachmentInput =
       name?: string | null;
       path?: string | null;
       type: "file";
+    }
+  | {
+      mimeType?: string | null;
+      name?: string | null;
+      path: string;
+      type: "fileMention";
     };
+
+export type ProjectFileSearchInput = {
+  limit?: number;
+  query?: string;
+  root: string;
+};
+
+export type ProjectFileSearchResult = {
+  name: string;
+  path: string;
+  relativePath: string;
+  type: "directory" | "file";
+};
 
 export type ChatSendInput = {
   attachments?: ChatAttachmentInput[];
@@ -689,19 +717,43 @@ export function normalizeChatAttachmentsInput(
     }
 
     const value = item as Partial<ChatAttachmentInput>;
-    if (value.type !== "image" && value.type !== "file") {
+    if (
+      value.type !== "image" &&
+      value.type !== "file" &&
+      value.type !== "fileMention"
+    ) {
       throw new Error("Unsupported chat attachment type.");
     }
-    if (typeof value.data !== "string" || !value.data.trim()) {
+    if (value.type === "fileMention") {
+      if (typeof value.path !== "string" || !value.path.trim()) {
+        throw new Error("Mentioned file path is required.");
+      }
+
+      const path = value.path.trim();
+      return {
+        mimeType:
+          typeof value.mimeType === "string" && value.mimeType.trim()
+            ? value.mimeType.trim()
+            : null,
+        name:
+          typeof value.name === "string" && value.name.trim()
+            ? value.name.trim()
+            : pathName(path),
+        path,
+        type: "fileMention",
+      };
+    }
+    const dataValue = (value as { data?: unknown }).data;
+    if (typeof dataValue !== "string" || !dataValue.trim()) {
       throw new Error("Chat attachment data is required.");
     }
     if (typeof value.mimeType !== "string" || !value.mimeType.trim()) {
       throw new Error("Chat attachment MIME type is required.");
     }
 
-    const parsed = parseDataUrl(value.data);
+    const parsed = parseDataUrl(dataValue);
     const mimeType = parsed?.mimeType ?? value.mimeType.trim();
-    const data = parsed?.data ?? value.data;
+    const data = parsed?.data ?? dataValue;
     if (value.type === "image" && !mimeType.startsWith("image/")) {
       throw new Error("Image attachment MIME type is required.");
     }
@@ -720,4 +772,9 @@ export function normalizeChatAttachmentsInput(
       type: mimeType.startsWith("image/") ? "image" : "file",
     };
   });
+}
+
+function pathName(path: string) {
+  const parts = path.split(/[\\/]/).filter(Boolean);
+  return parts.at(-1) ?? path;
 }

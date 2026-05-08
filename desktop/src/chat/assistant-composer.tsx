@@ -1,5 +1,8 @@
 import {
   useCallback,
+  useEffect,
+  useMemo,
+  useRef,
   useState,
   type ChangeEvent,
   type KeyboardEvent,
@@ -13,6 +16,7 @@ import {
 } from "@assistant-ui/react";
 import {
   ArrowUp,
+  AtSign,
   Bot,
   Brain,
   Check,
@@ -59,25 +63,62 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { iconButtonClass } from "@/chat/thread-styles";
+import { useChatEnvironment } from "@/chat/chat-environment-context";
+import { ipc } from "@/lib/ipc";
 import {
   AGENT_OPTIONS,
   normalizeAgentRuntime,
   type AgentValueOption,
 } from "@/shared/agents";
 import { useToast } from "@/components/ui/toast";
+import type {
+  ChatAvailableCommand,
+  ProjectFileSearchResult,
+} from "@/shared/chat";
+
+type ComposerMentionedFile = ProjectFileSearchResult & {
+  id: string;
+};
 
 export function AssistantComposer() {
   const aui = useAui();
+  const environment = useChatEnvironment();
   const canCancel = useAuiState((state) => state.composer.canCancel);
   const isInputDisabled = useAuiState((state) => state.thread.isDisabled);
   const isRunning = useAuiState((state) => state.thread.isRunning);
   const toast = useToast();
   const [draftText, setDraftText] = useState("");
+  const [mentionedFiles, setMentionedFiles] = useState<ComposerMentionedFile[]>(
+    [],
+  );
+  const [fileResults, setFileResults] = useState<ProjectFileSearchResult[]>([]);
+  const [fileSearchLoading, setFileSearchLoading] = useState(false);
+  const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+  const projectToolsEnabled =
+    environment.isProjectChat && environment.projectPath;
+  const mentionQuery = projectToolsEnabled
+    ? mentionQueryFromDraft(draftText)
+    : null;
+  const fileMentionOpen = mentionQuery !== null;
+  const slashQuery = projectToolsEnabled
+    ? slashQueryFromDraft(draftText)
+    : null;
+  const slashCommands = useMemo(
+    () =>
+      slashQuery === null
+        ? []
+        : filterSlashCommands(environment.availableCommands, slashQuery),
+    [environment.availableCommands, slashQuery],
+  );
+  const slashCommandOpen = slashQuery !== null && slashCommands.length > 0;
 
   const handleSubmit = useCallback(
     async (message: PromptInputMessage) => {
       const text = message.text.trim() ? message.text : "";
-      const hasMessage = text.length > 0 || message.files.length > 0;
+      const hasMessage =
+        text.length > 0 ||
+        message.files.length > 0 ||
+        mentionedFiles.length > 0;
       if (!hasMessage) {
         return;
       }
@@ -87,21 +128,68 @@ export function AssistantComposer() {
       composer.setText(text);
 
       try {
-        await Promise.all(
-          message.files.map((file) =>
+        await Promise.all([
+          ...message.files.map((file) =>
             composer.addAttachment(createAttachmentFromPromptFile(file)),
           ),
-        );
+          ...mentionedFiles.map((file) =>
+            composer.addAttachment(createMentionAttachment(file)),
+          ),
+        ]);
 
         await composer.send();
         setDraftText("");
+        setMentionedFiles([]);
       } catch (error) {
         await composer.clearAttachments().catch(() => undefined);
         throw error;
       }
     },
-    [aui],
+    [aui, mentionedFiles],
   );
+
+  useEffect(() => {
+    if (
+      !projectToolsEnabled ||
+      mentionQuery === null ||
+      !environment.projectPath
+    ) {
+      setFileResults([]);
+      setFileSearchLoading(false);
+      return;
+    }
+
+    let cancelled = false;
+    setFileSearchLoading(true);
+    const timeout = window.setTimeout(() => {
+      void ipc
+        .projectsSearchFiles({
+          limit: 12,
+          query: mentionQuery,
+          root: environment.projectPath ?? "",
+        })
+        .then((results) => {
+          if (!cancelled) setFileResults(results);
+        })
+        .catch((error: unknown) => {
+          if (cancelled) return;
+          setFileResults([]);
+          toast({
+            description: getErrorMessage(error),
+            title: "Could not search files",
+            variant: "destructive",
+          });
+        })
+        .finally(() => {
+          if (!cancelled) setFileSearchLoading(false);
+        });
+    }, 120);
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timeout);
+    };
+  }, [environment.projectPath, mentionQuery, projectToolsEnabled, toast]);
 
   const handleAttachmentError = useCallback(
     (error: AttachmentInputError) => {
@@ -121,11 +209,72 @@ export function AssistantComposer() {
     [],
   );
 
+  const insertSlashCommand = useCallback(
+    (command?: ChatAvailableCommand) => {
+      if (!command) return;
+      const next = draftText.replace(/^\/[^\s]*/, `/${command.name}`);
+      setDraftText(`${next.trimEnd()} `);
+      requestAnimationFrame(() => textareaRef.current?.focus());
+    },
+    [draftText],
+  );
+
+  const selectMentionedFile = useCallback((file: ProjectFileSearchResult) => {
+    setMentionedFiles((current) => {
+      if (current.some((item) => item.path === file.path)) return current;
+      return [...current, { ...file, id: file.path }];
+    });
+    setDraftText((current) => replaceMentionQuery(current, file.relativePath));
+    requestAnimationFrame(() => textareaRef.current?.focus());
+  }, []);
+
+  const removeMentionedFile = useCallback((id: string) => {
+    setMentionedFiles((current) => current.filter((file) => file.id !== id));
+  }, []);
+
+  const openMentionSearch = useCallback(() => {
+    setDraftText((current) => {
+      if (mentionQueryFromDraft(current) !== null) return current;
+      const separator = current && !/\s$/.test(current) ? " " : "";
+      return `${current}${separator}@`;
+    });
+    requestAnimationFrame(() => textareaRef.current?.focus());
+  }, []);
+
   const handleTextKeyDown = useCallback(
     (event: KeyboardEvent<HTMLTextAreaElement>) => {
-      if (event.key === "Escape" && canCancel) {
+      if (event.key === "Escape") {
+        if (slashCommandOpen || fileMentionOpen) {
+          setDraftText((current) =>
+            slashCommandOpen ? "" : current.replace(/(?:^|\s)@[^\s@]*$/, ""),
+          );
+          event.preventDefault();
+          return;
+        }
+        if (!canCancel) return;
         event.preventDefault();
         aui.composer().cancel();
+        return;
+      }
+
+      if (
+        (event.key === "Enter" || event.key === "Tab") &&
+        !event.shiftKey &&
+        slashCommandOpen
+      ) {
+        event.preventDefault();
+        insertSlashCommand(slashCommands[0]);
+        return;
+      }
+
+      if (
+        (event.key === "Enter" || event.key === "Tab") &&
+        !event.shiftKey &&
+        fileMentionOpen &&
+        fileResults[0]
+      ) {
+        event.preventDefault();
+        selectMentionedFile(fileResults[0]);
         return;
       }
 
@@ -133,7 +282,17 @@ export function AssistantComposer() {
         event.preventDefault();
       }
     },
-    [aui, canCancel, isRunning],
+    [
+      aui,
+      canCancel,
+      fileMentionOpen,
+      fileResults,
+      insertSlashCommand,
+      isRunning,
+      selectMentionedFile,
+      slashCommandOpen,
+      slashCommands,
+    ],
   );
 
   return (
@@ -143,7 +302,17 @@ export function AssistantComposer() {
       onError={handleAttachmentError}
       onSubmit={handleSubmit}
     >
-      <AssistantComposerHeader />
+      <AssistantComposerHeader
+        fileMentionOpen={fileMentionOpen}
+        fileResults={fileResults}
+        fileSearchLoading={fileSearchLoading}
+        mentionedFiles={mentionedFiles}
+        onRemoveMentionedFile={removeMentionedFile}
+        onSelectMentionedFile={selectMentionedFile}
+        onSelectSlashCommand={insertSlashCommand}
+        slashCommandOpen={slashCommandOpen}
+        slashCommands={slashCommands}
+      />
 
       <PromptInputBody>
         <PromptInputTextarea
@@ -152,24 +321,69 @@ export function AssistantComposer() {
           onChange={handleTextChange}
           onKeyDown={handleTextKeyDown}
           placeholder="Ask Angel Engine to inspect, patch, test, or explain..."
+          ref={textareaRef}
           rows={2}
           value={draftText}
         />
       </PromptInputBody>
 
-      <AssistantComposerFooter draftText={draftText} />
+      <AssistantComposerFooter
+        draftText={draftText}
+        onOpenMentionSearch={openMentionSearch}
+        projectToolsEnabled={Boolean(projectToolsEnabled)}
+      />
     </PromptInput>
   );
 }
 
-function AssistantComposerHeader() {
+function AssistantComposerHeader({
+  fileMentionOpen,
+  fileResults,
+  fileSearchLoading,
+  mentionedFiles,
+  onRemoveMentionedFile,
+  onSelectMentionedFile,
+  onSelectSlashCommand,
+  slashCommandOpen,
+  slashCommands,
+}: {
+  fileMentionOpen: boolean;
+  fileResults: ProjectFileSearchResult[];
+  fileSearchLoading: boolean;
+  mentionedFiles: ComposerMentionedFile[];
+  onRemoveMentionedFile: (id: string) => void;
+  onSelectMentionedFile: (file: ProjectFileSearchResult) => void;
+  onSelectSlashCommand: (command: ChatAvailableCommand) => void;
+  slashCommandOpen: boolean;
+  slashCommands: ChatAvailableCommand[];
+}) {
   const attachments = usePromptInputAttachments();
   const hasQuote = useAuiState((state) => Boolean(state.composer.quote));
+  const showAssist = slashCommandOpen || fileMentionOpen;
 
-  if (!hasQuote && attachments.files.length === 0) return null;
+  if (
+    !hasQuote &&
+    attachments.files.length === 0 &&
+    mentionedFiles.length === 0 &&
+    !showAssist
+  ) {
+    return null;
+  }
 
   return (
     <PromptInputHeader className="flex-col items-stretch gap-2 !px-2 !py-2">
+      {showAssist ? (
+        <ComposerAssistPanel
+          fileMentionOpen={fileMentionOpen}
+          fileResults={fileResults}
+          fileSearchLoading={fileSearchLoading}
+          onSelectMentionedFile={onSelectMentionedFile}
+          onSelectSlashCommand={onSelectSlashCommand}
+          slashCommandOpen={slashCommandOpen}
+          slashCommands={slashCommands}
+        />
+      ) : null}
+
       {hasQuote ? (
         <ComposerPrimitive.Quote className="flex items-start gap-2 rounded-md border bg-muted/40 p-2 text-sm">
           <Quote className="mt-0.5 size-3.5 shrink-0 text-muted-foreground" />
@@ -178,6 +392,22 @@ function AssistantComposerHeader() {
             <X className="size-3.5" />
           </ComposerPrimitive.QuoteDismiss>
         </ComposerPrimitive.Quote>
+      ) : null}
+
+      {mentionedFiles.length > 0 ? (
+        <div className="flex flex-wrap gap-2">
+          {mentionedFiles.map((file) => (
+            <ChatAttachmentTile
+              className="max-w-64"
+              contentType={file.relativePath}
+              key={file.id}
+              name={file.name}
+              onRemove={() => onRemoveMentionedFile(file.id)}
+              removeLabel={`Remove ${file.name}`}
+              typeLabel="Mention"
+            />
+          ))}
+        </div>
       ) : null}
 
       {attachments.files.length > 0 ? (
@@ -206,7 +436,104 @@ function AssistantComposerHeader() {
   );
 }
 
-function AssistantComposerFooter({ draftText }: { draftText: string }) {
+function ComposerAssistPanel({
+  fileMentionOpen,
+  fileResults,
+  fileSearchLoading,
+  onSelectMentionedFile,
+  onSelectSlashCommand,
+  slashCommandOpen,
+  slashCommands,
+}: {
+  fileMentionOpen: boolean;
+  fileResults: ProjectFileSearchResult[];
+  fileSearchLoading: boolean;
+  onSelectMentionedFile: (file: ProjectFileSearchResult) => void;
+  onSelectSlashCommand: (command: ChatAvailableCommand) => void;
+  slashCommandOpen: boolean;
+  slashCommands: ChatAvailableCommand[];
+}) {
+  if (slashCommandOpen) {
+    return (
+      <div className="rounded-md border bg-background p-1 shadow-sm">
+        <div className="px-2 py-1 text-[11px] font-medium uppercase text-muted-foreground">
+          Commands
+        </div>
+        <div className="max-h-48 overflow-y-auto">
+          {slashCommands.map((command) => (
+            <button
+              className="flex w-full min-w-0 items-center gap-2 rounded-sm px-2 py-1.5 text-left text-sm hover:bg-muted"
+              key={command.name}
+              onMouseDown={(event) => event.preventDefault()}
+              onClick={() => onSelectSlashCommand(command)}
+              type="button"
+            >
+              <span className="shrink-0 font-mono text-xs text-primary">
+                /{command.name}
+              </span>
+              <span className="min-w-0 flex-1 truncate text-muted-foreground">
+                {command.description}
+              </span>
+              {command.inputHint ? (
+                <span className="hidden shrink-0 truncate text-xs text-muted-foreground sm:inline">
+                  {command.inputHint}
+                </span>
+              ) : null}
+            </button>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  if (fileMentionOpen) {
+    return (
+      <div className="rounded-md border bg-background p-1 shadow-sm">
+        <div className="px-2 py-1 text-[11px] font-medium uppercase text-muted-foreground">
+          Files
+        </div>
+        <div className="max-h-48 overflow-y-auto">
+          {fileSearchLoading ? (
+            <div className="px-2 py-2 text-sm text-muted-foreground">
+              Searching...
+            </div>
+          ) : fileResults.length === 0 ? (
+            <div className="px-2 py-2 text-sm text-muted-foreground">
+              No files found
+            </div>
+          ) : (
+            fileResults.map((file) => (
+              <button
+                className="flex w-full min-w-0 flex-col rounded-sm px-2 py-1.5 text-left hover:bg-muted"
+                key={file.path}
+                onMouseDown={(event) => event.preventDefault()}
+                onClick={() => onSelectMentionedFile(file)}
+                type="button"
+              >
+                <span className="truncate text-sm">{file.name}</span>
+                <span className="truncate text-xs text-muted-foreground">
+                  {file.relativePath}
+                </span>
+              </button>
+            ))
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  return null;
+}
+
+function AssistantComposerFooter({
+  draftText,
+  onOpenMentionSearch,
+  projectToolsEnabled,
+}: {
+  draftText: string;
+  onOpenMentionSearch: () => void;
+  projectToolsEnabled: boolean;
+}) {
   const aui = useAui();
   const attachments = usePromptInputAttachments();
   const chatOptions = useChatOptions();
@@ -222,6 +549,18 @@ function AssistantComposerFooter({ draftText }: { draftText: string }) {
     <PromptInputFooter className="flex-wrap border-t !px-2 !py-2">
       <PromptInputTools className="flex-wrap">
         <PromptAttachmentButton />
+        {projectToolsEnabled ? (
+          <Button
+            onClick={onOpenMentionSearch}
+            size="icon-sm"
+            title="Mention file"
+            type="button"
+            variant="ghost"
+          >
+            <AtSign />
+            <span className="sr-only">Mention file</span>
+          </Button>
+        ) : null}
         <ComposerModelMenu disabled={isRunning} options={chatOptions} />
       </PromptInputTools>
       <div className="flex min-w-0 items-center gap-2">
@@ -596,9 +935,61 @@ function createAttachmentFromPromptFile(
   };
 }
 
+function createMentionAttachment(
+  file: ComposerMentionedFile,
+): CreateAttachment {
+  return {
+    content: [
+      {
+        data: file.path,
+        filename: file.name,
+        mention: true,
+        mimeType: "application/octet-stream",
+        path: file.path,
+        type: "file",
+      },
+    ] as unknown as CreateAttachment["content"],
+    contentType: "application/octet-stream",
+    name: file.name,
+    type: "file",
+  };
+}
+
 function promptFilePath(file: PromptInputMessage["files"][number]) {
   const path = file.path;
   return typeof path === "string" && path.trim() ? path.trim() : undefined;
+}
+
+function slashQueryFromDraft(text: string) {
+  const match = /^\/([^\s/]*)$/.exec(text);
+  return match ? match[1].toLowerCase() : null;
+}
+
+function filterSlashCommands(commands: ChatAvailableCommand[], query: string) {
+  const normalized = query.trim().toLowerCase();
+  return commands
+    .filter((command) => {
+      const name = command.name.toLowerCase();
+      return !normalized || name.includes(normalized);
+    })
+    .slice(0, 8);
+}
+
+function mentionQueryFromDraft(text: string) {
+  const match = /(?:^|\s)@([^\s@]*)$/.exec(text);
+  return match ? match[1] : null;
+}
+
+function replaceMentionQuery(text: string, relativePath: string) {
+  const replacement = `@${relativePath} `;
+  if (/(?:^|\s)@[^\s@]*$/.test(text)) {
+    return text.replace(
+      /(^|\s)@[^\s@]*$/,
+      (_match, prefix: string) => `${prefix}${replacement}`,
+    );
+  }
+  const separator = text && !/\s$/.test(text) ? " " : "";
+  return `${text}${separator}${replacement}`;
 }
 
 type AttachmentInputError = {

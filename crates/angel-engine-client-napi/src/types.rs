@@ -740,7 +740,7 @@ pub struct RuntimeOptions {
 pub struct SendTextRequest {
     pub text: String,
     #[napi(
-        ts_type = "Array<{ type: 'text'; text: string } | { type: 'image'; data: string; mimeType: string; name?: string | null } | { type: 'resourceLink'; name: string; uri: string; mimeType?: string | null; title?: string | null; description?: string | null } | { type: 'embeddedTextResource'; uri: string; text: string; mimeType?: string | null } | { type: 'embeddedBlobResource'; uri: string; data: string; mimeType?: string | null; name?: string | null } | { type: 'rawContentBlock'; value: unknown }>"
+        ts_type = "Array<{ type: 'text'; text: string } | { type: 'image'; data: string; mimeType: string; name?: string | null } | { type: 'resourceLink'; name: string; uri: string; mimeType?: string | null; title?: string | null; description?: string | null } | { type: 'fileMention'; name: string; path: string; mimeType?: string | null } | { type: 'embeddedTextResource'; uri: string; text: string; mimeType?: string | null } | { type: 'embeddedBlobResource'; uri: string; data: string; mimeType?: string | null; name?: string | null } | { type: 'rawContentBlock'; value: unknown }>"
     )]
     pub input: Option<Vec<serde_json::Value>>,
     pub cwd: Option<String>,

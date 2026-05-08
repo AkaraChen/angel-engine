@@ -155,6 +155,52 @@ fn active_turn_limit_blocks_second_start_by_default() {
 }
 
 #[test]
+fn start_turn_effect_fields_include_file_mention_input() {
+    let capabilities = codex_capabilities();
+    let mut engine = engine_with(ProtocolFlavor::CodexAppServer, capabilities.clone());
+    let conversation_id = insert_ready_conversation(
+        &mut engine,
+        "conv",
+        RemoteConversationId::Known("thread".to_string()),
+        capabilities.clone(),
+    );
+
+    let plan = engine
+        .plan_command(EngineCommand::StartTurn {
+            conversation_id,
+            input: vec![
+                UserInput::text("inspect this"),
+                UserInput::file_mention(
+                    "lib.rs",
+                    "/repo/src/lib.rs",
+                    Some("text/x-rust".to_string()),
+                ),
+            ],
+            overrides: TurnOverrides::default(),
+        })
+        .expect("start turn");
+    let fields = &plan.effects[0].payload.fields;
+
+    assert_eq!(fields.get("inputCount").map(String::as_str), Some("2"));
+    assert_eq!(
+        fields.get("input.1.type").map(String::as_str),
+        Some("file_mention")
+    );
+    assert_eq!(
+        fields.get("input.1.name").map(String::as_str),
+        Some("lib.rs")
+    );
+    assert_eq!(
+        fields.get("input.1.path").map(String::as_str),
+        Some("/repo/src/lib.rs")
+    );
+    assert_eq!(
+        fields.get("input.1.mimeType").map(String::as_str),
+        Some("text/x-rust")
+    );
+}
+
+#[test]
 fn cancel_is_two_phase_until_terminal_event() {
     let capabilities = codex_capabilities();
     let mut engine = engine_with(ProtocolFlavor::CodexAppServer, capabilities.clone());

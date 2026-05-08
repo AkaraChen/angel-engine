@@ -356,6 +356,26 @@ fn acp_prompt_blocks(effect: &angel_engine::ProtocolEffect) -> Vec<Value> {
                 insert_optional_prompt_field(effect, &prefix, &mut block, "description");
                 Value::Object(block)
             }
+            "file_mention" => {
+                let path = effect
+                    .payload
+                    .fields
+                    .get(&format!("{prefix}.path"))
+                    .cloned()
+                    .unwrap_or_else(|| content.clone());
+                let name = effect
+                    .payload
+                    .fields
+                    .get(&format!("{prefix}.name"))
+                    .cloned()
+                    .unwrap_or_else(|| file_name_from_path(&path).unwrap_or_else(|| path.clone()));
+                let mut block = serde_json::Map::new();
+                block.insert("type".to_string(), json!("resource_link"));
+                block.insert("name".to_string(), json!(name));
+                block.insert("uri".to_string(), json!(file_uri_from_path(&path)));
+                insert_optional_prompt_field(effect, &prefix, &mut block, "mimeType");
+                Value::Object(block)
+            }
             "resource" => {
                 let mut resource = serde_json::Map::new();
                 resource.insert(
@@ -453,6 +473,37 @@ fn insert_optional_prompt_field(
     if let Some(value) = effect.payload.fields.get(&format!("{prefix}.{field}")) {
         target.insert(field.to_string(), json!(value));
     }
+}
+
+fn file_name_from_path(path: &str) -> Option<String> {
+    std::path::Path::new(path)
+        .file_name()
+        .and_then(|name| name.to_str())
+        .filter(|name| !name.trim().is_empty())
+        .map(str::to_string)
+}
+
+fn file_uri_from_path(path: &str) -> String {
+    if path.starts_with("file://") {
+        return path.to_string();
+    }
+    if path.starts_with('/') {
+        return format!("file://{}", percent_encode_path(path));
+    }
+    path.to_string()
+}
+
+fn percent_encode_path(path: &str) -> String {
+    let mut encoded = String::with_capacity(path.len());
+    for byte in path.bytes() {
+        match byte {
+            b'A'..=b'Z' | b'a'..=b'z' | b'0'..=b'9' | b'/' | b'-' | b'_' | b'.' | b'~' => {
+                encoded.push(byte as char)
+            }
+            _ => encoded.push_str(&format!("%{byte:02X}")),
+        }
+    }
+    encoded
 }
 
 fn acp_elicitation_response(
@@ -675,6 +726,11 @@ mod tests {
                 input: vec![
                     angel_engine::UserInput::text("summarize this"),
                     angel_engine::UserInput::resource_link("README", "file:///repo/README.md"),
+                    angel_engine::UserInput::file_mention(
+                        "Project Notes.pdf",
+                        "/repo/Project Notes.pdf",
+                        Some("application/pdf".to_string()),
+                    ),
                     angel_engine::UserInput::embedded_text_resource(
                         "file:///repo/context.txt",
                         "important context",
@@ -716,6 +772,15 @@ mod tests {
         assert_eq!(
             params["prompt"][2],
             json!({
+                "type": "resource_link",
+                "name": "Project Notes.pdf",
+                "uri": "file:///repo/Project%20Notes.pdf",
+                "mimeType": "application/pdf"
+            })
+        );
+        assert_eq!(
+            params["prompt"][3],
+            json!({
                 "type": "resource",
                 "resource": {
                     "uri": "file:///repo/context.txt",
@@ -725,7 +790,7 @@ mod tests {
             })
         );
         assert_eq!(
-            params["prompt"][3],
+            params["prompt"][4],
             json!({
                 "type": "resource",
                 "resource": {
@@ -736,7 +801,7 @@ mod tests {
             })
         );
         assert_eq!(
-            params["prompt"][4],
+            params["prompt"][5],
             json!({
                 "type": "image",
                 "data": "ZmFrZQ==",

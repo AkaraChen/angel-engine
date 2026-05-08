@@ -651,6 +651,12 @@ pub enum ClientInput {
         #[serde(default)]
         description: Option<String>,
     },
+    FileMention {
+        name: String,
+        path: String,
+        #[serde(default)]
+        mime_type: Option<String>,
+    },
     EmbeddedTextResource {
         uri: String,
         text: String,
@@ -682,6 +688,18 @@ impl ClientInput {
             mime_type: None,
             title: None,
             description: None,
+        }
+    }
+
+    pub fn file_mention(
+        name: impl Into<String>,
+        path: impl Into<String>,
+        mime_type: Option<String>,
+    ) -> Self {
+        Self::FileMention {
+            name: name.into(),
+            path: path.into(),
+            mime_type,
         }
     }
 
@@ -749,6 +767,11 @@ impl From<ClientInput> for UserInput {
                     description,
                 },
             },
+            ClientInput::FileMention {
+                name,
+                path,
+                mime_type,
+            } => UserInput::file_mention(name, path, mime_type),
             ClientInput::EmbeddedTextResource {
                 uri,
                 text,

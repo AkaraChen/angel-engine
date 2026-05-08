@@ -377,10 +377,12 @@ function ImageMessagePart(part: Extract<EnrichedPartState, { type: "image" }>) {
 }
 
 function FileMessagePart(part: Extract<EnrichedPartState, { type: "file" }>) {
+  const isMention = messageFileMention(part);
   const isImage = part.mimeType.startsWith("image/");
-  const previewText = isImage
-    ? undefined
-    : textFilePreview(part.data, part.mimeType);
+  const previewText =
+    isMention || isImage
+      ? undefined
+      : textFilePreview(part.data, part.mimeType);
 
   return (
     <ChatAttachmentTile
@@ -389,9 +391,11 @@ function FileMessagePart(part: Extract<EnrichedPartState, { type: "file" }>) {
       name={part.filename ?? part.mimeType}
       previewText={previewText}
       previewUrl={
-        isImage ? imageFilePreviewUrl(part.data, part.mimeType) : undefined
+        !isMention && isImage
+          ? imageFilePreviewUrl(part.data, part.mimeType)
+          : undefined
       }
-      typeLabel={isImage ? "Image" : "File"}
+      typeLabel={isMention ? "Mention" : isImage ? "Image" : "File"}
     />
   );
 }
@@ -1399,13 +1403,15 @@ function JsonBlock({ label, value }: { label: string; value: unknown }) {
 function MessageAttachment({ attachment }: { attachment: CompleteAttachment }) {
   const imagePart = attachment.content.find((part) => part.type === "image");
   const filePart = attachment.content.find((part) => part.type === "file");
-  const previewUrl =
-    imagePart?.image ??
-    (filePart?.mimeType.startsWith("image/")
-      ? imageFilePreviewUrl(filePart.data, filePart.mimeType)
-      : undefined);
+  const isMention = filePart ? messageFileMention(filePart) : false;
+  const previewUrl = isMention
+    ? undefined
+    : (imagePart?.image ??
+      (filePart?.mimeType.startsWith("image/")
+        ? imageFilePreviewUrl(filePart.data, filePart.mimeType)
+        : undefined));
   const previewText =
-    !previewUrl && filePart
+    !previewUrl && filePart && !isMention
       ? textFilePreview(filePart.data, filePart.mimeType)
       : undefined;
 
@@ -1416,7 +1422,11 @@ function MessageAttachment({ attachment }: { attachment: CompleteAttachment }) {
       name={attachment.name}
       previewText={previewText}
       previewUrl={previewUrl}
-      typeLabel={attachment.type}
+      typeLabel={isMention ? "Mention" : attachment.type}
     />
   );
+}
+
+function messageFileMention(part: unknown) {
+  return (part as { mention?: unknown }).mention === true;
 }

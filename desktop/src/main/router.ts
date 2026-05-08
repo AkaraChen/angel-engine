@@ -4,6 +4,7 @@ import { tipc } from "@egoist/tipc/main";
 import type {
   ChatCreateInput,
   ChatPrewarmInput,
+  ProjectFileSearchInput,
   ChatRuntimeConfigInput,
   ChatSendInput,
   ChatSetModeInput,
@@ -36,6 +37,7 @@ import {
   listProjects,
   updateProject,
 } from "./projects/repository";
+import { searchProjectFiles } from "./projects/file-search";
 
 const t = tipc.create();
 
@@ -135,6 +137,12 @@ export const appRouter = {
 
   projectsList: t.procedure.action(async () => listProjects()),
 
+  projectsSearchFiles: t.procedure
+    .input<ProjectFileSearchInput>()
+    .action(async ({ input }) =>
+      searchProjectFiles(assertProjectFileSearchInput(input)),
+    ),
+
   projectsShowContextMenu: t.procedure
     .input<string>()
     .action(async ({ context, input }) => {
@@ -204,6 +212,22 @@ function assertChatSendInput(input: ChatSendInput): ChatSendInput {
     reasoningEffort: normalizeOptionalConfigInput(input.reasoningEffort),
     runtime: normalizeOptionalRuntime(input.runtime),
     text: assertString(input.text, "Chat text is required."),
+  };
+}
+
+function assertProjectFileSearchInput(
+  input: ProjectFileSearchInput,
+): ProjectFileSearchInput {
+  if (!input || typeof input !== "object") {
+    throw new Error("Project file search input is required.");
+  }
+  return {
+    limit:
+      typeof input.limit === "number" && Number.isFinite(input.limit)
+        ? input.limit
+        : undefined,
+    query: typeof input.query === "string" ? input.query : undefined,
+    root: assertString(input.root, "Project path is required."),
   };
 }
 

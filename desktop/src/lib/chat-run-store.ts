@@ -1508,7 +1508,9 @@ function historyPartToEngineMessagePart(
     return {
       data: part.data,
       filename: part.filename ?? undefined,
+      ...(part.mention ? { mention: part.mention } : {}),
       mimeType: part.mimeType,
+      ...(part.path ? { path: part.path } : {}),
       type: "file",
     } as ThreadMessage["content"][number];
   }
@@ -1580,7 +1582,9 @@ function historyFilePartToAttachment(
       {
         data: part.data,
         filename: part.filename,
+        ...(part.mention ? { mention: true } : {}),
         mimeType: part.mimeType,
+        ...(part.path ? { path: part.path } : {}),
         type: "file",
       },
     ],
@@ -1627,7 +1631,9 @@ function fileHistoryPartFromMessagePart(
   return {
     data,
     filename: part.filename ?? undefined,
+    mention: messagePartMention(part),
     mimeType,
+    path: messagePartPath(part),
     type: "file",
   };
 }
@@ -1685,6 +1691,17 @@ function attachmentInputFromMessagePart(
   part: ThreadMessage["content"][number],
   fallbackName?: string,
 ): ChatAttachmentInput | undefined {
+  if (part.type === "file" && messagePartMention(part)) {
+    const path = messagePartPath(part);
+    if (!path) return undefined;
+    return {
+      mimeType: part.mimeType,
+      name: part.filename ?? fallbackName ?? null,
+      path,
+      type: "fileMention",
+    };
+  }
+
   if (part.type === "image") {
     const parsed = parseImageDataUrl(part.image);
     if (!parsed) return undefined;
@@ -1733,9 +1750,30 @@ function messagePartPath(part: ThreadMessage["content"][number]) {
   return typeof path === "string" && path.trim() ? path.trim() : null;
 }
 
+function messagePartMention(part: ThreadMessage["content"][number]) {
+  return (
+    (
+      part as ThreadMessage["content"][number] & {
+        mention?: unknown;
+      }
+    ).mention === true
+  );
+}
+
 function attachmentInputToHistoryPart(
   input: ChatAttachmentInput,
 ): ChatHistoryMessagePart {
+  if (input.type === "fileMention") {
+    return {
+      data: input.path,
+      filename: input.name ?? undefined,
+      mention: true,
+      mimeType: input.mimeType ?? "application/octet-stream",
+      path: input.path,
+      type: "file",
+    };
+  }
+
   if (input.type === "image") {
     return {
       filename: input.name ?? undefined,

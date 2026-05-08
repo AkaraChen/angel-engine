@@ -74,6 +74,7 @@ pub(crate) fn codex_user_input(effect: &ProtocolEffect) -> Value {
                     input.push(item);
                 }
             }
+            "file_mention" => input.push(codex_file_mention_item(effect, &prefix, content)),
             "resource" => input.push(codex_text_item(codex_text_resource_text(
                 effect, &prefix, content,
             ))),
@@ -149,6 +150,27 @@ fn codex_resource_link_item(
     Some(codex_text_item(codex_resource_link_text(
         effect, prefix, content,
     )))
+}
+
+fn codex_file_mention_item(effect: &ProtocolEffect, prefix: &str, content: String) -> Value {
+    let path = field(effect, prefix, "path").unwrap_or(content.as_str());
+    let name = field(effect, prefix, "name")
+        .filter(|name| !name.trim().is_empty())
+        .map(str::to_string)
+        .or_else(|| {
+            std::path::Path::new(path)
+                .file_name()
+                .and_then(|name| name.to_str())
+                .filter(|name| !name.trim().is_empty())
+                .map(str::to_string)
+        })
+        .unwrap_or_else(|| path.to_string());
+
+    json!({
+        "type": "mention",
+        "name": name,
+        "path": path,
+    })
 }
 
 fn codex_file_mention_name(

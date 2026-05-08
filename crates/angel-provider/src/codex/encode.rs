@@ -485,6 +485,11 @@ mod tests {
                         "Project Notes.pdf",
                         "file:///repo/Project%20Notes.pdf",
                     ),
+                    angel_engine::UserInput::file_mention(
+                        "src/lib.rs",
+                        "/repo/src/lib.rs",
+                        Some("text/x-rust".to_string()),
+                    ),
                     angel_engine::UserInput {
                         content: "file:///repo/shot.png".to_string(),
                         kind: angel_engine::UserInputKind::ResourceLink {
@@ -525,6 +530,7 @@ mod tests {
                     "text_elements": []
                 },
                 {"type": "image", "url": "data:image/png;base64,ZmFrZQ=="},
+                {"type": "mention", "name": "src/lib.rs", "path": "/repo/src/lib.rs"},
                 {"type": "localImage", "path": "/repo/shot.png"},
                 {
                     "type": "text",

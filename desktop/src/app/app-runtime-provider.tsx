@@ -11,6 +11,7 @@ import {
 } from "@assistant-ui/react";
 
 import { useEngineRuntime } from "@/lib/engine-model-adapter";
+import { ChatEnvironmentProvider } from "@/chat/chat-environment-context";
 import { ChatRuntimeActionsProvider } from "@/lib/chat-runtime-actions-context";
 import type {
   Chat,
@@ -90,11 +91,20 @@ export function AppRuntimeProvider({
   });
 
   return (
-    <ChatRuntimeActionsProvider slotKey={slotKey}>
-      <AssistantRuntimeProvider runtime={assistantRuntime}>
-        {children}
-      </AssistantRuntimeProvider>
-    </ChatRuntimeActionsProvider>
+    <ChatEnvironmentProvider
+      value={{
+        availableCommands: runtimeConfig?.availableCommands ?? [],
+        isProjectChat: Boolean(projectId && projectPath),
+        projectId,
+        projectPath,
+      }}
+    >
+      <ChatRuntimeActionsProvider slotKey={slotKey}>
+        <AssistantRuntimeProvider runtime={assistantRuntime}>
+          {children}
+        </AssistantRuntimeProvider>
+      </ChatRuntimeActionsProvider>
+    </ChatEnvironmentProvider>
   );
 }
 

@@ -126,6 +126,23 @@ impl UserInput {
         }
     }
 
+    pub fn file_mention(
+        name: impl Into<String>,
+        path: impl Into<String>,
+        mime_type: Option<String>,
+    ) -> Self {
+        let path = path.into();
+        let name = name.into();
+        Self {
+            content: path.clone(),
+            kind: UserInputKind::FileMention {
+                name,
+                path,
+                mime_type,
+            },
+        }
+    }
+
     pub fn embedded_text_resource(
         uri: impl Into<String>,
         text: impl Into<String>,
@@ -192,6 +209,11 @@ pub enum UserInputKind {
         mime_type: Option<String>,
         title: Option<String>,
         description: Option<String>,
+    },
+    FileMention {
+        name: String,
+        path: String,
+        mime_type: Option<String>,
     },
     EmbeddedTextResource {
         uri: String,

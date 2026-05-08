@@ -244,6 +244,16 @@ function chatAttachmentsToClientInput(
   attachments: ChatAttachmentInput[],
 ): NonNullable<SendTextRequest["input"]> {
   return attachments.map((attachment) => {
+    if (attachment.type === "fileMention") {
+      const localPath = attachment.path.trim();
+      return {
+        mimeType: attachment.mimeType ?? null,
+        name: attachment.name?.trim() || path.basename(localPath),
+        path: localPath,
+        type: "fileMention",
+      };
+    }
+
     const localPath = attachment.path?.trim();
     if (localPath) {
       return {
