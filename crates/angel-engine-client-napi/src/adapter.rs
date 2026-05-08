@@ -1,16 +1,16 @@
 use std::fmt;
 
 use angel_engine::{
-    AngelEngine, ConversationCapabilities, EngineError, EngineEvent, JsonRpcMessage,
-    JsonRpcRequestId, ProtocolEffect, ProtocolFlavor, SessionModelState, TransportLog,
-    TransportLogKind, TransportOptions, TransportOutput, method_name,
+    AngelEngine, ConversationCapabilities, ConversationId, EngineError, EngineEvent,
+    JsonRpcMessage, JsonRpcRequestId, ProtocolEffect, ProtocolFlavor, SessionModelState,
+    TransportLog, TransportLogKind, TransportOptions, TransportOutput, UserInput, method_name,
 };
 use angel_engine_client::{
     ClientOptions as EngineClientOptions, ClientProtocol as EngineClientProtocol,
     ClientSnapshot as EngineClientSnapshot, RuntimeAdapter as EngineRuntimeAdapter,
 };
-use angel_provider::ProtocolAdapter as EngineProtocolAdapter;
 use angel_provider::acp::AcpAdapter as EngineAcpAdapter;
+use angel_provider::{InterpretedUserInput, ProtocolAdapter as EngineProtocolAdapter};
 use napi::JsValue;
 use napi::bindgen_prelude::*;
 use napi_derive::napi;
@@ -178,6 +178,18 @@ impl EngineProtocolAdapter for NapiRuntimeAdapter {
             Self::Js(adapter) => adapter.model_catalog_from_runtime_debug(result, current_model_id),
         }
     }
+
+    fn interpret_user_input(
+        &self,
+        engine: &AngelEngine,
+        conversation_id: &ConversationId,
+        input: &[UserInput],
+    ) -> EngineResult<Option<InterpretedUserInput>> {
+        match self {
+            Self::Builtin(adapter) => adapter.interpret_user_input(engine, conversation_id, input),
+            Self::Js(adapter) => adapter.interpret_user_input(engine, conversation_id, input),
+        }
+    }
 }
 
 pub(crate) struct JsProtocolAdapter {
@@ -334,6 +346,20 @@ impl EngineProtocolAdapter for JsProtocolAdapter {
         }
         serde_json::from_value(value).ok()
     }
+
+    fn interpret_user_input(
+        &self,
+        engine: &AngelEngine,
+        conversation_id: &ConversationId,
+        input: &[UserInput],
+    ) -> EngineResult<Option<InterpretedUserInput>> {
+        if let Some(base) = &self.native_base
+            && !self.method_is_overridden("interpretUserInput")
+        {
+            return base.interpret_user_input(engine, conversation_id, input);
+        }
+        Ok(None)
+    }
 }
 
 #[derive(Clone)]
@@ -372,6 +398,17 @@ impl NativeBaseAdapter {
     ) -> EngineResult<TransportOutput> {
         match self {
             Self::Acp(adapter) => adapter.decode_message(engine, message),
+        }
+    }
+
+    fn interpret_user_input(
+        &self,
+        engine: &AngelEngine,
+        conversation_id: &ConversationId,
+        input: &[UserInput],
+    ) -> EngineResult<Option<InterpretedUserInput>> {
+        match self {
+            Self::Acp(adapter) => adapter.interpret_user_input(engine, conversation_id, input),
         }
     }
 }

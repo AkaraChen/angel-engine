@@ -15,155 +15,34 @@ pub(super) const SERVICE_TIER_FAST: &str = "priority";
 pub(super) const SERVICE_TIER_NONE: &str = "null";
 
 pub(super) fn codex_slash_commands() -> Vec<AvailableCommand> {
-    // Codex app-server does not currently expose a command catalog; mirror the
-    // TUI's built-in slash command table inside the Codex adapter boundary.
-    let mut commands = vec![
+    // Codex app-server does not currently expose a command catalog. Only
+    // advertise slash commands that this adapter can execute through normalized
+    // engine commands.
+    vec![
         command(
             "model",
             "choose what model and reasoning effort to use",
-            None,
+            Some("model"),
         ),
         command(
             "fast",
             "toggle Fast mode to enable fastest inference with increased plan usage",
-            Some("[on|off|status]"),
+            Some("on|off|status"),
         ),
+        command("effort", "set Codex reasoning effort", Some("effort")),
+        command("reasoning", "set Codex reasoning effort", Some("effort")),
+        command("mode", "switch Codex collaboration mode", Some("mode")),
         command(
-            "ide",
-            "include current selection, open files, and other context from your IDE",
-            Some("[on|off|status]"),
-        ),
-        command("permissions", "choose what Codex is allowed to do", None),
-        command("keymap", "remap TUI shortcuts", Some("[debug]")),
-        command("vim", "toggle Vim mode for the composer", None),
-    ];
-
-    if cfg!(target_os = "windows") {
-        commands.extend([
-            command(
-                "setup-default-sandbox",
-                "set up elevated agent sandbox",
-                None,
-            ),
-            command(
-                "sandbox-add-read-dir",
-                "let sandbox read a directory: /sandbox-add-read-dir <absolute_path>",
-                Some("<absolute_path>"),
-            ),
-        ]);
-    }
-
-    commands.extend([
-        command("experimental", "toggle experimental features", None),
-        command(
-            "approve",
-            "approve one retry of a recent auto-review denial",
-            None,
-        ),
-        command("memories", "configure memory use and generation", None),
-        command(
-            "skills",
-            "use skills to improve how Codex performs specific tasks",
-            None,
-        ),
-        command("hooks", "view and manage lifecycle hooks", None),
-        command(
-            "review",
-            "review my current changes and find issues",
-            Some("[instructions]"),
-        ),
-        command("rename", "rename the current thread", Some("<title>")),
-        command("new", "start a new chat during a conversation", None),
-        command("resume", "resume a saved chat", Some("[thread]")),
-        command("fork", "fork the current chat", None),
-        command(
-            "init",
-            "create an AGENTS.md file with instructions for Codex",
-            None,
+            "plan",
+            "switch to Plan mode or run a prompt in Plan mode",
+            Some("prompt"),
         ),
         command(
             "compact",
             "summarize conversation to prevent hitting the context limit",
             None,
         ),
-        command("plan", "switch to Plan mode", Some("[prompt]")),
-        command(
-            "goal",
-            "set or view the goal for a long-running task",
-            Some("[objective|clear|pause|resume]"),
-        ),
-        command("collab", "change collaboration mode (experimental)", None),
-        command("agent", "switch the active agent thread", None),
-        command(
-            "side",
-            "start a side conversation in an ephemeral fork",
-            Some("<prompt>"),
-        ),
-        command("copy", "copy last response as markdown", None),
-        command(
-            "raw",
-            "toggle raw scrollback mode for copy-friendly terminal selection",
-            Some("[on|off]"),
-        ),
-        command("diff", "show git diff (including untracked files)", None),
-        command("mention", "mention a file", None),
-        command(
-            "status",
-            "show current session configuration and token usage",
-            None,
-        ),
-        command(
-            "debug-config",
-            "show config layers and requirement sources for debugging",
-            None,
-        ),
-        command(
-            "title",
-            "configure which items appear in the terminal title",
-            None,
-        ),
-        command(
-            "statusline",
-            "configure which items appear in the status line",
-            None,
-        ),
-        command("theme", "choose a syntax highlighting theme", None),
-        command(
-            "mcp",
-            "list configured MCP tools; use /mcp verbose for details",
-            Some("[verbose]"),
-        ),
-        command("apps", "manage apps", None),
-        command("plugins", "browse plugins", None),
-        command("logout", "log out of Codex", None),
-        command("quit", "exit Codex", None),
-        command("exit", "exit Codex", None),
-        command("feedback", "send logs to maintainers", None),
-        command("ps", "list background terminals", None),
-        command("stop", "stop all background terminals", None),
-        command("clear", "clear the terminal and start a new chat", None),
-        command(
-            "personality",
-            "choose a communication style for Codex",
-            None,
-        ),
-        command(
-            "realtime",
-            "toggle realtime voice mode (experimental)",
-            None,
-        ),
-        command("settings", "configure realtime microphone/speaker", None),
-        command("subagents", "switch the active agent thread", None),
-    ]);
-
-    if cfg!(debug_assertions) {
-        commands.extend([
-            command("rollout", "print the rollout file path", None),
-            command("test-approval", "test approval request", None),
-        ]);
-    }
-
-    commands
+    ]
 }
 
 fn command(name: &str, description: &str, input_hint: Option<&str>) -> AvailableCommand {
@@ -189,13 +68,6 @@ impl CodexAdapter {
         let Some((name, args)) = parse_slash_command(command_line) else {
             return Ok(None);
         };
-        if !codex_slash_commands()
-            .iter()
-            .any(|command| command.name == name)
-        {
-            return Ok(None);
-        }
-
         let interpreted = match name {
             "fast" => fast_command(engine, conversation_id, args),
             "model" => model_command(engine, conversation_id, args),
@@ -209,10 +81,7 @@ impl CodexAdapter {
                 }),
                 message: None,
             },
-            _ => no_op(
-                conversation_id,
-                format!("Slash command /{name} is a Codex UI command and is not available here."),
-            ),
+            _ => return Ok(None),
         };
         Ok(Some(interpreted))
     }
@@ -477,6 +346,53 @@ mod tests {
             .expect("interpret");
 
         assert!(interpreted.is_none());
+    }
+
+    #[test]
+    fn advertised_slash_commands_are_interpreted() {
+        let adapter = CodexAdapter::app_server();
+        let engine = engine_with_conversation(&adapter);
+        let conversation_id = ConversationId::new("conv");
+
+        for command in codex_slash_commands() {
+            let input = match command.name.as_str() {
+                "model" => "/model",
+                "fast" => "/fast status",
+                "effort" => "/effort high",
+                "reasoning" => "/reasoning low",
+                "mode" => "/mode default",
+                "plan" => "/plan",
+                "compact" => "/compact",
+                name => panic!("advertised /{name} is not covered by the adapter"),
+            };
+            let interpreted = adapter
+                .interpret_slash_command(&engine, &conversation_id, &[UserInput::text(input)])
+                .expect("interpret")
+                .unwrap_or_else(|| panic!("advertised command {input} was not interpreted"));
+
+            assert!(
+                !interpreted
+                    .message
+                    .as_deref()
+                    .is_some_and(|message| message.contains("not available here")),
+                "advertised command {input} only produced an unavailable no-op"
+            );
+        }
+    }
+
+    #[test]
+    fn tui_only_slash_commands_are_not_advertised() {
+        let commands = codex_slash_commands()
+            .into_iter()
+            .map(|command| command.name)
+            .collect::<Vec<_>>();
+
+        for tui_only in ["copy", "raw", "theme", "quit", "review", "mention"] {
+            assert!(
+                !commands.iter().any(|command| command == tui_only),
+                "/{tui_only} should not be advertised by the engine adapter"
+            );
+        }
     }
 
     fn engine_with_conversation(adapter: &CodexAdapter) -> AngelEngine {

@@ -211,7 +211,11 @@ impl AngelSession {
         let command = self
             .client
             .send_thread_event(conversation_id.clone(), ThreadEvent::input(input))?;
-        let mut active = ActiveTurn::new(conversation_id, command.turn_id.clone());
+        let mut active = ActiveTurn::new(
+            conversation_id,
+            command.turn_id.clone(),
+            command.request_id.clone(),
+        );
         active.handle_update(command.update)?;
         if command.turn_id.is_none()
             && let Some(message) = command.message
@@ -219,7 +223,7 @@ impl AngelSession {
             active.collector.text = message;
         }
 
-        if command.turn_id.is_none() {
+        if command.turn_id.is_none() && active.request_is_complete() {
             let snapshot = self.thread_state();
             let result = self.final_result(active, snapshot);
             return Ok(vec![TurnRunEvent::Result { result }]);
@@ -421,7 +425,7 @@ impl AngelSession {
             return Ok(false);
         };
         let Some(turn_id) = active.turn_id.as_deref() else {
-            return Ok(true);
+            return Ok(active.request_is_complete());
         };
         Ok(self.client_turn_is_terminal(&active.conversation_id, turn_id))
     }
@@ -558,17 +562,22 @@ impl AngelSession {
 struct ActiveTurn {
     conversation_id: String,
     turn_id: Option<String>,
+    request_id: Option<String>,
+    request_completed: bool,
     collector: TurnCollector,
     pending_elicitation_id: Option<String>,
     events: VecDeque<TurnRunEvent>,
 }
 
 impl ActiveTurn {
-    fn new(conversation_id: String, turn_id: Option<String>) -> Self {
+    fn new(conversation_id: String, turn_id: Option<String>, request_id: Option<String>) -> Self {
+        let request_completed = request_id.is_none();
         Self {
             collector: TurnCollector::new(turn_id.clone()),
             conversation_id,
             turn_id,
+            request_id,
+            request_completed,
             pending_elicitation_id: None,
             events: VecDeque::new(),
         }
@@ -584,6 +593,14 @@ impl ActiveTurn {
 
     fn handle_update(&mut self, update: ClientUpdate) -> ClientResult<()> {
         let has_ordered_stream_events = update.events.iter().any(is_ordered_stream_event);
+        if let Some(request_id) = &self.request_id
+            && update
+                .completed_request_ids
+                .iter()
+                .any(|completed| completed == request_id)
+        {
+            self.request_completed = true;
+        }
 
         for event in update.events {
             if let ClientEvent::RuntimeFaulted { code, message } = &event {
@@ -611,6 +628,10 @@ impl ActiveTurn {
 
     fn accepts_turn(&self, turn_id: Option<&str>) -> bool {
         self.collector.accepts_turn(turn_id)
+    }
+
+    fn request_is_complete(&self) -> bool {
+        self.request_completed
     }
 
     fn accept_elicitation(&mut self, elicitation: ElicitationSnapshot) {
@@ -930,7 +951,8 @@ mod tests {
 
     #[test]
     fn active_turn_ignores_resolved_elicitation_updates() {
-        let mut active = ActiveTurn::new("conversation".to_string(), Some("turn".to_string()));
+        let mut active =
+            ActiveTurn::new("conversation".to_string(), Some("turn".to_string()), None);
         active
             .handle_update(ClientUpdate {
                 events: vec![ClientEvent::ElicitationOpened {
@@ -963,7 +985,8 @@ mod tests {
 
     #[test]
     fn active_turn_preserves_action_lifecycle_events() {
-        let mut active = ActiveTurn::new("conversation".to_string(), Some("turn".to_string()));
+        let mut active =
+            ActiveTurn::new("conversation".to_string(), Some("turn".to_string()), None);
         active
             .handle_update(ClientUpdate {
                 events: vec![
@@ -988,6 +1011,25 @@ mod tests {
             active.pop_event(),
             Some(TurnRunEvent::ActionUpdated { .. })
         ));
+    }
+
+    #[test]
+    fn no_turn_active_request_completes_from_update() {
+        let mut active = ActiveTurn::new(
+            "conversation".to_string(),
+            None,
+            Some("request-1".to_string()),
+        );
+
+        assert!(!active.request_is_complete());
+        active
+            .handle_update(ClientUpdate {
+                completed_request_ids: vec!["request-1".to_string()],
+                ..ClientUpdate::default()
+            })
+            .unwrap();
+
+        assert!(active.request_is_complete());
     }
 
     #[test]

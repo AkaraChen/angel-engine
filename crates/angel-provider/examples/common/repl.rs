@@ -117,30 +117,35 @@ where
 
     fn run_turn(&mut self, prompt: String) -> Result<(), Box<dyn Error>> {
         let conversation_id = self.selected_conversation()?;
-        let plan = self.engine.plan_command(EngineCommand::StartTurn {
-            conversation_id: conversation_id.clone(),
-            input: vec![UserInput::text(prompt)],
-            overrides: TurnOverrides::default(),
-        })?;
+        let input = vec![UserInput::text(prompt)];
+        let (command, message) = if let Some(interpreted) =
+            self.adapter
+                .interpret_user_input(&self.engine, &conversation_id, &input)?
+        {
+            (interpreted.command, interpreted.message)
+        } else {
+            (
+                EngineCommand::StartTurn {
+                    conversation_id: conversation_id.clone(),
+                    input,
+                    overrides: TurnOverrides::default(),
+                },
+                None,
+            )
+        };
+        let plan = self.engine.plan_command(command)?;
         let turn_id = plan.turn_id.clone();
+        let request_id = plan.request_id.clone();
         self.send_plan(plan)?;
 
-        while !turn_id
-            .as_ref()
-            .and_then(|turn_id| {
-                self.engine
-                    .selected
-                    .as_ref()
-                    .and_then(|id| self.engine.conversations.get(id))
-                    .and_then(|conversation| conversation.turns.get(turn_id))
-            })
-            .map(|turn| turn.is_terminal())
-            .unwrap_or(false)
-        {
+        while !self.turn_or_request_done(turn_id.as_ref(), request_id.as_ref()) {
             if self.resolve_open_elicitation()? {
                 continue;
             }
             self.process_next_line(None)?;
+        }
+        if let Some(message) = message {
+            println!("{message}");
         }
         if let Some(turn_id) = turn_id.as_ref() {
             self.record_plan_file_from_turn_output(&conversation_id, turn_id);
@@ -149,6 +154,26 @@ where
         }
         println!();
         Ok(())
+    }
+
+    fn turn_or_request_done(
+        &self,
+        turn_id: Option<&angel_engine::TurnId>,
+        request_id: Option<&angel_engine::JsonRpcRequestId>,
+    ) -> bool {
+        if let Some(turn_id) = turn_id {
+            return self
+                .engine
+                .selected
+                .as_ref()
+                .and_then(|id| self.engine.conversations.get(id))
+                .and_then(|conversation| conversation.turns.get(turn_id))
+                .map(|turn| turn.is_terminal())
+                .unwrap_or(false);
+        }
+        request_id
+            .map(|id| !self.engine.pending.requests.contains_key(id))
+            .unwrap_or(true)
     }
 
     pub(super) fn current_model(&self) -> Option<String> {

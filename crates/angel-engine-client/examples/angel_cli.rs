@@ -88,8 +88,23 @@ impl MultiRuntimeCli {
 
     fn run_turn(&mut self, event: ThreadEvent) -> Result<(), Box<dyn Error>> {
         let result = self.send_thread_event(event)?;
+        let request_id = result.request_id.clone();
+        let message = result.message.clone();
+        let request_completed = result.request_id.as_ref().is_some_and(|request_id| {
+            result
+                .update
+                .completed_request_ids
+                .iter()
+                .any(|completed| completed == request_id)
+        });
         let Some(turn_id) = result.turn_id else {
-            if let Some(message) = result.message {
+            if let Some(request_id) = request_id {
+                self.wait_for_request(&request_id, request_completed)?;
+                if let Some(message) = message {
+                    println!("{message}");
+                }
+                println!();
+            } else if let Some(message) = message {
                 println!("{message}");
             }
             return Ok(());
@@ -103,6 +118,29 @@ impl MultiRuntimeCli {
         }
         println!();
         Ok(())
+    }
+
+    fn wait_for_request(
+        &mut self,
+        request_id: &str,
+        already_completed: bool,
+    ) -> Result<(), Box<dyn Error>> {
+        if already_completed {
+            return Ok(());
+        }
+        loop {
+            let Some(update) = self.client.next_update(None)? else {
+                return Err("runtime channel closed before request completed".into());
+            };
+            let completed = update
+                .completed_request_ids
+                .iter()
+                .any(|completed| completed == request_id);
+            self.handle_update(update)?;
+            if completed {
+                return Ok(());
+            }
+        }
     }
 
     fn send_thread_event(

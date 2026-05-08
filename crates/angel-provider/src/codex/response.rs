@@ -197,19 +197,31 @@ impl CodexAdapter {
         );
         if let Some(id) = id {
             output.completed_requests.push(id.clone());
-            if let Some(PendingRequest::StartTurn {
-                conversation_id,
-                turn_id,
-            }) = engine.pending.requests.get(id)
-            {
-                output.events.push(EngineEvent::TurnTerminal {
-                    conversation_id: conversation_id.clone(),
-                    turn_id: turn_id.clone(),
-                    outcome: TurnOutcome::Failed(ErrorInfo::new(
-                        format!("codex.rpc.{code}"),
-                        message.to_string(),
-                    )),
-                });
+            match engine.pending.requests.get(id) {
+                Some(PendingRequest::StartTurn {
+                    conversation_id,
+                    turn_id,
+                }) => {
+                    output.events.push(EngineEvent::TurnTerminal {
+                        conversation_id: conversation_id.clone(),
+                        turn_id: turn_id.clone(),
+                        outcome: TurnOutcome::Failed(ErrorInfo::new(
+                            format!("codex.rpc.{code}"),
+                            message.to_string(),
+                        )),
+                    });
+                }
+                Some(PendingRequest::HistoryMutation { conversation_id }) => {
+                    output.events.push(EngineEvent::HistoryMutationFinished {
+                        conversation_id: conversation_id.clone(),
+                        result: angel_engine::HistoryMutationResult {
+                            success: false,
+                            workspace_reverted: false,
+                            message: Some(message.to_string()),
+                        },
+                    });
+                }
+                _ => {}
             }
         }
         Ok(output)
@@ -797,8 +809,12 @@ mod tests {
                 EngineEvent::ConversationReady { .. },
                 EngineEvent::AvailableCommandsUpdated { commands, .. }
             ] if commands.iter().any(|command| command.name == "plan")
-                && commands.iter().any(|command| command.name == "review")
-                && commands.iter().any(|command| command.name == "mention")
+                && commands.iter().any(|command| command.name == "compact")
+                && commands.iter().any(|command| command.name == "fast")
+                && commands.iter().all(|command| !matches!(
+                    command.name.as_str(),
+                    "copy" | "raw" | "theme" | "quit" | "review" | "mention"
+                ))
         ));
     }
 

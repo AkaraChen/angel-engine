@@ -461,6 +461,52 @@ fn codex_slash_fast_is_interpreted_without_starting_turn() {
 }
 
 #[test]
+fn codex_slash_compact_is_request_backed_without_starting_turn() {
+    let (mut client, conversation_id) = ready_codex_client();
+
+    let sent = client
+        .thread(&conversation_id)
+        .send_event(ThreadEvent::text("/compact"))
+        .expect("send compact slash");
+
+    assert!(sent.turn_id.is_none());
+    let request_id = sent.request_id.expect("compact request id");
+    assert_eq!(
+        sent.update.outgoing[0].value["method"],
+        json!("thread/compact/start")
+    );
+    assert_eq!(
+        client
+            .thread(&conversation_id)
+            .require_state()
+            .expect("conversation")
+            .lifecycle,
+        "mutatingHistory"
+    );
+
+    let update = client
+        .receive_json_value(response(&request_id, json!({})))
+        .expect("compact response");
+    assert!(update.completed_request_ids.contains(&request_id));
+    assert!(update.events.iter().any(|event| {
+        matches!(
+            event,
+            ClientEvent::HistoryUpdated {
+                conversation_id: id
+            } if id == &conversation_id
+        )
+    }));
+    assert_eq!(
+        client
+            .thread(&conversation_id)
+            .require_state()
+            .expect("conversation")
+            .lifecycle,
+        "idle"
+    );
+}
+
+#[test]
 fn codex_resume_projects_raw_tool_history_into_display_messages() {
     let mut client = ClientOptions::builder()
         .codex_app_server("codex")
