@@ -4,3 +4,6 @@
 [submodule "vendor/openai-codex"]
 	path = vendor/openai-codex
 	url = https://github.com/openai/codex.git
+[submodule "vendor/claude-agent-sdk-typescript"]
+	path = vendor/claude-agent-sdk-typescript
+	url = https://github.com/anthropics/claude-agent-sdk-typescript
