@@ -89,6 +89,8 @@ const assistantTextContainerClassName = [
 
 type ElicitationQuestion = NonNullable<ChatElicitation["questions"]>[number];
 
+const ALLOW_PERMISSION_RESPONSE: ChatElicitationResponse = { type: "allow" };
+
 type ElicitationFreeformAnswerProps = {
   disabled: boolean;
   onChange: (value: string) => void;
@@ -713,6 +715,14 @@ function PermissionApprovalActions({
   disabled: boolean;
   onResume: (response: ChatElicitationResponse) => void;
 }) {
+  const { enablePermissionBypass, permissionBypassEnabled } =
+    useChatRuntimeActions();
+  const bypassPermission = () => {
+    if (disabled) return;
+    enablePermissionBypass();
+    onResume(ALLOW_PERMISSION_RESPONSE);
+  };
+
   return (
     <div className={cn("flex flex-wrap justify-end gap-2", className)}>
       <Button
@@ -750,6 +760,15 @@ function PermissionApprovalActions({
       >
         Allow
       </Button>
+      <Button
+        disabled={disabled || permissionBypassEnabled}
+        onClick={bypassPermission}
+        size="xs"
+        type="button"
+        variant="destructive"
+      >
+        Bypass permission
+      </Button>
     </div>
   );
 }
@@ -758,10 +777,18 @@ function isInlinePermissionElicitation(
   elicitation?: ChatElicitation,
 ): elicitation is ChatElicitation {
   return Boolean(
+    isPermissionElicitation(elicitation) &&
+    (elicitation.questions?.length ?? 0) === 0,
+  );
+}
+
+function isPermissionElicitation(
+  elicitation?: ChatElicitation,
+): elicitation is ChatElicitation {
+  return Boolean(
     elicitation &&
     (elicitation.kind === "approval" ||
-      elicitation.kind === "permissionProfile") &&
-    (elicitation.questions?.length ?? 0) === 0,
+      elicitation.kind === "permissionProfile"),
   );
 }
 
@@ -1121,6 +1148,7 @@ function ElicitationQuestionCard({
   const [submittedResponseType, setSubmittedResponseType] =
     useState<ChatElicitationResponse["type"]>();
   const awaitingInput = elicitation.phase === "open" && !submittedResponseType;
+  const isPermissionRequest = isPermissionElicitation(elicitation);
   const phase = submittedResponseType
     ? submittedResponseType === "cancel"
       ? "cancelled"
@@ -1181,52 +1209,59 @@ function ElicitationQuestionCard({
             </div>
           ) : null}
 
-          <div className="space-y-3">
-            {questions.length > 0 ? (
-              questions.map((question) => (
-                <ElicitationQuestionInput
+          {isPermissionRequest ? (
+            <PermissionApprovalActions
+              disabled={!awaitingInput}
+              onResume={resume}
+            />
+          ) : (
+            <div className="space-y-3">
+              {questions.length > 0 ? (
+                questions.map((question) => (
+                  <ElicitationQuestionInput
+                    disabled={!awaitingInput}
+                    key={question.id}
+                    onChange={(value) =>
+                      setAnswers((current) => ({
+                        ...current,
+                        [question.id]: value,
+                      }))
+                    }
+                    question={question}
+                    value={answers[question.id] ?? ""}
+                  />
+                ))
+              ) : (
+                <textarea
+                  className="min-h-20 w-full resize-y rounded-sm border bg-background px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring/30"
                   disabled={!awaitingInput}
-                  key={question.id}
-                  onChange={(value) =>
-                    setAnswers((current) => ({
-                      ...current,
-                      [question.id]: value,
-                    }))
-                  }
-                  question={question}
-                  value={answers[question.id] ?? ""}
+                  onChange={(event) => setFallbackAnswer(event.target.value)}
+                  value={fallbackAnswer}
                 />
-              ))
-            ) : (
-              <textarea
-                className="min-h-20 w-full resize-y rounded-sm border bg-background px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring/30"
-                disabled={!awaitingInput}
-                onChange={(event) => setFallbackAnswer(event.target.value)}
-                value={fallbackAnswer}
-              />
-            )}
+              )}
 
-            {awaitingInput ? (
-              <div className="flex flex-wrap justify-end gap-2">
-                <Button
-                  onClick={() => resume({ type: "cancel" })}
-                  size="xs"
-                  type="button"
-                  variant="ghost"
-                >
-                  Cancel
-                </Button>
-                <Button onClick={submitAnswers} size="xs" type="button">
-                  <Send className="size-3.5" />
-                  Submit
-                </Button>
-              </div>
-            ) : (
-              <div className="text-right text-[11px] text-muted-foreground">
-                {formatElicitationPhase(phase)}
-              </div>
-            )}
-          </div>
+              {awaitingInput ? (
+                <div className="flex flex-wrap justify-end gap-2">
+                  <Button
+                    onClick={() => resume({ type: "cancel" })}
+                    size="xs"
+                    type="button"
+                    variant="ghost"
+                  >
+                    Cancel
+                  </Button>
+                  <Button onClick={submitAnswers} size="xs" type="button">
+                    <Send className="size-3.5" />
+                    Submit
+                  </Button>
+                </div>
+              ) : (
+                <div className="text-right text-[11px] text-muted-foreground">
+                  {formatElicitationPhase(phase)}
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </CollapsibleContent>
     </Collapsible>

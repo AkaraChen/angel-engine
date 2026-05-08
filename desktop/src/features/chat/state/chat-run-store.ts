@@ -42,12 +42,14 @@ import {
 const STREAM_FLUSH_MIN_CHARS = 24;
 const STREAM_FLUSH_MAX_MS = 80;
 const EMPTY_MESSAGES: EngineMessage[] = [];
+const ALLOW_PERMISSION_RESPONSE: ChatElicitationResponse = { type: "allow" };
 
 export type EngineMessage = ThreadMessage;
 
 type ActiveRun = {
   abortController: AbortController;
   assistantMessageId: string;
+  autoApprovedPermissionIds: Set<string>;
   cancelled: boolean;
   initialSlotKey: string;
   resolveElicitationLocally?: (
@@ -65,6 +67,7 @@ type BaseChatRunSlot = {
   historyRevision: number;
   key: string;
   messages: EngineMessage[];
+  permissionBypassEnabled: boolean;
 };
 
 type IdleChatRunSlot = BaseChatRunSlot & {
@@ -120,6 +123,7 @@ type ChatRunStore = {
   cancelRun: (slotKey: string) => void;
   dropAllRuns: () => void;
   dropRun: (slotKey: string) => void;
+  enablePermissionBypass: (slotKey: string) => void;
   initializeSlot: (input: InitializeSlotInput) => void;
   resolveElicitation: (
     slotKey: string,
@@ -140,6 +144,7 @@ type ChatRunEvent =
       type: "slot.initialized";
     }
   | { slotKey: string; type: "run.cancelled" }
+  | { slotKey: string; type: "slot.permissionBypassEnabled" }
   | {
       chat: Chat;
       config: ChatRuntimeConfig;
@@ -220,6 +225,11 @@ const chatRunMachine = setup({
             updateSlotConfigContext(context, event),
           ),
         },
+        "slot.permissionBypassEnabled": {
+          actions: assign(({ context, event }) =>
+            enablePermissionBypassContext(context, event.slotKey),
+          ),
+        },
         "slot.initialized": {
           actions: assign(({ context, event }) =>
             initializeSlotContext(context, event.input, event.messages),
@@ -266,6 +276,9 @@ const chatRunActions: Omit<ChatRunStore, "aliases" | "slots"> = {
 
     chatRunActor.send({ slotKey, type: "slot.dropped" });
   },
+  enablePermissionBypass(slotKey) {
+    chatRunActor.send({ slotKey, type: "slot.permissionBypassEnabled" });
+  },
   initializeSlot(input) {
     chatRunActor.send({
       input,
@@ -309,6 +322,7 @@ const chatRunActions: Omit<ChatRunStore, "aliases" | "slots"> = {
     const activeRun: ActiveRun = {
       abortController: new AbortController(),
       assistantMessageId,
+      autoApprovedPermissionIds: new Set(),
       cancelled: false,
       initialSlotKey: slotKey,
       runId,
@@ -393,6 +407,12 @@ export function useChatRunIsRunning(slotKey?: string) {
 export function useChatRunConfig(slotKey?: string) {
   return useChatRunStore((state) =>
     slotKey ? selectSlot(state, slotKey)?.config : undefined,
+  );
+}
+
+export function useChatPermissionBypassEnabled(slotKey: string) {
+  return useChatRunStore((state) =>
+    isPermissionBypassEnabledForSlot(state, slotKey),
   );
 }
 
@@ -493,6 +513,30 @@ function initializeSlotContext(
         normalizeEnginePlanMessages(messages),
         existing,
       ),
+    },
+  };
+}
+
+function enablePermissionBypassContext(
+  state: ChatRunContext,
+  slotKey: string,
+): Partial<ChatRunContext> {
+  const resolvedKey = resolveSlotKey(state, slotKey);
+  const existing =
+    state.slots[resolvedKey] ??
+    createIdleSlot(resolvedKey, {
+      historyRevision: 0,
+      slotKey: resolvedKey,
+    });
+  if (existing.permissionBypassEnabled) return {};
+
+  return {
+    slots: {
+      ...state.slots,
+      [resolvedKey]: {
+        ...existing,
+        permissionBypassEnabled: true,
+      },
     },
   };
 }
@@ -707,6 +751,7 @@ function createIdleSlot(
     historyRevision: input.historyRevision,
     key,
     messages,
+    permissionBypassEnabled: existing?.permissionBypassEnabled ?? false,
     status: "idle",
   };
 }
@@ -818,10 +863,25 @@ async function consumeRunStream({
       }
 
       accumulator.chunkCount += 1;
+      let autoApprovedPermission = false;
       if (event.type === "elicitation") {
         upsertElicitationPart(accumulator.parts, event.elicitation);
+        autoApprovedPermission = autoApprovePermissionElicitation({
+          activeRun,
+          elicitation: event.elicitation,
+          parts: accumulator.parts,
+          slotKey: currentSlotKey,
+        });
       } else if (event.type === "tool") {
         upsertToolActionPart(accumulator.parts, event.action);
+        autoApprovedPermission = autoApprovePermissionToolAction({
+          action: event.action,
+          activeRun,
+          parts: accumulator.parts,
+          slotKey: currentSlotKey,
+        });
+      } else if (event.type === "toolDelta") {
+        appendToolActionDeltaPart(accumulator.parts, event.action);
       } else if (event.type === "plan") {
         upsertChatPlanPart(accumulator.parts, event.plan);
       } else {
@@ -830,6 +890,7 @@ async function consumeRunStream({
       }
       dirty = true;
       if (
+        autoApprovedPermission ||
         event.type === "elicitation" ||
         (event.type === "tool" && event.action.phase === "awaitingDecision")
       ) {
@@ -885,6 +946,81 @@ async function consumeRunStream({
     result: accumulator.result,
     slotKey: currentSlotKey,
   };
+}
+
+function autoApprovePermissionElicitation({
+  activeRun,
+  elicitation,
+  parts,
+  slotKey,
+}: {
+  activeRun: ActiveRun;
+  elicitation: ChatElicitation;
+  parts: ChatHistoryMessagePart[];
+  slotKey: string;
+}) {
+  if (!isPermissionElicitation(elicitation)) return false;
+  if (!shouldAutoApprovePermission(activeRun, slotKey, elicitation.id)) {
+    return false;
+  }
+
+  resolveElicitationPartLocally(
+    parts,
+    elicitation.id,
+    ALLOW_PERMISSION_RESPONSE,
+  );
+  sendAutoPermissionApproval(activeRun, elicitation.id);
+  return true;
+}
+
+function autoApprovePermissionToolAction({
+  action,
+  activeRun,
+  parts,
+  slotKey,
+}: {
+  action: ChatToolAction;
+  activeRun: ActiveRun;
+  parts: ChatHistoryMessagePart[];
+  slotKey: string;
+}) {
+  if (action.phase !== "awaitingDecision") return false;
+  const elicitation = chatElicitationFromAction(action);
+  if (!isPermissionElicitation(elicitation)) return false;
+  if (!shouldAutoApprovePermission(activeRun, slotKey, action.id)) {
+    return false;
+  }
+
+  markToolActionPermissionApprovedLocally(parts, action.id);
+  sendAutoPermissionApproval(activeRun, action.id);
+  return true;
+}
+
+function shouldAutoApprovePermission(
+  activeRun: ActiveRun,
+  slotKey: string,
+  elicitationId: string,
+) {
+  if (!activeRun.streamController) return false;
+  if (!isPermissionBypassEnabledForSlot(getChatRunContext(), slotKey)) {
+    return false;
+  }
+  if (activeRun.autoApprovedPermissionIds.has(elicitationId)) return false;
+
+  activeRun.autoApprovedPermissionIds.add(elicitationId);
+  return true;
+}
+
+function sendAutoPermissionApproval(
+  activeRun: ActiveRun,
+  elicitationId: string,
+) {
+  void activeRun.streamController
+    ?.resolveElicitation({
+      elicitationId,
+      response: ALLOW_PERMISSION_RESPONSE,
+    })
+    .catch((): undefined => undefined);
 }
 
 function replaceAssistantMessage(
@@ -953,6 +1089,13 @@ function selectSlot(
   key: string,
 ) {
   return state.slots[resolveSlotKey(state, key)];
+}
+
+function isPermissionBypassEnabledForSlot(
+  state: Pick<ChatRunStore, "aliases" | "slots">,
+  key: string,
+) {
+  return selectSlot(state, key)?.permissionBypassEnabled ?? false;
 }
 
 function resolveSlotKey(
@@ -1090,6 +1233,37 @@ function upsertToolActionPart(
   parts[index] = nextPart;
 }
 
+function appendToolActionDeltaPart(
+  parts: ChatHistoryMessagePart[],
+  action: ChatToolAction,
+) {
+  const index = parts.findIndex(
+    (part) => part.type === "tool-call" && part.toolCallId === action.id,
+  );
+
+  if (index === -1) {
+    upsertToolActionPart(parts, action);
+    return;
+  }
+
+  const previous = parts[index];
+  if (previous.type !== "tool-call" || !isChatToolAction(previous.artifact)) {
+    upsertToolActionPart(parts, action);
+    return;
+  }
+
+  const output = [
+    ...(previous.artifact.output ?? []),
+    ...(action.output ?? []),
+  ];
+  upsertToolActionPart(parts, {
+    ...previous.artifact,
+    ...action,
+    output,
+    outputText: `${previous.artifact.outputText ?? ""}${action.outputText ?? ""}`,
+  });
+}
+
 function mergeFinalResultParts(
   parts: ChatHistoryMessagePart[],
   finalParts: ChatHistoryMessagePart[],
@@ -1162,6 +1336,25 @@ function resolveElicitationPartLocally(
   }
 }
 
+function markToolActionPermissionApprovedLocally(
+  parts: ChatHistoryMessagePart[],
+  actionId: string,
+) {
+  const index = parts.findIndex(
+    (part) => part.type === "tool-call" && part.toolCallId === actionId,
+  );
+  const part = parts[index];
+  if (part?.type !== "tool-call" || !isChatToolAction(part.artifact)) return;
+
+  parts[index] = {
+    ...part,
+    artifact: {
+      ...part.artifact,
+      phase: "running",
+    },
+  };
+}
+
 function removeBackingHostCapabilityPart(
   parts: ChatHistoryMessagePart[],
   actionId: string,
@@ -1210,6 +1403,27 @@ function elicitationBackingActionId(action: ChatToolAction) {
 function questionElicitationFromAction(
   action: ChatToolAction,
 ): ChatElicitation | undefined {
+  const elicitation = chatElicitationFromAction(action);
+  if (
+    elicitation &&
+    (elicitation.kind === "userInput" ||
+      (elicitation.questions?.length ?? 0) > 0)
+  ) {
+    return {
+      ...elicitation,
+      phase: elicitationPhaseFromAction(
+        action.phase,
+        elicitation.phase,
+        actionHasOutput(action),
+      ),
+    };
+  }
+  return undefined;
+}
+
+function chatElicitationFromAction(
+  action: ChatToolAction,
+): ChatElicitation | undefined {
   if (!action.rawInput) return undefined;
   try {
     const parsed: unknown = JSON.parse(action.rawInput);
@@ -1219,25 +1433,21 @@ function questionElicitationFromAction(
       typeof (parsed as Partial<ChatElicitation>).id === "string" &&
       typeof (parsed as Partial<ChatElicitation>).kind === "string"
     ) {
-      const elicitation = parsed as ChatElicitation;
-      if (
-        elicitation.kind === "userInput" ||
-        (elicitation.questions?.length ?? 0) > 0
-      ) {
-        return {
-          ...elicitation,
-          phase: elicitationPhaseFromAction(
-            action.phase,
-            elicitation.phase,
-            actionHasOutput(action),
-          ),
-        };
-      }
+      return parsed as ChatElicitation;
     }
   } catch {
     return undefined;
   }
   return undefined;
+}
+
+function isPermissionElicitation(
+  elicitation?: ChatElicitation,
+): elicitation is ChatElicitation {
+  return (
+    elicitation?.kind === "approval" ||
+    elicitation?.kind === "permissionProfile"
+  );
 }
 
 function elicitationPhaseFromAction(

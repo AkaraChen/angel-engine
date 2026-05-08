@@ -1,9 +1,14 @@
 import { createContext, useContext, useMemo, type ReactNode } from "react";
 
-import { useChatRunStore } from "@/features/chat/state/chat-run-store";
+import {
+  useChatPermissionBypassEnabled,
+  useChatRunStore,
+} from "@/features/chat/state/chat-run-store";
 import type { ChatElicitationResponse } from "@/shared/chat";
 
 type ChatRuntimeActionsContextValue = {
+  enablePermissionBypass: () => void;
+  permissionBypassEnabled: boolean;
   resolveElicitation: (
     elicitationId: string,
     response: ChatElicitationResponse,
@@ -26,9 +31,17 @@ export function ChatRuntimeActionsProvider({
   const resolveElicitationForSlot = useChatRunStore(
     (state) => state.resolveElicitation,
   );
+  const enablePermissionBypassForSlot = useChatRunStore(
+    (state) => state.enablePermissionBypass,
+  );
   const setModeForSlot = useChatRunStore((state) => state.setMode);
+  const permissionBypassEnabled = useChatPermissionBypassEnabled(slotKey);
   const value = useMemo<ChatRuntimeActionsContextValue>(
     () => ({
+      enablePermissionBypass() {
+        enablePermissionBypassForSlot(slotKey);
+      },
+      permissionBypassEnabled,
       resolveElicitation(elicitationId, response) {
         resolveElicitationForSlot(slotKey, response, elicitationId);
       },
@@ -36,7 +49,13 @@ export function ChatRuntimeActionsProvider({
         await setModeForSlot(slotKey, mode);
       },
     }),
-    [resolveElicitationForSlot, setModeForSlot, slotKey],
+    [
+      enablePermissionBypassForSlot,
+      permissionBypassEnabled,
+      resolveElicitationForSlot,
+      setModeForSlot,
+      slotKey,
+    ],
   );
 
   return (
