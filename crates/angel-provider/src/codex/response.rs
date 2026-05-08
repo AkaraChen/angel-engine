@@ -1,4 +1,5 @@
 use super::actions::dynamic_tool_is_host_capability;
+use super::commands::codex_slash_commands;
 use super::protocol_helpers::*;
 use super::requests::host_capability_options;
 use super::summaries::{plan_item_content, plan_item_saved_path};
@@ -54,6 +55,10 @@ impl CodexAdapter {
                         context: codex_context_patch(result),
                         capabilities: Some(engine.default_capabilities.clone()),
                     })
+                    .event(EngineEvent::AvailableCommandsUpdated {
+                        conversation_id: conversation_id.clone(),
+                        commands: codex_slash_commands(),
+                    })
                     .log(TransportLogKind::State, format!("thread {thread_id} ready"));
             }
             PendingRequest::ResumeConversation {
@@ -73,6 +78,10 @@ impl CodexAdapter {
                         remote: Some(RemoteConversationId::Known(thread_id.to_string())),
                         context: codex_context_patch(result),
                         capabilities: Some(engine.default_capabilities.clone()),
+                    })
+                    .event(EngineEvent::AvailableCommandsUpdated {
+                        conversation_id: conversation_id.clone(),
+                        commands: codex_slash_commands(),
                     })
                     .log(TransportLogKind::State, format!("thread {thread_id} ready"));
                 if *hydrate {
@@ -752,6 +761,46 @@ fn codex_thread_info_context(thread: &Value) -> ContextPatch {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn thread_start_advertises_codex_slash_commands() {
+        let adapter = CodexAdapter::app_server();
+        let mut engine = AngelEngine::with_available_runtime(
+            angel_engine::ProtocolFlavor::CodexAppServer,
+            angel_engine::RuntimeCapabilities::new("test"),
+            adapter.capabilities(),
+        );
+        let request_id = engine
+            .plan_command(angel_engine::EngineCommand::StartConversation {
+                params: angel_engine::StartConversationParams::default(),
+            })
+            .expect("start plan")
+            .request_id
+            .expect("request id");
+
+        let output = adapter
+            .decode_response(
+                &engine,
+                &request_id,
+                &json!({
+                    "thread": {
+                        "id": "thread_1",
+                        "cwd": "/tmp/project"
+                    }
+                }),
+            )
+            .expect("thread start response");
+
+        assert!(matches!(
+            output.events.as_slice(),
+            [
+                EngineEvent::ConversationReady { .. },
+                EngineEvent::AvailableCommandsUpdated { commands, .. }
+            ] if commands.iter().any(|command| command.name == "plan")
+                && commands.iter().any(|command| command.name == "review")
+                && commands.iter().any(|command| command.name == "mention")
+        ));
+    }
 
     #[test]
     fn thread_list_discovers_threads_with_common_metadata() {

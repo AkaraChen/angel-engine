@@ -1,3 +1,4 @@
+use super::commands::{SERVICE_TIER_CONTEXT_KEY, SERVICE_TIER_NONE};
 use super::*;
 
 pub(crate) enum DeltaKind {
@@ -344,6 +345,17 @@ pub(crate) fn codex_context_patch(result: &Value) -> ContextPatch {
         patch.updates.push(angel_engine::ContextUpdate::Model {
             scope: angel_engine::ContextScope::Conversation,
             model: Some(model.to_string()),
+        });
+    }
+    if let Some(service_tier) = result.get("serviceTier") {
+        let value = service_tier
+            .as_str()
+            .unwrap_or(SERVICE_TIER_NONE)
+            .to_string();
+        patch.updates.push(angel_engine::ContextUpdate::Raw {
+            scope: angel_engine::ContextScope::Conversation,
+            key: SERVICE_TIER_CONTEXT_KEY.to_string(),
+            value,
         });
     }
     if let Some(cwd) = result.get("cwd").and_then(Value::as_str) {

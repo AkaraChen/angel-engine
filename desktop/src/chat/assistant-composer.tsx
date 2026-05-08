@@ -16,7 +16,6 @@ import {
 } from "@assistant-ui/react";
 import {
   ArrowUp,
-  AtSign,
   Bot,
   Brain,
   Check,
@@ -24,6 +23,7 @@ import {
   Cpu,
   Hammer,
   ListChecks,
+  Loader2,
   Paperclip,
   Quote,
   SlidersHorizontal,
@@ -110,7 +110,8 @@ export function AssistantComposer() {
         : filterSlashCommands(environment.availableCommands, slashQuery),
     [environment.availableCommands, slashQuery],
   );
-  const slashCommandOpen = slashQuery !== null && slashCommands.length > 0;
+  const slashCommandOpen = slashQuery !== null;
+  const slashCommandsLoading = environment.availableCommandsLoading;
 
   const handleSubmit = useCallback(
     async (message: PromptInputMessage) => {
@@ -232,15 +233,6 @@ export function AssistantComposer() {
     setMentionedFiles((current) => current.filter((file) => file.id !== id));
   }, []);
 
-  const openMentionSearch = useCallback(() => {
-    setDraftText((current) => {
-      if (mentionQueryFromDraft(current) !== null) return current;
-      const separator = current && !/\s$/.test(current) ? " " : "";
-      return `${current}${separator}@`;
-    });
-    requestAnimationFrame(() => textareaRef.current?.focus());
-  }, []);
-
   const handleTextKeyDown = useCallback(
     (event: KeyboardEvent<HTMLTextAreaElement>) => {
       if (event.key === "Escape") {
@@ -260,10 +252,13 @@ export function AssistantComposer() {
       if (
         (event.key === "Enter" || event.key === "Tab") &&
         !event.shiftKey &&
-        slashCommandOpen
+        slashCommandOpen &&
+        (slashCommandsLoading || slashCommands[0])
       ) {
         event.preventDefault();
-        insertSlashCommand(slashCommands[0]);
+        if (slashCommands[0]) {
+          insertSlashCommand(slashCommands[0]);
+        }
         return;
       }
 
@@ -292,26 +287,32 @@ export function AssistantComposer() {
       selectMentionedFile,
       slashCommandOpen,
       slashCommands,
+      slashCommandsLoading,
     ],
   );
 
   return (
     <PromptInput
-      inputGroupClassName="!rounded-md !border !border-border !bg-card shadow-sm has-[textarea]:!rounded-md has-[>[data-align=block-end]]:!rounded-md has-[>[data-align=block-start]]:!rounded-md"
+      inputGroupClassName="overflow-visible !rounded-md !border !border-border !bg-card shadow-sm has-[textarea]:!rounded-md has-[>[data-align=block-end]]:!rounded-md has-[>[data-align=block-start]]:!rounded-md"
       multiple
       onError={handleAttachmentError}
       onSubmit={handleSubmit}
     >
-      <AssistantComposerHeader
+      <ComposerAssistPanel
         fileMentionOpen={fileMentionOpen}
         fileResults={fileResults}
         fileSearchLoading={fileSearchLoading}
-        mentionedFiles={mentionedFiles}
-        onRemoveMentionedFile={removeMentionedFile}
         onSelectMentionedFile={selectMentionedFile}
         onSelectSlashCommand={insertSlashCommand}
+        slashCommandCatalogSize={environment.availableCommands.length}
+        slashCommandsLoading={slashCommandsLoading}
         slashCommandOpen={slashCommandOpen}
         slashCommands={slashCommands}
+      />
+
+      <AssistantComposerHeader
+        mentionedFiles={mentionedFiles}
+        onRemoveMentionedFile={removeMentionedFile}
       />
 
       <PromptInputBody>
@@ -327,63 +328,31 @@ export function AssistantComposer() {
         />
       </PromptInputBody>
 
-      <AssistantComposerFooter
-        draftText={draftText}
-        onOpenMentionSearch={openMentionSearch}
-        projectToolsEnabled={Boolean(projectToolsEnabled)}
-      />
+      <AssistantComposerFooter draftText={draftText} />
     </PromptInput>
   );
 }
 
 function AssistantComposerHeader({
-  fileMentionOpen,
-  fileResults,
-  fileSearchLoading,
   mentionedFiles,
   onRemoveMentionedFile,
-  onSelectMentionedFile,
-  onSelectSlashCommand,
-  slashCommandOpen,
-  slashCommands,
 }: {
-  fileMentionOpen: boolean;
-  fileResults: ProjectFileSearchResult[];
-  fileSearchLoading: boolean;
   mentionedFiles: ComposerMentionedFile[];
   onRemoveMentionedFile: (id: string) => void;
-  onSelectMentionedFile: (file: ProjectFileSearchResult) => void;
-  onSelectSlashCommand: (command: ChatAvailableCommand) => void;
-  slashCommandOpen: boolean;
-  slashCommands: ChatAvailableCommand[];
 }) {
   const attachments = usePromptInputAttachments();
   const hasQuote = useAuiState((state) => Boolean(state.composer.quote));
-  const showAssist = slashCommandOpen || fileMentionOpen;
 
   if (
     !hasQuote &&
     attachments.files.length === 0 &&
-    mentionedFiles.length === 0 &&
-    !showAssist
+    mentionedFiles.length === 0
   ) {
     return null;
   }
 
   return (
     <PromptInputHeader className="flex-col items-stretch gap-2 !px-2 !py-2">
-      {showAssist ? (
-        <ComposerAssistPanel
-          fileMentionOpen={fileMentionOpen}
-          fileResults={fileResults}
-          fileSearchLoading={fileSearchLoading}
-          onSelectMentionedFile={onSelectMentionedFile}
-          onSelectSlashCommand={onSelectSlashCommand}
-          slashCommandOpen={slashCommandOpen}
-          slashCommands={slashCommands}
-        />
-      ) : null}
-
       {hasQuote ? (
         <ComposerPrimitive.Quote className="flex items-start gap-2 rounded-md border bg-muted/40 p-2 text-sm">
           <Quote className="mt-0.5 size-3.5 shrink-0 text-muted-foreground" />
@@ -442,6 +411,8 @@ function ComposerAssistPanel({
   fileSearchLoading,
   onSelectMentionedFile,
   onSelectSlashCommand,
+  slashCommandCatalogSize,
+  slashCommandsLoading,
   slashCommandOpen,
   slashCommands,
 }: {
@@ -450,37 +421,52 @@ function ComposerAssistPanel({
   fileSearchLoading: boolean;
   onSelectMentionedFile: (file: ProjectFileSearchResult) => void;
   onSelectSlashCommand: (command: ChatAvailableCommand) => void;
+  slashCommandCatalogSize: number;
+  slashCommandsLoading: boolean;
   slashCommandOpen: boolean;
   slashCommands: ChatAvailableCommand[];
 }) {
   if (slashCommandOpen) {
     return (
-      <div className="rounded-md border bg-background p-1 shadow-sm">
+      <div className="absolute bottom-full left-0 right-0 z-50 mb-2 rounded-md border bg-popover p-1 text-popover-foreground shadow-lg">
         <div className="px-2 py-1 text-[11px] font-medium uppercase text-muted-foreground">
           Commands
         </div>
         <div className="max-h-48 overflow-y-auto">
-          {slashCommands.map((command) => (
-            <button
-              className="flex w-full min-w-0 items-center gap-2 rounded-sm px-2 py-1.5 text-left text-sm hover:bg-muted"
-              key={command.name}
-              onMouseDown={(event) => event.preventDefault()}
-              onClick={() => onSelectSlashCommand(command)}
-              type="button"
-            >
-              <span className="shrink-0 font-mono text-xs text-primary">
-                /{command.name}
-              </span>
-              <span className="min-w-0 flex-1 truncate text-muted-foreground">
-                {command.description}
-              </span>
-              {command.inputHint ? (
-                <span className="hidden shrink-0 truncate text-xs text-muted-foreground sm:inline">
-                  {command.inputHint}
+          {slashCommandsLoading ? (
+            <div className="flex items-center gap-2 px-2 py-2 text-sm text-muted-foreground">
+              <Loader2 className="size-3.5 animate-spin" />
+              <span>Loading commands</span>
+            </div>
+          ) : slashCommands.length === 0 ? (
+            <div className="px-2 py-2 text-sm text-muted-foreground">
+              {slashCommandCatalogSize === 0
+                ? "No commands advertised"
+                : "No matching commands"}
+            </div>
+          ) : (
+            slashCommands.map((command) => (
+              <button
+                className="flex w-full min-w-0 items-center gap-2 rounded-sm px-2 py-1.5 text-left text-sm hover:bg-muted"
+                key={command.name}
+                onMouseDown={(event) => event.preventDefault()}
+                onClick={() => onSelectSlashCommand(command)}
+                type="button"
+              >
+                <span className="shrink-0 font-mono text-xs text-primary">
+                  /{command.name}
                 </span>
-              ) : null}
-            </button>
-          ))}
+                <span className="min-w-0 flex-1 truncate text-muted-foreground">
+                  {command.description}
+                </span>
+                {command.inputHint ? (
+                  <span className="hidden shrink-0 truncate text-xs text-muted-foreground sm:inline">
+                    {command.inputHint}
+                  </span>
+                ) : null}
+              </button>
+            ))
+          )}
         </div>
       </div>
     );
@@ -488,7 +474,7 @@ function ComposerAssistPanel({
 
   if (fileMentionOpen) {
     return (
-      <div className="rounded-md border bg-background p-1 shadow-sm">
+      <div className="absolute bottom-full left-0 right-0 z-50 mb-2 rounded-md border bg-popover p-1 text-popover-foreground shadow-lg">
         <div className="px-2 py-1 text-[11px] font-medium uppercase text-muted-foreground">
           Files
         </div>
@@ -525,15 +511,7 @@ function ComposerAssistPanel({
   return null;
 }
 
-function AssistantComposerFooter({
-  draftText,
-  onOpenMentionSearch,
-  projectToolsEnabled,
-}: {
-  draftText: string;
-  onOpenMentionSearch: () => void;
-  projectToolsEnabled: boolean;
-}) {
+function AssistantComposerFooter({ draftText }: { draftText: string }) {
   const aui = useAui();
   const attachments = usePromptInputAttachments();
   const chatOptions = useChatOptions();
@@ -549,18 +527,6 @@ function AssistantComposerFooter({
     <PromptInputFooter className="flex-wrap border-t !px-2 !py-2">
       <PromptInputTools className="flex-wrap">
         <PromptAttachmentButton />
-        {projectToolsEnabled ? (
-          <Button
-            onClick={onOpenMentionSearch}
-            size="icon-sm"
-            title="Mention file"
-            type="button"
-            variant="ghost"
-          >
-            <AtSign />
-            <span className="sr-only">Mention file</span>
-          </Button>
-        ) : null}
         <ComposerModelMenu disabled={isRunning} options={chatOptions} />
       </PromptInputTools>
       <div className="flex min-w-0 items-center gap-2">

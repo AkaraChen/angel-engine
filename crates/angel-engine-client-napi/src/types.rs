@@ -301,6 +301,7 @@ pub struct ClientCommandResult {
     pub conversation_id: Option<String>,
     pub turn_id: Option<String>,
     pub request_id: Option<String>,
+    pub message: Option<String>,
     pub update: Option<ClientUpdate>,
 }
 

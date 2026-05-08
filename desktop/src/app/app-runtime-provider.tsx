@@ -94,6 +94,7 @@ export function AppRuntimeProvider({
     <ChatEnvironmentProvider
       value={{
         availableCommands: runtimeConfig?.availableCommands ?? [],
+        availableCommandsLoading: runtimeConfig === undefined,
         isProjectChat: Boolean(projectId && projectPath),
         projectId,
         projectPath,

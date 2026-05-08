@@ -213,6 +213,11 @@ impl AngelSession {
             .send_thread_event(conversation_id.clone(), ThreadEvent::input(input))?;
         let mut active = ActiveTurn::new(conversation_id, command.turn_id.clone());
         active.handle_update(command.update)?;
+        if command.turn_id.is_none()
+            && let Some(message) = command.message
+        {
+            active.collector.text = message;
+        }
 
         if command.turn_id.is_none() {
             let snapshot = self.thread_state();

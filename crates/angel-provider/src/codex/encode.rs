@@ -1,3 +1,4 @@
+use super::commands::{SERVICE_TIER_CONTEXT_KEY, SERVICE_TIER_NONE};
 use super::ids::*;
 use super::protocol_helpers::*;
 use super::*;
@@ -193,6 +194,20 @@ fn insert_codex_overrides(
     if let Some(effort) = fields.get("effort") {
         params.insert("effort".to_string(), json!(codex_reasoning_effort(effort)));
     }
+    if let Some(service_tier) = fields
+        .get("serviceTier")
+        .map(String::as_str)
+        .or_else(|| codex_current_service_tier(engine, effect))
+    {
+        params.insert(
+            "serviceTier".to_string(),
+            if service_tier == SERVICE_TIER_NONE {
+                Value::Null
+            } else {
+                json!(service_tier)
+            },
+        );
+    }
     params.insert("summary".to_string(), json!("auto"));
     if let Some(policy) = fields.get("approvalPolicy") {
         params.insert("approvalPolicy".to_string(), json!(policy));
@@ -254,6 +269,20 @@ fn codex_current_model<'a>(
                 .as_ref()
                 .map(|models| models.current_model_id.as_str())
         })
+}
+
+fn codex_current_service_tier<'a>(
+    engine: &'a AngelEngine,
+    effect: &angel_engine::ProtocolEffect,
+) -> Option<&'a str> {
+    let conversation_id = effect.conversation_id.as_ref()?;
+    let conversation = engine.conversations.get(conversation_id)?;
+    conversation
+        .context
+        .raw
+        .get(SERVICE_TIER_CONTEXT_KEY)?
+        .effective()
+        .map(String::as_str)
 }
 
 fn codex_reasoning_effort(effort: &str) -> &str {
@@ -416,6 +445,56 @@ mod tests {
             params["collaborationMode"]["settings"]["model"],
             json!("gpt-5.5")
         );
+    }
+
+    #[test]
+    fn turn_start_uses_context_service_tier() {
+        let adapter = CodexAdapter::app_server();
+        let mut engine = AngelEngine::with_available_runtime(
+            angel_engine::ProtocolFlavor::CodexAppServer,
+            angel_engine::RuntimeCapabilities::new("test"),
+            adapter.capabilities(),
+        );
+        let conversation_id = ConversationId::new("conv");
+        engine
+            .apply_event(EngineEvent::ConversationProvisionStarted {
+                id: conversation_id.clone(),
+                remote: RemoteConversationId::Known("thread".to_string()),
+                op: angel_engine::ProvisionOp::New,
+                capabilities: adapter.capabilities(),
+            })
+            .expect("conversation provision");
+        engine
+            .apply_event(EngineEvent::ConversationReady {
+                id: conversation_id.clone(),
+                remote: Some(RemoteConversationId::Known("thread".to_string())),
+                context: ContextPatch::empty(),
+                capabilities: None,
+            })
+            .expect("conversation ready");
+        engine
+            .apply_event(EngineEvent::ContextUpdated {
+                conversation_id: conversation_id.clone(),
+                patch: ContextPatch::one(angel_engine::ContextUpdate::Raw {
+                    scope: angel_engine::ContextScope::TurnAndFuture,
+                    key: SERVICE_TIER_CONTEXT_KEY.to_string(),
+                    value: crate::codex::commands::SERVICE_TIER_FAST.to_string(),
+                }),
+            })
+            .expect("service tier context");
+
+        let plan = engine
+            .plan_command(angel_engine::EngineCommand::StartTurn {
+                conversation_id,
+                input: vec![angel_engine::UserInput::text("hello")],
+                overrides: angel_engine::TurnOverrides::default(),
+            })
+            .expect("start turn");
+        let params = adapter
+            .encode_params(&engine, &plan.effects[0], &TransportOptions::default())
+            .expect("turn start params");
+
+        assert_eq!(params["serviceTier"], json!("priority"));
     }
 
     #[test]

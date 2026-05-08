@@ -1,10 +1,10 @@
 use angel_engine::{
-    AngelEngine, ConversationCapabilities, EngineError, ProtocolEffect, ProtocolFlavor,
-    SessionModelState, TransportOptions, TransportOutput,
+    AngelEngine, ConversationCapabilities, ConversationId, EngineError, ProtocolEffect,
+    ProtocolFlavor, SessionModelState, TransportOptions, TransportOutput, UserInput,
 };
-use angel_provider::ProtocolAdapter;
 use angel_provider::acp::AcpAdapter;
 use angel_provider::codex::CodexAdapter;
+use angel_provider::{InterpretedUserInput, ProtocolAdapter};
 use serde_json::Value;
 
 use crate::config::{ClientOptions, ClientProtocol};
@@ -58,5 +58,15 @@ impl ProtocolAdapter for RuntimeAdapter {
     ) -> Option<SessionModelState> {
         self.inner
             .model_catalog_from_runtime_debug(result, current_model_id)
+    }
+
+    fn interpret_user_input(
+        &self,
+        engine: &AngelEngine,
+        conversation_id: &ConversationId,
+        input: &[UserInput],
+    ) -> Result<Option<InterpretedUserInput>, EngineError> {
+        self.inner
+            .interpret_user_input(engine, conversation_id, input)
     }
 }

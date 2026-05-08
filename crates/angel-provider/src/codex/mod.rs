@@ -1,4 +1,4 @@
-use super::ProtocolAdapter;
+use super::{InterpretedUserInput, ProtocolAdapter};
 use angel_engine::capabilities::ConversationCapabilities;
 use angel_engine::error::ErrorInfo;
 use angel_engine::event::EngineEvent;
@@ -23,6 +23,7 @@ use angel_engine::{EngineError, ProtocolEffect};
 use serde_json::{Value, json};
 
 mod actions;
+mod commands;
 mod encode;
 mod ids;
 mod notifications;
@@ -187,6 +188,15 @@ impl ProtocolAdapter for CodexAdapter {
         current_model_id: Option<&str>,
     ) -> Option<SessionModelState> {
         self.model_catalog_from_debug_models(result, current_model_id)
+    }
+
+    fn interpret_user_input(
+        &self,
+        engine: &AngelEngine,
+        conversation_id: &ConversationId,
+        input: &[angel_engine::UserInput],
+    ) -> Result<Option<InterpretedUserInput>, EngineError> {
+        self.interpret_slash_command(engine, conversation_id, input)
     }
 }
 

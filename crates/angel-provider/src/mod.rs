@@ -6,6 +6,12 @@ use serde_json::Value;
 pub mod acp;
 pub mod codex;
 
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct InterpretedUserInput {
+    pub command: EngineCommand,
+    pub message: Option<String>,
+}
+
 pub trait ProtocolAdapter: Debug {
     fn protocol_flavor(&self) -> ProtocolFlavor;
 
@@ -30,5 +36,14 @@ pub trait ProtocolAdapter: Debug {
         _current_model_id: Option<&str>,
     ) -> Option<SessionModelState> {
         None
+    }
+
+    fn interpret_user_input(
+        &self,
+        _engine: &AngelEngine,
+        _conversation_id: &ConversationId,
+        _input: &[UserInput],
+    ) -> Result<Option<InterpretedUserInput>, EngineError> {
+        Ok(None)
     }
 }

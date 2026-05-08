@@ -436,6 +436,31 @@ fn codex_completed_reasoning_item_surfaces_reasoning_updates() {
 }
 
 #[test]
+fn codex_slash_fast_is_interpreted_without_starting_turn() {
+    let (mut client, conversation_id) = ready_codex_client();
+
+    let sent = client
+        .thread(&conversation_id)
+        .send_event(ThreadEvent::text("/fast"))
+        .expect("send slash");
+
+    assert!(sent.turn_id.is_none());
+    assert!(sent.request_id.is_none());
+    assert!(sent.update.outgoing.is_empty());
+    assert_eq!(sent.message.as_deref(), Some("Fast mode is on."));
+
+    let next = client
+        .thread(&conversation_id)
+        .send_event(ThreadEvent::text("hello"))
+        .expect("send text");
+    assert_eq!(next.update.outgoing[0].value["method"], json!("turn/start"));
+    assert_eq!(
+        next.update.outgoing[0].value["params"]["serviceTier"],
+        json!("priority")
+    );
+}
+
+#[test]
 fn codex_resume_projects_raw_tool_history_into_display_messages() {
     let mut client = ClientOptions::builder()
         .codex_app_server("codex")

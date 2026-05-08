@@ -89,6 +89,9 @@ impl MultiRuntimeCli {
     fn run_turn(&mut self, event: ThreadEvent) -> Result<(), Box<dyn Error>> {
         let result = self.send_thread_event(event)?;
         let Some(turn_id) = result.turn_id else {
+            if let Some(message) = result.message {
+                println!("{message}");
+            }
             return Ok(());
         };
         let conversation_id = self.conversation_id()?;

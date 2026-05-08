@@ -241,9 +241,20 @@ where
         conversation_id: impl Into<String>,
         input: Vec<ClientInput>,
     ) -> ClientResult<ClientCommandResult> {
+        let conversation_id = angel_engine::ConversationId::new(conversation_id.into());
+        let input = input.into_iter().map(UserInput::from).collect::<Vec<_>>();
+        if let Some(interpreted) =
+            self.adapter
+                .interpret_user_input(&self.engine, &conversation_id, &input)?
+        {
+            let mut result = self.plan_command(interpreted.command)?;
+            result.message = interpreted.message;
+            return Ok(result);
+        }
+
         self.plan_command(EngineCommand::StartTurn {
-            conversation_id: angel_engine::ConversationId::new(conversation_id.into()),
-            input: input.into_iter().map(UserInput::from).collect(),
+            conversation_id,
+            input,
             overrides: TurnOverrides::default(),
         })
     }
@@ -552,6 +563,7 @@ where
         }
         Ok(ClientCommandResult {
             conversation_id,
+            message: None,
             turn_id,
             request_id,
             update,
@@ -593,6 +605,8 @@ pub struct ClientCommandResult {
     pub conversation_id: Option<String>,
     pub turn_id: Option<String>,
     pub request_id: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub message: Option<String>,
     pub update: ClientUpdate,
 }
 
