@@ -995,14 +995,11 @@ function normalizeEnginePlanMessages(
         );
         if (locationIndex === -1) return part;
 
-        const presentation =
-          latest &&
-          latest.messageIndex === messageIndex &&
-          latest.partIndex === partIndex
-            ? null
-            : locationIndex === 0
-              ? "created"
-              : "updated";
+        const presentation = enginePlanPresentationForLocation(
+          locationIndex,
+          latest,
+          { messageIndex, partIndex },
+        );
 
         return {
           ...part,
@@ -1026,6 +1023,23 @@ function enginePlanPartLocations(messages: EngineMessage[]) {
     });
   });
   return locations;
+}
+
+function enginePlanPresentationForLocation(
+  locationIndex: number,
+  latest: { messageIndex: number; partIndex: number } | undefined,
+  current: { messageIndex: number; partIndex: number },
+): ChatPlanData["presentation"] {
+  if (
+    latest &&
+    latest.messageIndex === current.messageIndex &&
+    latest.partIndex === current.partIndex
+  ) {
+    return null;
+  }
+
+  if (locationIndex === 0) return "created";
+  return "updated";
 }
 
 function isEnginePlanPart(

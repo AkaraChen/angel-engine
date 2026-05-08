@@ -20,6 +20,6 @@ const ChatEnvironmentContext = createContext<ChatEnvironmentContextValue>({
 
 export const ChatEnvironmentProvider = ChatEnvironmentContext.Provider;
 
-export function useChatEnvironment() {
+export function useChatEnvironment(): ChatEnvironmentContextValue {
   return useContext(ChatEnvironmentContext);
 }

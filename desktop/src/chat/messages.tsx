@@ -87,6 +87,15 @@ const assistantTextContainerClassName = [
   "[&_[data-streamdown=inline-code]]:rounded-sm [&_[data-streamdown=inline-code]]:bg-muted [&_[data-streamdown=inline-code]]:px-1 [&_[data-streamdown=inline-code]]:py-0.5 [&_[data-streamdown=inline-code]]:font-mono [&_[data-streamdown=inline-code]]:text-[0.86em]",
 ].join(" ");
 
+type ElicitationQuestion = NonNullable<ChatElicitation["questions"]>[number];
+
+type ElicitationFreeformAnswerProps = {
+  disabled: boolean;
+  onChange: (value: string) => void;
+  question: ElicitationQuestion;
+  value: string;
+};
+
 export function UserMessage() {
   const hasBubbleContent = useAuiState((state) =>
     state.message.parts.some(isUserBubblePart),
@@ -390,14 +399,26 @@ function FileMessagePart(part: Extract<EnrichedPartState, { type: "file" }>) {
       contentType={part.mimeType}
       name={part.filename ?? part.mimeType}
       previewText={previewText}
-      previewUrl={
-        !isMention && isImage
-          ? imageFilePreviewUrl(part.data, part.mimeType)
-          : undefined
-      }
-      typeLabel={isMention ? "Mention" : isImage ? "Image" : "File"}
+      previewUrl={filePreviewUrl(part.data, part.mimeType, isMention, isImage)}
+      typeLabel={fileTypeLabel(isMention, isImage)}
     />
   );
+}
+
+function filePreviewUrl(
+  data: string,
+  mimeType: string,
+  isMention: boolean,
+  isImage: boolean,
+) {
+  if (isMention || !isImage) return undefined;
+  return imageFilePreviewUrl(data, mimeType);
+}
+
+function fileTypeLabel(isMention: boolean, isImage: boolean) {
+  if (isMention) return "Mention";
+  if (isImage) return "Image";
+  return "File";
 }
 
 function imageFilePreviewUrl(data: string, mimeType: string) {
@@ -776,7 +797,7 @@ function ElicitationQuestionInput({
 }: {
   disabled: boolean;
   onChange: (value: string) => void;
-  question: NonNullable<ChatElicitation["questions"]>[number];
+  question: ElicitationQuestion;
   value: string;
 }) {
   const options = question.options ?? [];
@@ -790,6 +811,7 @@ function ElicitationQuestionInput({
   const selectedOptionLabel =
     selection?.type === "option" ? selection.label : value;
   const selectedOther = selection?.type === "other";
+  const showFreeformAnswer = options.length === 0 || selectedOther;
 
   return (
     <div className="space-y-2">
@@ -850,25 +872,43 @@ function ElicitationQuestionInput({
         </div>
       ) : null}
 
-      {options.length === 0 || selectedOther ? (
-        question.isSecret ? (
-          <input
-            className="h-8 w-full rounded-sm border bg-background px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring/30"
-            disabled={disabled}
-            onChange={(event) => onChange(event.target.value)}
-            type="password"
-            value={value}
-          />
-        ) : (
-          <textarea
-            className="min-h-16 w-full resize-y rounded-sm border bg-background px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring/30"
-            disabled={disabled}
-            onChange={(event) => onChange(event.target.value)}
-            value={value}
-          />
-        )
+      {showFreeformAnswer ? (
+        <ElicitationFreeformAnswer
+          disabled={disabled}
+          onChange={onChange}
+          question={question}
+          value={value}
+        />
       ) : null}
     </div>
+  );
+}
+
+function ElicitationFreeformAnswer({
+  disabled,
+  onChange,
+  question,
+  value,
+}: ElicitationFreeformAnswerProps) {
+  if (question.isSecret) {
+    return (
+      <input
+        className="h-8 w-full rounded-sm border bg-background px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring/30"
+        disabled={disabled}
+        onChange={(event) => onChange(event.target.value)}
+        type="password"
+        value={value}
+      />
+    );
+  }
+
+  return (
+    <textarea
+      className="min-h-16 w-full resize-y rounded-sm border bg-background px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring/30"
+      disabled={disabled}
+      onChange={(event) => onChange(event.target.value)}
+      value={value}
+    />
   );
 }
 

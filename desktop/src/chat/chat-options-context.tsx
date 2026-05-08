@@ -25,7 +25,7 @@ const ChatOptionsContext = createContext<ChatOptionsContextValue | null>(null);
 
 export const ChatOptionsProvider = ChatOptionsContext.Provider;
 
-export function useChatOptions() {
+export function useChatOptions(): ChatOptionsContextValue {
   const value = useContext(ChatOptionsContext);
   if (!value) {
     throw new Error("useChatOptions must be used inside ChatOptionsProvider.");

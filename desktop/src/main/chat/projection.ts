@@ -147,11 +147,13 @@ export function runtimeConfigFromConversationSnapshot(
 }
 
 export function projectRunResult(result: TurnRunResult) {
-  const content = result.message
-    ? displayMessagePartsToChatParts(result.message.content)
-    : result.turn
-      ? contentFromTurnSnapshot(result.turn, result.actions)
-      : [];
+  let content: ChatHistoryMessagePart[] = [];
+  if (result.message) {
+    content = displayMessagePartsToChatParts(result.message.content);
+  } else if (result.turn) {
+    content = contentFromTurnSnapshot(result.turn, result.actions);
+  }
+
   if (content.length === 0 && result.text.trim()) {
     content.push({ text: result.text, type: "text" });
   }

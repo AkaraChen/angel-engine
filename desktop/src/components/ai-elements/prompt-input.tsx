@@ -931,37 +931,35 @@ export const PromptInput = ({
         return;
       }
 
-      try {
-        const result = onSubmit({ files: convertedFiles, text }, event);
-
-        // Handle both sync and async onSubmit
-        if (result instanceof Promise) {
-          try {
-            await result;
-            clear();
-            if (usingProvider) {
-              controller.textInput.clear();
-            }
-          } catch (error) {
-            // Don't clear on error - user may want to retry
-            onError?.({
-              code: "submit",
-              message: getErrorMessage(error),
-            });
-          }
-        } else {
-          // Sync function completed without throwing, clear inputs
-          clear();
-          if (usingProvider) {
-            controller.textInput.clear();
-          }
+      const clearSubmittedInput = () => {
+        clear();
+        if (usingProvider) {
+          controller.textInput.clear();
         }
-      } catch (error) {
-        // Don't clear on error - user may want to retry
+      };
+      const reportSubmitError = (error: unknown) => {
         onError?.({
           code: "submit",
           message: getErrorMessage(error),
         });
+      };
+
+      try {
+        const result = onSubmit({ files: convertedFiles, text }, event);
+        if (result instanceof Promise) {
+          try {
+            await result;
+            clearSubmittedInput();
+          } catch (error) {
+            reportSubmitError(error);
+          }
+          return;
+        }
+
+        clearSubmittedInput();
+      } catch (error) {
+        // Don't clear on error - user may want to retry
+        reportSubmitError(error);
       }
     },
     [usingProvider, controller, files, onSubmit, clear, onError],

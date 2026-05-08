@@ -80,6 +80,36 @@ type ComposerMentionedFile = ProjectFileSearchResult & {
   id: string;
 };
 
+type ComposerAssistPanelProps = {
+  fileMentionOpen: boolean;
+  fileResults: ProjectFileSearchResult[];
+  fileSearchLoading: boolean;
+  onSelectMentionedFile: (file: ProjectFileSearchResult) => void;
+  onSelectSlashCommand: (command: ChatAvailableCommand) => void;
+  slashCommandCatalogSize: number;
+  slashCommands: ChatAvailableCommand[];
+  slashCommandsLoading: boolean;
+  slashCommandOpen: boolean;
+};
+
+type AssistPanelFrameProps = {
+  children: ReactNode;
+  title: string;
+};
+
+type SlashCommandAssistPanelProps = {
+  catalogSize: number;
+  commands: ChatAvailableCommand[];
+  loading: boolean;
+  onSelect: (command: ChatAvailableCommand) => void;
+};
+
+type FileMentionAssistPanelProps = {
+  files: ProjectFileSearchResult[];
+  loading: boolean;
+  onSelect: (file: ProjectFileSearchResult) => void;
+};
+
 export function AssistantComposer() {
   const aui = useAui();
   const environment = useChatEnvironment();
@@ -415,100 +445,142 @@ function ComposerAssistPanel({
   slashCommandsLoading,
   slashCommandOpen,
   slashCommands,
-}: {
-  fileMentionOpen: boolean;
-  fileResults: ProjectFileSearchResult[];
-  fileSearchLoading: boolean;
-  onSelectMentionedFile: (file: ProjectFileSearchResult) => void;
-  onSelectSlashCommand: (command: ChatAvailableCommand) => void;
-  slashCommandCatalogSize: number;
-  slashCommandsLoading: boolean;
-  slashCommandOpen: boolean;
-  slashCommands: ChatAvailableCommand[];
-}) {
+}: ComposerAssistPanelProps) {
   if (slashCommandOpen) {
     return (
-      <div className="absolute bottom-full left-0 right-0 z-50 mb-2 rounded-md border bg-popover p-1 text-popover-foreground shadow-lg">
-        <div className="px-2 py-1 text-[11px] font-medium uppercase text-muted-foreground">
-          Commands
-        </div>
-        <div className="max-h-48 overflow-y-auto">
-          {slashCommandsLoading ? (
-            <div className="flex items-center gap-2 px-2 py-2 text-sm text-muted-foreground">
-              <Loader2 className="size-3.5 animate-spin" />
-              <span>Loading commands</span>
-            </div>
-          ) : slashCommands.length === 0 ? (
-            <div className="px-2 py-2 text-sm text-muted-foreground">
-              {slashCommandCatalogSize === 0
-                ? "No commands advertised"
-                : "No matching commands"}
-            </div>
-          ) : (
-            slashCommands.map((command) => (
-              <button
-                className="flex w-full min-w-0 items-center gap-2 rounded-sm px-2 py-1.5 text-left text-sm hover:bg-muted"
-                key={command.name}
-                onMouseDown={(event) => event.preventDefault()}
-                onClick={() => onSelectSlashCommand(command)}
-                type="button"
-              >
-                <span className="shrink-0 font-mono text-xs text-primary">
-                  /{command.name}
-                </span>
-                <span className="min-w-0 flex-1 truncate text-muted-foreground">
-                  {command.description}
-                </span>
-                {command.inputHint ? (
-                  <span className="hidden shrink-0 truncate text-xs text-muted-foreground sm:inline">
-                    {command.inputHint}
-                  </span>
-                ) : null}
-              </button>
-            ))
-          )}
-        </div>
-      </div>
+      <SlashCommandAssistPanel
+        catalogSize={slashCommandCatalogSize}
+        commands={slashCommands}
+        loading={slashCommandsLoading}
+        onSelect={onSelectSlashCommand}
+      />
     );
   }
 
   if (fileMentionOpen) {
     return (
-      <div className="absolute bottom-full left-0 right-0 z-50 mb-2 rounded-md border bg-popover p-1 text-popover-foreground shadow-lg">
-        <div className="px-2 py-1 text-[11px] font-medium uppercase text-muted-foreground">
-          Files
-        </div>
-        <div className="max-h-48 overflow-y-auto">
-          {fileSearchLoading ? (
-            <div className="px-2 py-2 text-sm text-muted-foreground">
-              Searching...
-            </div>
-          ) : fileResults.length === 0 ? (
-            <div className="px-2 py-2 text-sm text-muted-foreground">
-              No files found
-            </div>
-          ) : (
-            fileResults.map((file) => (
-              <button
-                className="flex w-full min-w-0 flex-col rounded-sm px-2 py-1.5 text-left hover:bg-muted"
-                key={file.path}
-                onMouseDown={(event) => event.preventDefault()}
-                onClick={() => onSelectMentionedFile(file)}
-                type="button"
-              >
-                <span className="truncate text-sm">{file.name}</span>
-                <span className="truncate text-xs text-muted-foreground">
-                  {file.relativePath}
-                </span>
-              </button>
-            ))
-          )}
-        </div>
-      </div>
+      <FileMentionAssistPanel
+        files={fileResults}
+        loading={fileSearchLoading}
+        onSelect={onSelectMentionedFile}
+      />
     );
   }
 
   return null;
+}
+
+function AssistPanelFrame({ children, title }: AssistPanelFrameProps) {
+  return (
+    <div className="absolute bottom-full left-0 right-0 z-50 mb-2 rounded-md border bg-popover p-1 text-popover-foreground shadow-lg">
+      <div className="px-2 py-1 text-[11px] font-medium uppercase text-muted-foreground">
+        {title}
+      </div>
+      <div className="max-h-48 overflow-y-auto">{children}</div>
+    </div>
+  );
+}
+
+function SlashCommandAssistPanel({
+  catalogSize,
+  commands,
+  loading,
+  onSelect,
+}: SlashCommandAssistPanelProps) {
+  if (loading) {
+    return (
+      <AssistPanelFrame title="Commands">
+        <div className="flex items-center gap-2 px-2 py-2 text-sm text-muted-foreground">
+          <Loader2 className="size-3.5 animate-spin" />
+          <span>Loading commands</span>
+        </div>
+      </AssistPanelFrame>
+    );
+  }
+
+  if (commands.length === 0) {
+    const emptyMessage =
+      catalogSize === 0 ? "No commands advertised" : "No matching commands";
+
+    return (
+      <AssistPanelFrame title="Commands">
+        <div className="px-2 py-2 text-sm text-muted-foreground">
+          {emptyMessage}
+        </div>
+      </AssistPanelFrame>
+    );
+  }
+
+  return (
+    <AssistPanelFrame title="Commands">
+      {commands.map((command) => (
+        <button
+          className="flex w-full min-w-0 items-center gap-2 rounded-sm px-2 py-1.5 text-left text-sm hover:bg-muted"
+          key={command.name}
+          onMouseDown={(event) => event.preventDefault()}
+          onClick={() => onSelect(command)}
+          type="button"
+        >
+          <span className="shrink-0 font-mono text-xs text-primary">
+            /{command.name}
+          </span>
+          <span className="min-w-0 flex-1 truncate text-muted-foreground">
+            {command.description}
+          </span>
+          {command.inputHint ? (
+            <span className="hidden shrink-0 truncate text-xs text-muted-foreground sm:inline">
+              {command.inputHint}
+            </span>
+          ) : null}
+        </button>
+      ))}
+    </AssistPanelFrame>
+  );
+}
+
+function FileMentionAssistPanel({
+  files,
+  loading,
+  onSelect,
+}: FileMentionAssistPanelProps) {
+  if (loading) {
+    return (
+      <AssistPanelFrame title="Files">
+        <div className="px-2 py-2 text-sm text-muted-foreground">
+          Searching...
+        </div>
+      </AssistPanelFrame>
+    );
+  }
+
+  if (files.length === 0) {
+    return (
+      <AssistPanelFrame title="Files">
+        <div className="px-2 py-2 text-sm text-muted-foreground">
+          No files found
+        </div>
+      </AssistPanelFrame>
+    );
+  }
+
+  return (
+    <AssistPanelFrame title="Files">
+      {files.map((file) => (
+        <button
+          className="flex w-full min-w-0 flex-col rounded-sm px-2 py-1.5 text-left hover:bg-muted"
+          key={file.path}
+          onMouseDown={(event) => event.preventDefault()}
+          onClick={() => onSelect(file)}
+          type="button"
+        >
+          <span className="truncate text-sm">{file.name}</span>
+          <span className="truncate text-xs text-muted-foreground">
+            {file.relativePath}
+          </span>
+        </button>
+      ))}
+    </AssistPanelFrame>
+  );
 }
 
 function AssistantComposerFooter({ draftText }: { draftText: string }) {

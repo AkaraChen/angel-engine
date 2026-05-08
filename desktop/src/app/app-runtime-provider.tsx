@@ -19,27 +19,7 @@ import type {
   ChatRuntimeConfig,
 } from "@/shared/chat";
 
-const mockFeedbackAdapter: FeedbackAdapter = {
-  submit: () => undefined,
-};
-
-export function AppRuntimeProvider({
-  chatId,
-  children,
-  historyMessages,
-  historyRevision,
-  model,
-  mode,
-  onChatCreated,
-  onChatUpdated,
-  prewarmId,
-  projectId,
-  projectPath,
-  reasoningEffort,
-  runtime: selectedRuntime,
-  runtimeConfig,
-  slotKey,
-}: {
+type AppRuntimeProviderProps = {
   chatId?: string;
   children: ReactNode;
   historyMessages: ChatHistoryMessage[];
@@ -59,7 +39,35 @@ export function AppRuntimeProvider({
   runtime?: string;
   runtimeConfig?: ChatRuntimeConfig;
   slotKey: string;
-}) {
+};
+
+const EMPTY_AVAILABLE_COMMANDS: NonNullable<
+  ChatRuntimeConfig["availableCommands"]
+> = [];
+
+const mockFeedbackAdapter: FeedbackAdapter = {
+  submit() {
+    return undefined;
+  },
+};
+
+export function AppRuntimeProvider({
+  chatId,
+  children,
+  historyMessages,
+  historyRevision,
+  model,
+  mode,
+  onChatCreated,
+  onChatUpdated,
+  prewarmId,
+  projectId,
+  projectPath,
+  reasoningEffort,
+  runtime: selectedRuntime,
+  runtimeConfig,
+  slotKey,
+}: AppRuntimeProviderProps) {
   const adapters = useMemo(
     () => ({
       attachments: new CompositeAttachmentAdapter([
@@ -89,17 +97,20 @@ export function AppRuntimeProvider({
     runtimeConfig,
     slotKey,
   });
+  const chatEnvironment = useMemo(
+    () => ({
+      availableCommands:
+        runtimeConfig?.availableCommands ?? EMPTY_AVAILABLE_COMMANDS,
+      availableCommandsLoading: runtimeConfig === undefined,
+      isProjectChat: Boolean(projectId && projectPath),
+      projectId,
+      projectPath,
+    }),
+    [projectId, projectPath, runtimeConfig],
+  );
 
   return (
-    <ChatEnvironmentProvider
-      value={{
-        availableCommands: runtimeConfig?.availableCommands ?? [],
-        availableCommandsLoading: runtimeConfig === undefined,
-        isProjectChat: Boolean(projectId && projectPath),
-        projectId,
-        projectPath,
-      }}
-    >
+    <ChatEnvironmentProvider value={chatEnvironment}>
       <ChatRuntimeActionsProvider slotKey={slotKey}>
         <AssistantRuntimeProvider runtime={assistantRuntime}>
           {children}
