@@ -50,7 +50,7 @@ pub(crate) fn action_exists(
         .unwrap_or(false)
 }
 
-pub(crate) fn append_completed_web_searches(
+pub(crate) fn append_completed_implicit_live_actions(
     engine: &AngelEngine,
     conversation_id: &ConversationId,
     turn_id: &TurnId,
@@ -61,7 +61,7 @@ pub(crate) fn append_completed_web_searches(
         return;
     };
     for action in conversation.actions.values() {
-        if action.kind != ActionKind::WebSearch || action.turn_id != *turn_id {
+        if action.turn_id != *turn_id || !action_is_implicit_live_item(action) {
             continue;
         }
         if except_action_id.is_some_and(|id| id == &action.id)
@@ -89,6 +89,15 @@ pub(crate) fn phase_from_item(item: &Value) -> Option<ActionPhase> {
     })
 }
 
+pub(crate) fn completed_phase_from_item(
+    item: &Value,
+    action_kind: &ActionKind,
+) -> Option<ActionPhase> {
+    phase_from_item(item).or_else(|| {
+        item_completes_without_status(item, action_kind).then_some(ActionPhase::Completed)
+    })
+}
+
 pub(crate) fn dynamic_tool_is_host_capability(value: &Value) -> bool {
     matches!(
         value.get("tool").and_then(Value::as_str),
@@ -104,6 +113,32 @@ fn action_phase_is_terminal(phase: &ActionPhase) -> bool {
             | ActionPhase::Declined
             | ActionPhase::Cancelled
     )
+}
+
+fn action_is_implicit_live_item(action: &ActionState) -> bool {
+    action.kind == ActionKind::WebSearch
+        || action
+            .input
+            .raw
+            .as_deref()
+            .and_then(codex_item_type_from_raw)
+            .is_some_and(|item_type| item_type == "imageGeneration")
+}
+
+fn codex_item_type_from_raw(raw: &str) -> Option<String> {
+    serde_json::from_str::<Value>(raw).ok().and_then(|value| {
+        value
+            .get("type")
+            .and_then(Value::as_str)
+            .map(str::to_string)
+    })
+}
+
+fn item_completes_without_status(item: &Value, action_kind: &ActionKind) -> bool {
+    matches!(
+        item.get("type").and_then(Value::as_str),
+        Some("webSearch" | "imageView" | "imageGeneration" | "contextCompaction")
+    ) || action_kind == &ActionKind::WebSearch
 }
 
 pub(crate) fn action_title(item: &Value) -> Option<String> {

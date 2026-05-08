@@ -1,4 +1,4 @@
-use super::actions::append_completed_web_searches;
+use super::actions::append_completed_implicit_live_actions;
 use super::ids::*;
 use super::protocol_helpers::DeltaKind;
 use super::summaries::*;
@@ -71,11 +71,11 @@ impl CodexAdapter {
                 format!("{} {}", method, summarize_inbound(method, params)),
             )),
         }?;
-        self.normalize_live_web_search_completion(engine, method, params, &mut output);
+        self.normalize_implicit_live_action_completion(engine, method, params, &mut output);
         Ok(output)
     }
 
-    fn normalize_live_web_search_completion(
+    fn normalize_implicit_live_action_completion(
         &self,
         engine: &AngelEngine,
         method: &str,
@@ -88,26 +88,26 @@ impl CodexAdapter {
         let Some(turn_id) = local_turn_id(engine, &conversation_id, remote_turn_id) else {
             return;
         };
-        let current_web_search = current_web_search_action_id(method, params);
-        let mut web_search_output = TransportOutput::default();
-        // Codex app-server commonly emits webSearch as a started item without a
-        // live result or terminal item. The next turn-scoped notification means
-        // control has moved on, so close older searches here at the adapter
+        let current_action = current_implicit_live_action_id(method, params);
+        let mut action_output = TransportOutput::default();
+        // Codex app-server can emit some built-in live items as started items
+        // without a live terminal item. The next turn-scoped notification means
+        // control has moved on, so close older items here at the adapter
         // boundary instead of leaking Codex-specific behavior downstream.
-        append_completed_web_searches(
+        append_completed_implicit_live_actions(
             engine,
             &conversation_id,
             &turn_id,
-            current_web_search.as_ref(),
-            &mut web_search_output,
+            current_action.as_ref(),
+            &mut action_output,
         );
-        if !web_search_output.events.is_empty() {
-            output.events.splice(0..0, web_search_output.events);
+        if !action_output.events.is_empty() {
+            output.events.splice(0..0, action_output.events);
         }
     }
 }
 
-fn current_web_search_action_id(method: &str, params: &Value) -> Option<ActionId> {
+fn current_implicit_live_action_id(method: &str, params: &Value) -> Option<ActionId> {
     if !matches!(
         method,
         "item/started" | "item/completed" | "rawResponseItem/completed"
@@ -115,7 +115,10 @@ fn current_web_search_action_id(method: &str, params: &Value) -> Option<ActionId
         return None;
     }
     let item = params.get("item")?;
-    if item.get("type").and_then(Value::as_str) != Some("webSearch") {
+    if !matches!(
+        item.get("type").and_then(Value::as_str),
+        Some("webSearch" | "imageGeneration")
+    ) {
         return None;
     }
     item.get("id")

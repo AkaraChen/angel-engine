@@ -101,9 +101,7 @@ impl CodexAdapter {
                 action,
             });
         }
-        let completed_phase = phase_from_item(item).or_else(|| {
-            (completed && action_kind == ActionKind::WebSearch).then_some(ActionPhase::Completed)
-        });
+        let completed_phase = completed_phase_from_item(item, &action_kind);
         if completed && let Some(phase) = completed_phase {
             output.events.push(EngineEvent::ActionUpdated {
                 conversation_id,
@@ -404,6 +402,69 @@ mod tests {
     }
 
     #[test]
+    fn next_stream_item_completes_open_image_generation() {
+        let adapter = CodexAdapter::app_server();
+        let mut engine = engine_with_thread(&adapter);
+
+        let image = adapter
+            .decode_notification(
+                &engine,
+                "item/started",
+                &json!({
+                    "threadId": "thread",
+                    "turnId": "turn",
+                    "item": {
+                        "id": "image_1",
+                        "type": "imageGeneration",
+                        "status": "",
+                        "revisedPrompt": null,
+                        "result": "",
+                        "savedPath": null
+                    }
+                }),
+            )
+            .expect("image generation started");
+        angel_engine::apply_transport_output(&mut engine, &image).expect("apply image generation");
+
+        let output = adapter
+            .decode_notification(
+                &engine,
+                "item/started",
+                &json!({
+                    "threadId": "thread",
+                    "turnId": "turn",
+                    "item": {
+                        "id": "cmd_1",
+                        "type": "commandExecution",
+                        "status": "inProgress",
+                        "command": "git status"
+                    }
+                }),
+            )
+            .expect("next item");
+
+        assert!(output.events.iter().any(|event| matches!(
+            event,
+            EngineEvent::ActionUpdated {
+                action_id,
+                patch:
+                    ActionPatch {
+                        phase: Some(ActionPhase::Completed),
+                        ..
+                    },
+                ..
+            } if action_id.as_str() == "image_1"
+        )));
+        assert!(output.events.iter().any(|event| matches!(
+            event,
+            EngineEvent::ActionObserved {
+                action,
+                ..
+            } if action.id.as_str() == "cmd_1"
+        )));
+    }
+
+    #[test]
     fn turn_completed_completes_open_web_search() {
         let adapter = CodexAdapter::app_server();
         let mut engine = engine_with_thread(&adapter);
@@ -461,6 +522,65 @@ mod tests {
     }
 
     #[test]
+    fn turn_completed_completes_open_image_generation() {
+        let adapter = CodexAdapter::app_server();
+        let mut engine = engine_with_thread(&adapter);
+
+        let image = adapter
+            .decode_notification(
+                &engine,
+                "item/started",
+                &json!({
+                    "threadId": "thread",
+                    "turnId": "turn",
+                    "item": {
+                        "id": "image_1",
+                        "type": "imageGeneration",
+                        "status": "",
+                        "revisedPrompt": null,
+                        "result": "",
+                        "savedPath": null
+                    }
+                }),
+            )
+            .expect("image generation started");
+        angel_engine::apply_transport_output(&mut engine, &image).expect("apply image generation");
+
+        let output = adapter
+            .decode_notification(
+                &engine,
+                "turn/completed",
+                &json!({
+                    "threadId": "thread",
+                    "turn": {
+                        "id": "turn",
+                        "status": "completed"
+                    }
+                }),
+            )
+            .expect("turn completed");
+
+        assert!(output.events.iter().any(|event| matches!(
+            event,
+            EngineEvent::ActionUpdated {
+                action_id,
+                patch:
+                    ActionPatch {
+                        phase: Some(ActionPhase::Completed),
+                        ..
+                    },
+                ..
+            } if action_id.as_str() == "image_1"
+        )));
+        assert!(
+            output
+                .events
+                .iter()
+                .any(|event| matches!(event, EngineEvent::TurnTerminal { .. }))
+        );
+    }
+
+    #[test]
     fn completed_web_search_item_without_status_is_completed() {
         let adapter = CodexAdapter::app_server();
         let engine = engine_with_thread(&adapter);
@@ -492,6 +612,112 @@ mod tests {
                     },
                 ..
             } if action_id.as_str() == "search_1"
+        )));
+    }
+
+    #[test]
+    fn completed_image_generation_item_without_status_is_completed() {
+        let adapter = CodexAdapter::app_server();
+        let engine = engine_with_thread(&adapter);
+
+        let output = adapter
+            .decode_notification(
+                &engine,
+                "item/completed",
+                &json!({
+                    "threadId": "thread",
+                    "turnId": "turn",
+                    "item": {
+                        "id": "image_1",
+                        "type": "imageGeneration",
+                        "revisedPrompt": "Draw a diagram",
+                        "result": "image/png;base64,abc",
+                        "savedPath": "/tmp/image.png"
+                    }
+                }),
+            )
+            .expect("image generation completed");
+
+        assert!(output.events.iter().any(|event| matches!(
+            event,
+            EngineEvent::ActionUpdated {
+                action_id,
+                patch:
+                    ActionPatch {
+                        phase: Some(ActionPhase::Completed),
+                        ..
+                    },
+                ..
+            } if action_id.as_str() == "image_1"
+        )));
+    }
+
+    #[test]
+    fn completed_image_view_item_without_status_is_completed() {
+        let adapter = CodexAdapter::app_server();
+        let engine = engine_with_thread(&adapter);
+
+        let output = adapter
+            .decode_notification(
+                &engine,
+                "item/completed",
+                &json!({
+                    "threadId": "thread",
+                    "turnId": "turn",
+                    "item": {
+                        "id": "image_view_1",
+                        "type": "imageView",
+                        "path": "/tmp/image.png"
+                    }
+                }),
+            )
+            .expect("image view completed");
+
+        assert!(output.events.iter().any(|event| matches!(
+            event,
+            EngineEvent::ActionUpdated {
+                action_id,
+                patch:
+                    ActionPatch {
+                        phase: Some(ActionPhase::Completed),
+                        ..
+                    },
+                ..
+            } if action_id.as_str() == "image_view_1"
+        )));
+    }
+
+    #[test]
+    fn completed_context_compaction_item_without_status_is_completed() {
+        let adapter = CodexAdapter::app_server();
+        let engine = engine_with_thread(&adapter);
+
+        let output = adapter
+            .decode_notification(
+                &engine,
+                "item/completed",
+                &json!({
+                    "threadId": "thread",
+                    "turnId": "turn",
+                    "item": {
+                        "id": "compact_1",
+                        "type": "contextCompaction"
+                    }
+                }),
+            )
+            .expect("context compaction completed");
+
+        assert!(output.events.iter().any(|event| matches!(
+            event,
+            EngineEvent::ActionUpdated {
+                action_id,
+                patch:
+                    ActionPatch {
+                        phase: Some(ActionPhase::Completed),
+                        ..
+                    },
+                ..
+            } if action_id.as_str() == "compact_1"
         )));
     }
 
