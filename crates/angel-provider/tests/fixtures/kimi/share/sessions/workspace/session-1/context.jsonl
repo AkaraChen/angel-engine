@@ -1,0 +1,4 @@
+{"role":"user","content":"hello"}
+{"role":"user","content":"<system-reminder>\nPlan mode is active.\n</system-reminder>"}
+{"role":"assistant","content":[{"type":"text","text":"thinking\n"}],"tool_calls":[{"type":"function","id":"tool_1","function":{"name":"Shell","arguments":"{\"command\":\"ls\"}"}}]}
+{"role":"tool","tool_call_id":"tool_1","content":[{"type":"text","text":"ok\n"}]}

@@ -134,7 +134,7 @@ pub(super) fn decode_acp_update(
             action.phase = AcpAdapter::tool_status_to_phase(status);
             action.title = tool_title(update);
             action.input = acp_tool_input(update);
-            action.output.chunks = acp_tool_output_deltas(update);
+            action.output.chunks = acp_tool_output_snapshot(update);
             action.error = acp_tool_error(update, status);
             Ok(TransportOutput::default()
                 .event(EngineEvent::ActionObserved {
@@ -156,7 +156,7 @@ pub(super) fn decode_acp_update(
                 .map(acp_tool_status)
                 .unwrap_or(AcpToolStatus::InProgress);
             let title = tool_title(update);
-            let deltas = acp_tool_output_deltas(update);
+            let deltas = acp_tool_output_deltas(engine, &conversation_id, &action_id, update);
             let error = acp_tool_error(update, status);
             let mut output = TransportOutput::default()
                 .log(TransportLogKind::State, format!("tool call {status:?}"));
@@ -314,7 +314,7 @@ fn acp_action_kind(update: &Value) -> ActionKind {
     }
 }
 
-fn acp_tool_output_deltas(update: &Value) -> Vec<ActionOutputDelta> {
+fn acp_tool_output_snapshot(update: &Value) -> Vec<ActionOutputDelta> {
     let Some(content) = update.get("content") else {
         return Vec::new();
     };
@@ -322,6 +322,86 @@ fn acp_tool_output_deltas(update: &Value) -> Vec<ActionOutputDelta> {
         return items.iter().filter_map(tool_content_delta).collect();
     }
     tool_content_delta(content).into_iter().collect()
+}
+
+fn acp_tool_output_deltas(
+    engine: &AngelEngine,
+    conversation_id: &ConversationId,
+    action_id: &ActionId,
+    update: &Value,
+) -> Vec<ActionOutputDelta> {
+    let snapshot = acp_tool_output_snapshot(update);
+    let Some(previous) = existing_action_output(engine, conversation_id, action_id) else {
+        return snapshot;
+    };
+    snapshot_delta(previous, snapshot)
+}
+
+fn existing_action_output<'a>(
+    engine: &'a AngelEngine,
+    conversation_id: &ConversationId,
+    action_id: &ActionId,
+) -> Option<&'a [ActionOutputDelta]> {
+    engine
+        .conversations
+        .get(conversation_id)
+        .and_then(|conversation| conversation.actions.get(action_id))
+        .map(|action| action.output.chunks.as_slice())
+}
+
+fn snapshot_delta(
+    previous: &[ActionOutputDelta],
+    snapshot: Vec<ActionOutputDelta>,
+) -> Vec<ActionOutputDelta> {
+    if previous.is_empty() || snapshot.is_empty() {
+        return snapshot;
+    }
+    if snapshot.starts_with(previous) {
+        return snapshot[previous.len()..].to_vec();
+    }
+    if let Some(delta) = text_snapshot_suffix(previous, &snapshot) {
+        return delta;
+    }
+    snapshot
+}
+
+fn text_snapshot_suffix(
+    previous: &[ActionOutputDelta],
+    snapshot: &[ActionOutputDelta],
+) -> Option<Vec<ActionOutputDelta>> {
+    let [next] = snapshot else {
+        return None;
+    };
+    let next_text = action_output_delta_text(next)?;
+    let previous_text = previous
+        .iter()
+        .map(action_output_delta_text)
+        .collect::<Option<Vec<_>>>()?
+        .join("");
+    let suffix = next_text.strip_prefix(&previous_text)?;
+    if suffix.is_empty() {
+        return Some(Vec::new());
+    }
+    Some(vec![action_output_delta_with_text(
+        next,
+        suffix.to_string(),
+    )])
+}
+
+fn action_output_delta_text(delta: &ActionOutputDelta) -> Option<&str> {
+    match delta {
+        ActionOutputDelta::Text(text) => Some(text),
+        _ => None,
+    }
+}
+
+fn action_output_delta_with_text(template: &ActionOutputDelta, text: String) -> ActionOutputDelta {
+    match template {
+        ActionOutputDelta::Text(_) => ActionOutputDelta::Text(text),
+        ActionOutputDelta::Patch(_) => ActionOutputDelta::Patch(text),
+        ActionOutputDelta::Terminal(_) => ActionOutputDelta::Terminal(text),
+        ActionOutputDelta::Structured(_) => ActionOutputDelta::Structured(text),
+    }
 }
 
 fn tool_content_delta(value: &Value) -> Option<ActionOutputDelta> {
@@ -694,6 +774,167 @@ mod tests {
         ));
     }
 
+    #[test]
+    fn tool_call_update_trims_cumulative_text_snapshots() {
+        let adapter = AcpAdapter::standard();
+        let mut engine =
+            AngelEngine::new(angel_engine::ProtocolFlavor::Acp, adapter.capabilities());
+        let conversation_id = ready_conversation(&adapter, &mut engine);
+        start_ready_turn(&mut engine, &conversation_id);
+
+        let output = adapter
+            .decode_notification(
+                &engine,
+                "session/update",
+                &json!({
+                    "sessionId": "sess",
+                    "update": {
+                        "sessionUpdate": "tool_call",
+                        "toolCallId": "call-1",
+                        "kind": "execute",
+                        "status": "in_progress",
+                        "content": [
+                            {
+                                "type": "content",
+                                "content": {
+                                    "type": "text",
+                                    "text": "x\n"
+                                }
+                            }
+                        ]
+                    }
+                }),
+            )
+            .expect("tool call");
+        assert!(matches!(
+            output.events.as_slice(),
+            [EngineEvent::ActionObserved { action, .. }]
+                if action.output.chunks == vec![ActionOutputDelta::Text("x\n".to_string())]
+        ));
+        apply_events(&mut engine, output.events);
+
+        let output = adapter
+            .decode_notification(
+                &engine,
+                "session/update",
+                &json!({
+                    "sessionId": "sess",
+                    "update": {
+                        "sessionUpdate": "tool_call_update",
+                        "toolCallId": "call-1",
+                        "status": "in_progress",
+                        "content": [
+                            {
+                                "type": "content",
+                                "content": {
+                                    "type": "text",
+                                    "text": "x\nxx\n"
+                                }
+                            }
+                        ]
+                    }
+                }),
+            )
+            .expect("tool update");
+        assert!(matches!(
+            output.events.as_slice(),
+            [EngineEvent::ActionUpdated { patch, .. }]
+                if patch.output_delta == Some(ActionOutputDelta::Text("xx\n".to_string()))
+        ));
+        apply_events(&mut engine, output.events);
+
+        let output = adapter
+            .decode_notification(
+                &engine,
+                "session/update",
+                &json!({
+                    "sessionId": "sess",
+                    "update": {
+                        "sessionUpdate": "tool_call_update",
+                        "toolCallId": "call-1",
+                        "status": "completed",
+                        "content": [
+                            {
+                                "type": "content",
+                                "content": {
+                                    "type": "text",
+                                    "text": "x\nxx\n"
+                                }
+                            }
+                        ]
+                    }
+                }),
+            )
+            .expect("tool completed");
+        assert!(matches!(
+            output.events.as_slice(),
+            [EngineEvent::ActionUpdated { patch, .. }]
+                if patch.phase == Some(ActionPhase::Completed)
+                    && patch.output_delta.is_none()
+        ));
+        apply_events(&mut engine, output.events);
+
+        let action = engine
+            .conversations
+            .get(&conversation_id)
+            .and_then(|conversation| conversation.actions.get(&ActionId::new("call-1")))
+            .expect("action");
+        assert_eq!(
+            action.output.chunks,
+            vec![
+                ActionOutputDelta::Text("x\n".to_string()),
+                ActionOutputDelta::Text("xx\n".to_string())
+            ]
+        );
+    }
+
+    #[test]
+    fn tool_call_update_preserves_non_cumulative_snapshots() {
+        let adapter = AcpAdapter::standard();
+        let mut engine =
+            AngelEngine::new(angel_engine::ProtocolFlavor::Acp, adapter.capabilities());
+        let conversation_id = ready_conversation(&adapter, &mut engine);
+        let turn_id = start_ready_turn(&mut engine, &conversation_id);
+        let mut action = ActionState::new(ActionId::new("call-1"), turn_id, ActionKind::Command);
+        action.output.chunks = vec![ActionOutputDelta::Text("old".to_string())];
+        engine
+            .apply_event(EngineEvent::ActionObserved {
+                conversation_id: conversation_id.clone(),
+                action,
+            })
+            .expect("action observed");
+
+        let output = adapter
+            .decode_notification(
+                &engine,
+                "session/update",
+                &json!({
+                    "sessionId": "sess",
+                    "update": {
+                        "sessionUpdate": "tool_call_update",
+                        "toolCallId": "call-1",
+                        "status": "completed",
+                        "content": [
+                            {
+                                "type": "content",
+                                "content": {
+                                    "type": "text",
+                                    "text": "new"
+                                }
+                            }
+                        ]
+                    }
+                }),
+            )
+            .expect("tool update");
+
+        assert!(matches!(
+            output.events.as_slice(),
+            [EngineEvent::ActionUpdated { patch, .. }]
+                if patch.output_delta == Some(ActionOutputDelta::Text("new".to_string()))
+        ));
+    }
+
     fn ready_conversation(adapter: &AcpAdapter, engine: &mut AngelEngine) -> ConversationId {
         let conversation_id = ConversationId::new("conv");
         engine
@@ -726,5 +967,11 @@ mod tests {
             })
             .expect("turn started");
         turn_id
+    }
+
+    fn apply_events(engine: &mut AngelEngine, events: Vec<EngineEvent>) {
+        for event in events {
+            engine.apply_event(event).expect("apply event");
+        }
     }
 }

@@ -668,6 +668,10 @@ export type ChatStreamEvent =
       type: "tool";
     }
   | {
+      action: ChatToolAction;
+      type: "toolDelta";
+    }
+  | {
       chat: Chat;
       type: "chat";
     }

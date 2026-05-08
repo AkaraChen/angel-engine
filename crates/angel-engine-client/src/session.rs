@@ -1,4 +1,4 @@
-use std::collections::{HashMap, VecDeque, hash_map::Entry};
+use std::collections::{HashMap, HashSet, VecDeque, hash_map::Entry};
 use std::time::Duration;
 
 use serde::{Deserialize, Serialize};
@@ -563,6 +563,7 @@ struct ActiveTurn {
     request_id: Option<String>,
     request_completed: bool,
     collector: TurnCollector,
+    displayed_elicitation_ids: HashSet<String>,
     pending_elicitation_id: Option<String>,
     events: VecDeque<TurnRunEvent>,
 }
@@ -573,6 +574,7 @@ impl ActiveTurn {
         Self {
             collector: TurnCollector::new(turn_id.clone()),
             conversation_id,
+            displayed_elicitation_ids: HashSet::new(),
             turn_id,
             request_id,
             request_completed,
@@ -591,6 +593,7 @@ impl ActiveTurn {
 
     fn handle_update(&mut self, update: ClientUpdate) -> ClientResult<()> {
         let has_ordered_stream_events = update.events.iter().any(is_ordered_stream_event);
+        let action_output_delta_ids = action_output_delta_ids(&update.stream_deltas);
         if let Some(request_id) = &self.request_id
             && update
                 .completed_request_ids
@@ -608,16 +611,29 @@ impl ActiveTurn {
                 });
             }
             match event {
-                ClientEvent::ElicitationOpened { elicitation, .. }
-                | ClientEvent::ElicitationUpdated { elicitation, .. } => {
+                ClientEvent::ElicitationOpened { elicitation, .. } => {
                     self.accept_elicitation(elicitation);
                 }
-                event => self.collector.accept_event(event, &mut self.events),
+                ClientEvent::ElicitationUpdated { elicitation, .. } => {
+                    self.update_elicitation(elicitation);
+                }
+                event => {
+                    self.collector
+                        .accept_event(event, &action_output_delta_ids, &mut self.events)
+                }
             }
         }
 
         if !has_ordered_stream_events {
             for delta in update.stream_deltas {
+                self.collector.accept_delta(delta, &mut self.events);
+            }
+        } else {
+            for delta in update
+                .stream_deltas
+                .into_iter()
+                .filter(|delta| matches!(delta, ClientStreamDelta::ActionOutputDelta { .. }))
+            {
                 self.collector.accept_delta(delta, &mut self.events);
             }
         }
@@ -634,6 +650,7 @@ impl ActiveTurn {
 
     fn accept_elicitation(&mut self, elicitation: ElicitationSnapshot) {
         if elicitation.phase != "open" {
+            self.update_elicitation(elicitation);
             return;
         }
         if !self.accepts_turn(elicitation.turn_id.as_deref()) {
@@ -643,6 +660,35 @@ impl ActiveTurn {
             return;
         }
         self.pending_elicitation_id = Some(elicitation.id.clone());
+        self.displayed_elicitation_ids
+            .insert(elicitation.id.clone());
+        let message_part = DisplayMessagePartSnapshot::tool(
+            DisplayToolActionSnapshot::from_elicitation(&elicitation),
+        );
+        self.events.push_back(TurnRunEvent::Elicitation {
+            elicitation,
+            message_part,
+        });
+    }
+
+    fn update_elicitation(&mut self, elicitation: ElicitationSnapshot) {
+        if !self.accepts_turn(elicitation.turn_id.as_deref()) {
+            return;
+        }
+        if elicitation.phase == "open" {
+            self.accept_elicitation(elicitation);
+            return;
+        }
+        let was_displayed = self.displayed_elicitation_ids.contains(&elicitation.id);
+        let was_pending = self.pending_elicitation_id.as_deref() == Some(elicitation.id.as_str());
+        if !was_displayed && !was_pending {
+            return;
+        }
+        if was_pending {
+            self.pending_elicitation_id = None;
+        }
+        self.displayed_elicitation_ids
+            .insert(elicitation.id.clone());
         let message_part = DisplayMessagePartSnapshot::tool(
             DisplayToolActionSnapshot::from_elicitation(&elicitation),
         );
@@ -700,7 +746,8 @@ impl TurnCollector {
                         action_id.clone(),
                         content.clone(),
                     );
-                    let message_part = DisplayMessagePartSnapshot::tool(action);
+                    let message_part =
+                        DisplayMessagePartSnapshot::tool(action_delta_part(action, &content));
                     events.push_back(TurnRunEvent::ActionOutputDelta {
                         action_id,
                         content,
@@ -712,7 +759,12 @@ impl TurnCollector {
         }
     }
 
-    fn accept_event(&mut self, event: ClientEvent, events: &mut VecDeque<TurnRunEvent>) {
+    fn accept_event(
+        &mut self,
+        event: ClientEvent,
+        action_output_delta_ids: &HashSet<String>,
+        events: &mut VecDeque<TurnRunEvent>,
+    ) {
         match event {
             ClientEvent::ActionObserved { action, .. } => {
                 self.upsert_action(action.clone());
@@ -722,6 +774,10 @@ impl TurnCollector {
                 });
             }
             ClientEvent::ActionUpdated { action, .. } => {
+                if action_output_delta_ids.contains(&action.id) {
+                    self.upsert_streaming_action_metadata(action);
+                    return;
+                }
                 self.upsert_action(action.clone());
                 events.push_back(TurnRunEvent::ActionUpdated {
                     message_part: DisplayMessagePartSnapshot::tool((&action).into()),
@@ -841,7 +897,9 @@ impl TurnCollector {
                 .clone(),
             Entry::Occupied(mut entry) => {
                 let action = entry.get_mut();
-                action.phase = "streamingResult".to_string();
+                if !is_terminal_action_phase_label(&action.phase) {
+                    action.phase = "streamingResult".to_string();
+                }
                 action.output.push(content);
                 action.output_text = action
                     .output
@@ -852,6 +910,25 @@ impl TurnCollector {
                 action.clone()
             }
         }
+    }
+
+    fn upsert_streaming_action_metadata(&mut self, action: ActionSnapshot) {
+        let action_id = action.id.clone();
+        let previous_output = self
+            .streaming_actions
+            .get(&action_id)
+            .map(|existing| (existing.output.clone(), existing.output_text.clone()));
+        self.upsert_action(action.clone());
+
+        let mut display = DisplayToolActionSnapshot::from(&action);
+        if let Some((output, output_text)) = previous_output {
+            display.output = output;
+            display.output_text = output_text;
+        } else {
+            display.output.clear();
+            display.output_text.clear();
+        }
+        self.streaming_actions.insert(action_id, display);
     }
 }
 
@@ -865,6 +942,29 @@ fn is_ordered_stream_event(event: &ClientEvent) -> bool {
             | ClientEvent::PlanUpdated { .. }
             | ClientEvent::ReasoningDelta { .. }
     )
+}
+
+fn action_output_delta_ids(deltas: &[ClientStreamDelta]) -> HashSet<String> {
+    deltas
+        .iter()
+        .filter_map(|delta| match delta {
+            ClientStreamDelta::ActionOutputDelta { action_id, .. } => Some(action_id.clone()),
+            _ => None,
+        })
+        .collect()
+}
+
+fn action_delta_part(
+    mut action: DisplayToolActionSnapshot,
+    content: &ActionOutputSnapshot,
+) -> DisplayToolActionSnapshot {
+    action.output = vec![content.clone()];
+    action.output_text = content.text.clone();
+    action
+}
+
+fn is_terminal_action_phase_label(phase: &str) -> bool {
+    matches!(phase, "completed" | "failed" | "declined" | "cancelled")
 }
 
 fn current_model(snapshot: &ConversationSnapshot) -> Option<String> {
@@ -942,7 +1042,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn active_turn_ignores_resolved_elicitation_updates() {
+    fn active_turn_projects_resolved_elicitation_updates() {
         let mut active =
             ActiveTurn::new("conversation".to_string(), Some("turn".to_string()), None);
         active
@@ -971,7 +1071,16 @@ mod tests {
             })
             .unwrap();
 
-        assert!(active.pop_event().is_none());
+        assert!(matches!(
+            active.pop_event(),
+            Some(TurnRunEvent::Elicitation {
+                elicitation,
+                message_part,
+            }) if elicitation.phase == "resolved:Allow"
+                && message_part.action.as_ref().is_some_and(|action| {
+                    action.id == "elicitation" && action.phase == "completed"
+                })
+        ));
         assert!(active.pending_elicitation_id.is_none());
     }
 
@@ -1003,6 +1112,84 @@ mod tests {
             active.pop_event(),
             Some(TurnRunEvent::ActionUpdated { .. })
         ));
+    }
+
+    #[test]
+    fn active_turn_streams_action_output_deltas_without_full_action_snapshots() {
+        let mut active =
+            ActiveTurn::new("conversation".to_string(), Some("turn".to_string()), None);
+
+        active
+            .handle_update(ClientUpdate {
+                events: vec![ClientEvent::ActionObserved {
+                    conversation_id: "conversation".to_string(),
+                    action: action("running"),
+                }],
+                ..ClientUpdate::default()
+            })
+            .unwrap();
+        assert!(matches!(
+            active.pop_event(),
+            Some(TurnRunEvent::ActionObserved { .. })
+        ));
+
+        active
+            .handle_update(ClientUpdate {
+                events: vec![ClientEvent::ActionUpdated {
+                    conversation_id: "conversation".to_string(),
+                    action: action_with_output("running", "x\n"),
+                }],
+                stream_deltas: vec![ClientStreamDelta::ActionOutputDelta {
+                    conversation_id: "conversation".to_string(),
+                    turn_id: "turn".to_string(),
+                    action_id: "action".to_string(),
+                    content: output("x\n"),
+                }],
+                ..ClientUpdate::default()
+            })
+            .unwrap();
+        assert!(matches!(
+            active.pop_event(),
+            Some(TurnRunEvent::ActionOutputDelta {
+                content,
+                message_part,
+                ..
+            }) if content.text == "x\n"
+                && message_part.action.as_ref().is_some_and(|action| {
+                    action.output_text == "x\n"
+                        && action.output == vec![output("x\n")]
+                })
+        ));
+        assert!(active.pop_event().is_none());
+
+        active
+            .handle_update(ClientUpdate {
+                events: vec![ClientEvent::ActionUpdated {
+                    conversation_id: "conversation".to_string(),
+                    action: action_with_output("running", "x\nxx\n"),
+                }],
+                stream_deltas: vec![ClientStreamDelta::ActionOutputDelta {
+                    conversation_id: "conversation".to_string(),
+                    turn_id: "turn".to_string(),
+                    action_id: "action".to_string(),
+                    content: output("xx\n"),
+                }],
+                ..ClientUpdate::default()
+            })
+            .unwrap();
+        assert!(matches!(
+            active.pop_event(),
+            Some(TurnRunEvent::ActionOutputDelta {
+                content,
+                message_part,
+                ..
+            }) if content.text == "xx\n"
+                && message_part.action.as_ref().is_some_and(|action| {
+                    action.output_text == "xx\n"
+                        && action.output == vec![output("xx\n")]
+                })
+        ));
+        assert!(active.pop_event().is_none());
     }
 
     #[test]
@@ -1057,17 +1244,32 @@ mod tests {
     }
 
     fn action(phase: &str) -> ActionSnapshot {
+        action_with_output(phase, "")
+    }
+
+    fn action_with_output(phase: &str, text: &str) -> ActionSnapshot {
+        let output = (!text.is_empty())
+            .then(|| output(text))
+            .into_iter()
+            .collect();
         ActionSnapshot {
             error: None,
             id: "action".to_string(),
             input_summary: None,
             kind: "command".to_string(),
-            output: Vec::new(),
-            output_text: String::new(),
+            output,
+            output_text: text.to_string(),
             phase: phase.to_string(),
             raw_input: None,
             title: Some("Shell".to_string()),
             turn_id: "turn".to_string(),
+        }
+    }
+
+    fn output(text: &str) -> ActionOutputSnapshot {
+        ActionOutputSnapshot {
+            kind: "text".to_string(),
+            text: text.to_string(),
         }
     }
 }

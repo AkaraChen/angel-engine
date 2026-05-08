@@ -474,7 +474,7 @@ impl DisplayToolActionSnapshot {
             id: elicitation.id.clone(),
             turn_id: elicitation.turn_id.clone(),
             kind: "elicitation".to_string(),
-            phase: "awaitingDecision".to_string(),
+            phase: elicitation_action_phase(elicitation.phase.as_str()).to_string(),
             title: Some(
                 elicitation
                     .title
@@ -487,6 +487,18 @@ impl DisplayToolActionSnapshot {
             output: Vec::new(),
             error: None,
         }
+    }
+}
+
+fn elicitation_action_phase(phase: &str) -> &'static str {
+    if phase.starts_with("resolved:") {
+        return "completed";
+    }
+    match phase {
+        "open" => "awaitingDecision",
+        "resolving" => "running",
+        "cancelled" => "cancelled",
+        _ => "running",
     }
 }
 

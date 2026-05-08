@@ -34,7 +34,8 @@ export type ProjectedTurnEvent =
   | ChatStreamDelta
   | { plan: ChatPlanData; turnId?: string; type: "plan" }
   | { elicitation: ChatElicitation; type: "elicitation" }
-  | { action: ChatToolAction; type: "tool" };
+  | { action: ChatToolAction; type: "tool" }
+  | { action: ChatToolAction; type: "toolDelta" };
 
 export function conversationMessages(
   snapshot: ConversationSnapshot,
@@ -174,6 +175,17 @@ export function projectRunResult(result: TurnRunResult) {
 export function projectTurnRunEvent(
   event: TurnRunEvent,
 ): ProjectedTurnEvent | undefined {
+  if (
+    event.type === "actionOutputDelta" &&
+    event.messagePart?.type === "tool-call" &&
+    event.messagePart.action
+  ) {
+    return {
+      action: toChatAction(event.messagePart.action),
+      type: "toolDelta",
+    };
+  }
+
   if ("messagePart" in event && event.messagePart) {
     const projected = projectMessagePart(
       event.messagePart,
