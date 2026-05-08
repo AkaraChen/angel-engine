@@ -103,34 +103,16 @@ impl AngelClient {
         &mut self,
         request: StartConversationRequest,
     ) -> ClientResult<ClientCommandResult> {
-        let mut result = self.core.start_conversation(request)?;
-        let sent = self.flush_update(&result.update)?;
-        result.update.merge(sent);
-        if let Some(conversation_id) = result.conversation_id.clone() {
-            result
-                .update
-                .merge(self.wait_for_conversation_idle(&conversation_id)?);
-            result.update.merge(self.drain(Duration::from_millis(150))?);
-            self.hydrate_runtime_model_catalog(&conversation_id)?;
-        }
-        Ok(result)
+        let result = self.core.start_conversation(request)?;
+        self.finish_conversation_command(result)
     }
 
     pub fn resume_conversation(
         &mut self,
         request: ResumeConversationRequest,
     ) -> ClientResult<ClientCommandResult> {
-        let mut result = self.core.resume_conversation(request)?;
-        let sent = self.flush_update(&result.update)?;
-        result.update.merge(sent);
-        if let Some(conversation_id) = result.conversation_id.clone() {
-            result
-                .update
-                .merge(self.wait_for_conversation_idle(&conversation_id)?);
-            result.update.merge(self.drain(Duration::from_millis(150))?);
-            self.hydrate_runtime_model_catalog(&conversation_id)?;
-        }
-        Ok(result)
+        let result = self.core.resume_conversation(request)?;
+        self.finish_conversation_command(result)
     }
 
     pub fn send_text(
@@ -138,10 +120,8 @@ impl AngelClient {
         conversation_id: impl Into<String>,
         text: impl Into<String>,
     ) -> ClientResult<ClientCommandResult> {
-        let mut result = self.core.send_text(conversation_id, text)?;
-        let sent = self.flush_update(&result.update)?;
-        result.update.merge(sent);
-        Ok(result)
+        let result = self.core.send_text(conversation_id, text)?;
+        self.flush_command_result(result)
     }
 
     pub fn send_thread_event(
@@ -151,12 +131,10 @@ impl AngelClient {
     ) -> ClientResult<ClientCommandResult> {
         let conversation_id = conversation_id.into();
         let focused_turn_id = self.focused_turn_id(&conversation_id);
-        let mut result = self
+        let result = self
             .core
             .send_thread_event(conversation_id, event, focused_turn_id)?;
-        let sent = self.flush_update(&result.update)?;
-        result.update.merge(sent);
-        Ok(result)
+        self.flush_command_result(result)
     }
 
     pub fn ask_text(
@@ -259,10 +237,8 @@ impl AngelClient {
         conversation_id: impl Into<String>,
         model: impl Into<String>,
     ) -> ClientResult<ClientCommandResult> {
-        let mut result = self.core.set_model(conversation_id, model)?;
-        let sent = self.flush_update(&result.update)?;
-        result.update.merge(sent);
-        Ok(result)
+        let result = self.core.set_model(conversation_id, model)?;
+        self.flush_command_result(result)
     }
 
     pub fn set_mode(
@@ -270,10 +246,8 @@ impl AngelClient {
         conversation_id: impl Into<String>,
         mode: impl Into<String>,
     ) -> ClientResult<ClientCommandResult> {
-        let mut result = self.core.set_mode(conversation_id, mode)?;
-        let sent = self.flush_update(&result.update)?;
-        result.update.merge(sent);
-        Ok(result)
+        let result = self.core.set_mode(conversation_id, mode)?;
+        self.flush_command_result(result)
     }
 
     pub fn set_reasoning_level(
@@ -281,10 +255,8 @@ impl AngelClient {
         conversation_id: impl Into<String>,
         level: impl Into<String>,
     ) -> ClientResult<ClientCommandResult> {
-        let mut result = self.core.set_reasoning_level(conversation_id, level)?;
-        let sent = self.flush_update(&result.update)?;
-        result.update.merge(sent);
-        Ok(result)
+        let result = self.core.set_reasoning_level(conversation_id, level)?;
+        self.flush_command_result(result)
     }
 
     pub fn set_reasoning_effort(
@@ -377,11 +349,32 @@ impl AngelClient {
         Ok(update)
     }
 
+    fn finish_conversation_command(
+        &mut self,
+        result: ClientCommandResult,
+    ) -> ClientResult<ClientCommandResult> {
+        let mut result = self.flush_command_result(result)?;
+        if let Some(conversation_id) = result.conversation_id.clone() {
+            result
+                .update
+                .merge(self.wait_for_conversation_idle(&conversation_id)?);
+            result.update.merge(self.drain(Duration::from_millis(150))?);
+            self.hydrate_runtime_model_catalog(&conversation_id)?;
+        }
+        Ok(result)
+    }
+
+    fn flush_command_result(
+        &mut self,
+        mut result: ClientCommandResult,
+    ) -> ClientResult<ClientCommandResult> {
+        let sent = self.flush_update(&result.update)?;
+        result.update.merge(sent);
+        Ok(result)
+    }
+
     fn send_command_result(&mut self, result: ClientCommandResult) -> ClientResult<ClientUpdate> {
-        let mut update = result.update;
-        let sent = self.flush_update(&update)?;
-        update.merge(sent);
-        Ok(update)
+        Ok(self.flush_command_result(result)?.update)
     }
 
     fn flush_update(&mut self, update: &ClientUpdate) -> ClientResult<ClientUpdate> {

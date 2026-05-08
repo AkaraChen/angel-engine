@@ -96,6 +96,7 @@ pub struct TurnRunResult {
     rename_all = "camelCase",
     rename_all_fields = "camelCase"
 )]
+#[allow(clippy::large_enum_variant)]
 pub enum TurnRunEvent {
     Delta {
         part: String,
@@ -381,16 +382,12 @@ impl AngelSession {
         conversation_id: &str,
         requested_mode: Option<&str>,
     ) -> ClientResult<()> {
-        let Some(mode) = requested_mode
-            .map(str::trim)
-            .filter(|mode| !mode.is_empty())
-        else {
+        let Some(mode) = selected_config_value(requested_mode) else {
             return Ok(());
         };
-        let result = self.client.send_thread_event(
-            conversation_id.to_string(),
-            ThreadEvent::set_mode(mode.to_string()),
-        )?;
+        let result = self
+            .client
+            .send_thread_event(conversation_id.to_string(), ThreadEvent::set_mode(mode))?;
         self.drain_configuration_updates(result.update)
     }
 
@@ -796,13 +793,7 @@ impl TurnCollector {
     }
 
     fn plan_message_part(&self) -> Option<DisplayMessagePartSnapshot> {
-        if self.plan.entries.is_empty()
-            && self.plan.text.trim().is_empty()
-            && self.plan.path.is_none()
-        {
-            return None;
-        }
-        Some(DisplayMessagePartSnapshot::plan(self.plan.clone()))
+        (!self.plan.is_empty()).then(|| DisplayMessagePartSnapshot::plan(self.plan.clone()))
     }
 
     fn push_plan_event(&self, turn_id: Option<String>, events: &mut VecDeque<TurnRunEvent>) {

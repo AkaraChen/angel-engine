@@ -1,8 +1,9 @@
 use angel_engine::{
-    AngelEngine, AuthMethodId, ContextPatch, DiscoverConversationsParams, ElicitationDecision,
-    ElicitationId, EngineCommand, EngineExtensionCommand, JsonRpcMessage, ResumeTarget,
-    StartConversationParams, TransportClientInfo, TransportOptions, TransportOutput, TurnOverrides,
-    UserAnswer, UserInput, UserInputKind,
+    AngelEngine, AuthMethodId, ContextPatch, ConversationId, ConversationLifecycle,
+    ConversationState, DiscoverConversationsParams, ElicitationDecision, ElicitationId,
+    ElicitationPhase, EngineCommand, EngineExtensionCommand, HistoryMutationOp, JsonRpcMessage,
+    ResumeTarget, StartConversationParams, TransportClientInfo, TransportOptions, TransportOutput,
+    TurnId, TurnOverrides, TurnState, UserAnswer, UserInput, UserInputKind,
 };
 use angel_provider::ProtocolAdapter;
 use serde::{Deserialize, Serialize};
@@ -135,68 +136,56 @@ where
         &mut self,
         request: ForkConversationRequest,
     ) -> ClientResult<ClientCommandResult> {
-        self.plan_command(EngineCommand::Extension(
-            EngineExtensionCommand::ForkConversation {
-                source: angel_engine::ConversationId::new(request.source_conversation_id),
-                at: request.at_turn_id.map(angel_engine::TurnId::new),
-            },
-        ))
+        self.plan_extension(EngineExtensionCommand::ForkConversation {
+            source: to_conversation_id(request.source_conversation_id),
+            at: request.at_turn_id.map(to_turn_id),
+        })
     }
 
     pub fn close_conversation(
         &mut self,
         conversation_id: impl Into<String>,
     ) -> ClientResult<ClientCommandResult> {
-        self.plan_command(EngineCommand::Extension(
-            EngineExtensionCommand::CloseConversation {
-                conversation_id: angel_engine::ConversationId::new(conversation_id.into()),
-            },
-        ))
+        self.plan_extension(EngineExtensionCommand::CloseConversation {
+            conversation_id: to_conversation_id(conversation_id),
+        })
     }
 
     pub fn unsubscribe(
         &mut self,
         conversation_id: impl Into<String>,
     ) -> ClientResult<ClientCommandResult> {
-        self.plan_command(EngineCommand::Extension(
-            EngineExtensionCommand::Unsubscribe {
-                conversation_id: angel_engine::ConversationId::new(conversation_id.into()),
-            },
-        ))
+        self.plan_extension(EngineExtensionCommand::Unsubscribe {
+            conversation_id: to_conversation_id(conversation_id),
+        })
     }
 
     pub fn archive_conversation(
         &mut self,
         conversation_id: impl Into<String>,
     ) -> ClientResult<ClientCommandResult> {
-        self.plan_command(EngineCommand::Extension(
-            EngineExtensionCommand::ArchiveConversation {
-                conversation_id: angel_engine::ConversationId::new(conversation_id.into()),
-            },
-        ))
+        self.plan_extension(EngineExtensionCommand::ArchiveConversation {
+            conversation_id: to_conversation_id(conversation_id),
+        })
     }
 
     pub fn unarchive_conversation(
         &mut self,
         conversation_id: impl Into<String>,
     ) -> ClientResult<ClientCommandResult> {
-        self.plan_command(EngineCommand::Extension(
-            EngineExtensionCommand::UnarchiveConversation {
-                conversation_id: angel_engine::ConversationId::new(conversation_id.into()),
-            },
-        ))
+        self.plan_extension(EngineExtensionCommand::UnarchiveConversation {
+            conversation_id: to_conversation_id(conversation_id),
+        })
     }
 
     pub fn compact_history(
         &mut self,
         conversation_id: impl Into<String>,
     ) -> ClientResult<ClientCommandResult> {
-        self.plan_command(EngineCommand::Extension(
-            EngineExtensionCommand::MutateHistory {
-                conversation_id: angel_engine::ConversationId::new(conversation_id.into()),
-                op: angel_engine::HistoryMutationOp::Compact,
-            },
-        ))
+        self.plan_extension(EngineExtensionCommand::MutateHistory {
+            conversation_id: to_conversation_id(conversation_id),
+            op: HistoryMutationOp::Compact,
+        })
     }
 
     pub fn rollback_history(
@@ -204,12 +193,10 @@ where
         conversation_id: impl Into<String>,
         num_turns: usize,
     ) -> ClientResult<ClientCommandResult> {
-        self.plan_command(EngineCommand::Extension(
-            EngineExtensionCommand::MutateHistory {
-                conversation_id: angel_engine::ConversationId::new(conversation_id.into()),
-                op: angel_engine::HistoryMutationOp::Rollback { num_turns },
-            },
-        ))
+        self.plan_extension(EngineExtensionCommand::MutateHistory {
+            conversation_id: to_conversation_id(conversation_id),
+            op: HistoryMutationOp::Rollback { num_turns },
+        })
     }
 
     pub fn run_shell_command(
@@ -217,12 +204,10 @@ where
         conversation_id: impl Into<String>,
         command: impl Into<String>,
     ) -> ClientResult<ClientCommandResult> {
-        self.plan_command(EngineCommand::Extension(
-            EngineExtensionCommand::RunShellCommand {
-                conversation_id: angel_engine::ConversationId::new(conversation_id.into()),
-                command: command.into(),
-            },
-        ))
+        self.plan_extension(EngineExtensionCommand::RunShellCommand {
+            conversation_id: to_conversation_id(conversation_id),
+            command: command.into(),
+        })
     }
 
     pub fn send_text(
@@ -241,7 +226,7 @@ where
         conversation_id: impl Into<String>,
         input: Vec<ClientInput>,
     ) -> ClientResult<ClientCommandResult> {
-        let conversation_id = angel_engine::ConversationId::new(conversation_id.into());
+        let conversation_id = to_conversation_id(conversation_id);
         let input = input.into_iter().map(UserInput::from).collect::<Vec<_>>();
         if let Some(interpreted) =
             self.adapter
@@ -265,13 +250,11 @@ where
         turn_id: Option<String>,
         text: impl Into<String>,
     ) -> ClientResult<ClientCommandResult> {
-        self.plan_command(EngineCommand::Extension(
-            EngineExtensionCommand::SteerTurn {
-                conversation_id: angel_engine::ConversationId::new(conversation_id.into()),
-                turn_id: turn_id.map(angel_engine::TurnId::new),
-                input: vec![UserInput::text(text.into())],
-            },
-        ))
+        self.plan_extension(EngineExtensionCommand::SteerTurn {
+            conversation_id: to_conversation_id(conversation_id),
+            turn_id: turn_id.map(to_turn_id),
+            input: vec![UserInput::text(text.into())],
+        })
     }
 
     pub fn cancel_turn(
@@ -280,8 +263,8 @@ where
         turn_id: Option<String>,
     ) -> ClientResult<ClientCommandResult> {
         self.plan_command(EngineCommand::CancelTurn {
-            conversation_id: angel_engine::ConversationId::new(conversation_id.into()),
-            turn_id: turn_id.map(angel_engine::TurnId::new),
+            conversation_id: to_conversation_id(conversation_id),
+            turn_id: turn_id.map(to_turn_id),
         })
     }
 
@@ -292,7 +275,7 @@ where
         response: ElicitationResponse,
     ) -> ClientResult<ClientCommandResult> {
         self.plan_command(EngineCommand::ResolveElicitation {
-            conversation_id: angel_engine::ConversationId::new(conversation_id.into()),
+            conversation_id: to_conversation_id(conversation_id),
             elicitation_id: ElicitationId::new(elicitation_id.into()),
             decision: response.into(),
         })
@@ -350,10 +333,9 @@ where
         conversation_id: impl Into<String>,
         model: impl Into<String>,
     ) -> ClientResult<ClientCommandResult> {
-        let plan = self.engine.set_model(
-            angel_engine::ConversationId::new(conversation_id.into()),
-            model.into(),
-        )?;
+        let plan = self
+            .engine
+            .set_model(to_conversation_id(conversation_id), model.into())?;
         self.apply_plan(plan)
     }
 
@@ -362,10 +344,9 @@ where
         conversation_id: impl Into<String>,
         mode: impl Into<String>,
     ) -> ClientResult<ClientCommandResult> {
-        let plan = self.engine.set_mode(
-            angel_engine::ConversationId::new(conversation_id.into()),
-            mode.into(),
-        )?;
+        let plan = self
+            .engine
+            .set_mode(to_conversation_id(conversation_id), mode.into())?;
         self.apply_plan(plan)
     }
 
@@ -374,10 +355,9 @@ where
         conversation_id: impl Into<String>,
         level: impl Into<String>,
     ) -> ClientResult<ClientCommandResult> {
-        let plan = self.engine.set_reasoning_level(
-            angel_engine::ConversationId::new(conversation_id.into()),
-            level.into(),
-        )?;
+        let plan = self
+            .engine
+            .set_reasoning_level(to_conversation_id(conversation_id), level.into())?;
         self.apply_plan(plan)
     }
 
@@ -401,62 +381,28 @@ where
     }
 
     pub fn conversation_is_idle(&self, conversation_id: &str) -> bool {
-        self.engine
-            .conversations
-            .get(&angel_engine::ConversationId::new(
-                conversation_id.to_string(),
-            ))
-            .map(|conversation| {
-                matches!(
-                    conversation.lifecycle,
-                    angel_engine::ConversationLifecycle::Idle
-                )
+        self.conversation(conversation_id)
+            .is_some_and(|conversation| {
+                matches!(conversation.lifecycle, ConversationLifecycle::Idle)
             })
-            .unwrap_or(false)
     }
 
     pub fn turn_is_terminal(&self, conversation_id: &str, turn_id: &str) -> bool {
-        self.engine
-            .conversations
-            .get(&angel_engine::ConversationId::new(
-                conversation_id.to_string(),
-            ))
-            .and_then(|conversation| {
-                conversation
-                    .turns
-                    .get(&angel_engine::TurnId::new(turn_id.to_string()))
-            })
-            .map(|turn| turn.is_terminal())
-            .unwrap_or(false)
+        self.turn(conversation_id, turn_id)
+            .is_some_and(TurnState::is_terminal)
     }
 
     pub fn turn_snapshot(&self, conversation_id: &str, turn_id: &str) -> Option<TurnSnapshot> {
-        self.engine
-            .conversations
-            .get(&angel_engine::ConversationId::new(
-                conversation_id.to_string(),
-            ))
-            .and_then(|conversation| {
-                conversation
-                    .turns
-                    .get(&angel_engine::TurnId::new(turn_id.to_string()))
-            })
-            .map(TurnSnapshot::from)
+        self.turn(conversation_id, turn_id).map(TurnSnapshot::from)
     }
 
     pub fn open_elicitations(&self, conversation_id: &str) -> Vec<ElicitationSnapshot> {
-        self.engine
-            .conversations
-            .get(&angel_engine::ConversationId::new(
-                conversation_id.to_string(),
-            ))
+        self.conversation(conversation_id)
             .map(|conversation| {
                 conversation
                     .elicitations
                     .values()
-                    .filter(|elicitation| {
-                        matches!(elicitation.phase, angel_engine::ElicitationPhase::Open)
-                    })
+                    .filter(|elicitation| matches!(elicitation.phase, ElicitationPhase::Open))
                     .map(ElicitationSnapshot::from)
                     .collect()
             })
@@ -469,7 +415,7 @@ where
     ) -> ClientResult<ThreadSettingsSnapshot> {
         Ok(self
             .engine
-            .conversation_settings(angel_engine::ConversationId::new(conversation_id.into()))?
+            .conversation_settings(to_conversation_id(conversation_id))?
             .into())
     }
 
@@ -479,7 +425,7 @@ where
     ) -> ClientResult<ReasoningLevelSettingSnapshot> {
         Ok(self
             .engine
-            .get_reasoning_level(angel_engine::ConversationId::new(conversation_id.into()))?
+            .get_reasoning_level(to_conversation_id(conversation_id))?
             .into())
     }
 
@@ -489,7 +435,7 @@ where
     ) -> ClientResult<ModelListSettingSnapshot> {
         Ok(self
             .engine
-            .get_model_list(angel_engine::ConversationId::new(conversation_id.into()))?
+            .get_model_list(to_conversation_id(conversation_id))?
             .into())
     }
 
@@ -501,7 +447,7 @@ where
         let conversation_id = conversation_id.into();
         let current_model_id = self
             .engine
-            .get_model_list(angel_engine::ConversationId::new(conversation_id.clone()))?
+            .get_model_list(to_conversation_id(conversation_id.clone()))?
             .current_model_id;
 
         let Some(models) = self
@@ -511,7 +457,7 @@ where
             return Ok(());
         };
         self.engine
-            .hydrate_model_list(angel_engine::ConversationId::new(conversation_id), models)?;
+            .hydrate_model_list(to_conversation_id(conversation_id), models)?;
         Ok(())
     }
 
@@ -521,7 +467,7 @@ where
     ) -> ClientResult<bool> {
         let model_list = self
             .engine
-            .get_model_list(angel_engine::ConversationId::new(conversation_id.into()))?;
+            .get_model_list(to_conversation_id(conversation_id))?;
         Ok(model_list.can_set && model_list.available_models.is_empty())
     }
 
@@ -531,7 +477,7 @@ where
     ) -> ClientResult<AvailableModeSettingSnapshot> {
         Ok(self
             .engine
-            .get_available_modes(angel_engine::ConversationId::new(conversation_id.into()))?
+            .get_available_modes(to_conversation_id(conversation_id))?
             .into())
     }
 
@@ -548,6 +494,25 @@ where
     fn plan_command(&mut self, command: EngineCommand) -> ClientResult<ClientCommandResult> {
         let plan = self.engine.plan_command(command)?;
         self.apply_plan(plan)
+    }
+
+    fn plan_extension(
+        &mut self,
+        command: EngineExtensionCommand,
+    ) -> ClientResult<ClientCommandResult> {
+        self.plan_command(EngineCommand::Extension(command))
+    }
+
+    fn conversation(&self, conversation_id: &str) -> Option<&ConversationState> {
+        self.engine
+            .conversations
+            .get(&to_conversation_id(conversation_id))
+    }
+
+    fn turn(&self, conversation_id: &str, turn_id: &str) -> Option<&TurnState> {
+        self.conversation(conversation_id)?
+            .turns
+            .get(&to_turn_id(turn_id))
     }
 
     fn apply_plan(&mut self, plan: angel_engine::CommandPlan) -> ClientResult<ClientCommandResult> {
@@ -597,6 +562,14 @@ where
         }
         Ok(update)
     }
+}
+
+fn to_conversation_id(id: impl Into<String>) -> ConversationId {
+    ConversationId::new(id.into())
+}
+
+fn to_turn_id(id: impl Into<String>) -> TurnId {
+    TurnId::new(id.into())
 }
 
 #[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]

@@ -357,14 +357,16 @@ pub struct DisplayPlanSnapshot {
 
 impl DisplayPlanSnapshot {
     pub(crate) fn from_turn(turn: &TurnSnapshot) -> Option<Self> {
-        if turn.plan.is_empty() && turn.plan_text.trim().is_empty() && turn.plan_path.is_none() {
-            return None;
-        }
-        Some(Self {
+        let plan = Self {
             entries: turn.plan.clone(),
             text: turn.plan_text.clone(),
             path: turn.plan_path.clone(),
-        })
+        };
+        (!plan.is_empty()).then_some(plan)
+    }
+
+    pub(crate) fn is_empty(&self) -> bool {
+        self.entries.is_empty() && self.text.trim().is_empty() && self.path.is_none()
     }
 }
 

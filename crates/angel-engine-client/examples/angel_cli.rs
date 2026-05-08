@@ -52,10 +52,7 @@ impl MultiRuntimeCli {
     }
 
     fn run_repl(&mut self) -> Result<(), Box<dyn Error>> {
-        loop {
-            let Some(input) = read_prompt_line(self.runtime.prompt())? else {
-                break;
-            };
+        while let Some(input) = read_prompt_line(self.runtime.prompt())? {
             let line = input.trim();
             if line.is_empty() {
                 continue;
