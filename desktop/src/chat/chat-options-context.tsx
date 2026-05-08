@@ -16,7 +16,7 @@ export type ChatOptionsContextValue = {
   runtime: AgentRuntime;
   runtimeLocked: boolean;
   setModel: (model: string) => void;
-  setMode: (mode: string) => void;
+  setMode: (mode: string) => Promise<void> | void;
   setReasoningEffort: (effort: string) => void;
   setRuntime: (runtime: AgentRuntime) => void;
 };

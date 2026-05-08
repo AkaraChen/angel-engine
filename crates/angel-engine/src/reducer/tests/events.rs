@@ -1,9 +1,11 @@
 use crate::event::EngineEvent;
-use crate::ids::RemoteConversationId;
+use crate::ids::{ActionId, RemoteConversationId};
 use crate::protocol::ProtocolFlavor;
 use crate::state::{
-    ContentDelta, ContextPatch, ContextScope, ContextUpdate, ConversationLifecycle, TurnOutcome,
-    TurnPhase,
+    ActionKind, ActionOutputDelta, ActionPatch, ActionPhase, ActionState, ContentDelta,
+    ContextPatch, ContextScope, ContextUpdate, ConversationLifecycle, DisplayMessagePart,
+    DisplayTextPartKind, PlanEntry, PlanEntryStatus, PlanState, TurnOutcome, TurnPhase,
+    conversation_display_messages,
 };
 
 use super::{
@@ -97,6 +99,130 @@ fn plan_path_is_stored_on_turn() {
     let turn = &engine.conversations[&conversation_id].turns[&turn_id];
     assert_eq!(turn.plan_path.as_deref(), Some("plans/plan.md"));
     assert!(matches!(turn.phase, TurnPhase::Planning));
+}
+
+#[test]
+fn completed_turn_display_preserves_event_order() {
+    let capabilities = codex_capabilities();
+    let mut engine = engine_with(ProtocolFlavor::CodexAppServer, capabilities.clone());
+    let conversation_id = insert_ready_conversation(
+        &mut engine,
+        "conv",
+        RemoteConversationId::Known("thread".to_string()),
+        capabilities.clone(),
+    );
+    let turn_id = start_turn(&mut engine, conversation_id.clone());
+
+    engine
+        .apply_event(EngineEvent::ReasoningDelta {
+            conversation_id: conversation_id.clone(),
+            turn_id: turn_id.clone(),
+            delta: ContentDelta::Text("first thought".to_string()),
+        })
+        .expect("reasoning");
+
+    let mut first_action = ActionState::new(
+        ActionId::new("call-1"),
+        turn_id.clone(),
+        ActionKind::Command,
+    );
+    first_action.phase = ActionPhase::Running;
+    first_action.title = Some("git status".to_string());
+    engine
+        .apply_event(EngineEvent::ActionObserved {
+            conversation_id: conversation_id.clone(),
+            action: first_action,
+        })
+        .expect("first action");
+    engine
+        .apply_event(EngineEvent::ActionUpdated {
+            conversation_id: conversation_id.clone(),
+            action_id: ActionId::new("call-1"),
+            patch: ActionPatch {
+                phase: Some(ActionPhase::Completed),
+                output_delta: Some(ActionOutputDelta::Text("clean".to_string())),
+                error: None,
+                title: None,
+            },
+        })
+        .expect("first output");
+
+    engine
+        .apply_event(EngineEvent::AssistantDelta {
+            conversation_id: conversation_id.clone(),
+            turn_id: turn_id.clone(),
+            delta: ContentDelta::Text("middle reply".to_string()),
+        })
+        .expect("assistant");
+    engine
+        .apply_event(EngineEvent::ReasoningDelta {
+            conversation_id: conversation_id.clone(),
+            turn_id: turn_id.clone(),
+            delta: ContentDelta::Text("second thought".to_string()),
+        })
+        .expect("second reasoning");
+
+    let mut second_action = ActionState::new(
+        ActionId::new("call-2"),
+        turn_id.clone(),
+        ActionKind::Command,
+    );
+    second_action.phase = ActionPhase::Completed;
+    second_action.title = Some("npm test".to_string());
+    engine
+        .apply_event(EngineEvent::ActionObserved {
+            conversation_id: conversation_id.clone(),
+            action: second_action,
+        })
+        .expect("second action");
+
+    engine
+        .apply_event(EngineEvent::PlanUpdated {
+            conversation_id: conversation_id.clone(),
+            turn_id: turn_id.clone(),
+            plan: PlanState {
+                entries: vec![PlanEntry {
+                    content: "Implement the UI".to_string(),
+                    status: PlanEntryStatus::InProgress,
+                }],
+            },
+        })
+        .expect("plan");
+    engine
+        .apply_event(EngineEvent::AssistantDelta {
+            conversation_id: conversation_id.clone(),
+            turn_id: turn_id.clone(),
+            delta: ContentDelta::Text("final reply".to_string()),
+        })
+        .expect("final assistant");
+
+    let conversation = &engine.conversations[&conversation_id];
+    let messages = conversation_display_messages(engine.protocol.clone(), conversation);
+    let assistant = messages
+        .iter()
+        .find(|message| message.id == format!("{turn_id}:assistant"))
+        .expect("assistant message");
+
+    assert!(matches!(
+        assistant.content.as_slice(),
+        [
+            DisplayMessagePart::Text { kind: DisplayTextPartKind::Reasoning, text: first_reasoning },
+            DisplayMessagePart::ToolCall { action: first_tool },
+            DisplayMessagePart::Text { kind: DisplayTextPartKind::Text, text: middle_text },
+            DisplayMessagePart::Text { kind: DisplayTextPartKind::Reasoning, text: second_reasoning },
+            DisplayMessagePart::ToolCall { action: second_tool },
+            DisplayMessagePart::Plan { entries, .. },
+            DisplayMessagePart::Text { kind: DisplayTextPartKind::Text, text: final_text }
+        ] if first_reasoning == "first thought"
+            && first_tool.id == "call-1"
+            && first_tool.output_text == "clean"
+            && middle_text == "middle reply"
+            && second_reasoning == "second thought"
+            && second_tool.id == "call-2"
+            && entries.len() == 1
+            && entries[0].content == "Implement the UI"
+            && final_text == "final reply"
+    ));
 }
 
 #[test]

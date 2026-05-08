@@ -1,4 +1,7 @@
+use super::actions::dynamic_tool_is_host_capability;
 use super::protocol_helpers::*;
+use super::requests::host_capability_options;
+use super::summaries::{plan_item_content, plan_item_saved_path};
 use super::*;
 
 impl CodexAdapter {
@@ -252,6 +255,15 @@ fn append_hydrated_turns(
                     HistoryRole::Reasoning,
                     ContentDelta::Text(codex_reasoning_text(replay_item)),
                 ),
+                Some("plan") => {
+                    let Some(plan_item) = codex_history_replay_plan_item(replay_item) else {
+                        continue;
+                    };
+                    (
+                        HistoryRole::Assistant,
+                        ContentDelta::Structured(plan_item.to_string()),
+                    )
+                }
                 Some(item_type) if codex_history_replay_tool_item_type(item_type) => (
                     HistoryRole::Tool,
                     ContentDelta::Structured(
@@ -310,19 +322,194 @@ fn codex_history_replay_tool_item(item: &Value) -> Value {
     fields
         .entry("status".to_string())
         .or_insert_with(|| Value::String("completed".to_string()));
+    normalize_host_capability_history_tool_item(&mut replay_item);
     replay_item
+}
+
+fn codex_history_replay_plan_item(item: &Value) -> Option<Value> {
+    let entries = codex_history_replay_plan_entries(item);
+    let text = plan_item_content(item).unwrap_or_default();
+    let path = plan_item_saved_path(item);
+    if entries.is_empty() && text.trim().is_empty() && path.is_none() {
+        return None;
+    }
+
+    let mut plan = serde_json::Map::new();
+    plan.insert("type".to_string(), Value::String("plan".to_string()));
+    plan.insert("entries".to_string(), Value::Array(entries));
+    plan.insert("text".to_string(), Value::String(text));
+    if let Some(path) = path {
+        plan.insert("path".to_string(), Value::String(path));
+    }
+    Some(Value::Object(plan))
+}
+
+fn codex_history_replay_plan_entries(item: &Value) -> Vec<Value> {
+    ["entries", "plan", "steps"]
+        .iter()
+        .find_map(|key| item.get(*key).and_then(Value::as_array))
+        .map(|entries| {
+            entries
+                .iter()
+                .filter_map(codex_history_replay_plan_entry)
+                .collect()
+        })
+        .unwrap_or_default()
+}
+
+fn codex_history_replay_plan_entry(entry: &Value) -> Option<Value> {
+    let content = match entry {
+        Value::String(content) => content.clone(),
+        Value::Object(_) => entry
+            .get("content")
+            .or_else(|| entry.get("text"))
+            .or_else(|| entry.get("step"))
+            .and_then(Value::as_str)?
+            .to_string(),
+        _ => return None,
+    };
+    if content.trim().is_empty() {
+        return None;
+    }
+
+    let status = entry
+        .get("status")
+        .and_then(Value::as_str)
+        .unwrap_or("pending");
+    Some(json!({
+        "content": content,
+        "status": normalize_plan_status(status),
+    }))
+}
+
+fn normalize_plan_status(status: &str) -> &str {
+    match status {
+        "completed" => "completed",
+        "in_progress" | "inProgress" => "inProgress",
+        _ => "pending",
+    }
 }
 
 fn codex_history_replay_tool_uses_call_id(item_type: &str) -> bool {
     matches!(
         item_type,
-        "function_call"
+        "dynamicToolCall"
+            | "function_call"
             | "function_call_output"
             | "custom_tool_call"
             | "custom_tool_call_output"
             | "tool_search_call"
             | "tool_search_output"
     )
+}
+
+fn normalize_host_capability_history_tool_item(replay_item: &mut Value) {
+    if replay_item.get("type").and_then(Value::as_str) != Some("dynamicToolCall")
+        || !dynamic_tool_is_host_capability(replay_item)
+    {
+        return;
+    }
+
+    let has_input_payload = replay_item.get("arguments").is_some()
+        || replay_item.get("title").is_some()
+        || replay_item.get("inputSummary").is_some()
+        || replay_item.get("rawInput").is_some();
+    {
+        let Value::Object(fields) = replay_item else {
+            return;
+        };
+        fields
+            .entry("kind".to_string())
+            .or_insert_with(|| Value::String("hostCapability".to_string()));
+        if !has_input_payload {
+            return;
+        }
+
+        if let Some(arguments) = fields
+            .get("arguments")
+            .and_then(Value::as_str)
+            .and_then(|arguments| serde_json::from_str::<Value>(arguments).ok())
+        {
+            fields.insert("arguments".to_string(), arguments);
+        }
+    }
+
+    let options = host_capability_options(replay_item);
+    let title = options
+        .title
+        .clone()
+        .unwrap_or_else(|| "User input requested".to_string());
+    let input_summary = host_capability_input_summary(&options);
+    let raw_input = host_capability_elicitation_input(replay_item, &options);
+    let Value::Object(fields) = replay_item else {
+        return;
+    };
+    if !title.trim().is_empty() {
+        fields
+            .entry("title".to_string())
+            .or_insert_with(|| Value::String(title));
+    }
+    if let Some(input_summary) = input_summary {
+        fields
+            .entry("inputSummary".to_string())
+            .or_insert_with(|| Value::String(input_summary.clone()));
+        fields.entry("rawInput".to_string()).or_insert(raw_input);
+    }
+}
+
+fn host_capability_input_summary(options: &ElicitationOptions) -> Option<String> {
+    if let Some(body) = options.body.as_ref().filter(|body| !body.trim().is_empty()) {
+        return Some(body.clone());
+    }
+    let questions = options
+        .questions
+        .iter()
+        .map(|question| {
+            if question.question.trim().is_empty() {
+                question.header.as_str()
+            } else {
+                question.question.as_str()
+            }
+        })
+        .filter(|text| !text.trim().is_empty())
+        .collect::<Vec<_>>()
+        .join("\n");
+    (!questions.is_empty()).then_some(questions)
+}
+
+fn host_capability_elicitation_input(item: &Value, options: &ElicitationOptions) -> Value {
+    json!({
+        "actionId": first_item_string(item, &["callId", "id", "call_id", "itemId"]),
+        "body": options.body,
+        "choices": options.choices,
+        "id": first_item_string(item, &["id", "callId", "call_id", "itemId"])
+            .unwrap_or_else(|| "hostCapability".to_string()),
+        "kind": "userInput",
+        "phase": "open",
+        "questions": options.questions.iter().map(|question| {
+            json!({
+                "header": question.header,
+                "id": question.id,
+                "isOther": question.is_other,
+                "isSecret": question.is_secret,
+                "options": question.options.iter().map(|option| {
+                    json!({
+                        "description": option.description,
+                        "label": option.label,
+                    })
+                }).collect::<Vec<_>>(),
+                "question": question.question,
+            })
+        }).collect::<Vec<_>>(),
+        "title": options.title,
+        "turnId": first_item_string(item, &["turnId", "turn_id"]),
+    })
+}
+
+fn first_item_string(item: &Value, keys: &[&str]) -> Option<String> {
+    keys.iter()
+        .find_map(|key| item.get(*key).and_then(Value::as_str))
+        .map(str::to_string)
 }
 
 fn string_field(fields: &serde_json::Map<String, Value>, keys: &[&str]) -> Option<String> {

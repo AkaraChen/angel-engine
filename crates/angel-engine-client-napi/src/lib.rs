@@ -10,7 +10,7 @@ use angel_engine_client::{
     ResumeConversationRequest as EngineResumeConversationRequest,
     RuntimeOptions as EngineRuntimeOptions,
     RuntimeOptionsOverrides as EngineRuntimeOptionsOverrides,
-    SendTextRequest as EngineSendTextRequest,
+    SendTextRequest as EngineSendTextRequest, SetModeRequest as EngineSetModeRequest,
     StartConversationRequest as EngineStartConversationRequest, ThreadEvent as EngineThreadEvent,
     create_runtime_options as engine_create_runtime_options,
     normalize_runtime_name as engine_normalize_runtime_name,
@@ -413,6 +413,16 @@ impl AngelSession {
     ) -> Result<AsyncTask<SessionJsonTask>> {
         let request = optional_json::<EngineInspectRequest>(request)?.unwrap_or_default();
         Ok(self.task(move |session| session.inspect(request)))
+    }
+
+    #[napi(
+        js_name = "setMode",
+        ts_args_type = "request: SetModeRequest",
+        ts_return_type = "Promise<ConversationSnapshot>"
+    )]
+    pub fn set_mode(&self, request: serde_json::Value) -> Result<AsyncTask<SessionJsonTask>> {
+        let request = from_json::<EngineSetModeRequest>(request)?;
+        Ok(self.task(move |session| session.set_mode(request)))
     }
 
     #[napi(

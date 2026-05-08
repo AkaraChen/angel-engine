@@ -227,7 +227,7 @@ impl MultiRuntimeCli {
         else {
             return Ok(false);
         };
-        let response = if elicitation.kind == "userInput" {
+        let response = if elicitation.kind == "userInput" || !elicitation.questions.is_empty() {
             self.read_user_input_response(&elicitation)?
         } else {
             self.read_approval_response(&elicitation)?

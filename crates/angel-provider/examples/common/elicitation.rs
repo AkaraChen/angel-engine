@@ -20,7 +20,9 @@ where
             return Ok(false);
         };
 
-        if matches!(elicitation.kind, ElicitationKind::UserInput) {
+        if matches!(elicitation.kind, ElicitationKind::UserInput)
+            || !elicitation.options.questions.is_empty()
+        {
             self.resolve_user_input_elicitation(conversation_id, elicitation)?;
             return Ok(true);
         }

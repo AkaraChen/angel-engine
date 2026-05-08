@@ -75,7 +75,7 @@ impl CodexAdapter {
                     json!(codex_thread_id(engine, effect)?),
                 );
                 params.insert("input".to_string(), codex_user_input(effect));
-                insert_codex_overrides(&mut params, &effect.payload.fields);
+                insert_codex_overrides(engine, effect, &mut params, &effect.payload.fields);
                 Ok(Value::Object(params))
             }
             ProtocolMethod::Codex(CodexMethod::TurnSteer) => Ok(json!({
@@ -182,6 +182,8 @@ impl CodexAdapter {
 }
 
 fn insert_codex_overrides(
+    engine: &AngelEngine,
+    effect: &angel_engine::ProtocolEffect,
     params: &mut serde_json::Map<String, Value>,
     fields: &std::collections::BTreeMap<String, String>,
 ) {
@@ -213,12 +215,12 @@ fn insert_codex_overrides(
             params.insert("sandboxPolicy".to_string(), policy);
         }
     }
-    if let (Some(mode), Some(model)) = (
-        fields.get("collaborationMode"),
-        fields
-            .get("collaborationModel")
-            .or_else(|| fields.get("model")),
-    ) {
+    let collaboration_model = fields
+        .get("collaborationModel")
+        .or_else(|| fields.get("model"))
+        .map(String::as_str)
+        .or_else(|| codex_current_model(engine, effect));
+    if let (Some(mode), Some(model)) = (fields.get("collaborationMode"), collaboration_model) {
         params.insert(
             "collaborationMode".to_string(),
             json!({
@@ -233,6 +235,25 @@ fn insert_codex_overrides(
             }),
         );
     }
+}
+
+fn codex_current_model<'a>(
+    engine: &'a AngelEngine,
+    effect: &angel_engine::ProtocolEffect,
+) -> Option<&'a str> {
+    let conversation_id = effect.conversation_id.as_ref()?;
+    let conversation = engine.conversations.get(conversation_id)?;
+    conversation
+        .context
+        .model
+        .effective()
+        .and_then(Option::as_deref)
+        .or_else(|| {
+            conversation
+                .model_state
+                .as_ref()
+                .map(|models| models.current_model_id.as_str())
+        })
 }
 
 fn codex_reasoning_effort(effort: &str) -> &str {
@@ -326,6 +347,74 @@ mod tests {
                 "experimentalRawEvents": true,
                 "persistExtendedHistory": true
             })
+        );
+    }
+
+    #[test]
+    fn turn_start_collaboration_mode_uses_current_model_state() {
+        let adapter = CodexAdapter::app_server();
+        let mut engine = AngelEngine::with_available_runtime(
+            angel_engine::ProtocolFlavor::CodexAppServer,
+            angel_engine::RuntimeCapabilities::new("test"),
+            adapter.capabilities(),
+        );
+        let conversation_id = ConversationId::new("conv");
+        engine
+            .apply_event(EngineEvent::ConversationProvisionStarted {
+                id: conversation_id.clone(),
+                remote: RemoteConversationId::Known("thread".to_string()),
+                op: angel_engine::ProvisionOp::New,
+                capabilities: adapter.capabilities(),
+            })
+            .expect("conversation provision");
+        engine
+            .apply_event(EngineEvent::ConversationReady {
+                id: conversation_id.clone(),
+                remote: Some(RemoteConversationId::Known("thread".to_string())),
+                context: ContextPatch::empty(),
+                capabilities: None,
+            })
+            .expect("conversation ready");
+        engine
+            .apply_event(EngineEvent::SessionModelsUpdated {
+                conversation_id: conversation_id.clone(),
+                models: SessionModelState {
+                    current_model_id: "gpt-5.5".to_string(),
+                    available_models: vec![SessionModel {
+                        id: "gpt-5.5".to_string(),
+                        name: "GPT-5.5".to_string(),
+                        description: None,
+                    }],
+                },
+            })
+            .expect("model state");
+        engine
+            .plan_command(angel_engine::EngineCommand::UpdateContext {
+                conversation_id: conversation_id.clone(),
+                patch: ContextPatch::one(angel_engine::ContextUpdate::Mode {
+                    scope: angel_engine::ContextScope::TurnAndFuture,
+                    mode: Some(angel_engine::AgentMode {
+                        id: "plan".to_string(),
+                    }),
+                }),
+            })
+            .expect("set mode");
+
+        let plan = engine
+            .plan_command(angel_engine::EngineCommand::StartTurn {
+                conversation_id,
+                input: vec![angel_engine::UserInput::text("make a plan")],
+                overrides: angel_engine::TurnOverrides::default(),
+            })
+            .expect("start turn");
+        let params = adapter
+            .encode_params(&engine, &plan.effects[0], &TransportOptions::default())
+            .expect("turn start params");
+
+        assert_eq!(params["collaborationMode"]["mode"], json!("plan"));
+        assert_eq!(
+            params["collaborationMode"]["settings"]["model"],
+            json!("gpt-5.5")
         );
     }
 

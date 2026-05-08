@@ -9,6 +9,7 @@ import type {
   InspectRequest,
   RuntimeOptions,
   SendTextRequest,
+  SetModeRequest,
   TurnRunEvent,
   TurnRunResult,
 } from "@angel-engine/client-napi";
@@ -25,8 +26,8 @@ import type {
   ChatRuntimeConfigInput,
   ChatSendInput,
   ChatSendResult,
-  ChatStreamDelta,
-  ChatToolAction,
+  ChatSetModeInput,
+  ChatSetModeResult,
 } from "../../shared/chat";
 import { normalizeChatAttachmentsInput } from "../../shared/chat";
 import {
@@ -46,10 +47,7 @@ import {
 
 type AngelClientModule = typeof import("@angel-engine/client-napi");
 type ChatStreamObserver = (
-  event:
-    | ChatStreamDelta
-    | { action: ChatToolAction; type: "tool" }
-    | { chat: Chat; type: "chat" },
+  event: ProjectedTurnEvent | { chat: Chat; type: "chat" },
 ) => void;
 export type ChatStreamControls = {
   setResolveElicitation?: (
@@ -123,6 +121,22 @@ export async function inspectChatRuntimeConfig(
   } finally {
     session.close();
   }
+}
+
+export async function setChatMode(
+  input: ChatSetModeInput,
+): Promise<ChatSetModeResult> {
+  const chat = requireChat(input.chatId);
+  const snapshot = await getChatSession(chat).setMode({
+    cwd: input.cwd ?? chat.cwd ?? undefined,
+    mode: input.mode,
+    remoteId: chat.remoteThreadId ?? undefined,
+  });
+  const updatedChat = persistRemoteThreadId(chat, snapshot);
+  return {
+    chat: updatedChat,
+    config: runtimeConfigFromConversationSnapshot(snapshot),
+  };
 }
 
 export async function prewarmChat(
@@ -484,6 +498,10 @@ class DesktopAngelSession {
     const request: InspectRequest =
       typeof cwd === "string" ? { cwd } : (cwd ?? {});
     return this.enqueue(() => this.session.inspect(request));
+  }
+
+  setMode(request: SetModeRequest): Promise<ConversationSnapshot> {
+    return this.enqueue(() => this.session.setMode(request));
   }
 
   sendText(request: DesktopSendTextRequest): Promise<TurnRunResult> {

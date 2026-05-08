@@ -30,6 +30,7 @@ import {
   cancelChatRun,
   useChatRunConfig,
   useChatRunIsRunning,
+  useChatRunStore,
 } from "@/lib/chat-run-store";
 import { SettingsPage } from "@/pages/settings-page";
 import {
@@ -563,7 +564,6 @@ function WorkspacePageContent({
                     projects={projects}
                     route={route}
                     selectedChat={selectedChat}
-                    setAgentMode={setAgentMode}
                     setAgentModel={setAgentModel}
                     setAgentReasoningEffort={setAgentReasoningEffort}
                     setDraftAgentRuntime={setDraftAgentRuntime}
@@ -580,7 +580,6 @@ function WorkspacePageContent({
                         projects={projects}
                         route={route}
                         selectedChatId={selectedChatId}
-                        setAgentMode={setAgentMode}
                         setAgentModel={setAgentModel}
                         setAgentReasoningEffort={setAgentReasoningEffort}
                         setDraftAgentRuntime={setDraftAgentRuntime}
@@ -634,7 +633,6 @@ function ActiveChatThread({
   projects,
   route,
   selectedChat,
-  setAgentMode,
   setAgentModel,
   setAgentReasoningEffort,
   setDraftAgentRuntime,
@@ -649,12 +647,12 @@ function ActiveChatThread({
   projects: Project[];
   route: WorkspaceRoute;
   selectedChat: Chat;
-  setAgentMode: (mode: string) => void;
   setAgentModel: (model: string) => void;
   setAgentReasoningEffort: (effort: string) => void;
   setDraftAgentRuntime: (runtime: AgentRuntime) => void;
 }) {
   const runtimeConfig = useChatRunConfig(selectedChat.id);
+  const setRunMode = useChatRunStore((state) => state.setMode);
   const chatRuntime = normalizeAgentRuntime(selectedChat.runtime);
   const routeProjectId =
     route.type === "projectChat" || route.type === "projectCreate"
@@ -676,13 +674,20 @@ function ActiveChatThread({
     draftAgentConfig.reasoningEffort ?? runtimeConfig?.currentReasoningEffort,
   );
   const activeMode = normalizeConfigDisplayValue(
-    draftAgentConfig.mode ?? runtimeConfig?.currentMode,
+    runtimeConfig?.agentState?.currentMode ??
+      runtimeConfig?.currentMode ??
+      draftAgentConfig.mode,
   );
   const modelOverride = selectedConfigOverride(draftAgentConfig.model);
   const reasoningEffortOverride = selectedConfigOverride(
     draftAgentConfig.reasoningEffort,
   );
-  const modeOverride = selectedConfigOverride(draftAgentConfig.mode);
+  const setBackendMode = useCallback(
+    async (mode: string) => {
+      await setRunMode(selectedChat.id, mode);
+    },
+    [selectedChat.id, setRunMode],
+  );
   const modelOptions = ensureConfigOption(
     runtimeConfigOptionsToAgentOptions(runtimeConfig?.models),
     activeModel,
@@ -710,7 +715,7 @@ function ActiveChatThread({
       runtime: chatRuntime,
       runtimeLocked: true,
       setModel: setAgentModel,
-      setMode: setAgentMode,
+      setMode: setBackendMode,
       setReasoningEffort: setAgentReasoningEffort,
       setRuntime: setDraftAgentRuntime,
     }),
@@ -725,9 +730,9 @@ function ActiveChatThread({
       runtimeConfig?.canSetMode,
       runtimeConfig?.canSetModel,
       runtimeConfig?.canSetReasoningEffort,
-      setAgentMode,
       setAgentModel,
       setAgentReasoningEffort,
+      setBackendMode,
       setDraftAgentRuntime,
     ],
   );
@@ -740,7 +745,7 @@ function ActiveChatThread({
         historyRevision={0}
         key={`chat:${selectedChat.id}:${chatRuntime}:active`}
         model={modelOverride}
-        mode={modeOverride}
+        mode={undefined}
         onChatCreated={onChatCreated}
         onChatUpdated={onChatUpdated}
         projectId={selectedChat.projectId ?? selectedProject?.id ?? null}
@@ -765,7 +770,6 @@ function RestoredChatThread({
   projects,
   route,
   selectedChatId,
-  setAgentMode,
   setAgentModel,
   setAgentReasoningEffort,
   setDraftAgentRuntime,
@@ -782,7 +786,6 @@ function RestoredChatThread({
   projects: Project[];
   route: WorkspaceRoute;
   selectedChatId: string;
-  setAgentMode: (mode: string) => void;
   setAgentModel: (model: string) => void;
   setAgentReasoningEffort: (effort: string) => void;
   setDraftAgentRuntime: (runtime: AgentRuntime) => void;
@@ -792,6 +795,8 @@ function RestoredChatThread({
   );
   const chatLoadData = chatLoadQuery.data;
   const selectedChat = chatLoadData.chat;
+  const liveRuntimeConfig = useChatRunConfig(selectedChatId);
+  const setRunMode = useChatRunStore((state) => state.setMode);
   const chatRuntime = normalizeAgentRuntime(selectedChat.runtime);
   const routeProjectId =
     route.type === "projectChat" || route.type === "projectCreate"
@@ -806,7 +811,7 @@ function RestoredChatThread({
   const selectedProjectName = selectedProjectPath
     ? getProjectDisplayName(selectedProjectPath)
     : undefined;
-  const runtimeConfig = chatLoadData.config;
+  const runtimeConfig = liveRuntimeConfig ?? chatLoadData.config;
   const activeModel = normalizeConfigDisplayValue(
     draftAgentConfig.model ?? runtimeConfig?.currentModel,
   );
@@ -814,13 +819,20 @@ function RestoredChatThread({
     draftAgentConfig.reasoningEffort ?? runtimeConfig?.currentReasoningEffort,
   );
   const activeMode = normalizeConfigDisplayValue(
-    draftAgentConfig.mode ?? runtimeConfig?.currentMode,
+    runtimeConfig?.agentState?.currentMode ??
+      runtimeConfig?.currentMode ??
+      draftAgentConfig.mode,
   );
   const modelOverride = selectedConfigOverride(draftAgentConfig.model);
   const reasoningEffortOverride = selectedConfigOverride(
     draftAgentConfig.reasoningEffort,
   );
-  const modeOverride = selectedConfigOverride(draftAgentConfig.mode);
+  const setBackendMode = useCallback(
+    async (mode: string) => {
+      await setRunMode(selectedChatId, mode);
+    },
+    [selectedChatId, setRunMode],
+  );
   const modelOptions = ensureConfigOption(
     runtimeConfigOptionsToAgentOptions(runtimeConfig?.models),
     activeModel,
@@ -848,7 +860,7 @@ function RestoredChatThread({
       runtime: chatRuntime,
       runtimeLocked: true,
       setModel: setAgentModel,
-      setMode: setAgentMode,
+      setMode: setBackendMode,
       setReasoningEffort: setAgentReasoningEffort,
       setRuntime: setDraftAgentRuntime,
     }),
@@ -864,9 +876,9 @@ function RestoredChatThread({
       runtimeConfig?.canSetMode,
       runtimeConfig?.canSetModel,
       runtimeConfig?.canSetReasoningEffort,
-      setAgentMode,
       setAgentModel,
       setAgentReasoningEffort,
+      setBackendMode,
       setDraftAgentRuntime,
     ],
   );
@@ -884,7 +896,7 @@ function RestoredChatThread({
         historyRevision={chatLoadQuery.dataUpdatedAt}
         key={`chat:${selectedChatId}:${chatRuntime}`}
         model={modelOverride}
-        mode={modeOverride}
+        mode={undefined}
         onChatCreated={onChatCreated}
         onChatUpdated={onChatUpdated}
         projectId={selectedChat.projectId ?? selectedProject?.id ?? null}

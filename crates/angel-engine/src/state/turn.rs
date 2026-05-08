@@ -14,6 +14,8 @@ pub struct TurnState {
     pub plan: Option<PlanState>,
     pub plan_text: OutputBuffer,
     pub plan_path: Option<String>,
+    #[serde(default)]
+    pub display_parts: Vec<TurnDisplayPart>,
     pub started_at: Timestamp,
     pub completed_at: Option<Timestamp>,
     pub outcome: Option<TurnOutcome>,
@@ -31,6 +33,7 @@ impl TurnState {
             plan: None,
             plan_text: OutputBuffer::default(),
             plan_path: None,
+            display_parts: Vec::new(),
             started_at,
             completed_at: None,
             outcome: None,
@@ -40,6 +43,24 @@ impl TurnState {
     pub fn is_terminal(&self) -> bool {
         matches!(self.phase, TurnPhase::Terminal(_))
     }
+}
+
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug, PartialEq, Eq)]
+pub enum TurnDisplayPart {
+    Content {
+        kind: TurnDisplayContentKind,
+        chunk_index: usize,
+    },
+    Plan,
+    Action {
+        action_id: ActionId,
+    },
+}
+
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug, PartialEq, Eq)]
+pub enum TurnDisplayContentKind {
+    Assistant,
+    Reasoning,
 }
 
 #[derive(serde::Serialize, serde::Deserialize, Clone, Debug, PartialEq, Eq)]

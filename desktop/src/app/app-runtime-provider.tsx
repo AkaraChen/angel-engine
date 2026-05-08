@@ -11,6 +11,7 @@ import {
 } from "@assistant-ui/react";
 
 import { useEngineRuntime } from "@/lib/engine-model-adapter";
+import { ChatRuntimeActionsProvider } from "@/lib/chat-runtime-actions-context";
 import type {
   Chat,
   ChatHistoryMessage,
@@ -89,9 +90,11 @@ export function AppRuntimeProvider({
   });
 
   return (
-    <AssistantRuntimeProvider runtime={assistantRuntime}>
-      {children}
-    </AssistantRuntimeProvider>
+    <ChatRuntimeActionsProvider slotKey={slotKey}>
+      <AssistantRuntimeProvider runtime={assistantRuntime}>
+        {children}
+      </AssistantRuntimeProvider>
+    </ChatRuntimeActionsProvider>
   );
 }
 

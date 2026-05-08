@@ -1,3 +1,6 @@
 [submodule "vendor/agent-client-protocol"]
 	path = vendor/agent-client-protocol
 	url = https://github.com/agentclientprotocol/agent-client-protocol.git
+[submodule "vendor/openai-codex"]
+	path = vendor/openai-codex
+	url = https://github.com/openai/codex.git

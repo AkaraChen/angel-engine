@@ -99,6 +99,7 @@ pub struct ConversationSnapshot {
     pub messages: Vec<DisplayMessageSnapshot>,
     pub elicitations: Vec<ElicitationSnapshot>,
     pub history: HistorySnapshot,
+    pub agent_state: AgentStateSnapshot,
     pub settings: ThreadSettingsSnapshot,
     pub available_commands: Vec<AvailableCommandSnapshot>,
     pub usage: Option<SessionUsageSnapshot>,
@@ -135,6 +136,9 @@ pub(crate) fn conversation_snapshot(
         .iter()
         .map(HistoryReplaySnapshot::from)
         .collect::<Vec<_>>();
+    let context = ContextSnapshot::from(&conversation.context);
+    let settings = ThreadSettingsSnapshot::from_conversation(protocol, conversation);
+    let agent_state = AgentStateSnapshot::from_context_and_settings(&context, &settings);
     ConversationSnapshot {
         id: conversation.id.to_string(),
         remote_id,
@@ -146,7 +150,7 @@ pub(crate) fn conversation_snapshot(
             .map(ToString::to_string)
             .collect(),
         focused_turn_id: conversation.focused_turn.as_ref().map(ToString::to_string),
-        context: ContextSnapshot::from(&conversation.context),
+        context,
         messages: angel_engine::conversation_display_messages(protocol, conversation)
             .iter()
             .map(DisplayMessageSnapshot::from)
@@ -163,7 +167,8 @@ pub(crate) fn conversation_snapshot(
             turn_count: conversation.history.turn_count,
             replay: history_replay,
         },
-        settings: ThreadSettingsSnapshot::from_conversation(protocol, conversation),
+        agent_state,
+        settings,
         available_commands: conversation
             .available_commands
             .iter()
@@ -173,6 +178,26 @@ pub(crate) fn conversation_snapshot(
             .usage_state
             .as_ref()
             .map(SessionUsageSnapshot::from),
+    }
+}
+
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AgentStateSnapshot {
+    pub current_mode: Option<String>,
+}
+
+impl AgentStateSnapshot {
+    fn from_context_and_settings(
+        context: &ContextSnapshot,
+        settings: &ThreadSettingsSnapshot,
+    ) -> Self {
+        let current_mode = settings
+            .available_modes
+            .current_mode_id
+            .clone()
+            .or_else(|| context.mode.clone());
+        Self { current_mode }
     }
 }
 
@@ -199,6 +224,8 @@ pub struct DisplayMessagePartSnapshot {
     pub name: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub action: Option<DisplayToolActionSnapshot>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub plan: Option<DisplayPlanSnapshot>,
 }
 
 impl DisplayMessagePartSnapshot {
@@ -210,6 +237,7 @@ impl DisplayMessagePartSnapshot {
             mime_type: None,
             name: None,
             action: None,
+            plan: None,
         }
     }
 
@@ -225,6 +253,7 @@ impl DisplayMessagePartSnapshot {
             mime_type: Some(mime_type.into()),
             name,
             action: None,
+            plan: None,
         }
     }
 
@@ -240,6 +269,7 @@ impl DisplayMessagePartSnapshot {
             mime_type: Some(mime_type.into()),
             name,
             action: None,
+            plan: None,
         }
     }
 
@@ -251,6 +281,19 @@ impl DisplayMessagePartSnapshot {
             mime_type: None,
             name: None,
             action: Some(action),
+            plan: None,
+        }
+    }
+
+    pub(crate) fn plan(plan: DisplayPlanSnapshot) -> Self {
+        Self {
+            kind: "plan".to_string(),
+            text: None,
+            data: None,
+            mime_type: None,
+            name: None,
+            action: None,
+            plan: Some(plan),
         }
     }
 }
@@ -285,10 +328,43 @@ impl From<&angel_engine::DisplayMessagePart> for DisplayMessagePartSnapshot {
                 mime_type,
                 name,
             } => Self::file(data.clone(), mime_type.clone(), name.clone()),
+            angel_engine::DisplayMessagePart::Plan {
+                entries,
+                text,
+                path,
+            } => Self::plan(DisplayPlanSnapshot {
+                entries: entries.iter().map(PlanEntrySnapshot::from).collect(),
+                text: text.clone(),
+                path: path.clone(),
+            }),
             angel_engine::DisplayMessagePart::ToolCall { action } => {
                 Self::tool(DisplayToolActionSnapshot::from(action))
             }
         }
+    }
+}
+
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DisplayPlanSnapshot {
+    #[serde(default)]
+    pub entries: Vec<PlanEntrySnapshot>,
+    #[serde(default)]
+    pub text: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub path: Option<String>,
+}
+
+impl DisplayPlanSnapshot {
+    pub(crate) fn from_turn(turn: &TurnSnapshot) -> Option<Self> {
+        if turn.plan.is_empty() && turn.plan_text.trim().is_empty() && turn.plan_path.is_none() {
+            return None;
+        }
+        Some(Self {
+            entries: turn.plan.clone(),
+            text: turn.plan_text.clone(),
+            path: turn.plan_path.clone(),
+        })
     }
 }
 

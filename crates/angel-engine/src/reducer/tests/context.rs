@@ -234,6 +234,52 @@ fn settings_api_reports_reasoning_models_and_modes() {
 }
 
 #[test]
+fn set_mode_materializes_inferred_current_mode() {
+    let capabilities = codex_capabilities();
+    let mut engine = engine_with(ProtocolFlavor::CodexAppServer, capabilities.clone());
+    let conversation_id = insert_ready_conversation(
+        &mut engine,
+        "conv",
+        RemoteConversationId::Known("thread".to_string()),
+        capabilities.clone(),
+    );
+
+    let settings = engine
+        .conversation_settings(conversation_id.clone())
+        .expect("settings");
+    assert_eq!(
+        settings.available_modes.current_mode_id.as_deref(),
+        Some("default")
+    );
+    assert_eq!(
+        engine
+            .conversations
+            .get(&conversation_id)
+            .unwrap()
+            .context
+            .mode
+            .effective(),
+        None
+    );
+
+    let plan = engine
+        .set_mode(conversation_id.clone(), "default")
+        .expect("set mode");
+    assert!(plan.effects.is_empty());
+
+    let conversation = engine.conversations.get(&conversation_id).unwrap();
+    assert_eq!(
+        conversation
+            .context
+            .mode
+            .effective()
+            .and_then(Option::as_ref)
+            .map(|mode| mode.id.as_str()),
+        Some("default")
+    );
+}
+
+#[test]
 fn acp_reasoning_effort_uses_thinking_model_variant_when_available() {
     let capabilities = acp_capabilities();
     let mut engine = engine_with(ProtocolFlavor::Acp, capabilities.clone());

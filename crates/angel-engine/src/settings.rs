@@ -391,10 +391,22 @@ impl AngelEngine {
         let conversation_id = conversation_id.into();
         let mode = mode.into().trim().to_string();
         let settings = self.get_available_modes(conversation_id.clone())?;
+        let context_mode_id = self
+            .conversations
+            .get(&conversation_id)
+            .and_then(|conversation| {
+                conversation
+                    .context
+                    .mode
+                    .effective()
+                    .and_then(Option::as_ref)
+                    .map(|mode| mode.id.as_str())
+            });
+        let mode_is_materialized = context_mode_id == Some(mode.as_str());
         if mode.is_empty()
             || !settings.can_set
-            || settings.current_mode_id.as_deref() == Some(mode.as_str())
             || !known_mode(&settings, &mode)
+            || (settings.current_mode_id.as_deref() == Some(mode.as_str()) && mode_is_materialized)
         {
             return Ok(settings_noop_plan(conversation_id));
         }

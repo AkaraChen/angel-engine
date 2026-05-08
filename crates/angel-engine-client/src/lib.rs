@@ -40,15 +40,17 @@ pub use runtime::{
     normalize_runtime_name,
 };
 pub use session::{
-    AngelSession, HydrateRequest, InspectRequest, SendTextRequest, TurnRunEvent, TurnRunResult,
+    AngelSession, HydrateRequest, InspectRequest, SendTextRequest, SetModeRequest, TurnRunEvent,
+    TurnRunResult,
 };
 pub use settings::{
     AvailableModeSettingSnapshot, ModeOptionSnapshot, ModelListSettingSnapshot,
     ModelOptionSnapshot, ReasoningLevelSettingSnapshot, ThreadSettingsSnapshot,
 };
 pub use snapshot::{
-    ActionOutputSnapshot, ActionSnapshot, AvailableCommandSnapshot, ClientSnapshot, ContentChunk,
-    ContextSnapshot, ConversationSnapshot, DisplayMessagePartSnapshot, DisplayMessageSnapshot,
+    ActionOutputSnapshot, ActionSnapshot, AgentStateSnapshot, AvailableCommandSnapshot,
+    ClientSnapshot, ContentChunk, ContextSnapshot, ConversationSnapshot,
+    DisplayMessagePartSnapshot, DisplayMessageSnapshot, DisplayPlanSnapshot,
     DisplayToolActionSnapshot, ElicitationSnapshot, ErrorSnapshot, HistoryReplaySnapshot,
     HistorySnapshot, PlanEntrySnapshot, QuestionConstraintsSnapshot, QuestionOptionSnapshot,
     QuestionSchemaSnapshot, QuestionSnapshot, RuntimeSnapshot, SessionUsageCostSnapshot,

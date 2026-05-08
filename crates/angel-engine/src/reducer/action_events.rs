@@ -1,7 +1,7 @@
 use crate::error::EngineError;
 use crate::event::{TransitionReport, UiEvent};
 use crate::ids::{ActionId, ConversationId};
-use crate::state::{ActionPhase, ActionState, TurnPhase};
+use crate::state::{ActionPhase, ActionState, TurnDisplayPart, TurnPhase};
 
 use super::AngelEngine;
 use super::event_helpers::is_terminal_action_phase;
@@ -21,12 +21,21 @@ impl AngelEngine {
             });
         }
         conversation.actions.insert(action_id.clone(), action);
-        if let Some(turn) = conversation.turns.get_mut(&turn_id)
-            && !turn.is_terminal()
-        {
-            turn.phase = TurnPhase::Acting {
-                action_id: action_id.clone(),
-            };
+        if let Some(turn) = conversation.turns.get_mut(&turn_id) {
+            if !turn
+                .display_parts
+                .iter()
+                .any(|part| matches!(part, TurnDisplayPart::Action { action_id: existing } if existing == &action_id))
+            {
+                turn.display_parts.push(TurnDisplayPart::Action {
+                    action_id: action_id.clone(),
+                });
+            }
+            if !turn.is_terminal() {
+                turn.phase = TurnPhase::Acting {
+                    action_id: action_id.clone(),
+                };
+            }
         }
         Ok(TransitionReport::one(UiEvent::ActionChanged {
             conversation_id,

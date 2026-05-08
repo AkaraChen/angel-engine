@@ -66,7 +66,7 @@ impl CodexAdapter {
         let mut elicitation = ElicitationState::new(
             ElicitationId::new(format!("codex-request-{id}")),
             RemoteRequestId::JsonRpc(id.clone()),
-            kind,
+            kind.clone(),
         );
         let mut local_turn_id = None;
         let mut turn_started = None;
@@ -76,26 +76,13 @@ impl CodexAdapter {
             local_turn_id = Some(turn_id);
             turn_started = event;
         }
-        if let Some(item_id) = params.get("itemId").and_then(Value::as_str) {
+        if let Some(item_id) = request_action_id(params) {
             let action_id = ActionId::new(item_id.to_string());
             if local_turn_id.is_some() || action_exists(engine, &conversation_id, &action_id) {
                 elicitation.action_id = Some(action_id);
             }
         }
-        elicitation.options = if method == "item/tool/requestUserInput" {
-            user_input_options(method, params)
-        } else {
-            ElicitationOptions {
-                title: Some(method.to_string()),
-                body: approval_body(method, params),
-                choices: vec![
-                    "allow".to_string(),
-                    "deny".to_string(),
-                    "cancel".to_string(),
-                ],
-                questions: Vec::new(),
-            }
-        };
+        elicitation.options = request_options(method, params, &kind);
 
         let mut output = TransportOutput::default().log(
             TransportLogKind::Warning,
@@ -114,7 +101,11 @@ impl CodexAdapter {
         {
             output.events.push(EngineEvent::ActionObserved {
                 conversation_id: conversation_id.clone(),
-                action: fallback_action(action_id, turn_id, action_kind_for_request(method)),
+                action: fallback_action(
+                    action_id,
+                    turn_id,
+                    action_kind_for_request(method, params),
+                ),
             });
         }
         output.events.push(EngineEvent::ElicitationOpened {
@@ -122,6 +113,32 @@ impl CodexAdapter {
             elicitation,
         });
         Ok(output)
+    }
+}
+
+fn request_action_id(params: &Value) -> Option<&str> {
+    params
+        .get("itemId")
+        .or_else(|| params.get("callId"))
+        .and_then(Value::as_str)
+}
+
+fn request_options(method: &str, params: &Value, kind: &ElicitationKind) -> ElicitationOptions {
+    match kind {
+        ElicitationKind::UserInput => user_input_options(method, params),
+        ElicitationKind::DynamicToolCall if dynamic_tool_is_host_capability(params) => {
+            host_capability_options(params)
+        }
+        _ => ElicitationOptions {
+            title: Some(method.to_string()),
+            body: approval_body(method, params),
+            choices: vec![
+                "allow".to_string(),
+                "deny".to_string(),
+                "cancel".to_string(),
+            ],
+            questions: Vec::new(),
+        },
     }
 }
 
@@ -204,6 +221,201 @@ fn user_question(value: &Value) -> Option<UserQuestion> {
             .unwrap_or_default(),
         schema: None,
     })
+}
+
+pub(super) fn host_capability_options(params: &Value) -> ElicitationOptions {
+    let questions = host_capability_questions(params);
+    ElicitationOptions {
+        title: Some(host_capability_title(params)),
+        body: if questions.is_empty() {
+            host_capability_body(params).or_else(|| approval_body("item/tool/call", params))
+        } else {
+            None
+        },
+        choices: if questions.len() == 1 {
+            questions[0]
+                .options
+                .iter()
+                .map(|option| option.label.clone())
+                .collect()
+        } else {
+            Vec::new()
+        },
+        questions,
+    }
+}
+
+fn host_capability_title(params: &Value) -> String {
+    first_string(
+        params,
+        &[
+            "/arguments/title",
+            "/arguments/header",
+            "/arguments/name",
+            "/arguments/input/title",
+            "/arguments/input/header",
+            "/arguments/params/title",
+            "/arguments/request/title",
+        ],
+    )
+    .unwrap_or("User input requested")
+    .to_string()
+}
+
+fn host_capability_body(params: &Value) -> Option<String> {
+    first_string(
+        params,
+        &[
+            "/arguments/question",
+            "/arguments/prompt",
+            "/arguments/message",
+            "/arguments/reason",
+            "/arguments/input/question",
+            "/arguments/input/prompt",
+            "/arguments/input/message",
+            "/arguments/params/question",
+            "/arguments/params/prompt",
+            "/arguments/params/message",
+            "/arguments/request/question",
+            "/arguments/request/prompt",
+            "/arguments/request/message",
+            "/reason",
+        ],
+    )
+    .map(str::to_string)
+}
+
+fn host_capability_questions(params: &Value) -> Vec<UserQuestion> {
+    let mut questions = first_array(
+        params,
+        &[
+            "/arguments/questions",
+            "/arguments/input/questions",
+            "/arguments/params/questions",
+            "/arguments/request/questions",
+            "/arguments/payload/questions",
+        ],
+    )
+    .map(|questions| {
+        questions
+            .iter()
+            .filter_map(user_question)
+            .collect::<Vec<_>>()
+    })
+    .unwrap_or_default();
+
+    if questions.is_empty() {
+        questions.push(host_capability_fallback_question(params));
+    }
+    questions
+}
+
+fn host_capability_fallback_question(params: &Value) -> UserQuestion {
+    let options = first_array(
+        params,
+        &[
+            "/arguments/options",
+            "/arguments/choices",
+            "/arguments/input/options",
+            "/arguments/input/choices",
+            "/arguments/params/options",
+            "/arguments/params/choices",
+            "/arguments/request/options",
+            "/arguments/request/choices",
+        ],
+    )
+    .map(|values| question_options_from_values(values))
+    .unwrap_or_default();
+
+    UserQuestion {
+        id: first_string(
+            params,
+            &[
+                "/arguments/id",
+                "/arguments/questionId",
+                "/arguments/input/id",
+                "/arguments/params/id",
+                "/arguments/request/id",
+            ],
+        )
+        .unwrap_or("answer")
+        .to_string(),
+        header: host_capability_title(params),
+        question: host_capability_body(params)
+            .unwrap_or_else(|| "Provide the requested input.".to_string()),
+        is_secret: first_bool(
+            params,
+            &[
+                "/arguments/isSecret",
+                "/arguments/secret",
+                "/arguments/input/isSecret",
+                "/arguments/params/isSecret",
+                "/arguments/request/isSecret",
+            ],
+        )
+        .unwrap_or(false),
+        is_other: options.is_empty()
+            || first_bool(
+                params,
+                &[
+                    "/arguments/isOther",
+                    "/arguments/input/isOther",
+                    "/arguments/params/isOther",
+                    "/arguments/request/isOther",
+                ],
+            )
+            .unwrap_or(false),
+        options,
+        schema: None,
+    }
+}
+
+fn question_options_from_values(values: &[Value]) -> Vec<UserQuestionOption> {
+    values
+        .iter()
+        .filter_map(|option| match option {
+            Value::String(label) => Some(UserQuestionOption {
+                label: label.clone(),
+                description: String::new(),
+            }),
+            Value::Object(_) => {
+                let label = option
+                    .get("label")
+                    .or_else(|| option.get("value"))
+                    .and_then(Value::as_str)?;
+                Some(UserQuestionOption {
+                    label: label.to_string(),
+                    description: option
+                        .get("description")
+                        .and_then(Value::as_str)
+                        .unwrap_or_default()
+                        .to_string(),
+                })
+            }
+            _ => None,
+        })
+        .collect()
+}
+
+fn first_string<'a>(value: &'a Value, pointers: &[&str]) -> Option<&'a str> {
+    pointers.iter().find_map(|pointer| {
+        value
+            .pointer(pointer)
+            .and_then(Value::as_str)
+            .filter(|text| !text.trim().is_empty())
+    })
+}
+
+fn first_bool(value: &Value, pointers: &[&str]) -> Option<bool> {
+    pointers
+        .iter()
+        .find_map(|pointer| value.pointer(pointer).and_then(Value::as_bool))
+}
+
+fn first_array<'a>(value: &'a Value, pointers: &[&str]) -> Option<&'a Vec<Value>> {
+    pointers
+        .iter()
+        .find_map(|pointer| value.pointer(pointer).and_then(Value::as_array))
 }
 
 #[cfg(test)]

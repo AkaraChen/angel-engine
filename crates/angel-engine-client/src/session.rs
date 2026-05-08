@@ -12,7 +12,10 @@ use crate::{
     RuntimeOptionsOverrides, StartConversationRequest, ThreadEvent, TurnSnapshot,
     create_runtime_options,
 };
-use crate::{DisplayMessagePartSnapshot, DisplayMessageSnapshot, DisplayToolActionSnapshot};
+use crate::{
+    DisplayMessagePartSnapshot, DisplayMessageSnapshot, DisplayPlanSnapshot,
+    DisplayToolActionSnapshot,
+};
 
 pub struct AngelSession {
     client: AngelClient,
@@ -37,6 +40,16 @@ pub struct SendTextRequest {
     pub mode: Option<String>,
     #[serde(default)]
     pub reasoning_effort: Option<String>,
+}
+
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SetModeRequest {
+    pub mode: String,
+    #[serde(default)]
+    pub cwd: Option<String>,
+    #[serde(default)]
+    pub remote_id: Option<String>,
 }
 
 #[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
@@ -109,6 +122,12 @@ pub enum TurnRunEvent {
         elicitation: ElicitationSnapshot,
         message_part: DisplayMessagePartSnapshot,
     },
+    PlanUpdated {
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        turn_id: Option<String>,
+        plan: DisplayPlanSnapshot,
+        message_part: DisplayMessagePartSnapshot,
+    },
     Result {
         result: TurnRunResult,
     },
@@ -148,6 +167,23 @@ impl AngelSession {
 
     pub fn inspect(&mut self, request: InspectRequest) -> ClientResult<ConversationSnapshot> {
         self.ensure_started(true, request.cwd, None)?;
+        self.thread_state()
+            .ok_or_else(|| invalid_input("Runtime did not return a conversation snapshot."))
+    }
+
+    pub fn set_mode(&mut self, request: SetModeRequest) -> ClientResult<ConversationSnapshot> {
+        let mode = selected_config_value(Some(&request.mode))
+            .ok_or_else(|| invalid_input("Mode is required."))?;
+        if self.active_turn.is_some() {
+            return Err(invalid_input(
+                "Cannot change mode while a chat turn is running.",
+            ));
+        }
+
+        self.ensure_started(true, request.cwd, request.remote_id)?;
+        let conversation_id = self.require_conversation_id()?.to_string();
+        let result = self.client.set_mode(conversation_id, mode)?;
+        self.drain_configuration_updates(result.update)?;
         self.thread_state()
             .ok_or_else(|| invalid_input("Runtime did not return a conversation snapshot."))
     }
@@ -449,6 +485,9 @@ impl AngelSession {
                         active.collector.reasoning.clone(),
                     ));
                 }
+                if let Some(plan_part) = active.collector.plan_message_part() {
+                    content.push(plan_part);
+                }
                 for action in &active.collector.actions {
                     content.push(DisplayMessagePartSnapshot::tool(action.into()));
                 }
@@ -596,6 +635,7 @@ struct TurnCollector {
     action_indexes: HashMap<String, usize>,
     actions: Vec<ActionSnapshot>,
     streaming_actions: HashMap<String, DisplayToolActionSnapshot>,
+    plan: DisplayPlanSnapshot,
     reasoning: String,
     text: String,
 }
@@ -607,6 +647,7 @@ impl TurnCollector {
             action_indexes: HashMap::new(),
             actions: Vec::new(),
             streaming_actions: HashMap::new(),
+            plan: DisplayPlanSnapshot::default(),
             reasoning: String::new(),
             text: String::new(),
         }
@@ -619,10 +660,10 @@ impl TurnCollector {
             } => self.accept_text_delta("text", turn_id, content.text, events),
             ClientStreamDelta::ReasoningDelta {
                 turn_id, content, ..
-            }
-            | ClientStreamDelta::PlanDelta {
-                turn_id, content, ..
             } => self.accept_text_delta("reasoning", turn_id, content.text, events),
+            ClientStreamDelta::PlanDelta {
+                turn_id, content, ..
+            } => self.accept_plan_delta(turn_id, content.text, events),
             ClientStreamDelta::ActionOutputDelta {
                 turn_id,
                 action_id,
@@ -668,10 +709,13 @@ impl TurnCollector {
             } => self.accept_text_delta("text", turn_id, content.text, events),
             ClientEvent::ReasoningDelta {
                 turn_id, content, ..
-            }
-            | ClientEvent::PlanDelta {
-                turn_id, content, ..
             } => self.accept_text_delta("reasoning", turn_id, content.text, events),
+            ClientEvent::PlanDelta {
+                turn_id, content, ..
+            } => self.accept_plan_delta(turn_id, content.text, events),
+            ClientEvent::PlanUpdated { turn_id, plan, .. } => {
+                self.accept_plan_update(turn_id, plan, events)
+            }
             _ => {}
         }
     }
@@ -696,6 +740,53 @@ impl TurnCollector {
             text,
             message_part,
             turn_id: Some(turn_id),
+        });
+    }
+
+    fn accept_plan_delta(
+        &mut self,
+        turn_id: String,
+        text: String,
+        events: &mut VecDeque<TurnRunEvent>,
+    ) {
+        if !self.accepts_turn(Some(&turn_id)) || text.is_empty() {
+            return;
+        }
+        self.plan.text.push_str(&text);
+        self.push_plan_event(Some(turn_id), events);
+    }
+
+    fn accept_plan_update(
+        &mut self,
+        turn_id: String,
+        plan: DisplayPlanSnapshot,
+        events: &mut VecDeque<TurnRunEvent>,
+    ) {
+        if !self.accepts_turn(Some(&turn_id)) {
+            return;
+        }
+        self.plan = plan;
+        self.push_plan_event(Some(turn_id), events);
+    }
+
+    fn plan_message_part(&self) -> Option<DisplayMessagePartSnapshot> {
+        if self.plan.entries.is_empty()
+            && self.plan.text.trim().is_empty()
+            && self.plan.path.is_none()
+        {
+            return None;
+        }
+        Some(DisplayMessagePartSnapshot::plan(self.plan.clone()))
+    }
+
+    fn push_plan_event(&self, turn_id: Option<String>, events: &mut VecDeque<TurnRunEvent>) {
+        let Some(message_part) = self.plan_message_part() else {
+            return;
+        };
+        events.push_back(TurnRunEvent::PlanUpdated {
+            turn_id,
+            plan: self.plan.clone(),
+            message_part,
         });
     }
 
@@ -753,6 +844,7 @@ fn is_ordered_stream_event(event: &ClientEvent) -> bool {
             | ClientEvent::ActionUpdated { .. }
             | ClientEvent::AssistantDelta { .. }
             | ClientEvent::PlanDelta { .. }
+            | ClientEvent::PlanUpdated { .. }
             | ClientEvent::ReasoningDelta { .. }
     )
 }
@@ -792,12 +884,7 @@ fn assistant_message_for_turn(
 
 fn turn_reasoning_text(turn: Option<&TurnSnapshot>) -> Option<String> {
     let turn = turn?;
-    let text = [turn.reasoning_text.as_str(), turn.plan_text.as_str()]
-        .into_iter()
-        .filter(|text| !text.trim().is_empty())
-        .collect::<Vec<_>>()
-        .join("\n");
-    (!text.is_empty()).then_some(text)
+    (!turn.reasoning_text.trim().is_empty()).then(|| turn.reasoning_text.clone())
 }
 
 fn selected_config_value(value: Option<&str>) -> Option<String> {

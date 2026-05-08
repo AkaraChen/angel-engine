@@ -7,6 +7,7 @@ pub(crate) fn action_from_item(item: &Value, turn_id: &TurnId) -> Option<ActionS
         "commandExecution" => ActionKind::Command,
         "fileChange" => ActionKind::FileChange,
         "mcpToolCall" => ActionKind::McpTool,
+        "dynamicToolCall" if dynamic_tool_is_host_capability(item) => ActionKind::HostCapability,
         "dynamicToolCall" => ActionKind::DynamicTool,
         "webSearch" => ActionKind::WebSearch,
         "imageView" | "imageGeneration" => ActionKind::Media,
@@ -86,6 +87,13 @@ pub(crate) fn phase_from_item(item: &Value) -> Option<ActionPhase> {
         "interrupted" => ActionPhase::Cancelled,
         _ => ActionPhase::Running,
     })
+}
+
+pub(crate) fn dynamic_tool_is_host_capability(value: &Value) -> bool {
+    matches!(
+        value.get("tool").and_then(Value::as_str),
+        Some("hostCapability" | "request_user_input" | "requestUserInput")
+    )
 }
 
 fn action_phase_is_terminal(phase: &ActionPhase) -> bool {
@@ -177,7 +185,11 @@ pub(crate) fn approval_body(method: &str, params: &Value) -> Option<String> {
     }
 }
 
-pub(crate) fn action_kind_for_request(method: &str) -> ActionKind {
+pub(crate) fn action_kind_for_request(method: &str, params: &Value) -> ActionKind {
+    if method == "item/tool/call" && dynamic_tool_is_host_capability(params) {
+        return ActionKind::HostCapability;
+    }
+
     match method {
         "item/commandExecution/requestApproval" => ActionKind::Command,
         "item/fileChange/requestApproval" => ActionKind::FileChange,

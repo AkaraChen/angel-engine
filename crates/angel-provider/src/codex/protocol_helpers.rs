@@ -368,10 +368,7 @@ pub(crate) fn codex_elicitation_response(
             "content": null,
             "_meta": null,
         }),
-        ElicitationKind::DynamicToolCall => json!({
-            "contentItems": [{"type": "inputText", "text": ""}],
-            "success": !matches!(decision, "Deny" | "Cancel"),
-        }),
+        ElicitationKind::DynamicToolCall => dynamic_tool_call_response(decision, fields),
     }
 }
 
@@ -418,6 +415,46 @@ fn mcp_elicitation_response(
         "content": content,
         "_meta": null,
     })
+}
+
+fn dynamic_tool_call_response(
+    decision: &str,
+    fields: &std::collections::BTreeMap<String, String>,
+) -> Value {
+    let success = !matches!(decision, "Deny" | "Cancel");
+    json!({
+        "contentItems": [{"type": "inputText", "text": if success { dynamic_tool_answer_text(fields) } else { String::new() }}],
+        "success": success,
+    })
+}
+
+fn dynamic_tool_answer_text(fields: &std::collections::BTreeMap<String, String>) -> String {
+    let answer_count = fields
+        .get("answerCount")
+        .and_then(|value| value.parse::<usize>().ok())
+        .unwrap_or(0);
+    let mut answers = Vec::new();
+    for index in 0..answer_count {
+        let id = fields
+            .get(&format!("answer.{index}.id"))
+            .cloned()
+            .unwrap_or_else(|| "answer".to_string());
+        let value = fields
+            .get(&format!("answer.{index}.value"))
+            .cloned()
+            .unwrap_or_default();
+        answers.push((id, value));
+    }
+
+    match answers.as_slice() {
+        [] => String::new(),
+        [(_, value)] => value.clone(),
+        _ => answers
+            .into_iter()
+            .map(|(id, value)| format!("{id}: {value}"))
+            .collect::<Vec<_>>()
+            .join("\n"),
+    }
 }
 
 fn flat_answer_content(
@@ -485,6 +522,34 @@ mod tests {
                     "choice": {"answers": ["first", "second"]},
                     "note": {"answers": ["free text"]},
                 }
+            })
+        );
+    }
+
+    #[test]
+    fn dynamic_tool_response_returns_answer_text_as_output() {
+        let elicitation = ElicitationState::new(
+            ElicitationId::new("host-input"),
+            RemoteRequestId::JsonRpc(JsonRpcRequestId::new("request")),
+            ElicitationKind::DynamicToolCall,
+        );
+        let fields = std::collections::BTreeMap::from([
+            ("decision".to_string(), "Answers".to_string()),
+            ("answerCount".to_string(), "1".to_string()),
+            ("answer.0.id".to_string(), "answer".to_string()),
+            (
+                "answer.0.value".to_string(),
+                "Use the compact layout".to_string(),
+            ),
+        ]);
+
+        let response = codex_elicitation_response(&elicitation, &fields);
+
+        assert_eq!(
+            response,
+            json!({
+                "contentItems": [{"type": "inputText", "text": "Use the compact layout"}],
+                "success": true,
             })
         );
     }

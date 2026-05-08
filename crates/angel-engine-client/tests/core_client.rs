@@ -172,6 +172,10 @@ fn client_hides_engine_behind_thread_updates_and_snapshots() {
         Some("default")
     );
     assert_eq!(
+        conversation.agent_state.current_mode.as_deref(),
+        Some("default")
+    );
+    assert_eq!(
         client
             .thread_settings(&conversation_id)
             .expect("thread settings")
@@ -291,6 +295,76 @@ fn thread_send_event_streams_turn_deltas_and_terminal_state() {
         .expect("turn snapshot");
     assert_eq!(snapshot.output_text, "The file defines a client facade.");
     assert!(snapshot.phase.contains("terminal"));
+}
+
+#[test]
+fn acp_plan_update_surfaces_independent_plan_message_part() {
+    let (mut client, conversation_id) = ready_client();
+
+    let turn = client
+        .thread(&conversation_id)
+        .send_event(ThreadEvent::text("make a plan"))
+        .expect("send text");
+    let turn_id = turn.turn_id.expect("turn id");
+
+    let update = client
+        .receive_json_value(json!({
+            "jsonrpc": "2.0",
+            "method": "session/update",
+            "params": {
+                "sessionId": "sess-1",
+                "update": {
+                    "sessionUpdate": "plan",
+                    "entries": [
+                        {
+                            "content": "Inspect ACP mode state",
+                            "priority": "high",
+                            "status": "completed"
+                        },
+                        {
+                            "content": "Render plan separately",
+                            "priority": "medium",
+                            "status": "in_progress"
+                        }
+                    ]
+                }
+            }
+        }))
+        .expect("plan update");
+
+    assert!(update.events.iter().any(|event| {
+        matches!(
+            event,
+            ClientEvent::PlanUpdated { conversation_id: id, turn_id: tid, plan }
+                if id == &conversation_id
+                    && tid == &turn_id
+                    && plan.entries.len() == 2
+                    && plan.entries[0].content == "Inspect ACP mode state"
+                    && plan.entries[0].status == "completed"
+                    && plan.entries[1].status == "inProgress"
+        )
+    }));
+
+    let snapshot = client.snapshot();
+    let conversation = snapshot
+        .conversations
+        .iter()
+        .find(|conversation| conversation.id == conversation_id)
+        .expect("conversation snapshot");
+    let assistant = conversation
+        .messages
+        .iter()
+        .find(|message| message.id == format!("{turn_id}:assistant"))
+        .expect("assistant message");
+
+    assert_eq!(assistant.content.len(), 1);
+    let plan_part = &assistant.content[0];
+    assert_eq!(plan_part.kind, "plan");
+    assert!(plan_part.text.is_none());
+    assert_eq!(
+        plan_part.plan.as_ref().expect("plan snapshot").entries[1].content,
+        "Render plan separately"
+    );
 }
 
 #[test]
@@ -781,6 +855,41 @@ fn thread_set_model_event_updates_snapshot_after_runtime_ack() {
     assert_eq!(
         conversation.context.model.as_deref(),
         Some("moonshot-v1-128k")
+    );
+}
+
+#[test]
+fn thread_set_mode_event_updates_snapshot_after_runtime_ack() {
+    let (mut client, conversation_id) = ready_client();
+
+    let update = client
+        .thread(&conversation_id)
+        .set_mode("plan")
+        .expect("set mode");
+    assert_eq!(
+        update.update.outgoing[0].value["method"],
+        json!("session/set_mode")
+    );
+    assert_eq!(
+        update.update.outgoing[0].value["params"]["modeId"],
+        json!("plan")
+    );
+
+    let request_id = update.request_id.expect("set mode request id");
+    client
+        .receive_json_value(response(&request_id, json!({})))
+        .expect("set mode response");
+
+    let snapshot = client.snapshot();
+    let conversation = snapshot
+        .conversations
+        .iter()
+        .find(|conversation| conversation.id == conversation_id)
+        .expect("conversation snapshot");
+    assert_eq!(conversation.context.mode.as_deref(), Some("plan"));
+    assert_eq!(
+        conversation.agent_state.current_mode.as_deref(),
+        Some("plan")
     );
 }
 

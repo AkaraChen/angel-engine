@@ -126,6 +126,9 @@ export function useEngineRuntime({
 
   const runMessage = useCallback(
     async (message: AppendMessage) => {
+      const runConfig = message.runConfig?.custom;
+      const modeOverride =
+        typeof runConfig?.mode === "string" ? runConfig.mode : undefined;
       await startRun({
         callbacks: {
           onChatCreated: latestOptionsRef.current.onChatCreated,
@@ -135,7 +138,7 @@ export function useEngineRuntime({
           chatId: latestOptionsRef.current.chatId,
           cwd: latestOptionsRef.current.projectPath,
           model: latestOptionsRef.current.model,
-          mode: latestOptionsRef.current.mode,
+          mode: modeOverride ?? latestOptionsRef.current.mode,
           prewarmId: latestOptionsRef.current.prewarmId,
           projectId: latestOptionsRef.current.projectId,
           reasoningEffort: latestOptionsRef.current.reasoningEffort,

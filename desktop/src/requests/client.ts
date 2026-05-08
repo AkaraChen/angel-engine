@@ -3,6 +3,7 @@ import type {
   ChatCreateInput,
   ChatPrewarmInput,
   ChatRuntimeConfigInput,
+  ChatSetModeInput,
 } from "@/shared/chat";
 import type { CreateProjectInput } from "@/shared/projects";
 
@@ -16,6 +17,7 @@ export function createApiClient() {
       list: () => ipc.chatsList(),
       load: (chatId: string) => ipc.chatsLoad(chatId),
       prewarm: (input: ChatPrewarmInput = {}) => ipc.chatsPrewarm(input),
+      setMode: (input: ChatSetModeInput) => ipc.chatsSetMode(input),
       showContextMenu: (chatId: string) => ipc.chatsShowContextMenu(chatId),
     },
     projects: {

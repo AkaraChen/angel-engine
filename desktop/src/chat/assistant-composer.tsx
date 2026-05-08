@@ -18,6 +18,8 @@ import {
   Check,
   CircleStop,
   Cpu,
+  Hammer,
+  ListChecks,
   Paperclip,
   Quote,
   SlidersHorizontal,
@@ -29,6 +31,7 @@ import {
   useChatOptions,
   type ChatOptionsContextValue,
 } from "@/chat/chat-options-context";
+import { findBuildModeOption, findPlanModeOption } from "@/chat/mode-options";
 import {
   PromptInput,
   PromptInputBody,
@@ -222,8 +225,9 @@ function AssistantComposerFooter({ draftText }: { draftText: string }) {
         <ComposerModelMenu disabled={isRunning} options={chatOptions} />
       </PromptInputTools>
       <div className="flex min-w-0 items-center gap-2">
+        <PlanModeToggleButton disabled={isRunning} options={chatOptions} />
         <ComposerOptionSelect
-          className="max-w-28"
+          className="hidden max-w-28"
           disabled={
             isRunning ||
             !chatOptions.canSetMode ||
@@ -248,6 +252,65 @@ function AssistantComposerFooter({ draftText }: { draftText: string }) {
       </div>
     </PromptInputFooter>
   );
+}
+
+function PlanModeToggleButton({
+  disabled,
+  options,
+}: {
+  disabled?: boolean;
+  options: ChatOptionsContextValue;
+}) {
+  const toast = useToast();
+  const [pending, setPending] = useState(false);
+  const planMode = findPlanModeOption(options.modeOptions);
+  const buildMode = findBuildModeOption(options.modeOptions);
+  const isPlanMode = Boolean(planMode && options.mode === planMode.value);
+  const targetMode = isPlanMode ? buildMode : planMode;
+  const unavailable =
+    disabled ||
+    pending ||
+    options.configLoading ||
+    !options.canSetMode ||
+    !planMode ||
+    !buildMode ||
+    !targetMode;
+  const label = isPlanMode ? "Plan" : "Build";
+  const title = isPlanMode ? "Switch to build mode" : "Switch to plan mode";
+  const Icon = isPlanMode ? ListChecks : Hammer;
+
+  return (
+    <Button
+      aria-pressed={isPlanMode}
+      className="h-8 gap-1.5 rounded-md px-2 text-xs"
+      disabled={unavailable}
+      onMouseDown={(event) => event.preventDefault()}
+      onClick={() => {
+        if (!targetMode) return;
+        setPending(true);
+        void Promise.resolve(options.setMode(targetMode.value))
+          .catch((error: unknown) => {
+            toast({
+              description: getErrorMessage(error),
+              title: "Could not change mode",
+              variant: "destructive",
+            });
+          })
+          .finally(() => setPending(false));
+      }}
+      title={title}
+      type="button"
+      variant="ghost"
+    >
+      <Icon className="size-3.5" />
+      <span>{label}</span>
+    </Button>
+  );
+}
+
+function getErrorMessage(error: unknown) {
+  if (error instanceof Error) return error.message;
+  return String(error);
 }
 
 function ComposerOptionSelect({

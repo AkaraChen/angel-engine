@@ -2,8 +2,8 @@ use crate::error::EngineError;
 use crate::event::{TransitionReport, UiEvent};
 use crate::ids::{ConversationId, RemoteTurnId, TurnId};
 use crate::state::{
-    ActionPhase, ContentDelta, ConversationLifecycle, ElicitationPhase, TurnOutcome, TurnPhase,
-    TurnState, UserInputRef,
+    ActionPhase, ContentDelta, ConversationLifecycle, ElicitationPhase, TurnDisplayContentKind,
+    TurnDisplayPart, TurnOutcome, TurnPhase, TurnState, UserInputRef,
 };
 
 use super::AngelEngine;
@@ -63,15 +63,26 @@ impl AngelEngine {
         }
         match kind {
             DeltaKind::Assistant => {
+                let chunk_index = turn.output.chunks.len();
                 turn.output.chunks.push(delta);
+                turn.display_parts.push(TurnDisplayPart::Content {
+                    kind: TurnDisplayContentKind::Assistant,
+                    chunk_index,
+                });
                 turn.phase = TurnPhase::StreamingOutput;
             }
             DeltaKind::Reasoning => {
+                let chunk_index = turn.reasoning.chunks.len();
                 turn.reasoning.chunks.push(delta);
+                turn.display_parts.push(TurnDisplayPart::Content {
+                    kind: TurnDisplayContentKind::Reasoning,
+                    chunk_index,
+                });
                 turn.phase = TurnPhase::Reasoning;
             }
             DeltaKind::Plan => {
                 turn.plan_text.chunks.push(delta);
+                append_turn_plan_display_part(turn);
                 turn.phase = TurnPhase::Planning;
             }
         }
@@ -131,5 +142,15 @@ impl AngelEngine {
             conversation_id,
             turn_id,
         }))
+    }
+}
+
+pub(super) fn append_turn_plan_display_part(turn: &mut TurnState) {
+    if !turn
+        .display_parts
+        .iter()
+        .any(|part| matches!(part, TurnDisplayPart::Plan))
+    {
+        turn.display_parts.push(TurnDisplayPart::Plan);
     }
 }

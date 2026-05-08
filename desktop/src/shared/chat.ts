@@ -30,13 +30,24 @@ export type ChatRuntimeConfigInput = {
   runtime?: string;
 };
 
+export type ChatSetModeInput = {
+  chatId: string;
+  cwd?: string;
+  mode: string;
+};
+
 export type ChatRuntimeConfigOption = {
   description?: string | null;
   label: string;
   value: string;
 };
 
+export type ChatAgentState = {
+  currentMode?: string | null;
+};
+
 export type ChatRuntimeConfig = {
+  agentState?: ChatAgentState;
   canSetModel?: boolean;
   canSetMode?: boolean;
   canSetReasoningEffort?: boolean;
@@ -53,6 +64,29 @@ export type ChatHistoryMessage = {
   createdAt?: string;
   id: string;
   role: "assistant" | "system" | "user";
+};
+
+export type ChatJsonValue =
+  | boolean
+  | null
+  | number
+  | string
+  | ChatJsonValue[]
+  | { readonly [key: string]: ChatJsonValue };
+
+export type ChatJsonObject = { readonly [key: string]: ChatJsonValue };
+
+export type ChatPlanEntryStatus = "completed" | "inProgress" | "pending";
+
+export type ChatPlanEntry = {
+  content: string;
+  status: ChatPlanEntryStatus;
+};
+
+export type ChatPlanData = {
+  entries: ChatPlanEntry[];
+  path?: string | null;
+  text: string;
 };
 
 export type ChatHistoryMessagePart =
@@ -72,17 +106,17 @@ export type ChatHistoryMessagePart =
       mimeType: string;
       type: "file";
     }
+  | {
+      data: ChatPlanData;
+      name: "plan";
+      type: "data";
+    }
+  | {
+      data: ChatElicitation;
+      name: "elicitation";
+      type: "data";
+    }
   | ChatToolCallPart;
-
-export type ChatJsonValue =
-  | boolean
-  | null
-  | number
-  | string
-  | ChatJsonValue[]
-  | { readonly [key: string]: ChatJsonValue };
-
-export type ChatJsonObject = { readonly [key: string]: ChatJsonValue };
 
 export type ChatToolActionOutput = {
   kind: string;
@@ -231,6 +265,17 @@ export function cloneChatHistoryPart(
       return { ...part };
     case "file":
       return { ...part };
+    case "data":
+      if (part.name === "elicitation") {
+        return {
+          ...part,
+          data: cloneChatElicitation(part.data),
+        };
+      }
+      return {
+        ...part,
+        data: cloneChatPlanData(part.data),
+      };
     case "reasoning":
     case "text":
       return { ...part };
@@ -257,6 +302,160 @@ export function chatPartsText(
 
 export function imageDataUrl(data: string, mimeType: string) {
   return `data:${mimeType};base64,${data}`;
+}
+
+export function isChatPlanData(value: unknown): value is ChatPlanData {
+  if (!value || typeof value !== "object") return false;
+  const data = value as Partial<ChatPlanData>;
+  return (
+    Array.isArray(data.entries) &&
+    data.entries.every(
+      (entry) =>
+        entry &&
+        typeof entry === "object" &&
+        typeof (entry as Partial<ChatPlanEntry>).content === "string" &&
+        isChatPlanEntryStatus((entry as Partial<ChatPlanEntry>).status),
+    ) &&
+    typeof data.text === "string" &&
+    (data.path === undefined ||
+      data.path === null ||
+      typeof data.path === "string")
+  );
+}
+
+export function isChatElicitationData(
+  value: unknown,
+): value is ChatElicitation {
+  if (!value || typeof value !== "object") return false;
+  const data = value as Partial<ChatElicitation>;
+  return (
+    typeof data.id === "string" &&
+    typeof data.kind === "string" &&
+    typeof data.phase === "string" &&
+    (data.actionId === undefined ||
+      data.actionId === null ||
+      typeof data.actionId === "string") &&
+    (data.body === undefined ||
+      data.body === null ||
+      typeof data.body === "string") &&
+    (data.title === undefined ||
+      data.title === null ||
+      typeof data.title === "string") &&
+    (data.turnId === undefined ||
+      data.turnId === null ||
+      typeof data.turnId === "string") &&
+    (data.choices === undefined ||
+      (Array.isArray(data.choices) &&
+        data.choices.every((choice) => typeof choice === "string"))) &&
+    (data.questions === undefined ||
+      (Array.isArray(data.questions) &&
+        data.questions.every(isChatElicitationQuestion)))
+  );
+}
+
+export function cloneChatPlanData(data: ChatPlanData): ChatPlanData {
+  return {
+    entries: data.entries.map((entry) => ({ ...entry })),
+    path: data.path ?? null,
+    text: data.text,
+  };
+}
+
+export function cloneChatElicitation(data: ChatElicitation): ChatElicitation {
+  return {
+    ...data,
+    choices: data.choices ? [...data.choices] : data.choices,
+    questions: data.questions?.map((question) => ({
+      ...question,
+      options: question.options?.map((option) => ({ ...option })),
+    })),
+  };
+}
+
+export function upsertChatPlanPart(
+  parts: ChatHistoryMessagePart[],
+  plan: ChatPlanData,
+) {
+  const nextPart: ChatHistoryMessagePart = {
+    data: cloneChatPlanData(plan),
+    name: "plan",
+    type: "data",
+  };
+  const index = parts.findIndex(
+    (part) => part.type === "data" && part.name === "plan",
+  );
+
+  if (index === -1) {
+    const firstToolIndex = parts.findIndex((part) => part.type === "tool-call");
+    if (firstToolIndex === -1) {
+      parts.push(nextPart);
+    } else {
+      parts.splice(firstToolIndex, 0, nextPart);
+    }
+    return;
+  }
+
+  parts[index] = nextPart;
+}
+
+export function upsertChatElicitationPart(
+  parts: ChatHistoryMessagePart[],
+  elicitation: ChatElicitation,
+) {
+  const nextPart: ChatHistoryMessagePart = {
+    data: cloneChatElicitation(elicitation),
+    name: "elicitation",
+    type: "data",
+  };
+  const index = parts.findIndex(
+    (part) =>
+      part.type === "data" &&
+      part.name === "elicitation" &&
+      part.data.id === elicitation.id,
+  );
+
+  if (index === -1) {
+    parts.push(nextPart);
+    return;
+  }
+
+  parts[index] = nextPart;
+}
+
+function isChatPlanEntryStatus(status: unknown): status is ChatPlanEntryStatus {
+  return (
+    status === "pending" || status === "inProgress" || status === "completed"
+  );
+}
+
+function isChatElicitationQuestion(
+  value: unknown,
+): value is ChatElicitationQuestion {
+  if (!value || typeof value !== "object") return false;
+  const question = value as Partial<ChatElicitationQuestion>;
+  return (
+    typeof question.id === "string" &&
+    (question.header === undefined || typeof question.header === "string") &&
+    (question.question === undefined ||
+      typeof question.question === "string") &&
+    (question.isOther === undefined || typeof question.isOther === "boolean") &&
+    (question.isSecret === undefined ||
+      typeof question.isSecret === "boolean") &&
+    (question.options === undefined ||
+      (Array.isArray(question.options) &&
+        question.options.every(isChatElicitationQuestionOption)))
+  );
+}
+
+function isChatElicitationQuestionOption(
+  value: unknown,
+): value is ChatElicitationQuestionOption {
+  if (!value || typeof value !== "object") return false;
+  const option = value as Partial<ChatElicitationQuestionOption>;
+  return (
+    typeof option.label === "string" &&
+    (option.description === undefined || typeof option.description === "string")
+  );
 }
 
 export function parseDataUrl(value: string):
@@ -291,6 +490,11 @@ export type ChatLoadResult = {
 export type ChatPrewarmResult = {
   config?: ChatRuntimeConfig;
   prewarmId: string;
+};
+
+export type ChatSetModeResult = {
+  chat: Chat;
+  config: ChatRuntimeConfig;
 };
 
 export type ChatAttachmentInput =
@@ -344,6 +548,15 @@ export type ChatStreamDelta = {
 
 export type ChatStreamEvent =
   | ChatStreamDelta
+  | {
+      plan: ChatPlanData;
+      turnId?: string;
+      type: "plan";
+    }
+  | {
+      elicitation: ChatElicitation;
+      type: "elicitation";
+    }
   | {
       action: ChatToolAction;
       type: "tool";

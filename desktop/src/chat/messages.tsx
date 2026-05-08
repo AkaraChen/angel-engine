@@ -5,6 +5,7 @@ import {
   BranchPickerPrimitive,
   ComposerPrimitive,
   MessagePrimitive,
+  useAui,
   useAuiState,
   type CompleteAttachment,
   type DataMessagePartProps,
@@ -16,17 +17,25 @@ import { cjk } from "@streamdown/cjk";
 import { code as streamdownCode } from "@streamdown/code";
 import { math } from "@streamdown/math";
 import { mermaid } from "@streamdown/mermaid";
+import { Streamdown } from "streamdown";
 import {
   AlertCircleIcon,
   Check,
   ChevronDown,
   ChevronLeft,
   ChevronRight,
+  Circle,
+  CircleHelp,
+  CircleDot,
   Clipboard,
   Copy,
+  FileText,
+  Hammer,
+  ListChecks,
   Loader2,
   Pencil,
   RefreshCw,
+  Send,
   ThumbsDown,
   ThumbsUp,
   Volume2,
@@ -34,6 +43,8 @@ import {
 } from "lucide-react";
 
 import { ChatAttachmentTile } from "@/chat/attachment-tile";
+import { useChatOptions } from "@/chat/chat-options-context";
+import { findBuildModeOption } from "@/chat/mode-options";
 import { Reasoning, ReasoningGroup } from "@/components/assistant-ui/reasoning";
 import { ToolGroup } from "@/components/assistant-ui/tool-group";
 import { Button } from "@/components/ui/button";
@@ -42,12 +53,17 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
+import { useToast } from "@/components/ui/toast";
+import { useChatRuntimeActions } from "@/lib/chat-runtime-actions-context";
 import { cn } from "@/lib/utils";
 import {
+  isChatElicitationData,
+  isChatPlanData,
   isChatToolAction,
   parseDataUrl,
   type ChatElicitation,
   type ChatElicitationResponse,
+  type ChatPlanData,
   type ChatToolAction,
 } from "@/shared/chat";
 import {
@@ -303,6 +319,9 @@ function AssistantTextMessagePart(
     state.message.parts.some(
       (messagePart) =>
         messagePart.type === "tool-call" ||
+        (messagePart.type === "data" &&
+          (messagePart.name === "plan" ||
+            messagePart.name === "elicitation")) ||
         (messagePart.type === "reasoning" &&
           (messagePart.text.trim() || messagePart.status.type === "running")),
     ),
@@ -437,6 +456,9 @@ function GenericToolActionMessagePart({
   const hasTextAfterTool = useHasTextAfterToolCall(part.toolCallId);
   const [manualOpen, setManualOpen] = useState<boolean | undefined>();
   const open = hasDetails && (manualOpen ?? !hasTextAfterTool);
+  if (isBareHostCapabilityToolAction(action, title, outputText, errorText)) {
+    return null;
+  }
 
   return (
     <Collapsible
@@ -470,6 +492,18 @@ function GenericToolActionMessagePart({
       )}
     </Collapsible>
   );
+}
+
+function isBareHostCapabilityToolAction(
+  action: ChatToolAction | undefined,
+  title: string,
+  outputText: string,
+  errorText?: string,
+) {
+  if (action?.kind !== "hostCapability") return false;
+  if (outputText.trim() || errorText?.trim()) return false;
+  if (action.output?.some((output) => output.text.trim())) return false;
+  return title === "hostCapability" || title === "User input requested";
 }
 
 function ElicitationToolPart({
@@ -742,6 +776,16 @@ function ElicitationQuestionInput({
   value: string;
 }) {
   const options = question.options ?? [];
+  const [selection, setSelection] = useState<
+    { label: string; type: "option" } | { type: "other" } | undefined
+  >(() =>
+    options.some((option) => option.label === value)
+      ? { label: value, type: "option" }
+      : undefined,
+  );
+  const selectedOptionLabel =
+    selection?.type === "option" ? selection.label : value;
+  const selectedOther = selection?.type === "other";
 
   return (
     <div className="space-y-2">
@@ -757,31 +801,55 @@ function ElicitationQuestionInput({
       </div>
 
       {options.length > 0 ? (
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-col gap-1.5">
           {options.map((option) => (
-            <Button
-              aria-pressed={value === option.label}
+            <button
+              aria-pressed={selectedOptionLabel === option.label}
               className={cn(
-                "max-w-full justify-start",
-                value === option.label && "border-primary bg-primary/10",
+                "w-full rounded-sm border bg-background px-3 py-2 text-left text-sm leading-5 transition-colors hover:bg-muted/40",
+                selectedOptionLabel === option.label &&
+                  "border-primary bg-primary/10",
               )}
               disabled={disabled}
               key={option.label}
-              onClick={() => onChange(option.label)}
-              size="xs"
+              onClick={() => {
+                setSelection({ label: option.label, type: "option" });
+                onChange(option.label);
+              }}
               type="button"
-              variant="outline"
             >
-              <span className="truncate">{option.label}</span>
-            </Button>
+              <span>{option.label}</span>
+              {option.description ? (
+                <span className="mt-0.5 block text-xs leading-4 text-muted-foreground">
+                  {option.description}
+                </span>
+              ) : null}
+            </button>
           ))}
+          {question.isOther ? (
+            <button
+              aria-pressed={selectedOther}
+              className={cn(
+                "w-full rounded-sm border bg-background px-3 py-2 text-left text-sm leading-5 transition-colors hover:bg-muted/40",
+                selectedOther && "border-primary bg-primary/10",
+              )}
+              disabled={disabled}
+              onClick={() => {
+                setSelection({ type: "other" });
+                onChange("");
+              }}
+              type="button"
+            >
+              Other
+            </button>
+          ) : null}
         </div>
       ) : null}
 
-      {options.length === 0 || question.isOther ? (
+      {options.length === 0 || selectedOther ? (
         question.isSecret ? (
           <input
-            className="h-8 w-full rounded-md border bg-background px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring/30"
+            className="h-8 w-full rounded-sm border bg-background px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring/30"
             disabled={disabled}
             onChange={(event) => onChange(event.target.value)}
             type="password"
@@ -789,7 +857,7 @@ function ElicitationQuestionInput({
           />
         ) : (
           <textarea
-            className="min-h-16 w-full resize-y rounded-md border bg-background px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring/30"
+            className="min-h-16 w-full resize-y rounded-sm border bg-background px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring/30"
             disabled={disabled}
             onChange={(event) => onChange(event.target.value)}
             value={value}
@@ -916,13 +984,7 @@ function parseElicitation(
 
   try {
     const parsed: unknown = JSON.parse(rawInput);
-    if (
-      parsed &&
-      typeof parsed === "object" &&
-      typeof (parsed as Partial<ChatElicitation>).id === "string"
-    ) {
-      return parsed as ChatElicitation;
-    }
+    if (isChatElicitationData(parsed)) return parsed;
   } catch {
     return undefined;
   }
@@ -962,8 +1024,340 @@ function formatToolPhase(phase: string) {
   }
 }
 
+function formatElicitationKind(kind: string) {
+  switch (kind) {
+    case "userInput":
+      return "Question";
+    case "externalFlow":
+      return "External flow";
+    case "dynamicToolCall":
+      return "Dynamic tool";
+    case "permissionProfile":
+      return "Permission profile";
+    default:
+      return kind || "Elicitation";
+  }
+}
+
+function formatElicitationPhase(phase: string) {
+  if (phase.startsWith("resolved:")) return "Answered";
+  switch (phase) {
+    case "open":
+      return "Awaiting answer";
+    case "resolving":
+      return "Submitting";
+    case "cancelled":
+      return "Cancelled";
+    default:
+      return phase || "Pending";
+  }
+}
+
 function DataMessagePart(part: DataMessagePartProps) {
+  if (part.name === "plan" && isChatPlanData(part.data)) {
+    return <PlanMessagePart plan={part.data} />;
+  }
+
+  if (part.name === "elicitation" && isChatElicitationData(part.data)) {
+    return <ElicitationQuestionCard elicitation={part.data} />;
+  }
+
   return <JsonBlock label={part.name} value={part.data} />;
+}
+
+function ElicitationQuestionCard({
+  elicitation,
+}: {
+  elicitation: ChatElicitation;
+}) {
+  const { resolveElicitation } = useChatRuntimeActions();
+  const questions = elicitation.questions ?? [];
+  const [answers, setAnswers] = useState<Record<string, string>>({});
+  const [fallbackAnswer, setFallbackAnswer] = useState("");
+  const [submittedResponseType, setSubmittedResponseType] =
+    useState<ChatElicitationResponse["type"]>();
+  const awaitingInput = elicitation.phase === "open" && !submittedResponseType;
+  const phase = submittedResponseType
+    ? submittedResponseType === "cancel"
+      ? "cancelled"
+      : "resolved:Answers"
+    : elicitation.phase;
+  const title = elicitation.title || "Question";
+  const [manualOpen, setManualOpen] = useState<boolean | undefined>();
+  const open = manualOpen ?? awaitingInput;
+
+  const resume = (response: ChatElicitationResponse) => {
+    if (!awaitingInput) return;
+    setSubmittedResponseType(response.type);
+    resolveElicitation(elicitation.id, response);
+  };
+
+  const submitAnswers = () => {
+    const responseAnswers =
+      questions.length > 0
+        ? questions.map((question) => ({
+            id: question.id,
+            value: (answers[question.id] ?? "").trim(),
+          }))
+        : [{ id: "answer", value: fallbackAnswer.trim() }];
+    resume({ answers: responseAnswers, type: "answers" });
+  };
+
+  return (
+    <Collapsible
+      className="my-2 w-full overflow-hidden rounded-md border py-3 text-xs"
+      onOpenChange={setManualOpen}
+      open={open}
+    >
+      <CollapsibleTrigger
+        className="flex min-h-9 w-full items-center gap-2 px-4 text-left"
+        type="button"
+      >
+        <CircleHelp className="size-3.5 shrink-0 text-muted-foreground" />
+        <div className="min-w-0 flex-1">
+          <div className="truncate font-medium">{title}</div>
+          <div className="mt-0.5 flex items-center gap-1.5 text-muted-foreground">
+            <span>{formatElicitationKind(elicitation.kind)}</span>
+            <span aria-hidden>·</span>
+            <span>{formatElicitationPhase(phase)}</span>
+          </div>
+        </div>
+        <ChevronDown
+          className={cn(
+            "size-4 shrink-0 text-muted-foreground transition-transform",
+            !open && "-rotate-90",
+          )}
+        />
+      </CollapsibleTrigger>
+      <CollapsibleContent className="overflow-hidden data-[state=closed]:animate-collapsible-up data-[state=open]:animate-collapsible-down">
+        <div className="mt-3 space-y-3 border-t px-4 pt-3">
+          {elicitation.body?.trim() ? (
+            <div className="whitespace-pre-wrap text-sm leading-5">
+              {elicitation.body}
+            </div>
+          ) : null}
+
+          <div className="space-y-3">
+            {questions.length > 0 ? (
+              questions.map((question) => (
+                <ElicitationQuestionInput
+                  disabled={!awaitingInput}
+                  key={question.id}
+                  onChange={(value) =>
+                    setAnswers((current) => ({
+                      ...current,
+                      [question.id]: value,
+                    }))
+                  }
+                  question={question}
+                  value={answers[question.id] ?? ""}
+                />
+              ))
+            ) : (
+              <textarea
+                className="min-h-20 w-full resize-y rounded-sm border bg-background px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring/30"
+                disabled={!awaitingInput}
+                onChange={(event) => setFallbackAnswer(event.target.value)}
+                value={fallbackAnswer}
+              />
+            )}
+
+            {awaitingInput ? (
+              <div className="flex flex-wrap justify-end gap-2">
+                <Button
+                  onClick={() => resume({ type: "cancel" })}
+                  size="xs"
+                  type="button"
+                  variant="ghost"
+                >
+                  Cancel
+                </Button>
+                <Button onClick={submitAnswers} size="xs" type="button">
+                  <Send className="size-3.5" />
+                  Submit
+                </Button>
+              </div>
+            ) : (
+              <div className="text-right text-[11px] text-muted-foreground">
+                {formatElicitationPhase(phase)}
+              </div>
+            )}
+          </div>
+        </div>
+      </CollapsibleContent>
+    </Collapsible>
+  );
+}
+
+function PlanMessagePart({ plan }: { plan: ChatPlanData }) {
+  const aui = useAui();
+  const chatOptions = useChatOptions();
+  const { setMode } = useChatRuntimeActions();
+  const toast = useToast();
+  const isLastMessage = useAuiState((state) => state.message.isLast);
+  const isRunning = useAuiState((state) => state.thread.isRunning);
+  const [open, setOpen] = useState(true);
+  const [startingImplementation, setStartingImplementation] = useState(false);
+  const completed = plan.entries.filter(
+    (entry) => entry.status === "completed",
+  ).length;
+  const hasDetails = plan.entries.length > 0 || Boolean(plan.text.trim());
+  const buildMode = findBuildModeOption(chatOptions.modeOptions);
+  const canStartImplementation =
+    !isRunning &&
+    !startingImplementation &&
+    !chatOptions.configLoading &&
+    chatOptions.canSetMode &&
+    Boolean(buildMode);
+
+  const startImplementation = async () => {
+    if (!buildMode || startingImplementation) return;
+    setStartingImplementation(true);
+    try {
+      await setMode(buildMode.value);
+      aui.thread().append({
+        content: [{ text: "start implementation", type: "text" }],
+      });
+    } catch (error) {
+      toast({
+        description: getErrorMessage(error),
+        title: "Could not start implementation",
+        variant: "destructive",
+      });
+    } finally {
+      setStartingImplementation(false);
+    }
+  };
+
+  return (
+    <Collapsible
+      className="w-full overflow-hidden rounded-md border bg-muted/20 text-xs"
+      onOpenChange={setOpen}
+      open={open}
+    >
+      <CollapsibleTrigger
+        className="flex min-h-9 w-full items-center gap-2 px-3 py-2 text-left hover:bg-muted/40"
+        disabled={!hasDetails}
+        type="button"
+      >
+        <ListChecks className="size-3.5 shrink-0 text-muted-foreground" />
+        <div className="min-w-0 flex-1">
+          <div className="truncate font-medium">Plan</div>
+          <div className="mt-0.5 flex min-w-0 items-center gap-1.5 text-muted-foreground">
+            {plan.entries.length > 0 ? (
+              <span>
+                {completed}/{plan.entries.length} completed
+              </span>
+            ) : (
+              <span>Draft</span>
+            )}
+            {plan.path ? (
+              <>
+                <span aria-hidden>·</span>
+                <span className="truncate">{plan.path}</span>
+              </>
+            ) : null}
+          </div>
+        </div>
+        {hasDetails ? (
+          <ChevronDown
+            className={cn(
+              "size-4 shrink-0 text-muted-foreground transition-transform",
+              !open && "-rotate-90",
+            )}
+          />
+        ) : null}
+      </CollapsibleTrigger>
+      {hasDetails ? (
+        <CollapsibleContent className="overflow-hidden data-[state=closed]:animate-collapsible-up data-[state=open]:animate-collapsible-down">
+          <div className="space-y-3 border-t px-3 py-2">
+            {plan.entries.length > 0 ? (
+              <ol className="space-y-2">
+                {plan.entries.map((entry, index) => (
+                  <li
+                    className="flex min-w-0 gap-2"
+                    key={`${entry.content}-${index}`}
+                  >
+                    <PlanEntryStatusIcon status={entry.status} />
+                    <span
+                      className={cn(
+                        "min-w-0 flex-1 text-sm leading-5",
+                        entry.status === "completed" &&
+                          "text-muted-foreground line-through",
+                      )}
+                    >
+                      {entry.content}
+                    </span>
+                  </li>
+                ))}
+              </ol>
+            ) : null}
+            {plan.path ? (
+              <div className="flex min-w-0 items-center gap-2 rounded-sm bg-background/70 px-2 py-1.5 text-muted-foreground">
+                <FileText className="size-3.5 shrink-0" />
+                <span className="truncate font-mono text-[11px]">
+                  {plan.path}
+                </span>
+              </div>
+            ) : null}
+            {plan.text.trim() ? (
+              <div className="p-2">
+                <Streamdown
+                  className={assistantTextContainerClassName}
+                  controls={false}
+                  mode="streaming"
+                  plugins={{ cjk, code: streamdownCode, math, mermaid }}
+                  shikiTheme={["github-light", "github-dark"]}
+                >
+                  {plan.text}
+                </Streamdown>
+              </div>
+            ) : null}
+            {isLastMessage ? (
+              <div className="flex justify-end border-t pt-2">
+                <Button
+                  disabled={!canStartImplementation}
+                  onClick={startImplementation}
+                  size="sm"
+                  type="button"
+                  variant="outline"
+                >
+                  {startingImplementation ? (
+                    <Loader2 className="size-3.5 animate-spin" />
+                  ) : (
+                    <Hammer className="size-3.5" />
+                  )}
+                  Start implementation
+                </Button>
+              </div>
+            ) : null}
+          </div>
+        </CollapsibleContent>
+      ) : null}
+    </Collapsible>
+  );
+}
+
+function getErrorMessage(error: unknown) {
+  if (error instanceof Error) return error.message;
+  return String(error);
+}
+
+function PlanEntryStatusIcon({
+  status,
+}: {
+  status: ChatPlanData["entries"][number]["status"];
+}) {
+  switch (status) {
+    case "completed":
+      return <Check className="mt-0.5 size-3.5 shrink-0 text-emerald-600" />;
+    case "inProgress":
+      return <CircleDot className="mt-0.5 size-3.5 shrink-0 text-amber-600" />;
+    default:
+      return (
+        <Circle className="mt-0.5 size-3.5 shrink-0 text-muted-foreground" />
+      );
+  }
 }
 
 function NullMessagePart(): null {

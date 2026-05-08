@@ -5,8 +5,9 @@ use serde::{Deserialize, Serialize};
 
 use crate::error::ClientResult;
 use crate::snapshot::{
-    ActionOutputSnapshot, ActionSnapshot, ContentChunk, ConversationSnapshot, ElicitationSnapshot,
-    SessionUsageSnapshot, conversation_snapshot, runtime_auth_methods,
+    ActionOutputSnapshot, ActionSnapshot, ContentChunk, ConversationSnapshot, DisplayPlanSnapshot,
+    ElicitationSnapshot, SessionUsageSnapshot, TurnSnapshot, conversation_snapshot,
+    runtime_auth_methods,
 };
 
 #[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
@@ -163,6 +164,7 @@ pub enum ClientEvent {
     PlanUpdated {
         conversation_id: String,
         turn_id: String,
+        plan: DisplayPlanSnapshot,
     },
     TurnTerminal {
         conversation_id: String,
@@ -357,6 +359,7 @@ pub(crate) fn events_from_engine_event(
         } => vec![ClientEvent::PlanUpdated {
             conversation_id: conversation_id.to_string(),
             turn_id: turn_id.to_string(),
+            plan: plan_snapshot_for_turn(engine, conversation_id, turn_id).unwrap_or_default(),
         }],
         EngineEvent::TurnTerminal {
             conversation_id,
@@ -509,6 +512,19 @@ pub(crate) fn stream_deltas_from_engine_event(
 
 pub(crate) fn log_event(log: ClientLog) -> ClientEvent {
     ClientEvent::Log { log }
+}
+
+fn plan_snapshot_for_turn(
+    engine: &angel_engine::AngelEngine,
+    conversation_id: &angel_engine::ConversationId,
+    turn_id: &angel_engine::TurnId,
+) -> Option<DisplayPlanSnapshot> {
+    let turn = engine
+        .conversations
+        .get(conversation_id)?
+        .turns
+        .get(turn_id)?;
+    DisplayPlanSnapshot::from_turn(&TurnSnapshot::from(turn))
 }
 
 fn content_chunk(delta: &ContentDelta) -> ContentChunk {

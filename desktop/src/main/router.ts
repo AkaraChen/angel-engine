@@ -6,6 +6,7 @@ import type {
   ChatPrewarmInput,
   ChatRuntimeConfigInput,
   ChatSendInput,
+  ChatSetModeInput,
 } from "../shared/chat";
 import { normalizeChatAttachmentsInput } from "../shared/chat";
 import { normalizeAgentRuntime } from "../shared/agents";
@@ -19,6 +20,7 @@ import {
   loadChatSession,
   prewarmChat,
   sendChat,
+  setChatMode,
 } from "./chat/angel-client";
 import {
   createChat,
@@ -59,6 +61,10 @@ export const appRouter = {
   chatsPrewarm: t.procedure
     .input<ChatPrewarmInput>()
     .action(async ({ input }) => prewarmChat(assertChatPrewarmInput(input))),
+
+  chatsSetMode: t.procedure
+    .input<ChatSetModeInput>()
+    .action(async ({ input }) => setChatMode(assertChatSetModeInput(input))),
 
   chatsLoad: t.procedure
     .input<string>()
@@ -251,6 +257,24 @@ function assertChatRuntimeConfigInput(
     cwd:
       typeof input.cwd === "string" && input.cwd.trim() ? input.cwd : undefined,
     runtime: normalizeOptionalRuntime(input.runtime),
+  };
+}
+
+function assertChatSetModeInput(input: ChatSetModeInput): ChatSetModeInput {
+  if (!input || typeof input !== "object") {
+    throw new Error("Chat mode input is required.");
+  }
+
+  const mode = normalizeOptionalConfigInput(input.mode);
+  if (!mode) {
+    throw new Error("Chat mode is required.");
+  }
+
+  return {
+    chatId: assertString(input.chatId, "Chat id is required.").trim(),
+    cwd:
+      typeof input.cwd === "string" && input.cwd.trim() ? input.cwd : undefined,
+    mode,
   };
 }
 

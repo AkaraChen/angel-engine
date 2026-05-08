@@ -199,6 +199,7 @@ pub enum TurnRunEventType {
     ActionUpdated,
     ActionOutputDelta,
     Elicitation,
+    PlanUpdated,
     Result,
 }
 
@@ -348,6 +349,7 @@ pub struct ClientEvent {
     pub usage: Option<SessionUsageSnapshot>,
     pub turn_id: Option<String>,
     pub content: Option<ContentChunk>,
+    pub plan: Option<DisplayPlanSnapshot>,
     pub outcome: Option<String>,
     pub action: Option<ActionSnapshot>,
     pub elicitation: Option<ElicitationSnapshot>,
@@ -399,9 +401,15 @@ pub struct ConversationSnapshot {
     pub messages: Vec<DisplayMessageSnapshot>,
     pub elicitations: Vec<ElicitationSnapshot>,
     pub history: HistorySnapshot,
+    pub agent_state: AgentStateSnapshot,
     pub settings: ThreadSettingsSnapshot,
     pub available_commands: Vec<AvailableCommandSnapshot>,
     pub usage: Option<SessionUsageSnapshot>,
+}
+
+#[napi(object)]
+pub struct AgentStateSnapshot {
+    pub current_mode: Option<String>,
 }
 
 #[napi(object)]
@@ -419,6 +427,14 @@ pub struct DisplayMessagePartSnapshot {
     pub mime_type: Option<String>,
     pub name: Option<String>,
     pub action: Option<DisplayToolActionSnapshot>,
+    pub plan: Option<DisplayPlanSnapshot>,
+}
+
+#[napi(object)]
+pub struct DisplayPlanSnapshot {
+    pub entries: Vec<PlanEntrySnapshot>,
+    pub text: String,
+    pub path: Option<String>,
 }
 
 #[napi(object)]
@@ -564,7 +580,7 @@ pub struct ContentChunk {
 
 #[napi(object)]
 pub struct PlanEntrySnapshot {
-    pub text: String,
+    pub content: String,
     #[napi(ts_type = "`${PlanEntryStatus}`")]
     pub status: PlanEntryStatus,
 }
@@ -735,6 +751,13 @@ pub struct SendTextRequest {
 }
 
 #[napi(object)]
+pub struct SetModeRequest {
+    pub mode: String,
+    pub cwd: Option<String>,
+    pub remote_id: Option<String>,
+}
+
+#[napi(object)]
 pub struct HydrateRequest {
     pub cwd: Option<String>,
     pub remote_id: Option<String>,
@@ -769,6 +792,7 @@ pub struct TurnRunEvent {
     pub action: Option<ActionSnapshot>,
     pub action_id: Option<String>,
     pub content: Option<ActionOutputSnapshot>,
+    pub plan: Option<DisplayPlanSnapshot>,
     pub message_part: Option<DisplayMessagePartSnapshot>,
     pub elicitation: Option<ElicitationSnapshot>,
     pub result: Option<TurnRunResult>,

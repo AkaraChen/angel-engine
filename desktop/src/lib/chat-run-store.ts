@@ -8,9 +8,11 @@ import { useSyncExternalStore } from "react";
 import { assign, createActor, setup } from "xstate";
 
 import { streamChatEvents } from "@/lib/chat-stream";
+import { ipc } from "@/lib/ipc";
 import type {
   Chat,
   ChatAttachmentInput,
+  ChatElicitation,
   ChatElicitationResponse,
   ChatHistoryMessage,
   ChatHistoryMessagePart,
@@ -26,8 +28,12 @@ import {
   chatToolActionToPart,
   cloneChatHistoryPart,
   imageDataUrl,
+  isChatElicitationData,
+  isChatPlanData,
   isChatToolAction,
   parseDataUrl,
+  upsertChatElicitationPart,
+  upsertChatPlanPart,
 } from "@/shared/chat";
 
 const STREAM_FLUSH_MIN_CHARS = 24;
@@ -41,6 +47,10 @@ type ActiveRun = {
   assistantMessageId: string;
   cancelled: boolean;
   initialSlotKey: string;
+  resolveElicitationLocally?: (
+    elicitationId: string,
+    response: ChatElicitationResponse,
+  ) => void;
   runId: string;
   startedAt: number;
   streamController?: ChatStreamController;
@@ -113,6 +123,7 @@ type ChatRunStore = {
     payload: unknown,
     toolCallId: string,
   ) => void;
+  setMode: (slotKey: string, mode: string) => Promise<ChatRuntimeConfig>;
   slots: Record<string, ChatRunSlot>;
   startRun: (input: StartRunInput) => Promise<void>;
 };
@@ -126,6 +137,12 @@ type ChatRunEvent =
       type: "slot.initialized";
     }
   | { slotKey: string; type: "run.cancelled" }
+  | {
+      chat: Chat;
+      config: ChatRuntimeConfig;
+      slotKey: string;
+      type: "slot.configUpdated";
+    }
   | { slotKey: string; type: "slot.dropped" }
   | { type: "slots.dropped" }
   | {
@@ -195,6 +212,11 @@ const chatRunMachine = setup({
             dropRunContext(context, event.slotKey),
           ),
         },
+        "slot.configUpdated": {
+          actions: assign(({ context, event }) =>
+            updateSlotConfigContext(context, event),
+          ),
+        },
         "slot.initialized": {
           actions: assign(({ context, event }) =>
             initializeSlotContext(context, event.input, event.messages),
@@ -253,10 +275,25 @@ const chatRunActions: Omit<ChatRunStore, "aliases" | "slots"> = {
     if (!response) return;
 
     const slot = selectSlot(getChatRunContext(), slotKey);
+    slot?.activeRun?.resolveElicitationLocally?.(toolCallId, response);
     void slot?.activeRun?.streamController?.resolveElicitation({
       elicitationId: toolCallId,
       response,
     });
+  },
+  async setMode(slotKey, mode) {
+    const state = getChatRunContext();
+    const resolvedKey = resolveSlotKey(state, slotKey);
+    const slot = state.slots[resolvedKey];
+    const chatId = slot?.chatId ?? resolvedKey;
+    const result = await ipc.chatsSetMode({ chatId, mode });
+    chatRunActor.send({
+      chat: result.chat,
+      config: result.config,
+      slotKey: resolvedKey,
+      type: "slot.configUpdated",
+    });
+    return result.config;
   },
   async startRun({ callbacks, input, message, slotKey }) {
     const prompt = getMessageText(message);
@@ -609,6 +646,31 @@ function finishRunContext(
   };
 }
 
+function updateSlotConfigContext(
+  state: ChatRunContext,
+  event: Extract<ChatRunEvent, { type: "slot.configUpdated" }>,
+): Partial<ChatRunContext> {
+  const resolvedKey = resolveSlotKey(state, event.slotKey);
+  const existing =
+    state.slots[resolvedKey] ??
+    createIdleSlot(resolvedKey, {
+      chatId: event.chat.id,
+      historyRevision: 0,
+      slotKey: resolvedKey,
+    });
+
+  return {
+    slots: {
+      ...state.slots,
+      [resolvedKey]: {
+        ...existing,
+        chatId: event.chat.id,
+        config: event.config,
+      },
+    },
+  };
+}
+
 function isSlotStreaming(slot?: ChatRunSlot): slot is ChatRunSlot & {
   activeRun: ActiveRun;
   status: "streaming";
@@ -681,6 +743,11 @@ async function consumeRunStream({
     await yieldToRendererTask();
     return true;
   };
+  activeRun.resolveElicitationLocally = (elicitationId, response) => {
+    resolveElicitationPartLocally(accumulator.parts, elicitationId, response);
+    dirty = true;
+    void flush();
+  };
 
   try {
     for await (const event of streamChatEvents(
@@ -735,13 +802,24 @@ async function consumeRunStream({
       }
 
       accumulator.chunkCount += 1;
-      if (event.type === "tool") {
+      if (event.type === "elicitation") {
+        upsertElicitationPart(accumulator.parts, event.elicitation);
+      } else if (event.type === "tool") {
         upsertToolActionPart(accumulator.parts, event.action);
+      } else if (event.type === "plan") {
+        upsertChatPlanPart(accumulator.parts, event.plan);
       } else {
         appendChatTextPart(accumulator.parts, event.part, event.text);
         pendingDeltaChars += event.text.length;
       }
       dirty = true;
+      if (
+        event.type === "elicitation" ||
+        (event.type === "tool" && event.action.phase === "awaitingDecision")
+      ) {
+        if (!(await flush())) break;
+        continue;
+      }
 
       const now = performance.now();
       if (
@@ -880,6 +958,22 @@ function upsertToolActionPart(
   parts: ChatHistoryMessagePart[],
   action: ChatToolAction,
 ) {
+  const questionElicitation = questionElicitationFromAction(action);
+  if (questionElicitation) {
+    upsertElicitationPart(parts, questionElicitation);
+    return;
+  }
+
+  const elicitationActionId = elicitationBackingActionId(action);
+  if (elicitationActionId) {
+    removeBackingHostCapabilityPart(parts, elicitationActionId);
+  } else if (
+    isEmptyHostCapabilityAction(action) &&
+    parts.some((part) => partReferencesElicitationAction(part, action.id))
+  ) {
+    return;
+  }
+
   const nextPart = chatToolActionToPart(action);
   const index = parts.findIndex(
     (part) =>
@@ -892,6 +986,191 @@ function upsertToolActionPart(
   }
 
   parts[index] = nextPart;
+}
+
+function upsertElicitationPart(
+  parts: ChatHistoryMessagePart[],
+  elicitation: ChatElicitation,
+) {
+  if (elicitation.actionId) {
+    removeBackingHostCapabilityPart(parts, elicitation.actionId);
+  }
+  upsertChatElicitationPart(
+    parts,
+    preserveResolvedElicitationPhase(parts, elicitation),
+  );
+}
+
+function preserveResolvedElicitationPhase(
+  parts: ChatHistoryMessagePart[],
+  elicitation: ChatElicitation,
+) {
+  if (elicitation.phase !== "open") return elicitation;
+  const previous = parts.find(
+    (part) =>
+      part.type === "data" &&
+      part.name === "elicitation" &&
+      part.data.id === elicitation.id,
+  );
+  if (
+    previous?.type !== "data" ||
+    previous.name !== "elicitation" ||
+    !isClosedElicitationPhase(previous.data.phase)
+  ) {
+    return elicitation;
+  }
+  return {
+    ...elicitation,
+    phase: previous.data.phase,
+  };
+}
+
+function resolveElicitationPartLocally(
+  parts: ChatHistoryMessagePart[],
+  elicitationId: string,
+  response: ChatElicitationResponse,
+) {
+  const phase = localElicitationPhase(response);
+  for (const part of parts) {
+    if (
+      part.type === "data" &&
+      part.name === "elicitation" &&
+      part.data.id === elicitationId
+    ) {
+      part.data = {
+        ...part.data,
+        phase,
+      };
+    }
+  }
+}
+
+function removeBackingHostCapabilityPart(
+  parts: ChatHistoryMessagePart[],
+  actionId: string,
+) {
+  const index = parts.findIndex(
+    (part) =>
+      part.type === "tool-call" &&
+      part.toolCallId === actionId &&
+      part.artifact.kind === "hostCapability" &&
+      isEmptyHostCapabilityAction(part.artifact),
+  );
+  if (index !== -1) parts.splice(index, 1);
+}
+
+function partReferencesElicitationAction(
+  part: ChatHistoryMessagePart,
+  actionId: string,
+) {
+  if (part.type === "data" && part.name === "elicitation") {
+    return part.data.actionId === actionId;
+  }
+  return (
+    part.type === "tool-call" &&
+    part.artifact.kind === "elicitation" &&
+    elicitationBackingActionId(part.artifact) === actionId
+  );
+}
+
+function elicitationBackingActionId(action: ChatToolAction) {
+  if (action.kind !== "elicitation" || !action.rawInput) return undefined;
+  try {
+    const parsed: unknown = JSON.parse(action.rawInput);
+    if (
+      parsed &&
+      typeof parsed === "object" &&
+      typeof (parsed as Partial<ChatElicitation>).actionId === "string"
+    ) {
+      return (parsed as Partial<ChatElicitation>).actionId ?? undefined;
+    }
+  } catch {
+    return undefined;
+  }
+  return undefined;
+}
+
+function questionElicitationFromAction(
+  action: ChatToolAction,
+): ChatElicitation | undefined {
+  if (!action.rawInput) return undefined;
+  try {
+    const parsed: unknown = JSON.parse(action.rawInput);
+    if (
+      parsed &&
+      typeof parsed === "object" &&
+      typeof (parsed as Partial<ChatElicitation>).id === "string" &&
+      typeof (parsed as Partial<ChatElicitation>).kind === "string"
+    ) {
+      const elicitation = parsed as ChatElicitation;
+      if (
+        elicitation.kind === "userInput" ||
+        (elicitation.questions?.length ?? 0) > 0
+      ) {
+        return {
+          ...elicitation,
+          phase: elicitationPhaseFromAction(
+            action.phase,
+            elicitation.phase,
+            actionHasOutput(action),
+          ),
+        };
+      }
+    }
+  } catch {
+    return undefined;
+  }
+  return undefined;
+}
+
+function elicitationPhaseFromAction(
+  actionPhase: string | undefined,
+  fallback: string,
+  hasOutput: boolean,
+) {
+  if (hasOutput) return "resolved:Answers";
+  switch (actionPhase) {
+    case "completed":
+      return "resolved:Answers";
+    case "cancelled":
+    case "declined":
+    case "failed":
+      return "cancelled";
+    case "awaitingDecision":
+      return "open";
+    default:
+      return fallback;
+  }
+}
+
+function actionHasOutput(action: ChatToolAction) {
+  return Boolean(
+    action.outputText?.trim() ||
+    action.output?.some((output) => output.text.trim()),
+  );
+}
+
+function localElicitationPhase(response: ChatElicitationResponse) {
+  switch (response.type) {
+    case "cancel":
+    case "deny":
+      return "cancelled";
+    default:
+      return "resolved:Answers";
+  }
+}
+
+function isClosedElicitationPhase(phase: string) {
+  return phase === "cancelled" || phase.startsWith("resolved:");
+}
+
+function isEmptyHostCapabilityAction(action: ChatToolAction) {
+  return (
+    action.kind === "hostCapability" &&
+    !action.error &&
+    !action.outputText?.trim() &&
+    !(action.output ?? []).some((output) => output.text.trim())
+  );
 }
 
 function normalizeElicitationResponse(
@@ -1091,6 +1370,14 @@ function engineMessageContentToHistoryParts(
       }
       case "file":
         return [fileHistoryPartFromMessagePart(part)];
+      case "data":
+        if (part.name === "plan" && isChatPlanData(part.data)) {
+          return [{ data: part.data, name: "plan", type: "data" }];
+        }
+        if (part.name === "elicitation" && isChatElicitationData(part.data)) {
+          return [{ data: part.data, name: "elicitation", type: "data" }];
+        }
+        return [];
       default:
         return [];
     }
@@ -1100,6 +1387,14 @@ function engineMessageContentToHistoryParts(
 function historyPartToEngineMessagePart(
   part: ChatHistoryMessagePart,
 ): ThreadMessage["content"][number] {
+  if (part.type === "data") {
+    return {
+      data: part.data,
+      name: part.name,
+      type: "data",
+    } as ThreadMessage["content"][number];
+  }
+
   if (part.type !== "image" && part.type !== "file") {
     return part as ThreadMessage["content"][number];
   }

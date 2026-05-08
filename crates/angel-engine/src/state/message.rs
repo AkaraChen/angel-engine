@@ -1,3 +1,5 @@
+use std::collections::BTreeSet;
+
 use serde_json::Value;
 
 use crate::error::ErrorInfo;
@@ -6,7 +8,8 @@ use crate::protocol::ProtocolFlavor;
 
 use super::{
     ActionKind, ActionOutputDelta, ActionPhase, ActionState, ContentDelta, ContentPart,
-    ConversationState, ElicitationState, HistoryReplayEntry, HistoryRole, TurnState,
+    ConversationState, ElicitationState, HistoryReplayEntry, HistoryRole, PlanEntry,
+    PlanEntryStatus, TurnDisplayContentKind, TurnDisplayPart, TurnState,
 };
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -38,6 +41,11 @@ pub enum DisplayMessagePart {
         data: String,
         mime_type: String,
         name: Option<String>,
+    },
+    Plan {
+        entries: Vec<PlanEntry>,
+        text: String,
+        path: Option<String>,
     },
     ToolCall {
         action: DisplayToolAction,
@@ -73,6 +81,14 @@ impl DisplayMessagePart {
             data: data.into(),
             mime_type: mime_type.into(),
             name,
+        }
+    }
+
+    pub fn plan(entries: Vec<PlanEntry>, text: impl Into<String>, path: Option<String>) -> Self {
+        Self::Plan {
+            entries,
+            text: text.into(),
+            path,
         }
     }
 
@@ -228,19 +244,17 @@ fn display_content_from_turn(
     turn: &TurnState,
     actions: &[&ActionState],
 ) -> Vec<DisplayMessagePart> {
+    if !turn.display_parts.is_empty() {
+        return ordered_display_content_from_turn(turn, actions);
+    }
+
     let mut parts = Vec::new();
     append_display_text_part(
         &mut parts,
         DisplayTextPartKind::Reasoning,
-        [
-            buffer_text(&turn.reasoning.chunks),
-            buffer_text(&turn.plan_text.chunks),
-        ]
-        .into_iter()
-        .filter(|text| !text.trim().is_empty())
-        .collect::<Vec<_>>()
-        .join("\n"),
+        buffer_text(&turn.reasoning.chunks),
     );
+    append_display_plan_part(&mut parts, turn);
     for action in actions {
         parts.push(DisplayMessagePart::tool(DisplayToolAction::from_action(
             action,
@@ -251,6 +265,57 @@ fn display_content_from_turn(
         DisplayTextPartKind::Text,
         buffer_text(&turn.output.chunks),
     );
+    parts
+}
+
+fn ordered_display_content_from_turn(
+    turn: &TurnState,
+    actions: &[&ActionState],
+) -> Vec<DisplayMessagePart> {
+    let mut parts = Vec::new();
+    let mut rendered_actions = BTreeSet::new();
+
+    for part in &turn.display_parts {
+        match part {
+            TurnDisplayPart::Content { kind, chunk_index } => {
+                let delta = match kind {
+                    TurnDisplayContentKind::Assistant => turn.output.chunks.get(*chunk_index),
+                    TurnDisplayContentKind::Reasoning => turn.reasoning.chunks.get(*chunk_index),
+                };
+                let Some(delta) = delta else {
+                    continue;
+                };
+                match kind {
+                    TurnDisplayContentKind::Assistant => {
+                        append_display_parts(&mut parts, content_delta_display_parts(delta));
+                    }
+                    TurnDisplayContentKind::Reasoning => append_display_text_part(
+                        &mut parts,
+                        DisplayTextPartKind::Reasoning,
+                        content_delta_text(delta),
+                    ),
+                }
+            }
+            TurnDisplayPart::Plan => append_display_plan_part(&mut parts, turn),
+            TurnDisplayPart::Action { action_id } => {
+                if let Some(action) = actions.iter().find(|action| action.id == *action_id) {
+                    parts.push(DisplayMessagePart::tool(DisplayToolAction::from_action(
+                        action,
+                    )));
+                    rendered_actions.insert(action_id.clone());
+                }
+            }
+        }
+    }
+
+    for action in actions {
+        if !rendered_actions.contains(&action.id) {
+            parts.push(DisplayMessagePart::tool(DisplayToolAction::from_action(
+                action,
+            )));
+        }
+    }
+
     parts
 }
 
@@ -333,6 +398,20 @@ fn append_display_text_part(
     parts.push(DisplayMessagePart::text(kind, text));
 }
 
+fn append_display_plan_part(parts: &mut Vec<DisplayMessagePart>, turn: &TurnState) {
+    let entries = turn
+        .plan
+        .as_ref()
+        .map(|plan| plan.entries.clone())
+        .unwrap_or_default();
+    let text = buffer_text(&turn.plan_text.chunks);
+    let path = turn.plan_path.clone();
+    if entries.is_empty() && text.trim().is_empty() && path.is_none() {
+        return;
+    }
+    parts.push(DisplayMessagePart::plan(entries, text, path));
+}
+
 fn append_display_parts(parts: &mut Vec<DisplayMessagePart>, next: Vec<DisplayMessagePart>) {
     for part in next {
         match part {
@@ -347,6 +426,11 @@ fn append_display_parts(parts: &mut Vec<DisplayMessagePart>, next: Vec<DisplayMe
                 mime_type,
                 name,
             } => parts.push(DisplayMessagePart::file(data, mime_type, name)),
+            DisplayMessagePart::Plan {
+                entries,
+                text,
+                path,
+            } => parts.push(DisplayMessagePart::plan(entries, text, path)),
             DisplayMessagePart::ToolCall { action } => parts.push(DisplayMessagePart::tool(action)),
         }
     }
@@ -358,6 +442,7 @@ fn upsert_display_tool_part(parts: &mut Vec<DisplayMessagePart>, next: DisplayTo
         DisplayMessagePart::Text { .. } => false,
         DisplayMessagePart::Image { .. } => false,
         DisplayMessagePart::File { .. } => false,
+        DisplayMessagePart::Plan { .. } => false,
     }) else {
         parts.push(DisplayMessagePart::tool(next));
         return;
@@ -501,7 +586,7 @@ fn codex_history_tool_action(value: &Value, fallback_id: String) -> DisplayToolA
         kind: codex_tool_kind(item),
         phase: codex_tool_phase(item),
         title: codex_tool_title(item),
-        input_summary: codex_tool_title(item),
+        input_summary: codex_tool_input_summary(item).or_else(|| codex_tool_title(item)),
         raw_input: codex_tool_raw_input(item),
         output_text,
         output,
@@ -523,6 +608,9 @@ fn codex_tool_kind(item: &Value) -> Option<ActionKind> {
         "commandExecution" | "local_shell_call" => ActionKind::Command,
         "fileChange" => ActionKind::FileChange,
         "mcpToolCall" | "mcp_call" => ActionKind::McpTool,
+        "dynamicToolCall" if codex_dynamic_tool_is_host_capability(item) => {
+            ActionKind::HostCapability
+        }
         "dynamicToolCall" | "tool_search_call" => ActionKind::DynamicTool,
         "webSearch" | "web_search_call" => ActionKind::WebSearch,
         "imageView" | "imageGeneration" => ActionKind::Media,
@@ -545,6 +633,16 @@ fn codex_tool_kind(item: &Value) -> Option<ActionKind> {
         _ => return None,
     };
     Some(kind)
+}
+
+fn codex_dynamic_tool_is_host_capability(item: &Value) -> bool {
+    matches!(
+        string_field(item, &["kind"]).as_deref(),
+        Some("hostCapability")
+    ) || matches!(
+        string_field(item, &["tool"]).as_deref(),
+        Some("hostCapability" | "request_user_input" | "requestUserInput")
+    )
 }
 
 fn codex_tool_phase(item: &Value) -> ActionPhase {
@@ -571,6 +669,16 @@ fn codex_tool_title(item: &Value) -> Option<String> {
         )),
         "mcp_call" => string_field(item, &["name"]).or_else(|| Some("mcp.call".to_string())),
         "dynamicToolCall" => {
+            if let Some(title) = string_field(item, &["title"]) {
+                return Some(title);
+            }
+            if codex_dynamic_tool_is_host_capability(item) {
+                return if item.get("arguments").is_some() {
+                    Some("User input requested".to_string())
+                } else {
+                    None
+                };
+            }
             let tool = string_field(item, &["tool"]).unwrap_or_else(|| "tool".to_string());
             Some(
                 string_field(item, &["namespace"])
@@ -592,6 +700,10 @@ fn codex_tool_title(item: &Value) -> Option<String> {
         "function_call_output" | "custom_tool_call_output" | "tool_search_output" => None,
         _ => string_field(item, &["title", "name", "type"]),
     }
+}
+
+fn codex_tool_input_summary(item: &Value) -> Option<String> {
+    string_field(item, &["inputSummary", "input_summary"])
 }
 
 fn codex_function_call_title(item: &Value) -> Option<String> {
@@ -623,6 +735,12 @@ fn command_value_text(value: &Value) -> Option<String> {
 }
 
 fn codex_tool_raw_input(item: &Value) -> Option<String> {
+    if let Some(raw_input) = item.get("rawInput").or_else(|| item.get("raw_input")) {
+        return raw_input
+            .as_str()
+            .map(str::to_string)
+            .or_else(|| Some(json_string(raw_input)));
+    }
     match string_field(item, &["type"]).as_deref() {
         Some("function_call") => {
             string_field(item, &["arguments"]).or_else(|| item.get("arguments").map(json_string))
@@ -631,6 +749,11 @@ fn codex_tool_raw_input(item: &Value) -> Option<String> {
             string_field(item, &["input"]).or_else(|| item.get("input").map(json_string))
         }
         Some("web_search_call") => item.get("action").map(json_string),
+        Some("dynamicToolCall")
+            if codex_dynamic_tool_is_host_capability(item) && item.get("arguments").is_none() =>
+        {
+            None
+        }
         Some("function_call_output" | "custom_tool_call_output" | "tool_search_output") => None,
         _ => Some(json_string(item)),
     }
@@ -641,6 +764,8 @@ fn codex_tool_output(item: &Value) -> Vec<ActionOutputDelta> {
         "output",
         "result",
         "content",
+        "contentItems",
+        "content_items",
         "aggregatedOutput",
         "stdout",
         "stderr",
@@ -800,9 +925,20 @@ fn content_delta_text(delta: &ContentDelta) -> String {
 
 fn content_delta_display_parts(delta: &ContentDelta) -> Vec<DisplayMessagePart> {
     match delta {
-        ContentDelta::Text(text)
-        | ContentDelta::ResourceRef(text)
-        | ContentDelta::Structured(text) => {
+        ContentDelta::Structured(text) => {
+            if let Some(plan) = structured_plan_display_part(text) {
+                return vec![plan];
+            }
+            if text.trim().is_empty() {
+                Vec::new()
+            } else {
+                vec![DisplayMessagePart::text(
+                    DisplayTextPartKind::Text,
+                    text.clone(),
+                )]
+            }
+        }
+        ContentDelta::Text(text) | ContentDelta::ResourceRef(text) => {
             if text.trim().is_empty() {
                 Vec::new()
             } else {
@@ -833,6 +969,62 @@ fn content_delta_display_parts(delta: &ContentDelta) -> Vec<DisplayMessagePart> 
                 }),
             })
             .collect(),
+    }
+}
+
+fn structured_plan_display_part(text: &str) -> Option<DisplayMessagePart> {
+    let value = serde_json::from_str::<Value>(text).ok()?;
+    if string_field(&value, &["type"]).as_deref() != Some("plan") {
+        return None;
+    }
+
+    let entries = ["entries", "plan", "steps"]
+        .iter()
+        .find_map(|key| value.get(*key).and_then(Value::as_array))
+        .map(|entries| {
+            entries
+                .iter()
+                .filter_map(structured_plan_entry)
+                .collect::<Vec<_>>()
+        })
+        .unwrap_or_default();
+    let plan_text = string_field(&value, &["text", "content", "markdown"]).unwrap_or_default();
+    let path = string_field(
+        &value,
+        &["path", "savedPath", "saved_path", "filePath", "file_path"],
+    );
+
+    if entries.is_empty() && plan_text.trim().is_empty() && path.is_none() {
+        return None;
+    }
+    Some(DisplayMessagePart::plan(entries, plan_text, path))
+}
+
+fn structured_plan_entry(value: &Value) -> Option<PlanEntry> {
+    let content = match value {
+        Value::String(content) => content.clone(),
+        Value::Object(_) => string_field(value, &["content", "text", "step"])?,
+        _ => return None,
+    };
+    if content.trim().is_empty() {
+        return None;
+    }
+    Some(PlanEntry {
+        content,
+        status: structured_plan_entry_status(
+            value
+                .get("status")
+                .and_then(Value::as_str)
+                .unwrap_or_default(),
+        ),
+    })
+}
+
+fn structured_plan_entry_status(status: &str) -> PlanEntryStatus {
+    match status {
+        "completed" => PlanEntryStatus::Completed,
+        "in_progress" | "inProgress" => PlanEntryStatus::InProgress,
+        _ => PlanEntryStatus::Pending,
     }
 }
 
@@ -890,8 +1082,8 @@ mod tests {
 
     use super::*;
     use crate::{
-        ConversationCapabilities, ConversationId, ConversationLifecycle, RemoteConversationId,
-        RemoteTurnId, UserImageInputRef, UserInputRef,
+        ConversationCapabilities, ConversationId, ConversationLifecycle, PlanEntryStatus,
+        PlanState, RemoteConversationId, RemoteTurnId, UserImageInputRef, UserInputRef,
     };
 
     #[test]
@@ -950,6 +1142,7 @@ mod tests {
                 DisplayMessagePart::Text { .. } => None,
                 DisplayMessagePart::Image { .. } => None,
                 DisplayMessagePart::File { .. } => None,
+                DisplayMessagePart::Plan { .. } => None,
             })
             .expect("tool action");
         assert_eq!(tool.id, "call_1");
@@ -1014,6 +1207,7 @@ mod tests {
             DisplayMessagePart::Text { .. } => panic!("expected tool action"),
             DisplayMessagePart::Image { .. } => panic!("expected tool action"),
             DisplayMessagePart::File { .. } => panic!("expected tool action"),
+            DisplayMessagePart::Plan { .. } => panic!("expected tool action"),
         };
         assert_eq!(tool.id, "tool-1");
         assert_eq!(tool.kind, Some(ActionKind::Command));
@@ -1071,6 +1265,58 @@ mod tests {
             ] if reasoning == "thinking"
                 && action.id == "call_1"
                 && action.output_text == "## main\n"
+                && text == "done"
+        ));
+    }
+
+    #[test]
+    fn live_turn_projects_plan_as_independent_part() {
+        let mut conversation = conversation(ConversationCapabilities::codex_app_server());
+        let turn_id = TurnId::new("turn-1");
+        let mut turn = TurnState::new(
+            turn_id.clone(),
+            RemoteTurnId::Known("remote-turn-1".to_string()),
+            0,
+        );
+        turn.reasoning
+            .chunks
+            .push(ContentDelta::Text("thinking".to_string()));
+        turn.plan_text
+            .chunks
+            .push(ContentDelta::Text("draft plan".to_string()));
+        turn.plan_path = Some("/tmp/plan.md".to_string());
+        turn.plan = Some(PlanState {
+            entries: vec![
+                PlanEntry {
+                    content: "Inspect protocol".to_string(),
+                    status: PlanEntryStatus::Completed,
+                },
+                PlanEntry {
+                    content: "Implement UI".to_string(),
+                    status: PlanEntryStatus::InProgress,
+                },
+            ],
+        });
+        turn.output
+            .chunks
+            .push(ContentDelta::Text("done".to_string()));
+        conversation.turns.insert(turn_id, turn);
+
+        let messages = conversation_display_messages(ProtocolFlavor::CodexAppServer, &conversation);
+
+        assert_eq!(messages.len(), 1);
+        assert!(matches!(
+            messages[0].content.as_slice(),
+            [
+                DisplayMessagePart::Text { kind: DisplayTextPartKind::Reasoning, text: reasoning },
+                DisplayMessagePart::Plan { entries, text: plan_text, path },
+                DisplayMessagePart::Text { kind: DisplayTextPartKind::Text, text }
+            ] if reasoning == "thinking"
+                && entries.len() == 2
+                && entries[0].content == "Inspect protocol"
+                && entries[0].status == PlanEntryStatus::Completed
+                && plan_text == "draft plan"
+                && path.as_deref() == Some("/tmp/plan.md")
                 && text == "done"
         ));
     }
