@@ -206,11 +206,11 @@ fn apply_codex_mentioned_files_prompt(input: &mut Vec<Value>, files: &[CodexMent
         .to_string();
     let prompt = codex_mentioned_files_prompt(files, &request);
 
-    if let Some(index) = text_index {
-        if let Some(object) = input[index].as_object_mut() {
-            object.insert("text".to_string(), json!(prompt));
-            return;
-        }
+    if let Some(index) = text_index
+        && let Some(object) = input[index].as_object_mut()
+    {
+        object.insert("text".to_string(), json!(prompt));
+        return;
     }
 
     input.insert(0, codex_text_item(prompt));
@@ -272,14 +272,14 @@ fn percent_decode_path(path: &str) -> Option<String> {
     let mut decoded = Vec::with_capacity(bytes.len());
     let mut index = 0;
     while index < bytes.len() {
-        if bytes[index] == b'%' && index + 2 < bytes.len() {
-            if let (Some(high), Some(low)) =
+        if bytes[index] == b'%'
+            && index + 2 < bytes.len()
+            && let (Some(high), Some(low)) =
                 (hex_digit(bytes[index + 1]), hex_digit(bytes[index + 2]))
-            {
-                decoded.push((high << 4) | low);
-                index += 3;
-                continue;
-            }
+        {
+            decoded.push((high << 4) | low);
+            index += 3;
+            continue;
         }
 
         decoded.push(bytes[index]);

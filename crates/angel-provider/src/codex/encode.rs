@@ -222,13 +222,12 @@ fn insert_codex_overrides(
             }),
         );
     }
-    if !fields.contains_key("permissions") {
-        if let Some(policy) = fields
+    if !fields.contains_key("permissions")
+        && let Some(policy) = fields
             .get("sandboxPolicy")
             .and_then(|policy| sandbox_policy(policy))
-        {
-            params.insert("sandboxPolicy".to_string(), policy);
-        }
+    {
+        params.insert("sandboxPolicy".to_string(), policy);
     }
     let collaboration_model = fields
         .get("collaborationModel")

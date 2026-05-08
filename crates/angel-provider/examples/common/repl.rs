@@ -2,7 +2,8 @@ use std::error::Error;
 use std::time::Duration;
 
 use angel_engine::{
-    EngineCommand, EngineExtensionCommand, ProtocolFlavor, TurnOverrides, UserInput,
+    EngineCommand, EngineExtensionCommand, JsonRpcRequestId, ProtocolFlavor, TurnId, TurnOverrides,
+    UserInput,
 };
 use angel_provider::ProtocolAdapter;
 use test_cli::{is_quit_command, read_prompt_line};
@@ -24,10 +25,7 @@ where
         }
         self.print_command_summary();
 
-        loop {
-            let Some(input) = read_prompt_line(self.config.prompt)? else {
-                break;
-            };
+        while let Some(input) = read_prompt_line(self.config.prompt)? {
             let line = input.trim();
             if line.is_empty() {
                 continue;
@@ -74,10 +72,7 @@ where
                 continue;
             }
 
-            let request_done = request_id
-                .as_ref()
-                .map(|id| !self.engine.pending.requests.contains_key(id))
-                .unwrap_or(true);
+            let request_done = self.request_is_done(request_id.as_ref());
             let active_turns = self.selected_active_turn_count();
             if request_done && active_turns == 0 {
                 if !self.process_next_line(Some(Duration::from_secs(1)))? {
@@ -138,7 +133,7 @@ where
         let request_id = plan.request_id.clone();
         self.send_plan(plan)?;
 
-        while !self.turn_or_request_done(turn_id.as_ref(), request_id.as_ref()) {
+        while !self.planned_command_done(turn_id.as_ref(), request_id.as_ref()) {
             if self.resolve_open_elicitation()? {
                 continue;
             }
@@ -156,21 +151,29 @@ where
         Ok(())
     }
 
-    fn turn_or_request_done(
+    fn planned_command_done(
         &self,
-        turn_id: Option<&angel_engine::TurnId>,
-        request_id: Option<&angel_engine::JsonRpcRequestId>,
+        turn_id: Option<&TurnId>,
+        request_id: Option<&JsonRpcRequestId>,
     ) -> bool {
         if let Some(turn_id) = turn_id {
-            return self
-                .engine
-                .selected
-                .as_ref()
-                .and_then(|id| self.engine.conversations.get(id))
-                .and_then(|conversation| conversation.turns.get(turn_id))
-                .map(|turn| turn.is_terminal())
-                .unwrap_or(false);
+            return self.selected_turn_is_terminal(turn_id);
         }
+
+        self.request_is_done(request_id)
+    }
+
+    fn selected_turn_is_terminal(&self, turn_id: &TurnId) -> bool {
+        self.engine
+            .selected
+            .as_ref()
+            .and_then(|id| self.engine.conversations.get(id))
+            .and_then(|conversation| conversation.turns.get(turn_id))
+            .map(|turn| turn.is_terminal())
+            .unwrap_or(false)
+    }
+
+    fn request_is_done(&self, request_id: Option<&JsonRpcRequestId>) -> bool {
         request_id
             .map(|id| !self.engine.pending.requests.contains_key(id))
             .unwrap_or(true)

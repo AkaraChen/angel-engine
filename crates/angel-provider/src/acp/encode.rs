@@ -553,6 +553,34 @@ fn acp_elicitation_answer_content(fields: &std::collections::BTreeMap<String, St
     )
 }
 
+fn select_permission_option(choices: &[String], decision: &str) -> Option<String> {
+    let desired = match decision {
+        "AllowForSession" => choices
+            .iter()
+            .find(|choice| {
+                let choice = choice.to_ascii_lowercase();
+                choice.contains("session") || choice.contains("always")
+            })
+            .or_else(|| find_allow_choice(choices)),
+        "Allow" => find_allow_choice(choices),
+        "Deny" => choices.iter().find(|choice| {
+            let choice = choice.to_ascii_lowercase();
+            choice.contains("deny") || choice.contains("reject")
+        }),
+        _ => None,
+    };
+    desired.cloned()
+}
+
+fn find_allow_choice(choices: &[String]) -> Option<&String> {
+    choices.iter().find(|choice| {
+        let choice = choice.to_ascii_lowercase();
+        (choice.contains("allow") || choice.contains("approve"))
+            && !choice.contains("session")
+            && !choice.contains("always")
+    })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -809,32 +837,4 @@ mod tests {
             })
         );
     }
-}
-
-fn select_permission_option(choices: &[String], decision: &str) -> Option<String> {
-    let desired = match decision {
-        "AllowForSession" => choices
-            .iter()
-            .find(|choice| {
-                let choice = choice.to_ascii_lowercase();
-                choice.contains("session") || choice.contains("always")
-            })
-            .or_else(|| find_allow_choice(choices)),
-        "Allow" => find_allow_choice(choices),
-        "Deny" => choices.iter().find(|choice| {
-            let choice = choice.to_ascii_lowercase();
-            choice.contains("deny") || choice.contains("reject")
-        }),
-        _ => None,
-    };
-    desired.cloned()
-}
-
-fn find_allow_choice(choices: &[String]) -> Option<&String> {
-    choices.iter().find(|choice| {
-        let choice = choice.to_ascii_lowercase();
-        (choice.contains("allow") || choice.contains("approve"))
-            && !choice.contains("session")
-            && !choice.contains("always")
-    })
 }
