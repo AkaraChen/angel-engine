@@ -1,3 +1,5 @@
+use std::sync::{Arc, Mutex};
+
 use super::ProtocolAdapter;
 use angel_engine::capabilities::{CapabilitySupport, ConversationCapabilities};
 use angel_engine::error::ErrorInfo;
@@ -35,6 +37,7 @@ pub use types::*;
 #[derive(Clone, Debug)]
 pub struct AcpAdapter {
     capabilities: AcpAdapterCapabilities,
+    auth_negotiation_result: Arc<Mutex<Option<Value>>>,
 }
 
 #[derive(Clone, Debug)]
@@ -66,7 +69,10 @@ impl AcpAdapterCapabilities {
 
 impl AcpAdapter {
     pub fn new(capabilities: AcpAdapterCapabilities) -> Self {
-        Self { capabilities }
+        Self {
+            capabilities,
+            auth_negotiation_result: Arc::new(Mutex::new(None)),
+        }
     }
 
     pub fn standard() -> Self {

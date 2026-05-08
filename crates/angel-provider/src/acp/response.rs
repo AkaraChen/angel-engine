@@ -40,6 +40,7 @@ impl AcpAdapter {
                     .unwrap_or_default();
                 let runtime_authentication = &self.capabilities.runtime.authentication;
                 if auth_methods.is_empty() || !runtime_authentication.is_supported() {
+                    self.clear_auth_negotiation_result();
                     let authentication = if runtime_authentication.is_supported() {
                         angel_engine::CapabilitySupport::Unknown
                     } else {
@@ -55,6 +56,7 @@ impl AcpAdapter {
                         })
                         .log(TransportLogKind::State, "ACP runtime initialized");
                 } else {
+                    self.remember_auth_negotiation_result(result);
                     output = output.event(EngineEvent::RuntimeAuthRequired {
                         methods: auth_methods
                             .iter()
@@ -149,14 +151,16 @@ impl AcpAdapter {
                 output = output.log(TransportLogKind::State, "cancel accepted");
             }
             PendingRequest::Authenticate => {
+                let negotiation_result = self.auth_negotiation_result(result);
+                self.clear_auth_negotiation_result();
                 output = output
                     .event(EngineEvent::RuntimeNegotiated {
                         capabilities: acp_runtime_capabilities(
-                            result,
+                            &negotiation_result,
                             angel_engine::CapabilitySupport::Supported,
                         ),
                         conversation_capabilities: Some(acp_conversation_capabilities(
-                            result,
+                            &negotiation_result,
                             self.capabilities(),
                         )),
                     })
@@ -251,6 +255,37 @@ impl AcpAdapter {
         }
         Ok(output)
     }
+}
+
+impl AcpAdapter {
+    fn remember_auth_negotiation_result(&self, result: &Value) {
+        if let Ok(mut stored) = self.auth_negotiation_result.lock() {
+            *stored = Some(result.clone());
+        }
+    }
+
+    fn clear_auth_negotiation_result(&self) {
+        if let Ok(mut stored) = self.auth_negotiation_result.lock() {
+            *stored = None;
+        }
+    }
+
+    fn auth_negotiation_result(&self, result: &Value) -> Value {
+        if acp_response_has_negotiation_data(result) {
+            return result.clone();
+        }
+        self.auth_negotiation_result
+            .lock()
+            .ok()
+            .and_then(|stored| stored.clone())
+            .unwrap_or_else(|| result.clone())
+    }
+}
+
+fn acp_response_has_negotiation_data(result: &Value) -> bool {
+    result.get("agentCapabilities").is_some()
+        || result.get("agentInfo").is_some()
+        || result.get("protocolVersion").is_some()
 }
 
 fn acp_rpc_error_event(pending: &PendingRequest, code: i64, message: &str) -> Option<EngineEvent> {
@@ -567,6 +602,73 @@ mod tests {
                 && conversation_capabilities.lifecycle.fork == angel_engine::CapabilitySupport::Supported
                 && conversation_capabilities.context.additional_directories == angel_engine::CapabilitySupport::Supported
                 && conversation_capabilities.lifecycle.close == angel_engine::CapabilitySupport::Supported
+        ));
+    }
+
+    #[test]
+    fn authenticate_empty_response_preserves_initialize_capabilities() {
+        let adapter = AcpAdapter::standard();
+        let mut engine =
+            AngelEngine::new(angel_engine::ProtocolFlavor::Acp, adapter.capabilities());
+        let request_id = engine
+            .plan_command(angel_engine::EngineCommand::Initialize)
+            .expect("initialize plan")
+            .request_id
+            .expect("request id");
+
+        let output = adapter
+            .decode_response(
+                &engine,
+                &request_id,
+                &json!({
+                    "protocolVersion": 1,
+                    "agentInfo": {
+                        "name": "Kimi Code CLI",
+                        "version": "1.40.0"
+                    },
+                    "authMethods": [
+                        {
+                            "id": "login",
+                            "name": "Login with Kimi account"
+                        }
+                    ],
+                    "agentCapabilities": {
+                        "loadSession": true,
+                        "sessionCapabilities": {
+                            "list": {},
+                            "resume": {}
+                        }
+                    }
+                }),
+            )
+            .expect("initialize response");
+        angel_engine::apply_transport_output(&mut engine, &output).expect("apply initialize");
+        assert!(matches!(
+            engine.runtime,
+            angel_engine::RuntimeState::AwaitingAuth { .. }
+        ));
+
+        let auth_id = engine
+            .plan_command(angel_engine::EngineCommand::Authenticate {
+                method: angel_engine::AuthMethodId::new("login"),
+            })
+            .expect("auth plan")
+            .request_id
+            .expect("request id");
+        let output = adapter
+            .decode_response(&engine, &auth_id, &json!({}))
+            .expect("auth response");
+
+        assert!(matches!(
+            output.events.as_slice(),
+            [EngineEvent::RuntimeNegotiated {
+                capabilities,
+                conversation_capabilities: Some(conversation_capabilities),
+            }] if capabilities.name == "Kimi Code CLI"
+                && capabilities.authentication == angel_engine::CapabilitySupport::Supported
+                && conversation_capabilities.lifecycle.load == angel_engine::CapabilitySupport::Supported
+                && conversation_capabilities.lifecycle.list == angel_engine::CapabilitySupport::Supported
+                && conversation_capabilities.lifecycle.resume == angel_engine::CapabilitySupport::Supported
         ));
     }
 
