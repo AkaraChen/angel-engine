@@ -332,6 +332,7 @@ function AssistantTextMessagePart(
         messagePart.type === "tool-call" ||
         (messagePart.type === "data" &&
           (messagePart.name === "plan" ||
+            messagePart.name === "todo" ||
             messagePart.name === "elicitation")) ||
         (messagePart.type === "reasoning" &&
           (messagePart.text.trim() || messagePart.status.type === "running")),
@@ -1150,7 +1151,10 @@ function formatElicitationPhase(phase: string) {
 }
 
 function DataMessagePart(part: DataMessagePartProps) {
-  if (part.name === "plan" && isChatPlanData(part.data)) {
+  if (
+    (part.name === "plan" || part.name === "todo") &&
+    isChatPlanData(part.data)
+  ) {
     return <PlanMessagePart plan={part.data} />;
   }
 
@@ -1316,9 +1320,12 @@ function PlanMessagePart({ plan }: { plan: ChatPlanData }) {
   const completed = plan.entries.filter(
     (entry) => entry.status === "completed",
   ).length;
+  const isTodoPlan = plan.kind === "todo";
+  const planTitle = isTodoPlan ? "Todo" : "Plan";
   const hasDetails = plan.entries.length > 0 || Boolean(plan.text.trim());
   const buildMode = findBuildModeOption(chatOptions.modeOptions);
   const canStartImplementation =
+    plan.kind === "review" &&
     !isRunning &&
     !startingImplementation &&
     !chatOptions.configLoading &&
@@ -1326,7 +1333,12 @@ function PlanMessagePart({ plan }: { plan: ChatPlanData }) {
     Boolean(buildMode);
 
   if (plan.presentation === "created" || plan.presentation === "updated") {
-    return <PlanMarkerPart presentation={plan.presentation} />;
+    return (
+      <PlanMarkerPart
+        kind={plan.kind ?? "review"}
+        presentation={plan.presentation}
+      />
+    );
   }
 
   const startImplementation = async () => {
@@ -1361,7 +1373,7 @@ function PlanMessagePart({ plan }: { plan: ChatPlanData }) {
       >
         <ListChecks className="size-3.5 shrink-0 text-muted-foreground" />
         <div className="min-w-0 flex-1">
-          <div className="truncate font-medium">Plan</div>
+          <div className="truncate font-medium">{planTitle}</div>
           <div className="mt-0.5 flex min-w-0 items-center gap-1.5 text-muted-foreground">
             {plan.entries.length > 0 ? (
               <span>
@@ -1457,15 +1469,18 @@ function PlanMessagePart({ plan }: { plan: ChatPlanData }) {
 }
 
 function PlanMarkerPart({
+  kind,
   presentation,
 }: {
+  kind: "review" | "todo";
   presentation: "created" | "updated";
 }) {
+  const title = kind === "todo" ? "Todo" : "Plan";
   return (
     <div className="flex min-h-9 w-full items-center gap-2 rounded-md border px-3 py-2 text-xs">
       <ListChecks className="size-3.5 shrink-0 text-muted-foreground" />
       <div className="truncate font-medium">
-        Plan {presentation === "created" ? "created" : "updated"}
+        {title} {presentation === "created" ? "created" : "updated"}
       </div>
     </div>
   );

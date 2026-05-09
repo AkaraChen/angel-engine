@@ -105,6 +105,12 @@ pub enum PlanEntryStatus {
     Completed,
 }
 
+#[napi(string_enum = "lowercase")]
+pub enum PlanDisplayKind {
+    Review,
+    Todo,
+}
+
 #[napi(string_enum = "camelCase")]
 pub enum ActionKind {
     Command,
@@ -435,6 +441,8 @@ pub struct DisplayMessagePartSnapshot {
 
 #[napi(object)]
 pub struct DisplayPlanSnapshot {
+    #[napi(ts_type = "`${PlanDisplayKind}`")]
+    pub kind: PlanDisplayKind,
     pub entries: Vec<PlanEntrySnapshot>,
     pub text: String,
     pub path: Option<String>,
@@ -572,6 +580,7 @@ pub struct TurnSnapshot {
     pub output: Vec<ContentChunk>,
     pub reasoning: Vec<ContentChunk>,
     pub plan: Vec<PlanEntrySnapshot>,
+    pub todo: Vec<PlanEntrySnapshot>,
 }
 
 #[napi(object)]

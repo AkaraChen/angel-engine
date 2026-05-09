@@ -361,6 +361,20 @@ pub(crate) fn events_from_engine_event(
             turn_id: turn_id.to_string(),
             plan: plan_snapshot_for_turn(engine, conversation_id, turn_id).unwrap_or_default(),
         }],
+        EngineEvent::TodoUpdated {
+            conversation_id,
+            turn_id,
+            ..
+        } => vec![ClientEvent::PlanUpdated {
+            conversation_id: conversation_id.to_string(),
+            turn_id: turn_id.to_string(),
+            plan: todo_snapshot_for_turn(engine, conversation_id, turn_id).unwrap_or_else(|| {
+                DisplayPlanSnapshot {
+                    kind: "todo".to_string(),
+                    ..DisplayPlanSnapshot::default()
+                }
+            }),
+        }],
         EngineEvent::TurnTerminal {
             conversation_id,
             turn_id,
@@ -525,6 +539,19 @@ fn plan_snapshot_for_turn(
         .turns
         .get(turn_id)?;
     DisplayPlanSnapshot::from_turn(&TurnSnapshot::from(turn))
+}
+
+fn todo_snapshot_for_turn(
+    engine: &angel_engine::AngelEngine,
+    conversation_id: &angel_engine::ConversationId,
+    turn_id: &angel_engine::TurnId,
+) -> Option<DisplayPlanSnapshot> {
+    let turn = engine
+        .conversations
+        .get(conversation_id)?
+        .turns
+        .get(turn_id)?;
+    DisplayPlanSnapshot::todo_from_turn(&TurnSnapshot::from(turn))
 }
 
 fn content_chunk(delta: &ContentDelta) -> ContentChunk {

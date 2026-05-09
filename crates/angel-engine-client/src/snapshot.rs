@@ -329,10 +329,12 @@ impl From<&angel_engine::DisplayMessagePart> for DisplayMessagePartSnapshot {
                 name,
             } => Self::file(data.clone(), mime_type.clone(), name.clone()),
             angel_engine::DisplayMessagePart::Plan {
+                kind,
                 entries,
                 text,
                 path,
             } => Self::plan(DisplayPlanSnapshot {
+                kind: plan_display_kind_label(kind),
                 entries: entries.iter().map(PlanEntrySnapshot::from).collect(),
                 text: text.clone(),
                 path: path.clone(),
@@ -344,9 +346,11 @@ impl From<&angel_engine::DisplayMessagePart> for DisplayMessagePartSnapshot {
     }
 }
 
-#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct DisplayPlanSnapshot {
+    #[serde(default = "default_plan_kind")]
+    pub kind: String,
     #[serde(default)]
     pub entries: Vec<PlanEntrySnapshot>,
     #[serde(default)]
@@ -355,12 +359,34 @@ pub struct DisplayPlanSnapshot {
     pub path: Option<String>,
 }
 
+impl Default for DisplayPlanSnapshot {
+    fn default() -> Self {
+        Self {
+            kind: default_plan_kind(),
+            entries: Vec::new(),
+            text: String::new(),
+            path: None,
+        }
+    }
+}
+
 impl DisplayPlanSnapshot {
     pub(crate) fn from_turn(turn: &TurnSnapshot) -> Option<Self> {
         let plan = Self {
+            kind: default_plan_kind(),
             entries: turn.plan.clone(),
             text: turn.plan_text.clone(),
             path: turn.plan_path.clone(),
+        };
+        (!plan.is_empty()).then_some(plan)
+    }
+
+    pub(crate) fn todo_from_turn(turn: &TurnSnapshot) -> Option<Self> {
+        let plan = Self {
+            kind: "todo".to_string(),
+            entries: turn.todo.clone(),
+            text: String::new(),
+            path: None,
         };
         (!plan.is_empty()).then_some(plan)
     }
@@ -590,6 +616,8 @@ pub struct TurnSnapshot {
     pub output: Vec<ContentChunk>,
     pub reasoning: Vec<ContentChunk>,
     pub plan: Vec<PlanEntrySnapshot>,
+    #[serde(default)]
+    pub todo: Vec<PlanEntrySnapshot>,
 }
 
 impl From<&TurnState> for TurnSnapshot {
@@ -641,6 +669,11 @@ impl From<&TurnState> for TurnSnapshot {
                 .plan
                 .as_ref()
                 .map(|plan| plan.entries.iter().map(PlanEntrySnapshot::from).collect())
+                .unwrap_or_default(),
+            todo: turn
+                .todo
+                .as_ref()
+                .map(|todo| todo.entries.iter().map(PlanEntrySnapshot::from).collect())
                 .unwrap_or_default(),
         }
     }
@@ -1070,6 +1103,18 @@ fn display_text_part_kind_label(kind: &angel_engine::DisplayTextPartKind) -> Str
         angel_engine::DisplayTextPartKind::Reasoning => "reasoning".to_string(),
         angel_engine::DisplayTextPartKind::Unknown(value) => value.clone(),
     }
+}
+
+fn plan_display_kind_label(kind: &angel_engine::PlanDisplayKind) -> String {
+    match kind {
+        angel_engine::PlanDisplayKind::Review => "review",
+        angel_engine::PlanDisplayKind::Todo => "todo",
+    }
+    .to_string()
+}
+
+fn default_plan_kind() -> String {
+    "review".to_string()
 }
 
 fn action_phase_label(phase: &ActionPhase) -> String {

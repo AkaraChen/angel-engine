@@ -4,8 +4,8 @@ use crate::protocol::ProtocolFlavor;
 use crate::state::{
     ActionKind, ActionOutputDelta, ActionPatch, ActionPhase, ActionState, ContentDelta,
     ContextPatch, ContextScope, ContextUpdate, ConversationLifecycle, DisplayMessagePart,
-    DisplayTextPartKind, PlanEntry, PlanEntryStatus, PlanState, TurnOutcome, TurnPhase,
-    conversation_display_messages,
+    DisplayTextPartKind, PlanDisplayKind, PlanEntry, PlanEntryStatus, PlanState, TurnOutcome,
+    TurnPhase, conversation_display_messages,
 };
 
 use super::{
@@ -222,6 +222,66 @@ fn completed_turn_display_preserves_event_order() {
             && entries.len() == 1
             && entries[0].content == "Implement the UI"
             && final_text == "final reply"
+    ));
+}
+
+#[test]
+fn todo_update_does_not_replace_review_plan() {
+    let capabilities = codex_capabilities();
+    let mut engine = engine_with(ProtocolFlavor::CodexAppServer, capabilities.clone());
+    let conversation_id = insert_ready_conversation(
+        &mut engine,
+        "conv",
+        RemoteConversationId::Known("thread".to_string()),
+        capabilities.clone(),
+    );
+    let turn_id = start_turn(&mut engine, conversation_id.clone());
+
+    engine
+        .apply_event(EngineEvent::PlanUpdated {
+            conversation_id: conversation_id.clone(),
+            turn_id: turn_id.clone(),
+            plan: PlanState {
+                entries: vec![PlanEntry {
+                    content: "Review the color system".to_string(),
+                    status: PlanEntryStatus::Pending,
+                }],
+            },
+        })
+        .expect("review plan");
+    engine
+        .apply_event(EngineEvent::TodoUpdated {
+            conversation_id: conversation_id.clone(),
+            turn_id: turn_id.clone(),
+            todo: PlanState {
+                entries: vec![PlanEntry {
+                    content: "Apply blue theme".to_string(),
+                    status: PlanEntryStatus::Completed,
+                }],
+            },
+        })
+        .expect("todo update");
+
+    let conversation = &engine.conversations[&conversation_id];
+    let turn = &conversation.turns[&turn_id];
+    assert_eq!(turn.plan.as_ref().expect("plan").entries.len(), 1);
+    assert_eq!(turn.todo.as_ref().expect("todo").entries.len(), 1);
+    assert!(matches!(turn.phase, TurnPhase::Planning));
+
+    let messages = conversation_display_messages(engine.protocol, conversation);
+    let assistant = messages
+        .iter()
+        .find(|message| message.id == format!("{turn_id}:assistant"))
+        .expect("assistant message");
+
+    assert!(matches!(
+        assistant.content.as_slice(),
+        [
+            DisplayMessagePart::Plan { kind: PlanDisplayKind::Review, entries: review, .. },
+            DisplayMessagePart::Plan { kind: PlanDisplayKind::Todo, entries: todo, .. }
+        ] if review[0].content == "Review the color system"
+            && todo[0].content == "Apply blue theme"
+            && todo[0].status == PlanEntryStatus::Completed
     ));
 }
 

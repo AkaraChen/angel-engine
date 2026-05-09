@@ -42,8 +42,8 @@ __metadata:
 
 "@angel-engine/client-napi@file:../crates/angel-engine-client-napi::locator=desktop%40workspace%3A.":
   version: 0.1.0
-  resolution: "@angel-engine/client-napi@file:../crates/angel-engine-client-napi#../crates/angel-engine-client-napi::hash=a2b481&locator=desktop%40workspace%3A."
-  checksum: 10c0/72d0429bf5fe733ddb696f8a6f6f61f396d69b90ae0981323651a5dcfc12de243c5cbb732db0983d4b4b4452e2f1cba9949254a6daf07d61e51069b886e055cd
+  resolution: "@angel-engine/client-napi@file:../crates/angel-engine-client-napi#../crates/angel-engine-client-napi::hash=ec830b&locator=desktop%40workspace%3A."
+  checksum: 10c0/23fd13a81f16b5e507e82712a443581c67d9d4c44ea4316828e8dd1de6e16164ba3569a7f7d721743c61501db5dc3dae3dea468646cb630e5a277cfa3581ff9f
   languageName: node
   linkType: hard
 

@@ -30,9 +30,9 @@ export function planEventsFromToolUse(
     return plan
       ? [
           {
-            PlanUpdated: {
+            TodoUpdated: {
               conversation_id: active.conversationId,
-              plan,
+              todo: plan,
               turn_id: active.turnId,
             },
           },
@@ -91,7 +91,7 @@ export function structuredPlanFromToolUse(
   if (todoInput) {
     const plan = planFromTodoInput(todoInput);
     if (!plan) return undefined;
-    return { entries: plan.entries, text: "", type: "plan" };
+    return { entries: plan.entries, kind: "todo", text: "", type: "plan" };
   }
 
   const exitPlanInput = typedClaudeInput(
@@ -105,6 +105,7 @@ export function structuredPlanFromToolUse(
   if (!text && !path) return undefined;
   return {
     entries: markdownPlanEntries(text),
+    kind: "review",
     path,
     text,
     type: "plan",
@@ -159,6 +160,7 @@ function planFromFileWriteToolUse(
   if (!text) return undefined;
   return {
     entries: markdownPlanEntries(text),
+    kind: "review",
     path: writeInput.file_path,
     text,
     type: "plan",
@@ -167,18 +169,25 @@ function planFromFileWriteToolUse(
 
 function isClaudePlanFileWrite(input: ClaudeFileWriteInput): boolean {
   if (typeof input.file_path !== "string") return false;
-  const relativePath = path.relative(claudePlansDir(), input.file_path);
-  return (
-    relativePath.length > 0 &&
-    !relativePath.startsWith("..") &&
-    !path.isAbsolute(relativePath) &&
-    path.extname(input.file_path).toLowerCase() === ".md"
-  );
+  if (path.extname(input.file_path).toLowerCase() !== ".md") return false;
+  return claudePlansDirs().some((plansDir) => {
+    const relativePath = path.relative(plansDir, input.file_path);
+    return (
+      relativePath.length > 0 &&
+      !relativePath.startsWith("..") &&
+      !path.isAbsolute(relativePath)
+    );
+  });
 }
 
-function claudePlansDir(): string {
+function claudePlansDirs(): string[] {
   const configDir = process.env.CLAUDE_CONFIG_DIR?.trim();
-  return path.join(configDir || path.join(homedir(), ".claude"), "plans");
+  const defaultDir = path.join(homedir(), ".claude");
+  return Array.from(
+    new Set(
+      [configDir, defaultDir].filter((dir): dir is string => Boolean(dir)),
+    ),
+  ).map((dir) => path.join(dir, "plans"));
 }
 
 function planFromTodoInput(

@@ -8,7 +8,7 @@ use crate::state::{
 use super::AngelEngine;
 use super::context_effects::sync_context_from_config_options;
 use super::event_helpers::DeltaKind;
-use super::turn_events::mark_turn_planning;
+use super::turn_events::{mark_turn_planning, mark_turn_todo_updated};
 
 impl AngelEngine {
     pub fn apply_event(&mut self, event: EngineEvent) -> Result<TransitionReport, EngineError> {
@@ -250,6 +250,24 @@ impl AngelEngine {
                 })?;
                 turn.plan = Some(plan);
                 mark_turn_planning(turn);
+                Ok(TransitionReport::one(UiEvent::TurnChanged {
+                    conversation_id,
+                    turn_id,
+                }))
+            }
+            EngineEvent::TodoUpdated {
+                conversation_id,
+                turn_id,
+                todo,
+            } => {
+                let conversation = self.conversation_mut(&conversation_id)?;
+                let turn = conversation.turns.get_mut(&turn_id).ok_or_else(|| {
+                    EngineError::TurnNotFound {
+                        turn_id: turn_id.to_string(),
+                    }
+                })?;
+                turn.todo = Some(todo);
+                mark_turn_todo_updated(turn);
                 Ok(TransitionReport::one(UiEvent::TurnChanged {
                     conversation_id,
                     turn_id,

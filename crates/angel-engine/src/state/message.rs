@@ -8,8 +8,8 @@ use crate::protocol::ProtocolFlavor;
 
 use super::{
     ActionKind, ActionOutputDelta, ActionPhase, ActionState, ContentDelta, ContentPart,
-    ConversationState, ElicitationState, HistoryReplayEntry, HistoryRole, PlanEntry,
-    PlanEntryStatus, TurnDisplayContentKind, TurnDisplayPart, TurnState, UserInputRef,
+    ConversationState, ElicitationState, HistoryReplayEntry, HistoryRole, PlanDisplayKind,
+    PlanEntry, PlanEntryStatus, TurnDisplayContentKind, TurnDisplayPart, TurnState, UserInputRef,
 };
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -43,6 +43,7 @@ pub enum DisplayMessagePart {
         name: Option<String>,
     },
     Plan {
+        kind: PlanDisplayKind,
         entries: Vec<PlanEntry>,
         text: String,
         path: Option<String>,
@@ -84,8 +85,14 @@ impl DisplayMessagePart {
         }
     }
 
-    pub fn plan(entries: Vec<PlanEntry>, text: impl Into<String>, path: Option<String>) -> Self {
+    pub fn plan(
+        kind: PlanDisplayKind,
+        entries: Vec<PlanEntry>,
+        text: impl Into<String>,
+        path: Option<String>,
+    ) -> Self {
         Self::Plan {
+            kind,
             entries,
             text: text.into(),
             path,
@@ -257,7 +264,8 @@ fn display_content_from_turn(
         DisplayTextPartKind::Reasoning,
         buffer_text(&turn.reasoning.chunks),
     );
-    append_display_plan_part(&mut parts, turn);
+    append_display_plan_part(&mut parts, turn, PlanDisplayKind::Review);
+    append_display_plan_part(&mut parts, turn, PlanDisplayKind::Todo);
     for action in actions {
         parts.push(DisplayMessagePart::tool(DisplayToolAction::from_action(
             action,
@@ -299,7 +307,7 @@ fn ordered_display_content_from_turn(
                     ),
                 }
             }
-            TurnDisplayPart::Plan => append_display_plan_part(&mut parts, turn),
+            TurnDisplayPart::Plan { kind } => append_display_plan_part(&mut parts, turn, *kind),
             TurnDisplayPart::Action { action_id } => {
                 if let Some(action) = actions.iter().find(|action| action.id == *action_id) {
                     parts.push(DisplayMessagePart::tool(DisplayToolAction::from_action(
@@ -400,18 +408,33 @@ fn append_display_text_part(
     parts.push(DisplayMessagePart::text(kind, text));
 }
 
-fn append_display_plan_part(parts: &mut Vec<DisplayMessagePart>, turn: &TurnState) {
-    let entries = turn
-        .plan
-        .as_ref()
-        .map(|plan| plan.entries.clone())
-        .unwrap_or_default();
-    let text = buffer_text(&turn.plan_text.chunks);
-    let path = turn.plan_path.clone();
+fn append_display_plan_part(
+    parts: &mut Vec<DisplayMessagePart>,
+    turn: &TurnState,
+    kind: PlanDisplayKind,
+) {
+    let (entries, text, path) = match kind {
+        PlanDisplayKind::Review => (
+            turn.plan
+                .as_ref()
+                .map(|plan| plan.entries.clone())
+                .unwrap_or_default(),
+            buffer_text(&turn.plan_text.chunks),
+            turn.plan_path.clone(),
+        ),
+        PlanDisplayKind::Todo => (
+            turn.todo
+                .as_ref()
+                .map(|todo| todo.entries.clone())
+                .unwrap_or_default(),
+            String::new(),
+            None,
+        ),
+    };
     if entries.is_empty() && text.trim().is_empty() && path.is_none() {
         return;
     }
-    parts.push(DisplayMessagePart::plan(entries, text, path));
+    parts.push(DisplayMessagePart::plan(kind, entries, text, path));
 }
 
 fn append_display_parts(parts: &mut Vec<DisplayMessagePart>, next: Vec<DisplayMessagePart>) {
@@ -980,11 +1003,15 @@ fn structured_plan_display_part(text: &str) -> Option<DisplayMessagePart> {
         &value,
         &["path", "savedPath", "saved_path", "filePath", "file_path"],
     );
+    let kind = match string_field(&value, &["kind"]).as_deref() {
+        Some("todo") | Some("todos") => PlanDisplayKind::Todo,
+        _ => PlanDisplayKind::Review,
+    };
 
     if entries.is_empty() && plan_text.trim().is_empty() && path.is_none() {
         return None;
     }
-    Some(DisplayMessagePart::plan(entries, plan_text, path))
+    Some(DisplayMessagePart::plan(kind, entries, plan_text, path))
 }
 
 fn structured_plan_entry(value: &Value) -> Option<PlanEntry> {
@@ -1009,8 +1036,8 @@ fn structured_plan_entry(value: &Value) -> Option<PlanEntry> {
 
 fn structured_plan_entry_status(status: &str) -> PlanEntryStatus {
     match status {
-        "completed" => PlanEntryStatus::Completed,
-        "in_progress" | "inProgress" => PlanEntryStatus::InProgress,
+        "completed" | "Completed" => PlanEntryStatus::Completed,
+        "in_progress" | "inProgress" | "InProgress" => PlanEntryStatus::InProgress,
         _ => PlanEntryStatus::Pending,
     }
 }
@@ -1204,6 +1231,50 @@ mod tests {
     }
 
     #[test]
+    fn hydrated_history_keeps_review_plan_and_todo_plan_separate() {
+        let mut conversation = conversation(ConversationCapabilities::codex_app_server());
+        conversation.history.replay = vec![
+            HistoryReplayEntry {
+                role: HistoryRole::Assistant,
+                content: ContentDelta::Structured(
+                    json!({
+                        "type": "plan",
+                        "kind": "review",
+                        "entries": [{"content": "Review theme options", "status": "pending"}],
+                        "text": "Review theme options"
+                    })
+                    .to_string(),
+                ),
+            },
+            HistoryReplayEntry {
+                role: HistoryRole::Assistant,
+                content: ContentDelta::Structured(
+                    json!({
+                        "type": "plan",
+                        "kind": "todo",
+                        "entries": [{"content": "Apply blue theme", "status": "Completed"}]
+                    })
+                    .to_string(),
+                ),
+            },
+        ];
+
+        let messages = conversation_display_messages(ProtocolFlavor::CodexAppServer, &conversation);
+
+        assert_eq!(messages.len(), 1);
+        assert!(matches!(
+            messages[0].content.as_slice(),
+            [
+                DisplayMessagePart::Plan { kind: PlanDisplayKind::Review, entries: review, .. },
+                DisplayMessagePart::Plan { kind: PlanDisplayKind::Todo, entries: todo, .. },
+            ] if review[0].content == "Review theme options"
+                && review[0].status == PlanEntryStatus::Pending
+                && todo[0].content == "Apply blue theme"
+                && todo[0].status == PlanEntryStatus::Completed
+        ));
+    }
+
+    #[test]
     fn live_turn_projects_same_message_shape() {
         let mut conversation = conversation(ConversationCapabilities::codex_app_server());
         let turn_id = TurnId::new("turn-1");
@@ -1296,7 +1367,7 @@ mod tests {
             messages[0].content.as_slice(),
             [
                 DisplayMessagePart::Text { kind: DisplayTextPartKind::Reasoning, text: reasoning },
-                DisplayMessagePart::Plan { entries, text: plan_text, path },
+                DisplayMessagePart::Plan { entries, text: plan_text, path, .. },
                 DisplayMessagePart::Text { kind: DisplayTextPartKind::Text, text }
             ] if reasoning == "thinking"
                 && entries.len() == 2

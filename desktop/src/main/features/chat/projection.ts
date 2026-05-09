@@ -22,6 +22,7 @@ import type {
 } from "../../../shared/chat";
 import {
   appendChatTextPart,
+  chatPlanPartName,
   chatToolActionToPart,
   imageDataUrl,
   isChatPlanData,
@@ -209,12 +210,14 @@ function contentFromTurnSnapshot(
 ): ChatHistoryMessagePart[] {
   const parts: ChatHistoryMessagePart[] = [];
   appendChatTextPart(parts, "reasoning", turn.reasoningText ?? "");
+  const plan = planFromTurnSnapshot(turn);
+  if (plan) parts.push(planMessagePartData(plan));
   for (const action of actions) {
     parts.push(chatPartFromAction(toChatAction(action)));
   }
+  const todo = todoFromTurnSnapshot(turn);
+  if (todo) parts.push(planMessagePartData(todo));
   appendChatTextPart(parts, "text", turn.outputText ?? "");
-  const plan = planFromTurnSnapshot(turn);
-  if (plan) parts.push({ data: plan, name: "plan", type: "data" });
   return parts;
 }
 
@@ -260,15 +263,15 @@ function projectMessagePart(
 
 function planMessagePart(plan: unknown): ChatHistoryMessagePart[] {
   const data = toChatPlanData(plan);
-  return isChatPlanData(data)
-    ? [
-        {
-          data,
-          name: "plan",
-          type: "data",
-        },
-      ]
-    : [];
+  return isChatPlanData(data) ? [planMessagePartData(data)] : [];
+}
+
+function planMessagePartData(plan: ChatPlanData): ChatHistoryMessagePart {
+  return {
+    data: plan,
+    name: chatPlanPartName(plan),
+    type: "data",
+  };
 }
 
 function planFromTurnSnapshot(turn: TurnSnapshot): ChatPlanData | undefined {
@@ -277,8 +280,22 @@ function planFromTurnSnapshot(turn: TurnSnapshot): ChatPlanData | undefined {
       content: entry.content,
       status: normalizePlanEntryStatus(entry.status),
     })),
+    kind: "review" as const,
     path: turn.planPath ?? null,
     text: turn.planText ?? "",
+  };
+  return isEmptyPlan(data) ? undefined : data;
+}
+
+function todoFromTurnSnapshot(turn: TurnSnapshot): ChatPlanData | undefined {
+  const data = {
+    entries: (turn.todo ?? []).map((entry) => ({
+      content: entry.content,
+      status: normalizePlanEntryStatus(entry.status),
+    })),
+    kind: "todo" as const,
+    path: null,
+    text: "",
   };
   return isEmptyPlan(data) ? undefined : data;
 }
@@ -286,14 +303,17 @@ function planFromTurnSnapshot(turn: TurnSnapshot): ChatPlanData | undefined {
 function toChatPlanData(plan: unknown): ChatPlanData {
   const value = plan as {
     entries?: Array<{ content?: string; status?: string; text?: string }>;
+    kind?: string | null;
     path?: string | null;
     text?: string;
   };
+  const kind = value.kind === "todo" ? "todo" : "review";
   return {
     entries: (value.entries ?? []).map((entry) => ({
       content: entry.content ?? entry.text ?? "",
       status: normalizePlanEntryStatus(entry.status),
     })),
+    kind,
     path: value.path ?? null,
     text: value.text ?? "",
   };

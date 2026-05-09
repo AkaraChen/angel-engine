@@ -2,8 +2,8 @@ use crate::error::EngineError;
 use crate::event::{TransitionReport, UiEvent};
 use crate::ids::{ConversationId, RemoteTurnId, TurnId};
 use crate::state::{
-    ActionPhase, ContentDelta, ConversationLifecycle, ElicitationPhase, TurnDisplayContentKind,
-    TurnDisplayPart, TurnOutcome, TurnPhase, TurnState, UserInputRef,
+    ActionPhase, ContentDelta, ConversationLifecycle, ElicitationPhase, PlanDisplayKind,
+    TurnDisplayContentKind, TurnDisplayPart, TurnOutcome, TurnPhase, TurnState, UserInputRef,
 };
 
 use super::AngelEngine;
@@ -144,19 +144,23 @@ impl AngelEngine {
     }
 }
 
-pub(super) fn append_turn_plan_display_part(turn: &mut TurnState) {
+pub(super) fn append_turn_plan_display_part(turn: &mut TurnState, kind: PlanDisplayKind) {
     if !turn
         .display_parts
         .iter()
-        .any(|part| matches!(part, TurnDisplayPart::Plan))
+        .any(|part| matches!(part, TurnDisplayPart::Plan { kind: existing } if *existing == kind))
     {
-        turn.display_parts.push(TurnDisplayPart::Plan);
+        turn.display_parts.push(TurnDisplayPart::Plan { kind });
     }
 }
 
 pub(super) fn mark_turn_planning(turn: &mut TurnState) {
-    append_turn_plan_display_part(turn);
+    append_turn_plan_display_part(turn, PlanDisplayKind::Review);
     if !turn.is_terminal() {
         turn.phase = TurnPhase::Planning;
     }
+}
+
+pub(super) fn mark_turn_todo_updated(turn: &mut TurnState) {
+    append_turn_plan_display_part(turn, PlanDisplayKind::Todo);
 }

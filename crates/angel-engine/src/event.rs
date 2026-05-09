@@ -111,6 +111,11 @@ pub enum EngineEvent {
         turn_id: TurnId,
         plan: PlanState,
     },
+    TodoUpdated {
+        conversation_id: ConversationId,
+        turn_id: TurnId,
+        todo: PlanState,
+    },
     PlanPathUpdated {
         conversation_id: ConversationId,
         turn_id: TurnId,

@@ -92,10 +92,13 @@ export type ChatPlanEntry = {
 
 export type ChatPlanData = {
   entries: ChatPlanEntry[];
+  kind?: "review" | "todo" | null;
   path?: string | null;
   presentation?: "created" | "updated" | null;
   text: string;
 };
+
+export type ChatPlanPartName = "plan" | "todo";
 
 export type ChatHistoryMessagePart =
   | {
@@ -118,7 +121,7 @@ export type ChatHistoryMessagePart =
     }
   | {
       data: ChatPlanData;
-      name: "plan";
+      name: ChatPlanPartName;
       type: "data";
     }
   | {
@@ -327,6 +330,10 @@ export function isChatPlanData(value: unknown): value is ChatPlanData {
         isChatPlanEntryStatus((entry as Partial<ChatPlanEntry>).status),
     ) &&
     typeof data.text === "string" &&
+    (data.kind === undefined ||
+      data.kind === null ||
+      data.kind === "review" ||
+      data.kind === "todo") &&
     (data.presentation === undefined ||
       data.presentation === null ||
       data.presentation === "created" ||
@@ -370,6 +377,7 @@ export function isChatElicitationData(
 export function cloneChatPlanData(data: ChatPlanData): ChatPlanData {
   return {
     entries: data.entries.map((entry) => ({ ...entry })),
+    kind: data.kind ?? "review",
     path: data.path ?? null,
     presentation: data.presentation ?? null,
     text: data.text,
@@ -382,7 +390,11 @@ export function normalizeChatPlanMessages(
   const locations = planPartLocations(messages);
   if (locations.length === 0) return messages;
 
-  const latest = locations.at(-1);
+  const latestByKind = new Map<string, (typeof locations)[number]>();
+  for (const location of locations) {
+    latestByKind.set(location.kind, location);
+  }
+
   return messages.map((message, messageIndex) => {
     const hasPlan = locations.some(
       (location) => location.messageIndex === messageIndex,
@@ -392,9 +404,13 @@ export function normalizeChatPlanMessages(
     return {
       ...message,
       content: message.content.map((part, partIndex) => {
-        if (part.type !== "data" || part.name !== "plan") return part;
+        if (!isChatPlanPart(part)) return part;
+        const kind = chatPlanKind(part.data);
+        const kindLocations = locations.filter(
+          (location) => location.kind === kind,
+        );
 
-        const locationIndex = locations.findIndex(
+        const locationIndex = kindLocations.findIndex(
           (location) =>
             location.messageIndex === messageIndex &&
             location.partIndex === partIndex,
@@ -403,12 +419,13 @@ export function normalizeChatPlanMessages(
 
         const presentation = planPresentationForLocation(
           locationIndex,
-          latest,
+          latestByKind.get(kind),
           { messageIndex, partIndex },
         );
 
         return {
           ...part,
+          name: chatPlanPartName(part.data),
           data: {
             ...cloneChatPlanData(part.data),
             presentation,
@@ -420,11 +437,19 @@ export function normalizeChatPlanMessages(
 }
 
 function planPartLocations(messages: ChatHistoryMessage[]) {
-  const locations: Array<{ messageIndex: number; partIndex: number }> = [];
+  const locations: Array<{
+    kind: string;
+    messageIndex: number;
+    partIndex: number;
+  }> = [];
   messages.forEach((message, messageIndex) => {
     message.content.forEach((part, partIndex) => {
-      if (part.type === "data" && part.name === "plan") {
-        locations.push({ messageIndex, partIndex });
+      if (isChatPlanPart(part)) {
+        locations.push({
+          kind: chatPlanKind(part.data),
+          messageIndex,
+          partIndex,
+        });
       }
     });
   });
@@ -465,11 +490,12 @@ export function upsertChatPlanPart(
 ) {
   const nextPart: ChatHistoryMessagePart = {
     data: cloneChatPlanData(plan),
-    name: "plan",
+    name: chatPlanPartName(plan),
     type: "data",
   };
   const index = parts.findIndex(
-    (part) => part.type === "data" && part.name === "plan",
+    (part) =>
+      isChatPlanPart(part) && chatPlanKind(part.data) === chatPlanKind(plan),
   );
 
   if (index === -1) {
@@ -483,6 +509,28 @@ export function upsertChatPlanPart(
   }
 
   parts[index] = nextPart;
+}
+
+function chatPlanKind(plan: ChatPlanData) {
+  return plan.kind ?? "review";
+}
+
+export function chatPlanPartName(plan: ChatPlanData): ChatPlanPartName {
+  return chatPlanKind(plan) === "todo" ? "todo" : "plan";
+}
+
+export function isChatPlanPart(part: ChatHistoryMessagePart): part is Extract<
+  ChatHistoryMessagePart,
+  { type: "data" }
+> & {
+  data: ChatPlanData;
+  name: ChatPlanPartName;
+} {
+  return (
+    part.type === "data" &&
+    (part.name === "plan" || part.name === "todo") &&
+    isChatPlanData(part.data)
+  );
 }
 
 export function upsertChatElicitationPart(

@@ -15,6 +15,8 @@ pub struct TurnState {
     pub plan_text: OutputBuffer,
     pub plan_path: Option<String>,
     #[serde(default)]
+    pub todo: Option<PlanState>,
+    #[serde(default)]
     pub display_parts: Vec<TurnDisplayPart>,
     pub started_at: Timestamp,
     pub completed_at: Option<Timestamp>,
@@ -33,6 +35,7 @@ impl TurnState {
             plan: None,
             plan_text: OutputBuffer::default(),
             plan_path: None,
+            todo: None,
             display_parts: Vec::new(),
             started_at,
             completed_at: None,
@@ -51,10 +54,18 @@ pub enum TurnDisplayPart {
         kind: TurnDisplayContentKind,
         chunk_index: usize,
     },
-    Plan,
+    Plan {
+        kind: PlanDisplayKind,
+    },
     Action {
         action_id: ActionId,
     },
+}
+
+#[derive(serde::Serialize, serde::Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
+pub enum PlanDisplayKind {
+    Review,
+    Todo,
 }
 
 #[derive(serde::Serialize, serde::Deserialize, Clone, Debug, PartialEq, Eq)]

@@ -25,6 +25,7 @@ import type {
 } from "@/shared/chat";
 import {
   appendChatTextPart,
+  chatPlanPartName,
   chatPartsText,
   chatToolActionToPart,
   cloneChatPlanData,
@@ -32,6 +33,7 @@ import {
   imageDataUrl,
   isChatElicitationData,
   isChatPlanData,
+  isChatPlanPart,
   isChatToolAction,
   normalizeChatPlanMessages,
   parseDataUrl,
@@ -1120,7 +1122,11 @@ function normalizeEnginePlanMessages(
   const locations = enginePlanPartLocations(messages);
   if (locations.length === 0) return messages;
 
-  const latest = locations.at(-1);
+  const latestByKind = new Map<string, (typeof locations)[number]>();
+  for (const location of locations) {
+    latestByKind.set(location.kind, location);
+  }
+
   return messages.map((message, messageIndex) => {
     const hasPlan = locations.some(
       (location) => location.messageIndex === messageIndex,
@@ -1131,8 +1137,12 @@ function normalizeEnginePlanMessages(
       ...message,
       content: message.content.map((part, partIndex) => {
         if (!isEnginePlanPart(part)) return part;
+        const kind = chatPlanKind(part.data);
+        const kindLocations = locations.filter(
+          (location) => location.kind === kind,
+        );
 
-        const locationIndex = locations.findIndex(
+        const locationIndex = kindLocations.findIndex(
           (location) =>
             location.messageIndex === messageIndex &&
             location.partIndex === partIndex,
@@ -1141,12 +1151,13 @@ function normalizeEnginePlanMessages(
 
         const presentation = enginePlanPresentationForLocation(
           locationIndex,
-          latest,
+          latestByKind.get(kind),
           { messageIndex, partIndex },
         );
 
         return {
           ...part,
+          name: chatPlanPartName(part.data),
           data: {
             ...cloneChatPlanData(part.data),
             presentation,
@@ -1158,11 +1169,19 @@ function normalizeEnginePlanMessages(
 }
 
 function enginePlanPartLocations(messages: EngineMessage[]) {
-  const locations: Array<{ messageIndex: number; partIndex: number }> = [];
+  const locations: Array<{
+    kind: string;
+    messageIndex: number;
+    partIndex: number;
+  }> = [];
   messages.forEach((message, messageIndex) => {
     message.content.forEach((part, partIndex) => {
       if (isEnginePlanPart(part)) {
-        locations.push({ messageIndex, partIndex });
+        locations.push({
+          kind: chatPlanKind(part.data),
+          messageIndex,
+          partIndex,
+        });
       }
     });
   });
@@ -1190,12 +1209,13 @@ function isEnginePlanPart(
   part: EngineMessage["content"][number],
 ): part is EngineMessage["content"][number] & {
   data: ChatPlanData;
-  name: "plan";
+  name: "plan" | "todo";
   type: "data";
 } {
   return (
     part.type === "data" &&
-    (part as { name?: unknown }).name === "plan" &&
+    ((part as { name?: unknown }).name === "plan" ||
+      (part as { name?: unknown }).name === "todo") &&
     isChatPlanData((part as { data?: unknown }).data)
   );
 }
@@ -1270,7 +1290,7 @@ function mergeFinalResultParts(
   finalParts: ChatHistoryMessagePart[],
 ) {
   for (const part of finalParts) {
-    if (part.type === "data" && part.name === "plan") {
+    if (isChatPlanPart(part)) {
       upsertTurnPlanPartAtEnd(parts, part.data);
     } else if (part.type === "data" && part.name === "elicitation") {
       upsertElicitationPart(parts, part.data);
@@ -1286,14 +1306,19 @@ function upsertTurnPlanPartAtEnd(
 ) {
   const nextPart: ChatHistoryMessagePart = {
     data: cloneChatPlanData(plan),
-    name: "plan",
+    name: chatPlanPartName(plan),
     type: "data",
   };
   const index = parts.findIndex(
-    (part) => part.type === "data" && part.name === "plan",
+    (part) =>
+      isChatPlanPart(part) && chatPlanKind(part.data) === chatPlanKind(plan),
   );
   if (index !== -1) parts.splice(index, 1);
   parts.push(nextPart);
+}
+
+function chatPlanKind(plan: ChatPlanData) {
+  return plan.kind ?? "review";
 }
 
 function upsertElicitationPart(
@@ -1734,8 +1759,17 @@ function engineMessageContentToHistoryParts(
       case "file":
         return [fileHistoryPartFromMessagePart(part)];
       case "data":
-        if (part.name === "plan" && isChatPlanData(part.data)) {
-          return [{ data: part.data, name: "plan", type: "data" }];
+        if (
+          (part.name === "plan" || part.name === "todo") &&
+          isChatPlanData(part.data)
+        ) {
+          return [
+            {
+              data: part.data,
+              name: chatPlanPartName(part.data),
+              type: "data",
+            },
+          ];
         }
         if (part.name === "elicitation" && isChatElicitationData(part.data)) {
           return [{ data: part.data, name: "elicitation", type: "data" }];

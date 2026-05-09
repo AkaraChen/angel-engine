@@ -492,11 +492,14 @@ impl AngelSession {
                         active.collector.reasoning.clone(),
                     ));
                 }
-                if let Some(plan_part) = active.collector.plan_message_part() {
+                if let Some(plan_part) = active.collector.review_plan_message_part() {
                     content.push(plan_part);
                 }
                 for action in &active.collector.actions {
                     content.push(DisplayMessagePartSnapshot::tool(action.into()));
+                }
+                if let Some(todo_part) = active.collector.todo_message_part() {
+                    content.push(todo_part);
                 }
                 if !active.collector.text.is_empty() {
                     content.push(DisplayMessagePartSnapshot::text(
@@ -706,6 +709,7 @@ struct TurnCollector {
     actions: Vec<ActionSnapshot>,
     streaming_actions: HashMap<String, DisplayToolActionSnapshot>,
     plan: DisplayPlanSnapshot,
+    todo: DisplayPlanSnapshot,
     reasoning: String,
     text: String,
 }
@@ -718,6 +722,10 @@ impl TurnCollector {
             actions: Vec::new(),
             streaming_actions: HashMap::new(),
             plan: DisplayPlanSnapshot::default(),
+            todo: DisplayPlanSnapshot {
+                kind: "todo".to_string(),
+                ..DisplayPlanSnapshot::default()
+            },
             reasoning: String::new(),
             text: String::new(),
         }
@@ -832,8 +840,10 @@ impl TurnCollector {
         if !self.accepts_turn(Some(&turn_id)) || text.is_empty() {
             return;
         }
+        self.plan.kind = "review".to_string();
         self.plan.text.push_str(&text);
-        self.push_plan_event(Some(turn_id), events);
+        let plan = self.plan.clone();
+        self.push_plan_event(Some(turn_id), plan, events);
     }
 
     fn accept_plan_update(
@@ -845,21 +855,38 @@ impl TurnCollector {
         if !self.accepts_turn(Some(&turn_id)) {
             return;
         }
-        self.plan = plan;
-        self.push_plan_event(Some(turn_id), events);
+        if plan.kind == "todo" {
+            self.todo = plan.clone();
+        } else {
+            self.plan = DisplayPlanSnapshot {
+                kind: "review".to_string(),
+                ..plan.clone()
+            };
+        }
+        self.push_plan_event(Some(turn_id), plan, events);
     }
 
-    fn plan_message_part(&self) -> Option<DisplayMessagePartSnapshot> {
+    fn review_plan_message_part(&self) -> Option<DisplayMessagePartSnapshot> {
         (!self.plan.is_empty()).then(|| DisplayMessagePartSnapshot::plan(self.plan.clone()))
     }
 
-    fn push_plan_event(&self, turn_id: Option<String>, events: &mut VecDeque<TurnRunEvent>) {
-        let Some(message_part) = self.plan_message_part() else {
+    fn todo_message_part(&self) -> Option<DisplayMessagePartSnapshot> {
+        (!self.todo.is_empty()).then(|| DisplayMessagePartSnapshot::plan(self.todo.clone()))
+    }
+
+    fn push_plan_event(
+        &self,
+        turn_id: Option<String>,
+        plan: DisplayPlanSnapshot,
+        events: &mut VecDeque<TurnRunEvent>,
+    ) {
+        if plan.is_empty() {
             return;
-        };
+        }
+        let message_part = DisplayMessagePartSnapshot::plan(plan.clone());
         events.push_back(TurnRunEvent::PlanUpdated {
             turn_id,
-            plan: self.plan.clone(),
+            plan,
             message_part,
         });
     }
