@@ -1,18 +1,21 @@
+import { useState } from "react";
 import type { ReactElement } from "react";
-import { AnimatePresence } from "framer-motion";
-import { Loader2, MessageSquare } from "lucide-react";
+import { AnimatePresence, motion } from "framer-motion";
+import { ChevronRight, Loader2, MessageSquare } from "lucide-react";
 
 import {
   AnimatedSidebarMenuItem,
   MacSidebarMenuButton,
   SidebarSectionHeader,
+  sidebarMotion,
 } from "@/components/workspace-sidebar-primitives";
+import { Button } from "@/components/ui/button";
 import {
   SidebarGroup,
   SidebarGroupContent,
   SidebarMenu,
 } from "@/components/ui/sidebar";
-import { ChatRunningPulse } from "@/features/chat/components/chat-running-pulse";
+import { ChatSidebarItem } from "@/features/chat/components/chat-sidebar-item";
 import type { Chat } from "@/shared/chat";
 
 type MaybeAsync = void | Promise<void>;
@@ -32,49 +35,64 @@ export function ChatSidebarSection({
   selectedChatId,
   standaloneChats,
 }: ChatSidebarSectionProps): ReactElement {
+  const [isCollapsed, setIsCollapsed] = useState(false);
+
   return (
     <SidebarGroup className="py-1">
-      <SidebarSectionHeader label="Chats" />
+      <SidebarSectionHeader label="Chats">
+        <Button asChild size="icon-xs" title="Toggle chats" variant="ghost">
+          <motion.button
+            onClick={() => setIsCollapsed((current) => !current)}
+            transition={sidebarMotion}
+            type="button"
+            whileTap={{ scale: 0.96 }}
+          >
+            <motion.span animate={{ rotate: isCollapsed ? 0 : 90 }}>
+              <ChevronRight className="size-4" />
+            </motion.span>
+            <span className="sr-only">Toggle chats</span>
+          </motion.button>
+        </Button>
+      </SidebarSectionHeader>
       <SidebarGroupContent>
-        <SidebarMenu>
-          <AnimatePresence initial={false}>
-            {isLoading ? (
-              <AnimatedSidebarMenuItem key="chats-loading">
-                <MacSidebarMenuButton disabled>
-                  <Loader2 className="animate-spin" />
-                  <span>Loading chats</span>
-                </MacSidebarMenuButton>
-              </AnimatedSidebarMenuItem>
-            ) : null}
+        <AnimatePresence initial={false}>
+          {!isCollapsed ? (
+            <SidebarMenu>
+              <AnimatePresence initial={false}>
+                {isLoading ? (
+                  <AnimatedSidebarMenuItem key="chats-loading">
+                    <MacSidebarMenuButton disabled>
+                      <Loader2 className="animate-spin" />
+                      <span>Loading chats</span>
+                    </MacSidebarMenuButton>
+                  </AnimatedSidebarMenuItem>
+                ) : null}
 
-            {!isLoading && standaloneChats.length === 0 ? (
-              <AnimatedSidebarMenuItem key="chats-empty">
-                <MacSidebarMenuButton disabled>
-                  <MessageSquare />
-                  <span>No standalone chats</span>
-                </MacSidebarMenuButton>
-              </AnimatedSidebarMenuItem>
-            ) : null}
+                {!isLoading && standaloneChats.length === 0 ? (
+                  <AnimatedSidebarMenuItem key="chats-empty">
+                    <MacSidebarMenuButton disabled>
+                      <MessageSquare />
+                      <span>No standalone chats</span>
+                    </MacSidebarMenuButton>
+                  </AnimatedSidebarMenuItem>
+                ) : null}
 
-            {standaloneChats.map((chat) => (
-              <AnimatedSidebarMenuItem key={chat.id}>
-                <MacSidebarMenuButton
-                  isActive={chat.id === selectedChatId}
-                  onClick={() => void onOpenChat(chat)}
-                  onContextMenu={(event) => {
-                    event.preventDefault();
-                    void onShowChatContextMenu(chat);
-                  }}
-                  title={chat.cwd ?? chat.title}
-                >
-                  <MessageSquare />
-                  <span className="min-w-0 flex-1 truncate">{chat.title}</span>
-                  <ChatRunningPulse chatId={chat.id} />
-                </MacSidebarMenuButton>
-              </AnimatedSidebarMenuItem>
-            ))}
-          </AnimatePresence>
-        </SidebarMenu>
+                {standaloneChats.map((chat) => (
+                  <AnimatedSidebarMenuItem key={chat.id}>
+                    <ChatSidebarItem
+                      chatId={chat.id}
+                      isActive={chat.id === selectedChatId}
+                      onOpenChat={() => void onOpenChat(chat)}
+                      onShowContextMenu={() => onShowChatContextMenu(chat)}
+                      title={chat.title}
+                      tooltip={chat.cwd ?? chat.title}
+                    />
+                  </AnimatedSidebarMenuItem>
+                ))}
+              </AnimatePresence>
+            </SidebarMenu>
+          ) : null}
+        </AnimatePresence>
       </SidebarGroupContent>
     </SidebarGroup>
   );

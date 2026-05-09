@@ -15,18 +15,15 @@ import {
   SidebarGroup,
   SidebarGroupContent,
   SidebarMenu,
-  SidebarMenuSub,
-  SidebarMenuSubItem,
 } from "@/components/ui/sidebar";
 import {
   AnimatedSidebarMenuItem,
   MacSidebarMenuAction,
   MacSidebarMenuButton,
-  MacSidebarMenuSubButton,
   SidebarSectionHeader,
   sidebarMotion,
 } from "@/components/workspace-sidebar-primitives";
-import { ChatRunningPulse } from "@/features/chat/components/chat-running-pulse";
+import { ChatSidebarItem } from "@/features/chat/components/chat-sidebar-item";
 import type { Chat } from "@/shared/chat";
 import type { Project } from "@/shared/projects";
 
@@ -166,7 +163,6 @@ export function ProjectSidebarSection({
                 <AnimatedSidebarMenuItem key={project.id}>
                   <MacSidebarMenuButton
                     aria-expanded={hasChats ? isExpanded : undefined}
-                    isActive={project.id === selectedProjectId}
                     onClick={() => {
                       toggleProjectExpanded(project.id);
                     }}
@@ -177,7 +173,10 @@ export function ProjectSidebarSection({
                     title={project.path}
                   >
                     <Folder />
-                    <span className="min-w-0 flex-1 truncate">
+                    <span
+                      className="block min-w-0 flex-1 overflow-hidden truncate whitespace-nowrap text-left"
+                      title={projectDisplayName}
+                    >
                       {projectDisplayName}
                     </span>
                     {hasChats ? (
@@ -208,33 +207,29 @@ export function ProjectSidebarSection({
                     {hasChats && isExpanded ? (
                       <motion.div
                         animate={{ height: "auto", opacity: 1 }}
-                        className="overflow-hidden"
+                        className="overflow-hidden py-0.5"
                         exit={{ height: 0, opacity: 0 }}
                         initial={{ height: 0, opacity: 0 }}
                         key={`project-chats-${project.id}`}
                         transition={sidebarMotion}
                         layout="position"
                       >
-                        <SidebarMenuSub>
+                        <SidebarMenu>
                           {projectChats.map((chat) => (
-                            <SidebarMenuSubItem key={chat.id}>
-                              <MacSidebarMenuSubButton
+                            <AnimatedSidebarMenuItem key={chat.id}>
+                              <ChatSidebarItem
+                                chatId={chat.id}
                                 isActive={chat.id === selectedChatId}
-                                onClick={() => void onOpenChat(chat)}
-                                onContextMenu={(event) => {
-                                  event.preventDefault();
-                                  void onShowChatContextMenu(chat);
-                                }}
-                                title={chat.cwd ?? chat.title}
-                              >
-                                <span className="min-w-0 flex-1 truncate">
-                                  {chat.title}
-                                </span>
-                                <ChatRunningPulse chatId={chat.id} />
-                              </MacSidebarMenuSubButton>
-                            </SidebarMenuSubItem>
+                                onOpenChat={() => void onOpenChat(chat)}
+                                onShowContextMenu={() =>
+                                  onShowChatContextMenu(chat)
+                                }
+                                title={chat.title}
+                                tooltip={chat.cwd ?? chat.title}
+                              />
+                            </AnimatedSidebarMenuItem>
                           ))}
-                        </SidebarMenuSub>
+                        </SidebarMenu>
                       </motion.div>
                     ) : null}
                   </AnimatePresence>
