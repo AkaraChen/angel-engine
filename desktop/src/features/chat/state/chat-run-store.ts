@@ -36,7 +36,6 @@ import {
   normalizeChatPlanMessages,
   parseDataUrl,
   upsertChatElicitationPart,
-  upsertChatPlanPart,
 } from "@/shared/chat";
 
 const STREAM_FLUSH_MIN_CHARS = 24;
@@ -883,7 +882,7 @@ async function consumeRunStream({
       } else if (event.type === "toolDelta") {
         appendToolActionDeltaPart(accumulator.parts, event.action);
       } else if (event.type === "plan") {
-        upsertChatPlanPart(accumulator.parts, event.plan);
+        upsertTurnPlanPartAtEnd(accumulator.parts, event.plan);
       } else {
         appendChatTextPart(accumulator.parts, event.part, event.text);
         pendingDeltaChars += event.text.length;
@@ -960,6 +959,7 @@ function autoApprovePermissionElicitation({
   slotKey: string;
 }) {
   if (!isPermissionElicitation(elicitation)) return false;
+  if (isPlanApprovalElicitation(elicitation, parts)) return false;
   if (!shouldAutoApprovePermission(activeRun, slotKey, elicitation.id)) {
     return false;
   }
@@ -985,6 +985,7 @@ function autoApprovePermissionToolAction({
   slotKey: string;
 }) {
   if (action.phase !== "awaitingDecision") return false;
+  if (isPlanApprovalToolAction(action)) return false;
   const elicitation = chatElicitationFromAction(action);
   if (!isPermissionElicitation(elicitation)) return false;
   if (!shouldAutoApprovePermission(activeRun, slotKey, action.id)) {
@@ -1270,13 +1271,29 @@ function mergeFinalResultParts(
 ) {
   for (const part of finalParts) {
     if (part.type === "data" && part.name === "plan") {
-      upsertChatPlanPart(parts, part.data);
+      upsertTurnPlanPartAtEnd(parts, part.data);
     } else if (part.type === "data" && part.name === "elicitation") {
       upsertElicitationPart(parts, part.data);
     } else if (part.type === "tool-call") {
       upsertToolActionPart(parts, part.artifact);
     }
   }
+}
+
+function upsertTurnPlanPartAtEnd(
+  parts: ChatHistoryMessagePart[],
+  plan: ChatPlanData,
+) {
+  const nextPart: ChatHistoryMessagePart = {
+    data: cloneChatPlanData(plan),
+    name: "plan",
+    type: "data",
+  };
+  const index = parts.findIndex(
+    (part) => part.type === "data" && part.name === "plan",
+  );
+  if (index !== -1) parts.splice(index, 1);
+  parts.push(nextPart);
 }
 
 function upsertElicitationPart(
@@ -1448,6 +1465,23 @@ function isPermissionElicitation(
     elicitation?.kind === "approval" ||
     elicitation?.kind === "permissionProfile"
   );
+}
+
+function isPlanApprovalElicitation(
+  elicitation: ChatElicitation,
+  parts: ChatHistoryMessagePart[],
+) {
+  const actionId = elicitation.actionId ?? elicitation.id;
+  return parts.some(
+    (part) =>
+      part.type === "tool-call" &&
+      part.artifact.id === actionId &&
+      isPlanApprovalToolAction(part.artifact),
+  );
+}
+
+function isPlanApprovalToolAction(action: ChatToolAction) {
+  return action.kind === "plan";
 }
 
 function elicitationPhaseFromAction(

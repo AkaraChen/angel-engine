@@ -78,6 +78,115 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@anthropic-ai/claude-agent-sdk-darwin-arm64@npm:0.2.133":
+  version: 0.2.133
+  resolution: "@anthropic-ai/claude-agent-sdk-darwin-arm64@npm:0.2.133"
+  conditions: os=darwin & cpu=arm64
+  languageName: node
+  linkType: hard
+
+"@anthropic-ai/claude-agent-sdk-darwin-x64@npm:0.2.133":
+  version: 0.2.133
+  resolution: "@anthropic-ai/claude-agent-sdk-darwin-x64@npm:0.2.133"
+  conditions: os=darwin & cpu=x64
+  languageName: node
+  linkType: hard
+
+"@anthropic-ai/claude-agent-sdk-linux-arm64-musl@npm:0.2.133":
+  version: 0.2.133
+  resolution: "@anthropic-ai/claude-agent-sdk-linux-arm64-musl@npm:0.2.133"
+  conditions: os=linux & cpu=arm64 & libc=musl
+  languageName: node
+  linkType: hard
+
+"@anthropic-ai/claude-agent-sdk-linux-arm64@npm:0.2.133":
+  version: 0.2.133
+  resolution: "@anthropic-ai/claude-agent-sdk-linux-arm64@npm:0.2.133"
+  conditions: os=linux & cpu=arm64 & libc=glibc
+  languageName: node
+  linkType: hard
+
+"@anthropic-ai/claude-agent-sdk-linux-x64-musl@npm:0.2.133":
+  version: 0.2.133
+  resolution: "@anthropic-ai/claude-agent-sdk-linux-x64-musl@npm:0.2.133"
+  conditions: os=linux & cpu=x64 & libc=musl
+  languageName: node
+  linkType: hard
+
+"@anthropic-ai/claude-agent-sdk-linux-x64@npm:0.2.133":
+  version: 0.2.133
+  resolution: "@anthropic-ai/claude-agent-sdk-linux-x64@npm:0.2.133"
+  conditions: os=linux & cpu=x64 & libc=glibc
+  languageName: node
+  linkType: hard
+
+"@anthropic-ai/claude-agent-sdk-win32-arm64@npm:0.2.133":
+  version: 0.2.133
+  resolution: "@anthropic-ai/claude-agent-sdk-win32-arm64@npm:0.2.133"
+  conditions: os=win32 & cpu=arm64
+  languageName: node
+  linkType: hard
+
+"@anthropic-ai/claude-agent-sdk-win32-x64@npm:0.2.133":
+  version: 0.2.133
+  resolution: "@anthropic-ai/claude-agent-sdk-win32-x64@npm:0.2.133"
+  conditions: os=win32 & cpu=x64
+  languageName: node
+  linkType: hard
+
+"@anthropic-ai/claude-agent-sdk@npm:^0.2.133":
+  version: 0.2.133
+  resolution: "@anthropic-ai/claude-agent-sdk@npm:0.2.133"
+  dependencies:
+    "@anthropic-ai/claude-agent-sdk-darwin-arm64": "npm:0.2.133"
+    "@anthropic-ai/claude-agent-sdk-darwin-x64": "npm:0.2.133"
+    "@anthropic-ai/claude-agent-sdk-linux-arm64": "npm:0.2.133"
+    "@anthropic-ai/claude-agent-sdk-linux-arm64-musl": "npm:0.2.133"
+    "@anthropic-ai/claude-agent-sdk-linux-x64": "npm:0.2.133"
+    "@anthropic-ai/claude-agent-sdk-linux-x64-musl": "npm:0.2.133"
+    "@anthropic-ai/claude-agent-sdk-win32-arm64": "npm:0.2.133"
+    "@anthropic-ai/claude-agent-sdk-win32-x64": "npm:0.2.133"
+    "@anthropic-ai/sdk": "npm:^0.81.0"
+    "@modelcontextprotocol/sdk": "npm:^1.29.0"
+  peerDependencies:
+    zod: ^4.0.0
+  dependenciesMeta:
+    "@anthropic-ai/claude-agent-sdk-darwin-arm64":
+      optional: true
+    "@anthropic-ai/claude-agent-sdk-darwin-x64":
+      optional: true
+    "@anthropic-ai/claude-agent-sdk-linux-arm64":
+      optional: true
+    "@anthropic-ai/claude-agent-sdk-linux-arm64-musl":
+      optional: true
+    "@anthropic-ai/claude-agent-sdk-linux-x64":
+      optional: true
+    "@anthropic-ai/claude-agent-sdk-linux-x64-musl":
+      optional: true
+    "@anthropic-ai/claude-agent-sdk-win32-arm64":
+      optional: true
+    "@anthropic-ai/claude-agent-sdk-win32-x64":
+      optional: true
+  checksum: 10c0/4c83aefa0ab9c55aca6d8b4e2b25f472eab4adc56d607811aa9a0974d699d9308e3b5ad6e0f5426db5ed941836d7acf89e3287557e738c9b3aab8cab968fe8aa
+  languageName: node
+  linkType: hard
+
+"@anthropic-ai/sdk@npm:^0.81.0":
+  version: 0.81.0
+  resolution: "@anthropic-ai/sdk@npm:0.81.0"
+  dependencies:
+    json-schema-to-ts: "npm:^3.1.1"
+  peerDependencies:
+    zod: ^3.25.0 || ^4.0.0
+  peerDependenciesMeta:
+    zod:
+      optional: true
+  bin:
+    anthropic-ai-sdk: bin/cli
+  checksum: 10c0/9ce1de04f88c05a74e67d07e8707d74815df8a9ad4977fbd7ad6fc146cef521214f11c4faeab5f5c00d76ee5671bf4e223dadf0e2f98c2c979aa9e33c8f89d8d
+  languageName: node
+  linkType: hard
+
 "@ark/schema@npm:0.56.0":
   version: 0.56.0
   resolution: "@ark/schema@npm:0.56.0"
@@ -494,7 +603,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@babel/runtime@npm:^7.20.13":
+"@babel/runtime@npm:^7.18.3, @babel/runtime@npm:^7.20.13":
   version: 7.29.2
   resolution: "@babel/runtime@npm:7.29.2"
   checksum: 10c0/30b80a0140d16467792e1bbeb06f655b0dab70407da38dfac7fedae9c859f9ae9d846ef14ad77bd3814c064295fe9b1bc551f1541ea14646ae9f22b71a8bc17a
@@ -1659,7 +1768,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@modelcontextprotocol/sdk@npm:^1.26.0":
+"@modelcontextprotocol/sdk@npm:^1.26.0, @modelcontextprotocol/sdk@npm:^1.29.0":
   version: 1.29.0
   resolution: "@modelcontextprotocol/sdk@npm:1.29.0"
   dependencies:
@@ -6528,6 +6637,7 @@ __metadata:
   resolution: "desktop@workspace:."
   dependencies:
     "@angel-engine/client-napi": "file:../crates/angel-engine-client-napi"
+    "@anthropic-ai/claude-agent-sdk": "npm:^0.2.133"
     "@assistant-ui/react": "npm:^0.12.28"
     "@assistant-ui/react-streamdown": "npm:^0.1.11"
     "@egoist/tipc": "npm:^0.3.2"
@@ -6586,6 +6696,7 @@ __metadata:
     vite: "npm:^8.0.10"
     wouter: "npm:^3.9.0"
     xstate: "npm:^5.31.0"
+    zod: "npm:^4.4.3"
   languageName: unknown
   linkType: soft
 
@@ -9366,6 +9477,16 @@ __metadata:
   version: 2.3.1
   resolution: "json-parse-even-better-errors@npm:2.3.1"
   checksum: 10c0/140932564c8f0b88455432e0f33c4cb4086b8868e37524e07e723f4eaedb9425bdc2bafd71bd1d9765bd15fd1e2d126972bc83990f55c467168c228c24d665f3
+  languageName: node
+  linkType: hard
+
+"json-schema-to-ts@npm:^3.1.1":
+  version: 3.1.1
+  resolution: "json-schema-to-ts@npm:3.1.1"
+  dependencies:
+    "@babel/runtime": "npm:^7.18.3"
+    ts-algebra: "npm:^2.0.0"
+  checksum: 10c0/609bae04aa5e860a11b6d30ccf41445fae1c7f66fb600c1d170257cf33aa468aa9d03aa046428c3688aff0ff450c2b0c76584b66fa4a5d0da8e33799e4c439a6
   languageName: node
   linkType: hard
 
@@ -13762,6 +13883,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"ts-algebra@npm:^2.0.0":
+  version: 2.0.0
+  resolution: "ts-algebra@npm:2.0.0"
+  checksum: 10c0/4ae93bec1bada635bba425854eec323dad50b6ffe86bc04ad2d7f9ce3fb129d673dcf483e19a6e70d07a3a9083e6a0a7f4e004bb8d2164cddc60cc9540ba187f
+  languageName: node
+  linkType: hard
+
 "ts-api-utils@npm:^2.5.0":
   version: 2.5.0
   resolution: "ts-api-utils@npm:2.5.0"
@@ -14936,7 +15064,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"zod@npm:^3.25 || ^4.0, zod@npm:^4.3.6":
+"zod@npm:^3.25 || ^4.0, zod@npm:^4.3.6, zod@npm:^4.4.3":
   version: 4.4.3
   resolution: "zod@npm:4.4.3"
   checksum: 10c0/7ea31b558e88f9faf44f31dd185e2e1cbf51fed3081787fb96cc2534749b50c0acfc6da7f0922a7353ed092dd358c7d50c28ea96c94d04af64191bd33152eca3

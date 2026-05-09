@@ -119,6 +119,7 @@ type ChatThreadRuntimeProps = ActiveChatThreadProps & {
 };
 
 type ChatProjectContext = {
+  id?: string;
   name?: string;
   path?: string;
   project?: Project;
@@ -182,7 +183,7 @@ function WorkspacePageContent({
   const selectedProject = selectedProjectId
     ? projects.find((project) => project.id === selectedProjectId)
     : undefined;
-  const selectedProjectPath = selectedChat?.cwd ?? selectedProject?.path;
+  const selectedProjectPath = selectedProject?.path ?? selectedChat?.cwd;
   const selectedProjectName = selectedProjectPath
     ? getProjectDisplayName(selectedProjectPath)
     : undefined;
@@ -638,9 +639,7 @@ function WorkspacePageContent({
                     onChatCreated={updateChatFromRun}
                     onChatUpdated={updateChatFromRun}
                     prewarmId={prewarmQuery.data?.prewarmId}
-                    projectId={
-                      selectedChat?.projectId ?? selectedProject?.id ?? null
-                    }
+                    projectId={selectedProjectId ?? null}
                     projectPath={selectedProjectPath ?? undefined}
                     reasoningEffort={reasoningEffortOverride}
                     runtime={activeRuntime}
@@ -847,7 +846,7 @@ function ChatThreadRuntime({
         mode={undefined}
         onChatCreated={onChatCreated}
         onChatUpdated={onChatUpdated}
-        projectId={selectedChat.projectId ?? projectContext.project?.id ?? null}
+        projectId={projectContext.id ?? selectedChat.projectId ?? null}
         projectPath={projectContext.path ?? undefined}
         reasoningEffort={reasoningEffortOverride}
         runtime={chatRuntime}
@@ -998,9 +997,10 @@ function chatProjectContext(
   const project = projectId
     ? projects.find((item) => item.id === projectId)
     : undefined;
-  const path = chat.cwd ?? project?.path;
+  const path = project?.path ?? chat.cwd ?? undefined;
 
   return {
+    id: projectId,
     name: path ? getProjectDisplayName(path) : undefined,
     path,
     project,

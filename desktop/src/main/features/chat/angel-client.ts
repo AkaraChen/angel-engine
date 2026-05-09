@@ -29,6 +29,7 @@ import type {
   ChatSetModeInput,
   ChatSetModeResult,
 } from "../../../shared/chat";
+import { normalizeAgentRuntime } from "../../../shared/agents";
 import { normalizeChatAttachmentsInput } from "../../../shared/chat";
 import {
   createChat,
@@ -37,6 +38,7 @@ import {
   setChatRemoteThreadId,
   touchChat,
 } from "./repository";
+import { getProject } from "../projects/repository";
 import {
   conversationMessages,
   projectRunResult,
@@ -44,6 +46,7 @@ import {
   runtimeConfigFromConversationSnapshot,
   type ProjectedTurnEvent,
 } from "./projection";
+import { DesktopClaudeSession } from "./claude/session";
 
 type AngelClientModule = typeof import("@angel-engine/client-napi");
 type ChatStreamObserver = (
@@ -64,7 +67,9 @@ const clientModule = nodeRequire(
 ) as AngelClientModule;
 const { AngelSession: NativeAngelSession, createRuntimeOptions } = clientModule;
 
-const chatSessions = new Map<string, DesktopAngelSession>();
+type DesktopChatSession = DesktopAngelSession | DesktopClaudeSession;
+
+const chatSessions = new Map<string, DesktopChatSession>();
 const chatPrewarms = new Map<string, ChatPrewarm>();
 const MAX_PREWARM_SESSIONS = 4;
 
@@ -75,7 +80,7 @@ type ChatPrewarm = {
   input: ChatPrewarmInput;
   key: string;
   promise: Promise<void>;
-  session: DesktopAngelSession;
+  session: DesktopChatSession;
   snapshot?: ConversationSnapshot;
 };
 type ReadyChatPrewarm = ChatPrewarm & {
@@ -90,13 +95,14 @@ export async function sendChat(input: ChatSendInput): Promise<ChatSendResult> {
 export async function loadChatSession(chatId: string): Promise<ChatLoadResult> {
   const chat = requireChat(chatId);
   const session = chatSessions.get(chat.id);
+  const cwd = cwdForChat(chat);
 
   if (!chat.remoteThreadId && !session?.hasConversation()) {
     return { chat, messages: [] };
   }
 
   const snapshot = await getChatSession(chat).hydrate({
-    cwd: chat.cwd ?? undefined,
+    cwd,
     remoteId: chat.remoteThreadId ?? undefined,
   });
   const updatedChat = persistRemoteThreadId(chat, snapshot);
@@ -128,7 +134,7 @@ export async function setChatMode(
 ): Promise<ChatSetModeResult> {
   const chat = requireChat(input.chatId);
   const snapshot = await getChatSession(chat).setMode({
-    cwd: input.cwd ?? chat.cwd ?? undefined,
+    cwd: cwdForChat(chat) ?? input.cwd,
     mode: input.mode,
     remoteId: chat.remoteThreadId ?? undefined,
   });
@@ -175,7 +181,7 @@ export async function streamChat(
   }
 
   const result = await session.sendText({
-    cwd: input.cwd ?? chat.cwd ?? undefined,
+    cwd: cwdForChat(chat, input.projectId) ?? input.cwd,
     model: input.model ?? undefined,
     mode: input.mode ?? undefined,
     onEvent,
@@ -231,7 +237,11 @@ function getChatSession(chat: Chat) {
   return session;
 }
 
-function createChatSession(runtime?: string): DesktopAngelSession {
+function createChatSession(runtime?: string): DesktopChatSession {
+  if (normalizeAgentRuntime(runtime) === "claude") {
+    return new DesktopClaudeSession();
+  }
+
   return new DesktopAngelSession(
     createRuntimeOptions(runtime, {
       clientName: "angel-engine-desktop",
@@ -318,7 +328,7 @@ function isTextLikeMimeType(mimeType: string) {
 function prepareChatForSend(input: ChatSendInput): {
   chat: Chat;
   isNewChat: boolean;
-  session: DesktopAngelSession;
+  session: DesktopChatSession;
 } {
   if (input.chatId) {
     const chat = requireChat(input.chatId);
@@ -329,8 +339,9 @@ function prepareChatForSend(input: ChatSendInput): {
     ? takeChatPrewarm(input.prewarmId, input)
     : undefined;
   if (prewarm) {
+    const cwd = cwdForProjectId(prewarm.input.projectId) ?? prewarm.input.cwd;
     const createdChat = createChat({
-      cwd: prewarm.input.cwd,
+      cwd,
       projectId: prewarm.input.projectId,
       runtime: prewarm.input.runtime,
     });
@@ -340,7 +351,7 @@ function prepareChatForSend(input: ChatSendInput): {
   }
 
   const chat = createChat({
-    cwd: input.cwd,
+    cwd: cwdForProjectId(input.projectId) ?? input.cwd,
     projectId: input.projectId,
     runtime: input.runtime,
   });
@@ -348,7 +359,11 @@ function prepareChatForSend(input: ChatSendInput): {
 }
 
 function persistRemoteThreadId(chat: Chat, snapshot: ConversationSnapshot) {
-  if (!snapshot.remoteId || snapshot.remoteId === chat.remoteThreadId) {
+  if (
+    snapshot.remoteKind !== "known" ||
+    !snapshot.remoteId ||
+    snapshot.remoteId === chat.remoteThreadId
+  ) {
     return chat;
   }
   return setChatRemoteThreadId(chat.id, snapshot.remoteId);
@@ -388,6 +403,7 @@ function isReadyChatPrewarm(prewarm: ChatPrewarm): prewarm is ReadyChatPrewarm {
 
 function createChatPrewarm(input: ChatPrewarmInput, key: string): ChatPrewarm {
   const session = createChatSession(input.runtime);
+  const cwd = cwdForProjectId(input.projectId) ?? input.cwd;
   const prewarm: ChatPrewarm = {
     closed: false,
     createdAt: Date.now(),
@@ -398,7 +414,7 @@ function createChatPrewarm(input: ChatPrewarmInput, key: string): ChatPrewarm {
   };
 
   prewarm.promise = session
-    .inspect({ cwd: input.cwd })
+    .inspect({ cwd })
     .then((snapshot) => {
       if (prewarm.closed) {
         throw new Error("Chat prewarm was closed.");
@@ -422,7 +438,8 @@ function chatPrewarmMatches(
   sendInput: ChatSendInput,
 ) {
   return (
-    (prewarmInput.cwd ?? undefined) === (sendInput.cwd ?? undefined) &&
+    (cwdForProjectId(prewarmInput.projectId) ?? prewarmInput.cwd) ===
+      (cwdForProjectId(sendInput.projectId) ?? sendInput.cwd) &&
     (prewarmInput.projectId ?? null) === (sendInput.projectId ?? null) &&
     (prewarmInput.runtime ?? undefined) === (sendInput.runtime ?? undefined)
   );
@@ -431,9 +448,22 @@ function chatPrewarmMatches(
 function chatPrewarmKey(input: ChatPrewarmInput) {
   return JSON.stringify([
     input.runtime ?? "",
-    input.cwd ?? "",
+    cwdForProjectId(input.projectId) ?? input.cwd ?? "",
     input.projectId ?? "",
   ]);
+}
+
+function cwdForChat(chat: Chat, projectId?: string | null): string | undefined {
+  return cwdForProjectId(projectId ?? chat.projectId) ?? chat.cwd ?? undefined;
+}
+
+function cwdForProjectId(projectId: string | null | undefined) {
+  if (!projectId) return undefined;
+  const project = getProject(projectId);
+  if (!project) {
+    throw new Error(`Project path not found for project id: ${projectId}`);
+  }
+  return project.path;
 }
 
 function trimChatPrewarms() {

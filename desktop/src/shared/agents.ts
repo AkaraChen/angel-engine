@@ -1,4 +1,4 @@
-export type AgentRuntime = "codex" | "kimi" | "opencode";
+export type AgentRuntime = "codex" | "kimi" | "opencode" | "claude";
 
 export type AgentOption = {
   description: string;
@@ -32,6 +32,11 @@ export const AGENT_OPTIONS: AgentOption[] = [
     id: "opencode",
     label: "OpenCode",
   },
+  {
+    description: "Claude Code runtime through the Claude Agent SDK.",
+    id: "claude",
+    label: "Claude Code",
+  },
 ];
 
 export function normalizeAgentRuntime(
@@ -45,6 +50,13 @@ export function normalizeAgentRuntime(
     trimmed === "open code"
   ) {
     return "opencode";
+  }
+  if (
+    trimmed === "claude" ||
+    trimmed === "claude-code" ||
+    trimmed === "claude code"
+  ) {
+    return "claude";
   }
   return "codex";
 }

@@ -546,7 +546,13 @@ function ElicitationToolPart({
 
   if (isInlinePermissionElicitation(elicitation)) {
     if (hasOutput) return null;
-    return <InlinePermissionApprovalButtons part={part} phase={phase} />;
+    return (
+      <InlinePermissionApprovalButtons
+        action={action}
+        part={part}
+        phase={phase}
+      />
+    );
   }
 
   return (
@@ -666,6 +672,7 @@ function StandaloneElicitationToolPart({
             </div>
           ) : (
             <PermissionApprovalActions
+              allowBypass={!isPlanApprovalToolAction(action)}
               disabled={!awaitingInput}
               onResume={resume}
             />
@@ -681,9 +688,11 @@ function StandaloneElicitationToolPart({
 }
 
 function InlinePermissionApprovalButtons({
+  action,
   part,
   phase,
 }: {
+  action: ChatToolAction;
   part: ToolCallMessagePartProps;
   phase: string;
 }) {
@@ -699,6 +708,7 @@ function InlinePermissionApprovalButtons({
 
   return (
     <PermissionApprovalActions
+      allowBypass={!isPlanApprovalToolAction(action)}
       className="px-1 pt-1"
       disabled={false}
       onResume={resume}
@@ -707,10 +717,12 @@ function InlinePermissionApprovalButtons({
 }
 
 function PermissionApprovalActions({
+  allowBypass = true,
   className,
   disabled,
   onResume,
 }: {
+  allowBypass?: boolean;
   className?: string;
   disabled: boolean;
   onResume: (response: ChatElicitationResponse) => void;
@@ -760,15 +772,17 @@ function PermissionApprovalActions({
       >
         Allow
       </Button>
-      <Button
-        disabled={disabled || permissionBypassEnabled}
-        onClick={bypassPermission}
-        size="xs"
-        type="button"
-        variant="destructive"
-      >
-        Bypass permission
-      </Button>
+      {allowBypass ? (
+        <Button
+          disabled={disabled || permissionBypassEnabled}
+          onClick={bypassPermission}
+          size="xs"
+          type="button"
+          variant="destructive"
+        >
+          Bypass permission
+        </Button>
+      ) : null}
     </div>
   );
 }
@@ -790,6 +804,17 @@ function isPermissionElicitation(
     (elicitation.kind === "approval" ||
       elicitation.kind === "permissionProfile"),
   );
+}
+
+function isPlanApprovalToolAction(action?: ChatToolAction) {
+  return action?.kind === "plan";
+}
+
+function toolActionFromMessagePart(part: unknown): ChatToolAction | undefined {
+  if (!part || typeof part !== "object") return undefined;
+  const candidate = part as { artifact?: unknown; type?: string };
+  if (candidate.type !== "tool-call") return undefined;
+  return isChatToolAction(candidate.artifact) ? candidate.artifact : undefined;
 }
 
 function useHasTextAfterToolCall(toolCallId: string) {
@@ -1148,7 +1173,17 @@ function ElicitationQuestionCard({
   const [submittedResponseType, setSubmittedResponseType] =
     useState<ChatElicitationResponse["type"]>();
   const awaitingInput = elicitation.phase === "open" && !submittedResponseType;
-  const isPermissionRequest = isPermissionElicitation(elicitation);
+  const hasInputQuestions =
+    elicitation.kind === "userInput" || questions.length > 0;
+  const isPermissionRequest =
+    isPermissionElicitation(elicitation) && !hasInputQuestions;
+  const backingActionKind = useAuiState((state) => {
+    const actionId = elicitation.actionId ?? elicitation.id;
+    return state.message.parts
+      .map(toolActionFromMessagePart)
+      .find((action) => action?.id === actionId)?.kind;
+  });
+  const allowBypass = backingActionKind !== "plan";
   const phase = submittedResponseType
     ? submittedResponseType === "cancel"
       ? "cancelled"
@@ -1211,6 +1246,7 @@ function ElicitationQuestionCard({
 
           {isPermissionRequest ? (
             <PermissionApprovalActions
+              allowBypass={allowBypass}
               disabled={!awaitingInput}
               onResume={resume}
             />
@@ -1354,6 +1390,27 @@ function PlanMessagePart({ plan }: { plan: ChatPlanData }) {
       {hasDetails ? (
         <CollapsibleContent className="overflow-hidden data-[state=closed]:animate-collapsible-up data-[state=open]:animate-collapsible-down">
           <div className="space-y-3 border-t px-3 py-2">
+            {plan.text.trim() ? (
+              <div className="p-2">
+                <Streamdown
+                  className={assistantTextContainerClassName}
+                  controls={false}
+                  mode="streaming"
+                  plugins={{ cjk, code: streamdownCode, math, mermaid }}
+                  shikiTheme={["github-light", "github-dark"]}
+                >
+                  {plan.text}
+                </Streamdown>
+              </div>
+            ) : null}
+            {plan.path ? (
+              <div className="flex min-w-0 items-center gap-2 rounded-sm bg-background/70 px-2 py-1.5 text-muted-foreground">
+                <FileText className="size-3.5 shrink-0" />
+                <span className="truncate font-mono text-[11px]">
+                  {plan.path}
+                </span>
+              </div>
+            ) : null}
             {plan.entries.length > 0 ? (
               <ol className="space-y-2">
                 {plan.entries.map((entry, index) => (
@@ -1375,31 +1432,9 @@ function PlanMessagePart({ plan }: { plan: ChatPlanData }) {
                 ))}
               </ol>
             ) : null}
-            {plan.path ? (
-              <div className="flex min-w-0 items-center gap-2 rounded-sm bg-background/70 px-2 py-1.5 text-muted-foreground">
-                <FileText className="size-3.5 shrink-0" />
-                <span className="truncate font-mono text-[11px]">
-                  {plan.path}
-                </span>
-              </div>
-            ) : null}
-            {plan.text.trim() ? (
-              <div className="p-2">
-                <Streamdown
-                  className={assistantTextContainerClassName}
-                  controls={false}
-                  mode="streaming"
-                  plugins={{ cjk, code: streamdownCode, math, mermaid }}
-                  shikiTheme={["github-light", "github-dark"]}
-                >
-                  {plan.text}
-                </Streamdown>
-              </div>
-            ) : null}
-            {isLastMessage ? (
+            {isLastMessage && canStartImplementation ? (
               <div className="flex justify-end border-t pt-2">
                 <Button
-                  disabled={!canStartImplementation}
                   onClick={startImplementation}
                   size="sm"
                   type="button"

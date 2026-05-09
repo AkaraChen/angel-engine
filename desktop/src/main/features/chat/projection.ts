@@ -26,7 +26,6 @@ import {
   imageDataUrl,
   isChatPlanData,
   normalizeChatPlanMessages,
-  upsertChatPlanPart,
 } from "../../../shared/chat";
 
 type ToolActionSnapshotLike = ActionSnapshot | DisplayToolActionSnapshot;
@@ -210,12 +209,12 @@ function contentFromTurnSnapshot(
 ): ChatHistoryMessagePart[] {
   const parts: ChatHistoryMessagePart[] = [];
   appendChatTextPart(parts, "reasoning", turn.reasoningText ?? "");
-  const plan = planFromTurnSnapshot(turn);
-  if (plan) upsertChatPlanPart(parts, plan);
   for (const action of actions) {
     parts.push(chatPartFromAction(toChatAction(action)));
   }
   appendChatTextPart(parts, "text", turn.outputText ?? "");
+  const plan = planFromTurnSnapshot(turn);
+  if (plan) parts.push({ data: plan, name: "plan", type: "data" });
   return parts;
 }
 
