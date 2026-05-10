@@ -6,6 +6,7 @@ import {
   drizzle,
   type BetterSQLite3Database,
 } from "drizzle-orm/better-sqlite3";
+import { migrate } from "drizzle-orm/better-sqlite3/migrator";
 
 import { chats, projects } from "./schema";
 
@@ -27,31 +28,10 @@ export function getDatabase() {
     path.join(dbDirectory, "angel-engine.sqlite"),
   );
   sqlite.pragma("journal_mode = WAL");
-  sqlite.exec(`
-    CREATE TABLE IF NOT EXISTS projects (
-      id TEXT PRIMARY KEY NOT NULL,
-      path TEXT NOT NULL UNIQUE
-    );
-
-    CREATE TABLE IF NOT EXISTS chats (
-      id TEXT PRIMARY KEY NOT NULL,
-      title TEXT NOT NULL,
-      project_id TEXT,
-      cwd TEXT,
-      runtime TEXT NOT NULL,
-      remote_thread_id TEXT,
-      created_at TEXT NOT NULL,
-      updated_at TEXT NOT NULL
-    );
-
-    CREATE INDEX IF NOT EXISTS chats_updated_at_idx
-      ON chats (updated_at DESC);
-
-    CREATE INDEX IF NOT EXISTS chats_project_id_idx
-      ON chats (project_id);
-  `);
+  sqlite.pragma("foreign_keys = ON");
 
   db = drizzle(sqlite, { schema: { chats, projects } });
+  migrate(db, { migrationsFolder: resolveMigrationsFolder() });
   return db;
 }
 
@@ -59,4 +39,21 @@ export function closeDatabase() {
   sqlite?.close();
   sqlite = undefined;
   db = undefined;
+}
+
+function resolveMigrationsFolder() {
+  const candidates = [
+    path.join(app.getAppPath(), "drizzle"),
+    path.join(process.cwd(), "drizzle"),
+  ];
+
+  const migrationsFolder = candidates.find((candidate) =>
+    fs.existsSync(path.join(candidate, "meta", "_journal.json")),
+  );
+
+  if (!migrationsFolder) {
+    throw new Error("Drizzle migrations folder not found.");
+  }
+
+  return migrationsFolder;
 }

@@ -6,6 +6,7 @@ import {
 
 import type { ApiClient } from "@/platform/api-client";
 import { queryKeys } from "@/platform/query-keys";
+import { invalidateChatQueries } from "@/features/chat/api/queries";
 import type { Project } from "@/shared/projects";
 
 interface ProjectListQueryParams {
@@ -70,6 +71,7 @@ export function projectContextMenuMutationOptions({
     onSuccess: async (data, variables) => {
       if (data === "deleted") {
         await invalidateProjectQueries(queryClient);
+        await invalidateChatQueries(queryClient);
       }
       await onSuccess?.(data, variables);
     },

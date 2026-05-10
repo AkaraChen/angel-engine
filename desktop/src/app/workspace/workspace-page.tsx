@@ -462,7 +462,12 @@ function WorkspacePageContent({
   const showProjectContextMenu = useCallback(
     async (project: Project) => {
       try {
-        await showProjectContextMenuMutation.mutateAsync(project);
+        const action =
+          await showProjectContextMenuMutation.mutateAsync(project);
+
+        if (action === "deleted" && routeProjectId === project.id) {
+          navigate("/", { replace: true });
+        }
       } catch (error) {
         toast({
           description: getErrorMessage(error),
@@ -471,7 +476,7 @@ function WorkspacePageContent({
         });
       }
     },
-    [showProjectContextMenuMutation, toast],
+    [navigate, routeProjectId, showProjectContextMenuMutation, toast],
   );
 
   const removeChatFromCache = useCallback(

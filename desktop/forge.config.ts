@@ -65,6 +65,7 @@ function copyNativeRuntimeDependencies(buildPath: string) {
 const config: ForgeConfig = {
   hooks: {
     packageAfterCopy: async (_config, buildPath) => {
+      copyRuntimePath(buildPath, "drizzle");
       copyNativeRuntimeDependencies(buildPath);
     },
   },
