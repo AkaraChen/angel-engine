@@ -1,6 +1,6 @@
 {
   "name": "desktop",
-  "productName": "Angel Engine Desktop",
+  "productName": "Angel Engine",
   "version": "1.0.0",
   "description": "Desktop shell for Angel Engine.",
   "main": ".vite/build/main.js",

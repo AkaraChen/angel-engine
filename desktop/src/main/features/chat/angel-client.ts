@@ -244,8 +244,8 @@ function createChatSession(runtime?: string): DesktopChatSession {
 
   return new DesktopAngelSession(
     createRuntimeOptions(runtime, {
-      clientName: "angel-engine-desktop",
-      clientTitle: "Angel Engine Desktop",
+      clientName: "angel-engine",
+      clientTitle: "Angel Engine",
     }) as RuntimeOptions,
   );
 }

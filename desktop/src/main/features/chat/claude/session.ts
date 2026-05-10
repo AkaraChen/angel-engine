@@ -123,8 +123,8 @@ export class DesktopClaudeSession {
         auth: { autoAuthenticate: false, needAuth: false },
         command: "claude",
         identity: {
-          name: "angel-engine-desktop",
-          title: "Angel Engine Desktop",
+          name: "angel-engine",
+          title: "Angel Engine",
         },
         protocol: "acp",
       },
