@@ -3,6 +3,7 @@ import path from "node:path";
 import type { ForgeConfig } from "@electron-forge/shared-types";
 import { MakerSquirrel } from "@electron-forge/maker-squirrel";
 import { MakerZIP } from "@electron-forge/maker-zip";
+import { MakerDMG } from "@electron-forge/maker-dmg";
 import { MakerDeb } from "@electron-forge/maker-deb";
 import { MakerRpm } from "@electron-forge/maker-rpm";
 import { AutoUnpackNativesPlugin } from "@electron-forge/plugin-auto-unpack-natives";
@@ -13,6 +14,7 @@ import { FuseV1Options, FuseVersion } from "@electron/fuses";
 const nativeRuntimeModules = ["better-sqlite3", "bindings", "file-uri-to-path"];
 
 const projectRoot = __dirname;
+const appIconPath = path.join(projectRoot, "assets", "icon");
 
 function copyRuntimePath(buildPath: string, relativePath: string) {
   fs.cpSync(
@@ -68,10 +70,19 @@ const config: ForgeConfig = {
   },
   packagerConfig: {
     asar: true,
+    icon: appIconPath,
   },
   rebuildConfig: {},
   makers: [
     new MakerSquirrel({}),
+    new MakerDMG(
+      {
+        format: "ULFO",
+        icon: `${appIconPath}.icns`,
+        iconSize: 96,
+      },
+      ["darwin"],
+    ),
     new MakerZIP({}, ["darwin"]),
     new MakerRpm({}),
     new MakerDeb({}),
