@@ -38,7 +38,6 @@ export type EngineRuntimeOptions = {
   ) => void;
   prewarmId?: string;
   projectId?: string | null;
-  projectPath?: string;
   reasoningEffort?: string;
   runtime?: string;
   runtimeConfig?: ChatRuntimeConfig;
@@ -56,7 +55,6 @@ export function useEngineRuntime({
   onChatUpdated,
   prewarmId,
   projectId,
-  projectPath,
   reasoningEffort,
   runtime,
   runtimeConfig,
@@ -78,7 +76,6 @@ export function useEngineRuntime({
     onChatUpdated,
     prewarmId,
     projectId,
-    projectPath,
     reasoningEffort,
     runtime,
   });
@@ -91,7 +88,6 @@ export function useEngineRuntime({
     onChatUpdated,
     prewarmId,
     projectId,
-    projectPath,
     reasoningEffort,
     runtime,
   };
@@ -136,11 +132,10 @@ export function useEngineRuntime({
         },
         input: {
           chatId: latestOptionsRef.current.chatId,
-          cwd: latestOptionsRef.current.projectPath,
           model: latestOptionsRef.current.model,
           mode: modeOverride ?? latestOptionsRef.current.mode,
           prewarmId: latestOptionsRef.current.prewarmId,
-          projectId: latestOptionsRef.current.projectId,
+          projectId: latestOptionsRef.current.projectId ?? undefined,
           reasoningEffort: latestOptionsRef.current.reasoningEffort,
           runtime: latestOptionsRef.current.runtime,
         },

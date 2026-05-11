@@ -63,7 +63,6 @@ export function registerChatStreamIpc() {
     const input = {
       attachments: normalizeChatAttachmentsInput(request.input.attachments),
       chatId: request.input.chatId,
-      cwd: request.input.cwd,
       model: request.input.model,
       projectId: request.input.projectId,
       mode: request.input.mode,

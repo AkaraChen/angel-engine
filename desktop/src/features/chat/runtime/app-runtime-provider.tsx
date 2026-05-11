@@ -91,7 +91,6 @@ export function AppRuntimeProvider({
     onChatUpdated,
     prewarmId,
     projectId,
-    projectPath,
     reasoningEffort,
     runtime: selectedRuntime,
     runtimeConfig,

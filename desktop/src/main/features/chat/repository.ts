@@ -10,6 +10,10 @@ import { getDatabase } from "../../db/database";
 
 const DEFAULT_CHAT_TITLE = "New chat";
 
+type CreateChatRecordInput = ChatCreateInput & {
+  cwd: string;
+};
+
 export function listChats(): Chat[] {
   return getDatabase()
     .select()
@@ -29,7 +33,7 @@ export function getChat(id: string): Chat | null {
   return chat ?? null;
 }
 
-export function createChat(input: ChatCreateInput = {}): Chat {
+export function createChat(input: CreateChatRecordInput): Chat {
   const now = new Date().toISOString();
   const chat = getDatabase()
     .insert(chats)

@@ -4,11 +4,8 @@ export const queryKeys = {
     detail: (id: string | null) => ["chats", "detail", id] as const,
     details: () => ["chats", "detail"] as const,
     list: () => ["chats", "list"] as const,
-    prewarm: (
-      runtime: string | null,
-      cwd: string | null,
-      projectId: string | null,
-    ) => ["chats", "prewarm", runtime, cwd, projectId] as const,
+    prewarm: (runtime: string | null, projectId: string | null) =>
+      ["chats", "prewarm", runtime, projectId] as const,
     runtimeConfig: (runtime: string | null, cwd: string | null) =>
       ["chats", "runtime-config", runtime, cwd] as const,
   },

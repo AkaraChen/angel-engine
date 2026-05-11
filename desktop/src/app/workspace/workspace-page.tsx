@@ -218,9 +218,8 @@ function WorkspacePageContent({
   const prewarmQuery = useQuery({
     ...chatPrewarmQueryOptions({
       api,
-      cwd: selectedProjectPath ?? undefined,
       enabled: shouldPrewarmChat,
-      projectId: route.type === "projectCreate" ? route.projectId : null,
+      projectId: route.type === "projectCreate" ? route.projectId : undefined,
       runtime: activeRuntime,
     }),
   });

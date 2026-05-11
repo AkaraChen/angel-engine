@@ -10,19 +10,14 @@ import type {
 } from "../../../shared/chat";
 import {
   closeChatSession,
+  createChatFromInput,
   inspectChatRuntimeConfig,
   loadChatSession,
   prewarmChat,
   sendChat,
   setChatMode,
 } from "./angel-client";
-import {
-  createChat,
-  deleteAllChats,
-  deleteChat,
-  getChat,
-  listChats,
-} from "./repository";
+import { deleteAllChats, deleteChat, getChat, listChats } from "./repository";
 import {
   parseChatCreateInput,
   parseChatId,
@@ -37,7 +32,9 @@ const t = tipc.create();
 export const chatIpcRouter = {
   chatsCreate: t.procedure
     .input<ChatCreateInput>()
-    .action(async ({ input }) => createChat(parseChatCreateInput(input))),
+    .action(async ({ input }) =>
+      createChatFromInput(parseChatCreateInput(input)),
+    ),
 
   chatsDeleteAll: t.procedure.action(async () => {
     closeChatSession();

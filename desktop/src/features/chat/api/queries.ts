@@ -37,7 +37,6 @@ interface ChatRuntimeConfigQueryParams {
 
 interface ChatPrewarmQueryParams {
   api: ApiClient;
-  cwd?: string | null;
   enabled?: boolean;
   projectId?: string | null;
   runtime?: string | null;
@@ -142,7 +141,6 @@ export function chatRuntimeConfigQueryOptions({
 
 export function chatPrewarmQueryOptions({
   api,
-  cwd,
   enabled = true,
   projectId,
   runtime,
@@ -153,15 +151,10 @@ export function chatPrewarmQueryOptions({
     gcTime: 300_000,
     queryFn: (): Promise<ChatPrewarmResult> =>
       api.chats.prewarm({
-        cwd: cwd ?? undefined,
-        projectId: projectId ?? null,
+        projectId: projectId ?? undefined,
         runtime: runtime ?? undefined,
       }),
-    queryKey: queryKeys.chats.prewarm(
-      runtime ?? null,
-      cwd ?? null,
-      projectId ?? null,
-    ),
+    queryKey: queryKeys.chats.prewarm(runtime ?? null, projectId ?? null),
     retry: false,
     staleTime,
   });
@@ -176,7 +169,6 @@ export function createProjectChatMutationOptions({
   return mutationOptions({
     mutationFn: (project: Project) =>
       api.chats.create({
-        cwd: project.path,
         projectId: project.id,
         runtime,
       }),

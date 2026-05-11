@@ -1,6 +1,7 @@
 import { createRequire } from "node:module";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
+import { app } from "electron";
 
 import { isTextLikeMimeType } from "../../../shared/mime";
 import type {
@@ -18,6 +19,7 @@ import type {
 import type {
   Chat,
   ChatAttachmentInput,
+  ChatCreateInput,
   ChatElicitationResponse,
   ChatHistoryMessage,
   ChatLoadResult,
@@ -78,6 +80,7 @@ type ChatPrewarm = {
   closed: boolean;
   config?: ChatRuntimeConfig;
   createdAt: number;
+  cwd: string;
   input: ChatPrewarmInput;
   key: string;
   promise: Promise<void>;
@@ -123,11 +126,18 @@ export async function inspectChatRuntimeConfig(
   const session = createChatSession(input.runtime);
   try {
     return runtimeConfigFromConversationSnapshot(
-      await session.inspect(input.cwd),
+      await session.inspect(input.cwd ?? standaloneChatCwd()),
     );
   } finally {
     session.close();
   }
+}
+
+export function createChatFromInput(input: ChatCreateInput): Chat {
+  return createChat({
+    ...input,
+    cwd: cwdForProjectOrStandalone(input.projectId),
+  });
 }
 
 export async function setChatMode(
@@ -135,7 +145,7 @@ export async function setChatMode(
 ): Promise<ChatSetModeResult> {
   const chat = requireChat(input.chatId);
   const snapshot = await getChatSession(chat).setMode({
-    cwd: cwdForChat(chat) ?? input.cwd,
+    cwd: cwdForChat(chat),
     mode: input.mode,
     remoteId: chat.remoteThreadId ?? undefined,
   });
@@ -181,7 +191,7 @@ export async function streamChat(
   }
 
   const result = await session.sendText({
-    cwd: cwdForChat(chat, input.projectId) ?? input.cwd,
+    cwd: cwdForChat(chat, input.projectId),
     model: input.model ?? undefined,
     mode: input.mode ?? undefined,
     onEvent,
@@ -322,9 +332,8 @@ function prepareChatForSend(input: ChatSendInput): {
     ? takeChatPrewarm(input.prewarmId, input)
     : undefined;
   if (prewarm) {
-    const cwd = cwdForProjectId(prewarm.input.projectId) ?? prewarm.input.cwd;
     const createdChat = createChat({
-      cwd,
+      cwd: prewarm.cwd,
       projectId: prewarm.input.projectId,
       runtime: prewarm.input.runtime,
     });
@@ -334,7 +343,7 @@ function prepareChatForSend(input: ChatSendInput): {
   }
 
   const chat = createChat({
-    cwd: cwdForProjectId(input.projectId) ?? input.cwd,
+    cwd: cwdForProjectOrStandalone(input.projectId),
     projectId: input.projectId,
     runtime: input.runtime,
   });
@@ -372,7 +381,7 @@ function takeChatPrewarm(
 
   chatPrewarms.delete(prewarm.key);
 
-  if (!chatPrewarmMatches(prewarm.input, input)) {
+  if (!chatPrewarmMatches(prewarm, input)) {
     closeChatPrewarm(prewarm);
     return undefined;
   }
@@ -386,10 +395,11 @@ function isReadyChatPrewarm(prewarm: ChatPrewarm): prewarm is ReadyChatPrewarm {
 
 function createChatPrewarm(input: ChatPrewarmInput, key: string): ChatPrewarm {
   const session = createChatSession(input.runtime);
-  const cwd = cwdForProjectId(input.projectId) ?? input.cwd;
+  const cwd = cwdForProjectOrStandalone(input.projectId);
   const prewarm: ChatPrewarm = {
     closed: false,
     createdAt: Date.now(),
+    cwd,
     input,
     key,
     promise: Promise.resolve(),
@@ -416,13 +426,10 @@ function createChatPrewarm(input: ChatPrewarmInput, key: string): ChatPrewarm {
   return prewarm;
 }
 
-function chatPrewarmMatches(
-  prewarmInput: ChatPrewarmInput,
-  sendInput: ChatSendInput,
-) {
+function chatPrewarmMatches(prewarm: ChatPrewarm, sendInput: ChatSendInput) {
+  const prewarmInput = prewarm.input;
   return (
-    (cwdForProjectId(prewarmInput.projectId) ?? prewarmInput.cwd) ===
-      (cwdForProjectId(sendInput.projectId) ?? sendInput.cwd) &&
+    prewarm.cwd === cwdForProjectOrStandalone(sendInput.projectId) &&
     (prewarmInput.projectId ?? null) === (sendInput.projectId ?? null) &&
     (prewarmInput.runtime ?? undefined) === (sendInput.runtime ?? undefined)
   );
@@ -431,13 +438,21 @@ function chatPrewarmMatches(
 function chatPrewarmKey(input: ChatPrewarmInput) {
   return JSON.stringify([
     input.runtime ?? "",
-    cwdForProjectId(input.projectId) ?? input.cwd ?? "",
     input.projectId ?? "",
+    cwdForProjectOrStandalone(input.projectId),
   ]);
 }
 
-function cwdForChat(chat: Chat, projectId?: string | null): string | undefined {
-  return cwdForProjectId(projectId ?? chat.projectId) ?? chat.cwd ?? undefined;
+function cwdForChat(chat: Chat, projectId?: string | null): string {
+  return (
+    cwdForProjectId(projectId ?? chat.projectId) ??
+    chat.cwd ??
+    standaloneChatCwd()
+  );
+}
+
+function cwdForProjectOrStandalone(projectId: string | null | undefined) {
+  return cwdForProjectId(projectId) ?? standaloneChatCwd();
 }
 
 function cwdForProjectId(projectId: string | null | undefined) {
@@ -447,6 +462,10 @@ function cwdForProjectId(projectId: string | null | undefined) {
     throw new Error(`Project path not found for project id: ${projectId}`);
   }
   return project.path;
+}
+
+function standaloneChatCwd() {
+  return app.getPath("home");
 }
 
 function trimChatPrewarms() {

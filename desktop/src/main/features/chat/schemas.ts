@@ -17,7 +17,6 @@ export const chatStreamStartInput = type({
   input: {
     attachments: "unknown",
     "chatId?": "string",
-    "cwd?": "string",
     "model?": "string",
     "mode?": "string",
     "prewarmId?": "string",
@@ -38,7 +37,6 @@ export const chatStreamElicitationResolveInput = type({
 // Input parser schemas
 export const chatCreateInput = type({
   "+": "ignore",
-  "cwd?": "string",
   "model?": "string",
   "mode?": "string",
   "projectId?": "string",
@@ -49,7 +47,6 @@ export const chatCreateInput = type({
 
 export const chatPrewarmInput = type({
   "+": "ignore",
-  "cwd?": "string",
   "projectId?": "string",
   "runtime?": "string",
 });
@@ -64,7 +61,6 @@ export const chatSendInput = type({
   "+": "ignore",
   "attachments?": "unknown",
   "chatId?": "string",
-  "cwd?": "string",
   "model?": "string",
   "mode?": "string",
   "prewarmId?": "string",
@@ -77,6 +73,5 @@ export const chatSendInput = type({
 export const chatSetModeInput = type({
   "+": "ignore",
   chatId: "string > 0",
-  "cwd?": "string",
   mode: "string > 0",
 });

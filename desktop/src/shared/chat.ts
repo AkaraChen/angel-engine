@@ -10,18 +10,16 @@ export type Chat = {
 };
 
 export type ChatCreateInput = {
-  cwd?: string;
   model?: string | null;
   mode?: string | null;
-  projectId?: string | null;
+  projectId?: string;
   reasoningEffort?: string | null;
   runtime?: string;
   title?: string;
 };
 
 export type ChatPrewarmInput = {
-  cwd?: string;
-  projectId?: string | null;
+  projectId?: string;
   runtime?: string;
 };
 
@@ -32,7 +30,6 @@ export type ChatRuntimeConfigInput = {
 
 export type ChatSetModeInput = {
   chatId: string;
-  cwd?: string;
   mode: string;
 };
 
@@ -670,11 +667,10 @@ export type ProjectFileSearchResult = {
 export type ChatSendInput = {
   attachments?: ChatAttachmentInput[];
   chatId?: string;
-  cwd?: string;
   model?: string | null;
   mode?: string | null;
   prewarmId?: string;
-  projectId?: string | null;
+  projectId?: string;
   reasoningEffort?: string | null;
   runtime?: string;
   text: string;

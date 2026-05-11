@@ -24,7 +24,6 @@ export function parseChatCreateInput(input: unknown): ChatCreateInput {
   );
 
   return {
-    cwd: value.cwd,
     model: value.model,
     projectId: value.projectId,
     mode: value.mode,
@@ -42,7 +41,6 @@ export function parseChatPrewarmInput(input: unknown): ChatPrewarmInput {
   );
 
   return {
-    cwd: value.cwd,
     projectId: value.projectId,
     runtime: parseRuntime(value.runtime),
   };
@@ -73,7 +71,6 @@ export function parseChatSendInput(input: unknown): ChatSendInput {
   return {
     attachments: normalizeChatAttachmentsInput(value.attachments),
     chatId: value.chatId,
-    cwd: value.cwd,
     model: value.model,
     projectId: value.projectId,
     mode: value.mode,
@@ -93,7 +90,6 @@ export function parseChatSetModeInput(input: unknown): ChatSetModeInput {
 
   return {
     chatId: value.chatId,
-    cwd: value.cwd,
     mode: value.mode,
   };
 }
