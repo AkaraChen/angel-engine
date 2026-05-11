@@ -152,20 +152,49 @@ pub(crate) fn action_title(item: &Value) -> Option<String> {
             item.get("server").and_then(Value::as_str).unwrap_or("mcp"),
             item.get("tool").and_then(Value::as_str).unwrap_or("tool")
         )),
-        "dynamicToolCall" => Some(format!(
-            "{}{}",
-            item.get("namespace")
-                .and_then(Value::as_str)
-                .map(|namespace| format!("{namespace}."))
-                .unwrap_or_default(),
-            item.get("tool").and_then(Value::as_str).unwrap_or("tool")
-        )),
+        "dynamicToolCall" if dynamic_tool_is_output_only(item) => None,
+        "dynamicToolCall" => item
+            .get("title")
+            .and_then(Value::as_str)
+            .map(str::to_string)
+            .or_else(|| {
+                Some(format!(
+                    "{}{}",
+                    item.get("namespace")
+                        .and_then(Value::as_str)
+                        .map(|namespace| format!("{namespace}."))
+                        .unwrap_or_default(),
+                    item.get("tool").and_then(Value::as_str).unwrap_or("tool")
+                ))
+            }),
         "webSearch" => item
             .get("query")
             .and_then(Value::as_str)
             .map(str::to_string),
         other => Some(other.to_string()),
     }
+}
+
+pub(crate) fn dynamic_tool_has_input_payload(item: &Value) -> bool {
+    item.get("arguments").is_some()
+        || item.get("title").is_some()
+        || item.get("inputSummary").is_some()
+        || item.get("rawInput").is_some()
+}
+
+pub(crate) fn dynamic_tool_is_output_only(item: &Value) -> bool {
+    item.get("type").and_then(Value::as_str) == Some("dynamicToolCall")
+        && !dynamic_tool_has_input_payload(item)
+        && [
+            "contentItems",
+            "content_items",
+            "output",
+            "result",
+            "content",
+            "aggregatedOutput",
+        ]
+        .iter()
+        .any(|key| item.get(*key).is_some())
 }
 
 pub(crate) fn turn_error(turn: Option<&Value>) -> Option<ErrorInfo> {

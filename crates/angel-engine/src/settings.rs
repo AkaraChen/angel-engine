@@ -2,7 +2,6 @@ use crate::command::EngineCommand;
 use crate::error::EngineError;
 use crate::event::{EngineEvent, TransitionReport};
 use crate::ids::ConversationId;
-use crate::protocol::ProtocolFlavor;
 use crate::reducer::{AngelEngine, CommandPlan};
 use crate::state::{
     AgentMode, ContextPatch, ContextScope, ContextUpdate, ConversationState, ReasoningProfile,
@@ -10,8 +9,6 @@ use crate::state::{
 };
 use std::fmt;
 use strum::Display;
-
-const CODEX_REASONING_LEVELS: &[&str] = &["none", "minimal", "low", "medium", "high", "xhigh"];
 
 /// A normalized identifier that strips non-alphanumeric characters and lowercases.
 /// Used for fuzzy-matching config option IDs and names.
@@ -81,11 +78,11 @@ pub struct ConversationSettingsState {
 }
 
 impl ConversationSettingsState {
-    pub fn from_conversation(protocol: ProtocolFlavor, conversation: &ConversationState) -> Self {
+    pub fn from_conversation(conversation: &ConversationState) -> Self {
         Self {
-            reasoning: ReasoningLevelState::from_conversation(protocol, conversation),
-            model_list: ModelListState::from_conversation(protocol, conversation),
-            available_modes: AvailableModeState::from_conversation(protocol, conversation),
+            reasoning: ReasoningLevelState::from_conversation(conversation),
+            model_list: ModelListState::from_conversation(conversation),
+            available_modes: AvailableModeState::from_conversation(conversation),
         }
     }
 }
@@ -101,7 +98,7 @@ pub struct ReasoningLevelState {
 }
 
 impl ReasoningLevelState {
-    pub fn from_conversation(protocol: ProtocolFlavor, conversation: &ConversationState) -> Self {
+    pub fn from_conversation(conversation: &ConversationState) -> Self {
         if let Some(option) = find_reasoning_config_option(&conversation.config_options) {
             let available_options = reasoning_options_from_config(option);
             return Self {
@@ -121,37 +118,20 @@ impl ReasoningLevelState {
             .and_then(Option::as_ref)
             .and_then(|reasoning| reasoning.effort.clone());
 
-        if protocol == ProtocolFlavor::CodexAppServer {
-            let available_options = reasoning_options_from_values(CODEX_REASONING_LEVELS);
-            return Self {
-                current_level: context_level,
-                available_levels: reasoning_option_values(&available_options),
-                available_options,
-                source: ReasoningLevelSource::CodexDefaults,
-                config_option_id: None,
-                can_set: true,
-            };
-        }
-
-        if let Some(inferred_level) = model_variant_reasoning_level(conversation) {
-            let available_options = reasoning_options_from_values(&["none", "thinking"]);
-            return Self {
-                current_level: context_level.or(Some(inferred_level)),
-                available_levels: reasoning_option_values(&available_options),
-                available_options,
-                source: ReasoningLevelSource::ModelVariant,
-                config_option_id: None,
-                can_set: true,
-            };
-        }
+        let can_set = conversation.capabilities.context.config.is_supported();
+        let source = if context_level.is_some() || can_set {
+            ReasoningLevelSource::Context
+        } else {
+            ReasoningLevelSource::Unsupported
+        };
 
         Self {
             current_level: context_level,
             available_levels: Vec::new(),
             available_options: Vec::new(),
-            source: ReasoningLevelSource::Unsupported,
+            source,
             config_option_id: None,
-            can_set: false,
+            can_set,
         }
     }
 }
@@ -166,8 +146,7 @@ pub struct ReasoningLevelOption {
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum ReasoningLevelSource {
     ConfigOption,
-    CodexDefaults,
-    ModelVariant,
+    Context,
     Unsupported,
 }
 
@@ -175,8 +154,7 @@ impl ReasoningLevelSource {
     pub fn as_str(self) -> &'static str {
         match self {
             Self::ConfigOption => "configOption",
-            Self::CodexDefaults => "codexDefaults",
-            Self::ModelVariant => "modelVariant",
+            Self::Context => "context",
             Self::Unsupported => "unsupported",
         }
     }
@@ -191,7 +169,7 @@ pub struct ModelListState {
 }
 
 impl ModelListState {
-    pub fn from_conversation(protocol: ProtocolFlavor, conversation: &ConversationState) -> Self {
+    pub fn from_conversation(conversation: &ConversationState) -> Self {
         let context_model = conversation
             .context
             .model
@@ -229,10 +207,7 @@ impl ModelListState {
             current_model_id: context_model,
             available_models: Vec::new(),
             config_option_id: None,
-            can_set: matches!(
-                protocol,
-                ProtocolFlavor::Acp | ProtocolFlavor::CodexAppServer
-            ),
+            can_set: conversation.capabilities.context.config.is_supported(),
         }
     }
 }
@@ -246,7 +221,7 @@ pub struct AvailableModeState {
 }
 
 impl AvailableModeState {
-    pub fn from_conversation(protocol: ProtocolFlavor, conversation: &ConversationState) -> Self {
+    pub fn from_conversation(conversation: &ConversationState) -> Self {
         let context_mode = conversation
             .context
             .mode
@@ -280,31 +255,12 @@ impl AvailableModeState {
             };
         }
 
-        if protocol == ProtocolFlavor::CodexAppServer {
-            return Self {
-                current_mode_id: Some(context_mode.unwrap_or_else(|| "default".to_string())),
-                available_modes: vec![
-                    SessionMode {
-                        id: "default".to_string(),
-                        name: "Default".to_string(),
-                        description: None,
-                    },
-                    SessionMode {
-                        id: "plan".to_string(),
-                        name: "Plan".to_string(),
-                        description: Some("Plan before making changes.".to_string()),
-                    },
-                ],
-                config_option_id: None,
-                can_set: true,
-            };
-        }
-
         Self {
             current_mode_id: context_mode,
             available_modes: Vec::new(),
             config_option_id: None,
-            can_set: protocol == ProtocolFlavor::Acp,
+            can_set: conversation.capabilities.context.mode.is_supported()
+                || conversation.capabilities.context.config.is_supported(),
         }
     }
 }
@@ -320,10 +276,7 @@ impl AngelEngine {
                 conversation_id: conversation_id.to_string(),
             }
         })?;
-        Ok(ConversationSettingsState::from_conversation(
-            self.protocol,
-            conversation,
-        ))
+        Ok(ConversationSettingsState::from_conversation(conversation))
     }
 
     pub fn get_reasoning_level(
@@ -579,17 +532,6 @@ fn reasoning_options_from_config(option: &SessionConfigOption) -> Vec<ReasoningL
         .collect()
 }
 
-fn reasoning_options_from_values(values: &[&str]) -> Vec<ReasoningLevelOption> {
-    values
-        .iter()
-        .map(|value| ReasoningLevelOption {
-            value: (*value).to_string(),
-            name: label_from_config_value(value),
-            description: None,
-        })
-        .collect()
-}
-
 fn reasoning_option_values(options: &[ReasoningLevelOption]) -> Vec<String> {
     options.iter().map(|option| option.value.clone()).collect()
 }
@@ -645,51 +587,4 @@ fn known_mode(settings: &AvailableModeState, mode: &str) -> bool {
             .available_modes
             .iter()
             .any(|available| available.id == mode)
-}
-
-pub(crate) fn thinking_model_for_level(
-    conversation: &ConversationState,
-    level: &str,
-) -> Option<String> {
-    const THINKING_SUFFIX: &str = ",thinking";
-
-    let models = conversation.model_state.as_ref()?;
-    let current = models.current_model_id.as_str();
-    let is_disabled = ReasoningLevel::from_wire(level)
-        .map(|l| l.is_disabled())
-        .unwrap_or(false);
-    let target = if is_disabled {
-        current.strip_suffix(THINKING_SUFFIX).map(str::to_string)?
-    } else if current.ends_with(THINKING_SUFFIX) {
-        return None;
-    } else {
-        format!("{current}{THINKING_SUFFIX}")
-    };
-
-    models
-        .available_models
-        .iter()
-        .any(|model| model.id == target)
-        .then_some(target)
-}
-
-fn model_variant_reasoning_level(conversation: &ConversationState) -> Option<String> {
-    const THINKING_SUFFIX: &str = ",thinking";
-
-    let models = conversation.model_state.as_ref()?;
-    let current = models.current_model_id.as_str();
-    if current.ends_with(THINKING_SUFFIX) {
-        let base = current.strip_suffix(THINKING_SUFFIX)?;
-        return models
-            .available_models
-            .iter()
-            .any(|model| model.id == base)
-            .then(|| "thinking".to_string());
-    }
-
-    models
-        .available_models
-        .iter()
-        .any(|model| model.id == format!("{current}{THINKING_SUFFIX}"))
-        .then(|| "none".to_string())
 }

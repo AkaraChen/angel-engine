@@ -755,7 +755,7 @@ fn acp_resume_projects_tool_history_into_display_messages() {
 }
 
 #[test]
-fn codex_turn_start_defaults_to_auto_summary_without_effort() {
+fn codex_turn_start_uses_provider_reasoning_config_default() {
     let (mut client, conversation_id) = ready_codex_client();
 
     let conversation = client
@@ -764,9 +764,14 @@ fn codex_turn_start_defaults_to_auto_summary_without_effort() {
         .into_iter()
         .find(|conversation| conversation.id == conversation_id)
         .expect("conversation snapshot");
+    assert_eq!(conversation.settings.reasoning_level.source, "configOption");
     assert_eq!(
-        conversation.settings.reasoning_level.source,
-        "codexDefaults"
+        conversation
+            .settings
+            .reasoning_level
+            .config_option_id
+            .as_deref(),
+        Some("reasoning")
     );
     assert!(conversation.settings.reasoning_level.can_set);
     assert_eq!(
@@ -780,10 +785,9 @@ fn codex_turn_start_defaults_to_auto_summary_without_effort() {
         .expect("send codex text");
 
     assert_eq!(sent.update.outgoing[0].value["method"], json!("turn/start"));
-    assert!(
-        sent.update.outgoing[0].value["params"]
-            .get("effort")
-            .is_none()
+    assert_eq!(
+        sent.update.outgoing[0].value["params"]["effort"],
+        json!("none")
     );
     assert_eq!(
         sent.update.outgoing[0].value["params"]["summary"],
@@ -792,7 +796,7 @@ fn codex_turn_start_defaults_to_auto_summary_without_effort() {
 }
 
 #[test]
-fn acp_thinking_model_variant_surfaces_reasoning_options() {
+fn acp_model_variants_do_not_infer_reasoning_options() {
     let mut client = ClientOptions::builder()
         .acp("fake-agent")
         .need_auth(false)
@@ -834,18 +838,21 @@ fn acp_thinking_model_variant_surfaces_reasoning_options() {
         .into_iter()
         .find(|conversation| conversation.id == conversation_id)
         .expect("conversation snapshot");
-    assert_eq!(conversation.settings.reasoning_level.source, "modelVariant");
+    assert_eq!(conversation.settings.reasoning_level.source, "unsupported");
     assert_eq!(
         conversation
             .settings
             .reasoning_level
             .current_level
             .as_deref(),
-        Some("none")
+        None
     );
-    assert_eq!(
-        conversation.settings.reasoning_level.available_levels,
-        vec!["none", "thinking"]
+    assert!(
+        conversation
+            .settings
+            .reasoning_level
+            .available_levels
+            .is_empty()
     );
 }
 
@@ -994,7 +1001,23 @@ fn ready_client() -> (Client, String) {
     client
         .receive_json_value(response(
             &start.request_id.expect("start id"),
-            json!({"sessionId": "sess-1"}),
+            json!({
+                "sessionId": "sess-1",
+                "modes": {
+                    "currentModeId": "default",
+                    "availableModes": [
+                        {"id": "default", "name": "Default"},
+                        {"id": "plan", "name": "Plan"}
+                    ]
+                },
+                "models": {
+                    "currentModelId": "kimi-k2",
+                    "availableModels": [
+                        {"id": "kimi-k2", "name": "Kimi K2"},
+                        {"id": "moonshot-v1-128k", "name": "Moonshot v1 128k"}
+                    ]
+                }
+            }),
         ))
         .expect("start response");
     (client, conversation_id)

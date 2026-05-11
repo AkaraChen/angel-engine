@@ -197,7 +197,7 @@ fn completed_turn_display_preserves_event_order() {
         .expect("final assistant");
 
     let conversation = &engine.conversations[&conversation_id];
-    let messages = conversation_display_messages(engine.protocol, conversation);
+    let messages = conversation_display_messages(conversation);
     let assistant = messages
         .iter()
         .find(|message| message.id == format!("{turn_id}:assistant"))
@@ -268,7 +268,7 @@ fn todo_update_does_not_replace_review_plan() {
     assert_eq!(turn.todo.as_ref().expect("todo").entries.len(), 1);
     assert!(matches!(turn.phase, TurnPhase::Planning));
 
-    let messages = conversation_display_messages(engine.protocol, conversation);
+    let messages = conversation_display_messages(conversation);
     let assistant = messages
         .iter()
         .find(|message| message.id == format!("{turn_id}:assistant"))

@@ -18,7 +18,7 @@ use angel_engine::{
 };
 use serde_json::{Value, json};
 
-use crate::acp::{AcpAdapter, AcpAdapterCapabilities};
+use crate::acp::{AcpAdapter, AcpAdapterCapabilities, acp_tool_history_entry};
 use crate::{InterpretedUserInput, ProtocolAdapter};
 
 #[derive(Clone, Debug)]
@@ -51,7 +51,13 @@ impl KimiAdapter {
         effect: &ProtocolEffect,
         options: &TransportOptions,
     ) -> Result<Option<TransportOutput>, EngineError> {
-        let Some(mode_id) = effect.payload.fields.get("modeId").map(String::as_str) else {
+        let Some(mode_id) = effect
+            .payload
+            .fields
+            .get("modeId")
+            .or_else(|| effect.payload.fields.get("mode"))
+            .map(String::as_str)
+        else {
             return Ok(None);
         };
         if !matches!(mode_id, "plan" | "default") || !conversation_has_plan_command(engine, effect)
@@ -207,8 +213,10 @@ impl ProtocolAdapter for KimiAdapter {
         effect: &ProtocolEffect,
         options: &TransportOptions,
     ) -> Result<TransportOutput, EngineError> {
-        if matches!(effect.method, ProtocolMethod::SetSessionMode)
-            && let Some(output) = self.encode_kimi_mode_effect(engine, effect, options)?
+        if matches!(
+            effect.method,
+            ProtocolMethod::SetSessionMode | ProtocolMethod::UpdateContext
+        ) && let Some(output) = self.encode_kimi_mode_effect(engine, effect, options)?
         {
             return Ok(output);
         }
@@ -551,6 +559,7 @@ fn kimi_context_user_entry(value: &Value) -> Option<HistoryReplayEntry> {
     Some(HistoryReplayEntry {
         role: HistoryRole::User,
         content: ContentDelta::Text(text),
+        tool: None,
     })
 }
 
@@ -574,7 +583,7 @@ fn kimi_context_tool_entry(value: &Value) -> Option<HistoryReplayEntry> {
         .get("content")
         .map(kimi_content_value_text)
         .unwrap_or_default();
-    let payload = json!({
+    acp_tool_history_entry(&json!({
         "sessionUpdate": "tool_call_update",
         "toolCallId": tool_call_id,
         "status": "completed",
@@ -587,11 +596,7 @@ fn kimi_context_tool_entry(value: &Value) -> Option<HistoryReplayEntry> {
                 }
             }
         ]
-    });
-    Some(HistoryReplayEntry {
-        role: HistoryRole::Tool,
-        content: ContentDelta::Structured(payload.to_string()),
-    })
+    }))
 }
 
 fn kimi_context_text_entry(
@@ -605,6 +610,7 @@ fn kimi_context_text_entry(
     Some(HistoryReplayEntry {
         role,
         content: ContentDelta::Text(text),
+        tool: None,
     })
 }
 
@@ -638,10 +644,7 @@ fn kimi_tool_call_history_entry(tool_call: &Value) -> Option<HistoryReplayEntry>
         payload.insert("kind".to_string(), json!(kind));
     }
 
-    Some(HistoryReplayEntry {
-        role: HistoryRole::Tool,
-        content: ContentDelta::Structured(Value::Object(payload).to_string()),
-    })
+    acp_tool_history_entry(&Value::Object(payload))
 }
 
 fn kimi_content_value_text(value: &Value) -> String {
@@ -739,6 +742,7 @@ fn kimi_local_plan_entry(context_path: &Path, state: &Value) -> Option<HistoryRe
             })
             .to_string(),
         ),
+        tool: None,
     })
 }
 
@@ -905,6 +909,39 @@ mod tests {
             .expect("plan mode");
         let output = adapter
             .encode_effect(&engine, &plan.effects[0], &TransportOptions::default())
+            .expect("encode mode");
+
+        assert!(matches!(
+            &output.messages[0],
+            JsonRpcMessage::Request { method, params, .. }
+                if method == "session/prompt"
+                    && params["sessionId"] == json!("sess")
+                    && params["prompt"][0]["text"] == json!("/plan on")
+        ));
+    }
+
+    #[test]
+    fn neutral_update_context_plan_mode_uses_kimi_plan_slash_command() {
+        let adapter = KimiAdapter::standard();
+        let (mut engine, conversation_id) = ready_engine(&adapter);
+        engine
+            .apply_event(EngineEvent::AvailableCommandsUpdated {
+                conversation_id: conversation_id.clone(),
+                commands: vec![AvailableCommand {
+                    name: "plan".to_string(),
+                    description: "Toggle plan mode".to_string(),
+                    input: None,
+                }],
+            })
+            .expect("commands");
+        let effect = ProtocolEffect::new(ProtocolFlavor::Acp, ProtocolMethod::UpdateContext)
+            .request_id(angel_engine::JsonRpcRequestId::new("ctx"))
+            .conversation_id(conversation_id)
+            .field("contextUpdate", "mode")
+            .field("mode", "plan");
+
+        let output = adapter
+            .encode_effect(&engine, &effect, &TransportOptions::default())
             .expect("encode mode");
 
         assert!(matches!(
@@ -1103,6 +1140,7 @@ mod tests {
             HistoryReplayEntry {
                 role: HistoryRole::User,
                 content: ContentDelta::Text("hello".to_string()),
+                tool: None,
             }
         );
         assert_eq!(
@@ -1110,6 +1148,7 @@ mod tests {
             HistoryReplayEntry {
                 role: HistoryRole::Assistant,
                 content: ContentDelta::Text("thinking\n".to_string()),
+                tool: None,
             }
         );
 

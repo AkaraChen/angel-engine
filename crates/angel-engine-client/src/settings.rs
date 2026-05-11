@@ -1,6 +1,6 @@
 use angel_engine::{
-    AvailableModeState, ConversationSettingsState, ModelListState, ProtocolFlavor,
-    ReasoningLevelOption, ReasoningLevelState, SessionMode, SessionModel,
+    AvailableModeState, ConversationSettingsState, ModelListState, ReasoningLevelOption,
+    ReasoningLevelState, SessionMode, SessionModel,
 };
 use serde::{Deserialize, Serialize};
 
@@ -13,11 +13,8 @@ pub struct ThreadSettingsSnapshot {
 }
 
 impl ThreadSettingsSnapshot {
-    pub(crate) fn from_conversation(
-        protocol: ProtocolFlavor,
-        conversation: &angel_engine::ConversationState,
-    ) -> Self {
-        ConversationSettingsState::from_conversation(protocol, conversation).into()
+    pub(crate) fn from_conversation(conversation: &angel_engine::ConversationState) -> Self {
+        ConversationSettingsState::from_conversation(conversation).into()
     }
 }
 

@@ -67,7 +67,7 @@ fn acp_extension_steer_uses_extension_method() {
 }
 
 #[test]
-fn acp_cancel_turn_is_notification_not_public_raw_protocol() {
+fn cancel_turn_emits_neutral_request() {
     let capabilities = acp_capabilities();
     let mut engine = engine_with(ProtocolFlavor::Acp, capabilities.clone());
     let conversation_id = insert_ready_conversation(
@@ -85,15 +85,15 @@ fn acp_cancel_turn_is_notification_not_public_raw_protocol() {
         })
         .expect("cancel turn");
 
-    assert_eq!(plan.request_id, None);
-    assert_eq!(plan.effects[0].request_id, None);
+    assert!(plan.request_id.is_some());
+    assert_eq!(plan.effects[0].request_id, plan.request_id);
     assert!(matches!(plan.effects[0].method, ProtocolMethod::CancelTurn));
     assert!(
         engine
             .pending
             .requests
             .values()
-            .all(|pending| !matches!(pending, PendingRequest::CancelTurn { .. }))
+            .any(|pending| matches!(pending, PendingRequest::CancelTurn { .. }))
     );
     let conversation = engine.conversations.get(&conversation_id).unwrap();
     assert!(matches!(

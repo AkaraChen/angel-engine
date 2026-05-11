@@ -1,13 +1,12 @@
 use crate::command::{TurnOverrides, UserInput, UserInputKind};
 use crate::error::EngineError;
 use crate::ids::{ConversationId, JsonRpcRequestId, RemoteTurnId, TurnId};
-use crate::protocol::{ProtocolEffect, ProtocolFlavor};
+use crate::protocol::ProtocolEffect;
 use crate::state::{
     ConversationLifecycle, ConversationState, TurnPhase, TurnState, UserFileInputRef,
     UserImageInputRef, UserInputRef,
 };
 
-use super::context_effects::codex_context_fields;
 use super::{AngelEngine, CommandPlan, PendingRequest};
 
 impl AngelEngine {
@@ -50,13 +49,6 @@ impl AngelEngine {
             conversation.focused_turn = Some(turn_id.clone());
             conversation.lifecycle = ConversationLifecycle::Active;
         }
-        let codex_context_fields = if self.protocol == ProtocolFlavor::CodexAppServer {
-            let conversation = self.conversation(&conversation_id)?;
-            codex_context_fields(&conversation.context)
-        } else {
-            Vec::new()
-        };
-
         self.pending.insert(
             request_id.clone(),
             PendingRequest::StartTurn {
@@ -71,9 +63,6 @@ impl AngelEngine {
             .turn_id(turn_id.clone())
             .field("input", input_text);
         for (key, value) in effect_fields {
-            effect = effect.field(key, value);
-        }
-        for (key, value) in codex_context_fields {
             effect = effect.field(key, value);
         }
         Ok(CommandPlan {
@@ -141,11 +130,7 @@ impl AngelEngine {
         turn_id: Option<TurnId>,
     ) -> Result<CommandPlan, EngineError> {
         let selected_turn_id = self.select_turn_for_cancel(&conversation_id, turn_id)?;
-        let request_id = if self.protocol == ProtocolFlavor::Acp {
-            None
-        } else {
-            Some(self.next_request_id())
-        };
+        let request_id = self.next_request_id();
         {
             let conversation = self.conversation_mut(&conversation_id)?;
             conversation.lifecycle = ConversationLifecycle::Cancelling {
@@ -155,28 +140,22 @@ impl AngelEngine {
                 turn.phase = TurnPhase::Cancelling;
             }
         }
-        if let Some(request_id) = &request_id {
-            self.pending.insert(
-                request_id.clone(),
-                PendingRequest::CancelTurn {
-                    conversation_id: conversation_id.clone(),
-                    turn_id: selected_turn_id.clone(),
-                },
-            )?;
-        }
+        self.pending.insert(
+            request_id.clone(),
+            PendingRequest::CancelTurn {
+                conversation_id: conversation_id.clone(),
+                turn_id: selected_turn_id.clone(),
+            },
+        )?;
         let effect = ProtocolEffect::new(self.protocol, self.method_cancel_turn())
+            .request_id(request_id.clone())
             .conversation_id(conversation_id.clone())
             .turn_id(selected_turn_id.clone());
-        let effect = if let Some(request_id) = &request_id {
-            effect.request_id(request_id.clone())
-        } else {
-            effect
-        };
         Ok(CommandPlan {
             effects: vec![effect],
             conversation_id: Some(conversation_id),
             turn_id: Some(selected_turn_id),
-            request_id,
+            request_id: Some(request_id),
         })
     }
 
@@ -193,7 +172,7 @@ impl AngelEngine {
             .turn
             .requires_expected_turn_id_for_steer
         {
-            ensure_codex_turn_id_available(conversation, &selected, "steer")?;
+            ensure_remote_turn_id_available(conversation, &selected, "steer")?;
         }
         Ok(selected)
     }
@@ -210,9 +189,6 @@ impl AngelEngine {
             .cancel
             .require("turn.cancel")?;
         let selected = active_or_requested_turn(conversation, conversation_id, turn_id)?;
-        if self.protocol == ProtocolFlavor::CodexAppServer {
-            ensure_codex_turn_id_available(conversation, &selected, "cancel")?;
-        }
         Ok(selected)
     }
 
@@ -249,22 +225,11 @@ impl AngelEngine {
         request_id: &JsonRpcRequestId,
         sequence: u64,
     ) -> Result<RemoteTurnId, EngineError> {
-        let conversation = self.conversation(conversation_id)?;
-        match self.protocol {
-            ProtocolFlavor::Acp => {
-                conversation
-                    .remote
-                    .as_protocol_id()
-                    .ok_or_else(|| EngineError::InvalidState {
-                        expected: "remote conversation id".to_string(),
-                        actual: format!("{:?}", conversation.remote),
-                    })?;
-                Ok(RemoteTurnId::Local(format!("turn-{sequence}")))
-            }
-            ProtocolFlavor::CodexAppServer => Ok(RemoteTurnId::Pending {
-                request_id: request_id.clone(),
-            }),
-        }
+        self.conversation(conversation_id)?;
+        let _ = sequence;
+        Ok(RemoteTurnId::Pending {
+            request_id: request_id.clone(),
+        })
     }
 }
 
@@ -287,7 +252,7 @@ fn active_or_requested_turn(
     Ok(selected)
 }
 
-fn ensure_codex_turn_id_available(
+fn ensure_remote_turn_id_available(
     conversation: &ConversationState,
     turn_id: &TurnId,
     operation: &str,

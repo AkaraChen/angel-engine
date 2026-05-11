@@ -22,7 +22,7 @@ impl CodexAdapter {
                 if let Some(cwd) = effect.payload.fields.get("cwd") {
                     params.insert("cwd".to_string(), json!(cwd));
                 }
-                insert_codex_thread_overrides(&mut params, &effect.payload.fields);
+                insert_codex_thread_overrides(engine, effect, &mut params)?;
                 params.insert("experimentalRawEvents".to_string(), json!(true));
                 params.insert("persistExtendedHistory".to_string(), json!(true));
                 Ok(Value::Object(params))
@@ -76,7 +76,7 @@ impl CodexAdapter {
                     json!(codex_thread_id(engine, effect)?),
                 );
                 params.insert("input".to_string(), codex_user_input(effect));
-                insert_codex_overrides(engine, effect, &mut params, &effect.payload.fields);
+                insert_codex_overrides(engine, effect, &mut params)?;
                 Ok(Value::Object(params))
             }
             ProtocolMethod::SteerTurn => Ok(json!({
@@ -183,69 +183,58 @@ fn insert_codex_overrides(
     engine: &AngelEngine,
     effect: &angel_engine::ProtocolEffect,
     params: &mut serde_json::Map<String, Value>,
-    fields: &std::collections::BTreeMap<String, String>,
-) {
-    if let Some(model) = fields.get("model") {
+) -> Result<(), angel_engine::EngineError> {
+    let Some(context) = codex_effect_context(engine, effect)? else {
+        params.insert("summary".to_string(), json!("auto"));
+        return Ok(());
+    };
+
+    if let Some(model) = codex_context_model(context) {
         params.insert("model".to_string(), json!(model));
     }
-    if let Some(effort) = fields.get("effort") {
+    if let Some(effort) = codex_context_effort(context) {
         params.insert("effort".to_string(), json!(codex_reasoning_effort(effort)));
     }
-    if let Some(service_tier) = fields
-        .get("serviceTier")
-        .map(String::as_str)
-        .or_else(|| codex_current_service_tier(engine, effect))
-    {
+    if let Some(service_tier) = codex_context_service_tier(context) {
         params.insert(
             "serviceTier".to_string(),
-            if service_tier == SERVICE_TIER_NONE {
-                Value::Null
-            } else {
-                json!(service_tier)
-            },
+            codex_service_tier_value(service_tier),
         );
     }
     params.insert("summary".to_string(), json!("auto"));
-    if let Some(policy) = fields.get("approvalPolicy") {
-        params.insert("approvalPolicy".to_string(), json!(policy));
-    }
-    if let Some(profile) = fields.get("permissions") {
+    if let Some(policy) = context.approvals.effective() {
         params.insert(
-            "permissions".to_string(),
-            json!({
-                "type": "profile",
-                "id": profile,
-                "modifications": null,
-            }),
+            "approvalPolicy".to_string(),
+            json!(codex_approval_policy(policy)),
         );
     }
-    if !fields.contains_key("permissions")
-        && let Some(policy) = fields
-            .get("sandboxPolicy")
-            .and_then(|policy| sandbox_policy(policy))
+    let has_permissions = insert_codex_permissions(context, params);
+    if !has_permissions
+        && let Some(policy) = context
+            .sandbox
+            .effective()
+            .and_then(|sandbox| sandbox_policy(codex_sandbox_policy(sandbox)))
     {
         params.insert("sandboxPolicy".to_string(), policy);
     }
-    let collaboration_model = fields
-        .get("collaborationModel")
-        .or_else(|| fields.get("model"))
-        .map(String::as_str)
-        .or_else(|| codex_current_model(engine, effect));
-    if let (Some(mode), Some(model)) = (fields.get("collaborationMode"), collaboration_model) {
+    if let (Some(mode), Some(model)) = (
+        codex_context_mode(context),
+        codex_context_model(context).or_else(|| codex_current_model(engine, effect)),
+    ) {
         params.insert(
             "collaborationMode".to_string(),
             json!({
-                "mode": mode,
+                "mode": mode.id.as_str(),
                 "settings": {
                     "model": model,
                     "developer_instructions": null,
-                    "reasoning_effort": fields
-                        .get("effort")
+                    "reasoning_effort": codex_context_effort(context)
                         .map(|effort| codex_reasoning_effort(effort)),
                 }
             }),
         );
     }
+    Ok(())
 }
 
 fn codex_current_model<'a>(
@@ -267,14 +256,45 @@ fn codex_current_model<'a>(
         })
 }
 
-fn codex_current_service_tier<'a>(
+fn codex_effect_context<'a>(
     engine: &'a AngelEngine,
     effect: &angel_engine::ProtocolEffect,
-) -> Option<&'a str> {
-    let conversation_id = effect.conversation_id.as_ref()?;
-    let conversation = engine.conversations.get(conversation_id)?;
-    conversation
-        .context
+) -> Result<Option<&'a angel_engine::EffectiveContext>, angel_engine::EngineError> {
+    let Some(conversation_id) = effect.conversation_id.as_ref() else {
+        return Ok(None);
+    };
+    let conversation = engine.conversations.get(conversation_id).ok_or_else(|| {
+        angel_engine::EngineError::ConversationNotFound {
+            conversation_id: conversation_id.to_string(),
+        }
+    })?;
+    Ok(Some(&conversation.context))
+}
+
+fn codex_context_model(context: &angel_engine::EffectiveContext) -> Option<&str> {
+    context.model.effective().and_then(Option::as_deref)
+}
+
+fn codex_context_effort(context: &angel_engine::EffectiveContext) -> Option<&str> {
+    context
+        .reasoning
+        .effective()
+        .and_then(Option::as_ref)
+        .and_then(|reasoning| reasoning.effort.as_deref())
+}
+
+fn codex_context_mode(
+    context: &angel_engine::EffectiveContext,
+) -> Option<&angel_engine::AgentMode> {
+    context
+        .mode
+        .effective()
+        .and_then(Option::as_ref)
+        .filter(|mode| matches!(mode.id.as_str(), "default" | "plan"))
+}
+
+fn codex_context_service_tier(context: &angel_engine::EffectiveContext) -> Option<&str> {
+    context
         .raw
         .get(SERVICE_TIER_CONTEXT_KEY)?
         .effective()
@@ -285,31 +305,96 @@ fn codex_reasoning_effort(effort: &str) -> &str {
     if effort == "high" { "xhigh" } else { effort }
 }
 
+fn codex_approval_policy(policy: &angel_engine::ApprovalPolicy) -> &'static str {
+    match policy {
+        angel_engine::ApprovalPolicy::Never => "never",
+        angel_engine::ApprovalPolicy::OnRequest => "on-request",
+        angel_engine::ApprovalPolicy::OnFailure => "on-failure",
+        angel_engine::ApprovalPolicy::UnlessTrusted => "untrusted",
+    }
+}
+
+fn codex_sandbox_policy(sandbox: &angel_engine::SandboxProfile) -> &str {
+    match sandbox {
+        angel_engine::SandboxProfile::ReadOnly => "read-only",
+        angel_engine::SandboxProfile::WorkspaceWrite => "workspace-write",
+        angel_engine::SandboxProfile::FullAccess => "danger-full-access",
+        angel_engine::SandboxProfile::Custom(value) => value,
+    }
+}
+
+fn codex_service_tier_value(service_tier: &str) -> Value {
+    if service_tier == SERVICE_TIER_NONE {
+        Value::Null
+    } else {
+        json!(service_tier)
+    }
+}
+
 fn insert_codex_thread_overrides(
+    engine: &AngelEngine,
+    effect: &angel_engine::ProtocolEffect,
     params: &mut serde_json::Map<String, Value>,
-    fields: &std::collections::BTreeMap<String, String>,
-) {
-    if let Some(model) = fields.get("model") {
+) -> Result<(), angel_engine::EngineError> {
+    let Some(context) = codex_effect_context(engine, effect)? else {
+        return Ok(());
+    };
+    if let Some(model) = codex_context_model(context) {
         params.insert("model".to_string(), json!(model));
     }
-    if let Some(policy) = fields.get("approvalPolicy") {
-        params.insert("approvalPolicy".to_string(), json!(policy));
+    if let Some(effort) = codex_context_effort(context) {
+        params.insert("effort".to_string(), json!(codex_reasoning_effort(effort)));
     }
-    if let Some(profile) = fields.get("permissions") {
+    if let Some(service_tier) = codex_context_service_tier(context) {
         params.insert(
-            "permissions".to_string(),
+            "serviceTier".to_string(),
+            codex_service_tier_value(service_tier),
+        );
+    }
+    if let Some(policy) = context.approvals.effective() {
+        params.insert(
+            "approvalPolicy".to_string(),
+            json!(codex_approval_policy(policy)),
+        );
+    }
+    if !insert_codex_permissions(context, params)
+        && let Some(sandbox) = context.sandbox.effective()
+    {
+        params.insert("sandbox".to_string(), json!(codex_sandbox_policy(sandbox)));
+    }
+    if let (Some(mode), Some(model)) = (codex_context_mode(context), codex_context_model(context)) {
+        params.insert(
+            "collaborationMode".to_string(),
             json!({
-                "type": "profile",
-                "id": profile,
-                "modifications": null,
+                "mode": mode.id.as_str(),
+                "settings": {
+                    "model": model,
+                    "developer_instructions": null,
+                    "reasoning_effort": codex_context_effort(context)
+                        .map(|effort| codex_reasoning_effort(effort)),
+                }
             }),
         );
     }
-    if !fields.contains_key("permissions")
-        && let Some(policy) = fields.get("sandboxPolicy")
-    {
-        params.insert("sandbox".to_string(), json!(policy));
-    }
+    Ok(())
+}
+
+fn insert_codex_permissions(
+    context: &angel_engine::EffectiveContext,
+    params: &mut serde_json::Map<String, Value>,
+) -> bool {
+    let Some(profile) = context.permissions.effective() else {
+        return false;
+    };
+    params.insert(
+        "permissions".to_string(),
+        json!({
+            "type": "profile",
+            "id": profile.name.as_str(),
+            "modifications": null,
+        }),
+    );
+    true
 }
 
 fn sandbox_policy(policy: &str) -> Option<Value> {

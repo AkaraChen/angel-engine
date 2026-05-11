@@ -732,8 +732,8 @@ fn capabilities_from_js(
         return Ok(base.capabilities());
     }
     Ok(match flavor {
-        ProtocolFlavor::Acp => ConversationCapabilities::acp_standard(),
-        ProtocolFlavor::CodexAppServer => ConversationCapabilities::codex_app_server(),
+        ProtocolFlavor::Acp => angel_provider::acp::acp_standard_capabilities(),
+        ProtocolFlavor::CodexAppServer => angel_provider::codex::codex_app_server_capabilities(),
     })
 }
 

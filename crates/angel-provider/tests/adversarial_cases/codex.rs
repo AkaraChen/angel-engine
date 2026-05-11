@@ -194,7 +194,7 @@ fn codex_start_turn_rpc_error_terminalizes_and_allows_next_turn() {
 }
 
 #[test]
-fn codex_rejects_steer_and_cancel_before_remote_turn_id_without_mutation() {
+fn codex_rejects_steer_in_engine_and_cancel_in_adapter_before_remote_turn_id() {
     let adapter = CodexAdapter::app_server();
     let mut engine = codex_engine(&adapter);
     let conversation_id = insert_ready_conversation(
@@ -223,16 +223,22 @@ fn codex_rejects_steer_and_cancel_before_remote_turn_id_without_mutation() {
             conversation_id: conversation_id.clone(),
             turn_id: None,
         })
-        .expect_err("cancel needs remote turn id");
-    assert!(matches!(cancel, EngineError::InvalidState { .. }));
+        .expect("neutral cancel can be planned");
+    let cancel_encode = adapter
+        .encode_effect(&engine, &cancel.effects[0], &TransportOptions::default())
+        .expect_err("Codex cancel needs remote turn id");
+    assert!(matches!(cancel_encode, EngineError::InvalidState { .. }));
 
     let conversation = &engine.conversations[&conversation_id];
-    assert_eq!(engine.pending.requests.len(), pending_len);
+    assert_eq!(engine.pending.requests.len(), pending_len + 1);
     assert_eq!(conversation.turns[&turn_id].input.len(), 1);
-    assert_eq!(conversation.lifecycle, ConversationLifecycle::Active);
+    assert!(matches!(
+        conversation.lifecycle,
+        ConversationLifecycle::Cancelling { .. }
+    ));
     assert!(matches!(
         conversation.turns[&turn_id].phase,
-        TurnPhase::Starting
+        TurnPhase::Cancelling
     ));
 }
 

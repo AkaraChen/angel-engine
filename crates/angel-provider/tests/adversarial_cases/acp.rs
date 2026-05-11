@@ -182,6 +182,35 @@ fn acp_cancel_turn_responds_cancel_to_pending_form_elicitation() {
 }
 
 #[test]
+fn acp_cancel_turn_with_engine_request_id_is_notification_and_completes_locally() {
+    let adapter = AcpAdapter::standard();
+    let mut engine = acp_engine(&adapter);
+    let conversation_id = insert_ready_conversation(
+        &mut engine,
+        "conv",
+        RemoteConversationId::Known("sess".to_string()),
+        adapter.capabilities(),
+    );
+    let turn_id = TurnId::new("turn");
+    let engine_request_id = JsonRpcRequestId::new("cancel-local");
+    let effect = ProtocolEffect::new(ProtocolFlavor::Acp, ProtocolMethod::CancelTurn)
+        .request_id(engine_request_id.clone())
+        .conversation_id(conversation_id)
+        .turn_id(turn_id);
+
+    let output = adapter
+        .encode_effect(&engine, &effect, &TransportOptions::default())
+        .expect("encode cancel");
+
+    assert!(matches!(
+        output.messages.as_slice(),
+        [JsonRpcMessage::Notification { method, params }]
+            if method == "session/cancel" && params["sessionId"] == json!("sess")
+    ));
+    assert_eq!(output.completed_requests, vec![engine_request_id]);
+}
+
+#[test]
 fn acp_elicitation_schema_preserves_typed_constraints_without_stringly_metadata() {
     let adapter = AcpAdapter::standard();
     let mut engine = acp_engine(&adapter);
@@ -291,7 +320,7 @@ fn acp_elicitation_schema_preserves_typed_constraints_without_stringly_metadata(
 }
 
 #[test]
-fn acp_bad_model_and_effort_updates_are_server_validated_without_local_context_mutation() {
+fn acp_bad_model_and_effort_updates_are_encoded_for_server_validation() {
     let adapter = AcpAdapter::standard();
     let mut engine = acp_engine(&adapter);
     let conversation_id = insert_ready_conversation(
@@ -349,8 +378,23 @@ fn acp_bad_model_and_effort_updates_are_server_validated_without_local_context_m
     assert_eq!(encoded_effects[0].2["value"], json!("not-a-real-model"));
     assert_eq!(encoded_effects[1].2["value"], json!("sideways"));
     let conversation = &engine.conversations[&conversation_id];
-    assert_eq!(conversation.context.model.effective(), None);
-    assert_eq!(conversation.context.reasoning.effective(), None);
+    assert_eq!(
+        conversation
+            .context
+            .model
+            .effective()
+            .and_then(Option::as_deref),
+        Some("not-a-real-model")
+    );
+    assert_eq!(
+        conversation
+            .context
+            .reasoning
+            .effective()
+            .and_then(Option::as_ref)
+            .and_then(|reasoning| reasoning.effort.as_deref()),
+        Some("sideways")
+    );
 
     for (request_id, _, _) in encoded_effects {
         decode_and_apply(
@@ -363,6 +407,68 @@ fn acp_bad_model_and_effort_updates_are_server_validated_without_local_context_m
     let next = start_turn(&mut engine, conversation_id, "recover");
     let (_, method, _) = encode_request(&adapter, &engine, &next.effects[0]);
     assert_eq!(method, "session/prompt");
+}
+
+#[test]
+fn acp_neutral_update_context_uses_config_option_when_available() {
+    let adapter = AcpAdapter::standard();
+    let mut engine = acp_engine(&adapter);
+    let conversation_id = insert_ready_conversation(
+        &mut engine,
+        "conv",
+        RemoteConversationId::Known("sess".to_string()),
+        adapter.capabilities(),
+    );
+    engine
+        .conversations
+        .get_mut(&conversation_id)
+        .unwrap()
+        .config_options
+        .push(SessionConfigOption {
+            id: "thought_level".to_string(),
+            name: "Thought level".to_string(),
+            description: None,
+            category: Some("thought_level".to_string()),
+            current_value: "medium".to_string(),
+            values: Vec::new(),
+        });
+    let effect = ProtocolEffect::new(ProtocolFlavor::Acp, ProtocolMethod::UpdateContext)
+        .request_id(JsonRpcRequestId::new("ctx"))
+        .conversation_id(conversation_id)
+        .field("contextUpdate", "reasoning")
+        .field("effort", "high");
+
+    let (_, method, params) = encode_request(&adapter, &engine, &effect);
+
+    assert_eq!(method, "session/set_config_option");
+    assert_eq!(params["sessionId"], json!("sess"));
+    assert_eq!(params["configId"], json!("thought_level"));
+    assert_eq!(params["value"], json!("high"));
+}
+
+#[test]
+fn acp_neutral_update_context_without_supported_write_completes_locally() {
+    let adapter = AcpAdapter::standard();
+    let mut engine = acp_engine(&adapter);
+    let conversation_id = insert_ready_conversation(
+        &mut engine,
+        "conv",
+        RemoteConversationId::Known("sess".to_string()),
+        adapter.capabilities(),
+    );
+    let request_id = JsonRpcRequestId::new("ctx");
+    let effect = ProtocolEffect::new(ProtocolFlavor::Acp, ProtocolMethod::UpdateContext)
+        .request_id(request_id.clone())
+        .conversation_id(conversation_id)
+        .field("contextUpdate", "sandbox")
+        .field("sandbox", "read-only");
+
+    let output = adapter
+        .encode_effect(&engine, &effect, &TransportOptions::default())
+        .expect("encode context");
+
+    assert!(output.messages.is_empty());
+    assert_eq!(output.completed_requests, vec![request_id]);
 }
 
 #[test]
@@ -743,10 +849,12 @@ fn acp_load_hydrates_replay_updates_before_response_without_session_id() {
             HistoryReplayEntry {
                 role: HistoryRole::User,
                 content: ContentDelta::Text(user),
+                tool: None,
             },
             HistoryReplayEntry {
                 role: HistoryRole::Assistant,
                 content: ContentDelta::ResourceRef(resource),
+                tool: None,
             },
         ] if user == "old user prompt" && resource == "file:///repo/README.md"
     ));

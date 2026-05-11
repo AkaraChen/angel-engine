@@ -8,6 +8,14 @@ impl CodexAdapter {
         effect: &angel_engine::ProtocolEffect,
         options: &TransportOptions,
     ) -> Result<TransportOutput, angel_engine::EngineError> {
+        if matches!(effect.method, ProtocolMethod::UpdateContext) {
+            let mut output =
+                TransportOutput::default().log(TransportLogKind::State, "Codex context updated");
+            if let Some(request_id) = &effect.request_id {
+                output.completed_requests.push(request_id.clone());
+            }
+            return Ok(output);
+        }
         if matches!(effect.method, ProtocolMethod::ResolveElicitation) {
             return self.encode_server_request_response(engine, effect);
         }

@@ -18,7 +18,14 @@ fn codex_plan_mode_round_trip_handles_question_plan_path_and_exit() {
             patch: set_model_and_mode("gpt-5.5", "plan"),
         })
         .expect("enter plan mode");
-    assert!(enter_plan.effects.is_empty());
+    assert_eq!(enter_plan.effects.len(), 2);
+    for effect in &enter_plan.effects {
+        let output = adapter
+            .encode_effect(&engine, effect, &TransportOptions::default())
+            .expect("encode context update");
+        assert!(output.messages.is_empty());
+        apply_transport_output(&mut engine, &output).expect("complete context update");
+    }
 
     let start = engine
         .plan_command(EngineCommand::StartTurn {
@@ -174,7 +181,12 @@ fn codex_plan_mode_round_trip_handles_question_plan_path_and_exit() {
             patch: set_mode("default"),
         })
         .expect("exit plan mode");
-    assert!(exit_plan.effects.is_empty());
+    assert_eq!(exit_plan.effects.len(), 1);
+    let exit_output = adapter
+        .encode_effect(&engine, &exit_plan.effects[0], &TransportOptions::default())
+        .expect("encode context update");
+    assert!(exit_output.messages.is_empty());
+    apply_transport_output(&mut engine, &exit_output).expect("complete context update");
 
     let next = engine
         .plan_command(EngineCommand::StartTurn {
@@ -407,7 +419,7 @@ fn codex_hydrate_restores_host_capability_question_and_answer() {
     );
 
     let conversation = &engine.conversations[&conversation_id];
-    let messages = conversation_display_messages(ProtocolFlavor::CodexAppServer, conversation);
+    let messages = conversation_display_messages(conversation);
     let action = messages
         .iter()
         .flat_map(|message| message.content.iter())

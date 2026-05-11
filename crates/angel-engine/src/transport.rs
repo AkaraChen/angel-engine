@@ -314,6 +314,7 @@ pub fn method_name(method: &ProtocolMethod) -> String {
         ProtocolMethod::SteerTurn => "steer_turn".to_string(),
         ProtocolMethod::CancelTurn => "cancel_turn".to_string(),
         ProtocolMethod::ResolveElicitation => "resolve_elicitation".to_string(),
+        ProtocolMethod::UpdateContext => "update_context".to_string(),
         ProtocolMethod::ArchiveConversation => "archive_conversation".to_string(),
         ProtocolMethod::UnarchiveConversation => "unarchive_conversation".to_string(),
         ProtocolMethod::CompactHistory => "history.compact".to_string(),

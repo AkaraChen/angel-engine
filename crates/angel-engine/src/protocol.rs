@@ -63,6 +63,7 @@ pub enum ProtocolMethod {
     SteerTurn,
     CancelTurn,
     ResolveElicitation,
+    UpdateContext,
     ArchiveConversation,
     UnarchiveConversation,
     CompactHistory,

@@ -3,13 +3,12 @@ use std::collections::BTreeMap;
 use crate::command::{DiscoverConversationsParams, ResumeTarget, StartConversationParams};
 use crate::error::EngineError;
 use crate::ids::{ConversationId, RemoteConversationId, TurnId};
-use crate::protocol::{ProtocolEffect, ProtocolFlavor, ProtocolMethod};
+use crate::protocol::ProtocolEffect;
 use crate::state::{
     ContextPatch, ConversationLifecycle, ConversationState, HydrationSource, ProvisionOp,
     RuntimeState,
 };
 
-use super::context_effects::codex_context_fields;
 use super::{AngelEngine, CommandPlan, PendingRequest};
 
 impl AngelEngine {
@@ -133,11 +132,6 @@ impl AngelEngine {
                 },
             ));
         }
-        let codex_context_fields = if self.protocol == ProtocolFlavor::CodexAppServer {
-            codex_context_fields(&conversation.context)
-        } else {
-            Vec::new()
-        };
         self.conversations
             .insert(conversation_id.clone(), conversation);
         self.selected = Some(conversation_id.clone());
@@ -162,9 +156,6 @@ impl AngelEngine {
                 "additionalDirectoryCount",
                 params.additional_directories.len().to_string(),
             );
-        }
-        for (key, value) in codex_context_fields {
-            effect = effect.field(key, value);
         }
         Ok(CommandPlan {
             effects: vec![effect],
@@ -228,10 +219,7 @@ impl AngelEngine {
                 if let Some(cwd) = cwd.as_ref() {
                     fields.insert("cwd".to_string(), cwd.clone());
                 }
-                let remote = match self.protocol {
-                    ProtocolFlavor::Acp => RemoteConversationId::Known(id),
-                    ProtocolFlavor::CodexAppServer => RemoteConversationId::Known(id),
-                };
+                let remote = RemoteConversationId::Known(id);
                 (
                     conversation_id,
                     remote,
@@ -254,10 +242,7 @@ impl AngelEngine {
                 if let Some(cwd) = cwd.as_ref() {
                     fields.insert("cwd".to_string(), cwd.clone());
                 }
-                let remote = match self.protocol {
-                    ProtocolFlavor::Acp => RemoteConversationId::Known(id),
-                    ProtocolFlavor::CodexAppServer => RemoteConversationId::Known(id),
-                };
+                let remote = RemoteConversationId::Known(id);
                 (
                     conversation_id,
                     remote,
@@ -298,10 +283,7 @@ impl AngelEngine {
         };
         let lifecycle = if hydrate {
             ConversationLifecycle::Hydrating {
-                source: match self.protocol {
-                    ProtocolFlavor::Acp => HydrationSource::AcpLoad,
-                    ProtocolFlavor::CodexAppServer => HydrationSource::CodexResume,
-                },
+                source: HydrationSource::Load,
             }
         } else {
             ConversationLifecycle::Provisioning { op }

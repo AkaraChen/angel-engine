@@ -77,6 +77,184 @@ pub(super) fn acp_tool_status(value: &str) -> AcpToolStatus {
     }
 }
 
+pub(crate) fn acp_tool_history_entry(update: &Value) -> Option<HistoryReplayEntry> {
+    let payload = acp_tool_history_payload(update)?;
+    Some(HistoryReplayEntry {
+        role: HistoryRole::Tool,
+        content: ContentDelta::Structured(json_string(&payload)),
+        tool: Some(acp_tool_history_action(&payload)),
+    })
+}
+
+pub(crate) fn acp_tool_history_payload(update: &Value) -> Option<Value> {
+    let session_update = update
+        .get("sessionUpdate")
+        .and_then(Value::as_str)
+        .filter(|session_update| matches!(*session_update, "tool_call" | "tool_call_update"))?;
+    let tool_call_id = update
+        .get("toolCallId")
+        .or_else(|| update.get("id"))
+        .and_then(Value::as_str)?;
+
+    let mut payload = serde_json::Map::new();
+    payload.insert("sessionUpdate".to_string(), json!(session_update));
+    payload.insert("toolCallId".to_string(), json!(tool_call_id));
+
+    if let Some(status) = update.get("status").and_then(Value::as_str) {
+        payload.insert("status".to_string(), json!(status));
+    } else if session_update == "tool_call" {
+        payload.insert("status".to_string(), json!("pending"));
+    }
+    if let Some(kind) = update.get("kind").and_then(Value::as_str) {
+        payload.insert("kind".to_string(), json!(kind));
+    }
+    if let Some(title) = update.get("title").and_then(Value::as_str) {
+        payload.insert("title".to_string(), json!(title));
+    }
+    if let Some(raw_input) = update.get("rawInput") {
+        payload.insert("rawInput".to_string(), raw_input.clone());
+    }
+    if let Some(content) = update.get("content") {
+        payload.insert("content".to_string(), content.clone());
+    }
+    if let Some(raw_output) = update.get("rawOutput") {
+        payload.insert("rawOutput".to_string(), raw_output.clone());
+    }
+    if let Some(error) = update.get("error") {
+        payload.insert("error".to_string(), error.clone());
+    }
+
+    Some(Value::Object(payload))
+}
+
+fn acp_tool_history_action(value: &Value) -> HistoryReplayToolAction {
+    let phase = value
+        .get("status")
+        .and_then(Value::as_str)
+        .map(acp_tool_status)
+        .map(AcpAdapter::tool_status_to_phase)
+        .unwrap_or(ActionPhase::Running);
+    let title = value
+        .get("title")
+        .and_then(Value::as_str)
+        .map(str::to_string);
+    let output = acp_tool_history_output(
+        value
+            .get("content")
+            .or_else(|| value.get("rawOutput"))
+            .unwrap_or(&Value::Null),
+    );
+    let output_text = output
+        .iter()
+        .filter_map(|chunk| match chunk {
+            ActionOutputDelta::Text(text) | ActionOutputDelta::Terminal(text) => {
+                Some(text.as_str())
+            }
+            ActionOutputDelta::Patch(_) | ActionOutputDelta::Structured(_) => None,
+        })
+        .collect::<Vec<_>>()
+        .join("");
+    let error = if phase == ActionPhase::Failed {
+        Some(ErrorInfo::new(
+            "acp.tool_call_failed",
+            value
+                .get("error")
+                .and_then(Value::as_str)
+                .map(str::to_string)
+                .or_else(|| (!output_text.trim().is_empty()).then_some(output_text))
+                .unwrap_or_else(|| "ACP tool call failed".to_string()),
+        ))
+    } else {
+        None
+    };
+    HistoryReplayToolAction {
+        id: value
+            .get("toolCallId")
+            .or_else(|| value.get("id"))
+            .and_then(Value::as_str)
+            .map(str::to_string),
+        kind: Some(acp_history_action_kind(
+            value.get("kind").and_then(Value::as_str),
+        )),
+        phase,
+        title: title.clone(),
+        input_summary: title,
+        raw_input: value.get("rawInput").map(|raw| {
+            raw.as_str()
+                .map_or_else(|| json_string(raw), str::to_string)
+        }),
+        output,
+        error,
+    }
+}
+
+fn acp_history_action_kind(kind: Option<&str>) -> ActionKind {
+    match kind.unwrap_or("other") {
+        "read" => ActionKind::Read,
+        "edit" | "delete" | "move" => ActionKind::FileChange,
+        "execute" | "command" => ActionKind::Command,
+        "search" | "web_search" => ActionKind::WebSearch,
+        "think" | "reasoning" => ActionKind::Reasoning,
+        "fetch" | "dynamic_tool" => ActionKind::DynamicTool,
+        "switch_mode" | "host_capability" => ActionKind::HostCapability,
+        _ => ActionKind::McpTool,
+    }
+}
+
+fn acp_tool_history_output(value: &Value) -> Vec<ActionOutputDelta> {
+    match value {
+        Value::Null => Vec::new(),
+        Value::Array(items) => items.iter().flat_map(acp_tool_history_output).collect(),
+        Value::String(text) => vec![ActionOutputDelta::Text(text.clone())],
+        Value::Bool(value) => vec![ActionOutputDelta::Text(value.to_string())],
+        Value::Number(value) => vec![ActionOutputDelta::Text(value.to_string())],
+        Value::Object(_) => acp_tool_history_output_object(value),
+    }
+}
+
+fn acp_tool_history_output_object(value: &Value) -> Vec<ActionOutputDelta> {
+    match value.get("type").and_then(Value::as_str) {
+        Some("content") => value
+            .get("content")
+            .map(acp_tool_history_output)
+            .filter(|output| !output.is_empty())
+            .unwrap_or_else(|| vec![ActionOutputDelta::Structured(json_string(value))]),
+        Some("diff") => vec![ActionOutputDelta::Patch(acp_history_diff_text(value))],
+        Some("terminal") => vec![ActionOutputDelta::Terminal(
+            value
+                .get("terminalId")
+                .and_then(Value::as_str)
+                .unwrap_or_default()
+                .to_string(),
+        )],
+        Some("patch") => vec![ActionOutputDelta::Patch(
+            content_text(value).unwrap_or_else(|| json_string(value)),
+        )],
+        Some("text") => content_text(value)
+            .map(|text| vec![ActionOutputDelta::Text(text)])
+            .unwrap_or_else(|| vec![ActionOutputDelta::Structured(json_string(value))]),
+        Some(_) | None => content_text(value)
+            .map(|text| vec![ActionOutputDelta::Text(text)])
+            .unwrap_or_else(|| vec![ActionOutputDelta::Structured(json_string(value))]),
+    }
+}
+
+fn acp_history_diff_text(value: &Value) -> String {
+    let path = value
+        .get("path")
+        .and_then(Value::as_str)
+        .unwrap_or("<unknown>");
+    let old_text = value
+        .get("oldText")
+        .and_then(Value::as_str)
+        .unwrap_or_default();
+    let new_text = value
+        .get("newText")
+        .and_then(Value::as_str)
+        .unwrap_or_default();
+    format!("diff -- {path}\n--- old\n{old_text}\n+++ new\n{new_text}")
+}
+
 pub(super) fn content_delta_from_update(update: &Value) -> ContentDelta {
     update
         .get("content")

@@ -302,7 +302,7 @@ fn codex_app_server_process_smoke_enters_and_exits_plan_mode() -> TestResult {
             ],
         },
     })?;
-    assert!(enter_plan.effects.is_empty());
+    process.send_engine_plan(enter_plan)?;
     let plan_turn =
         process.start_turn_and_interrupt(conversation_id.clone(), "codex process smoke: plan")?;
     assert!(matches!(
@@ -319,7 +319,7 @@ fn codex_app_server_process_smoke_enters_and_exits_plan_mode() -> TestResult {
             }),
         }),
     })?;
-    assert!(exit_plan.effects.is_empty());
+    process.send_engine_plan(exit_plan)?;
     assert_eq!(
         process.engine.conversations[&conversation_id]
             .context

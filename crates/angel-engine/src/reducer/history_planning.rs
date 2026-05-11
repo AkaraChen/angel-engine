@@ -1,6 +1,6 @@
 use crate::error::EngineError;
 use crate::ids::ConversationId;
-use crate::protocol::{ProtocolEffect, ProtocolFlavor, ProtocolMethod};
+use crate::protocol::{ProtocolEffect, ProtocolMethod};
 use crate::state::{ConversationLifecycle, HistoryMutationOp};
 
 use super::{AngelEngine, CommandPlan, PendingRequest};
@@ -80,11 +80,11 @@ impl AngelEngine {
                     actual: format!("{:?}", conversation.lifecycle),
                 });
             }
-            if self.protocol != ProtocolFlavor::CodexAppServer {
-                return Err(EngineError::CapabilityUnsupported {
-                    capability: "thread.shell_command".to_string(),
-                });
-            }
+            conversation
+                .capabilities
+                .history
+                .shell_command
+                .require("history.shell_command")?;
         }
         let request_id = self.next_request_id();
         self.pending.insert(

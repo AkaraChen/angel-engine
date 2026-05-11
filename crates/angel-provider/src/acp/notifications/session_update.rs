@@ -250,19 +250,19 @@ fn hydration_update(
         "user_message_chunk" => HistoryReplayEntry {
             role: HistoryRole::User,
             content: content_delta_from_update(update),
+            tool: None,
         },
         "agent_message_chunk" => HistoryReplayEntry {
             role: HistoryRole::Assistant,
             content: content_delta_from_update(update),
+            tool: None,
         },
         "agent_thought_chunk" => HistoryReplayEntry {
             role: HistoryRole::Reasoning,
             content: content_delta_from_update(update),
+            tool: None,
         },
-        "tool_call" | "tool_call_update" => HistoryReplayEntry {
-            role: HistoryRole::Tool,
-            content: ContentDelta::Structured(json_string(update)),
-        },
+        "tool_call" | "tool_call_update" => acp_tool_history_entry(update)?,
         _ => return None,
     };
     Some(

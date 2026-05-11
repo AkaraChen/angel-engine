@@ -1,4 +1,7 @@
-use super::actions::dynamic_tool_is_host_capability;
+use super::actions::{
+    action_from_item, completed_phase_from_item, dynamic_tool_has_input_payload,
+    dynamic_tool_is_host_capability, dynamic_tool_is_output_only,
+};
 use super::commands::codex_slash_commands;
 use super::protocol_helpers::*;
 use super::requests::host_capability_options;
@@ -60,6 +63,7 @@ impl CodexAdapter {
                         commands: codex_slash_commands(),
                     })
                     .log(TransportLogKind::State, format!("thread {thread_id} ready"));
+                append_codex_default_settings(&mut output, engine, conversation_id);
             }
             PendingRequest::ResumeConversation {
                 conversation_id,
@@ -84,6 +88,7 @@ impl CodexAdapter {
                         commands: codex_slash_commands(),
                     })
                     .log(TransportLogKind::State, format!("thread {thread_id} ready"));
+                append_codex_default_settings(&mut output, engine, conversation_id);
                 if *hydrate {
                     append_hydrated_turns(&mut output, conversation_id, result);
                 }
@@ -210,6 +215,113 @@ impl CodexAdapter {
     }
 }
 
+fn append_codex_default_settings(
+    output: &mut TransportOutput,
+    engine: &AngelEngine,
+    conversation_id: &ConversationId,
+) {
+    let conversation = engine.conversations.get(conversation_id);
+    if conversation
+        .and_then(|conversation| conversation.mode_state.as_ref())
+        .is_none()
+    {
+        output.events.push(EngineEvent::SessionModesUpdated {
+            conversation_id: conversation_id.clone(),
+            modes: SessionModeState {
+                current_mode_id: conversation
+                    .and_then(|conversation| {
+                        conversation
+                            .context
+                            .mode
+                            .effective()
+                            .and_then(Option::as_ref)
+                            .map(|mode| mode.id.clone())
+                    })
+                    .unwrap_or_else(|| "default".to_string()),
+                available_modes: vec![
+                    SessionMode {
+                        id: "default".to_string(),
+                        name: "Default".to_string(),
+                        description: None,
+                    },
+                    SessionMode {
+                        id: "plan".to_string(),
+                        name: "Plan".to_string(),
+                        description: Some("Plan before making changes.".to_string()),
+                    },
+                ],
+            },
+        });
+    }
+
+    if conversation.map_or(true, |conversation| {
+        !codex_has_reasoning_option(conversation)
+    }) {
+        let mut options = conversation
+            .map(|conversation| conversation.config_options.clone())
+            .unwrap_or_default();
+        options.push(codex_reasoning_config_option(
+            conversation
+                .and_then(|conversation| {
+                    conversation
+                        .context
+                        .reasoning
+                        .effective()
+                        .and_then(Option::as_ref)
+                        .and_then(|reasoning| reasoning.effort.clone())
+                })
+                .unwrap_or_else(|| "none".to_string()),
+        ));
+        output
+            .events
+            .push(EngineEvent::SessionConfigOptionsUpdated {
+                conversation_id: conversation_id.clone(),
+                options,
+            });
+    }
+}
+
+fn codex_has_reasoning_option(conversation: &angel_engine::state::ConversationState) -> bool {
+    conversation.config_options.iter().any(|option| {
+        let id = option.id.to_ascii_lowercase();
+        let name = option.name.to_ascii_lowercase();
+        id.contains("reasoning") || id.contains("effort") || name.contains("reasoning")
+    })
+}
+
+fn codex_reasoning_config_option(current_value: String) -> SessionConfigOption {
+    SessionConfigOption {
+        id: "reasoning".to_string(),
+        name: "Reasoning".to_string(),
+        description: None,
+        category: Some("reasoning".to_string()),
+        current_value,
+        values: ["none", "minimal", "low", "medium", "high", "xhigh"]
+            .into_iter()
+            .map(|value| SessionConfigValue {
+                value: value.to_string(),
+                name: codex_setting_label(value),
+                description: None,
+            })
+            .collect(),
+    }
+}
+
+fn codex_setting_label(value: &str) -> String {
+    value
+        .split(['_', '-'])
+        .filter(|part| !part.is_empty())
+        .map(|part| {
+            let mut chars = part.chars();
+            match chars.next() {
+                Some(first) => format!("{}{}", first.to_ascii_uppercase(), chars.as_str()),
+                None => String::new(),
+            }
+        })
+        .collect::<Vec<_>>()
+        .join(" ")
+}
+
 fn codex_rpc_error_event(
     pending: &PendingRequest,
     code: i64,
@@ -266,19 +378,27 @@ fn append_hydrated_turns(
             .flatten()
         {
             let replay_item = codex_history_replay_item(item);
-            let (role, content) = match replay_item.get("type").and_then(Value::as_str) {
-                Some("userMessage") => (HistoryRole::User, codex_content_delta(replay_item)),
+            let (role, content, tool) = match replay_item.get("type").and_then(Value::as_str) {
+                Some("userMessage") => (HistoryRole::User, codex_content_delta(replay_item), None),
                 Some("message")
                     if replay_item.get("role").and_then(Value::as_str) == Some("user") =>
                 {
-                    (HistoryRole::User, codex_content_delta(replay_item))
+                    (HistoryRole::User, codex_content_delta(replay_item), None)
                 }
                 Some("message")
                     if replay_item.get("role").and_then(Value::as_str) == Some("assistant") =>
                 {
-                    (HistoryRole::Assistant, codex_content_delta(replay_item))
+                    (
+                        HistoryRole::Assistant,
+                        codex_content_delta(replay_item),
+                        None,
+                    )
                 }
-                Some("message") => (HistoryRole::Assistant, codex_content_delta(replay_item)),
+                Some("message") => (
+                    HistoryRole::Assistant,
+                    codex_content_delta(replay_item),
+                    None,
+                ),
                 Some("agentMessage") => (
                     HistoryRole::Assistant,
                     ContentDelta::Text(
@@ -288,10 +408,12 @@ fn append_hydrated_turns(
                             .unwrap_or_default()
                             .to_string(),
                     ),
+                    None,
                 ),
                 Some("reasoning") => (
                     HistoryRole::Reasoning,
                     ContentDelta::Text(codex_reasoning_text(replay_item)),
+                    None,
                 ),
                 Some("plan") => {
                     let Some(plan_item) = codex_history_replay_plan_item(replay_item) else {
@@ -300,14 +422,18 @@ fn append_hydrated_turns(
                     (
                         HistoryRole::Assistant,
                         ContentDelta::Structured(plan_item.to_string()),
+                        None,
                     )
                 }
-                Some(item_type) if codex_history_replay_tool_item_type(item_type) => (
-                    HistoryRole::Tool,
-                    ContentDelta::Structured(
-                        codex_history_replay_tool_item(replay_item).to_string(),
-                    ),
-                ),
+                Some(item_type) if codex_history_replay_tool_item_type(item_type) => {
+                    let tool_item = codex_history_replay_tool_item(replay_item);
+                    let tool = codex_history_replay_tool_action(&tool_item);
+                    (
+                        HistoryRole::Tool,
+                        ContentDelta::Structured(tool_item.to_string()),
+                        tool,
+                    )
+                }
                 _ => continue,
             };
             if content_delta_is_empty(&content) {
@@ -315,7 +441,11 @@ fn append_hydrated_turns(
             }
             output.events.push(EngineEvent::HistoryReplayChunk {
                 conversation_id: conversation_id.clone(),
-                entry: HistoryReplayEntry { role, content },
+                entry: HistoryReplayEntry {
+                    role,
+                    content,
+                    tool,
+                },
             });
         }
     }
@@ -362,6 +492,184 @@ fn codex_history_replay_tool_item(item: &Value) -> Value {
         .or_insert_with(|| Value::String("completed".to_string()));
     normalize_host_capability_history_tool_item(&mut replay_item);
     replay_item
+}
+
+fn codex_history_replay_tool_action(item: &Value) -> Option<HistoryReplayToolAction> {
+    let item_type = item.get("type").and_then(Value::as_str)?;
+    let fallback_turn_id = TurnId::new("history".to_string());
+    let action = action_from_item(item, &fallback_turn_id);
+    let kind = action
+        .as_ref()
+        .map(|action| action.kind.clone())
+        .or_else(|| codex_history_tool_kind(item));
+    let phase = action
+        .as_ref()
+        .and_then(|action| completed_phase_from_item(item, &action.kind))
+        .or_else(|| {
+            item.get("status")
+                .and_then(Value::as_str)
+                .map(|status| ActionPhase::from_wire(Some(status)))
+        })
+        .unwrap_or_else(|| match item_type {
+            "function_call_output" | "custom_tool_call_output" | "tool_search_output" => {
+                ActionPhase::Completed
+            }
+            _ => ActionPhase::Completed,
+        });
+    let title = action
+        .as_ref()
+        .and_then(|action| action.title.clone())
+        .or_else(|| codex_history_tool_title(item));
+    let output = codex_history_tool_output(item);
+    Some(HistoryReplayToolAction {
+        id: first_item_string(item, &["id", "callId", "call_id", "itemId"]),
+        kind,
+        phase,
+        title: title.clone(),
+        input_summary: first_item_string(item, &["inputSummary", "input_summary"]).or(title),
+        raw_input: codex_history_tool_raw_input(item),
+        output,
+        error: None,
+    })
+}
+
+fn codex_history_tool_kind(item: &Value) -> Option<ActionKind> {
+    let kind = match item.get("type").and_then(Value::as_str)? {
+        "commandExecution" | "local_shell_call" => ActionKind::Command,
+        "fileChange" => ActionKind::FileChange,
+        "mcpToolCall" | "mcp_call" => ActionKind::McpTool,
+        "dynamicToolCall" if dynamic_tool_is_host_capability(item) => ActionKind::HostCapability,
+        "dynamicToolCall" | "tool_search_call" => ActionKind::DynamicTool,
+        "webSearch" | "web_search_call" => ActionKind::WebSearch,
+        "imageView" | "imageGeneration" => ActionKind::Media,
+        "contextCompaction" => ActionKind::Reasoning,
+        "function_call" => {
+            if is_codex_command_tool_name(first_item_string(item, &["name"]).as_deref()) {
+                ActionKind::Command
+            } else {
+                ActionKind::DynamicTool
+            }
+        }
+        "custom_tool_call" => {
+            if first_item_string(item, &["name"]).as_deref() == Some("apply_patch") {
+                ActionKind::FileChange
+            } else {
+                ActionKind::DynamicTool
+            }
+        }
+        "computer_call" => ActionKind::HostCapability,
+        _ => return None,
+    };
+    Some(kind)
+}
+
+fn codex_history_tool_title(item: &Value) -> Option<String> {
+    match item.get("type").and_then(Value::as_str)? {
+        "commandExecution" | "local_shell_call" => first_item_string(item, &["command"]),
+        "mcpToolCall" => Some(format!(
+            "{}.{}",
+            item.get("server").and_then(Value::as_str).unwrap_or("mcp"),
+            item.get("tool").and_then(Value::as_str).unwrap_or("tool")
+        )),
+        "mcp_call" => first_item_string(item, &["name"]),
+        "dynamicToolCall" if dynamic_tool_is_output_only(item) => {
+            first_item_string(item, &["title"])
+        }
+        "dynamicToolCall" => first_item_string(item, &["title"]).or_else(|| {
+            let tool = item.get("tool").and_then(Value::as_str).unwrap_or("tool");
+            Some(
+                item.get("namespace")
+                    .and_then(Value::as_str)
+                    .map(|namespace| format!("{namespace}.{tool}"))
+                    .unwrap_or_else(|| tool.to_string()),
+            )
+        }),
+        "webSearch" => first_item_string(item, &["query"]),
+        "web_search_call" => item
+            .get("action")
+            .and_then(|action| first_item_string(action, &["query"])),
+        "function_call" | "custom_tool_call" => first_item_string(item, &["name"]),
+        "tool_search_call" => Some("tool_search".to_string()),
+        "computer_call" => Some("computer".to_string()),
+        "function_call_output" | "custom_tool_call_output" | "tool_search_output" => None,
+        _ => first_item_string(item, &["title", "name", "type"]),
+    }
+}
+
+fn codex_history_tool_raw_input(item: &Value) -> Option<String> {
+    if let Some(raw_input) = item.get("rawInput").or_else(|| item.get("raw_input")) {
+        return Some(
+            raw_input
+                .as_str()
+                .map_or_else(|| raw_input.to_string(), str::to_string),
+        );
+    }
+    match item.get("type").and_then(Value::as_str) {
+        Some("function_call") => first_item_string(item, &["arguments"])
+            .or_else(|| item.get("arguments").map(Value::to_string)),
+        Some("custom_tool_call") => {
+            first_item_string(item, &["input"]).or_else(|| item.get("input").map(Value::to_string))
+        }
+        Some("dynamicToolCall") if dynamic_tool_is_output_only(item) => None,
+        Some("function_call_output" | "custom_tool_call_output" | "tool_search_output") => None,
+        _ => Some(item.to_string()),
+    }
+}
+
+fn codex_history_tool_output(item: &Value) -> Vec<ActionOutputDelta> {
+    [
+        "output",
+        "result",
+        "content",
+        "contentItems",
+        "content_items",
+        "aggregatedOutput",
+        "stdout",
+        "stderr",
+    ]
+    .iter()
+    .find_map(|key| item.get(*key))
+    .map(codex_history_output_value)
+    .unwrap_or_default()
+}
+
+fn codex_history_output_value(value: &Value) -> Vec<ActionOutputDelta> {
+    match value {
+        Value::Null => Vec::new(),
+        Value::Array(items) => items.iter().flat_map(codex_history_output_value).collect(),
+        Value::String(text) => vec![ActionOutputDelta::Text(codex_history_output_text(text))],
+        Value::Bool(value) => vec![ActionOutputDelta::Text(value.to_string())],
+        Value::Number(value) => vec![ActionOutputDelta::Text(value.to_string())],
+        Value::Object(_) => {
+            if matches!(
+                value.get("type").and_then(Value::as_str),
+                Some("inputText" | "outputText" | "text")
+            ) && let Some(text) = value.get("text").and_then(Value::as_str)
+            {
+                vec![ActionOutputDelta::Text(text.to_string())]
+            } else {
+                vec![ActionOutputDelta::Structured(value.to_string())]
+            }
+        }
+    }
+}
+
+fn codex_history_output_text(text: &str) -> String {
+    serde_json::from_str::<Value>(text)
+        .ok()
+        .and_then(|value| {
+            value
+                .get("output")
+                .or_else(|| value.get("text"))
+                .or_else(|| value.get("content"))
+                .and_then(Value::as_str)
+                .map(str::to_string)
+        })
+        .unwrap_or_else(|| text.to_string())
+}
+
+fn is_codex_command_tool_name(name: Option<&str>) -> bool {
+    matches!(name, Some("shell" | "exec_command" | "write_stdin"))
 }
 
 fn codex_history_replay_plan_item(item: &Value) -> Option<Value> {
@@ -441,10 +749,7 @@ fn normalize_host_capability_history_tool_item(replay_item: &mut Value) {
         return;
     }
 
-    let has_input_payload = replay_item.get("arguments").is_some()
-        || replay_item.get("title").is_some()
-        || replay_item.get("inputSummary").is_some()
-        || replay_item.get("rawInput").is_some();
+    let has_input_payload = dynamic_tool_has_input_payload(replay_item);
     {
         let Value::Object(fields) = replay_item else {
             return;
@@ -817,7 +1122,9 @@ mod tests {
             output.events.as_slice(),
             [
                 EngineEvent::ConversationReady { .. },
-                EngineEvent::AvailableCommandsUpdated { commands, .. }
+                EngineEvent::AvailableCommandsUpdated { commands, .. },
+                EngineEvent::SessionModesUpdated { modes, .. },
+                EngineEvent::SessionConfigOptionsUpdated { options, .. }
             ] if commands.iter().any(|command| command.name == "plan")
                 && commands.iter().any(|command| command.name == "compact")
                 && commands.iter().any(|command| command.name == "fast")
@@ -825,6 +1132,16 @@ mod tests {
                     command.name.as_str(),
                     "copy" | "raw" | "theme" | "quit" | "review" | "mention"
                 ))
+                && modes.current_mode_id == "default"
+                && modes.available_modes.iter().any(|mode| mode.id == "default")
+                && modes.available_modes.iter().any(|mode| mode.id == "plan")
+                && options.iter().any(|option| option.id == "reasoning"
+                    && option.values.iter().any(|value| value.value == "none")
+                    && option.values.iter().any(|value| value.value == "minimal")
+                    && option.values.iter().any(|value| value.value == "low")
+                    && option.values.iter().any(|value| value.value == "medium")
+                    && option.values.iter().any(|value| value.value == "high")
+                    && option.values.iter().any(|value| value.value == "xhigh"))
         ));
     }
 
@@ -1005,6 +1322,14 @@ mod tests {
                 _ => None,
             })
             .collect::<Vec<_>>();
+        let replay_entries = output
+            .events
+            .iter()
+            .filter_map(|event| match event {
+                EngineEvent::HistoryReplayChunk { entry, .. } => Some(entry),
+                _ => None,
+            })
+            .collect::<Vec<_>>();
 
         assert_eq!(replay.len(), 7);
         assert_eq!(
@@ -1034,6 +1359,20 @@ mod tests {
             search_item.get("status").and_then(Value::as_str),
             Some("completed")
         );
+        assert_eq!(
+            replay_entries[2]
+                .tool
+                .as_ref()
+                .and_then(|tool| tool.kind.as_ref()),
+            Some(&ActionKind::WebSearch)
+        );
+        assert_eq!(
+            replay_entries[2]
+                .tool
+                .as_ref()
+                .and_then(|tool| tool.title.as_deref()),
+            Some("keyboard lock")
+        );
         assert_eq!(replay[3].0, HistoryRole::Tool);
         assert_eq!(replay[3].1, "structured");
         let tool_item: Value = serde_json::from_str(&replay[3].2).expect("tool item");
@@ -1042,6 +1381,20 @@ mod tests {
             Some("commandExecution")
         );
         assert_eq!(tool_item.get("id").and_then(Value::as_str), Some("exec-1"));
+        assert_eq!(
+            replay_entries[3]
+                .tool
+                .as_ref()
+                .and_then(|tool| tool.kind.as_ref()),
+            Some(&ActionKind::Command)
+        );
+        assert_eq!(
+            replay_entries[3]
+                .tool
+                .as_ref()
+                .and_then(|tool| tool.title.as_deref()),
+            Some("cargo test")
+        );
         assert_eq!(replay[4].0, HistoryRole::Tool);
         assert_eq!(replay[4].1, "structured");
         let raw_call_item: Value = serde_json::from_str(&replay[4].2).expect("raw call item");
@@ -1065,6 +1418,13 @@ mod tests {
             raw_call_item.get("status").and_then(Value::as_str),
             Some("completed")
         );
+        assert_eq!(
+            replay_entries[4]
+                .tool
+                .as_ref()
+                .and_then(|tool| tool.kind.as_ref()),
+            Some(&ActionKind::Command)
+        );
         assert_eq!(replay[5].0, HistoryRole::Tool);
         assert_eq!(replay[5].1, "structured");
         let raw_output_item: Value = serde_json::from_str(&replay[5].2).expect("raw output item");
@@ -1087,6 +1447,13 @@ mod tests {
         assert_eq!(
             raw_output_item.get("status").and_then(Value::as_str),
             Some("completed")
+        );
+        assert_eq!(
+            replay_entries[5]
+                .tool
+                .as_ref()
+                .map(|tool| tool.phase.clone()),
+            Some(ActionPhase::Completed)
         );
         assert_eq!(
             replay[6],

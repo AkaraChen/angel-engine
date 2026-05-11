@@ -65,96 +65,50 @@ pub struct ConversationCapabilities {
 }
 
 impl ConversationCapabilities {
-    pub fn acp_standard() -> Self {
+    pub fn unknown() -> Self {
         Self {
             lifecycle: LifecycleCapabilities {
-                create: CapabilitySupport::Supported,
-                list: CapabilitySupport::Supported,
+                create: CapabilitySupport::Unknown,
+                list: CapabilitySupport::Unknown,
                 load: CapabilitySupport::Unknown,
                 resume: CapabilitySupport::Unknown,
-                fork: CapabilitySupport::Unsupported,
-                archive: CapabilitySupport::Unsupported,
+                fork: CapabilitySupport::Unknown,
+                archive: CapabilitySupport::Unknown,
                 close: CapabilitySupport::Unknown,
             },
             turn: TurnCapabilities {
-                start: CapabilitySupport::Supported,
-                steer: CapabilitySupport::Unsupported,
-                cancel: CapabilitySupport::Supported,
+                start: CapabilitySupport::Unknown,
+                steer: CapabilitySupport::Unknown,
+                cancel: CapabilitySupport::Unknown,
                 max_active_turns: 1,
                 requires_expected_turn_id_for_steer: false,
             },
             action: ActionCapabilities {
-                observe: CapabilitySupport::Supported,
-                stream_output: CapabilitySupport::Supported,
-                decline: CapabilitySupport::Supported,
+                observe: CapabilitySupport::Unknown,
+                stream_output: CapabilitySupport::Unknown,
+                decline: CapabilitySupport::Unknown,
             },
             elicitation: ElicitationCapabilities {
-                approval: CapabilitySupport::Supported,
+                approval: CapabilitySupport::Unknown,
                 user_input: CapabilitySupport::Unknown,
                 external_flow: CapabilitySupport::Unknown,
                 dynamic_tool_call: CapabilitySupport::Unknown,
             },
             history: HistoryCapabilities {
                 hydrate: CapabilitySupport::Unknown,
-                compact: CapabilitySupport::Unsupported,
-                rollback: CapabilitySupport::Unsupported,
-                inject_items: CapabilitySupport::Unsupported,
+                compact: CapabilitySupport::Unknown,
+                rollback: CapabilitySupport::Unknown,
+                inject_items: CapabilitySupport::Unknown,
+                shell_command: CapabilitySupport::Unknown,
             },
             context: ContextCapabilities {
                 mode: CapabilitySupport::Unknown,
                 config: CapabilitySupport::Unknown,
                 additional_directories: CapabilitySupport::Unknown,
-                turn_overrides: CapabilitySupport::Unsupported,
+                turn_overrides: CapabilitySupport::Unknown,
             },
             observer: ObserverCapabilities {
-                unsubscribe: CapabilitySupport::Unsupported,
-            },
-        }
-    }
-
-    pub fn codex_app_server() -> Self {
-        Self {
-            lifecycle: LifecycleCapabilities {
-                create: CapabilitySupport::Supported,
-                list: CapabilitySupport::Supported,
-                load: CapabilitySupport::Supported,
-                resume: CapabilitySupport::Supported,
-                fork: CapabilitySupport::Supported,
-                archive: CapabilitySupport::Supported,
-                close: CapabilitySupport::Unknown,
-            },
-            turn: TurnCapabilities {
-                start: CapabilitySupport::Supported,
-                steer: CapabilitySupport::Supported,
-                cancel: CapabilitySupport::Supported,
-                max_active_turns: 1,
-                requires_expected_turn_id_for_steer: true,
-            },
-            action: ActionCapabilities {
-                observe: CapabilitySupport::Supported,
-                stream_output: CapabilitySupport::Supported,
-                decline: CapabilitySupport::Supported,
-            },
-            elicitation: ElicitationCapabilities {
-                approval: CapabilitySupport::Supported,
-                user_input: CapabilitySupport::Supported,
-                external_flow: CapabilitySupport::Supported,
-                dynamic_tool_call: CapabilitySupport::Supported,
-            },
-            history: HistoryCapabilities {
-                hydrate: CapabilitySupport::Supported,
-                compact: CapabilitySupport::Supported,
-                rollback: CapabilitySupport::Supported,
-                inject_items: CapabilitySupport::Supported,
-            },
-            context: ContextCapabilities {
-                mode: CapabilitySupport::Supported,
-                config: CapabilitySupport::Supported,
-                additional_directories: CapabilitySupport::Unsupported,
-                turn_overrides: CapabilitySupport::Supported,
-            },
-            observer: ObserverCapabilities {
-                unsubscribe: CapabilitySupport::Supported,
+                unsubscribe: CapabilitySupport::Unknown,
             },
         }
     }
@@ -201,6 +155,7 @@ pub struct HistoryCapabilities {
     pub compact: CapabilitySupport,
     pub rollback: CapabilitySupport,
     pub inject_items: CapabilitySupport,
+    pub shell_command: CapabilitySupport,
 }
 
 #[derive(serde::Serialize, serde::Deserialize, Clone, Debug, PartialEq, Eq)]

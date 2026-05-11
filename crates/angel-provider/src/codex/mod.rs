@@ -1,5 +1,5 @@
 use super::{InterpretedUserInput, ProtocolAdapter};
-use angel_engine::capabilities::ConversationCapabilities;
+use angel_engine::capabilities::{CapabilitySupport, ConversationCapabilities};
 use angel_engine::error::ErrorInfo;
 use angel_engine::event::EngineEvent;
 use angel_engine::ids::{
@@ -11,9 +11,10 @@ use angel_engine::reducer::{AngelEngine, PendingRequest};
 use angel_engine::state::{
     ActionInput, ActionKind, ActionOutputDelta, ActionPatch, ActionPhase, ActionState,
     ContentDelta, ContentPart, ContextPatch, ConversationLifecycle, ElicitationKind,
-    ElicitationOptions, ElicitationState, ExhaustionReason, HistoryReplayEntry, HistoryRole,
-    PlanEntry, PlanEntryStatus, PlanState, SessionModel, SessionModelState, TurnOutcome,
-    UserQuestion, UserQuestionOption,
+    ElicitationOptions, ElicitationState, ExhaustionReason, HistoryReplayEntry,
+    HistoryReplayToolAction, HistoryRole, PlanEntry, PlanEntryStatus, PlanState,
+    SessionConfigOption, SessionConfigValue, SessionMode, SessionModeState, SessionModel,
+    SessionModelState, TurnOutcome, UserQuestion, UserQuestionOption,
 };
 use angel_engine::transport::{
     JsonRpcMessage, TransportLogKind, TransportOptions, TransportOutput, client_info_json,
@@ -44,7 +45,7 @@ pub struct CodexAdapter {
 impl CodexAdapter {
     pub fn app_server() -> Self {
         Self {
-            capabilities: ConversationCapabilities::codex_app_server(),
+            capabilities: codex_app_server_capabilities(),
         }
     }
 
@@ -153,6 +154,54 @@ impl CodexAdapter {
             current_model_id,
             available_models,
         })
+    }
+}
+
+pub fn codex_app_server_capabilities() -> ConversationCapabilities {
+    ConversationCapabilities {
+        lifecycle: angel_engine::LifecycleCapabilities {
+            create: CapabilitySupport::Supported,
+            list: CapabilitySupport::Supported,
+            load: CapabilitySupport::Supported,
+            resume: CapabilitySupport::Supported,
+            fork: CapabilitySupport::Supported,
+            archive: CapabilitySupport::Supported,
+            close: CapabilitySupport::Unknown,
+        },
+        turn: angel_engine::TurnCapabilities {
+            start: CapabilitySupport::Supported,
+            steer: CapabilitySupport::Supported,
+            cancel: CapabilitySupport::Supported,
+            max_active_turns: 1,
+            requires_expected_turn_id_for_steer: true,
+        },
+        action: angel_engine::ActionCapabilities {
+            observe: CapabilitySupport::Supported,
+            stream_output: CapabilitySupport::Supported,
+            decline: CapabilitySupport::Supported,
+        },
+        elicitation: angel_engine::ElicitationCapabilities {
+            approval: CapabilitySupport::Supported,
+            user_input: CapabilitySupport::Supported,
+            external_flow: CapabilitySupport::Supported,
+            dynamic_tool_call: CapabilitySupport::Supported,
+        },
+        history: angel_engine::HistoryCapabilities {
+            hydrate: CapabilitySupport::Supported,
+            compact: CapabilitySupport::Supported,
+            rollback: CapabilitySupport::Supported,
+            inject_items: CapabilitySupport::Supported,
+            shell_command: CapabilitySupport::Supported,
+        },
+        context: angel_engine::ContextCapabilities {
+            mode: CapabilitySupport::Supported,
+            config: CapabilitySupport::Supported,
+            additional_directories: CapabilitySupport::Unsupported,
+            turn_overrides: CapabilitySupport::Supported,
+        },
+        observer: angel_engine::ObserverCapabilities {
+            unsubscribe: CapabilitySupport::Supported,
+        },
     }
 }
 

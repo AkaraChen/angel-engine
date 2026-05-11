@@ -11,6 +11,9 @@ impl AcpAdapter {
         if matches!(effect.method, ProtocolMethod::ResolveElicitation) {
             return self.encode_permission_response(engine, effect);
         }
+        if matches!(effect.method, ProtocolMethod::UpdateContext) {
+            return self.encode_update_context_effect(engine, effect);
+        }
 
         let method = acp_wire_method(&effect.method);
         let params = self.encode_params(engine, effect, options)?;
@@ -18,13 +21,18 @@ impl AcpAdapter {
             TransportLogKind::Send,
             format!("{} {}", method, acp_outbound_summary(&method, &params)),
         );
-        let message = if let Some(request_id) = &effect.request_id {
+        let message = if matches!(effect.method, ProtocolMethod::CancelTurn) {
+            JsonRpcMessage::notification(method, params)
+        } else if let Some(request_id) = &effect.request_id {
             JsonRpcMessage::request(request_id.clone(), method, params)
         } else {
             JsonRpcMessage::notification(method, params)
         };
         output.messages.push(message);
         if matches!(effect.method, ProtocolMethod::CancelTurn) {
+            if let Some(request_id) = &effect.request_id {
+                output.completed_requests.push(request_id.clone());
+            }
             append_cancelled_elicitation_responses(engine, effect, &mut output);
         }
         Ok(output)
@@ -67,7 +75,7 @@ fn acp_wire_method(method: &ProtocolMethod) -> String {
         ProtocolMethod::Unsubscribe => "session/unsubscribe".to_string(),
         ProtocolMethod::SetSessionModel => "session/set_model".to_string(),
         ProtocolMethod::SetSessionMode => "session/set_mode".to_string(),
-        ProtocolMethod::SetSessionConfigOption => "session/set_session_config_option".to_string(),
+        ProtocolMethod::SetSessionConfigOption => "session/set_config_option".to_string(),
         ProtocolMethod::Extension(method) => method.clone(),
         _ => method_name(method),
     }

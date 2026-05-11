@@ -31,9 +31,9 @@ pub enum ProvisionOp {
 
 #[derive(serde::Serialize, serde::Deserialize, Clone, Debug, PartialEq, Eq)]
 pub enum HydrationSource {
-    AcpLoad,
-    CodexResume,
-    CodexRead,
+    Load,
+    Resume,
+    Read,
     Imported,
 }
 

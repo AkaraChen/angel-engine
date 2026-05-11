@@ -11,8 +11,9 @@ use angel_engine::ids::{
 use angel_engine::protocol::{ProtocolFlavor, ProtocolMethod};
 use angel_engine::reducer::{AngelEngine, PendingRequest};
 use angel_engine::state::{
-    ActionInput, ActionKind, ActionPhase, ActionState, ContentDelta, ContentPart, ContextPatch,
-    ElicitationKind, ElicitationOptions, ElicitationPhase, ElicitationState, ExhaustionReason,
+    ActionInput, ActionKind, ActionOutputDelta, ActionPhase, ActionState, ContentDelta,
+    ContentPart, ContextPatch, ElicitationKind, ElicitationOptions, ElicitationPhase,
+    ElicitationState, ExhaustionReason, HistoryReplayEntry, HistoryReplayToolAction, HistoryRole,
     SessionConfigOption, SessionConfigValue, SessionMode, SessionModeState, SessionModel,
     SessionModelState, SessionUsageCost, SessionUsageState, TurnOutcome, UserQuestion,
     UserQuestionOption,
@@ -32,6 +33,7 @@ mod response;
 mod transport;
 mod types;
 
+pub(crate) use helpers::acp_tool_history_entry;
 pub use types::*;
 
 #[derive(Clone, Debug)]
@@ -57,7 +59,7 @@ impl AcpAdapterCapabilities {
             runtime: AcpRuntimeCapabilities {
                 authentication: CapabilitySupport::Supported,
             },
-            conversation: ConversationCapabilities::acp_standard(),
+            conversation: acp_standard_capabilities(),
         }
     }
 
@@ -118,6 +120,54 @@ impl AcpAdapter {
             AcpToolStatus::Completed => ActionPhase::Completed,
             AcpToolStatus::Failed => ActionPhase::Failed,
         }
+    }
+}
+
+pub fn acp_standard_capabilities() -> ConversationCapabilities {
+    ConversationCapabilities {
+        lifecycle: angel_engine::LifecycleCapabilities {
+            create: CapabilitySupport::Supported,
+            list: CapabilitySupport::Supported,
+            load: CapabilitySupport::Unknown,
+            resume: CapabilitySupport::Unknown,
+            fork: CapabilitySupport::Unsupported,
+            archive: CapabilitySupport::Unsupported,
+            close: CapabilitySupport::Unknown,
+        },
+        turn: angel_engine::TurnCapabilities {
+            start: CapabilitySupport::Supported,
+            steer: CapabilitySupport::Unsupported,
+            cancel: CapabilitySupport::Supported,
+            max_active_turns: 1,
+            requires_expected_turn_id_for_steer: false,
+        },
+        action: angel_engine::ActionCapabilities {
+            observe: CapabilitySupport::Supported,
+            stream_output: CapabilitySupport::Supported,
+            decline: CapabilitySupport::Supported,
+        },
+        elicitation: angel_engine::ElicitationCapabilities {
+            approval: CapabilitySupport::Supported,
+            user_input: CapabilitySupport::Unknown,
+            external_flow: CapabilitySupport::Unknown,
+            dynamic_tool_call: CapabilitySupport::Unknown,
+        },
+        history: angel_engine::HistoryCapabilities {
+            hydrate: CapabilitySupport::Unknown,
+            compact: CapabilitySupport::Unsupported,
+            rollback: CapabilitySupport::Unsupported,
+            inject_items: CapabilitySupport::Unsupported,
+            shell_command: CapabilitySupport::Unsupported,
+        },
+        context: angel_engine::ContextCapabilities {
+            mode: CapabilitySupport::Unknown,
+            config: CapabilitySupport::Unknown,
+            additional_directories: CapabilitySupport::Unknown,
+            turn_overrides: CapabilitySupport::Unsupported,
+        },
+        observer: angel_engine::ObserverCapabilities {
+            unsubscribe: CapabilitySupport::Unsupported,
+        },
     }
 }
 

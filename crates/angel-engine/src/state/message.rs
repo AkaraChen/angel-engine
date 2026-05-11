@@ -4,12 +4,12 @@ use serde_json::Value;
 
 use crate::error::ErrorInfo;
 use crate::ids::{ActionId, TurnId};
-use crate::protocol::ProtocolFlavor;
 
 use super::{
     ActionKind, ActionOutputDelta, ActionPhase, ActionState, ContentDelta, ContentPart,
-    ConversationState, ElicitationState, HistoryReplayEntry, HistoryRole, PlanDisplayKind,
-    PlanEntry, PlanEntryStatus, TurnDisplayContentKind, TurnDisplayPart, TurnState, UserInputRef,
+    ConversationState, ElicitationState, HistoryReplayEntry, HistoryReplayToolAction, HistoryRole,
+    PlanDisplayKind, PlanEntry, PlanEntryStatus, TurnDisplayContentKind, TurnDisplayPart,
+    TurnState, UserInputRef,
 };
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -183,6 +183,22 @@ impl DisplayToolAction {
             error: None,
         }
     }
+
+    pub fn from_history(tool: &HistoryReplayToolAction, fallback_id: String) -> Self {
+        let output = tool.output.clone();
+        Self {
+            id: tool.id.clone().unwrap_or(fallback_id),
+            turn_id: None,
+            kind: tool.kind.clone(),
+            phase: tool.phase.clone(),
+            title: tool.title.clone(),
+            input_summary: tool.input_summary.clone(),
+            raw_input: tool.raw_input.clone(),
+            output_text: action_output_text(&output),
+            output,
+            error: tool.error.clone(),
+        }
+    }
 }
 
 fn elicitation_input_summary(elicitation: &ElicitationState) -> Option<String> {
@@ -205,14 +221,11 @@ fn elicitation_input_summary(elicitation: &ElicitationState) -> Option<String> {
     })
 }
 
-pub fn conversation_display_messages(
-    protocol: ProtocolFlavor,
-    conversation: &ConversationState,
-) -> Vec<DisplayMessage> {
+pub fn conversation_display_messages(conversation: &ConversationState) -> Vec<DisplayMessage> {
     let mut messages = Vec::new();
 
     for (index, entry) in conversation.history.replay.iter().enumerate() {
-        append_history_display_message(&mut messages, protocol, entry, index);
+        append_history_display_message(&mut messages, entry, index);
     }
 
     for turn in conversation.turns.values() {
@@ -332,13 +345,12 @@ fn ordered_display_content_from_turn(
 
 fn append_history_display_message(
     messages: &mut Vec<DisplayMessage>,
-    protocol: ProtocolFlavor,
     entry: &HistoryReplayEntry,
     index: usize,
 ) {
     let text = content_delta_text(&entry.content);
     let parts = content_delta_display_parts(&entry.content);
-    if parts.is_empty() {
+    if parts.is_empty() && entry.role != HistoryRole::Tool {
         return;
     }
 
@@ -350,7 +362,7 @@ fn append_history_display_message(
         }),
         HistoryRole::Tool => {
             let fallback_id = format!("history-tool-{index}");
-            let action = history_tool_action(protocol, &entry.content, fallback_id);
+            let action = history_tool_action(entry, fallback_id);
             upsert_display_tool_part(ensure_history_assistant_message(messages), action);
         }
         HistoryRole::Reasoning => append_display_text_part(
@@ -489,21 +501,11 @@ fn merge_display_tool_actions(
     }
 }
 
-fn history_tool_action(
-    protocol: ProtocolFlavor,
-    content: &ContentDelta,
-    fallback_id: String,
-) -> DisplayToolAction {
-    let raw = content_delta_text(content);
-    let value = serde_json::from_str::<Value>(&raw).ok();
-    if let Some(value) = value.as_ref() {
-        if is_acp_tool_update(value) {
-            return acp_history_tool_action(value, fallback_id);
-        }
-        if is_codex_tool_item(value) || matches!(protocol, ProtocolFlavor::CodexAppServer) {
-            return codex_history_tool_action(value, fallback_id);
-        }
+fn history_tool_action(entry: &HistoryReplayEntry, fallback_id: String) -> DisplayToolAction {
+    if let Some(tool) = &entry.tool {
+        return DisplayToolAction::from_history(tool, fallback_id);
     }
+    let raw = content_delta_text(&entry.content);
     DisplayToolAction {
         id: fallback_id,
         turn_id: None,
@@ -515,347 +517,6 @@ fn history_tool_action(
         output_text: String::new(),
         output: Vec::new(),
         error: None,
-    }
-}
-
-fn is_acp_tool_update(value: &Value) -> bool {
-    matches!(
-        string_field(value, &["sessionUpdate"]).as_deref(),
-        Some("tool_call" | "tool_call_update")
-    )
-}
-
-fn acp_history_tool_action(value: &Value, fallback_id: String) -> DisplayToolAction {
-    let output = action_outputs_from_value(value.get("content").or_else(|| value.get("rawOutput")));
-    let output_text = action_output_text(&output);
-    let phase = ActionPhase::from_wire(string_field(value, &["status"]).as_deref());
-    let title = string_field(value, &["title"]);
-    let error = if phase == ActionPhase::Failed {
-        Some(ErrorInfo::new(
-            "acp.tool_call_failed",
-            string_field(value, &["error"])
-                .or_else(|| (!output_text.trim().is_empty()).then_some(output_text.clone()))
-                .unwrap_or_else(|| "ACP tool call failed".to_string()),
-        ))
-    } else {
-        None
-    };
-    DisplayToolAction {
-        id: string_field(value, &["toolCallId", "id"]).unwrap_or(fallback_id),
-        turn_id: None,
-        kind: Some(acp_tool_kind(string_field(value, &["kind"]).as_deref())),
-        phase,
-        title: title.clone(),
-        input_summary: title,
-        raw_input: Some(
-            value
-                .get("rawInput")
-                .map_or_else(|| json_string(value), json_string),
-        ),
-        output_text,
-        output,
-        error,
-    }
-}
-
-fn is_codex_tool_item(value: &Value) -> bool {
-    let item = codex_replay_value(value);
-    matches!(
-        string_field(item, &["type"]).as_deref(),
-        Some(
-            "commandExecution"
-                | "fileChange"
-                | "mcpToolCall"
-                | "dynamicToolCall"
-                | "webSearch"
-                | "imageView"
-                | "imageGeneration"
-                | "contextCompaction"
-                | "function_call"
-                | "function_call_output"
-                | "custom_tool_call"
-                | "custom_tool_call_output"
-                | "local_shell_call"
-                | "mcp_call"
-                | "computer_call"
-                | "web_search_call"
-                | "tool_search_call"
-                | "tool_search_output"
-        )
-    )
-}
-
-fn codex_history_tool_action(value: &Value, fallback_id: String) -> DisplayToolAction {
-    let item = codex_replay_value(value);
-    let output = codex_tool_output(item);
-    let output_text = action_output_text(&output);
-    let title = codex_tool_title(item);
-    DisplayToolAction {
-        id: string_field(item, &["id", "callId", "call_id", "itemId"]).unwrap_or(fallback_id),
-        turn_id: None,
-        kind: codex_tool_kind(item),
-        phase: codex_tool_phase(item),
-        title: title.clone(),
-        input_summary: codex_tool_input_summary(item).or(title),
-        raw_input: codex_tool_raw_input(item),
-        output_text,
-        output,
-        error: None,
-    }
-}
-
-fn codex_replay_value(value: &Value) -> &Value {
-    if string_field(value, &["type"]).as_deref() == Some("response_item")
-        && let Some(payload) = value.get("payload").filter(|payload| payload.is_object())
-    {
-        return payload;
-    }
-    value
-}
-
-fn codex_tool_kind(item: &Value) -> Option<ActionKind> {
-    let kind = match string_field(item, &["type"]).as_deref()? {
-        "commandExecution" | "local_shell_call" => ActionKind::Command,
-        "fileChange" => ActionKind::FileChange,
-        "mcpToolCall" | "mcp_call" => ActionKind::McpTool,
-        "dynamicToolCall" if codex_dynamic_tool_is_host_capability(item) => {
-            ActionKind::HostCapability
-        }
-        "dynamicToolCall" | "tool_search_call" => ActionKind::DynamicTool,
-        "webSearch" | "web_search_call" => ActionKind::WebSearch,
-        "imageView" | "imageGeneration" => ActionKind::Media,
-        "contextCompaction" => ActionKind::Reasoning,
-        "function_call" => {
-            if is_codex_command_tool_name(string_field(item, &["name"]).as_deref()) {
-                ActionKind::Command
-            } else {
-                ActionKind::DynamicTool
-            }
-        }
-        "custom_tool_call" => {
-            if string_field(item, &["name"]).as_deref() == Some("apply_patch") {
-                ActionKind::FileChange
-            } else {
-                ActionKind::DynamicTool
-            }
-        }
-        "computer_call" => ActionKind::HostCapability,
-        _ => return None,
-    };
-    Some(kind)
-}
-
-fn codex_dynamic_tool_is_host_capability(item: &Value) -> bool {
-    matches!(
-        string_field(item, &["kind"]).as_deref(),
-        Some("hostCapability")
-    ) || matches!(
-        string_field(item, &["tool"]).as_deref(),
-        Some("hostCapability" | "request_user_input" | "requestUserInput")
-    )
-}
-
-fn codex_tool_phase(item: &Value) -> ActionPhase {
-    if let Some(status) = string_field(item, &["status"]) {
-        return ActionPhase::from_wire(Some(&status));
-    }
-    match string_field(item, &["type"]).as_deref() {
-        Some("function_call_output" | "custom_tool_call_output" | "tool_search_output") => {
-            ActionPhase::Completed
-        }
-        _ => ActionPhase::Running,
-    }
-}
-
-fn codex_tool_title(item: &Value) -> Option<String> {
-    match string_field(item, &["type"]).as_deref()? {
-        "commandExecution" | "local_shell_call" => {
-            string_field(item, &["command"]).or_else(|| Some("Command".to_string()))
-        }
-        "mcpToolCall" => Some(format!(
-            "{}.{}",
-            string_field(item, &["server"]).unwrap_or_else(|| "mcp".to_string()),
-            string_field(item, &["tool"]).unwrap_or_else(|| "tool".to_string())
-        )),
-        "mcp_call" => string_field(item, &["name"]).or_else(|| Some("mcp.call".to_string())),
-        "dynamicToolCall" => {
-            if let Some(title) = string_field(item, &["title"]) {
-                return Some(title);
-            }
-            if codex_dynamic_tool_is_host_capability(item) {
-                return if item.get("arguments").is_some() {
-                    Some("User input requested".to_string())
-                } else {
-                    None
-                };
-            }
-            let tool = string_field(item, &["tool"]).unwrap_or_else(|| "tool".to_string());
-            Some(
-                string_field(item, &["namespace"])
-                    .map(|namespace| format!("{namespace}.{tool}"))
-                    .unwrap_or(tool),
-            )
-        }
-        "webSearch" => string_field(item, &["query"]).or_else(|| Some("Web search".to_string())),
-        "web_search_call" => item
-            .get("action")
-            .and_then(|action| string_field(action, &["query"]))
-            .or_else(|| Some("Web search".to_string())),
-        "function_call" => codex_function_call_title(item),
-        "custom_tool_call" => {
-            string_field(item, &["name"]).or_else(|| Some("Custom tool".to_string()))
-        }
-        "tool_search_call" => Some("tool_search".to_string()),
-        "computer_call" => Some("computer".to_string()),
-        "function_call_output" | "custom_tool_call_output" | "tool_search_output" => None,
-        _ => string_field(item, &["title", "name", "type"]),
-    }
-}
-
-fn codex_tool_input_summary(item: &Value) -> Option<String> {
-    string_field(item, &["inputSummary", "input_summary"])
-}
-
-fn codex_function_call_title(item: &Value) -> Option<String> {
-    let name = string_field(item, &["name"]);
-    let args = string_field(item, &["arguments"])
-        .and_then(|arguments| serde_json::from_str::<Value>(&arguments).ok());
-    if is_codex_command_tool_name(name.as_deref())
-        && let Some(command) = args
-            .as_ref()
-            .and_then(|args| args.get("command"))
-            .and_then(command_value_text)
-    {
-        return Some(command);
-    }
-    name.or_else(|| Some("Function call".to_string()))
-}
-
-fn command_value_text(value: &Value) -> Option<String> {
-    if let Some(text) = value.as_str().filter(|text| !text.trim().is_empty()) {
-        return Some(text.to_string());
-    }
-    let command = value
-        .as_array()?
-        .iter()
-        .filter_map(Value::as_str)
-        .collect::<Vec<_>>()
-        .join(" ");
-    (!command.is_empty()).then_some(command)
-}
-
-fn codex_tool_raw_input(item: &Value) -> Option<String> {
-    if let Some(raw_input) = item.get("rawInput").or_else(|| item.get("raw_input")) {
-        return Some(
-            raw_input
-                .as_str()
-                .map_or_else(|| json_string(raw_input), str::to_string),
-        );
-    }
-    match string_field(item, &["type"]).as_deref() {
-        Some("function_call") => {
-            string_field(item, &["arguments"]).or_else(|| item.get("arguments").map(json_string))
-        }
-        Some("custom_tool_call") => {
-            string_field(item, &["input"]).or_else(|| item.get("input").map(json_string))
-        }
-        Some("web_search_call") => item.get("action").map(json_string),
-        Some("dynamicToolCall")
-            if codex_dynamic_tool_is_host_capability(item) && item.get("arguments").is_none() =>
-        {
-            None
-        }
-        Some("function_call_output" | "custom_tool_call_output" | "tool_search_output") => None,
-        _ => Some(json_string(item)),
-    }
-}
-
-fn codex_tool_output(item: &Value) -> Vec<ActionOutputDelta> {
-    let raw_output = [
-        "output",
-        "result",
-        "content",
-        "contentItems",
-        "content_items",
-        "aggregatedOutput",
-        "stdout",
-        "stderr",
-    ]
-    .iter()
-    .find_map(|key| item.get(*key));
-    let output = raw_output.map(codex_raw_output_value);
-    action_outputs_from_value(output.as_ref())
-}
-
-fn codex_raw_output_value(value: &Value) -> Value {
-    let Some(text) = value.as_str() else {
-        return value.clone();
-    };
-    let Ok(parsed) = serde_json::from_str::<Value>(text) else {
-        return value.clone();
-    };
-    ["output", "stdout", "stderr", "content"]
-        .iter()
-        .find_map(|key| parsed.get(*key).cloned())
-        .unwrap_or_else(|| value.clone())
-}
-
-fn is_codex_command_tool_name(name: Option<&str>) -> bool {
-    matches!(name, Some("shell" | "exec_command" | "write_stdin"))
-}
-
-fn action_outputs_from_value(value: Option<&Value>) -> Vec<ActionOutputDelta> {
-    let Some(value) = value else {
-        return Vec::new();
-    };
-    match value {
-        Value::Null => Vec::new(),
-        Value::Array(items) => items
-            .iter()
-            .flat_map(|item| action_outputs_from_value(Some(item)))
-            .collect(),
-        Value::String(text) => vec![ActionOutputDelta::Text(text.clone())],
-        Value::Bool(value) => vec![ActionOutputDelta::Text(value.to_string())],
-        Value::Number(value) => vec![ActionOutputDelta::Text(value.to_string())],
-        Value::Object(_) => action_output_from_object(value),
-    }
-}
-
-fn action_output_from_object(value: &Value) -> Vec<ActionOutputDelta> {
-    match string_field(value, &["type", "kind"]).as_deref() {
-        Some("diff") => vec![ActionOutputDelta::Patch(acp_diff_text(value))],
-        Some("terminal") => vec![ActionOutputDelta::Terminal(
-            string_field(value, &["terminalId"]).unwrap_or_else(|| json_string(value)),
-        )],
-        Some("content") => value
-            .get("content")
-            .map(|content| action_outputs_from_value(Some(content)))
-            .filter(|output| !output.is_empty())
-            .unwrap_or_else(|| structured_output(value)),
-        Some("patch") => vec![ActionOutputDelta::Patch(
-            content_text(value).unwrap_or_else(|| json_string(value)),
-        )],
-        Some(_) | None => content_text(value)
-            .map(|text| vec![ActionOutputDelta::Text(text)])
-            .unwrap_or_else(|| structured_output(value)),
-    }
-}
-
-fn structured_output(value: &Value) -> Vec<ActionOutputDelta> {
-    vec![ActionOutputDelta::Structured(json_string(value))]
-}
-
-fn acp_tool_kind(kind: Option<&str>) -> ActionKind {
-    let lower = kind.map(|k| k.to_ascii_lowercase());
-    match lower.as_deref() {
-        Some("read") => ActionKind::Read,
-        Some("edit" | "delete" | "move") => ActionKind::FileChange,
-        Some("execute" | "command") => ActionKind::Command,
-        Some("search" | "web_search") => ActionKind::WebSearch,
-        Some("think" | "reasoning") => ActionKind::Reasoning,
-        Some("fetch" | "dynamic_tool") => ActionKind::DynamicTool,
-        Some("switch_mode" | "host_capability") => ActionKind::HostCapability,
-        _ => ActionKind::McpTool,
     }
 }
 
@@ -1030,27 +691,6 @@ fn action_output_text(chunks: &[ActionOutputDelta]) -> String {
     text
 }
 
-fn content_text(value: &Value) -> Option<String> {
-    match value {
-        Value::String(text) => Some(text.clone()),
-        Value::Array(items) => {
-            let text = items.iter().filter_map(content_text).collect::<String>();
-            (!text.is_empty()).then_some(text)
-        }
-        Value::Object(_) => ["text", "content", "summary", "delta", "message"]
-            .iter()
-            .find_map(|key| value.get(*key).and_then(content_text)),
-        _ => None,
-    }
-}
-
-fn acp_diff_text(value: &Value) -> String {
-    let path = string_field(value, &["path"]).unwrap_or_else(|| "<unknown>".to_string());
-    let old_text = string_field(value, &["oldText"]).unwrap_or_default();
-    let new_text = string_field(value, &["newText"]).unwrap_or_default();
-    format!("diff -- {path}\n--- old\n{old_text}\n+++ new\n{new_text}")
-}
-
 fn string_field(value: &Value, keys: &[&str]) -> Option<String> {
     keys.iter().find_map(|key| {
         value
@@ -1059,10 +699,6 @@ fn string_field(value: &Value, keys: &[&str]) -> Option<String> {
             .filter(|text| !text.trim().is_empty())
             .map(str::to_string)
     })
-}
-
-fn json_string(value: &Value) -> String {
-    serde_json::to_string(value).unwrap_or_else(|_| value.to_string())
 }
 
 #[cfg(test)]
@@ -1076,43 +712,50 @@ mod tests {
     };
 
     #[test]
-    fn codex_hydrated_history_projects_tool_parts() {
-        let mut conversation = conversation(ConversationCapabilities::codex_app_server());
+    fn hydrated_history_projects_neutral_tool_parts() {
+        let mut conversation = conversation(ConversationCapabilities::unknown());
         conversation.history.replay = vec![
             HistoryReplayEntry {
                 role: HistoryRole::User,
                 content: ContentDelta::Text("status".to_string()),
+                tool: None,
             },
             HistoryReplayEntry {
                 role: HistoryRole::Tool,
-                content: ContentDelta::Structured(
-                    json!({
-                        "type": "function_call",
-                        "call_id": "call_1",
-                        "name": "shell",
-                        "arguments": "{\"command\":[\"zsh\",\"-lc\",\"git status -sb\"]}"
-                    })
-                    .to_string(),
-                ),
+                content: ContentDelta::Text(String::new()),
+                tool: Some(HistoryReplayToolAction {
+                    id: Some("call_1".to_string()),
+                    kind: Some(ActionKind::Command),
+                    phase: ActionPhase::Running,
+                    title: Some("git status".to_string()),
+                    input_summary: Some("git status -sb".to_string()),
+                    raw_input: Some("git status -sb".to_string()),
+                    output: Vec::new(),
+                    error: None,
+                }),
             },
             HistoryReplayEntry {
                 role: HistoryRole::Tool,
-                content: ContentDelta::Structured(
-                    json!({
-                        "type": "function_call_output",
-                        "call_id": "call_1",
-                        "output": "{\"output\":\"## main\\n\",\"metadata\":{\"exit_code\":0}}"
-                    })
-                    .to_string(),
-                ),
+                content: ContentDelta::Text(String::new()),
+                tool: Some(HistoryReplayToolAction {
+                    id: Some("call_1".to_string()),
+                    kind: Some(ActionKind::Command),
+                    phase: ActionPhase::Completed,
+                    title: Some("git status".to_string()),
+                    input_summary: None,
+                    raw_input: None,
+                    output: vec![ActionOutputDelta::Text("## main\n".to_string())],
+                    error: None,
+                }),
             },
             HistoryReplayEntry {
                 role: HistoryRole::Assistant,
                 content: ContentDelta::Text("done".to_string()),
+                tool: None,
             },
         ];
 
-        let messages = conversation_display_messages(ProtocolFlavor::CodexAppServer, &conversation);
+        let messages = conversation_display_messages(&conversation);
 
         assert_eq!(messages.len(), 2);
         assert_eq!(messages[0].role, DisplayMessageRole::User);
@@ -1146,49 +789,22 @@ mod tests {
     }
 
     #[test]
-    fn acp_hydrated_history_projects_tool_parts() {
-        let mut conversation = conversation(ConversationCapabilities::acp_standard());
+    fn hydrated_history_projects_generic_tool_fallback() {
+        let mut conversation = conversation(ConversationCapabilities::unknown());
         conversation.history.replay = vec![
             HistoryReplayEntry {
                 role: HistoryRole::User,
                 content: ContentDelta::Text("run tests".to_string()),
+                tool: None,
             },
             HistoryReplayEntry {
                 role: HistoryRole::Tool,
-                content: ContentDelta::Structured(
-                    json!({
-                        "sessionUpdate": "tool_call",
-                        "toolCallId": "tool-1",
-                        "kind": "execute",
-                        "title": "npm test",
-                        "status": "in_progress",
-                        "rawInput": {"command": "npm test"}
-                    })
-                    .to_string(),
-                ),
-            },
-            HistoryReplayEntry {
-                role: HistoryRole::Tool,
-                content: ContentDelta::Structured(
-                    json!({
-                        "sessionUpdate": "tool_call_update",
-                        "toolCallId": "tool-1",
-                        "kind": "execute",
-                        "title": "npm test",
-                        "status": "completed",
-                        "content": [
-                            {
-                                "type": "content",
-                                "content": {"type": "text", "text": "ok\n"}
-                            }
-                        ]
-                    })
-                    .to_string(),
-                ),
+                content: ContentDelta::Text("npm test".to_string()),
+                tool: None,
             },
         ];
 
-        let messages = conversation_display_messages(ProtocolFlavor::Acp, &conversation);
+        let messages = conversation_display_messages(&conversation);
 
         assert_eq!(messages.len(), 2);
         let tool = match &messages[1].content[0] {
@@ -1198,16 +814,16 @@ mod tests {
             DisplayMessagePart::File { .. } => panic!("expected tool action"),
             DisplayMessagePart::Plan { .. } => panic!("expected tool action"),
         };
-        assert_eq!(tool.id, "tool-1");
-        assert_eq!(tool.kind, Some(ActionKind::Command));
+        assert_eq!(tool.id, "history-tool-1");
+        assert_eq!(tool.kind, None);
         assert_eq!(tool.phase, ActionPhase::Completed);
-        assert_eq!(tool.title.as_deref(), Some("npm test"));
-        assert_eq!(tool.output_text, "ok\n");
+        assert_eq!(tool.title.as_deref(), Some("Tool call"));
+        assert_eq!(tool.raw_input.as_deref(), Some("npm test"));
     }
 
     #[test]
     fn hydrated_history_keeps_review_plan_and_todo_plan_separate() {
-        let mut conversation = conversation(ConversationCapabilities::codex_app_server());
+        let mut conversation = conversation(ConversationCapabilities::unknown());
         conversation.history.replay = vec![
             HistoryReplayEntry {
                 role: HistoryRole::Assistant,
@@ -1220,6 +836,7 @@ mod tests {
                     })
                     .to_string(),
                 ),
+                tool: None,
             },
             HistoryReplayEntry {
                 role: HistoryRole::Assistant,
@@ -1231,10 +848,11 @@ mod tests {
                     })
                     .to_string(),
                 ),
+                tool: None,
             },
         ];
 
-        let messages = conversation_display_messages(ProtocolFlavor::CodexAppServer, &conversation);
+        let messages = conversation_display_messages(&conversation);
 
         assert_eq!(messages.len(), 1);
         assert!(matches!(
@@ -1251,7 +869,7 @@ mod tests {
 
     #[test]
     fn live_turn_projects_same_message_shape() {
-        let mut conversation = conversation(ConversationCapabilities::codex_app_server());
+        let mut conversation = conversation(ConversationCapabilities::unknown());
         let turn_id = TurnId::new("turn-1");
         let mut turn = TurnState::new(
             turn_id.clone(),
@@ -1284,7 +902,7 @@ mod tests {
             .push(ActionOutputDelta::Text("## main\n".to_string()));
         conversation.actions.insert(action.id.clone(), action);
 
-        let messages = conversation_display_messages(ProtocolFlavor::CodexAppServer, &conversation);
+        let messages = conversation_display_messages(&conversation);
 
         assert_eq!(messages.len(), 2);
         assert_eq!(messages[0].role, DisplayMessageRole::User);
@@ -1304,7 +922,7 @@ mod tests {
 
     #[test]
     fn live_turn_projects_plan_as_independent_part() {
-        let mut conversation = conversation(ConversationCapabilities::codex_app_server());
+        let mut conversation = conversation(ConversationCapabilities::unknown());
         let turn_id = TurnId::new("turn-1");
         let mut turn = TurnState::new(
             turn_id.clone(),
@@ -1335,7 +953,7 @@ mod tests {
             .push(ContentDelta::Text("done".to_string()));
         conversation.turns.insert(turn_id, turn);
 
-        let messages = conversation_display_messages(ProtocolFlavor::CodexAppServer, &conversation);
+        let messages = conversation_display_messages(&conversation);
 
         assert_eq!(messages.len(), 1);
         assert!(matches!(
@@ -1356,7 +974,7 @@ mod tests {
 
     #[test]
     fn live_turn_projects_image_input_parts() {
-        let mut conversation = conversation(ConversationCapabilities::codex_app_server());
+        let mut conversation = conversation(ConversationCapabilities::unknown());
         let turn_id = TurnId::new("turn-1");
         let mut turn = TurnState::new(
             turn_id.clone(),
@@ -1379,7 +997,7 @@ mod tests {
         });
         conversation.turns.insert(turn_id, turn);
 
-        let messages = conversation_display_messages(ProtocolFlavor::CodexAppServer, &conversation);
+        let messages = conversation_display_messages(&conversation);
 
         assert_eq!(messages.len(), 1);
         assert_eq!(messages[0].role, DisplayMessageRole::User);
@@ -1397,16 +1015,17 @@ mod tests {
 
     #[test]
     fn hydrated_history_projects_image_parts() {
-        let mut conversation = conversation(ConversationCapabilities::codex_app_server());
+        let mut conversation = conversation(ConversationCapabilities::unknown());
         conversation.history.replay = vec![HistoryReplayEntry {
             role: HistoryRole::User,
             content: ContentDelta::Parts(vec![
                 ContentPart::text("look"),
                 ContentPart::image("ZmFrZQ==", "image/png", Some("sample.png".to_string())),
             ]),
+            tool: None,
         }];
 
-        let messages = conversation_display_messages(ProtocolFlavor::CodexAppServer, &conversation);
+        let messages = conversation_display_messages(&conversation);
 
         assert_eq!(messages.len(), 1);
         assert!(matches!(
