@@ -55,10 +55,10 @@ export function ChatAttachmentTile({
               {body}
             </button>
           </DialogTrigger>
-          <DialogContent className="max-h-[88dvh] max-w-[min(56rem,calc(100vw-2rem))] gap-3 rounded-md p-3">
+          <DialogContent className="max-h-[88dvh] max-w-[min(56rem,calc(100vw-2rem))] gap-3 rounded-2xl p-3">
             <DialogTitle className="truncate pr-10 text-sm">{name}</DialogTitle>
             {previewUrl ? (
-              <div className="flex min-h-0 items-center justify-center overflow-auto rounded-sm bg-muted/30">
+              <div className="flex min-h-0 items-center justify-center overflow-auto rounded-xl bg-muted/30">
                 <img
                   alt={name}
                   className="max-h-[76dvh] max-w-full object-contain"
@@ -66,7 +66,7 @@ export function ChatAttachmentTile({
                 />
               </div>
             ) : (
-              <pre className="max-h-[76dvh] overflow-auto whitespace-pre-wrap break-words rounded-sm bg-muted/30 p-3 font-mono text-xs leading-5">
+              <pre className="max-h-[76dvh] overflow-auto whitespace-pre-wrap break-words rounded-xl bg-muted/30 p-3 font-mono text-xs leading-5">
                 {previewText}
               </pre>
             )}
@@ -131,7 +131,7 @@ function AttachmentThumb({
   const [imageFailed, setImageFailed] = useState(false);
 
   return (
-    <span className="flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-sm border bg-muted/50">
+    <span className="flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-foreground/10 bg-muted/45 dark:border-white/10">
       {previewUrl && !imageFailed ? (
         <img
           alt=""
@@ -156,8 +156,8 @@ function attachmentTileClassName({
   removable: boolean;
 }) {
   return cn(
-    "inline-flex min-w-0 max-w-full items-center gap-2 rounded-md border bg-background px-2 py-1.5 text-left text-xs shadow-sm transition-colors",
-    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30",
+    "inline-flex min-w-0 max-w-full items-center gap-2 rounded-2xl border border-foreground/10 bg-background/70 px-2 py-1.5 text-left text-xs shadow-[0_10px_24px_-20px_rgba(0,0,0,0.55)] backdrop-blur-xl transition-colors dark:border-white/10",
+    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-foreground/10",
     removable && "pr-7",
     interactive && "cursor-pointer hover:bg-muted/60",
   );

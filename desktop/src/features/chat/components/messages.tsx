@@ -72,20 +72,37 @@ import {
 } from "@/features/chat/components/thread-styles";
 
 const assistantTextContainerClassName = [
-  "min-w-0 max-w-none text-sm leading-6",
-  "[&_a]:underline",
-  "[&_blockquote]:my-3 [&_blockquote]:border-l-2 [&_blockquote]:border-border [&_blockquote]:pl-3 [&_blockquote]:text-muted-foreground",
-  "[&_h1]:mb-3 [&_h1]:mt-1 [&_h1]:text-xl [&_h1]:font-semibold",
-  "[&_h2]:mb-2 [&_h2]:mt-4 [&_h2]:text-lg [&_h2]:font-semibold",
-  "[&_h3]:mb-2 [&_h3]:mt-3 [&_h3]:font-semibold",
-  "[&_li]:my-1 [&_ol]:my-2 [&_ol]:list-decimal [&_ol]:pl-5",
-  "[&_p]:my-0 [&_p+p]:mt-3",
-  "[&_table]:my-3 [&_table]:w-full [&_table]:border-collapse",
-  "[&_td]:border [&_td]:border-border [&_td]:px-2 [&_td]:py-1",
-  "[&_th]:border [&_th]:border-border [&_th]:px-2 [&_th]:py-1",
-  "[&_ul]:my-2 [&_ul]:list-disc [&_ul]:pl-5",
-  "[&_[data-streamdown=inline-code]]:rounded-sm [&_[data-streamdown=inline-code]]:bg-muted [&_[data-streamdown=inline-code]]:px-1 [&_[data-streamdown=inline-code]]:py-0.5 [&_[data-streamdown=inline-code]]:font-mono [&_[data-streamdown=inline-code]]:text-[0.86em]",
+  "min-w-0 max-w-none text-[15px] leading-[1.72] text-foreground/90 hyphens-auto [line-break:loose] [overflow-wrap:anywhere] [text-rendering:optimizeLegibility] [word-break:normal]",
+  "[&_a]:text-primary [&_a]:underline [&_a]:underline-offset-2 [&_a]:decoration-primary/35 [&_a:hover]:decoration-primary/70",
+  "[&_blockquote]:my-4 [&_blockquote]:border-l-2 [&_blockquote]:border-foreground/10 [&_blockquote]:pl-3.5 [&_blockquote]:text-[14px] [&_blockquote]:leading-[1.72] [&_blockquote]:text-muted-foreground",
+  "[&_[data-streamdown=code-block]]:my-4 [&_[data-streamdown=code-block]]:overflow-hidden [&_[data-streamdown=code-block]]:rounded-[1rem] [&_[data-streamdown=code-block]]:border [&_[data-streamdown=code-block]]:border-foreground/[0.08] [&_[data-streamdown=code-block]]:bg-[#f7f7f8] [&_[data-streamdown=code-block]]:p-0 [&_[data-streamdown=code-block]]:shadow-[inset_0_1px_0_rgba(255,255,255,0.86),0_12px_30px_-26px_rgba(0,0,0,0.48)] dark:[&_[data-streamdown=code-block]]:border-white/10 dark:[&_[data-streamdown=code-block]]:bg-white/[0.045] dark:[&_[data-streamdown=code-block]]:shadow-[inset_0_1px_0_rgba(255,255,255,0.06),0_14px_34px_-28px_rgba(0,0,0,0.8)]",
+  "[&_[data-streamdown=code-block-actions]]:rounded-full [&_[data-streamdown=code-block-actions]]:border-foreground/10 [&_[data-streamdown=code-block-actions]]:bg-background/80 [&_[data-streamdown=code-block-actions]]:px-1 [&_[data-streamdown=code-block-actions]]:py-0.5 [&_[data-streamdown=code-block-actions]]:shadow-sm [&_[data-streamdown=code-block-actions]]:backdrop-blur-xl dark:[&_[data-streamdown=code-block-actions]]:border-white/10 dark:[&_[data-streamdown=code-block-actions]]:bg-card/75",
+  "[&_[data-streamdown=code-block-body]]:rounded-none [&_[data-streamdown=code-block-body]]:border-0 [&_[data-streamdown=code-block-body]]:bg-transparent [&_[data-streamdown=code-block-body]]:p-0 [&_[data-streamdown=code-block-body]]:text-[12.5px] [&_[data-streamdown=code-block-body]]:leading-[1.58]",
+  "[&_[data-streamdown=code-block-body]_code>span]:block",
+  "[&_[data-streamdown=code-block-header]]:h-8 [&_[data-streamdown=code-block-header]]:border-b [&_[data-streamdown=code-block-header]]:border-foreground/[0.07] [&_[data-streamdown=code-block-header]]:bg-black/[0.018] [&_[data-streamdown=code-block-header]]:px-3 [&_[data-streamdown=code-block-header]]:text-[11px] [&_[data-streamdown=code-block-header]]:font-medium [&_[data-streamdown=code-block-header]]:tracking-normal dark:[&_[data-streamdown=code-block-header]]:border-white/[0.07] dark:[&_[data-streamdown=code-block-header]]:bg-white/[0.035]",
+  "[&_[data-streamdown=code-block-header]>span]:ml-0 [&_[data-streamdown=code-block-header]>span]:font-mono [&_[data-streamdown=code-block-header]>span]:text-muted-foreground/75",
+  "[&_h1]:mb-3 [&_h1]:mt-1 [&_h1]:text-[21px] [&_h1]:font-semibold [&_h1]:leading-[1.36]",
+  "[&_h2]:mb-2 [&_h2]:mt-6 [&_h2]:text-[17px] [&_h2]:font-semibold [&_h2]:leading-[1.42]",
+  "[&_h3]:mb-1.5 [&_h3]:mt-4 [&_h3]:text-[15px] [&_h3]:font-semibold [&_h3]:leading-[1.5]",
+  "[&_hr]:my-5 [&_hr]:border-foreground/10",
+  "[&_li]:my-1.5 [&_li]:[line-break:loose] [&_li]:[overflow-wrap:anywhere] [&_li::marker]:text-muted-foreground [&_ol]:my-3 [&_ol]:list-decimal [&_ol]:pl-5",
+  "[&_p]:my-0 [&_p]:[line-break:loose] [&_p]:[overflow-wrap:anywhere] [&_p+p]:mt-3.5",
+  "[&_pre]:m-0 [&_pre]:max-w-full [&_pre]:overflow-x-auto [&_pre]:bg-transparent [&_pre]:px-3.5 [&_pre]:py-3.5 [&_pre]:text-[12.5px] [&_pre]:leading-[1.58] [&_pre]:[line-break:normal] [&_pre]:[overflow-wrap:normal] [&_pre]:[word-break:normal]",
+  "[&_strong]:font-semibold [&_strong]:text-foreground",
+  "[&_table]:my-4 [&_table]:w-full [&_table]:border-separate [&_table]:border-spacing-0 [&_table]:overflow-hidden [&_table]:rounded-xl",
+  "[&_td]:border-b [&_td]:border-foreground/10 [&_td]:px-2.5 [&_td]:py-2 [&_td]:align-top [&_td]:[line-break:loose] [&_td]:[overflow-wrap:anywhere]",
+  "[&_th]:border-b [&_th]:border-foreground/10 [&_th]:bg-muted/35 [&_th]:px-2.5 [&_th]:py-2 [&_th]:text-left [&_th]:font-medium [&_th]:[line-break:loose] [&_th]:[overflow-wrap:anywhere]",
+  "[&_ul]:my-3 [&_ul]:list-disc [&_ul]:pl-5",
+  "[&_[data-streamdown=inline-code]]:rounded-[0.38rem] [&_[data-streamdown=inline-code]]:bg-foreground/[0.055] [&_[data-streamdown=inline-code]]:px-[0.32em] [&_[data-streamdown=inline-code]]:py-[0.12em] [&_[data-streamdown=inline-code]]:font-mono [&_[data-streamdown=inline-code]]:text-[0.88em] [&_[data-streamdown=inline-code]]:text-foreground/90 dark:[&_[data-streamdown=inline-code]]:bg-white/[0.075]",
 ].join(" ");
+
+const messageColumnClassName = "mx-auto w-full max-w-[860px]";
+
+const inspectorCardClassName =
+  "w-full overflow-hidden rounded-2xl border border-foreground/10 bg-muted/[0.18] text-xs shadow-[0_12px_32px_-24px_rgba(0,0,0,0.55)] backdrop-blur-xl dark:border-white/10 dark:bg-muted/20";
+
+const toolCallCardClassName =
+  "w-full overflow-hidden rounded-xl border border-foreground/10 bg-background/65 text-xs shadow-[0_10px_24px_-22px_rgba(0,0,0,0.5)] backdrop-blur-xl dark:border-white/10 dark:bg-card/45";
 
 type ElicitationQuestion = NonNullable<ChatElicitation["questions"]>[number];
 
@@ -104,8 +121,10 @@ export function UserMessage() {
   );
 
   return (
-    <MessagePrimitive.Root className="group flex justify-end">
-      <div className="flex max-w-[78%] flex-col items-end gap-1.5">
+    <MessagePrimitive.Root
+      className={cn(messageColumnClassName, "group flex justify-end")}
+    >
+      <div className="flex max-w-[74%] flex-col items-end gap-1.5">
         <MessagePrimitive.Attachments>
           {({ attachment }) => (
             <MessageAttachment attachment={attachment} key={attachment.id} />
@@ -113,7 +132,7 @@ export function UserMessage() {
         </MessagePrimitive.Attachments>
         <UserMessageAttachmentParts />
         {hasBubbleContent ? (
-          <div className="rounded-md bg-primary px-3 py-2 text-sm leading-6 text-primary-foreground">
+          <div className="rounded-[1.15rem] rounded-br-md bg-primary/95 px-3.5 py-2.5 text-[14px] leading-6 text-primary-foreground shadow-[0_10px_24px_-18px_rgba(10,132,255,0.8)]">
             <UserMessageParts />
           </div>
         ) : null}
@@ -145,9 +164,11 @@ export function UserMessage() {
 
 export function UserEditComposer() {
   return (
-    <MessagePrimitive.Root className="flex justify-end">
-      <ComposerPrimitive.Root className="w-full max-w-[78%] rounded-md border bg-background p-2 shadow-sm">
-        <ComposerPrimitive.Input className="min-h-24 w-full resize-none rounded-sm bg-muted/30 px-3 py-2 text-sm outline-none" />
+    <MessagePrimitive.Root
+      className={cn(messageColumnClassName, "flex justify-end")}
+    >
+      <ComposerPrimitive.Root className="w-full max-w-[74%] rounded-2xl border border-foreground/10 bg-background/90 p-2.5 shadow-[0_12px_32px_-24px_rgba(0,0,0,0.55)] backdrop-blur-xl">
+        <ComposerPrimitive.Input className="min-h-24 w-full resize-none rounded-xl bg-muted/30 px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-foreground/10" />
         <div className="mt-2 flex justify-end gap-2">
           <ComposerPrimitive.Cancel asChild>
             <Button size="sm" type="button" variant="ghost">
@@ -168,8 +189,10 @@ export function UserEditComposer() {
 
 export function AssistantMessage() {
   return (
-    <MessagePrimitive.Root className="group flex justify-start">
-      <div className="flex w-full max-w-[82%] flex-col items-start gap-1.5 text-sm leading-6">
+    <MessagePrimitive.Root
+      className={cn(messageColumnClassName, "group flex justify-start")}
+    >
+      <div className="flex w-full max-w-[760px] flex-col items-start gap-1.5 text-sm leading-6">
         <div className="w-full">
           <AssistantMessageParts />
         </div>
@@ -239,16 +262,16 @@ export function AssistantMessage() {
 function MessageBranchPicker() {
   return (
     <BranchPickerPrimitive.Root
-      className="inline-flex h-7 items-center gap-0.5 rounded-md border bg-background px-1 text-xs text-muted-foreground"
+      className="inline-flex h-7 items-center gap-0.5 rounded-full border border-foreground/10 bg-background/70 px-1 text-xs text-muted-foreground backdrop-blur-xl"
       hideWhenSingleBranch
     >
-      <BranchPickerPrimitive.Previous className="inline-flex size-5 items-center justify-center rounded-sm hover:bg-muted disabled:opacity-40">
+      <BranchPickerPrimitive.Previous className="inline-flex size-5 items-center justify-center rounded-full hover:bg-muted disabled:opacity-40">
         <ChevronLeft className="size-3" />
       </BranchPickerPrimitive.Previous>
       <span className="min-w-8 text-center tabular-nums">
         <BranchPickerPrimitive.Number /> / <BranchPickerPrimitive.Count />
       </span>
-      <BranchPickerPrimitive.Next className="inline-flex size-5 items-center justify-center rounded-sm hover:bg-muted disabled:opacity-40">
+      <BranchPickerPrimitive.Next className="inline-flex size-5 items-center justify-center rounded-full hover:bg-muted disabled:opacity-40">
         <ChevronRight className="size-3" />
       </BranchPickerPrimitive.Next>
     </BranchPickerPrimitive.Root>
@@ -352,7 +375,8 @@ function AssistantTextMessagePart(
     <StreamdownTextPrimitive
       caret="block"
       containerClassName={assistantTextContainerClassName}
-      controls
+      controls={{ code: false }}
+      lineNumbers={false}
       mode="streaming"
       plugins={{ cjk, code: streamdownCode, math, mermaid }}
       shikiTheme={["github-light", "github-dark"]}
@@ -476,7 +500,7 @@ function GenericToolActionMessagePart({
 
   return (
     <Collapsible
-      className="w-full overflow-hidden rounded-md border bg-muted/20 text-xs"
+      className={toolCallCardClassName}
       onOpenChange={setManualOpen}
       open={open}
     >
@@ -491,7 +515,7 @@ function GenericToolActionMessagePart({
       />
       {hasDetails && (
         <CollapsibleContent className="overflow-hidden data-[state=closed]:animate-collapsible-up data-[state=open]:animate-collapsible-down">
-          <div className="space-y-2 border-t px-3 py-2">
+          <div className="space-y-2 border-t border-foreground/10 px-2.5 py-2.5 dark:border-white/10">
             {part.argsText && (
               <ToolPreBlock label="Input" value={part.argsText} />
             )}
@@ -591,7 +615,7 @@ function StandaloneElicitationToolPart({
 
   return (
     <Collapsible
-      className="w-full overflow-hidden rounded-md border bg-muted/20 text-xs"
+      className={toolCallCardClassName}
       onOpenChange={setManualOpen}
       open={open}
     >
@@ -605,7 +629,7 @@ function StandaloneElicitationToolPart({
         title={title}
       />
       <CollapsibleContent className="overflow-hidden data-[state=closed]:animate-collapsible-up data-[state=open]:animate-collapsible-down">
-        <div className="space-y-3 border-t px-3 py-2">
+        <div className="space-y-3 border-t border-foreground/10 px-2.5 py-2.5 dark:border-white/10">
           {elicitation?.body ? (
             <div className="whitespace-pre-wrap text-sm leading-5">
               {elicitation.body}
@@ -631,7 +655,7 @@ function StandaloneElicitationToolPart({
                 ))
               ) : (
                 <textarea
-                  className="min-h-20 w-full resize-y rounded-md border bg-background px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring/30"
+                  className="min-h-20 w-full resize-y rounded-xl border border-foreground/10 bg-background/80 px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-foreground/10"
                   disabled={!awaitingInput}
                   onChange={(event) => setFallbackAnswer(event.target.value)}
                   value={fallbackAnswer}
@@ -871,9 +895,9 @@ function ElicitationQuestionInput({
             <button
               aria-pressed={selectedOptionLabel === option.label}
               className={cn(
-                "w-full rounded-sm border bg-background px-3 py-2 text-left text-sm leading-5 transition-colors hover:bg-muted/40",
+                "w-full rounded-xl border border-foreground/10 bg-background/75 px-3 py-2 text-left text-sm leading-5 transition-colors hover:bg-muted/40",
                 selectedOptionLabel === option.label &&
-                  "border-primary bg-primary/10",
+                  "border-primary/35 bg-primary/10",
               )}
               disabled={disabled}
               key={option.label}
@@ -895,8 +919,8 @@ function ElicitationQuestionInput({
             <button
               aria-pressed={selectedOther}
               className={cn(
-                "w-full rounded-sm border bg-background px-3 py-2 text-left text-sm leading-5 transition-colors hover:bg-muted/40",
-                selectedOther && "border-primary bg-primary/10",
+                "w-full rounded-xl border border-foreground/10 bg-background/75 px-3 py-2 text-left text-sm leading-5 transition-colors hover:bg-muted/40",
+                selectedOther && "border-primary/35 bg-primary/10",
               )}
               disabled={disabled}
               onClick={() => {
@@ -932,7 +956,7 @@ function ElicitationFreeformAnswer({
   if (question.isSecret) {
     return (
       <input
-        className="h-8 w-full rounded-sm border bg-background px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring/30"
+        className="h-8 w-full rounded-xl border border-foreground/10 bg-background/80 px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-foreground/10"
         disabled={disabled}
         onChange={(event) => onChange(event.target.value)}
         type="password"
@@ -943,7 +967,7 @@ function ElicitationFreeformAnswer({
 
   return (
     <textarea
-      className="min-h-16 w-full resize-y rounded-sm border bg-background px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring/30"
+      className="min-h-16 w-full resize-y rounded-xl border border-foreground/10 bg-background/80 px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-foreground/10"
       disabled={disabled}
       onChange={(event) => onChange(event.target.value)}
       value={value}
@@ -972,8 +996,8 @@ function ToolActionHeader({
     <>
       <ToolStatusIcon failed={failed} running={running} />
       <div className="min-w-0 flex-1">
-        <div className="truncate font-medium">{title}</div>
-        <div className="mt-0.5 flex items-center gap-1.5 text-muted-foreground">
+        <div className="truncate font-medium text-foreground/90">{title}</div>
+        <div className="mt-0.5 flex items-center gap-1.5 text-muted-foreground/90">
           <span>{kind}</span>
           <span aria-hidden>·</span>
           <span>{formatToolPhase(phase)}</span>
@@ -991,8 +1015,8 @@ function ToolActionHeader({
   );
 
   const className = cn(
-    "flex min-h-9 w-full items-center gap-2 px-3 py-2 text-left",
-    details && "hover:bg-muted/40",
+    "flex min-h-9 w-full items-center gap-2 px-2.5 py-2 text-left",
+    details && "hover:bg-muted/30",
   );
 
   if (!details) {
@@ -1015,8 +1039,11 @@ function ToolStatusIcon({
 }) {
   if (failed)
     return <AlertCircleIcon className="size-3.5 shrink-0 text-rose-600" />;
-  if (running) return <Loader2 className="size-3.5 shrink-0 animate-spin" />;
-  return <Check className="size-3.5 shrink-0 text-emerald-600" />;
+  if (running)
+    return (
+      <Loader2 className="size-3.5 shrink-0 animate-spin text-primary/75" />
+    );
+  return <Check className="size-3.5 shrink-0 text-emerald-600/90" />;
 }
 
 function ToolPreBlock({
@@ -1038,7 +1065,7 @@ function ToolPreBlock({
       >
         {label}
       </div>
-      <pre className="max-h-48 overflow-auto whitespace-pre-wrap break-words rounded-sm bg-background/70 p-2 font-mono text-[11px] leading-4">
+      <pre className="max-h-48 overflow-auto whitespace-pre-wrap break-words rounded-xl border border-foreground/10 bg-background/70 p-2.5 font-mono text-[11px] leading-4 dark:border-white/10">
         {value}
       </pre>
     </div>
@@ -1202,12 +1229,12 @@ function ElicitationQuestionCard({
 
   return (
     <Collapsible
-      className="my-2 w-full overflow-hidden rounded-md border py-3 text-xs"
+      className={cn(inspectorCardClassName, "my-2")}
       onOpenChange={setManualOpen}
       open={open}
     >
       <CollapsibleTrigger
-        className="flex min-h-9 w-full items-center gap-2 px-4 text-left"
+        className="flex min-h-10 w-full items-center gap-2 px-3 py-2 text-left hover:bg-muted/35"
         type="button"
       >
         <CircleHelp className="size-3.5 shrink-0 text-muted-foreground" />
@@ -1227,7 +1254,7 @@ function ElicitationQuestionCard({
         />
       </CollapsibleTrigger>
       <CollapsibleContent className="overflow-hidden data-[state=closed]:animate-collapsible-up data-[state=open]:animate-collapsible-down">
-        <div className="mt-3 space-y-3 border-t px-4 pt-3">
+        <div className="mt-1 space-y-3 border-t border-foreground/10 px-3 py-2.5 dark:border-white/10">
           {elicitation.body ? (
             <div className="whitespace-pre-wrap text-sm leading-5">
               {elicitation.body}
@@ -1259,7 +1286,7 @@ function ElicitationQuestionCard({
                 ))
               ) : (
                 <textarea
-                  className="min-h-20 w-full resize-y rounded-sm border bg-background px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring/30"
+                  className="min-h-20 w-full resize-y rounded-xl border border-foreground/10 bg-background/80 px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-foreground/10"
                   disabled={!awaitingInput}
                   onChange={(event) => setFallbackAnswer(event.target.value)}
                   value={fallbackAnswer}
@@ -1348,12 +1375,12 @@ function PlanMessagePart({ plan }: { plan: ChatPlanData }) {
 
   return (
     <Collapsible
-      className="w-full overflow-hidden rounded-md border bg-muted/20 text-xs"
+      className={inspectorCardClassName}
       onOpenChange={setOpen}
       open={open}
     >
       <CollapsibleTrigger
-        className="flex min-h-9 w-full items-center gap-2 px-3 py-2 text-left hover:bg-muted/40"
+        className="flex min-h-10 w-full items-center gap-2 px-3 py-2 text-left hover:bg-muted/35"
         disabled={!hasDetails}
         type="button"
       >
@@ -1387,12 +1414,13 @@ function PlanMessagePart({ plan }: { plan: ChatPlanData }) {
       </CollapsibleTrigger>
       {hasDetails ? (
         <CollapsibleContent className="overflow-hidden data-[state=closed]:animate-collapsible-up data-[state=open]:animate-collapsible-down">
-          <div className="space-y-3 border-t px-3 py-2">
+          <div className="space-y-3 border-t border-foreground/10 px-3 py-2.5 dark:border-white/10">
             {plan.text ? (
               <div className="p-2">
                 <Streamdown
                   className={assistantTextContainerClassName}
                   controls={false}
+                  lineNumbers={false}
                   mode="streaming"
                   plugins={{ cjk, code: streamdownCode, math, mermaid }}
                   shikiTheme={["github-light", "github-dark"]}
@@ -1402,7 +1430,7 @@ function PlanMessagePart({ plan }: { plan: ChatPlanData }) {
               </div>
             ) : null}
             {plan.path ? (
-              <div className="flex min-w-0 items-center gap-2 rounded-sm bg-background/70 px-2 py-1.5 text-muted-foreground">
+              <div className="flex min-w-0 items-center gap-2 rounded-xl border border-foreground/10 bg-background/70 px-2 py-1.5 text-muted-foreground dark:border-white/10">
                 <FileText className="size-3.5 shrink-0" />
                 <span className="truncate font-mono text-[11px]">
                   {plan.path}
@@ -1431,7 +1459,7 @@ function PlanMessagePart({ plan }: { plan: ChatPlanData }) {
               </ol>
             ) : null}
             {isLastMessage && canStartImplementation ? (
-              <div className="flex justify-end border-t pt-2">
+              <div className="flex justify-end border-t border-foreground/10 pt-2 dark:border-white/10">
                 <Button
                   onClick={startImplementation}
                   size="sm"
@@ -1463,7 +1491,7 @@ function PlanMarkerPart({
 }) {
   const title = kind === "todo" ? "Todo" : "Plan";
   return (
-    <div className="flex min-h-9 w-full items-center gap-2 rounded-md border px-3 py-2 text-xs">
+    <div className="flex min-h-10 w-full items-center gap-2 rounded-2xl border border-foreground/10 bg-muted/[0.18] px-3 py-2 text-xs shadow-[0_12px_32px_-24px_rgba(0,0,0,0.55)] dark:border-white/10">
       <ListChecks className="size-3.5 shrink-0 text-muted-foreground" />
       <div className="truncate font-medium">
         {title} {presentation === "created" ? "created" : "updated"}
@@ -1500,7 +1528,7 @@ function NullMessagePart(): null {
 
 function JsonBlock({ label, value }: { label: string; value: unknown }) {
   return (
-    <div className="min-w-0 rounded-md bg-muted/50 p-2">
+    <div className="min-w-0 rounded-2xl border border-foreground/10 bg-muted/35 p-3 dark:border-white/10">
       <div className="mb-1 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
         {label}
       </div>

@@ -589,7 +589,7 @@ function WorkspacePageContent({
           />
         </SidebarInset>
       ) : (
-        <SidebarInset className="h-svh max-h-svh overflow-hidden md:h-[calc(100svh-1rem)] md:max-h-[calc(100svh-1rem)]">
+        <SidebarInset className="h-svh max-h-svh overflow-hidden md:h-[calc(100svh-1rem)] md:max-h-[calc(100svh-1rem)] md:ring-1 md:ring-foreground/10 md:shadow-[0_24px_80px_-56px_rgba(0,0,0,0.72)] dark:md:ring-white/10">
           <WorkspaceHeader title={workspaceTitle} />
           <main className="flex min-h-0 flex-1 overflow-hidden">
             <section className="flex min-h-0 min-w-0 flex-1 flex-col">

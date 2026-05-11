@@ -110,7 +110,7 @@ type FileMentionAssistPanelProps = {
 };
 
 const composerInputGroupClassName =
-  "overflow-visible !rounded-[1.35rem] !border !border-foreground/10 !bg-background/85 shadow-[0_18px_44px_-24px_rgba(0,0,0,0.55),0_1px_0_rgba(255,255,255,0.85)_inset] backdrop-blur-xl transition-[border-color,box-shadow,background-color] has-[textarea]:!rounded-[1.35rem] has-[>[data-align=block-end]]:!rounded-[1.35rem] has-[>[data-align=block-start]]:!rounded-[1.35rem] focus-within:!border-foreground/16 focus-within:!bg-background/95 focus-within:shadow-[0_18px_42px_-26px_rgba(0,0,0,0.58),0_0_0_2px_rgba(29,29,31,0.045),0_1px_0_rgba(255,255,255,0.9)_inset] dark:!border-white/10 dark:!bg-card/80 dark:shadow-[0_18px_44px_-24px_rgba(0,0,0,0.85),0_1px_0_rgba(255,255,255,0.08)_inset] dark:focus-within:!border-white/16 dark:focus-within:!bg-card/90 dark:focus-within:shadow-[0_18px_42px_-26px_rgba(0,0,0,0.86),0_0_0_2px_rgba(255,255,255,0.055),0_1px_0_rgba(255,255,255,0.1)_inset]";
+  "overflow-visible !rounded-[1.35rem] !border !border-foreground/10 !bg-background/90 shadow-[0_18px_44px_-24px_rgba(0,0,0,0.55),0_1px_0_rgba(255,255,255,0.85)_inset] backdrop-blur-xl transition-[border-color,box-shadow,background-color] has-[textarea]:!rounded-[1.35rem] has-[>[data-align=block-end]]:!rounded-[1.35rem] has-[>[data-align=block-start]]:!rounded-[1.35rem] focus-within:!border-foreground/15 focus-within:!bg-background/95 focus-within:shadow-[0_18px_42px_-26px_rgba(0,0,0,0.58),0_0_0_2px_rgba(29,29,31,0.045),0_1px_0_rgba(255,255,255,0.9)_inset] dark:!border-white/10 dark:!bg-card/80 dark:shadow-[0_18px_44px_-24px_rgba(0,0,0,0.85),0_1px_0_rgba(255,255,255,0.08)_inset] dark:focus-within:!border-white/15 dark:focus-within:!bg-card/90 dark:focus-within:shadow-[0_18px_42px_-26px_rgba(0,0,0,0.86),0_0_0_2px_rgba(255,255,255,0.055),0_1px_0_rgba(255,255,255,0.1)_inset]";
 
 export function AssistantComposer() {
   const aui = useAui();
@@ -598,7 +598,7 @@ function AssistantComposerFooter({ draftText }: { draftText: string }) {
   }, [aui]);
 
   return (
-    <PromptInputFooter className="flex-wrap border-t border-foreground/8 !px-3 !py-2.5 dark:border-white/10">
+    <PromptInputFooter className="flex-wrap border-t border-foreground/10 !px-3 !py-2.5 dark:border-white/10">
       <PromptInputTools className="flex-wrap">
         <PromptAttachmentButton />
         <ComposerModelMenu disabled={isRunning} options={chatOptions} />

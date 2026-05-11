@@ -981,7 +981,12 @@ export const PromptInput = ({
         ref={formRef}
         {...props}
       >
-        <InputGroup className={cn("overflow-hidden", inputGroupClassName)}>
+        <InputGroup
+          className={cn(
+            "overflow-hidden rounded-[1.35rem] border-foreground/10 bg-background/80 shadow-[0_14px_34px_-28px_rgba(0,0,0,0.55)] backdrop-blur-xl",
+            inputGroupClassName,
+          )}
+        >
           {children}
         </InputGroup>
       </form>
@@ -1125,7 +1130,10 @@ export const PromptInputTextarea = forwardRef<
 
     return (
       <InputGroupTextarea
-        className={cn("field-sizing-content max-h-48 min-h-16", className)}
+        className={cn(
+          "field-sizing-content max-h-48 min-h-16 text-[15px] leading-6 placeholder:text-muted-foreground/65 [line-break:loose] [overflow-wrap:anywhere]",
+          className,
+        )}
         name="message"
         onCompositionEnd={handleCompositionEnd}
         onCompositionStart={handleCompositionStart}
@@ -1152,7 +1160,7 @@ export const PromptInputHeader = ({
 }: PromptInputHeaderProps) => (
   <InputGroupAddon
     align="block-end"
-    className={cn("order-first flex-wrap gap-1", className)}
+    className={cn("order-first flex-wrap gap-1.5", className)}
     {...props}
   />
 );
@@ -1168,7 +1176,7 @@ export const PromptInputFooter = ({
 }: PromptInputFooterProps) => (
   <InputGroupAddon
     align="block-end"
-    className={cn("justify-between gap-1", className)}
+    className={cn("justify-between gap-1.5", className)}
     {...props}
   />
 );
@@ -1209,7 +1217,7 @@ export const PromptInputButton = ({
 
   const button = (
     <InputGroupButton
-      className={cn(className)}
+      className={cn("rounded-full", className)}
       size={newSize}
       type="button"
       variant={variant}
@@ -1265,7 +1273,14 @@ export const PromptInputActionMenuContent = ({
   className,
   ...props
 }: PromptInputActionMenuContentProps) => (
-  <DropdownMenuContent align="start" className={cn(className)} {...props} />
+  <DropdownMenuContent
+    align="start"
+    className={cn(
+      "rounded-2xl border-foreground/10 bg-popover/95 shadow-lg backdrop-blur-xl dark:border-white/10",
+      className,
+    )}
+    {...props}
+  />
 );
 
 export type PromptInputActionMenuItemProps = ComponentProps<
@@ -1275,7 +1290,7 @@ export const PromptInputActionMenuItem = ({
   className,
   ...props
 }: PromptInputActionMenuItemProps) => (
-  <DropdownMenuItem className={cn(className)} {...props} />
+  <DropdownMenuItem className={cn("rounded-xl", className)} {...props} />
 );
 
 // Note: Actions that perform side-effects (like opening a file dialog)
@@ -1323,7 +1338,7 @@ export const PromptInputSubmit = ({
   return (
     <InputGroupButton
       aria-label={isGenerating ? "Stop" : "Submit"}
-      className={cn(className)}
+      className={cn("rounded-full shadow-sm", className)}
       onClick={handleClick}
       size={size}
       type={isGenerating && onStop ? "button" : "submit"}
@@ -1351,8 +1366,8 @@ export const PromptInputSelectTrigger = ({
 }: PromptInputSelectTriggerProps) => (
   <SelectTrigger
     className={cn(
-      "border-none bg-transparent font-medium text-muted-foreground shadow-none transition-colors",
-      "hover:bg-accent hover:text-foreground aria-expanded:bg-accent aria-expanded:text-foreground",
+      "rounded-full border border-transparent bg-transparent font-medium text-muted-foreground shadow-none transition-colors",
+      "hover:bg-muted hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground",
       className,
     )}
     {...props}
@@ -1367,7 +1382,7 @@ export const PromptInputSelectContent = ({
   className,
   ...props
 }: PromptInputSelectContentProps) => (
-  <SelectContent className={cn(className)} {...props} />
+  <SelectContent className={cn("rounded-2xl", className)} {...props} />
 );
 
 export type PromptInputSelectItemProps = ComponentProps<typeof SelectItem>;
@@ -1376,7 +1391,7 @@ export const PromptInputSelectItem = ({
   className,
   ...props
 }: PromptInputSelectItemProps) => (
-  <SelectItem className={cn(className)} {...props} />
+  <SelectItem className={cn("rounded-xl", className)} {...props} />
 );
 
 export type PromptInputSelectValueProps = ComponentProps<typeof SelectValue>;
@@ -1412,9 +1427,17 @@ export type PromptInputHoverCardContentProps = ComponentProps<
 
 export const PromptInputHoverCardContent = ({
   align = "start",
+  className,
   ...props
 }: PromptInputHoverCardContentProps) => (
-  <HoverCardContent align={align} {...props} />
+  <HoverCardContent
+    align={align}
+    className={cn(
+      "rounded-2xl border-foreground/10 bg-popover/95 shadow-lg backdrop-blur-xl dark:border-white/10",
+      className,
+    )}
+    {...props}
+  />
 );
 
 export type PromptInputTabsListProps = HTMLAttributes<HTMLDivElement>;
@@ -1422,14 +1445,18 @@ export type PromptInputTabsListProps = HTMLAttributes<HTMLDivElement>;
 export const PromptInputTabsList = ({
   className,
   ...props
-}: PromptInputTabsListProps) => <div className={cn(className)} {...props} />;
+}: PromptInputTabsListProps) => (
+  <div className={cn("flex min-w-0 gap-1", className)} {...props} />
+);
 
 export type PromptInputTabProps = HTMLAttributes<HTMLDivElement>;
 
 export const PromptInputTab = ({
   className,
   ...props
-}: PromptInputTabProps) => <div className={cn(className)} {...props} />;
+}: PromptInputTabProps) => (
+  <div className={cn("min-w-0 rounded-2xl", className)} {...props} />
+);
 
 export type PromptInputTabLabelProps = HTMLAttributes<HTMLHeadingElement>;
 
@@ -1441,7 +1468,7 @@ export const PromptInputTabLabel = ({
   // oxlint-disable-next-line eslint-plugin-jsx-a11y(heading-has-content)
   <h3
     className={cn(
-      "mb-2 px-3 font-medium text-muted-foreground text-xs",
+      "mb-2 px-3 text-xs font-medium text-muted-foreground",
       className,
     )}
     {...props}
@@ -1454,7 +1481,7 @@ export const PromptInputTabBody = ({
   className,
   ...props
 }: PromptInputTabBodyProps) => (
-  <div className={cn("space-y-1", className)} {...props} />
+  <div className={cn("space-y-1.5", className)} {...props} />
 );
 
 export type PromptInputTabItemProps = HTMLAttributes<HTMLDivElement>;
@@ -1465,7 +1492,7 @@ export const PromptInputTabItem = ({
 }: PromptInputTabItemProps) => (
   <div
     className={cn(
-      "flex items-center gap-2 px-3 py-2 text-xs hover:bg-accent",
+      "flex items-center gap-2 rounded-xl px-3 py-2 text-xs hover:bg-muted",
       className,
     )}
     {...props}
@@ -1477,7 +1504,9 @@ export type PromptInputCommandProps = ComponentProps<typeof Command>;
 export const PromptInputCommand = ({
   className,
   ...props
-}: PromptInputCommandProps) => <Command className={cn(className)} {...props} />;
+}: PromptInputCommandProps) => (
+  <Command className={cn("rounded-2xl", className)} {...props} />
+);
 
 export type PromptInputCommandInputProps = ComponentProps<typeof CommandInput>;
 
@@ -1521,7 +1550,7 @@ export const PromptInputCommandItem = ({
   className,
   ...props
 }: PromptInputCommandItemProps) => (
-  <CommandItem className={cn(className)} {...props} />
+  <CommandItem className={cn("rounded-xl", className)} {...props} />
 );
 
 export type PromptInputCommandSeparatorProps = ComponentProps<

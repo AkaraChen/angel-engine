@@ -14,9 +14,9 @@ import {
 
 export function AssistantThread({ projectName }: { projectName?: string }) {
   return (
-    <ThreadPrimitive.Root className="flex h-full min-h-0 flex-col">
+    <ThreadPrimitive.Root className="flex h-full min-h-0 flex-col bg-background">
       <ThreadPrimitive.Viewport
-        className="relative flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto px-4 py-5 sm:px-6"
+        className="relative flex min-h-0 flex-1 flex-col gap-6 overflow-y-auto px-4 py-6 sm:px-8"
         scrollToBottomOnRunStart
       >
         <AuiIf condition={(state) => state.thread.isEmpty}>
@@ -33,15 +33,17 @@ export function AssistantThread({ projectName }: { projectName?: string }) {
           }}
         </ThreadPrimitive.Messages>
 
-        <SelectionToolbarPrimitive.Root className="z-20 flex items-center gap-1 rounded-md border bg-popover p-1 text-popover-foreground shadow-md">
-          <SelectionToolbarPrimitive.Quote className="inline-flex h-7 items-center gap-1 rounded-sm px-2 text-xs hover:bg-muted">
+        <SelectionToolbarPrimitive.Root className="z-20 flex items-center gap-1 rounded-full border border-foreground/10 bg-popover/95 p-1 text-popover-foreground shadow-lg backdrop-blur-xl">
+          <SelectionToolbarPrimitive.Quote className="inline-flex h-7 items-center gap-1 rounded-full px-2 text-xs hover:bg-muted">
             <Quote className="size-3" />
             Quote
           </SelectionToolbarPrimitive.Quote>
         </SelectionToolbarPrimitive.Root>
       </ThreadPrimitive.Viewport>
-      <div className="shrink-0 bg-background px-4 pb-4 pt-2 sm:px-6">
-        <AssistantComposer />
+      <div className="shrink-0 bg-background/80 px-4 pb-4 pt-2 backdrop-blur-xl sm:px-8">
+        <div className="mx-auto w-full max-w-[860px]">
+          <AssistantComposer />
+        </div>
       </div>
     </ThreadPrimitive.Root>
   );
@@ -49,12 +51,12 @@ export function AssistantThread({ projectName }: { projectName?: string }) {
 
 function EmptyThread({ projectName }: { projectName?: string }) {
   return (
-    <div className="mx-auto flex max-w-2xl flex-1 flex-col justify-center gap-5 text-center">
-      <div className="mx-auto flex size-11 items-center justify-center rounded-md border bg-muted/40">
+    <div className="mx-auto flex w-full max-w-[760px] flex-1 flex-col justify-center gap-4 text-center">
+      <div className="mx-auto flex size-10 items-center justify-center rounded-2xl border border-foreground/10 bg-muted/30">
         <Sparkles className="size-5" />
       </div>
       <div>
-        <h2 className="text-lg font-semibold">
+        <h2 className="text-[17px] font-semibold tracking-normal">
           {projectName ? (
             <>
               Start a run in <ProjectNameUnderline name={projectName} />
