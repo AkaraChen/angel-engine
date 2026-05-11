@@ -109,6 +109,9 @@ type FileMentionAssistPanelProps = {
   onSelect: (file: ProjectFileSearchResult) => void;
 };
 
+const composerInputGroupClassName =
+  "overflow-visible !rounded-[1.35rem] !border !border-foreground/10 !bg-background/85 shadow-[0_18px_44px_-24px_rgba(0,0,0,0.55),0_1px_0_rgba(255,255,255,0.85)_inset] backdrop-blur-xl transition-[border-color,box-shadow,background-color] has-[textarea]:!rounded-[1.35rem] has-[>[data-align=block-end]]:!rounded-[1.35rem] has-[>[data-align=block-start]]:!rounded-[1.35rem] focus-within:!border-foreground/16 focus-within:!bg-background/95 focus-within:shadow-[0_18px_42px_-26px_rgba(0,0,0,0.58),0_0_0_2px_rgba(29,29,31,0.045),0_1px_0_rgba(255,255,255,0.9)_inset] dark:!border-white/10 dark:!bg-card/80 dark:shadow-[0_18px_44px_-24px_rgba(0,0,0,0.85),0_1px_0_rgba(255,255,255,0.08)_inset] dark:focus-within:!border-white/16 dark:focus-within:!bg-card/90 dark:focus-within:shadow-[0_18px_42px_-26px_rgba(0,0,0,0.86),0_0_0_2px_rgba(255,255,255,0.055),0_1px_0_rgba(255,255,255,0.1)_inset]";
+
 export function AssistantComposer() {
   const aui = useAui();
   const api = useApi();
@@ -323,7 +326,7 @@ export function AssistantComposer() {
 
   return (
     <PromptInput
-      inputGroupClassName="overflow-visible !rounded-md !border !border-border !bg-card shadow-sm has-[textarea]:!rounded-md has-[>[data-align=block-end]]:!rounded-md has-[>[data-align=block-start]]:!rounded-md"
+      inputGroupClassName={composerInputGroupClassName}
       multiple
       onError={handleAttachmentError}
       onSubmit={handleSubmit}
@@ -347,7 +350,7 @@ export function AssistantComposer() {
 
       <PromptInputBody>
         <PromptInputTextarea
-          className="max-h-36 min-h-16 text-sm leading-6"
+          className="max-h-40 min-h-[4.75rem] px-4 py-3 text-[15px] leading-6 placeholder:text-muted-foreground/65"
           disabled={isInputDisabled}
           onChange={handleTextChange}
           onKeyDown={handleTextKeyDown}
@@ -382,9 +385,9 @@ function AssistantComposerHeader({
   }
 
   return (
-    <PromptInputHeader className="flex-col items-stretch gap-2 !px-2 !py-2">
+    <PromptInputHeader className="flex-col items-stretch gap-2 !px-3 !pb-2 !pt-3">
       {hasQuote ? (
-        <ComposerPrimitive.Quote className="flex items-start gap-2 rounded-md border bg-muted/40 p-2 text-sm">
+        <ComposerPrimitive.Quote className="flex items-start gap-2 rounded-xl border border-foreground/10 bg-muted/35 p-2 text-sm">
           <Quote className="mt-0.5 size-3.5 shrink-0 text-muted-foreground" />
           <ComposerPrimitive.QuoteText className="line-clamp-2 flex-1 text-muted-foreground" />
           <ComposerPrimitive.QuoteDismiss className={iconButtonClass}>
@@ -472,7 +475,7 @@ function ComposerAssistPanel({
 
 function AssistPanelFrame({ children, title }: AssistPanelFrameProps) {
   return (
-    <div className="absolute bottom-full left-0 right-0 z-50 mb-2 rounded-md border bg-popover p-1 text-popover-foreground shadow-lg">
+    <div className="absolute bottom-full left-0 right-0 z-50 mb-2 overflow-hidden rounded-2xl border border-foreground/10 bg-popover/95 p-1 text-popover-foreground shadow-[0_18px_48px_-24px_rgba(0,0,0,0.65)] backdrop-blur-xl dark:border-white/10">
       <div className="px-2 py-1 text-[11px] font-medium uppercase text-muted-foreground">
         {title}
       </div>
@@ -595,7 +598,7 @@ function AssistantComposerFooter({ draftText }: { draftText: string }) {
   }, [aui]);
 
   return (
-    <PromptInputFooter className="flex-wrap border-t !px-2 !py-2">
+    <PromptInputFooter className="flex-wrap border-t border-foreground/8 !px-3 !py-2.5 dark:border-white/10">
       <PromptInputTools className="flex-wrap">
         <PromptAttachmentButton />
         <ComposerModelMenu disabled={isRunning} options={chatOptions} />
@@ -616,14 +619,26 @@ function AssistantComposerFooter({ draftText }: { draftText: string }) {
           value={chatOptions.mode}
         />
         {isRunning ? (
-          <Button onClick={stopRun} size="sm" type="button" variant="outline">
+          <Button
+            className="h-8 rounded-full border-foreground/10 bg-background/65 px-3 text-xs dark:bg-card/65"
+            onClick={stopRun}
+            size="sm"
+            type="button"
+            variant="outline"
+          >
             <CircleStop />
             Cancel
           </Button>
         ) : null}
-        <Button disabled={isRunning || isEmpty} size="sm" type="submit">
+        <Button
+          aria-label="Send"
+          className="size-8 rounded-full p-0 shadow-sm active:translate-y-px"
+          disabled={isRunning || isEmpty}
+          size="sm"
+          type="submit"
+        >
           <ArrowUp />
-          Send
+          <span className="sr-only">Send</span>
         </Button>
       </div>
     </PromptInputFooter>
@@ -658,7 +673,7 @@ function PlanModeToggleButton({
   return (
     <Button
       aria-pressed={isPlanMode}
-      className="h-8 gap-1.5 rounded-md px-2 text-xs"
+      className="h-8 gap-1.5 rounded-full px-2 text-xs"
       disabled={unavailable}
       onMouseDown={(event) => event.preventDefault()}
       onClick={() => {
@@ -717,7 +732,7 @@ function ComposerOptionSelect({
       <PromptInputSelectTrigger
         aria-label={label}
         className={[
-          "h-8 max-w-36 rounded-md border border-border bg-background/70 px-2 text-xs",
+          "h-8 max-w-36 rounded-full border border-foreground/10 bg-background/65 px-2 text-xs dark:bg-card/65",
           className,
         ]
           .filter(Boolean)
@@ -797,7 +812,7 @@ function ComposerModelMenu({
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button
-          className="h-8 max-w-[22rem] gap-1.5 rounded-md border border-border bg-background/70 px-2 text-xs"
+          className="h-8 max-w-[22rem] gap-1.5 rounded-full border border-foreground/10 bg-background/65 px-2 text-xs shadow-none dark:bg-card/65"
           disabled={disabled}
           size="sm"
           title="Provider, model, and reasoning effort"
