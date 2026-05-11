@@ -68,11 +68,7 @@ import {
 import { iconButtonClass } from "@/features/chat/components/thread-styles";
 import { useChatEnvironment } from "@/features/chat/runtime/chat-environment-context";
 import { useApi } from "@/platform/use-api";
-import {
-  AGENT_OPTIONS,
-  normalizeAgentRuntime,
-  type AgentValueOption,
-} from "@/shared/agents";
+import { AGENT_OPTIONS, type AgentValueOption } from "@/shared/agents";
 import { useToast } from "@/components/ui/toast";
 import type {
   ChatAvailableCommand,
@@ -830,9 +826,7 @@ function ComposerModelMenu({
             <ComposerModelMenuItem
               key={provider.value}
               label={provider.label}
-              onSelect={() =>
-                options.setRuntime(normalizeAgentRuntime(provider.value))
-              }
+              onSelect={() => options.setRuntime(provider.value)}
               selected={provider.value === options.runtime}
             />
           ))}

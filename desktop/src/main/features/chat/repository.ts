@@ -4,7 +4,6 @@ import path from "node:path";
 import { desc, eq } from "drizzle-orm";
 
 import type { Chat, ChatCreateInput } from "../../../shared/chat";
-import { normalizeAgentRuntime } from "../../../shared/agents";
 import { chats } from "../../db/schema";
 import { getDatabase } from "../../db/database";
 
@@ -125,7 +124,7 @@ function requireChatId(id: string) {
 }
 
 function normalizeRuntime(runtime: string | undefined) {
-  return normalizeAgentRuntime(runtime ?? process.env.ANGEL_ENGINE_RUNTIME);
+  return runtime || process.env.ANGEL_ENGINE_RUNTIME || "codex";
 }
 
 function normalizeTitle(title: string | undefined) {

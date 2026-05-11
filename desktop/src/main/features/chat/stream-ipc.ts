@@ -10,7 +10,6 @@ import {
   type ChatElicitationResponse,
   type ChatStreamEvent,
 } from "../../../shared/chat";
-import { normalizeAgentRuntime } from "../../../shared/agents";
 import { streamChat, type ChatStreamControls } from "./angel-client";
 import {
   chatStreamElicitationResolveInput,
@@ -68,9 +67,7 @@ export function registerChatStreamIpc() {
       mode: request.input.mode,
       prewarmId: request.input.prewarmId,
       reasoningEffort: request.input.reasoningEffort,
-      runtime: request.input.runtime
-        ? normalizeAgentRuntime(request.input.runtime)
-        : undefined,
+      runtime: request.input.runtime ?? undefined,
       text: request.input.text,
     };
 

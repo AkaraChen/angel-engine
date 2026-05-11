@@ -46,11 +46,7 @@ import {
   projectContextMenuMutationOptions,
   projectListQueryOptions,
 } from "@/features/projects/api/queries";
-import {
-  normalizeAgentRuntime,
-  type AgentValueOption,
-  type AgentRuntime,
-} from "@/shared/agents";
+import { type AgentValueOption, type AgentRuntime } from "@/shared/agents";
 import type {
   Chat,
   ChatHistoryMessage,
@@ -194,9 +190,7 @@ function WorkspacePageContent({
   });
   const historyMessages = EMPTY_MESSAGES;
   const historyRevision = 0;
-  const chatRuntime = selectedChat
-    ? normalizeAgentRuntime(selectedChat.runtime)
-    : undefined;
+  const chatRuntime = selectedChat?.runtime as AgentRuntime | undefined;
   const draftRuntimeKey = draftRuntimeKeyFromRoute(route);
   const draftRuntime = draftRuntimeKey
     ? (draftRuntimes[draftRuntimeKey] ?? agentSettings.defaultRuntime)
@@ -766,7 +760,7 @@ function ChatThreadRuntime({
   slotKey,
 }: ChatThreadRuntimeProps) {
   const setRunMode = useChatRunStore((state) => state.setMode);
-  const chatRuntime = normalizeAgentRuntime(selectedChat.runtime);
+  const chatRuntime = selectedChat.runtime as AgentRuntime;
   const projectContext = chatProjectContext(route, selectedChat, projects);
   const activeModel = normalizeConfigDisplayValue(
     draftAgentConfig.model ?? runtimeConfig?.currentModel,

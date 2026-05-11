@@ -9,7 +9,6 @@ import type {
   ChatSendInput,
   ChatSetModeInput,
 } from "../../../shared/chat";
-import { normalizeAgentRuntime } from "../../../shared/agents";
 import { normalizeChatAttachmentsInput } from "../../../shared/chat";
 import {
   closeChatSession,
@@ -45,9 +44,7 @@ export const chatIpcRouter = {
         projectId: value.projectId,
         mode: value.mode,
         reasoningEffort: value.reasoningEffort,
-        runtime: value.runtime
-          ? normalizeAgentRuntime(value.runtime)
-          : undefined,
+        runtime: value.runtime ?? undefined,
         title: value.title,
       });
     }),
@@ -84,9 +81,7 @@ export const chatIpcRouter = {
       }
       return prewarmChat({
         projectId: value.projectId,
-        runtime: value.runtime
-          ? normalizeAgentRuntime(value.runtime)
-          : undefined,
+        runtime: value.runtime ?? undefined,
       });
     }),
 
@@ -99,9 +94,7 @@ export const chatIpcRouter = {
       }
       return inspectChatRuntimeConfig({
         cwd: value.cwd,
-        runtime: value.runtime
-          ? normalizeAgentRuntime(value.runtime)
-          : undefined,
+        runtime: value.runtime ?? undefined,
       });
     }),
 
@@ -159,7 +152,7 @@ export const chatIpcRouter = {
       mode: value.mode,
       prewarmId: value.prewarmId,
       reasoningEffort: value.reasoningEffort,
-      runtime: value.runtime ? normalizeAgentRuntime(value.runtime) : undefined,
+      runtime: value.runtime ?? undefined,
       text: value.text,
     });
   }),

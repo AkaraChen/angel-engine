@@ -32,7 +32,6 @@ import type {
   ChatSetModeInput,
   ChatSetModeResult,
 } from "../../../shared/chat";
-import { normalizeAgentRuntime } from "../../../shared/agents";
 import { normalizeChatAttachmentsInput } from "../../../shared/chat";
 import {
   createChat,
@@ -248,7 +247,7 @@ function getChatSession(chat: Chat) {
 }
 
 function createChatSession(runtime?: string): DesktopChatSession {
-  if (normalizeAgentRuntime(runtime) === "claude") {
+  if (runtime === "claude") {
     return new DesktopClaudeSession();
   }
 

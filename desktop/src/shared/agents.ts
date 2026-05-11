@@ -1,3 +1,5 @@
+import { type as arkType } from "arktype";
+
 export type AgentRuntime = "codex" | "kimi" | "opencode" | "claude";
 
 export type AgentOption = {
@@ -39,32 +41,13 @@ export const AGENT_OPTIONS: AgentOption[] = [
   },
 ];
 
-export function normalizeAgentRuntime(
-  runtime: string | null | undefined,
-): AgentRuntime {
-  const normalized = runtime?.toLowerCase();
-  if (normalized === "kimi") return "kimi";
-  if (
-    normalized === "opencode" ||
-    normalized === "open-code" ||
-    normalized === "open code"
-  ) {
-    return "opencode";
-  }
-  if (
-    normalized === "claude" ||
-    normalized === "claude-code" ||
-    normalized === "claude code"
-  ) {
-    return "claude";
-  }
-  return "codex";
-}
+const agentRuntime = arkType("'codex' | 'kimi' | 'opencode' | 'claude'");
 
 export function sanitizeAgentSettings(value: unknown): AgentSettings {
   const settings =
     value && typeof value === "object" ? (value as Partial<AgentSettings>) : {};
-  const defaultRuntime = normalizeAgentRuntime(settings.defaultRuntime);
+  const parsed = agentRuntime(settings.defaultRuntime);
+  const defaultRuntime = parsed instanceof arkType.errors ? "codex" : parsed;
 
   return {
     defaultRuntime,

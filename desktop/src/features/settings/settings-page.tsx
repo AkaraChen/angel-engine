@@ -12,7 +12,6 @@ import {
 import { cn } from "@/platform/utils";
 import {
   AGENT_OPTIONS,
-  normalizeAgentRuntime,
   type AgentRuntime,
   type AgentSettings,
 } from "@/shared/agents";
@@ -89,7 +88,7 @@ export function SettingsPage({
                   icon={<Bot />}
                   label="Default agent"
                   onValueChange={(value) =>
-                    onDefaultAgentChange(normalizeAgentRuntime(value))
+                    onDefaultAgentChange(value as AgentRuntime)
                   }
                   options={AGENT_OPTIONS.map((agent) => ({
                     label: agent.label,
