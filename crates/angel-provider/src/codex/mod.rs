@@ -34,6 +34,7 @@ mod response;
 mod summaries;
 mod transport;
 mod types;
+mod wire;
 
 pub use types::*;
 

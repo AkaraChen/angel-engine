@@ -1,3 +1,4 @@
+use super::wire::{AcpSessionUpdateKind, parse_stop_reason, parse_tool_kind, parse_tool_status};
 use super::*;
 
 pub(super) fn acp_session_id(
@@ -59,21 +60,27 @@ pub(super) fn acp_action_exists(
 }
 
 pub(super) fn acp_stop_reason(value: &str) -> AcpStopReason {
-    match value {
-        "max_tokens" => AcpStopReason::MaxTokens,
-        "max_turn_requests" => AcpStopReason::MaxTurnRequests,
-        "refusal" => AcpStopReason::Refusal,
-        "cancelled" => AcpStopReason::Cancelled,
-        _ => AcpStopReason::EndTurn,
+    match parse_stop_reason(value) {
+        Some(agent_client_protocol_schema::StopReason::MaxTokens) => AcpStopReason::MaxTokens,
+        Some(agent_client_protocol_schema::StopReason::MaxTurnRequests) => {
+            AcpStopReason::MaxTurnRequests
+        }
+        Some(agent_client_protocol_schema::StopReason::Refusal) => AcpStopReason::Refusal,
+        Some(agent_client_protocol_schema::StopReason::Cancelled) => AcpStopReason::Cancelled,
+        Some(agent_client_protocol_schema::StopReason::EndTurn) | Some(_) | None => {
+            AcpStopReason::EndTurn
+        }
     }
 }
 
 pub(super) fn acp_tool_status(value: &str) -> AcpToolStatus {
-    match value {
-        "pending" => AcpToolStatus::Pending,
-        "completed" => AcpToolStatus::Completed,
-        "failed" => AcpToolStatus::Failed,
-        _ => AcpToolStatus::InProgress,
+    match parse_tool_status(value) {
+        Some(agent_client_protocol_schema::ToolCallStatus::Pending) => AcpToolStatus::Pending,
+        Some(agent_client_protocol_schema::ToolCallStatus::Completed) => AcpToolStatus::Completed,
+        Some(agent_client_protocol_schema::ToolCallStatus::Failed) => AcpToolStatus::Failed,
+        Some(agent_client_protocol_schema::ToolCallStatus::InProgress) | Some(_) | None => {
+            AcpToolStatus::InProgress
+        }
     }
 }
 
@@ -87,23 +94,33 @@ pub(crate) fn acp_tool_history_entry(update: &Value) -> Option<HistoryReplayEntr
 }
 
 pub(crate) fn acp_tool_history_payload(update: &Value) -> Option<Value> {
-    let session_update = update
-        .get("sessionUpdate")
-        .and_then(Value::as_str)
-        .filter(|session_update| matches!(*session_update, "tool_call" | "tool_call_update"))?;
+    let session_update = update.get("sessionUpdate").and_then(Value::as_str)?;
+    let session_update_kind = session_update.parse::<AcpSessionUpdateKind>().ok()?;
+    if !matches!(
+        session_update_kind,
+        AcpSessionUpdateKind::ToolCall | AcpSessionUpdateKind::ToolCallUpdate
+    ) {
+        return None;
+    }
     let tool_call_id = update
         .get("toolCallId")
         .or_else(|| update.get("id"))
         .and_then(Value::as_str)?;
 
     let mut payload = serde_json::Map::new();
-    payload.insert("sessionUpdate".to_string(), json!(session_update));
+    payload.insert(
+        "sessionUpdate".to_string(),
+        session_update_kind.wire_value(),
+    );
     payload.insert("toolCallId".to_string(), json!(tool_call_id));
 
     if let Some(status) = update.get("status").and_then(Value::as_str) {
         payload.insert("status".to_string(), json!(status));
-    } else if session_update == "tool_call" {
-        payload.insert("status".to_string(), json!("pending"));
+    } else if session_update_kind == AcpSessionUpdateKind::ToolCall {
+        payload.insert(
+            "status".to_string(),
+            json!(agent_client_protocol_schema::ToolCallStatus::Pending),
+        );
     }
     if let Some(kind) = update.get("kind").and_then(Value::as_str) {
         payload.insert("kind".to_string(), json!(kind));
@@ -189,15 +206,19 @@ fn acp_tool_history_action(value: &Value) -> HistoryReplayToolAction {
 }
 
 fn acp_history_action_kind(kind: Option<&str>) -> ActionKind {
-    match kind.unwrap_or("other") {
-        "read" => ActionKind::Read,
-        "edit" | "delete" | "move" => ActionKind::FileChange,
-        "execute" | "command" => ActionKind::Command,
-        "search" | "web_search" => ActionKind::WebSearch,
-        "think" | "reasoning" => ActionKind::Reasoning,
-        "fetch" | "dynamic_tool" => ActionKind::DynamicTool,
-        "switch_mode" | "host_capability" => ActionKind::HostCapability,
-        _ => ActionKind::McpTool,
+    match kind.and_then(parse_tool_kind) {
+        Some(agent_client_protocol_schema::ToolKind::Read) => ActionKind::Read,
+        Some(
+            agent_client_protocol_schema::ToolKind::Edit
+            | agent_client_protocol_schema::ToolKind::Delete
+            | agent_client_protocol_schema::ToolKind::Move,
+        ) => ActionKind::FileChange,
+        Some(agent_client_protocol_schema::ToolKind::Execute) => ActionKind::Command,
+        Some(agent_client_protocol_schema::ToolKind::Search) => ActionKind::WebSearch,
+        Some(agent_client_protocol_schema::ToolKind::Think) => ActionKind::Reasoning,
+        Some(agent_client_protocol_schema::ToolKind::Fetch) => ActionKind::DynamicTool,
+        Some(agent_client_protocol_schema::ToolKind::SwitchMode) => ActionKind::HostCapability,
+        Some(agent_client_protocol_schema::ToolKind::Other) | Some(_) | None => ActionKind::McpTool,
     }
 }
 

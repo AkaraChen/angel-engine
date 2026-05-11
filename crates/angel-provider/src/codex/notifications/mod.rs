@@ -2,6 +2,9 @@ use super::actions::append_completed_implicit_live_actions;
 use super::ids::*;
 use super::protocol_helpers::DeltaKind;
 use super::summaries::*;
+use super::wire::CodexThreadItemKind;
+use super::wire::constants::ServerNotificationMethod as CodexServerNotificationMethod;
+use super::wire::schema as codex_schema;
 use super::*;
 
 mod action;
@@ -18,58 +21,97 @@ impl CodexAdapter {
         method: &str,
         params: &Value,
     ) -> Result<TransportOutput, angel_engine::EngineError> {
-        let mut output = match method {
-            "thread/status/changed" => self.decode_thread_status(engine, params),
-            "turn/started" => self.decode_turn_started(engine, params),
-            "turn/completed" => self.decode_turn_completed(engine, params),
-            "item/agentMessage/delta" => {
+        let notification_method = method.parse::<CodexServerNotificationMethod>().ok();
+        let mut output = match notification_method {
+            Some(CodexServerNotificationMethod::ThreadStatusChanged) => {
+                match codex_notification_params(params) {
+                    Some(notification) => self.decode_thread_status(engine, &notification),
+                    None => unknown_notification(method, params),
+                }
+            }
+            Some(CodexServerNotificationMethod::TurnStarted) => {
+                self.decode_turn_started(engine, params)
+            }
+            Some(CodexServerNotificationMethod::TurnCompleted) => {
+                self.decode_turn_completed(engine, params)
+            }
+            Some(CodexServerNotificationMethod::ItemAgentMessageDelta) => {
                 self.decode_text_delta(engine, params, DeltaKind::Assistant)
             }
-            "item/reasoning/textDelta" | "item/reasoning/summaryTextDelta" => {
-                self.decode_text_delta(engine, params, DeltaKind::Reasoning)
+            Some(
+                CodexServerNotificationMethod::ItemReasoningTextDelta
+                | CodexServerNotificationMethod::ItemReasoningSummaryTextDelta,
+            ) => self.decode_text_delta(engine, params, DeltaKind::Reasoning),
+            Some(CodexServerNotificationMethod::ItemReasoningSummaryPartAdded) => {
+                Ok(TransportOutput::default())
             }
-            "item/reasoning/summaryPartAdded" => Ok(TransportOutput::default()),
-            "item/plan/delta" => self.decode_plan_delta(engine, params),
-            "turn/plan/updated" => self.decode_plan(engine, params),
-            "item/started" => self.decode_item(engine, params, false),
-            "item/completed" => self.decode_item(engine, params, true),
-            "rawResponseItem/completed" => self.decode_item(engine, params, true),
-            "item/commandExecution/outputDelta" => {
+            Some(CodexServerNotificationMethod::ItemPlanDelta) => {
+                self.decode_plan_delta(engine, params)
+            }
+            Some(CodexServerNotificationMethod::TurnPlanUpdated) => {
+                self.decode_plan(engine, params)
+            }
+            Some(CodexServerNotificationMethod::ItemStarted) => {
+                self.decode_item(engine, params, false)
+            }
+            Some(
+                CodexServerNotificationMethod::ItemCompleted
+                | CodexServerNotificationMethod::RawResponseItemCompleted,
+            ) => self.decode_item(engine, params, true),
+            Some(CodexServerNotificationMethod::ItemCommandExecutionOutputDelta) => {
                 self.decode_action_output(engine, params, ActionKind::Command, true)
             }
-            "item/fileChange/outputDelta" => {
+            Some(CodexServerNotificationMethod::ItemFileChangeOutputDelta) => {
                 self.decode_action_output(engine, params, ActionKind::FileChange, false)
             }
-            "item/fileChange/patchUpdated" => self.decode_file_patch(engine, params),
-            "serverRequest/resolved" => self.decode_server_request_resolved(engine, params),
-            "error" => Ok(TransportOutput::default().log(
+            Some(CodexServerNotificationMethod::ItemFileChangePatchUpdated) => {
+                self.decode_file_patch(engine, params)
+            }
+            Some(CodexServerNotificationMethod::ServerRequestResolved) => {
+                self.decode_server_request_resolved(engine, params)
+            }
+            Some(CodexServerNotificationMethod::Error) => Ok(TransportOutput::default().log(
                 TransportLogKind::Error,
                 params
                     .get("message")
                     .and_then(Value::as_str)
                     .unwrap_or("Codex error notification"),
             )),
-            "warning" | "guardianWarning" | "configWarning" => Ok(TransportOutput::default().log(
-                TransportLogKind::Warning,
-                params
-                    .get("message")
-                    .and_then(Value::as_str)
-                    .unwrap_or(method),
-            )),
-            "remoteControl/status/changed" => Ok(TransportOutput::default().log(
-                TransportLogKind::State,
-                format!(
-                    "remote control {}",
-                    params
-                        .get("status")
-                        .and_then(Value::as_str)
-                        .unwrap_or("updated")
-                ),
-            )),
-            _ => Ok(TransportOutput::default().log(
-                TransportLogKind::Receive,
-                format!("{} {}", method, summarize_inbound(method, params)),
-            )),
+            Some(CodexServerNotificationMethod::Warning) => {
+                match codex_notification_params::<codex_schema::WarningNotification>(params) {
+                    Some(notification) => Ok(TransportOutput::default()
+                        .log(TransportLogKind::Warning, &notification.message)),
+                    None => unknown_notification(method, params),
+                }
+            }
+            Some(CodexServerNotificationMethod::GuardianWarning) => {
+                match codex_notification_params::<codex_schema::GuardianWarningNotification>(params)
+                {
+                    Some(notification) => Ok(TransportOutput::default()
+                        .log(TransportLogKind::Warning, &notification.message)),
+                    None => unknown_notification(method, params),
+                }
+            }
+            Some(CodexServerNotificationMethod::ConfigWarning) => {
+                match codex_notification_params::<codex_schema::ConfigWarningNotification>(params) {
+                    Some(notification) => Ok(TransportOutput::default()
+                        .log(TransportLogKind::Warning, &notification.summary)),
+                    None => unknown_notification(method, params),
+                }
+            }
+            Some(CodexServerNotificationMethod::RemoteControlStatusChanged) => {
+                match codex_notification_params::<
+                    codex_schema::RemoteControlStatusChangedNotification,
+                >(params)
+                {
+                    Some(notification) => Ok(TransportOutput::default().log(
+                        TransportLogKind::State,
+                        format!("remote control {}", notification.status),
+                    )),
+                    None => unknown_notification(method, params),
+                }
+            }
+            Some(_) | None => unknown_notification(method, params),
         }?;
         self.normalize_implicit_live_action_completion(engine, method, params, &mut output);
         Ok(output)
@@ -108,20 +150,41 @@ impl CodexAdapter {
 }
 
 fn current_implicit_live_action_id(method: &str, params: &Value) -> Option<ActionId> {
-    if !matches!(
-        method,
-        "item/started" | "item/completed" | "rawResponseItem/completed"
-    ) {
+    let is_item_notification = matches!(
+        method.parse::<CodexServerNotificationMethod>().ok(),
+        Some(
+            CodexServerNotificationMethod::ItemStarted
+                | CodexServerNotificationMethod::ItemCompleted
+                | CodexServerNotificationMethod::RawResponseItemCompleted
+        )
+    );
+    if !is_item_notification {
         return None;
     }
     let item = params.get("item")?;
     if !matches!(
         item.get("type").and_then(Value::as_str),
-        Some("webSearch" | "imageGeneration")
+        Some(value)
+            if value == CodexThreadItemKind::WebSearch.as_str()
+                || value == CodexThreadItemKind::ImageGeneration.as_str()
     ) {
         return None;
     }
     item.get("id")
         .and_then(Value::as_str)
         .map(|id| ActionId::new(id.to_string()))
+}
+
+fn codex_notification_params<T: serde::de::DeserializeOwned>(params: &Value) -> Option<T> {
+    serde_json::from_value(params.clone()).ok()
+}
+
+fn unknown_notification(
+    method: &str,
+    params: &Value,
+) -> Result<TransportOutput, angel_engine::EngineError> {
+    Ok(TransportOutput::default().log(
+        TransportLogKind::Receive,
+        format!("{} {}", method, summarize_inbound(method, params)),
+    ))
 }

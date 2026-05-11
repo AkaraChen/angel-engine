@@ -1,5 +1,7 @@
 use super::helpers::*;
+use super::wire::AcpClientRequestMethod;
 use super::*;
+use std::str::FromStr;
 
 impl AcpAdapter {
     pub(super) fn decode_request(
@@ -9,21 +11,24 @@ impl AcpAdapter {
         method: &str,
         params: &Value,
     ) -> Result<TransportOutput, angel_engine::EngineError> {
-        if method == "elicitation/create" {
-            return self.decode_elicitation_create(engine, id, params);
-        }
-        if method != "session/request_permission" {
-            return Ok(TransportOutput::default()
-                .message(JsonRpcMessage::error(
-                    Some(id.clone()),
-                    -32601,
-                    format!("unsupported client request: {method}"),
-                    None,
-                ))
-                .log(
-                    TransportLogKind::Warning,
-                    format!("unsupported request {method}"),
-                ));
+        match AcpClientRequestMethod::from_str(method) {
+            Ok(AcpClientRequestMethod::CreateElicitation) => {
+                return self.decode_elicitation_create(engine, id, params);
+            }
+            Ok(AcpClientRequestMethod::RequestPermission) => {}
+            Err(()) => {
+                return Ok(TransportOutput::default()
+                    .message(JsonRpcMessage::error(
+                        Some(id.clone()),
+                        -32601,
+                        format!("unsupported client request: {method}"),
+                        None,
+                    ))
+                    .log(
+                        TransportLogKind::Warning,
+                        format!("unsupported request {method}"),
+                    ));
+            }
         }
         let session_id = params
             .get("sessionId")

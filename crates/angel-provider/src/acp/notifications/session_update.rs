@@ -2,7 +2,9 @@ use angel_engine::*;
 use serde_json::Value;
 
 use super::super::helpers::*;
+use super::super::wire::AcpSessionUpdateKind;
 use super::super::{AcpAdapter, AcpToolStatus};
+use std::str::FromStr;
 
 pub(super) fn decode_acp_update(
     engine: &AngelEngine,
@@ -24,7 +26,9 @@ pub(super) fn decode_acp_update(
         .and_then(Value::as_str)
         .unwrap_or("");
 
-    if update_type == "available_commands_update" {
+    let update_kind = AcpSessionUpdateKind::from_str(update_type).ok();
+
+    if update_kind == Some(AcpSessionUpdateKind::AvailableCommandsUpdate) {
         let commands = available_commands(update);
         return Ok(TransportOutput::default()
             .event(EngineEvent::AvailableCommandsUpdated {
@@ -36,7 +40,7 @@ pub(super) fn decode_acp_update(
                 format!("available commands updated: {}", commands.len()),
             ));
     }
-    if update_type == "config_option_update" {
+    if update_kind == Some(AcpSessionUpdateKind::ConfigOptionUpdate) {
         let options = session_config_options(update);
         return Ok(TransportOutput::default()
             .event(EngineEvent::SessionConfigOptionsUpdated {
@@ -48,7 +52,7 @@ pub(super) fn decode_acp_update(
                 format!("config options updated: {}", options.len()),
             ));
     }
-    if update_type == "current_mode_update" {
+    if update_kind == Some(AcpSessionUpdateKind::CurrentModeUpdate) {
         let mode_id = update
             .get("modeId")
             .or_else(|| update.get("currentModeId"))
@@ -62,7 +66,7 @@ pub(super) fn decode_acp_update(
             })
             .log(TransportLogKind::State, format!("mode changed: {mode_id}")));
     }
-    if update_type == "session_info_update" {
+    if update_kind == Some(AcpSessionUpdateKind::SessionInfoUpdate) {
         let patch = acp_session_info_context(update);
         return Ok(TransportOutput::default()
             .event(EngineEvent::ContextUpdated {
@@ -71,7 +75,7 @@ pub(super) fn decode_acp_update(
             })
             .log(TransportLogKind::State, "session info updated"));
     }
-    if update_type == "usage_update" {
+    if update_kind == Some(AcpSessionUpdateKind::UsageUpdate) {
         let Some(usage) = session_usage_state(update) else {
             return Ok(TransportOutput::default().log(
                 TransportLogKind::Warning,
@@ -87,7 +91,7 @@ pub(super) fn decode_acp_update(
     }
 
     let Some(turn_id) = active_turn_id(engine, &conversation_id) else {
-        if let Some(output) = hydration_update(engine, &conversation_id, update_type, update) {
+        if let Some(output) = hydration_update(engine, &conversation_id, update_kind, update) {
             return Ok(output);
         }
         return Ok(TransportOutput::default().log(
@@ -96,8 +100,8 @@ pub(super) fn decode_acp_update(
         ));
     };
 
-    match update_type {
-        "agent_message_chunk" => {
+    match update_kind {
+        Some(AcpSessionUpdateKind::AgentMessageChunk) => {
             let delta = content_delta_from_update(update);
             let log_text = content_delta_log_text(&delta);
             Ok(TransportOutput::default()
@@ -108,7 +112,7 @@ pub(super) fn decode_acp_update(
                 })
                 .log(TransportLogKind::Output, log_text))
         }
-        "agent_thought_chunk" => {
+        Some(AcpSessionUpdateKind::AgentThoughtChunk) => {
             let delta = content_delta_from_update(update);
             let log_text = content_delta_log_text(&delta);
             Ok(TransportOutput::default()
@@ -119,7 +123,7 @@ pub(super) fn decode_acp_update(
                 })
                 .log(TransportLogKind::Output, format!("[reasoning] {log_text}")))
         }
-        "tool_call" => {
+        Some(AcpSessionUpdateKind::ToolCall) => {
             let id = update
                 .get("toolCallId")
                 .or_else(|| update.get("id"))
@@ -143,7 +147,7 @@ pub(super) fn decode_acp_update(
                 })
                 .log(TransportLogKind::State, "tool call started"))
         }
-        "tool_call_update" => {
+        Some(AcpSessionUpdateKind::ToolCallUpdate) => {
             let id = update
                 .get("toolCallId")
                 .or_else(|| update.get("id"))
@@ -181,7 +185,7 @@ pub(super) fn decode_acp_update(
             );
             Ok(output)
         }
-        "plan" => {
+        Some(AcpSessionUpdateKind::Plan) => {
             let path = plan_update_path(update);
             let entries = update
                 .get("entries")
@@ -236,7 +240,7 @@ pub(super) fn decode_acp_update(
 fn hydration_update(
     engine: &AngelEngine,
     conversation_id: &ConversationId,
-    update_type: &str,
+    update_kind: Option<AcpSessionUpdateKind>,
     update: &Value,
 ) -> Option<TransportOutput> {
     let conversation = engine.conversations.get(conversation_id)?;
@@ -246,23 +250,25 @@ fn hydration_update(
     ) {
         return None;
     }
-    let entry = match update_type {
-        "user_message_chunk" => HistoryReplayEntry {
+    let entry = match update_kind? {
+        AcpSessionUpdateKind::UserMessageChunk => HistoryReplayEntry {
             role: HistoryRole::User,
             content: content_delta_from_update(update),
             tool: None,
         },
-        "agent_message_chunk" => HistoryReplayEntry {
+        AcpSessionUpdateKind::AgentMessageChunk => HistoryReplayEntry {
             role: HistoryRole::Assistant,
             content: content_delta_from_update(update),
             tool: None,
         },
-        "agent_thought_chunk" => HistoryReplayEntry {
+        AcpSessionUpdateKind::AgentThoughtChunk => HistoryReplayEntry {
             role: HistoryRole::Reasoning,
             content: content_delta_from_update(update),
             tool: None,
         },
-        "tool_call" | "tool_call_update" => acp_tool_history_entry(update)?,
+        AcpSessionUpdateKind::ToolCall | AcpSessionUpdateKind::ToolCallUpdate => {
+            acp_tool_history_entry(update)?
+        }
         _ => return None,
     };
     Some(
@@ -271,7 +277,10 @@ fn hydration_update(
                 conversation_id: conversation_id.clone(),
                 entry,
             })
-            .log(TransportLogKind::State, format!("hydrated {update_type}")),
+            .log(
+                TransportLogKind::State,
+                format!("hydrated {}", update_kind?.wire_string()),
+            ),
     )
 }
 
@@ -301,16 +310,20 @@ fn acp_action_kind(update: &Value) -> ActionKind {
     match update
         .get("kind")
         .and_then(Value::as_str)
-        .unwrap_or("other")
+        .and_then(super::super::wire::parse_tool_kind)
     {
-        "read" => ActionKind::Read,
-        "edit" | "delete" | "move" => ActionKind::FileChange,
-        "execute" => ActionKind::Command,
-        "search" => ActionKind::WebSearch,
-        "think" => ActionKind::Reasoning,
-        "fetch" => ActionKind::DynamicTool,
-        "switch_mode" => ActionKind::HostCapability,
-        _ => ActionKind::McpTool,
+        Some(agent_client_protocol_schema::ToolKind::Read) => ActionKind::Read,
+        Some(
+            agent_client_protocol_schema::ToolKind::Edit
+            | agent_client_protocol_schema::ToolKind::Delete
+            | agent_client_protocol_schema::ToolKind::Move,
+        ) => ActionKind::FileChange,
+        Some(agent_client_protocol_schema::ToolKind::Execute) => ActionKind::Command,
+        Some(agent_client_protocol_schema::ToolKind::Search) => ActionKind::WebSearch,
+        Some(agent_client_protocol_schema::ToolKind::Think) => ActionKind::Reasoning,
+        Some(agent_client_protocol_schema::ToolKind::Fetch) => ActionKind::DynamicTool,
+        Some(agent_client_protocol_schema::ToolKind::SwitchMode) => ActionKind::HostCapability,
+        Some(agent_client_protocol_schema::ToolKind::Other) | Some(_) | None => ActionKind::McpTool,
     }
 }
 

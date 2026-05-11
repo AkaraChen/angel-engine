@@ -1,4 +1,5 @@
 use super::helpers::*;
+use super::wire::AGENT_METHOD_NAMES;
 use super::*;
 
 impl AcpAdapter {
@@ -60,22 +61,26 @@ impl AcpAdapter {
 
 fn acp_wire_method(method: &ProtocolMethod) -> String {
     match method {
-        ProtocolMethod::Initialize => "initialize".to_string(),
-        ProtocolMethod::Authenticate => "authenticate".to_string(),
-        ProtocolMethod::ListConversations => "session/list".to_string(),
-        ProtocolMethod::StartConversation => "session/new".to_string(),
-        ProtocolMethod::ResumeConversation => "session/load".to_string(),
-        ProtocolMethod::ForkConversation => "session/fork".to_string(),
-        ProtocolMethod::StartTurn => "session/prompt".to_string(),
-        ProtocolMethod::CancelTurn => "session/cancel".to_string(),
-        ProtocolMethod::ResolveElicitation => "session/request_permission".to_string(),
+        ProtocolMethod::Initialize => AGENT_METHOD_NAMES.initialize.to_string(),
+        ProtocolMethod::Authenticate => AGENT_METHOD_NAMES.authenticate.to_string(),
+        ProtocolMethod::ListConversations => AGENT_METHOD_NAMES.session_list.to_string(),
+        ProtocolMethod::StartConversation => AGENT_METHOD_NAMES.session_new.to_string(),
+        ProtocolMethod::ResumeConversation => AGENT_METHOD_NAMES.session_load.to_string(),
+        ProtocolMethod::ForkConversation => AGENT_METHOD_NAMES.session_fork.to_string(),
+        ProtocolMethod::StartTurn => AGENT_METHOD_NAMES.session_prompt.to_string(),
+        ProtocolMethod::CancelTurn => AGENT_METHOD_NAMES.session_cancel.to_string(),
+        ProtocolMethod::ResolveElicitation => super::wire::CLIENT_METHOD_NAMES
+            .session_request_permission
+            .to_string(),
         ProtocolMethod::ArchiveConversation => "conversation/archive".to_string(),
         ProtocolMethod::UnarchiveConversation => "conversation/unarchive".to_string(),
-        ProtocolMethod::CloseConversation => "session/close".to_string(),
+        ProtocolMethod::CloseConversation => AGENT_METHOD_NAMES.session_close.to_string(),
         ProtocolMethod::Unsubscribe => "session/unsubscribe".to_string(),
-        ProtocolMethod::SetSessionModel => "session/set_model".to_string(),
-        ProtocolMethod::SetSessionMode => "session/set_mode".to_string(),
-        ProtocolMethod::SetSessionConfigOption => "session/set_config_option".to_string(),
+        ProtocolMethod::SetSessionModel => AGENT_METHOD_NAMES.session_set_model.to_string(),
+        ProtocolMethod::SetSessionMode => AGENT_METHOD_NAMES.session_set_mode.to_string(),
+        ProtocolMethod::SetSessionConfigOption => {
+            AGENT_METHOD_NAMES.session_set_config_option.to_string()
+        }
         ProtocolMethod::Extension(method) => method.clone(),
         _ => method_name(method),
     }
@@ -127,6 +132,6 @@ fn append_cancelled_elicitation_responses(
 fn cancelled_elicitation_result(elicitation: &ElicitationState) -> Value {
     match elicitation.kind {
         ElicitationKind::UserInput | ElicitationKind::ExternalFlow => json!({"action": "cancel"}),
-        _ => json!({"outcome": {"outcome": "cancelled"}}),
+        _ => super::wire::cancelled_permission_response_json(),
     }
 }

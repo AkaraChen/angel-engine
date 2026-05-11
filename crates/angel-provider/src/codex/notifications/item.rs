@@ -1,6 +1,7 @@
 use super::super::actions::*;
 use super::super::ids::*;
 use super::super::summaries::*;
+use super::super::wire::CodexThreadItemKind;
 use super::super::*;
 
 impl CodexAdapter {
@@ -18,7 +19,7 @@ impl CodexAdapter {
         let Some(item) = params.get("item") else {
             return Ok(TransportOutput::default());
         };
-        if item.get("type").and_then(Value::as_str) == Some("plan") {
+        if item.get("type").and_then(Value::as_str) == Some(CodexThreadItemKind::Plan.as_str()) {
             let mut output = TransportOutput::default();
             if let Some(event) = maybe_start {
                 output.events.push(event);
@@ -46,7 +47,8 @@ impl CodexAdapter {
             }
             return Ok(output);
         }
-        if item.get("type").and_then(Value::as_str) == Some("reasoning") {
+        if item.get("type").and_then(Value::as_str) == Some(CodexThreadItemKind::Reasoning.as_str())
+        {
             let mut output = TransportOutput::default();
             if let Some(event) = maybe_start {
                 output.events.push(event);

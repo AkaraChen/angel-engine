@@ -1,4 +1,5 @@
 use super::summaries::*;
+use super::wire::codex_client_request_method;
 use super::*;
 
 impl CodexAdapter {
@@ -56,24 +57,11 @@ impl CodexAdapter {
 }
 
 fn codex_wire_method(method: &ProtocolMethod) -> String {
+    if let Some(method) = codex_client_request_method(method) {
+        return method.as_str().to_string();
+    }
+
     match method {
-        ProtocolMethod::Authenticate => "account/login/start".to_string(),
-        ProtocolMethod::Initialize => "initialize".to_string(),
-        ProtocolMethod::ListConversations => "thread/list".to_string(),
-        ProtocolMethod::StartConversation => "thread/start".to_string(),
-        ProtocolMethod::ResumeConversation => "thread/resume".to_string(),
-        ProtocolMethod::ForkConversation => "thread/fork".to_string(),
-        ProtocolMethod::StartTurn => "turn/start".to_string(),
-        ProtocolMethod::SteerTurn => "turn/steer".to_string(),
-        ProtocolMethod::CancelTurn => "turn/interrupt".to_string(),
-        ProtocolMethod::ArchiveConversation => "thread/archive".to_string(),
-        ProtocolMethod::UnarchiveConversation => "thread/unarchive".to_string(),
-        ProtocolMethod::CompactHistory => "thread/compact/start".to_string(),
-        ProtocolMethod::RollbackHistory => "thread/rollback".to_string(),
-        ProtocolMethod::InjectHistoryItems => "thread/injectItems".to_string(),
-        ProtocolMethod::CloseConversation => "thread/close".to_string(),
-        ProtocolMethod::Unsubscribe => "thread/unsubscribe".to_string(),
-        ProtocolMethod::RunShellCommand => "thread/shellCommand".to_string(),
         ProtocolMethod::ResolveElicitation
         | ProtocolMethod::SetSessionModel
         | ProtocolMethod::SetSessionMode

@@ -8,8 +8,17 @@ path = "src/mod.rs"
 
 [dependencies]
 angel-engine = { path = "../angel-engine" }
+agent-client-protocol-schema = { version = "0.12.2", features = ["unstable"] }
+serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 strum = { version = "0.26", features = ["derive"] }
+
+[build-dependencies]
+prettyplease = "0.2"
+schemars = "0.8"
+serde_json = "1"
+syn = "2"
+typify = { version = "0.6.2", default-features = false }
 
 [dev-dependencies]
 test-cli = { path = "../test-cli" }

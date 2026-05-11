@@ -18,6 +18,7 @@ use angel_engine::{
 };
 use serde_json::{Value, json};
 
+use crate::acp::wire::AcpSessionUpdateKind;
 use crate::acp::{AcpAdapter, AcpAdapterCapabilities, acp_tool_history_entry};
 use crate::{InterpretedUserInput, ProtocolAdapter};
 
@@ -584,9 +585,9 @@ fn kimi_context_tool_entry(value: &Value) -> Option<HistoryReplayEntry> {
         .map(kimi_content_value_text)
         .unwrap_or_default();
     acp_tool_history_entry(&json!({
-        "sessionUpdate": "tool_call_update",
+        "sessionUpdate": AcpSessionUpdateKind::ToolCallUpdate.wire_value(),
         "toolCallId": tool_call_id,
-        "status": "completed",
+        "status": agent_client_protocol_schema::ToolCallStatus::Completed,
         "content": [
             {
                 "type": "content",
@@ -632,13 +633,19 @@ fn kimi_tool_call_history_entry(tool_call: &Value) -> Option<HistoryReplayEntry>
         .unwrap_or_else(|_| Value::String(arguments.to_string()));
 
     let mut payload = serde_json::Map::new();
-    payload.insert("sessionUpdate".to_string(), json!("tool_call"));
+    payload.insert(
+        "sessionUpdate".to_string(),
+        AcpSessionUpdateKind::ToolCall.wire_value(),
+    );
     payload.insert("toolCallId".to_string(), json!(id));
     payload.insert(
         "title".to_string(),
         json!(kimi_tool_title(name, &raw_input)),
     );
-    payload.insert("status".to_string(), json!("in_progress"));
+    payload.insert(
+        "status".to_string(),
+        json!(agent_client_protocol_schema::ToolCallStatus::Pending),
+    );
     payload.insert("rawInput".to_string(), raw_input);
     if let Some(kind) = kimi_tool_kind(name) {
         payload.insert("kind".to_string(), json!(kind));

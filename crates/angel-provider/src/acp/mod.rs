@@ -32,6 +32,7 @@ mod requests;
 mod response;
 mod transport;
 mod types;
+pub(crate) mod wire;
 
 pub(crate) use helpers::acp_tool_history_entry;
 pub use types::*;

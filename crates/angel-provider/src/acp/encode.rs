@@ -1,4 +1,5 @@
 use super::helpers::*;
+use super::wire::AGENT_METHOD_NAMES;
 use super::*;
 
 impl AcpAdapter {
@@ -38,7 +39,7 @@ impl AcpAdapter {
         options: &TransportOptions,
     ) -> Result<Value, angel_engine::EngineError> {
         if let ProtocolMethod::Extension(method) = &effect.method
-            && method == "session/fork"
+            && method == AGENT_METHOD_NAMES.session_fork
         {
             return acp_fork_params(engine, effect);
         }
@@ -220,11 +221,7 @@ impl AcpAdapter {
             return Ok(output);
         }
         let selected_option = select_permission_option(&elicitation.options.choices, decision);
-        let result = if let Some(option_id) = selected_option {
-            json!({"outcome": {"outcome": "selected", "optionId": option_id}})
-        } else {
-            json!({"outcome": {"outcome": "cancelled"}})
-        };
+        let result = super::wire::permission_response_json(selected_option.as_deref());
         let mut output = TransportOutput::default()
             .message(JsonRpcMessage::response(remote_request_id, result))
             .event(EngineEvent::ElicitationResolved {
