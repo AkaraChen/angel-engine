@@ -17,6 +17,7 @@ use angel_engine::state::{
 };
 use angel_engine::transport::{
     JsonRpcMessage, TransportLogKind, TransportOptions, TransportOutput, client_info_json,
+    method_name,
 };
 use angel_engine::{EngineError, ProtocolEffect};
 use serde_json::{Value, json};
