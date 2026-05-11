@@ -83,7 +83,7 @@ export type ChatJsonValue =
 
 export type ChatJsonObject = { readonly [key: string]: ChatJsonValue };
 
-export type ChatPlanEntryStatus = "completed" | "inProgress" | "pending";
+export type ChatPlanEntryStatus = "completed" | "in_progress" | "pending";
 
 export type ChatPlanEntry = {
   content: string;
@@ -208,7 +208,7 @@ export type ChatToolCallPart = {
 };
 
 export function chatToolActionToPart(action: ChatToolAction): ChatToolCallPart {
-  const outputText = action.outputText?.trim() ? action.outputText : undefined;
+  const outputText = action.outputText || undefined;
   const errorText = action.error?.message;
   const result = outputText ?? errorText;
 
@@ -559,7 +559,7 @@ export function upsertChatElicitationPart(
 
 function isChatPlanEntryStatus(status: unknown): status is ChatPlanEntryStatus {
   return (
-    status === "pending" || status === "inProgress" || status === "completed"
+    status === "pending" || status === "in_progress" || status === "completed"
   );
 }
 
@@ -791,34 +791,34 @@ export function normalizeChatAttachmentsInput(
       throw new Error("Unsupported chat attachment type.");
     }
     if (value.type === "fileMention") {
-      if (typeof value.path !== "string" || !value.path.trim()) {
+      if (typeof value.path !== "string" || !value.path) {
         throw new Error("Mentioned file path is required.");
       }
 
-      const path = value.path.trim();
+      const path = value.path;
       return {
         mimeType:
-          typeof value.mimeType === "string" && value.mimeType.trim()
-            ? value.mimeType.trim()
+          typeof value.mimeType === "string" && value.mimeType
+            ? value.mimeType
             : null,
         name:
-          typeof value.name === "string" && value.name.trim()
-            ? value.name.trim()
+          typeof value.name === "string" && value.name
+            ? value.name
             : pathName(path),
         path,
         type: "fileMention",
       };
     }
     const dataValue = (value as { data?: unknown }).data;
-    if (typeof dataValue !== "string" || !dataValue.trim()) {
+    if (typeof dataValue !== "string" || !dataValue) {
       throw new Error("Chat attachment data is required.");
     }
-    if (typeof value.mimeType !== "string" || !value.mimeType.trim()) {
+    if (typeof value.mimeType !== "string" || !value.mimeType) {
       throw new Error("Chat attachment MIME type is required.");
     }
 
     const parsed = parseDataUrl(dataValue);
-    const mimeType = parsed?.mimeType ?? value.mimeType.trim();
+    const mimeType = parsed?.mimeType ?? value.mimeType;
     const data = parsed?.data ?? dataValue;
     if (value.type === "image" && !mimeType.startsWith("image/")) {
       throw new Error("Image attachment MIME type is required.");
@@ -827,14 +827,8 @@ export function normalizeChatAttachmentsInput(
     return {
       data,
       mimeType,
-      name:
-        typeof value.name === "string" && value.name.trim()
-          ? value.name.trim()
-          : null,
-      path:
-        typeof value.path === "string" && value.path.trim()
-          ? value.path.trim()
-          : null,
+      name: typeof value.name === "string" && value.name ? value.name : null,
+      path: typeof value.path === "string" && value.path ? value.path : null,
       type: mimeType.startsWith("image/") ? "image" : "file",
     };
   });

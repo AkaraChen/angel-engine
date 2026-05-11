@@ -925,15 +925,14 @@ function ensureConfigOption(
 }
 
 function normalizeConfigDisplayValue(value: string | null | undefined) {
-  return value?.trim() || NO_CONFIG_OVERRIDE_VALUE;
+  return value || NO_CONFIG_OVERRIDE_VALUE;
 }
 
 function selectedConfigOverride(value: string | null | undefined) {
-  const normalizedValue = value?.trim();
-  if (!normalizedValue || normalizedValue === NO_CONFIG_OVERRIDE_VALUE) {
+  if (!value || value === NO_CONFIG_OVERRIDE_VALUE) {
     return undefined;
   }
-  return normalizedValue;
+  return value;
 }
 
 function labelFromConfigValue(value: string) {

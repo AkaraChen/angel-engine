@@ -43,7 +43,7 @@ function restoreShellPath() {
 function mergePathEntries(...paths: Array<string | undefined>) {
   const entries = paths
     .flatMap((value) => value?.split(":") ?? [])
-    .map((entry) => entry.trim())
+    .filter((entry) => entry !== "")
     .filter(Boolean);
 
   return Array.from(new Set(entries)).join(":");

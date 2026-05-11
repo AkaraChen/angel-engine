@@ -42,8 +42,8 @@ __metadata:
 
 "@angel-engine/client-napi@file:../crates/angel-engine-client-napi::locator=desktop%40workspace%3A.":
   version: 0.1.0
-  resolution: "@angel-engine/client-napi@file:../crates/angel-engine-client-napi#../crates/angel-engine-client-napi::hash=ec830b&locator=desktop%40workspace%3A."
-  checksum: 10c0/23fd13a81f16b5e507e82712a443581c67d9d4c44ea4316828e8dd1de6e16164ba3569a7f7d721743c61501db5dc3dae3dea468646cb630e5a277cfa3581ff9f
+  resolution: "@angel-engine/client-napi@file:../crates/angel-engine-client-napi#../crates/angel-engine-client-napi::hash=773df4&locator=desktop%40workspace%3A."
+  checksum: 10c0/6cdf977a1ec0f3c994c5b6a57d38e50c6bf2e6d43abd738b1a490581fde33362e8c45f0bea3000b642e27d198030f88e84a9c9345e7d8e3ac913616fd754ed47
   languageName: node
   linkType: hard
 
@@ -4797,6 +4797,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@types/mime-types@npm:^3.0.1":
+  version: 3.0.1
+  resolution: "@types/mime-types@npm:3.0.1"
+  checksum: 10c0/61c2056529dc5bc73c25b2a053e21f063fd547c21e12a2be94ca78b89b0f83c9a75afed9a8bda3c78592ee880acc82778302651527f7882cf5ba8e58ab320e29
+  languageName: node
+  linkType: hard
+
 "@types/ms@npm:*":
   version: 2.1.0
   resolution: "@types/ms@npm:2.1.0"
@@ -7283,6 +7290,7 @@ __metadata:
     "@tanstack/react-query": "npm:^5.100.9"
     "@types/better-sqlite3": "npm:^7.6.13"
     "@types/electron-squirrel-startup": "npm:^1.0.2"
+    "@types/mime-types": "npm:^3.0.1"
     "@types/react": "npm:^19.2.14"
     "@types/react-dom": "npm:^19.2.3"
     "@typescript-eslint/eslint-plugin": "npm:^8.59.2"
@@ -7304,6 +7312,7 @@ __metadata:
     framer-motion: "npm:^12.38.0"
     katex: "npm:^0.16.45"
     lucide-react: "npm:^1.14.0"
+    mime-types: "npm:^3.0.0"
     nanoid: "npm:^5.1.11"
     prettier: "npm:^3.8.3"
     radix-ui: "npm:^1.4.3"

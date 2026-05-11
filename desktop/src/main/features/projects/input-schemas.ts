@@ -1,30 +1,14 @@
-import { type as arkType } from "arktype";
-
 import type { ProjectFileSearchInput } from "../../../shared/chat";
 import type {
   CreateProjectInput,
   UpdateProjectInput,
 } from "../../../shared/projects";
 import { parseObjectInput, parseStringInput } from "../../ipc/validation";
-
-const createProjectInput = arkType({
-  "+": "ignore",
-  "id?": "unknown",
-  "path?": "unknown",
-});
-
-const projectFileSearchInput = arkType({
-  "+": "ignore",
-  "limit?": "unknown",
-  "query?": "unknown",
-  "root?": "unknown",
-});
-
-const updateProjectInput = arkType({
-  "+": "ignore",
-  "id?": "unknown",
-  "path?": "unknown",
-});
+import {
+  createProjectInput,
+  projectFileSearchInput,
+  updateProjectInput,
+} from "./schemas";
 
 export function parseCreateProjectInput(input: unknown): CreateProjectInput {
   const value = parseObjectInput(
@@ -34,8 +18,8 @@ export function parseCreateProjectInput(input: unknown): CreateProjectInput {
   );
 
   return {
-    id: typeof value.id === "string" ? value.id : undefined,
-    path: parseStringInput(value.path, "Project path is required."),
+    id: value.id,
+    path: value.path,
   };
 }
 
@@ -49,9 +33,12 @@ export function parseProjectFileSearchInput(
   );
 
   return {
-    limit: normalizeOptionalFiniteNumber(value.limit),
-    query: typeof value.query === "string" ? value.query : undefined,
-    root: parseStringInput(value.root, "Project path is required."),
+    limit:
+      typeof value.limit === "number" && Number.isFinite(value.limit)
+        ? value.limit
+        : undefined,
+    query: value.query,
+    root: value.root,
   };
 }
 
@@ -67,15 +54,7 @@ export function parseUpdateProjectInput(input: unknown): UpdateProjectInput {
   );
 
   return {
-    id: parseProjectId(value.id),
-    path: parseStringInput(value.path, "Project path is required."),
+    id: value.id,
+    path: value.path,
   };
-}
-
-function normalizeOptionalFiniteNumber(value: unknown): number | undefined {
-  if (typeof value !== "number" || !Number.isFinite(value)) {
-    return undefined;
-  }
-
-  return value;
 }

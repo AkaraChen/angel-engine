@@ -128,7 +128,7 @@ function planEventsFromStructuredPlan(
         },
       ]
     : [];
-  if (typeof plan.path === "string" && plan.path.trim()) {
+  if (typeof plan.path === "string" && plan.path) {
     events.push({
       PlanPathUpdated: {
         conversation_id: active.conversationId,
@@ -156,13 +156,12 @@ function planFromFileWriteToolUse(
   const writeInput = typedClaudeInput(toolName, input, CLAUDE_TOOL.Write);
   if (!writeInput || !isClaudePlanFileWrite(writeInput)) return undefined;
   if (typeof writeInput.content !== "string") return undefined;
-  const text = writeInput.content.trim();
-  if (!text) return undefined;
+  if (!writeInput.content) return undefined;
   return {
-    entries: markdownPlanEntries(text),
+    entries: markdownPlanEntries(writeInput.content),
     kind: "review",
     path: writeInput.file_path,
-    text,
+    text: writeInput.content,
     type: "plan",
   };
 }
@@ -181,7 +180,7 @@ function isClaudePlanFileWrite(input: ClaudeFileWriteInput): boolean {
 }
 
 function claudePlansDirs(): string[] {
-  const configDir = process.env.CLAUDE_CONFIG_DIR?.trim();
+  const configDir = process.env.CLAUDE_CONFIG_DIR;
   const defaultDir = path.join(homedir(), ".claude");
   return Array.from(
     new Set(
@@ -203,21 +202,21 @@ function planFromTodoInput(
     .filter((todo): todo is Record<string, unknown> => Boolean(todo))
     .map((todo) => ({
       content: String(todo.content ?? ""),
-      status: normalizePlanStatus(String(todo.status ?? "")),
+      status: String(todo.status ?? ""),
     }))
-    .filter((entry) => entry.content.trim());
+    .filter((entry) => entry.content);
   if (entries.length === 0) return undefined;
   return { entries };
 }
 
 function planTextFromExitPlanModeInput(input: ClaudeExitPlanModeInput): string {
-  return typeof input.plan === "string" ? input.plan.trim() : "";
+  return typeof input.plan === "string" ? input.plan : "";
 }
 
 function planPathFromExitPlanModeInput(
   input: ClaudeExitPlanModeInput,
 ): string | undefined {
-  return typeof input.planFilePath === "string" && input.planFilePath.trim()
+  return typeof input.planFilePath === "string" && input.planFilePath
     ? input.planFilePath
     : undefined;
 }
@@ -227,21 +226,9 @@ function markdownPlanEntries(
 ): Array<{ content: string; status: string }> {
   return text
     .split(/\r?\n/)
-    .map((line) => line.trim())
+    .map((line) => line)
     .map((line) => line.match(/^(?:[-*]|\d+[.)])\s+(.+)$/)?.[1] ?? "")
     .filter((line) => line && !line.startsWith("`"))
     .slice(0, 20)
     .map((content) => ({ content, status: "Pending" }));
-}
-
-function normalizePlanStatus(status: string): string {
-  switch (status) {
-    case "completed":
-      return "Completed";
-    case "in_progress":
-    case "inProgress":
-      return "InProgress";
-    default:
-      return "Pending";
-  }
 }

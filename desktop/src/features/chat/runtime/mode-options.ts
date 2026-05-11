@@ -33,8 +33,5 @@ function isNoOverrideOption(option: AgentValueOption): boolean {
 }
 
 function normalizeModeToken(value: string): string {
-  return value
-    .trim()
-    .toLowerCase()
-    .replace(/[\s_-]+/g, "");
+  return value.toLowerCase().replace(/[\s_-]+/g, "");
 }

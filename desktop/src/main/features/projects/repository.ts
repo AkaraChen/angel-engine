@@ -32,7 +32,7 @@ export function getProject(id: string): Project | null {
 
 export function createProject(input: CreateProjectInput): Project {
   const nextProject = {
-    id: input.id?.trim() || randomUUID(),
+    id: input.id || randomUUID(),
     path: normalizeProjectPath(input.path),
   };
 
@@ -71,20 +71,18 @@ export function closeProjectsDatabase() {
 }
 
 function requireProjectId(id: string) {
-  const trimmed = id.trim();
-  if (!trimmed) {
+  if (!id) {
     throw new Error("Project id is required.");
   }
-  return trimmed;
+  return id;
 }
 
 function normalizeProjectPath(projectPath: string) {
-  const trimmed = projectPath.trim();
-  if (!trimmed) {
+  if (!projectPath) {
     throw new Error("Project path is required.");
   }
 
-  const resolvedPath = path.resolve(trimmed);
+  const resolvedPath = path.resolve(projectPath);
   if (!fs.existsSync(resolvedPath)) {
     throw new Error("Project path does not exist.");
   }

@@ -335,7 +335,7 @@ function AssistantTextMessagePart(
             messagePart.name === "todo" ||
             messagePart.name === "elicitation")) ||
         (messagePart.type === "reasoning" &&
-          (messagePart.text.trim() || messagePart.status.type === "running")),
+          (messagePart.text || messagePart.status.type === "running")),
     ),
   );
 
@@ -371,7 +371,7 @@ function isUserBubblePart(part: {
     case "source":
       return false;
     case "text":
-      return part.status?.type === "running" || Boolean(part.text?.trim());
+      return part.status?.type === "running" || Boolean(part.text);
     default:
       return true;
   }
@@ -442,21 +442,7 @@ function textFilePreview(data: string, mimeType: string) {
   }
 }
 
-function isTextLikeMimeType(mimeType: string) {
-  const normalized = mimeType.toLowerCase();
-  return (
-    normalized.startsWith("text/") ||
-    normalized === "application/json" ||
-    normalized === "application/xml" ||
-    normalized === "application/javascript" ||
-    normalized === "application/typescript" ||
-    normalized === "application/x-ndjson" ||
-    normalized === "application/yaml" ||
-    normalized === "application/toml" ||
-    normalized.endsWith("+json") ||
-    normalized.endsWith("+xml")
-  );
-}
+import { isTextLikeMimeType } from "../../../shared/mime";
 
 function ToolActionMessagePart(part: ToolCallMessagePartProps) {
   const action = isChatToolAction(part.artifact) ? part.artifact : undefined;
@@ -529,8 +515,8 @@ function isBareHostCapabilityToolAction(
   errorText?: string,
 ) {
   if (action?.kind !== "hostCapability") return false;
-  if (outputText.trim() || errorText?.trim()) return false;
-  if (action.output?.some((output) => output.text.trim())) return false;
+  if (outputText || errorText) return false;
+  if (action.output?.some((output) => output.text)) return false;
   return title === "hostCapability" || title === "User input requested";
 }
 
@@ -597,9 +583,9 @@ function StandaloneElicitationToolPart({
       questions.length > 0
         ? questions.map((question) => ({
             id: question.id,
-            value: (answers[question.id] ?? "").trim(),
+            value: answers[question.id] ?? "",
           }))
-        : [{ id: "answer", value: fallbackAnswer.trim() }];
+        : [{ id: "answer", value: fallbackAnswer }];
     resume({ answers: responseAnswers, type: "answers" });
   };
 
@@ -620,7 +606,7 @@ function StandaloneElicitationToolPart({
       />
       <CollapsibleContent className="overflow-hidden data-[state=closed]:animate-collapsible-up data-[state=open]:animate-collapsible-down">
         <div className="space-y-3 border-t px-3 py-2">
-          {elicitation?.body?.trim() ? (
+          {elicitation?.body ? (
             <div className="whitespace-pre-wrap text-sm leading-5">
               {elicitation.body}
             </div>
@@ -837,7 +823,7 @@ function hasTextContentAfterIndex(
     partIndex += 1
   ) {
     const part = parts[partIndex];
-    if (part?.type === "text" && part.text?.trim()) return true;
+    if (part?.type === "text" && part.text) return true;
   }
   return false;
 }
@@ -1063,15 +1049,15 @@ function getToolOutputText(
   action: ChatToolAction | undefined,
   result: unknown,
 ) {
-  if (action?.outputText?.trim()) return action.outputText;
+  if (action?.outputText) return action.outputText;
   if (typeof result === "string") return result;
   if (result === undefined || result === null) return "";
   return JSON.stringify(result, null, 2);
 }
 
 function hasToolOutput(action: ChatToolAction | undefined, result: unknown) {
-  if (getToolOutputText(action, result).trim()) return true;
-  return Boolean(action?.output?.some((output) => output.text.trim()));
+  if (getToolOutputText(action, result)) return true;
+  return Boolean(action?.output?.some((output) => output.text));
 }
 
 function parseElicitation(
@@ -1208,9 +1194,9 @@ function ElicitationQuestionCard({
       questions.length > 0
         ? questions.map((question) => ({
             id: question.id,
-            value: (answers[question.id] ?? "").trim(),
+            value: answers[question.id] ?? "",
           }))
-        : [{ id: "answer", value: fallbackAnswer.trim() }];
+        : [{ id: "answer", value: fallbackAnswer }];
     resume({ answers: responseAnswers, type: "answers" });
   };
 
@@ -1242,7 +1228,7 @@ function ElicitationQuestionCard({
       </CollapsibleTrigger>
       <CollapsibleContent className="overflow-hidden data-[state=closed]:animate-collapsible-up data-[state=open]:animate-collapsible-down">
         <div className="mt-3 space-y-3 border-t px-4 pt-3">
-          {elicitation.body?.trim() ? (
+          {elicitation.body ? (
             <div className="whitespace-pre-wrap text-sm leading-5">
               {elicitation.body}
             </div>
@@ -1322,7 +1308,7 @@ function PlanMessagePart({ plan }: { plan: ChatPlanData }) {
   ).length;
   const isTodoPlan = plan.kind === "todo";
   const planTitle = isTodoPlan ? "Todo" : "Plan";
-  const hasDetails = plan.entries.length > 0 || Boolean(plan.text.trim());
+  const hasDetails = plan.entries.length > 0 || Boolean(plan.text);
   const buildMode = findBuildModeOption(chatOptions.modeOptions);
   const canStartImplementation =
     plan.kind === "review" &&
@@ -1402,7 +1388,7 @@ function PlanMessagePart({ plan }: { plan: ChatPlanData }) {
       {hasDetails ? (
         <CollapsibleContent className="overflow-hidden data-[state=closed]:animate-collapsible-up data-[state=open]:animate-collapsible-down">
           <div className="space-y-3 border-t px-3 py-2">
-            {plan.text.trim() ? (
+            {plan.text ? (
               <div className="p-2">
                 <Streamdown
                   className={assistantTextContainerClassName}
@@ -1499,7 +1485,7 @@ function PlanEntryStatusIcon({
   switch (status) {
     case "completed":
       return <Check className="mt-0.5 size-3.5 shrink-0 text-emerald-600" />;
-    case "inProgress":
+    case "in_progress":
       return <CircleDot className="mt-0.5 size-3.5 shrink-0 text-amber-600" />;
     default:
       return (

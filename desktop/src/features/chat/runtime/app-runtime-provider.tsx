@@ -171,7 +171,7 @@ function fileContentType(file: File, fallback?: string) {
 function getLocalFilePath(file: File) {
   if (typeof window === "undefined") return null;
   const path = window.desktopEnvironment?.getPathForFile?.(file);
-  return typeof path === "string" && path.trim() ? path.trim() : null;
+  return typeof path === "string" && path ? path : null;
 }
 
 function readFileAsDataUrl(file: File) {

@@ -121,7 +121,7 @@ function clientInputToContent(
     const value = item as JsonObject;
     switch (value.type) {
       case "text": {
-        const itemText = String(value.text ?? "").trim();
+        const itemText = String(value.text ?? "");
         if (itemText && itemText !== text) {
           content.push({ text: itemText, type: "text" });
         }

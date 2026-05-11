@@ -30,7 +30,7 @@ function historyEventsFromSessionMessage(
   const content = value?.content;
   if (typeof content === "string") {
     const role = message.type === "user" ? "User" : "Assistant";
-    return content.trim()
+    return content
       ? [historyReplayChunk(conversationId, role, { Text: content })]
       : [];
   }
@@ -57,13 +57,13 @@ function assistantHistoryEvents(
   if (!value) return [];
   if (value.type === "text") {
     const text = String(value.text ?? "");
-    return text.trim()
+    return text
       ? [historyReplayChunk(conversationId, "Assistant", { Text: text })]
       : [];
   }
   if (value.type === "thinking") {
     const text = String(value.thinking ?? "");
-    return text.trim()
+    return text
       ? [historyReplayChunk(conversationId, "Reasoning", { Text: text })]
       : [];
   }
@@ -99,7 +99,7 @@ function userHistoryEvents(
   if (!value) return [];
   if (value.type === "text") {
     const text = String(value.text ?? "");
-    return text.trim()
+    return text
       ? [historyReplayChunk(conversationId, "User", { Text: text })]
       : [];
   }

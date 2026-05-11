@@ -1531,8 +1531,7 @@ function elicitationPhaseFromAction(
 
 function actionHasOutput(action: ChatToolAction) {
   return Boolean(
-    action.outputText?.trim() ||
-    action.output?.some((output) => output.text.trim()),
+    action.outputText || action.output?.some((output) => output.text),
   );
 }
 
@@ -1554,8 +1553,8 @@ function isEmptyHostCapabilityAction(action: ChatToolAction) {
   return (
     action.kind === "hostCapability" &&
     !action.error &&
-    !action.outputText?.trim() &&
-    !(action.output ?? []).some((output) => output.text.trim())
+    !action.outputText &&
+    !(action.output ?? []).some((output) => output.text)
   );
 }
 
@@ -1744,7 +1743,7 @@ function engineMessageContentToHistoryParts(
     switch (part.type) {
       case "reasoning":
       case "text":
-        return part.text.trim() ? [{ ...part }] : [];
+        return part.text ? [{ ...part }] : [];
       case "tool-call":
         return isChatToolAction(part.artifact)
           ? [cloneChatHistoryPart(chatToolActionToPart(part.artifact))]
@@ -1955,8 +1954,7 @@ function engineMessageAttachmentsToHistoryParts(
 function getMessageText(message: Pick<ThreadMessage, "content">) {
   return message.content
     .map((part) => (part.type === "text" ? part.text : ""))
-    .join("\n")
-    .trim();
+    .join("\n");
 }
 
 function getMessageAttachments(
@@ -2039,7 +2037,7 @@ function messagePartPath(part: ThreadMessage["content"][number]) {
       path?: unknown;
     }
   ).path;
-  return typeof path === "string" && path.trim() ? path.trim() : null;
+  return typeof path === "string" && path ? path : null;
 }
 
 function messagePartMention(part: ThreadMessage["content"][number]) {

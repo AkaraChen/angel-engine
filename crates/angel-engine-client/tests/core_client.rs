@@ -341,7 +341,7 @@ fn acp_plan_update_surfaces_independent_plan_message_part() {
                     && plan.entries.len() == 2
                     && plan.entries[0].content == "Inspect ACP mode state"
                     && plan.entries[0].status == "completed"
-                    && plan.entries[1].status == "inProgress"
+                    && plan.entries[1].status == "in_progress"
         )
     }));
 

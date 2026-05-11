@@ -1,5 +1,6 @@
 use crate::error::ErrorInfo;
 use crate::ids::{ActionId, ElicitationId, RemoteActionId, TurnId};
+use strum::Display;
 
 #[derive(serde::Serialize, serde::Deserialize, Clone, Debug, PartialEq, Eq)]
 pub struct ActionState {
@@ -30,7 +31,8 @@ impl ActionState {
     }
 }
 
-#[derive(serde::Serialize, serde::Deserialize, Clone, Debug, PartialEq, Eq)]
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug, PartialEq, Eq, Display)]
+#[serde(rename_all = "snake_case")]
 pub enum ActionKind {
     Command,
     FileChange,
@@ -46,7 +48,8 @@ pub enum ActionKind {
     HostCapability,
 }
 
-#[derive(serde::Serialize, serde::Deserialize, Clone, Debug, PartialEq, Eq)]
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug, PartialEq, Eq, Display)]
+#[serde(rename_all = "snake_case")]
 pub enum ActionPhase {
     Proposed,
     AwaitingDecision { elicitation_id: ElicitationId },
@@ -56,6 +59,24 @@ pub enum ActionPhase {
     Failed,
     Declined,
     Cancelled,
+}
+
+impl ActionPhase {
+    pub fn from_wire(status: Option<&str>) -> Self {
+        let lower = status.map(|s| s.to_ascii_lowercase());
+        match lower.as_deref() {
+            Some("completed") => Self::Completed,
+            Some("failed") => Self::Failed,
+            Some("declined") => Self::Declined,
+            Some("cancelled" | "canceled" | "interrupted") => Self::Cancelled,
+            Some("pending" | "proposed") => Self::Proposed,
+            Some("streamingresult" | "streaming_result") => Self::StreamingResult,
+            Some("awaitingdecision" | "awaiting_decision") => Self::AwaitingDecision {
+                elicitation_id: ElicitationId::new("history-elicitation".to_string()),
+            },
+            _ => Self::Running,
+        }
+    }
 }
 
 #[derive(serde::Serialize, serde::Deserialize, Clone, Debug, Default, PartialEq, Eq)]

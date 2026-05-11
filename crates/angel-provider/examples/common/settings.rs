@@ -2,8 +2,8 @@ use std::error::Error;
 
 use angel_engine::{
     AgentMode, ApprovalPolicy, AvailableCommand, ContextPatch, ContextScope, ContextUpdate,
-    ConversationId, ConversationState, PermissionProfile, ProtocolFlavor, ReasoningProfile,
-    SandboxProfile, SessionConfigOption,
+    ConversationId, ConversationState, NormalizedId, PermissionProfile, ProtocolFlavor,
+    ReasoningProfile, SandboxProfile, SessionConfigOption,
 };
 use angel_provider::ProtocolAdapter;
 use test_cli::{CliCommandInfo, print_available_commands, print_command_summary};
@@ -367,16 +367,13 @@ fn config_option<'a>(
         .iter()
         .find(|option| option.category.as_deref() == Some(category))
         .or_else(|| {
+            let targets: Vec<NormalizedId> = ids.iter().map(|id| NormalizedId::from(*id)).collect();
             conversation.config_options.iter().find(|option| {
-                ids.iter().any(|id| {
-                    option.id.eq_ignore_ascii_case(id) || normalize(&option.id) == normalize(id)
-                })
-            })
-        })
-        .or_else(|| {
-            conversation.config_options.iter().find(|option| {
-                let name = normalize(&option.name);
-                ids.iter().any(|id| name == normalize(id))
+                let option_id = NormalizedId::from(option.id.as_str());
+                let option_name = NormalizedId::from(option.name.as_str());
+                targets
+                    .iter()
+                    .any(|target| *target == option_id || *target == option_name)
             })
         })
 }
@@ -406,14 +403,6 @@ fn print_values(prefix: &str, values: &[&str]) {
         .join(", ");
     let suffix = if values.len() > 16 { ", ..." } else { "" };
     println!("{prefix} available: {shown}{suffix}");
-}
-
-fn normalize(value: &str) -> String {
-    value
-        .chars()
-        .filter(|ch| ch.is_ascii_alphanumeric())
-        .flat_map(char::to_lowercase)
-        .collect()
 }
 
 fn parse_approval_policy(value: &str) -> Option<ApprovalPolicy> {

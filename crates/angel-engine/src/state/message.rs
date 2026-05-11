@@ -528,7 +528,7 @@ fn is_acp_tool_update(value: &Value) -> bool {
 fn acp_history_tool_action(value: &Value, fallback_id: String) -> DisplayToolAction {
     let output = action_outputs_from_value(value.get("content").or_else(|| value.get("rawOutput")));
     let output_text = action_output_text(&output);
-    let phase = normalize_tool_phase(string_field(value, &["status"]).as_deref());
+    let phase = ActionPhase::from_wire(string_field(value, &["status"]).as_deref());
     let title = string_field(value, &["title"]);
     let error = if phase == ActionPhase::Failed {
         Some(ErrorInfo::new(
@@ -657,7 +657,7 @@ fn codex_dynamic_tool_is_host_capability(item: &Value) -> bool {
 
 fn codex_tool_phase(item: &Value) -> ActionPhase {
     if let Some(status) = string_field(item, &["status"]) {
-        return normalize_tool_phase(Some(&status));
+        return ActionPhase::from_wire(Some(&status));
     }
     match string_field(item, &["type"]).as_deref() {
         Some("function_call_output" | "custom_tool_call_output" | "tool_search_output") => {
@@ -846,30 +846,16 @@ fn structured_output(value: &Value) -> Vec<ActionOutputDelta> {
 }
 
 fn acp_tool_kind(kind: Option<&str>) -> ActionKind {
-    match kind {
+    let lower = kind.map(|k| k.to_ascii_lowercase());
+    match lower.as_deref() {
         Some("read") => ActionKind::Read,
         Some("edit" | "delete" | "move") => ActionKind::FileChange,
-        Some("execute") => ActionKind::Command,
-        Some("search") => ActionKind::WebSearch,
-        Some("think") => ActionKind::Reasoning,
-        Some("fetch") => ActionKind::DynamicTool,
-        Some("switch_mode") => ActionKind::HostCapability,
+        Some("execute" | "command") => ActionKind::Command,
+        Some("search" | "web_search") => ActionKind::WebSearch,
+        Some("think" | "reasoning") => ActionKind::Reasoning,
+        Some("fetch" | "dynamic_tool") => ActionKind::DynamicTool,
+        Some("switch_mode" | "host_capability") => ActionKind::HostCapability,
         _ => ActionKind::McpTool,
-    }
-}
-
-fn normalize_tool_phase(status: Option<&str>) -> ActionPhase {
-    match status {
-        Some("completed") => ActionPhase::Completed,
-        Some("failed") => ActionPhase::Failed,
-        Some("declined") => ActionPhase::Declined,
-        Some("cancelled" | "canceled" | "interrupted") => ActionPhase::Cancelled,
-        Some("pending" | "proposed") => ActionPhase::Proposed,
-        Some("streamingResult") => ActionPhase::StreamingResult,
-        Some("awaitingDecision") => ActionPhase::AwaitingDecision {
-            elicitation_id: crate::ElicitationId::new("history-elicitation".to_string()),
-        },
-        _ => ActionPhase::Running,
     }
 }
 
@@ -1023,23 +1009,12 @@ fn structured_plan_entry(value: &Value) -> Option<PlanEntry> {
     if content.trim().is_empty() {
         return None;
     }
-    Some(PlanEntry {
-        content,
-        status: structured_plan_entry_status(
-            value
-                .get("status")
-                .and_then(Value::as_str)
-                .unwrap_or_default(),
-        ),
-    })
-}
-
-fn structured_plan_entry_status(status: &str) -> PlanEntryStatus {
-    match status {
-        "completed" | "Completed" => PlanEntryStatus::Completed,
-        "in_progress" | "inProgress" | "InProgress" => PlanEntryStatus::InProgress,
+    let status = match value.get("status").and_then(Value::as_str) {
+        Some("completed" | "Completed") => PlanEntryStatus::Completed,
+        Some("in_progress" | "inProgress" | "InProgress") => PlanEntryStatus::InProgress,
         _ => PlanEntryStatus::Pending,
-    }
+    };
+    Some(PlanEntry { content, status })
 }
 
 fn action_output_text(chunks: &[ActionOutputDelta]) -> String {

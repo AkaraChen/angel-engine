@@ -1,6 +1,7 @@
 use std::collections::{HashMap, HashSet, VecDeque, hash_map::Entry};
 use std::time::Duration;
 
+use garde::Validate;
 use serde::{Deserialize, Serialize};
 
 use crate::error::{ClientError, ClientResult};
@@ -24,31 +25,48 @@ pub struct AngelSession {
     active_turn: Option<ActiveTurn>,
 }
 
-#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
+fn validate_trimmed_not_empty(value: &str, _: &()) -> garde::Result {
+    if value.trim().is_empty() {
+        return Err(garde::Error::new("text must not be empty"));
+    }
+    Ok(())
+}
+
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize, Validate)]
 #[serde(rename_all = "camelCase")]
 pub struct SendTextRequest {
+    #[garde(custom(validate_trimmed_not_empty))]
     pub text: String,
     #[serde(default)]
+    #[garde(skip)]
     pub input: Vec<ClientInput>,
     #[serde(default)]
+    #[garde(skip)]
     pub cwd: Option<String>,
     #[serde(default)]
+    #[garde(skip)]
     pub remote_id: Option<String>,
     #[serde(default)]
+    #[garde(skip)]
     pub model: Option<String>,
     #[serde(default)]
+    #[garde(skip)]
     pub mode: Option<String>,
     #[serde(default)]
+    #[garde(skip)]
     pub reasoning_effort: Option<String>,
 }
 
-#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize, Validate)]
 #[serde(rename_all = "camelCase")]
 pub struct SetModeRequest {
+    #[garde(length(min = 1))]
     pub mode: String,
     #[serde(default)]
+    #[garde(skip)]
     pub cwd: Option<String>,
     #[serde(default)]
+    #[garde(skip)]
     pub remote_id: Option<String>,
 }
 
@@ -93,7 +111,7 @@ pub struct TurnRunResult {
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(
     tag = "type",
-    rename_all = "camelCase",
+    rename_all = "snake_case",
     rename_all_fields = "camelCase"
 )]
 #[allow(clippy::large_enum_variant)]

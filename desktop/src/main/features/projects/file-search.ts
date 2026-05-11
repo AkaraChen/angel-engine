@@ -28,7 +28,7 @@ export async function searchProjectFiles(
   input: ProjectFileSearchInput,
 ): Promise<ProjectFileSearchResult[]> {
   const root = path.resolve(input.root);
-  const query = input.query?.trim().toLowerCase() ?? "";
+  const query = input.query?.toLowerCase() ?? "";
   const limit = Math.max(
     1,
     Math.min(MAX_LIMIT, Math.floor(input.limit ?? DEFAULT_LIMIT)),

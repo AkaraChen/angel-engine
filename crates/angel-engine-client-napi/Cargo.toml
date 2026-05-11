@@ -11,6 +11,7 @@ path = "src/lib.rs"
 angel-engine = { path = "../angel-engine" }
 angel-engine-client = { path = "../angel-engine-client" }
 angel-provider = { path = "../angel-provider" }
+garde = { version = "0.21", features = ["derive"] }
 napi = { version = "3", features = ["serde-json"] }
 napi-derive = "3"
 serde = "1"

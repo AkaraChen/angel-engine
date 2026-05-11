@@ -1,6 +1,3 @@
-import { type as arkType } from "arktype";
-
-import type { AgentRuntime } from "../../../shared/agents";
 import { normalizeAgentRuntime } from "../../../shared/agents";
 import type {
   ChatCreateInput,
@@ -11,57 +8,15 @@ import type {
 } from "../../../shared/chat";
 import { normalizeChatAttachmentsInput } from "../../../shared/chat";
 import { parseObjectInput, parseStringInput } from "../../ipc/validation";
-
-const chatCreateInput = arkType({
-  "+": "ignore",
-  "cwd?": "unknown",
-  "model?": "unknown",
-  "mode?": "unknown",
-  "projectId?": "unknown",
-  "reasoningEffort?": "unknown",
-  "runtime?": "unknown",
-  "title?": "unknown",
-});
-
-const chatPrewarmInput = arkType({
-  "+": "ignore",
-  "cwd?": "unknown",
-  "projectId?": "unknown",
-  "runtime?": "unknown",
-});
-
-const chatRuntimeConfigInput = arkType({
-  "+": "ignore",
-  "cwd?": "unknown",
-  "runtime?": "unknown",
-});
-
-const chatSendInput = arkType({
-  "+": "ignore",
-  "attachments?": "unknown",
-  "chatId?": "unknown",
-  "cwd?": "unknown",
-  "model?": "unknown",
-  "mode?": "unknown",
-  "prewarmId?": "unknown",
-  "projectId?": "unknown",
-  "reasoningEffort?": "unknown",
-  "runtime?": "unknown",
-  "text?": "unknown",
-});
-
-const chatSetModeInput = arkType({
-  "+": "ignore",
-  "chatId?": "unknown",
-  "cwd?": "unknown",
-  "mode?": "unknown",
-});
+import {
+  chatCreateInput,
+  chatPrewarmInput,
+  chatRuntimeConfigInput,
+  chatSendInput,
+  chatSetModeInput,
+} from "./schemas";
 
 export function parseChatCreateInput(input: unknown): ChatCreateInput {
-  if (!input || typeof input !== "object") {
-    return {};
-  }
-
   const value = parseObjectInput(
     chatCreateInput,
     input,
@@ -69,21 +24,17 @@ export function parseChatCreateInput(input: unknown): ChatCreateInput {
   );
 
   return {
-    cwd: normalizeOptionalNonEmptyString(value.cwd),
-    model: normalizeOptionalConfigInput(value.model),
-    projectId: normalizeOptionalProjectId(value.projectId),
-    mode: normalizeOptionalConfigInput(value.mode),
-    reasoningEffort: normalizeOptionalConfigInput(value.reasoningEffort),
-    runtime: normalizeOptionalRuntime(value.runtime),
-    title: normalizeOptionalTrimmedString(value.title),
+    cwd: value.cwd,
+    model: value.model,
+    projectId: value.projectId,
+    mode: value.mode,
+    reasoningEffort: value.reasoningEffort,
+    runtime: parseRuntime(value.runtime),
+    title: value.title,
   };
 }
 
 export function parseChatPrewarmInput(input: unknown): ChatPrewarmInput {
-  if (!input || typeof input !== "object") {
-    return {};
-  }
-
   const value = parseObjectInput(
     chatPrewarmInput,
     input,
@@ -91,19 +42,15 @@ export function parseChatPrewarmInput(input: unknown): ChatPrewarmInput {
   );
 
   return {
-    cwd: normalizeOptionalNonEmptyString(value.cwd),
-    projectId: normalizeOptionalProjectId(value.projectId),
-    runtime: normalizeOptionalRuntime(value.runtime),
+    cwd: value.cwd,
+    projectId: value.projectId,
+    runtime: parseRuntime(value.runtime),
   };
 }
 
 export function parseChatRuntimeConfigInput(
   input: unknown,
 ): ChatRuntimeConfigInput {
-  if (!input || typeof input !== "object") {
-    return {};
-  }
-
   const value = parseObjectInput(
     chatRuntimeConfigInput,
     input,
@@ -111,8 +58,8 @@ export function parseChatRuntimeConfigInput(
   );
 
   return {
-    cwd: normalizeOptionalNonEmptyString(value.cwd),
-    runtime: normalizeOptionalRuntime(value.runtime),
+    cwd: value.cwd,
+    runtime: parseRuntime(value.runtime),
   };
 }
 
@@ -125,15 +72,15 @@ export function parseChatSendInput(input: unknown): ChatSendInput {
 
   return {
     attachments: normalizeChatAttachmentsInput(value.attachments),
-    chatId: normalizeOptionalTrimmedString(value.chatId),
-    cwd: normalizeOptionalNonEmptyString(value.cwd),
-    model: normalizeOptionalConfigInput(value.model),
-    projectId: normalizeOptionalProjectId(value.projectId),
-    mode: normalizeOptionalConfigInput(value.mode),
-    prewarmId: normalizeOptionalTrimmedString(value.prewarmId),
-    reasoningEffort: normalizeOptionalConfigInput(value.reasoningEffort),
-    runtime: normalizeOptionalRuntime(value.runtime),
-    text: parseStringInput(value.text, "Chat text is required."),
+    chatId: value.chatId,
+    cwd: value.cwd,
+    model: value.model,
+    projectId: value.projectId,
+    mode: value.mode,
+    prewarmId: value.prewarmId,
+    reasoningEffort: value.reasoningEffort,
+    runtime: parseRuntime(value.runtime),
+    text: value.text,
   };
 }
 
@@ -143,15 +90,11 @@ export function parseChatSetModeInput(input: unknown): ChatSetModeInput {
     input,
     "Chat mode input is required.",
   );
-  const mode = normalizeOptionalConfigInput(value.mode);
-  if (!mode) {
-    throw new Error("Chat mode is required.");
-  }
 
   return {
-    chatId: parseStringInput(value.chatId, "Chat id is required.").trim(),
-    cwd: normalizeOptionalNonEmptyString(value.cwd),
-    mode,
+    chatId: value.chatId,
+    cwd: value.cwd,
+    mode: value.mode,
   };
 }
 
@@ -159,31 +102,6 @@ export function parseChatId(input: unknown): string {
   return parseStringInput(input, "Chat id is required.");
 }
 
-function normalizeOptionalRuntime(value: unknown): AgentRuntime | undefined {
-  if (typeof value !== "string" || !value.trim()) {
-    return undefined;
-  }
-
-  return normalizeAgentRuntime(value);
-}
-
-function normalizeOptionalConfigInput(value: unknown): string | undefined {
-  if (typeof value !== "string") {
-    return undefined;
-  }
-
-  const trimmed = value.trim();
-  return trimmed || undefined;
-}
-
-function normalizeOptionalNonEmptyString(value: unknown): string | undefined {
-  return typeof value === "string" && value.trim() ? value : undefined;
-}
-
-function normalizeOptionalProjectId(value: unknown): string | null {
-  return typeof value === "string" && value.trim() ? value.trim() : null;
-}
-
-function normalizeOptionalTrimmedString(value: unknown): string | undefined {
-  return typeof value === "string" && value.trim() ? value.trim() : undefined;
+function parseRuntime(value: string | undefined) {
+  return value ? normalizeAgentRuntime(value) : undefined;
 }

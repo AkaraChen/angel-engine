@@ -8,9 +8,7 @@ import type { ChatElicitationResponse } from "../../../../shared/chat";
 import type { EngineEventJson, JsonObject } from "./types";
 
 export function uniqueStrings(values: readonly string[]): string[] {
-  return Array.from(
-    new Set(values.map((value) => value.trim()).filter(Boolean)),
-  );
+  return Array.from(new Set(values.filter(Boolean)));
 }
 
 export function labelFromValue(value: string): string {
@@ -122,14 +120,13 @@ export function permissionDecision(response: ChatElicitationResponse): unknown {
 export function normalizeClaudeMode(
   mode: string | null | undefined,
 ): PermissionMode {
-  return (mode?.trim() || "default") as PermissionMode;
+  return (mode || "default") as PermissionMode;
 }
 
 export function claudeEffort(
   effort: string | null | undefined,
 ): NonNullable<ClaudeQueryOptions["effort"]> | undefined {
-  const trimmed = effort?.trim();
-  return trimmed
-    ? (trimmed as NonNullable<ClaudeQueryOptions["effort"]>)
+  return effort
+    ? (effort as NonNullable<ClaudeQueryOptions["effort"]>)
     : undefined;
 }

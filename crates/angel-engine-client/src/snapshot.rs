@@ -35,7 +35,7 @@ impl From<&angel_engine::AngelEngine> for ClientSnapshot {
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
-#[serde(tag = "status", rename_all = "camelCase")]
+#[serde(tag = "status", rename_all = "snake_case")]
 pub enum RuntimeSnapshot {
     Offline,
     Connecting,
@@ -722,7 +722,7 @@ impl From<&angel_engine::PlanEntry> for PlanEntrySnapshot {
             content: entry.content.clone(),
             status: match entry.status {
                 PlanEntryStatus::Pending => "pending",
-                PlanEntryStatus::InProgress => "inProgress",
+                PlanEntryStatus::InProgress => "in_progress",
                 PlanEntryStatus::Completed => "completed",
             }
             .to_string(),

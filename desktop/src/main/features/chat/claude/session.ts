@@ -192,7 +192,7 @@ export class DesktopClaudeSession {
   private async sendTextNow(
     request: DesktopClaudeSendTextRequest,
   ): Promise<TurnRunResult> {
-    const text = String(request.text || "").trim();
+    const text = request.text ?? "";
     const input = request.input ?? [];
     if (!text && input.length === 0) {
       throw new Error("Text or input is required.");
@@ -506,7 +506,7 @@ export class DesktopClaudeSession {
     if (
       message.subtype === "success" &&
       !active.sawTextDelta &&
-      message.result.trim()
+      message.result
     ) {
       active.sawTextDelta = true;
       return [
@@ -674,9 +674,9 @@ export class DesktopClaudeSession {
       (action) => action.turnId === active.turnId,
     );
     const resultText =
-      turn?.outputText.trim() ||
+      turn?.outputText ||
       (active.finalResult?.subtype === "success"
-        ? active.finalResult.result.trim()
+        ? active.finalResult.result
         : "") ||
       "Claude Code finished without text output.";
 

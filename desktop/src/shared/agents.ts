@@ -42,19 +42,19 @@ export const AGENT_OPTIONS: AgentOption[] = [
 export function normalizeAgentRuntime(
   runtime: string | null | undefined,
 ): AgentRuntime {
-  const trimmed = runtime?.trim().toLowerCase();
-  if (trimmed === "kimi") return "kimi";
+  const normalized = runtime?.toLowerCase();
+  if (normalized === "kimi") return "kimi";
   if (
-    trimmed === "opencode" ||
-    trimmed === "open-code" ||
-    trimmed === "open code"
+    normalized === "opencode" ||
+    normalized === "open-code" ||
+    normalized === "open code"
   ) {
     return "opencode";
   }
   if (
-    trimmed === "claude" ||
-    trimmed === "claude-code" ||
-    trimmed === "claude code"
+    normalized === "claude" ||
+    normalized === "claude-code" ||
+    normalized === "claude code"
   ) {
     return "claude";
   }

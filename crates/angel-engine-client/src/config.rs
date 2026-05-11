@@ -1,24 +1,34 @@
+use garde::Validate;
 use serde::{Deserialize, Serialize};
 
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, Validate)]
 #[serde(rename_all = "camelCase")]
 pub struct ClientOptions {
+    #[garde(length(min = 1))]
     pub command: String,
     #[serde(default)]
+    #[garde(skip)]
     pub args: Vec<String>,
     #[serde(default)]
+    #[garde(skip)]
     pub protocol: ClientProtocol,
     #[serde(default)]
+    #[garde(skip)]
     pub auth: ClientAuthOptions,
     #[serde(default)]
+    #[garde(skip)]
     pub identity: ClientIdentity,
     #[serde(default)]
+    #[garde(skip)]
     pub cwd: Option<String>,
     #[serde(default)]
+    #[garde(skip)]
     pub additional_directories: Vec<String>,
     #[serde(default = "default_experimental_api")]
+    #[garde(skip)]
     pub experimental_api: bool,
     #[serde(default)]
+    #[garde(skip)]
     pub process_label: Option<String>,
 }
 

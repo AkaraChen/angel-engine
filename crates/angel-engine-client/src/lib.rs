@@ -35,10 +35,7 @@ pub use event::{
     RuntimeAuthMethod,
 };
 pub use process::AngelClient;
-pub use runtime::{
-    AgentRuntime, RuntimeOptions, RuntimeOptionsOverrides, create_runtime_options,
-    normalize_runtime_name,
-};
+pub use runtime::{AgentRuntime, RuntimeOptions, RuntimeOptionsOverrides, create_runtime_options};
 pub use session::{
     AngelSession, HydrateRequest, InspectRequest, SendTextRequest, SetModeRequest, TurnRunEvent,
     TurnRunResult,

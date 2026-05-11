@@ -619,7 +619,7 @@ pub struct ForkConversationRequest {
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(
     tag = "type",
-    rename_all = "camelCase",
+    rename_all = "snake_case",
     rename_all_fields = "camelCase"
 )]
 pub enum ClientInput {
@@ -782,7 +782,7 @@ impl From<ClientInput> for UserInput {
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(
     tag = "type",
-    rename_all = "camelCase",
+    rename_all = "snake_case",
     rename_all_fields = "camelCase"
 )]
 pub enum ElicitationResponse {

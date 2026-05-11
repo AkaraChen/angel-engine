@@ -98,7 +98,7 @@ pub enum ContentChunkKind {
     Structured,
 }
 
-#[napi(string_enum = "camelCase")]
+#[napi(string_enum = "snake_case")]
 pub enum PlanEntryStatus {
     Pending,
     InProgress,

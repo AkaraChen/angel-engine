@@ -108,14 +108,14 @@ const convertFileToDataUrl = (file: File): Promise<string | null> =>
 
 function getErrorMessage(error: unknown) {
   if (error instanceof Error && error.message) return error.message;
-  if (typeof error === "string" && error.trim()) return error;
+  if (typeof error === "string" && error) return error;
   return "Unknown error";
 }
 
 function getLocalFilePath(file: File) {
   if (typeof window === "undefined") return null;
   const path = window.desktopEnvironment?.getPathForFile?.(file);
-  return typeof path === "string" && path.trim() ? path.trim() : null;
+  return typeof path === "string" && path ? path : null;
 }
 
 const captureScreenshot = async (): Promise<File | null> => {
@@ -585,14 +585,11 @@ export const PromptInput = ({
 
   const matchesAccept = useCallback(
     (f: File) => {
-      if (!accept || accept.trim() === "") {
+      if (!accept) {
         return true;
       }
 
-      const patterns = accept
-        .split(",")
-        .map((s) => s.trim())
-        .filter(Boolean);
+      const patterns = accept.split(",").filter(Boolean);
 
       return patterns.some((pattern) => {
         if (pattern.endsWith("/*")) {

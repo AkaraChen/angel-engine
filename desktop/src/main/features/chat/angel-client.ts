@@ -2,6 +2,7 @@ import { createRequire } from "node:module";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 
+import { isTextLikeMimeType } from "../../../shared/mime";
 import type {
   ConversationSnapshot,
   ElicitationResponse,
@@ -168,9 +169,8 @@ export async function streamChat(
   abortSignal?: AbortSignal,
   controls?: ChatStreamControls,
 ): Promise<ChatSendResult> {
-  const text = input.text.trim();
   const attachments = normalizeChatAttachmentsInput(input.attachments);
-  if (!text && attachments.length === 0) {
+  if (!input.text && attachments.length === 0) {
     throw new Error("Chat text or attachment is required.");
   }
 
@@ -190,11 +190,11 @@ export async function streamChat(
     remoteId: chat.remoteThreadId ?? undefined,
     signal: abortSignal,
     input: chatAttachmentsToClientInput(attachments),
-    text,
+    text: input.text,
   });
 
-  if (text) {
-    renameChatFromPrompt(chat.id, text);
+  if (input.text) {
+    renameChatFromPrompt(chat.id, input.text);
   }
   const finalChat = result.remoteThreadId
     ? setChatRemoteThreadId(chat.id, result.remoteThreadId)
@@ -255,21 +255,20 @@ function chatAttachmentsToClientInput(
 ): NonNullable<SendTextRequest["input"]> {
   return attachments.map((attachment) => {
     if (attachment.type === "fileMention") {
-      const localPath = attachment.path.trim();
+      const localPath = attachment.path;
       return {
         mimeType: attachment.mimeType ?? null,
-        name: attachment.name?.trim() || path.basename(localPath),
+        name: attachment.name || path.basename(localPath),
         path: localPath,
         type: "fileMention",
       };
     }
 
-    const localPath = attachment.path?.trim();
+    const localPath = attachment.path;
     if (localPath) {
       return {
         mimeType: attachment.mimeType,
-        name:
-          attachment.name?.trim() || path.basename(localPath) || "attachment",
+        name: attachment.name || path.basename(localPath) || "attachment",
         type: "resourceLink",
         uri: pathToFileURL(localPath).href,
       };
@@ -305,24 +304,8 @@ function chatAttachmentsToClientInput(
 }
 
 function attachmentUri(attachment: ChatAttachmentInput) {
-  const name = attachment.name?.trim() || "attachment";
+  const name = attachment.name || "attachment";
   return `attachment:///${encodeURIComponent(name)}`;
-}
-
-function isTextLikeMimeType(mimeType: string) {
-  const normalized = mimeType.toLowerCase();
-  return (
-    normalized.startsWith("text/") ||
-    normalized === "application/json" ||
-    normalized === "application/xml" ||
-    normalized === "application/javascript" ||
-    normalized === "application/typescript" ||
-    normalized === "application/x-ndjson" ||
-    normalized === "application/yaml" ||
-    normalized === "application/toml" ||
-    normalized.endsWith("+json") ||
-    normalized.endsWith("+xml")
-  );
 }
 
 function prepareChatForSend(input: ChatSendInput): {
@@ -551,7 +534,7 @@ class DesktopAngelSession {
   private async sendTextNow(
     request: DesktopSendTextRequest,
   ): Promise<TurnRunResult> {
-    const text = String(request.text || "").trim();
+    const text = request.text ?? "";
     const input = request.input ?? [];
     if (!text && input.length === 0) {
       throw new Error("Text or input is required.");

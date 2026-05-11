@@ -267,7 +267,7 @@ function hasTextContentAfterIndex(parts: readonly PartState[], index: number) {
     partIndex += 1
   ) {
     const part = parts[partIndex];
-    if (part?.type === "text" && part.text.trim()) return true;
+    if (part?.type === "text" && part.text) return true;
   }
   return false;
 }

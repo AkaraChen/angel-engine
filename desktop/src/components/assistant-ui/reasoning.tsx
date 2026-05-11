@@ -181,7 +181,7 @@ function ReasoningText({
 }
 
 const ReasoningImpl: ReasoningMessagePartComponent = ({ text }) => {
-  if (!text.trim()) return null;
+  if (!text) return null;
   return <>{text}</>;
 };
 

@@ -72,7 +72,7 @@ function displayMessagePartToChatParts(
   switch (part.type) {
     case "reasoning":
     case "text":
-      return part.text?.trim() ? [{ text: part.text, type: part.type }] : [];
+      return part.text ? [{ text: part.text, type: part.type }] : [];
     case "tool-call":
       return part.action ? [chatPartFromAction(toChatAction(part.action))] : [];
     case "plan":
@@ -100,7 +100,7 @@ function displayMessagePartToChatParts(
           ]
         : [];
     default:
-      return part.text?.trim() ? [{ text: part.text, type: "text" }] : [];
+      return part.text ? [{ text: part.text, type: "text" }] : [];
   }
 }
 
@@ -155,7 +155,7 @@ export function projectRunResult(result: TurnRunResult) {
     content = contentFromTurnSnapshot(result.turn, result.actions);
   }
 
-  if (content.length === 0 && result.text.trim()) {
+  if (content.length === 0 && result.text) {
     content.push({ text: result.text, type: "text" });
   }
 
@@ -275,12 +275,12 @@ function planMessagePartData(plan: ChatPlanData): ChatHistoryMessagePart {
 }
 
 function planFromTurnSnapshot(turn: TurnSnapshot): ChatPlanData | undefined {
-  const data = {
+  const data: ChatPlanData = {
     entries: (turn.plan ?? []).map((entry) => ({
       content: entry.content,
-      status: normalizePlanEntryStatus(entry.status),
+      status: entry.status as ChatPlanEntryStatus,
     })),
-    kind: "review" as const,
+    kind: "review",
     path: turn.planPath ?? null,
     text: turn.planText ?? "",
   };
@@ -288,12 +288,12 @@ function planFromTurnSnapshot(turn: TurnSnapshot): ChatPlanData | undefined {
 }
 
 function todoFromTurnSnapshot(turn: TurnSnapshot): ChatPlanData | undefined {
-  const data = {
+  const data: ChatPlanData = {
     entries: (turn.todo ?? []).map((entry) => ({
       content: entry.content,
-      status: normalizePlanEntryStatus(entry.status),
+      status: entry.status as ChatPlanEntryStatus,
     })),
-    kind: "todo" as const,
+    kind: "todo",
     path: null,
     text: "",
   };
@@ -311,7 +311,7 @@ function toChatPlanData(plan: unknown): ChatPlanData {
   return {
     entries: (value.entries ?? []).map((entry) => ({
       content: entry.content ?? entry.text ?? "",
-      status: normalizePlanEntryStatus(entry.status),
+      status: (entry.status as ChatPlanEntryStatus) ?? "pending",
     })),
     kind,
     path: value.path ?? null,
@@ -322,21 +322,9 @@ function toChatPlanData(plan: unknown): ChatPlanData {
 function isEmptyPlan(plan: ChatPlanData) {
   return (
     plan.entries.length === 0 &&
-    !plan.text.trim() &&
-    !(typeof plan.path === "string" && plan.path.trim())
+    !plan.text &&
+    !(typeof plan.path === "string" && plan.path)
   );
-}
-
-function normalizePlanEntryStatus(status?: string): ChatPlanEntryStatus {
-  switch (status) {
-    case "completed":
-      return "completed";
-    case "inProgress":
-    case "in_progress":
-      return "inProgress";
-    default:
-      return "pending";
-  }
 }
 
 function toChatAction(action: ToolActionSnapshotLike): ChatToolAction {
@@ -431,8 +419,7 @@ function elicitationPhaseFromAction(
 
 function actionHasOutput(action: ChatToolAction) {
   return Boolean(
-    action.outputText?.trim() ||
-    action.output?.some((output) => output.text.trim()),
+    action.outputText || action.output?.some((output) => output.text),
   );
 }
 

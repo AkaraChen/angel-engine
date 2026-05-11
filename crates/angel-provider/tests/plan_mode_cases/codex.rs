@@ -447,6 +447,7 @@ fn codex_hydrate_restores_host_capability_question_and_answer() {
                 entries,
                 text,
                 path,
+                ..
             } => Some((entries, text, path)),
             _ => None,
         })

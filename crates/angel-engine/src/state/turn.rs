@@ -1,5 +1,6 @@
 use crate::error::ErrorInfo;
 use crate::ids::{ActionId, ElicitationId, RemoteTurnId, TurnId};
+use strum::Display;
 
 use super::*;
 
@@ -201,8 +202,10 @@ pub struct PlanEntry {
     pub status: PlanEntryStatus,
 }
 
-#[derive(serde::Serialize, serde::Deserialize, Clone, Debug, PartialEq, Eq)]
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug, Default, PartialEq, Eq, Display)]
+#[serde(rename_all = "snake_case")]
 pub enum PlanEntryStatus {
+    #[default]
     Pending,
     InProgress,
     Completed,

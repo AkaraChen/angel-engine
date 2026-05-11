@@ -1,8 +1,9 @@
 use serde::{Deserialize, Serialize};
+use strum::Display;
 
 use crate::{ClientAuthOptions, ClientIdentity, ClientOptions, ClientProtocol};
 
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize, Display)]
 #[serde(rename_all = "lowercase")]
 pub enum AgentRuntime {
     #[default]
@@ -55,24 +56,18 @@ impl RuntimeOptions {
     }
 }
 
-pub fn normalize_runtime_name(runtime: Option<&str>) -> AgentRuntime {
-    match runtime
-        .unwrap_or_default()
-        .trim()
-        .to_ascii_lowercase()
-        .as_str()
-    {
-        "kimi" => AgentRuntime::Kimi,
-        "opencode" | "open-code" | "open code" => AgentRuntime::Opencode,
-        _ => AgentRuntime::Codex,
-    }
-}
-
 pub fn create_runtime_options(
     runtime_name: Option<&str>,
     overrides: RuntimeOptionsOverrides,
 ) -> RuntimeOptions {
-    let runtime = normalize_runtime_name(runtime_name);
+    let runtime = match runtime_name
+        .map(|s| s.trim().to_ascii_lowercase())
+        .as_deref()
+    {
+        Some("kimi") => AgentRuntime::Kimi,
+        Some("opencode") => AgentRuntime::Opencode,
+        _ => AgentRuntime::Codex,
+    };
     let command_override = overrides
         .command
         .clone()

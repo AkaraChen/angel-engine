@@ -105,7 +105,7 @@ function questionInputs(
       options: questionOptions(question.options),
       question: String(question.question ?? ""),
     }))
-    .filter((question) => question.question.trim());
+    .filter((question) => question.question);
 }
 
 function questionOptions(
@@ -116,7 +116,7 @@ function questionOptions(
       description: String(option.description ?? ""),
       label: String(option.label ?? ""),
     }))
-    .filter((option) => option.label.trim());
+    .filter((option) => option.label);
 }
 
 function questionId(index: number): string {

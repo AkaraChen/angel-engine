@@ -114,11 +114,10 @@ function updateChat(
 }
 
 function requireChatId(id: string) {
-  const trimmed = id.trim();
-  if (!trimmed) {
+  if (!id) {
     throw new Error("Chat id is required.");
   }
-  return trimmed;
+  return id;
 }
 
 function normalizeRuntime(runtime: string | undefined) {
@@ -126,21 +125,19 @@ function normalizeRuntime(runtime: string | undefined) {
 }
 
 function normalizeTitle(title: string | undefined) {
-  const trimmed = title?.trim();
-  return trimmed || DEFAULT_CHAT_TITLE;
+  return title || DEFAULT_CHAT_TITLE;
 }
 
 function normalizeOptionalString(value: string | null | undefined) {
-  if (typeof value !== "string") return null;
-  const trimmed = value.trim();
-  return trimmed || null;
+  if (typeof value !== "string" || !value) return null;
+  return value;
 }
 
 function normalizeOptionalDirectory(value: string | null | undefined) {
-  const trimmed = normalizeOptionalString(value);
-  if (!trimmed) return null;
+  const dirPath = normalizeOptionalString(value);
+  if (!dirPath) return null;
 
-  const resolvedPath = path.resolve(trimmed);
+  const resolvedPath = path.resolve(dirPath);
   if (!fs.existsSync(resolvedPath)) {
     throw new Error("Chat cwd does not exist.");
   }
@@ -153,7 +150,7 @@ function normalizeOptionalDirectory(value: string | null | undefined) {
 }
 
 function titleFromPrompt(prompt: string) {
-  const title = prompt.replace(/\s+/g, " ").trim();
+  const title = prompt.replace(/\s+/g, " ");
   if (!title) return DEFAULT_CHAT_TITLE;
   return title.length > 48 ? `${title.slice(0, 47)}...` : title;
 }

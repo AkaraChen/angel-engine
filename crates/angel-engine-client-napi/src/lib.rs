@@ -13,8 +13,8 @@ use angel_engine_client::{
     SendTextRequest as EngineSendTextRequest, SetModeRequest as EngineSetModeRequest,
     StartConversationRequest as EngineStartConversationRequest, ThreadEvent as EngineThreadEvent,
     create_runtime_options as engine_create_runtime_options,
-    normalize_runtime_name as engine_normalize_runtime_name,
 };
+use garde::Validate;
 use napi::ScopedTask;
 use napi::bindgen_prelude::*;
 use napi_derive::napi;
@@ -1215,6 +1215,9 @@ pub fn normalize_client_options(options: serde_json::Value) -> Result<serde_json
         format!("input={}", json_shape(&options)),
         || {
             let options = from_json::<EngineClientOptions>(options)?;
+            options
+                .validate()
+                .map_err(|e| Error::from_reason(format!("Validation failed: {e}")))?;
             to_json(options)
         },
     )
@@ -1277,7 +1280,18 @@ pub fn normalize_runtime_name(runtime: Option<String>) -> String {
     trace_napi_value(
         "normalizeRuntimeName",
         format!("runtime={}", runtime.as_deref().unwrap_or("<none>")),
-        || agent_runtime_name(engine_normalize_runtime_name(runtime.as_deref())),
+        || {
+            let runtime = match runtime
+                .as_deref()
+                .map(|s| s.trim().to_ascii_lowercase())
+                .as_deref()
+            {
+                Some("kimi") => EngineAgentRuntime::Kimi,
+                Some("opencode") => EngineAgentRuntime::Opencode,
+                _ => EngineAgentRuntime::Codex,
+            };
+            runtime.to_string()
+        },
     )
 }
 
@@ -1414,7 +1428,7 @@ fn runtime_options_trace(options: &EngineRuntimeOptions) -> String {
     format!(
         "{} runtime={} default_reasoning_effort={}",
         client_options_trace(&options.client),
-        agent_runtime_name(options.runtime),
+        options.runtime.to_string(),
         options
             .default_reasoning_effort
             .as_deref()
@@ -1458,14 +1472,6 @@ fn thread_event_kind(event: &EngineThreadEvent) -> &'static str {
         EngineThreadEvent::CompactHistory => "compactHistory",
         EngineThreadEvent::RollbackHistory { .. } => "rollbackHistory",
         EngineThreadEvent::RunShellCommand { .. } => "runShellCommand",
-    }
-}
-
-fn agent_runtime_name(runtime: EngineAgentRuntime) -> String {
-    match runtime {
-        EngineAgentRuntime::Codex => "codex".to_string(),
-        EngineAgentRuntime::Kimi => "kimi".to_string(),
-        EngineAgentRuntime::Opencode => "opencode".to_string(),
     }
 }
 

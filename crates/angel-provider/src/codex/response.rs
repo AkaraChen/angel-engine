@@ -410,22 +410,15 @@ fn codex_history_replay_plan_entry(entry: &Value) -> Option<Value> {
         return None;
     }
 
-    let status = entry
-        .get("status")
-        .and_then(Value::as_str)
-        .unwrap_or("pending");
+    let status = match entry.get("status").and_then(Value::as_str) {
+        Some("completed" | "Completed") => PlanEntryStatus::Completed,
+        Some("in_progress" | "inProgress" | "InProgress") => PlanEntryStatus::InProgress,
+        _ => PlanEntryStatus::Pending,
+    };
     Some(json!({
         "content": content,
-        "status": normalize_plan_status(status),
+        "status": status,
     }))
-}
-
-fn normalize_plan_status(status: &str) -> &str {
-    match status {
-        "completed" => "completed",
-        "in_progress" | "inProgress" => "inProgress",
-        _ => "pending",
-    }
 }
 
 fn codex_history_replay_tool_uses_call_id(item_type: &str) -> bool {

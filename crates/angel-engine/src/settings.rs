@@ -8,8 +8,70 @@ use crate::state::{
     AgentMode, ContextPatch, ContextScope, ContextUpdate, ConversationState, ReasoningProfile,
     SessionConfigOption, SessionMode, SessionModeState, SessionModel, SessionModelState,
 };
+use std::fmt;
+use strum::Display;
 
 const CODEX_REASONING_LEVELS: &[&str] = &["none", "minimal", "low", "medium", "high", "xhigh"];
+
+/// A normalized identifier that strips non-alphanumeric characters and lowercases.
+/// Used for fuzzy-matching config option IDs and names.
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub struct NormalizedId(String);
+
+impl NormalizedId {
+    pub fn as_str(&self) -> &str {
+        &self.0
+    }
+}
+
+impl From<&str> for NormalizedId {
+    fn from(value: &str) -> Self {
+        Self(
+            value
+                .chars()
+                .filter(|c| c.is_ascii_alphanumeric())
+                .flat_map(char::to_lowercase)
+                .collect(),
+        )
+    }
+}
+
+impl fmt::Display for NormalizedId {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
+
+/// Parsed reasoning level with disabled aliases.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Display)]
+pub enum ReasoningLevel {
+    None,
+    Minimal,
+    Low,
+    Medium,
+    High,
+    XHigh,
+}
+
+impl ReasoningLevel {
+    pub fn from_wire(value: &str) -> Option<Self> {
+        match value.to_ascii_lowercase().as_str() {
+            "none" | "off" | "false" | "disabled" | "disable" => Some(Self::None),
+            "minimal" => Some(Self::Minimal),
+            "low" => Some(Self::Low),
+            "medium" => Some(Self::Medium),
+            "high" => Some(Self::High),
+            "xhigh" | "x_high" | "x-high" => Some(Self::XHigh),
+            _ => None,
+        }
+    }
+}
+
+impl ReasoningLevel {
+    pub fn is_disabled(&self) -> bool {
+        matches!(self, Self::None)
+    }
+}
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct ConversationSettingsState {
@@ -484,19 +546,19 @@ pub(crate) fn find_config_option<'a>(
     category: &str,
     ids: &[&str],
 ) -> Option<&'a SessionConfigOption> {
+    // Fast path: exact category match
     options
         .iter()
         .find(|option| option.category.as_deref() == Some(category))
         .or_else(|| {
+            // Fuzzy path: normalized ID or name match
+            let targets: Vec<NormalizedId> = ids.iter().map(|id| NormalizedId::from(*id)).collect();
             options.iter().find(|option| {
-                ids.iter()
-                    .any(|id| option.id.eq_ignore_ascii_case(id) || normalized_eq(&option.id, id))
-            })
-        })
-        .or_else(|| {
-            options.iter().find(|option| {
-                let name = normalize_name(&option.name);
-                ids.iter().any(|id| name == normalize_name(id))
+                let option_id = NormalizedId::from(option.id.as_str());
+                let option_name = NormalizedId::from(option.name.as_str());
+                targets
+                    .iter()
+                    .any(|target| *target == option_id || *target == option_name)
             })
         })
 }
@@ -593,7 +655,10 @@ pub(crate) fn thinking_model_for_level(
 
     let models = conversation.model_state.as_ref()?;
     let current = models.current_model_id.as_str();
-    let target = if disables_reasoning(level) {
+    let is_disabled = ReasoningLevel::from_wire(level)
+        .map(|l| l.is_disabled())
+        .unwrap_or(false);
+    let target = if is_disabled {
         current.strip_suffix(THINKING_SUFFIX).map(str::to_string)?
     } else if current.ends_with(THINKING_SUFFIX) {
         return None;
@@ -627,23 +692,4 @@ fn model_variant_reasoning_level(conversation: &ConversationState) -> Option<Str
         .iter()
         .any(|model| model.id == format!("{current}{THINKING_SUFFIX}"))
         .then(|| "none".to_string())
-}
-
-fn disables_reasoning(level: &str) -> bool {
-    matches!(
-        level.to_ascii_lowercase().as_str(),
-        "none" | "off" | "false" | "disabled" | "disable"
-    )
-}
-
-fn normalized_eq(left: &str, right: &str) -> bool {
-    normalize_name(left) == normalize_name(right)
-}
-
-fn normalize_name(value: &str) -> String {
-    value
-        .chars()
-        .filter(|ch| ch.is_ascii_alphanumeric())
-        .flat_map(char::to_lowercase)
-        .collect()
 }

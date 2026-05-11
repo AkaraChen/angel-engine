@@ -149,7 +149,7 @@ export function AssistantComposer() {
 
   const handleSubmit = useCallback(
     async (message: PromptInputMessage) => {
-      const text = message.text.trim() ? message.text : "";
+      const text = message.text;
       const hasMessage =
         text.length > 0 ||
         message.files.length > 0 ||
@@ -592,8 +592,7 @@ function AssistantComposerFooter({ draftText }: { draftText: string }) {
   const attachments = usePromptInputAttachments();
   const chatOptions = useChatOptions();
   const isRunning = useAuiState((state) => state.thread.isRunning);
-  const isEmpty =
-    draftText.trim().length === 0 && attachments.files.length === 0;
+  const isEmpty = draftText.length === 0 && attachments.files.length === 0;
 
   const stopRun = useCallback(() => {
     aui.composer().cancel();
@@ -999,7 +998,7 @@ function createMentionAttachment(
 
 function promptFilePath(file: PromptInputMessage["files"][number]) {
   const path = file.path;
-  return typeof path === "string" && path.trim() ? path.trim() : undefined;
+  return typeof path === "string" && path ? path : undefined;
 }
 
 function slashQueryFromDraft(text: string) {
@@ -1008,7 +1007,7 @@ function slashQueryFromDraft(text: string) {
 }
 
 function filterSlashCommands(commands: ChatAvailableCommand[], query: string) {
-  const normalized = query.trim().toLowerCase();
+  const normalized = query.toLowerCase();
   return commands
     .filter((command) => {
       const name = command.name.toLowerCase();
