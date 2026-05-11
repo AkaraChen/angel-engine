@@ -1,5 +1,6 @@
 import { BrowserWindow, Menu } from "electron";
 import { tipc } from "@egoist/tipc/main";
+import { type as arkType } from "arktype";
 
 import type {
   ChatCreateInput,
@@ -8,6 +9,8 @@ import type {
   ChatSendInput,
   ChatSetModeInput,
 } from "../../../shared/chat";
+import { normalizeAgentRuntime } from "../../../shared/agents";
+import { normalizeChatAttachmentsInput } from "../../../shared/chat";
 import {
   closeChatSession,
   createChatFromInput,
@@ -19,56 +22,107 @@ import {
 } from "./angel-client";
 import { deleteAllChats, deleteChat, getChat, listChats } from "./repository";
 import {
-  parseChatCreateInput,
-  parseChatId,
-  parseChatPrewarmInput,
-  parseChatRuntimeConfigInput,
-  parseChatSendInput,
-  parseChatSetModeInput,
-} from "./input-schemas";
+  chatCreateInput,
+  chatPrewarmInput,
+  chatRuntimeConfigInput,
+  chatSendInput,
+  chatSetModeInput,
+} from "./schemas";
 
 const t = tipc.create();
 
 export const chatIpcRouter = {
   chatsCreate: t.procedure
     .input<ChatCreateInput>()
-    .action(async ({ input }) =>
-      createChatFromInput(parseChatCreateInput(input)),
-    ),
+    .action(async ({ input }) => {
+      const value = chatCreateInput(input);
+      if (value instanceof arkType.errors) {
+        throw new Error("Chat input is required.");
+      }
+
+      return createChatFromInput({
+        model: value.model,
+        projectId: value.projectId,
+        mode: value.mode,
+        reasoningEffort: value.reasoningEffort,
+        runtime: value.runtime
+          ? normalizeAgentRuntime(value.runtime)
+          : undefined,
+        title: value.title,
+      });
+    }),
 
   chatsDeleteAll: t.procedure.action(async () => {
     closeChatSession();
     return { deletedCount: deleteAllChats() };
   }),
 
-  chatsGet: t.procedure
-    .input<string>()
-    .action(async ({ input }) => getChat(parseChatId(input))),
+  chatsGet: t.procedure.input<string>().action(async ({ input }) => {
+    const value = arkType("string")(input);
+    if (value instanceof arkType.errors) {
+      throw new Error("Chat id is required.");
+    }
+    return getChat(value);
+  }),
 
   chatsList: t.procedure.action(async () => listChats()),
 
-  chatsLoad: t.procedure
-    .input<string>()
-    .action(async ({ input }) => loadChatSession(parseChatId(input))),
+  chatsLoad: t.procedure.input<string>().action(async ({ input }) => {
+    const value = arkType("string")(input);
+    if (value instanceof arkType.errors) {
+      throw new Error("Chat id is required.");
+    }
+    return loadChatSession(value);
+  }),
 
   chatsPrewarm: t.procedure
     .input<ChatPrewarmInput>()
-    .action(async ({ input }) => prewarmChat(parseChatPrewarmInput(input))),
+    .action(async ({ input }) => {
+      const value = chatPrewarmInput(input);
+      if (value instanceof arkType.errors) {
+        throw new Error("Chat prewarm input is required.");
+      }
+      return prewarmChat({
+        projectId: value.projectId,
+        runtime: value.runtime
+          ? normalizeAgentRuntime(value.runtime)
+          : undefined,
+      });
+    }),
 
   chatsRuntimeConfig: t.procedure
     .input<ChatRuntimeConfigInput>()
-    .action(async ({ input }) =>
-      inspectChatRuntimeConfig(parseChatRuntimeConfigInput(input)),
-    ),
+    .action(async ({ input }) => {
+      const value = chatRuntimeConfigInput(input);
+      if (value instanceof arkType.errors) {
+        throw new Error("Chat runtime config input is required.");
+      }
+      return inspectChatRuntimeConfig({
+        cwd: value.cwd,
+        runtime: value.runtime
+          ? normalizeAgentRuntime(value.runtime)
+          : undefined,
+      });
+    }),
 
   chatsSetMode: t.procedure
     .input<ChatSetModeInput>()
-    .action(async ({ input }) => setChatMode(parseChatSetModeInput(input))),
+    .action(async ({ input }) => {
+      const value = chatSetModeInput(input);
+      if (value instanceof arkType.errors) {
+        throw new Error("Chat mode input is required.");
+      }
+      return setChatMode(value);
+    }),
 
   chatsShowContextMenu: t.procedure
     .input<string>()
     .action(async ({ context, input }) => {
-      const chat = getChat(parseChatId(input));
+      const chatId = arkType("string")(input);
+      if (chatId instanceof arkType.errors) {
+        throw new Error("Chat id is required.");
+      }
+      const chat = getChat(chatId);
       if (!chat) {
         throw new Error("Chat not found.");
       }
@@ -92,7 +146,21 @@ export const chatIpcRouter = {
       });
     }),
 
-  chatSend: t.procedure
-    .input<ChatSendInput>()
-    .action(async ({ input }) => sendChat(parseChatSendInput(input))),
+  chatSend: t.procedure.input<ChatSendInput>().action(async ({ input }) => {
+    const value = chatSendInput(input);
+    if (value instanceof arkType.errors) {
+      throw new Error("Chat input is required.");
+    }
+    return sendChat({
+      attachments: normalizeChatAttachmentsInput(value.attachments),
+      chatId: value.chatId,
+      model: value.model,
+      projectId: value.projectId,
+      mode: value.mode,
+      prewarmId: value.prewarmId,
+      reasoningEffort: value.reasoningEffort,
+      runtime: value.runtime ? normalizeAgentRuntime(value.runtime) : undefined,
+      text: value.text,
+    });
+  }),
 };

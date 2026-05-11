@@ -16,13 +16,13 @@ export const elicitationResponse = type({
 export const chatStreamStartInput = type({
   input: {
     attachments: "unknown",
-    "chatId?": "string",
-    "model?": "string",
-    "mode?": "string",
-    "prewarmId?": "string",
-    "projectId?": "string",
-    "reasoningEffort?": "string",
-    "runtime?": "string",
+    "chatId?": "string | undefined",
+    "model?": "string | undefined",
+    "mode?": "string | undefined",
+    "prewarmId?": "string | undefined",
+    "projectId?": "string | undefined",
+    "reasoningEffort?": "string | undefined",
+    "runtime?": "string | undefined",
     text: "string > 0",
   },
   streamId: "string > 0",
@@ -37,36 +37,36 @@ export const chatStreamElicitationResolveInput = type({
 // Input parser schemas
 export const chatCreateInput = type({
   "+": "ignore",
-  "model?": "string",
-  "mode?": "string",
-  "projectId?": "string",
-  "reasoningEffort?": "string",
-  "runtime?": "string",
-  "title?": "string",
+  "model?": "string | undefined",
+  "mode?": "string | undefined",
+  "projectId?": "string | undefined",
+  "reasoningEffort?": "string | undefined",
+  "runtime?": "string | undefined",
+  "title?": "string | undefined",
 });
 
 export const chatPrewarmInput = type({
   "+": "ignore",
-  "projectId?": "string",
-  "runtime?": "string",
+  "projectId?": "string | undefined",
+  "runtime?": "string | undefined",
 });
 
 export const chatRuntimeConfigInput = type({
   "+": "ignore",
-  "cwd?": "string",
-  "runtime?": "string",
+  "cwd?": "string | undefined",
+  "runtime?": "string | undefined",
 });
 
 export const chatSendInput = type({
   "+": "ignore",
-  "attachments?": "unknown",
-  "chatId?": "string",
-  "model?": "string",
-  "mode?": "string",
-  "prewarmId?": "string",
-  "projectId?": "string",
-  "reasoningEffort?": "string",
-  "runtime?": "string",
+  "attachments?": "unknown | undefined",
+  "chatId?": "string | undefined",
+  "model?": "string | undefined",
+  "mode?": "string | undefined",
+  "prewarmId?": "string | undefined",
+  "projectId?": "string | undefined",
+  "reasoningEffort?": "string | undefined",
+  "runtime?": "string | undefined",
   text: "string > 0",
 });
 

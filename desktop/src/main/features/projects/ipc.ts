@@ -1,5 +1,6 @@
 import { BrowserWindow, dialog, Menu, shell } from "electron";
 import { tipc } from "@egoist/tipc/main";
+import { type as arkType } from "arktype";
 
 import type {
   CreateProjectInput,
@@ -8,18 +9,17 @@ import type {
 import type { ProjectFileSearchInput } from "../../../shared/chat";
 import { searchProjectFiles } from "./file-search";
 import {
+  createProjectInput,
+  projectFileSearchInput,
+  updateProjectInput,
+} from "./schemas";
+import {
   createProject,
   deleteProject,
   getProject,
   listProjects,
   updateProject,
 } from "./repository";
-import {
-  parseCreateProjectInput,
-  parseProjectFileSearchInput,
-  parseProjectId,
-  parseUpdateProjectInput,
-} from "./input-schemas";
 
 const t = tipc.create();
 
@@ -35,28 +35,61 @@ export const projectIpcRouter = {
 
   projectsCreate: t.procedure
     .input<CreateProjectInput>()
-    .action(async ({ input }) => createProject(parseCreateProjectInput(input))),
+    .action(async ({ input }) => {
+      const value = createProjectInput(input);
+      if (value instanceof arkType.errors) {
+        throw new Error("Project input is required.");
+      }
+      return createProject({
+        id: value.id,
+        path: value.path,
+      });
+    }),
 
-  projectsDelete: t.procedure
-    .input<string>()
-    .action(async ({ input }) => deleteProject(parseProjectId(input))),
+  projectsDelete: t.procedure.input<string>().action(async ({ input }) => {
+    const value = arkType("string")(input);
+    if (value instanceof arkType.errors) {
+      throw new Error("Project id is required.");
+    }
+    return deleteProject(value);
+  }),
 
-  projectsGet: t.procedure
-    .input<string>()
-    .action(async ({ input }) => getProject(parseProjectId(input))),
+  projectsGet: t.procedure.input<string>().action(async ({ input }) => {
+    const value = arkType("string")(input);
+    if (value instanceof arkType.errors) {
+      throw new Error("Project id is required.");
+    }
+    return getProject(value);
+  }),
 
   projectsList: t.procedure.action(async () => listProjects()),
 
   projectsSearchFiles: t.procedure
     .input<ProjectFileSearchInput>()
-    .action(async ({ input }) =>
-      searchProjectFiles(parseProjectFileSearchInput(input)),
-    ),
+    .action(async ({ input }) => {
+      const value = projectFileSearchInput(input);
+      if (value instanceof arkType.errors) {
+        throw new Error("Project file search input is required.");
+      }
+      const query = {
+        limit:
+          typeof value.limit === "number" && Number.isFinite(value.limit)
+            ? value.limit
+            : undefined,
+        query: value.query,
+        root: value.root,
+      };
+      return searchProjectFiles(query);
+    }),
 
   projectsShowContextMenu: t.procedure
     .input<string>()
     .action(async ({ context, input }) => {
-      const project = getProject(parseProjectId(input));
+      const projectId = arkType("string")(input);
+      if (projectId instanceof arkType.errors) {
+        throw new Error("Project id is required.");
+      }
+      const project = getProject(projectId);
       if (!project) {
         throw new Error("Project not found.");
       }
@@ -89,5 +122,14 @@ export const projectIpcRouter = {
 
   projectsUpdate: t.procedure
     .input<UpdateProjectInput>()
-    .action(async ({ input }) => updateProject(parseUpdateProjectInput(input))),
+    .action(async ({ input }) => {
+      const value = updateProjectInput(input);
+      if (value instanceof arkType.errors) {
+        throw new Error("Project input is required.");
+      }
+      return updateProject({
+        id: value.id,
+        path: value.path,
+      });
+    }),
 };
