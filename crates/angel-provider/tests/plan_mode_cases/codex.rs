@@ -407,7 +407,7 @@ fn codex_hydrate_restores_host_capability_question_and_answer() {
     );
 
     let conversation = &engine.conversations[&conversation_id];
-    let messages = conversation_display_messages(ProtocolFlavor::CodexAppServer, conversation);
+    let messages = conversation_display_messages(conversation);
     let action = messages
         .iter()
         .flat_map(|message| message.content.iter())

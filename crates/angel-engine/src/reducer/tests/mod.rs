@@ -1,4 +1,8 @@
-use crate::capabilities::{CapabilitySupport, ConversationCapabilities, RuntimeCapabilities};
+use crate::capabilities::{
+    ActionCapabilities, CapabilitySupport, ConversationCapabilities, ContextCapabilities,
+    ElicitationCapabilities, HistoryCapabilities, LifecycleCapabilities, ObserverCapabilities,
+    RuntimeCapabilities, TurnCapabilities,
+};
 use crate::command::{EngineCommand, TurnOverrides, UserInput};
 use crate::event::EngineEvent;
 use crate::ids::{ConversationId, RemoteConversationId, RemoteTurnId, TurnId};
@@ -20,11 +24,56 @@ pub(super) fn runtime(name: &str) -> RuntimeCapabilities {
 }
 
 pub(super) fn acp_capabilities() -> ConversationCapabilities {
-    ConversationCapabilities::acp_standard()
+    ConversationCapabilities {
+        lifecycle: LifecycleCapabilities {
+            create: CapabilitySupport::Supported,
+            list: CapabilitySupport::Supported,
+            load: CapabilitySupport::Unknown,
+            resume: CapabilitySupport::Unknown,
+            fork: CapabilitySupport::Unsupported,
+            archive: CapabilitySupport::Unsupported,
+            close: CapabilitySupport::Unknown,
+        },
+        turn: TurnCapabilities {
+            start: CapabilitySupport::Supported,
+            steer: CapabilitySupport::Unsupported,
+            cancel: CapabilitySupport::Supported,
+            max_active_turns: 1,
+            requires_expected_turn_id_for_steer: false,
+        },
+        action: ActionCapabilities {
+            observe: CapabilitySupport::Supported,
+            stream_output: CapabilitySupport::Supported,
+            decline: CapabilitySupport::Supported,
+        },
+        elicitation: ElicitationCapabilities {
+            approval: CapabilitySupport::Supported,
+            user_input: CapabilitySupport::Unknown,
+            external_flow: CapabilitySupport::Unknown,
+            dynamic_tool_call: CapabilitySupport::Unknown,
+        },
+        history: HistoryCapabilities {
+            hydrate: CapabilitySupport::Unknown,
+            compact: CapabilitySupport::Unsupported,
+            rollback: CapabilitySupport::Unsupported,
+            inject_items: CapabilitySupport::Unsupported,
+        },
+        context: ContextCapabilities {
+            mode: CapabilitySupport::Supported,
+            config: CapabilitySupport::Unknown,
+            additional_directories: CapabilitySupport::Unknown,
+            turn_overrides: CapabilitySupport::Unsupported,
+            explicit_context_updates: CapabilitySupport::Supported,
+            model: CapabilitySupport::Supported,
+        },
+        observer: ObserverCapabilities {
+            unsubscribe: CapabilitySupport::Unsupported,
+        },
+    }
 }
 
 pub(super) fn acp_capabilities_with_steer_extension(name: &str) -> ConversationCapabilities {
-    let mut capabilities = ConversationCapabilities::acp_standard();
+    let mut capabilities = acp_capabilities();
     capabilities.turn.steer = CapabilitySupport::Extension {
         name: name.to_string(),
     };
@@ -32,7 +81,52 @@ pub(super) fn acp_capabilities_with_steer_extension(name: &str) -> ConversationC
 }
 
 pub(super) fn codex_capabilities() -> ConversationCapabilities {
-    ConversationCapabilities::codex_app_server()
+    ConversationCapabilities {
+        lifecycle: LifecycleCapabilities {
+            create: CapabilitySupport::Supported,
+            list: CapabilitySupport::Supported,
+            load: CapabilitySupport::Supported,
+            resume: CapabilitySupport::Supported,
+            fork: CapabilitySupport::Supported,
+            archive: CapabilitySupport::Supported,
+            close: CapabilitySupport::Unknown,
+        },
+        turn: TurnCapabilities {
+            start: CapabilitySupport::Supported,
+            steer: CapabilitySupport::Supported,
+            cancel: CapabilitySupport::Supported,
+            max_active_turns: 1,
+            requires_expected_turn_id_for_steer: true,
+        },
+        action: ActionCapabilities {
+            observe: CapabilitySupport::Supported,
+            stream_output: CapabilitySupport::Supported,
+            decline: CapabilitySupport::Supported,
+        },
+        elicitation: ElicitationCapabilities {
+            approval: CapabilitySupport::Supported,
+            user_input: CapabilitySupport::Supported,
+            external_flow: CapabilitySupport::Supported,
+            dynamic_tool_call: CapabilitySupport::Supported,
+        },
+        history: HistoryCapabilities {
+            hydrate: CapabilitySupport::Supported,
+            compact: CapabilitySupport::Supported,
+            rollback: CapabilitySupport::Supported,
+            inject_items: CapabilitySupport::Supported,
+        },
+        context: ContextCapabilities {
+            mode: CapabilitySupport::Supported,
+            config: CapabilitySupport::Supported,
+            additional_directories: CapabilitySupport::Unsupported,
+            turn_overrides: CapabilitySupport::Supported,
+            explicit_context_updates: CapabilitySupport::Unsupported,
+            model: CapabilitySupport::Supported,
+        },
+        observer: ObserverCapabilities {
+            unsubscribe: CapabilitySupport::Supported,
+        },
+    }
 }
 
 pub(super) fn engine_with(

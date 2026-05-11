@@ -1,5 +1,9 @@
 use std::collections::BTreeMap;
 
+fn capability_unknown() -> CapabilitySupport {
+    CapabilitySupport::Unknown
+}
+
 #[derive(serde::Serialize, serde::Deserialize, Clone, Debug, PartialEq, Eq)]
 pub enum CapabilitySupport {
     Unsupported,
@@ -64,101 +68,7 @@ pub struct ConversationCapabilities {
     pub observer: ObserverCapabilities,
 }
 
-impl ConversationCapabilities {
-    pub fn acp_standard() -> Self {
-        Self {
-            lifecycle: LifecycleCapabilities {
-                create: CapabilitySupport::Supported,
-                list: CapabilitySupport::Supported,
-                load: CapabilitySupport::Unknown,
-                resume: CapabilitySupport::Unknown,
-                fork: CapabilitySupport::Unsupported,
-                archive: CapabilitySupport::Unsupported,
-                close: CapabilitySupport::Unknown,
-            },
-            turn: TurnCapabilities {
-                start: CapabilitySupport::Supported,
-                steer: CapabilitySupport::Unsupported,
-                cancel: CapabilitySupport::Supported,
-                max_active_turns: 1,
-                requires_expected_turn_id_for_steer: false,
-            },
-            action: ActionCapabilities {
-                observe: CapabilitySupport::Supported,
-                stream_output: CapabilitySupport::Supported,
-                decline: CapabilitySupport::Supported,
-            },
-            elicitation: ElicitationCapabilities {
-                approval: CapabilitySupport::Supported,
-                user_input: CapabilitySupport::Unknown,
-                external_flow: CapabilitySupport::Unknown,
-                dynamic_tool_call: CapabilitySupport::Unknown,
-            },
-            history: HistoryCapabilities {
-                hydrate: CapabilitySupport::Unknown,
-                compact: CapabilitySupport::Unsupported,
-                rollback: CapabilitySupport::Unsupported,
-                inject_items: CapabilitySupport::Unsupported,
-            },
-            context: ContextCapabilities {
-                mode: CapabilitySupport::Unknown,
-                config: CapabilitySupport::Unknown,
-                additional_directories: CapabilitySupport::Unknown,
-                turn_overrides: CapabilitySupport::Unsupported,
-            },
-            observer: ObserverCapabilities {
-                unsubscribe: CapabilitySupport::Unsupported,
-            },
-        }
-    }
 
-    pub fn codex_app_server() -> Self {
-        Self {
-            lifecycle: LifecycleCapabilities {
-                create: CapabilitySupport::Supported,
-                list: CapabilitySupport::Supported,
-                load: CapabilitySupport::Supported,
-                resume: CapabilitySupport::Supported,
-                fork: CapabilitySupport::Supported,
-                archive: CapabilitySupport::Supported,
-                close: CapabilitySupport::Unknown,
-            },
-            turn: TurnCapabilities {
-                start: CapabilitySupport::Supported,
-                steer: CapabilitySupport::Supported,
-                cancel: CapabilitySupport::Supported,
-                max_active_turns: 1,
-                requires_expected_turn_id_for_steer: true,
-            },
-            action: ActionCapabilities {
-                observe: CapabilitySupport::Supported,
-                stream_output: CapabilitySupport::Supported,
-                decline: CapabilitySupport::Supported,
-            },
-            elicitation: ElicitationCapabilities {
-                approval: CapabilitySupport::Supported,
-                user_input: CapabilitySupport::Supported,
-                external_flow: CapabilitySupport::Supported,
-                dynamic_tool_call: CapabilitySupport::Supported,
-            },
-            history: HistoryCapabilities {
-                hydrate: CapabilitySupport::Supported,
-                compact: CapabilitySupport::Supported,
-                rollback: CapabilitySupport::Supported,
-                inject_items: CapabilitySupport::Supported,
-            },
-            context: ContextCapabilities {
-                mode: CapabilitySupport::Supported,
-                config: CapabilitySupport::Supported,
-                additional_directories: CapabilitySupport::Unsupported,
-                turn_overrides: CapabilitySupport::Supported,
-            },
-            observer: ObserverCapabilities {
-                unsubscribe: CapabilitySupport::Supported,
-            },
-        }
-    }
-}
 
 #[derive(serde::Serialize, serde::Deserialize, Clone, Debug, PartialEq, Eq)]
 pub struct LifecycleCapabilities {
@@ -209,6 +119,14 @@ pub struct ContextCapabilities {
     pub config: CapabilitySupport,
     pub additional_directories: CapabilitySupport,
     pub turn_overrides: CapabilitySupport,
+    /// Whether this protocol sends explicit context-update requests (e.g. set_session_model)
+    /// when the user changes settings. Protocols that embed context in request fields instead
+    /// (e.g. Codex) leave this `Unsupported`; ACP-family protocols set it to `Supported`.
+    #[serde(default = "capability_unknown")]
+    pub explicit_context_updates: CapabilitySupport,
+    /// Whether this conversation supports changing the model via the settings API.
+    #[serde(default = "capability_unknown")]
+    pub model: CapabilitySupport,
 }
 
 #[derive(serde::Serialize, serde::Deserialize, Clone, Debug, PartialEq, Eq)]

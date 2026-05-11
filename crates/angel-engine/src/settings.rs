@@ -2,7 +2,6 @@ use crate::command::EngineCommand;
 use crate::error::EngineError;
 use crate::event::{EngineEvent, TransitionReport};
 use crate::ids::ConversationId;
-use crate::protocol::ProtocolFlavor;
 use crate::reducer::{AngelEngine, CommandPlan};
 use crate::state::{
     AgentMode, ContextPatch, ContextScope, ContextUpdate, ConversationState, ReasoningProfile,
@@ -10,8 +9,6 @@ use crate::state::{
 };
 use std::fmt;
 use strum::Display;
-
-const CODEX_REASONING_LEVELS: &[&str] = &["none", "minimal", "low", "medium", "high", "xhigh"];
 
 /// A normalized identifier that strips non-alphanumeric characters and lowercases.
 /// Used for fuzzy-matching config option IDs and names.
@@ -81,11 +78,11 @@ pub struct ConversationSettingsState {
 }
 
 impl ConversationSettingsState {
-    pub fn from_conversation(protocol: ProtocolFlavor, conversation: &ConversationState) -> Self {
+    pub fn from_conversation(conversation: &ConversationState) -> Self {
         Self {
-            reasoning: ReasoningLevelState::from_conversation(protocol, conversation),
-            model_list: ModelListState::from_conversation(protocol, conversation),
-            available_modes: AvailableModeState::from_conversation(protocol, conversation),
+            reasoning: ReasoningLevelState::from_conversation(conversation),
+            model_list: ModelListState::from_conversation(conversation),
+            available_modes: AvailableModeState::from_conversation(conversation),
         }
     }
 }
@@ -101,7 +98,7 @@ pub struct ReasoningLevelState {
 }
 
 impl ReasoningLevelState {
-    pub fn from_conversation(protocol: ProtocolFlavor, conversation: &ConversationState) -> Self {
+    pub fn from_conversation(conversation: &ConversationState) -> Self {
         if let Some(option) = find_reasoning_config_option(&conversation.config_options) {
             let available_options = reasoning_options_from_config(option);
             return Self {
@@ -120,18 +117,6 @@ impl ReasoningLevelState {
             .effective()
             .and_then(Option::as_ref)
             .and_then(|reasoning| reasoning.effort.clone());
-
-        if protocol == ProtocolFlavor::CodexAppServer {
-            let available_options = reasoning_options_from_values(CODEX_REASONING_LEVELS);
-            return Self {
-                current_level: context_level,
-                available_levels: reasoning_option_values(&available_options),
-                available_options,
-                source: ReasoningLevelSource::CodexDefaults,
-                config_option_id: None,
-                can_set: true,
-            };
-        }
 
         if let Some(inferred_level) = model_variant_reasoning_level(conversation) {
             let available_options = reasoning_options_from_values(&["none", "thinking"]);
@@ -166,7 +151,7 @@ pub struct ReasoningLevelOption {
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum ReasoningLevelSource {
     ConfigOption,
-    CodexDefaults,
+    ProviderDefaults,
     ModelVariant,
     Unsupported,
 }
@@ -175,7 +160,7 @@ impl ReasoningLevelSource {
     pub fn as_str(self) -> &'static str {
         match self {
             Self::ConfigOption => "configOption",
-            Self::CodexDefaults => "codexDefaults",
+            Self::ProviderDefaults => "providerDefaults",
             Self::ModelVariant => "modelVariant",
             Self::Unsupported => "unsupported",
         }
@@ -191,7 +176,7 @@ pub struct ModelListState {
 }
 
 impl ModelListState {
-    pub fn from_conversation(protocol: ProtocolFlavor, conversation: &ConversationState) -> Self {
+    pub fn from_conversation(conversation: &ConversationState) -> Self {
         let context_model = conversation
             .context
             .model
@@ -229,10 +214,7 @@ impl ModelListState {
             current_model_id: context_model,
             available_models: Vec::new(),
             config_option_id: None,
-            can_set: matches!(
-                protocol,
-                ProtocolFlavor::Acp | ProtocolFlavor::CodexAppServer
-            ),
+            can_set: conversation.capabilities.context.model.is_supported(),
         }
     }
 }
@@ -246,7 +228,7 @@ pub struct AvailableModeState {
 }
 
 impl AvailableModeState {
-    pub fn from_conversation(protocol: ProtocolFlavor, conversation: &ConversationState) -> Self {
+    pub fn from_conversation(conversation: &ConversationState) -> Self {
         let context_mode = conversation
             .context
             .mode
@@ -280,31 +262,11 @@ impl AvailableModeState {
             };
         }
 
-        if protocol == ProtocolFlavor::CodexAppServer {
-            return Self {
-                current_mode_id: Some(context_mode.unwrap_or_else(|| "default".to_string())),
-                available_modes: vec![
-                    SessionMode {
-                        id: "default".to_string(),
-                        name: "Default".to_string(),
-                        description: None,
-                    },
-                    SessionMode {
-                        id: "plan".to_string(),
-                        name: "Plan".to_string(),
-                        description: Some("Plan before making changes.".to_string()),
-                    },
-                ],
-                config_option_id: None,
-                can_set: true,
-            };
-        }
-
         Self {
             current_mode_id: context_mode,
             available_modes: Vec::new(),
             config_option_id: None,
-            can_set: protocol == ProtocolFlavor::Acp,
+            can_set: conversation.capabilities.context.mode.is_supported(),
         }
     }
 }
@@ -320,10 +282,7 @@ impl AngelEngine {
                 conversation_id: conversation_id.to_string(),
             }
         })?;
-        Ok(ConversationSettingsState::from_conversation(
-            self.protocol,
-            conversation,
-        ))
+        Ok(ConversationSettingsState::from_conversation(conversation))
     }
 
     pub fn get_reasoning_level(

@@ -60,6 +60,9 @@ impl CodexAdapter {
                         commands: codex_slash_commands(),
                     })
                     .log(TransportLogKind::State, format!("thread {thread_id} ready"));
+                for event in codex_conversation_defaults(engine, conversation_id) {
+                    output = output.event(event);
+                }
             }
             PendingRequest::ResumeConversation {
                 conversation_id,
@@ -84,6 +87,9 @@ impl CodexAdapter {
                         commands: codex_slash_commands(),
                     })
                     .log(TransportLogKind::State, format!("thread {thread_id} ready"));
+                for event in codex_conversation_defaults(engine, conversation_id) {
+                    output = output.event(event);
+                }
                 if *hydrate {
                     append_hydrated_turns(&mut output, conversation_id, result);
                 }
@@ -780,7 +786,88 @@ fn codex_thread_info_context(thread: &Value) -> ContextPatch {
     ContextPatch { updates }
 }
 
-#[cfg(test)]
+const CODEX_REASONING_LEVELS: &[(&str, &str)] = &[
+    ("none", "None"),
+    ("minimal", "Minimal"),
+    ("low", "Low"),
+    ("medium", "Medium"),
+    ("high", "High"),
+    ("xhigh", "X-High"),
+];
+
+/// Generates the default mode and reasoning-effort config option events for a newly-ready
+/// Codex conversation. These inject provider defaults into the engine so that the settings
+/// API can expose them without embedding Codex-specific knowledge in the engine.
+fn codex_conversation_defaults(
+    engine: &AngelEngine,
+    conversation_id: &ConversationId,
+) -> Vec<EngineEvent> {
+    let conversation = match engine.conversations.get(conversation_id) {
+        Some(c) => c,
+        None => return Vec::new(),
+    };
+
+    let current_effort = conversation
+        .context
+        .reasoning
+        .effective()
+        .and_then(Option::as_ref)
+        .and_then(|r| r.effort.clone())
+        .unwrap_or_else(|| "medium".to_string());
+
+    let current_mode = conversation
+        .context
+        .mode
+        .effective()
+        .and_then(Option::as_ref)
+        .map(|m| m.id.clone())
+        .unwrap_or_else(|| "default".to_string());
+
+    let reasoning_option = SessionConfigOption {
+        id: "reasoning_effort".to_string(),
+        name: "Reasoning Effort".to_string(),
+        description: None,
+        category: Some("thought_level".to_string()),
+        current_value: current_effort,
+        values: CODEX_REASONING_LEVELS
+            .iter()
+            .map(|(value, name)| SessionConfigValue {
+                value: value.to_string(),
+                name: name.to_string(),
+                description: None,
+            })
+            .collect(),
+    };
+
+    let mode_state = SessionModeState {
+        current_mode_id: current_mode,
+        available_modes: vec![
+            SessionMode {
+                id: "default".to_string(),
+                name: "Default".to_string(),
+                description: None,
+            },
+            SessionMode {
+                id: "plan".to_string(),
+                name: "Plan".to_string(),
+                description: Some("Plan before making changes.".to_string()),
+            },
+        ],
+    };
+
+    vec![
+        EngineEvent::SessionConfigOptionsUpdated {
+            conversation_id: conversation_id.clone(),
+            options: vec![reasoning_option],
+        },
+        EngineEvent::SessionModesUpdated {
+            conversation_id: conversation_id.clone(),
+            modes: mode_state,
+        },
+    ]
+}
+
+
 mod tests {
     use super::*;
 

@@ -244,6 +244,28 @@ fn set_mode_materializes_inferred_current_mode() {
         capabilities.clone(),
     );
 
+    // Simulate the mode state that the Codex adapter injects on ConversationReady.
+    engine
+        .apply_event(EngineEvent::SessionModesUpdated {
+            conversation_id: conversation_id.clone(),
+            modes: SessionModeState {
+                current_mode_id: "default".to_string(),
+                available_modes: vec![
+                    SessionMode {
+                        id: "default".to_string(),
+                        name: "Default".to_string(),
+                        description: None,
+                    },
+                    SessionMode {
+                        id: "plan".to_string(),
+                        name: "Plan".to_string(),
+                        description: Some("Plan before making changes.".to_string()),
+                    },
+                ],
+            },
+        })
+        .expect("inject mode state");
+
     let settings = engine
         .conversation_settings(conversation_id.clone())
         .expect("settings");
@@ -251,6 +273,7 @@ fn set_mode_materializes_inferred_current_mode() {
         settings.available_modes.current_mode_id.as_deref(),
         Some("default")
     );
+    // SessionModesUpdated also syncs the context mode so it matches the injected state.
     assert_eq!(
         engine
             .conversations
@@ -258,8 +281,10 @@ fn set_mode_materializes_inferred_current_mode() {
             .unwrap()
             .context
             .mode
-            .effective(),
-        None
+            .effective()
+            .and_then(Option::as_ref)
+            .map(|m| m.id.as_str()),
+        Some("default")
     );
 
     let plan = engine
@@ -412,6 +437,8 @@ fn acp_start_turn_rejects_unsupported_turn_overrides() {
 
 #[test]
 fn codex_start_turn_includes_sticky_context_overrides() {
+    // Verifies that context updates applied to a Codex conversation are persisted in the
+    // conversation state and are therefore available to the adapter when it encodes the turn.
     let capabilities = codex_capabilities();
     let mut engine = engine_with(ProtocolFlavor::CodexAppServer, capabilities.clone());
     let conversation_id = insert_ready_conversation(
@@ -461,6 +488,45 @@ fn codex_start_turn_includes_sticky_context_overrides() {
         .expect("context update");
     assert!(plan.effects.is_empty());
 
+    // Verify the context has been persisted in conversation state (the adapter reads from here
+    // when encoding the turn request, instead of from effect payload fields).
+    let conversation = engine.conversations.get(&conversation_id).unwrap();
+    assert_eq!(
+        conversation.context.model.effective().and_then(Option::as_deref),
+        Some("gpt-5.5")
+    );
+    assert_eq!(
+        conversation
+            .context
+            .mode
+            .effective()
+            .and_then(Option::as_ref)
+            .map(|m| m.id.as_str()),
+        Some("plan")
+    );
+    assert_eq!(
+        conversation
+            .context
+            .reasoning
+            .effective()
+            .and_then(Option::as_ref)
+            .and_then(|r| r.effort.as_deref()),
+        Some("high")
+    );
+    assert_eq!(
+        conversation.context.approvals.effective(),
+        Some(&ApprovalPolicy::Never)
+    );
+    assert_eq!(
+        conversation
+            .context
+            .permissions
+            .effective()
+            .map(|p| p.name.as_str()),
+        Some("default")
+    );
+
+    // StartTurn effect does not embed context in its payload fields; that is the adapter's job.
     let turn = engine
         .plan_command(EngineCommand::StartTurn {
             conversation_id,
@@ -469,10 +535,8 @@ fn codex_start_turn_includes_sticky_context_overrides() {
         })
         .expect("start turn");
     let fields = &turn.effects[0].payload.fields;
-    assert_eq!(fields.get("model"), Some(&"gpt-5.5".to_string()));
-    assert_eq!(fields.get("collaborationMode"), Some(&"plan".to_string()));
-    assert_eq!(fields.get("effort"), Some(&"high".to_string()));
-    assert_eq!(fields.get("approvalPolicy"), Some(&"never".to_string()));
-    assert_eq!(fields.get("permissions"), Some(&"default".to_string()));
-    assert_eq!(fields.get("sandboxPolicy"), None);
+    assert!(!fields.contains_key("model"));
+    assert!(!fields.contains_key("collaborationMode"));
+    assert!(!fields.contains_key("effort"));
+    assert!(!fields.contains_key("approvalPolicy"));
 }

@@ -4,7 +4,7 @@ use angel_engine::{
     ActionKind, ActionOutputDelta, ActionPhase, ActionState, AgentMode, AvailableCommand,
     ContentDelta, ContentPart, ConversationLifecycle, ConversationState, EffectiveContext,
     ElicitationKind, ElicitationPhase, ElicitationState, HistoryReplayEntry, HistoryRole,
-    PlanEntryStatus, ProtocolFlavor, QuestionValueType, RuntimeState, SessionUsageCost,
+    PlanEntryStatus, QuestionValueType, RuntimeState, SessionUsageCost,
     SessionUsageState, TurnPhase, TurnState, UserQuestion, UserQuestionOption, UserQuestionSchema,
 };
 use serde::{Deserialize, Serialize};
@@ -28,7 +28,7 @@ impl From<&angel_engine::AngelEngine> for ClientSnapshot {
             conversations: engine
                 .conversations
                 .values()
-                .map(|conversation| conversation_snapshot(engine.protocol, conversation))
+                .map(|conversation| conversation_snapshot(conversation))
                 .collect(),
         }
     }
@@ -106,7 +106,6 @@ pub struct ConversationSnapshot {
 }
 
 pub(crate) fn conversation_snapshot(
-    protocol: ProtocolFlavor,
     conversation: &ConversationState,
 ) -> ConversationSnapshot {
     let (remote_kind, remote_id) = match &conversation.remote {
@@ -137,7 +136,7 @@ pub(crate) fn conversation_snapshot(
         .map(HistoryReplaySnapshot::from)
         .collect::<Vec<_>>();
     let context = ContextSnapshot::from(&conversation.context);
-    let settings = ThreadSettingsSnapshot::from_conversation(protocol, conversation);
+    let settings = ThreadSettingsSnapshot::from_conversation(conversation);
     let agent_state = AgentStateSnapshot::from_context_and_settings(&context, &settings);
     ConversationSnapshot {
         id: conversation.id.to_string(),
@@ -151,7 +150,7 @@ pub(crate) fn conversation_snapshot(
             .collect(),
         focused_turn_id: conversation.focused_turn.as_ref().map(ToString::to_string),
         context,
-        messages: angel_engine::conversation_display_messages(protocol, conversation)
+        messages: angel_engine::conversation_display_messages(conversation)
             .iter()
             .map(DisplayMessageSnapshot::from)
             .collect(),

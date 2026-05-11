@@ -65,9 +65,9 @@ fn acp_wire_method(method: &ProtocolMethod) -> String {
         ProtocolMethod::UnarchiveConversation => "conversation/unarchive".to_string(),
         ProtocolMethod::CloseConversation => "session/close".to_string(),
         ProtocolMethod::Unsubscribe => "session/unsubscribe".to_string(),
-        ProtocolMethod::SetSessionModel => "session/set_session_model".to_string(),
-        ProtocolMethod::SetSessionMode => "session/set_session_mode".to_string(),
-        ProtocolMethod::SetSessionConfigOption => "session/set_session_config_option".to_string(),
+        ProtocolMethod::SetSessionModel => "session/set_model".to_string(),
+        ProtocolMethod::SetSessionMode => "session/set_mode".to_string(),
+        ProtocolMethod::SetSessionConfigOption => "session/set_config_option".to_string(),
         ProtocolMethod::Extension(method) => method.clone(),
         _ => method_name(method),
     }

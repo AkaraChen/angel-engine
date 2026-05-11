@@ -9,7 +9,8 @@ use angel_engine_client::{
     ClientOptions as EngineClientOptions, ClientProtocol as EngineClientProtocol,
     ClientSnapshot as EngineClientSnapshot, RuntimeAdapter as EngineRuntimeAdapter,
 };
-use angel_provider::acp::AcpAdapter as EngineAcpAdapter;
+use angel_provider::acp::{AcpAdapter as EngineAcpAdapter, AcpAdapterCapabilities};
+use angel_provider::codex::CodexAdapter as EngineCodexAdapter;
 use angel_provider::{InterpretedUserInput, ProtocolAdapter as EngineProtocolAdapter};
 use napi::JsValue;
 use napi::bindgen_prelude::*;
@@ -732,8 +733,8 @@ fn capabilities_from_js(
         return Ok(base.capabilities());
     }
     Ok(match flavor {
-        ProtocolFlavor::Acp => ConversationCapabilities::acp_standard(),
-        ProtocolFlavor::CodexAppServer => ConversationCapabilities::codex_app_server(),
+        ProtocolFlavor::Acp => AcpAdapterCapabilities::standard().conversation,
+        ProtocolFlavor::CodexAppServer => EngineCodexAdapter::app_server().capabilities(),
     })
 }
 

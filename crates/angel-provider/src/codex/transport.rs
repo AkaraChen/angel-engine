@@ -60,7 +60,7 @@ fn codex_wire_method(method: &ProtocolMethod) -> String {
         ProtocolMethod::CancelTurn => "turn/interrupt".to_string(),
         ProtocolMethod::ArchiveConversation => "thread/archive".to_string(),
         ProtocolMethod::UnarchiveConversation => "thread/unarchive".to_string(),
-        ProtocolMethod::CompactHistory => "thread/compactStart".to_string(),
+        ProtocolMethod::CompactHistory => "thread/compact/start".to_string(),
         ProtocolMethod::RollbackHistory => "thread/rollback".to_string(),
         ProtocolMethod::InjectHistoryItems => "thread/injectItems".to_string(),
         ProtocolMethod::CloseConversation => "thread/close".to_string(),

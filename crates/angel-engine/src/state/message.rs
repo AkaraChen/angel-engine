@@ -4,7 +4,6 @@ use serde_json::Value;
 
 use crate::error::ErrorInfo;
 use crate::ids::{ActionId, TurnId};
-use crate::protocol::ProtocolFlavor;
 
 use super::{
     ActionKind, ActionOutputDelta, ActionPhase, ActionState, ContentDelta, ContentPart,
@@ -205,14 +204,16 @@ fn elicitation_input_summary(elicitation: &ElicitationState) -> Option<String> {
     })
 }
 
-pub fn conversation_display_messages(
-    protocol: ProtocolFlavor,
-    conversation: &ConversationState,
-) -> Vec<DisplayMessage> {
+pub fn conversation_display_messages(conversation: &ConversationState) -> Vec<DisplayMessage> {
+    let has_explicit_context_updates = conversation
+        .capabilities
+        .context
+        .explicit_context_updates
+        .is_supported();
     let mut messages = Vec::new();
 
     for (index, entry) in conversation.history.replay.iter().enumerate() {
-        append_history_display_message(&mut messages, protocol, entry, index);
+        append_history_display_message(&mut messages, has_explicit_context_updates, entry, index);
     }
 
     for turn in conversation.turns.values() {
@@ -332,7 +333,7 @@ fn ordered_display_content_from_turn(
 
 fn append_history_display_message(
     messages: &mut Vec<DisplayMessage>,
-    protocol: ProtocolFlavor,
+    has_explicit_context_updates: bool,
     entry: &HistoryReplayEntry,
     index: usize,
 ) {
@@ -350,7 +351,7 @@ fn append_history_display_message(
         }),
         HistoryRole::Tool => {
             let fallback_id = format!("history-tool-{index}");
-            let action = history_tool_action(protocol, &entry.content, fallback_id);
+            let action = history_tool_action(has_explicit_context_updates, &entry.content, fallback_id);
             upsert_display_tool_part(ensure_history_assistant_message(messages), action);
         }
         HistoryRole::Reasoning => append_display_text_part(
@@ -490,7 +491,7 @@ fn merge_display_tool_actions(
 }
 
 fn history_tool_action(
-    protocol: ProtocolFlavor,
+    has_explicit_context_updates: bool,
     content: &ContentDelta,
     fallback_id: String,
 ) -> DisplayToolAction {
@@ -500,7 +501,9 @@ fn history_tool_action(
         if is_acp_tool_update(value) {
             return acp_history_tool_action(value, fallback_id);
         }
-        if is_codex_tool_item(value) || matches!(protocol, ProtocolFlavor::CodexAppServer) {
+        // Protocols without explicit context updates (e.g. Codex) embed context
+        // in request fields; their history items use Codex wire shapes.
+        if is_codex_tool_item(value) || !has_explicit_context_updates {
             return codex_history_tool_action(value, fallback_id);
         }
     }
@@ -1071,13 +1074,116 @@ mod tests {
 
     use super::*;
     use crate::{
-        ConversationCapabilities, ConversationId, ConversationLifecycle, PlanEntryStatus,
-        PlanState, RemoteConversationId, RemoteTurnId, UserImageInputRef, UserInputRef,
+        CapabilitySupport, ConversationCapabilities, ConversationId, ConversationLifecycle,
+        PlanEntryStatus, PlanState, RemoteConversationId, RemoteTurnId, UserImageInputRef,
+        UserInputRef,
+        capabilities::{
+            ActionCapabilities, ContextCapabilities, ElicitationCapabilities, HistoryCapabilities,
+            LifecycleCapabilities, ObserverCapabilities, TurnCapabilities,
+        },
     };
+
+    fn codex_capabilities() -> ConversationCapabilities {
+        ConversationCapabilities {
+            lifecycle: LifecycleCapabilities {
+                create: CapabilitySupport::Supported,
+                list: CapabilitySupport::Supported,
+                load: CapabilitySupport::Supported,
+                resume: CapabilitySupport::Supported,
+                fork: CapabilitySupport::Supported,
+                archive: CapabilitySupport::Supported,
+                close: CapabilitySupport::Unknown,
+            },
+            turn: TurnCapabilities {
+                start: CapabilitySupport::Supported,
+                steer: CapabilitySupport::Supported,
+                cancel: CapabilitySupport::Supported,
+                max_active_turns: 1,
+                requires_expected_turn_id_for_steer: true,
+            },
+            action: ActionCapabilities {
+                observe: CapabilitySupport::Supported,
+                stream_output: CapabilitySupport::Supported,
+                decline: CapabilitySupport::Supported,
+            },
+            elicitation: ElicitationCapabilities {
+                approval: CapabilitySupport::Supported,
+                user_input: CapabilitySupport::Supported,
+                external_flow: CapabilitySupport::Supported,
+                dynamic_tool_call: CapabilitySupport::Supported,
+            },
+            history: HistoryCapabilities {
+                hydrate: CapabilitySupport::Supported,
+                compact: CapabilitySupport::Supported,
+                rollback: CapabilitySupport::Supported,
+                inject_items: CapabilitySupport::Supported,
+            },
+            context: ContextCapabilities {
+                mode: CapabilitySupport::Supported,
+                config: CapabilitySupport::Supported,
+                additional_directories: CapabilitySupport::Unsupported,
+                turn_overrides: CapabilitySupport::Supported,
+                explicit_context_updates: CapabilitySupport::Unsupported,
+                model: CapabilitySupport::Supported,
+            },
+            observer: ObserverCapabilities {
+                unsubscribe: CapabilitySupport::Supported,
+            },
+        }
+    }
+
+    fn acp_capabilities() -> ConversationCapabilities {
+        ConversationCapabilities {
+            lifecycle: LifecycleCapabilities {
+                create: CapabilitySupport::Supported,
+                list: CapabilitySupport::Supported,
+                load: CapabilitySupport::Unknown,
+                resume: CapabilitySupport::Unknown,
+                fork: CapabilitySupport::Unsupported,
+                archive: CapabilitySupport::Unsupported,
+                close: CapabilitySupport::Unknown,
+            },
+            turn: TurnCapabilities {
+                start: CapabilitySupport::Supported,
+                steer: CapabilitySupport::Unsupported,
+                cancel: CapabilitySupport::Supported,
+                max_active_turns: 1,
+                requires_expected_turn_id_for_steer: false,
+            },
+            action: ActionCapabilities {
+                observe: CapabilitySupport::Supported,
+                stream_output: CapabilitySupport::Supported,
+                decline: CapabilitySupport::Supported,
+            },
+            elicitation: ElicitationCapabilities {
+                approval: CapabilitySupport::Supported,
+                user_input: CapabilitySupport::Unknown,
+                external_flow: CapabilitySupport::Unknown,
+                dynamic_tool_call: CapabilitySupport::Unknown,
+            },
+            history: HistoryCapabilities {
+                hydrate: CapabilitySupport::Unknown,
+                compact: CapabilitySupport::Unsupported,
+                rollback: CapabilitySupport::Unsupported,
+                inject_items: CapabilitySupport::Unsupported,
+            },
+            context: ContextCapabilities {
+                mode: CapabilitySupport::Supported,
+                config: CapabilitySupport::Unknown,
+                additional_directories: CapabilitySupport::Unknown,
+                turn_overrides: CapabilitySupport::Unsupported,
+                explicit_context_updates: CapabilitySupport::Supported,
+                model: CapabilitySupport::Supported,
+            },
+            observer: ObserverCapabilities {
+                unsubscribe: CapabilitySupport::Unsupported,
+            },
+        }
+    }
 
     #[test]
     fn codex_hydrated_history_projects_tool_parts() {
-        let mut conversation = conversation(ConversationCapabilities::codex_app_server());
+        let mut conversation = conversation(codex_capabilities());
         conversation.history.replay = vec![
             HistoryReplayEntry {
                 role: HistoryRole::User,
@@ -1112,7 +1218,7 @@ mod tests {
             },
         ];
 
-        let messages = conversation_display_messages(ProtocolFlavor::CodexAppServer, &conversation);
+        let messages = conversation_display_messages(&conversation);
 
         assert_eq!(messages.len(), 2);
         assert_eq!(messages[0].role, DisplayMessageRole::User);
@@ -1147,7 +1253,7 @@ mod tests {
 
     #[test]
     fn acp_hydrated_history_projects_tool_parts() {
-        let mut conversation = conversation(ConversationCapabilities::acp_standard());
+        let mut conversation = conversation(acp_capabilities());
         conversation.history.replay = vec![
             HistoryReplayEntry {
                 role: HistoryRole::User,
@@ -1188,7 +1294,7 @@ mod tests {
             },
         ];
 
-        let messages = conversation_display_messages(ProtocolFlavor::Acp, &conversation);
+        let messages = conversation_display_messages(&conversation);
 
         assert_eq!(messages.len(), 2);
         let tool = match &messages[1].content[0] {
@@ -1207,7 +1313,7 @@ mod tests {
 
     #[test]
     fn hydrated_history_keeps_review_plan_and_todo_plan_separate() {
-        let mut conversation = conversation(ConversationCapabilities::codex_app_server());
+        let mut conversation = conversation(codex_capabilities());
         conversation.history.replay = vec![
             HistoryReplayEntry {
                 role: HistoryRole::Assistant,
@@ -1234,7 +1340,7 @@ mod tests {
             },
         ];
 
-        let messages = conversation_display_messages(ProtocolFlavor::CodexAppServer, &conversation);
+        let messages = conversation_display_messages(&conversation);
 
         assert_eq!(messages.len(), 1);
         assert!(matches!(
@@ -1251,7 +1357,7 @@ mod tests {
 
     #[test]
     fn live_turn_projects_same_message_shape() {
-        let mut conversation = conversation(ConversationCapabilities::codex_app_server());
+        let mut conversation = conversation(codex_capabilities());
         let turn_id = TurnId::new("turn-1");
         let mut turn = TurnState::new(
             turn_id.clone(),
@@ -1284,7 +1390,7 @@ mod tests {
             .push(ActionOutputDelta::Text("## main\n".to_string()));
         conversation.actions.insert(action.id.clone(), action);
 
-        let messages = conversation_display_messages(ProtocolFlavor::CodexAppServer, &conversation);
+        let messages = conversation_display_messages(&conversation);
 
         assert_eq!(messages.len(), 2);
         assert_eq!(messages[0].role, DisplayMessageRole::User);
@@ -1304,7 +1410,7 @@ mod tests {
 
     #[test]
     fn live_turn_projects_plan_as_independent_part() {
-        let mut conversation = conversation(ConversationCapabilities::codex_app_server());
+        let mut conversation = conversation(codex_capabilities());
         let turn_id = TurnId::new("turn-1");
         let mut turn = TurnState::new(
             turn_id.clone(),
@@ -1335,7 +1441,7 @@ mod tests {
             .push(ContentDelta::Text("done".to_string()));
         conversation.turns.insert(turn_id, turn);
 
-        let messages = conversation_display_messages(ProtocolFlavor::CodexAppServer, &conversation);
+        let messages = conversation_display_messages(&conversation);
 
         assert_eq!(messages.len(), 1);
         assert!(matches!(
@@ -1356,7 +1462,7 @@ mod tests {
 
     #[test]
     fn live_turn_projects_image_input_parts() {
-        let mut conversation = conversation(ConversationCapabilities::codex_app_server());
+        let mut conversation = conversation(codex_capabilities());
         let turn_id = TurnId::new("turn-1");
         let mut turn = TurnState::new(
             turn_id.clone(),
@@ -1379,7 +1485,7 @@ mod tests {
         });
         conversation.turns.insert(turn_id, turn);
 
-        let messages = conversation_display_messages(ProtocolFlavor::CodexAppServer, &conversation);
+        let messages = conversation_display_messages(&conversation);
 
         assert_eq!(messages.len(), 1);
         assert_eq!(messages[0].role, DisplayMessageRole::User);
@@ -1397,7 +1503,7 @@ mod tests {
 
     #[test]
     fn hydrated_history_projects_image_parts() {
-        let mut conversation = conversation(ConversationCapabilities::codex_app_server());
+        let mut conversation = conversation(codex_capabilities());
         conversation.history.replay = vec![HistoryReplayEntry {
             role: HistoryRole::User,
             content: ContentDelta::Parts(vec![
@@ -1406,7 +1512,7 @@ mod tests {
             ]),
         }];
 
-        let messages = conversation_display_messages(ProtocolFlavor::CodexAppServer, &conversation);
+        let messages = conversation_display_messages(&conversation);
 
         assert_eq!(messages.len(), 1);
         assert!(matches!(

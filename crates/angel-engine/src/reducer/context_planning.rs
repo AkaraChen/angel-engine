@@ -1,9 +1,9 @@
 use crate::error::EngineError;
 use crate::ids::ConversationId;
-use crate::protocol::{ProtocolEffect, ProtocolFlavor};
+use crate::protocol::ProtocolEffect;
 use crate::state::{ContextPatch, ConversationLifecycle};
 
-use super::context_effects::acp_context_effect_specs;
+use super::context_effects::explicit_context_effect_specs;
 use super::{AngelEngine, CommandPlan, PendingRequest};
 
 impl AngelEngine {
@@ -12,12 +12,6 @@ impl AngelEngine {
         conversation_id: ConversationId,
         patch: ContextPatch,
     ) -> Result<CommandPlan, EngineError> {
-        let effect_specs = if self.protocol == ProtocolFlavor::Acp {
-            let conversation = self.conversation(&conversation_id)?;
-            acp_context_effect_specs(conversation, &patch)
-        } else {
-            Vec::new()
-        };
         {
             let conversation = self.conversation(&conversation_id)?;
             if matches!(
@@ -30,10 +24,25 @@ impl AngelEngine {
                 });
             }
         }
-        if self.protocol == ProtocolFlavor::CodexAppServer {
+
+        let uses_explicit_updates = self
+            .conversation(&conversation_id)?
+            .capabilities
+            .context
+            .explicit_context_updates
+            .is_supported();
+
+        let effect_specs = if uses_explicit_updates {
+            let conversation = self.conversation(&conversation_id)?;
+            explicit_context_effect_specs(conversation, &patch)
+        } else {
+            // Protocols that embed context in request fields (e.g. Codex) apply
+            // the patch to local state immediately instead of sending explicit requests.
             let conversation = self.conversation_mut(&conversation_id)?;
             conversation.context.apply_patch(patch.clone());
-        }
+            Vec::new()
+        };
+
         let mut effects = Vec::new();
         let mut first_request_id = None;
         for spec in effect_specs {

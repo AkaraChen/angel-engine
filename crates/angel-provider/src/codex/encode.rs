@@ -22,7 +22,7 @@ impl CodexAdapter {
                 if let Some(cwd) = effect.payload.fields.get("cwd") {
                     params.insert("cwd".to_string(), json!(cwd));
                 }
-                insert_codex_thread_overrides(&mut params, &effect.payload.fields);
+                insert_codex_thread_overrides(&mut params, engine, effect);
                 params.insert("experimentalRawEvents".to_string(), json!(true));
                 params.insert("persistExtendedHistory".to_string(), json!(true));
                 Ok(Value::Object(params))
@@ -185,12 +185,38 @@ fn insert_codex_overrides(
     params: &mut serde_json::Map<String, Value>,
     fields: &std::collections::BTreeMap<String, String>,
 ) {
-    if let Some(model) = fields.get("model") {
+    let conversation = effect
+        .conversation_id
+        .as_ref()
+        .and_then(|id| engine.conversations.get(id));
+
+    // Model
+    let model = fields
+        .get("model")
+        .map(String::as_str)
+        .or_else(|| conversation.and_then(|c| c.context.model.effective().and_then(Option::as_deref)));
+    if let Some(model) = model {
         params.insert("model".to_string(), json!(model));
     }
-    if let Some(effort) = fields.get("effort") {
+
+    // Reasoning effort
+    let effort = fields
+        .get("effort")
+        .map(String::as_str)
+        .or_else(|| {
+            conversation.and_then(|c| {
+                c.context
+                    .reasoning
+                    .effective()
+                    .and_then(Option::as_ref)
+                    .and_then(|r| r.effort.as_deref())
+            })
+        });
+    if let Some(effort) = effort {
         params.insert("effort".to_string(), json!(codex_reasoning_effort(effort)));
     }
+
+    // Service tier (special override, no context fallback)
     if let Some(service_tier) = fields
         .get("serviceTier")
         .map(String::as_str)
@@ -206,10 +232,29 @@ fn insert_codex_overrides(
         );
     }
     params.insert("summary".to_string(), json!("auto"));
-    if let Some(policy) = fields.get("approvalPolicy") {
+
+    // Approval policy
+    let approval_policy = fields
+        .get("approvalPolicy")
+        .map(String::as_str)
+        .or_else(|| conversation.and_then(|c| c.context.approvals.effective().map(codex_approval_policy)));
+    if let Some(policy) = approval_policy {
         params.insert("approvalPolicy".to_string(), json!(policy));
     }
-    if let Some(profile) = fields.get("permissions") {
+
+    // Permissions profile (takes precedence over sandbox)
+    let permissions = fields
+        .get("permissions")
+        .map(String::as_str)
+        .or_else(|| {
+            conversation.and_then(|c| {
+                c.context
+                    .permissions
+                    .effective()
+                    .map(|p| p.name.as_str())
+            })
+        });
+    if let Some(profile) = permissions {
         params.insert(
             "permissions".to_string(),
             json!({
@@ -219,19 +264,46 @@ fn insert_codex_overrides(
             }),
         );
     }
-    if !fields.contains_key("permissions")
-        && let Some(policy) = fields
+
+    // Sandbox (only when no permissions profile)
+    if permissions.is_none() {
+        let sandbox = fields
             .get("sandboxPolicy")
             .and_then(|policy| sandbox_policy(policy))
-    {
-        params.insert("sandboxPolicy".to_string(), policy);
+            .or_else(|| {
+                conversation.and_then(|c| {
+                    c.context
+                        .sandbox
+                        .effective()
+                        .and_then(|s| sandbox_policy(codex_sandbox_policy(s)))
+                })
+            });
+        if let Some(policy) = sandbox {
+            params.insert("sandboxPolicy".to_string(), policy);
+        }
     }
+
+    // Collaboration mode (plan/default)
+    let collab_mode = fields
+        .get("collaborationMode")
+        .map(String::as_str)
+        .or_else(|| {
+            conversation.and_then(|c| {
+                c.context
+                    .mode
+                    .effective()
+                    .and_then(Option::as_ref)
+                    .map(|m| m.id.as_str())
+                    .filter(|id| matches!(*id, "plan" | "default"))
+            })
+        });
     let collaboration_model = fields
         .get("collaborationModel")
         .or_else(|| fields.get("model"))
         .map(String::as_str)
+        .or(model)
         .or_else(|| codex_current_model(engine, effect));
-    if let (Some(mode), Some(model)) = (fields.get("collaborationMode"), collaboration_model) {
+    if let (Some(mode), Some(model)) = (collab_mode, collaboration_model) {
         params.insert(
             "collaborationMode".to_string(),
             json!({
@@ -239,9 +311,7 @@ fn insert_codex_overrides(
                 "settings": {
                     "model": model,
                     "developer_instructions": null,
-                    "reasoning_effort": fields
-                        .get("effort")
-                        .map(|effort| codex_reasoning_effort(effort)),
+                    "reasoning_effort": effort.map(|e| codex_reasoning_effort(e)),
                 }
             }),
         );
@@ -287,15 +357,49 @@ fn codex_reasoning_effort(effort: &str) -> &str {
 
 fn insert_codex_thread_overrides(
     params: &mut serde_json::Map<String, Value>,
-    fields: &std::collections::BTreeMap<String, String>,
+    engine: &AngelEngine,
+    effect: &angel_engine::ProtocolEffect,
 ) {
-    if let Some(model) = fields.get("model") {
+    let fields = &effect.payload.fields;
+    let conversation = effect
+        .conversation_id
+        .as_ref()
+        .and_then(|id| engine.conversations.get(id));
+
+    // Model
+    let model = fields
+        .get("model")
+        .map(String::as_str)
+        .or_else(|| {
+            conversation.and_then(|c| {
+                c.context
+                    .model
+                    .effective()
+                    .and_then(Option::as_deref)
+            })
+        });
+    if let Some(model) = model {
         params.insert("model".to_string(), json!(model));
     }
-    if let Some(policy) = fields.get("approvalPolicy") {
+
+    // Approval policy
+    let approval_policy = fields.get("approvalPolicy").map(String::as_str).or_else(|| {
+        conversation.and_then(|c| c.context.approvals.effective().map(codex_approval_policy))
+    });
+    if let Some(policy) = approval_policy {
         params.insert("approvalPolicy".to_string(), json!(policy));
     }
-    if let Some(profile) = fields.get("permissions") {
+
+    // Permissions profile (takes precedence over sandbox)
+    let permissions = fields.get("permissions").map(String::as_str).or_else(|| {
+        conversation.and_then(|c| {
+            c.context
+                .permissions
+                .effective()
+                .map(|p| p.name.as_str())
+        })
+    });
+    if let Some(profile) = permissions {
         params.insert(
             "permissions".to_string(),
             json!({
@@ -305,10 +409,77 @@ fn insert_codex_thread_overrides(
             }),
         );
     }
-    if !fields.contains_key("permissions")
-        && let Some(policy) = fields.get("sandboxPolicy")
-    {
-        params.insert("sandbox".to_string(), json!(policy));
+
+    // Sandbox (only when no permissions profile)
+    if permissions.is_none() {
+        let sandbox = fields.get("sandboxPolicy").map(String::as_str).or_else(|| {
+            conversation.and_then(|c| c.context.sandbox.effective().map(codex_sandbox_policy))
+        });
+        if let Some(policy) = sandbox {
+            params.insert("sandbox".to_string(), json!(policy));
+        }
+    }
+
+    // Collaboration mode (plan/default)
+    let effort = fields.get("effort").map(String::as_str).or_else(|| {
+        conversation.and_then(|c| {
+            c.context
+                .reasoning
+                .effective()
+                .and_then(Option::as_ref)
+                .and_then(|r| r.effort.as_deref())
+        })
+    });
+    let mode = fields
+        .get("collaborationMode")
+        .map(String::as_str)
+        .or_else(|| {
+            conversation.and_then(|c| {
+                c.context
+                    .mode
+                    .effective()
+                    .and_then(Option::as_ref)
+                    .map(|m| m.id.as_str())
+                    .filter(|id| matches!(*id, "plan" | "default"))
+            })
+        });
+    let collab_model = fields
+        .get("collaborationModel")
+        .map(String::as_str)
+        .or(model)
+        .or_else(|| codex_current_model(engine, effect));
+    if let (Some(mode), Some(model)) = (mode, collab_model) {
+        params.insert(
+            "collaborationMode".to_string(),
+            json!({
+                "mode": mode,
+                "settings": {
+                    "model": model,
+                    "developer_instructions": null,
+                    "reasoning_effort": effort.map(|e| codex_reasoning_effort(e)),
+                }
+            }),
+        );
+    }
+}
+
+fn codex_approval_policy(policy: &angel_engine::ApprovalPolicy) -> &'static str {
+    use angel_engine::ApprovalPolicy;
+    match policy {
+        ApprovalPolicy::Never => "never",
+        ApprovalPolicy::OnRequest => "on-request",
+        ApprovalPolicy::OnFailure => "on-failure",
+        ApprovalPolicy::UnlessTrusted => "untrusted",
+    }
+}
+
+fn codex_sandbox_policy(sandbox: &angel_engine::SandboxProfile) -> &str {
+    use angel_engine::SandboxProfile;
+    match sandbox {
+        SandboxProfile::ReadOnly => "read-only",
+        SandboxProfile::WorkspaceWrite => "workspace-write",
+        SandboxProfile::FullAccess => "danger-full-access",
+        SandboxProfile::Custom(value) => value,
     }
 }
 

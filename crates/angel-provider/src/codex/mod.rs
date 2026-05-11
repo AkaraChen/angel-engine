@@ -12,11 +12,12 @@ use angel_engine::state::{
     ActionInput, ActionKind, ActionOutputDelta, ActionPatch, ActionPhase, ActionState,
     ContentDelta, ContentPart, ContextPatch, ConversationLifecycle, ElicitationKind,
     ElicitationOptions, ElicitationState, ExhaustionReason, HistoryReplayEntry, HistoryRole,
-    PlanEntry, PlanEntryStatus, PlanState, SessionModel, SessionModelState, TurnOutcome,
-    UserQuestion, UserQuestionOption,
+    PlanEntry, PlanEntryStatus, PlanState, SessionConfigOption, SessionConfigValue, SessionMode,
+    SessionModeState, SessionModel, SessionModelState, TurnOutcome, UserQuestion, UserQuestionOption,
 };
 use angel_engine::transport::{
     JsonRpcMessage, TransportLogKind, TransportOptions, TransportOutput, client_info_json,
+    method_name,
 };
 use angel_engine::{EngineError, ProtocolEffect};
 use serde_json::{Value, json};
@@ -42,8 +43,58 @@ pub struct CodexAdapter {
 
 impl CodexAdapter {
     pub fn app_server() -> Self {
+        use angel_engine::capabilities::{
+            ActionCapabilities, ContextCapabilities, ElicitationCapabilities,
+            HistoryCapabilities, LifecycleCapabilities, ObserverCapabilities, TurnCapabilities,
+        };
+        use angel_engine::capabilities::CapabilitySupport;
         Self {
-            capabilities: ConversationCapabilities::codex_app_server(),
+            capabilities: ConversationCapabilities {
+                lifecycle: LifecycleCapabilities {
+                    create: CapabilitySupport::Supported,
+                    list: CapabilitySupport::Supported,
+                    load: CapabilitySupport::Supported,
+                    resume: CapabilitySupport::Supported,
+                    fork: CapabilitySupport::Supported,
+                    archive: CapabilitySupport::Supported,
+                    close: CapabilitySupport::Unknown,
+                },
+                turn: TurnCapabilities {
+                    start: CapabilitySupport::Supported,
+                    steer: CapabilitySupport::Supported,
+                    cancel: CapabilitySupport::Supported,
+                    max_active_turns: 1,
+                    requires_expected_turn_id_for_steer: true,
+                },
+                action: ActionCapabilities {
+                    observe: CapabilitySupport::Supported,
+                    stream_output: CapabilitySupport::Supported,
+                    decline: CapabilitySupport::Supported,
+                },
+                elicitation: ElicitationCapabilities {
+                    approval: CapabilitySupport::Supported,
+                    user_input: CapabilitySupport::Supported,
+                    external_flow: CapabilitySupport::Supported,
+                    dynamic_tool_call: CapabilitySupport::Supported,
+                },
+                history: HistoryCapabilities {
+                    hydrate: CapabilitySupport::Supported,
+                    compact: CapabilitySupport::Supported,
+                    rollback: CapabilitySupport::Supported,
+                    inject_items: CapabilitySupport::Supported,
+                },
+                context: ContextCapabilities {
+                    mode: CapabilitySupport::Supported,
+                    config: CapabilitySupport::Supported,
+                    additional_directories: CapabilitySupport::Unsupported,
+                    turn_overrides: CapabilitySupport::Supported,
+                    explicit_context_updates: CapabilitySupport::Unsupported,
+                    model: CapabilitySupport::Supported,
+                },
+                observer: ObserverCapabilities {
+                    unsubscribe: CapabilitySupport::Supported,
+                },
+            },
         }
     }
 

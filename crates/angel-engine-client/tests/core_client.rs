@@ -764,9 +764,11 @@ fn codex_turn_start_defaults_to_auto_summary_without_effort() {
         .into_iter()
         .find(|conversation| conversation.id == conversation_id)
         .expect("conversation snapshot");
+    // The Codex adapter injects a reasoning-effort config option on ConversationReady,
+    // so the source is "configOption" (not a provider-specific string).
     assert_eq!(
         conversation.settings.reasoning_level.source,
-        "codexDefaults"
+        "configOption"
     );
     assert!(conversation.settings.reasoning_level.can_set);
     assert_eq!(

@@ -7,7 +7,6 @@ use crate::state::{
     UserImageInputRef, UserInputRef,
 };
 
-use super::context_effects::codex_context_fields;
 use super::{AngelEngine, CommandPlan, PendingRequest};
 
 impl AngelEngine {
@@ -50,12 +49,6 @@ impl AngelEngine {
             conversation.focused_turn = Some(turn_id.clone());
             conversation.lifecycle = ConversationLifecycle::Active;
         }
-        let codex_context_fields = if self.protocol == ProtocolFlavor::CodexAppServer {
-            let conversation = self.conversation(&conversation_id)?;
-            codex_context_fields(&conversation.context)
-        } else {
-            Vec::new()
-        };
 
         self.pending.insert(
             request_id.clone(),
@@ -71,9 +64,6 @@ impl AngelEngine {
             .turn_id(turn_id.clone())
             .field("input", input_text);
         for (key, value) in effect_fields {
-            effect = effect.field(key, value);
-        }
-        for (key, value) in codex_context_fields {
             effect = effect.field(key, value);
         }
         Ok(CommandPlan {

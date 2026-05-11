@@ -42,60 +42,9 @@ pub(super) fn sync_context_from_config_options(
     }
 }
 
-pub(super) fn codex_context_fields(context: &crate::EffectiveContext) -> Vec<(String, String)> {
-    let mut fields = Vec::new();
-    if let Some(Some(model)) = context.model.effective() {
-        fields.push(("model".to_string(), model.clone()));
-    }
-    if let Some(reasoning) = context.reasoning.effective().and_then(Option::as_ref)
-        && let Some(effort) = &reasoning.effort
-    {
-        fields.push(("effort".to_string(), effort.clone()));
-    }
-    if let Some(policy) = context.approvals.effective() {
-        fields.push((
-            "approvalPolicy".to_string(),
-            codex_approval_policy(policy).to_string(),
-        ));
-    }
-    if let Some(permissions) = context.permissions.effective() {
-        fields.push(("permissions".to_string(), permissions.name.clone()));
-    } else if let Some(sandbox) = context.sandbox.effective() {
-        fields.push((
-            "sandboxPolicy".to_string(),
-            codex_sandbox_policy(sandbox).to_string(),
-        ));
-    }
-    if let Some(mode) = context.mode.effective().and_then(Option::as_ref)
-        && matches!(mode.id.as_str(), "plan" | "default")
-    {
-        fields.push(("collaborationMode".to_string(), mode.id.clone()));
-        if let Some(Some(model)) = context.model.effective() {
-            fields.push(("collaborationModel".to_string(), model.clone()));
-        }
-    }
-    fields
-}
-
-pub(super) fn codex_approval_policy(policy: &ApprovalPolicy) -> &'static str {
-    match policy {
-        ApprovalPolicy::Never => "never",
-        ApprovalPolicy::OnRequest => "on-request",
-        ApprovalPolicy::OnFailure => "on-failure",
-        ApprovalPolicy::UnlessTrusted => "untrusted",
-    }
-}
-
-pub(super) fn codex_sandbox_policy(sandbox: &SandboxProfile) -> &str {
-    match sandbox {
-        SandboxProfile::ReadOnly => "read-only",
-        SandboxProfile::WorkspaceWrite => "workspace-write",
-        SandboxProfile::FullAccess => "danger-full-access",
-        SandboxProfile::Custom(value) => value,
-    }
-}
-
-pub(super) fn acp_context_effect_specs(
+/// Build the list of protocol effects needed to propagate a context patch for protocols that
+/// send explicit context-update requests (e.g. ACP set_session_model / set_session_config_option).
+pub(super) fn explicit_context_effect_specs(
     conversation: &ConversationState,
     patch: &ContextPatch,
 ) -> Vec<ContextEffectSpec> {
@@ -171,7 +120,7 @@ pub(super) fn acp_context_effect_specs(
                 {
                     specs.push(set_config_option_spec(
                         &option.id,
-                        codex_approval_policy(policy),
+                        approval_policy_value(policy),
                         update.clone(),
                     ));
                 }
@@ -182,7 +131,7 @@ pub(super) fn acp_context_effect_specs(
                 {
                     specs.push(set_config_option_spec(
                         &option.id,
-                        codex_sandbox_policy(sandbox),
+                        sandbox_policy_value(sandbox),
                         update.clone(),
                     ));
                 }
@@ -208,6 +157,24 @@ pub(super) fn acp_context_effect_specs(
     specs
 }
 
+fn approval_policy_value(policy: &ApprovalPolicy) -> &'static str {
+    match policy {
+        ApprovalPolicy::Never => "never",
+        ApprovalPolicy::OnRequest => "on-request",
+        ApprovalPolicy::OnFailure => "on-failure",
+        ApprovalPolicy::UnlessTrusted => "untrusted",
+    }
+}
+
+fn sandbox_policy_value(sandbox: &SandboxProfile) -> &str {
+    match sandbox {
+        SandboxProfile::ReadOnly => "read-only",
+        SandboxProfile::WorkspaceWrite => "workspace-write",
+        SandboxProfile::FullAccess => "danger-full-access",
+        SandboxProfile::Custom(value) => value,
+    }
+}
+
 fn set_config_option_spec(
     config_id: &str,
     value: &str,
@@ -222,3 +189,4 @@ fn set_config_option_spec(
         patch: ContextPatch::one(update),
     }
 }
+

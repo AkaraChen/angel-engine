@@ -19,6 +19,7 @@ use angel_engine::state::{
 };
 use angel_engine::transport::{
     JsonRpcMessage, TransportLogKind, TransportOptions, TransportOutput, client_info_json,
+    method_name,
 };
 use angel_engine::{EngineError, ProtocolEffect};
 use serde_json::{Value, json};
@@ -52,11 +53,60 @@ pub struct AcpRuntimeCapabilities {
 
 impl AcpAdapterCapabilities {
     pub fn standard() -> Self {
+        use angel_engine::capabilities::{
+            ActionCapabilities, ContextCapabilities, ElicitationCapabilities,
+            HistoryCapabilities, LifecycleCapabilities, ObserverCapabilities, TurnCapabilities,
+        };
         Self {
             runtime: AcpRuntimeCapabilities {
                 authentication: CapabilitySupport::Supported,
             },
-            conversation: ConversationCapabilities::acp_standard(),
+            conversation: ConversationCapabilities {
+                lifecycle: LifecycleCapabilities {
+                    create: CapabilitySupport::Supported,
+                    list: CapabilitySupport::Supported,
+                    load: CapabilitySupport::Unknown,
+                    resume: CapabilitySupport::Unknown,
+                    fork: CapabilitySupport::Unsupported,
+                    archive: CapabilitySupport::Unsupported,
+                    close: CapabilitySupport::Unknown,
+                },
+                turn: TurnCapabilities {
+                    start: CapabilitySupport::Supported,
+                    steer: CapabilitySupport::Unsupported,
+                    cancel: CapabilitySupport::Supported,
+                    max_active_turns: 1,
+                    requires_expected_turn_id_for_steer: false,
+                },
+                action: ActionCapabilities {
+                    observe: CapabilitySupport::Supported,
+                    stream_output: CapabilitySupport::Supported,
+                    decline: CapabilitySupport::Supported,
+                },
+                elicitation: ElicitationCapabilities {
+                    approval: CapabilitySupport::Supported,
+                    user_input: CapabilitySupport::Unknown,
+                    external_flow: CapabilitySupport::Unknown,
+                    dynamic_tool_call: CapabilitySupport::Unknown,
+                },
+                history: HistoryCapabilities {
+                    hydrate: CapabilitySupport::Unknown,
+                    compact: CapabilitySupport::Unsupported,
+                    rollback: CapabilitySupport::Unsupported,
+                    inject_items: CapabilitySupport::Unsupported,
+                },
+                context: ContextCapabilities {
+                    mode: CapabilitySupport::Supported,
+                    config: CapabilitySupport::Unknown,
+                    additional_directories: CapabilitySupport::Unknown,
+                    turn_overrides: CapabilitySupport::Unsupported,
+                    explicit_context_updates: CapabilitySupport::Supported,
+                    model: CapabilitySupport::Supported,
+                },
+                observer: ObserverCapabilities {
+                    unsubscribe: CapabilitySupport::Unsupported,
+                },
+            },
         }
     }
 
