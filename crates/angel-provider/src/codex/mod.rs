@@ -6,7 +6,7 @@ use angel_engine::ids::{
     ActionId, ConversationId, ElicitationId, JsonRpcRequestId, RemoteActionId,
     RemoteConversationId, RemoteRequestId, RemoteTurnId, TurnId,
 };
-use angel_engine::protocol::{CodexMethod, ProtocolFlavor, ProtocolMethod};
+use angel_engine::protocol::{ProtocolFlavor, ProtocolMethod};
 use angel_engine::reducer::{AngelEngine, PendingRequest};
 use angel_engine::state::{
     ActionInput, ActionKind, ActionOutputDelta, ActionPatch, ActionPhase, ActionState,
@@ -17,7 +17,6 @@ use angel_engine::state::{
 };
 use angel_engine::transport::{
     JsonRpcMessage, TransportLogKind, TransportOptions, TransportOutput, client_info_json,
-    method_name,
 };
 use angel_engine::{EngineError, ProtocolEffect};
 use serde_json::{Value, json};

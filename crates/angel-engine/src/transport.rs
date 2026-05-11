@@ -3,7 +3,7 @@ use serde_json::{Value, json};
 use crate::error::EngineError;
 use crate::event::EngineEvent;
 use crate::ids::JsonRpcRequestId;
-use crate::protocol::{AcpMethod, CodexMethod, ProtocolMethod};
+use crate::protocol::ProtocolMethod;
 use crate::reducer::AngelEngine;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -304,48 +304,28 @@ pub fn client_info_json(client_info: &TransportClientInfo) -> Value {
 
 pub fn method_name(method: &ProtocolMethod) -> String {
     match method {
-        ProtocolMethod::Acp(method) => acp_method_name(method).to_string(),
-        ProtocolMethod::Codex(method) => codex_method_name(method).to_string(),
+        ProtocolMethod::Initialize => "initialize".to_string(),
+        ProtocolMethod::Authenticate => "authenticate".to_string(),
+        ProtocolMethod::ListConversations => "list_conversations".to_string(),
+        ProtocolMethod::StartConversation => "start_conversation".to_string(),
+        ProtocolMethod::ResumeConversation => "resume_conversation".to_string(),
+        ProtocolMethod::ForkConversation => "fork_conversation".to_string(),
+        ProtocolMethod::StartTurn => "start_turn".to_string(),
+        ProtocolMethod::SteerTurn => "steer_turn".to_string(),
+        ProtocolMethod::CancelTurn => "cancel_turn".to_string(),
+        ProtocolMethod::ResolveElicitation => "resolve_elicitation".to_string(),
+        ProtocolMethod::ArchiveConversation => "archive_conversation".to_string(),
+        ProtocolMethod::UnarchiveConversation => "unarchive_conversation".to_string(),
+        ProtocolMethod::CompactHistory => "history.compact".to_string(),
+        ProtocolMethod::RollbackHistory => "history.rollback".to_string(),
+        ProtocolMethod::InjectHistoryItems => "history.inject_items".to_string(),
+        ProtocolMethod::CloseConversation => "close_conversation".to_string(),
+        ProtocolMethod::Unsubscribe => "unsubscribe".to_string(),
+        ProtocolMethod::SetSessionModel => "set_session_model".to_string(),
+        ProtocolMethod::SetSessionMode => "set_session_mode".to_string(),
+        ProtocolMethod::SetSessionConfigOption => "set_session_config_option".to_string(),
+        ProtocolMethod::RunShellCommand => "run_shell_command".to_string(),
         ProtocolMethod::Extension(method) => method.clone(),
-    }
-}
-
-pub(crate) fn acp_method_name(method: &AcpMethod) -> &'static str {
-    match method {
-        AcpMethod::Initialize => "initialize",
-        AcpMethod::Authenticate => "authenticate",
-        AcpMethod::SessionList => "session/list",
-        AcpMethod::SessionNew => "session/new",
-        AcpMethod::SessionLoad => "session/load",
-        AcpMethod::SessionResume => "session/resume",
-        AcpMethod::SessionPrompt => "session/prompt",
-        AcpMethod::SessionCancel => "session/cancel",
-        AcpMethod::SessionClose => "session/close",
-        AcpMethod::SetSessionMode => "session/set_mode",
-        AcpMethod::SetSessionConfigOption => "session/set_config_option",
-        AcpMethod::SetSessionModel => "session/set_model",
-        AcpMethod::RequestPermissionResponse => "session/request_permission",
-    }
-}
-
-pub(crate) fn codex_method_name(method: &CodexMethod) -> &'static str {
-    match method {
-        CodexMethod::Initialize => "initialize",
-        CodexMethod::ThreadList => "thread/list",
-        CodexMethod::ThreadStart => "thread/start",
-        CodexMethod::ThreadResume => "thread/resume",
-        CodexMethod::ThreadFork => "thread/fork",
-        CodexMethod::ThreadArchive => "thread/archive",
-        CodexMethod::ThreadUnarchive => "thread/unarchive",
-        CodexMethod::ThreadUnsubscribe => "thread/unsubscribe",
-        CodexMethod::ThreadCompactStart => "thread/compact/start",
-        CodexMethod::ThreadRollback => "thread/rollback",
-        CodexMethod::ThreadInjectItems => "thread/inject_items",
-        CodexMethod::TurnStart => "turn/start",
-        CodexMethod::TurnSteer => "turn/steer",
-        CodexMethod::TurnInterrupt => "turn/interrupt",
-        CodexMethod::ServerRequestResponse => "serverRequest/response",
-        CodexMethod::ThreadShellCommand => "thread/shellCommand",
     }
 }
 

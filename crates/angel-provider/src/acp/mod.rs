@@ -8,7 +8,7 @@ use angel_engine::ids::{
     ActionId, ConversationId, ElicitationId, JsonRpcRequestId, RemoteConversationId,
     RemoteRequestId, TurnId,
 };
-use angel_engine::protocol::{AcpMethod, ProtocolFlavor, ProtocolMethod};
+use angel_engine::protocol::{ProtocolFlavor, ProtocolMethod};
 use angel_engine::reducer::{AngelEngine, PendingRequest};
 use angel_engine::state::{
     ActionInput, ActionKind, ActionPhase, ActionState, ContentDelta, ContentPart, ContextPatch,
@@ -19,7 +19,6 @@ use angel_engine::state::{
 };
 use angel_engine::transport::{
     JsonRpcMessage, TransportLogKind, TransportOptions, TransportOutput, client_info_json,
-    method_name,
 };
 use angel_engine::{EngineError, ProtocolEffect};
 use serde_json::{Value, json};

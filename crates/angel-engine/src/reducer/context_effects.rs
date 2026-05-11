@@ -1,4 +1,4 @@
-use crate::protocol::{AcpMethod, ProtocolMethod};
+use crate::protocol::ProtocolMethod;
 use crate::settings::{
     find_config_option, find_mode_config_option, find_model_config_option,
     find_reasoning_config_option, thinking_model_for_level,
@@ -109,7 +109,7 @@ pub(super) fn acp_context_effect_specs(
                     specs.push(set_config_option_spec(&option.id, model, update.clone()));
                 } else {
                     specs.push(ContextEffectSpec {
-                        method: ProtocolMethod::Acp(AcpMethod::SetSessionModel),
+                        method: ProtocolMethod::SetSessionModel,
                         fields: vec![("modelId".to_string(), model.clone())],
                         patch: ContextPatch::one(update.clone()),
                     });
@@ -122,7 +122,7 @@ pub(super) fn acp_context_effect_specs(
                     specs.push(set_config_option_spec(&option.id, &mode.id, update.clone()));
                 } else {
                     specs.push(ContextEffectSpec {
-                        method: ProtocolMethod::Acp(AcpMethod::SetSessionMode),
+                        method: ProtocolMethod::SetSessionMode,
                         fields: vec![("modeId".to_string(), mode.id.clone())],
                         patch: ContextPatch::one(update.clone()),
                     });
@@ -141,7 +141,7 @@ pub(super) fn acp_context_effect_specs(
                     && let Some(model) = thinking_model_for_level(conversation, effort)
                 {
                     specs.push(ContextEffectSpec {
-                        method: ProtocolMethod::Acp(AcpMethod::SetSessionModel),
+                        method: ProtocolMethod::SetSessionModel,
                         fields: vec![("modelId".to_string(), model.clone())],
                         patch: ContextPatch {
                             updates: vec![
@@ -214,7 +214,7 @@ fn set_config_option_spec(
     update: ContextUpdate,
 ) -> ContextEffectSpec {
     ContextEffectSpec {
-        method: ProtocolMethod::Acp(AcpMethod::SetSessionConfigOption),
+        method: ProtocolMethod::SetSessionConfigOption,
         fields: vec![
             ("configId".to_string(), config_id.to_string()),
             ("value".to_string(), value.to_string()),

@@ -3,7 +3,7 @@ use std::collections::BTreeMap;
 use crate::command::{DiscoverConversationsParams, ResumeTarget, StartConversationParams};
 use crate::error::EngineError;
 use crate::ids::{ConversationId, RemoteConversationId, TurnId};
-use crate::protocol::{CodexMethod, ProtocolEffect, ProtocolFlavor, ProtocolMethod};
+use crate::protocol::{ProtocolEffect, ProtocolFlavor, ProtocolMethod};
 use crate::state::{
     ContextPatch, ConversationLifecycle, ConversationState, HydrationSource, ProvisionOp,
     RuntimeState,
@@ -442,19 +442,7 @@ impl AngelEngine {
                 .require("conversation.archive")?;
         }
         let request_id = self.next_request_id();
-        let method = match (self.protocol, archive) {
-            (ProtocolFlavor::CodexAppServer, true) => {
-                ProtocolMethod::Codex(CodexMethod::ThreadArchive)
-            }
-            (ProtocolFlavor::CodexAppServer, false) => {
-                ProtocolMethod::Codex(CodexMethod::ThreadUnarchive)
-            }
-            (_, _) => ProtocolMethod::Extension(if archive {
-                "conversation/archive".to_string()
-            } else {
-                "conversation/unarchive".to_string()
-            }),
-        };
+        let method = self.method_archive_conversation(archive);
         let effect = ProtocolEffect::new(self.protocol, method)
             .request_id(request_id.clone())
             .conversation_id(conversation_id.clone());

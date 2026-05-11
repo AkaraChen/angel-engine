@@ -53,46 +53,28 @@ impl ProtocolEffect {
 
 #[derive(serde::Serialize, serde::Deserialize, Clone, Debug, PartialEq, Eq)]
 pub enum ProtocolMethod {
-    Acp(AcpMethod),
-    Codex(CodexMethod),
-    Extension(String),
-}
-
-#[derive(serde::Serialize, serde::Deserialize, Clone, Debug, PartialEq, Eq)]
-pub enum AcpMethod {
     Initialize,
     Authenticate,
-    SessionList,
-    SessionNew,
-    SessionLoad,
-    SessionResume,
-    SessionPrompt,
-    SessionCancel,
-    SessionClose,
+    ListConversations,
+    StartConversation,
+    ResumeConversation,
+    ForkConversation,
+    StartTurn,
+    SteerTurn,
+    CancelTurn,
+    ResolveElicitation,
+    ArchiveConversation,
+    UnarchiveConversation,
+    CompactHistory,
+    RollbackHistory,
+    InjectHistoryItems,
+    CloseConversation,
+    Unsubscribe,
+    SetSessionModel,
     SetSessionMode,
     SetSessionConfigOption,
-    SetSessionModel,
-    RequestPermissionResponse,
-}
-
-#[derive(serde::Serialize, serde::Deserialize, Clone, Debug, PartialEq, Eq)]
-pub enum CodexMethod {
-    Initialize,
-    ThreadList,
-    ThreadStart,
-    ThreadResume,
-    ThreadFork,
-    ThreadArchive,
-    ThreadUnarchive,
-    ThreadUnsubscribe,
-    ThreadCompactStart,
-    ThreadRollback,
-    ThreadInjectItems,
-    TurnStart,
-    TurnSteer,
-    TurnInterrupt,
-    ServerRequestResponse,
-    ThreadShellCommand,
+    RunShellCommand,
+    Extension(String),
 }
 
 #[derive(serde::Serialize, serde::Deserialize, Clone, Debug, Default, PartialEq, Eq)]

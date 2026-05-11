@@ -8,14 +8,11 @@ impl CodexAdapter {
         effect: &angel_engine::ProtocolEffect,
         options: &TransportOptions,
     ) -> Result<TransportOutput, angel_engine::EngineError> {
-        if matches!(
-            effect.method,
-            ProtocolMethod::Codex(CodexMethod::ServerRequestResponse)
-        ) {
+        if matches!(effect.method, ProtocolMethod::ResolveElicitation) {
             return self.encode_server_request_response(engine, effect);
         }
 
-        let method = method_name(&effect.method);
+        let method = codex_wire_method(&effect.method);
         let params = self.encode_params(engine, effect, options)?;
         let mut output = TransportOutput::default().log(
             TransportLogKind::Send,
@@ -47,5 +44,33 @@ impl CodexAdapter {
                 self.decode_server_request(engine, id, method, params)
             }
         }
+    }
+}
+
+fn codex_wire_method(method: &ProtocolMethod) -> String {
+    match method {
+        ProtocolMethod::Authenticate => "account/login/start".to_string(),
+        ProtocolMethod::Initialize => "initialize".to_string(),
+        ProtocolMethod::ListConversations => "thread/list".to_string(),
+        ProtocolMethod::StartConversation => "thread/start".to_string(),
+        ProtocolMethod::ResumeConversation => "thread/resume".to_string(),
+        ProtocolMethod::ForkConversation => "thread/fork".to_string(),
+        ProtocolMethod::StartTurn => "turn/start".to_string(),
+        ProtocolMethod::SteerTurn => "turn/steer".to_string(),
+        ProtocolMethod::CancelTurn => "turn/interrupt".to_string(),
+        ProtocolMethod::ArchiveConversation => "thread/archive".to_string(),
+        ProtocolMethod::UnarchiveConversation => "thread/unarchive".to_string(),
+        ProtocolMethod::CompactHistory => "thread/compactStart".to_string(),
+        ProtocolMethod::RollbackHistory => "thread/rollback".to_string(),
+        ProtocolMethod::InjectHistoryItems => "thread/injectItems".to_string(),
+        ProtocolMethod::CloseConversation => "thread/close".to_string(),
+        ProtocolMethod::Unsubscribe => "thread/unsubscribe".to_string(),
+        ProtocolMethod::RunShellCommand => "thread/shellCommand".to_string(),
+        ProtocolMethod::ResolveElicitation
+        | ProtocolMethod::SetSessionModel
+        | ProtocolMethod::SetSessionMode
+        | ProtocolMethod::SetSessionConfigOption => method_name(method),
+        ProtocolMethod::Extension(method) => method.clone(),
+        _ => method_name(method),
     }
 }

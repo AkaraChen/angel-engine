@@ -2,7 +2,7 @@ use crate::command::{EngineCommand, EngineExtensionCommand, TurnOverrides, UserI
 use crate::error::EngineError;
 use crate::event::EngineEvent;
 use crate::ids::RemoteConversationId;
-use crate::protocol::{AcpMethod, CodexMethod, ProtocolFlavor, ProtocolMethod};
+use crate::protocol::{ProtocolFlavor, ProtocolMethod};
 use crate::reducer::PendingRequest;
 use crate::state::{ConversationLifecycle, TurnOutcome, TurnPhase};
 
@@ -87,10 +87,7 @@ fn acp_cancel_turn_is_notification_not_public_raw_protocol() {
 
     assert_eq!(plan.request_id, None);
     assert_eq!(plan.effects[0].request_id, None);
-    assert!(matches!(
-        plan.effects[0].method,
-        ProtocolMethod::Acp(AcpMethod::SessionCancel)
-    ));
+    assert!(matches!(plan.effects[0].method, ProtocolMethod::CancelTurn));
     assert!(
         engine
             .pending
@@ -127,10 +124,7 @@ fn codex_standard_steer_uses_turn_steer() {
             },
         ))
         .expect("codex steer");
-    assert!(matches!(
-        &plan.effects[0].method,
-        ProtocolMethod::Codex(CodexMethod::TurnSteer)
-    ));
+    assert!(matches!(&plan.effects[0].method, ProtocolMethod::SteerTurn));
 }
 #[test]
 fn active_turn_limit_blocks_second_start_by_default() {

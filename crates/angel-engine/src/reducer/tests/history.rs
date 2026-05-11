@@ -1,7 +1,7 @@
 use crate::command::{EngineCommand, EngineExtensionCommand};
 use crate::event::EngineEvent;
 use crate::ids::RemoteConversationId;
-use crate::protocol::{CodexMethod, ProtocolFlavor, ProtocolMethod};
+use crate::protocol::{ProtocolFlavor, ProtocolMethod};
 use crate::state::{ConversationLifecycle, HistoryMutationOp, HistoryMutationResult};
 
 use super::{codex_capabilities, engine_with, insert_ready_conversation};
@@ -27,7 +27,7 @@ fn codex_rollback_marks_workspace_not_reverted() {
         .expect("rollback");
     assert!(matches!(
         &plan.effects[0].method,
-        ProtocolMethod::Codex(CodexMethod::ThreadRollback)
+        ProtocolMethod::RollbackHistory
     ));
 
     engine

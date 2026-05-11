@@ -1,7 +1,7 @@
 use crate::command::{EngineCommand, TurnOverrides, UserInput};
 use crate::event::EngineEvent;
 use crate::ids::RemoteConversationId;
-use crate::protocol::{AcpMethod, ProtocolFlavor, ProtocolMethod};
+use crate::protocol::{ProtocolFlavor, ProtocolMethod};
 use crate::state::{
     AgentMode, ApprovalPolicy, ContextPatch, ContextScope, ContextUpdate, PermissionProfile,
     ReasoningProfile, SandboxProfile, SessionConfigOption, SessionConfigValue, SessionMode,
@@ -46,7 +46,7 @@ fn acp_context_update_uses_advertised_model_config_option() {
 
     assert!(matches!(
         &plan.effects[0].method,
-        ProtocolMethod::Acp(AcpMethod::SetSessionConfigOption)
+        ProtocolMethod::SetSessionConfigOption
     ));
     assert_eq!(
         plan.effects[0].payload.fields.get("configId"),
@@ -99,7 +99,7 @@ fn acp_context_update_uses_advertised_effort_config_option() {
 
     assert!(matches!(
         &plan.effects[0].method,
-        ProtocolMethod::Acp(AcpMethod::SetSessionConfigOption)
+        ProtocolMethod::SetSessionConfigOption
     ));
     assert_eq!(
         plan.effects[0].payload.fields.get("configId"),
@@ -212,7 +212,7 @@ fn settings_api_reports_reasoning_models_and_modes() {
         .expect("set reasoning");
     assert!(matches!(
         &plan.effects[0].method,
-        ProtocolMethod::Acp(AcpMethod::SetSessionConfigOption)
+        ProtocolMethod::SetSessionConfigOption
     ));
     assert_eq!(
         plan.effects[0].payload.fields.get("value"),
@@ -224,7 +224,7 @@ fn settings_api_reports_reasoning_models_and_modes() {
         .expect("set model");
     assert!(matches!(
         &plan.effects[0].method,
-        ProtocolMethod::Acp(AcpMethod::SetSessionModel)
+        ProtocolMethod::SetSessionModel
     ));
 
     let plan = engine
@@ -320,7 +320,7 @@ fn acp_reasoning_effort_uses_thinking_model_variant_when_available() {
 
     assert!(matches!(
         &plan.effects[0].method,
-        ProtocolMethod::Acp(AcpMethod::SetSessionModel)
+        ProtocolMethod::SetSessionModel
     ));
     assert_eq!(
         plan.effects[0].payload.fields.get("modelId"),
@@ -369,7 +369,7 @@ fn acp_reasoning_none_disables_thinking_model_variant_when_available() {
 
     assert!(matches!(
         &plan.effects[0].method,
-        ProtocolMethod::Acp(AcpMethod::SetSessionModel)
+        ProtocolMethod::SetSessionModel
     ));
     assert_eq!(
         plan.effects[0].payload.fields.get("modelId"),

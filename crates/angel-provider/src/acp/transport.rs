@@ -8,14 +8,11 @@ impl AcpAdapter {
         effect: &angel_engine::ProtocolEffect,
         options: &TransportOptions,
     ) -> Result<TransportOutput, angel_engine::EngineError> {
-        if matches!(
-            effect.method,
-            ProtocolMethod::Acp(AcpMethod::RequestPermissionResponse)
-        ) {
+        if matches!(effect.method, ProtocolMethod::ResolveElicitation) {
             return self.encode_permission_response(engine, effect);
         }
 
-        let method = method_name(&effect.method);
+        let method = acp_wire_method(&effect.method);
         let params = self.encode_params(engine, effect, options)?;
         let mut output = TransportOutput::default().log(
             TransportLogKind::Send,
@@ -27,7 +24,7 @@ impl AcpAdapter {
             JsonRpcMessage::notification(method, params)
         };
         output.messages.push(message);
-        if matches!(effect.method, ProtocolMethod::Acp(AcpMethod::SessionCancel)) {
+        if matches!(effect.method, ProtocolMethod::CancelTurn) {
             append_cancelled_elicitation_responses(engine, effect, &mut output);
         }
         Ok(output)
@@ -50,6 +47,29 @@ impl AcpAdapter {
                 self.decode_request(engine, id, method, params)
             }
         }
+    }
+}
+
+fn acp_wire_method(method: &ProtocolMethod) -> String {
+    match method {
+        ProtocolMethod::Initialize => "initialize".to_string(),
+        ProtocolMethod::Authenticate => "authenticate".to_string(),
+        ProtocolMethod::ListConversations => "session/list".to_string(),
+        ProtocolMethod::StartConversation => "session/new".to_string(),
+        ProtocolMethod::ResumeConversation => "session/load".to_string(),
+        ProtocolMethod::ForkConversation => "session/fork".to_string(),
+        ProtocolMethod::StartTurn => "session/prompt".to_string(),
+        ProtocolMethod::CancelTurn => "session/cancel".to_string(),
+        ProtocolMethod::ResolveElicitation => "session/request_permission".to_string(),
+        ProtocolMethod::ArchiveConversation => "conversation/archive".to_string(),
+        ProtocolMethod::UnarchiveConversation => "conversation/unarchive".to_string(),
+        ProtocolMethod::CloseConversation => "session/close".to_string(),
+        ProtocolMethod::Unsubscribe => "session/unsubscribe".to_string(),
+        ProtocolMethod::SetSessionModel => "session/set_session_model".to_string(),
+        ProtocolMethod::SetSessionMode => "session/set_session_mode".to_string(),
+        ProtocolMethod::SetSessionConfigOption => "session/set_session_config_option".to_string(),
+        ProtocolMethod::Extension(method) => method.clone(),
+        _ => method_name(method),
     }
 }
 

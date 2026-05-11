@@ -1,6 +1,6 @@
 use crate::command::{EngineCommand, EngineExtensionCommand};
 use crate::ids::RemoteConversationId;
-use crate::protocol::{CodexMethod, ProtocolFlavor, ProtocolMethod};
+use crate::protocol::{ProtocolFlavor, ProtocolMethod};
 
 use super::{codex_capabilities, engine_with, insert_ready_conversation};
 
@@ -25,7 +25,7 @@ fn codex_shell_command_uses_thread_shell_command() {
         .expect("codex shell command");
     assert!(matches!(
         &plan.effects[0].method,
-        ProtocolMethod::Codex(CodexMethod::ThreadShellCommand)
+        ProtocolMethod::RunShellCommand
     ));
     assert_eq!(
         plan.effects[0].payload.fields.get("command"),

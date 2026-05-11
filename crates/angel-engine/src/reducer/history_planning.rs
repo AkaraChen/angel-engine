@@ -1,6 +1,6 @@
 use crate::error::EngineError;
 use crate::ids::ConversationId;
-use crate::protocol::{CodexMethod, ProtocolEffect, ProtocolFlavor, ProtocolMethod};
+use crate::protocol::{ProtocolEffect, ProtocolFlavor, ProtocolMethod};
 use crate::state::{ConversationLifecycle, HistoryMutationOp};
 
 use super::{AngelEngine, CommandPlan, PendingRequest};
@@ -93,13 +93,10 @@ impl AngelEngine {
                 conversation_id: conversation_id.clone(),
             },
         )?;
-        let effect = ProtocolEffect::new(
-            self.protocol,
-            ProtocolMethod::Codex(CodexMethod::ThreadShellCommand),
-        )
-        .request_id(request_id.clone())
-        .conversation_id(conversation_id.clone())
-        .field("command", command);
+        let effect = ProtocolEffect::new(self.protocol, ProtocolMethod::RunShellCommand)
+            .request_id(request_id.clone())
+            .conversation_id(conversation_id.clone())
+            .field("command", command);
         Ok(CommandPlan {
             effects: vec![effect],
             conversation_id: Some(conversation_id),

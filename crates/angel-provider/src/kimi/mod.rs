@@ -4,7 +4,7 @@ use std::path::{Path, PathBuf};
 use angel_engine::capabilities::ConversationCapabilities;
 use angel_engine::event::EngineEvent;
 use angel_engine::ids::ConversationId;
-use angel_engine::protocol::{AcpMethod, ProtocolMethod};
+use angel_engine::protocol::ProtocolMethod;
 use angel_engine::state::{
     ActionOutputDelta, ActionState, AvailableCommand, ContentDelta, ConversationState,
     HistoryReplayEntry, HistoryRole, SessionMode, SessionModeState,
@@ -65,7 +65,7 @@ impl KimiAdapter {
             "/plan off"
         };
         let mut prompt_effect = effect.clone();
-        prompt_effect.method = ProtocolMethod::Acp(AcpMethod::SessionPrompt);
+        prompt_effect.method = ProtocolMethod::StartTurn;
         prompt_effect.payload.fields.clear();
         prompt_effect
             .payload
@@ -207,10 +207,8 @@ impl ProtocolAdapter for KimiAdapter {
         effect: &ProtocolEffect,
         options: &TransportOptions,
     ) -> Result<TransportOutput, EngineError> {
-        if matches!(
-            effect.method,
-            ProtocolMethod::Acp(AcpMethod::SetSessionMode)
-        ) && let Some(output) = self.encode_kimi_mode_effect(engine, effect, options)?
+        if matches!(effect.method, ProtocolMethod::SetSessionMode)
+            && let Some(output) = self.encode_kimi_mode_effect(engine, effect, options)?
         {
             return Ok(output);
         }

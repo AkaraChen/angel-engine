@@ -14,7 +14,7 @@ impl AcpAdapter {
             return acp_fork_params(engine, effect);
         }
         match &effect.method {
-            ProtocolMethod::Acp(AcpMethod::Initialize) => {
+            ProtocolMethod::Initialize => {
                 let mut client_capabilities = serde_json::Map::new();
                 if self.capabilities.runtime.authentication.is_supported() {
                     client_capabilities.insert(
@@ -39,7 +39,7 @@ impl AcpAdapter {
                     "clientInfo": client_info_json(&options.client_info),
                 }))
             }
-            ProtocolMethod::Acp(AcpMethod::Authenticate) => Ok(json!({
+            ProtocolMethod::Authenticate => Ok(json!({
                 "methodId": effect
                     .payload
                     .fields
@@ -48,15 +48,14 @@ impl AcpAdapter {
                     .cloned()
                     .unwrap_or_default(),
             })),
-            ProtocolMethod::Acp(AcpMethod::SessionNew) => {
+            ProtocolMethod::StartConversation => {
                 let mut params = serde_json::Map::new();
                 params.insert("cwd".to_string(), json!(acp_effect_cwd(engine, effect)));
                 insert_additional_directories(&mut params, effect);
                 params.insert("mcpServers".to_string(), json!([]));
                 Ok(Value::Object(params))
             }
-            ProtocolMethod::Acp(AcpMethod::SessionLoad)
-            | ProtocolMethod::Acp(AcpMethod::SessionResume) => {
+            ProtocolMethod::ResumeConversation => {
                 let mut params = serde_json::Map::new();
                 params.insert(
                     "sessionId".to_string(),
@@ -75,15 +74,14 @@ impl AcpAdapter {
                 params.insert("mcpServers".to_string(), json!([]));
                 Ok(Value::Object(params))
             }
-            ProtocolMethod::Acp(AcpMethod::SessionPrompt) => Ok(json!({
+            ProtocolMethod::StartTurn => Ok(json!({
                 "sessionId": acp_session_id(engine, effect)?,
                 "prompt": acp_prompt_blocks(effect),
             })),
-            ProtocolMethod::Acp(AcpMethod::SessionCancel)
-            | ProtocolMethod::Acp(AcpMethod::SessionClose) => Ok(json!({
+            ProtocolMethod::CancelTurn | ProtocolMethod::CloseConversation => Ok(json!({
                 "sessionId": acp_session_id(engine, effect)?,
             })),
-            ProtocolMethod::Acp(AcpMethod::SessionList) => {
+            ProtocolMethod::ListConversations => {
                 let mut params = serde_json::Map::new();
                 if let Some(cwd) = effect.payload.fields.get("cwd") {
                     params.insert("cwd".to_string(), json!(cwd));
@@ -94,25 +92,29 @@ impl AcpAdapter {
                 insert_additional_directories(&mut params, effect);
                 Ok(Value::Object(params))
             }
-            ProtocolMethod::Acp(AcpMethod::SetSessionConfigOption) => Ok(json!({
+            ProtocolMethod::SetSessionConfigOption => Ok(json!({
                 "sessionId": acp_session_id(engine, effect)?,
                 "configId": effect.payload.fields.get("configId").cloned().unwrap_or_default(),
                 "value": effect.payload.fields.get("value").cloned().unwrap_or_default(),
             })),
-            ProtocolMethod::Acp(AcpMethod::SetSessionMode) => Ok(json!({
+            ProtocolMethod::SetSessionMode => Ok(json!({
                 "sessionId": acp_session_id(engine, effect)?,
                 "modeId": effect.payload.fields.get("modeId").cloned().unwrap_or_default(),
             })),
-            ProtocolMethod::Acp(AcpMethod::SetSessionModel) => Ok(json!({
+            ProtocolMethod::SetSessionModel => Ok(json!({
                 "sessionId": acp_session_id(engine, effect)?,
                 "modelId": effect.payload.fields.get("modelId").cloned().unwrap_or_default(),
             })),
-            ProtocolMethod::Acp(AcpMethod::RequestPermissionResponse) => {
-                Err(angel_engine::EngineError::InvalidCommand {
-                    message: "permission responses are encoded by encode_permission_response"
-                        .to_string(),
-                })
-            }
+            ProtocolMethod::ResolveElicitation => Err(angel_engine::EngineError::InvalidCommand {
+                message: "permission responses are encoded by encode_permission_response"
+                    .to_string(),
+            }),
+            ProtocolMethod::ForkConversation => acp_fork_params(engine, effect),
+            ProtocolMethod::ArchiveConversation
+            | ProtocolMethod::UnarchiveConversation
+            | ProtocolMethod::Unsubscribe => Ok(json!({
+                "sessionId": acp_session_id(engine, effect)?,
+            })),
             _ => Ok(Value::Object(
                 effect
                     .payload
@@ -595,7 +597,7 @@ mod tests {
         };
         let effect = angel_engine::ProtocolEffect::new(
             angel_engine::ProtocolFlavor::Acp,
-            ProtocolMethod::Acp(AcpMethod::Initialize),
+            ProtocolMethod::Initialize,
         );
 
         let params = adapter
@@ -611,7 +613,7 @@ mod tests {
         let engine = AngelEngine::new(angel_engine::ProtocolFlavor::Acp, adapter.capabilities());
         let effect = angel_engine::ProtocolEffect::new(
             angel_engine::ProtocolFlavor::Acp,
-            ProtocolMethod::Acp(AcpMethod::Initialize),
+            ProtocolMethod::Initialize,
         );
 
         let params = adapter
@@ -630,7 +632,7 @@ mod tests {
         let engine = AngelEngine::new(angel_engine::ProtocolFlavor::Acp, adapter.capabilities());
         let effect = angel_engine::ProtocolEffect::new(
             angel_engine::ProtocolFlavor::Acp,
-            ProtocolMethod::Acp(AcpMethod::Initialize),
+            ProtocolMethod::Initialize,
         );
 
         let params = adapter
@@ -650,7 +652,7 @@ mod tests {
         let engine = AngelEngine::new(angel_engine::ProtocolFlavor::Acp, adapter.capabilities());
         let effect = angel_engine::ProtocolEffect::new(
             angel_engine::ProtocolFlavor::Acp,
-            ProtocolMethod::Acp(AcpMethod::SessionList),
+            ProtocolMethod::ListConversations,
         )
         .field("cwd", "/tmp/project")
         .field("cursor", "opaque");
@@ -668,7 +670,7 @@ mod tests {
         let engine = AngelEngine::new(angel_engine::ProtocolFlavor::Acp, adapter.capabilities());
         let effect = angel_engine::ProtocolEffect::new(
             angel_engine::ProtocolFlavor::Acp,
-            ProtocolMethod::Acp(AcpMethod::SessionResume),
+            ProtocolMethod::ResumeConversation,
         )
         .field("remoteConversationId", "sess")
         .field("cwd", "/tmp/project");
@@ -708,7 +710,7 @@ mod tests {
             .expect("context update");
         let effect = angel_engine::ProtocolEffect::new(
             angel_engine::ProtocolFlavor::Acp,
-            ProtocolMethod::Acp(AcpMethod::SessionLoad),
+            ProtocolMethod::ResumeConversation,
         )
         .conversation_id(conversation_id)
         .field("sessionId", "sess");

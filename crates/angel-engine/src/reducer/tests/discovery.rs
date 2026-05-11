@@ -4,7 +4,7 @@ use crate::command::{
 };
 use crate::event::EngineEvent;
 use crate::ids::{ConversationId, RemoteConversationId};
-use crate::protocol::{AcpMethod, CodexMethod, ProtocolFlavor, ProtocolMethod};
+use crate::protocol::{ProtocolFlavor, ProtocolMethod};
 use crate::reducer::{AngelEngine, PendingRequest};
 use crate::state::{ContextPatch, ContextScope, ContextUpdate, ConversationLifecycle};
 
@@ -27,7 +27,7 @@ fn acp_discovery_carries_common_filters() {
 
     assert!(matches!(
         &plan.effects[0].method,
-        ProtocolMethod::Acp(AcpMethod::SessionList)
+        ProtocolMethod::ListConversations
     ));
     assert_eq!(
         plan.effects[0].payload.fields.get("cwd"),
@@ -63,7 +63,7 @@ fn codex_discovery_carries_common_filters() {
 
     assert!(matches!(
         &plan.effects[0].method,
-        ProtocolMethod::Codex(CodexMethod::ThreadList)
+        ProtocolMethod::ListConversations
     ));
     assert_eq!(
         plan.effects[0].payload.fields.get("cwd"),
@@ -201,7 +201,7 @@ fn acp_discovered_conversation_resumes_with_remote_id() {
 
     assert!(matches!(
         &plan.effects[0].method,
-        ProtocolMethod::Acp(AcpMethod::SessionLoad)
+        ProtocolMethod::ResumeConversation
     ));
     assert_eq!(
         plan.effects[0].payload.fields.get("remoteConversationId"),
@@ -249,7 +249,7 @@ fn codex_discovered_conversation_resumes_with_remote_id() {
 
     assert!(matches!(
         &plan.effects[0].method,
-        ProtocolMethod::Codex(CodexMethod::ThreadResume)
+        ProtocolMethod::ResumeConversation
     ));
     assert_eq!(
         plan.effects[0].payload.fields.get("remoteConversationId"),

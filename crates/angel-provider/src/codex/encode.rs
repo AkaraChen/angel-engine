@@ -11,13 +11,13 @@ impl CodexAdapter {
         options: &TransportOptions,
     ) -> Result<Value, angel_engine::EngineError> {
         match &effect.method {
-            ProtocolMethod::Codex(CodexMethod::Initialize) => Ok(json!({
+            ProtocolMethod::Initialize => Ok(json!({
                 "clientInfo": client_info_json(&options.client_info),
                 "capabilities": {
                     "experimentalApi": options.experimental_api,
                 },
             })),
-            ProtocolMethod::Codex(CodexMethod::ThreadStart) => {
+            ProtocolMethod::StartConversation => {
                 let mut params = serde_json::Map::new();
                 if let Some(cwd) = effect.payload.fields.get("cwd") {
                     params.insert("cwd".to_string(), json!(cwd));
@@ -27,7 +27,7 @@ impl CodexAdapter {
                 params.insert("persistExtendedHistory".to_string(), json!(true));
                 Ok(Value::Object(params))
             }
-            ProtocolMethod::Codex(CodexMethod::ThreadResume) => {
+            ProtocolMethod::ResumeConversation => {
                 let mut params = serde_json::Map::new();
                 params.insert(
                     "threadId".to_string(),
@@ -52,24 +52,24 @@ impl CodexAdapter {
                 params.insert("persistExtendedHistory".to_string(), json!(true));
                 Ok(Value::Object(params))
             }
-            ProtocolMethod::Codex(CodexMethod::ThreadFork) => Ok(json!({
+            ProtocolMethod::ForkConversation => Ok(json!({
                 "threadId": effect.payload.fields.get("sourceConversationId").cloned().unwrap_or_default(),
             })),
-            ProtocolMethod::Codex(CodexMethod::ThreadArchive)
-            | ProtocolMethod::Codex(CodexMethod::ThreadUnarchive)
-            | ProtocolMethod::Codex(CodexMethod::ThreadUnsubscribe)
-            | ProtocolMethod::Codex(CodexMethod::ThreadCompactStart) => Ok(json!({
+            ProtocolMethod::ArchiveConversation
+            | ProtocolMethod::UnarchiveConversation
+            | ProtocolMethod::Unsubscribe
+            | ProtocolMethod::CompactHistory => Ok(json!({
                 "threadId": codex_thread_id(engine, effect)?,
             })),
-            ProtocolMethod::Codex(CodexMethod::ThreadRollback) => Ok(json!({
+            ProtocolMethod::RollbackHistory => Ok(json!({
                 "threadId": codex_thread_id(engine, effect)?,
                 "numTurns": effect.payload.fields.get("numTurns").and_then(|value| value.parse::<usize>().ok()).unwrap_or(1),
             })),
-            ProtocolMethod::Codex(CodexMethod::ThreadInjectItems) => Ok(json!({
+            ProtocolMethod::InjectHistoryItems => Ok(json!({
                 "threadId": codex_thread_id(engine, effect)?,
                 "items": [],
             })),
-            ProtocolMethod::Codex(CodexMethod::TurnStart) => {
+            ProtocolMethod::StartTurn => {
                 let mut params = serde_json::Map::new();
                 params.insert(
                     "threadId".to_string(),
@@ -79,20 +79,20 @@ impl CodexAdapter {
                 insert_codex_overrides(engine, effect, &mut params, &effect.payload.fields);
                 Ok(Value::Object(params))
             }
-            ProtocolMethod::Codex(CodexMethod::TurnSteer) => Ok(json!({
+            ProtocolMethod::SteerTurn => Ok(json!({
                 "threadId": codex_thread_id(engine, effect)?,
                 "input": codex_user_input(effect),
                 "expectedTurnId": codex_turn_id(engine, effect)?,
             })),
-            ProtocolMethod::Codex(CodexMethod::TurnInterrupt) => Ok(json!({
+            ProtocolMethod::CancelTurn => Ok(json!({
                 "threadId": codex_thread_id(engine, effect)?,
                 "turnId": codex_turn_id(engine, effect)?,
             })),
-            ProtocolMethod::Codex(CodexMethod::ThreadShellCommand) => Ok(json!({
+            ProtocolMethod::RunShellCommand => Ok(json!({
                 "threadId": codex_thread_id(engine, effect)?,
                 "command": effect.payload.fields.get("command").cloned().unwrap_or_default(),
             })),
-            ProtocolMethod::Codex(CodexMethod::ThreadList) => {
+            ProtocolMethod::ListConversations => {
                 let mut params = serde_json::Map::new();
                 if let Some(cwd) = effect.payload.fields.get("cwd") {
                     params.insert("cwd".to_string(), json!(cwd));
@@ -102,13 +102,10 @@ impl CodexAdapter {
                 }
                 Ok(Value::Object(params))
             }
-            ProtocolMethod::Codex(CodexMethod::ServerRequestResponse) => {
-                Err(angel_engine::EngineError::InvalidCommand {
-                    message:
-                        "server request responses are encoded by encode_server_request_response"
-                            .to_string(),
-                })
-            }
+            ProtocolMethod::ResolveElicitation => Err(angel_engine::EngineError::InvalidCommand {
+                message: "server request responses are encoded by encode_server_request_response"
+                    .to_string(),
+            }),
             _ => Ok(Value::Object(
                 effect
                     .payload
@@ -339,7 +336,7 @@ mod tests {
         );
         let effect = angel_engine::ProtocolEffect::new(
             angel_engine::ProtocolFlavor::CodexAppServer,
-            ProtocolMethod::Codex(CodexMethod::ThreadList),
+            ProtocolMethod::ListConversations,
         )
         .field("cwd", "/tmp/project")
         .field("cursor", "opaque");
@@ -360,7 +357,7 @@ mod tests {
         );
         let effect = angel_engine::ProtocolEffect::new(
             angel_engine::ProtocolFlavor::CodexAppServer,
-            ProtocolMethod::Codex(CodexMethod::ThreadStart),
+            ProtocolMethod::StartConversation,
         )
         .field("cwd", "/tmp/project");
 
@@ -505,7 +502,7 @@ mod tests {
         );
         let effect = angel_engine::ProtocolEffect::new(
             angel_engine::ProtocolFlavor::CodexAppServer,
-            ProtocolMethod::Codex(CodexMethod::ThreadResume),
+            ProtocolMethod::ResumeConversation,
         )
         .field("remoteConversationId", "thread")
         .field("hydrate", "false");
