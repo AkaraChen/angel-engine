@@ -19,6 +19,7 @@ import {
   Bot,
   Brain,
   Check,
+  ChevronDown,
   CircleStop,
   Cpu,
   Hammer,
@@ -111,6 +112,12 @@ type FileMentionAssistPanelProps = {
 
 const composerInputGroupClassName =
   "overflow-visible !rounded-[1.35rem] !border !border-foreground/10 !bg-background/90 shadow-[0_18px_44px_-24px_rgba(0,0,0,0.55),0_1px_0_rgba(255,255,255,0.85)_inset] backdrop-blur-xl transition-[border-color,box-shadow,background-color] has-[textarea]:!rounded-[1.35rem] has-[>[data-align=block-end]]:!rounded-[1.35rem] has-[>[data-align=block-start]]:!rounded-[1.35rem] focus-within:!border-foreground/15 focus-within:!bg-background/95 focus-within:shadow-[0_18px_42px_-26px_rgba(0,0,0,0.58),0_0_0_2px_rgba(29,29,31,0.045),0_1px_0_rgba(255,255,255,0.9)_inset] dark:!border-white/10 dark:!bg-card/80 dark:shadow-[0_18px_44px_-24px_rgba(0,0,0,0.85),0_1px_0_rgba(255,255,255,0.08)_inset] dark:focus-within:!border-white/15 dark:focus-within:!bg-card/90 dark:focus-within:shadow-[0_18px_42px_-26px_rgba(0,0,0,0.86),0_0_0_2px_rgba(255,255,255,0.055),0_1px_0_rgba(255,255,255,0.1)_inset]";
+const composerModelMenuTriggerClassName =
+  "h-8 max-w-[21rem] gap-1 rounded-full border-foreground/10 bg-background/75 px-1.5 text-[11px] font-medium text-foreground shadow-[0_1px_0_rgba(255,255,255,0.8)_inset,0_8px_20px_-16px_rgba(0,0,0,0.55)] backdrop-blur-xl hover:border-foreground/15 hover:bg-background/90 aria-expanded:border-foreground/15 aria-expanded:bg-background/95 dark:border-white/10 dark:bg-white/[0.055] dark:shadow-[0_1px_0_rgba(255,255,255,0.08)_inset,0_8px_20px_-16px_rgba(0,0,0,0.85)] dark:hover:bg-white/[0.08] dark:aria-expanded:bg-white/[0.09]";
+const composerModelMenuPrimaryClassName =
+  "flex min-w-0 max-w-28 items-center gap-1.5 rounded-full bg-foreground/[0.055] px-2 py-0.5 shadow-[0_1px_0_rgba(255,255,255,0.6)_inset] dark:bg-white/[0.08] dark:shadow-none";
+const composerModelMenuValueClassName =
+  "min-w-0 max-w-28 truncate text-muted-foreground";
 
 export function AssistantComposer() {
   const aui = useAui();
@@ -812,25 +819,42 @@ function ComposerModelMenu({
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button
-          className="h-8 max-w-[22rem] gap-1.5 rounded-full border border-foreground/10 bg-background/65 px-2 text-xs shadow-none dark:bg-card/65"
+          aria-label="Provider, model, and reasoning effort"
+          className={composerModelMenuTriggerClassName}
           disabled={disabled}
           size="sm"
           title="Provider, model, and reasoning effort"
           type="button"
           variant="outline"
         >
-          <Bot className="size-3.5 shrink-0" />
-          <span className="min-w-0 truncate">{providerLabel}</span>
-          <span className="text-muted-foreground">/</span>
-          <span className="min-w-0 truncate">{modelLabel}</span>
-          <span className="text-muted-foreground">/</span>
-          <span className="min-w-0 truncate">
+          <span className={composerModelMenuPrimaryClassName}>
+            <Bot className="size-3.5 shrink-0 text-muted-foreground" />
+            <span className="min-w-0 truncate">{providerLabel}</span>
+          </span>
+          <span
+            aria-hidden="true"
+            className="size-1 shrink-0 rounded-full bg-foreground/20"
+          />
+          <span className={composerModelMenuValueClassName}>{modelLabel}</span>
+          <span
+            aria-hidden="true"
+            className="size-1 shrink-0 rounded-full bg-foreground/20"
+          />
+          <span className="min-w-0 max-w-20 truncate text-muted-foreground/85">
             {shortEffortLabel(effortLabel)}
           </span>
+          <ChevronDown className="size-3.5 shrink-0 text-muted-foreground/80 transition-transform duration-150 group-data-[state=open]/button:rotate-180" />
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent className="w-72 rounded-md" align="start">
-        <DropdownMenuLabel>Agent settings</DropdownMenuLabel>
+      <DropdownMenuContent
+        className="w-[16.5rem] min-w-0"
+        align="start"
+        sideOffset={6}
+        variant="apple"
+      >
+        <DropdownMenuLabel className="px-2 pt-1 pb-1 text-[11px] font-semibold leading-4">
+          Agent Settings
+        </DropdownMenuLabel>
         <ComposerModelMenuSub
           disabled={options.runtimeLocked || disabled}
           icon={<Bot />}
@@ -897,19 +921,25 @@ function ComposerModelMenuSub({
   return (
     <DropdownMenuSub>
       <DropdownMenuSubTrigger
-        className="rounded-sm"
+        className="h-9 gap-1.5 rounded-lg px-2 py-1 text-xs font-medium focus:bg-foreground/[0.06] focus:text-foreground data-open:bg-foreground/[0.07] data-open:text-foreground dark:focus:bg-white/[0.08] dark:data-open:bg-white/[0.1] [&>svg:last-child]:size-3.5"
         disabled={disabled}
         title={label}
       >
-        <span className="flex size-4 shrink-0 items-center justify-center [&_svg]:size-3.5">
+        <span className="flex size-5 shrink-0 items-center justify-center rounded-md bg-foreground/[0.055] text-muted-foreground shadow-[0_1px_0_rgba(255,255,255,0.55)_inset] dark:bg-white/[0.08] dark:shadow-none [&_svg]:size-3">
           {icon}
         </span>
-        <span className="min-w-0 flex-1">
-          <span className="block text-xs text-muted-foreground">{label}</span>
-          <span className="block truncate">{value}</span>
+        <span className="flex min-w-0 flex-1 items-center justify-between gap-2">
+          <span className="truncate">{label}</span>
+          <span className="min-w-0 max-w-28 truncate rounded-full bg-foreground/[0.055] px-1.5 py-0.5 text-[10.5px] font-medium leading-4 text-muted-foreground dark:bg-white/[0.07]">
+            {value}
+          </span>
         </span>
       </DropdownMenuSubTrigger>
-      <DropdownMenuSubContent className="max-h-80 w-64 rounded-md overflow-y-auto">
+      <DropdownMenuSubContent
+        className="max-h-72 w-[16.5rem] min-w-0"
+        sideOffset={6}
+        variant="apple"
+      >
         {children}
       </DropdownMenuSubContent>
     </DropdownMenuSub>
@@ -927,16 +957,16 @@ function ComposerModelMenuItem({
 }) {
   return (
     <DropdownMenuItem
-      className="rounded-sm"
+      className="min-h-7 rounded-lg px-2 py-1 text-xs font-normal focus:bg-foreground/[0.06] focus:text-foreground dark:focus:bg-white/[0.08]"
       onSelect={(event) => {
         event.preventDefault();
         if (!selected) onSelect();
       }}
     >
-      <span className="flex size-4 shrink-0 items-center justify-center">
-        {selected ? <Check className="size-3.5" /> : null}
-      </span>
       <span className="min-w-0 flex-1 truncate">{label}</span>
+      <span className="flex size-4 shrink-0 items-center justify-center text-primary">
+        {selected ? <Check className="size-3" /> : null}
+      </span>
     </DropdownMenuItem>
   );
 }

@@ -1273,14 +1273,7 @@ export const PromptInputActionMenuContent = ({
   className,
   ...props
 }: PromptInputActionMenuContentProps) => (
-  <DropdownMenuContent
-    align="start"
-    className={cn(
-      "rounded-2xl border-foreground/10 bg-popover/95 shadow-lg backdrop-blur-xl dark:border-white/10",
-      className,
-    )}
-    {...props}
-  />
+  <DropdownMenuContent align="start" className={className} {...props} />
 );
 
 export type PromptInputActionMenuItemProps = ComponentProps<
@@ -1290,7 +1283,7 @@ export const PromptInputActionMenuItem = ({
   className,
   ...props
 }: PromptInputActionMenuItemProps) => (
-  <DropdownMenuItem className={cn("rounded-xl", className)} {...props} />
+  <DropdownMenuItem className={className} {...props} />
 );
 
 // Note: Actions that perform side-effects (like opening a file dialog)
