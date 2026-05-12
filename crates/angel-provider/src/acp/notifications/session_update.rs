@@ -14,7 +14,7 @@ pub(super) fn decode_acp_update(
         .get("sessionId")
         .and_then(Value::as_str)
         .unwrap_or("");
-    let Some(conversation_id) = find_acp_conversation(engine, session_id) else {
+    let Some(conversation_id) = find_acp_conversation_or_pending_start(engine, session_id) else {
         return Ok(TransportOutput::default().log(
             TransportLogKind::Receive,
             format!("update for unknown session {session_id}"),
@@ -597,6 +597,53 @@ mod tests {
                     && commands.len() == 1
                     && commands[0].name == "plan"
                     && commands[0].input.as_ref().map(|input| input.hint.as_str()) == Some("task")
+        ));
+    }
+
+    #[test]
+    fn available_commands_update_can_arrive_before_session_new_response() {
+        let adapter = AcpAdapter::standard();
+        let mut engine = AngelEngine::with_available_runtime(
+            angel_engine::ProtocolFlavor::Acp,
+            RuntimeCapabilities::new("test-acp"),
+            adapter.capabilities(),
+        );
+        let plan = engine
+            .plan_command(EngineCommand::StartConversation {
+                params: StartConversationParams {
+                    cwd: Some("/repo".to_string()),
+                    additional_directories: Vec::new(),
+                    context: ContextPatch::empty(),
+                },
+            })
+            .expect("start conversation");
+        let conversation_id = plan.conversation_id.expect("conversation id");
+
+        let output = adapter
+            .decode_notification(
+                &engine,
+                "session/update",
+                &json!({
+                    "sessionId": "sess-before-response",
+                    "update": {
+                        "sessionUpdate": "available_commands_update",
+                        "availableCommands": [
+                            {
+                                "name": "help",
+                                "description": "Show help"
+                            }
+                        ]
+                    }
+                }),
+            )
+            .expect("available commands update");
+
+        assert!(matches!(
+            output.events.as_slice(),
+            [EngineEvent::AvailableCommandsUpdated { conversation_id: id, commands }]
+                if id == &conversation_id
+                    && commands.len() == 1
+                    && commands[0].name == "help"
         ));
     }
 

@@ -5,11 +5,17 @@ use crate::{ClientAuthOptions, ClientIdentity, ClientOptions, ClientProtocol};
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize, Display)]
 #[serde(rename_all = "lowercase")]
+#[strum(serialize_all = "lowercase")]
 pub enum AgentRuntime {
     #[default]
     Codex,
     Kimi,
     Opencode,
+    Qoder,
+    Copilot,
+    Gemini,
+    Cursor,
+    Cline,
 }
 
 #[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
@@ -66,6 +72,11 @@ pub fn create_runtime_options(
     {
         Some("kimi") => AgentRuntime::Kimi,
         Some("opencode") => AgentRuntime::Opencode,
+        Some("qoder") => AgentRuntime::Qoder,
+        Some("copilot") => AgentRuntime::Copilot,
+        Some("gemini") => AgentRuntime::Gemini,
+        Some("cursor") => AgentRuntime::Cursor,
+        Some("cline") => AgentRuntime::Cline,
         _ => AgentRuntime::Codex,
     };
     let command_override = overrides
@@ -114,6 +125,76 @@ pub fn create_runtime_options(
                 need_auth: false,
             }),
             command: command_override.unwrap_or_else(|| "opencode".to_string()),
+            identity,
+            protocol: ClientProtocol::Acp,
+            ..ClientOptions::builder().build()
+        },
+        AgentRuntime::Qoder => ClientOptions {
+            args: overrides
+                .args
+                .clone()
+                .unwrap_or_else(|| vec!["--acp".to_string()]),
+            auth: overrides.auth.unwrap_or(ClientAuthOptions {
+                auto_authenticate: false,
+                need_auth: false,
+            }),
+            command: command_override.unwrap_or_else(|| "qodercli".to_string()),
+            identity,
+            protocol: ClientProtocol::Acp,
+            ..ClientOptions::builder().build()
+        },
+        AgentRuntime::Copilot => ClientOptions {
+            args: overrides
+                .args
+                .clone()
+                .unwrap_or_else(|| vec!["--acp".to_string(), "--stdio".to_string()]),
+            auth: overrides.auth.unwrap_or(ClientAuthOptions {
+                auto_authenticate: false,
+                need_auth: false,
+            }),
+            command: command_override.unwrap_or_else(|| "copilot".to_string()),
+            identity,
+            protocol: ClientProtocol::Acp,
+            ..ClientOptions::builder().build()
+        },
+        AgentRuntime::Gemini => ClientOptions {
+            args: overrides
+                .args
+                .clone()
+                .unwrap_or_else(|| vec!["--acp".to_string()]),
+            auth: overrides.auth.unwrap_or(ClientAuthOptions {
+                auto_authenticate: true,
+                need_auth: true,
+            }),
+            command: command_override.unwrap_or_else(|| "gemini".to_string()),
+            identity,
+            protocol: ClientProtocol::Acp,
+            ..ClientOptions::builder().build()
+        },
+        AgentRuntime::Cursor => ClientOptions {
+            args: overrides
+                .args
+                .clone()
+                .unwrap_or_else(|| vec!["acp".to_string()]),
+            auth: overrides.auth.unwrap_or(ClientAuthOptions {
+                auto_authenticate: true,
+                need_auth: true,
+            }),
+            command: command_override.unwrap_or_else(|| "agent".to_string()),
+            identity,
+            protocol: ClientProtocol::Acp,
+            ..ClientOptions::builder().build()
+        },
+        AgentRuntime::Cline => ClientOptions {
+            args: overrides
+                .args
+                .clone()
+                .unwrap_or_else(|| vec!["--acp".to_string()]),
+            auth: overrides.auth.unwrap_or(ClientAuthOptions {
+                auto_authenticate: false,
+                need_auth: false,
+            }),
+            command: command_override.unwrap_or_else(|| "cline".to_string()),
             identity,
             protocol: ClientProtocol::Acp,
             ..ClientOptions::builder().build()
@@ -172,5 +253,87 @@ mod tests {
         assert_eq!(options.client.protocol, ClientProtocol::Acp);
         assert_eq!(options.client.command, "opencode");
         assert_eq!(options.client.args, vec!["acp"]);
+    }
+
+    #[test]
+    fn documented_acp_runtimes_use_standard_acp_commands() {
+        let cases = [
+            (
+                "qoder",
+                AgentRuntime::Qoder,
+                "qodercli",
+                vec!["--acp"],
+                false,
+                false,
+            ),
+            (
+                "copilot",
+                AgentRuntime::Copilot,
+                "copilot",
+                vec!["--acp", "--stdio"],
+                false,
+                false,
+            ),
+            (
+                "gemini",
+                AgentRuntime::Gemini,
+                "gemini",
+                vec!["--acp"],
+                true,
+                true,
+            ),
+            (
+                "cursor",
+                AgentRuntime::Cursor,
+                "agent",
+                vec!["acp"],
+                true,
+                true,
+            ),
+            (
+                "cline",
+                AgentRuntime::Cline,
+                "cline",
+                vec!["--acp"],
+                false,
+                false,
+            ),
+        ];
+
+        for (name, runtime, command, args, need_auth, auto_authenticate) in cases {
+            let options = create_runtime_options(Some(name), RuntimeOptionsOverrides::default());
+
+            assert_eq!(options.runtime, runtime);
+            assert_eq!(options.client.protocol, ClientProtocol::Acp);
+            assert_eq!(options.client.command, command);
+            assert_eq!(options.client.args, args);
+            assert_eq!(options.client.auth.need_auth, need_auth);
+            assert_eq!(options.client.auth.auto_authenticate, auto_authenticate);
+        }
+    }
+
+    #[test]
+    fn runtime_display_uses_canonical_lowercase_ids() {
+        assert_eq!(AgentRuntime::Copilot.to_string(), "copilot");
+        assert_eq!(AgentRuntime::Qoder.to_string(), "qoder");
+        assert_eq!(AgentRuntime::Cursor.to_string(), "cursor");
+    }
+
+    #[test]
+    fn compatibility_aliases_are_not_runtime_names() {
+        for name in [
+            "qodercli",
+            "github-copilot",
+            "githubcopilot",
+            "gemini-cli",
+            "geminicli",
+            "cursor-agent",
+            "agent",
+            "open-code",
+        ] {
+            let options = create_runtime_options(Some(name), RuntimeOptionsOverrides::default());
+
+            assert_eq!(options.runtime, AgentRuntime::Codex);
+        }
     }
 }

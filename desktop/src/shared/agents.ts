@@ -1,6 +1,15 @@
 import { type as arkType } from "arktype";
 
-export type AgentRuntime = "codex" | "kimi" | "opencode" | "claude";
+export type AgentRuntime =
+  | "codex"
+  | "kimi"
+  | "opencode"
+  | "qoder"
+  | "copilot"
+  | "gemini"
+  | "cursor"
+  | "cline"
+  | "claude";
 
 export type AgentOption = {
   description: string;
@@ -35,13 +44,40 @@ export const AGENT_OPTIONS: AgentOption[] = [
     label: "OpenCode",
   },
   {
+    description: "Qoder CLI through its ACP server.",
+    id: "qoder",
+    label: "Qoder",
+  },
+  {
+    description: "GitHub Copilot CLI through its ACP server.",
+    id: "copilot",
+    label: "GitHub Copilot",
+  },
+  {
+    description: "Gemini CLI through its ACP server.",
+    id: "gemini",
+    label: "Gemini",
+  },
+  {
+    description: "Cursor CLI through its ACP server.",
+    id: "cursor",
+    label: "Cursor",
+  },
+  {
+    description: "Cline CLI through its ACP server.",
+    id: "cline",
+    label: "Cline",
+  },
+  {
     description: "Claude Code runtime through the Claude Agent SDK.",
     id: "claude",
     label: "Claude Code",
   },
 ];
 
-const agentRuntime = arkType("'codex' | 'kimi' | 'opencode' | 'claude'");
+const agentRuntime = arkType(
+  "'codex' | 'kimi' | 'opencode' | 'qoder' | 'copilot' | 'gemini' | 'cursor' | 'cline' | 'claude'",
+);
 
 export function sanitizeAgentSettings(value: unknown): AgentSettings {
   const settings =

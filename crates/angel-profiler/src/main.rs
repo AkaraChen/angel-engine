@@ -101,7 +101,7 @@ impl CliConfig {
                         .need_auth(true)
                         .auto_authenticate(true);
                 }
-                "opencode" | "open-code" => {
+                "opencode" => {
                     builder = builder
                         .command("opencode")
                         .arg("acp")

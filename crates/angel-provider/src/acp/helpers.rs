@@ -37,6 +37,28 @@ pub(super) fn find_acp_conversation(
         })
 }
 
+pub(super) fn find_acp_conversation_or_pending_start(
+    engine: &AngelEngine,
+    session_id: &str,
+) -> Option<ConversationId> {
+    find_acp_conversation(engine, session_id).or_else(|| {
+        let mut pending = engine
+            .pending
+            .requests
+            .values()
+            .filter_map(|request| match request {
+                PendingRequest::StartConversation { conversation_id }
+                | PendingRequest::ForkConversation { conversation_id }
+                | PendingRequest::ResumeConversation {
+                    conversation_id, ..
+                } => Some(conversation_id.clone()),
+                _ => None,
+            });
+        let candidate = pending.next()?;
+        pending.next().is_none().then_some(candidate)
+    })
+}
+
 pub(super) fn active_turn_id(
     engine: &AngelEngine,
     conversation_id: &ConversationId,

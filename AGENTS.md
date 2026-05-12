@@ -120,6 +120,10 @@ protocol-neutral engine concept by an adapter.
   before sending requests.
 - Do not add aliases for unpublished APIs. If an API name is wrong, delete or
   rename it directly.
+- Do not add compatibility aliases for runtime/provider names. Runtime names
+  must be canonical product ids exactly as exposed in UI and settings, such as
+  `copilot`; do not accept alternate spellings like vendor-prefixed names,
+  binary names, or legacy names unless the product explicitly publishes that id.
 
 ## Verification
 

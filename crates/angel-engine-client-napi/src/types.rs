@@ -9,6 +9,11 @@ pub enum AgentRuntime {
     Codex,
     Kimi,
     Opencode,
+    Qoder,
+    Copilot,
+    Gemini,
+    Cursor,
+    Cline,
 }
 
 #[napi(string_enum = "camelCase")]
