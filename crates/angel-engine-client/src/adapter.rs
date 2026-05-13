@@ -4,6 +4,7 @@ use angel_engine::{
 };
 use angel_provider::acp::AcpAdapter;
 use angel_provider::codex::CodexAdapter;
+use angel_provider::gemini::GeminiAdapter;
 use angel_provider::kimi::KimiAdapter;
 use angel_provider::{InterpretedUserInput, ProtocolAdapter};
 use serde_json::Value;
@@ -22,6 +23,8 @@ impl RuntimeAdapter {
             ClientProtocol::Acp => Box::new(AcpAdapter::without_authentication()),
             ClientProtocol::Kimi if options.auth.need_auth => Box::new(KimiAdapter::standard()),
             ClientProtocol::Kimi => Box::new(KimiAdapter::without_authentication()),
+            ClientProtocol::Gemini if options.auth.need_auth => Box::new(GeminiAdapter::standard()),
+            ClientProtocol::Gemini => Box::new(GeminiAdapter::without_authentication()),
             ClientProtocol::CodexAppServer => Box::new(CodexAdapter::app_server()),
         };
         Self { inner }

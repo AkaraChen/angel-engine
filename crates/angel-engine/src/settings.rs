@@ -5,7 +5,7 @@ use crate::ids::ConversationId;
 use crate::reducer::{AngelEngine, CommandPlan};
 use crate::state::{
     AgentMode, ContextPatch, ContextScope, ContextUpdate, ConversationState, ReasoningProfile,
-    SessionConfigOption, SessionModeState, SessionModel, SessionModelState,
+    SessionConfigOption, SessionMode, SessionModeState, SessionModel, SessionModelState,
 };
 use strum::Display;
 

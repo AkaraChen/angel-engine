@@ -45,6 +45,10 @@ impl ClientOptions {
         Self::builder().kimi(command).build()
     }
 
+    pub fn gemini(command: impl Into<String>) -> Self {
+        Self::builder().gemini(command).build()
+    }
+
     pub fn codex_app_server(command: impl Into<String>) -> Self {
         Self::builder().codex_app_server(command).build()
     }
@@ -56,6 +60,7 @@ pub enum ClientProtocol {
     #[default]
     Acp,
     Kimi,
+    Gemini,
     CodexAppServer,
 }
 
@@ -111,6 +116,12 @@ impl ClientOptionsBuilder {
 
     pub fn kimi(mut self, command: impl Into<String>) -> Self {
         self.options.protocol = ClientProtocol::Kimi;
+        self.options.command = command.into();
+        self
+    }
+
+    pub fn gemini(mut self, command: impl Into<String>) -> Self {
+        self.options.protocol = ClientProtocol::Gemini;
         self.options.command = command.into();
         self
     }

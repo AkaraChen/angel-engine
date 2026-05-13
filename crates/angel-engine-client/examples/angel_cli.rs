@@ -572,7 +572,7 @@ impl RuntimeKind {
                 .client_title("Angel Client CLI")
                 .build(),
             Self::Gemini => ClientOptions::builder()
-                .acp("gemini")
+                .gemini("gemini")
                 .arg("--acp")
                 .need_auth(true)
                 .auto_authenticate(true)

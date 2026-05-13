@@ -716,6 +716,7 @@ fn protocol_flavor_from_js(
     Ok(match options.protocol {
         EngineClientProtocol::Acp => ProtocolFlavor::Acp,
         EngineClientProtocol::Kimi => ProtocolFlavor::Acp,
+        EngineClientProtocol::Gemini => ProtocolFlavor::Acp,
         EngineClientProtocol::CodexAppServer => ProtocolFlavor::CodexAppServer,
     })
 }

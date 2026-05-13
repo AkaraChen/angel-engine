@@ -168,7 +168,7 @@ pub fn create_runtime_options(
             }),
             command: command_override.unwrap_or_else(|| "gemini".to_string()),
             identity,
-            protocol: ClientProtocol::Acp,
+            protocol: ClientProtocol::Gemini,
             ..ClientOptions::builder().build()
         },
         AgentRuntime::Cursor => ClientOptions {
@@ -256,6 +256,16 @@ mod tests {
     }
 
     #[test]
+    fn gemini_runtime_uses_gemini_adapter_protocol() {
+        let options = create_runtime_options(Some("gemini"), RuntimeOptionsOverrides::default());
+
+        assert_eq!(options.runtime, AgentRuntime::Gemini);
+        assert_eq!(options.client.protocol, ClientProtocol::Gemini);
+        assert_eq!(options.client.command, "gemini");
+        assert_eq!(options.client.args, vec!["--acp"]);
+    }
+
+    #[test]
     fn documented_acp_runtimes_use_standard_acp_commands() {
         let cases = [
             (
@@ -273,14 +283,6 @@ mod tests {
                 vec!["--acp", "--stdio"],
                 false,
                 false,
-            ),
-            (
-                "gemini",
-                AgentRuntime::Gemini,
-                "gemini",
-                vec!["--acp"],
-                true,
-                true,
             ),
             (
                 "cursor",

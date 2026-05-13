@@ -20,6 +20,7 @@ pub enum AgentRuntime {
 pub enum ClientProtocol {
     Acp,
     Kimi,
+    Gemini,
     CodexAppServer,
 }
 
