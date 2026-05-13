@@ -51,6 +51,12 @@ export const chatPrewarmInput = type({
   "runtime?": "string | undefined",
 });
 
+export const chatRenameInput = type({
+  "+": "ignore",
+  chatId: "string > 0",
+  title: "string > 0",
+});
+
 export const chatRuntimeConfigInput = type({
   "+": "ignore",
   "cwd?": "string | undefined",

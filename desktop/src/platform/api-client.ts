@@ -3,6 +3,7 @@ import type {
   ChatCreateInput,
   ChatPrewarmInput,
   ProjectFileSearchInput,
+  ChatRenameInput,
   ChatRuntimeConfigInput,
   ChatSetModeInput,
 } from "@/shared/chat";
@@ -17,6 +18,7 @@ type ChatApiClient = {
   list: () => ReturnType<typeof ipc.chatsList>;
   load: (chatId: string) => ReturnType<typeof ipc.chatsLoad>;
   prewarm: (input?: ChatPrewarmInput) => ReturnType<typeof ipc.chatsPrewarm>;
+  rename: (input: ChatRenameInput) => ReturnType<typeof ipc.chatsRename>;
   setMode: (input: ChatSetModeInput) => ReturnType<typeof ipc.chatsSetMode>;
   showContextMenu: (
     chatId: string,
@@ -50,6 +52,7 @@ export function createApiClient(): ApiClient {
       list: () => ipc.chatsList(),
       load: (chatId: string) => ipc.chatsLoad(chatId),
       prewarm: (input: ChatPrewarmInput = {}) => ipc.chatsPrewarm(input),
+      rename: (input: ChatRenameInput) => ipc.chatsRename(input),
       setMode: (input: ChatSetModeInput) => ipc.chatsSetMode(input),
       showContextMenu: (chatId: string) => ipc.chatsShowContextMenu(chatId),
     },

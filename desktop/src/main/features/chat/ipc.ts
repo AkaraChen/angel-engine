@@ -5,6 +5,7 @@ import { type as arkType } from "arktype";
 import type {
   ChatCreateInput,
   ChatPrewarmInput,
+  ChatRenameInput,
   ChatRuntimeConfigInput,
   ChatSendInput,
   ChatSetModeInput,
@@ -19,10 +20,17 @@ import {
   sendChat,
   setChatMode,
 } from "./angel-client";
-import { deleteAllChats, deleteChat, getChat, listChats } from "./repository";
+import {
+  deleteAllChats,
+  deleteChat,
+  getChat,
+  listChats,
+  renameChat,
+} from "./repository";
 import {
   chatCreateInput,
   chatPrewarmInput,
+  chatRenameInput,
   chatRuntimeConfigInput,
   chatSendInput,
   chatSetModeInput,
@@ -83,6 +91,16 @@ export const chatIpcRouter = {
         projectId: value.projectId,
         runtime: value.runtime ?? undefined,
       });
+    }),
+
+  chatsRename: t.procedure
+    .input<ChatRenameInput>()
+    .action(async ({ input }) => {
+      const value = chatRenameInput(input);
+      if (value instanceof arkType.errors) {
+        throw new Error("Chat rename input is required.");
+      }
+      return renameChat(value.chatId, value.title);
     }),
 
   chatsRuntimeConfig: t.procedure

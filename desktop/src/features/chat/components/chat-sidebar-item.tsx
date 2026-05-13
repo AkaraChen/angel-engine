@@ -1,6 +1,10 @@
 import type { MouseEventHandler, ReactElement } from "react";
+import { Pencil } from "lucide-react";
 
-import { MacSidebarMenuButton } from "@/components/workspace-sidebar-primitives";
+import {
+  MacSidebarMenuAction,
+  MacSidebarMenuButton,
+} from "@/components/workspace-sidebar-primitives";
 
 import { ChatRunningPulse } from "./chat-running-pulse";
 
@@ -10,6 +14,7 @@ type ChatSidebarItemProps = {
   tooltip: string;
   isActive: boolean;
   onOpenChat: () => void;
+  onRenameChat?: () => Promise<void> | void;
   onShowContextMenu?: () => Promise<void> | void;
 };
 
@@ -19,6 +24,7 @@ export function ChatSidebarItem({
   tooltip,
   isActive,
   onOpenChat,
+  onRenameChat,
   onShowContextMenu,
 }: ChatSidebarItemProps): ReactElement {
   const handleContextMenu: MouseEventHandler<HTMLButtonElement> = (event) => {
@@ -29,19 +35,36 @@ export function ChatSidebarItem({
   };
 
   return (
-    <MacSidebarMenuButton
-      isActive={isActive}
-      onClick={onOpenChat}
-      onContextMenu={onShowContextMenu ? handleContextMenu : undefined}
-      title={tooltip}
-    >
-      <span
-        className="block min-w-0 flex-1 overflow-hidden truncate whitespace-nowrap text-left"
-        title={title}
+    <>
+      <MacSidebarMenuButton
+        isActive={isActive}
+        onClick={onOpenChat}
+        onContextMenu={onShowContextMenu ? handleContextMenu : undefined}
+        title={tooltip}
       >
-        {title}
-      </span>
-      <ChatRunningPulse chatId={chatId} />
-    </MacSidebarMenuButton>
+        <span
+          className="block min-w-0 flex-1 overflow-hidden truncate whitespace-nowrap text-left"
+          title={title}
+        >
+          {title}
+        </span>
+        <ChatRunningPulse chatId={chatId} />
+      </MacSidebarMenuButton>
+      {onRenameChat ? (
+        <MacSidebarMenuAction
+          aria-label={`Rename ${title}`}
+          onClick={(event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            void onRenameChat();
+          }}
+          showOnHover
+          title={`Rename ${title}`}
+          type="button"
+        >
+          <Pencil />
+        </MacSidebarMenuAction>
+      ) : null}
+    </>
   );
 }

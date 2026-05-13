@@ -43,6 +43,12 @@ interface ChatPrewarmQueryParams {
   staleTime?: number;
 }
 
+interface RenameChatMutationParams {
+  api: ApiClient;
+  onSuccess?: (data: Chat) => Promise<void> | void;
+  queryClient: QueryClient;
+}
+
 interface CreateProjectChatMutationParams {
   api: ApiClient;
   onSuccess?: (data: Chat, variables: Project) => Promise<void> | void;
@@ -179,6 +185,27 @@ export function createProjectChatMutationOptions({
   });
 }
 
+export function renameChatMutationOptions({
+  api,
+  onSuccess,
+  queryClient,
+}: RenameChatMutationParams) {
+  return mutationOptions({
+    mutationFn: (input: Parameters<ApiClient["chats"]["rename"]>[0]) =>
+      api.chats.rename(input),
+    onSuccess: async (data) => {
+      queryClient.setQueryData<Chat[]>(queryKeys.chats.list(), (current = []) =>
+        upsertChatInList(current, data),
+      );
+      queryClient.setQueryData<ChatLoadResult | undefined>(
+        queryKeys.chats.detail(data.id),
+        (current) => (current ? { ...current, chat: data } : current),
+      );
+      await onSuccess?.(data);
+    },
+  });
+}
+
 export function deleteAllChatsMutationOptions({
   api,
   onSuccess,
@@ -218,4 +245,12 @@ export async function invalidateChatQueries(queryClient: QueryClient) {
     queryKey: queryKeys.chats.list(),
     type: "active",
   });
+}
+
+function upsertChatInList(chats: Chat[], chat: Chat) {
+  const next = chats.filter((item) => item.id !== chat.id);
+  next.unshift(chat);
+  return next.sort((left, right) =>
+    right.updatedAt.localeCompare(left.updatedAt),
+  );
 }

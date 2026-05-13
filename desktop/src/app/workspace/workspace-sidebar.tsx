@@ -28,6 +28,7 @@ type WorkspaceSidebarProps = {
   onCreateStandaloneChat: () => MaybeAsync;
   onOpenChat: (chat: Chat) => MaybeAsync;
   onOpenSettings: () => MaybeAsync;
+  onRenameChat: (chat: Chat) => MaybeAsync;
   onRefreshProjects: () => MaybeAsync;
   onShowChatContextMenu: (chat: Chat) => MaybeAsync;
   onShowProjectContextMenu: (project: Project) => MaybeAsync;
@@ -48,6 +49,7 @@ export function WorkspaceSidebar({
   onCreateStandaloneChat,
   onOpenChat,
   onOpenSettings,
+  onRenameChat,
   onRefreshProjects,
   onShowChatContextMenu,
   onShowProjectContextMenu,
@@ -79,6 +81,7 @@ export function WorkspaceSidebar({
           onCreateProject={onCreateProject}
           onCreateProjectChat={onCreateProjectChat}
           onOpenChat={onOpenChat}
+          onRenameChat={onRenameChat}
           onRefreshProjects={onRefreshProjects}
           onShowChatContextMenu={onShowChatContextMenu}
           onShowProjectContextMenu={onShowProjectContextMenu}
@@ -91,6 +94,7 @@ export function WorkspaceSidebar({
         <ChatSidebarSection
           isLoading={isChatsLoading}
           onOpenChat={onOpenChat}
+          onRenameChat={onRenameChat}
           onShowChatContextMenu={onShowChatContextMenu}
           selectedChatId={selectedChatId}
           standaloneChats={standaloneChats}
