@@ -91,6 +91,18 @@ issue 写到单独的 run report，例如
 - Failed:
 - Blocked:
 - Notes:
+- Coverage matrix:
+  - Basic send:
+  - Model/effort/mode config:
+  - Plan/build or equivalent planning mode:
+  - Cancel/interrupt:
+  - Permission request:
+  - Tool call:
+  - Attachment/file mention:
+  - Hydrate/restart:
+
+每个 matrix 项必须写 `passed`、`failed`、`blocked` 或 `not supported`，不能留空。某
+agent 不支持某能力时，记录它的 snapshot/UI 证据或 runtime 能力判断，而不是跳过。
 
 发现问题时用这个格式记录，截图或视频路径可选但推荐：
 
@@ -162,9 +174,10 @@ snapshot config。
 Say exactly: codex desktop QA ping
 ```
 
-## 4. 长任务、取消和恢复输入
+## 4. 长任务、取消、打断和恢复输入
 
-覆盖：abort signal、active stream abort、pending run state、post-cancel continuation。
+覆盖：abort signal、active stream abort、interrupt/steer path、pending run state、
+post-cancel continuation。
 
 - [ ] 发送长任务后能看到 assistant 正在输出或 pending。
 - [ ] 点击 `Cancel` 后输出停止，running 状态清除。
@@ -173,6 +186,12 @@ Say exactly: codex desktop QA ping
 - [ ] sidebar/header 的 running/attention 状态和当前 chat 一致。
 - [ ] 取消正在等待 permission/input 的 run 后，卡片不会永久阻塞新消息。
 - [ ] 快速连续点击 cancel 不会抛异常或产生重复 toast。
+- [ ] 如果 UI/runtime 支持运行中打断、steer 或追加用户指令，运行中提交一条短打断指
+      令，确认它进入当前 active turn，而不是创建重复 chat 或丢失原 run 状态。
+- [ ] 如果该 agent 不支持运行中追加输入，run report 明确记录 `interrupt not
+    supported`，并把 `Cancel` 作为该 agent 的打断路径覆盖。
+- [ ] 打断或 cancel 后立刻发送 follow-up，确认后续 turn 能正常开始、输出和 sidebar
+      状态不串到上一轮。
 
 建议 Codex prompt：
 
@@ -189,12 +208,18 @@ Count from 1 to 50 slowly, one number per line.
 - [ ] 为当前 agent 找到会跨过权限边界的安全动作。只使用 `/tmp/angel-engine-agent-qa`
       下的 fixture，逐级尝试：只读 shell、写入临时文件、编辑 project 文件、删除临
       时文件、访问非 cwd 的 fixture 文件。
+- [ ] 如果 agent/runtime 暴露显式 permission request 工具或命令，优先用它触发
+      permission 确认；不要只依赖普通 shell/write 是否自然触发。
 - [ ] 如果低风险动作没有触发确认，继续升级到该 agent 会请求确认的边界动作；目标是
       触发 Angel Engine 的 permission/elicitation 投影，而不是证明 agent 本身有问题。
 - [ ] 触发确认后，消息中出现 permission UI，且 UI 内容能说明将执行的动作。
 - [ ] `Deny` 后对应动作不执行，agent 收到拒绝结果，chat 不死锁。
 - [ ] `Allow` 后动作继续执行，tool result 和最终 assistant message 正常渲染。
+- [ ] `Cancel` 或关闭 permission/input UI 后，agent 收到取消/拒绝结果，run 不永久
+      running，composer 能恢复。
 - [ ] 如果显示 `Bypass permission`，启用后只影响当前 chat/run slot，不影响其他 chat。
+- [ ] 支持 session/always allow 的 agent，验证 session 级授权只影响当前 chat/session
+      的后续安全 fixture，不污染其他 chat。
 - [ ] 切到其他 chat 时，等待 permission 的 chat 在 sidebar/header 有 attention 提示。
 - [ ] 回到该 chat 并处理 permission 后，attention 提示清除。
 - [ ] agent 提问需要用户输入时，文本输入或选项 UI 可提交；取消后 agent 能收到取消结
@@ -293,17 +318,25 @@ Use the attached file and the mentioned project file to summarize both first
 lines in two bullets.
 ```
 
-## 9. Plan / Build 流程
+## 9. Plan / Build / 规划模式流程
 
-覆盖：Codex plan mode、plan card、todo、Start implementation、mode transition。
+覆盖：agent plan/build 或等价规划模式、plan card、todo、Start implementation、mode
+transition。
 
-- [ ] 切到 `Plan` 后发送规划类 prompt，Codex 使用 plan mode。
+- [ ] 对每个 agent 先从 runtime snapshot/UI 记录可用 mode；如果有 `Plan`、`Ask`、
+      `Agent`、`Auto Edit`、`Act`、`Build` 等规划/执行模式，都要至少覆盖一次切换和
+      发送。
+- [ ] 切到 `Plan` 或该 agent 的等价规划模式后发送规划类 prompt，runtime 使用所选
+      mode，而不是回落到默认 build/act。
 - [ ] plan/todo card 正常显示，内容可读，状态更新清楚。
 - [ ] 如果出现 `Start implementation`，点击后切到 build 模式并发送实现请求。
 - [ ] build 实现期间 permission、tool call、file edit 正常走同一个 chat。
 - [ ] 从 build 再切回 plan 时，按钮状态和 runtime mode 一致。
 - [ ] 运行中 plan/build toggle 禁用。
 - [ ] hydrate 后 plan/todo 历史可恢复，不变成普通未结构化 JSON。
+- [ ] 如果该 agent 没有规划模式或不输出结构化 plan/todo，run report 记录为 `plan
+    mode not supported` 或 `structured plan not supported`，并提供 model/mode UI 或
+      snapshot 证据。
 
 建议 Codex prompt：
 
