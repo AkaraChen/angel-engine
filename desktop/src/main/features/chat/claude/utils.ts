@@ -1,4 +1,5 @@
 import type { ClientUpdate } from "@angel-engine/client-napi";
+import { EngineEventElicitationDecision } from "@angel-engine/client-napi";
 import type {
   Options as ClaudeQueryOptions,
   PermissionMode,
@@ -100,20 +101,20 @@ export function abortError(signal?: AbortSignal) {
 export function permissionDecision(response: ChatElicitationResponse): unknown {
   switch (response.type) {
     case "allow":
-      return "Allow";
+      return EngineEventElicitationDecision.Allow;
     case "allowForSession":
-      return "AllowForSession";
+      return EngineEventElicitationDecision.AllowForSession;
     case "answers":
       return {
-        Answers: response.answers.map((answer) => ({
+        [EngineEventElicitationDecision.Answers]: response.answers.map((answer) => ({
           id: answer.id,
           value: answer.value,
         })),
       };
     case "cancel":
-      return "Cancel";
+      return EngineEventElicitationDecision.Cancel;
     default:
-      return "Deny";
+      return EngineEventElicitationDecision.Deny;
   }
 }
 

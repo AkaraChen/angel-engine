@@ -52,6 +52,10 @@ impl ClientOptions {
     pub fn codex_app_server(command: impl Into<String>) -> Self {
         Self::builder().codex_app_server(command).build()
     }
+
+    pub fn custom(command: impl Into<String>) -> Self {
+        Self::builder().custom(command).build()
+    }
 }
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
@@ -62,6 +66,7 @@ pub enum ClientProtocol {
     Kimi,
     Gemini,
     CodexAppServer,
+    Custom,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -128,6 +133,12 @@ impl ClientOptionsBuilder {
 
     pub fn codex_app_server(mut self, command: impl Into<String>) -> Self {
         self.options.protocol = ClientProtocol::CodexAppServer;
+        self.options.command = command.into();
+        self
+    }
+
+    pub fn custom(mut self, command: impl Into<String>) -> Self {
+        self.options.protocol = ClientProtocol::Custom;
         self.options.command = command.into();
         self
     }

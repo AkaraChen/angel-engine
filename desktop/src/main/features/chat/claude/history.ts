@@ -1,4 +1,8 @@
 import type { SessionMessage } from "@anthropic-ai/claude-agent-sdk";
+import {
+  EngineEventContentKind,
+  EngineEventHistoryRole,
+} from "@angel-engine/client-napi";
 
 import { structuredPlanFromToolUse } from "./plan";
 import type { EngineEventJson, JsonObject } from "./types";
@@ -29,9 +33,16 @@ function historyEventsFromSessionMessage(
   const value = asObject(message.message);
   const content = value?.content;
   if (typeof content === "string") {
-    const role = message.type === "user" ? "User" : "Assistant";
+    const role =
+      message.type === "user"
+        ? EngineEventHistoryRole.User
+        : EngineEventHistoryRole.Assistant;
     return content
-      ? [historyReplayChunk(conversationId, role, { Text: content })]
+      ? [
+          historyReplayChunk(conversationId, role, {
+            [EngineEventContentKind.Text]: content,
+          }),
+        ]
       : [];
   }
   if (!Array.isArray(content)) return [];
@@ -58,13 +69,21 @@ function assistantHistoryEvents(
   if (value.type === "text") {
     const text = String(value.text ?? "");
     return text
-      ? [historyReplayChunk(conversationId, "Assistant", { Text: text })]
+      ? [
+          historyReplayChunk(conversationId, EngineEventHistoryRole.Assistant, {
+            [EngineEventContentKind.Text]: text,
+          }),
+        ]
       : [];
   }
   if (value.type === "thinking") {
     const text = String(value.thinking ?? "");
     return text
-      ? [historyReplayChunk(conversationId, "Reasoning", { Text: text })]
+      ? [
+          historyReplayChunk(conversationId, EngineEventHistoryRole.Reasoning, {
+            [EngineEventContentKind.Text]: text,
+          }),
+        ]
       : [];
   }
   if (value.type !== "tool_use") return [];
@@ -77,15 +96,17 @@ function assistantHistoryEvents(
   const plan = structuredPlanFromToolUse(name, input);
   if (plan) {
     return [
-      historyReplayChunk(conversationId, "Assistant", {
-        Structured: JSON.stringify(plan),
+      historyReplayChunk(conversationId, EngineEventHistoryRole.Assistant, {
+        [EngineEventContentKind.Structured]: JSON.stringify(plan),
       }),
     ];
   }
 
   return [
-    historyReplayChunk(conversationId, "Tool", {
-      Structured: JSON.stringify(claudeHistoryToolCall(id, name, input)),
+    historyReplayChunk(conversationId, EngineEventHistoryRole.Tool, {
+      [EngineEventContentKind.Structured]: JSON.stringify(
+        claudeHistoryToolCall(id, name, input),
+      ),
     }),
   ];
 }
@@ -100,7 +121,11 @@ function userHistoryEvents(
   if (value.type === "text") {
     const text = String(value.text ?? "");
     return text
-      ? [historyReplayChunk(conversationId, "User", { Text: text })]
+      ? [
+          historyReplayChunk(conversationId, EngineEventHistoryRole.User, {
+            [EngineEventContentKind.Text]: text,
+          }),
+        ]
       : [];
   }
   if (value.type !== "tool_result") return [];
@@ -110,8 +135,8 @@ function userHistoryEvents(
   );
   const toolUse = toolUses.get(toolId);
   return [
-    historyReplayChunk(conversationId, "Tool", {
-      Structured: JSON.stringify(
+    historyReplayChunk(conversationId, EngineEventHistoryRole.Tool, {
+      [EngineEventContentKind.Structured]: JSON.stringify(
         claudeHistoryToolResult({
           content: value.content,
           input: toolUse?.input,
@@ -126,7 +151,7 @@ function userHistoryEvents(
 
 function historyReplayChunk(
   conversationId: string,
-  role: string,
+  role: `${EngineEventHistoryRole}`,
   content: JsonObject,
 ): EngineEventJson {
   return {

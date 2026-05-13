@@ -5,6 +5,7 @@ import type {
   AdapterEncodeInput,
   TransportOutput,
 } from "@angel-engine/client-napi";
+import { ClientProtocol } from "@angel-engine/client-napi";
 
 import { contextPatch, contextUpdated } from "./context";
 import type { JsonObject } from "./types";
@@ -26,8 +27,8 @@ const { AcpAdapter } = nodeRequire(
 export class ClaudeCodeEngineAdapter {
   private readonly base = new AcpAdapter({ needAuthentication: false });
 
-  protocolFlavor(): "acp" {
-    return "acp";
+  protocolFlavor(): `${ClientProtocol}` {
+    return ClientProtocol.Custom;
   }
 
   capabilities(): unknown {

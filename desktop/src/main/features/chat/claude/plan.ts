@@ -1,6 +1,8 @@
 import { homedir } from "node:os";
 import path from "node:path";
 
+import { EngineEventContentKind, PlanEntryStatus } from "@angel-engine/client-napi";
+
 import type { ActiveClaudeTurn, EngineEventJson, JsonObject } from "./types";
 import {
   CLAUDE_TOOL,
@@ -53,7 +55,7 @@ export function planEventsFromToolUse(
     {
       PlanDelta: {
         conversation_id: active.conversationId,
-        delta: { Text: text },
+        delta: { [EngineEventContentKind.Text]: text },
         turn_id: active.turnId,
       },
     },
@@ -122,7 +124,7 @@ function planEventsFromStructuredPlan(
         {
           PlanDelta: {
             conversation_id: active.conversationId,
-            delta: { Text: text },
+            delta: { [EngineEventContentKind.Text]: text },
             turn_id: active.turnId,
           },
         },
@@ -230,5 +232,5 @@ function markdownPlanEntries(
     .map((line) => line.match(/^(?:[-*]|\d+[.)])\s+(.+)$/)?.[1] ?? "")
     .filter((line) => line && !line.startsWith("`"))
     .slice(0, 20)
-    .map((content) => ({ content, status: "Pending" }));
+    .map((content) => ({ content, status: PlanEntryStatus.Pending }));
 }

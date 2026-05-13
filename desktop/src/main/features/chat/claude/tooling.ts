@@ -1,3 +1,8 @@
+import {
+  EngineEventActionKind,
+  EngineEventActionOutputKind,
+} from "@angel-engine/client-napi";
+
 import type { ActiveClaudeTurn, JsonObject } from "./types";
 import { CLAUDE_TOOL } from "./sdk-types";
 import { isClaudePlanToolUse } from "./plan";
@@ -6,32 +11,32 @@ import { asObject } from "./utils";
 export function actionKind(
   toolName: string,
   input?: Record<string, unknown>,
-): string {
-  if (isClaudePlanToolUse(toolName, input)) return "Plan";
+): `${EngineEventActionKind}` {
+  if (isClaudePlanToolUse(toolName, input)) return EngineEventActionKind.Plan;
 
   switch (toolName) {
     case CLAUDE_TOOL.Bash:
-      return "Command";
+      return EngineEventActionKind.Command;
     case CLAUDE_TOOL.Read:
     case CLAUDE_TOOL.Glob:
     case CLAUDE_TOOL.Grep:
     case CLAUDE_TOOL.LS:
-      return "Read";
+      return EngineEventActionKind.Read;
     case CLAUDE_TOOL.Write:
-      return "Write";
+      return EngineEventActionKind.Write;
     case CLAUDE_TOOL.Edit:
     case CLAUDE_TOOL.MultiEdit:
-      return "FileChange";
+      return EngineEventActionKind.FileChange;
     case CLAUDE_TOOL.WebSearch:
     case CLAUDE_TOOL.WebFetch:
-      return "WebSearch";
+      return EngineEventActionKind.WebSearch;
     case CLAUDE_TOOL.Task:
     case CLAUDE_TOOL.Agent:
-      return "SubAgent";
+      return EngineEventActionKind.SubAgent;
     case CLAUDE_TOOL.AskUserQuestion:
-      return "HostCapability";
+      return EngineEventActionKind.HostCapability;
     default:
-      return "DynamicTool";
+      return EngineEventActionKind.DynamicTool;
   }
 }
 
@@ -39,9 +44,11 @@ export function toolOutputKind(
   actionId: string,
   output: string,
   active: ActiveClaudeTurn,
-): string {
-  if (!active.actionIds.has(actionId)) return "Text";
-  return output.includes("\n") ? "Terminal" : "Text";
+): `${EngineEventActionOutputKind}` {
+  if (!active.actionIds.has(actionId)) return EngineEventActionOutputKind.Text;
+  return output.includes("\n")
+    ? EngineEventActionOutputKind.Terminal
+    : EngineEventActionOutputKind.Text;
 }
 
 export function toolTitle(
@@ -138,17 +145,17 @@ function acpHistoryToolKind(
   input?: Record<string, unknown>,
 ): string {
   switch (actionKind(toolName, input)) {
-    case "Command":
+    case EngineEventActionKind.Command:
       return "execute";
-    case "Read":
+    case EngineEventActionKind.Read:
       return "read";
-    case "Write":
-    case "FileChange":
+    case EngineEventActionKind.Write:
+    case EngineEventActionKind.FileChange:
       return "edit";
-    case "WebSearch":
+    case EngineEventActionKind.WebSearch:
       return "search";
-    case "Reasoning":
-    case "Plan":
+    case EngineEventActionKind.Reasoning:
+    case EngineEventActionKind.Plan:
       return "think";
     default:
       return "fetch";

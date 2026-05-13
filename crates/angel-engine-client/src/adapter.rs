@@ -26,8 +26,43 @@ impl RuntimeAdapter {
             ClientProtocol::Gemini if options.auth.need_auth => Box::new(GeminiAdapter::standard()),
             ClientProtocol::Gemini => Box::new(GeminiAdapter::without_authentication()),
             ClientProtocol::CodexAppServer => Box::new(CodexAdapter::app_server()),
+            ClientProtocol::Custom => Box::new(UnsupportedCustomAdapter),
         };
         Self { inner }
+    }
+}
+
+#[derive(Debug)]
+struct UnsupportedCustomAdapter;
+
+impl ProtocolAdapter for UnsupportedCustomAdapter {
+    fn protocol_flavor(&self) -> ProtocolFlavor {
+        ProtocolFlavor::Custom
+    }
+
+    fn capabilities(&self) -> ConversationCapabilities {
+        ConversationCapabilities::unknown()
+    }
+
+    fn encode_effect(
+        &self,
+        _engine: &AngelEngine,
+        _effect: &ProtocolEffect,
+        _options: &TransportOptions,
+    ) -> Result<TransportOutput, EngineError> {
+        Err(EngineError::InvalidCommand {
+            message: "custom client protocol requires an explicit adapter".to_string(),
+        })
+    }
+
+    fn decode_message(
+        &self,
+        _engine: &AngelEngine,
+        _message: &angel_engine::JsonRpcMessage,
+    ) -> Result<TransportOutput, EngineError> {
+        Err(EngineError::InvalidCommand {
+            message: "custom client protocol requires an explicit adapter".to_string(),
+        })
     }
 }
 

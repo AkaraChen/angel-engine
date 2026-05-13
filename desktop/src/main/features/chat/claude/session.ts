@@ -9,6 +9,14 @@ import type {
   SetModeRequest,
   TurnRunResult,
 } from "@angel-engine/client-napi";
+import {
+  EngineEventActionKind,
+  EngineEventActionOutputKind,
+  EngineEventActionPhase,
+  EngineEventElicitationKind,
+  EngineEventElicitationPhase,
+  EngineEventTurnOutcome,
+} from "@angel-engine/client-napi";
 import type {
   CanUseTool,
   ModelInfo,
@@ -322,9 +330,9 @@ export class DesktopClaudeSession {
                 active.turnId,
                 `summary-${message.uuid}`,
                 "Tool Summary",
-                "DynamicTool",
+                EngineEventActionKind.DynamicTool,
                 message.summary,
-                "Text",
+                EngineEventActionOutputKind.Text,
               ),
             ]
           : [];
@@ -490,7 +498,9 @@ export class DesktopClaudeSession {
             output_delta: {
               [toolOutputKind(actionId, output, active)]: output,
             },
-            phase: block.is_error ? "Failed" : "Completed",
+            phase: block.is_error
+              ? EngineEventActionPhase.Failed
+              : EngineEventActionPhase.Completed,
             title: null,
           },
         },
@@ -511,7 +521,11 @@ export class DesktopClaudeSession {
       active.sawTextDelta = true;
       return [
         assistantDelta(active.conversationId, active.turnId, message.result),
-        turnTerminal(active.conversationId, active.turnId, "Succeeded"),
+        turnTerminal(
+          active.conversationId,
+          active.turnId,
+          EngineEventTurnOutcome.Succeeded,
+        ),
         sessionUsageUpdated(active.conversationId, message),
       ];
     }
@@ -520,7 +534,7 @@ export class DesktopClaudeSession {
         active.conversationId,
         active.turnId,
         message.subtype === "success"
-          ? "Succeeded"
+          ? EngineEventTurnOutcome.Succeeded
           : failedOutcome(message.errors?.join("\n") || message.subtype),
       ),
       sessionUsageUpdated(active.conversationId, message),
@@ -554,11 +568,11 @@ export class DesktopClaudeSession {
                 title:
                   context.title ??
                   context.displayName ??
-                  (elicitationKind === "UserInput"
+                  (elicitationKind === EngineEventElicitationKind.UserInput
                     ? "Question"
                     : `Allow ${toolName}?`),
               },
-              phase: "Open",
+              phase: EngineEventElicitationPhase.Open,
               remote_request_id: { Local: actionId },
               turn_id: active.turnId,
             },

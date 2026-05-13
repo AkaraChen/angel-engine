@@ -19,3 +19,4 @@ serde_json = "1"
 
 [build-dependencies]
 napi-build = "2"
+syn = { version = "2", features = ["full"] }

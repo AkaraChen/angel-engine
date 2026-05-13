@@ -68,6 +68,7 @@ dependencies = [
  "napi-derive",
  "serde",
  "serde_json",
+ "syn",
 ]
 
 [[package]]

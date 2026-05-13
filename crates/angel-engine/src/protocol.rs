@@ -6,6 +6,7 @@ use crate::ids::{ConversationId, JsonRpcRequestId, TurnId};
 pub enum ProtocolFlavor {
     Acp,
     CodexAppServer,
+    Custom,
 }
 
 #[derive(serde::Serialize, serde::Deserialize, Clone, Debug, PartialEq, Eq)]

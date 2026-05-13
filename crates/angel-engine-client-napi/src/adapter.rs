@@ -718,6 +718,7 @@ fn protocol_flavor_from_js(
         EngineClientProtocol::Kimi => ProtocolFlavor::Acp,
         EngineClientProtocol::Gemini => ProtocolFlavor::Acp,
         EngineClientProtocol::CodexAppServer => ProtocolFlavor::CodexAppServer,
+        EngineClientProtocol::Custom => ProtocolFlavor::Custom,
     })
 }
 
@@ -735,6 +736,7 @@ fn capabilities_from_js(
     Ok(match flavor {
         ProtocolFlavor::Acp => angel_provider::acp::acp_standard_capabilities(),
         ProtocolFlavor::CodexAppServer => angel_provider::codex::codex_app_server_capabilities(),
+        ProtocolFlavor::Custom => ConversationCapabilities::unknown(),
     })
 }
 
@@ -742,6 +744,7 @@ fn parse_protocol_flavor(value: &str) -> Result<ProtocolFlavor> {
     match value {
         "acp" => Ok(ProtocolFlavor::Acp),
         "codexAppServer" => Ok(ProtocolFlavor::CodexAppServer),
+        "custom" => Ok(ProtocolFlavor::Custom),
         other => Err(Error::from_reason(format!(
             "unsupported adapter protocol flavor: {other}"
         ))),
@@ -801,6 +804,7 @@ fn protocol_flavor_name(flavor: ProtocolFlavor) -> &'static str {
     match flavor {
         ProtocolFlavor::Acp => "acp",
         ProtocolFlavor::CodexAppServer => "codexAppServer",
+        ProtocolFlavor::Custom => "custom",
     }
 }
 

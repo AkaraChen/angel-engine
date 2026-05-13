@@ -1,4 +1,5 @@
 import type { CanUseTool } from "@anthropic-ai/claude-agent-sdk";
+import { EngineEventElicitationKind } from "@angel-engine/client-napi";
 
 import type { ChatElicitationResponse } from "../../../../shared/chat";
 import type { JsonObject } from "./types";
@@ -20,8 +21,10 @@ type NormalizedClaudeQuestionInput = {
 export function claudeElicitationKind(
   toolName: string,
   input: Record<string, unknown>,
-): "Approval" | "UserInput" {
-  return askUserQuestionInput(toolName, input) ? "UserInput" : "Approval";
+): `${EngineEventElicitationKind}` {
+  return askUserQuestionInput(toolName, input)
+    ? EngineEventElicitationKind.UserInput
+    : EngineEventElicitationKind.Approval;
 }
 
 export function claudeElicitationBody(

@@ -8,6 +8,12 @@ import type {
   TurnRunEvent,
   TurnSnapshot,
 } from "@angel-engine/client-napi";
+import {
+  EngineEventActionKind,
+  EngineEventActionOutputKind,
+  EngineEventActionPhase,
+  EngineEventContentKind,
+} from "@angel-engine/client-napi";
 import type {
   ModelInfo,
   SDKResultMessage,
@@ -41,7 +47,7 @@ export function actionObserved(
         },
         kind: actionKind(toolName, input),
         output: { chunks: [] },
-        phase: "Running",
+        phase: EngineEventActionPhase.Running,
         remote: { Known: actionId },
         title: toolTitle(toolName, input),
         turn_id: active.turnId,
@@ -56,9 +62,9 @@ export function actionOutputUpdated(
   turnId: string,
   actionId: string,
   title: string,
-  kind: string,
+  kind: `${EngineEventActionKind}`,
   output: string,
-  outputKind: string,
+  outputKind: `${EngineEventActionOutputKind}`,
 ): EngineEventJson {
   return {
     ActionObserved: {
@@ -71,7 +77,7 @@ export function actionOutputUpdated(
         },
         kind,
         output: { chunks: [{ [outputKind]: output }] },
-        phase: "Completed",
+        phase: EngineEventActionPhase.Completed,
         remote: { Local: actionId },
         title,
         turn_id: turnId,
@@ -89,7 +95,7 @@ export function assistantDelta(
   return {
     AssistantDelta: {
       conversation_id: conversationId,
-      delta: { Text: text },
+      delta: { [EngineEventContentKind.Text]: text },
       turn_id: turnId,
     },
   };
@@ -103,7 +109,7 @@ export function reasoningDelta(
   return {
     ReasoningDelta: {
       conversation_id: conversationId,
-      delta: { Text: text },
+      delta: { [EngineEventContentKind.Text]: text },
       turn_id: turnId,
     },
   };

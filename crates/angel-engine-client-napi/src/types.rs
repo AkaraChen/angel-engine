@@ -22,6 +22,7 @@ pub enum ClientProtocol {
     Kimi,
     Gemini,
     CodexAppServer,
+    Custom,
 }
 
 #[napi(string_enum = "camelCase")]
@@ -183,6 +184,8 @@ pub enum ElicitationResponseType {
     ExternalComplete,
     Raw,
 }
+
+include!(concat!(env!("OUT_DIR"), "/engine_event_enums.rs"));
 
 #[napi(string_enum = "camelCase")]
 pub enum ThreadEventType {
