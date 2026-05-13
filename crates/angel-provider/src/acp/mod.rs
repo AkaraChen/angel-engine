@@ -12,11 +12,11 @@ use angel_engine::protocol::{ProtocolFlavor, ProtocolMethod};
 use angel_engine::reducer::{AngelEngine, PendingRequest};
 use angel_engine::state::{
     ActionInput, ActionKind, ActionOutputDelta, ActionPhase, ActionState, ContentDelta,
-    ContentPart, ContextPatch, ElicitationKind, ElicitationOptions, ElicitationPhase,
-    ElicitationState, ExhaustionReason, HistoryReplayEntry, HistoryReplayToolAction, HistoryRole,
-    SessionConfigOption, SessionConfigValue, SessionMode, SessionModeState, SessionModel,
-    SessionModelState, SessionUsageCost, SessionUsageState, TurnOutcome, UserQuestion,
-    UserQuestionOption,
+    ContentPart, ContextPatch, ElicitationChoice, ElicitationChoiceKind, ElicitationKind,
+    ElicitationOptions, ElicitationPhase, ElicitationState, ExhaustionReason, HistoryReplayEntry,
+    HistoryReplayToolAction, HistoryRole, SessionConfigOption, SessionConfigValue, SessionMode,
+    SessionModeState, SessionModel, SessionModelState, SessionUsageCost, SessionUsageState,
+    TurnOutcome, UserQuestion, UserQuestionOption,
 };
 use angel_engine::transport::{
     JsonRpcMessage, TransportLogKind, TransportOptions, TransportOutput, client_info_json,

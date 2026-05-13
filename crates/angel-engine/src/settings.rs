@@ -5,39 +5,9 @@ use crate::ids::ConversationId;
 use crate::reducer::{AngelEngine, CommandPlan};
 use crate::state::{
     AgentMode, ContextPatch, ContextScope, ContextUpdate, ConversationState, ReasoningProfile,
-    SessionConfigOption, SessionMode, SessionModeState, SessionModel, SessionModelState,
+    SessionConfigOption, SessionModeState, SessionModel, SessionModelState,
 };
-use std::fmt;
 use strum::Display;
-
-/// A normalized identifier that strips non-alphanumeric characters and lowercases.
-/// Used for fuzzy-matching config option IDs and names.
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub struct NormalizedId(String);
-
-impl NormalizedId {
-    pub fn as_str(&self) -> &str {
-        &self.0
-    }
-}
-
-impl From<&str> for NormalizedId {
-    fn from(value: &str) -> Self {
-        Self(
-            value
-                .chars()
-                .filter(|c| c.is_ascii_alphanumeric())
-                .flat_map(char::to_lowercase)
-                .collect(),
-        )
-    }
-}
-
-impl fmt::Display for NormalizedId {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.0)
-    }
-}
 
 /// Parsed reasoning level with disabled aliases.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Display)]
@@ -100,9 +70,15 @@ pub struct ReasoningLevelState {
 impl ReasoningLevelState {
     pub fn from_conversation(conversation: &ConversationState) -> Self {
         if let Some(option) = find_reasoning_config_option(&conversation.config_options) {
+            let context_level = conversation
+                .context
+                .reasoning
+                .effective()
+                .and_then(Option::as_ref)
+                .and_then(|reasoning| reasoning.effort.clone());
             let available_options = reasoning_options_from_config(option);
             return Self {
-                current_level: Some(option.current_value.clone()),
+                current_level: context_level.or_else(|| Some(option.current_value.clone())),
                 available_levels: reasoning_option_values(&available_options),
                 available_options,
                 source: ReasoningLevelSource::ConfigOption,
@@ -468,52 +444,28 @@ impl AngelEngine {
 pub(crate) fn find_model_config_option(
     options: &[SessionConfigOption],
 ) -> Option<&SessionConfigOption> {
-    find_config_option(options, "model", &["model"])
+    find_config_option(options, "model")
 }
 
 pub(crate) fn find_mode_config_option(
     options: &[SessionConfigOption],
 ) -> Option<&SessionConfigOption> {
-    find_config_option(options, "mode", &["mode"])
+    find_config_option(options, "mode")
 }
 
 pub(crate) fn find_reasoning_config_option(
     options: &[SessionConfigOption],
 ) -> Option<&SessionConfigOption> {
-    find_config_option(
-        options,
-        "thought_level",
-        &[
-            "thought_level",
-            "reasoning",
-            "reasoning_effort",
-            "effort",
-            "thinking",
-            "thought",
-        ],
-    )
+    find_config_option(options, "reasoning")
 }
 
 pub(crate) fn find_config_option<'a>(
     options: &'a [SessionConfigOption],
     category: &str,
-    ids: &[&str],
 ) -> Option<&'a SessionConfigOption> {
-    // Fast path: exact category match
     options
         .iter()
         .find(|option| option.category.as_deref() == Some(category))
-        .or_else(|| {
-            // Fuzzy path: normalized ID or name match
-            let targets: Vec<NormalizedId> = ids.iter().map(|id| NormalizedId::from(*id)).collect();
-            options.iter().find(|option| {
-                let option_id = NormalizedId::from(option.id.as_str());
-                let option_name = NormalizedId::from(option.name.as_str());
-                targets
-                    .iter()
-                    .any(|target| *target == option_id || *target == option_name)
-            })
-        })
 }
 
 fn reasoning_options_from_config(option: &SessionConfigOption) -> Vec<ReasoningLevelOption> {

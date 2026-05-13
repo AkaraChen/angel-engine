@@ -67,6 +67,86 @@ fn acp_permission_before_tool_call_creates_fallback_action_and_safe_choices() {
 }
 
 #[test]
+fn acp_permission_response_selects_option_by_protocol_kind() {
+    let adapter = AcpAdapter::standard();
+    let mut engine = acp_engine(&adapter);
+    let conversation_id = insert_ready_conversation(
+        &mut engine,
+        "conv",
+        RemoteConversationId::Known("sess".to_string()),
+        adapter.capabilities(),
+    );
+
+    decode_and_apply(
+        &adapter,
+        &mut engine,
+        JsonRpcMessage::request(
+            JsonRpcRequestId::new("perm"),
+            "session/request_permission",
+            json!({
+                "sessionId": "sess",
+                "title": "Run tool",
+                "options": [
+                    {
+                        "optionId": "cancel",
+                        "name": "Looks like cancel",
+                        "kind": "allow_once"
+                    },
+                    {
+                        "optionId": "proceed_once",
+                        "name": "Looks like proceed",
+                        "kind": "reject_once"
+                    },
+                    {
+                        "optionId": "forever",
+                        "name": "Always",
+                        "kind": "allow_always"
+                    }
+                ]
+            }),
+        ),
+    );
+
+    let elicitation = engine.conversations[&conversation_id]
+        .elicitations
+        .values()
+        .next()
+        .expect("elicitation")
+        .clone();
+    assert_eq!(
+        elicitation.options.choices,
+        vec!["Looks like cancel", "Looks like proceed", "Always"]
+    );
+    assert_eq!(
+        elicitation.options.choice_details[0].kind,
+        Some(ElicitationChoiceKind::AllowOnce)
+    );
+    assert_eq!(
+        elicitation.options.choice_details[1].kind,
+        Some(ElicitationChoiceKind::RejectOnce)
+    );
+
+    let plan = engine
+        .plan_command(EngineCommand::ResolveElicitation {
+            conversation_id,
+            elicitation_id: elicitation.id,
+            decision: ElicitationDecision::Allow,
+        })
+        .expect("resolve permission");
+    let output = adapter
+        .encode_effect(&engine, &plan.effects[0], &TransportOptions::default())
+        .expect("encode response");
+
+    assert!(matches!(
+        output.messages.as_slice(),
+        [JsonRpcMessage::Response { id, result }]
+            if id == &JsonRpcRequestId::new("perm")
+                && result["outcome"]["outcome"] == json!("selected")
+                && result["outcome"]["optionId"] == json!("cancel")
+    ));
+}
+
+#[test]
 fn acp_cancel_turn_responds_cancelled_to_pending_permission_request() {
     let adapter = AcpAdapter::standard();
     let mut engine = acp_engine(&adapter);
@@ -343,7 +423,7 @@ fn acp_bad_model_and_effort_updates_are_encoded_for_server_validation() {
             id: "thought_level".to_string(),
             name: "Thought level".to_string(),
             description: None,
-            category: Some("thought_level".to_string()),
+            category: Some("reasoning".to_string()),
             current_value: "medium".to_string(),
             values: Vec::new(),
         });
@@ -484,7 +564,7 @@ fn acp_neutral_update_context_uses_config_option_when_available() {
             id: "thought_level".to_string(),
             name: "Thought level".to_string(),
             description: None,
-            category: Some("thought_level".to_string()),
+            category: Some("reasoning".to_string()),
             current_value: "medium".to_string(),
             values: Vec::new(),
         });

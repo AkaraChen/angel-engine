@@ -1,6 +1,9 @@
 use super::helpers::*;
 use super::wire::AcpClientRequestMethod;
 use super::*;
+use agent_client_protocol_schema::{
+    PermissionOption as AcpPermissionOption, PermissionOptionKind as AcpPermissionOptionKind,
+};
 use std::str::FromStr;
 
 impl AcpAdapter {
@@ -67,6 +70,7 @@ impl AcpAdapter {
                 elicitation.action_id = Some(action_id);
             }
         }
+        let permission_choices = permission_choices(params);
         elicitation.options = ElicitationOptions {
             title: params
                 .get("title")
@@ -79,7 +83,11 @@ impl AcpAdapter {
                 .and_then(Value::as_str)
                 .map(str::to_string)
                 .or_else(|| tool_call.and_then(tool_call_summary)),
-            choices: permission_option_ids(params),
+            choices: permission_choices
+                .iter()
+                .map(|choice| choice.label.clone())
+                .collect(),
+            choice_details: permission_choices,
             questions: Vec::new(),
         };
         let mut output =
@@ -170,6 +178,7 @@ impl AcpAdapter {
                     .and_then(Value::as_str)
                     .map(str::to_string),
                 choices: vec!["allow".to_string(), "cancel".to_string()],
+                choice_details: Vec::new(),
                 questions: Vec::new(),
             }
         } else {
@@ -238,6 +247,7 @@ fn acp_elicitation_form_options(message: &str, params: &Value) -> ElicitationOpt
         } else {
             Vec::new()
         },
+        choice_details: Vec::new(),
         questions,
     }
 }
@@ -387,26 +397,55 @@ fn json_string(value: &Value) -> String {
     serde_json::to_string(value).unwrap_or_else(|_| value.to_string())
 }
 
-fn permission_option_ids(params: &Value) -> Vec<String> {
+fn permission_choices(params: &Value) -> Vec<ElicitationChoice> {
     let choices = params
         .get("options")
         .and_then(Value::as_array)
         .map(|options| {
             options
                 .iter()
-                .filter_map(|option| option.get("optionId").and_then(Value::as_str))
-                .map(str::to_string)
+                .filter_map(|option| {
+                    let option =
+                        serde_json::from_value::<AcpPermissionOption>(option.clone()).ok()?;
+                    Some(ElicitationChoice {
+                        id: option.option_id.to_string(),
+                        label: option.name,
+                        kind: permission_choice_kind(option.kind),
+                    })
+                })
                 .collect::<Vec<_>>()
         })
         .unwrap_or_default();
     if choices.is_empty() {
         vec![
-            "allow".to_string(),
-            "deny".to_string(),
-            "cancel".to_string(),
+            ElicitationChoice {
+                id: "allow".to_string(),
+                label: "allow".to_string(),
+                kind: Some(ElicitationChoiceKind::AllowOnce),
+            },
+            ElicitationChoice {
+                id: "deny".to_string(),
+                label: "deny".to_string(),
+                kind: Some(ElicitationChoiceKind::RejectOnce),
+            },
+            ElicitationChoice {
+                id: "cancel".to_string(),
+                label: "cancel".to_string(),
+                kind: None,
+            },
         ]
     } else {
         choices
+    }
+}
+
+fn permission_choice_kind(kind: AcpPermissionOptionKind) -> Option<ElicitationChoiceKind> {
+    match kind {
+        AcpPermissionOptionKind::AllowOnce => Some(ElicitationChoiceKind::AllowOnce),
+        AcpPermissionOptionKind::AllowAlways => Some(ElicitationChoiceKind::AllowAlways),
+        AcpPermissionOptionKind::RejectOnce => Some(ElicitationChoiceKind::RejectOnce),
+        AcpPermissionOptionKind::RejectAlways => Some(ElicitationChoiceKind::RejectAlways),
+        _ => None,
     }
 }
 

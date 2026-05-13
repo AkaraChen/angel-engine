@@ -8,7 +8,10 @@ use angel_profiler::{
 };
 
 fn main() -> Result<(), Box<dyn Error>> {
-    let config = CliConfig::parse(env::args().skip(1))?;
+    let Some(config) = CliConfig::parse(env::args().skip(1))? else {
+        println!("{}", usage());
+        return Ok(());
+    };
     let request = config.profile_request()?;
     let report = profile_spawned_client(config.client_options(), request)?;
     if config.json {
@@ -33,7 +36,7 @@ struct CliConfig {
 }
 
 impl CliConfig {
-    fn parse(args: impl IntoIterator<Item = String>) -> Result<Self, String> {
+    fn parse(args: impl IntoIterator<Item = String>) -> Result<Option<Self>, String> {
         let mut config = Self {
             runtime: "kimi".to_string(),
             command: None,
@@ -50,7 +53,7 @@ impl CliConfig {
 
         while let Some(arg) = iter.next() {
             match arg.as_str() {
-                "-h" | "--help" => return Err(usage()),
+                "-h" | "--help" => return Ok(None),
                 "--runtime" => {
                     config.runtime = next_value(&mut iter, "--runtime")?;
                     runtime_set = true;
@@ -83,7 +86,7 @@ impl CliConfig {
             }
         }
 
-        Ok(config)
+        Ok(Some(config))
     }
 
     fn client_options(&self) -> ClientOptions {

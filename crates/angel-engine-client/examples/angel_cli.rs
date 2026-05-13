@@ -160,18 +160,30 @@ impl MultiRuntimeCli {
                 if value.is_empty() {
                     self.print_model_state()?;
                 } else {
+                    let before = self.current_model_id()?;
                     self.send_thread_event(ThreadEvent::set_model(value))?;
                     self.pump_until_no_activity(Duration::from_millis(250))?;
-                    println!("[state] model set to {value}");
+                    let after = self.current_model_id()?;
+                    if after != before {
+                        println!("[state] model set to {}", after.as_deref().unwrap_or(value));
+                    } else {
+                        println!("[warn] model unchanged");
+                    }
                 }
             }
             "/mode" => {
                 if value.is_empty() {
                     self.print_mode_state()?;
                 } else {
+                    let before = self.current_mode_id()?;
                     self.send_thread_event(ThreadEvent::set_mode(value))?;
                     self.pump_until_no_activity(Duration::from_millis(250))?;
-                    println!("[state] mode set to {value}");
+                    let after = self.current_mode_id()?;
+                    if after != before {
+                        println!("[state] mode set to {}", after.as_deref().unwrap_or(value));
+                    } else {
+                        println!("[warn] mode unchanged");
+                    }
                     if self.codex_mode_needs_model_warning(value) {
                         println!(
                             "[warn] Codex collaborationMode requires a model in turn/start; set /model first if the next turn does not switch mode"
@@ -195,9 +207,18 @@ impl MultiRuntimeCli {
                         }
                         return Ok(true);
                     };
+                    let before = self.current_effort_level()?;
                     self.send_thread_event(ThreadEvent::set_reasoning_effort(effort))?;
                     self.pump_until_no_activity(Duration::from_millis(250))?;
-                    println!("[state] reasoning effort set to {value}");
+                    let after = self.current_effort_level()?;
+                    if after != before {
+                        println!(
+                            "[state] reasoning effort set to {}",
+                            after.as_deref().unwrap_or(value)
+                        );
+                    } else {
+                        println!("[warn] reasoning effort unchanged");
+                    }
                 }
             }
             _ => return Ok(false),
@@ -350,6 +371,30 @@ impl MultiRuntimeCli {
         self.current_conversation()
             .map(|conversation| cli_commands(&conversation.available_commands))
             .unwrap_or_default()
+    }
+
+    fn current_model_id(&self) -> Result<Option<String>, Box<dyn Error>> {
+        Ok(self
+            .current_conversation()?
+            .settings
+            .model_list
+            .current_model_id)
+    }
+
+    fn current_mode_id(&self) -> Result<Option<String>, Box<dyn Error>> {
+        Ok(self
+            .current_conversation()?
+            .settings
+            .available_modes
+            .current_mode_id)
+    }
+
+    fn current_effort_level(&self) -> Result<Option<String>, Box<dyn Error>> {
+        Ok(self
+            .current_conversation()?
+            .settings
+            .reasoning_level
+            .current_level)
     }
 
     fn print_model_state(&self) -> Result<(), Box<dyn Error>> {

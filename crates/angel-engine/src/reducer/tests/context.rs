@@ -83,7 +83,7 @@ fn acp_context_update_uses_advertised_effort_config_option() {
             id: "thought_level".to_string(),
             name: "Thought level".to_string(),
             description: None,
-            category: Some("thought_level".to_string()),
+            category: Some("reasoning".to_string()),
             current_value: "medium".to_string(),
             values: Vec::new(),
         });
@@ -142,7 +142,7 @@ fn settings_api_reports_reasoning_models_and_modes() {
                 id: "thought_level".to_string(),
                 name: "Reasoning".to_string(),
                 description: None,
-                category: Some("thought_level".to_string()),
+                category: Some("reasoning".to_string()),
                 current_value: "medium".to_string(),
                 values: vec![
                     SessionConfigValue {

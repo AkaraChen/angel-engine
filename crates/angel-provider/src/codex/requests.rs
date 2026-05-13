@@ -139,6 +139,7 @@ fn request_options(method: &str, params: &Value, kind: &ElicitationKind) -> Elic
                 "deny".to_string(),
                 "cancel".to_string(),
             ],
+            choice_details: Vec::new(),
             questions: Vec::new(),
         },
     }
@@ -178,6 +179,7 @@ fn user_input_options(method: &str, params: &Value) -> ElicitationOptions {
         } else {
             Vec::new()
         },
+        choice_details: Vec::new(),
         questions,
     }
 }
@@ -243,6 +245,7 @@ pub(super) fn host_capability_options(params: &Value) -> ElicitationOptions {
         } else {
             Vec::new()
         },
+        choice_details: Vec::new(),
         questions,
     }
 }

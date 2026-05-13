@@ -1,9 +1,10 @@
 use angel_engine::{
-    AngelEngine, AuthMethodId, ContextPatch, ConversationId, ConversationLifecycle,
-    ConversationState, DiscoverConversationsParams, ElicitationDecision, ElicitationId,
-    ElicitationPhase, EngineCommand, EngineExtensionCommand, HistoryMutationOp, JsonRpcMessage,
-    ResumeTarget, StartConversationParams, TransportClientInfo, TransportOptions, TransportOutput,
-    TurnId, TurnOverrides, TurnState, UserAnswer, UserInput, UserInputKind,
+    AngelEngine, AuthMethodId, AvailableModeState, ContextPatch, ConversationId,
+    ConversationLifecycle, ConversationState, DiscoverConversationsParams, ElicitationDecision,
+    ElicitationId, ElicitationPhase, EngineCommand, EngineExtensionCommand, HistoryMutationOp,
+    JsonRpcMessage, ResumeTarget, SessionMode, StartConversationParams, TransportClientInfo,
+    TransportOptions, TransportOutput, TurnId, TurnOverrides, TurnState, UserAnswer, UserInput,
+    UserInputKind,
 };
 use angel_provider::ProtocolAdapter;
 use serde::{Deserialize, Serialize};
@@ -346,9 +347,10 @@ where
         conversation_id: impl Into<String>,
         mode: impl Into<String>,
     ) -> ClientResult<ClientCommandResult> {
-        let plan = self
-            .engine
-            .set_mode(to_conversation_id(conversation_id), mode.into())?;
+        let conversation_id = to_conversation_id(conversation_id);
+        let settings = self.engine.get_available_modes(conversation_id.clone())?;
+        let mode = resolve_mode_request(&settings, &mode.into());
+        let plan = self.engine.set_mode(conversation_id, mode)?;
         self.apply_plan(plan)
     }
 
@@ -852,4 +854,42 @@ pub(crate) fn process_log(kind: ClientLogKind, message: impl Into<String>) -> Cl
         logs: vec![log],
         ..ClientUpdate::default()
     }
+}
+
+fn resolve_mode_request(settings: &AvailableModeState, requested: &str) -> String {
+    let requested = requested.trim();
+    if requested.is_empty()
+        || settings.available_modes.is_empty()
+        || settings
+            .available_modes
+            .iter()
+            .any(|mode| mode.id == requested)
+    {
+        return requested.to_string();
+    }
+
+    let normalized = normalized_mode_key(requested);
+    settings
+        .available_modes
+        .iter()
+        .find(|mode| mode_matches_request(mode, &normalized))
+        .map(|mode| mode.id.clone())
+        .unwrap_or_else(|| requested.to_string())
+}
+
+fn mode_matches_request(mode: &SessionMode, requested: &str) -> bool {
+    normalized_mode_key(&mode.name) == requested
+        || mode
+            .id
+            .rsplit(['#', '/', ':'])
+            .next()
+            .is_some_and(|suffix| normalized_mode_key(suffix) == requested)
+}
+
+fn normalized_mode_key(value: &str) -> String {
+    value
+        .chars()
+        .filter(|ch| ch.is_ascii_alphanumeric())
+        .flat_map(char::to_lowercase)
+        .collect()
 }

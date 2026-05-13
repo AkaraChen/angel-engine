@@ -2,8 +2,8 @@ use std::error::Error;
 
 use angel_engine::{
     AgentMode, ApprovalPolicy, AvailableCommand, ContextPatch, ContextScope, ContextUpdate,
-    ConversationId, ConversationState, NormalizedId, PermissionProfile, ProtocolFlavor,
-    ReasoningProfile, SandboxProfile, SessionConfigOption,
+    ConversationId, ConversationState, PermissionProfile, ProtocolFlavor, ReasoningProfile,
+    SandboxProfile, SessionConfigOption,
 };
 use angel_provider::ProtocolAdapter;
 use test_cli::{CliCommandInfo, print_available_commands, print_command_summary};
@@ -367,15 +367,26 @@ fn config_option<'a>(
         .iter()
         .find(|option| option.category.as_deref() == Some(category))
         .or_else(|| {
-            let targets: Vec<NormalizedId> = ids.iter().map(|id| NormalizedId::from(*id)).collect();
+            let targets = ids
+                .iter()
+                .map(|id| normalize_config_id(id))
+                .collect::<Vec<_>>();
             conversation.config_options.iter().find(|option| {
-                let option_id = NormalizedId::from(option.id.as_str());
-                let option_name = NormalizedId::from(option.name.as_str());
+                let option_id = normalize_config_id(&option.id);
+                let option_name = normalize_config_id(&option.name);
                 targets
                     .iter()
-                    .any(|target| *target == option_id || *target == option_name)
+                    .any(|target| target == &option_id || target == &option_name)
             })
         })
+}
+
+fn normalize_config_id(value: &str) -> String {
+    value
+        .chars()
+        .filter(|ch| ch.is_ascii_alphanumeric())
+        .flat_map(char::to_lowercase)
+        .collect()
 }
 
 fn print_config_values(prefix: &str, option: &SessionConfigOption) {

@@ -220,7 +220,7 @@ impl AcpAdapter {
             }
             return Ok(output);
         }
-        let selected_option = select_permission_option(&elicitation.options.choices, decision);
+        let selected_option = select_permission_option(&elicitation.options, decision);
         let result = super::wire::permission_response_json(selected_option.as_deref());
         let mut output = TransportOutput::default()
             .message(JsonRpcMessage::response(remote_request_id, result))
@@ -820,32 +820,57 @@ fn acp_elicitation_answer_content(fields: &std::collections::BTreeMap<String, St
     )
 }
 
-fn select_permission_option(choices: &[String], decision: &str) -> Option<String> {
-    let desired = match decision {
-        "AllowForSession" => choices
-            .iter()
-            .find(|choice| {
-                let choice = choice.to_ascii_lowercase();
-                choice.contains("session") || choice.contains("always")
-            })
-            .or_else(|| find_allow_choice(choices)),
-        "Allow" => find_allow_choice(choices),
-        "Deny" => choices.iter().find(|choice| {
-            let choice = choice.to_ascii_lowercase();
-            choice.contains("deny") || choice.contains("reject")
-        }),
+fn select_permission_option(options: &ElicitationOptions, decision: &str) -> Option<String> {
+    match decision {
+        "AllowForSession" => permission_option_with_kind(
+            options,
+            &[
+                ElicitationChoiceKind::AllowAlways,
+                ElicitationChoiceKind::AllowOnce,
+            ],
+        )
+        .or_else(|| legacy_permission_option(options, &["allow_always", "allow"])),
+        "Allow" => permission_option_with_kind(
+            options,
+            &[
+                ElicitationChoiceKind::AllowOnce,
+                ElicitationChoiceKind::AllowAlways,
+            ],
+        )
+        .or_else(|| legacy_permission_option(options, &["allow"])),
+        "Deny" => permission_option_with_kind(
+            options,
+            &[
+                ElicitationChoiceKind::RejectOnce,
+                ElicitationChoiceKind::RejectAlways,
+            ],
+        )
+        .or_else(|| legacy_permission_option(options, &["deny", "reject"])),
         _ => None,
-    };
-    desired.cloned()
+    }
 }
 
-fn find_allow_choice(choices: &[String]) -> Option<&String> {
-    choices.iter().find(|choice| {
-        let choice = choice.to_ascii_lowercase();
-        (choice.contains("allow") || choice.contains("approve"))
-            && !choice.contains("session")
-            && !choice.contains("always")
+fn permission_option_with_kind(
+    options: &ElicitationOptions,
+    kinds: &[ElicitationChoiceKind],
+) -> Option<String> {
+    kinds.iter().find_map(|kind| {
+        options
+            .choice_details
+            .iter()
+            .find(|choice| choice.kind.as_ref() == Some(kind))
+            .map(|choice| choice.id.clone())
     })
+}
+
+fn legacy_permission_option(options: &ElicitationOptions, ids: &[&str]) -> Option<String> {
+    options
+        .choice_details
+        .iter()
+        .map(|choice| choice.id.as_str())
+        .chain(options.choices.iter().map(String::as_str))
+        .find(|choice| ids.iter().any(|id| choice.eq_ignore_ascii_case(id)))
+        .map(str::to_string)
 }
 
 #[cfg(test)]
@@ -909,6 +934,50 @@ mod tests {
         assert!(params["clientCapabilities"].get("elicitation").is_some());
         assert!(params["clientCapabilities"].get("fs").is_none());
         assert!(params["clientCapabilities"].get("terminal").is_none());
+    }
+
+    #[test]
+    fn permission_selection_uses_protocol_kind_not_option_id_text() {
+        let options = ElicitationOptions {
+            title: None,
+            body: None,
+            choices: vec![
+                "Looks like cancel".to_string(),
+                "Looks like proceed".to_string(),
+                "Always".to_string(),
+            ],
+            choice_details: vec![
+                ElicitationChoice {
+                    id: "cancel".to_string(),
+                    label: "Looks like cancel".to_string(),
+                    kind: Some(ElicitationChoiceKind::AllowOnce),
+                },
+                ElicitationChoice {
+                    id: "proceed_once".to_string(),
+                    label: "Looks like proceed".to_string(),
+                    kind: Some(ElicitationChoiceKind::RejectOnce),
+                },
+                ElicitationChoice {
+                    id: "forever".to_string(),
+                    label: "Always".to_string(),
+                    kind: Some(ElicitationChoiceKind::AllowAlways),
+                },
+            ],
+            questions: Vec::new(),
+        };
+
+        assert_eq!(
+            select_permission_option(&options, "Allow").as_deref(),
+            Some("cancel")
+        );
+        assert_eq!(
+            select_permission_option(&options, "AllowForSession").as_deref(),
+            Some("forever")
+        );
+        assert_eq!(
+            select_permission_option(&options, "Deny").as_deref(),
+            Some("proceed_once")
+        );
     }
 
     #[test]

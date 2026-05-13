@@ -975,6 +975,24 @@ fn thread_set_mode_event_updates_snapshot_after_runtime_ack() {
 }
 
 #[test]
+fn thread_set_mode_event_resolves_available_mode_name_or_uri_fragment() {
+    let (mut client, conversation_id) = ready_uri_mode_client();
+
+    let update = client
+        .thread(&conversation_id)
+        .set_mode("plan")
+        .expect("set mode alias");
+    assert_eq!(
+        update.update.outgoing[0].value["method"],
+        json!("session/set_mode")
+    );
+    assert_eq!(
+        update.update.outgoing[0].value["params"]["modeId"],
+        json!("https://agentclientprotocol.com/protocol/session-modes#plan")
+    );
+}
+
+#[test]
 fn inputs_event_encodes_every_supported_user_input_shape_for_acp() {
     let (mut client, conversation_id) = ready_client();
 
@@ -1118,8 +1136,8 @@ fn resolve_first_elicitation_event_answers_runtime_permission_request() {
                 "toolCallId": "tool-1",
                 "title": "Run command",
                 "options": [
-                    {"optionId": "allow", "label": "Allow"},
-                    {"optionId": "deny", "label": "Deny"}
+                    {"optionId": "allow", "name": "Allow", "kind": "allow_once"},
+                    {"optionId": "deny", "name": "Deny", "kind": "reject_once"}
                 ]
             }
         }))
@@ -1387,6 +1405,51 @@ fn ready_client() -> (Client, String) {
                     "availableModels": [
                         {"id": "kimi-k2", "name": "Kimi K2"},
                         {"id": "moonshot-v1-128k", "name": "Moonshot v1 128k"}
+                    ]
+                }
+            }),
+        ))
+        .expect("start response");
+    (client, conversation_id)
+}
+
+fn ready_uri_mode_client() -> (Client, String) {
+    let mut client = ClientOptions::builder()
+        .acp("fake-agent")
+        .need_auth(false)
+        .build_client();
+    let initialize = client.initialize().expect("initialize");
+    client
+        .receive_json_value(response(
+            &initialize.request_id.expect("initialize id"),
+            json!({
+                "protocolVersion": 1,
+                "agentInfo": {"name": "fake-agent"},
+                "agentCapabilities": {"sessionCapabilities": {}}
+            }),
+        ))
+        .expect("initialize response");
+
+    let start = client
+        .start_thread(StartConversationRequest::new().cwd("/repo"))
+        .expect("start");
+    let conversation_id = start.conversation_id.expect("conversation id");
+    client
+        .receive_json_value(response(
+            &start.request_id.expect("start id"),
+            json!({
+                "sessionId": "sess-1",
+                "modes": {
+                    "currentModeId": "https://agentclientprotocol.com/protocol/session-modes#agent",
+                    "availableModes": [
+                        {
+                            "id": "https://agentclientprotocol.com/protocol/session-modes#agent",
+                            "name": "Agent"
+                        },
+                        {
+                            "id": "https://agentclientprotocol.com/protocol/session-modes#plan",
+                            "name": "Plan"
+                        }
                     ]
                 }
             }),

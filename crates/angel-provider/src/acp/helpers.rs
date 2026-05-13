@@ -464,6 +464,11 @@ pub(super) fn session_config_options(value: &Value) -> Vec<SessionConfigOption> 
                         .and_then(Value::as_str)
                         .unwrap_or(id)
                         .to_string();
+                    let category = acp_config_category(
+                        option.get("category").and_then(Value::as_str),
+                        id,
+                        &name,
+                    );
                     Some(SessionConfigOption {
                         id: id.to_string(),
                         name,
@@ -471,10 +476,7 @@ pub(super) fn session_config_options(value: &Value) -> Vec<SessionConfigOption> 
                             .get("description")
                             .and_then(Value::as_str)
                             .map(str::to_string),
-                        category: option
-                            .get("category")
-                            .and_then(Value::as_str)
-                            .map(str::to_string),
+                        category,
                         current_value: config_current_value(option),
                         values: config_values(option),
                     })
@@ -482,6 +484,53 @@ pub(super) fn session_config_options(value: &Value) -> Vec<SessionConfigOption> 
                 .collect()
         })
         .unwrap_or_default()
+}
+
+fn acp_config_category(raw_category: Option<&str>, id: &str, name: &str) -> Option<String> {
+    let candidates = [raw_category.unwrap_or_default(), id, name];
+    if candidates
+        .iter()
+        .any(|value| config_name_matches(value, &["model"]))
+    {
+        return Some("model".to_string());
+    }
+    if candidates
+        .iter()
+        .any(|value| config_name_matches(value, &["mode"]))
+    {
+        return Some("mode".to_string());
+    }
+    if candidates.iter().any(|value| {
+        config_name_matches(
+            value,
+            &[
+                "reasoning",
+                "reasoning_effort",
+                "effort",
+                "thought",
+                "thought_level",
+                "thinking",
+            ],
+        )
+    }) {
+        return Some("reasoning".to_string());
+    }
+    raw_category.map(str::to_string)
+}
+
+fn config_name_matches(value: &str, targets: &[&str]) -> bool {
+    let normalized = normalize_config_name(value);
+    targets
+        .iter()
+        .any(|target| normalized == normalize_config_name(target))
+}
+
+fn normalize_config_name(value: &str) -> String {
+    value
+        .chars()
+        .filter(|ch| ch.is_ascii_alphanumeric())
+        .flat_map(char::to_lowercase)
+        .collect()
 }
 
 pub(super) fn session_mode_state(value: &Value) -> Option<SessionModeState> {

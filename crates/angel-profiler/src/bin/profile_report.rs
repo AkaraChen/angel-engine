@@ -11,7 +11,10 @@ use angel_profiler::{
 };
 
 fn main() -> Result<(), Box<dyn Error>> {
-    let config = ReportConfig::parse(env::args().skip(1))?;
+    let Some(config) = ReportConfig::parse(env::args().skip(1))? else {
+        println!("{}", usage());
+        return Ok(());
+    };
     let request = config.profile_request()?;
     let targets = default_targets();
     let mut runs = Vec::new();
@@ -54,7 +57,7 @@ struct ReportConfig {
 }
 
 impl ReportConfig {
-    fn parse(args: impl IntoIterator<Item = String>) -> Result<Self, String> {
+    fn parse(args: impl IntoIterator<Item = String>) -> Result<Option<Self>, String> {
         let mut config = Self {
             output: None,
             message: Some("Reply with exactly: profiler-ok".to_string()),
@@ -66,7 +69,7 @@ impl ReportConfig {
 
         while let Some(arg) = iter.next() {
             match arg.as_str() {
-                "-h" | "--help" => return Err(usage()),
+                "-h" | "--help" => return Ok(None),
                 "--output" => {
                     config.output = Some(PathBuf::from(next_value(&mut iter, "--output")?))
                 }
@@ -84,7 +87,7 @@ impl ReportConfig {
             }
         }
 
-        Ok(config)
+        Ok(Some(config))
     }
 
     fn profile_request(&self) -> Result<ProfileRequest, String> {

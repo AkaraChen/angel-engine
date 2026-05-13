@@ -72,7 +72,24 @@ pub struct ElicitationOptions {
     pub title: Option<String>,
     pub body: Option<String>,
     pub choices: Vec<String>,
+    #[serde(default)]
+    pub choice_details: Vec<ElicitationChoice>,
     pub questions: Vec<UserQuestion>,
+}
+
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug, PartialEq, Eq)]
+pub struct ElicitationChoice {
+    pub id: String,
+    pub label: String,
+    pub kind: Option<ElicitationChoiceKind>,
+}
+
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug, PartialEq, Eq)]
+pub enum ElicitationChoiceKind {
+    AllowOnce,
+    AllowAlways,
+    RejectOnce,
+    RejectAlways,
 }
 
 #[derive(serde::Serialize, serde::Deserialize, Clone, Debug, PartialEq, Eq)]

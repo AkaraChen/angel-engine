@@ -157,6 +157,51 @@ fn settings_user_choices_ignore_empty_same_and_unknown_values() {
 }
 
 #[test]
+fn reasoning_setting_readback_prefers_local_context_over_config_option() {
+    let capabilities = codex_capabilities();
+    let mut engine = engine_with(ProtocolFlavor::CodexAppServer, capabilities.clone());
+    let conversation_id = insert_ready_conversation(
+        &mut engine,
+        "conv",
+        RemoteConversationId::Known("thread".to_string()),
+        capabilities,
+    );
+    engine
+        .apply_event(EngineEvent::SessionConfigOptionsUpdated {
+            conversation_id: conversation_id.clone(),
+            options: vec![crate::state::SessionConfigOption {
+                id: "reasoning".to_string(),
+                name: "Reasoning".to_string(),
+                description: None,
+                category: Some("reasoning".to_string()),
+                current_value: "none".to_string(),
+                values: ["none", "low", "high"]
+                    .into_iter()
+                    .map(|value| crate::state::SessionConfigValue {
+                        value: value.to_string(),
+                        name: value.to_string(),
+                        description: None,
+                    })
+                    .collect(),
+            }],
+        })
+        .expect("reasoning option");
+
+    engine
+        .set_reasoning_level(conversation_id.clone(), "low")
+        .expect("set effort");
+
+    assert_eq!(
+        engine
+            .get_reasoning_level(conversation_id)
+            .expect("reasoning")
+            .current_level
+            .as_deref(),
+        Some("low")
+    );
+}
+
+#[test]
 fn start_turn_preserves_every_user_input_shape_for_runtime_projection() {
     let capabilities = codex_capabilities();
     let mut engine = engine_with(ProtocolFlavor::CodexAppServer, capabilities.clone());
