@@ -6,6 +6,7 @@ export type ChatOptionsContextValue = {
   canSetModel: boolean;
   canSetMode: boolean;
   canSetReasoningEffort: boolean;
+  canSetRuntime: boolean;
   configLoading: boolean;
   model: string;
   modelOptions: AgentValueOption[];
@@ -14,11 +15,11 @@ export type ChatOptionsContextValue = {
   reasoningEffort: string;
   reasoningEffortOptions: AgentValueOption[];
   runtime: AgentRuntime;
-  runtimeLocked: boolean;
+  runtimeDisabledReason?: string;
   setModel: (model: string) => void;
   setMode: (mode: string) => Promise<void> | void;
   setReasoningEffort: (effort: string) => void;
-  setRuntime: (runtime: AgentRuntime) => void;
+  setRuntime: (runtime: AgentRuntime) => Promise<void> | void;
 };
 
 const ChatOptionsContext = createContext<ChatOptionsContextValue | null>(null);

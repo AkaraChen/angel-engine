@@ -38,6 +38,11 @@ export type ChatSetModeInput = {
   mode: string;
 };
 
+export type ChatSetRuntimeInput = {
+  chatId: string;
+  runtime: string;
+};
+
 export type ChatRuntimeConfigOption = {
   description?: string | null;
   label: string;

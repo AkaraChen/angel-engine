@@ -9,6 +9,7 @@ import type {
   ChatRuntimeConfigInput,
   ChatSendInput,
   ChatSetModeInput,
+  ChatSetRuntimeInput,
 } from "../../../shared/chat";
 import { normalizeChatAttachmentsInput } from "../../../shared/chat";
 import {
@@ -19,6 +20,7 @@ import {
   prewarmChat,
   sendChat,
   setChatMode,
+  setChatRuntime,
 } from "./angel-client";
 import {
   deleteAllChats,
@@ -34,6 +36,7 @@ import {
   chatRuntimeConfigInput,
   chatSendInput,
   chatSetModeInput,
+  chatSetRuntimeInput,
 } from "./schemas";
 
 const t = tipc.create();
@@ -124,6 +127,16 @@ export const chatIpcRouter = {
         throw new Error("Chat mode input is required.");
       }
       return setChatMode(value);
+    }),
+
+  chatsSetRuntime: t.procedure
+    .input<ChatSetRuntimeInput>()
+    .action(async ({ input }) => {
+      const value = chatSetRuntimeInput(input);
+      if (value instanceof arkType.errors) {
+        throw new Error("Chat runtime input is required.");
+      }
+      return setChatRuntime(value);
     }),
 
   chatsShowContextMenu: t.procedure

@@ -81,3 +81,9 @@ export const chatSetModeInput = type({
   chatId: "string > 0",
   mode: "string > 0",
 });
+
+export const chatSetRuntimeInput = type({
+  "+": "ignore",
+  chatId: "string > 0",
+  runtime: "string > 0",
+});

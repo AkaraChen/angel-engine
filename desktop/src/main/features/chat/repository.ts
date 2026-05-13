@@ -80,6 +80,20 @@ export function setChatRemoteThreadId(
   });
 }
 
+export function setChatRuntime(id: string, runtime: string): Chat {
+  const chat = requireChat(id);
+  if (chat.remoteThreadId) {
+    throw new Error(
+      "Chat runtime cannot be changed after the chat has started.",
+    );
+  }
+
+  return updateChat(id, {
+    runtime: normalizeRuntime(runtime),
+    updatedAt: new Date().toISOString(),
+  });
+}
+
 export function renameChatFromPrompt(id: string, prompt: string): Chat {
   const chat = requireChat(id);
   if (chat.title !== DEFAULT_CHAT_TITLE) return chat;
@@ -107,7 +121,9 @@ export function requireChat(id: string): Chat {
 
 function updateChat(
   id: string,
-  patch: Partial<Pick<Chat, "remoteThreadId" | "title" | "updatedAt">>,
+  patch: Partial<
+    Pick<Chat, "remoteThreadId" | "runtime" | "title" | "updatedAt">
+  >,
 ): Chat {
   const chat = getDatabase()
     .update(chats)

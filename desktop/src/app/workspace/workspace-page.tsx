@@ -4,6 +4,7 @@ import {
   useCallback,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ErrorInfo,
   type ReactNode,
@@ -34,17 +35,20 @@ import {
   useChatAttentionSummary,
   useChatRunConfig,
   useChatRunIsRunning,
+  useChatRunMessages,
   useChatRunStore,
 } from "@/features/chat/state/chat-run-store";
 import { SettingsPage } from "@/features/settings/settings-page";
 import {
   chatContextMenuMutationOptions,
+  createChatMutationOptions,
   chatListQueryOptions,
   chatLoadSuspenseQueryOptions,
   chatPrewarmQueryOptions,
   chatRuntimeConfigQueryOptions,
   deleteAllChatsMutationOptions,
   renameChatMutationOptions,
+  setChatRuntimeMutationOptions,
 } from "@/features/chat/api/queries";
 import { queryKeys } from "@/platform/query-keys";
 import {
@@ -55,6 +59,7 @@ import {
 import { type AgentValueOption, type AgentRuntime } from "@/shared/agents";
 import type {
   Chat,
+  ChatCreateInput,
   ChatHistoryMessage,
   ChatLoadResult,
   ChatRuntimeConfig,
@@ -103,7 +108,10 @@ type ActiveChatThreadProps = {
   selectedChat: Chat;
   setAgentModel: (model: string) => void;
   setAgentReasoningEffort: (effort: string) => void;
-  setDraftAgentRuntime: (runtime: AgentRuntime) => void;
+  setPersistedChatRuntime: (
+    chatId: string,
+    runtime: AgentRuntime,
+  ) => Promise<void> | void;
 };
 
 type RestoredChatThreadProps = Omit<ActiveChatThreadProps, "selectedChat"> & {
@@ -164,6 +172,7 @@ function WorkspacePageContent({
     Partial<Record<string, DraftAgentConfig>>
   >({});
   const [renameChatId, setRenameChatId] = useState<string | null>(null);
+  const createChatPendingRef = useRef(false);
 
   const currentRoutePath = routePath(route);
 
@@ -351,6 +360,7 @@ function WorkspacePageContent({
       canSetModel,
       canSetMode,
       canSetReasoningEffort,
+      canSetRuntime: true,
       configLoading: prewarmQuery.isFetching,
       model: activeModel,
       modelOptions,
@@ -359,7 +369,6 @@ function WorkspacePageContent({
       reasoningEffort: activeReasoningEffort,
       reasoningEffortOptions,
       runtime: activeRuntime,
-      runtimeLocked: Boolean(chatRuntime),
       setModel: setAgentModel,
       setMode: setAgentMode,
       setReasoningEffort: setAgentReasoningEffort,
@@ -373,7 +382,6 @@ function WorkspacePageContent({
       canSetModel,
       canSetMode,
       canSetReasoningEffort,
-      chatRuntime,
       modelOptions,
       modeOptions,
       reasoningEffortOptions,
@@ -440,6 +448,12 @@ function WorkspacePageContent({
 
   const createProjectMutation = useMutation({
     ...createProjectMutationOptions({ api, queryClient }),
+  });
+  const { isPending: isCreatingChat, mutateAsync: createChat } = useMutation({
+    ...createChatMutationOptions({ api, queryClient }),
+  });
+  const { mutateAsync: setChatRuntime } = useMutation({
+    ...setChatRuntimeMutationOptions({ api, queryClient }),
   });
   const deleteAllChatsMutation = useMutation({
     ...deleteAllChatsMutationOptions({ api, queryClient }),
@@ -567,16 +581,104 @@ function WorkspacePageContent({
     [renameChatMutation, toast],
   );
 
+  const setPersistedChatRuntime = useCallback(
+    async (chatId: string, runtime: AgentRuntime) => {
+      try {
+        const chat = await setChatRuntime({ chatId, runtime });
+        cancelChatRun(chat.id);
+      } catch (error) {
+        toast({
+          description: getErrorMessage(error),
+          title: "Could not change agent",
+          variant: "destructive",
+        });
+      }
+    },
+    [setChatRuntime, toast],
+  );
+
+  const chatRunSlots = useChatRunStore((state) => state.slots);
+  const runningChatIds = useMemo(
+    () => runningChatIdsFromSlots(chatRunSlots),
+    [chatRunSlots],
+  );
+
+  const createAndOpenChat = useCallback(
+    async (input: ChatCreateInput) => {
+      if (createChatPendingRef.current || isCreatingChat) return;
+
+      createChatPendingRef.current = true;
+      try {
+        const chat = await createChat(input);
+        navigateToChat(chat);
+      } catch (error) {
+        toast({
+          description: getErrorMessage(error),
+          title: "Could not create chat",
+          variant: "destructive",
+        });
+      } finally {
+        createChatPendingRef.current = false;
+      }
+    },
+    [createChat, isCreatingChat, navigateToChat, toast],
+  );
+
   const createChatForProject = useCallback(
     (project: Project) => {
-      navigate(`/project/${encodeURIComponent(project.id)}`);
+      const reusableChat = reusableUnstartedChat({
+        chats: projectChatsByProjectId.get(project.id) ?? EMPTY_CHATS,
+        preferredChat: selectedChat,
+        runningChatIds,
+      });
+
+      if (reusableChat) {
+        navigateToChat(reusableChat);
+        return;
+      }
+
+      void createAndOpenChat({
+        projectId: project.id,
+        runtime:
+          draftRuntimes[`project:${project.id}`] ??
+          agentSettings.defaultRuntime,
+      });
     },
-    [navigate],
+    [
+      agentSettings.defaultRuntime,
+      createAndOpenChat,
+      draftRuntimes,
+      navigateToChat,
+      projectChatsByProjectId,
+      runningChatIds,
+      selectedChat,
+    ],
   );
 
   const createChatForSelection = useCallback(() => {
-    navigate("/");
-  }, [navigate]);
+    const reusableChat = reusableUnstartedChat({
+      chats: standaloneChats,
+      preferredChat: selectedChat,
+      runningChatIds,
+    });
+
+    if (reusableChat) {
+      navigateToChat(reusableChat);
+      return;
+    }
+
+    void createAndOpenChat({
+      runtime: draftRuntimes.create ?? agentSettings.defaultRuntime,
+    });
+  }, [
+    agentSettings.defaultRuntime,
+    createAndOpenChat,
+    draftRuntimes.create,
+    navigateToChat,
+    runningChatIds,
+    selectedChat,
+    standaloneChats,
+  ]);
 
   const openSettings = useCallback(() => {
     navigate("/settings");
@@ -672,7 +774,7 @@ function WorkspacePageContent({
                     selectedChat={selectedChat}
                     setAgentModel={setAgentModel}
                     setAgentReasoningEffort={setAgentReasoningEffort}
-                    setDraftAgentRuntime={setDraftAgentRuntime}
+                    setPersistedChatRuntime={setPersistedChatRuntime}
                   />
                 ) : (
                   <ChatRestoreErrorBoundary key={selectedChatId}>
@@ -688,7 +790,7 @@ function WorkspacePageContent({
                         selectedChatId={selectedChatId}
                         setAgentModel={setAgentModel}
                         setAgentReasoningEffort={setAgentReasoningEffort}
-                        setDraftAgentRuntime={setDraftAgentRuntime}
+                        setPersistedChatRuntime={setPersistedChatRuntime}
                       />
                     </Suspense>
                   </ChatRestoreErrorBoundary>
@@ -730,6 +832,46 @@ function selectedChatIdFromRoute(route: WorkspaceRoute) {
     : undefined;
 }
 
+function runningChatIdsFromSlots(
+  slots: Record<string, { chatId?: string; key: string; status: string }>,
+) {
+  const ids = new Set<string>();
+
+  for (const slot of Object.values(slots)) {
+    if (slot.status !== "streaming") continue;
+    ids.add(slot.key);
+    if (slot.chatId) {
+      ids.add(slot.chatId);
+    }
+  }
+
+  return ids;
+}
+
+function reusableUnstartedChat({
+  chats,
+  preferredChat,
+  runningChatIds,
+}: {
+  chats: Chat[];
+  preferredChat?: Chat;
+  runningChatIds: ReadonlySet<string>;
+}) {
+  if (
+    preferredChat &&
+    chats.some((chat) => chat.id === preferredChat.id) &&
+    isUnstartedChat(preferredChat, runningChatIds)
+  ) {
+    return preferredChat;
+  }
+
+  return chats.find((chat) => isUnstartedChat(chat, runningChatIds));
+}
+
+function isUnstartedChat(chat: Chat, runningChatIds: ReadonlySet<string>) {
+  return !chat.remoteThreadId && !runningChatIds.has(chat.id);
+}
+
 function ActiveChatThread({
   draftAgentConfig,
   onChatCreated,
@@ -739,7 +881,7 @@ function ActiveChatThread({
   selectedChat,
   setAgentModel,
   setAgentReasoningEffort,
-  setDraftAgentRuntime,
+  setPersistedChatRuntime,
 }: ActiveChatThreadProps) {
   const runtimeConfig = useChatRunConfig(selectedChat.id);
 
@@ -758,7 +900,7 @@ function ActiveChatThread({
       selectedChat={selectedChat}
       setAgentModel={setAgentModel}
       setAgentReasoningEffort={setAgentReasoningEffort}
-      setDraftAgentRuntime={setDraftAgentRuntime}
+      setPersistedChatRuntime={setPersistedChatRuntime}
       slotKey={selectedChat.id}
     />
   );
@@ -775,7 +917,7 @@ function RestoredChatThread({
   selectedChatId,
   setAgentModel,
   setAgentReasoningEffort,
-  setDraftAgentRuntime,
+  setPersistedChatRuntime,
 }: RestoredChatThreadProps) {
   const chatLoadQuery = useSuspenseQuery(
     chatLoadSuspenseQueryOptions({ api, chatId: selectedChatId }),
@@ -813,7 +955,7 @@ function RestoredChatThread({
       selectedChat={selectedChat}
       setAgentModel={setAgentModel}
       setAgentReasoningEffort={setAgentReasoningEffort}
-      setDraftAgentRuntime={setDraftAgentRuntime}
+      setPersistedChatRuntime={setPersistedChatRuntime}
       slotKey={selectedChatId}
     />
   );
@@ -833,11 +975,23 @@ function ChatThreadRuntime({
   selectedChat,
   setAgentModel,
   setAgentReasoningEffort,
-  setDraftAgentRuntime,
+  setPersistedChatRuntime,
   slotKey,
 }: ChatThreadRuntimeProps) {
   const setRunMode = useChatRunStore((state) => state.setMode);
+  const isRunning = useChatRunIsRunning(slotKey);
+  const liveMessages = useChatRunMessages(slotKey);
   const chatRuntime = selectedChat.runtime as AgentRuntime;
+  const hasStarted =
+    Boolean(selectedChat.remoteThreadId) ||
+    historyMessages.length > 0 ||
+    liveMessages.length > 0;
+  const canSetRuntime = !hasStarted && !isRunning;
+  const runtimeDisabledReason = isRunning
+    ? "Agent cannot be changed while a response is running."
+    : hasStarted
+      ? "Agent cannot be changed after a chat has started."
+      : undefined;
   const projectContext = chatProjectContext(route, selectedChat, projects);
   const activeModel = normalizeConfigDisplayValue(
     draftAgentConfig.model ?? runtimeConfig?.currentModel,
@@ -860,6 +1014,13 @@ function ChatThreadRuntime({
     },
     [setRunMode, slotKey],
   );
+  const setRuntime = useCallback(
+    async (runtime: AgentRuntime) => {
+      if (!canSetRuntime) return;
+      await setPersistedChatRuntime(selectedChat.id, runtime);
+    },
+    [canSetRuntime, selectedChat.id, setPersistedChatRuntime],
+  );
   const modelOptions = ensureConfigOption(
     runtimeConfigOptionsToAgentOptions(runtimeConfig?.models),
     activeModel,
@@ -877,6 +1038,7 @@ function ChatThreadRuntime({
       canSetModel: runtimeConfig?.canSetModel ?? true,
       canSetMode: runtimeConfig?.canSetMode ?? true,
       canSetReasoningEffort: runtimeConfig?.canSetReasoningEffort ?? true,
+      canSetRuntime,
       configLoading,
       model: activeModel,
       modelOptions,
@@ -885,11 +1047,11 @@ function ChatThreadRuntime({
       reasoningEffort: activeReasoningEffort,
       reasoningEffortOptions,
       runtime: chatRuntime,
-      runtimeLocked: true,
+      runtimeDisabledReason,
       setModel: setAgentModel,
       setMode: setBackendMode,
       setReasoningEffort: setAgentReasoningEffort,
-      setRuntime: setDraftAgentRuntime,
+      setRuntime,
     }),
     [
       activeMode,
@@ -903,10 +1065,12 @@ function ChatThreadRuntime({
       runtimeConfig?.canSetMode,
       runtimeConfig?.canSetModel,
       runtimeConfig?.canSetReasoningEffort,
+      canSetRuntime,
+      runtimeDisabledReason,
       setAgentModel,
       setAgentReasoningEffort,
       setBackendMode,
-      setDraftAgentRuntime,
+      setRuntime,
     ],
   );
 

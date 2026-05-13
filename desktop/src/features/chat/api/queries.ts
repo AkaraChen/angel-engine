@@ -49,6 +49,12 @@ interface RenameChatMutationParams {
   queryClient: QueryClient;
 }
 
+interface SetChatRuntimeMutationParams {
+  api: ApiClient;
+  onSuccess?: (data: Chat) => Promise<void> | void;
+  queryClient: QueryClient;
+}
+
 interface CreateChatMutationParams {
   api: ApiClient;
   onSuccess?: (data: Chat, variables: ChatCreateInput) => Promise<void> | void;
@@ -205,6 +211,30 @@ export function renameChatMutationOptions({
       queryClient.setQueryData<ChatLoadResult | undefined>(
         queryKeys.chats.detail(data.id),
         (current) => (current ? { ...current, chat: data } : current),
+      );
+      await onSuccess?.(data);
+    },
+  });
+}
+
+export function setChatRuntimeMutationOptions({
+  api,
+  onSuccess,
+  queryClient,
+}: SetChatRuntimeMutationParams) {
+  return mutationOptions({
+    mutationFn: (input: Parameters<ApiClient["chats"]["setRuntime"]>[0]) =>
+      api.chats.setRuntime(input),
+    onSuccess: async (data) => {
+      queryClient.setQueryData<Chat[]>(queryKeys.chats.list(), (current = []) =>
+        upsertChatInList(current, data),
+      );
+      queryClient.setQueryData<ChatLoadResult | undefined>(
+        queryKeys.chats.detail(data.id),
+        (current) =>
+          current
+            ? { ...current, chat: data, config: undefined }
+            : { chat: data, messages: EMPTY_MESSAGES },
       );
       await onSuccess?.(data);
     },

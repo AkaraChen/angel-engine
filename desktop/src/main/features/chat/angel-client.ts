@@ -31,6 +31,7 @@ import type {
   ChatSendResult,
   ChatSetModeInput,
   ChatSetModeResult,
+  ChatSetRuntimeInput,
 } from "../../../shared/chat";
 import { normalizeChatAttachmentsInput } from "../../../shared/chat";
 import {
@@ -38,6 +39,7 @@ import {
   renameChatFromPrompt,
   requireChat,
   setChatRemoteThreadId,
+  setChatRuntime as setChatRuntimeRecord,
   touchChat,
 } from "./repository";
 import { getProject } from "../projects/repository";
@@ -153,6 +155,20 @@ export async function setChatMode(
     chat: updatedChat,
     config: runtimeConfigFromConversationSnapshot(snapshot),
   };
+}
+
+export function setChatRuntime(input: ChatSetRuntimeInput): Chat {
+  const chat = requireChat(input.chatId);
+  const session = chatSessions.get(chat.id);
+  if (chat.remoteThreadId || session?.hasConversation()) {
+    throw new Error(
+      "Chat runtime cannot be changed after the chat has started.",
+    );
+  }
+
+  session?.close();
+  chatSessions.delete(chat.id);
+  return setChatRuntimeRecord(chat.id, input.runtime);
 }
 
 export async function prewarmChat(

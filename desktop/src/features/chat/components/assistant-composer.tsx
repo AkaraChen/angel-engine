@@ -822,11 +822,11 @@ function ComposerModelMenu({
     disabled ||
     !options.canSetReasoningEffort ||
     options.reasoningEffortOptions.length < 2;
-  const providerDisabledReason = options.runtimeLocked
-    ? "Agent cannot be changed after a chat has been created. Start a new chat to choose a different agent."
-    : disabled
+  const providerDisabledReason =
+    options.runtimeDisabledReason ??
+    (disabled
       ? "Agent cannot be changed while a response is running."
-      : undefined;
+      : undefined);
   const filteredModelOptions = useMemo(
     () => filterComposerOptions(options.modelOptions, modelQuery),
     [options.modelOptions, modelQuery],
@@ -838,7 +838,6 @@ function ComposerModelMenu({
         <Button
           aria-label="Provider, model, and reasoning effort"
           className={composerModelMenuTriggerClassName}
-          disabled={disabled}
           size="sm"
           title="Provider, model, and reasoning effort"
           type="button"
@@ -873,7 +872,7 @@ function ComposerModelMenu({
           Agent Settings
         </DropdownMenuLabel>
         <ComposerModelMenuSub
-          disabled={options.runtimeLocked || disabled}
+          disabled={!options.canSetRuntime || disabled}
           disabledReason={providerDisabledReason}
           icon={<Bot />}
           label="Provider"

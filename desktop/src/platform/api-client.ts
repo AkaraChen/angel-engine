@@ -6,6 +6,7 @@ import type {
   ChatRenameInput,
   ChatRuntimeConfigInput,
   ChatSetModeInput,
+  ChatSetRuntimeInput,
 } from "@/shared/chat";
 import type { CreateProjectInput } from "@/shared/projects";
 
@@ -20,6 +21,9 @@ type ChatApiClient = {
   prewarm: (input?: ChatPrewarmInput) => ReturnType<typeof ipc.chatsPrewarm>;
   rename: (input: ChatRenameInput) => ReturnType<typeof ipc.chatsRename>;
   setMode: (input: ChatSetModeInput) => ReturnType<typeof ipc.chatsSetMode>;
+  setRuntime: (
+    input: ChatSetRuntimeInput,
+  ) => ReturnType<typeof ipc.chatsSetRuntime>;
   showContextMenu: (
     chatId: string,
   ) => ReturnType<typeof ipc.chatsShowContextMenu>;
@@ -54,6 +58,7 @@ export function createApiClient(): ApiClient {
       prewarm: (input: ChatPrewarmInput = {}) => ipc.chatsPrewarm(input),
       rename: (input: ChatRenameInput) => ipc.chatsRename(input),
       setMode: (input: ChatSetModeInput) => ipc.chatsSetMode(input),
+      setRuntime: (input: ChatSetRuntimeInput) => ipc.chatsSetRuntime(input),
       showContextMenu: (chatId: string) => ipc.chatsShowContextMenu(chatId),
     },
     projects: {
