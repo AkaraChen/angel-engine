@@ -189,7 +189,7 @@ post-cancel continuation。
 - [ ] 如果 UI/runtime 支持运行中打断、steer 或追加用户指令，运行中提交一条短打断指
       令，确认它进入当前 active turn，而不是创建重复 chat 或丢失原 run 状态。
 - [ ] 如果该 agent 不支持运行中追加输入，run report 明确记录 `interrupt not
-    supported`，并把 `Cancel` 作为该 agent 的打断路径覆盖。
+supported`，并把 `Cancel` 作为该 agent 的打断路径覆盖。
 - [ ] 打断或 cancel 后立刻发送 follow-up，确认后续 turn 能正常开始、输出和 sidebar
       状态不串到上一轮。
 
@@ -328,15 +328,17 @@ transition。
       发送。
 - [ ] 切到 `Plan` 或该 agent 的等价规划模式后发送规划类 prompt，runtime 使用所选
       mode，而不是回落到默认 build/act。
-- [ ] plan/todo card 正常显示，内容可读，状态更新清楚。
+- [ ] plan/todo card 或普通 assistant plan text 正常显示，内容可读；只有 runtime
+      明确输出 structured plan/todo 时才要求状态更新清楚。
 - [ ] 如果出现 `Start implementation`，点击后切到 build 模式并发送实现请求。
 - [ ] build 实现期间 permission、tool call、file edit 正常走同一个 chat。
 - [ ] 从 build 再切回 plan 时，按钮状态和 runtime mode 一致。
 - [ ] 运行中 plan/build toggle 禁用。
-- [ ] hydrate 后 plan/todo 历史可恢复，不变成普通未结构化 JSON。
-- [ ] 如果该 agent 没有规划模式或不输出结构化 plan/todo，run report 记录为 `plan
-    mode not supported` 或 `structured plan not supported`，并提供 model/mode UI 或
-      snapshot 证据。
+- [ ] hydrate 后 structured plan/todo 历史可恢复，不变成普通未结构化 JSON；如果该
+      runtime 原本只输出普通 assistant plan text，则按普通 assistant message
+      恢复是正确行为。
+- [ ] 如果该 agent 没有规划模式，run report 记录为 `plan mode not supported`；如果
+      只输出普通 assistant plan text，不记录为失败。
 
 建议 Codex prompt：
 

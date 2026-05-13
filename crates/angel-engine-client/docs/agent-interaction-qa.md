@@ -190,7 +190,9 @@ show.
 Verify:
 
 - Plan mode state changes or the runtime clearly confirms plan mode.
-- Plan text, reasoning, or structured plan output appears.
+- Plan text, reasoning, or structured plan output appears. Plain assistant text
+  containing the plan is valid plan content for runtimes that do not emit a
+  structured ACP `plan` update.
 - Any plan-path question is answered through the terminal.
 - After exiting, a normal follow-up turn does not create a new plan and does not
   keep the old plan as the active turn plan.

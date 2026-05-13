@@ -50,7 +50,7 @@ impl KimiAdapter {
         &self,
         engine: &AngelEngine,
         effect: &ProtocolEffect,
-        options: &TransportOptions,
+        _options: &TransportOptions,
     ) -> Result<Option<TransportOutput>, EngineError> {
         let Some(mode_id) = effect
             .payload
@@ -61,28 +61,33 @@ impl KimiAdapter {
         else {
             return Ok(None);
         };
-        if !matches!(mode_id, "plan" | "default") || !conversation_has_plan_command(engine, effect)
-        {
+        if !matches!(mode_id, "plan" | "default") || !conversation_has_plan_mode(engine, effect) {
             return Ok(None);
         }
 
-        let command = if mode_id == "plan" {
-            "/plan on"
-        } else {
-            "/plan off"
-        };
-        let mut prompt_effect = effect.clone();
-        prompt_effect.method = ProtocolMethod::StartTurn;
-        prompt_effect.payload.fields.clear();
-        prompt_effect
-            .payload
-            .fields
-            .insert("input".to_string(), command.to_string());
-
-        let mut output = self.acp.encode_effect(engine, &prompt_effect, options)?;
+        let mut output = TransportOutput::default()
+            .event(EngineEvent::SessionModeChanged {
+                conversation_id: effect.conversation_id.clone().ok_or_else(|| {
+                    EngineError::InvalidCommand {
+                        message: "missing conversation id for Kimi mode update".to_string(),
+                    }
+                })?,
+                mode_id: mode_id.to_string(),
+            })
+            .log(
+                TransportLogKind::State,
+                format!("Kimi plan mode projected locally: {mode_id}"),
+            )
+            .log(
+                TransportLogKind::Warning,
+                "Kimi native /plan command is not sent because its ExitPlanMode approval flow is not exposed through ACP",
+            );
+        if let Some(request_id) = &effect.request_id {
+            output.completed_requests.push(request_id.clone());
+        }
         output.logs.push(angel_engine::TransportLog::new(
             TransportLogKind::State,
-            format!("Kimi plan mode via slash command: {command}"),
+            "Use normal assistant text as plan content for Kimi plan-mode QA",
         ));
         Ok(Some(output))
     }
@@ -95,22 +100,52 @@ impl KimiAdapter {
     ) -> TransportOutput {
         self.append_kimi_local_hydration(engine, message, &mut output);
 
-        let mode_updates = output
+        let mut plan_command_conversations = Vec::new();
+        let mut filtered_plan_command = false;
+        output.events = output
             .events
-            .iter()
-            .filter_map(|event| match event {
+            .into_iter()
+            .map(|event| match event {
                 EngineEvent::AvailableCommandsUpdated {
                     conversation_id,
                     commands,
-                } if commands.iter().any(is_plan_command)
-                    && needs_kimi_plan_modes(engine, &output.events, conversation_id) =>
+                } => {
+                    let (commands, had_plan_command) = kimi_filter_plan_command(commands);
+                    if had_plan_command {
+                        plan_command_conversations.push(conversation_id.clone());
+                        filtered_plan_command = true;
+                    }
+                    EngineEvent::AvailableCommandsUpdated {
+                        conversation_id,
+                        commands,
+                    }
+                }
+                event => event,
+            })
+            .collect();
+
+        let mode_updates = output
+            .events
+            .iter()
+            .filter_map(|event| {
+                let EngineEvent::AvailableCommandsUpdated {
+                    conversation_id, ..
+                } = event
+                else {
+                    return None;
+                };
+                if plan_command_conversations
+                    .iter()
+                    .any(|id| id == conversation_id)
+                    && needs_kimi_plan_modes(engine, &output.events, conversation_id)
                 {
                     Some(EngineEvent::SessionModesUpdated {
                         conversation_id: conversation_id.clone(),
                         modes: kimi_plan_mode_state(engine, conversation_id),
                     })
+                } else {
+                    None
                 }
-                _ => None,
             })
             .collect::<Vec<_>>();
 
@@ -119,6 +154,12 @@ impl KimiAdapter {
             output.logs.push(angel_engine::TransportLog::new(
                 TransportLogKind::State,
                 "Kimi /plan command exposed as plan/default modes",
+            ));
+        }
+        if filtered_plan_command {
+            output.logs.push(angel_engine::TransportLog::new(
+                TransportLogKind::Warning,
+                "Kimi /plan command hidden because its ExitPlanMode approval flow is not exposed through ACP; use /mode plan instead",
             ));
         }
         let plan_file_updates = output
@@ -254,16 +295,33 @@ impl ProtocolAdapter for KimiAdapter {
     }
 }
 
-fn conversation_has_plan_command(engine: &AngelEngine, effect: &ProtocolEffect) -> bool {
+fn conversation_has_plan_mode(engine: &AngelEngine, effect: &ProtocolEffect) -> bool {
     effect
         .conversation_id
         .as_ref()
         .and_then(|conversation_id| engine.conversations.get(conversation_id))
-        .is_some_and(|conversation| conversation.available_commands.iter().any(is_plan_command))
+        .and_then(|conversation| conversation.mode_state.as_ref())
+        .is_some_and(|modes| modes.available_modes.iter().any(|mode| mode.id == "plan"))
 }
 
 fn is_plan_command(command: &AvailableCommand) -> bool {
     command.name == "plan"
+}
+
+fn kimi_filter_plan_command(commands: Vec<AvailableCommand>) -> (Vec<AvailableCommand>, bool) {
+    let mut had_plan_command = false;
+    let commands = commands
+        .into_iter()
+        .filter(|command| {
+            if is_plan_command(command) {
+                had_plan_command = true;
+                false
+            } else {
+                true
+            }
+        })
+        .collect();
+    (commands, had_plan_command)
 }
 
 fn needs_kimi_plan_modes(
@@ -883,7 +941,7 @@ mod tests {
     }
 
     #[test]
-    fn set_plan_mode_uses_kimi_plan_slash_command() {
+    fn set_plan_mode_projects_locally_without_kimi_plan_slash_command() {
         let adapter = KimiAdapter::standard();
         let (mut engine, conversation_id) = ready_engine(&adapter);
         engine
@@ -918,17 +976,22 @@ mod tests {
             .encode_effect(&engine, &plan.effects[0], &TransportOptions::default())
             .expect("encode mode");
 
-        assert!(matches!(
-            &output.messages[0],
-            JsonRpcMessage::Request { method, params, .. }
-                if method == "session/prompt"
-                    && params["sessionId"] == json!("sess")
-                    && params["prompt"][0]["text"] == json!("/plan on")
-        ));
+        assert!(output.messages.is_empty());
+        assert!(
+            output
+                .completed_requests
+                .contains(&plan.effects[0].request_id.clone().unwrap())
+        );
+        assert!(output.events.iter().any(|event| {
+            matches!(
+                event,
+                EngineEvent::SessionModeChanged { mode_id, .. } if mode_id == "plan"
+            )
+        }));
     }
 
     #[test]
-    fn neutral_update_context_plan_mode_uses_kimi_plan_slash_command() {
+    fn neutral_update_context_plan_mode_projects_locally() {
         let adapter = KimiAdapter::standard();
         let (mut engine, conversation_id) = ready_engine(&adapter);
         engine
@@ -941,6 +1004,12 @@ mod tests {
                 }],
             })
             .expect("commands");
+        engine
+            .apply_event(EngineEvent::SessionModesUpdated {
+                conversation_id: conversation_id.clone(),
+                modes: kimi_plan_mode_state(&engine, &conversation_id),
+            })
+            .expect("modes");
         let effect = ProtocolEffect::new(ProtocolFlavor::Acp, ProtocolMethod::UpdateContext)
             .request_id(angel_engine::JsonRpcRequestId::new("ctx"))
             .conversation_id(conversation_id)
@@ -951,17 +1020,22 @@ mod tests {
             .encode_effect(&engine, &effect, &TransportOptions::default())
             .expect("encode mode");
 
-        assert!(matches!(
-            &output.messages[0],
-            JsonRpcMessage::Request { method, params, .. }
-                if method == "session/prompt"
-                    && params["sessionId"] == json!("sess")
-                    && params["prompt"][0]["text"] == json!("/plan on")
-        ));
+        assert!(output.messages.is_empty());
+        assert!(
+            output
+                .completed_requests
+                .contains(&angel_engine::JsonRpcRequestId::new("ctx"))
+        );
+        assert!(output.events.iter().any(|event| {
+            matches!(
+                event,
+                EngineEvent::SessionModeChanged { mode_id, .. } if mode_id == "plan"
+            )
+        }));
     }
 
     #[test]
-    fn set_default_mode_uses_kimi_plan_off_slash_command() {
+    fn set_default_mode_projects_locally_without_kimi_plan_slash_command() {
         let adapter = KimiAdapter::standard();
         let (mut engine, conversation_id) = ready_engine(&adapter);
         engine
@@ -1011,13 +1085,18 @@ mod tests {
             .encode_effect(&engine, &plan.effects[0], &TransportOptions::default())
             .expect("encode mode");
 
-        assert!(matches!(
-            &output.messages[0],
-            JsonRpcMessage::Request { method, params, .. }
-                if method == "session/prompt"
-                    && params["sessionId"] == json!("sess")
-                    && params["prompt"][0]["text"] == json!("/plan off")
-        ));
+        assert!(output.messages.is_empty());
+        assert!(
+            output
+                .completed_requests
+                .contains(&plan.effects[0].request_id.clone().unwrap())
+        );
+        assert!(output.events.iter().any(|event| {
+            matches!(
+                event,
+                EngineEvent::SessionModeChanged { mode_id, .. } if mode_id == "default"
+            )
+        }));
     }
 
     #[test]

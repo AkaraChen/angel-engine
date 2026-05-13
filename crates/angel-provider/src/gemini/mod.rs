@@ -1,13 +1,13 @@
 use angel_engine::event::EngineEvent;
 use angel_engine::ids::{ConversationId, JsonRpcRequestId};
 use angel_engine::protocol::ProtocolMethod;
-use angel_engine::state::{SessionConfigOption, SessionModeState};
+use angel_engine::state::{AvailableCommand, SessionConfigOption, SessionModeState};
 use angel_engine::transport::{
     JsonRpcMessage, TransportLogKind, TransportOptions, TransportOutput,
 };
 use angel_engine::{
-    AngelEngine, ConversationCapabilities, EngineError, PendingRequest, ProtocolEffect,
-    ProtocolFlavor, SessionModelState, UserInput,
+    AngelEngine, ContextPatch, ConversationCapabilities, EngineCommand, EngineError,
+    PendingRequest, ProtocolEffect, ProtocolFlavor, SessionModelState, UserInput, UserInputKind,
 };
 use serde_json::{Value, json};
 
@@ -40,6 +40,7 @@ impl GeminiAdapter {
 
     fn normalize_gemini_output(&self, mut output: TransportOutput) -> TransportOutput {
         let mut filtered_plan_mode = false;
+        let mut filtered_plan_command = false;
         output.events = output
             .events
             .into_iter()
@@ -66,6 +67,17 @@ impl GeminiAdapter {
                         options,
                     }
                 }
+                EngineEvent::AvailableCommandsUpdated {
+                    conversation_id,
+                    commands,
+                } => {
+                    let (commands, filtered) = gemini_available_commands(commands);
+                    filtered_plan_command |= filtered;
+                    EngineEvent::AvailableCommandsUpdated {
+                        conversation_id,
+                        commands,
+                    }
+                }
                 event => event,
             })
             .collect();
@@ -74,6 +86,12 @@ impl GeminiAdapter {
             output.logs.push(angel_engine::TransportLog::new(
                 TransportLogKind::Warning,
                 "Gemini ACP plan mode hidden because this runtime does not complete prompts in plan mode",
+            ));
+        }
+        if filtered_plan_command {
+            output.logs.push(angel_engine::TransportLog::new(
+                TransportLogKind::Warning,
+                "Gemini /plan command hidden because this runtime does not complete prompts in plan mode",
             ));
         }
         output
@@ -177,6 +195,17 @@ impl ProtocolAdapter for GeminiAdapter {
         conversation_id: &ConversationId,
         input: &[UserInput],
     ) -> Result<Option<InterpretedUserInput>, EngineError> {
+        if is_gemini_plan_user_input(input) {
+            return Ok(Some(InterpretedUserInput {
+                command: EngineCommand::UpdateContext {
+                    conversation_id: conversation_id.clone(),
+                    patch: ContextPatch::empty(),
+                },
+                message: Some(
+                    "Gemini /plan is unavailable through ACP because this runtime does not complete prompts in plan mode.".to_string(),
+                ),
+            }));
+        }
         self.acp
             .interpret_user_input(engine, conversation_id, input)
     }
@@ -229,6 +258,13 @@ fn gemini_config_options(options: Vec<SessionConfigOption>) -> (Vec<SessionConfi
     (options, filtered_any)
 }
 
+fn gemini_available_commands(mut commands: Vec<AvailableCommand>) -> (Vec<AvailableCommand>, bool) {
+    let before = commands.len();
+    commands.retain(|command| command.name != "plan");
+    let filtered = before != commands.len();
+    (commands, filtered)
+}
+
 fn is_mode_config_option(option: &SessionConfigOption) -> bool {
     option.category.as_deref() == Some("mode")
 }
@@ -274,6 +310,13 @@ fn is_gemini_plan_command(value: &str) -> bool {
         || value
             .strip_prefix("/plan")
             .is_some_and(|suffix| suffix.starts_with(char::is_whitespace))
+}
+
+fn is_gemini_plan_user_input(input: &[UserInput]) -> bool {
+    let [input] = input else {
+        return false;
+    };
+    matches!(input.kind, UserInputKind::Text) && is_gemini_plan_command(&input.content)
 }
 
 #[cfg(test)]
@@ -452,6 +495,74 @@ mod tests {
 
         let settings_plan = engine.set_mode("conv", "plan").expect("settings plan");
         assert!(settings_plan.effects.is_empty());
+    }
+
+    #[test]
+    fn available_commands_hide_gemini_plan_command() {
+        let adapter = GeminiAdapter::standard();
+        let (mut engine, conversation_id) = ready_engine(&adapter);
+
+        let output = adapter
+            .decode_message(
+                &engine,
+                &JsonRpcMessage::notification(
+                    "session/update",
+                    json!({
+                        "sessionId": "sess",
+                        "update": {
+                            "sessionUpdate": "available_commands_update",
+                            "availableCommands": [
+                                {
+                                    "name": "memory",
+                                    "description": "Manage memory."
+                                },
+                                {
+                                    "name": "plan",
+                                    "description": "Enter plan mode."
+                                }
+                            ]
+                        }
+                    }),
+                ),
+            )
+            .expect("decode commands");
+        apply(&mut engine, &output);
+
+        let commands = &engine.conversations[&conversation_id].available_commands;
+        assert_eq!(
+            commands
+                .iter()
+                .map(|command| command.name.as_str())
+                .collect::<Vec<_>>(),
+            vec!["memory"]
+        );
+        assert!(output.logs.iter().any(|log| {
+            log.kind == TransportLogKind::Warning
+                && log.message.contains("Gemini /plan command hidden")
+        }));
+    }
+
+    #[test]
+    fn plan_slash_user_input_is_local_noop() {
+        let adapter = GeminiAdapter::standard();
+        let (engine, conversation_id) = ready_engine(&adapter);
+
+        let interpreted = adapter
+            .interpret_user_input(
+                &engine,
+                &conversation_id,
+                &[UserInput::text("/plan inspect the repo")],
+            )
+            .expect("interpret")
+            .expect("local noop");
+
+        assert!(matches!(
+            interpreted.command,
+            EngineCommand::UpdateContext { patch, .. } if patch.is_empty()
+        ));
+        assert!(interpreted.message.is_some_and(|message| {
+            message.contains("Gemini /plan is unavailable through ACP")
+        }));
     }
 
     #[test]
