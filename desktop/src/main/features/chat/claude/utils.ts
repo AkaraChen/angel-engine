@@ -106,10 +106,12 @@ export function permissionDecision(response: ChatElicitationResponse): unknown {
       return EngineEventElicitationDecision.AllowForSession;
     case "answers":
       return {
-        [EngineEventElicitationDecision.Answers]: response.answers.map((answer) => ({
-          id: answer.id,
-          value: answer.value,
-        })),
+        [EngineEventElicitationDecision.Answers]: response.answers.map(
+          (answer) => ({
+            id: answer.id,
+            value: answer.value,
+          }),
+        ),
       };
     case "cancel":
       return EngineEventElicitationDecision.Cancel;

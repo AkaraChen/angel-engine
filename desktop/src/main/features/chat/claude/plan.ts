@@ -1,7 +1,10 @@
 import { homedir } from "node:os";
 import path from "node:path";
 
-import { EngineEventContentKind, PlanEntryStatus } from "@angel-engine/client-napi";
+import {
+  EngineEventContentKind,
+  PlanEntryStatus,
+} from "@angel-engine/client-napi";
 
 import type { ActiveClaudeTurn, EngineEventJson, JsonObject } from "./types";
 import {

@@ -560,6 +560,7 @@ function ElicitationToolPart({
     return (
       <InlinePermissionApprovalButtons
         action={action}
+        elicitation={elicitation}
         part={part}
         phase={phase}
       />
@@ -590,6 +591,7 @@ function StandaloneElicitationToolPart({
   const questions = elicitation?.questions ?? [];
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [fallbackAnswer, setFallbackAnswer] = useState("");
+  const { resolveElicitation } = useChatRuntimeActions();
   const hasTextAfterTool = useHasTextAfterToolCall(part.toolCallId);
   const [manualOpen, setManualOpen] = useState<boolean | undefined>();
   const awaitingInput = phase === "awaitingDecision";
@@ -599,7 +601,11 @@ function StandaloneElicitationToolPart({
 
   const resume = (response: ChatElicitationResponse) => {
     if (!awaitingInput) return;
-    part.resume(response);
+    resolveElicitation(
+      action.elicitationId ?? elicitation?.id ?? part.toolCallId,
+      response,
+      part.toolCallId,
+    );
   };
 
   const submitAnswers = () => {
@@ -700,19 +706,26 @@ function StandaloneElicitationToolPart({
 
 function InlinePermissionApprovalButtons({
   action,
+  elicitation,
   part,
   phase,
 }: {
   action: ChatToolAction;
+  elicitation?: ChatElicitation;
   part: ToolCallMessagePartProps;
   phase: string;
 }) {
   const [submitted, setSubmitted] = useState(false);
+  const { resolveElicitation } = useChatRuntimeActions();
   const awaitingInput = phase === "awaitingDecision";
   const resume = (response: ChatElicitationResponse) => {
     if (!awaitingInput) return;
     setSubmitted(true);
-    part.resume(response);
+    resolveElicitation(
+      action.elicitationId ?? elicitation?.id ?? part.toolCallId,
+      response,
+      part.toolCallId,
+    );
   };
 
   if (submitted || !awaitingInput) return null;

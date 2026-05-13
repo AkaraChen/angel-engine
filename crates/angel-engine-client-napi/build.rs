@@ -10,7 +10,134 @@ fn main() {
 fn generate_engine_event_enums() {
     let manifest_dir = PathBuf::from(env::var("CARGO_MANIFEST_DIR").expect("manifest dir"));
     let engine_src = manifest_dir.join("../angel-engine/src");
+    let client_src = manifest_dir.join("../angel-engine-client/src");
     let generated = [
+        generated_enum(
+            &client_src.join("runtime.rs"),
+            "AgentRuntime",
+            "AgentRuntime",
+            "lowercase",
+        ),
+        generated_enum(
+            &client_src.join("event.rs"),
+            "ClientLogKind",
+            "ClientLogKind",
+            "camelCase",
+        ),
+        generated_enum(
+            &engine_src.join("transport.rs"),
+            "TransportLogKind",
+            "TransportLogKind",
+            "camelCase",
+        ),
+        generated_enum(
+            &client_src.join("event.rs"),
+            "ClientEvent",
+            "ClientEventType",
+            "camelCase",
+        ),
+        generated_enum(
+            &client_src.join("event.rs"),
+            "ClientStreamDelta",
+            "ClientStreamDeltaType",
+            "camelCase",
+        ),
+        generated_enum(
+            &client_src.join("snapshot.rs"),
+            "RuntimeSnapshot",
+            "RuntimeStatus",
+            "snake_case",
+        ),
+        generated_enum(
+            &engine_src.join("ids.rs"),
+            "RemoteConversationId",
+            "RemoteKind",
+            "lowercase",
+        ),
+        generated_enum(
+            &client_src.join("config.rs"),
+            "ClientProtocol",
+            "ClientProtocol",
+            "camelCase",
+        ),
+        generated_enum(
+            &client_src.join("core.rs"),
+            "ClientInput",
+            "ClientInputType",
+            "snake_case",
+        ),
+        generated_enum(
+            &client_src.join("core.rs"),
+            "ElicitationResponse",
+            "ElicitationResponseType",
+            "snake_case",
+        ),
+        generated_enum(
+            &engine_src.join("state/turn.rs"),
+            "ContentDelta",
+            "ContentChunkKind",
+            "camelCase",
+        ),
+        generated_enum(
+            &engine_src.join("state/turn.rs"),
+            "PlanEntryStatus",
+            "PlanEntryStatus",
+            "snake_case",
+        ),
+        generated_enum(
+            &engine_src.join("state/turn.rs"),
+            "PlanDisplayKind",
+            "PlanDisplayKind",
+            "lowercase",
+        ),
+        generated_enum(
+            &engine_src.join("state/action.rs"),
+            "ActionKind",
+            "ActionKind",
+            "camelCase",
+        ),
+        generated_enum(
+            &engine_src.join("state/action.rs"),
+            "ActionPhase",
+            "ActionPhase",
+            "camelCase",
+        ),
+        generated_enum(
+            &engine_src.join("state/action.rs"),
+            "ActionOutputDelta",
+            "ActionOutputKind",
+            "lowercase",
+        ),
+        generated_enum(
+            &engine_src.join("state/elicitation.rs"),
+            "ElicitationKind",
+            "ElicitationKind",
+            "camelCase",
+        ),
+        generated_enum(
+            &engine_src.join("state/elicitation.rs"),
+            "QuestionValueType",
+            "QuestionValueType",
+            "lowercase",
+        ),
+        generated_enum(
+            &client_src.join("thread.rs"),
+            "ThreadEvent",
+            "ThreadEventType",
+            "snake_case",
+        ),
+        generated_enum(
+            &client_src.join("session.rs"),
+            "TurnRunEvent",
+            "TurnRunEventType",
+            "snake_case",
+        ),
+        generated_enum(
+            &client_src.join("session.rs"),
+            "TurnRunDeltaPart",
+            "TurnRunDeltaPart",
+            "lowercase",
+        ),
         generated_enum(
             &engine_src.join("state/action.rs"),
             "ActionKind",
@@ -69,7 +196,7 @@ fn generate_engine_event_enums() {
     .join("\n");
 
     let out_dir = PathBuf::from(env::var("OUT_DIR").expect("out dir"));
-    fs::write(out_dir.join("engine_event_enums.rs"), generated).expect("write generated enums");
+    fs::write(out_dir.join("generated_enums.rs"), generated).expect("write generated enums");
 }
 
 fn generated_enum(path: &Path, source_name: &str, export_name: &str, case: &str) -> String {

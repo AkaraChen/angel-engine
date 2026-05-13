@@ -12,6 +12,7 @@ type ChatRuntimeActionsContextValue = {
   resolveElicitation: (
     elicitationId: string,
     response: ChatElicitationResponse,
+    localToolCallId?: string,
   ) => void;
   setMode: (mode: string) => Promise<void>;
 };
@@ -42,8 +43,13 @@ export function ChatRuntimeActionsProvider({
         enablePermissionBypassForSlot(slotKey);
       },
       permissionBypassEnabled,
-      resolveElicitation(elicitationId, response) {
-        resolveElicitationForSlot(slotKey, response, elicitationId);
+      resolveElicitation(elicitationId, response, localToolCallId) {
+        resolveElicitationForSlot(
+          slotKey,
+          response,
+          localToolCallId ?? elicitationId,
+          elicitationId,
+        );
       },
       async setMode(mode) {
         await setModeForSlot(slotKey, mode);

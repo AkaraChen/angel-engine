@@ -399,6 +399,8 @@ pub struct DisplayToolActionSnapshot {
     pub id: String,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub turn_id: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub elicitation_id: Option<String>,
     pub kind: String,
     pub phase: String,
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -418,6 +420,7 @@ impl From<&ActionSnapshot> for DisplayToolActionSnapshot {
         Self {
             id: action.id.clone(),
             turn_id: Some(action.turn_id.clone()),
+            elicitation_id: action.elicitation_id.clone(),
             kind: action.kind.clone(),
             phase: action.phase.clone(),
             title: action.title.clone(),
@@ -440,6 +443,7 @@ impl From<&angel_engine::DisplayToolAction> for DisplayToolActionSnapshot {
         Self {
             id: action.id.clone(),
             turn_id: action.turn_id.as_ref().map(ToString::to_string),
+            elicitation_id: None,
             kind: action
                 .kind
                 .as_ref()
@@ -465,6 +469,7 @@ impl DisplayToolActionSnapshot {
         Self {
             id: action_id,
             turn_id: Some(turn_id),
+            elicitation_id: None,
             kind: "tool".to_string(),
             phase: "streamingResult".to_string(),
             title: Some("Tool call".to_string()),
@@ -496,6 +501,7 @@ impl DisplayToolActionSnapshot {
         Self {
             id: elicitation.id.clone(),
             turn_id: elicitation.turn_id.clone(),
+            elicitation_id: Some(elicitation.id.clone()),
             kind: "elicitation".to_string(),
             phase: elicitation_action_phase(elicitation.phase.as_str()).to_string(),
             title: Some(
@@ -732,6 +738,8 @@ impl From<&angel_engine::PlanEntry> for PlanEntrySnapshot {
 pub struct ActionSnapshot {
     pub id: String,
     pub turn_id: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub elicitation_id: Option<String>,
     pub kind: String,
     pub phase: String,
     pub title: Option<String>,
@@ -753,6 +761,7 @@ impl From<&ActionState> for ActionSnapshot {
         Self {
             id: action.id.to_string(),
             turn_id: action.turn_id.to_string(),
+            elicitation_id: action_elicitation_id(&action.phase),
             kind: action_kind_label(&action.kind),
             phase: action_phase_label(&action.phase),
             title: action.title.clone(),
@@ -1112,6 +1121,13 @@ fn plan_display_kind_label(kind: &angel_engine::PlanDisplayKind) -> String {
 
 fn default_plan_kind() -> String {
     "review".to_string()
+}
+
+fn action_elicitation_id(phase: &ActionPhase) -> Option<String> {
+    match phase {
+        ActionPhase::AwaitingDecision { elicitation_id } => Some(elicitation_id.to_string()),
+        _ => None,
+    }
 }
 
 fn action_phase_label(phase: &ActionPhase) -> String {

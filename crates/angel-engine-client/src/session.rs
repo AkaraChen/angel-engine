@@ -117,7 +117,7 @@ pub struct TurnRunResult {
 #[allow(clippy::large_enum_variant)]
 pub enum TurnRunEvent {
     Delta {
-        part: String,
+        part: TurnRunDeltaPart,
         text: String,
         #[serde(default, skip_serializing_if = "Option::is_none")]
         turn_id: Option<String>,
@@ -150,6 +150,13 @@ pub enum TurnRunEvent {
     Result {
         result: TurnRunResult,
     },
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum TurnRunDeltaPart {
+    Reasoning,
+    Text,
 }
 
 impl AngelSession {
@@ -868,7 +875,7 @@ impl TurnCollector {
         }
         let message_part = DisplayMessagePartSnapshot::text(part, text.clone());
         events.push_back(TurnRunEvent::Delta {
-            part: part.to_string(),
+            part: turn_run_delta_part(part),
             text,
             message_part,
             turn_id: Some(turn_id),
@@ -1073,6 +1080,13 @@ fn assistant_message_for_turn(
         .iter()
         .find(|message| message.id == message_id)
         .cloned()
+}
+
+fn turn_run_delta_part(part: &str) -> TurnRunDeltaPart {
+    match part {
+        "reasoning" => TurnRunDeltaPart::Reasoning,
+        _ => TurnRunDeltaPart::Text,
+    }
 }
 
 fn turn_reasoning_text(turn: Option<&TurnSnapshot>) -> Option<String> {
@@ -1328,6 +1342,7 @@ mod tests {
             .into_iter()
             .collect();
         ActionSnapshot {
+            elicitation_id: None,
             error: None,
             id: "action".to_string(),
             input_summary: None,

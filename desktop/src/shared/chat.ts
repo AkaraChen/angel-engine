@@ -1,3 +1,5 @@
+import type { ActionSnapshot } from "@angel-engine/client-napi";
+
 export type Chat = {
   id: string;
   title: string;
@@ -149,14 +151,17 @@ export type ChatToolActionError = {
   recoverable: boolean;
 };
 
+export type ChatToolActionPhase = ActionSnapshot["phase"];
+
 export type ChatToolAction = {
+  elicitationId?: string | null;
   error?: ChatToolActionError | null;
   id: string;
   inputSummary?: string | null;
   kind?: string;
   output?: ChatToolActionOutput[];
   outputText?: string;
-  phase?: string;
+  phase?: ChatToolActionPhase;
   rawInput?: string | null;
   title?: string | null;
   turnId?: string;
@@ -614,13 +619,23 @@ export function parseDataUrl(value: string):
   return { data, mimeType };
 }
 
-export function isTerminalChatToolPhase(phase?: string) {
-  return (
-    phase === "completed" ||
-    phase === "failed" ||
-    phase === "declined" ||
-    phase === "cancelled"
-  );
+export function isTerminalChatToolPhase(phase?: ChatToolActionPhase) {
+  switch (phase) {
+    case undefined:
+    case "awaitingDecision":
+    case "proposed":
+    case "running":
+    case "streamingResult":
+      return false;
+    case "cancelled":
+    case "completed":
+    case "declined":
+    case "failed":
+      return true;
+  }
+
+  const exhaustive: never = phase;
+  return exhaustive;
 }
 
 export type ChatLoadResult = {

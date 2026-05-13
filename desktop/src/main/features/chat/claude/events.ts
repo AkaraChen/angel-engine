@@ -9,10 +9,12 @@ import type {
   TurnSnapshot,
 } from "@angel-engine/client-napi";
 import {
+  ClientEventType,
   EngineEventActionKind,
   EngineEventActionOutputKind,
   EngineEventActionPhase,
   EngineEventContentKind,
+  TurnRunEventType,
 } from "@angel-engine/client-napi";
 import type {
   ModelInfo,
@@ -283,52 +285,52 @@ function turnRunEventFromClientEvent(
   event: ClientEvent,
 ): TurnRunEvent | undefined {
   switch (event.type) {
-    case "assistantDelta":
+    case ClientEventType.AssistantDelta:
       return event.content
         ? {
             messagePart: textPart("text", event.content.text),
             part: "text",
             text: event.content.text,
             turnId: event.turnId,
-            type: "delta",
+            type: TurnRunEventType.Delta,
           }
         : undefined;
-    case "reasoningDelta":
+    case ClientEventType.ReasoningDelta:
       return event.content
         ? {
             messagePart: textPart("reasoning", event.content.text),
             part: "reasoning",
             text: event.content.text,
             turnId: event.turnId,
-            type: "delta",
+            type: TurnRunEventType.Delta,
           }
         : undefined;
-    case "actionObserved":
+    case ClientEventType.ActionObserved:
       return event.action
         ? {
             action: event.action,
             messagePart: toolPart(event.action),
-            type: "actionObserved",
+            type: TurnRunEventType.ActionObserved,
           }
         : undefined;
-    case "actionUpdated":
+    case ClientEventType.ActionUpdated:
       return event.action
         ? {
             action: event.action,
             messagePart: toolPart(event.action),
-            type: "actionUpdated",
+            type: TurnRunEventType.ActionUpdated,
           }
         : undefined;
-    case "elicitationOpened":
-    case "elicitationUpdated":
+    case ClientEventType.ElicitationOpened:
+    case ClientEventType.ElicitationUpdated:
       return event.elicitation
         ? {
             elicitation: event.elicitation,
             messagePart: elicitationPart(event.elicitation),
-            type: "elicitation",
+            type: TurnRunEventType.Elicitation,
           }
         : undefined;
-    case "planUpdated":
+    case ClientEventType.PlanUpdated:
       return event.plan
         ? {
             messagePart: {
@@ -337,7 +339,7 @@ function turnRunEventFromClientEvent(
             },
             plan: event.plan,
             turnId: event.turnId,
-            type: "planUpdated",
+            type: TurnRunEventType.PlanUpdated,
           }
         : undefined;
     default:

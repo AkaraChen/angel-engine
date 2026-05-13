@@ -5,7 +5,7 @@ import { promisify } from "node:util";
 import type { SendTextRequest } from "@angel-engine/client-napi";
 import type { SDKUserMessage } from "@anthropic-ai/claude-agent-sdk";
 
-import { CLIENT_INPUT_TYPES, type ClientInput } from "../client-input";
+import { ClientInputType, type ClientInput } from "../client-input";
 import type { ClaudeSdkModule, JsonObject } from "./types";
 import { asObject, isJsonObject, uniqueStrings } from "./utils";
 
@@ -120,14 +120,14 @@ function clientInputToContent(
   if (text) content.push({ text, type: "text" });
   for (const value of input) {
     switch (value.type) {
-      case CLIENT_INPUT_TYPES.text: {
+      case ClientInputType.Text: {
         const itemText = value.text;
         if (itemText && itemText !== text) {
           content.push({ text: itemText, type: "text" });
         }
         break;
       }
-      case CLIENT_INPUT_TYPES.image:
+      case ClientInputType.Image:
         content.push({
           source: {
             data: value.data,
@@ -137,31 +137,31 @@ function clientInputToContent(
           type: "image",
         });
         break;
-      case CLIENT_INPUT_TYPES.file_mention:
+      case ClientInputType.FileMention:
         content.push({
           text: `@${value.path || value.name}`,
           type: "text",
         });
         break;
-      case CLIENT_INPUT_TYPES.embedded_text_resource:
+      case ClientInputType.EmbeddedTextResource:
         content.push({
           text: [`Resource: ${value.uri}`, value.text].join("\n\n"),
           type: "text",
         });
         break;
-      case CLIENT_INPUT_TYPES.resource_link:
+      case ClientInputType.ResourceLink:
         content.push({
           text: `Resource: ${value.name} (${value.uri})`,
           type: "text",
         });
         break;
-      case CLIENT_INPUT_TYPES.embedded_blob_resource:
+      case ClientInputType.EmbeddedBlobResource:
         content.push({
           text: `Attachment: ${String(value.name ?? value.uri ?? "blob")}`,
           type: "text",
         });
         break;
-      case CLIENT_INPUT_TYPES.raw_content_block:
+      case ClientInputType.RawContentBlock:
         if (isJsonObject(value.value)) {
           content.push(value.value);
         }

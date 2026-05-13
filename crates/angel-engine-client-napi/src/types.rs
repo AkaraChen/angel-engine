@@ -4,226 +4,7 @@ use std::collections::HashMap;
 
 use napi_derive::napi;
 
-#[napi(string_enum = "lowercase")]
-pub enum AgentRuntime {
-    Codex,
-    Kimi,
-    Opencode,
-    Qoder,
-    Copilot,
-    Gemini,
-    Cursor,
-    Cline,
-}
-
-#[napi(string_enum = "camelCase")]
-pub enum ClientProtocol {
-    Acp,
-    Kimi,
-    Gemini,
-    CodexAppServer,
-    Custom,
-}
-
-#[napi(string_enum = "camelCase")]
-pub enum ClientLogKind {
-    Send,
-    Receive,
-    State,
-    Output,
-    Warning,
-    Error,
-    ProcessStdout,
-    ProcessStderr,
-}
-
-#[napi(string_enum = "camelCase")]
-pub enum TransportLogKind {
-    Send,
-    Receive,
-    State,
-    Output,
-    Warning,
-    Error,
-}
-
-#[napi(string_enum = "camelCase")]
-pub enum ClientEventType {
-    Log,
-    RuntimeAuthRequired,
-    RuntimeReady,
-    RuntimeFaulted,
-    ConversationDiscovered,
-    ConversationReady,
-    ConversationUpdated,
-    AvailableCommandsUpdated,
-    SessionUsageUpdated,
-    TurnStarted,
-    TurnSteered,
-    AssistantDelta,
-    ReasoningDelta,
-    PlanDelta,
-    PlanUpdated,
-    TurnTerminal,
-    ActionObserved,
-    ActionUpdated,
-    ElicitationOpened,
-    ElicitationUpdated,
-    ContextUpdated,
-    HistoryUpdated,
-}
-
-#[napi(string_enum = "camelCase")]
-pub enum ClientStreamDeltaType {
-    AssistantDelta,
-    ReasoningDelta,
-    PlanDelta,
-    ActionOutputDelta,
-}
-
-#[napi(string_enum = "camelCase")]
-pub enum RuntimeStatus {
-    Offline,
-    Connecting,
-    Negotiating,
-    AwaitingAuth,
-    Available,
-    Faulted,
-}
-
-#[napi(string_enum = "lowercase")]
-pub enum RemoteKind {
-    Known,
-    Pending,
-    Local,
-}
-
-#[napi(string_enum = "camelCase")]
-pub enum ContentChunkKind {
-    Text,
-    ResourceRef,
-    Structured,
-}
-
-#[napi(string_enum = "snake_case")]
-pub enum PlanEntryStatus {
-    Pending,
-    InProgress,
-    Completed,
-}
-
-#[napi(string_enum = "lowercase")]
-pub enum PlanDisplayKind {
-    Review,
-    Todo,
-}
-
-#[napi(string_enum = "camelCase")]
-pub enum ActionKind {
-    Command,
-    FileChange,
-    Read,
-    Write,
-    McpTool,
-    DynamicTool,
-    SubAgent,
-    WebSearch,
-    Media,
-    Reasoning,
-    Plan,
-    HostCapability,
-}
-
-#[napi(string_enum = "camelCase")]
-pub enum ActionPhase {
-    Proposed,
-    AwaitingDecision,
-    Running,
-    StreamingResult,
-    Completed,
-    Failed,
-    Declined,
-    Cancelled,
-}
-
-#[napi(string_enum = "lowercase")]
-pub enum ActionOutputKind {
-    Text,
-    Patch,
-    Terminal,
-    Structured,
-}
-
-#[napi(string_enum = "camelCase")]
-pub enum ElicitationKind {
-    Approval,
-    UserInput,
-    ExternalFlow,
-    DynamicToolCall,
-    PermissionProfile,
-}
-
-#[napi(string_enum = "lowercase")]
-pub enum QuestionValueType {
-    String,
-    Number,
-    Integer,
-    Boolean,
-    Array,
-    Object,
-}
-
-#[napi(string_enum = "camelCase")]
-pub enum ElicitationResponseType {
-    Allow,
-    AllowForSession,
-    Deny,
-    Cancel,
-    Answers,
-    DynamicToolResult,
-    ExternalComplete,
-    Raw,
-}
-
-include!(concat!(env!("OUT_DIR"), "/engine_event_enums.rs"));
-
-#[napi(string_enum = "camelCase")]
-pub enum ThreadEventType {
-    UserMessage,
-    Inputs,
-    Steer,
-    Cancel,
-    SetModel,
-    SetMode,
-    SetReasoningEffort,
-    ResolveElicitation,
-    ResolveFirstElicitation,
-    Fork,
-    Close,
-    Unsubscribe,
-    Archive,
-    Unarchive,
-    CompactHistory,
-    RollbackHistory,
-    RunShellCommand,
-}
-
-#[napi(string_enum = "camelCase")]
-pub enum TurnRunEventType {
-    Delta,
-    ActionObserved,
-    ActionUpdated,
-    ActionOutputDelta,
-    Elicitation,
-    PlanUpdated,
-    Result,
-}
-
-#[napi(string_enum = "lowercase")]
-pub enum TurnRunDeltaPart {
-    Reasoning,
-    Text,
-}
+include!(concat!(env!("OUT_DIR"), "/generated_enums.rs"));
 
 #[napi(object)]
 pub struct ClientOptions {
@@ -461,7 +242,9 @@ pub struct DisplayPlanSnapshot {
 pub struct DisplayToolActionSnapshot {
     pub id: String,
     pub turn_id: Option<String>,
+    pub elicitation_id: Option<String>,
     pub kind: String,
+    #[napi(ts_type = "`${ActionPhase}`")]
     pub phase: String,
     pub title: Option<String>,
     pub input_summary: Option<String>,
@@ -610,6 +393,7 @@ pub struct PlanEntrySnapshot {
 pub struct ActionSnapshot {
     pub id: String,
     pub turn_id: String,
+    pub elicitation_id: Option<String>,
     #[napi(ts_type = "`${ActionKind}`")]
     pub kind: ActionKind,
     #[napi(ts_type = "`${ActionPhase}`")]

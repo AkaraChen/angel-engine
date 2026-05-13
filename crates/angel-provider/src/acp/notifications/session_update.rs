@@ -308,10 +308,73 @@ fn tool_status_from_update(update: &Value) -> AcpToolStatus {
 }
 
 fn tool_title(update: &Value) -> Option<String> {
-    update
+    let title = update
         .get("title")
         .and_then(Value::as_str)
-        .map(str::to_string)
+        .map(str::to_string);
+    let kind = update
+        .get("kind")
+        .and_then(Value::as_str)
+        .and_then(super::super::wire::parse_tool_kind);
+    match kind {
+        Some(agent_client_protocol_schema::ToolKind::Read) => tool_path_from_output(update)
+            .map(|path| format!("Read file: {path}"))
+            .or(title),
+        _ => title,
+    }
+}
+
+fn tool_path_from_output(update: &Value) -> Option<String> {
+    acp_tool_output_snapshot(update)
+        .iter()
+        .find_map(|chunk| match chunk {
+            ActionOutputDelta::Text(text) => path_like_text(text),
+            ActionOutputDelta::Patch(_)
+            | ActionOutputDelta::Structured(_)
+            | ActionOutputDelta::Terminal(_) => None,
+        })
+}
+
+fn path_like_text(text: &str) -> Option<String> {
+    extract_tag_text(text, "path")
+        .and_then(clean_path_candidate)
+        .or_else(|| {
+            text.lines()
+                .find_map(|line| clean_path_candidate(line.trim()))
+        })
+        .or_else(|| {
+            text.split_whitespace()
+                .find_map(|token| clean_path_candidate(token))
+        })
+}
+
+fn extract_tag_text(text: &str, tag: &str) -> Option<String> {
+    let start_tag = format!("<{tag}>");
+    let end_tag = format!("</{tag}>");
+    let start = text.find(&start_tag)? + start_tag.len();
+    let end = text[start..].find(&end_tag)? + start;
+    Some(text[start..end].to_string())
+}
+
+fn clean_path_candidate(value: impl AsRef<str>) -> Option<String> {
+    let candidate = value.as_ref().trim().trim_matches(|ch: char| {
+        matches!(
+            ch,
+            '`' | '\'' | '"' | ',' | ';' | ':' | ')' | ']' | '}' | '(' | '[' | '{'
+        )
+    });
+    looks_like_path(candidate).then(|| candidate.to_string())
+}
+
+fn looks_like_path(value: &str) -> bool {
+    if value.is_empty() || value.contains('\n') {
+        return false;
+    }
+    value.starts_with('/')
+        || value.starts_with("./")
+        || value.starts_with("../")
+        || value.starts_with("file://")
+        || value.contains('/')
 }
 
 fn acp_tool_input(update: &Value) -> ActionInput {
@@ -1007,6 +1070,65 @@ mod tests {
             output.events.as_slice(),
             [EngineEvent::ActionUpdated { patch, .. }]
                 if patch.output_delta == Some(ActionOutputDelta::Text("new".to_string()))
+        ));
+    }
+
+    #[test]
+    fn read_tool_update_prefers_output_path_for_display_title() {
+        let adapter = AcpAdapter::standard();
+        let mut engine =
+            AngelEngine::new(angel_engine::ProtocolFlavor::Acp, adapter.capabilities());
+        let conversation_id = ready_conversation(&adapter, &mut engine);
+        start_ready_turn(&mut engine, &conversation_id);
+
+        let output = adapter
+            .decode_notification(
+                &engine,
+                "session/update",
+                &json!({
+                    "sessionId": "sess",
+                    "update": {
+                        "sessionUpdate": "tool_call",
+                        "toolCallId": "read-1",
+                        "title": "Read file: project-root",
+                        "kind": "read",
+                        "status": "in_progress"
+                    }
+                }),
+            )
+            .expect("tool call");
+        apply_events(&mut engine, output.events);
+
+        let output = adapter
+            .decode_notification(
+                &engine,
+                "session/update",
+                &json!({
+                    "sessionId": "sess",
+                    "update": {
+                        "sessionUpdate": "tool_call_update",
+                        "toolCallId": "read-1",
+                        "title": "Read file: project-root",
+                        "kind": "read",
+                        "status": "completed",
+                        "content": [
+                            {
+                                "type": "content",
+                                "content": {
+                                    "type": "text",
+                                    "text": "/tmp/project/src/edit-me.txt\n"
+                                }
+                            }
+                        ]
+                    }
+                }),
+            )
+            .expect("tool update");
+
+        assert!(matches!(
+            output.events.as_slice(),
+            [EngineEvent::ActionUpdated { patch, .. }]
+                if patch.title.as_deref() == Some("Read file: /tmp/project/src/edit-me.txt")
         ));
     }
 

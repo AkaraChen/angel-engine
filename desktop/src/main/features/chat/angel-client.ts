@@ -1,6 +1,5 @@
 import { createRequire } from "node:module";
 import path from "node:path";
-import { pathToFileURL } from "node:url";
 import { app } from "electron";
 
 import { isTextLikeMimeType } from "../../../shared/mime";
@@ -15,6 +14,7 @@ import type {
   TurnRunEvent,
   TurnRunResult,
 } from "@angel-engine/client-napi";
+import { ElicitationResponseType } from "@angel-engine/client-napi";
 
 import type {
   Chat,
@@ -50,7 +50,7 @@ import {
   runtimeConfigFromConversationSnapshot,
   type ProjectedTurnEvent,
 } from "./projection";
-import { CLIENT_INPUT_TYPES, type ClientInput } from "./client-input";
+import { ClientInputType, type ClientInput } from "./client-input";
 import { DesktopClaudeSession } from "./claude/session";
 
 type AngelClientModule = typeof import("@angel-engine/client-napi");
@@ -286,17 +286,7 @@ function chatAttachmentsToClientInput(
         mimeType: attachment.mimeType ?? null,
         name: attachment.name || path.basename(localPath),
         path: localPath,
-        type: CLIENT_INPUT_TYPES.file_mention,
-      };
-    }
-
-    const localPath = attachment.path;
-    if (localPath) {
-      return {
-        mimeType: attachment.mimeType,
-        name: attachment.name || path.basename(localPath) || "attachment",
-        type: CLIENT_INPUT_TYPES.resource_link,
-        uri: pathToFileURL(localPath).href,
+        type: ClientInputType.FileMention,
       };
     }
 
@@ -305,7 +295,7 @@ function chatAttachmentsToClientInput(
         data: attachment.data,
         mimeType: attachment.mimeType,
         name: attachment.name ?? null,
-        type: CLIENT_INPUT_TYPES.image,
+        type: ClientInputType.Image,
       };
     }
 
@@ -314,7 +304,7 @@ function chatAttachmentsToClientInput(
       return {
         mimeType: attachment.mimeType,
         text: Buffer.from(attachment.data, "base64").toString("utf8"),
-        type: CLIENT_INPUT_TYPES.embedded_text_resource,
+        type: ClientInputType.EmbeddedTextResource,
         uri,
       };
     }
@@ -323,7 +313,7 @@ function chatAttachmentsToClientInput(
       data: attachment.data,
       mimeType: attachment.mimeType,
       name: attachment.name ?? null,
-      type: CLIENT_INPUT_TYPES.embedded_blob_resource,
+      type: ClientInputType.EmbeddedBlobResource,
       uri,
     };
   });
@@ -717,7 +707,7 @@ class DesktopAngelSession {
       pending.resolve(
         await this.session.resolveElicitation(
           elicitationId,
-          response as ElicitationResponse,
+          clientElicitationResponse(response),
         ),
       );
     } catch (error) {
@@ -752,6 +742,38 @@ function abortError(signal?: AbortSignal) {
 
 function yieldToEventLoop() {
   return new Promise<void>((resolve) => setTimeout(resolve, 0));
+}
+
+function clientElicitationResponse(
+  response: ChatElicitationResponse,
+): ElicitationResponse {
+  switch (response.type) {
+    case "allow":
+      return { type: ElicitationResponseType.Allow };
+    case "allowForSession":
+      return { type: ElicitationResponseType.AllowForSession };
+    case "deny":
+      return { type: ElicitationResponseType.Deny };
+    case "cancel":
+      return { type: ElicitationResponseType.Cancel };
+    case "answers":
+      return {
+        answers: response.answers,
+        type: ElicitationResponseType.Answers,
+      };
+    case "dynamicToolResult":
+      return {
+        success: response.success,
+        type: ElicitationResponseType.DynamicToolResult,
+      };
+    case "externalComplete":
+      return { type: ElicitationResponseType.ExternalComplete };
+    case "raw":
+      return {
+        type: ElicitationResponseType.Raw,
+        value: response.value,
+      };
+  }
 }
 
 export type {

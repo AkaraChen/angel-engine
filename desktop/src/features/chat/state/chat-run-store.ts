@@ -22,6 +22,7 @@ import type {
   ChatSendResult,
   ChatStreamController,
   ChatToolAction,
+  ChatToolActionPhase,
 } from "@/shared/chat";
 import {
   appendChatTextPart,
@@ -34,6 +35,7 @@ import {
   isChatElicitationData,
   isChatPlanData,
   isChatPlanPart,
+  isTerminalChatToolPhase,
   isChatToolAction,
   normalizeChatPlanMessages,
   parseDataUrl,
@@ -60,6 +62,30 @@ const COMPLETED_AND_NEEDS_INPUT_CHAT_ATTENTION: ChatAttentionState = {
   needsInput: true,
 };
 const ALLOW_PERMISSION_RESPONSE: ChatElicitationResponse = { type: "allow" };
+type LocallyResolvedElicitationPhase = "cancelled" | "resolved:Answers";
+const LOCAL_ELICITATION_PHASE_BY_RESPONSE_TYPE = {
+  allow: "resolved:Answers",
+  allowForSession: "resolved:Answers",
+  answers: "resolved:Answers",
+  cancel: "cancelled",
+  deny: "cancelled",
+  dynamicToolResult: "resolved:Answers",
+  externalComplete: "resolved:Answers",
+  raw: "resolved:Answers",
+} satisfies Record<
+  ChatElicitationResponse["type"],
+  LocallyResolvedElicitationPhase
+>;
+const OPTIMISTIC_TOOL_PHASE_BY_ELICITATION_RESPONSE_TYPE = {
+  allow: "running",
+  allowForSession: "running",
+  answers: "running",
+  cancel: "cancelled",
+  deny: "declined",
+  dynamicToolResult: "running",
+  externalComplete: "running",
+  raw: "running",
+} satisfies Record<ChatElicitationResponse["type"], ChatToolActionPhase>;
 
 export type EngineMessage = ThreadMessage;
 
@@ -155,6 +181,7 @@ type ChatRunStore = {
     slotKey: string,
     payload: unknown,
     toolCallId: string,
+    elicitationId?: string,
   ) => void;
   setActiveChatId: (chatId?: string) => void;
   setMode: (slotKey: string, mode: string) => Promise<ChatRuntimeConfig>;
@@ -335,14 +362,19 @@ const chatRunActions: Omit<ChatRunStore, keyof ChatRunContext> = {
       type: "slot.initialized",
     });
   },
-  resolveElicitation(slotKey, payload, toolCallId) {
+  resolveElicitation(slotKey, payload, toolCallId, elicitationId) {
     const response = normalizeElicitationResponse(payload);
     if (!response) return;
 
-    const slot = selectSlot(getChatRunContext(), slotKey);
-    slot?.activeRun?.resolveElicitationLocally?.(toolCallId, response);
-    void slot?.activeRun?.streamController?.resolveElicitation({
-      elicitationId: toolCallId,
+    const activeRun = selectActiveRunForElicitation(
+      getChatRunContext(),
+      slotKey,
+      toolCallId,
+      elicitationId,
+    );
+    activeRun?.resolveElicitationLocally?.(toolCallId, response);
+    void activeRun?.streamController?.resolveElicitation({
+      elicitationId: elicitationId ?? toolCallId,
       response,
     });
   },
@@ -1144,12 +1176,13 @@ function autoApprovePermissionToolAction({
   if (isPlanApprovalToolAction(action)) return false;
   const elicitation = chatElicitationFromAction(action);
   if (!isPermissionElicitation(elicitation)) return false;
-  if (!shouldAutoApprovePermission(activeRun, slotKey, action.id)) {
+  const elicitationId = action.elicitationId ?? action.id;
+  if (!shouldAutoApprovePermission(activeRun, slotKey, elicitationId)) {
     return false;
   }
 
   markToolActionPermissionApprovedLocally(parts, action.id);
-  sendAutoPermissionApproval(activeRun, action.id);
+  sendAutoPermissionApproval(activeRun, elicitationId);
   return true;
 }
 
@@ -1207,10 +1240,46 @@ function markAssistantMessageCancelled(
     message.id === assistantMessageId
       ? ({
           ...message,
+          content: message.content.map(cancelAssistantMessagePart),
           status: { reason: "cancelled", type: "incomplete" },
         } as EngineMessage)
       : message,
   );
+}
+
+function cancelAssistantMessagePart(
+  part: EngineMessage["content"][number],
+): EngineMessage["content"][number] {
+  if (
+    part.type === "tool-call" &&
+    isChatToolAction(part.artifact) &&
+    !isTerminalChatToolPhase(part.artifact.phase)
+  ) {
+    return {
+      ...part,
+      artifact: {
+        ...part.artifact,
+        phase: "cancelled",
+      },
+    };
+  }
+
+  if (
+    part.type === "data" &&
+    part.name === "elicitation" &&
+    isChatElicitationData(part.data) &&
+    !isClosedElicitationPhase(part.data.phase)
+  ) {
+    return {
+      ...part,
+      data: {
+        ...part.data,
+        phase: "cancelled",
+      },
+    };
+  }
+
+  return part;
 }
 
 function moveActiveRunToChat(slotKey: string, chat: Chat, runId: string) {
@@ -1270,6 +1339,62 @@ function selectSlot(
   key: string,
 ) {
   return state.slots[resolveSlotKey(state, key)];
+}
+
+function selectActiveRunForElicitation(
+  state: Pick<ChatRunStore, "aliases" | "slots">,
+  slotKey: string,
+  toolCallId: string,
+  elicitationId?: string,
+) {
+  const slot = selectSlot(state, slotKey);
+  if (slot?.activeRun) return slot.activeRun;
+
+  const ids = new Set(
+    [toolCallId, elicitationId].filter((id): id is string => Boolean(id)),
+  );
+  for (const candidate of Object.values(state.slots)) {
+    if (!candidate.activeRun) continue;
+    if (slotHasOpenElicitation(candidate, ids)) {
+      return candidate.activeRun;
+    }
+  }
+
+  return undefined;
+}
+
+function slotHasOpenElicitation(slot: ChatRunSlot, ids: Set<string>) {
+  return slot.messages.some((message) =>
+    engineMessageContentToHistoryParts(message.content).some((part) =>
+      partMatchesOpenElicitation(part, ids),
+    ),
+  );
+}
+
+function partMatchesOpenElicitation(
+  part: ChatHistoryMessagePart,
+  ids: Set<string>,
+) {
+  if (part.type === "data" && part.name === "elicitation") {
+    return (
+      part.data.phase === "open" &&
+      (ids.has(part.data.id) ||
+        Boolean(part.data.actionId && ids.has(part.data.actionId)))
+    );
+  }
+
+  if (part.type !== "tool-call" || !isChatToolAction(part.artifact)) {
+    return false;
+  }
+
+  return (
+    part.artifact.phase === "awaitingDecision" &&
+    (ids.has(part.toolCallId) ||
+      ids.has(part.artifact.id) ||
+      Boolean(
+        part.artifact.elicitationId && ids.has(part.artifact.elicitationId),
+      ))
+  );
 }
 
 function isPermissionBypassEnabledForSlot(
@@ -1541,7 +1666,7 @@ function resolveElicitationPartLocally(
   elicitationId: string,
   response: ChatElicitationResponse,
 ) {
-  const phase = localElicitationPhase(response);
+  const phase = LOCAL_ELICITATION_PHASE_BY_RESPONSE_TYPE[response.type];
   for (const part of parts) {
     if (
       part.type === "data" &&
@@ -1551,6 +1676,18 @@ function resolveElicitationPartLocally(
       part.data = {
         ...part.data,
         phase,
+      };
+    }
+    if (
+      part.type === "tool-call" &&
+      part.toolCallId === elicitationId &&
+      isChatToolAction(part.artifact) &&
+      part.artifact.phase === "awaitingDecision"
+    ) {
+      part.artifact = {
+        ...part.artifact,
+        phase:
+          OPTIMISTIC_TOOL_PHASE_BY_ELICITATION_RESPONSE_TYPE[response.type],
       };
     }
   }
@@ -1711,16 +1848,6 @@ function actionHasOutput(action: ChatToolAction) {
   return Boolean(
     action.outputText || action.output?.some((output) => output.text),
   );
-}
-
-function localElicitationPhase(response: ChatElicitationResponse) {
-  switch (response.type) {
-    case "cancel":
-    case "deny":
-      return "cancelled";
-    default:
-      return "resolved:Answers";
-  }
 }
 
 function isClosedElicitationPhase(phase: string) {

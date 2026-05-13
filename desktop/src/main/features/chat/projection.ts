@@ -9,6 +9,7 @@ import type {
   TurnRunResult,
   TurnSnapshot,
 } from "@angel-engine/client-napi";
+import { TurnRunEventType } from "@angel-engine/client-napi";
 
 import type {
   ChatElicitation,
@@ -176,7 +177,7 @@ export function projectTurnRunEvent(
   event: TurnRunEvent,
 ): ProjectedTurnEvent | undefined {
   if (
-    event.type === "actionOutputDelta" &&
+    event.type === TurnRunEventType.ActionOutputDelta &&
     event.messagePart?.type === "tool-call" &&
     event.messagePart.action
   ) {
@@ -329,6 +330,7 @@ function isEmptyPlan(plan: ChatPlanData) {
 
 function toChatAction(action: ToolActionSnapshotLike): ChatToolAction {
   return {
+    elicitationId: action.elicitationId,
     error: action.error,
     id: action.id,
     inputSummary: action.inputSummary,
