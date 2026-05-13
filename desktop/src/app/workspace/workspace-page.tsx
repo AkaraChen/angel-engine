@@ -1203,7 +1203,8 @@ function chatProjectContext(
   const project = projectId
     ? projects.find((item) => item.id === projectId)
     : undefined;
-  const path = project?.path ?? chat.cwd ?? undefined;
+  const path =
+    project?.path ?? (projectId ? (chat.cwd ?? undefined) : undefined);
 
   return {
     id: projectId,

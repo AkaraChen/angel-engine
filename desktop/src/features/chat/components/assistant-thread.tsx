@@ -89,7 +89,7 @@ function SketchUnderline({ text }: { text: string }) {
           fill="none"
           stroke="currentColor"
           strokeLinecap="round"
-          strokeWidth="1.55"
+          strokeWidth="3.1"
         />
       </svg>
     </span>

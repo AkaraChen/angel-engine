@@ -85,7 +85,7 @@ export function ChatSidebarSection({
                       onOpenChat={() => void onOpenChat(chat)}
                       onShowContextMenu={() => onShowChatContextMenu(chat)}
                       title={chat.title}
-                      tooltip={chat.cwd ?? chat.title}
+                      tooltip={chat.title}
                     />
                   </AnimatedSidebarMenuItem>
                 ))}
