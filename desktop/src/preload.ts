@@ -16,12 +16,38 @@ import {
   type ChatStreamEvent,
   type ChatStreamStartInput,
 } from "./shared/chat";
+import {
+  DESKTOP_ACTIVE_CHAT_SET_CHANNEL,
+  DESKTOP_OPEN_CHAT_FROM_NOTIFICATION_CHANNEL,
+  type DesktopOpenChatFromNotificationEvent,
+} from "./shared/desktop-window";
 
 contextBridge.exposeInMainWorld("desktopEnvironment", {
   getPathForFile(file: File) {
     return webUtils.getPathForFile(file) || null;
   },
   platform: process.platform,
+});
+contextBridge.exposeInMainWorld("desktopWindow", {
+  onOpenChatFromNotification(
+    handler: (event: DesktopOpenChatFromNotificationEvent) => void,
+  ) {
+    const listener = (
+      _event: IpcRendererEvent,
+      payload: DesktopOpenChatFromNotificationEvent,
+    ) => handler(payload);
+
+    ipcRenderer.on(DESKTOP_OPEN_CHAT_FROM_NOTIFICATION_CHANNEL, listener);
+    return () => {
+      ipcRenderer.removeListener(
+        DESKTOP_OPEN_CHAT_FROM_NOTIFICATION_CHANNEL,
+        listener,
+      );
+    };
+  },
+  setActiveChatId(chatId: string | null) {
+    ipcRenderer.send(DESKTOP_ACTIVE_CHAT_SET_CHANNEL, chatId);
+  },
 });
 contextBridge.exposeInMainWorld("ipcInvoke", ipcRenderer.invoke);
 const chatStreamApi = {

@@ -5,6 +5,7 @@ import {
   MacSidebarMenuAction,
   MacSidebarMenuButton,
 } from "@/components/workspace-sidebar-primitives";
+import { useChatAttention } from "@/features/chat/state/chat-run-store";
 
 import { ChatRunningPulse } from "./chat-running-pulse";
 
@@ -48,7 +49,10 @@ export function ChatSidebarItem({
         >
           {title}
         </span>
-        <ChatRunningPulse chatId={chatId} />
+        <span className="ml-auto flex shrink-0 items-center gap-1">
+          <ChatAttentionIndicators chatId={chatId} />
+          <ChatRunningPulse chatId={chatId} />
+        </span>
       </MacSidebarMenuButton>
       {onRenameChat ? (
         <MacSidebarMenuAction
@@ -66,5 +70,37 @@ export function ChatSidebarItem({
         </MacSidebarMenuAction>
       ) : null}
     </>
+  );
+}
+
+function ChatAttentionIndicators({
+  chatId,
+}: {
+  chatId: string;
+}): ReactElement | null {
+  const attention = useChatAttention(chatId);
+  if (!attention.needsInput && !attention.completed) return null;
+
+  return (
+    <span
+      aria-label="Chat attention"
+      className="flex shrink-0 items-center gap-1"
+      title="Chat attention"
+    >
+      {attention.needsInput ? (
+        <span
+          aria-label="Needs input"
+          className="size-2 rounded-full bg-amber-400 shadow-[0_0_0_1px_rgba(245,158,11,0.42),0_0_0_4px_rgba(245,158,11,0.14)]"
+          role="img"
+        />
+      ) : null}
+      {attention.completed ? (
+        <span
+          aria-label="Completed"
+          className="size-2 rounded-full bg-emerald-500 shadow-[0_0_0_1px_rgba(16,185,129,0.35)]"
+          role="img"
+        />
+      ) : null}
+    </span>
   );
 }

@@ -9,12 +9,20 @@ import { closeChatSession } from "./main/features/chat/angel-client";
 import { registerChatStreamIpc } from "./main/features/chat/stream-ipc";
 import { closeProjectsDatabase } from "./main/features/projects/repository";
 import { appRouter } from "./main/ipc/app-router";
+import {
+  configureDesktopWindowNotifications,
+  registerDesktopWindowIpc,
+} from "./main/window-notifications";
 
 const isMacOS = process.platform === "darwin";
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
 if (started) {
   app.quit();
+}
+
+if (process.platform === "win32") {
+  app.setAppUserModelId(process.execPath);
 }
 
 restoreShellPath();
@@ -78,6 +86,7 @@ const createWindow = () => {
     },
   });
   configureExternalLinkHandling(mainWindow);
+  configureDesktopWindowNotifications(mainWindow);
 
   if (isMacOS) {
     mainWindow.setBackgroundColor("#00000000");
@@ -106,6 +115,7 @@ function configureExternalLinkHandling(mainWindow: BrowserWindow) {
 // Some APIs can only be used after this event occurs.
 app.whenReady().then(() => {
   registerIpcMain(appRouter);
+  registerDesktopWindowIpc();
   registerChatStreamIpc();
   createWindow();
 });

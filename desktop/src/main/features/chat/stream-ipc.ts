@@ -1,4 +1,4 @@
-import { ipcMain } from "electron";
+import { BrowserWindow, ipcMain } from "electron";
 import { type } from "arktype";
 
 import {
@@ -7,21 +7,32 @@ import {
   CHAT_STREAM_START_CHANNEL,
   chatStreamEventChannel,
   normalizeChatAttachmentsInput,
+  type Chat,
+  type ChatElicitation,
   type ChatElicitationResponse,
   type ChatStreamEvent,
+  type ChatToolAction,
 } from "../../../shared/chat";
 import { streamChat, type ChatStreamControls } from "./angel-client";
+import { getChat } from "./repository";
 import {
   chatStreamElicitationResolveInput,
   chatStreamStartInput,
 } from "./schemas";
+import {
+  notifyChatNeedsInput,
+  notifyChatTurnCompleted,
+} from "../../window-notifications";
 
 type ActiveStream = {
   cancel: () => void;
+  chat?: Chat;
+  notifiedElicitationIds: Set<string>;
   resolveElicitation?: (
     elicitationId: string,
     response: ChatElicitationResponse,
   ) => Promise<void>;
+  window?: BrowserWindow | null;
 };
 
 const activeStreams = new Map<string, ActiveStream>();
@@ -35,6 +46,7 @@ export function registerChatStreamIpc() {
     const request = requestResult;
 
     const sender = event.sender;
+    const window = BrowserWindow.fromWebContents(sender);
     const abortController = new AbortController();
     let cancelled = false;
 
@@ -44,6 +56,11 @@ export function registerChatStreamIpc() {
         abortController.abort();
         activeStreams.delete(request.streamId);
       },
+      chat: request.input.chatId
+        ? (getChat(request.input.chatId) ?? undefined)
+        : undefined,
+      notifiedElicitationIds: new Set(),
+      window,
     };
 
     activeStreams.set(request.streamId, activeStream);
@@ -55,7 +72,9 @@ export function registerChatStreamIpc() {
     };
 
     const sendEvent = (streamEvent: ChatStreamEvent) => {
-      if (cancelled || sender.isDestroyed()) return;
+      if (cancelled) return;
+      handleStreamNotification(activeStream, streamEvent);
+      if (sender.isDestroyed()) return;
       sender.send(chatStreamEventChannel(request.streamId), streamEvent);
     };
 
@@ -115,6 +134,69 @@ export function registerChatStreamIpc() {
       return { resolved: true };
     },
   );
+}
+
+function handleStreamNotification(
+  activeStream: ActiveStream,
+  streamEvent: ChatStreamEvent,
+) {
+  if (streamEvent.type === "chat") {
+    activeStream.chat = streamEvent.chat;
+    return;
+  }
+
+  if (streamEvent.type === "result") {
+    activeStream.chat = streamEvent.result.chat;
+    notifyChatTurnCompleted({
+      body: streamEvent.result.text,
+      chat: streamEvent.result.chat,
+      window: activeStream.window,
+    });
+    return;
+  }
+
+  if (streamEvent.type === "elicitation") {
+    notifyOpenElicitation(activeStream, streamEvent.elicitation);
+    return;
+  }
+
+  if (streamEvent.type === "tool") {
+    notifyAwaitingToolAction(activeStream, streamEvent.action);
+  }
+}
+
+function notifyOpenElicitation(
+  activeStream: ActiveStream,
+  elicitation: ChatElicitation,
+) {
+  if (elicitation.phase !== "open") return;
+  if (activeStream.notifiedElicitationIds.has(elicitation.id)) {
+    return;
+  }
+
+  const chat = activeStream.chat;
+  if (!chat) return;
+
+  activeStream.notifiedElicitationIds.add(elicitation.id);
+  notifyChatNeedsInput({
+    chat,
+    elicitation,
+    window: activeStream.window,
+  });
+}
+
+function notifyAwaitingToolAction(
+  activeStream: ActiveStream,
+  action: ChatToolAction,
+) {
+  if (action.phase !== "awaitingDecision") return;
+  notifyOpenElicitation(activeStream, {
+    body: action.inputSummary ?? action.rawInput ?? null,
+    id: action.id,
+    kind: "approval",
+    phase: "open",
+    title: action.title ?? "Permission required",
+  });
 }
 
 function getErrorMessage(error: unknown) {

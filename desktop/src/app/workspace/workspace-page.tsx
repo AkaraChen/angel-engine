@@ -2,6 +2,7 @@ import {
   Component,
   Suspense,
   useCallback,
+  useEffect,
   useMemo,
   useState,
   type ErrorInfo,
@@ -29,6 +30,8 @@ import { useApi } from "@/platform/use-api";
 import {
   cancelAllChatRuns,
   cancelChatRun,
+  setActiveChatRunId,
+  useChatAttentionSummary,
   useChatRunConfig,
   useChatRunIsRunning,
   useChatRunStore,
@@ -56,6 +59,7 @@ import type {
   ChatRuntimeConfig,
   ChatRuntimeConfigOption,
 } from "@/shared/chat";
+import type { DesktopOpenChatFromNotificationEvent } from "@/shared/desktop-window";
 import type { Project } from "@/shared/projects";
 
 export type WorkspaceRoute =
@@ -176,6 +180,7 @@ function WorkspacePageContent({
   const renameTargetChat = renameChatId
     ? (chats.find((chat) => chat.id === renameChatId) ?? null)
     : null;
+  const chatAttention = useChatAttentionSummary();
   const routeProjectId =
     route.type === "projectChat" || route.type === "projectCreate"
       ? route.projectId
@@ -253,6 +258,19 @@ function WorkspacePageContent({
   const canSetModel = runtimeConfig?.canSetModel ?? true;
   const canSetMode = runtimeConfig?.canSetMode ?? true;
   const canSetReasoningEffort = runtimeConfig?.canSetReasoningEffort ?? true;
+
+  useEffect(() => {
+    setActiveChatRunId(selectedChatId);
+    window.desktopWindow.setActiveChatId(selectedChatId ?? null);
+  }, [selectedChatId]);
+
+  useEffect(
+    () =>
+      window.desktopWindow.onOpenChatFromNotification((event) => {
+        navigate(chatNotificationRoutePath(event));
+      }),
+    [navigate],
+  );
 
   const projectIds = useMemo(
     () => new Set(projects.map((project) => project.id)),
@@ -623,7 +641,7 @@ function WorkspacePageContent({
 
       {route.type === "settings" ? (
         <SidebarInset className="h-svh max-h-svh overflow-hidden md:h-[calc(100svh-1rem)] md:max-h-[calc(100svh-1rem)]">
-          <WorkspaceHeader title={workspaceTitle} />
+          <WorkspaceHeader attention={chatAttention} title={workspaceTitle} />
           <SettingsPage
             agentSettings={agentSettings}
             isDeletingChats={deleteAllChatsMutation.isPending}
@@ -633,7 +651,7 @@ function WorkspacePageContent({
         </SidebarInset>
       ) : (
         <SidebarInset className="h-svh max-h-svh overflow-hidden md:h-[calc(100svh-1rem)] md:max-h-[calc(100svh-1rem)] md:ring-1 md:ring-foreground/10 md:shadow-[0_24px_80px_-56px_rgba(0,0,0,0.72)] dark:md:ring-white/10">
-          <WorkspaceHeader title={workspaceTitle} />
+          <WorkspaceHeader attention={chatAttention} title={workspaceTitle} />
           <main className="flex min-h-0 flex-1 overflow-hidden">
             <section className="flex min-h-0 min-w-0 flex-1 flex-col">
               {selectedChatId ? (
@@ -993,6 +1011,15 @@ function chatRoutePath(chat: Chat) {
     return `/project/${encodeURIComponent(chat.projectId)}/${encodeURIComponent(chat.id)}`;
   }
   return `/chat/${encodeURIComponent(chat.id)}`;
+}
+
+function chatNotificationRoutePath(
+  event: DesktopOpenChatFromNotificationEvent,
+) {
+  if (event.projectId) {
+    return `/project/${encodeURIComponent(event.projectId)}/${encodeURIComponent(event.chatId)}`;
+  }
+  return `/chat/${encodeURIComponent(event.chatId)}`;
 }
 
 function chatRuntimeProviderKey(

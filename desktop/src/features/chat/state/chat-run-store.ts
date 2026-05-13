@@ -43,6 +43,22 @@ import {
 const STREAM_FLUSH_MIN_CHARS = 24;
 const STREAM_FLUSH_MAX_MS = 80;
 const EMPTY_MESSAGES: EngineMessage[] = [];
+const EMPTY_CHAT_ATTENTION: ChatAttentionState = {
+  completed: false,
+  needsInput: false,
+};
+const COMPLETED_CHAT_ATTENTION: ChatAttentionState = {
+  completed: true,
+  needsInput: false,
+};
+const NEEDS_INPUT_CHAT_ATTENTION: ChatAttentionState = {
+  completed: false,
+  needsInput: true,
+};
+const COMPLETED_AND_NEEDS_INPUT_CHAT_ATTENTION: ChatAttentionState = {
+  completed: true,
+  needsInput: true,
+};
 const ALLOW_PERMISSION_RESPONSE: ChatElicitationResponse = { type: "allow" };
 
 export type EngineMessage = ThreadMessage;
@@ -83,6 +99,13 @@ type StreamingChatRunSlot = BaseChatRunSlot & {
 
 type ChatRunSlot = IdleChatRunSlot | StreamingChatRunSlot;
 
+export type ChatAttentionState = {
+  completed: boolean;
+  needsInput: boolean;
+};
+
+type ChatAttentionKind = keyof ChatAttentionState;
+
 type AssistantAccumulator = {
   chunkCount: number;
   error?: string;
@@ -120,7 +143,9 @@ type StartRunInput = {
 };
 
 type ChatRunStore = {
+  activeChatId?: string;
   aliases: Record<string, string>;
+  attentions: Record<string, ChatAttentionState>;
   cancelRun: (slotKey: string) => void;
   dropAllRuns: () => void;
   dropRun: (slotKey: string) => void;
@@ -131,14 +156,20 @@ type ChatRunStore = {
     payload: unknown,
     toolCallId: string,
   ) => void;
+  setActiveChatId: (chatId?: string) => void;
   setMode: (slotKey: string, mode: string) => Promise<ChatRuntimeConfig>;
   slots: Record<string, ChatRunSlot>;
   startRun: (input: StartRunInput) => Promise<void>;
 };
 
-type ChatRunContext = Pick<ChatRunStore, "aliases" | "slots">;
+type ChatRunContext = Pick<
+  ChatRunStore,
+  "activeChatId" | "aliases" | "attentions" | "slots"
+>;
 
 type ChatRunEvent =
+  | { chatId?: string; type: "activeChat.changed" }
+  | { chatId: string; kind: ChatAttentionKind; type: "attention.marked" }
   | {
       input: InitializeSlotInput;
       messages: EngineMessage[];
@@ -183,7 +214,9 @@ const chatRunMachine = setup({
   },
 }).createMachine({
   context: {
+    activeChatId: undefined,
     aliases: {},
+    attentions: {},
     slots: {},
   },
   id: "chatRunRegistry",
@@ -194,6 +227,16 @@ const chatRunMachine = setup({
         "assistant.replaced": {
           actions: assign(({ context, event }) =>
             replaceAssistantMessageContext(context, event),
+          ),
+        },
+        "activeChat.changed": {
+          actions: assign(({ context, event }) =>
+            setActiveChatIdContext(context, event.chatId),
+          ),
+        },
+        "attention.marked": {
+          actions: assign(({ context, event }) =>
+            markAttentionContext(context, event),
           ),
         },
         "run.cancelled": {
@@ -237,7 +280,12 @@ const chatRunMachine = setup({
           ),
         },
         "slots.dropped": {
-          actions: assign(() => ({ aliases: {}, slots: {} })),
+          actions: assign(() => ({
+            activeChatId: undefined,
+            aliases: {},
+            attentions: {},
+            slots: {},
+          })),
         },
       },
     },
@@ -248,7 +296,7 @@ const chatRunActor = createActor(chatRunMachine).start();
 let cachedChatRunContext: ChatRunContext | undefined;
 let cachedChatRunStore: ChatRunStore | undefined;
 
-const chatRunActions: Omit<ChatRunStore, "aliases" | "slots"> = {
+const chatRunActions: Omit<ChatRunStore, keyof ChatRunContext> = {
   cancelRun(slotKey) {
     const state = getChatRunContext();
     const slot = selectSlot(state, slotKey);
@@ -296,6 +344,12 @@ const chatRunActions: Omit<ChatRunStore, "aliases" | "slots"> = {
     void slot?.activeRun?.streamController?.resolveElicitation({
       elicitationId: toolCallId,
       response,
+    });
+  },
+  setActiveChatId(chatId) {
+    chatRunActor.send({
+      chatId: chatId || undefined,
+      type: "activeChat.changed",
     });
   },
   async setMode(slotKey, mode) {
@@ -411,6 +465,16 @@ export function useChatRunConfig(slotKey?: string) {
   );
 }
 
+export function useChatAttention(chatId: string) {
+  return useChatRunStore(
+    (state) => state.attentions[chatId] ?? EMPTY_CHAT_ATTENTION,
+  );
+}
+
+export function useChatAttentionSummary() {
+  return useChatRunStore((state) => summarizeChatAttention(state));
+}
+
 export function useChatPermissionBypassEnabled(slotKey: string) {
   return useChatRunStore((state) =>
     isPermissionBypassEnabledForSlot(state, slotKey),
@@ -423,6 +487,10 @@ export function cancelChatRun(slotKey: string) {
 
 export function cancelAllChatRuns() {
   chatRunActions.dropAllRuns();
+}
+
+export function setActiveChatRunId(chatId?: string) {
+  chatRunActions.setActiveChatId(chatId);
 }
 
 function subscribeChatRunActor(onStoreChange: () => void) {
@@ -446,6 +514,78 @@ function getChatRunStore(): ChatRunStore {
     ...chatRunActions,
   };
   return cachedChatRunStore;
+}
+
+function setActiveChatIdContext(
+  state: ChatRunContext,
+  chatId: string | undefined,
+): Partial<ChatRunContext> {
+  const resolvedChatId = chatId ? resolveSlotKey(state, chatId) : undefined;
+  const attentions = resolvedChatId
+    ? removeAttention(state.attentions, resolvedChatId, chatId)
+    : state.attentions;
+  if (
+    state.activeChatId === resolvedChatId &&
+    attentions === state.attentions
+  ) {
+    return {};
+  }
+
+  return {
+    activeChatId: resolvedChatId,
+    attentions,
+  };
+}
+
+function markAttentionContext(
+  state: ChatRunContext,
+  event: Extract<ChatRunEvent, { type: "attention.marked" }>,
+): Partial<ChatRunContext> {
+  const chatId = resolveSlotKey(state, event.chatId);
+  const previous = state.attentions[chatId] ?? EMPTY_CHAT_ATTENTION;
+  if (previous[event.kind]) return {};
+
+  return {
+    attentions: {
+      ...state.attentions,
+      [chatId]: {
+        ...previous,
+        [event.kind]: true,
+      },
+    },
+  };
+}
+
+function summarizeChatAttention(state: ChatRunContext): ChatAttentionState {
+  let completed = false;
+  let needsInput = false;
+  for (const [chatId, attention] of Object.entries(state.attentions)) {
+    if (chatId === state.activeChatId) continue;
+    completed ||= attention.completed;
+    needsInput ||= attention.needsInput;
+    if (completed && needsInput) break;
+  }
+
+  if (completed && needsInput) return COMPLETED_AND_NEEDS_INPUT_CHAT_ATTENTION;
+  if (completed) return COMPLETED_CHAT_ATTENTION;
+  if (needsInput) return NEEDS_INPUT_CHAT_ATTENTION;
+  return EMPTY_CHAT_ATTENTION;
+}
+
+function removeAttention(
+  attentions: Record<string, ChatAttentionState>,
+  ...chatIds: Array<string | undefined>
+) {
+  const ids = chatIds.filter((chatId): chatId is string => Boolean(chatId));
+  if (ids.length === 0 || !ids.some((chatId) => attentions[chatId])) {
+    return attentions;
+  }
+
+  const next = { ...attentions };
+  for (const chatId of ids) {
+    delete next[chatId];
+  }
+  return next;
 }
 
 function initializeSlotContext(
@@ -617,7 +757,11 @@ function dropRunContext(
     }
   }
 
-  return { aliases, slots };
+  return {
+    aliases,
+    attentions: removeAttention(state.attentions, resolvedKey, slotKey),
+    slots,
+  };
 }
 
 function replaceAssistantMessageContext(
@@ -858,6 +1002,7 @@ async function consumeRunStream({
         } else {
           mergeFinalResultParts(accumulator.parts, event.result.content);
         }
+        markChatAttention(event.result.chatId, "completed");
         dirty = true;
         if (!(await flush())) break;
         continue;
@@ -873,6 +1018,9 @@ async function consumeRunStream({
           parts: accumulator.parts,
           slotKey: currentSlotKey,
         });
+        if (!autoApprovedPermission && event.elicitation.phase === "open") {
+          markChatAttention(currentSlotKey, "needsInput");
+        }
       } else if (event.type === "tool") {
         upsertToolActionPart(accumulator.parts, event.action);
         autoApprovedPermission = autoApprovePermissionToolAction({
@@ -881,6 +1029,12 @@ async function consumeRunStream({
           parts: accumulator.parts,
           slotKey: currentSlotKey,
         });
+        if (
+          !autoApprovedPermission &&
+          event.action.phase === "awaitingDecision"
+        ) {
+          markChatAttention(currentSlotKey, "needsInput");
+        }
       } else if (event.type === "toolDelta") {
         appendToolActionDeltaPart(accumulator.parts, event.action);
       } else if (event.type === "plan") {
@@ -1085,6 +1239,30 @@ function finishRun(slotKey: string, runId: string, result?: ChatSendResult) {
     slotKey,
     type: "run.finished",
   });
+}
+
+function markChatAttention(
+  chatId: string | undefined,
+  kind: ChatAttentionKind,
+) {
+  if (!chatId) return;
+  const state = getChatRunContext();
+  const resolvedChatId = resolveSlotKey(state, chatId);
+  if (!shouldMarkChatAttention(state, resolvedChatId)) return;
+
+  chatRunActor.send({
+    chatId: resolvedChatId,
+    kind,
+    type: "attention.marked",
+  });
+}
+
+function shouldMarkChatAttention(state: ChatRunContext, chatId: string) {
+  return isRendererWindowVisible() && state.activeChatId !== chatId;
+}
+
+function isRendererWindowVisible() {
+  return document.visibilityState === "visible";
 }
 
 function selectSlot(
