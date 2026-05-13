@@ -59,7 +59,7 @@ export function WorkspaceSidebar({
   standaloneChats,
 }: WorkspaceSidebarProps): ReactElement {
   return (
-    <Sidebar variant="inset">
+    <Sidebar className="select-none" variant="inset">
       <SidebarHeader className="px-2 pb-2 pt-2" data-electron-drag>
         {isMacOS ? <div aria-hidden className="h-8 shrink-0" /> : null}
 

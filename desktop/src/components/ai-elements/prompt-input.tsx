@@ -1131,7 +1131,7 @@ export const PromptInputTextarea = forwardRef<
     return (
       <InputGroupTextarea
         className={cn(
-          "field-sizing-content max-h-48 min-h-16 text-[15px] leading-6 placeholder:text-muted-foreground/65 [line-break:loose] [overflow-wrap:anywhere]",
+          "field-sizing-content max-h-48 min-h-16 text-[15px] leading-6 placeholder:text-muted-foreground/65 [line-break:loose] [overflow-wrap:anywhere] [&::placeholder]:select-none",
           className,
         )}
         name="message"

@@ -98,27 +98,6 @@ export function SettingsPage({
                 />
               </div>
             </section>
-
-            <div className="grid gap-3">
-              {AGENT_OPTIONS.map((agent) => (
-                <section
-                  className="rounded-2xl border bg-card p-4"
-                  key={agent.id}
-                >
-                  <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-                    <div className="min-w-0">
-                      <div className="flex items-center gap-2">
-                        <Bot className="size-4 text-muted-foreground" />
-                        <h3 className="text-sm font-semibold">{agent.label}</h3>
-                      </div>
-                      <p className="mt-1 text-sm text-muted-foreground">
-                        {agent.description}
-                      </p>
-                    </div>
-                  </div>
-                </section>
-              ))}
-            </div>
           </div>
         ) : null}
 
@@ -167,9 +146,9 @@ function SettingsSelect({
 }) {
   return (
     <label className="flex min-w-44 flex-col gap-1.5 text-xs font-medium text-muted-foreground">
-      {label}
       <Select onValueChange={onValueChange} value={value}>
         <SelectTrigger
+          aria-label={label}
           className="h-8 w-full rounded-xl border-border bg-background px-2 text-xs"
           size="sm"
         >

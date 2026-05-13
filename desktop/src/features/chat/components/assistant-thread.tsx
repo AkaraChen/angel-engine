@@ -3,7 +3,7 @@ import {
   SelectionToolbarPrimitive,
   ThreadPrimitive,
 } from "@assistant-ui/react";
-import { Quote, Sparkles } from "lucide-react";
+import { Quote } from "lucide-react";
 
 import { AssistantComposer } from "@/features/chat/components/assistant-composer";
 import {
@@ -51,34 +51,32 @@ export function AssistantThread({ projectName }: { projectName?: string }) {
 
 function EmptyThread({ projectName }: { projectName?: string }) {
   return (
-    <div className="mx-auto flex w-full max-w-[760px] flex-1 flex-col justify-center gap-4 text-center">
-      <div className="mx-auto flex size-10 items-center justify-center rounded-2xl border border-foreground/10 bg-muted/30">
-        <Sparkles className="size-5" />
-      </div>
-      <div>
-        <h2 className="text-[17px] font-semibold tracking-normal">
-          {projectName ? (
-            <>
-              Start a run in <ProjectNameUnderline name={projectName} />
-            </>
-          ) : (
-            "Start a desktop run"
-          )}
-        </h2>
-        <p className="mt-1 text-sm text-muted-foreground">
-          {projectName
-            ? `Ask Angel Engine to inspect, patch, or test ${projectName}.`
-            : "Describe the workspace slice to inspect."}
-        </p>
+    <div className="mx-auto flex w-full max-w-[820px] flex-1 items-center py-10">
+      <div className="w-full">
+        <div className="min-w-0 select-none text-left">
+          <h2 className="max-w-[38rem] text-pretty text-[32px] font-semibold leading-[1.12] text-foreground">
+            {projectName ? (
+              <>
+                What should Angel Engine inspect in{" "}
+                <SketchUnderline text={projectName} />?
+              </>
+            ) : (
+              "What should Angel Engine inspect?"
+            )}
+          </h2>
+          <p className="mt-3 max-w-[34rem] text-sm leading-6 text-muted-foreground">
+            Point to a file, bug, behavior, or workspace slice to patch or test.
+          </p>
+        </div>
       </div>
     </div>
   );
 }
 
-function ProjectNameUnderline({ name }: { name: string }) {
+function SketchUnderline({ text }: { text: string }) {
   return (
     <span className="relative inline-block max-w-full align-baseline text-primary">
-      <span className="relative z-10 break-words">{name}</span>
+      <span className="relative z-10 break-words">{text}</span>
       <svg
         aria-hidden
         className="pointer-events-none absolute -bottom-1.5 -left-[5%] h-3 w-[110%] overflow-visible text-primary/70"
