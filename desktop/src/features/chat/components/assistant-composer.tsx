@@ -68,6 +68,11 @@ import {
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { iconButtonClass } from "@/features/chat/components/thread-styles";
 import { useChatEnvironment } from "@/features/chat/runtime/chat-environment-context";
 import { useApi } from "@/platform/use-api";
@@ -817,6 +822,11 @@ function ComposerModelMenu({
     disabled ||
     !options.canSetReasoningEffort ||
     options.reasoningEffortOptions.length < 2;
+  const providerDisabledReason = options.runtimeLocked
+    ? "Agent cannot be changed after a chat has been created. Start a new chat to choose a different agent."
+    : disabled
+      ? "Agent cannot be changed while a response is running."
+      : undefined;
   const filteredModelOptions = useMemo(
     () => filterComposerOptions(options.modelOptions, modelQuery),
     [options.modelOptions, modelQuery],
@@ -864,6 +874,7 @@ function ComposerModelMenu({
         </DropdownMenuLabel>
         <ComposerModelMenuSub
           disabled={options.runtimeLocked || disabled}
+          disabledReason={providerDisabledReason}
           icon={<Bot />}
           label="Provider"
           value={providerLabel}
@@ -959,33 +970,50 @@ function ComposerModelMenuSearch({
 function ComposerModelMenuSub({
   children,
   disabled,
+  disabledReason,
   icon,
   label,
   value,
 }: {
   children: ReactNode;
   disabled?: boolean;
+  disabledReason?: string;
   icon: ReactNode;
   label: string;
   value: string;
 }) {
+  const trigger = (
+    <DropdownMenuSubTrigger
+      className="h-9 gap-1.5 rounded-lg px-2 py-1 text-xs font-medium focus:bg-foreground/[0.06] focus:text-foreground data-open:bg-foreground/[0.07] data-open:text-foreground dark:focus:bg-white/[0.08] dark:data-open:bg-white/[0.1] [&>svg:last-child]:size-3.5"
+      disabled={disabled}
+      title={disabledReason ?? label}
+    >
+      <span className="flex size-5 shrink-0 items-center justify-center rounded-lg bg-foreground/[0.055] text-muted-foreground shadow-[0_1px_0_rgba(255,255,255,0.55)_inset] dark:bg-white/[0.08] dark:shadow-none [&_svg]:size-3">
+        {icon}
+      </span>
+      <span className="flex min-w-0 flex-1 items-center justify-between gap-2">
+        <span className="truncate">{label}</span>
+        <span className="min-w-0 max-w-28 truncate rounded-full bg-foreground/[0.055] px-1.5 py-0.5 text-[10.5px] font-medium leading-4 text-muted-foreground dark:bg-white/[0.07]">
+          {value}
+        </span>
+      </span>
+    </DropdownMenuSubTrigger>
+  );
+
   return (
     <DropdownMenuSub>
-      <DropdownMenuSubTrigger
-        className="h-9 gap-1.5 rounded-lg px-2 py-1 text-xs font-medium focus:bg-foreground/[0.06] focus:text-foreground data-open:bg-foreground/[0.07] data-open:text-foreground dark:focus:bg-white/[0.08] dark:data-open:bg-white/[0.1] [&>svg:last-child]:size-3.5"
-        disabled={disabled}
-        title={label}
-      >
-        <span className="flex size-5 shrink-0 items-center justify-center rounded-lg bg-foreground/[0.055] text-muted-foreground shadow-[0_1px_0_rgba(255,255,255,0.55)_inset] dark:bg-white/[0.08] dark:shadow-none [&_svg]:size-3">
-          {icon}
-        </span>
-        <span className="flex min-w-0 flex-1 items-center justify-between gap-2">
-          <span className="truncate">{label}</span>
-          <span className="min-w-0 max-w-28 truncate rounded-full bg-foreground/[0.055] px-1.5 py-0.5 text-[10.5px] font-medium leading-4 text-muted-foreground dark:bg-white/[0.07]">
-            {value}
-          </span>
-        </span>
-      </DropdownMenuSubTrigger>
+      {disabled && disabledReason ? (
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <span className="block rounded-lg">{trigger}</span>
+          </TooltipTrigger>
+          <TooltipContent side="right" sideOffset={8}>
+            {disabledReason}
+          </TooltipContent>
+        </Tooltip>
+      ) : (
+        trigger
+      )}
       <DropdownMenuSubContent
         className="max-h-72 w-[16.5rem] min-w-0"
         sideOffset={6}

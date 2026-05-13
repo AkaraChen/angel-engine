@@ -4,7 +4,6 @@ import {
   useCallback,
   useEffect,
   useMemo,
-  useRef,
   useState,
   type ErrorInfo,
   type ReactNode,
@@ -40,7 +39,6 @@ import {
 import { SettingsPage } from "@/features/settings/settings-page";
 import {
   chatContextMenuMutationOptions,
-  createChatMutationOptions,
   chatListQueryOptions,
   chatLoadSuspenseQueryOptions,
   chatPrewarmQueryOptions,
@@ -57,7 +55,6 @@ import {
 import { type AgentValueOption, type AgentRuntime } from "@/shared/agents";
 import type {
   Chat,
-  ChatCreateInput,
   ChatHistoryMessage,
   ChatLoadResult,
   ChatRuntimeConfig,
@@ -167,7 +164,6 @@ function WorkspacePageContent({
     Partial<Record<string, DraftAgentConfig>>
   >({});
   const [renameChatId, setRenameChatId] = useState<string | null>(null);
-  const createChatPendingRef = useRef(false);
 
   const currentRoutePath = routePath(route);
 
@@ -445,9 +441,6 @@ function WorkspacePageContent({
   const createProjectMutation = useMutation({
     ...createProjectMutationOptions({ api, queryClient }),
   });
-  const { isPending: isCreatingChat, mutateAsync: createChat } = useMutation({
-    ...createChatMutationOptions({ api, queryClient }),
-  });
   const deleteAllChatsMutation = useMutation({
     ...deleteAllChatsMutationOptions({ api, queryClient }),
   });
@@ -574,88 +567,16 @@ function WorkspacePageContent({
     [renameChatMutation, toast],
   );
 
-  const chatRunSlots = useChatRunStore((state) => state.slots);
-  const runningChatIds = useMemo(
-    () => runningChatIdsFromSlots(chatRunSlots),
-    [chatRunSlots],
-  );
-
-  const createAndOpenChat = useCallback(
-    async (input: ChatCreateInput) => {
-      if (createChatPendingRef.current || isCreatingChat) return;
-
-      createChatPendingRef.current = true;
-      try {
-        const chat = await createChat(input);
-        navigateToChat(chat);
-      } catch (error) {
-        toast({
-          description: getErrorMessage(error),
-          title: "Could not create chat",
-          variant: "destructive",
-        });
-      } finally {
-        createChatPendingRef.current = false;
-      }
-    },
-    [createChat, isCreatingChat, navigateToChat, toast],
-  );
-
   const createChatForProject = useCallback(
     (project: Project) => {
-      const reusableChat = reusableUnstartedChat({
-        chats: projectChatsByProjectId.get(project.id) ?? EMPTY_CHATS,
-        preferredChat: selectedChat,
-        runningChatIds,
-      });
-
-      if (reusableChat) {
-        navigateToChat(reusableChat);
-        return;
-      }
-
-      void createAndOpenChat({
-        projectId: project.id,
-        runtime:
-          draftRuntimes[`project:${project.id}`] ??
-          agentSettings.defaultRuntime,
-      });
+      navigate(`/project/${encodeURIComponent(project.id)}`);
     },
-    [
-      agentSettings.defaultRuntime,
-      createAndOpenChat,
-      draftRuntimes,
-      navigateToChat,
-      projectChatsByProjectId,
-      runningChatIds,
-      selectedChat,
-    ],
+    [navigate],
   );
 
   const createChatForSelection = useCallback(() => {
-    const reusableChat = reusableUnstartedChat({
-      chats: standaloneChats,
-      preferredChat: selectedChat,
-      runningChatIds,
-    });
-
-    if (reusableChat) {
-      navigateToChat(reusableChat);
-      return;
-    }
-
-    void createAndOpenChat({
-      runtime: draftRuntimes.create ?? agentSettings.defaultRuntime,
-    });
-  }, [
-    agentSettings.defaultRuntime,
-    createAndOpenChat,
-    draftRuntimes.create,
-    navigateToChat,
-    runningChatIds,
-    selectedChat,
-    standaloneChats,
-  ]);
+    navigate("/");
+  }, [navigate]);
 
   const openSettings = useCallback(() => {
     navigate("/settings");
@@ -807,46 +728,6 @@ function selectedChatIdFromRoute(route: WorkspaceRoute) {
   return route.type === "chat" || route.type === "projectChat"
     ? route.chatId
     : undefined;
-}
-
-function runningChatIdsFromSlots(
-  slots: Record<string, { chatId?: string; key: string; status: string }>,
-) {
-  const ids = new Set<string>();
-
-  for (const slot of Object.values(slots)) {
-    if (slot.status !== "streaming") continue;
-    ids.add(slot.key);
-    if (slot.chatId) {
-      ids.add(slot.chatId);
-    }
-  }
-
-  return ids;
-}
-
-function reusableUnstartedChat({
-  chats,
-  preferredChat,
-  runningChatIds,
-}: {
-  chats: Chat[];
-  preferredChat?: Chat;
-  runningChatIds: ReadonlySet<string>;
-}) {
-  if (
-    preferredChat &&
-    chats.some((chat) => chat.id === preferredChat.id) &&
-    isUnstartedChat(preferredChat, runningChatIds)
-  ) {
-    return preferredChat;
-  }
-
-  return chats.find((chat) => isUnstartedChat(chat, runningChatIds));
-}
-
-function isUnstartedChat(chat: Chat, runningChatIds: ReadonlySet<string>) {
-  return !chat.remoteThreadId && !runningChatIds.has(chat.id);
 }
 
 function ActiveChatThread({
