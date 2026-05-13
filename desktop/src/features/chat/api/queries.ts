@@ -8,11 +8,11 @@ import type { ApiClient } from "@/platform/api-client";
 import { queryKeys } from "@/platform/query-keys";
 import type {
   Chat,
+  ChatCreateInput,
   ChatLoadResult,
   ChatPrewarmResult,
   ChatRuntimeConfig,
 } from "@/shared/chat";
-import type { Project } from "@/shared/projects";
 
 interface ChatListQueryParams {
   api: ApiClient;
@@ -49,11 +49,10 @@ interface RenameChatMutationParams {
   queryClient: QueryClient;
 }
 
-interface CreateProjectChatMutationParams {
+interface CreateChatMutationParams {
   api: ApiClient;
-  onSuccess?: (data: Chat, variables: Project) => Promise<void> | void;
+  onSuccess?: (data: Chat, variables: ChatCreateInput) => Promise<void> | void;
   queryClient: QueryClient;
-  runtime?: string;
 }
 
 type DeleteAllChatsResult = Awaited<
@@ -78,6 +77,8 @@ interface ChatContextMenuMutationParams {
   ) => Promise<void> | void;
   queryClient: QueryClient;
 }
+
+const EMPTY_MESSAGES: ChatLoadResult["messages"] = [];
 
 export function chatListQueryOptions({
   api,
@@ -166,20 +167,24 @@ export function chatPrewarmQueryOptions({
   });
 }
 
-export function createProjectChatMutationOptions({
+export function createChatMutationOptions({
   api,
   onSuccess,
   queryClient,
-  runtime,
-}: CreateProjectChatMutationParams) {
+}: CreateChatMutationParams) {
   return mutationOptions({
-    mutationFn: (project: Project) =>
-      api.chats.create({
-        projectId: project.id,
-        runtime,
-      }),
+    mutationFn: (input: ChatCreateInput) => api.chats.create(input),
     onSuccess: async (data, variables) => {
-      await invalidateChatQueries(queryClient);
+      queryClient.setQueryData<Chat[]>(queryKeys.chats.list(), (current = []) =>
+        upsertChatInList(current, data),
+      );
+      queryClient.setQueryData<ChatLoadResult | undefined>(
+        queryKeys.chats.detail(data.id),
+        (current) =>
+          current
+            ? { ...current, chat: data }
+            : { chat: data, messages: EMPTY_MESSAGES },
+      );
       await onSuccess?.(data, variables);
     },
   });
