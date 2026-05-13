@@ -121,6 +121,8 @@ fn request_action_id(params: &Value) -> Option<&str> {
         .get("itemId")
         .or_else(|| params.get("callId"))
         .and_then(Value::as_str)
+        .map(str::trim)
+        .filter(|id| !id.is_empty())
 }
 
 fn request_options(method: &str, params: &Value, kind: &ElicitationKind) -> ElicitationOptions {

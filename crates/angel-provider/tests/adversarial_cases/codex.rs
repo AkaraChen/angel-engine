@@ -92,6 +92,38 @@ fn codex_bad_server_request_returns_json_rpc_error_and_followup_can_run() {
 }
 
 #[test]
+fn codex_unsupported_server_request_returns_method_not_found_without_mutating_state() {
+    let adapter = CodexAdapter::app_server();
+    let mut engine = codex_engine(&adapter);
+    let conversation_id = insert_ready_conversation(
+        &mut engine,
+        "conv",
+        RemoteConversationId::Known("thread".to_string()),
+        adapter.capabilities(),
+    );
+
+    let output = decode_and_apply(
+        &adapter,
+        &mut engine,
+        JsonRpcMessage::request(
+            JsonRpcRequestId::new("unsupported"),
+            "item/unknown/requestApproval",
+            json!({
+                "threadId": "thread",
+                "turnId": "turn",
+                "itemId": "item"
+            }),
+        ),
+    );
+
+    assert_error_message(&output, "unsupported", -32601);
+    let conversation = &engine.conversations[&conversation_id];
+    assert!(conversation.turns.is_empty());
+    assert!(conversation.actions.is_empty());
+    assert!(conversation.elicitations.is_empty());
+}
+
+#[test]
 fn codex_request_before_turn_started_creates_missing_turn_and_action() {
     let adapter = CodexAdapter::app_server();
     let mut engine = codex_engine(&adapter);
@@ -126,6 +158,77 @@ fn codex_request_before_turn_started_creates_missing_turn_and_action() {
         ActionPhase::AwaitingDecision { .. }
     ));
     assert_eq!(conversation.elicitations.len(), 1);
+}
+
+#[test]
+fn codex_request_with_blank_item_id_does_not_create_empty_action() {
+    let adapter = CodexAdapter::app_server();
+    let mut engine = codex_engine(&adapter);
+    let conversation_id = insert_ready_conversation(
+        &mut engine,
+        "conv",
+        RemoteConversationId::Known("thread".to_string()),
+        adapter.capabilities(),
+    );
+
+    decode_and_apply(
+        &adapter,
+        &mut engine,
+        JsonRpcMessage::request(
+            JsonRpcRequestId::new("blank-action"),
+            "item/commandExecution/requestApproval",
+            json!({
+                "threadId": "thread",
+                "turnId": "turn-remote",
+                "itemId": "",
+                "command": "dangerous --flag"
+            }),
+        ),
+    );
+
+    let conversation = &engine.conversations[&conversation_id];
+    assert!(conversation.actions.is_empty());
+    let elicitation = conversation.elicitations.values().next().unwrap();
+    assert_eq!(elicitation.action_id, None);
+    assert_eq!(
+        elicitation.turn_id.as_ref(),
+        Some(&TurnId::new("codex-turn-remote"))
+    );
+}
+
+#[test]
+fn codex_fork_from_pending_source_rejects_before_sending_local_conversation_id() {
+    let adapter = CodexAdapter::app_server();
+    let mut engine = codex_engine(&adapter);
+
+    let start = engine
+        .plan_command(EngineCommand::StartConversation {
+            params: StartConversationParams::default(),
+        })
+        .expect("start pending conversation");
+    let source_id = start.conversation_id.expect("source conversation id");
+    assert!(matches!(
+        engine.conversations[&source_id].remote,
+        RemoteConversationId::Pending(_)
+    ));
+
+    let fork = engine
+        .plan_command(EngineCommand::Extension(
+            EngineExtensionCommand::ForkConversation {
+                source: source_id,
+                at: None,
+            },
+        ))
+        .expect("plan fork");
+    let encode_error = adapter
+        .encode_effect(&engine, &fork.effects[0], &TransportOptions::default())
+        .expect_err("pending source has no remote thread id");
+
+    assert!(matches!(
+        encode_error,
+        EngineError::InvalidState { expected, actual }
+            if expected == "source Codex thread id" && actual.contains("Pending")
+    ));
 }
 
 #[test]

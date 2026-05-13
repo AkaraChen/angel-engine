@@ -1,6 +1,7 @@
 use angel_engine_client::{
-    Client, ClientBuilder, ClientEvent, ClientOptions, ClientStreamDelta,
-    ResumeConversationRequest, RuntimeSnapshot, StartConversationRequest, ThreadEvent,
+    Client, ClientBuilder, ClientError, ClientEvent, ClientInput, ClientOptions, ClientStreamDelta,
+    ElicitationResponse, ResumeConversationRequest, RuntimeSnapshot, StartConversationRequest,
+    ThreadEvent,
 };
 use serde_json::json;
 
@@ -971,6 +972,377 @@ fn thread_set_mode_event_updates_snapshot_after_runtime_ack() {
         conversation.agent_state.current_mode.as_deref(),
         Some("plan")
     );
+}
+
+#[test]
+fn inputs_event_encodes_every_supported_user_input_shape_for_acp() {
+    let (mut client, conversation_id) = ready_client();
+
+    let sent = client
+        .thread(&conversation_id)
+        .send_event(ThreadEvent::input(vec![
+            ClientInput::text("inspect these inputs"),
+            ClientInput::ResourceLink {
+                name: "docs".to_string(),
+                uri: "file:///repo/docs/readme.md".to_string(),
+                mime_type: Some("text/markdown".to_string()),
+                title: Some("Readme".to_string()),
+                description: Some("Project docs".to_string()),
+            },
+            ClientInput::file_mention(
+                "lib.rs",
+                "/repo/src/lib.rs",
+                Some("text/x-rust".to_string()),
+            ),
+            ClientInput::EmbeddedTextResource {
+                uri: "memory://note".to_string(),
+                text: "inline note".to_string(),
+                mime_type: Some("text/plain".to_string()),
+            },
+            ClientInput::embedded_blob_resource(
+                "file:///repo/archive.bin",
+                "AAEC",
+                None,
+                Some("archive.bin".to_string()),
+            ),
+            ClientInput::image(
+                "iVBORw0KGgo=",
+                "image/png",
+                Some("screenshot.png".to_string()),
+            ),
+            ClientInput::raw_content_block(json!({
+                "type": "text",
+                "text": "raw block"
+            })),
+        ]))
+        .expect("send inputs");
+
+    assert_eq!(
+        sent.update.outgoing[0].value["method"],
+        json!("session/prompt")
+    );
+    let prompt = &sent.update.outgoing[0].value["params"]["prompt"];
+    assert_eq!(prompt.as_array().expect("prompt blocks").len(), 7);
+    assert_eq!(prompt[0]["type"], json!("text"));
+    assert_eq!(prompt[0]["text"], json!("inspect these inputs"));
+    assert_eq!(prompt[1]["type"], json!("resource_link"));
+    assert_eq!(prompt[1]["name"], json!("docs"));
+    assert_eq!(prompt[1]["mimeType"], json!("text/markdown"));
+    assert_eq!(prompt[1]["title"], json!("Readme"));
+    assert_eq!(prompt[2]["type"], json!("resource_link"));
+    assert_eq!(prompt[2]["name"], json!("lib.rs"));
+    assert_eq!(prompt[2]["uri"], json!("file:///repo/src/lib.rs"));
+    assert_eq!(prompt[3]["type"], json!("resource"));
+    assert_eq!(prompt[3]["resource"]["text"], json!("inline note"));
+    assert_eq!(prompt[4]["type"], json!("resource"));
+    assert_eq!(prompt[4]["resource"]["blob"], json!("AAEC"));
+    assert_eq!(prompt[5]["type"], json!("image"));
+    assert_eq!(prompt[5]["data"], json!("iVBORw0KGgo="));
+    assert_eq!(prompt[5]["mimeType"], json!("image/png"));
+    assert_eq!(prompt[6]["type"], json!("text"));
+    assert_eq!(prompt[6]["text"], json!("raw block"));
+
+    let turn = client
+        .thread(&conversation_id)
+        .turn(&sent.turn_id.expect("turn id"))
+        .expect("turn snapshot");
+    assert!(turn.input_text.contains("inspect these inputs"));
+    assert!(turn.input_text.contains("/repo/src/lib.rs"));
+}
+
+#[test]
+fn user_operation_errors_do_not_create_phantom_thread_state() {
+    let (mut client, conversation_id) = ready_client();
+
+    let missing = client
+        .thread("missing")
+        .send_event(ThreadEvent::text("hello"))
+        .expect_err("missing conversation should reject send");
+    assert!(matches!(
+        missing,
+        ClientError::Engine(angel_engine::EngineError::ConversationNotFound {
+            conversation_id
+        }) if conversation_id == "missing"
+    ));
+
+    let idle_cancel = client
+        .thread(&conversation_id)
+        .send_event(ThreadEvent::cancel())
+        .expect_err("idle conversation should reject cancel");
+    assert!(matches!(
+        idle_cancel,
+        ClientError::Engine(angel_engine::EngineError::MissingActiveTurn { conversation_id: id })
+            if id == conversation_id
+    ));
+
+    let no_elicitation = client
+        .thread(&conversation_id)
+        .send_event(ThreadEvent::resolve_first(ElicitationResponse::Allow))
+        .expect_err("no open elicitation should reject resolve_first");
+    assert!(matches!(
+        no_elicitation,
+        ClientError::InvalidInput { message } if message.contains("has no open elicitation")
+    ));
+
+    let snapshot = client.snapshot();
+    assert!(
+        snapshot
+            .conversations
+            .iter()
+            .any(|conversation| conversation.id == conversation_id
+                && conversation.lifecycle == "idle")
+    );
+    assert!(
+        !snapshot
+            .conversations
+            .iter()
+            .any(|conversation| conversation.id == "missing")
+    );
+}
+
+#[test]
+fn resolve_first_elicitation_event_answers_runtime_permission_request() {
+    let (mut client, conversation_id) = ready_client();
+    client
+        .thread(&conversation_id)
+        .send_event(ThreadEvent::text("run a command"))
+        .expect("start turn");
+
+    let update = client
+        .receive_json_value(json!({
+            "jsonrpc": "2.0",
+            "id": "perm-1",
+            "method": "session/request_permission",
+            "params": {
+                "sessionId": "sess-1",
+                "toolCallId": "tool-1",
+                "title": "Run command",
+                "options": [
+                    {"optionId": "allow", "label": "Allow"},
+                    {"optionId": "deny", "label": "Deny"}
+                ]
+            }
+        }))
+        .expect("permission request");
+    assert!(update.events.iter().any(|event| {
+        matches!(
+            event,
+            ClientEvent::ElicitationOpened {
+                conversation_id: id,
+                ..
+            } if id == &conversation_id
+        )
+    }));
+    let open = client.thread(&conversation_id).open_elicitations();
+    assert_eq!(open.len(), 1);
+
+    let resolved = client
+        .thread(&conversation_id)
+        .send_event(ThreadEvent::approve_first())
+        .expect("approve permission");
+    assert_eq!(resolved.update.outgoing[0].value["id"], json!("perm-1"));
+    assert!(resolved.update.outgoing[0].value["result"].is_object());
+    assert!(resolved.update.events.iter().any(|event| {
+        matches!(
+            event,
+            ClientEvent::ElicitationUpdated {
+                conversation_id: id,
+                elicitation
+            } if id == &conversation_id && elicitation.phase.starts_with("resolved:")
+        )
+    }));
+    assert!(
+        client
+            .thread(&conversation_id)
+            .open_elicitations()
+            .is_empty()
+    );
+}
+
+#[test]
+fn setting_thread_events_route_to_runtime_setting_commands() {
+    let (mut client, conversation_id) = ready_client();
+
+    let model = client
+        .thread(&conversation_id)
+        .send_event(ThreadEvent::set_model("moonshot-v1-128k"))
+        .expect("set model event");
+    assert_eq!(
+        model.update.outgoing[0].value["method"],
+        json!("session/set_model")
+    );
+    assert_eq!(
+        model.update.outgoing[0].value["params"]["modelId"],
+        json!("moonshot-v1-128k")
+    );
+
+    let mode = client
+        .thread(&conversation_id)
+        .send_event(ThreadEvent::set_mode("plan"))
+        .expect("set mode event");
+    assert_eq!(
+        mode.update.outgoing[0].value["method"],
+        json!("session/set_mode")
+    );
+    assert_eq!(
+        mode.update.outgoing[0].value["params"]["modeId"],
+        json!("plan")
+    );
+}
+
+#[test]
+fn focused_thread_events_target_the_active_turn() {
+    let (mut client, conversation_id) = ready_codex_client();
+
+    let sent = client
+        .thread(&conversation_id)
+        .send_event(ThreadEvent::text("start a long task"))
+        .expect("send codex text");
+    let turn_id = sent.turn_id.expect("turn id");
+    client
+        .receive_json_value(response(
+            &sent.request_id.expect("turn request id"),
+            json!({
+                "turn": {
+                    "id": "turn-1",
+                    "status": "inProgress"
+                }
+            }),
+        ))
+        .expect("turn accepted");
+
+    let steered = client
+        .thread(&conversation_id)
+        .send_event(ThreadEvent::steer("add this constraint"))
+        .expect("steer focused turn");
+    assert_eq!(
+        steered.update.outgoing[0].value["method"],
+        json!("turn/steer")
+    );
+    assert_eq!(
+        steered.update.outgoing[0].value["params"]["expectedTurnId"],
+        json!("turn-1")
+    );
+    assert_eq!(steered.turn_id.as_deref(), Some(turn_id.as_str()));
+
+    let cancelled = client
+        .thread(&conversation_id)
+        .send_event(ThreadEvent::cancel())
+        .expect("cancel focused turn");
+    assert_eq!(
+        cancelled.update.outgoing[0].value["method"],
+        json!("turn/interrupt")
+    );
+    assert_eq!(
+        cancelled.update.outgoing[0].value["params"]["turnId"],
+        json!("turn-1")
+    );
+    assert_eq!(cancelled.turn_id.as_deref(), Some(turn_id.as_str()));
+}
+
+#[test]
+fn codex_thread_events_cover_lifecycle_history_and_shell_operations() {
+    let (mut client, conversation_id) = ready_codex_client();
+
+    let archive = client
+        .thread(&conversation_id)
+        .send_event(ThreadEvent::Archive)
+        .expect("archive thread");
+    assert_eq!(
+        archive.update.outgoing[0].value["method"],
+        json!("thread/archive")
+    );
+    assert_eq!(
+        archive.update.outgoing[0].value["params"]["threadId"],
+        json!("thread-1")
+    );
+
+    let unarchive = client
+        .thread(&conversation_id)
+        .send_event(ThreadEvent::Unarchive)
+        .expect("unarchive thread");
+    assert_eq!(
+        unarchive.update.outgoing[0].value["method"],
+        json!("thread/unarchive")
+    );
+
+    let unsubscribe = client
+        .thread(&conversation_id)
+        .send_event(ThreadEvent::Unsubscribe)
+        .expect("unsubscribe thread");
+    assert_eq!(
+        unsubscribe.update.outgoing[0].value["method"],
+        json!("thread/unsubscribe")
+    );
+
+    let shell = client
+        .thread(&conversation_id)
+        .send_event(ThreadEvent::shell("git status --short"))
+        .expect("shell command");
+    assert_eq!(
+        shell.update.outgoing[0].value["method"],
+        json!("thread/shellCommand")
+    );
+    assert_eq!(
+        shell.update.outgoing[0].value["params"]["command"],
+        json!("git status --short")
+    );
+
+    let fork = client
+        .thread(&conversation_id)
+        .send_event(ThreadEvent::fork())
+        .expect("fork thread");
+    assert_eq!(
+        fork.update.outgoing[0].value["method"],
+        json!("thread/fork")
+    );
+    assert_eq!(
+        fork.update.outgoing[0].value["params"]["threadId"],
+        json!("thread-1")
+    );
+    assert_ne!(
+        fork.conversation_id.as_deref(),
+        Some(conversation_id.as_str())
+    );
+
+    let compact = client
+        .thread(&conversation_id)
+        .send_event(ThreadEvent::CompactHistory)
+        .expect("compact history");
+    assert_eq!(
+        compact.update.outgoing[0].value["method"],
+        json!("thread/compact/start")
+    );
+    client
+        .receive_json_value(response(
+            &compact.request_id.expect("compact request id"),
+            json!({}),
+        ))
+        .expect("compact response");
+
+    let rollback = client
+        .thread(&conversation_id)
+        .send_event(ThreadEvent::rollback_history(2))
+        .expect("rollback history");
+    assert_eq!(
+        rollback.update.outgoing[0].value["method"],
+        json!("thread/rollback")
+    );
+    assert_eq!(
+        rollback.update.outgoing[0].value["params"]["numTurns"],
+        json!(2)
+    );
+
+    let close = client
+        .thread(&conversation_id)
+        .send_event(ThreadEvent::Close)
+        .expect_err("close is not negotiated for codex test runtime");
+    assert!(matches!(
+        close,
+        ClientError::Engine(angel_engine::EngineError::CapabilityUnsupported {
+            capability
+        }) if capability == "conversation.close"
+    ));
 }
 
 fn ready_client() -> (Client, String) {

@@ -14,6 +14,7 @@ mod elicitation;
 mod events;
 mod history;
 mod turn_control;
+mod user_operations;
 
 pub(super) fn runtime(name: &str) -> RuntimeCapabilities {
     RuntimeCapabilities::new(name)

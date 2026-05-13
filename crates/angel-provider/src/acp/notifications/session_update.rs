@@ -53,12 +53,18 @@ pub(super) fn decode_acp_update(
             ));
     }
     if update_kind == Some(AcpSessionUpdateKind::CurrentModeUpdate) {
-        let mode_id = update
+        let Some(mode_id) = update
             .get("modeId")
             .or_else(|| update.get("currentModeId"))
             .and_then(Value::as_str)
-            .unwrap_or_default()
-            .to_string();
+            .map(str::trim)
+            .filter(|mode_id| !mode_id.is_empty())
+            .map(str::to_string)
+        else {
+            return Err(angel_engine::EngineError::InvalidCommand {
+                message: "ACP current mode update missing modeId/currentModeId".to_string(),
+            });
+        };
         return Ok(TransportOutput::default()
             .event(EngineEvent::SessionModeChanged {
                 conversation_id,
@@ -124,11 +130,11 @@ pub(super) fn decode_acp_update(
                 .log(TransportLogKind::Output, format!("[reasoning] {log_text}")))
         }
         Some(AcpSessionUpdateKind::ToolCall) => {
-            let id = update
-                .get("toolCallId")
-                .or_else(|| update.get("id"))
-                .and_then(Value::as_str)
-                .unwrap_or("tool");
+            let Some(id) = tool_call_id(update) else {
+                return Err(angel_engine::EngineError::InvalidCommand {
+                    message: "ACP tool call missing toolCallId/id".to_string(),
+                });
+            };
             let status = tool_status_from_update(update);
             let mut action = ActionState::new(
                 ActionId::new(id.to_string()),
@@ -148,11 +154,11 @@ pub(super) fn decode_acp_update(
                 .log(TransportLogKind::State, "tool call started"))
         }
         Some(AcpSessionUpdateKind::ToolCallUpdate) => {
-            let id = update
-                .get("toolCallId")
-                .or_else(|| update.get("id"))
-                .and_then(Value::as_str)
-                .unwrap_or("tool");
+            let Some(id) = tool_call_id(update) else {
+                return Err(angel_engine::EngineError::InvalidCommand {
+                    message: "ACP tool call update missing toolCallId/id".to_string(),
+                });
+            };
             let action_id = ActionId::new(id.to_string());
             let status = update
                 .get("status")
@@ -235,6 +241,15 @@ pub(super) fn decode_acp_update(
             format!("session/update {update_type}"),
         )),
     }
+}
+
+fn tool_call_id(update: &Value) -> Option<&str> {
+    update
+        .get("toolCallId")
+        .or_else(|| update.get("id"))
+        .and_then(Value::as_str)
+        .map(str::trim)
+        .filter(|id| !id.is_empty())
 }
 
 fn hydration_update(

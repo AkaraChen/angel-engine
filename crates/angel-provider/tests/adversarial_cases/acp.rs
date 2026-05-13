@@ -410,6 +410,62 @@ fn acp_bad_model_and_effort_updates_are_encoded_for_server_validation() {
 }
 
 #[test]
+fn acp_malformed_current_mode_update_rejects_without_clearing_mode() {
+    let adapter = AcpAdapter::standard();
+    let mut engine = acp_engine(&adapter);
+    let conversation_id = insert_ready_conversation(
+        &mut engine,
+        "conv",
+        RemoteConversationId::Known("sess".to_string()),
+        adapter.capabilities(),
+    );
+    engine
+        .apply_event(EngineEvent::SessionModesUpdated {
+            conversation_id: conversation_id.clone(),
+            modes: SessionModeState {
+                current_mode_id: "default".to_string(),
+                available_modes: vec![SessionMode {
+                    id: "default".to_string(),
+                    name: "Default".to_string(),
+                    description: None,
+                }],
+            },
+        })
+        .expect("seed modes");
+
+    let error = adapter
+        .decode_message(
+            &engine,
+            &JsonRpcMessage::notification(
+                "session/update",
+                json!({
+                    "sessionId": "sess",
+                    "update": {
+                        "sessionUpdate": "current_mode_update"
+                    }
+                }),
+            ),
+        )
+        .expect_err("malformed ACP current mode update should fail");
+
+    assert!(matches!(
+        error,
+        EngineError::InvalidCommand { message }
+            if message.contains("current mode update missing modeId/currentModeId")
+    ));
+    let conversation = &engine.conversations[&conversation_id];
+    assert_eq!(
+        conversation
+            .context
+            .mode
+            .effective()
+            .and_then(Option::as_ref)
+            .map(|mode| mode.id.as_str()),
+        Some("default")
+    );
+}
+
+#[test]
 fn acp_neutral_update_context_uses_config_option_when_available() {
     let adapter = AcpAdapter::standard();
     let mut engine = acp_engine(&adapter);
@@ -622,6 +678,69 @@ fn acp_tool_update_before_tool_call_creates_fallback_action() {
         action.output.chunks,
         vec![ActionOutputDelta::Text("done".to_string())]
     );
+}
+
+#[test]
+fn acp_tool_updates_without_ids_reject_without_synthetic_tool_collision() {
+    let adapter = AcpAdapter::standard();
+    let mut engine = acp_engine(&adapter);
+    let conversation_id = insert_ready_conversation(
+        &mut engine,
+        "conv",
+        RemoteConversationId::Known("sess".to_string()),
+        adapter.capabilities(),
+    );
+    start_turn(&mut engine, conversation_id.clone(), "active");
+
+    let missing_start = adapter
+        .decode_message(
+            &engine,
+            &JsonRpcMessage::notification(
+                "session/update",
+                json!({
+                    "sessionId": "sess",
+                    "update": {
+                        "sessionUpdate": "tool_call",
+                        "kind": "execute",
+                        "title": "Missing id"
+                    }
+                }),
+            ),
+        )
+        .expect_err("ACP tool call without id should fail");
+    assert!(matches!(
+        missing_start,
+        EngineError::InvalidCommand { message }
+            if message.contains("tool call missing toolCallId/id")
+    ));
+
+    let missing_update = adapter
+        .decode_message(
+            &engine,
+            &JsonRpcMessage::notification(
+                "session/update",
+                json!({
+                    "sessionId": "sess",
+                    "update": {
+                        "sessionUpdate": "tool_call_update",
+                        "status": "completed",
+                        "content": [
+                            {
+                                "type": "content",
+                                "content": {"type": "text", "text": "ok"}
+                            }
+                        ]
+                    }
+                }),
+            ),
+        )
+        .expect_err("ACP tool call update without id should fail");
+    assert!(matches!(
+        missing_update,
+        EngineError::InvalidCommand { message }
+            if message.contains("tool call update missing toolCallId/id")
+    ));
+    assert!(engine.conversations[&conversation_id].actions.is_empty());
 }
 
 #[test]

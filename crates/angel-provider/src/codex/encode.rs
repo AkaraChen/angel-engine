@@ -53,7 +53,7 @@ impl CodexAdapter {
                 Ok(Value::Object(params))
             }
             ProtocolMethod::ForkConversation => Ok(json!({
-                "threadId": effect.payload.fields.get("sourceConversationId").cloned().unwrap_or_default(),
+                "threadId": codex_source_thread_id(engine, effect)?,
             })),
             ProtocolMethod::ArchiveConversation
             | ProtocolMethod::UnarchiveConversation
@@ -253,6 +253,33 @@ fn codex_current_model<'a>(
                 .model_state
                 .as_ref()
                 .map(|models| models.current_model_id.as_str())
+        })
+}
+
+fn codex_source_thread_id(
+    engine: &AngelEngine,
+    effect: &angel_engine::ProtocolEffect,
+) -> Result<String, angel_engine::EngineError> {
+    let source_id = effect
+        .payload
+        .fields
+        .get("sourceConversationId")
+        .ok_or_else(|| angel_engine::EngineError::InvalidCommand {
+            message: "missing source conversation id for Codex fork".to_string(),
+        })?;
+    let source = engine
+        .conversations
+        .get(&ConversationId::new(source_id.clone()))
+        .ok_or_else(|| angel_engine::EngineError::ConversationNotFound {
+            conversation_id: source_id.clone(),
+        })?;
+    source
+        .remote
+        .as_protocol_id()
+        .map(str::to_string)
+        .ok_or_else(|| angel_engine::EngineError::InvalidState {
+            expected: "source Codex thread id".to_string(),
+            actual: format!("{:?}", source.remote),
         })
 }
 
