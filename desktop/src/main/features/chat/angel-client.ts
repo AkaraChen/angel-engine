@@ -50,6 +50,7 @@ import {
   runtimeConfigFromConversationSnapshot,
   type ProjectedTurnEvent,
 } from "./projection";
+import { CLIENT_INPUT_TYPES, type ClientInput } from "./client-input";
 import { DesktopClaudeSession } from "./claude/session";
 
 type AngelClientModule = typeof import("@angel-engine/client-napi");
@@ -278,14 +279,14 @@ function createChatSession(runtime?: string): DesktopChatSession {
 function chatAttachmentsToClientInput(
   attachments: ChatAttachmentInput[],
 ): NonNullable<SendTextRequest["input"]> {
-  return attachments.map((attachment) => {
+  return attachments.map((attachment): ClientInput => {
     if (attachment.type === "fileMention") {
       const localPath = attachment.path;
       return {
         mimeType: attachment.mimeType ?? null,
         name: attachment.name || path.basename(localPath),
         path: localPath,
-        type: "fileMention",
+        type: CLIENT_INPUT_TYPES.file_mention,
       };
     }
 
@@ -294,7 +295,7 @@ function chatAttachmentsToClientInput(
       return {
         mimeType: attachment.mimeType,
         name: attachment.name || path.basename(localPath) || "attachment",
-        type: "resourceLink",
+        type: CLIENT_INPUT_TYPES.resource_link,
         uri: pathToFileURL(localPath).href,
       };
     }
@@ -304,7 +305,7 @@ function chatAttachmentsToClientInput(
         data: attachment.data,
         mimeType: attachment.mimeType,
         name: attachment.name ?? null,
-        type: "image",
+        type: CLIENT_INPUT_TYPES.image,
       };
     }
 
@@ -313,7 +314,7 @@ function chatAttachmentsToClientInput(
       return {
         mimeType: attachment.mimeType,
         text: Buffer.from(attachment.data, "base64").toString("utf8"),
-        type: "embeddedTextResource",
+        type: CLIENT_INPUT_TYPES.embedded_text_resource,
         uri,
       };
     }
@@ -322,7 +323,7 @@ function chatAttachmentsToClientInput(
       data: attachment.data,
       mimeType: attachment.mimeType,
       name: attachment.name ?? null,
-      type: "embeddedBlobResource",
+      type: CLIENT_INPUT_TYPES.embedded_blob_resource,
       uri,
     };
   });

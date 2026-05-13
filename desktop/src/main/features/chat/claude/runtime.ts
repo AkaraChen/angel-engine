@@ -5,6 +5,7 @@ import { promisify } from "node:util";
 import type { SendTextRequest } from "@angel-engine/client-napi";
 import type { SDKUserMessage } from "@anthropic-ai/claude-agent-sdk";
 
+import { CLIENT_INPUT_TYPES, type ClientInput } from "../client-input";
 import type { ClaudeSdkModule, JsonObject } from "./types";
 import { asObject, isJsonObject, uniqueStrings } from "./utils";
 
@@ -113,66 +114,64 @@ export function claudePrompt(
 
 function clientInputToContent(
   text: string,
-  input: NonNullable<SendTextRequest["input"]>,
+  input: ClientInput[],
 ): JsonObject[] {
   const content: JsonObject[] = [];
   if (text) content.push({ text, type: "text" });
-  for (const item of input) {
-    const value = item as JsonObject;
+  for (const value of input) {
     switch (value.type) {
-      case "text": {
-        const itemText = String(value.text ?? "");
+      case CLIENT_INPUT_TYPES.text: {
+        const itemText = value.text;
         if (itemText && itemText !== text) {
           content.push({ text: itemText, type: "text" });
         }
         break;
       }
-      case "image":
+      case CLIENT_INPUT_TYPES.image:
         content.push({
           source: {
-            data: String(value.data ?? ""),
-            media_type: String(value.mimeType ?? "image/png"),
+            data: value.data,
+            media_type: value.mimeType,
             type: "base64",
           },
           type: "image",
         });
         break;
-      case "fileMention":
+      case CLIENT_INPUT_TYPES.file_mention:
         content.push({
-          text: `@${String(value.path ?? value.name ?? "")}`,
+          text: `@${value.path || value.name}`,
           type: "text",
         });
         break;
-      case "embeddedTextResource":
+      case CLIENT_INPUT_TYPES.embedded_text_resource:
         content.push({
-          text: [
-            `Resource: ${String(value.uri ?? "embedded text")}`,
-            String(value.text ?? ""),
-          ].join("\n\n"),
+          text: [`Resource: ${value.uri}`, value.text].join("\n\n"),
           type: "text",
         });
         break;
-      case "resourceLink":
+      case CLIENT_INPUT_TYPES.resource_link:
         content.push({
-          text: `Resource: ${String(value.name ?? "resource")} (${String(
-            value.uri ?? "",
-          )})`,
+          text: `Resource: ${value.name} (${value.uri})`,
           type: "text",
         });
         break;
-      case "embeddedBlobResource":
+      case CLIENT_INPUT_TYPES.embedded_blob_resource:
         content.push({
           text: `Attachment: ${String(value.name ?? value.uri ?? "blob")}`,
           type: "text",
         });
         break;
-      case "rawContentBlock":
+      case CLIENT_INPUT_TYPES.raw_content_block:
         if (isJsonObject(value.value)) {
           content.push(value.value);
         }
         break;
-      default:
-        break;
+      default: {
+        const exhaustive: never = value;
+        throw new Error(
+          `Unsupported client input type: ${JSON.stringify(exhaustive)}`,
+        );
+      }
     }
   }
   return content;

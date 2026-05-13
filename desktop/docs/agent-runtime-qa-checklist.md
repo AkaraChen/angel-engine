@@ -17,6 +17,8 @@ Electron CDP target 后按 snapshot/ref 工作流执行；不要直接打开 Vit
   agent。
 - agent 的 model、reasoning effort、mode、tool/permission/input 能力来自
   engine/client snapshot，而不是 desktop 侧硬编码。
+- Permission 测试验证的是 Angel Engine 对 agent 边界事件的归一化、投影和 resolve
+  流程，不评价 agent 本身的默认权限策略。
 - 消息、reasoning、tool call、permission、elicitation、plan、todo、附件、文件
   mention、错误和取消都能被 UI 正确投影。
 - 运行中、后台、重启、hydrate、route 切换、多 chat 并发这些状态不会丢消息、卡住
@@ -68,9 +70,15 @@ Electron CDP target 后按 snapshot/ref 工作流执行；不要直接打开 Vit
 6. 当前 `npm --prefix desktop run lint` 依赖 ESLint 10，但仓库没有
    `eslint.config.*`。在配置迁移前不要把它当 blocking gate。
 
-## 执行记录格式
+## 结果记录位置
 
-每次手动 QA 都在文档末尾复制一段运行记录，至少填这些字段：
+本文件只维护 QA 清单，不保存具体执行结果。每次执行时，把运行记录、截图、失败项和
+issue 写到单独的 run report，例如
+`qa-runs/agent-runtime/YYYY-MM-DD-<agent>.md`。不要在本清单末尾追加 `Passed`、
+`Failed`、`Blocked` 或具体 issue 结果。`qa-runs/` 是专门给本地执行产物用的目录，
+可以整体加入 `.gitignore`。
+
+每份 run report 至少填这些字段：
 
 - Date:
 - Agent:
@@ -176,8 +184,15 @@ Count from 1 to 50 slowly, one number per line.
 
 覆盖：permission card、elicitation resolve、permission bypass、attention indicator。
 
-- [ ] 触发需要 shell/file 权限的操作后，消息中出现 permission UI。
-- [ ] `Deny` 后危险动作不执行，agent 收到拒绝结果，chat 不死锁。
+- [ ] 先识别该 agent 的权限策略，不把“默认允许某类命令”当成 desktop/engine 问题。
+      例如 OpenCode 可能会直接运行大部分命令，Claude Code 默认通常更严格。
+- [ ] 为当前 agent 找到会跨过权限边界的安全动作。只使用 `/tmp/angel-engine-agent-qa`
+      下的 fixture，逐级尝试：只读 shell、写入临时文件、编辑 project 文件、删除临
+      时文件、访问非 cwd 的 fixture 文件。
+- [ ] 如果低风险动作没有触发确认，继续升级到该 agent 会请求确认的边界动作；目标是
+      触发 Angel Engine 的 permission/elicitation 投影，而不是证明 agent 本身有问题。
+- [ ] 触发确认后，消息中出现 permission UI，且 UI 内容能说明将执行的动作。
+- [ ] `Deny` 后对应动作不执行，agent 收到拒绝结果，chat 不死锁。
 - [ ] `Allow` 后动作继续执行，tool result 和最终 assistant message 正常渲染。
 - [ ] 如果显示 `Bypass permission`，启用后只影响当前 chat/run slot，不影响其他 chat。
 - [ ] 切到其他 chat 时，等待 permission 的 chat 在 sidebar/header 有 attention 提示。
@@ -185,13 +200,32 @@ Count from 1 to 50 slowly, one number per line.
 - [ ] agent 提问需要用户输入时，文本输入或选项 UI 可提交；取消后 agent 能收到取消结
       果，不无限等待。
 - [ ] permission/input 卡片在 hydrate 后仍能显示正确终态。
+- [ ] 如果穷尽本轮安全边界动作仍没有触发 permission，run report 记录为
+      `permission boundary not reached`，不是失败；下一轮需要换 agent、模式或更贴近该
+      agent 权限策略的安全边界动作。
 
 建议 Codex prompt：
 
 ```text
-In /tmp/angel-engine-agent-qa/project, run a shell command to print the current
-working directory, then tell me the output.
+In /tmp/angel-engine-agent-qa/project, create a temporary file named
+permission-boundary.txt with the text "permission boundary", then show its final
+content.
 ```
+
+Agent 差异提示：
+
+- Codex 如果默认配置没有触发 permission UI，不算失败。需要专门验证 Codex 权限确认
+  时，可用本地 wrapper 启动 runtime，例如给 `codex` 追加
+  `-c 'approval_policy="on-request"'`、`-c 'approvals_reviewer="user"'`、
+  `-c 'sandbox_mode="read-only"'`、`-c 'features.exec_permission_approvals=true'`
+  和 `-c 'features.request_permissions_tool=true'`，再执行本节安全 fixture。
+- OpenCode 这类默认较宽松的 agent，如果普通 shell/write 操作直接运行，继续用
+  `/tmp/angel-engine-agent-qa` 下的删除、覆盖、跨 cwd 读取等安全 fixture 动作寻找确认
+  边界。
+- Claude Code 这类默认较严格的 agent，简单 shell、文件读取或文件写入就可能触发确
+  认；仍然要分别覆盖 `Deny`、`Allow`、取消和后台 attention。
+- 如果某个 agent 支持权限模式切换，先记录当前模式，再在不会影响其他 chat 的前提下
+  切到能触发确认的模式。
 
 ## 6. Tool Call、Reasoning 和输出投影
 
@@ -362,18 +396,3 @@ Codex 额外验证：
 
 测试其他 agent 时，在这里补该 agent 的专属能力，例如 ACP session update、Claude
 AskUserQuestion、OpenCode/Qoder/Copilot/Gemini 的 mode/config 差异。
-
-## Codex QA Run - 2026-05-13
-
-- Date: 2026-05-13
-- Agent: Codex
-- App command: TBD
-- CDP port/session: `9222` / `angel-agent-qa`
-- Project path: `/tmp/angel-engine-agent-qa/project`
-- Commit/worktree state: TBD
-- Gates run: TBD
-- Passed: TBD
-- Failed: TBD
-- Blocked: TBD
-- Notes: Initial run record created with the checklist. Fill concrete results as
-  the manual pass executes.
