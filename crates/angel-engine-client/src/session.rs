@@ -324,7 +324,9 @@ impl AngelSession {
             .client
             .send_thread_event(conversation_id, ThreadEvent::Cancel { turn_id })?;
         self.active_turn_mut()?.handle_update(result.update)?;
-        Ok(self.active_turn_mut()?.drain_events())
+        let mut events = self.active_turn_mut()?.drain_events();
+        self.drain_cancelled_turn(&mut events)?;
+        Ok(events)
     }
 
     fn ensure_started(
@@ -467,6 +469,30 @@ impl AngelSession {
         let snapshot = self.thread_state_by_id(&conversation_id);
         let result = self.final_result(active, snapshot);
         Ok(Some(TurnRunEvent::Result { result }))
+    }
+
+    fn drain_cancelled_turn(&mut self, events: &mut Vec<TurnRunEvent>) -> ClientResult<()> {
+        loop {
+            if events.iter().any(is_result_event) {
+                return Ok(());
+            }
+
+            if let Some(elicitation_id) = self.pending_elicitation_id() {
+                events
+                    .extend(self.resolve_elicitation(elicitation_id, ElicitationResponse::Cancel)?);
+                continue;
+            }
+
+            if let Some(event) = self.next_turn_event(Duration::from_millis(50))? {
+                events.push(event);
+            }
+        }
+    }
+
+    fn pending_elicitation_id(&self) -> Option<String> {
+        self.active_turn
+            .as_ref()
+            .and_then(|active| active.pending_elicitation_id.clone())
     }
 
     fn final_result(
@@ -1010,6 +1036,10 @@ fn action_delta_part(
 
 fn is_terminal_action_phase_label(phase: &str) -> bool {
     matches!(phase, "completed" | "failed" | "declined" | "cancelled")
+}
+
+fn is_result_event(event: &TurnRunEvent) -> bool {
+    matches!(event, TurnRunEvent::Result { .. })
 }
 
 fn current_model(snapshot: &ConversationSnapshot) -> Option<String> {

@@ -563,30 +563,38 @@ class DesktopAngelSession {
       this.resolveElicitationNow(elicitationId, response),
     );
 
-    let events = await this.session.startTextTurn({
-      cwd: request.cwd,
-      mode: request.mode,
-      model: request.model,
-      input,
-      reasoningEffort: request.reasoningEffort,
-      remoteId: request.remoteId,
-      text,
-    });
+    try {
+      let events = await this.session.startTextTurn({
+        cwd: request.cwd,
+        mode: request.mode,
+        model: request.model,
+        input,
+        reasoningEffort: request.reasoningEffort,
+        remoteId: request.remoteId,
+        text,
+      });
 
-    for (;;) {
-      const result = await this.dispatchEvents(events, request);
-      if (result) return result;
+      for (;;) {
+        const result = await this.dispatchEvents(events, request);
+        if (result) return result;
 
+        if (request.signal?.aborted) {
+          await this.cancelNativeTurn().catch((): undefined => undefined);
+          throwIfAborted(request.signal);
+        }
+
+        const event = await this.session.nextTurnEvent(50);
+        events = event ? [event] : [];
+        if (events.length === 0) {
+          await yieldToEventLoop();
+        }
+      }
+    } catch (error) {
       if (request.signal?.aborted) {
         await this.cancelNativeTurn().catch((): undefined => undefined);
         throwIfAborted(request.signal);
       }
-
-      const event = await this.session.nextTurnEvent(50);
-      events = event ? [event] : [];
-      if (events.length === 0) {
-        await yieldToEventLoop();
-      }
+      throw error;
     }
   }
 
