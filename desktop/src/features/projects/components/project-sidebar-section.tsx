@@ -34,6 +34,7 @@ type ProjectSidebarSectionProps = {
   onCreateProject: () => MaybeAsync;
   onCreateProjectChat: (project: Project) => MaybeAsync;
   onOpenChat: (chat: Chat) => MaybeAsync;
+  onRenameChat: (chat: Chat) => MaybeAsync;
   onRefreshProjects: () => MaybeAsync;
   onShowChatContextMenu: (chat: Chat) => MaybeAsync;
   onShowProjectContextMenu: (project: Project) => MaybeAsync;
@@ -48,6 +49,7 @@ export function ProjectSidebarSection({
   onCreateProject,
   onCreateProjectChat,
   onOpenChat,
+  onRenameChat,
   onRefreshProjects,
   onShowChatContextMenu,
   onShowProjectContextMenu,
@@ -221,6 +223,7 @@ export function ProjectSidebarSection({
                                 chatId={chat.id}
                                 isActive={chat.id === selectedChatId}
                                 onOpenChat={() => void onOpenChat(chat)}
+                                onRenameChat={() => void onRenameChat(chat)}
                                 onShowContextMenu={() =>
                                   onShowChatContextMenu(chat)
                                 }

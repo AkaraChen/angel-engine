@@ -21,6 +21,7 @@ import { WorkspaceHeader } from "@/app/workspace/workspace-header";
 import { WorkspaceSidebar } from "@/app/workspace/workspace-sidebar";
 import { ChatOptionsProvider } from "@/features/chat/runtime/chat-options-context";
 import { AssistantThread } from "@/features/chat/components/assistant-thread";
+import { RenameChatDialog } from "@/features/chat/components/rename-chat-dialog";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { useAgentSettings } from "@/features/settings/use-agent-settings";
 import { useToast } from "@/components/ui/toast";
@@ -39,6 +40,7 @@ import {
   chatLoadSuspenseQueryOptions,
   chatPrewarmQueryOptions,
   deleteAllChatsMutationOptions,
+  renameChatMutationOptions,
 } from "@/features/chat/api/queries";
 import { queryKeys } from "@/platform/query-keys";
 import {
@@ -156,6 +158,7 @@ function WorkspacePageContent({
   const [draftAgentConfigs, setDraftAgentConfigs] = useState<
     Partial<Record<string, DraftAgentConfig>>
   >({});
+  const [renameChatId, setRenameChatId] = useState<string | null>(null);
 
   const currentRoutePath = routePath(route);
 
@@ -170,6 +173,9 @@ function WorkspacePageContent({
   const projects = projectsQuery.data ?? EMPTY_PROJECTS;
   const chats = chatsQuery.data ?? EMPTY_CHATS;
   const selectedChat = chats.find((chat) => chat.id === selectedChatId);
+  const renameTargetChat = renameChatId
+    ? (chats.find((chat) => chat.id === renameChatId) ?? null)
+    : null;
   const routeProjectId =
     route.type === "projectChat" || route.type === "projectCreate"
       ? route.projectId
@@ -425,6 +431,9 @@ function WorkspacePageContent({
   const showChatContextMenuMutation = useMutation({
     ...chatContextMenuMutationOptions({ api, queryClient }),
   });
+  const renameChatMutation = useMutation({
+    ...renameChatMutationOptions({ api, queryClient }),
+  });
 
   const refreshProjects = useCallback(async () => {
     const result = await projectsQuery.refetch();
@@ -505,6 +514,33 @@ function WorkspacePageContent({
     [removeChatFromCache, showChatContextMenuMutation, toast],
   );
 
+  const openRenameChatDialog = useCallback((chat: Chat) => {
+    setRenameChatId(chat.id);
+  }, []);
+
+  const closeRenameChatDialog = useCallback(() => {
+    setRenameChatId(null);
+  }, []);
+
+  const renameChat = useCallback(
+    async (chat: Chat, title: string) => {
+      try {
+        await renameChatMutation.mutateAsync({
+          chatId: chat.id,
+          title,
+        });
+      } catch (error) {
+        toast({
+          description: getErrorMessage(error),
+          title: "Could not rename chat",
+          variant: "destructive",
+        });
+        throw error;
+      }
+    },
+    [renameChatMutation, toast],
+  );
+
   const createChatForProject = useCallback(
     (project: Project) => {
       navigate(`/project/${encodeURIComponent(project.id)}`);
@@ -567,6 +603,7 @@ function WorkspacePageContent({
         onCreateStandaloneChat={createChatForSelection}
         onOpenChat={openChat}
         onOpenSettings={openSettings}
+        onRenameChat={openRenameChatDialog}
         onRefreshProjects={refreshProjects}
         onShowChatContextMenu={showChatContextMenu}
         onShowProjectContextMenu={showProjectContextMenu}
@@ -576,6 +613,12 @@ function WorkspacePageContent({
         selectedProjectId={selectedProjectId}
         settingsActive={route.type === "settings"}
         standaloneChats={standaloneChats}
+      />
+      <RenameChatDialog
+        chat={renameTargetChat}
+        isSaving={renameChatMutation.isPending}
+        onClose={closeRenameChatDialog}
+        onRename={renameChat}
       />
 
       {route.type === "settings" ? (

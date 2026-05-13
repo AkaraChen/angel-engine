@@ -90,6 +90,13 @@ export function renameChatFromPrompt(id: string, prompt: string): Chat {
   });
 }
 
+export function renameChat(id: string, title: string): Chat {
+  return updateChat(id, {
+    title: normalizeManualTitle(title),
+    updatedAt: new Date().toISOString(),
+  });
+}
+
 export function requireChat(id: string): Chat {
   const chat = getChat(id);
   if (!chat) {
@@ -129,6 +136,14 @@ function normalizeRuntime(runtime: string | undefined) {
 
 function normalizeTitle(title: string | undefined) {
   return title || DEFAULT_CHAT_TITLE;
+}
+
+function normalizeManualTitle(title: string) {
+  const normalizedTitle = title.replace(/\s+/g, " ").trim();
+  if (!normalizedTitle) {
+    throw new Error("Chat title is required.");
+  }
+  return normalizedTitle;
 }
 
 function normalizeOptionalString(value: string | null | undefined) {

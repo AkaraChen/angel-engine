@@ -23,6 +23,11 @@ export type ChatPrewarmInput = {
   runtime?: string;
 };
 
+export type ChatRenameInput = {
+  chatId: string;
+  title: string;
+};
+
 export type ChatRuntimeConfigInput = {
   cwd?: string;
   runtime?: string;

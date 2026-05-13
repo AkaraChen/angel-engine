@@ -23,6 +23,7 @@ type MaybeAsync = void | Promise<void>;
 type ChatSidebarSectionProps = {
   isLoading: boolean;
   onOpenChat: (chat: Chat) => MaybeAsync;
+  onRenameChat: (chat: Chat) => MaybeAsync;
   onShowChatContextMenu: (chat: Chat) => MaybeAsync;
   selectedChatId?: string;
   standaloneChats: Chat[];
@@ -31,6 +32,7 @@ type ChatSidebarSectionProps = {
 export function ChatSidebarSection({
   isLoading,
   onOpenChat,
+  onRenameChat,
   onShowChatContextMenu,
   selectedChatId,
   standaloneChats,
@@ -83,6 +85,7 @@ export function ChatSidebarSection({
                       chatId={chat.id}
                       isActive={chat.id === selectedChatId}
                       onOpenChat={() => void onOpenChat(chat)}
+                      onRenameChat={() => void onRenameChat(chat)}
                       onShowContextMenu={() => onShowChatContextMenu(chat)}
                       title={chat.title}
                       tooltip={chat.cwd ?? chat.title}
