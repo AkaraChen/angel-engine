@@ -983,7 +983,7 @@ export const PromptInput = ({
       >
         <InputGroup
           className={cn(
-            "overflow-hidden rounded-[1.35rem] border-foreground/10 bg-background/80 shadow-[0_14px_34px_-28px_rgba(0,0,0,0.55)] backdrop-blur-xl",
+            "overflow-hidden rounded-2xl border-foreground/10 bg-background/80 shadow-[0_14px_34px_-28px_rgba(0,0,0,0.55)] backdrop-blur-xl",
             inputGroupClassName,
           )}
         >
@@ -1384,7 +1384,7 @@ export const PromptInputSelectItem = ({
   className,
   ...props
 }: PromptInputSelectItemProps) => (
-  <SelectItem className={cn("rounded-xl", className)} {...props} />
+  <SelectItem className={cn("rounded-lg", className)} {...props} />
 );
 
 export type PromptInputSelectValueProps = ComponentProps<typeof SelectValue>;
@@ -1543,7 +1543,7 @@ export const PromptInputCommandItem = ({
   className,
   ...props
 }: PromptInputCommandItemProps) => (
-  <CommandItem className={cn("rounded-xl", className)} {...props} />
+  <CommandItem className={cn("rounded-lg", className)} {...props} />
 );
 
 export type PromptInputCommandSeparatorProps = ComponentProps<

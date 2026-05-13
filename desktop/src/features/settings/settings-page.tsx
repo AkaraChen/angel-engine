@@ -75,7 +75,7 @@ export function SettingsPage({
 
         {activeTab === "agents" ? (
           <div className="space-y-4">
-            <section className="rounded-md border bg-card p-4">
+            <section className="rounded-2xl border bg-card p-4">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div className="min-w-0">
                   <h3 className="text-sm font-semibold">Default agent</h3>
@@ -102,7 +102,7 @@ export function SettingsPage({
             <div className="grid gap-3">
               {AGENT_OPTIONS.map((agent) => (
                 <section
-                  className="rounded-md border bg-card p-4"
+                  className="rounded-2xl border bg-card p-4"
                   key={agent.id}
                 >
                   <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
@@ -123,7 +123,7 @@ export function SettingsPage({
         ) : null}
 
         {activeTab === "danger" ? (
-          <div className="rounded-md border border-destructive/30 bg-destructive/5 p-4">
+          <div className="rounded-2xl border border-destructive/30 bg-destructive/5 p-4">
             <div className="flex items-start gap-3">
               <AlertTriangle className="mt-0.5 size-5 shrink-0 text-destructive" />
               <div className="min-w-0 flex-1">
@@ -170,7 +170,7 @@ function SettingsSelect({
       {label}
       <Select onValueChange={onValueChange} value={value}>
         <SelectTrigger
-          className="h-8 w-full rounded-md border-border bg-background px-2 text-xs"
+          className="h-8 w-full rounded-xl border-border bg-background px-2 text-xs"
           size="sm"
         >
           <span className="flex min-w-0 items-center gap-1.5">
@@ -180,10 +180,10 @@ function SettingsSelect({
             <SelectValue />
           </span>
         </SelectTrigger>
-        <SelectContent className="rounded-md">
+        <SelectContent className="rounded-2xl">
           {options.map((option) => (
             <SelectItem
-              className="rounded-sm"
+              className="rounded-lg"
               key={option.value}
               value={option.value}
             >

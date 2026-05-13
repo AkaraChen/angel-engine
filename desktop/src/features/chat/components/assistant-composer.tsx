@@ -111,7 +111,7 @@ type FileMentionAssistPanelProps = {
 };
 
 const composerInputGroupClassName =
-  "overflow-visible !rounded-[1.35rem] !border !border-foreground/10 !bg-background/90 shadow-[0_18px_44px_-24px_rgba(0,0,0,0.55),0_1px_0_rgba(255,255,255,0.85)_inset] backdrop-blur-xl transition-[border-color,box-shadow,background-color] has-[textarea]:!rounded-[1.35rem] has-[>[data-align=block-end]]:!rounded-[1.35rem] has-[>[data-align=block-start]]:!rounded-[1.35rem] focus-within:!border-foreground/15 focus-within:!bg-background/95 focus-within:shadow-[0_18px_42px_-26px_rgba(0,0,0,0.58),0_0_0_2px_rgba(29,29,31,0.045),0_1px_0_rgba(255,255,255,0.9)_inset] dark:!border-white/10 dark:!bg-card/80 dark:shadow-[0_18px_44px_-24px_rgba(0,0,0,0.85),0_1px_0_rgba(255,255,255,0.08)_inset] dark:focus-within:!border-white/15 dark:focus-within:!bg-card/90 dark:focus-within:shadow-[0_18px_42px_-26px_rgba(0,0,0,0.86),0_0_0_2px_rgba(255,255,255,0.055),0_1px_0_rgba(255,255,255,0.1)_inset]";
+  "overflow-visible !rounded-2xl !border !border-foreground/10 !bg-background/90 shadow-[0_18px_44px_-24px_rgba(0,0,0,0.55),0_1px_0_rgba(255,255,255,0.85)_inset] backdrop-blur-xl transition-[border-color,box-shadow,background-color] has-[textarea]:!rounded-2xl has-[>[data-align=block-end]]:!rounded-2xl has-[>[data-align=block-start]]:!rounded-2xl focus-within:!border-foreground/15 focus-within:!bg-background/95 focus-within:shadow-[0_18px_42px_-26px_rgba(0,0,0,0.58),0_0_0_2px_rgba(29,29,31,0.045),0_1px_0_rgba(255,255,255,0.9)_inset] dark:!border-white/10 dark:!bg-card/80 dark:shadow-[0_18px_44px_-24px_rgba(0,0,0,0.85),0_1px_0_rgba(255,255,255,0.08)_inset] dark:focus-within:!border-white/15 dark:focus-within:!bg-card/90 dark:focus-within:shadow-[0_18px_42px_-26px_rgba(0,0,0,0.86),0_0_0_2px_rgba(255,255,255,0.055),0_1px_0_rgba(255,255,255,0.1)_inset]";
 const composerModelMenuTriggerClassName =
   "h-8 max-w-[21rem] gap-1 rounded-full border-foreground/10 bg-background/75 px-1.5 text-[11px] font-medium text-foreground shadow-[0_1px_0_rgba(255,255,255,0.8)_inset,0_8px_20px_-16px_rgba(0,0,0,0.55)] backdrop-blur-xl hover:border-foreground/15 hover:bg-background/90 aria-expanded:border-foreground/15 aria-expanded:bg-background/95 dark:border-white/10 dark:bg-white/[0.055] dark:shadow-[0_1px_0_rgba(255,255,255,0.08)_inset,0_8px_20px_-16px_rgba(0,0,0,0.85)] dark:hover:bg-white/[0.08] dark:aria-expanded:bg-white/[0.09]";
 const composerModelMenuPrimaryClassName =
@@ -525,7 +525,7 @@ function SlashCommandAssistPanel({
     <AssistPanelFrame title="Commands">
       {commands.map((command) => (
         <button
-          className="flex w-full min-w-0 items-center gap-2 rounded-sm px-2 py-1.5 text-left text-sm hover:bg-muted"
+          className="flex w-full min-w-0 items-center gap-2 rounded-lg px-2 py-1.5 text-left text-sm hover:bg-muted"
           key={command.name}
           onMouseDown={(event) => event.preventDefault()}
           onClick={() => onSelect(command)}
@@ -577,7 +577,7 @@ function FileMentionAssistPanel({
     <AssistPanelFrame title="Files">
       {files.map((file) => (
         <button
-          className="flex w-full min-w-0 flex-col rounded-sm px-2 py-1.5 text-left hover:bg-muted"
+          className="flex w-full min-w-0 flex-col rounded-lg px-2 py-1.5 text-left hover:bg-muted"
           key={file.path}
           onMouseDown={(event) => event.preventDefault()}
           onClick={() => onSelect(file)}
@@ -754,10 +754,10 @@ function ComposerOptionSelect({
           <PromptInputSelectValue />
         </span>
       </PromptInputSelectTrigger>
-      <PromptInputSelectContent className="rounded-md">
+      <PromptInputSelectContent className="rounded-2xl">
         {options.map((option) => (
           <PromptInputSelectItem
-            className="rounded-sm"
+            className="rounded-lg"
             key={option.value}
             value={option.value}
           >
@@ -925,7 +925,7 @@ function ComposerModelMenuSub({
         disabled={disabled}
         title={label}
       >
-        <span className="flex size-5 shrink-0 items-center justify-center rounded-md bg-foreground/[0.055] text-muted-foreground shadow-[0_1px_0_rgba(255,255,255,0.55)_inset] dark:bg-white/[0.08] dark:shadow-none [&_svg]:size-3">
+        <span className="flex size-5 shrink-0 items-center justify-center rounded-lg bg-foreground/[0.055] text-muted-foreground shadow-[0_1px_0_rgba(255,255,255,0.55)_inset] dark:bg-white/[0.08] dark:shadow-none [&_svg]:size-3">
           {icon}
         </span>
         <span className="flex min-w-0 flex-1 items-center justify-between gap-2">

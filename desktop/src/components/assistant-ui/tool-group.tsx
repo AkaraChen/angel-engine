@@ -34,9 +34,9 @@ const toolGroupVariants = cva(
       variant: {
         ghost: "",
         muted:
-          "rounded-[1.15rem] border border-foreground/10 bg-background/55 py-1.5 shadow-[0_14px_34px_-28px_rgba(0,0,0,0.58)] backdrop-blur-xl dark:border-white/10 dark:bg-card/45",
+          "rounded-2xl border border-foreground/10 bg-background/55 py-1.5 shadow-[0_14px_34px_-28px_rgba(0,0,0,0.58)] backdrop-blur-xl dark:border-white/10 dark:bg-card/45",
         outline:
-          "rounded-[1.15rem] border border-foreground/10 bg-background/55 py-1.5 shadow-[0_14px_34px_-28px_rgba(0,0,0,0.58)] backdrop-blur-xl dark:border-white/10 dark:bg-card/45",
+          "rounded-2xl border border-foreground/10 bg-background/55 py-1.5 shadow-[0_14px_34px_-28px_rgba(0,0,0,0.58)] backdrop-blur-xl dark:border-white/10 dark:bg-card/45",
       },
     },
   },

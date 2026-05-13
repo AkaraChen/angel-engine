@@ -9,9 +9,9 @@ type DropdownMenuContentVariant = "default" | "apple";
 const dropdownMenuContentVariants: Record<DropdownMenuContentVariant, string> =
   {
     apple:
-      "rounded-[0.95rem] border border-white/[0.55] bg-white/80 bg-clip-padding shadow-[0_18px_45px_-28px_rgba(0,0,0,0.78),0_1px_0_rgba(255,255,255,0.95)_inset] ring-1 ring-black/[0.04] backdrop-blur-2xl backdrop-saturate-150 supports-backdrop-filter:bg-white/[0.72] dark:border-white/[0.12] dark:bg-card/90 dark:shadow-[0_18px_45px_-28px_rgba(0,0,0,0.95),0_1px_0_rgba(255,255,255,0.08)_inset] dark:ring-white/[0.08] dark:supports-backdrop-filter:bg-card/82",
+      "rounded-2xl border border-white/[0.55] bg-white/80 bg-clip-padding shadow-[0_18px_45px_-28px_rgba(0,0,0,0.78),0_1px_0_rgba(255,255,255,0.95)_inset] ring-1 ring-black/[0.04] backdrop-blur-2xl backdrop-saturate-150 supports-backdrop-filter:bg-white/[0.72] dark:border-white/[0.12] dark:bg-card/90 dark:shadow-[0_18px_45px_-28px_rgba(0,0,0,0.95),0_1px_0_rgba(255,255,255,0.08)_inset] dark:ring-white/[0.08] dark:supports-backdrop-filter:bg-card/82",
     default:
-      "rounded-[0.95rem] bg-popover shadow-[0_18px_45px_-28px_rgba(0,0,0,0.78)] ring-1 ring-foreground/5 dark:ring-foreground/10",
+      "rounded-2xl bg-popover shadow-[0_18px_45px_-28px_rgba(0,0,0,0.78)] ring-1 ring-foreground/5 dark:ring-foreground/10",
   };
 
 function DropdownMenu({

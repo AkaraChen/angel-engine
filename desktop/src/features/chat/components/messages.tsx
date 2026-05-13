@@ -75,7 +75,7 @@ const assistantTextContainerClassName = [
   "min-w-0 max-w-none text-[15px] leading-[1.72] text-foreground/90 hyphens-auto [line-break:loose] [overflow-wrap:anywhere] [text-rendering:optimizeLegibility] [word-break:normal]",
   "[&_a]:text-primary [&_a]:underline [&_a]:underline-offset-2 [&_a]:decoration-primary/35 [&_a:hover]:decoration-primary/70",
   "[&_blockquote]:my-4 [&_blockquote]:border-l-2 [&_blockquote]:border-foreground/10 [&_blockquote]:pl-3.5 [&_blockquote]:text-[14px] [&_blockquote]:leading-[1.72] [&_blockquote]:text-muted-foreground",
-  "[&_[data-streamdown=code-block]]:my-4 [&_[data-streamdown=code-block]]:overflow-hidden [&_[data-streamdown=code-block]]:rounded-[1rem] [&_[data-streamdown=code-block]]:border [&_[data-streamdown=code-block]]:border-foreground/[0.08] [&_[data-streamdown=code-block]]:bg-[#f7f7f8] [&_[data-streamdown=code-block]]:p-0 [&_[data-streamdown=code-block]]:shadow-[inset_0_1px_0_rgba(255,255,255,0.86),0_12px_30px_-26px_rgba(0,0,0,0.48)] dark:[&_[data-streamdown=code-block]]:border-white/10 dark:[&_[data-streamdown=code-block]]:bg-white/[0.045] dark:[&_[data-streamdown=code-block]]:shadow-[inset_0_1px_0_rgba(255,255,255,0.06),0_14px_34px_-28px_rgba(0,0,0,0.8)]",
+  "[&_[data-streamdown=code-block]]:my-4 [&_[data-streamdown=code-block]]:overflow-hidden [&_[data-streamdown=code-block]]:rounded-2xl [&_[data-streamdown=code-block]]:border [&_[data-streamdown=code-block]]:border-foreground/[0.08] [&_[data-streamdown=code-block]]:bg-[#f7f7f8] [&_[data-streamdown=code-block]]:p-0 [&_[data-streamdown=code-block]]:shadow-[inset_0_1px_0_rgba(255,255,255,0.86),0_12px_30px_-26px_rgba(0,0,0,0.48)] dark:[&_[data-streamdown=code-block]]:border-white/10 dark:[&_[data-streamdown=code-block]]:bg-white/[0.045] dark:[&_[data-streamdown=code-block]]:shadow-[inset_0_1px_0_rgba(255,255,255,0.06),0_14px_34px_-28px_rgba(0,0,0,0.8)]",
   "[&_[data-streamdown=code-block-actions]]:rounded-full [&_[data-streamdown=code-block-actions]]:border-foreground/10 [&_[data-streamdown=code-block-actions]]:bg-background/80 [&_[data-streamdown=code-block-actions]]:px-1 [&_[data-streamdown=code-block-actions]]:py-0.5 [&_[data-streamdown=code-block-actions]]:shadow-sm [&_[data-streamdown=code-block-actions]]:backdrop-blur-xl dark:[&_[data-streamdown=code-block-actions]]:border-white/10 dark:[&_[data-streamdown=code-block-actions]]:bg-card/75",
   "[&_[data-streamdown=code-block-body]]:rounded-none [&_[data-streamdown=code-block-body]]:border-0 [&_[data-streamdown=code-block-body]]:bg-transparent [&_[data-streamdown=code-block-body]]:p-0 [&_[data-streamdown=code-block-body]]:text-[12.5px] [&_[data-streamdown=code-block-body]]:leading-[1.58]",
   "[&_[data-streamdown=code-block-body]_code>span]:block",
@@ -132,7 +132,7 @@ export function UserMessage() {
         </MessagePrimitive.Attachments>
         <UserMessageAttachmentParts />
         {hasBubbleContent ? (
-          <div className="rounded-[1.15rem] rounded-br-md bg-primary/95 px-3.5 py-2.5 text-[14px] leading-6 text-primary-foreground shadow-[0_10px_24px_-18px_rgba(10,132,255,0.8)]">
+          <div className="rounded-2xl rounded-br-lg bg-primary/95 px-3.5 py-2.5 text-[14px] leading-6 text-primary-foreground shadow-[0_10px_24px_-18px_rgba(10,132,255,0.8)]">
             <UserMessageParts />
           </div>
         ) : null}
