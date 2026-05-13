@@ -27,6 +27,7 @@ import {
   Loader2,
   Paperclip,
   Quote,
+  Search,
   SlidersHorizontal,
   X,
 } from "lucide-react";
@@ -56,6 +57,7 @@ import {
   type PromptInputMessage,
 } from "@/components/ai-elements/prompt-input";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -793,6 +795,7 @@ function ComposerModelMenu({
   disabled?: boolean;
   options: ChatOptionsContextValue;
 }) {
+  const [modelQuery, setModelQuery] = useState("");
   const providerOptions = AGENT_OPTIONS.map((agent) => ({
     label: agent.label,
     value: agent.id,
@@ -814,6 +817,10 @@ function ComposerModelMenu({
     disabled ||
     !options.canSetReasoningEffort ||
     options.reasoningEffortOptions.length < 2;
+  const filteredModelOptions = useMemo(
+    () => filterComposerOptions(options.modelOptions, modelQuery),
+    [options.modelOptions, modelQuery],
+  );
 
   return (
     <DropdownMenu>
@@ -876,14 +883,28 @@ function ComposerModelMenu({
           label="Model"
           value={options.configLoading ? "Loading..." : modelLabel}
         >
-          {options.modelOptions.map((model) => (
-            <ComposerModelMenuItem
-              key={model.value}
-              label={model.label}
-              onSelect={() => options.setModel(model.value)}
-              selected={model.value === options.model}
-            />
-          ))}
+          <ComposerModelMenuSearch
+            onChange={setModelQuery}
+            placeholder="Search models"
+            value={modelQuery}
+          />
+          {filteredModelOptions.length > 0 ? (
+            filteredModelOptions.map((model) => (
+              <ComposerModelMenuItem
+                key={model.value}
+                label={model.label}
+                onSelect={() => {
+                  options.setModel(model.value);
+                  setModelQuery("");
+                }}
+                selected={model.value === options.model}
+              />
+            ))
+          ) : (
+            <div className="px-2 py-5 text-center text-xs text-muted-foreground">
+              No models found
+            </div>
+          )}
         </ComposerModelMenuSub>
         <ComposerModelMenuSub
           disabled={effortDisabled}
@@ -902,6 +923,36 @@ function ComposerModelMenu({
         </ComposerModelMenuSub>
       </DropdownMenuContent>
     </DropdownMenu>
+  );
+}
+
+function ComposerModelMenuSearch({
+  onChange,
+  placeholder,
+  value,
+}: {
+  onChange: (value: string) => void;
+  placeholder: string;
+  value: string;
+}) {
+  return (
+    <div
+      className="sticky top-0 z-10 -mx-0.5 mb-1 bg-white/85 px-0.5 pb-1 backdrop-blur-xl dark:bg-card/90"
+      onKeyDown={(event) => event.stopPropagation()}
+      onPointerDown={(event) => event.stopPropagation()}
+    >
+      <div className="relative">
+        <Search className="pointer-events-none absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2 text-muted-foreground/70" />
+        <Input
+          aria-label={placeholder}
+          autoComplete="off"
+          className="h-8 rounded-lg bg-foreground/[0.055] pr-2 pl-8 text-xs dark:bg-white/[0.07]"
+          onChange={(event) => onChange(event.target.value)}
+          placeholder={placeholder}
+          value={value}
+        />
+      </div>
+    </div>
   );
 }
 
@@ -973,6 +1024,19 @@ function ComposerModelMenuItem({
 
 function optionLabel(options: AgentValueOption[], value: string) {
   return options.find((option) => option.value === value)?.label ?? value;
+}
+
+function filterComposerOptions(options: AgentValueOption[], query: string) {
+  const normalizedQuery = query.trim().toLowerCase();
+  if (!normalizedQuery) {
+    return options;
+  }
+
+  return options.filter(
+    (option) =>
+      option.label.toLowerCase().includes(normalizedQuery) ||
+      option.value.toLowerCase().includes(normalizedQuery),
+  );
 }
 
 function shortEffortLabel(label: string) {
