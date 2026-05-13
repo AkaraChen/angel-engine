@@ -24,9 +24,7 @@ export function getDatabase() {
   const dbDirectory = app.getPath("userData");
   fs.mkdirSync(dbDirectory, { recursive: true });
 
-  sqlite = new BetterSqliteDatabase(
-    path.join(dbDirectory, "angel-engine.sqlite"),
-  );
+  sqlite = new BetterSqliteDatabase(path.join(dbDirectory, databaseFileName()));
   sqlite.pragma("journal_mode = WAL");
   sqlite.pragma("foreign_keys = ON");
 
@@ -56,4 +54,8 @@ function resolveMigrationsFolder() {
   }
 
   return migrationsFolder;
+}
+
+function databaseFileName() {
+  return app.isPackaged ? "angel-engine.sqlite" : "angel-engine.dev.sqlite";
 }
