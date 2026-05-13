@@ -1,7 +1,6 @@
 import {
   type FormEventHandler,
   type ReactElement,
-  useEffect,
   useId,
   useState,
 } from "react";
@@ -30,21 +29,45 @@ export function RenameChatDialog({
   onClose,
   onRename,
 }: RenameChatDialogProps): ReactElement {
-  const titleInputId = useId();
-  const [title, setTitle] = useState("");
-  const normalizedTitle = normalizeTitleInput(title);
-  const canSubmit =
-    Boolean(chat) &&
-    Boolean(normalizedTitle) &&
-    normalizedTitle !== chat?.title;
+  return (
+    <Dialog open={Boolean(chat)} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="gap-5 rounded-2xl">
+        <DialogHeader>
+          <DialogTitle>Rename chat</DialogTitle>
+        </DialogHeader>
+        {chat ? (
+          <RenameChatForm
+            chat={chat}
+            isSaving={isSaving}
+            key={chat.id}
+            onClose={onClose}
+            onRename={onRename}
+          />
+        ) : null}
+      </DialogContent>
+    </Dialog>
+  );
+}
 
-  useEffect(() => {
-    setTitle(chat?.title ?? "");
-  }, [chat]);
+function RenameChatForm({
+  chat,
+  isSaving,
+  onClose,
+  onRename,
+}: {
+  chat: Chat;
+  isSaving: boolean;
+  onClose: () => void;
+  onRename: (chat: Chat, title: string) => Promise<void> | void;
+}) {
+  const titleInputId = useId();
+  const [title, setTitle] = useState(() => chat.title);
+  const normalizedTitle = normalizeTitleInput(title);
+  const canSubmit = Boolean(normalizedTitle) && normalizedTitle !== chat.title;
 
   const handleSubmit: FormEventHandler<HTMLFormElement> = (event) => {
     event.preventDefault();
-    if (!chat || !canSubmit || isSaving) return;
+    if (!canSubmit || isSaving) return;
 
     void Promise.resolve(onRename(chat, normalizedTitle))
       .then(onClose)
@@ -54,40 +77,33 @@ export function RenameChatDialog({
   };
 
   return (
-    <Dialog open={Boolean(chat)} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="gap-5 rounded-2xl">
-        <DialogHeader>
-          <DialogTitle>Rename chat</DialogTitle>
-        </DialogHeader>
-        <form className="grid gap-4" onSubmit={handleSubmit}>
-          <div className="grid gap-2">
-            <label className="text-sm font-medium" htmlFor={titleInputId}>
-              Name
-            </label>
-            <Input
-              autoFocus
-              disabled={isSaving}
-              id={titleInputId}
-              onChange={(event) => setTitle(event.target.value)}
-              value={title}
-            />
-          </div>
-          <DialogFooter>
-            <Button
-              disabled={isSaving}
-              onClick={onClose}
-              type="button"
-              variant="outline"
-            >
-              Cancel
-            </Button>
-            <Button disabled={!canSubmit || isSaving} type="submit">
-              {isSaving ? "Saving" : "Save"}
-            </Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
+    <form className="grid gap-4" onSubmit={handleSubmit}>
+      <div className="grid gap-2">
+        <label className="text-sm font-medium" htmlFor={titleInputId}>
+          Name
+        </label>
+        <Input
+          autoFocus
+          disabled={isSaving}
+          id={titleInputId}
+          onChange={(event) => setTitle(event.target.value)}
+          value={title}
+        />
+      </div>
+      <DialogFooter>
+        <Button
+          disabled={isSaving}
+          onClick={onClose}
+          type="button"
+          variant="outline"
+        >
+          Cancel
+        </Button>
+        <Button disabled={!canSubmit || isSaving} type="submit">
+          {isSaving ? "Saving" : "Save"}
+        </Button>
+      </DialogFooter>
+    </form>
   );
 }
 
