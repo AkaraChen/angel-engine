@@ -514,11 +514,17 @@ function WorkspacePageContent({
     [navigate, queryClient, selectedChatId],
   );
 
+  const openRenameChatDialog = useCallback((chat: Chat) => {
+    setRenameChatId(chat.id);
+  }, []);
+
   const showChatContextMenu = useCallback(
     async (chat: Chat) => {
       try {
         const action = await showChatContextMenuMutation.mutateAsync(chat);
-        if (action === "deleted") {
+        if (action === "rename") {
+          openRenameChatDialog(chat);
+        } else if (action === "deleted") {
           removeChatFromCache(chat.id);
         }
       } catch (error) {
@@ -529,12 +535,13 @@ function WorkspacePageContent({
         });
       }
     },
-    [removeChatFromCache, showChatContextMenuMutation, toast],
+    [
+      openRenameChatDialog,
+      removeChatFromCache,
+      showChatContextMenuMutation,
+      toast,
+    ],
   );
-
-  const openRenameChatDialog = useCallback((chat: Chat) => {
-    setRenameChatId(chat.id);
-  }, []);
 
   const closeRenameChatDialog = useCallback(() => {
     setRenameChatId(null);
@@ -621,7 +628,6 @@ function WorkspacePageContent({
         onCreateStandaloneChat={createChatForSelection}
         onOpenChat={openChat}
         onOpenSettings={openSettings}
-        onRenameChat={openRenameChatDialog}
         onRefreshProjects={refreshProjects}
         onShowChatContextMenu={showChatContextMenu}
         onShowProjectContextMenu={showProjectContextMenu}

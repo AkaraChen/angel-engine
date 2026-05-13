@@ -1,9 +1,4 @@
-import {
-  type FormEventHandler,
-  type ReactElement,
-  useId,
-  useState,
-} from "react";
+import { type FormEventHandler, type ReactElement, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -60,7 +55,6 @@ function RenameChatForm({
   onClose: () => void;
   onRename: (chat: Chat, title: string) => Promise<void> | void;
 }) {
-  const titleInputId = useId();
   const [title, setTitle] = useState(() => chat.title);
   const normalizedTitle = normalizeTitleInput(title);
   const canSubmit = Boolean(normalizedTitle) && normalizedTitle !== chat.title;
@@ -78,14 +72,11 @@ function RenameChatForm({
 
   return (
     <form className="grid gap-4" onSubmit={handleSubmit}>
-      <div className="grid gap-2">
-        <label className="text-sm font-medium" htmlFor={titleInputId}>
-          Name
-        </label>
+      <div>
         <Input
+          aria-label="Chat name"
           autoFocus
           disabled={isSaving}
-          id={titleInputId}
           onChange={(event) => setTitle(event.target.value)}
           value={title}
         />

@@ -138,8 +138,13 @@ export const chatIpcRouter = {
         throw new Error("Chat not found.");
       }
 
-      return new Promise<"cancelled" | "deleted">((resolve) => {
+      return new Promise<"cancelled" | "deleted" | "rename">((resolve) => {
         const menu = Menu.buildFromTemplate([
+          {
+            click: () => resolve("rename"),
+            label: "Rename",
+          },
+          { type: "separator" },
           {
             click: () => {
               closeChatSession(chat.id);

@@ -1,10 +1,6 @@
 import type { MouseEventHandler, ReactElement } from "react";
-import { Pencil } from "lucide-react";
 
-import {
-  MacSidebarMenuAction,
-  MacSidebarMenuButton,
-} from "@/components/workspace-sidebar-primitives";
+import { MacSidebarMenuButton } from "@/components/workspace-sidebar-primitives";
 import { useChatAttention } from "@/features/chat/state/chat-run-store";
 
 import { ChatRunningPulse } from "./chat-running-pulse";
@@ -15,7 +11,6 @@ type ChatSidebarItemProps = {
   tooltip: string;
   isActive: boolean;
   onOpenChat: () => void;
-  onRenameChat?: () => Promise<void> | void;
   onShowContextMenu?: () => Promise<void> | void;
 };
 
@@ -25,7 +20,6 @@ export function ChatSidebarItem({
   tooltip,
   isActive,
   onOpenChat,
-  onRenameChat,
   onShowContextMenu,
 }: ChatSidebarItemProps): ReactElement {
   const handleContextMenu: MouseEventHandler<HTMLButtonElement> = (event) => {
@@ -54,21 +48,6 @@ export function ChatSidebarItem({
           <ChatRunningPulse chatId={chatId} />
         </span>
       </MacSidebarMenuButton>
-      {onRenameChat ? (
-        <MacSidebarMenuAction
-          aria-label={`Rename ${title}`}
-          onClick={(event) => {
-            event.preventDefault();
-            event.stopPropagation();
-            void onRenameChat();
-          }}
-          showOnHover
-          title={`Rename ${title}`}
-          type="button"
-        >
-          <Pencil />
-        </MacSidebarMenuAction>
-      ) : null}
     </>
   );
 }
