@@ -45,7 +45,7 @@ function ToastProvider({ children }: { children: React.ReactNode }) {
         {toasts.map((toast) => (
           <ToastPrimitive.Root
             className={cn(
-              "grid w-full max-w-sm gap-1 rounded-2xl border bg-popover p-3 text-popover-foreground shadow-lg data-closed:animate-out data-closed:fade-out-0 data-closed:slide-out-to-right-4 data-open:animate-in data-open:fade-in-0 data-open:slide-in-from-right-4",
+              "grid w-full max-w-sm gap-1 rounded-lg border bg-popover p-3 text-popover-foreground shadow-lg data-closed:animate-out data-closed:fade-out-0 data-closed:slide-out-to-right-4 data-open:animate-in data-open:fade-in-0 data-open:slide-in-from-right-4",
               toast.variant === "destructive" &&
                 "border-destructive/40 text-destructive",
             )}
@@ -65,7 +65,7 @@ function ToastProvider({ children }: { children: React.ReactNode }) {
                   </ToastPrimitive.Description>
                 ) : null}
               </div>
-              <ToastPrimitive.Close className="inline-flex size-6 shrink-0 items-center justify-center rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground">
+              <ToastPrimitive.Close className="inline-flex size-6 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground">
                 <XIcon className="size-3.5" />
                 <span className="sr-only">{t("common.close")}</span>
               </ToastPrimitive.Close>
