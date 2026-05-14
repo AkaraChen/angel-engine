@@ -125,9 +125,9 @@ export const resources = {
         empty: {
           description:
             "Point to a file, bug, behavior, or workspace slice to patch or test.",
-          title: "What should Angel Engine inspect?",
+          title: "What would you like Angel Engine to do?",
           titleWithProject:
-            "What should Angel Engine inspect in <project>{{projectName}}</project>?",
+            "What would you like Angel Engine to do in <project>{{projectName}}</project>?",
         },
         quote: "Quote",
         restoring: "Restoring chat",
@@ -390,9 +390,9 @@ export const resources = {
       thread: {
         empty: {
           description: "指定文件、缺陷、行为或工作区范围，让它修复或测试。",
-          title: "希望 Angel Engine 检查什么？",
+          title: "希望 Angel Engine 做些什么？",
           titleWithProject:
-            "希望 Angel Engine 检查 <project>{{projectName}}</project> 的什么内容？",
+            "希望 Angel Engine 在 <project>{{projectName}}</project> 做些什么？",
         },
         quote: "引用",
         restoring: "正在恢复聊天",
