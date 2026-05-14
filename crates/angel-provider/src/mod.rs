@@ -4,9 +4,13 @@ pub use angel_engine::*;
 use serde_json::Value;
 
 pub mod acp;
+pub mod cline;
 pub mod codex;
+pub mod copilot;
+pub mod cursor;
 pub mod gemini;
 pub mod kimi;
+pub mod qoder;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct InterpretedUserInput {

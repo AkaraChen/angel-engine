@@ -43,6 +43,24 @@ fn generate_engine_event_enums() {
             "camelCase",
         ),
         generated_enum(
+            &engine_src.join("event.rs"),
+            "EngineEvent",
+            "EngineEventType",
+            "PascalCase",
+        ),
+        generated_enum(
+            &engine_src.join("state/context.rs"),
+            "ContextUpdate",
+            "EngineEventContextUpdateType",
+            "PascalCase",
+        ),
+        generated_enum(
+            &engine_src.join("state/context.rs"),
+            "ContextScope",
+            "EngineEventContextScope",
+            "PascalCase",
+        ),
+        generated_enum(
             &client_src.join("snapshot.rs"),
             "RuntimeSnapshot",
             "RuntimeStatus",

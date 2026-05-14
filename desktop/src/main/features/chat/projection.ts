@@ -111,16 +111,23 @@ export function runtimeConfigFromConversationSnapshot(
   const settings = snapshot.settings;
   const modelList = settings.modelList;
   const availableModes = settings.availableModes;
+  const permissionModes = settings.permissionModes;
   const reasoningLevel = settings.reasoningLevel;
   const currentMode =
     snapshot.agentState?.currentMode ?? availableModes.currentModeId ?? null;
+  const currentPermissionMode =
+    snapshot.agentState?.currentPermissionMode ??
+    permissionModes.currentModeId ??
+    null;
 
   return {
     agentState: {
       currentMode,
+      currentPermissionMode,
     },
     canSetModel: modelList.canSet,
     canSetMode: availableModes.canSet,
+    canSetPermissionMode: permissionModes.canSet,
     canSetReasoningEffort: reasoningLevel.canSet,
     availableCommands: snapshot.availableCommands.map((command) => ({
       description: command.description,
@@ -129,6 +136,7 @@ export function runtimeConfigFromConversationSnapshot(
     })),
     currentMode,
     currentModel: modelList.currentModelId ?? null,
+    currentPermissionMode,
     currentReasoningEffort: reasoningLevel.currentLevel ?? null,
     modes: availableModes.availableModes.map((mode) => ({
       description: mode.description,
@@ -139,6 +147,11 @@ export function runtimeConfigFromConversationSnapshot(
       description: model.description,
       label: model.name || model.id,
       value: model.id,
+    })),
+    permissionModes: permissionModes.availableModes.map((mode) => ({
+      description: mode.description,
+      label: mode.name || mode.id,
+      value: mode.id,
     })),
     reasoningEfforts: reasoningLevel.availableOptions.map((effort) => ({
       description: effort.description,

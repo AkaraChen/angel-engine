@@ -1,8 +1,10 @@
 use crate::settings::{
-    find_mode_config_option, find_model_config_option, find_reasoning_config_option,
+    find_mode_config_option, find_model_config_option, find_permission_mode_config_option,
+    find_reasoning_config_option,
 };
 use crate::state::{
-    AgentMode, ContextPatch, ContextScope, ContextUpdate, ReasoningProfile, SessionConfigOption,
+    AgentMode, ContextPatch, ContextScope, ContextUpdate, PermissionMode, ReasoningProfile,
+    SessionConfigOption,
 };
 
 pub(super) fn sync_context_from_config_options(
@@ -19,6 +21,14 @@ pub(super) fn sync_context_from_config_options(
         context.apply_patch(ContextPatch::one(ContextUpdate::Mode {
             scope: ContextScope::TurnAndFuture,
             mode: Some(AgentMode {
+                id: option.current_value.clone(),
+            }),
+        }));
+    }
+    if let Some(option) = find_permission_mode_config_option(options) {
+        context.apply_patch(ContextPatch::one(ContextUpdate::PermissionMode {
+            scope: ContextScope::TurnAndFuture,
+            mode: Some(PermissionMode {
                 id: option.current_value.clone(),
             }),
         }));

@@ -5,8 +5,8 @@ use crate::client::Client;
 use crate::core::{ClientAnswer, ClientCommandResult, ClientInput, ElicitationResponse};
 use crate::error::{ClientError, ClientResult};
 use crate::settings::{
-    AvailableModeSettingSnapshot, ModelListSettingSnapshot, ReasoningLevelSettingSnapshot,
-    ThreadSettingsSnapshot,
+    AvailableModeSettingSnapshot, AvailablePermissionModeSettingSnapshot, ModelListSettingSnapshot,
+    ReasoningLevelSettingSnapshot, ThreadSettingsSnapshot,
 };
 use crate::snapshot::{ConversationSnapshot, ElicitationSnapshot, TurnSnapshot};
 
@@ -90,6 +90,12 @@ where
             .available_modes(self.conversation_id.clone())
     }
 
+    pub fn permission_modes(&self) -> ClientResult<AvailablePermissionModeSettingSnapshot> {
+        self.client
+            .core
+            .permission_modes(self.conversation_id.clone())
+    }
+
     pub fn send_event(&mut self, event: ThreadEvent) -> ClientResult<ClientCommandResult> {
         let focused_turn_id = self.focused_turn_id();
         self.client
@@ -107,6 +113,15 @@ where
         self.client
             .core
             .set_mode(self.conversation_id.clone(), mode.into())
+    }
+
+    pub fn set_permission_mode(
+        &mut self,
+        mode: impl Into<String>,
+    ) -> ClientResult<ClientCommandResult> {
+        self.client
+            .core
+            .set_permission_mode(self.conversation_id.clone(), mode.into())
     }
 
     pub fn set_reasoning_level(
@@ -152,6 +167,9 @@ pub enum ThreadEvent {
         model: String,
     },
     SetMode {
+        mode: String,
+    },
+    SetPermissionMode {
         mode: String,
     },
     SetReasoningEffort {
@@ -224,6 +242,10 @@ impl ThreadEvent {
 
     pub fn set_mode(mode: impl Into<String>) -> Self {
         Self::SetMode { mode: mode.into() }
+    }
+
+    pub fn set_permission_mode(mode: impl Into<String>) -> Self {
+        Self::SetPermissionMode { mode: mode.into() }
     }
 
     pub fn set_reasoning_effort(effort: impl Into<String>) -> Self {

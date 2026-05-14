@@ -1,10 +1,10 @@
 use angel_engine::{
-    AngelEngine, AuthMethodId, AvailableModeState, ContextPatch, ConversationId,
-    ConversationLifecycle, ConversationState, DiscoverConversationsParams, ElicitationDecision,
-    ElicitationId, ElicitationPhase, EngineCommand, EngineExtensionCommand, HistoryMutationOp,
-    JsonRpcMessage, ResumeTarget, SessionMode, StartConversationParams, TransportClientInfo,
-    TransportOptions, TransportOutput, TurnId, TurnOverrides, TurnState, UserAnswer, UserInput,
-    UserInputKind,
+    AngelEngine, AuthMethodId, AvailableModeState, AvailablePermissionModeState, ContextPatch,
+    ConversationId, ConversationLifecycle, ConversationState, DiscoverConversationsParams,
+    ElicitationDecision, ElicitationId, ElicitationPhase, EngineCommand, EngineExtensionCommand,
+    HistoryMutationOp, JsonRpcMessage, ResumeTarget, SessionMode, SessionPermissionMode,
+    StartConversationParams, TransportClientInfo, TransportOptions, TransportOutput, TurnId,
+    TurnOverrides, TurnState, UserAnswer, UserInput, UserInputKind,
 };
 use angel_provider::ProtocolAdapter;
 use serde::{Deserialize, Serialize};
@@ -17,8 +17,8 @@ use crate::event::{
     stream_deltas_from_engine_event,
 };
 use crate::settings::{
-    AvailableModeSettingSnapshot, ModelListSettingSnapshot, ReasoningLevelSettingSnapshot,
-    ThreadSettingsSnapshot,
+    AvailableModeSettingSnapshot, AvailablePermissionModeSettingSnapshot, ModelListSettingSnapshot,
+    ReasoningLevelSettingSnapshot, ThreadSettingsSnapshot,
 };
 use crate::snapshot::{ClientSnapshot, ElicitationSnapshot, TurnSnapshot};
 use crate::thread::ThreadEvent;
@@ -302,6 +302,9 @@ where
             }
             ThreadEvent::SetModel { model } => self.set_model(conversation_id, model),
             ThreadEvent::SetMode { mode } => self.set_mode(conversation_id, mode),
+            ThreadEvent::SetPermissionMode { mode } => {
+                self.set_permission_mode(conversation_id, mode)
+            }
             ThreadEvent::SetReasoningEffort { effort } => {
                 self.set_reasoning_effort(conversation_id, effort)
             }
@@ -351,6 +354,18 @@ where
         let settings = self.engine.get_available_modes(conversation_id.clone())?;
         let mode = resolve_mode_request(&settings, &mode.into());
         let plan = self.engine.set_mode(conversation_id, mode)?;
+        self.apply_plan(plan)
+    }
+
+    pub fn set_permission_mode(
+        &mut self,
+        conversation_id: impl Into<String>,
+        mode: impl Into<String>,
+    ) -> ClientResult<ClientCommandResult> {
+        let conversation_id = to_conversation_id(conversation_id);
+        let settings = self.engine.get_permission_modes(conversation_id.clone())?;
+        let mode = resolve_permission_mode_request(&settings, &mode.into());
+        let plan = self.engine.set_permission_mode(conversation_id, mode)?;
         self.apply_plan(plan)
     }
 
@@ -482,6 +497,16 @@ where
         Ok(self
             .engine
             .get_available_modes(to_conversation_id(conversation_id))?
+            .into())
+    }
+
+    pub fn permission_modes(
+        &self,
+        conversation_id: impl Into<String>,
+    ) -> ClientResult<AvailablePermissionModeSettingSnapshot> {
+        Ok(self
+            .engine
+            .get_permission_modes(to_conversation_id(conversation_id))?
             .into())
     }
 
@@ -877,7 +902,40 @@ fn resolve_mode_request(settings: &AvailableModeState, requested: &str) -> Strin
         .unwrap_or_else(|| requested.to_string())
 }
 
+fn resolve_permission_mode_request(
+    settings: &AvailablePermissionModeState,
+    requested: &str,
+) -> String {
+    let requested = requested.trim();
+    if requested.is_empty()
+        || settings.available_modes.is_empty()
+        || settings
+            .available_modes
+            .iter()
+            .any(|mode| mode.id == requested)
+    {
+        return requested.to_string();
+    }
+
+    let normalized = normalized_mode_key(requested);
+    settings
+        .available_modes
+        .iter()
+        .find(|mode| permission_mode_matches_request(mode, &normalized))
+        .map(|mode| mode.id.clone())
+        .unwrap_or_else(|| requested.to_string())
+}
+
 fn mode_matches_request(mode: &SessionMode, requested: &str) -> bool {
+    normalized_mode_key(&mode.name) == requested
+        || mode
+            .id
+            .rsplit(['#', '/', ':'])
+            .next()
+            .is_some_and(|suffix| normalized_mode_key(suffix) == requested)
+}
+
+fn permission_mode_matches_request(mode: &SessionPermissionMode, requested: &str) -> bool {
     normalized_mode_key(&mode.name) == requested
         || mode
             .id

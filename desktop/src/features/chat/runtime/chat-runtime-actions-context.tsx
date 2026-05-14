@@ -15,6 +15,7 @@ type ChatRuntimeActionsContextValue = {
     localToolCallId?: string,
   ) => void;
   setMode: (mode: string) => Promise<void>;
+  setPermissionMode: (mode: string) => Promise<void>;
 };
 
 type ChatRuntimeActionsProviderProps = {
@@ -36,6 +37,9 @@ export function ChatRuntimeActionsProvider({
     (state) => state.enablePermissionBypass,
   );
   const setModeForSlot = useChatRunStore((state) => state.setMode);
+  const setPermissionModeForSlot = useChatRunStore(
+    (state) => state.setPermissionMode,
+  );
   const permissionBypassEnabled = useChatPermissionBypassEnabled(slotKey);
   const value = useMemo<ChatRuntimeActionsContextValue>(
     () => ({
@@ -54,12 +58,16 @@ export function ChatRuntimeActionsProvider({
       async setMode(mode) {
         await setModeForSlot(slotKey, mode);
       },
+      async setPermissionMode(mode) {
+        await setPermissionModeForSlot(slotKey, mode);
+      },
     }),
     [
       enablePermissionBypassForSlot,
       permissionBypassEnabled,
       resolveElicitationForSlot,
       setModeForSlot,
+      setPermissionModeForSlot,
       slotKey,
     ],
   );

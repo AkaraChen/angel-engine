@@ -44,7 +44,7 @@ import {
 
 import { ChatAttachmentTile } from "@/features/chat/components/attachment-tile";
 import { useChatOptions } from "@/features/chat/runtime/chat-options-context";
-import { findBuildModeOption } from "@/features/chat/runtime/mode-options";
+import { findPlanModeToggleTarget } from "@/features/chat/runtime/mode-options";
 import { Reasoning, ReasoningGroup } from "@/components/assistant-ui/reasoning";
 import { ToolGroup } from "@/components/assistant-ui/tool-group";
 import { Button } from "@/components/ui/button";
@@ -1337,7 +1337,7 @@ function ElicitationQuestionCard({
 function PlanMessagePart({ plan }: { plan: ChatPlanData }) {
   const aui = useAui();
   const chatOptions = useChatOptions();
-  const { setMode } = useChatRuntimeActions();
+  const { setMode, setPermissionMode } = useChatRuntimeActions();
   const toast = useToast();
   const isLastMessage = useAuiState((state) => state.message.isLast);
   const isRunning = useAuiState((state) => state.thread.isRunning);
@@ -1349,14 +1349,26 @@ function PlanMessagePart({ plan }: { plan: ChatPlanData }) {
   const isTodoPlan = plan.kind === "todo";
   const planTitle = isTodoPlan ? "Todo" : "Plan";
   const hasDetails = plan.entries.length > 0 || Boolean(plan.text);
-  const buildMode = findBuildModeOption(chatOptions.modeOptions);
+  const target = findPlanModeToggleTarget([
+    {
+      canSet: chatOptions.canSetMode,
+      family: "agent",
+      options: chatOptions.modeOptions,
+      value: chatOptions.mode,
+    },
+    {
+      canSet: chatOptions.canSetPermissionMode,
+      family: "permission",
+      options: chatOptions.permissionModeOptions,
+      value: chatOptions.permissionMode,
+    },
+  ]);
   const canStartImplementation =
     plan.kind === "review" &&
     !isRunning &&
     !startingImplementation &&
     !chatOptions.configLoading &&
-    chatOptions.canSetMode &&
-    Boolean(buildMode);
+    Boolean(target?.buildMode);
 
   if (plan.presentation === "created" || plan.presentation === "updated") {
     return (
@@ -1368,10 +1380,14 @@ function PlanMessagePart({ plan }: { plan: ChatPlanData }) {
   }
 
   const startImplementation = async () => {
-    if (!buildMode || startingImplementation) return;
+    if (!target?.buildMode || startingImplementation) return;
     setStartingImplementation(true);
     try {
-      await setMode(buildMode.value);
+      if (target.family === "agent") {
+        await setMode(target.buildMode.value);
+      } else {
+        await setPermissionMode(target.buildMode.value);
+      }
       aui.thread().append({
         content: [{ text: "start implementation", type: "text" }],
       });

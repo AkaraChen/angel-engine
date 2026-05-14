@@ -3,9 +3,13 @@ use angel_engine::{
     ProtocolFlavor, SessionModelState, TransportOptions, TransportOutput, UserInput,
 };
 use angel_provider::acp::AcpAdapter;
+use angel_provider::cline::ClineAdapter;
 use angel_provider::codex::CodexAdapter;
+use angel_provider::copilot::CopilotAdapter;
+use angel_provider::cursor::CursorAdapter;
 use angel_provider::gemini::GeminiAdapter;
 use angel_provider::kimi::KimiAdapter;
+use angel_provider::qoder::QoderAdapter;
 use angel_provider::{InterpretedUserInput, ProtocolAdapter};
 use serde_json::Value;
 
@@ -21,10 +25,33 @@ impl RuntimeAdapter {
         let inner: Box<dyn ProtocolAdapter + Send + Sync> = match options.protocol {
             ClientProtocol::Acp if options.auth.need_auth => Box::new(AcpAdapter::standard()),
             ClientProtocol::Acp => Box::new(AcpAdapter::without_authentication()),
-            ClientProtocol::Kimi if options.auth.need_auth => Box::new(KimiAdapter::standard()),
-            ClientProtocol::Kimi => Box::new(KimiAdapter::without_authentication()),
+            ClientProtocol::Kimi if options.auth.need_auth => {
+                Box::new(KimiAdapter::standard_with_args(&options.args))
+            }
+            ClientProtocol::Kimi => {
+                Box::new(KimiAdapter::without_authentication_with_args(&options.args))
+            }
             ClientProtocol::Gemini if options.auth.need_auth => Box::new(GeminiAdapter::standard()),
             ClientProtocol::Gemini => Box::new(GeminiAdapter::without_authentication()),
+            ClientProtocol::Qoder => Box::new(QoderAdapter::without_authentication()),
+            ClientProtocol::Copilot if options.auth.need_auth => {
+                Box::new(CopilotAdapter::standard_with_args(&options.args))
+            }
+            ClientProtocol::Copilot => Box::new(CopilotAdapter::without_authentication_with_args(
+                &options.args,
+            )),
+            ClientProtocol::Cursor if options.auth.need_auth => {
+                Box::new(CursorAdapter::standard_with_args(&options.args))
+            }
+            ClientProtocol::Cursor => Box::new(CursorAdapter::without_authentication_with_args(
+                &options.args,
+            )),
+            ClientProtocol::Cline if options.auth.need_auth => {
+                Box::new(ClineAdapter::standard_with_args(&options.args))
+            }
+            ClientProtocol::Cline => Box::new(ClineAdapter::without_authentication_with_args(
+                &options.args,
+            )),
             ClientProtocol::CodexAppServer => Box::new(CodexAdapter::app_server()),
             ClientProtocol::Custom => Box::new(UnsupportedCustomAdapter),
         };

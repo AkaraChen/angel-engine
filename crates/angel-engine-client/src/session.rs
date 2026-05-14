@@ -54,12 +54,28 @@ pub struct SendTextRequest {
     pub mode: Option<String>,
     #[serde(default)]
     #[garde(skip)]
+    pub permission_mode: Option<String>,
+    #[serde(default)]
+    #[garde(skip)]
     pub reasoning_effort: Option<String>,
 }
 
 #[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize, Validate)]
 #[serde(rename_all = "camelCase")]
 pub struct SetModeRequest {
+    #[garde(length(min = 1))]
+    pub mode: String,
+    #[serde(default)]
+    #[garde(skip)]
+    pub cwd: Option<String>,
+    #[serde(default)]
+    #[garde(skip)]
+    pub remote_id: Option<String>,
+}
+
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize, Validate)]
+#[serde(rename_all = "camelCase")]
+pub struct SetPermissionModeRequest {
     #[garde(length(min = 1))]
     pub mode: String,
     #[serde(default)]
@@ -214,6 +230,26 @@ impl AngelSession {
             .ok_or_else(|| invalid_input("Runtime did not return a conversation snapshot."))
     }
 
+    pub fn set_permission_mode(
+        &mut self,
+        request: SetPermissionModeRequest,
+    ) -> ClientResult<ConversationSnapshot> {
+        let mode = selected_config_value(Some(&request.mode))
+            .ok_or_else(|| invalid_input("Permission mode is required."))?;
+        if self.active_turn.is_some() {
+            return Err(invalid_input(
+                "Cannot change permission mode while a chat turn is running.",
+            ));
+        }
+
+        self.ensure_started(true, request.cwd, request.remote_id)?;
+        let conversation_id = self.require_conversation_id()?.to_string();
+        let result = self.client.set_permission_mode(conversation_id, mode)?;
+        self.drain_configuration_updates(result.update)?;
+        self.thread_state()
+            .ok_or_else(|| invalid_input("Runtime did not return a conversation snapshot."))
+    }
+
     pub fn start_text_turn(&mut self, request: SendTextRequest) -> ClientResult<Vec<TurnRunEvent>> {
         let text = request.text.trim().to_string();
         let mut input = Vec::new();
@@ -232,6 +268,7 @@ impl AngelSession {
         let conversation_id = self.require_conversation_id()?.to_string();
         self.ensure_model(&conversation_id, request.model.as_deref())?;
         self.ensure_mode(&conversation_id, request.mode.as_deref())?;
+        self.ensure_permission_mode(&conversation_id, request.permission_mode.as_deref())?;
         self.ensure_reasoning_effort(&conversation_id, request.reasoning_effort.as_deref())?;
 
         let command = self
@@ -419,6 +456,21 @@ impl AngelSession {
         self.drain_configuration_updates(result.update)
     }
 
+    fn ensure_permission_mode(
+        &mut self,
+        conversation_id: &str,
+        requested_mode: Option<&str>,
+    ) -> ClientResult<()> {
+        let Some(mode) = selected_config_value(requested_mode) else {
+            return Ok(());
+        };
+        let result = self.client.send_thread_event(
+            conversation_id.to_string(),
+            ThreadEvent::set_permission_mode(mode),
+        )?;
+        self.drain_configuration_updates(result.update)
+    }
+
     fn drain_configuration_updates(&mut self, initial: ClientUpdate) -> ClientResult<()> {
         check_update_fault(&initial)?;
         while let Some(update) = self.client.next_update(Some(Duration::from_millis(250)))? {
@@ -463,7 +515,7 @@ impl AngelSession {
                     .into_iter()
                     .find(|turn| turn.id == turn_id)
             })
-            .map(|turn| turn.phase.contains("terminal"))
+            .map(|turn| turn.is_terminal)
             .unwrap_or(false)
     }
 

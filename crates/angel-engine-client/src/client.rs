@@ -8,8 +8,8 @@ use crate::error::ClientResult;
 use crate::event::ClientUpdate;
 use crate::process::AngelClient;
 use crate::settings::{
-    AvailableModeSettingSnapshot, ModelListSettingSnapshot, ReasoningLevelSettingSnapshot,
-    ThreadSettingsSnapshot,
+    AvailableModeSettingSnapshot, AvailablePermissionModeSettingSnapshot, ModelListSettingSnapshot,
+    ReasoningLevelSettingSnapshot, ThreadSettingsSnapshot,
 };
 use crate::snapshot::ClientSnapshot;
 use crate::thread::Thread;
@@ -117,6 +117,13 @@ where
         self.core.available_modes(conversation_id)
     }
 
+    pub fn permission_modes(
+        &self,
+        conversation_id: impl Into<String>,
+    ) -> ClientResult<AvailablePermissionModeSettingSnapshot> {
+        self.core.permission_modes(conversation_id)
+    }
+
     pub fn set_model(
         &mut self,
         conversation_id: impl Into<String>,
@@ -131,6 +138,14 @@ where
         mode: impl Into<String>,
     ) -> ClientResult<ClientCommandResult> {
         self.core.set_mode(conversation_id, mode)
+    }
+
+    pub fn set_permission_mode(
+        &mut self,
+        conversation_id: impl Into<String>,
+        mode: impl Into<String>,
+    ) -> ClientResult<ClientCommandResult> {
+        self.core.set_permission_mode(conversation_id, mode)
     }
 
     pub fn set_reasoning_level(

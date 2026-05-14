@@ -202,11 +202,8 @@ fn insert_codex_overrides(
         );
     }
     params.insert("summary".to_string(), json!("auto"));
-    if let Some(policy) = context.approvals.effective() {
-        params.insert(
-            "approvalPolicy".to_string(),
-            json!(codex_approval_policy(policy)),
-        );
+    if let Some(policy) = codex_context_permission_mode(context) {
+        params.insert("approvalPolicy".to_string(), json!(policy.id()));
     }
     let has_permissions = insert_codex_permissions(context, params);
     if !has_permissions
@@ -224,7 +221,7 @@ fn insert_codex_overrides(
         params.insert(
             "collaborationMode".to_string(),
             json!({
-                "mode": mode.id.as_str(),
+                "mode": mode.id(),
                 "settings": {
                     "model": model,
                     "developer_instructions": null,
@@ -310,14 +307,28 @@ fn codex_context_effort(context: &angel_engine::EffectiveContext) -> Option<&str
         .and_then(|reasoning| reasoning.effort.as_deref())
 }
 
-fn codex_context_mode(
-    context: &angel_engine::EffectiveContext,
-) -> Option<&angel_engine::AgentMode> {
+fn codex_context_mode(context: &angel_engine::EffectiveContext) -> Option<CodexCollaborationMode> {
     context
         .mode
         .effective()
         .and_then(Option::as_ref)
-        .filter(|mode| matches!(mode.id.as_str(), "default" | "plan"))
+        .and_then(|mode| CodexCollaborationMode::from_id(&mode.id))
+}
+
+fn codex_context_permission_mode(
+    context: &angel_engine::EffectiveContext,
+) -> Option<CodexPermissionMode> {
+    context
+        .permission_mode
+        .effective()
+        .and_then(Option::as_ref)
+        .and_then(|mode| CodexPermissionMode::from_id(&mode.id))
+        .or_else(|| {
+            context
+                .approvals
+                .effective()
+                .map(CodexPermissionMode::from_approval_policy)
+        })
 }
 
 fn codex_context_service_tier(context: &angel_engine::EffectiveContext) -> Option<&str> {
@@ -330,15 +341,6 @@ fn codex_context_service_tier(context: &angel_engine::EffectiveContext) -> Optio
 
 fn codex_reasoning_effort(effort: &str) -> &str {
     if effort == "high" { "xhigh" } else { effort }
-}
-
-fn codex_approval_policy(policy: &angel_engine::ApprovalPolicy) -> &'static str {
-    match policy {
-        angel_engine::ApprovalPolicy::Never => "never",
-        angel_engine::ApprovalPolicy::OnRequest => "on-request",
-        angel_engine::ApprovalPolicy::OnFailure => "on-failure",
-        angel_engine::ApprovalPolicy::UnlessTrusted => "untrusted",
-    }
 }
 
 fn codex_sandbox_policy(sandbox: &angel_engine::SandboxProfile) -> &str {
@@ -378,11 +380,8 @@ fn insert_codex_thread_overrides(
             codex_service_tier_value(service_tier),
         );
     }
-    if let Some(policy) = context.approvals.effective() {
-        params.insert(
-            "approvalPolicy".to_string(),
-            json!(codex_approval_policy(policy)),
-        );
+    if let Some(policy) = codex_context_permission_mode(context) {
+        params.insert("approvalPolicy".to_string(), json!(policy.id()));
     }
     if !insert_codex_permissions(context, params)
         && let Some(sandbox) = context.sandbox.effective()
@@ -393,7 +392,7 @@ fn insert_codex_thread_overrides(
         params.insert(
             "collaborationMode".to_string(),
             json!({
-                "mode": mode.id.as_str(),
+                "mode": mode.id(),
                 "settings": {
                     "model": model,
                     "developer_instructions": null,
@@ -553,6 +552,102 @@ mod tests {
             params["collaborationMode"]["settings"]["model"],
             json!("gpt-5.5")
         );
+    }
+
+    #[test]
+    fn turn_start_keeps_collaboration_mode_and_permission_mode_independent() {
+        let adapter = CodexAdapter::app_server();
+        let mut engine = AngelEngine::with_available_runtime(
+            angel_engine::ProtocolFlavor::CodexAppServer,
+            angel_engine::RuntimeCapabilities::new("test"),
+            adapter.capabilities(),
+        );
+        let conversation_id = ConversationId::new("conv");
+        engine
+            .apply_event(EngineEvent::ConversationProvisionStarted {
+                id: conversation_id.clone(),
+                remote: RemoteConversationId::Known("thread".to_string()),
+                op: angel_engine::ProvisionOp::New,
+                capabilities: adapter.capabilities(),
+            })
+            .expect("conversation provision");
+        engine
+            .apply_event(EngineEvent::ConversationReady {
+                id: conversation_id.clone(),
+                remote: Some(RemoteConversationId::Known("thread".to_string())),
+                context: ContextPatch::empty(),
+                capabilities: None,
+            })
+            .expect("conversation ready");
+        engine
+            .apply_event(EngineEvent::SessionModelsUpdated {
+                conversation_id: conversation_id.clone(),
+                models: SessionModelState {
+                    current_model_id: "gpt-5.5".to_string(),
+                    available_models: vec![SessionModel {
+                        id: "gpt-5.5".to_string(),
+                        name: "GPT-5.5".to_string(),
+                        description: None,
+                    }],
+                },
+            })
+            .expect("model state");
+        engine
+            .apply_event(EngineEvent::SessionModesUpdated {
+                conversation_id: conversation_id.clone(),
+                modes: SessionModeState {
+                    current_mode_id: "default".to_string(),
+                    available_modes: vec![
+                        SessionMode {
+                            id: "default".to_string(),
+                            name: "Default".to_string(),
+                            description: None,
+                        },
+                        SessionMode {
+                            id: "plan".to_string(),
+                            name: "Plan".to_string(),
+                            description: None,
+                        },
+                    ],
+                },
+            })
+            .expect("mode state");
+        engine
+            .apply_event(EngineEvent::SessionPermissionModesUpdated {
+                conversation_id: conversation_id.clone(),
+                modes: SessionPermissionModeState {
+                    current_mode_id: "on-request".to_string(),
+                    available_modes: CodexPermissionMode::ALL
+                        .into_iter()
+                        .map(|mode| SessionPermissionMode {
+                            id: mode.id().to_string(),
+                            name: mode.name().to_string(),
+                            description: mode.description().map(str::to_string),
+                        })
+                        .collect(),
+                },
+            })
+            .expect("permission mode state");
+        engine
+            .set_mode(conversation_id.clone(), "plan")
+            .expect("set mode");
+        engine
+            .set_permission_mode(conversation_id.clone(), "never")
+            .expect("set permission mode");
+
+        let plan = engine
+            .plan_command(angel_engine::EngineCommand::StartTurn {
+                conversation_id,
+                input: vec![angel_engine::UserInput::text("make a plan")],
+                overrides: angel_engine::TurnOverrides::default(),
+            })
+            .expect("start turn");
+        let params = adapter
+            .encode_params(&engine, &plan.effects[0], &TransportOptions::default())
+            .expect("turn start params");
+
+        assert_eq!(params["collaborationMode"]["mode"], json!("plan"));
+        assert_eq!(params["approvalPolicy"], json!("never"));
     }
 
     #[test]

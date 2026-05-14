@@ -285,6 +285,12 @@ pub(crate) fn events_from_engine_event(
         | EngineEvent::SessionModeChanged {
             conversation_id, ..
         }
+        | EngineEvent::SessionPermissionModesUpdated {
+            conversation_id, ..
+        }
+        | EngineEvent::SessionPermissionModeChanged {
+            conversation_id, ..
+        }
         | EngineEvent::SessionModelsUpdated {
             conversation_id, ..
         }

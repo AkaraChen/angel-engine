@@ -84,6 +84,7 @@ export function registerChatStreamIpc() {
       model: request.input.model,
       projectId: request.input.projectId,
       mode: request.input.mode,
+      permissionMode: request.input.permissionMode,
       prewarmId: request.input.prewarmId,
       reasoningEffort: request.input.reasoningEffort,
       runtime: request.input.runtime ?? undefined,

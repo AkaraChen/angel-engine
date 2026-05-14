@@ -9,6 +9,7 @@ import type {
   ChatRuntimeConfigInput,
   ChatSendInput,
   ChatSetModeInput,
+  ChatSetPermissionModeInput,
   ChatSetRuntimeInput,
 } from "../../../shared/chat";
 import { normalizeChatAttachmentsInput } from "../../../shared/chat";
@@ -20,6 +21,7 @@ import {
   prewarmChat,
   sendChat,
   setChatMode,
+  setChatPermissionMode,
   setChatRuntime,
 } from "./angel-client";
 import {
@@ -36,6 +38,7 @@ import {
   chatRuntimeConfigInput,
   chatSendInput,
   chatSetModeInput,
+  chatSetPermissionModeInput,
   chatSetRuntimeInput,
 } from "./schemas";
 
@@ -54,6 +57,7 @@ export const chatIpcRouter = {
         model: value.model,
         projectId: value.projectId,
         mode: value.mode,
+        permissionMode: value.permissionMode,
         reasoningEffort: value.reasoningEffort,
         runtime: value.runtime ?? undefined,
         title: value.title,
@@ -129,6 +133,16 @@ export const chatIpcRouter = {
       return setChatMode(value);
     }),
 
+  chatsSetPermissionMode: t.procedure
+    .input<ChatSetPermissionModeInput>()
+    .action(async ({ input }) => {
+      const value = chatSetPermissionModeInput(input);
+      if (value instanceof arkType.errors) {
+        throw new Error("Chat permission mode input is required.");
+      }
+      return setChatPermissionMode(value);
+    }),
+
   chatsSetRuntime: t.procedure
     .input<ChatSetRuntimeInput>()
     .action(async ({ input }) => {
@@ -186,6 +200,7 @@ export const chatIpcRouter = {
       model: value.model,
       projectId: value.projectId,
       mode: value.mode,
+      permissionMode: value.permissionMode,
       prewarmId: value.prewarmId,
       reasoningEffort: value.reasoningEffort,
       runtime: value.runtime ?? undefined,

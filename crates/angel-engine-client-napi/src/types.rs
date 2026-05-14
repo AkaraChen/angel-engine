@@ -209,6 +209,7 @@ pub struct ConversationSnapshot {
 #[napi(object)]
 pub struct AgentStateSnapshot {
     pub current_mode: Option<String>,
+    pub current_permission_mode: Option<String>,
 }
 
 #[napi(object)]
@@ -258,6 +259,7 @@ pub struct DisplayToolActionSnapshot {
 pub struct ContextSnapshot {
     pub model: Option<String>,
     pub mode: Option<String>,
+    pub permission_mode: Option<String>,
     pub cwd: Option<String>,
     pub additional_directories: Vec<String>,
     pub approval_policy: Option<String>,
@@ -271,6 +273,7 @@ pub struct ThreadSettingsSnapshot {
     pub reasoning_level: ReasoningLevelSettingSnapshot,
     pub model_list: ModelListSettingSnapshot,
     pub available_modes: AvailableModeSettingSnapshot,
+    pub permission_modes: AvailablePermissionModeSettingSnapshot,
 }
 
 #[napi(object)]
@@ -308,6 +311,14 @@ pub struct AvailableModeSettingSnapshot {
 }
 
 #[napi(object)]
+pub struct AvailablePermissionModeSettingSnapshot {
+    pub current_mode_id: Option<String>,
+    pub available_modes: Vec<PermissionModeOptionSnapshot>,
+    pub config_option_id: Option<String>,
+    pub can_set: bool,
+}
+
+#[napi(object)]
 pub struct ModelOptionSnapshot {
     pub id: String,
     pub name: String,
@@ -317,6 +328,14 @@ pub struct ModelOptionSnapshot {
 
 #[napi(object)]
 pub struct ModeOptionSnapshot {
+    pub id: String,
+    pub name: String,
+    pub description: Option<String>,
+    pub selected: bool,
+}
+
+#[napi(object)]
+pub struct PermissionModeOptionSnapshot {
     pub id: String,
     pub name: String,
     pub description: Option<String>,
@@ -363,6 +382,7 @@ pub struct TurnSnapshot {
     #[napi(ts_type = "`${RemoteKind}`")]
     pub remote_kind: RemoteKind,
     pub phase: String,
+    pub is_terminal: bool,
     pub input_text: String,
     pub output_text: String,
     pub reasoning_text: String,
@@ -552,11 +572,19 @@ pub struct SendTextRequest {
     pub remote_id: Option<String>,
     pub model: Option<String>,
     pub mode: Option<String>,
+    pub permission_mode: Option<String>,
     pub reasoning_effort: Option<String>,
 }
 
 #[napi(object)]
 pub struct SetModeRequest {
+    pub mode: String,
+    pub cwd: Option<String>,
+    pub remote_id: Option<String>,
+}
+
+#[napi(object)]
+pub struct SetPermissionModeRequest {
     pub mode: String,
     pub cwd: Option<String>,
     pub remote_id: Option<String>,

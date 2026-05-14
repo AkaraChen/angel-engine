@@ -42,7 +42,7 @@ export class ClaudeCodeEngineAdapter {
     const context = asMutableObject(capabilities.context);
     context.additional_directories = "Supported";
     context.config = "Supported";
-    context.mode = "Supported";
+    context.mode = "Unsupported";
     context.turn_overrides = "Supported";
     const history = asMutableObject(capabilities.history);
     history.hydrate = "Supported";
@@ -110,17 +110,7 @@ export class ClaudeCodeEngineAdapter {
     }
 
     if (method === "session/set_mode") {
-      const mode = stringField(fields, "modeId");
-      return {
-        completedRequests,
-        events: mode
-          ? [
-              contextUpdated(conversationId, [
-                { Mode: { mode: { id: mode }, scope: "TurnAndFuture" } },
-              ]),
-            ]
-          : [],
-      };
+      return { completedRequests };
     }
 
     if (method === "session/set_model") {

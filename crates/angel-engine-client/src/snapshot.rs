@@ -4,8 +4,8 @@ use angel_engine::{
     ActionKind, ActionOutputDelta, ActionPhase, ActionState, AgentMode, AvailableCommand,
     ContentDelta, ContentPart, ConversationLifecycle, ConversationState, EffectiveContext,
     ElicitationKind, ElicitationPhase, ElicitationState, HistoryReplayEntry, HistoryRole,
-    PlanEntryStatus, QuestionValueType, RuntimeState, SessionUsageCost, SessionUsageState,
-    TurnPhase, TurnState, UserQuestion, UserQuestionOption, UserQuestionSchema,
+    PermissionMode, PlanEntryStatus, QuestionValueType, RuntimeState, SessionUsageCost,
+    SessionUsageState, TurnPhase, TurnState, UserQuestion, UserQuestionOption, UserQuestionSchema,
 };
 use serde::{Deserialize, Serialize};
 
@@ -182,6 +182,7 @@ pub(crate) fn conversation_snapshot(conversation: &ConversationState) -> Convers
 #[serde(rename_all = "camelCase")]
 pub struct AgentStateSnapshot {
     pub current_mode: Option<String>,
+    pub current_permission_mode: Option<String>,
 }
 
 impl AgentStateSnapshot {
@@ -194,7 +195,15 @@ impl AgentStateSnapshot {
             .current_mode_id
             .clone()
             .or_else(|| context.mode.clone());
-        Self { current_mode }
+        let current_permission_mode = settings
+            .permission_modes
+            .current_mode_id
+            .clone()
+            .or_else(|| context.permission_mode.clone());
+        Self {
+            current_mode,
+            current_permission_mode,
+        }
     }
 }
 
@@ -548,6 +557,7 @@ pub(crate) fn display_message_from_parts(
 pub struct ContextSnapshot {
     pub model: Option<String>,
     pub mode: Option<String>,
+    pub permission_mode: Option<String>,
     pub cwd: Option<String>,
     pub additional_directories: Vec<String>,
     pub approval_policy: Option<String>,
@@ -565,6 +575,11 @@ impl From<&EffectiveContext> for ContextSnapshot {
                 .effective()
                 .and_then(Option::as_ref)
                 .map(|AgentMode { id }| id.clone()),
+            permission_mode: context
+                .permission_mode
+                .effective()
+                .and_then(Option::as_ref)
+                .map(|PermissionMode { id }| id.clone()),
             cwd: context
                 .cwd
                 .effective()
@@ -610,6 +625,7 @@ pub struct TurnSnapshot {
     pub remote_id: Option<String>,
     pub remote_kind: String,
     pub phase: String,
+    pub is_terminal: bool,
     pub input_text: String,
     pub output_text: String,
     pub reasoning_text: String,
@@ -655,6 +671,7 @@ impl From<&TurnState> for TurnSnapshot {
             remote_id,
             remote_kind,
             phase: turn_phase_label(&turn.phase),
+            is_terminal: turn.is_terminal(),
             input_text: turn
                 .input
                 .iter()

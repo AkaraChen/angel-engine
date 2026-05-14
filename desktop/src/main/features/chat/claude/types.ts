@@ -26,7 +26,7 @@ export type SessionConfigValueJson = {
   value: string;
 };
 
-export type SessionModeJson = {
+export type SessionPermissionModeJson = {
   description: string | null;
   id: string;
   name: string;

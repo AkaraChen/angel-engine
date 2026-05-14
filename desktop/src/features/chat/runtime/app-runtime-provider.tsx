@@ -34,6 +34,7 @@ type AppRuntimeProviderProps = {
   ) => void;
   prewarmId?: string;
   projectId?: string | null;
+  permissionMode?: string;
   projectPath?: string;
   reasoningEffort?: string;
   runtime?: string;
@@ -62,6 +63,7 @@ export function AppRuntimeProvider({
   onChatUpdated,
   prewarmId,
   projectId,
+  permissionMode,
   projectPath,
   reasoningEffort,
   runtime: selectedRuntime,
@@ -91,6 +93,7 @@ export function AppRuntimeProvider({
     onChatUpdated,
     prewarmId,
     projectId,
+    permissionMode,
     reasoningEffort,
     runtime: selectedRuntime,
     runtimeConfig,

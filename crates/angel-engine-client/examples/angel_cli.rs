@@ -478,7 +478,7 @@ impl MultiRuntimeCli {
                     .into_iter()
                     .find(|turn| turn.id == turn_id)
             })
-            .map(|turn| turn.phase.contains("terminal"))
+            .map(|turn| turn.is_terminal)
             .unwrap_or(false)
     }
 }

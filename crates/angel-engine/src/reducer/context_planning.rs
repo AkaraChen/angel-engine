@@ -96,6 +96,15 @@ fn context_update_fields(update: &ContextUpdate) -> Option<Vec<(String, String)>
                 mode.as_ref().map(|mode| mode.id.as_str()),
             );
         }
+        ContextUpdate::PermissionMode { scope, mode } => {
+            fields.push(("contextUpdate".to_string(), "permissionMode".to_string()));
+            fields.push(("scope".to_string(), context_scope_name(*scope).to_string()));
+            push_optional_field(
+                &mut fields,
+                "permissionMode",
+                mode.as_ref().map(|mode| mode.id.as_str()),
+            );
+        }
         ContextUpdate::Cwd { scope, cwd } => {
             fields.push(("contextUpdate".to_string(), "cwd".to_string()));
             fields.push(("scope".to_string(), context_scope_name(*scope).to_string()));

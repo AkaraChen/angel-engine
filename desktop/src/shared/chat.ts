@@ -14,6 +14,7 @@ export type Chat = {
 export type ChatCreateInput = {
   model?: string | null;
   mode?: string | null;
+  permissionMode?: string | null;
   projectId?: string;
   reasoningEffort?: string | null;
   runtime?: string;
@@ -40,6 +41,11 @@ export type ChatSetModeInput = {
   mode: string;
 };
 
+export type ChatSetPermissionModeInput = {
+  chatId: string;
+  mode: string;
+};
+
 export type ChatSetRuntimeInput = {
   chatId: string;
   runtime: string;
@@ -59,19 +65,23 @@ export type ChatAvailableCommand = {
 
 export type ChatAgentState = {
   currentMode?: string | null;
+  currentPermissionMode?: string | null;
 };
 
 export type ChatRuntimeConfig = {
   agentState?: ChatAgentState;
   canSetModel?: boolean;
   canSetMode?: boolean;
+  canSetPermissionMode?: boolean;
   canSetReasoningEffort?: boolean;
   currentMode?: string | null;
   currentModel?: string | null;
+  currentPermissionMode?: string | null;
   currentReasoningEffort?: string | null;
   availableCommands?: ChatAvailableCommand[];
   modes: ChatRuntimeConfigOption[];
   models: ChatRuntimeConfigOption[];
+  permissionModes: ChatRuntimeConfigOption[];
   reasoningEfforts: ChatRuntimeConfigOption[];
 };
 
@@ -654,6 +664,11 @@ export type ChatSetModeResult = {
   config: ChatRuntimeConfig;
 };
 
+export type ChatSetPermissionModeResult = {
+  chat: Chat;
+  config: ChatRuntimeConfig;
+};
+
 export type ChatAttachmentInput =
   | {
       data: string;
@@ -694,6 +709,7 @@ export type ChatSendInput = {
   chatId?: string;
   model?: string | null;
   mode?: string | null;
+  permissionMode?: string | null;
   prewarmId?: string;
   projectId?: string;
   reasoningEffort?: string | null;

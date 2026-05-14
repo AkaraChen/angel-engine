@@ -7,15 +7,19 @@ import type {
   InspectRequest,
   SendTextRequest,
   SetModeRequest,
+  SetPermissionModeRequest,
   TurnRunResult,
 } from "@angel-engine/client-napi";
 import {
   ClientProtocol,
+  EngineEventContextScope,
+  EngineEventContextUpdateType,
   EngineEventActionKind,
   EngineEventActionOutputKind,
   EngineEventActionPhase,
   EngineEventElicitationKind,
   EngineEventElicitationPhase,
+  EngineEventType,
   EngineEventTurnOutcome,
 } from "@angel-engine/client-napi";
 import type {
@@ -52,9 +56,9 @@ import {
   availableCommandsUpdated,
   configValuesFromIds,
   failedOutcome,
-  modeOptionsFromIds,
   modelInfoForId,
   modelStateFromModelInfo,
+  permissionModeOptionsFromIds,
   reasoningDelta,
   sessionModelsUpdated,
   sessionUsageUpdated,
@@ -76,7 +80,7 @@ import type {
   EngineEventJson,
   PendingPermission,
   SessionConfigValueJson,
-  SessionModeJson,
+  SessionPermissionModeJson,
 } from "./types";
 import {
   stringifyToolResult,
@@ -116,9 +120,9 @@ export class DesktopClaudeSession {
   private readonly pendingPermissions = new Map<string, PendingPermission>();
   private activeQuery?: Query;
   private availableEfforts: SessionConfigValueJson[] = [];
-  private availableModes: SessionModeJson[] = [];
+  private availablePermissionModes: SessionPermissionModeJson[] = [];
   private conversationId?: string;
-  private currentMode = "default";
+  private currentPermissionMode = "default";
   private currentModel?: string;
   private currentReasoningEffort = "high";
   private modelInfos: ModelInfo[] = [];
@@ -179,15 +183,32 @@ export class DesktopClaudeSession {
 
   setMode(request: SetModeRequest): Promise<ConversationSnapshot> {
     return this.enqueue(async () => {
+      this.ensureConversation({
+        cwd: request.cwd,
+        remoteId: request.remoteId,
+      });
+      return this.requireConversation();
+    });
+  }
+
+  setPermissionMode(
+    request: SetPermissionModeRequest,
+  ): Promise<ConversationSnapshot> {
+    return this.enqueue(async () => {
       const conversation = this.ensureConversation({
         cwd: request.cwd,
         remoteId: request.remoteId,
       });
-      this.currentMode = normalizeClaudeMode(request.mode);
+      this.currentPermissionMode = normalizeClaudeMode(request.mode);
       this.applyEngineEvents([
-        this.sessionModesUpdated(conversation.id),
+        this.sessionPermissionModesUpdated(conversation.id),
         contextUpdated(conversation.id, [
-          { Mode: { mode: { id: this.currentMode }, scope: "TurnAndFuture" } },
+          {
+            [EngineEventContextUpdateType.PermissionMode]: {
+              mode: { id: this.currentPermissionMode },
+              scope: EngineEventContextScope.TurnAndFuture,
+            },
+          },
         ]),
       ]);
       return this.requireConversation();
@@ -280,7 +301,9 @@ export class DesktopClaudeSession {
       ),
       includePartialMessages: true,
       model: request.model ?? this.currentModel,
-      permissionMode: normalizeClaudeMode(request.mode ?? this.currentMode),
+      permissionMode: normalizeClaudeMode(
+        request.permissionMode ?? this.currentPermissionMode,
+      ),
       resume: request.remoteId,
     };
   }
@@ -349,7 +372,7 @@ export class DesktopClaudeSession {
     if (message.subtype !== "init") return [];
     const init = message as SDKSystemMessage;
     active.sessionId = init.session_id;
-    this.currentMode = normalizeClaudeMode(init.permissionMode);
+    this.currentPermissionMode = normalizeClaudeMode(init.permissionMode);
     this.currentModel = init.model;
     active.model = init.model;
     this.updateEffortsForModel(init.model);
@@ -358,9 +381,9 @@ export class DesktopClaudeSession {
       { Cwd: { cwd: init.cwd, scope: "Conversation" } },
       { Model: { model: init.model, scope: "TurnAndFuture" } },
       {
-        Mode: {
-          mode: { id: normalizeClaudeMode(init.permissionMode) },
-          scope: "TurnAndFuture",
+        [EngineEventContextUpdateType.PermissionMode]: {
+          mode: { id: this.currentPermissionMode },
+          scope: EngineEventContextScope.TurnAndFuture,
         },
       },
     ]);
@@ -382,7 +405,7 @@ export class DesktopClaudeSession {
         })),
       ),
     );
-    updates.push(this.sessionModesUpdated(active.conversationId));
+    updates.push(this.sessionPermissionModesUpdated(active.conversationId));
     updates.push(
       sessionModelsUpdated(
         active.conversationId,
@@ -735,7 +758,7 @@ export class DesktopClaudeSession {
 
   private initialConversationEvents(conversationId: string): EngineEventJson[] {
     return compactEvents([
-      this.sessionModesUpdated(conversationId),
+      this.sessionPermissionModesUpdated(conversationId),
       this.reasoningConfigUpdated(conversationId),
     ]);
   }
@@ -747,7 +770,7 @@ export class DesktopClaudeSession {
       prompt: emptyClaudePrompt(),
       options: {
         cwd,
-        permissionMode: normalizeClaudeMode(this.currentMode),
+        permissionMode: normalizeClaudeMode(this.currentPermissionMode),
       },
     });
     try {
@@ -772,7 +795,10 @@ export class DesktopClaudeSession {
       loadClaudePermissionModeIds(),
       loadClaudeEffortLevelIds(),
     ]);
-    this.availableModes = modeOptionsFromIds(modeIds, this.currentMode);
+    this.availablePermissionModes = permissionModeOptionsFromIds(
+      modeIds,
+      this.currentPermissionMode,
+    );
     this.updateEffortsForModel(currentModel, fallbackEffortLevels);
 
     this.applyEngineEvents(
@@ -782,7 +808,7 @@ export class DesktopClaudeSession {
           conversationId,
           modelStateFromModelInfo(result.models, currentModel),
         ),
-        this.sessionModesUpdated(conversationId),
+        this.sessionPermissionModesUpdated(conversationId),
         this.reasoningConfigUpdated(conversationId),
       ]),
     );
@@ -814,12 +840,17 @@ export class DesktopClaudeSession {
     request: SendTextRequest,
   ): void {
     const events: EngineEventJson[] = [];
-    if (request.mode) {
-      this.currentMode = normalizeClaudeMode(request.mode);
-      events.push(this.sessionModesUpdated(conversationId));
+    if (request.permissionMode) {
+      this.currentPermissionMode = normalizeClaudeMode(request.permissionMode);
+      events.push(this.sessionPermissionModesUpdated(conversationId));
       events.push(
         contextUpdated(conversationId, [
-          { Mode: { mode: { id: this.currentMode }, scope: "TurnAndFuture" } },
+          {
+            [EngineEventContextUpdateType.PermissionMode]: {
+              mode: { id: this.currentPermissionMode },
+              scope: EngineEventContextScope.TurnAndFuture,
+            },
+          },
         ]),
       );
     }
@@ -858,15 +889,20 @@ export class DesktopClaudeSession {
     }
   }
 
-  private sessionModesUpdated(conversationId: string): EngineEventJson {
+  private sessionPermissionModesUpdated(
+    conversationId: string,
+  ): EngineEventJson {
     return {
-      SessionModesUpdated: {
+      [EngineEventType.SessionPermissionModesUpdated]: {
         conversation_id: conversationId,
         modes: {
-          available_modes: this.availableModes.length
-            ? this.availableModes
-            : modeOptionsFromIds([this.currentMode], this.currentMode),
-          current_mode_id: this.currentMode,
+          available_modes: this.availablePermissionModes.length
+            ? this.availablePermissionModes
+            : permissionModeOptionsFromIds(
+                [this.currentPermissionMode],
+                this.currentPermissionMode,
+              ),
+          current_mode_id: this.currentPermissionMode,
         },
       },
     };

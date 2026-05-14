@@ -38,6 +38,7 @@ export type EngineRuntimeOptions = {
   ) => void;
   prewarmId?: string;
   projectId?: string | null;
+  permissionMode?: string;
   reasoningEffort?: string;
   runtime?: string;
   runtimeConfig?: ChatRuntimeConfig;
@@ -55,6 +56,7 @@ export function useEngineRuntime({
   onChatUpdated,
   prewarmId,
   projectId,
+  permissionMode,
   reasoningEffort,
   runtime,
   runtimeConfig,
@@ -76,6 +78,7 @@ export function useEngineRuntime({
     onChatUpdated,
     prewarmId,
     projectId,
+    permissionMode,
     reasoningEffort,
     runtime,
   });
@@ -88,6 +91,7 @@ export function useEngineRuntime({
     onChatUpdated,
     prewarmId,
     projectId,
+    permissionMode,
     reasoningEffort,
     runtime,
   };
@@ -134,6 +138,7 @@ export function useEngineRuntime({
           chatId: latestOptionsRef.current.chatId,
           model: latestOptionsRef.current.model,
           mode: modeOverride ?? latestOptionsRef.current.mode,
+          permissionMode: latestOptionsRef.current.permissionMode,
           prewarmId: latestOptionsRef.current.prewarmId,
           projectId: latestOptionsRef.current.projectId ?? undefined,
           reasoningEffort: latestOptionsRef.current.reasoningEffort,

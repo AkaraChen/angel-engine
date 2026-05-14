@@ -15,8 +15,11 @@ Electron CDP target 后按 snapshot/ref 工作流执行；不要直接打开 Vit
 
 - 用户能在 `New chat`、standalone chat、project chat 三种入口稳定选择并使用该
   agent。
-- agent 的 model、reasoning effort、mode、tool/permission/input 能力来自
+- agent 的 model、reasoning effort、agent mode、permission mode、tool/permission/input 能力来自
   engine/client snapshot，而不是 desktop 侧硬编码。
+- `Plan` / `Build` 快捷切换必须按当前 runtime 的 snapshot 选择正确通道：有些 agent
+  通过 agent mode 实现 plan，有些通过 permission mode 实现 plan，不能在 desktop 侧
+  假设二者等价。
 - Permission 测试验证的是 Angel Engine 对 agent 边界事件的归一化、投影和 resolve
   流程，不评价 agent 本身的默认权限策略。
 - 消息、reasoning、tool call、permission、elicitation、plan、todo、附件、文件
@@ -93,7 +96,7 @@ issue 写到单独的 run report，例如
 - Notes:
 - Coverage matrix:
   - Basic send:
-  - Model/effort/mode config:
+  - Model/effort/agent mode/permission mode config:
   - Plan/build or equivalent planning mode:
   - Cancel/interrupt:
   - Permission request:
@@ -130,8 +133,8 @@ snapshot config。
 - [ ] 打开 agent/model/reasoning 菜单时，agent 列表包含 canonical product ids 对应
       的显示名，例如 `Codex`。
 - [ ] 选择 `Codex` 后不清空 composer 文本，不跳 route，不创建多余 chat。
-- [ ] runtime config inspect 完成后 model、reasoning effort、available modes 正常显
-      示；加载失败时 UI 有可见错误或 fallback，不崩溃。
+- [ ] runtime config inspect 完成后 model、reasoning effort、agent mode、permission
+      mode 正常显示；加载失败时 UI 有可见错误或 fallback，不崩溃。
 - [ ] 连续打开/关闭配置菜单不会重复创建不可见运行态，也不会让 model 列表回到硬编码
       默认值。
 - [ ] Console/errors 没有初始化阶段的未捕获异常。
@@ -139,18 +142,26 @@ snapshot config。
 ## 2. Agent / Model / Reasoning / Mode 配置
 
 覆盖：composer menu、draft config、persisted unstarted chat、started chat 禁用逻辑、
-`set_model`、`set_mode`。
+`set_model`、`set_mode`、`set_permission_mode`。
 
 - [ ] 在 `New chat` 中切换 agent 到 `Codex`，model/effort 列表随 Codex snapshot 更
       新。
 - [ ] 在 model 搜索框输入关键字时菜单不意外关闭，过滤结果可键盘和鼠标选择。
 - [ ] 切换 model 后 composer 菜单、header/runtime config 显示同一个值。
 - [ ] 切换 reasoning effort 后 composer 菜单、header/runtime config 显示同一个值。
-- [ ] 切换 `Plan` / `Build` 后按钮状态正确，下一次发送使用所选 mode。
+- [ ] Agent Mode 菜单只显示 engine/client 投影出的 agent mode；Permission Mode 菜单
+      只显示 engine/client 投影出的 permission mode，二者不会互相污染。
+- [ ] 切换 agent mode 后 composer 菜单、header/runtime config 显示同一个值，下一轮
+      发送使用同一个 agent mode。
+- [ ] 切换 permission mode 后 composer 菜单、header/runtime config 显示同一个值，下
+      一轮发送使用同一个 permission mode。
+- [ ] 切换 `Plan` / `Build` 快捷按钮后状态正确，并且下一轮发送使用该 agent 实际支持
+      的 agent mode 或 permission mode。
 - [ ] 在未发送消息的 persisted chat 中可以切换 agent，并清除旧 agent 不兼容的
-      model/effort/mode。
+      model/effort/agent mode/permission mode。
 - [ ] 在已开始 chat 中 agent 切换入口禁用或无法提交，并显示明确原因。
-- [ ] 运行中不能切换 agent/model/effort/mode；UI 给出 disabled 状态或说明。
+- [ ] 运行中不能切换 agent/model/effort/agent mode/permission mode；UI 给出 disabled
+      状态或说明。
 - [ ] 同一 chat 中第二次发送沿用上一轮确认过的 runtime config，除非用户显式修改。
 
 ## 3. Standalone Chat 基础对话
@@ -320,25 +331,29 @@ lines in two bullets.
 
 ## 9. Plan / Build / 规划模式流程
 
-覆盖：agent plan/build 或等价规划模式、plan card、todo、Start implementation、mode
-transition。
+覆盖：agent plan/build 或等价规划模式、plan card、todo、Start implementation、agent
+mode / permission mode transition。
 
-- [ ] 对每个 agent 先从 runtime snapshot/UI 记录可用 mode；如果有 `Plan`、`Ask`、
-      `Agent`、`Auto Edit`、`Act`、`Build` 等规划/执行模式，都要至少覆盖一次切换和
-      发送。
+- [ ] 对每个 agent 先从 runtime snapshot/UI 分别记录可用 agent mode 和 permission
+      mode；如果有 `Plan`、`Ask`、`Agent`、`Auto Edit`、`Act`、`Build` 等规划/执行模
+      式，都要至少覆盖一次切换和发送。
 - [ ] 切到 `Plan` 或该 agent 的等价规划模式后发送规划类 prompt，runtime 使用所选
-      mode，而不是回落到默认 build/act。
+      agent mode 或 permission mode，而不是回落到默认 build/act。
 - [ ] plan/todo card 或普通 assistant plan text 正常显示，内容可读；只有 runtime
       明确输出 structured plan/todo 时才要求状态更新清楚。
-- [ ] 如果出现 `Start implementation`，点击后切到 build 模式并发送实现请求。
+- [ ] 如果出现 `Start implementation`，点击后通过正确的 agent mode 或 permission
+      mode 切到 build/act 模式并发送实现请求。
 - [ ] build 实现期间 permission、tool call、file edit 正常走同一个 chat。
-- [ ] 从 build 再切回 plan 时，按钮状态和 runtime mode 一致。
+- [ ] 从 build 再切回 plan 时，按钮状态和 runtime agent mode / permission mode 一
+      致。
 - [ ] 运行中 plan/build toggle 禁用。
 - [ ] hydrate 后 structured plan/todo 历史可恢复，不变成普通未结构化 JSON；如果该
       runtime 原本只输出普通 assistant plan text，则按普通 assistant message
       恢复是正确行为。
 - [ ] 如果该 agent 没有规划模式，run report 记录为 `plan mode not supported`；如果
       只输出普通 assistant plan text，不记录为失败。
+- [ ] 如果该 agent 明确不支持 plan mode，不继续强行测试 plan flow，只在 run report
+      记录 `plan mode not supported` 和对应 snapshot/UI 证据。
 
 建议 Codex prompt：
 
@@ -428,6 +443,11 @@ Codex 额外验证：
 - [ ] Codex hydrate replay 中的历史 chunks 被 adapter 规范化后进入 engine state。
 - [ ] Codex server request/permission 转成 protocol-neutral elicitation 后显示在 UI。
 - [ ] Codex tool/action phase 在 desktop 中不依赖 raw Codex payload 分支。
+- [ ] Claude Code 的 plan mode 通过 permission mode 投影到 desktop，不通过 ACP 或
+      agent mode 兼容分支伪装。
+- [ ] ACP/OpenCode 如果通过 config option 暴露 permission/approval mode，desktop
+      使用 permission mode primitive；如果通过 session mode 暴露 plan/build，则使用
+      agent mode primitive。
 
 测试其他 agent 时，在这里补该 agent 的专属能力，例如 ACP session update、Claude
 AskUserQuestion、OpenCode/Qoder/Copilot/Gemini 的 mode/config 差异。

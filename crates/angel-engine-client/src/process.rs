@@ -9,8 +9,8 @@ use crate::core::{AngelClientCore, process_log};
 use crate::error::{ClientError, ClientResult};
 use crate::event::{ClientLogKind, ClientUpdate};
 use crate::settings::{
-    AvailableModeSettingSnapshot, ModelListSettingSnapshot, ReasoningLevelSettingSnapshot,
-    ThreadSettingsSnapshot,
+    AvailableModeSettingSnapshot, AvailablePermissionModeSettingSnapshot, ModelListSettingSnapshot,
+    ReasoningLevelSettingSnapshot, ThreadSettingsSnapshot,
 };
 use crate::snapshot::{RuntimeSnapshot, TurnSnapshot};
 use crate::{ClientCommandResult, ElicitationSnapshot, ResumeConversationRequest, ThreadEvent};
@@ -235,6 +235,13 @@ impl AngelClient {
         self.core.available_modes(conversation_id)
     }
 
+    pub fn permission_modes(
+        &self,
+        conversation_id: impl Into<String>,
+    ) -> ClientResult<AvailablePermissionModeSettingSnapshot> {
+        self.core.permission_modes(conversation_id)
+    }
+
     pub fn set_model(
         &mut self,
         conversation_id: impl Into<String>,
@@ -250,6 +257,15 @@ impl AngelClient {
         mode: impl Into<String>,
     ) -> ClientResult<ClientCommandResult> {
         let result = self.core.set_mode(conversation_id, mode)?;
+        self.flush_command_result(result)
+    }
+
+    pub fn set_permission_mode(
+        &mut self,
+        conversation_id: impl Into<String>,
+        mode: impl Into<String>,
+    ) -> ClientResult<ClientCommandResult> {
+        let result = self.core.set_permission_mode(conversation_id, mode)?;
         self.flush_command_result(result)
     }
 

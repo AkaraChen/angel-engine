@@ -90,6 +90,7 @@ const NO_CONFIG_OVERRIDE_OPTIONS: AgentValueOption[] = [
 type DraftAgentConfig = {
   model?: string;
   mode?: string;
+  permissionMode?: string;
   reasoningEffort?: string;
 };
 
@@ -248,11 +249,17 @@ function WorkspacePageContent({
   const activeMode = normalizeConfigDisplayValue(
     draftAgentConfig.mode ?? runtimeConfig?.currentMode,
   );
+  const activePermissionMode = normalizeConfigDisplayValue(
+    draftAgentConfig.permissionMode ?? runtimeConfig?.currentPermissionMode,
+  );
   const modelOverride = selectedConfigOverride(draftAgentConfig.model);
   const reasoningEffortOverride = selectedConfigOverride(
     draftAgentConfig.reasoningEffort,
   );
   const modeOverride = selectedConfigOverride(draftAgentConfig.mode);
+  const permissionModeOverride = selectedConfigOverride(
+    draftAgentConfig.permissionMode,
+  );
   const modelOptions = ensureConfigOption(
     runtimeConfigOptionsToAgentOptions(runtimeConfig?.models),
     activeModel,
@@ -265,8 +272,21 @@ function WorkspacePageContent({
     runtimeConfigOptionsToAgentOptions(runtimeConfig?.modes),
     activeMode,
   );
+  const permissionModeOptions = ensureConfigOption(
+    runtimeConfigOptionsToAgentOptions(runtimeConfig?.permissionModes),
+    activePermissionMode,
+  );
+  const modelOptionCount = runtimeConfigOptionCount(runtimeConfig?.models);
+  const reasoningEffortOptionCount = runtimeConfigOptionCount(
+    runtimeConfig?.reasoningEfforts,
+  );
+  const modeOptionCount = runtimeConfigOptionCount(runtimeConfig?.modes);
+  const permissionModeOptionCount = runtimeConfigOptionCount(
+    runtimeConfig?.permissionModes,
+  );
   const canSetModel = runtimeConfig?.canSetModel ?? true;
   const canSetMode = runtimeConfig?.canSetMode ?? true;
+  const canSetPermissionMode = runtimeConfig?.canSetPermissionMode ?? true;
   const canSetReasoningEffort = runtimeConfig?.canSetReasoningEffort ?? true;
 
   useEffect(() => {
@@ -355,39 +375,61 @@ function WorkspacePageContent({
     },
     [setDraftAgentConfigValue],
   );
+  const setAgentPermissionMode = useCallback(
+    (mode: string) => {
+      setDraftAgentConfigValue("permissionMode", mode);
+    },
+    [setDraftAgentConfigValue],
+  );
   const chatOptions = useMemo(
     () => ({
       canSetModel,
       canSetMode,
+      canSetPermissionMode,
       canSetReasoningEffort,
       canSetRuntime: true,
       configLoading: prewarmQuery.isFetching,
       model: activeModel,
+      modelOptionCount,
       modelOptions,
       mode: activeMode,
+      modeOptionCount,
       modeOptions,
+      permissionMode: activePermissionMode,
+      permissionModeOptionCount,
+      permissionModeOptions,
       reasoningEffort: activeReasoningEffort,
+      reasoningEffortOptionCount,
       reasoningEffortOptions,
       runtime: activeRuntime,
       setModel: setAgentModel,
       setMode: setAgentMode,
+      setPermissionMode: setAgentPermissionMode,
       setReasoningEffort: setAgentReasoningEffort,
       setRuntime: setDraftAgentRuntime,
     }),
     [
       activeMode,
       activeModel,
+      activePermissionMode,
       activeReasoningEffort,
       activeRuntime,
       canSetModel,
       canSetMode,
+      canSetPermissionMode,
       canSetReasoningEffort,
+      modelOptionCount,
       modelOptions,
+      modeOptionCount,
       modeOptions,
+      permissionModeOptionCount,
+      permissionModeOptions,
+      reasoningEffortOptionCount,
       reasoningEffortOptions,
       prewarmQuery.isFetching,
       setAgentModel,
       setAgentMode,
+      setAgentPermissionMode,
       setAgentReasoningEffort,
       setDraftAgentRuntime,
     ],
@@ -809,6 +851,7 @@ function WorkspacePageContent({
                     prewarmId={prewarmQuery.data?.prewarmId}
                     projectId={selectedProjectId ?? null}
                     projectPath={selectedProjectPath ?? undefined}
+                    permissionMode={permissionModeOverride}
                     reasoningEffort={reasoningEffortOverride}
                     runtime={activeRuntime}
                     runtimeConfig={runtimeConfig}
@@ -979,6 +1022,9 @@ function ChatThreadRuntime({
   slotKey,
 }: ChatThreadRuntimeProps) {
   const setRunMode = useChatRunStore((state) => state.setMode);
+  const setRunPermissionMode = useChatRunStore(
+    (state) => state.setPermissionMode,
+  );
   const isRunning = useChatRunIsRunning(slotKey);
   const liveMessages = useChatRunMessages(slotKey);
   const chatRuntime = selectedChat.runtime as AgentRuntime;
@@ -1004,6 +1050,11 @@ function ChatThreadRuntime({
       runtimeConfig?.currentMode ??
       draftAgentConfig.mode,
   );
+  const activePermissionMode = normalizeConfigDisplayValue(
+    runtimeConfig?.agentState?.currentPermissionMode ??
+      runtimeConfig?.currentPermissionMode ??
+      draftAgentConfig.permissionMode,
+  );
   const modelOverride = selectedConfigOverride(draftAgentConfig.model);
   const reasoningEffortOverride = selectedConfigOverride(
     draftAgentConfig.reasoningEffort,
@@ -1015,6 +1066,14 @@ function ChatThreadRuntime({
       await setRunMode(slotKey, modeOverride);
     },
     [setRunMode, slotKey],
+  );
+  const setBackendPermissionMode = useCallback(
+    async (mode: string) => {
+      const modeOverride = selectedConfigOverride(mode);
+      if (!modeOverride) return;
+      await setRunPermissionMode(slotKey, modeOverride);
+    },
+    [setRunPermissionMode, slotKey],
   );
   const setRuntime = useCallback(
     async (runtime: AgentRuntime) => {
@@ -1035,41 +1094,69 @@ function ChatThreadRuntime({
     runtimeConfigOptionsToAgentOptions(runtimeConfig?.modes),
     activeMode,
   );
+  const permissionModeOptions = ensureConfigOption(
+    runtimeConfigOptionsToAgentOptions(runtimeConfig?.permissionModes),
+    activePermissionMode,
+  );
+  const modelOptionCount = runtimeConfigOptionCount(runtimeConfig?.models);
+  const reasoningEffortOptionCount = runtimeConfigOptionCount(
+    runtimeConfig?.reasoningEfforts,
+  );
+  const modeOptionCount = runtimeConfigOptionCount(runtimeConfig?.modes);
+  const permissionModeOptionCount = runtimeConfigOptionCount(
+    runtimeConfig?.permissionModes,
+  );
   const chatOptions = useMemo(
     () => ({
       canSetModel: runtimeConfig?.canSetModel ?? true,
       canSetMode: runtimeConfig?.canSetMode ?? true,
+      canSetPermissionMode: runtimeConfig?.canSetPermissionMode ?? true,
       canSetReasoningEffort: runtimeConfig?.canSetReasoningEffort ?? true,
       canSetRuntime,
       configLoading,
       model: activeModel,
+      modelOptionCount,
       modelOptions,
       mode: activeMode,
+      modeOptionCount,
       modeOptions,
+      permissionMode: activePermissionMode,
+      permissionModeOptionCount,
+      permissionModeOptions,
       reasoningEffort: activeReasoningEffort,
+      reasoningEffortOptionCount,
       reasoningEffortOptions,
       runtime: chatRuntime,
       runtimeDisabledReason,
       setModel: setAgentModel,
       setMode: setBackendMode,
+      setPermissionMode: setBackendPermissionMode,
       setReasoningEffort: setAgentReasoningEffort,
       setRuntime,
     }),
     [
       activeMode,
       activeModel,
+      activePermissionMode,
       activeReasoningEffort,
       chatRuntime,
       configLoading,
+      modelOptionCount,
       modelOptions,
+      modeOptionCount,
       modeOptions,
+      permissionModeOptionCount,
+      permissionModeOptions,
+      reasoningEffortOptionCount,
       reasoningEffortOptions,
+      runtimeConfig?.canSetPermissionMode,
       runtimeConfig?.canSetMode,
       runtimeConfig?.canSetModel,
       runtimeConfig?.canSetReasoningEffort,
       canSetRuntime,
       runtimeDisabledReason,
       setAgentModel,
+      setBackendPermissionMode,
       setAgentReasoningEffort,
       setBackendMode,
       setRuntime,
@@ -1089,6 +1176,7 @@ function ChatThreadRuntime({
         onChatUpdated={onChatUpdated}
         projectId={projectContext.id ?? selectedChat.projectId ?? null}
         projectPath={projectContext.path ?? undefined}
+        permissionMode={undefined}
         reasoningEffort={reasoningEffortOverride}
         runtime={chatRuntime}
         runtimeConfig={runtimeConfig}
@@ -1147,6 +1235,15 @@ function runtimeConfigOptionsToAgentOptions(
     ];
   });
   return [NO_CONFIG_OVERRIDE_OPTION, ...runtimeOptions];
+}
+
+function runtimeConfigOptionCount(
+  options: ChatRuntimeConfigOption[] | undefined,
+): number {
+  return (
+    options?.filter((option) => selectedConfigOverride(option.value)).length ??
+    0
+  );
 }
 
 function ensureConfigOption(

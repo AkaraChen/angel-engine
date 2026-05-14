@@ -69,3 +69,105 @@ pub enum CodexServerRequestKind {
     McpUrl,
     DynamicToolCall,
 }
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum CodexCollaborationMode {
+    Default,
+    Plan,
+}
+
+impl CodexCollaborationMode {
+    pub const ALL: [Self; 2] = [Self::Default, Self::Plan];
+
+    pub fn from_id(value: &str) -> Option<Self> {
+        match value {
+            "default" => Some(Self::Default),
+            "plan" => Some(Self::Plan),
+            _ => None,
+        }
+    }
+
+    pub fn id(self) -> &'static str {
+        match self {
+            Self::Default => "default",
+            Self::Plan => "plan",
+        }
+    }
+
+    pub fn name(self) -> &'static str {
+        match self {
+            Self::Default => "Default",
+            Self::Plan => "Plan",
+        }
+    }
+
+    pub fn description(self) -> Option<&'static str> {
+        match self {
+            Self::Default => None,
+            Self::Plan => Some("Plan before making changes."),
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum CodexPermissionMode {
+    Untrusted,
+    OnFailure,
+    OnRequest,
+    Never,
+}
+
+impl CodexPermissionMode {
+    pub const ALL: [Self; 4] = [
+        Self::Untrusted,
+        Self::OnFailure,
+        Self::OnRequest,
+        Self::Never,
+    ];
+
+    pub fn from_id(value: &str) -> Option<Self> {
+        match value {
+            "untrusted" => Some(Self::Untrusted),
+            "on-failure" => Some(Self::OnFailure),
+            "on-request" => Some(Self::OnRequest),
+            "never" => Some(Self::Never),
+            _ => None,
+        }
+    }
+
+    pub fn from_approval_policy(policy: &angel_engine::ApprovalPolicy) -> Self {
+        match policy {
+            angel_engine::ApprovalPolicy::Never => Self::Never,
+            angel_engine::ApprovalPolicy::OnRequest => Self::OnRequest,
+            angel_engine::ApprovalPolicy::OnFailure => Self::OnFailure,
+            angel_engine::ApprovalPolicy::UnlessTrusted => Self::Untrusted,
+        }
+    }
+
+    pub fn id(self) -> &'static str {
+        match self {
+            Self::Untrusted => "untrusted",
+            Self::OnFailure => "on-failure",
+            Self::OnRequest => "on-request",
+            Self::Never => "never",
+        }
+    }
+
+    pub fn name(self) -> &'static str {
+        match self {
+            Self::Untrusted => "Untrusted",
+            Self::OnFailure => "On Failure",
+            Self::OnRequest => "On Request",
+            Self::Never => "Never",
+        }
+    }
+
+    pub fn description(self) -> Option<&'static str> {
+        match self {
+            Self::Untrusted => Some("Ask before commands outside the trusted set."),
+            Self::OnFailure => Some("Only ask after a command fails."),
+            Self::OnRequest => Some("Let the agent request approval when needed."),
+            Self::Never => Some("Do not ask for approval."),
+        }
+    }
+}

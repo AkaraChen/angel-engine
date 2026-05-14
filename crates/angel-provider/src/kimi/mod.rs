@@ -7,7 +7,8 @@ use angel_engine::ids::ConversationId;
 use angel_engine::protocol::ProtocolMethod;
 use angel_engine::state::{
     ActionOutputDelta, ActionState, AvailableCommand, ContentDelta, ConversationState,
-    HistoryReplayEntry, HistoryRole, SessionMode, SessionModeState,
+    HistoryReplayEntry, HistoryRole, SessionMode, SessionModeState, SessionPermissionMode,
+    SessionPermissionModeState,
 };
 use angel_engine::transport::{
     JsonRpcMessage, TransportLogKind, TransportOptions, TransportOutput,
@@ -25,12 +26,25 @@ use crate::{InterpretedUserInput, ProtocolAdapter};
 #[derive(Clone, Debug)]
 pub struct KimiAdapter {
     acp: AcpAdapter,
+    startup_permission_mode: KimiPermissionMode,
 }
 
 impl KimiAdapter {
     pub fn new(capabilities: AcpAdapterCapabilities) -> Self {
+        Self::with_startup_permission_mode(capabilities, KimiPermissionMode::Default)
+    }
+
+    pub fn with_args(capabilities: AcpAdapterCapabilities, args: &[String]) -> Self {
+        Self::with_startup_permission_mode(capabilities, kimi_startup_permission_mode(args))
+    }
+
+    fn with_startup_permission_mode(
+        capabilities: AcpAdapterCapabilities,
+        startup_permission_mode: KimiPermissionMode,
+    ) -> Self {
         Self {
             acp: AcpAdapter::new(capabilities),
+            startup_permission_mode,
         }
     }
 
@@ -38,8 +52,19 @@ impl KimiAdapter {
         Self::new(AcpAdapterCapabilities::standard())
     }
 
+    pub fn standard_with_args(args: &[String]) -> Self {
+        Self::with_args(AcpAdapterCapabilities::standard(), args)
+    }
+
     pub fn without_authentication() -> Self {
         Self::new(AcpAdapterCapabilities::standard().without_authentication())
+    }
+
+    pub fn without_authentication_with_args(args: &[String]) -> Self {
+        Self::with_args(
+            AcpAdapterCapabilities::standard().without_authentication(),
+            args,
+        )
     }
 
     pub fn capabilities(&self) -> ConversationCapabilities {
@@ -92,6 +117,45 @@ impl KimiAdapter {
         Ok(Some(output))
     }
 
+    fn encode_kimi_permission_mode_effect(
+        &self,
+        engine: &AngelEngine,
+        effect: &ProtocolEffect,
+    ) -> Result<Option<TransportOutput>, EngineError> {
+        let Some(mode) = kimi_permission_mode_effect(effect)? else {
+            return Ok(None);
+        };
+        if !conversation_has_yolo_permission_mode(engine, effect) {
+            return Ok(None);
+        }
+
+        let session_id = kimi_session_id(engine, effect)?;
+        let method = "session/prompt";
+        let params = json!({
+            "sessionId": session_id,
+            "prompt": [{"type": "text", "text": "/yolo"}],
+        });
+        let mut output = TransportOutput::default().log(
+            TransportLogKind::Send,
+            format!(
+                "Kimi permission mode set via /yolo toggle: {}",
+                kimi_permission_mode_wire_id(mode)
+            ),
+        );
+        if let Some(request_id) = &effect.request_id {
+            output.messages.push(JsonRpcMessage::request(
+                request_id.clone(),
+                method.to_string(),
+                params,
+            ));
+        } else {
+            output
+                .messages
+                .push(JsonRpcMessage::notification(method.to_string(), params));
+        }
+        Ok(Some(output))
+    }
+
     fn normalize_kimi_output(
         &self,
         engine: &AngelEngine,
@@ -101,7 +165,9 @@ impl KimiAdapter {
         self.append_kimi_local_hydration(engine, message, &mut output);
 
         let mut plan_command_conversations = Vec::new();
+        let mut yolo_command_conversations = Vec::new();
         let mut filtered_plan_command = false;
+        let mut filtered_yolo_command = false;
         output.events = output
             .events
             .into_iter()
@@ -111,9 +177,14 @@ impl KimiAdapter {
                     commands,
                 } => {
                     let (commands, had_plan_command) = kimi_filter_plan_command(commands);
+                    let (commands, had_yolo_command) = kimi_filter_yolo_command(commands);
                     if had_plan_command {
                         plan_command_conversations.push(conversation_id.clone());
                         filtered_plan_command = true;
+                    }
+                    if had_yolo_command {
+                        yolo_command_conversations.push(conversation_id.clone());
+                        filtered_yolo_command = true;
                     }
                     EngineEvent::AvailableCommandsUpdated {
                         conversation_id,
@@ -148,6 +219,34 @@ impl KimiAdapter {
                 }
             })
             .collect::<Vec<_>>();
+        let permission_mode_updates = output
+            .events
+            .iter()
+            .filter_map(|event| {
+                let EngineEvent::AvailableCommandsUpdated {
+                    conversation_id, ..
+                } = event
+                else {
+                    return None;
+                };
+                if yolo_command_conversations
+                    .iter()
+                    .any(|id| id == conversation_id)
+                    && needs_kimi_permission_modes(engine, &output.events, conversation_id)
+                {
+                    Some(EngineEvent::SessionPermissionModesUpdated {
+                        conversation_id: conversation_id.clone(),
+                        modes: kimi_permission_mode_state(
+                            engine,
+                            conversation_id,
+                            self.startup_permission_mode,
+                        ),
+                    })
+                } else {
+                    None
+                }
+            })
+            .collect::<Vec<_>>();
 
         if !mode_updates.is_empty() {
             output.events.extend(mode_updates);
@@ -156,10 +255,23 @@ impl KimiAdapter {
                 "Kimi /plan command exposed as plan/default modes",
             ));
         }
+        if !permission_mode_updates.is_empty() {
+            output.events.extend(permission_mode_updates);
+            output.logs.push(angel_engine::TransportLog::new(
+                TransportLogKind::State,
+                "Kimi /yolo command exposed as default/yolo permission modes",
+            ));
+        }
         if filtered_plan_command {
             output.logs.push(angel_engine::TransportLog::new(
                 TransportLogKind::Warning,
                 "Kimi /plan command hidden because its ExitPlanMode approval flow is not exposed through ACP; use /mode plan instead",
+            ));
+        }
+        if filtered_yolo_command {
+            output.logs.push(angel_engine::TransportLog::new(
+                TransportLogKind::Warning,
+                "Kimi /yolo command hidden because it is exposed as permission mode",
             ));
         }
         let plan_file_updates = output
@@ -255,6 +367,11 @@ impl ProtocolAdapter for KimiAdapter {
         effect: &ProtocolEffect,
         options: &TransportOptions,
     ) -> Result<TransportOutput, EngineError> {
+        if matches!(effect.method, ProtocolMethod::UpdateContext)
+            && let Some(output) = self.encode_kimi_permission_mode_effect(engine, effect)?
+        {
+            return Ok(output);
+        }
         if matches!(
             effect.method,
             ProtocolMethod::SetSessionMode | ProtocolMethod::UpdateContext
@@ -304,6 +421,21 @@ fn conversation_has_plan_mode(engine: &AngelEngine, effect: &ProtocolEffect) -> 
         .is_some_and(|modes| modes.available_modes.iter().any(|mode| mode.id == "plan"))
 }
 
+fn conversation_has_yolo_permission_mode(engine: &AngelEngine, effect: &ProtocolEffect) -> bool {
+    effect
+        .conversation_id
+        .as_ref()
+        .and_then(|conversation_id| engine.conversations.get(conversation_id))
+        .and_then(|conversation| conversation.permission_mode_state.as_ref())
+        .is_some_and(|modes| {
+            let yolo_mode_id = kimi_permission_mode_wire_id(KimiPermissionMode::Yolo);
+            modes
+                .available_modes
+                .iter()
+                .any(|mode| mode.id == yolo_mode_id.as_str())
+        })
+}
+
 fn is_plan_command(command: &AvailableCommand) -> bool {
     command.name == "plan"
 }
@@ -322,6 +454,26 @@ fn kimi_filter_plan_command(commands: Vec<AvailableCommand>) -> (Vec<AvailableCo
         })
         .collect();
     (commands, had_plan_command)
+}
+
+fn is_yolo_command(command: &AvailableCommand) -> bool {
+    command.name == "yolo"
+}
+
+fn kimi_filter_yolo_command(commands: Vec<AvailableCommand>) -> (Vec<AvailableCommand>, bool) {
+    let mut had_yolo_command = false;
+    let commands = commands
+        .into_iter()
+        .filter(|command| {
+            if is_yolo_command(command) {
+                had_yolo_command = true;
+                false
+            } else {
+                true
+            }
+        })
+        .collect();
+    (commands, had_yolo_command)
 }
 
 fn needs_kimi_plan_modes(
@@ -354,6 +506,36 @@ fn needs_kimi_plan_modes(
 
     match &conversation.mode_state {
         Some(modes) => !modes.available_modes.iter().any(|mode| mode.id == "plan"),
+        None => true,
+    }
+}
+
+fn needs_kimi_permission_modes(
+    engine: &AngelEngine,
+    pending_events: &[EngineEvent],
+    conversation_id: &ConversationId,
+) -> bool {
+    if pending_events.iter().any(|event| {
+        matches!(
+            event,
+            EngineEvent::SessionPermissionModesUpdated {
+                conversation_id: id,
+                ..
+            } if id == conversation_id
+        )
+    }) {
+        return false;
+    }
+
+    let Some(conversation) = engine.conversations.get(conversation_id) else {
+        return false;
+    };
+    let yolo_mode_id = kimi_permission_mode_wire_id(KimiPermissionMode::Yolo);
+    match &conversation.permission_mode_state {
+        Some(modes) => !modes
+            .available_modes
+            .iter()
+            .any(|mode| mode.id == yolo_mode_id.as_str()),
         None => true,
     }
 }
@@ -397,6 +579,38 @@ fn kimi_plan_mode_state_for(current_mode_id: String) -> SessionModeState {
     }
 }
 
+fn kimi_permission_mode_state(
+    engine: &AngelEngine,
+    conversation_id: &ConversationId,
+    startup_permission_mode: KimiPermissionMode,
+) -> SessionPermissionModeState {
+    let current_mode_id = engine
+        .conversations
+        .get(conversation_id)
+        .and_then(current_permission_mode)
+        .unwrap_or_else(|| kimi_permission_mode_wire_id(startup_permission_mode));
+
+    kimi_permission_mode_state_for(current_mode_id)
+}
+
+fn kimi_permission_mode_state_for(current_mode_id: String) -> SessionPermissionModeState {
+    SessionPermissionModeState {
+        current_mode_id,
+        available_modes: vec![
+            SessionPermissionMode {
+                id: kimi_permission_mode_wire_id(KimiPermissionMode::Default),
+                name: "Default".to_string(),
+                description: Some("Prompt before protected Kimi actions.".to_string()),
+            },
+            SessionPermissionMode {
+                id: kimi_permission_mode_wire_id(KimiPermissionMode::Yolo),
+                name: "YOLO".to_string(),
+                description: Some("Auto-approve Kimi actions via /yolo.".to_string()),
+            },
+        ],
+    }
+}
+
 fn current_mode(conversation: &ConversationState) -> Option<String> {
     conversation
         .context
@@ -410,6 +624,93 @@ fn current_mode(conversation: &ConversationState) -> Option<String> {
                 .as_ref()
                 .map(|modes| modes.current_mode_id.clone())
         })
+}
+
+fn current_permission_mode(conversation: &ConversationState) -> Option<String> {
+    conversation
+        .context
+        .permission_mode
+        .effective()
+        .and_then(Option::as_ref)
+        .map(|mode| mode.id.clone())
+        .or_else(|| {
+            conversation
+                .permission_mode_state
+                .as_ref()
+                .map(|modes| modes.current_mode_id.clone())
+        })
+}
+
+fn kimi_permission_mode_effect(
+    effect: &ProtocolEffect,
+) -> Result<Option<KimiPermissionMode>, EngineError> {
+    let fields = &effect.payload.fields;
+    if fields.get("contextUpdate").map(String::as_str) != Some("permissionMode") {
+        return Ok(None);
+    }
+    fields
+        .get("permissionMode")
+        .map(|mode| decode_kimi_permission_mode(mode))
+        .transpose()
+}
+
+fn kimi_session_id(engine: &AngelEngine, effect: &ProtocolEffect) -> Result<String, EngineError> {
+    let conversation_id =
+        effect
+            .conversation_id
+            .as_ref()
+            .ok_or_else(|| EngineError::InvalidCommand {
+                message: "missing conversation id for Kimi permission mode update".to_string(),
+            })?;
+    let conversation = engine.conversations.get(conversation_id).ok_or_else(|| {
+        EngineError::ConversationNotFound {
+            conversation_id: conversation_id.to_string(),
+        }
+    })?;
+    conversation
+        .remote
+        .as_protocol_id()
+        .map(str::to_string)
+        .ok_or_else(|| EngineError::InvalidState {
+            expected: "Kimi ACP session id".to_string(),
+            actual: format!("{:?}", conversation.remote),
+        })
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, serde::Deserialize, serde::Serialize)]
+enum KimiPermissionMode {
+    #[serde(rename = "default")]
+    Default,
+    #[serde(rename = "yolo")]
+    Yolo,
+}
+
+fn kimi_startup_permission_mode(args: &[String]) -> KimiPermissionMode {
+    if args
+        .iter()
+        .any(|arg| matches!(arg.as_str(), "--yolo" | "--yes" | "-y"))
+    {
+        KimiPermissionMode::Yolo
+    } else {
+        KimiPermissionMode::Default
+    }
+}
+
+fn decode_kimi_permission_mode(value: &str) -> Result<KimiPermissionMode, EngineError> {
+    serde_json::from_value(Value::String(value.to_string())).map_err(|error| {
+        EngineError::InvalidState {
+            expected: "canonical Kimi permission mode id".to_string(),
+            actual: format!("{value:?}: {error}"),
+        }
+    })
+}
+
+fn kimi_permission_mode_wire_id(mode: KimiPermissionMode) -> String {
+    let value = serde_json::to_value(mode).expect("KimiPermissionMode serializes to a string");
+    let Value::String(id) = value else {
+        unreachable!("KimiPermissionMode serialized to non-string JSON");
+    };
+    id
 }
 
 fn kimi_plan_file_event(engine: &AngelEngine, event: &EngineEvent) -> Option<Vec<EngineEvent>> {
@@ -825,7 +1126,8 @@ mod tests {
     use super::*;
     use angel_engine::{
         AgentMode, ContextPatch, ContextScope, ContextUpdate, ConversationLifecycle,
-        ConversationState, EngineCommand, RemoteConversationId, apply_transport_output,
+        ConversationState, EngineCommand, PermissionMode, RemoteConversationId,
+        apply_transport_output,
     };
     use serde_json::json;
 
@@ -938,6 +1240,92 @@ mod tests {
                 .collect::<Vec<_>>(),
             vec!["default", "plan"]
         );
+    }
+
+    #[test]
+    fn available_yolo_command_exposes_kimi_permission_modes() {
+        let adapter = KimiAdapter::standard();
+        let (mut engine, conversation_id) = ready_engine(&adapter);
+
+        let output = adapter
+            .decode_message(
+                &engine,
+                &JsonRpcMessage::notification(
+                    "session/update",
+                    json!({
+                        "sessionId": "sess",
+                        "update": {
+                            "sessionUpdate": "available_commands_update",
+                            "availableCommands": [
+                                {
+                                    "name": "yolo",
+                                    "description": "Toggle YOLO mode"
+                                },
+                                {
+                                    "name": "compact",
+                                    "description": "Compact context"
+                                }
+                            ]
+                        }
+                    }),
+                ),
+            )
+            .expect("available commands");
+        apply(&mut engine, &output);
+
+        let commands = &engine.conversations[&conversation_id].available_commands;
+        assert_eq!(
+            commands
+                .iter()
+                .map(|command| command.name.as_str())
+                .collect::<Vec<_>>(),
+            vec!["compact"]
+        );
+        let permission_modes = engine
+            .permission_modes(conversation_id)
+            .expect("permission modes");
+        assert_eq!(
+            permission_modes
+                .available_modes
+                .iter()
+                .map(|mode| mode.id.as_str())
+                .collect::<Vec<_>>(),
+            vec!["default", "yolo"]
+        );
+    }
+
+    #[test]
+    fn set_yolo_permission_mode_encodes_kimi_yolo_prompt() {
+        let adapter = KimiAdapter::standard();
+        let (mut engine, conversation_id) = ready_engine(&adapter);
+        engine
+            .apply_event(EngineEvent::SessionPermissionModesUpdated {
+                conversation_id: conversation_id.clone(),
+                modes: kimi_permission_mode_state_for("default".to_string()),
+            })
+            .expect("permission modes");
+        let plan = engine
+            .plan_command(EngineCommand::UpdateContext {
+                conversation_id,
+                patch: ContextPatch::one(ContextUpdate::PermissionMode {
+                    scope: ContextScope::TurnAndFuture,
+                    mode: Some(PermissionMode {
+                        id: "yolo".to_string(),
+                    }),
+                }),
+            })
+            .expect("permission mode");
+
+        let output = adapter
+            .encode_effect(&engine, &plan.effects[0], &TransportOptions::default())
+            .expect("encode permission mode");
+        assert!(matches!(
+            output.messages.first(),
+            Some(JsonRpcMessage::Request { method, params, .. })
+                if method == "session/prompt"
+                    && params["sessionId"] == json!("sess")
+                    && params["prompt"] == json!([{"type": "text", "text": "/yolo"}])
+        ));
     }
 
     #[test]

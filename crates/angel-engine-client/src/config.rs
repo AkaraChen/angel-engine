@@ -49,6 +49,22 @@ impl ClientOptions {
         Self::builder().gemini(command).build()
     }
 
+    pub fn qoder(command: impl Into<String>) -> Self {
+        Self::builder().qoder(command).build()
+    }
+
+    pub fn copilot(command: impl Into<String>) -> Self {
+        Self::builder().copilot(command).build()
+    }
+
+    pub fn cursor(command: impl Into<String>) -> Self {
+        Self::builder().cursor(command).build()
+    }
+
+    pub fn cline(command: impl Into<String>) -> Self {
+        Self::builder().cline(command).build()
+    }
+
     pub fn codex_app_server(command: impl Into<String>) -> Self {
         Self::builder().codex_app_server(command).build()
     }
@@ -65,6 +81,10 @@ pub enum ClientProtocol {
     Acp,
     Kimi,
     Gemini,
+    Qoder,
+    Copilot,
+    Cursor,
+    Cline,
     CodexAppServer,
     Custom,
 }
@@ -127,6 +147,30 @@ impl ClientOptionsBuilder {
 
     pub fn gemini(mut self, command: impl Into<String>) -> Self {
         self.options.protocol = ClientProtocol::Gemini;
+        self.options.command = command.into();
+        self
+    }
+
+    pub fn qoder(mut self, command: impl Into<String>) -> Self {
+        self.options.protocol = ClientProtocol::Qoder;
+        self.options.command = command.into();
+        self
+    }
+
+    pub fn copilot(mut self, command: impl Into<String>) -> Self {
+        self.options.protocol = ClientProtocol::Copilot;
+        self.options.command = command.into();
+        self
+    }
+
+    pub fn cursor(mut self, command: impl Into<String>) -> Self {
+        self.options.protocol = ClientProtocol::Cursor;
+        self.options.command = command.into();
+        self
+    }
+
+    pub fn cline(mut self, command: impl Into<String>) -> Self {
+        self.options.protocol = ClientProtocol::Cline;
         self.options.command = command.into();
         self
     }

@@ -209,3 +209,80 @@ fn acp_plan_mode_round_trip_handles_question_plan_path_and_exit() {
     assert!(next_turn.plan_text.chunks.is_empty());
     assert!(next_turn.plan_path.is_none());
 }
+
+#[test]
+fn acp_permission_mode_uses_dedicated_config_option() {
+    let adapter = AcpAdapter::without_authentication();
+    let mut engine = acp_engine(&adapter);
+    let conversation_id = insert_ready_conversation(
+        &mut engine,
+        "conv",
+        RemoteConversationId::Known("sess".to_string()),
+        adapter.capabilities(),
+    );
+
+    decode_and_apply(
+        &adapter,
+        &mut engine,
+        JsonRpcMessage::notification(
+            "session/update",
+            json!({
+                "sessionId": "sess",
+                "update": {
+                    "sessionUpdate": "config_option_update",
+                    "configOptions": [{
+                        "id": "permission_mode",
+                        "name": "Permission Mode",
+                        "category": "permission_mode",
+                        "currentValue": "default",
+                        "options": [
+                            {"value": "default", "name": "Default"},
+                            {"value": "plan", "name": "Plan"}
+                        ]
+                    }]
+                }
+            }),
+        ),
+    );
+    let settings = engine
+        .conversation_settings(conversation_id.clone())
+        .expect("settings");
+    assert_eq!(
+        settings.permission_modes.current_mode_id.as_deref(),
+        Some("default")
+    );
+    assert_eq!(
+        settings.permission_modes.config_option_id.as_deref(),
+        Some("permission_mode")
+    );
+
+    let enter_plan = engine
+        .plan_command(EngineCommand::UpdateContext {
+            conversation_id: conversation_id.clone(),
+            patch: set_permission_mode("plan"),
+        })
+        .expect("enter permission plan mode");
+    let encoded_enter = adapter
+        .encode_effect(
+            &engine,
+            &enter_plan.effects[0],
+            &TransportOptions::default(),
+        )
+        .expect("encode enter permission plan");
+    let JsonRpcMessage::Request { method, params, .. } = &encoded_enter.messages[0] else {
+        panic!("expected session/set_config_option request");
+    };
+    assert_eq!(method, "session/set_config_option");
+    assert_eq!(params["sessionId"], json!("sess"));
+    assert_eq!(params["configId"], json!("permission_mode"));
+    assert_eq!(params["value"], json!("plan"));
+    assert_eq!(
+        engine.conversations[&conversation_id]
+            .context
+            .permission_mode
+            .effective()
+            .and_then(|mode| mode.as_ref())
+            .map(|mode| mode.id.as_str()),
+        Some("plan")
+    );
+}

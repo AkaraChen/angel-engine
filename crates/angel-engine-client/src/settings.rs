@@ -1,6 +1,6 @@
 use angel_engine::{
-    AvailableModeState, ConversationSettingsState, ModelListState, ReasoningLevelOption,
-    ReasoningLevelState, SessionMode, SessionModel,
+    AvailableModeState, AvailablePermissionModeState, ConversationSettingsState, ModelListState,
+    ReasoningLevelOption, ReasoningLevelState, SessionMode, SessionModel, SessionPermissionMode,
 };
 use serde::{Deserialize, Serialize};
 
@@ -10,6 +10,7 @@ pub struct ThreadSettingsSnapshot {
     pub reasoning_level: ReasoningLevelSettingSnapshot,
     pub model_list: ModelListSettingSnapshot,
     pub available_modes: AvailableModeSettingSnapshot,
+    pub permission_modes: AvailablePermissionModeSettingSnapshot,
 }
 
 impl ThreadSettingsSnapshot {
@@ -24,6 +25,7 @@ impl From<ConversationSettingsState> for ThreadSettingsSnapshot {
             reasoning_level: settings.reasoning.into(),
             model_list: settings.model_list.into(),
             available_modes: settings.available_modes.into(),
+            permission_modes: settings.permission_modes.into(),
         }
     }
 }
@@ -131,6 +133,33 @@ impl From<AvailableModeState> for AvailableModeSettingSnapshot {
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+pub struct AvailablePermissionModeSettingSnapshot {
+    pub current_mode_id: Option<String>,
+    pub available_modes: Vec<PermissionModeOptionSnapshot>,
+    pub config_option_id: Option<String>,
+    pub can_set: bool,
+}
+
+impl From<AvailablePermissionModeState> for AvailablePermissionModeSettingSnapshot {
+    fn from(permission_modes: AvailablePermissionModeState) -> Self {
+        let current_mode_id = permission_modes.current_mode_id;
+        Self {
+            available_modes: permission_modes
+                .available_modes
+                .iter()
+                .map(|mode| {
+                    PermissionModeOptionSnapshot::from_mode(mode, current_mode_id.as_deref())
+                })
+                .collect(),
+            config_option_id: permission_modes.config_option_id,
+            can_set: permission_modes.can_set,
+            current_mode_id,
+        }
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct ModelOptionSnapshot {
     pub id: String,
     pub name: String,
@@ -160,6 +189,26 @@ pub struct ModeOptionSnapshot {
 
 impl ModeOptionSnapshot {
     fn from_mode(mode: &SessionMode, current_mode_id: Option<&str>) -> Self {
+        Self {
+            id: mode.id.clone(),
+            name: mode.name.clone(),
+            description: mode.description.clone(),
+            selected: current_mode_id == Some(mode.id.as_str()),
+        }
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PermissionModeOptionSnapshot {
+    pub id: String,
+    pub name: String,
+    pub description: Option<String>,
+    pub selected: bool,
+}
+
+impl PermissionModeOptionSnapshot {
+    fn from_mode(mode: &SessionPermissionMode, current_mode_id: Option<&str>) -> Self {
         Self {
             id: mode.id.clone(),
             name: mode.name.clone(),

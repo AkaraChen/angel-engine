@@ -2,7 +2,7 @@ use crate::error::EngineError;
 use crate::event::{EngineEvent, TransitionReport, UiEvent};
 use crate::state::{
     AgentMode, ContextPatch, ContextScope, ContextUpdate, ConversationLifecycle, ConversationState,
-    ElicitationPhase, HistoryRole, RuntimeState, TurnPhase,
+    ElicitationPhase, HistoryRole, PermissionMode, RuntimeState, TurnPhase,
 };
 
 use super::AngelEngine;
@@ -160,6 +160,42 @@ impl AngelEngine {
                         scope: ContextScope::TurnAndFuture,
                         mode: Some(AgentMode { id: mode_id }),
                     }));
+                Ok(TransitionReport::one(UiEvent::ContextChanged(
+                    conversation_id,
+                )))
+            }
+            EngineEvent::SessionPermissionModesUpdated {
+                conversation_id,
+                modes,
+            } => {
+                let conversation = self.conversation_mut(&conversation_id)?;
+                conversation.context.apply_patch(ContextPatch::one(
+                    ContextUpdate::PermissionMode {
+                        scope: ContextScope::TurnAndFuture,
+                        mode: Some(PermissionMode {
+                            id: modes.current_mode_id.clone(),
+                        }),
+                    },
+                ));
+                conversation.permission_mode_state = Some(modes);
+                Ok(TransitionReport::one(UiEvent::ContextChanged(
+                    conversation_id,
+                )))
+            }
+            EngineEvent::SessionPermissionModeChanged {
+                conversation_id,
+                mode_id,
+            } => {
+                let conversation = self.conversation_mut(&conversation_id)?;
+                if let Some(modes) = &mut conversation.permission_mode_state {
+                    modes.current_mode_id = mode_id.clone();
+                }
+                conversation.context.apply_patch(ContextPatch::one(
+                    ContextUpdate::PermissionMode {
+                        scope: ContextScope::TurnAndFuture,
+                        mode: Some(PermissionMode { id: mode_id }),
+                    },
+                ));
                 Ok(TransitionReport::one(UiEvent::ContextChanged(
                     conversation_id,
                 )))
@@ -363,11 +399,41 @@ impl AngelEngine {
                         None
                     }
                 });
+                let mode = patch.updates.iter().find_map(|update| {
+                    if let ContextUpdate::Mode {
+                        mode: Some(mode), ..
+                    } = update
+                    {
+                        Some(mode.id.clone())
+                    } else {
+                        None
+                    }
+                });
+                let permission_mode = patch.updates.iter().find_map(|update| {
+                    if let ContextUpdate::PermissionMode {
+                        mode: Some(mode), ..
+                    } = update
+                    {
+                        Some(mode.id.clone())
+                    } else {
+                        None
+                    }
+                });
                 conversation.context.apply_patch(patch);
                 if let Some(model) = model
                     && let Some(models) = &mut conversation.model_state
                 {
                     models.current_model_id = model;
+                }
+                if let Some(mode) = mode
+                    && let Some(modes) = &mut conversation.mode_state
+                {
+                    modes.current_mode_id = mode;
+                }
+                if let Some(mode) = permission_mode
+                    && let Some(modes) = &mut conversation.permission_mode_state
+                {
+                    modes.current_mode_id = mode;
                 }
                 Ok(TransitionReport::one(UiEvent::ContextChanged(
                     conversation_id,

@@ -717,6 +717,10 @@ fn protocol_flavor_from_js(
         EngineClientProtocol::Acp => ProtocolFlavor::Acp,
         EngineClientProtocol::Kimi => ProtocolFlavor::Acp,
         EngineClientProtocol::Gemini => ProtocolFlavor::Acp,
+        EngineClientProtocol::Qoder => ProtocolFlavor::Acp,
+        EngineClientProtocol::Copilot => ProtocolFlavor::Acp,
+        EngineClientProtocol::Cursor => ProtocolFlavor::Acp,
+        EngineClientProtocol::Cline => ProtocolFlavor::Acp,
         EngineClientProtocol::CodexAppServer => ProtocolFlavor::CodexAppServer,
         EngineClientProtocol::Custom => ProtocolFlavor::Custom,
     })

@@ -11,6 +11,7 @@ use angel_engine_client::{
     RuntimeOptions as EngineRuntimeOptions,
     RuntimeOptionsOverrides as EngineRuntimeOptionsOverrides,
     SendTextRequest as EngineSendTextRequest, SetModeRequest as EngineSetModeRequest,
+    SetPermissionModeRequest as EngineSetPermissionModeRequest,
     StartConversationRequest as EngineStartConversationRequest, ThreadEvent as EngineThreadEvent,
     create_runtime_options as engine_create_runtime_options,
 };
@@ -241,6 +242,18 @@ impl AngelClient {
         )
     }
 
+    #[napi(
+        js_name = "permissionModes",
+        ts_return_type = "AvailablePermissionModeSettingSnapshot"
+    )]
+    pub fn permission_modes(&self, conversation_id: String) -> Result<serde_json::Value> {
+        self.with_client_json(
+            "AngelClient.permissionModes",
+            format!("conversation_id={conversation_id}"),
+            move |client| client.permission_modes(conversation_id),
+        )
+    }
+
     #[napi(js_name = "turnState", ts_return_type = "TurnSnapshot | null")]
     pub fn turn_state(
         &self,
@@ -294,7 +307,7 @@ impl AngelClient {
                         .into_iter()
                         .find(|turn| turn.id == turn_id)
                 })
-                .map(|turn| turn.phase.contains("terminal"))
+                .map(|turn| turn.is_terminal)
                 .unwrap_or(false)
         })
     }
@@ -317,6 +330,24 @@ impl AngelClient {
             format!("conversation_id={conversation_id} mode={mode}"),
             move |client| {
                 client.send_thread_event(conversation_id, EngineThreadEvent::set_mode(mode))
+            },
+        )
+    }
+
+    #[napi(js_name = "setPermissionMode", ts_return_type = "ClientCommandResult")]
+    pub fn set_permission_mode(
+        &self,
+        conversation_id: String,
+        mode: String,
+    ) -> Result<serde_json::Value> {
+        self.with_client_json(
+            "AngelClient.setPermissionMode",
+            format!("conversation_id={conversation_id} mode={mode}"),
+            move |client| {
+                client.send_thread_event(
+                    conversation_id,
+                    EngineThreadEvent::set_permission_mode(mode),
+                )
             },
         )
     }
@@ -613,6 +644,28 @@ impl AngelSession {
     }
 
     #[napi(
+        js_name = "setPermissionMode",
+        ts_args_type = "request: SetPermissionModeRequest",
+        ts_return_type = "Promise<ConversationSnapshot>"
+    )]
+    pub fn set_permission_mode(
+        &self,
+        request: serde_json::Value,
+    ) -> Result<AsyncTask<SessionJsonTask>> {
+        let request = from_json::<EngineSetPermissionModeRequest>(request)?;
+        Ok(self.task(
+            "AngelSession.setPermissionMode",
+            format!(
+                "mode={} cwd={} remote_id={}",
+                request.mode,
+                request.cwd.as_deref().unwrap_or("<none>"),
+                request.remote_id.as_deref().unwrap_or("<none>")
+            ),
+            move |session| session.set_permission_mode(request),
+        ))
+    }
+
+    #[napi(
         js_name = "startTextTurn",
         ts_args_type = "request: SendTextRequest",
         ts_return_type = "Promise<TurnRunEvent[]>"
@@ -625,13 +678,14 @@ impl AngelSession {
         Ok(self.task(
             "AngelSession.startTextTurn",
             format!(
-                "text_len={} input_len={} cwd={} remote_id={} model={} mode={} reasoning_effort={}",
+                "text_len={} input_len={} cwd={} remote_id={} model={} mode={} permission_mode={} reasoning_effort={}",
                 request.text.chars().count(),
                 request.input.len(),
                 request.cwd.as_deref().unwrap_or("<none>"),
                 request.remote_id.as_deref().unwrap_or("<none>"),
                 request.model.as_deref().unwrap_or("<none>"),
                 request.mode.as_deref().unwrap_or("<none>"),
+                request.permission_mode.as_deref().unwrap_or("<none>"),
                 request.reasoning_effort.as_deref().unwrap_or("<none>")
             ),
             move |session| session.start_text_turn(request),
@@ -959,6 +1013,22 @@ impl AngelEngineClient {
         )
     }
 
+    #[napi(
+        js_name = "permissionModes",
+        ts_return_type = "AvailablePermissionModeSettingSnapshot"
+    )]
+    pub fn permission_modes(&self, conversation_id: String) -> Result<serde_json::Value> {
+        trace_napi_sync_result(
+            "AngelEngineClient.permissionModes",
+            format!("conversation_id={conversation_id}"),
+            || {
+                to_json(client_result(
+                    self.client.permission_modes(conversation_id),
+                )?)
+            },
+        )
+    }
+
     #[napi(js_name = "turnState", ts_return_type = "TurnSnapshot | null")]
     pub fn turn_state(
         &self,
@@ -1016,7 +1086,7 @@ impl AngelEngineClient {
                             .into_iter()
                             .find(|turn| turn.id == turn_id)
                     })
-                    .map(|turn| turn.phase.contains("terminal"))
+                    .map(|turn| turn.is_terminal)
                     .unwrap_or(false)
             },
         )
@@ -1076,6 +1146,23 @@ impl AngelEngineClient {
             "AngelEngineClient.setMode",
             format!("conversation_id={conversation_id} mode={mode}"),
             || to_json(client_result(self.client.set_mode(conversation_id, mode))?),
+        )
+    }
+
+    #[napi(js_name = "setPermissionMode", ts_return_type = "ClientCommandResult")]
+    pub fn set_permission_mode(
+        &mut self,
+        conversation_id: String,
+        mode: String,
+    ) -> Result<serde_json::Value> {
+        trace_napi_sync_result(
+            "AngelEngineClient.setPermissionMode",
+            format!("conversation_id={conversation_id} mode={mode}"),
+            || {
+                to_json(client_result(
+                    self.client.set_permission_mode(conversation_id, mode),
+                )?)
+            },
         )
     }
 
@@ -1466,6 +1553,7 @@ fn thread_event_kind(event: &EngineThreadEvent) -> &'static str {
         EngineThreadEvent::Cancel { .. } => "cancel",
         EngineThreadEvent::SetModel { .. } => "setModel",
         EngineThreadEvent::SetMode { .. } => "setMode",
+        EngineThreadEvent::SetPermissionMode { .. } => "setPermissionMode",
         EngineThreadEvent::SetReasoningEffort { .. } => "setReasoningEffort",
         EngineThreadEvent::ResolveElicitation { .. } => "resolveElicitation",
         EngineThreadEvent::ResolveFirstElicitation { .. } => "resolveFirstElicitation",

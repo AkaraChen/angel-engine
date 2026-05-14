@@ -1,6 +1,7 @@
 import type { ClientUpdate } from "@angel-engine/client-napi";
 import { EngineEventElicitationDecision } from "@angel-engine/client-napi";
 import type {
+  EffortLevel,
   Options as ClaudeQueryOptions,
   PermissionMode,
 } from "@anthropic-ai/claude-agent-sdk";
@@ -8,8 +9,35 @@ import type {
 import type { ChatElicitationResponse } from "../../../../shared/chat";
 import type { EngineEventJson, JsonObject } from "./types";
 
+const CLAUDE_PERMISSION_MODE_VISIBILITY = {
+  default: true,
+  acceptEdits: true,
+  plan: true,
+  dontAsk: true,
+  auto: true,
+  bypassPermissions: false,
+} as const satisfies Record<PermissionMode, boolean>;
+
+const CLAUDE_EFFORT_LEVELS = {
+  low: true,
+  medium: true,
+  high: true,
+  xhigh: true,
+  max: true,
+} as const satisfies Record<EffortLevel, true>;
+
 export function uniqueStrings(values: readonly string[]): string[] {
   return Array.from(new Set(values.filter(Boolean)));
+}
+
+export function claudePermissionModeIds(): PermissionMode[] {
+  return (
+    Object.keys(CLAUDE_PERMISSION_MODE_VISIBILITY) as PermissionMode[]
+  ).filter((mode) => CLAUDE_PERMISSION_MODE_VISIBILITY[mode]);
+}
+
+export function claudeEffortLevelIds(): EffortLevel[] {
+  return Object.keys(CLAUDE_EFFORT_LEVELS) as EffortLevel[];
 }
 
 export function labelFromValue(value: string): string {
@@ -123,13 +151,25 @@ export function permissionDecision(response: ChatElicitationResponse): unknown {
 export function normalizeClaudeMode(
   mode: string | null | undefined,
 ): PermissionMode {
-  return (mode || "default") as PermissionMode;
+  return isClaudePermissionMode(mode) ? mode : "default";
 }
 
 export function claudeEffort(
   effort: string | null | undefined,
 ): NonNullable<ClaudeQueryOptions["effort"]> | undefined {
-  return effort
-    ? (effort as NonNullable<ClaudeQueryOptions["effort"]>)
-    : undefined;
+  return isClaudeEffortLevel(effort) ? effort : undefined;
+}
+
+function isClaudePermissionMode(
+  value: string | null | undefined,
+): value is PermissionMode {
+  return (
+    typeof value === "string" && value in CLAUDE_PERMISSION_MODE_VISIBILITY
+  );
+}
+
+function isClaudeEffortLevel(
+  value: string | null | undefined,
+): value is EffortLevel {
+  return typeof value === "string" && value in CLAUDE_EFFORT_LEVELS;
 }

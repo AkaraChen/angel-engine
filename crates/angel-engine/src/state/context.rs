@@ -6,6 +6,7 @@ pub struct EffectiveContext {
     pub model: ScopedValue<Option<String>>,
     pub reasoning: ScopedValue<Option<ReasoningProfile>>,
     pub mode: ScopedValue<Option<AgentMode>>,
+    pub permission_mode: ScopedValue<Option<PermissionMode>>,
     pub cwd: ScopedValue<Option<PathBuf>>,
     pub additional_directories: ScopedValue<Vec<PathBuf>>,
     pub approvals: ScopedValue<ApprovalPolicy>,
@@ -23,6 +24,9 @@ impl EffectiveContext {
                     self.reasoning.set(scope, reasoning)
                 }
                 ContextUpdate::Mode { scope, mode } => self.mode.set(scope, mode),
+                ContextUpdate::PermissionMode { scope, mode } => {
+                    self.permission_mode.set(scope, mode)
+                }
                 ContextUpdate::Cwd { scope, cwd } => self.cwd.set(scope, cwd.map(PathBuf::from)),
                 ContextUpdate::AdditionalDirectories { scope, directories } => self
                     .additional_directories
@@ -118,6 +122,10 @@ pub enum ContextUpdate {
         scope: ContextScope,
         mode: Option<AgentMode>,
     },
+    PermissionMode {
+        scope: ContextScope,
+        mode: Option<PermissionMode>,
+    },
     Cwd {
         scope: ContextScope,
         cwd: Option<String>,
@@ -152,6 +160,11 @@ pub struct ReasoningProfile {
 
 #[derive(serde::Serialize, serde::Deserialize, Clone, Debug, PartialEq, Eq)]
 pub struct AgentMode {
+    pub id: String,
+}
+
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug, PartialEq, Eq)]
+pub struct PermissionMode {
     pub id: String,
 }
 

@@ -28,6 +28,7 @@ import {
   Paperclip,
   Quote,
   Search,
+  ShieldCheck,
   SlidersHorizontal,
   X,
 } from "lucide-react";
@@ -37,10 +38,7 @@ import {
   useChatOptions,
   type ChatOptionsContextValue,
 } from "@/features/chat/runtime/chat-options-context";
-import {
-  findBuildModeOption,
-  findPlanModeOption,
-} from "@/features/chat/runtime/mode-options";
+import { findPlanModeToggleTarget } from "@/features/chat/runtime/mode-options";
 import {
   PromptInput,
   PromptInputBody,
@@ -668,32 +666,42 @@ function PlanModeToggleButton({
 }) {
   const toast = useToast();
   const [pending, setPending] = useState(false);
-  const planMode = findPlanModeOption(options.modeOptions);
-  const buildMode = findBuildModeOption(options.modeOptions);
-  const isPlanMode = Boolean(planMode && options.mode === planMode.value);
-  const targetMode = isPlanMode ? buildMode : planMode;
+  const target = findPlanModeToggleTarget([
+    {
+      canSet: options.canSetMode,
+      family: "agent",
+      options: options.modeOptions,
+      value: options.mode,
+    },
+    {
+      canSet: options.canSetPermissionMode,
+      family: "permission",
+      options: options.permissionModeOptions,
+      value: options.permissionMode,
+    },
+  ]);
   const unavailable =
-    disabled ||
-    pending ||
-    options.configLoading ||
-    !options.canSetMode ||
-    !planMode ||
-    !buildMode ||
-    !targetMode;
-  const label = isPlanMode ? "Plan" : "Build";
-  const title = isPlanMode ? "Switch to build mode" : "Switch to plan mode";
-  const Icon = isPlanMode ? ListChecks : Hammer;
+    disabled || pending || options.configLoading || !target?.targetMode;
+  const label = target?.isPlanMode ? "Plan" : "Build";
+  const title = target?.isPlanMode
+    ? "Switch to build mode"
+    : "Switch to plan mode";
+  const Icon = target?.isPlanMode ? ListChecks : Hammer;
 
   return (
     <Button
-      aria-pressed={isPlanMode}
+      aria-pressed={Boolean(target?.isPlanMode)}
       className="h-8 gap-1.5 rounded-full px-2 text-xs"
       disabled={unavailable}
       onMouseDown={(event) => event.preventDefault()}
       onClick={() => {
-        if (!targetMode) return;
+        if (!target?.targetMode) return;
         setPending(true);
-        void Promise.resolve(options.setMode(targetMode.value))
+        const setMode =
+          target.family === "agent"
+            ? options.setMode
+            : options.setPermissionMode;
+        void Promise.resolve(setMode(target.targetMode.value))
           .catch((error: unknown) => {
             toast({
               description: getErrorMessage(error),
@@ -813,15 +821,55 @@ function ComposerModelMenu({
     options.reasoningEffortOptions,
     options.reasoningEffort,
   );
+  const modeLabel = optionLabel(options.modeOptions, options.mode);
+  const permissionModeLabel = optionLabel(
+    options.permissionModeOptions,
+    options.permissionMode,
+  );
   const modelDisabled =
     disabled ||
     options.configLoading ||
     !options.canSetModel ||
-    options.modelOptions.length < 2;
+    options.modelOptionCount < 2;
   const effortDisabled =
     disabled ||
+    options.configLoading ||
     !options.canSetReasoningEffort ||
-    options.reasoningEffortOptions.length < 2;
+    options.reasoningEffortOptionCount < 2;
+  const modeDisabled =
+    disabled ||
+    options.configLoading ||
+    !options.canSetMode ||
+    options.modeOptionCount < 2;
+  const permissionModeDisabled =
+    disabled ||
+    options.configLoading ||
+    !options.canSetPermissionMode ||
+    options.permissionModeOptionCount < 2;
+  const effortDisabledReason = options.configLoading
+    ? undefined
+    : composerSettingDisabledReason({
+        canSet: options.canSetReasoningEffort,
+        disabled,
+        label: "reasoning effort",
+        optionCount: options.reasoningEffortOptionCount,
+      });
+  const modeDisabledReason = options.configLoading
+    ? undefined
+    : composerSettingDisabledReason({
+        canSet: options.canSetMode,
+        disabled,
+        label: "agent mode",
+        optionCount: options.modeOptionCount,
+      });
+  const permissionModeDisabledReason = options.configLoading
+    ? undefined
+    : composerSettingDisabledReason({
+        canSet: options.canSetPermissionMode,
+        disabled,
+        label: "permission mode",
+        optionCount: options.permissionModeOptionCount,
+      });
   const providerDisabledReason =
     options.runtimeDisabledReason ??
     (disabled
@@ -836,10 +884,10 @@ function ComposerModelMenu({
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button
-          aria-label="Provider, model, and reasoning effort"
+          aria-label="Agent settings"
           className={composerModelMenuTriggerClassName}
           size="sm"
-          title="Provider, model, and reasoning effort"
+          title="Agent settings"
           type="button"
           variant="outline"
         >
@@ -918,9 +966,10 @@ function ComposerModelMenu({
         </ComposerModelMenuSub>
         <ComposerModelMenuSub
           disabled={effortDisabled}
+          disabledReason={effortDisabledReason}
           icon={<Brain />}
           label="Effort"
-          value={effortLabel}
+          value={options.configLoading ? "Loading..." : effortLabel}
         >
           {options.reasoningEffortOptions.map((effort) => (
             <ComposerModelMenuItem
@@ -928,6 +977,38 @@ function ComposerModelMenu({
               label={effort.label}
               onSelect={() => options.setReasoningEffort(effort.value)}
               selected={effort.value === options.reasoningEffort}
+            />
+          ))}
+        </ComposerModelMenuSub>
+        <ComposerModelMenuSub
+          disabled={modeDisabled}
+          disabledReason={modeDisabledReason}
+          icon={<SlidersHorizontal />}
+          label="Agent Mode"
+          value={options.configLoading ? "Loading..." : modeLabel}
+        >
+          {options.modeOptions.map((mode) => (
+            <ComposerModelMenuItem
+              key={mode.value}
+              label={mode.label}
+              onSelect={() => options.setMode(mode.value)}
+              selected={mode.value === options.mode}
+            />
+          ))}
+        </ComposerModelMenuSub>
+        <ComposerModelMenuSub
+          disabled={permissionModeDisabled}
+          disabledReason={permissionModeDisabledReason}
+          icon={<ShieldCheck />}
+          label="Permission Mode"
+          value={options.configLoading ? "Loading..." : permissionModeLabel}
+        >
+          {options.permissionModeOptions.map((mode) => (
+            <ComposerModelMenuItem
+              key={mode.value}
+              label={mode.label}
+              onSelect={() => options.setPermissionMode(mode.value)}
+              selected={mode.value === options.permissionMode}
             />
           ))}
         </ComposerModelMenuSub>
@@ -1068,6 +1149,29 @@ function filterComposerOptions(options: AgentValueOption[], query: string) {
 
 function shortEffortLabel(label: string) {
   return label.toLowerCase() === "use default" ? "Default" : label;
+}
+
+function composerSettingDisabledReason({
+  canSet,
+  disabled,
+  label,
+  optionCount,
+}: {
+  canSet: boolean;
+  disabled?: boolean;
+  label: string;
+  optionCount: number;
+}) {
+  if (disabled) {
+    return "Agent settings cannot be changed while a response is running.";
+  }
+  if (!canSet || optionCount === 0) {
+    return `This agent does not expose adjustable ${label}.`;
+  }
+  if (optionCount < 2) {
+    return `This agent exposes only one ${label} value, so it cannot be changed.`;
+  }
+  return undefined;
 }
 
 function createAttachmentFromPromptFile(

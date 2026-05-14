@@ -653,6 +653,19 @@ fn acp_config_category(raw_category: Option<&str>, id: &str, name: &str) -> Opti
     {
         return Some("model".to_string());
     }
+    if candidates.iter().any(|value| {
+        config_name_matches(
+            value,
+            &[
+                "permission_mode",
+                "permissions_mode",
+                "permission_mode_id",
+                "approval_mode",
+            ],
+        )
+    }) {
+        return Some("permissionMode".to_string());
+    }
     if candidates
         .iter()
         .any(|value| config_name_matches(value, &["mode"]))

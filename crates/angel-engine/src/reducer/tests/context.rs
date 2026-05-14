@@ -3,9 +3,10 @@ use crate::event::EngineEvent;
 use crate::ids::RemoteConversationId;
 use crate::protocol::{ProtocolFlavor, ProtocolMethod};
 use crate::state::{
-    AgentMode, ApprovalPolicy, ContextPatch, ContextScope, ContextUpdate, PermissionProfile,
-    ReasoningProfile, SandboxProfile, SessionConfigOption, SessionConfigValue, SessionMode,
-    SessionModeState, SessionModel, SessionModelState,
+    AgentMode, ApprovalPolicy, ContextPatch, ContextScope, ContextUpdate, PermissionMode,
+    PermissionProfile, ReasoningProfile, SandboxProfile, SessionConfigOption, SessionConfigValue,
+    SessionMode, SessionModeState, SessionModel, SessionModelState, SessionPermissionMode,
+    SessionPermissionModeState,
 };
 
 use super::{acp_capabilities, codex_capabilities, engine_with, insert_ready_conversation};
@@ -291,6 +292,74 @@ fn set_mode_materializes_context_mode() {
 }
 
 #[test]
+fn set_permission_mode_materializes_context_permission_mode() {
+    let capabilities = acp_capabilities();
+    let mut engine = engine_with(ProtocolFlavor::Acp, capabilities.clone());
+    let conversation_id = insert_ready_conversation(
+        &mut engine,
+        "conv",
+        RemoteConversationId::Known("sess".to_string()),
+        capabilities.clone(),
+    );
+    engine
+        .apply_event(EngineEvent::SessionPermissionModesUpdated {
+            conversation_id: conversation_id.clone(),
+            modes: SessionPermissionModeState {
+                current_mode_id: "default".to_string(),
+                available_modes: vec![
+                    SessionPermissionMode {
+                        id: "default".to_string(),
+                        name: "Default".to_string(),
+                        description: None,
+                    },
+                    SessionPermissionMode {
+                        id: "plan".to_string(),
+                        name: "Plan".to_string(),
+                        description: None,
+                    },
+                ],
+            },
+        })
+        .expect("permission modes");
+
+    let settings = engine
+        .conversation_settings(conversation_id.clone())
+        .expect("settings");
+    assert_eq!(
+        settings.permission_modes.current_mode_id.as_deref(),
+        Some("default")
+    );
+    assert_eq!(settings.permission_modes.available_modes[1].id, "plan");
+
+    let plan = engine
+        .set_permission_mode(conversation_id.clone(), "plan")
+        .expect("set permission mode");
+    assert!(matches!(
+        &plan.effects[0].method,
+        ProtocolMethod::UpdateContext
+    ));
+    assert_eq!(
+        plan.effects[0].payload.fields.get("contextUpdate"),
+        Some(&"permissionMode".to_string())
+    );
+    assert_eq!(
+        plan.effects[0].payload.fields.get("permissionMode"),
+        Some(&"plan".to_string())
+    );
+
+    let conversation = engine.conversations.get(&conversation_id).unwrap();
+    assert_eq!(
+        conversation
+            .context
+            .permission_mode
+            .effective()
+            .and_then(Option::as_ref)
+            .map(|mode| mode.id.as_str()),
+        Some("plan")
+    );
+}
+
+#[test]
 fn reasoning_effort_emits_neutral_context_update_without_model_variant_policy() {
     let capabilities = acp_capabilities();
     let mut engine = engine_with(ProtocolFlavor::Acp, capabilities.clone());
@@ -448,6 +517,12 @@ fn context_update_emits_neutral_effects_and_start_turn_stays_context_free() {
                             id: "plan".to_string(),
                         }),
                     },
+                    ContextUpdate::PermissionMode {
+                        scope: ContextScope::TurnAndFuture,
+                        mode: Some(PermissionMode {
+                            id: "plan".to_string(),
+                        }),
+                    },
                     ContextUpdate::Reasoning {
                         scope: ContextScope::TurnAndFuture,
                         reasoning: Some(ReasoningProfile {
@@ -472,7 +547,7 @@ fn context_update_emits_neutral_effects_and_start_turn_stays_context_free() {
             },
         })
         .expect("context update");
-    assert_eq!(plan.effects.len(), 6);
+    assert_eq!(plan.effects.len(), 7);
     assert!(
         plan.effects
             .iter()
@@ -488,18 +563,22 @@ fn context_update_emits_neutral_effects_and_start_turn_stays_context_free() {
     );
     assert_eq!(
         plan.effects[2].payload.fields.get("contextUpdate"),
-        Some(&"reasoning".to_string())
+        Some(&"permissionMode".to_string())
     );
     assert_eq!(
         plan.effects[3].payload.fields.get("contextUpdate"),
-        Some(&"approval".to_string())
+        Some(&"reasoning".to_string())
     );
     assert_eq!(
         plan.effects[4].payload.fields.get("contextUpdate"),
-        Some(&"sandbox".to_string())
+        Some(&"approval".to_string())
     );
     assert_eq!(
         plan.effects[5].payload.fields.get("contextUpdate"),
+        Some(&"sandbox".to_string())
+    );
+    assert_eq!(
+        plan.effects[6].payload.fields.get("contextUpdate"),
         Some(&"permissions".to_string())
     );
 
@@ -513,6 +592,7 @@ fn context_update_emits_neutral_effects_and_start_turn_stays_context_free() {
     let fields = &turn.effects[0].payload.fields;
     assert_eq!(fields.get("model"), None);
     assert_eq!(fields.get("mode"), None);
+    assert_eq!(fields.get("permissionMode"), None);
     assert_eq!(fields.get("reasoningEffort"), None);
     assert_eq!(fields.get("approval"), None);
     assert_eq!(fields.get("permissions"), None);

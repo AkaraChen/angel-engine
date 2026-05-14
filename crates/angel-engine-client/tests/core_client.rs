@@ -295,7 +295,7 @@ fn thread_send_event_streams_turn_deltas_and_terminal_state() {
         .turn(&turn_id)
         .expect("turn snapshot");
     assert_eq!(snapshot.output_text, "The file defines a client facade.");
-    assert!(snapshot.phase.contains("terminal"));
+    assert!(snapshot.is_terminal);
 }
 
 #[test]

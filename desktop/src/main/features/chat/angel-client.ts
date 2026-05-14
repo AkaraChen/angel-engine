@@ -11,6 +11,7 @@ import type {
   RuntimeOptions,
   SendTextRequest,
   SetModeRequest,
+  SetPermissionModeRequest,
   TurnRunEvent,
   TurnRunResult,
 } from "@angel-engine/client-napi";
@@ -35,6 +36,8 @@ import type {
   ChatSendResult,
   ChatSetModeInput,
   ChatSetModeResult,
+  ChatSetPermissionModeInput,
+  ChatSetPermissionModeResult,
   ChatSetRuntimeInput,
 } from "../../../shared/chat";
 import { normalizeChatAttachmentsInput } from "../../../shared/chat";
@@ -162,6 +165,22 @@ export async function setChatMode(
   };
 }
 
+export async function setChatPermissionMode(
+  input: ChatSetPermissionModeInput,
+): Promise<ChatSetPermissionModeResult> {
+  const chat = requireChat(input.chatId);
+  const snapshot = await getChatSession(chat).setPermissionMode({
+    cwd: cwdForChat(chat),
+    mode: input.mode,
+    remoteId: chat.remoteThreadId ?? undefined,
+  });
+  const updatedChat = persistRemoteThreadId(chat, snapshot);
+  return {
+    chat: updatedChat,
+    config: runtimeConfigFromConversationSnapshot(snapshot),
+  };
+}
+
 export function setChatRuntime(input: ChatSetRuntimeInput): Chat {
   const chat = requireChat(input.chatId);
   const session = chatSessions.get(chat.id);
@@ -214,6 +233,7 @@ export async function streamChat(
     cwd: cwdForChat(chat, input.projectId),
     model: input.model ?? undefined,
     mode: input.mode ?? undefined,
+    permissionMode: input.permissionMode ?? undefined,
     onEvent,
     onResolveElicitation: controls?.setResolveElicitation,
     reasoningEffort: input.reasoningEffort ?? undefined,
@@ -556,6 +576,12 @@ class DesktopAngelSession {
     return this.enqueue(() => this.session.setMode(request));
   }
 
+  setPermissionMode(
+    request: SetPermissionModeRequest,
+  ): Promise<ConversationSnapshot> {
+    return this.enqueue(() => this.session.setPermissionMode(request));
+  }
+
   sendText(request: DesktopSendTextRequest): Promise<TurnRunResult> {
     return this.enqueue(() => this.sendTextNow(request));
   }
@@ -579,6 +605,7 @@ class DesktopAngelSession {
         cwd: request.cwd,
         mode: request.mode,
         model: request.model,
+        permissionMode: request.permissionMode,
         input,
         reasoningEffort: request.reasoningEffort,
         remoteId: request.remoteId,

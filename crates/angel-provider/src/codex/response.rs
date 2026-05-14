@@ -228,30 +228,39 @@ fn append_codex_default_settings(
         output.events.push(EngineEvent::SessionModesUpdated {
             conversation_id: conversation_id.clone(),
             modes: SessionModeState {
-                current_mode_id: conversation
-                    .and_then(|conversation| {
-                        conversation
-                            .context
-                            .mode
-                            .effective()
-                            .and_then(Option::as_ref)
-                            .map(|mode| mode.id.clone())
+                current_mode_id: codex_current_collaboration_mode(conversation),
+                available_modes: CodexCollaborationMode::ALL
+                    .into_iter()
+                    .map(|mode| SessionMode {
+                        id: mode.id().to_string(),
+                        name: mode.name().to_string(),
+                        description: mode.description().map(str::to_string),
                     })
-                    .unwrap_or_else(|| "default".to_string()),
-                available_modes: vec![
-                    SessionMode {
-                        id: "default".to_string(),
-                        name: "Default".to_string(),
-                        description: None,
-                    },
-                    SessionMode {
-                        id: "plan".to_string(),
-                        name: "Plan".to_string(),
-                        description: Some("Plan before making changes.".to_string()),
-                    },
-                ],
+                    .collect(),
             },
         });
+    }
+
+    if conversation
+        .and_then(|conversation| conversation.permission_mode_state.as_ref())
+        .is_none()
+    {
+        output
+            .events
+            .push(EngineEvent::SessionPermissionModesUpdated {
+                conversation_id: conversation_id.clone(),
+                modes: SessionPermissionModeState {
+                    current_mode_id: codex_current_permission_mode(conversation),
+                    available_modes: CodexPermissionMode::ALL
+                        .into_iter()
+                        .map(|mode| SessionPermissionMode {
+                            id: mode.id().to_string(),
+                            name: mode.name().to_string(),
+                            description: mode.description().map(str::to_string),
+                        })
+                        .collect(),
+                },
+            });
     }
 
     if conversation.map_or(true, |conversation| {
@@ -281,11 +290,54 @@ fn append_codex_default_settings(
     }
 }
 
+fn codex_current_collaboration_mode(
+    conversation: Option<&angel_engine::state::ConversationState>,
+) -> String {
+    conversation
+        .and_then(|conversation| {
+            conversation
+                .context
+                .mode
+                .effective()
+                .and_then(Option::as_ref)
+                .and_then(|mode| CodexCollaborationMode::from_id(&mode.id))
+        })
+        .unwrap_or(CodexCollaborationMode::Default)
+        .id()
+        .to_string()
+}
+
+fn codex_current_permission_mode(
+    conversation: Option<&angel_engine::state::ConversationState>,
+) -> String {
+    conversation
+        .and_then(|conversation| {
+            conversation
+                .context
+                .permission_mode
+                .effective()
+                .and_then(Option::as_ref)
+                .and_then(|mode| CodexPermissionMode::from_id(&mode.id))
+        })
+        .or_else(|| {
+            conversation.and_then(|conversation| {
+                conversation
+                    .context
+                    .approvals
+                    .effective()
+                    .map(CodexPermissionMode::from_approval_policy)
+            })
+        })
+        .unwrap_or(CodexPermissionMode::OnRequest)
+        .id()
+        .to_string()
+}
+
 fn codex_has_reasoning_option(conversation: &angel_engine::state::ConversationState) -> bool {
     conversation.config_options.iter().any(|option| {
-        let id = option.id.to_ascii_lowercase();
-        let name = option.name.to_ascii_lowercase();
-        id.contains("reasoning") || id.contains("effort") || name.contains("reasoning")
+        option.category.as_deref() == Some("reasoning")
+            || codex_config_name_matches(&option.id, &["reasoning", "effort"])
+            || codex_config_name_matches(&option.name, &["reasoning", "effort"])
     })
 }
 
@@ -320,6 +372,21 @@ fn codex_setting_label(value: &str) -> String {
         })
         .collect::<Vec<_>>()
         .join(" ")
+}
+
+fn codex_config_name_matches(value: &str, targets: &[&str]) -> bool {
+    let normalized = codex_normalized_config_name(value);
+    targets
+        .iter()
+        .any(|target| normalized == codex_normalized_config_name(target))
+}
+
+fn codex_normalized_config_name(value: &str) -> String {
+    value
+        .chars()
+        .filter(|ch| ch.is_ascii_alphanumeric())
+        .flat_map(char::to_lowercase)
+        .collect()
 }
 
 fn codex_rpc_error_event(
@@ -1124,6 +1191,7 @@ mod tests {
                 EngineEvent::ConversationReady { .. },
                 EngineEvent::AvailableCommandsUpdated { commands, .. },
                 EngineEvent::SessionModesUpdated { modes, .. },
+                EngineEvent::SessionPermissionModesUpdated { modes: permission_modes, .. },
                 EngineEvent::SessionConfigOptionsUpdated { options, .. }
             ] if commands.iter().any(|command| command.name == "plan")
                 && commands.iter().any(|command| command.name == "compact")
@@ -1135,6 +1203,10 @@ mod tests {
                 && modes.current_mode_id == "default"
                 && modes.available_modes.iter().any(|mode| mode.id == "default")
                 && modes.available_modes.iter().any(|mode| mode.id == "plan")
+                && permission_modes.current_mode_id == "on-request"
+                && permission_modes.available_modes.iter().any(|mode| mode.id == "untrusted")
+                && permission_modes.available_modes.iter().any(|mode| mode.id == "on-request")
+                && permission_modes.available_modes.iter().any(|mode| mode.id == "never")
                 && options.iter().any(|option| option.id == "reasoning"
                     && option.values.iter().any(|value| value.value == "none")
                     && option.values.iter().any(|value| value.value == "minimal")

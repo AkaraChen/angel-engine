@@ -140,7 +140,7 @@ pub fn create_runtime_options(
             }),
             command: command_override.unwrap_or_else(|| "qodercli".to_string()),
             identity,
-            protocol: ClientProtocol::Acp,
+            protocol: ClientProtocol::Qoder,
             ..ClientOptions::builder().build()
         },
         AgentRuntime::Copilot => ClientOptions {
@@ -154,7 +154,7 @@ pub fn create_runtime_options(
             }),
             command: command_override.unwrap_or_else(|| "copilot".to_string()),
             identity,
-            protocol: ClientProtocol::Acp,
+            protocol: ClientProtocol::Copilot,
             ..ClientOptions::builder().build()
         },
         AgentRuntime::Gemini => ClientOptions {
@@ -182,7 +182,7 @@ pub fn create_runtime_options(
             }),
             command: command_override.unwrap_or_else(|| "agent".to_string()),
             identity,
-            protocol: ClientProtocol::Acp,
+            protocol: ClientProtocol::Cursor,
             ..ClientOptions::builder().build()
         },
         AgentRuntime::Cline => ClientOptions {
@@ -196,7 +196,7 @@ pub fn create_runtime_options(
             }),
             command: command_override.unwrap_or_else(|| "cline".to_string()),
             identity,
-            protocol: ClientProtocol::Acp,
+            protocol: ClientProtocol::Cline,
             ..ClientOptions::builder().build()
         },
         AgentRuntime::Codex => ClientOptions {
@@ -266,52 +266,43 @@ mod tests {
     }
 
     #[test]
-    fn documented_acp_runtimes_use_standard_acp_commands() {
-        let cases = [
-            (
-                "qoder",
-                AgentRuntime::Qoder,
-                "qodercli",
-                vec!["--acp"],
-                false,
-                false,
-            ),
-            (
-                "copilot",
-                AgentRuntime::Copilot,
-                "copilot",
-                vec!["--acp", "--stdio"],
-                false,
-                false,
-            ),
-            (
-                "cursor",
-                AgentRuntime::Cursor,
-                "agent",
-                vec!["acp"],
-                true,
-                true,
-            ),
-            (
-                "cline",
-                AgentRuntime::Cline,
-                "cline",
-                vec!["--acp"],
-                false,
-                false,
-            ),
-        ];
+    fn qoder_runtime_uses_qoder_adapter_protocol() {
+        let options = create_runtime_options(Some("qoder"), RuntimeOptionsOverrides::default());
 
-        for (name, runtime, command, args, need_auth, auto_authenticate) in cases {
-            let options = create_runtime_options(Some(name), RuntimeOptionsOverrides::default());
+        assert_eq!(options.runtime, AgentRuntime::Qoder);
+        assert_eq!(options.client.protocol, ClientProtocol::Qoder);
+        assert_eq!(options.client.command, "qodercli");
+        assert_eq!(options.client.args, vec!["--acp"]);
+    }
 
-            assert_eq!(options.runtime, runtime);
-            assert_eq!(options.client.protocol, ClientProtocol::Acp);
-            assert_eq!(options.client.command, command);
-            assert_eq!(options.client.args, args);
-            assert_eq!(options.client.auth.need_auth, need_auth);
-            assert_eq!(options.client.auth.auto_authenticate, auto_authenticate);
-        }
+    #[test]
+    fn copilot_runtime_uses_copilot_adapter_protocol() {
+        let options = create_runtime_options(Some("copilot"), RuntimeOptionsOverrides::default());
+
+        assert_eq!(options.runtime, AgentRuntime::Copilot);
+        assert_eq!(options.client.protocol, ClientProtocol::Copilot);
+        assert_eq!(options.client.command, "copilot");
+        assert_eq!(options.client.args, vec!["--acp", "--stdio"]);
+    }
+
+    #[test]
+    fn cursor_runtime_uses_cursor_adapter_protocol() {
+        let options = create_runtime_options(Some("cursor"), RuntimeOptionsOverrides::default());
+
+        assert_eq!(options.runtime, AgentRuntime::Cursor);
+        assert_eq!(options.client.protocol, ClientProtocol::Cursor);
+        assert_eq!(options.client.command, "agent");
+        assert_eq!(options.client.args, vec!["acp"]);
+    }
+
+    #[test]
+    fn cline_runtime_uses_cline_adapter_protocol() {
+        let options = create_runtime_options(Some("cline"), RuntimeOptionsOverrides::default());
+
+        assert_eq!(options.runtime, AgentRuntime::Cline);
+        assert_eq!(options.client.protocol, ClientProtocol::Cline);
+        assert_eq!(options.client.command, "cline");
+        assert_eq!(options.client.args, vec!["--acp"]);
     }
 
     #[test]

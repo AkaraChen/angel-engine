@@ -37,12 +37,13 @@ pub use event::{
 pub use process::AngelClient;
 pub use runtime::{AgentRuntime, RuntimeOptions, RuntimeOptionsOverrides, create_runtime_options};
 pub use session::{
-    AngelSession, HydrateRequest, InspectRequest, SendTextRequest, SetModeRequest, TurnRunEvent,
-    TurnRunResult,
+    AngelSession, HydrateRequest, InspectRequest, SendTextRequest, SetModeRequest,
+    SetPermissionModeRequest, TurnRunEvent, TurnRunResult,
 };
 pub use settings::{
-    AvailableModeSettingSnapshot, ModeOptionSnapshot, ModelListSettingSnapshot,
-    ModelOptionSnapshot, ReasoningLevelSettingSnapshot, ThreadSettingsSnapshot,
+    AvailableModeSettingSnapshot, AvailablePermissionModeSettingSnapshot, ModeOptionSnapshot,
+    ModelListSettingSnapshot, ModelOptionSnapshot, PermissionModeOptionSnapshot,
+    ReasoningLevelSettingSnapshot, ThreadSettingsSnapshot,
 };
 pub use snapshot::{
     ActionOutputSnapshot, ActionSnapshot, AgentStateSnapshot, AvailableCommandSnapshot,

@@ -185,6 +185,10 @@ type ChatRunStore = {
   ) => void;
   setActiveChatId: (chatId?: string) => void;
   setMode: (slotKey: string, mode: string) => Promise<ChatRuntimeConfig>;
+  setPermissionMode: (
+    slotKey: string,
+    mode: string,
+  ) => Promise<ChatRuntimeConfig>;
   slots: Record<string, ChatRunSlot>;
   startRun: (input: StartRunInput) => Promise<void>;
 };
@@ -390,6 +394,23 @@ const chatRunActions: Omit<ChatRunStore, keyof ChatRunContext> = {
     const slot = state.slots[resolvedKey];
     const chatId = slot?.chatId ?? resolvedKey;
     const result = await getApiClient().chats.setMode({ chatId, mode });
+    chatRunActor.send({
+      chat: result.chat,
+      config: result.config,
+      slotKey: resolvedKey,
+      type: "slot.configUpdated",
+    });
+    return result.config;
+  },
+  async setPermissionMode(slotKey, mode) {
+    const state = getChatRunContext();
+    const resolvedKey = resolveSlotKey(state, slotKey);
+    const slot = state.slots[resolvedKey];
+    const chatId = slot?.chatId ?? resolvedKey;
+    const result = await getApiClient().chats.setPermissionMode({
+      chatId,
+      mode,
+    });
     chatRunActor.send({
       chat: result.chat,
       config: result.config,

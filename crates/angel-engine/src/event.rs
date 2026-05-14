@@ -7,8 +7,8 @@ use crate::state::{
     ActionPatch, ActionState, AvailableCommand, ContentDelta, ContextPatch, ConversationLifecycle,
     ElicitationDecision, ElicitationState, HistoryMutationOp, HistoryMutationResult,
     HistoryReplayEntry, HydrationSource, ObserverState, PlanState, ProvisionOp,
-    SessionConfigOption, SessionModeState, SessionModelState, SessionUsageState, TurnOutcome,
-    UserInputRef,
+    SessionConfigOption, SessionModeState, SessionModelState, SessionPermissionModeState,
+    SessionUsageState, TurnOutcome, UserInputRef,
 };
 
 #[derive(serde::Serialize, serde::Deserialize, Clone, Debug, PartialEq, Eq)]
@@ -66,6 +66,14 @@ pub enum EngineEvent {
         modes: SessionModeState,
     },
     SessionModeChanged {
+        conversation_id: ConversationId,
+        mode_id: String,
+    },
+    SessionPermissionModesUpdated {
+        conversation_id: ConversationId,
+        modes: SessionPermissionModeState,
+    },
+    SessionPermissionModeChanged {
         conversation_id: ConversationId,
         mode_id: String,
     },

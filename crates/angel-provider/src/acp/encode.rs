@@ -283,6 +283,10 @@ fn acp_update_context_message(
                 ))
             }
         }
+        AcpContextUpdate::PermissionMode(mode) => {
+            acp_find_permission_mode_config_option(&conversation.config_options)
+                .and_then(|option| acp_set_config_option_message(&session_id, option, mode))
+        }
         AcpContextUpdate::Reasoning(effort) => {
             acp_find_reasoning_config_option(&conversation.config_options)
                 .and_then(|option| acp_set_config_option_message(&session_id, option, effort))
@@ -336,6 +340,7 @@ fn acp_set_config_option_message(
 enum AcpContextUpdate {
     Model(String),
     Mode(String),
+    PermissionMode(String),
     Reasoning(String),
     Approval(String),
     Sandbox(String),
@@ -347,6 +352,10 @@ fn acp_context_update(effect: &angel_engine::ProtocolEffect) -> Option<AcpContex
     match fields.get("contextUpdate").map(String::as_str) {
         Some("model") => fields.get("model").cloned().map(AcpContextUpdate::Model),
         Some("mode") => fields.get("mode").cloned().map(AcpContextUpdate::Mode),
+        Some("permissionMode") => fields
+            .get("permissionMode")
+            .cloned()
+            .map(AcpContextUpdate::PermissionMode),
         Some("reasoning") | Some("effort") => fields
             .get("reasoning")
             .or_else(|| fields.get("reasoningEffort"))
@@ -371,6 +380,12 @@ fn acp_context_update(effect: &angel_engine::ProtocolEffect) -> Option<AcpContex
             .cloned()
             .map(AcpContextUpdate::Model)
             .or_else(|| fields.get("mode").cloned().map(AcpContextUpdate::Mode))
+            .or_else(|| {
+                fields
+                    .get("permissionMode")
+                    .cloned()
+                    .map(AcpContextUpdate::PermissionMode)
+            })
             .or_else(|| {
                 fields
                     .get("reasoning")
@@ -407,6 +422,21 @@ fn acp_find_model_config_option(options: &[SessionConfigOption]) -> Option<&Sess
 
 fn acp_find_mode_config_option(options: &[SessionConfigOption]) -> Option<&SessionConfigOption> {
     acp_find_config_option(options, "mode", &["mode"])
+}
+
+fn acp_find_permission_mode_config_option(
+    options: &[SessionConfigOption],
+) -> Option<&SessionConfigOption> {
+    acp_find_config_option(
+        options,
+        "permissionMode",
+        &[
+            "permission_mode",
+            "permissions_mode",
+            "permission_mode_id",
+            "approval_mode",
+        ],
+    )
 }
 
 fn acp_find_reasoning_config_option(

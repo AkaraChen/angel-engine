@@ -1,3 +1,5 @@
+import { EngineEventType } from "@angel-engine/client-napi";
+
 import type { EngineEventJson, JsonObject } from "./types";
 import { isJsonObject } from "./utils";
 
@@ -6,7 +8,7 @@ export function contextUpdated(
   updates: EngineEventJson[],
 ): EngineEventJson {
   return {
-    ContextUpdated: {
+    [EngineEventType.ContextUpdated]: {
       conversation_id: conversationId,
       patch: contextPatch(updates),
     },

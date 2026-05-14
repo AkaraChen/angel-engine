@@ -4,8 +4,9 @@ use crate::event::{EngineEvent, TransitionReport};
 use crate::ids::ConversationId;
 use crate::reducer::{AngelEngine, CommandPlan};
 use crate::state::{
-    AgentMode, ContextPatch, ContextScope, ContextUpdate, ConversationState, ReasoningProfile,
-    SessionConfigOption, SessionMode, SessionModeState, SessionModel, SessionModelState,
+    AgentMode, ContextPatch, ContextScope, ContextUpdate, ConversationState, PermissionMode,
+    ReasoningProfile, SessionConfigOption, SessionMode, SessionModeState, SessionModel,
+    SessionModelState, SessionPermissionMode, SessionPermissionModeState,
 };
 use strum::Display;
 
@@ -45,6 +46,7 @@ pub struct ConversationSettingsState {
     pub reasoning: ReasoningLevelState,
     pub model_list: ModelListState,
     pub available_modes: AvailableModeState,
+    pub permission_modes: AvailablePermissionModeState,
 }
 
 impl ConversationSettingsState {
@@ -53,6 +55,7 @@ impl ConversationSettingsState {
             reasoning: ReasoningLevelState::from_conversation(conversation),
             model_list: ModelListState::from_conversation(conversation),
             available_modes: AvailableModeState::from_conversation(conversation),
+            permission_modes: AvailablePermissionModeState::from_conversation(conversation),
         }
     }
 }
@@ -235,8 +238,59 @@ impl AvailableModeState {
             current_mode_id: context_mode,
             available_modes: Vec::new(),
             config_option_id: None,
-            can_set: conversation.capabilities.context.mode.is_supported()
-                || conversation.capabilities.context.config.is_supported(),
+            can_set: conversation.capabilities.context.mode.is_supported(),
+        }
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct AvailablePermissionModeState {
+    pub current_mode_id: Option<String>,
+    pub available_modes: Vec<SessionPermissionMode>,
+    pub config_option_id: Option<String>,
+    pub can_set: bool,
+}
+
+impl AvailablePermissionModeState {
+    pub fn from_conversation(conversation: &ConversationState) -> Self {
+        let context_mode = conversation
+            .context
+            .permission_mode
+            .effective()
+            .and_then(Option::as_ref)
+            .map(|mode| mode.id.clone());
+
+        if let Some(modes) = &conversation.permission_mode_state {
+            return Self {
+                current_mode_id: context_mode.or_else(|| Some(modes.current_mode_id.clone())),
+                available_modes: modes.available_modes.clone(),
+                config_option_id: None,
+                can_set: true,
+            };
+        }
+
+        if let Some(option) = find_permission_mode_config_option(&conversation.config_options) {
+            return Self {
+                current_mode_id: context_mode.or_else(|| Some(option.current_value.clone())),
+                available_modes: option
+                    .values
+                    .iter()
+                    .map(|value| SessionPermissionMode {
+                        id: value.value.clone(),
+                        name: value.name.clone(),
+                        description: value.description.clone(),
+                    })
+                    .collect(),
+                config_option_id: Some(option.id.clone()),
+                can_set: true,
+            };
+        }
+
+        Self {
+            current_mode_id: context_mode,
+            available_modes: Vec::new(),
+            config_option_id: None,
+            can_set: false,
         }
     }
 }
@@ -295,6 +349,22 @@ impl AngelEngine {
         conversation_id: impl Into<ConversationId>,
     ) -> Result<AvailableModeState, EngineError> {
         self.get_available_modes(conversation_id)
+    }
+
+    pub fn get_permission_modes(
+        &self,
+        conversation_id: impl Into<ConversationId>,
+    ) -> Result<AvailablePermissionModeState, EngineError> {
+        Ok(self
+            .conversation_settings(conversation_id)?
+            .permission_modes)
+    }
+
+    pub fn permission_modes(
+        &self,
+        conversation_id: impl Into<ConversationId>,
+    ) -> Result<AvailablePermissionModeState, EngineError> {
+        self.get_permission_modes(conversation_id)
     }
 
     pub fn set_reasoning_level(
@@ -422,6 +492,54 @@ impl AngelEngine {
         })
     }
 
+    pub fn set_permission_mode(
+        &mut self,
+        conversation_id: impl Into<ConversationId>,
+        mode: impl Into<String>,
+    ) -> Result<CommandPlan, EngineError> {
+        let conversation_id = conversation_id.into();
+        let mode = mode.into().trim().to_string();
+        let settings = self.get_permission_modes(conversation_id.clone())?;
+        let context_mode_id = self
+            .conversations
+            .get(&conversation_id)
+            .and_then(|conversation| {
+                conversation
+                    .context
+                    .permission_mode
+                    .effective()
+                    .and_then(Option::as_ref)
+                    .map(|mode| mode.id.as_str())
+            });
+        let mode_is_materialized = context_mode_id == Some(mode.as_str());
+        if mode.is_empty()
+            || !settings.can_set
+            || !known_permission_mode(&settings, &mode)
+            || (settings.current_mode_id.as_deref() == Some(mode.as_str()) && mode_is_materialized)
+        {
+            return Ok(settings_noop_plan(conversation_id));
+        }
+
+        self.plan_command(EngineCommand::UpdateContext {
+            conversation_id,
+            patch: ContextPatch::one(ContextUpdate::PermissionMode {
+                scope: ContextScope::TurnAndFuture,
+                mode: Some(PermissionMode { id: mode }),
+            }),
+        })
+    }
+
+    pub fn replace_permission_modes(
+        &mut self,
+        conversation_id: impl Into<ConversationId>,
+        modes: SessionPermissionModeState,
+    ) -> Result<TransitionReport, EngineError> {
+        self.apply_event(EngineEvent::SessionPermissionModesUpdated {
+            conversation_id: conversation_id.into(),
+            modes,
+        })
+    }
+
     fn current_reasoning_profile(
         &self,
         conversation_id: &ConversationId,
@@ -451,6 +569,12 @@ pub(crate) fn find_mode_config_option(
     options: &[SessionConfigOption],
 ) -> Option<&SessionConfigOption> {
     find_config_option(options, "mode")
+}
+
+pub(crate) fn find_permission_mode_config_option(
+    options: &[SessionConfigOption],
+) -> Option<&SessionConfigOption> {
+    find_config_option(options, "permissionMode")
 }
 
 pub(crate) fn find_reasoning_config_option(
@@ -534,6 +658,14 @@ fn known_model(settings: &ModelListState, model: &str) -> bool {
 }
 
 fn known_mode(settings: &AvailableModeState, mode: &str) -> bool {
+    settings.available_modes.is_empty()
+        || settings
+            .available_modes
+            .iter()
+            .any(|available| available.id == mode)
+}
+
+fn known_permission_mode(settings: &AvailablePermissionModeState, mode: &str) -> bool {
     settings.available_modes.is_empty()
         || settings
             .available_modes

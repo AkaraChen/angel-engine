@@ -19,6 +19,7 @@ export const chatStreamStartInput = type({
     "chatId?": "string | undefined",
     "model?": "string | undefined",
     "mode?": "string | undefined",
+    "permissionMode?": "string | undefined",
     "prewarmId?": "string | undefined",
     "projectId?": "string | undefined",
     "reasoningEffort?": "string | undefined",
@@ -39,6 +40,7 @@ export const chatCreateInput = type({
   "+": "ignore",
   "model?": "string | undefined",
   "mode?": "string | undefined",
+  "permissionMode?": "string | undefined",
   "projectId?": "string | undefined",
   "reasoningEffort?": "string | undefined",
   "runtime?": "string | undefined",
@@ -69,6 +71,7 @@ export const chatSendInput = type({
   "chatId?": "string | undefined",
   "model?": "string | undefined",
   "mode?": "string | undefined",
+  "permissionMode?": "string | undefined",
   "prewarmId?": "string | undefined",
   "projectId?": "string | undefined",
   "reasoningEffort?": "string | undefined",
@@ -77,6 +80,12 @@ export const chatSendInput = type({
 });
 
 export const chatSetModeInput = type({
+  "+": "ignore",
+  chatId: "string > 0",
+  mode: "string > 0",
+});
+
+export const chatSetPermissionModeInput = type({
   "+": "ignore",
   chatId: "string > 0",
   mode: "string > 0",

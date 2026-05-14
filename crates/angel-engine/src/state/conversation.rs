@@ -53,6 +53,7 @@ pub struct ConversationState {
     pub available_commands: Vec<AvailableCommand>,
     pub config_options: Vec<SessionConfigOption>,
     pub mode_state: Option<SessionModeState>,
+    pub permission_mode_state: Option<SessionPermissionModeState>,
     pub model_state: Option<SessionModelState>,
     pub usage_state: Option<SessionUsageState>,
     pub capabilities: ConversationCapabilities,
@@ -81,6 +82,7 @@ impl ConversationState {
             available_commands: Vec::new(),
             config_options: Vec::new(),
             mode_state: None,
+            permission_mode_state: None,
             model_state: None,
             usage_state: None,
             capabilities,
@@ -147,6 +149,19 @@ pub struct SessionModeState {
 
 #[derive(serde::Serialize, serde::Deserialize, Clone, Debug, PartialEq, Eq)]
 pub struct SessionMode {
+    pub id: String,
+    pub name: String,
+    pub description: Option<String>,
+}
+
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug, PartialEq, Eq)]
+pub struct SessionPermissionModeState {
+    pub current_mode_id: String,
+    pub available_modes: Vec<SessionPermissionMode>,
+}
+
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug, PartialEq, Eq)]
+pub struct SessionPermissionMode {
     pub id: String,
     pub name: String,
     pub description: Option<String>,

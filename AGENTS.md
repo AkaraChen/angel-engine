@@ -89,6 +89,11 @@ protocol-neutral engine concept by an adapter.
    - Encode `ProtocolEffect` into provider JSON-RPC.
    - Normalize provider hydrate/replay quirks before creating history replay
      chunks.
+   - For protocol fields with a closed value set, use typed enums from the
+     owning crate when available, or serde enums with exact canonical wire names
+     in the adapter. Do not add string alias compatibility, casing fallbacks, or
+     `contains`/prefix/suffix guessing for protocol ids. Unknown values should
+     fail fast so casing drift is caught during development.
 
 2. Reducers and state are protocol-neutral.
    - Reducers apply `EngineEvent` to state.

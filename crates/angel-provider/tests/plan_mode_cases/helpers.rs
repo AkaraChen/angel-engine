@@ -76,6 +76,15 @@ pub(super) fn set_mode(mode: &str) -> ContextPatch {
     })
 }
 
+pub(super) fn set_permission_mode(mode: &str) -> ContextPatch {
+    ContextPatch::one(ContextUpdate::PermissionMode {
+        scope: ContextScope::TurnAndFuture,
+        mode: Some(PermissionMode {
+            id: mode.to_string(),
+        }),
+    })
+}
+
 pub(super) fn set_model_and_mode(model: &str, mode: &str) -> ContextPatch {
     ContextPatch {
         updates: vec![

@@ -25,7 +25,7 @@ import type {
   ActiveClaudeTurn,
   EngineEventJson,
   SessionConfigValueJson,
-  SessionModeJson,
+  SessionPermissionModeJson,
 } from "./types";
 import { labelFromValue, uniqueStrings } from "./utils";
 import { actionKind, toolInputSummary, toolTitle } from "./tooling";
@@ -212,11 +212,11 @@ export function modelInfoForId(
   );
 }
 
-export function modeOptionsFromIds(
+export function permissionModeOptionsFromIds(
   ids: readonly string[],
-  currentMode: string,
-): SessionModeJson[] {
-  return uniqueStrings([...ids, currentMode])
+  currentPermissionMode: string,
+): SessionPermissionModeJson[] {
+  return uniqueStrings([...ids, currentPermissionMode])
     .filter((id) => id && id !== "bypassPermissions")
     .map((id) => ({
       description: null,

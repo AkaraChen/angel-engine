@@ -1,7 +1,10 @@
 use angel_engine::event::EngineEvent;
 use angel_engine::ids::{ConversationId, JsonRpcRequestId};
 use angel_engine::protocol::ProtocolMethod;
-use angel_engine::state::{AvailableCommand, SessionConfigOption, SessionModeState};
+use angel_engine::state::{
+    AvailableCommand, SessionConfigOption, SessionMode, SessionModeState, SessionPermissionMode,
+    SessionPermissionModeState,
+};
 use angel_engine::transport::{
     JsonRpcMessage, TransportLogKind, TransportOptions, TransportOutput,
 };
@@ -38,34 +41,51 @@ impl GeminiAdapter {
         self.acp.capabilities()
     }
 
-    fn normalize_gemini_output(&self, mut output: TransportOutput) -> TransportOutput {
+    fn normalize_gemini_output(
+        &self,
+        mut output: TransportOutput,
+    ) -> Result<TransportOutput, EngineError> {
         let mut filtered_plan_mode = false;
         let mut filtered_plan_command = false;
-        output.events = output
-            .events
-            .into_iter()
-            .map(|event| match event {
+        let mut events = Vec::with_capacity(output.events.len());
+        for event in output.events {
+            let event = match event {
                 EngineEvent::SessionModesUpdated {
                     conversation_id,
                     modes,
                 } => {
-                    let (modes, filtered) = gemini_session_modes(modes);
+                    let (modes, filtered) = gemini_permission_modes(modes)?;
                     filtered_plan_mode |= filtered;
-                    EngineEvent::SessionModesUpdated {
+                    Some(EngineEvent::SessionPermissionModesUpdated {
                         conversation_id,
                         modes,
+                    })
+                }
+                EngineEvent::SessionModeChanged {
+                    conversation_id,
+                    mode_id,
+                } => {
+                    let mode = decode_gemini_permission_mode(&mode_id)?;
+                    if mode == GeminiPermissionMode::Plan {
+                        filtered_plan_mode = true;
+                        None
+                    } else {
+                        Some(EngineEvent::SessionPermissionModeChanged {
+                            conversation_id,
+                            mode_id: gemini_permission_mode_wire_id(mode),
+                        })
                     }
                 }
                 EngineEvent::SessionConfigOptionsUpdated {
                     conversation_id,
                     options,
                 } => {
-                    let (options, filtered) = gemini_config_options(options);
+                    let (options, filtered) = gemini_config_options(options)?;
                     filtered_plan_mode |= filtered;
-                    EngineEvent::SessionConfigOptionsUpdated {
+                    Some(EngineEvent::SessionConfigOptionsUpdated {
                         conversation_id,
                         options,
-                    }
+                    })
                 }
                 EngineEvent::AvailableCommandsUpdated {
                     conversation_id,
@@ -73,14 +93,18 @@ impl GeminiAdapter {
                 } => {
                     let (commands, filtered) = gemini_available_commands(commands);
                     filtered_plan_command |= filtered;
-                    EngineEvent::AvailableCommandsUpdated {
+                    Some(EngineEvent::AvailableCommandsUpdated {
                         conversation_id,
                         commands,
-                    }
+                    })
                 }
-                event => event,
-            })
-            .collect();
+                event => Some(event),
+            };
+            if let Some(event) = event {
+                events.push(event);
+            }
+        }
+        output.events = events;
 
         if filtered_plan_mode {
             output.logs.push(angel_engine::TransportLog::new(
@@ -94,7 +118,7 @@ impl GeminiAdapter {
                 "Gemini /plan command hidden because this runtime does not complete prompts in plan mode",
             ));
         }
-        output
+        Ok(output)
     }
 
     fn normalize_gemini_response(
@@ -142,6 +166,52 @@ impl GeminiAdapter {
         }
         Some(output)
     }
+
+    fn encode_gemini_permission_mode_effect(
+        &self,
+        engine: &AngelEngine,
+        effect: &ProtocolEffect,
+    ) -> Result<Option<TransportOutput>, EngineError> {
+        let Some(mode) = gemini_permission_mode_effect(effect)? else {
+            return Ok(None);
+        };
+        if mode == GeminiPermissionMode::Plan {
+            let mut output = TransportOutput::default().log(
+                TransportLogKind::Warning,
+                "Gemini ACP plan permission mode ignored because this runtime does not complete prompts in plan mode",
+            );
+            if let Some(request_id) = &effect.request_id {
+                output.completed_requests.push(request_id.clone());
+            }
+            return Ok(Some(output));
+        }
+
+        let session_id = gemini_session_id(engine, effect)?;
+        let method = "session/set_mode";
+        let params = json!({
+            "sessionId": session_id,
+            "modeId": mode,
+        });
+        let mut output = TransportOutput::default().log(
+            TransportLogKind::Send,
+            format!(
+                "Gemini permission mode set via ACP mode: {}",
+                gemini_permission_mode_wire_id(mode),
+            ),
+        );
+        if let Some(request_id) = &effect.request_id {
+            output.messages.push(JsonRpcMessage::request(
+                request_id.clone(),
+                method.to_string(),
+                params,
+            ));
+        } else {
+            output
+                .messages
+                .push(JsonRpcMessage::notification(method.to_string(), params));
+        }
+        Ok(Some(output))
+    }
 }
 
 impl ProtocolAdapter for GeminiAdapter {
@@ -159,6 +229,11 @@ impl ProtocolAdapter for GeminiAdapter {
         effect: &ProtocolEffect,
         options: &TransportOptions,
     ) -> Result<TransportOutput, EngineError> {
+        if matches!(effect.method, ProtocolMethod::UpdateContext)
+            && let Some(output) = self.encode_gemini_permission_mode_effect(engine, effect)?
+        {
+            return Ok(output);
+        }
         if matches!(
             effect.method,
             ProtocolMethod::SetSessionMode | ProtocolMethod::UpdateContext
@@ -176,7 +251,7 @@ impl ProtocolAdapter for GeminiAdapter {
         message: &JsonRpcMessage,
     ) -> Result<TransportOutput, EngineError> {
         let output = self.acp.decode_message(engine, message)?;
-        let output = self.normalize_gemini_output(output);
+        let output = self.normalize_gemini_output(output)?;
         Ok(self.normalize_gemini_response(engine, message, output))
     }
 
@@ -211,51 +286,94 @@ impl ProtocolAdapter for GeminiAdapter {
     }
 }
 
-fn gemini_session_modes(mut modes: SessionModeState) -> (SessionModeState, bool) {
-    let before = modes.available_modes.len();
-    modes
-        .available_modes
-        .retain(|mode| !is_gemini_plan_mode(&mode.id));
-    let filtered = before != modes.available_modes.len();
-    if filtered && is_gemini_plan_mode(&modes.current_mode_id) {
-        modes.current_mode_id = modes
-            .available_modes
-            .iter()
-            .find(|mode| mode.id == "default")
-            .or_else(|| modes.available_modes.first())
-            .map(|mode| mode.id.clone())
-            .unwrap_or_else(|| "default".to_string());
+fn gemini_permission_modes(
+    modes: SessionModeState,
+) -> Result<(SessionPermissionModeState, bool), EngineError> {
+    let mut filtered = false;
+    let mut available_modes = Vec::new();
+    for mode in modes.available_modes {
+        let permission_mode = decode_gemini_permission_mode(&mode.id)?;
+        if permission_mode == GeminiPermissionMode::Plan {
+            filtered = true;
+            continue;
+        }
+        available_modes.push(gemini_permission_mode(mode, permission_mode));
     }
-    (modes, filtered)
+
+    let current_mode = decode_gemini_permission_mode(&modes.current_mode_id)?;
+    let current_mode_id = if current_mode == GeminiPermissionMode::Plan {
+        filtered = true;
+        available_modes
+            .first()
+            .map(|mode| mode.id.clone())
+            .unwrap_or_else(|| gemini_permission_mode_wire_id(GeminiPermissionMode::Default))
+    } else {
+        gemini_permission_mode_wire_id(current_mode)
+    };
+
+    Ok((
+        SessionPermissionModeState {
+            current_mode_id,
+            available_modes,
+        },
+        filtered,
+    ))
 }
 
-fn gemini_config_options(options: Vec<SessionConfigOption>) -> (Vec<SessionConfigOption>, bool) {
+fn gemini_permission_mode(
+    mode: SessionMode,
+    permission_mode: GeminiPermissionMode,
+) -> SessionPermissionMode {
+    SessionPermissionMode {
+        id: gemini_permission_mode_wire_id(permission_mode),
+        name: mode.name,
+        description: mode.description,
+    }
+}
+
+fn gemini_config_options(
+    options: Vec<SessionConfigOption>,
+) -> Result<(Vec<SessionConfigOption>, bool), EngineError> {
     let mut filtered_any = false;
     let options = options
         .into_iter()
         .map(|mut option| {
             if is_mode_config_option(&option) {
-                let before = option.values.len();
-                option
-                    .values
-                    .retain(|value| !is_gemini_plan_mode(&value.value));
-                if before != option.values.len() {
-                    filtered_any = true;
-                    if is_gemini_plan_mode(&option.current_value) {
-                        option.current_value = option
-                            .values
-                            .iter()
-                            .find(|value| value.value == "default")
-                            .or_else(|| option.values.first())
-                            .map(|value| value.value.clone())
-                            .unwrap_or_else(|| "default".to_string());
+                option.category = Some("permissionMode".to_string());
+                let mut values = Vec::with_capacity(option.values.len());
+                for mut value in option.values {
+                    let mode = decode_gemini_permission_mode(&value.value)?;
+                    if mode == GeminiPermissionMode::Plan {
+                        filtered_any = true;
+                    } else {
+                        value.value = gemini_permission_mode_wire_id(mode);
+                        values.push(value);
                     }
                 }
+                option.values = values;
+                let current_mode = decode_gemini_permission_mode(&option.current_value)?;
+                if current_mode == GeminiPermissionMode::Plan {
+                    filtered_any = true;
+                    option.current_value = option
+                        .values
+                        .iter()
+                        .find(|value| {
+                            decode_gemini_permission_mode(&value.value)
+                                .is_ok_and(|mode| mode == GeminiPermissionMode::Default)
+                        })
+                        .or_else(|| option.values.first())
+                        .map(|value| value.value.clone())
+                        .unwrap_or_else(|| {
+                            gemini_permission_mode_wire_id(GeminiPermissionMode::Default)
+                        });
+                } else {
+                    option.current_value = gemini_permission_mode_wire_id(current_mode);
+                }
             }
-            option
+            Ok(option)
         })
-        .collect();
-    (options, filtered_any)
+        .collect::<Result<Vec<_>, _>>()?;
+    Ok((options, filtered_any))
 }
 
 fn gemini_available_commands(mut commands: Vec<AvailableCommand>) -> (Vec<AvailableCommand>, bool) {
@@ -270,8 +388,72 @@ fn is_mode_config_option(option: &SessionConfigOption) -> bool {
 }
 
 fn is_gemini_plan_mode(value: &str) -> bool {
-    let value = value.trim();
-    value == "plan" || value.ends_with("#plan")
+    value == "plan"
+}
+
+fn gemini_permission_mode_effect(
+    effect: &ProtocolEffect,
+) -> Result<Option<GeminiPermissionMode>, EngineError> {
+    let fields = &effect.payload.fields;
+    if fields.get("contextUpdate").map(String::as_str) != Some("permissionMode") {
+        return Ok(None);
+    }
+    fields
+        .get("permissionMode")
+        .map(|mode| decode_gemini_permission_mode(mode))
+        .transpose()
+}
+
+fn gemini_session_id(engine: &AngelEngine, effect: &ProtocolEffect) -> Result<String, EngineError> {
+    let conversation_id =
+        effect
+            .conversation_id
+            .as_ref()
+            .ok_or_else(|| EngineError::InvalidCommand {
+                message: "missing conversation id for Gemini permission mode update".to_string(),
+            })?;
+    let conversation = engine.conversations.get(conversation_id).ok_or_else(|| {
+        EngineError::ConversationNotFound {
+            conversation_id: conversation_id.to_string(),
+        }
+    })?;
+    conversation
+        .remote
+        .as_protocol_id()
+        .map(str::to_string)
+        .ok_or_else(|| EngineError::InvalidState {
+            expected: "Gemini ACP session id".to_string(),
+            actual: format!("{:?}", conversation.remote),
+        })
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, serde::Deserialize, serde::Serialize)]
+enum GeminiPermissionMode {
+    #[serde(rename = "default")]
+    Default,
+    #[serde(rename = "autoEdit")]
+    AutoEdit,
+    #[serde(rename = "yolo")]
+    Yolo,
+    #[serde(rename = "plan")]
+    Plan,
+}
+
+fn decode_gemini_permission_mode(value: &str) -> Result<GeminiPermissionMode, EngineError> {
+    serde_json::from_value(Value::String(value.to_string())).map_err(|error| {
+        EngineError::InvalidState {
+            expected: "canonical Gemini permission mode id".to_string(),
+            actual: format!("{value:?}: {error}"),
+        }
+    })
+}
+
+fn gemini_permission_mode_wire_id(mode: GeminiPermissionMode) -> String {
+    let value = serde_json::to_value(mode).expect("GeminiPermissionMode serializes to a string");
+    let Value::String(id) = value else {
+        unreachable!("GeminiPermissionMode serialized to non-string JSON");
+    };
+    id
 }
 
 fn gemini_plan_prompt_response(
@@ -324,7 +506,8 @@ mod tests {
     use super::*;
     use angel_engine::{
         AgentMode, ContextPatch, ContextScope, ContextUpdate, ConversationLifecycle,
-        ConversationState, EngineCommand, RemoteConversationId, apply_transport_output,
+        ConversationState, EngineCommand, PermissionMode, RemoteConversationId,
+        apply_transport_output,
     };
     use serde_json::json;
 
@@ -408,9 +591,17 @@ mod tests {
             .expect("decode session");
         apply(&mut engine, &output);
 
-        let modes = engine.available_modes(conversation_id).expect("modes");
+        let modes = engine
+            .available_modes(conversation_id.clone())
+            .expect("modes");
+        assert!(!modes.can_set);
+        assert!(modes.available_modes.is_empty());
+        let permission_modes = engine
+            .permission_modes(conversation_id)
+            .expect("permission modes");
+        assert!(permission_modes.can_set);
         assert_eq!(
-            modes
+            permission_modes
                 .available_modes
                 .iter()
                 .map(|mode| mode.id.as_str())
@@ -419,8 +610,46 @@ mod tests {
         );
         assert!(output.logs.iter().any(|log| {
             log.kind == TransportLogKind::Warning
-                && log.message.contains("Gemini ACP plan mode hidden")
+                && log.message
+                    == "Gemini ACP plan mode hidden because this runtime does not complete prompts in plan mode"
         }));
+    }
+
+    #[test]
+    fn session_modes_reject_noncanonical_gemini_permission_mode_casing() {
+        let adapter = GeminiAdapter::standard();
+        let (mut engine, conversation_id) = ready_engine(&adapter);
+        engine.pending.requests.insert(
+            angel_engine::JsonRpcRequestId::new("new"),
+            angel_engine::PendingRequest::StartConversation {
+                conversation_id: conversation_id.clone(),
+            },
+        );
+
+        let error = adapter
+            .decode_message(
+                &engine,
+                &JsonRpcMessage::response(
+                    angel_engine::JsonRpcRequestId::new("new"),
+                    json!({
+                        "sessionId": "sess",
+                        "modes": {
+                            "currentModeId": "default",
+                            "availableModes": [
+                                {"id": "default", "name": "Default"},
+                                {"id": "auto_edit", "name": "Auto Edit"}
+                            ]
+                        }
+                    }),
+                ),
+            )
+            .expect_err("noncanonical casing must fail");
+
+        assert!(matches!(
+            error,
+            EngineError::InvalidState { expected, .. }
+                if expected == "canonical Gemini permission mode id"
+        ));
     }
 
     #[test]
@@ -490,11 +719,53 @@ mod tests {
         assert!(output.messages.is_empty());
         assert!(output.logs.iter().any(|log| {
             log.kind == TransportLogKind::Warning
-                && log.message.contains("Gemini ACP plan mode ignored")
+                && log.message
+                    == "Gemini ACP plan mode ignored because this runtime does not complete prompts in plan mode"
         }));
 
         let settings_plan = engine.set_mode("conv", "plan").expect("settings plan");
         assert!(settings_plan.effects.is_empty());
+    }
+
+    #[test]
+    fn set_permission_mode_encodes_as_acp_mode_update() {
+        let adapter = GeminiAdapter::standard();
+        let (mut engine, conversation_id) = ready_engine(&adapter);
+        engine
+            .apply_event(EngineEvent::SessionPermissionModesUpdated {
+                conversation_id: conversation_id.clone(),
+                modes: SessionPermissionModeState {
+                    current_mode_id: "default".to_string(),
+                    available_modes: vec![SessionPermissionMode {
+                        id: "yolo".to_string(),
+                        name: "YOLO".to_string(),
+                        description: None,
+                    }],
+                },
+            })
+            .expect("seed permission modes");
+        let plan = engine
+            .plan_command(EngineCommand::UpdateContext {
+                conversation_id,
+                patch: ContextPatch::one(ContextUpdate::PermissionMode {
+                    scope: ContextScope::TurnAndFuture,
+                    mode: Some(PermissionMode {
+                        id: "yolo".to_string(),
+                    }),
+                }),
+            })
+            .expect("set permission mode");
+
+        let output = adapter
+            .encode_effect(&engine, &plan.effects[0], &TransportOptions::default())
+            .expect("encode permission mode");
+        assert!(matches!(
+            output.messages.first(),
+            Some(JsonRpcMessage::Request { method, params, .. })
+                if method == "session/set_mode"
+                    && params["sessionId"] == json!("sess")
+                    && params["modeId"] == json!("yolo")
+        ));
     }
 
     #[test]
@@ -538,7 +809,8 @@ mod tests {
         );
         assert!(output.logs.iter().any(|log| {
             log.kind == TransportLogKind::Warning
-                && log.message.contains("Gemini /plan command hidden")
+                && log.message
+                    == "Gemini /plan command hidden because this runtime does not complete prompts in plan mode"
         }));
     }
 
@@ -560,9 +832,8 @@ mod tests {
             interpreted.command,
             EngineCommand::UpdateContext { patch, .. } if patch.is_empty()
         ));
-        assert!(interpreted.message.is_some_and(|message| {
-            message.contains("Gemini /plan is unavailable through ACP")
-        }));
+        assert!(interpreted.message.is_some_and(|message| message
+            == "Gemini /plan is unavailable through ACP because this runtime does not complete prompts in plan mode."));
     }
 
     #[test]
@@ -596,9 +867,7 @@ mod tests {
         ));
         assert!(output.logs.iter().any(|log| {
             log.kind == TransportLogKind::Send
-                && log
-                    .message
-                    .contains("Gemini /plan turn completed; resetting runtime mode")
+                && log.message == "Gemini /plan turn completed; resetting runtime mode to default"
         }));
     }
 }
