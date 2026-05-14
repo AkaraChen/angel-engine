@@ -1,5 +1,5 @@
 import { useCallback, useState, type ReactNode } from "react";
-import { AlertTriangle, Bot, Trash2 } from "lucide-react";
+import { AlertTriangle, Bot, Palette, Trash2 } from "lucide-react";
 import claudeIconUrl from "@lobehub/icons-static-svg/icons/claudecode-color.svg";
 import clineIconUrl from "@lobehub/icons-static-svg/icons/cline.svg";
 import codexIconUrl from "@lobehub/icons-static-svg/icons/codex-color.svg";
@@ -26,12 +26,24 @@ import {
   type AgentRuntime,
   type AgentSettings,
 } from "@/shared/agents";
+import { useThemeSettings } from "@/features/settings/use-theme-settings";
+import type { DesktopThemeMode } from "@/platform/theme";
 
-type SettingsTab = "agents" | "danger";
+type SettingsTab = "agents" | "appearance" | "danger";
 
 const settingsTabs: Array<{ id: SettingsTab; label: string }> = [
   { id: "agents", label: "Agents" },
+  { id: "appearance", label: "Appearance" },
   { id: "danger", label: "Danger Area" },
+];
+
+const themeModeOptions: Array<{
+  label: string;
+  value: DesktopThemeMode;
+}> = [
+  { label: "System", value: "system" },
+  { label: "Light", value: "light" },
+  { label: "Dark", value: "dark" },
 ];
 
 const agentIconUrl: Record<AgentRuntime, string> = {
@@ -60,6 +72,7 @@ export function SettingsPage({
   onDefaultAgentChange: (runtime: AgentRuntime) => void;
 }) {
   const [activeTab, setActiveTab] = useState<SettingsTab>("agents");
+  const [themeMode, setThemeMode] = useThemeSettings();
   const enabledAgentOptions = getEnabledAgentOptions(agentSettings);
   const enabledRuntimeSet = new Set(agentSettings.enabledRuntimes);
 
@@ -167,6 +180,27 @@ export function SettingsPage({
                     value: agent.id,
                   }))}
                   value={agentSettings.defaultRuntime}
+                />
+              </div>
+            </section>
+          </div>
+        ) : null}
+
+        {activeTab === "appearance" ? (
+          <div className="space-y-5">
+            <section className="rounded-2xl border bg-card p-4">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div className="min-w-0">
+                  <h3 className="text-sm font-semibold">Theme</h3>
+                </div>
+                <SettingsSelect
+                  icon={<Palette />}
+                  label="Theme"
+                  onValueChange={(value) =>
+                    setThemeMode(value as DesktopThemeMode)
+                  }
+                  options={themeModeOptions}
+                  value={themeMode}
                 />
               </div>
             </section>

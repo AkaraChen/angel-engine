@@ -19,6 +19,8 @@ import {
 import {
   DESKTOP_ACTIVE_CHAT_SET_CHANNEL,
   DESKTOP_OPEN_CHAT_FROM_NOTIFICATION_CHANNEL,
+  DESKTOP_THEME_SET_CHANNEL,
+  type DesktopThemeSetInput,
   type DesktopOpenChatFromNotificationEvent,
 } from "./shared/desktop-window";
 
@@ -47,6 +49,9 @@ contextBridge.exposeInMainWorld("desktopWindow", {
   },
   setActiveChatId(chatId: string | null) {
     ipcRenderer.send(DESKTOP_ACTIVE_CHAT_SET_CHANNEL, chatId);
+  },
+  setTheme(input: DesktopThemeSetInput) {
+    ipcRenderer.send(DESKTOP_THEME_SET_CHANNEL, input);
   },
 });
 contextBridge.exposeInMainWorld("ipcInvoke", ipcRenderer.invoke);

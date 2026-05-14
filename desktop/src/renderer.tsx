@@ -3,13 +3,13 @@ import { createRoot } from "react-dom/client";
 
 import { App } from "./App";
 import "./index.css";
-import { applyDesktopPlatform, syncSystemColorScheme } from "./platform/theme";
+import { applyDesktopPlatform, syncDesktopColorScheme } from "./platform/theme";
 
 applyDesktopPlatform();
-const stopSystemColorSchemeSync = syncSystemColorScheme();
+const stopDesktopColorSchemeSync = syncDesktopColorScheme();
 
 if (import.meta.hot) {
-  import.meta.hot.dispose(stopSystemColorSchemeSync);
+  import.meta.hot.dispose(stopDesktopColorSchemeSync);
 }
 
 createRoot(document.getElementById("root") as HTMLElement).render(

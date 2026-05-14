@@ -10,6 +10,11 @@ import { registerChatStreamIpc } from "./main/features/chat/stream-ipc";
 import { closeProjectsDatabase } from "./main/features/projects/repository";
 import { appRouter } from "./main/ipc/app-router";
 import {
+  configureDesktopWindowAppearance,
+  desktopWindowChromeOptions,
+  registerDesktopWindowAppearanceIpc,
+} from "./main/window-appearance";
+import {
   configureDesktopWindowNotifications,
   registerDesktopWindowIpc,
 } from "./main/window-notifications";
@@ -67,16 +72,7 @@ const createWindow = () => {
 
   // Create the browser window.
   const mainWindow = new BrowserWindow({
-    ...(isMacOS
-      ? {
-          backgroundColor: "#00000000",
-          titleBarStyle: "hidden" as const,
-          trafficLightPosition: { x: 16, y: 18 },
-          transparent: true,
-          vibrancy: "under-window" as const,
-          visualEffectState: "active" as const,
-        }
-      : {}),
+    ...desktopWindowChromeOptions(),
     height: 820,
     minHeight: 640,
     minWidth: 960,
@@ -85,14 +81,9 @@ const createWindow = () => {
       preload: path.join(__dirname, "preload.js"),
     },
   });
+  configureDesktopWindowAppearance(mainWindow);
   configureExternalLinkHandling(mainWindow);
   configureDesktopWindowNotifications(mainWindow);
-
-  if (isMacOS) {
-    mainWindow.setBackgroundColor("#00000000");
-    mainWindow.setVibrancy("under-window", { animationDuration: 0 });
-    mainWindow.setWindowButtonPosition({ x: 16, y: 18 });
-  }
 
   // and load the index.html of the app.
   if (MAIN_WINDOW_VITE_DEV_SERVER_URL) {
@@ -115,6 +106,7 @@ function configureExternalLinkHandling(mainWindow: BrowserWindow) {
 // Some APIs can only be used after this event occurs.
 app.whenReady().then(() => {
   registerIpcMain(appRouter);
+  registerDesktopWindowAppearanceIpc();
   registerDesktopWindowIpc();
   registerChatStreamIpc();
   createWindow();
