@@ -14,7 +14,13 @@ import {
   UserMessage,
 } from "@/features/chat/components/messages";
 
-export function AssistantThread({ projectName }: { projectName?: string }) {
+export function AssistantThread({
+  projectName,
+  toolbar,
+}: {
+  projectName?: string;
+  toolbar?: ReactNode;
+}) {
   const { t } = useTranslation();
 
   return (
@@ -23,6 +29,10 @@ export function AssistantThread({ projectName }: { projectName?: string }) {
         className="relative flex min-h-0 flex-1 flex-col gap-6 overflow-y-auto px-4 py-6 sm:px-8"
         scrollToBottomOnRunStart
       >
+        {toolbar ? (
+          <div className="flex shrink-0 justify-end">{toolbar}</div>
+        ) : null}
+
         <AuiIf condition={(state) => state.thread.isEmpty}>
           <EmptyThread projectName={projectName} />
         </AuiIf>

@@ -62,6 +62,8 @@ export const de = {
       backgroundChatStatus: "Status des Hintergrundchats",
       newChat: "Neuer Chat",
       newChatInProject: "Neuer Chat in {{projectName}}",
+      noProject: "Kein Projekt",
+      projectSelect: "Projekt",
       settings: "Einstellungen",
     },
     sidebar: {

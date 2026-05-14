@@ -62,6 +62,8 @@ export const zhTW = {
       backgroundChatStatus: "背景聊天狀態",
       newChat: "新聊天",
       newChatInProject: "{{projectName}} 中的新聊天",
+      noProject: "無專案",
+      projectSelect: "專案",
       settings: "設定",
     },
     sidebar: {

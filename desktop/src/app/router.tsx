@@ -3,8 +3,9 @@ import type { RouteComponentProps } from "wouter";
 import { useHashLocation } from "wouter/use-hash-location";
 
 import {
-  WorkspacePage,
-  type WorkspaceRoute,
+  WorkspaceChatPage,
+  WorkspaceDraftPage,
+  WorkspaceSettingsPage,
 } from "@/app/workspace/workspace-page";
 
 export function AppRouter() {
@@ -12,17 +13,17 @@ export function AppRouter() {
     <Router hook={useHashLocation}>
       <Switch>
         <Route path="/">
-          <WorkspacePage route={{ type: "create" }} />
+          <WorkspaceDraftPage />
         </Route>
         <Route path="/settings">
-          <WorkspacePage route={{ type: "settings" }} />
+          <WorkspaceSettingsPage />
         </Route>
         <Route component={ChatRoutePage} path="/chat/:chatId" />
         <Route
           component={ProjectChatRoutePage}
           path="/project/:projectId/:chatId"
         />
-        <Route component={ProjectCreateRoutePage} path="/project/:projectId" />
+        <Route component={ProjectDraftRoutePage} path="/project/:projectId" />
         <Route>
           <Redirect replace to="/" />
         </Route>
@@ -32,31 +33,19 @@ export function AppRouter() {
 }
 
 function ChatRoutePage({ params }: RouteComponentProps<{ chatId: string }>) {
-  return <WorkspacePage route={chatRoute(params.chatId)} />;
+  return <WorkspaceChatPage chatId={params.chatId} />;
 }
 
-function ProjectCreateRoutePage({
+function ProjectDraftRoutePage({
   params,
 }: RouteComponentProps<{ projectId: string }>) {
-  return <WorkspacePage route={projectCreateRoute(params.projectId)} />;
+  return <WorkspaceDraftPage projectId={params.projectId} />;
 }
 
 function ProjectChatRoutePage({
   params,
 }: RouteComponentProps<{ chatId: string; projectId: string }>) {
   return (
-    <WorkspacePage route={projectChatRoute(params.projectId, params.chatId)} />
+    <WorkspaceChatPage chatId={params.chatId} projectId={params.projectId} />
   );
-}
-
-function chatRoute(chatId: string): WorkspaceRoute {
-  return { chatId, type: "chat" };
-}
-
-function projectCreateRoute(projectId: string): WorkspaceRoute {
-  return { projectId, type: "projectCreate" };
-}
-
-function projectChatRoute(projectId: string, chatId: string): WorkspaceRoute {
-  return { chatId, projectId, type: "projectChat" };
 }

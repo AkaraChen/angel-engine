@@ -62,6 +62,8 @@ export const ko = {
       backgroundChatStatus: "백그라운드 채팅 상태",
       newChat: "새 채팅",
       newChatInProject: "{{projectName}}의 새 채팅",
+      noProject: "프로젝트 없음",
+      projectSelect: "프로젝트",
       settings: "설정",
     },
     sidebar: {

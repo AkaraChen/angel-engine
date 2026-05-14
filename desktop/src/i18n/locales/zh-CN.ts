@@ -62,6 +62,8 @@ export const zhCN = {
       backgroundChatStatus: "后台聊天状态",
       newChat: "新聊天",
       newChatInProject: "{{projectName}} 中的新聊天",
+      noProject: "无项目",
+      projectSelect: "项目",
       settings: "设置",
     },
     sidebar: {
