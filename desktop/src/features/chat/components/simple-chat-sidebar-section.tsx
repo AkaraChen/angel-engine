@@ -84,14 +84,15 @@ export function SimpleChatSidebarSection({
           ) : null}
 
           {!isLoading && chats.length === 0 ? (
-            <SidebarMenu key="chats-empty-menu">
-              <AnimatedSidebarMenuItem key="chats-empty">
-                <WorkspaceSidebarMenuButton disabled>
-                  <MessageSquare />
-                  <span>{t("sidebar.noChats")}</span>
-                </WorkspaceSidebarMenuButton>
-              </AnimatedSidebarMenuItem>
-            </SidebarMenu>
+            <div
+              className="flex min-h-44 flex-col items-center justify-center gap-3 px-4 py-8 text-center text-sidebar-foreground/70"
+              key="chats-empty"
+            >
+              <MessageSquare className="size-6 text-sidebar-foreground/45" />
+              <span className="text-xs font-medium">
+                {t("sidebar.noChats")}
+              </span>
+            </div>
           ) : null}
 
           {!isLoading

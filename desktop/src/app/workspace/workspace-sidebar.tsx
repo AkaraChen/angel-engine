@@ -84,21 +84,23 @@ export function WorkspaceSidebar({
       <SidebarHeader className="px-2 pb-2 pt-2" data-electron-drag>
         {isMacOS ? <div aria-hidden className="h-8 shrink-0" /> : null}
 
-        <SidebarMenu className="gap-1">
-          <AnimatedSidebarMenuItem>
-            <WorkspaceSidebarMenuButton
-              onClick={() => void onCreateStandaloneChat()}
-            >
-              <MessageSquarePlus />
-              <span>{t("sidebar.newChat")}</span>
-            </WorkspaceSidebarMenuButton>
-          </AnimatedSidebarMenuItem>
-        </SidebarMenu>
-
         <SidebarViewModeControl onValueChange={setViewMode} value={viewMode} />
       </SidebarHeader>
 
       <SidebarContent className="gap-1 pb-1">
+        {viewMode !== "project" ? (
+          <SidebarMenu className="px-2">
+            <AnimatedSidebarMenuItem>
+              <WorkspaceSidebarMenuButton
+                onClick={() => void onCreateStandaloneChat()}
+              >
+                <MessageSquarePlus />
+                <span>{t("sidebar.newChat")}</span>
+              </WorkspaceSidebarMenuButton>
+            </AnimatedSidebarMenuItem>
+          </SidebarMenu>
+        ) : null}
+
         {viewMode === "simple" ? (
           <SimpleChatSidebarSection
             chats={chats}
