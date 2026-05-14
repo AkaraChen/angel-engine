@@ -25,6 +25,7 @@ type MaybeAsync = void | Promise<void>;
 
 type ProjectSidebarSectionProps = {
   isLoading: boolean;
+  onArchiveChat: (chat: Chat) => MaybeAsync;
   onCreateProject: () => MaybeAsync;
   onCreateProjectChat: (project: Project) => MaybeAsync;
   onOpenChat: (chat: Chat) => MaybeAsync;
@@ -38,6 +39,7 @@ type ProjectSidebarSectionProps = {
 
 export function ProjectSidebarSection({
   isLoading,
+  onArchiveChat,
   onCreateProject,
   onCreateProjectChat,
   onOpenChat,
@@ -203,6 +205,7 @@ export function ProjectSidebarSection({
                               <ChatSidebarItem
                                 chatId={chat.id}
                                 isActive={chat.id === selectedChatId}
+                                onArchiveChat={() => onArchiveChat(chat)}
                                 onOpenChat={() => void onOpenChat(chat)}
                                 onShowContextMenu={() =>
                                   onShowChatContextMenu(chat)

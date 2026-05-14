@@ -66,6 +66,7 @@ export const zhTW = {
     },
     sidebar: {
       addProject: "新增專案",
+      archiveChat: "封存聊天",
       chatAttention: "聊天提醒",
       chats: "聊天",
       completed: "已完成",

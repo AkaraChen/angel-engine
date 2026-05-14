@@ -66,6 +66,7 @@ export const ja = {
     },
     sidebar: {
       addProject: "プロジェクトを追加",
+      archiveChat: "チャットをアーカイブ",
       chatAttention: "チャットの注意",
       chats: "チャット",
       completed: "完了",

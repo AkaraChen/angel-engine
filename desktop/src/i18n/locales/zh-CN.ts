@@ -66,6 +66,7 @@ export const zhCN = {
     },
     sidebar: {
       addProject: "添加项目",
+      archiveChat: "归档聊天",
       chatAttention: "聊天提醒",
       chats: "聊天",
       completed: "已完成",

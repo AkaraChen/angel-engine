@@ -66,6 +66,7 @@ export const en = {
     },
     sidebar: {
       addProject: "Add project",
+      archiveChat: "Archive chat",
       chatAttention: "Chat attention",
       chats: "Chats",
       completed: "Completed",

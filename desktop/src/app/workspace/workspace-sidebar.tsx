@@ -40,6 +40,7 @@ type WorkspaceSidebarProps = {
   isChatsLoading: boolean;
   isMacOS: boolean;
   isProjectsLoading: boolean;
+  onArchiveChat: (chat: Chat) => MaybeAsync;
   onCreateProject: () => MaybeAsync;
   onCreateProjectChat: (project: Project) => MaybeAsync;
   onCreateStandaloneChat: () => MaybeAsync;
@@ -60,6 +61,7 @@ export function WorkspaceSidebar({
   isChatsLoading,
   isMacOS,
   isProjectsLoading,
+  onArchiveChat,
   onCreateProject,
   onCreateProjectChat,
   onCreateStandaloneChat,
@@ -101,6 +103,7 @@ export function WorkspaceSidebar({
           <SimpleChatSidebarSection
             chats={chats}
             isLoading={isChatsLoading}
+            onArchiveChat={onArchiveChat}
             onOpenChat={onOpenChat}
             onShowChatContextMenu={onShowChatContextMenu}
             selectedChatId={selectedChatId}
@@ -110,6 +113,7 @@ export function WorkspaceSidebar({
         {viewMode === "project" ? (
           <ProjectSidebarSection
             isLoading={isProjectsLoading}
+            onArchiveChat={onArchiveChat}
             onCreateProject={onCreateProject}
             onCreateProjectChat={onCreateProjectChat}
             onOpenChat={onOpenChat}
@@ -126,6 +130,7 @@ export function WorkspaceSidebar({
           <>
             <ProjectSidebarSection
               isLoading={isProjectsLoading}
+              onArchiveChat={onArchiveChat}
               onCreateProject={onCreateProject}
               onCreateProjectChat={onCreateProjectChat}
               onOpenChat={onOpenChat}
@@ -139,6 +144,7 @@ export function WorkspaceSidebar({
 
             <ChatSidebarSection
               isLoading={isChatsLoading}
+              onArchiveChat={onArchiveChat}
               onOpenChat={onOpenChat}
               onShowChatContextMenu={onShowChatContextMenu}
               selectedChatId={selectedChatId}

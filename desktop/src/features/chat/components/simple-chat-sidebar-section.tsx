@@ -35,6 +35,7 @@ type ChatDateGroup = {
 type SimpleChatSidebarSectionProps = {
   chats: Chat[];
   isLoading: boolean;
+  onArchiveChat: (chat: Chat) => MaybeAsync;
   onOpenChat: (chat: Chat) => MaybeAsync;
   onShowChatContextMenu: (chat: Chat) => MaybeAsync;
   selectedChatId?: string;
@@ -59,6 +60,7 @@ const CHAT_DATE_GROUPS: Array<{
 export function SimpleChatSidebarSection({
   chats,
   isLoading,
+  onArchiveChat,
   onOpenChat,
   onShowChatContextMenu,
   selectedChatId,
@@ -104,6 +106,7 @@ export function SimpleChatSidebarSection({
                         <ChatSidebarItem
                           chatId={chat.id}
                           isActive={chat.id === selectedChatId}
+                          onArchiveChat={() => onArchiveChat(chat)}
                           onOpenChat={() => void onOpenChat(chat)}
                           onShowContextMenu={() => onShowChatContextMenu(chat)}
                           title={displayChatTitle(chat.title, t)}

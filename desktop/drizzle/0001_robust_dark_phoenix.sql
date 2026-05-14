@@ -1,0 +1,1 @@
+ALTER TABLE `chats` ADD `archived` integer DEFAULT false NOT NULL;

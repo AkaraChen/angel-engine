@@ -1,4 +1,4 @@
-import { index, sqliteTable, text } from "drizzle-orm/sqlite-core";
+import { index, integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
 
 export const projects = sqliteTable("projects", {
   id: text("id").primaryKey(),
@@ -18,6 +18,7 @@ export const chats = sqliteTable(
     remoteThreadId: text("remote_thread_id"),
     createdAt: text("created_at").notNull(),
     updatedAt: text("updated_at").notNull(),
+    archived: integer("archived", { mode: "boolean" }).notNull().default(false),
   },
   (table) => [
     index("chats_project_id_idx").on(table.projectId),

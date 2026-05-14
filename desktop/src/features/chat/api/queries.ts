@@ -61,6 +61,12 @@ interface CreateChatMutationParams {
   queryClient: QueryClient;
 }
 
+interface ArchiveChatMutationParams {
+  api: ApiClient;
+  onSuccess?: (data: Chat, variables: Chat) => Promise<void> | void;
+  queryClient: QueryClient;
+}
+
 type DeleteAllChatsResult = Awaited<
   ReturnType<ApiClient["chats"]["deleteAll"]>
 >;
@@ -241,6 +247,26 @@ export function setChatRuntimeMutationOptions({
   });
 }
 
+export function archiveChatMutationOptions({
+  api,
+  onSuccess,
+  queryClient,
+}: ArchiveChatMutationParams) {
+  return mutationOptions({
+    mutationFn: (chat: Chat) => api.chats.archive(chat.id),
+    onSuccess: async (data, variables) => {
+      queryClient.setQueryData<Chat[]>(queryKeys.chats.list(), (current = []) =>
+        current.filter((chat) => chat.id !== data.id),
+      );
+      queryClient.setQueryData<ChatLoadResult | undefined>(
+        queryKeys.chats.detail(data.id),
+        (current) => (current ? { ...current, chat: data } : current),
+      );
+      await onSuccess?.(data, variables);
+    },
+  });
+}
+
 export function deleteAllChatsMutationOptions({
   api,
   onSuccess,
@@ -284,6 +310,7 @@ export async function invalidateChatQueries(queryClient: QueryClient) {
 
 function upsertChatInList(chats: Chat[], chat: Chat) {
   const next = chats.filter((item) => item.id !== chat.id);
+  if (chat.archived) return next;
   next.unshift(chat);
   return next.sort((left, right) =>
     right.updatedAt.localeCompare(left.updatedAt),

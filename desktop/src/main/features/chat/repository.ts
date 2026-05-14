@@ -17,6 +17,7 @@ export function listChats(): Chat[] {
   return getDatabase()
     .select()
     .from(chats)
+    .where(eq(chats.archived, false))
     .orderBy(desc(chats.updatedAt))
     .all();
 }
@@ -45,6 +46,7 @@ export function createChat(input: CreateChatRecordInput): Chat {
       runtime: normalizeRuntime(input.runtime),
       title: normalizeTitle(input.title),
       updatedAt: now,
+      archived: false,
     })
     .returning()
     .get();
@@ -61,9 +63,13 @@ export function deleteChat(id: string): Chat {
 }
 
 export function deleteAllChats(): number {
-  const deletedCount = listChats().length;
+  const deletedCount = getDatabase().select().from(chats).all().length;
   getDatabase().delete(chats).run();
   return deletedCount;
+}
+
+export function archiveChat(id: string): Chat {
+  return updateChat(id, { archived: true });
 }
 
 export function touchChat(id: string): Chat {
@@ -122,7 +128,10 @@ export function requireChat(id: string): Chat {
 function updateChat(
   id: string,
   patch: Partial<
-    Pick<Chat, "remoteThreadId" | "runtime" | "title" | "updatedAt">
+    Pick<
+      Chat,
+      "archived" | "remoteThreadId" | "runtime" | "title" | "updatedAt"
+    >
   >,
 ): Chat {
   const chat = getDatabase()

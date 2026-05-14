@@ -45,6 +45,7 @@ import {
 } from "@/features/chat/state/chat-run-store";
 import { SettingsPage } from "@/features/settings/settings-page";
 import {
+  archiveChatMutationOptions,
   chatContextMenuMutationOptions,
   createChatMutationOptions,
   chatListQueryOptions,
@@ -562,6 +563,9 @@ function WorkspacePageContent({
   const deleteAllChatsMutation = useMutation({
     ...deleteAllChatsMutationOptions({ api, queryClient }),
   });
+  const archiveChatMutation = useMutation({
+    ...archiveChatMutationOptions({ api, queryClient }),
+  });
   const showProjectContextMenuMutation = useMutation({
     ...projectContextMenuMutationOptions({ api, queryClient }),
   });
@@ -625,6 +629,21 @@ function WorkspacePageContent({
   const openRenameChatDialog = useCallback((chat: Chat) => {
     setRenameChatId(chat.id);
   }, []);
+
+  const archiveChat = useCallback(
+    async (chat: Chat) => {
+      try {
+        await archiveChatMutation.mutateAsync(chat);
+      } catch (error) {
+        toast({
+          description: getErrorMessage(error),
+          title: t("notifications.chatActionFailed"),
+          variant: "destructive",
+        });
+      }
+    },
+    [archiveChatMutation, t, toast],
+  );
 
   const showChatContextMenu = useCallback(
     async (chat: Chat) => {
@@ -823,6 +842,7 @@ function WorkspacePageContent({
           isChatsLoading={chatsQuery.isPending}
           isMacOS={isMacOS}
           isProjectsLoading={projectsQuery.isPending}
+          onArchiveChat={archiveChat}
           onCreateProject={createProjectFromPicker}
           onCreateProjectChat={createChatForProject}
           onCreateStandaloneChat={createChatForSelection}

@@ -66,6 +66,7 @@ export const es = {
     },
     sidebar: {
       addProject: "Agregar proyecto",
+      archiveChat: "Archivar chat",
       chatAttention: "Atención del chat",
       chats: "Chats",
       completed: "Completado",

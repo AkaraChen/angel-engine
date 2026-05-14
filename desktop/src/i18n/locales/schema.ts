@@ -75,6 +75,7 @@ export interface LocaleResourceTranslationSidebarDateGroups {
 
 export interface LocaleResourceTranslationSidebar {
   addProject: string;
+  archiveChat: string;
   chatAttention: string;
   chats: string;
   completed: string;

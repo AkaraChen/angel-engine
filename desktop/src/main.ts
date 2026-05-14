@@ -8,6 +8,7 @@ import { registerIpcMain } from "@egoist/tipc/main";
 import { closeChatSession } from "./main/features/chat/angel-client";
 import { registerChatStreamIpc } from "./main/features/chat/stream-ipc";
 import { closeProjectsDatabase } from "./main/features/projects/repository";
+import { getDatabase } from "./main/db/database";
 import { appRouter } from "./main/ipc/app-router";
 import {
   configureDesktopWindowAppearance,
@@ -105,6 +106,7 @@ function configureExternalLinkHandling(mainWindow: BrowserWindow) {
 // initialization and is ready to create browser windows.
 // Some APIs can only be used after this event occurs.
 app.whenReady().then(() => {
+  getDatabase();
   registerIpcMain(appRouter);
   registerDesktopWindowAppearanceIpc();
   registerDesktopWindowIpc();

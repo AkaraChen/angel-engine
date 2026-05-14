@@ -12,6 +12,7 @@ import type {
 import type { CreateProjectInput } from "@/shared/projects";
 
 type ChatApiClient = {
+  archive: (chatId: string) => ReturnType<typeof ipc.chatsArchive>;
   create: (input?: ChatCreateInput) => ReturnType<typeof ipc.chatsCreate>;
   deleteAll: () => ReturnType<typeof ipc.chatsDeleteAll>;
   inspectConfig: (
@@ -53,6 +54,7 @@ export type ApiClient = {
 export function createApiClient(): ApiClient {
   return {
     chats: {
+      archive: (chatId: string) => ipc.chatsArchive(chatId),
       create: (input: ChatCreateInput = {}) => ipc.chatsCreate(input),
       deleteAll: () => ipc.chatsDeleteAll(),
       inspectConfig: (input: ChatRuntimeConfigInput = {}) =>

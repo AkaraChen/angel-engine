@@ -9,6 +9,7 @@ export type Chat = {
   remoteThreadId: string | null;
   createdAt: string;
   updatedAt: string;
+  archived: boolean;
 };
 
 export type ChatCreateInput = {

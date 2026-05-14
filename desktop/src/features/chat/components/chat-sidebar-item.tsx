@@ -1,7 +1,11 @@
 import type { MouseEventHandler, ReactElement } from "react";
 import { useTranslation } from "react-i18next";
+import { Archive } from "lucide-react";
 
-import { WorkspaceSidebarMenuButton } from "@/components/workspace-sidebar-primitives";
+import {
+  WorkspaceSidebarMenuAction,
+  WorkspaceSidebarMenuButton,
+} from "@/components/workspace-sidebar-primitives";
 import { useChatAttention } from "@/features/chat/state/chat-run-store";
 
 import { ChatRunningPulse } from "./chat-running-pulse";
@@ -11,6 +15,7 @@ type ChatSidebarItemProps = {
   title: string;
   tooltip: string;
   isActive: boolean;
+  onArchiveChat?: () => Promise<void> | void;
   onOpenChat: () => void;
   onShowContextMenu?: () => Promise<void> | void;
 };
@@ -20,9 +25,11 @@ export function ChatSidebarItem({
   title,
   tooltip,
   isActive,
+  onArchiveChat,
   onOpenChat,
   onShowContextMenu,
 }: ChatSidebarItemProps): ReactElement {
+  const { t } = useTranslation();
   const handleContextMenu: MouseEventHandler<HTMLButtonElement> = (event) => {
     event.preventDefault();
     if (onShowContextMenu) {
@@ -49,6 +56,21 @@ export function ChatSidebarItem({
           <ChatRunningPulse chatId={chatId} />
         </span>
       </WorkspaceSidebarMenuButton>
+      {onArchiveChat ? (
+        <WorkspaceSidebarMenuAction
+          aria-label={t("sidebar.archiveChat")}
+          onClick={(event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            void onArchiveChat();
+          }}
+          showOnHover
+          title={t("sidebar.archiveChat")}
+          type="button"
+        >
+          <Archive />
+        </WorkspaceSidebarMenuAction>
+      ) : null}
     </>
   );
 }

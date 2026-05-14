@@ -1,0 +1,1 @@
+- 如果更改 Drizzle 的 schema，记得生成 migration。

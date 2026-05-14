@@ -66,6 +66,7 @@ export const ko = {
     },
     sidebar: {
       addProject: "프로젝트 추가",
+      archiveChat: "채팅 보관",
       chatAttention: "채팅 주의 필요",
       chats: "채팅",
       completed: "완료됨",

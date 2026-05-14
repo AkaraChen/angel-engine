@@ -25,6 +25,7 @@ import {
   setChatRuntime,
 } from "./angel-client";
 import {
+  archiveChat,
   deleteAllChats,
   deleteChat,
   getChat,
@@ -46,6 +47,14 @@ import { translate } from "../../i18n";
 const t = tipc.create();
 
 export const chatIpcRouter = {
+  chatsArchive: t.procedure.input<string>().action(async ({ input }) => {
+    const value = arkType("string")(input);
+    if (value instanceof arkType.errors) {
+      throw new Error("Chat id is required.");
+    }
+    return archiveChat(value);
+  }),
+
   chatsCreate: t.procedure
     .input<ChatCreateInput>()
     .action(async ({ input }) => {
