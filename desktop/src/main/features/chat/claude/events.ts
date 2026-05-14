@@ -4,7 +4,6 @@ import type {
   ClientUpdate,
   ConversationSnapshot,
   DisplayMessagePartSnapshot,
-  ElicitationSnapshot,
   TurnRunEvent,
   TurnSnapshot,
 } from "@angel-engine/client-napi";
@@ -326,7 +325,6 @@ function turnRunEventFromClientEvent(
       return event.elicitation
         ? {
             elicitation: event.elicitation,
-            messagePart: elicitationPart(event.elicitation),
             type: TurnRunEventType.Elicitation,
           }
         : undefined;
@@ -367,25 +365,6 @@ function toolPart(action: ActionSnapshot): DisplayMessagePartSnapshot {
       rawInput: action.rawInput ?? undefined,
       title: action.title ?? undefined,
       turnId: action.turnId,
-    },
-    type: "tool-call",
-  };
-}
-
-function elicitationPart(
-  elicitation: ElicitationSnapshot,
-): DisplayMessagePartSnapshot {
-  return {
-    action: {
-      id: elicitation.id,
-      inputSummary: elicitation.body ?? undefined,
-      kind: "elicitation",
-      output: [],
-      outputText: "",
-      phase: elicitation.phase === "open" ? "awaitingDecision" : "completed",
-      rawInput: JSON.stringify(elicitation),
-      title: elicitation.title ?? "User input requested",
-      turnId: elicitation.turnId ?? undefined,
     },
     type: "tool-call",
   };
