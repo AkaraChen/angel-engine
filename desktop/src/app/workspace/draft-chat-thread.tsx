@@ -69,14 +69,14 @@ export function DraftChatThread({
         slotKey={slotKey}
       >
         <AssistantThread
-          projectName={projectName}
-          toolbar={
+          composerFloatingAccessory={
             <DraftProjectSelect
               onProjectChange={onProjectChange}
               projects={projects}
               selectedProjectId={projectId}
             />
           }
+          projectName={projectName}
         />
       </AppRuntimeProvider>
     </ChatOptionsProvider>

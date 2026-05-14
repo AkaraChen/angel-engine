@@ -15,11 +15,11 @@ import {
 } from "@/features/chat/components/messages";
 
 export function AssistantThread({
+  composerFloatingAccessory,
   projectName,
-  toolbar,
 }: {
+  composerFloatingAccessory?: ReactNode;
   projectName?: string;
-  toolbar?: ReactNode;
 }) {
   const { t } = useTranslation();
 
@@ -29,10 +29,6 @@ export function AssistantThread({
         className="relative flex min-h-0 flex-1 flex-col gap-6 overflow-y-auto px-4 py-6 sm:px-8"
         scrollToBottomOnRunStart
       >
-        {toolbar ? (
-          <div className="flex shrink-0 justify-end">{toolbar}</div>
-        ) : null}
-
         <AuiIf condition={(state) => state.thread.isEmpty}>
           <EmptyThread projectName={projectName} />
         </AuiIf>
@@ -56,7 +52,7 @@ export function AssistantThread({
       </ThreadPrimitive.Viewport>
       <div className="shrink-0 bg-transparent px-4 pb-4 pt-2 sm:px-8">
         <div className="mx-auto w-full max-w-[860px]">
-          <AssistantComposer />
+          <AssistantComposer floatingAccessory={composerFloatingAccessory} />
         </div>
       </div>
     </ThreadPrimitive.Root>

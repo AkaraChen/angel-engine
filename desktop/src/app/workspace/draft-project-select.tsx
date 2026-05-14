@@ -37,14 +37,15 @@ export function DraftProjectSelect({
     >
       <SelectTrigger
         aria-label={t("workspace.projectSelect")}
-        className="max-w-[18rem] justify-start bg-muted/40"
+        className="h-8 max-w-[18rem] justify-start rounded-full border-foreground/10 bg-background/95 px-2.5 text-xs shadow-[0_10px_30px_-22px_rgba(0,0,0,0.8),0_1px_0_rgba(255,255,255,0.8)_inset] backdrop-blur-xl hover:bg-background dark:border-white/10 dark:bg-card/95 dark:shadow-[0_10px_30px_-22px_rgba(0,0,0,0.95),0_1px_0_rgba(255,255,255,0.08)_inset]"
         size="sm"
         title={t("workspace.projectSelect")}
+        type="button"
       >
-        <Folder className="size-4 shrink-0 text-muted-foreground" />
+        <Folder className="size-3.5 shrink-0 text-muted-foreground" />
         <SelectValue placeholder={t("workspace.noProject")} />
       </SelectTrigger>
-      <SelectContent align="end" className="min-w-56">
+      <SelectContent align="start" className="min-w-56" position="popper">
         <SelectItem value={NO_PROJECT_SELECT_VALUE}>
           {t("workspace.noProject")}
         </SelectItem>

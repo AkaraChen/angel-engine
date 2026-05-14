@@ -124,7 +124,11 @@ const composerModelMenuTriggerClassName =
 const composerModelMenuValueClassName =
   "min-w-0 max-w-28 truncate text-muted-foreground";
 
-export function AssistantComposer() {
+export function AssistantComposer({
+  floatingAccessory,
+}: {
+  floatingAccessory?: ReactNode;
+}) {
   const { t } = useTranslation();
   const aui = useAui();
   const api = useApi();
@@ -351,6 +355,15 @@ export function AssistantComposer() {
       onError={handleAttachmentError}
       onSubmit={handleSubmit}
     >
+      {floatingAccessory ? (
+        <div className="absolute top-0 left-4 z-30 -translate-y-1/2">
+          {floatingAccessory}
+        </div>
+      ) : null}
+      {floatingAccessory ? (
+        <div aria-hidden="true" className="order-first h-4 w-full shrink-0" />
+      ) : null}
+
       <ComposerAssistPanel
         fileMentionOpen={fileMentionOpen}
         fileResults={fileResults}
