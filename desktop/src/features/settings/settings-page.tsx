@@ -13,12 +13,9 @@ import qoderIconUrl from "@lobehub/icons-static-svg/icons/qoder-color.svg";
 
 import { Button } from "@/components/ui/button";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+  NativeSelect,
+  NativeSelectOption,
+} from "@/components/ui/native-select";
 import { Switch } from "@/components/ui/switch";
 import { cn } from "@/platform/utils";
 import {
@@ -289,31 +286,25 @@ function SettingsSelect({
 }) {
   return (
     <label className="flex min-w-44 flex-col gap-1.5 text-xs font-medium text-muted-foreground">
-      <Select onValueChange={onValueChange} value={value}>
-        <SelectTrigger
+      <span className="relative">
+        <span className="pointer-events-none absolute top-1/2 left-2 z-10 flex size-4 -translate-y-1/2 items-center justify-center [&_svg]:size-3.5">
+          {icon}
+        </span>
+        <NativeSelect
           aria-label={label}
-          className="h-8 w-full rounded-xl border-border bg-background px-2 text-xs"
+          className="w-full"
+          onChange={(event) => onValueChange(event.currentTarget.value)}
+          selectClassName="h-8 w-full rounded-lg border-border bg-background py-0 pr-8 pl-8 text-xs"
           size="sm"
+          value={value}
         >
-          <span className="flex min-w-0 items-center gap-1.5">
-            <span className="flex size-4 shrink-0 items-center justify-center [&_svg]:size-3.5">
-              {icon}
-            </span>
-            <SelectValue />
-          </span>
-        </SelectTrigger>
-        <SelectContent className="rounded-2xl">
           {options.map((option) => (
-            <SelectItem
-              className="rounded-lg"
-              key={option.value}
-              value={option.value}
-            >
+            <NativeSelectOption key={option.value} value={option.value}>
               {option.label}
-            </SelectItem>
+            </NativeSelectOption>
           ))}
-        </SelectContent>
-      </Select>
+        </NativeSelect>
+      </span>
     </label>
   );
 }

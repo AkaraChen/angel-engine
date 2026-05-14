@@ -46,11 +46,6 @@ import {
   PromptInputBody,
   PromptInputFooter,
   PromptInputHeader,
-  PromptInputSelect,
-  PromptInputSelectContent,
-  PromptInputSelectItem,
-  PromptInputSelectTrigger,
-  PromptInputSelectValue,
   PromptInputTextarea,
   PromptInputTools,
   usePromptInputAttachments,
@@ -58,6 +53,10 @@ import {
 } from "@/components/ai-elements/prompt-input";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import {
+  NativeSelect,
+  NativeSelectOption,
+} from "@/components/ui/native-select";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -782,41 +781,31 @@ function ComposerOptionSelect({
   value: string;
 }) {
   return (
-    <PromptInputSelect
-      disabled={disabled}
-      onValueChange={onValueChange}
-      value={value}
+    <div
+      className={["relative w-fit max-w-36", className]
+        .filter(Boolean)
+        .join(" ")}
     >
-      <PromptInputSelectTrigger
+      <span className="pointer-events-none absolute top-1/2 left-2 z-10 flex size-4 -translate-y-1/2 items-center justify-center [&_svg]:size-3.5">
+        {icon}
+      </span>
+      <NativeSelect
         aria-label={label}
-        className={[
-          "h-8 max-w-36 rounded-full border border-foreground/10 bg-background/65 px-2 text-xs dark:bg-card/65",
-          className,
-        ]
-          .filter(Boolean)
-          .join(" ")}
+        className="max-w-36"
+        disabled={disabled}
+        onChange={(event) => onValueChange(event.currentTarget.value)}
+        selectClassName="h-8 max-w-36 rounded-full border border-foreground/10 bg-background/65 py-0 pr-8 pl-8 text-xs dark:bg-card/65"
         size="sm"
         title={title ?? label}
+        value={value}
       >
-        <span className="flex min-w-0 items-center gap-1.5">
-          <span className="flex size-4 shrink-0 items-center justify-center [&_svg]:size-3.5">
-            {icon}
-          </span>
-          <PromptInputSelectValue />
-        </span>
-      </PromptInputSelectTrigger>
-      <PromptInputSelectContent className="rounded-2xl">
         {options.map((option) => (
-          <PromptInputSelectItem
-            className="rounded-lg"
-            key={option.value}
-            value={option.value}
-          >
+          <NativeSelectOption key={option.value} value={option.value}>
             {option.label}
-          </PromptInputSelectItem>
+          </NativeSelectOption>
         ))}
-      </PromptInputSelectContent>
-    </PromptInputSelect>
+      </NativeSelect>
+    </div>
   );
 }
 
