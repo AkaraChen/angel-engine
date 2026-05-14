@@ -1909,10 +1909,45 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@fontsource-variable/inter@npm:^5.2.8":
+  version: 5.2.8
+  resolution: "@fontsource-variable/inter@npm:5.2.8"
+  checksum: 10c0/35b46df31c8c18f55f87228acf6297e4dac6cc9f38d0faaafdaf5a40e40c386cf1bfb115fb0fe0dcdb9b7e14f582843693ccf070d9c903072a5b2fc0f8dfde56
+  languageName: node
+  linkType: hard
+
 "@fontsource-variable/playwrite-de-la@npm:^5.2.7":
   version: 5.2.7
   resolution: "@fontsource-variable/playwrite-de-la@npm:5.2.7"
   checksum: 10c0/71a7a147d9802e1c635c754b2201407478a3eec9320a074285a1960c4c5f0b3a3d26e4d789a4dd7245265170bbd09c33765d3bf4941d2230194c7b0e30baeeaf
+  languageName: node
+  linkType: hard
+
+"@fontsource/noto-sans-jp@npm:^5.2.9":
+  version: 5.2.9
+  resolution: "@fontsource/noto-sans-jp@npm:5.2.9"
+  checksum: 10c0/29128885182afc8e21451c94655e35c836b5c012cf54330512b6df1fff3967ce798d07a2f393018f0aad5d6a0bbda0f37631be38adf3f648ff0c7fe56fa90ec1
+  languageName: node
+  linkType: hard
+
+"@fontsource/noto-sans-kr@npm:^5.2.9":
+  version: 5.2.9
+  resolution: "@fontsource/noto-sans-kr@npm:5.2.9"
+  checksum: 10c0/24a061dcf592dbe968078f88312902cfbf8577742a23fbe8bb2d7da876643e0614b308a00c5a9d0d338a122426b3f12368d8e24a567b46f8c187cf54cb4e0841
+  languageName: node
+  linkType: hard
+
+"@fontsource/noto-sans-sc@npm:^5.2.9":
+  version: 5.2.9
+  resolution: "@fontsource/noto-sans-sc@npm:5.2.9"
+  checksum: 10c0/f399c11d875a069307fccc2df005b3194e1090fea804a6e9b4cd9ed20163e7bc8060ab53495159d19ad12839fa22d5dcebdacca97dc3b90b78abb9df7a355e69
+  languageName: node
+  linkType: hard
+
+"@fontsource/noto-sans-tc@npm:^5.2.9":
+  version: 5.2.9
+  resolution: "@fontsource/noto-sans-tc@npm:5.2.9"
+  checksum: 10c0/a508bbc149a34536b3547e077122c6a55f574bf256db016cf9ea6209f58090cc90ebdd81b172f778ca44c818e544369a406abcd6bb781415b3de825778efd964
   languageName: node
   linkType: hard
 
@@ -7287,7 +7322,12 @@ __metadata:
     "@electron-forge/plugin-fuses": "npm:^7.11.1"
     "@electron-forge/plugin-vite": "npm:^7.11.1"
     "@electron/fuses": "npm:^2.1.1"
+    "@fontsource-variable/inter": "npm:^5.2.8"
     "@fontsource-variable/playwrite-de-la": "npm:^5.2.7"
+    "@fontsource/noto-sans-jp": "npm:^5.2.9"
+    "@fontsource/noto-sans-kr": "npm:^5.2.9"
+    "@fontsource/noto-sans-sc": "npm:^5.2.9"
+    "@fontsource/noto-sans-tc": "npm:^5.2.9"
     "@lobehub/icons-static-svg": "npm:^1.90.0"
     "@radix-ui/react-collapsible": "npm:^1.1.12"
     "@streamdown/cjk": "npm:^1.0.3"

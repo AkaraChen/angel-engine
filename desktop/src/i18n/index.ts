@@ -11,6 +11,8 @@ import { ipc } from "@/platform/ipc";
 
 const LANGUAGE_STORAGE_KEY = "angel-engine.language";
 
+type CjkFontLocale = "sc" | "tc" | "jp" | "kr";
+
 export const languageOptions: Array<{
   labelKey: `settings.appearance.languageOptions.${SupportedLanguage}`;
   value: SupportedLanguage;
@@ -19,12 +21,15 @@ export const languageOptions: Array<{
   value: language,
 }));
 
+const initialLanguage = detectInitialLanguage();
+const initialCjkFontLanguage = detectInitialCjkFontLanguage(initialLanguage);
+
 void i18n.use(initReactI18next).init({
   fallbackLng: "en",
   interpolation: {
     escapeValue: false,
   },
-  lng: detectInitialLanguage(),
+  lng: initialLanguage,
   react: {
     useSuspense: false,
   },
@@ -32,12 +37,15 @@ void i18n.use(initReactI18next).init({
   supportedLngs: [...supportedLanguages],
 });
 
-applyDocumentLanguage(normalizeSupportedLanguage(i18n.resolvedLanguage));
+applyDocumentLanguage(
+  normalizeSupportedLanguage(i18n.resolvedLanguage),
+  initialCjkFontLanguage,
+);
 
 i18n.on("languageChanged", (language) => {
   const supportedLanguage = normalizeSupportedLanguage(language);
   window.localStorage.setItem(LANGUAGE_STORAGE_KEY, supportedLanguage);
-  applyDocumentLanguage(supportedLanguage);
+  applyDocumentLanguage(supportedLanguage, language);
   syncMainLanguage(supportedLanguage);
 });
 
@@ -52,13 +60,67 @@ function detectInitialLanguage(): SupportedLanguage {
   return normalizeSupportedLanguage(window.navigator.language);
 }
 
-function applyDocumentLanguage(language: SupportedLanguage): void {
+function detectInitialCjkFontLanguage(
+  supportedLanguage: SupportedLanguage,
+): string {
+  const persistedLanguage = window.localStorage.getItem(LANGUAGE_STORAGE_KEY);
+  if (persistedLanguage) {
+    return persistedLanguage;
+  }
+
+  return (
+    window.navigator.languages.find((language) =>
+      languageUsesCjkFont(language),
+    ) ??
+    window.navigator.language ??
+    supportedLanguage
+  );
+}
+
+function applyDocumentLanguage(
+  language: SupportedLanguage,
+  cjkFontLanguage: string = language,
+): void {
   document.documentElement.lang = language;
   document.documentElement.dir = "ltr";
+  document.documentElement.dataset.cjkFont =
+    cjkFontLocaleFromLanguage(cjkFontLanguage);
 }
 
 function syncMainLanguage(language: SupportedLanguage): void {
   void ipc.appSetLanguage(language).catch(() => undefined);
+}
+
+function languageUsesCjkFont(language: string): boolean {
+  const normalized = language.toLowerCase();
+  return (
+    normalized.startsWith("zh") ||
+    normalized.startsWith("ja") ||
+    normalized.startsWith("ko")
+  );
+}
+
+function cjkFontLocaleFromLanguage(language: string): CjkFontLocale {
+  const normalized = language.toLowerCase();
+
+  if (normalized.startsWith("ja")) {
+    return "jp";
+  }
+
+  if (normalized.startsWith("ko")) {
+    return "kr";
+  }
+
+  if (
+    normalized.includes("hant") ||
+    normalized.startsWith("zh-tw") ||
+    normalized.startsWith("zh-hk") ||
+    normalized.startsWith("zh-mo")
+  ) {
+    return "tc";
+  }
+
+  return "sc";
 }
 
 export { normalizeSupportedLanguage };
