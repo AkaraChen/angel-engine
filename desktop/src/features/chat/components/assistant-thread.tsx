@@ -57,10 +57,10 @@ function EmptyThread({ projectName }: { projectName?: string }) {
   const { t } = useTranslation();
 
   return (
-    <div className="mx-auto flex w-full max-w-[820px] flex-1 items-center py-10">
-      <div className="w-full">
-        <div className="min-w-0 select-none text-left">
-          <h2 className="max-w-[38rem] text-pretty text-[32px] font-semibold leading-[1.12] text-foreground">
+    <div className="mx-auto flex w-full max-w-[820px] flex-1 items-center justify-center py-10">
+      <div className="w-full max-w-[38rem]">
+        <div className="min-w-0 select-none text-center">
+          <h2 className="text-pretty text-[32px] font-semibold leading-[1.12] text-foreground">
             {projectName ? (
               <Trans
                 components={{ project: <SketchUnderline /> }}
@@ -71,7 +71,7 @@ function EmptyThread({ projectName }: { projectName?: string }) {
               t("thread.empty.title")
             )}
           </h2>
-          <p className="mt-3 max-w-[34rem] text-sm leading-6 text-muted-foreground">
+          <p className="mx-auto mt-3 max-w-[34rem] text-sm leading-6 text-muted-foreground">
             {t("thread.empty.description")}
           </p>
         </div>
