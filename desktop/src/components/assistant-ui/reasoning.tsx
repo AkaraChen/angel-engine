@@ -1,7 +1,6 @@
 import {
   memo,
   useCallback,
-  useEffect,
   useRef,
   useState,
   type ComponentProps,
@@ -205,14 +204,26 @@ const ReasoningGroupImpl: ReasoningGroupComponent = ({
 
     return state.message.parts[lastIndex]?.type === "reasoning";
   });
-  const [open, setOpen] = useState(isReasoningStreaming);
+  const [openState, setOpenState] = useState(() => ({
+    isReasoningStreaming,
+    open: isReasoningStreaming,
+  }));
 
-  useEffect(() => {
-    setOpen(isReasoningStreaming);
-  }, [isReasoningStreaming]);
+  let open = openState.open;
+  if (openState.isReasoningStreaming !== isReasoningStreaming) {
+    open = isReasoningStreaming;
+    setOpenState({
+      isReasoningStreaming,
+      open,
+    });
+  }
+
+  const handleOpenChange = useCallback((nextOpen: boolean) => {
+    setOpenState((current) => ({ ...current, open: nextOpen }));
+  }, []);
 
   return (
-    <ReasoningRoot onOpenChange={setOpen} open={open}>
+    <ReasoningRoot onOpenChange={handleOpenChange} open={open}>
       <ReasoningTrigger active={isReasoningStreaming} />
       <ReasoningContent aria-busy={isReasoningStreaming}>
         <ReasoningText>{children}</ReasoningText>

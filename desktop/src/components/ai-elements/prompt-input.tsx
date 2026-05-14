@@ -228,7 +228,7 @@ export interface PromptInputControllerProps {
   attachments: AttachmentsContext;
   /** INTERNAL: Allows PromptInput to register its file textInput + "open" callback */
   __registerFileInput: (
-    ref: RefObject<HTMLInputElement | null>,
+    input: HTMLInputElement | null,
     open: () => void,
   ) => void;
 }
@@ -271,6 +271,8 @@ export type PromptInputProviderProps = PropsWithChildren<{
   initialInput?: string;
 }>;
 
+const noopOpenFileDialog = () => undefined;
+
 /**
  * Optional global provider that lifts PromptInput state outside of PromptInput.
  * If you don't use it, PromptInput stays fully self-managed.
@@ -286,8 +288,7 @@ export const PromptInputProvider = ({
   // ----- attachments state (global when wrapped)
   const [attachmentFiles, setAttachmentFiles] = useState<PromptInputFile[]>([]);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
-  // oxlint-disable-next-line eslint(no-empty-function)
-  const openRef = useRef<() => void>(() => {});
+  const openRef = useRef<() => void>(noopOpenFileDialog);
 
   const add = useCallback((files: File[] | FileList) => {
     const incoming = [...files];
@@ -332,10 +333,7 @@ export const PromptInputProvider = ({
 
   // Keep a ref to attachments for cleanup on unmount (avoids stale closure)
   const attachmentsRef = useRef(attachmentFiles);
-
-  useEffect(() => {
-    attachmentsRef.current = attachmentFiles;
-  }, [attachmentFiles]);
+  attachmentsRef.current = attachmentFiles;
 
   // Cleanup blob URLs on unmount to prevent memory leaks
   useEffect(
@@ -366,9 +364,9 @@ export const PromptInputProvider = ({
   );
 
   const __registerFileInput = useCallback(
-    (ref: RefObject<HTMLInputElement | null>, open: () => void) => {
-      fileInputRef.current = ref.current;
-      openRef.current = open;
+    (input: HTMLInputElement | null, open: () => void) => {
+      fileInputRef.current = input;
+      openRef.current = input ? open : noopOpenFileDialog;
     },
     [],
   );
@@ -529,8 +527,6 @@ export type PromptInputProps = Omit<
   multiple?: boolean;
   // When true, accepts drops anywhere on document. Default false (opt-in).
   globalDrop?: boolean;
-  // Render a hidden input with given name and keep it in sync for native form posts. Default false.
-  syncHiddenInput?: boolean;
   // Minimal constraints
   maxFiles?: number;
   // bytes
@@ -551,7 +547,6 @@ export const PromptInput = ({
   accept,
   multiple,
   globalDrop,
-  syncHiddenInput,
   maxFiles,
   maxFileSize,
   onError,
@@ -579,14 +574,21 @@ export const PromptInput = ({
 
   // Keep a ref to files for cleanup on unmount (avoids stale closure)
   const filesRef = useRef(files);
-
-  useEffect(() => {
-    filesRef.current = files;
-  }, [files]);
+  filesRef.current = files;
 
   const openFileDialogLocal = useCallback(() => {
     inputRef.current?.click();
   }, []);
+  const registerFileInput = controller?.__registerFileInput;
+  const setInputElement = useCallback(
+    (input: HTMLInputElement | null) => {
+      inputRef.current = input;
+      if (usingProvider) {
+        registerFileInput?.(input, () => inputRef.current?.click());
+      }
+    },
+    [registerFileInput, usingProvider],
+  );
 
   const matchesAccept = useCallback(
     (f: File) => {
@@ -755,22 +757,6 @@ export const PromptInput = ({
     clearAttachments();
     clearReferencedSources();
   }, [clearAttachments, clearReferencedSources]);
-
-  // Let provider know about our hidden file input so external menus can call openFileDialog()
-  useEffect(() => {
-    if (!usingProvider) {
-      return;
-    }
-    controller.__registerFileInput(inputRef, () => inputRef.current?.click());
-  }, [usingProvider, controller]);
-
-  // Note: File input cannot be programmatically set for security reasons
-  // The syncHiddenInput prop is no longer functional
-  useEffect(() => {
-    if (syncHiddenInput && inputRef.current && files.length === 0) {
-      inputRef.current.value = "";
-    }
-  }, [files, syncHiddenInput]);
 
   // Attach drop handlers on nearest form and document (opt-in)
   useEffect(() => {
@@ -984,7 +970,7 @@ export const PromptInput = ({
         className="hidden"
         multiple={multiple}
         onChange={handleChange}
-        ref={inputRef}
+        ref={setInputElement}
         title={t("promptInput.uploadFiles")}
         type="file"
       />

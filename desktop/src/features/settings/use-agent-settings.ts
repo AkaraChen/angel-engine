@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 
 import { sanitizeAgentSettings, type AgentSettings } from "@/shared/agents";
 
@@ -8,14 +8,15 @@ export function useAgentSettings() {
   const [settings, setSettings] = useState<AgentSettings>(() =>
     readAgentSettings(),
   );
-
-  useEffect(() => {
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
-  }, [settings]);
+  const settingsRef = useRef(settings);
+  settingsRef.current = settings;
 
   const updateSettings = useCallback(
     (updater: (settings: AgentSettings) => AgentSettings) => {
-      setSettings((current) => sanitizeAgentSettings(updater(current)));
+      const nextSettings = sanitizeAgentSettings(updater(settingsRef.current));
+      settingsRef.current = nextSettings;
+      writeAgentSettings(nextSettings);
+      setSettings(nextSettings);
     },
     [],
   );
@@ -30,4 +31,8 @@ function readAgentSettings() {
   } catch {
     return sanitizeAgentSettings(undefined);
   }
+}
+
+function writeAgentSettings(settings: AgentSettings) {
+  window.localStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
 }

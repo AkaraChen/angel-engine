@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import type { ReactElement } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useTranslation } from "react-i18next";
@@ -22,6 +22,12 @@ import type { Chat } from "@/shared/chat";
 import type { Project } from "@/shared/projects";
 
 type MaybeAsync = void | Promise<void>;
+
+type ProjectExpansionState = {
+  expandedProjectIds: Set<string>;
+  projectIds: Set<string>;
+  selectedProjectId?: string;
+};
 
 type ProjectSidebarSectionProps = {
   isLoading: boolean;
@@ -51,43 +57,50 @@ export function ProjectSidebarSection({
   selectedProjectId,
 }: ProjectSidebarSectionProps): ReactElement {
   const { t } = useTranslation();
-  const [expandedProjectIds, setExpandedProjectIds] = useState<Set<string>>(
-    () => new Set(projects.map((project) => project.id)),
-  );
+  const currentProjectIds = new Set(projects.map((project) => project.id));
+  const [projectExpansion, setProjectExpansion] =
+    useState<ProjectExpansionState>(() => ({
+      expandedProjectIds: new Set(projects.map((project) => project.id)),
+      projectIds: currentProjectIds,
+      selectedProjectId,
+    }));
 
-  useEffect(() => {
-    setExpandedProjectIds((current) => {
-      let changed = false;
-      const next = new Set(current);
-      for (const project of projects) {
-        if (!next.has(project.id)) {
-          next.add(project.id);
-          changed = true;
-        }
+  let expandedProjectIds = projectExpansion.expandedProjectIds;
+  if (
+    !setsEqual(projectExpansion.projectIds, currentProjectIds) ||
+    projectExpansion.selectedProjectId !== selectedProjectId
+  ) {
+    const nextExpandedProjectIds = new Set(expandedProjectIds);
+    for (const projectId of nextExpandedProjectIds) {
+      if (!currentProjectIds.has(projectId)) {
+        nextExpandedProjectIds.delete(projectId);
       }
-      return changed ? next : current;
+    }
+    for (const projectId of currentProjectIds) {
+      if (!projectExpansion.projectIds.has(projectId)) {
+        nextExpandedProjectIds.add(projectId);
+      }
+    }
+    if (selectedProjectId) {
+      nextExpandedProjectIds.add(selectedProjectId);
+    }
+    setProjectExpansion({
+      expandedProjectIds: nextExpandedProjectIds,
+      projectIds: currentProjectIds,
+      selectedProjectId,
     });
-  }, [projects]);
-
-  useEffect(() => {
-    if (!selectedProjectId) return;
-    setExpandedProjectIds((current) => {
-      if (current.has(selectedProjectId)) return current;
-      const next = new Set(current);
-      next.add(selectedProjectId);
-      return next;
-    });
-  }, [selectedProjectId]);
+    expandedProjectIds = nextExpandedProjectIds;
+  }
 
   function toggleProjectExpanded(projectId: string): void {
-    setExpandedProjectIds((current) => {
-      const next = new Set(current);
-      if (next.has(projectId)) {
-        next.delete(projectId);
+    setProjectExpansion((current) => {
+      const expandedProjectIds = new Set(current.expandedProjectIds);
+      if (expandedProjectIds.has(projectId)) {
+        expandedProjectIds.delete(projectId);
       } else {
-        next.add(projectId);
+        expandedProjectIds.add(projectId);
       }
-      return next;
+      return { ...current, expandedProjectIds };
     });
   }
 
@@ -179,7 +192,6 @@ export function ProjectSidebarSection({
                       event.stopPropagation();
                       void onCreateProjectChat(project);
                     }}
-                    showOnHover
                     title={t("sidebar.newChatInProject", {
                       projectName: projectDisplayName,
                     })}
@@ -229,6 +241,18 @@ export function ProjectSidebarSection({
       </SidebarGroupContent>
     </SidebarGroup>
   );
+}
+
+function setsEqual(left: Set<string>, right: Set<string>): boolean {
+  if (left.size !== right.size) {
+    return false;
+  }
+  for (const value of left) {
+    if (!right.has(value)) {
+      return false;
+    }
+  }
+  return true;
 }
 
 function getProjectDisplayName(projectPath: string): string {
