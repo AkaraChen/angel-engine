@@ -2301,6 +2301,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@lobehub/icons-static-svg@npm:^1.90.0":
+  version: 1.90.0
+  resolution: "@lobehub/icons-static-svg@npm:1.90.0"
+  checksum: 10c0/5111c73c711504658c2d0d5ea58e0021562b65f3662ad3b5f94c8fdf696196e144e16e9bad5178470af2ea02c66108ed42647493f4341093bd6e737534878074
+  languageName: node
+  linkType: hard
+
 "@malept/cross-spawn-promise@npm:^1.0.0":
   version: 1.1.1
   resolution: "@malept/cross-spawn-promise@npm:1.1.1"
@@ -7281,6 +7288,7 @@ __metadata:
     "@electron-forge/plugin-vite": "npm:^7.11.1"
     "@electron/fuses": "npm:^2.1.1"
     "@fontsource-variable/playwrite-de-la": "npm:^5.2.7"
+    "@lobehub/icons-static-svg": "npm:^1.90.0"
     "@radix-ui/react-collapsible": "npm:^1.1.12"
     "@streamdown/cjk": "npm:^1.0.3"
     "@streamdown/code": "npm:^1.1.1"

@@ -23,6 +23,11 @@ export type ChatOptionsContextValue = {
   reasoningEffortOptions: AgentValueOption[];
   runtime: AgentRuntime;
   runtimeDisabledReason?: string;
+  runtimeOptions: Array<{
+    description?: string;
+    label: string;
+    value: AgentRuntime;
+  }>;
   setModel: (model: string) => void;
   setMode: (mode: string) => Promise<void> | void;
   setPermissionMode: (mode: string) => Promise<void> | void;

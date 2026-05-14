@@ -60,6 +60,7 @@
     "@assistant-ui/react-streamdown": "^0.1.11",
     "@egoist/tipc": "^0.3.2",
     "@fontsource-variable/playwrite-de-la": "^5.2.7",
+    "@lobehub/icons-static-svg": "^1.90.0",
     "@radix-ui/react-collapsible": "^1.1.12",
     "@streamdown/cjk": "^1.0.3",
     "@streamdown/code": "^1.1.1",

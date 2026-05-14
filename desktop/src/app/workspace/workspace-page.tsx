@@ -56,7 +56,12 @@ import {
   projectContextMenuMutationOptions,
   projectListQueryOptions,
 } from "@/features/projects/api/queries";
-import { type AgentValueOption, type AgentRuntime } from "@/shared/agents";
+import {
+  getEnabledAgentOptions,
+  resolveEnabledAgentRuntime,
+  type AgentValueOption,
+  type AgentRuntime,
+} from "@/shared/agents";
 import type {
   Chat,
   ChatCreateInput,
@@ -106,6 +111,10 @@ type ActiveChatThreadProps = {
   onChatUpdated: ChatUpdateHandler;
   projects: Project[];
   route: WorkspaceRoute;
+  runtimeOptions: Array<{
+    label: string;
+    value: AgentRuntime;
+  }>;
   selectedChat: Chat;
   setAgentModel: (model: string) => void;
   setAgentReasoningEffort: (effort: string) => void;
@@ -166,6 +175,18 @@ function WorkspacePageContent({
   const [location, navigate] = useLocation();
   const isMacOS = window.desktopEnvironment.platform === "darwin";
   const [agentSettings, updateAgentSettings] = useAgentSettings();
+  const enabledAgentOptions = useMemo(
+    () => getEnabledAgentOptions(agentSettings),
+    [agentSettings],
+  );
+  const runtimeOptions = useMemo(
+    () =>
+      enabledAgentOptions.map((agent) => ({
+        label: agent.label,
+        value: agent.id,
+      })),
+    [enabledAgentOptions],
+  );
   const [draftRuntimes, setDraftRuntimes] = useState<
     Partial<Record<string, AgentRuntime>>
   >({});
@@ -220,7 +241,7 @@ function WorkspacePageContent({
   });
   const draftRuntimeKey = draftRuntimeKeyFromRoute(route);
   const draftRuntime = draftRuntimeKey
-    ? (draftRuntimes[draftRuntimeKey] ?? agentSettings.defaultRuntime)
+    ? resolveEnabledAgentRuntime(agentSettings, draftRuntimes[draftRuntimeKey])
     : agentSettings.defaultRuntime;
   const activeRuntime = chatRuntime ?? draftRuntime;
   const draftAgentConfigKey = `${runtimePageKey}:${activeRuntime}`;
@@ -329,19 +350,38 @@ function WorkspacePageContent({
   const setDraftAgentRuntime = useCallback(
     (runtime: AgentRuntime) => {
       if (!draftRuntimeKey) return;
+      if (!agentSettings.enabledRuntimes.includes(runtime)) return;
       setDraftRuntimes((current) => ({
         ...current,
         [draftRuntimeKey]: runtime,
       }));
     },
-    [draftRuntimeKey],
+    [agentSettings.enabledRuntimes, draftRuntimeKey],
   );
   const setDefaultRuntime = useCallback(
     (runtime: AgentRuntime) => {
+      if (!agentSettings.enabledRuntimes.includes(runtime)) return;
       updateAgentSettings((current) => ({
         ...current,
         defaultRuntime: runtime,
       }));
+    },
+    [agentSettings.enabledRuntimes, updateAgentSettings],
+  );
+  const setAgentEnabled = useCallback(
+    (runtime: AgentRuntime, enabled: boolean) => {
+      updateAgentSettings((current) => {
+        const enabledRuntimes = new Set(current.enabledRuntimes);
+        if (enabled) {
+          enabledRuntimes.add(runtime);
+        } else {
+          enabledRuntimes.delete(runtime);
+        }
+        return {
+          ...current,
+          enabledRuntimes: [...enabledRuntimes],
+        };
+      });
     },
     [updateAgentSettings],
   );
@@ -402,6 +442,7 @@ function WorkspacePageContent({
       reasoningEffortOptionCount,
       reasoningEffortOptions,
       runtime: activeRuntime,
+      runtimeOptions,
       setModel: setAgentModel,
       setMode: setAgentMode,
       setPermissionMode: setAgentPermissionMode,
@@ -426,6 +467,7 @@ function WorkspacePageContent({
       permissionModeOptions,
       reasoningEffortOptionCount,
       reasoningEffortOptions,
+      runtimeOptions,
       prewarmQuery.isFetching,
       setAgentModel,
       setAgentMode,
@@ -681,13 +723,14 @@ function WorkspacePageContent({
 
       void createAndOpenChat({
         projectId: project.id,
-        runtime:
-          draftRuntimes[`project:${project.id}`] ??
-          agentSettings.defaultRuntime,
+        runtime: resolveEnabledAgentRuntime(
+          agentSettings,
+          draftRuntimes[`project:${project.id}`],
+        ),
       });
     },
     [
-      agentSettings.defaultRuntime,
+      agentSettings,
       createAndOpenChat,
       draftRuntimes,
       navigateToChat,
@@ -710,10 +753,10 @@ function WorkspacePageContent({
     }
 
     void createAndOpenChat({
-      runtime: draftRuntimes.create ?? agentSettings.defaultRuntime,
+      runtime: resolveEnabledAgentRuntime(agentSettings, draftRuntimes.create),
     });
   }, [
-    agentSettings.defaultRuntime,
+    agentSettings,
     createAndOpenChat,
     draftRuntimes.create,
     navigateToChat,
@@ -796,6 +839,7 @@ function WorkspacePageContent({
           <SettingsPage
             agentSettings={agentSettings}
             isDeletingChats={deleteAllChatsMutation.isPending}
+            onAgentEnabledChange={setAgentEnabled}
             onDeleteAllChats={deleteAllChats}
             onDefaultAgentChange={setDefaultRuntime}
           />
@@ -813,6 +857,7 @@ function WorkspacePageContent({
                     onChatUpdated={updateChatFromRun}
                     projects={projects}
                     route={route}
+                    runtimeOptions={runtimeOptions}
                     selectedChat={selectedChat}
                     setAgentModel={setAgentModel}
                     setAgentReasoningEffort={setAgentReasoningEffort}
@@ -829,6 +874,7 @@ function WorkspacePageContent({
                         onChatUpdated={updateChatFromRun}
                         projects={projects}
                         route={route}
+                        runtimeOptions={runtimeOptions}
                         selectedChatId={selectedChatId}
                         setAgentModel={setAgentModel}
                         setAgentReasoningEffort={setAgentReasoningEffort}
@@ -921,6 +967,7 @@ function ActiveChatThread({
   onChatUpdated,
   projects,
   route,
+  runtimeOptions,
   selectedChat,
   setAgentModel,
   setAgentReasoningEffort,
@@ -939,6 +986,7 @@ function ActiveChatThread({
       onChatUpdated={onChatUpdated}
       projects={projects}
       route={route}
+      runtimeOptions={runtimeOptions}
       runtimeConfig={runtimeConfig}
       selectedChat={selectedChat}
       setAgentModel={setAgentModel}
@@ -957,6 +1005,7 @@ function RestoredChatThread({
   onChatUpdated,
   projects,
   route,
+  runtimeOptions,
   selectedChatId,
   setAgentModel,
   setAgentReasoningEffort,
@@ -994,6 +1043,7 @@ function RestoredChatThread({
       onChatUpdated={onChatUpdated}
       projects={projects}
       route={route}
+      runtimeOptions={runtimeOptions}
       runtimeConfig={runtimeConfig}
       selectedChat={selectedChat}
       setAgentModel={setAgentModel}
@@ -1014,6 +1064,7 @@ function ChatThreadRuntime({
   onChatUpdated,
   projects,
   route,
+  runtimeOptions,
   runtimeConfig,
   selectedChat,
   setAgentModel,
@@ -1128,6 +1179,7 @@ function ChatThreadRuntime({
       reasoningEffortOptions,
       runtime: chatRuntime,
       runtimeDisabledReason,
+      runtimeOptions,
       setModel: setAgentModel,
       setMode: setBackendMode,
       setPermissionMode: setBackendPermissionMode,
@@ -1149,6 +1201,7 @@ function ChatThreadRuntime({
       permissionModeOptions,
       reasoningEffortOptionCount,
       reasoningEffortOptions,
+      runtimeOptions,
       runtimeConfig?.canSetPermissionMode,
       runtimeConfig?.canSetMode,
       runtimeConfig?.canSetModel,

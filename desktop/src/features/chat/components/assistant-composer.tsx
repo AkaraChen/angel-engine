@@ -809,10 +809,7 @@ function ComposerModelMenu({
   options: ChatOptionsContextValue;
 }) {
   const [modelQuery, setModelQuery] = useState("");
-  const providerOptions = AGENT_OPTIONS.map((agent) => ({
-    label: agent.label,
-    value: agent.id,
-  }));
+  const providerOptions = options.runtimeOptions;
   const providerLabel =
     AGENT_OPTIONS.find((agent) => agent.id === options.runtime)?.label ??
     options.runtime;
@@ -872,9 +869,16 @@ function ComposerModelMenu({
       });
   const providerDisabledReason =
     options.runtimeDisabledReason ??
+    (providerOptions.every((provider) => provider.value === options.runtime)
+      ? "Only one agent is enabled in Settings."
+      : undefined) ??
     (disabled
       ? "Agent cannot be changed while a response is running."
       : undefined);
+  const providerDisabled =
+    !options.canSetRuntime ||
+    disabled ||
+    providerOptions.every((provider) => provider.value === options.runtime);
   const filteredModelOptions = useMemo(
     () => filterComposerOptions(options.modelOptions, modelQuery),
     [options.modelOptions, modelQuery],
@@ -920,7 +924,7 @@ function ComposerModelMenu({
           Agent Settings
         </DropdownMenuLabel>
         <ComposerModelMenuSub
-          disabled={!options.canSetRuntime || disabled}
+          disabled={providerDisabled}
           disabledReason={providerDisabledReason}
           icon={<Bot />}
           label="Provider"

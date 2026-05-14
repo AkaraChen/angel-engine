@@ -1,5 +1,14 @@
 import { useCallback, useState, type ReactNode } from "react";
 import { AlertTriangle, Bot, Trash2 } from "lucide-react";
+import claudeIconUrl from "@lobehub/icons-static-svg/icons/claudecode-color.svg";
+import clineIconUrl from "@lobehub/icons-static-svg/icons/cline.svg";
+import codexIconUrl from "@lobehub/icons-static-svg/icons/codex-color.svg";
+import copilotIconUrl from "@lobehub/icons-static-svg/icons/copilot-color.svg";
+import cursorIconUrl from "@lobehub/icons-static-svg/icons/cursor.svg";
+import geminiIconUrl from "@lobehub/icons-static-svg/icons/geminicli-color.svg";
+import kimiIconUrl from "@lobehub/icons-static-svg/icons/kimi-color.svg";
+import opencodeIconUrl from "@lobehub/icons-static-svg/icons/opencode.svg";
+import qoderIconUrl from "@lobehub/icons-static-svg/icons/qoder-color.svg";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -9,9 +18,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
 import { cn } from "@/platform/utils";
 import {
   AGENT_OPTIONS,
+  getEnabledAgentOptions,
   type AgentRuntime,
   type AgentSettings,
 } from "@/shared/agents";
@@ -23,18 +34,34 @@ const settingsTabs: Array<{ id: SettingsTab; label: string }> = [
   { id: "danger", label: "Danger Area" },
 ];
 
+const agentIconUrl: Record<AgentRuntime, string> = {
+  claude: claudeIconUrl,
+  cline: clineIconUrl,
+  codex: codexIconUrl,
+  copilot: copilotIconUrl,
+  cursor: cursorIconUrl,
+  gemini: geminiIconUrl,
+  kimi: kimiIconUrl,
+  opencode: opencodeIconUrl,
+  qoder: qoderIconUrl,
+};
+
 export function SettingsPage({
   agentSettings,
   isDeletingChats,
+  onAgentEnabledChange,
   onDeleteAllChats,
   onDefaultAgentChange,
 }: {
   agentSettings: AgentSettings;
   isDeletingChats: boolean;
+  onAgentEnabledChange: (runtime: AgentRuntime, enabled: boolean) => void;
   onDeleteAllChats: () => Promise<void>;
   onDefaultAgentChange: (runtime: AgentRuntime) => void;
 }) {
   const [activeTab, setActiveTab] = useState<SettingsTab>("agents");
+  const enabledAgentOptions = getEnabledAgentOptions(agentSettings);
+  const enabledRuntimeSet = new Set(agentSettings.enabledRuntimes);
 
   const deleteAllChats = useCallback(async () => {
     const confirmed = window.confirm(
@@ -74,7 +101,52 @@ export function SettingsPage({
         </div>
 
         {activeTab === "agents" ? (
-          <div className="space-y-4">
+          <div className="space-y-5">
+            <section className="space-y-3">
+              <h3 className="text-sm font-semibold">Agents</h3>
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                {AGENT_OPTIONS.map((agent) => {
+                  const enabled = enabledRuntimeSet.has(agent.id);
+                  const isOnlyEnabled =
+                    enabled && agentSettings.enabledRuntimes.length <= 1;
+
+                  return (
+                    <article
+                      className={cn(
+                        "flex items-center gap-3 rounded-lg border bg-card p-3 transition-colors",
+                        enabled
+                          ? "border-foreground/10"
+                          : "border-foreground/10 bg-card/45 text-muted-foreground",
+                      )}
+                      key={agent.id}
+                    >
+                      <span className="flex size-9 shrink-0 items-center justify-center rounded-lg border border-foreground/10 bg-background">
+                        <img
+                          alt=""
+                          className="size-5 object-contain"
+                          draggable={false}
+                          src={agentIconUrl[agent.id]}
+                        />
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate text-sm font-medium">
+                          {agent.label}
+                        </span>
+                      </span>
+                      <AgentEnabledSwitch
+                        checked={enabled}
+                        disabled={isOnlyEnabled}
+                        label={`${agent.label} agent`}
+                        onCheckedChange={(checked) =>
+                          onAgentEnabledChange(agent.id, checked)
+                        }
+                      />
+                    </article>
+                  );
+                })}
+              </div>
+            </section>
+
             <section className="rounded-2xl border bg-card p-4">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div className="min-w-0">
@@ -90,7 +162,7 @@ export function SettingsPage({
                   onValueChange={(value) =>
                     onDefaultAgentChange(value as AgentRuntime)
                   }
-                  options={AGENT_OPTIONS.map((agent) => ({
+                  options={enabledAgentOptions.map((agent) => ({
                     label: agent.label,
                     value: agent.id,
                   }))}
@@ -172,5 +244,27 @@ function SettingsSelect({
         </SelectContent>
       </Select>
     </label>
+  );
+}
+
+function AgentEnabledSwitch({
+  checked,
+  disabled,
+  label,
+  onCheckedChange,
+}: {
+  checked: boolean;
+  disabled?: boolean;
+  label: string;
+  onCheckedChange: (checked: boolean) => void;
+}) {
+  return (
+    <Switch
+      aria-label={label}
+      checked={checked}
+      disabled={disabled}
+      onCheckedChange={onCheckedChange}
+      title={disabled ? "At least one agent must stay enabled." : label}
+    />
   );
 }
