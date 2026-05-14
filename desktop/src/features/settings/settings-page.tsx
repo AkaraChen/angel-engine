@@ -98,9 +98,6 @@ export function SettingsPage({
       <section className="mx-auto flex w-full max-w-4xl flex-col gap-6 px-6 py-6">
         <div>
           <h2 className="text-lg font-semibold">{t("settings.title")}</h2>
-          <p className="mt-1 text-sm text-muted-foreground">
-            {t("settings.description")}
-          </p>
         </div>
 
         <div className="flex gap-2 border-b">
