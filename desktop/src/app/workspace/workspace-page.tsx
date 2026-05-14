@@ -21,6 +21,10 @@ import { useTranslation } from "react-i18next";
 import { AppRuntimeProvider } from "@/features/chat/runtime/app-runtime-provider";
 import { ChatRestoreLoading } from "@/app/workspace/chat-restore-loading";
 import { WorkspaceHeader } from "@/app/workspace/workspace-header";
+import {
+  WorkspaceSidebarControl,
+  WorkspaceSidebarControlPortalProvider,
+} from "@/app/workspace/workspace-sidebar-control";
 import { WorkspaceSidebar } from "@/app/workspace/workspace-sidebar";
 import { ChatOptionsProvider } from "@/features/chat/runtime/chat-options-context";
 import { AssistantThread } from "@/features/chat/components/assistant-thread";
@@ -824,110 +828,113 @@ function WorkspacePageContent({
 
   return (
     <SidebarProvider>
-      <WorkspaceSidebar
-        isChatsLoading={chatsQuery.isPending}
-        isMacOS={isMacOS}
-        isProjectsLoading={projectsQuery.isPending}
-        onCreateProject={createProjectFromPicker}
-        onCreateProjectChat={createChatForProject}
-        onCreateStandaloneChat={createChatForSelection}
-        onOpenChat={openChat}
-        onOpenSettings={openSettings}
-        onRefreshProjects={refreshProjects}
-        onShowChatContextMenu={showChatContextMenu}
-        onShowProjectContextMenu={showProjectContextMenu}
-        projectChatsByProjectId={projectChatsByProjectId}
-        projects={projects}
-        selectedChatId={selectedChatId}
-        selectedProjectId={selectedProjectId}
-        settingsActive={route.type === "settings"}
-        standaloneChats={standaloneChats}
-      />
-      <RenameChatDialog
-        chat={renameTargetChat}
-        isSaving={renameChatMutation.isPending}
-        onClose={closeRenameChatDialog}
-        onRename={renameChat}
-      />
+      <WorkspaceSidebarControlPortalProvider>
+        <WorkspaceSidebar
+          isChatsLoading={chatsQuery.isPending}
+          isMacOS={isMacOS}
+          isProjectsLoading={projectsQuery.isPending}
+          onCreateProject={createProjectFromPicker}
+          onCreateProjectChat={createChatForProject}
+          onCreateStandaloneChat={createChatForSelection}
+          onOpenChat={openChat}
+          onOpenSettings={openSettings}
+          onRefreshProjects={refreshProjects}
+          onShowChatContextMenu={showChatContextMenu}
+          onShowProjectContextMenu={showProjectContextMenu}
+          projectChatsByProjectId={projectChatsByProjectId}
+          projects={projects}
+          selectedChatId={selectedChatId}
+          selectedProjectId={selectedProjectId}
+          settingsActive={route.type === "settings"}
+          standaloneChats={standaloneChats}
+        />
+        <WorkspaceSidebarControl />
+        <RenameChatDialog
+          chat={renameTargetChat}
+          isSaving={renameChatMutation.isPending}
+          onClose={closeRenameChatDialog}
+          onRename={renameChat}
+        />
 
-      {route.type === "settings" ? (
-        <SidebarInset className="h-svh max-h-svh overflow-hidden md:h-[calc(100svh-1rem)] md:max-h-[calc(100svh-1rem)]">
-          <WorkspaceHeader attention={chatAttention} title={workspaceTitle} />
-          <SettingsPage
-            agentSettings={agentSettings}
-            isDeletingChats={deleteAllChatsMutation.isPending}
-            onAgentEnabledChange={setAgentEnabled}
-            onDeleteAllChats={deleteAllChats}
-            onDefaultAgentChange={setDefaultRuntime}
-          />
-        </SidebarInset>
-      ) : (
-        <SidebarInset className="h-svh max-h-svh overflow-hidden md:h-[calc(100svh-1rem)] md:max-h-[calc(100svh-1rem)] md:ring-1 md:ring-foreground/10 md:shadow-[0_24px_80px_-56px_rgba(0,0,0,0.72)] dark:md:ring-white/10">
-          <WorkspaceHeader attention={chatAttention} title={workspaceTitle} />
-          <main className="flex min-h-0 flex-1 overflow-hidden">
-            <section className="flex min-h-0 min-w-0 flex-1 flex-col">
-              {selectedChatId ? (
-                selectedChatIsRunning && selectedChat ? (
-                  <ActiveChatThread
-                    draftAgentConfig={draftAgentConfig}
-                    onChatCreated={updateChatFromRun}
-                    onChatUpdated={updateChatFromRun}
-                    projects={projects}
-                    route={route}
-                    runtimeOptions={runtimeOptions}
-                    selectedChat={selectedChat}
-                    setAgentModel={setAgentModel}
-                    setAgentReasoningEffort={setAgentReasoningEffort}
-                    setPersistedChatRuntime={setPersistedChatRuntime}
-                  />
+        {route.type === "settings" ? (
+          <SidebarInset className="h-svh max-h-svh overflow-hidden">
+            <WorkspaceHeader attention={chatAttention} title={workspaceTitle} />
+            <SettingsPage
+              agentSettings={agentSettings}
+              isDeletingChats={deleteAllChatsMutation.isPending}
+              onAgentEnabledChange={setAgentEnabled}
+              onDeleteAllChats={deleteAllChats}
+              onDefaultAgentChange={setDefaultRuntime}
+            />
+          </SidebarInset>
+        ) : (
+          <SidebarInset className="h-svh max-h-svh overflow-hidden">
+            <WorkspaceHeader attention={chatAttention} title={workspaceTitle} />
+            <main className="flex min-h-0 flex-1 overflow-hidden">
+              <section className="flex min-h-0 min-w-0 flex-1 flex-col">
+                {selectedChatId ? (
+                  selectedChatIsRunning && selectedChat ? (
+                    <ActiveChatThread
+                      draftAgentConfig={draftAgentConfig}
+                      onChatCreated={updateChatFromRun}
+                      onChatUpdated={updateChatFromRun}
+                      projects={projects}
+                      route={route}
+                      runtimeOptions={runtimeOptions}
+                      selectedChat={selectedChat}
+                      setAgentModel={setAgentModel}
+                      setAgentReasoningEffort={setAgentReasoningEffort}
+                      setPersistedChatRuntime={setPersistedChatRuntime}
+                    />
+                  ) : (
+                    <ChatRestoreErrorBoundary key={selectedChatId}>
+                      <Suspense fallback={<ChatRestoreLoading />}>
+                        <RestoredChatThread
+                          api={api}
+                          currentRoutePath={currentRoutePath}
+                          draftAgentConfig={draftAgentConfig}
+                          onChatCreated={updateChatFromRun}
+                          onChatUpdated={updateChatFromRun}
+                          projects={projects}
+                          route={route}
+                          runtimeOptions={runtimeOptions}
+                          selectedChatId={selectedChatId}
+                          setAgentModel={setAgentModel}
+                          setAgentReasoningEffort={setAgentReasoningEffort}
+                          setPersistedChatRuntime={setPersistedChatRuntime}
+                        />
+                      </Suspense>
+                    </ChatRestoreErrorBoundary>
+                  )
                 ) : (
-                  <ChatRestoreErrorBoundary key={selectedChatId}>
-                    <Suspense fallback={<ChatRestoreLoading />}>
-                      <RestoredChatThread
-                        api={api}
-                        currentRoutePath={currentRoutePath}
-                        draftAgentConfig={draftAgentConfig}
-                        onChatCreated={updateChatFromRun}
-                        onChatUpdated={updateChatFromRun}
-                        projects={projects}
-                        route={route}
-                        runtimeOptions={runtimeOptions}
-                        selectedChatId={selectedChatId}
-                        setAgentModel={setAgentModel}
-                        setAgentReasoningEffort={setAgentReasoningEffort}
-                        setPersistedChatRuntime={setPersistedChatRuntime}
-                      />
-                    </Suspense>
-                  </ChatRestoreErrorBoundary>
-                )
-              ) : (
-                <ChatOptionsProvider value={chatOptions}>
-                  <AppRuntimeProvider
-                    chatId={selectedChatId}
-                    historyMessages={historyMessages}
-                    historyRevision={historyRevision}
-                    key={runtimePageKey}
-                    model={modelOverride}
-                    mode={modeOverride}
-                    onChatCreated={updateChatFromRun}
-                    onChatUpdated={updateChatFromRun}
-                    prewarmId={prewarmQuery.data?.prewarmId}
-                    projectId={selectedProjectId ?? null}
-                    projectPath={selectedProjectPath ?? undefined}
-                    permissionMode={permissionModeOverride}
-                    reasoningEffort={reasoningEffortOverride}
-                    runtime={activeRuntime}
-                    runtimeConfig={runtimeConfig}
-                    slotKey={runtimePageKey}
-                  >
-                    <AssistantThread projectName={selectedProjectName} />
-                  </AppRuntimeProvider>
-                </ChatOptionsProvider>
-              )}
-            </section>
-          </main>
-        </SidebarInset>
-      )}
+                  <ChatOptionsProvider value={chatOptions}>
+                    <AppRuntimeProvider
+                      chatId={selectedChatId}
+                      historyMessages={historyMessages}
+                      historyRevision={historyRevision}
+                      key={runtimePageKey}
+                      model={modelOverride}
+                      mode={modeOverride}
+                      onChatCreated={updateChatFromRun}
+                      onChatUpdated={updateChatFromRun}
+                      prewarmId={prewarmQuery.data?.prewarmId}
+                      projectId={selectedProjectId ?? null}
+                      projectPath={selectedProjectPath ?? undefined}
+                      permissionMode={permissionModeOverride}
+                      reasoningEffort={reasoningEffortOverride}
+                      runtime={activeRuntime}
+                      runtimeConfig={runtimeConfig}
+                      slotKey={runtimePageKey}
+                    >
+                      <AssistantThread projectName={selectedProjectName} />
+                    </AppRuntimeProvider>
+                  </ChatOptionsProvider>
+                )}
+              </section>
+            </main>
+          </SidebarInset>
+        )}
+      </WorkspaceSidebarControlPortalProvider>
     </SidebarProvider>
   );
 }

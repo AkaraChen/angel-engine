@@ -44,7 +44,7 @@ export function AssistantThread({ projectName }: { projectName?: string }) {
           </SelectionToolbarPrimitive.Quote>
         </SelectionToolbarPrimitive.Root>
       </ThreadPrimitive.Viewport>
-      <div className="shrink-0 bg-background/80 px-4 pb-4 pt-2 backdrop-blur-xl sm:px-8">
+      <div className="shrink-0 bg-transparent px-4 pb-4 pt-2 sm:px-8">
         <div className="mx-auto w-full max-w-[860px]">
           <AssistantComposer />
         </div>
