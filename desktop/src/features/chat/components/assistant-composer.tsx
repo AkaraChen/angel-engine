@@ -120,9 +120,7 @@ type FileMentionAssistPanelProps = {
 const composerInputGroupClassName =
   "overflow-visible !rounded-2xl !border !border-foreground/10 !bg-background/90 shadow-[0_18px_44px_-24px_rgba(0,0,0,0.55),0_1px_0_rgba(255,255,255,0.85)_inset] backdrop-blur-xl transition-[border-color,box-shadow,background-color] has-[textarea]:!rounded-2xl has-[>[data-align=block-end]]:!rounded-2xl has-[>[data-align=block-start]]:!rounded-2xl focus-within:!border-foreground/15 focus-within:!bg-background/95 focus-within:shadow-[0_18px_42px_-26px_rgba(0,0,0,0.58),0_0_0_2px_rgba(29,29,31,0.045),0_1px_0_rgba(255,255,255,0.9)_inset] dark:!border-white/10 dark:!bg-card/80 dark:shadow-[0_18px_44px_-24px_rgba(0,0,0,0.85),0_1px_0_rgba(255,255,255,0.08)_inset] dark:focus-within:!border-white/15 dark:focus-within:!bg-card/90 dark:focus-within:shadow-[0_18px_42px_-26px_rgba(0,0,0,0.86),0_0_0_2px_rgba(255,255,255,0.055),0_1px_0_rgba(255,255,255,0.1)_inset]";
 const composerModelMenuTriggerClassName =
-  "h-8 max-w-[21rem] gap-1 rounded-full border-foreground/10 bg-background/75 px-1.5 text-[11px] font-medium text-foreground shadow-[0_1px_0_rgba(255,255,255,0.8)_inset,0_8px_20px_-16px_rgba(0,0,0,0.55)] backdrop-blur-xl hover:border-foreground/15 hover:bg-background/90 aria-expanded:border-foreground/15 aria-expanded:bg-background/95 dark:border-white/10 dark:bg-white/[0.055] dark:shadow-[0_1px_0_rgba(255,255,255,0.08)_inset,0_8px_20px_-16px_rgba(0,0,0,0.85)] dark:hover:bg-white/[0.08] dark:aria-expanded:bg-white/[0.09]";
-const composerModelMenuPrimaryClassName =
-  "flex min-w-0 max-w-28 items-center gap-1.5 rounded-full bg-foreground/[0.055] px-2 py-0.5 shadow-[0_1px_0_rgba(255,255,255,0.6)_inset] dark:bg-white/[0.08] dark:shadow-none";
+  "h-8 min-w-0 gap-1.5 rounded-full px-2 text-xs font-medium text-foreground";
 const composerModelMenuValueClassName =
   "min-w-0 max-w-28 truncate text-muted-foreground";
 
@@ -879,6 +877,15 @@ function ComposerModelMenu({
         optionCount: options.reasoningEffortOptionCount,
         t,
       });
+  const modelDisabledReason = options.configLoading
+    ? undefined
+    : composerSettingDisabledReason({
+        canSet: options.canSetModel,
+        disabled,
+        label: t("composer.model"),
+        optionCount: options.modelOptionCount,
+        t,
+      });
   const modeDisabledReason = options.configLoading
     ? undefined
     : composerSettingDisabledReason({
@@ -913,153 +920,206 @@ function ComposerModelMenu({
     () => filterComposerOptions(options.modelOptions, modelQuery),
     [options.modelOptions, modelQuery],
   );
+  const effortDisplayLabel = shortEffortLabel(
+    effortLabel,
+    t("common.useDefault"),
+    t("common.default"),
+  );
+  const modelEffortLabel = `${modelLabel} ${effortDisplayLabel}`;
 
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button
-          aria-label={t("composer.agentSettings")}
-          className={composerModelMenuTriggerClassName}
-          size="sm"
-          title={t("composer.agentSettings")}
-          type="button"
-          variant="outline"
-        >
-          <span className={composerModelMenuPrimaryClassName}>
+    <>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button
+            aria-label={t("composer.provider")}
+            className={`${composerModelMenuTriggerClassName} max-w-40`}
+            size="sm"
+            title={providerDisabledReason ?? t("composer.provider")}
+            type="button"
+            variant="ghost"
+          >
             <Bot className="size-3.5 shrink-0 text-muted-foreground" />
-            <span className="min-w-0 truncate">{providerLabel}</span>
-          </span>
-          <span
-            aria-hidden="true"
-            className="size-1 shrink-0 rounded-full bg-foreground/20"
-          />
-          <span className={composerModelMenuValueClassName}>{modelLabel}</span>
-          <span
-            aria-hidden="true"
-            className="size-1 shrink-0 rounded-full bg-foreground/20"
-          />
-          <span className="min-w-0 max-w-20 truncate text-muted-foreground/85">
-            {shortEffortLabel(
-              effortLabel,
-              t("common.useDefault"),
-              t("common.default"),
-            )}
-          </span>
-          <ChevronDown className="size-3.5 shrink-0 text-muted-foreground/80 transition-transform duration-150 group-data-[state=open]/button:rotate-180" />
-        </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent
-        className="w-[16.5rem] min-w-0"
-        align="start"
-        sideOffset={6}
-        variant="apple"
-      >
-        <DropdownMenuLabel className="px-2 pt-1 pb-1 text-[11px] font-semibold leading-4">
-          {t("composer.agentSettings")}
-        </DropdownMenuLabel>
-        <ComposerModelMenuSub
-          disabled={providerDisabled}
-          disabledReason={providerDisabledReason}
-          icon={<Bot />}
-          label={t("composer.provider")}
-          value={providerLabel}
+            <span className={composerModelMenuValueClassName}>
+              {providerLabel}
+            </span>
+            <ComposerModelMenuChevron />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent
+          className="w-52 min-w-0"
+          align="start"
+          sideOffset={6}
+          variant="apple"
         >
+          <DropdownMenuLabel className="px-2 pt-1 pb-1 text-[11px] font-semibold leading-4">
+            {t("composer.provider")}
+          </DropdownMenuLabel>
           {providerOptions.map((provider) => (
             <ComposerModelMenuItem
+              disabled={providerDisabled}
+              disabledReason={providerDisabledReason}
               key={provider.value}
               label={provider.label}
               onSelect={() => options.setRuntime(provider.value)}
               selected={provider.value === options.runtime}
             />
           ))}
-        </ComposerModelMenuSub>
-        <ComposerModelMenuSub
-          disabled={modelDisabled}
-          icon={<Cpu />}
-          label={t("composer.model")}
-          value={
-            options.configLoading ? t("composer.loadingValue") : modelLabel
-          }
+        </DropdownMenuContent>
+      </DropdownMenu>
+
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button
+            aria-label={`${t("composer.model")} / ${t("composer.effort")}`}
+            className={`${composerModelMenuTriggerClassName} max-w-[18rem]`}
+            size="sm"
+            title={modelEffortLabel}
+            type="button"
+            variant="ghost"
+          >
+            <Cpu className="size-3.5 shrink-0 text-muted-foreground" />
+            <span className="min-w-0 max-w-52 truncate text-muted-foreground">
+              {modelEffortLabel}
+            </span>
+            <ComposerModelMenuChevron />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent
+          className="w-[16.5rem] min-w-0"
+          align="start"
+          sideOffset={6}
+          variant="apple"
         >
-          <ComposerModelMenuSearch
-            onChange={setModelQuery}
-            placeholder={t("composer.searchModels")}
-            value={modelQuery}
-          />
-          {filteredModelOptions.length > 0 ? (
-            filteredModelOptions.map((model) => (
+          <DropdownMenuLabel className="px-2 pt-1 pb-1 text-[11px] font-semibold leading-4">
+            {t("composer.model")} / {t("composer.effort")}
+          </DropdownMenuLabel>
+          <ComposerModelMenuSub
+            disabled={modelDisabled}
+            disabledReason={modelDisabledReason}
+            icon={<Cpu />}
+            label={t("composer.model")}
+            value={
+              options.configLoading ? t("composer.loadingValue") : modelLabel
+            }
+          >
+            <ComposerModelMenuSearch
+              onChange={setModelQuery}
+              placeholder={t("composer.searchModels")}
+              value={modelQuery}
+            />
+            {filteredModelOptions.length > 0 ? (
+              filteredModelOptions.map((model) => (
+                <ComposerModelMenuItem
+                  key={model.value}
+                  label={model.label}
+                  onSelect={() => {
+                    options.setModel(model.value);
+                    setModelQuery("");
+                  }}
+                  selected={model.value === options.model}
+                />
+              ))
+            ) : (
+              <div className="px-2 py-5 text-center text-xs text-muted-foreground">
+                {t("composer.noModelsFound")}
+              </div>
+            )}
+          </ComposerModelMenuSub>
+          <ComposerModelMenuSub
+            disabled={effortDisabled}
+            disabledReason={effortDisabledReason}
+            icon={<Brain />}
+            label={t("composer.effort")}
+            value={
+              options.configLoading ? t("composer.loadingValue") : effortLabel
+            }
+          >
+            {options.reasoningEffortOptions.map((effort) => (
               <ComposerModelMenuItem
-                key={model.value}
-                label={model.label}
-                onSelect={() => {
-                  options.setModel(model.value);
-                  setModelQuery("");
-                }}
-                selected={model.value === options.model}
+                key={effort.value}
+                label={effort.label}
+                onSelect={() => options.setReasoningEffort(effort.value)}
+                selected={effort.value === options.reasoningEffort}
               />
-            ))
-          ) : (
-            <div className="px-2 py-5 text-center text-xs text-muted-foreground">
-              {t("composer.noModelsFound")}
-            </div>
-          )}
-        </ComposerModelMenuSub>
-        <ComposerModelMenuSub
-          disabled={effortDisabled}
-          disabledReason={effortDisabledReason}
-          icon={<Brain />}
-          label={t("composer.effort")}
-          value={
-            options.configLoading ? t("composer.loadingValue") : effortLabel
-          }
+            ))}
+          </ComposerModelMenuSub>
+        </DropdownMenuContent>
+      </DropdownMenu>
+
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button
+            aria-label={t("composer.agentSettings")}
+            className={`${composerModelMenuTriggerClassName} max-w-40`}
+            size="sm"
+            title={t("composer.agentSettings")}
+            type="button"
+            variant="ghost"
+          >
+            <SlidersHorizontal className="size-3.5 shrink-0 text-muted-foreground" />
+            <span className={composerModelMenuValueClassName}>
+              {t("composer.agentSettings")}
+            </span>
+            <ComposerModelMenuChevron />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent
+          className="w-[16.5rem] min-w-0"
+          align="start"
+          sideOffset={6}
+          variant="apple"
         >
-          {options.reasoningEffortOptions.map((effort) => (
-            <ComposerModelMenuItem
-              key={effort.value}
-              label={effort.label}
-              onSelect={() => options.setReasoningEffort(effort.value)}
-              selected={effort.value === options.reasoningEffort}
-            />
-          ))}
-        </ComposerModelMenuSub>
-        <ComposerModelMenuSub
-          disabled={modeDisabled}
-          disabledReason={modeDisabledReason}
-          icon={<SlidersHorizontal />}
-          label={t("composer.agentMode")}
-          value={options.configLoading ? t("composer.loadingValue") : modeLabel}
-        >
-          {options.modeOptions.map((mode) => (
-            <ComposerModelMenuItem
-              key={mode.value}
-              label={mode.label}
-              onSelect={() => options.setMode(mode.value)}
-              selected={mode.value === options.mode}
-            />
-          ))}
-        </ComposerModelMenuSub>
-        <ComposerModelMenuSub
-          disabled={permissionModeDisabled}
-          disabledReason={permissionModeDisabledReason}
-          icon={<ShieldCheck />}
-          label={t("composer.permissionMode")}
-          value={
-            options.configLoading
-              ? t("composer.loadingValue")
-              : permissionModeLabel
-          }
-        >
-          {options.permissionModeOptions.map((mode) => (
-            <ComposerModelMenuItem
-              key={mode.value}
-              label={mode.label}
-              onSelect={() => options.setPermissionMode(mode.value)}
-              selected={mode.value === options.permissionMode}
-            />
-          ))}
-        </ComposerModelMenuSub>
-      </DropdownMenuContent>
-    </DropdownMenu>
+          <DropdownMenuLabel className="px-2 pt-1 pb-1 text-[11px] font-semibold leading-4">
+            {t("composer.agentSettings")}
+          </DropdownMenuLabel>
+          <ComposerModelMenuSub
+            disabled={modeDisabled}
+            disabledReason={modeDisabledReason}
+            icon={<SlidersHorizontal />}
+            label={t("composer.agentMode")}
+            value={
+              options.configLoading ? t("composer.loadingValue") : modeLabel
+            }
+          >
+            {options.modeOptions.map((mode) => (
+              <ComposerModelMenuItem
+                key={mode.value}
+                label={mode.label}
+                onSelect={() => options.setMode(mode.value)}
+                selected={mode.value === options.mode}
+              />
+            ))}
+          </ComposerModelMenuSub>
+          <ComposerModelMenuSub
+            disabled={permissionModeDisabled}
+            disabledReason={permissionModeDisabledReason}
+            icon={<ShieldCheck />}
+            label={t("composer.permissionMode")}
+            value={
+              options.configLoading
+                ? t("composer.loadingValue")
+                : permissionModeLabel
+            }
+          >
+            {options.permissionModeOptions.map((mode) => (
+              <ComposerModelMenuItem
+                key={mode.value}
+                label={mode.label}
+                onSelect={() => options.setPermissionMode(mode.value)}
+                selected={mode.value === options.permissionMode}
+              />
+            ))}
+          </ComposerModelMenuSub>
+        </DropdownMenuContent>
+      </DropdownMenu>
+    </>
+  );
+}
+
+function ComposerModelMenuChevron() {
+  return (
+    <ChevronDown className="size-3.5 shrink-0 text-muted-foreground/80 transition-transform duration-150 group-data-[state=open]/button:rotate-180" />
   );
 }
 
@@ -1152,10 +1212,14 @@ function ComposerModelMenuSub({
 }
 
 function ComposerModelMenuItem({
+  disabled,
+  disabledReason,
   label,
   onSelect,
   selected,
 }: {
+  disabled?: boolean;
+  disabledReason?: string;
   label: string;
   onSelect: () => void;
   selected: boolean;
@@ -1163,10 +1227,12 @@ function ComposerModelMenuItem({
   return (
     <DropdownMenuItem
       className="min-h-7 rounded-lg px-2 py-1 text-xs font-normal focus:bg-foreground/[0.06] focus:text-foreground dark:focus:bg-white/[0.08]"
+      disabled={disabled}
       onSelect={(event) => {
         event.preventDefault();
-        if (!selected) onSelect();
+        if (!disabled && !selected) onSelect();
       }}
+      title={disabledReason ?? label}
     >
       <span className="min-w-0 flex-1 truncate">{label}</span>
       <span className="flex size-4 shrink-0 items-center justify-center text-primary">
