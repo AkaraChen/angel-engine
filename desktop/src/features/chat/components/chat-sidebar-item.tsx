@@ -1,7 +1,7 @@
 import type { MouseEventHandler, ReactElement } from "react";
 import { useTranslation } from "react-i18next";
 
-import { MacSidebarMenuButton } from "@/components/workspace-sidebar-primitives";
+import { WorkspaceSidebarMenuButton } from "@/components/workspace-sidebar-primitives";
 import { useChatAttention } from "@/features/chat/state/chat-run-store";
 
 import { ChatRunningPulse } from "./chat-running-pulse";
@@ -32,7 +32,7 @@ export function ChatSidebarItem({
 
   return (
     <>
-      <MacSidebarMenuButton
+      <WorkspaceSidebarMenuButton
         isActive={isActive}
         onClick={onOpenChat}
         onContextMenu={onShowContextMenu ? handleContextMenu : undefined}
@@ -48,7 +48,7 @@ export function ChatSidebarItem({
           <ChatAttentionIndicators chatId={chatId} />
           <ChatRunningPulse chatId={chatId} />
         </span>
-      </MacSidebarMenuButton>
+      </WorkspaceSidebarMenuButton>
     </>
   );
 }

@@ -4,7 +4,7 @@ import { MessageSquarePlus, Settings } from "lucide-react";
 
 import {
   AnimatedSidebarMenuItem,
-  MacSidebarMenuButton,
+  WorkspaceSidebarMenuButton,
 } from "@/components/workspace-sidebar-primitives";
 import {
   Sidebar,
@@ -68,10 +68,12 @@ export function WorkspaceSidebar({
 
         <SidebarMenu className="gap-1">
           <AnimatedSidebarMenuItem>
-            <MacSidebarMenuButton onClick={() => void onCreateStandaloneChat()}>
+            <WorkspaceSidebarMenuButton
+              onClick={() => void onCreateStandaloneChat()}
+            >
               <MessageSquarePlus />
               <span>{t("sidebar.newChat")}</span>
-            </MacSidebarMenuButton>
+            </WorkspaceSidebarMenuButton>
           </AnimatedSidebarMenuItem>
         </SidebarMenu>
       </SidebarHeader>
@@ -103,13 +105,13 @@ export function WorkspaceSidebar({
       <SidebarFooter className="p-2">
         <SidebarMenu>
           <AnimatedSidebarMenuItem>
-            <MacSidebarMenuButton
+            <WorkspaceSidebarMenuButton
               isActive={settingsActive}
               onClick={() => void onOpenSettings()}
             >
               <Settings />
               <span>{t("sidebar.settings")}</span>
-            </MacSidebarMenuButton>
+            </WorkspaceSidebarMenuButton>
           </AnimatedSidebarMenuItem>
         </SidebarMenu>
       </SidebarFooter>

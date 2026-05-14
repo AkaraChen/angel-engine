@@ -6,7 +6,7 @@ import { ChevronRight, Loader2, MessageSquare } from "lucide-react";
 
 import {
   AnimatedSidebarMenuItem,
-  MacSidebarMenuButton,
+  WorkspaceSidebarMenuButton,
   SidebarSectionHeader,
   sidebarMotion,
 } from "@/components/workspace-sidebar-primitives";
@@ -68,19 +68,19 @@ export function ChatSidebarSection({
               <AnimatePresence initial={false}>
                 {isLoading ? (
                   <AnimatedSidebarMenuItem key="chats-loading">
-                    <MacSidebarMenuButton disabled>
+                    <WorkspaceSidebarMenuButton disabled>
                       <Loader2 className="animate-spin" />
                       <span>{t("sidebar.loadingChats")}</span>
-                    </MacSidebarMenuButton>
+                    </WorkspaceSidebarMenuButton>
                   </AnimatedSidebarMenuItem>
                 ) : null}
 
                 {!isLoading && standaloneChats.length === 0 ? (
                   <AnimatedSidebarMenuItem key="chats-empty">
-                    <MacSidebarMenuButton disabled>
+                    <WorkspaceSidebarMenuButton disabled>
                       <MessageSquare />
                       <span>{t("sidebar.noStandaloneChats")}</span>
-                    </MacSidebarMenuButton>
+                    </WorkspaceSidebarMenuButton>
                   </AnimatedSidebarMenuItem>
                 ) : null}
 

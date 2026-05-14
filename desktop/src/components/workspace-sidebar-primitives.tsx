@@ -65,17 +65,17 @@ export function SidebarSectionHeader({
   );
 }
 
-type MacSidebarMenuButtonProps = HTMLMotionProps<"button"> & {
+type WorkspaceSidebarMenuButtonProps = HTMLMotionProps<"button"> & {
   isActive?: boolean;
 };
 
-export function MacSidebarMenuButton({
+export function WorkspaceSidebarMenuButton({
   children,
   className,
   isActive,
   type = "button",
   ...props
-}: MacSidebarMenuButtonProps): ReactElement {
+}: WorkspaceSidebarMenuButtonProps): ReactElement {
   return (
     <SidebarMenuButton asChild isActive={isActive}>
       <motion.button
@@ -90,17 +90,17 @@ export function MacSidebarMenuButton({
   );
 }
 
-type MacSidebarMenuSubButtonProps = HTMLMotionProps<"button"> & {
+type WorkspaceSidebarMenuSubButtonProps = HTMLMotionProps<"button"> & {
   isActive?: boolean;
 };
 
-export function MacSidebarMenuSubButton({
+export function WorkspaceSidebarMenuSubButton({
   children,
   className,
   isActive,
   type = "button",
   ...props
-}: MacSidebarMenuSubButtonProps): ReactElement {
+}: WorkspaceSidebarMenuSubButtonProps): ReactElement {
   return (
     <SidebarMenuSubButton asChild isActive={isActive}>
       <motion.button
@@ -115,17 +115,17 @@ export function MacSidebarMenuSubButton({
   );
 }
 
-type MacSidebarMenuActionProps = HTMLMotionProps<"button"> & {
+type WorkspaceSidebarMenuActionProps = HTMLMotionProps<"button"> & {
   showOnHover?: boolean;
 };
 
-export function MacSidebarMenuAction({
+export function WorkspaceSidebarMenuAction({
   children,
   className,
   showOnHover,
   type = "button",
   ...props
-}: MacSidebarMenuActionProps): ReactElement {
+}: WorkspaceSidebarMenuActionProps): ReactElement {
   return (
     <SidebarMenuAction asChild showOnHover={showOnHover}>
       <motion.button

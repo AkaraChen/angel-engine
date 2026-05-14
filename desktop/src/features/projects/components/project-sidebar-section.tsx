@@ -19,8 +19,8 @@ import {
 } from "@/components/ui/sidebar";
 import {
   AnimatedSidebarMenuItem,
-  MacSidebarMenuAction,
-  MacSidebarMenuButton,
+  WorkspaceSidebarMenuAction,
+  WorkspaceSidebarMenuButton,
   SidebarSectionHeader,
   sidebarMotion,
 } from "@/components/workspace-sidebar-primitives";
@@ -143,19 +143,19 @@ export function ProjectSidebarSection({
           <AnimatePresence initial={false}>
             {isLoading ? (
               <AnimatedSidebarMenuItem key="projects-loading">
-                <MacSidebarMenuButton disabled>
+                <WorkspaceSidebarMenuButton disabled>
                   <Loader2 className="animate-spin" />
                   <span>{t("sidebar.loadingProjects")}</span>
-                </MacSidebarMenuButton>
+                </WorkspaceSidebarMenuButton>
               </AnimatedSidebarMenuItem>
             ) : null}
 
             {!isLoading && projects.length === 0 ? (
               <AnimatedSidebarMenuItem key="projects-empty">
-                <MacSidebarMenuButton disabled>
+                <WorkspaceSidebarMenuButton disabled>
                   <Folder />
                   <span>{t("sidebar.noProjects")}</span>
-                </MacSidebarMenuButton>
+                </WorkspaceSidebarMenuButton>
               </AnimatedSidebarMenuItem>
             ) : null}
 
@@ -168,7 +168,7 @@ export function ProjectSidebarSection({
 
               return (
                 <AnimatedSidebarMenuItem key={project.id}>
-                  <MacSidebarMenuButton
+                  <WorkspaceSidebarMenuButton
                     aria-expanded={hasChats ? isExpanded : undefined}
                     onClick={() => {
                       toggleProjectExpanded(project.id);
@@ -195,8 +195,8 @@ export function ProjectSidebarSection({
                         <ChevronRight className="size-4" />
                       </motion.span>
                     ) : null}
-                  </MacSidebarMenuButton>
-                  <MacSidebarMenuAction
+                  </WorkspaceSidebarMenuButton>
+                  <WorkspaceSidebarMenuAction
                     aria-label={t("sidebar.newChatInProject", {
                       projectName: projectDisplayName,
                     })}
@@ -212,7 +212,7 @@ export function ProjectSidebarSection({
                     type="button"
                   >
                     <Plus />
-                  </MacSidebarMenuAction>
+                  </WorkspaceSidebarMenuAction>
 
                   <AnimatePresence initial={false}>
                     {hasChats && isExpanded ? (
