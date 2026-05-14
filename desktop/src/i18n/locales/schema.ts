@@ -64,16 +64,27 @@ export interface LocaleResourceTranslationWorkspace {
   settings: string;
 }
 
+export interface LocaleResourceTranslationSidebarDateGroups {
+  dayBeforeYesterday: string;
+  older: string;
+  previousMonth: string;
+  previousWeek: string;
+  today: string;
+  yesterday: string;
+}
+
 export interface LocaleResourceTranslationSidebar {
   addProject: string;
   chatAttention: string;
   chats: string;
   completed: string;
+  dateGroups: LocaleResourceTranslationSidebarDateGroups;
   loadingChats: string;
   loadingProjects: string;
   needsInput: string;
   newChat: string;
   newChatInProject: string;
+  noChats: string;
   noProjects: string;
   noStandaloneChats: string;
   projects: string;

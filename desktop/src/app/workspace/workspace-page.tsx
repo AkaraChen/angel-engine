@@ -572,17 +572,6 @@ function WorkspacePageContent({
     ...renameChatMutationOptions({ api, queryClient }),
   });
 
-  const refreshProjects = useCallback(async () => {
-    const result = await projectsQuery.refetch();
-    if (result.error) {
-      toast({
-        description: getErrorMessage(result.error),
-        title: t("notifications.couldNotLoadProjects"),
-        variant: "destructive",
-      });
-    }
-  }, [projectsQuery, t, toast]);
-
   const createProjectFromPicker = useCallback(async () => {
     try {
       const selectedPath = await api.projects.chooseDirectory();
@@ -830,6 +819,7 @@ function WorkspacePageContent({
     <SidebarProvider>
       <WorkspaceSidebarControlPortalProvider>
         <WorkspaceSidebar
+          chats={chats}
           isChatsLoading={chatsQuery.isPending}
           isMacOS={isMacOS}
           isProjectsLoading={projectsQuery.isPending}
@@ -838,7 +828,6 @@ function WorkspacePageContent({
           onCreateStandaloneChat={createChatForSelection}
           onOpenChat={openChat}
           onOpenSettings={openSettings}
-          onRefreshProjects={refreshProjects}
           onShowChatContextMenu={showChatContextMenu}
           onShowProjectContextMenu={showProjectContextMenu}
           projectChatsByProjectId={projectChatsByProjectId}

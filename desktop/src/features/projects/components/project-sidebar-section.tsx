@@ -2,14 +2,7 @@ import { useEffect, useState } from "react";
 import type { ReactElement } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useTranslation } from "react-i18next";
-import {
-  ChevronRight,
-  Folder,
-  FolderPlus,
-  Loader2,
-  Plus,
-  RefreshCw,
-} from "lucide-react";
+import { ChevronRight, Folder, FolderPlus, Loader2, Plus } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -35,7 +28,6 @@ type ProjectSidebarSectionProps = {
   onCreateProject: () => MaybeAsync;
   onCreateProjectChat: (project: Project) => MaybeAsync;
   onOpenChat: (chat: Chat) => MaybeAsync;
-  onRefreshProjects: () => MaybeAsync;
   onShowChatContextMenu: (chat: Chat) => MaybeAsync;
   onShowProjectContextMenu: (project: Project) => MaybeAsync;
   projectChatsByProjectId: Map<string, Chat[]>;
@@ -49,7 +41,6 @@ export function ProjectSidebarSection({
   onCreateProject,
   onCreateProjectChat,
   onOpenChat,
-  onRefreshProjects,
   onShowChatContextMenu,
   onShowProjectContextMenu,
   projectChatsByProjectId,
@@ -101,42 +92,23 @@ export function ProjectSidebarSection({
   return (
     <SidebarGroup className="py-1">
       <SidebarSectionHeader label={t("sidebar.projects")}>
-        <>
-          <Button
-            asChild
-            size="icon-xs"
-            title={t("sidebar.refreshProjects")}
-            variant="ghost"
-          >
-            <motion.button
-              onClick={() => void onRefreshProjects()}
-              title={t("sidebar.refreshProjects")}
-              transition={sidebarMotion}
-              type="button"
-              whileTap={{ scale: 0.96 }}
-            >
-              <RefreshCw />
-              <span className="sr-only">{t("sidebar.refreshProjects")}</span>
-            </motion.button>
-          </Button>
-          <Button
-            asChild
-            size="icon-xs"
+        <Button
+          asChild
+          size="icon-xs"
+          title={t("sidebar.addProject")}
+          variant="ghost"
+        >
+          <motion.button
+            onClick={() => void onCreateProject()}
             title={t("sidebar.addProject")}
-            variant="ghost"
+            transition={sidebarMotion}
+            type="button"
+            whileTap={{ scale: 0.96 }}
           >
-            <motion.button
-              onClick={() => void onCreateProject()}
-              title={t("sidebar.addProject")}
-              transition={sidebarMotion}
-              type="button"
-              whileTap={{ scale: 0.96 }}
-            >
-              <FolderPlus />
-              <span className="sr-only">{t("sidebar.addProject")}</span>
-            </motion.button>
-          </Button>
-        </>
+            <FolderPlus />
+            <span className="sr-only">{t("sidebar.addProject")}</span>
+          </motion.button>
+        </Button>
       </SidebarSectionHeader>
       <SidebarGroupContent>
         <SidebarMenu>

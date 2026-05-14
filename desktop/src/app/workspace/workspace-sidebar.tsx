@@ -1,11 +1,12 @@
-import type { ReactElement } from "react";
+import { useState, type ComponentType, type ReactElement } from "react";
 import { useTranslation } from "react-i18next";
-import { MessageSquarePlus, Settings } from "lucide-react";
+import { Folder, List, MessageSquarePlus, Rows3, Settings } from "lucide-react";
 
 import {
   AnimatedSidebarMenuItem,
   WorkspaceSidebarMenuButton,
 } from "@/components/workspace-sidebar-primitives";
+import { cn } from "@/platform/utils";
 import {
   Sidebar,
   SidebarContent,
@@ -14,13 +15,28 @@ import {
   SidebarMenu,
 } from "@/components/ui/sidebar";
 import { ChatSidebarSection } from "@/features/chat/components/chat-sidebar-section";
+import { SimpleChatSidebarSection } from "@/features/chat/components/simple-chat-sidebar-section";
 import { ProjectSidebarSection } from "@/features/projects/components/project-sidebar-section";
 import type { Chat } from "@/shared/chat";
 import type { Project } from "@/shared/projects";
 
 type MaybeAsync = void | Promise<void>;
+type SidebarViewMode = "mixed" | "project" | "simple";
+
+const SIDEBAR_VIEW_MODES: Array<{
+  icon: ComponentType<{ className?: string }>;
+  value: SidebarViewMode;
+}> = [
+  { icon: List, value: "simple" },
+  { icon: Folder, value: "project" },
+  {
+    icon: Rows3,
+    value: "mixed",
+  },
+];
 
 type WorkspaceSidebarProps = {
+  chats: Chat[];
   isChatsLoading: boolean;
   isMacOS: boolean;
   isProjectsLoading: boolean;
@@ -29,7 +45,6 @@ type WorkspaceSidebarProps = {
   onCreateStandaloneChat: () => MaybeAsync;
   onOpenChat: (chat: Chat) => MaybeAsync;
   onOpenSettings: () => MaybeAsync;
-  onRefreshProjects: () => MaybeAsync;
   onShowChatContextMenu: (chat: Chat) => MaybeAsync;
   onShowProjectContextMenu: (project: Project) => MaybeAsync;
   projectChatsByProjectId: Map<string, Chat[]>;
@@ -41,6 +56,7 @@ type WorkspaceSidebarProps = {
 };
 
 export function WorkspaceSidebar({
+  chats,
   isChatsLoading,
   isMacOS,
   isProjectsLoading,
@@ -49,7 +65,6 @@ export function WorkspaceSidebar({
   onCreateStandaloneChat,
   onOpenChat,
   onOpenSettings,
-  onRefreshProjects,
   onShowChatContextMenu,
   onShowProjectContextMenu,
   projectChatsByProjectId,
@@ -60,6 +75,7 @@ export function WorkspaceSidebar({
   standaloneChats,
 }: WorkspaceSidebarProps): ReactElement {
   const { t } = useTranslation();
+  const [viewMode, setViewMode] = useState<SidebarViewMode>("simple");
 
   return (
     <Sidebar className="select-none" variant="inset">
@@ -76,30 +92,60 @@ export function WorkspaceSidebar({
             </WorkspaceSidebarMenuButton>
           </AnimatedSidebarMenuItem>
         </SidebarMenu>
+
+        <SidebarViewModeControl onValueChange={setViewMode} value={viewMode} />
       </SidebarHeader>
 
       <SidebarContent className="gap-1 pb-1">
-        <ProjectSidebarSection
-          isLoading={isProjectsLoading}
-          onCreateProject={onCreateProject}
-          onCreateProjectChat={onCreateProjectChat}
-          onOpenChat={onOpenChat}
-          onRefreshProjects={onRefreshProjects}
-          onShowChatContextMenu={onShowChatContextMenu}
-          onShowProjectContextMenu={onShowProjectContextMenu}
-          projectChatsByProjectId={projectChatsByProjectId}
-          projects={projects}
-          selectedChatId={selectedChatId}
-          selectedProjectId={selectedProjectId}
-        />
+        {viewMode === "simple" ? (
+          <SimpleChatSidebarSection
+            chats={chats}
+            isLoading={isChatsLoading}
+            onOpenChat={onOpenChat}
+            onShowChatContextMenu={onShowChatContextMenu}
+            selectedChatId={selectedChatId}
+          />
+        ) : null}
 
-        <ChatSidebarSection
-          isLoading={isChatsLoading}
-          onOpenChat={onOpenChat}
-          onShowChatContextMenu={onShowChatContextMenu}
-          selectedChatId={selectedChatId}
-          standaloneChats={standaloneChats}
-        />
+        {viewMode === "project" ? (
+          <ProjectSidebarSection
+            isLoading={isProjectsLoading}
+            onCreateProject={onCreateProject}
+            onCreateProjectChat={onCreateProjectChat}
+            onOpenChat={onOpenChat}
+            onShowChatContextMenu={onShowChatContextMenu}
+            onShowProjectContextMenu={onShowProjectContextMenu}
+            projectChatsByProjectId={projectChatsByProjectId}
+            projects={projects}
+            selectedChatId={selectedChatId}
+            selectedProjectId={selectedProjectId}
+          />
+        ) : null}
+
+        {viewMode === "mixed" ? (
+          <>
+            <ProjectSidebarSection
+              isLoading={isProjectsLoading}
+              onCreateProject={onCreateProject}
+              onCreateProjectChat={onCreateProjectChat}
+              onOpenChat={onOpenChat}
+              onShowChatContextMenu={onShowChatContextMenu}
+              onShowProjectContextMenu={onShowProjectContextMenu}
+              projectChatsByProjectId={projectChatsByProjectId}
+              projects={projects}
+              selectedChatId={selectedChatId}
+              selectedProjectId={selectedProjectId}
+            />
+
+            <ChatSidebarSection
+              isLoading={isChatsLoading}
+              onOpenChat={onOpenChat}
+              onShowChatContextMenu={onShowChatContextMenu}
+              selectedChatId={selectedChatId}
+              standaloneChats={standaloneChats}
+            />
+          </>
+        ) : null}
       </SidebarContent>
 
       <SidebarFooter className="p-2">
@@ -116,5 +162,46 @@ export function WorkspaceSidebar({
         </SidebarMenu>
       </SidebarFooter>
     </Sidebar>
+  );
+}
+
+function SidebarViewModeControl({
+  onValueChange,
+  value,
+}: {
+  onValueChange: (value: SidebarViewMode) => void;
+  value: SidebarViewMode;
+}): ReactElement {
+  return (
+    <div className="px-1 group-data-[collapsible=icon]:hidden">
+      <div
+        aria-label="view"
+        className="grid grid-cols-3 gap-0.5 rounded-xl bg-sidebar-accent/60 p-1"
+        role="group"
+      >
+        {SIDEBAR_VIEW_MODES.map((option) => {
+          const Icon = option.icon;
+          const isActive = value === option.value;
+
+          return (
+            <button
+              aria-label={option.value}
+              aria-pressed={isActive}
+              className={cn(
+                "flex h-8 min-w-0 items-center justify-center rounded-lg px-2 text-sidebar-foreground/70 outline-hidden transition-colors hover:text-sidebar-foreground focus-visible:ring-2 focus-visible:ring-sidebar-ring",
+                isActive
+                  ? "bg-background text-sidebar-foreground shadow-[0_0_0_1px_hsl(var(--sidebar-border))]"
+                  : "hover:bg-sidebar-accent",
+              )}
+              key={option.value}
+              onClick={() => onValueChange(option.value)}
+              type="button"
+            >
+              <Icon className="size-4 shrink-0" />
+            </button>
+          );
+        })}
+      </div>
+    </div>
   );
 }
