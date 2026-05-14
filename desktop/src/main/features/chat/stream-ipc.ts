@@ -23,6 +23,7 @@ import {
   notifyChatNeedsInput,
   notifyChatTurnCompleted,
 } from "../../window-notifications";
+import { translate } from "../../i18n";
 
 type ActiveStream = {
   cancel: () => void;
@@ -196,7 +197,7 @@ function notifyAwaitingToolAction(
     id: action.id,
     kind: "approval",
     phase: "open",
-    title: action.title ?? "Permission required",
+    title: action.title ?? translate("notifications.permissionRequired"),
   });
 }
 

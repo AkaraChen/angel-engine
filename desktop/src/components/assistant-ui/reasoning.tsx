@@ -15,6 +15,7 @@ import {
 } from "@assistant-ui/react";
 import { cva, type VariantProps } from "class-variance-authority";
 import { BrainIcon, ChevronDownIcon } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 import {
   Collapsible,
@@ -102,6 +103,11 @@ function ReasoningTrigger({
 }: ComponentProps<typeof CollapsibleTrigger> & {
   active?: boolean;
 }) {
+  const { t } = useTranslation();
+  const label = t("components.reasoning", {
+    defaultValue: "Reasoning",
+  });
+
   return (
     <CollapsibleTrigger
       className={cn(
@@ -113,13 +119,13 @@ function ReasoningTrigger({
     >
       <BrainIcon className="aui-reasoning-trigger-icon size-4 shrink-0" />
       <span className="aui-reasoning-trigger-label-wrapper relative inline-block leading-none">
-        <span>Reasoning</span>
+        <span>{label}</span>
         {active ? (
           <span
             aria-hidden
             className="aui-reasoning-trigger-shimmer shimmer pointer-events-none absolute inset-0 motion-reduce:animate-none"
           >
-            Reasoning
+            {label}
           </span>
         ) : null}
       </span>

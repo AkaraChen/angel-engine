@@ -4,6 +4,8 @@ import {
   ThreadPrimitive,
 } from "@assistant-ui/react";
 import { Quote } from "lucide-react";
+import { Trans, useTranslation } from "react-i18next";
+import type { ReactNode } from "react";
 
 import { AssistantComposer } from "@/features/chat/components/assistant-composer";
 import {
@@ -13,6 +15,8 @@ import {
 } from "@/features/chat/components/messages";
 
 export function AssistantThread({ projectName }: { projectName?: string }) {
+  const { t } = useTranslation();
+
   return (
     <ThreadPrimitive.Root className="flex h-full min-h-0 flex-col bg-background">
       <ThreadPrimitive.Viewport
@@ -36,7 +40,7 @@ export function AssistantThread({ projectName }: { projectName?: string }) {
         <SelectionToolbarPrimitive.Root className="z-20 flex items-center gap-1 rounded-full border border-foreground/10 bg-popover/95 p-1 text-popover-foreground shadow-lg backdrop-blur-xl">
           <SelectionToolbarPrimitive.Quote className="inline-flex h-7 items-center gap-1 rounded-full px-2 text-xs hover:bg-muted">
             <Quote className="size-3" />
-            Quote
+            {t("thread.quote")}
           </SelectionToolbarPrimitive.Quote>
         </SelectionToolbarPrimitive.Root>
       </ThreadPrimitive.Viewport>
@@ -50,22 +54,25 @@ export function AssistantThread({ projectName }: { projectName?: string }) {
 }
 
 function EmptyThread({ projectName }: { projectName?: string }) {
+  const { t } = useTranslation();
+
   return (
     <div className="mx-auto flex w-full max-w-[820px] flex-1 items-center py-10">
       <div className="w-full">
         <div className="min-w-0 select-none text-left">
           <h2 className="max-w-[38rem] text-pretty text-[32px] font-semibold leading-[1.12] text-foreground">
             {projectName ? (
-              <>
-                What should Angel Engine inspect in{" "}
-                <SketchUnderline text={projectName} />?
-              </>
+              <Trans
+                components={{ project: <SketchUnderline /> }}
+                i18nKey="thread.empty.titleWithProject"
+                values={{ projectName }}
+              />
             ) : (
-              "What should Angel Engine inspect?"
+              t("thread.empty.title")
             )}
           </h2>
           <p className="mt-3 max-w-[34rem] text-sm leading-6 text-muted-foreground">
-            Point to a file, bug, behavior, or workspace slice to patch or test.
+            {t("thread.empty.description")}
           </p>
         </div>
       </div>
@@ -73,10 +80,10 @@ function EmptyThread({ projectName }: { projectName?: string }) {
   );
 }
 
-function SketchUnderline({ text }: { text: string }) {
+function SketchUnderline({ children }: { children?: ReactNode }) {
   return (
     <span className="relative inline-block max-w-full align-baseline text-primary">
-      <span className="relative z-10 break-words">{text}</span>
+      <span className="relative z-10 break-words">{children}</span>
       <svg
         aria-hidden
         className="pointer-events-none absolute -bottom-1.5 -left-[5%] h-3 w-[110%] overflow-visible text-primary/70"

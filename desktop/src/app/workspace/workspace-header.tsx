@@ -1,3 +1,5 @@
+import { useTranslation } from "react-i18next";
+
 import type { ChatAttentionState } from "@/features/chat/state/chat-run-store";
 
 type WorkspaceHeaderProps = {
@@ -6,6 +8,7 @@ type WorkspaceHeaderProps = {
 };
 
 export function WorkspaceHeader({ attention, title }: WorkspaceHeaderProps) {
+  const { t } = useTranslation();
   const showAttention = Boolean(attention?.needsInput || attention?.completed);
 
   return (
@@ -16,20 +19,20 @@ export function WorkspaceHeader({ attention, title }: WorkspaceHeaderProps) {
       <h1 className="min-w-0 truncate text-sm font-medium">{title}</h1>
       {showAttention ? (
         <span
-          aria-label="Background chat status"
+          aria-label={t("workspace.backgroundChatStatus")}
           className="flex shrink-0 items-center gap-1"
-          title="Background chat status"
+          title={t("workspace.backgroundChatStatus")}
         >
           {attention?.needsInput ? (
             <span
-              aria-label="Background chat needs input"
+              aria-label={t("workspace.backgroundChatNeedsInput")}
               className="size-2 rounded-full bg-amber-400 shadow-[0_0_0_1px_rgba(245,158,11,0.42),0_0_0_4px_rgba(245,158,11,0.14)]"
               role="img"
             />
           ) : null}
           {attention?.completed ? (
             <span
-              aria-label="Background chat completed"
+              aria-label={t("workspace.backgroundChatCompleted")}
               className="size-2 rounded-full bg-emerald-500 shadow-[0_0_0_1px_rgba(16,185,129,0.35)]"
               role="img"
             />

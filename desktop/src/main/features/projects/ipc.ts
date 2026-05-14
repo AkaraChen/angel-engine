@@ -20,6 +20,7 @@ import {
   listProjects,
   updateProject,
 } from "./repository";
+import { translate } from "../../i18n";
 
 const t = tipc.create();
 
@@ -27,7 +28,7 @@ export const projectIpcRouter = {
   projectsChooseDirectory: t.procedure.action(async () => {
     const result = await dialog.showOpenDialog({
       properties: ["openDirectory"],
-      title: "Choose project folder",
+      title: translate("projects.chooseFolder"),
     });
 
     return result.canceled ? null : result.filePaths[0];
@@ -101,7 +102,7 @@ export const projectIpcRouter = {
               await shell.openPath(project.path);
               resolve("opened");
             },
-            label: "Open in Finder",
+            label: translate("projects.openInFinder"),
           },
           { type: "separator" },
           {
@@ -109,7 +110,7 @@ export const projectIpcRouter = {
               deleteProject(project.id);
               resolve("deleted");
             },
-            label: "Delete",
+            label: translate("common.delete"),
           },
         ]);
 

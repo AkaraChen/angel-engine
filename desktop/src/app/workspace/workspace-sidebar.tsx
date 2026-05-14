@@ -1,4 +1,5 @@
 import type { ReactElement } from "react";
+import { useTranslation } from "react-i18next";
 import { MessageSquarePlus, Settings } from "lucide-react";
 
 import {
@@ -58,6 +59,8 @@ export function WorkspaceSidebar({
   settingsActive,
   standaloneChats,
 }: WorkspaceSidebarProps): ReactElement {
+  const { t } = useTranslation();
+
   return (
     <Sidebar className="select-none" variant="inset">
       <SidebarHeader className="px-2 pb-2 pt-2" data-electron-drag>
@@ -67,7 +70,7 @@ export function WorkspaceSidebar({
           <AnimatedSidebarMenuItem>
             <MacSidebarMenuButton onClick={() => void onCreateStandaloneChat()}>
               <MessageSquarePlus />
-              <span>New chat</span>
+              <span>{t("sidebar.newChat")}</span>
             </MacSidebarMenuButton>
           </AnimatedSidebarMenuItem>
         </SidebarMenu>
@@ -105,7 +108,7 @@ export function WorkspaceSidebar({
               onClick={() => void onOpenSettings()}
             >
               <Settings />
-              <span>Settings</span>
+              <span>{t("sidebar.settings")}</span>
             </MacSidebarMenuButton>
           </AnimatedSidebarMenuItem>
         </SidebarMenu>

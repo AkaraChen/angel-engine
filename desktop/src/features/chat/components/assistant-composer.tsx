@@ -14,6 +14,8 @@ import {
   useAuiState,
   type CreateAttachment,
 } from "@assistant-ui/react";
+import type { TFunction } from "i18next";
+import { useTranslation } from "react-i18next";
 import {
   ArrowUp,
   Bot,
@@ -125,6 +127,7 @@ const composerModelMenuValueClassName =
   "min-w-0 max-w-28 truncate text-muted-foreground";
 
 export function AssistantComposer() {
+  const { t } = useTranslation();
   const aui = useAui();
   const api = useApi();
   const environment = useChatEnvironment();
@@ -176,7 +179,7 @@ export function AssistantComposer() {
       try {
         await Promise.all([
           ...message.files.map((file) =>
-            composer.addAttachment(createAttachmentFromPromptFile(file)),
+            composer.addAttachment(createAttachmentFromPromptFile(file, t)),
           ),
           ...mentionedFiles.map((file) =>
             composer.addAttachment(createMentionAttachment(file)),
@@ -191,7 +194,7 @@ export function AssistantComposer() {
         throw error;
       }
     },
-    [aui, mentionedFiles],
+    [aui, mentionedFiles, t],
   );
 
   useEffect(() => {
@@ -222,7 +225,7 @@ export function AssistantComposer() {
           setFileResults([]);
           toast({
             description: getErrorMessage(error),
-            title: "Could not search files",
+            title: t("composer.toasts.couldNotSearchFiles"),
             variant: "destructive",
           });
         })
@@ -235,17 +238,24 @@ export function AssistantComposer() {
       cancelled = true;
       window.clearTimeout(timeout);
     };
-  }, [api, environment.projectPath, mentionQuery, projectToolsEnabled, toast]);
+  }, [
+    api,
+    environment.projectPath,
+    mentionQuery,
+    projectToolsEnabled,
+    t,
+    toast,
+  ]);
 
   const handleAttachmentError = useCallback(
     (error: AttachmentInputError) => {
       toast({
-        description: error.message,
-        title: attachmentErrorTitle(error.code),
+        description: attachmentErrorMessage(error.code, t),
+        title: attachmentErrorTitle(error.code, t),
         variant: "destructive",
       });
     },
-    [toast],
+    [t, toast],
   );
 
   const handleTextChange = useCallback(
@@ -366,7 +376,7 @@ export function AssistantComposer() {
           disabled={isInputDisabled}
           onChange={handleTextChange}
           onKeyDown={handleTextKeyDown}
-          placeholder="Ask Angel Engine to inspect, patch, test, or explain..."
+          placeholder={t("composer.placeholder")}
           ref={textareaRef}
           rows={2}
           value={draftText}
@@ -385,6 +395,7 @@ function AssistantComposerHeader({
   mentionedFiles: ComposerMentionedFile[];
   onRemoveMentionedFile: (id: string) => void;
 }) {
+  const { t } = useTranslation();
   const attachments = usePromptInputAttachments();
   const hasQuote = useAuiState((state) => Boolean(state.composer.quote));
 
@@ -417,8 +428,10 @@ function AssistantComposerHeader({
               key={file.id}
               name={file.name}
               onRemove={() => onRemoveMentionedFile(file.id)}
-              removeLabel={`Remove ${file.name}`}
-              typeLabel="Mention"
+              removeLabel={t("composer.removeAttachment", {
+                name: file.name,
+              })}
+              typeLabel={t("common.mention")}
             />
           ))}
         </div>
@@ -429,7 +442,7 @@ function AssistantComposerHeader({
           {attachments.files.map((file) => {
             const mediaType = file.mediaType ?? "application/octet-stream";
             const isImage = mediaType.startsWith("image/");
-            const name = file.filename ?? "Attachment";
+            const name = file.filename ?? t("common.attachment");
 
             return (
               <ChatAttachmentTile
@@ -439,8 +452,8 @@ function AssistantComposerHeader({
                 name={name}
                 onRemove={() => attachments.remove(file.id)}
                 previewUrl={isImage ? file.url : undefined}
-                removeLabel={`Remove ${name}`}
-                typeLabel={isImage ? "Image" : "File"}
+                removeLabel={t("composer.removeAttachment", { name })}
+                typeLabel={isImage ? t("common.image") : t("common.file")}
               />
             );
           })}
@@ -502,12 +515,14 @@ function SlashCommandAssistPanel({
   loading,
   onSelect,
 }: SlashCommandAssistPanelProps) {
+  const { t } = useTranslation();
+
   if (loading) {
     return (
-      <AssistPanelFrame title="Commands">
+      <AssistPanelFrame title={t("composer.commands")}>
         <div className="flex items-center gap-2 px-2 py-2 text-sm text-muted-foreground">
           <Loader2 className="size-3.5 animate-spin" />
-          <span>Loading commands</span>
+          <span>{t("composer.loadingCommands")}</span>
         </div>
       </AssistPanelFrame>
     );
@@ -515,10 +530,12 @@ function SlashCommandAssistPanel({
 
   if (commands.length === 0) {
     const emptyMessage =
-      catalogSize === 0 ? "No commands advertised" : "No matching commands";
+      catalogSize === 0
+        ? t("composer.noCommandsAdvertised")
+        : t("composer.noMatchingCommands");
 
     return (
-      <AssistPanelFrame title="Commands">
+      <AssistPanelFrame title={t("composer.commands")}>
         <div className="px-2 py-2 text-sm text-muted-foreground">
           {emptyMessage}
         </div>
@@ -527,7 +544,7 @@ function SlashCommandAssistPanel({
   }
 
   return (
-    <AssistPanelFrame title="Commands">
+    <AssistPanelFrame title={t("composer.commands")}>
       {commands.map((command) => (
         <button
           className="flex w-full min-w-0 items-center gap-2 rounded-lg px-2 py-1.5 text-left text-sm hover:bg-muted"
@@ -558,11 +575,13 @@ function FileMentionAssistPanel({
   loading,
   onSelect,
 }: FileMentionAssistPanelProps) {
+  const { t } = useTranslation();
+
   if (loading) {
     return (
-      <AssistPanelFrame title="Files">
+      <AssistPanelFrame title={t("composer.files")}>
         <div className="px-2 py-2 text-sm text-muted-foreground">
-          Searching...
+          {t("common.searching")}
         </div>
       </AssistPanelFrame>
     );
@@ -570,16 +589,16 @@ function FileMentionAssistPanel({
 
   if (files.length === 0) {
     return (
-      <AssistPanelFrame title="Files">
+      <AssistPanelFrame title={t("composer.files")}>
         <div className="px-2 py-2 text-sm text-muted-foreground">
-          No files found
+          {t("composer.noFilesFound")}
         </div>
       </AssistPanelFrame>
     );
   }
 
   return (
-    <AssistPanelFrame title="Files">
+    <AssistPanelFrame title={t("composer.files")}>
       {files.map((file) => (
         <button
           className="flex w-full min-w-0 flex-col rounded-lg px-2 py-1.5 text-left hover:bg-muted"
@@ -599,6 +618,7 @@ function FileMentionAssistPanel({
 }
 
 function AssistantComposerFooter({ draftText }: { draftText: string }) {
+  const { t } = useTranslation();
   const aui = useAui();
   const attachments = usePromptInputAttachments();
   const chatOptions = useChatOptions();
@@ -625,7 +645,7 @@ function AssistantComposerFooter({ draftText }: { draftText: string }) {
             chatOptions.modeOptions.length < 2
           }
           icon={<SlidersHorizontal />}
-          label="Mode"
+          label={t("composer.mode")}
           onValueChange={chatOptions.setMode}
           options={chatOptions.modeOptions}
           value={chatOptions.mode}
@@ -639,18 +659,18 @@ function AssistantComposerFooter({ draftText }: { draftText: string }) {
             variant="outline"
           >
             <CircleStop />
-            Cancel
+            {t("common.cancel")}
           </Button>
         ) : null}
         <Button
-          aria-label="Send"
+          aria-label={t("common.send")}
           className="size-8 rounded-full p-0 shadow-sm active:translate-y-px"
           disabled={isRunning || isEmpty}
           size="sm"
           type="submit"
         >
           <ArrowUp />
-          <span className="sr-only">Send</span>
+          <span className="sr-only">{t("common.send")}</span>
         </Button>
       </div>
     </PromptInputFooter>
@@ -664,6 +684,7 @@ function PlanModeToggleButton({
   disabled?: boolean;
   options: ChatOptionsContextValue;
 }) {
+  const { t } = useTranslation();
   const toast = useToast();
   const [pending, setPending] = useState(false);
   const target = findPlanModeToggleTarget([
@@ -682,10 +703,14 @@ function PlanModeToggleButton({
   ]);
   const unavailable =
     disabled || pending || options.configLoading || !target?.targetMode;
-  const label = target?.isPlanMode ? "Plan" : "Build";
+  const label = target?.isPlanMode ? t("composer.plan") : t("common.build");
   const title = target?.isPlanMode
-    ? "Switch to build mode"
-    : "Switch to plan mode";
+    ? t("composer.switchToBuild", {
+        defaultValue: "Switch to build mode",
+      })
+    : t("composer.switchToPlan", {
+        defaultValue: "Switch to plan mode",
+      });
   const Icon = target?.isPlanMode ? ListChecks : Hammer;
 
   return (
@@ -705,7 +730,7 @@ function PlanModeToggleButton({
           .catch((error: unknown) => {
             toast({
               description: getErrorMessage(error),
-              title: "Could not change mode",
+              title: t("composer.toasts.couldNotChangeMode"),
               variant: "destructive",
             });
           })
@@ -785,18 +810,19 @@ function ComposerOptionSelect({
 }
 
 function PromptAttachmentButton() {
+  const { t } = useTranslation();
   const attachments = usePromptInputAttachments();
 
   return (
     <Button
       onClick={attachments.openFileDialog}
       size="icon-sm"
-      title="Attach files"
+      title={t("composer.attachFiles")}
       type="button"
       variant="ghost"
     >
       <Paperclip />
-      <span className="sr-only">Attach files</span>
+      <span className="sr-only">{t("composer.attachFiles")}</span>
     </Button>
   );
 }
@@ -808,6 +834,7 @@ function ComposerModelMenu({
   disabled?: boolean;
   options: ChatOptionsContextValue;
 }) {
+  const { t } = useTranslation();
   const [modelQuery, setModelQuery] = useState("");
   const providerOptions = options.runtimeOptions;
   const providerLabel =
@@ -848,32 +875,35 @@ function ComposerModelMenu({
     : composerSettingDisabledReason({
         canSet: options.canSetReasoningEffort,
         disabled,
-        label: "reasoning effort",
+        label: t("composer.settingLabels.reasoningEffort"),
         optionCount: options.reasoningEffortOptionCount,
+        t,
       });
   const modeDisabledReason = options.configLoading
     ? undefined
     : composerSettingDisabledReason({
         canSet: options.canSetMode,
         disabled,
-        label: "agent mode",
+        label: t("composer.settingLabels.agentMode"),
         optionCount: options.modeOptionCount,
+        t,
       });
   const permissionModeDisabledReason = options.configLoading
     ? undefined
     : composerSettingDisabledReason({
         canSet: options.canSetPermissionMode,
         disabled,
-        label: "permission mode",
+        label: t("composer.settingLabels.permissionMode"),
         optionCount: options.permissionModeOptionCount,
+        t,
       });
   const providerDisabledReason =
     options.runtimeDisabledReason ??
     (providerOptions.every((provider) => provider.value === options.runtime)
-      ? "Only one agent is enabled in Settings."
+      ? t("composer.disabledReasons.onlyOneAgent")
       : undefined) ??
     (disabled
-      ? "Agent cannot be changed while a response is running."
+      ? t("composer.disabledReasons.agentCannotChangeWhileRunning")
       : undefined);
   const providerDisabled =
     !options.canSetRuntime ||
@@ -888,10 +918,10 @@ function ComposerModelMenu({
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button
-          aria-label="Agent settings"
+          aria-label={t("composer.agentSettings")}
           className={composerModelMenuTriggerClassName}
           size="sm"
-          title="Agent settings"
+          title={t("composer.agentSettings")}
           type="button"
           variant="outline"
         >
@@ -909,7 +939,11 @@ function ComposerModelMenu({
             className="size-1 shrink-0 rounded-full bg-foreground/20"
           />
           <span className="min-w-0 max-w-20 truncate text-muted-foreground/85">
-            {shortEffortLabel(effortLabel)}
+            {shortEffortLabel(
+              effortLabel,
+              t("common.useDefault"),
+              t("common.default"),
+            )}
           </span>
           <ChevronDown className="size-3.5 shrink-0 text-muted-foreground/80 transition-transform duration-150 group-data-[state=open]/button:rotate-180" />
         </Button>
@@ -921,13 +955,13 @@ function ComposerModelMenu({
         variant="apple"
       >
         <DropdownMenuLabel className="px-2 pt-1 pb-1 text-[11px] font-semibold leading-4">
-          Agent Settings
+          {t("composer.agentSettings")}
         </DropdownMenuLabel>
         <ComposerModelMenuSub
           disabled={providerDisabled}
           disabledReason={providerDisabledReason}
           icon={<Bot />}
-          label="Provider"
+          label={t("composer.provider")}
           value={providerLabel}
         >
           {providerOptions.map((provider) => (
@@ -942,12 +976,14 @@ function ComposerModelMenu({
         <ComposerModelMenuSub
           disabled={modelDisabled}
           icon={<Cpu />}
-          label="Model"
-          value={options.configLoading ? "Loading..." : modelLabel}
+          label={t("composer.model")}
+          value={
+            options.configLoading ? t("composer.loadingValue") : modelLabel
+          }
         >
           <ComposerModelMenuSearch
             onChange={setModelQuery}
-            placeholder="Search models"
+            placeholder={t("composer.searchModels")}
             value={modelQuery}
           />
           {filteredModelOptions.length > 0 ? (
@@ -964,7 +1000,7 @@ function ComposerModelMenu({
             ))
           ) : (
             <div className="px-2 py-5 text-center text-xs text-muted-foreground">
-              No models found
+              {t("composer.noModelsFound")}
             </div>
           )}
         </ComposerModelMenuSub>
@@ -972,8 +1008,10 @@ function ComposerModelMenu({
           disabled={effortDisabled}
           disabledReason={effortDisabledReason}
           icon={<Brain />}
-          label="Effort"
-          value={options.configLoading ? "Loading..." : effortLabel}
+          label={t("composer.effort")}
+          value={
+            options.configLoading ? t("composer.loadingValue") : effortLabel
+          }
         >
           {options.reasoningEffortOptions.map((effort) => (
             <ComposerModelMenuItem
@@ -988,8 +1026,8 @@ function ComposerModelMenu({
           disabled={modeDisabled}
           disabledReason={modeDisabledReason}
           icon={<SlidersHorizontal />}
-          label="Agent Mode"
-          value={options.configLoading ? "Loading..." : modeLabel}
+          label={t("composer.agentMode")}
+          value={options.configLoading ? t("composer.loadingValue") : modeLabel}
         >
           {options.modeOptions.map((mode) => (
             <ComposerModelMenuItem
@@ -1004,8 +1042,12 @@ function ComposerModelMenu({
           disabled={permissionModeDisabled}
           disabledReason={permissionModeDisabledReason}
           icon={<ShieldCheck />}
-          label="Permission Mode"
-          value={options.configLoading ? "Loading..." : permissionModeLabel}
+          label={t("composer.permissionMode")}
+          value={
+            options.configLoading
+              ? t("composer.loadingValue")
+              : permissionModeLabel
+          }
         >
           {options.permissionModeOptions.map((mode) => (
             <ComposerModelMenuItem
@@ -1151,8 +1193,14 @@ function filterComposerOptions(options: AgentValueOption[], query: string) {
   );
 }
 
-function shortEffortLabel(label: string) {
-  return label.toLowerCase() === "use default" ? "Default" : label;
+function shortEffortLabel(
+  label: string,
+  defaultLabel: string,
+  shortDefaultLabel: string,
+) {
+  return label.toLowerCase() === defaultLabel.toLowerCase()
+    ? shortDefaultLabel
+    : label;
 }
 
 function composerSettingDisabledReason({
@@ -1160,35 +1208,38 @@ function composerSettingDisabledReason({
   disabled,
   label,
   optionCount,
+  t,
 }: {
   canSet: boolean;
   disabled?: boolean;
   label: string;
   optionCount: number;
+  t: TFunction;
 }) {
   if (disabled) {
-    return "Agent settings cannot be changed while a response is running.";
+    return t("composer.disabledReasons.cannotChangeWhileRunning");
   }
   if (!canSet || optionCount === 0) {
-    return `This agent does not expose adjustable ${label}.`;
+    return t("composer.disabledReasons.cannotAdjust", { label });
   }
   if (optionCount < 2) {
-    return `This agent exposes only one ${label} value, so it cannot be changed.`;
+    return t("composer.disabledReasons.onlyOneValue", { label });
   }
   return undefined;
 }
 
 function createAttachmentFromPromptFile(
   file: PromptInputMessage["files"][number],
+  t: TFunction,
 ): CreateAttachment {
-  const filename = file.filename ?? "Attachment";
+  const filename = file.filename ?? t("common.attachment");
   const mediaType = file.mediaType ?? "application/octet-stream";
   const url = file.url ?? "";
   const path = promptFilePath(file);
   const isImage = mediaType.startsWith("image/");
 
   if (!url || url.startsWith("blob:")) {
-    throw new Error(`Could not read ${filename}. Try attaching it again.`);
+    throw new Error(t("composer.couldNotReadAttachment", { filename }));
   }
 
   const content = isImage
@@ -1276,17 +1327,38 @@ type AttachmentInputError = {
   message: string;
 };
 
-function attachmentErrorTitle(code: AttachmentInputError["code"]) {
+function attachmentErrorTitle(
+  code: AttachmentInputError["code"],
+  t: TFunction,
+) {
   switch (code) {
     case "accept":
-      return "File type blocked";
+      return t("composer.fileTypeBlocked");
     case "max_file_size":
-      return "File is too large";
+      return t("composer.fileTooLarge");
     case "max_files":
-      return "Too many files";
+      return t("composer.toasts.tooManyFiles");
     case "file_read":
-      return "Could not read file";
+      return t("composer.toasts.couldNotReadFile");
     case "submit":
-      return "Could not send attachment";
+      return t("composer.toasts.couldNotSendAttachment");
+  }
+}
+
+function attachmentErrorMessage(
+  code: AttachmentInputError["code"],
+  t: TFunction,
+) {
+  switch (code) {
+    case "accept":
+      return t("composer.attachmentErrors.accept");
+    case "max_file_size":
+      return t("composer.attachmentErrors.maxFileSize");
+    case "max_files":
+      return t("composer.attachmentErrors.maxFiles");
+    case "file_read":
+      return t("composer.attachmentErrors.fileRead");
+    case "submit":
+      return t("composer.attachmentErrors.submit");
   }
 }

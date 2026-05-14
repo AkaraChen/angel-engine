@@ -1,5 +1,6 @@
 import { useCallback, useState, type ReactNode } from "react";
-import { AlertTriangle, Bot, Palette, Trash2 } from "lucide-react";
+import { useTranslation } from "react-i18next";
+import { AlertTriangle, Bot, Languages, Palette, Trash2 } from "lucide-react";
 import claudeIconUrl from "@lobehub/icons-static-svg/icons/claudecode-color.svg";
 import clineIconUrl from "@lobehub/icons-static-svg/icons/cline.svg";
 import codexIconUrl from "@lobehub/icons-static-svg/icons/codex-color.svg";
@@ -27,23 +28,28 @@ import {
   type AgentSettings,
 } from "@/shared/agents";
 import { useThemeSettings } from "@/features/settings/use-theme-settings";
+import {
+  languageOptions,
+  normalizeSupportedLanguage,
+  type SupportedLanguage,
+} from "@/i18n";
 import type { DesktopThemeMode } from "@/platform/theme";
 
 type SettingsTab = "agents" | "appearance" | "danger";
 
-const settingsTabs: Array<{ id: SettingsTab; label: string }> = [
-  { id: "agents", label: "Agents" },
-  { id: "appearance", label: "Appearance" },
-  { id: "danger", label: "Danger Area" },
+const settingsTabs: Array<{ id: SettingsTab; labelKey: string }> = [
+  { id: "agents", labelKey: "settings.tabs.agents" },
+  { id: "appearance", labelKey: "settings.tabs.appearance" },
+  { id: "danger", labelKey: "settings.tabs.danger" },
 ];
 
 const themeModeOptions: Array<{
-  label: string;
+  labelKey: string;
   value: DesktopThemeMode;
 }> = [
-  { label: "System", value: "system" },
-  { label: "Light", value: "light" },
-  { label: "Dark", value: "dark" },
+  { labelKey: "settings.appearance.themeOptions.system", value: "system" },
+  { labelKey: "settings.appearance.themeOptions.light", value: "light" },
+  { labelKey: "settings.appearance.themeOptions.dark", value: "dark" },
 ];
 
 const agentIconUrl: Record<AgentRuntime, string> = {
@@ -71,27 +77,29 @@ export function SettingsPage({
   onDeleteAllChats: () => Promise<void>;
   onDefaultAgentChange: (runtime: AgentRuntime) => void;
 }) {
+  const { i18n, t } = useTranslation();
   const [activeTab, setActiveTab] = useState<SettingsTab>("agents");
   const [themeMode, setThemeMode] = useThemeSettings();
+  const language = normalizeSupportedLanguage(
+    i18n.resolvedLanguage ?? i18n.language,
+  );
   const enabledAgentOptions = getEnabledAgentOptions(agentSettings);
   const enabledRuntimeSet = new Set(agentSettings.enabledRuntimes);
 
   const deleteAllChats = useCallback(async () => {
-    const confirmed = window.confirm(
-      "Delete all chats? This cannot be undone.",
-    );
+    const confirmed = window.confirm(t("settings.danger.confirmDeleteAll"));
     if (!confirmed) return;
 
     await onDeleteAllChats();
-  }, [onDeleteAllChats]);
+  }, [onDeleteAllChats, t]);
 
   return (
     <main className="flex min-h-0 flex-1 overflow-auto">
       <section className="mx-auto flex w-full max-w-4xl flex-col gap-6 px-6 py-6">
         <div>
-          <h2 className="text-lg font-semibold">Settings</h2>
+          <h2 className="text-lg font-semibold">{t("settings.title")}</h2>
           <p className="mt-1 text-sm text-muted-foreground">
-            Configure desktop workspace behavior.
+            {t("settings.description")}
           </p>
         </div>
 
@@ -108,7 +116,7 @@ export function SettingsPage({
               onClick={() => setActiveTab(tab.id)}
               type="button"
             >
-              {tab.label}
+              {t(tab.labelKey)}
             </button>
           ))}
         </div>
@@ -116,7 +124,9 @@ export function SettingsPage({
         {activeTab === "agents" ? (
           <div className="space-y-5">
             <section className="space-y-3">
-              <h3 className="text-sm font-semibold">Agents</h3>
+              <h3 className="text-sm font-semibold">
+                {t("settings.agents.title")}
+              </h3>
               <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                 {AGENT_OPTIONS.map((agent) => {
                   const enabled = enabledRuntimeSet.has(agent.id);
@@ -149,7 +159,9 @@ export function SettingsPage({
                       <AgentEnabledSwitch
                         checked={enabled}
                         disabled={isOnlyEnabled}
-                        label={`${agent.label} agent`}
+                        label={t("settings.agents.enabledLabel", {
+                          agent: agent.label,
+                        })}
                         onCheckedChange={(checked) =>
                           onAgentEnabledChange(agent.id, checked)
                         }
@@ -163,15 +175,16 @@ export function SettingsPage({
             <section className="rounded-2xl border bg-card p-4">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div className="min-w-0">
-                  <h3 className="text-sm font-semibold">Default agent</h3>
+                  <h3 className="text-sm font-semibold">
+                    {t("settings.agents.defaultTitle")}
+                  </h3>
                   <p className="mt-1 text-sm text-muted-foreground">
-                    Used for new chats started from the composer or project
-                    list.
+                    {t("settings.agents.defaultDescription")}
                   </p>
                 </div>
                 <SettingsSelect
                   icon={<Bot />}
-                  label="Default agent"
+                  label={t("settings.agents.defaultTitle")}
                   onValueChange={(value) =>
                     onDefaultAgentChange(value as AgentRuntime)
                   }
@@ -191,16 +204,42 @@ export function SettingsPage({
             <section className="rounded-2xl border bg-card p-4">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div className="min-w-0">
-                  <h3 className="text-sm font-semibold">Theme</h3>
+                  <h3 className="text-sm font-semibold">
+                    {t("settings.appearance.theme")}
+                  </h3>
                 </div>
                 <SettingsSelect
                   icon={<Palette />}
-                  label="Theme"
+                  label={t("settings.appearance.theme")}
                   onValueChange={(value) =>
                     setThemeMode(value as DesktopThemeMode)
                   }
-                  options={themeModeOptions}
+                  options={themeModeOptions.map((option) => ({
+                    label: t(option.labelKey),
+                    value: option.value,
+                  }))}
                   value={themeMode}
+                />
+              </div>
+            </section>
+            <section className="rounded-2xl border bg-card p-4">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div className="min-w-0">
+                  <h3 className="text-sm font-semibold">
+                    {t("settings.appearance.language")}
+                  </h3>
+                </div>
+                <SettingsSelect
+                  icon={<Languages />}
+                  label={t("settings.appearance.language")}
+                  onValueChange={(value) =>
+                    void i18n.changeLanguage(value as SupportedLanguage)
+                  }
+                  options={languageOptions.map((option) => ({
+                    label: t(option.labelKey),
+                    value: option.value,
+                  }))}
+                  value={language}
                 />
               </div>
             </section>
@@ -213,11 +252,10 @@ export function SettingsPage({
               <AlertTriangle className="mt-0.5 size-5 shrink-0 text-destructive" />
               <div className="min-w-0 flex-1">
                 <h3 className="text-sm font-semibold text-destructive">
-                  Delete all chats
+                  {t("settings.danger.deleteTitle")}
                 </h3>
                 <p className="mt-1 text-sm text-muted-foreground">
-                  Removes every chat from the local desktop database and closes
-                  active chat sessions.
+                  {t("settings.danger.description")}
                 </p>
               </div>
               <Button
@@ -227,7 +265,9 @@ export function SettingsPage({
                 variant="destructive"
               >
                 <Trash2 />
-                {isDeletingChats ? "Deleting" : "Delete all chats"}
+                {isDeletingChats
+                  ? t("settings.danger.deleting")
+                  : t("settings.danger.deleteTitle")}
               </Button>
             </div>
           </div>
@@ -292,13 +332,15 @@ function AgentEnabledSwitch({
   label: string;
   onCheckedChange: (checked: boolean) => void;
 }) {
+  const { t } = useTranslation();
+
   return (
     <Switch
       aria-label={label}
       checked={checked}
       disabled={disabled}
       onCheckedChange={onCheckedChange}
-      title={disabled ? "At least one agent must stay enabled." : label}
+      title={disabled ? t("settings.agents.minimumEnabled") : label}
     />
   );
 }

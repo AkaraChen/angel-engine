@@ -50,6 +50,7 @@ import {
   XIcon,
 } from "lucide-react";
 import { nanoid } from "nanoid";
+import { useTranslation } from "react-i18next";
 import type {
   ChangeEvent,
   ChangeEventHandler,
@@ -444,9 +445,10 @@ export type PromptInputActionAddAttachmentsProps = ComponentProps<
 };
 
 export const PromptInputActionAddAttachments = ({
-  label = "Add photos or files",
+  label,
   ...props
 }: PromptInputActionAddAttachmentsProps) => {
+  const { t } = useTranslation();
   const attachments = usePromptInputAttachments();
 
   const handleSelect = useCallback(
@@ -459,7 +461,8 @@ export const PromptInputActionAddAttachments = ({
 
   return (
     <DropdownMenuItem {...props} onSelect={handleSelect}>
-      <ImageIcon className="mr-2 size-4" /> {label}
+      <ImageIcon className="mr-2 size-4" />
+      {label ?? t("promptInput.addPhotosOrFiles")}
     </DropdownMenuItem>
   );
 };
@@ -471,10 +474,11 @@ export type PromptInputActionAddScreenshotProps = ComponentProps<
 };
 
 export const PromptInputActionAddScreenshot = ({
-  label = "Take screenshot",
+  label,
   onSelect,
   ...props
 }: PromptInputActionAddScreenshotProps) => {
+  const { t } = useTranslation();
   const attachments = usePromptInputAttachments();
 
   const handleSelect = useCallback(
@@ -505,7 +509,7 @@ export const PromptInputActionAddScreenshot = ({
   return (
     <DropdownMenuItem {...props} onSelect={handleSelect}>
       <Monitor className="mr-2 size-4" />
-      {label}
+      {label ?? t("promptInput.takeScreenshot")}
     </DropdownMenuItem>
   );
 };
@@ -555,6 +559,7 @@ export const PromptInput = ({
   children,
   ...props
 }: PromptInputProps) => {
+  const { t } = useTranslation();
   // Try to use a provider controller if present
   const controller = useOptionalPromptInputController();
   const usingProvider = !!controller;
@@ -610,7 +615,7 @@ export const PromptInput = ({
       if (incoming.length && accepted.length === 0) {
         onError?.({
           code: "accept",
-          message: "No files match the accepted types.",
+          message: t("composer.attachmentErrors.accept"),
         });
         return;
       }
@@ -620,7 +625,7 @@ export const PromptInput = ({
       if (accepted.length > 0 && sized.length === 0) {
         onError?.({
           code: "max_file_size",
-          message: "All files exceed the maximum size.",
+          message: t("composer.attachmentErrors.maxFileSize"),
         });
         return;
       }
@@ -635,7 +640,7 @@ export const PromptInput = ({
         if (typeof capacity === "number" && sized.length > capacity) {
           onError?.({
             code: "max_files",
-            message: "Too many files. Some were not added.",
+            message: t("composer.attachmentErrors.maxFiles"),
           });
         }
         const next: PromptInputFile[] = [];
@@ -653,7 +658,7 @@ export const PromptInput = ({
         return [...prev, ...next];
       });
     },
-    [matchesAccept, maxFiles, maxFileSize, onError],
+    [matchesAccept, maxFiles, maxFileSize, onError, t],
   );
 
   const removeLocal = useCallback(
@@ -676,7 +681,7 @@ export const PromptInput = ({
       if (incoming.length && accepted.length === 0) {
         onError?.({
           code: "accept",
-          message: "No files match the accepted types.",
+          message: t("composer.attachmentErrors.accept"),
         });
         return;
       }
@@ -686,7 +691,7 @@ export const PromptInput = ({
       if (accepted.length > 0 && sized.length === 0) {
         onError?.({
           code: "max_file_size",
-          message: "All files exceed the maximum size.",
+          message: t("composer.attachmentErrors.maxFileSize"),
         });
         return;
       }
@@ -701,7 +706,7 @@ export const PromptInput = ({
       if (typeof capacity === "number" && sized.length > capacity) {
         onError?.({
           code: "max_files",
-          message: "Too many files. Some were not added.",
+          message: t("composer.attachmentErrors.maxFiles"),
         });
       }
 
@@ -709,7 +714,15 @@ export const PromptInput = ({
         controller?.attachments.add(capped);
       }
     },
-    [matchesAccept, maxFileSize, maxFiles, onError, files.length, controller],
+    [
+      matchesAccept,
+      maxFileSize,
+      maxFiles,
+      onError,
+      files.length,
+      controller,
+      t,
+    ],
   );
 
   const clearAttachments = useCallback(
@@ -967,12 +980,12 @@ export const PromptInput = ({
     <>
       <input
         accept={accept}
-        aria-label="Upload files"
+        aria-label={t("promptInput.uploadFiles")}
         className="hidden"
         multiple={multiple}
         onChange={handleChange}
         ref={inputRef}
-        title="Upload files"
+        title={t("promptInput.uploadFiles")}
         type="file"
       />
       <form
@@ -1023,130 +1036,119 @@ export type PromptInputTextareaProps = ComponentProps<
 export const PromptInputTextarea = forwardRef<
   HTMLTextAreaElement,
   PromptInputTextareaProps
->(
-  (
-    {
-      onChange,
-      onKeyDown,
-      className,
-      placeholder = "What would you like to know?",
-      ...props
-    },
-    ref,
-  ) => {
-    const controller = useOptionalPromptInputController();
-    const attachments = usePromptInputAttachments();
-    const [isComposing, setIsComposing] = useState(false);
+>(({ onChange, onKeyDown, className, placeholder, ...props }, ref) => {
+  const { t } = useTranslation();
+  const controller = useOptionalPromptInputController();
+  const attachments = usePromptInputAttachments();
+  const [isComposing, setIsComposing] = useState(false);
 
-    const handleKeyDown: KeyboardEventHandler<HTMLTextAreaElement> =
-      useCallback(
-        (e) => {
-          // Call the external onKeyDown handler first
-          onKeyDown?.(e);
+  const handleKeyDown: KeyboardEventHandler<HTMLTextAreaElement> = useCallback(
+    (e) => {
+      // Call the external onKeyDown handler first
+      onKeyDown?.(e);
 
-          // If the external handler prevented default, don't run internal logic
-          if (e.defaultPrevented) {
-            return;
-          }
+      // If the external handler prevented default, don't run internal logic
+      if (e.defaultPrevented) {
+        return;
+      }
 
-          if (e.key === "Enter") {
-            if (isComposing || e.nativeEvent.isComposing) {
-              return;
-            }
-            if (e.shiftKey) {
-              return;
-            }
-            e.preventDefault();
+      if (e.key === "Enter") {
+        if (isComposing || e.nativeEvent.isComposing) {
+          return;
+        }
+        if (e.shiftKey) {
+          return;
+        }
+        e.preventDefault();
 
-            // Check if the submit button is disabled before submitting
-            const { form } = e.currentTarget;
-            const submitButton = form?.querySelector(
-              'button[type="submit"]',
-            ) as HTMLButtonElement | null;
-            if (submitButton?.disabled) {
-              return;
-            }
-
-            form?.requestSubmit();
-          }
-
-          // Remove last attachment when Backspace is pressed and textarea is empty
-          if (
-            e.key === "Backspace" &&
-            e.currentTarget.value === "" &&
-            attachments.files.length > 0
-          ) {
-            e.preventDefault();
-            const lastAttachment = attachments.files.at(-1);
-            if (lastAttachment) {
-              attachments.remove(lastAttachment.id);
-            }
-          }
-        },
-        [onKeyDown, isComposing, attachments],
-      );
-
-    const handlePaste: ClipboardEventHandler<HTMLTextAreaElement> = useCallback(
-      (event) => {
-        const items = event.clipboardData?.items;
-
-        if (!items) {
+        // Check if the submit button is disabled before submitting
+        const { form } = e.currentTarget;
+        const submitButton = form?.querySelector(
+          'button[type="submit"]',
+        ) as HTMLButtonElement | null;
+        if (submitButton?.disabled) {
           return;
         }
 
-        const files: File[] = [];
+        form?.requestSubmit();
+      }
 
-        for (const item of items) {
-          if (item.kind === "file") {
-            const file = item.getAsFile();
-            if (file) {
-              files.push(file);
-            }
+      // Remove last attachment when Backspace is pressed and textarea is empty
+      if (
+        e.key === "Backspace" &&
+        e.currentTarget.value === "" &&
+        attachments.files.length > 0
+      ) {
+        e.preventDefault();
+        const lastAttachment = attachments.files.at(-1);
+        if (lastAttachment) {
+          attachments.remove(lastAttachment.id);
+        }
+      }
+    },
+    [onKeyDown, isComposing, attachments],
+  );
+
+  const handlePaste: ClipboardEventHandler<HTMLTextAreaElement> = useCallback(
+    (event) => {
+      const items = event.clipboardData?.items;
+
+      if (!items) {
+        return;
+      }
+
+      const files: File[] = [];
+
+      for (const item of items) {
+        if (item.kind === "file") {
+          const file = item.getAsFile();
+          if (file) {
+            files.push(file);
           }
         }
+      }
 
-        if (files.length > 0) {
-          event.preventDefault();
-          attachments.add(files);
-        }
-      },
-      [attachments],
-    );
+      if (files.length > 0) {
+        event.preventDefault();
+        attachments.add(files);
+      }
+    },
+    [attachments],
+  );
 
-    const handleCompositionEnd = useCallback(() => setIsComposing(false), []);
-    const handleCompositionStart = useCallback(() => setIsComposing(true), []);
+  const handleCompositionEnd = useCallback(() => setIsComposing(false), []);
+  const handleCompositionStart = useCallback(() => setIsComposing(true), []);
 
-    const controlledProps = controller
-      ? {
-          onChange: (e: ChangeEvent<HTMLTextAreaElement>) => {
-            controller.textInput.setInput(e.currentTarget.value);
-            onChange?.(e);
-          },
-          value: controller.textInput.value,
-        }
-      : {
-          onChange,
-        };
+  const controlledProps = controller
+    ? {
+        onChange: (e: ChangeEvent<HTMLTextAreaElement>) => {
+          controller.textInput.setInput(e.currentTarget.value);
+          onChange?.(e);
+        },
+        value: controller.textInput.value,
+      }
+    : {
+        onChange,
+      };
 
-    return (
-      <InputGroupTextarea
-        className={cn(
-          "field-sizing-content max-h-48 min-h-16 text-[15px] leading-6 placeholder:text-muted-foreground/65 [line-break:loose] [overflow-wrap:anywhere] [&::placeholder]:select-none",
-          className,
-        )}
-        name="message"
-        onCompositionEnd={handleCompositionEnd}
-        onCompositionStart={handleCompositionStart}
-        onKeyDown={handleKeyDown}
-        onPaste={handlePaste}
-        placeholder={placeholder}
-        ref={ref}
-        {...props}
-        {...controlledProps}
-      />
-    );
-  },
-);
+  return (
+    <InputGroupTextarea
+      className={cn(
+        "field-sizing-content max-h-48 min-h-16 text-[15px] leading-6 placeholder:text-muted-foreground/65 [line-break:loose] [overflow-wrap:anywhere] [&::placeholder]:select-none",
+        className,
+      )}
+      name="message"
+      onCompositionEnd={handleCompositionEnd}
+      onCompositionStart={handleCompositionStart}
+      onKeyDown={handleKeyDown}
+      onPaste={handlePaste}
+      placeholder={placeholder ?? t("promptInput.placeholder")}
+      ref={ref}
+      {...props}
+      {...controlledProps}
+    />
+  );
+});
 PromptInputTextarea.displayName = "PromptInputTextarea";
 
 export type PromptInputHeaderProps = Omit<
@@ -1304,6 +1306,7 @@ export const PromptInputSubmit = ({
   children,
   ...props
 }: PromptInputSubmitProps) => {
+  const { t } = useTranslation();
   const isGenerating = status === "submitted" || status === "streaming";
 
   let Icon = <CornerDownLeftIcon className="size-4" />;
@@ -1330,7 +1333,7 @@ export const PromptInputSubmit = ({
 
   return (
     <InputGroupButton
-      aria-label={isGenerating ? "Stop" : "Submit"}
+      aria-label={isGenerating ? t("common.cancel") : t("common.submit")}
       className={cn("rounded-full shadow-sm", className)}
       onClick={handleClick}
       size={size}

@@ -1,4 +1,5 @@
 import type { MouseEventHandler, ReactElement } from "react";
+import { useTranslation } from "react-i18next";
 
 import { MacSidebarMenuButton } from "@/components/workspace-sidebar-primitives";
 import { useChatAttention } from "@/features/chat/state/chat-run-store";
@@ -57,25 +58,26 @@ function ChatAttentionIndicators({
 }: {
   chatId: string;
 }): ReactElement | null {
+  const { t } = useTranslation();
   const attention = useChatAttention(chatId);
   if (!attention.needsInput && !attention.completed) return null;
 
   return (
     <span
-      aria-label="Chat attention"
+      aria-label={t("sidebar.chatAttention")}
       className="flex shrink-0 items-center gap-1"
-      title="Chat attention"
+      title={t("sidebar.chatAttention")}
     >
       {attention.needsInput ? (
         <span
-          aria-label="Needs input"
+          aria-label={t("sidebar.needsInput")}
           className="size-2 rounded-full bg-amber-400 shadow-[0_0_0_1px_rgba(245,158,11,0.42),0_0_0_4px_rgba(245,158,11,0.14)]"
           role="img"
         />
       ) : null}
       {attention.completed ? (
         <span
-          aria-label="Completed"
+          aria-label={t("sidebar.completed")}
           className="size-2 rounded-full bg-emerald-500 shadow-[0_0_0_1px_rgba(16,185,129,0.35)]"
           role="img"
         />

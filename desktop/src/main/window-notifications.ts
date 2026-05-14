@@ -6,6 +6,7 @@ import {
   DESKTOP_OPEN_CHAT_FROM_NOTIFICATION_CHANNEL,
   type DesktopOpenChatFromNotificationEvent,
 } from "../shared/desktop-window";
+import { translate } from "./i18n";
 
 type WindowNotificationState = {
   activeChatId: string | null;
@@ -46,10 +47,12 @@ export function notifyChatTurnCompleted(input: {
   showBackgroundChatNotification({
     body: notificationBody(
       input.body,
-      "The agent finished without text output.",
+      translate("notifications.agentFinishedNoOutput"),
     ),
     chat: input.chat,
-    title: `${notificationChatTitle(input.chat)} finished`,
+    title: translate("notifications.finished", {
+      chatTitle: notificationChatTitle(input.chat),
+    }),
     window: input.window,
   });
 }
@@ -60,18 +63,22 @@ export function notifyChatNeedsInput(input: {
   window?: BrowserWindow | null;
 }) {
   const title = input.elicitation.title
-    ? `${notificationChatTitle(input.chat)} needs input`
-    : `${notificationChatTitle(input.chat)} needs attention`;
+    ? translate("notifications.needsInput", {
+        chatTitle: notificationChatTitle(input.chat),
+      })
+    : translate("notifications.needsAttention", {
+        chatTitle: notificationChatTitle(input.chat),
+      });
   const body =
     input.elicitation.body ||
     input.elicitation.title ||
     input.elicitation.questions
       ?.map((question) => question.question)
       .find(Boolean) ||
-    "The agent is waiting for a response.";
+    translate("notifications.agentWaiting");
 
   showBackgroundChatNotification({
-    body: notificationBody(body, "The agent is waiting for a response."),
+    body: notificationBody(body, translate("notifications.agentWaiting")),
     chat: input.chat,
     title,
     window: input.window,

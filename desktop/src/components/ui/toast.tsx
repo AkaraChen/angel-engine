@@ -1,6 +1,7 @@
 import * as React from "react";
 import { Toast as ToastPrimitive } from "radix-ui";
 import { XIcon } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 import { cn } from "@/platform/utils";
 
@@ -20,6 +21,7 @@ const ToastContext = React.createContext<((toast: ToastInput) => void) | null>(
 );
 
 function ToastProvider({ children }: { children: React.ReactNode }) {
+  const { t } = useTranslation();
   const [toasts, setToasts] = React.useState<ToastMessage[]>([]);
 
   const toast = React.useCallback((input: ToastInput) => {
@@ -65,7 +67,7 @@ function ToastProvider({ children }: { children: React.ReactNode }) {
               </div>
               <ToastPrimitive.Close className="inline-flex size-6 shrink-0 items-center justify-center rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground">
                 <XIcon className="size-3.5" />
-                <span className="sr-only">Close</span>
+                <span className="sr-only">{t("common.close")}</span>
               </ToastPrimitive.Close>
             </div>
           </ToastPrimitive.Root>

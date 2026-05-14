@@ -14,7 +14,9 @@ import {
   type PartState,
 } from "@assistant-ui/react";
 import { cva, type VariantProps } from "class-variance-authority";
+import type { TFunction } from "i18next";
 import { ChevronDownIcon, LoaderIcon } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 import {
   Collapsible,
@@ -110,6 +112,9 @@ function ToolGroupTrigger({
   active?: boolean;
   label: string;
 }) {
+  const { t } = useTranslation();
+  const activityLabel = t("components.toolGroup.activity");
+
   return (
     <CollapsibleTrigger
       className={cn(
@@ -140,7 +145,7 @@ function ToolGroupTrigger({
         )}
         data-slot="tool-group-trigger-label"
       >
-        <span className="font-medium text-foreground/85">Activity</span>
+        <span className="font-medium text-foreground/85">{activityLabel}</span>
         <span className="truncate text-muted-foreground">{label}</span>
         {active && (
           <span
@@ -148,7 +153,7 @@ function ToolGroupTrigger({
             className="aui-tool-group-trigger-shimmer shimmer pointer-events-none absolute inset-0 motion-reduce:animate-none"
             data-slot="tool-group-trigger-shimmer"
           >
-            Activity
+            {activityLabel}
           </span>
         )}
       </span>
@@ -210,11 +215,12 @@ type ToolGroupComponent = FC<
 const ToolGroupImpl: FC<
   PropsWithChildren<{ endIndex: number; startIndex: number }>
 > = ({ children, endIndex, startIndex }) => {
+  const { t } = useTranslation();
   const active = useAuiState((state) =>
     hasActiveToolGroupPart(state.message.parts, startIndex, endIndex),
   );
   const label = useAuiState((state) =>
-    formatToolGroupLabel(state.message.parts, startIndex, endIndex),
+    formatToolGroupLabel(state.message.parts, startIndex, endIndex, t),
   );
   const hasTextAfterGroup = useAuiState((state) =>
     hasTextContentAfterIndex(state.message.parts, endIndex),
@@ -234,6 +240,7 @@ function formatToolGroupLabel(
   parts: readonly PartState[],
   startIndex: number,
   endIndex: number,
+  t: TFunction,
 ) {
   let approvalCount = 0;
   let partCount = 0;
@@ -246,14 +253,16 @@ function formatToolGroupLabel(
   const toolCount = Math.max(0, partCount - approvalCount);
   const labels = [
     toolCount > 0
-      ? `${toolCount} tool ${toolCount === 1 ? "call" : "calls"}`
+      ? t("components.toolGroup.toolCalls", { count: toolCount })
       : undefined,
     approvalCount > 0
-      ? `${approvalCount} approval${approvalCount === 1 ? "" : "s"}`
+      ? t("components.toolGroup.approvals", { count: approvalCount })
       : undefined,
   ].filter(Boolean);
 
-  return labels.join(" · ") || "0 tool calls";
+  return (
+    labels.join(" · ") || t("components.toolGroup.toolCalls", { count: 0 })
+  );
 }
 
 function hasActiveToolGroupPart(

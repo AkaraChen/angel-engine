@@ -16,6 +16,7 @@ import {
   useSuspenseQuery,
 } from "@tanstack/react-query";
 import { Redirect, useLocation } from "wouter";
+import { useTranslation } from "react-i18next";
 
 import { AppRuntimeProvider } from "@/features/chat/runtime/app-runtime-provider";
 import { ChatRestoreLoading } from "@/app/workspace/chat-restore-loading";
@@ -84,13 +85,6 @@ const EMPTY_CHATS: Chat[] = [];
 const EMPTY_MESSAGES: ChatHistoryMessage[] = [];
 const EMPTY_PROJECTS: Project[] = [];
 const NO_CONFIG_OVERRIDE_VALUE = "__angel_no_override__";
-const NO_CONFIG_OVERRIDE_OPTION: AgentValueOption = {
-  label: "Use default",
-  value: NO_CONFIG_OVERRIDE_VALUE,
-};
-const NO_CONFIG_OVERRIDE_OPTIONS: AgentValueOption[] = [
-  NO_CONFIG_OVERRIDE_OPTION,
-];
 
 type DraftAgentConfig = {
   model?: string;
@@ -170,6 +164,7 @@ function WorkspacePageContent({
   route: WorkspaceRoute;
   selectedChatId?: string;
 }) {
+  const { t } = useTranslation();
   const toast = useToast();
   const queryClient = useQueryClient();
   const [location, navigate] = useLocation();
@@ -230,6 +225,7 @@ function WorkspacePageContent({
     route,
     selectedChat,
     selectedProjectName,
+    t,
   });
   const historyMessages = EMPTY_MESSAGES;
   const historyRevision = 0;
@@ -282,20 +278,40 @@ function WorkspacePageContent({
     draftAgentConfig.permissionMode,
   );
   const modelOptions = ensureConfigOption(
-    runtimeConfigOptionsToAgentOptions(runtimeConfig?.models),
+    runtimeConfigOptionsToAgentOptions(
+      runtimeConfig?.models,
+      t("common.useDefault"),
+    ),
     activeModel,
+    t("common.useDefault"),
+    t("common.default"),
   );
   const reasoningEffortOptions = ensureConfigOption(
-    runtimeConfigOptionsToAgentOptions(runtimeConfig?.reasoningEfforts),
+    runtimeConfigOptionsToAgentOptions(
+      runtimeConfig?.reasoningEfforts,
+      t("common.useDefault"),
+    ),
     activeReasoningEffort,
+    t("common.useDefault"),
+    t("common.default"),
   );
   const modeOptions = ensureConfigOption(
-    runtimeConfigOptionsToAgentOptions(runtimeConfig?.modes),
+    runtimeConfigOptionsToAgentOptions(
+      runtimeConfig?.modes,
+      t("common.useDefault"),
+    ),
     activeMode,
+    t("common.useDefault"),
+    t("common.default"),
   );
   const permissionModeOptions = ensureConfigOption(
-    runtimeConfigOptionsToAgentOptions(runtimeConfig?.permissionModes),
+    runtimeConfigOptionsToAgentOptions(
+      runtimeConfig?.permissionModes,
+      t("common.useDefault"),
+    ),
     activePermissionMode,
+    t("common.useDefault"),
+    t("common.default"),
   );
   const modelOptionCount = runtimeConfigOptionCount(runtimeConfig?.models);
   const reasoningEffortOptionCount = runtimeConfigOptionCount(
@@ -557,11 +573,11 @@ function WorkspacePageContent({
     if (result.error) {
       toast({
         description: getErrorMessage(result.error),
-        title: "Could not load projects",
+        title: t("notifications.couldNotLoadProjects"),
         variant: "destructive",
       });
     }
-  }, [projectsQuery, toast]);
+  }, [projectsQuery, t, toast]);
 
   const createProjectFromPicker = useCallback(async () => {
     try {
@@ -572,11 +588,11 @@ function WorkspacePageContent({
     } catch (error) {
       toast({
         description: getErrorMessage(error),
-        title: "Could not add project",
+        title: t("notifications.couldNotAddProject"),
         variant: "destructive",
       });
     }
-  }, [api, createProjectMutation, toast]);
+  }, [api, createProjectMutation, t, toast]);
 
   const showProjectContextMenu = useCallback(
     async (project: Project) => {
@@ -590,12 +606,12 @@ function WorkspacePageContent({
       } catch (error) {
         toast({
           description: getErrorMessage(error),
-          title: "Project action failed",
+          title: t("notifications.projectActionFailed"),
           variant: "destructive",
         });
       }
     },
-    [navigate, routeProjectId, showProjectContextMenuMutation, toast],
+    [navigate, routeProjectId, showProjectContextMenuMutation, t, toast],
   );
 
   const removeChatFromCache = useCallback(
@@ -629,7 +645,7 @@ function WorkspacePageContent({
       } catch (error) {
         toast({
           description: getErrorMessage(error),
-          title: "Chat action failed",
+          title: t("notifications.chatActionFailed"),
           variant: "destructive",
         });
       }
@@ -638,6 +654,7 @@ function WorkspacePageContent({
       openRenameChatDialog,
       removeChatFromCache,
       showChatContextMenuMutation,
+      t,
       toast,
     ],
   );
@@ -656,13 +673,13 @@ function WorkspacePageContent({
       } catch (error) {
         toast({
           description: getErrorMessage(error),
-          title: "Could not rename chat",
+          title: t("notifications.couldNotRenameChat"),
           variant: "destructive",
         });
         throw error;
       }
     },
-    [renameChatMutation, toast],
+    [renameChatMutation, t, toast],
   );
 
   const setPersistedChatRuntime = useCallback(
@@ -673,12 +690,12 @@ function WorkspacePageContent({
       } catch (error) {
         toast({
           description: getErrorMessage(error),
-          title: "Could not change agent",
+          title: t("notifications.couldNotChangeAgent"),
           variant: "destructive",
         });
       }
     },
-    [setChatRuntime, toast],
+    [setChatRuntime, t, toast],
   );
 
   const chatRunSlots = useChatRunStore((state) => state.slots);
@@ -698,14 +715,14 @@ function WorkspacePageContent({
       } catch (error) {
         toast({
           description: getErrorMessage(error),
-          title: "Could not create chat",
+          title: t("notifications.couldNotCreateChat"),
           variant: "destructive",
         });
       } finally {
         createChatPendingRef.current = false;
       }
     },
-    [createChat, isCreatingChat, navigateToChat, toast],
+    [createChat, isCreatingChat, navigateToChat, t, toast],
   );
 
   const createChatForProject = useCallback(
@@ -784,19 +801,19 @@ function WorkspacePageContent({
       queryClient.removeQueries({ queryKey: queryKeys.chats.details() });
       navigate("/", { replace: true });
       toast({
-        description: `Deleted ${result.deletedCount} chat${
-          result.deletedCount === 1 ? "" : "s"
-        }.`,
-        title: "Chats deleted",
+        description: t("notifications.chatsDeletedDescription", {
+          count: result.deletedCount,
+        }),
+        title: t("notifications.chatsDeleted"),
       });
     } catch (error) {
       toast({
         description: getErrorMessage(error),
-        title: "Could not delete chats",
+        title: t("notifications.couldNotDeleteChats"),
         variant: "destructive",
       });
     }
-  }, [deleteAllChatsMutation, navigate, queryClient, toast]);
+  }, [deleteAllChatsMutation, navigate, queryClient, t, toast]);
 
   if (selectedChat) {
     const canonicalPath = chatRoutePath(selectedChat);
@@ -1072,6 +1089,7 @@ function ChatThreadRuntime({
   setPersistedChatRuntime,
   slotKey,
 }: ChatThreadRuntimeProps) {
+  const { t } = useTranslation();
   const setRunMode = useChatRunStore((state) => state.setMode);
   const setRunPermissionMode = useChatRunStore(
     (state) => state.setPermissionMode,
@@ -1085,9 +1103,9 @@ function ChatThreadRuntime({
     liveMessages.length > 0;
   const canSetRuntime = !hasStarted && !isRunning;
   const runtimeDisabledReason = isRunning
-    ? "Agent cannot be changed while a response is running."
+    ? t("composer.disabledReasons.agentCannotChangeWhileRunning")
     : hasStarted
-      ? "Agent cannot be changed after a chat has started."
+      ? t("composer.disabledReasons.agentCannotChangeAfterStart")
       : undefined;
   const projectContext = chatProjectContext(route, selectedChat, projects);
   const activeModel = normalizeConfigDisplayValue(
@@ -1134,20 +1152,40 @@ function ChatThreadRuntime({
     [canSetRuntime, selectedChat.id, setPersistedChatRuntime],
   );
   const modelOptions = ensureConfigOption(
-    runtimeConfigOptionsToAgentOptions(runtimeConfig?.models),
+    runtimeConfigOptionsToAgentOptions(
+      runtimeConfig?.models,
+      t("common.useDefault"),
+    ),
     activeModel,
+    t("common.useDefault"),
+    t("common.default"),
   );
   const reasoningEffortOptions = ensureConfigOption(
-    runtimeConfigOptionsToAgentOptions(runtimeConfig?.reasoningEfforts),
+    runtimeConfigOptionsToAgentOptions(
+      runtimeConfig?.reasoningEfforts,
+      t("common.useDefault"),
+    ),
     activeReasoningEffort,
+    t("common.useDefault"),
+    t("common.default"),
   );
   const modeOptions = ensureConfigOption(
-    runtimeConfigOptionsToAgentOptions(runtimeConfig?.modes),
+    runtimeConfigOptionsToAgentOptions(
+      runtimeConfig?.modes,
+      t("common.useDefault"),
+    ),
     activeMode,
+    t("common.useDefault"),
+    t("common.default"),
   );
   const permissionModeOptions = ensureConfigOption(
-    runtimeConfigOptionsToAgentOptions(runtimeConfig?.permissionModes),
+    runtimeConfigOptionsToAgentOptions(
+      runtimeConfig?.permissionModes,
+      t("common.useDefault"),
+    ),
     activePermissionMode,
+    t("common.useDefault"),
+    t("common.default"),
   );
   const modelOptionCount = runtimeConfigOptionCount(runtimeConfig?.models);
   const reasoningEffortOptionCount = runtimeConfigOptionCount(
@@ -1274,8 +1312,13 @@ function upsertChatInList(chats: Chat[], chat: Chat) {
 
 function runtimeConfigOptionsToAgentOptions(
   options: ChatRuntimeConfigOption[] | undefined,
+  defaultLabel: string,
 ): AgentValueOption[] {
-  if (!options?.length) return NO_CONFIG_OVERRIDE_OPTIONS;
+  const defaultOption: AgentValueOption = {
+    label: defaultLabel,
+    value: NO_CONFIG_OVERRIDE_VALUE,
+  };
+  if (!options?.length) return [defaultOption];
   const runtimeOptions = options.flatMap((option) => {
     const value = selectedConfigOverride(option.value);
     if (!value) return [];
@@ -1287,7 +1330,7 @@ function runtimeConfigOptionsToAgentOptions(
       },
     ];
   });
-  return [NO_CONFIG_OVERRIDE_OPTION, ...runtimeOptions];
+  return [defaultOption, ...runtimeOptions];
 }
 
 function runtimeConfigOptionCount(
@@ -1302,6 +1345,8 @@ function runtimeConfigOptionCount(
 function ensureConfigOption(
   options: AgentValueOption[],
   value: string | null | undefined,
+  defaultLabel: string,
+  configDefaultLabel: string,
 ) {
   const normalizedValue = normalizeConfigDisplayValue(value);
   if (options.some((option) => option.value === normalizedValue)) {
@@ -1310,7 +1355,10 @@ function ensureConfigOption(
   return [
     ...options,
     {
-      label: labelFromConfigValue(normalizedValue),
+      label:
+        normalizedValue === NO_CONFIG_OVERRIDE_VALUE
+          ? defaultLabel
+          : labelFromConfigValue(normalizedValue, configDefaultLabel),
       value: normalizedValue,
     },
   ];
@@ -1327,9 +1375,9 @@ function selectedConfigOverride(value: string | null | undefined) {
   return value;
 }
 
-function labelFromConfigValue(value: string) {
+function labelFromConfigValue(value: string, defaultLabel: string) {
   if (value === "xhigh") return "XHigh";
-  if (value === "default") return "Default";
+  if (value === "default") return defaultLabel;
   return value
     .split(/[_\s-]+/)
     .filter(Boolean)
@@ -1442,17 +1490,21 @@ function getWorkspaceTitle({
   route,
   selectedChat,
   selectedProjectName,
+  t,
 }: {
   route: WorkspaceRoute;
   selectedChat?: Chat;
   selectedProjectName?: string;
+  t: (key: string, options?: Record<string, unknown>) => string;
 }) {
-  if (route.type === "settings") return "Settings";
-  if (selectedChat) return selectedChat.title;
+  if (route.type === "settings") return t("workspace.settings");
+  if (selectedChat) return displayChatTitle(selectedChat.title, t);
   if (route.type === "projectCreate" && selectedProjectName) {
-    return `New chat in ${selectedProjectName}`;
+    return t("workspace.newChatInProject", {
+      projectName: selectedProjectName,
+    });
   }
-  return "New chat";
+  return t("workspace.newChat");
 }
 
 function draftRuntimeKeyFromRoute(route: WorkspaceRoute) {
@@ -1464,4 +1516,11 @@ function draftRuntimeKeyFromRoute(route: WorkspaceRoute) {
 function getProjectDisplayName(projectPath: string) {
   const parts = projectPath.split(/[\\/]/).filter(Boolean);
   return parts[parts.length - 1] ?? projectPath;
+}
+
+function displayChatTitle(
+  title: string,
+  t: (key: string, options?: Record<string, unknown>) => string,
+) {
+  return title === "New chat" ? t("workspace.newChat") : title;
 }

@@ -1,5 +1,6 @@
 import { FileText, ImageIcon, X } from "lucide-react";
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 
 import {
   Dialog,
@@ -30,6 +31,7 @@ export function ChatAttachmentTile({
   removeLabel,
   typeLabel,
 }: ChatAttachmentTileProps) {
+  const { t } = useTranslation();
   const body = (
     <AttachmentTileBody
       contentType={contentType}
@@ -45,7 +47,10 @@ export function ChatAttachmentTile({
         <Dialog>
           <DialogTrigger asChild>
             <button
-              aria-label={`Open ${name}`}
+              aria-label={t("attachment.open", {
+                defaultValue: "Open {{name}}",
+                name,
+              })}
               className={attachmentTileClassName({
                 interactive: true,
                 removable: Boolean(onRemove),
@@ -85,7 +90,12 @@ export function ChatAttachmentTile({
 
       {onRemove ? (
         <button
-          aria-label={removeLabel ?? `Remove ${name}`}
+          aria-label={
+            removeLabel ??
+            t("composer.removeAttachment", {
+              name,
+            })
+          }
           className="absolute -right-1 -top-1 inline-flex size-5 items-center justify-center rounded-full border bg-background text-muted-foreground shadow-sm hover:bg-muted hover:text-foreground"
           onClick={onRemove}
           type="button"

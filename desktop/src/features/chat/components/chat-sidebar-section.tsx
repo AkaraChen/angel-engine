@@ -1,6 +1,7 @@
 import { useState } from "react";
 import type { ReactElement } from "react";
 import { AnimatePresence, motion } from "framer-motion";
+import { useTranslation } from "react-i18next";
 import { ChevronRight, Loader2, MessageSquare } from "lucide-react";
 
 import {
@@ -35,12 +36,18 @@ export function ChatSidebarSection({
   selectedChatId,
   standaloneChats,
 }: ChatSidebarSectionProps): ReactElement {
+  const { t } = useTranslation();
   const [isCollapsed, setIsCollapsed] = useState(false);
 
   return (
     <SidebarGroup className="py-1">
-      <SidebarSectionHeader label="Chats">
-        <Button asChild size="icon-xs" title="Toggle chats" variant="ghost">
+      <SidebarSectionHeader label={t("sidebar.chats")}>
+        <Button
+          asChild
+          size="icon-xs"
+          title={t("sidebar.toggleChats")}
+          variant="ghost"
+        >
           <motion.button
             onClick={() => setIsCollapsed((current) => !current)}
             transition={sidebarMotion}
@@ -50,7 +57,7 @@ export function ChatSidebarSection({
             <motion.span animate={{ rotate: isCollapsed ? 0 : 90 }}>
               <ChevronRight className="size-4" />
             </motion.span>
-            <span className="sr-only">Toggle chats</span>
+            <span className="sr-only">{t("sidebar.toggleChats")}</span>
           </motion.button>
         </Button>
       </SidebarSectionHeader>
@@ -63,7 +70,7 @@ export function ChatSidebarSection({
                   <AnimatedSidebarMenuItem key="chats-loading">
                     <MacSidebarMenuButton disabled>
                       <Loader2 className="animate-spin" />
-                      <span>Loading chats</span>
+                      <span>{t("sidebar.loadingChats")}</span>
                     </MacSidebarMenuButton>
                   </AnimatedSidebarMenuItem>
                 ) : null}
@@ -72,7 +79,7 @@ export function ChatSidebarSection({
                   <AnimatedSidebarMenuItem key="chats-empty">
                     <MacSidebarMenuButton disabled>
                       <MessageSquare />
-                      <span>No standalone chats</span>
+                      <span>{t("sidebar.noStandaloneChats")}</span>
                     </MacSidebarMenuButton>
                   </AnimatedSidebarMenuItem>
                 ) : null}
@@ -84,8 +91,8 @@ export function ChatSidebarSection({
                       isActive={chat.id === selectedChatId}
                       onOpenChat={() => void onOpenChat(chat)}
                       onShowContextMenu={() => onShowChatContextMenu(chat)}
-                      title={chat.title}
-                      tooltip={chat.title}
+                      title={displayChatTitle(chat.title, t)}
+                      tooltip={displayChatTitle(chat.title, t)}
                     />
                   </AnimatedSidebarMenuItem>
                 ))}
@@ -96,4 +103,11 @@ export function ChatSidebarSection({
       </SidebarGroupContent>
     </SidebarGroup>
   );
+}
+
+function displayChatTitle(
+  title: string,
+  t: (key: string, options?: Record<string, unknown>) => string,
+) {
+  return title === "New chat" ? t("workspace.newChat") : title;
 }

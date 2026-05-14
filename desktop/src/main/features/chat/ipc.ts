@@ -41,6 +41,7 @@ import {
   chatSetPermissionModeInput,
   chatSetRuntimeInput,
 } from "./schemas";
+import { translate } from "../../i18n";
 
 const t = tipc.create();
 
@@ -169,7 +170,7 @@ export const chatIpcRouter = {
         const menu = Menu.buildFromTemplate([
           {
             click: () => resolve("rename"),
-            label: "Rename",
+            label: translate("common.rename"),
           },
           { type: "separator" },
           {
@@ -178,7 +179,7 @@ export const chatIpcRouter = {
               deleteChat(chat.id);
               resolve("deleted");
             },
-            label: "Delete",
+            label: translate("common.delete"),
           },
         ]);
 

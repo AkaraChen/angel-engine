@@ -17,6 +17,8 @@ import { cjk } from "@streamdown/cjk";
 import { code as streamdownCode } from "@streamdown/code";
 import { math } from "@streamdown/math";
 import { mermaid } from "@streamdown/mermaid";
+import type { TFunction } from "i18next";
+import { useTranslation } from "react-i18next";
 import { Streamdown } from "streamdown";
 import {
   AlertCircleIcon,
@@ -116,6 +118,7 @@ type ElicitationFreeformAnswerProps = {
 };
 
 export function UserMessage() {
+  const { t } = useTranslation();
   const hasBubbleContent = useAuiState((state) =>
     state.message.parts.some(isUserBubblePart),
   );
@@ -146,14 +149,14 @@ export function UserMessage() {
           >
             <ActionBarPrimitive.Edit className={iconButtonClass}>
               <Pencil className="size-3.5" />
-              <span className="sr-only">Edit</span>
+              <span className="sr-only">{t("common.edit")}</span>
             </ActionBarPrimitive.Edit>
             <ActionBarPrimitive.Copy
               className={cn(iconButtonClass, "group/copy")}
             >
               <Copy className="size-3.5 group-data-[copied]/copy:hidden" />
               <Check className="hidden size-3.5 group-data-[copied]/copy:block" />
-              <span className="sr-only">Copy</span>
+              <span className="sr-only">{t("common.copy")}</span>
             </ActionBarPrimitive.Copy>
           </ActionBarPrimitive.Root>
         </div>
@@ -163,6 +166,8 @@ export function UserMessage() {
 }
 
 export function UserEditComposer() {
+  const { t } = useTranslation();
+
   return (
     <MessagePrimitive.Root
       className={cn(messageColumnClassName, "flex justify-end")}
@@ -172,13 +177,13 @@ export function UserEditComposer() {
         <div className="mt-2 flex justify-end gap-2">
           <ComposerPrimitive.Cancel asChild>
             <Button size="sm" type="button" variant="ghost">
-              Cancel
+              {t("common.cancel")}
             </Button>
           </ComposerPrimitive.Cancel>
           <ComposerPrimitive.Send asChild>
             <Button size="sm" type="submit">
               <Check />
-              Save
+              {t("common.save")}
             </Button>
           </ComposerPrimitive.Send>
         </div>
@@ -188,6 +193,8 @@ export function UserEditComposer() {
 }
 
 export function AssistantMessage() {
+  const { t } = useTranslation();
+
   return (
     <MessagePrimitive.Root
       className={cn(messageColumnClassName, "group flex justify-start")}
@@ -209,22 +216,22 @@ export function AssistantMessage() {
             >
               <Copy className="size-3.5 group-data-[copied]/copy:hidden" />
               <Check className="hidden size-3.5 group-data-[copied]/copy:block" />
-              <span className="sr-only">Copy</span>
+              <span className="sr-only">{t("common.copy")}</span>
             </ActionBarPrimitive.Copy>
             <ActionBarPrimitive.Reload className={iconButtonClass}>
               <RefreshCw className="size-3.5" />
-              <span className="sr-only">Reload</span>
+              <span className="sr-only">{t("common.reload")}</span>
             </ActionBarPrimitive.Reload>
             <AuiIf condition={(state) => !state.message.speech}>
               <ActionBarPrimitive.Speak className={iconButtonClass}>
                 <Volume2 className="size-3.5" />
-                <span className="sr-only">Speak</span>
+                <span className="sr-only">{t("common.speak")}</span>
               </ActionBarPrimitive.Speak>
             </AuiIf>
             <AuiIf condition={(state) => Boolean(state.message.speech)}>
               <ActionBarPrimitive.StopSpeaking className={iconButtonClass}>
                 <VolumeX className="size-3.5" />
-                <span className="sr-only">Stop speaking</span>
+                <span className="sr-only">{t("common.stopSpeaking")}</span>
               </ActionBarPrimitive.StopSpeaking>
             </AuiIf>
             <ActionBarPrimitive.FeedbackPositive
@@ -234,7 +241,7 @@ export function AssistantMessage() {
               )}
             >
               <ThumbsUp className="size-3.5" />
-              <span className="sr-only">Helpful</span>
+              <span className="sr-only">{t("common.helpful")}</span>
             </ActionBarPrimitive.FeedbackPositive>
             <ActionBarPrimitive.FeedbackNegative
               className={cn(
@@ -243,14 +250,14 @@ export function AssistantMessage() {
               )}
             >
               <ThumbsDown className="size-3.5" />
-              <span className="sr-only">Not helpful</span>
+              <span className="sr-only">{t("common.notHelpful")}</span>
             </ActionBarPrimitive.FeedbackNegative>
             <ActionBarPrimitive.ExportMarkdown
               className={iconButtonClass}
               onExport={(content) => navigator.clipboard.writeText(content)}
             >
               <Clipboard className="size-3.5" />
-              <span className="sr-only">Export Markdown</span>
+              <span className="sr-only">{t("messages.exportMarkdown")}</span>
             </ActionBarPrimitive.ExportMarkdown>
           </ActionBarPrimitive.Root>
         </div>
@@ -331,12 +338,14 @@ const assistantMessagePartComponents = {
 function PlainTextMessagePart(
   part: Extract<EnrichedPartState, { type: "text" }>,
 ) {
+  const { t } = useTranslation();
+
   if (part.type === "text") {
     if (part.status.type === "running" && !part.text) {
       return (
         <span className="inline-flex items-center gap-2 text-muted-foreground">
           <Loader2 className="size-3.5 animate-spin" />
-          Thinking
+          {t("common.thinking")}
         </span>
       );
     }
@@ -349,6 +358,7 @@ function PlainTextMessagePart(
 function AssistantTextMessagePart(
   part: Extract<EnrichedPartState, { type: "text" }>,
 ) {
+  const { t } = useTranslation();
   const hasReasoningOrTool = useAuiState((state) =>
     state.message.parts.some(
       (messagePart) =>
@@ -366,7 +376,7 @@ function AssistantTextMessagePart(
     return hasReasoningOrTool ? null : (
       <span className="inline-flex items-center gap-2 text-muted-foreground">
         <Loader2 className="size-3.5 animate-spin" />
-        Thinking
+        {t("common.thinking")}
       </span>
     );
   }
@@ -402,17 +412,20 @@ function isUserBubblePart(part: {
 }
 
 function ImageMessagePart(part: Extract<EnrichedPartState, { type: "image" }>) {
+  const { t } = useTranslation();
+
   return (
     <ChatAttachmentTile
       className="my-2 max-w-64"
       name={part.filename ?? "image"}
       previewUrl={part.image}
-      typeLabel="Image"
+      typeLabel={t("common.image")}
     />
   );
 }
 
 function FileMessagePart(part: Extract<EnrichedPartState, { type: "file" }>) {
+  const { t } = useTranslation();
   const isMention = messageFileMention(part);
   const isImage = part.mimeType.startsWith("image/");
   const previewText =
@@ -427,7 +440,7 @@ function FileMessagePart(part: Extract<EnrichedPartState, { type: "file" }>) {
       name={part.filename ?? part.mimeType}
       previewText={previewText}
       previewUrl={filePreviewUrl(part.data, part.mimeType, isMention, isImage)}
-      typeLabel={fileTypeLabel(isMention, isImage)}
+      typeLabel={fileTypeLabel(isMention, isImage, t)}
     />
   );
 }
@@ -442,10 +455,10 @@ function filePreviewUrl(
   return imageFilePreviewUrl(data, mimeType);
 }
 
-function fileTypeLabel(isMention: boolean, isImage: boolean) {
-  if (isMention) return "Mention";
-  if (isImage) return "Image";
-  return "File";
+function fileTypeLabel(isMention: boolean, isImage: boolean, t: TFunction) {
+  if (isMention) return t("common.mention");
+  if (isImage) return t("common.image");
+  return t("common.file");
 }
 
 function imageFilePreviewUrl(data: string, mimeType: string) {
@@ -484,6 +497,7 @@ function GenericToolActionMessagePart({
   action?: ChatToolAction;
   part: ToolCallMessagePartProps;
 }) {
+  const { t } = useTranslation();
   const phase = action?.phase ?? part.status.type;
   const title = action?.title || action?.inputSummary || part.toolName;
   const outputText = getToolOutputText(action, part.result);
@@ -517,13 +531,23 @@ function GenericToolActionMessagePart({
         <CollapsibleContent className="overflow-hidden data-[state=closed]:animate-collapsible-up data-[state=open]:animate-collapsible-down">
           <div className="space-y-2 border-t border-foreground/10 px-2.5 py-2.5 dark:border-white/10">
             {part.argsText && (
-              <ToolPreBlock label="Input" value={part.argsText} />
+              <ToolPreBlock
+                label={t("messages.tool.input")}
+                value={part.argsText}
+              />
             )}
             {errorText && (
-              <ToolPreBlock label="Error" tone="error" value={errorText} />
+              <ToolPreBlock
+                label={t("common.error")}
+                tone="error"
+                value={errorText}
+              />
             )}
             {!errorText && outputText && (
-              <ToolPreBlock label="Output" value={outputText} />
+              <ToolPreBlock
+                label={t("messages.tool.output")}
+                value={outputText}
+              />
             )}
           </div>
         </CollapsibleContent>
@@ -585,8 +609,10 @@ function StandaloneElicitationToolPart({
   elicitation?: ChatElicitation;
   part: ToolCallMessagePartProps;
 }) {
+  const { t } = useTranslation();
   const phase = action.phase ?? part.status.type;
-  const title = action.title || elicitation?.title || "User input";
+  const title =
+    action.title || elicitation?.title || t("messages.elicitation.userInput");
   const outputText = getToolOutputText(action, part.result);
   const questions = elicitation?.questions ?? [];
   const [answers, setAnswers] = useState<Record<string, string>>({});
@@ -675,7 +701,7 @@ function StandaloneElicitationToolPart({
                   type="button"
                   variant="ghost"
                 >
-                  Cancel
+                  {t("common.cancel")}
                 </Button>
                 <Button
                   disabled={!awaitingInput}
@@ -683,7 +709,7 @@ function StandaloneElicitationToolPart({
                   size="xs"
                   type="button"
                 >
-                  Submit
+                  {t("common.submit")}
                 </Button>
               </div>
             </div>
@@ -696,7 +722,7 @@ function StandaloneElicitationToolPart({
           )}
 
           {outputText ? (
-            <ToolPreBlock label="Response" value={outputText} />
+            <ToolPreBlock label={t("messages.response")} value={outputText} />
           ) : null}
         </div>
       </CollapsibleContent>
@@ -751,6 +777,7 @@ function PermissionApprovalActions({
   disabled: boolean;
   onResume: (response: ChatElicitationResponse) => void;
 }) {
+  const { t } = useTranslation();
   const { enablePermissionBypass, permissionBypassEnabled } =
     useChatRuntimeActions();
   const bypassPermission = () => {
@@ -768,7 +795,7 @@ function PermissionApprovalActions({
         type="button"
         variant="ghost"
       >
-        Deny
+        {t("common.deny")}
       </Button>
       <Button
         disabled={disabled}
@@ -777,7 +804,7 @@ function PermissionApprovalActions({
         type="button"
         variant="ghost"
       >
-        Cancel
+        {t("common.cancel")}
       </Button>
       <Button
         disabled={disabled}
@@ -786,7 +813,7 @@ function PermissionApprovalActions({
         type="button"
         variant="outline"
       >
-        Allow session
+        {t("common.allowSession")}
       </Button>
       <Button
         disabled={disabled}
@@ -794,7 +821,7 @@ function PermissionApprovalActions({
         size="xs"
         type="button"
       >
-        Allow
+        {t("common.allow")}
       </Button>
       {allowBypass ? (
         <Button
@@ -804,7 +831,7 @@ function PermissionApprovalActions({
           type="button"
           variant="destructive"
         >
-          Bypass permission
+          {t("common.bypassPermission")}
         </Button>
       ) : null}
     </div>
@@ -876,6 +903,7 @@ function ElicitationQuestionInput({
   question: ElicitationQuestion;
   value: string;
 }) {
+  const { t } = useTranslation();
   const options = question.options ?? [];
   const [selection, setSelection] = useState<
     { label: string; type: "option" } | { type: "other" } | undefined
@@ -942,7 +970,7 @@ function ElicitationQuestionInput({
               }}
               type="button"
             >
-              Other
+              {t("common.other")}
             </button>
           ) : null}
         </div>
@@ -1005,6 +1033,7 @@ function ToolActionHeader({
   running: boolean;
   title: string;
 }) {
+  const { t } = useTranslation();
   const content = (
     <>
       <ToolStatusIcon failed={failed} running={running} />
@@ -1013,7 +1042,7 @@ function ToolActionHeader({
         <div className="mt-0.5 flex items-center gap-1.5 text-muted-foreground/90">
           <span>{kind}</span>
           <span aria-hidden>·</span>
-          <span>{formatToolPhase(phase)}</span>
+          <span>{formatToolPhase(phase, t)}</span>
         </div>
       </div>
       {details && (
@@ -1124,55 +1153,55 @@ function isRunningToolPhase(phase: string) {
   );
 }
 
-function formatToolPhase(phase: string) {
+function formatToolPhase(phase: string, t: TFunction) {
   switch (phase) {
     case "awaitingDecision":
-      return "Awaiting decision";
+      return t("messages.tool.phase.awaitingDecision");
     case "streamingResult":
-      return "Streaming result";
+      return t("messages.tool.phase.streamingResult");
     case "completed":
-      return "Completed";
+      return t("common.completed");
     case "failed":
-      return "Failed";
+      return t("common.failed");
     case "declined":
-      return "Declined";
+      return t("common.declined");
     case "cancelled":
-      return "Cancelled";
+      return t("common.cancelled");
     case "running":
-      return "Running";
+      return t("common.running");
     case "proposed":
-      return "Proposed";
+      return t("common.proposed");
     default:
       return phase;
   }
 }
 
-function formatElicitationKind(kind: string) {
+function formatElicitationKind(kind: string, t: TFunction) {
   switch (kind) {
     case "userInput":
-      return "Question";
+      return t("messages.elicitation.userInput");
     case "externalFlow":
-      return "External flow";
+      return t("messages.elicitation.externalFlow");
     case "dynamicToolCall":
-      return "Dynamic tool";
+      return t("messages.elicitation.dynamicTool");
     case "permissionProfile":
-      return "Permission profile";
+      return t("messages.elicitation.permissionProfile");
     default:
-      return kind || "Elicitation";
+      return kind || t("common.question");
   }
 }
 
-function formatElicitationPhase(phase: string) {
-  if (phase.startsWith("resolved:")) return "Answered";
+function formatElicitationPhase(phase: string, t: TFunction) {
+  if (phase.startsWith("resolved:")) return t("common.answered");
   switch (phase) {
     case "open":
-      return "Awaiting answer";
+      return t("messages.elicitation.awaitingAnswer");
     case "resolving":
-      return "Submitting";
+      return t("common.submitting");
     case "cancelled":
-      return "Cancelled";
+      return t("common.cancelled");
     default:
-      return phase || "Pending";
+      return phase || t("common.pending");
   }
 }
 
@@ -1196,6 +1225,7 @@ function ElicitationQuestionCard({
 }: {
   elicitation: ChatElicitation;
 }) {
+  const { t } = useTranslation();
   const { resolveElicitation } = useChatRuntimeActions();
   const questions = elicitation.questions ?? [];
   const [answers, setAnswers] = useState<Record<string, string>>({});
@@ -1219,7 +1249,7 @@ function ElicitationQuestionCard({
       ? "cancelled"
       : "resolved:Answers"
     : elicitation.phase;
-  const title = elicitation.title || "Question";
+  const title = elicitation.title || t("common.question");
   const [manualOpen, setManualOpen] = useState<boolean | undefined>();
   const open = manualOpen ?? awaitingInput;
 
@@ -1254,9 +1284,9 @@ function ElicitationQuestionCard({
         <div className="min-w-0 flex-1">
           <div className="truncate font-medium">{title}</div>
           <div className="mt-0.5 flex items-center gap-1.5 text-muted-foreground">
-            <span>{formatElicitationKind(elicitation.kind)}</span>
+            <span>{formatElicitationKind(elicitation.kind, t)}</span>
             <span aria-hidden>·</span>
-            <span>{formatElicitationPhase(phase)}</span>
+            <span>{formatElicitationPhase(phase, t)}</span>
           </div>
         </div>
         <ChevronDown
@@ -1314,16 +1344,16 @@ function ElicitationQuestionCard({
                     type="button"
                     variant="ghost"
                   >
-                    Cancel
+                    {t("common.cancel")}
                   </Button>
                   <Button onClick={submitAnswers} size="xs" type="button">
                     <Send className="size-3.5" />
-                    Submit
+                    {t("common.submit")}
                   </Button>
                 </div>
               ) : (
                 <div className="text-right text-[11px] text-muted-foreground">
-                  {formatElicitationPhase(phase)}
+                  {formatElicitationPhase(phase, t)}
                 </div>
               )}
             </div>
@@ -1335,6 +1365,7 @@ function ElicitationQuestionCard({
 }
 
 function PlanMessagePart({ plan }: { plan: ChatPlanData }) {
+  const { t } = useTranslation();
   const aui = useAui();
   const chatOptions = useChatOptions();
   const { setMode, setPermissionMode } = useChatRuntimeActions();
@@ -1347,7 +1378,7 @@ function PlanMessagePart({ plan }: { plan: ChatPlanData }) {
     (entry) => entry.status === "completed",
   ).length;
   const isTodoPlan = plan.kind === "todo";
-  const planTitle = isTodoPlan ? "Todo" : "Plan";
+  const planTitle = isTodoPlan ? t("common.todo") : t("common.plan");
   const hasDetails = plan.entries.length > 0 || Boolean(plan.text);
   const target = findPlanModeToggleTarget([
     {
@@ -1394,7 +1425,7 @@ function PlanMessagePart({ plan }: { plan: ChatPlanData }) {
     } catch (error) {
       toast({
         description: getErrorMessage(error),
-        title: "Could not start implementation",
+        title: t("messages.toasts.couldNotStartImplementation"),
         variant: "destructive",
       });
     } finally {
@@ -1419,10 +1450,13 @@ function PlanMessagePart({ plan }: { plan: ChatPlanData }) {
           <div className="mt-0.5 flex min-w-0 items-center gap-1.5 text-muted-foreground">
             {plan.entries.length > 0 ? (
               <span>
-                {completed}/{plan.entries.length} completed
+                {t("messages.completedCount", {
+                  completed,
+                  total: plan.entries.length,
+                })}
               </span>
             ) : (
-              <span>Draft</span>
+              <span>{t("common.draft")}</span>
             )}
             {plan.path ? (
               <>
@@ -1500,7 +1534,7 @@ function PlanMessagePart({ plan }: { plan: ChatPlanData }) {
                   ) : (
                     <Hammer className="size-3.5" />
                   )}
-                  Start implementation
+                  {t("messages.startImplementation")}
                 </Button>
               </div>
             ) : null}
@@ -1518,12 +1552,19 @@ function PlanMarkerPart({
   kind: "review" | "todo";
   presentation: "created" | "updated";
 }) {
-  const title = kind === "todo" ? "Todo" : "Plan";
+  const { t } = useTranslation();
+  const title = kind === "todo" ? t("common.todo") : t("common.plan");
+  const presentationLabel =
+    presentation === "created" ? t("messages.created") : t("common.updated");
+
   return (
     <div className="flex min-h-10 w-full items-center gap-2 rounded-2xl border border-foreground/10 bg-muted/[0.18] px-3 py-2 text-xs shadow-[0_12px_32px_-24px_rgba(0,0,0,0.55)] dark:border-white/10">
       <ListChecks className="size-3.5 shrink-0 text-muted-foreground" />
       <div className="truncate font-medium">
-        {title} {presentation === "created" ? "created" : "updated"}
+        {t("messages.planMarker", {
+          presentation: presentationLabel,
+          title,
+        })}
       </div>
     </div>
   );
@@ -1569,6 +1610,7 @@ function JsonBlock({ label, value }: { label: string; value: unknown }) {
 }
 
 function MessageAttachment({ attachment }: { attachment: CompleteAttachment }) {
+  const { t } = useTranslation();
   const imagePart = attachment.content.find((part) => part.type === "image");
   const filePart = attachment.content.find((part) => part.type === "file");
   const isMention = filePart ? messageFileMention(filePart) : false;
@@ -1590,7 +1632,15 @@ function MessageAttachment({ attachment }: { attachment: CompleteAttachment }) {
       name={attachment.name}
       previewText={previewText}
       previewUrl={previewUrl}
-      typeLabel={isMention ? "Mention" : attachment.type}
+      typeLabel={
+        isMention
+          ? t("common.mention")
+          : attachment.type === "image"
+            ? t("common.image")
+            : attachment.type === "file"
+              ? t("common.file")
+              : attachment.type
+      }
     />
   );
 }

@@ -1,4 +1,5 @@
 import { type FormEventHandler, type ReactElement, useState } from "react";
+import { useTranslation } from "react-i18next";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -24,11 +25,13 @@ export function RenameChatDialog({
   onClose,
   onRename,
 }: RenameChatDialogProps): ReactElement {
+  const { t } = useTranslation();
+
   return (
     <Dialog open={Boolean(chat)} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="gap-5 rounded-2xl">
         <DialogHeader>
-          <DialogTitle>Rename chat</DialogTitle>
+          <DialogTitle>{t("dialog.renameChat")}</DialogTitle>
         </DialogHeader>
         {chat ? (
           <RenameChatForm
@@ -55,6 +58,7 @@ function RenameChatForm({
   onClose: () => void;
   onRename: (chat: Chat, title: string) => Promise<void> | void;
 }) {
+  const { t } = useTranslation();
   const [title, setTitle] = useState(() => chat.title);
   const normalizedTitle = normalizeTitleInput(title);
   const canSubmit = Boolean(normalizedTitle) && normalizedTitle !== chat.title;
@@ -74,7 +78,7 @@ function RenameChatForm({
     <form className="grid gap-4" onSubmit={handleSubmit}>
       <div>
         <Input
-          aria-label="Chat name"
+          aria-label={t("dialog.chatName")}
           autoFocus
           disabled={isSaving}
           onChange={(event) => setTitle(event.target.value)}
@@ -88,10 +92,10 @@ function RenameChatForm({
           type="button"
           variant="outline"
         >
-          Cancel
+          {t("common.cancel")}
         </Button>
         <Button disabled={!canSubmit || isSaving} type="submit">
-          {isSaving ? "Saving" : "Save"}
+          {isSaving ? t("common.saving") : t("common.save")}
         </Button>
       </DialogFooter>
     </form>

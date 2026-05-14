@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import type { ReactElement } from "react";
 import { AnimatePresence, motion } from "framer-motion";
+import { useTranslation } from "react-i18next";
 import {
   ChevronRight,
   Folder,
@@ -56,6 +57,7 @@ export function ProjectSidebarSection({
   selectedChatId,
   selectedProjectId,
 }: ProjectSidebarSectionProps): ReactElement {
+  const { t } = useTranslation();
   const [expandedProjectIds, setExpandedProjectIds] = useState<Set<string>>(
     () => new Set(projects.map((project) => project.id)),
   );
@@ -98,35 +100,40 @@ export function ProjectSidebarSection({
 
   return (
     <SidebarGroup className="py-1">
-      <SidebarSectionHeader label="Projects">
+      <SidebarSectionHeader label={t("sidebar.projects")}>
         <>
           <Button
             asChild
             size="icon-xs"
-            title="Refresh projects"
+            title={t("sidebar.refreshProjects")}
             variant="ghost"
           >
             <motion.button
               onClick={() => void onRefreshProjects()}
-              title="Refresh projects"
+              title={t("sidebar.refreshProjects")}
               transition={sidebarMotion}
               type="button"
               whileTap={{ scale: 0.96 }}
             >
               <RefreshCw />
-              <span className="sr-only">Refresh projects</span>
+              <span className="sr-only">{t("sidebar.refreshProjects")}</span>
             </motion.button>
           </Button>
-          <Button asChild size="icon-xs" title="Add project" variant="ghost">
+          <Button
+            asChild
+            size="icon-xs"
+            title={t("sidebar.addProject")}
+            variant="ghost"
+          >
             <motion.button
               onClick={() => void onCreateProject()}
-              title="Add project"
+              title={t("sidebar.addProject")}
               transition={sidebarMotion}
               type="button"
               whileTap={{ scale: 0.96 }}
             >
               <FolderPlus />
-              <span className="sr-only">Add project</span>
+              <span className="sr-only">{t("sidebar.addProject")}</span>
             </motion.button>
           </Button>
         </>
@@ -138,7 +145,7 @@ export function ProjectSidebarSection({
               <AnimatedSidebarMenuItem key="projects-loading">
                 <MacSidebarMenuButton disabled>
                   <Loader2 className="animate-spin" />
-                  <span>Loading projects</span>
+                  <span>{t("sidebar.loadingProjects")}</span>
                 </MacSidebarMenuButton>
               </AnimatedSidebarMenuItem>
             ) : null}
@@ -147,7 +154,7 @@ export function ProjectSidebarSection({
               <AnimatedSidebarMenuItem key="projects-empty">
                 <MacSidebarMenuButton disabled>
                   <Folder />
-                  <span>No projects yet</span>
+                  <span>{t("sidebar.noProjects")}</span>
                 </MacSidebarMenuButton>
               </AnimatedSidebarMenuItem>
             ) : null}
@@ -190,14 +197,18 @@ export function ProjectSidebarSection({
                     ) : null}
                   </MacSidebarMenuButton>
                   <MacSidebarMenuAction
-                    aria-label={`New chat in ${projectDisplayName}`}
+                    aria-label={t("sidebar.newChatInProject", {
+                      projectName: projectDisplayName,
+                    })}
                     onClick={(event) => {
                       event.preventDefault();
                       event.stopPropagation();
                       void onCreateProjectChat(project);
                     }}
                     showOnHover
-                    title={`New chat in ${projectDisplayName}`}
+                    title={t("sidebar.newChatInProject", {
+                      projectName: projectDisplayName,
+                    })}
                     type="button"
                   >
                     <Plus />
@@ -224,8 +235,10 @@ export function ProjectSidebarSection({
                                 onShowContextMenu={() =>
                                   onShowChatContextMenu(chat)
                                 }
-                                title={chat.title}
-                                tooltip={chat.cwd ?? chat.title}
+                                title={displayChatTitle(chat.title, t)}
+                                tooltip={
+                                  chat.cwd ?? displayChatTitle(chat.title, t)
+                                }
                               />
                             </AnimatedSidebarMenuItem>
                           ))}
@@ -246,4 +259,11 @@ export function ProjectSidebarSection({
 function getProjectDisplayName(projectPath: string): string {
   const parts = projectPath.split(/[\\/]/).filter(Boolean);
   return parts[parts.length - 1] ?? projectPath;
+}
+
+function displayChatTitle(
+  title: string,
+  t: (key: string, options?: Record<string, unknown>) => string,
+) {
+  return title === "New chat" ? t("workspace.newChat") : title;
 }
