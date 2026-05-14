@@ -1,4 +1,4 @@
-import { useState, type ComponentType, type ReactElement } from "react";
+import { type ComponentType, type ReactElement } from "react";
 import { useTranslation } from "react-i18next";
 import { Folder, List, MessageSquarePlus, Rows3, Settings } from "lucide-react";
 
@@ -17,11 +17,14 @@ import {
 import { ChatSidebarSection } from "@/features/chat/components/chat-sidebar-section";
 import { SimpleChatSidebarSection } from "@/features/chat/components/simple-chat-sidebar-section";
 import { ProjectSidebarSection } from "@/features/projects/components/project-sidebar-section";
+import {
+  useWorkspaceUiStore,
+  type SidebarViewMode,
+} from "@/app/workspace/workspace-ui-store";
 import type { Chat } from "@/shared/chat";
 import type { Project } from "@/shared/projects";
 
 type MaybeAsync = void | Promise<void>;
-type SidebarViewMode = "mixed" | "project" | "simple";
 
 const SIDEBAR_VIEW_MODES: Array<{
   icon: ComponentType<{ className?: string }>;
@@ -77,7 +80,8 @@ export function WorkspaceSidebar({
   standaloneChats,
 }: WorkspaceSidebarProps): ReactElement {
   const { t } = useTranslation();
-  const [viewMode, setViewMode] = useState<SidebarViewMode>("simple");
+  const viewMode = useWorkspaceUiStore((state) => state.sidebarViewMode);
+  const setViewMode = useWorkspaceUiStore((state) => state.setSidebarViewMode);
 
   return (
     <Sidebar className="select-none" variant="inset">
