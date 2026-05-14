@@ -1,3 +1,4 @@
+use std::collections::BTreeMap;
 use std::sync::{Arc, Mutex};
 
 use super::ProtocolAdapter;
@@ -41,6 +42,7 @@ pub use types::*;
 pub struct AcpAdapter {
     capabilities: AcpAdapterCapabilities,
     auth_negotiation_result: Arc<Mutex<Option<Value>>>,
+    duplicate_tool_actions: Arc<Mutex<BTreeMap<String, ActionId>>>,
 }
 
 #[derive(Clone, Debug)]
@@ -75,6 +77,7 @@ impl AcpAdapter {
         Self {
             capabilities,
             auth_negotiation_result: Arc::new(Mutex::new(None)),
+            duplicate_tool_actions: Arc::new(Mutex::new(BTreeMap::new())),
         }
     }
 

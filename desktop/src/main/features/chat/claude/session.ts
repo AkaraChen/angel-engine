@@ -10,6 +10,7 @@ import type {
   TurnRunResult,
 } from "@angel-engine/client-napi";
 import {
+  ClientProtocol,
   EngineEventActionKind,
   EngineEventActionOutputKind,
   EngineEventActionPhase,
@@ -134,7 +135,7 @@ export class DesktopClaudeSession {
           name: "angel-engine",
           title: "Angel Engine",
         },
-        protocol: "acp",
+        protocol: ClientProtocol.Custom,
       },
       this.adapter,
     );

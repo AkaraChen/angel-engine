@@ -67,6 +67,185 @@ fn acp_permission_before_tool_call_creates_fallback_action_and_safe_choices() {
 }
 
 #[test]
+fn acp_duplicate_pending_permission_for_active_tool_is_cancelled() {
+    let adapter = AcpAdapter::standard();
+    let mut engine = acp_engine(&adapter);
+    let conversation_id = insert_ready_conversation(
+        &mut engine,
+        "conv",
+        RemoteConversationId::Known("sess".to_string()),
+        adapter.capabilities(),
+    );
+    let turn_id = start_turn(&mut engine, conversation_id.clone(), "active")
+        .turn_id
+        .unwrap();
+    let raw_input = json!({"command": "python3 - <<'PY'\nprint('same command')\nPY"});
+
+    decode_and_apply(
+        &adapter,
+        &mut engine,
+        JsonRpcMessage::notification(
+            "session/update",
+            json!({
+                "sessionId": "sess",
+                "update": {
+                    "sessionUpdate": "tool_call",
+                    "toolCallId": "tool-1",
+                    "kind": "execute",
+                    "status": "pending",
+                    "title": "python3 - <<'PY'\nprint('same command')\nPY",
+                    "rawInput": raw_input.clone()
+                }
+            }),
+        ),
+    );
+    engine
+        .apply_event(EngineEvent::ActionUpdated {
+            conversation_id: conversation_id.clone(),
+            action_id: ActionId::new("tool-1"),
+            patch: ActionPatch::phase(ActionPhase::Completed),
+        })
+        .expect("mark tool completed");
+
+    let duplicate_tool = decode_and_apply(
+        &adapter,
+        &mut engine,
+        JsonRpcMessage::notification(
+            "session/update",
+            json!({
+                "sessionId": "sess",
+                "update": {
+                    "sessionUpdate": "tool_call",
+                    "toolCallId": "tool-2",
+                    "kind": "execute",
+                    "status": "pending",
+                    "title": "python3 - <<'PY'\nprint('same command')\nPY",
+                    "rawInput": raw_input.clone()
+                }
+            }),
+        ),
+    );
+    assert!(duplicate_tool.events.is_empty());
+
+    let duplicate_permission = decode_and_apply(
+        &adapter,
+        &mut engine,
+        JsonRpcMessage::request(
+            JsonRpcRequestId::new("perm-2"),
+            "session/request_permission",
+            json!({
+                "sessionId": "sess",
+                "toolCall": {
+                    "sessionUpdate": "tool_call",
+                    "toolCallId": "tool-2",
+                    "kind": "execute",
+                    "status": "pending",
+                    "title": "python3 - <<'PY'\nprint('same command')\nPY",
+                    "rawInput": raw_input.clone()
+                }
+            }),
+        ),
+    );
+
+    assert!(matches!(
+        duplicate_permission.messages.as_slice(),
+        [JsonRpcMessage::Response { id, result }]
+            if id == &JsonRpcRequestId::new("perm-2")
+                && result["outcome"]["outcome"] == json!("cancelled")
+    ));
+    let failed_duplicate_update = decode_and_apply(
+        &adapter,
+        &mut engine,
+        JsonRpcMessage::notification(
+            "session/update",
+            json!({
+                "sessionId": "sess",
+                "update": {
+                    "sessionUpdate": "tool_call_update",
+                    "toolCallId": "tool-2",
+                    "status": "failed",
+                    "content": "cancelled duplicate"
+                }
+            }),
+        ),
+    );
+    assert!(failed_duplicate_update.events.is_empty());
+
+    let conversation = &engine.conversations[&conversation_id];
+    assert_eq!(conversation.actions.len(), 1);
+    assert_eq!(
+        conversation.actions[&ActionId::new("tool-1")].turn_id,
+        turn_id
+    );
+    assert!(conversation.elicitations.is_empty());
+}
+
+#[test]
+fn acp_duplicate_completed_tool_call_with_same_signature_is_ignored() {
+    let adapter = AcpAdapter::standard();
+    let mut engine = acp_engine(&adapter);
+    let conversation_id = insert_ready_conversation(
+        &mut engine,
+        "conv",
+        RemoteConversationId::Known("sess".to_string()),
+        adapter.capabilities(),
+    );
+    start_turn(&mut engine, conversation_id.clone(), "active");
+    let raw_input = json!({"command": "printf 'same output' > src/same.txt"});
+    let content = json!([{
+        "type": "content",
+        "content": {
+            "type": "text",
+            "text": "same output"
+        }
+    }]);
+
+    decode_and_apply(
+        &adapter,
+        &mut engine,
+        JsonRpcMessage::notification(
+            "session/update",
+            json!({
+                "sessionId": "sess",
+                "update": {
+                    "sessionUpdate": "tool_call",
+                    "toolCallId": "tool-1",
+                    "kind": "execute",
+                    "status": "completed",
+                    "title": "Execute: printf 'same output' > src/same.txt",
+                    "rawInput": raw_input.clone(),
+                    "content": content.clone()
+                }
+            }),
+        ),
+    );
+    let duplicate = decode_and_apply(
+        &adapter,
+        &mut engine,
+        JsonRpcMessage::notification(
+            "session/update",
+            json!({
+                "sessionId": "sess",
+                "update": {
+                    "sessionUpdate": "tool_call",
+                    "toolCallId": "tool-2",
+                    "kind": "execute",
+                    "status": "completed",
+                    "title": "Execute: printf 'same output' > src/same.txt",
+                    "rawInput": raw_input.clone(),
+                    "content": content.clone()
+                }
+            }),
+        ),
+    );
+
+    assert!(duplicate.events.is_empty());
+    let conversation = &engine.conversations[&conversation_id];
+    assert_eq!(conversation.actions.len(), 1);
+    assert!(conversation.actions.contains_key(&ActionId::new("tool-1")));
+}
+
+#[test]
 fn acp_permission_response_selects_option_by_protocol_kind() {
     let adapter = AcpAdapter::standard();
     let mut engine = acp_engine(&adapter);

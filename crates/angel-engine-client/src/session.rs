@@ -664,6 +664,13 @@ impl ActiveTurn {
                     message: message.clone(),
                 });
             }
+            match &event {
+                ClientEvent::ActionObserved { action, .. }
+                | ClientEvent::ActionUpdated { action, .. } => {
+                    self.accept_action_elicitation(action);
+                }
+                _ => {}
+            }
             match event {
                 ClientEvent::ElicitationOpened { elicitation, .. } => {
                     self.accept_elicitation(elicitation);
@@ -723,6 +730,19 @@ impl ActiveTurn {
             elicitation,
             message_part,
         });
+    }
+
+    fn accept_action_elicitation(&mut self, action: &ActionSnapshot) {
+        if !self.accepts_turn(Some(&action.turn_id)) {
+            return;
+        }
+        let Some(elicitation_id) = action.elicitation_id.as_deref() else {
+            return;
+        };
+        if self.pending_elicitation_id.is_some() {
+            return;
+        }
+        self.pending_elicitation_id = Some(elicitation_id.to_string());
     }
 
     fn update_elicitation(&mut self, elicitation: ElicitationSnapshot) {
@@ -1197,6 +1217,30 @@ mod tests {
             active.pop_event(),
             Some(TurnRunEvent::ActionObserved { .. })
         ));
+        assert!(matches!(
+            active.pop_event(),
+            Some(TurnRunEvent::ActionUpdated { .. })
+        ));
+    }
+
+    #[test]
+    fn active_turn_waits_for_action_elicitation() {
+        let mut active =
+            ActiveTurn::new("conversation".to_string(), Some("turn".to_string()), None);
+        let mut action = action("awaitingDecision");
+        action.elicitation_id = Some("approval".to_string());
+
+        active
+            .handle_update(ClientUpdate {
+                events: vec![ClientEvent::ActionUpdated {
+                    conversation_id: "conversation".to_string(),
+                    action,
+                }],
+                ..ClientUpdate::default()
+            })
+            .unwrap();
+
+        assert_eq!(active.pending_elicitation_id.as_deref(), Some("approval"));
         assert!(matches!(
             active.pop_event(),
             Some(TurnRunEvent::ActionUpdated { .. })

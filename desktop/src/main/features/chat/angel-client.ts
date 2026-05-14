@@ -14,7 +14,11 @@ import type {
   TurnRunEvent,
   TurnRunResult,
 } from "@angel-engine/client-napi";
-import { ElicitationResponseType } from "@angel-engine/client-napi";
+import {
+  ActionPhase,
+  ElicitationResponseType,
+  TurnRunEventType,
+} from "@angel-engine/client-napi";
 
 import type {
   Chat,
@@ -613,9 +617,23 @@ class DesktopAngelSession {
       const projected = projectTurnRunEvent(event);
       if (projected) request.onEvent?.(projected);
 
-      if (event.type === "elicitation" && event.elicitation) {
+      if (
+        event.type === TurnRunEventType.Elicitation &&
+        event.elicitation?.phase === "open"
+      ) {
         const followup = await this.waitForElicitation(
           event.elicitation.id,
+          request.signal,
+        );
+        const result = await this.dispatchEvents(followup, request);
+        if (result) return result;
+        continue;
+      }
+
+      const actionElicitationId = pendingActionElicitationId(event);
+      if (actionElicitationId) {
+        const followup = await this.waitForElicitation(
+          actionElicitationId,
           request.signal,
         );
         const result = await this.dispatchEvents(followup, request);
@@ -704,12 +722,11 @@ class DesktopAngelSession {
     }
 
     try {
-      pending.resolve(
-        await this.session.resolveElicitation(
-          elicitationId,
-          clientElicitationResponse(response),
-        ),
+      const events = await this.session.resolveElicitation(
+        elicitationId,
+        clientElicitationResponse(response),
       );
+      pending.resolve(events);
     } catch (error) {
       pending.reject(error instanceof Error ? error : new Error(String(error)));
       throw error;
@@ -723,6 +740,19 @@ class DesktopAngelSession {
     this.pendingElicitations.clear();
     return this.session.cancelTurn();
   }
+}
+
+function pendingActionElicitationId(event: TurnRunEvent) {
+  const action =
+    event.action ??
+    (event.messagePart?.type === "tool-call"
+      ? event.messagePart.action
+      : undefined);
+  if (action?.phase !== ActionPhase.AwaitingDecision) {
+    return undefined;
+  }
+
+  return action.elicitationId || action.id || undefined;
 }
 
 function throwIfAborted(signal?: AbortSignal) {

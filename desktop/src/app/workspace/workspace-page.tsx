@@ -1010,7 +1010,9 @@ function ChatThreadRuntime({
   );
   const setBackendMode = useCallback(
     async (mode: string) => {
-      await setRunMode(slotKey, mode);
+      const modeOverride = selectedConfigOverride(mode);
+      if (!modeOverride) return;
+      await setRunMode(slotKey, modeOverride);
     },
     [setRunMode, slotKey],
   );
@@ -1133,11 +1135,17 @@ function runtimeConfigOptionsToAgentOptions(
   options: ChatRuntimeConfigOption[] | undefined,
 ): AgentValueOption[] {
   if (!options?.length) return NO_CONFIG_OVERRIDE_OPTIONS;
-  const runtimeOptions = options.map((option) => ({
-    description: option.description ?? undefined,
-    label: option.label,
-    value: option.value,
-  }));
+  const runtimeOptions = options.flatMap((option) => {
+    const value = selectedConfigOverride(option.value);
+    if (!value) return [];
+    return [
+      {
+        description: option.description ?? undefined,
+        label: option.label,
+        value,
+      },
+    ];
+  });
   return [NO_CONFIG_OVERRIDE_OPTION, ...runtimeOptions];
 }
 

@@ -60,11 +60,32 @@ impl AcpAdapter {
             elicitation.turn_id = Some(turn_id);
         }
         let tool_call = params.get("toolCall");
-        if let Some(tool_call_id) = params
+        let tool_call_id = params
             .get("toolCallId")
             .or_else(|| tool_call.and_then(|tool_call| tool_call.get("toolCallId")))
             .and_then(Value::as_str)
-        {
+            .map(str::trim)
+            .filter(|id| !id.is_empty());
+        if let (Some(tool_call), Some(tool_call_id)) = (tool_call, tool_call_id) {
+            let action_id = ActionId::new(tool_call_id.to_string());
+            if let Some(existing_action_id) =
+                matching_acp_tool_action_id(engine, &conversation_id, tool_call, &action_id)
+            {
+                self.remember_duplicate_tool_action(tool_call_id, existing_action_id.clone());
+                return Ok(TransportOutput::default()
+                    .message(JsonRpcMessage::response(
+                        id.clone(),
+                        super::wire::cancelled_permission_response_json(),
+                    ))
+                    .log(
+                        TransportLogKind::Warning,
+                        format!(
+                            "cancelled duplicate ACP permission request for {tool_call_id}; active action {existing_action_id} already represents it"
+                        ),
+                    ));
+            }
+        }
+        if let Some(tool_call_id) = tool_call_id {
             let action_id = ActionId::new(tool_call_id.to_string());
             if active_turn_id.is_some() || acp_action_exists(engine, &conversation_id, &action_id) {
                 elicitation.action_id = Some(action_id);

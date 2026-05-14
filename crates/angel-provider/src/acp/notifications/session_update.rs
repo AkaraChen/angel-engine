@@ -7,6 +7,7 @@ use super::super::{AcpAdapter, AcpToolStatus};
 use std::str::FromStr;
 
 pub(super) fn decode_acp_update(
+    adapter: &AcpAdapter,
     engine: &AngelEngine,
     params: &Value,
 ) -> Result<TransportOutput, angel_engine::EngineError> {
@@ -136,11 +137,50 @@ pub(super) fn decode_acp_update(
                 });
             };
             let status = tool_status_from_update(update);
-            let mut action = ActionState::new(
-                ActionId::new(id.to_string()),
-                turn_id,
-                acp_action_kind(update),
-            );
+            let action_id = ActionId::new(id.to_string());
+            if let Some(existing_action_id) =
+                duplicate_active_acp_tool_action_id(engine, &conversation_id, update, &action_id)
+            {
+                adapter.remember_duplicate_tool_action(id, existing_action_id.clone());
+                if status == AcpToolStatus::Pending {
+                    return Ok(TransportOutput::default().log(
+                        TransportLogKind::Warning,
+                        format!(
+                            "ignored duplicate ACP tool call {id} for active action {existing_action_id}"
+                        ),
+                    ));
+                }
+                let title = tool_title(update);
+                let deltas =
+                    acp_tool_output_deltas(engine, &conversation_id, &existing_action_id, update);
+                let error = acp_tool_error(update, status);
+                let mut output = TransportOutput::default().log(
+                    TransportLogKind::Warning,
+                    format!("merged duplicate ACP tool call {id} into {existing_action_id}"),
+                );
+                push_tool_action_updates(
+                    &mut output,
+                    conversation_id,
+                    existing_action_id,
+                    Some(AcpAdapter::tool_status_to_phase(status)),
+                    title,
+                    error,
+                    deltas,
+                );
+                return Ok(output);
+            }
+            if let Some(existing_action_id) =
+                matching_acp_tool_action_id(engine, &conversation_id, update, &action_id)
+            {
+                adapter.remember_duplicate_tool_action(id, existing_action_id.clone());
+                return Ok(TransportOutput::default().log(
+                    TransportLogKind::Warning,
+                    format!(
+                        "ignored duplicate ACP tool call {id}; active action {existing_action_id} already represents it"
+                    ),
+                ));
+            }
+            let mut action = ActionState::new(action_id, turn_id, acp_action_kind(update));
             action.phase = AcpAdapter::tool_status_to_phase(status);
             action.title = tool_title(update);
             action.input = acp_tool_input(update);
@@ -159,27 +199,72 @@ pub(super) fn decode_acp_update(
                     message: "ACP tool call update missing toolCallId/id".to_string(),
                 });
             };
-            let action_id = ActionId::new(id.to_string());
+            let mut action_id = ActionId::new(id.to_string());
             let status = update
                 .get("status")
                 .and_then(Value::as_str)
                 .map(acp_tool_status)
                 .unwrap_or(AcpToolStatus::InProgress);
             let title = tool_title(update);
-            let deltas = acp_tool_output_deltas(engine, &conversation_id, &action_id, update);
             let error = acp_tool_error(update, status);
             let mut output = TransportOutput::default()
                 .log(TransportLogKind::State, format!("tool call {status:?}"));
             if !acp_action_exists(engine, &conversation_id, &action_id) {
-                let mut action =
-                    ActionState::new(action_id.clone(), turn_id.clone(), acp_action_kind(update));
-                action.title = title.clone();
-                action.input = acp_tool_input(update);
-                output.events.push(EngineEvent::ActionObserved {
-                    conversation_id: conversation_id.clone(),
-                    action,
-                });
+                if let Some(existing_action_id) = adapter.duplicate_tool_action_id(id) {
+                    if status == AcpToolStatus::Failed {
+                        return Ok(output.log(
+                            TransportLogKind::Warning,
+                            format!(
+                                "ignored failed duplicate ACP tool call update {id}; active action {existing_action_id} already represents it"
+                            ),
+                        ));
+                    }
+                    output.logs.push(angel_engine::TransportLog {
+                        kind: TransportLogKind::Warning,
+                        message: format!(
+                            "merged duplicate ACP tool call update {id} into {existing_action_id}"
+                        ),
+                    });
+                    action_id = existing_action_id;
+                } else if let Some(existing_action_id) = duplicate_active_acp_tool_action_id(
+                    engine,
+                    &conversation_id,
+                    update,
+                    &action_id,
+                ) {
+                    adapter.remember_duplicate_tool_action(id, existing_action_id.clone());
+                    output.logs.push(angel_engine::TransportLog {
+                        kind: TransportLogKind::Warning,
+                        message: format!(
+                            "merged duplicate ACP tool call update {id} into {existing_action_id}"
+                        ),
+                    });
+                    action_id = existing_action_id;
+                } else if let Some(existing_action_id) =
+                    matching_acp_tool_action_id(engine, &conversation_id, update, &action_id)
+                {
+                    adapter.remember_duplicate_tool_action(id, existing_action_id.clone());
+                    return Ok(output.log(
+                        TransportLogKind::Warning,
+                        format!(
+                            "ignored duplicate ACP tool call update {id}; active action {existing_action_id} already represents it"
+                        ),
+                    ));
+                } else {
+                    let mut action = ActionState::new(
+                        action_id.clone(),
+                        turn_id.clone(),
+                        acp_action_kind(update),
+                    );
+                    action.title = title.clone();
+                    action.input = acp_tool_input(update);
+                    output.events.push(EngineEvent::ActionObserved {
+                        conversation_id: conversation_id.clone(),
+                        action,
+                    });
+                }
             }
+            let deltas = acp_tool_output_deltas(engine, &conversation_id, &action_id, update);
             push_tool_action_updates(
                 &mut output,
                 conversation_id,
@@ -385,24 +470,7 @@ fn acp_tool_input(update: &Value) -> ActionInput {
 }
 
 fn acp_action_kind(update: &Value) -> ActionKind {
-    match update
-        .get("kind")
-        .and_then(Value::as_str)
-        .and_then(super::super::wire::parse_tool_kind)
-    {
-        Some(agent_client_protocol_schema::ToolKind::Read) => ActionKind::Read,
-        Some(
-            agent_client_protocol_schema::ToolKind::Edit
-            | agent_client_protocol_schema::ToolKind::Delete
-            | agent_client_protocol_schema::ToolKind::Move,
-        ) => ActionKind::FileChange,
-        Some(agent_client_protocol_schema::ToolKind::Execute) => ActionKind::Command,
-        Some(agent_client_protocol_schema::ToolKind::Search) => ActionKind::WebSearch,
-        Some(agent_client_protocol_schema::ToolKind::Think) => ActionKind::Reasoning,
-        Some(agent_client_protocol_schema::ToolKind::Fetch) => ActionKind::DynamicTool,
-        Some(agent_client_protocol_schema::ToolKind::SwitchMode) => ActionKind::HostCapability,
-        Some(agent_client_protocol_schema::ToolKind::Other) | Some(_) | None => ActionKind::McpTool,
-    }
+    acp_tool_action_kind(update)
 }
 
 fn acp_tool_output_snapshot(update: &Value) -> Vec<ActionOutputDelta> {
