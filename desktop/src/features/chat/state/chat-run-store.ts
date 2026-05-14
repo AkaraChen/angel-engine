@@ -1063,6 +1063,7 @@ async function consumeRunStream({
 
       accumulator.chunkCount += 1;
       let autoApprovedPermission = false;
+      let shouldFlushToolState = false;
       if (event.type === "elicitation") {
         upsertElicitationPart(accumulator.parts, event.elicitation);
         autoApprovedPermission = autoApprovePermissionElicitation({
@@ -1076,6 +1077,7 @@ async function consumeRunStream({
         }
       } else if (event.type === "tool") {
         upsertToolActionPart(accumulator.parts, event.action);
+        shouldFlushToolState = isTerminalChatToolPhase(event.action.phase);
         autoApprovedPermission = autoApprovePermissionToolAction({
           action: event.action,
           activeRun,
@@ -1089,7 +1091,11 @@ async function consumeRunStream({
           markChatAttention(currentSlotKey, "needsInput");
         }
       } else if (event.type === "toolDelta") {
-        appendToolActionDeltaPart(accumulator.parts, event.action);
+        pendingDeltaChars += appendToolActionDeltaPart(
+          accumulator.parts,
+          event.action,
+        );
+        shouldFlushToolState = isTerminalChatToolPhase(event.action.phase);
       } else if (event.type === "plan") {
         upsertTurnPlanPartAtEnd(accumulator.parts, event.plan);
       } else {
@@ -1100,7 +1106,8 @@ async function consumeRunStream({
       if (
         autoApprovedPermission ||
         event.type === "elicitation" ||
-        (event.type === "tool" && event.action.phase === "awaitingDecision")
+        (event.type === "tool" && event.action.phase === "awaitingDecision") ||
+        shouldFlushToolState
       ) {
         if (!(await flush())) break;
         continue;
@@ -1582,19 +1589,20 @@ function appendToolActionDeltaPart(
   parts: ChatHistoryMessagePart[],
   action: ChatToolAction,
 ) {
+  const deltaText = toolActionDeltaText(action);
   const index = parts.findIndex(
     (part) => part.type === "tool-call" && part.toolCallId === action.id,
   );
 
   if (index === -1) {
     upsertToolActionPart(parts, action);
-    return;
+    return deltaText.length;
   }
 
   const previous = parts[index];
   if (previous.type !== "tool-call" || !isChatToolAction(previous.artifact)) {
     upsertToolActionPart(parts, action);
-    return;
+    return deltaText.length;
   }
 
   const output = [
@@ -1605,8 +1613,14 @@ function appendToolActionDeltaPart(
     ...previous.artifact,
     ...action,
     output,
-    outputText: `${previous.artifact.outputText ?? ""}${action.outputText ?? ""}`,
+    outputText: `${previous.artifact.outputText ?? ""}${deltaText}`,
   });
+  return deltaText.length;
+}
+
+function toolActionDeltaText(action: ChatToolAction) {
+  if (action.outputText !== undefined) return action.outputText;
+  return (action.output ?? []).map((chunk) => chunk.text).join("");
 }
 
 function mergeFinalResultParts(
