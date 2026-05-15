@@ -196,7 +196,7 @@ function SidebarViewModeControl({
     <div className="px-1 group-data-[collapsible=icon]:hidden">
       <div
         aria-label="view"
-        className="grid grid-cols-3 gap-0.5 rounded-md bg-sidebar-accent/40 p-0.5"
+        className="grid grid-cols-3 gap-0.5 rounded-md border border-sidebar-border/70 bg-sidebar-accent/65 p-0.5"
         role="group"
       >
         {SIDEBAR_VIEW_MODES.map((option) => {
