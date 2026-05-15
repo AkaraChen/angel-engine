@@ -72,9 +72,13 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { iconButtonClass } from "@/features/chat/components/thread-styles";
+import {
+  iconButtonClass,
+  nativeControlRowClass,
+} from "@/features/chat/components/thread-styles";
 import { useChatEnvironment } from "@/features/chat/runtime/chat-environment-context";
 import { useApi } from "@/platform/use-api";
+import { cn } from "@/platform/utils";
 import { AGENT_OPTIONS, type AgentValueOption } from "@/shared/agents";
 import { useToast } from "@/components/ui/toast";
 import type {
@@ -117,9 +121,9 @@ type FileMentionAssistPanelProps = {
 };
 
 const composerInputGroupClassName =
-  "overflow-visible !rounded-lg !border !border-foreground/[0.08] !bg-background/82 shadow-[0_8px_22px_-20px_rgba(0,0,0,0.42)] backdrop-blur-xl transition-[border-color,background-color] has-[textarea]:!rounded-lg has-[>[data-align=block-end]]:!rounded-lg has-[>[data-align=block-start]]:!rounded-lg has-[[data-slot=input-group-control]:focus-visible]:!border-foreground/12 has-[[data-slot=input-group-control]:focus-visible]:!ring-0 focus-within:!border-foreground/12 focus-within:!bg-background/90 focus-within:!shadow-[0_8px_22px_-20px_rgba(0,0,0,0.42)] dark:!border-white/[0.09] dark:!bg-card/78 dark:shadow-[0_10px_24px_-22px_rgba(0,0,0,0.68)] dark:focus-within:!border-white/13 dark:focus-within:!bg-card/86 dark:focus-within:!shadow-[0_10px_24px_-22px_rgba(0,0,0,0.68)] [&_button:focus-visible]:!border-transparent [&_button:focus-visible]:!ring-0 [&_button]:shadow-none";
+  "overflow-visible !rounded-lg !border !border-foreground/[0.08] !bg-background/86 shadow-[0_8px_22px_-22px_rgba(0,0,0,0.48)] backdrop-blur-xl transition-[border-color,background-color] has-[textarea]:!rounded-lg has-[>[data-align=block-end]]:!rounded-lg has-[>[data-align=block-start]]:!rounded-lg has-[[data-slot=input-group-control]:focus-visible]:!border-foreground/14 has-[[data-slot=input-group-control]:focus-visible]:!ring-0 focus-within:!border-foreground/14 focus-within:!bg-background/94 focus-within:!shadow-[0_10px_26px_-24px_rgba(0,0,0,0.55)] dark:!border-white/[0.09] dark:!bg-card/82 dark:shadow-[0_10px_24px_-24px_rgba(0,0,0,0.72)] dark:focus-within:!border-white/14 dark:focus-within:!bg-card/90 dark:focus-within:!shadow-[0_10px_26px_-24px_rgba(0,0,0,0.78)] [&_button:focus-visible]:!border-transparent [&_button:focus-visible]:!ring-0 [&_button]:shadow-none";
 const composerModelMenuTriggerClassName =
-  "h-8 min-w-0 gap-1.5 rounded-md px-2 text-xs font-medium text-foreground focus-visible:!border-transparent focus-visible:!ring-0 aria-expanded:bg-foreground/[0.055] dark:aria-expanded:bg-white/[0.07]";
+  "h-8 min-w-0 gap-1.5 rounded-md px-2 text-xs font-medium text-foreground focus-visible:!border-transparent focus-visible:!ring-0 hover:bg-foreground/[0.045] aria-expanded:bg-foreground/[0.065] dark:hover:bg-white/[0.055] dark:aria-expanded:bg-white/[0.08]";
 const composerModelMenuValueClassName =
   "min-w-0 max-w-28 truncate text-muted-foreground";
 const composerNativeMenuClassName =
@@ -359,7 +363,7 @@ export function AssistantComposer({
       onSubmit={handleSubmit}
     >
       {floatingAccessory ? (
-        <div className="absolute top-0 left-4 z-30 -translate-y-1/2">
+        <div className="absolute top-0 left-3 z-30 -translate-y-1/2">
           {floatingAccessory}
         </div>
       ) : null}
@@ -386,7 +390,7 @@ export function AssistantComposer({
 
       <PromptInputBody>
         <PromptInputTextarea
-          className="max-h-40 min-h-[4.25rem] px-4 py-3 text-[15px] leading-6 placeholder:text-muted-foreground/65"
+          className="max-h-40 min-h-[4.2rem] px-3.5 py-3 text-[15px] leading-6 placeholder:text-muted-foreground/62"
           disabled={isInputDisabled}
           onChange={handleTextChange}
           onKeyDown={handleTextKeyDown}
@@ -424,7 +428,7 @@ function AssistantComposerHeader({
   return (
     <PromptInputHeader className="flex-col items-stretch gap-2 !px-3 !pb-2 !pt-3">
       {hasQuote ? (
-        <ComposerPrimitive.Quote className="flex items-start gap-2 rounded-xl border border-foreground/10 bg-muted/35 p-2 text-sm">
+        <ComposerPrimitive.Quote className="flex items-start gap-2 rounded-md border border-foreground/[0.08] bg-muted/30 p-2 text-sm dark:border-white/[0.08]">
           <Quote className="mt-0.5 size-3.5 shrink-0 text-muted-foreground" />
           <ComposerPrimitive.QuoteText className="line-clamp-2 flex-1 text-muted-foreground" />
           <ComposerPrimitive.QuoteDismiss className={iconButtonClass}>
@@ -514,8 +518,8 @@ function ComposerAssistPanel({
 
 function AssistPanelFrame({ children, title }: AssistPanelFrameProps) {
   return (
-    <div className="absolute bottom-full left-0 right-0 z-50 mb-2 overflow-hidden rounded-lg border border-foreground/[0.08] bg-popover/95 p-1 text-popover-foreground shadow-[0_12px_30px_-24px_rgba(0,0,0,0.62)] backdrop-blur-xl dark:border-white/[0.1]">
-      <div className="px-2 py-1 text-[11px] font-medium uppercase text-muted-foreground">
+    <div className="absolute bottom-full left-0 right-0 z-50 mb-2 overflow-hidden rounded-lg border border-foreground/[0.08] bg-popover/96 p-1 text-popover-foreground shadow-[0_12px_30px_-24px_rgba(0,0,0,0.62)] backdrop-blur-xl dark:border-white/[0.1]">
+      <div className="select-none px-2 py-1 text-[11px] font-medium text-muted-foreground">
         {title}
       </div>
       <div className="max-h-48 overflow-y-auto">{children}</div>
@@ -561,7 +565,10 @@ function SlashCommandAssistPanel({
     <AssistPanelFrame title={t("composer.commands")}>
       {commands.map((command) => (
         <button
-          className="flex w-full min-w-0 items-center gap-2 rounded-lg px-2 py-1.5 text-left text-sm hover:bg-muted"
+          className={cn(
+            nativeControlRowClass,
+            "flex w-full min-w-0 items-center gap-2 px-2 py-1.5 text-left text-sm",
+          )}
           key={command.name}
           onMouseDown={(event) => event.preventDefault()}
           onClick={() => onSelect(command)}
@@ -615,7 +622,10 @@ function FileMentionAssistPanel({
     <AssistPanelFrame title={t("composer.files")}>
       {files.map((file) => (
         <button
-          className="flex w-full min-w-0 flex-col rounded-lg px-2 py-1.5 text-left hover:bg-muted"
+          className={cn(
+            nativeControlRowClass,
+            "flex w-full min-w-0 flex-col px-2 py-1.5 text-left",
+          )}
           key={file.path}
           onMouseDown={(event) => event.preventDefault()}
           onClick={() => onSelect(file)}

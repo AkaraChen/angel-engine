@@ -30,9 +30,9 @@ const reasoningVariants = cva("aui-reasoning-root mb-3 w-full", {
   variants: {
     variant: {
       ghost: "",
-      muted: "rounded-2xl bg-muted/30 px-3 py-2",
+      muted: "rounded-lg bg-muted/30 px-3 py-2",
       outline:
-        "rounded-2xl border border-foreground/10 bg-muted/[0.18] px-3 py-2 dark:border-white/10",
+        "rounded-lg border border-foreground/[0.08] bg-muted/[0.18] px-3 py-2 dark:border-white/[0.08]",
     },
   },
 });
@@ -110,7 +110,7 @@ function ReasoningTrigger({
   return (
     <CollapsibleTrigger
       className={cn(
-        "aui-reasoning-trigger group/trigger flex max-w-full items-center gap-2 py-1 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground",
+        "aui-reasoning-trigger group/trigger flex max-w-full items-center gap-2 rounded-md py-1 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground",
         className,
       )}
       data-slot="reasoning-trigger"

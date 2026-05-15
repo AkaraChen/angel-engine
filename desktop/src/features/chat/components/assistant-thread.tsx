@@ -24,9 +24,9 @@ export function AssistantThread({
   const { t } = useTranslation();
 
   return (
-    <ThreadPrimitive.Root className="flex h-full min-h-0 flex-col bg-background">
+    <ThreadPrimitive.Root className="flex h-full min-h-0 flex-col bg-background/96">
       <ThreadPrimitive.Viewport
-        className="relative flex min-h-0 flex-1 flex-col gap-6 overflow-y-auto px-4 py-5 sm:px-8"
+        className="relative flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto px-4 py-4 sm:px-7"
         scrollToBottomOnRunStart
       >
         <AuiIf condition={(state) => state.thread.isEmpty}>
@@ -43,14 +43,14 @@ export function AssistantThread({
           }}
         </ThreadPrimitive.Messages>
 
-        <SelectionToolbarPrimitive.Root className="z-20 flex items-center gap-1 rounded-full border border-foreground/10 bg-popover/95 p-1 text-popover-foreground shadow-lg backdrop-blur-xl">
-          <SelectionToolbarPrimitive.Quote className="inline-flex h-7 items-center gap-1 rounded-full px-2 text-xs hover:bg-muted">
+        <SelectionToolbarPrimitive.Root className="z-20 flex items-center gap-1 rounded-lg border border-foreground/[0.08] bg-popover/95 p-1 text-popover-foreground shadow-[0_10px_28px_-22px_rgba(0,0,0,0.6)] backdrop-blur-xl dark:border-white/[0.09]">
+          <SelectionToolbarPrimitive.Quote className="inline-flex h-7 items-center gap-1 rounded-md px-2 text-xs hover:bg-foreground/[0.055] active:bg-foreground/[0.075] dark:hover:bg-white/[0.07]">
             <Quote className="size-3" />
             {t("thread.quote")}
           </SelectionToolbarPrimitive.Quote>
         </SelectionToolbarPrimitive.Root>
       </ThreadPrimitive.Viewport>
-      <div className="shrink-0 bg-transparent px-4 pb-3 pt-2 sm:px-8">
+      <div className="shrink-0 bg-transparent px-4 pb-3 pt-1 sm:px-7">
         <div className="mx-auto w-full max-w-[860px]">
           <AssistantComposer floatingAccessory={composerFloatingAccessory} />
         </div>

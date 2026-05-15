@@ -15,7 +15,7 @@ import {
 } from "@assistant-ui/react";
 import { cva, type VariantProps } from "class-variance-authority";
 import type { TFunction } from "i18next";
-import { ChevronDownIcon, LoaderIcon } from "lucide-react";
+import { ChevronDownIcon } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 import {
@@ -35,10 +35,8 @@ const toolGroupVariants = cva(
     variants: {
       variant: {
         ghost: "",
-        muted:
-          "rounded-2xl border border-foreground/10 bg-background/55 py-1.5 shadow-[0_14px_34px_-28px_rgba(0,0,0,0.58)] backdrop-blur-xl dark:border-white/10 dark:bg-card/45",
-        outline:
-          "rounded-2xl border border-foreground/10 bg-background/55 py-1.5 shadow-[0_14px_34px_-28px_rgba(0,0,0,0.58)] backdrop-blur-xl dark:border-white/10 dark:bg-card/45",
+        muted: "",
+        outline: "",
       },
     },
   },
@@ -104,7 +102,6 @@ function ToolGroupRoot({
 }
 
 function ToolGroupTrigger({
-  active = false,
   className,
   label,
   ...props
@@ -112,54 +109,24 @@ function ToolGroupTrigger({
   active?: boolean;
   label: string;
 }) {
-  const { t } = useTranslation();
-  const activityLabel = t("components.toolGroup.activity");
-
   return (
     <CollapsibleTrigger
       className={cn(
-        "aui-tool-group-trigger group/trigger flex min-h-9 items-center gap-2 text-xs transition-colors hover:text-foreground",
-        "group-data-[variant=outline]/tool-group-root:w-full group-data-[variant=outline]/tool-group-root:px-3.5",
-        "group-data-[variant=muted]/tool-group-root:w-full group-data-[variant=muted]/tool-group-root:px-3.5",
+        "aui-tool-group-trigger group/trigger flex min-h-7 w-fit max-w-full items-center gap-1.5 rounded-md text-[13px] text-muted-foreground transition-colors hover:text-foreground",
         className,
       )}
       data-slot="tool-group-trigger"
       {...props}
     >
-      {active ? (
-        <LoaderIcon
-          className="aui-tool-group-trigger-loader size-3.5 shrink-0 animate-spin text-primary/75"
-          data-slot="tool-group-trigger-loader"
-        />
-      ) : (
-        <span
-          aria-hidden
-          className="size-2 shrink-0 rounded-full bg-muted-foreground/35"
-        />
-      )}
       <span
-        className={cn(
-          "aui-tool-group-trigger-label-wrapper relative flex min-w-0 items-baseline gap-2 text-start leading-none",
-          "group-data-[variant=outline]/tool-group-root:grow",
-          "group-data-[variant=muted]/tool-group-root:grow",
-        )}
+        className="aui-tool-group-trigger-label-wrapper min-w-0 truncate text-start font-medium leading-none"
         data-slot="tool-group-trigger-label"
       >
-        <span className="font-medium text-foreground/85">{activityLabel}</span>
-        <span className="truncate text-muted-foreground">{label}</span>
-        {active && (
-          <span
-            aria-hidden
-            className="aui-tool-group-trigger-shimmer shimmer pointer-events-none absolute inset-0 motion-reduce:animate-none"
-            data-slot="tool-group-trigger-shimmer"
-          >
-            {activityLabel}
-          </span>
-        )}
+        {label}
       </span>
       <ChevronDownIcon
         className={cn(
-          "aui-tool-group-trigger-chevron size-4 shrink-0 text-muted-foreground/80",
+          "aui-tool-group-trigger-chevron size-3.5 shrink-0 text-muted-foreground/70",
           "transition-transform duration-(--animation-duration) ease-out",
           "group-data-[state=closed]/trigger:-rotate-90",
           "group-data-[state=open]/trigger:rotate-0",
@@ -191,15 +158,7 @@ function ToolGroupContent({
       data-slot="tool-group-content"
       {...props}
     >
-      <div
-        className={cn(
-          "mt-2 flex flex-col gap-1.5",
-          "group-data-[variant=outline]/tool-group-root:mt-1.5 group-data-[variant=outline]/tool-group-root:border-t group-data-[variant=outline]/tool-group-root:border-foreground/10 group-data-[variant=outline]/tool-group-root:px-2.5 group-data-[variant=outline]/tool-group-root:pt-2 dark:group-data-[variant=outline]/tool-group-root:border-white/10",
-          "group-data-[variant=muted]/tool-group-root:mt-1.5 group-data-[variant=muted]/tool-group-root:border-t group-data-[variant=muted]/tool-group-root:border-foreground/10 group-data-[variant=muted]/tool-group-root:px-2.5 group-data-[variant=muted]/tool-group-root:pt-2 dark:group-data-[variant=muted]/tool-group-root:border-white/10",
-        )}
-      >
-        {children}
-      </div>
+      <div className={cn("mt-1.5 flex flex-col gap-1.5")}>{children}</div>
     </CollapsibleContent>
   );
 }

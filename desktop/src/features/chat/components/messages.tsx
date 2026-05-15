@@ -71,13 +71,15 @@ import {
 import {
   iconButtonClass,
   messageActionFooterClass,
+  nativeControlRowClass,
+  nativePanelClass,
 } from "@/features/chat/components/thread-styles";
 
 const assistantTextContainerClassName = [
   "min-w-0 max-w-none text-[15px] leading-[1.72] text-foreground/90 hyphens-auto [line-break:loose] [overflow-wrap:anywhere] [text-rendering:optimizeLegibility] [word-break:normal]",
   "[&_a]:text-primary [&_a]:underline [&_a]:underline-offset-2 [&_a]:decoration-primary/35 [&_a:hover]:decoration-primary/70",
   "[&_blockquote]:my-4 [&_blockquote]:border-l-2 [&_blockquote]:border-foreground/10 [&_blockquote]:pl-3.5 [&_blockquote]:text-[14px] [&_blockquote]:leading-[1.72] [&_blockquote]:text-muted-foreground",
-  "[&_[data-streamdown=code-block]]:my-4 [&_[data-streamdown=code-block]]:overflow-hidden [&_[data-streamdown=code-block]]:rounded-2xl [&_[data-streamdown=code-block]]:border [&_[data-streamdown=code-block]]:border-foreground/[0.08] [&_[data-streamdown=code-block]]:bg-[#f7f7f8] [&_[data-streamdown=code-block]]:p-0 [&_[data-streamdown=code-block]]:shadow-[inset_0_1px_0_rgba(255,255,255,0.86),0_12px_30px_-26px_rgba(0,0,0,0.48)] dark:[&_[data-streamdown=code-block]]:border-white/10 dark:[&_[data-streamdown=code-block]]:bg-white/[0.045] dark:[&_[data-streamdown=code-block]]:shadow-[inset_0_1px_0_rgba(255,255,255,0.06),0_14px_34px_-28px_rgba(0,0,0,0.8)]",
+  "[&_[data-streamdown=code-block]]:my-4 [&_[data-streamdown=code-block]]:overflow-hidden [&_[data-streamdown=code-block]]:rounded-lg [&_[data-streamdown=code-block]]:border [&_[data-streamdown=code-block]]:border-foreground/[0.08] [&_[data-streamdown=code-block]]:bg-[#f7f7f8] [&_[data-streamdown=code-block]]:p-0 [&_[data-streamdown=code-block]]:shadow-[0_8px_22px_-24px_rgba(0,0,0,0.5)] dark:[&_[data-streamdown=code-block]]:border-white/10 dark:[&_[data-streamdown=code-block]]:bg-white/[0.045] dark:[&_[data-streamdown=code-block]]:shadow-[0_10px_26px_-26px_rgba(0,0,0,0.8)]",
   "[&_[data-streamdown=code-block-actions]]:rounded-full [&_[data-streamdown=code-block-actions]]:border-foreground/10 [&_[data-streamdown=code-block-actions]]:bg-background/80 [&_[data-streamdown=code-block-actions]]:px-1 [&_[data-streamdown=code-block-actions]]:py-0.5 [&_[data-streamdown=code-block-actions]]:shadow-sm [&_[data-streamdown=code-block-actions]]:backdrop-blur-xl dark:[&_[data-streamdown=code-block-actions]]:border-white/10 dark:[&_[data-streamdown=code-block-actions]]:bg-card/75",
   "[&_[data-streamdown=code-block-body]]:rounded-none [&_[data-streamdown=code-block-body]]:border-0 [&_[data-streamdown=code-block-body]]:bg-transparent [&_[data-streamdown=code-block-body]]:p-0 [&_[data-streamdown=code-block-body]]:text-[12.5px] [&_[data-streamdown=code-block-body]]:leading-[1.58]",
   "[&_[data-streamdown=code-block-body]_code>span]:block",
@@ -91,7 +93,7 @@ const assistantTextContainerClassName = [
   "[&_p]:my-0 [&_p]:[line-break:loose] [&_p]:[overflow-wrap:anywhere] [&_p+p]:mt-3.5",
   "[&_pre]:m-0 [&_pre]:max-w-full [&_pre]:overflow-x-auto [&_pre]:bg-transparent [&_pre]:px-3.5 [&_pre]:py-3.5 [&_pre]:text-[12.5px] [&_pre]:leading-[1.58] [&_pre]:[line-break:normal] [&_pre]:[overflow-wrap:normal] [&_pre]:[word-break:normal]",
   "[&_strong]:font-semibold [&_strong]:text-foreground",
-  "[&_table]:my-4 [&_table]:w-full [&_table]:border-separate [&_table]:border-spacing-0 [&_table]:overflow-hidden [&_table]:rounded-xl",
+  "[&_table]:my-4 [&_table]:w-full [&_table]:border-separate [&_table]:border-spacing-0 [&_table]:overflow-hidden [&_table]:rounded-lg",
   "[&_td]:border-b [&_td]:border-foreground/10 [&_td]:px-2.5 [&_td]:py-2 [&_td]:align-top [&_td]:[line-break:loose] [&_td]:[overflow-wrap:anywhere]",
   "[&_th]:border-b [&_th]:border-foreground/10 [&_th]:bg-muted/35 [&_th]:px-2.5 [&_th]:py-2 [&_th]:text-left [&_th]:font-medium [&_th]:[line-break:loose] [&_th]:[overflow-wrap:anywhere]",
   "[&_ul]:my-3 [&_ul]:list-disc [&_ul]:pl-5",
@@ -100,11 +102,8 @@ const assistantTextContainerClassName = [
 
 const messageColumnClassName = "mx-auto w-full max-w-[860px]";
 
-const inspectorCardClassName =
-  "w-full overflow-hidden rounded-2xl border border-foreground/10 bg-muted/[0.18] text-xs shadow-[0_12px_32px_-24px_rgba(0,0,0,0.55)] backdrop-blur-xl dark:border-white/10 dark:bg-muted/20";
-
-const toolCallCardClassName =
-  "w-full overflow-hidden rounded-xl border border-foreground/10 bg-background/65 text-xs shadow-[0_10px_24px_-22px_rgba(0,0,0,0.5)] backdrop-blur-xl dark:border-white/10 dark:bg-card/45";
+const inspectorCardClassName = nativePanelClass;
+const toolCallCardClassName = nativePanelClass;
 
 type ElicitationQuestion = NonNullable<ChatElicitation["questions"]>[number];
 
@@ -135,7 +134,7 @@ export function UserMessage() {
         </MessagePrimitive.Attachments>
         <UserMessageAttachmentParts />
         {hasBubbleContent ? (
-          <div className="rounded-2xl rounded-br-lg bg-primary/95 px-3.5 py-2.5 text-[14px] leading-6 text-primary-foreground shadow-[0_10px_24px_-18px_rgba(10,132,255,0.8)]">
+          <div className="rounded-lg rounded-br-md bg-primary/95 px-3.5 py-2.5 text-[14px] leading-6 text-primary-foreground">
             <UserMessageParts />
           </div>
         ) : null}
@@ -172,8 +171,8 @@ export function UserEditComposer() {
     <MessagePrimitive.Root
       className={cn(messageColumnClassName, "flex justify-end")}
     >
-      <ComposerPrimitive.Root className="w-full max-w-[74%] rounded-2xl border border-foreground/10 bg-background/90 p-2.5 shadow-[0_12px_32px_-24px_rgba(0,0,0,0.55)] backdrop-blur-xl">
-        <ComposerPrimitive.Input className="min-h-24 w-full resize-none rounded-xl bg-muted/30 px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-foreground/10" />
+      <ComposerPrimitive.Root className="w-full max-w-[74%] rounded-lg border border-foreground/[0.08] bg-background/90 p-2.5 shadow-[0_8px_22px_-22px_rgba(0,0,0,0.55)] backdrop-blur-xl dark:border-white/[0.08]">
+        <ComposerPrimitive.Input className="min-h-24 w-full resize-none rounded-md bg-muted/30 px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-foreground/10" />
         <div className="mt-2 flex justify-end gap-2">
           <ComposerPrimitive.Cancel asChild>
             <Button size="sm" type="button" variant="ghost">
@@ -269,16 +268,16 @@ export function AssistantMessage() {
 function MessageBranchPicker() {
   return (
     <BranchPickerPrimitive.Root
-      className="inline-flex h-7 items-center gap-0.5 rounded-full border border-foreground/10 bg-background/70 px-1 text-xs text-muted-foreground backdrop-blur-xl"
+      className="inline-flex h-7 items-center gap-0.5 rounded-md border border-foreground/[0.08] bg-background/70 px-1 text-xs text-muted-foreground backdrop-blur-xl dark:border-white/[0.08]"
       hideWhenSingleBranch
     >
-      <BranchPickerPrimitive.Previous className="inline-flex size-5 items-center justify-center rounded-full hover:bg-muted disabled:opacity-40">
+      <BranchPickerPrimitive.Previous className="inline-flex size-5 items-center justify-center rounded disabled:opacity-40 data-[disabled]:opacity-40 hover:bg-foreground/[0.055] dark:hover:bg-white/[0.07]">
         <ChevronLeft className="size-3" />
       </BranchPickerPrimitive.Previous>
       <span className="min-w-8 text-center tabular-nums">
         <BranchPickerPrimitive.Number /> / <BranchPickerPrimitive.Count />
       </span>
-      <BranchPickerPrimitive.Next className="inline-flex size-5 items-center justify-center rounded-full hover:bg-muted disabled:opacity-40">
+      <BranchPickerPrimitive.Next className="inline-flex size-5 items-center justify-center rounded disabled:opacity-40 data-[disabled]:opacity-40 hover:bg-foreground/[0.055] dark:hover:bg-white/[0.07]">
         <ChevronRight className="size-3" />
       </BranchPickerPrimitive.Next>
     </BranchPickerPrimitive.Root>
@@ -521,7 +520,6 @@ function GenericToolActionMessagePart({
       <ToolActionHeader
         details={hasDetails}
         failed={isFailed}
-        kind={action?.kind || part.toolName}
         open={open}
         phase={phase}
         running={isRunning}
@@ -654,7 +652,6 @@ function StandaloneElicitationToolPart({
       <ToolActionHeader
         details
         failed={phase === "failed"}
-        kind={elicitation?.kind || "elicitation"}
         open={open}
         phase={phase}
         running={awaitingInput}
@@ -687,7 +684,7 @@ function StandaloneElicitationToolPart({
                 ))
               ) : (
                 <textarea
-                  className="min-h-20 w-full resize-y rounded-xl border border-foreground/10 bg-background/80 px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-foreground/10"
+                  className="min-h-20 w-full resize-y rounded-md border border-foreground/[0.08] bg-background/80 px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-foreground/10 dark:border-white/[0.08]"
                   disabled={!awaitingInput}
                   onChange={(event) => setFallbackAnswer(event.target.value)}
                   value={fallbackAnswer}
@@ -936,9 +933,9 @@ function ElicitationQuestionInput({
             <button
               aria-pressed={selectedOptionLabel === option.label}
               className={cn(
-                "w-full rounded-xl border border-foreground/10 bg-background/75 px-3 py-2 text-left text-sm leading-5 transition-colors hover:bg-muted/40",
+                "w-full rounded-md border border-foreground/[0.08] bg-background/75 px-3 py-2 text-left text-sm leading-5 transition-colors hover:bg-foreground/[0.055] active:bg-foreground/[0.075] dark:border-white/[0.08] dark:hover:bg-white/[0.07]",
                 selectedOptionLabel === option.label &&
-                  "border-primary/35 bg-primary/10",
+                  "border-primary/35 bg-primary/10 dark:bg-primary/15",
               )}
               disabled={disabled}
               key={option.label}
@@ -960,8 +957,9 @@ function ElicitationQuestionInput({
             <button
               aria-pressed={selectedOther}
               className={cn(
-                "w-full rounded-xl border border-foreground/10 bg-background/75 px-3 py-2 text-left text-sm leading-5 transition-colors hover:bg-muted/40",
-                selectedOther && "border-primary/35 bg-primary/10",
+                "w-full rounded-md border border-foreground/[0.08] bg-background/75 px-3 py-2 text-left text-sm leading-5 transition-colors hover:bg-foreground/[0.055] active:bg-foreground/[0.075] dark:border-white/[0.08] dark:hover:bg-white/[0.07]",
+                selectedOther &&
+                  "border-primary/35 bg-primary/10 dark:bg-primary/15",
               )}
               disabled={disabled}
               onClick={() => {
@@ -997,7 +995,7 @@ function ElicitationFreeformAnswer({
   if (question.isSecret) {
     return (
       <input
-        className="h-8 w-full rounded-xl border border-foreground/10 bg-background/80 px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-foreground/10"
+        className="h-8 w-full rounded-md border border-foreground/[0.08] bg-background/80 px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-foreground/10 dark:border-white/[0.08]"
         disabled={disabled}
         onChange={(event) => onChange(event.target.value)}
         type="password"
@@ -1008,7 +1006,7 @@ function ElicitationFreeformAnswer({
 
   return (
     <textarea
-      className="min-h-16 w-full resize-y rounded-xl border border-foreground/10 bg-background/80 px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-foreground/10"
+      className="min-h-16 w-full resize-y rounded-md border border-foreground/[0.08] bg-background/80 px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-foreground/10 dark:border-white/[0.08]"
       disabled={disabled}
       onChange={(event) => onChange(event.target.value)}
       value={value}
@@ -1019,7 +1017,6 @@ function ElicitationFreeformAnswer({
 function ToolActionHeader({
   details,
   failed,
-  kind,
   open,
   phase,
   running,
@@ -1027,28 +1024,26 @@ function ToolActionHeader({
 }: {
   details: boolean;
   failed: boolean;
-  kind: string;
   open: boolean;
   phase: string;
   running: boolean;
   title: string;
 }) {
   const { t } = useTranslation();
+  const phaseLabel = formatToolPhase(phase, t);
   const content = (
     <>
       <ToolStatusIcon failed={failed} running={running} />
-      <div className="min-w-0 flex-1">
-        <div className="truncate font-medium text-foreground/90">{title}</div>
-        <div className="mt-0.5 flex items-center gap-1.5 text-muted-foreground/90">
-          <span>{kind}</span>
-          <span aria-hidden>·</span>
-          <span>{formatToolPhase(phase, t)}</span>
-        </div>
+      <div className="min-w-0 flex-1 truncate font-medium text-foreground/90">
+        {title}
       </div>
+      <span className="shrink-0 text-[12px] text-muted-foreground/75">
+        {phaseLabel}
+      </span>
       {details && (
         <ChevronDown
           className={cn(
-            "size-4 shrink-0 text-muted-foreground transition-transform",
+            "size-3.5 shrink-0 text-muted-foreground/70 transition-transform",
             !open && "-rotate-90",
           )}
         />
@@ -1057,8 +1052,7 @@ function ToolActionHeader({
   );
 
   const className = cn(
-    "flex min-h-9 w-full items-center gap-2 px-2.5 py-2 text-left",
-    details && "hover:bg-muted/30",
+    "flex min-h-8 w-full items-center gap-2 px-2.5 py-1.5 text-left",
   );
 
   if (!details) {
@@ -1085,7 +1079,7 @@ function ToolStatusIcon({
     return (
       <Loader2 className="size-3.5 shrink-0 animate-spin text-primary/75" />
     );
-  return <Check className="size-3.5 shrink-0 text-emerald-600/90" />;
+  return <Check className="size-3.5 shrink-0 text-muted-foreground/75" />;
 }
 
 function ToolPreBlock({
@@ -1107,7 +1101,7 @@ function ToolPreBlock({
       >
         {label}
       </div>
-      <pre className="max-h-48 overflow-auto whitespace-pre-wrap break-words rounded-xl border border-foreground/10 bg-background/70 p-2.5 font-mono text-[11px] leading-4 dark:border-white/10">
+      <pre className="max-h-48 overflow-auto whitespace-pre-wrap break-words rounded-md border border-foreground/[0.065] bg-muted/[0.22] p-2.5 font-mono text-[11px] leading-4 dark:border-white/[0.065] dark:bg-white/[0.035]">
         {value}
       </pre>
     </div>
@@ -1277,7 +1271,10 @@ function ElicitationQuestionCard({
       open={open}
     >
       <CollapsibleTrigger
-        className="flex min-h-10 w-full items-center gap-2 px-3 py-2 text-left hover:bg-muted/35"
+        className={cn(
+          nativeControlRowClass,
+          "flex min-h-10 w-full items-center gap-2 rounded-none px-3 py-2 text-left",
+        )}
         type="button"
       >
         <CircleHelp className="size-3.5 shrink-0 text-muted-foreground" />
@@ -1329,7 +1326,7 @@ function ElicitationQuestionCard({
                 ))
               ) : (
                 <textarea
-                  className="min-h-20 w-full resize-y rounded-xl border border-foreground/10 bg-background/80 px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-foreground/10"
+                  className="min-h-20 w-full resize-y rounded-md border border-foreground/[0.08] bg-background/80 px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-foreground/10 dark:border-white/[0.08]"
                   disabled={!awaitingInput}
                   onChange={(event) => setFallbackAnswer(event.target.value)}
                   value={fallbackAnswer}
@@ -1440,7 +1437,10 @@ function PlanMessagePart({ plan }: { plan: ChatPlanData }) {
       open={open}
     >
       <CollapsibleTrigger
-        className="flex min-h-10 w-full items-center gap-2 px-3 py-2 text-left hover:bg-muted/35"
+        className={cn(
+          nativeControlRowClass,
+          "flex min-h-10 w-full items-center gap-2 rounded-none px-3 py-2 text-left",
+        )}
         disabled={!hasDetails}
         type="button"
       >
@@ -1493,7 +1493,7 @@ function PlanMessagePart({ plan }: { plan: ChatPlanData }) {
               </div>
             ) : null}
             {plan.path ? (
-              <div className="flex min-w-0 items-center gap-2 rounded-xl border border-foreground/10 bg-background/70 px-2 py-1.5 text-muted-foreground dark:border-white/10">
+              <div className="flex min-w-0 items-center gap-2 rounded-md border border-foreground/[0.08] bg-background/70 px-2 py-1.5 text-muted-foreground dark:border-white/[0.08]">
                 <FileText className="size-3.5 shrink-0" />
                 <span className="truncate font-mono text-[11px]">
                   {plan.path}
@@ -1558,7 +1558,7 @@ function PlanMarkerPart({
     presentation === "created" ? t("messages.created") : t("common.updated");
 
   return (
-    <div className="flex min-h-10 w-full items-center gap-2 rounded-2xl border border-foreground/10 bg-muted/[0.18] px-3 py-2 text-xs shadow-[0_12px_32px_-24px_rgba(0,0,0,0.55)] dark:border-white/10">
+    <div className="flex min-h-10 w-full items-center gap-2 rounded-lg border border-foreground/[0.08] bg-muted/[0.18] px-3 py-2 text-xs shadow-[0_8px_22px_-22px_rgba(0,0,0,0.55)] dark:border-white/[0.08]">
       <ListChecks className="size-3.5 shrink-0 text-muted-foreground" />
       <div className="truncate font-medium">
         {t("messages.planMarker", {
@@ -1598,7 +1598,7 @@ function NullMessagePart(): null {
 
 function JsonBlock({ label, value }: { label: string; value: unknown }) {
   return (
-    <div className="min-w-0 rounded-2xl border border-foreground/10 bg-muted/35 p-3 dark:border-white/10">
+    <div className="min-w-0 rounded-lg border border-foreground/[0.08] bg-muted/35 p-3 dark:border-white/[0.08]">
       <div className="mb-1 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
         {label}
       </div>

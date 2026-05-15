@@ -1,0 +1,6 @@
+#!/usr/bin/env sh
+set -eu
+
+cd "$(dirname "$0")/.."
+
+yarn --cwd desktop lint-staged --config ../lint-staged.config.mjs --cwd .. --relative

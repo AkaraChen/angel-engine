@@ -975,7 +975,7 @@ export const PromptInput = ({
       >
         <InputGroup
           className={cn(
-            "overflow-hidden rounded-2xl border-foreground/10 bg-background/80 shadow-[0_14px_34px_-28px_rgba(0,0,0,0.55)] backdrop-blur-xl",
+            "overflow-hidden rounded-lg border-foreground/[0.08] bg-background/80 shadow-[0_8px_22px_-22px_rgba(0,0,0,0.55)] backdrop-blur-xl",
             inputGroupClassName,
           )}
         >
@@ -1355,7 +1355,7 @@ export const PromptInputHoverCardContent = ({
   <HoverCardContent
     align={align}
     className={cn(
-      "rounded-2xl border-foreground/10 bg-popover/95 shadow-lg backdrop-blur-xl dark:border-white/10",
+      "rounded-lg border-foreground/[0.08] bg-popover/95 shadow-lg backdrop-blur-xl dark:border-white/[0.08]",
       className,
     )}
     {...props}
@@ -1377,7 +1377,7 @@ export const PromptInputTab = ({
   className,
   ...props
 }: PromptInputTabProps) => (
-  <div className={cn("min-w-0 rounded-2xl", className)} {...props} />
+  <div className={cn("min-w-0 rounded-lg", className)} {...props} />
 );
 
 export type PromptInputTabLabelProps = HTMLAttributes<HTMLHeadingElement>;
@@ -1414,7 +1414,7 @@ export const PromptInputTabItem = ({
 }: PromptInputTabItemProps) => (
   <div
     className={cn(
-      "flex items-center gap-2 rounded-xl px-3 py-2 text-xs hover:bg-muted",
+      "flex items-center gap-2 rounded-md px-3 py-2 text-xs hover:bg-foreground/[0.055] active:bg-foreground/[0.075] dark:hover:bg-white/[0.07]",
       className,
     )}
     {...props}
@@ -1427,7 +1427,7 @@ export const PromptInputCommand = ({
   className,
   ...props
 }: PromptInputCommandProps) => (
-  <Command className={cn("rounded-2xl", className)} {...props} />
+  <Command className={cn("rounded-lg", className)} {...props} />
 );
 
 export type PromptInputCommandInputProps = ComponentProps<typeof CommandInput>;
