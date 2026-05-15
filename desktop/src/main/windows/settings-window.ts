@@ -5,14 +5,18 @@ import { createDesktopWindow } from "./factory";
 const settingsWindowStateFileName = "settings-window-state.json";
 
 let settingsWindow: BrowserWindow | null = null;
+let settingsWindowContentReady = false;
 
 export function openSettingsWindow() {
   if (settingsWindow && !settingsWindow.isDestroyed()) {
-    settingsWindow.show();
-    settingsWindow.focus();
+    if (settingsWindowContentReady) {
+      settingsWindow.show();
+      settingsWindow.focus();
+    }
     return;
   }
 
+  settingsWindowContentReady = false;
   settingsWindow = createDesktopWindow({
     bounds: {
       defaultBounds: { height: 540, width: 680 },
@@ -31,10 +35,31 @@ export function openSettingsWindow() {
     stateFileName: settingsWindowStateFileName,
   });
 
-  settingsWindow.once("ready-to-show", () => {
-    settingsWindow?.show();
+  const window = settingsWindow;
+  let didFinishLoad = false;
+  let readyToShow = false;
+  const showWhenReady = () => {
+    if (window.isDestroyed() || settingsWindow !== window) return;
+    if (!didFinishLoad || !readyToShow) return;
+
+    settingsWindowContentReady = true;
+    window.show();
+    window.focus();
+  };
+  const markWebContentsLoaded = () => {
+    didFinishLoad = true;
+    showWhenReady();
+  };
+
+  window.webContents.once("did-finish-load", markWebContentsLoaded);
+  window.webContents.once("did-fail-load", markWebContentsLoaded);
+  window.once("ready-to-show", () => {
+    readyToShow = true;
+    showWhenReady();
   });
-  settingsWindow.on("closed", () => {
+
+  window.on("closed", () => {
     settingsWindow = null;
+    settingsWindowContentReady = false;
   });
 }
