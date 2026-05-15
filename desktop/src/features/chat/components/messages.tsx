@@ -385,6 +385,7 @@ function AssistantTextMessagePart(
       caret="block"
       containerClassName={assistantTextContainerClassName}
       controls={{ code: false }}
+      linkSafety={{ enabled: false }}
       lineNumbers={false}
       mode="streaming"
       plugins={{ cjk, code: streamdownCode, math, mermaid }}
@@ -1483,6 +1484,7 @@ function PlanMessagePart({ plan }: { plan: ChatPlanData }) {
                 <Streamdown
                   className={assistantTextContainerClassName}
                   controls={false}
+                  linkSafety={{ enabled: false }}
                   lineNumbers={false}
                   mode="streaming"
                   plugins={{ cjk, code: streamdownCode, math, mermaid }}

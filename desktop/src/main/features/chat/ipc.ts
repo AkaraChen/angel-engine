@@ -1,4 +1,10 @@
-import { BrowserWindow, Menu } from "electron";
+import {
+  app,
+  BrowserWindow,
+  clipboard,
+  Menu,
+  type MenuItemConstructorOptions,
+} from "electron";
 import { tipc } from "@egoist/tipc/main";
 import { type as arkType } from "arktype";
 
@@ -175,28 +181,47 @@ export const chatIpcRouter = {
         throw new Error("Chat not found.");
       }
 
-      return new Promise<"cancelled" | "deleted" | "rename">((resolve) => {
-        const menu = Menu.buildFromTemplate([
-          {
-            click: () => resolve("rename"),
-            label: translate("common.rename"),
-          },
-          { type: "separator" },
-          {
-            click: () => {
-              closeChatSession(chat.id);
-              deleteChat(chat.id);
-              resolve("deleted");
+      return new Promise<"cancelled" | "copied" | "deleted" | "rename">(
+        (resolve) => {
+          const menuTemplate: MenuItemConstructorOptions[] = [
+            {
+              click: () => resolve("rename"),
+              label: translate("common.rename"),
             },
-            label: translate("common.delete"),
-          },
-        ]);
+          ];
 
-        menu.popup({
-          callback: () => resolve("cancelled"),
-          window: BrowserWindow.fromWebContents(context.sender) ?? undefined,
-        });
-      });
+          if (!app.isPackaged) {
+            menuTemplate.push(
+              { type: "separator" },
+              {
+                click: () => {
+                  clipboard.writeText(JSON.stringify(chat, null, 2));
+                  resolve("copied");
+                },
+                label: "Copy chat entity as JSON",
+              },
+            );
+          }
+
+          const menu = Menu.buildFromTemplate([
+            ...menuTemplate,
+            { type: "separator" },
+            {
+              click: () => {
+                closeChatSession(chat.id);
+                deleteChat(chat.id);
+                resolve("deleted");
+              },
+              label: translate("common.delete"),
+            },
+          ]);
+
+          menu.popup({
+            callback: () => resolve("cancelled"),
+            window: BrowserWindow.fromWebContents(context.sender) ?? undefined,
+          });
+        },
+      );
     }),
 
   chatSend: t.procedure.input<ChatSendInput>().action(async ({ input }) => {
