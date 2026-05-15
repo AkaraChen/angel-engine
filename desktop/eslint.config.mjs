@@ -49,7 +49,7 @@ export default antfu(
     settings: {
       "better-tailwindcss": {
         cwd: ".",
-        entryPoint: "src/index.css",
+        entryPoint: "src/renderer/index.css",
       },
     },
     rules: {
@@ -60,7 +60,7 @@ export default antfu(
         "error",
         {
           cwd: ".",
-          entryPoint: "src/index.css",
+          entryPoint: "src/renderer/index.css",
           ignore: ["^aui-", "^chat-restore-"],
         },
       ],
@@ -101,6 +101,29 @@ export default antfu(
       "jsx-a11y/no-noninteractive-element-interactions": "warn",
       "jsx-a11y/no-noninteractive-element-to-interactive-role": "warn",
       "jsx-a11y/no-static-element-interactions": "warn",
+    },
+  },
+  {
+    name: "angel/layer-boundaries",
+    files: ["src/**/*.{ts,tsx,mts}"],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          patterns: [
+            {
+              group: ["../main/*", "../../main/*", "../../../main/*"],
+              message:
+                "Renderer/preload code must not import main-process modules.",
+            },
+            {
+              group: ["@renderer/*", "../renderer/*", "../../renderer/*"],
+              message:
+                "Main/preload/shared code must not import renderer modules.",
+            },
+          ],
+        },
+      ],
     },
   },
   {

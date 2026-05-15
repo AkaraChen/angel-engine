@@ -8,7 +8,7 @@ import fs from "node:fs";
 import path from "node:path";
 
 import { asc, eq } from "drizzle-orm";
-import { closeDatabase, getDatabase } from "../../db/database";
+import { closeDatabase, getDatabase } from "../../db/client";
 import { projects } from "../../db/schema";
 
 export function listProjects(): Project[] {

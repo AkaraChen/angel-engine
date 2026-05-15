@@ -7,7 +7,7 @@ import { tipc } from "@egoist/tipc/main";
 
 import { type as arkType } from "arktype";
 import { BrowserWindow, dialog, Menu, shell } from "electron";
-import { translate } from "../../i18n";
+import { translate } from "../../platform/i18n";
 import { searchProjectFiles } from "./file-search";
 import {
   createProject,

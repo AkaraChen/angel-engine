@@ -4,7 +4,7 @@ import fs from "node:fs";
 import path from "node:path";
 
 import { desc, eq } from "drizzle-orm";
-import { getDatabase } from "../../db/database";
+import { getDatabase } from "../../db/client";
 import { chats } from "../../db/schema";
 
 const DEFAULT_CHAT_TITLE = "New chat";
