@@ -89,7 +89,6 @@ const createWindow = () => {
   // and load the index.html of the app.
   if (MAIN_WINDOW_VITE_DEV_SERVER_URL) {
     mainWindow.loadURL(rendererEntryUrl);
-    mainWindow.webContents.openDevTools();
   } else {
     mainWindow.loadFile(rendererFilePath);
   }
