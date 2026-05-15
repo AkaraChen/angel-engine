@@ -84,11 +84,11 @@ export function SettingsPage({
   const enabledRuntimeSet = new Set(agentSettings.enabledRuntimes);
 
   const deleteAllChats = useCallback(async () => {
-    const confirmed = window.confirm(t("settings.danger.confirmDeleteAll"));
+    const confirmed = await window.desktopWindow.confirmDeleteAllChats();
     if (!confirmed) return;
 
     await onDeleteAllChats();
-  }, [onDeleteAllChats, t]);
+  }, [onDeleteAllChats]);
 
   return (
     <main className="flex min-h-0 flex-1 overflow-auto">

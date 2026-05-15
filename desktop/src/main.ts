@@ -5,6 +5,7 @@ import { pathToFileURL } from "node:url";
 import started from "electron-squirrel-startup";
 import { registerIpcMain } from "@egoist/tipc/main";
 
+import { configureApplicationMenu } from "./main/application-menu";
 import { closeChatSession } from "./main/features/chat/angel-client";
 import { registerChatStreamIpc } from "./main/features/chat/stream-ipc";
 import { closeProjectsDatabase } from "./main/features/projects/repository";
@@ -19,6 +20,7 @@ import {
   configureDesktopWindowNotifications,
   registerDesktopWindowIpc,
 } from "./main/window-notifications";
+import { persistWindowBounds, savedWindowBounds } from "./main/window-state";
 
 const isMacOS = process.platform === "darwin";
 
@@ -74,15 +76,15 @@ const createWindow = () => {
   // Create the browser window.
   const mainWindow = new BrowserWindow({
     ...desktopWindowChromeOptions(),
-    height: 820,
+    ...savedWindowBounds(),
     minHeight: 640,
     minWidth: 960,
-    width: 1200,
     webPreferences: {
       preload: path.join(__dirname, "preload.js"),
     },
   });
   configureDesktopWindowAppearance(mainWindow);
+  persistWindowBounds(mainWindow);
   configureExternalLinkHandling(mainWindow);
   configureDesktopWindowNotifications(mainWindow);
 
@@ -110,6 +112,7 @@ app.whenReady().then(() => {
   registerDesktopWindowAppearanceIpc();
   registerDesktopWindowIpc();
   registerChatStreamIpc();
+  configureApplicationMenu();
   createWindow();
 });
 

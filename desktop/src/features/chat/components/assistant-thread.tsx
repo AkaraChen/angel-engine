@@ -26,7 +26,7 @@ export function AssistantThread({
   return (
     <ThreadPrimitive.Root className="flex h-full min-h-0 flex-col bg-background">
       <ThreadPrimitive.Viewport
-        className="relative flex min-h-0 flex-1 flex-col gap-6 overflow-y-auto px-4 py-6 sm:px-8"
+        className="relative flex min-h-0 flex-1 flex-col gap-6 overflow-y-auto px-4 py-5 sm:px-8"
         scrollToBottomOnRunStart
       >
         <AuiIf condition={(state) => state.thread.isEmpty}>
@@ -50,7 +50,7 @@ export function AssistantThread({
           </SelectionToolbarPrimitive.Quote>
         </SelectionToolbarPrimitive.Root>
       </ThreadPrimitive.Viewport>
-      <div className="shrink-0 bg-transparent px-4 pb-4 pt-2 sm:px-8">
+      <div className="shrink-0 bg-transparent px-4 pb-3 pt-2 sm:px-8">
         <div className="mx-auto w-full max-w-[860px]">
           <AssistantComposer floatingAccessory={composerFloatingAccessory} />
         </div>
@@ -63,10 +63,10 @@ function EmptyThread({ projectName }: { projectName?: string }) {
   const { t } = useTranslation();
 
   return (
-    <div className="mx-auto flex w-full max-w-[820px] flex-1 items-center justify-center py-10">
-      <div className="w-full max-w-[38rem]">
+    <div className="mx-auto flex w-full max-w-[760px] flex-1 items-center justify-center py-8">
+      <div className="w-full max-w-[34rem]">
         <div className="min-w-0 select-none text-center">
-          <h2 className="text-pretty text-[32px] font-semibold leading-[1.12] text-foreground">
+          <h2 className="text-pretty text-2xl font-semibold leading-tight text-foreground">
             {projectName ? (
               <Trans
                 components={{ project: <SketchUnderline /> }}
@@ -77,7 +77,7 @@ function EmptyThread({ projectName }: { projectName?: string }) {
               t("thread.empty.title")
             )}
           </h2>
-          <p className="mx-auto mt-3 max-w-[34rem] text-sm leading-6 text-muted-foreground">
+          <p className="mx-auto mt-2 max-w-[30rem] text-sm leading-6 text-muted-foreground">
             {t("thread.empty.description")}
           </p>
         </div>

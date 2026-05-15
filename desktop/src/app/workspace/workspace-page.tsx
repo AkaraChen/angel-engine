@@ -17,7 +17,11 @@ import {
 } from "@/app/workspace/workspace-chat-thread";
 import { DraftChatThread } from "@/app/workspace/draft-chat-thread";
 import { RenameChatDialog } from "@/features/chat/components/rename-chat-dialog";
-import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
+import {
+  SidebarInset,
+  SidebarProvider,
+  useSidebar,
+} from "@/components/ui/sidebar";
 import { useAgentSettings } from "@/features/settings/use-agent-settings";
 import { useToast } from "@/components/ui/toast";
 import { useApi } from "@/platform/use-api";
@@ -630,6 +634,10 @@ function WorkspacePageContent({
           standaloneChats={standaloneChats}
         />
         <WorkspaceSidebarControl />
+        <WorkspaceNativeCommandHandler
+          onCreateStandaloneChat={createChatForSelection}
+          onOpenSettings={openSettings}
+        />
         <RenameChatDialog
           chat={renameTargetChat}
           isSaving={renameChatMutation.isPending}
@@ -715,6 +723,36 @@ function WorkspacePageContent({
       </WorkspaceSidebarControlPortalProvider>
     </SidebarProvider>
   );
+}
+
+function WorkspaceNativeCommandHandler({
+  onCreateStandaloneChat,
+  onOpenSettings,
+}: {
+  onCreateStandaloneChat: () => void;
+  onOpenSettings: () => void;
+}) {
+  const { toggleSidebar } = useSidebar();
+
+  useEffect(
+    () =>
+      window.desktopWindow.onCommand((command) => {
+        switch (command) {
+          case "new-chat":
+            onCreateStandaloneChat();
+            break;
+          case "open-settings":
+            onOpenSettings();
+            break;
+          case "toggle-sidebar":
+            toggleSidebar();
+            break;
+        }
+      }),
+    [onCreateStandaloneChat, onOpenSettings, toggleSidebar],
+  );
+
+  return null;
 }
 
 function upsertChatInList(chats: Chat[], chat: Chat) {

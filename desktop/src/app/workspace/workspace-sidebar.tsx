@@ -188,7 +188,7 @@ function SidebarViewModeControl({
     <div className="px-1 group-data-[collapsible=icon]:hidden">
       <div
         aria-label="view"
-        className="grid grid-cols-3 gap-0.5 rounded-xl bg-sidebar-accent/60 p-1"
+        className="grid grid-cols-3 gap-0.5 rounded-md bg-sidebar-accent/40 p-0.5"
         role="group"
       >
         {SIDEBAR_VIEW_MODES.map((option) => {
@@ -200,10 +200,8 @@ function SidebarViewModeControl({
               aria-label={option.value}
               aria-pressed={isActive}
               className={cn(
-                "flex h-8 min-w-0 items-center justify-center rounded-lg px-2 text-sidebar-foreground/70 outline-hidden transition-colors hover:text-sidebar-foreground focus-visible:ring-2 focus-visible:ring-sidebar-ring",
-                isActive
-                  ? "bg-background text-sidebar-foreground shadow-[0_0_0_1px_hsl(var(--sidebar-border))]"
-                  : "hover:bg-sidebar-accent",
+                "flex h-7 min-w-0 items-center justify-center rounded px-2 text-sidebar-foreground/62 outline-hidden transition-[background-color,color] hover:bg-sidebar-accent/55 hover:text-sidebar-foreground/82 focus-visible:bg-sidebar-accent/70",
+                isActive ? "bg-background/62 text-sidebar-foreground" : "",
               )}
               key={option.value}
               onClick={() => onValueChange(option.value)}

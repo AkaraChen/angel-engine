@@ -117,11 +117,15 @@ type FileMentionAssistPanelProps = {
 };
 
 const composerInputGroupClassName =
-  "overflow-visible !rounded-2xl !border !border-foreground/10 !bg-background/90 shadow-[0_18px_44px_-24px_rgba(0,0,0,0.55),0_1px_0_rgba(255,255,255,0.85)_inset] backdrop-blur-xl transition-[border-color,box-shadow,background-color] has-[textarea]:!rounded-2xl has-[>[data-align=block-end]]:!rounded-2xl has-[>[data-align=block-start]]:!rounded-2xl focus-within:!border-foreground/15 focus-within:!bg-background/95 focus-within:shadow-[0_18px_42px_-26px_rgba(0,0,0,0.58),0_0_0_2px_rgba(29,29,31,0.045),0_1px_0_rgba(255,255,255,0.9)_inset] dark:!border-white/10 dark:!bg-card/80 dark:shadow-[0_18px_44px_-24px_rgba(0,0,0,0.85),0_1px_0_rgba(255,255,255,0.08)_inset] dark:focus-within:!border-white/15 dark:focus-within:!bg-card/90 dark:focus-within:shadow-[0_18px_42px_-26px_rgba(0,0,0,0.86),0_0_0_2px_rgba(255,255,255,0.055),0_1px_0_rgba(255,255,255,0.1)_inset]";
+  "overflow-visible !rounded-lg !border !border-foreground/[0.08] !bg-background/82 shadow-[0_8px_22px_-20px_rgba(0,0,0,0.42)] backdrop-blur-xl transition-[border-color,background-color] has-[textarea]:!rounded-lg has-[>[data-align=block-end]]:!rounded-lg has-[>[data-align=block-start]]:!rounded-lg has-[[data-slot=input-group-control]:focus-visible]:!border-foreground/12 has-[[data-slot=input-group-control]:focus-visible]:!ring-0 focus-within:!border-foreground/12 focus-within:!bg-background/90 focus-within:!shadow-[0_8px_22px_-20px_rgba(0,0,0,0.42)] dark:!border-white/[0.09] dark:!bg-card/78 dark:shadow-[0_10px_24px_-22px_rgba(0,0,0,0.68)] dark:focus-within:!border-white/13 dark:focus-within:!bg-card/86 dark:focus-within:!shadow-[0_10px_24px_-22px_rgba(0,0,0,0.68)] [&_button:focus-visible]:!border-transparent [&_button:focus-visible]:!ring-0 [&_button]:shadow-none";
 const composerModelMenuTriggerClassName =
-  "h-8 min-w-0 gap-1.5 rounded-full px-2 text-xs font-medium text-foreground";
+  "h-8 min-w-0 gap-1.5 rounded-md px-2 text-xs font-medium text-foreground focus-visible:!border-transparent focus-visible:!ring-0 aria-expanded:bg-foreground/[0.055] dark:aria-expanded:bg-white/[0.07]";
 const composerModelMenuValueClassName =
   "min-w-0 max-w-28 truncate text-muted-foreground";
+const composerNativeMenuClassName =
+  "p-1 data-open:zoom-in-100 data-closed:zoom-out-100 data-[side=bottom]:slide-in-from-top-0 data-[side=left]:slide-in-from-right-0 data-[side=right]:slide-in-from-left-0 data-[side=top]:slide-in-from-bottom-0";
+const composerNativeMenuLabelClassName =
+  "px-2 pb-1 pt-1 text-[11px] font-medium leading-4 text-muted-foreground/80";
 
 export function AssistantComposer({
   floatingAccessory,
@@ -382,7 +386,7 @@ export function AssistantComposer({
 
       <PromptInputBody>
         <PromptInputTextarea
-          className="max-h-40 min-h-[4.75rem] px-4 py-3 text-[15px] leading-6 placeholder:text-muted-foreground/65"
+          className="max-h-40 min-h-[4.25rem] px-4 py-3 text-[15px] leading-6 placeholder:text-muted-foreground/65"
           disabled={isInputDisabled}
           onChange={handleTextChange}
           onKeyDown={handleTextKeyDown}
@@ -510,7 +514,7 @@ function ComposerAssistPanel({
 
 function AssistPanelFrame({ children, title }: AssistPanelFrameProps) {
   return (
-    <div className="absolute bottom-full left-0 right-0 z-50 mb-2 overflow-hidden rounded-2xl border border-foreground/10 bg-popover/95 p-1 text-popover-foreground shadow-[0_18px_48px_-24px_rgba(0,0,0,0.65)] backdrop-blur-xl dark:border-white/10">
+    <div className="absolute bottom-full left-0 right-0 z-50 mb-2 overflow-hidden rounded-lg border border-foreground/[0.08] bg-popover/95 p-1 text-popover-foreground shadow-[0_12px_30px_-24px_rgba(0,0,0,0.62)] backdrop-blur-xl dark:border-white/[0.1]">
       <div className="px-2 py-1 text-[11px] font-medium uppercase text-muted-foreground">
         {title}
       </div>
@@ -640,7 +644,7 @@ function AssistantComposerFooter({ draftText }: { draftText: string }) {
   }, [aui]);
 
   return (
-    <PromptInputFooter className="flex-wrap border-t border-foreground/10 !px-3 !py-2.5 dark:border-white/10">
+    <PromptInputFooter className="flex-wrap border-t border-foreground/[0.075] !px-3 !py-2 dark:border-white/[0.08]">
       <PromptInputTools className="flex-wrap">
         <PromptAttachmentButton />
         <ComposerModelMenu disabled={isRunning} options={chatOptions} />
@@ -662,7 +666,7 @@ function AssistantComposerFooter({ draftText }: { draftText: string }) {
         />
         {isRunning ? (
           <Button
-            className="h-8 rounded-full border-foreground/10 bg-background/65 px-3 text-xs dark:bg-card/65"
+            className="h-8 rounded-md border-foreground/[0.08] bg-background/55 px-3 text-xs focus-visible:!ring-0 dark:bg-card/60"
             onClick={stopRun}
             size="sm"
             type="button"
@@ -674,7 +678,7 @@ function AssistantComposerFooter({ draftText }: { draftText: string }) {
         ) : null}
         <Button
           aria-label={t("common.send")}
-          className="size-8 rounded-full p-0 shadow-sm active:translate-y-px"
+          className="size-8 rounded-full p-0 shadow-none focus-visible:!ring-0 active:translate-y-px"
           disabled={isRunning || isEmpty}
           size="sm"
           type="submit"
@@ -726,7 +730,7 @@ function PlanModeToggleButton({
   return (
     <Button
       aria-pressed={Boolean(target?.isPlanMode)}
-      className="h-8 gap-1.5 rounded-full px-2 text-xs"
+      className="h-8 gap-1.5 rounded-md px-2 text-xs focus-visible:!ring-0"
       disabled={unavailable}
       onMouseDown={(event) => event.preventDefault()}
       onClick={() => {
@@ -794,7 +798,7 @@ function ComposerOptionSelect({
         className="max-w-36"
         disabled={disabled}
         onChange={(event) => onValueChange(event.currentTarget.value)}
-        selectClassName="h-8 max-w-36 rounded-full border border-foreground/10 bg-background/65 py-0 pr-8 pl-8 text-xs dark:bg-card/65"
+        selectClassName="h-8 max-w-36 rounded-md border border-foreground/[0.08] bg-background/55 py-0 pr-8 pl-8 text-xs focus-visible:!border-foreground/12 focus-visible:!ring-0 dark:bg-card/60"
         size="sm"
         title={title ?? label}
         value={value}
@@ -815,6 +819,7 @@ function PromptAttachmentButton() {
 
   return (
     <Button
+      className="focus-visible:!ring-0"
       onClick={attachments.openFileDialog}
       size="icon-sm"
       title={t("composer.attachFiles")}
@@ -949,12 +954,12 @@ function ComposerModelMenu({
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent
-          className="w-52 min-w-0"
+          className={`${composerNativeMenuClassName} w-52 min-w-0`}
           align="start"
-          sideOffset={6}
-          variant="apple"
+          sideOffset={4}
+          variant="native"
         >
-          <DropdownMenuLabel className="px-2 pt-1 pb-1 text-[11px] font-semibold leading-4">
+          <DropdownMenuLabel className={composerNativeMenuLabelClassName}>
             {t("composer.provider")}
           </DropdownMenuLabel>
           {providerOptions.map((provider) => (
@@ -988,12 +993,12 @@ function ComposerModelMenu({
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent
-          className="w-[16.5rem] min-w-0"
+          className={`${composerNativeMenuClassName} w-[17rem] min-w-0`}
           align="start"
-          sideOffset={6}
-          variant="apple"
+          sideOffset={4}
+          variant="native"
         >
-          <DropdownMenuLabel className="px-2 pt-1 pb-1 text-[11px] font-semibold leading-4">
+          <DropdownMenuLabel className={composerNativeMenuLabelClassName}>
             {t("composer.model")} / {t("composer.effort")}
           </DropdownMenuLabel>
           <ComposerModelMenuSub
@@ -1067,12 +1072,12 @@ function ComposerModelMenu({
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent
-          className="w-[16.5rem] min-w-0"
+          className={`${composerNativeMenuClassName} w-[17rem] min-w-0`}
           align="start"
-          sideOffset={6}
-          variant="apple"
+          sideOffset={4}
+          variant="native"
         >
-          <DropdownMenuLabel className="px-2 pt-1 pb-1 text-[11px] font-semibold leading-4">
+          <DropdownMenuLabel className={composerNativeMenuLabelClassName}>
             {t("composer.agentSettings")}
           </DropdownMenuLabel>
           <ComposerModelMenuSub
@@ -1136,7 +1141,7 @@ function ComposerModelMenuSearch({
 }) {
   return (
     <div
-      className="sticky top-0 z-10 -mx-0.5 mb-1 bg-white/85 px-0.5 pb-1 backdrop-blur-xl dark:bg-card/90"
+      className="sticky top-0 z-10 -mx-0.5 mb-1 bg-white/90 px-0.5 pb-1 backdrop-blur-xl dark:bg-card/95"
       onKeyDown={(event) => event.stopPropagation()}
       onPointerDown={(event) => event.stopPropagation()}
     >
@@ -1145,7 +1150,7 @@ function ComposerModelMenuSearch({
         <Input
           aria-label={placeholder}
           autoComplete="off"
-          className="h-8 rounded-lg bg-foreground/[0.055] pr-2 pl-8 text-xs dark:bg-white/[0.07]"
+          className="h-7 rounded-md border-0 bg-foreground/[0.055] pr-2 pl-8 text-xs shadow-none focus-visible:ring-1 focus-visible:ring-ring/25 dark:bg-white/[0.07]"
           onChange={(event) => onChange(event.target.value)}
           placeholder={placeholder}
           value={value}
@@ -1172,18 +1177,16 @@ function ComposerModelMenuSub({
 }) {
   const trigger = (
     <DropdownMenuSubTrigger
-      className="h-9 gap-1.5 rounded-lg px-2 py-1 text-xs font-medium focus:bg-foreground/[0.06] focus:text-foreground data-open:bg-foreground/[0.07] data-open:text-foreground dark:focus:bg-white/[0.08] dark:data-open:bg-white/[0.1] [&>svg:last-child]:size-3.5"
+      className="min-h-7 w-full gap-2 rounded px-2 py-1 text-[13px] font-normal focus:bg-foreground/[0.055] focus:text-foreground data-open:bg-foreground/[0.055] data-open:text-foreground dark:focus:bg-white/[0.07] dark:data-open:bg-white/[0.07] [&>svg:last-child]:ml-1 [&>svg:last-child]:size-3.5 [&>svg:last-child]:opacity-45 focus:[&>svg:last-child]:opacity-65 data-open:[&>svg:last-child]:opacity-65"
       disabled={disabled}
       title={disabledReason ?? label}
     >
-      <span className="flex size-5 shrink-0 items-center justify-center rounded-lg bg-foreground/[0.055] text-muted-foreground shadow-[0_1px_0_rgba(255,255,255,0.55)_inset] dark:bg-white/[0.08] dark:shadow-none [&_svg]:size-3">
+      <span className="flex size-4 shrink-0 items-center justify-center text-muted-foreground [&_svg]:size-3.5">
         {icon}
       </span>
-      <span className="flex min-w-0 flex-1 items-center justify-between gap-2">
-        <span className="truncate">{label}</span>
-        <span className="min-w-0 max-w-28 truncate rounded-full bg-foreground/[0.055] px-1.5 py-0.5 text-[10.5px] font-medium leading-4 text-muted-foreground dark:bg-white/[0.07]">
-          {value}
-        </span>
+      <span className="min-w-0 flex-1 truncate">{label}</span>
+      <span className="min-w-0 max-w-28 shrink truncate text-right text-[12px] text-muted-foreground">
+        {value}
       </span>
     </DropdownMenuSubTrigger>
   );
@@ -1203,9 +1206,9 @@ function ComposerModelMenuSub({
         trigger
       )}
       <DropdownMenuSubContent
-        className="max-h-72 w-[16.5rem] min-w-0"
-        sideOffset={6}
-        variant="apple"
+        className={`${composerNativeMenuClassName} max-h-72 w-[17rem] min-w-0`}
+        sideOffset={4}
+        variant="native"
       >
         {children}
       </DropdownMenuSubContent>
@@ -1228,7 +1231,7 @@ function ComposerModelMenuItem({
 }) {
   return (
     <DropdownMenuItem
-      className="min-h-7 rounded-lg px-2 py-1 text-xs font-normal focus:bg-foreground/[0.06] focus:text-foreground dark:focus:bg-white/[0.08]"
+      className="min-h-7 rounded px-2 py-1 text-[13px] font-normal focus:bg-foreground/[0.055] focus:text-foreground dark:focus:bg-white/[0.07]"
       disabled={disabled}
       onSelect={(event) => {
         event.preventDefault();
@@ -1236,10 +1239,10 @@ function ComposerModelMenuItem({
       }}
       title={disabledReason ?? label}
     >
-      <span className="min-w-0 flex-1 truncate">{label}</span>
       <span className="flex size-4 shrink-0 items-center justify-center text-primary">
         {selected ? <Check className="size-3" /> : null}
       </span>
+      <span className="min-w-0 flex-1 truncate">{label}</span>
     </DropdownMenuItem>
   );
 }

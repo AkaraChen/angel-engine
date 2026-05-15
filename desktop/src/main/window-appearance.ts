@@ -1,14 +1,17 @@
 import {
   BrowserWindow,
+  dialog,
   ipcMain,
   nativeTheme,
   type BrowserWindowConstructorOptions,
 } from "electron";
 
 import {
+  DESKTOP_CONFIRM_DELETE_ALL_CHATS_CHANNEL,
   DESKTOP_THEME_SET_CHANNEL,
   type DesktopThemeMode,
 } from "../shared/desktop-window";
+import { translate } from "./i18n";
 
 const isMacOS = process.platform === "darwin";
 const trafficLightPosition = { x: 16, y: 18 };
@@ -42,6 +45,24 @@ export function registerDesktopWindowAppearanceIpc() {
     if (!mode) return;
 
     nativeTheme.themeSource = mode;
+  });
+
+  ipcMain.handle(DESKTOP_CONFIRM_DELETE_ALL_CHATS_CHANNEL, async (event) => {
+    const options = {
+      buttons: [translate("common.cancel"), translate("common.delete")],
+      cancelId: 0,
+      defaultId: 0,
+      detail: translate("settings.danger.description"),
+      message: translate("settings.danger.confirmDeleteAll"),
+      noLink: true,
+      type: "warning" as const,
+    };
+    const parentWindow = BrowserWindow.fromWebContents(event.sender);
+    const result = parentWindow
+      ? await dialog.showMessageBox(parentWindow, options)
+      : await dialog.showMessageBox(options);
+
+    return result.response === 1;
   });
 }
 

@@ -1,0 +1,138 @@
+import {
+  app,
+  BrowserWindow,
+  Menu,
+  type MenuItemConstructorOptions,
+} from "electron";
+
+import {
+  DESKTOP_COMMAND_CHANNEL,
+  type DesktopWindowCommand,
+} from "../shared/desktop-window";
+import { translate } from "./i18n";
+
+const isMacOS = process.platform === "darwin";
+
+export function configureApplicationMenu() {
+  Menu.setApplicationMenu(Menu.buildFromTemplate(menuTemplate()));
+}
+
+function menuTemplate(): MenuItemConstructorOptions[] {
+  return [
+    ...(isMacOS
+      ? [
+          {
+            label: app.name,
+            submenu: [
+              { role: "about" },
+              { type: "separator" },
+              commandItem(
+                "open-settings",
+                translate("workspace.settings"),
+                ",",
+              ),
+              { type: "separator" },
+              { role: "services" },
+              { type: "separator" },
+              { role: "hide" },
+              { role: "hideOthers" },
+              { role: "unhide" },
+              { type: "separator" },
+              { role: "quit" },
+            ],
+          } satisfies MenuItemConstructorOptions,
+        ]
+      : []),
+    {
+      label: translate("common.file"),
+      submenu: [
+        commandItem("new-chat", translate("workspace.newChat"), "CmdOrCtrl+N"),
+        ...(!isMacOS
+          ? [
+              { type: "separator" } satisfies MenuItemConstructorOptions,
+              commandItem(
+                "open-settings",
+                translate("workspace.settings"),
+                "Ctrl+,",
+              ),
+              { type: "separator" } satisfies MenuItemConstructorOptions,
+              { role: "quit" } satisfies MenuItemConstructorOptions,
+            ]
+          : []),
+      ],
+    },
+    {
+      label: translate("common.edit"),
+      submenu: [
+        { role: "undo" },
+        { role: "redo" },
+        { type: "separator" },
+        { role: "cut" },
+        { role: "copy" },
+        { role: "paste" },
+        { role: "pasteAndMatchStyle" },
+        { role: "delete" },
+        { role: "selectAll" },
+      ],
+    },
+    {
+      label: "View",
+      submenu: [
+        commandItem(
+          "toggle-sidebar",
+          translate("sidebar.toggleSidebar"),
+          "CmdOrCtrl+B",
+        ),
+        { type: "separator" },
+        { role: "reload" },
+        { role: "forceReload" },
+        { role: "toggleDevTools" },
+        { type: "separator" },
+        { role: "resetZoom" },
+        { role: "zoomIn" },
+        { role: "zoomOut" },
+        { type: "separator" },
+        { role: "togglefullscreen" },
+      ],
+    },
+    {
+      label: "Window",
+      submenu: [
+        { role: "minimize" },
+        { role: "zoom" },
+        ...(isMacOS
+          ? [
+              { type: "separator" } satisfies MenuItemConstructorOptions,
+              { role: "front" } satisfies MenuItemConstructorOptions,
+              { type: "separator" } satisfies MenuItemConstructorOptions,
+              { role: "window" } satisfies MenuItemConstructorOptions,
+            ]
+          : [{ role: "close" } satisfies MenuItemConstructorOptions]),
+      ],
+    },
+    {
+      role: "help",
+      submenu: [],
+    },
+  ];
+}
+
+function commandItem(
+  command: DesktopWindowCommand,
+  label: string,
+  accelerator: string,
+): MenuItemConstructorOptions {
+  return {
+    accelerator,
+    click: () => {
+      sendCommand(command);
+    },
+    label,
+  };
+}
+
+function sendCommand(command: DesktopWindowCommand) {
+  const window =
+    BrowserWindow.getFocusedWindow() ?? BrowserWindow.getAllWindows()[0];
+  window?.webContents.send(DESKTOP_COMMAND_CHANNEL, { command });
+}

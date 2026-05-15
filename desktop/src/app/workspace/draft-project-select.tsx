@@ -24,7 +24,7 @@ export function DraftProjectSelect({
 
   return (
     <div className="relative w-fit max-w-[18rem]">
-      <Folder className="pointer-events-none absolute top-1/2 left-2.5 z-10 size-3.5 -translate-y-1/2 text-muted-foreground" />
+      <Folder className="pointer-events-none absolute top-1/2 left-2.5 z-10 size-3.5 -translate-y-1/2 text-muted-foreground/85" />
       <NativeSelect
         aria-label={t("workspace.projectSelect")}
         className="max-w-[18rem]"
@@ -34,7 +34,7 @@ export function DraftProjectSelect({
             nextValue === NO_PROJECT_SELECT_VALUE ? null : nextValue,
           );
         }}
-        selectClassName="h-8 max-w-[18rem] rounded-full border-foreground/10 bg-background/95 py-0 pr-8 pl-8 text-xs shadow-[0_10px_30px_-22px_rgba(0,0,0,0.8),0_1px_0_rgba(255,255,255,0.8)_inset] backdrop-blur-xl hover:bg-background dark:border-white/10 dark:bg-card/95 dark:shadow-[0_10px_30px_-22px_rgba(0,0,0,0.95),0_1px_0_rgba(255,255,255,0.08)_inset]"
+        selectClassName="h-8 max-w-[18rem] rounded-md border border-foreground/[0.08] bg-background/88 py-0 pr-8 pl-8 text-xs shadow-[0_8px_18px_-18px_rgba(0,0,0,0.55)] backdrop-blur-xl hover:bg-background/92 focus-visible:!border-foreground/12 focus-visible:!ring-0 dark:border-white/[0.09] dark:bg-card/86 dark:shadow-[0_10px_20px_-20px_rgba(0,0,0,0.72)] dark:hover:bg-card/90 dark:focus-visible:!border-white/14"
         size="sm"
         title={t("workspace.projectSelect")}
         value={value}

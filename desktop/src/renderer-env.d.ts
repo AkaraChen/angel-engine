@@ -1,5 +1,6 @@
 import type { ChatStreamApi } from "./shared/chat";
 import type {
+  DesktopWindowCommand,
   DesktopOpenChatFromNotificationEvent,
   DesktopThemeSetInput,
 } from "./shared/desktop-window";
@@ -24,6 +25,10 @@ declare global {
       platform: DesktopPlatform;
     };
     desktopWindow: {
+      confirmDeleteAllChats: () => Promise<boolean>;
+      onCommand: (
+        handler: (command: DesktopWindowCommand) => void,
+      ) => () => void;
       onOpenChatFromNotification: (
         handler: (event: DesktopOpenChatFromNotificationEvent) => void,
       ) => () => void;
