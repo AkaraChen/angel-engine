@@ -1,14 +1,8 @@
-import {
-  app,
-  BrowserWindow,
-  Menu,
-  type MenuItemConstructorOptions,
-} from "electron";
+import type { MenuItemConstructorOptions } from "electron";
+import type { DesktopWindowCommand } from "../shared/desktop-window";
 
-import {
-  DESKTOP_COMMAND_CHANNEL,
-  type DesktopWindowCommand,
-} from "../shared/desktop-window";
+import { app, BrowserWindow, Menu } from "electron";
+import { DESKTOP_COMMAND_CHANNEL } from "../shared/desktop-window";
 import { translate } from "./i18n";
 
 const isMacOS = process.platform === "darwin";

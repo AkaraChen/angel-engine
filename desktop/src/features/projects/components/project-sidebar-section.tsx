@@ -1,9 +1,11 @@
-import { useState } from "react";
 import type { ReactElement } from "react";
+import type { Chat } from "@/shared/chat";
+import type { Project } from "@/shared/projects";
 import { AnimatePresence, motion } from "framer-motion";
-import { useTranslation } from "react-i18next";
 import { ChevronRight, Folder, FolderPlus, Loader2, Plus } from "lucide-react";
 
+import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import {
   SidebarGroup,
@@ -12,24 +14,22 @@ import {
 } from "@/components/ui/sidebar";
 import {
   AnimatedSidebarMenuItem,
+  sidebarMotion,
+  SidebarSectionHeader,
   WorkspaceSidebarMenuAction,
   WorkspaceSidebarMenuButton,
-  SidebarSectionHeader,
-  sidebarMotion,
 } from "@/components/workspace-sidebar-primitives";
 import { ChatSidebarItem } from "@/features/chat/components/chat-sidebar-item";
-import type { Chat } from "@/shared/chat";
-import type { Project } from "@/shared/projects";
 
 type MaybeAsync = void | Promise<void>;
 
-type ProjectExpansionState = {
+interface ProjectExpansionState {
   expandedProjectIds: Set<string>;
   projectIds: Set<string>;
   selectedProjectId?: string;
-};
+}
 
-type ProjectSidebarSectionProps = {
+interface ProjectSidebarSectionProps {
   isLoading: boolean;
   onArchiveChat: (chat: Chat) => MaybeAsync;
   onCreateProject: () => MaybeAsync;
@@ -41,7 +41,7 @@ type ProjectSidebarSectionProps = {
   projects: Project[];
   selectedChatId?: string;
   selectedProjectId?: string;
-};
+}
 
 export function ProjectSidebarSection({
   isLoading,
@@ -168,7 +168,10 @@ export function ProjectSidebarSection({
                   >
                     <Folder />
                     <span
-                      className="block min-w-0 flex-1 overflow-hidden truncate whitespace-nowrap text-left"
+                      className="
+                        block min-w-0 flex-1 truncate overflow-hidden text-left
+                        whitespace-nowrap
+                      "
                       title={projectDisplayName}
                     >
                       {projectDisplayName}
@@ -217,9 +220,9 @@ export function ProjectSidebarSection({
                               <ChatSidebarItem
                                 chatId={chat.id}
                                 isActive={chat.id === selectedChatId}
-                                onArchiveChat={() => onArchiveChat(chat)}
+                                onArchiveChat={async () => onArchiveChat(chat)}
                                 onOpenChat={() => void onOpenChat(chat)}
-                                onShowContextMenu={() =>
+                                onShowContextMenu={async () =>
                                   onShowChatContextMenu(chat)
                                 }
                                 title={displayChatTitle(chat.title, t)}

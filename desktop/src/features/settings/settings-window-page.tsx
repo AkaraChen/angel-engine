@@ -1,16 +1,16 @@
-import { useCallback } from "react";
+import type { AgentRuntime } from "@/shared/agents";
+import type { Chat } from "@/shared/chat";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useTranslation } from "react-i18next";
 
+import { useCallback } from "react";
+import { useTranslation } from "react-i18next";
+import { useToast } from "@/components/ui/toast";
+import { deleteAllChatsMutationOptions } from "@/features/chat/api/queries";
+import { cancelAllChatRuns } from "@/features/chat/state/chat-run-store";
 import { SettingsPage } from "@/features/settings/settings-page";
 import { useAgentSettings } from "@/features/settings/use-agent-settings";
-import { useToast } from "@/components/ui/toast";
-import { useApi } from "@/platform/use-api";
-import { deleteAllChatsMutationOptions } from "@/features/chat/api/queries";
 import { queryKeys } from "@/platform/query-keys";
-import { cancelAllChatRuns } from "@/features/chat/state/chat-run-store";
-import type { Chat } from "@/shared/chat";
-import type { AgentRuntime } from "@/shared/agents";
+import { useApi } from "@/platform/use-api";
 
 const EMPTY_CHATS: Chat[] = [];
 

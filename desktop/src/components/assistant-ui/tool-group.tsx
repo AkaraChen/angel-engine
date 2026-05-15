@@ -1,21 +1,16 @@
-import {
-  memo,
-  useCallback,
-  useRef,
-  useState,
-  type ComponentProps,
-  type CSSProperties,
-  type FC,
-  type PropsWithChildren,
-} from "react";
-import {
-  useAuiState,
-  useScrollLock,
-  type PartState,
-} from "@assistant-ui/react";
-import { cva, type VariantProps } from "class-variance-authority";
+import type { PartState } from "@assistant-ui/react";
+import type { VariantProps } from "class-variance-authority";
 import type { TFunction } from "i18next";
+import type {
+  ComponentProps,
+  CSSProperties,
+  FC,
+  PropsWithChildren,
+} from "react";
+import { useAuiState, useScrollLock } from "@assistant-ui/react";
+import { cva } from "class-variance-authority";
 import { ChevronDownIcon } from "lucide-react";
+import { memo, useCallback, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import {
@@ -112,21 +107,32 @@ function ToolGroupTrigger({
   return (
     <CollapsibleTrigger
       className={cn(
-        "aui-tool-group-trigger group/trigger flex min-h-7 w-fit max-w-full items-center gap-1.5 rounded-md text-[13px] text-muted-foreground transition-colors hover:text-foreground",
+        `
+          aui-tool-group-trigger group/trigger flex min-h-7 w-fit max-w-full
+          items-center gap-1.5 rounded-md text-[13px] text-muted-foreground
+          transition-colors
+          hover:text-foreground
+        `,
         className,
       )}
       data-slot="tool-group-trigger"
       {...props}
     >
       <span
-        className="aui-tool-group-trigger-label-wrapper min-w-0 truncate text-start font-medium leading-none"
+        className="
+          aui-tool-group-trigger-label-wrapper min-w-0 truncate text-start
+          leading-none font-medium
+        "
         data-slot="tool-group-trigger-label"
       >
         {label}
       </span>
       <ChevronDownIcon
         className={cn(
-          "aui-tool-group-trigger-chevron size-3.5 shrink-0 text-muted-foreground/70",
+          `
+            aui-tool-group-trigger-chevron size-3.5 shrink-0
+            text-muted-foreground/70
+          `,
           "transition-transform duration-(--animation-duration) ease-out",
           "group-data-[state=closed]/trigger:-rotate-90",
           "group-data-[state=open]/trigger:rotate-0",

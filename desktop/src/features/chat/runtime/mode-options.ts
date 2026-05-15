@@ -4,20 +4,20 @@ const BUILD_MODE_FALLBACKS = ["build", "code", "default"];
 
 export type ModeOptionFamily = "agent" | "permission";
 
-export type ModeOptionSelection = {
+export interface ModeOptionSelection {
   canSet: boolean;
   family: ModeOptionFamily;
   options: AgentValueOption[];
   value: string;
-};
+}
 
-export type PlanModeToggleTarget = {
+export interface PlanModeToggleTarget {
   buildMode: AgentValueOption;
   family: ModeOptionFamily;
   isPlanMode: boolean;
   planMode: AgentValueOption;
   targetMode: AgentValueOption;
-};
+}
 
 export function findPlanModeToggleTarget(
   selections: ModeOptionSelection[],

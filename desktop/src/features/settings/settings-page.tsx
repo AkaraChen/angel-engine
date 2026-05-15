@@ -1,12 +1,7 @@
-import {
-  useCallback,
-  useId,
-  useState,
-  type KeyboardEvent,
-  type ReactNode,
-} from "react";
-import { useTranslation } from "react-i18next";
-import { AlertTriangle, Trash2 } from "lucide-react";
+import type { KeyboardEvent, ReactNode } from "react";
+import type { SupportedLanguage } from "@/i18n";
+import type { DesktopThemeMode } from "@/platform/theme";
+import type { AgentRuntime, AgentSettings } from "@/shared/agents";
 import claudeIconUrl from "@lobehub/icons-static-svg/icons/claudecode-color.svg";
 import clineIconUrl from "@lobehub/icons-static-svg/icons/cline.svg";
 import codexIconUrl from "@lobehub/icons-static-svg/icons/codex-color.svg";
@@ -15,25 +10,22 @@ import cursorIconUrl from "@lobehub/icons-static-svg/icons/cursor.svg";
 import geminiIconUrl from "@lobehub/icons-static-svg/icons/geminicli-color.svg";
 import kimiIconUrl from "@lobehub/icons-static-svg/icons/kimi-color.svg";
 import opencodeIconUrl from "@lobehub/icons-static-svg/icons/opencode.svg";
-import qoderIconUrl from "@lobehub/icons-static-svg/icons/qoder-color.svg";
 
+import qoderIconUrl from "@lobehub/icons-static-svg/icons/qoder-color.svg";
+import { AlertTriangle, Trash2 } from "lucide-react";
+import { useCallback, useId, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import {
   NativeSelect,
   NativeSelectOption,
 } from "@/components/ui/native-select";
 import { Switch } from "@/components/ui/switch";
-import { cn } from "@/platform/utils";
-import {
-  AGENT_OPTIONS,
-  getEnabledAgentOptions,
-  type AgentRuntime,
-  type AgentSettings,
-} from "@/shared/agents";
-import { useThemeSettings } from "@/features/settings/use-theme-settings";
 import { useSettingsStore } from "@/features/settings/settings-store";
-import { languageOptions, type SupportedLanguage } from "@/i18n";
-import type { DesktopThemeMode } from "@/platform/theme";
+import { useThemeSettings } from "@/features/settings/use-theme-settings";
+import { languageOptions } from "@/i18n";
+import { cn } from "@/platform/utils";
+import { AGENT_OPTIONS, getEnabledAgentOptions } from "@/shared/agents";
 
 type SettingsTab = "agents" | "appearance" | "danger";
 
@@ -143,10 +135,17 @@ export function SettingsPage({
   return (
     <main className="flex min-h-0 flex-1 overflow-hidden bg-background">
       <aside
-        className="flex w-48 shrink-0 flex-col border-r border-border/70 bg-sidebar/80 px-3 pt-14"
+        className="
+          flex w-48 shrink-0 flex-col border-r border-border/70 bg-sidebar/80
+          px-3 pt-14
+        "
         data-electron-drag
       >
-        <h1 className="px-2 pb-4 text-[13px] font-semibold text-sidebar-foreground">
+        <h1
+          className="
+          px-2 pb-4 text-[13px] font-semibold text-sidebar-foreground
+        "
+        >
           {t("settings.title")}
         </h1>
         <nav
@@ -161,7 +160,13 @@ export function SettingsPage({
               aria-controls={`${tabPanelId}-${tab.id}`}
               aria-selected={activeTab === tab.id}
               className={cn(
-                "flex h-8 items-center rounded-md px-2 text-left text-[13px] font-medium text-sidebar-foreground/70 transition-colors outline-none hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-2 focus-visible:ring-ring/30",
+                `
+                  flex h-8 items-center rounded-md px-2 text-left text-[13px]
+                  font-medium text-sidebar-foreground/70 transition-colors
+                  outline-none
+                  hover:bg-sidebar-accent hover:text-sidebar-accent-foreground
+                  focus-visible:ring-2 focus-visible:ring-ring/30
+                `,
                 activeTab === tab.id
                   ? "bg-sidebar-accent text-sidebar-accent-foreground"
                   : "bg-transparent",
@@ -181,7 +186,11 @@ export function SettingsPage({
       </aside>
 
       <section className="min-w-0 flex-1 overflow-auto">
-        <div className="mx-auto flex w-full max-w-2xl flex-col gap-5 px-8 pt-14 pb-8">
+        <div
+          className="
+          mx-auto flex w-full max-w-2xl flex-col gap-5 px-8 pt-14 pb-8
+        "
+        >
           <h2 className="text-xl font-semibold tracking-normal">
             {activeTabLabel}
           </h2>
@@ -217,7 +226,13 @@ export function SettingsPage({
                         key={agent.id}
                         muted={!enabled}
                       >
-                        <span className="flex size-9 shrink-0 items-center justify-center rounded-lg border border-foreground/10 bg-background">
+                        <span
+                          className="
+                              flex size-9 shrink-0 items-center justify-center
+                              rounded-lg border border-foreground/10
+                              bg-background
+                            "
+                        >
                           <img
                             alt=""
                             className="size-5 object-contain"
@@ -226,7 +241,11 @@ export function SettingsPage({
                           />
                         </span>
                         <span className="min-w-0 flex-1">
-                          <span className="block truncate text-sm font-medium">
+                          <span
+                            className="
+                                block truncate text-sm font-medium
+                              "
+                          >
                             {agent.label}
                           </span>
                         </span>
@@ -346,7 +365,11 @@ function SettingsGroup({
   return (
     <section className="space-y-2">
       {title ? <h3 className="text-sm font-semibold">{title}</h3> : null}
-      <div className="divide-y divide-border overflow-hidden rounded-lg border bg-card">
+      <div
+        className="
+        divide-y divide-border overflow-hidden rounded-lg border bg-card
+      "
+      >
         {children}
       </div>
     </section>
@@ -378,7 +401,12 @@ function SettingsRow({
       )}
     >
       {icon ? (
-        <span className="flex size-8 shrink-0 items-center justify-center rounded-md border border-foreground/10 bg-background">
+        <span
+          className="
+              flex size-8 shrink-0 items-center justify-center rounded-md border
+              border-foreground/10 bg-background
+            "
+        >
           {icon}
         </span>
       ) : null}
@@ -418,7 +446,11 @@ function SettingsSelect({
   value: string;
 }) {
   return (
-    <label className="flex min-w-44 flex-col gap-1.5 text-xs font-medium text-muted-foreground">
+    <label
+      className="
+      flex min-w-44 flex-col gap-1.5 text-xs font-medium text-muted-foreground
+    "
+    >
       <NativeSelect
         aria-label={label}
         className="w-full"

@@ -1,29 +1,29 @@
-import { useCallback, useLayoutEffect, useMemo, useRef } from "react";
-import {
-  useExternalStoreRuntime,
-  type AppendMessage,
-  type AssistantRuntime,
-  type ExternalStoreAdapter,
-  type ThreadMessage,
+import type {
+  AppendMessage,
+  AssistantRuntime,
+  ExternalStoreAdapter,
+  ThreadMessage,
 } from "@assistant-ui/react";
-
-import {
-  useChatRunIsRunning,
-  useChatRunMessages,
-  useChatRunStore,
-  type EngineMessage,
-} from "@/features/chat/state/chat-run-store";
+import type { EngineMessage } from "@/features/chat/state/chat-run-store";
 import type {
   Chat,
   ChatHistoryMessage,
   ChatRuntimeConfig,
 } from "@/shared/chat";
 
+import { useExternalStoreRuntime } from "@assistant-ui/react";
+import { useCallback, useLayoutEffect, useMemo, useRef } from "react";
+import {
+  useChatRunIsRunning,
+  useChatRunMessages,
+  useChatRunStore,
+} from "@/features/chat/state/chat-run-store";
+
 type EngineRuntimeAdapters = NonNullable<
   ExternalStoreAdapter<EngineMessage>["adapters"]
 >;
 
-export type EngineRuntimeOptions = {
+export interface EngineRuntimeOptions {
   adapters: EngineRuntimeAdapters;
   chatId?: string;
   historyMessages: ChatHistoryMessage[];
@@ -43,7 +43,7 @@ export type EngineRuntimeOptions = {
   runtime?: string;
   runtimeConfig?: ChatRuntimeConfig;
   slotKey: string;
-};
+}
 
 export function useEngineRuntime({
   adapters,

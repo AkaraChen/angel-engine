@@ -1,6 +1,7 @@
-import { app, BrowserWindow, screen, type Rectangle } from "electron";
+import type { BrowserWindow, Rectangle } from "electron";
 import fs from "node:fs";
 import path from "node:path";
+import { app, screen } from "electron";
 
 const mainWindowStateFileName = "window-state.json";
 const defaultMainBounds = {

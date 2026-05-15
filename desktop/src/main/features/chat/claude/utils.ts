@@ -1,13 +1,13 @@
 import type { ClientUpdate } from "@angel-engine/client-napi";
-import { EngineEventElicitationDecision } from "@angel-engine/client-napi";
 import type {
-  EffortLevel,
   Options as ClaudeQueryOptions,
+  EffortLevel,
   PermissionMode,
 } from "@anthropic-ai/claude-agent-sdk";
-
 import type { ChatElicitationResponse } from "../../../../shared/chat";
+
 import type { EngineEventJson, JsonObject } from "./types";
+import { EngineEventElicitationDecision } from "@angel-engine/client-napi";
 
 const CLAUDE_PERMISSION_MODE_VISIBILITY = {
   default: true,

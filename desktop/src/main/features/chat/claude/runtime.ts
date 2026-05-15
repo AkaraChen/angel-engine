@@ -1,8 +1,9 @@
 import type { SendTextRequest } from "@angel-engine/client-napi";
 import type { SDKUserMessage } from "@anthropic-ai/claude-agent-sdk";
 
-import { ClientInputType, type ClientInput } from "../client-input";
+import type { ClientInput } from "../client-input";
 import type { ClaudeSdkModule, JsonObject } from "./types";
+import { ClientInputType } from "../client-input";
 import {
   asObject,
   claudeEffortLevelIds,
@@ -14,24 +15,22 @@ let claudeSdkPromise: Promise<ClaudeSdkModule> | undefined;
 let claudePermissionModesPromise: Promise<string[]> | undefined;
 let claudeEffortLevelsPromise: Promise<string[]> | undefined;
 
-export function loadClaudeSdk(): Promise<ClaudeSdkModule> {
+export async function loadClaudeSdk(): Promise<ClaudeSdkModule> {
   claudeSdkPromise ??= import("@anthropic-ai/claude-agent-sdk");
   return claudeSdkPromise;
 }
 
-export function loadClaudePermissionModeIds(): Promise<string[]> {
+export async function loadClaudePermissionModeIds(): Promise<string[]> {
   claudePermissionModesPromise ??= Promise.resolve(claudePermissionModeIds());
   return claudePermissionModesPromise;
 }
 
-export function loadClaudeEffortLevelIds(): Promise<string[]> {
+export async function loadClaudeEffortLevelIds(): Promise<string[]> {
   claudeEffortLevelsPromise ??= Promise.resolve(claudeEffortLevelIds());
   return claudeEffortLevelsPromise;
 }
 
-export async function* emptyClaudePrompt(): AsyncIterable<SDKUserMessage> {
-  return;
-}
+export async function* emptyClaudePrompt(): AsyncIterable<SDKUserMessage> {}
 
 export function claudePrompt(
   text: string,

@@ -43,7 +43,7 @@ export type ClaudeExitPlanModeInput = ExitPlanModeInput & {
   planFilePath?: unknown;
 };
 
-export type ClaudeToolInputByName = {
+export interface ClaudeToolInputByName {
   [CLAUDE_TOOL.Agent]: AgentInput;
   [CLAUDE_TOOL.AskUserQuestion]: AskUserQuestionInput;
   [CLAUDE_TOOL.Bash]: BashInput;
@@ -59,7 +59,7 @@ export type ClaudeToolInputByName = {
   [CLAUDE_TOOL.WebFetch]: WebFetchInput;
   [CLAUDE_TOOL.WebSearch]: WebSearchInput;
   [CLAUDE_TOOL.Write]: FileWriteInput;
-};
+}
 
 export type ClaudeAskUserQuestionInput =
   ClaudeToolInputByName[typeof CLAUDE_TOOL.AskUserQuestion];

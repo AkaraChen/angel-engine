@@ -1,15 +1,15 @@
-import { randomUUID } from "node:crypto";
-import fs from "node:fs";
-import path from "node:path";
-import { asc, eq } from "drizzle-orm";
-
 import type {
   CreateProjectInput,
   Project,
   UpdateProjectInput,
 } from "../../../shared/projects";
-import { projects } from "../../db/schema";
+import { randomUUID } from "node:crypto";
+import fs from "node:fs";
+import path from "node:path";
+
+import { asc, eq } from "drizzle-orm";
 import { closeDatabase, getDatabase } from "../../db/database";
+import { projects } from "../../db/schema";
 
 export function listProjects(): Project[] {
   return getDatabase()

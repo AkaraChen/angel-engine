@@ -1,4 +1,16 @@
-import { useState } from "react";
+import type {
+  CompleteAttachment,
+  DataMessagePartProps,
+  EnrichedPartState,
+  ToolCallMessagePartProps,
+} from "@assistant-ui/react";
+import type { TFunction } from "i18next";
+import type {
+  ChatElicitation,
+  ChatElicitationResponse,
+  ChatPlanData,
+  ChatToolAction,
+} from "@/shared/chat";
 import {
   ActionBarPrimitive,
   AuiIf,
@@ -7,19 +19,12 @@ import {
   MessagePrimitive,
   useAui,
   useAuiState,
-  type CompleteAttachment,
-  type DataMessagePartProps,
-  type EnrichedPartState,
-  type ToolCallMessagePartProps,
 } from "@assistant-ui/react";
 import { StreamdownTextPrimitive } from "@assistant-ui/react-streamdown";
 import { cjk } from "@streamdown/cjk";
 import { code as streamdownCode } from "@streamdown/code";
 import { math } from "@streamdown/math";
 import { mermaid } from "@streamdown/mermaid";
-import type { TFunction } from "i18next";
-import { useTranslation } from "react-i18next";
-import { Streamdown } from "streamdown";
 import {
   AlertCircleIcon,
   Check,
@@ -27,8 +32,8 @@ import {
   ChevronLeft,
   ChevronRight,
   Circle,
-  CircleHelp,
   CircleDot,
+  CircleHelp,
   Clipboard,
   Copy,
   FileText,
@@ -43,10 +48,10 @@ import {
   Volume2,
   VolumeX,
 } from "lucide-react";
+import { useState } from "react";
+import { useTranslation } from "react-i18next";
 
-import { ChatAttachmentTile } from "@/features/chat/components/attachment-tile";
-import { useChatOptions } from "@/features/chat/runtime/chat-options-context";
-import { findPlanModeToggleTarget } from "@/features/chat/runtime/mode-options";
+import { Streamdown } from "streamdown";
 import { Reasoning, ReasoningGroup } from "@/components/assistant-ui/reasoning";
 import { ToolGroup } from "@/components/assistant-ui/tool-group";
 import { Button } from "@/components/ui/button";
@@ -56,24 +61,25 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import { useToast } from "@/components/ui/toast";
-import { useChatRuntimeActions } from "@/features/chat/runtime/chat-runtime-actions-context";
-import { cn } from "@/platform/utils";
-import {
-  isChatElicitationData,
-  isChatPlanData,
-  isChatToolAction,
-  parseDataUrl,
-  type ChatElicitation,
-  type ChatElicitationResponse,
-  type ChatPlanData,
-  type ChatToolAction,
-} from "@/shared/chat";
+import { ChatAttachmentTile } from "@/features/chat/components/attachment-tile";
 import {
   iconButtonClass,
   messageActionFooterClass,
   nativeControlRowClass,
   nativePanelClass,
 } from "@/features/chat/components/thread-styles";
+import { useChatOptions } from "@/features/chat/runtime/chat-options-context";
+import { useChatRuntimeActions } from "@/features/chat/runtime/chat-runtime-actions-context";
+import { findPlanModeToggleTarget } from "@/features/chat/runtime/mode-options";
+import { cn } from "@/platform/utils";
+import {
+  isChatElicitationData,
+  isChatPlanData,
+  isChatToolAction,
+  parseDataUrl,
+} from "@/shared/chat";
+
+import { isTextLikeMimeType } from "../../../shared/mime";
 
 const assistantTextContainerClassName = [
   "min-w-0 max-w-none text-[15px] leading-[1.72] text-foreground/90 hyphens-auto [line-break:loose] [overflow-wrap:anywhere] [text-rendering:optimizeLegibility] [word-break:normal]",
@@ -109,12 +115,12 @@ type ElicitationQuestion = NonNullable<ChatElicitation["questions"]>[number];
 
 const ALLOW_PERMISSION_RESPONSE: ChatElicitationResponse = { type: "allow" };
 
-type ElicitationFreeformAnswerProps = {
+interface ElicitationFreeformAnswerProps {
   disabled: boolean;
   onChange: (value: string) => void;
   question: ElicitationQuestion;
   value: string;
-};
+}
 
 export function UserMessage() {
   const { t } = useTranslation();
@@ -134,7 +140,12 @@ export function UserMessage() {
         </MessagePrimitive.Attachments>
         <UserMessageAttachmentParts />
         {hasBubbleContent ? (
-          <div className="rounded-lg rounded-br-md bg-primary/95 px-3.5 py-2.5 text-[14px] leading-6 text-primary-foreground">
+          <div
+            className="
+                rounded-lg rounded-br-md bg-primary/95 px-3.5 py-2.5
+                text-[14px]/6 text-primary-foreground
+              "
+          >
             <UserMessageParts />
           </div>
         ) : null}
@@ -143,7 +154,11 @@ export function UserMessage() {
           <ActionBarPrimitive.Root
             autohide="not-last"
             autohideFloat="always"
-            className="flex gap-0.5 data-[floating]:opacity-0 data-[floating]:transition-opacity group-hover:data-[floating]:opacity-100"
+            className="
+              flex gap-0.5
+              data-floating:opacity-0 data-floating:transition-opacity
+              group-hover:data-floating:opacity-100
+            "
             hideWhenRunning
           >
             <ActionBarPrimitive.Edit className={iconButtonClass}>
@@ -153,8 +168,18 @@ export function UserMessage() {
             <ActionBarPrimitive.Copy
               className={cn(iconButtonClass, "group/copy")}
             >
-              <Copy className="size-3.5 group-data-[copied]/copy:hidden" />
-              <Check className="hidden size-3.5 group-data-[copied]/copy:block" />
+              <Copy
+                className="
+                size-3.5
+                group-data-copied/copy:hidden
+              "
+              />
+              <Check
+                className="
+                hidden size-3.5
+                group-data-copied/copy:block
+              "
+              />
               <span className="sr-only">{t("common.copy")}</span>
             </ActionBarPrimitive.Copy>
           </ActionBarPrimitive.Root>
@@ -171,8 +196,21 @@ export function UserEditComposer() {
     <MessagePrimitive.Root
       className={cn(messageColumnClassName, "flex justify-end")}
     >
-      <ComposerPrimitive.Root className="w-full max-w-[74%] rounded-lg border border-foreground/[0.08] bg-background/90 p-2.5 shadow-[0_8px_22px_-22px_rgba(0,0,0,0.55)] backdrop-blur-xl dark:border-white/[0.08]">
-        <ComposerPrimitive.Input className="min-h-24 w-full resize-none rounded-md bg-muted/30 px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-foreground/10" />
+      <ComposerPrimitive.Root
+        className="
+        w-full max-w-[74%] rounded-lg border border-foreground/8
+        bg-background/90 p-2.5 shadow-[0_8px_22px_-22px_rgba(0,0,0,0.55)]
+        backdrop-blur-xl
+        dark:border-white/8
+      "
+      >
+        <ComposerPrimitive.Input
+          className="
+          min-h-24 w-full resize-none rounded-md bg-muted/30 px-3 py-2 text-sm
+          outline-none
+          focus-visible:ring-2 focus-visible:ring-foreground/10
+        "
+        />
         <div className="mt-2 flex justify-end gap-2">
           <ComposerPrimitive.Cancel asChild>
             <Button size="sm" type="button" variant="ghost">
@@ -198,7 +236,11 @@ export function AssistantMessage() {
     <MessagePrimitive.Root
       className={cn(messageColumnClassName, "group flex justify-start")}
     >
-      <div className="flex w-full max-w-[760px] flex-col items-start gap-1.5 text-sm leading-6">
+      <div
+        className="
+        flex w-full max-w-[760px] flex-col items-start gap-1.5 text-sm/6
+      "
+      >
         <div className="w-full">
           <AssistantMessageParts />
         </div>
@@ -207,14 +249,28 @@ export function AssistantMessage() {
           <ActionBarPrimitive.Root
             autohide="not-last"
             autohideFloat="always"
-            className="flex gap-0.5 data-[floating]:opacity-0 data-[floating]:transition-opacity group-hover:data-[floating]:opacity-100"
+            className="
+              flex gap-0.5
+              data-floating:opacity-0 data-floating:transition-opacity
+              group-hover:data-floating:opacity-100
+            "
             hideWhenRunning
           >
             <ActionBarPrimitive.Copy
               className={cn(iconButtonClass, "group/copy")}
             >
-              <Copy className="size-3.5 group-data-[copied]/copy:hidden" />
-              <Check className="hidden size-3.5 group-data-[copied]/copy:block" />
+              <Copy
+                className="
+                size-3.5
+                group-data-copied/copy:hidden
+              "
+              />
+              <Check
+                className="
+                hidden size-3.5
+                group-data-copied/copy:block
+              "
+              />
               <span className="sr-only">{t("common.copy")}</span>
             </ActionBarPrimitive.Copy>
             <ActionBarPrimitive.Reload className={iconButtonClass}>
@@ -236,7 +292,10 @@ export function AssistantMessage() {
             <ActionBarPrimitive.FeedbackPositive
               className={cn(
                 iconButtonClass,
-                "data-[submitted]:bg-emerald-500/10 data-[submitted]:text-emerald-700",
+                `
+                  data-submitted:bg-emerald-500/10
+                  data-submitted:text-emerald-700
+                `,
               )}
             >
               <ThumbsUp className="size-3.5" />
@@ -245,7 +304,7 @@ export function AssistantMessage() {
             <ActionBarPrimitive.FeedbackNegative
               className={cn(
                 iconButtonClass,
-                "data-[submitted]:bg-rose-500/10 data-[submitted]:text-rose-700",
+                "data-submitted:bg-rose-500/10 data-submitted:text-rose-700",
               )}
             >
               <ThumbsDown className="size-3.5" />
@@ -253,7 +312,9 @@ export function AssistantMessage() {
             </ActionBarPrimitive.FeedbackNegative>
             <ActionBarPrimitive.ExportMarkdown
               className={iconButtonClass}
-              onExport={(content) => navigator.clipboard.writeText(content)}
+              onExport={async (content) =>
+                navigator.clipboard.writeText(content)
+              }
             >
               <Clipboard className="size-3.5" />
               <span className="sr-only">{t("messages.exportMarkdown")}</span>
@@ -268,16 +329,38 @@ export function AssistantMessage() {
 function MessageBranchPicker() {
   return (
     <BranchPickerPrimitive.Root
-      className="inline-flex h-7 items-center gap-0.5 rounded-md border border-foreground/[0.08] bg-background/70 px-1 text-xs text-muted-foreground backdrop-blur-xl dark:border-white/[0.08]"
+      className="
+        inline-flex h-7 items-center gap-0.5 rounded-md border
+        border-foreground/8 bg-background/70 px-1 text-xs text-muted-foreground
+        backdrop-blur-xl
+        dark:border-white/8
+      "
       hideWhenSingleBranch
     >
-      <BranchPickerPrimitive.Previous className="inline-flex size-5 items-center justify-center rounded disabled:opacity-40 data-[disabled]:opacity-40 hover:bg-foreground/[0.055] dark:hover:bg-white/[0.07]">
+      <BranchPickerPrimitive.Previous
+        className="
+        inline-flex size-5 items-center justify-center rounded-sm
+        hover:bg-foreground/5.5
+        disabled:opacity-40
+        dark:hover:bg-white/[0.07]
+        data-disabled:opacity-40
+      "
+      >
         <ChevronLeft className="size-3" />
       </BranchPickerPrimitive.Previous>
       <span className="min-w-8 text-center tabular-nums">
-        <BranchPickerPrimitive.Number /> / <BranchPickerPrimitive.Count />
+        <BranchPickerPrimitive.Number /> /
+        <BranchPickerPrimitive.Count />
       </span>
-      <BranchPickerPrimitive.Next className="inline-flex size-5 items-center justify-center rounded disabled:opacity-40 data-[disabled]:opacity-40 hover:bg-foreground/[0.055] dark:hover:bg-white/[0.07]">
+      <BranchPickerPrimitive.Next
+        className="
+        inline-flex size-5 items-center justify-center rounded-sm
+        hover:bg-foreground/5.5
+        disabled:opacity-40
+        dark:hover:bg-white/[0.07]
+        data-disabled:opacity-40
+      "
+      >
         <ChevronRight className="size-3" />
       </BranchPickerPrimitive.Next>
     </BranchPickerPrimitive.Root>
@@ -479,8 +562,6 @@ function textFilePreview(data: string, mimeType: string) {
   }
 }
 
-import { isTextLikeMimeType } from "../../../shared/mime";
-
 function ToolActionMessagePart(part: ToolCallMessagePartProps) {
   const action = isChatToolAction(part.artifact) ? part.artifact : undefined;
   if (action?.kind === "elicitation") {
@@ -527,8 +608,19 @@ function GenericToolActionMessagePart({
         title={title}
       />
       {hasDetails && (
-        <CollapsibleContent className="overflow-hidden data-[state=closed]:animate-collapsible-up data-[state=open]:animate-collapsible-down">
-          <div className="space-y-2 border-t border-foreground/10 px-2.5 py-2.5 dark:border-white/10">
+        <CollapsibleContent
+          className="
+          overflow-hidden
+          data-[state=closed]:animate-collapsible-up
+          data-[state=open]:animate-collapsible-down
+        "
+        >
+          <div
+            className="
+            space-y-2 border-t border-foreground/10 p-2.5
+            dark:border-white/10
+          "
+          >
             {part.argsText && (
               <ToolPreBlock
                 label={t("messages.tool.input")}
@@ -658,10 +750,21 @@ function StandaloneElicitationToolPart({
         running={awaitingInput}
         title={title}
       />
-      <CollapsibleContent className="overflow-hidden data-[state=closed]:animate-collapsible-up data-[state=open]:animate-collapsible-down">
-        <div className="space-y-3 border-t border-foreground/10 px-2.5 py-2.5 dark:border-white/10">
+      <CollapsibleContent
+        className="
+        overflow-hidden
+        data-[state=closed]:animate-collapsible-up
+        data-[state=open]:animate-collapsible-down
+      "
+      >
+        <div
+          className="
+          space-y-3 border-t border-foreground/10 p-2.5
+          dark:border-white/10
+        "
+        >
           {elicitation?.body ? (
-            <div className="whitespace-pre-wrap text-sm leading-5">
+            <div className="text-sm/5 whitespace-pre-wrap">
               {elicitation.body}
             </div>
           ) : null}
@@ -685,7 +788,14 @@ function StandaloneElicitationToolPart({
                 ))
               ) : (
                 <textarea
-                  className="min-h-20 w-full resize-y rounded-md border border-foreground/[0.08] bg-background/80 px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-foreground/10 dark:border-white/[0.08]"
+                  className="
+                            min-h-20 w-full resize-y rounded-md border
+                            border-foreground/8 bg-background/80 px-3 py-2
+                            text-sm outline-none
+                            focus-visible:ring-2
+                            focus-visible:ring-foreground/10
+                            dark:border-white/8
+                          "
                   disabled={!awaitingInput}
                   onChange={(event) => setFallbackAnswer(event.target.value)}
                   value={fallbackAnswer}
@@ -919,12 +1029,16 @@ function ElicitationQuestionInput({
     <div className="space-y-2">
       <div>
         {question.header ? (
-          <div className="text-[11px] font-medium uppercase text-muted-foreground">
+          <div
+            className="
+                text-[11px] font-medium text-muted-foreground uppercase
+              "
+          >
             {question.header}
           </div>
         ) : null}
         {question.question ? (
-          <div className="text-sm leading-5">{question.question}</div>
+          <div className="text-sm/5">{question.question}</div>
         ) : null}
       </div>
 
@@ -934,9 +1048,20 @@ function ElicitationQuestionInput({
             <button
               aria-pressed={selectedOptionLabel === option.label}
               className={cn(
-                "w-full rounded-md border border-foreground/[0.08] bg-background/75 px-3 py-2 text-left text-sm leading-5 transition-colors hover:bg-foreground/[0.055] active:bg-foreground/[0.075] dark:border-white/[0.08] dark:hover:bg-white/[0.07]",
+                `
+                      w-full rounded-md border border-foreground/8
+                      bg-background/75 px-3 py-2 text-left text-sm/5
+                      transition-colors
+                      hover:bg-foreground/5.5
+                      active:bg-foreground/7.5
+                      dark:border-white/8
+                      dark:hover:bg-white/[0.07]
+                    `,
                 selectedOptionLabel === option.label &&
-                  "border-primary/35 bg-primary/10 dark:bg-primary/15",
+                  `
+                      border-primary/35 bg-primary/10
+                      dark:bg-primary/15
+                    `,
               )}
               disabled={disabled}
               key={option.label}
@@ -948,7 +1073,11 @@ function ElicitationQuestionInput({
             >
               <span>{option.label}</span>
               {option.description ? (
-                <span className="mt-0.5 block text-xs leading-4 text-muted-foreground">
+                <span
+                  className="
+                          mt-0.5 block text-xs/4 text-muted-foreground
+                        "
+                >
                   {option.description}
                 </span>
               ) : null}
@@ -958,9 +1087,20 @@ function ElicitationQuestionInput({
             <button
               aria-pressed={selectedOther}
               className={cn(
-                "w-full rounded-md border border-foreground/[0.08] bg-background/75 px-3 py-2 text-left text-sm leading-5 transition-colors hover:bg-foreground/[0.055] active:bg-foreground/[0.075] dark:border-white/[0.08] dark:hover:bg-white/[0.07]",
+                `
+                          w-full rounded-md border border-foreground/8
+                          bg-background/75 px-3 py-2 text-left text-sm/5
+                          transition-colors
+                          hover:bg-foreground/5.5
+                          active:bg-foreground/7.5
+                          dark:border-white/8
+                          dark:hover:bg-white/[0.07]
+                        `,
                 selectedOther &&
-                  "border-primary/35 bg-primary/10 dark:bg-primary/15",
+                  `
+                          border-primary/35 bg-primary/10
+                          dark:bg-primary/15
+                        `,
               )}
               disabled={disabled}
               onClick={() => {
@@ -996,7 +1136,12 @@ function ElicitationFreeformAnswer({
   if (question.isSecret) {
     return (
       <input
-        className="h-8 w-full rounded-md border border-foreground/[0.08] bg-background/80 px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-foreground/10 dark:border-white/[0.08]"
+        className="
+          h-8 w-full rounded-md border border-foreground/8 bg-background/80 px-3
+          text-sm outline-none
+          focus-visible:ring-2 focus-visible:ring-foreground/10
+          dark:border-white/8
+        "
         disabled={disabled}
         onChange={(event) => onChange(event.target.value)}
         type="password"
@@ -1007,7 +1152,12 @@ function ElicitationFreeformAnswer({
 
   return (
     <textarea
-      className="min-h-16 w-full resize-y rounded-md border border-foreground/[0.08] bg-background/80 px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-foreground/10 dark:border-white/[0.08]"
+      className="
+        min-h-16 w-full resize-y rounded-md border border-foreground/8
+        bg-background/80 px-3 py-2 text-sm outline-none
+        focus-visible:ring-2 focus-visible:ring-foreground/10
+        dark:border-white/8
+      "
       disabled={disabled}
       onChange={(event) => onChange(event.target.value)}
       value={value}
@@ -1076,10 +1226,11 @@ function ToolStatusIcon({
 }) {
   if (failed)
     return <AlertCircleIcon className="size-3.5 shrink-0 text-rose-600" />;
-  if (running)
+  if (running) {
     return (
       <Loader2 className="size-3.5 shrink-0 animate-spin text-primary/75" />
     );
+  }
   return <Check className="size-3.5 shrink-0 text-muted-foreground/75" />;
 }
 
@@ -1096,13 +1247,20 @@ function ToolPreBlock({
     <div>
       <div
         className={cn(
-          "mb-1 text-[11px] font-medium uppercase text-muted-foreground",
+          "mb-1 text-[11px] font-medium text-muted-foreground uppercase",
           tone === "error" && "text-rose-600",
         )}
       >
         {label}
       </div>
-      <pre className="max-h-48 overflow-auto whitespace-pre-wrap break-words rounded-md border border-foreground/[0.065] bg-muted/[0.22] p-2.5 font-mono text-[11px] leading-4 dark:border-white/[0.065] dark:bg-white/[0.035]">
+      <pre
+        className="
+        max-h-48 overflow-auto rounded-md border border-foreground/6.5
+        bg-muted/22 p-2.5 font-mono text-[11px]/4 wrap-break-word
+        whitespace-pre-wrap
+        dark:border-white/6.5 dark:bg-white/[0.035]
+      "
+      >
         {value}
       </pre>
     </div>
@@ -1274,14 +1432,21 @@ function ElicitationQuestionCard({
       <CollapsibleTrigger
         className={cn(
           nativeControlRowClass,
-          "flex min-h-10 w-full items-center gap-2 rounded-none px-3 py-2 text-left",
+          `
+            flex min-h-10 w-full items-center gap-2 rounded-none px-3 py-2
+            text-left
+          `,
         )}
         type="button"
       >
         <CircleHelp className="size-3.5 shrink-0 text-muted-foreground" />
         <div className="min-w-0 flex-1">
           <div className="truncate font-medium">{title}</div>
-          <div className="mt-0.5 flex items-center gap-1.5 text-muted-foreground">
+          <div
+            className="
+            mt-0.5 flex items-center gap-1.5 text-muted-foreground
+          "
+          >
             <span>{formatElicitationKind(elicitation.kind, t)}</span>
             <span aria-hidden>·</span>
             <span>{formatElicitationPhase(phase, t)}</span>
@@ -1294,10 +1459,21 @@ function ElicitationQuestionCard({
           )}
         />
       </CollapsibleTrigger>
-      <CollapsibleContent className="overflow-hidden data-[state=closed]:animate-collapsible-up data-[state=open]:animate-collapsible-down">
-        <div className="mt-1 space-y-3 border-t border-foreground/10 px-3 py-2.5 dark:border-white/10">
+      <CollapsibleContent
+        className="
+        overflow-hidden
+        data-[state=closed]:animate-collapsible-up
+        data-[state=open]:animate-collapsible-down
+      "
+      >
+        <div
+          className="
+          mt-1 space-y-3 border-t border-foreground/10 px-3 py-2.5
+          dark:border-white/10
+        "
+        >
           {elicitation.body ? (
-            <div className="whitespace-pre-wrap text-sm leading-5">
+            <div className="text-sm/5 whitespace-pre-wrap">
               {elicitation.body}
             </div>
           ) : null}
@@ -1327,7 +1503,14 @@ function ElicitationQuestionCard({
                 ))
               ) : (
                 <textarea
-                  className="min-h-20 w-full resize-y rounded-md border border-foreground/[0.08] bg-background/80 px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-foreground/10 dark:border-white/[0.08]"
+                  className="
+                            min-h-20 w-full resize-y rounded-md border
+                            border-foreground/8 bg-background/80 px-3 py-2
+                            text-sm outline-none
+                            focus-visible:ring-2
+                            focus-visible:ring-foreground/10
+                            dark:border-white/8
+                          "
                   disabled={!awaitingInput}
                   onChange={(event) => setFallbackAnswer(event.target.value)}
                   value={fallbackAnswer}
@@ -1350,7 +1533,11 @@ function ElicitationQuestionCard({
                   </Button>
                 </div>
               ) : (
-                <div className="text-right text-[11px] text-muted-foreground">
+                <div
+                  className="
+                          text-right text-[11px] text-muted-foreground
+                        "
+                >
                   {formatElicitationPhase(phase, t)}
                 </div>
               )}
@@ -1440,7 +1627,10 @@ function PlanMessagePart({ plan }: { plan: ChatPlanData }) {
       <CollapsibleTrigger
         className={cn(
           nativeControlRowClass,
-          "flex min-h-10 w-full items-center gap-2 rounded-none px-3 py-2 text-left",
+          `
+            flex min-h-10 w-full items-center gap-2 rounded-none px-3 py-2
+            text-left
+          `,
         )}
         disabled={!hasDetails}
         type="button"
@@ -1448,7 +1638,11 @@ function PlanMessagePart({ plan }: { plan: ChatPlanData }) {
         <ListChecks className="size-3.5 shrink-0 text-muted-foreground" />
         <div className="min-w-0 flex-1">
           <div className="truncate font-medium">{planTitle}</div>
-          <div className="mt-0.5 flex min-w-0 items-center gap-1.5 text-muted-foreground">
+          <div
+            className="
+            mt-0.5 flex min-w-0 items-center gap-1.5 text-muted-foreground
+          "
+          >
             {plan.entries.length > 0 ? (
               <span>
                 {t("messages.completedCount", {
@@ -1477,8 +1671,19 @@ function PlanMessagePart({ plan }: { plan: ChatPlanData }) {
         ) : null}
       </CollapsibleTrigger>
       {hasDetails ? (
-        <CollapsibleContent className="overflow-hidden data-[state=closed]:animate-collapsible-up data-[state=open]:animate-collapsible-down">
-          <div className="space-y-3 border-t border-foreground/10 px-3 py-2.5 dark:border-white/10">
+        <CollapsibleContent
+          className="
+              overflow-hidden
+              data-[state=closed]:animate-collapsible-up
+              data-[state=open]:animate-collapsible-down
+            "
+        >
+          <div
+            className="
+                space-y-3 border-t border-foreground/10 px-3 py-2.5
+                dark:border-white/10
+              "
+          >
             {plan.text ? (
               <div className="p-2">
                 <Streamdown
@@ -1495,7 +1700,14 @@ function PlanMessagePart({ plan }: { plan: ChatPlanData }) {
               </div>
             ) : null}
             {plan.path ? (
-              <div className="flex min-w-0 items-center gap-2 rounded-md border border-foreground/[0.08] bg-background/70 px-2 py-1.5 text-muted-foreground dark:border-white/[0.08]">
+              <div
+                className="
+                        flex min-w-0 items-center gap-2 rounded-md border
+                        border-foreground/8 bg-background/70 px-2 py-1.5
+                        text-muted-foreground
+                        dark:border-white/8
+                      "
+              >
                 <FileText className="size-3.5 shrink-0" />
                 <span className="truncate font-mono text-[11px]">
                   {plan.path}
@@ -1512,7 +1724,7 @@ function PlanMessagePart({ plan }: { plan: ChatPlanData }) {
                     <PlanEntryStatusIcon status={entry.status} />
                     <span
                       className={cn(
-                        "min-w-0 flex-1 text-sm leading-5",
+                        "min-w-0 flex-1 text-sm/5",
                         entry.status === "completed" &&
                           "text-muted-foreground line-through",
                       )}
@@ -1524,7 +1736,12 @@ function PlanMessagePart({ plan }: { plan: ChatPlanData }) {
               </ol>
             ) : null}
             {isLastMessage && canStartImplementation ? (
-              <div className="flex justify-end border-t border-foreground/10 pt-2 dark:border-white/10">
+              <div
+                className="
+                        flex justify-end border-t border-foreground/10 pt-2
+                        dark:border-white/10
+                      "
+              >
                 <Button
                   onClick={startImplementation}
                   size="sm"
@@ -1560,7 +1777,14 @@ function PlanMarkerPart({
     presentation === "created" ? t("messages.created") : t("common.updated");
 
   return (
-    <div className="flex min-h-10 w-full items-center gap-2 rounded-lg border border-foreground/[0.08] bg-muted/[0.18] px-3 py-2 text-xs shadow-[0_8px_22px_-22px_rgba(0,0,0,0.55)] dark:border-white/[0.08]">
+    <div
+      className="
+      flex min-h-10 w-full items-center gap-2 rounded-lg border
+      border-foreground/8 bg-muted/18 px-3 py-2 text-xs
+      shadow-[0_8px_22px_-22px_rgba(0,0,0,0.55)]
+      dark:border-white/8
+    "
+    >
       <ListChecks className="size-3.5 shrink-0 text-muted-foreground" />
       <div className="truncate font-medium">
         {t("messages.planMarker", {
@@ -1600,11 +1824,26 @@ function NullMessagePart(): null {
 
 function JsonBlock({ label, value }: { label: string; value: unknown }) {
   return (
-    <div className="min-w-0 rounded-lg border border-foreground/[0.08] bg-muted/35 p-3 dark:border-white/[0.08]">
-      <div className="mb-1 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+    <div
+      className="
+      min-w-0 rounded-lg border border-foreground/8 bg-muted/35 p-3
+      dark:border-white/8
+    "
+    >
+      <div
+        className="
+        mb-1 text-[11px] font-medium tracking-wide text-muted-foreground
+        uppercase
+      "
+      >
         {label}
       </div>
-      <pre className="max-h-40 overflow-auto whitespace-pre-wrap break-words font-mono text-[11px] leading-4">
+      <pre
+        className="
+        max-h-40 overflow-auto font-mono text-[11px]/4 wrap-break-word
+        whitespace-pre-wrap
+      "
+      >
         {typeof value === "string" ? value : JSON.stringify(value, null, 2)}
       </pre>
     </div>

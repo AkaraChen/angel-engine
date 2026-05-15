@@ -1,19 +1,15 @@
-import { AppRuntimeProvider } from "@/features/chat/runtime/app-runtime-provider";
-import {
-  ChatOptionsProvider,
-  type ChatOptionsContextValue,
-} from "@/features/chat/runtime/chat-options-context";
-import { AssistantThread } from "@/features/chat/components/assistant-thread";
-import { DraftProjectSelect } from "@/app/workspace/draft-project-select";
-import {
-  EMPTY_MESSAGES,
-  type ChatUpdateHandler,
-} from "./workspace-thread-types";
+import type { ChatUpdateHandler } from "./workspace-thread-types";
+import type { ChatOptionsContextValue } from "@/features/chat/runtime/chat-options-context";
 import type { AgentRuntime } from "@/shared/agents";
 import type { Chat, ChatRuntimeConfig } from "@/shared/chat";
 import type { Project } from "@/shared/projects";
+import { DraftProjectSelect } from "@/app/workspace/draft-project-select";
+import { AssistantThread } from "@/features/chat/components/assistant-thread";
+import { AppRuntimeProvider } from "@/features/chat/runtime/app-runtime-provider";
+import { ChatOptionsProvider } from "@/features/chat/runtime/chat-options-context";
+import { EMPTY_MESSAGES } from "./workspace-thread-types";
 
-type DraftChatThreadProps = {
+interface DraftChatThreadProps {
   chatOptions: ChatOptionsContextValue;
   model?: string;
   mode?: string;
@@ -31,7 +27,7 @@ type DraftChatThreadProps = {
   runtime: AgentRuntime;
   runtimeConfig?: ChatRuntimeConfig;
   slotKey: string;
-};
+}
 
 export function DraftChatThread({
   chatOptions,

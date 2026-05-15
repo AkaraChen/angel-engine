@@ -1,14 +1,14 @@
-export type Project = {
+export interface Project {
   id: string;
   path: string;
-};
+}
 
-export type CreateProjectInput = {
+export interface CreateProjectInput {
   id?: string;
   path: string;
-};
+}
 
-export type UpdateProjectInput = {
+export interface UpdateProjectInput {
   id: string;
   path: string;
-};
+}

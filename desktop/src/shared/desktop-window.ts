@@ -1,7 +1,7 @@
-export type DesktopOpenChatFromNotificationEvent = {
+export interface DesktopOpenChatFromNotificationEvent {
   chatId: string;
   projectId?: string | null;
-};
+}
 
 export type DesktopThemeMode = "light" | "dark" | "system";
 
@@ -10,9 +10,9 @@ export type DesktopWindowCommand =
   | "open-settings"
   | "toggle-sidebar";
 
-export type DesktopThemeSetInput = {
+export interface DesktopThemeSetInput {
   mode: DesktopThemeMode;
-};
+}
 
 export const DESKTOP_ACTIVE_CHAT_SET_CHANNEL = "desktop-window:active-chat:set";
 export const DESKTOP_CONFIRM_DELETE_ALL_CHATS_CHANNEL =

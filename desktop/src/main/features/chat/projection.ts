@@ -9,8 +9,6 @@ import type {
   TurnRunResult,
   TurnSnapshot,
 } from "@angel-engine/client-napi";
-import { TurnRunEventType } from "@angel-engine/client-napi";
-
 import type {
   ChatElicitation,
   ChatHistoryMessage,
@@ -21,6 +19,8 @@ import type {
   ChatStreamDelta,
   ChatToolAction,
 } from "../../../shared/chat";
+
+import { TurnRunEventType } from "@angel-engine/client-napi";
 import {
   appendChatTextPart,
   chatPlanPartName,
@@ -292,7 +292,7 @@ function planFromTurnSnapshot(turn: TurnSnapshot): ChatPlanData | undefined {
   const data: ChatPlanData = {
     entries: (turn.plan ?? []).map((entry) => ({
       content: entry.content,
-      status: entry.status as ChatPlanEntryStatus,
+      status: entry.status,
     })),
     kind: "review",
     path: turn.planPath ?? null,
@@ -305,7 +305,7 @@ function todoFromTurnSnapshot(turn: TurnSnapshot): ChatPlanData | undefined {
   const data: ChatPlanData = {
     entries: (turn.todo ?? []).map((entry) => ({
       content: entry.content,
-      status: entry.status as ChatPlanEntryStatus,
+      status: entry.status,
     })),
     kind: "todo",
     path: null,

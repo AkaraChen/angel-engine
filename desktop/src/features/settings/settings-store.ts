@@ -1,33 +1,25 @@
-import { create } from "zustand";
+import type { SupportedLanguage } from "@/i18n/resources";
 
-import {
-  sanitizeAgentSettings,
-  type AgentRuntime,
-  type AgentSettings,
-} from "@/shared/agents";
-import {
-  readDesktopThemeMode,
-  setDesktopThemeMode,
-  type DesktopThemeMode,
-} from "@/platform/theme";
-import {
-  normalizeSupportedLanguage,
-  type SupportedLanguage,
-} from "@/i18n/resources";
+import type { DesktopThemeMode } from "@/platform/theme";
+import type { AgentRuntime, AgentSettings } from "@/shared/agents";
+import { create } from "zustand";
+import { normalizeSupportedLanguage } from "@/i18n/resources";
+import { readDesktopThemeMode, setDesktopThemeMode } from "@/platform/theme";
+import { sanitizeAgentSettings } from "@/shared/agents";
 
 const agentSettingsStorageKey = "angel-engine.agent-settings.v1";
 const languageStorageKey = "angel-engine.language";
 const settingsBroadcastChannel = "angel-engine.settings.v1";
 const senderId = globalThis.crypto?.randomUUID?.() ?? String(Date.now());
 
-type SettingsBroadcastMessage = {
+interface SettingsBroadcastMessage {
   agentSettings: AgentSettings;
   language: SupportedLanguage;
   senderId: string;
   themeMode: DesktopThemeMode;
-};
+}
 
-type SettingsState = {
+interface SettingsState {
   agentSettings: AgentSettings;
   language: SupportedLanguage;
   setAgentEnabled: (runtime: AgentRuntime, enabled: boolean) => void;
@@ -38,7 +30,7 @@ type SettingsState = {
   setLanguage: (language: SupportedLanguage) => void;
   setThemeMode: (themeMode: DesktopThemeMode) => void;
   themeMode: DesktopThemeMode;
-};
+}
 
 const broadcastChannel = createBroadcastChannel();
 

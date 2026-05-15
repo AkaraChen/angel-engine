@@ -1,5 +1,6 @@
-import { motion, type HTMLMotionProps, type Transition } from "framer-motion";
+import type { HTMLMotionProps, Transition } from "framer-motion";
 import type { ReactElement, ReactNode } from "react";
+import { motion } from "framer-motion";
 
 import {
   SidebarGroupLabel,
@@ -14,10 +15,10 @@ export const sidebarMotion = {
   ease: "easeOut",
 } satisfies Transition;
 
-type AnimatedSidebarMenuItemProps = {
+interface AnimatedSidebarMenuItemProps {
   children: ReactNode;
   className?: string;
-};
+}
 
 export function AnimatedSidebarMenuItem({
   children,
@@ -38,10 +39,10 @@ export function AnimatedSidebarMenuItem({
   );
 }
 
-type SidebarSectionHeaderProps = {
+interface SidebarSectionHeaderProps {
   children?: ReactNode;
   label: string;
-};
+}
 
 export function SidebarSectionHeader({
   children,
@@ -57,7 +58,12 @@ export function SidebarSectionHeader({
         <SidebarGroupLabel className="h-7">{label}</SidebarGroupLabel>
       </div>
       {children ? (
-        <div className="flex items-center gap-1 group-data-[collapsible=icon]:hidden">
+        <div
+          className="
+              flex items-center gap-1
+              group-data-[collapsible=icon]:hidden
+            "
+        >
           {children}
         </div>
       ) : null}

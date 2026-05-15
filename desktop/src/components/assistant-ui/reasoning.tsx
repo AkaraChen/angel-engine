@@ -1,19 +1,13 @@
-import {
-  memo,
-  useCallback,
-  useRef,
-  useState,
-  type ComponentProps,
-  type CSSProperties,
-} from "react";
-import {
-  useAuiState,
-  useScrollLock,
-  type ReasoningGroupComponent,
-  type ReasoningMessagePartComponent,
+import type {
+  ReasoningGroupComponent,
+  ReasoningMessagePartComponent,
 } from "@assistant-ui/react";
-import { cva, type VariantProps } from "class-variance-authority";
+import type { VariantProps } from "class-variance-authority";
+import type { ComponentProps, CSSProperties } from "react";
+import { useAuiState, useScrollLock } from "@assistant-ui/react";
+import { cva } from "class-variance-authority";
 import { BrainIcon, ChevronDownIcon } from "lucide-react";
+import { memo, useCallback, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import {
@@ -31,8 +25,10 @@ const reasoningVariants = cva("aui-reasoning-root mb-3 w-full", {
     variant: {
       ghost: "",
       muted: "rounded-lg bg-muted/30 px-3 py-2",
-      outline:
-        "rounded-lg border border-foreground/[0.08] bg-muted/[0.18] px-3 py-2 dark:border-white/[0.08]",
+      outline: `
+          rounded-lg border border-foreground/8 bg-muted/18 px-3 py-2
+          dark:border-white/8
+        `,
     },
   },
 });
@@ -110,19 +106,32 @@ function ReasoningTrigger({
   return (
     <CollapsibleTrigger
       className={cn(
-        "aui-reasoning-trigger group/trigger flex max-w-full items-center gap-2 rounded-md py-1 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground",
+        `
+          aui-reasoning-trigger group/trigger flex max-w-full items-center gap-2
+          rounded-md py-1 text-xs font-medium text-muted-foreground
+          transition-colors
+          hover:text-foreground
+        `,
         className,
       )}
       data-slot="reasoning-trigger"
       {...props}
     >
       <BrainIcon className="aui-reasoning-trigger-icon size-4 shrink-0" />
-      <span className="aui-reasoning-trigger-label-wrapper relative inline-block leading-none">
+      <span
+        className="
+        aui-reasoning-trigger-label-wrapper relative inline-block leading-none
+      "
+      >
         <span>{label}</span>
         {active ? (
           <span
             aria-hidden
-            className="aui-reasoning-trigger-shimmer shimmer pointer-events-none absolute inset-0 motion-reduce:animate-none"
+            className="
+                  aui-reasoning-trigger-shimmer pointer-events-none absolute
+                  inset-0 shimmer
+                  motion-reduce:animate-none
+                "
           >
             {label}
           </span>
@@ -148,7 +157,10 @@ function ReasoningContent({
   return (
     <CollapsibleContent
       className={cn(
-        "aui-reasoning-content relative overflow-hidden text-sm text-muted-foreground outline-none",
+        `
+          aui-reasoning-content relative overflow-hidden text-sm
+          text-muted-foreground outline-none
+        `,
         "group/collapsible-content ease-out",
         "data-[state=closed]:animate-collapsible-up",
         "data-[state=open]:animate-collapsible-down",
@@ -174,7 +186,11 @@ function ReasoningText({
   return (
     <div
       className={cn(
-        "aui-reasoning-text max-h-64 overflow-y-auto border-l border-foreground/10 pb-2 pl-3 pt-2 text-xs leading-5 dark:border-white/10",
+        `
+          aui-reasoning-text max-h-64 overflow-y-auto border-l
+          border-foreground/10 py-2 pl-3 text-xs/5
+          dark:border-white/10
+        `,
         "whitespace-pre-wrap",
         className,
       )}

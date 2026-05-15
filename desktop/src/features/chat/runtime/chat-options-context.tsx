@@ -1,8 +1,8 @@
-import { createContext, useContext } from "react";
-
 import type { AgentRuntime, AgentValueOption } from "@/shared/agents";
 
-export type ChatOptionsContextValue = {
+import { createContext, useContext } from "react";
+
+export interface ChatOptionsContextValue {
   canSetModel: boolean;
   canSetMode: boolean;
   canSetPermissionMode: boolean;
@@ -33,7 +33,7 @@ export type ChatOptionsContextValue = {
   setPermissionMode: (mode: string) => Promise<void> | void;
   setReasoningEffort: (effort: string) => void;
   setRuntime: (runtime: AgentRuntime) => Promise<void> | void;
-};
+}
 
 const ChatOptionsContext = createContext<ChatOptionsContextValue | null>(null);
 

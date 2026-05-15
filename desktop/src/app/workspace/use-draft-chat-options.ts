@@ -1,11 +1,10 @@
-import {
-  useCallback,
-  useMemo,
-  type Dispatch,
-  type SetStateAction,
-} from "react";
-import { useTranslation } from "react-i18next";
+import type { Dispatch, SetStateAction } from "react";
+import type { DraftAgentConfig } from "@/app/workspace/workspace-thread-types";
 
+import type { AgentRuntime, AgentSettings } from "@/shared/agents";
+import type { ChatRuntimeConfig } from "@/shared/chat";
+import { useCallback, useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import {
   ensureConfigOption,
   normalizeConfigDisplayValue,
@@ -13,19 +12,14 @@ import {
   runtimeConfigOptionsToAgentOptions,
   selectedConfigOverride,
 } from "@/app/workspace/chat-runtime-options";
-import {
-  EMPTY_DRAFT_AGENT_CONFIG,
-  type DraftAgentConfig,
-} from "@/app/workspace/workspace-thread-types";
-import { type AgentRuntime, type AgentSettings } from "@/shared/agents";
-import type { ChatRuntimeConfig } from "@/shared/chat";
+import { EMPTY_DRAFT_AGENT_CONFIG } from "@/app/workspace/workspace-thread-types";
 
 type DraftRuntimeOptions = Array<{
   label: string;
   value: AgentRuntime;
 }>;
 
-type UseDraftChatOptionsInput = {
+interface UseDraftChatOptionsInput {
   activeRuntime: AgentRuntime;
   agentSettings: Pick<AgentSettings, "enabledRuntimes">;
   configLoading: boolean;
@@ -40,7 +34,7 @@ type UseDraftChatOptionsInput = {
   setDraftRuntimes: Dispatch<
     SetStateAction<Partial<Record<string, AgentRuntime>>>
   >;
-};
+}
 
 export function useDraftChatOptions({
   activeRuntime,

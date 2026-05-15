@@ -1,8 +1,3 @@
-import { createRequire } from "node:module";
-import path from "node:path";
-import { app } from "electron";
-
-import { isTextLikeMimeType } from "../../../shared/mime";
 import type {
   ConversationSnapshot,
   ElicitationResponse,
@@ -15,18 +10,11 @@ import type {
   TurnRunEvent,
   TurnRunResult,
 } from "@angel-engine/client-napi";
-import {
-  ActionPhase,
-  ElicitationResponseType,
-  TurnRunEventType,
-} from "@angel-engine/client-napi";
-
 import type {
   Chat,
   ChatAttachmentInput,
   ChatCreateInput,
   ChatElicitationResponse,
-  ChatHistoryMessage,
   ChatLoadResult,
   ChatPrewarmInput,
   ChatPrewarmResult,
@@ -40,7 +28,29 @@ import type {
   ChatSetPermissionModeResult,
   ChatSetRuntimeInput,
 } from "../../../shared/chat";
+import type { ClientInput } from "./client-input";
+
+import type { ProjectedTurnEvent } from "./projection";
+import { createRequire } from "node:module";
+import path from "node:path";
+
+import {
+  ActionPhase,
+  ElicitationResponseType,
+  TurnRunEventType,
+} from "@angel-engine/client-napi";
+import { app } from "electron";
 import { normalizeChatAttachmentsInput } from "../../../shared/chat";
+import { isTextLikeMimeType } from "../../../shared/mime";
+import { getProject } from "../projects/repository";
+import { DesktopClaudeSession } from "./claude/session";
+import { ClientInputType } from "./client-input";
+import {
+  conversationMessages,
+  projectRunResult,
+  projectTurnRunEvent,
+  runtimeConfigFromConversationSnapshot,
+} from "./projection";
 import {
   createChat,
   renameChatFromPrompt,
@@ -49,29 +59,19 @@ import {
   setChatRuntime as setChatRuntimeRecord,
   touchChat,
 } from "./repository";
-import { getProject } from "../projects/repository";
-import {
-  conversationMessages,
-  projectRunResult,
-  projectTurnRunEvent,
-  runtimeConfigFromConversationSnapshot,
-  type ProjectedTurnEvent,
-} from "./projection";
-import { ClientInputType, type ClientInput } from "./client-input";
-import { DesktopClaudeSession } from "./claude/session";
 
 type AngelClientModule = typeof import("@angel-engine/client-napi");
 type ChatStreamObserver = (
   event: ProjectedTurnEvent | { chat: Chat; type: "chat" },
 ) => void;
-export type ChatStreamControls = {
+export interface ChatStreamControls {
   setResolveElicitation?: (
     handler: (
       elicitationId: string,
       response: ChatElicitationResponse,
     ) => Promise<void>,
   ) => void;
-};
+}
 
 const nodeRequire = createRequire(__filename);
 const clientModule = nodeRequire(
@@ -85,7 +85,7 @@ const chatSessions = new Map<string, DesktopChatSession>();
 const chatPrewarms = new Map<string, ChatPrewarm>();
 const MAX_PREWARM_SESSIONS = 4;
 
-type ChatPrewarm = {
+interface ChatPrewarm {
   closed: boolean;
   config?: ChatRuntimeConfig;
   createdAt: number;
@@ -95,7 +95,7 @@ type ChatPrewarm = {
   promise: Promise<void>;
   session: DesktopChatSession;
   snapshot?: ConversationSnapshot;
-};
+}
 type ReadyChatPrewarm = ChatPrewarm & {
   config: ChatRuntimeConfig;
   snapshot: ConversationSnapshot;
@@ -119,12 +119,10 @@ export async function loadChatSession(chatId: string): Promise<ChatLoadResult> {
     remoteId: chat.remoteThreadId ?? undefined,
   });
   const updatedChat = persistRemoteThreadId(chat, snapshot);
-  const messages = conversationMessages(snapshot) as ChatHistoryMessage[];
+  const messages = conversationMessages(snapshot);
   return {
     chat: updatedChat,
-    config: runtimeConfigFromConversationSnapshot(
-      snapshot,
-    ) as ChatRuntimeConfig,
+    config: runtimeConfigFromConversationSnapshot(snapshot),
     messages,
   };
 }
@@ -296,7 +294,7 @@ function createChatSession(runtime?: string): DesktopChatSession {
     createRuntimeOptions(runtime, {
       clientName: "angel-engine",
       clientTitle: "Angel Engine",
-    }) as RuntimeOptions,
+    }),
   );
 }
 
@@ -444,9 +442,7 @@ function createChatPrewarm(input: ChatPrewarmInput, key: string): ChatPrewarm {
       }
 
       prewarm.snapshot = snapshot;
-      prewarm.config = runtimeConfigFromConversationSnapshot(
-        snapshot,
-      ) as ChatRuntimeConfig;
+      prewarm.config = runtimeConfigFromConversationSnapshot(snapshot);
     })
     .catch((error: unknown) => {
       closeChatPrewarm(prewarm);
@@ -535,11 +531,11 @@ type DesktopSendTextRequest = SendTextRequest & {
   ) => void;
   signal?: AbortSignal;
 };
-type PendingElicitation = {
+interface PendingElicitation {
   promise: Promise<TurnRunEvent[]>;
   reject: (error: Error) => void;
   resolve: (events?: TurnRunEvent[]) => void;
-};
+}
 
 class DesktopAngelSession {
   private readonly pendingElicitations = new Map<string, PendingElicitation>();
@@ -562,28 +558,28 @@ class DesktopAngelSession {
     return this.session.hasConversation();
   }
 
-  hydrate(request: HydrateRequest = {}): Promise<ConversationSnapshot> {
-    return this.enqueue(() => this.session.hydrate(request));
+  async hydrate(request: HydrateRequest = {}): Promise<ConversationSnapshot> {
+    return this.enqueue(async () => this.session.hydrate(request));
   }
 
-  inspect(cwd?: string | InspectRequest): Promise<ConversationSnapshot> {
+  async inspect(cwd?: string | InspectRequest): Promise<ConversationSnapshot> {
     const request: InspectRequest =
       typeof cwd === "string" ? { cwd } : (cwd ?? {});
-    return this.enqueue(() => this.session.inspect(request));
+    return this.enqueue(async () => this.session.inspect(request));
   }
 
-  setMode(request: SetModeRequest): Promise<ConversationSnapshot> {
-    return this.enqueue(() => this.session.setMode(request));
+  async setMode(request: SetModeRequest): Promise<ConversationSnapshot> {
+    return this.enqueue(async () => this.session.setMode(request));
   }
 
-  setPermissionMode(
+  async setPermissionMode(
     request: SetPermissionModeRequest,
   ): Promise<ConversationSnapshot> {
-    return this.enqueue(() => this.session.setPermissionMode(request));
+    return this.enqueue(async () => this.session.setPermissionMode(request));
   }
 
-  sendText(request: DesktopSendTextRequest): Promise<TurnRunResult> {
-    return this.enqueue(() => this.sendTextNow(request));
+  async sendText(request: DesktopSendTextRequest): Promise<TurnRunResult> {
+    return this.enqueue(async () => this.sendTextNow(request));
   }
 
   private async sendTextNow(
@@ -596,7 +592,7 @@ class DesktopAngelSession {
     }
 
     throwIfAborted(request.signal);
-    request.onResolveElicitation?.((elicitationId, response) =>
+    request.onResolveElicitation?.(async (elicitationId, response) =>
       this.resolveElicitationNow(elicitationId, response),
     );
 
@@ -676,7 +672,7 @@ class DesktopAngelSession {
     return undefined;
   }
 
-  private enqueue<T>(action: () => Promise<T>): Promise<T> {
+  private async enqueue<T>(action: () => Promise<T>): Promise<T> {
     const run = this.operationQueue.then(action);
     this.operationQueue = run.then(
       (): undefined => undefined,
@@ -685,7 +681,7 @@ class DesktopAngelSession {
     return run;
   }
 
-  private waitForElicitation(
+  private async waitForElicitation(
     elicitationId: string,
     signal?: AbortSignal,
   ): Promise<TurnRunEvent[]> {
@@ -797,7 +793,7 @@ function abortError(signal?: AbortSignal) {
   return error;
 }
 
-function yieldToEventLoop() {
+async function yieldToEventLoop() {
   return new Promise<void>((resolve) => setTimeout(resolve, 0));
 }
 

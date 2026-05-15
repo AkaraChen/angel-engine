@@ -1,22 +1,21 @@
 import type { CanUseTool } from "@anthropic-ai/claude-agent-sdk";
-import { EngineEventElicitationKind } from "@angel-engine/client-napi";
-
 import type { ChatElicitationResponse } from "../../../../shared/chat";
-import type { JsonObject } from "./types";
-import {
-  CLAUDE_TOOL,
-  typedClaudeInput,
-  type ClaudeAskUserQuestionInput,
-  type ClaudeQuestionInput,
+
+import type {
+  ClaudeAskUserQuestionInput,
+  ClaudeQuestionInput,
 } from "./sdk-types";
+import type { JsonObject } from "./types";
+import { EngineEventElicitationKind } from "@angel-engine/client-napi";
+import { CLAUDE_TOOL, typedClaudeInput } from "./sdk-types";
 
 type CanUseToolContext = Parameters<CanUseTool>[2];
-type NormalizedClaudeQuestionInput = {
+interface NormalizedClaudeQuestionInput {
   header: string;
   multiSelect: boolean;
   options: Array<{ description: string; label: string }>;
   question: string;
-};
+}
 
 export function claudeElicitationKind(
   toolName: string,

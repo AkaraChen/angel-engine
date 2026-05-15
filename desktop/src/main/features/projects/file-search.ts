@@ -1,11 +1,11 @@
-import fs from "node:fs/promises";
-import path from "node:path";
 import type { Dirent } from "node:fs";
-
 import type {
   ProjectFileSearchInput,
   ProjectFileSearchResult,
 } from "../../../shared/chat";
+import fs from "node:fs/promises";
+
+import path from "node:path";
 
 const DEFAULT_LIMIT = 20;
 const MAX_LIMIT = 50;
@@ -86,7 +86,12 @@ export async function searchProjectFiles(
         a.relativePath.localeCompare(b.relativePath),
     )
     .slice(0, limit)
-    .map(({ score: _score, ...result }) => result);
+    .map(({ name, path, relativePath, type }) => ({
+      name,
+      path,
+      relativePath,
+      type,
+    }));
 }
 
 function scorePathMatch(query: string, relativePath: string, name: string) {

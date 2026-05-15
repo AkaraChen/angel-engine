@@ -4,31 +4,31 @@ import type {
   ClientUpdate,
   ConversationSnapshot,
   DisplayMessagePartSnapshot,
-  TurnRunEvent,
-  TurnSnapshot,
-} from "@angel-engine/client-napi";
-import {
-  ClientEventType,
   EngineEventActionKind,
   EngineEventActionOutputKind,
-  EngineEventActionPhase,
-  EngineEventContentKind,
-  TurnRunEventType,
+  TurnRunEvent,
+  TurnSnapshot,
 } from "@angel-engine/client-napi";
 import type {
   ModelInfo,
   SDKResultMessage,
   SlashCommand,
 } from "@anthropic-ai/claude-agent-sdk";
-
 import type {
   ActiveClaudeTurn,
   EngineEventJson,
   SessionConfigValueJson,
   SessionPermissionModeJson,
 } from "./types";
-import { labelFromValue, uniqueStrings } from "./utils";
+
+import {
+  ClientEventType,
+  EngineEventActionPhase,
+  EngineEventContentKind,
+  TurnRunEventType,
+} from "@angel-engine/client-napi";
 import { actionKind, toolInputSummary, toolTitle } from "./tooling";
+import { labelFromValue, uniqueStrings } from "./utils";
 
 export function actionObserved(
   active: ActiveClaudeTurn,

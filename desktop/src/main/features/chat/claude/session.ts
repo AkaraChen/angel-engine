@@ -1,5 +1,3 @@
-import { createRequire } from "node:module";
-
 import type {
   ClientUpdate,
   ConversationSnapshot,
@@ -10,22 +8,11 @@ import type {
   SetPermissionModeRequest,
   TurnRunResult,
 } from "@angel-engine/client-napi";
-import {
-  ClientProtocol,
-  EngineEventContextScope,
-  EngineEventContextUpdateType,
-  EngineEventActionKind,
-  EngineEventActionOutputKind,
-  EngineEventActionPhase,
-  EngineEventElicitationKind,
-  EngineEventElicitationPhase,
-  EngineEventType,
-  EngineEventTurnOutcome,
-} from "@angel-engine/client-napi";
+
 import type {
   CanUseTool,
-  ModelInfo,
   Options as ClaudeQueryOptions,
+  ModelInfo,
   PermissionResult,
   Query,
   SDKAssistantMessage,
@@ -33,12 +20,33 @@ import type {
   SDKMessage,
   SDKPartialAssistantMessage,
   SDKResultMessage,
-  SDKSystemMessage,
   SDKUserMessage,
 } from "@anthropic-ai/claude-agent-sdk";
-
 import type { ChatElicitationResponse } from "../../../../shared/chat";
-import { projectTurnRunEvent, type ProjectedTurnEvent } from "../projection";
+import type { ProjectedTurnEvent } from "../projection";
+
+import type {
+  ActiveClaudeTurn,
+  DesktopClaudeSendTextRequest,
+  EngineEventJson,
+  PendingPermission,
+  SessionConfigValueJson,
+  SessionPermissionModeJson,
+} from "./types";
+import { createRequire } from "node:module";
+import {
+  ClientProtocol,
+  EngineEventActionKind,
+  EngineEventActionOutputKind,
+  EngineEventActionPhase,
+  EngineEventContextScope,
+  EngineEventContextUpdateType,
+  EngineEventElicitationKind,
+  EngineEventElicitationPhase,
+  EngineEventTurnOutcome,
+  EngineEventType,
+} from "@angel-engine/client-napi";
+import { projectTurnRunEvent } from "../projection";
 import { ClaudeCodeEngineAdapter } from "./adapter";
 import { contextPatch, contextUpdated } from "./context";
 import {
@@ -74,25 +82,17 @@ import {
   loadClaudePermissionModeIds,
   loadClaudeSdk,
 } from "./runtime";
-import type {
-  ActiveClaudeTurn,
-  DesktopClaudeSendTextRequest,
-  EngineEventJson,
-  PendingPermission,
-  SessionConfigValueJson,
-  SessionPermissionModeJson,
-} from "./types";
-import {
-  stringifyToolResult,
-  toolInputSummary,
-  toolOutputKind,
-} from "./tooling";
 import {
   isClaudeAssistantToolUseBlock,
   isClaudeContentBlockDeltaEvent,
   isClaudeContentBlockStartEvent,
   isClaudeUserToolResultBlock,
 } from "./sdk-types";
+import {
+  stringifyToolResult,
+  toolInputSummary,
+  toolOutputKind,
+} from "./tooling";
 import {
   abortError,
   asRecord,
@@ -159,7 +159,7 @@ export class DesktopClaudeSession {
     return Boolean(this.conversationId);
   }
 
-  hydrate(request: HydrateRequest = {}): Promise<ConversationSnapshot> {
+  async hydrate(request: HydrateRequest = {}): Promise<ConversationSnapshot> {
     return this.enqueue(async () => {
       this.ensureConversation({
         cwd: request.cwd,
@@ -171,7 +171,7 @@ export class DesktopClaudeSession {
     });
   }
 
-  inspect(cwd?: string | InspectRequest): Promise<ConversationSnapshot> {
+  async inspect(cwd?: string | InspectRequest): Promise<ConversationSnapshot> {
     const request: InspectRequest =
       typeof cwd === "string" ? { cwd } : (cwd ?? {});
     return this.enqueue(async () => {
@@ -181,7 +181,7 @@ export class DesktopClaudeSession {
     });
   }
 
-  setMode(request: SetModeRequest): Promise<ConversationSnapshot> {
+  async setMode(request: SetModeRequest): Promise<ConversationSnapshot> {
     return this.enqueue(async () => {
       this.ensureConversation({
         cwd: request.cwd,
@@ -191,7 +191,7 @@ export class DesktopClaudeSession {
     });
   }
 
-  setPermissionMode(
+  async setPermissionMode(
     request: SetPermissionModeRequest,
   ): Promise<ConversationSnapshot> {
     return this.enqueue(async () => {
@@ -215,8 +215,10 @@ export class DesktopClaudeSession {
     });
   }
 
-  sendText(request: DesktopClaudeSendTextRequest): Promise<TurnRunResult> {
-    return this.enqueue(() => this.sendTextNow(request));
+  async sendText(
+    request: DesktopClaudeSendTextRequest,
+  ): Promise<TurnRunResult> {
+    return this.enqueue(async () => this.sendTextNow(request));
   }
 
   private async sendTextNow(
@@ -229,7 +231,7 @@ export class DesktopClaudeSession {
     }
 
     throwIfAborted(request.signal);
-    request.onResolveElicitation?.((elicitationId, response) =>
+    request.onResolveElicitation?.(async (elicitationId, response) =>
       this.resolveElicitationNow(elicitationId, response),
     );
 
@@ -370,7 +372,7 @@ export class DesktopClaudeSession {
     active: ActiveClaudeTurn,
   ): EngineEventJson[] {
     if (message.subtype !== "init") return [];
-    const init = message as SDKSystemMessage;
+    const init = message;
     active.sessionId = init.session_id;
     this.currentPermissionMode = normalizeClaudeMode(init.permissionMode);
     this.currentModel = init.model;
@@ -467,16 +469,18 @@ export class DesktopClaudeSession {
     for (const block of content) {
       if (block.type === "text" && !active.sawTextDelta) {
         const text = block.text ?? "";
-        if (text)
+        if (text) {
           events.push(
             assistantDelta(active.conversationId, active.turnId, text),
           );
+        }
       } else if (block.type === "thinking" && !active.sawReasoningDelta) {
         const text = block.thinking ?? "";
-        if (text)
+        if (text) {
           events.push(
             reasoningDelta(active.conversationId, active.turnId, text),
           );
+        }
       } else if (isClaudeAssistantToolUseBlock(block)) {
         const toolName = block.name;
         const input = asRecord(block.input);
@@ -826,7 +830,7 @@ export class DesktopClaudeSession {
     const sdk = await loadClaudeSdk();
     const messages = await sdk.getSessionMessages(remoteId, { dir: cwd });
     const events = historyEventsFromSessionMessages(
-      this.conversationId as string,
+      this.conversationId,
       messages,
     );
     if (events.length > 0) {
@@ -982,7 +986,7 @@ export class DesktopClaudeSession {
     return conversation;
   }
 
-  private enqueue<T>(action: () => Promise<T>): Promise<T> {
+  private async enqueue<T>(action: () => Promise<T>): Promise<T> {
     const run = this.operationQueue.then(action);
     this.operationQueue = run.then(
       (): undefined => undefined,

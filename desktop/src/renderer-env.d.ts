@@ -1,8 +1,8 @@
 import type { ChatStreamApi } from "./shared/chat";
 import type {
-  DesktopWindowCommand,
   DesktopOpenChatFromNotificationEvent,
   DesktopThemeSetInput,
+  DesktopWindowCommand,
 } from "./shared/desktop-window";
 
 declare global {

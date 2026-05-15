@@ -1,14 +1,14 @@
-import { createRequire } from "node:module";
-
 import type {
   AdapterDecodeInput,
   AdapterEncodeInput,
   TransportOutput,
 } from "@angel-engine/client-napi";
-import { ClientProtocol } from "@angel-engine/client-napi";
 
-import { contextPatch, contextUpdated } from "./context";
 import type { JsonObject } from "./types";
+import { createRequire } from "node:module";
+
+import { ClientProtocol } from "@angel-engine/client-napi";
+import { contextPatch, contextUpdated } from "./context";
 import {
   additionalDirectoriesFromFields,
   asMutableObject,

@@ -1,12 +1,13 @@
-import { createContext, useContext, useMemo, type ReactNode } from "react";
+import type { ReactNode } from "react";
 
+import type { ChatElicitationResponse } from "@/shared/chat";
+import { createContext, useContext, useMemo } from "react";
 import {
   useChatPermissionBypassEnabled,
   useChatRunStore,
 } from "@/features/chat/state/chat-run-store";
-import type { ChatElicitationResponse } from "@/shared/chat";
 
-type ChatRuntimeActionsContextValue = {
+interface ChatRuntimeActionsContextValue {
   enablePermissionBypass: () => void;
   permissionBypassEnabled: boolean;
   resolveElicitation: (
@@ -16,12 +17,12 @@ type ChatRuntimeActionsContextValue = {
   ) => void;
   setMode: (mode: string) => Promise<void>;
   setPermissionMode: (mode: string) => Promise<void>;
-};
+}
 
-type ChatRuntimeActionsProviderProps = {
+interface ChatRuntimeActionsProviderProps {
   children: ReactNode;
   slotKey: string;
-};
+}
 
 const ChatRuntimeActionsContext =
   createContext<ChatRuntimeActionsContextValue | null>(null);

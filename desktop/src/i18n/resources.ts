@@ -1,3 +1,4 @@
+import type { LocaleResource } from "./locales/schema";
 import { de } from "./locales/de";
 import { en } from "./locales/en";
 import { es } from "./locales/es";
@@ -6,7 +7,6 @@ import { ja } from "./locales/ja";
 import { ko } from "./locales/ko";
 import { zhCN } from "./locales/zh-CN";
 import { zhTW } from "./locales/zh-TW";
-import type { LocaleResource } from "./locales/schema";
 
 export const supportedLanguages = [
   "en",

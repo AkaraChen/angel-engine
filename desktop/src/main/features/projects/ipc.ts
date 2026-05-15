@@ -1,18 +1,14 @@
-import { BrowserWindow, dialog, Menu, shell } from "electron";
-import { tipc } from "@egoist/tipc/main";
-import { type as arkType } from "arktype";
-
+import type { ProjectFileSearchInput } from "../../../shared/chat";
 import type {
   CreateProjectInput,
   UpdateProjectInput,
 } from "../../../shared/projects";
-import type { ProjectFileSearchInput } from "../../../shared/chat";
+import { tipc } from "@egoist/tipc/main";
+
+import { type as arkType } from "arktype";
+import { BrowserWindow, dialog, Menu, shell } from "electron";
+import { translate } from "../../i18n";
 import { searchProjectFiles } from "./file-search";
-import {
-  createProjectInput,
-  projectFileSearchInput,
-  updateProjectInput,
-} from "./schemas";
 import {
   createProject,
   deleteProject,
@@ -20,7 +16,11 @@ import {
   listProjects,
   updateProject,
 } from "./repository";
-import { translate } from "../../i18n";
+import {
+  createProjectInput,
+  projectFileSearchInput,
+  updateProjectInput,
+} from "./schemas";
 
 const t = tipc.create();
 
@@ -39,7 +39,7 @@ export const projectIpcRouter = {
     .action(async ({ input }) => {
       const value = createProjectInput(input);
       if (value instanceof arkType.errors) {
-        throw new Error("Project input is required.");
+        throw new TypeError("Project input is required.");
       }
       return createProject({
         id: value.id,
@@ -50,7 +50,7 @@ export const projectIpcRouter = {
   projectsDelete: t.procedure.input<string>().action(async ({ input }) => {
     const value = arkType("string")(input);
     if (value instanceof arkType.errors) {
-      throw new Error("Project id is required.");
+      throw new TypeError("Project id is required.");
     }
     return deleteProject(value);
   }),
@@ -58,7 +58,7 @@ export const projectIpcRouter = {
   projectsGet: t.procedure.input<string>().action(async ({ input }) => {
     const value = arkType("string")(input);
     if (value instanceof arkType.errors) {
-      throw new Error("Project id is required.");
+      throw new TypeError("Project id is required.");
     }
     return getProject(value);
   }),
@@ -70,7 +70,7 @@ export const projectIpcRouter = {
     .action(async ({ input }) => {
       const value = projectFileSearchInput(input);
       if (value instanceof arkType.errors) {
-        throw new Error("Project file search input is required.");
+        throw new TypeError("Project file search input is required.");
       }
       const query = {
         limit:
@@ -88,7 +88,7 @@ export const projectIpcRouter = {
     .action(async ({ context, input }) => {
       const projectId = arkType("string")(input);
       if (projectId instanceof arkType.errors) {
-        throw new Error("Project id is required.");
+        throw new TypeError("Project id is required.");
       }
       const project = getProject(projectId);
       if (!project) {
@@ -126,7 +126,7 @@ export const projectIpcRouter = {
     .action(async ({ input }) => {
       const value = updateProjectInput(input);
       if (value instanceof arkType.errors) {
-        throw new Error("Project input is required.");
+        throw new TypeError("Project input is required.");
       }
       return updateProject({
         id: value.id,

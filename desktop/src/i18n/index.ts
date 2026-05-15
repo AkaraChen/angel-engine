@@ -1,14 +1,14 @@
+import type { SupportedLanguage } from "@/i18n/resources";
 import i18n from "i18next";
-import { initReactI18next } from "react-i18next";
 
+import { initReactI18next } from "react-i18next";
+import { useSettingsStore } from "@/features/settings/settings-store";
 import {
   normalizeSupportedLanguage,
   resources,
   supportedLanguages,
-  type SupportedLanguage,
 } from "@/i18n/resources";
 import { ipc } from "@/platform/ipc";
-import { useSettingsStore } from "@/features/settings/settings-store";
 
 const LANGUAGE_STORAGE_KEY = "angel-engine.language";
 

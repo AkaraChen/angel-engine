@@ -4,11 +4,6 @@ import type {
   MessageStatus,
   ThreadMessage,
 } from "@assistant-ui/react";
-import { useSyncExternalStore } from "react";
-import { assign, createActor, setup } from "xstate";
-
-import { streamChatEvents } from "@/features/chat/api/chat-stream";
-import { getApiClient } from "@/platform/api-client";
 import type {
   Chat,
   ChatAttachmentInput,
@@ -24,19 +19,24 @@ import type {
   ChatToolAction,
   ChatToolActionPhase,
 } from "@/shared/chat";
+import { useSyncExternalStore } from "react";
+
+import { assign, createActor, setup } from "xstate";
+import { streamChatEvents } from "@/features/chat/api/chat-stream";
+import { getApiClient } from "@/platform/api-client";
 import {
   appendChatTextPart,
-  chatPlanPartName,
   chatPartsText,
+  chatPlanPartName,
   chatToolActionToPart,
-  cloneChatPlanData,
   cloneChatHistoryPart,
+  cloneChatPlanData,
   imageDataUrl,
   isChatElicitationData,
   isChatPlanData,
   isChatPlanPart,
-  isTerminalChatToolPhase,
   isChatToolAction,
+  isTerminalChatToolPhase,
   normalizeChatPlanMessages,
   parseDataUrl,
   upsertChatElicitationPart,
@@ -89,7 +89,7 @@ const OPTIMISTIC_TOOL_PHASE_BY_ELICITATION_RESPONSE_TYPE = {
 
 export type EngineMessage = ThreadMessage;
 
-type ActiveRun = {
+interface ActiveRun {
   abortController: AbortController;
   assistantMessageId: string;
   autoApprovedPermissionIds: Set<string>;
@@ -102,16 +102,16 @@ type ActiveRun = {
   runId: string;
   startedAt: number;
   streamController?: ChatStreamController;
-};
+}
 
-type BaseChatRunSlot = {
+interface BaseChatRunSlot {
   chatId?: string;
   config?: ChatRuntimeConfig;
   historyRevision: number;
   key: string;
   messages: EngineMessage[];
   permissionBypassEnabled: boolean;
-};
+}
 
 type IdleChatRunSlot = BaseChatRunSlot & {
   activeRun?: undefined;
@@ -125,36 +125,36 @@ type StreamingChatRunSlot = BaseChatRunSlot & {
 
 type ChatRunSlot = IdleChatRunSlot | StreamingChatRunSlot;
 
-export type ChatAttentionState = {
+export interface ChatAttentionState {
   completed: boolean;
   needsInput: boolean;
-};
+}
 
 type ChatAttentionKind = keyof ChatAttentionState;
 
-type AssistantAccumulator = {
+interface AssistantAccumulator {
   chunkCount: number;
   error?: string;
   parts: ChatHistoryMessagePart[];
   result?: ChatSendResult;
   status: MessageStatus;
-};
+}
 
-type RunCompletion = {
+interface RunCompletion {
   assistantMessage: EngineMessage;
   result?: ChatSendResult;
   slotKey: string;
-};
+}
 
-type InitializeSlotInput = {
+interface InitializeSlotInput {
   chatId?: string;
   config?: ChatRuntimeConfig;
   historyMessages: ChatHistoryMessage[];
   historyRevision: number;
   slotKey: string;
-};
+}
 
-type StartRunInput = {
+interface StartRunInput {
   callbacks?: {
     onChatCreated?: (chat: Chat) => void;
     onChatUpdated?: (
@@ -166,9 +166,9 @@ type StartRunInput = {
   input: Omit<ChatSendInput, "text">;
   message: AppendMessage;
   slotKey: string;
-};
+}
 
-type ChatRunStore = {
+interface ChatRunStore {
   activeChatId?: string;
   aliases: Record<string, string>;
   attentions: Record<string, ChatAttentionState>;
@@ -191,7 +191,7 @@ type ChatRunStore = {
   ) => Promise<ChatRuntimeConfig>;
   slots: Record<string, ChatRunSlot>;
   startRun: (input: StartRunInput) => Promise<void>;
-};
+}
 
 type ChatRunContext = Pick<
   ChatRunStore,
@@ -239,9 +239,9 @@ type ChatRunEvent =
     };
 
 const chatRunMachine = setup({
-  types: {} as {
-    context: ChatRunContext;
-    events: ChatRunEvent;
+  types: {
+    context: {} as ChatRunContext,
+    events: {} as ChatRunEvent,
   },
 }).createMachine({
   context: {
@@ -2030,7 +2030,7 @@ function historyMessageToEngineMessage(
         custom: {},
       },
       role: "system",
-    } as EngineMessage;
+    };
   }
 
   const userMessage = userHistoryMessageContentToEngineMessage(
@@ -2437,7 +2437,7 @@ function parseImageDataUrl(
   return { data, mimeType };
 }
 
-function yieldToRendererTask() {
+async function yieldToRendererTask() {
   if (typeof MessageChannel === "function") {
     return new Promise<void>((resolve) => {
       const channel = new MessageChannel();

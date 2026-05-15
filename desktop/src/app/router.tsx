@@ -1,5 +1,5 @@
-import { Redirect, Route, Router, Switch } from "wouter";
 import type { RouteComponentProps } from "wouter";
+import { Redirect, Route, Router, Switch } from "wouter";
 import { useHashLocation } from "wouter/use-hash-location";
 
 import {

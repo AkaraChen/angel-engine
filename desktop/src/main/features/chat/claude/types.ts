@@ -20,25 +20,25 @@ export type DesktopClaudeSendTextRequest = SendTextRequest & {
 export type EngineEventJson = Record<string, unknown>;
 export type JsonObject = Record<string, unknown>;
 
-export type SessionConfigValueJson = {
+export interface SessionConfigValueJson {
   description: string | null;
   name: string;
   value: string;
-};
+}
 
-export type SessionPermissionModeJson = {
+export interface SessionPermissionModeJson {
   description: string | null;
   id: string;
   name: string;
-};
+}
 
-export type PendingPermission = {
+export interface PendingPermission {
   reject: (error: Error) => void;
   resolve: (response: ChatElicitationResponse) => void;
   promise: Promise<ChatElicitationResponse>;
-};
+}
 
-export type ActiveClaudeTurn = {
+export interface ActiveClaudeTurn {
   actionIds: Set<string>;
   conversationId: string;
   finalResult?: SDKResultMessage;
@@ -48,4 +48,4 @@ export type ActiveClaudeTurn = {
   sawTextDelta: boolean;
   sessionId?: string;
   turnId: string;
-};
+}

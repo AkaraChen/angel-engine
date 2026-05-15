@@ -1,15 +1,15 @@
-import { app, BrowserWindow, ipcMain, shell } from "electron";
 import { execFileSync } from "node:child_process";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
-import started from "electron-squirrel-startup";
 import { registerIpcMain } from "@egoist/tipc/main";
+import { app, BrowserWindow, ipcMain, shell } from "electron";
+import started from "electron-squirrel-startup";
 
 import { configureApplicationMenu } from "./main/application-menu";
+import { getDatabase } from "./main/db/database";
 import { closeChatSession } from "./main/features/chat/angel-client";
 import { registerChatStreamIpc } from "./main/features/chat/stream-ipc";
 import { closeProjectsDatabase } from "./main/features/projects/repository";
-import { getDatabase } from "./main/db/database";
 import { appRouter } from "./main/ipc/app-router";
 import {
   configureDesktopWindowAppearance,
@@ -69,7 +69,7 @@ function mergePathEntries(...paths: Array<string | undefined>) {
   return Array.from(new Set(entries)).join(":");
 }
 
-const createWindow = () => {
+function createWindow() {
   const rendererFilePath = path.join(
     __dirname,
     `../renderer/${MAIN_WINDOW_VITE_NAME}/index.html`,
@@ -98,7 +98,7 @@ const createWindow = () => {
   } else {
     mainWindow.loadFile(rendererFilePath);
   }
-};
+}
 
 function openSettingsWindow() {
   if (settingsWindow && !settingsWindow.isDestroyed()) {

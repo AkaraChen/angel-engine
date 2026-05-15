@@ -1,13 +1,10 @@
-import {
-  mutationOptions,
-  queryOptions,
-  type QueryClient,
-} from "@tanstack/react-query";
+import type { QueryClient } from "@tanstack/react-query";
 
 import type { ApiClient } from "@/platform/api-client";
-import { queryKeys } from "@/platform/query-keys";
-import { invalidateChatQueries } from "@/features/chat/api/queries";
 import type { Project } from "@/shared/projects";
+import { mutationOptions, queryOptions } from "@tanstack/react-query";
+import { invalidateChatQueries } from "@/features/chat/api/queries";
+import { queryKeys } from "@/platform/query-keys";
 
 interface ProjectListQueryParams {
   api: ApiClient;
@@ -41,7 +38,7 @@ export function projectListQueryOptions({
 }: ProjectListQueryParams) {
   return queryOptions({
     enabled,
-    queryFn: () => api.projects.list(),
+    queryFn: async () => api.projects.list(),
     queryKey: queryKeys.projects.list(),
     staleTime,
   });
@@ -53,7 +50,7 @@ export function createProjectMutationOptions({
   queryClient,
 }: CreateProjectMutationParams) {
   return mutationOptions({
-    mutationFn: (path: string) => api.projects.create({ path }),
+    mutationFn: async (path: string) => api.projects.create({ path }),
     onSuccess: async (data, variables) => {
       await invalidateProjectQueries(queryClient);
       await onSuccess?.(data, variables);
@@ -67,7 +64,8 @@ export function projectContextMenuMutationOptions({
   queryClient,
 }: ProjectContextMenuMutationParams) {
   return mutationOptions({
-    mutationFn: (project: Project) => api.projects.showContextMenu(project.id),
+    mutationFn: async (project: Project) =>
+      api.projects.showContextMenu(project.id),
     onSuccess: async (data, variables) => {
       if (data === "deleted") {
         await invalidateProjectQueries(queryClient);

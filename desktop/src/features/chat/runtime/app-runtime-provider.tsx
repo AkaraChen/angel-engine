@@ -1,25 +1,28 @@
-import { useMemo, type ReactNode } from "react";
-import {
-  AssistantRuntimeProvider,
-  CompositeAttachmentAdapter,
-  SimpleImageAttachmentAdapter,
-  type AttachmentAdapter,
-  type CompleteAttachment,
-  type FeedbackAdapter,
-  type PendingAttachment,
-  type SpeechSynthesisAdapter,
+import type {
+  AttachmentAdapter,
+  CompleteAttachment,
+  FeedbackAdapter,
+  PendingAttachment,
+  SpeechSynthesisAdapter,
 } from "@assistant-ui/react";
-
-import { useEngineRuntime } from "@/features/chat/runtime/engine-model-adapter";
-import { ChatEnvironmentProvider } from "@/features/chat/runtime/chat-environment-context";
-import { ChatRuntimeActionsProvider } from "@/features/chat/runtime/chat-runtime-actions-context";
+import type { ReactNode } from "react";
 import type {
   Chat,
   ChatHistoryMessage,
   ChatRuntimeConfig,
 } from "@/shared/chat";
 
-type AppRuntimeProviderProps = {
+import {
+  AssistantRuntimeProvider,
+  CompositeAttachmentAdapter,
+  SimpleImageAttachmentAdapter,
+} from "@assistant-ui/react";
+import { useMemo } from "react";
+import { ChatEnvironmentProvider } from "@/features/chat/runtime/chat-environment-context";
+import { ChatRuntimeActionsProvider } from "@/features/chat/runtime/chat-runtime-actions-context";
+import { useEngineRuntime } from "@/features/chat/runtime/engine-model-adapter";
+
+interface AppRuntimeProviderProps {
   chatId?: string;
   children: ReactNode;
   historyMessages: ChatHistoryMessage[];
@@ -40,7 +43,7 @@ type AppRuntimeProviderProps = {
   runtime?: string;
   runtimeConfig?: ChatRuntimeConfig;
   slotKey: string;
-};
+}
 
 const EMPTY_AVAILABLE_COMMANDS: NonNullable<
   ChatRuntimeConfig["availableCommands"]
@@ -176,7 +179,7 @@ function getLocalFilePath(file: File) {
   return typeof path === "string" && path ? path : null;
 }
 
-function readFileAsDataUrl(file: File) {
+async function readFileAsDataUrl(file: File) {
   return new Promise<string>((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = () => resolve(reader.result as string);

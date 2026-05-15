@@ -1,6 +1,8 @@
-import { type FormEventHandler, type ReactElement, useState } from "react";
-import { useTranslation } from "react-i18next";
+import type { FormEventHandler, ReactElement } from "react";
+import type { Chat } from "@/shared/chat";
+import { useState } from "react";
 
+import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -10,14 +12,13 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import type { Chat } from "@/shared/chat";
 
-type RenameChatDialogProps = {
+interface RenameChatDialogProps {
   chat: Chat | null;
   isSaving: boolean;
   onClose: () => void;
   onRename: (chat: Chat, title: string) => Promise<void> | void;
-};
+}
 
 export function RenameChatDialog({
   chat,

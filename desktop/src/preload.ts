@@ -1,20 +1,23 @@
-import {
-  contextBridge,
-  ipcRenderer,
-  webUtils,
-  type IpcRendererEvent,
-} from "electron";
+import type { IpcRendererEvent } from "electron";
 
+import type {
+  ChatSendInput,
+  ChatStreamApi,
+  ChatStreamElicitationResolveInput,
+  ChatStreamEvent,
+  ChatStreamStartInput,
+} from "./shared/chat";
+import type {
+  DesktopOpenChatFromNotificationEvent,
+  DesktopThemeSetInput,
+  DesktopWindowCommand,
+} from "./shared/desktop-window";
+import { contextBridge, ipcRenderer, webUtils } from "electron";
 import {
   CHAT_STREAM_CANCEL_CHANNEL,
   CHAT_STREAM_ELICITATION_RESOLVE_CHANNEL,
   CHAT_STREAM_START_CHANNEL,
   chatStreamEventChannel,
-  type ChatStreamApi,
-  type ChatStreamElicitationResolveInput,
-  type ChatSendInput,
-  type ChatStreamEvent,
-  type ChatStreamStartInput,
 } from "./shared/chat";
 import {
   DESKTOP_ACTIVE_CHAT_SET_CHANNEL,
@@ -23,9 +26,6 @@ import {
   DESKTOP_OPEN_CHAT_FROM_NOTIFICATION_CHANNEL,
   DESKTOP_SETTINGS_OPEN_CHANNEL,
   DESKTOP_THEME_SET_CHANNEL,
-  type DesktopWindowCommand,
-  type DesktopThemeSetInput,
-  type DesktopOpenChatFromNotificationEvent,
 } from "./shared/desktop-window";
 
 contextBridge.exposeInMainWorld("desktopEnvironment", {

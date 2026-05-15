@@ -1,19 +1,13 @@
-import {
-  createContext,
-  useContext,
-  useMemo,
-  useState,
-  type ReactElement,
-  type ReactNode,
-} from "react";
+import type { ReactElement, ReactNode } from "react";
+import { createContext, useContext, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 
 import { SidebarTrigger } from "@/components/ui/sidebar";
 
-type WorkspaceSidebarControlPortalContextValue = {
+interface WorkspaceSidebarControlPortalContextValue {
   setTarget: (target: HTMLDivElement | null) => void;
   target: HTMLDivElement | null;
-};
+}
 
 const WorkspaceSidebarControlPortalContext =
   createContext<WorkspaceSidebarControlPortalContextValue | null>(null);

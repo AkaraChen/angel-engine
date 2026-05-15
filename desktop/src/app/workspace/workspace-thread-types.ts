@@ -6,12 +6,12 @@ import type {
 
 export const EMPTY_MESSAGES: ChatHistoryMessage[] = [];
 
-export type DraftAgentConfig = {
+export interface DraftAgentConfig {
   model?: string;
   mode?: string;
   permissionMode?: string;
   reasoningEffort?: string;
-};
+}
 
 export type ChatUpdateHandler = (
   chat: Chat,

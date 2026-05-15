@@ -11,7 +11,7 @@ const appIpcRouter = {
   appSetLanguage: t.procedure.input<string>().action(async ({ input }) => {
     const value = arkType("string")(input);
     if (value instanceof arkType.errors) {
-      throw new Error("Language is required.");
+      throw new TypeError("Language is required.");
     }
     return setMainLanguage(value);
   }),

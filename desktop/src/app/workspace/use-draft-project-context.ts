@@ -1,14 +1,14 @@
-import { useMemo } from "react";
-
-import { getProjectDisplayName } from "@/app/workspace/workspace-display";
 import type { Project } from "@/shared/projects";
 
-export type DraftProjectContext = {
+import { useMemo } from "react";
+import { getProjectDisplayName } from "@/app/workspace/workspace-display";
+
+export interface DraftProjectContext {
   id?: string;
   name?: string;
   path?: string;
   project?: Project;
-};
+}
 
 export function useDraftProjectContext(
   projects: Project[],

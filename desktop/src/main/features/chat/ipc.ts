@@ -1,13 +1,4 @@
-import {
-  app,
-  BrowserWindow,
-  clipboard,
-  Menu,
-  type MenuItemConstructorOptions,
-} from "electron";
-import { tipc } from "@egoist/tipc/main";
-import { type as arkType } from "arktype";
-
+import type { MenuItemConstructorOptions } from "electron";
 import type {
   ChatCreateInput,
   ChatPrewarmInput,
@@ -18,7 +9,12 @@ import type {
   ChatSetPermissionModeInput,
   ChatSetRuntimeInput,
 } from "../../../shared/chat";
+import { tipc } from "@egoist/tipc/main";
+
+import { type as arkType } from "arktype";
+import { app, BrowserWindow, clipboard, Menu } from "electron";
 import { normalizeChatAttachmentsInput } from "../../../shared/chat";
+import { translate } from "../../i18n";
 import {
   closeChatSession,
   createChatFromInput,
@@ -48,7 +44,6 @@ import {
   chatSetPermissionModeInput,
   chatSetRuntimeInput,
 } from "./schemas";
-import { translate } from "../../i18n";
 
 const t = tipc.create();
 
@@ -56,7 +51,7 @@ export const chatIpcRouter = {
   chatsArchive: t.procedure.input<string>().action(async ({ input }) => {
     const value = arkType("string")(input);
     if (value instanceof arkType.errors) {
-      throw new Error("Chat id is required.");
+      throw new TypeError("Chat id is required.");
     }
     return archiveChat(value);
   }),
@@ -66,7 +61,7 @@ export const chatIpcRouter = {
     .action(async ({ input }) => {
       const value = chatCreateInput(input);
       if (value instanceof arkType.errors) {
-        throw new Error("Chat input is required.");
+        throw new TypeError("Chat input is required.");
       }
 
       return createChatFromInput({
@@ -88,7 +83,7 @@ export const chatIpcRouter = {
   chatsGet: t.procedure.input<string>().action(async ({ input }) => {
     const value = arkType("string")(input);
     if (value instanceof arkType.errors) {
-      throw new Error("Chat id is required.");
+      throw new TypeError("Chat id is required.");
     }
     return getChat(value);
   }),
@@ -98,7 +93,7 @@ export const chatIpcRouter = {
   chatsLoad: t.procedure.input<string>().action(async ({ input }) => {
     const value = arkType("string")(input);
     if (value instanceof arkType.errors) {
-      throw new Error("Chat id is required.");
+      throw new TypeError("Chat id is required.");
     }
     return loadChatSession(value);
   }),
@@ -108,7 +103,7 @@ export const chatIpcRouter = {
     .action(async ({ input }) => {
       const value = chatPrewarmInput(input);
       if (value instanceof arkType.errors) {
-        throw new Error("Chat prewarm input is required.");
+        throw new TypeError("Chat prewarm input is required.");
       }
       return prewarmChat({
         projectId: value.projectId,
@@ -121,7 +116,7 @@ export const chatIpcRouter = {
     .action(async ({ input }) => {
       const value = chatRenameInput(input);
       if (value instanceof arkType.errors) {
-        throw new Error("Chat rename input is required.");
+        throw new TypeError("Chat rename input is required.");
       }
       return renameChat(value.chatId, value.title);
     }),
@@ -131,7 +126,7 @@ export const chatIpcRouter = {
     .action(async ({ input }) => {
       const value = chatRuntimeConfigInput(input);
       if (value instanceof arkType.errors) {
-        throw new Error("Chat runtime config input is required.");
+        throw new TypeError("Chat runtime config input is required.");
       }
       return inspectChatRuntimeConfig({
         cwd: value.cwd,
@@ -144,7 +139,7 @@ export const chatIpcRouter = {
     .action(async ({ input }) => {
       const value = chatSetModeInput(input);
       if (value instanceof arkType.errors) {
-        throw new Error("Chat mode input is required.");
+        throw new TypeError("Chat mode input is required.");
       }
       return setChatMode(value);
     }),
@@ -154,7 +149,7 @@ export const chatIpcRouter = {
     .action(async ({ input }) => {
       const value = chatSetPermissionModeInput(input);
       if (value instanceof arkType.errors) {
-        throw new Error("Chat permission mode input is required.");
+        throw new TypeError("Chat permission mode input is required.");
       }
       return setChatPermissionMode(value);
     }),
@@ -164,7 +159,7 @@ export const chatIpcRouter = {
     .action(async ({ input }) => {
       const value = chatSetRuntimeInput(input);
       if (value instanceof arkType.errors) {
-        throw new Error("Chat runtime input is required.");
+        throw new TypeError("Chat runtime input is required.");
       }
       return setChatRuntime(value);
     }),
@@ -174,7 +169,7 @@ export const chatIpcRouter = {
     .action(async ({ context, input }) => {
       const chatId = arkType("string")(input);
       if (chatId instanceof arkType.errors) {
-        throw new Error("Chat id is required.");
+        throw new TypeError("Chat id is required.");
       }
       const chat = getChat(chatId);
       if (!chat) {
@@ -227,7 +222,7 @@ export const chatIpcRouter = {
   chatSend: t.procedure.input<ChatSendInput>().action(async ({ input }) => {
     const value = chatSendInput(input);
     if (value instanceof arkType.errors) {
-      throw new Error("Chat input is required.");
+      throw new TypeError("Chat input is required.");
     }
     return sendChat({
       attachments: normalizeChatAttachmentsInput(value.attachments),

@@ -1,21 +1,15 @@
-import {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-  type ChangeEvent,
-  type KeyboardEvent,
-  type ReactNode,
-} from "react";
-import {
-  ComposerPrimitive,
-  useAui,
-  useAuiState,
-  type CreateAttachment,
-} from "@assistant-ui/react";
+import type { CreateAttachment } from "@assistant-ui/react";
 import type { TFunction } from "i18next";
-import { useTranslation } from "react-i18next";
+import type { ChangeEvent, KeyboardEvent, ReactNode } from "react";
+import type { PromptInputMessage } from "@/components/ai-elements/prompt-input";
+import type { ChatOptionsContextValue } from "@/features/chat/runtime/chat-options-context";
+import type { AgentValueOption } from "@/shared/agents";
+
+import type {
+  ChatAvailableCommand,
+  ProjectFileSearchResult,
+} from "@/shared/chat";
+import { ComposerPrimitive, useAui, useAuiState } from "@assistant-ui/react";
 import {
   ArrowUp,
   Bot,
@@ -34,13 +28,8 @@ import {
   SlidersHorizontal,
   X,
 } from "lucide-react";
-
-import { ChatAttachmentTile } from "@/features/chat/components/attachment-tile";
-import {
-  useChatOptions,
-  type ChatOptionsContextValue,
-} from "@/features/chat/runtime/chat-options-context";
-import { findPlanModeToggleTarget } from "@/features/chat/runtime/mode-options";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   PromptInput,
   PromptInputBody,
@@ -49,14 +38,8 @@ import {
   PromptInputTextarea,
   PromptInputTools,
   usePromptInputAttachments,
-  type PromptInputMessage,
 } from "@/components/ai-elements/prompt-input";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import {
-  NativeSelect,
-  NativeSelectOption,
-} from "@/components/ui/native-select";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -67,30 +50,34 @@ import {
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Input } from "@/components/ui/input";
+import {
+  NativeSelect,
+  NativeSelectOption,
+} from "@/components/ui/native-select";
+import { useToast } from "@/components/ui/toast";
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { ChatAttachmentTile } from "@/features/chat/components/attachment-tile";
 import {
   iconButtonClass,
   nativeControlRowClass,
 } from "@/features/chat/components/thread-styles";
 import { useChatEnvironment } from "@/features/chat/runtime/chat-environment-context";
+import { useChatOptions } from "@/features/chat/runtime/chat-options-context";
+import { findPlanModeToggleTarget } from "@/features/chat/runtime/mode-options";
 import { useApi } from "@/platform/use-api";
 import { cn } from "@/platform/utils";
-import { AGENT_OPTIONS, type AgentValueOption } from "@/shared/agents";
-import { useToast } from "@/components/ui/toast";
-import type {
-  ChatAvailableCommand,
-  ProjectFileSearchResult,
-} from "@/shared/chat";
+import { AGENT_OPTIONS } from "@/shared/agents";
 
 type ComposerMentionedFile = ProjectFileSearchResult & {
   id: string;
 };
 
-type ComposerAssistPanelProps = {
+interface ComposerAssistPanelProps {
   fileMentionOpen: boolean;
   fileResults: ProjectFileSearchResult[];
   fileSearchLoading: boolean;
@@ -100,25 +87,25 @@ type ComposerAssistPanelProps = {
   slashCommands: ChatAvailableCommand[];
   slashCommandsLoading: boolean;
   slashCommandOpen: boolean;
-};
+}
 
-type AssistPanelFrameProps = {
+interface AssistPanelFrameProps {
   children: ReactNode;
   title: string;
-};
+}
 
-type SlashCommandAssistPanelProps = {
+interface SlashCommandAssistPanelProps {
   catalogSize: number;
   commands: ChatAvailableCommand[];
   loading: boolean;
   onSelect: (command: ChatAvailableCommand) => void;
-};
+}
 
-type FileMentionAssistPanelProps = {
+interface FileMentionAssistPanelProps {
   files: ProjectFileSearchResult[];
   loading: boolean;
   onSelect: (file: ProjectFileSearchResult) => void;
-};
+}
 
 const composerInputGroupClassName =
   "overflow-visible !rounded-lg !border !border-foreground/[0.08] !bg-background/86 shadow-[0_8px_22px_-22px_rgba(0,0,0,0.48)] backdrop-blur-xl transition-[border-color,background-color] has-[textarea]:!rounded-lg has-[>[data-align=block-end]]:!rounded-lg has-[>[data-align=block-start]]:!rounded-lg has-[[data-slot=input-group-control]:focus-visible]:!border-foreground/14 has-[[data-slot=input-group-control]:focus-visible]:!ring-0 focus-within:!border-foreground/14 focus-within:!bg-background/94 focus-within:!shadow-[0_10px_26px_-24px_rgba(0,0,0,0.55)] dark:!border-white/[0.09] dark:!bg-card/82 dark:shadow-[0_10px_24px_-24px_rgba(0,0,0,0.72)] dark:focus-within:!border-white/14 dark:focus-within:!bg-card/90 dark:focus-within:!shadow-[0_10px_26px_-24px_rgba(0,0,0,0.78)] [&_button:focus-visible]:!border-transparent [&_button:focus-visible]:!ring-0 [&_button]:shadow-none";
@@ -187,10 +174,10 @@ export function AssistantComposer({
 
       try {
         await Promise.all([
-          ...message.files.map((file) =>
+          ...message.files.map(async (file) =>
             composer.addAttachment(createAttachmentFromPromptFile(file, t)),
           ),
-          ...mentionedFiles.map((file) =>
+          ...mentionedFiles.map(async (file) =>
             composer.addAttachment(createMentionAttachment(file)),
           ),
         ]);
@@ -277,7 +264,7 @@ export function AssistantComposer({
   const insertSlashCommand = useCallback(
     (command?: ChatAvailableCommand) => {
       if (!command) return;
-      const next = draftText.replace(/^\/[^\s]*/, `/${command.name}`);
+      const next = draftText.replace(/^\/\S*/, `/${command.name}`);
       setDraftText(`${next.trimEnd()} `);
       requestAnimationFrame(() => textareaRef.current?.focus());
     },
@@ -390,7 +377,10 @@ export function AssistantComposer({
 
       <PromptInputBody>
         <PromptInputTextarea
-          className="max-h-40 min-h-[4.2rem] px-3.5 py-3 text-[15px] leading-6 placeholder:text-muted-foreground/62"
+          className="
+            max-h-40 min-h-[4.2rem] px-3.5 py-3 text-[15px]/6
+            placeholder:text-muted-foreground/62
+          "
           disabled={isInputDisabled}
           onChange={handleTextChange}
           onKeyDown={handleTextKeyDown}
@@ -426,11 +416,25 @@ function AssistantComposerHeader({
   }
 
   return (
-    <PromptInputHeader className="flex-col items-stretch gap-2 !px-3 !pb-2 !pt-3">
+    <PromptInputHeader
+      className="
+      flex-col items-stretch gap-2 px-3! pt-3! pb-2!
+    "
+    >
       {hasQuote ? (
-        <ComposerPrimitive.Quote className="flex items-start gap-2 rounded-md border border-foreground/[0.08] bg-muted/30 p-2 text-sm dark:border-white/[0.08]">
+        <ComposerPrimitive.Quote
+          className="
+              flex items-start gap-2 rounded-md border border-foreground/8
+              bg-muted/30 p-2 text-sm
+              dark:border-white/8
+            "
+        >
           <Quote className="mt-0.5 size-3.5 shrink-0 text-muted-foreground" />
-          <ComposerPrimitive.QuoteText className="line-clamp-2 flex-1 text-muted-foreground" />
+          <ComposerPrimitive.QuoteText
+            className="
+                line-clamp-2 flex-1 text-muted-foreground
+              "
+          />
           <ComposerPrimitive.QuoteDismiss className={iconButtonClass}>
             <X className="size-3.5" />
           </ComposerPrimitive.QuoteDismiss>
@@ -518,8 +522,19 @@ function ComposerAssistPanel({
 
 function AssistPanelFrame({ children, title }: AssistPanelFrameProps) {
   return (
-    <div className="absolute bottom-full left-0 right-0 z-50 mb-2 overflow-hidden rounded-lg border border-foreground/[0.08] bg-popover/96 p-1 text-popover-foreground shadow-[0_12px_30px_-24px_rgba(0,0,0,0.62)] backdrop-blur-xl dark:border-white/[0.1]">
-      <div className="select-none px-2 py-1 text-[11px] font-medium text-muted-foreground">
+    <div
+      className="
+      absolute inset-x-0 bottom-full z-50 mb-2 overflow-hidden rounded-lg border
+      border-foreground/8 bg-popover/96 p-1 text-popover-foreground
+      shadow-[0_12px_30px_-24px_rgba(0,0,0,0.62)] backdrop-blur-xl
+      dark:border-white/10
+    "
+    >
+      <div
+        className="
+        px-2 py-1 text-[11px] font-medium text-muted-foreground select-none
+      "
+      >
         {title}
       </div>
       <div className="max-h-48 overflow-y-auto">{children}</div>
@@ -538,7 +553,11 @@ function SlashCommandAssistPanel({
   if (loading) {
     return (
       <AssistPanelFrame title={t("composer.commands")}>
-        <div className="flex items-center gap-2 px-2 py-2 text-sm text-muted-foreground">
+        <div
+          className="
+          flex items-center gap-2 p-2 text-sm text-muted-foreground
+        "
+        >
           <Loader2 className="size-3.5 animate-spin" />
           <span>{t("composer.loadingCommands")}</span>
         </div>
@@ -554,9 +573,7 @@ function SlashCommandAssistPanel({
 
     return (
       <AssistPanelFrame title={t("composer.commands")}>
-        <div className="px-2 py-2 text-sm text-muted-foreground">
-          {emptyMessage}
-        </div>
+        <div className="p-2 text-sm text-muted-foreground">{emptyMessage}</div>
       </AssistPanelFrame>
     );
   }
@@ -567,7 +584,10 @@ function SlashCommandAssistPanel({
         <button
           className={cn(
             nativeControlRowClass,
-            "flex w-full min-w-0 items-center gap-2 px-2 py-1.5 text-left text-sm",
+            `
+              flex w-full min-w-0 items-center gap-2 px-2 py-1.5 text-left
+              text-sm
+            `,
           )}
           key={command.name}
           onMouseDown={(event) => event.preventDefault()}
@@ -581,7 +601,12 @@ function SlashCommandAssistPanel({
             {command.description}
           </span>
           {command.inputHint ? (
-            <span className="hidden shrink-0 truncate text-xs text-muted-foreground sm:inline">
+            <span
+              className="
+                  hidden shrink-0 truncate text-xs text-muted-foreground
+                  sm:inline
+                "
+            >
               {command.inputHint}
             </span>
           ) : null}
@@ -601,7 +626,7 @@ function FileMentionAssistPanel({
   if (loading) {
     return (
       <AssistPanelFrame title={t("composer.files")}>
-        <div className="px-2 py-2 text-sm text-muted-foreground">
+        <div className="p-2 text-sm text-muted-foreground">
           {t("common.searching")}
         </div>
       </AssistPanelFrame>
@@ -611,7 +636,7 @@ function FileMentionAssistPanel({
   if (files.length === 0) {
     return (
       <AssistPanelFrame title={t("composer.files")}>
-        <div className="px-2 py-2 text-sm text-muted-foreground">
+        <div className="p-2 text-sm text-muted-foreground">
           {t("composer.noFilesFound")}
         </div>
       </AssistPanelFrame>
@@ -654,7 +679,12 @@ function AssistantComposerFooter({ draftText }: { draftText: string }) {
   }, [aui]);
 
   return (
-    <PromptInputFooter className="flex-wrap border-t border-foreground/[0.075] !px-3 !py-2 dark:border-white/[0.08]">
+    <PromptInputFooter
+      className="
+      flex-wrap border-t border-foreground/7.5 px-3! py-2!
+      dark:border-white/8
+    "
+    >
       <PromptInputTools className="flex-wrap">
         <PromptAttachmentButton />
         <ComposerModelMenu disabled={isRunning} options={chatOptions} />
@@ -676,7 +706,12 @@ function AssistantComposerFooter({ draftText }: { draftText: string }) {
         />
         {isRunning ? (
           <Button
-            className="h-8 rounded-md border-foreground/[0.08] bg-background/55 px-3 text-xs focus-visible:!ring-0 dark:bg-card/60"
+            className="
+                  h-8 rounded-md border-foreground/8 bg-background/55 px-3
+                  text-xs
+                  focus-visible:ring-0!
+                  dark:bg-card/60
+                "
             onClick={stopRun}
             size="sm"
             type="button"
@@ -688,7 +723,11 @@ function AssistantComposerFooter({ draftText }: { draftText: string }) {
         ) : null}
         <Button
           aria-label={t("common.send")}
-          className="size-8 rounded-full p-0 shadow-none focus-visible:!ring-0 active:translate-y-px"
+          className="
+            size-8 rounded-full p-0 shadow-none
+            focus-visible:ring-0!
+            active:translate-y-px
+          "
           disabled={isRunning || isEmpty}
           size="sm"
           type="submit"
@@ -740,7 +779,10 @@ function PlanModeToggleButton({
   return (
     <Button
       aria-pressed={Boolean(target?.isPlanMode)}
-      className="h-8 gap-1.5 rounded-md px-2 text-xs focus-visible:!ring-0"
+      className="
+        h-8 gap-1.5 rounded-md px-2 text-xs
+        focus-visible:ring-0!
+      "
       disabled={unavailable}
       onMouseDown={(event) => event.preventDefault()}
       onClick={() => {
@@ -800,7 +842,13 @@ function ComposerOptionSelect({
         .filter(Boolean)
         .join(" ")}
     >
-      <span className="pointer-events-none absolute top-1/2 left-2 z-10 flex size-4 -translate-y-1/2 items-center justify-center [&_svg]:size-3.5">
+      <span
+        className="
+        pointer-events-none absolute top-1/2 left-2 z-10 flex size-4
+        -translate-y-1/2 items-center justify-center
+        [&_svg]:size-3.5
+      "
+      >
         {icon}
       </span>
       <NativeSelect
@@ -829,7 +877,7 @@ function PromptAttachmentButton() {
 
   return (
     <Button
-      className="focus-visible:!ring-0"
+      className="focus-visible:ring-0!"
       onClick={attachments.openFileDialog}
       size="icon-sm"
       title={t("composer.attachFiles")}
@@ -950,7 +998,10 @@ function ComposerModelMenu({
         <DropdownMenuTrigger asChild>
           <Button
             aria-label={t("composer.provider")}
-            className={`${composerModelMenuTriggerClassName} max-w-40`}
+            className={`
+              ${composerModelMenuTriggerClassName}
+              max-w-40
+            `}
             size="sm"
             title={providerDisabledReason ?? t("composer.provider")}
             type="button"
@@ -964,7 +1015,10 @@ function ComposerModelMenu({
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent
-          className={`${composerNativeMenuClassName} w-52 min-w-0`}
+          className={`
+            ${composerNativeMenuClassName}
+            w-52 min-w-0
+          `}
           align="start"
           sideOffset={4}
           variant="native"
@@ -978,7 +1032,7 @@ function ComposerModelMenu({
               disabledReason={providerDisabledReason}
               key={provider.value}
               label={provider.label}
-              onSelect={() => options.setRuntime(provider.value)}
+              onSelect={async () => options.setRuntime(provider.value)}
               selected={provider.value === options.runtime}
             />
           ))}
@@ -989,27 +1043,33 @@ function ComposerModelMenu({
         <DropdownMenuTrigger asChild>
           <Button
             aria-label={`${t("composer.model")} / ${t("composer.effort")}`}
-            className={`${composerModelMenuTriggerClassName} max-w-[18rem]`}
+            className={`
+              ${composerModelMenuTriggerClassName}
+              max-w-[18rem]
+            `}
             size="sm"
             title={modelEffortLabel}
             type="button"
             variant="ghost"
           >
             <Cpu className="size-3.5 shrink-0 text-muted-foreground" />
-            <span className="min-w-0 max-w-52 truncate text-muted-foreground">
+            <span className="max-w-52 min-w-0 truncate text-muted-foreground">
               {modelEffortLabel}
             </span>
             <ComposerModelMenuChevron />
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent
-          className={`${composerNativeMenuClassName} w-[17rem] min-w-0`}
+          className={`
+            ${composerNativeMenuClassName}
+            w-68 min-w-0
+          `}
           align="start"
           sideOffset={4}
           variant="native"
         >
           <DropdownMenuLabel className={composerNativeMenuLabelClassName}>
-            {t("composer.model")} / {t("composer.effort")}
+            {t("composer.model")} /{t("composer.effort")}
           </DropdownMenuLabel>
           <ComposerModelMenuSub
             disabled={modelDisabled}
@@ -1038,7 +1098,11 @@ function ComposerModelMenu({
                 />
               ))
             ) : (
-              <div className="px-2 py-5 text-center text-xs text-muted-foreground">
+              <div
+                className="
+                    px-2 py-5 text-center text-xs text-muted-foreground
+                  "
+              >
                 {t("composer.noModelsFound")}
               </div>
             )}
@@ -1068,13 +1132,20 @@ function ComposerModelMenu({
         <DropdownMenuTrigger asChild>
           <Button
             aria-label={t("composer.agentSettings")}
-            className={`${composerModelMenuTriggerClassName} max-w-40`}
+            className={`
+              ${composerModelMenuTriggerClassName}
+              max-w-40
+            `}
             size="sm"
             title={t("composer.agentSettings")}
             type="button"
             variant="ghost"
           >
-            <SlidersHorizontal className="size-3.5 shrink-0 text-muted-foreground" />
+            <SlidersHorizontal
+              className="
+              size-3.5 shrink-0 text-muted-foreground
+            "
+            />
             <span className={composerModelMenuValueClassName}>
               {t("composer.agentSettings")}
             </span>
@@ -1082,7 +1153,10 @@ function ComposerModelMenu({
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent
-          className={`${composerNativeMenuClassName} w-[17rem] min-w-0`}
+          className={`
+            ${composerNativeMenuClassName}
+            w-68 min-w-0
+          `}
           align="start"
           sideOffset={4}
           variant="native"
@@ -1103,7 +1177,7 @@ function ComposerModelMenu({
               <ComposerModelMenuItem
                 key={mode.value}
                 label={mode.label}
-                onSelect={() => options.setMode(mode.value)}
+                onSelect={async () => options.setMode(mode.value)}
                 selected={mode.value === options.mode}
               />
             ))}
@@ -1123,7 +1197,7 @@ function ComposerModelMenu({
               <ComposerModelMenuItem
                 key={mode.value}
                 label={mode.label}
-                onSelect={() => options.setPermissionMode(mode.value)}
+                onSelect={async () => options.setPermissionMode(mode.value)}
                 selected={mode.value === options.permissionMode}
               />
             ))}
@@ -1136,7 +1210,13 @@ function ComposerModelMenu({
 
 function ComposerModelMenuChevron() {
   return (
-    <ChevronDown className="size-3.5 shrink-0 text-muted-foreground/80 transition-transform duration-150 group-data-[state=open]/button:rotate-180" />
+    <ChevronDown
+      className="
+      size-3.5 shrink-0 text-muted-foreground/80 transition-transform
+      duration-150
+      group-data-[state=open]/button:rotate-180
+    "
+    />
   );
 }
 
@@ -1151,16 +1231,29 @@ function ComposerModelMenuSearch({
 }) {
   return (
     <div
-      className="sticky top-0 z-10 -mx-0.5 mb-1 bg-white/90 px-0.5 pb-1 backdrop-blur-xl dark:bg-card/95"
+      className="
+        sticky top-0 z-10 -mx-0.5 mb-1 bg-white/90 px-0.5 pb-1 backdrop-blur-xl
+        dark:bg-card/95
+      "
       onKeyDown={(event) => event.stopPropagation()}
       onPointerDown={(event) => event.stopPropagation()}
     >
       <div className="relative">
-        <Search className="pointer-events-none absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2 text-muted-foreground/70" />
+        <Search
+          className="
+          pointer-events-none absolute top-1/2 left-2.5 size-3.5
+          -translate-y-1/2 text-muted-foreground/70
+        "
+        />
         <Input
           aria-label={placeholder}
           autoComplete="off"
-          className="h-7 rounded-md border-0 bg-foreground/[0.055] pr-2 pl-8 text-xs shadow-none focus-visible:ring-1 focus-visible:ring-ring/25 dark:bg-white/[0.07]"
+          className="
+            h-7 rounded-md border-0 bg-foreground/5.5 pr-2 pl-8 text-xs
+            shadow-none
+            focus-visible:ring-1 focus-visible:ring-ring/25
+            dark:bg-white/[0.07]
+          "
           onChange={(event) => onChange(event.target.value)}
           placeholder={placeholder}
           value={value}
@@ -1187,15 +1280,35 @@ function ComposerModelMenuSub({
 }) {
   const trigger = (
     <DropdownMenuSubTrigger
-      className="min-h-7 w-full gap-2 rounded px-2 py-1 text-[13px] font-normal focus:bg-foreground/[0.055] focus:text-foreground data-open:bg-foreground/[0.055] data-open:text-foreground dark:focus:bg-white/[0.07] dark:data-open:bg-white/[0.07] [&>svg:last-child]:ml-1 [&>svg:last-child]:size-3.5 [&>svg:last-child]:opacity-45 focus:[&>svg:last-child]:opacity-65 data-open:[&>svg:last-child]:opacity-65"
+      className="
+        min-h-7 w-full gap-2 rounded-sm px-2 py-1 text-[13px] font-normal
+        focus:bg-foreground/5.5 focus:text-foreground
+        dark:focus:bg-white/[0.07]
+        data-open:bg-foreground/5.5 data-open:text-foreground
+        dark:data-open:bg-white/[0.07]
+        [&>svg:last-child]:ml-1 [&>svg:last-child]:size-3.5
+        [&>svg:last-child]:opacity-45
+        focus:[&>svg:last-child]:opacity-65
+        data-open:[&>svg:last-child]:opacity-65
+      "
       disabled={disabled}
       title={disabledReason ?? label}
     >
-      <span className="flex size-4 shrink-0 items-center justify-center text-muted-foreground [&_svg]:size-3.5">
+      <span
+        className="
+        flex size-4 shrink-0 items-center justify-center text-muted-foreground
+        [&_svg]:size-3.5
+      "
+      >
         {icon}
       </span>
       <span className="min-w-0 flex-1 truncate">{label}</span>
-      <span className="min-w-0 max-w-28 shrink truncate text-right text-[12px] text-muted-foreground">
+      <span
+        className="
+        max-w-28 min-w-0 shrink truncate text-right text-[12px]
+        text-muted-foreground
+      "
+      >
         {value}
       </span>
     </DropdownMenuSubTrigger>
@@ -1216,7 +1329,10 @@ function ComposerModelMenuSub({
         trigger
       )}
       <DropdownMenuSubContent
-        className={`${composerNativeMenuClassName} max-h-72 w-[17rem] min-w-0`}
+        className={`
+          ${composerNativeMenuClassName}
+          max-h-72 w-68 min-w-0
+        `}
         sideOffset={4}
         variant="native"
       >
@@ -1241,7 +1357,11 @@ function ComposerModelMenuItem({
 }) {
   return (
     <DropdownMenuItem
-      className="min-h-7 rounded px-2 py-1 text-[13px] font-normal focus:bg-foreground/[0.055] focus:text-foreground dark:focus:bg-white/[0.07]"
+      className="
+        min-h-7 rounded-sm px-2 py-1 text-[13px] font-normal
+        focus:bg-foreground/5.5 focus:text-foreground
+        dark:focus:bg-white/[0.07]
+      "
       disabled={disabled}
       onSelect={(event) => {
         event.preventDefault();
@@ -1249,7 +1369,11 @@ function ComposerModelMenuItem({
       }}
       title={disabledReason ?? label}
     >
-      <span className="flex size-4 shrink-0 items-center justify-center text-primary">
+      <span
+        className="
+        flex size-4 shrink-0 items-center justify-center text-primary
+      "
+      >
         {selected ? <Check className="size-3" /> : null}
       </span>
       <span className="min-w-0 flex-1 truncate">{label}</span>
@@ -1403,10 +1527,10 @@ function replaceMentionQuery(text: string, relativePath: string) {
   return `${text}${separator}${replacement}`;
 }
 
-type AttachmentInputError = {
+interface AttachmentInputError {
   code: "max_files" | "max_file_size" | "accept" | "file_read" | "submit";
   message: string;
-};
+}
 
 function attachmentErrorTitle(
   code: AttachmentInputError["code"],

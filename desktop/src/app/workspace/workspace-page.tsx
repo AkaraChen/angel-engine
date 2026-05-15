@@ -1,38 +1,55 @@
-import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Redirect, useLocation } from "wouter";
-import { useTranslation } from "react-i18next";
+import type { DraftAgentConfig } from "@/app/workspace/workspace-thread-types";
+import type { AgentRuntime } from "@/shared/agents";
+import type {
+  Chat,
+  ChatHistoryMessage,
+  ChatLoadResult,
+  ChatRuntimeConfig,
+} from "@/shared/chat";
+import type { Project } from "@/shared/projects";
 
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
+import { Redirect, useLocation } from "wouter";
 import { ChatRestoreLoading } from "@/app/workspace/chat-restore-loading";
-import { WorkspaceHeader } from "@/app/workspace/workspace-header";
-import {
-  WorkspaceSidebarControl,
-  WorkspaceSidebarControlPortalProvider,
-} from "@/app/workspace/workspace-sidebar-control";
-import { WorkspaceSidebar } from "@/app/workspace/workspace-sidebar";
+import { DraftChatThread } from "@/app/workspace/draft-chat-thread";
+import { useDraftChatOptions } from "@/app/workspace/use-draft-chat-options";
+import { useDraftProjectContext } from "@/app/workspace/use-draft-project-context";
 import {
   ActiveChatThread,
   ChatRestoreErrorBoundary,
   RestoredChatThread,
 } from "@/app/workspace/workspace-chat-thread";
-import { DraftChatThread } from "@/app/workspace/draft-chat-thread";
-import { RenameChatDialog } from "@/features/chat/components/rename-chat-dialog";
+import {
+  getErrorMessage,
+  getProjectDisplayName,
+  getWorkspaceTitle,
+} from "@/app/workspace/workspace-display";
+import { WorkspaceHeader } from "@/app/workspace/workspace-header";
+import {
+  chatNotificationRoutePath,
+  chatRoutePath,
+  chatRoutePathId,
+  currentHashRoutePath,
+  projectChatRoutePath,
+  projectDraftRoutePath,
+} from "@/app/workspace/workspace-route-paths";
+import {
+  draftRuntimeKeyFromProjectId,
+  workspaceRuntimePageKey,
+} from "@/app/workspace/workspace-runtime-keys";
+import { WorkspaceSidebar } from "@/app/workspace/workspace-sidebar";
+import {
+  WorkspaceSidebarControl,
+  WorkspaceSidebarControlPortalProvider,
+} from "@/app/workspace/workspace-sidebar-control";
 import {
   SidebarInset,
   SidebarProvider,
   useSidebar,
 } from "@/components/ui/sidebar";
-import { useAgentSettings } from "@/features/settings/use-agent-settings";
 import { useToast } from "@/components/ui/toast";
-import { useApi } from "@/platform/use-api";
-import {
-  cancelAllChatRuns,
-  cancelChatRun,
-  setActiveChatRunId,
-  useChatAttentionSummary,
-  useChatRunIsRunning,
-} from "@/features/chat/state/chat-run-store";
-import { SettingsPage } from "@/features/settings/settings-page";
 import {
   archiveChatMutationOptions,
   chatContextMenuMutationOptions,
@@ -42,56 +59,39 @@ import {
   renameChatMutationOptions,
   setChatRuntimeMutationOptions,
 } from "@/features/chat/api/queries";
-import { queryKeys } from "@/platform/query-keys";
+import { RenameChatDialog } from "@/features/chat/components/rename-chat-dialog";
+import {
+  cancelAllChatRuns,
+  cancelChatRun,
+  setActiveChatRunId,
+  useChatAttentionSummary,
+  useChatRunIsRunning,
+} from "@/features/chat/state/chat-run-store";
 import {
   createProjectMutationOptions,
   projectContextMenuMutationOptions,
   projectListQueryOptions,
 } from "@/features/projects/api/queries";
+import { SettingsPage } from "@/features/settings/settings-page";
+import { useAgentSettings } from "@/features/settings/use-agent-settings";
+import { queryKeys } from "@/platform/query-keys";
+import { useApi } from "@/platform/use-api";
 import {
   getEnabledAgentOptions,
   resolveEnabledAgentRuntime,
-  type AgentRuntime,
 } from "@/shared/agents";
-import type {
-  Chat,
-  ChatHistoryMessage,
-  ChatLoadResult,
-  ChatRuntimeConfig,
-} from "@/shared/chat";
-import type { Project } from "@/shared/projects";
-import { useDraftProjectContext } from "@/app/workspace/use-draft-project-context";
-import { useDraftChatOptions } from "@/app/workspace/use-draft-chat-options";
-import {
-  currentHashRoutePath,
-  chatNotificationRoutePath,
-  chatRoutePath,
-  chatRoutePathId,
-  projectChatRoutePath,
-  projectDraftRoutePath,
-} from "@/app/workspace/workspace-route-paths";
-import {
-  draftRuntimeKeyFromProjectId,
-  workspaceRuntimePageKey,
-} from "@/app/workspace/workspace-runtime-keys";
-import {
-  getErrorMessage,
-  getProjectDisplayName,
-  getWorkspaceTitle,
-} from "@/app/workspace/workspace-display";
-import type { DraftAgentConfig } from "@/app/workspace/workspace-thread-types";
 
 const EMPTY_CHATS: Chat[] = [];
 const EMPTY_PROJECTS: Project[] = [];
 
-type WorkspacePageContentProps = {
+interface WorkspacePageContentProps {
   api: ReturnType<typeof useApi>;
   currentRoutePath: string;
   draftProjectId?: string;
   routeProjectId?: string;
   selectedChatId?: string;
   settingsActive?: boolean;
-};
+}
 
 export function WorkspaceDraftPage({ projectId }: { projectId?: string }) {
   const api = useApi();

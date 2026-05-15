@@ -1,14 +1,14 @@
-import { createContext, useContext } from "react";
-
 import type { ChatAvailableCommand } from "@/shared/chat";
 
-export type ChatEnvironmentContextValue = {
+import { createContext, useContext } from "react";
+
+export interface ChatEnvironmentContextValue {
   availableCommands: ChatAvailableCommand[];
   availableCommandsLoading: boolean;
   isProjectChat: boolean;
   projectId?: string | null;
   projectPath?: string;
-};
+}
 
 const EMPTY_COMMANDS: ChatAvailableCommand[] = [];
 

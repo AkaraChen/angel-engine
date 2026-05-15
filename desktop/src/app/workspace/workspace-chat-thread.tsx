@@ -1,28 +1,21 @@
-import {
-  Component,
-  useCallback,
-  useMemo,
-  type ErrorInfo,
-  type ReactNode,
-} from "react";
-import { useQuery, useSuspenseQuery } from "@tanstack/react-query";
-import { Redirect } from "wouter";
-import { useTranslation } from "react-i18next";
+import type { ErrorInfo, ReactNode } from "react";
+import type {
+  ChatUpdateHandler,
+  DraftAgentConfig,
+} from "@/app/workspace/workspace-thread-types";
+import type { useApi } from "@/platform/use-api";
+import type { AgentRuntime } from "@/shared/agents";
 
-import { AppRuntimeProvider } from "@/features/chat/runtime/app-runtime-provider";
-import { ChatOptionsProvider } from "@/features/chat/runtime/chat-options-context";
-import { AssistantThread } from "@/features/chat/components/assistant-thread";
-import {
-  chatLoadSuspenseQueryOptions,
-  chatRuntimeConfigQueryOptions,
-} from "@/features/chat/api/queries";
-import {
-  useChatRunConfig,
-  useChatRunIsRunning,
-  useChatRunMessages,
-  useChatRunStore,
-} from "@/features/chat/state/chat-run-store";
-import { useApi } from "@/platform/use-api";
+import type {
+  Chat,
+  ChatHistoryMessage,
+  ChatRuntimeConfig,
+} from "@/shared/chat";
+import type { Project } from "@/shared/projects";
+import { useQuery, useSuspenseQuery } from "@tanstack/react-query";
+import { Component, useCallback, useMemo } from "react";
+import { useTranslation } from "react-i18next";
+import { Redirect } from "wouter";
 import {
   ensureConfigOption,
   normalizeConfigDisplayValue,
@@ -30,23 +23,25 @@ import {
   runtimeConfigOptionsToAgentOptions,
   selectedConfigOverride,
 } from "@/app/workspace/chat-runtime-options";
+import { getProjectDisplayName } from "@/app/workspace/workspace-display";
 import { chatRoutePath } from "@/app/workspace/workspace-route-paths";
 import { chatRuntimeProviderKey } from "@/app/workspace/workspace-runtime-keys";
-import { getProjectDisplayName } from "@/app/workspace/workspace-display";
+import { EMPTY_MESSAGES } from "@/app/workspace/workspace-thread-types";
 import {
-  EMPTY_MESSAGES,
-  type ChatUpdateHandler,
-  type DraftAgentConfig,
-} from "@/app/workspace/workspace-thread-types";
-import type { AgentRuntime } from "@/shared/agents";
-import type {
-  Chat,
-  ChatHistoryMessage,
-  ChatRuntimeConfig,
-} from "@/shared/chat";
-import type { Project } from "@/shared/projects";
+  chatLoadSuspenseQueryOptions,
+  chatRuntimeConfigQueryOptions,
+} from "@/features/chat/api/queries";
+import { AssistantThread } from "@/features/chat/components/assistant-thread";
+import { AppRuntimeProvider } from "@/features/chat/runtime/app-runtime-provider";
+import { ChatOptionsProvider } from "@/features/chat/runtime/chat-options-context";
+import {
+  useChatRunConfig,
+  useChatRunIsRunning,
+  useChatRunMessages,
+  useChatRunStore,
+} from "@/features/chat/state/chat-run-store";
 
-type ActiveChatThreadProps = {
+interface ActiveChatThreadProps {
   draftAgentConfig: DraftAgentConfig;
   onChatCreated: (chat: Chat) => void;
   onChatUpdated: ChatUpdateHandler;
@@ -63,7 +58,7 @@ type ActiveChatThreadProps = {
     chatId: string,
     runtime: AgentRuntime,
   ) => Promise<void> | void;
-};
+}
 
 type RestoredChatThreadProps = Omit<ActiveChatThreadProps, "selectedChat"> & {
   api: ReturnType<typeof useApi>;
@@ -80,12 +75,12 @@ type ChatThreadRuntimeProps = ActiveChatThreadProps & {
   slotKey: string;
 };
 
-type ChatProjectContext = {
+interface ChatProjectContext {
   id?: string;
   name?: string;
   path?: string;
   project?: Project;
-};
+}
 
 export function ActiveChatThread({
   draftAgentConfig,
@@ -406,7 +401,7 @@ export class ChatRestoreErrorBoundary extends Component<
     console.error("Chat restore failed", error, errorInfo);
   }
 
-  render() {
+  async render() {
     if (this.state.failed) {
       return <Redirect replace to="/" />;
     }

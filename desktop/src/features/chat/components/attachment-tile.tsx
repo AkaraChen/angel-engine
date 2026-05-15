@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/dialog";
 import { cn } from "@/platform/utils";
 
-type ChatAttachmentTileProps = {
+interface ChatAttachmentTileProps {
   className?: string;
   contentType?: string;
   name: string;
@@ -19,7 +19,7 @@ type ChatAttachmentTileProps = {
   previewUrl?: string;
   removeLabel?: string;
   typeLabel: string;
-};
+}
 
 export function ChatAttachmentTile({
   className,
@@ -60,10 +60,20 @@ export function ChatAttachmentTile({
               {body}
             </button>
           </DialogTrigger>
-          <DialogContent className="max-h-[88dvh] max-w-[min(56rem,calc(100vw-2rem))] gap-3 rounded-lg p-3">
+          <DialogContent
+            className="
+                max-h-[88dvh] max-w-[min(56rem,calc(100vw-2rem))] gap-3
+                rounded-lg p-3
+              "
+          >
             <DialogTitle className="truncate pr-10 text-sm">{name}</DialogTitle>
             {previewUrl ? (
-              <div className="flex min-h-0 items-center justify-center overflow-auto rounded-md bg-muted/30">
+              <div
+                className="
+                        flex min-h-0 items-center justify-center overflow-auto
+                        rounded-md bg-muted/30
+                      "
+              >
                 <img
                   alt={name}
                   className="max-h-[76dvh] max-w-full object-contain"
@@ -71,7 +81,12 @@ export function ChatAttachmentTile({
                 />
               </div>
             ) : (
-              <pre className="max-h-[76dvh] overflow-auto whitespace-pre-wrap break-words rounded-md bg-muted/30 p-3 font-mono text-xs leading-5">
+              <pre
+                className="
+                        max-h-[76dvh] overflow-auto rounded-md bg-muted/30 p-3
+                        font-mono text-xs/5 wrap-break-word whitespace-pre-wrap
+                      "
+              >
                 {previewText}
               </pre>
             )}
@@ -96,7 +111,14 @@ export function ChatAttachmentTile({
               name,
             })
           }
-          className="absolute -right-1 -top-1 inline-flex size-5 items-center justify-center rounded-full border bg-background text-muted-foreground shadow-sm hover:bg-foreground/[0.055] hover:text-foreground active:bg-foreground/[0.075] dark:hover:bg-white/[0.07]"
+          className="
+                absolute -top-1 -right-1 inline-flex size-5 items-center
+                justify-center rounded-full border bg-background
+                text-muted-foreground shadow-sm
+                hover:bg-foreground/5.5 hover:text-foreground
+                active:bg-foreground/7.5
+                dark:hover:bg-white/[0.07]
+              "
           onClick={onRemove}
           type="button"
         >
@@ -123,7 +145,7 @@ function AttachmentTileBody({
       <AttachmentThumb name={name} previewUrl={previewUrl} />
       <span className="flex min-w-0 flex-col">
         <span className="truncate font-medium text-foreground">{name}</span>
-        <span className="truncate text-[11px] leading-4 text-muted-foreground">
+        <span className="truncate text-[11px]/4 text-muted-foreground">
           {contentType ?? typeLabel}
         </span>
       </span>
@@ -141,7 +163,13 @@ function AttachmentThumb({
   const [imageFailed, setImageFailed] = useState(false);
 
   return (
-    <span className="flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-md border border-foreground/[0.08] bg-muted/45 dark:border-white/[0.08]">
+    <span
+      className="
+      flex size-10 shrink-0 items-center justify-center overflow-hidden
+      rounded-md border border-foreground/8 bg-muted/45
+      dark:border-white/8
+    "
+    >
       {previewUrl && !imageFailed ? (
         <img
           alt=""
@@ -166,10 +194,23 @@ function attachmentTileClassName({
   removable: boolean;
 }) {
   return cn(
-    "inline-flex min-w-0 max-w-full items-center gap-2 rounded-lg border border-foreground/[0.08] bg-background/70 px-2 py-1.5 text-left text-xs shadow-[0_8px_22px_-22px_rgba(0,0,0,0.55)] backdrop-blur-xl transition-colors dark:border-white/[0.08]",
-    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-foreground/10",
+    `
+      inline-flex max-w-full min-w-0 items-center gap-2 rounded-lg border
+      border-foreground/8 bg-background/70 px-2 py-1.5 text-left text-xs
+      shadow-[0_8px_22px_-22px_rgba(0,0,0,0.55)] backdrop-blur-xl
+      transition-colors
+      dark:border-white/8
+    `,
+    `
+      focus-visible:ring-2 focus-visible:ring-foreground/10
+      focus-visible:outline-none
+    `,
     removable && "pr-7",
     interactive &&
-      "hover:bg-foreground/[0.055] active:bg-foreground/[0.075] dark:hover:bg-white/[0.07]",
+      `
+      hover:bg-foreground/5.5
+      active:bg-foreground/7.5
+      dark:hover:bg-white/[0.07]
+    `,
   );
 }

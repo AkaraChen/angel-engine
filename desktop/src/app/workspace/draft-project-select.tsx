@@ -1,12 +1,12 @@
+import type { Project } from "@/shared/projects";
 import { Folder } from "lucide-react";
-import { useTranslation } from "react-i18next";
 
+import { useTranslation } from "react-i18next";
+import { getProjectDisplayName } from "@/app/workspace/workspace-display";
 import {
   NativeSelect,
   NativeSelectOption,
 } from "@/components/ui/native-select";
-import { getProjectDisplayName } from "@/app/workspace/workspace-display";
-import type { Project } from "@/shared/projects";
 
 const NO_PROJECT_SELECT_VALUE = Symbol("angel.projectSelect.noProject");
 const NEW_PROJECT_SELECT_VALUE = Symbol("angel.projectSelect.newProject");
@@ -31,7 +31,12 @@ export function DraftProjectSelect({
 
   return (
     <div className="relative w-fit max-w-[18rem]">
-      <Folder className="pointer-events-none absolute top-1/2 left-2.5 z-10 size-3.5 -translate-y-1/2 text-muted-foreground/85" />
+      <Folder
+        className="
+        pointer-events-none absolute top-1/2 left-2.5 z-10 size-3.5
+        -translate-y-1/2 text-muted-foreground/85
+      "
+      />
       <NativeSelect
         aria-label={t("workspace.projectSelect")}
         className="max-w-[18rem]"

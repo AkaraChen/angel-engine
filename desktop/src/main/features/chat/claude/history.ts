@@ -1,19 +1,19 @@
 import type { SessionMessage } from "@anthropic-ai/claude-agent-sdk";
+import type { EngineEventJson, JsonObject } from "./types";
+
 import {
   EngineEventContentKind,
   EngineEventHistoryRole,
 } from "@angel-engine/client-napi";
-
 import { structuredPlanFromToolUse } from "./plan";
-import type { EngineEventJson, JsonObject } from "./types";
 import { claudeHistoryToolCall, claudeHistoryToolResult } from "./tooling";
 import { asObject } from "./utils";
 
-type HistoryToolUse = {
+interface HistoryToolUse {
   id: string;
   input: JsonObject;
   name: string;
-};
+}
 
 export function historyEventsFromSessionMessages(
   conversationId: string,

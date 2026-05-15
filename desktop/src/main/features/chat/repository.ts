@@ -1,11 +1,11 @@
+import type { Chat, ChatCreateInput } from "../../../shared/chat";
 import { randomUUID } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
-import { desc, eq } from "drizzle-orm";
 
-import type { Chat, ChatCreateInput } from "../../../shared/chat";
-import { chats } from "../../db/schema";
+import { desc, eq } from "drizzle-orm";
 import { getDatabase } from "../../db/database";
+import { chats } from "../../db/schema";
 
 const DEFAULT_CHAT_TITLE = "New chat";
 

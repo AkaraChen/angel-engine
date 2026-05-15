@@ -1,12 +1,11 @@
-import { type ComponentType, type ReactElement } from "react";
-import { useTranslation } from "react-i18next";
-import { Folder, List, MessageSquarePlus, Rows3, Settings } from "lucide-react";
+import type { ComponentType, ReactElement } from "react";
+import type { SidebarViewMode } from "@/app/workspace/workspace-ui-store";
+import type { Chat } from "@/shared/chat";
 
-import {
-  AnimatedSidebarMenuItem,
-  WorkspaceSidebarMenuButton,
-} from "@/components/workspace-sidebar-primitives";
-import { cn } from "@/platform/utils";
+import type { Project } from "@/shared/projects";
+import { Folder, List, MessageSquarePlus, Rows3, Settings } from "lucide-react";
+import { useTranslation } from "react-i18next";
+import { useWorkspaceUiStore } from "@/app/workspace/workspace-ui-store";
 import {
   Sidebar,
   SidebarContent,
@@ -14,15 +13,14 @@ import {
   SidebarHeader,
   SidebarMenu,
 } from "@/components/ui/sidebar";
+import {
+  AnimatedSidebarMenuItem,
+  WorkspaceSidebarMenuButton,
+} from "@/components/workspace-sidebar-primitives";
 import { ChatSidebarSection } from "@/features/chat/components/chat-sidebar-section";
 import { SimpleChatSidebarSection } from "@/features/chat/components/simple-chat-sidebar-section";
 import { ProjectSidebarSection } from "@/features/projects/components/project-sidebar-section";
-import {
-  useWorkspaceUiStore,
-  type SidebarViewMode,
-} from "@/app/workspace/workspace-ui-store";
-import type { Chat } from "@/shared/chat";
-import type { Project } from "@/shared/projects";
+import { cn } from "@/platform/utils";
 
 type MaybeAsync = void | Promise<void>;
 
@@ -38,7 +36,7 @@ const SIDEBAR_VIEW_MODES: Array<{
   },
 ];
 
-type WorkspaceSidebarProps = {
+interface WorkspaceSidebarProps {
   chats: Chat[];
   isChatsLoading: boolean;
   isMacOS: boolean;
@@ -57,7 +55,7 @@ type WorkspaceSidebarProps = {
   selectedProjectId?: string;
   settingsActive: boolean;
   standaloneChats: Chat[];
-};
+}
 
 export function WorkspaceSidebar({
   chats,
@@ -82,7 +80,7 @@ export function WorkspaceSidebar({
   const { t } = useTranslation();
   const viewMode = useWorkspaceUiStore((state) => state.sidebarViewMode);
   const setViewMode = useWorkspaceUiStore((state) => state.setSidebarViewMode);
-  const createChatFromNewButton = () => {
+  const createChatFromNewButton = async () => {
     if (viewMode === "project") {
       const firstProject = projects[0];
       if (firstProject) {
@@ -95,7 +93,7 @@ export function WorkspaceSidebar({
 
   return (
     <Sidebar className="select-none" variant="inset">
-      <SidebarHeader className="px-2 pb-2 pt-2" data-electron-drag>
+      <SidebarHeader className="p-2" data-electron-drag>
         {isMacOS ? <div aria-hidden className="h-8 shrink-0" /> : null}
 
         <SidebarViewModeControl onValueChange={setViewMode} value={viewMode} />
@@ -193,10 +191,18 @@ function SidebarViewModeControl({
   value: SidebarViewMode;
 }): ReactElement {
   return (
-    <div className="px-1 group-data-[collapsible=icon]:hidden">
+    <div
+      className="
+      px-1
+      group-data-[collapsible=icon]:hidden
+    "
+    >
       <div
         aria-label="view"
-        className="grid grid-cols-3 gap-0.5 rounded-md border border-sidebar-border/70 bg-sidebar-accent/65 p-0.5"
+        className="
+          grid grid-cols-3 gap-0.5 rounded-md border border-sidebar-border/70
+          bg-sidebar-accent/65 p-0.5
+        "
         role="group"
       >
         {SIDEBAR_VIEW_MODES.map((option) => {
@@ -208,7 +214,13 @@ function SidebarViewModeControl({
               aria-label={option.value}
               aria-pressed={isActive}
               className={cn(
-                "flex h-7 min-w-0 items-center justify-center rounded px-2 text-sidebar-foreground/62 outline-hidden transition-[background-color,color] hover:bg-sidebar-accent/55 hover:text-sidebar-foreground/82 focus-visible:bg-sidebar-accent/70",
+                `
+                  flex h-7 min-w-0 items-center justify-center rounded-sm px-2
+                  text-sidebar-foreground/62 outline-hidden
+                  transition-[background-color,color]
+                  hover:bg-sidebar-accent/55 hover:text-sidebar-foreground/82
+                  focus-visible:bg-sidebar-accent/70
+                `,
                 isActive ? "bg-background/62 text-sidebar-foreground" : "",
               )}
               key={option.value}

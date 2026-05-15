@@ -1,6 +1,6 @@
 import type { ActionSnapshot } from "@angel-engine/client-napi";
 
-export type Chat = {
+export interface Chat {
   id: string;
   title: string;
   projectId: string | null;
@@ -10,9 +10,9 @@ export type Chat = {
   createdAt: string;
   updatedAt: string;
   archived: boolean;
-};
+}
 
-export type ChatCreateInput = {
+export interface ChatCreateInput {
   model?: string | null;
   mode?: string | null;
   permissionMode?: string | null;
@@ -20,56 +20,56 @@ export type ChatCreateInput = {
   reasoningEffort?: string | null;
   runtime?: string;
   title?: string;
-};
+}
 
-export type ChatPrewarmInput = {
+export interface ChatPrewarmInput {
   projectId?: string;
   runtime?: string;
-};
+}
 
-export type ChatRenameInput = {
+export interface ChatRenameInput {
   chatId: string;
   title: string;
-};
+}
 
-export type ChatRuntimeConfigInput = {
+export interface ChatRuntimeConfigInput {
   cwd?: string;
   runtime?: string;
-};
+}
 
-export type ChatSetModeInput = {
+export interface ChatSetModeInput {
   chatId: string;
   mode: string;
-};
+}
 
-export type ChatSetPermissionModeInput = {
+export interface ChatSetPermissionModeInput {
   chatId: string;
   mode: string;
-};
+}
 
-export type ChatSetRuntimeInput = {
+export interface ChatSetRuntimeInput {
   chatId: string;
   runtime: string;
-};
+}
 
-export type ChatRuntimeConfigOption = {
+export interface ChatRuntimeConfigOption {
   description?: string | null;
   label: string;
   value: string;
-};
+}
 
-export type ChatAvailableCommand = {
+export interface ChatAvailableCommand {
   description: string;
   inputHint?: string | null;
   name: string;
-};
+}
 
-export type ChatAgentState = {
+export interface ChatAgentState {
   currentMode?: string | null;
   currentPermissionMode?: string | null;
-};
+}
 
-export type ChatRuntimeConfig = {
+export interface ChatRuntimeConfig {
   agentState?: ChatAgentState;
   canSetModel?: boolean;
   canSetMode?: boolean;
@@ -84,14 +84,14 @@ export type ChatRuntimeConfig = {
   models: ChatRuntimeConfigOption[];
   permissionModes: ChatRuntimeConfigOption[];
   reasoningEfforts: ChatRuntimeConfigOption[];
-};
+}
 
-export type ChatHistoryMessage = {
+export interface ChatHistoryMessage {
   content: ChatHistoryMessagePart[];
   createdAt?: string;
   id: string;
   role: "assistant" | "system" | "user";
-};
+}
 
 export type ChatJsonValue =
   | boolean
@@ -101,22 +101,24 @@ export type ChatJsonValue =
   | ChatJsonValue[]
   | { readonly [key: string]: ChatJsonValue };
 
-export type ChatJsonObject = { readonly [key: string]: ChatJsonValue };
+export interface ChatJsonObject {
+  readonly [key: string]: ChatJsonValue;
+}
 
 export type ChatPlanEntryStatus = "completed" | "in_progress" | "pending";
 
-export type ChatPlanEntry = {
+export interface ChatPlanEntry {
   content: string;
   status: ChatPlanEntryStatus;
-};
+}
 
-export type ChatPlanData = {
+export interface ChatPlanData {
   entries: ChatPlanEntry[];
   kind?: "review" | "todo" | null;
   path?: string | null;
   presentation?: "created" | "updated" | null;
   text: string;
-};
+}
 
 export type ChatPlanPartName = "plan" | "todo";
 
@@ -151,20 +153,20 @@ export type ChatHistoryMessagePart =
     }
   | ChatToolCallPart;
 
-export type ChatToolActionOutput = {
+export interface ChatToolActionOutput {
   kind: string;
   text: string;
-};
+}
 
-export type ChatToolActionError = {
+export interface ChatToolActionError {
   code: string;
   message: string;
   recoverable: boolean;
-};
+}
 
 export type ChatToolActionPhase = ActionSnapshot["phase"];
 
-export type ChatToolAction = {
+export interface ChatToolAction {
   elicitationId?: string | null;
   error?: ChatToolActionError | null;
   id: string;
@@ -176,23 +178,23 @@ export type ChatToolAction = {
   rawInput?: string | null;
   title?: string | null;
   turnId?: string;
-};
+}
 
-export type ChatElicitationQuestionOption = {
+export interface ChatElicitationQuestionOption {
   description?: string;
   label: string;
-};
+}
 
-export type ChatElicitationQuestion = {
+export interface ChatElicitationQuestion {
   header?: string;
   id: string;
   isOther?: boolean;
   isSecret?: boolean;
   options?: ChatElicitationQuestionOption[];
   question?: string;
-};
+}
 
-export type ChatElicitation = {
+export interface ChatElicitation {
   actionId?: string | null;
   body?: string | null;
   choices?: string[];
@@ -202,12 +204,12 @@ export type ChatElicitation = {
   questions?: ChatElicitationQuestion[];
   title?: string | null;
   turnId?: string | null;
-};
+}
 
-export type ChatElicitationAnswer = {
+export interface ChatElicitationAnswer {
   id: string;
   value: string;
-};
+}
 
 export type ChatElicitationResponse =
   | { type: "allow" }
@@ -219,7 +221,7 @@ export type ChatElicitationResponse =
   | { type: "externalComplete" }
   | { type: "raw"; value: string };
 
-export type ChatToolCallPart = {
+export interface ChatToolCallPart {
   args: ChatJsonObject;
   argsText: string;
   artifact: ChatToolAction;
@@ -228,7 +230,7 @@ export type ChatToolCallPart = {
   toolCallId: string;
   toolName: string;
   type: "tool-call";
-};
+}
 
 export function chatToolActionToPart(action: ChatToolAction): ChatToolCallPart {
   const outputText = action.outputText || undefined;
@@ -649,26 +651,26 @@ export function isTerminalChatToolPhase(phase?: ChatToolActionPhase) {
   return exhaustive;
 }
 
-export type ChatLoadResult = {
+export interface ChatLoadResult {
   chat: Chat;
   config?: ChatRuntimeConfig;
   messages: ChatHistoryMessage[];
-};
+}
 
-export type ChatPrewarmResult = {
+export interface ChatPrewarmResult {
   config?: ChatRuntimeConfig;
   prewarmId: string;
-};
+}
 
-export type ChatSetModeResult = {
+export interface ChatSetModeResult {
   chat: Chat;
   config: ChatRuntimeConfig;
-};
+}
 
-export type ChatSetPermissionModeResult = {
+export interface ChatSetPermissionModeResult {
   chat: Chat;
   config: ChatRuntimeConfig;
-};
+}
 
 export type ChatAttachmentInput =
   | {
@@ -692,20 +694,20 @@ export type ChatAttachmentInput =
       type: "fileMention";
     };
 
-export type ProjectFileSearchInput = {
+export interface ProjectFileSearchInput {
   limit?: number;
   query?: string;
   root: string;
-};
+}
 
-export type ProjectFileSearchResult = {
+export interface ProjectFileSearchResult {
   name: string;
   path: string;
   relativePath: string;
   type: "directory" | "file";
-};
+}
 
-export type ChatSendInput = {
+export interface ChatSendInput {
   attachments?: ChatAttachmentInput[];
   chatId?: string;
   model?: string | null;
@@ -716,9 +718,9 @@ export type ChatSendInput = {
   reasoningEffort?: string | null;
   runtime?: string;
   text: string;
-};
+}
 
-export type ChatSendResult = {
+export interface ChatSendResult {
   chat: Chat;
   chatId: string;
   config?: ChatRuntimeConfig;
@@ -727,16 +729,16 @@ export type ChatSendResult = {
   reasoning?: string;
   text: string;
   turnId?: string;
-};
+}
 
 export type ChatStreamPart = "reasoning" | "text";
 
-export type ChatStreamDelta = {
+export interface ChatStreamDelta {
   part: ChatStreamPart;
   text: string;
   turnId?: string;
   type: "delta";
-};
+}
 
 export type ChatStreamEvent =
   | ChatStreamDelta
@@ -773,30 +775,30 @@ export type ChatStreamEvent =
       type: "done";
     };
 
-export type ChatStreamStartInput = {
+export interface ChatStreamStartInput {
   input: ChatSendInput;
   streamId: string;
-};
+}
 
-export type ChatStreamElicitationResolveInput = {
+export interface ChatStreamElicitationResolveInput {
   elicitationId: string;
   response: ChatElicitationResponse;
   streamId: string;
-};
+}
 
-export type ChatStreamController = {
+export interface ChatStreamController {
   cancel: () => void;
   resolveElicitation: (
     input: Omit<ChatStreamElicitationResolveInput, "streamId">,
   ) => Promise<void>;
-};
+}
 
-export type ChatStreamApi = {
-  send(
+export interface ChatStreamApi {
+  send: (
     input: ChatSendInput,
     onEvent: (streamEvent: ChatStreamEvent) => void,
-  ): ChatStreamController;
-};
+  ) => ChatStreamController;
+}
 
 export const CHAT_STREAM_CANCEL_CHANNEL = "chat:stream:cancel";
 export const CHAT_STREAM_ELICITATION_RESOLVE_CHANNEL =
@@ -812,7 +814,7 @@ export function normalizeChatAttachmentsInput(
 ): ChatAttachmentInput[] {
   if (input == null) return [];
   if (!Array.isArray(input)) {
-    throw new Error("Chat attachments must be an array.");
+    throw new TypeError("Chat attachments must be an array.");
   }
 
   return input.map((item) => {

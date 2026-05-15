@@ -1,10 +1,10 @@
-import i18n from "i18next";
+import type { SupportedLanguage } from "../i18n/resources";
 
+import i18n from "i18next";
 import {
   normalizeSupportedLanguage,
   resources,
   supportedLanguages,
-  type SupportedLanguage,
 } from "../i18n/resources";
 
 void i18n.init({

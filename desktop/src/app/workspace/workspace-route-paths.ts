@@ -1,5 +1,5 @@
-import type { DesktopOpenChatFromNotificationEvent } from "@/shared/desktop-window";
 import type { Chat } from "@/shared/chat";
+import type { DesktopOpenChatFromNotificationEvent } from "@/shared/desktop-window";
 
 export function chatRoutePath(chat: Chat) {
   if (chat.projectId) {

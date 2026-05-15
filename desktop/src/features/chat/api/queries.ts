@@ -1,11 +1,6 @@
-import {
-  mutationOptions,
-  queryOptions,
-  type QueryClient,
-} from "@tanstack/react-query";
+import type { QueryClient } from "@tanstack/react-query";
 
 import type { ApiClient } from "@/platform/api-client";
-import { queryKeys } from "@/platform/query-keys";
 import type {
   Chat,
   ChatCreateInput,
@@ -13,6 +8,8 @@ import type {
   ChatPrewarmResult,
   ChatRuntimeConfig,
 } from "@/shared/chat";
+import { mutationOptions, queryOptions } from "@tanstack/react-query";
+import { queryKeys } from "@/platform/query-keys";
 
 interface ChatListQueryParams {
   api: ApiClient;
@@ -99,7 +96,7 @@ export function chatListQueryOptions({
 }: ChatListQueryParams) {
   return queryOptions({
     enabled,
-    queryFn: () => api.chats.list(),
+    queryFn: async () => api.chats.list(),
     queryKey: queryKeys.chats.list(),
     staleTime,
   });
@@ -113,7 +110,7 @@ export function chatLoadQueryOptions({
 }: ChatLoadQueryParams) {
   return queryOptions({
     enabled: enabled && Boolean(chatId),
-    queryFn: (): Promise<ChatLoadResult> => {
+    queryFn: async (): Promise<ChatLoadResult> => {
       if (!chatId) {
         throw new Error("No chat selected");
       }
@@ -131,7 +128,7 @@ export function chatLoadSuspenseQueryOptions({
   staleTime = 60_000,
 }: Omit<ChatLoadQueryParams, "enabled" | "chatId"> & { chatId: string }) {
   return queryOptions({
-    queryFn: (): Promise<ChatLoadResult> => api.chats.load(chatId),
+    queryFn: async (): Promise<ChatLoadResult> => api.chats.load(chatId),
     queryKey: queryKeys.chats.detail(chatId),
     retry: false,
     staleTime,
@@ -147,7 +144,7 @@ export function chatRuntimeConfigQueryOptions({
 }: ChatRuntimeConfigQueryParams) {
   return queryOptions({
     enabled: enabled && Boolean(runtime),
-    queryFn: (): Promise<ChatRuntimeConfig> =>
+    queryFn: async (): Promise<ChatRuntimeConfig> =>
       api.chats.inspectConfig({
         cwd: cwd ?? undefined,
         runtime: runtime ?? undefined,
@@ -168,7 +165,7 @@ export function chatPrewarmQueryOptions({
   return queryOptions({
     enabled: enabled && Boolean(runtime),
     gcTime: 300_000,
-    queryFn: (): Promise<ChatPrewarmResult> =>
+    queryFn: async (): Promise<ChatPrewarmResult> =>
       api.chats.prewarm({
         projectId: projectId ?? undefined,
         runtime: runtime ?? undefined,
@@ -185,7 +182,7 @@ export function createChatMutationOptions({
   queryClient,
 }: CreateChatMutationParams) {
   return mutationOptions({
-    mutationFn: (input: ChatCreateInput) => api.chats.create(input),
+    mutationFn: async (input: ChatCreateInput) => api.chats.create(input),
     onSuccess: async (data, variables) => {
       queryClient.setQueryData<Chat[]>(queryKeys.chats.list(), (current = []) =>
         upsertChatInList(current, data),
@@ -208,7 +205,7 @@ export function renameChatMutationOptions({
   queryClient,
 }: RenameChatMutationParams) {
   return mutationOptions({
-    mutationFn: (input: Parameters<ApiClient["chats"]["rename"]>[0]) =>
+    mutationFn: async (input: Parameters<ApiClient["chats"]["rename"]>[0]) =>
       api.chats.rename(input),
     onSuccess: async (data) => {
       queryClient.setQueryData<Chat[]>(queryKeys.chats.list(), (current = []) =>
@@ -229,8 +226,9 @@ export function setChatRuntimeMutationOptions({
   queryClient,
 }: SetChatRuntimeMutationParams) {
   return mutationOptions({
-    mutationFn: (input: Parameters<ApiClient["chats"]["setRuntime"]>[0]) =>
-      api.chats.setRuntime(input),
+    mutationFn: async (
+      input: Parameters<ApiClient["chats"]["setRuntime"]>[0],
+    ) => api.chats.setRuntime(input),
     onSuccess: async (data) => {
       queryClient.setQueryData<Chat[]>(queryKeys.chats.list(), (current = []) =>
         upsertChatInList(current, data),
@@ -253,7 +251,7 @@ export function archiveChatMutationOptions({
   queryClient,
 }: ArchiveChatMutationParams) {
   return mutationOptions({
-    mutationFn: (chat: Chat) => api.chats.archive(chat.id),
+    mutationFn: async (chat: Chat) => api.chats.archive(chat.id),
     onSuccess: async (data, variables) => {
       queryClient.setQueryData<Chat[]>(queryKeys.chats.list(), (current = []) =>
         current.filter((chat) => chat.id !== data.id),
@@ -273,7 +271,7 @@ export function deleteAllChatsMutationOptions({
   queryClient,
 }: DeleteAllChatsMutationParams) {
   return mutationOptions({
-    mutationFn: () => api.chats.deleteAll(),
+    mutationFn: async () => api.chats.deleteAll(),
     onSuccess: async (data) => {
       await invalidateChatQueries(queryClient);
       await onSuccess?.(data);
@@ -287,7 +285,7 @@ export function chatContextMenuMutationOptions({
   queryClient,
 }: ChatContextMenuMutationParams) {
   return mutationOptions({
-    mutationFn: (chat: Chat) => api.chats.showContextMenu(chat.id),
+    mutationFn: async (chat: Chat) => api.chats.showContextMenu(chat.id),
     onSuccess: async (data, variables) => {
       if (data === "deleted") {
         await invalidateChatQueries(queryClient);

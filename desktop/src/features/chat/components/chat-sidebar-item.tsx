@@ -1,6 +1,6 @@
 import type { MouseEventHandler, ReactElement } from "react";
-import { useTranslation } from "react-i18next";
 import { Archive } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 import {
   WorkspaceSidebarMenuAction,
@@ -10,7 +10,7 @@ import { useChatAttention } from "@/features/chat/state/chat-run-store";
 
 import { ChatRunningPulse } from "./chat-running-pulse";
 
-type ChatSidebarItemProps = {
+interface ChatSidebarItemProps {
   chatId: string;
   title: string;
   tooltip: string;
@@ -18,7 +18,7 @@ type ChatSidebarItemProps = {
   onArchiveChat?: () => Promise<void> | void;
   onOpenChat: () => void;
   onShowContextMenu?: () => Promise<void> | void;
-};
+}
 
 export function ChatSidebarItem({
   chatId,
@@ -46,7 +46,10 @@ export function ChatSidebarItem({
         title={tooltip}
       >
         <span
-          className="block min-w-0 flex-1 overflow-hidden truncate whitespace-nowrap text-left"
+          className="
+            block min-w-0 flex-1 truncate overflow-hidden text-left
+            whitespace-nowrap
+          "
           title={title}
         >
           {title}
@@ -93,14 +96,20 @@ function ChatAttentionIndicators({
       {attention.needsInput ? (
         <span
           aria-label={t("sidebar.needsInput")}
-          className="size-1.5 rounded-full bg-amber-400 shadow-[0_0_0_1px_rgba(245,158,11,0.34)]"
+          className="
+                size-1.5 rounded-full bg-amber-400
+                shadow-[0_0_0_1px_rgba(245,158,11,0.34)]
+              "
           role="img"
         />
       ) : null}
       {attention.completed ? (
         <span
           aria-label={t("sidebar.completed")}
-          className="size-1.5 rounded-full bg-emerald-500 shadow-[0_0_0_1px_rgba(16,185,129,0.28)]"
+          className="
+                size-1.5 rounded-full bg-emerald-500
+                shadow-[0_0_0_1px_rgba(16,185,129,0.28)]
+              "
           role="img"
         />
       ) : null}

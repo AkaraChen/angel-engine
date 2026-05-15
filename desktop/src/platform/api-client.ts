@@ -1,17 +1,17 @@
-import { ipc } from "@/platform/ipc";
 import type {
   ChatCreateInput,
   ChatPrewarmInput,
-  ProjectFileSearchInput,
   ChatRenameInput,
   ChatRuntimeConfigInput,
   ChatSetModeInput,
   ChatSetPermissionModeInput,
   ChatSetRuntimeInput,
+  ProjectFileSearchInput,
 } from "@/shared/chat";
 import type { CreateProjectInput } from "@/shared/projects";
+import { ipc } from "@/platform/ipc";
 
-type ChatApiClient = {
+interface ChatApiClient {
   archive: (chatId: string) => ReturnType<typeof ipc.chatsArchive>;
   create: (input?: ChatCreateInput) => ReturnType<typeof ipc.chatsCreate>;
   deleteAll: () => ReturnType<typeof ipc.chatsDeleteAll>;
@@ -32,9 +32,9 @@ type ChatApiClient = {
   showContextMenu: (
     chatId: string,
   ) => ReturnType<typeof ipc.chatsShowContextMenu>;
-};
+}
 
-type ProjectsApiClient = {
+interface ProjectsApiClient {
   chooseDirectory: () => ReturnType<typeof ipc.projectsChooseDirectory>;
   create: (input: CreateProjectInput) => ReturnType<typeof ipc.projectsCreate>;
   list: () => ReturnType<typeof ipc.projectsList>;
@@ -44,38 +44,40 @@ type ProjectsApiClient = {
   showContextMenu: (
     projectId: string,
   ) => ReturnType<typeof ipc.projectsShowContextMenu>;
-};
+}
 
-export type ApiClient = {
+export interface ApiClient {
   chats: ChatApiClient;
   projects: ProjectsApiClient;
-};
+}
 
 export function createApiClient(): ApiClient {
   return {
     chats: {
-      archive: (chatId: string) => ipc.chatsArchive(chatId),
-      create: (input: ChatCreateInput = {}) => ipc.chatsCreate(input),
-      deleteAll: () => ipc.chatsDeleteAll(),
-      inspectConfig: (input: ChatRuntimeConfigInput = {}) =>
+      archive: async (chatId: string) => ipc.chatsArchive(chatId),
+      create: async (input: ChatCreateInput = {}) => ipc.chatsCreate(input),
+      deleteAll: async () => ipc.chatsDeleteAll(),
+      inspectConfig: async (input: ChatRuntimeConfigInput = {}) =>
         ipc.chatsRuntimeConfig(input),
-      list: () => ipc.chatsList(),
-      load: (chatId: string) => ipc.chatsLoad(chatId),
-      prewarm: (input: ChatPrewarmInput = {}) => ipc.chatsPrewarm(input),
-      rename: (input: ChatRenameInput) => ipc.chatsRename(input),
-      setMode: (input: ChatSetModeInput) => ipc.chatsSetMode(input),
-      setPermissionMode: (input: ChatSetPermissionModeInput) =>
+      list: async () => ipc.chatsList(),
+      load: async (chatId: string) => ipc.chatsLoad(chatId),
+      prewarm: async (input: ChatPrewarmInput = {}) => ipc.chatsPrewarm(input),
+      rename: async (input: ChatRenameInput) => ipc.chatsRename(input),
+      setMode: async (input: ChatSetModeInput) => ipc.chatsSetMode(input),
+      setPermissionMode: async (input: ChatSetPermissionModeInput) =>
         ipc.chatsSetPermissionMode(input),
-      setRuntime: (input: ChatSetRuntimeInput) => ipc.chatsSetRuntime(input),
-      showContextMenu: (chatId: string) => ipc.chatsShowContextMenu(chatId),
+      setRuntime: async (input: ChatSetRuntimeInput) =>
+        ipc.chatsSetRuntime(input),
+      showContextMenu: async (chatId: string) =>
+        ipc.chatsShowContextMenu(chatId),
     },
     projects: {
-      chooseDirectory: () => ipc.projectsChooseDirectory(),
-      create: (input: CreateProjectInput) => ipc.projectsCreate(input),
-      list: () => ipc.projectsList(),
-      searchFiles: (input: ProjectFileSearchInput) =>
+      chooseDirectory: async () => ipc.projectsChooseDirectory(),
+      create: async (input: CreateProjectInput) => ipc.projectsCreate(input),
+      list: async () => ipc.projectsList(),
+      searchFiles: async (input: ProjectFileSearchInput) =>
         ipc.projectsSearchFiles(input),
-      showContextMenu: (projectId: string) =>
+      showContextMenu: async (projectId: string) =>
         ipc.projectsShowContextMenu(projectId),
     },
   };

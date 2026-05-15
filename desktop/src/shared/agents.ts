@@ -11,22 +11,22 @@ export type AgentRuntime =
   | "cline"
   | "claude";
 
-export type AgentOption = {
+export interface AgentOption {
   description: string;
   id: AgentRuntime;
   label: string;
-};
+}
 
-export type AgentValueOption = {
+export interface AgentValueOption {
   description?: string;
   label: string;
   value: string;
-};
+}
 
-export type AgentSettings = {
+export interface AgentSettings {
   defaultRuntime: AgentRuntime;
   enabledRuntimes: AgentRuntime[];
-};
+}
 
 export const AGENT_OPTIONS: AgentOption[] = [
   {

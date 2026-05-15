@@ -1,6 +1,6 @@
-import { EngineEventType } from "@angel-engine/client-napi";
-
 import type { EngineEventJson, JsonObject } from "./types";
+
+import { EngineEventType } from "@angel-engine/client-napi";
 import { isJsonObject } from "./utils";
 
 export function contextUpdated(

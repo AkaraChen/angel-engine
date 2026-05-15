@@ -1,6 +1,6 @@
 import type {
-  ChatStreamController,
   ChatSendInput,
+  ChatStreamController,
   ChatStreamEvent,
 } from "@/shared/chat";
 
@@ -34,7 +34,7 @@ class AsyncEventQueue<T> {
   private readonly items: T[] = [];
   private readonly waiters: Array<(item: T) => void> = [];
 
-  next() {
+  async next() {
     const item = this.items.shift();
     if (item !== undefined) {
       return Promise.resolve(item);

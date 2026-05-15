@@ -1,31 +1,34 @@
-import { BrowserWindow, ipcMain } from "electron";
-import { type } from "arktype";
+import type {
+  Chat,
+  ChatElicitation,
+  ChatElicitationResponse,
+  ChatStreamEvent,
+  ChatToolAction,
+} from "../../../shared/chat";
+import type { ChatStreamControls } from "./angel-client";
 
+import { type } from "arktype";
+import { BrowserWindow, ipcMain } from "electron";
 import {
   CHAT_STREAM_CANCEL_CHANNEL,
   CHAT_STREAM_ELICITATION_RESOLVE_CHANNEL,
   CHAT_STREAM_START_CHANNEL,
   chatStreamEventChannel,
   normalizeChatAttachmentsInput,
-  type Chat,
-  type ChatElicitation,
-  type ChatElicitationResponse,
-  type ChatStreamEvent,
-  type ChatToolAction,
 } from "../../../shared/chat";
-import { streamChat, type ChatStreamControls } from "./angel-client";
+import { translate } from "../../i18n";
+import {
+  notifyChatNeedsInput,
+  notifyChatTurnCompleted,
+} from "../../window-notifications";
+import { streamChat } from "./angel-client";
 import { getChat } from "./repository";
 import {
   chatStreamElicitationResolveInput,
   chatStreamStartInput,
 } from "./schemas";
-import {
-  notifyChatNeedsInput,
-  notifyChatTurnCompleted,
-} from "../../window-notifications";
-import { translate } from "../../i18n";
 
-type ActiveStream = {
+interface ActiveStream {
   cancel: () => void;
   chat?: Chat;
   notifiedElicitationIds: Set<string>;
@@ -34,7 +37,7 @@ type ActiveStream = {
     response: ChatElicitationResponse,
   ) => Promise<void>;
   window?: BrowserWindow | null;
-};
+}
 
 const activeStreams = new Map<string, ActiveStream>();
 
@@ -42,7 +45,9 @@ export function registerChatStreamIpc() {
   ipcMain.handle(CHAT_STREAM_START_CHANNEL, (event, payload: unknown) => {
     const requestResult = chatStreamStartInput(payload);
     if (requestResult instanceof type.errors) {
-      throw new Error(`Invalid stream start input: ${requestResult.summary}`);
+      throw new TypeError(
+        `Invalid stream start input: ${requestResult.summary}`,
+      );
     }
     const request = requestResult;
 
@@ -119,7 +124,7 @@ export function registerChatStreamIpc() {
     async (_event, payload: unknown) => {
       const requestResult = chatStreamElicitationResolveInput(payload);
       if (requestResult instanceof type.errors) {
-        throw new Error(
+        throw new TypeError(
           `Invalid elicitation resolve input: ${requestResult.summary}`,
         );
       }

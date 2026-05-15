@@ -7,7 +7,10 @@ export function ChatRestoreLoading() {
   return (
     <div
       aria-label={restoringLabel}
-      className="flex h-full min-h-0 flex-1 items-center justify-center overflow-hidden bg-background text-foreground"
+      className="
+        flex h-full min-h-0 flex-1 items-center justify-center overflow-hidden
+        bg-background text-foreground
+      "
       role="status"
     >
       <svg

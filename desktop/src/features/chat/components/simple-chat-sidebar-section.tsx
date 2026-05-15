@@ -1,21 +1,21 @@
-import { useMemo } from "react";
 import type { ReactElement } from "react";
+import type { Chat } from "@/shared/chat";
 import { AnimatePresence } from "framer-motion";
-import { useTranslation } from "react-i18next";
 import { Loader2, MessageSquare } from "lucide-react";
+import { useMemo } from "react";
 
-import {
-  AnimatedSidebarMenuItem,
-  WorkspaceSidebarMenuButton,
-} from "@/components/workspace-sidebar-primitives";
+import { useTranslation } from "react-i18next";
 import {
   SidebarGroup,
   SidebarGroupContent,
   SidebarGroupLabel,
   SidebarMenu,
 } from "@/components/ui/sidebar";
+import {
+  AnimatedSidebarMenuItem,
+  WorkspaceSidebarMenuButton,
+} from "@/components/workspace-sidebar-primitives";
 import { ChatSidebarItem } from "@/features/chat/components/chat-sidebar-item";
-import type { Chat } from "@/shared/chat";
 
 type MaybeAsync = void | Promise<void>;
 type ChatDateGroupKey =
@@ -26,20 +26,20 @@ type ChatDateGroupKey =
   | "today"
   | "yesterday";
 
-type ChatDateGroup = {
+interface ChatDateGroup {
   chats: Chat[];
   key: ChatDateGroupKey;
   labelKey: string;
-};
+}
 
-type SimpleChatSidebarSectionProps = {
+interface SimpleChatSidebarSectionProps {
   chats: Chat[];
   isLoading: boolean;
   onArchiveChat: (chat: Chat) => MaybeAsync;
   onOpenChat: (chat: Chat) => MaybeAsync;
   onShowChatContextMenu: (chat: Chat) => MaybeAsync;
   selectedChatId?: string;
-};
+}
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const CHAT_DATE_GROUPS: Array<{
@@ -85,7 +85,10 @@ export function SimpleChatSidebarSection({
 
           {!isLoading && chats.length === 0 ? (
             <div
-              className="flex min-h-44 flex-col items-center justify-center gap-3 px-4 py-8 text-center text-sidebar-foreground/70"
+              className="
+                    flex min-h-44 flex-col items-center justify-center gap-3
+                    px-4 py-8 text-center text-sidebar-foreground/70
+                  "
               key="chats-empty"
             >
               <MessageSquare className="size-6 text-sidebar-foreground/45" />
@@ -107,9 +110,11 @@ export function SimpleChatSidebarSection({
                         <ChatSidebarItem
                           chatId={chat.id}
                           isActive={chat.id === selectedChatId}
-                          onArchiveChat={() => onArchiveChat(chat)}
+                          onArchiveChat={async () => onArchiveChat(chat)}
                           onOpenChat={() => void onOpenChat(chat)}
-                          onShowContextMenu={() => onShowChatContextMenu(chat)}
+                          onShowContextMenu={async () =>
+                            onShowChatContextMenu(chat)
+                          }
                           title={displayChatTitle(chat.title, t)}
                           tooltip={chat.cwd ?? displayChatTitle(chat.title, t)}
                         />

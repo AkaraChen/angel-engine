@@ -1,34 +1,34 @@
-import { useState } from "react";
 import type { ReactElement } from "react";
+import type { Chat } from "@/shared/chat";
 import { AnimatePresence, motion } from "framer-motion";
-import { useTranslation } from "react-i18next";
 import { ChevronRight, Loader2, MessageSquare } from "lucide-react";
+import { useState } from "react";
 
-import {
-  AnimatedSidebarMenuItem,
-  WorkspaceSidebarMenuButton,
-  SidebarSectionHeader,
-  sidebarMotion,
-} from "@/components/workspace-sidebar-primitives";
+import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import {
   SidebarGroup,
   SidebarGroupContent,
   SidebarMenu,
 } from "@/components/ui/sidebar";
+import {
+  AnimatedSidebarMenuItem,
+  sidebarMotion,
+  SidebarSectionHeader,
+  WorkspaceSidebarMenuButton,
+} from "@/components/workspace-sidebar-primitives";
 import { ChatSidebarItem } from "@/features/chat/components/chat-sidebar-item";
-import type { Chat } from "@/shared/chat";
 
 type MaybeAsync = void | Promise<void>;
 
-type ChatSidebarSectionProps = {
+interface ChatSidebarSectionProps {
   isLoading: boolean;
   onArchiveChat: (chat: Chat) => MaybeAsync;
   onOpenChat: (chat: Chat) => MaybeAsync;
   onShowChatContextMenu: (chat: Chat) => MaybeAsync;
   selectedChatId?: string;
   standaloneChats: Chat[];
-};
+}
 
 export function ChatSidebarSection({
   isLoading,
@@ -91,9 +91,11 @@ export function ChatSidebarSection({
                     <ChatSidebarItem
                       chatId={chat.id}
                       isActive={chat.id === selectedChatId}
-                      onArchiveChat={() => onArchiveChat(chat)}
+                      onArchiveChat={async () => onArchiveChat(chat)}
                       onOpenChat={() => void onOpenChat(chat)}
-                      onShowContextMenu={() => onShowChatContextMenu(chat)}
+                      onShowContextMenu={async () =>
+                        onShowChatContextMenu(chat)
+                      }
                       title={displayChatTitle(chat.title, t)}
                       tooltip={displayChatTitle(chat.title, t)}
                     />
