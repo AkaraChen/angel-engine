@@ -62,6 +62,7 @@ export const es = {
       backgroundChatStatus: "Estado del chat en segundo plano",
       newChat: "Nuevo chat",
       newChatInProject: "Nuevo chat en {{projectName}}",
+      newProject: "Nuevo proyecto",
       noProject: "Sin proyecto",
       projectSelect: "Proyecto",
       settings: "Configuración",

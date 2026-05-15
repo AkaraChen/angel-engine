@@ -61,6 +61,7 @@ export interface LocaleResourceTranslationWorkspace {
   backgroundChatStatus: string;
   newChat: string;
   newChatInProject: string;
+  newProject: string;
   noProject: string;
   projectSelect: string;
   settings: string;

@@ -62,6 +62,7 @@ export const ja = {
       backgroundChatStatus: "バックグラウンドチャットの状態",
       newChat: "新しいチャット",
       newChatInProject: "{{projectName}} の新しいチャット",
+      newProject: "新しいプロジェクト",
       noProject: "プロジェクトなし",
       projectSelect: "プロジェクト",
       settings: "設定",

@@ -19,6 +19,7 @@ type DraftChatThreadProps = {
   mode?: string;
   onChatCreated: (chat: Chat) => void;
   onChatUpdated: ChatUpdateHandler;
+  onCreateProject: () => Project | undefined | Promise<Project | undefined>;
   onProjectChange: (projectId: string | null) => void;
   permissionMode?: string;
   prewarmId?: string;
@@ -38,6 +39,7 @@ export function DraftChatThread({
   mode,
   onChatCreated,
   onChatUpdated,
+  onCreateProject,
   onProjectChange,
   permissionMode,
   prewarmId,
@@ -71,6 +73,7 @@ export function DraftChatThread({
         <AssistantThread
           composerFloatingAccessory={
             <DraftProjectSelect
+              onCreateProject={onCreateProject}
               onProjectChange={onProjectChange}
               projects={projects}
               selectedProjectId={projectId}

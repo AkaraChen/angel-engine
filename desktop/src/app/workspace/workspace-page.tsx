@@ -401,15 +401,16 @@ function WorkspacePageContent({
   const createProjectFromPicker = useCallback(async () => {
     try {
       const selectedPath = await api.projects.chooseDirectory();
-      if (!selectedPath) return;
+      if (!selectedPath) return undefined;
 
-      await createProjectMutation.mutateAsync(selectedPath);
+      return await createProjectMutation.mutateAsync(selectedPath);
     } catch (error) {
       toast({
         description: getErrorMessage(error),
         title: t("notifications.couldNotAddProject"),
         variant: "destructive",
       });
+      return undefined;
     }
   }, [api, createProjectMutation, t, toast]);
 
@@ -625,7 +626,7 @@ function WorkspacePageContent({
           isMacOS={isMacOS}
           isProjectsLoading={projectsQuery.isPending}
           onArchiveChat={archiveChat}
-          onCreateProject={createProjectFromPicker}
+          onCreateProject={() => void createProjectFromPicker()}
           onCreateProjectChat={createChatForProject}
           onCreateStandaloneChat={createChatForSelection}
           onOpenChat={openChat}
@@ -709,6 +710,7 @@ function WorkspacePageContent({
                     mode={modeOverride}
                     onChatCreated={updateChatFromRun}
                     onChatUpdated={updateChatFromRun}
+                    onCreateProject={createProjectFromPicker}
                     onProjectChange={selectDraftProject}
                     permissionMode={permissionModeOverride}
                     prewarmId={prewarmQuery.data?.prewarmId}
