@@ -5,7 +5,7 @@ use std::thread;
 use std::time::Duration;
 
 use crate::config::{ClientOptions, ClientProtocol, StartConversationRequest};
-use crate::core::{AngelClientCore, process_log};
+use crate::core::{process_log, AngelClientCore};
 use crate::error::{ClientError, ClientResult};
 use crate::event::{ClientLogKind, ClientUpdate};
 use crate::settings::{
@@ -115,6 +115,14 @@ impl AngelClient {
             request.cwd = self.default_cwd.clone().or_else(current_dir_string);
         }
         let result = self.core.resume_conversation(request)?;
+        self.finish_conversation_command(result)
+    }
+
+    pub fn read_conversation(
+        &mut self,
+        conversation_id: impl Into<String>,
+    ) -> ClientResult<ClientCommandResult> {
+        let result = self.core.read_conversation(conversation_id)?;
         self.finish_conversation_command(result)
     }
 

@@ -32,6 +32,7 @@ declare global {
       onOpenChatFromNotification: (
         handler: (event: DesktopOpenChatFromNotificationEvent) => void,
       ) => () => void;
+      openSettings: () => void;
       setActiveChatId: (chatId: string | null) => void;
       setTheme: (input: DesktopThemeSetInput) => void;
     };

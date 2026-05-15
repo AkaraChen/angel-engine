@@ -31,15 +31,13 @@ impl CodexAdapter {
                 let mut params = serde_json::Map::new();
                 params.insert(
                     "threadId".to_string(),
-                    json!(
-                        effect
-                            .payload
-                            .fields
-                            .get("remoteConversationId")
-                            .or_else(|| effect.payload.fields.get("threadId"))
-                            .cloned()
-                            .unwrap_or_default()
-                    ),
+                    json!(effect
+                        .payload
+                        .fields
+                        .get("remoteConversationId")
+                        .or_else(|| effect.payload.fields.get("threadId"))
+                        .cloned()
+                        .unwrap_or_default()),
                 );
                 if effect
                     .payload
@@ -101,6 +99,23 @@ impl CodexAdapter {
                     params.insert("cursor".to_string(), json!(cursor));
                 }
                 Ok(Value::Object(params))
+            }
+            ProtocolMethod::ReadConversation => {
+                let thread_id = effect
+                    .payload
+                    .fields
+                    .get("remoteConversationId")
+                    .cloned()
+                    .map(Ok)
+                    .unwrap_or_else(|| codex_thread_id(engine, effect))?;
+                Ok(json!({
+                    "threadId": thread_id,
+                    "includeTurns": effect
+                        .payload
+                        .fields
+                        .get("includeTurns")
+                        .is_none_or(|value| value == "true"),
+                }))
             }
             ProtocolMethod::ResolveElicitation => Err(angel_engine::EngineError::InvalidCommand {
                 message: "server request responses are encoded by encode_server_request_response"
@@ -206,13 +221,14 @@ fn insert_codex_overrides(
         params.insert("approvalPolicy".to_string(), json!(policy.id()));
     }
     let has_permissions = insert_codex_permissions(context, params);
-    if !has_permissions
-        && let Some(policy) = context
+    if !has_permissions {
+        if let Some(policy) = context
             .sandbox
             .effective()
             .and_then(|sandbox| sandbox_policy(codex_sandbox_policy(sandbox)))
-    {
-        params.insert("sandboxPolicy".to_string(), policy);
+        {
+            params.insert("sandboxPolicy".to_string(), policy);
+        }
     }
     if let (Some(mode), Some(model)) = (
         codex_context_mode(context),
@@ -340,7 +356,11 @@ fn codex_context_service_tier(context: &angel_engine::EffectiveContext) -> Optio
 }
 
 fn codex_reasoning_effort(effort: &str) -> &str {
-    if effort == "high" { "xhigh" } else { effort }
+    if effort == "high" {
+        "xhigh"
+    } else {
+        effort
+    }
 }
 
 fn codex_sandbox_policy(sandbox: &angel_engine::SandboxProfile) -> &str {
@@ -383,10 +403,10 @@ fn insert_codex_thread_overrides(
     if let Some(policy) = codex_context_permission_mode(context) {
         params.insert("approvalPolicy".to_string(), json!(policy.id()));
     }
-    if !insert_codex_permissions(context, params)
-        && let Some(sandbox) = context.sandbox.effective()
-    {
-        params.insert("sandbox".to_string(), json!(codex_sandbox_policy(sandbox)));
+    if !insert_codex_permissions(context, params) {
+        if let Some(sandbox) = context.sandbox.effective() {
+            params.insert("sandbox".to_string(), json!(codex_sandbox_policy(sandbox)));
+        }
     }
     if let (Some(mode), Some(model)) = (codex_context_mode(context), codex_context_model(context)) {
         params.insert(
@@ -724,6 +744,33 @@ mod tests {
                 "threadId": "thread",
                 "excludeTurns": true,
                 "persistExtendedHistory": true
+            })
+        );
+    }
+
+    #[test]
+    fn thread_read_encodes_include_turns_for_history_hydrate() {
+        let adapter = CodexAdapter::app_server();
+        let engine = AngelEngine::new(
+            angel_engine::ProtocolFlavor::CodexAppServer,
+            adapter.capabilities(),
+        );
+        let effect = angel_engine::ProtocolEffect::new(
+            angel_engine::ProtocolFlavor::CodexAppServer,
+            ProtocolMethod::ReadConversation,
+        )
+        .field("remoteConversationId", "thread")
+        .field("includeTurns", "true");
+
+        let params = adapter
+            .encode_params(&engine, &effect, &TransportOptions::default())
+            .expect("thread read params");
+
+        assert_eq!(
+            params,
+            json!({
+                "threadId": "thread",
+                "includeTurns": true,
             })
         );
     }

@@ -1,4 +1,4 @@
-use serde_json::{Value, json};
+use serde_json::{json, Value};
 
 use crate::error::EngineError;
 use crate::event::EngineEvent;
@@ -197,10 +197,10 @@ impl JsonRpcMessage {
                     "code": code,
                     "message": message,
                 });
-                if let Some(data) = data
-                    && let Some(object) = error.as_object_mut()
-                {
-                    object.insert("data".to_string(), data.clone());
+                if let Some(data) = data {
+                    if let Some(object) = error.as_object_mut() {
+                        object.insert("data".to_string(), data.clone());
+                    }
                 }
                 json!({
                     "jsonrpc": "2.0",
@@ -307,6 +307,7 @@ pub fn method_name(method: &ProtocolMethod) -> String {
         ProtocolMethod::Initialize => "initialize".to_string(),
         ProtocolMethod::Authenticate => "authenticate".to_string(),
         ProtocolMethod::ListConversations => "list_conversations".to_string(),
+        ProtocolMethod::ReadConversation => "read_conversation".to_string(),
         ProtocolMethod::StartConversation => "start_conversation".to_string(),
         ProtocolMethod::ResumeConversation => "resume_conversation".to_string(),
         ProtocolMethod::ForkConversation => "fork_conversation".to_string(),

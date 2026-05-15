@@ -22,6 +22,7 @@ pub(crate) fn codex_client_request_method(method: &ProtocolMethod) -> Option<Cli
         ProtocolMethod::Authenticate => Some(ClientRequestMethod::AccountLoginStart),
         ProtocolMethod::Initialize => Some(ClientRequestMethod::Initialize),
         ProtocolMethod::ListConversations => Some(ClientRequestMethod::ThreadList),
+        ProtocolMethod::ReadConversation => Some(ClientRequestMethod::ThreadRead),
         ProtocolMethod::StartConversation => Some(ClientRequestMethod::ThreadStart),
         ProtocolMethod::ResumeConversation => Some(ClientRequestMethod::ThreadResume),
         ProtocolMethod::ForkConversation => Some(ClientRequestMethod::ThreadFork),

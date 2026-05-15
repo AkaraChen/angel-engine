@@ -3,7 +3,7 @@ use std::collections::BTreeMap;
 use crate::command::{DiscoverConversationsParams, ResumeTarget, StartConversationParams};
 use crate::error::EngineError;
 use crate::ids::{ConversationId, RemoteConversationId, TurnId};
-use crate::protocol::ProtocolEffect;
+use crate::protocol::{ProtocolEffect, ProtocolMethod};
 use crate::state::{
     ContextPatch, ConversationLifecycle, ConversationState, HydrationSource, ProvisionOp,
     RuntimeState,
@@ -18,10 +18,8 @@ impl AngelEngine {
         self.pending
             .insert(request_id.clone(), PendingRequest::Initialize)?;
         Ok(CommandPlan {
-            effects: vec![
-                ProtocolEffect::new(self.protocol, self.method_initialize())
-                    .request_id(request_id.clone()),
-            ],
+            effects: vec![ProtocolEffect::new(self.protocol, self.method_initialize())
+                .request_id(request_id.clone())],
             request_id: Some(request_id),
             ..CommandPlan::default()
         })
@@ -92,6 +90,52 @@ impl AngelEngine {
         }
         Ok(CommandPlan {
             effects: vec![effect],
+            request_id: Some(request_id),
+            ..CommandPlan::default()
+        })
+    }
+
+    pub(super) fn plan_read_conversation(
+        &mut self,
+        conversation_id: ConversationId,
+    ) -> Result<CommandPlan, EngineError> {
+        self.ensure_runtime_available()?;
+        let remote_id = {
+            let conversation = self.conversation_mut(&conversation_id)?;
+            let remote_id = conversation
+                .remote
+                .as_protocol_id()
+                .map(str::to_string)
+                .ok_or_else(|| EngineError::InvalidState {
+                    expected: "known remote conversation id".to_string(),
+                    actual: format!("{:?}", conversation.remote),
+                })?;
+            conversation.history.replay.clear();
+            conversation.history.turn_count = 0;
+            conversation.history.hydrated = false;
+            conversation.lifecycle = ConversationLifecycle::Hydrating {
+                source: HydrationSource::Read,
+            };
+            remote_id
+        };
+
+        let request_id = self.next_request_id();
+        self.pending.insert(
+            request_id.clone(),
+            PendingRequest::ReadConversation {
+                conversation_id: conversation_id.clone(),
+            },
+        )?;
+
+        Ok(CommandPlan {
+            effects: vec![
+                ProtocolEffect::new(self.protocol, ProtocolMethod::ReadConversation)
+                    .request_id(request_id.clone())
+                    .conversation_id(conversation_id.clone())
+                    .field("remoteConversationId", remote_id)
+                    .field("includeTurns", "true"),
+            ],
+            conversation_id: Some(conversation_id),
             request_id: Some(request_id),
             ..CommandPlan::default()
         })

@@ -11,6 +11,9 @@ impl AngelEngine {
             EngineCommand::DiscoverConversations { params } => {
                 self.plan_discover_conversations(params)
             }
+            EngineCommand::ReadConversation { conversation_id } => {
+                self.plan_read_conversation(conversation_id)
+            }
             EngineCommand::StartConversation { params } => self.plan_start_conversation(params),
             EngineCommand::ResumeConversation { target } => self.plan_resume_conversation(target),
             EngineCommand::StartTurn {
@@ -42,6 +45,9 @@ impl AngelEngine {
         match command {
             EngineExtensionCommand::ForkConversation { source, at } => {
                 self.plan_fork_conversation(source, at)
+            }
+            EngineExtensionCommand::ReadConversation { conversation_id } => {
+                self.plan_read_conversation(conversation_id)
             }
             EngineExtensionCommand::SteerTurn {
                 conversation_id,

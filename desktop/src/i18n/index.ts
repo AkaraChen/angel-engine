@@ -8,6 +8,7 @@ import {
   type SupportedLanguage,
 } from "@/i18n/resources";
 import { ipc } from "@/platform/ipc";
+import { useSettingsStore } from "@/features/settings/settings-store";
 
 const LANGUAGE_STORAGE_KEY = "angel-engine.language";
 
@@ -47,6 +48,21 @@ i18n.on("languageChanged", (language) => {
   window.localStorage.setItem(LANGUAGE_STORAGE_KEY, supportedLanguage);
   applyDocumentLanguage(supportedLanguage, language);
   syncMainLanguage(supportedLanguage);
+  if (useSettingsStore.getState().language !== supportedLanguage) {
+    useSettingsStore.getState().setLanguage(supportedLanguage);
+  }
+});
+
+useSettingsStore.subscribe((state, previousState) => {
+  if (state.language === previousState.language) return;
+  if (
+    i18n.resolvedLanguage === state.language ||
+    i18n.language === state.language
+  ) {
+    return;
+  }
+
+  void i18n.changeLanguage(state.language);
 });
 
 syncMainLanguage(normalizeSupportedLanguage(i18n.resolvedLanguage));

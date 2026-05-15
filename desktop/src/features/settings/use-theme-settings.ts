@@ -1,20 +1,12 @@
-import { useCallback, useState } from "react";
-
-import {
-  readDesktopThemeMode,
-  setDesktopThemeMode,
-  type DesktopThemeMode,
-} from "@/platform/theme";
+import type { DesktopThemeMode } from "@/platform/theme";
+import { useSettingsStore } from "@/features/settings/settings-store";
 
 export function useThemeSettings() {
-  const [themeMode, setThemeModeState] = useState<DesktopThemeMode>(() =>
-    readDesktopThemeMode(),
-  );
+  const themeMode = useSettingsStore((state) => state.themeMode);
+  const setThemeMode = useSettingsStore((state) => state.setThemeMode);
 
-  const setThemeMode = useCallback((mode: DesktopThemeMode) => {
-    setDesktopThemeMode(mode);
-    setThemeModeState(mode);
-  }, []);
-
-  return [themeMode, setThemeMode] as const;
+  return [themeMode, setThemeMode] as readonly [
+    DesktopThemeMode,
+    (mode: DesktopThemeMode) => void,
+  ];
 }

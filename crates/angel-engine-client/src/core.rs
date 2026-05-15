@@ -13,8 +13,8 @@ use crate::adapter::RuntimeAdapter;
 use crate::config::{ClientOptions, StartConversationRequest};
 use crate::error::ClientResult;
 use crate::event::{
-    ClientLog, ClientLogKind, ClientUpdate, JsonRpcOutbound, events_from_engine_event, log_event,
-    stream_deltas_from_engine_event,
+    events_from_engine_event, log_event, stream_deltas_from_engine_event, ClientLog, ClientLogKind,
+    ClientUpdate, JsonRpcOutbound,
 };
 use crate::settings::{
     AvailableModeSettingSnapshot, AvailablePermissionModeSettingSnapshot, ModelListSettingSnapshot,
@@ -133,6 +133,15 @@ where
             }
         };
         self.plan_command(EngineCommand::ResumeConversation { target })
+    }
+
+    pub fn read_conversation(
+        &mut self,
+        conversation_id: impl Into<String>,
+    ) -> ClientResult<ClientCommandResult> {
+        self.plan_command(EngineCommand::ReadConversation {
+            conversation_id: to_conversation_id(conversation_id),
+        })
     }
 
     pub fn fork_conversation(

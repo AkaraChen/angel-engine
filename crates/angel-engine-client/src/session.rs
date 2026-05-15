@@ -1,4 +1,4 @@
-use std::collections::{HashMap, HashSet, VecDeque, hash_map::Entry};
+use std::collections::{hash_map::Entry, HashMap, HashSet, VecDeque};
 use std::time::Duration;
 
 use garde::Validate;
@@ -8,10 +8,10 @@ use crate::error::{ClientError, ClientResult};
 use crate::event::{ClientEvent, ClientStreamDelta, ClientUpdate};
 use crate::snapshot::display_message_from_parts;
 use crate::{
-    ActionOutputSnapshot, ActionSnapshot, AngelClient, ClientInput, ConversationSnapshot,
-    ElicitationResponse, ElicitationSnapshot, ResumeConversationRequest, RuntimeOptions,
-    RuntimeOptionsOverrides, StartConversationRequest, ThreadEvent, TurnSnapshot,
-    create_runtime_options,
+    create_runtime_options, ActionOutputSnapshot, ActionSnapshot, AngelClient, ClientInput,
+    ClientProtocol, ConversationSnapshot, ElicitationResponse, ElicitationSnapshot,
+    ResumeConversationRequest, RuntimeOptions, RuntimeOptionsOverrides, StartConversationRequest,
+    ThreadEvent, TurnSnapshot,
 };
 use crate::{
     DisplayMessagePartSnapshot, DisplayMessageSnapshot, DisplayPlanSnapshot,
@@ -280,10 +280,10 @@ impl AngelSession {
             command.request_id.clone(),
         );
         active.handle_update(command.update)?;
-        if command.turn_id.is_none()
-            && let Some(message) = command.message
-        {
-            active.collector.text = message;
+        if command.turn_id.is_none() {
+            if let Some(message) = command.message {
+                active.collector.text = message;
+            }
         }
 
         if command.turn_id.is_none() && active.request_is_complete() {
@@ -385,6 +385,8 @@ impl AngelSession {
 
         let initialize_update = self.client.initialize()?;
         check_update_fault(&initialize_update)?;
+        let should_read_history = remote_id.is_some()
+            && matches!(self.options.client.protocol, ClientProtocol::CodexAppServer);
         let result = if let Some(remote_id) = remote_id {
             self.client.resume_conversation(ResumeConversationRequest {
                 additional_directories: Vec::new(),
@@ -405,6 +407,11 @@ impl AngelSession {
         check_update_fault(&result.update)?;
 
         self.conversation_id = result.conversation_id;
+        if should_read_history {
+            let conversation_id = self.require_conversation_id()?.to_string();
+            let result = self.client.read_conversation(conversation_id)?;
+            check_update_fault(&result.update)?;
+        }
         Ok(())
     }
 
@@ -700,13 +707,14 @@ impl ActiveTurn {
     fn handle_update(&mut self, update: ClientUpdate) -> ClientResult<()> {
         let has_ordered_stream_events = update.events.iter().any(is_ordered_stream_event);
         let action_output_delta_ids = action_output_delta_ids(&update.stream_deltas);
-        if let Some(request_id) = &self.request_id
-            && update
+        if let Some(request_id) = &self.request_id {
+            if update
                 .completed_request_ids
                 .iter()
                 .any(|completed| completed == request_id)
-        {
-            self.request_completed = true;
+            {
+                self.request_completed = true;
+            }
         }
 
         for event in update.events {

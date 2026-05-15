@@ -578,8 +578,8 @@ function WorkspacePageContent({
   );
 
   const openSettings = useCallback(() => {
-    navigate("/settings");
-  }, [navigate]);
+    window.desktopWindow.openSettings();
+  }, []);
 
   const openChat = useCallback(
     (chat: Chat) => {

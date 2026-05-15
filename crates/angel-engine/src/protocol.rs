@@ -57,6 +57,7 @@ pub enum ProtocolMethod {
     Initialize,
     Authenticate,
     ListConversations,
+    ReadConversation,
     StartConversation,
     ResumeConversation,
     ForkConversation,

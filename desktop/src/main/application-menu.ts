@@ -13,11 +13,21 @@ import { translate } from "./i18n";
 
 const isMacOS = process.platform === "darwin";
 
-export function configureApplicationMenu() {
-  Menu.setApplicationMenu(Menu.buildFromTemplate(menuTemplate()));
+export function configureApplicationMenu({
+  openSettingsWindow,
+}: {
+  openSettingsWindow: () => void;
+}) {
+  Menu.setApplicationMenu(
+    Menu.buildFromTemplate(menuTemplate({ openSettingsWindow })),
+  );
 }
 
-function menuTemplate(): MenuItemConstructorOptions[] {
+function menuTemplate({
+  openSettingsWindow,
+}: {
+  openSettingsWindow: () => void;
+}): MenuItemConstructorOptions[] {
   return [
     ...(isMacOS
       ? [
@@ -26,8 +36,8 @@ function menuTemplate(): MenuItemConstructorOptions[] {
             submenu: [
               { role: "about" },
               { type: "separator" },
-              commandItem(
-                "open-settings",
+              settingsItem(
+                openSettingsWindow,
                 translate("workspace.settings"),
                 ",",
               ),
@@ -50,8 +60,8 @@ function menuTemplate(): MenuItemConstructorOptions[] {
         ...(!isMacOS
           ? [
               { type: "separator" } satisfies MenuItemConstructorOptions,
-              commandItem(
-                "open-settings",
+              settingsItem(
+                openSettingsWindow,
                 translate("workspace.settings"),
                 "Ctrl+,",
               ),
@@ -115,6 +125,18 @@ function menuTemplate(): MenuItemConstructorOptions[] {
       submenu: [],
     },
   ];
+}
+
+function settingsItem(
+  openSettingsWindow: () => void,
+  label: string,
+  accelerator: string,
+): MenuItemConstructorOptions {
+  return {
+    accelerator,
+    click: openSettingsWindow,
+    label,
+  };
 }
 
 function commandItem(

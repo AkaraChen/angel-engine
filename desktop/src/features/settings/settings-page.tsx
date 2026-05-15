@@ -31,11 +31,8 @@ import {
   type AgentSettings,
 } from "@/shared/agents";
 import { useThemeSettings } from "@/features/settings/use-theme-settings";
-import {
-  languageOptions,
-  normalizeSupportedLanguage,
-  type SupportedLanguage,
-} from "@/i18n";
+import { useSettingsStore } from "@/features/settings/settings-store";
+import { languageOptions, type SupportedLanguage } from "@/i18n";
 import type { DesktopThemeMode } from "@/platform/theme";
 
 type SettingsTab = "agents" | "appearance" | "danger";
@@ -80,15 +77,18 @@ export function SettingsPage({
   onDeleteAllChats: () => Promise<void>;
   onDefaultAgentChange: (runtime: AgentRuntime) => void;
 }) {
-  const { i18n, t } = useTranslation();
+  const { t } = useTranslation();
   const tabPanelId = useId();
   const [activeTab, setActiveTab] = useState<SettingsTab>("agents");
   const [themeMode, setThemeMode] = useThemeSettings();
-  const language = normalizeSupportedLanguage(
-    i18n.resolvedLanguage ?? i18n.language,
-  );
+  const language = useSettingsStore((state) => state.language);
+  const setLanguage = useSettingsStore((state) => state.setLanguage);
   const enabledAgentOptions = getEnabledAgentOptions(agentSettings);
   const enabledRuntimeSet = new Set(agentSettings.enabledRuntimes);
+  const activeTabLabel = t(
+    settingsTabs.find((tab) => tab.id === activeTab)?.labelKey ??
+      settingsTabs[0].labelKey,
+  );
 
   const deleteAllChats = useCallback(async () => {
     const confirmed = await window.desktopWindow.confirmDeleteAllChats();
@@ -115,10 +115,10 @@ export function SettingsPage({
 
   const handleTabKeyDown = useCallback(
     (event: KeyboardEvent<HTMLButtonElement>, tab: SettingsTab) => {
-      if (event.key === "ArrowLeft") {
+      if (event.key === "ArrowLeft" || event.key === "ArrowUp") {
         event.preventDefault();
         selectAdjacentTab(tab, -1);
-      } else if (event.key === "ArrowRight") {
+      } else if (event.key === "ArrowRight" || event.key === "ArrowDown") {
         event.preventDefault();
         selectAdjacentTab(tab, 1);
       } else if (event.key === "Home") {
@@ -141,26 +141,30 @@ export function SettingsPage({
   );
 
   return (
-    <main className="flex min-h-0 flex-1 overflow-auto">
-      <section className="mx-auto flex w-full max-w-3xl flex-col gap-5 px-6 py-6">
-        <div>
-          <h2 className="text-lg font-semibold">{t("settings.title")}</h2>
-        </div>
-
-        <div
+    <main className="flex min-h-0 flex-1 overflow-hidden bg-background">
+      <aside
+        className="flex w-48 shrink-0 flex-col border-r border-border/70 bg-sidebar/80 px-3 pt-14"
+        data-electron-drag
+      >
+        <h1 className="px-2 pb-4 text-[13px] font-semibold text-sidebar-foreground">
+          {t("settings.title")}
+        </h1>
+        <nav
           aria-label={t("settings.title")}
-          className="flex gap-1 border-b"
+          aria-orientation="vertical"
+          className="flex flex-col gap-1"
           role="tablist"
+          data-electron-no-drag
         >
           {settingsTabs.map((tab) => (
             <button
               aria-controls={`${tabPanelId}-${tab.id}`}
               aria-selected={activeTab === tab.id}
               className={cn(
-                "border-b-2 px-2 pb-2 text-sm font-medium text-muted-foreground transition-colors outline-none hover:text-foreground focus-visible:text-foreground focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:ring-offset-2",
+                "flex h-8 items-center rounded-md px-2 text-left text-[13px] font-medium text-sidebar-foreground/70 transition-colors outline-none hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-2 focus-visible:ring-ring/30",
                 activeTab === tab.id
-                  ? "border-foreground text-foreground"
-                  : "border-transparent",
+                  ? "bg-sidebar-accent text-sidebar-accent-foreground"
+                  : "bg-transparent",
               )}
               id={`${tabPanelId}-${tab.id}-tab`}
               key={tab.id}
@@ -173,152 +177,160 @@ export function SettingsPage({
               {t(tab.labelKey)}
             </button>
           ))}
-        </div>
+        </nav>
+      </aside>
 
-        {activeTab === "agents" ? (
-          <div
-            aria-labelledby={`${tabPanelId}-agents-tab`}
-            className="space-y-5"
-            id={`${tabPanelId}-agents`}
-            role="tabpanel"
-          >
-            <SettingsGroup title={t("settings.agents.title")}>
-              <>
-                {AGENT_OPTIONS.map((agent) => {
-                  const enabled = enabledRuntimeSet.has(agent.id);
-                  const isOnlyEnabled =
-                    enabled && agentSettings.enabledRuntimes.length <= 1;
+      <section className="min-w-0 flex-1 overflow-auto">
+        <div className="mx-auto flex w-full max-w-2xl flex-col gap-5 px-8 pt-14 pb-8">
+          <h2 className="text-xl font-semibold tracking-normal">
+            {activeTabLabel}
+          </h2>
 
-                  return (
-                    <SettingsRow
-                      after={
-                        <AgentEnabledSwitch
-                          checked={enabled}
-                          disabled={isOnlyEnabled}
-                          label={t("settings.agents.enabledLabel", {
-                            agent: agent.label,
-                          })}
-                          onCheckedChange={(checked) =>
-                            onAgentEnabledChange(agent.id, checked)
-                          }
-                        />
-                      }
-                      key={agent.id}
-                      muted={!enabled}
-                    >
-                      <span className="flex size-9 shrink-0 items-center justify-center rounded-lg border border-foreground/10 bg-background">
-                        <img
-                          alt=""
-                          className="size-5 object-contain"
-                          draggable={false}
-                          src={agentIconUrl[agent.id]}
-                        />
-                      </span>
-                      <span className="min-w-0 flex-1">
-                        <span className="block truncate text-sm font-medium">
-                          {agent.label}
+          {activeTab === "agents" ? (
+            <div
+              aria-labelledby={`${tabPanelId}-agents-tab`}
+              className="space-y-5"
+              id={`${tabPanelId}-agents`}
+              role="tabpanel"
+            >
+              <SettingsGroup>
+                <>
+                  {AGENT_OPTIONS.map((agent) => {
+                    const enabled = enabledRuntimeSet.has(agent.id);
+                    const isOnlyEnabled =
+                      enabled && agentSettings.enabledRuntimes.length <= 1;
+
+                    return (
+                      <SettingsRow
+                        after={
+                          <AgentEnabledSwitch
+                            checked={enabled}
+                            disabled={isOnlyEnabled}
+                            label={t("settings.agents.enabledLabel", {
+                              agent: agent.label,
+                            })}
+                            onCheckedChange={(checked) =>
+                              onAgentEnabledChange(agent.id, checked)
+                            }
+                          />
+                        }
+                        key={agent.id}
+                        muted={!enabled}
+                      >
+                        <span className="flex size-9 shrink-0 items-center justify-center rounded-lg border border-foreground/10 bg-background">
+                          <img
+                            alt=""
+                            className="size-5 object-contain"
+                            draggable={false}
+                            src={agentIconUrl[agent.id]}
+                          />
                         </span>
-                      </span>
-                    </SettingsRow>
-                  );
-                })}
-              </>
-            </SettingsGroup>
+                        <span className="min-w-0 flex-1">
+                          <span className="block truncate text-sm font-medium">
+                            {agent.label}
+                          </span>
+                        </span>
+                      </SettingsRow>
+                    );
+                  })}
+                </>
+              </SettingsGroup>
 
-            <SettingsGroup>
-              <SettingsRow
-                after={
-                  <SettingsSelect
-                    label={t("settings.agents.defaultTitle")}
-                    onValueChange={(value) =>
-                      onDefaultAgentChange(value as AgentRuntime)
-                    }
-                    options={enabledAgentOptions.map((agent) => ({
-                      label: agent.label,
-                      value: agent.id,
-                    }))}
-                    value={agentSettings.defaultRuntime}
-                  />
-                }
-                description={t("settings.agents.defaultDescription")}
-                title={t("settings.agents.defaultTitle")}
-              />
-            </SettingsGroup>
-          </div>
-        ) : null}
+              <SettingsGroup>
+                <SettingsRow
+                  after={
+                    <SettingsSelect
+                      label={t("settings.agents.defaultTitle")}
+                      onValueChange={(value) =>
+                        onDefaultAgentChange(value as AgentRuntime)
+                      }
+                      options={enabledAgentOptions.map((agent) => ({
+                        label: agent.label,
+                        value: agent.id,
+                      }))}
+                      value={agentSettings.defaultRuntime}
+                    />
+                  }
+                  description={t("settings.agents.defaultDescription")}
+                  title={t("settings.agents.defaultTitle")}
+                />
+              </SettingsGroup>
+            </div>
+          ) : null}
 
-        {activeTab === "appearance" ? (
-          <div
-            aria-labelledby={`${tabPanelId}-appearance-tab`}
-            id={`${tabPanelId}-appearance`}
-            role="tabpanel"
-          >
-            <SettingsGroup>
-              <SettingsRow
-                after={
-                  <SettingsSelect
-                    label={t("settings.appearance.theme")}
-                    onValueChange={(value) =>
-                      setThemeMode(value as DesktopThemeMode)
-                    }
-                    options={themeModeOptions.map((option) => ({
-                      label: t(option.labelKey),
-                      value: option.value,
-                    }))}
-                    value={themeMode}
-                  />
-                }
-                title={t("settings.appearance.theme")}
-              />
-              <SettingsRow
-                after={
-                  <SettingsSelect
-                    label={t("settings.appearance.language")}
-                    onValueChange={(value) =>
-                      void i18n.changeLanguage(value as SupportedLanguage)
-                    }
-                    options={languageOptions.map((option) => ({
-                      label: t(option.labelKey),
-                      value: option.value,
-                    }))}
-                    value={language}
-                  />
-                }
-                title={t("settings.appearance.language")}
-              />
-            </SettingsGroup>
-          </div>
-        ) : null}
+          {activeTab === "appearance" ? (
+            <div
+              aria-labelledby={`${tabPanelId}-appearance-tab`}
+              id={`${tabPanelId}-appearance`}
+              role="tabpanel"
+            >
+              <SettingsGroup>
+                <SettingsRow
+                  after={
+                    <SettingsSelect
+                      label={t("settings.appearance.theme")}
+                      onValueChange={(value) =>
+                        setThemeMode(value as DesktopThemeMode)
+                      }
+                      options={themeModeOptions.map((option) => ({
+                        label: t(option.labelKey),
+                        value: option.value,
+                      }))}
+                      value={themeMode}
+                    />
+                  }
+                  title={t("settings.appearance.theme")}
+                />
+                <SettingsRow
+                  after={
+                    <SettingsSelect
+                      label={t("settings.appearance.language")}
+                      onValueChange={(value) =>
+                        setLanguage(value as SupportedLanguage)
+                      }
+                      options={languageOptions.map((option) => ({
+                        label: t(option.labelKey),
+                        value: option.value,
+                      }))}
+                      value={language}
+                    />
+                  }
+                  title={t("settings.appearance.language")}
+                />
+              </SettingsGroup>
+            </div>
+          ) : null}
 
-        {activeTab === "danger" ? (
-          <div
-            aria-labelledby={`${tabPanelId}-danger-tab`}
-            id={`${tabPanelId}-danger`}
-            role="tabpanel"
-          >
-            <SettingsGroup>
-              <SettingsRow
-                after={
-                  <Button
-                    disabled={isDeletingChats}
-                    onClick={() => void deleteAllChats()}
-                    type="button"
-                    variant="destructive"
-                  >
-                    <Trash2 />
-                    {isDeletingChats
-                      ? t("settings.danger.deleting")
-                      : t("settings.danger.deleteTitle")}
-                  </Button>
-                }
-                description={t("settings.danger.description")}
-                icon={<AlertTriangle className="size-4 text-destructive" />}
-                title={t("settings.danger.deleteTitle")}
-                variant="destructive"
-              />
-            </SettingsGroup>
-          </div>
-        ) : null}
+          {activeTab === "danger" ? (
+            <div
+              aria-labelledby={`${tabPanelId}-danger-tab`}
+              id={`${tabPanelId}-danger`}
+              role="tabpanel"
+            >
+              <SettingsGroup>
+                <SettingsRow
+                  after={
+                    <Button
+                      disabled={isDeletingChats}
+                      onClick={() => void deleteAllChats()}
+                      type="button"
+                      variant="destructive"
+                    >
+                      <Trash2 />
+                      {isDeletingChats
+                        ? t("settings.danger.deleting")
+                        : t("settings.danger.deleteTitle")}
+                    </Button>
+                  }
+                  description={t("settings.danger.description")}
+                  icon={<AlertTriangle className="size-4 text-destructive" />}
+                  title={t("settings.danger.deleteTitle")}
+                  variant="destructive"
+                />
+              </SettingsGroup>
+            </div>
+          ) : null}
+        </div>
       </section>
     </main>
   );

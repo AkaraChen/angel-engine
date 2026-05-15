@@ -7,6 +7,7 @@ use super::protocol_helpers::*;
 use super::requests::host_capability_options;
 use super::summaries::{plan_item_content, plan_item_saved_path};
 use super::*;
+use std::{env, fs, path::PathBuf};
 
 impl CodexAdapter {
     pub(super) fn decode_response(
@@ -64,6 +65,24 @@ impl CodexAdapter {
                     })
                     .log(TransportLogKind::State, format!("thread {thread_id} ready"));
                 append_codex_default_settings(&mut output, engine, conversation_id);
+            }
+            PendingRequest::ReadConversation { conversation_id } => {
+                let thread_id = result
+                    .get("thread")
+                    .and_then(|thread| thread.get("id"))
+                    .and_then(Value::as_str)
+                    .ok_or_else(|| angel_engine::EngineError::InvalidCommand {
+                        message: "Codex thread/read response missing thread.id".to_string(),
+                    })?;
+                output = output.event(EngineEvent::ConversationReady {
+                    id: conversation_id.clone(),
+                    remote: Some(RemoteConversationId::Known(thread_id.to_string())),
+                    context: codex_context_patch(result),
+                    capabilities: None,
+                });
+                if !append_local_rollout_history(&mut output, conversation_id, thread_id) {
+                    append_hydrated_turns(&mut output, conversation_id, result);
+                }
             }
             PendingRequest::ResumeConversation {
                 conversation_id,
@@ -424,6 +443,129 @@ fn history_mutation_failed_event(conversation_id: &ConversationId, message: &str
     }
 }
 
+fn append_local_rollout_history(
+    output: &mut TransportOutput,
+    conversation_id: &ConversationId,
+    thread_id: &str,
+) -> bool {
+    let Some(path) = find_local_rollout_path(thread_id) else {
+        return false;
+    };
+    let Ok(content) = fs::read_to_string(path) else {
+        return false;
+    };
+
+    let mut appended = 0usize;
+    let mut has_structured_history = false;
+    for line in content.lines() {
+        let Ok(record) = serde_json::from_str::<Value>(line) else {
+            continue;
+        };
+        let Some((role, content, tool)) = codex_rollout_history_entry(&record) else {
+            continue;
+        };
+        if content_delta_is_empty(&content) {
+            continue;
+        }
+        has_structured_history |= matches!(role, HistoryRole::Reasoning | HistoryRole::Tool);
+        output.events.push(EngineEvent::HistoryReplayChunk {
+            conversation_id: conversation_id.clone(),
+            entry: HistoryReplayEntry {
+                role,
+                content,
+                tool,
+            },
+        });
+        appended += 1;
+    }
+
+    appended > 0 && has_structured_history
+}
+
+fn find_local_rollout_path(thread_id: &str) -> Option<PathBuf> {
+    let codex_home = env::var_os("CODEX_HOME")
+        .map(PathBuf::from)
+        .or_else(|| env::var_os("HOME").map(|home| PathBuf::from(home).join(".codex")))?;
+    let sessions_dir = codex_home.join("sessions");
+    find_rollout_path_in_dir(&sessions_dir, thread_id)
+}
+
+fn find_rollout_path_in_dir(dir: &PathBuf, thread_id: &str) -> Option<PathBuf> {
+    let entries = fs::read_dir(dir).ok()?;
+    for entry in entries.flatten() {
+        let path = entry.path();
+        if path.is_dir() {
+            if let Some(found) = find_rollout_path_in_dir(&path, thread_id) {
+                return Some(found);
+            }
+            continue;
+        }
+        let Some(name) = path.file_name().and_then(|name| name.to_str()) else {
+            continue;
+        };
+        if name.contains(thread_id) && name.ends_with(".jsonl") {
+            return Some(path);
+        }
+    }
+    None
+}
+
+fn codex_rollout_history_entry(
+    record: &Value,
+) -> Option<(HistoryRole, ContentDelta, Option<HistoryReplayToolAction>)> {
+    match record.get("type").and_then(Value::as_str)? {
+        "event_msg" => {
+            let payload = record.get("payload")?;
+            if payload.get("type").and_then(Value::as_str) != Some("user_message") {
+                return None;
+            }
+            let message = payload.get("message").and_then(Value::as_str)?;
+            Some((
+                HistoryRole::User,
+                ContentDelta::Text(message.to_string()),
+                None,
+            ))
+        }
+        "response_item" => {
+            let payload = record.get("payload")?;
+            match payload.get("type").and_then(Value::as_str) {
+                Some("message")
+                    if payload.get("role").and_then(Value::as_str) == Some("assistant") =>
+                {
+                    Some((HistoryRole::Assistant, codex_content_delta(payload), None))
+                }
+                Some("agentMessage") => Some((
+                    HistoryRole::Assistant,
+                    ContentDelta::Text(
+                        payload
+                            .get("text")
+                            .and_then(Value::as_str)
+                            .unwrap_or_default()
+                            .to_string(),
+                    ),
+                    None,
+                )),
+                Some("reasoning") => Some((
+                    HistoryRole::Reasoning,
+                    ContentDelta::Text(codex_reasoning_text(payload)),
+                    None,
+                )),
+                Some(item_type) if codex_history_replay_tool_item_type(item_type) => {
+                    let tool_item = codex_history_replay_tool_item(payload);
+                    let tool = codex_history_replay_tool_action(&tool_item);
+                    Some((
+                        HistoryRole::Tool,
+                        ContentDelta::Structured(tool_item.to_string()),
+                        tool,
+                    ))
+                }
+                _ => None,
+            }
+        }
+        _ => None,
+    }
+}
+
 fn append_hydrated_turns(
     output: &mut TransportOutput,
     conversation_id: &ConversationId,
@@ -519,10 +661,10 @@ fn append_hydrated_turns(
 }
 
 fn codex_history_replay_item(item: &Value) -> &Value {
-    if item.get("type").and_then(Value::as_str) == Some("response_item")
-        && let Some(payload) = item.get("payload").filter(|payload| payload.is_object())
-    {
-        return payload;
+    if item.get("type").and_then(Value::as_str) == Some("response_item") {
+        if let Some(payload) = item.get("payload").filter(|payload| payload.is_object()) {
+            return payload;
+        }
     }
     item
 }
@@ -538,20 +680,20 @@ fn codex_history_replay_tool_item(item: &Value) -> Value {
         .unwrap_or_default()
         .to_string();
 
-    if codex_history_replay_tool_uses_call_id(&item_type)
-        && let Some(call_id) = string_field(fields, &["callId", "call_id"])
-    {
-        if let Some(original_id) = fields
-            .get("id")
-            .and_then(Value::as_str)
-            .filter(|id| *id != call_id)
-            .map(str::to_string)
-        {
-            fields
-                .entry("itemId".to_string())
-                .or_insert_with(|| Value::String(original_id));
+    if codex_history_replay_tool_uses_call_id(&item_type) {
+        if let Some(call_id) = string_field(fields, &["callId", "call_id"]) {
+            if let Some(original_id) = fields
+                .get("id")
+                .and_then(Value::as_str)
+                .filter(|id| *id != call_id)
+                .map(str::to_string)
+            {
+                fields
+                    .entry("itemId".to_string())
+                    .or_insert_with(|| Value::String(original_id));
+            }
+            fields.insert("id".to_string(), Value::String(call_id));
         }
-        fields.insert("id".to_string(), Value::String(call_id));
     }
 
     fields
@@ -711,12 +853,12 @@ fn codex_history_output_value(value: &Value) -> Vec<ActionOutputDelta> {
             if matches!(
                 value.get("type").and_then(Value::as_str),
                 Some("inputText" | "outputText" | "text")
-            ) && let Some(text) = value.get("text").and_then(Value::as_str)
-            {
-                vec![ActionOutputDelta::Text(text.to_string())]
-            } else {
-                vec![ActionOutputDelta::Structured(value.to_string())]
+            ) {
+                if let Some(text) = value.get("text").and_then(Value::as_str) {
+                    return vec![ActionOutputDelta::Text(text.to_string())];
+                }
             }
+            vec![ActionOutputDelta::Structured(value.to_string())]
         }
     }
 }
@@ -1125,21 +1267,21 @@ fn codex_thread_info_context(thread: &Value) -> ContextPatch {
             cwd: Some(cwd.to_string()),
         });
     }
-    if let Some(name) = thread.get("name").and_then(Value::as_str)
-        && !name.is_empty()
-    {
-        updates.push(angel_engine::ContextUpdate::Raw {
-            scope: angel_engine::ContextScope::Conversation,
-            key: "conversation.title".to_string(),
-            value: name.to_string(),
+    let title = thread
+        .get("name")
+        .and_then(Value::as_str)
+        .filter(|name| !name.is_empty())
+        .or_else(|| {
+            thread
+                .get("preview")
+                .and_then(Value::as_str)
+                .filter(|preview| !preview.is_empty())
         });
-    } else if let Some(preview) = thread.get("preview").and_then(Value::as_str)
-        && !preview.is_empty()
-    {
+    if let Some(title) = title {
         updates.push(angel_engine::ContextUpdate::Raw {
             scope: angel_engine::ContextScope::Conversation,
             key: "conversation.title".to_string(),
-            value: preview.to_string(),
+            value: title.to_string(),
         });
     }
     if let Some(updated_at) = thread.get("updatedAt").and_then(Value::as_i64) {
@@ -1531,6 +1673,97 @@ mod tests {
             replay[6],
             (HistoryRole::Assistant, "text".to_string(), "hi".to_string())
         );
+    }
+
+    #[test]
+    fn thread_read_hydrates_rollout_turn_items_into_history_replay() {
+        let adapter = CodexAdapter::app_server();
+        let conversation_id = ConversationId::new("conv");
+        let mut engine = AngelEngine::with_available_runtime(
+            angel_engine::ProtocolFlavor::CodexAppServer,
+            angel_engine::RuntimeCapabilities::new("test"),
+            adapter.capabilities(),
+        );
+        engine
+            .apply_event(EngineEvent::ConversationProvisionStarted {
+                id: conversation_id.clone(),
+                remote: RemoteConversationId::Known("thread_1".to_string()),
+                op: angel_engine::ProvisionOp::Resume,
+                capabilities: adapter.capabilities(),
+            })
+            .expect("conversation provisioned");
+        engine
+            .apply_event(EngineEvent::ConversationReady {
+                id: conversation_id.clone(),
+                remote: Some(RemoteConversationId::Known("thread_1".to_string())),
+                context: Default::default(),
+                capabilities: Some(adapter.capabilities()),
+            })
+            .expect("conversation ready");
+
+        let request_id = engine
+            .plan_command(angel_engine::EngineCommand::ReadConversation {
+                conversation_id: conversation_id.clone(),
+            })
+            .expect("read plan")
+            .request_id
+            .expect("request id");
+
+        let output = adapter
+            .decode_response(
+                &engine,
+                &request_id,
+                &json!({
+                    "thread": {
+                        "id": "thread_1",
+                        "turns": [
+                            {
+                                "id": "turn_1",
+                                "items": [
+                                    {
+                                        "type": "userMessage",
+                                        "content": [{ "type": "text", "text": "hello" }]
+                                    },
+                                    {
+                                        "type": "reasoning",
+                                        "summary": ["thinking"]
+                                    },
+                                    {
+                                        "id": "exec-1",
+                                        "type": "commandExecution",
+                                        "status": "completed",
+                                        "command": "cargo test"
+                                    },
+                                    {
+                                        "type": "agentMessage",
+                                        "text": "done"
+                                    }
+                                ]
+                            }
+                        ]
+                    }
+                }),
+            )
+            .expect("thread read response");
+
+        let replay = output
+            .events
+            .iter()
+            .filter_map(|event| match event {
+                EngineEvent::HistoryReplayChunk { entry, .. } => Some(entry),
+                _ => None,
+            })
+            .collect::<Vec<_>>();
+
+        assert_eq!(replay.len(), 4);
+        assert_eq!(replay[0].role, HistoryRole::User);
+        assert_eq!(replay[1].role, HistoryRole::Reasoning);
+        assert_eq!(replay[2].role, HistoryRole::Tool);
+        assert_eq!(
+            replay[2].tool.as_ref().and_then(|tool| tool.kind.as_ref()),
+            Some(&ActionKind::Command)
+        );
+        assert_eq!(replay[3].role, HistoryRole::Assistant);
     }
 
     #[test]

@@ -1,4 +1,4 @@
-import { app, BrowserWindow, shell } from "electron";
+import { app, BrowserWindow, ipcMain, shell } from "electron";
 import { execFileSync } from "node:child_process";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
@@ -21,8 +21,12 @@ import {
   registerDesktopWindowIpc,
 } from "./main/window-notifications";
 import { persistWindowBounds, savedWindowBounds } from "./main/window-state";
+import { DESKTOP_SETTINGS_OPEN_CHANNEL } from "./shared/desktop-window";
 
 const isMacOS = process.platform === "darwin";
+const settingsWindowStateFileName = "settings-window-state.json";
+
+let settingsWindow: BrowserWindow | null = null;
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
 if (started) {
@@ -96,6 +100,64 @@ const createWindow = () => {
   }
 };
 
+function openSettingsWindow() {
+  if (settingsWindow && !settingsWindow.isDestroyed()) {
+    settingsWindow.show();
+    settingsWindow.focus();
+    return;
+  }
+
+  const rendererFilePath = path.join(
+    __dirname,
+    `../renderer/${MAIN_WINDOW_VITE_NAME}/index.html`,
+  );
+  const rendererEntryUrl = settingsRendererUrl(rendererFilePath);
+
+  settingsWindow = new BrowserWindow({
+    ...desktopWindowChromeOptions(),
+    height: 540,
+    minHeight: 420,
+    minWidth: 560,
+    show: false,
+    title: "Settings",
+    width: 680,
+    ...savedWindowBounds({
+      defaultBounds: { height: 540, width: 680 },
+      minimumBounds: { height: 420, width: 560 },
+      stateFileName: settingsWindowStateFileName,
+    }),
+    webPreferences: {
+      preload: path.join(__dirname, "preload.js"),
+    },
+  });
+
+  configureDesktopWindowAppearance(settingsWindow);
+  persistWindowBounds(settingsWindow, settingsWindowStateFileName);
+  configureExternalLinkHandling(settingsWindow);
+  configureDesktopWindowNotifications(settingsWindow);
+
+  settingsWindow.once("ready-to-show", () => {
+    settingsWindow?.show();
+  });
+  settingsWindow.on("closed", () => {
+    settingsWindow = null;
+  });
+
+  if (MAIN_WINDOW_VITE_DEV_SERVER_URL) {
+    settingsWindow.loadURL(rendererEntryUrl);
+  } else {
+    settingsWindow.loadFile(rendererFilePath, { hash: "/settings" });
+  }
+}
+
+function settingsRendererUrl(rendererFilePath: string) {
+  if (MAIN_WINDOW_VITE_DEV_SERVER_URL) {
+    return `${MAIN_WINDOW_VITE_DEV_SERVER_URL}#/settings`;
+  }
+
+  return pathToFileURL(rendererFilePath).href;
+}
+
 function configureExternalLinkHandling(mainWindow: BrowserWindow) {
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
     shell.openExternal(url);
@@ -112,7 +174,8 @@ app.whenReady().then(() => {
   registerDesktopWindowAppearanceIpc();
   registerDesktopWindowIpc();
   registerChatStreamIpc();
-  configureApplicationMenu();
+  ipcMain.on(DESKTOP_SETTINGS_OPEN_CHANNEL, openSettingsWindow);
+  configureApplicationMenu({ openSettingsWindow });
   createWindow();
 });
 

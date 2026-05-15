@@ -10,6 +10,9 @@ pub enum EngineCommand {
     DiscoverConversations {
         params: DiscoverConversationsParams,
     },
+    ReadConversation {
+        conversation_id: ConversationId,
+    },
     StartConversation {
         params: StartConversationParams,
     },
@@ -42,6 +45,9 @@ pub enum EngineExtensionCommand {
     ForkConversation {
         source: ConversationId,
         at: Option<TurnId>,
+    },
+    ReadConversation {
+        conversation_id: ConversationId,
     },
     SteerTurn {
         conversation_id: ConversationId,

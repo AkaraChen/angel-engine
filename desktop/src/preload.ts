@@ -21,6 +21,7 @@ import {
   DESKTOP_COMMAND_CHANNEL,
   DESKTOP_CONFIRM_DELETE_ALL_CHATS_CHANNEL,
   DESKTOP_OPEN_CHAT_FROM_NOTIFICATION_CHANNEL,
+  DESKTOP_SETTINGS_OPEN_CHANNEL,
   DESKTOP_THEME_SET_CHANNEL,
   type DesktopWindowCommand,
   type DesktopThemeSetInput,
@@ -63,6 +64,9 @@ contextBridge.exposeInMainWorld("desktopWindow", {
         listener,
       );
     };
+  },
+  openSettings() {
+    ipcRenderer.send(DESKTOP_SETTINGS_OPEN_CHANNEL);
   },
   setActiveChatId(chatId: string | null) {
     ipcRenderer.send(DESKTOP_ACTIVE_CHAT_SET_CHANNEL, chatId);
