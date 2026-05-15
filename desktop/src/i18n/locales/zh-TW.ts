@@ -136,7 +136,7 @@ export const zhTW = {
       tabs: {
         agents: "Agents",
         appearance: "外觀",
-        danger: "危險區",
+        danger: "進階",
       },
       title: "設定",
     },

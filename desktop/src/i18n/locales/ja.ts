@@ -139,7 +139,7 @@ export const ja = {
       tabs: {
         agents: "Agents",
         appearance: "外観",
-        danger: "危険エリア",
+        danger: "詳細",
       },
       title: "設定",
     },

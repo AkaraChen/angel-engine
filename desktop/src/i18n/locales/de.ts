@@ -138,7 +138,7 @@ export const de = {
       tabs: {
         agents: "Agents",
         appearance: "Darstellung",
-        danger: "Gefahrenbereich",
+        danger: "Erweitert",
       },
       title: "Einstellungen",
     },

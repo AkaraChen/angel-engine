@@ -139,7 +139,7 @@ export const fr = {
       tabs: {
         agents: "Agents",
         appearance: "Apparence",
-        danger: "Zone dangereuse",
+        danger: "Avancé",
       },
       title: "Paramètres",
     },

@@ -135,7 +135,7 @@ export const zhCN = {
       tabs: {
         agents: "Agents",
         appearance: "外观",
-        danger: "危险区",
+        danger: "高级",
       },
       title: "设置",
     },

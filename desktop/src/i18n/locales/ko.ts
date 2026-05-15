@@ -138,7 +138,7 @@ export const ko = {
       tabs: {
         agents: "Agents",
         appearance: "모양",
-        danger: "위험 구역",
+        danger: "고급",
       },
       title: "설정",
     },
