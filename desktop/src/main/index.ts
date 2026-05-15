@@ -5,23 +5,23 @@ import { registerIpcMain } from "@egoist/tipc/main";
 import { app, BrowserWindow, ipcMain, shell } from "electron";
 import started from "electron-squirrel-startup";
 
-import { configureApplicationMenu } from "./main/application-menu";
-import { getDatabase } from "./main/db/database";
-import { closeChatSession } from "./main/features/chat/angel-client";
-import { registerChatStreamIpc } from "./main/features/chat/stream-ipc";
-import { closeProjectsDatabase } from "./main/features/projects/repository";
-import { appRouter } from "./main/ipc/app-router";
+import { configureApplicationMenu } from "./application-menu";
+import { getDatabase } from "./db/database";
+import { closeChatSession } from "./features/chat/angel-client";
+import { registerChatStreamIpc } from "./features/chat/stream-ipc";
+import { closeProjectsDatabase } from "./features/projects/repository";
+import { appRouter } from "./router";
 import {
   configureDesktopWindowAppearance,
   desktopWindowChromeOptions,
   registerDesktopWindowAppearanceIpc,
-} from "./main/window-appearance";
+} from "./window/appearance";
 import {
   configureDesktopWindowNotifications,
   registerDesktopWindowIpc,
-} from "./main/window-notifications";
-import { persistWindowBounds, savedWindowBounds } from "./main/window-state";
-import { DESKTOP_SETTINGS_OPEN_CHANNEL } from "./shared/desktop-window";
+} from "./window/notifications";
+import { persistWindowBounds, savedWindowBounds } from "./window/state";
+import { DESKTOP_SETTINGS_OPEN_CHANNEL } from "../shared/desktop-window";
 
 const isMacOS = process.platform === "darwin";
 const settingsWindowStateFileName = "settings-window-state.json";
@@ -77,7 +77,6 @@ function createWindow() {
   const rendererEntryUrl =
     MAIN_WINDOW_VITE_DEV_SERVER_URL ?? pathToFileURL(rendererFilePath).href;
 
-  // Create the browser window.
   const mainWindow = new BrowserWindow({
     ...desktopWindowChromeOptions(),
     ...savedWindowBounds(),
@@ -92,7 +91,6 @@ function createWindow() {
   configureExternalLinkHandling(mainWindow);
   configureDesktopWindowNotifications(mainWindow);
 
-  // and load the index.html of the app.
   if (MAIN_WINDOW_VITE_DEV_SERVER_URL) {
     mainWindow.loadURL(rendererEntryUrl);
   } else {
@@ -165,9 +163,6 @@ function configureExternalLinkHandling(mainWindow: BrowserWindow) {
   });
 }
 
-// This method will be called when Electron has finished
-// initialization and is ready to create browser windows.
-// Some APIs can only be used after this event occurs.
 app.whenReady().then(() => {
   getDatabase();
   registerIpcMain(appRouter);
@@ -184,9 +179,6 @@ app.on("before-quit", () => {
   closeProjectsDatabase();
 });
 
-// Quit when all windows are closed, except on macOS. There, it's common
-// for applications and their menu bar to stay active until the user quits
-// explicitly with Cmd + Q.
 app.on("window-all-closed", () => {
   if (process.platform !== "darwin") {
     app.quit();
@@ -194,12 +186,7 @@ app.on("window-all-closed", () => {
 });
 
 app.on("activate", () => {
-  // On OS X it's common to re-create a window in the app when the
-  // dock icon is clicked and there are no other windows open.
   if (BrowserWindow.getAllWindows().length === 0) {
     createWindow();
   }
 });
-
-// In this file you can include the rest of your app's specific main process
-// code. You can also put them in separate files and import them here.

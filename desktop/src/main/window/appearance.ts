@@ -1,12 +1,12 @@
 import type { BrowserWindowConstructorOptions } from "electron";
 
-import type { DesktopThemeMode } from "../shared/desktop-window";
+import type { DesktopThemeMode } from "../../shared/desktop-window";
 import { BrowserWindow, dialog, ipcMain, nativeTheme } from "electron";
 import {
   DESKTOP_CONFIRM_DELETE_ALL_CHATS_CHANNEL,
   DESKTOP_THEME_SET_CHANNEL,
-} from "../shared/desktop-window";
-import { translate } from "./i18n";
+} from "../../shared/desktop-window";
+import { translate } from "../i18n";
 
 const isMacOS = process.platform === "darwin";
 const trafficLightPosition = { x: 16, y: 18 };

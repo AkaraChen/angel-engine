@@ -6,19 +6,19 @@ import type {
   ChatStreamElicitationResolveInput,
   ChatStreamEvent,
   ChatStreamStartInput,
-} from "./shared/chat";
+} from "../shared/chat";
 import type {
   DesktopOpenChatFromNotificationEvent,
   DesktopThemeSetInput,
   DesktopWindowCommand,
-} from "./shared/desktop-window";
+} from "../shared/desktop-window";
 import { contextBridge, ipcRenderer, webUtils } from "electron";
 import {
   CHAT_STREAM_CANCEL_CHANNEL,
   CHAT_STREAM_ELICITATION_RESOLVE_CHANNEL,
   CHAT_STREAM_START_CHANNEL,
   chatStreamEventChannel,
-} from "./shared/chat";
+} from "../shared/chat";
 import {
   DESKTOP_ACTIVE_CHAT_SET_CHANNEL,
   DESKTOP_COMMAND_CHANNEL,
@@ -26,7 +26,7 @@ import {
   DESKTOP_OPEN_CHAT_FROM_NOTIFICATION_CHANNEL,
   DESKTOP_SETTINGS_OPEN_CHANNEL,
   DESKTOP_THEME_SET_CHANNEL,
-} from "./shared/desktop-window";
+} from "../shared/desktop-window";
 
 contextBridge.exposeInMainWorld("desktopEnvironment", {
   getPathForFile(file: File) {

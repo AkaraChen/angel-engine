@@ -1,4 +1,4 @@
-import type { AppRouter } from "../main/ipc/app-router";
+import type { AppRouter } from "../main/router";
 
 import { createClient } from "@egoist/tipc/renderer";
 

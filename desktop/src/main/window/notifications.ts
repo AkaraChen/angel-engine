@@ -1,12 +1,12 @@
-import type { Chat, ChatElicitation } from "../shared/chat";
+import type { Chat, ChatElicitation } from "../../shared/chat";
 
-import type { DesktopOpenChatFromNotificationEvent } from "../shared/desktop-window";
+import type { DesktopOpenChatFromNotificationEvent } from "../../shared/desktop-window";
 import { app, BrowserWindow, ipcMain, Notification } from "electron";
 import {
   DESKTOP_ACTIVE_CHAT_SET_CHANNEL,
   DESKTOP_OPEN_CHAT_FROM_NOTIFICATION_CHANNEL,
-} from "../shared/desktop-window";
-import { translate } from "./i18n";
+} from "../../shared/desktop-window";
+import { translate } from "../i18n";
 
 interface WindowNotificationState {
   activeChatId: string | null;

@@ -20,7 +20,7 @@ import { translate } from "../../i18n";
 import {
   notifyChatNeedsInput,
   notifyChatTurnCompleted,
-} from "../../window-notifications";
+} from "../../window/notifications";
 import { streamChat } from "./angel-client";
 import { getChat } from "./repository";
 import {
