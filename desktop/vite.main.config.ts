@@ -9,6 +9,9 @@ export default defineConfig({
         "@anthropic-ai/claude-agent-sdk",
         "better-sqlite3",
       ],
+      output: {
+        entryFileNames: "main.js",
+      },
     },
   },
 });

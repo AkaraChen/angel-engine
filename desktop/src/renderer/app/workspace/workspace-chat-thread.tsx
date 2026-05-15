@@ -397,7 +397,7 @@ export class ChatRestoreErrorBoundary extends Component<
     console.error("Chat restore failed", error, errorInfo);
   }
 
-  async render() {
+  render() {
     if (this.state.failed) {
       return <Redirect replace to="/" />;
     }
