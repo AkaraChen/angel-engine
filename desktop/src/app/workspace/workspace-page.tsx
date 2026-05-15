@@ -462,21 +462,6 @@ function WorkspacePageContent({
     setRenameChatId(chat.id);
   }, []);
 
-  const archiveChat = useCallback(
-    async (chat: Chat) => {
-      try {
-        await archiveChatMutation.mutateAsync(chat);
-      } catch (error) {
-        toast({
-          description: getErrorMessage(error),
-          title: t("notifications.chatActionFailed"),
-          variant: "destructive",
-        });
-      }
-    },
-    [archiveChatMutation, t, toast],
-  );
-
   const showChatContextMenu = useCallback(
     async (chat: Chat) => {
       try {
@@ -543,13 +528,34 @@ function WorkspacePageContent({
   );
 
   const navigateToDraft = useCallback(
-    (projectId?: string) => {
+    (projectId?: string, options?: { replace?: boolean }) => {
       const path = projectId ? projectDraftRoutePath(projectId) : "/";
       if (location !== path) {
-        navigate(path);
+        navigate(path, options);
       }
     },
     [location, navigate],
+  );
+
+  const archiveChat = useCallback(
+    async (chat: Chat) => {
+      try {
+        const archivedChat = await archiveChatMutation.mutateAsync(chat);
+
+        if (selectedChatId === archivedChat.id) {
+          navigateToDraft(archivedChat.projectId ?? undefined, {
+            replace: true,
+          });
+        }
+      } catch (error) {
+        toast({
+          description: getErrorMessage(error),
+          title: t("notifications.chatActionFailed"),
+          variant: "destructive",
+        });
+      }
+    },
+    [archiveChatMutation, navigateToDraft, selectedChatId, t, toast],
   );
 
   const createChatForProject = useCallback(
