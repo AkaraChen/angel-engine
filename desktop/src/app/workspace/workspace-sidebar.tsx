@@ -82,6 +82,16 @@ export function WorkspaceSidebar({
   const { t } = useTranslation();
   const viewMode = useWorkspaceUiStore((state) => state.sidebarViewMode);
   const setViewMode = useWorkspaceUiStore((state) => state.setSidebarViewMode);
+  const createChatFromNewButton = () => {
+    if (viewMode === "project") {
+      const firstProject = projects[0];
+      if (firstProject) {
+        return onCreateProjectChat(firstProject);
+      }
+    }
+
+    return onCreateStandaloneChat();
+  };
 
   return (
     <Sidebar className="select-none" variant="inset">
@@ -92,18 +102,16 @@ export function WorkspaceSidebar({
       </SidebarHeader>
 
       <SidebarContent className="gap-1 pb-1">
-        {viewMode !== "project" ? (
-          <SidebarMenu className="px-2">
-            <AnimatedSidebarMenuItem>
-              <WorkspaceSidebarMenuButton
-                onClick={() => void onCreateStandaloneChat()}
-              >
-                <MessageSquarePlus />
-                <span>{t("sidebar.newChat")}</span>
-              </WorkspaceSidebarMenuButton>
-            </AnimatedSidebarMenuItem>
-          </SidebarMenu>
-        ) : null}
+        <SidebarMenu className="px-2">
+          <AnimatedSidebarMenuItem>
+            <WorkspaceSidebarMenuButton
+              onClick={() => void createChatFromNewButton()}
+            >
+              <MessageSquarePlus />
+              <span>{t("sidebar.newChat")}</span>
+            </WorkspaceSidebarMenuButton>
+          </AnimatedSidebarMenuItem>
+        </SidebarMenu>
 
         {viewMode === "simple" ? (
           <SimpleChatSidebarSection
