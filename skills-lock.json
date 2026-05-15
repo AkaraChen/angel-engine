@@ -86,6 +86,12 @@
       "sourceType": "github",
       "computedHash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
     },
+    "native-feel-cross-platform-desktop": {
+      "source": "yetone/native-feel-skill",
+      "ref": "master",
+      "sourceType": "github",
+      "computedHash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
     "primitives": {
       "source": "assistant-ui/skills",
       "sourceType": "github",

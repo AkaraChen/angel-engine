@@ -130,6 +130,13 @@ protocol-neutral engine concept by an adapter.
   `copilot`; do not accept alternate spellings like vendor-prefixed names,
   binary names, or legacy names unless the product explicitly publishes that id.
 
+## Temporary Artifacts
+
+- Put screenshots and other one-off verification captures in a temp directory
+  such as `/private/tmp/angel-engine/`. Do not leave them in the repository root
+  or the current working directory unless the user explicitly asks for a
+  checked-in artifact.
+
 ## Verification
 
 Common gates:
