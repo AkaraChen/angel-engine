@@ -6,7 +6,7 @@ import {
   type ReactNode,
 } from "react";
 import { useTranslation } from "react-i18next";
-import { AlertTriangle, Bot, Languages, Palette, Trash2 } from "lucide-react";
+import { AlertTriangle, Trash2 } from "lucide-react";
 import claudeIconUrl from "@lobehub/icons-static-svg/icons/claudecode-color.svg";
 import clineIconUrl from "@lobehub/icons-static-svg/icons/cline.svg";
 import codexIconUrl from "@lobehub/icons-static-svg/icons/codex-color.svg";
@@ -229,7 +229,6 @@ export function SettingsPage({
               <SettingsRow
                 after={
                   <SettingsSelect
-                    icon={<Bot />}
                     label={t("settings.agents.defaultTitle")}
                     onValueChange={(value) =>
                       onDefaultAgentChange(value as AgentRuntime)
@@ -258,7 +257,6 @@ export function SettingsPage({
               <SettingsRow
                 after={
                   <SettingsSelect
-                    icon={<Palette />}
                     label={t("settings.appearance.theme")}
                     onValueChange={(value) =>
                       setThemeMode(value as DesktopThemeMode)
@@ -275,7 +273,6 @@ export function SettingsPage({
               <SettingsRow
                 after={
                   <SettingsSelect
-                    icon={<Languages />}
                     label={t("settings.appearance.language")}
                     onValueChange={(value) =>
                       void i18n.changeLanguage(value as SupportedLanguage)
@@ -398,13 +395,11 @@ function SettingsRow({
 }
 
 function SettingsSelect({
-  icon,
   label,
   onValueChange,
   options,
   value,
 }: {
-  icon: ReactNode;
   label: string;
   onValueChange: (value: string) => void;
   options: Array<{ label: string; value: string }>;
@@ -412,25 +407,20 @@ function SettingsSelect({
 }) {
   return (
     <label className="flex min-w-44 flex-col gap-1.5 text-xs font-medium text-muted-foreground">
-      <span className="relative">
-        <span className="pointer-events-none absolute top-1/2 left-2 z-10 flex size-4 -translate-y-1/2 items-center justify-center [&_svg]:size-3.5">
-          {icon}
-        </span>
-        <NativeSelect
-          aria-label={label}
-          className="w-full"
-          onChange={(event) => onValueChange(event.currentTarget.value)}
-          selectClassName="h-8 w-full rounded-lg border-border bg-background py-0 pr-8 pl-8 text-xs"
-          size="sm"
-          value={value}
-        >
-          {options.map((option) => (
-            <NativeSelectOption key={option.value} value={option.value}>
-              {option.label}
-            </NativeSelectOption>
-          ))}
-        </NativeSelect>
-      </span>
+      <NativeSelect
+        aria-label={label}
+        className="w-full"
+        onChange={(event) => onValueChange(event.currentTarget.value)}
+        selectClassName="h-8 w-full rounded-md border-border bg-background py-0 pr-8 pl-3 text-xs"
+        size="sm"
+        value={value}
+      >
+        {options.map((option) => (
+          <NativeSelectOption key={option.value} value={option.value}>
+            {option.label}
+          </NativeSelectOption>
+        ))}
+      </NativeSelect>
     </label>
   );
 }
