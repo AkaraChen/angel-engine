@@ -23,9 +23,17 @@ export interface AgentValueOption {
   value: string;
 }
 
+export interface AgentRuntimePreference {
+  mode?: string;
+  model?: string;
+  permissionMode?: string;
+  reasoningEffort?: string;
+}
+
 export interface AgentSettings {
-  defaultRuntime: AgentRuntime;
   enabledRuntimes: AgentRuntime[];
+  lastRuntime?: AgentRuntime;
+  runtimePreferences: Partial<Record<AgentRuntime, AgentRuntimePreference>>;
 }
 
 export const AGENT_OPTIONS: AgentOption[] = [
@@ -82,6 +90,10 @@ const agentRuntime = arkType(
 
 const DEFAULT_AGENT_RUNTIME: AgentRuntime = "codex";
 
+export function isAgentRuntime(value: unknown): value is AgentRuntime {
+  return !(agentRuntime(value) instanceof arkType.errors);
+}
+
 export function getEnabledAgentOptions(settings: AgentSettings): AgentOption[] {
   const enabled = new Set(settings.enabledRuntimes);
   return AGENT_OPTIONS.filter((agent) => enabled.has(agent.id));
@@ -91,29 +103,82 @@ export function resolveEnabledAgentRuntime(
   settings: AgentSettings,
   runtime?: AgentRuntime,
 ): AgentRuntime {
-  return runtime && settings.enabledRuntimes.includes(runtime)
-    ? runtime
-    : settings.defaultRuntime;
+  if (runtime && settings.enabledRuntimes.includes(runtime)) {
+    return runtime;
+  }
+
+  if (
+    settings.lastRuntime &&
+    settings.enabledRuntimes.includes(settings.lastRuntime)
+  ) {
+    return settings.lastRuntime;
+  }
+
+  return settings.enabledRuntimes[0];
+}
+
+export function sanitizeAgentRuntimePreference(
+  value: unknown,
+): AgentRuntimePreference {
+  if (!value || typeof value !== "object") return {};
+  const input = value as Partial<AgentRuntimePreference>;
+  const preference: AgentRuntimePreference = {};
+  const model = sanitizePreferenceValue(input.model);
+  const reasoningEffort = sanitizePreferenceValue(input.reasoningEffort);
+  const mode = sanitizePreferenceValue(input.mode);
+  const permissionMode = sanitizePreferenceValue(input.permissionMode);
+
+  if (model) preference.model = model;
+  if (reasoningEffort) preference.reasoningEffort = reasoningEffort;
+  if (mode) preference.mode = mode;
+  if (permissionMode) preference.permissionMode = permissionMode;
+
+  return preference;
 }
 
 export function sanitizeAgentSettings(value: unknown): AgentSettings {
   const settings =
     value && typeof value === "object" ? (value as Partial<AgentSettings>) : {};
-  const parsed = agentRuntime(settings.defaultRuntime);
-  const parsedDefault =
-    parsed instanceof arkType.errors ? DEFAULT_AGENT_RUNTIME : parsed;
+  const legacySettings =
+    value && typeof value === "object"
+      ? (value as Partial<{ defaultRuntime: unknown }>)
+      : {};
+  const parsedLastRuntime = agentRuntime(settings.lastRuntime);
+  const parsedLegacyDefault = agentRuntime(legacySettings.defaultRuntime);
+  const fallbackRuntime =
+    parsedLastRuntime instanceof arkType.errors
+      ? parsedLegacyDefault instanceof arkType.errors
+        ? DEFAULT_AGENT_RUNTIME
+        : parsedLegacyDefault
+      : parsedLastRuntime;
   const enabledRuntimes = sanitizeEnabledRuntimes(
     settings.enabledRuntimes,
-    parsedDefault,
+    fallbackRuntime,
   );
-  const defaultRuntime = enabledRuntimes.includes(parsedDefault)
-    ? parsedDefault
+  const lastRuntime = enabledRuntimes.includes(fallbackRuntime)
+    ? fallbackRuntime
     : enabledRuntimes[0];
 
   return {
-    defaultRuntime,
     enabledRuntimes,
+    lastRuntime,
+    runtimePreferences: sanitizeRuntimePreferences(settings.runtimePreferences),
   };
+}
+
+export function rememberAgentRuntimePreference(
+  settings: AgentSettings,
+  runtime: AgentRuntime,
+  preference?: AgentRuntimePreference,
+): AgentSettings {
+  return sanitizeAgentSettings({
+    ...settings,
+    lastRuntime: runtime,
+    runtimePreferences: {
+      ...settings.runtimePreferences,
+      ...(preference ? { [runtime]: preference } : {}),
+    },
+  });
 }
 
 function sanitizeEnabledRuntimes(
@@ -137,4 +202,27 @@ function sanitizeEnabledRuntimes(
   );
 
   return enabledRuntimes.length > 0 ? enabledRuntimes : [fallbackRuntime];
+}
+
+function sanitizeRuntimePreferences(
+  value: unknown,
+): AgentSettings["runtimePreferences"] {
+  if (!value || typeof value !== "object") return {};
+  const input = value as Partial<
+    Record<AgentRuntime, Partial<AgentRuntimePreference>>
+  >;
+  const preferences: AgentSettings["runtimePreferences"] = {};
+
+  for (const agent of AGENT_OPTIONS) {
+    const preference = sanitizeAgentRuntimePreference(input[agent.id]);
+    if (Object.keys(preference).length > 0) {
+      preferences[agent.id] = preference;
+    }
+  }
+
+  return preferences;
+}
+
+function sanitizePreferenceValue(value: unknown): string | undefined {
+  return typeof value === "string" && value.trim() ? value : undefined;
 }

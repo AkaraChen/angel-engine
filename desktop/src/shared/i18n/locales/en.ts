@@ -99,9 +99,6 @@ export const en = {
     },
     settings: {
       agents: {
-        defaultDescription:
-          "Used for new chats started from the composer or project list.",
-        defaultTitle: "Default agent",
         enabledLabel: "{{agent}} agent",
         minimumEnabled: "At least one agent must stay enabled.",
         title: "Agents",

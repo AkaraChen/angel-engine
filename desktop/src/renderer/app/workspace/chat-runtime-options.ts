@@ -57,6 +57,34 @@ export function ensureConfigOption(
   ];
 }
 
+export function resolveSavedConfigSelection({
+  canSet,
+  currentValue,
+  options,
+  savedValue,
+}: {
+  canSet: boolean | undefined;
+  currentValue: string | null | undefined;
+  options: ChatRuntimeConfigOption[] | undefined;
+  savedValue: string | undefined;
+}): { displayValue?: string; overrideValue?: string } {
+  const saved = selectedConfigOverride(savedValue);
+  if (!saved || canSet === false) return {};
+
+  const optionValues = configOptionValues(options);
+  if (optionValues.has(saved)) {
+    return { displayValue: saved, overrideValue: saved };
+  }
+
+  const current = selectedConfigOverride(currentValue);
+  if (current && (optionValues.size === 0 || optionValues.has(current))) {
+    return { displayValue: current };
+  }
+
+  const first = firstConfigOptionValue(options);
+  return first ? { displayValue: first, overrideValue: first } : {};
+}
+
 export function normalizeConfigDisplayValue(value: string | null | undefined) {
   return value || NO_CONFIG_OVERRIDE_VALUE;
 }
@@ -76,4 +104,23 @@ function labelFromConfigValue(value: string, defaultLabel: string) {
     .filter(Boolean)
     .map((part) => `${part.slice(0, 1).toUpperCase()}${part.slice(1)}`)
     .join(" ");
+}
+
+function configOptionValues(
+  options: ChatRuntimeConfigOption[] | undefined,
+): Set<string> {
+  return new Set(
+    options?.flatMap((option) => {
+      const value = selectedConfigOverride(option.value);
+      return value ? [value] : [];
+    }) ?? [],
+  );
+}
+
+function firstConfigOptionValue(
+  options: ChatRuntimeConfigOption[] | undefined,
+): string | undefined {
+  return options
+    ?.map((option) => selectedConfigOverride(option.value))
+    .find((value): value is string => Boolean(value));
 }

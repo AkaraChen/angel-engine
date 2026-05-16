@@ -100,9 +100,6 @@ export const fr = {
     },
     settings: {
       agents: {
-        defaultDescription:
-          "Utilisé pour les nouvelles discussions lancées depuis le compositeur ou la liste des projets.",
-        defaultTitle: "Agent par défaut",
         enabledLabel: "Agent {{agent}}",
         minimumEnabled: "Au moins un agent doit rester activé.",
         title: "Agents",

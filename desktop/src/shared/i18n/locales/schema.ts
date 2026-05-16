@@ -101,8 +101,6 @@ export interface LocaleResourceTranslationSidebar {
 }
 
 export interface LocaleResourceTranslationSettingsAgents {
-  defaultDescription: string;
-  defaultTitle: string;
   enabledLabel: string;
   minimumEnabled: string;
   title: string;

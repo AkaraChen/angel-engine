@@ -24,17 +24,6 @@ export function SettingsWindowPage() {
     ...deleteAllChatsMutationOptions({ api, queryClient }),
   });
 
-  const setDefaultRuntime = useCallback(
-    (runtime: AgentRuntime) => {
-      if (!agentSettings.enabledRuntimes.includes(runtime)) return;
-      updateAgentSettings((current) => ({
-        ...current,
-        defaultRuntime: runtime,
-      }));
-    },
-    [agentSettings.enabledRuntimes, updateAgentSettings],
-  );
-
   const setAgentEnabled = useCallback(
     (runtime: AgentRuntime, enabled: boolean) => {
       updateAgentSettings((current) => {
@@ -81,7 +70,6 @@ export function SettingsWindowPage() {
         isDeletingChats={deleteAllChatsMutation.isPending}
         onAgentEnabledChange={setAgentEnabled}
         onDeleteAllChats={deleteAllChats}
-        onDefaultAgentChange={setDefaultRuntime}
       />
     </div>
   );

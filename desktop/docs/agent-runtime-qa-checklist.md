@@ -398,13 +398,14 @@ Plan a two-step change for src/edit-me.txt. Do not edit files yet.
 - [ ] 访问不存在的 chat/project route 时回到安全页面，不出现 blank page。
 - [ ] 后台完成或等待输入的提示在打开对应 chat 后清除。
 
-## 13. Settings 和默认 Agent
+## 13. Settings 和上次使用的 Agent
 
-覆盖：settings page、default agent localStorage、draft agent initialization。
+覆盖：settings page、last agent localStorage、draft agent initialization。
 
-- [ ] Settings 中把 default agent 切为 `Codex`。
-- [ ] 回到 `New chat` 后 draft 使用 `Codex`。
-- [ ] 重启 app 后 default agent 仍为 `Codex`。
+- [ ] Settings 中没有默认 agent 选择项。
+- [ ] 完成一次 Codex chat 后，回到 `New chat`，draft 使用 `Codex`。
+- [ ] runtime config 加载后恢复上次 model、reasoning effort、agent mode、permission mode。
+- [ ] 重启 app 后上次使用的 agent 和配置保持。
 - [ ] localStorage 中写入非法 runtime id 后，app 清洗为安全默认值，不崩溃。
 - [ ] `Delete all chats` 取消时不删除；确认后 chat 清空，project 保留，route 回首页。
 - [ ] 清空 chat 后新建 Codex chat 仍能初始化 runtime config。

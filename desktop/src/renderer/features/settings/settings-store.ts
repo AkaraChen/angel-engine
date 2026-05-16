@@ -26,7 +26,6 @@ interface SettingsState {
   setAgentSettings: (
     updater: (settings: AgentSettings) => AgentSettings,
   ) => void;
-  setDefaultAgent: (runtime: AgentRuntime) => void;
   setLanguage: (language: SupportedLanguage) => void;
   setThemeMode: (themeMode: DesktopThemeMode) => void;
   themeMode: DesktopThemeMode;
@@ -58,20 +57,6 @@ export const useSettingsStore = create<SettingsState>()((set, get) => ({
     updateSettingsState(set, get, (current) => ({
       agentSettings: sanitizeAgentSettings(updater(current.agentSettings)),
     }));
-  },
-  setDefaultAgent: (runtime) => {
-    updateSettingsState(set, get, (current) => {
-      if (!current.agentSettings.enabledRuntimes.includes(runtime)) {
-        return {};
-      }
-
-      return {
-        agentSettings: sanitizeAgentSettings({
-          ...current.agentSettings,
-          defaultRuntime: runtime,
-        }),
-      };
-    });
   },
   setLanguage: (language) => {
     updateSettingsState(set, get, (current) => {

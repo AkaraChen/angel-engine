@@ -99,8 +99,6 @@ export const zhCN = {
     },
     settings: {
       agents: {
-        defaultDescription: "用于从输入框或项目列表发起的新聊天。",
-        defaultTitle: "默认 Agent",
         enabledLabel: "{{agent}} Agent",
         minimumEnabled: "至少需要启用一个 Agent。",
         title: "Agents",

@@ -99,9 +99,6 @@ export const ja = {
     },
     settings: {
       agents: {
-        defaultDescription:
-          "コンポーザーまたはプロジェクト一覧から開始する新しいチャットに使用されます。",
-        defaultTitle: "デフォルト Agent",
         enabledLabel: "{{agent}} Agent",
         minimumEnabled:
           "少なくとも 1 つの Agent を有効にしておく必要があります。",

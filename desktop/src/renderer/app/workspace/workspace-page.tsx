@@ -1,4 +1,4 @@
-import type { AgentRuntime } from "@shared/agents";
+import type { AgentRuntime, AgentRuntimePreference } from "@shared/agents";
 import type {
   Chat,
   ChatHistoryMessage,
@@ -10,7 +10,10 @@ import type { DraftAgentConfig } from "@/app/workspace/workspace-thread-types";
 
 import {
   getEnabledAgentOptions,
+  isAgentRuntime,
+  rememberAgentRuntimePreference,
   resolveEnabledAgentRuntime,
+  sanitizeAgentRuntimePreference,
 } from "@shared/agents";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
@@ -226,7 +229,7 @@ function WorkspacePageContent({
     : undefined;
   const draftRuntime = draftRuntimeKey
     ? resolveEnabledAgentRuntime(agentSettings, draftRuntimes[draftRuntimeKey])
-    : agentSettings.defaultRuntime;
+    : resolveEnabledAgentRuntime(agentSettings);
   const activeRuntime = chatRuntime ?? draftRuntime;
   const shouldPrewarmChat =
     isDraftPage && (!routeDraftProjectId || Boolean(draftProject.path));
@@ -300,16 +303,6 @@ function WorkspacePageContent({
         (chat) => !chat.projectId || !projectIds.has(chat.projectId),
       ),
     [chats, projectIds],
-  );
-  const setDefaultRuntime = useCallback(
-    (runtime: AgentRuntime) => {
-      if (!agentSettings.enabledRuntimes.includes(runtime)) return;
-      updateAgentSettings((current) => ({
-        ...current,
-        defaultRuntime: runtime,
-      }));
-    },
-    [agentSettings.enabledRuntimes, updateAgentSettings],
   );
   const setAgentEnabled = useCallback(
     (runtime: AgentRuntime, enabled: boolean) => {
@@ -391,12 +384,37 @@ function WorkspacePageContent({
       messages?: ChatHistoryMessage[],
       config?: ChatRuntimeConfig,
     ) => {
+      if (messages && isAgentRuntime(chat.runtime)) {
+        const runtime = chat.runtime;
+        const preference = agentRuntimePreferenceFromConfig(config, {
+          mode: modeOverride,
+          model: modelOverride,
+          permissionMode: permissionModeOverride,
+          reasoningEffort: reasoningEffortOverride,
+        });
+        updateAgentSettings((current) =>
+          rememberAgentRuntimePreference(current, runtime, preference),
+        );
+        setDraftRuntimes({});
+        setDraftAgentConfigs((current) => clearDraftAgentConfigs(current));
+      }
+
       setChatInCache(chat, messages, config);
       if (isDraftPage && currentHashRoutePath() === currentRoutePath) {
         navigateToChat(chat);
       }
     },
-    [currentRoutePath, isDraftPage, navigateToChat, setChatInCache],
+    [
+      currentRoutePath,
+      isDraftPage,
+      navigateToChat,
+      modeOverride,
+      modelOverride,
+      setChatInCache,
+      permissionModeOverride,
+      reasoningEffortOverride,
+      updateAgentSettings,
+    ],
   );
 
   const createProjectMutation = useMutation({
@@ -683,7 +701,6 @@ function WorkspacePageContent({
               isDeletingChats={deleteAllChatsMutation.isPending}
               onAgentEnabledChange={setAgentEnabled}
               onDeleteAllChats={deleteAllChats}
-              onDefaultAgentChange={setDefaultRuntime}
             />
           </SidebarInset>
         ) : (
@@ -795,4 +812,39 @@ function upsertChatInList(chats: Chat[], chat: Chat) {
   return next.sort((left, right) =>
     right.updatedAt.localeCompare(left.updatedAt),
   );
+}
+
+function agentRuntimePreferenceFromConfig(
+  config: ChatRuntimeConfig | undefined,
+  fallback: AgentRuntimePreference,
+): AgentRuntimePreference | undefined {
+  const preference = sanitizeAgentRuntimePreference({
+    mode:
+      config?.agentState?.currentMode ?? config?.currentMode ?? fallback.mode,
+    model: config?.currentModel ?? fallback.model,
+    permissionMode:
+      config?.agentState?.currentPermissionMode ??
+      config?.currentPermissionMode ??
+      fallback.permissionMode,
+    reasoningEffort: config?.currentReasoningEffort ?? fallback.reasoningEffort,
+  });
+
+  return Object.keys(preference).length > 0 ? preference : undefined;
+}
+
+function clearDraftAgentConfigs(
+  configs: Partial<Record<string, DraftAgentConfig>>,
+): Partial<Record<string, DraftAgentConfig>> {
+  const next: Partial<Record<string, DraftAgentConfig>> = {};
+  let changed = false;
+
+  for (const [key, value] of Object.entries(configs)) {
+    if (key === "draft" || key.startsWith("draft:")) {
+      changed = true;
+      continue;
+    }
+    next[key] = value;
+  }
+
+  return changed ? next : configs;
 }

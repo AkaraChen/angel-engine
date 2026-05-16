@@ -8,6 +8,7 @@ import { useTranslation } from "react-i18next";
 import {
   ensureConfigOption,
   normalizeConfigDisplayValue,
+  resolveSavedConfigSelection,
   runtimeConfigOptionCount,
   runtimeConfigOptionsToAgentOptions,
   selectedConfigOverride,
@@ -21,7 +22,7 @@ type DraftRuntimeOptions = Array<{
 
 interface UseDraftChatOptionsInput {
   activeRuntime: AgentRuntime;
-  agentSettings: Pick<AgentSettings, "enabledRuntimes">;
+  agentSettings: Pick<AgentSettings, "enabledRuntimes" | "runtimePreferences">;
   configLoading: boolean;
   draftAgentConfigs: Partial<Record<string, DraftAgentConfig>>;
   draftRuntimeKey?: string;
@@ -52,26 +53,72 @@ export function useDraftChatOptions({
   const draftAgentConfigKey = `${runtimePageKey}:${activeRuntime}`;
   const draftAgentConfig =
     draftAgentConfigs[draftAgentConfigKey] ?? EMPTY_DRAFT_AGENT_CONFIG;
+  const runtimePreference = agentSettings.runtimePreferences[activeRuntime];
+  const savedModelSelection = resolveSavedConfigSelection({
+    canSet: runtimeConfig?.canSetModel,
+    currentValue: runtimeConfig?.currentModel,
+    options: runtimeConfig?.models,
+    savedValue: runtimePreference?.model,
+  });
+  const savedReasoningSelection = resolveSavedConfigSelection({
+    canSet: runtimeConfig?.canSetReasoningEffort,
+    currentValue: runtimeConfig?.currentReasoningEffort,
+    options: runtimeConfig?.reasoningEfforts,
+    savedValue: runtimePreference?.reasoningEffort,
+  });
+  const savedModeSelection = resolveSavedConfigSelection({
+    canSet: runtimeConfig?.canSetMode,
+    currentValue:
+      runtimeConfig?.agentState?.currentMode ?? runtimeConfig?.currentMode,
+    options: runtimeConfig?.modes,
+    savedValue: runtimePreference?.mode,
+  });
+  const savedPermissionModeSelection = resolveSavedConfigSelection({
+    canSet: runtimeConfig?.canSetPermissionMode,
+    currentValue:
+      runtimeConfig?.agentState?.currentPermissionMode ??
+      runtimeConfig?.currentPermissionMode,
+    options: runtimeConfig?.permissionModes,
+    savedValue: runtimePreference?.permissionMode,
+  });
   const activeModel = normalizeConfigDisplayValue(
-    draftAgentConfig.model ?? runtimeConfig?.currentModel,
+    draftAgentConfig.model ??
+      savedModelSelection.displayValue ??
+      runtimeConfig?.currentModel,
   );
   const activeReasoningEffort = normalizeConfigDisplayValue(
-    draftAgentConfig.reasoningEffort ?? runtimeConfig?.currentReasoningEffort,
+    draftAgentConfig.reasoningEffort ??
+      savedReasoningSelection.displayValue ??
+      runtimeConfig?.currentReasoningEffort,
   );
   const activeMode = normalizeConfigDisplayValue(
-    draftAgentConfig.mode ?? runtimeConfig?.currentMode,
+    draftAgentConfig.mode ??
+      savedModeSelection.displayValue ??
+      runtimeConfig?.agentState?.currentMode ??
+      runtimeConfig?.currentMode,
   );
   const activePermissionMode = normalizeConfigDisplayValue(
-    draftAgentConfig.permissionMode ?? runtimeConfig?.currentPermissionMode,
+    draftAgentConfig.permissionMode ??
+      savedPermissionModeSelection.displayValue ??
+      runtimeConfig?.agentState?.currentPermissionMode ??
+      runtimeConfig?.currentPermissionMode,
   );
-  const modelOverride = selectedConfigOverride(draftAgentConfig.model);
-  const reasoningEffortOverride = selectedConfigOverride(
-    draftAgentConfig.reasoningEffort,
-  );
-  const modeOverride = selectedConfigOverride(draftAgentConfig.mode);
-  const permissionModeOverride = selectedConfigOverride(
-    draftAgentConfig.permissionMode,
-  );
+  const modelOverride =
+    draftAgentConfig.model === undefined
+      ? savedModelSelection.overrideValue
+      : selectedConfigOverride(draftAgentConfig.model);
+  const reasoningEffortOverride =
+    draftAgentConfig.reasoningEffort === undefined
+      ? savedReasoningSelection.overrideValue
+      : selectedConfigOverride(draftAgentConfig.reasoningEffort);
+  const modeOverride =
+    draftAgentConfig.mode === undefined
+      ? savedModeSelection.overrideValue
+      : selectedConfigOverride(draftAgentConfig.mode);
+  const permissionModeOverride =
+    draftAgentConfig.permissionMode === undefined
+      ? savedPermissionModeSelection.overrideValue
+      : selectedConfigOverride(draftAgentConfig.permissionMode);
   const modelOptions = ensureConfigOption(
     runtimeConfigOptionsToAgentOptions(
       runtimeConfig?.models,

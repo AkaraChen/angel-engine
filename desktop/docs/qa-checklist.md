@@ -187,16 +187,17 @@
 
 ## Settings
 
-覆盖：settings page、default agent localStorage、delete all chats。
+覆盖：settings page、last agent localStorage、delete all chats。
 
 1. 打开 Settings。
-2. 切换 default agent。
-3. 回到 `New chat`。
-4. 期望新 draft 使用新的 default agent。
-5. 重启 app。
-6. 期望 default agent 保持。
-7. 点击 `Delete all chats`，先取消，再确认。
-8. 期望取消不删除；确认后所有 chat 清空，project 保留，route 回首页。
+2. 确认 Settings 不显示默认 agent 选择项。
+3. 完成一次 Codex chat。
+4. 回到 `New chat`。
+5. 期望新 draft 使用 Codex，并在 runtime config 加载后恢复上次 model/reasoning/mode/permission。
+6. 重启 app。
+7. 期望上次使用的 agent 和配置保持。
+8. 点击 `Delete all chats`，先取消，再确认。
+9. 期望取消不删除；确认后所有 chat 清空，project 保留，route 回首页。
 
 ## Message Rendering
 

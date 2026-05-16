@@ -16,7 +16,7 @@ import {
   RiErrorWarningLine as AlertTriangle,
   RiDeleteBinLine as Trash2,
 } from "@remixicon/react";
-import { AGENT_OPTIONS, getEnabledAgentOptions } from "@shared/agents";
+import { AGENT_OPTIONS } from "@shared/agents";
 import { useCallback, useId, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
@@ -64,13 +64,11 @@ export function SettingsPage({
   isDeletingChats,
   onAgentEnabledChange,
   onDeleteAllChats,
-  onDefaultAgentChange,
 }: {
   agentSettings: AgentSettings;
   isDeletingChats: boolean;
   onAgentEnabledChange: (runtime: AgentRuntime, enabled: boolean) => void;
   onDeleteAllChats: () => Promise<void>;
-  onDefaultAgentChange: (runtime: AgentRuntime) => void;
 }) {
   const { t } = useTranslation();
   const tabPanelId = useId();
@@ -78,7 +76,6 @@ export function SettingsPage({
   const [themeMode, setThemeMode] = useThemeSettings();
   const language = useSettingsStore((state) => state.language);
   const setLanguage = useSettingsStore((state) => state.setLanguage);
-  const enabledAgentOptions = getEnabledAgentOptions(agentSettings);
   const enabledRuntimeSet = new Set(agentSettings.enabledRuntimes);
   const activeTabLabel = t(
     settingsTabs.find((tab) => tab.id === activeTab)?.labelKey ??
@@ -251,26 +248,6 @@ export function SettingsPage({
                     );
                   })}
                 </>
-              </SettingsGroup>
-
-              <SettingsGroup>
-                <SettingsRow
-                  after={
-                    <SettingsSelect
-                      label={t("settings.agents.defaultTitle")}
-                      onValueChange={(value) =>
-                        onDefaultAgentChange(value as AgentRuntime)
-                      }
-                      options={enabledAgentOptions.map((agent) => ({
-                        label: agent.label,
-                        value: agent.id,
-                      }))}
-                      value={agentSettings.defaultRuntime}
-                    />
-                  }
-                  description={t("settings.agents.defaultDescription")}
-                  title={t("settings.agents.defaultTitle")}
-                />
               </SettingsGroup>
             </div>
           ) : null}

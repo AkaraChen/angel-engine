@@ -99,9 +99,6 @@ export const ko = {
     },
     settings: {
       agents: {
-        defaultDescription:
-          "작성기 또는 프로젝트 목록에서 시작하는 새 채팅에 사용됩니다.",
-        defaultTitle: "기본 Agent",
         enabledLabel: "{{agent}} Agent",
         minimumEnabled: "최소 하나의 Agent는 활성화되어 있어야 합니다.",
         title: "Agents",

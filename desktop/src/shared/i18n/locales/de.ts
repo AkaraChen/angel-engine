@@ -99,9 +99,6 @@ export const de = {
     },
     settings: {
       agents: {
-        defaultDescription:
-          "Wird für neue Chats aus dem Composer oder der Projektliste verwendet.",
-        defaultTitle: "Standard-Agent",
         enabledLabel: "{{agent}}-Agent",
         minimumEnabled: "Mindestens ein Agent muss aktiviert bleiben.",
         title: "Agents",

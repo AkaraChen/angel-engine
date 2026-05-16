@@ -99,8 +99,6 @@ export const zhTW = {
     },
     settings: {
       agents: {
-        defaultDescription: "用於從輸入框或專案清單發起的新聊天。",
-        defaultTitle: "預設 Agent",
         enabledLabel: "{{agent}} Agent",
         minimumEnabled: "至少需要啟用一個 Agent。",
         title: "Agents",
