@@ -1,5 +1,6 @@
 import type {
   Chat,
+  ChatHistoryMessage,
   ChatRuntimeConfig,
   ChatSendInput,
   ChatStreamEvent,
@@ -8,7 +9,7 @@ import type {
 
 export interface AgentRunContext {
   chat?: Chat;
-  messages: readonly unknown[];
+  messages: readonly ChatHistoryMessage[];
   project?: Project;
   signal: AbortSignal;
 }

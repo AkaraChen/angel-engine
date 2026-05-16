@@ -166,7 +166,7 @@ export type ChatToolCallPart = {
   argsText: string;
   artifact: ChatToolAction;
   isError?: boolean;
-  result?: unknown;
+  result?: ChatJsonValue;
   toolCallId: string;
   toolName: string;
   type: "tool-call";
