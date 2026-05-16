@@ -348,8 +348,28 @@ function WorkspacePageContent({
           if (current) {
             return { ...current, chat, config: config ?? current.config };
           }
-          return current;
+          return {
+            chat,
+            config,
+            messages: [],
+          };
         },
+      );
+    },
+    [queryClient],
+  );
+  const setChatMessagesInCache = useCallback(
+    (
+      chatId: string,
+      messages: ChatHistoryMessage[],
+      config?: ChatRuntimeConfig,
+    ) => {
+      queryClient.setQueryData<ChatLoadResult | undefined>(
+        queryKeys.chats.detail(chatId),
+        (current) =>
+          current
+            ? { ...current, config: config ?? current.config, messages }
+            : current,
       );
     },
     [queryClient],
@@ -676,6 +696,7 @@ function WorkspacePageContent({
                     <ActiveChatThread
                       draftAgentConfig={draftAgentConfig}
                       onChatCreated={updateChatFromRun}
+                      onChatMessagesUpdated={setChatMessagesInCache}
                       onChatUpdated={updateChatFromRun}
                       projects={projects}
                       routeProjectId={routeProjectId}
@@ -693,6 +714,7 @@ function WorkspacePageContent({
                           currentRoutePath={currentRoutePath}
                           draftAgentConfig={draftAgentConfig}
                           onChatCreated={updateChatFromRun}
+                          onChatMessagesUpdated={setChatMessagesInCache}
                           onChatUpdated={updateChatFromRun}
                           projects={projects}
                           routeProjectId={routeProjectId}
@@ -712,6 +734,7 @@ function WorkspacePageContent({
                     model={modelOverride}
                     mode={modeOverride}
                     onChatCreated={updateChatFromRun}
+                    onChatMessagesUpdated={setChatMessagesInCache}
                     onChatUpdated={updateChatFromRun}
                     onCreateProject={createProjectFromPicker}
                     onProjectChange={selectDraftProject}

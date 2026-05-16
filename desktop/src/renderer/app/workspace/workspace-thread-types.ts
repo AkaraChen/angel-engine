@@ -15,4 +15,10 @@ export type ChatUpdateHandler = (
   config?: ChatRuntimeConfig,
 ) => void;
 
+export type ChatMessagesUpdateHandler = (
+  chatId: string,
+  messages: ChatHistoryMessage[],
+  config?: ChatRuntimeConfig,
+) => void;
+
 export const EMPTY_DRAFT_AGENT_CONFIG: DraftAgentConfig = {};

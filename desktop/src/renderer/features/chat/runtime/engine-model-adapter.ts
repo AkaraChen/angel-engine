@@ -27,6 +27,11 @@ export interface EngineRuntimeOptions {
   model?: string;
   mode?: string;
   onChatCreated?: (chat: Chat) => void;
+  onChatMessagesUpdated?: (
+    chatId: string,
+    messages: ChatHistoryMessage[],
+    config?: ChatRuntimeConfig,
+  ) => void;
   onChatUpdated?: (
     chat: Chat,
     messages?: ChatHistoryMessage[],
@@ -49,6 +54,7 @@ export function useEngineRuntime({
   model,
   mode,
   onChatCreated,
+  onChatMessagesUpdated,
   onChatUpdated,
   prewarmId,
   projectId,
@@ -71,6 +77,7 @@ export function useEngineRuntime({
     model,
     mode,
     onChatCreated,
+    onChatMessagesUpdated,
     onChatUpdated,
     prewarmId,
     projectId,
@@ -84,6 +91,7 @@ export function useEngineRuntime({
     model,
     mode,
     onChatCreated,
+    onChatMessagesUpdated,
     onChatUpdated,
     prewarmId,
     projectId,
@@ -127,6 +135,7 @@ export function useEngineRuntime({
         typeof runConfig?.mode === "string" ? runConfig.mode : undefined;
       await startRun({
         callbacks: {
+          onChatMessagesUpdated: latestOptionsRef.current.onChatMessagesUpdated,
           onChatCreated: latestOptionsRef.current.onChatCreated,
           onChatUpdated: latestOptionsRef.current.onChatUpdated,
         },

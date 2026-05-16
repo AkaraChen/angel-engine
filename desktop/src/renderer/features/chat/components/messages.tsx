@@ -11,12 +11,12 @@ import type {
   ChatToolAction,
 } from "@shared/chat";
 import type { TFunction } from "i18next";
+import { useMessageError } from "@assistant-ui/core/react";
 import {
   ActionBarPrimitive,
   AuiIf,
   BranchPickerPrimitive,
   ComposerPrimitive,
-  ErrorPrimitive,
   MessagePrimitive,
   useAui,
   useAuiState,
@@ -352,16 +352,43 @@ function AssistantMessageErrorBanner() {
           <div className="font-medium">
             {t("notifications.chatActionFailed")}
           </div>
-          <ErrorPrimitive.Message
-            className="
-              mt-1 block text-[13px]/5 whitespace-pre-wrap text-rose-900/90
-              dark:text-rose-100/85
-            "
-          />
+          <AssistantMessageErrorText />
         </div>
       </div>
     </MessagePrimitive.Error>
   );
+}
+
+function AssistantMessageErrorText() {
+  const { t } = useTranslation();
+  const error = useMessageError();
+  const text = formatAssistantMessageError(
+    error,
+    t("notifications.chatActionFailed"),
+  );
+
+  if (!text) return null;
+
+  return (
+    <div
+      className="
+        mt-1 text-[13px]/5 whitespace-pre-wrap text-rose-900/90
+        dark:text-rose-100/85
+      "
+    >
+      {text}
+    </div>
+  );
+}
+
+function formatAssistantMessageError(error: unknown, title: string) {
+  const text =
+    typeof error === "string" ? error : JSON.stringify(error ?? title);
+  const normalizedTitle = title.trim();
+  const normalizedText = text.trim();
+  return normalizedText.startsWith(normalizedTitle)
+    ? normalizedText.slice(normalizedTitle.length).replace(/^[:\s-]+/, "")
+    : normalizedText;
 }
 
 function MessageBranchPicker() {

@@ -26,6 +26,11 @@ interface AppRuntimeProviderProps {
   model?: string;
   mode?: string;
   onChatCreated?: (chat: Chat) => void;
+  onChatMessagesUpdated?: (
+    chatId: string,
+    messages: ChatHistoryMessage[],
+    config?: ChatRuntimeConfig,
+  ) => void;
   onChatUpdated: (
     chat: Chat,
     messages?: ChatHistoryMessage[],
@@ -59,6 +64,7 @@ export function AppRuntimeProvider({
   model,
   mode,
   onChatCreated,
+  onChatMessagesUpdated,
   onChatUpdated,
   prewarmId,
   projectId,
@@ -89,6 +95,7 @@ export function AppRuntimeProvider({
     model,
     mode,
     onChatCreated,
+    onChatMessagesUpdated,
     onChatUpdated,
     prewarmId,
     projectId,

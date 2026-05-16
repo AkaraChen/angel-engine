@@ -1,7 +1,10 @@
 import type { AgentRuntime } from "@shared/agents";
 import type { Chat, ChatRuntimeConfig } from "@shared/chat";
 import type { Project } from "@shared/projects";
-import type { ChatUpdateHandler } from "./workspace-thread-types";
+import type {
+  ChatMessagesUpdateHandler,
+  ChatUpdateHandler,
+} from "./workspace-thread-types";
 import type { ChatOptionsContextValue } from "@/features/chat/runtime/chat-options-context";
 import { DraftProjectSelect } from "@/app/workspace/draft-project-select";
 import { AssistantThread } from "@/features/chat/components/assistant-thread";
@@ -14,6 +17,7 @@ interface DraftChatThreadProps {
   model?: string;
   mode?: string;
   onChatCreated: (chat: Chat) => void;
+  onChatMessagesUpdated: ChatMessagesUpdateHandler;
   onChatUpdated: ChatUpdateHandler;
   onCreateProject: () => Project | undefined | Promise<Project | undefined>;
   onProjectChange: (projectId: string | null) => void;
@@ -34,6 +38,7 @@ export function DraftChatThread({
   model,
   mode,
   onChatCreated,
+  onChatMessagesUpdated,
   onChatUpdated,
   onCreateProject,
   onProjectChange,
@@ -56,6 +61,7 @@ export function DraftChatThread({
         model={model}
         mode={mode}
         onChatCreated={onChatCreated}
+        onChatMessagesUpdated={onChatMessagesUpdated}
         onChatUpdated={onChatUpdated}
         prewarmId={prewarmId}
         projectId={projectId ?? null}

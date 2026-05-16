@@ -157,6 +157,11 @@ interface InitializeSlotInput {
 interface StartRunInput {
   callbacks?: {
     onChatCreated?: (chat: Chat) => void;
+    onChatMessagesUpdated?: (
+      chatId: string,
+      messages: ChatHistoryMessage[],
+      config?: ChatRuntimeConfig,
+    ) => void;
     onChatUpdated?: (
       chat: Chat,
       messages?: ChatHistoryMessage[],
@@ -477,14 +482,22 @@ const chatRunActions: Omit<ChatRunStore, keyof ChatRunContext> = {
       slotKey: runSlotKey,
     });
     const finalMessages = getActiveRunMessages(completion.slotKey, runId);
+    const historyMessages = engineMessagesToHistoryMessages(finalMessages);
 
     try {
-      if (!activeRun.cancelled && completion.result) {
-        callbacks?.onChatUpdated?.(
-          completion.result.chat,
-          engineMessagesToHistoryMessages(finalMessages),
-          completion.result.config,
-        );
+      if (!activeRun.cancelled) {
+        if (completion.result) {
+          callbacks?.onChatUpdated?.(
+            completion.result.chat,
+            historyMessages,
+            completion.result.config,
+          );
+        } else {
+          callbacks?.onChatMessagesUpdated?.(
+            completion.slotKey,
+            historyMessages,
+          );
+        }
       }
     } finally {
       finishRun(completion.slotKey, runId, completion.result);

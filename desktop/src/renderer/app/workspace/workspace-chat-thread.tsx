@@ -4,14 +4,17 @@ import type { Project } from "@shared/projects";
 import type { ErrorInfo, ReactNode } from "react";
 
 import type {
+  ChatMessagesUpdateHandler,
   ChatUpdateHandler,
   DraftAgentConfig,
 } from "@/app/workspace/workspace-thread-types";
 import type { useApi } from "@/platform/use-api";
 import { useQuery, useSuspenseQuery } from "@tanstack/react-query";
+import { RiErrorWarningLine as AlertCircle } from "@remixicon/react";
 import { Component, useCallback, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { Redirect } from "wouter";
+import i18n from "@/i18n";
 import {
   ensureConfigOption,
   normalizeConfigDisplayValue,
@@ -19,7 +22,10 @@ import {
   runtimeConfigOptionsToAgentOptions,
   selectedConfigOverride,
 } from "@/app/workspace/chat-runtime-options";
-import { getProjectDisplayName } from "@/app/workspace/workspace-display";
+import {
+  getErrorMessage,
+  getProjectDisplayName,
+} from "@/app/workspace/workspace-display";
 import { chatRoutePath } from "@/app/workspace/workspace-route-paths";
 import { chatRuntimeProviderKey } from "@/app/workspace/workspace-runtime-keys";
 import { EMPTY_MESSAGES } from "@/app/workspace/workspace-thread-types";
@@ -40,6 +46,7 @@ import {
 interface ActiveChatThreadProps {
   draftAgentConfig: DraftAgentConfig;
   onChatCreated: (chat: Chat) => void;
+  onChatMessagesUpdated: ChatMessagesUpdateHandler;
   onChatUpdated: ChatUpdateHandler;
   projects: Project[];
   routeProjectId?: string;
@@ -81,6 +88,7 @@ interface ChatProjectContext {
 export function ActiveChatThread({
   draftAgentConfig,
   onChatCreated,
+  onChatMessagesUpdated,
   onChatUpdated,
   projects,
   routeProjectId,
@@ -100,6 +108,7 @@ export function ActiveChatThread({
       historyRevision={0}
       keySuffix="active"
       onChatCreated={onChatCreated}
+      onChatMessagesUpdated={onChatMessagesUpdated}
       onChatUpdated={onChatUpdated}
       projects={projects}
       routeProjectId={routeProjectId}
@@ -119,6 +128,7 @@ export function RestoredChatThread({
   currentRoutePath,
   draftAgentConfig,
   onChatCreated,
+  onChatMessagesUpdated,
   onChatUpdated,
   projects,
   routeProjectId,
@@ -157,6 +167,7 @@ export function RestoredChatThread({
       historyMessages={chatLoadData.messages}
       historyRevision={chatLoadQuery.dataUpdatedAt}
       onChatCreated={onChatCreated}
+      onChatMessagesUpdated={onChatMessagesUpdated}
       onChatUpdated={onChatUpdated}
       projects={projects}
       routeProjectId={routeProjectId}
@@ -178,6 +189,7 @@ function ChatThreadRuntime({
   historyRevision,
   keySuffix,
   onChatCreated,
+  onChatMessagesUpdated,
   onChatUpdated,
   projects,
   routeProjectId,
@@ -368,6 +380,7 @@ function ChatThreadRuntime({
         model={modelOverride}
         mode={undefined}
         onChatCreated={onChatCreated}
+        onChatMessagesUpdated={onChatMessagesUpdated}
         onChatUpdated={onChatUpdated}
         projectId={projectContext.id ?? selectedChat.projectId ?? null}
         projectPath={projectContext.path ?? undefined}
@@ -385,12 +398,12 @@ function ChatThreadRuntime({
 
 export class ChatRestoreErrorBoundary extends Component<
   { children: ReactNode },
-  { failed: boolean }
+  { error?: unknown; failed: boolean }
 > {
-  state = { failed: false };
+  state: { error?: unknown; failed: boolean } = { failed: false };
 
-  static getDerivedStateFromError() {
-    return { failed: true };
+  static getDerivedStateFromError(error: unknown) {
+    return { error, failed: true };
   }
 
   componentDidCatch(error: unknown, errorInfo: ErrorInfo) {
@@ -399,7 +412,29 @@ export class ChatRestoreErrorBoundary extends Component<
 
   render(): ReactNode {
     if (this.state.failed) {
-      return <Redirect replace to="/" />;
+      return (
+        <div className="flex h-full min-h-0 flex-1 items-center justify-center bg-background p-4">
+          <div
+            className="
+              flex max-w-xl items-start gap-3 rounded-lg border
+              border-rose-500/20 bg-rose-500/8 px-4 py-3 text-sm text-rose-950
+              shadow-sm
+              dark:border-rose-400/20 dark:bg-rose-400/10 dark:text-rose-100
+            "
+            role="alert"
+          >
+            <AlertCircle className="mt-0.5 size-4 shrink-0 text-rose-600 dark:text-rose-300" />
+            <div className="min-w-0">
+              <div className="font-medium">
+                {i18n.t("notifications.chatActionFailed")}
+              </div>
+              <div className="mt-1 whitespace-pre-wrap text-[13px]/5 text-rose-900/90 dark:text-rose-100/85">
+                {getErrorMessage(this.state.error)}
+              </div>
+            </div>
+          </div>
+        </div>
+      );
     }
 
     return this.props.children;
