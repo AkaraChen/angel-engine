@@ -166,7 +166,9 @@ class GenericFileAttachmentAdapter implements AttachmentAdapter {
 }
 
 function fileContentType(file: File, fallback?: string) {
-  return file.type || fallback || "application/octet-stream";
+  if (file.type) return file.type;
+  if (fallback) return fallback;
+  throw new Error(`File is missing content type: ${file.name}`);
 }
 
 function getLocalFilePath(file: File) {

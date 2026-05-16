@@ -204,6 +204,7 @@ export function AssistantComposer({
       return;
     }
 
+    const projectRoot = environment.projectPath;
     let cancelled = false;
     setFileSearchLoading(true);
     const timeout = window.setTimeout(() => {
@@ -211,7 +212,7 @@ export function AssistantComposer({
         .searchFiles({
           limit: 12,
           query: mentionQuery,
-          root: environment.projectPath ?? "",
+          root: projectRoot,
         })
         .then((results) => {
           if (!cancelled) setFileResults(results);
@@ -454,7 +455,10 @@ function AssistantComposerHeader({
       {attachments.files.length > 0 ? (
         <div className="flex flex-wrap gap-2">
           {attachments.files.map((file) => {
-            const mediaType = file.mediaType ?? "application/octet-stream";
+            if (!file.mediaType) {
+              throw new Error("Composer attachment is missing mediaType.");
+            }
+            const mediaType = file.mediaType;
             const isImage = mediaType.startsWith("image/");
             const name = file.filename ?? t("common.attachment");
 
@@ -1417,8 +1421,14 @@ function createAttachmentFromPromptFile(
   t: TFunction,
 ): CreateAttachment {
   const filename = file.filename ?? t("common.attachment");
-  const mediaType = file.mediaType ?? "application/octet-stream";
-  const url = file.url ?? "";
+  if (!file.mediaType) {
+    throw new Error(t("composer.couldNotReadAttachment", { filename }));
+  }
+  if (!file.url) {
+    throw new Error(t("composer.couldNotReadAttachment", { filename }));
+  }
+  const mediaType = file.mediaType;
+  const url = file.url;
   const path = promptFilePath(file);
   const isImage = mediaType.startsWith("image/");
 
@@ -1452,18 +1462,22 @@ function createAttachmentFromPromptFile(
 function createMentionAttachment(
   file: ComposerMentionedFile,
 ): CreateAttachment {
+  if (!file.mimeType) {
+    throw new Error(
+      `Mentioned file is missing MIME type: ${file.relativePath}`,
+    );
+  }
+  const content = {
+    data: file.path,
+    filename: file.name,
+    mention: true,
+    mimeType: file.mimeType,
+    path: file.path,
+    type: "file" as const,
+  };
   return {
-    content: [
-      {
-        data: file.path,
-        filename: file.name,
-        mention: true,
-        mimeType: "application/octet-stream",
-        path: file.path,
-        type: "file",
-      },
-    ] as unknown as CreateAttachment["content"],
-    contentType: "application/octet-stream",
+    content: [content],
+    contentType: file.mimeType,
     name: file.name,
     type: "file",
   };

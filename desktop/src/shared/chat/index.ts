@@ -236,6 +236,7 @@ export interface ProjectFileSearchInput {
 }
 
 export interface ProjectFileSearchResult {
+  mimeType: string | null;
   name: string;
   path: string;
   relativePath: string;

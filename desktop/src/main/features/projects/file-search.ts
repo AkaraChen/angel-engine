@@ -5,6 +5,7 @@ import type {
 } from "../../../shared/chat";
 import fs from "node:fs/promises";
 
+import { lookup } from "mime-types";
 import path from "node:path";
 
 const DEFAULT_LIMIT = 20;
@@ -69,6 +70,7 @@ export async function searchProjectFiles(
       if (score <= 0) continue;
 
       matches.push({
+        mimeType: lookup(absolutePath) || null,
         name: entry.name,
         path: absolutePath,
         relativePath,
@@ -86,7 +88,8 @@ export async function searchProjectFiles(
         a.relativePath.localeCompare(b.relativePath),
     )
     .slice(0, limit)
-    .map(({ name, path, relativePath, type }) => ({
+    .map(({ mimeType, name, path, relativePath, type }) => ({
+      mimeType,
       name,
       path,
       relativePath,
