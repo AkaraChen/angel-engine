@@ -11,7 +11,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::adapter::RuntimeAdapter;
 use crate::config::{ClientOptions, StartConversationRequest};
-use crate::error::ClientResult;
+use crate::error::{ClientError, ClientResult};
 use crate::event::{
     ClientLog, ClientLogKind, ClientUpdate, JsonRpcOutbound, events_from_engine_event, log_event,
     stream_deltas_from_engine_event,
@@ -361,7 +361,7 @@ where
     ) -> ClientResult<ClientCommandResult> {
         let conversation_id = to_conversation_id(conversation_id);
         let settings = self.engine.get_available_modes(conversation_id.clone())?;
-        let mode = resolve_mode_request(&settings, &mode.into());
+        let mode = resolve_mode_request(&settings, &mode.into())?;
         let plan = self.engine.set_mode(conversation_id, mode)?;
         self.apply_plan(plan)
     }
@@ -373,7 +373,7 @@ where
     ) -> ClientResult<ClientCommandResult> {
         let conversation_id = to_conversation_id(conversation_id);
         let settings = self.engine.get_permission_modes(conversation_id.clone())?;
-        let mode = resolve_permission_mode_request(&settings, &mode.into());
+        let mode = resolve_permission_mode_request(&settings, &mode.into())?;
         let plan = self.engine.set_permission_mode(conversation_id, mode)?;
         self.apply_plan(plan)
     }
@@ -894,16 +894,24 @@ pub(crate) fn process_log(kind: ClientLogKind, message: impl Into<String>) -> Cl
     }
 }
 
-fn resolve_mode_request(settings: &AvailableModeState, requested: &str) -> String {
+fn resolve_mode_request(settings: &AvailableModeState, requested: &str) -> ClientResult<String> {
     let requested = requested.trim();
-    if requested.is_empty()
-        || settings.available_modes.is_empty()
-        || settings
-            .available_modes
-            .iter()
-            .any(|mode| mode.id == requested)
+    if requested.is_empty() {
+        return Err(ClientError::InvalidInput {
+            message: "mode is required".to_string(),
+        });
+    }
+    if settings.available_modes.is_empty() {
+        return Err(ClientError::InvalidInput {
+            message: "conversation has no available modes".to_string(),
+        });
+    }
+    if settings
+        .available_modes
+        .iter()
+        .any(|mode| mode.id == requested)
     {
-        return requested.to_string();
+        return Ok(requested.to_string());
     }
 
     let normalized = normalized_mode_key(requested);
@@ -912,22 +920,32 @@ fn resolve_mode_request(settings: &AvailableModeState, requested: &str) -> Strin
         .iter()
         .find(|mode| mode_matches_request(mode, &normalized))
         .map(|mode| mode.id.clone())
-        .unwrap_or_else(|| requested.to_string())
+        .ok_or_else(|| ClientError::InvalidInput {
+            message: format!("unknown mode: {requested}"),
+        })
 }
 
 fn resolve_permission_mode_request(
     settings: &AvailablePermissionModeState,
     requested: &str,
-) -> String {
+) -> ClientResult<String> {
     let requested = requested.trim();
-    if requested.is_empty()
-        || settings.available_modes.is_empty()
-        || settings
-            .available_modes
-            .iter()
-            .any(|mode| mode.id == requested)
+    if requested.is_empty() {
+        return Err(ClientError::InvalidInput {
+            message: "permission mode is required".to_string(),
+        });
+    }
+    if settings.available_modes.is_empty() {
+        return Err(ClientError::InvalidInput {
+            message: "conversation has no available permission modes".to_string(),
+        });
+    }
+    if settings
+        .available_modes
+        .iter()
+        .any(|mode| mode.id == requested)
     {
-        return requested.to_string();
+        return Ok(requested.to_string());
     }
 
     let normalized = normalized_mode_key(requested);
@@ -936,7 +954,9 @@ fn resolve_permission_mode_request(
         .iter()
         .find(|mode| permission_mode_matches_request(mode, &normalized))
         .map(|mode| mode.id.clone())
-        .unwrap_or_else(|| requested.to_string())
+        .ok_or_else(|| ClientError::InvalidInput {
+            message: format!("unknown permission mode: {requested}"),
+        })
 }
 
 fn mode_matches_request(mode: &SessionMode, requested: &str) -> bool {
