@@ -875,7 +875,11 @@ export function PromptInput({
         ? controller.textInput.value
         : (() => {
             const formData = new FormData(form);
-            return (formData.get("message") as string) || "";
+            const value = formData.get("message");
+            if (typeof value !== "string") {
+              throw new Error("Prompt input form is missing message field.");
+            }
+            return value;
           })();
 
       // Reset form immediately after capturing text to avoid race condition

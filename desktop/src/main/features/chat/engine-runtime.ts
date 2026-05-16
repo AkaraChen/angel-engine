@@ -480,8 +480,8 @@ function chatPrewarmMatches(prewarm: ChatPrewarm, sendInput: ChatSendInput) {
 
 function chatPrewarmKey(input: ChatPrewarmInput) {
   return JSON.stringify([
-    input.runtime ?? "",
-    input.projectId ?? "",
+    input.runtime ?? null,
+    input.projectId ?? null,
     cwdForProjectOrStandalone(input.projectId),
   ]);
 }

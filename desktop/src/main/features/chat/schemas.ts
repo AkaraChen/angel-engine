@@ -16,14 +16,14 @@ export const elicitationResponse = type({
 export const chatStreamStartInput = type({
   input: {
     attachments: "unknown",
-    "chatId?": "string | undefined",
-    "model?": "string | undefined",
-    "mode?": "string | undefined",
-    "permissionMode?": "string | undefined",
-    "prewarmId?": "string | undefined",
-    "projectId?": "string | undefined",
-    "reasoningEffort?": "string | undefined",
-    "runtime?": "string | undefined",
+    "chatId?": "string > 0 | undefined",
+    "model?": "string > 0 | undefined",
+    "mode?": "string > 0 | undefined",
+    "permissionMode?": "string > 0 | undefined",
+    "prewarmId?": "string > 0 | undefined",
+    "projectId?": "string > 0 | undefined",
+    "reasoningEffort?": "string > 0 | undefined",
+    "runtime?": "string > 0 | undefined",
     text: "string > 0",
   },
   streamId: "string > 0",
@@ -38,19 +38,19 @@ export const chatStreamElicitationResolveInput = type({
 // Input parser schemas
 export const chatCreateInput = type({
   "+": "ignore",
-  "model?": "string | undefined",
-  "mode?": "string | undefined",
-  "permissionMode?": "string | undefined",
-  "projectId?": "string | undefined",
-  "reasoningEffort?": "string | undefined",
-  "runtime?": "string | undefined",
-  "title?": "string | undefined",
+  "model?": "string > 0 | undefined",
+  "mode?": "string > 0 | undefined",
+  "permissionMode?": "string > 0 | undefined",
+  "projectId?": "string > 0 | undefined",
+  "reasoningEffort?": "string > 0 | undefined",
+  "runtime?": "string > 0 | undefined",
+  "title?": "string > 0 | undefined",
 });
 
 export const chatPrewarmInput = type({
   "+": "ignore",
-  "projectId?": "string | undefined",
-  "runtime?": "string | undefined",
+  "projectId?": "string > 0 | undefined",
+  "runtime?": "string > 0 | undefined",
 });
 
 export const chatRenameInput = type({
@@ -61,21 +61,21 @@ export const chatRenameInput = type({
 
 export const chatRuntimeConfigInput = type({
   "+": "ignore",
-  "cwd?": "string | undefined",
-  "runtime?": "string | undefined",
+  "cwd?": "string > 0 | undefined",
+  "runtime?": "string > 0 | undefined",
 });
 
 export const chatSendInput = type({
   "+": "ignore",
   "attachments?": "unknown | undefined",
-  "chatId?": "string | undefined",
-  "model?": "string | undefined",
-  "mode?": "string | undefined",
-  "permissionMode?": "string | undefined",
-  "prewarmId?": "string | undefined",
-  "projectId?": "string | undefined",
-  "reasoningEffort?": "string | undefined",
-  "runtime?": "string | undefined",
+  "chatId?": "string > 0 | undefined",
+  "model?": "string > 0 | undefined",
+  "mode?": "string > 0 | undefined",
+  "permissionMode?": "string > 0 | undefined",
+  "prewarmId?": "string > 0 | undefined",
+  "projectId?": "string > 0 | undefined",
+  "reasoningEffort?": "string > 0 | undefined",
+  "runtime?": "string > 0 | undefined",
   text: "string > 0",
 });
 

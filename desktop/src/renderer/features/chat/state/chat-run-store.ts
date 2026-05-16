@@ -1605,22 +1605,34 @@ function appendToolActionDeltaPart(
     return deltaText.length;
   }
 
-  const output = [
-    ...(previous.artifact.output ?? []),
-    ...(action.output ?? []),
-  ];
+  const output = previous.artifact.output ? [...previous.artifact.output] : [];
+  if (action.output) {
+    output.push(...action.output);
+  }
+  let previousOutputText = previous.artifact.outputText;
+  if (previousOutputText === undefined) {
+    if (!previous.artifact.output) {
+      throw new Error("Tool action delta is missing previous output.");
+    }
+    previousOutputText = previous.artifact.output
+      .map((chunk) => chunk.text)
+      .join("");
+  }
   upsertToolActionPart(parts, {
     ...previous.artifact,
     ...action,
     output,
-    outputText: `${previous.artifact.outputText ?? ""}${deltaText}`,
+    outputText: `${previousOutputText}${deltaText}`,
   });
   return deltaText.length;
 }
 
 function toolActionDeltaText(action: ChatToolAction) {
   if (action.outputText !== undefined) return action.outputText;
-  return (action.output ?? []).map((chunk) => chunk.text).join("");
+  if (!action.output) {
+    throw new Error("Tool action delta is missing output.");
+  }
+  return action.output.map((chunk) => chunk.text).join("");
 }
 
 function mergeFinalResultParts(
@@ -1894,7 +1906,7 @@ function isEmptyHostCapabilityAction(action: ChatToolAction) {
     action.kind === "hostCapability" &&
     !action.error &&
     !action.outputText &&
-    !(action.output ?? []).some((output) => output.text)
+    !action.output?.some((output) => output.text)
   );
 }
 
@@ -2276,8 +2288,9 @@ function engineMessageAttachmentsToHistoryParts(
   const existingKeys = new Set(existingParts.map(historyPartKey));
   const parts: ChatHistoryMessagePart[] = [];
 
-  for (const attachment of attachments ?? []) {
-    for (const part of attachment.content ?? []) {
+  if (!attachments) return parts;
+  for (const attachment of attachments) {
+    for (const part of attachment.content) {
       const input = attachmentInputFromMessagePart(part, attachment.name);
       if (!input) continue;
       const historyPart = attachmentInputToHistoryPart(input);
@@ -2302,10 +2315,12 @@ function getMessageAttachments(
 ): ChatAttachmentInput[] {
   const inputs: ChatAttachmentInput[] = [];
 
-  for (const attachment of message.attachments ?? []) {
-    for (const part of attachment.content ?? []) {
-      const input = attachmentInputFromMessagePart(part, attachment.name);
-      if (input) inputs.push(input);
+  if (message.attachments) {
+    for (const attachment of message.attachments) {
+      for (const part of attachment.content) {
+        const input = attachmentInputFromMessagePart(part, attachment.name);
+        if (input) inputs.push(input);
+      }
     }
   }
 
@@ -2434,10 +2449,9 @@ function parseImageDataUrl(
   value: string,
 ): { data: string; mimeType: string } | undefined {
   const parsed = parseDataUrl(value);
-  const mimeType = parsed?.mimeType ?? "";
-  const data = parsed?.data ?? "";
-  if (!mimeType.startsWith("image/") || !data) return undefined;
-  return { data, mimeType };
+  if (!parsed) return undefined;
+  if (!parsed.mimeType.startsWith("image/") || !parsed.data) return undefined;
+  return parsed;
 }
 
 async function yieldToRendererTask() {
