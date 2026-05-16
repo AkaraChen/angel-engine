@@ -20,8 +20,6 @@ pub struct AngelClient {
     child_stdin: ChildStdin,
     lines: Receiver<ProcessLine>,
     core: AngelClientCore,
-    default_cwd: Option<String>,
-    default_additional_directories: Vec<String>,
     runtime_model_catalog_command: Option<String>,
     runtime_model_catalog: RuntimeModelCatalogCache,
 }
@@ -59,15 +57,11 @@ impl AngelClient {
         spawn_line_reader(stdout, tx.clone(), ProcessLine::Stdout);
         spawn_line_reader(stderr, tx, ProcessLine::Stderr);
 
-        let default_cwd = options.cwd.clone();
-        let default_additional_directories = options.additional_directories.clone();
         Ok(Self {
             child,
             child_stdin,
             lines: rx,
             core: AngelClientCore::new(options),
-            default_cwd,
-            default_additional_directories,
             runtime_model_catalog_command,
             runtime_model_catalog: RuntimeModelCatalogCache::NotLoaded,
         })
@@ -86,14 +80,10 @@ impl AngelClient {
 
     pub fn initialize_and_start(
         &mut self,
-        request: Option<StartConversationRequest>,
+        request: StartConversationRequest,
     ) -> ClientResult<ClientCommandResult> {
         let mut update = self.initialize()?;
-        let mut result =
-            self.start_conversation(request.unwrap_or_else(|| StartConversationRequest {
-                cwd: self.default_cwd.clone().or_else(current_dir_string),
-                additional_directories: self.default_additional_directories.clone(),
-            }))?;
+        let mut result = self.start_conversation(request)?;
         update.merge(result.update);
         result.update = update;
         Ok(result)
@@ -109,11 +99,8 @@ impl AngelClient {
 
     pub fn resume_conversation(
         &mut self,
-        mut request: ResumeConversationRequest,
+        request: ResumeConversationRequest,
     ) -> ClientResult<ClientCommandResult> {
-        if request.cwd.is_none() {
-            request.cwd = self.default_cwd.clone().or_else(current_dir_string);
-        }
         let result = self.core.resume_conversation(request)?;
         self.finish_conversation_command(result)
     }
@@ -456,10 +443,4 @@ where
             }
         }
     });
-}
-
-fn current_dir_string() -> Option<String> {
-    std::env::current_dir()
-        .ok()
-        .map(|path| path.display().to_string())
 }

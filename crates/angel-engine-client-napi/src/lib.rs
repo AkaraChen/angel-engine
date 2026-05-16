@@ -56,27 +56,23 @@ impl AngelClient {
 
     #[napi(
         js_name = "initializeAndStart",
-        ts_args_type = "request?: StartConversationRequest | null",
+        ts_args_type = "request: StartConversationRequest",
         ts_return_type = "Promise<ClientCommandResult>"
     )]
     pub fn initialize_and_start(
         &self,
         request: Option<serde_json::Value>,
     ) -> Result<AsyncTask<ClientJsonTask>> {
-        let request = optional_json::<EngineStartConversationRequest>(request)?;
+        let request = match optional_json::<EngineStartConversationRequest>(request)? {
+            Some(request) => request,
+            None => return Err(to_napi_error("initializeAndStart request is required")),
+        };
         Ok(self.task(
             "AngelClient.initializeAndStart",
             format!(
-                "request_present={} cwd={} additional_directories={}",
-                request.is_some(),
-                request
-                    .as_ref()
-                    .and_then(|request| request.cwd.as_deref())
-                    .unwrap_or("<none>"),
-                request
-                    .as_ref()
-                    .map(|request| request.additional_directories.len())
-                    .unwrap_or(0),
+                "cwd={} additional_directories={}",
+                request.cwd.as_deref().unwrap_or("<none>"),
+                request.additional_directories.len(),
             ),
             move |client| client.initialize_and_start(request),
         ))

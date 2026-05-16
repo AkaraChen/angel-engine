@@ -41,7 +41,7 @@ impl MultiRuntimeCli {
     fn initialize_and_start(&mut self) -> Result<(), Box<dyn Error>> {
         let request =
             StartConversationRequest::new().cwd(env::current_dir()?.display().to_string());
-        let result = self.client.initialize_and_start(Some(request))?;
+        let result = self.client.initialize_and_start(request)?;
         self.handle_update(result.update)?;
         self.conversation_id = result.conversation_id;
         if self.conversation_id.is_none() {

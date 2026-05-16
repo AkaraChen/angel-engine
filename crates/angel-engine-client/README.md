@@ -105,7 +105,7 @@ also expose direct primitives for `thread_settings`, `reasoning_level`,
 Use `AngelClient` when Rust should spawn and own the runtime process:
 
 ```rust
-use angel_engine_client::{AngelClient, ClientOptions};
+use angel_engine_client::{AngelClient, ClientOptions, StartConversationRequest};
 
 let mut client = AngelClient::spawn(
     ClientOptions::builder()
@@ -115,7 +115,9 @@ let mut client = AngelClient::spawn(
         .build(),
 )?;
 
-let start = client.initialize_and_start(None)?;
+let start = client.initialize_and_start(
+    StartConversationRequest::new().cwd(std::env::current_dir()?.display().to_string()),
+)?;
 let conversation_id = start.conversation_id.unwrap();
 let turn = client.send_text(&conversation_id, "Explain this workspace")?;
 ```
