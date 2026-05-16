@@ -111,7 +111,7 @@ export function structuredPlanFromToolUse(
   return {
     entries: markdownPlanEntries(text),
     kind: "review",
-    path,
+    ...(path ? { path } : {}),
     text,
     type: "plan",
   };

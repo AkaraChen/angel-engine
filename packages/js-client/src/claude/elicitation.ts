@@ -52,26 +52,29 @@ export function claudeElicitationQuestions(
   toolName: string,
   input: Record<string, unknown>,
 ): JsonObject[] {
-  return questionInputs(toolName, input).map((question, index) => ({
-    header: question.header,
-    id: questionId(index),
-    is_other: true,
-    is_secret: false,
-    options: question.options,
-    question: question.question,
-    schema: {
-      constraints: question.multiSelect
-        ? { max_items: "4", min_items: "1", unique_items: true }
-        : {},
-      default_value: null,
-      format: null,
-      item_value_type: question.multiSelect ? "String" : null,
-      multiple: question.multiSelect,
-      raw_schema: JSON.stringify(question),
-      required: true,
-      value_type: question.multiSelect ? "Array" : "String",
-    },
-  }));
+  return questionInputs(toolName, input).map((question, index) => {
+    const constraints: JsonObject = question.multiSelect
+      ? { max_items: "4", min_items: "1", unique_items: true }
+      : {};
+    return {
+      header: question.header,
+      id: questionId(index),
+      is_other: true,
+      is_secret: false,
+      options: question.options,
+      question: question.question,
+      schema: {
+        constraints,
+        default_value: null,
+        format: null,
+        item_value_type: question.multiSelect ? "String" : null,
+        multiple: question.multiSelect,
+        raw_schema: JSON.stringify(question),
+        required: true,
+        value_type: question.multiSelect ? "Array" : "String",
+      },
+    };
+  });
 }
 
 export function updatedInputFromElicitationResponse(

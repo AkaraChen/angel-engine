@@ -166,9 +166,9 @@ export function claudeHistoryToolResult(input: {
   }
   return {
     content: output,
-    error: input.isError ? output : undefined,
+    ...(input.isError ? { error: output } : {}),
     kind: acpHistoryToolKind(toolName, rawInput),
-    rawInput,
+    ...(rawInput ? { rawInput } : {}),
     sessionUpdate: "tool_call_update",
     status: input.isError ? "failed" : "completed",
     title: rawInput ? toolTitle(toolName, rawInput) : toolName,
