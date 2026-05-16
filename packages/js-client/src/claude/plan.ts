@@ -12,6 +12,7 @@ import {
   EngineEventContentKind,
   PlanEntryStatus,
 } from "@angel-engine/client-napi";
+import is from "@sindresorhus/is";
 import { CLAUDE_TOOL, typedClaudeInput } from "./sdk-types.js";
 
 interface PlanStateJson {
@@ -196,25 +197,29 @@ function claudePlansDirs(): string[] {
 function planFromTodoInput(
   input: ClaudeTodoWriteInput,
 ): PlanStateJson | undefined {
-  const todos = Array.isArray(input.todos) ? input.todos : [];
-  const entries = todos
-    .map((todo) =>
-      todo && typeof todo === "object" && !Array.isArray(todo)
-        ? (todo as Record<string, unknown>)
-        : undefined,
-    )
-    .filter((todo): todo is Record<string, unknown> => Boolean(todo))
-    .map((todo) => ({
-      content: String(todo.content ?? ""),
-      status: String(todo.status ?? ""),
-    }))
+  const entries = input.todos
+    .map((todo) => {
+      if (!is.string(todo.content)) {
+        throw new Error("Claude todo content is missing.");
+      }
+      if (!is.string(todo.status)) {
+        throw new Error("Claude todo status is missing.");
+      }
+      return {
+        content: todo.content,
+        status: todo.status,
+      };
+    })
     .filter((entry) => entry.content);
   if (entries.length === 0) return undefined;
   return { entries };
 }
 
 function planTextFromExitPlanModeInput(input: ClaudeExitPlanModeInput): string {
-  return typeof input.plan === "string" ? input.plan : "";
+  if (!is.string(input.plan)) {
+    throw new Error("Claude exit plan input is missing plan.");
+  }
+  return input.plan;
 }
 
 function planPathFromExitPlanModeInput(
@@ -231,7 +236,10 @@ function markdownPlanEntries(
   return text
     .split(/\r?\n/)
     .map((line) => line)
-    .map((line) => line.match(/^(?:[-*]|\d+[.)])\s+(.+)$/)?.[1] ?? "")
+    .flatMap((line) => {
+      const match = line.match(/^(?:[-*]|\d+[.)])\s+(.+)$/);
+      return match ? [match[1]] : [];
+    })
     .filter((line) => line && !line.startsWith("`"))
     .slice(0, 20)
     .map((content) => ({ content, status: PlanEntryStatus.Pending }));

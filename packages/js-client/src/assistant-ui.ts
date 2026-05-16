@@ -8,6 +8,7 @@ import type {
   ChatHistoryMessage,
   ChatHistoryMessagePart,
 } from "./types.js";
+import is from "@sindresorhus/is";
 import {
   chatPartsText,
   chatPlanPartName,
@@ -136,11 +137,7 @@ export function assistantMessageContentToHistoryParts(
           ? [cloneChatHistoryPart(chatToolActionToPart(part.artifact))]
           : [];
       case "image": {
-        const imagePart = imageHistoryPartFromDataUrl(
-          part.image,
-          part.filename ?? null,
-        );
-        return imagePart ? [imagePart] : [];
+        return [imageHistoryPartFromDataUrl(part.image, part.filename ?? null)];
       }
       case "file":
         return [fileHistoryPartFromMessagePart(part)];
@@ -213,10 +210,12 @@ export function getAssistantMessageAttachments(
 ): ChatAttachmentInput[] {
   const inputs: ChatAttachmentInput[] = [];
 
-  for (const attachment of message.attachments ?? []) {
-    for (const part of attachment.content ?? []) {
-      const input = attachmentInputFromMessagePart(part, attachment.name);
-      if (input) inputs.push(input);
+  if (message.attachments) {
+    for (const attachment of message.attachments) {
+      for (const part of attachment.content) {
+        const input = attachmentInputFromMessagePart(part, attachment.name);
+        if (input) inputs.push(input);
+      }
     }
   }
 
@@ -232,12 +231,15 @@ export function attachmentInputToHistoryPart(
   input: ChatAttachmentInput,
 ): ChatHistoryMessagePart {
   if (input.type === "fileMention") {
+    if (!is.string(input.mimeType)) {
+      throw new Error("File mention attachment is missing mimeType.");
+    }
     return {
-      data: input.path ?? "",
+      data: input.path,
       filename: input.name ?? undefined,
       mention: true,
-      mimeType: input.mimeType ?? "application/octet-stream",
-      path: input.path ?? null,
+      mimeType: input.mimeType,
+      path: input.path,
       type: "file",
     };
   }
@@ -245,16 +247,16 @@ export function attachmentInputToHistoryPart(
   if (input.type === "image") {
     return {
       filename: input.name ?? undefined,
-      image: imageDataUrl(input.data ?? "", input.mimeType ?? "image/png"),
-      mimeType: input.mimeType ?? undefined,
+      image: imageDataUrl(input.data, input.mimeType),
+      mimeType: input.mimeType,
       type: "image",
     };
   }
 
   return {
-    data: input.data ?? "",
+    data: input.data,
     filename: input.name ?? undefined,
-    mimeType: input.mimeType ?? "application/octet-stream",
+    mimeType: input.mimeType,
     type: "file",
   };
 }
@@ -335,17 +337,16 @@ function historyFilePartToAttachment(
 function imageHistoryPartFromDataUrl(
   image: string,
   filename: string | null,
-  options?: { fallbackMimeType?: string },
-): ChatHistoryMessagePart | undefined {
+): ChatHistoryMessagePart {
   const parsed = parseImageDataUrl(image);
-  if (!parsed && !options?.fallbackMimeType?.startsWith("image/")) {
-    return undefined;
+  if (!parsed) {
+    throw new Error("Assistant UI image part is not a data URL.");
   }
 
   return {
     filename: filename ?? undefined,
-    image: parsed ? imageDataUrl(parsed.data, parsed.mimeType) : image,
-    mimeType: parsed?.mimeType ?? options?.fallbackMimeType,
+    image: imageDataUrl(parsed.data, parsed.mimeType),
+    mimeType: parsed.mimeType,
     type: "image",
   };
 }
@@ -381,8 +382,9 @@ function assistantMessageAttachmentsToHistoryParts(
   const existingKeys = new Set(existingParts.map(historyPartKey));
   const parts: ChatHistoryMessagePart[] = [];
 
-  for (const attachment of attachments ?? []) {
-    for (const part of attachment.content ?? []) {
+  if (!attachments) return parts;
+  for (const attachment of attachments) {
+    for (const part of attachment.content) {
       const input = attachmentInputFromMessagePart(part, attachment.name);
       if (!input) continue;
       const historyPart = attachmentInputToHistoryPart(input);

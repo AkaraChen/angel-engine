@@ -233,7 +233,7 @@ function contentFromTurnSnapshot(
   actions: ActionSnapshot[],
 ): ChatHistoryMessagePart[] {
   const parts: ChatHistoryMessagePart[] = [];
-  appendChatTextPart(parts, "reasoning", turn.reasoningText ?? "");
+  appendChatTextPart(parts, "reasoning", turn.reasoningText);
   const plan = planFromTurnSnapshot(turn);
   if (plan) parts.push(planMessagePartData(plan));
   for (const action of actions) {
@@ -241,7 +241,7 @@ function contentFromTurnSnapshot(
   }
   const todo = todoFromTurnSnapshot(turn);
   if (todo) parts.push(planMessagePartData(todo));
-  appendChatTextPart(parts, "text", turn.outputText ?? "");
+  appendChatTextPart(parts, "text", turn.outputText);
   return parts;
 }
 
@@ -303,20 +303,20 @@ function planMessagePartData(plan: ChatPlanData): ChatHistoryMessagePart {
 
 function planFromTurnSnapshot(turn: TurnSnapshot): ChatPlanData | undefined {
   const data: ChatPlanData = {
-    entries: (turn.plan ?? []).map((entry) => ({
+    entries: turn.plan.map((entry) => ({
       content: entry.content,
       status: entry.status,
     })),
     kind: "review",
     path: turn.planPath ?? null,
-    text: turn.planText ?? "",
+    text: turn.planText,
   };
   return isEmptyPlan(data) ? undefined : data;
 }
 
 function todoFromTurnSnapshot(turn: TurnSnapshot): ChatPlanData | undefined {
   const data: ChatPlanData = {
-    entries: (turn.todo ?? []).map((entry) => ({
+    entries: turn.todo.map((entry) => ({
       content: entry.content,
       status: entry.status,
     })),
@@ -390,11 +390,7 @@ function questionElicitationFromAction(
   if (!shouldRenderAsQuestionElicitation(elicitation)) return undefined;
   return {
     ...elicitation,
-    phase: elicitationPhaseFromAction(
-      action.phase,
-      elicitation.phase,
-      actionHasOutput(action),
-    ),
+    phase: elicitationPhaseFromAction(action.phase, actionHasOutput(action)),
   };
 }
 
@@ -427,7 +423,6 @@ function parseChatElicitation(
 
 function elicitationPhaseFromAction(
   actionPhase: string | undefined,
-  fallback: string,
   hasOutput: boolean,
 ) {
   if (hasOutput) return "resolved:Answers";
@@ -441,7 +436,7 @@ function elicitationPhaseFromAction(
     case "awaitingDecision":
       return "open";
     default:
-      return fallback;
+      throw new Error(`Unknown elicitation phase: ${actionPhase}`);
   }
 }
 

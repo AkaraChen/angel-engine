@@ -1,7 +1,6 @@
 import type {
   SDKAssistantMessage,
   SDKPartialAssistantMessage,
-  SDKUserMessage,
 } from "@anthropic-ai/claude-agent-sdk";
 import type {
   AgentInput,
@@ -17,6 +16,7 @@ import type {
   WebFetchInput,
   WebSearchInput,
 } from "@anthropic-ai/claude-agent-sdk/sdk-tools";
+import is from "@sindresorhus/is";
 
 export const CLAUDE_TOOL = {
   Agent: "Agent",
@@ -77,16 +77,12 @@ export type ClaudeAssistantToolUseBlock = Extract<
   { type: "tool_use" }
 >;
 
-type ClaudeUserContent =
-  SDKUserMessage["message"]["content"] extends infer Content ? Content : never;
-type ClaudeUserContentBlock = Extract<
-  ClaudeUserContent,
-  readonly unknown[]
->[number];
-export type ClaudeUserToolResultBlock = Extract<
-  ClaudeUserContentBlock,
-  { type: "tool_result" }
->;
+export interface ClaudeUserToolResultBlock {
+  content: object | readonly object[] | string | null | undefined;
+  is_error?: boolean;
+  tool_use_id: string;
+  type: "tool_result";
+}
 
 export type ClaudeStreamEvent = SDKPartialAssistantMessage["event"];
 export type ClaudeContentBlockStartEvent = Extract<
@@ -111,21 +107,13 @@ export function typedClaudeInput<T extends keyof ClaudeToolInputByName>(
 export function isClaudeAssistantToolUseBlock(
   block: unknown,
 ): block is ClaudeAssistantToolUseBlock {
-  return (
-    Boolean(block) &&
-    typeof block === "object" &&
-    (block as { type?: unknown }).type === "tool_use"
-  );
+  return is.plainObject(block) && block.type === "tool_use";
 }
 
 export function isClaudeUserToolResultBlock(
   block: unknown,
 ): block is ClaudeUserToolResultBlock {
-  return (
-    Boolean(block) &&
-    typeof block === "object" &&
-    (block as { type?: unknown }).type === "tool_result"
-  );
+  return is.plainObject(block) && block.type === "tool_result";
 }
 
 export function isClaudeContentBlockStartEvent(

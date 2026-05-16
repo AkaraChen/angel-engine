@@ -4,6 +4,8 @@ import {
   EngineEventActionKind,
   EngineEventActionOutputKind,
 } from "@angel-engine/client-napi";
+import is from "@sindresorhus/is";
+import { type } from "arktype";
 import { isClaudePlanToolUse } from "./plan.js";
 import { CLAUDE_TOOL } from "./sdk-types.js";
 
@@ -80,24 +82,49 @@ export function toolInputSummary(
   return JSON.stringify(input);
 }
 
-export function stringifyToolResult(value: unknown): string {
-  if (typeof value === "string") return value;
+export function stringifyToolResult(
+  value: object | readonly object[] | string | null | undefined,
+): string {
+  if (is.string(value)) return value;
   if (Array.isArray(value)) {
-    return value.map(contentBlockText).filter(Boolean).join("\n");
+    return value
+      .map((block) => contentBlockText(block))
+      .filter(Boolean)
+      .join("\n");
   }
-  if (value === undefined || value === null) return "";
+  if (is.nullOrUndefined(value)) {
+    throw new Error("Claude tool result content is required.");
+  }
   return JSON.stringify(value);
 }
 
-export function contentBlockText(block: unknown): string {
-  const value = block as JsonObject;
-  if (value.type === "text") return String(value.text ?? "");
-  if (value.type === "thinking") return String(value.thinking ?? "");
-  if (value.type === "tool_use") {
-    return `[${String(value.name ?? "tool")}] ${JSON.stringify(value.input ?? {})}`;
+export function contentBlockText(block: object): string {
+  const textBlock = type({ type: "'text'", text: "string" })(block);
+  if (!(textBlock instanceof type.errors)) return textBlock.text;
+
+  const thinkingBlock = type({ type: "'thinking'", thinking: "string" })(block);
+  if (!(thinkingBlock instanceof type.errors)) {
+    return thinkingBlock.thinking;
   }
-  if (value.type === "tool_result") return stringifyToolResult(value.content);
-  return "";
+
+  const toolUseBlock = type({
+    type: "'tool_use'",
+    name: "string",
+    input: "object",
+  })(block);
+  if (!(toolUseBlock instanceof type.errors)) {
+    return `[${toolUseBlock.name}] ${JSON.stringify(toolUseBlock.input)}`;
+  }
+
+  const toolResultBlock = type({
+    type: "'tool_result'",
+    content: "string | object | object[]",
+  })(block);
+  if (!(toolResultBlock instanceof type.errors)) {
+    return stringifyToolResult(toolResultBlock.content);
+  }
+
+  throw new Error("Unknown Claude content block type.");
 }
 
 export function claudeHistoryToolCall(
@@ -116,24 +143,32 @@ export function claudeHistoryToolCall(
 }
 
 export function claudeHistoryToolResult(input: {
-  content: unknown;
+  content: object | object[] | string;
   input?: JsonObject;
   isError?: boolean;
   toolId: string;
   toolName?: string;
 }): JsonObject {
-  const toolName = input.toolName ?? "tool";
+  if (!is.nonEmptyString(input.toolName)) {
+    throw new Error("Claude history tool result is missing toolName.");
+  }
+  const toolName = input.toolName;
+  if (input.input !== undefined && !is.plainObject(input.input)) {
+    throw new Error("Claude history tool result input must be an object.");
+  }
+  const rawInput = input.input ? (input.input as JsonObject) : undefined;
   const output = stringifyToolResult(input.content);
+  if (input.isError && !output) {
+    throw new Error("Claude history tool error is missing content.");
+  }
   return {
     content: output,
-    error: input.isError
-      ? output || "Claude Code tool call failed."
-      : undefined,
-    kind: acpHistoryToolKind(toolName, input.input),
-    rawInput: input.input,
+    error: input.isError ? output : undefined,
+    kind: acpHistoryToolKind(toolName, rawInput),
+    rawInput,
     sessionUpdate: "tool_call_update",
     status: input.isError ? "failed" : "completed",
-    title: toolTitle(toolName, input.input ?? {}),
+    title: rawInput ? toolTitle(toolName, rawInput) : toolName,
     toolCallId: input.toolId,
   };
 }

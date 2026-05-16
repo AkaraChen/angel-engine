@@ -46,6 +46,7 @@ import {
   EngineEventTurnOutcome,
   EngineEventType,
 } from "@angel-engine/client-napi";
+import is from "@sindresorhus/is";
 import { emptyUpdate } from "../utils/client-update.js";
 import { abortError, errorMessage, throwIfAborted } from "../utils/errors.js";
 import { ClaudeCodeEngineAdapter } from "./adapter.js";
@@ -162,7 +163,7 @@ export class ClaudeCodeSession {
 
   async inspect(cwd?: string | InspectRequest): Promise<ConversationSnapshot> {
     const request: InspectRequest =
-      typeof cwd === "string" ? { cwd } : (cwd ?? {});
+      cwd === undefined ? {} : typeof cwd === "string" ? { cwd } : cwd;
     return this.enqueue(async () => {
       this.ensureConversation({ cwd: request.cwd });
       await this.loadRuntimeConfiguration(request.cwd);
@@ -211,8 +212,11 @@ export class ClaudeCodeSession {
   private async sendTextNow(
     request: ClaudeCodeSendTextRequest,
   ): Promise<TurnRunResult> {
-    const text = request.text ?? "";
-    const input = request.input ?? [];
+    if (!is.string(request.text)) {
+      throw new Error("Claude sendText request is missing text.");
+    }
+    const text = request.text;
+    const input = request.input;
     if (!text && input.length === 0) {
       throw new Error("Text or input is required.");
     }
@@ -414,10 +418,16 @@ export class ClaudeCodeSession {
     if (isClaudeContentBlockStartEvent(event)) {
       const contentBlock = event.content_block;
       if (isClaudeAssistantToolUseBlock(contentBlock)) {
+        if (!is.nonEmptyString(contentBlock.id)) {
+          throw new Error("Claude tool_use block is missing id.");
+        }
+        if (!is.plainObject(contentBlock.input)) {
+          throw new Error("Claude tool_use block input must be an object.");
+        }
         return [
           actionObserved(
             active,
-            contentBlock.id || `tool-${message.uuid}`,
+            contentBlock.id,
             contentBlock.name,
             contentBlock.input as Record<string, unknown>,
           ),
@@ -429,14 +439,14 @@ export class ClaudeCodeSession {
     if (!isClaudeContentBlockDeltaEvent(event)) return [];
     const delta = event.delta;
     if (delta.type === "text_delta") {
-      const text = delta.text ?? "";
+      const text = delta.text;
       active.sawTextDelta = active.sawTextDelta || text.length > 0;
       return text
         ? [assistantDelta(active.conversationId, active.turnId, text)]
         : [];
     }
     if (delta.type === "thinking_delta") {
-      const text = delta.thinking ?? "";
+      const text = delta.thinking;
       active.sawReasoningDelta = active.sawReasoningDelta || text.length > 0;
       return text
         ? [reasoningDelta(active.conversationId, active.turnId, text)]
@@ -450,35 +460,32 @@ export class ClaudeCodeSession {
     active: ActiveClaudeTurn,
   ): EngineEventJson[] {
     const events: EngineEventJson[] = [];
-    const content = Array.isArray(message.message.content)
-      ? message.message.content
-      : [];
+    const content = message.message.content;
     for (const block of content) {
       if (block.type === "text" && !active.sawTextDelta) {
-        const text = block.text ?? "";
+        const text = block.text;
         if (text) {
           events.push(
             assistantDelta(active.conversationId, active.turnId, text),
           );
         }
       } else if (block.type === "thinking" && !active.sawReasoningDelta) {
-        const text = block.thinking ?? "";
+        const text = block.thinking;
         if (text) {
           events.push(
             reasoningDelta(active.conversationId, active.turnId, text),
           );
         }
       } else if (isClaudeAssistantToolUseBlock(block)) {
+        if (!is.nonEmptyString(block.id)) {
+          throw new Error("Claude tool_use block is missing id.");
+        }
+        if (!is.plainObject(block.input)) {
+          throw new Error("Claude tool_use block input must be an object.");
+        }
         const toolName = block.name;
         const input = block.input as Record<string, unknown>;
-        events.push(
-          actionObserved(
-            active,
-            block.id || `tool-${message.uuid}`,
-            toolName,
-            input,
-          ),
-        );
+        events.push(actionObserved(active, block.id, toolName, input));
         events.push(...planEventsFromToolUse(active, toolName, input));
       }
     }
@@ -489,15 +496,18 @@ export class ClaudeCodeSession {
     message: SDKUserMessage,
     active: ActiveClaudeTurn,
   ): EngineEventJson[] {
-    const content = Array.isArray(message.message.content)
-      ? message.message.content
-      : [];
+    const content = message.message.content;
     const events: EngineEventJson[] = [];
     for (const block of content) {
       if (!isClaudeUserToolResultBlock(block)) continue;
-      const actionId = block.tool_use_id ?? "";
-      if (!actionId) continue;
+      if (!is.nonEmptyString(block.tool_use_id)) {
+        throw new Error("Claude tool_result block is missing tool_use_id.");
+      }
+      const actionId = block.tool_use_id;
       const output = stringifyToolResult(block.content);
+      if (block.is_error && !output) {
+        throw new Error("Claude tool error result is missing content.");
+      }
       events.push({
         ActionUpdated: {
           action_id: actionId,
@@ -506,7 +516,7 @@ export class ClaudeCodeSession {
             error: block.is_error
               ? {
                   code: "claude.tool_failed",
-                  message: output || "Claude Code tool call failed.",
+                  message: output,
                   recoverable: true,
                 }
               : null,
@@ -883,16 +893,14 @@ export class ClaudeCodeSession {
   private sessionPermissionModesUpdated(
     conversationId: string,
   ): EngineEventJson {
+    if (this.availablePermissionModes.length === 0) {
+      throw new Error("Claude permission modes are not loaded.");
+    }
     return {
       [EngineEventType.SessionPermissionModesUpdated]: {
         conversation_id: conversationId,
         modes: {
-          available_modes: this.availablePermissionModes.length
-            ? this.availablePermissionModes
-            : permissionModeOptionsFromIds(
-                [this.currentPermissionMode],
-                this.currentPermissionMode,
-              ),
+          available_modes: this.availablePermissionModes,
           current_mode_id: this.currentPermissionMode,
         },
       },

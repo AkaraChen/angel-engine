@@ -36,7 +36,11 @@ export function createAgentRegistry(
   const byId = new Map(adapters.map((adapter) => [adapter.id, adapter]));
   return {
     get(runtime) {
-      const adapter = byId.get(runtime ?? "") ?? byId.get(defaultRuntime ?? "");
+      const adapter = runtime
+        ? byId.get(runtime)
+        : defaultRuntime
+          ? byId.get(defaultRuntime)
+          : undefined;
       if (!adapter) {
         throw new Error(
           `No agent adapter registered for runtime "${runtime}".`,

@@ -117,6 +117,7 @@
     }
   },
   "dependencies": {
+    "@sindresorhus/is": "^4.6.0",
     "arktype": "^2.2.0"
   }
 }

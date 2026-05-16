@@ -3,6 +3,7 @@ import type { SDKUserMessage } from "@anthropic-ai/claude-agent-sdk";
 
 import type { ClaudeSdkModule, JsonObject } from "./types.js";
 import { ClientInputType } from "@angel-engine/client-napi";
+import is from "@sindresorhus/is";
 import { claudeEffortLevelIds, claudePermissionModeIds } from "./utils.js";
 
 type ClientInput = NonNullable<SendTextRequest["input"]>[number];
@@ -35,7 +36,10 @@ export function claudePrompt(
   const content = clientInputToContent(text, input);
   const singleContent = content[0];
   if (content.length === 1 && singleContent?.type === "text") {
-    return String(singleContent.text ?? "");
+    if (!is.string(singleContent.text)) {
+      throw new Error("Claude text content is missing text.");
+    }
+    return singleContent.text;
   }
 
   return (async function* (): AsyncIterable<SDKUserMessage> {
@@ -76,8 +80,14 @@ function clientInputToContent(
         });
         break;
       case ClientInputType.FileMention:
+        const mentionPath = is.nonEmptyString(value.path)
+          ? value.path
+          : value.name;
+        if (!is.nonEmptyString(mentionPath)) {
+          throw new Error("File mention input is missing path or name.");
+        }
         content.push({
-          text: `@${value.path || value.name}`,
+          text: `@${mentionPath}`,
           type: "text",
         });
         break;
@@ -94,19 +104,20 @@ function clientInputToContent(
         });
         break;
       case ClientInputType.EmbeddedBlobResource:
+        const label = is.string(value.name) ? value.name : value.uri;
+        if (!is.string(label)) {
+          throw new Error("Embedded blob resource is missing name or uri.");
+        }
         content.push({
-          text: `Attachment: ${String(value.name ?? value.uri ?? "blob")}`,
+          text: `Attachment: ${label}`,
           type: "text",
         });
         break;
       case ClientInputType.RawContentBlock:
-        if (
-          value.value &&
-          typeof value.value === "object" &&
-          !Array.isArray(value.value)
-        ) {
-          content.push(value.value as JsonObject);
+        if (!is.plainObject(value.value)) {
+          throw new Error("Raw content block input must be an object.");
         }
+        content.push(value.value as JsonObject);
         break;
       default: {
         const exhaustive: never = value;

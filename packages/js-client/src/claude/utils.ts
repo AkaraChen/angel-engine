@@ -78,14 +78,18 @@ export function permissionDecision(
     case "cancel":
       return EngineEventElicitationDecision.Cancel;
     default:
-      return EngineEventElicitationDecision.Deny;
+      throw new Error(
+        `Unknown Claude elicitation response type: ${response.type}`,
+      );
   }
 }
 
 export function normalizeClaudeMode(
   mode: string | null | undefined,
 ): PermissionMode {
-  return isClaudePermissionMode(mode) ? mode : "default";
+  if (mode === null || mode === undefined) return "default";
+  if (isClaudePermissionMode(mode)) return mode;
+  throw new Error(`Unknown Claude permission mode: ${mode}`);
 }
 
 export function claudeEffort(

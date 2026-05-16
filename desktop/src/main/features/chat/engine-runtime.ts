@@ -539,6 +539,7 @@ function closeChatPrewarm(prewarm: ChatPrewarm) {
 
 type NativeAngelSessionInstance = InstanceType<typeof NativeAngelSession>;
 type DesktopSendTextRequest = SendTextRequest & {
+  input: NonNullable<SendTextRequest["input"]>;
   onEvent?: (event: TurnRunEvent) => void;
   onResolveElicitation?: (
     handler: (
@@ -602,8 +603,8 @@ class DesktopAngelSession {
   private async sendTextNow(
     request: DesktopSendTextRequest,
   ): Promise<TurnRunResult> {
-    const text = request.text ?? "";
-    const input = request.input ?? [];
+    const text = request.text;
+    const input = request.input;
     if (!text && input.length === 0) {
       throw new Error("Text or input is required.");
     }

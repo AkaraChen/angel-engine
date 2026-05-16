@@ -35,14 +35,17 @@ export class InMemoryAngelStore implements AngelStore {
     chatId: string,
     message: ChatHistoryMessage,
   ): Promise<ChatHistoryMessage> {
-    const messages = this.#messages.get(chatId) ?? [];
+    const messages = this.#messages.get(chatId);
+    if (!messages) {
+      throw new Error(`Messages for chat "${chatId}" were not initialized.`);
+    }
     this.#messages.set(chatId, [...messages, message]);
     return message;
   }
 
   async createChat(chat: Chat): Promise<Chat> {
     this.#chats.set(chat.id, chat);
-    this.#messages.set(chat.id, this.#messages.get(chat.id) ?? []);
+    this.#messages.set(chat.id, []);
     return chat;
   }
 
@@ -61,7 +64,11 @@ export class InMemoryAngelStore implements AngelStore {
   }
 
   async getMessages(chatId: string): Promise<ChatHistoryMessage[]> {
-    return [...(this.#messages.get(chatId) ?? [])];
+    const messages = this.#messages.get(chatId);
+    if (!messages) {
+      throw new Error(`Messages for chat "${chatId}" were not initialized.`);
+    }
+    return [...messages];
   }
 
   async getProject(projectId: string): Promise<Project | undefined> {

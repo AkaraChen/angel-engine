@@ -7,6 +7,7 @@ import type {
 import type { ClaudeElicitationResponse } from "./types.js";
 import type { JsonObject } from "./types.js";
 import { EngineEventElicitationKind } from "@angel-engine/client-napi";
+import is from "@sindresorhus/is";
 import { CLAUDE_TOOL, typedClaudeInput } from "./sdk-types.js";
 
 type CanUseToolContext = Parameters<CanUseTool>[2];
@@ -100,13 +101,23 @@ function questionInputs(
   toolName: string,
   input: Record<string, unknown>,
 ): NormalizedClaudeQuestionInput[] {
-  return [...(askUserQuestionInput(toolName, input)?.questions ?? [])]
-    .map((question) => ({
-      header: String(question.header ?? ""),
-      multiSelect: Boolean(question.multiSelect),
-      options: questionOptions(question.options),
-      question: String(question.question ?? ""),
-    }))
+  const askInput = askUserQuestionInput(toolName, input);
+  if (!askInput) return [];
+  return askInput.questions
+    .map((input) => {
+      if (!is.string(input.header)) {
+        throw new Error("Claude AskUserQuestion header is missing.");
+      }
+      if (!is.string(input.question)) {
+        throw new Error("Claude AskUserQuestion question is missing.");
+      }
+      return {
+        header: input.header,
+        multiSelect: input.multiSelect === true,
+        options: questionOptions(input.options),
+        question: input.question,
+      };
+    })
     .filter((question) => question.question);
 }
 
@@ -114,10 +125,20 @@ function questionOptions(
   value: ClaudeQuestionInput["options"],
 ): NormalizedClaudeQuestionInput["options"] {
   return [...value]
-    .map((option) => ({
-      description: String(option.description ?? ""),
-      label: String(option.label ?? ""),
-    }))
+    .map((option) => {
+      if (!is.string(option.description)) {
+        throw new Error(
+          "Claude AskUserQuestion option description is missing.",
+        );
+      }
+      if (!is.string(option.label)) {
+        throw new Error("Claude AskUserQuestion option label is missing.");
+      }
+      return {
+        description: option.description,
+        label: option.label,
+      };
+    })
     .filter((option) => option.label);
 }
 

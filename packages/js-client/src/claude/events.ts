@@ -30,6 +30,15 @@ import {
 import { actionKind, toolInputSummary, toolTitle } from "./tooling.js";
 import { labelFromValue, uniqueStrings } from "./utils.js";
 
+interface ClaudeModelStateJson {
+  available_models: Array<{
+    description: string;
+    id: string;
+    name: string;
+  }>;
+  current_model_id: string;
+}
+
 export function actionObserved(
   active: ActiveClaudeTurn,
   actionId: string,
@@ -147,7 +156,7 @@ export function availableCommandsUpdated(
   return {
     AvailableCommandsUpdated: {
       commands: commands.map((command) => ({
-        description: command.description || "",
+        description: command.description,
         input: command.argumentHint ? { hint: command.argumentHint } : null,
         name: command.name,
       })),
@@ -158,7 +167,7 @@ export function availableCommandsUpdated(
 
 export function sessionModelsUpdated(
   conversationId: string,
-  models: { current_model_id: string; available_models: unknown[] },
+  models: ClaudeModelStateJson,
 ): EngineEventJson {
   return {
     SessionModelsUpdated: {
@@ -171,14 +180,22 @@ export function sessionModelsUpdated(
 export function modelStateFromModelInfo(
   models: ModelInfo[],
   currentModel?: string,
-): { current_model_id: string; available_models: unknown[] } {
+): ClaudeModelStateJson {
   const availableModels = models.map((model) => ({
     description: model.description,
     id: model.value,
-    name: model.displayName || model.value,
+    name: model.displayName ? model.displayName : model.value,
   }));
-  const current =
-    currentModel ?? availableModels.find((model) => model.id)?.id ?? "default";
+  const firstModel = availableModels.find((model) => model.id);
+  let current: string;
+  if (currentModel) {
+    current = currentModel;
+  } else {
+    if (!firstModel) {
+      throw new Error("Claude model list is empty.");
+    }
+    current = firstModel.id;
+  }
   if (!availableModels.some((model) => model.id === current)) {
     availableModels.unshift({
       description: "",
@@ -196,7 +213,8 @@ export function modelInfoForId(
   models: ModelInfo[],
   modelId: string | undefined,
 ): ModelInfo | undefined {
-  const normalized = modelId?.toLowerCase() ?? "";
+  if (!modelId) return undefined;
+  const normalized = modelId.toLowerCase();
   const exact = models.find((model) => model.value === modelId);
   if (exact) return exact;
   if (normalized.includes("opus")) {
@@ -241,12 +259,12 @@ export function sessionUsageUpdated(
 ): EngineEventJson {
   const usage = message.usage;
   const used =
-    Number(usage.input_tokens ?? 0) +
-    Number(usage.output_tokens ?? 0) +
-    Number(usage.cache_creation_input_tokens ?? 0) +
-    Number(usage.cache_read_input_tokens ?? 0);
-  const maxWindow = Object.values(message.modelUsage ?? {}).reduce(
-    (max, model) => Math.max(max, Number(model.contextWindow ?? 0)),
+    Number(usage.input_tokens) +
+    Number(usage.output_tokens) +
+    Number(usage.cache_creation_input_tokens) +
+    Number(usage.cache_read_input_tokens);
+  const maxWindow = Object.values(message.modelUsage).reduce<number>(
+    (max, model) => Math.max(max, model.contextWindow),
     0,
   );
   return {
@@ -254,7 +272,7 @@ export function sessionUsageUpdated(
       conversation_id: conversationId,
       usage: {
         cost: {
-          amount: String(message.total_cost_usd ?? 0),
+          amount: String(message.total_cost_usd),
           currency: "USD",
         },
         size: maxWindow,
@@ -265,8 +283,12 @@ export function sessionUsageUpdated(
 }
 
 export function turnRunEventsFromUpdate(update: ClientUpdate): TurnRunEvent[] {
+  const clientEvents = update.events;
+  if (!clientEvents) {
+    throw new Error("Client update is missing events.");
+  }
   const events: TurnRunEvent[] = [];
-  for (const event of update.events ?? []) {
+  for (const event of clientEvents) {
     const turnEvent = turnRunEventFromClientEvent(event);
     if (turnEvent) events.push(turnEvent);
   }
