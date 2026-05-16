@@ -1,11 +1,12 @@
 import type { SessionMessage } from "@anthropic-ai/claude-agent-sdk";
+import type { ChatJsonValue } from "../types.js";
 import type { EngineEventJson, JsonObject } from "./types.js";
 
 import {
   EngineEventContentKind,
   EngineEventHistoryRole,
 } from "@angel-engine/client-napi";
-import { type } from "arktype";
+import is from "@sindresorhus/is";
 import { structuredPlanFromToolUse } from "./plan.js";
 import { claudeHistoryToolCall, claudeHistoryToolResult } from "./tooling.js";
 
@@ -14,6 +15,22 @@ interface HistoryToolUse {
   input: JsonObject;
   name: string;
 }
+
+type ReadonlyJsonObject = { readonly [key: string]: ChatJsonValue };
+
+type AssistantHistoryBlock =
+  | { text: string; type: "text" }
+  | { thinking: string; type: "thinking" }
+  | { id: string; input: object; name: string; type: "tool_use" };
+
+type UserHistoryBlock =
+  | { text: string; type: "text" }
+  | {
+      content: string | object[];
+      is_error?: boolean;
+      tool_use_id: string;
+      type: "tool_result";
+    };
 
 export function historyEventsFromSessionMessages(
   conversationId: string,
@@ -30,10 +47,11 @@ function historyEventsFromSessionMessage(
   message: SessionMessage,
   toolUses: Map<string, HistoryToolUse>,
 ): EngineEventJson[] {
-  const content = type({ content: "string | object[]" }).assert(
-    message.message,
-  ).content;
-  if (typeof content === "string") {
+  if (!is.plainObject(message.message)) {
+    throw new Error("Claude history message must be an object.");
+  }
+  const content = message.message.content;
+  if (is.string(content)) {
     const role =
       message.type === "user"
         ? EngineEventHistoryRole.User
@@ -46,42 +64,87 @@ function historyEventsFromSessionMessage(
         ]
       : [];
   }
+  if (!is.array(content, is.plainObject)) {
+    throw new Error(
+      "Claude history message content must be a string or array.",
+    );
+  }
+  const blocks = content as readonly ReadonlyJsonObject[];
   if (message.type === "assistant") {
-    return type({ type: "'text'", text: "string" })
-      .or({ type: "'thinking'", thinking: "string" })
-      .or({
-        type: "'tool_use'",
-        id: "string > 0",
-        name: "string > 0",
-        input: "object",
-      })
-      .array()
-      .assert(content)
-      .flatMap((block) =>
-        assistantHistoryEvents(conversationId, block, toolUses),
-      );
+    return blocks.flatMap((block) => {
+      if (block.type === "text" && is.string(block.text)) {
+        return assistantHistoryEvents(
+          conversationId,
+          { text: block.text, type: "text" },
+          toolUses,
+        );
+      }
+      if (block.type === "thinking" && is.string(block.thinking)) {
+        return assistantHistoryEvents(
+          conversationId,
+          { thinking: block.thinking, type: "thinking" },
+          toolUses,
+        );
+      }
+      if (
+        block.type === "tool_use" &&
+        is.nonEmptyString(block.id) &&
+        is.nonEmptyString(block.name) &&
+        is.plainObject(block.input)
+      ) {
+        return assistantHistoryEvents(
+          conversationId,
+          {
+            id: block.id,
+            input: block.input,
+            name: block.name,
+            type: "tool_use",
+          },
+          toolUses,
+        );
+      }
+      throw new Error("Unknown Claude assistant history block.");
+    });
   }
   if (message.type === "user") {
-    return type({ type: "'text'", text: "string" })
-      .or({
-        type: "'tool_result'",
-        tool_use_id: "string > 0",
-        content: "string | object[]",
-        "is_error?": "boolean",
-      })
-      .array()
-      .assert(content)
-      .flatMap((block) => userHistoryEvents(conversationId, block, toolUses));
+    return blocks.flatMap((block) => {
+      if (block.type === "text" && is.string(block.text)) {
+        return userHistoryEvents(
+          conversationId,
+          { text: block.text, type: "text" },
+          toolUses,
+        );
+      }
+      if (
+        block.type === "tool_result" &&
+        is.nonEmptyString(block.tool_use_id) &&
+        (is.string(block.content) || is.array(block.content, is.plainObject)) &&
+        (block.is_error === undefined || is.boolean(block.is_error))
+      ) {
+        return userHistoryEvents(
+          conversationId,
+          {
+            content: is.string(block.content)
+              ? block.content
+              : (block.content as object[]),
+            ...(block.is_error === undefined
+              ? {}
+              : { is_error: block.is_error }),
+            tool_use_id: block.tool_use_id,
+            type: "tool_result",
+          },
+          toolUses,
+        );
+      }
+      throw new Error("Unknown Claude user history block.");
+    });
   }
   return [];
 }
 
 function assistantHistoryEvents(
   conversationId: string,
-  block:
-    | { text: string; type: "text" }
-    | { thinking: string; type: "thinking" }
-    | { id: string; input: object; name: string; type: "tool_use" },
+  block: AssistantHistoryBlock,
   toolUses: Map<string, HistoryToolUse>,
 ): EngineEventJson[] {
   if (block.type === "text") {
@@ -129,14 +192,7 @@ function assistantHistoryEvents(
 
 function userHistoryEvents(
   conversationId: string,
-  block:
-    | { text: string; type: "text" }
-    | {
-        content: string | object[];
-        is_error?: boolean;
-        tool_use_id: string;
-        type: "tool_result";
-      },
+  block: UserHistoryBlock,
   toolUses: Map<string, HistoryToolUse>,
 ): EngineEventJson[] {
   if (block.type === "text") {

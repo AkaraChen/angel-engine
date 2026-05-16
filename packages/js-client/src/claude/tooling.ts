@@ -5,7 +5,6 @@ import {
   EngineEventActionOutputKind,
 } from "@angel-engine/client-napi";
 import is from "@sindresorhus/is";
-import { type } from "arktype";
 import { isClaudePlanToolUse } from "./plan.js";
 import { CLAUDE_TOOL } from "./sdk-types.js";
 
@@ -99,29 +98,33 @@ export function stringifyToolResult(
 }
 
 export function contentBlockText(block: object): string {
-  const textBlock = type({ type: "'text'", text: "string" })(block);
-  if (!(textBlock instanceof type.errors)) return textBlock.text;
-
-  const thinkingBlock = type({ type: "'thinking'", thinking: "string" })(block);
-  if (!(thinkingBlock instanceof type.errors)) {
-    return thinkingBlock.thinking;
+  if (!is.plainObject(block)) {
+    throw new Error("Claude content block must be an object.");
   }
 
-  const toolUseBlock = type({
-    type: "'tool_use'",
-    name: "string",
-    input: "object",
-  })(block);
-  if (!(toolUseBlock instanceof type.errors)) {
-    return `[${toolUseBlock.name}] ${JSON.stringify(toolUseBlock.input)}`;
+  if (block.type === "text" && is.string(block.text)) return block.text;
+
+  if (block.type === "thinking" && is.string(block.thinking)) {
+    return block.thinking;
   }
 
-  const toolResultBlock = type({
-    type: "'tool_result'",
-    content: "string | object | object[]",
-  })(block);
-  if (!(toolResultBlock instanceof type.errors)) {
-    return stringifyToolResult(toolResultBlock.content);
+  if (
+    block.type === "tool_use" &&
+    is.string(block.name) &&
+    is.plainObject(block.input)
+  ) {
+    return `[${block.name}] ${JSON.stringify(block.input)}`;
+  }
+
+  if (block.type === "tool_result") {
+    const content = block.content;
+    if (
+      is.string(content) ||
+      is.plainObject(content) ||
+      is.array(content, is.plainObject)
+    ) {
+      return stringifyToolResult(content);
+    }
   }
 
   throw new Error("Unknown Claude content block type.");
