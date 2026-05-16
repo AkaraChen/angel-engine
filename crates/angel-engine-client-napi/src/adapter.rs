@@ -40,10 +40,10 @@ impl AcpAdapter {
             .unwrap_or(true);
         napi_trace(format!(
             "AcpAdapter.new start need_authentication={need_authentication} options={}",
-            options
-                .as_ref()
-                .map(json_shape)
-                .unwrap_or_else(|| "<none>".to_string())
+            match options.as_ref() {
+                Some(options) => json_shape(options),
+                None => "<none>".to_string(),
+            }
         ));
         let adapter = if need_authentication {
             EngineAcpAdapter::standard()
@@ -202,16 +202,14 @@ impl EngineProtocolAdapter for NapiRuntimeAdapter {
             self.adapter_kind_name(),
             protocol_flavor_name(effect.flavor),
             method_name(&effect.method),
-            effect
-                .conversation_id
-                .as_ref()
-                .map(ToString::to_string)
-                .unwrap_or_else(|| "<none>".to_string()),
-            effect
-                .turn_id
-                .as_ref()
-                .map(ToString::to_string)
-                .unwrap_or_else(|| "<none>".to_string())
+            match effect.conversation_id.as_ref() {
+                Some(conversation_id) => conversation_id.to_string(),
+                None => "<none>".to_string(),
+            },
+            match effect.turn_id.as_ref() {
+                Some(turn_id) => turn_id.to_string(),
+                None => "<none>".to_string(),
+            }
         ));
         let result = match self {
             Self::Builtin(adapter) => adapter.encode_effect(engine, effect, options),

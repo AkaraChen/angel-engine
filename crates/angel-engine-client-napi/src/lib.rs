@@ -1560,9 +1560,10 @@ pub(crate) fn json_shape(value: &serde_json::Value) -> String {
 }
 
 fn option_u32(value: Option<u32>) -> String {
-    value
-        .map(|value| value.to_string())
-        .unwrap_or_else(|| "<none>".to_string())
+    match value {
+        Some(value) => value.to_string(),
+        None => "<none>".to_string(),
+    }
 }
 
 fn thread_event_kind(event: &EngineThreadEvent) -> &'static str {
