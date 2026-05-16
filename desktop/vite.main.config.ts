@@ -6,6 +6,8 @@ export default defineConfig({
     rollupOptions: {
       external: [
         "@angel-engine/client-napi",
+        "@angel-engine/js-client",
+        /^@angel-engine\/js-client\//,
         "@anthropic-ai/claude-agent-sdk",
         "better-sqlite3",
       ],

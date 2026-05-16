@@ -40,7 +40,10 @@ const { AngelEngineClient, AcpAdapter } = require("@angel-engine/client-napi");
 class MyAcpAdapter extends AcpAdapter {
   encodeEffect(input) {
     const output = super.encodeEffect(input);
-    output.logs = [...(output.logs ?? []), { kind: "output", message: "hooked" }];
+    output.logs = [
+      ...(output.logs ?? []),
+      { kind: "output", message: "hooked" },
+    ];
     return output;
   }
 }

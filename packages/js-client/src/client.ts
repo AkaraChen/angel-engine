@@ -1,6 +1,6 @@
-import type { AgentAdapter, AgentRegistry } from "./adapter";
-import { createAgentRegistry } from "./adapter";
-import { InMemoryAngelStore, type AngelStore } from "./store";
+import type { AgentAdapter, AgentRegistry } from "./adapter.js";
+import { createAgentRegistry } from "./adapter.js";
+import { InMemoryAngelStore, type AngelStore } from "./store.js";
 import type {
   AngelClientEvent,
   Chat,
@@ -15,8 +15,10 @@ import type {
   ChatStreamEvent,
   CreateProjectInput,
   Project,
-} from "./types";
-import { appendTextPart, createId, nowIso, toolActionToPart } from "./utils";
+} from "./types.js";
+import { createId, nowIso } from "./utils/core.js";
+import { appendChatTextPart } from "./utils/messages.js";
+import { chatToolActionToPart } from "./utils/tools.js";
 
 export interface AngelClientOptions {
   adapters: AgentAdapter[] | AgentRegistry;
@@ -183,7 +185,7 @@ export class AngelClient {
       yield* this.forwardEvent(chat.id, { chat, type: "chat" });
       for await (const event of adapter.run(input, context)) {
         if (event.type === "delta") {
-          appendTextPart(assistantParts, event.part, event.text);
+          appendChatTextPart(assistantParts, event.part, event.text);
         } else if (event.type === "plan") {
           assistantParts.push({
             data: event.plan,
@@ -191,7 +193,7 @@ export class AngelClient {
             type: "data",
           });
         } else if (event.type === "tool" || event.type === "toolDelta") {
-          upsertToolPart(assistantParts, toolActionToPart(event.action));
+          upsertToolPart(assistantParts, chatToolActionToPart(event.action));
         } else if (event.type === "elicitation") {
           assistantParts.push({
             data: event.elicitation,
@@ -215,6 +217,7 @@ export class AngelClient {
       );
       const config = await this.chats.inspectConfig({ runtime: chat.runtime });
       const result: ChatSendResult = {
+        actions: collectToolActions(assistantParts),
         chat,
         chatId: chat.id,
         config,
@@ -303,4 +306,10 @@ function upsertToolPart(
   );
   if (index === -1) parts.push(nextPart);
   else parts[index] = nextPart;
+}
+
+function collectToolActions(parts: ChatHistoryMessagePart[]) {
+  return parts
+    .filter((part) => part.type === "tool-call")
+    .map((part) => part.artifact);
 }

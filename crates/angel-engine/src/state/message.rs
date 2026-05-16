@@ -184,14 +184,18 @@ impl DisplayToolAction {
         }
     }
 
-    pub fn from_history(tool: &HistoryReplayToolAction, fallback_id: String) -> Self {
+    pub fn from_history(
+        tool: &HistoryReplayToolAction,
+        fallback_id: String,
+        turn_id: TurnId,
+    ) -> Self {
         let output = tool.output.clone();
         Self {
             id: tool.id.clone().unwrap_or(fallback_id),
-            turn_id: None,
+            turn_id: Some(turn_id),
             kind: tool.kind.clone(),
             phase: tool.phase.clone(),
-            title: tool.title.clone(),
+            title: Some(history_tool_title(tool)),
             input_summary: tool.input_summary.clone(),
             raw_input: tool.raw_input.clone(),
             output_text: action_output_text(&output),
@@ -362,42 +366,47 @@ fn append_history_display_message(
         }),
         HistoryRole::Tool => {
             let fallback_id = format!("history-tool-{index}");
-            let action = history_tool_action(entry, fallback_id);
-            upsert_display_tool_part(ensure_history_assistant_message(messages), action);
+            let (turn_id, parts) = ensure_history_assistant_message(messages);
+            let action = history_tool_action(entry, fallback_id, turn_id);
+            upsert_display_tool_part(parts, action);
         }
-        HistoryRole::Reasoning => append_display_text_part(
-            ensure_history_assistant_message(messages),
-            DisplayTextPartKind::Reasoning,
-            text,
-        ),
+        HistoryRole::Reasoning => {
+            let (_, parts) = ensure_history_assistant_message(messages);
+            append_display_text_part(parts, DisplayTextPartKind::Reasoning, text);
+        }
         HistoryRole::Assistant => {
-            append_display_parts(ensure_history_assistant_message(messages), parts)
+            let (_, assistant_parts) = ensure_history_assistant_message(messages);
+            append_display_parts(assistant_parts, parts);
         }
-        HistoryRole::Unknown(role) => append_display_text_part(
-            ensure_history_assistant_message(messages),
-            DisplayTextPartKind::Unknown(role.clone()),
-            text,
-        ),
+        HistoryRole::Unknown(role) => {
+            let (_, parts) = ensure_history_assistant_message(messages);
+            append_display_text_part(parts, DisplayTextPartKind::Unknown(role.clone()), text);
+        }
     }
 }
 
 fn ensure_history_assistant_message(
     messages: &mut Vec<DisplayMessage>,
-) -> &mut Vec<DisplayMessagePart> {
+) -> (TurnId, &mut Vec<DisplayMessagePart>) {
     if messages
         .last()
         .is_some_and(|message| message.role == DisplayMessageRole::Assistant)
     {
-        return &mut messages.last_mut().expect("last message").content;
+        let message = messages.last_mut().expect("last message");
+        return (TurnId::new(message.id.clone()), &mut message.content);
     }
 
     let id = format!("history-{}", messages.len());
+    let turn_id = TurnId::new(id.clone());
     messages.push(DisplayMessage {
         id,
         role: DisplayMessageRole::Assistant,
         content: Vec::new(),
     });
-    &mut messages.last_mut().expect("inserted message").content
+    (
+        turn_id,
+        &mut messages.last_mut().expect("inserted message").content,
+    )
 }
 
 fn append_display_text_part(
@@ -412,10 +421,11 @@ fn append_display_text_part(
         kind: last_kind,
         text: existing,
     }) = parts.last_mut()
-        && *last_kind == kind
     {
-        existing.push_str(&text);
-        return;
+        if *last_kind == kind {
+            existing.push_str(&text);
+            return;
+        }
     }
     parts.push(DisplayMessagePart::text(kind, text));
 }
@@ -501,14 +511,18 @@ fn merge_display_tool_actions(
     }
 }
 
-fn history_tool_action(entry: &HistoryReplayEntry, fallback_id: String) -> DisplayToolAction {
+fn history_tool_action(
+    entry: &HistoryReplayEntry,
+    fallback_id: String,
+    turn_id: TurnId,
+) -> DisplayToolAction {
     if let Some(tool) = &entry.tool {
-        return DisplayToolAction::from_history(tool, fallback_id);
+        return DisplayToolAction::from_history(tool, fallback_id, turn_id);
     }
     let raw = content_delta_text(&entry.content);
     DisplayToolAction {
         id: fallback_id,
-        turn_id: None,
+        turn_id: Some(turn_id),
         kind: None,
         phase: ActionPhase::Completed,
         title: Some("Tool call".to_string()),
@@ -518,6 +532,36 @@ fn history_tool_action(entry: &HistoryReplayEntry, fallback_id: String) -> Displ
         output: Vec::new(),
         error: None,
     }
+}
+
+fn history_tool_title(tool: &HistoryReplayToolAction) -> String {
+    non_empty(tool.title.as_deref())
+        .or_else(|| non_empty(tool.input_summary.as_deref()))
+        .map(ToString::to_string)
+        .or_else(|| tool.kind.as_ref().map(action_kind_title))
+        .unwrap_or_else(|| "Tool call".to_string())
+}
+
+fn non_empty(value: Option<&str>) -> Option<&str> {
+    value.filter(|value| !value.trim().is_empty())
+}
+
+fn action_kind_title(kind: &ActionKind) -> String {
+    match kind {
+        ActionKind::Command => "Command",
+        ActionKind::FileChange => "File change",
+        ActionKind::Read => "Read",
+        ActionKind::Write => "Write",
+        ActionKind::McpTool => "MCP tool",
+        ActionKind::DynamicTool => "Dynamic tool",
+        ActionKind::SubAgent => "Subagent",
+        ActionKind::WebSearch => "Web search",
+        ActionKind::Media => "Media",
+        ActionKind::Reasoning => "Reasoning",
+        ActionKind::Plan => "Plan",
+        ActionKind::HostCapability => "Host capability",
+    }
+    .to_string()
 }
 
 fn turn_input_display_parts(turn: &TurnState) -> Vec<DisplayMessagePart> {
@@ -778,6 +822,11 @@ mod tests {
             })
             .expect("tool action");
         assert_eq!(tool.id, "call_1");
+        assert_eq!(
+            tool.turn_id.as_ref().map(ToString::to_string),
+            Some(assistant.id.clone())
+        );
+        assert_eq!(tool.title.as_deref(), Some("git status"));
         assert_eq!(tool.kind, Some(ActionKind::Command));
         assert_eq!(tool.phase, ActionPhase::Completed);
         assert_eq!(tool.output_text, "## main\n");
@@ -815,10 +864,55 @@ mod tests {
             DisplayMessagePart::Plan { .. } => panic!("expected tool action"),
         };
         assert_eq!(tool.id, "history-tool-1");
+        assert_eq!(
+            tool.turn_id.as_ref().map(ToString::to_string),
+            Some(messages[1].id.clone())
+        );
         assert_eq!(tool.kind, None);
         assert_eq!(tool.phase, ActionPhase::Completed);
         assert_eq!(tool.title.as_deref(), Some("Tool call"));
         assert_eq!(tool.raw_input.as_deref(), Some("npm test"));
+    }
+
+    #[test]
+    fn hydrated_history_projects_missing_tool_title_from_kind() {
+        let mut conversation = conversation(ConversationCapabilities::unknown());
+        conversation.history.replay = vec![
+            HistoryReplayEntry {
+                role: HistoryRole::User,
+                content: ContentDelta::Text("search".to_string()),
+                tool: None,
+            },
+            HistoryReplayEntry {
+                role: HistoryRole::Tool,
+                content: ContentDelta::Text(String::new()),
+                tool: Some(HistoryReplayToolAction {
+                    id: Some("call_1".to_string()),
+                    kind: Some(ActionKind::WebSearch),
+                    phase: ActionPhase::Completed,
+                    title: None,
+                    input_summary: None,
+                    raw_input: None,
+                    output: Vec::new(),
+                    error: None,
+                }),
+            },
+        ];
+
+        let messages = conversation_display_messages(&conversation);
+
+        let tool = match &messages[1].content[0] {
+            DisplayMessagePart::ToolCall { action } => action,
+            DisplayMessagePart::Text { .. } => panic!("expected tool action"),
+            DisplayMessagePart::Image { .. } => panic!("expected tool action"),
+            DisplayMessagePart::File { .. } => panic!("expected tool action"),
+            DisplayMessagePart::Plan { .. } => panic!("expected tool action"),
+        };
+        assert_eq!(tool.title.as_deref(), Some("Web search"));
+        assert_eq!(
+            tool.turn_id.as_ref().map(ToString::to_string),
+            Some(messages[1].id.clone())
+        );
     }
 
     #[test]

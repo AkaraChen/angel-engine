@@ -1,3 +1,41 @@
+import type {
+  ActionOutputSnapshot,
+  AgentStateSnapshot,
+  AvailableCommandSnapshot,
+  DisplayPlanSnapshot,
+  DisplayToolActionSnapshot,
+  ElicitationSnapshot,
+  ErrorSnapshot,
+  ModelOptionSnapshot,
+  ModeOptionSnapshot,
+  PermissionModeOptionSnapshot,
+  PlanEntrySnapshot,
+  QuestionOptionSnapshot,
+  QuestionSnapshot,
+  ReasoningLevelOptionSnapshot,
+  TurnRunEvent,
+  TurnRunResult,
+} from "@angel-engine/client-napi";
+
+type PartialBy<T, K extends keyof T> = Omit<T, K> & Partial<Pick<T, K>>;
+type NullableOptional<T> = { [K in keyof T]?: T[K] | null };
+type RequireFrom<T, K extends keyof T> = Omit<T, K> & Required<Pick<T, K>>;
+type RuntimeConfigOptionDescription =
+  | ModelOptionSnapshot["description"]
+  | ModeOptionSnapshot["description"]
+  | PermissionModeOptionSnapshot["description"]
+  | ReasoningLevelOptionSnapshot["description"];
+type RuntimeConfigOptionLabel =
+  | ModelOptionSnapshot["name"]
+  | ModeOptionSnapshot["name"]
+  | PermissionModeOptionSnapshot["name"]
+  | ReasoningLevelOptionSnapshot["label"];
+type RuntimeConfigOptionValue =
+  | ModelOptionSnapshot["id"]
+  | ModeOptionSnapshot["id"]
+  | PermissionModeOptionSnapshot["id"]
+  | ReasoningLevelOptionSnapshot["value"];
+
 export interface Project {
   id: string;
   path: string;
@@ -36,21 +74,14 @@ export interface ChatRuntimeConfigInput {
 }
 
 export interface ChatRuntimeConfigOption {
-  description?: string | null;
-  label: string;
-  value: string;
+  description?: RuntimeConfigOptionDescription | null;
+  label: RuntimeConfigOptionLabel;
+  value: RuntimeConfigOptionValue;
 }
 
-export interface ChatAvailableCommand {
-  description: string;
-  inputHint?: string | null;
-  name: string;
-}
+export type ChatAvailableCommand = AvailableCommandSnapshot;
 
-export interface ChatAgentState {
-  currentMode?: string | null;
-  currentPermissionMode?: string | null;
-}
+export type ChatAgentState = NullableOptional<AgentStateSnapshot>;
 
 export interface ChatRuntimeConfig {
   agentState?: ChatAgentState;
@@ -81,81 +112,47 @@ export interface ChatJsonObject {
   readonly [key: string]: ChatJsonValue;
 }
 
-export type ChatPlanEntryStatus = "completed" | "in_progress" | "pending";
+export type ChatPlanEntryStatus = PlanEntrySnapshot["status"];
 
-export interface ChatPlanEntry {
-  content: string;
-  status: ChatPlanEntryStatus;
-}
+export type ChatPlanEntry = PlanEntrySnapshot;
 
-export interface ChatPlanData {
-  entries: ChatPlanEntry[];
-  kind?: "review" | "todo" | null;
-  path?: string | null;
+export type ChatPlanData = Omit<DisplayPlanSnapshot, "kind" | "path"> & {
+  kind?: DisplayPlanSnapshot["kind"] | null;
+  path?: DisplayPlanSnapshot["path"] | null;
   presentation?: "created" | "updated" | null;
-  text: string;
-}
+};
 
-export type ChatToolActionPhase =
-  | "awaitingDecision"
-  | "cancelled"
-  | "completed"
-  | "declined"
-  | "failed"
-  | "proposed"
-  | "running"
-  | "streamingResult";
+export type ChatToolActionPhase = DisplayToolActionSnapshot["phase"];
 
-export interface ChatToolActionOutput {
-  kind: string;
-  text: string;
-}
+export type ChatToolActionOutput = ActionOutputSnapshot;
 
-export interface ChatToolActionError {
-  code: string;
-  message: string;
-  recoverable: boolean;
-}
+export type ChatToolActionError = ErrorSnapshot;
 
-export interface ChatToolAction {
-  elicitationId?: string | null;
-  error?: ChatToolActionError | null;
-  id: string;
-  inputSummary?: string | null;
-  kind?: string;
-  output?: ChatToolActionOutput[];
-  outputText?: string;
-  phase?: ChatToolActionPhase;
-  rawInput?: string | null;
-  title?: string | null;
-  turnId?: string;
-}
+export type ChatToolAction = NonNullable<TurnRunEvent["action"]>;
 
-export interface ChatElicitationQuestionOption {
-  description?: string;
-  label: string;
-}
+export type ChatElicitationQuestionOption = PartialBy<
+  QuestionOptionSnapshot,
+  "description"
+>;
 
-export interface ChatElicitationQuestion {
-  header?: string;
-  id: string;
-  isOther?: boolean;
-  isSecret?: boolean;
-  options?: ChatElicitationQuestionOption[];
-  question?: string;
-}
+export type ChatElicitationQuestion = PartialBy<
+  Omit<QuestionSnapshot, "options"> & {
+    options?: ChatElicitationQuestionOption[];
+  },
+  "header" | "isOther" | "isSecret" | "question"
+>;
 
-export interface ChatElicitation {
-  actionId?: string | null;
-  body?: string | null;
-  choices?: string[];
-  id: string;
-  kind: string;
-  phase: string;
+export type ChatElicitation = Omit<
+  ElicitationSnapshot,
+  "actionId" | "body" | "choices" | "questions" | "title" | "turnId"
+> & {
+  actionId?: ElicitationSnapshot["actionId"] | null;
+  body?: ElicitationSnapshot["body"] | null;
+  choices?: ElicitationSnapshot["choices"];
   questions?: ChatElicitationQuestion[];
-  title?: string | null;
-  turnId?: string | null;
-}
+  title?: ElicitationSnapshot["title"] | null;
+  turnId?: ElicitationSnapshot["turnId"] | null;
+};
 
 export interface ChatHistoryMessage {
   content: ChatHistoryMessagePart[];
@@ -178,6 +175,20 @@ export type ChatToolCallPart = {
 export type ChatHistoryMessagePart =
   | { text: string; type: "reasoning" | "text" }
   | {
+      filename?: string;
+      image: string;
+      mimeType?: string;
+      type: "image";
+    }
+  | {
+      data: string;
+      filename?: string;
+      mimeType: string;
+      mention?: boolean;
+      path?: string | null;
+      type: "file";
+    }
+  | {
       data: ChatPlanData;
       name: "plan" | "todo";
       type: "data";
@@ -195,13 +206,20 @@ export interface ChatLoadResult {
   messages: ChatHistoryMessage[];
 }
 
-export interface ChatAttachmentInput {
-  data?: string;
-  mimeType?: string | null;
-  name?: string | null;
-  path?: string | null;
-  type: "file" | "fileMention" | "image";
-}
+export type ChatAttachmentInput =
+  | {
+      data: string;
+      mimeType: string;
+      name?: string | null;
+      path?: string | null;
+      type: "file" | "image";
+    }
+  | {
+      mimeType?: string | null;
+      name?: string | null;
+      path: string;
+      type: "fileMention";
+    };
 
 export interface ChatSendInput {
   attachments?: ChatAttachmentInput[];
@@ -217,44 +235,56 @@ export interface ChatSendInput {
 }
 
 export interface ChatSendResult {
+  actions: TurnRunResult["actions"];
   chat: Chat;
   chatId: string;
   config?: ChatRuntimeConfig;
   content: ChatHistoryMessagePart[];
-  model?: string;
-  reasoning?: string;
-  text: string;
-  turnId?: string;
+  model?: TurnRunResult["model"];
+  reasoning?: TurnRunResult["reasoning"];
+  text: TurnRunResult["text"];
+  turnId?: TurnRunResult["turnId"];
 }
+
+export type ChatStreamDelta = RequireFrom<
+  Pick<TurnRunEvent, "part" | "text" | "turnId">,
+  "part" | "text"
+> & {
+  type: "delta";
+};
+
+type ChatPlanStreamEvent = {
+  plan: NonNullable<TurnRunEvent["plan"]> & ChatPlanData;
+  turnId?: TurnRunEvent["turnId"];
+  type: "plan";
+};
+
+type ChatToolStreamEvent = {
+  action: NonNullable<TurnRunEvent["action"]> & ChatToolAction;
+  type: "tool" | "toolDelta";
+};
+
+type ChatElicitationStreamEvent = {
+  elicitation: NonNullable<TurnRunEvent["elicitation"]> & ChatElicitation;
+  type: "elicitation";
+};
+
+type ChatResultStreamEvent = {
+  result: Omit<TurnRunResult, "conversation" | "message" | "turn"> &
+    ChatSendResult;
+  type: "result";
+};
 
 export type ChatStreamEvent =
   | {
       chat: Chat;
       type: "chat";
     }
-  | {
-      part: "reasoning" | "text";
-      text: string;
-      turnId?: string;
-      type: "delta";
-    }
-  | {
-      plan: ChatPlanData;
-      turnId?: string;
-      type: "plan";
-    }
-  | {
-      action: ChatToolAction;
-      type: "tool" | "toolDelta";
-    }
-  | {
-      elicitation: ChatElicitation;
-      type: "elicitation";
-    }
-  | {
-      result: ChatSendResult;
-      type: "result";
-    }
+  | ChatStreamDelta
+  | ChatPlanStreamEvent
+  | ChatToolStreamEvent
+  | ChatElicitationStreamEvent
+  | ChatResultStreamEvent
   | {
       message: string;
       type: "error";

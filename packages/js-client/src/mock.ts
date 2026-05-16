@@ -1,11 +1,11 @@
-import type { AgentAdapter } from "./adapter";
+import type { AgentAdapter } from "./adapter.js";
 import type {
   ChatRuntimeConfig,
   ChatSendInput,
   ChatStreamEvent,
   ChatToolAction,
-} from "./types";
-import { createId } from "./utils";
+} from "./types.js";
+import { createId } from "./utils/core.js";
 
 export interface MockAgentAdapterOptions {
   delayMs?: number;
@@ -107,7 +107,9 @@ export class MockAgentAdapter implements AgentAdapter {
     const runningAction: ChatToolAction = {
       id: actionId,
       inputSummary: "Inspect mock project state",
-      kind: "inspect_workspace",
+      kind: "dynamicTool",
+      output: [],
+      outputText: "",
       phase: "running",
       rawInput: JSON.stringify({ promptLength: prompt.length }),
       title: "Inspect workspace",

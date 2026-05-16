@@ -4,7 +4,8 @@ import type {
   ChatHistoryMessagePart,
   ChatStreamEvent,
 } from "@angel-engine/js-client";
-import { AngelClient, MockAgentAdapter } from "@angel-engine/js-client";
+import { AngelClient } from "@angel-engine/js-client";
+import { MockAgentAdapter } from "@angel-engine/js-client/mock";
 import { StrictMode, useEffect, useMemo, useState } from "react";
 import { createRoot } from "react-dom/client";
 import "./styles.css";

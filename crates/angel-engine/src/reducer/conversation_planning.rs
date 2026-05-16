@@ -18,8 +18,10 @@ impl AngelEngine {
         self.pending
             .insert(request_id.clone(), PendingRequest::Initialize)?;
         Ok(CommandPlan {
-            effects: vec![ProtocolEffect::new(self.protocol, self.method_initialize())
-                .request_id(request_id.clone())],
+            effects: vec![
+                ProtocolEffect::new(self.protocol, self.method_initialize())
+                    .request_id(request_id.clone()),
+            ],
             request_id: Some(request_id),
             ..CommandPlan::default()
         })

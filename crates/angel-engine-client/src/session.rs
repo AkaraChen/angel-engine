@@ -1,4 +1,4 @@
-use std::collections::{hash_map::Entry, HashMap, HashSet, VecDeque};
+use std::collections::{HashMap, HashSet, VecDeque, hash_map::Entry};
 use std::time::Duration;
 
 use garde::Validate;
@@ -8,10 +8,10 @@ use crate::error::{ClientError, ClientResult};
 use crate::event::{ClientEvent, ClientStreamDelta, ClientUpdate};
 use crate::snapshot::display_message_from_parts;
 use crate::{
-    create_runtime_options, ActionOutputSnapshot, ActionSnapshot, AngelClient, ClientInput,
-    ClientProtocol, ConversationSnapshot, ElicitationResponse, ElicitationSnapshot,
-    ResumeConversationRequest, RuntimeOptions, RuntimeOptionsOverrides, StartConversationRequest,
-    ThreadEvent, TurnSnapshot,
+    ActionOutputSnapshot, ActionSnapshot, AngelClient, ClientInput, ClientProtocol,
+    ConversationSnapshot, ElicitationResponse, ElicitationSnapshot, ResumeConversationRequest,
+    RuntimeOptions, RuntimeOptionsOverrides, StartConversationRequest, ThreadEvent, TurnSnapshot,
+    create_runtime_options,
 };
 use crate::{
     DisplayMessagePartSnapshot, DisplayMessageSnapshot, DisplayPlanSnapshot,

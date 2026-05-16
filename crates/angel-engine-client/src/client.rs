@@ -1,5 +1,6 @@
 use angel_provider::ProtocolAdapter;
 
+use crate::ClientCommandResult;
 use crate::adapter::RuntimeAdapter;
 use crate::config::{ClientOptions, ClientOptionsBuilder, StartConversationRequest};
 use crate::core::{AngelClientCore, DiscoveryRequest, ResumeConversationRequest};
@@ -12,7 +13,6 @@ use crate::settings::{
 };
 use crate::snapshot::ClientSnapshot;
 use crate::thread::Thread;
-use crate::ClientCommandResult;
 
 #[derive(Debug)]
 pub struct Client<A = RuntimeAdapter> {

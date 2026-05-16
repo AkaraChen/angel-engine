@@ -6,6 +6,7 @@ import type {
   SendTextRequest,
   SetModeRequest,
   SetPermissionModeRequest,
+  TurnRunEvent,
   TurnRunResult,
 } from "@angel-engine/client-napi";
 
@@ -22,19 +23,18 @@ import type {
   SDKResultMessage,
   SDKUserMessage,
 } from "@anthropic-ai/claude-agent-sdk";
-import type { ChatElicitationResponse } from "../../../shared/chat";
-import type { ProjectedTurnEvent } from "./projection";
 
 import type {
   ActiveClaudeTurn,
-  DesktopClaudeSendTextRequest,
+  ClaudeCodeSendTextRequest,
+  ClaudeElicitationResponse,
   EngineEventJson,
   PendingPermission,
   SessionConfigValueJson,
   SessionPermissionModeJson,
-} from "./types";
-import { createRequire } from "node:module";
+} from "./types.js";
 import {
+  AngelEngineClient,
   ClientProtocol,
   EngineEventActionKind,
   EngineEventActionOutputKind,
@@ -46,15 +46,17 @@ import {
   EngineEventTurnOutcome,
   EngineEventType,
 } from "@angel-engine/client-napi";
-import { ClaudeCodeEngineAdapter } from "./adapter";
-import { contextPatch, contextUpdated } from "./context";
+import { emptyUpdate } from "../utils/client-update.js";
+import { abortError, errorMessage, throwIfAborted } from "../utils/errors.js";
+import { ClaudeCodeEngineAdapter } from "./adapter.js";
+import { contextPatch, contextUpdated } from "./context.js";
 import {
   claudeElicitationBody,
   claudeElicitationChoices,
   claudeElicitationKind,
   claudeElicitationQuestions,
   updatedInputFromElicitationResponse,
-} from "./elicitation";
+} from "./elicitation.js";
 import {
   actionObserved,
   actionOutputUpdated,
@@ -71,50 +73,37 @@ import {
   sessionUsageUpdated,
   turnRunEventsFromUpdate,
   turnTerminal,
-} from "./events";
-import { historyEventsFromSessionMessages } from "./history";
-import { planEventsFromToolUse } from "./plan";
-import { projectTurnRunEvent } from "./projection";
+} from "./events.js";
+import { historyEventsFromSessionMessages } from "./history.js";
+import { planEventsFromToolUse } from "./plan.js";
 import {
   claudePrompt,
   emptyClaudePrompt,
   loadClaudeEffortLevelIds,
   loadClaudePermissionModeIds,
   loadClaudeSdk,
-} from "./runtime";
+} from "./runtime.js";
 import {
   isClaudeAssistantToolUseBlock,
   isClaudeContentBlockDeltaEvent,
   isClaudeContentBlockStartEvent,
   isClaudeUserToolResultBlock,
-} from "./sdk-types";
+} from "./sdk-types.js";
 import {
   stringifyToolResult,
   toolInputSummary,
   toolOutputKind,
-} from "./tooling";
+} from "./tooling.js";
 import {
-  abortError,
-  asRecord,
   claudeEffort,
   compactEvents,
-  emptyUpdate,
-  errorMessage,
   normalizeClaudeMode,
   permissionDecision,
-  throwIfAborted,
-} from "./utils";
+} from "./utils.js";
 
-type AngelClientModule = typeof import("@angel-engine/client-napi");
-type NativeEngineClient = InstanceType<AngelClientModule["AngelEngineClient"]>;
+type NativeEngineClient = InstanceType<typeof AngelEngineClient>;
 
-const nodeRequire = createRequire(__filename);
-const clientModule = nodeRequire(
-  "@angel-engine/client-napi",
-) as AngelClientModule;
-const { AngelEngineClient } = clientModule;
-
-export class DesktopClaudeSession {
+export class ClaudeCodeSession {
   private readonly adapter = new ClaudeCodeEngineAdapter();
   private readonly client: NativeEngineClient;
   private readonly pendingPermissions = new Map<string, PendingPermission>();
@@ -215,14 +204,12 @@ export class DesktopClaudeSession {
     });
   }
 
-  async sendText(
-    request: DesktopClaudeSendTextRequest,
-  ): Promise<TurnRunResult> {
+  async sendText(request: ClaudeCodeSendTextRequest): Promise<TurnRunResult> {
     return this.enqueue(async () => this.sendTextNow(request));
   }
 
   private async sendTextNow(
-    request: DesktopClaudeSendTextRequest,
+    request: ClaudeCodeSendTextRequest,
   ): Promise<TurnRunResult> {
     const text = request.text ?? "";
     const input = request.input ?? [];
@@ -289,7 +276,7 @@ export class DesktopClaudeSession {
   }
 
   private queryOptions(
-    request: DesktopClaudeSendTextRequest,
+    request: ClaudeCodeSendTextRequest,
     abortController: AbortController,
     active: ActiveClaudeTurn,
   ): ClaudeQueryOptions {
@@ -432,7 +419,7 @@ export class DesktopClaudeSession {
             active,
             contentBlock.id || `tool-${message.uuid}`,
             contentBlock.name,
-            asRecord(contentBlock.input),
+            contentBlock.input as Record<string, unknown>,
           ),
         ];
       }
@@ -483,7 +470,7 @@ export class DesktopClaudeSession {
         }
       } else if (isClaudeAssistantToolUseBlock(block)) {
         const toolName = block.name;
-        const input = asRecord(block.input);
+        const input = block.input as Record<string, unknown>;
         events.push(
           actionObserved(
             active,
@@ -664,9 +651,9 @@ export class DesktopClaudeSession {
     const existing = this.pendingPermissions.get(elicitationId);
     if (existing) return existing;
 
-    let resolve!: (response: ChatElicitationResponse) => void;
+    let resolve!: (response: ClaudeElicitationResponse) => void;
     let reject!: (error: Error) => void;
-    const promise = new Promise<ChatElicitationResponse>(
+    const promise = new Promise<ClaudeElicitationResponse>(
       (resolvePromise, rejectPromise) => {
         resolve = (response): void => {
           this.pendingPermissions.delete(elicitationId);
@@ -685,7 +672,7 @@ export class DesktopClaudeSession {
 
   private async resolveElicitationNow(
     elicitationId: string,
-    response: ChatElicitationResponse,
+    response: ClaudeElicitationResponse,
   ): Promise<void> {
     const pending = this.pendingPermissions.get(elicitationId);
     if (!pending) {
@@ -956,12 +943,11 @@ export class DesktopClaudeSession {
 
   private emitEngineEvents(
     events: EngineEventJson[],
-    onEvent?: (event: ProjectedTurnEvent) => void,
+    onEvent?: (event: TurnRunEvent) => void,
   ): void {
     const update = this.applyEngineEvents(events);
     for (const event of turnRunEventsFromUpdate(update)) {
-      const projected = projectTurnRunEvent(event);
-      if (projected) onEvent?.(projected);
+      onEvent?.(event);
     }
   }
 

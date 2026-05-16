@@ -10,9 +10,69 @@
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
     },
+    "./assistant-ui": {
+      "types": "./dist/assistant-ui.d.ts",
+      "default": "./dist/assistant-ui.js"
+    },
+    "./claude": {
+      "types": "./dist/claude/index.d.ts",
+      "default": "./dist/claude/index.js"
+    },
+    "./claude/adapter": {
+      "types": "./dist/claude/adapter.d.ts",
+      "default": "./dist/claude/adapter.js"
+    },
+    "./claude/context": {
+      "types": "./dist/claude/context.d.ts",
+      "default": "./dist/claude/context.js"
+    },
     "./mock": {
       "types": "./dist/mock.d.ts",
       "default": "./dist/mock.js"
+    },
+    "./projection": {
+      "types": "./dist/projection.d.ts",
+      "default": "./dist/projection.js"
+    },
+    "./utils": {
+      "types": "./dist/utils/index.d.ts",
+      "default": "./dist/utils/index.js"
+    },
+    "./utils/attachments": {
+      "types": "./dist/utils/attachments.d.ts",
+      "default": "./dist/utils/attachments.js"
+    },
+    "./utils/client-update": {
+      "types": "./dist/utils/client-update.d.ts",
+      "default": "./dist/utils/client-update.js"
+    },
+    "./utils/core": {
+      "types": "./dist/utils/core.d.ts",
+      "default": "./dist/utils/core.js"
+    },
+    "./utils/elicitations": {
+      "types": "./dist/utils/elicitations.d.ts",
+      "default": "./dist/utils/elicitations.js"
+    },
+    "./utils/errors": {
+      "types": "./dist/utils/errors.d.ts",
+      "default": "./dist/utils/errors.js"
+    },
+    "./utils/media": {
+      "types": "./dist/utils/media.d.ts",
+      "default": "./dist/utils/media.js"
+    },
+    "./utils/messages": {
+      "types": "./dist/utils/messages.d.ts",
+      "default": "./dist/utils/messages.js"
+    },
+    "./utils/plans": {
+      "types": "./dist/utils/plans.d.ts",
+      "default": "./dist/utils/plans.js"
+    },
+    "./utils/tools": {
+      "types": "./dist/utils/tools.d.ts",
+      "default": "./dist/utils/tools.js"
     }
   },
   "files": [
@@ -23,17 +83,40 @@
     "dev": "vite --host 127.0.0.1 --config playground/vite.config.ts",
     "playground": "vite --host 127.0.0.1 --config playground/vite.config.ts",
     "playground:build": "vite build --config playground/vite.config.ts",
+    "test": "vitest run",
     "typecheck": "tsc --noEmit"
   },
-  "dependencies": {
-    "react": "^19.2.6",
-    "react-dom": "^19.2.6"
-  },
   "devDependencies": {
+    "@angel-engine/client-napi": "workspace:*",
+    "@anthropic-ai/claude-agent-sdk": "^0.2.133",
+    "@assistant-ui/react": "^0.12.28",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^6.0.2",
+    "react": "^19.2.6",
+    "react-dom": "^19.2.6",
     "typescript": "^6.0.3",
-    "vite": "^8.0.13"
+    "vite": "^8.0.13",
+    "vitest": "^4.1.6"
+  },
+  "peerDependencies": {
+    "@angel-engine/client-napi": "0.1.0",
+    "@anthropic-ai/claude-agent-sdk": "^0.2.133",
+    "@assistant-ui/react": "^0.12.28",
+    "react": "^19.2.6"
+  },
+  "peerDependenciesMeta": {
+    "@assistant-ui/react": {
+      "optional": true
+    },
+    "@anthropic-ai/claude-agent-sdk": {
+      "optional": true
+    },
+    "react": {
+      "optional": true
+    }
+  },
+  "dependencies": {
+    "arktype": "^2.2.0"
   }
 }

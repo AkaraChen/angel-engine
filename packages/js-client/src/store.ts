@@ -1,4 +1,4 @@
-import type { Chat, ChatHistoryMessage, Project } from "./types";
+import type { Chat, ChatHistoryMessage, Project } from "./types.js";
 
 export interface AngelStore {
   archiveChat: (chatId: string) => Promise<Chat>;

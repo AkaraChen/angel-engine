@@ -4,10 +4,10 @@ import type {
   ChatSendInput,
   ChatStreamEvent,
   Project,
-} from "./types";
+} from "./types.js";
 
 export interface AgentRunContext {
-  chat: Chat;
+  chat?: Chat;
   messages: readonly unknown[];
   project?: Project;
   signal: AbortSignal;

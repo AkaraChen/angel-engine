@@ -1,15 +1,11 @@
 import type { SendTextRequest } from "@angel-engine/client-napi";
 import type { SDKUserMessage } from "@anthropic-ai/claude-agent-sdk";
 
-import type { ClientInput } from "./client-input";
-import type { ClaudeSdkModule, JsonObject } from "./types";
-import { ClientInputType } from "./client-input";
-import {
-  asObject,
-  claudeEffortLevelIds,
-  claudePermissionModeIds,
-  isJsonObject,
-} from "./utils";
+import type { ClaudeSdkModule, JsonObject } from "./types.js";
+import { ClientInputType } from "@angel-engine/client-napi";
+import { claudeEffortLevelIds, claudePermissionModeIds } from "./utils.js";
+
+type ClientInput = NonNullable<SendTextRequest["input"]>[number];
 
 let claudeSdkPromise: Promise<ClaudeSdkModule> | undefined;
 let claudePermissionModesPromise: Promise<string[]> | undefined;
@@ -37,8 +33,9 @@ export function claudePrompt(
   input: NonNullable<SendTextRequest["input"]>,
 ): string | AsyncIterable<SDKUserMessage> {
   const content = clientInputToContent(text, input);
-  if (content.length === 1 && asObject(content[0])?.type === "text") {
-    return String(asObject(content[0])?.text ?? "");
+  const singleContent = content[0];
+  if (content.length === 1 && singleContent?.type === "text") {
+    return String(singleContent.text ?? "");
   }
 
   return (async function* (): AsyncIterable<SDKUserMessage> {
@@ -103,8 +100,12 @@ function clientInputToContent(
         });
         break;
       case ClientInputType.RawContentBlock:
-        if (isJsonObject(value.value)) {
-          content.push(value.value);
+        if (
+          value.value &&
+          typeof value.value === "object" &&
+          !Array.isArray(value.value)
+        ) {
+          content.push(value.value as JsonObject);
         }
         break;
       default: {

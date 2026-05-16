@@ -28,17 +28,31 @@ import type {
   ChatSetPermissionModeResult,
   ChatSetRuntimeInput,
 } from "../../../shared/chat";
-import type { ClientInput } from "./client-input";
+import type { ChatRuntime } from "./runtime";
+type ClientInput = NonNullable<SendTextRequest["input"]>[number];
 
-import type { ProjectedTurnEvent } from "./projection";
-import { createRequire } from "node:module";
+import type { ProjectedTurnEvent } from "@angel-engine/js-client/projection";
 import path from "node:path";
 
 import {
   ActionPhase,
+  AngelSession as NativeAngelSession,
+  ClientInputType,
   ElicitationResponseType,
   TurnRunEventType,
+  createRuntimeOptions,
 } from "@angel-engine/client-napi";
+import { ClaudeCodeSession } from "@angel-engine/js-client/claude";
+import {
+  conversationMessages,
+  projectTurnRunEvent,
+  projectTurnRunResult,
+  runtimeConfigFromConversationSnapshot,
+} from "@angel-engine/js-client/projection";
+import {
+  abortError,
+  throwIfAborted,
+} from "@angel-engine/js-client/utils/errors";
 import { app } from "electron";
 import { normalizeChatAttachmentsInput } from "../../../shared/chat";
 import { isTextLikeMimeType } from "../../../shared/mime";
@@ -49,18 +63,9 @@ import {
   setChatRemoteThreadId,
   setChatRuntime as setChatRuntimeRecord,
   touchChat,
-} from "../../features/chat/repository";
-import { getProject } from "../../features/projects/repository";
-import { ClientInputType } from "./client-input";
-import {
-  conversationMessages,
-  projectRunResult,
-  projectTurnRunEvent,
-  runtimeConfigFromConversationSnapshot,
-} from "./projection";
-import { DesktopClaudeSession } from "./session";
+} from "./repository";
+import { getProject } from "../projects/repository";
 
-type AngelClientModule = typeof import("@angel-engine/client-napi");
 type ChatStreamObserver = (
   event: ProjectedTurnEvent | { chat: Chat; type: "chat" },
 ) => void;
@@ -73,13 +78,7 @@ export interface ChatStreamControls {
   ) => void;
 }
 
-const nodeRequire = createRequire(__filename);
-const clientModule = nodeRequire(
-  "@angel-engine/client-napi",
-) as AngelClientModule;
-const { AngelSession: NativeAngelSession, createRuntimeOptions } = clientModule;
-
-type DesktopChatSession = DesktopAngelSession | DesktopClaudeSession;
+type DesktopChatSession = DesktopAngelSession | ClaudeCodeSession;
 
 const chatSessions = new Map<string, DesktopChatSession>();
 const chatPrewarms = new Map<string, ChatPrewarm>();
@@ -103,6 +102,21 @@ type ReadyChatPrewarm = ChatPrewarm & {
 
 export async function sendChat(input: ChatSendInput): Promise<ChatSendResult> {
   return streamChat(input);
+}
+
+export function createChatRuntime(): ChatRuntime {
+  return {
+    closeChatSession,
+    createChatFromInput,
+    inspectChatRuntimeConfig,
+    loadChatSession,
+    prewarmChat,
+    sendChat,
+    setChatMode,
+    setChatPermissionMode,
+    setChatRuntime,
+    streamChat,
+  };
 }
 
 export async function loadChatSession(chatId: string): Promise<ChatLoadResult> {
@@ -232,7 +246,10 @@ export async function streamChat(
     model: input.model ?? undefined,
     mode: input.mode ?? undefined,
     permissionMode: input.permissionMode ?? undefined,
-    onEvent,
+    onEvent: (event) => {
+      const projected = projectTurnRunEvent(event);
+      if (projected) onEvent?.(projected);
+    },
     onResolveElicitation: controls?.setResolveElicitation,
     reasoningEffort: input.reasoningEffort ?? undefined,
     remoteId: chat.remoteThreadId ?? undefined,
@@ -247,7 +264,7 @@ export async function streamChat(
   const finalChat = result.remoteThreadId
     ? setChatRemoteThreadId(chat.id, result.remoteThreadId)
     : touchChat(chat.id);
-  const projected = projectRunResult(result);
+  const projected = projectTurnRunResult(result);
   const content = projected.content;
 
   return {
@@ -287,7 +304,7 @@ function getChatSession(chat: Chat) {
 
 function createChatSession(runtime?: string): DesktopChatSession {
   if (runtime === "claude") {
-    return new DesktopClaudeSession();
+    return new ClaudeCodeSession();
   }
 
   return new DesktopAngelSession(
@@ -522,7 +539,7 @@ function closeChatPrewarm(prewarm: ChatPrewarm) {
 
 type NativeAngelSessionInstance = InstanceType<typeof NativeAngelSession>;
 type DesktopSendTextRequest = SendTextRequest & {
-  onEvent?: (event: ProjectedTurnEvent) => void;
+  onEvent?: (event: TurnRunEvent) => void;
   onResolveElicitation?: (
     handler: (
       elicitationId: string,
@@ -637,8 +654,7 @@ class DesktopAngelSession {
     request: DesktopSendTextRequest,
   ): Promise<TurnRunResult | undefined> {
     for (const event of events) {
-      const projected = projectTurnRunEvent(event);
-      if (projected) request.onEvent?.(projected);
+      request.onEvent?.(event);
 
       if (
         event.type === TurnRunEventType.Elicitation &&
@@ -776,21 +792,6 @@ function pendingActionElicitationId(event: TurnRunEvent) {
   }
 
   return action.elicitationId || action.id || undefined;
-}
-
-function throwIfAborted(signal?: AbortSignal) {
-  if (signal?.aborted) {
-    throw abortError(signal);
-  }
-}
-
-function abortError(signal?: AbortSignal) {
-  if (signal?.reason instanceof Error) {
-    return signal.reason;
-  }
-  const error = new Error("Chat request cancelled.");
-  error.name = "AbortError";
-  return error;
 }
 
 async function yieldToEventLoop() {

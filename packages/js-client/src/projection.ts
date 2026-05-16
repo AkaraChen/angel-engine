@@ -3,6 +3,7 @@ import type {
   ConversationSnapshot,
   DisplayMessagePartSnapshot,
   DisplayMessageSnapshot,
+  DisplayPlanSnapshot,
   DisplayToolActionSnapshot,
   ElicitationSnapshot,
   TurnRunEvent,
@@ -18,17 +19,16 @@ import type {
   ChatRuntimeConfig,
   ChatStreamDelta,
   ChatToolAction,
-} from "../../../shared/chat";
+} from "./types.js";
 
 import { TurnRunEventType } from "@angel-engine/client-napi";
 import {
   appendChatTextPart,
   chatPlanPartName,
   chatToolActionToPart,
-  imageDataUrl,
-  isChatPlanData,
-  normalizeChatPlanMessages,
-} from "../../../shared/chat";
+} from "./utils/index.js";
+import { imageDataUrl } from "./utils/media.js";
+import { isChatPlanData, normalizeChatPlanMessages } from "./utils/plans.js";
 
 type ToolActionSnapshotLike = ActionSnapshot | DisplayToolActionSnapshot;
 export type ProjectedTurnEvent =
@@ -73,34 +73,48 @@ function displayMessagePartToChatParts(
   switch (part.type) {
     case "reasoning":
     case "text":
+      if (typeof part.text !== "string") {
+        throw new Error(`Display ${part.type} part is missing text.`);
+      }
       return part.text ? [{ text: part.text, type: part.type }] : [];
     case "tool-call":
-      return part.action ? [chatPartFromAction(toChatAction(part.action))] : [];
+      if (!part.action) {
+        throw new Error("Display tool-call part is missing action.");
+      }
+      return [chatPartFromAction(toChatAction(part.action))];
     case "plan":
-      return part.plan ? planMessagePart(part.plan) : [];
+      if (!part.plan) {
+        throw new Error("Display plan part is missing plan.");
+      }
+      return planMessagePart(part.plan);
     case "image":
-      return part.data && part.mimeType?.startsWith("image/")
-        ? [
-            {
-              filename: part.name ?? undefined,
-              image: imageDataUrl(part.data, part.mimeType),
-              mimeType: part.mimeType,
-              type: "image",
-            },
-          ]
-        : [];
+      if (!part.data || !part.mimeType?.startsWith("image/")) {
+        throw new Error("Display image part is missing image data.");
+      }
+      return [
+        {
+          filename: part.name ?? undefined,
+          image: imageDataUrl(part.data, part.mimeType),
+          mimeType: part.mimeType,
+          type: "image",
+        },
+      ];
     case "file":
-      return part.data && part.mimeType
-        ? [
-            {
-              data: part.data,
-              filename: part.name ?? undefined,
-              mimeType: part.mimeType,
-              type: "file",
-            },
-          ]
-        : [];
+      if (!part.data || !part.mimeType) {
+        throw new Error("Display file part is missing file data.");
+      }
+      return [
+        {
+          data: part.data,
+          filename: part.name ?? undefined,
+          mimeType: part.mimeType,
+          type: "file",
+        },
+      ];
     default:
+      if (typeof part.text !== "string") {
+        throw new Error("Display message part is not projectable.");
+      }
       return part.text ? [{ text: part.text, type: "text" }] : [];
   }
 }
@@ -129,11 +143,7 @@ export function runtimeConfigFromConversationSnapshot(
     canSetMode: availableModes.canSet,
     canSetPermissionMode: permissionModes.canSet,
     canSetReasoningEffort: reasoningLevel.canSet,
-    availableCommands: snapshot.availableCommands.map((command) => ({
-      description: command.description,
-      inputHint: command.inputHint ?? null,
-      name: command.name,
-    })),
+    availableCommands: snapshot.availableCommands,
     currentMode,
     currentModel: modelList.currentModelId ?? null,
     currentPermissionMode,
@@ -161,7 +171,7 @@ export function runtimeConfigFromConversationSnapshot(
   };
 }
 
-export function projectRunResult(result: TurnRunResult) {
+export function projectTurnRunResult(result: TurnRunResult) {
   let content: ChatHistoryMessagePart[] = [];
   if (result.message) {
     content = displayMessagePartsToChatParts(result.message.content);
@@ -240,9 +250,12 @@ function projectMessagePart(
   turnId?: string,
 ): ProjectedTurnEvent | undefined {
   if (part.type === "text" || part.type === "reasoning") {
+    if (typeof part.text !== "string") {
+      throw new Error(`Display ${part.type} part is missing text.`);
+    }
     return {
       part: part.type,
-      text: part.text ?? "",
+      text: part.text,
       turnId,
       type: "delta",
     };
@@ -276,7 +289,7 @@ function projectMessagePart(
 }
 
 function planMessagePart(plan: unknown): ChatHistoryMessagePart[] {
-  const data = toChatPlanData(plan);
+  const data = toChatPlanData(plan as DisplayPlanSnapshot);
   return isChatPlanData(data) ? [planMessagePartData(data)] : [];
 }
 
@@ -314,22 +327,16 @@ function todoFromTurnSnapshot(turn: TurnSnapshot): ChatPlanData | undefined {
   return isEmptyPlan(data) ? undefined : data;
 }
 
-function toChatPlanData(plan: unknown): ChatPlanData {
-  const value = plan as {
-    entries?: Array<{ content?: string; status?: string; text?: string }>;
-    kind?: string | null;
-    path?: string | null;
-    text?: string;
-  };
-  const kind = value.kind === "todo" ? "todo" : "review";
+function toChatPlanData(plan: DisplayPlanSnapshot): ChatPlanData {
+  const kind = plan.kind === "todo" ? "todo" : "review";
   return {
-    entries: (value.entries ?? []).map((entry) => ({
-      content: entry.content ?? entry.text ?? "",
-      status: (entry.status as ChatPlanEntryStatus) ?? "pending",
+    entries: plan.entries.map((entry) => ({
+      content: entry.content,
+      status: entry.status as ChatPlanEntryStatus,
     })),
     kind,
-    path: value.path ?? null,
-    text: value.text ?? "",
+    path: plan.path ?? null,
+    text: plan.text,
   };
 }
 
@@ -342,18 +349,24 @@ function isEmptyPlan(plan: ChatPlanData) {
 }
 
 function toChatAction(action: ToolActionSnapshotLike): ChatToolAction {
+  if (!action.turnId) {
+    throw new Error("Tool action is missing turnId.");
+  }
+  if (!action.title) {
+    throw new Error("Tool action is missing title.");
+  }
   return {
     elicitationId: action.elicitationId,
     error: action.error,
     id: action.id,
     inputSummary: action.inputSummary,
-    kind: action.kind,
+    kind: action.kind as ChatToolAction["kind"],
     output: action.output,
     outputText: action.outputText,
     phase: action.phase,
     rawInput: action.rawInput,
     title: action.title,
-    turnId: action.turnId ?? undefined,
+    turnId: action.turnId,
   };
 }
 

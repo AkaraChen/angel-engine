@@ -11,7 +11,13 @@
     "outDir": "dist",
     "paths": {
       "@angel-engine/js-client": ["./src/index.ts"],
-      "@angel-engine/js-client/mock": ["./src/mock.ts"]
+      "@angel-engine/js-client/assistant-ui": ["./src/assistant-ui.ts"],
+      "@angel-engine/js-client/claude": ["./src/claude/index.ts"],
+      "@angel-engine/js-client/claude/*": ["./src/claude/*"],
+      "@angel-engine/js-client/mock": ["./src/mock.ts"],
+      "@angel-engine/js-client/projection": ["./src/projection.ts"],
+      "@angel-engine/js-client/utils": ["./src/utils/index.ts"],
+      "@angel-engine/js-client/utils/*": ["./src/utils/*"]
     },
     "resolveJsonModule": true,
     "skipLibCheck": true,

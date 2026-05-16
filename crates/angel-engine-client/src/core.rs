@@ -13,8 +13,8 @@ use crate::adapter::RuntimeAdapter;
 use crate::config::{ClientOptions, StartConversationRequest};
 use crate::error::ClientResult;
 use crate::event::{
-    events_from_engine_event, log_event, stream_deltas_from_engine_event, ClientLog, ClientLogKind,
-    ClientUpdate, JsonRpcOutbound,
+    ClientLog, ClientLogKind, ClientUpdate, JsonRpcOutbound, events_from_engine_event, log_event,
+    stream_deltas_from_engine_event,
 };
 use crate::settings::{
     AvailableModeSettingSnapshot, AvailablePermissionModeSettingSnapshot, ModelListSettingSnapshot,

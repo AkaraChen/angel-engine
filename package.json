@@ -19,7 +19,8 @@
     "desktop:rebuild-native": "pnpm --filter desktop rebuild:native",
     "js-client:build": "turbo run build --filter @angel-engine/js-client",
     "js-client:playground": "pnpm --filter @angel-engine/js-client playground",
-    "js-client:playground:build": "turbo run playground:build --filter @angel-engine/js-client"
+    "js-client:playground:build": "turbo run playground:build --filter @angel-engine/js-client",
+    "js-client:test": "turbo run test --filter @angel-engine/js-client"
   },
   "devDependencies": {
     "husky": "^9.1.7",

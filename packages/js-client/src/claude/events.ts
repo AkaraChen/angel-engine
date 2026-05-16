@@ -19,7 +19,7 @@ import type {
   EngineEventJson,
   SessionConfigValueJson,
   SessionPermissionModeJson,
-} from "./types";
+} from "./types.js";
 
 import {
   ClientEventType,
@@ -27,8 +27,8 @@ import {
   EngineEventContentKind,
   TurnRunEventType,
 } from "@angel-engine/client-napi";
-import { actionKind, toolInputSummary, toolTitle } from "./tooling";
-import { labelFromValue, uniqueStrings } from "./utils";
+import { actionKind, toolInputSummary, toolTitle } from "./tooling.js";
+import { labelFromValue, uniqueStrings } from "./utils.js";
 
 export function actionObserved(
   active: ActiveClaudeTurn,

@@ -1,13 +1,13 @@
 import type { CanUseTool } from "@anthropic-ai/claude-agent-sdk";
-import type { ChatElicitationResponse } from "../../../shared/chat";
 
 import type {
   ClaudeAskUserQuestionInput,
   ClaudeQuestionInput,
-} from "./sdk-types";
-import type { JsonObject } from "./types";
+} from "./sdk-types.js";
+import type { ClaudeElicitationResponse } from "./types.js";
+import type { JsonObject } from "./types.js";
 import { EngineEventElicitationKind } from "@angel-engine/client-napi";
-import { CLAUDE_TOOL, typedClaudeInput } from "./sdk-types";
+import { CLAUDE_TOOL, typedClaudeInput } from "./sdk-types.js";
 
 type CanUseToolContext = Parameters<CanUseTool>[2];
 interface NormalizedClaudeQuestionInput {
@@ -76,7 +76,7 @@ export function claudeElicitationQuestions(
 export function updatedInputFromElicitationResponse(
   toolName: string,
   input: Record<string, unknown>,
-  response: ChatElicitationResponse,
+  response: ClaudeElicitationResponse,
 ): Record<string, unknown> {
   if (response.type !== "answers") return input;
   const questions = questionInputs(toolName, input);

@@ -1,12 +1,11 @@
-import type { ActiveClaudeTurn, JsonObject } from "./types";
+import type { ActiveClaudeTurn, JsonObject } from "./types.js";
 
 import {
   EngineEventActionKind,
   EngineEventActionOutputKind,
 } from "@angel-engine/client-napi";
-import { isClaudePlanToolUse } from "./plan";
-import { CLAUDE_TOOL } from "./sdk-types";
-import { asObject } from "./utils";
+import { isClaudePlanToolUse } from "./plan.js";
+import { CLAUDE_TOOL } from "./sdk-types.js";
 
 export function actionKind(
   toolName: string,
@@ -91,8 +90,7 @@ export function stringifyToolResult(value: unknown): string {
 }
 
 export function contentBlockText(block: unknown): string {
-  const value = asObject(block);
-  if (!value) return "";
+  const value = block as JsonObject;
   if (value.type === "text") return String(value.text ?? "");
   if (value.type === "thinking") return String(value.thinking ?? "");
   if (value.type === "tool_use") {

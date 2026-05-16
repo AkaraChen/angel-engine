@@ -5,7 +5,7 @@ use std::thread;
 use std::time::Duration;
 
 use crate::config::{ClientOptions, ClientProtocol, StartConversationRequest};
-use crate::core::{process_log, AngelClientCore};
+use crate::core::{AngelClientCore, process_log};
 use crate::error::{ClientError, ClientResult};
 use crate::event::{ClientLogKind, ClientUpdate};
 use crate::settings::{

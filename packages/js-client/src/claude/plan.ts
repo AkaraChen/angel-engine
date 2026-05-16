@@ -2,8 +2,8 @@ import type {
   ClaudeExitPlanModeInput,
   ClaudeFileWriteInput,
   ClaudeTodoWriteInput,
-} from "./sdk-types";
-import type { ActiveClaudeTurn, EngineEventJson, JsonObject } from "./types";
+} from "./sdk-types.js";
+import type { ActiveClaudeTurn, EngineEventJson, JsonObject } from "./types.js";
 
 import { homedir } from "node:os";
 
@@ -12,7 +12,7 @@ import {
   EngineEventContentKind,
   PlanEntryStatus,
 } from "@angel-engine/client-napi";
-import { CLAUDE_TOOL, typedClaudeInput } from "./sdk-types";
+import { CLAUDE_TOOL, typedClaudeInput } from "./sdk-types.js";
 
 interface PlanStateJson {
   entries: Array<{ content: string; status: string }>;

@@ -1,13 +1,12 @@
 import type { SessionMessage } from "@anthropic-ai/claude-agent-sdk";
-import type { EngineEventJson, JsonObject } from "./types";
+import type { EngineEventJson, JsonObject } from "./types.js";
 
 import {
   EngineEventContentKind,
   EngineEventHistoryRole,
 } from "@angel-engine/client-napi";
-import { structuredPlanFromToolUse } from "./plan";
-import { claudeHistoryToolCall, claudeHistoryToolResult } from "./tooling";
-import { asObject } from "./utils";
+import { structuredPlanFromToolUse } from "./plan.js";
+import { claudeHistoryToolCall, claudeHistoryToolResult } from "./tooling.js";
 
 interface HistoryToolUse {
   id: string;
@@ -30,7 +29,7 @@ function historyEventsFromSessionMessage(
   message: SessionMessage,
   toolUses: Map<string, HistoryToolUse>,
 ): EngineEventJson[] {
-  const value = asObject(message.message);
+  const value = message.message as JsonObject;
   const content = value?.content;
   if (typeof content === "string") {
     const role =
@@ -64,8 +63,7 @@ function assistantHistoryEvents(
   block: unknown,
   toolUses: Map<string, HistoryToolUse>,
 ): EngineEventJson[] {
-  const value = asObject(block);
-  if (!value) return [];
+  const value = block as JsonObject;
   if (value.type === "text") {
     const text = String(value.text ?? "");
     return text
@@ -90,7 +88,7 @@ function assistantHistoryEvents(
 
   const id = String(value.id ?? `history-tool-${toolUses.size}`);
   const name = String(value.name ?? "tool");
-  const input = asObject(value.input) ?? {};
+  const input = value.input as JsonObject;
   toolUses.set(id, { id, input, name });
 
   const plan = structuredPlanFromToolUse(name, input);
@@ -116,8 +114,7 @@ function userHistoryEvents(
   block: unknown,
   toolUses: Map<string, HistoryToolUse>,
 ): EngineEventJson[] {
-  const value = asObject(block);
-  if (!value) return [];
+  const value = block as JsonObject;
   if (value.type === "text") {
     const text = String(value.text ?? "");
     return text

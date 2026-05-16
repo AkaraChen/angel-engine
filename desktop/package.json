@@ -29,6 +29,7 @@
   },
   "dependencies": {
     "@angel-engine/client-napi": "workspace:*",
+    "@angel-engine/js-client": "workspace:*",
     "@anthropic-ai/claude-agent-sdk": "^0.2.133",
     "@assistant-ui/react": "^0.12.28",
     "@assistant-ui/react-streamdown": "^0.1.11",

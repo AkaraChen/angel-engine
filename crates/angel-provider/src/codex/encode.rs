@@ -31,13 +31,15 @@ impl CodexAdapter {
                 let mut params = serde_json::Map::new();
                 params.insert(
                     "threadId".to_string(),
-                    json!(effect
-                        .payload
-                        .fields
-                        .get("remoteConversationId")
-                        .or_else(|| effect.payload.fields.get("threadId"))
-                        .cloned()
-                        .unwrap_or_default()),
+                    json!(
+                        effect
+                            .payload
+                            .fields
+                            .get("remoteConversationId")
+                            .or_else(|| effect.payload.fields.get("threadId"))
+                            .cloned()
+                            .unwrap_or_default()
+                    ),
                 );
                 if effect
                     .payload
@@ -356,11 +358,7 @@ fn codex_context_service_tier(context: &angel_engine::EffectiveContext) -> Optio
 }
 
 fn codex_reasoning_effort(effort: &str) -> &str {
-    if effort == "high" {
-        "xhigh"
-    } else {
-        effort
-    }
+    if effort == "high" { "xhigh" } else { effort }
 }
 
 fn codex_sandbox_policy(sandbox: &angel_engine::SandboxProfile) -> &str {
