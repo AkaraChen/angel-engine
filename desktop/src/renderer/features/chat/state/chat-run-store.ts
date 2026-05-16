@@ -2394,11 +2394,14 @@ function attachmentInputToHistoryPart(
   input: ChatAttachmentInput,
 ): ChatHistoryMessagePart {
   if (input.type === "fileMention") {
+    if (!input.mimeType) {
+      throw new Error("File mention attachment is missing mimeType.");
+    }
     return {
       data: input.path,
       filename: input.name ?? undefined,
       mention: true,
-      mimeType: input.mimeType ?? "application/octet-stream",
+      mimeType: input.mimeType,
       path: input.path,
       type: "file",
     };
