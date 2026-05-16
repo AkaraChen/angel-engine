@@ -172,14 +172,16 @@ impl UserInput {
         name: Option<String>,
     ) -> Self {
         let uri = uri.into();
-        let name = name.filter(|name| !name.trim().is_empty());
+        let name = name
+            .filter(|name| !name.trim().is_empty())
+            .expect("embedded blob resource name is required");
         Self {
-            content: name.clone().unwrap_or_else(|| uri.clone()),
+            content: name.clone(),
             kind: UserInputKind::EmbeddedBlobResource {
                 uri,
                 data: data.into(),
                 mime_type,
-                name,
+                name: Some(name),
             },
         }
     }
