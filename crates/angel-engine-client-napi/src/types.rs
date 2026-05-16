@@ -58,19 +58,19 @@ pub struct AdapterDecodeInput {
 #[napi(object)]
 pub struct TransportOutput {
     #[napi(ts_type = "unknown[]")]
-    pub messages: Option<Vec<serde_json::Value>>,
+    pub messages: Vec<serde_json::Value>,
     #[napi(ts_type = "unknown[]")]
-    pub events: Option<Vec<serde_json::Value>>,
+    pub events: Vec<serde_json::Value>,
     #[napi(ts_type = "unknown[]")]
-    pub completed_requests: Option<Vec<serde_json::Value>>,
-    pub logs: Option<Vec<TransportLog>>,
+    pub completed_requests: Vec<serde_json::Value>,
+    pub logs: Vec<TransportLog>,
 }
 
 #[napi(object)]
 pub struct TransportLog {
     #[napi(ts_type = "`${TransportLogKind}`")]
-    pub kind: Option<TransportLogKind>,
-    pub message: Option<String>,
+    pub kind: TransportLogKind,
+    pub message: String,
 }
 
 #[napi(object)]

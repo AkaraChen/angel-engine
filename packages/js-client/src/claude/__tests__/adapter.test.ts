@@ -69,8 +69,16 @@ describe("ClaudeCodeEngineAdapter", () => {
     };
 
     expect(adapter.decodeMessage(input)).toEqual({
+      completedRequests: [],
       events: [{ TurnStarted: { id: "turn-1" } }],
+      logs: [],
+      messages: [],
     });
-    expect(adapter.decodeMessage({ message: { method: "other" } })).toEqual({});
+    expect(adapter.decodeMessage({ message: { method: "other" } })).toEqual({
+      completedRequests: [],
+      events: [],
+      logs: [],
+      messages: [],
+    });
   });
 });

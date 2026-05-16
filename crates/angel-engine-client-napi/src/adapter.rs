@@ -834,22 +834,17 @@ fn transport_output_to_json(output: TransportOutput) -> serde_json::Result<Value
 }
 
 fn transport_output_from_json(value: Value) -> EngineResult<TransportOutput> {
-    let messages = array_field(&value, "messages")
+    let messages = required_array_field(&value, "messages")?
         .into_iter()
         .map(JsonRpcMessage::from_value)
         .collect::<EngineResult<Vec<_>>>()?;
-    let events = if let Some(events) = value.get("events").cloned() {
-        serde_json::from_value::<Vec<EngineEvent>>(events)
-            .map_err(|error| invalid_command(format!("invalid adapter events: {error}")))?
-    } else {
-        Vec::new()
-    };
-    let completed_requests = array_field(&value, "completedRequests")
+    let events = serde_json::from_value::<Vec<EngineEvent>>(required_field(&value, "events")?)
+        .map_err(|error| invalid_command(format!("invalid adapter events: {error}")))?;
+    let completed_requests = required_array_field(&value, "completedRequests")?
         .into_iter()
-        .chain(array_field(&value, "completed_requests"))
         .map(|value| JsonRpcRequestId::from_json_value(&value))
         .collect();
-    let logs = array_field(&value, "logs")
+    let logs = required_array_field(&value, "logs")?
         .into_iter()
         .map(transport_log_from_json)
         .collect::<EngineResult<Vec<_>>>()?;
@@ -861,12 +856,18 @@ fn transport_output_from_json(value: Value) -> EngineResult<TransportOutput> {
     })
 }
 
-fn array_field(value: &Value, field: &str) -> Vec<Value> {
+fn required_field(value: &Value, field: &str) -> EngineResult<Value> {
     value
         .get(field)
-        .and_then(Value::as_array)
         .cloned()
-        .unwrap_or_default()
+        .ok_or_else(|| invalid_command(format!("adapter output is missing {field}")))
+}
+
+fn required_array_field(value: &Value, field: &str) -> EngineResult<Vec<Value>> {
+    required_field(value, field)?
+        .as_array()
+        .cloned()
+        .ok_or_else(|| invalid_command(format!("adapter output {field} must be an array")))
 }
 
 fn transport_log_json(log: &TransportLog) -> Value {
@@ -882,11 +883,11 @@ fn transport_log_from_json(value: Value) -> EngineResult<TransportLog> {
         .and_then(Value::as_str)
         .map(transport_log_kind_from_name)
         .transpose()?
-        .unwrap_or(TransportLogKind::Output);
+        .ok_or_else(|| invalid_command("adapter transport log is missing kind"))?;
     let message = value
         .get("message")
         .and_then(Value::as_str)
-        .unwrap_or_default()
+        .ok_or_else(|| invalid_command("adapter transport log is missing message"))?
         .to_string();
     Ok(TransportLog { kind, message })
 }

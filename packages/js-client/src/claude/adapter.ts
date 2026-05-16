@@ -86,6 +86,8 @@ export class ClaudeCodeEngineAdapter {
             },
           },
         ],
+        logs: [],
+        messages: [],
       };
     }
 
@@ -142,11 +144,13 @@ export class ClaudeCodeEngineAdapter {
             },
           },
         ],
+        logs: [],
+        messages: [],
       };
     }
 
     if (method === "session/set_mode") {
-      return { completedRequests };
+      return { completedRequests, events: [], logs: [], messages: [] };
     }
 
     if (method === "session/set_model") {
@@ -163,24 +167,33 @@ export class ClaudeCodeEngineAdapter {
               ]),
             ]
           : [],
+        logs: [],
+        messages: [],
       };
     }
 
-    return { completedRequests };
+    return { completedRequests, events: [], logs: [], messages: [] };
   }
 
   decodeMessage(input: AdapterDecodeInput): TransportOutput {
     if (!is.plainObject(input.message)) {
       throw new Error("Claude adapter message must be an object.");
     }
-    if (input.message.method !== "claude/event") return {};
+    if (input.message.method !== "claude/event") {
+      return { completedRequests: [], events: [], logs: [], messages: [] };
+    }
     if (!is.plainObject(input.message.params)) {
       throw new Error("Claude adapter event params must be an object.");
     }
     if (!is.array(input.message.params.events, is.plainObject)) {
       throw new Error("Claude adapter events must be objects.");
     }
-    return { events: input.message.params.events };
+    return {
+      completedRequests: [],
+      events: input.message.params.events,
+      logs: [],
+      messages: [],
+    };
   }
 
   modelCatalogFromRuntimeDebug(): null {
