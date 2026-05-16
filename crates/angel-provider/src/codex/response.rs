@@ -730,8 +730,10 @@ fn codex_history_replay_tool_action(item: &Value) -> Option<HistoryReplayToolAct
         .and_then(|action| action.title.clone())
         .or_else(|| codex_history_tool_title(item));
     let output = codex_history_tool_output(item);
+    let id = first_item_string(item, &["id", "callId", "call_id", "itemId"])
+        .unwrap_or_else(|| codex_history_missing_tool_id(item_type, item));
     Some(HistoryReplayToolAction {
-        id: first_item_string(item, &["id", "callId", "call_id", "itemId"]),
+        id: Some(id),
         kind,
         phase,
         title: title.clone(),
@@ -740,6 +742,15 @@ fn codex_history_replay_tool_action(item: &Value) -> Option<HistoryReplayToolAct
         output,
         error: None,
     })
+}
+
+fn codex_history_missing_tool_id(item_type: &str, item: &Value) -> String {
+    let mut hash = 0xcbf29ce484222325_u64;
+    for byte in item.to_string().as_bytes() {
+        hash ^= u64::from(*byte);
+        hash = hash.wrapping_mul(0x100000001b3);
+    }
+    format!("codex-history-{item_type}-{hash:016x}")
 }
 
 fn codex_history_tool_kind(item: &Value) -> Option<ActionKind> {
@@ -1508,6 +1519,13 @@ mod tests {
                                         }
                                     },
                                     {
+                                        "type": "response_item",
+                                        "payload": {
+                                            "type": "webSearch",
+                                            "query": "missing id should not hydrate"
+                                        }
+                                    },
+                                    {
                                         "type": "agentMessage",
                                         "text": "hi"
                                     }
@@ -1558,7 +1576,7 @@ mod tests {
             })
             .collect::<Vec<_>>();
 
-        assert_eq!(replay.len(), 7);
+        assert_eq!(replay.len(), 8);
         assert_eq!(
             replay[0],
             (HistoryRole::User, "text".to_string(), "hello".to_string())
@@ -1682,8 +1700,24 @@ mod tests {
                 .map(|tool| tool.phase.clone()),
             Some(ActionPhase::Completed)
         );
+        assert_eq!(replay[6].0, HistoryRole::Tool);
+        assert_eq!(replay[6].1, "structured");
+        assert!(
+            replay_entries[6]
+                .tool
+                .as_ref()
+                .and_then(|tool| tool.id.as_deref())
+                .is_some_and(|id| id.starts_with("codex-history-webSearch-"))
+        );
         assert_eq!(
-            replay[6],
+            replay_entries[6]
+                .tool
+                .as_ref()
+                .and_then(|tool| tool.kind.as_ref()),
+            Some(&ActionKind::WebSearch)
+        );
+        assert_eq!(
+            replay[7],
             (HistoryRole::Assistant, "text".to_string(), "hi".to_string())
         );
     }

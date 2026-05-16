@@ -149,7 +149,7 @@ export class ClaudeCodeSession {
     return Boolean(this.conversationId);
   }
 
-  async hydrate(request: HydrateRequest = {}): Promise<ConversationSnapshot> {
+  async hydrate(request: HydrateRequest): Promise<ConversationSnapshot> {
     return this.enqueue(async () => {
       this.ensureConversation({
         cwd: request.cwd,
@@ -161,9 +161,8 @@ export class ClaudeCodeSession {
     });
   }
 
-  async inspect(cwd?: string | InspectRequest): Promise<ConversationSnapshot> {
-    const request: InspectRequest =
-      cwd === undefined ? {} : typeof cwd === "string" ? { cwd } : cwd;
+  async inspect(cwd: string | InspectRequest): Promise<ConversationSnapshot> {
+    const request: InspectRequest = typeof cwd === "string" ? { cwd } : cwd;
     return this.enqueue(async () => {
       this.ensureConversation({ cwd: request.cwd });
       await this.loadRuntimeConfiguration(request.cwd);

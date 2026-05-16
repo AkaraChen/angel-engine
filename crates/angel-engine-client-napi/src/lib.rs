@@ -84,14 +84,17 @@ impl AngelClient {
 
     #[napi(
         js_name = "startThread",
-        ts_args_type = "request?: StartConversationRequest | null",
+        ts_args_type = "request: StartConversationRequest",
         ts_return_type = "Promise<ClientCommandResult>"
     )]
     pub fn start_thread(
         &self,
         request: Option<serde_json::Value>,
     ) -> Result<AsyncTask<ClientJsonTask>> {
-        let request = optional_json::<EngineStartConversationRequest>(request)?.unwrap_or_default();
+        let request = match optional_json::<EngineStartConversationRequest>(request)? {
+            Some(request) => request,
+            None => return Err(to_napi_error("startThread request is required")),
+        };
         Ok(self.task(
             "AngelClient.startThread",
             format!(
@@ -588,14 +591,17 @@ impl AngelSession {
 
     #[napi(
         js_name = "hydrate",
-        ts_args_type = "request?: HydrateRequest | null",
+        ts_args_type = "request: HydrateRequest",
         ts_return_type = "Promise<ConversationSnapshot>"
     )]
     pub fn hydrate(
         &self,
         request: Option<serde_json::Value>,
     ) -> Result<AsyncTask<SessionJsonTask>> {
-        let request = optional_json::<EngineHydrateRequest>(request)?.unwrap_or_default();
+        let request = match optional_json::<EngineHydrateRequest>(request)? {
+            Some(request) => request,
+            None => return Err(to_napi_error("hydrate request is required")),
+        };
         Ok(self.task(
             "AngelSession.hydrate",
             format!(
@@ -609,14 +615,17 @@ impl AngelSession {
 
     #[napi(
         js_name = "inspect",
-        ts_args_type = "request?: InspectRequest | null",
+        ts_args_type = "request: InspectRequest",
         ts_return_type = "Promise<ConversationSnapshot>"
     )]
     pub fn inspect(
         &self,
         request: Option<serde_json::Value>,
     ) -> Result<AsyncTask<SessionJsonTask>> {
-        let request = optional_json::<EngineInspectRequest>(request)?.unwrap_or_default();
+        let request = match optional_json::<EngineInspectRequest>(request)? {
+            Some(request) => request,
+            None => return Err(to_napi_error("inspect request is required")),
+        };
         Ok(self.task(
             "AngelSession.inspect",
             format!("cwd={}", request.cwd.as_deref().unwrap_or("<none>")),
@@ -862,14 +871,17 @@ impl AngelEngineClient {
 
     #[napi(
         js_name = "discoverThreads",
-        ts_args_type = "request?: { cwd?: string | null; additionalDirectories?: string[]; cursor?: string | null } | null",
+        ts_args_type = "request: { cwd?: string | null; additionalDirectories?: string[]; cursor?: string | null }",
         ts_return_type = "ClientCommandResult"
     )]
     pub fn discover_threads(
         &mut self,
         request: Option<serde_json::Value>,
     ) -> Result<serde_json::Value> {
-        let request = optional_json::<EngineDiscoveryRequest>(request)?.unwrap_or_default();
+        let request = match optional_json::<EngineDiscoveryRequest>(request)? {
+            Some(request) => request,
+            None => return Err(to_napi_error("discoverThreads request is required")),
+        };
         trace_napi_sync_result(
             "AngelEngineClient.discoverThreads",
             format!(
@@ -884,14 +896,17 @@ impl AngelEngineClient {
 
     #[napi(
         js_name = "startThread",
-        ts_args_type = "request?: StartConversationRequest | null",
+        ts_args_type = "request: StartConversationRequest",
         ts_return_type = "ClientCommandResult"
     )]
     pub fn start_thread(
         &mut self,
         request: Option<serde_json::Value>,
     ) -> Result<serde_json::Value> {
-        let request = optional_json::<EngineStartConversationRequest>(request)?.unwrap_or_default();
+        let request = match optional_json::<EngineStartConversationRequest>(request)? {
+            Some(request) => request,
+            None => return Err(to_napi_error("startThread request is required")),
+        };
         trace_napi_sync_result(
             "AngelEngineClient.startThread",
             format!(
@@ -1337,7 +1352,7 @@ pub fn answers_response(answers: serde_json::Value) -> Result<serde_json::Value>
 
 #[napi(
     js_name = "createRuntimeOptions",
-    ts_args_type = "runtimeName?: string | null, overrides?: RuntimeOptionsOverrides | null",
+    ts_args_type = "runtimeName: string | null, overrides: RuntimeOptionsOverrides",
     ts_return_type = "RuntimeOptions"
 )]
 pub fn create_runtime_options(
@@ -1355,8 +1370,10 @@ pub fn create_runtime_options(
             overrides.is_some()
         ),
         || {
-            let overrides =
-                optional_json::<EngineRuntimeOptionsOverrides>(overrides)?.unwrap_or_default();
+            let overrides = match optional_json::<EngineRuntimeOptionsOverrides>(overrides)? {
+                Some(overrides) => overrides,
+                None => return Err(to_napi_error("createRuntimeOptions overrides are required")),
+            };
             to_json(engine_create_runtime_options(runtime_name, overrides))
         },
     )

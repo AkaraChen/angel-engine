@@ -308,7 +308,7 @@ function createChatSession(runtime?: string): DesktopChatSession {
   }
 
   return new DesktopAngelSession(
-    createRuntimeOptions(runtime, {
+    createRuntimeOptions(runtime ?? null, {
       clientName: "angel-engine",
       clientTitle: "Angel Engine",
     }),
@@ -576,13 +576,12 @@ class DesktopAngelSession {
     return this.session.hasConversation();
   }
 
-  async hydrate(request: HydrateRequest = {}): Promise<ConversationSnapshot> {
+  async hydrate(request: HydrateRequest): Promise<ConversationSnapshot> {
     return this.enqueue(async () => this.session.hydrate(request));
   }
 
-  async inspect(cwd?: string | InspectRequest): Promise<ConversationSnapshot> {
-    const request: InspectRequest =
-      typeof cwd === "string" ? { cwd } : (cwd ?? {});
+  async inspect(cwd: string | InspectRequest): Promise<ConversationSnapshot> {
+    const request: InspectRequest = typeof cwd === "string" ? { cwd } : cwd;
     return this.enqueue(async () => this.session.inspect(request));
   }
 
