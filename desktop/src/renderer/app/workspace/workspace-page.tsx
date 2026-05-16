@@ -284,9 +284,12 @@ function WorkspacePageContent({
     for (const chat of chats) {
       if (!chat.projectId) continue;
 
-      const projectChats = groupedChats.get(chat.projectId) ?? [];
-      projectChats.push(chat);
-      groupedChats.set(chat.projectId, projectChats);
+      const projectChats = groupedChats.get(chat.projectId);
+      if (projectChats) {
+        projectChats.push(chat);
+        continue;
+      }
+      groupedChats.set(chat.projectId, [chat]);
     }
 
     return groupedChats;

@@ -142,7 +142,8 @@ function groupChatsByUpdatedAt(chats: Chat[]): ChatDateGroup[] {
   }
 
   return CHAT_DATE_GROUPS.flatMap((group) => {
-    const groupChats = buckets.get(group.key) ?? [];
+    const groupChats = buckets.get(group.key);
+    if (!groupChats) return [];
     if (groupChats.length === 0) return [];
     return [{ chats: groupChats, key: group.key, labelKey: group.labelKey }];
   });

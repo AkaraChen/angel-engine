@@ -148,10 +148,9 @@ export function ProjectSidebarSection({
 
             {projects.map((project) => {
               const projectDisplayName = getProjectDisplayName(project.path);
-              const projectChats =
-                projectChatsByProjectId.get(project.id) ?? [];
+              const projectChats = projectChatsByProjectId.get(project.id);
               const isExpanded = expandedProjectIds.has(project.id);
-              const hasChats = projectChats.length > 0;
+              const hasChats = Boolean(projectChats?.length);
 
               return (
                 <AnimatedSidebarMenuItem key={project.id}>
@@ -215,7 +214,7 @@ export function ProjectSidebarSection({
                         layout="position"
                       >
                         <SidebarMenu>
-                          {projectChats.map((chat) => (
+                          {projectChats?.map((chat) => (
                             <AnimatedSidebarMenuItem key={chat.id}>
                               <ChatSidebarItem
                                 chatId={chat.id}
