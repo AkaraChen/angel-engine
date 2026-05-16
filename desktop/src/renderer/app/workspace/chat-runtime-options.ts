@@ -96,6 +96,26 @@ export function selectedConfigOverride(value: string | null | undefined) {
   return value;
 }
 
+export function supportedConfigOverride({
+  canSet,
+  options,
+  value,
+}: {
+  canSet: boolean | undefined;
+  options: ChatRuntimeConfigOption[] | undefined;
+  value: string | null | undefined;
+}) {
+  const override = selectedConfigOverride(value);
+  if (!override || canSet === false) return undefined;
+
+  const optionValues = configOptionValues(options);
+  if (optionValues.size > 0 && !optionValues.has(override)) {
+    return undefined;
+  }
+
+  return override;
+}
+
 function labelFromConfigValue(value: string, defaultLabel: string) {
   if (value === "xhigh") return "XHigh";
   if (value === "default") return defaultLabel;

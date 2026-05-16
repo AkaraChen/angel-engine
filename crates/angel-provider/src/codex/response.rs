@@ -367,7 +367,7 @@ fn codex_reasoning_config_option(current_value: String) -> SessionConfigOption {
         description: None,
         category: Some("reasoning".to_string()),
         current_value,
-        values: ["none", "minimal", "low", "medium", "high", "xhigh"]
+        values: ["none", "low", "medium", "high", "xhigh"]
             .into_iter()
             .map(|value| SessionConfigValue {
                 value: value.to_string(),
@@ -1375,7 +1375,6 @@ mod tests {
                 && permission_modes.available_modes.iter().any(|mode| mode.id == "never")
                 && options.iter().any(|option| option.id == "reasoning"
                     && option.values.iter().any(|value| value.value == "none")
-                    && option.values.iter().any(|value| value.value == "minimal")
                     && option.values.iter().any(|value| value.value == "low")
                     && option.values.iter().any(|value| value.value == "medium")
                     && option.values.iter().any(|value| value.value == "high")

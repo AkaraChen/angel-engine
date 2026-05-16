@@ -47,6 +47,7 @@ import {
 } from "@remixicon/react";
 import {
   isChatElicitationData,
+  isChatErrorData,
   isChatPlanData,
   isChatToolAction,
   parseDataUrl,
@@ -1418,6 +1419,10 @@ function formatElicitationPhase(phase: string, t: TFunction) {
 }
 
 function DataMessagePart(part: DataMessagePartProps) {
+  if (part.name === "chat-error" && isChatErrorData(part.data)) {
+    return null;
+  }
+
   if (
     (part.name === "plan" || part.name === "todo") &&
     isChatPlanData(part.data)

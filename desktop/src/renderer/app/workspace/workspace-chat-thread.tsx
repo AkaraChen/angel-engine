@@ -21,6 +21,7 @@ import {
   runtimeConfigOptionCount,
   runtimeConfigOptionsToAgentOptions,
   selectedConfigOverride,
+  supportedConfigOverride,
 } from "@/app/workspace/chat-runtime-options";
 import {
   getErrorMessage,
@@ -227,8 +228,19 @@ function ChatThreadRuntime({
   const activeModel = normalizeConfigDisplayValue(
     draftAgentConfig.model ?? runtimeConfig?.currentModel,
   );
+  const draftReasoningEffortOverride = supportedConfigOverride({
+    canSet: runtimeConfig?.canSetReasoningEffort,
+    options: runtimeConfig?.reasoningEfforts,
+    value: draftAgentConfig.reasoningEffort,
+  });
+  const draftReasoningEffortDisplay =
+    draftAgentConfig.reasoningEffort === undefined
+      ? undefined
+      : selectedConfigOverride(draftAgentConfig.reasoningEffort)
+        ? draftReasoningEffortOverride
+        : draftAgentConfig.reasoningEffort;
   const activeReasoningEffort = normalizeConfigDisplayValue(
-    draftAgentConfig.reasoningEffort ?? runtimeConfig?.currentReasoningEffort,
+    draftReasoningEffortDisplay ?? runtimeConfig?.currentReasoningEffort,
   );
   const activeMode = normalizeConfigDisplayValue(
     runtimeConfig?.agentState?.currentMode ??
@@ -242,7 +254,7 @@ function ChatThreadRuntime({
   );
   const modelOverride = selectedConfigOverride(draftAgentConfig.model);
   const reasoningEffortOverride = selectedConfigOverride(
-    draftAgentConfig.reasoningEffort,
+    draftReasoningEffortOverride,
   );
   const setBackendMode = useCallback(
     async (mode: string) => {

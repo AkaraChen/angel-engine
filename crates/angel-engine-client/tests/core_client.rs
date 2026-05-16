@@ -777,7 +777,7 @@ fn codex_turn_start_uses_provider_reasoning_config_default() {
     assert!(conversation.settings.reasoning_level.can_set);
     assert_eq!(
         conversation.settings.reasoning_level.available_levels,
-        vec!["none", "minimal", "low", "medium", "high", "xhigh"]
+        vec!["none", "low", "medium", "high", "xhigh"]
     );
 
     let sent = client

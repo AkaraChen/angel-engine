@@ -36,7 +36,7 @@ where
                 } else if self.config.protocol == ProtocolFlavor::CodexAppServer
                     && !is_codex_reasoning_effort(value)
                 {
-                    println!("[warn] use one of: none, minimal, low, medium, high, xhigh");
+                    println!("[warn] use one of: none, low, medium, high, xhigh");
                 } else {
                     let effort = if self.config.protocol == ProtocolFlavor::CodexAppServer {
                         value.to_ascii_lowercase()
@@ -254,7 +254,7 @@ where
         ) {
             print_config_values("[effort]", option);
         } else if self.config.protocol == ProtocolFlavor::CodexAppServer {
-            println!("[effort] available: none, minimal, low, medium, high, xhigh");
+            println!("[effort] available: none, low, medium, high, xhigh");
         }
         Ok(())
     }
@@ -429,7 +429,7 @@ fn parse_approval_policy(value: &str) -> Option<ApprovalPolicy> {
 fn is_codex_reasoning_effort(value: &str) -> bool {
     matches!(
         value.to_ascii_lowercase().as_str(),
-        "none" | "minimal" | "low" | "medium" | "high" | "xhigh"
+        "none" | "low" | "medium" | "high" | "xhigh"
     )
 }
 

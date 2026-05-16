@@ -28,6 +28,7 @@ import {
   cloneChatPlanData,
   imageDataUrl,
   isChatElicitationData,
+  isChatErrorData,
   isChatPlanData,
   isChatPlanPart,
   isChatToolAction,
@@ -1048,8 +1049,13 @@ async function consumeRunStream({
         };
         accumulator.parts = [
           {
-            text: `Backend chat failed: ${event.message}`,
-            type: "text",
+            data: {
+              message: event.message,
+              source: "runtime",
+              type: "chat-error",
+            },
+            name: "chat-error",
+            type: "data",
           },
         ];
         dirty = true;
@@ -1161,8 +1167,13 @@ async function consumeRunStream({
     };
     accumulator.parts = [
       {
-        text: `Backend chat failed: ${message}`,
-        type: "text",
+        data: {
+          message,
+          source: "runtime",
+          type: "chat-error",
+        },
+        name: "chat-error",
+        type: "data",
       },
     ];
     dirty = true;
@@ -2085,6 +2096,9 @@ function historyMessageToEngineMessage(
 
 function backendFailureText(parts: readonly ChatHistoryMessagePart[]) {
   for (const part of parts) {
+    if (part.type === "data" && isChatErrorData(part.data)) {
+      return part.data.message;
+    }
     if (part.type === "text" && part.text.startsWith("Backend chat failed:")) {
       return part.text.replace(/^Backend chat failed:\s*/, "");
     }
@@ -2140,6 +2154,15 @@ function engineMessageContentToHistoryParts(
       case "file":
         return [fileHistoryPartFromMessagePart(part)];
       case "data":
+        if (part.name === "chat-error" && isChatErrorData(part.data)) {
+          return [
+            {
+              data: part.data,
+              name: "chat-error",
+              type: "data",
+            },
+          ];
+        }
         if (
           (part.name === "plan" || part.name === "todo") &&
           isChatPlanData(part.data)

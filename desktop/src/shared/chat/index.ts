@@ -123,6 +123,12 @@ export type ChatToolCallPart = Omit<JsChatToolCallPart, "artifact"> & {
   artifact: ChatToolAction;
 };
 
+export interface ChatErrorData {
+  message: string;
+  source: "runtime";
+  type: "chat-error";
+}
+
 export type ChatHistoryMessagePart =
   | Extract<
       JsChatHistoryMessagePart,
@@ -136,6 +142,11 @@ export type ChatHistoryMessagePart =
   | {
       data: ChatElicitation;
       name: "elicitation";
+      type: "data";
+    }
+  | {
+      data: ChatErrorData;
+      name: "chat-error";
       type: "data";
     }
   | ChatToolCallPart;
@@ -292,6 +303,13 @@ export function appendChatTextPart(
 export function cloneChatHistoryPart(
   part: ChatHistoryMessagePart,
 ): ChatHistoryMessagePart {
+  if (part.type === "data" && isChatErrorData(part.data)) {
+    return {
+      data: { ...part.data },
+      name: "chat-error",
+      type: "data",
+    };
+  }
   return cloneJsChatHistoryPart(
     part as JsChatHistoryMessagePart,
   ) as ChatHistoryMessagePart;
@@ -312,6 +330,15 @@ export function isChatElicitationData(
   value: unknown,
 ): value is ChatElicitation {
   return isJsChatElicitationData(value);
+}
+
+export function isChatErrorData(value: unknown): value is ChatErrorData {
+  return (
+    Boolean(value) &&
+    typeof value === "object" &&
+    (value as ChatErrorData).type === "chat-error" &&
+    typeof (value as ChatErrorData).message === "string"
+  );
 }
 
 export function cloneChatPlanData(data: ChatPlanData): ChatPlanData {
