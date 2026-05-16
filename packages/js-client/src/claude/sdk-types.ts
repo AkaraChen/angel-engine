@@ -1,8 +1,8 @@
 import type {
+  CanUseTool,
   SDKAssistantMessage,
   SDKPartialAssistantMessage,
 } from "@anthropic-ai/claude-agent-sdk";
-import type { JsonObject } from "./types.js";
 import type {
   AgentInput,
   AskUserQuestionInput,
@@ -39,21 +39,15 @@ export const CLAUDE_TOOL = {
 
 export type ClaudeToolName = (typeof CLAUDE_TOOL)[keyof typeof CLAUDE_TOOL];
 
-export type ClaudeExitPlanModeInput = ExitPlanModeInput & {
-  plan?: unknown;
-  planFilePath?: unknown;
-};
-
 export interface ClaudeToolInputByName {
   [CLAUDE_TOOL.Agent]: AgentInput;
   [CLAUDE_TOOL.AskUserQuestion]: AskUserQuestionInput;
   [CLAUDE_TOOL.Bash]: BashInput;
   [CLAUDE_TOOL.Edit]: FileEditInput;
-  [CLAUDE_TOOL.ExitPlanMode]: ClaudeExitPlanModeInput;
+  [CLAUDE_TOOL.ExitPlanMode]: ExitPlanModeInput;
   [CLAUDE_TOOL.Glob]: GlobInput;
   [CLAUDE_TOOL.Grep]: GrepInput;
   [CLAUDE_TOOL.LS]: { path?: string };
-  [CLAUDE_TOOL.MultiEdit]: JsonObject;
   [CLAUDE_TOOL.Read]: FileReadInput;
   [CLAUDE_TOOL.Task]: AgentInput;
   [CLAUDE_TOOL.TodoWrite]: TodoWriteInput;
@@ -62,6 +56,10 @@ export interface ClaudeToolInputByName {
   [CLAUDE_TOOL.Write]: FileWriteInput;
 }
 
+export type ClaudeSdkToolInput = Parameters<CanUseTool>[1];
+export type ClaudeKnownToolInput =
+  ClaudeToolInputByName[keyof ClaudeToolInputByName];
+export type ClaudeToolInput = ClaudeKnownToolInput | ClaudeSdkToolInput;
 export type ClaudeAskUserQuestionInput =
   ClaudeToolInputByName[typeof CLAUDE_TOOL.AskUserQuestion];
 export type ClaudeQuestionInput =
@@ -97,7 +95,7 @@ export type ClaudeContentBlockDeltaEvent = Extract<
 
 export function typedClaudeInput<T extends keyof ClaudeToolInputByName>(
   toolName: string,
-  input: JsonObject,
+  input: ClaudeToolInput,
   expected: T,
 ): ClaudeToolInputByName[T] | undefined {
   return toolName === expected

@@ -1,7 +1,8 @@
 import type { SendTextRequest } from "@angel-engine/client-napi";
 import type { SDKUserMessage } from "@anthropic-ai/claude-agent-sdk";
 
-import type { ClaudeSdkModule, JsonObject } from "./types.js";
+import type { ChatJsonObject } from "../types.js";
+import type { ClaudeSdkModule } from "./types.js";
 import { ClientInputType } from "@angel-engine/client-napi";
 import is from "@sindresorhus/is";
 import { claudeEffortLevelIds, claudePermissionModeIds } from "./utils.js";
@@ -57,8 +58,8 @@ export function claudePrompt(
 function clientInputToContent(
   text: string,
   input: ClientInput[],
-): JsonObject[] {
-  const content: JsonObject[] = [];
+): ChatJsonObject[] {
+  const content: ChatJsonObject[] = [];
   if (text) content.push({ text, type: "text" });
   for (const value of input) {
     switch (value.type) {
@@ -117,7 +118,7 @@ function clientInputToContent(
         if (!is.plainObject(value.value)) {
           throw new Error("Raw content block input must be an object.");
         }
-        content.push(value.value as JsonObject);
+        content.push(value.value as ChatJsonObject);
         break;
       default: {
         const exhaustive: never = value;

@@ -1,10 +1,7 @@
 import type { SendTextRequest, TurnRunEvent } from "@angel-engine/client-napi";
 import type { SDKResultMessage } from "@anthropic-ai/claude-agent-sdk";
-import type { ChatJsonValue } from "../types.js";
-
-export type JsonObject = { [key: string]: ChatJsonValue | object };
 export type ClaudeEngineEventJson = object;
-export type ClaudeJsonObject = JsonObject;
+export type ClaudeJsonObject = object;
 export type EngineEventJson = object;
 export type ClaudeSdkModule = typeof import("@anthropic-ai/claude-agent-sdk");
 

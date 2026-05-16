@@ -1,4 +1,6 @@
-import type { ActiveClaudeTurn, JsonObject } from "./types.js";
+import type { ChatJsonObject } from "../types.js";
+import type { ClaudeToolInput } from "./sdk-types.js";
+import type { ActiveClaudeTurn } from "./types.js";
 
 import {
   EngineEventActionKind,
@@ -10,7 +12,7 @@ import { CLAUDE_TOOL } from "./sdk-types.js";
 
 export function actionKind(
   toolName: string,
-  input?: JsonObject,
+  input?: ClaudeToolInput,
 ): `${EngineEventActionKind}` {
   if (isClaudePlanToolUse(toolName, input)) return EngineEventActionKind.Plan;
 
@@ -51,27 +53,41 @@ export function toolOutputKind(
     : EngineEventActionOutputKind.Text;
 }
 
-export function toolTitle(toolName: string, input: JsonObject): string {
-  if (toolName === CLAUDE_TOOL.Bash && typeof input.command === "string") {
+export function toolTitle(toolName: string, input: ClaudeToolInput): string {
+  if (
+    toolName === CLAUDE_TOOL.Bash &&
+    "command" in input &&
+    is.string(input.command)
+  ) {
     return input.command;
   }
-  if (typeof input.file_path === "string")
+  if ("file_path" in input && is.string(input.file_path))
     return `${toolName} ${input.file_path}`;
-  if (typeof input.path === "string") return `${toolName} ${input.path}`;
-  if (typeof input.planFilePath === "string")
+  if ("path" in input && is.string(input.path))
+    return `${toolName} ${input.path}`;
+  if ("planFilePath" in input && is.string(input.planFilePath))
     return `${toolName} ${input.planFilePath}`;
   return toolName;
 }
 
-export function toolInputSummary(toolName: string, input: JsonObject): string {
-  if (toolName === CLAUDE_TOOL.Bash && typeof input.command === "string") {
+export function toolInputSummary(
+  toolName: string,
+  input: ClaudeToolInput,
+): string {
+  if (
+    toolName === CLAUDE_TOOL.Bash &&
+    "command" in input &&
+    is.string(input.command)
+  ) {
     return input.command;
   }
-  if (typeof input.description === "string") return input.description;
-  if (typeof input.prompt === "string") return input.prompt;
-  if (typeof input.file_path === "string") return input.file_path;
-  if (typeof input.path === "string") return input.path;
-  if (typeof input.plan === "string") return input.plan;
+  if ("description" in input && is.string(input.description))
+    return input.description;
+  if ("prompt" in input && is.string(input.prompt)) return input.prompt;
+  if ("file_path" in input && is.string(input.file_path))
+    return input.file_path;
+  if ("path" in input && is.string(input.path)) return input.path;
+  if ("plan" in input && is.string(input.plan)) return input.plan;
   return JSON.stringify(input);
 }
 
@@ -127,11 +143,11 @@ export function contentBlockText(block: object): string {
 export function claudeHistoryToolCall(
   toolId: string,
   toolName: string,
-  input: JsonObject,
-): JsonObject {
+  input: ClaudeToolInput,
+): ChatJsonObject {
   return {
     kind: acpHistoryToolKind(toolName, input),
-    rawInput: input,
+    rawInput: input as ChatJsonObject,
     sessionUpdate: "tool_call",
     status: "in_progress",
     title: toolTitle(toolName, input),
@@ -141,19 +157,16 @@ export function claudeHistoryToolCall(
 
 export function claudeHistoryToolResult(input: {
   content: object | object[] | string;
-  input?: JsonObject;
+  input?: ClaudeToolInput;
   isError?: boolean;
   toolId: string;
   toolName?: string;
-}): JsonObject {
+}): ChatJsonObject {
   if (!is.nonEmptyString(input.toolName)) {
     throw new Error("Claude history tool result is missing toolName.");
   }
   const toolName = input.toolName;
-  if (input.input !== undefined && !is.plainObject(input.input)) {
-    throw new Error("Claude history tool result input must be an object.");
-  }
-  const rawInput = input.input ? (input.input as JsonObject) : undefined;
+  const rawInput = input.input;
   const output = stringifyToolResult(input.content);
   if (input.isError && !output) {
     throw new Error("Claude history tool error is missing content.");
@@ -162,7 +175,7 @@ export function claudeHistoryToolResult(input: {
     content: output,
     ...(input.isError ? { error: output } : {}),
     kind: acpHistoryToolKind(toolName, rawInput),
-    ...(rawInput ? { rawInput } : {}),
+    ...(rawInput ? { rawInput: rawInput as ChatJsonObject } : {}),
     sessionUpdate: "tool_call_update",
     status: input.isError ? "failed" : "completed",
     title: rawInput ? toolTitle(toolName, rawInput) : toolName,
@@ -170,7 +183,7 @@ export function claudeHistoryToolResult(input: {
   };
 }
 
-function acpHistoryToolKind(toolName: string, input?: JsonObject): string {
+function acpHistoryToolKind(toolName: string, input?: ClaudeToolInput): string {
   switch (actionKind(toolName, input)) {
     case EngineEventActionKind.Command:
       return "execute";

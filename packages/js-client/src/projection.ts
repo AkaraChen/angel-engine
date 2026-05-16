@@ -22,6 +22,7 @@ import type {
 } from "./types.js";
 
 import { TurnRunEventType } from "@angel-engine/client-napi";
+import is from "@sindresorhus/is";
 import {
   appendChatTextPart,
   chatPlanPartName,
@@ -416,9 +417,8 @@ function questionElicitationFromAction(
 }
 
 function shouldRenderAsQuestionElicitation(elicitation: ChatElicitation) {
-  return (
-    elicitation.kind === "userInput" || (elicitation.questions?.length ?? 0) > 0
-  );
+  if (elicitation.kind === "userInput") return true;
+  return Boolean(elicitation.questions?.length);
 }
 
 function parseChatElicitation(
@@ -426,13 +426,12 @@ function parseChatElicitation(
 ): ChatElicitation | undefined {
   if (!rawInput) return undefined;
   try {
-    const parsed: unknown = JSON.parse(rawInput);
+    const parsed = JSON.parse(rawInput);
     if (
-      parsed &&
-      typeof parsed === "object" &&
-      typeof (parsed as Partial<ChatElicitation>).id === "string" &&
-      typeof (parsed as Partial<ChatElicitation>).kind === "string" &&
-      typeof (parsed as Partial<ChatElicitation>).phase === "string"
+      is.plainObject(parsed) &&
+      is.string(parsed.id) &&
+      is.string(parsed.kind) &&
+      is.string(parsed.phase)
     ) {
       return parsed as ChatElicitation;
     }

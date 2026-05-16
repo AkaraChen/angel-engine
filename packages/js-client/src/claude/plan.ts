@@ -1,9 +1,11 @@
+import type { ExitPlanModeInput } from "@anthropic-ai/claude-agent-sdk/sdk-tools";
 import type {
-  ClaudeExitPlanModeInput,
   ClaudeFileWriteInput,
+  ClaudeToolInput,
   ClaudeTodoWriteInput,
 } from "./sdk-types.js";
-import type { ActiveClaudeTurn, EngineEventJson, JsonObject } from "./types.js";
+import type { ChatJsonObject } from "../types.js";
+import type { ActiveClaudeTurn, EngineEventJson } from "./types.js";
 
 import { homedir } from "node:os";
 
@@ -22,7 +24,7 @@ interface PlanStateJson {
 export function planEventsFromToolUse(
   active: ActiveClaudeTurn,
   toolName: string,
-  input: JsonObject,
+  input: ClaudeToolInput,
 ): EngineEventJson[] {
   const filePlan = planFromFileWriteToolUse(toolName, input);
   if (filePlan) {
@@ -78,7 +80,7 @@ export function planEventsFromToolUse(
 
 export function isClaudePlanToolUse(
   toolName: string,
-  input?: JsonObject,
+  input?: ClaudeToolInput,
 ): boolean {
   if (toolName === CLAUDE_TOOL.TodoWrite) return true;
   if (toolName === CLAUDE_TOOL.ExitPlanMode) return true;
@@ -87,8 +89,8 @@ export function isClaudePlanToolUse(
 
 export function structuredPlanFromToolUse(
   toolName: string,
-  input: JsonObject,
-): JsonObject | undefined {
+  input: ClaudeToolInput,
+): ChatJsonObject | undefined {
   const filePlan = planFromFileWriteToolUse(toolName, input);
   if (filePlan) return filePlan;
 
@@ -119,7 +121,7 @@ export function structuredPlanFromToolUse(
 
 function planEventsFromStructuredPlan(
   active: ActiveClaudeTurn,
-  plan: JsonObject,
+  plan: ChatJsonObject,
 ): EngineEventJson[] {
   const text = typeof plan.text === "string" ? plan.text : "";
   const events: EngineEventJson[] = text
@@ -156,8 +158,8 @@ function planEventsFromStructuredPlan(
 
 function planFromFileWriteToolUse(
   toolName: string,
-  input: JsonObject,
-): JsonObject | undefined {
+  input: ClaudeToolInput,
+): ChatJsonObject | undefined {
   const writeInput = typedClaudeInput(toolName, input, CLAUDE_TOOL.Write);
   if (!writeInput || !isClaudePlanFileWrite(writeInput)) return undefined;
   if (typeof writeInput.content !== "string") return undefined;
@@ -215,7 +217,7 @@ function planFromTodoInput(
   return { entries };
 }
 
-function planTextFromExitPlanModeInput(input: ClaudeExitPlanModeInput): string {
+function planTextFromExitPlanModeInput(input: ExitPlanModeInput): string {
   if (!is.string(input.plan)) {
     throw new Error("Claude exit plan input is missing plan.");
   }
@@ -223,7 +225,7 @@ function planTextFromExitPlanModeInput(input: ClaudeExitPlanModeInput): string {
 }
 
 function planPathFromExitPlanModeInput(
-  input: ClaudeExitPlanModeInput,
+  input: ExitPlanModeInput,
 ): string | undefined {
   return typeof input.planFilePath === "string" && input.planFilePath
     ? input.planFilePath

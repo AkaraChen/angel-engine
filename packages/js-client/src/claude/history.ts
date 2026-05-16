@@ -1,6 +1,7 @@
 import type { SessionMessage } from "@anthropic-ai/claude-agent-sdk";
-import type { ChatJsonValue } from "../types.js";
-import type { EngineEventJson, JsonObject } from "./types.js";
+import type { ChatJsonObject, ChatJsonValue } from "../types.js";
+import type { ClaudeToolInput } from "./sdk-types.js";
+import type { EngineEventJson } from "./types.js";
 
 import {
   EngineEventContentKind,
@@ -12,7 +13,7 @@ import { claudeHistoryToolCall, claudeHistoryToolResult } from "./tooling.js";
 
 interface HistoryToolUse {
   id: string;
-  input: JsonObject;
+  input: ClaudeToolInput;
   name: string;
 }
 
@@ -169,7 +170,7 @@ function assistantHistoryEvents(
   }
   const id = block.id;
   const name = block.name;
-  const input = block.input as JsonObject;
+  const input = block.input as ClaudeToolInput;
   toolUses.set(id, { id, input, name });
 
   const plan = structuredPlanFromToolUse(name, input);
@@ -230,7 +231,7 @@ function userHistoryEvents(
 function historyReplayChunk(
   conversationId: string,
   role: `${EngineEventHistoryRole}`,
-  content: JsonObject,
+  content: ChatJsonObject,
 ): EngineEventJson {
   return {
     HistoryReplayChunk: {

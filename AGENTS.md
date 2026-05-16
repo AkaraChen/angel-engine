@@ -94,6 +94,10 @@ protocol-neutral engine concept by an adapter.
      in the adapter. Do not add string alias compatibility, casing fallbacks, or
      `contains`/prefix/suffix guessing for protocol ids. Unknown values should
      fail fast so casing drift is caught during development.
+   - Missing or malformed boundary input should throw immediately. Do not fill
+     missing IDs, text, arrays, objects, or settings with `""`, `[]`, `{}`, or
+     other silent defaults unless the provider adapter is explicitly normalizing
+     a documented provider quirk into a protocol-neutral concept.
 
 2. Reducers and state are protocol-neutral.
    - Reducers apply `EngineEvent` to state.
@@ -107,6 +111,20 @@ protocol-neutral engine concept by an adapter.
    - NAPI mirrors those primitives to JS.
    - Neither layer should duplicate adapter parsing or desktop projection
      behavior.
+   - TypeScript clients should use upstream generated types directly whenever
+     possible. Do not hand-write local copies of SDK/NAPI types, invent provider
+     tool input interfaces, or add compatibility type aliases when the upstream
+     package exports the real type. If a type name is wrong, rename all uses
+     directly instead of leaving an alias.
+   - Avoid broad escape-hatch types such as `unknown`, `any`,
+     `Record<string, unknown>`, or catch-all JSON object aliases as internal API
+     shapes. If an upstream SDK exposes a broad boundary type, keep it local to
+     that boundary, narrow it immediately, and pass precise types through the
+     rest of the code.
+   - Prefer normal TypeScript property access on precise types. Do not add
+     one-off helper functions such as `requireString`, `requiredStringField`,
+     `mutableObjectField`, or ad hoc object-field readers for values that should
+     already be typed.
 
 4. Desktop projects normalized data.
    - Desktop may reshape snapshots/events for UI components.
@@ -125,6 +143,8 @@ protocol-neutral engine concept by an adapter.
   before sending requests.
 - Do not add aliases for unpublished APIs. If an API name is wrong, delete or
   rename it directly.
+- Do not keep compatibility aliases just to preserve old local names. Update the
+  import sites and call sites to the canonical exported name in the same change.
 - Do not add compatibility aliases for runtime/provider names. Runtime names
   must be canonical product ids exactly as exposed in UI and settings, such as
   `copilot`; do not accept alternate spellings like vendor-prefixed names,

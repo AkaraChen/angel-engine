@@ -30,7 +30,6 @@ import type {
   ClaudeCodeSendTextRequest,
   ClaudeElicitationResponse,
   EngineEventJson,
-  JsonObject,
   PendingPermission,
   SessionConfigValueJson,
   SessionPermissionModeJson,
@@ -91,6 +90,7 @@ import {
   isClaudeContentBlockDeltaEvent,
   isClaudeContentBlockStartEvent,
   isClaudeUserToolResultBlock,
+  type ClaudeToolInput,
 } from "./sdk-types.js";
 import {
   stringifyToolResult,
@@ -430,7 +430,7 @@ export class ClaudeCodeSession {
             active,
             contentBlock.id,
             contentBlock.name,
-            contentBlock.input as JsonObject,
+            contentBlock.input as ClaudeToolInput,
           ),
         ];
       }
@@ -485,7 +485,7 @@ export class ClaudeCodeSession {
           throw new Error("Claude tool_use block input must be an object.");
         }
         const toolName = block.name;
-        const input = block.input as JsonObject;
+        const input = block.input as ClaudeToolInput;
         events.push(actionObserved(active, block.id, toolName, input));
         events.push(...planEventsFromToolUse(active, toolName, input));
       }
@@ -569,7 +569,7 @@ export class ClaudeCodeSession {
 
   private canUseTool(active: ActiveClaudeTurn): CanUseTool {
     return async (toolName, input, context) => {
-      const toolInput = input as JsonObject;
+      const toolInput: ClaudeToolInput = input;
       const actionId = context.toolUseID || `permission-${Date.now()}`;
       const pending = this.createPendingPermission(actionId);
       const inputSummary = toolInputSummary(toolName, toolInput);
@@ -630,7 +630,7 @@ export class ClaudeCodeSession {
               ? "user_permanent"
               : "user_temporary",
           toolUseID: actionId,
-          updatedInput: toolInput,
+          updatedInput: input,
           updatedPermissions:
             response.type === "allowForSession"
               ? context.suggestions

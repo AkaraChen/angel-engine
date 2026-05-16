@@ -17,10 +17,10 @@ import type {
 import type {
   ActiveClaudeTurn,
   EngineEventJson,
-  JsonObject,
   SessionConfigValueJson,
   SessionPermissionModeJson,
 } from "./types.js";
+import type { ClaudeToolInput } from "./sdk-types.js";
 
 import {
   ClientEventType,
@@ -44,7 +44,7 @@ export function actionObserved(
   active: ActiveClaudeTurn,
   actionId: string,
   toolName: string,
-  input: JsonObject,
+  input: ClaudeToolInput,
 ): EngineEventJson {
   active.actionIds.add(actionId);
   return {

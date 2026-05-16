@@ -3,9 +3,11 @@ import type { CanUseTool } from "@anthropic-ai/claude-agent-sdk";
 import type {
   ClaudeAskUserQuestionInput,
   ClaudeQuestionInput,
+  ClaudeSdkToolInput,
+  ClaudeToolInput,
 } from "./sdk-types.js";
+import type { ChatJsonObject } from "../types.js";
 import type { ClaudeElicitationResponse } from "./types.js";
-import type { JsonObject } from "./types.js";
 import { EngineEventElicitationKind } from "@angel-engine/client-napi";
 import is from "@sindresorhus/is";
 import { CLAUDE_TOOL, typedClaudeInput } from "./sdk-types.js";
@@ -20,7 +22,7 @@ interface NormalizedClaudeQuestionInput {
 
 export function claudeElicitationKind(
   toolName: string,
-  input: JsonObject,
+  input: ClaudeToolInput,
 ): `${EngineEventElicitationKind}` {
   return askUserQuestionInput(toolName, input)
     ? EngineEventElicitationKind.UserInput
@@ -29,7 +31,7 @@ export function claudeElicitationKind(
 
 export function claudeElicitationBody(
   toolName: string,
-  input: JsonObject,
+  input: ClaudeToolInput,
   context: CanUseToolContext,
   fallback: string,
 ): string | null {
@@ -41,7 +43,7 @@ export function claudeElicitationBody(
 
 export function claudeElicitationChoices(
   toolName: string,
-  input: JsonObject,
+  input: ClaudeToolInput,
 ): string[] {
   return askUserQuestionInput(toolName, input)
     ? []
@@ -50,10 +52,10 @@ export function claudeElicitationChoices(
 
 export function claudeElicitationQuestions(
   toolName: string,
-  input: JsonObject,
-): JsonObject[] {
+  input: ClaudeToolInput,
+): ChatJsonObject[] {
   return questionInputs(toolName, input).map((question, index) => {
-    const constraints: JsonObject = question.multiSelect
+    const constraints: ChatJsonObject = question.multiSelect
       ? { max_items: "4", min_items: "1", unique_items: true }
       : {};
     return {
@@ -79,10 +81,12 @@ export function claudeElicitationQuestions(
 
 export function updatedInputFromElicitationResponse(
   toolName: string,
-  input: JsonObject,
+  input: ClaudeToolInput,
   response: ClaudeElicitationResponse,
-): JsonObject {
-  if (response.type !== "answers") return input;
+): ClaudeSdkToolInput {
+  if (response.type !== "answers") {
+    return input as ClaudeSdkToolInput;
+  }
   const questions = questionInputs(toolName, input);
   const answers: Record<string, string> = {};
   for (const answer of response.answers) {
@@ -90,19 +94,19 @@ export function updatedInputFromElicitationResponse(
     const question = index === undefined ? undefined : questions[index];
     answers[question?.question ?? answer.id] = answer.value;
   }
-  return { ...input, answers };
+  return { ...(input as ClaudeSdkToolInput), answers };
 }
 
 function askUserQuestionInput(
   toolName: string,
-  input: JsonObject,
+  input: ClaudeToolInput,
 ): ClaudeAskUserQuestionInput | undefined {
   return typedClaudeInput(toolName, input, CLAUDE_TOOL.AskUserQuestion);
 }
 
 function questionInputs(
   toolName: string,
-  input: JsonObject,
+  input: ClaudeToolInput,
 ): NormalizedClaudeQuestionInput[] {
   const askInput = askUserQuestionInput(toolName, input);
   if (!askInput) return [];
