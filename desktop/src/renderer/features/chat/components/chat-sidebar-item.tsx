@@ -40,6 +40,10 @@ export function ChatSidebarItem({
   return (
     <>
       <WorkspaceSidebarMenuButton
+        className="
+          group-has-data-[sidebar=menu-action]/menu-item:!pr-2.5
+          md:group-hover/menu-item:!pr-8
+        "
         isActive={isActive}
         onClick={onOpenChat}
         onContextMenu={onShowContextMenu ? handleContextMenu : undefined}
