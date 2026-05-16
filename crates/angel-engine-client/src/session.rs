@@ -288,7 +288,7 @@ impl AngelSession {
 
         if command.turn_id.is_none() && active.request_is_complete() {
             let snapshot = self.thread_state();
-            let result = self.final_result(active, snapshot);
+            let result = self.final_result(active, snapshot)?;
             return Ok(vec![TurnRunEvent::Result { result }]);
         }
 
@@ -533,7 +533,7 @@ impl AngelSession {
             .ok_or_else(|| invalid_input("No active chat turn."))?;
         let conversation_id = active.conversation_id.clone();
         let snapshot = self.thread_state_by_id(&conversation_id);
-        let result = self.final_result(active, snapshot);
+        let result = self.final_result(active, snapshot)?;
         Ok(Some(TurnRunEvent::Result { result }))
     }
 
@@ -565,36 +565,35 @@ impl AngelSession {
         &self,
         active: ActiveTurn,
         snapshot: Option<ConversationSnapshot>,
-    ) -> TurnRunResult {
-        let turn_id = active.turn_id.clone();
-        let turn = snapshot.as_ref().and_then(|snapshot| {
-            turn_id
-                .as_ref()
-                .and_then(|turn_id| find_turn(snapshot, turn_id))
-        });
-        let actions = snapshot
-            .as_ref()
-            .zip(turn_id.as_deref())
-            .map(|(snapshot, turn_id)| actions_for_turn(snapshot, turn_id))
-            .unwrap_or_default();
-
-        let text = turn
-            .as_ref()
-            .map(|turn| turn.output_text.as_str())
-            .filter(|text| !text.trim().is_empty())
-            .map(ToString::to_string)
-            .or_else(|| {
-                (!active.collector.text.is_empty()).then_some(active.collector.text.clone())
-            })
-            .unwrap_or_else(|| "The runtime finished without text output.".to_string());
-        let reasoning = turn_reasoning_text(turn.as_ref()).or_else(|| {
-            (!active.collector.reasoning.is_empty()).then_some(active.collector.reasoning.clone())
-        });
-        let message = snapshot
-            .as_ref()
-            .zip(turn_id.as_deref())
-            .and_then(|(snapshot, turn_id)| assistant_message_for_turn(snapshot, turn_id))
-            .or_else(|| {
+    ) -> ClientResult<TurnRunResult> {
+        let result_turn_id = active.turn_id.clone();
+        let (actions, message, reasoning, text, turn) = match active.turn_id.as_deref() {
+            Some(turn_id) => {
+                let snapshot = snapshot.as_ref().ok_or_else(|| {
+                    invalid_input("Runtime did not return a final conversation snapshot.")
+                })?;
+                let turn = find_turn(snapshot, turn_id).ok_or_else(|| {
+                    invalid_input(format!(
+                        "Final conversation snapshot is missing turn {turn_id}."
+                    ))
+                })?;
+                let message = assistant_message_for_turn(snapshot, turn_id).ok_or_else(|| {
+                    invalid_input(format!(
+                        "Final conversation snapshot is missing turn {turn_id} assistant message."
+                    ))
+                })?;
+                (
+                    actions_for_turn(snapshot, turn_id),
+                    Some(message),
+                    turn_reasoning_text(Some(&turn)),
+                    turn.output_text.clone(),
+                    Some(turn),
+                )
+            }
+            None => {
+                let request_id = active.request_id.as_deref().ok_or_else(|| {
+                    invalid_input("Completed no-turn result is missing request id.")
+                })?;
                 let mut content = Vec::new();
                 if !active.collector.reasoning.is_empty() {
                     content.push(DisplayMessagePartSnapshot::text(
@@ -617,18 +616,22 @@ impl AngelSession {
                         active.collector.text.clone(),
                     ));
                 }
-                display_message_from_parts(
-                    active
-                        .turn_id
-                        .as_ref()
-                        .map(|turn_id| format!("{turn_id}:assistant"))
-                        .unwrap_or_else(|| "result:assistant".to_string()),
-                    "assistant",
-                    content,
+                (
+                    Vec::new(),
+                    display_message_from_parts(
+                        format!("result:{request_id}:assistant"),
+                        "assistant",
+                        content,
+                    ),
+                    (!active.collector.reasoning.is_empty())
+                        .then_some(active.collector.reasoning.clone()),
+                    active.collector.text.clone(),
+                    None,
                 )
-            });
+            }
+        };
 
-        TurnRunResult {
+        Ok(TurnRunResult {
             actions,
             conversation: snapshot.clone(),
             message,
@@ -639,8 +642,8 @@ impl AngelSession {
                 .and_then(|snapshot| snapshot.remote_id.clone()),
             text,
             turn,
-            turn_id,
-        }
+            turn_id: result_turn_id,
+        })
     }
 
     fn thread_state(&self) -> Option<ConversationSnapshot> {

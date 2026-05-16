@@ -580,16 +580,13 @@ impl From<&EffectiveContext> for ContextSnapshot {
                 .effective()
                 .and_then(Option::as_ref)
                 .map(|path| path.display().to_string()),
-            additional_directories: context
-                .additional_directories
-                .effective()
-                .map(|directories| {
-                    directories
-                        .iter()
-                        .map(|directory| directory.display().to_string())
-                        .collect()
-                })
-                .unwrap_or_default(),
+            additional_directories: match context.additional_directories.effective() {
+                Some(directories) => directories
+                    .iter()
+                    .map(|directory| directory.display().to_string())
+                    .collect(),
+                None => Vec::new(),
+            },
             approval_policy: context
                 .approvals
                 .effective()
@@ -680,16 +677,14 @@ impl From<&TurnState> for TurnSnapshot {
             outcome: turn.outcome.as_ref().map(|outcome| format!("{outcome:?}")),
             output,
             reasoning,
-            plan: turn
-                .plan
-                .as_ref()
-                .map(|plan| plan.entries.iter().map(PlanEntrySnapshot::from).collect())
-                .unwrap_or_default(),
-            todo: turn
-                .todo
-                .as_ref()
-                .map(|todo| todo.entries.iter().map(PlanEntrySnapshot::from).collect())
-                .unwrap_or_default(),
+            plan: match turn.plan.as_ref() {
+                Some(plan) => plan.entries.iter().map(PlanEntrySnapshot::from).collect(),
+                None => Vec::new(),
+            },
+            todo: match turn.todo.as_ref() {
+                Some(todo) => todo.entries.iter().map(PlanEntrySnapshot::from).collect(),
+                None => Vec::new(),
+            },
         }
     }
 }
