@@ -16,6 +16,7 @@ import {
   AuiIf,
   BranchPickerPrimitive,
   ComposerPrimitive,
+  ErrorPrimitive,
   MessagePrimitive,
   useAui,
   useAuiState,
@@ -329,53 +330,37 @@ export function AssistantMessage() {
 
 function AssistantMessageErrorBanner() {
   const { t } = useTranslation();
-  const errorText = useAuiState((state) => {
-    const status = state.message.status;
-    if (status?.type !== "incomplete" || status.reason !== "error") {
-      return undefined;
-    }
-
-    const error = status.error;
-    if (typeof error === "string") return error;
-    if (typeof error === "number" || typeof error === "boolean") {
-      return String(error);
-    }
-    if (error === undefined || error === null) {
-      return t("notifications.chatActionFailed");
-    }
-    return JSON.stringify(error);
-  });
-
-  if (errorText === undefined) return null;
 
   return (
-    <div
-      className="
-        mb-3 flex w-full items-start gap-2.5 rounded-lg border
-        border-rose-500/20 bg-rose-500/8 px-3 py-2.5 text-sm text-rose-950
-        shadow-sm
-        dark:border-rose-400/20 dark:bg-rose-400/10 dark:text-rose-100
-      "
-      role="alert"
-    >
-      <AlertCircleIcon
+    <MessagePrimitive.Error>
+      <div
         className="
-          mt-0.5 size-4 shrink-0 text-rose-600
-          dark:text-rose-300
+          mb-3 flex w-full items-start gap-2.5 rounded-lg border
+          border-rose-500/20 bg-rose-500/8 px-3 py-2.5 text-sm text-rose-950
+          shadow-sm
+          dark:border-rose-400/20 dark:bg-rose-400/10 dark:text-rose-100
         "
-      />
-      <div className="min-w-0">
-        <div className="font-medium">{t("notifications.chatActionFailed")}</div>
-        <div
+        role="alert"
+      >
+        <AlertCircleIcon
           className="
-            mt-1 text-[13px]/5 whitespace-pre-wrap text-rose-900/90
-            dark:text-rose-100/85
+            mt-0.5 size-4 shrink-0 text-rose-600
+            dark:text-rose-300
           "
-        >
-          {errorText}
+        />
+        <div className="min-w-0">
+          <div className="font-medium">
+            {t("notifications.chatActionFailed")}
+          </div>
+          <ErrorPrimitive.Message
+            className="
+              mt-1 block text-[13px]/5 whitespace-pre-wrap text-rose-900/90
+              dark:text-rose-100/85
+            "
+          />
         </div>
       </div>
-    </div>
+    </MessagePrimitive.Error>
   );
 }
 

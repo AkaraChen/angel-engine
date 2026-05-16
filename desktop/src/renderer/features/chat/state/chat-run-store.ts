@@ -2014,6 +2014,7 @@ function historyMessageToEngineMessage(
   const content = message.content.map(cloneChatHistoryPart);
 
   if (message.role === "assistant") {
+    const backendFailure = backendFailureText(content);
     return {
       content: content.map(historyPartToEngineMessagePart),
       createdAt: normalizedCreatedAt,
@@ -2026,10 +2027,17 @@ function historyMessageToEngineMessage(
         unstable_state: null,
       },
       role: "assistant",
-      status: {
-        reason: "stop",
-        type: "complete",
-      },
+      status:
+        backendFailure === undefined
+          ? {
+              reason: "stop",
+              type: "complete",
+            }
+          : {
+              error: backendFailure,
+              reason: "error",
+              type: "incomplete",
+            },
     } as EngineMessage;
   }
 
@@ -2060,6 +2068,15 @@ function historyMessageToEngineMessage(
     },
     role: "user",
   } as EngineMessage;
+}
+
+function backendFailureText(parts: readonly ChatHistoryMessagePart[]) {
+  for (const part of parts) {
+    if (part.type === "text" && part.text.startsWith("Backend chat failed:")) {
+      return part.text.replace(/^Backend chat failed:\s*/, "");
+    }
+  }
+  return undefined;
 }
 
 function engineMessagesToHistoryMessages(
