@@ -1,4 +1,4 @@
-import { XIcon } from "lucide-react";
+import { RiCloseLine as XIcon } from "@remixicon/react";
 import { Dialog as SheetPrimitive } from "radix-ui";
 import * as React from "react";
 

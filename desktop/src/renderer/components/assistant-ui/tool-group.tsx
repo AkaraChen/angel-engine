@@ -8,9 +8,12 @@ import type {
   PropsWithChildren,
 } from "react";
 import { useAuiState, useScrollLock } from "@assistant-ui/react";
+import {
+  RiArrowDownSLine as ChevronDownIcon,
+  RiToolsLine as ToolIcon,
+} from "@remixicon/react";
 import { isChatToolAction, isTerminalChatToolPhase } from "@shared/chat";
 import { cva } from "class-variance-authority";
-import { ChevronDownIcon } from "lucide-react";
 import { memo, useCallback, useRef, useState } from "react";
 
 import { useTranslation } from "react-i18next";
@@ -109,8 +112,8 @@ function ToolGroupTrigger({
       className={cn(
         `
           aui-tool-group-trigger group/trigger flex min-h-7 w-fit max-w-full
-          items-center gap-1.5 rounded-md text-[13px] text-muted-foreground
-          transition-colors
+          items-center gap-2 rounded-md py-1 text-xs font-medium
+          text-muted-foreground transition-colors
           hover:text-foreground
         `,
         className,
@@ -118,10 +121,14 @@ function ToolGroupTrigger({
       data-slot="tool-group-trigger"
       {...props}
     >
+      <ToolIcon
+        className="aui-tool-group-trigger-icon size-4 shrink-0"
+        data-slot="tool-group-trigger-icon"
+      />
       <span
         className="
           aui-tool-group-trigger-label-wrapper min-w-0 truncate text-start
-          leading-none font-medium
+          leading-none
         "
         data-slot="tool-group-trigger-label"
       >
@@ -129,10 +136,7 @@ function ToolGroupTrigger({
       </span>
       <ChevronDownIcon
         className={cn(
-          `
-            aui-tool-group-trigger-chevron size-3.5 shrink-0
-            text-muted-foreground/70
-          `,
+          "aui-tool-group-trigger-chevron mt-0.5 size-4 shrink-0",
           "transition-transform duration-(--animation-duration) ease-out",
           "group-data-[state=closed]/trigger:-rotate-90",
           "group-data-[state=open]/trigger:rotate-0",

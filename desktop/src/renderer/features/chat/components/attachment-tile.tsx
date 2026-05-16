@@ -1,4 +1,8 @@
-import { FileText, ImageIcon, X } from "lucide-react";
+import {
+  RiFileTextLine as FileText,
+  RiImageLine as ImageIcon,
+  RiCloseLine as X,
+} from "@remixicon/react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 

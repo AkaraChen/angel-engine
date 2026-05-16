@@ -10,10 +10,13 @@ import cursorIconUrl from "@lobehub/icons-static-svg/icons/cursor.svg";
 import geminiIconUrl from "@lobehub/icons-static-svg/icons/geminicli-color.svg";
 import kimiIconUrl from "@lobehub/icons-static-svg/icons/kimi-color.svg";
 import opencodeIconUrl from "@lobehub/icons-static-svg/icons/opencode.svg";
-
 import qoderIconUrl from "@lobehub/icons-static-svg/icons/qoder-color.svg";
+
+import {
+  RiErrorWarningLine as AlertTriangle,
+  RiDeleteBinLine as Trash2,
+} from "@remixicon/react";
 import { AGENT_OPTIONS, getEnabledAgentOptions } from "@shared/agents";
-import { AlertTriangle, Trash2 } from "lucide-react";
 import { useCallback, useId, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";

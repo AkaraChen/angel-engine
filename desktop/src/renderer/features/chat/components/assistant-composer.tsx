@@ -10,25 +10,25 @@ import type { PromptInputMessage } from "@/components/ai-elements/prompt-input";
 
 import type { ChatOptionsContextValue } from "@/features/chat/runtime/chat-options-context";
 import { ComposerPrimitive, useAui, useAuiState } from "@assistant-ui/react";
-import { AGENT_OPTIONS } from "@shared/agents";
 import {
-  ArrowUp,
-  Bot,
-  Brain,
-  Check,
-  ChevronDown,
-  CircleStop,
-  Cpu,
-  Hammer,
-  ListChecks,
-  Loader2,
-  Paperclip,
-  Quote,
-  Search,
-  ShieldCheck,
-  SlidersHorizontal,
-  X,
-} from "lucide-react";
+  RiArrowUpLine as ArrowUp,
+  RiRobot2Line as Bot,
+  RiBrainLine as Brain,
+  RiCheckLine as Check,
+  RiArrowDownSLine as ChevronDown,
+  RiStopCircleLine as CircleStop,
+  RiCpuLine as Cpu,
+  RiHammerLine as Hammer,
+  RiListCheck3 as ListChecks,
+  RiLoader4Line as Loader2,
+  RiAttachment2 as Paperclip,
+  RiDoubleQuotesL as Quote,
+  RiSearchLine as Search,
+  RiShieldCheckLine as ShieldCheck,
+  RiEqualizer2Line as SlidersHorizontal,
+  RiCloseLine as X,
+} from "@remixicon/react";
+import { AGENT_OPTIONS } from "@shared/agents";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
@@ -417,7 +417,9 @@ function AssistantComposerHeader({
   }
 
   return (
-    <PromptInputHeader className="flex-col items-stretch gap-2 px-3! pt-3! pb-2!">
+    <PromptInputHeader className="
+      flex-col items-stretch gap-2 px-3! pt-3! pb-2!
+    ">
       {hasQuote ? (
         <ComposerPrimitive.Quote
           className="
@@ -427,7 +429,9 @@ function AssistantComposerHeader({
           "
         >
           <Quote className="mt-0.5 size-3.5 shrink-0 text-muted-foreground" />
-          <ComposerPrimitive.QuoteText className="line-clamp-2 flex-1 text-muted-foreground" />
+          <ComposerPrimitive.QuoteText className="
+            line-clamp-2 flex-1 text-muted-foreground
+          " />
           <ComposerPrimitive.QuoteDismiss className={iconButtonClass}>
             <X className="size-3.5" />
           </ComposerPrimitive.QuoteDismiss>
@@ -549,7 +553,9 @@ function SlashCommandAssistPanel({
   if (loading) {
     return (
       <AssistPanelFrame title={t("composer.commands")}>
-        <div className="flex items-center gap-2 p-2 text-sm text-muted-foreground">
+        <div className="
+          flex items-center gap-2 p-2 text-sm text-muted-foreground
+        ">
           <Loader2 className="size-3.5 animate-spin" />
           <span>{t("composer.loadingCommands")}</span>
         </div>
@@ -1089,7 +1095,9 @@ function ComposerModelMenu({
                 />
               ))
             ) : (
-              <div className="px-2 py-5 text-center text-xs text-muted-foreground">
+              <div className="
+                px-2 py-5 text-center text-xs text-muted-foreground
+              ">
                 {t("composer.noModelsFound")}
               </div>
             )}
@@ -1128,7 +1136,9 @@ function ComposerModelMenu({
             type="button"
             variant="ghost"
           >
-            <SlidersHorizontal className="size-3.5 shrink-0 text-muted-foreground" />
+            <SlidersHorizontal className="
+              size-3.5 shrink-0 text-muted-foreground
+            " />
             <span className={composerModelMenuValueClassName}>
               {t("composer.agentSettings")}
             </span>

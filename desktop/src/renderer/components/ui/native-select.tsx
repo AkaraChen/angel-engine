@@ -1,4 +1,4 @@
-import { ChevronDownIcon } from "lucide-react";
+import { RiArrowDownSLine as ChevronDownIcon } from "@remixicon/react";
 
 import * as React from "react";
 import { cn } from "@/platform/utils";

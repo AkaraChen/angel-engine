@@ -5,8 +5,11 @@ import type {
 import type { VariantProps } from "class-variance-authority";
 import type { ComponentProps, CSSProperties } from "react";
 import { useAuiState, useScrollLock } from "@assistant-ui/react";
+import {
+  RiBrainLine as BrainIcon,
+  RiArrowDownSLine as ChevronDownIcon,
+} from "@remixicon/react";
 import { cva } from "class-variance-authority";
-import { BrainIcon, ChevronDownIcon } from "lucide-react";
 import { memo, useCallback, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 

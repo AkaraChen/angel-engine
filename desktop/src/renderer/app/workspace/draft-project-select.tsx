@@ -1,6 +1,6 @@
 import type { Project } from "@shared/projects";
-import { Folder } from "lucide-react";
 
+import { RiFolderLine as Folder } from "@remixicon/react";
 import { useTranslation } from "react-i18next";
 import { getProjectDisplayName } from "@/app/workspace/workspace-display";
 import {

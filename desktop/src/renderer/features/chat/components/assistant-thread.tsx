@@ -4,7 +4,7 @@ import {
   SelectionToolbarPrimitive,
   ThreadPrimitive,
 } from "@assistant-ui/react";
-import { Quote } from "lucide-react";
+import { RiDoubleQuotesL as Quote } from "@remixicon/react";
 import { Trans, useTranslation } from "react-i18next";
 
 import { AssistantComposer } from "@/features/chat/components/assistant-composer";
@@ -24,7 +24,9 @@ export function AssistantThread({
   const { t } = useTranslation();
 
   return (
-    <ThreadPrimitive.Root className="flex h-full min-h-0 flex-col bg-background/96">
+    <ThreadPrimitive.Root className="
+      flex h-full min-h-0 flex-col bg-background/96
+    ">
       <ThreadPrimitive.Viewport
         className="
           relative flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto p-4
@@ -93,7 +95,9 @@ function EmptyThread({ projectName }: { projectName?: string }) {
     >
       <div className="w-full max-w-136">
         <div className="min-w-0 text-center select-none">
-          <h2 className="text-2xl/tight font-semibold text-pretty text-foreground">
+          <h2 className="
+            text-2xl/tight font-semibold text-pretty text-foreground
+          ">
             {projectName ? (
               <Trans
                 components={{ project: <SketchUnderline /> }}
@@ -115,7 +119,9 @@ function EmptyThread({ projectName }: { projectName?: string }) {
 
 function SketchUnderline({ children }: { children?: ReactNode }) {
   return (
-    <span className="relative inline-block max-w-full align-baseline text-primary">
+    <span className="
+      relative inline-block max-w-full align-baseline text-primary
+    ">
       <span className="relative z-10 wrap-break-word">{children}</span>
       <svg
         aria-hidden

@@ -1,7 +1,10 @@
 import type { Chat } from "@shared/chat";
 import type { ReactElement } from "react";
+import {
+  RiLoader4Line as Loader2,
+  RiMessage2Line as MessageSquare,
+} from "@remixicon/react";
 import { AnimatePresence } from "framer-motion";
-import { Loader2, MessageSquare } from "lucide-react";
 import { useMemo } from "react";
 
 import { useTranslation } from "react-i18next";

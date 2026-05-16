@@ -1,4 +1,4 @@
-import { XIcon } from "lucide-react";
+import { RiCloseLine as XIcon } from "@remixicon/react";
 import { Toast as ToastPrimitive } from "radix-ui";
 import * as React from "react";
 import { useTranslation } from "react-i18next";
@@ -67,7 +67,9 @@ function ToastProvider({ children }: { children: React.ReactNode }) {
                   {toast.title}
                 </ToastPrimitive.Title>
                 {toast.description ? (
-                  <ToastPrimitive.Description className="mt-1 text-xs text-muted-foreground">
+                  <ToastPrimitive.Description className="
+                    mt-1 text-xs text-muted-foreground
+                  ">
                     {toast.description}
                   </ToastPrimitive.Description>
                 ) : null}

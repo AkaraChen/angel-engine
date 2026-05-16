@@ -1,8 +1,9 @@
 "use client";
 
 import type { VariantProps } from "class-variance-authority";
+
+import { RiSidebarUnfoldLine as PanelLeftIcon } from "@remixicon/react";
 import { cva } from "class-variance-authority";
-import { PanelLeftIcon } from "lucide-react";
 import { Slot } from "radix-ui";
 import * as React from "react";
 

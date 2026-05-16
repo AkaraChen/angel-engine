@@ -1,5 +1,8 @@
+import {
+  RiCheckLine as CheckIcon,
+  RiSearchLine as SearchIcon,
+} from "@remixicon/react";
 import { Command as CommandPrimitive } from "cmdk";
-import { CheckIcon, SearchIcon } from "lucide-react";
 import * as React from "react";
 
 import { useTranslation } from "react-i18next";

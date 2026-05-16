@@ -3,7 +3,13 @@ import type { Project } from "@shared/projects";
 import type { ComponentType, ReactElement } from "react";
 
 import type { SidebarViewMode } from "@/app/workspace/workspace-ui-store";
-import { Folder, List, MessageSquarePlus, Rows3, Settings } from "lucide-react";
+import {
+  RiFolderLine as Folder,
+  RiListUnordered as List,
+  RiChatNewLine as MessageSquarePlus,
+  RiLayoutRowLine as Rows3,
+  RiSettings3Line as Settings,
+} from "@remixicon/react";
 import { useTranslation } from "react-i18next";
 import { useWorkspaceUiStore } from "@/app/workspace/workspace-ui-store";
 import {

@@ -1,7 +1,11 @@
 import type { Chat } from "@shared/chat";
 import type { ReactElement } from "react";
+import {
+  RiArrowRightSLine as ChevronRight,
+  RiLoader4Line as Loader2,
+  RiMessage2Line as MessageSquare,
+} from "@remixicon/react";
 import { AnimatePresence, motion } from "framer-motion";
-import { ChevronRight, Loader2, MessageSquare } from "lucide-react";
 import { useState } from "react";
 
 import { useTranslation } from "react-i18next";

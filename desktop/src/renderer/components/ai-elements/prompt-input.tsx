@@ -1,6 +1,7 @@
 "use client";
 
 import type { ChatStatus, FileUIPart, SourceDocumentUIPart } from "ai";
+
 import type {
   ChangeEvent,
   ChangeEventHandler,
@@ -15,13 +16,13 @@ import type {
   RefObject,
 } from "react";
 import {
-  CornerDownLeftIcon,
-  ImageIcon,
-  Monitor,
-  PlusIcon,
-  SquareIcon,
-  XIcon,
-} from "lucide-react";
+  RiCornerDownLeftLine as CornerDownLeftIcon,
+  RiImageLine as ImageIcon,
+  RiComputerLine as Monitor,
+  RiAddLine as PlusIcon,
+  RiSquareLine as SquareIcon,
+  RiCloseLine as XIcon,
+} from "@remixicon/react";
 import { nanoid } from "nanoid";
 import {
   Children,
@@ -877,7 +878,7 @@ export function PromptInput({
             const formData = new FormData(form);
             const value = formData.get("message");
             if (typeof value !== "string") {
-              throw new Error("Prompt input form is missing message field.");
+              throw new TypeError("Prompt input form is missing message field.");
             }
             return value;
           })();

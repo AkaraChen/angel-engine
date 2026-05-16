@@ -1,9 +1,15 @@
 import type { Chat } from "@shared/chat";
 import type { Project } from "@shared/projects";
 import type { ReactElement } from "react";
-import { AnimatePresence, motion } from "framer-motion";
-import { ChevronRight, Folder, FolderPlus, Loader2, Plus } from "lucide-react";
+import {
+  RiArrowRightSLine as ChevronRight,
+  RiFolderLine as Folder,
+  RiFolderAddLine as FolderPlus,
+  RiLoader4Line as Loader2,
+  RiAddLine as Plus,
+} from "@remixicon/react";
 
+import { AnimatePresence, motion } from "framer-motion";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";

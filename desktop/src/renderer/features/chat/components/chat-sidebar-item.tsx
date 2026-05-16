@@ -1,7 +1,7 @@
 import type { MouseEventHandler, ReactElement } from "react";
-import { Archive } from "lucide-react";
-import { useTranslation } from "react-i18next";
+import { RiArchiveLine as Archive } from "@remixicon/react";
 
+import { useTranslation } from "react-i18next";
 import {
   WorkspaceSidebarMenuAction,
   WorkspaceSidebarMenuButton,
@@ -41,8 +41,8 @@ export function ChatSidebarItem({
     <>
       <WorkspaceSidebarMenuButton
         className="
-          group-has-data-[sidebar=menu-action]/menu-item:!pr-2.5
-          md:group-hover/menu-item:!pr-8
+          group-has-data-[sidebar=menu-action]/menu-item:pr-2.5!
+          md:group-hover/menu-item:pr-8!
         "
         isActive={isActive}
         onClick={onOpenChat}

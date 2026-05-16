@@ -22,6 +22,29 @@ import {
 } from "@assistant-ui/react";
 import { StreamdownTextPrimitive } from "@assistant-ui/react-streamdown";
 import {
+  RiErrorWarningLine as AlertCircleIcon,
+  RiCheckLine as Check,
+  RiArrowDownSLine as ChevronDown,
+  RiArrowLeftSLine as ChevronLeft,
+  RiArrowRightSLine as ChevronRight,
+  RiCircleLine as Circle,
+  RiRadioButtonLine as CircleDot,
+  RiQuestionLine as CircleHelp,
+  RiClipboardLine as Clipboard,
+  RiFileCopyLine as Copy,
+  RiFileTextLine as FileText,
+  RiHammerLine as Hammer,
+  RiListCheck3 as ListChecks,
+  RiLoader4Line as Loader2,
+  RiPencilLine as Pencil,
+  RiRefreshLine as RefreshCw,
+  RiSendPlaneLine as Send,
+  RiThumbDownLine as ThumbsDown,
+  RiThumbUpLine as ThumbsUp,
+  RiVolumeUpLine as Volume2,
+  RiVolumeMuteLine as VolumeX,
+} from "@remixicon/react";
+import {
   isChatElicitationData,
   isChatPlanData,
   isChatToolAction,
@@ -32,29 +55,6 @@ import { cjk } from "@streamdown/cjk";
 import { code as streamdownCode } from "@streamdown/code";
 import { math } from "@streamdown/math";
 import { mermaid } from "@streamdown/mermaid";
-import {
-  AlertCircleIcon,
-  Check,
-  ChevronDown,
-  ChevronLeft,
-  ChevronRight,
-  Circle,
-  CircleDot,
-  CircleHelp,
-  Clipboard,
-  Copy,
-  FileText,
-  Hammer,
-  ListChecks,
-  Loader2,
-  Pencil,
-  RefreshCw,
-  Send,
-  ThumbsDown,
-  ThumbsUp,
-  Volume2,
-  VolumeX,
-} from "lucide-react";
 
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -242,6 +242,7 @@ export function AssistantMessage() {
         "
       >
         <div className="w-full">
+          <AssistantMessageErrorBanner />
           <AssistantMessageParts />
         </div>
         <div className={messageActionFooterClass}>
@@ -323,6 +324,58 @@ export function AssistantMessage() {
         </div>
       </div>
     </MessagePrimitive.Root>
+  );
+}
+
+function AssistantMessageErrorBanner() {
+  const { t } = useTranslation();
+  const errorText = useAuiState((state) => {
+    const status = state.message.status;
+    if (status?.type !== "incomplete" || status.reason !== "error") {
+      return undefined;
+    }
+
+    const error = status.error;
+    if (typeof error === "string") return error;
+    if (typeof error === "number" || typeof error === "boolean") {
+      return String(error);
+    }
+    if (error === undefined || error === null) {
+      return t("notifications.chatActionFailed");
+    }
+    return JSON.stringify(error);
+  });
+
+  if (errorText === undefined) return null;
+
+  return (
+    <div
+      className="
+        mb-3 flex w-full items-start gap-2.5 rounded-lg border
+        border-rose-500/20 bg-rose-500/8 px-3 py-2.5 text-sm text-rose-950
+        shadow-sm
+        dark:border-rose-400/20 dark:bg-rose-400/10 dark:text-rose-100
+      "
+      role="alert"
+    >
+      <AlertCircleIcon
+        className="
+          mt-0.5 size-4 shrink-0 text-rose-600
+          dark:text-rose-300
+        "
+      />
+      <div className="min-w-0">
+        <div className="font-medium">{t("notifications.chatActionFailed")}</div>
+        <div
+          className="
+            mt-1 text-[13px]/5 whitespace-pre-wrap text-rose-900/90
+            dark:text-rose-100/85
+          "
+        >
+          {errorText}
+        </div>
+      </div>
+    </div>
   );
 }
 
