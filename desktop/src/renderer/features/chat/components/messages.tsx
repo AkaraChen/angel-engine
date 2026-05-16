@@ -119,7 +119,7 @@ interface ElicitationFreeformAnswerProps {
   disabled: boolean;
   onChange: (value: string) => void;
   question: ElicitationQuestion;
-  value: string;
+  value?: string;
 }
 
 export function UserMessage() {
@@ -705,7 +705,7 @@ function StandaloneElicitationToolPart({
   const title =
     action.title || elicitation?.title || t("messages.elicitation.userInput");
   const outputText = getToolOutputText(action, part.result);
-  const questions = elicitation?.questions ?? [];
+  const questions = elicitation?.questions;
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [fallbackAnswer, setFallbackAnswer] = useState("");
   const { resolveElicitation } = useChatRuntimeActions();
@@ -713,7 +713,7 @@ function StandaloneElicitationToolPart({
   const [manualOpen, setManualOpen] = useState<boolean | undefined>();
   const awaitingInput = phase === "awaitingDecision";
   const hasInputQuestions =
-    elicitation?.kind === "userInput" || questions.length > 0;
+    elicitation?.kind === "userInput" || Boolean(questions?.length);
   const open = manualOpen ?? (awaitingInput || !hasTextAfterTool);
 
   const resume = (response: ChatElicitationResponse) => {
@@ -726,13 +726,18 @@ function StandaloneElicitationToolPart({
   };
 
   const submitAnswers = () => {
-    const responseAnswers =
-      questions.length > 0
-        ? questions.map((question) => ({
+    const responseAnswers = questions?.length
+      ? questions.map((question) => {
+          const value = answers[question.id];
+          if (value === undefined) {
+            throw new Error(`Missing answer for question ${question.id}.`);
+          }
+          return {
             id: question.id,
-            value: answers[question.id] ?? "",
-          }))
-        : [{ id: "answer", value: fallbackAnswer }];
+            value,
+          };
+        })
+      : [{ id: "answer", value: fallbackAnswer }];
     resume({ answers: responseAnswers, type: "answers" });
   };
 
@@ -771,7 +776,7 @@ function StandaloneElicitationToolPart({
 
           {hasInputQuestions ? (
             <div className="space-y-3">
-              {questions.length > 0 ? (
+              {questions?.length ? (
                 questions.map((question) => (
                   <ElicitationQuestionInput
                     disabled={!awaitingInput}
@@ -783,7 +788,7 @@ function StandaloneElicitationToolPart({
                       }))
                     }
                     question={question}
-                    value={answers[question.id] ?? ""}
+                    value={answers[question.id]}
                   />
                 ))
               ) : (
@@ -1008,21 +1013,21 @@ function ElicitationQuestionInput({
   disabled: boolean;
   onChange: (value: string) => void;
   question: ElicitationQuestion;
-  value: string;
+  value?: string;
 }) {
   const { t } = useTranslation();
-  const options = question.options ?? [];
+  const options = question.options;
   const [selection, setSelection] = useState<
     { label: string; type: "option" } | { type: "other" } | undefined
   >(() =>
-    options.some((option) => option.label === value)
+    value !== undefined && options?.some((option) => option.label === value)
       ? { label: value, type: "option" }
       : undefined,
   );
   const selectedOptionLabel =
     selection?.type === "option" ? selection.label : value;
   const selectedOther = selection?.type === "other";
-  const showFreeformAnswer = options.length === 0 || selectedOther;
+  const showFreeformAnswer = !options?.length || selectedOther;
 
   return (
     <div className="space-y-2">
@@ -1037,7 +1042,7 @@ function ElicitationQuestionInput({
         ) : null}
       </div>
 
-      {options.length > 0 ? (
+      {options?.length ? (
         <div className="flex flex-col gap-1.5">
           {options.map((option) => (
             <button
@@ -1369,14 +1374,14 @@ function ElicitationQuestionCard({
 }) {
   const { t } = useTranslation();
   const { resolveElicitation } = useChatRuntimeActions();
-  const questions = elicitation.questions ?? [];
+  const questions = elicitation.questions;
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [fallbackAnswer, setFallbackAnswer] = useState("");
   const [submittedResponseType, setSubmittedResponseType] =
     useState<ChatElicitationResponse["type"]>();
   const awaitingInput = elicitation.phase === "open" && !submittedResponseType;
   const hasInputQuestions =
-    elicitation.kind === "userInput" || questions.length > 0;
+    elicitation.kind === "userInput" || Boolean(questions?.length);
   const isPermissionRequest =
     isPermissionElicitation(elicitation) && !hasInputQuestions;
   const backingActionKind = useAuiState((state) => {
@@ -1402,13 +1407,18 @@ function ElicitationQuestionCard({
   };
 
   const submitAnswers = () => {
-    const responseAnswers =
-      questions.length > 0
-        ? questions.map((question) => ({
+    const responseAnswers = questions?.length
+      ? questions.map((question) => {
+          const value = answers[question.id];
+          if (value === undefined) {
+            throw new Error(`Missing answer for question ${question.id}.`);
+          }
+          return {
             id: question.id,
-            value: answers[question.id] ?? "",
-          }))
-        : [{ id: "answer", value: fallbackAnswer }];
+            value,
+          };
+        })
+      : [{ id: "answer", value: fallbackAnswer }];
     resume({ answers: responseAnswers, type: "answers" });
   };
 
@@ -1471,7 +1481,7 @@ function ElicitationQuestionCard({
             />
           ) : (
             <div className="space-y-3">
-              {questions.length > 0 ? (
+              {questions?.length ? (
                 questions.map((question) => (
                   <ElicitationQuestionInput
                     disabled={!awaitingInput}
@@ -1483,7 +1493,7 @@ function ElicitationQuestionCard({
                       }))
                     }
                     question={question}
-                    value={answers[question.id] ?? ""}
+                    value={answers[question.id]}
                   />
                 ))
               ) : (
