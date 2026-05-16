@@ -237,17 +237,14 @@ impl AngelEngine {
                         })?;
                 let mut fields = BTreeMap::new();
                 fields.insert("remoteConversationId".to_string(), remote_id.to_string());
-                let additional_directories = conversation
-                    .context
-                    .additional_directories
-                    .effective()
-                    .map(|directories| {
-                        directories
+                let additional_directories =
+                    match conversation.context.additional_directories.effective() {
+                        Some(directories) => directories
                             .iter()
                             .map(|directory| directory.display().to_string())
-                            .collect::<Vec<_>>()
-                    })
-                    .unwrap_or_default();
+                            .collect::<Vec<_>>(),
+                        None => Vec::new(),
+                    };
                 (
                     conversation_id,
                     remote,

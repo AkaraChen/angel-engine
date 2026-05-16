@@ -428,22 +428,24 @@ fn append_display_plan_part(
     kind: PlanDisplayKind,
 ) {
     let (entries, text, path) = match kind {
-        PlanDisplayKind::Review => (
-            turn.plan
-                .as_ref()
-                .map(|plan| plan.entries.clone())
-                .unwrap_or_default(),
-            buffer_text(&turn.plan_text.chunks),
-            turn.plan_path.clone(),
-        ),
-        PlanDisplayKind::Todo => (
-            turn.todo
-                .as_ref()
-                .map(|todo| todo.entries.clone())
-                .unwrap_or_default(),
-            String::new(),
-            None,
-        ),
+        PlanDisplayKind::Review => {
+            let entries = match turn.plan.as_ref() {
+                Some(plan) => plan.entries.clone(),
+                None => Vec::new(),
+            };
+            (
+                entries,
+                buffer_text(&turn.plan_text.chunks),
+                turn.plan_path.clone(),
+            )
+        }
+        PlanDisplayKind::Todo => {
+            let entries = match turn.todo.as_ref() {
+                Some(todo) => todo.entries.clone(),
+                None => Vec::new(),
+            };
+            (entries, String::new(), None)
+        }
     };
     if entries.is_empty() && text.trim().is_empty() && path.is_none() {
         return;
@@ -650,49 +652,55 @@ fn text_display_parts(text: &str) -> Vec<DisplayMessagePart> {
 
 fn structured_plan_display_part(text: &str) -> Option<DisplayMessagePart> {
     let value = serde_json::from_str::<Value>(text).ok()?;
-    if string_field(&value, &["type"]).as_deref() != Some("plan") {
+    if value.get("type").and_then(Value::as_str) != Some("plan") {
         return None;
     }
 
-    let entries = ["entries", "plan", "steps"]
-        .iter()
-        .find_map(|key| value.get(*key).and_then(Value::as_array))
+    let entries = value
+        .get("entries")
+        .and_then(Value::as_array)
         .map(|entries| {
             entries
                 .iter()
                 .filter_map(structured_plan_entry)
                 .collect::<Vec<_>>()
-        })
-        .unwrap_or_default();
-    let plan_text = string_field(&value, &["text", "content", "markdown"]).unwrap_or_default();
-    let path = string_field(
-        &value,
-        &["path", "savedPath", "saved_path", "filePath", "file_path"],
-    );
-    let kind = match string_field(&value, &["kind"]).as_deref() {
-        Some("todo") | Some("todos") => PlanDisplayKind::Todo,
+        })?;
+    let plan_text = value
+        .get("text")
+        .and_then(Value::as_str)
+        .filter(|text| !text.trim().is_empty())
+        .map(str::to_string);
+    let path = value
+        .get("path")
+        .and_then(Value::as_str)
+        .filter(|path| !path.trim().is_empty())
+        .map(str::to_string);
+    let kind = match value.get("kind").and_then(Value::as_str) {
+        Some("todo") => PlanDisplayKind::Todo,
+        Some("review") | None => PlanDisplayKind::Review,
         _ => PlanDisplayKind::Review,
     };
 
-    if entries.is_empty() && plan_text.trim().is_empty() && path.is_none() {
+    if entries.is_empty() && plan_text.is_none() && path.is_none() {
         return None;
     }
+    let plan_text = match plan_text {
+        Some(text) => text,
+        None => String::new(),
+    };
     Some(DisplayMessagePart::plan(kind, entries, plan_text, path))
 }
 
 fn structured_plan_entry(value: &Value) -> Option<PlanEntry> {
-    let content = match value {
-        Value::String(content) => content.clone(),
-        Value::Object(_) => string_field(value, &["content", "text", "step"])?,
-        _ => return None,
-    };
+    let content = value.get("content").and_then(Value::as_str)?.to_string();
     if content.trim().is_empty() {
         return None;
     }
     let status = match value.get("status").and_then(Value::as_str) {
-        Some("completed" | "Completed") => PlanEntryStatus::Completed,
-        Some("in_progress" | "inProgress" | "InProgress") => PlanEntryStatus::InProgress,
-        _ => PlanEntryStatus::Pending,
+        Some("completed") => PlanEntryStatus::Completed,
+        Some("in_progress") => PlanEntryStatus::InProgress,
+        Some("pending") | None => PlanEntryStatus::Pending,
+        _ => return None,
     };
     Some(PlanEntry { content, status })
 }
@@ -708,16 +716,6 @@ fn action_output_text(chunks: &[ActionOutputDelta]) -> String {
         }
     }
     text
-}
-
-fn string_field(value: &Value, keys: &[&str]) -> Option<String> {
-    keys.iter().find_map(|key| {
-        value
-            .get(*key)
-            .and_then(Value::as_str)
-            .filter(|text| !text.trim().is_empty())
-            .map(str::to_string)
-    })
 }
 
 #[cfg(test)]
@@ -896,7 +894,7 @@ mod tests {
                     json!({
                         "type": "plan",
                         "kind": "todo",
-                        "entries": [{"content": "Apply blue theme", "status": "Completed"}]
+                        "entries": [{"content": "Apply blue theme", "status": "completed"}]
                     })
                     .to_string(),
                 ),
