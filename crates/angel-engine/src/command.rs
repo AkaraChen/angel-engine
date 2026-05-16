@@ -196,13 +196,15 @@ impl UserInput {
         mime_type: impl Into<String>,
         name: Option<String>,
     ) -> Self {
-        let name = name.filter(|name| !name.trim().is_empty());
+        let name = name
+            .filter(|name| !name.trim().is_empty())
+            .expect("image input name is required");
         Self {
-            content: name.clone().unwrap_or_else(|| "image".to_string()),
+            content: name.clone(),
             kind: UserInputKind::Image {
                 data: data.into(),
                 mime_type: mime_type.into(),
-                name,
+                name: Some(name),
             },
         }
     }
