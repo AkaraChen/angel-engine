@@ -1,0 +1,25 @@
+packages:
+  - "desktop"
+  - "crates/angel-engine-client-napi"
+  - "!vendor/**"
+
+nodeLinker: hoisted
+blockExoticSubdeps: false
+
+peerDependencyRules:
+  allowedVersions:
+    "@electron-forge/plugin-fuses>@electron/fuses": "^2.1.1"
+
+allowBuilds:
+  "@electron/node-gyp": true
+  "@parcel/watcher": true
+  "@tailwindcss/oxide": true
+  "better-sqlite3": true
+  "electron": true
+  "electron-winstaller": true
+  "esbuild": true
+  "fs-xattr": true
+  "macos-alias": true
+  "msgpackr-extract": true
+  "msw": true
+  "unrs-resolver": true

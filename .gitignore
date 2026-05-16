@@ -5,3 +5,5 @@ asahi.db
 .luna/
 
 /qa-runs
+/node_modules
+.turbo/

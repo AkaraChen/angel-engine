@@ -1,16 +1,13 @@
 import antfu from "@antfu/eslint-config";
+import { createTypeScriptImportResolver } from "eslint-import-resolver-typescript";
 import betterTailwindcss from "eslint-plugin-better-tailwindcss";
-import importPlugin from "eslint-plugin-import";
-import jsxA11yPlugin from "eslint-plugin-jsx-a11y";
+import importPlugin from "eslint-plugin-import-x";
 
 export default antfu(
   {
     type: "app",
     ignores: [".vite/**", "dist/**", "node_modules/**", "out/**"],
     react: true,
-    jsx: {
-      a11y: true,
-    },
     typescript: {
       tsconfigPath: "tsconfig.json",
       overridesTypeAware: {
@@ -31,12 +28,12 @@ export default antfu(
       "electron-import": importPlugin,
     },
     settings: {
-      "import/core-modules": ["electron"],
-      "import/resolver": {
-        typescript: {
+      "import-x/core-modules": ["electron"],
+      "import-x/resolver-next": [
+        createTypeScriptImportResolver({
           project: "./tsconfig.json",
-        },
-      },
+        }),
+      ],
     },
     rules: {
       "electron-import/no-unresolved": "error",
@@ -86,21 +83,6 @@ export default antfu(
       "ts/strict-boolean-expressions": "warn",
       "ts/switch-exhaustiveness-check": "warn",
       "ts/unbound-method": "warn",
-    },
-  },
-  {
-    name: "angel/a11y-migration-warnings",
-    files: ["src/**/*.{ts,tsx}"],
-    plugins: {
-      "jsx-a11y": jsxA11yPlugin,
-    },
-    rules: {
-      "jsx-a11y/click-events-have-key-events": "warn",
-      "jsx-a11y/heading-has-content": "warn",
-      "jsx-a11y/no-autofocus": "warn",
-      "jsx-a11y/no-noninteractive-element-interactions": "warn",
-      "jsx-a11y/no-noninteractive-element-to-interactive-role": "warn",
-      "jsx-a11y/no-static-element-interactions": "warn",
     },
   },
   {

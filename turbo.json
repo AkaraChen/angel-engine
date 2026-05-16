@@ -1,0 +1,64 @@
+{
+  "$schema": "https://turborepo.dev/schema.json",
+  "globalDependencies": [
+    "Cargo.lock",
+    "Cargo.toml",
+    "crates/angel-engine/Cargo.toml",
+    "crates/angel-engine/src/**",
+    "crates/angel-engine-client/Cargo.toml",
+    "crates/angel-engine-client/src/**",
+    "crates/angel-provider/Cargo.toml",
+    "crates/angel-provider/build.rs",
+    "crates/angel-provider/src/**"
+  ],
+  "tasks": {
+    "build": {
+      "dependsOn": ["^build"],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "!*.node",
+        "!index.d.ts",
+        "!target/**",
+        "Cargo.toml",
+        "build.rs",
+        "src/**"
+      ],
+      "outputs": ["*.node", "index.d.ts"]
+    },
+    "build:debug": {
+      "dependsOn": ["^build:debug"],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "!*.node",
+        "!index.d.ts",
+        "!target/**",
+        "Cargo.toml",
+        "build.rs",
+        "src/**"
+      ],
+      "outputs": ["*.node", "index.d.ts"]
+    },
+    "package": {
+      "dependsOn": ["^build"],
+      "outputs": ["out/**", ".vite/**"]
+    },
+    "make": {
+      "dependsOn": ["^build"],
+      "outputs": ["out/**", ".vite/**"]
+    },
+    "lint": {
+      "outputs": []
+    },
+    "typecheck": {
+      "dependsOn": ["^build"],
+      "outputs": []
+    },
+    "rebuild:native": {
+      "cache": false
+    },
+    "start": {
+      "cache": false,
+      "persistent": true
+    }
+  }
+}

@@ -1,5 +1,6 @@
 import type { ForgeConfig } from "@electron-forge/shared-types";
 import fs from "node:fs";
+import { createRequire } from "node:module";
 import path from "node:path";
 import { MakerDeb } from "@electron-forge/maker-deb";
 import { MakerDMG } from "@electron-forge/maker-dmg";
@@ -14,6 +15,10 @@ import { FuseV1Options, FuseVersion } from "@electron/fuses";
 const nativeRuntimeModules = ["better-sqlite3", "bindings", "file-uri-to-path"];
 
 const projectRoot = __dirname;
+const workspaceRoot = path.resolve(projectRoot, "..");
+const workspaceRequire = createRequire(
+  path.join(workspaceRoot, "package.json"),
+);
 const appIconPath = path.join(projectRoot, "assets", "icon");
 
 function copyRuntimePath(buildPath: string, relativePath: string) {
@@ -28,9 +33,26 @@ function copyRuntimePath(buildPath: string, relativePath: string) {
   );
 }
 
+function copyRuntimeModule(buildPath: string, moduleName: string) {
+  const packageJsonPath = workspaceRequire.resolve(
+    `${moduleName}/package.json`,
+    {
+      paths: [projectRoot, workspaceRoot],
+    },
+  );
+  const sourcePath = path.dirname(packageJsonPath);
+  const targetPath = path.join(buildPath, "node_modules", moduleName);
+
+  fs.cpSync(sourcePath, targetPath, {
+    dereference: true,
+    force: true,
+    recursive: true,
+  });
+}
+
 function copyNativeRuntimeDependencies(buildPath: string) {
   for (const moduleName of nativeRuntimeModules) {
-    copyRuntimePath(buildPath, path.join("node_modules", moduleName));
+    copyRuntimeModule(buildPath, moduleName);
   }
 
   const clientNapiSource = path.resolve(

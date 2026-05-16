@@ -1,0 +1,27 @@
+{
+  "name": "angel-engine-workspace",
+  "private": true,
+  "packageManager": "pnpm@11.1.2",
+  "scripts": {
+    "build": "turbo run build",
+    "package": "turbo run package",
+    "make": "turbo run make",
+    "lint": "turbo run lint",
+    "typecheck": "turbo run typecheck",
+    "prepare": "husky",
+    "precommit": "lint-staged --config lint-staged.config.mjs --relative",
+    "napi:build": "turbo run build --filter @angel-engine/client-napi",
+    "napi:build:debug": "turbo run build:debug --filter @angel-engine/client-napi",
+    "desktop:start": "pnpm --filter desktop start",
+    "desktop:package": "turbo run package --filter desktop",
+    "desktop:make": "turbo run make --filter desktop",
+    "desktop:typecheck": "turbo run typecheck --filter desktop",
+    "desktop:rebuild-native": "pnpm --filter desktop rebuild:native"
+  },
+  "devDependencies": {
+    "husky": "^9.1.7",
+    "lint-staged": "^17.0.4",
+    "prettier": "^3.8.3",
+    "turbo": "^2.9.14"
+  }
+}
