@@ -7,3 +7,6 @@ asahi.db
 /qa-runs
 /node_modules
 .turbo/
+/packages/*/dist
+/packages/*/playground/dist
+/packages/js-client/node_modules

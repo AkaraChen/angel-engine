@@ -1,5 +1,6 @@
 packages:
   - "desktop"
+  - "packages/*"
   - "crates/angel-engine-client-napi"
   - "!vendor/**"
 

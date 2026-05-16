@@ -23,7 +23,7 @@
         "build.rs",
         "src/**"
       ],
-      "outputs": ["*.node", "index.d.ts"]
+      "outputs": ["*.node", "index.d.ts", "dist/**"]
     },
     "build:debug": {
       "dependsOn": ["^build:debug"],
@@ -36,7 +36,11 @@
         "build.rs",
         "src/**"
       ],
-      "outputs": ["*.node", "index.d.ts"]
+      "outputs": ["*.node", "index.d.ts", "dist/**"]
+    },
+    "playground:build": {
+      "dependsOn": ["build"],
+      "outputs": ["playground/dist/**"]
     },
     "package": {
       "dependsOn": ["^build"],
