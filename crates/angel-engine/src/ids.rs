@@ -78,7 +78,10 @@ impl JsonRpcRequestId {
     }
 
     pub fn number(value: impl Into<String>) -> Self {
-        Self::Number(value.into())
+        let value = value.into();
+        serde_json::from_str::<serde_json::Number>(&value)
+            .expect("JSON-RPC numeric request id must be a valid JSON number");
+        Self::Number(value)
     }
 
     pub fn null() -> Self {
@@ -115,8 +118,10 @@ impl JsonRpcRequestId {
     pub fn to_json_value(&self) -> serde_json::Value {
         match self {
             Self::String(value) => serde_json::Value::String(value.clone()),
-            Self::Number(value) => serde_json::from_str(value)
-                .unwrap_or_else(|_| serde_json::Value::String(value.clone())),
+            Self::Number(value) => serde_json::Value::Number(
+                serde_json::from_str(value)
+                    .expect("JSON-RPC numeric request id must be a valid JSON number"),
+            ),
             Self::Null => serde_json::Value::Null,
             Self::Other(value) => serde_json::Value::String(value.clone()),
         }
