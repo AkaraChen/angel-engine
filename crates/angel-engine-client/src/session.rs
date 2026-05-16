@@ -397,7 +397,7 @@ impl AngelSession {
         } else if allow_start {
             self.client.start_conversation(StartConversationRequest {
                 additional_directories: Vec::new(),
-                cwd: Some(cwd.unwrap_or_else(current_dir_string)),
+                cwd: Some(cwd.ok_or_else(|| invalid_input("Conversation cwd is required."))?),
             })?
         } else {
             return Err(invalid_input(
@@ -1182,13 +1182,6 @@ fn selected_config_value(value: Option<&str>) -> Option<String> {
         .map(str::trim)
         .filter(|value| !value.is_empty())
         .map(ToString::to_string)
-}
-
-fn current_dir_string() -> String {
-    std::env::current_dir()
-        .ok()
-        .map(|path| path.display().to_string())
-        .unwrap_or_else(|| ".".to_string())
 }
 
 fn invalid_input(message: impl Into<String>) -> ClientError {

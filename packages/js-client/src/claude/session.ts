@@ -1,4 +1,5 @@
 import type {
+  ClientCommandResult,
   ClientUpdate,
   ConversationSnapshot,
   HydrateRequest,
@@ -745,7 +746,7 @@ export class ClaudeCodeSession {
           hydrate: false,
           remoteId: input.remoteId,
         })
-      : this.client.startThread({ cwd: input.cwd });
+      : this.startConversation(input.cwd);
     if (!result.conversationId) {
       throw new Error("Claude Code runtime did not start a conversation.");
     }
@@ -754,6 +755,13 @@ export class ClaudeCodeSession {
       this.initialConversationEvents(result.conversationId),
     );
     return this.requireConversation();
+  }
+
+  private startConversation(cwd: string | undefined): ClientCommandResult {
+    if (!is.string(cwd) || cwd.length === 0) {
+      throw new Error("Claude Code conversation cwd is required.");
+    }
+    return this.client.startThread({ cwd });
   }
 
   private initialConversationEvents(conversationId: string): EngineEventJson[] {
