@@ -231,7 +231,7 @@ export interface ChatSetPermissionModeResult {
 
 export interface ProjectFileSearchInput {
   limit?: number;
-  query?: string;
+  query: string;
   root: string;
 }
 

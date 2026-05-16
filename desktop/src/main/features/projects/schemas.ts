@@ -9,7 +9,7 @@ export const createProjectInput = type({
 export const projectFileSearchInput = type({
   "+": "ignore",
   "limit?": "number",
-  "query?": "string",
+  query: "string > 0",
   root: "string > 0",
 });
 
