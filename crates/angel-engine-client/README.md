@@ -81,7 +81,7 @@ thread.send_event(ThreadEvent::cancel())?;
 thread.send_event(ThreadEvent::approve_first())?;
 
 let state = thread.require_state()?;
-let open_questions = thread.open_elicitations();
+let open_questions = thread.open_elicitations()?;
 let settings = thread.settings()?;
 let models = thread.model_list()?;
 ```

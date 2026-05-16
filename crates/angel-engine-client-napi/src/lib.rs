@@ -278,7 +278,7 @@ impl AngelClient {
         self.with_client_json(
             "AngelClient.openElicitations",
             format!("conversation_id={conversation_id}"),
-            move |client| Ok(client.open_elicitations(&conversation_id)),
+            move |client| client.open_elicitations(&conversation_id),
         )
     }
 
@@ -1067,7 +1067,14 @@ impl AngelEngineClient {
         trace_napi_sync_result(
             "AngelEngineClient.openElicitations",
             format!("conversation_id={conversation_id}"),
-            || to_json(self.client.thread(conversation_id).open_elicitations()),
+            || {
+                let elicitations = self
+                    .client
+                    .thread(conversation_id)
+                    .open_elicitations()
+                    .map_err(to_napi_error)?;
+                to_json(elicitations)
+            },
         )
     }
 

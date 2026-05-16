@@ -424,17 +424,21 @@ where
         self.turn(conversation_id, turn_id).map(TurnSnapshot::from)
     }
 
-    pub fn open_elicitations(&self, conversation_id: &str) -> Vec<ElicitationSnapshot> {
-        self.conversation(conversation_id)
-            .map(|conversation| {
-                conversation
-                    .elicitations
-                    .values()
-                    .filter(|elicitation| matches!(elicitation.phase, ElicitationPhase::Open))
-                    .map(ElicitationSnapshot::from)
-                    .collect()
-            })
-            .unwrap_or_default()
+    pub fn open_elicitations(
+        &self,
+        conversation_id: &str,
+    ) -> ClientResult<Vec<ElicitationSnapshot>> {
+        let conversation =
+            self.conversation(conversation_id)
+                .ok_or_else(|| crate::ClientError::InvalidInput {
+                    message: format!("conversation {conversation_id} does not exist"),
+                })?;
+        Ok(conversation
+            .elicitations
+            .values()
+            .filter(|elicitation| matches!(elicitation.phase, ElicitationPhase::Open))
+            .map(ElicitationSnapshot::from)
+            .collect())
     }
 
     pub fn thread_settings(
@@ -520,7 +524,7 @@ where
     }
 
     fn first_open_elicitation_id(&self, conversation_id: &str) -> ClientResult<String> {
-        self.open_elicitations(conversation_id)
+        self.open_elicitations(conversation_id)?
             .into_iter()
             .next()
             .map(|elicitation| elicitation.id)

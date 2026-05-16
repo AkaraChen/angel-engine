@@ -64,7 +64,7 @@ where
             .find(|turn| turn.id == turn_id)
     }
 
-    pub fn open_elicitations(&self) -> Vec<ElicitationSnapshot> {
+    pub fn open_elicitations(&self) -> ClientResult<Vec<ElicitationSnapshot>> {
         self.client.core.open_elicitations(&self.conversation_id)
     }
 

@@ -198,7 +198,10 @@ impl AngelClient {
         Ok(update)
     }
 
-    pub fn open_elicitations(&self, conversation_id: &str) -> Vec<ElicitationSnapshot> {
+    pub fn open_elicitations(
+        &self,
+        conversation_id: &str,
+    ) -> ClientResult<Vec<ElicitationSnapshot>> {
         self.core.open_elicitations(conversation_id)
     }
 

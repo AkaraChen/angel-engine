@@ -490,7 +490,7 @@ impl AngelSession {
         let conversation_id = self.require_conversation_id()?.to_string();
         let Some(elicitation) = self
             .client
-            .open_elicitations(&conversation_id)
+            .open_elicitations(&conversation_id)?
             .first()
             .cloned()
         else {

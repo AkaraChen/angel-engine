@@ -1151,7 +1151,10 @@ fn resolve_first_elicitation_event_answers_runtime_permission_request() {
             } if id == &conversation_id
         )
     }));
-    let open = client.thread(&conversation_id).open_elicitations();
+    let open = client
+        .thread(&conversation_id)
+        .open_elicitations()
+        .expect("open elicitations");
     assert_eq!(open.len(), 1);
 
     let resolved = client
@@ -1173,6 +1176,7 @@ fn resolve_first_elicitation_event_answers_runtime_permission_request() {
         client
             .thread(&conversation_id)
             .open_elicitations()
+            .expect("open elicitations")
             .is_empty()
     );
 }

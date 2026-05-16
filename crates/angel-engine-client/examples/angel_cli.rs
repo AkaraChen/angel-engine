@@ -280,7 +280,7 @@ impl MultiRuntimeCli {
         let conversation_id = self.conversation_id()?;
         let Some(elicitation) = self
             .client
-            .open_elicitations(&conversation_id)
+            .open_elicitations(&conversation_id)?
             .first()
             .cloned()
         else {
