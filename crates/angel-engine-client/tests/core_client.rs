@@ -1020,7 +1020,7 @@ fn inputs_event_encodes_every_supported_user_input_shape_for_acp() {
             ClientInput::embedded_blob_resource(
                 "file:///repo/archive.bin",
                 "AAEC",
-                None,
+                Some("application/zip".to_string()),
                 Some("archive.bin".to_string()),
             ),
             ClientInput::image(

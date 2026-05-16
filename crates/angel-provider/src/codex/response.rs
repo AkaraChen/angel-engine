@@ -717,7 +717,7 @@ fn codex_history_replay_tool_action(item: &Value) -> Option<HistoryReplayToolAct
         .or_else(|| {
             item.get("status")
                 .and_then(Value::as_str)
-                .map(|status| ActionPhase::from_wire(Some(status)))
+                .and_then(codex_history_status_to_phase)
         })
         .unwrap_or_else(|| match item_type {
             "function_call_output" | "custom_tool_call_output" | "tool_search_output" => {
@@ -770,6 +770,19 @@ fn codex_history_tool_kind(item: &Value) -> Option<ActionKind> {
         _ => return None,
     };
     Some(kind)
+}
+
+fn codex_history_status_to_phase(status: &str) -> Option<ActionPhase> {
+    match status {
+        "completed" => Some(ActionPhase::Completed),
+        "failed" => Some(ActionPhase::Failed),
+        "declined" => Some(ActionPhase::Declined),
+        "cancelled" | "canceled" | "interrupted" => Some(ActionPhase::Cancelled),
+        "pending" | "proposed" => Some(ActionPhase::Proposed),
+        "inProgress" => Some(ActionPhase::Running),
+        "streamingResult" => Some(ActionPhase::StreamingResult),
+        _ => None,
+    }
 }
 
 fn codex_history_tool_title(item: &Value) -> Option<String> {

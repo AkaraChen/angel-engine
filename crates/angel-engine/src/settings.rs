@@ -22,20 +22,6 @@ pub enum ReasoningLevel {
 }
 
 impl ReasoningLevel {
-    pub fn from_wire(value: &str) -> Option<Self> {
-        match value.to_ascii_lowercase().as_str() {
-            "none" | "off" | "false" | "disabled" | "disable" => Some(Self::None),
-            "minimal" => Some(Self::Minimal),
-            "low" => Some(Self::Low),
-            "medium" => Some(Self::Medium),
-            "high" => Some(Self::High),
-            "xhigh" | "x_high" | "x-high" => Some(Self::XHigh),
-            _ => None,
-        }
-    }
-}
-
-impl ReasoningLevel {
     pub fn is_disabled(&self) -> bool {
         matches!(self, Self::None)
     }

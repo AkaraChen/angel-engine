@@ -3,7 +3,7 @@ use angel_engine::{
 };
 use serde::{Deserialize, Serialize};
 
-use crate::error::ClientResult;
+use crate::error::{ClientError, ClientResult};
 use crate::snapshot::{
     ActionOutputSnapshot, ActionSnapshot, ContentChunk, ConversationSnapshot, DisplayPlanSnapshot,
     ElicitationSnapshot, SessionUsageSnapshot, TurnSnapshot, conversation_snapshot,
@@ -235,8 +235,8 @@ pub struct RuntimeAuthMethod {
 pub(crate) fn events_from_engine_event(
     engine: &angel_engine::AngelEngine,
     event: &EngineEvent,
-) -> Vec<ClientEvent> {
-    match event {
+) -> ClientResult<Vec<ClientEvent>> {
+    Ok(match event {
         EngineEvent::RuntimeNegotiated { .. } => match &engine.runtime {
             RuntimeState::Available { capabilities } => vec![ClientEvent::RuntimeReady {
                 name: capabilities.name.clone(),
@@ -251,18 +251,22 @@ pub(crate) fn events_from_engine_event(
             code: error.code.clone(),
             message: error.message.clone(),
         }],
-        EngineEvent::ConversationDiscovered { id, .. } => engine
-            .conversations
-            .get(id)
-            .map(conversation_snapshot)
-            .map(|conversation| vec![ClientEvent::ConversationDiscovered { conversation }])
-            .unwrap_or_default(),
-        EngineEvent::ConversationReady { id, .. } => engine
-            .conversations
-            .get(id)
-            .map(conversation_snapshot)
-            .map(|conversation| vec![ClientEvent::ConversationReady { conversation }])
-            .unwrap_or_default(),
+        EngineEvent::ConversationDiscovered { id, .. } => {
+            let conversation = engine
+                .conversations
+                .get(id)
+                .map(conversation_snapshot)
+                .ok_or_else(|| missing_projection("discovered conversation snapshot"))?;
+            vec![ClientEvent::ConversationDiscovered { conversation }]
+        }
+        EngineEvent::ConversationReady { id, .. } => {
+            let conversation = engine
+                .conversations
+                .get(id)
+                .map(conversation_snapshot)
+                .ok_or_else(|| missing_projection("ready conversation snapshot"))?;
+            vec![ClientEvent::ConversationReady { conversation }]
+        }
         EngineEvent::ConversationProvisionStarted { id, .. }
         | EngineEvent::ConversationHydrationStarted { id, .. }
         | EngineEvent::ConversationStatusChanged { id, .. }
@@ -365,7 +369,8 @@ pub(crate) fn events_from_engine_event(
         } => vec![ClientEvent::PlanUpdated {
             conversation_id: conversation_id.to_string(),
             turn_id: turn_id.to_string(),
-            plan: plan_snapshot_for_turn(engine, conversation_id, turn_id).unwrap_or_default(),
+            plan: plan_snapshot_for_turn(engine, conversation_id, turn_id)
+                .ok_or_else(|| missing_projection("plan snapshot"))?,
         }],
         EngineEvent::TodoUpdated {
             conversation_id,
@@ -374,12 +379,8 @@ pub(crate) fn events_from_engine_event(
         } => vec![ClientEvent::PlanUpdated {
             conversation_id: conversation_id.to_string(),
             turn_id: turn_id.to_string(),
-            plan: todo_snapshot_for_turn(engine, conversation_id, turn_id).unwrap_or_else(|| {
-                DisplayPlanSnapshot {
-                    kind: "todo".to_string(),
-                    ..DisplayPlanSnapshot::default()
-                }
-            }),
+            plan: todo_snapshot_for_turn(engine, conversation_id, turn_id)
+                .ok_or_else(|| missing_projection("todo snapshot"))?,
         }],
         EngineEvent::TurnTerminal {
             conversation_id,
@@ -401,18 +402,18 @@ pub(crate) fn events_from_engine_event(
             conversation_id,
             action_id,
             ..
-        } => engine
-            .conversations
-            .get(conversation_id)
-            .and_then(|conversation| conversation.actions.get(action_id))
-            .map(ActionSnapshot::from)
-            .map(|action| {
-                vec![ClientEvent::ActionUpdated {
-                    conversation_id: conversation_id.to_string(),
-                    action,
-                }]
-            })
-            .unwrap_or_default(),
+        } => {
+            let action = engine
+                .conversations
+                .get(conversation_id)
+                .and_then(|conversation| conversation.actions.get(action_id))
+                .map(ActionSnapshot::from)
+                .ok_or_else(|| missing_projection("updated action snapshot"))?;
+            vec![ClientEvent::ActionUpdated {
+                conversation_id: conversation_id.to_string(),
+                action,
+            }]
+        }
         EngineEvent::ElicitationOpened {
             conversation_id,
             elicitation,
@@ -432,18 +433,18 @@ pub(crate) fn events_from_engine_event(
         | EngineEvent::ElicitationCancelled {
             conversation_id,
             elicitation_id,
-        } => engine
-            .conversations
-            .get(conversation_id)
-            .and_then(|conversation| conversation.elicitations.get(elicitation_id))
-            .map(ElicitationSnapshot::from)
-            .map(|elicitation| {
-                vec![ClientEvent::ElicitationUpdated {
-                    conversation_id: conversation_id.to_string(),
-                    elicitation,
-                }]
-            })
-            .unwrap_or_default(),
+        } => {
+            let elicitation = engine
+                .conversations
+                .get(conversation_id)
+                .and_then(|conversation| conversation.elicitations.get(elicitation_id))
+                .map(ElicitationSnapshot::from)
+                .ok_or_else(|| missing_projection("updated elicitation snapshot"))?;
+            vec![ClientEvent::ElicitationUpdated {
+                conversation_id: conversation_id.to_string(),
+                elicitation,
+            }]
+        }
         EngineEvent::HistoryMutationStarted {
             conversation_id, ..
         }
@@ -455,14 +456,14 @@ pub(crate) fn events_from_engine_event(
         } => vec![ClientEvent::HistoryUpdated {
             conversation_id: conversation_id.to_string(),
         }],
-    }
+    })
 }
 
 pub(crate) fn stream_deltas_from_engine_event(
     engine: &angel_engine::AngelEngine,
     event: &EngineEvent,
-) -> Vec<ClientStreamDelta> {
-    match event {
+) -> ClientResult<Vec<ClientStreamDelta>> {
+    Ok(match event {
         EngineEvent::AssistantDelta {
             conversation_id,
             turn_id,
@@ -510,28 +511,32 @@ pub(crate) fn stream_deltas_from_engine_event(
             patch,
         } => {
             let Some(delta) = patch.output_delta.as_ref() else {
-                return Vec::new();
+                return Ok(Vec::new());
             };
-            engine
+            let action = engine
                 .conversations
                 .get(conversation_id)
                 .and_then(|conversation| conversation.actions.get(action_id))
-                .map(|action| {
-                    vec![ClientStreamDelta::ActionOutputDelta {
-                        conversation_id: conversation_id.to_string(),
-                        turn_id: action.turn_id.to_string(),
-                        action_id: action_id.to_string(),
-                        content: ActionOutputSnapshot::from(delta),
-                    }]
-                })
-                .unwrap_or_default()
+                .ok_or_else(|| missing_projection("action output delta snapshot"))?;
+            vec![ClientStreamDelta::ActionOutputDelta {
+                conversation_id: conversation_id.to_string(),
+                turn_id: action.turn_id.to_string(),
+                action_id: action_id.to_string(),
+                content: ActionOutputSnapshot::from(delta),
+            }]
         }
         _ => Vec::new(),
-    }
+    })
 }
 
 pub(crate) fn log_event(log: ClientLog) -> ClientEvent {
     ClientEvent::Log { log }
+}
+
+fn missing_projection(message: &str) -> ClientError {
+    ClientError::InvalidInput {
+        message: format!("engine event projection is missing {message}"),
+    }
 }
 
 fn plan_snapshot_for_turn(

@@ -481,7 +481,7 @@ impl DisplayToolActionSnapshot {
             elicitation_id: None,
             kind: "tool".to_string(),
             phase: "streamingResult".to_string(),
-            title: Some("Tool call".to_string()),
+            title: None,
             input_summary: None,
             raw_input: None,
             output_text: action_output_text(std::slice::from_ref(&content)),
@@ -513,12 +513,7 @@ impl DisplayToolActionSnapshot {
             elicitation_id: Some(elicitation.id.clone()),
             kind: "elicitation".to_string(),
             phase: elicitation_action_phase(elicitation.phase.as_str()).to_string(),
-            title: Some(
-                elicitation
-                    .title
-                    .clone()
-                    .unwrap_or_else(|| "User input requested".to_string()),
-            ),
+            title: elicitation.title.clone(),
             input_summary,
             raw_input: serde_json::to_string(elicitation).ok(),
             output_text: String::new(),

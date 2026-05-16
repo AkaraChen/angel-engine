@@ -16,12 +16,13 @@ impl AngelEngine {
         if result.success {
             conversation.lifecycle = ConversationLifecycle::Idle;
         } else {
-            conversation.lifecycle = ConversationLifecycle::Faulted(ErrorInfo::new(
-                "history.mutation_failed",
-                result
-                    .message
-                    .unwrap_or_else(|| "history mutation failed".to_string()),
-            ));
+            let Some(message) = result.message else {
+                return Err(EngineError::InvalidCommand {
+                    message: "failed history mutation result is missing message".to_string(),
+                });
+            };
+            conversation.lifecycle =
+                ConversationLifecycle::Faulted(ErrorInfo::new("history.mutation_failed", message));
         }
         Ok(TransitionReport::one(UiEvent::HistoryChanged(
             conversation_id,

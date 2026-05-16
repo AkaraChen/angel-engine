@@ -457,6 +457,18 @@ impl AngelEngine {
                 conversation_id,
                 entry,
             } => {
+                if entry.role == HistoryRole::Tool {
+                    let Some(tool) = entry.tool.as_ref() else {
+                        return Err(EngineError::InvalidCommand {
+                            message: "history tool replay entry is missing tool action".to_string(),
+                        });
+                    };
+                    if tool.id.as_deref().is_none_or(str::is_empty) {
+                        return Err(EngineError::InvalidCommand {
+                            message: "history tool replay entry is missing tool id".to_string(),
+                        });
+                    }
+                }
                 let conversation = self.conversation_mut(&conversation_id)?;
                 if entry.role == HistoryRole::User {
                     conversation.history.turn_count += 1;

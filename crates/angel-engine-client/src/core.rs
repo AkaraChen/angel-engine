@@ -589,10 +589,10 @@ where
             self.engine.apply_event(event.clone())?;
             update
                 .stream_deltas
-                .extend(stream_deltas_from_engine_event(&self.engine, event));
+                .extend(stream_deltas_from_engine_event(&self.engine, event)?);
             update
                 .events
-                .extend(events_from_engine_event(&self.engine, event));
+                .extend(events_from_engine_event(&self.engine, event)?);
         }
         for request_id in output.completed_requests {
             self.engine.pending.remove(&request_id);

@@ -34,7 +34,7 @@ impl AngelEngine {
         let remote = self.remote_turn_for_start(&conversation_id, &request_id, sequence)?;
         let input_text = input_to_text(&input);
         let effect_fields = input_effect_fields(&input);
-        let input_refs = to_input_refs(input);
+        let input_refs = to_input_refs(input)?;
         let generation = self.generation;
 
         {
@@ -84,7 +84,7 @@ impl AngelEngine {
         let request_id = self.next_request_id();
         let input_text = input_to_text(&input);
         let effect_fields = input_effect_fields(&input);
-        let input_refs = to_input_refs(input);
+        let input_refs = to_input_refs(input)?;
         {
             let conversation = self.conversation_mut(&conversation_id)?;
             let turn = conversation
@@ -272,23 +272,23 @@ fn ensure_remote_turn_id_available(
     Ok(())
 }
 
-fn to_input_refs(input: Vec<UserInput>) -> Vec<UserInputRef> {
+fn to_input_refs(input: Vec<UserInput>) -> Result<Vec<UserInputRef>, EngineError> {
     input.into_iter().map(to_input_ref).collect()
 }
 
-fn to_input_ref(input: UserInput) -> UserInputRef {
-    let (image, file) = input_attachment_refs(&input.kind);
-    UserInputRef {
+fn to_input_ref(input: UserInput) -> Result<UserInputRef, EngineError> {
+    let (image, file) = input_attachment_refs(&input.kind)?;
+    Ok(UserInputRef {
         content: input.content,
         image,
         file,
-    }
+    })
 }
 
 fn input_attachment_refs(
     kind: &UserInputKind,
-) -> (Option<UserImageInputRef>, Option<UserFileInputRef>) {
-    match kind {
+) -> Result<(Option<UserImageInputRef>, Option<UserFileInputRef>), EngineError> {
+    Ok(match kind {
         UserInputKind::Image {
             data,
             mime_type,
@@ -306,22 +306,27 @@ fn input_attachment_refs(
             mime_type,
             name,
             ..
-        } => (
-            None,
-            Some(UserFileInputRef {
-                data: data.clone(),
-                mime_type: mime_type
-                    .clone()
-                    .unwrap_or_else(|| "application/octet-stream".to_string()),
-                name: name.clone(),
-            }),
-        ),
+        } => {
+            let Some(mime_type) = mime_type else {
+                return Err(EngineError::InvalidCommand {
+                    message: "embedded blob resource is missing mime type".to_string(),
+                });
+            };
+            (
+                None,
+                Some(UserFileInputRef {
+                    data: data.clone(),
+                    mime_type: mime_type.clone(),
+                    name: name.clone(),
+                }),
+            )
+        }
         UserInputKind::Text
         | UserInputKind::ResourceLink { .. }
         | UserInputKind::FileMention { .. }
         | UserInputKind::EmbeddedTextResource { .. }
         | UserInputKind::RawContentBlock(_) => (None, None),
-    }
+    })
 }
 
 fn input_to_text(input: &[UserInput]) -> String {

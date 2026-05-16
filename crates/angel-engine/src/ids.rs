@@ -2,12 +2,18 @@ use std::fmt;
 
 macro_rules! id_type {
     ($name:ident) => {
-        #[derive(serde::Serialize, serde::Deserialize, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
-        pub struct $name(String);
+        #[derive(
+            serde::Serialize, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, garde::Validate,
+        )]
+        #[garde(transparent)]
+        pub struct $name(#[garde(length(min = 1))] String);
 
         impl $name {
             pub fn new(value: impl Into<String>) -> Self {
-                Self(value.into())
+                let id = Self(value.into());
+                <Self as garde::Validate>::validate(&id)
+                    .expect(concat!(stringify!($name), " must not be empty"));
+                id
             }
 
             pub fn as_str(&self) -> &str {
@@ -34,6 +40,17 @@ macro_rules! id_type {
         impl fmt::Display for $name {
             fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
                 f.write_str(&self.0)
+            }
+        }
+
+        impl<'de> serde::Deserialize<'de> for $name {
+            fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+            where
+                D: serde::Deserializer<'de>,
+            {
+                let id = Self(String::deserialize(deserializer)?);
+                <Self as garde::Validate>::validate(&id).map_err(serde::de::Error::custom)?;
+                Ok(id)
             }
         }
     };
@@ -124,13 +141,11 @@ impl fmt::Display for JsonRpcRequestId {
     }
 }
 
-#[derive(
-    serde::Serialize, serde::Deserialize, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash,
-)]
+#[derive(serde::Serialize, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, garde::Validate)]
 pub enum RemoteConversationId {
-    Known(String),
-    Pending(String),
-    Local(String),
+    Known(#[garde(length(min = 1))] String),
+    Pending(#[garde(length(min = 1))] String),
+    Local(#[garde(length(min = 1))] String),
 }
 
 impl RemoteConversationId {
@@ -142,27 +157,137 @@ impl RemoteConversationId {
     }
 }
 
-#[derive(
-    serde::Serialize, serde::Deserialize, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash,
-)]
+impl<'de> serde::Deserialize<'de> for RemoteConversationId {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        #[derive(serde::Deserialize)]
+        enum RemoteConversationIdJson {
+            Known(String),
+            Pending(String),
+            Local(String),
+        }
+
+        let id = match RemoteConversationIdJson::deserialize(deserializer)? {
+            RemoteConversationIdJson::Known(value) => Self::Known(value),
+            RemoteConversationIdJson::Pending(value) => Self::Pending(value),
+            RemoteConversationIdJson::Local(value) => Self::Local(value),
+        };
+        <Self as garde::Validate>::validate(&id).map_err(serde::de::Error::custom)?;
+        Ok(id)
+    }
+}
+
+#[derive(serde::Serialize, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, garde::Validate)]
 pub enum RemoteTurnId {
-    Known(String),
-    Pending { request_id: JsonRpcRequestId },
-    Local(String),
+    Known(#[garde(length(min = 1))] String),
+    Pending {
+        #[garde(skip)]
+        request_id: JsonRpcRequestId,
+    },
+    Local(#[garde(length(min = 1))] String),
 }
 
-#[derive(
-    serde::Serialize, serde::Deserialize, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash,
-)]
+impl<'de> serde::Deserialize<'de> for RemoteTurnId {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        #[derive(serde::Deserialize)]
+        enum RemoteTurnIdJson {
+            Known(String),
+            Pending { request_id: JsonRpcRequestId },
+            Local(String),
+        }
+
+        let id = match RemoteTurnIdJson::deserialize(deserializer)? {
+            RemoteTurnIdJson::Known(value) => Self::Known(value),
+            RemoteTurnIdJson::Pending { request_id } => Self::Pending { request_id },
+            RemoteTurnIdJson::Local(value) => Self::Local(value),
+        };
+        <Self as garde::Validate>::validate(&id).map_err(serde::de::Error::custom)?;
+        Ok(id)
+    }
+}
+
+#[derive(serde::Serialize, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, garde::Validate)]
 pub enum RemoteActionId {
-    Known(String),
-    Local(String),
+    Known(#[garde(length(min = 1))] String),
+    Local(#[garde(length(min = 1))] String),
 }
 
-#[derive(
-    serde::Serialize, serde::Deserialize, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash,
-)]
+impl<'de> serde::Deserialize<'de> for RemoteActionId {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        #[derive(serde::Deserialize)]
+        enum RemoteActionIdJson {
+            Known(String),
+            Local(String),
+        }
+
+        let id = match RemoteActionIdJson::deserialize(deserializer)? {
+            RemoteActionIdJson::Known(value) => Self::Known(value),
+            RemoteActionIdJson::Local(value) => Self::Local(value),
+        };
+        <Self as garde::Validate>::validate(&id).map_err(serde::de::Error::custom)?;
+        Ok(id)
+    }
+}
+
+#[derive(serde::Serialize, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, garde::Validate)]
 pub enum RemoteRequestId {
-    JsonRpc(JsonRpcRequestId),
-    Local(String),
+    JsonRpc(#[garde(skip)] JsonRpcRequestId),
+    Local(#[garde(length(min = 1))] String),
+}
+
+impl<'de> serde::Deserialize<'de> for RemoteRequestId {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        #[derive(serde::Deserialize)]
+        enum RemoteRequestIdJson {
+            JsonRpc(JsonRpcRequestId),
+            Local(String),
+        }
+
+        let id = match RemoteRequestIdJson::deserialize(deserializer)? {
+            RemoteRequestIdJson::JsonRpc(value) => Self::JsonRpc(value),
+            RemoteRequestIdJson::Local(value) => Self::Local(value),
+        };
+        <Self as garde::Validate>::validate(&id).map_err(serde::de::Error::custom)?;
+        Ok(id)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{
+        ActionId, ConversationId, RemoteActionId, RemoteConversationId, RemoteRequestId,
+        RemoteTurnId, TurnId,
+    };
+
+    #[test]
+    fn typed_ids_reject_empty_strings() {
+        assert!(std::panic::catch_unwind(|| ConversationId::new("")).is_err());
+        assert!(std::panic::catch_unwind(|| TurnId::new("")).is_err());
+        assert!(std::panic::catch_unwind(|| ActionId::new("")).is_err());
+
+        assert!(serde_json::from_str::<ConversationId>(r#""""#).is_err());
+        assert!(serde_json::from_str::<TurnId>(r#""""#).is_err());
+        assert!(serde_json::from_str::<ActionId>(r#""""#).is_err());
+    }
+
+    #[test]
+    fn remote_ids_reject_empty_strings_on_deserialize() {
+        assert!(serde_json::from_str::<RemoteConversationId>(r#"{"Known":""}"#).is_err());
+        assert!(serde_json::from_str::<RemoteConversationId>(r#"{"Pending":""}"#).is_err());
+        assert!(serde_json::from_str::<RemoteTurnId>(r#"{"Known":""}"#).is_err());
+        assert!(serde_json::from_str::<RemoteTurnId>(r#"{"Local":""}"#).is_err());
+        assert!(serde_json::from_str::<RemoteActionId>(r#"{"Known":""}"#).is_err());
+        assert!(serde_json::from_str::<RemoteRequestId>(r#"{"Local":""}"#).is_err());
+    }
 }

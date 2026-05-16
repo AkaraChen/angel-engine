@@ -152,7 +152,7 @@ impl DisplayToolAction {
             turn_id: Some(turn_id),
             kind: None,
             phase: ActionPhase::StreamingResult,
-            title: Some("Tool call".to_string()),
+            title: None,
             input_summary: None,
             raw_input: None,
             output_text: action_output_text(std::slice::from_ref(&content)),
@@ -169,13 +169,7 @@ impl DisplayToolAction {
             phase: ActionPhase::AwaitingDecision {
                 elicitation_id: elicitation.id.clone(),
             },
-            title: Some(
-                elicitation
-                    .options
-                    .title
-                    .clone()
-                    .unwrap_or_else(|| "User input requested".to_string()),
-            ),
+            title: elicitation.options.title.clone(),
             input_summary: elicitation_input_summary(elicitation),
             raw_input: None,
             output_text: String::new(),
@@ -184,18 +178,17 @@ impl DisplayToolAction {
         }
     }
 
-    pub fn from_history(
-        tool: &HistoryReplayToolAction,
-        fallback_id: String,
-        turn_id: TurnId,
-    ) -> Self {
+    pub fn from_history(tool: &HistoryReplayToolAction, turn_id: TurnId) -> Self {
         let output = tool.output.clone();
         Self {
-            id: tool.id.clone().unwrap_or(fallback_id),
+            id: tool
+                .id
+                .clone()
+                .expect("history tool replay entry must include tool id"),
             turn_id: Some(turn_id),
             kind: tool.kind.clone(),
             phase: tool.phase.clone(),
-            title: Some(history_tool_title(tool)),
+            title: history_tool_title(tool),
             input_summary: tool.input_summary.clone(),
             raw_input: tool.raw_input.clone(),
             output_text: action_output_text(&output),
@@ -365,9 +358,8 @@ fn append_history_display_message(
             content: parts,
         }),
         HistoryRole::Tool => {
-            let fallback_id = format!("history-tool-{index}");
             let (turn_id, parts) = ensure_history_assistant_message(messages);
-            let action = history_tool_action(entry, fallback_id, turn_id);
+            let action = history_tool_action(entry, turn_id);
             upsert_display_tool_part(parts, action);
         }
         HistoryRole::Reasoning => {
@@ -511,35 +503,18 @@ fn merge_display_tool_actions(
     }
 }
 
-fn history_tool_action(
-    entry: &HistoryReplayEntry,
-    fallback_id: String,
-    turn_id: TurnId,
-) -> DisplayToolAction {
+fn history_tool_action(entry: &HistoryReplayEntry, turn_id: TurnId) -> DisplayToolAction {
     if let Some(tool) = &entry.tool {
-        return DisplayToolAction::from_history(tool, fallback_id, turn_id);
+        return DisplayToolAction::from_history(tool, turn_id);
     }
-    let raw = content_delta_text(&entry.content);
-    DisplayToolAction {
-        id: fallback_id,
-        turn_id: Some(turn_id),
-        kind: None,
-        phase: ActionPhase::Completed,
-        title: Some("Tool call".to_string()),
-        input_summary: None,
-        raw_input: Some(raw),
-        output_text: String::new(),
-        output: Vec::new(),
-        error: None,
-    }
+    panic!("history tool replay entry must include tool action");
 }
 
-fn history_tool_title(tool: &HistoryReplayToolAction) -> String {
+fn history_tool_title(tool: &HistoryReplayToolAction) -> Option<String> {
     non_empty(tool.title.as_deref())
         .or_else(|| non_empty(tool.input_summary.as_deref()))
         .map(ToString::to_string)
         .or_else(|| tool.kind.as_ref().map(action_kind_title))
-        .unwrap_or_else(|| "Tool call".to_string())
 }
 
 fn non_empty(value: Option<&str>) -> Option<&str> {
@@ -838,7 +813,8 @@ mod tests {
     }
 
     #[test]
-    fn hydrated_history_projects_generic_tool_fallback() {
+    #[should_panic(expected = "history tool replay entry must include tool action")]
+    fn hydrated_history_rejects_tool_entry_without_tool_action() {
         let mut conversation = conversation(ConversationCapabilities::unknown());
         conversation.history.replay = vec![
             HistoryReplayEntry {
@@ -853,25 +829,7 @@ mod tests {
             },
         ];
 
-        let messages = conversation_display_messages(&conversation);
-
-        assert_eq!(messages.len(), 2);
-        let tool = match &messages[1].content[0] {
-            DisplayMessagePart::ToolCall { action } => action,
-            DisplayMessagePart::Text { .. } => panic!("expected tool action"),
-            DisplayMessagePart::Image { .. } => panic!("expected tool action"),
-            DisplayMessagePart::File { .. } => panic!("expected tool action"),
-            DisplayMessagePart::Plan { .. } => panic!("expected tool action"),
-        };
-        assert_eq!(tool.id, "history-tool-1");
-        assert_eq!(
-            tool.turn_id.as_ref().map(ToString::to_string),
-            Some(messages[1].id.clone())
-        );
-        assert_eq!(tool.kind, None);
-        assert_eq!(tool.phase, ActionPhase::Completed);
-        assert_eq!(tool.title.as_deref(), Some("Tool call"));
-        assert_eq!(tool.raw_input.as_deref(), Some("npm test"));
+        let _ = conversation_display_messages(&conversation);
     }
 
     #[test]

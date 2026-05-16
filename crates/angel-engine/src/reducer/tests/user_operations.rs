@@ -231,7 +231,7 @@ fn start_turn_preserves_every_user_input_shape_for_runtime_projection() {
                 UserInput::embedded_blob_resource(
                     "file:///repo/archive.bin",
                     "AAEC",
-                    None,
+                    Some("application/zip".to_string()),
                     Some("archive.bin".to_string()),
                 ),
                 UserInput::image(
@@ -280,7 +280,7 @@ fn start_turn_preserves_every_user_input_shape_for_runtime_projection() {
     assert!(turn.input[4].file.is_some());
     assert_eq!(
         turn.input[4].file.as_ref().expect("file ref").mime_type,
-        "application/octet-stream"
+        "application/zip"
     );
     assert!(turn.input[5].image.is_some());
     assert_eq!(
@@ -291,6 +291,36 @@ fn start_turn_preserves_every_user_input_shape_for_runtime_projection() {
             .name
             .as_deref(),
         Some("screenshot.png")
+    );
+}
+
+#[test]
+fn start_turn_rejects_embedded_blob_without_mime_type() {
+    let capabilities = codex_capabilities();
+    let mut engine = engine_with(ProtocolFlavor::CodexAppServer, capabilities.clone());
+    let conversation_id = insert_ready_conversation(
+        &mut engine,
+        "conv",
+        RemoteConversationId::Known("thread".to_string()),
+        capabilities,
+    );
+
+    let error = engine
+        .plan_command(EngineCommand::StartTurn {
+            conversation_id,
+            input: vec![UserInput::embedded_blob_resource(
+                "file:///repo/archive.bin",
+                "AAEC",
+                None,
+                Some("archive.bin".to_string()),
+            )],
+            overrides: TurnOverrides::default(),
+        })
+        .expect_err("embedded blob requires mime type");
+
+    assert_eq!(
+        error.to_string(),
+        "invalid command: embedded blob resource is missing mime type"
     );
 }
 
