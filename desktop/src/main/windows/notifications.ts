@@ -163,11 +163,14 @@ function stateForWindow(window: BrowserWindow) {
 }
 
 function notificationChatTitle(chat: Chat) {
-  return chat.title.trim() || "Angel Engine";
+  const title = chat.title.trim();
+  if (title) return title;
+  return "Angel Engine";
 }
 
 function notificationBody(text: string | null | undefined, fallback: string) {
-  const normalized = (text ?? "").replace(/\s+/g, " ").trim() || fallback;
+  const normalizedText = text?.replace(/\s+/g, " ").trim();
+  const normalized = normalizedText ? normalizedText : fallback;
   return normalized.length > 220
     ? `${normalized.slice(0, 217).trimEnd()}...`
     : normalized;
