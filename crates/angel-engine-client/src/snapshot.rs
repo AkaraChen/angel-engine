@@ -410,7 +410,8 @@ pub struct DisplayToolActionSnapshot {
     pub turn_id: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub elicitation_id: Option<String>,
-    pub kind: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub kind: Option<String>,
     pub phase: String,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub title: Option<String>,
@@ -430,7 +431,7 @@ impl From<&ActionSnapshot> for DisplayToolActionSnapshot {
             id: action.id.clone(),
             turn_id: Some(action.turn_id.clone()),
             elicitation_id: action.elicitation_id.clone(),
-            kind: action.kind.clone(),
+            kind: Some(action.kind.clone()),
             phase: action.phase.clone(),
             title: action.title.clone(),
             input_summary: action.input_summary.clone(),
@@ -453,11 +454,7 @@ impl From<&angel_engine::DisplayToolAction> for DisplayToolActionSnapshot {
             id: action.id.clone(),
             turn_id: action.turn_id.as_ref().map(ToString::to_string),
             elicitation_id: None,
-            kind: action
-                .kind
-                .as_ref()
-                .map(action_kind_label)
-                .unwrap_or_else(|| "tool".to_string()),
+            kind: action.kind.as_ref().map(action_kind_label),
             phase: action_phase_label(&action.phase),
             title: action.title.clone(),
             input_summary: action.input_summary.clone(),
@@ -479,7 +476,7 @@ impl DisplayToolActionSnapshot {
             id: action_id,
             turn_id: Some(turn_id),
             elicitation_id: None,
-            kind: "tool".to_string(),
+            kind: None,
             phase: "streamingResult".to_string(),
             title: None,
             input_summary: None,
@@ -511,7 +508,7 @@ impl DisplayToolActionSnapshot {
             id: elicitation.id.clone(),
             turn_id: elicitation.turn_id.clone(),
             elicitation_id: Some(elicitation.id.clone()),
-            kind: "elicitation".to_string(),
+            kind: Some("elicitation".to_string()),
             phase: elicitation_action_phase(elicitation.phase.as_str()).to_string(),
             title: elicitation.title.clone(),
             input_summary,

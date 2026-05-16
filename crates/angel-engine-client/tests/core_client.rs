@@ -614,7 +614,7 @@ fn codex_resume_projects_raw_tool_history_into_display_messages() {
         })
         .and_then(|part| part.action.as_ref())
         .expect("search tool call");
-    assert_eq!(search.kind, "webSearch");
+    assert_eq!(search.kind.as_deref(), Some("webSearch"));
     assert_eq!(search.phase, "completed");
     assert_eq!(search.output_text, "");
     let tool = assistant
@@ -628,7 +628,7 @@ fn codex_resume_projects_raw_tool_history_into_display_messages() {
         .and_then(|part| part.action.as_ref())
         .expect("tool call part");
     assert_eq!(tool.id, "call_1");
-    assert_eq!(tool.kind, "command");
+    assert_eq!(tool.kind.as_deref(), Some("command"));
     assert_eq!(tool.phase, "completed");
     assert_eq!(tool.output_text, "## main\n");
     assert_eq!(
@@ -749,7 +749,7 @@ fn acp_resume_projects_tool_history_into_display_messages() {
         .as_ref()
         .expect("tool action");
     assert_eq!(tool.id, "tool-1");
-    assert_eq!(tool.kind, "command");
+    assert_eq!(tool.kind.as_deref(), Some("command"));
     assert_eq!(tool.phase, "completed");
     assert_eq!(tool.title.as_deref(), Some("npm test"));
     assert_eq!(tool.output_text, "ok\n");

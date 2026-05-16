@@ -355,12 +355,33 @@ function toChatAction(action: ToolActionSnapshotLike): ChatToolAction {
   if (!action.title) {
     throw new Error("Tool action is missing title.");
   }
+  if (!action.kind) {
+    throw new Error("Tool action is missing kind.");
+  }
+  const kind = action.kind;
+  switch (kind) {
+    case "command":
+    case "fileChange":
+    case "read":
+    case "write":
+    case "mcpTool":
+    case "dynamicTool":
+    case "subAgent":
+    case "webSearch":
+    case "media":
+    case "reasoning":
+    case "plan":
+    case "hostCapability":
+      break;
+    default:
+      throw new Error(`Unknown tool action kind: ${kind}`);
+  }
   return {
     elicitationId: action.elicitationId,
     error: action.error,
     id: action.id,
     inputSummary: action.inputSummary,
-    kind: action.kind as ChatToolAction["kind"],
+    kind,
     output: action.output,
     outputText: action.outputText,
     phase: action.phase,
