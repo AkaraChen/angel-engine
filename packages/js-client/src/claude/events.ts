@@ -17,6 +17,7 @@ import type {
 import type {
   ActiveClaudeTurn,
   EngineEventJson,
+  JsonObject,
   SessionConfigValueJson,
   SessionPermissionModeJson,
 } from "./types.js";
@@ -43,7 +44,7 @@ export function actionObserved(
   active: ActiveClaudeTurn,
   actionId: string,
   toolName: string,
-  input: Record<string, unknown>,
+  input: JsonObject,
 ): EngineEventJson {
   active.actionIds.add(actionId);
   return {

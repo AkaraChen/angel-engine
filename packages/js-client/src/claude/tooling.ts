@@ -10,7 +10,7 @@ import { CLAUDE_TOOL } from "./sdk-types.js";
 
 export function actionKind(
   toolName: string,
-  input?: Record<string, unknown>,
+  input?: JsonObject,
 ): `${EngineEventActionKind}` {
   if (isClaudePlanToolUse(toolName, input)) return EngineEventActionKind.Plan;
 
@@ -51,10 +51,7 @@ export function toolOutputKind(
     : EngineEventActionOutputKind.Text;
 }
 
-export function toolTitle(
-  toolName: string,
-  input: Record<string, unknown>,
-): string {
+export function toolTitle(toolName: string, input: JsonObject): string {
   if (toolName === CLAUDE_TOOL.Bash && typeof input.command === "string") {
     return input.command;
   }
@@ -66,10 +63,7 @@ export function toolTitle(
   return toolName;
 }
 
-export function toolInputSummary(
-  toolName: string,
-  input: Record<string, unknown>,
-): string {
+export function toolInputSummary(toolName: string, input: JsonObject): string {
   if (toolName === CLAUDE_TOOL.Bash && typeof input.command === "string") {
     return input.command;
   }
@@ -176,10 +170,7 @@ export function claudeHistoryToolResult(input: {
   };
 }
 
-function acpHistoryToolKind(
-  toolName: string,
-  input?: Record<string, unknown>,
-): string {
+function acpHistoryToolKind(toolName: string, input?: JsonObject): string {
   switch (actionKind(toolName, input)) {
     case EngineEventActionKind.Command:
       return "execute";

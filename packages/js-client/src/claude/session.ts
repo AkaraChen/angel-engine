@@ -30,6 +30,7 @@ import type {
   ClaudeCodeSendTextRequest,
   ClaudeElicitationResponse,
   EngineEventJson,
+  JsonObject,
   PendingPermission,
   SessionConfigValueJson,
   SessionPermissionModeJson,
@@ -429,7 +430,7 @@ export class ClaudeCodeSession {
             active,
             contentBlock.id,
             contentBlock.name,
-            contentBlock.input as Record<string, unknown>,
+            contentBlock.input as JsonObject,
           ),
         ];
       }
@@ -484,7 +485,7 @@ export class ClaudeCodeSession {
           throw new Error("Claude tool_use block input must be an object.");
         }
         const toolName = block.name;
-        const input = block.input as Record<string, unknown>;
+        const input = block.input as JsonObject;
         events.push(actionObserved(active, block.id, toolName, input));
         events.push(...planEventsFromToolUse(active, toolName, input));
       }
@@ -568,12 +569,13 @@ export class ClaudeCodeSession {
 
   private canUseTool(active: ActiveClaudeTurn): CanUseTool {
     return async (toolName, input, context) => {
+      const toolInput = input as JsonObject;
       const actionId = context.toolUseID || `permission-${Date.now()}`;
       const pending = this.createPendingPermission(actionId);
-      const inputSummary = toolInputSummary(toolName, input);
-      const elicitationKind = claudeElicitationKind(toolName, input);
+      const inputSummary = toolInputSummary(toolName, toolInput);
+      const elicitationKind = claudeElicitationKind(toolName, toolInput);
       const events = [
-        actionObserved(active, actionId, toolName, input),
+        actionObserved(active, actionId, toolName, toolInput),
         {
           ElicitationOpened: {
             conversation_id: active.conversationId,
@@ -584,12 +586,12 @@ export class ClaudeCodeSession {
               options: {
                 body: claudeElicitationBody(
                   toolName,
-                  input,
+                  toolInput,
                   context,
                   inputSummary,
                 ),
-                choices: claudeElicitationChoices(toolName, input),
-                questions: claudeElicitationQuestions(toolName, input),
+                choices: claudeElicitationChoices(toolName, toolInput),
+                questions: claudeElicitationQuestions(toolName, toolInput),
                 title:
                   context.title ??
                   context.displayName ??
@@ -628,7 +630,7 @@ export class ClaudeCodeSession {
               ? "user_permanent"
               : "user_temporary",
           toolUseID: actionId,
-          updatedInput: input,
+          updatedInput: toolInput,
           updatedPermissions:
             response.type === "allowForSession"
               ? context.suggestions
@@ -641,7 +643,7 @@ export class ClaudeCodeSession {
           toolUseID: actionId,
           updatedInput: updatedInputFromElicitationResponse(
             toolName,
-            input,
+            toolInput,
             response,
           ),
         } satisfies PermissionResult;

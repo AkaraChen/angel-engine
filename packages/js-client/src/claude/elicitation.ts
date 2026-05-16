@@ -20,7 +20,7 @@ interface NormalizedClaudeQuestionInput {
 
 export function claudeElicitationKind(
   toolName: string,
-  input: Record<string, unknown>,
+  input: JsonObject,
 ): `${EngineEventElicitationKind}` {
   return askUserQuestionInput(toolName, input)
     ? EngineEventElicitationKind.UserInput
@@ -29,7 +29,7 @@ export function claudeElicitationKind(
 
 export function claudeElicitationBody(
   toolName: string,
-  input: Record<string, unknown>,
+  input: JsonObject,
   context: CanUseToolContext,
   fallback: string,
 ): string | null {
@@ -41,7 +41,7 @@ export function claudeElicitationBody(
 
 export function claudeElicitationChoices(
   toolName: string,
-  input: Record<string, unknown>,
+  input: JsonObject,
 ): string[] {
   return askUserQuestionInput(toolName, input)
     ? []
@@ -50,7 +50,7 @@ export function claudeElicitationChoices(
 
 export function claudeElicitationQuestions(
   toolName: string,
-  input: Record<string, unknown>,
+  input: JsonObject,
 ): JsonObject[] {
   return questionInputs(toolName, input).map((question, index) => {
     const constraints: JsonObject = question.multiSelect
@@ -79,9 +79,9 @@ export function claudeElicitationQuestions(
 
 export function updatedInputFromElicitationResponse(
   toolName: string,
-  input: Record<string, unknown>,
+  input: JsonObject,
   response: ClaudeElicitationResponse,
-): Record<string, unknown> {
+): JsonObject {
   if (response.type !== "answers") return input;
   const questions = questionInputs(toolName, input);
   const answers: Record<string, string> = {};
@@ -95,14 +95,14 @@ export function updatedInputFromElicitationResponse(
 
 function askUserQuestionInput(
   toolName: string,
-  input: Record<string, unknown>,
+  input: JsonObject,
 ): ClaudeAskUserQuestionInput | undefined {
   return typedClaudeInput(toolName, input, CLAUDE_TOOL.AskUserQuestion);
 }
 
 function questionInputs(
   toolName: string,
-  input: Record<string, unknown>,
+  input: JsonObject,
 ): NormalizedClaudeQuestionInput[] {
   const askInput = askUserQuestionInput(toolName, input);
   if (!askInput) return [];

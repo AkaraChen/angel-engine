@@ -2,6 +2,7 @@ import type {
   SDKAssistantMessage,
   SDKPartialAssistantMessage,
 } from "@anthropic-ai/claude-agent-sdk";
+import type { JsonObject } from "./types.js";
 import type {
   AgentInput,
   AskUserQuestionInput,
@@ -52,7 +53,7 @@ export interface ClaudeToolInputByName {
   [CLAUDE_TOOL.Glob]: GlobInput;
   [CLAUDE_TOOL.Grep]: GrepInput;
   [CLAUDE_TOOL.LS]: { path?: string };
-  [CLAUDE_TOOL.MultiEdit]: Record<string, unknown>;
+  [CLAUDE_TOOL.MultiEdit]: JsonObject;
   [CLAUDE_TOOL.Read]: FileReadInput;
   [CLAUDE_TOOL.Task]: AgentInput;
   [CLAUDE_TOOL.TodoWrite]: TodoWriteInput;
@@ -96,7 +97,7 @@ export type ClaudeContentBlockDeltaEvent = Extract<
 
 export function typedClaudeInput<T extends keyof ClaudeToolInputByName>(
   toolName: string,
-  input: Record<string, unknown>,
+  input: JsonObject,
   expected: T,
 ): ClaudeToolInputByName[T] | undefined {
   return toolName === expected

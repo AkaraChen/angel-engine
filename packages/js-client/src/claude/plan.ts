@@ -22,7 +22,7 @@ interface PlanStateJson {
 export function planEventsFromToolUse(
   active: ActiveClaudeTurn,
   toolName: string,
-  input: Record<string, unknown>,
+  input: JsonObject,
 ): EngineEventJson[] {
   const filePlan = planFromFileWriteToolUse(toolName, input);
   if (filePlan) {
@@ -78,7 +78,7 @@ export function planEventsFromToolUse(
 
 export function isClaudePlanToolUse(
   toolName: string,
-  input?: Record<string, unknown>,
+  input?: JsonObject,
 ): boolean {
   if (toolName === CLAUDE_TOOL.TodoWrite) return true;
   if (toolName === CLAUDE_TOOL.ExitPlanMode) return true;
@@ -87,7 +87,7 @@ export function isClaudePlanToolUse(
 
 export function structuredPlanFromToolUse(
   toolName: string,
-  input: Record<string, unknown>,
+  input: JsonObject,
 ): JsonObject | undefined {
   const filePlan = planFromFileWriteToolUse(toolName, input);
   if (filePlan) return filePlan;
@@ -156,7 +156,7 @@ function planEventsFromStructuredPlan(
 
 function planFromFileWriteToolUse(
   toolName: string,
-  input: Record<string, unknown>,
+  input: JsonObject,
 ): JsonObject | undefined {
   const writeInput = typedClaudeInput(toolName, input, CLAUDE_TOOL.Write);
   if (!writeInput || !isClaudePlanFileWrite(writeInput)) return undefined;
