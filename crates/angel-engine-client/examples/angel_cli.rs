@@ -47,7 +47,7 @@ impl MultiRuntimeCli {
         if self.conversation_id.is_none() {
             return Err("start_thread did not return a conversation id".into());
         }
-        self.print_banner();
+        self.print_banner()?;
         Ok(())
     }
 
@@ -61,7 +61,7 @@ impl MultiRuntimeCli {
                 break;
             }
             if line == "/commands" {
-                self.print_available_command_list();
+                self.print_available_command_list()?;
                 continue;
             }
             if self.handle_setting_command(line)? {
@@ -152,73 +152,75 @@ impl MultiRuntimeCli {
 
     fn handle_setting_command(&mut self, line: &str) -> Result<bool, Box<dyn Error>> {
         let mut parts = line.splitn(2, char::is_whitespace);
-        let command = parts.next().unwrap_or_default();
-        let value = parts.next().unwrap_or_default().trim();
+        let command = parts
+            .next()
+            .ok_or("setting command is missing command name")?;
+        let value = parts.next().map(str::trim);
 
         match command {
             "/model" => {
-                if value.is_empty() {
+                let Some(value) = value else {
                     self.print_model_state()?;
+                    return Ok(true);
+                };
+                let before = self.current_model_id()?;
+                self.send_thread_event(ThreadEvent::set_model(value))?;
+                self.pump_until_no_activity(Duration::from_millis(250))?;
+                let after = self.current_model_id()?;
+                if after != before {
+                    println!("[state] model set to {}", after.as_deref().unwrap_or(value));
                 } else {
-                    let before = self.current_model_id()?;
-                    self.send_thread_event(ThreadEvent::set_model(value))?;
-                    self.pump_until_no_activity(Duration::from_millis(250))?;
-                    let after = self.current_model_id()?;
-                    if after != before {
-                        println!("[state] model set to {}", after.as_deref().unwrap_or(value));
-                    } else {
-                        println!("[warn] model unchanged");
-                    }
+                    println!("[warn] model unchanged");
                 }
             }
             "/mode" => {
-                if value.is_empty() {
+                let Some(value) = value else {
                     self.print_mode_state()?;
+                    return Ok(true);
+                };
+                let before = self.current_mode_id()?;
+                self.send_thread_event(ThreadEvent::set_mode(value))?;
+                self.pump_until_no_activity(Duration::from_millis(250))?;
+                let after = self.current_mode_id()?;
+                if after != before {
+                    println!("[state] mode set to {}", after.as_deref().unwrap_or(value));
                 } else {
-                    let before = self.current_mode_id()?;
-                    self.send_thread_event(ThreadEvent::set_mode(value))?;
-                    self.pump_until_no_activity(Duration::from_millis(250))?;
-                    let after = self.current_mode_id()?;
-                    if after != before {
-                        println!("[state] mode set to {}", after.as_deref().unwrap_or(value));
-                    } else {
-                        println!("[warn] mode unchanged");
-                    }
-                    if self.codex_mode_needs_model_warning(value) {
-                        println!(
-                            "[warn] Codex collaborationMode requires a model in turn/start; set /model first if the next turn does not switch mode"
-                        );
-                    }
+                    println!("[warn] mode unchanged");
+                }
+                if self.codex_mode_needs_model_warning(value)? {
+                    println!(
+                        "[warn] Codex collaborationMode requires a model in turn/start; set /model first if the next turn does not switch mode"
+                    );
                 }
             }
             "/effort" | "/reasoning" => {
-                if value.is_empty() {
+                let Some(value) = value else {
                     self.print_effort_state()?;
-                } else {
-                    let reasoning = self.current_conversation()?.settings.reasoning_level;
-                    let Some(effort) = reasoning.normalize_effort(value) else {
-                        if reasoning.available_levels.is_empty() {
-                            println!("[warn] reasoning effort is unavailable for this runtime");
-                        } else {
-                            println!(
-                                "[warn] use one of: {}",
-                                reasoning.available_levels.join(", ")
-                            );
-                        }
-                        return Ok(true);
-                    };
-                    let before = self.current_effort_level()?;
-                    self.send_thread_event(ThreadEvent::set_reasoning_effort(effort))?;
-                    self.pump_until_no_activity(Duration::from_millis(250))?;
-                    let after = self.current_effort_level()?;
-                    if after != before {
-                        println!(
-                            "[state] reasoning effort set to {}",
-                            after.as_deref().unwrap_or(value)
-                        );
+                    return Ok(true);
+                };
+                let reasoning = self.current_conversation()?.settings.reasoning_level;
+                let Some(effort) = reasoning.normalize_effort(value) else {
+                    if reasoning.available_levels.is_empty() {
+                        println!("[warn] reasoning effort is unavailable for this runtime");
                     } else {
-                        println!("[warn] reasoning effort unchanged");
+                        println!(
+                            "[warn] use one of: {}",
+                            reasoning.available_levels.join(", ")
+                        );
                     }
+                    return Ok(true);
+                };
+                let before = self.current_effort_level()?;
+                self.send_thread_event(ThreadEvent::set_reasoning_effort(effort))?;
+                self.pump_until_no_activity(Duration::from_millis(250))?;
+                let after = self.current_effort_level()?;
+                if after != before {
+                    println!(
+                        "[state] reasoning effort set to {}",
+                        after.as_deref().unwrap_or(value)
+                    );
+                } else {
+                    println!("[warn] reasoning effort unchanged");
                 }
             }
             _ => return Ok(false),
@@ -337,24 +339,27 @@ impl MultiRuntimeCli {
         )
     }
 
-    fn print_banner(&self) {
+    fn print_banner(&self) -> Result<(), Box<dyn Error>> {
         println!("{}", self.runtime.banner());
         if self.runtime.supports_shell() {
             println!("Type a message, /shell <command>, /model, /mode, /effort, or :quit.");
         } else {
             println!("Type a message, /model, /mode, /effort, or :quit.");
         }
-        self.print_available_commands();
+        self.print_available_commands()?;
+        Ok(())
     }
 
-    fn print_available_commands(&self) {
-        let commands = self.current_commands();
+    fn print_available_commands(&self) -> Result<(), Box<dyn Error>> {
+        let commands = self.current_commands()?;
         print_command_summary(&commands);
+        Ok(())
     }
 
-    fn print_available_command_list(&self) {
-        let commands = self.current_commands();
+    fn print_available_command_list(&self) -> Result<(), Box<dyn Error>> {
+        let commands = self.current_commands()?;
         print_available_commands(&commands);
+        Ok(())
     }
 
     fn current_conversation(&self) -> Result<ConversationSnapshot, Box<dyn Error>> {
@@ -367,10 +372,10 @@ impl MultiRuntimeCli {
             .ok_or_else(|| "selected conversation missing".into())
     }
 
-    fn current_commands(&self) -> Vec<CliCommandInfo> {
-        self.current_conversation()
-            .map(|conversation| cli_commands(&conversation.available_commands))
-            .unwrap_or_default()
+    fn current_commands(&self) -> Result<Vec<CliCommandInfo>, Box<dyn Error>> {
+        Ok(cli_commands(
+            &self.current_conversation()?.available_commands,
+        ))
     }
 
     fn current_model_id(&self) -> Result<Option<String>, Box<dyn Error>> {
@@ -450,14 +455,10 @@ impl MultiRuntimeCli {
         Ok(())
     }
 
-    fn codex_mode_needs_model_warning(&self, value: &str) -> bool {
-        self.runtime.is_codex()
+    fn codex_mode_needs_model_warning(&self, value: &str) -> Result<bool, Box<dyn Error>> {
+        Ok(self.runtime.is_codex()
             && matches!(value, "plan" | "default")
-            && self
-                .current_conversation()
-                .map(|conversation| conversation.context.model)
-                .unwrap_or_default()
-                .is_none()
+            && self.current_conversation()?.context.model.is_none())
     }
 
     fn conversation_id(&self) -> Result<String, Box<dyn Error>> {
@@ -701,13 +702,11 @@ fn print_event(event: &ClientEvent) {
             );
         }
         ClientEvent::RuntimeReady { name, version } => {
-            println!(
-                "[runtime] {name}{} ready",
-                version
-                    .as_ref()
-                    .map(|version| format!(" {version}"))
-                    .unwrap_or_default()
-            );
+            if let Some(version) = version {
+                println!("[runtime] {name} {version} ready");
+            } else {
+                println!("[runtime] {name} ready");
+            }
         }
         ClientEvent::ConversationReady { conversation } => {
             println!(
