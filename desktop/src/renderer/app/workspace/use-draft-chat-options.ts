@@ -12,7 +12,6 @@ import {
   runtimeConfigOptionCount,
   runtimeConfigOptionsToAgentOptions,
   selectedConfigOverride,
-  supportedConfigOverride,
 } from "@/app/workspace/chat-runtime-options";
 import { EMPTY_DRAFT_AGENT_CONFIG } from "@/app/workspace/workspace-thread-types";
 
@@ -82,27 +81,13 @@ export function useDraftChatOptions({
     options: runtimeConfig?.permissionModes,
     savedValue: runtimePreference?.permissionMode,
   });
-  const draftReasoningEffortOverride =
-    draftAgentConfig.reasoningEffort === undefined
-      ? undefined
-      : supportedConfigOverride({
-          canSet: runtimeConfig?.canSetReasoningEffort,
-          options: runtimeConfig?.reasoningEfforts,
-          value: draftAgentConfig.reasoningEffort,
-        });
-  const draftReasoningEffortDisplay =
-    draftAgentConfig.reasoningEffort === undefined
-      ? undefined
-      : selectedConfigOverride(draftAgentConfig.reasoningEffort)
-        ? draftReasoningEffortOverride
-        : draftAgentConfig.reasoningEffort;
   const activeModel = normalizeConfigDisplayValue(
     draftAgentConfig.model ??
       savedModelSelection.displayValue ??
       runtimeConfig?.currentModel,
   );
   const activeReasoningEffort = normalizeConfigDisplayValue(
-    draftReasoningEffortDisplay ??
+    draftAgentConfig.reasoningEffort ??
       savedReasoningSelection.displayValue ??
       runtimeConfig?.currentReasoningEffort,
   );
@@ -125,7 +110,7 @@ export function useDraftChatOptions({
   const reasoningEffortOverride =
     draftAgentConfig.reasoningEffort === undefined
       ? savedReasoningSelection.overrideValue
-      : draftReasoningEffortOverride;
+      : selectedConfigOverride(draftAgentConfig.reasoningEffort);
   const modeOverride =
     draftAgentConfig.mode === undefined
       ? savedModeSelection.overrideValue

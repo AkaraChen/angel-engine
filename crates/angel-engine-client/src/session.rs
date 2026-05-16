@@ -577,51 +577,45 @@ impl AngelSession {
                         "Final conversation snapshot is missing turn {turn_id}."
                     ))
                 })?;
-                let message = assistant_message_for_turn(snapshot, turn_id).ok_or_else(|| {
-                    invalid_input(format!(
-                        "Final conversation snapshot is missing turn {turn_id} assistant message."
-                    ))
-                })?;
-                (
-                    actions_for_turn(snapshot, turn_id),
-                    Some(message),
-                    turn_reasoning_text(Some(&turn)),
-                    turn.output_text.clone(),
-                    Some(turn),
-                )
+                let actions = actions_for_turn(snapshot, turn_id);
+                let reasoning = turn_reasoning_text(Some(&turn)).or_else(|| {
+                    (!active.collector.reasoning.is_empty())
+                        .then_some(active.collector.reasoning.clone())
+                });
+                let text = if turn.output_text.is_empty() {
+                    active.collector.text.clone()
+                } else {
+                    turn.output_text.clone()
+                };
+                let message_actions = if actions.is_empty() {
+                    &active.collector.actions
+                } else {
+                    &actions
+                };
+                let message = assistant_message_for_turn(snapshot, turn_id).or_else(|| {
+                    collected_assistant_message(
+                        format!("{turn_id}:assistant"),
+                        &active.collector,
+                        message_actions,
+                        reasoning.clone(),
+                        text.clone(),
+                    )
+                });
+                (actions, message, reasoning, text, Some(turn))
             }
             None => {
                 let request_id = active.request_id.as_deref().ok_or_else(|| {
                     invalid_input("Completed no-turn result is missing request id.")
                 })?;
-                let mut content = Vec::new();
-                if !active.collector.reasoning.is_empty() {
-                    content.push(DisplayMessagePartSnapshot::text(
-                        "reasoning",
-                        active.collector.reasoning.clone(),
-                    ));
-                }
-                if let Some(plan_part) = active.collector.review_plan_message_part() {
-                    content.push(plan_part);
-                }
-                for action in &active.collector.actions {
-                    content.push(DisplayMessagePartSnapshot::tool(action.into()));
-                }
-                if let Some(todo_part) = active.collector.todo_message_part() {
-                    content.push(todo_part);
-                }
-                if !active.collector.text.is_empty() {
-                    content.push(DisplayMessagePartSnapshot::text(
-                        "text",
-                        active.collector.text.clone(),
-                    ));
-                }
                 (
                     Vec::new(),
-                    display_message_from_parts(
+                    collected_assistant_message(
                         format!("result:{request_id}:assistant"),
-                        "assistant",
-                        content,
+                        &active.collector,
+                        &active.collector.actions,
+                        (!active.collector.reasoning.is_empty())
+                            .then_some(active.collector.reasoning.clone()),
+                        active.collector.text.clone(),
                     ),
                     (!active.collector.reasoning.is_empty())
                         .then_some(active.collector.reasoning.clone()),
@@ -1151,6 +1145,32 @@ fn actions_for_turn(snapshot: &ConversationSnapshot, turn_id: &str) -> Vec<Actio
         .filter(|action| action.turn_id == turn_id)
         .cloned()
         .collect()
+}
+
+fn collected_assistant_message(
+    id: impl Into<String>,
+    collector: &TurnCollector,
+    actions: &[ActionSnapshot],
+    reasoning: Option<String>,
+    text: String,
+) -> Option<DisplayMessageSnapshot> {
+    let mut content = Vec::new();
+    if let Some(reasoning) = reasoning.filter(|text| !text.is_empty()) {
+        content.push(DisplayMessagePartSnapshot::text("reasoning", reasoning));
+    }
+    if let Some(plan_part) = collector.review_plan_message_part() {
+        content.push(plan_part);
+    }
+    for action in actions {
+        content.push(DisplayMessagePartSnapshot::tool(action.into()));
+    }
+    if let Some(todo_part) = collector.todo_message_part() {
+        content.push(todo_part);
+    }
+    if !text.is_empty() {
+        content.push(DisplayMessagePartSnapshot::text("text", text));
+    }
+    display_message_from_parts(id, "assistant", content)
 }
 
 fn assistant_message_for_turn(
