@@ -4,8 +4,11 @@ import type {
   TransportOutput,
 } from "@angel-engine/client-napi";
 import { AcpAdapter, ClientProtocol } from "@angel-engine/client-napi";
+import is from "@sindresorhus/is";
+import type { ChatJsonValue } from "../types.js";
 import { contextPatch, contextUpdated } from "./context.js";
-import type { ClaudeJsonObject } from "./types.js";
+
+type MutableJsonObject = { [key: string]: ChatJsonValue };
 
 export class ClaudeCodeEngineAdapter {
   private readonly base = new AcpAdapter({ needAuthentication: false });
@@ -14,31 +17,56 @@ export class ClaudeCodeEngineAdapter {
     return ClientProtocol.Custom;
   }
 
-  capabilities(): unknown {
-    const capabilities = structuredClone(
-      this.base.capabilities(),
-    ) as ClaudeJsonObject;
-    const lifecycle = asMutableObject(capabilities.lifecycle);
+  capabilities(): MutableJsonObject {
+    const capabilities = structuredClone(this.base.capabilities());
+    if (!is.plainObject(capabilities)) {
+      throw new Error("Claude base capabilities must be an object.");
+    }
+    const mutableCapabilities = capabilities as MutableJsonObject;
+    const lifecycleValue = mutableCapabilities.lifecycle;
+    if (!is.plainObject(lifecycleValue)) {
+      throw new Error("Claude base lifecycle capabilities must be an object.");
+    }
+    const lifecycle = lifecycleValue as MutableJsonObject;
     lifecycle.load = "Supported";
     lifecycle.resume = "Supported";
     lifecycle.close = "Supported";
-    const context = asMutableObject(capabilities.context);
+    const contextValue = mutableCapabilities.context;
+    if (!is.plainObject(contextValue)) {
+      throw new Error("Claude base context capabilities must be an object.");
+    }
+    const context = contextValue as MutableJsonObject;
     context.additional_directories = "Supported";
     context.config = "Supported";
     context.mode = "Unsupported";
     context.turn_overrides = "Supported";
-    const history = asMutableObject(capabilities.history);
+    const historyValue = mutableCapabilities.history;
+    if (!is.plainObject(historyValue)) {
+      throw new Error("Claude base history capabilities must be an object.");
+    }
+    const history = historyValue as MutableJsonObject;
     history.hydrate = "Supported";
-    return capabilities;
+    return mutableCapabilities;
   }
 
   encodeEffect(input: AdapterEncodeInput): TransportOutput {
-    const effect = input.effect as ClaudeJsonObject;
-    if (typeof effect.method !== "string") {
+    const effect = input.effect;
+    if (!is.plainObject(effect)) {
+      throw new Error("Claude adapter effect must be an object.");
+    }
+    if (!is.string(effect.method)) {
       throw new Error("Claude adapter effect is missing method.");
     }
     const method = effect.method;
-    const requestId = effect?.requestId;
+    const requestId = effect.requestId;
+    if (
+      requestId !== undefined &&
+      requestId !== null &&
+      !is.string(requestId) &&
+      !is.number(requestId)
+    ) {
+      throw new Error("Claude adapter requestId must be a string or number.");
+    }
     const completedRequests = requestId === undefined ? [] : [requestId];
 
     if (method === "initialize") {
@@ -61,16 +89,32 @@ export class ClaudeCodeEngineAdapter {
       };
     }
 
-    if (typeof effect.conversationId !== "string") {
+    if (!is.string(effect.conversationId)) {
       throw new Error("Claude adapter effect is missing conversationId.");
     }
     const conversationId = effect.conversationId;
-    const payload = effect.payload as ClaudeJsonObject;
-    const fields = payload.fields as Record<string, unknown>;
+    if (!is.plainObject(effect.payload)) {
+      throw new Error("Claude adapter payload must be an object.");
+    }
+    if (!is.plainObject(effect.payload.fields)) {
+      throw new Error("Claude adapter payload fields must be an object.");
+    }
+    const fields = effect.payload.fields as MutableJsonObject;
 
     if (method === "session/new" || method === "session/resume") {
-      const remoteConversationId = stringField(fields, "remoteConversationId");
-      const cwd = requiredStringField(fields, "cwd");
+      const remoteConversationId = fields.remoteConversationId;
+      if (
+        remoteConversationId !== undefined &&
+        !is.string(remoteConversationId)
+      ) {
+        throw new Error(
+          "Claude adapter remoteConversationId must be a string.",
+        );
+      }
+      const cwd = fields.cwd;
+      if (!is.string(cwd)) {
+        throw new Error("Claude adapter cwd must be a string.");
+      }
       return {
         completedRequests,
         events: [
@@ -106,7 +150,10 @@ export class ClaudeCodeEngineAdapter {
     }
 
     if (method === "session/set_model") {
-      const model = stringField(fields, "modelId");
+      const model = fields.modelId;
+      if (model !== undefined && !is.string(model)) {
+        throw new Error("Claude adapter modelId must be a string.");
+      }
       return {
         completedRequests,
         events: model
@@ -123,14 +170,17 @@ export class ClaudeCodeEngineAdapter {
   }
 
   decodeMessage(input: AdapterDecodeInput): TransportOutput {
-    const message = input.message as ClaudeJsonObject;
-    if (message?.method !== "claude/event") return {};
-    const params = message.params as ClaudeJsonObject;
-    if (!Array.isArray(params.events)) {
-      throw new Error("Claude event message is missing events.");
+    if (!is.plainObject(input.message)) {
+      throw new Error("Claude adapter message must be an object.");
     }
-    const events = params.events as unknown[];
-    return { events };
+    if (input.message.method !== "claude/event") return {};
+    if (!is.plainObject(input.message.params)) {
+      throw new Error("Claude adapter event params must be an object.");
+    }
+    if (!is.array(input.message.params.events, is.plainObject)) {
+      throw new Error("Claude adapter events must be objects.");
+    }
+    return { events: input.message.params.events };
   }
 
   modelCatalogFromRuntimeDebug(): null {
@@ -138,37 +188,25 @@ export class ClaudeCodeEngineAdapter {
   }
 }
 
-function additionalDirectoriesFromFields(
-  fields: Record<string, unknown>,
-): string[] {
-  const count = Number(fields.additionalDirectoryCount ?? 0);
+function additionalDirectoriesFromFields(fields: MutableJsonObject): string[] {
+  const countValue = fields.additionalDirectoryCount;
+  if (countValue === undefined) return [];
+  if (!is.string(countValue) && !is.number(countValue)) {
+    throw new Error("Claude adapter additional directory count is invalid.");
+  }
+  const count = Number(countValue);
+  if (!Number.isInteger(count) || count < 0) {
+    throw new Error("Claude adapter additional directory count is invalid.");
+  }
   const directories: string[] = [];
   for (let index = 0; index < count; index += 1) {
-    const directory = stringField(fields, `additionalDirectory.${index}`);
-    if (directory) directories.push(directory);
+    const directory = fields[`additionalDirectory.${index}`];
+    if (!is.string(directory) || directory.length === 0) {
+      throw new Error(
+        `Claude adapter additional directory is missing: ${index}`,
+      );
+    }
+    directories.push(directory);
   }
   return directories;
-}
-
-function stringField(
-  value: Record<string, unknown>,
-  field: string,
-): string | undefined {
-  const fieldValue = value[field];
-  return typeof fieldValue === "string" ? fieldValue : undefined;
-}
-
-function requiredStringField(
-  value: Record<string, unknown>,
-  field: string,
-): string {
-  const fieldValue = value[field];
-  if (typeof fieldValue !== "string") {
-    throw new Error(`Claude adapter field is missing: ${field}`);
-  }
-  return fieldValue;
-}
-
-function asMutableObject(value: unknown): ClaudeJsonObject {
-  return value as ClaudeJsonObject;
 }
