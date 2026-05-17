@@ -563,14 +563,16 @@ const sidebarMenuButtonVariants = cva(
     transition-[width,height,padding,background-color,color]
     group-has-data-[sidebar=menu-action]/menu-item:pr-8
     group-data-[collapsible=icon]:size-8! group-data-[collapsible=icon]:p-2!
-    hover:bg-sidebar-accent/55 hover:text-sidebar-foreground
-    focus-visible:bg-sidebar-accent/70
-    active:bg-sidebar-accent/70 active:text-sidebar-foreground
+    hover:bg-black/[0.045] hover:text-sidebar-foreground
+    focus-visible:bg-black/[0.06]
+    active:bg-black/[0.065] active:text-sidebar-foreground
+    dark:hover:bg-white/[0.07] dark:focus-visible:bg-white/[0.09]
+    dark:active:bg-white/[0.11]
     disabled:pointer-events-none disabled:opacity-50
     aria-disabled:pointer-events-none aria-disabled:opacity-50
-    data-open:hover:bg-sidebar-accent/65 data-open:hover:text-sidebar-foreground
-    data-active:bg-sidebar-accent/82 data-active:font-medium
-    data-active:text-sidebar-foreground
+    data-open:hover:bg-black/[0.055] data-open:hover:text-sidebar-foreground
+    data-active:bg-black/[0.065] data-active:text-sidebar-foreground
+    dark:data-open:hover:bg-white/[0.09] dark:data-active:bg-white/[0.11]
     [&_svg]:size-4 [&_svg]:shrink-0 [&_svg]:text-sidebar-foreground/68
     data-active:[&_svg]:text-sidebar-foreground/90
     [&>span:last-child]:truncate
@@ -578,11 +580,12 @@ const sidebarMenuButtonVariants = cva(
   {
     variants: {
       variant: {
-        default: "hover:bg-sidebar-accent/55 hover:text-sidebar-foreground",
+        default: "",
         outline: `
           bg-background/70 shadow-[0_0_0_1px_hsl(var(--sidebar-border))]
-          hover:bg-sidebar-accent/55 hover:text-sidebar-foreground
+          hover:bg-black/[0.045] hover:text-sidebar-foreground
           hover:shadow-[0_0_0_1px_hsl(var(--sidebar-border))]
+          dark:hover:bg-white/[0.07]
         `,
       },
       size: {
@@ -677,8 +680,9 @@ function SidebarMenuAction({
           peer-data-[size=lg]/menu-button:top-2.5
           peer-data-[size=sm]/menu-button:top-1
           after:absolute after:-inset-2
-          hover:bg-sidebar-accent/70 hover:text-sidebar-foreground
-          focus-visible:bg-sidebar-accent
+          hover:bg-black/[0.055] hover:text-sidebar-foreground
+          focus-visible:bg-black/[0.07]
+          dark:hover:bg-white/[0.08] dark:focus-visible:bg-white/[0.1]
           md:after:hidden
           [&>svg]:size-3.5 [&>svg]:shrink-0
         `,
@@ -819,14 +823,17 @@ function SidebarMenuSubButton({
           overflow-hidden rounded-md text-left text-sidebar-foreground
           outline-hidden
           group-data-[collapsible=icon]:hidden
-          hover:bg-sidebar-accent/55 hover:text-sidebar-foreground
-          focus-visible:bg-sidebar-accent/70
-          active:bg-sidebar-accent/70 active:text-sidebar-foreground
+          hover:bg-black/[0.045] hover:text-sidebar-foreground
+          focus-visible:bg-black/[0.06]
+          active:bg-black/[0.065] active:text-sidebar-foreground
+          dark:hover:bg-white/[0.07] dark:focus-visible:bg-white/[0.09]
+          dark:active:bg-white/[0.11]
           disabled:pointer-events-none disabled:opacity-50
           aria-disabled:pointer-events-none aria-disabled:opacity-50
           data-[size=md]:text-sm
           data-[size=sm]:text-xs
-          data-active:bg-sidebar-accent/82 data-active:text-sidebar-foreground
+          data-active:bg-black/[0.065] data-active:text-sidebar-foreground
+          dark:data-active:bg-white/[0.11]
           [&>span:last-child]:truncate
           [&>svg]:size-4 [&>svg]:shrink-0 [&>svg]:text-sidebar-foreground/70
         `,

@@ -105,8 +105,8 @@ export function WorkspaceSidebar({
         <SidebarViewModeControl onValueChange={setViewMode} value={viewMode} />
       </SidebarHeader>
 
-      <SidebarContent className="gap-1 pb-1">
-        <SidebarMenu className="px-2">
+      <SidebarContent className="gap-0 pb-1">
+        <SidebarMenu className="px-2 py-2.5">
           <AnimatedSidebarMenuItem>
             <WorkspaceSidebarMenuButton
               onClick={() => void createChatFromNewButton()}
@@ -116,6 +116,14 @@ export function WorkspaceSidebar({
             </WorkspaceSidebarMenuButton>
           </AnimatedSidebarMenuItem>
         </SidebarMenu>
+
+        <div
+          aria-hidden="true"
+          className="
+            mx-2 mb-1 h-px shrink-0 bg-black/[0.06]
+            dark:bg-white/[0.08]
+          "
+        />
 
         {viewMode === "simple" ? (
           <SimpleChatSidebarSection
@@ -206,8 +214,10 @@ function SidebarViewModeControl({
       <div
         aria-label="view"
         className="
-          grid grid-cols-3 gap-0.5 rounded-md border border-sidebar-border/70
-          bg-sidebar-accent/65 p-0.5
+          grid grid-cols-3 gap-0.5 rounded-md bg-black/[0.055] p-0.5
+          shadow-[inset_0_0_0_1px_rgba(0,0,0,0.06)]
+          dark:bg-white/[0.055]
+          dark:shadow-[inset_0_0_0_1px_rgba(255,255,255,0.07)]
         "
         role="group"
       >
@@ -221,13 +231,21 @@ function SidebarViewModeControl({
               aria-pressed={isActive}
               className={cn(
                 `
-                  flex h-7 min-w-0 items-center justify-center rounded-sm px-2
-                  text-sidebar-foreground/62 outline-hidden
-                  transition-[background-color,color]
-                  hover:bg-sidebar-accent/55 hover:text-sidebar-foreground/82
-                  focus-visible:bg-sidebar-accent/70
+                  flex h-7 min-w-0 items-center justify-center rounded-[5px]
+                  px-2 text-sidebar-foreground/58 outline-hidden
+                  transition-[background-color,color,box-shadow]
+                  hover:bg-white/25 hover:text-sidebar-foreground/78
+                  focus-visible:bg-white/40 focus-visible:text-sidebar-foreground
+                  dark:hover:bg-white/[0.055] dark:focus-visible:bg-white/[0.1]
                 `,
-                isActive ? "bg-background/62 text-sidebar-foreground" : "",
+                isActive
+                  ? `
+                    bg-white/58 text-sidebar-foreground
+                    shadow-[0_1px_2px_rgba(0,0,0,0.08)]
+                    dark:bg-white/[0.14]
+                    dark:shadow-[inset_0_0_0_1px_rgba(255,255,255,0.06)]
+                  `
+                  : "",
               )}
               key={option.value}
               onClick={() => onValueChange(option.value)}

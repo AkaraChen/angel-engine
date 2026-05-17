@@ -1,11 +1,12 @@
 import type { Chat } from "@shared/chat";
 import type { ReactElement } from "react";
 import {
+  RiArrowRightSLine as ChevronRight,
   RiLoader4Line as Loader2,
   RiMessage2Line as MessageSquare,
 } from "@remixicon/react";
-import { AnimatePresence } from "framer-motion";
-import { useMemo } from "react";
+import { AnimatePresence, motion } from "framer-motion";
+import { useMemo, useState } from "react";
 
 import { useTranslation } from "react-i18next";
 import {
@@ -16,6 +17,7 @@ import {
 } from "@/components/ui/sidebar";
 import {
   AnimatedSidebarMenuItem,
+  sidebarMotion,
   WorkspaceSidebarMenuButton,
 } from "@/components/workspace-sidebar-primitives";
 import { ChatSidebarItem } from "@/features/chat/components/chat-sidebar-item";
@@ -69,7 +71,21 @@ export function SimpleChatSidebarSection({
   selectedChatId,
 }: SimpleChatSidebarSectionProps): ReactElement {
   const { t } = useTranslation();
+  const [collapsedGroupKeys, setCollapsedGroupKeys] = useState<
+    Set<ChatDateGroupKey>
+  >(() => new Set());
   const groupedChats = useMemo(() => groupChatsByUpdatedAt(chats), [chats]);
+  const toggleDateGroup = (groupKey: ChatDateGroupKey): void => {
+    setCollapsedGroupKeys((current) => {
+      const next = new Set(current);
+      if (next.has(groupKey)) {
+        next.delete(groupKey);
+      } else {
+        next.add(groupKey);
+      }
+      return next;
+    });
+  };
 
   return (
     <SidebarGroup className="py-1">
@@ -102,30 +118,76 @@ export function SimpleChatSidebarSection({
           ) : null}
 
           {!isLoading
-            ? groupedChats.map((group) => (
-                <div className="space-y-0.5" key={group.key}>
-                  <SidebarGroupLabel className="h-7">
-                    {t(group.labelKey)}
-                  </SidebarGroupLabel>
-                  <SidebarMenu>
-                    {group.chats.map((chat) => (
-                      <AnimatedSidebarMenuItem key={chat.id}>
-                        <ChatSidebarItem
-                          chatId={chat.id}
-                          isActive={chat.id === selectedChatId}
-                          onArchiveChat={async () => onArchiveChat(chat)}
-                          onOpenChat={() => void onOpenChat(chat)}
-                          onShowContextMenu={async () =>
-                            onShowChatContextMenu(chat)
-                          }
-                          title={displayChatTitle(chat.title, t)}
-                          tooltip={chat.cwd ?? displayChatTitle(chat.title, t)}
-                        />
-                      </AnimatedSidebarMenuItem>
-                    ))}
-                  </SidebarMenu>
-                </div>
-              ))
+            ? groupedChats.map((group) => {
+                const isExpanded = !collapsedGroupKeys.has(group.key);
+                const label = t(group.labelKey);
+
+                return (
+                  <div className="space-y-0.5" key={group.key}>
+                    <SidebarGroupLabel
+                      asChild
+                      className="
+                        h-7 cursor-default pr-1.5
+                        hover:bg-black/[0.035]
+                        dark:hover:bg-white/[0.055]
+                      "
+                    >
+                      <button
+                        aria-expanded={isExpanded}
+                        onClick={() => toggleDateGroup(group.key)}
+                        title={label}
+                        type="button"
+                      >
+                        <span className="min-w-0 flex-1 truncate text-left">
+                          {label}
+                        </span>
+                        <motion.span
+                          animate={{ rotate: isExpanded ? 90 : 0 }}
+                          className="ml-1 shrink-0 opacity-75"
+                          transition={sidebarMotion}
+                        >
+                          <ChevronRight className="size-3.5" />
+                        </motion.span>
+                      </button>
+                    </SidebarGroupLabel>
+                    <AnimatePresence initial={false}>
+                      {isExpanded ? (
+                        <motion.div
+                          animate={{ height: "auto", opacity: 1 }}
+                          className="overflow-hidden"
+                          exit={{ height: 0, opacity: 0 }}
+                          initial={{ height: 0, opacity: 0 }}
+                          key={`${group.key}-chats`}
+                          layout="position"
+                          transition={sidebarMotion}
+                        >
+                          <SidebarMenu>
+                            {group.chats.map((chat) => (
+                              <AnimatedSidebarMenuItem key={chat.id}>
+                                <ChatSidebarItem
+                                  chatId={chat.id}
+                                  isActive={chat.id === selectedChatId}
+                                  onArchiveChat={async () =>
+                                    onArchiveChat(chat)
+                                  }
+                                  onOpenChat={() => void onOpenChat(chat)}
+                                  onShowContextMenu={async () =>
+                                    onShowChatContextMenu(chat)
+                                  }
+                                  title={displayChatTitle(chat.title, t)}
+                                  tooltip={
+                                    chat.cwd ?? displayChatTitle(chat.title, t)
+                                  }
+                                />
+                              </AnimatedSidebarMenuItem>
+                            ))}
+                          </SidebarMenu>
+                        </motion.div>
+                      ) : null}
+                    </AnimatePresence>
+                  </div>
+                );
+              })
             : null}
         </AnimatePresence>
       </SidebarGroupContent>
