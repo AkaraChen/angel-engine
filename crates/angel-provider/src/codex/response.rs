@@ -1,13 +1,13 @@
 use super::actions::{
     action_from_item, completed_phase_from_item, dynamic_tool_has_input_payload,
-    dynamic_tool_is_host_capability, dynamic_tool_is_output_only,
+    dynamic_tool_is_host_capability, dynamic_tool_is_output_only, normalize_action_item_title,
 };
 use super::commands::codex_slash_commands;
 use super::protocol_helpers::*;
 use super::requests::host_capability_options;
 use super::summaries::{plan_item_content, plan_item_saved_path};
 use super::*;
-use std::{env, fs, path::PathBuf};
+use std::{collections::BTreeMap, env, fs, path::PathBuf};
 
 impl CodexAdapter {
     pub(super) fn decode_response(
@@ -457,13 +457,15 @@ fn append_local_rollout_history(
 
     let mut appended = 0usize;
     let mut has_structured_history = false;
+    let mut replay_tool_titles = BTreeMap::new();
     for line in content.lines() {
         let Ok(record) = serde_json::from_str::<Value>(line) else {
             continue;
         };
-        let Some((role, content, tool)) = codex_rollout_history_entry(&record) else {
+        let Some((role, content, mut tool)) = codex_rollout_history_entry(&record) else {
             continue;
         };
+        inherit_replay_tool_title(&mut tool, &mut replay_tool_titles);
         if content_delta_is_empty(&content) {
             continue;
         }
@@ -580,6 +582,7 @@ fn append_hydrated_turns(
     };
 
     for turn in turns {
+        let mut replay_tool_titles = BTreeMap::new();
         for item in turn
             .get("items")
             .and_then(Value::as_array)
@@ -636,7 +639,8 @@ fn append_hydrated_turns(
                 }
                 Some(item_type) if codex_history_replay_tool_item_type(item_type) => {
                     let tool_item = codex_history_replay_tool_item(replay_item);
-                    let tool = codex_history_replay_tool_action(&tool_item);
+                    let mut tool = codex_history_replay_tool_action(&tool_item);
+                    inherit_replay_tool_title(&mut tool, &mut replay_tool_titles);
                     (
                         HistoryRole::Tool,
                         ContentDelta::Structured(tool_item.to_string()),
@@ -657,6 +661,28 @@ fn append_hydrated_turns(
                 },
             });
         }
+    }
+}
+
+fn inherit_replay_tool_title(
+    tool: &mut Option<HistoryReplayToolAction>,
+    replay_tool_titles: &mut BTreeMap<String, String>,
+) {
+    let Some(tool) = tool.as_mut() else {
+        return;
+    };
+    let Some(id) = tool.id.clone() else {
+        return;
+    };
+    let missing_title = tool
+        .title
+        .as_deref()
+        .is_none_or(|title| title.trim().is_empty());
+    if missing_title && let Some(title) = replay_tool_titles.get(&id) {
+        tool.title = Some(title.clone());
+    }
+    if let Some(title) = tool.title.as_ref().filter(|title| !title.trim().is_empty()) {
+        replay_tool_titles.insert(id, title.clone());
     }
 }
 
@@ -700,6 +726,7 @@ fn codex_history_replay_tool_item(item: &Value) -> Value {
         .entry("status".to_string())
         .or_insert_with(|| Value::String("completed".to_string()));
     normalize_host_capability_history_tool_item(&mut replay_item);
+    normalize_action_item_title(&mut replay_item);
     replay_item
 }
 
@@ -728,7 +755,7 @@ fn codex_history_replay_tool_action(item: &Value) -> Option<HistoryReplayToolAct
     let title = action
         .as_ref()
         .and_then(|action| action.title.clone())
-        .or_else(|| codex_history_tool_title(item));
+        .or_else(|| first_item_string(item, &["title"]));
     let output = codex_history_tool_output(item);
     let id = first_item_string(item, &["id", "callId", "call_id", "itemId"])
         .unwrap_or_else(|| codex_history_missing_tool_id(item_type, item));
@@ -793,39 +820,6 @@ fn codex_history_status_to_phase(status: &str) -> Option<ActionPhase> {
         "inProgress" => Some(ActionPhase::Running),
         "streamingResult" => Some(ActionPhase::StreamingResult),
         _ => None,
-    }
-}
-
-fn codex_history_tool_title(item: &Value) -> Option<String> {
-    match item.get("type").and_then(Value::as_str)? {
-        "commandExecution" | "local_shell_call" => first_item_string(item, &["command"]),
-        "mcpToolCall" => Some(format!(
-            "{}.{}",
-            item.get("server").and_then(Value::as_str).unwrap_or("mcp"),
-            item.get("tool").and_then(Value::as_str).unwrap_or("tool")
-        )),
-        "mcp_call" => first_item_string(item, &["name"]),
-        "dynamicToolCall" if dynamic_tool_is_output_only(item) => {
-            first_item_string(item, &["title"])
-        }
-        "dynamicToolCall" => first_item_string(item, &["title"]).or_else(|| {
-            let tool = item.get("tool").and_then(Value::as_str).unwrap_or("tool");
-            Some(
-                item.get("namespace")
-                    .and_then(Value::as_str)
-                    .map(|namespace| format!("{namespace}.{tool}"))
-                    .unwrap_or_else(|| tool.to_string()),
-            )
-        }),
-        "webSearch" => first_item_string(item, &["query"]),
-        "web_search_call" => item
-            .get("action")
-            .and_then(|action| first_item_string(action, &["query"])),
-        "function_call" | "custom_tool_call" => first_item_string(item, &["name"]),
-        "tool_search_call" => Some("tool_search".to_string()),
-        "computer_call" => Some("computer".to_string()),
-        "function_call_output" | "custom_tool_call_output" | "tool_search_output" => None,
-        _ => first_item_string(item, &["title", "name", "type"]),
     }
 }
 

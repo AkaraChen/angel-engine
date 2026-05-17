@@ -343,6 +343,92 @@ mod tests {
     }
 
     #[test]
+    fn raw_response_web_search_without_title_uses_provider_fallback() {
+        let adapter = CodexAdapter::app_server();
+        let engine = engine_with_thread(&adapter);
+
+        let output = adapter
+            .decode_notification(
+                &engine,
+                "rawResponseItem/completed",
+                &json!({
+                    "threadId": "thread",
+                    "turnId": "turn",
+                    "item": {
+                        "id": "search_1",
+                        "type": "web_search_call",
+                        "status": "completed",
+                        "action": { "type": "other" }
+                    }
+                }),
+            )
+            .expect("raw web search item");
+
+        assert!(output.events.iter().any(|event| matches!(
+            event,
+            EngineEvent::ActionObserved {
+                action,
+                ..
+            } if action.id.as_str() == "search_1"
+                && action.kind == ActionKind::WebSearch
+                && action.title.as_deref() == Some("Web search")
+                && action.input.summary.as_deref() == Some("Web search")
+                && action.input.raw.is_some()
+        )));
+        assert!(output.events.iter().any(|event| matches!(
+            event,
+            EngineEvent::ActionUpdated {
+                action_id,
+                patch:
+                    ActionPatch {
+                        phase: Some(ActionPhase::Completed),
+                        ..
+                    },
+                ..
+            } if action_id.as_str() == "search_1"
+        )));
+    }
+
+    #[test]
+    fn output_only_dynamic_tool_without_title_uses_tool_name() {
+        let adapter = CodexAdapter::app_server();
+        let engine = engine_with_thread(&adapter);
+
+        let output = adapter
+            .decode_notification(
+                &engine,
+                "item/completed",
+                &json!({
+                    "threadId": "thread",
+                    "turnId": "turn",
+                    "item": {
+                        "id": "tool_1",
+                        "type": "dynamicToolCall",
+                        "status": "completed",
+                        "namespace": "web",
+                        "tool": "search",
+                        "contentItems": [
+                            { "type": "input_text", "text": "done" }
+                        ]
+                    }
+                }),
+            )
+            .expect("dynamic tool item");
+
+        assert!(output.events.iter().any(|event| matches!(
+            event,
+            EngineEvent::ActionObserved {
+                action,
+                ..
+            } if action.id.as_str() == "tool_1"
+                && action.kind == ActionKind::DynamicTool
+                && action.title.as_deref() == Some("web.search")
+                && action.input.summary.as_deref() == Some("web.search")
+                && action.input.raw.is_some()
+        )));
+    }
+
+    #[test]
     fn next_stream_item_completes_open_web_search() {
         let adapter = CodexAdapter::app_server();
         let mut engine = engine_with_thread(&adapter);

@@ -437,6 +437,59 @@ fn codex_completed_reasoning_item_surfaces_reasoning_updates() {
 }
 
 #[test]
+fn codex_raw_web_search_action_has_projectable_title() {
+    let (mut client, conversation_id) = ready_codex_client();
+
+    let sent = client
+        .thread(&conversation_id)
+        .send_event(ThreadEvent::text("search the web"))
+        .expect("send codex text");
+    let turn_id = sent.turn_id.expect("turn id");
+    client
+        .receive_json_value(response(
+            &sent.request_id.expect("turn request id"),
+            json!({
+                "turn": {
+                    "id": "turn-1",
+                    "status": "inProgress"
+                }
+            }),
+        ))
+        .expect("turn accepted");
+
+    let update = client
+        .receive_json_value(json!({
+            "jsonrpc": "2.0",
+            "method": "rawResponseItem/completed",
+            "params": {
+                "threadId": "thread-1",
+                "turnId": "turn-1",
+                "item": {
+                    "id": "search_1",
+                    "type": "web_search_call",
+                    "status": "completed",
+                    "action": { "type": "other" }
+                }
+            }
+        }))
+        .expect("raw web search item");
+
+    assert!(update.events.iter().any(|event| {
+        matches!(
+            event,
+            ClientEvent::ActionObserved { conversation_id: id, action }
+                if id == &conversation_id
+                    && action.id == "search_1"
+                    && action.turn_id == turn_id
+                    && action.kind == "webSearch"
+                    && action.title.as_deref() == Some("Web search")
+                    && action.input_summary.as_deref() == Some("Web search")
+                    && action.raw_input.is_some()
+        )
+    }));
+}
+
+#[test]
 fn codex_slash_fast_is_interpreted_without_starting_turn() {
     let (mut client, conversation_id) = ready_codex_client();
 

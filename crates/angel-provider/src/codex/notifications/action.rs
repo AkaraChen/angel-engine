@@ -95,3 +95,60 @@ impl CodexAdapter {
         Ok(output)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde_json::json;
+
+    #[test]
+    fn output_delta_without_started_item_creates_titled_fallback_action() {
+        let adapter = CodexAdapter::app_server();
+        let engine = engine_with_thread(&adapter);
+
+        let output = adapter
+            .decode_notification(
+                &engine,
+                "item/commandExecution/outputDelta",
+                &json!({
+                    "threadId": "thread",
+                    "turnId": "turn",
+                    "itemId": "cmd_1",
+                    "delta": "hello\n"
+                }),
+            )
+            .expect("command output delta");
+
+        assert!(output.events.iter().any(|event| matches!(
+            event,
+            EngineEvent::ActionObserved {
+                action,
+                ..
+            } if action.id.as_str() == "cmd_1"
+                && action.kind == ActionKind::Command
+                && action.title.as_deref() == Some("Command")
+                && action.input.summary.as_deref() == Some("Command")
+                && action.input.raw.is_some()
+        )));
+    }
+
+    fn engine_with_thread(adapter: &CodexAdapter) -> AngelEngine {
+        let mut engine = AngelEngine::with_available_runtime(
+            angel_engine::ProtocolFlavor::CodexAppServer,
+            angel_engine::RuntimeCapabilities::new("test"),
+            adapter.capabilities(),
+        );
+        let conversation_id = ConversationId::new("conv");
+        engine.conversations.insert(
+            conversation_id.clone(),
+            angel_engine::ConversationState::new(
+                conversation_id.clone(),
+                RemoteConversationId::Known("thread".to_string()),
+                ConversationLifecycle::Idle,
+                adapter.capabilities(),
+            ),
+        );
+        engine.selected = Some(conversation_id);
+        engine
+    }
+}

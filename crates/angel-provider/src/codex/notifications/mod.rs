@@ -1,4 +1,4 @@
-use super::actions::append_completed_implicit_live_actions;
+use super::actions::{action_id_from_item, append_completed_implicit_live_actions};
 use super::ids::*;
 use super::protocol_helpers::DeltaKind;
 use super::summaries::*;
@@ -167,12 +167,12 @@ fn current_implicit_live_action_id(method: &str, params: &Value) -> Option<Actio
         Some(value)
             if value == CodexThreadItemKind::WebSearch.as_str()
                 || value == CodexThreadItemKind::ImageGeneration.as_str()
+                || value == "web_search_call"
+                || value == "image_generation_call"
     ) {
         return None;
     }
-    item.get("id")
-        .and_then(Value::as_str)
-        .map(|id| ActionId::new(id.to_string()))
+    action_id_from_item(item).map(|id| ActionId::new(id.to_string()))
 }
 
 fn codex_notification_params<T: serde::de::DeserializeOwned>(params: &Value) -> Option<T> {
