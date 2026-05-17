@@ -4,10 +4,11 @@ use crate::ids::RemoteConversationId;
 use crate::protocol::{ProtocolFlavor, ProtocolMethod};
 use crate::state::{
     ActionPhase, ContentDelta, ConversationLifecycle, HistoryMutationOp, HistoryMutationResult,
-    HistoryReplayEntry, HistoryReplayToolAction, HistoryRole,
+    HistoryReplayEntry, HistoryReplayToolAction, HistoryRole, HydrationSource,
+    conversation_display_messages,
 };
 
-use super::{codex_capabilities, engine_with, insert_ready_conversation};
+use super::{accept_codex_turn, codex_capabilities, engine_with, insert_ready_conversation};
 
 #[test]
 fn codex_rollback_marks_workspace_not_reverted() {
@@ -110,5 +111,93 @@ fn history_replay_rejects_tool_entry_without_tool_id() {
     assert_eq!(
         error.to_string(),
         "invalid command: history tool replay entry is missing tool id"
+    );
+}
+
+#[test]
+fn hydration_started_clears_existing_visible_history() {
+    let capabilities = codex_capabilities();
+    let mut engine = engine_with(ProtocolFlavor::CodexAppServer, capabilities.clone());
+    let conversation_id = insert_ready_conversation(
+        &mut engine,
+        "conv",
+        RemoteConversationId::Known("thread".to_string()),
+        capabilities,
+    );
+
+    engine
+        .apply_event(EngineEvent::HistoryReplayChunk {
+            conversation_id: conversation_id.clone(),
+            entry: HistoryReplayEntry {
+                role: HistoryRole::User,
+                content: ContentDelta::Text("old history".to_string()),
+                tool: None,
+            },
+        })
+        .expect("old replay");
+    let turn_id = crate::ids::TurnId::new("turn-1");
+    accept_codex_turn(&mut engine, conversation_id.clone(), turn_id.clone());
+    engine
+        .apply_event(EngineEvent::AssistantDelta {
+            conversation_id: conversation_id.clone(),
+            turn_id,
+            delta: ContentDelta::Text("old live response".to_string()),
+        })
+        .expect("old live response");
+    assert_eq!(
+        conversation_display_messages(engine.conversations.get(&conversation_id).unwrap()).len(),
+        2
+    );
+
+    engine
+        .apply_event(EngineEvent::ConversationHydrationStarted {
+            id: conversation_id.clone(),
+            source: HydrationSource::Resume,
+        })
+        .expect("hydration started");
+    {
+        let conversation = engine.conversations.get(&conversation_id).unwrap();
+        assert_eq!(
+            conversation.lifecycle,
+            ConversationLifecycle::Hydrating {
+                source: HydrationSource::Resume
+            }
+        );
+        assert!(conversation.history.replay.is_empty());
+        assert_eq!(conversation.history.turn_count, 0);
+        assert!(conversation.turns.is_empty());
+        assert!(conversation.actions.is_empty());
+        assert!(conversation.elicitations.is_empty());
+        assert!(conversation_display_messages(conversation).is_empty());
+    }
+
+    engine
+        .apply_event(EngineEvent::HistoryReplayChunk {
+            conversation_id: conversation_id.clone(),
+            entry: HistoryReplayEntry {
+                role: HistoryRole::User,
+                content: ContentDelta::Text("new history".to_string()),
+                tool: None,
+            },
+        })
+        .expect("new user replay");
+    engine
+        .apply_event(EngineEvent::HistoryReplayChunk {
+            conversation_id: conversation_id.clone(),
+            entry: HistoryReplayEntry {
+                role: HistoryRole::Assistant,
+                content: ContentDelta::Text("new response".to_string()),
+                tool: None,
+            },
+        })
+        .expect("new assistant replay");
+
+    let messages =
+        conversation_display_messages(engine.conversations.get(&conversation_id).unwrap());
+    assert_eq!(messages.len(), 2);
+    assert_eq!(messages[0].role, crate::state::DisplayMessageRole::User);
+    assert_eq!(
+        messages[1].role,
+        crate::state::DisplayMessageRole::Assistant
     );
 }

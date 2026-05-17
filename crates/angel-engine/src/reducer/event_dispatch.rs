@@ -81,6 +81,13 @@ impl AngelEngine {
                 let conversation = self.conversation_mut(&id)?;
                 conversation.lifecycle = ConversationLifecycle::Hydrating { source };
                 conversation.history.hydrated = false;
+                conversation.history.turn_count = 0;
+                conversation.history.replay.clear();
+                conversation.active_turns.clear();
+                conversation.focused_turn = None;
+                conversation.turns.clear();
+                conversation.actions.clear();
+                conversation.elicitations.clear();
                 Ok(TransitionReport::one(UiEvent::ConversationChanged(id)))
             }
             EngineEvent::ConversationReady {
