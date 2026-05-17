@@ -24,9 +24,11 @@ export function AssistantThread({
   const { t } = useTranslation();
 
   return (
-    <ThreadPrimitive.Root className="
+    <ThreadPrimitive.Root
+      className="
       flex h-full min-h-0 flex-col bg-background/96
-    ">
+    "
+    >
       <ThreadPrimitive.Viewport
         className="
           relative flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto p-4
@@ -70,8 +72,15 @@ export function AssistantThread({
         </SelectionToolbarPrimitive.Root>
       </ThreadPrimitive.Viewport>
       <div
+        aria-hidden="true"
         className="
-          shrink-0 bg-transparent px-4 pt-1 pb-3
+          pointer-events-none relative z-10 -mt-6 h-6 shrink-0
+          bg-gradient-to-b from-background/0 via-background/78 to-background
+        "
+      />
+      <div
+        className="
+          relative z-20 shrink-0 bg-background px-4 pb-3
           sm:px-7
         "
       >
@@ -95,9 +104,11 @@ function EmptyThread({ projectName }: { projectName?: string }) {
     >
       <div className="w-full max-w-136">
         <div className="min-w-0 text-center select-none">
-          <h2 className="
+          <h2
+            className="
             text-2xl/tight font-semibold text-pretty text-foreground
-          ">
+          "
+          >
             {projectName ? (
               <Trans
                 components={{ project: <SketchUnderline /> }}
@@ -119,9 +130,11 @@ function EmptyThread({ projectName }: { projectName?: string }) {
 
 function SketchUnderline({ children }: { children?: ReactNode }) {
   return (
-    <span className="
+    <span
+      className="
       relative inline-block max-w-full align-baseline text-primary
-    ">
+    "
+    >
       <span className="relative z-10 wrap-break-word">{children}</span>
       <svg
         aria-hidden
