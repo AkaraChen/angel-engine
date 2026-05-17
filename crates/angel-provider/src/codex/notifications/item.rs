@@ -343,7 +343,7 @@ mod tests {
     }
 
     #[test]
-    fn raw_response_web_search_without_title_uses_provider_fallback() {
+    fn codex_raw_web_search_action_has_projectable_title() {
         let adapter = CodexAdapter::app_server();
         let engine = engine_with_thread(&adapter);
 
