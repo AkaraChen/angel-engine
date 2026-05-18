@@ -117,6 +117,7 @@ impl CodexAdapter {
                         .fields
                         .get("includeTurns")
                         .is_none_or(|value| value == "true"),
+                    "persistExtendedHistory": true,
                 }))
             }
             ProtocolMethod::ResolveElicitation => Err(angel_engine::EngineError::InvalidCommand {
@@ -769,6 +770,7 @@ mod tests {
             json!({
                 "threadId": "thread",
                 "includeTurns": true,
+                "persistExtendedHistory": true,
             })
         );
     }

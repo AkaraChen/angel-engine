@@ -12,7 +12,7 @@ use angel_engine::state::{
     ActionInput, ActionKind, ActionOutputDelta, ActionPatch, ActionPhase, ActionState,
     ContentDelta, ContentPart, ContextPatch, ConversationLifecycle, ElicitationKind,
     ElicitationOptions, ElicitationState, ExhaustionReason, HistoryReplayEntry,
-    HistoryReplayToolAction, HistoryRole, PlanEntry, PlanEntryStatus, PlanState,
+    HistoryReplayToolAction, HistoryRole, HydrationSource, PlanEntry, PlanEntryStatus, PlanState,
     SessionConfigOption, SessionConfigValue, SessionMode, SessionModeState, SessionModel,
     SessionModelState, SessionPermissionMode, SessionPermissionModeState, TurnOutcome,
     UserQuestion, UserQuestionOption,

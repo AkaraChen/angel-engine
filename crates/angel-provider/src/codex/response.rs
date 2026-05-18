@@ -74,12 +74,17 @@ impl CodexAdapter {
                     .ok_or_else(|| angel_engine::EngineError::InvalidCommand {
                         message: "Codex thread/read response missing thread.id".to_string(),
                     })?;
-                output = output.event(EngineEvent::ConversationReady {
-                    id: conversation_id.clone(),
-                    remote: Some(RemoteConversationId::Known(thread_id.to_string())),
-                    context: codex_context_patch(result),
-                    capabilities: None,
-                });
+                output = output
+                    .event(EngineEvent::ConversationHydrationStarted {
+                        id: conversation_id.clone(),
+                        source: HydrationSource::Read,
+                    })
+                    .event(EngineEvent::ConversationReady {
+                        id: conversation_id.clone(),
+                        remote: Some(RemoteConversationId::Known(thread_id.to_string())),
+                        context: codex_context_patch(result),
+                        capabilities: None,
+                    });
                 if !append_local_rollout_history(&mut output, conversation_id, thread_id) {
                     append_hydrated_turns(&mut output, conversation_id, result);
                 }
@@ -1958,5 +1963,152 @@ mod tests {
                         && blob_name.as_deref() == Some("archive.zip")
                 )
         ));
+    }
+}
+
+#[cfg(test)]
+mod read_conversation_tests {
+    use super::*;
+    use angel_engine::{ConversationId, EngineEvent, HydrationSource, RemoteConversationId};
+
+    fn setup_ready_engine(adapter: &CodexAdapter, conversation_id: &ConversationId) -> AngelEngine {
+        let mut engine = AngelEngine::with_available_runtime(
+            angel_engine::ProtocolFlavor::CodexAppServer,
+            angel_engine::RuntimeCapabilities::new("test"),
+            adapter.capabilities(),
+        );
+        engine
+            .apply_event(EngineEvent::ConversationProvisionStarted {
+                id: conversation_id.clone(),
+                remote: RemoteConversationId::Known("thread_1".to_string()),
+                op: angel_engine::ProvisionOp::Resume,
+                capabilities: adapter.capabilities(),
+            })
+            .expect("conversation provisioned");
+        engine
+            .apply_event(EngineEvent::ConversationReady {
+                id: conversation_id.clone(),
+                remote: Some(RemoteConversationId::Known("thread_1".to_string())),
+                context: Default::default(),
+                capabilities: Some(adapter.capabilities()),
+            })
+            .expect("conversation ready");
+        engine
+    }
+
+    #[test]
+    fn thread_read_emits_hydration_started_to_clear_existing_history() {
+        let adapter = CodexAdapter::app_server();
+        let conversation_id = ConversationId::new("conv");
+        let mut engine = setup_ready_engine(&adapter, &conversation_id);
+
+        let request_id = engine
+            .plan_command(angel_engine::EngineCommand::ReadConversation {
+                conversation_id: conversation_id.clone(),
+            })
+            .expect("read plan")
+            .request_id
+            .expect("request id");
+
+        let output = adapter
+            .decode_response(
+                &engine,
+                &request_id,
+                &json!({
+                    "thread": {
+                        "id": "thread_1",
+                        "turns": []
+                    }
+                }),
+            )
+            .expect("thread read response");
+
+        assert!(
+            output.events.iter().any(|event| matches!(
+                event,
+                EngineEvent::ConversationHydrationStarted {
+                    id,
+                    source: HydrationSource::Read,
+                } if id == &conversation_id
+            )),
+            "ReadConversation should emit ConversationHydrationStarted to clear prior replay history"
+        );
+    }
+
+    #[test]
+    fn thread_read_preserves_file_attachment_parts_in_history_replay() {
+        let adapter = CodexAdapter::app_server();
+        let conversation_id = ConversationId::new("conv");
+        let mut engine = setup_ready_engine(&adapter, &conversation_id);
+
+        let request_id = engine
+            .plan_command(angel_engine::EngineCommand::ReadConversation {
+                conversation_id: conversation_id.clone(),
+            })
+            .expect("read plan")
+            .request_id
+            .expect("request id");
+
+        let output = adapter
+            .decode_response(
+                &engine,
+                &request_id,
+                &json!({
+                    "thread": {
+                        "id": "thread_1",
+                        "turns": [
+                            {
+                                "items": [
+                                    {
+                                        "type": "userMessage",
+                                        "content": [
+                                            {
+                                                "type": "text",
+                                                "text": "Attached text resource: attachment:///notes.txt\nMIME type: text/plain\n\nhello from a file"
+                                            },
+                                            {
+                                                "type": "text",
+                                                "text": "please review this"
+                                            }
+                                        ]
+                                    },
+                                    {
+                                        "type": "agentMessage",
+                                        "text": "done"
+                                    }
+                                ]
+                            }
+                        ]
+                    }
+                }),
+            )
+            .expect("thread read response");
+
+        let entry = output
+            .events
+            .iter()
+            .find_map(|event| match event {
+                EngineEvent::HistoryReplayChunk { entry, .. }
+                    if entry.role == HistoryRole::User =>
+                {
+                    Some(entry)
+                }
+                _ => None,
+            })
+            .expect("user history replay entry");
+
+        assert!(
+            matches!(
+                &entry.content,
+                ContentDelta::Parts(parts)
+                    if parts.iter().any(|p| matches!(p,
+                        ContentPart::File { data, mime_type, name }
+                            if data == "hello from a file"
+                                && mime_type == "text/plain"
+                                && name.as_deref() == Some("notes.txt")
+                    ))
+            ),
+            "ReadConversation should preserve file attachment parts from thread/read response"
+        );
     }
 }
