@@ -66,6 +66,7 @@ export class AngelClient {
       this.createChat(input),
     deleteAll: async (): Promise<{ deleted: true }> => {
       await this.store.deleteAllChats();
+      this.emit({ type: "chats.deletedAll" });
       return { deleted: true };
     },
     inspectConfig: async (

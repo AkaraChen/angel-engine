@@ -1,8 +1,8 @@
 use crate::error::EngineError;
 use crate::event::{EngineEvent, TransitionReport, UiEvent};
 use crate::state::{
-    AgentMode, ContextPatch, ContextScope, ContextUpdate, ConversationLifecycle, ConversationState,
-    ElicitationPhase, HistoryRole, PermissionMode, RuntimeState, TurnPhase,
+    ActionPhase, AgentMode, ContextPatch, ContextScope, ContextUpdate, ConversationLifecycle,
+    ConversationState, ElicitationPhase, HistoryRole, PermissionMode, RuntimeState, TurnPhase,
 };
 
 use super::AngelEngine;
@@ -386,6 +386,17 @@ impl AngelEngine {
                         elicitation_id: elicitation_id.to_string(),
                     })?;
                 elicitation.phase = ElicitationPhase::Cancelled;
+                if let Some(action_id) = elicitation.action_id.clone()
+                    && let Some(action) = conversation.actions.get_mut(&action_id)
+                {
+                    action.phase = ActionPhase::Cancelled;
+                }
+                if let Some(turn_id) = elicitation.turn_id.clone()
+                    && let Some(turn) = conversation.turns.get_mut(&turn_id)
+                    && !turn.is_terminal()
+                {
+                    turn.phase = TurnPhase::Reasoning;
+                }
                 Ok(TransitionReport::one(UiEvent::ElicitationChanged {
                     conversation_id,
                     elicitation_id,

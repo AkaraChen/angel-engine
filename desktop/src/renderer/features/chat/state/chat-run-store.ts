@@ -112,6 +112,7 @@ interface BaseChatRunSlot {
   key: string;
   messages: EngineMessage[];
   permissionBypassEnabled: boolean;
+  permissionBypassResponse: ChatElicitationResponse | undefined;
 }
 
 type IdleChatRunSlot = BaseChatRunSlot & {
@@ -181,7 +182,10 @@ interface ChatRunStore {
   cancelRun: (slotKey: string) => void;
   dropAllRuns: () => void;
   dropRun: (slotKey: string) => void;
-  enablePermissionBypass: (slotKey: string) => void;
+  enablePermissionBypass: (
+    slotKey: string,
+    response: ChatElicitationResponse,
+  ) => void;
   initializeSlot: (input: InitializeSlotInput) => void;
   resolveElicitation: (
     slotKey: string,
@@ -213,7 +217,11 @@ type ChatRunEvent =
       type: "slot.initialized";
     }
   | { slotKey: string; type: "run.cancelled" }
-  | { slotKey: string; type: "slot.permissionBypassEnabled" }
+  | {
+      response: ChatElicitationResponse;
+      slotKey: string;
+      type: "slot.permissionBypassEnabled";
+    }
   | {
       chat: Chat;
       config: ChatRuntimeConfig;
@@ -308,7 +316,11 @@ const chatRunMachine = setup({
         },
         "slot.permissionBypassEnabled": {
           actions: assign(({ context, event }) =>
-            enablePermissionBypassContext(context, event.slotKey),
+            enablePermissionBypassContext(
+              context,
+              event.slotKey,
+              event.response,
+            ),
           ),
         },
         "slot.initialized": {
@@ -362,8 +374,12 @@ const chatRunActions: Omit<ChatRunStore, keyof ChatRunContext> = {
 
     chatRunActor.send({ slotKey, type: "slot.dropped" });
   },
-  enablePermissionBypass(slotKey) {
-    chatRunActor.send({ slotKey, type: "slot.permissionBypassEnabled" });
+  enablePermissionBypass(slotKey, response) {
+    chatRunActor.send({
+      response,
+      slotKey,
+      type: "slot.permissionBypassEnabled",
+    });
   },
   initializeSlot(input) {
     chatRunActor.send({
@@ -728,6 +744,7 @@ function initializeSlotContext(
 function enablePermissionBypassContext(
   state: ChatRunContext,
   slotKey: string,
+  response: ChatElicitationResponse,
 ): Partial<ChatRunContext> {
   const resolvedKey = resolveSlotKey(state, slotKey);
   const existing =
@@ -736,7 +753,6 @@ function enablePermissionBypassContext(
       historyRevision: 0,
       slotKey: resolvedKey,
     });
-  if (existing.permissionBypassEnabled) return {};
 
   return {
     slots: {
@@ -744,6 +760,7 @@ function enablePermissionBypassContext(
       [resolvedKey]: {
         ...existing,
         permissionBypassEnabled: true,
+        permissionBypassResponse: response,
       },
     },
   };
@@ -964,6 +981,7 @@ function createIdleSlot(
     key,
     messages,
     permissionBypassEnabled: existing?.permissionBypassEnabled ?? false,
+    permissionBypassResponse: existing?.permissionBypassResponse,
     status: "idle",
   };
 }
@@ -1047,17 +1065,15 @@ async function consumeRunStream({
           reason: "error",
           type: "incomplete",
         };
-        accumulator.parts = [
-          {
-            data: {
-              message: event.message,
-              source: "runtime",
-              type: "chat-error",
-            },
-            name: "chat-error",
-            type: "data",
+        accumulator.parts.push({
+          data: {
+            message: event.message,
+            source: "runtime",
+            type: "chat-error",
           },
-        ];
+          name: "chat-error",
+          type: "data",
+        });
         dirty = true;
         await flush();
         return {
@@ -1165,17 +1181,15 @@ async function consumeRunStream({
       reason: "error",
       type: "incomplete",
     };
-    accumulator.parts = [
-      {
-        data: {
-          message,
-          source: "runtime",
-          type: "chat-error",
-        },
-        name: "chat-error",
-        type: "data",
+    accumulator.parts.push({
+      data: {
+        message,
+        source: "runtime",
+        type: "chat-error",
       },
-    ];
+      name: "chat-error",
+      type: "data",
+    });
     dirty = true;
     await flush();
   }
@@ -1200,16 +1214,17 @@ function autoApprovePermissionElicitation({
 }) {
   if (!isPermissionElicitation(elicitation)) return false;
   if (isPlanApprovalElicitation(elicitation, parts)) return false;
-  if (!shouldAutoApprovePermission(activeRun, slotKey, elicitation.id)) {
+  const response = shouldAutoApprovePermission(
+    activeRun,
+    slotKey,
+    elicitation.id,
+  );
+  if (!response) {
     return false;
   }
 
-  resolveElicitationPartLocally(
-    parts,
-    elicitation.id,
-    ALLOW_PERMISSION_RESPONSE,
-  );
-  sendAutoPermissionApproval(activeRun, elicitation.id);
+  resolveElicitationPartLocally(parts, elicitation.id, response);
+  sendAutoPermissionApproval(activeRun, elicitation.id, response);
   return true;
 }
 
@@ -1229,12 +1244,17 @@ function autoApprovePermissionToolAction({
   const elicitation = chatElicitationFromAction(action);
   if (!isPermissionElicitation(elicitation)) return false;
   const elicitationId = action.elicitationId ?? action.id;
-  if (!shouldAutoApprovePermission(activeRun, slotKey, elicitationId)) {
+  const response = shouldAutoApprovePermission(
+    activeRun,
+    slotKey,
+    elicitationId,
+  );
+  if (!response) {
     return false;
   }
 
   markToolActionPermissionApprovedLocally(parts, action.id);
-  sendAutoPermissionApproval(activeRun, elicitationId);
+  sendAutoPermissionApproval(activeRun, elicitationId, response);
   return true;
 }
 
@@ -1242,25 +1262,25 @@ function shouldAutoApprovePermission(
   activeRun: ActiveRun,
   slotKey: string,
   elicitationId: string,
-) {
-  if (!activeRun.streamController) return false;
-  if (!isPermissionBypassEnabledForSlot(getChatRunContext(), slotKey)) {
-    return false;
-  }
-  if (activeRun.autoApprovedPermissionIds.has(elicitationId)) return false;
+): ChatElicitationResponse | undefined {
+  if (!activeRun.streamController) return undefined;
+  const slot = selectSlot(getChatRunContext(), slotKey);
+  if (!slot?.permissionBypassEnabled) return undefined;
+  if (activeRun.autoApprovedPermissionIds.has(elicitationId)) return undefined;
 
   activeRun.autoApprovedPermissionIds.add(elicitationId);
-  return true;
+  return slot.permissionBypassResponse ?? ALLOW_PERMISSION_RESPONSE;
 }
 
 function sendAutoPermissionApproval(
   activeRun: ActiveRun,
   elicitationId: string,
+  response: ChatElicitationResponse,
 ) {
   void activeRun.streamController
     ?.resolveElicitation({
       elicitationId,
-      response: ALLOW_PERMISSION_RESPONSE,
+      response,
     })
     .catch((): undefined => undefined);
 }
@@ -1667,6 +1687,20 @@ function mergeFinalResultParts(
       upsertElicitationPart(parts, part.data);
     } else if (part.type === "tool-call") {
       upsertToolActionPart(parts, part.artifact);
+    } else if (part.type === "text") {
+      const index = parts.findIndex((p) => p.type === "text");
+      if (index !== -1) {
+        parts[index] = part;
+      } else {
+        parts.push(part);
+      }
+    } else if (part.type === "reasoning") {
+      const index = parts.findIndex((p) => p.type === "reasoning");
+      if (index !== -1) {
+        parts[index] = part;
+      } else {
+        parts.push(part);
+      }
     }
   }
 }

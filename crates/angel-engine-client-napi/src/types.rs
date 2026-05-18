@@ -351,8 +351,8 @@ pub struct AvailableCommandSnapshot {
 
 #[napi(object)]
 pub struct SessionUsageSnapshot {
-    pub used: u32,
-    pub size: u32,
+    pub used: i64,
+    pub size: i64,
     pub cost: Option<SessionUsageCostSnapshot>,
 }
 

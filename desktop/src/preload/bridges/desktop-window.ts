@@ -34,10 +34,10 @@ export function exposeDesktopWindowBridge() {
     onOpenChatFromNotification(
       handler: (event: DesktopOpenChatFromNotificationEvent) => void,
     ) {
-      const listener = (
-        _event: IpcRendererEvent,
-        payload: DesktopOpenChatFromNotificationEvent,
-      ) => handler(payload);
+      const listener = (_event: IpcRendererEvent, payload: unknown) => {
+        if (!isOpenChatFromNotificationEvent(payload)) return;
+        handler(payload);
+      };
 
       ipcRenderer.on(DESKTOP_OPEN_CHAT_FROM_NOTIFICATION_CHANNEL, listener);
       return () => {
@@ -69,4 +69,11 @@ function isDesktopWindowCommandEvent(
     command === "open-settings" ||
     command === "toggle-sidebar"
   );
+}
+
+function isOpenChatFromNotificationEvent(
+  value: unknown,
+): value is DesktopOpenChatFromNotificationEvent {
+  if (typeof value !== "object" || value === null) return false;
+  return typeof (value as { chatId?: unknown }).chatId === "string";
 }

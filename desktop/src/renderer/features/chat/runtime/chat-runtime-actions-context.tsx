@@ -8,7 +8,7 @@ import {
 } from "@/features/chat/state/chat-run-store";
 
 interface ChatRuntimeActionsContextValue {
-  enablePermissionBypass: () => void;
+  enablePermissionBypass: (response: ChatElicitationResponse) => void;
   permissionBypassEnabled: boolean;
   resolveElicitation: (
     elicitationId: string,
@@ -44,8 +44,8 @@ export function ChatRuntimeActionsProvider({
   const permissionBypassEnabled = useChatPermissionBypassEnabled(slotKey);
   const value = useMemo<ChatRuntimeActionsContextValue>(
     () => ({
-      enablePermissionBypass() {
-        enablePermissionBypassForSlot(slotKey);
+      enablePermissionBypass(response) {
+        enablePermissionBypassForSlot(slotKey, response);
       },
       permissionBypassEnabled,
       resolveElicitation(elicitationId, response, localToolCallId) {

@@ -312,12 +312,11 @@ export function AssistantComposer({
       if (
         (event.key === "Enter" || event.key === "Tab") &&
         !event.shiftKey &&
-        slashCommandOpen &&
-        (slashCommandsLoading || slashCommands[0] !== undefined)
+        slashCommandOpen
       ) {
         event.preventDefault();
         const firstCommand = slashCommands[0];
-        if (firstCommand !== undefined) {
+        if (firstCommand !== undefined && !slashCommandsLoading) {
           insertSlashCommand(firstCommand);
         }
         return;
@@ -326,12 +325,13 @@ export function AssistantComposer({
       if (
         (event.key === "Enter" || event.key === "Tab") &&
         !event.shiftKey &&
-        fileMentionOpen &&
-        fileResults[0] !== undefined
+        fileMentionOpen
       ) {
         event.preventDefault();
         const firstFileResult = fileResults[0];
-        selectMentionedFile(firstFileResult);
+        if (firstFileResult !== undefined && !fileSearchLoading) {
+          selectMentionedFile(firstFileResult);
+        }
         return;
       }
 
@@ -349,6 +349,7 @@ export function AssistantComposer({
       chatOptions.configLoading,
       fileMentionOpen,
       fileResults,
+      fileSearchLoading,
       insertSlashCommand,
       isRunning,
       selectMentionedFile,

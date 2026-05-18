@@ -425,6 +425,17 @@ fn codex_rpc_error_event(
                 message.to_string(),
             )),
         }),
+        PendingRequest::StartConversation { conversation_id }
+        | PendingRequest::ForkConversation { conversation_id }
+        | PendingRequest::ResumeConversation {
+            conversation_id, ..
+        } => Some(EngineEvent::ConversationStatusChanged {
+            id: conversation_id.clone(),
+            lifecycle: angel_engine::ConversationLifecycle::Faulted(ErrorInfo::new(
+                format!("codex.rpc.{code}"),
+                message.to_string(),
+            )),
+        }),
         PendingRequest::HistoryMutation { conversation_id } => {
             Some(history_mutation_failed_event(conversation_id, message))
         }

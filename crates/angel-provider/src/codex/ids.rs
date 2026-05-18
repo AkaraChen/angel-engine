@@ -75,7 +75,22 @@ pub(crate) fn find_codex_conversation(
         .or_else(|| {
             let selected_id = engine.selected.as_ref()?;
             let selected = engine.conversations.get(selected_id)?;
-            matches!(selected.remote, RemoteConversationId::Pending(_)).then(|| selected_id.clone())
+            if !matches!(selected.remote, RemoteConversationId::Pending(_)) {
+                return None;
+            }
+            engine
+                .pending
+                .requests
+                .values()
+                .any(|pending| match pending {
+                    PendingRequest::StartConversation { conversation_id }
+                    | PendingRequest::ForkConversation { conversation_id }
+                    | PendingRequest::ResumeConversation {
+                        conversation_id, ..
+                    } => conversation_id == selected_id,
+                    _ => false,
+                })
+                .then(|| selected_id.clone())
         })
 }
 

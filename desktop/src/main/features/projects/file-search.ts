@@ -52,7 +52,7 @@ export async function searchProjectFiles(
     entries.sort((a, b) => a.name.localeCompare(b.name));
     for (const entry of entries) {
       if (visited++ >= MAX_VISITED) break;
-      if (entry.name.startsWith(".") && entry.name !== ".env") continue;
+      if (entry.name.startsWith(".")) continue;
 
       const absolutePath = path.join(dir, entry.name);
       const relativePath = path.relative(root, absolutePath);
@@ -123,7 +123,7 @@ function fuzzyScore(query: string, candidate: string) {
   ) {
     if (candidate[index] !== query[queryIndex]) continue;
     queryIndex += 1;
-    score += index === 0 || candidate[index - 1] === "/" ? 6 : 2;
+    score += index === 0 || candidate[index - 1] === path.sep ? 6 : 2;
   }
 
   return queryIndex === query.length ? score : 0;

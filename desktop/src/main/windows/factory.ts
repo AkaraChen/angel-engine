@@ -58,7 +58,20 @@ export function createDesktopWindow({
 
 function configureExternalLinkHandling(window: BrowserWindow) {
   window.webContents.setWindowOpenHandler(({ url }) => {
-    void shell.openExternal(url);
+    if (isAllowedExternalUrl(url)) {
+      void shell.openExternal(url);
+    }
     return { action: "deny" };
   });
+}
+
+function isAllowedExternalUrl(url: string) {
+  try {
+    const protocol = new URL(url).protocol;
+    return (
+      protocol === "https:" || protocol === "http:" || protocol === "mailto:"
+    );
+  } catch {
+    return false;
+  }
 }

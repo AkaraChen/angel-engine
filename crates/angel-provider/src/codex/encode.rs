@@ -403,7 +403,9 @@ fn insert_codex_thread_overrides(
     }
     if !insert_codex_permissions(context, params) {
         if let Some(sandbox) = context.sandbox.effective() {
-            params.insert("sandbox".to_string(), json!(codex_sandbox_policy(sandbox)));
+            if let Some(policy) = sandbox_policy(codex_sandbox_policy(sandbox)) {
+                params.insert("sandboxPolicy".to_string(), policy);
+            }
         }
     }
     if let (Some(mode), Some(model)) = (codex_context_mode(context), codex_context_model(context)) {
@@ -502,6 +504,34 @@ mod tests {
                 "persistExtendedHistory": true
             })
         );
+    }
+
+    #[test]
+    fn thread_start_uses_sandbox_policy_override_shape() {
+        let adapter = CodexAdapter::app_server();
+        let mut engine = AngelEngine::with_available_runtime(
+            angel_engine::ProtocolFlavor::CodexAppServer,
+            angel_engine::RuntimeCapabilities::new("test"),
+            adapter.capabilities(),
+        );
+        let plan = engine
+            .plan_command(angel_engine::EngineCommand::StartConversation {
+                params: angel_engine::StartConversationParams {
+                    context: ContextPatch::one(angel_engine::ContextUpdate::Sandbox {
+                        scope: angel_engine::ContextScope::Conversation,
+                        sandbox: angel_engine::SandboxProfile::WorkspaceWrite,
+                    }),
+                    ..angel_engine::StartConversationParams::default()
+                },
+            })
+            .expect("start conversation");
+
+        let params = adapter
+            .encode_params(&engine, &plan.effects[0], &TransportOptions::default())
+            .expect("thread start params");
+
+        assert_eq!(params["sandboxPolicy"], json!({"type": "workspaceWrite"}));
+        assert!(params.get("sandbox").is_none());
     }
 
     #[test]

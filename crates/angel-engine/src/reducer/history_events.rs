@@ -15,6 +15,8 @@ impl AngelEngine {
         conversation.history.workspace_reverted = Some(result.workspace_reverted);
         if result.success {
             conversation.lifecycle = ConversationLifecycle::Idle;
+            conversation.history.replay.clear();
+            conversation.history.turn_count = 0;
         } else {
             let Some(message) = result.message else {
                 return Err(EngineError::InvalidCommand {

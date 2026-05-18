@@ -116,6 +116,9 @@ const toolCallCardClassName = nativePanelClass;
 type ElicitationQuestion = NonNullable<ChatElicitation["questions"]>[number];
 
 const ALLOW_PERMISSION_RESPONSE: ChatElicitationResponse = { type: "allow" };
+const ALLOW_SESSION_PERMISSION_RESPONSE: ChatElicitationResponse = {
+  type: "allowForSession",
+};
 
 interface ElicitationFreeformAnswerProps {
   disabled: boolean;
@@ -740,7 +743,7 @@ function PermissionApprovalActions({
     useChatRuntimeActions();
   const bypassPermission = () => {
     if (disabled) return;
-    enablePermissionBypass();
+    enablePermissionBypass(ALLOW_PERMISSION_RESPONSE);
     onResume(ALLOW_PERMISSION_RESPONSE);
   };
 
@@ -766,7 +769,10 @@ function PermissionApprovalActions({
       </Button>
       <Button
         disabled={disabled}
-        onClick={() => onResume({ type: "allowForSession" })}
+        onClick={() => {
+          enablePermissionBypass(ALLOW_SESSION_PERMISSION_RESPONSE);
+          onResume(ALLOW_SESSION_PERMISSION_RESPONSE);
+        }}
         size="xs"
         type="button"
         variant="outline"

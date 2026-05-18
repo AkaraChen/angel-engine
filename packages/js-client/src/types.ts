@@ -296,4 +296,5 @@ export type ChatStreamEvent =
 export type AngelClientEvent =
   | { chat: Chat; type: "chat.created" | "chat.updated" }
   | { chatId: string; message: ChatHistoryMessage; type: "message.appended" }
-  | { chatId: string; event: ChatStreamEvent; type: "run.event" };
+  | { chatId: string; event: ChatStreamEvent; type: "run.event" }
+  | { type: "chats.deletedAll" };

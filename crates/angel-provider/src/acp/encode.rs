@@ -786,17 +786,29 @@ fn file_uri_from_path(path: &str) -> String {
     if path.starts_with("file://") {
         return path.to_string();
     }
+    let normalized_windows_path = path.replace('\\', "/");
+    if is_windows_drive_path(&normalized_windows_path) {
+        return format!("file:///{}", percent_encode_path(&normalized_windows_path));
+    }
+    if normalized_windows_path.starts_with("//") {
+        return format!("file:{}", percent_encode_path(&normalized_windows_path));
+    }
     if path.starts_with('/') {
         return format!("file://{}", percent_encode_path(path));
     }
     path.to_string()
 }
 
+fn is_windows_drive_path(path: &str) -> bool {
+    let bytes = path.as_bytes();
+    bytes.len() >= 3 && bytes[1] == b':' && bytes[2] == b'/' && bytes[0].is_ascii_alphabetic()
+}
+
 fn percent_encode_path(path: &str) -> String {
     let mut encoded = String::with_capacity(path.len());
     for byte in path.bytes() {
         match byte {
-            b'A'..=b'Z' | b'a'..=b'z' | b'0'..=b'9' | b'/' | b'-' | b'_' | b'.' | b'~' => {
+            b'A'..=b'Z' | b'a'..=b'z' | b'0'..=b'9' | b'/' | b':' | b'-' | b'_' | b'.' | b'~' => {
                 encoded.push(byte as char)
             }
             _ => encoded.push_str(&format!("%{byte:02X}")),
@@ -1203,6 +1215,53 @@ mod tests {
                 "data": "ZmFrZQ==",
                 "mimeType": "image/png"
             })
+        );
+    }
+
+    #[test]
+    fn file_mentions_encode_windows_paths_as_file_uris() {
+        let adapter = AcpAdapter::standard();
+        let mut engine = AngelEngine::with_available_runtime(
+            angel_engine::ProtocolFlavor::Acp,
+            angel_engine::RuntimeCapabilities::new("test"),
+            adapter.capabilities(),
+        );
+        let conversation_id = ConversationId::new("conv");
+        engine
+            .apply_event(EngineEvent::ConversationProvisionStarted {
+                id: conversation_id.clone(),
+                remote: RemoteConversationId::Known("sess".to_string()),
+                op: angel_engine::ProvisionOp::New,
+                capabilities: adapter.capabilities(),
+            })
+            .expect("conversation provision");
+        engine
+            .apply_event(EngineEvent::ConversationReady {
+                id: conversation_id.clone(),
+                remote: Some(RemoteConversationId::Known("sess".to_string())),
+                context: ContextPatch::empty(),
+                capabilities: None,
+            })
+            .expect("conversation ready");
+        let plan = engine
+            .plan_command(angel_engine::EngineCommand::StartTurn {
+                conversation_id,
+                input: vec![angel_engine::UserInput::file_mention(
+                    "Notes.md",
+                    r"C:\Users\Ada Lovelace\Notes.md",
+                    Some("text/markdown".to_string()),
+                )],
+                overrides: angel_engine::TurnOverrides::default(),
+            })
+            .expect("start turn");
+
+        let params = adapter
+            .encode_params(&engine, &plan.effects[0], &TransportOptions::default())
+            .expect("prompt params");
+
+        assert_eq!(
+            params["prompt"][0]["uri"],
+            json!("file:///C:/Users/Ada%20Lovelace/Notes.md")
         );
     }
 }
