@@ -16,6 +16,6 @@ export default defineConfig({
       "@shared": path.resolve(srcRoot, "shared"),
       "@renderer": path.resolve(rendererRoot),
     },
-    dedupe: ["react", "react-dom"],
+    dedupe: ["@ark/schema", "@ark/util", "arktype", "react", "react-dom"],
   },
 });
