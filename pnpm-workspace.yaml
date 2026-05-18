@@ -4,7 +4,9 @@ packages:
   - "crates/angel-engine-client-napi"
   - "!vendor/**"
 
-nodeLinker: hoisted
+nodeLinker: isolated
+hoistPattern:
+  - "*"
 blockExoticSubdeps: false
 
 peerDependencyRules:
