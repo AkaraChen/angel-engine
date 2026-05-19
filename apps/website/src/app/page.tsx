@@ -1,36 +1,45 @@
-/* eslint-disable @next/next/no-img-element */
+import Image from "next/image";
+import allProviderImage from "../../public/all-provider.png";
+import claudeCodeIcon from "../../public/icons/claudecode.svg";
+import codexIcon from "../../public/icons/codex.svg";
+import openCodeIcon from "../../public/icons/opencode.svg";
+import heroImage from "../../public/hero.png";
+import projectChatImage from "../../public/project-chat.png";
+import richChatUiImage from "../../public/rich-chat-ui.png";
+import screenshotImage from "../../public/screenshot.png";
+import simpleChatImage from "../../public/simple-chat.png";
 
 const featureSections = [
   {
     label: "Simple chat",
     title: "A quiet chat surface for real agent work",
     copy: "Start a thread, choose the runtime, pick the model, and keep the conversation focused. Angel Engine keeps Codex, OpenCode, and Claude Code inside the same desktop flow.",
-    image: "/simple-chat.png",
+    image: simpleChatImage,
   },
   {
     label: "Project chat",
     title: "Keep every thread attached to its project",
     copy: "Project chat groups conversations by workspace, so each repo keeps its own history, runtime context, and follow-up work without mixing sessions together.",
-    image: "/project-chat.png",
+    image: projectChatImage,
   },
   {
     label: "Rich chat UI",
     title: "Open tool calls without leaving the thread",
     copy: "Tool calls, command output, code blocks, and assistant text stay readable in one stream. You can inspect what happened while the agent keeps the conversation moving.",
-    image: "/rich-chat-ui.png",
+    image: richChatUiImage,
   },
   {
     label: "All providers",
     title: "Turn every agent on from one place",
     copy: "Enable Codex, Kimi, OpenCode, Qoder, GitHub Copilot, Gemini, Cursor, Cline, and Claude Code from the same settings screen.",
-    image: "/all-provider.png",
+    image: allProviderImage,
   },
 ];
 
 const integrations = [
-  { icon: "/icons/codex.svg", name: "Codex" },
-  { icon: "/icons/opencode.svg", name: "OpenCode" },
-  { icon: "/icons/claudecode.svg", name: "Claude Code" },
+  { icon: codexIcon, name: "Codex" },
+  { icon: openCodeIcon, name: "OpenCode" },
+  { icon: claudeCodeIcon, name: "Claude Code" },
 ];
 
 const faqs = [
@@ -98,7 +107,12 @@ function ChevronDownIcon() {
 function ProductFrame() {
   return (
     <div className="product-frame">
-      <img src="/screenshot.png" alt="" />
+      <Image
+        src={screenshotImage}
+        alt=""
+        priority
+        sizes="(max-width: 900px) calc(100vw - 32px), min(1214px, calc(100vw - 66px))"
+      />
     </div>
   );
 }
@@ -124,7 +138,14 @@ export default function Home() {
 
       <main>
         <section className="hero">
-          <img className="hero-bg" src="/hero.png" alt="" />
+          <Image
+            className="hero-bg"
+            src={heroImage}
+            alt=""
+            fill
+            priority
+            sizes="100vw"
+          />
           <div className="hero-content">
             <h1>
               All you agent,
@@ -148,7 +169,7 @@ export default function Home() {
               <span>Works with</span>
               {integrations.map((integration) => (
                 <b key={integration.name}>
-                  <img src={integration.icon} alt="" />
+                  <Image src={integration.icon} alt="" />
                   {integration.name}
                 </b>
               ))}
@@ -165,7 +186,11 @@ export default function Home() {
               key={section.label}
             >
               <div className="feature-visual">
-                <img src={section.image} alt={`${section.label} screenshot`} />
+                <Image
+                  src={section.image}
+                  alt={`${section.label} screenshot`}
+                  sizes="(max-width: 900px) calc(100vw - 40px), min(669px, 58vw)"
+                />
               </div>
               <div className="feature-copy">
                 <p className="feature-label">{section.label}</p>
