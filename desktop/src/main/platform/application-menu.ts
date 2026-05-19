@@ -33,7 +33,7 @@ function menuTemplate({
               settingsItem(
                 openSettingsWindow,
                 translate("workspace.settings"),
-                ",",
+                "CmdOrCtrl+,",
               ),
               { type: "separator" },
               { role: "services" },
