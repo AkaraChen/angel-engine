@@ -1,4 +1,5 @@
 import Image from "next/image";
+import Link from "next/link";
 import allProviderImage from "../../public/all-provider.png";
 import claudeCodeIcon from "../../public/icons/claudecode.svg";
 import codexIcon from "../../public/icons/codex.svg";
@@ -9,26 +10,32 @@ import richChatUiImage from "../../public/rich-chat-ui.png";
 import screenshotImage from "../../public/screenshot.png";
 import simpleChatImage from "../../public/simple-chat.png";
 
+const repoUrl = "https://github.com/AkaraChen/angel-engine";
+
 const featureSections = [
   {
+    id: "simple-chat",
     label: "Simple chat",
     title: "A quiet chat surface for real agent work",
     copy: "Start a thread, choose the runtime, pick the model, and keep the conversation focused. Angel Engine keeps Codex, OpenCode, and Claude Code inside the same desktop flow.",
     image: simpleChatImage,
   },
   {
+    id: "project-chat",
     label: "Project chat",
     title: "Keep every thread attached to its project",
     copy: "Project chat groups conversations by workspace, so each repo keeps its own history, runtime context, and follow-up work without mixing sessions together.",
     image: projectChatImage,
   },
   {
+    id: "rich-chat-ui",
     label: "Rich chat UI",
     title: "Open tool calls without leaving the thread",
     copy: "Tool calls, command output, code blocks, and assistant text stay readable in one stream. You can inspect what happened while the agent keeps the conversation moving.",
     image: richChatUiImage,
   },
   {
+    id: "all-providers",
     label: "All providers",
     title: "Turn every agent on from one place",
     copy: "Enable Codex, Kimi, OpenCode, Qoder, GitHub Copilot, Gemini, Cursor, Cline, and Claude Code from the same settings screen.",
@@ -40,6 +47,25 @@ const integrations = [
   { icon: codexIcon, name: "Codex" },
   { icon: openCodeIcon, name: "OpenCode" },
   { icon: claudeCodeIcon, name: "Claude Code" },
+];
+
+const openSourceCards = [
+  [
+    "Self-host anywhere",
+    "Run the desktop locally, bring your own agent tools, and keep the client close to the projects you work in.",
+  ],
+  [
+    "No vendor lock-in",
+    "Use one interface for multiple coding agents instead of rebuilding your workflow around a single provider.",
+  ],
+  [
+    "Transparent by default",
+    "Follow the code, inspect changes, and understand how chats, tools, and settings are represented.",
+  ],
+  [
+    "Community-driven",
+    "Shape the desktop client around real coding workflows, not a closed product roadmap.",
+  ],
 ];
 
 const faqs = [
@@ -109,7 +135,7 @@ function ProductFrame() {
     <div className="product-frame">
       <Image
         src={screenshotImage}
-        alt=""
+        alt="Angel Engine desktop chat interface"
         priority
         sizes="(max-width: 900px) calc(100vw - 32px), min(1214px, calc(100vw - 66px))"
       />
@@ -121,15 +147,12 @@ export default function Home() {
   return (
     <div className="site-shell">
       <header className="topbar">
-        <a className="brand" href="#">
+        <Link className="brand" href="/">
           <Logo />
           <span>Angel Engine</span>
-        </a>
+        </Link>
         <nav>
-          <a
-            className="nav-button ghost"
-            href="https://github.com/AkaraChen/angel-engine"
-          >
+          <a className="nav-button ghost" href={repoUrl}>
             <GitHubIcon />
             GitHub
           </a>
@@ -153,14 +176,14 @@ export default function Home() {
               in one desktop.
             </h1>
             <p>
-              Angel Engine runs Codex, ACP, Kimi, and OpenCode chats through a
-              normalized batterry-included UI.
+              Angel Engine brings Codex, OpenCode, and Claude Code chats into a
+              project-aware desktop client.
             </p>
             <div className="hero-actions">
-              <a className="primary-button" href="#">
+              <a className="primary-button" href={repoUrl}>
                 Open desktop
               </a>
-              <a className="secondary-button" href="#">
+              <a className="secondary-button" href={repoUrl}>
                 <ChevronDownIcon />
                 View source
               </a>
@@ -182,7 +205,7 @@ export default function Home() {
           {featureSections.map((section, index) => (
             <section
               className={`feature-row ${index % 2 === 1 ? "is-reversed" : ""}`}
-              id={section.label.toLowerCase()}
+              id={section.id}
               key={section.label}
             >
               <div className="feature-visual">
@@ -201,7 +224,7 @@ export default function Home() {
           ))}
         </div>
 
-        <section className="open-source">
+        <section className="open-source" id="open-source">
           <div>
             <p className="eyebrow dark">OPEN SOURCE</p>
             <h2>
@@ -210,31 +233,21 @@ export default function Home() {
               for all.
             </h2>
             <p>
-              Angel Engine is built in the open on top of the Rust engine,
-              provider adapters, generated NAPI bindings, and Electron app
-              services.
+              Angel Engine is built in the open so you can inspect the client,
+              run it locally, and follow how the desktop experience evolves.
             </p>
           </div>
           <div className="open-grid">
-            {[
-              "Self-host anywhere",
-              "No vendor lock-in",
-              "Transparent by default",
-              "Community-driven",
-            ].map((title) => (
+            {openSourceCards.map(([title, copy]) => (
               <article key={title}>
                 <h3>{title}</h3>
-                <p>
-                  Run the desktop locally, connect your own runtime process,
-                  extend adapters, and keep provider behavior outside renderer
-                  state.
-                </p>
+                <p>{copy}</p>
               </article>
             ))}
           </div>
         </section>
 
-        <section className="faq-section">
+        <section className="faq-section" id="faq">
           <p className="eyebrow dark">FAQ</p>
           <h2>Questions & answers.</h2>
           <div className="faq-list">
@@ -251,22 +264,30 @@ export default function Home() {
       <footer className="footer">
         <div className="footer-top">
           <div>
-            <a className="brand" href="#">
+            <Link className="brand" href="/">
               <Logo />
               <span>Angel Engine</span>
-            </a>
+            </Link>
             <p>
-              An Electron workspace for batterry-included agent chats, runtime
-              settings, approvals, and restored history.
+              A desktop client for project-aware coding agent chats, tool calls,
+              settings, and restored history.
             </p>
           </div>
-          {["PRODUCT", "RESOURCES", "COMPANY"].map((group) => (
+          {[
+            [
+              "PRODUCT",
+              "Features",
+              "#simple-chat",
+              "Providers",
+              "#all-providers",
+            ],
+            ["RESOURCES", "FAQ", "#faq", "GitHub", repoUrl],
+            ["COMPANY", "Open Source", "#open-source", "Source", repoUrl],
+          ].map(([group, firstLabel, firstHref, secondLabel, secondHref]) => (
             <nav key={group}>
               <b>{group}</b>
-              <a href="#">Features</a>
-              <a href="#">How it Works</a>
-              <a href="#">Changelog</a>
-              <a href="#">GitHub</a>
+              <a href={firstHref}>{firstLabel}</a>
+              <a href={secondHref}>{secondLabel}</a>
             </nav>
           ))}
         </div>

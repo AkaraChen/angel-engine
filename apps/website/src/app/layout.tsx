@@ -2,9 +2,40 @@ import type { Metadata } from "next";
 import Script from "next/script";
 import "./globals.css";
 
+const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://angel-engine.dev";
+const title = "Angel Engine - Desktop Chat for Coding Agents";
+const description =
+  "A desktop app for Codex, OpenCode, and Claude Code chats, with project-aware threads, tool calls, and agent settings in one focused client.";
+
 export const metadata: Metadata = {
-  title: "Angel Engine - Unified Agent Runtime Workspace",
-  description: "Electron workspace for batterry-included agent runtime chats.",
+  metadataBase: new URL(siteUrl),
+  title,
+  description,
+  alternates: {
+    canonical: "/",
+  },
+  openGraph: {
+    title,
+    description,
+    url: "/",
+    siteName: "Angel Engine",
+    images: [
+      {
+        url: "/screenshot.png",
+        width: 2908,
+        height: 1814,
+        alt: "Angel Engine desktop chat interface",
+      },
+    ],
+    locale: "en_US",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title,
+    description,
+    images: ["/screenshot.png"],
+  },
 };
 
 export default function RootLayout({
