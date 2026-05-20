@@ -100,7 +100,14 @@ function Logo({ giant = false }: { giant?: boolean }) {
     <span
       className={giant ? "logo-mark giant" : "logo-mark"}
       aria-hidden="true"
-    />
+    >
+      <svg viewBox="0 0 24 24" focusable="false">
+        <path
+          d="M12 2.75 14.45 9.55 21.25 12 14.45 14.45 12 21.25 9.55 14.45 2.75 12 9.55 9.55 12 2.75Z"
+          fill="currentColor"
+        />
+      </svg>
+    </span>
   );
 }
 
