@@ -4,14 +4,21 @@ import * as React from "react";
 import { useTranslation } from "react-i18next";
 
 import { cn } from "@/platform/utils";
+import { Button } from "./button";
 
 type ToastVariant = "default" | "destructive";
 
 interface ToastMessage {
+  action?: ToastAction;
   id: string;
   title: string;
   description?: string;
   variant?: ToastVariant;
+}
+
+interface ToastAction {
+  label: string;
+  onClick: () => void;
 }
 
 type ToastInput = Omit<ToastMessage, "id">;
@@ -37,6 +44,23 @@ function ToastProvider({ children }: { children: React.ReactNode }) {
   const dismiss = React.useCallback((id: string) => {
     setToasts((current) => current.filter((toast) => toast.id !== id));
   }, []);
+
+  React.useEffect(() => {
+    return window.desktopWindow.onUpdateDownloaded((event) => {
+      toast({
+        action: {
+          label: t("notifications.installUpdate"),
+          onClick: () => {
+            void window.desktopWindow.installUpdate();
+          },
+        },
+        description: t("notifications.updateReadyDescription", {
+          version: event.releaseName,
+        }),
+        title: t("notifications.updateReady"),
+      });
+    });
+  }, [t, toast]);
 
   return (
     <ToastContext.Provider value={toast}>
@@ -74,6 +98,19 @@ function ToastProvider({ children }: { children: React.ReactNode }) {
                   >
                     {toast.description}
                   </ToastPrimitive.Description>
+                ) : null}
+                {toast.action ? (
+                  <div className="mt-3">
+                    <Button
+                      onClick={() => {
+                        toast.action?.onClick();
+                        dismiss(toast.id);
+                      }}
+                      size="sm"
+                    >
+                      {toast.action.label}
+                    </Button>
+                  </div>
                 ) : null}
               </div>
               <ToastPrimitive.Close

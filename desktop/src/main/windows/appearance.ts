@@ -4,9 +4,11 @@ import type { DesktopThemeMode } from "../../shared/desktop-window";
 import { BrowserWindow, dialog, ipcMain, nativeTheme } from "electron";
 import {
   DESKTOP_CONFIRM_DELETE_ALL_CHATS_CHANNEL,
+  DESKTOP_INSTALL_UPDATE_CHANNEL,
   DESKTOP_THEME_SET_CHANNEL,
 } from "../../shared/desktop-window";
 import { translate } from "../platform/i18n";
+import { installDownloadedUpdate } from "../updater";
 
 const isMacOS = process.platform === "darwin";
 const trafficLightPosition = { x: 16, y: 18 };
@@ -58,6 +60,10 @@ export function registerDesktopWindowAppearanceIpc() {
       : await dialog.showMessageBox(options);
 
     return result.response === 1;
+  });
+
+  ipcMain.handle(DESKTOP_INSTALL_UPDATE_CHANNEL, () => {
+    installDownloadedUpdate();
   });
 }
 

@@ -261,6 +261,9 @@ export const zhTW = {
       chatActionFailed: "聊天操作失敗",
       permissionRequired: "需要權限",
       projectActionFailed: "專案操作失敗",
+      installUpdate: "重新啟動並安裝",
+      updateReady: "更新已就緒",
+      updateReadyDescription: "{{version}} 已下載完成。",
     },
     projects: {
       chooseFolder: "選擇專案資料夾",

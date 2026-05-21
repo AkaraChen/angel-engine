@@ -3,6 +3,7 @@ import { createChatRuntime } from "./features/chat/engine-runtime";
 import { closeProjectsDatabase } from "./features/projects/repository";
 import { registerAllIpc } from "./ipc/register";
 import { configureApplicationMenu } from "./platform/application-menu";
+import { configureAutoUpdates } from "./updater";
 import { createMainWindow } from "./windows/main-window";
 import { openSettingsWindow } from "./windows/settings-window";
 
@@ -12,6 +13,7 @@ export function bootstrap() {
   getDatabase();
   registerAllIpc({ chatRuntime, openSettingsWindow });
   configureApplicationMenu({ openSettingsWindow });
+  configureAutoUpdates();
   createMainWindow();
 }
 

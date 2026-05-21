@@ -269,6 +269,9 @@ export const de = {
       chatActionFailed: "Chat-Aktion fehlgeschlagen",
       permissionRequired: "Berechtigung erforderlich",
       projectActionFailed: "Projektaktion fehlgeschlagen",
+      installUpdate: "Neu starten und installieren",
+      updateReady: "Update bereit",
+      updateReadyDescription: "{{version}} wurde heruntergeladen.",
     },
     projects: {
       chooseFolder: "Projektordner auswählen",

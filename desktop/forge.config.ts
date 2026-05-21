@@ -10,6 +10,7 @@ import { MakerZIP } from "@electron-forge/maker-zip";
 import { AutoUnpackNativesPlugin } from "@electron-forge/plugin-auto-unpack-natives";
 import { FusesPlugin } from "@electron-forge/plugin-fuses";
 import { VitePlugin } from "@electron-forge/plugin-vite";
+import { PublisherGithub } from "@electron-forge/publisher-github";
 import { FuseV1Options, FuseVersion } from "@electron/fuses";
 
 const nativeRuntimeModules = ["better-sqlite3", "bindings", "file-uri-to-path"];
@@ -20,6 +21,11 @@ const workspaceRequire = createRequire(
   path.join(workspaceRoot, "package.json"),
 );
 const appIconPath = path.join(projectRoot, "assets", "icon");
+const macSignIdentity = process.env.ANGEL_ENGINE_MAC_SIGN_IDENTITY;
+const macSignKeychain = process.env.ANGEL_ENGINE_MAC_SIGN_KEYCHAIN;
+const macSignIdentityValidation =
+  process.env.ANGEL_ENGINE_MAC_SIGN_IDENTITY_VALIDATION !== "false";
+const fallbackAdHocSign = process.platform === "darwin" && !macSignIdentity;
 
 function copyRuntimePath(buildPath: string, relativePath: string) {
   fs.cpSync(
@@ -94,6 +100,20 @@ const config: ForgeConfig = {
   packagerConfig: {
     asar: true,
     icon: appIconPath,
+    osxSign:
+      process.platform === "darwin"
+        ? {
+            ...(macSignKeychain ? { keychain: macSignKeychain } : {}),
+            identity: macSignIdentity ?? "-",
+            identityValidation: fallbackAdHocSign
+              ? false
+              : macSignIdentityValidation,
+            optionsForFile: () => ({
+              hardenedRuntime: false,
+              signatureFlags: [],
+            }),
+          }
+        : undefined,
   },
   rebuildConfig: {},
   makers: [
@@ -109,6 +129,16 @@ const config: ForgeConfig = {
     new MakerZIP({}, ["darwin"]),
     new MakerRpm({}),
     new MakerDeb({}),
+  ],
+  publishers: [
+    new PublisherGithub({
+      repository: {
+        owner: "AkaraChen",
+        name: "angel-engine",
+      },
+      draft: false,
+      prerelease: false,
+    }),
   ],
   plugins: [
     new VitePlugin({

@@ -268,6 +268,9 @@ export const ja = {
       chatActionFailed: "チャット操作に失敗しました",
       permissionRequired: "権限が必要です",
       projectActionFailed: "プロジェクト操作に失敗しました",
+      installUpdate: "再起動してインストール",
+      updateReady: "更新の準備ができました",
+      updateReadyDescription: "{{version}} のダウンロードが完了しました。",
     },
     projects: {
       chooseFolder: "プロジェクトフォルダーを選択",

@@ -270,6 +270,9 @@ export const fr = {
       chatActionFailed: "L’action de discussion a échoué",
       permissionRequired: "Autorisation requise",
       projectActionFailed: "L’action de projet a échoué",
+      installUpdate: "Redémarrer et installer",
+      updateReady: "Mise à jour prête",
+      updateReadyDescription: "{{version}} a été téléchargée.",
     },
     projects: {
       chooseFolder: "Choisir le dossier du projet",

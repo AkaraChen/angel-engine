@@ -260,6 +260,9 @@ export const zhCN = {
       chatActionFailed: "聊天操作失败",
       permissionRequired: "需要权限",
       projectActionFailed: "项目操作失败",
+      installUpdate: "重启并安装",
+      updateReady: "更新已就绪",
+      updateReadyDescription: "{{version}} 已下载完成。",
     },
     projects: {
       chooseFolder: "选择项目文件夹",

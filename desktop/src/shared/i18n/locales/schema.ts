@@ -300,6 +300,9 @@ export interface LocaleResourceTranslationNotifications {
   chatActionFailed: string;
   permissionRequired: string;
   projectActionFailed: string;
+  installUpdate: string;
+  updateReady: string;
+  updateReadyDescription: string;
 }
 
 export interface LocaleResourceTranslationProjects {

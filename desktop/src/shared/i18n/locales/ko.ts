@@ -269,6 +269,9 @@ export const ko = {
       chatActionFailed: "채팅 작업 실패",
       permissionRequired: "권한 필요",
       projectActionFailed: "프로젝트 작업 실패",
+      installUpdate: "다시 시작하여 설치",
+      updateReady: "업데이트 준비됨",
+      updateReadyDescription: "{{version}} 다운로드가 완료되었습니다.",
     },
     projects: {
       chooseFolder: "프로젝트 폴더 선택",

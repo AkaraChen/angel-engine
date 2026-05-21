@@ -2,6 +2,7 @@ import type { IpcRendererEvent } from "electron";
 import type {
   DesktopOpenChatFromNotificationEvent,
   DesktopThemeSetInput,
+  DesktopUpdateDownloadedEvent,
   DesktopWindowCommand,
 } from "../../shared/desktop-window";
 
@@ -10,9 +11,11 @@ import {
   DESKTOP_ACTIVE_CHAT_SET_CHANNEL,
   DESKTOP_COMMAND_CHANNEL,
   DESKTOP_CONFIRM_DELETE_ALL_CHATS_CHANNEL,
+  DESKTOP_INSTALL_UPDATE_CHANNEL,
   DESKTOP_OPEN_CHAT_FROM_NOTIFICATION_CHANNEL,
   DESKTOP_SETTINGS_OPEN_CHANNEL,
   DESKTOP_THEME_SET_CHANNEL,
+  DESKTOP_UPDATE_DOWNLOADED_CHANNEL,
 } from "../../shared/desktop-window";
 
 export function exposeDesktopWindowBridge() {
@@ -47,6 +50,20 @@ export function exposeDesktopWindowBridge() {
         );
       };
     },
+    onUpdateDownloaded(handler: (event: DesktopUpdateDownloadedEvent) => void) {
+      const listener = (_event: IpcRendererEvent, payload: unknown) => {
+        if (!isUpdateDownloadedEvent(payload)) return;
+        handler(payload);
+      };
+
+      ipcRenderer.on(DESKTOP_UPDATE_DOWNLOADED_CHANNEL, listener);
+      return () => {
+        ipcRenderer.removeListener(DESKTOP_UPDATE_DOWNLOADED_CHANNEL, listener);
+      };
+    },
+    installUpdate() {
+      return ipcRenderer.invoke(DESKTOP_INSTALL_UPDATE_CHANNEL);
+    },
     openSettings() {
       ipcRenderer.send(DESKTOP_SETTINGS_OPEN_CHANNEL);
     },
@@ -76,4 +93,15 @@ function isOpenChatFromNotificationEvent(
 ): value is DesktopOpenChatFromNotificationEvent {
   if (typeof value !== "object" || value === null) return false;
   return typeof (value as { chatId?: unknown }).chatId === "string";
+}
+
+function isUpdateDownloadedEvent(
+  value: unknown,
+): value is DesktopUpdateDownloadedEvent {
+  if (typeof value !== "object" || value === null) return false;
+  const event = value as { releaseName?: unknown; releaseNotes?: unknown };
+  return (
+    typeof event.releaseName === "string" &&
+    (event.releaseNotes === undefined || typeof event.releaseNotes === "string")
+  );
 }

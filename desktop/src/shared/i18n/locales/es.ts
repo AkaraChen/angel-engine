@@ -269,6 +269,9 @@ export const es = {
       chatActionFailed: "Falló la acción del chat",
       permissionRequired: "Permiso requerido",
       projectActionFailed: "Falló la acción del proyecto",
+      installUpdate: "Reiniciar e instalar",
+      updateReady: "Actualización lista",
+      updateReadyDescription: "{{version}} se descargó.",
     },
     projects: {
       chooseFolder: "Elegir carpeta del proyecto",

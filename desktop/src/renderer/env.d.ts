@@ -2,6 +2,7 @@ import type { ChatStreamApi } from "@shared/chat";
 import type {
   DesktopOpenChatFromNotificationEvent,
   DesktopThemeSetInput,
+  DesktopUpdateDownloadedEvent,
   DesktopWindowCommand,
 } from "@shared/desktop-window";
 
@@ -32,6 +33,10 @@ declare global {
       onOpenChatFromNotification: (
         handler: (event: DesktopOpenChatFromNotificationEvent) => void,
       ) => () => void;
+      onUpdateDownloaded: (
+        handler: (event: DesktopUpdateDownloadedEvent) => void,
+      ) => () => void;
+      installUpdate: () => Promise<unknown>;
       openSettings: () => void;
       setActiveChatId: (chatId: string | null) => void;
       setTheme: (input: DesktopThemeSetInput) => void;
