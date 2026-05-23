@@ -1389,7 +1389,7 @@ function ComposerModelMenuItem({
   onSelect: () => void;
   selected: boolean;
 }) {
-  return (
+  const item = (
     <DropdownMenuItem
       className="
         min-h-7 rounded-sm px-2 py-1 text-[13px] font-normal
@@ -1401,7 +1401,7 @@ function ComposerModelMenuItem({
         event.preventDefault();
         if (!disabled && !selected) onSelect();
       }}
-      title={disabledReason ?? label}
+      title={label}
     >
       <span
         className="
@@ -1413,6 +1413,19 @@ function ComposerModelMenuItem({
       <span className="min-w-0 flex-1 truncate">{label}</span>
     </DropdownMenuItem>
   );
+
+  if (disabled && disabledReason) {
+    return (
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <span className="inline-block">{item}</span>
+        </TooltipTrigger>
+        <TooltipContent>{disabledReason}</TooltipContent>
+      </Tooltip>
+    );
+  }
+
+  return item;
 }
 
 function optionLabel(options: AgentValueOption[], value: string) {

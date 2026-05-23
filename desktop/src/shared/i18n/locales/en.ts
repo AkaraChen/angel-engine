@@ -185,9 +185,9 @@ export const en = {
         "Could not read {{filename}}. Try attaching it again.",
       disabledReasons: {
         agentCannotChangeAfterStart:
-          "Agent cannot be changed after a chat has started.",
+          "Context is bound to the current agent. Start a new chat to switch.",
         agentCannotChangeWhileRunning:
-          "Agent cannot be changed while a response is running.",
+          "Context is bound to the current agent. Start a new chat to switch.",
         cannotAdjust: "This agent does not expose adjustable {{label}}.",
         cannotChangeWhileRunning:
           "Agent settings cannot be changed while a response is running.",

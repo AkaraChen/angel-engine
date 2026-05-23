@@ -180,8 +180,10 @@ export const zhTW = {
       commands: "命令",
       couldNotReadAttachment: "無法讀取 {{filename}}。請重新附加。",
       disabledReasons: {
-        agentCannotChangeAfterStart: "聊天開始後不能變更 Agent。",
-        agentCannotChangeWhileRunning: "回應執行時不能變更 Agent。",
+        agentCannotChangeAfterStart:
+          "上下文綁定在當前 Agent，切換請開啟新對話。",
+        agentCannotChangeWhileRunning:
+          "上下文綁定在當前 Agent，切換請開啟新對話。",
         cannotAdjust: "此 Agent 未提供可調整的{{label}}。",
         cannotChangeWhileRunning: "回應執行時不能變更 Agent 設定。",
         onlyOneAgent: "設定中只啟用了一個 Agent。",

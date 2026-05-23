@@ -178,8 +178,10 @@ export const zhCN = {
       commands: "命令",
       couldNotReadAttachment: "无法读取 {{filename}}。请重新附加。",
       disabledReasons: {
-        agentCannotChangeAfterStart: "聊天开始后不能更改 Agent。",
-        agentCannotChangeWhileRunning: "响应运行时不能更改 Agent。",
+        agentCannotChangeAfterStart:
+          "上下文绑定在当前 Agent，切换请开启新对话。",
+        agentCannotChangeWhileRunning:
+          "上下文绑定在当前 Agent，切换请开启新对话。",
         cannotAdjust: "此 Agent 未提供可调整的{{label}}。",
         cannotChangeWhileRunning: "响应运行时不能更改 Agent 设置。",
         onlyOneAgent: "设置中只启用了一个 Agent。",
