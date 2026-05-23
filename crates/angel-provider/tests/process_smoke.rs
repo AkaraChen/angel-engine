@@ -5,6 +5,19 @@ use std::sync::mpsc::{self, Receiver};
 use std::thread;
 use std::time::{Duration, Instant};
 
+#[cfg(windows)]
+use std::os::windows::process::CommandExt;
+
+#[cfg(windows)]
+const CREATE_NO_WINDOW: u32 = 0x08000000;
+
+fn create_command(program: &str) -> Command {
+    let mut cmd = Command::new(program);
+    #[cfg(windows)]
+    cmd.creation_flags(CREATE_NO_WINDOW);
+    cmd
+}
+
 use angel_engine::*;
 use angel_provider::ProtocolAdapter;
 use angel_provider::codex::CodexAdapter;
@@ -33,7 +46,7 @@ where
         protocol: ProtocolFlavor,
         capabilities: ConversationCapabilities,
     ) -> Result<Self, Box<dyn Error>> {
-        let mut child = Command::new(binary)
+        let mut child = create_command(binary)
             .args(args)
             .stdin(Stdio::piped())
             .stdout(Stdio::piped())

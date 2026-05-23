@@ -4,6 +4,12 @@ use std::sync::mpsc::{self, Receiver};
 use std::thread;
 use std::time::Duration;
 
+#[cfg(windows)]
+use std::os::windows::process::CommandExt;
+
+#[cfg(windows)]
+const CREATE_NO_WINDOW: u32 = 0x08000000;
+
 use crate::config::{ClientOptions, ClientProtocol, StartConversationRequest};
 use crate::core::{AngelClientCore, process_log};
 use crate::error::{ClientError, ClientResult};
@@ -28,7 +34,7 @@ impl AngelClient {
     pub fn spawn(options: ClientOptions) -> ClientResult<Self> {
         let runtime_model_catalog_command =
             (options.protocol == ClientProtocol::CodexAppServer).then(|| options.command.clone());
-        let mut child = Command::new(&options.command)
+        let mut child = spawn_command(&options.command)
             .args(&options.args)
             .stdin(Stdio::piped())
             .stdout(Stdio::piped())
@@ -405,8 +411,15 @@ impl AngelClient {
     }
 }
 
+fn spawn_command(program: &str) -> Command {
+    let mut cmd = Command::new(program);
+    #[cfg(windows)]
+    cmd.creation_flags(CREATE_NO_WINDOW);
+    cmd
+}
+
 fn load_runtime_model_catalog(command: &str) -> Option<serde_json::Value> {
-    let output = Command::new(command)
+    let output = spawn_command(command)
         .args(["debug", "models"])
         .output()
         .ok()?;

@@ -5,6 +5,19 @@ use std::sync::mpsc::{self, Receiver};
 use std::thread;
 use std::time::Duration;
 
+#[cfg(windows)]
+use std::os::windows::process::CommandExt;
+
+#[cfg(windows)]
+const CREATE_NO_WINDOW: u32 = 0x08000000;
+
+fn create_command(program: impl AsRef<OsStr>) -> Command {
+    let mut cmd = Command::new(program);
+    #[cfg(windows)]
+    cmd.creation_flags(CREATE_NO_WINDOW);
+    cmd
+}
+
 pub struct RuntimeProcess {
     child: Child,
     stdin: ChildStdin,
@@ -17,7 +30,7 @@ impl RuntimeProcess {
         I: IntoIterator<Item = S>,
         S: AsRef<OsStr>,
     {
-        let mut child = Command::new(command)
+        let mut child = create_command(command)
             .args(args)
             .stdin(Stdio::piped())
             .stdout(Stdio::piped())
