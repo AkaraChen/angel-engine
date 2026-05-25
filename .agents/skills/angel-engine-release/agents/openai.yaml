@@ -1,0 +1,4 @@
+interface:
+  display_name: "Angel Engine Release"
+  short_description: "Release Angel Engine desktop builds safely."
+  default_prompt: "Release Angel Engine desktop: update the version, commit, tag, push, then run and verify the release workflow."
