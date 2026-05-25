@@ -101,7 +101,6 @@ jobs:
 
       - name: Publish release
         env:
-          ANGEL_ENGINE_MAC_SIGN_IDENTITY: ${{ secrets.MACOS_SIGN_IDENTITY }}
           ANGEL_ENGINE_MAC_SIGN_KEYCHAIN: ${{ secrets.MACOS_CERTIFICATE_BASE64 != '' && format('{0}/build.keychain-db', runner.temp) || '' }}
           APPLE_API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
           APPLE_API_ISSUER: ${{ secrets.APPLE_API_ISSUER }}

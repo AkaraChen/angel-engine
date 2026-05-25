@@ -24,7 +24,6 @@ const macSignIdentity = process.env.ANGEL_ENGINE_MAC_SIGN_IDENTITY;
 const macSignKeychain = process.env.ANGEL_ENGINE_MAC_SIGN_KEYCHAIN;
 const macSignIdentityValidation =
   process.env.ANGEL_ENGINE_MAC_SIGN_IDENTITY_VALIDATION !== "false";
-const fallbackAdHocSign = process.platform === "darwin" && !macSignIdentity;
 const appleApiKey = process.env.APPLE_API_KEY;
 const appleApiKeyId = process.env.APPLE_API_KEY_ID;
 const appleApiIssuer = process.env.APPLE_API_ISSUER;
@@ -40,6 +39,8 @@ const macNotarize =
         appleApiIssuer,
       }
     : undefined;
+const fallbackAdHocSign =
+  process.platform === "darwin" && !macSignIdentity && !macNotarize;
 
 function copyRuntimePath(buildPath: string, relativePath: string) {
   fs.cpSync(
@@ -119,7 +120,11 @@ const config: ForgeConfig = {
       process.platform === "darwin"
         ? {
             ...(macSignKeychain ? { keychain: macSignKeychain } : {}),
-            identity: macSignIdentity ?? "-",
+            ...(macSignIdentity
+              ? { identity: macSignIdentity }
+              : fallbackAdHocSign
+                ? { identity: "-" }
+                : {}),
             identityValidation: fallbackAdHocSign
               ? false
               : macSignIdentityValidation,
