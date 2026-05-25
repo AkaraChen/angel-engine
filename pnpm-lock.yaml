@@ -83,6 +83,9 @@ importers:
       "@anthropic-ai/claude-agent-sdk":
         specifier: ^0.2.133
         version: 0.2.141(patch_hash=f8f60042768be19cd0e3b76f516c07eccb2295c9bf84f37822159d40ea4e191f)(zod@4.4.3)
+      "@assistant-ui/core":
+        specifier: 0.1.17
+        version: 0.1.17(@assistant-ui/store@0.2.10(@assistant-ui/tap@0.5.11(@types/react@19.2.14)(react@19.2.6))(@types/react@19.2.14)(react@19.2.6))(@assistant-ui/tap@0.5.11(@types/react@19.2.14)(react@19.2.6))(@types/react@19.2.14)(assistant-cloud@0.1.27)(react@19.2.6)(zustand@5.0.13(@types/react@19.2.14)(react@19.2.6)(use-sync-external-store@1.6.0(react@19.2.6)))
       "@assistant-ui/react":
         specifier: ^0.12.28
         version: 0.12.28(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(use-sync-external-store@1.6.0(react@19.2.6))
@@ -20764,7 +20767,7 @@ snapshots:
       "@vue/shared": 3.5.34
       estree-walker: 2.0.2
       magic-string: 0.30.21
-      postcss: 8.5.14
+      postcss: 8.5.15
       source-map-js: 1.2.1
 
   "@vue/compiler-ssr@3.5.34":
