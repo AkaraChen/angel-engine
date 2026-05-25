@@ -17,5 +17,6 @@ export default defineConfig({
       "@renderer": path.resolve(rendererRoot),
     },
     dedupe: ["@ark/schema", "@ark/util", "arktype", "react", "react-dom"],
+    preserveSymlinks: false,
   },
 });
