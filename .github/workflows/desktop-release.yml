@@ -90,4 +90,4 @@ jobs:
           ANGEL_ENGINE_MAC_SIGN_IDENTITY: ${{ secrets.MACOS_SIGN_IDENTITY }}
           ANGEL_ENGINE_MAC_SIGN_KEYCHAIN: ${{ secrets.MACOS_CERTIFICATE_BASE64 != '' && format('{0}/build.keychain-db', runner.temp) || '' }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: pnpm --filter desktop publish
+        run: pnpm --filter desktop run publish
