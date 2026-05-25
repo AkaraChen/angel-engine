@@ -9,6 +9,7 @@ on:
         type: string
   push:
     tags:
+      - "v*"
       - "desktop-v*"
 
 permissions:
@@ -49,15 +50,22 @@ jobs:
 
       - name: Set tag version
         if: github.event_name == 'push'
-        run: pnpm --dir desktop version "${GITHUB_REF_NAME#desktop-v}" --no-git-tag-version
+        run: |
+          version="${GITHUB_REF_NAME#desktop-v}"
+          version="${version#v}"
+          pnpm --dir desktop version "${version}" --no-git-tag-version
 
       - name: Import macOS signing certificate
-        if: secrets.MACOS_CERTIFICATE_BASE64 != ''
         env:
           MACOS_CERTIFICATE_BASE64: ${{ secrets.MACOS_CERTIFICATE_BASE64 }}
           MACOS_CERTIFICATE_PASSWORD: ${{ secrets.MACOS_CERTIFICATE_PASSWORD }}
           KEYCHAIN_PASSWORD: ${{ secrets.MACOS_KEYCHAIN_PASSWORD }}
         run: |
+          if [[ -z "${MACOS_CERTIFICATE_BASE64}" ]]; then
+            echo "No macOS signing certificate configured; using ad-hoc signing."
+            exit 0
+          fi
+
           CERTIFICATE_PATH="${RUNNER_TEMP}/macos-certificate.p12"
           KEYCHAIN_PATH="${RUNNER_TEMP}/build.keychain-db"
 
@@ -80,6 +88,6 @@ jobs:
       - name: Publish release
         env:
           ANGEL_ENGINE_MAC_SIGN_IDENTITY: ${{ secrets.MACOS_SIGN_IDENTITY }}
-          ANGEL_ENGINE_MAC_SIGN_KEYCHAIN: ${{ runner.temp }}/build.keychain-db
+          ANGEL_ENGINE_MAC_SIGN_KEYCHAIN: ${{ secrets.MACOS_CERTIFICATE_BASE64 != '' && format('{0}/build.keychain-db', runner.temp) || '' }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: pnpm --prefix desktop run publish

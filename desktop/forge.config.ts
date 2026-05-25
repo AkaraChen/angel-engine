@@ -10,7 +10,6 @@ import { MakerZIP } from "@electron-forge/maker-zip";
 import { AutoUnpackNativesPlugin } from "@electron-forge/plugin-auto-unpack-natives";
 import { FusesPlugin } from "@electron-forge/plugin-fuses";
 import { VitePlugin } from "@electron-forge/plugin-vite";
-import { PublisherGithub } from "@electron-forge/publisher-github";
 import { FuseV1Options, FuseVersion } from "@electron/fuses";
 
 const nativeRuntimeModules = ["better-sqlite3", "bindings", "file-uri-to-path"];
@@ -129,16 +128,6 @@ const config: ForgeConfig = {
     new MakerZIP({}, ["darwin"]),
     new MakerRpm({}),
     new MakerDeb({}),
-  ],
-  publishers: [
-    new PublisherGithub({
-      repository: {
-        owner: "AkaraChen",
-        name: "angel-engine",
-      },
-      draft: false,
-      prerelease: false,
-    }),
   ],
   plugins: [
     new VitePlugin({

@@ -1,0 +1,21 @@
+appId: com.akrc.angel-engine
+productName: Angel Engine
+artifactName: Angel-Engine-${version}-${arch}.${ext}
+directories:
+  output: out/builder
+files: []
+mac:
+  category: public.app-category.developer-tools
+  icon: assets/icon.icns
+  target:
+    - target: dmg
+      arch:
+        - arm64
+    - target: zip
+      arch:
+        - arm64
+publish:
+  provider: github
+  owner: AkaraChen
+  repo: angel-engine
+  releaseType: prerelease
