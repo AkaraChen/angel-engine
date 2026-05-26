@@ -23,4 +23,4 @@ publish:
   provider: github
   owner: AkaraChen
   repo: angel-engine
-  releaseType: prerelease
+  releaseType: release
