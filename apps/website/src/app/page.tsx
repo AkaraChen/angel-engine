@@ -49,24 +49,6 @@ const integrations = [
   { icon: claudeCodeIcon, name: "Claude Code" },
 ];
 
-const openSourceCards = [
-  [
-    "Self-host anywhere",
-    "Run the desktop locally, bring your own agent tools, and keep the client close to the projects you work in.",
-  ],
-  [
-    "No vendor lock-in",
-    "Use one interface for multiple coding agents instead of rebuilding your workflow around a single provider.",
-  ],
-  [
-    "Transparent by default",
-    "Follow the code, inspect changes, and understand how chats, tools, and settings are represented.",
-  ],
-  [
-    "Community-driven",
-    "Shape the desktop client around real coding workflows, not a closed product roadmap.",
-  ],
-];
 
 const faqs = [
   [
@@ -231,29 +213,6 @@ export default function Home() {
           ))}
         </div>
 
-        <section className="open-source" id="open-source">
-          <div>
-            <p className="eyebrow dark">OPEN SOURCE</p>
-            <h2>
-              Open source
-              <br />
-              for all.
-            </h2>
-            <p>
-              Angel Engine is built in the open so you can inspect the client,
-              run it locally, and follow how the desktop experience evolves.
-            </p>
-          </div>
-          <div className="open-grid">
-            {openSourceCards.map(([title, copy]) => (
-              <article key={title}>
-                <h3>{title}</h3>
-                <p>{copy}</p>
-              </article>
-            ))}
-          </div>
-        </section>
-
         <section className="faq-section" id="faq">
           <p className="eyebrow dark">FAQ</p>
           <h2>Questions & answers.</h2>
@@ -289,7 +248,7 @@ export default function Home() {
               "#all-providers",
             ],
             ["RESOURCES", "FAQ", "#faq", "GitHub", repoUrl],
-            ["COMPANY", "Open Source", "#open-source", "Source", repoUrl],
+            ["COMPANY", "Source", repoUrl],
           ].map(([group, firstLabel, firstHref, secondLabel, secondHref]) => (
             <nav key={group}>
               <b>{group}</b>
