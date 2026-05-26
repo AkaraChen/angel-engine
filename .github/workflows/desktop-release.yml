@@ -53,7 +53,12 @@ jobs:
         run: |
           version="${GITHUB_REF_NAME#desktop-v}"
           version="${version#v}"
-          pnpm --dir desktop version "${version}" --no-git-tag-version
+          current="$(node -p "require('./desktop/package.json').version")"
+          if [[ "${current}" == "${version}" ]]; then
+            echo "desktop/package.json already has version ${version}."
+          else
+            pnpm --dir desktop version "${version}" --no-git-tag-version
+          fi
 
       - name: Import macOS signing certificate
         env:
