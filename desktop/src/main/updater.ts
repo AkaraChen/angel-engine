@@ -24,6 +24,8 @@ export function configureAutoUpdates() {
   autoUpdater.logger = log;
   autoUpdater.autoDownload = true;
   autoUpdater.autoInstallOnAppQuit = false;
+  autoUpdater.allowPrerelease = false;
+  autoUpdater.allowDowngrade = true;
   autoUpdater.setFeedURL({
     provider: "github",
     ...updateRepository,
