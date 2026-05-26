@@ -1,0 +1,4 @@
+provider: github
+owner: AkaraChen
+repo: angel-engine
+updaterCacheDirName: angel-engine-updater

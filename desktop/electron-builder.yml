@@ -4,6 +4,9 @@ artifactName: Angel-Engine-${version}-${arch}.${ext}
 directories:
   output: out/builder
 files: []
+extraResources:
+  - from: build/app-update.yml
+    to: app-update.yml
 artifactBuildCompleted: scripts/notarize-dmg-artifact.cjs
 mac:
   category: public.app-category.developer-tools
