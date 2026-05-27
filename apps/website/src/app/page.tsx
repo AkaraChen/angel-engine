@@ -3,6 +3,8 @@ import Link from "next/link";
 import allProviderImage from "../../public/all-provider.png";
 import claudeCodeIcon from "../../public/icons/claudecode.svg";
 import codexIcon from "../../public/icons/codex.svg";
+import cursorIcon from "../../public/icons/cursor.svg";
+import githubCopilotIcon from "../../public/icons/github-copilot.svg";
 import openCodeIcon from "../../public/icons/opencode.svg";
 import heroImage from "../../public/hero.png";
 import projectChatImage from "../../public/project-chat.png";
@@ -47,6 +49,9 @@ const integrations = [
   { icon: codexIcon, name: "Codex" },
   { icon: openCodeIcon, name: "OpenCode" },
   { icon: claudeCodeIcon, name: "Claude Code" },
+  { icon: githubCopilotIcon, name: "GitHub Copilot" },
+  { icon: cursorIcon, name: "Cursor" },
+  { name: "and more ...", plain: true },
 ];
 
 const faqs = [
@@ -165,7 +170,7 @@ export default function Home() {
             </h1>
             <p>
               Angel Engine brings Codex, OpenCode, and Claude Code chats into a
-              project-aware desktop client.
+              desktop client.
             </p>
             <div className="hero-actions">
               <a
@@ -182,10 +187,16 @@ export default function Home() {
             <div className="works-with">
               <span>Works with</span>
               {integrations.map((integration) => (
-                <b key={integration.name}>
-                  <Image src={integration.icon} alt="" />
-                  {integration.name}
-                </b>
+                integration.plain ? (
+                  <span className="works-with-more" key={integration.name}>
+                    {integration.name}
+                  </span>
+                ) : (
+                  <b key={integration.name}>
+                    {integration.icon ? <Image src={integration.icon} alt="" /> : null}
+                    {integration.name}
+                  </b>
+                )
               ))}
             </div>
           </div>
@@ -238,7 +249,7 @@ export default function Home() {
             </Link>
             <p>
               Angel Engine brings Codex, OpenCode, and Claude Code chats into a
-              project-aware desktop client.
+              desktop client.
             </p>
           </div>
           {[

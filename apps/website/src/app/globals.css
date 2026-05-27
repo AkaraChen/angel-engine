@@ -231,11 +231,19 @@ a {
   color: rgba(16, 34, 53, 0.44);
 }
 
+.works-with-more {
+  color: rgba(16, 34, 53, 0.44);
+}
+
 .works-with b {
   display: inline-flex;
   align-items: center;
   gap: 8px;
   font-weight: 500;
+}
+
+.works-with b.plain {
+  color: rgba(16, 34, 53, 0.44);
 }
 
 .works-with img {
