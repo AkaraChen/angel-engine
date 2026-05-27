@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Script from "next/script";
-import heroImage from "../../public/hero.png";
+import ogImage from "../../public/og-image.png";
 import "./globals.css";
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://angel-engine.dev";
@@ -22,20 +22,20 @@ export const metadata: Metadata = {
     siteName: "Angel Engine",
     images: [
       {
-        url: heroImage.src,
-        width: heroImage.width,
-        height: heroImage.height,
-        alt: "Angel Engine watercolor hero artwork",
+        url: ogImage.src,
+        width: ogImage.width,
+        height: ogImage.height,
+        alt: "Angel Engine desktop chat app hero",
       },
     ],
     locale: "en_US",
     type: "website",
   },
   twitter: {
-    card: "summary",
+    card: "summary_large_image",
     title,
     description,
-    images: [heroImage.src],
+    images: [ogImage.src],
   },
 };
 
