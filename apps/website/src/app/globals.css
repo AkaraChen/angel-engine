@@ -443,12 +443,18 @@ a {
   font-weight: 700;
 }
 
-.faq-list p {
+.faq-body {
   margin: 0;
   padding: 0 48px 24px 0;
-  color: var(--muted);
-  font-size: 15px;
-  line-height: 1.7;
+}
+
+.faq-list summary,
+.faq-list summary:focus-visible {
+  cursor: pointer;
+}
+
+.faq-list summary::marker {
+  color: rgba(16, 34, 53, 0.32);
 }
 
 .footer {
@@ -596,5 +602,13 @@ a {
   .open-grid article {
     min-height: auto;
     padding: 28px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .faq-body,
+  .works-with img {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
   }
 }

@@ -1,3 +1,6 @@
+"use client";
+
+import { motion } from "motion/react";
 import Image from "next/image";
 import Link from "next/link";
 import allProviderImage from "../../public/all-provider.png";
@@ -186,18 +189,20 @@ export default function Home() {
             </div>
             <div className="works-with">
               <span>Works with</span>
-              {integrations.map((integration) => (
+              {integrations.map((integration) =>
                 integration.plain ? (
                   <span className="works-with-more" key={integration.name}>
                     {integration.name}
                   </span>
                 ) : (
                   <b key={integration.name}>
-                    {integration.icon ? <Image src={integration.icon} alt="" /> : null}
+                    {integration.icon ? (
+                      <Image src={integration.icon} alt="" />
+                    ) : null}
                     {integration.name}
                   </b>
-                )
-              ))}
+                ),
+              )}
             </div>
           </div>
           <ProductFrame />
@@ -205,10 +210,18 @@ export default function Home() {
 
         <div className="content-band">
           {featureSections.map((section, index) => (
-            <section
+            <motion.section
+              key={section.label}
               className={`feature-row ${index % 2 === 1 ? "is-reversed" : ""}`}
               id={section.id}
-              key={section.label}
+              initial={{ opacity: 0, y: 26 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              transition={{
+                duration: 0.72,
+                delay: index * 0.11,
+                ease: [0.22, 1, 0.36, 1],
+              }}
+              viewport={{ once: true, amount: 0.14 }}
             >
               <div className="feature-visual">
                 <Image
@@ -222,7 +235,7 @@ export default function Home() {
                 <h2>{section.title}</h2>
                 <p>{section.copy}</p>
               </div>
-            </section>
+            </motion.section>
           ))}
         </div>
 
@@ -231,9 +244,9 @@ export default function Home() {
           <h2>Questions & answers.</h2>
           <div className="faq-list">
             {faqs.map(([q, a]) => (
-              <details key={q}>
+              <details key={q} className="faq-item">
                 <summary>{q}</summary>
-                <p>{a}</p>
+                <p className="faq-body">{a}</p>
               </details>
             ))}
           </div>
