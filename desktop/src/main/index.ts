@@ -1,8 +1,8 @@
 import { app, BrowserWindow } from "electron";
 import started from "electron-squirrel-startup";
+import fixPath from "fix-path";
 
 import { beforeQuit, bootstrap } from "./bootstrap";
-import { restoreShellPath } from "./platform/shell-path";
 import { checkForUpdatesInBackground } from "./updater";
 import { createMainWindow } from "./windows/main-window";
 
@@ -15,7 +15,7 @@ if (process.platform === "win32") {
   app.setAppUserModelId(process.execPath);
 }
 
-restoreShellPath();
+fixPath();
 
 void app
   .whenReady()

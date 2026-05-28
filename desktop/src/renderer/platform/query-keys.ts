@@ -13,6 +13,8 @@ export const queryKeys = {
     all: () => ["projects"] as const,
     detail: (id: string | null) => ["projects", "detail", id] as const,
     details: () => ["projects", "detail"] as const,
+    fileSearch: (root: string, query: string, limit: number) =>
+      ["projects", "file-search", root, query, limit] as const,
     list: () => ["projects", "list"] as const,
   },
 } as const;
