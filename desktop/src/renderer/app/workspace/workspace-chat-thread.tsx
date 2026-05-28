@@ -21,6 +21,7 @@ import {
   runtimeConfigOptionsToAgentOptions,
   selectedConfigOverride,
 } from "@/app/workspace/chat-runtime-options";
+import { ReadonlyProjectLabel } from "@/app/workspace/draft-project-select";
 import {
   getErrorMessage,
   getProjectDisplayName,
@@ -390,7 +391,17 @@ function ChatThreadRuntime({
         runtimeConfig={runtimeConfig}
         slotKey={slotKey}
       >
-        <AssistantThread projectName={projectContext.name} />
+        <AssistantThread
+          composerFloatingAccessory={
+            projectContext.name ? (
+              <ReadonlyProjectLabel
+                projectName={projectContext.name}
+                projectPath={projectContext.path}
+              />
+            ) : undefined
+          }
+          projectName={projectContext.name}
+        />
       </AppRuntimeProvider>
     </ChatOptionsProvider>
   );
