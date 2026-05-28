@@ -6,6 +6,7 @@ use angel_provider::acp::AcpAdapter;
 use angel_provider::cline::ClineAdapter;
 use angel_provider::codex::CodexAdapter;
 use angel_provider::copilot::CopilotAdapter;
+#[cfg(feature = "cursor-history")]
 use angel_provider::cursor::CursorAdapter;
 use angel_provider::gemini::GeminiAdapter;
 use angel_provider::kimi::KimiAdapter;
@@ -40,12 +41,16 @@ impl RuntimeAdapter {
             ClientProtocol::Copilot => Box::new(CopilotAdapter::without_authentication_with_args(
                 &options.args,
             )),
+            #[cfg(feature = "cursor-history")]
             ClientProtocol::Cursor if options.auth.need_auth => {
                 Box::new(CursorAdapter::standard_with_args(&options.args))
             }
+            #[cfg(feature = "cursor-history")]
             ClientProtocol::Cursor => Box::new(CursorAdapter::without_authentication_with_args(
                 &options.args,
             )),
+            #[cfg(not(feature = "cursor-history"))]
+            ClientProtocol::Cursor => Box::new(UnsupportedCustomAdapter),
             ClientProtocol::Cline if options.auth.need_auth => {
                 Box::new(ClineAdapter::standard_with_args(&options.args))
             }

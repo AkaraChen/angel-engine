@@ -6,10 +6,12 @@ edition = "2024"
 [lib]
 path = "src/mod.rs"
 
+[features]
+cursor-history = []
+
 [dependencies]
 angel-engine = { path = "../angel-engine" }
-agent-client-protocol-schema = { version = "0.12.2", features = ["unstable"] }
-rusqlite = { version = "0.39.0", features = ["bundled"] }
+agent-client-protocol-schema = { version = "0.12.0", features = ["unstable"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 strum = { version = "0.26", features = ["derive"] }

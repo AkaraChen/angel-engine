@@ -412,7 +412,7 @@ impl AngelClient {
 }
 
 fn spawn_command(program: &str) -> Command {
-    let mut cmd = Command::new(program);
+    let cmd = Command::new(program);
     #[cfg(windows)]
     cmd.creation_flags(CREATE_NO_WINDOW);
     cmd

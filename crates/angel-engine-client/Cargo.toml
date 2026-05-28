@@ -6,6 +6,9 @@ edition = "2024"
 [lib]
 path = "src/lib.rs"
 
+[features]
+cursor-history = ["angel-provider/cursor-history"]
+
 [dependencies]
 angel-engine = { path = "../angel-engine" }
 angel-provider = { path = "../angel-provider" }
