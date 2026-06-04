@@ -98,7 +98,11 @@ export function WorkspaceSidebar({
   };
 
   return (
-    <Sidebar className="select-none" variant="inset">
+    <Sidebar
+      className="select-none"
+      data-workspace-mode={workspaceMode}
+      variant="inset"
+    >
       <SidebarHeader className="p-2" data-electron-drag>
         {isMacOS ? <div aria-hidden className="h-[2rem] shrink-0" /> : null}
 

@@ -61,6 +61,7 @@ import { mermaid } from "@streamdown/mermaid";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Streamdown } from "streamdown";
+import { useWorkspaceUiStore } from "@/app/workspace/workspace-ui-store";
 import { Reasoning, ReasoningGroup } from "@/components/assistant-ui/reasoning";
 import { ToolGroup } from "@/components/assistant-ui/tool-group";
 import { Button } from "@/components/ui/button";
@@ -134,6 +135,7 @@ interface ElicitationFreeformAnswerProps {
 
 export function UserMessage() {
   const { t } = useTranslation();
+  const workspaceMode = useWorkspaceUiStore((state) => state.workspaceMode);
   const hasBubbleContent = useAuiState((state) =>
     state.message.parts.some(isUserBubblePart),
   );
@@ -141,6 +143,7 @@ export function UserMessage() {
   return (
     <MessagePrimitive.Root
       className={cn(messageColumnClassName, "group flex justify-end")}
+      data-workspace-mode={workspaceMode}
     >
       <div className={userMessageColumnClassName}>
         <MessagePrimitive.Attachments>
@@ -196,10 +199,12 @@ export function UserMessage() {
 
 export function UserEditComposer() {
   const { t } = useTranslation();
+  const workspaceMode = useWorkspaceUiStore((state) => state.workspaceMode);
 
   return (
     <MessagePrimitive.Root
       className={cn(messageColumnClassName, "flex justify-end")}
+      data-workspace-mode={workspaceMode}
     >
       <ComposerPrimitive.Root
         className="
@@ -236,11 +241,13 @@ export function UserEditComposer() {
 
 export function AssistantMessage() {
   const { t } = useTranslation();
+  const workspaceMode = useWorkspaceUiStore((state) => state.workspaceMode);
   const canReload = useAuiState((state) => state.thread.capabilities.reload);
 
   return (
     <MessagePrimitive.Root
       className={cn(messageColumnClassName, "group flex justify-start")}
+      data-workspace-mode={workspaceMode}
     >
       <div
         className="

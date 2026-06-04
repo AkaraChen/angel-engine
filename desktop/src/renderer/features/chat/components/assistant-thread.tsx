@@ -7,6 +7,7 @@ import {
 import { RiDoubleQuotesL as Quote } from "@remixicon/react";
 import { Trans, useTranslation } from "react-i18next";
 
+import { useWorkspaceUiStore } from "@/app/workspace/workspace-ui-store";
 import { AssistantComposer } from "@/features/chat/components/assistant-composer";
 import {
   AssistantMessage,
@@ -23,12 +24,14 @@ export function AssistantThread({
   projectName?: string;
 }) {
   const { t } = useTranslation();
+  const workspaceMode = useWorkspaceUiStore((state) => state.workspaceMode);
 
   return (
     <ThreadPrimitive.Root
       className="
       flex h-full min-h-0 flex-col bg-background/96
     "
+      data-workspace-mode={workspaceMode}
     >
       <ThreadPrimitive.Viewport
         className="
@@ -81,7 +84,7 @@ export function AssistantThread({
       />
       <div
         className="
-          relative z-20 shrink-0 bg-background px-4 pb-3
+          relative z-20 mt-[12px] shrink-0 bg-background px-4 pb-3
           sm:px-7
         "
       >
@@ -98,17 +101,14 @@ function EmptyThread({ projectName }: { projectName?: string }) {
 
   return (
     <div
-      className="
-        mx-auto flex w-full max-w-[48rem] flex-1 items-center justify-center
-        py-8
-      "
+      className={`${workspaceContentColumnClass} flex flex-1 items-center justify-center py-8`}
+      data-workspace-mode="chat"
     >
-      <div className="w-full max-w-[34rem]">
+      <div className="w-full max-w-136">
         <div className="min-w-0 text-center select-none">
           <h2
             className="
-              [font-size:1.5rem] [line-height:1.1] font-semibold
-              text-pretty text-foreground
+            text-2xl/tight font-semibold text-pretty text-foreground
           "
           >
             {projectName ? (
@@ -121,12 +121,7 @@ function EmptyThread({ projectName }: { projectName?: string }) {
               t("thread.empty.title")
             )}
           </h2>
-          <p
-            className="
-              mx-auto mt-2 max-w-[30rem] [font-size:0.875rem]
-              [line-height:1.5rem] text-muted-foreground
-            "
-          >
+          <p className="mx-auto mt-2 max-w-120 text-sm/6 text-muted-foreground">
             {t("thread.empty.description")}
           </p>
         </div>

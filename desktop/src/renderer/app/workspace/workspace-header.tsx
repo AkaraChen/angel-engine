@@ -26,6 +26,7 @@ export function WorkspaceHeader({ attention, title }: WorkspaceHeaderProps) {
         dark:border-white/10
       "
       data-electron-drag
+      data-workspace-mode="chat"
     >
       <WorkspaceSidebarControlTarget />
       <h1

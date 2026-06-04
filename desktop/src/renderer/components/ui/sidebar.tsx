@@ -244,6 +244,7 @@ function Sidebar({
       data-variant={variant}
       data-side={side}
       data-slot="sidebar"
+      {...props}
     >
       {/* This is what handles the sidebar gap on desktop */}
       <div
