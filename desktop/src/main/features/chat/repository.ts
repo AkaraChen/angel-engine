@@ -22,6 +22,15 @@ export function listChats(): Chat[] {
     .all();
 }
 
+export function listArchivedChats(): Chat[] {
+  return getDatabase()
+    .select()
+    .from(chats)
+    .where(eq(chats.archived, true))
+    .orderBy(desc(chats.updatedAt))
+    .all();
+}
+
 export function getChat(id: string): Chat | null {
   const chat = getDatabase()
     .select()
@@ -70,6 +79,23 @@ export function deleteAllChats(): number {
 
 export function archiveChat(id: string): Chat {
   return updateChat(id, { archived: true });
+}
+
+export function restoreArchivedChats(ids: string[]): Chat[] {
+  return uniqueChatIds(ids).map((id) => {
+    requireArchivedChat(id);
+    return updateChat(id, { archived: false });
+  });
+}
+
+export function deleteArchivedChats(ids: string[]): Chat[] {
+  const archivedChats = uniqueChatIds(ids).map((id) => requireArchivedChat(id));
+
+  for (const chat of archivedChats) {
+    getDatabase().delete(chats).where(eq(chats.id, chat.id)).run();
+  }
+
+  return archivedChats;
 }
 
 export function touchChat(id: string): Chat {
@@ -125,6 +151,14 @@ export function requireChat(id: string): Chat {
   return chat;
 }
 
+export function requireArchivedChat(id: string): Chat {
+  const chat = requireChat(id);
+  if (!chat.archived) {
+    throw new Error("Chat is not archived.");
+  }
+  return chat;
+}
+
 function updateChat(
   id: string,
   patch: Partial<
@@ -153,6 +187,14 @@ function requireChatId(id: string) {
     throw new Error("Chat id is required.");
   }
   return id;
+}
+
+function uniqueChatIds(ids: string[]) {
+  const uniqueIds = [...new Set(ids.map((id) => requireChatId(id)))];
+  if (uniqueIds.length === 0) {
+    throw new Error("At least one chat id is required.");
+  }
+  return uniqueIds;
 }
 
 function normalizeRuntime(runtime: string | undefined) {

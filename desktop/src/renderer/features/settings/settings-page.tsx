@@ -40,18 +40,25 @@ import {
 } from "@/components/ui/native-select";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
+import { ArchivedSettingsPanel } from "@/features/settings/archived-settings-panel";
 import { useSettingsStore } from "@/features/settings/settings-store";
 import { useThemeSettings } from "@/features/settings/use-theme-settings";
 import { languageOptions } from "@/i18n";
 import { queryKeys } from "@/platform/query-keys";
 import { cn } from "@/platform/utils";
 
-type SettingsTab = "agents" | "appearance" | "workspace" | "danger";
+type SettingsTab =
+  | "agents"
+  | "appearance"
+  | "workspace"
+  | "archived"
+  | "danger";
 
 const settingsTabs: Array<{ id: SettingsTab; labelKey: string }> = [
   { id: "agents", labelKey: "settings.tabs.agents" },
   { id: "appearance", labelKey: "settings.tabs.appearance" },
   { id: "workspace", labelKey: "settings.tabs.workspace" },
+  { id: "archived", labelKey: "settings.tabs.archived" },
   { id: "danger", labelKey: "settings.tabs.danger" },
 ];
 
@@ -232,9 +239,10 @@ export function SettingsPage({
 
       <section className="min-w-0 flex-1 overflow-auto">
         <div
-          className="
-            mx-auto flex w-full max-w-2xl flex-col gap-5 px-8 pt-14 pb-8
-          "
+          className={cn(
+            "mx-auto flex w-full flex-col gap-5 px-8 pt-14 pb-8",
+            activeTab === "archived" ? "max-w-4xl" : "max-w-2xl",
+          )}
         >
           <h2 className="text-xl font-semibold tracking-normal">
             {activeTabLabel}
@@ -380,6 +388,16 @@ export function SettingsPage({
                   title={t("settings.workspace.dirtyPromptTitle")}
                 />
               </SettingsGroup>
+            </div>
+          ) : null}
+
+          {activeTab === "archived" ? (
+            <div
+              aria-labelledby={`${tabPanelId}-archived-tab`}
+              id={`${tabPanelId}-archived`}
+              role="tabpanel"
+            >
+              <ArchivedSettingsPanel />
             </div>
           ) : null}
 

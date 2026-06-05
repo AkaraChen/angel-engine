@@ -223,6 +223,26 @@ export interface ChatPrewarmResult {
   prewarmId: string;
 }
 
+export interface ChatIdsInput {
+  chatIds: string[];
+}
+
+export type ChatArchivedRestoreInput = ChatIdsInput;
+export type ChatArchivedDeleteInput = ChatIdsInput;
+export type ChatArchivedDeleteImpactInput = ChatIdsInput;
+
+export interface ChatArchivedDeleteImpact {
+  chatCount: number;
+  managedWorktreeCount: number;
+  managedWorktrees: string[];
+}
+
+export interface ChatArchivedDeleteResult {
+  deletedCount: number;
+  deletedWorktreeCount: number;
+  deletedWorktrees: string[];
+}
+
 export interface ChatSetModeResult {
   chat: Chat;
   config: ChatRuntimeConfig;

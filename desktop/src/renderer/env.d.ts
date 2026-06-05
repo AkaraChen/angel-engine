@@ -1,5 +1,6 @@
 import type { ChatStreamApi } from "@shared/chat";
 import type {
+  DesktopConfirmDeleteArchivedChatsInput,
   DesktopConfirmDeleteCustomAgentInput,
   DesktopOpenChatFromNotificationEvent,
   DesktopThemeSetInput,
@@ -28,6 +29,9 @@ declare global {
     };
     desktopWindow: {
       confirmDeleteAllChats: () => Promise<boolean>;
+      confirmDeleteArchivedChats: (
+        input: DesktopConfirmDeleteArchivedChatsInput,
+      ) => Promise<boolean>;
       confirmDeleteCustomAgent: (
         input: DesktopConfirmDeleteCustomAgentInput,
       ) => Promise<boolean>;

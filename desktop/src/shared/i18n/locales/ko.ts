@@ -135,6 +135,35 @@ export const ko = {
           system: "시스템",
         },
       },
+      archived: {
+        allProjects: "모든 프로젝트",
+        bulkSelect: "일괄 선택",
+        clearSelection: "선택 해제",
+        confirmDeleteDetail:
+          "보관된 세션 {{chatCount}}개를 영구 삭제합니다. 이 작업은 되돌릴 수 없습니다.",
+        confirmDeleteTitle: "보관된 세션을 영구 삭제할까요?",
+        confirmDeleteWorktreeDetail:
+          "보관된 세션 {{chatCount}}개와 관리되는 worktree {{managedWorktreeCount}}개를 영구 삭제합니다. worktree 디렉터리는 복원할 수 없습니다.",
+        deletedToast: "보관된 세션 {{count}}개를 삭제했습니다",
+        deletePermanently: "영구 삭제",
+        deleteSelected: "선택 항목 삭제",
+        done: "완료",
+        empty: "보관된 세션이 없습니다",
+        filterProject: "프로젝트",
+        filterTime: "시간",
+        noProject: "프로젝트 없음",
+        restore: "복원",
+        restoredToast: "보관된 세션 {{count}}개를 복원했습니다",
+        restoreSelected: "선택 항목 복원",
+        selectAll: "전체 선택",
+        selectedCount: "{{count}}개 선택됨",
+        timeAll: "전체",
+        timeLast7Days: "지난 7일",
+        timeLast30Days: "지난 30일",
+        timeLast90Days: "지난 90일",
+        timeToday: "오늘",
+        worktree: "worktree",
+      },
       danger: {
         confirmDeleteAll:
           "모든 채팅을 삭제할까요? 이 작업은 되돌릴 수 없습니다.",
@@ -148,6 +177,7 @@ export const ko = {
       tabs: {
         agents: "Agents",
         appearance: "모양",
+        archived: "보관됨",
         danger: "고급",
         workspace: "작업 공간",
       },

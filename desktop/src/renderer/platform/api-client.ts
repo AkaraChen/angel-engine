@@ -3,6 +3,9 @@ import type {
   UpdateCustomAgentInput,
 } from "@shared/agents";
 import type {
+  ChatArchivedDeleteImpactInput,
+  ChatArchivedDeleteInput,
+  ChatArchivedRestoreInput,
   ChatCreateInput,
   ChatPrewarmInput,
   ChatRenameInput,
@@ -35,6 +38,16 @@ interface AgentsApiClient {
 
 interface ChatApiClient {
   archive: (chatId: string) => ReturnType<typeof ipc.chatsArchive>;
+  archivedDelete: (
+    input: ChatArchivedDeleteInput,
+  ) => ReturnType<typeof ipc.chatsArchivedDelete>;
+  archivedDeleteImpact: (
+    input: ChatArchivedDeleteImpactInput,
+  ) => ReturnType<typeof ipc.chatsArchivedDeleteImpact>;
+  archivedList: () => ReturnType<typeof ipc.chatsArchivedList>;
+  archivedRestore: (
+    input: ChatArchivedRestoreInput,
+  ) => ReturnType<typeof ipc.chatsArchivedRestore>;
   create: (input?: ChatCreateInput) => ReturnType<typeof ipc.chatsCreate>;
   deleteAll: () => ReturnType<typeof ipc.chatsDeleteAll>;
   inspectConfig: (
@@ -92,6 +105,13 @@ export function createApiClient(): ApiClient {
     },
     chats: {
       archive: async (chatId: string) => ipc.chatsArchive(chatId),
+      archivedDelete: async (input: ChatArchivedDeleteInput) =>
+        ipc.chatsArchivedDelete(input),
+      archivedDeleteImpact: async (input: ChatArchivedDeleteImpactInput) =>
+        ipc.chatsArchivedDeleteImpact(input),
+      archivedList: async () => ipc.chatsArchivedList(),
+      archivedRestore: async (input: ChatArchivedRestoreInput) =>
+        ipc.chatsArchivedRestore(input),
       create: async (input: ChatCreateInput = {}) => ipc.chatsCreate(input),
       deleteAll: async () => ipc.chatsDeleteAll(),
       inspectConfig: async (input: ChatRuntimeConfigInput = {}) =>

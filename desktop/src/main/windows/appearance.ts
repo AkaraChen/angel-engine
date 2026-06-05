@@ -1,12 +1,14 @@
 import type { BrowserWindowConstructorOptions } from "electron";
 
 import type {
+  DesktopConfirmDeleteArchivedChatsInput,
   DesktopConfirmDeleteCustomAgentInput,
   DesktopThemeMode,
 } from "../../shared/desktop-window";
 import { BrowserWindow, dialog, ipcMain, nativeTheme } from "electron";
 import {
   DESKTOP_CONFIRM_DELETE_ALL_CHATS_CHANNEL,
+  DESKTOP_CONFIRM_DELETE_ARCHIVED_CHATS_CHANNEL,
   DESKTOP_CONFIRM_DELETE_CUSTOM_AGENT_CHANNEL,
   DESKTOP_INSTALL_UPDATE_CHANNEL,
   DESKTOP_THEME_SET_CHANNEL,
@@ -67,6 +69,44 @@ export function registerDesktopWindowAppearanceIpc() {
   });
 
   ipcMain.handle(
+    DESKTOP_CONFIRM_DELETE_ARCHIVED_CHATS_CHANNEL,
+    async (event, input: unknown) => {
+      const value = readConfirmDeleteArchivedChatsInput(input);
+      if (!value) return false;
+
+      const translationValues = {
+        chatCount: value.chatCount,
+        managedWorktreeCount: value.managedWorktreeCount,
+      };
+      const detail =
+        value.managedWorktreeCount > 0
+          ? translate(
+              "settings.archived.confirmDeleteWorktreeDetail",
+              translationValues,
+            )
+          : translate(
+              "settings.archived.confirmDeleteDetail",
+              translationValues,
+            );
+      const options = {
+        buttons: [translate("common.cancel"), translate("common.delete")],
+        cancelId: 0,
+        defaultId: 0,
+        detail,
+        message: translate("settings.archived.confirmDeleteTitle"),
+        noLink: true,
+        type: "warning" as const,
+      };
+      const parentWindow = BrowserWindow.fromWebContents(event.sender);
+      const result = parentWindow
+        ? await dialog.showMessageBox(parentWindow, options)
+        : await dialog.showMessageBox(options);
+
+      return result.response === 1;
+    },
+  );
+
+  ipcMain.handle(
     DESKTOP_CONFIRM_DELETE_CUSTOM_AGENT_CHANNEL,
     async (event, input: unknown) => {
       const value = readConfirmDeleteCustomAgentInput(input);
@@ -113,6 +153,31 @@ function readThemeMode(input: unknown): DesktopThemeMode | null {
 
 function isObject(value: unknown): value is { mode?: unknown } {
   return typeof value === "object" && value !== null;
+}
+
+function readConfirmDeleteArchivedChatsInput(
+  input: unknown,
+): DesktopConfirmDeleteArchivedChatsInput | null {
+  if (typeof input !== "object" || input === null) return null;
+  const value = input as Partial<DesktopConfirmDeleteArchivedChatsInput>;
+  if (
+    typeof value.chatCount !== "number" ||
+    !Number.isFinite(value.chatCount) ||
+    value.chatCount <= 0
+  ) {
+    return null;
+  }
+  if (
+    typeof value.managedWorktreeCount !== "number" ||
+    !Number.isFinite(value.managedWorktreeCount) ||
+    value.managedWorktreeCount < 0
+  ) {
+    return null;
+  }
+  return {
+    chatCount: Math.trunc(value.chatCount),
+    managedWorktreeCount: Math.trunc(value.managedWorktreeCount),
+  };
 }
 
 function readConfirmDeleteCustomAgentInput(

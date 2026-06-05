@@ -19,6 +19,11 @@ export interface DesktopConfirmDeleteCustomAgentInput {
   label: string;
 }
 
+export interface DesktopConfirmDeleteArchivedChatsInput {
+  chatCount: number;
+  managedWorktreeCount: number;
+}
+
 export interface DesktopUpdateDownloadedEvent {
   releaseName: string;
   releaseNotes?: string;
@@ -29,6 +34,8 @@ export const DESKTOP_CONFIRM_DELETE_CUSTOM_AGENT_CHANNEL =
   "desktop-window:confirm-delete-custom-agent";
 export const DESKTOP_CONFIRM_DELETE_ALL_CHATS_CHANNEL =
   "desktop-window:confirm-delete-all-chats";
+export const DESKTOP_CONFIRM_DELETE_ARCHIVED_CHATS_CHANNEL =
+  "desktop-window:confirm-delete-archived-chats";
 export const DESKTOP_COMMAND_CHANNEL = "desktop-window:command";
 export const DESKTOP_INSTALL_UPDATE_CHANNEL = "desktop-window:update:install";
 export const DESKTOP_OPEN_CHAT_FROM_NOTIFICATION_CHANNEL =

@@ -1,5 +1,6 @@
 import type { IpcRendererEvent } from "electron";
 import type {
+  DesktopConfirmDeleteArchivedChatsInput,
   DesktopConfirmDeleteCustomAgentInput,
   DesktopOpenChatFromNotificationEvent,
   DesktopThemeSetInput,
@@ -12,6 +13,7 @@ import {
   DESKTOP_ACTIVE_CHAT_SET_CHANNEL,
   DESKTOP_COMMAND_CHANNEL,
   DESKTOP_CONFIRM_DELETE_ALL_CHATS_CHANNEL,
+  DESKTOP_CONFIRM_DELETE_ARCHIVED_CHATS_CHANNEL,
   DESKTOP_CONFIRM_DELETE_CUSTOM_AGENT_CHANNEL,
   DESKTOP_INSTALL_UPDATE_CHANNEL,
   DESKTOP_OPEN_CHAT_FROM_NOTIFICATION_CHANNEL,
@@ -24,6 +26,14 @@ export function exposeDesktopWindowBridge() {
   contextBridge.exposeInMainWorld("desktopWindow", {
     async confirmDeleteAllChats() {
       return ipcRenderer.invoke(DESKTOP_CONFIRM_DELETE_ALL_CHATS_CHANNEL);
+    },
+    async confirmDeleteArchivedChats(
+      input: DesktopConfirmDeleteArchivedChatsInput,
+    ) {
+      return ipcRenderer.invoke(
+        DESKTOP_CONFIRM_DELETE_ARCHIVED_CHATS_CHANNEL,
+        input,
+      );
     },
     async confirmDeleteCustomAgent(
       input: DesktopConfirmDeleteCustomAgentInput,

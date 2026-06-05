@@ -6,6 +6,8 @@ export const elicitationAnswer = type({
   value: "string > 0",
 });
 
+const chatId = type("string > 0");
+
 export const elicitationResponse = type({
   type: "'allow' | 'allowForSession' | 'deny' | 'cancel' | 'externalComplete' | 'answers' | 'dynamicToolResult' | 'raw'",
   "answers?": elicitationAnswer.array(),
@@ -60,6 +62,11 @@ export const chatRenameInput = type({
   "+": "ignore",
   chatId: "string > 0",
   title: "string > 0",
+});
+
+export const chatIdsInput = type({
+  "+": "ignore",
+  chatIds: chatId.array(),
 });
 
 export const chatRuntimeConfigInput = type({

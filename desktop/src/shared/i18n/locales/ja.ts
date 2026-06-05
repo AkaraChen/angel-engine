@@ -136,6 +136,35 @@ export const ja = {
           system: "システム",
         },
       },
+      archived: {
+        allProjects: "すべてのプロジェクト",
+        bulkSelect: "一括選択",
+        clearSelection: "選択を解除",
+        confirmDeleteDetail:
+          "{{chatCount}} 件のアーカイブ済みセッションを完全に削除します。この操作は元に戻せません。",
+        confirmDeleteTitle: "アーカイブ済みセッションを完全に削除しますか？",
+        confirmDeleteWorktreeDetail:
+          "{{chatCount}} 件のアーカイブ済みセッションと {{managedWorktreeCount}} 件の管理対象 worktree を完全に削除します。worktree ディレクトリは復元できません。",
+        deletedToast: "{{count}} 件のアーカイブ済みセッションを削除しました",
+        deletePermanently: "完全に削除",
+        deleteSelected: "選択を削除",
+        done: "完了",
+        empty: "アーカイブ済みセッションはありません",
+        filterProject: "プロジェクト",
+        filterTime: "時間",
+        noProject: "プロジェクトなし",
+        restore: "復元",
+        restoredToast: "{{count}} 件のアーカイブ済みセッションを復元しました",
+        restoreSelected: "選択を復元",
+        selectAll: "すべて選択",
+        selectedCount: "{{count}} 件選択",
+        timeAll: "すべて",
+        timeLast7Days: "過去 7 日",
+        timeLast30Days: "過去 30 日",
+        timeLast90Days: "過去 90 日",
+        timeToday: "今日",
+        worktree: "worktree",
+      },
       danger: {
         confirmDeleteAll:
           "すべてのチャットを削除しますか？この操作は元に戻せません。",
@@ -149,6 +178,7 @@ export const ja = {
       tabs: {
         agents: "Agents",
         appearance: "外観",
+        archived: "アーカイブ",
         danger: "詳細",
         workspace: "ワークスペース",
       },

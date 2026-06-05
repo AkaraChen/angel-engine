@@ -136,6 +136,35 @@ export const fr = {
           system: "Système",
         },
       },
+      archived: {
+        allProjects: "Tous les projets",
+        bulkSelect: "Sélection groupée",
+        clearSelection: "Effacer la sélection",
+        confirmDeleteDetail:
+          "Cela supprimera définitivement {{chatCount}} session(s) archivée(s). Cette action est irréversible.",
+        confirmDeleteTitle: "Supprimer définitivement les sessions archivées ?",
+        confirmDeleteWorktreeDetail:
+          "Cela supprimera définitivement {{chatCount}} session(s) archivée(s) et {{managedWorktreeCount}} worktree(s) géré(s). Les répertoires worktree ne pourront pas être restaurés.",
+        deletedToast: "{{count}} session(s) archivée(s) supprimée(s)",
+        deletePermanently: "Supprimer définitivement",
+        deleteSelected: "Supprimer la sélection",
+        done: "Terminé",
+        empty: "Aucune session archivée",
+        filterProject: "Projet",
+        filterTime: "Temps",
+        noProject: "Aucun projet",
+        restore: "Restaurer",
+        restoredToast: "{{count}} session(s) archivée(s) restaurée(s)",
+        restoreSelected: "Restaurer la sélection",
+        selectAll: "Tout sélectionner",
+        selectedCount: "{{count}} sélectionné(s)",
+        timeAll: "Tout",
+        timeLast7Days: "7 derniers jours",
+        timeLast30Days: "30 derniers jours",
+        timeLast90Days: "90 derniers jours",
+        timeToday: "Aujourd'hui",
+        worktree: "worktree",
+      },
       danger: {
         confirmDeleteAll:
           "Supprimer toutes les discussions ? Cette action est irréversible.",
@@ -149,6 +178,7 @@ export const fr = {
       tabs: {
         agents: "Agents",
         appearance: "Apparence",
+        archived: "Archivées",
         danger: "Avancé",
         workspace: "Espace de travail",
       },

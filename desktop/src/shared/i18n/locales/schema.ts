@@ -117,6 +117,34 @@ export interface LocaleResourceTranslationSettingsAgents {
   title: string;
 }
 
+export interface LocaleResourceTranslationSettingsArchived {
+  allProjects: string;
+  bulkSelect: string;
+  clearSelection: string;
+  confirmDeleteDetail: string;
+  confirmDeleteTitle: string;
+  confirmDeleteWorktreeDetail: string;
+  deletedToast: string;
+  deletePermanently: string;
+  deleteSelected: string;
+  done: string;
+  empty: string;
+  filterProject: string;
+  filterTime: string;
+  noProject: string;
+  restore: string;
+  restoredToast: string;
+  restoreSelected: string;
+  selectAll: string;
+  selectedCount: string;
+  timeAll: string;
+  timeLast7Days: string;
+  timeLast30Days: string;
+  timeLast90Days: string;
+  timeToday: string;
+  worktree: string;
+}
+
 export interface LocaleResourceTranslationSettingsAppearanceLanguageOptions {
   en: string;
   "zh-CN": string;
@@ -152,6 +180,7 @@ export interface LocaleResourceTranslationSettingsDanger {
 export interface LocaleResourceTranslationSettingsTabs {
   agents: string;
   appearance: string;
+  archived: string;
   danger: string;
   workspace: string;
 }
@@ -165,6 +194,7 @@ export interface LocaleResourceTranslationSettingsWorkspace {
 export interface LocaleResourceTranslationSettings {
   agents: LocaleResourceTranslationSettingsAgents;
   appearance: LocaleResourceTranslationSettingsAppearance;
+  archived: LocaleResourceTranslationSettingsArchived;
   danger: LocaleResourceTranslationSettingsDanger;
   description: string;
   tabs: LocaleResourceTranslationSettingsTabs;

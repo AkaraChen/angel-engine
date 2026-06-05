@@ -1,6 +1,12 @@
 import type { MenuItemConstructorOptions } from "electron";
 import type {
+  Chat,
+  ChatArchivedDeleteImpact,
+  ChatArchivedDeleteInput,
+  ChatArchivedDeleteResult,
+  ChatArchivedRestoreInput,
   ChatCreateInput,
+  ChatIdsInput,
   ChatPrewarmInput,
   ChatRenameInput,
   ChatRuntimeConfigInput,
@@ -18,14 +24,19 @@ import { normalizeChatAttachmentsInput } from "../../../shared/chat";
 import { translate } from "../../platform/i18n";
 import {
   archiveChat,
+  deleteArchivedChats,
   deleteAllChats,
   deleteChat,
   getChat,
+  listArchivedChats,
   listChats,
   renameChat,
+  requireArchivedChat,
+  restoreArchivedChats,
 } from "./repository";
 import {
   chatCreateInput,
+  chatIdsInput,
   chatPrewarmInput,
   chatRenameInput,
   chatRuntimeConfigInput,
@@ -34,6 +45,7 @@ import {
   chatSetPermissionModeInput,
   chatSetRuntimeInput,
 } from "./schemas";
+import { managedWorktreePath, removeManagedWorktree } from "../projects/git";
 
 const t = tipc.create();
 
@@ -46,6 +58,51 @@ export function createChatIpcRouter(runtime: ChatRuntime) {
       }
       return archiveChat(value);
     }),
+
+    chatsArchivedDelete: t.procedure
+      .input<ChatArchivedDeleteInput>()
+      .action(async ({ input }) => {
+        const chatIds = readChatIdsInput(input);
+        const targetChats = chatIds.map((chatId) =>
+          requireArchivedChat(chatId),
+        );
+        const deletedWorktrees =
+          await removeManagedWorktreesForChats(targetChats);
+
+        for (const chat of targetChats) {
+          runtime.closeChatSession(chat.id);
+        }
+        const deletedChats = deleteArchivedChats(chatIds);
+
+        return {
+          deletedCount: deletedChats.length,
+          deletedWorktreeCount: deletedWorktrees.length,
+          deletedWorktrees,
+        } satisfies ChatArchivedDeleteResult;
+      }),
+
+    chatsArchivedDeleteImpact: t.procedure
+      .input<ChatIdsInput>()
+      .action(async ({ input }) => {
+        const targetChats = readChatIdsInput(input).map((chatId) =>
+          requireArchivedChat(chatId),
+        );
+        const managedWorktrees = managedWorktreesForChats(targetChats);
+
+        return {
+          chatCount: targetChats.length,
+          managedWorktreeCount: managedWorktrees.length,
+          managedWorktrees,
+        } satisfies ChatArchivedDeleteImpact;
+      }),
+
+    chatsArchivedList: t.procedure.action(async () => listArchivedChats()),
+
+    chatsArchivedRestore: t.procedure
+      .input<ChatArchivedRestoreInput>()
+      .action(async ({ input }) =>
+        restoreArchivedChats(readChatIdsInput(input)),
+      ),
 
     chatsCreate: t.procedure
       .input<ChatCreateInput>()
@@ -233,4 +290,40 @@ export function createChatIpcRouter(runtime: ChatRuntime) {
       });
     }),
   };
+}
+
+function readChatIdsInput(input: ChatIdsInput) {
+  const value = chatIdsInput(input);
+  if (value instanceof arkType.errors) {
+    throw new TypeError("Chat ids are required.");
+  }
+
+  const chatIds = [...new Set(value.chatIds)];
+  if (chatIds.length === 0) {
+    throw new TypeError("At least one chat id is required.");
+  }
+  return chatIds;
+}
+
+function managedWorktreesForChats(targetChats: Chat[]) {
+  return [
+    ...new Set(
+      targetChats
+        .map((chat) => managedWorktreePath(chat.cwd))
+        .filter((cwd): cwd is string => cwd !== undefined),
+    ),
+  ];
+}
+
+async function removeManagedWorktreesForChats(targetChats: Chat[]) {
+  const removedWorktrees: string[] = [];
+
+  for (const worktreePath of managedWorktreesForChats(targetChats)) {
+    const removedPath = await removeManagedWorktree(worktreePath);
+    if (removedPath) {
+      removedWorktrees.push(removedPath);
+    }
+  }
+
+  return removedWorktrees;
 }

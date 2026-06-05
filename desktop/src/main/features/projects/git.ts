@@ -95,8 +95,44 @@ export async function createProjectWorktree(
   throw new Error("Could not create git worktree.");
 }
 
-function managedWorktreeRoot() {
+export function managedWorktreeRoot() {
   return path.join(os.homedir(), ".angel-engine", "worktrees");
+}
+
+export function managedWorktreePath(cwd: string | null | undefined) {
+  if (!cwd) return undefined;
+
+  const root = path.resolve(managedWorktreeRoot());
+  const resolvedCwd = path.resolve(cwd);
+  const relativePath = path.relative(root, resolvedCwd);
+  if (
+    !relativePath ||
+    relativePath.startsWith("..") ||
+    path.isAbsolute(relativePath)
+  ) {
+    return undefined;
+  }
+
+  const parts = relativePath.split(path.sep).filter(Boolean);
+  if (parts.length < 2) return undefined;
+
+  return path.join(root, parts[0], parts[1]);
+}
+
+export async function removeManagedWorktree(
+  cwd: string | null | undefined,
+): Promise<string | undefined> {
+  const worktreePath = managedWorktreePath(cwd);
+  if (!worktreePath) return undefined;
+
+  if (fs.existsSync(worktreePath)) {
+    await removeGitWorktree(worktreePath).catch(() => undefined);
+    if (fs.existsSync(worktreePath)) {
+      fs.rmSync(worktreePath, { force: true, recursive: true });
+    }
+  }
+
+  return worktreePath;
 }
 
 function projectSlugFromPath(projectPath: string) {
@@ -115,6 +151,24 @@ async function gitOutput(cwd: string, args: string[]) {
     maxBuffer: GIT_OUTPUT_MAX_BUFFER,
   });
   return result.stdout.trim();
+}
+
+async function removeGitWorktree(worktreePath: string) {
+  const gitCommonDir = await gitOutput(worktreePath, [
+    "rev-parse",
+    "--path-format=absolute",
+    "--git-common-dir",
+  ]);
+  const gitRoot =
+    path.basename(gitCommonDir) === ".git"
+      ? path.dirname(gitCommonDir)
+      : path.dirname(gitCommonDir);
+
+  await execFileAsync(
+    "git",
+    ["-C", gitRoot, "worktree", "remove", "--force", worktreePath],
+    { maxBuffer: GIT_OUTPUT_MAX_BUFFER },
+  );
 }
 
 function nonEmpty(value: string) {

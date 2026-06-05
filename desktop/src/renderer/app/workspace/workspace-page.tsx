@@ -87,11 +87,13 @@ import {
   chatPrewarmQueryOptions,
   chatRuntimeConfigQueryOptions,
   deleteAllChatsMutationOptions,
+  invalidateChatQueries,
   renameChatMutationOptions,
   setChatRuntimeMutationOptions,
 } from "@/features/chat/api/queries";
 import {
   broadcastAllChatsDeleted,
+  broadcastChatsChanged,
   subscribeToChatMetadataEvents,
 } from "@/features/chat/chat-metadata-events";
 import { RenameChatDialog } from "@/features/chat/components/rename-chat-dialog";
@@ -573,9 +575,11 @@ function WorkspacePageContent({
       subscribeToChatMetadataEvents((event) => {
         if (event.type === "delete-all") {
           applyAllChatsDeleted();
+        } else {
+          void invalidateChatQueries(queryClient);
         }
       }),
-    [applyAllChatsDeleted],
+    [applyAllChatsDeleted, queryClient],
   );
 
   const createProjectFromPicker = useCallback(async () => {
@@ -779,6 +783,7 @@ function WorkspacePageContent({
     async (chat: Chat) => {
       try {
         const archivedChat = await archiveChatMutation.mutateAsync(chat);
+        broadcastChatsChanged();
 
         if (selectedChatId === archivedChat.id) {
           navigateToDraft(archivedChat.projectId ?? undefined, {

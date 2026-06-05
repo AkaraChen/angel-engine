@@ -18,6 +18,12 @@ interface ChatListQueryParams {
   staleTime?: number;
 }
 
+interface ArchivedChatListQueryParams {
+  api: ApiClient;
+  enabled?: boolean;
+  staleTime?: number;
+}
+
 interface ChatLoadQueryParams {
   api: ApiClient;
   chatId?: string;
@@ -66,6 +72,24 @@ interface ArchiveChatMutationParams {
   queryClient: QueryClient;
 }
 
+interface ArchivedChatIdsMutationParams {
+  api: ApiClient;
+  onSuccess?: (
+    data: Awaited<ReturnType<ApiClient["chats"]["archivedRestore"]>>,
+    variables: Parameters<ApiClient["chats"]["archivedRestore"]>[0],
+  ) => Promise<void> | void;
+  queryClient: QueryClient;
+}
+
+interface DeleteArchivedChatMutationParams {
+  api: ApiClient;
+  onSuccess?: (
+    data: Awaited<ReturnType<ApiClient["chats"]["archivedDelete"]>>,
+    variables: Parameters<ApiClient["chats"]["archivedDelete"]>[0],
+  ) => Promise<void> | void;
+  queryClient: QueryClient;
+}
+
 type DeleteAllChatsResult = Awaited<
   ReturnType<ApiClient["chats"]["deleteAll"]>
 >;
@@ -100,6 +124,19 @@ export function chatListQueryOptions({
     enabled,
     queryFn: async () => api.chats.list(),
     queryKey: queryKeys.chats.list(),
+    staleTime,
+  });
+}
+
+export function archivedChatListQueryOptions({
+  api,
+  enabled = true,
+  staleTime = 30_000,
+}: ArchivedChatListQueryParams) {
+  return queryOptions({
+    enabled,
+    queryFn: async (): Promise<Chat[]> => api.chats.archivedList(),
+    queryKey: queryKeys.chats.archived(),
     staleTime,
   });
 }
@@ -276,6 +313,40 @@ export function archiveChatMutationOptions({
   });
 }
 
+export function restoreArchivedChatsMutationOptions({
+  api,
+  onSuccess,
+  queryClient,
+}: ArchivedChatIdsMutationParams) {
+  return mutationOptions({
+    mutationFn: async (
+      input: Parameters<ApiClient["chats"]["archivedRestore"]>[0],
+    ) => api.chats.archivedRestore(input),
+    onSuccess: async (data, variables) => {
+      await invalidateChatQueries(queryClient);
+      await refetchArchivedChatQueries(queryClient);
+      await onSuccess?.(data, variables);
+    },
+  });
+}
+
+export function deleteArchivedChatsMutationOptions({
+  api,
+  onSuccess,
+  queryClient,
+}: DeleteArchivedChatMutationParams) {
+  return mutationOptions({
+    mutationFn: async (
+      input: Parameters<ApiClient["chats"]["archivedDelete"]>[0],
+    ) => api.chats.archivedDelete(input),
+    onSuccess: async (data, variables) => {
+      await invalidateChatQueries(queryClient);
+      await refetchArchivedChatQueries(queryClient);
+      await onSuccess?.(data, variables);
+    },
+  });
+}
+
 export function deleteAllChatsMutationOptions({
   api,
   onSuccess,
@@ -313,6 +384,13 @@ export async function invalidateChatQueries(queryClient: QueryClient) {
   });
   await queryClient.refetchQueries({
     queryKey: queryKeys.chats.list(),
+    type: "active",
+  });
+}
+
+export async function refetchArchivedChatQueries(queryClient: QueryClient) {
+  await queryClient.refetchQueries({
+    queryKey: queryKeys.chats.archived(),
     type: "active",
   });
 }

@@ -135,6 +135,35 @@ export const de = {
           system: "System",
         },
       },
+      archived: {
+        allProjects: "Alle Projekte",
+        bulkSelect: "Mehrfachauswahl",
+        clearSelection: "Auswahl aufheben",
+        confirmDeleteDetail:
+          "Dadurch werden {{chatCount}} archivierte Sitzung(en) dauerhaft gelöscht. Dies kann nicht rückgängig gemacht werden.",
+        confirmDeleteTitle: "Archivierte Sitzungen dauerhaft löschen?",
+        confirmDeleteWorktreeDetail:
+          "Dadurch werden {{chatCount}} archivierte Sitzung(en) und {{managedWorktreeCount}} verwaltete Worktree(s) dauerhaft gelöscht. Die Worktree-Verzeichnisse können nicht wiederhergestellt werden.",
+        deletedToast: "{{count}} archivierte Sitzung(en) gelöscht",
+        deletePermanently: "Dauerhaft löschen",
+        deleteSelected: "Auswahl löschen",
+        done: "Fertig",
+        empty: "Keine archivierten Sitzungen",
+        filterProject: "Projekt",
+        filterTime: "Zeit",
+        noProject: "Kein Projekt",
+        restore: "Wiederherstellen",
+        restoredToast: "{{count}} archivierte Sitzung(en) wiederhergestellt",
+        restoreSelected: "Auswahl wiederherstellen",
+        selectAll: "Alle auswählen",
+        selectedCount: "{{count}} ausgewählt",
+        timeAll: "Alle",
+        timeLast7Days: "Letzte 7 Tage",
+        timeLast30Days: "Letzte 30 Tage",
+        timeLast90Days: "Letzte 90 Tage",
+        timeToday: "Heute",
+        worktree: "worktree",
+      },
       danger: {
         confirmDeleteAll:
           "Alle Chats löschen? Diese Aktion kann nicht rückgängig gemacht werden.",
@@ -148,6 +177,7 @@ export const de = {
       tabs: {
         agents: "Agents",
         appearance: "Darstellung",
+        archived: "Archiviert",
         danger: "Erweitert",
         workspace: "Arbeitsbereich",
       },

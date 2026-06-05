@@ -135,6 +135,36 @@ export const es = {
           system: "Sistema",
         },
       },
+      archived: {
+        allProjects: "Todos los proyectos",
+        bulkSelect: "Selección múltiple",
+        clearSelection: "Borrar selección",
+        confirmDeleteDetail:
+          "Esto eliminará permanentemente {{chatCount}} sesión(es) archivada(s). Esta acción no se puede deshacer.",
+        confirmDeleteTitle:
+          "¿Eliminar permanentemente las sesiones archivadas?",
+        confirmDeleteWorktreeDetail:
+          "Esto eliminará permanentemente {{chatCount}} sesión(es) archivada(s) y {{managedWorktreeCount}} worktree(s) administrado(s). Los directorios worktree no se podrán restaurar.",
+        deletedToast: "{{count}} sesión(es) archivada(s) eliminada(s)",
+        deletePermanently: "Eliminar permanentemente",
+        deleteSelected: "Eliminar selección",
+        done: "Listo",
+        empty: "No hay sesiones archivadas",
+        filterProject: "Proyecto",
+        filterTime: "Tiempo",
+        noProject: "Sin proyecto",
+        restore: "Restaurar",
+        restoredToast: "{{count}} sesión(es) archivada(s) restaurada(s)",
+        restoreSelected: "Restaurar selección",
+        selectAll: "Seleccionar todo",
+        selectedCount: "{{count}} seleccionado(s)",
+        timeAll: "Todo",
+        timeLast7Days: "Últimos 7 días",
+        timeLast30Days: "Últimos 30 días",
+        timeLast90Days: "Últimos 90 días",
+        timeToday: "Hoy",
+        worktree: "worktree",
+      },
       danger: {
         confirmDeleteAll:
           "¿Eliminar todos los chats? Esta acción no se puede deshacer.",
@@ -148,6 +178,7 @@ export const es = {
       tabs: {
         agents: "Agents",
         appearance: "Apariencia",
+        archived: "Archivadas",
         danger: "Avanzado",
         workspace: "Espacio de trabajo",
       },
