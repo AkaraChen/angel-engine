@@ -12,7 +12,12 @@ import { FusesPlugin } from "@electron-forge/plugin-fuses";
 import { VitePlugin } from "@electron-forge/plugin-vite";
 import { FuseV1Options, FuseVersion } from "@electron/fuses";
 
-const nativeRuntimeModules = ["better-sqlite3", "bindings", "file-uri-to-path"];
+const nativeRuntimeModules = [
+  "better-sqlite3",
+  "bindings",
+  "file-uri-to-path",
+  "node-pty",
+];
 
 const projectRoot = __dirname;
 const workspaceRoot = path.resolve(projectRoot, "..");

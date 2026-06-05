@@ -6,6 +6,7 @@ export type WorkspaceRightSidebarTab = "browser" | "files" | "git" | "terminal";
 
 const workspaceModeStorageKey = "angel-engine.workspace-mode";
 const rightSidebarWidthStorageKey = "angel-engine.right-sidebar-width";
+const defaultBrowserUrl = "about:blank";
 const defaultRightSidebarWidth = 288;
 const minRightSidebarWidth = 240;
 const maxRightSidebarWidth = 520;
@@ -21,11 +22,13 @@ export type SidebarChatDateGroupKey =
   | "yesterday";
 
 interface WorkspaceUiState {
+  browserUrl: string;
   collapsedChatDateGroupKeys: Set<SidebarChatDateGroupKey>;
   expandedProjectIds: Set<string>;
   rightSidebarActiveTab: WorkspaceRightSidebarTab;
   rightSidebarOpen: boolean;
   rightSidebarWidth: number;
+  setBrowserUrl: (browserUrl: string) => void;
   setRightSidebarActiveTab: (
     rightSidebarActiveTab: WorkspaceRightSidebarTab,
   ) => void;
@@ -45,11 +48,14 @@ interface WorkspaceUiState {
 }
 
 export const useWorkspaceUiStore = create<WorkspaceUiState>()((set) => ({
+  browserUrl: defaultBrowserUrl,
   collapsedChatDateGroupKeys: new Set(),
   expandedProjectIds: new Set(),
   rightSidebarActiveTab: "files",
   rightSidebarOpen: initialWorkspaceMode === "work",
   rightSidebarWidth: initialRightSidebarWidth,
+  setBrowserUrl: (browserUrl) =>
+    set({ browserUrl: sanitizeBrowserUrl(browserUrl) }),
   setRightSidebarActiveTab: (rightSidebarActiveTab) =>
     set({ rightSidebarActiveTab }),
   setRightSidebarOpen: (rightSidebarOpen) => set({ rightSidebarOpen }),
@@ -137,6 +143,12 @@ function writeWorkspaceMode(workspaceMode: WorkspaceMode) {
 
 function sanitizeWorkspaceMode(value: unknown): WorkspaceMode {
   return value === "work" ? "work" : "chat";
+}
+
+function sanitizeBrowserUrl(value: unknown) {
+  return typeof value === "string" && value.trim()
+    ? value.trim()
+    : defaultBrowserUrl;
 }
 
 function readRightSidebarWidth() {

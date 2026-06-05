@@ -4,6 +4,7 @@ import { registerIpcMain } from "@egoist/tipc/main";
 import { ipcMain } from "electron";
 import { DESKTOP_SETTINGS_OPEN_CHANNEL } from "../../shared/desktop-window";
 import { registerChatStreamIpc } from "../features/chat/stream-handler";
+import { registerTerminalIpc } from "../features/terminal/ipc";
 import { registerDesktopWindowAppearanceIpc } from "../windows/appearance";
 import { registerDesktopWindowIpc } from "../windows/notifications";
 import { createAppRouter } from "./router";
@@ -21,5 +22,6 @@ export function registerAllIpc({
   registerDesktopWindowAppearanceIpc();
   registerDesktopWindowIpc();
   registerChatStreamIpc(chatRuntime);
+  registerTerminalIpc();
   ipcMain.on(DESKTOP_SETTINGS_OPEN_CHANNEL, openSettingsWindow);
 }

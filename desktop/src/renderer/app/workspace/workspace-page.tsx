@@ -13,12 +13,6 @@ import type {
 } from "@/app/workspace/workspace-thread-types";
 
 import {
-  RiFolderLine as Folder,
-  RiGitBranchLine as GitBranch,
-  RiGlobalLine as Browser,
-  RiTerminalBoxLine as Terminal,
-} from "@remixicon/react";
-import {
   getEnabledAgentOptions,
   isAgentRuntime,
   rememberAgentRuntimePreference,
@@ -28,7 +22,6 @@ import {
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Suspense,
-  type PointerEvent as ReactPointerEvent,
   useCallback,
   useEffect,
   useMemo,
@@ -71,11 +64,8 @@ import {
   WorkspaceSidebarControl,
   WorkspaceSidebarControlPortalProvider,
 } from "@/app/workspace/workspace-sidebar-control";
-import {
-  clampWorkspaceRightSidebarWidth,
-  type WorkspaceRightSidebarTab,
-  useWorkspaceUiStore,
-} from "@/app/workspace/workspace-ui-store";
+import { WorkspaceRightSidebar } from "@/app/workspace/workspace-right-sidebar";
+import { useWorkspaceUiStore } from "@/app/workspace/workspace-ui-store";
 import {
   SidebarInset,
   SidebarProvider,
@@ -90,7 +80,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/components/ui/toast";
 import {
   archiveChatMutationOptions,
@@ -128,21 +117,9 @@ import { useSettingsStore } from "@/features/settings/settings-store";
 import { useAgentSettings } from "@/features/settings/use-agent-settings";
 import { queryKeys } from "@/platform/query-keys";
 import { useApi } from "@/platform/use-api";
-import { cn } from "@/platform/utils";
 
 const EMPTY_CHATS: Chat[] = [];
 const EMPTY_PROJECTS: Project[] = [];
-
-const rightSidebarTabs: Array<{
-  icon: typeof Folder;
-  label: string;
-  value: WorkspaceRightSidebarTab;
-}> = [
-  { icon: Folder, label: "File tree", value: "files" },
-  { icon: Terminal, label: "Terminal", value: "terminal" },
-  { icon: GitBranch, label: "Version control", value: "git" },
-  { icon: Browser, label: "Browser", value: "browser" },
-];
 
 interface WorkspacePageContentProps {
   api: ReturnType<typeof useApi>;
@@ -1164,7 +1141,9 @@ function WorkspacePageContent({
               {showRightSidebar ? (
                 <WorkspaceRightSidebar
                   activeTab={rightSidebarActiveTab}
+                  api={api}
                   open={rightSidebarOpen}
+                  root={selectedProjectPath ?? undefined}
                   width={rightSidebarWidth}
                   onTabChange={setRightSidebarActiveTab}
                   onWidthChange={setRightSidebarWidth}
@@ -1176,241 +1155,6 @@ function WorkspacePageContent({
       </WorkspaceSidebarControlPortalProvider>
     </SidebarProvider>
   );
-}
-
-function WorkspaceRightSidebar({
-  activeTab,
-  open,
-  width,
-  onTabChange,
-  onWidthChange,
-}: {
-  activeTab: WorkspaceRightSidebarTab;
-  open: boolean;
-  width: number;
-  onTabChange: (tab: WorkspaceRightSidebarTab) => void;
-  onWidthChange: (width: number) => void;
-}) {
-  const resizeStateRef = useRef<{ startWidth: number; startX: number } | null>(
-    null,
-  );
-  const [draftWidth, setDraftWidth] = useState(width);
-  const [resizing, setResizing] = useState(false);
-  const widthStyle = { width: open ? draftWidth : 0 };
-  const contentStyle = { width: draftWidth };
-
-  useEffect(() => {
-    if (!resizeStateRef.current) {
-      setDraftWidth(width);
-    }
-  }, [width]);
-
-  const handleResizePointerDown = useCallback(
-    (event: ReactPointerEvent<HTMLDivElement>) => {
-      const nextDraftWidth = clampWorkspaceRightSidebarWidth(draftWidth);
-      setDraftWidth(nextDraftWidth);
-      resizeStateRef.current = {
-        startWidth: nextDraftWidth,
-        startX: event.clientX,
-      };
-      setResizing(true);
-      event.currentTarget.setPointerCapture(event.pointerId);
-      event.preventDefault();
-    },
-    [draftWidth],
-  );
-  const handleResizePointerMove = useCallback(
-    (event: ReactPointerEvent<HTMLDivElement>) => {
-      const resizeState = resizeStateRef.current;
-      if (!resizeState) return;
-
-      setDraftWidth(
-        clampWorkspaceRightSidebarWidth(
-          resizeState.startWidth + resizeState.startX - event.clientX,
-        ),
-      );
-    },
-    [],
-  );
-  const handleResizePointerEnd = useCallback(
-    (event: ReactPointerEvent<HTMLDivElement>) => {
-      const resizeState = resizeStateRef.current;
-      if (resizeState) {
-        const nextWidth = clampWorkspaceRightSidebarWidth(
-          resizeState.startWidth + resizeState.startX - event.clientX,
-        );
-        setDraftWidth(nextWidth);
-        onWidthChange(nextWidth);
-      }
-      resizeStateRef.current = null;
-      setResizing(false);
-      if (event.currentTarget.hasPointerCapture(event.pointerId)) {
-        event.currentTarget.releasePointerCapture(event.pointerId);
-      }
-    },
-    [onWidthChange],
-  );
-
-  return (
-    <aside
-      aria-hidden={!open}
-      inert={!open ? true : undefined}
-      className={cn(
-        `
-          relative min-h-0 shrink-0 overflow-hidden border-l border-foreground/10
-          bg-background/80
-          dark:border-white/10
-        `,
-        resizing
-          ? "transition-opacity"
-          : "transition-[width,opacity] duration-200 ease-linear",
-        open ? "opacity-100" : "opacity-0",
-      )}
-      style={widthStyle}
-    >
-      <div
-        aria-hidden="true"
-        className="
-          absolute inset-y-0 left-0 z-10 w-2 -translate-x-1/2 cursor-col-resize
-          touch-none
-          before:absolute before:inset-y-0 before:left-1/2 before:w-px
-          before:-translate-x-1/2 before:bg-transparent
-          hover:before:bg-primary/35
-        "
-        onPointerCancel={handleResizePointerEnd}
-        onPointerDown={handleResizePointerDown}
-        onPointerMove={handleResizePointerMove}
-        onPointerUp={handleResizePointerEnd}
-      />
-      <div className="flex h-full flex-col" style={contentStyle}>
-        <div
-          aria-label="Workspace tools"
-          className="
-            flex h-11 shrink-0 items-center gap-1 border-b border-foreground/10
-            px-2
-            dark:border-white/10
-          "
-          role="tablist"
-        >
-          {rightSidebarTabs.map((tab) => {
-            const active = activeTab === tab.value;
-            const Icon = tab.icon;
-            const tabId = rightSidebarTabId(tab.value);
-            const panelId = rightSidebarPanelId(tab.value);
-
-            return (
-              <Button
-                aria-controls={panelId}
-                aria-label={tab.label}
-                aria-selected={active}
-                className={cn(
-                  `
-                    text-muted-foreground
-                    hover:text-foreground
-                  `,
-                  active &&
-                    `
-                      bg-muted text-foreground
-                      hover:bg-muted hover:text-foreground
-                    `,
-                )}
-                id={tabId}
-                key={tab.value}
-                onClick={() => onTabChange(tab.value)}
-                role="tab"
-                size="icon-sm"
-                title={tab.label}
-                type="button"
-                variant="ghost"
-              >
-                <Icon />
-              </Button>
-            );
-          })}
-        </div>
-        <WorkspaceRightSidebarPanel activeTab={activeTab} />
-      </div>
-    </aside>
-  );
-}
-
-function WorkspaceRightSidebarPanel({
-  activeTab,
-}: {
-  activeTab: WorkspaceRightSidebarTab;
-}) {
-  const activeTabOption = rightSidebarTabs.find(
-    (tab) => tab.value === activeTab,
-  );
-  const label = activeTabOption?.label ?? "Workspace tool";
-
-  return (
-    <div
-      aria-labelledby={rightSidebarTabId(activeTab)}
-      className="min-h-0 flex-1 overflow-hidden p-4"
-      id={rightSidebarPanelId(activeTab)}
-      role="tabpanel"
-      tabIndex={0}
-    >
-      <WorkspaceRightSidebarPlaceholder label={label} tab={activeTab} />
-    </div>
-  );
-}
-
-function WorkspaceRightSidebarPlaceholder({
-  label,
-  tab,
-}: {
-  label: string;
-  tab: WorkspaceRightSidebarTab;
-}) {
-  switch (tab) {
-    case "files":
-      return (
-        <div aria-label={label} className="space-y-3">
-          <Skeleton className="h-5 w-28 rounded-md" />
-          <div className="space-y-2 pl-1">
-            <Skeleton className="h-6 w-11/12 rounded-md" />
-            <Skeleton className="h-6 w-9/12 rounded-md" />
-            <Skeleton className="h-6 w-10/12 rounded-md" />
-            <Skeleton className="h-6 w-8/12 rounded-md" />
-          </div>
-        </div>
-      );
-    case "terminal":
-      return (
-        <div aria-label={label} className="space-y-3">
-          <Skeleton className="h-5 w-24 rounded-md" />
-          <Skeleton className="h-32 w-full rounded-md" />
-          <Skeleton className="h-8 w-full rounded-md" />
-        </div>
-      );
-    case "git":
-      return (
-        <div aria-label={label} className="space-y-3">
-          <Skeleton className="h-5 w-32 rounded-md" />
-          <Skeleton className="h-10 w-full rounded-md" />
-          <Skeleton className="h-10 w-11/12 rounded-md" />
-          <Skeleton className="h-24 w-full rounded-md" />
-        </div>
-      );
-    case "browser":
-      return (
-        <div aria-label={label} className="space-y-3">
-          <Skeleton className="h-8 w-full rounded-md" />
-          <Skeleton className="h-40 w-full rounded-md" />
-          <Skeleton className="h-20 w-full rounded-md" />
-        </div>
-      );
-  }
-}
-
-function rightSidebarTabId(tab: WorkspaceRightSidebarTab) {
-  return `workspace-right-sidebar-${tab}-tab`;
-}
-
-function rightSidebarPanelId(tab: WorkspaceRightSidebarTab) {
-  return `workspace-right-sidebar-${tab}-panel`;
 }
 
 function WorktreeDirtyDialog({

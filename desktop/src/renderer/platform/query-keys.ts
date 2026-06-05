@@ -22,4 +22,10 @@ export const queryKeys = {
     gitStatus: (id: string | null) => ["projects", "git-status", id] as const,
     list: () => ["projects", "list"] as const,
   },
+  workspaceTools: {
+    fileTree: (root: string | null) =>
+      ["workspace-tools", "file-tree", root] as const,
+    gitDiff: (root: string | null) =>
+      ["workspace-tools", "git-diff", root] as const,
+  },
 } as const;

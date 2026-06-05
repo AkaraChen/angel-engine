@@ -26,6 +26,7 @@ allowBuilds:
   "macos-alias": true
   "msgpackr-extract": true
   "msw": true
+  node-pty: true
   "sharp": true
   "unrs-resolver": true
 

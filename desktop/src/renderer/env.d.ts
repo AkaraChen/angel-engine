@@ -1,4 +1,6 @@
 import type { ChatStreamApi } from "@shared/chat";
+import type { TerminalApi } from "@shared/terminal";
+import type * as React from "react";
 import type {
   DesktopConfirmDeleteArchivedChatsInput,
   DesktopConfirmDeleteCustomAgentInput,
@@ -50,9 +52,31 @@ declare global {
       setTheme: (input: DesktopThemeSetInput) => void;
     };
     chatStream: ChatStreamApi;
+    terminal: TerminalApi;
     tipc: {
       invoke: (channel: string, input?: unknown) => Promise<unknown>;
     };
+  }
+
+  namespace JSX {
+    interface IntrinsicElements {
+      webview: React.DetailedHTMLProps<
+        React.HTMLAttributes<ElectronWebviewElement>,
+        ElectronWebviewElement
+      > & {
+        allowpopups?: string;
+        partition?: string;
+        src?: string;
+      };
+    }
+  }
+
+  interface ElectronWebviewElement extends HTMLElement {
+    canGoBack: () => boolean;
+    canGoForward: () => boolean;
+    goBack: () => void;
+    goForward: () => void;
+    reload: () => void;
   }
 }
 

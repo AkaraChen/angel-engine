@@ -19,6 +19,7 @@ import type {
   CreateProjectInput,
   ProjectGitStatusInput,
 } from "@shared/projects";
+import type { WorkspaceToolRootInput } from "@shared/workspace-tools";
 import { ipc } from "@/platform/ipc";
 
 interface AgentsApiClient {
@@ -84,10 +85,20 @@ interface ProjectsApiClient {
   ) => ReturnType<typeof ipc.projectsShowContextMenu>;
 }
 
+interface WorkspaceToolsApiClient {
+  fileTree: (
+    input: WorkspaceToolRootInput,
+  ) => ReturnType<typeof ipc.workspaceToolsFileTree>;
+  gitDiff: (
+    input: WorkspaceToolRootInput,
+  ) => ReturnType<typeof ipc.workspaceToolsGitDiff>;
+}
+
 export interface ApiClient {
   agents: AgentsApiClient;
   chats: ChatApiClient;
   projects: ProjectsApiClient;
+  workspaceTools: WorkspaceToolsApiClient;
 }
 
 export function createApiClient(): ApiClient {
@@ -138,6 +149,12 @@ export function createApiClient(): ApiClient {
         ipc.projectsSearchFiles(input),
       showContextMenu: async (projectId: string) =>
         ipc.projectsShowContextMenu(projectId),
+    },
+    workspaceTools: {
+      fileTree: async (input: WorkspaceToolRootInput) =>
+        ipc.workspaceToolsFileTree(input),
+      gitDiff: async (input: WorkspaceToolRootInput) =>
+        ipc.workspaceToolsGitDiff(input),
     },
   };
 }
