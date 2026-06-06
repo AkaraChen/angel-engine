@@ -14,6 +14,10 @@ const electronBuilderBin = path.join(
 const publishIndex = process.argv.indexOf("--publish");
 const publishMode =
   publishIndex === -1 ? "never" : process.argv[publishIndex + 1];
+const waitMs = Number(
+  process.env.ANGEL_ENGINE_PREPACKAGED_APP_WAIT_MS ?? 600000,
+);
+const pollMs = 5000;
 
 if (
   !publishMode ||
@@ -46,6 +50,30 @@ function findAppBundles(dir) {
   return apps;
 }
 
+function sleep(ms) {
+  Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms);
+}
+
+function directorySize(dir) {
+  let size = 0;
+
+  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+    const entryPath = path.join(dir, entry.name);
+
+    try {
+      if (entry.isDirectory()) {
+        size += directorySize(entryPath);
+      } else {
+        size += fs.statSync(entryPath).size;
+      }
+    } catch {
+      return -1;
+    }
+  }
+
+  return size;
+}
+
 function printOutTree() {
   if (!fs.existsSync(outDir)) {
     console.error(`Forge output directory does not exist: ${outDir}`);
@@ -59,15 +87,57 @@ function printOutTree() {
   });
 }
 
-const appBundles = findAppBundles(outDir);
 const preferredAppPath = path.join(
   outDir,
   "Angel Engine-darwin-arm64",
   "Angel Engine.app",
 );
-const appPath = appBundles.includes(preferredAppPath)
-  ? preferredAppPath
-  : appBundles[0];
+
+function selectAppBundle() {
+  const appBundles = findAppBundles(outDir);
+  const appPath = appBundles.includes(preferredAppPath)
+    ? preferredAppPath
+    : appBundles[0];
+
+  return { appBundles, appPath };
+}
+
+function waitForAppBundle() {
+  const deadline = Date.now() + waitMs;
+  let lastSize = -1;
+  let lastAppPath;
+
+  while (Date.now() <= deadline) {
+    const { appBundles, appPath } = selectAppBundle();
+
+    if (appPath) {
+      const size = directorySize(appPath);
+
+      if (appPath === lastAppPath && size > 0 && size === lastSize) {
+        return { appBundles, appPath };
+      }
+
+      lastAppPath = appPath;
+      lastSize = size;
+      console.log(
+        `Waiting for packaged app to settle: ${path.relative(
+          desktopRoot,
+          appPath,
+        )}`,
+      );
+    } else {
+      console.log(
+        `Waiting for Forge output: ${path.relative(desktopRoot, outDir)}`,
+      );
+    }
+
+    sleep(pollMs);
+  }
+
+  return selectAppBundle();
+}
+
+const { appBundles, appPath } = waitForAppBundle();
 
 if (!appPath) {
   printOutTree();
