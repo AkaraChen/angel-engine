@@ -46,6 +46,10 @@ export interface WorkspaceToolWindowOpenInput {
   instance: WorkspaceToolInstance;
 }
 
+export interface WorkspaceToolInstanceCloseInput {
+  toolId: string;
+}
+
 export interface WorkspaceToolWindowLookupInput {
   toolId: string;
 }

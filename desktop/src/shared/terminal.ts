@@ -40,6 +40,7 @@ export interface TerminalKillInput {
 
 export type TerminalEvent =
   | { data: string; type: "data" }
+  | { data: string; type: "replay" }
   | { exitCode?: number; signal?: number; type: "exit" }
   | { message: string; type: "error" };
 

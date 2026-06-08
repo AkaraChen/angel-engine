@@ -13,6 +13,7 @@ import type {
 import type {
   WorkspaceToolContextSetInput,
   WorkspaceToolInstance,
+  WorkspaceToolInstanceCloseInput,
   WorkspaceToolWindowOpenInput,
 } from "@shared/workspace-tool-instances";
 
@@ -67,8 +68,14 @@ declare global {
         toolId: string,
       ) => Promise<WorkspaceToolInstance | null>;
       openSettings: () => void;
+      closeWorkspaceToolInstance: (
+        input: WorkspaceToolInstanceCloseInput,
+      ) => void;
       openWorkspaceToolDialog: (input: WorkspaceToolWindowOpenInput) => void;
       openWorkspaceToolWindow: (input: WorkspaceToolWindowOpenInput) => void;
+      registerWorkspaceToolWindowInstance: (
+        input: WorkspaceToolWindowOpenInput,
+      ) => void;
       setActiveChatId: (chatId: string | null) => void;
       setTheme: (input: DesktopThemeSetInput) => void;
       setWorkspaceToolContext: (input: WorkspaceToolContextSetInput) => void;

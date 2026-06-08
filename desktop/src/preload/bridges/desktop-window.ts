@@ -10,6 +10,7 @@ import type {
 import type {
   WorkspaceToolContextSetInput,
   WorkspaceToolInstance,
+  WorkspaceToolInstanceCloseInput,
   WorkspaceToolWindowOpenInput,
 } from "../../shared/workspace-tool-instances";
 
@@ -28,6 +29,8 @@ import {
   DESKTOP_WINDOW_CLOSE_CURRENT_CHANNEL,
   DESKTOP_WORKSPACE_TOOL_CONTEXT_SET_CHANNEL,
   DESKTOP_WORKSPACE_TOOL_DIALOG_OPEN_CHANNEL,
+  DESKTOP_WORKSPACE_TOOL_INSTANCE_CLOSE_CHANNEL,
+  DESKTOP_WORKSPACE_TOOL_INSTANCE_REGISTER_CHANNEL,
   DESKTOP_WORKSPACE_TOOL_INSTANCE_UPDATED_CHANNEL,
   DESKTOP_WORKSPACE_TOOL_WINDOW_GET_CHANNEL,
   DESKTOP_WORKSPACE_TOOL_WINDOW_CLOSED_CHANNEL,
@@ -162,6 +165,12 @@ export function exposeDesktopWindowBridge() {
     },
     openWorkspaceToolDialog(input: WorkspaceToolWindowOpenInput) {
       ipcRenderer.send(DESKTOP_WORKSPACE_TOOL_DIALOG_OPEN_CHANNEL, input);
+    },
+    closeWorkspaceToolInstance(input: WorkspaceToolInstanceCloseInput) {
+      ipcRenderer.send(DESKTOP_WORKSPACE_TOOL_INSTANCE_CLOSE_CHANNEL, input);
+    },
+    registerWorkspaceToolWindowInstance(input: WorkspaceToolWindowOpenInput) {
+      ipcRenderer.send(DESKTOP_WORKSPACE_TOOL_INSTANCE_REGISTER_CHANNEL, input);
     },
     setActiveChatId(chatId: string | null) {
       ipcRenderer.send(DESKTOP_ACTIVE_CHAT_SET_CHANNEL, chatId);

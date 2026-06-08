@@ -1,6 +1,7 @@
 import type {
   TerminalCreateRequest,
   TerminalDisposeInput,
+  TerminalEvent,
   TerminalKillInput,
   TerminalResizeInput,
   TerminalWriteInput,
@@ -125,17 +126,17 @@ function attachTerminalSubscriber(
   if (session.scrollback.length > 0 && !owner.isDestroyed()) {
     owner.send(terminalEventChannel(sessionId), {
       data: session.scrollback.join(""),
-      type: "data",
+      type: "replay",
     });
   }
 }
 
+type TerminalBroadcastEvent = Extract<TerminalEvent, { type: "data" | "exit" }>;
+
 function emitTerminalEvent(
   session: TerminalSession,
   sessionId: string,
-  event:
-    | { data: string; type: "data" }
-    | { exitCode?: number; signal?: number; type: "exit" },
+  event: TerminalBroadcastEvent,
 ) {
   for (const subscriber of session.subscribers) {
     if (subscriber.isDestroyed()) {

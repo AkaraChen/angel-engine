@@ -12,6 +12,8 @@ import {
   DESKTOP_WINDOW_CLOSE_CURRENT_CHANNEL,
   DESKTOP_WORKSPACE_TOOL_CONTEXT_SET_CHANNEL,
   DESKTOP_WORKSPACE_TOOL_DIALOG_OPEN_CHANNEL,
+  DESKTOP_WORKSPACE_TOOL_INSTANCE_CLOSE_CHANNEL,
+  DESKTOP_WORKSPACE_TOOL_INSTANCE_REGISTER_CHANNEL,
   DESKTOP_WORKSPACE_TOOL_INSTANCE_UPDATED_CHANNEL,
   DESKTOP_WORKSPACE_TOOL_WINDOW_GET_CHANNEL,
   DESKTOP_WORKSPACE_TOOL_WINDOW_CLOSED_CHANNEL,
@@ -52,6 +54,29 @@ export function registerWorkspaceToolWindowIpc() {
     workspaceToolInstances.set(dialogInstance.id, dialogInstance);
     workspaceToolDialogTransferIds.add(dialogInstance.id);
     broadcastWorkspaceToolDialogOpen(dialogInstance);
+  });
+
+  ipcMain.on(
+    DESKTOP_WORKSPACE_TOOL_INSTANCE_REGISTER_CHANNEL,
+    (_event, input) => {
+      const instance = parseWorkspaceToolWindowOpenInput(input);
+      if (!instance) return;
+
+      const registeredInstance = workspaceToolInstanceWithRoot(
+        { ...instance, host: "window" },
+        currentWorkspaceToolRoot,
+      );
+      workspaceToolInstances.set(registeredInstance.id, registeredInstance);
+      broadcastWorkspaceToolInstanceUpdated(registeredInstance);
+    },
+  );
+
+  ipcMain.on(DESKTOP_WORKSPACE_TOOL_INSTANCE_CLOSE_CHANNEL, (_event, input) => {
+    const toolId = parseWorkspaceToolInstanceCloseInput(input);
+    if (!toolId) return;
+
+    workspaceToolInstances.delete(toolId);
+    broadcastWorkspaceToolWindowClosed(toolId);
   });
 
   ipcMain.on(DESKTOP_WINDOW_CLOSE_CURRENT_CHANNEL, (event) => {
@@ -273,6 +298,15 @@ function parseWorkspaceToolWindowOpenInput(
     default:
       return null;
   }
+}
+
+function parseWorkspaceToolInstanceCloseInput(input: unknown) {
+  if (typeof input !== "object" || input === null) {
+    return null;
+  }
+
+  const toolId = (input as { toolId?: unknown }).toolId;
+  return typeof toolId === "string" ? toolId : null;
 }
 
 function parseWorkspaceToolContextSetInput(

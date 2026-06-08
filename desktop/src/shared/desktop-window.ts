@@ -50,6 +50,10 @@ export const DESKTOP_WORKSPACE_TOOL_CONTEXT_SET_CHANNEL =
   "desktop-window:workspace-tool-context:set";
 export const DESKTOP_WORKSPACE_TOOL_DIALOG_OPEN_CHANNEL =
   "desktop-window:workspace-tool-dialog:open";
+export const DESKTOP_WORKSPACE_TOOL_INSTANCE_CLOSE_CHANNEL =
+  "desktop-window:workspace-tool-instance:close";
+export const DESKTOP_WORKSPACE_TOOL_INSTANCE_REGISTER_CHANNEL =
+  "desktop-window:workspace-tool-instance:register";
 export const DESKTOP_WORKSPACE_TOOL_INSTANCE_UPDATED_CHANNEL =
   "desktop-window:workspace-tool-instance:updated";
 export const DESKTOP_WORKSPACE_TOOL_WINDOW_GET_CHANNEL =

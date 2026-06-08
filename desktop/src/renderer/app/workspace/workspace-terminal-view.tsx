@@ -102,6 +102,7 @@ export function WorkspaceTerminalView({
         attributeFilter: ["class"],
         attributes: true,
       });
+      let replayWriteDepth = 0;
 
       const controller = window.terminal.create(
         {
@@ -115,6 +116,13 @@ export function WorkspaceTerminalView({
             terminal.write(event.data);
             return;
           }
+          if (event.type === "replay") {
+            replayWriteDepth += 1;
+            terminal.write(event.data, () => {
+              replayWriteDepth = Math.max(0, replayWriteDepth - 1);
+            });
+            return;
+          }
           if (event.type === "error") {
             terminal.writeln(`\r\n${event.message}`);
             return;
@@ -122,7 +130,12 @@ export function WorkspaceTerminalView({
           terminal.writeln("\r\nProcess exited.");
         },
       );
-      const dataDisposable = terminal.onData((data) => controller.write(data));
+      const dataDisposable = terminal.onData((data) => {
+        if (replayWriteDepth > 0) {
+          return;
+        }
+        controller.write(data);
+      });
       const resizeObserver = new ResizeObserver(() => {
         fitTerminal(fitAddon, terminal, controller);
       });

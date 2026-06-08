@@ -571,6 +571,9 @@ function WorkspaceGitPanel({ api, root }: { api: ApiClient; root?: string }) {
   const openWorkspaceTool = useWorkspaceToolStore(
     (state) => state.openWorkspaceTool,
   );
+  const closeWorkspaceTool = useWorkspaceToolStore(
+    (state) => state.closeWorkspaceTool,
+  );
   const gitQuery = useQuery({
     enabled: Boolean(root),
     queryFn: async () => {
@@ -614,34 +617,45 @@ function WorkspaceGitPanel({ api, root }: { api: ApiClient; root?: string }) {
     data.stagedPatch,
     data.unstagedPatch,
   );
+  const openDialogGitDiffTool = (
+    input: Parameters<typeof openWorkspaceTool>[0],
+  ) => {
+    for (const instance of Object.values(
+      useWorkspaceToolStore.getState().instances,
+    )) {
+      if (
+        instance.host === "dialog" &&
+        instance.kind === "git-diff" &&
+        instance.root === root
+      ) {
+        closeWorkspaceTool(instance.id);
+      }
+    }
+
+    openWorkspaceTool(input, "dialog");
+  };
   const openGitDiffDialog = () => {
     if (!root) {
       return;
     }
 
-    openWorkspaceTool(
-      {
-        kind: "git-diff",
-        root,
-        title: data.branch ? `Git diff: ${data.branch}` : "Git diff",
-      },
-      "dialog",
-    );
+    openDialogGitDiffTool({
+      kind: "git-diff",
+      root,
+      title: data.branch ? `Git diff: ${data.branch}` : "Git diff",
+    });
   };
   const openGitFileDialog = (file: WorkspacePatchFile) => {
     if (!root) {
       return;
     }
 
-    openWorkspaceTool(
-      {
-        kind: "git-diff",
-        path: file.name,
-        root,
-        title: formatWorkspacePatchFileName(file),
-      },
-      "dialog",
-    );
+    openDialogGitDiffTool({
+      kind: "git-diff",
+      path: file.name,
+      root,
+      title: formatWorkspacePatchFileName(file),
+    });
   };
 
   return (

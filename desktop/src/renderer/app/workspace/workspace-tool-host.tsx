@@ -3,13 +3,17 @@ import type {
   WorkspaceFileReadResult,
   WorkspaceGitDiffResult,
 } from "@shared/workspace-tools";
-import type { WorkspaceToolInstance } from "@shared/workspace-tool-instances";
+import type {
+  WorkspaceToolInstance,
+  WorkspaceToolInstanceInput,
+} from "@shared/workspace-tool-instances";
 import type { FileDiffMetadata } from "@pierre/diffs";
 import type { CSSProperties } from "react";
 
 import { parsePatchFiles } from "@pierre/diffs";
 import { FileDiff } from "@pierre/diffs/react";
 import {
+  RiAddLine as Add,
   RiCloseLine as Close,
   RiExternalLinkLine as ExternalLink,
   RiFileTextLine as FileText,
@@ -19,7 +23,7 @@ import {
   RiWindowLine as WindowIcon,
 } from "@remixicon/react";
 import { useQuery } from "@tanstack/react-query";
-import { useCallback, useMemo } from "react";
+import { useCallback, useMemo, useState } from "react";
 
 import { WorkspaceBrowserToolView } from "@/app/workspace/workspace-browser-view";
 import {
@@ -40,6 +44,7 @@ import { queryKeys } from "@/platform/query-keys";
 import { cn } from "@/platform/utils";
 
 const largeWorkspaceDiffLineThreshold = 1000;
+const defaultWorkspaceToolBrowserUrl = "about:blank";
 
 type WorkspaceToolCssVariableStyle = CSSProperties &
   Record<`--${string}`, string | number>;
@@ -122,6 +127,9 @@ export function WorkspaceToolDialogHost({ api }: { api: ApiClient }) {
   const closeDialogTools = useWorkspaceToolStore(
     (state) => state.closeDialogTools,
   );
+  const openWorkspaceTool = useWorkspaceToolStore(
+    (state) => state.openWorkspaceTool,
+  );
   const setActiveDialogTool = useWorkspaceToolStore(
     (state) => state.setActiveDialogTool,
   );
@@ -141,6 +149,14 @@ export function WorkspaceToolDialogHost({ api }: { api: ApiClient }) {
     setWorkspaceToolHost(instance.id, "window");
     window.desktopWindow.openWorkspaceToolWindow({ instance: windowInstance });
   };
+  const createDialogSiblingTool = (sourceTool: WorkspaceToolInstance) => {
+    const input = createWorkspaceToolSiblingInput(sourceTool, dialogInstances);
+    if (!input) {
+      return;
+    }
+
+    openWorkspaceTool(input, "dialog");
+  };
 
   return (
     <Dialog open onOpenChange={(open) => !open && closeDialogTools()}>
@@ -154,6 +170,7 @@ export function WorkspaceToolDialogHost({ api }: { api: ApiClient }) {
           tools={dialogInstances}
           onCloseActiveTool={closeActiveTool}
           onCloseTool={closeWorkspaceTool}
+          onCreateSiblingTool={createDialogSiblingTool}
           onOpenDialog={undefined}
           onOpenWindow={openWindow}
           onSelectTool={setActiveDialogTool}
@@ -169,6 +186,7 @@ function WorkspaceToolWorkbench({
   tools,
   onCloseActiveTool,
   onCloseTool,
+  onCreateSiblingTool,
   onOpenDialog,
   onOpenWindow,
   onSelectTool,
@@ -179,6 +197,7 @@ function WorkspaceToolWorkbench({
   tools: WorkspaceToolInstance[];
   onCloseActiveTool: () => void;
   onCloseTool: (toolId: string) => void;
+  onCreateSiblingTool?: (sourceTool: WorkspaceToolInstance) => void;
   onOpenDialog?: () => void;
   onOpenWindow?: () => void;
   onSelectTool: (toolId: string) => void;
@@ -189,10 +208,12 @@ function WorkspaceToolWorkbench({
   return (
     <div className="flex h-full min-h-0 min-w-0 flex-1 overflow-hidden">
       <WorkspaceToolRail
+        activeTool={activeTool}
         activeToolId={activeTool.id}
         trafficLightInset={trafficLightInset}
         tools={tools}
         onCloseTool={onCloseTool}
+        onCreateSiblingTool={onCreateSiblingTool}
         onSelectTool={onSelectTool}
       />
       <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
@@ -211,18 +232,24 @@ function WorkspaceToolWorkbench({
 }
 
 function WorkspaceToolRail({
+  activeTool,
   activeToolId,
   trafficLightInset,
   tools,
   onCloseTool,
+  onCreateSiblingTool,
   onSelectTool,
 }: {
+  activeTool: WorkspaceToolInstance;
   activeToolId: string;
   trafficLightInset: boolean;
   tools: WorkspaceToolInstance[];
   onCloseTool: (toolId: string) => void;
+  onCreateSiblingTool?: (sourceTool: WorkspaceToolInstance) => void;
   onSelectTool: (toolId: string) => void;
 }) {
+  const newToolLabel = workspaceToolSiblingLabel(activeTool);
+
   return (
     <aside className="flex w-[clamp(10rem,18vw,18rem)] shrink-0 flex-col border-r border-border/70 bg-muted/20">
       <div
@@ -233,6 +260,22 @@ function WorkspaceToolRail({
       >
         Tools
       </div>
+      {newToolLabel && onCreateSiblingTool ? (
+        <div className="shrink-0 border-b border-border/70 p-2">
+          <Button
+            aria-label={newToolLabel}
+            className="h-8 w-full justify-start gap-2 border-border/70 px-2 text-xs text-muted-foreground [-webkit-app-region:no-drag]"
+            onClick={() => onCreateSiblingTool(activeTool)}
+            size="xs"
+            title={newToolLabel}
+            type="button"
+            variant="outline"
+          >
+            <Add className="size-3.5" />
+            <span className="truncate">{newToolLabel}</span>
+          </Button>
+        </div>
+      ) : null}
       <div className="min-h-0 flex-1 overflow-y-auto p-2">
         <div className="space-y-1">
           {tools.map((tool) => {
@@ -285,16 +328,58 @@ export function WorkspaceToolWindowPage({ toolId }: { toolId: string }) {
   ensureWorkspaceToolWindowEvents();
   const api = getApiClient();
   const trafficLightInset = window.desktopEnvironment.platform === "darwin";
+  const [activeWindowToolId, setActiveWindowToolId] = useState(toolId);
+  const [windowToolIds, setWindowToolIds] = useState(
+    () => new Set<string>([toolId]),
+  );
+  const instances = useWorkspaceToolStore((state) => state.instances);
+  const windowInstances = useMemo(
+    () =>
+      Object.values(instances).filter(
+        (instance) =>
+          instance.host === "window" && windowToolIds.has(instance.id),
+      ),
+    [instances, windowToolIds],
+  );
+  const closeWorkspaceTool = useWorkspaceToolStore(
+    (state) => state.closeWorkspaceTool,
+  );
+  const openWorkspaceTool = useWorkspaceToolStore(
+    (state) => state.openWorkspaceTool,
+  );
+  const registerWorkspaceToolInstance = useWorkspaceToolStore(
+    (state) => state.registerWorkspaceToolInstance,
+  );
   const storeInstance = useWorkspaceToolStore(
     (state) => state.instances[toolId],
   );
   const toolQuery = useQuery({
-    queryFn: () => window.desktopWindow.getWorkspaceToolWindowInstance(toolId),
+    queryFn: async () => {
+      const instance =
+        await window.desktopWindow.getWorkspaceToolWindowInstance(toolId);
+      if (instance) {
+        registerWorkspaceToolInstance(instance);
+      }
+      return instance;
+    },
     queryKey: ["workspace-tool-window", toolId],
     retry: false,
     staleTime: Infinity,
   });
-  const instance = storeInstance ?? toolQuery.data;
+  const initialInstance = storeInstance ?? toolQuery.data;
+  const tools = useMemo(() => {
+    const nextTools = new Map<string, WorkspaceToolInstance>();
+    if (initialInstance) {
+      nextTools.set(initialInstance.id, initialInstance);
+    }
+    for (const instance of windowInstances) {
+      nextTools.set(instance.id, instance);
+    }
+
+    return Array.from(nextTools.values());
+  }, [initialInstance, windowInstances]);
+  const activeTool =
+    tools.find((tool) => tool.id === activeWindowToolId) ?? tools[0];
 
   if (toolQuery.isLoading) {
     return (
@@ -311,7 +396,7 @@ export function WorkspaceToolWindowPage({ toolId }: { toolId: string }) {
     );
   }
 
-  if (!instance) {
+  if (!activeTool) {
     return (
       <div className="flex h-screen min-h-0 flex-col bg-background">
         <WorkspaceToolHeader
@@ -323,24 +408,65 @@ export function WorkspaceToolWindowPage({ toolId }: { toolId: string }) {
     );
   }
 
+  const closeWindowTool = (closedToolId: string) => {
+    if (tools.length <= 1) {
+      window.desktopWindow.closeCurrent();
+      return;
+    }
+
+    const remainingTools = tools.filter((tool) => tool.id !== closedToolId);
+    const closedToolIndex = tools.findIndex((tool) => tool.id === closedToolId);
+    const nextActiveTool =
+      remainingTools[
+        Math.max(0, Math.min(closedToolIndex, remainingTools.length - 1))
+      ] ?? remainingTools[0];
+
+    window.desktopWindow.closeWorkspaceToolInstance({ toolId: closedToolId });
+    closeWorkspaceTool(closedToolId);
+    setWindowToolIds((current) => {
+      const next = new Set(current);
+      next.delete(closedToolId);
+      return next;
+    });
+    if (activeWindowToolId === closedToolId && nextActiveTool) {
+      setActiveWindowToolId(nextActiveTool.id);
+    }
+  };
+
   const openDialog = () => {
     window.desktopWindow.openWorkspaceToolDialog({
-      instance: { ...instance, host: "dialog" },
+      instance: { ...activeTool, host: "dialog" },
     });
-    window.desktopWindow.closeCurrent();
+    closeWindowTool(activeTool.id);
+  };
+  const createWindowSiblingTool = (sourceTool: WorkspaceToolInstance) => {
+    const input = createWorkspaceToolSiblingInput(sourceTool, tools);
+    if (!input) {
+      return;
+    }
+
+    const instance = openWorkspaceTool(input, "window");
+    window.desktopWindow.registerWorkspaceToolWindowInstance({ instance });
+    setWindowToolIds((current) => {
+      const next = new Set(current);
+      next.add(instance.id);
+      return next;
+    });
+    setActiveWindowToolId(instance.id);
   };
 
   return (
     <div className="flex h-screen min-h-0 bg-background text-foreground">
       <WorkspaceToolWorkbench
-        activeToolId={instance.id}
+        activeToolId={activeTool.id}
         api={api}
-        tools={[instance]}
-        onCloseActiveTool={() => window.desktopWindow.closeCurrent()}
-        onCloseTool={() => window.desktopWindow.closeCurrent()}
+        tools={tools}
+        onCloseActiveTool={() => closeWindowTool(activeTool.id)}
+        onCloseTool={closeWindowTool}
+        onCreateSiblingTool={createWindowSiblingTool}
         onOpenDialog={openDialog}
         onOpenWindow={undefined}
-        onSelectTool={() => {}}
+        onSelectTool={setActiveWindowToolId}
         trafficLightInset={trafficLightInset}
       />
     </div>
@@ -444,6 +570,52 @@ function WorkspaceToolContent({
         </div>
       );
   }
+}
+
+function createWorkspaceToolSiblingInput(
+  sourceTool: WorkspaceToolInstance,
+  tools: WorkspaceToolInstance[],
+): WorkspaceToolInstanceInput | null {
+  switch (sourceTool.kind) {
+    case "browser":
+      return {
+        browserViewId: crypto.randomUUID(),
+        kind: "browser",
+        title: nextWorkspaceToolTitle(tools, "browser", "Browser"),
+        url: defaultWorkspaceToolBrowserUrl,
+      };
+    case "terminal":
+      return {
+        kind: "terminal",
+        root: sourceTool.root,
+        sessionId: crypto.randomUUID(),
+        title: nextWorkspaceToolTitle(tools, "terminal", "Terminal"),
+      };
+    case "file-preview":
+    case "git-diff":
+      return null;
+  }
+}
+
+function workspaceToolSiblingLabel(instance: WorkspaceToolInstance) {
+  switch (instance.kind) {
+    case "browser":
+      return "New browser";
+    case "terminal":
+      return "New terminal";
+    case "file-preview":
+    case "git-diff":
+      return null;
+  }
+}
+
+function nextWorkspaceToolTitle(
+  tools: WorkspaceToolInstance[],
+  kind: "browser" | "terminal",
+  label: string,
+) {
+  const nextOrdinal = tools.filter((tool) => tool.kind === kind).length + 1;
+  return `${label} ${nextOrdinal}`;
 }
 
 function workspaceToolDisplayTitle(instance: WorkspaceToolInstance) {
