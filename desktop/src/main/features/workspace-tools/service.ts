@@ -1,4 +1,5 @@
 import type {
+  WorkspaceFileReadResult,
   WorkspaceFileTreeResult,
   WorkspaceGitDiffResult,
   WorkspaceToolGitStatus,
@@ -15,6 +16,7 @@ const execFileAsync = promisify(execFile);
 
 const MAX_TREE_ENTRIES = 12_000;
 const GIT_OUTPUT_MAX_BUFFER = 12 * 1024 * 1024;
+const MAX_FILE_PREVIEW_BYTES = 512 * 1024;
 const MAX_UNTRACKED_PATCH_BYTES = 512 * 1024;
 const MAX_TOTAL_UNTRACKED_PATCH_BYTES = 2 * 1024 * 1024;
 const IGNORED_DIRECTORIES = new Set([
@@ -100,6 +102,55 @@ export async function workspaceGitDiff(
     status,
     unstagedPatch,
     warnings: untrackedResult.warnings,
+  };
+}
+
+export async function workspaceReadFile(
+  rootInput: string,
+  treePathInput: string,
+): Promise<WorkspaceFileReadResult> {
+  const root = await resolveWorkspaceRoot(rootInput);
+  const absolutePath = resolveWorkspaceTreePath(root, treePathInput);
+  const stat = await fs.stat(absolutePath);
+  const treePath = absolutePathToTreePath(root, absolutePath) ?? treePathInput;
+
+  if (!stat.isFile()) {
+    return {
+      path: treePath,
+      reason: "not-file",
+      root,
+      size: stat.size,
+      type: "unsupported",
+    };
+  }
+
+  if (stat.size > MAX_FILE_PREVIEW_BYTES) {
+    return {
+      path: treePath,
+      reason: "too-large",
+      root,
+      size: stat.size,
+      type: "unsupported",
+    };
+  }
+
+  const buffer = await fs.readFile(absolutePath);
+  if (isProbablyBinary(buffer)) {
+    return {
+      path: treePath,
+      reason: "binary",
+      root,
+      size: stat.size,
+      type: "unsupported",
+    };
+  }
+
+  return {
+    content: buffer.toString("utf8"),
+    path: treePath,
+    root,
+    size: stat.size,
+    type: "text",
   };
 }
 
@@ -374,6 +425,21 @@ function absolutePathToTreePath(root: string, absolutePath: string) {
     return null;
   }
   return normalizeGitPath(relativePath);
+}
+
+function resolveWorkspaceTreePath(root: string, treePathInput: string) {
+  const absolutePath = path.resolve(root, fromTreePath(treePathInput));
+  const relativePath = path.relative(root, absolutePath);
+
+  if (
+    relativePath === "" ||
+    relativePath.startsWith("..") ||
+    path.isAbsolute(relativePath)
+  ) {
+    throw new Error("Workspace file path must stay inside the workspace root.");
+  }
+
+  return absolutePath;
 }
 
 function normalizeGitPath(value: string) {

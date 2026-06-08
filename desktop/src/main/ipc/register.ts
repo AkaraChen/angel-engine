@@ -5,8 +5,10 @@ import { ipcMain } from "electron";
 import { DESKTOP_SETTINGS_OPEN_CHANNEL } from "../../shared/desktop-window";
 import { registerChatStreamIpc } from "../features/chat/stream-handler";
 import { registerTerminalIpc } from "../features/terminal/ipc";
+import { registerWorkspaceBrowserIpc } from "../features/workspace-browser/ipc";
 import { registerDesktopWindowAppearanceIpc } from "../windows/appearance";
 import { registerDesktopWindowIpc } from "../windows/notifications";
+import { registerWorkspaceToolWindowIpc } from "../windows/workspace-tool-window";
 import { createAppRouter } from "./router";
 
 interface RegisterAllIpcOptions {
@@ -21,7 +23,9 @@ export function registerAllIpc({
   registerIpcMain(createAppRouter(chatRuntime));
   registerDesktopWindowAppearanceIpc();
   registerDesktopWindowIpc();
+  registerWorkspaceToolWindowIpc();
   registerChatStreamIpc(chatRuntime);
   registerTerminalIpc();
+  registerWorkspaceBrowserIpc();
   ipcMain.on(DESKTOP_SETTINGS_OPEN_CHANNEL, openSettingsWindow);
 }

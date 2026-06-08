@@ -9,6 +9,7 @@ import { contextBridge, ipcRenderer } from "electron";
 import {
   TERMINAL_CREATE_CHANNEL,
   TERMINAL_DISPOSE_CHANNEL,
+  TERMINAL_KILL_CHANNEL,
   TERMINAL_RESIZE_CHANNEL,
   TERMINAL_WRITE_CHANNEL,
   terminalEventChannel,
@@ -20,7 +21,7 @@ export function exposeTerminalBridge() {
       input: TerminalCreateInput,
       onEvent: (terminalEvent: TerminalEvent) => void,
     ) {
-      const sessionId = createSessionId();
+      const sessionId = input.sessionId ?? createSessionId();
       const channel = terminalEventChannel(sessionId);
       let disposed = false;
       const listener = (
@@ -44,6 +45,11 @@ export function exposeTerminalBridge() {
           ipcRenderer.removeListener(channel, listener);
           void ipcRenderer.invoke(TERMINAL_DISPOSE_CHANNEL, { sessionId });
         },
+        kill() {
+          disposed = true;
+          ipcRenderer.removeListener(channel, listener);
+          void ipcRenderer.invoke(TERMINAL_KILL_CHANNEL, { sessionId });
+        },
         resize(nextSize) {
           void ipcRenderer.invoke(TERMINAL_RESIZE_CHANNEL, {
             ...nextSize,
@@ -58,6 +64,9 @@ export function exposeTerminalBridge() {
           });
         },
       };
+    },
+    kill(input) {
+      void ipcRenderer.invoke(TERMINAL_KILL_CHANNEL, input);
     },
   } satisfies TerminalApi;
 

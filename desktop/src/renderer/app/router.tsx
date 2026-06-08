@@ -6,6 +6,7 @@ import {
   WorkspaceChatPage,
   WorkspaceDraftPage,
 } from "@/app/workspace/workspace-page";
+import { WorkspaceToolWindowPage } from "@/app/workspace/workspace-tool-host";
 import { SettingsWindowPage } from "@/features/settings/settings-window-page";
 
 export function AppRouter() {
@@ -18,6 +19,10 @@ export function AppRouter() {
         <Route path="/settings">
           <SettingsWindowPage />
         </Route>
+        <Route
+          component={WorkspaceToolWindowRoutePage}
+          path="/workspace-tool/:toolId"
+        />
         <Route component={ChatRoutePage} path="/chat/:chatId" />
         <Route
           component={ProjectChatRoutePage}
@@ -30,6 +35,12 @@ export function AppRouter() {
       </Switch>
     </Router>
   );
+}
+
+function WorkspaceToolWindowRoutePage({
+  params,
+}: RouteComponentProps<{ toolId: string }>) {
+  return <WorkspaceToolWindowPage toolId={params.toolId} />;
 }
 
 function ChatRoutePage({ params }: RouteComponentProps<{ chatId: string }>) {

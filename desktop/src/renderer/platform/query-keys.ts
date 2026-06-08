@@ -27,5 +27,7 @@ export const queryKeys = {
       ["workspace-tools", "file-tree", root] as const,
     gitDiff: (root: string | null) =>
       ["workspace-tools", "git-diff", root] as const,
+    readFile: (root: string | null, path: string | null) =>
+      ["workspace-tools", "read-file", root, path] as const,
   },
 } as const;

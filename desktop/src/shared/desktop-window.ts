@@ -44,3 +44,17 @@ export const DESKTOP_SETTINGS_OPEN_CHANNEL = "desktop-window:settings:open";
 export const DESKTOP_THEME_SET_CHANNEL = "desktop-window:theme:set";
 export const DESKTOP_UPDATE_DOWNLOADED_CHANNEL =
   "desktop-window:update:downloaded";
+export const DESKTOP_WINDOW_CLOSE_CURRENT_CHANNEL =
+  "desktop-window:close-current";
+export const DESKTOP_WORKSPACE_TOOL_CONTEXT_SET_CHANNEL =
+  "desktop-window:workspace-tool-context:set";
+export const DESKTOP_WORKSPACE_TOOL_DIALOG_OPEN_CHANNEL =
+  "desktop-window:workspace-tool-dialog:open";
+export const DESKTOP_WORKSPACE_TOOL_INSTANCE_UPDATED_CHANNEL =
+  "desktop-window:workspace-tool-instance:updated";
+export const DESKTOP_WORKSPACE_TOOL_WINDOW_GET_CHANNEL =
+  "desktop-window:workspace-tool-window:get";
+export const DESKTOP_WORKSPACE_TOOL_WINDOW_OPEN_CHANNEL =
+  "desktop-window:workspace-tool-window:open";
+export const DESKTOP_WORKSPACE_TOOL_WINDOW_CLOSED_CHANNEL =
+  "desktop-window:workspace-tool-window:closed";

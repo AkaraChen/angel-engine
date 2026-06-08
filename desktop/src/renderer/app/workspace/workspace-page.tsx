@@ -65,6 +65,10 @@ import {
   WorkspaceSidebarControlPortalProvider,
 } from "@/app/workspace/workspace-sidebar-control";
 import { WorkspaceRightSidebar } from "@/app/workspace/workspace-right-sidebar";
+import {
+  WorkspaceToolContextBridge,
+  WorkspaceToolDialogHost,
+} from "@/app/workspace/workspace-tool-host";
 import { useWorkspaceUiStore } from "@/app/workspace/workspace-ui-store";
 import {
   SidebarInset,
@@ -1033,6 +1037,8 @@ function WorkspacePageContent({
           onClose={closeWorktreeDirtyPrompt}
           state={worktreeDirtyPrompt}
         />
+        <WorkspaceToolContextBridge root={selectedProjectPath ?? undefined} />
+        <WorkspaceToolDialogHost api={api} />
 
         {settingsActive ? (
           <SidebarInset className="h-svh max-h-svh overflow-hidden">

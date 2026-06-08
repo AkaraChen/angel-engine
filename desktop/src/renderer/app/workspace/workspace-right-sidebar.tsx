@@ -1,8 +1,7 @@
 import type { ApiClient } from "@/platform/api-client";
 import type { WorkspaceRightSidebarTab } from "@/app/workspace/workspace-ui-store";
-import type { TerminalSessionController } from "@shared/terminal";
+import type { WorkspaceBrowserState } from "@shared/workspace-browser";
 import type { WorkspaceToolGitStatus } from "@shared/workspace-tools";
-import type { ITheme } from "@xterm/xterm";
 
 import { parsePatchFiles, type FileDiffMetadata } from "@pierre/diffs";
 import { FileDiff } from "@pierre/diffs/react";
@@ -18,13 +17,13 @@ import {
   RiGitBranchLine as GitBranch,
   RiGlobalLine as Browser,
   RiRefreshLine as Refresh,
+  RiExternalLinkLine as ExternalLink,
   RiTerminalBoxLine as TerminalIcon,
 } from "@remixicon/react";
-import { FitAddon } from "@xterm/addon-fit";
-import { Terminal } from "@xterm/xterm";
 import {
   type CSSProperties,
   type FormEvent,
+  type MouseEvent as ReactMouseEvent,
   type PointerEvent as ReactPointerEvent,
   type ReactNode,
   useCallback,
@@ -32,12 +31,17 @@ import {
   useRef,
   useState,
 } from "react";
-import "@xterm/xterm/css/xterm.css";
 
 import {
   clampWorkspaceRightSidebarWidth,
   useWorkspaceUiStore,
 } from "@/app/workspace/workspace-ui-store";
+import {
+  WorkspaceBrowserNativeView,
+  normalizeWorkspaceBrowserUrl,
+} from "@/app/workspace/workspace-browser-view";
+import { WorkspaceTerminalView } from "@/app/workspace/workspace-terminal-view";
+import { useWorkspaceToolStore } from "@/app/workspace/workspace-tool-store";
 import { Button } from "@/components/ui/button";
 import {
   Collapsible,
@@ -106,51 +110,6 @@ const diffHostStyle: WorkspaceCssVariableStyle = {
   "--diffs-light-bg": "var(--background)",
 };
 
-const pierreTerminalThemes = {
-  dark: {
-    black: "#171717",
-    blue: "#009fff",
-    brightBlack: "#171717",
-    brightBlue: "#009fff",
-    brightCyan: "#08c0ef",
-    brightGreen: "#86c427",
-    brightMagenta: "#e130ac",
-    brightRed: "#ff2e3f",
-    brightWhite: "#bcbcbc",
-    brightYellow: "#ffca00",
-    cursor: "#69b1ff",
-    cyan: "#08c0ef",
-    foreground: "#8a8a8a",
-    green: "#0dbe4e",
-    magenta: "#e130ac",
-    red: "#ff2e3f",
-    selectionBackground: "#1f3e5e",
-    white: "#bcbcbc",
-    yellow: "#ffca00",
-  },
-  light: {
-    black: "#1d1d1d",
-    blue: "#009fff",
-    brightBlack: "#1d1d1d",
-    brightBlue: "#009fff",
-    brightCyan: "#08c0ef",
-    brightGreen: "#86c427",
-    brightMagenta: "#e130ac",
-    brightRed: "#ff2e3f",
-    brightWhite: "#bcbcbc",
-    brightYellow: "#ffca00",
-    cursor: "#009fff",
-    cyan: "#08c0ef",
-    foreground: "#737373",
-    green: "#0dbe4e",
-    magenta: "#e130ac",
-    red: "#ff2e3f",
-    selectionBackground: "#dfebff",
-    white: "#bcbcbc",
-    yellow: "#ffca00",
-  },
-} satisfies Record<"dark" | "light", ITheme>;
-
 interface WorkspaceRightSidebarProps {
   activeTab: WorkspaceRightSidebarTab;
   api: ApiClient;
@@ -187,6 +146,7 @@ interface WorkspaceTerminalTabsState {
 }
 
 interface WorkspaceBrowserTab {
+  browserViewId: string;
   draftUrl: string;
   id: string;
   title: string;
@@ -221,6 +181,7 @@ function createWorkspaceBrowserTab(
   url = defaultWorkspaceBrowserUrl,
 ): WorkspaceBrowserTab {
   return {
+    browserViewId: crypto.randomUUID(),
     draftUrl: url,
     id: crypto.randomUUID(),
     title: `Browser ${ordinal}`,
@@ -499,6 +460,9 @@ function WorkspaceRightSidebarPanelShell({
 }
 
 function WorkspaceFilesPanel({ api, root }: { api: ApiClient; root?: string }) {
+  const openWorkspaceTool = useWorkspaceToolStore(
+    (state) => state.openWorkspaceTool,
+  );
   const { model } = useFileTree({
     density: "compact",
     fileTreeSearchMode: "hide-non-matches",
@@ -538,6 +502,32 @@ function WorkspaceFilesPanel({ api, root }: { api: ApiClient; root?: string }) {
       })),
     );
   }, [model, treeQuery.data]);
+  const handleFileTreeClick = useCallback(
+    (event: ReactMouseEvent<HTMLDivElement>) => {
+      if (!root || !(event.target instanceof Element)) {
+        return;
+      }
+
+      const row = event.target.closest<HTMLElement>(
+        "[data-item-path][data-item-type='file']",
+      );
+      const path = row?.dataset.itemPath;
+      if (!path) {
+        return;
+      }
+
+      openWorkspaceTool(
+        {
+          kind: "file-preview",
+          path,
+          root,
+          title: path,
+        },
+        "dialog",
+      );
+    },
+    [openWorkspaceTool, root],
+  );
 
   if (!root) {
     return <WorkspaceToolEmpty title="No workspace root" />;
@@ -559,7 +549,10 @@ function WorkspaceFilesPanel({ api, root }: { api: ApiClient; root?: string }) {
           Limited result set
         </div>
       ) : null}
-      <div className="min-h-0 flex-1 overflow-hidden">
+      <div
+        className="min-h-0 flex-1 overflow-hidden"
+        onClick={handleFileTreeClick}
+      >
         {treeQuery.isLoading ? (
           <WorkspaceFileTreeSkeleton />
         ) : (
@@ -575,6 +568,9 @@ function WorkspaceFilesPanel({ api, root }: { api: ApiClient; root?: string }) {
 }
 
 function WorkspaceGitPanel({ api, root }: { api: ApiClient; root?: string }) {
+  const openWorkspaceTool = useWorkspaceToolStore(
+    (state) => state.openWorkspaceTool,
+  );
   const gitQuery = useQuery({
     enabled: Boolean(root),
     queryFn: async () => {
@@ -618,9 +614,51 @@ function WorkspaceGitPanel({ api, root }: { api: ApiClient; root?: string }) {
     data.stagedPatch,
     data.unstagedPatch,
   );
+  const openGitDiffDialog = () => {
+    if (!root) {
+      return;
+    }
+
+    openWorkspaceTool(
+      {
+        kind: "git-diff",
+        root,
+        title: data.branch ? `Git diff: ${data.branch}` : "Git diff",
+      },
+      "dialog",
+    );
+  };
+  const openGitFileDialog = (file: WorkspacePatchFile) => {
+    if (!root) {
+      return;
+    }
+
+    openWorkspaceTool(
+      {
+        kind: "git-diff",
+        path: file.name,
+        root,
+        title: formatWorkspacePatchFileName(file),
+      },
+      "dialog",
+    );
+  };
 
   return (
     <div className="flex h-full min-h-0 flex-col">
+      <div className="flex h-9 shrink-0 items-center justify-end border-b border-border/70 px-2">
+        <Button
+          className="h-7 border-border/70 px-2 text-xs text-muted-foreground"
+          onClick={openGitDiffDialog}
+          size="xs"
+          title="Open git diff"
+          type="button"
+          variant="outline"
+        >
+          <ExternalLink className="size-3.5" />
+          <span>Open</span>
+        </Button>
+      </div>
       <div className="min-h-0 flex-1 space-y-3 overflow-auto p-3">
         {data.warnings.length > 0 ? (
           <div className="space-y-1 rounded-md border border-border/70 bg-muted/30 p-2 text-xs text-muted-foreground">
@@ -629,15 +667,20 @@ function WorkspaceGitPanel({ api, root }: { api: ApiClient; root?: string }) {
             ))}
           </div>
         ) : null}
-        <WorkspacePatchFileList patchList={patchList} />
+        <WorkspacePatchFileList
+          patchList={patchList}
+          onOpenFile={openGitFileDialog}
+        />
       </div>
     </div>
   );
 }
 
 function WorkspacePatchFileList({
+  onOpenFile,
   patchList,
 }: {
+  onOpenFile?: (file: WorkspacePatchFile) => void;
   patchList: {
     errors: string[];
     files: WorkspacePatchFile[];
@@ -655,7 +698,11 @@ function WorkspacePatchFileList({
       ))}
       {patchList.files.length > 0 ? (
         patchList.files.map((file) => (
-          <WorkspacePatchFileItem file={file} key={file.key} />
+          <WorkspacePatchFileItem
+            file={file}
+            key={file.key}
+            onOpenFile={onOpenFile}
+          />
         ))
       ) : patchList.errors.length === 0 ? (
         <div className="rounded-md border border-border/70 px-3 py-6 text-center text-sm text-muted-foreground">
@@ -666,7 +713,13 @@ function WorkspacePatchFileList({
   );
 }
 
-function WorkspacePatchFileItem({ file }: { file: WorkspacePatchFile }) {
+function WorkspacePatchFileItem({
+  file,
+  onOpenFile,
+}: {
+  file: WorkspacePatchFile;
+  onOpenFile?: (file: WorkspacePatchFile) => void;
+}) {
   const fileName = formatWorkspacePatchFileName(file);
   const lineCount = getWorkspacePatchFileLineCount(file);
 
@@ -681,6 +734,13 @@ function WorkspacePatchFileItem({ file }: { file: WorkspacePatchFile }) {
           text-xs transition-colors
           hover:bg-muted/50
         "
+        onClick={(event) => {
+          if (!onOpenFile) {
+            return;
+          }
+          event.preventDefault();
+          onOpenFile(file);
+        }}
         type="button"
       >
         <ChevronDown
@@ -854,90 +914,63 @@ function workspaceFileDiffKey(
   return `${source}:${index}:${fileDiff.cacheKey ?? fileDiff.prevName ?? ""}:${fileDiff.name}`;
 }
 
-interface WorkspaceBrowserNavigationState {
-  canGoBack: boolean;
-  canGoForward: boolean;
-  ready: boolean;
-}
-
 function WorkspaceBrowserPanel({ active }: { active: boolean }) {
   const browserUrl = useWorkspaceUiStore((state) => state.browserUrl);
   const setBrowserUrl = useWorkspaceUiStore((state) => state.setBrowserUrl);
-  const webviewsRef = useRef(new Map<string, ElectronWebviewElement>());
+  const openWorkspaceTool = useWorkspaceToolStore(
+    (state) => state.openWorkspaceTool,
+  );
   const [tabsState, setTabsState] = useState(() =>
     createWorkspaceBrowserTabsState(browserUrl),
   );
-  const [navigationState, setNavigationState] =
-    useState<WorkspaceBrowserNavigationState>({
-      canGoBack: false,
-      canGoForward: false,
-      ready: false,
-    });
   const activeTab =
     tabsState.tabs.find((tab) => tab.id === tabsState.activeTabId) ??
     tabsState.tabs[0];
-  const refreshNavigationState = useCallback(
-    (tabId = tabsState.activeTabId) => {
-      setNavigationState(
-        readWorkspaceBrowserNavigationState(
-          webviewsRef.current.get(tabId) ?? null,
-        ),
-      );
-    },
-    [tabsState.activeTabId],
+  const detachedBrowserTool = useWorkspaceToolStore((state) =>
+    activeTab
+      ? state.findBrowserToolByViewId(activeTab.browserViewId)
+      : undefined,
   );
-  const setBrowserWebview = useCallback(
-    (tabId: string, webview: ElectronWebviewElement | null) => {
-      if (webview) {
-        webviewsRef.current.set(tabId, webview);
-      } else {
-        webviewsRef.current.delete(tabId);
-      }
-      if (tabId === tabsState.activeTabId) {
-        refreshNavigationState(tabId);
-      }
+  const activeBrowserDetached =
+    detachedBrowserTool !== undefined && detachedBrowserTool.host !== "sidebar";
+  const [navigationState, setNavigationState] = useState<WorkspaceBrowserState>(
+    {
+      canGoBack: false,
+      canGoForward: false,
+      ready: false,
+      title: activeTab.title,
+      url: activeTab.url,
     },
-    [refreshNavigationState, tabsState.activeTabId],
   );
-  const updateBrowserTabUrl = useCallback(
-    (tabId: string, url: string) => {
-      const nextUrl = url.trim() || defaultWorkspaceBrowserUrl;
-
+  const refreshNavigationState = useCallback((tab: WorkspaceBrowserTab) => {
+    void window.workspaceBrowser
+      .getState({ browserViewId: tab.browserViewId })
+      .then(setNavigationState)
+      .catch(() => {});
+  }, []);
+  const handleBrowserStateChange = useCallback(
+    (tabId: string, state: WorkspaceBrowserState) => {
       setTabsState((current) => ({
         ...current,
         tabs: current.tabs.map((tab) =>
           tab.id === tabId
             ? {
                 ...tab,
-                draftUrl: nextUrl,
-                title: browserTabTitle(tab, nextUrl),
-                url: nextUrl,
+                draftUrl: state.url || tab.draftUrl,
+                title: state.title.trim() || browserTabTitle(tab, state.url),
+                url: state.url || tab.url,
               }
             : tab,
         ),
       }));
 
       if (tabsState.activeTabId === tabId) {
-        setBrowserUrl(nextUrl);
-        refreshNavigationState(tabId);
+        setBrowserUrl(state.url);
+        setNavigationState(state);
       }
     },
-    [refreshNavigationState, setBrowserUrl, tabsState.activeTabId],
+    [setBrowserUrl, tabsState.activeTabId],
   );
-  const updateBrowserTabTitle = useCallback((tabId: string, title: string) => {
-    const nextTitle = title.trim();
-
-    if (!nextTitle) {
-      return;
-    }
-
-    setTabsState((current) => ({
-      ...current,
-      tabs: current.tabs.map((tab) =>
-        tab.id === tabId ? { ...tab, title: nextTitle } : tab,
-      ),
-    }));
-  }, []);
   const updateActiveBrowserDraftUrl = useCallback((draftUrl: string) => {
     setTabsState((current) => ({
       ...current,
@@ -948,9 +981,15 @@ function WorkspaceBrowserPanel({ active }: { active: boolean }) {
   }, []);
   const addBrowserTab = useCallback(() => {
     setBrowserUrl(defaultWorkspaceBrowserUrl);
-    setNavigationState({ canGoBack: false, canGoForward: false, ready: false });
     setTabsState((current) => {
       const tab = createWorkspaceBrowserTab(current.nextOrdinal);
+      setNavigationState({
+        canGoBack: false,
+        canGoForward: false,
+        ready: false,
+        title: tab.title,
+        url: tab.url,
+      });
 
       return {
         activeTabId: tab.id,
@@ -968,7 +1007,14 @@ function WorkspaceBrowserPanel({ active }: { active: boolean }) {
 
       setTabsState({ ...tabsState, activeTabId: tabId });
       setBrowserUrl(tab.url);
-      refreshNavigationState(tabId);
+      setNavigationState({
+        canGoBack: false,
+        canGoForward: false,
+        ready: false,
+        title: tab.title,
+        url: tab.url,
+      });
+      refreshNavigationState(tab);
     },
     [refreshNavigationState, setBrowserUrl, tabsState],
   );
@@ -982,6 +1028,16 @@ function WorkspaceBrowserPanel({ active }: { active: boolean }) {
       if (tabIndex === -1) {
         return;
       }
+      const tab = tabsState.tabs[tabIndex];
+      const detachedTool = useWorkspaceToolStore
+        .getState()
+        .findBrowserToolByViewId(tab.browserViewId);
+      if (detachedTool) {
+        useWorkspaceToolStore.getState().closeWorkspaceTool(detachedTool.id);
+      }
+      void window.workspaceBrowser.destroy({
+        browserViewId: tab.browserViewId,
+      });
 
       const tabs = tabsState.tabs.filter((tab) => tab.id !== tabId);
       const activeTabId =
@@ -993,8 +1049,15 @@ function WorkspaceBrowserPanel({ active }: { active: boolean }) {
       setTabsState({ ...tabsState, activeTabId, tabs });
       if (tabsState.activeTabId === tabId && nextActiveTab) {
         setBrowserUrl(nextActiveTab.url);
+        setNavigationState({
+          canGoBack: false,
+          canGoForward: false,
+          ready: false,
+          title: nextActiveTab.title,
+          url: nextActiveTab.url,
+        });
+        refreshNavigationState(nextActiveTab);
       }
-      refreshNavigationState(activeTabId);
     },
     [refreshNavigationState, setBrowserUrl, tabsState],
   );
@@ -1002,7 +1065,7 @@ function WorkspaceBrowserPanel({ active }: { active: boolean }) {
   const handleSubmit = useCallback(
     (event: FormEvent<HTMLFormElement>) => {
       event.preventDefault();
-      const nextUrl = normalizeBrowserUrl(activeTab.draftUrl);
+      const nextUrl = normalizeWorkspaceBrowserUrl(activeTab.draftUrl);
 
       setTabsState((current) => ({
         ...current,
@@ -1018,44 +1081,47 @@ function WorkspaceBrowserPanel({ active }: { active: boolean }) {
         ),
       }));
       setBrowserUrl(nextUrl);
+      setNavigationState((current) => ({
+        ...current,
+        title: browserTabTitle(activeTab, nextUrl),
+        url: nextUrl,
+      }));
+      void window.workspaceBrowser
+        .navigate({ browserViewId: activeTab.browserViewId, url: nextUrl })
+        .then(setNavigationState)
+        .catch(() => {});
     },
-    [activeTab.draftUrl, setBrowserUrl],
+    [activeTab, setBrowserUrl],
   );
-  const activeWebview = webviewsRef.current.get(tabsState.activeTabId) ?? null;
   const goBack = useCallback(() => {
-    const webview = webviewsRef.current.get(tabsState.activeTabId);
-
-    if (safeWorkspaceBrowserCanGoBack(webview ?? null)) {
-      safeWorkspaceBrowserCall(webview ?? null, (currentWebview) => {
-        currentWebview.goBack();
-      });
-    }
-  }, [tabsState.activeTabId]);
+    void window.workspaceBrowser
+      .goBack({ browserViewId: activeTab.browserViewId })
+      .then(setNavigationState)
+      .catch(() => {});
+  }, [activeTab.browserViewId]);
   const goForward = useCallback(() => {
-    const webview = webviewsRef.current.get(tabsState.activeTabId);
-
-    if (safeWorkspaceBrowserCanGoForward(webview ?? null)) {
-      safeWorkspaceBrowserCall(webview ?? null, (currentWebview) => {
-        currentWebview.goForward();
-      });
-    }
-  }, [tabsState.activeTabId]);
+    void window.workspaceBrowser
+      .goForward({ browserViewId: activeTab.browserViewId })
+      .then(setNavigationState)
+      .catch(() => {});
+  }, [activeTab.browserViewId]);
   const reload = useCallback(() => {
-    safeWorkspaceBrowserCall(
-      webviewsRef.current.get(tabsState.activeTabId) ?? null,
-      (webview) => {
-        webview.reload();
+    void window.workspaceBrowser
+      .reload({ browserViewId: activeTab.browserViewId })
+      .then(setNavigationState)
+      .catch(() => {});
+  }, [activeTab.browserViewId]);
+  const openActiveBrowserInDialog = useCallback(() => {
+    openWorkspaceTool(
+      {
+        browserViewId: activeTab.browserViewId,
+        kind: "browser",
+        title: activeTab.title,
+        url: activeTab.url,
       },
+      "dialog",
     );
-  }, [tabsState.activeTabId]);
-  const handleBrowserNavigationStateChange = useCallback(
-    (tabId: string) => {
-      if (tabId === tabsState.activeTabId) {
-        refreshNavigationState(tabId);
-      }
-    },
-    [refreshNavigationState, tabsState.activeTabId],
-  );
+  }, [activeTab, openWorkspaceTool]);
 
   return (
     <div className="flex h-full min-h-0 flex-col">
@@ -1072,7 +1138,7 @@ function WorkspaceBrowserPanel({ active }: { active: boolean }) {
       >
         <Button
           aria-label="Back"
-          disabled={!activeWebview || !navigationState.canGoBack}
+          disabled={activeBrowserDetached || !navigationState.canGoBack}
           onClick={goBack}
           size="icon-xs"
           type="button"
@@ -1082,7 +1148,7 @@ function WorkspaceBrowserPanel({ active }: { active: boolean }) {
         </Button>
         <Button
           aria-label="Forward"
-          disabled={!activeWebview || !navigationState.canGoForward}
+          disabled={activeBrowserDetached || !navigationState.canGoForward}
           onClick={goForward}
           size="icon-xs"
           type="button"
@@ -1092,7 +1158,7 @@ function WorkspaceBrowserPanel({ active }: { active: boolean }) {
         </Button>
         <Button
           aria-label="Reload"
-          disabled={!activeWebview || !navigationState.ready}
+          disabled={activeBrowserDetached || !navigationState.ready}
           onClick={reload}
           size="icon-xs"
           type="button"
@@ -1108,10 +1174,26 @@ function WorkspaceBrowserPanel({ active }: { active: boolean }) {
           }
           value={activeTab.draftUrl}
         />
+        <Button
+          aria-label="Open browser tab"
+          disabled={activeBrowserDetached}
+          onClick={openActiveBrowserInDialog}
+          size="icon-xs"
+          title="Open browser tab"
+          type="button"
+          variant="ghost"
+        >
+          <ExternalLink />
+        </Button>
       </form>
       <div className="relative min-h-0 flex-1 overflow-hidden bg-background">
         {tabsState.tabs.map((tab) => {
           const tabActive = active && tabsState.activeTabId === tab.id;
+          const detachedTool =
+            detachedBrowserTool?.kind === "browser" &&
+            tab.browserViewId === detachedBrowserTool.browserViewId
+              ? detachedBrowserTool
+              : undefined;
 
           return (
             <div
@@ -1126,13 +1208,18 @@ function WorkspaceBrowserPanel({ active }: { active: boolean }) {
               key={tab.id}
               role="tabpanel"
             >
-              <WorkspaceBrowserView
-                tab={tab}
-                onNavigationStateChange={handleBrowserNavigationStateChange}
-                onTitleChange={updateBrowserTabTitle}
-                onUrlChange={updateBrowserTabUrl}
-                onWebviewChange={setBrowserWebview}
-              />
+              {detachedTool && detachedTool.host !== "sidebar" ? (
+                <WorkspaceToolEmpty
+                  detail={detachedTool.title}
+                  title="Browser opened elsewhere"
+                />
+              ) : (
+                <WorkspaceBrowserView
+                  active={tabActive}
+                  tab={tab}
+                  onStateChange={handleBrowserStateChange}
+                />
+              )}
             </div>
           );
         })}
@@ -1236,150 +1323,29 @@ function WorkspaceBrowserTabStrip({
 }
 
 function WorkspaceBrowserView({
+  active,
   tab,
-  onNavigationStateChange,
-  onTitleChange,
-  onUrlChange,
-  onWebviewChange,
+  onStateChange,
 }: {
+  active: boolean;
   tab: WorkspaceBrowserTab;
-  onNavigationStateChange: (tabId: string) => void;
-  onTitleChange: (tabId: string, title: string) => void;
-  onUrlChange: (tabId: string, url: string) => void;
-  onWebviewChange: (
-    tabId: string,
-    webview: ElectronWebviewElement | null,
-  ) => void;
+  onStateChange: (tabId: string, state: WorkspaceBrowserState) => void;
 }) {
-  const cleanupRef = useRef<() => void>(() => {});
-  const setWebview = useCallback(
-    (webview: ElectronWebviewElement | null) => {
-      cleanupRef.current();
-      cleanupRef.current = () => {};
-      onWebviewChange(tab.id, webview);
-
-      if (!webview) {
-        return;
-      }
-
-      const updateNavigationState = () => {
-        onNavigationStateChange(tab.id);
-      };
-      const updateUrlFromWebview = () => {
-        onUrlChange(tab.id, webview.getURL());
-        updateNavigationState();
-      };
-      const handleNavigation = (event: Event) => {
-        onUrlChange(
-          tab.id,
-          browserNavigationEventUrl(event) ?? webview.getURL(),
-        );
-        updateNavigationState();
-      };
-      const handleTitleUpdate = (event: Event) => {
-        onTitleChange(
-          tab.id,
-          browserTitleEventTitle(event) || webview.getTitle(),
-        );
-      };
-
-      webview.addEventListener("dom-ready", updateNavigationState);
-      webview.addEventListener("did-finish-load", updateUrlFromWebview);
-      webview.addEventListener("did-navigate", handleNavigation);
-      webview.addEventListener("did-navigate-in-page", handleNavigation);
-      webview.addEventListener("page-title-updated", handleTitleUpdate);
-      cleanupRef.current = () => {
-        webview.removeEventListener("dom-ready", updateNavigationState);
-        webview.removeEventListener("did-finish-load", updateUrlFromWebview);
-        webview.removeEventListener("did-navigate", handleNavigation);
-        webview.removeEventListener("did-navigate-in-page", handleNavigation);
-        webview.removeEventListener("page-title-updated", handleTitleUpdate);
-        onWebviewChange(tab.id, null);
-      };
-      updateNavigationState();
+  const handleStateChange = useCallback(
+    (state: WorkspaceBrowserState) => {
+      onStateChange(tab.id, state);
     },
-    [
-      onNavigationStateChange,
-      onTitleChange,
-      onUrlChange,
-      onWebviewChange,
-      tab.id,
-    ],
+    [onStateChange, tab.id],
   );
 
   return (
-    <webview
-      className="h-full min-h-0 w-full bg-background"
-      partition="persist:workspace-browser"
-      ref={setWebview}
-      src={tab.url}
+    <WorkspaceBrowserNativeView
+      active={active}
+      browserViewId={tab.browserViewId}
+      onStateChange={handleStateChange}
+      url={tab.url}
     />
   );
-}
-
-function readWorkspaceBrowserNavigationState(
-  webview: ElectronWebviewElement | null,
-): WorkspaceBrowserNavigationState {
-  if (!webview) {
-    return { canGoBack: false, canGoForward: false, ready: false };
-  }
-
-  try {
-    return {
-      canGoBack: webview.canGoBack(),
-      canGoForward: webview.canGoForward(),
-      ready: true,
-    };
-  } catch {
-    return { canGoBack: false, canGoForward: false, ready: false };
-  }
-}
-
-function safeWorkspaceBrowserCanGoBack(webview: ElectronWebviewElement | null) {
-  try {
-    return webview?.canGoBack() ?? false;
-  } catch {
-    return false;
-  }
-}
-
-function safeWorkspaceBrowserCanGoForward(
-  webview: ElectronWebviewElement | null,
-) {
-  try {
-    return webview?.canGoForward() ?? false;
-  } catch {
-    return false;
-  }
-}
-
-function safeWorkspaceBrowserCall(
-  webview: ElectronWebviewElement | null,
-  action: (webview: ElectronWebviewElement) => void,
-) {
-  if (!webview) {
-    return;
-  }
-
-  try {
-    action(webview);
-  } catch {
-    return;
-  }
-}
-
-function browserNavigationEventUrl(event: Event) {
-  const navigationEvent = event as Event & { readonly url?: string };
-
-  return typeof navigationEvent.url === "string"
-    ? navigationEvent.url
-    : undefined;
-}
-
-function browserTitleEventTitle(event: Event) {
-  const titleEvent = event as Event & { readonly title?: string };
-
-  return typeof titleEvent.title === "string" ? titleEvent.title : undefined;
 }
 
 function browserTabTitle(tab: WorkspaceBrowserTab, url: string) {
@@ -1404,7 +1370,19 @@ function WorkspaceTerminalPanel({
   active: boolean;
   root?: string;
 }) {
+  const openWorkspaceTool = useWorkspaceToolStore(
+    (state) => state.openWorkspaceTool,
+  );
   const [tabsState, setTabsState] = useState(createWorkspaceTerminalTabsState);
+  const activeTab =
+    tabsState.tabs.find((tab) => tab.id === tabsState.activeTabId) ??
+    tabsState.tabs[0];
+  const detachedTerminalTool = useWorkspaceToolStore((state) =>
+    activeTab ? state.findTerminalToolBySessionId(activeTab.id) : undefined,
+  );
+  const activeTerminalDetached =
+    detachedTerminalTool !== undefined &&
+    detachedTerminalTool.host !== "sidebar";
   const addTerminalTab = useCallback(() => {
     setTabsState((current) => {
       const tab = createWorkspaceTerminalTab(current.nextOrdinal);
@@ -1433,6 +1411,14 @@ function WorkspaceTerminalPanel({
       if (tabIndex === -1) {
         return current;
       }
+      const tab = current.tabs[tabIndex];
+      const detachedTool = useWorkspaceToolStore
+        .getState()
+        .findTerminalToolBySessionId(tab.id);
+      if (detachedTool) {
+        useWorkspaceToolStore.getState().closeWorkspaceTool(detachedTool.id);
+      }
+      window.terminal.kill({ sessionId: tab.id });
 
       const tabs = current.tabs.filter((tab) => tab.id !== tabId);
       const activeTabId =
@@ -1443,6 +1429,21 @@ function WorkspaceTerminalPanel({
       return { ...current, activeTabId, tabs };
     });
   }, []);
+  const openActiveTerminalInDialog = useCallback(() => {
+    if (!root) {
+      return;
+    }
+
+    openWorkspaceTool(
+      {
+        kind: "terminal",
+        root,
+        sessionId: activeTab.id,
+        title: activeTab.title,
+      },
+      "dialog",
+    );
+  }, [activeTab, openWorkspaceTool, root]);
 
   if (!root) {
     return <WorkspaceToolEmpty title="No workspace root" />;
@@ -1455,12 +1456,20 @@ function WorkspaceTerminalPanel({
         tabs={tabsState.tabs}
         onAddTab={addTerminalTab}
         onCloseTab={closeTerminalTab}
+        onOpenActiveTab={
+          activeTerminalDetached ? undefined : openActiveTerminalInDialog
+        }
         onSelectTab={selectTerminalTab}
       />
       <div className="min-h-0 flex-1 overflow-hidden bg-background p-2">
         <div className="relative h-full min-h-0 overflow-hidden">
           {tabsState.tabs.map((tab) => {
             const tabActive = active && tabsState.activeTabId === tab.id;
+            const detachedTool =
+              detachedTerminalTool?.kind === "terminal" &&
+              tab.id === detachedTerminalTool.sessionId
+                ? detachedTerminalTool
+                : undefined;
 
             return (
               <div
@@ -1475,7 +1484,18 @@ function WorkspaceTerminalPanel({
                 key={tab.id}
                 role="tabpanel"
               >
-                <WorkspaceTerminalView autoFocus={tabActive} root={root} />
+                {detachedTool && detachedTool.host !== "sidebar" ? (
+                  <WorkspaceToolEmpty
+                    detail={detachedTool.title}
+                    title="Terminal opened elsewhere"
+                  />
+                ) : (
+                  <WorkspaceTerminalView
+                    autoFocus={tabActive}
+                    root={root}
+                    sessionId={tab.id}
+                  />
+                )}
               </div>
             );
           })}
@@ -1490,12 +1510,14 @@ function WorkspaceTerminalTabStrip({
   tabs,
   onAddTab,
   onCloseTab,
+  onOpenActiveTab,
   onSelectTab,
 }: {
   activeTabId: string;
   tabs: WorkspaceTerminalTab[];
   onAddTab: () => void;
   onCloseTab: (tabId: string) => void;
+  onOpenActiveTab?: () => void;
   onSelectTab: (tabId: string) => void;
 }) {
   return (
@@ -1564,6 +1586,18 @@ function WorkspaceTerminalTabStrip({
         })}
       </div>
       <Button
+        aria-label="Open terminal tab"
+        className="h-7 border-border/70 px-2 text-xs text-muted-foreground"
+        disabled={!onOpenActiveTab}
+        onClick={onOpenActiveTab}
+        size="xs"
+        title="Open terminal tab"
+        type="button"
+        variant="outline"
+      >
+        <ExternalLink className="size-3.5" />
+      </Button>
+      <Button
         aria-label="New terminal tab"
         className="h-7 border-border/70 px-2 text-xs text-muted-foreground"
         onClick={onAddTab}
@@ -1576,133 +1610,6 @@ function WorkspaceTerminalTabStrip({
         <span>New</span>
       </Button>
     </div>
-  );
-}
-
-interface WorkspaceTerminalInstance {
-  animationFrame: number;
-  controller: TerminalSessionController;
-  dataDisposable: { dispose: () => void };
-  resizeObserver: ResizeObserver;
-  terminal: Terminal;
-  themeObserver: MutationObserver;
-}
-
-function WorkspaceTerminalView({
-  autoFocus,
-  root,
-}: {
-  autoFocus: boolean;
-  root: string;
-}) {
-  const instanceRef = useRef<WorkspaceTerminalInstance | null>(null);
-  const autoFocusRef = useRef(autoFocus);
-  autoFocusRef.current = autoFocus;
-  const setContainer = useCallback(
-    (container: HTMLDivElement | null) => {
-      disposeWorkspaceTerminalInstance(instanceRef.current);
-      instanceRef.current = null;
-
-      if (!container) {
-        return;
-      }
-
-      const terminal = new Terminal({
-        allowProposedApi: false,
-        convertEol: true,
-        cursorBlink: true,
-        fontFamily:
-          'ui-monospace, SFMono-Regular, "SF Mono", Menlo, Monaco, Consolas, monospace',
-        fontSize: 12,
-        scrollback: 5000,
-        theme: getWorkspaceTerminalTheme(),
-      });
-      const fitAddon = new FitAddon();
-      terminal.loadAddon(fitAddon);
-      terminal.open(container);
-      fitAddon.fit();
-      const themeObserver = new MutationObserver(() => {
-        terminal.options.theme = getWorkspaceTerminalTheme();
-      });
-      themeObserver.observe(document.documentElement, {
-        attributeFilter: ["class"],
-        attributes: true,
-      });
-
-      const controller = window.terminal.create(
-        {
-          cols: terminal.cols,
-          cwd: root,
-          rows: terminal.rows,
-        },
-        (event) => {
-          if (event.type === "data") {
-            terminal.write(event.data);
-            return;
-          }
-          if (event.type === "error") {
-            terminal.writeln(`\r\n${event.message}`);
-            return;
-          }
-          terminal.writeln("\r\nProcess exited.");
-        },
-      );
-      const dataDisposable = terminal.onData((data) => controller.write(data));
-      const resizeObserver = new ResizeObserver(() => {
-        fitTerminal(fitAddon, terminal, controller);
-      });
-      resizeObserver.observe(container);
-      const animationFrame = window.requestAnimationFrame(() => {
-        fitTerminal(fitAddon, terminal, controller);
-        if (autoFocusRef.current) {
-          terminal.focus();
-        }
-      });
-
-      instanceRef.current = {
-        animationFrame,
-        controller,
-        dataDisposable,
-        resizeObserver,
-        terminal,
-        themeObserver,
-      };
-    },
-    [root],
-  );
-
-  return <div className="h-full min-h-0 overflow-hidden" ref={setContainer} />;
-}
-
-function disposeWorkspaceTerminalInstance(
-  instance: WorkspaceTerminalInstance | null,
-) {
-  if (!instance) {
-    return;
-  }
-
-  window.cancelAnimationFrame(instance.animationFrame);
-  instance.themeObserver.disconnect();
-  instance.resizeObserver.disconnect();
-  instance.dataDisposable.dispose();
-  instance.controller.dispose();
-  instance.terminal.dispose();
-}
-
-function getWorkspaceTerminalTheme() {
-  return {
-    ...(document.documentElement.classList.contains("dark")
-      ? pierreTerminalThemes.dark
-      : pierreTerminalThemes.light),
-    background: getWorkspaceBackgroundColor(),
-  };
-}
-
-function getWorkspaceBackgroundColor() {
-  return (
-    getComputedStyle(document.documentElement)
-      .getPropertyValue("--background")
-      .trim() || "transparent"
   );
 }
 
@@ -1736,26 +1643,6 @@ function WorkspaceFileTreeSkeleton() {
       <Skeleton className="h-6 w-8/12 rounded-md" />
     </div>
   );
-}
-
-function fitTerminal(
-  fitAddon: FitAddon,
-  terminal: Terminal,
-  controller: TerminalSessionController,
-) {
-  fitAddon.fit();
-  controller.resize({
-    cols: terminal.cols,
-    rows: terminal.rows,
-  });
-}
-
-function normalizeBrowserUrl(input: string) {
-  const trimmed = input.trim();
-  if (!trimmed) return "about:blank";
-  if (trimmed === "about:blank") return trimmed;
-  if (/^[a-zA-Z][a-zA-Z\d+.-]*:/.test(trimmed)) return trimmed;
-  return `https://${trimmed}`;
 }
 
 function toTreeGitStatus(status: WorkspaceToolGitStatus): GitStatus {

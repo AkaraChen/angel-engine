@@ -1,5 +1,6 @@
 import type { ChatStreamApi } from "@shared/chat";
 import type { TerminalApi } from "@shared/terminal";
+import type { WorkspaceBrowserApi } from "@shared/workspace-browser";
 import type * as React from "react";
 import type {
   DesktopConfirmDeleteArchivedChatsInput,
@@ -9,6 +10,11 @@ import type {
   DesktopUpdateDownloadedEvent,
   DesktopWindowCommand,
 } from "@shared/desktop-window";
+import type {
+  WorkspaceToolContextSetInput,
+  WorkspaceToolInstance,
+  WorkspaceToolWindowOpenInput,
+} from "@shared/workspace-tool-instances";
 
 declare global {
   type DesktopPlatform =
@@ -30,6 +36,7 @@ declare global {
       platform: DesktopPlatform;
     };
     desktopWindow: {
+      closeCurrent: () => void;
       confirmDeleteAllChats: () => Promise<boolean>;
       confirmDeleteArchivedChats: (
         input: DesktopConfirmDeleteArchivedChatsInput,
@@ -46,13 +53,29 @@ declare global {
       onUpdateDownloaded: (
         handler: (event: DesktopUpdateDownloadedEvent) => void,
       ) => () => void;
+      onWorkspaceToolDialogRequested: (
+        handler: (instance: WorkspaceToolInstance) => void,
+      ) => () => void;
+      onWorkspaceToolInstanceUpdated: (
+        handler: (instance: WorkspaceToolInstance) => void,
+      ) => () => void;
+      onWorkspaceToolWindowClosed: (
+        handler: (toolId: string) => void,
+      ) => () => void;
       installUpdate: () => Promise<unknown>;
+      getWorkspaceToolWindowInstance: (
+        toolId: string,
+      ) => Promise<WorkspaceToolInstance | null>;
       openSettings: () => void;
+      openWorkspaceToolDialog: (input: WorkspaceToolWindowOpenInput) => void;
+      openWorkspaceToolWindow: (input: WorkspaceToolWindowOpenInput) => void;
       setActiveChatId: (chatId: string | null) => void;
       setTheme: (input: DesktopThemeSetInput) => void;
+      setWorkspaceToolContext: (input: WorkspaceToolContextSetInput) => void;
     };
     chatStream: ChatStreamApi;
     terminal: TerminalApi;
+    workspaceBrowser: WorkspaceBrowserApi;
     tipc: {
       invoke: (channel: string, input?: unknown) => Promise<unknown>;
     };
