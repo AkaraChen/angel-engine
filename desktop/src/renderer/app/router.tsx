@@ -21,8 +21,11 @@ export function AppRouter() {
         </Route>
         <Route
           component={WorkspaceToolWindowRoutePage}
-          path="/workspace-tool/:toolId"
+          path="/workspace-tools"
         />
+        <Route path="/workspace-tool/:toolId">
+          <Redirect replace to="/workspace-tools" />
+        </Route>
         <Route component={ChatRoutePage} path="/chat/:chatId" />
         <Route
           component={ProjectChatRoutePage}
@@ -37,10 +40,8 @@ export function AppRouter() {
   );
 }
 
-function WorkspaceToolWindowRoutePage({
-  params,
-}: RouteComponentProps<{ toolId: string }>) {
-  return <WorkspaceToolWindowPage toolId={params.toolId} />;
+function WorkspaceToolWindowRoutePage() {
+  return <WorkspaceToolWindowPage />;
 }
 
 function ChatRoutePage({ params }: RouteComponentProps<{ chatId: string }>) {

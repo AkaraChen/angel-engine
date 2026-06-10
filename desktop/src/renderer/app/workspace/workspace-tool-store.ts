@@ -1,233 +1,121 @@
 import type {
-  WorkspaceToolHost,
-  WorkspaceToolInstance,
-  WorkspaceToolInstanceInput,
-} from "@shared/workspace-tool-instances";
+  WorkspaceToolSurfaceContext,
+  WorkspaceToolSurfaceHost,
+  WorkspaceToolSurfaceSnapshot,
+  WorkspaceToolSurfaceState,
+} from "@shared/workspace-tool-surface";
 
 import { create } from "zustand";
 
 interface WorkspaceToolState {
-  activeDialogToolId?: string;
-  closeDialogTools: () => void;
-  closeWorkspaceTool: (toolId: string) => void;
-  findBrowserToolByViewId: (
-    browserViewId: string,
-  ) => WorkspaceToolInstance | undefined;
-  findTerminalToolBySessionId: (
-    sessionId: string,
-  ) => WorkspaceToolInstance | undefined;
-  instances: Record<string, WorkspaceToolInstance>;
-  openWorkspaceTool: (
-    input: WorkspaceToolInstanceInput,
-    host?: WorkspaceToolHost,
-  ) => WorkspaceToolInstance;
-  registerWorkspaceToolInstance: (instance: WorkspaceToolInstance) => void;
-  setActiveDialogTool: (toolId: string) => void;
-  setWorkspaceToolRoot: (root?: string | null) => void;
-  setWorkspaceToolHost: (toolId: string, host: WorkspaceToolHost) => void;
+  context: WorkspaceToolSurfaceContext;
+  hydrated: boolean;
+  host: WorkspaceToolSurfaceHost;
+  snapshots: Record<string, WorkspaceToolSurfaceSnapshot>;
+  focusWorkspaceToolSurface: () => void;
+  requestWorkspaceToolHost: (host: WorkspaceToolSurfaceHost) => void;
+  setWorkspaceToolContext: (context: WorkspaceToolSurfaceContext) => void;
+  syncWorkspaceToolState: (state: WorkspaceToolSurfaceState) => void;
+  updateWorkspaceToolSnapshot: (
+    chatId: string,
+    updater: (
+      snapshot: WorkspaceToolSurfaceSnapshot,
+    ) => WorkspaceToolSurfaceSnapshot,
+  ) => void;
 }
+
+export const workspaceToolFilesTabId = "files";
+export const workspaceToolGitTabId = "git";
 
 export const useWorkspaceToolStore = create<WorkspaceToolState>()(
   (set, get) => ({
-    activeDialogToolId: undefined,
-    closeDialogTools: () =>
-      set((current) => {
-        const instances = Object.fromEntries(
-          Object.entries(current.instances).filter(
-            ([, instance]) => instance.host !== "dialog",
-          ),
-        );
-
-        if (
-          current.activeDialogToolId === undefined &&
-          Object.keys(instances).length ===
-            Object.keys(current.instances).length
-        ) {
-          return current;
-        }
-
-        return {
-          activeDialogToolId: undefined,
-          instances,
-        };
-      }),
-    closeWorkspaceTool: (toolId) =>
-      set((current) => {
-        const { [toolId]: _closedInstance, ...instances } = current.instances;
-        const nextActiveDialogToolId =
-          current.activeDialogToolId === toolId
-            ? Object.values(instances).find(
-                (instance) => instance.host === "dialog",
-              )?.id
-            : current.activeDialogToolId;
-
-        return {
-          activeDialogToolId: nextActiveDialogToolId,
-          instances,
-        };
-      }),
-    findBrowserToolByViewId: (browserViewId) =>
-      Object.values(get().instances).find(
-        (instance) =>
-          instance.kind === "browser" &&
-          instance.browserViewId === browserViewId,
-      ),
-    findTerminalToolBySessionId: (sessionId) =>
-      Object.values(get().instances).find(
-        (instance) =>
-          instance.kind === "terminal" && instance.sessionId === sessionId,
-      ),
-    instances: {},
-    openWorkspaceTool: (input, host = "dialog") => {
-      const instance = {
-        ...input,
-        host,
-        id: crypto.randomUUID(),
-      } as WorkspaceToolInstance;
-
-      set((current) => ({
-        activeDialogToolId:
-          host === "dialog" ? instance.id : current.activeDialogToolId,
-        instances: {
-          ...current.instances,
-          [instance.id]: instance,
-        },
-      }));
-
-      return instance;
+    context: {},
+    focusWorkspaceToolSurface: () => {
+      window.desktopWindow.focusWorkspaceToolSurface();
     },
-    registerWorkspaceToolInstance: (instance) => {
-      const previousInstance = get().instances[instance.id];
-      if (previousInstance === instance) {
-        return;
-      }
-
-      killReplacedTerminalSession(previousInstance, instance);
+    host: "sidebar",
+    hydrated: false,
+    requestWorkspaceToolHost: (host) => {
+      set({ host });
+      window.desktopWindow.setWorkspaceToolSurfaceHost({ host });
+    },
+    setWorkspaceToolContext: (context) => {
+      set({ context });
+      window.desktopWindow.setWorkspaceToolSurfaceContext(context);
+    },
+    snapshots: {},
+    syncWorkspaceToolState: (state) => {
+      const chatId = state.context.chatId ?? undefined;
       set((current) => ({
-        activeDialogToolId:
-          instance.host === "dialog" ? instance.id : current.activeDialogToolId,
-        instances: {
-          ...current.instances,
-          [instance.id]: instance,
-        },
+        context: state.context,
+        host: state.host,
+        hydrated: true,
+        snapshots:
+          chatId && state.snapshot
+            ? {
+                ...current.snapshots,
+                [chatId]: state.snapshot,
+              }
+            : current.snapshots,
       }));
     },
-    setActiveDialogTool: (toolId) => {
-      const instance = get().instances[toolId];
-      if (!instance || instance.host !== "dialog") {
-        return;
-      }
-      if (get().activeDialogToolId === toolId) {
-        return;
-      }
+    updateWorkspaceToolSnapshot: (chatId, updater) => {
+      const currentSnapshot =
+        get().snapshots[chatId] ?? createDefaultWorkspaceToolSnapshot();
+      const snapshot = updater(currentSnapshot);
 
-      set({ activeDialogToolId: toolId });
-    },
-    setWorkspaceToolRoot: (root) => {
-      if (!root) {
-        return;
-      }
-
-      const replacedTerminalSessionIds: string[] = [];
-      set((current) => {
-        let changed = false;
-        const instances = Object.fromEntries(
-          Object.entries(current.instances).map(([toolId, instance]) => {
-            const nextInstance = workspaceToolInstanceWithRoot(instance, root);
-            if (nextInstance !== instance) {
-              changed = true;
-            }
-            if (
-              instance.kind === "terminal" &&
-              nextInstance.kind === "terminal" &&
-              instance.sessionId !== nextInstance.sessionId
-            ) {
-              replacedTerminalSessionIds.push(instance.sessionId);
-            }
-
-            return [toolId, nextInstance];
-          }),
-        );
-
-        return changed ? { instances } : current;
+      set((current) => ({
+        snapshots: {
+          ...current.snapshots,
+          [chatId]: snapshot,
+        },
+      }));
+      window.desktopWindow.setWorkspaceToolSurfaceSnapshot({
+        chatId,
+        snapshot,
       });
-      for (const sessionId of replacedTerminalSessionIds) {
-        window.terminal.kill({ sessionId });
-      }
-    },
-    setWorkspaceToolHost: (toolId, host) => {
-      const instance = get().instances[toolId];
-      if (!instance) return;
-      if (instance.host === host) return;
-
-      set((current) => ({
-        activeDialogToolId:
-          host === "dialog"
-            ? toolId
-            : current.activeDialogToolId === toolId
-              ? undefined
-              : current.activeDialogToolId,
-        instances: {
-          ...current.instances,
-          [toolId]: { ...instance, host } as WorkspaceToolInstance,
-        },
-      }));
     },
   }),
 );
 
-let workspaceToolWindowEventsInitialized = false;
+let workspaceToolSurfaceEventsInitialized = false;
 
-export function ensureWorkspaceToolWindowEvents() {
-  if (workspaceToolWindowEventsInitialized) {
+export function ensureWorkspaceToolSurfaceEvents() {
+  if (workspaceToolSurfaceEventsInitialized) {
     return;
   }
-  workspaceToolWindowEventsInitialized = true;
+  workspaceToolSurfaceEventsInitialized = true;
 
-  window.desktopWindow.onWorkspaceToolWindowClosed((toolId) => {
-    useWorkspaceToolStore.getState().closeWorkspaceTool(toolId);
-  });
-  window.desktopWindow.onWorkspaceToolDialogRequested((instance) => {
-    useWorkspaceToolStore.getState().registerWorkspaceToolInstance(instance);
-  });
-  window.desktopWindow.onWorkspaceToolInstanceUpdated((instance) => {
-    useWorkspaceToolStore.getState().registerWorkspaceToolInstance(instance);
+  window.desktopWindow
+    .getWorkspaceToolSurfaceState()
+    .then((state) => {
+      useWorkspaceToolStore.getState().syncWorkspaceToolState(state);
+    })
+    .catch(() => {
+      useWorkspaceToolStore.setState({ hydrated: true });
+    });
+
+  window.desktopWindow.onWorkspaceToolSurfaceChanged((state) => {
+    useWorkspaceToolStore.getState().syncWorkspaceToolState(state);
   });
 }
 
-function workspaceToolInstanceWithRoot(
-  instance: WorkspaceToolInstance,
-  root: string,
-): WorkspaceToolInstance {
-  if (instance.kind === "browser" || instance.root === root) {
-    return instance;
-  }
-
-  if (instance.kind === "terminal") {
-    return {
-      ...instance,
-      root,
-      sessionId: crypto.randomUUID(),
-    };
-  }
-
+export function createDefaultWorkspaceToolSnapshot(): WorkspaceToolSurfaceSnapshot {
   return {
-    ...instance,
-    root,
+    activeTabId: workspaceToolFilesTabId,
+    nextBrowserOrdinal: 1,
+    nextTerminalOrdinal: 1,
+    tabs: [],
   };
 }
 
-function killReplacedTerminalSession(
-  previous: WorkspaceToolInstance | undefined,
-  next: WorkspaceToolInstance,
+export function currentWorkspaceToolSnapshot(
+  chatId: string | null | undefined,
+  snapshots: Record<string, WorkspaceToolSurfaceSnapshot>,
 ) {
-  if (
-    previous?.kind !== "terminal" ||
-    next.kind !== "terminal" ||
-    previous.sessionId === next.sessionId
-  ) {
-    return;
+  if (!chatId) {
+    return createDefaultWorkspaceToolSnapshot();
   }
 
-  window.terminal.kill({ sessionId: previous.sessionId });
+  return snapshots[chatId] ?? createDefaultWorkspaceToolSnapshot();
 }

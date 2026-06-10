@@ -50,6 +50,18 @@ export const DESKTOP_WORKSPACE_TOOL_CONTEXT_SET_CHANNEL =
   "desktop-window:workspace-tool-context:set";
 export const DESKTOP_WORKSPACE_TOOL_DIALOG_OPEN_CHANNEL =
   "desktop-window:workspace-tool-dialog:open";
+export const DESKTOP_WORKSPACE_TOOL_SURFACE_CHANGED_CHANNEL =
+  "desktop-window:workspace-tool-surface:changed";
+export const DESKTOP_WORKSPACE_TOOL_SURFACE_CONTEXT_SET_CHANNEL =
+  "desktop-window:workspace-tool-surface-context:set";
+export const DESKTOP_WORKSPACE_TOOL_SURFACE_FOCUS_CHANNEL =
+  "desktop-window:workspace-tool-surface:focus";
+export const DESKTOP_WORKSPACE_TOOL_SURFACE_GET_CHANNEL =
+  "desktop-window:workspace-tool-surface:get";
+export const DESKTOP_WORKSPACE_TOOL_SURFACE_HOST_SET_CHANNEL =
+  "desktop-window:workspace-tool-surface-host:set";
+export const DESKTOP_WORKSPACE_TOOL_SURFACE_SNAPSHOT_SET_CHANNEL =
+  "desktop-window:workspace-tool-surface-snapshot:set";
 export const DESKTOP_WORKSPACE_TOOL_INSTANCE_CLOSE_CHANNEL =
   "desktop-window:workspace-tool-instance:close";
 export const DESKTOP_WORKSPACE_TOOL_INSTANCE_REGISTER_CHANNEL =

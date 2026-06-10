@@ -16,6 +16,12 @@ import type {
   WorkspaceToolInstanceCloseInput,
   WorkspaceToolWindowOpenInput,
 } from "@shared/workspace-tool-instances";
+import type {
+  WorkspaceToolSurfaceContextSetInput,
+  WorkspaceToolSurfaceHostSetInput,
+  WorkspaceToolSurfaceSnapshotSetInput,
+  WorkspaceToolSurfaceState,
+} from "@shared/workspace-tool-surface";
 
 declare global {
   type DesktopPlatform =
@@ -63,14 +69,19 @@ declare global {
       onWorkspaceToolWindowClosed: (
         handler: (toolId: string) => void,
       ) => () => void;
+      onWorkspaceToolSurfaceChanged: (
+        handler: (state: WorkspaceToolSurfaceState) => void,
+      ) => () => void;
       installUpdate: () => Promise<unknown>;
       getWorkspaceToolWindowInstance: (
         toolId: string,
       ) => Promise<WorkspaceToolInstance | null>;
+      getWorkspaceToolSurfaceState: () => Promise<WorkspaceToolSurfaceState>;
       openSettings: () => void;
       closeWorkspaceToolInstance: (
         input: WorkspaceToolInstanceCloseInput,
       ) => void;
+      focusWorkspaceToolSurface: () => void;
       openWorkspaceToolDialog: (input: WorkspaceToolWindowOpenInput) => void;
       openWorkspaceToolWindow: (input: WorkspaceToolWindowOpenInput) => void;
       registerWorkspaceToolWindowInstance: (
@@ -79,6 +90,15 @@ declare global {
       setActiveChatId: (chatId: string | null) => void;
       setTheme: (input: DesktopThemeSetInput) => void;
       setWorkspaceToolContext: (input: WorkspaceToolContextSetInput) => void;
+      setWorkspaceToolSurfaceContext: (
+        input: WorkspaceToolSurfaceContextSetInput,
+      ) => void;
+      setWorkspaceToolSurfaceHost: (
+        input: WorkspaceToolSurfaceHostSetInput,
+      ) => void;
+      setWorkspaceToolSurfaceSnapshot: (
+        input: WorkspaceToolSurfaceSnapshotSetInput,
+      ) => void;
     };
     chatStream: ChatStreamApi;
     terminal: TerminalApi;

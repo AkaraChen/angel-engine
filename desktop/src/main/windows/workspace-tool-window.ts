@@ -1,11 +1,15 @@
 import type {
-  WorkspaceToolContextSetInput,
-  WorkspaceToolInstance,
-  WorkspaceToolWindowOpenInput,
-} from "../../shared/workspace-tool-instances";
+  WorkspaceToolSurfaceContext,
+  WorkspaceToolSurfaceContextSetInput,
+  WorkspaceToolSurfaceHost,
+  WorkspaceToolSurfaceHostSetInput,
+  WorkspaceToolSurfaceSnapshot,
+  WorkspaceToolSurfaceSnapshotSetInput,
+  WorkspaceToolSurfaceState,
+} from "../../shared/workspace-tool-surface";
+import type { WorkspaceToolContextSetInput } from "../../shared/workspace-tool-instances";
 
 import path from "node:path";
-import { randomUUID } from "node:crypto";
 import { BrowserWindow, ipcMain } from "electron";
 
 import {
@@ -14,91 +18,122 @@ import {
   DESKTOP_WORKSPACE_TOOL_DIALOG_OPEN_CHANNEL,
   DESKTOP_WORKSPACE_TOOL_INSTANCE_CLOSE_CHANNEL,
   DESKTOP_WORKSPACE_TOOL_INSTANCE_REGISTER_CHANNEL,
-  DESKTOP_WORKSPACE_TOOL_INSTANCE_UPDATED_CHANNEL,
+  DESKTOP_WORKSPACE_TOOL_SURFACE_CHANGED_CHANNEL,
+  DESKTOP_WORKSPACE_TOOL_SURFACE_CONTEXT_SET_CHANNEL,
+  DESKTOP_WORKSPACE_TOOL_SURFACE_FOCUS_CHANNEL,
+  DESKTOP_WORKSPACE_TOOL_SURFACE_GET_CHANNEL,
+  DESKTOP_WORKSPACE_TOOL_SURFACE_HOST_SET_CHANNEL,
+  DESKTOP_WORKSPACE_TOOL_SURFACE_SNAPSHOT_SET_CHANNEL,
   DESKTOP_WORKSPACE_TOOL_WINDOW_GET_CHANNEL,
-  DESKTOP_WORKSPACE_TOOL_WINDOW_CLOSED_CHANNEL,
   DESKTOP_WORKSPACE_TOOL_WINDOW_OPEN_CHANNEL,
 } from "../../shared/desktop-window";
-import { killTerminalSession } from "../features/terminal/ipc";
 import { createDesktopWindow } from "./factory";
 
 const workspaceToolWindowStateFileName = "workspace-tool-window-state.json";
+const workspaceToolWindowHash = "/workspace-tools";
 
-const workspaceToolInstances = new Map<string, WorkspaceToolInstance>();
-const workspaceToolWindows = new Map<string, BrowserWindow>();
-const workspaceToolDialogTransferIds = new Set<string>();
-let currentWorkspaceToolRoot: string | undefined;
+const workspaceToolSnapshots = new Map<string, WorkspaceToolSurfaceSnapshot>();
+
+let workspaceToolContext: WorkspaceToolSurfaceContext = {};
+let workspaceToolHost: WorkspaceToolSurfaceHost = "sidebar";
+let workspaceToolWindow: BrowserWindow | null = null;
+let closingWorkspaceToolWindowForHostChange = false;
 
 export function registerWorkspaceToolWindowIpc() {
-  ipcMain.handle(
-    DESKTOP_WORKSPACE_TOOL_WINDOW_GET_CHANNEL,
-    (_event, toolId: unknown) => {
-      return typeof toolId === "string"
-        ? (workspaceToolInstances.get(toolId) ?? null)
-        : null;
-    },
+  ipcMain.handle(DESKTOP_WORKSPACE_TOOL_SURFACE_GET_CHANNEL, () =>
+    workspaceToolSurfaceState(),
   );
-
-  ipcMain.on(DESKTOP_WORKSPACE_TOOL_WINDOW_OPEN_CHANNEL, (_event, input) => {
-    const instance = parseWorkspaceToolWindowOpenInput(input);
-    if (!instance) return;
-
-    openWorkspaceToolWindow(instance);
-  });
-
-  ipcMain.on(DESKTOP_WORKSPACE_TOOL_DIALOG_OPEN_CHANNEL, (_event, input) => {
-    const instance = parseWorkspaceToolWindowOpenInput(input);
-    if (!instance) return;
-
-    const dialogInstance = { ...instance, host: "dialog" as const };
-    workspaceToolInstances.set(dialogInstance.id, dialogInstance);
-    workspaceToolDialogTransferIds.add(dialogInstance.id);
-    broadcastWorkspaceToolDialogOpen(dialogInstance);
-  });
 
   ipcMain.on(
-    DESKTOP_WORKSPACE_TOOL_INSTANCE_REGISTER_CHANNEL,
-    (_event, input) => {
-      const instance = parseWorkspaceToolWindowOpenInput(input);
-      if (!instance) return;
-
-      const registeredInstance = workspaceToolInstanceWithRoot(
-        { ...instance, host: "window" },
-        currentWorkspaceToolRoot,
-      );
-      workspaceToolInstances.set(registeredInstance.id, registeredInstance);
-      broadcastWorkspaceToolInstanceUpdated(registeredInstance);
+    DESKTOP_WORKSPACE_TOOL_SURFACE_CONTEXT_SET_CHANNEL,
+    (_event, input: WorkspaceToolSurfaceContextSetInput) => {
+      setWorkspaceToolSurfaceContext(input);
     },
   );
 
-  ipcMain.on(DESKTOP_WORKSPACE_TOOL_INSTANCE_CLOSE_CHANNEL, (_event, input) => {
-    const toolId = parseWorkspaceToolInstanceCloseInput(input);
-    if (!toolId) return;
+  ipcMain.on(
+    DESKTOP_WORKSPACE_TOOL_SURFACE_HOST_SET_CHANNEL,
+    (_event, input: WorkspaceToolSurfaceHostSetInput) => {
+      setWorkspaceToolSurfaceHost(input.host);
+    },
+  );
 
-    workspaceToolInstances.delete(toolId);
-    broadcastWorkspaceToolWindowClosed(toolId);
+  ipcMain.on(
+    DESKTOP_WORKSPACE_TOOL_SURFACE_SNAPSHOT_SET_CHANNEL,
+    (_event, input: WorkspaceToolSurfaceSnapshotSetInput) => {
+      workspaceToolSnapshots.set(input.chatId, input.snapshot);
+      broadcastWorkspaceToolSurfaceState();
+    },
+  );
+
+  ipcMain.on(DESKTOP_WORKSPACE_TOOL_SURFACE_FOCUS_CHANNEL, () => {
+    focusWorkspaceToolSurface();
   });
 
   ipcMain.on(DESKTOP_WINDOW_CLOSE_CURRENT_CHANNEL, (event) => {
     BrowserWindow.fromWebContents(event.sender)?.close();
   });
 
-  ipcMain.on(DESKTOP_WORKSPACE_TOOL_CONTEXT_SET_CHANNEL, (_event, input) => {
-    setWorkspaceToolContext(parseWorkspaceToolContextSetInput(input));
-  });
+  registerLegacyWorkspaceToolIpc();
 }
 
-export function openWorkspaceToolWindow(instance: WorkspaceToolInstance) {
-  const windowInstance = workspaceToolInstanceWithRoot(
-    { ...instance, host: "window" },
-    currentWorkspaceToolRoot,
+function registerLegacyWorkspaceToolIpc() {
+  ipcMain.handle(DESKTOP_WORKSPACE_TOOL_WINDOW_GET_CHANNEL, () => null);
+  ipcMain.on(
+    DESKTOP_WORKSPACE_TOOL_CONTEXT_SET_CHANNEL,
+    (_event, context: WorkspaceToolContextSetInput) => {
+      setWorkspaceToolSurfaceContext({
+        ...workspaceToolContext,
+        root: context.root,
+      });
+    },
   );
+  ipcMain.on(DESKTOP_WORKSPACE_TOOL_WINDOW_OPEN_CHANNEL, () => {
+    setWorkspaceToolSurfaceHost("window");
+  });
+  ipcMain.on(DESKTOP_WORKSPACE_TOOL_DIALOG_OPEN_CHANNEL, () => {
+    setWorkspaceToolSurfaceHost("dialog");
+  });
+  ipcMain.on(DESKTOP_WORKSPACE_TOOL_INSTANCE_REGISTER_CHANNEL, () => {});
+  ipcMain.on(DESKTOP_WORKSPACE_TOOL_INSTANCE_CLOSE_CHANNEL, () => {});
+}
 
-  workspaceToolInstances.set(windowInstance.id, windowInstance);
+function setWorkspaceToolSurfaceContext(context: WorkspaceToolSurfaceContext) {
+  if (
+    context.chatId === workspaceToolContext.chatId &&
+    context.root === workspaceToolContext.root
+  ) {
+    return;
+  }
 
-  const existingWindow = workspaceToolWindows.get(windowInstance.id);
+  workspaceToolContext = context;
+  updateWorkspaceToolWindowTitle();
+  broadcastWorkspaceToolSurfaceState();
+}
+
+function setWorkspaceToolSurfaceHost(host: WorkspaceToolSurfaceHost) {
+  if (host === "window") {
+    workspaceToolHost = "window";
+    ensureWorkspaceToolWindow();
+    broadcastWorkspaceToolSurfaceState();
+    return;
+  }
+
+  workspaceToolHost = host;
+  closeWorkspaceToolWindowForHostChange();
+  broadcastWorkspaceToolSurfaceState();
+}
+
+function focusWorkspaceToolSurface() {
+  if (workspaceToolHost === "window") {
+    ensureWorkspaceToolWindow();
+  }
+}
+
+function ensureWorkspaceToolWindow() {
+  const existingWindow = workspaceToolWindow;
   if (existingWindow && !existingWindow.isDestroyed()) {
-    existingWindow.setTitle(workspaceToolWindowTitle(windowInstance));
+    existingWindow.setTitle(workspaceToolWindowTitle());
     existingWindow.show();
     existingWindow.focus();
     return existingWindow;
@@ -110,221 +145,95 @@ export function openWorkspaceToolWindow(instance: WorkspaceToolInstance) {
       minimumBounds: { height: 420, width: 640 },
       stateFileName: workspaceToolWindowStateFileName,
     },
-    hash: `/workspace-tool/${encodeURIComponent(windowInstance.id)}`,
+    hash: workspaceToolWindowHash,
     options: {
       height: 720,
       minHeight: 420,
       minWidth: 640,
       show: true,
-      title: workspaceToolWindowTitle(windowInstance),
+      title: workspaceToolWindowTitle(),
       width: 1040,
     },
     stateFileName: workspaceToolWindowStateFileName,
   });
 
-  workspaceToolWindows.set(windowInstance.id, window);
-  lockWorkspaceToolWindowTitle(window, windowInstance.id);
+  workspaceToolWindow = window;
+  lockWorkspaceToolWindowTitle(window);
   window.on("closed", () => {
-    workspaceToolWindows.delete(windowInstance.id);
-    if (workspaceToolDialogTransferIds.delete(windowInstance.id)) {
+    workspaceToolWindow = null;
+    if (closingWorkspaceToolWindowForHostChange) {
+      closingWorkspaceToolWindowForHostChange = false;
       return;
     }
-    workspaceToolInstances.delete(windowInstance.id);
-    broadcastWorkspaceToolWindowClosed(windowInstance.id);
+
+    if (workspaceToolHost === "window") {
+      workspaceToolHost = "sidebar";
+      broadcastWorkspaceToolSurfaceState();
+    }
   });
 
   return window;
 }
 
-function setWorkspaceToolContext(input: WorkspaceToolContextSetInput) {
-  const nextRoot = parseOptionalWorkspaceRoot(input.root);
-  if (nextRoot === currentWorkspaceToolRoot) {
+function closeWorkspaceToolWindowForHostChange() {
+  const window = workspaceToolWindow;
+  if (!window || window.isDestroyed()) {
+    workspaceToolWindow = null;
     return;
   }
 
-  currentWorkspaceToolRoot = nextRoot;
-  if (!nextRoot) {
-    return;
-  }
-
-  for (const instance of workspaceToolInstances.values()) {
-    const nextInstance = workspaceToolInstanceWithRoot(instance, nextRoot);
-    if (nextInstance === instance) {
-      updateWorkspaceToolWindowTitle(instance.id);
-      continue;
-    }
-
-    workspaceToolInstances.set(nextInstance.id, nextInstance);
-    updateWorkspaceToolWindowTitle(nextInstance.id);
-    broadcastWorkspaceToolInstanceUpdated(nextInstance);
-  }
+  closingWorkspaceToolWindowForHostChange = true;
+  window.close();
 }
 
-function workspaceToolInstanceWithRoot(
-  instance: WorkspaceToolInstance,
-  root: string | undefined,
-): WorkspaceToolInstance {
-  if (!root || instance.kind === "browser" || instance.root === root) {
-    return instance;
-  }
-
-  if (instance.kind === "terminal") {
-    killTerminalSession(instance.sessionId);
-    return {
-      ...instance,
-      root,
-      sessionId: randomUUID(),
-    };
-  }
+function workspaceToolSurfaceState(): WorkspaceToolSurfaceState {
+  const chatId = workspaceToolContext.chatId ?? undefined;
 
   return {
-    ...instance,
-    root,
+    context: workspaceToolContext,
+    host: workspaceToolHost,
+    snapshot: chatId ? (workspaceToolSnapshots.get(chatId) ?? null) : null,
   };
 }
 
-function lockWorkspaceToolWindowTitle(window: BrowserWindow, toolId: string) {
-  window.webContents.on("page-title-updated", (event) => {
-    event.preventDefault();
-    updateWorkspaceToolWindowTitle(toolId);
-  });
-  updateWorkspaceToolWindowTitle(toolId);
+function broadcastWorkspaceToolSurfaceState() {
+  const state = workspaceToolSurfaceState();
+  for (const window of BrowserWindow.getAllWindows()) {
+    if (!window.isDestroyed()) {
+      window.webContents.send(
+        DESKTOP_WORKSPACE_TOOL_SURFACE_CHANGED_CHANNEL,
+        state,
+      );
+    }
+  }
 }
 
-function updateWorkspaceToolWindowTitle(toolId: string) {
-  const window = workspaceToolWindows.get(toolId);
-  const instance = workspaceToolInstances.get(toolId);
-  if (!window || window.isDestroyed() || !instance) {
+function lockWorkspaceToolWindowTitle(window: BrowserWindow) {
+  window.webContents.on("page-title-updated", (event) => {
+    event.preventDefault();
+    updateWorkspaceToolWindowTitle();
+  });
+  updateWorkspaceToolWindowTitle();
+}
+
+function updateWorkspaceToolWindowTitle() {
+  const window = workspaceToolWindow;
+  if (!window || window.isDestroyed()) {
     return;
   }
 
-  window.setTitle(workspaceToolWindowTitle(instance));
+  window.setTitle(workspaceToolWindowTitle());
 }
 
-function workspaceToolWindowTitle(instance: WorkspaceToolInstance) {
-  const root = workspaceToolRoot(instance);
+function workspaceToolWindowTitle() {
+  const root = workspaceToolContext.root;
   const rootName = root ? path.basename(root) || root : undefined;
-  const title = `${workspaceToolKindLabel(instance)}: ${instance.title}`;
 
   return rootName
-    ? `Angel Engine · ${title} · ${rootName}`
-    : `Angel Engine · ${title}`;
+    ? `Angel Engine · Workspace tools · ${rootName}`
+    : "Angel Engine · Workspace tools";
 }
 
-function workspaceToolRoot(instance: WorkspaceToolInstance) {
-  return instance.kind === "browser" ? undefined : instance.root;
-}
-
-function workspaceToolKindLabel(instance: WorkspaceToolInstance) {
-  switch (instance.kind) {
-    case "browser":
-      return "Browser";
-    case "file-preview":
-      return "File";
-    case "git-diff":
-      return "Git";
-    case "terminal":
-      return "Terminal";
-  }
-}
-
-function broadcastWorkspaceToolDialogOpen(instance: WorkspaceToolInstance) {
-  for (const window of BrowserWindow.getAllWindows()) {
-    if (!window.isDestroyed()) {
-      window.webContents.send(
-        DESKTOP_WORKSPACE_TOOL_DIALOG_OPEN_CHANNEL,
-        instance,
-      );
-    }
-  }
-}
-
-function broadcastWorkspaceToolWindowClosed(toolId: string) {
-  for (const window of BrowserWindow.getAllWindows()) {
-    if (!window.isDestroyed()) {
-      window.webContents.send(DESKTOP_WORKSPACE_TOOL_WINDOW_CLOSED_CHANNEL, {
-        toolId,
-      });
-    }
-  }
-}
-
-function broadcastWorkspaceToolInstanceUpdated(
-  instance: WorkspaceToolInstance,
-) {
-  for (const window of BrowserWindow.getAllWindows()) {
-    if (!window.isDestroyed()) {
-      window.webContents.send(
-        DESKTOP_WORKSPACE_TOOL_INSTANCE_UPDATED_CHANNEL,
-        instance,
-      );
-    }
-  }
-}
-
-function parseWorkspaceToolWindowOpenInput(
-  input: unknown,
-): WorkspaceToolInstance | null {
-  if (typeof input !== "object" || input === null) {
-    return null;
-  }
-
-  const instance = (input as Partial<WorkspaceToolWindowOpenInput>).instance;
-  if (typeof instance !== "object" || instance === null) {
-    return null;
-  }
-  if (typeof instance.id !== "string" || typeof instance.title !== "string") {
-    return null;
-  }
-
-  switch (instance.kind) {
-    case "browser":
-      return typeof instance.browserViewId === "string" &&
-        typeof instance.url === "string"
-        ? instance
-        : null;
-    case "file-preview":
-      return typeof instance.root === "string" &&
-        typeof instance.path === "string"
-        ? instance
-        : null;
-    case "git-diff":
-      return typeof instance.root === "string" ? instance : null;
-    case "terminal":
-      return typeof instance.root === "string" &&
-        typeof instance.sessionId === "string"
-        ? instance
-        : null;
-    default:
-      return null;
-  }
-}
-
-function parseWorkspaceToolInstanceCloseInput(input: unknown) {
-  if (typeof input !== "object" || input === null) {
-    return null;
-  }
-
-  const toolId = (input as { toolId?: unknown }).toolId;
-  return typeof toolId === "string" ? toolId : null;
-}
-
-function parseWorkspaceToolContextSetInput(
-  input: unknown,
-): WorkspaceToolContextSetInput {
-  if (typeof input !== "object" || input === null) {
-    return {};
-  }
-
-  const root = (input as Partial<WorkspaceToolContextSetInput>).root;
-  return { root: parseOptionalWorkspaceRoot(root) ?? null };
-}
-
-function parseOptionalWorkspaceRoot(root: unknown) {
-  if (typeof root !== "string") {
-    return undefined;
-  }
-
-  const trimmedRoot = root.trim();
-  return trimmedRoot ? trimmedRoot : undefined;
+export function openWorkspaceToolWindow() {
+  return setWorkspaceToolSurfaceHost("window");
 }
