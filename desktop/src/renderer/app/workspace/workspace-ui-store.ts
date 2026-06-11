@@ -2,8 +2,6 @@ import { create } from "zustand";
 
 export type WorkspaceMode = "chat" | "work";
 
-export type WorkspaceRightSidebarTab = "browser" | "files" | "git" | "terminal";
-
 const workspaceModeStorageKey = "angel-engine.workspace-mode";
 const rightSidebarWidthStorageKey = "angel-engine.right-sidebar-width";
 const defaultBrowserUrl = "about:blank";
@@ -25,13 +23,9 @@ interface WorkspaceUiState {
   browserUrl: string;
   collapsedChatDateGroupKeys: Set<SidebarChatDateGroupKey>;
   expandedProjectIds: Set<string>;
-  rightSidebarActiveTab: WorkspaceRightSidebarTab;
   rightSidebarOpen: boolean;
   rightSidebarWidth: number;
   setBrowserUrl: (browserUrl: string) => void;
-  setRightSidebarActiveTab: (
-    rightSidebarActiveTab: WorkspaceRightSidebarTab,
-  ) => void;
   setRightSidebarOpen: (rightSidebarOpen: boolean) => void;
   setRightSidebarWidth: (rightSidebarWidth: number) => void;
   setSidebarOpen: (sidebarOpen: boolean) => void;
@@ -51,13 +45,10 @@ export const useWorkspaceUiStore = create<WorkspaceUiState>()((set) => ({
   browserUrl: defaultBrowserUrl,
   collapsedChatDateGroupKeys: new Set(),
   expandedProjectIds: new Set(),
-  rightSidebarActiveTab: "files",
   rightSidebarOpen: initialWorkspaceMode === "work",
   rightSidebarWidth: initialRightSidebarWidth,
   setBrowserUrl: (browserUrl) =>
     set({ browserUrl: sanitizeBrowserUrl(browserUrl) }),
-  setRightSidebarActiveTab: (rightSidebarActiveTab) =>
-    set({ rightSidebarActiveTab }),
   setRightSidebarOpen: (rightSidebarOpen) => set({ rightSidebarOpen }),
   setRightSidebarWidth: (rightSidebarWidth) => {
     const nextRightSidebarWidth =

@@ -65,6 +65,11 @@ import {
   WorkspaceSidebarControlPortalProvider,
 } from "@/app/workspace/workspace-sidebar-control";
 import { WorkspaceRightSidebar } from "@/app/workspace/workspace-right-sidebar";
+import {
+  WorkspaceToolContextBridge,
+  WorkspaceToolDialogHost,
+} from "@/app/workspace/workspace-tool-host";
+import { useWorkspaceToolStore } from "@/app/workspace/workspace-tool-store";
 import { useWorkspaceUiStore } from "@/app/workspace/workspace-ui-store";
 import {
   SidebarInset,
@@ -210,13 +215,7 @@ function WorkspacePageContent({
   const rightSidebarWidth = useWorkspaceUiStore(
     (state) => state.rightSidebarWidth,
   );
-  const rightSidebarActiveTab = useWorkspaceUiStore(
-    (state) => state.rightSidebarActiveTab,
-  );
   const workspaceMode = useWorkspaceUiStore((state) => state.workspaceMode);
-  const setRightSidebarActiveTab = useWorkspaceUiStore(
-    (state) => state.setRightSidebarActiveTab,
-  );
   const setRightSidebarOpen = useWorkspaceUiStore(
     (state) => state.setRightSidebarOpen,
   );
@@ -229,6 +228,10 @@ function WorkspacePageContent({
   );
   const toggleRightSidebar = useWorkspaceUiStore(
     (state) => state.toggleRightSidebar,
+  );
+  const workspaceToolHost = useWorkspaceToolStore((state) => state.host);
+  const focusWorkspaceToolSurface = useWorkspaceToolStore(
+    (state) => state.focusWorkspaceToolSurface,
   );
   const worktreeDirtyPromptEnabled = useSettingsStore(
     (state) => state.worktreeDirtyPromptEnabled,
@@ -250,6 +253,7 @@ function WorkspacePageContent({
   );
   const showRightSidebar = workspaceMode === "work";
   const previousWorkspaceModeRef = useRef(workspaceMode);
+  const previousWorkspaceToolHostRef = useRef(workspaceToolHost);
 
   useEffect(() => {
     if (
@@ -314,6 +318,44 @@ function WorkspacePageContent({
     : selectedProjectPath
       ? getProjectDisplayName(selectedProjectPath)
       : undefined;
+  const workspaceToolRoot = selectedChatId ? selectedProjectPath : undefined;
+  const canShowRightSidebar = showRightSidebar && Boolean(workspaceToolRoot);
+  const dockedWorkspaceToolContext =
+    canShowRightSidebar &&
+    workspaceToolHost === "sidebar" &&
+    selectedChatId &&
+    workspaceToolRoot
+      ? {
+          chatId: selectedChatId,
+          root: workspaceToolRoot,
+        }
+      : null;
+  useEffect(() => {
+    if (
+      previousWorkspaceToolHostRef.current !== "sidebar" &&
+      workspaceToolHost === "sidebar" &&
+      canShowRightSidebar &&
+      selectedChatId &&
+      workspaceToolRoot
+    ) {
+      setRightSidebarOpen(true);
+    }
+    previousWorkspaceToolHostRef.current = workspaceToolHost;
+  }, [
+    canShowRightSidebar,
+    selectedChatId,
+    setRightSidebarOpen,
+    workspaceToolHost,
+    workspaceToolRoot,
+  ]);
+  const toggleWorkspaceTools = useCallback(() => {
+    if (workspaceToolHost !== "sidebar") {
+      focusWorkspaceToolSurface();
+      return;
+    }
+
+    toggleRightSidebar();
+  }, [focusWorkspaceToolSurface, toggleRightSidebar, workspaceToolHost]);
   const workspaceTitle = getWorkspaceTitle({
     selectedChat,
     selectedProjectName,
@@ -1029,6 +1071,11 @@ function WorkspacePageContent({
           onClose={closeWorktreeDirtyPrompt}
           state={worktreeDirtyPrompt}
         />
+        <WorkspaceToolContextBridge
+          chatId={selectedChatId ?? null}
+          root={workspaceToolRoot ?? null}
+        />
+        <WorkspaceToolDialogHost api={api} />
 
         {settingsActive ? (
           <SidebarInset className="h-svh max-h-svh overflow-hidden">
@@ -1045,10 +1092,13 @@ function WorkspacePageContent({
           <SidebarInset className="h-svh max-h-svh overflow-hidden">
             <WorkspaceHeader
               attention={chatAttention}
-              rightSidebarOpen={showRightSidebar && rightSidebarOpen}
+              rightSidebarOpen={
+                canShowRightSidebar &&
+                (rightSidebarOpen || workspaceToolHost !== "sidebar")
+              }
               title={workspaceTitle}
               onToggleRightSidebar={
-                showRightSidebar ? toggleRightSidebar : undefined
+                canShowRightSidebar ? toggleWorkspaceTools : undefined
               }
             />
             <main className="flex min-h-0 flex-1 overflow-hidden">
@@ -1138,14 +1188,13 @@ function WorkspacePageContent({
                   />
                 )}
               </section>
-              {showRightSidebar ? (
+              {dockedWorkspaceToolContext ? (
                 <WorkspaceRightSidebar
-                  activeTab={rightSidebarActiveTab}
                   api={api}
+                  chatId={dockedWorkspaceToolContext.chatId}
                   open={rightSidebarOpen}
-                  root={selectedProjectPath ?? undefined}
+                  root={dockedWorkspaceToolContext.root}
                   width={rightSidebarWidth}
-                  onTabChange={setRightSidebarActiveTab}
                   onWidthChange={setRightSidebarWidth}
                 />
               ) : null}

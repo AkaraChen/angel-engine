@@ -2,6 +2,10 @@ export interface WorkspaceToolRootInput {
   root: string;
 }
 
+export interface WorkspaceToolReadFileInput extends WorkspaceToolRootInput {
+  path: string;
+}
+
 export type WorkspaceToolGitStatus =
   | "added"
   | "deleted"
@@ -23,6 +27,22 @@ export interface WorkspaceFileTreeResult {
   root: string;
   truncated: boolean;
 }
+
+export type WorkspaceFileReadResult =
+  | {
+      content: string;
+      path: string;
+      root: string;
+      size: number;
+      type: "text";
+    }
+  | {
+      path: string;
+      reason: "binary" | "not-file" | "too-large";
+      root: string;
+      size?: number;
+      type: "unsupported";
+    };
 
 export interface WorkspaceGitDiffResult {
   branch?: string;

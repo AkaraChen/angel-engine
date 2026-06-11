@@ -1,6 +1,8 @@
 import type {
   TerminalCreateRequest,
   TerminalDisposeInput,
+  TerminalEvent,
+  TerminalKillInput,
   TerminalResizeInput,
   TerminalWriteInput,
 } from "../../../shared/terminal";
@@ -15,22 +17,34 @@ import * as pty from "node-pty";
 import {
   TERMINAL_CREATE_CHANNEL,
   TERMINAL_DISPOSE_CHANNEL,
+  TERMINAL_KILL_CHANNEL,
   TERMINAL_RESIZE_CHANNEL,
   TERMINAL_WRITE_CHANNEL,
   terminalEventChannel,
 } from "../../../shared/terminal";
 
 interface TerminalSession {
-  owner: WebContents;
   ptyProcess: IPty;
+  scrollback: string[];
+  subscribers: Set<WebContents>;
 }
 
 const terminalSessions = new Map<string, TerminalSession>();
+const terminalScrollbackLimit = 1_000;
 
 export function registerTerminalIpc() {
   ipcMain.handle(TERMINAL_CREATE_CHANNEL, (event, input: unknown) => {
     const request = parseTerminalCreateRequest(input);
-    disposeTerminalSession(request.sessionId);
+    const existingSession = terminalSessions.get(request.sessionId);
+    if (existingSession) {
+      attachTerminalSubscriber(
+        existingSession,
+        event.sender,
+        request.sessionId,
+      );
+      existingSession.ptyProcess.resize(request.cols, request.rows);
+      return { sessionId: request.sessionId };
+    }
 
     const shell = defaultShell();
     const cwd = resolveTerminalCwd(request.cwd);
@@ -45,27 +59,25 @@ export function registerTerminalIpc() {
       name: "xterm-256color",
       rows: request.rows,
     });
-    const owner = event.sender;
+    const session: TerminalSession = {
+      ptyProcess,
+      scrollback: [],
+      subscribers: new Set(),
+    };
 
-    terminalSessions.set(request.sessionId, { owner, ptyProcess });
+    terminalSessions.set(request.sessionId, session);
+    attachTerminalSubscriber(session, event.sender, request.sessionId);
     ptyProcess.onData((data) => {
-      if (owner.isDestroyed()) return;
-      owner.send(terminalEventChannel(request.sessionId), {
-        data,
-        type: "data",
-      });
+      pushTerminalScrollback(session, data);
+      emitTerminalEvent(session, request.sessionId, { data, type: "data" });
     });
     ptyProcess.onExit(({ exitCode, signal }) => {
       terminalSessions.delete(request.sessionId);
-      if (owner.isDestroyed()) return;
-      owner.send(terminalEventChannel(request.sessionId), {
+      emitTerminalEvent(session, request.sessionId, {
         exitCode,
         signal,
         type: "exit",
       });
-    });
-    owner.once("destroyed", () => {
-      disposeOwnedTerminalSessions(owner);
     });
 
     return { sessionId: request.sessionId };
@@ -87,24 +99,70 @@ export function registerTerminalIpc() {
 
   ipcMain.handle(TERMINAL_DISPOSE_CHANNEL, (_event, input: unknown) => {
     const request = parseTerminalDisposeInput(input);
-    return { disposed: disposeTerminalSession(request.sessionId) };
+    const session = terminalSessions.get(request.sessionId);
+    if (!session) {
+      return { disposed: false };
+    }
+
+    session.subscribers.delete(_event.sender);
+    return { disposed: true };
+  });
+
+  ipcMain.handle(TERMINAL_KILL_CHANNEL, (_event, input: unknown) => {
+    const request = parseTerminalKillInput(input);
+    return { killed: killTerminalSession(request.sessionId) };
   });
 }
 
-function disposeTerminalSession(sessionId: string) {
+function attachTerminalSubscriber(
+  session: TerminalSession,
+  owner: WebContents,
+  sessionId: string,
+) {
+  session.subscribers.add(owner);
+  owner.once("destroyed", () => {
+    session.subscribers.delete(owner);
+  });
+  if (session.scrollback.length > 0 && !owner.isDestroyed()) {
+    owner.send(terminalEventChannel(sessionId), {
+      data: session.scrollback.join(""),
+      type: "replay",
+    });
+  }
+}
+
+type TerminalBroadcastEvent = Extract<TerminalEvent, { type: "data" | "exit" }>;
+
+function emitTerminalEvent(
+  session: TerminalSession,
+  sessionId: string,
+  event: TerminalBroadcastEvent,
+) {
+  for (const subscriber of session.subscribers) {
+    if (subscriber.isDestroyed()) {
+      session.subscribers.delete(subscriber);
+      continue;
+    }
+    subscriber.send(terminalEventChannel(sessionId), event);
+  }
+}
+
+function pushTerminalScrollback(session: TerminalSession, data: string) {
+  session.scrollback.push(data);
+  if (session.scrollback.length > terminalScrollbackLimit) {
+    session.scrollback.splice(
+      0,
+      session.scrollback.length - terminalScrollbackLimit,
+    );
+  }
+}
+
+export function killTerminalSession(sessionId: string) {
   const session = terminalSessions.get(sessionId);
   if (!session) return false;
   terminalSessions.delete(sessionId);
   session.ptyProcess.kill();
   return true;
-}
-
-function disposeOwnedTerminalSessions(owner: WebContents) {
-  for (const [sessionId, session] of terminalSessions) {
-    if (session.owner === owner) {
-      disposeTerminalSession(sessionId);
-    }
-  }
 }
 
 function defaultShell() {
@@ -168,6 +226,15 @@ function parseTerminalResizeInput(input: unknown): TerminalResizeInput {
 function parseTerminalDisposeInput(input: unknown): TerminalDisposeInput {
   if (!isObject(input)) {
     throw new Error("Terminal dispose input is required.");
+  }
+  return {
+    sessionId: parseNonEmptyString(input.sessionId, "Terminal session id"),
+  };
+}
+
+function parseTerminalKillInput(input: unknown): TerminalKillInput {
+  if (!isObject(input)) {
+    throw new Error("Terminal kill input is required.");
   }
   return {
     sessionId: parseNonEmptyString(input.sessionId, "Terminal session id"),
