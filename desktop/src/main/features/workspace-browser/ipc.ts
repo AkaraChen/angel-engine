@@ -149,6 +149,7 @@ function ensureWorkspaceBrowserInstance({
   if (existing) {
     return existing;
   }
+  const initialUrl = workspaceBrowserLoadUrl(url);
 
   const view = new WebContentsView({
     webPreferences: {
@@ -159,13 +160,13 @@ function ensureWorkspaceBrowserInstance({
     browserViewId,
     ready: false,
     title: "",
-    url,
+    url: initialUrl,
     view,
   };
 
   workspaceBrowserInstances.set(browserViewId, instance);
   configureWorkspaceBrowserWebContents(instance);
-  loadWorkspaceBrowserUrl(instance, url);
+  loadWorkspaceBrowserUrl(instance, initialUrl);
   return instance;
 }
 
@@ -177,7 +178,7 @@ function configureWorkspaceBrowserWebContents(
   webContents.setWindowOpenHandler(({ url }) => {
     if (isHttpUrl(url)) {
       loadWorkspaceBrowserUrl(instance, url);
-    } else {
+    } else if (isAllowedExternalUrl(url)) {
       void shell.openExternal(url);
     }
     return { action: "deny" };
@@ -265,14 +266,24 @@ function loadWorkspaceBrowserUrl(
   instance: WorkspaceBrowserInstance,
   url: string,
 ) {
-  const nextUrl = url.trim() || "about:blank";
-  instance.url = nextUrl;
-  if (nextUrl === "about:blank") {
-    void instance.view.webContents.loadURL(nextUrl);
-    return;
-  }
+  const nextUrl = workspaceBrowserLoadUrl(url);
 
-  void instance.view.webContents.loadURL(nextUrl);
+  instance.url = nextUrl;
+  void instance.view.webContents.loadURL(nextUrl).catch((error) => {
+    console.error("Failed to load workspace browser URL.", {
+      browserViewId: instance.browserViewId,
+      error,
+      url: nextUrl,
+    });
+  });
+}
+
+function workspaceBrowserLoadUrl(url: string) {
+  const nextUrl = url.trim() || "about:blank";
+  if (nextUrl !== "about:blank" && !isHttpUrl(nextUrl)) {
+    throw new Error("Workspace browser only supports http(s) URLs.");
+  }
+  return nextUrl;
 }
 
 function refreshWorkspaceBrowserLocation(instance: WorkspaceBrowserInstance) {
@@ -447,6 +458,14 @@ function isHttpUrl(url: string) {
   try {
     const protocol = new URL(url).protocol;
     return protocol === "https:" || protocol === "http:";
+  } catch {
+    return false;
+  }
+}
+
+function isAllowedExternalUrl(url: string) {
+  try {
+    return new URL(url).protocol === "mailto:";
   } catch {
     return false;
   }

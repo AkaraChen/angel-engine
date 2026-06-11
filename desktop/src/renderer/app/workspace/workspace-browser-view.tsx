@@ -28,70 +28,85 @@ export function WorkspaceBrowserNativeView({
   const propsRef = useRef({ browserViewId, onStateChange, url });
   propsRef.current = { browserViewId, onStateChange, url };
 
-  const setContainer = useCallback((container: HTMLDivElement | null) => {
-    cleanupRef.current();
-    cleanupRef.current = () => {};
+  const setContainer = useCallback(
+    (container: HTMLDivElement | null) => {
+      cleanupRef.current();
+      cleanupRef.current = () => {};
 
-    if (!container) {
-      return;
-    }
+      if (!container) {
+        return;
+      }
 
-    const attachmentId = crypto.randomUUID();
-    let disposed = false;
-    const currentProps = propsRef.current;
-    const emitState = (state: WorkspaceBrowserState) => {
-      propsRef.current.onStateChange?.(state);
-    };
-    const updateBounds = () => {
-      const bounds = readWorkspaceBrowserBounds(container);
-      void window.workspaceBrowser.setBounds({
-        attachmentId,
-        bounds,
-        browserViewId: currentProps.browserViewId,
-      });
-    };
-    const unsubscribe = window.workspaceBrowser.onEvent(
-      currentProps.browserViewId,
-      (event) => {
-        emitState(event.state);
-      },
-    );
-    const resizeObserver = new ResizeObserver(updateBounds);
-
-    resizeObserver.observe(container);
-    void window.workspaceBrowser
-      .create({
-        browserViewId: currentProps.browserViewId,
-        url: currentProps.url,
-      })
-      .then((state) => {
-        if (disposed) {
-          return;
-        }
-        emitState(state);
-        return window.workspaceBrowser.attach({
+      const attachmentId = crypto.randomUUID();
+      let disposed = false;
+      const currentProps = propsRef.current;
+      const emitState = (state: WorkspaceBrowserState) => {
+        propsRef.current.onStateChange?.(state);
+      };
+      const updateBounds = () => {
+        const bounds = readWorkspaceBrowserBounds(container);
+        void window.workspaceBrowser.setBounds({
           attachmentId,
-          bounds: readWorkspaceBrowserBounds(container),
+          bounds,
           browserViewId: currentProps.browserViewId,
         });
-      })
-      .then((state) => {
-        if (!disposed && state) {
-          emitState(state);
-        }
-      })
-      .catch(() => {});
+      };
+      const unsubscribe = window.workspaceBrowser.onEvent(
+        currentProps.browserViewId,
+        (event) => {
+          emitState(event.state);
+        },
+      );
+      const resizeObserver = new ResizeObserver(updateBounds);
 
-    cleanupRef.current = () => {
-      disposed = true;
-      resizeObserver.disconnect();
-      unsubscribe();
-      void window.workspaceBrowser.detach({
-        attachmentId,
-        browserViewId: currentProps.browserViewId,
-      });
-    };
-  }, []);
+      resizeObserver.observe(container);
+      void window.workspaceBrowser
+        .create({
+          browserViewId: currentProps.browserViewId,
+          url: currentProps.url,
+        })
+        .then((state) => {
+          if (disposed) {
+            return;
+          }
+          emitState(state);
+          return window.workspaceBrowser.attach({
+            attachmentId,
+            bounds: readWorkspaceBrowserBounds(container),
+            browserViewId: currentProps.browserViewId,
+          });
+        })
+        .then((state) => {
+          if (!disposed && state) {
+            emitState(state);
+          }
+        })
+        .catch((error) => {
+          console.error("Failed to attach workspace browser view.", {
+            browserViewId: currentProps.browserViewId,
+            error,
+          });
+        });
+
+      cleanupRef.current = () => {
+        disposed = true;
+        resizeObserver.disconnect();
+        unsubscribe();
+        void window.workspaceBrowser
+          .detach({
+            attachmentId,
+            browserViewId: currentProps.browserViewId,
+          })
+          .catch((error) => {
+            console.error("Failed to detach workspace browser view.", {
+              browserViewId: currentProps.browserViewId,
+              error,
+            });
+          });
+      };
+    },
+    [browserViewId],
+  );
 
   return (
     <div

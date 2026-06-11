@@ -352,9 +352,17 @@ export function WorkspaceToolSurface({
         window.terminal.kill({ sessionId: tab.sessionId });
       }
       if (tab.kind === "browser") {
-        void window.workspaceBrowser.destroy({
-          browserViewId: tab.browserViewId,
-        });
+        void window.workspaceBrowser
+          .destroy({
+            browserViewId: tab.browserViewId,
+          })
+          .catch((error) => {
+            console.error("Failed to destroy workspace browser view.", {
+              browserViewId: tab.browserViewId,
+              error,
+              tabId: tab.id,
+            });
+          });
       }
 
       setSnapshot((current) => {
@@ -990,8 +998,14 @@ function WorkspaceBrowserTabContent({
     void window.workspaceBrowser
       .getState({ browserViewId: tab.browserViewId })
       .then(setBrowserState)
-      .catch(() => {});
-  }, [tab.browserViewId]);
+      .catch((error) => {
+        console.error("Failed to get workspace browser state.", {
+          browserViewId: tab.browserViewId,
+          error,
+          tabId: tab.id,
+        });
+      });
+  }, [tab.browserViewId, tab.id]);
 
   const updateBrowserTab = useCallback(
     (
@@ -1047,28 +1061,59 @@ function WorkspaceBrowserTabContent({
       void window.workspaceBrowser
         .navigate({ browserViewId: tab.browserViewId, url: nextUrl })
         .then(handleStateChange)
-        .catch(() => {});
+        .catch((error) => {
+          console.error("Failed to navigate workspace browser.", {
+            browserViewId: tab.browserViewId,
+            error,
+            tabId: tab.id,
+            url: nextUrl,
+          });
+        });
     },
-    [handleStateChange, tab.browserViewId, tab.draftUrl, updateBrowserTab],
+    [
+      handleStateChange,
+      tab.browserViewId,
+      tab.draftUrl,
+      tab.id,
+      updateBrowserTab,
+    ],
   );
   const goBack = useCallback(() => {
     void window.workspaceBrowser
       .goBack({ browserViewId: tab.browserViewId })
       .then(handleStateChange)
-      .catch(() => {});
-  }, [handleStateChange, tab.browserViewId]);
+      .catch((error) => {
+        console.error("Failed to navigate workspace browser back.", {
+          browserViewId: tab.browserViewId,
+          error,
+          tabId: tab.id,
+        });
+      });
+  }, [handleStateChange, tab.browserViewId, tab.id]);
   const goForward = useCallback(() => {
     void window.workspaceBrowser
       .goForward({ browserViewId: tab.browserViewId })
       .then(handleStateChange)
-      .catch(() => {});
-  }, [handleStateChange, tab.browserViewId]);
+      .catch((error) => {
+        console.error("Failed to navigate workspace browser forward.", {
+          browserViewId: tab.browserViewId,
+          error,
+          tabId: tab.id,
+        });
+      });
+  }, [handleStateChange, tab.browserViewId, tab.id]);
   const reload = useCallback(() => {
     void window.workspaceBrowser
       .reload({ browserViewId: tab.browserViewId })
       .then(handleStateChange)
-      .catch(() => {});
-  }, [handleStateChange, tab.browserViewId]);
+      .catch((error) => {
+        console.error("Failed to reload workspace browser.", {
+          browserViewId: tab.browserViewId,
+          error,
+          tabId: tab.id,
+        });
+      });
+  }, [handleStateChange, tab.browserViewId, tab.id]);
 
   return (
     <div className="flex h-full min-h-0 flex-col">
@@ -1116,6 +1161,7 @@ function WorkspaceBrowserTabContent({
       <WorkspaceBrowserNativeView
         active={active}
         browserViewId={tab.browserViewId}
+        key={tab.browserViewId}
         onStateChange={handleStateChange}
         url={tab.url}
       />

@@ -66,6 +66,10 @@ export interface WorkspaceBrowserEvent {
   type: "state";
 }
 
+export interface WorkspaceBrowserOkResult {
+  ok: true;
+}
+
 export interface WorkspaceBrowserApi {
   attach: (
     input: WorkspaceBrowserAttachInput,
@@ -73,8 +77,12 @@ export interface WorkspaceBrowserApi {
   create: (
     input: WorkspaceBrowserCreateInput,
   ) => Promise<WorkspaceBrowserState>;
-  destroy: (input: WorkspaceBrowserCommandInput) => Promise<unknown>;
-  detach: (input: WorkspaceBrowserDetachInput) => Promise<unknown>;
+  destroy: (
+    input: WorkspaceBrowserCommandInput,
+  ) => Promise<WorkspaceBrowserOkResult>;
+  detach: (
+    input: WorkspaceBrowserDetachInput,
+  ) => Promise<WorkspaceBrowserOkResult>;
   getState: (
     input: WorkspaceBrowserCommandInput,
   ) => Promise<WorkspaceBrowserState>;

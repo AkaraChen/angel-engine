@@ -111,8 +111,20 @@ export async function workspaceReadFile(
 ): Promise<WorkspaceFileReadResult> {
   const root = await resolveWorkspaceRoot(rootInput);
   const absolutePath = resolveWorkspaceTreePath(root, treePathInput);
-  const stat = await fs.stat(absolutePath);
-  const treePath = absolutePathToTreePath(root, absolutePath) ?? treePathInput;
+  const treePath = absolutePathToTreePath(root, absolutePath);
+  if (!treePath) {
+    throw new Error("Workspace file path must stay inside the workspace root.");
+  }
+
+  const [realRoot, realPath] = await Promise.all([
+    fs.realpath(root),
+    fs.realpath(absolutePath),
+  ]);
+  if (!pathIsInside(realRoot, realPath)) {
+    throw new Error("Workspace file path must stay inside the workspace root.");
+  }
+
+  const stat = await fs.stat(realPath);
 
   if (!stat.isFile()) {
     return {
@@ -134,7 +146,7 @@ export async function workspaceReadFile(
     };
   }
 
-  const buffer = await fs.readFile(absolutePath);
+  const buffer = await fs.readFile(realPath);
   if (isProbablyBinary(buffer)) {
     return {
       path: treePath,
@@ -440,6 +452,14 @@ function resolveWorkspaceTreePath(root: string, treePathInput: string) {
   }
 
   return absolutePath;
+}
+
+function pathIsInside(root: string, absolutePath: string) {
+  const relativePath = path.relative(root, absolutePath);
+  return (
+    relativePath === "" ||
+    (!relativePath.startsWith("..") && !path.isAbsolute(relativePath))
+  );
 }
 
 function normalizeGitPath(value: string) {

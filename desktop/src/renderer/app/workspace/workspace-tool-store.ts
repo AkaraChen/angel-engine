@@ -91,7 +91,8 @@ export function ensureWorkspaceToolSurfaceEvents() {
     .then((state) => {
       useWorkspaceToolStore.getState().syncWorkspaceToolState(state);
     })
-    .catch(() => {
+    .catch((error) => {
+      console.error("Failed to hydrate workspace tool surface state.", error);
       useWorkspaceToolStore.setState({ hydrated: true });
     });
 

@@ -19,10 +19,9 @@ export function AppRouter() {
         <Route path="/settings">
           <SettingsWindowPage />
         </Route>
-        <Route
-          component={WorkspaceToolWindowRoutePage}
-          path="/workspace-tools"
-        />
+        <Route path="/workspace-tools">
+          <WorkspaceToolWindowPage />
+        </Route>
         <Route path="/workspace-tool/:toolId">
           <Redirect replace to="/workspace-tools" />
         </Route>
@@ -38,10 +37,6 @@ export function AppRouter() {
       </Switch>
     </Router>
   );
-}
-
-function WorkspaceToolWindowRoutePage() {
-  return <WorkspaceToolWindowPage />;
 }
 
 function ChatRoutePage({ params }: RouteComponentProps<{ chatId: string }>) {
