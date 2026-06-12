@@ -796,10 +796,10 @@ function WorkspaceToolTabStrip({
   return (
     <div
       aria-label="Workspace tool tabs"
-      className="flex h-10 shrink-0 items-center gap-1 border-b border-border/70 px-2"
+      className="flex h-9 shrink-0 items-stretch border-b border-border/70 bg-muted/20"
       role="tablist"
     >
-      <div className="flex min-w-0 shrink items-center gap-1 overflow-x-auto">
+      <div className="flex min-w-0 shrink items-stretch overflow-x-auto">
         {tabs.map((tab) => {
           const active = tab.id === activeTabId;
           const Icon = tab.icon;
@@ -808,11 +808,11 @@ function WorkspaceToolTabStrip({
           return (
             <div
               className={cn(
-                "group flex h-7 max-w-44 min-w-0 shrink-0 items-center overflow-hidden rounded-md border border-transparent text-xs text-muted-foreground",
-                tab.pinned ? "w-8" : "min-w-28",
+                "group relative flex h-full max-w-48 min-w-0 shrink-0 items-center overflow-hidden border-r border-border/60 text-xs text-muted-foreground",
+                tab.pinned ? "w-9" : "min-w-32",
                 active
-                  ? "border-border/80 bg-muted text-foreground"
-                  : "hover:bg-muted/60 hover:text-foreground",
+                  ? "bg-background text-foreground after:absolute after:inset-x-0 after:bottom-0 after:h-px after:bg-primary"
+                  : "bg-muted/20 hover:bg-muted/60 hover:text-foreground",
               )}
               key={tab.id}
             >
@@ -954,12 +954,12 @@ function WorkspaceToolNewTabMenu({
             "text-xs",
             variant === "row"
               ? "h-8 w-full justify-start gap-2 border-border/70 px-2 text-muted-foreground"
-              : "h-7 border-border/70 px-2 text-muted-foreground",
+              : "h-full w-8 rounded-none border-0 px-0 text-muted-foreground",
           )}
-          size="xs"
+          size={variant === "row" ? "xs" : "icon-xs"}
           title="New tool tab"
           type="button"
-          variant="outline"
+          variant={variant === "row" ? "outline" : "ghost"}
         >
           <Add className="size-3.5" />
           {variant === "row" ? (
@@ -2461,7 +2461,7 @@ function WorkspaceToolPatchFileList({
           onFileSelectedChange={onFileSelectedChange}
         />
       ) : patchList.errors.length === 0 ? (
-        <div className="rounded-md border border-border/70 px-3 py-6 text-center text-sm text-muted-foreground">
+        <div className="px-3 py-6 text-center text-sm text-muted-foreground">
           No changes
         </div>
       ) : null}
