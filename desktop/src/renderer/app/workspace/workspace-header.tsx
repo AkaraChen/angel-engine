@@ -1,4 +1,5 @@
 import type { ChatAttentionState } from "@/features/chat/state/chat-run-store";
+import type { ReactNode } from "react";
 
 import {
   RiSidebarFoldLine as SidebarFold,
@@ -8,19 +9,28 @@ import { useTranslation } from "react-i18next";
 import { WorkspaceSidebarControlTarget } from "@/app/workspace/workspace-sidebar-control";
 import { Button } from "@/components/ui/button";
 import { useSidebar } from "@/components/ui/sidebar";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 interface WorkspaceHeaderProps {
   attention?: ChatAttentionState;
   onToggleRightSidebar?: () => void;
   rightSidebarOpen?: boolean;
+  rightSidebarToggleLabel?: string;
   title: string;
+  workspaceToolActions?: ReactNode;
 }
 
 export function WorkspaceHeader({
   attention,
   onToggleRightSidebar,
   rightSidebarOpen = false,
+  rightSidebarToggleLabel = "Toggle workspace tools",
   title,
+  workspaceToolActions,
 }: WorkspaceHeaderProps) {
   const { t } = useTranslation();
   const { isMobile, state } = useSidebar();
@@ -79,23 +89,35 @@ export function WorkspaceHeader({
           ) : null}
         </span>
       ) : null}
+      {workspaceToolActions ? (
+        <div className="flex shrink-0 items-center gap-1">
+          {workspaceToolActions}
+        </div>
+      ) : null}
       {onToggleRightSidebar ? (
-        <Button
-          aria-label={t("sidebar.toggleSidebar")}
-          className="text-muted-foreground"
-          data-electron-no-drag
-          onClick={onToggleRightSidebar}
-          size="icon-sm"
-          title={t("sidebar.toggleSidebar")}
-          type="button"
-          variant="ghost"
-        >
-          {rightSidebarOpen ? (
-            <SidebarFold className="scale-x-[-1]" />
-          ) : (
-            <SidebarUnfold className="scale-x-[-1]" />
-          )}
-        </Button>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              aria-label={rightSidebarToggleLabel}
+              className="text-muted-foreground"
+              data-electron-no-drag
+              onClick={onToggleRightSidebar}
+              size="icon-sm"
+              title={rightSidebarToggleLabel}
+              type="button"
+              variant="ghost"
+            >
+              {rightSidebarOpen ? (
+                <SidebarFold className="scale-x-[-1]" />
+              ) : (
+                <SidebarUnfold className="scale-x-[-1]" />
+              )}
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent side="bottom" sideOffset={6}>
+            {rightSidebarToggleLabel}
+          </TooltipContent>
+        </Tooltip>
       ) : null}
     </header>
   );

@@ -84,6 +84,11 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { getApiClient } from "@/platform/api-client";
 import { queryKeys } from "@/platform/query-keys";
 import { cn } from "@/platform/utils";
@@ -121,6 +126,7 @@ interface WorkspaceToolSurfaceProps {
   chatId?: string | null;
   host: WorkspaceToolSurfaceHost;
   root?: string | null;
+  showHeaderActions?: boolean;
   trafficLightInset?: boolean;
 }
 
@@ -235,6 +241,7 @@ export function WorkspaceToolSurface({
   chatId: propChatId,
   host,
   root: propRoot,
+  showHeaderActions = true,
   trafficLightInset = false,
 }: WorkspaceToolSurfaceProps) {
   ensureWorkspaceToolSurfaceEvents();
@@ -395,6 +402,7 @@ export function WorkspaceToolSurface({
     <section className="flex h-full min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-background text-foreground">
       <WorkspaceToolSurfaceHeader
         host={host}
+        showActions={showHeaderActions}
         trafficLightInset={trafficLightInset}
         onRequestHost={requestHost}
       />
@@ -440,10 +448,12 @@ function WorkspaceToolWindowTitleBridge({ root }: { root?: string | null }) {
 
 function WorkspaceToolSurfaceHeader({
   host,
+  showActions,
   trafficLightInset,
   onRequestHost,
 }: {
   host: WorkspaceToolSurfaceHost;
+  showActions: boolean;
   trafficLightInset: boolean;
   onRequestHost: (host: WorkspaceToolSurfaceHost) => void;
 }) {
@@ -451,66 +461,93 @@ function WorkspaceToolSurfaceHeader({
     <div
       className={cn(
         "flex h-11 shrink-0 items-center gap-2 border-b border-border/70 px-3",
-        trafficLightInset && "pl-[88px]",
+        trafficLightInset && "h-12 pl-[88px]",
       )}
       data-electron-drag={trafficLightInset ? true : undefined}
     >
       <div className="min-w-0 flex-1 truncate text-sm font-medium">
         Workspace tools
       </div>
-      {host !== "sidebar" ? (
-        <Button
-          aria-label="Dock tools"
-          data-electron-no-drag
-          onClick={() => onRequestHost("sidebar")}
-          size="icon-xs"
-          title="Dock tools"
-          type="button"
-          variant="ghost"
-        >
-          <DockIcon />
-        </Button>
-      ) : null}
-      {host !== "dialog" ? (
-        <Button
-          aria-label="Open tools in dialog"
-          data-electron-no-drag
-          onClick={() => onRequestHost("dialog")}
-          size="icon-xs"
-          title="Open tools in dialog"
-          type="button"
-          variant="ghost"
-        >
-          <DialogIcon />
-        </Button>
-      ) : null}
-      {host !== "window" ? (
-        <Button
-          aria-label="Open tools in window"
-          data-electron-no-drag
-          onClick={() => onRequestHost("window")}
-          size="icon-xs"
-          title="Open tools in window"
-          type="button"
-          variant="ghost"
-        >
-          <WindowIcon />
-        </Button>
-      ) : null}
-      {host !== "sidebar" ? (
-        <Button
-          aria-label="Close tools"
-          data-electron-no-drag
-          onClick={() => onRequestHost("sidebar")}
-          size="icon-xs"
-          title="Close tools"
-          type="button"
-          variant="ghost"
-        >
-          <Close />
-        </Button>
+      {showActions ? (
+        <WorkspaceToolSurfaceHostControls
+          host={host}
+          onRequestHost={onRequestHost}
+        />
       ) : null}
     </div>
+  );
+}
+
+export function WorkspaceToolSurfaceHostControls({
+  host,
+  onRequestHost,
+}: {
+  host: WorkspaceToolSurfaceHost;
+  onRequestHost: (host: WorkspaceToolSurfaceHost) => void;
+}) {
+  return (
+    <>
+      {host !== "sidebar" ? (
+        <WorkspaceToolSurfaceHostButton
+          icon={<DockIcon />}
+          label="Dock tools in sidebar"
+          onClick={() => onRequestHost("sidebar")}
+        />
+      ) : null}
+      {host !== "dialog" ? (
+        <WorkspaceToolSurfaceHostButton
+          icon={<DialogIcon />}
+          label="Open tools in dialog"
+          onClick={() => onRequestHost("dialog")}
+        />
+      ) : null}
+      {host !== "window" ? (
+        <WorkspaceToolSurfaceHostButton
+          icon={<WindowIcon />}
+          label="Open tools in window"
+          onClick={() => onRequestHost("window")}
+        />
+      ) : null}
+      {host !== "sidebar" ? (
+        <WorkspaceToolSurfaceHostButton
+          icon={<Close />}
+          label="Close tools window"
+          onClick={() => onRequestHost("sidebar")}
+        />
+      ) : null}
+    </>
+  );
+}
+
+function WorkspaceToolSurfaceHostButton({
+  icon,
+  label,
+  onClick,
+}: {
+  icon: ReactNode;
+  label: string;
+  onClick: () => void;
+}) {
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <Button
+          aria-label={label}
+          className="text-muted-foreground"
+          data-electron-no-drag
+          onClick={onClick}
+          size="icon-sm"
+          title={label}
+          type="button"
+          variant="ghost"
+        >
+          {icon}
+        </Button>
+      </TooltipTrigger>
+      <TooltipContent side="bottom" sideOffset={6}>
+        {label}
+      </TooltipContent>
+    </Tooltip>
   );
 }
 
@@ -535,7 +572,7 @@ function WorkspaceToolTabStrip({
       className="flex h-10 shrink-0 items-center gap-1 border-b border-border/70 px-2"
       role="tablist"
     >
-      <div className="flex min-w-0 flex-1 items-center gap-1 overflow-x-auto">
+      <div className="flex min-w-0 shrink items-center gap-1 overflow-x-auto">
         {tabs.map((tab) => {
           const active = tab.id === activeTabId;
           const Icon = tab.icon;

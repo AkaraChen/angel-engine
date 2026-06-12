@@ -10,7 +10,7 @@ import type {
 import type { WorkspaceToolContextSetInput } from "../../shared/workspace-tool-instances";
 
 import path from "node:path";
-import { BrowserWindow, ipcMain } from "electron";
+import { BrowserWindow, ipcMain, screen } from "electron";
 
 import {
   DESKTOP_WINDOW_CLOSE_CURRENT_CHANNEL,
@@ -31,6 +31,7 @@ import { createDesktopWindow } from "./factory";
 
 const workspaceToolWindowStateFileName = "workspace-tool-window-state.json";
 const workspaceToolWindowHash = "/workspace-tools";
+const workspaceToolWindowMinimumBounds = { height: 420, width: 640 };
 
 const workspaceToolSnapshots = new Map<string, WorkspaceToolSurfaceSnapshot>();
 
@@ -139,20 +140,21 @@ function ensureWorkspaceToolWindow() {
     return existingWindow;
   }
 
+  const defaultBounds = defaultWorkspaceToolWindowBounds();
   const window = createDesktopWindow({
     bounds: {
-      defaultBounds: { height: 720, width: 1040 },
-      minimumBounds: { height: 420, width: 640 },
+      defaultBounds,
+      minimumBounds: workspaceToolWindowMinimumBounds,
       stateFileName: workspaceToolWindowStateFileName,
     },
     hash: workspaceToolWindowHash,
     options: {
-      height: 720,
-      minHeight: 420,
-      minWidth: 640,
+      height: defaultBounds.height,
+      minHeight: workspaceToolWindowMinimumBounds.height,
+      minWidth: workspaceToolWindowMinimumBounds.width,
       show: true,
       title: workspaceToolWindowTitle(),
-      width: 1040,
+      width: defaultBounds.width,
     },
     stateFileName: workspaceToolWindowStateFileName,
   });
@@ -173,6 +175,35 @@ function ensureWorkspaceToolWindow() {
   });
 
   return window;
+}
+
+function defaultWorkspaceToolWindowBounds() {
+  const { workArea } = screen.getPrimaryDisplay();
+  const maxBounds = {
+    height: Math.max(workspaceToolWindowMinimumBounds.height, workArea.height),
+    width: Math.max(workspaceToolWindowMinimumBounds.width, workArea.width),
+  };
+
+  return {
+    height: clampWorkspaceToolWindowDimension(
+      Math.round(workArea.height * 0.82),
+      workspaceToolWindowMinimumBounds.height,
+      maxBounds.height,
+    ),
+    width: clampWorkspaceToolWindowDimension(
+      Math.round(workArea.width * 0.82),
+      workspaceToolWindowMinimumBounds.width,
+      maxBounds.width,
+    ),
+  };
+}
+
+function clampWorkspaceToolWindowDimension(
+  value: number,
+  minimum: number,
+  maximum: number,
+) {
+  return Math.max(minimum, Math.min(value, maximum));
 }
 
 function closeWorkspaceToolWindowForHostChange() {

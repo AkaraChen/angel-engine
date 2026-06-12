@@ -68,6 +68,7 @@ import { WorkspaceRightSidebar } from "@/app/workspace/workspace-right-sidebar";
 import {
   WorkspaceToolContextBridge,
   WorkspaceToolDialogHost,
+  WorkspaceToolSurfaceHostControls,
 } from "@/app/workspace/workspace-tool-host";
 import { useWorkspaceToolStore } from "@/app/workspace/workspace-tool-store";
 import { useWorkspaceUiStore } from "@/app/workspace/workspace-ui-store";
@@ -233,6 +234,9 @@ function WorkspacePageContent({
   const focusWorkspaceToolSurface = useWorkspaceToolStore(
     (state) => state.focusWorkspaceToolSurface,
   );
+  const requestWorkspaceToolHost = useWorkspaceToolStore(
+    (state) => state.requestWorkspaceToolHost,
+  );
   const worktreeDirtyPromptEnabled = useSettingsStore(
     (state) => state.worktreeDirtyPromptEnabled,
   );
@@ -356,6 +360,12 @@ function WorkspacePageContent({
 
     toggleRightSidebar();
   }, [focusWorkspaceToolSurface, toggleRightSidebar, workspaceToolHost]);
+  const workspaceToolsToggleLabel =
+    workspaceToolHost !== "sidebar"
+      ? "Focus workspace tools"
+      : rightSidebarOpen
+        ? "Hide workspace tools"
+        : "Show workspace tools";
   const workspaceTitle = getWorkspaceTitle({
     selectedChat,
     selectedProjectName,
@@ -1096,7 +1106,16 @@ function WorkspacePageContent({
                 canShowRightSidebar &&
                 (rightSidebarOpen || workspaceToolHost !== "sidebar")
               }
+              rightSidebarToggleLabel={workspaceToolsToggleLabel}
               title={workspaceTitle}
+              workspaceToolActions={
+                canShowRightSidebar && workspaceToolHost === "sidebar" ? (
+                  <WorkspaceToolSurfaceHostControls
+                    host="sidebar"
+                    onRequestHost={requestWorkspaceToolHost}
+                  />
+                ) : undefined
+              }
               onToggleRightSidebar={
                 canShowRightSidebar ? toggleWorkspaceTools : undefined
               }
