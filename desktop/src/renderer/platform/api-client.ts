@@ -20,8 +20,10 @@ import type {
   ProjectGitStatusInput,
 } from "@shared/projects";
 import type {
+  WorkspaceToolGitCommitInput,
   WorkspaceToolReadFileInput,
   WorkspaceToolRootInput,
+  WorkspaceToolWriteFileInput,
 } from "@shared/workspace-tools";
 import { ipc } from "@/platform/ipc";
 
@@ -92,12 +94,18 @@ interface WorkspaceToolsApiClient {
   fileTree: (
     input: WorkspaceToolRootInput,
   ) => ReturnType<typeof ipc.workspaceToolsFileTree>;
+  gitCommit: (
+    input: WorkspaceToolGitCommitInput,
+  ) => ReturnType<typeof ipc.workspaceToolsGitCommit>;
   gitDiff: (
     input: WorkspaceToolRootInput,
   ) => ReturnType<typeof ipc.workspaceToolsGitDiff>;
   readFile: (
     input: WorkspaceToolReadFileInput,
   ) => ReturnType<typeof ipc.workspaceToolsReadFile>;
+  writeFile: (
+    input: WorkspaceToolWriteFileInput,
+  ) => ReturnType<typeof ipc.workspaceToolsWriteFile>;
 }
 
 export interface ApiClient {
@@ -159,10 +167,14 @@ export function createApiClient(): ApiClient {
     workspaceTools: {
       fileTree: async (input: WorkspaceToolRootInput) =>
         ipc.workspaceToolsFileTree(input),
+      gitCommit: async (input: WorkspaceToolGitCommitInput) =>
+        ipc.workspaceToolsGitCommit(input),
       gitDiff: async (input: WorkspaceToolRootInput) =>
         ipc.workspaceToolsGitDiff(input),
       readFile: async (input: WorkspaceToolReadFileInput) =>
         ipc.workspaceToolsReadFile(input),
+      writeFile: async (input: WorkspaceToolWriteFileInput) =>
+        ipc.workspaceToolsWriteFile(input),
     },
   };
 }

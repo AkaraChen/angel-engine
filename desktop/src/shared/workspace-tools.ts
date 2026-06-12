@@ -6,6 +6,21 @@ export interface WorkspaceToolReadFileInput extends WorkspaceToolRootInput {
   path: string;
 }
 
+export interface WorkspaceToolWriteFileInput extends WorkspaceToolReadFileInput {
+  content: string;
+}
+
+export interface WorkspaceToolGitCommitInput extends WorkspaceToolRootInput {
+  description?: string;
+  paths: string[];
+  summary: string;
+}
+
+export interface WorkspaceToolGitCommitResult {
+  commitHash: string;
+  root: string;
+}
+
 export type WorkspaceToolGitStatus =
   | "added"
   | "deleted"
@@ -43,6 +58,12 @@ export type WorkspaceFileReadResult =
       size?: number;
       type: "unsupported";
     };
+
+export interface WorkspaceFileWriteResult {
+  path: string;
+  root: string;
+  size: number;
+}
 
 export interface WorkspaceGitDiffResult {
   branch?: string;

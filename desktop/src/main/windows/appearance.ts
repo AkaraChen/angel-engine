@@ -3,6 +3,8 @@ import type { BrowserWindowConstructorOptions } from "electron";
 import type {
   DesktopConfirmDeleteArchivedChatsInput,
   DesktopConfirmDeleteCustomAgentInput,
+  DesktopConfirmSaveWorkspaceFileChangesInput,
+  DesktopConfirmSaveWorkspaceFileChangesResult,
   DesktopThemeMode,
 } from "../../shared/desktop-window";
 import { BrowserWindow, dialog, ipcMain, nativeTheme } from "electron";
@@ -10,6 +12,7 @@ import {
   DESKTOP_CONFIRM_DELETE_ALL_CHATS_CHANNEL,
   DESKTOP_CONFIRM_DELETE_ARCHIVED_CHATS_CHANNEL,
   DESKTOP_CONFIRM_DELETE_CUSTOM_AGENT_CHANNEL,
+  DESKTOP_CONFIRM_SAVE_WORKSPACE_FILE_CHANGES_CHANNEL,
   DESKTOP_INSTALL_UPDATE_CHANNEL,
   DESKTOP_THEME_SET_CHANNEL,
 } from "../../shared/desktop-window";
@@ -133,6 +136,41 @@ export function registerDesktopWindowAppearanceIpc() {
     },
   );
 
+  ipcMain.handle(
+    DESKTOP_CONFIRM_SAVE_WORKSPACE_FILE_CHANGES_CHANNEL,
+    async (event, input: unknown) => {
+      const value = readConfirmSaveWorkspaceFileChangesInput(input);
+      if (!value) return "cancel";
+
+      const options = {
+        buttons: [
+          translate("common.save"),
+          "Don't Save",
+          translate("common.cancel"),
+        ],
+        cancelId: 2,
+        defaultId: 0,
+        detail: "Your changes will be lost if you don't save them.",
+        message: `Save changes to ${value.path}?`,
+        noLink: true,
+        type: "warning" as const,
+      };
+      const parentWindow = BrowserWindow.fromWebContents(event.sender);
+      const result = parentWindow
+        ? await dialog.showMessageBox(parentWindow, options)
+        : await dialog.showMessageBox(options);
+
+      switch (result.response) {
+        case 0:
+          return "save" satisfies DesktopConfirmSaveWorkspaceFileChangesResult;
+        case 1:
+          return "discard" satisfies DesktopConfirmSaveWorkspaceFileChangesResult;
+        default:
+          return "cancel" satisfies DesktopConfirmSaveWorkspaceFileChangesResult;
+      }
+    },
+  );
+
   ipcMain.handle(DESKTOP_INSTALL_UPDATE_CHANNEL, () => {
     installDownloadedUpdate();
   });
@@ -196,4 +234,13 @@ function readConfirmDeleteCustomAgentInput(
     chatCount: Math.max(0, Math.trunc(value.chatCount)),
     label: value.label,
   };
+}
+
+function readConfirmSaveWorkspaceFileChangesInput(
+  input: unknown,
+): DesktopConfirmSaveWorkspaceFileChangesInput | null {
+  if (typeof input !== "object" || input === null) return null;
+  const value = input as Partial<DesktopConfirmSaveWorkspaceFileChangesInput>;
+  if (typeof value.path !== "string" || !value.path.trim()) return null;
+  return { path: value.path };
 }

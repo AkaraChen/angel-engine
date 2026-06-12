@@ -111,7 +111,6 @@ export function WorkspaceRightSidebar({
           chatId={chatId}
           host="sidebar"
           root={root}
-          showHeaderActions={false}
         />
       </div>
     </aside>

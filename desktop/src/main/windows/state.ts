@@ -20,7 +20,7 @@ export function savedWindowBounds({
   minimumBounds = minimumMainBounds,
   stateFileName = mainWindowStateFileName,
 }: {
-  defaultBounds?: Pick<Rectangle, "height" | "width">;
+  defaultBounds?: Partial<Rectangle> & Pick<Rectangle, "height" | "width">;
   minimumBounds?: Pick<Rectangle, "height" | "width">;
   stateFileName?: string;
 } = {}): Partial<Rectangle> {
@@ -32,6 +32,8 @@ export function savedWindowBounds({
   return {
     height: defaultBounds.height,
     width: defaultBounds.width,
+    x: defaultBounds.x,
+    y: defaultBounds.y,
   };
 }
 

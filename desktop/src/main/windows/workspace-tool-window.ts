@@ -179,22 +179,22 @@ function ensureWorkspaceToolWindow() {
 
 function defaultWorkspaceToolWindowBounds() {
   const { workArea } = screen.getPrimaryDisplay();
-  const maxBounds = {
-    height: Math.max(workspaceToolWindowMinimumBounds.height, workArea.height),
-    width: Math.max(workspaceToolWindowMinimumBounds.width, workArea.width),
-  };
+  const width = clampWorkspaceToolWindowDimension(
+    Math.round(workArea.width * 0.94),
+    workspaceToolWindowMinimumBounds.width,
+    workArea.width,
+  );
+  const height = clampWorkspaceToolWindowDimension(
+    Math.round(workArea.height * 0.92),
+    workspaceToolWindowMinimumBounds.height,
+    workArea.height,
+  );
 
   return {
-    height: clampWorkspaceToolWindowDimension(
-      Math.round(workArea.height * 0.82),
-      workspaceToolWindowMinimumBounds.height,
-      maxBounds.height,
-    ),
-    width: clampWorkspaceToolWindowDimension(
-      Math.round(workArea.width * 0.82),
-      workspaceToolWindowMinimumBounds.width,
-      maxBounds.width,
-    ),
+    height,
+    width,
+    x: workArea.x + Math.round((workArea.width - width) / 2),
+    y: workArea.y + Math.round((workArea.height - height) / 2),
   };
 }
 

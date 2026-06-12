@@ -1,7 +1,9 @@
 import type {
   WorkspaceFileReadResult,
   WorkspaceFileTreeResult,
+  WorkspaceFileWriteResult,
   WorkspaceGitDiffResult,
+  WorkspaceToolGitCommitResult,
   WorkspaceToolGitStatus,
   WorkspaceToolGitStatusEntry,
 } from "../../../shared/workspace-tools";
@@ -105,6 +107,51 @@ export async function workspaceGitDiff(
   };
 }
 
+export async function workspaceGitCommit({
+  description,
+  paths: pathInputs,
+  root: rootInput,
+  summary,
+}: {
+  description?: string;
+  paths: string[];
+  root: string;
+  summary: string;
+}): Promise<WorkspaceToolGitCommitResult> {
+  const root = await resolveWorkspaceRoot(rootInput);
+  const gitRoot = await gitRootFor(root);
+  if (!gitRoot) {
+    throw new Error("Workspace root is not a Git repository.");
+  }
+
+  const trimmedSummary = summary.trim();
+  if (!trimmedSummary) {
+    throw new Error("Commit summary is required.");
+  }
+
+  const paths = uniqueWorkspaceGitPaths(root, pathInputs);
+  if (paths.length === 0) {
+    throw new Error("Select at least one file to commit.");
+  }
+
+  await gitOutput(root, ["add", "--", ...paths]);
+
+  const commitArgs = ["commit", "-m", trimmedSummary];
+  const trimmedDescription = description?.trim();
+  if (trimmedDescription) {
+    commitArgs.push("-m", trimmedDescription);
+  }
+  commitArgs.push("--only", "--", ...paths);
+
+  await gitOutput(root, commitArgs);
+  const commitHash = await gitOutput(root, ["rev-parse", "--short", "HEAD"]);
+
+  return {
+    commitHash,
+    root,
+  };
+}
+
 export async function workspaceReadFile(
   rootInput: string,
   treePathInput: string,
@@ -163,6 +210,37 @@ export async function workspaceReadFile(
     root,
     size: stat.size,
     type: "text",
+  };
+}
+
+export async function workspaceWriteFile(
+  rootInput: string,
+  treePathInput: string,
+  content: string,
+): Promise<WorkspaceFileWriteResult> {
+  const root = await resolveWorkspaceRoot(rootInput);
+  const treePath = normalizeGitPath(treePathInput);
+  const absolutePath = resolveWorkspaceTreePath(root, treePath);
+  const realRoot = await fs.realpath(root);
+  let realPath = absolutePath;
+
+  try {
+    realPath = await fs.realpath(absolutePath);
+  } catch {
+    // New files are allowed as long as their resolved path stays in the root.
+  }
+
+  if (!pathIsInside(realRoot, realPath)) {
+    throw new Error("Workspace file path must stay inside the workspace root.");
+  }
+
+  await fs.mkdir(path.dirname(absolutePath), { recursive: true });
+  await fs.writeFile(absolutePath, content, "utf8");
+
+  return {
+    path: treePath,
+    root,
+    size: Buffer.byteLength(content, "utf8"),
   };
 }
 
@@ -452,6 +530,22 @@ function resolveWorkspaceTreePath(root: string, treePathInput: string) {
   }
 
   return absolutePath;
+}
+
+function uniqueWorkspaceGitPaths(root: string, pathInputs: string[]) {
+  const paths = new Set<string>();
+
+  for (const pathInput of pathInputs) {
+    const treePath = normalizeGitPath(pathInput.trim());
+    if (!treePath) {
+      continue;
+    }
+
+    resolveWorkspaceTreePath(root, treePath);
+    paths.add(treePath);
+  }
+
+  return [...paths];
 }
 
 function pathIsInside(root: string, absolutePath: string) {

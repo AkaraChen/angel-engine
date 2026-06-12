@@ -5,6 +5,8 @@ import type * as React from "react";
 import type {
   DesktopConfirmDeleteArchivedChatsInput,
   DesktopConfirmDeleteCustomAgentInput,
+  DesktopConfirmSaveWorkspaceFileChangesInput,
+  DesktopConfirmSaveWorkspaceFileChangesResult,
   DesktopOpenChatFromNotificationEvent,
   DesktopThemeSetInput,
   DesktopUpdateDownloadedEvent,
@@ -51,6 +53,9 @@ declare global {
       confirmDeleteCustomAgent: (
         input: DesktopConfirmDeleteCustomAgentInput,
       ) => Promise<boolean>;
+      confirmSaveWorkspaceFileChanges: (
+        input: DesktopConfirmSaveWorkspaceFileChangesInput,
+      ) => Promise<DesktopConfirmSaveWorkspaceFileChangesResult>;
       onCommand: (
         handler: (command: DesktopWindowCommand) => void,
       ) => () => void;

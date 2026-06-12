@@ -2,6 +2,7 @@ import type { IpcRendererEvent } from "electron";
 import type {
   DesktopConfirmDeleteArchivedChatsInput,
   DesktopConfirmDeleteCustomAgentInput,
+  DesktopConfirmSaveWorkspaceFileChangesInput,
   DesktopOpenChatFromNotificationEvent,
   DesktopThemeSetInput,
   DesktopUpdateDownloadedEvent,
@@ -21,6 +22,7 @@ import {
   DESKTOP_CONFIRM_DELETE_ALL_CHATS_CHANNEL,
   DESKTOP_CONFIRM_DELETE_ARCHIVED_CHATS_CHANNEL,
   DESKTOP_CONFIRM_DELETE_CUSTOM_AGENT_CHANNEL,
+  DESKTOP_CONFIRM_SAVE_WORKSPACE_FILE_CHANGES_CHANNEL,
   DESKTOP_INSTALL_UPDATE_CHANNEL,
   DESKTOP_OPEN_CHAT_FROM_NOTIFICATION_CHANNEL,
   DESKTOP_SETTINGS_OPEN_CHANNEL,
@@ -67,6 +69,14 @@ export function exposeDesktopWindowBridge() {
     ) {
       return ipcRenderer.invoke(
         DESKTOP_CONFIRM_DELETE_CUSTOM_AGENT_CHANNEL,
+        input,
+      );
+    },
+    async confirmSaveWorkspaceFileChanges(
+      input: DesktopConfirmSaveWorkspaceFileChangesInput,
+    ) {
+      return ipcRenderer.invoke(
+        DESKTOP_CONFIRM_SAVE_WORKSPACE_FILE_CHANGES_CHANNEL,
         input,
       );
     },

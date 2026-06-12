@@ -7,8 +7,6 @@ import type {
 } from "@shared/workspace-tools";
 import type {
   WorkspaceToolPinnedTabId,
-  WorkspaceToolSurfaceFilePreviewTab,
-  WorkspaceToolSurfaceGitDiffTab,
   WorkspaceToolSurfaceDynamicTab,
   WorkspaceToolSurfaceHost,
   WorkspaceToolSurfaceSnapshot,
@@ -17,14 +15,23 @@ import type { FileDiffMetadata } from "@pierre/diffs";
 import type { CSSProperties } from "react";
 
 import {
+  DEFAULT_VIRTUAL_FILE_METRICS,
   getFiletypeFromFileName,
   getHighlighterOptions,
   parsePatchFiles,
   preloadHighlighter,
 } from "@pierre/diffs";
 import { FileDiff } from "@pierre/diffs/react";
-import { prepareFileTreeInput, type GitStatus } from "@pierre/trees";
+import {
+  createFileTreeIconResolver,
+  getBuiltInSpriteSheet,
+  prepareFileTreeInput,
+  type GitStatus,
+} from "@pierre/trees";
 import { FileTree, useFileTree } from "@pierre/trees/react";
+import Editor, { loader as monacoLoader } from "@monaco-editor/react";
+import * as monaco from "monaco-editor";
+import { basename } from "pathe";
 import {
   RiAddLine as Add,
   RiArrowLeftLine as ArrowLeft,
@@ -40,7 +47,7 @@ import {
   RiTerminalBoxLine as TerminalIcon,
   RiWindowLine as WindowIcon,
 } from "@remixicon/react";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   type FormEvent,
   type MouseEvent as ReactMouseEvent,
@@ -58,13 +65,17 @@ import {
 } from "@/app/workspace/workspace-browser-view";
 import {
   currentWorkspaceToolSnapshot,
+  emptyWorkspaceWideFilesState,
   ensureWorkspaceToolSurfaceEvents,
+  isWorkspaceWideFileStateDirty,
   useWorkspaceToolStore,
+  type WorkspaceWideFileState,
   workspaceToolFilesTabId,
   workspaceToolGitTabId,
 } from "@/app/workspace/workspace-tool-store";
 import { WorkspaceTerminalView } from "@/app/workspace/workspace-terminal-view";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Collapsible,
   CollapsibleContent,
@@ -84,6 +95,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Tooltip,
   TooltipContent,
@@ -93,16 +105,69 @@ import { getApiClient } from "@/platform/api-client";
 import { queryKeys } from "@/platform/query-keys";
 import { cn } from "@/platform/utils";
 
-const largeWorkspaceDiffLineThreshold = 1000;
 const defaultWorkspaceToolBrowserUrl = "about:blank";
 
-type WorkspaceToolSemanticDynamicTab =
-  | WorkspaceToolSurfaceFilePreviewTab
-  | WorkspaceToolSurfaceGitDiffTab;
+monacoLoader.config({ monaco });
+disableWorkspaceMonacoTypeScriptServices();
 
-type WorkspaceToolSemanticDynamicTabInput =
-  | Omit<WorkspaceToolSurfaceFilePreviewTab, "id">
-  | Omit<WorkspaceToolSurfaceGitDiffTab, "id">;
+const workspaceMonacoDisplayEditorOptions: monaco.editor.IStandaloneEditorConstructionOptions =
+  {
+    "semanticHighlighting.enabled": false,
+    acceptSuggestionOnEnter: "off",
+    automaticLayout: true,
+    codeLens: false,
+    colorDecorators: false,
+    contextmenu: false,
+    folding: false,
+    fontSize: 12,
+    hover: { enabled: false },
+    lightbulb: { enabled: monaco.editor.ShowLightbulbIconMode.Off },
+    links: false,
+    minimap: { enabled: false },
+    parameterHints: { enabled: false },
+    quickSuggestions: false,
+    renderValidationDecorations: "off",
+    scrollBeyondLastLine: false,
+    selectionHighlight: false,
+    suggestOnTriggerCharacters: false,
+    tabCompletion: "off",
+    wordBasedSuggestions: "off",
+  };
+
+const workspaceFileIconResolver = createFileTreeIconResolver({
+  colored: true,
+  set: "complete",
+});
+const workspaceFileTreeIconSpriteSheet = getBuiltInSpriteSheet("complete");
+
+const workspaceMonacoLanguageByFileTreeToken: Partial<Record<string, string>> =
+  {
+    astro: "html",
+    babel: "javascript",
+    bash: "shell",
+    c: "c",
+    cpp: "cpp",
+    css: "css",
+    database: "sql",
+    docker: "dockerfile",
+    go: "go",
+    graphql: "graphql",
+    html: "html",
+    javascript: "javascript",
+    json: "json",
+    markdown: "markdown",
+    npm: "json",
+    python: "python",
+    react: "typescript",
+    ruby: "ruby",
+    rust: "rust",
+    sass: "scss",
+    svg: "xml",
+    swift: "swift",
+    typescript: "typescript",
+    vue: "html",
+    yml: "yaml",
+  };
 
 type WorkspaceToolCssVariableStyle = CSSProperties &
   Record<`--${string}`, string | number>;
@@ -121,12 +186,16 @@ interface WorkspaceToolPatchFile {
   prevName?: string;
 }
 
+interface WorkspaceToolPatchFileLineChanges {
+  additions: number;
+  deletions: number;
+}
+
 interface WorkspaceToolSurfaceProps {
   api: ApiClient;
   chatId?: string | null;
   host: WorkspaceToolSurfaceHost;
   root?: string | null;
-  showHeaderActions?: boolean;
   trafficLightInset?: boolean;
 }
 
@@ -143,6 +212,10 @@ const diffOptions = {
   },
   themeType: "system",
 } as const;
+const diffMetrics = {
+  ...DEFAULT_VIRTUAL_FILE_METRICS,
+  paddingTop: 0,
+} as const;
 
 const treeHostStyle: WorkspaceToolCssVariableStyle = {
   "--trees-bg-muted-override": "var(--muted)",
@@ -156,6 +229,122 @@ const treeHostStyle: WorkspaceToolCssVariableStyle = {
   "--trees-padding-inline-override": "8px",
   height: "100%",
   minHeight: 0,
+};
+
+const workspaceFileTreeIconColorStyle: WorkspaceToolCssVariableStyle = {
+  "--trees-file-icon-color-astro":
+    "var(--trees-file-icon-color, var(--trees-icon-purple))",
+  "--trees-file-icon-color-babel":
+    "var(--trees-file-icon-color, var(--trees-icon-yellow))",
+  "--trees-file-icon-color-bash":
+    "var(--trees-file-icon-color, var(--trees-icon-green))",
+  "--trees-file-icon-color-biome":
+    "var(--trees-file-icon-color, var(--trees-icon-blue))",
+  "--trees-file-icon-color-bootstrap":
+    "var(--trees-file-icon-color, var(--trees-icon-indigo))",
+  "--trees-file-icon-color-browserslist":
+    "var(--trees-file-icon-color, var(--trees-icon-yellow))",
+  "--trees-file-icon-color-bun":
+    "var(--trees-file-icon-color, var(--trees-icon-mauve))",
+  "--trees-file-icon-color-c":
+    "var(--trees-file-icon-color, var(--trees-icon-blue))",
+  "--trees-file-icon-color-claude":
+    "var(--trees-file-icon-color, var(--trees-icon-orange))",
+  "--trees-file-icon-color-cpp":
+    "var(--trees-file-icon-color, var(--trees-icon-blue))",
+  "--trees-file-icon-color-css":
+    "var(--trees-file-icon-color, var(--trees-icon-indigo))",
+  "--trees-file-icon-color-database":
+    "var(--trees-file-icon-color, var(--trees-icon-purple))",
+  "--trees-file-icon-color-default":
+    "var(--trees-file-icon-color, var(--trees-icon-gray))",
+  "--trees-file-icon-color-docker":
+    "var(--trees-file-icon-color, var(--trees-icon-blue))",
+  "--trees-file-icon-color-eslint":
+    "var(--trees-file-icon-color, var(--trees-icon-indigo))",
+  "--trees-file-icon-color-git":
+    "var(--trees-file-icon-vermilion, var(--trees-icon-vermilion))",
+  "--trees-file-icon-color-go":
+    "var(--trees-file-icon-color, var(--trees-icon-cyan))",
+  "--trees-file-icon-color-graphql":
+    "var(--trees-file-icon-color, var(--trees-icon-pink))",
+  "--trees-file-icon-color-html":
+    "var(--trees-file-icon-color, var(--trees-icon-orange))",
+  "--trees-file-icon-color-image":
+    "var(--trees-file-icon-color, var(--trees-icon-pink))",
+  "--trees-file-icon-color-javascript":
+    "var(--trees-file-icon-color, var(--trees-icon-yellow))",
+  "--trees-file-icon-color-json":
+    "var(--trees-file-icon-color, var(--trees-icon-orange))",
+  "--trees-file-icon-color-markdown":
+    "var(--trees-file-icon-color, var(--trees-icon-green))",
+  "--trees-file-icon-color-mcp":
+    "var(--trees-file-icon-color, var(--trees-icon-teal))",
+  "--trees-file-icon-color-npm":
+    "var(--trees-file-icon-color, var(--trees-icon-red))",
+  "--trees-file-icon-color-oxc":
+    "var(--trees-file-icon-cyan, var(--trees-icon-cyan))",
+  "--trees-file-icon-color-postcss":
+    "var(--trees-file-icon-color, var(--trees-icon-red))",
+  "--trees-file-icon-color-prettier":
+    "var(--trees-file-icon-color, var(--trees-icon-teal))",
+  "--trees-file-icon-color-python":
+    "var(--trees-file-icon-color, var(--trees-icon-blue))",
+  "--trees-file-icon-color-react":
+    "var(--trees-file-icon-color, var(--trees-icon-cyan))",
+  "--trees-file-icon-color-ruby":
+    "var(--trees-file-icon-color, var(--trees-icon-red))",
+  "--trees-file-icon-color-rust":
+    "var(--trees-file-icon-color, var(--trees-icon-orange))",
+  "--trees-file-icon-color-sass":
+    "var(--trees-file-icon-color, var(--trees-icon-pink))",
+  "--trees-file-icon-color-svg":
+    "var(--trees-file-icon-color, var(--trees-icon-orange))",
+  "--trees-file-icon-color-svelte":
+    "var(--trees-file-icon-color, var(--trees-icon-red))",
+  "--trees-file-icon-color-svgo":
+    "var(--trees-file-icon-color, var(--trees-icon-green))",
+  "--trees-file-icon-color-swift":
+    "var(--trees-file-icon-color, var(--trees-icon-orange))",
+  "--trees-file-icon-color-table":
+    "var(--trees-file-icon-color, var(--trees-icon-teal))",
+  "--trees-file-icon-color-tailwind":
+    "var(--trees-file-icon-color, var(--trees-icon-cyan))",
+  "--trees-file-icon-color-terraform":
+    "var(--trees-file-icon-color, var(--trees-icon-indigo))",
+  "--trees-file-icon-color-text":
+    "var(--trees-file-icon-color, var(--trees-icon-gray))",
+  "--trees-file-icon-color-typescript":
+    "var(--trees-file-icon-color, var(--trees-icon-blue))",
+  "--trees-file-icon-color-vite":
+    "var(--trees-file-icon-color, var(--trees-icon-purple))",
+  "--trees-file-icon-color-vscode":
+    "var(--trees-file-icon-color, var(--trees-icon-blue))",
+  "--trees-file-icon-color-vue":
+    "var(--trees-file-icon-color, var(--trees-icon-green))",
+  "--trees-file-icon-color-wasm":
+    "var(--trees-file-icon-color, var(--trees-icon-indigo))",
+  "--trees-file-icon-color-webpack":
+    "var(--trees-file-icon-color, var(--trees-icon-blue))",
+  "--trees-file-icon-color-yml":
+    "var(--trees-file-icon-color, var(--trees-icon-red))",
+  "--trees-file-icon-color-zig":
+    "var(--trees-file-icon-color, var(--trees-icon-orange))",
+  "--trees-file-icon-color-zip":
+    "var(--trees-file-icon-color, var(--trees-icon-orange))",
+  "--trees-icon-blue": "light-dark(#1a85d4, #69b1ff)",
+  "--trees-icon-cyan": "light-dark(#1ca1c7, #68cdf2)",
+  "--trees-icon-gray": "light-dark(#84848a, #adadb1)",
+  "--trees-icon-green": "light-dark(#199f43, #5ecc71)",
+  "--trees-icon-indigo": "light-dark(#693acf, #9d6afb)",
+  "--trees-icon-mauve": "light-dark(#594c5b, #79697b)",
+  "--trees-icon-orange": "light-dark(#d47628, #ffa359)",
+  "--trees-icon-pink": "light-dark(#d32a61, #ff678d)",
+  "--trees-icon-purple": "light-dark(#a631be, #d568ea)",
+  "--trees-icon-red": "light-dark(#d52c36, #ff6762)",
+  "--trees-icon-teal": "light-dark(#17a5af, #64d1db)",
+  "--trees-icon-vermilion": "light-dark(#ff8c5b, #d5512f)",
+  "--trees-icon-yellow": "light-dark(#d5a910, #ffd452)",
 };
 
 const diffHostStyle: WorkspaceToolCssVariableStyle = {
@@ -190,6 +379,12 @@ export function WorkspaceToolContextBridge({
 export function WorkspaceToolDialogHost({ api }: { api: ApiClient }) {
   ensureWorkspaceToolSurfaceEvents();
   const host = useWorkspaceToolStore((state) => state.host);
+  const wideFilesEditorDirty = useWorkspaceToolStore(
+    (state) => state.wideFilesEditorDirty,
+  );
+  const setWideFilesEditorDirty = useWorkspaceToolStore(
+    (state) => state.setWideFilesEditorDirty,
+  );
 
   if (host !== "dialog") {
     return null;
@@ -200,6 +395,10 @@ export function WorkspaceToolDialogHost({ api }: { api: ApiClient }) {
       open
       onOpenChange={(open) => {
         if (!open) {
+          if (!confirmDiscardWorkspaceToolFileChanges(wideFilesEditorDirty)) {
+            return;
+          }
+          setWideFilesEditorDirty(false);
           useWorkspaceToolStore.getState().requestWorkspaceToolHost("sidebar");
         }
       }}
@@ -241,7 +440,6 @@ export function WorkspaceToolSurface({
   chatId: propChatId,
   host,
   root: propRoot,
-  showHeaderActions = true,
   trafficLightInset = false,
 }: WorkspaceToolSurfaceProps) {
   ensureWorkspaceToolSurfaceEvents();
@@ -253,11 +451,37 @@ export function WorkspaceToolSurface({
   const requestHost = useWorkspaceToolStore(
     (state) => state.requestWorkspaceToolHost,
   );
+  const wideFilesEditorDirty = useWorkspaceToolStore(
+    (state) => state.wideFilesEditorDirty,
+  );
+  const setWideFilesEditorDirty = useWorkspaceToolStore(
+    (state) => state.setWideFilesEditorDirty,
+  );
   const chatId = propChatId ?? context.chatId ?? null;
   const root = propRoot ?? context.root ?? null;
   const snapshot = currentWorkspaceToolSnapshot(chatId, snapshots);
   const activeTabId = visibleActiveWorkspaceToolTabId(snapshot);
   const activeDynamicTab = snapshot.tabs.find((tab) => tab.id === activeTabId);
+  const openWorkspaceWideFile = useWorkspaceWideFileOpener(api);
+  const confirmWideFilesEditorExit = useCallback(() => {
+    if (host === "sidebar" || activeTabId !== workspaceToolFilesTabId) {
+      return true;
+    }
+    if (!confirmDiscardWorkspaceToolFileChanges(wideFilesEditorDirty)) {
+      return false;
+    }
+    setWideFilesEditorDirty(false);
+    return true;
+  }, [activeTabId, host, setWideFilesEditorDirty, wideFilesEditorDirty]);
+  const requestSurfaceHost = useCallback(
+    (nextHost: WorkspaceToolSurfaceHost) => {
+      if (nextHost !== host && !confirmWideFilesEditorExit()) {
+        return;
+      }
+      requestHost(nextHost);
+    },
+    [confirmWideFilesEditorExit, host, requestHost],
+  );
   const setSnapshot = useCallback(
     (
       updater: (
@@ -274,9 +498,12 @@ export function WorkspaceToolSurface({
   );
   const selectTab = useCallback(
     (tabId: WorkspaceToolPinnedTabId | string) => {
+      if (tabId !== activeTabId && !confirmWideFilesEditorExit()) {
+        return;
+      }
       setSnapshot((current) => ({ ...current, activeTabId: tabId }));
     },
-    [setSnapshot],
+    [activeTabId, confirmWideFilesEditorExit, setSnapshot],
   );
   const openFileTab = useCallback(
     (path: string) => {
@@ -284,33 +511,16 @@ export function WorkspaceToolSurface({
         return;
       }
 
-      setSnapshot((current) =>
-        openSemanticWorkspaceToolTab(current, {
-          kind: "file-preview",
-          path,
-          root,
-          title: path,
-        }),
-      );
-    },
-    [root, setSnapshot],
-  );
-  const openGitDiffTab = useCallback(
-    (path: string | undefined, title: string) => {
-      if (!root) {
-        return;
+      openWorkspaceWideFile({ path, root });
+      setSnapshot((current) => ({
+        ...current,
+        activeTabId: workspaceToolFilesTabId,
+      }));
+      if (host === "sidebar") {
+        requestSurfaceHost("dialog");
       }
-
-      setSnapshot((current) =>
-        openSemanticWorkspaceToolTab(current, {
-          kind: "git-diff",
-          path,
-          root,
-          title,
-        }),
-      );
     },
-    [root, setSnapshot],
+    [host, openWorkspaceWideFile, requestSurfaceHost, root, setSnapshot],
   );
   const addTerminalTab = useCallback(() => {
     if (!root) {
@@ -400,15 +610,16 @@ export function WorkspaceToolSurface({
   );
   return (
     <section className="flex h-full min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-background text-foreground">
-      <WorkspaceToolSurfaceHeader
-        host={host}
-        showActions={showHeaderActions}
-        trafficLightInset={trafficLightInset}
-        onRequestHost={requestHost}
-      />
+      {host !== "sidebar" ? (
+        <WorkspaceToolSurfaceHeader
+          host={host}
+          trafficLightInset={trafficLightInset}
+          onRequestHost={requestSurfaceHost}
+        />
+      ) : null}
       {!chatId || !root ? (
         <WorkspaceToolEmpty title="No workspace tools for this chat" />
-      ) : (
+      ) : host === "sidebar" ? (
         <>
           <WorkspaceToolTabStrip
             activeTabId={activeTabId}
@@ -426,10 +637,30 @@ export function WorkspaceToolSurface({
               root={root}
               onBrowserTabChange={setSnapshot}
               onOpenFile={openFileTab}
-              onOpenGitDiff={openGitDiffTab}
             />
           </div>
         </>
+      ) : (
+        <div className="flex min-h-0 flex-1 overflow-hidden">
+          <WorkspaceToolVerticalTabSidebar
+            activeTabId={activeTabId}
+            tabs={tabItems}
+            onAddBrowserTab={addBrowserTab}
+            onAddTerminalTab={addTerminalTab}
+            onCloseDynamicTab={closeDynamicTab}
+            onSelectTab={selectTab}
+          />
+          <div className="min-h-0 min-w-0 flex-1 overflow-hidden">
+            <WorkspaceToolWideContent
+              activeDynamicTab={activeDynamicTab}
+              activeTabId={activeTabId}
+              api={api}
+              root={root}
+              onBrowserTabChange={setSnapshot}
+              onOpenFile={openFileTab}
+            />
+          </div>
+        </div>
       )}
     </section>
   );
@@ -448,12 +679,10 @@ function WorkspaceToolWindowTitleBridge({ root }: { root?: string | null }) {
 
 function WorkspaceToolSurfaceHeader({
   host,
-  showActions,
   trafficLightInset,
   onRequestHost,
 }: {
   host: WorkspaceToolSurfaceHost;
-  showActions: boolean;
   trafficLightInset: boolean;
   onRequestHost: (host: WorkspaceToolSurfaceHost) => void;
 }) {
@@ -468,12 +697,10 @@ function WorkspaceToolSurfaceHeader({
       <div className="min-w-0 flex-1 truncate text-sm font-medium">
         Workspace tools
       </div>
-      {showActions ? (
-        <WorkspaceToolSurfaceHostControls
-          host={host}
-          onRequestHost={onRequestHost}
-        />
-      ) : null}
+      <WorkspaceToolSurfaceHostControls
+        host={host}
+        onRequestHost={onRequestHost}
+      />
     </div>
   );
 }
@@ -508,10 +735,10 @@ export function WorkspaceToolSurfaceHostControls({
           onClick={() => onRequestHost("window")}
         />
       ) : null}
-      {host !== "sidebar" ? (
+      {host === "dialog" ? (
         <WorkspaceToolSurfaceHostButton
           icon={<Close />}
-          label="Close tools window"
+          label="Close tools dialog"
           onClick={() => onRequestHost("sidebar")}
         />
       ) : null}
@@ -623,31 +850,137 @@ function WorkspaceToolTabStrip({
           );
         })}
       </div>
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button
-            aria-label="New tool tab"
-            className="h-7 border-border/70 px-2 text-xs text-muted-foreground"
-            size="xs"
-            title="New tool tab"
-            type="button"
-            variant="outline"
-          >
-            <Add className="size-3.5" />
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" variant="native">
-          <DropdownMenuItem onSelect={onAddTerminalTab}>
-            <TerminalIcon className="size-3.5" />
-            <span>Terminal</span>
-          </DropdownMenuItem>
-          <DropdownMenuItem onSelect={onAddBrowserTab}>
-            <Browser className="size-3.5" />
-            <span>Browser</span>
-          </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
+      <WorkspaceToolNewTabMenu
+        onAddBrowserTab={onAddBrowserTab}
+        onAddTerminalTab={onAddTerminalTab}
+      />
     </div>
+  );
+}
+
+function WorkspaceToolVerticalTabSidebar({
+  activeTabId,
+  tabs,
+  onAddBrowserTab,
+  onAddTerminalTab,
+  onCloseDynamicTab,
+  onSelectTab,
+}: {
+  activeTabId: string;
+  tabs: WorkspaceToolTabItem[];
+  onAddBrowserTab: () => void;
+  onAddTerminalTab: () => void;
+  onCloseDynamicTab: (tab: WorkspaceToolSurfaceDynamicTab) => void;
+  onSelectTab: (tabId: string) => void;
+}) {
+  return (
+    <div
+      aria-label="Workspace tool tabs"
+      aria-orientation="vertical"
+      className="flex w-56 shrink-0 flex-col border-r border-border/70 bg-muted/20"
+      role="tablist"
+    >
+      <div className="flex h-12 shrink-0 items-center px-2">
+        <WorkspaceToolNewTabMenu
+          variant="row"
+          onAddBrowserTab={onAddBrowserTab}
+          onAddTerminalTab={onAddTerminalTab}
+        />
+      </div>
+      <div className="-mt-1 flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto p-2">
+        {tabs.map((tab) => {
+          const active = tab.id === activeTabId;
+          const Icon = tab.icon;
+          const dynamicTab = tab.dynamicTab;
+
+          return (
+            <div
+              className={cn(
+                "group flex h-8 min-w-0 shrink-0 items-center overflow-hidden rounded-md border border-transparent text-xs text-muted-foreground",
+                active
+                  ? "border-border/80 bg-background text-foreground shadow-sm"
+                  : "hover:bg-background/80 hover:text-foreground",
+              )}
+              key={tab.id}
+            >
+              <button
+                aria-selected={active}
+                className="flex h-full min-w-0 flex-1 items-center gap-2 px-2 text-left outline-none focus-visible:ring-2 focus-visible:ring-ring/30"
+                onClick={() => onSelectTab(tab.id)}
+                role="tab"
+                title={tab.title}
+                type="button"
+              >
+                <Icon className="size-3.5 shrink-0" />
+                <span className="truncate">{tab.title}</span>
+              </button>
+              {dynamicTab ? (
+                <button
+                  aria-label={`Close ${tab.title}`}
+                  className="flex h-full w-7 shrink-0 items-center justify-center text-muted-foreground/70 outline-none hover:bg-foreground/5 hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/30"
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    onCloseDynamicTab(dynamicTab);
+                  }}
+                  title={`Close ${tab.title}`}
+                  type="button"
+                >
+                  <Close className="size-3.5" />
+                </button>
+              ) : null}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function WorkspaceToolNewTabMenu({
+  onAddBrowserTab,
+  onAddTerminalTab,
+  variant = "icon",
+}: {
+  onAddBrowserTab: () => void;
+  onAddTerminalTab: () => void;
+  variant?: "icon" | "row";
+}) {
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button
+          aria-label="New tool tab"
+          className={cn(
+            "text-xs",
+            variant === "row"
+              ? "h-8 w-full justify-start gap-2 border-border/70 px-2 text-muted-foreground"
+              : "h-7 border-border/70 px-2 text-muted-foreground",
+          )}
+          size="xs"
+          title="New tool tab"
+          type="button"
+          variant="outline"
+        >
+          <Add className="size-3.5" />
+          {variant === "row" ? (
+            <span className="truncate">New tool tab</span>
+          ) : null}
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent
+        align={variant === "row" ? "start" : "end"}
+        variant="native"
+      >
+        <DropdownMenuItem onSelect={onAddTerminalTab}>
+          <TerminalIcon className="size-3.5" />
+          <span>Terminal</span>
+        </DropdownMenuItem>
+        <DropdownMenuItem onSelect={onAddBrowserTab}>
+          <Browser className="size-3.5" />
+          <span>Browser</span>
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }
 
@@ -706,7 +1039,6 @@ function WorkspaceToolContent({
   root,
   onBrowserTabChange,
   onOpenFile,
-  onOpenGitDiff,
 }: {
   activeDynamicTab?: WorkspaceToolSurfaceDynamicTab;
   activeTabId: string;
@@ -718,7 +1050,6 @@ function WorkspaceToolContent({
     ) => WorkspaceToolSurfaceSnapshot,
   ) => void;
   onOpenFile: (path: string) => void;
-  onOpenGitDiff: (path: string | undefined, title: string) => void;
 }) {
   if (activeTabId === workspaceToolFilesTabId) {
     return (
@@ -726,9 +1057,7 @@ function WorkspaceToolContent({
     );
   }
   if (activeTabId === workspaceToolGitTabId) {
-    return (
-      <WorkspaceGitPanel api={api} root={root} onOpenGitDiff={onOpenGitDiff} />
-    );
+    return <WorkspaceGitPanel api={api} root={root} />;
   }
   if (!activeDynamicTab) {
     return <WorkspaceToolEmpty title="Tool unavailable" />;
@@ -760,6 +1089,94 @@ function WorkspaceToolContent({
   }
 }
 
+function WorkspaceToolWideContent({
+  activeDynamicTab,
+  activeTabId,
+  api,
+  root,
+  onBrowserTabChange,
+  onOpenFile,
+}: {
+  activeDynamicTab?: WorkspaceToolSurfaceDynamicTab;
+  activeTabId: string;
+  api: ApiClient;
+  root: string;
+  onBrowserTabChange: (
+    updater: (
+      current: WorkspaceToolSurfaceSnapshot,
+    ) => WorkspaceToolSurfaceSnapshot,
+  ) => void;
+  onOpenFile: (path: string) => void;
+}) {
+  if (activeTabId === workspaceToolFilesTabId) {
+    return <WorkspaceWideFilesPanel api={api} root={root} />;
+  }
+  if (activeTabId === workspaceToolGitTabId) {
+    return <WorkspaceWideGitPanel api={api} root={root} />;
+  }
+
+  return (
+    <WorkspaceToolContent
+      activeDynamicTab={activeDynamicTab}
+      activeTabId={activeTabId}
+      api={api}
+      root={root}
+      onBrowserTabChange={onBrowserTabChange}
+      onOpenFile={onOpenFile}
+    />
+  );
+}
+
+function useWorkspaceWideFileOpener(api: ApiClient) {
+  const queryClient = useQueryClient();
+  const openWideFile = useWorkspaceToolStore((state) => state.openWideFile);
+  const setWideFileReadError = useWorkspaceToolStore(
+    (state) => state.setWideFileReadError,
+  );
+  const setWideFileReadResult = useWorkspaceToolStore(
+    (state) => state.setWideFileReadResult,
+  );
+
+  return useCallback(
+    ({ path, root }: { path: string; root: string }) => {
+      const currentState =
+        useWorkspaceToolStore.getState().wideFilesByRoot[root]?.fileStates[
+          path
+        ];
+
+      openWideFile({ path, root });
+      if (currentState && currentState.status !== "error") {
+        return;
+      }
+
+      void queryClient
+        .fetchQuery({
+          queryFn: () => api.workspaceTools.readFile({ path, root }),
+          queryKey: queryKeys.workspaceTools.readFile(root, path),
+          retry: false,
+          staleTime: 5_000,
+        })
+        .then((result) => {
+          setWideFileReadResult({ result, root });
+        })
+        .catch((error: unknown) => {
+          setWideFileReadError({
+            message: getErrorMessage(error),
+            path,
+            root,
+          });
+        });
+    },
+    [
+      api,
+      openWideFile,
+      queryClient,
+      setWideFileReadError,
+      setWideFileReadResult,
+    ],
+  );
+}
+
 function WorkspaceFilesPanel({
   api,
   onOpenFile,
@@ -769,40 +1186,7 @@ function WorkspaceFilesPanel({
   onOpenFile: (path: string) => void;
   root: string;
 }) {
-  const { model } = useFileTree({
-    density: "compact",
-    fileTreeSearchMode: "hide-non-matches",
-    flattenEmptyDirectories: true,
-    icons: { colored: true, set: "complete" },
-    id: `workspace-file-tree-${root}`,
-    initialExpansion: 1,
-    initialVisibleRowCount: 32,
-    paths: [],
-    search: false,
-  });
-  const treeQuery = useQuery({
-    queryFn: () => api.workspaceTools.fileTree({ root }),
-    queryKey: queryKeys.workspaceTools.fileTree(root),
-    retry: false,
-    staleTime: 10_000,
-  });
-
-  useEffect(() => {
-    if (!treeQuery.data) return;
-
-    const preparedInput = prepareFileTreeInput(treeQuery.data.paths, {
-      flattenEmptyDirectories: true,
-      sort: "default",
-    });
-    model.resetPaths(treeQuery.data.paths, { preparedInput });
-    model.setGitStatus(
-      treeQuery.data.gitStatus.map((entry) => ({
-        path: entry.path,
-        status: toTreeGitStatus(entry.status),
-      })),
-    );
-  }, [model, treeQuery.data]);
-
+  const { model, treeQuery } = useWorkspaceFileTreeModel(api, root);
   const handleFileTreeClick = useCallback(
     (event: ReactMouseEvent<HTMLDivElement>) => {
       const path = getClickedFileTreePath(event);
@@ -847,21 +1231,562 @@ function WorkspaceFilesPanel({
   );
 }
 
-function WorkspaceGitPanel({
+function WorkspaceWideFilesPanel({
   api,
-  onOpenGitDiff,
   root,
 }: {
   api: ApiClient;
-  onOpenGitDiff: (path: string | undefined, title: string) => void;
   root: string;
 }) {
+  const queryClient = useQueryClient();
+  const closeWideFile = useWorkspaceToolStore((state) => state.closeWideFile);
+  const selectWideFile = useWorkspaceToolStore((state) => state.selectWideFile);
+  const setWideFileDraftContent = useWorkspaceToolStore(
+    (state) => state.setWideFileDraftContent,
+  );
+  const setWideFileSavedContent = useWorkspaceToolStore(
+    (state) => state.setWideFileSavedContent,
+  );
+  const setWideFilesEditorDirty = useWorkspaceToolStore(
+    (state) => state.setWideFilesEditorDirty,
+  );
+  const wideFilesState = useWorkspaceToolStore(
+    (state) => state.wideFilesByRoot[root] ?? emptyWorkspaceWideFilesState,
+  );
+  const { model, treeQuery } = useWorkspaceFileTreeModel(api, root);
+  const openWorkspaceWideFile = useWorkspaceWideFileOpener(api);
+  const { activePath, fileStates, openFilePaths } = wideFilesState;
+  const [fileTreeWidth, setFileTreeWidth] = useState(288);
+  const dirty = openFilePaths.some((path) =>
+    isWorkspaceWideFileStateDirty(fileStates[path]),
+  );
+  const saveFileMutation = useMutation({
+    mutationFn: (input: { content: string; path: string }) =>
+      api.workspaceTools.writeFile({
+        content: input.content,
+        path: input.path,
+        root,
+      }),
+  });
+
+  useEffect(() => {
+    setWideFilesEditorDirty(dirty);
+    return () => {
+      setWideFilesEditorDirty(false);
+    };
+  }, [dirty, setWideFilesEditorDirty]);
+
+  useEffect(() => {
+    if (!dirty) return;
+
+    const handleBeforeUnload = (event: BeforeUnloadEvent) => {
+      event.preventDefault();
+      event.returnValue = "";
+    };
+
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => {
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+    };
+  }, [dirty]);
+
+  const handleFileTreeClick = useCallback(
+    (event: ReactMouseEvent<HTMLDivElement>) => {
+      const path = getClickedFileTreePath(event);
+      if (!path) return;
+      openWorkspaceWideFile({ path, root });
+    },
+    [openWorkspaceWideFile, root],
+  );
+  const saveFile = useCallback(
+    async (path: string) => {
+      const state = fileStates[path];
+      if (
+        !isWorkspaceWideFileStateDirty(state) ||
+        state.status !== "text" ||
+        saveFileMutation.isPending
+      ) {
+        return true;
+      }
+
+      try {
+        const result = await saveFileMutation.mutateAsync({
+          content: state.draftContent,
+          path,
+        });
+        setWideFileSavedContent({
+          content: state.draftContent,
+          path,
+          root,
+          size: result.size,
+        });
+        queryClient.setQueryData<WorkspaceFileReadResult>(
+          queryKeys.workspaceTools.readFile(root, path),
+          {
+            content: state.draftContent,
+            path,
+            root,
+            size: result.size,
+            type: "text",
+          },
+        );
+        void queryClient.invalidateQueries({
+          queryKey: queryKeys.workspaceTools.fileTree(root),
+        });
+        void queryClient.invalidateQueries({
+          queryKey: queryKeys.workspaceTools.gitDiff(root),
+        });
+        return true;
+      } catch {
+        return false;
+      }
+    },
+    [fileStates, queryClient, root, saveFileMutation, setWideFileSavedContent],
+  );
+  const saveActiveFile = useCallback(() => {
+    if (!activePath) return;
+    void saveFile(activePath);
+  }, [activePath, saveFile]);
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (
+        event.key.toLowerCase() !== "s" ||
+        (!event.ctrlKey && !event.metaKey) ||
+        event.altKey ||
+        event.shiftKey
+      ) {
+        return;
+      }
+
+      event.preventDefault();
+      saveActiveFile();
+    };
+
+    window.addEventListener("keydown", handleKeyDown, true);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown, true);
+    };
+  }, [saveActiveFile]);
+  const closeFile = useCallback(
+    async (path: string) => {
+      const state = fileStates[path];
+      if (isWorkspaceWideFileStateDirty(state)) {
+        const action =
+          await window.desktopWindow.confirmSaveWorkspaceFileChanges({ path });
+        if (action === "cancel") {
+          return;
+        }
+        if (action === "save") {
+          const saved = await saveFile(path);
+          if (!saved) {
+            return;
+          }
+        }
+      }
+
+      closeWideFile({ path, root });
+    },
+    [closeWideFile, fileStates, root, saveFile],
+  );
+  const updateActiveFileContent = useCallback(
+    (content: string) => {
+      if (!activePath) return;
+      setWideFileDraftContent({
+        content,
+        path: activePath,
+        root,
+      });
+    },
+    [activePath, root, setWideFileDraftContent],
+  );
+  const selectFile = useCallback(
+    (path: string) => {
+      selectWideFile({ path, root });
+    },
+    [root, selectWideFile],
+  );
+  const startFileTreeResize = useCallback(
+    (event: React.PointerEvent<HTMLDivElement>) => {
+      event.preventDefault();
+      const startX = event.clientX;
+      const startWidth = fileTreeWidth;
+      const handlePointerMove = (moveEvent: PointerEvent) => {
+        setFileTreeWidth(
+          Math.min(520, Math.max(200, startWidth + moveEvent.clientX - startX)),
+        );
+      };
+      const stopResize = () => {
+        window.removeEventListener("pointermove", handlePointerMove);
+      };
+
+      window.addEventListener("pointermove", handlePointerMove);
+      window.addEventListener("pointerup", stopResize, { once: true });
+    },
+    [fileTreeWidth],
+  );
+
+  if (treeQuery.isError) {
+    return (
+      <WorkspaceToolEmpty
+        detail={getErrorMessage(treeQuery.error)}
+        title="File tree unavailable"
+      />
+    );
+  }
+
+  return (
+    <div className="flex h-full min-h-0 bg-background">
+      <div className="flex shrink-0 flex-col" style={{ width: fileTreeWidth }}>
+        {treeQuery.data?.truncated ? (
+          <div className="shrink-0 px-3 py-2 text-xs text-muted-foreground">
+            Limited result set
+          </div>
+        ) : null}
+        <div
+          className="min-h-0 flex-1 overflow-hidden"
+          onClick={handleFileTreeClick}
+        >
+          {treeQuery.isLoading ? (
+            <WorkspaceFileTreeSkeleton />
+          ) : (
+            <FileTree
+              className="h-full min-h-0 bg-background text-sm"
+              model={model}
+              style={treeHostStyle}
+            />
+          )}
+        </div>
+      </div>
+      <div
+        aria-orientation="vertical"
+        className="w-1 shrink-0 cursor-col-resize border-x border-transparent bg-border/70 hover:bg-ring/50"
+        role="separator"
+        onPointerDown={startFileTreeResize}
+      />
+      <div className="min-w-0 flex-1">
+        <WorkspaceWideFileEditor
+          activePath={activePath}
+          fileStates={fileStates}
+          openFilePaths={openFilePaths}
+          onClose={closeFile}
+          onContentChange={updateActiveFileContent}
+          onSelect={selectFile}
+        />
+      </div>
+    </div>
+  );
+}
+
+function useWorkspaceFileTreeModel(api: ApiClient, root: string) {
+  const { model } = useFileTree({
+    density: "compact",
+    fileTreeSearchMode: "hide-non-matches",
+    flattenEmptyDirectories: true,
+    icons: { colored: true, set: "complete" },
+    id: `workspace-file-tree-${root}`,
+    initialExpansion: 1,
+    initialVisibleRowCount: 32,
+    paths: [],
+    search: false,
+  });
+  const treeQuery = useQuery({
+    queryFn: () => api.workspaceTools.fileTree({ root }),
+    queryKey: queryKeys.workspaceTools.fileTree(root),
+    retry: false,
+    staleTime: 10_000,
+  });
+
+  useEffect(() => {
+    if (!treeQuery.data) return;
+
+    const preparedInput = prepareFileTreeInput(treeQuery.data.paths, {
+      flattenEmptyDirectories: true,
+      sort: "default",
+    });
+    model.resetPaths(treeQuery.data.paths, { preparedInput });
+    model.setGitStatus(
+      treeQuery.data.gitStatus.map((entry) => ({
+        path: entry.path,
+        status: toTreeGitStatus(entry.status),
+      })),
+    );
+  }, [model, treeQuery.data]);
+
+  return { model, treeQuery };
+}
+
+function WorkspaceWideFileEditor({
+  activePath,
+  fileStates,
+  openFilePaths,
+  onClose,
+  onContentChange,
+  onSelect,
+}: {
+  activePath: string | null;
+  fileStates: Record<string, WorkspaceWideFileState>;
+  openFilePaths: string[];
+  onClose: (path: string) => void;
+  onContentChange: (content: string) => void;
+  onSelect: (path: string) => void;
+}) {
+  const [editorTheme, setEditorTheme] = useState(getWorkspaceMonacoTheme);
+  useEffect(() => {
+    const updateTheme = () => {
+      setEditorTheme(getWorkspaceMonacoTheme());
+    };
+    const themeObserver = new MutationObserver(updateTheme);
+
+    themeObserver.observe(document.documentElement, {
+      attributeFilter: ["class"],
+      attributes: true,
+    });
+    updateTheme();
+
+    return () => {
+      themeObserver.disconnect();
+    };
+  }, []);
+
+  if (openFilePaths.length === 0 || !activePath) {
+    return <WorkspaceToolEmpty title="Select a file" />;
+  }
+
+  const activeState = fileStates[activePath] ?? { status: "loading" };
+
+  return (
+    <div className="flex h-full min-h-0 flex-col bg-background">
+      <WorkspaceWideFileTabBar
+        activePath={activePath}
+        fileStates={fileStates}
+        openFilePaths={openFilePaths}
+        onClose={onClose}
+        onSelect={onSelect}
+      />
+      {activeState.status === "loading" ? (
+        <div className="space-y-3 p-4">
+          <Skeleton className="h-[70vh] w-full rounded-md" />
+        </div>
+      ) : activeState.status === "error" ? (
+        <WorkspaceToolEmpty
+          detail={activeState.message}
+          title="File unavailable"
+        />
+      ) : activeState.status === "unsupported" ? (
+        <WorkspaceToolEmpty
+          detail={formatUnsupportedFileReason(activeState.result)}
+          title={activeState.result.path}
+        />
+      ) : (
+        <Editor
+          className="min-h-0 flex-1"
+          defaultLanguage={getWorkspaceMonacoLanguageFromFileTree(activePath)}
+          path={activePath}
+          theme={editorTheme}
+          value={activeState.draftContent}
+          options={workspaceMonacoDisplayEditorOptions}
+          onChange={(value) => onContentChange(value ?? "")}
+        />
+      )}
+    </div>
+  );
+}
+
+function WorkspaceWideFileTabBar({
+  activePath,
+  fileStates,
+  openFilePaths,
+  onClose,
+  onSelect,
+}: {
+  activePath: string;
+  fileStates: Record<string, WorkspaceWideFileState>;
+  openFilePaths: string[];
+  onClose: (path: string) => void;
+  onSelect: (path: string) => void;
+}) {
+  return (
+    <div
+      className="flex h-9 shrink-0 items-stretch border-b border-border/70 bg-muted/30 text-xs"
+      style={workspaceFileTreeIconColorStyle}
+    >
+      <WorkspaceFileTreeIconSprite />
+      <div className="flex min-w-0 flex-1 overflow-x-auto">
+        {openFilePaths.map((path) => {
+          const active = path === activePath;
+          const dirty = isWorkspaceWideFileStateDirty(fileStates[path]);
+          const fileName = basename(path);
+
+          return (
+            <div
+              className={cn(
+                "group/tab flex h-9 max-w-80 min-w-32 items-center gap-2 border-r border-border/70 px-3 text-muted-foreground",
+                active ? "bg-background text-foreground" : "hover:bg-muted/60",
+              )}
+              key={path}
+              title={path}
+            >
+              <button
+                aria-selected={active}
+                className="flex h-full min-w-0 flex-1 items-center gap-2 text-left outline-none focus-visible:ring-2 focus-visible:ring-ring/30"
+                onClick={() => onSelect(path)}
+                role="tab"
+                type="button"
+              >
+                <WorkspaceFileTreeFileIcon path={path} />
+                <span className="min-w-0 truncate">{fileName}</span>
+              </button>
+              <button
+                aria-label={`Close ${fileName}`}
+                className="ml-1 flex size-5 shrink-0 items-center justify-center rounded-sm text-muted-foreground outline-none hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/30"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  onClose(path);
+                }}
+                title={`Close ${fileName}`}
+                type="button"
+              >
+                {dirty ? (
+                  <>
+                    <span className="size-2 rounded-full bg-muted-foreground group-hover/tab:hidden" />
+                    <Close className="hidden size-3.5 group-hover/tab:block" />
+                  </>
+                ) : (
+                  <Close className="size-3.5" />
+                )}
+              </button>
+            </div>
+          );
+        })}
+      </div>
+      <div className="min-w-0 flex-1" />
+    </div>
+  );
+}
+
+function WorkspaceFileTreeIconSprite() {
+  return (
+    <span
+      aria-hidden="true"
+      className="pointer-events-none absolute size-0 overflow-hidden"
+      dangerouslySetInnerHTML={{ __html: workspaceFileTreeIconSpriteSheet }}
+    />
+  );
+}
+
+function WorkspaceFileTreeFileIcon({ path }: { path: string }) {
+  const icon = workspaceFileIconResolver.resolveIcon(
+    "file-tree-icon-file",
+    path,
+  );
+  const name = icon.name.replace(/^#/, "");
+  const token = icon.token ?? "default";
+  const width = icon.width ?? 16;
+  const height = icon.height ?? 16;
+
+  return (
+    <svg
+      aria-hidden="true"
+      className="size-3.5 shrink-0"
+      data-icon-name={icon.remappedFrom ?? icon.name}
+      data-icon-token={token}
+      fill="currentColor"
+      height={height}
+      style={{
+        color: `var(--trees-file-icon-color-${token}, var(--trees-file-icon-color-default))`,
+      }}
+      viewBox={icon.viewBox ?? `0 0 ${width} ${height}`}
+      width={width}
+    >
+      <use href={`#${name}`} />
+    </svg>
+  );
+}
+
+function useWorkspaceGitPanelState(api: ApiClient, root: string) {
+  const queryClient = useQueryClient();
+  const [commitDescription, setCommitDescription] = useState("");
+  const [commitSummary, setCommitSummary] = useState("");
+  const [selectedFileKeys, setSelectedFileKeys] = useState<
+    Record<string, boolean>
+  >({});
+  const commitMutation = useMutation({
+    mutationFn: (input: {
+      description?: string;
+      paths: string[];
+      root: string;
+      summary: string;
+    }) => api.workspaceTools.gitCommit(input),
+    onSuccess: () => {
+      setCommitDescription("");
+      setCommitSummary("");
+      setSelectedFileKeys({});
+      void queryClient.invalidateQueries({
+        queryKey: queryKeys.workspaceTools.gitDiff(root),
+      });
+      void queryClient.invalidateQueries({
+        queryKey: queryKeys.workspaceTools.fileTree(root),
+      });
+    },
+  });
   const gitQuery = useQuery({
     queryFn: () => api.workspaceTools.gitDiff({ root }),
     queryKey: queryKeys.workspaceTools.gitDiff(root),
     retry: false,
     staleTime: 5_000,
   });
+  const handleFileSelectedChange = useCallback(
+    (file: WorkspaceToolPatchFile, selected: boolean) => {
+      setSelectedFileKeys((current) => ({
+        ...current,
+        [file.key]: selected,
+      }));
+    },
+    [],
+  );
+  const commitSelectedPaths = useCallback(
+    (paths: string[]) => {
+      const summary = commitSummary.trim();
+      if (!summary || paths.length === 0 || commitMutation.isPending) {
+        return;
+      }
+
+      const description = commitDescription.trim();
+      commitMutation.mutate({
+        description: description || undefined,
+        paths,
+        root,
+        summary,
+      });
+    },
+    [commitDescription, commitMutation, commitSummary, root],
+  );
+
+  return {
+    commitDescription,
+    commitMutation,
+    commitSelectedPaths,
+    commitSummary,
+    gitQuery,
+    handleFileSelectedChange,
+    selectedFileKeys,
+    setCommitDescription,
+    setCommitSummary,
+  };
+}
+
+function WorkspaceGitPanel({ api, root }: { api: ApiClient; root: string }) {
+  const {
+    commitDescription,
+    commitMutation,
+    commitSelectedPaths,
+    commitSummary,
+    gitQuery,
+    handleFileSelectedChange,
+    selectedFileKeys,
+    setCommitDescription,
+    setCommitSummary,
+  } = useWorkspaceGitPanelState(api, root);
 
   if (gitQuery.isError) {
     return (
@@ -891,45 +1816,250 @@ function WorkspaceGitPanel({
     data.stagedPatch,
     data.unstagedPatch,
   );
-  const openFullDiff = () => {
-    onOpenGitDiff(
-      undefined,
-      data.branch ? `Git diff: ${data.branch}` : "Git diff",
-    );
-  };
-  const openFileDiff = (file: WorkspaceToolPatchFile) => {
-    onOpenGitDiff(file.name, formatWorkspaceToolPatchFileName(file));
+  const selectedFiles = patchList.files.filter(
+    (file) => selectedFileKeys[file.key] ?? true,
+  );
+  const selectedPaths = selectedFiles.map((file) => file.name);
+  const handleCommitSubmit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    commitSelectedPaths(selectedPaths);
   };
 
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <div className="flex h-9 shrink-0 items-center justify-end border-b border-border/70 px-2">
-        <Button
-          className="h-7 border-border/70 px-2 text-xs text-muted-foreground"
-          onClick={openFullDiff}
-          size="xs"
-          title="Open git diff"
-          type="button"
-          variant="outline"
-        >
-          <DialogIcon className="size-3.5" />
-          <span>Open</span>
-        </Button>
-      </div>
-      <div className="min-h-0 flex-1 space-y-3 overflow-auto p-3">
+      <div className="min-h-0 flex-1 overflow-auto">
         {data.warnings.length > 0 ? (
-          <div className="space-y-1 rounded-md border border-border/70 bg-muted/30 p-2 text-xs text-muted-foreground">
+          <div className="m-3 space-y-1 rounded-md border border-border/70 bg-muted/30 p-2 text-xs text-muted-foreground">
             {data.warnings.map((warning) => (
               <div key={warning}>{warning}</div>
             ))}
           </div>
         ) : null}
         <WorkspaceToolPatchFileList
+          flush
           patchList={patchList}
-          onOpenFile={openFileDiff}
+          selectedFileKeys={selectedFileKeys}
+          onFileSelectedChange={handleFileSelectedChange}
         />
       </div>
+      <WorkspaceGitCommitComposer
+        branch={data.branch}
+        description={commitDescription}
+        errorMessage={
+          commitMutation.isError
+            ? getErrorMessage(commitMutation.error)
+            : undefined
+        }
+        pending={commitMutation.isPending}
+        selectedCount={selectedFiles.length}
+        summary={commitSummary}
+        totalCount={patchList.files.length}
+        onDescriptionChange={setCommitDescription}
+        onSubmit={handleCommitSubmit}
+        onSummaryChange={setCommitSummary}
+      />
     </div>
+  );
+}
+
+function WorkspaceWideGitPanel({
+  api,
+  root,
+}: {
+  api: ApiClient;
+  root: string;
+}) {
+  const {
+    commitDescription,
+    commitMutation,
+    commitSelectedPaths,
+    commitSummary,
+    gitQuery,
+    handleFileSelectedChange,
+    selectedFileKeys,
+    setCommitDescription,
+    setCommitSummary,
+  } = useWorkspaceGitPanelState(api, root);
+  const [activeFileKey, setActiveFileKey] = useState<string | null>(null);
+
+  if (gitQuery.isError) {
+    return (
+      <WorkspaceToolEmpty
+        detail={getErrorMessage(gitQuery.error)}
+        title="Git unavailable"
+      />
+    );
+  }
+
+  if (gitQuery.isLoading) {
+    return (
+      <div className="flex h-full min-h-0 bg-background">
+        <div className="w-80 shrink-0 border-r border-border/70 p-3">
+          <Skeleton className="h-8 w-full rounded-md" />
+          <Skeleton className="mt-3 h-48 w-full rounded-md" />
+        </div>
+        <div className="min-w-0 flex-1 p-3">
+          <Skeleton className="h-8 w-64 rounded-md" />
+          <Skeleton className="mt-3 h-[70vh] w-full rounded-md" />
+        </div>
+      </div>
+    );
+  }
+
+  const data = gitQuery.data;
+  if (!data?.isGitRepository) {
+    return <WorkspaceToolEmpty title="Not a Git repository" detail={root} />;
+  }
+
+  const patchList = buildWorkspaceToolPatchList(
+    data.stagedPatch,
+    data.unstagedPatch,
+  );
+  const selectedFiles = patchList.files.filter(
+    (file) => selectedFileKeys[file.key] ?? true,
+  );
+  const selectedPaths = selectedFiles.map((file) => file.name);
+  const activeFile =
+    patchList.files.find((file) => file.key === activeFileKey) ??
+    patchList.files[0];
+  const handleCommitSubmit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    commitSelectedPaths(selectedPaths);
+  };
+
+  return (
+    <div className="flex h-full min-h-0 bg-background">
+      <div className="flex w-80 shrink-0 flex-col border-r border-border/70">
+        <div className="min-h-0 flex-1 overflow-auto">
+          {data.warnings.length > 0 ? (
+            <div className="m-3 space-y-1 rounded-md border border-border/70 bg-muted/30 p-2 text-xs text-muted-foreground">
+              {data.warnings.map((warning) => (
+                <div key={warning}>{warning}</div>
+              ))}
+            </div>
+          ) : null}
+          <WorkspaceToolPatchFileList
+            flush
+            activeFileKey={activeFile?.key}
+            patchList={patchList}
+            rowMode="select"
+            selectedFileKeys={selectedFileKeys}
+            onFileActivate={(file) => setActiveFileKey(file.key)}
+            onFileSelectedChange={handleFileSelectedChange}
+          />
+        </div>
+        <WorkspaceGitCommitComposer
+          branch={data.branch}
+          description={commitDescription}
+          errorMessage={
+            commitMutation.isError
+              ? getErrorMessage(commitMutation.error)
+              : undefined
+          }
+          pending={commitMutation.isPending}
+          selectedCount={selectedFiles.length}
+          summary={commitSummary}
+          totalCount={patchList.files.length}
+          onDescriptionChange={setCommitDescription}
+          onSubmit={handleCommitSubmit}
+          onSummaryChange={setCommitSummary}
+        />
+      </div>
+      <div className="min-w-0 flex-1 overflow-hidden">
+        <WorkspaceWideGitDiffViewer file={activeFile} />
+      </div>
+    </div>
+  );
+}
+
+function WorkspaceWideGitDiffViewer({
+  file,
+}: {
+  file?: WorkspaceToolPatchFile;
+}) {
+  if (!file) {
+    return <WorkspaceToolEmpty title="No changes" />;
+  }
+
+  const fileName = formatWorkspaceToolPatchFileName(file);
+  const lineChanges = getWorkspaceToolPatchFileLineChanges(file);
+
+  return (
+    <div className="flex h-full min-h-0 flex-col bg-background">
+      <div className="flex h-8 shrink-0 items-center gap-2 border-b border-border/70 px-3 text-xs">
+        <span className="min-w-0 flex-1 truncate font-medium" title={fileName}>
+          {fileName}
+        </span>
+        <WorkspaceToolPatchFileLineStats lineChanges={lineChanges} />
+      </div>
+      <div className="min-h-0 flex-1 overflow-auto">
+        <WorkspaceToolPatchFileDiffContent file={file} />
+      </div>
+    </div>
+  );
+}
+
+function WorkspaceGitCommitComposer({
+  branch,
+  description,
+  errorMessage,
+  pending,
+  selectedCount,
+  summary,
+  totalCount,
+  onDescriptionChange,
+  onSubmit,
+  onSummaryChange,
+}: {
+  branch?: string;
+  description: string;
+  errorMessage?: string;
+  pending: boolean;
+  selectedCount: number;
+  summary: string;
+  totalCount: number;
+  onDescriptionChange: (value: string) => void;
+  onSubmit: (event: FormEvent<HTMLFormElement>) => void;
+  onSummaryChange: (value: string) => void;
+}) {
+  const disabled =
+    pending || selectedCount === 0 || summary.trim().length === 0;
+  const target = branch || "HEAD";
+
+  return (
+    <form
+      className="shrink-0 border-t border-border/70 bg-background p-2"
+      onSubmit={onSubmit}
+    >
+      <div className="space-y-1.5">
+        <Input
+          className="h-6 rounded-md bg-muted/40 px-2 py-0.5 text-[11px] leading-4 md:text-[11px]"
+          placeholder="Summary"
+          value={summary}
+          onChange={(event) => onSummaryChange(event.currentTarget.value)}
+        />
+        <Textarea
+          className="min-h-12 rounded-md bg-muted/40 p-1.5 text-[11px] leading-4 md:text-[11px]"
+          placeholder="Description"
+          value={description}
+          onChange={(event) => onDescriptionChange(event.currentTarget.value)}
+        />
+        {errorMessage ? (
+          <div className="rounded-md border border-destructive/40 bg-destructive/5 px-2 py-1.5 text-[11px] text-destructive">
+            {errorMessage}
+          </div>
+        ) : null}
+        <div className="flex items-center gap-1.5">
+          <div className="min-w-0 flex-1 truncate text-[11px] text-muted-foreground">
+            {selectedCount.toLocaleString()} of {totalCount.toLocaleString()}{" "}
+            files selected
+          </div>
+          <Button disabled={disabled} size="xs" type="submit">
+            {pending ? "Committing" : `Commit to ${target}`}
+          </Button>
+        </div>
+      </div>
+    </form>
   );
 }
 
@@ -1276,11 +2406,7 @@ function WorkspaceGitDiffResultView({
         </div>
       ))}
       {files.length > 0 ? (
-        <div className="space-y-2">
-          {files.map((file) => (
-            <WorkspaceToolPatchFileItem file={file} key={file.key} />
-          ))}
-        </div>
+        <WorkspaceToolPatchFileRows files={files} />
       ) : (
         <WorkspaceToolEmpty
           detail={pathFilter}
@@ -1292,14 +2418,27 @@ function WorkspaceGitDiffResultView({
 }
 
 function WorkspaceToolPatchFileList({
-  onOpenFile,
+  activeFileKey,
+  flush = false,
+  onFileActivate,
+  onFileSelectedChange,
   patchList,
+  rowMode = "expand",
+  selectedFileKeys,
 }: {
-  onOpenFile?: (file: WorkspaceToolPatchFile) => void;
+  activeFileKey?: string;
+  flush?: boolean;
+  onFileActivate?: (file: WorkspaceToolPatchFile) => void;
+  onFileSelectedChange?: (
+    file: WorkspaceToolPatchFile,
+    selected: boolean,
+  ) => void;
   patchList: {
     errors: string[];
     files: WorkspaceToolPatchFile[];
   };
+  rowMode?: "expand" | "select";
+  selectedFileKeys?: Record<string, boolean>;
 }) {
   return (
     <section className="space-y-2">
@@ -1312,13 +2451,15 @@ function WorkspaceToolPatchFileList({
         </div>
       ))}
       {patchList.files.length > 0 ? (
-        patchList.files.map((file) => (
-          <WorkspaceToolPatchFileItem
-            file={file}
-            key={file.key}
-            onOpenFile={onOpenFile}
-          />
-        ))
+        <WorkspaceToolPatchFileRows
+          activeFileKey={activeFileKey}
+          files={patchList.files}
+          flush={flush}
+          rowMode={rowMode}
+          selectedFileKeys={selectedFileKeys}
+          onFileActivate={onFileActivate}
+          onFileSelectedChange={onFileSelectedChange}
+        />
       ) : patchList.errors.length === 0 ? (
         <div className="rounded-md border border-border/70 px-3 py-6 text-center text-sm text-muted-foreground">
           No changes
@@ -1328,69 +2469,209 @@ function WorkspaceToolPatchFileList({
   );
 }
 
-function WorkspaceToolPatchFileItem({
-  file,
-  onOpenFile,
+function WorkspaceToolPatchFileRows({
+  activeFileKey,
+  files,
+  flush = false,
+  onFileActivate,
+  onFileSelectedChange,
+  rowMode = "expand",
+  selectedFileKeys: controlledSelectedFileKeys,
 }: {
+  activeFileKey?: string;
+  files: WorkspaceToolPatchFile[];
+  flush?: boolean;
+  onFileActivate?: (file: WorkspaceToolPatchFile) => void;
+  onFileSelectedChange?: (
+    file: WorkspaceToolPatchFile,
+    selected: boolean,
+  ) => void;
+  rowMode?: "expand" | "select";
+  selectedFileKeys?: Record<string, boolean>;
+}) {
+  const [localSelectedFileKeys, setLocalSelectedFileKeys] = useState<
+    Record<string, boolean>
+  >({});
+  const selectedFileKeys = controlledSelectedFileKeys ?? localSelectedFileKeys;
+  const handleFileSelectedChange = (
+    file: WorkspaceToolPatchFile,
+    selected: boolean,
+  ) => {
+    if (onFileSelectedChange) {
+      onFileSelectedChange(file, selected);
+      return;
+    }
+    setLocalSelectedFileKeys((current) => ({
+      ...current,
+      [file.key]: selected,
+    }));
+  };
+
+  return (
+    <div
+      className={cn(
+        "overflow-hidden bg-background",
+        flush ? "" : "rounded-md border border-border/70",
+      )}
+    >
+      {files.map((file) => (
+        <WorkspaceToolPatchFileItem
+          active={file.key === activeFileKey}
+          checked={selectedFileKeys[file.key] ?? true}
+          file={file}
+          key={file.key}
+          mode={rowMode}
+          onActivate={onFileActivate}
+          onCheckedChange={handleFileSelectedChange}
+        />
+      ))}
+    </div>
+  );
+}
+
+function WorkspaceToolPatchFileItem({
+  active = false,
+  checked,
+  file,
+  mode,
+  onActivate,
+  onCheckedChange,
+}: {
+  active?: boolean;
+  checked: boolean;
   file: WorkspaceToolPatchFile;
-  onOpenFile?: (file: WorkspaceToolPatchFile) => void;
+  mode: "expand" | "select";
+  onActivate?: (file: WorkspaceToolPatchFile) => void;
+  onCheckedChange: (file: WorkspaceToolPatchFile, checked: boolean) => void;
 }) {
   const fileName = formatWorkspaceToolPatchFileName(file);
-  const lineCount = getWorkspaceToolPatchFileLineCount(file);
+  const lineChanges = getWorkspaceToolPatchFileLineChanges(file);
+  const [open, setOpen] = useState(false);
+
+  if (mode === "select") {
+    return (
+      <div
+        className={cn(
+          "border-b border-border/70 last:border-b-0",
+          active ? "bg-muted/60" : "",
+        )}
+      >
+        <div className="group flex min-h-8 w-full items-center gap-2 px-2.5 py-1 text-xs transition-colors hover:bg-muted/50">
+          <Checkbox
+            aria-label={`Include ${fileName} in commit`}
+            checked={checked}
+            className="size-3.5"
+            onCheckedChange={(value) => onCheckedChange(file, value === true)}
+          />
+          <button
+            aria-current={active ? "true" : undefined}
+            className="flex min-w-0 flex-1 items-center gap-2 text-left outline-none focus-visible:ring-2 focus-visible:ring-ring/30"
+            type="button"
+            onClick={() => onActivate?.(file)}
+          >
+            <span
+              className="min-w-0 flex-1 truncate font-medium text-foreground"
+              title={fileName}
+            >
+              {fileName}
+            </span>
+          </button>
+          <WorkspaceToolPatchFileLineStats lineChanges={lineChanges} />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <Collapsible
-      className="overflow-hidden rounded-md border border-border/70 bg-background"
-      defaultOpen={lineCount <= largeWorkspaceDiffLineThreshold}
+      className="border-b border-border/70 last:border-b-0"
+      open={open}
+      onOpenChange={setOpen}
     >
-      <CollapsibleTrigger
-        className="group flex min-h-9 w-full items-center gap-2 px-2.5 py-1.5 text-left text-xs transition-colors hover:bg-muted/50"
-        onClick={(event) => {
-          if (onOpenFile) {
-            event.preventDefault();
-            onOpenFile(file);
-          }
-        }}
-        type="button"
-      >
-        <span className="text-muted-foreground transition-transform group-data-[state=closed]:-rotate-90">
-          ▾
-        </span>
-        <span
-          className="min-w-0 flex-1 truncate font-medium text-foreground"
-          title={fileName}
+      <div className="group flex min-h-8 w-full items-center gap-2 px-2.5 py-1 text-xs transition-colors hover:bg-muted/50">
+        <Checkbox
+          aria-label={`Include ${fileName} in commit`}
+          checked={checked}
+          className="size-3.5"
+          onCheckedChange={(value) => onCheckedChange(file, value === true)}
+        />
+        <CollapsibleTrigger
+          className="flex min-w-0 flex-1 items-center gap-2 text-left outline-none focus-visible:ring-2 focus-visible:ring-ring/30"
+          type="button"
         >
-          {fileName}
-        </span>
-        <span className="shrink-0 text-[11px] text-muted-foreground">
-          {formatWorkspaceToolPatchFileSummary(file.diffs, lineCount)}
-        </span>
-      </CollapsibleTrigger>
-      <CollapsibleContent className="overflow-hidden data-[state=closed]:animate-collapsible-up data-[state=open]:animate-collapsible-down">
-        <div className="space-y-2 border-t border-border/70">
-          {file.diffs.map((diff, index) => (
-            <div
-              className="overflow-hidden"
-              key={workspaceToolFileDiffKey(diff.source, diff.fileDiff, index)}
-            >
-              {file.diffs.length > 1 ? (
-                <div className="border-b border-border/70 px-2.5 py-1 text-[11px] font-medium text-muted-foreground">
-                  {formatWorkspaceToolPatchSource(diff.source)}
-                </div>
-              ) : null}
-              <WorkspaceToolFileDiff
-                fileDiff={diff.fileDiff}
-                preloadKey={workspaceToolFileDiffKey(
-                  diff.source,
-                  diff.fileDiff,
-                  index,
-                )}
-              />
-            </div>
-          ))}
-        </div>
-      </CollapsibleContent>
+          <span
+            className="min-w-0 flex-1 truncate font-medium text-foreground"
+            title={fileName}
+          >
+            {fileName}
+          </span>
+        </CollapsibleTrigger>
+        <WorkspaceToolPatchFileLineStats lineChanges={lineChanges} />
+      </div>
+      {open ? (
+        <CollapsibleContent className="overflow-hidden data-[state=closed]:animate-collapsible-up data-[state=open]:animate-collapsible-down">
+          <WorkspaceToolPatchFileDiffContent file={file} borderTop />
+        </CollapsibleContent>
+      ) : null}
     </Collapsible>
+  );
+}
+
+function WorkspaceToolPatchFileDiffContent({
+  borderTop = false,
+  file,
+}: {
+  borderTop?: boolean;
+  file: WorkspaceToolPatchFile;
+}) {
+  return (
+    <div className={cn(borderTop ? "border-t border-border/70" : "")}>
+      {file.diffs.map((diff, index) => (
+        <div
+          className="overflow-hidden border-b border-border/70 last:border-b-0"
+          key={workspaceToolFileDiffKey(diff.source, diff.fileDiff, index)}
+        >
+          {file.diffs.length > 1 ? (
+            <div className="border-b border-border/70 px-2.5 py-1 text-[11px] font-medium text-muted-foreground">
+              {formatWorkspaceToolPatchSource(diff.source)}
+            </div>
+          ) : null}
+          <WorkspaceToolFileDiff
+            fileDiff={diff.fileDiff}
+            preloadKey={workspaceToolFileDiffKey(
+              diff.source,
+              diff.fileDiff,
+              index,
+            )}
+          />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function WorkspaceToolPatchFileLineStats({
+  lineChanges,
+}: {
+  lineChanges: WorkspaceToolPatchFileLineChanges;
+}) {
+  if (lineChanges.additions === 0 && lineChanges.deletions === 0) {
+    return null;
+  }
+
+  return (
+    <span className="flex shrink-0 items-center gap-2 text-[11px] tabular-nums">
+      {lineChanges.additions > 0 ? (
+        <span className="font-medium text-emerald-600 dark:text-emerald-400">
+          +{lineChanges.additions.toLocaleString()}
+        </span>
+      ) : null}
+      {lineChanges.deletions > 0 ? (
+        <span className="font-medium text-red-600 dark:text-red-400">
+          -{lineChanges.deletions.toLocaleString()}
+        </span>
+      ) : null}
+    </span>
   );
 }
 
@@ -1436,6 +2717,7 @@ function WorkspaceToolFileDiff({
       disableWorkerPool
       fileDiff={fileDiff}
       key={preloadKey}
+      metrics={diffMetrics}
       options={diffOptions}
       style={diffHostStyle}
     />
@@ -1493,51 +2775,6 @@ function WorkspaceFileTreeSkeleton() {
   );
 }
 
-function openSemanticWorkspaceToolTab(
-  snapshot: WorkspaceToolSurfaceSnapshot,
-  tab: WorkspaceToolSemanticDynamicTabInput,
-): WorkspaceToolSurfaceSnapshot {
-  const existing = snapshot.tabs.find((candidate) => {
-    if (candidate.kind !== tab.kind) {
-      return false;
-    }
-    if (candidate.root !== tab.root) {
-      return false;
-    }
-    if (candidate.kind === "file-preview" && tab.kind === "file-preview") {
-      return candidate.path === tab.path;
-    }
-    if (candidate.kind === "git-diff" && tab.kind === "git-diff") {
-      return candidate.path === tab.path;
-    }
-    return false;
-  });
-
-  if (existing) {
-    return {
-      ...snapshot,
-      activeTabId: existing.id,
-    };
-  }
-
-  const nextTab: WorkspaceToolSemanticDynamicTab =
-    tab.kind === "file-preview"
-      ? {
-          ...tab,
-          id: crypto.randomUUID(),
-        }
-      : {
-          ...tab,
-          id: crypto.randomUUID(),
-        };
-
-  return {
-    ...snapshot,
-    activeTabId: nextTab.id,
-    tabs: [...snapshot.tabs, nextTab],
-  };
-}
-
 function workspaceToolTabIcon(tab: WorkspaceToolSurfaceDynamicTab) {
   switch (tab.kind) {
     case "browser":
@@ -1576,6 +2813,61 @@ function getClickedFileTreePath(event: ReactMouseEvent<HTMLElement>) {
   }
 
   return null;
+}
+
+function confirmDiscardWorkspaceToolFileChanges(dirty: boolean) {
+  return (
+    !dirty ||
+    window.confirm("This file has unsaved changes. Discard them and continue?")
+  );
+}
+
+function getWorkspaceMonacoLanguageFromFileTree(path: string) {
+  const token = workspaceFileIconResolver.resolveIcon(
+    "file-tree-icon-file",
+    path,
+  ).token;
+
+  return (
+    (token ? workspaceMonacoLanguageByFileTreeToken[token] : undefined) ??
+    "plaintext"
+  );
+}
+
+function getWorkspaceMonacoTheme() {
+  return document.documentElement.classList.contains("dark") ? "vs-dark" : "vs";
+}
+
+function disableWorkspaceMonacoTypeScriptServices() {
+  const modeConfiguration: monaco.typescript.ModeConfiguration = {
+    codeActions: false,
+    completionItems: false,
+    definitions: false,
+    diagnostics: false,
+    documentHighlights: false,
+    documentRangeFormattingEdits: false,
+    documentSymbols: false,
+    hovers: false,
+    inlayHints: false,
+    onTypeFormattingEdits: false,
+    references: false,
+    rename: false,
+    signatureHelp: false,
+  };
+  const diagnosticsOptions: monaco.typescript.DiagnosticsOptions = {
+    noSemanticValidation: true,
+    noSuggestionDiagnostics: true,
+    noSyntaxValidation: true,
+  };
+
+  monaco.typescript.typescriptDefaults.setDiagnosticsOptions(
+    diagnosticsOptions,
+  );
+  monaco.typescript.javascriptDefaults.setDiagnosticsOptions(
+    diagnosticsOptions,
+  );
+  monaco.typescript.typescriptDefaults.setModeConfiguration(modeConfiguration);
+  monaco.typescript.javascriptDefaults.setModeConfiguration(modeConfiguration);
 }
 
 function buildWorkspaceToolPatchList(
@@ -1669,30 +2961,15 @@ function formatWorkspaceToolPatchSource(source: WorkspaceToolPatchSource) {
   return source === "staged" ? "Staged" : "Unstaged";
 }
 
-function formatWorkspaceToolPatchSourceSummary(
-  diffs: WorkspaceToolFilePatch[],
-) {
-  const sources = new Set(diffs.map((diff) => diff.source));
-
-  if (sources.has("staged") && sources.has("unstaged")) {
-    return "staged + unstaged";
-  }
-  return formatWorkspaceToolPatchSource(
-    diffs[0]?.source ?? "unstaged",
-  ).toLowerCase();
-}
-
-function formatWorkspaceToolPatchFileSummary(
-  diffs: WorkspaceToolFilePatch[],
-  lineCount: number,
-) {
-  return `${formatWorkspaceToolPatchSourceSummary(diffs)} · ${lineCount.toLocaleString()} lines`;
-}
-
-function getWorkspaceToolPatchFileLineCount(file: WorkspaceToolPatchFile) {
-  return file.diffs.reduce(
-    (total, diff) => total + diff.fileDiff.unifiedLineCount,
-    0,
+function getWorkspaceToolPatchFileLineChanges(
+  file: WorkspaceToolPatchFile,
+): WorkspaceToolPatchFileLineChanges {
+  return file.diffs.reduce<WorkspaceToolPatchFileLineChanges>(
+    (total, diff) => ({
+      additions: total.additions + diff.fileDiff.additionLines.length,
+      deletions: total.deletions + diff.fileDiff.deletionLines.length,
+    }),
+    { additions: 0, deletions: 0 },
   );
 }
 

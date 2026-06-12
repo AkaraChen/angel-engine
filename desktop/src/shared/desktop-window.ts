@@ -24,6 +24,15 @@ export interface DesktopConfirmDeleteArchivedChatsInput {
   managedWorktreeCount: number;
 }
 
+export interface DesktopConfirmSaveWorkspaceFileChangesInput {
+  path: string;
+}
+
+export type DesktopConfirmSaveWorkspaceFileChangesResult =
+  | "cancel"
+  | "discard"
+  | "save";
+
 export interface DesktopUpdateDownloadedEvent {
   releaseName: string;
   releaseNotes?: string;
@@ -36,6 +45,8 @@ export const DESKTOP_CONFIRM_DELETE_ALL_CHATS_CHANNEL =
   "desktop-window:confirm-delete-all-chats";
 export const DESKTOP_CONFIRM_DELETE_ARCHIVED_CHATS_CHANNEL =
   "desktop-window:confirm-delete-archived-chats";
+export const DESKTOP_CONFIRM_SAVE_WORKSPACE_FILE_CHANGES_CHANNEL =
+  "desktop-window:confirm-save-workspace-file-changes";
 export const DESKTOP_COMMAND_CHANNEL = "desktop-window:command";
 export const DESKTOP_INSTALL_UPDATE_CHANNEL = "desktop-window:update:install";
 export const DESKTOP_OPEN_CHAT_FROM_NOTIFICATION_CHANNEL =

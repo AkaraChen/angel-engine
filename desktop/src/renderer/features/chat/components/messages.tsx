@@ -14,8 +14,6 @@ import type { TFunction } from "i18next";
 import { useMessageError } from "@assistant-ui/core/react";
 import {
   ActionBarPrimitive,
-  AuiIf,
-  BranchPickerPrimitive,
   ComposerPrimitive,
   MessagePrimitive,
   useAui,
@@ -26,24 +24,16 @@ import {
   RiErrorWarningLine as AlertCircleIcon,
   RiCheckLine as Check,
   RiArrowDownSLine as ChevronDown,
-  RiArrowLeftSLine as ChevronLeft,
-  RiArrowRightSLine as ChevronRight,
   RiCircleLine as Circle,
   RiRadioButtonLine as CircleDot,
   RiQuestionLine as CircleHelp,
-  RiClipboardLine as Clipboard,
   RiFileCopyLine as Copy,
   RiFileTextLine as FileText,
   RiHammerLine as Hammer,
   RiListCheck3 as ListChecks,
   RiLoader4Line as Loader2,
   RiPencilLine as Pencil,
-  RiRefreshLine as RefreshCw,
   RiSendPlaneLine as Send,
-  RiThumbDownLine as ThumbsDown,
-  RiThumbUpLine as ThumbsUp,
-  RiVolumeUpLine as Volume2,
-  RiVolumeMuteLine as VolumeX,
 } from "@remixicon/react";
 import {
   isChatElicitationData,
@@ -158,7 +148,6 @@ export function UserMessage() {
           </div>
         ) : null}
         <div className={messageActionFooterClass}>
-          <MessageBranchPicker />
           <ActionBarPrimitive.Root
             autohide="not-last"
             autohideFloat="always"
@@ -242,7 +231,6 @@ export function UserEditComposer() {
 export function AssistantMessage() {
   const { t } = useTranslation();
   const workspaceMode = useWorkspaceUiStore((state) => state.workspaceMode);
-  const canReload = useAuiState((state) => state.thread.capabilities.reload);
 
   return (
     <MessagePrimitive.Root
@@ -259,7 +247,6 @@ export function AssistantMessage() {
           <AssistantMessageParts />
         </div>
         <div className={messageActionFooterClass}>
-          <MessageBranchPicker />
           <ActionBarPrimitive.Root
             autohide="not-last"
             autohideFloat="always"
@@ -287,54 +274,6 @@ export function AssistantMessage() {
               />
               <span className="sr-only">{t("common.copy")}</span>
             </ActionBarPrimitive.Copy>
-            {canReload ? (
-              <ActionBarPrimitive.Reload className={iconButtonClass}>
-                <RefreshCw className="size-3.5" />
-                <span className="sr-only">{t("common.reload")}</span>
-              </ActionBarPrimitive.Reload>
-            ) : null}
-            <AuiIf condition={(state) => !state.message.speech}>
-              <ActionBarPrimitive.Speak className={iconButtonClass}>
-                <Volume2 className="size-3.5" />
-                <span className="sr-only">{t("common.speak")}</span>
-              </ActionBarPrimitive.Speak>
-            </AuiIf>
-            <AuiIf condition={(state) => Boolean(state.message.speech)}>
-              <ActionBarPrimitive.StopSpeaking className={iconButtonClass}>
-                <VolumeX className="size-3.5" />
-                <span className="sr-only">{t("common.stopSpeaking")}</span>
-              </ActionBarPrimitive.StopSpeaking>
-            </AuiIf>
-            <ActionBarPrimitive.FeedbackPositive
-              className={cn(
-                iconButtonClass,
-                `
-                  data-submitted:bg-emerald-500/10
-                  data-submitted:text-emerald-700
-                `,
-              )}
-            >
-              <ThumbsUp className="size-3.5" />
-              <span className="sr-only">{t("common.helpful")}</span>
-            </ActionBarPrimitive.FeedbackPositive>
-            <ActionBarPrimitive.FeedbackNegative
-              className={cn(
-                iconButtonClass,
-                "data-submitted:bg-rose-500/10 data-submitted:text-rose-700",
-              )}
-            >
-              <ThumbsDown className="size-3.5" />
-              <span className="sr-only">{t("common.notHelpful")}</span>
-            </ActionBarPrimitive.FeedbackNegative>
-            <ActionBarPrimitive.ExportMarkdown
-              className={iconButtonClass}
-              onExport={async (content) =>
-                navigator.clipboard.writeText(content)
-              }
-            >
-              <Clipboard className="size-3.5" />
-              <span className="sr-only">{t("messages.exportMarkdown")}</span>
-            </ActionBarPrimitive.ExportMarkdown>
           </ActionBarPrimitive.Root>
         </div>
       </div>
@@ -403,47 +342,6 @@ function formatAssistantMessageError(error: unknown, title: string) {
   return normalizedText.startsWith(normalizedTitle)
     ? normalizedText.slice(normalizedTitle.length).replace(/^[:\s-]+/, "")
     : normalizedText;
-}
-
-function MessageBranchPicker() {
-  return (
-    <BranchPickerPrimitive.Root
-      className="
-        inline-flex h-7 items-center gap-0.5 rounded-md border
-        border-foreground/8 bg-background/70 px-1 text-xs text-muted-foreground
-        backdrop-blur-xl
-        dark:border-white/8
-      "
-      hideWhenSingleBranch
-    >
-      <BranchPickerPrimitive.Previous
-        className="
-          inline-flex size-5 items-center justify-center rounded-sm
-          hover:bg-foreground/5.5
-          disabled:opacity-40
-          dark:hover:bg-white/[0.07]
-          data-disabled:opacity-40
-        "
-      >
-        <ChevronLeft className="size-3" />
-      </BranchPickerPrimitive.Previous>
-      <span className="min-w-8 text-center tabular-nums">
-        <BranchPickerPrimitive.Number /> /
-        <BranchPickerPrimitive.Count />
-      </span>
-      <BranchPickerPrimitive.Next
-        className="
-          inline-flex size-5 items-center justify-center rounded-sm
-          hover:bg-foreground/5.5
-          disabled:opacity-40
-          dark:hover:bg-white/[0.07]
-          data-disabled:opacity-40
-        "
-      >
-        <ChevronRight className="size-3" />
-      </BranchPickerPrimitive.Next>
-    </BranchPickerPrimitive.Root>
-  );
 }
 
 function UserMessageParts() {
