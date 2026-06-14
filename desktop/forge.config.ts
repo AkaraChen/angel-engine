@@ -53,6 +53,42 @@ const fallbackAdHocSign =
   process.platform === "darwin" &&
   !is.nonEmptyString(macSignIdentity) &&
   macNotarize === undefined;
+const defaultDarwinAppEntitlements = [
+  "com.apple.security.cs.allow-jit",
+  "com.apple.security.device.audio-input",
+  "com.apple.security.device.bluetooth",
+  "com.apple.security.device.camera",
+  "com.apple.security.device.print",
+  "com.apple.security.device.usb",
+  "com.apple.security.personal-information.location",
+];
+const fallbackAdHocAppEntitlements = [
+  ...defaultDarwinAppEntitlements,
+  "com.apple.security.cs.disable-library-validation",
+];
+const defaultDarwinRendererHelperEntitlements = [
+  "com.apple.security.cs.allow-jit",
+];
+const fallbackAdHocRendererHelperEntitlements = [
+  ...defaultDarwinRendererHelperEntitlements,
+  "com.apple.security.cs.disable-library-validation",
+];
+
+function fallbackAdHocEntitlementsForFile(filePath: string) {
+  if (!filePath.endsWith(".app")) {
+    return undefined;
+  }
+
+  if (filePath.includes("(Plugin).app")) {
+    return undefined;
+  }
+
+  if (filePath.includes("(Renderer).app") || filePath.includes("(GPU).app")) {
+    return fallbackAdHocRendererHelperEntitlements;
+  }
+
+  return fallbackAdHocAppEntitlements;
+}
 
 function copyRuntimePath(buildPath: string, relativePath: string) {
   fs.cpSync(
@@ -151,9 +187,16 @@ const config: ForgeConfig = {
             identityValidation: fallbackAdHocSign
               ? false
               : macSignIdentityValidation,
-            optionsForFile: () => ({
-              hardenedRuntime: true,
-            }),
+            optionsForFile: (filePath) => {
+              const entitlements = fallbackAdHocSign
+                ? fallbackAdHocEntitlementsForFile(filePath)
+                : undefined;
+
+              return {
+                ...(entitlements ? { entitlements } : {}),
+                hardenedRuntime: true,
+              };
+            },
           }
         : undefined,
     osxNotarize: macNotarize,
