@@ -9,6 +9,7 @@ import type { ChangeEvent, KeyboardEvent, ReactNode } from "react";
 import type { PromptInputMessage } from "@/components/ai-elements/prompt-input";
 
 import type { ChatOptionsContextValue } from "@/features/chat/runtime/chat-options-context";
+import type { ChatComposerMentionedFile } from "@/features/chat/state/chat-run-store";
 import { ComposerPrimitive, useAui, useAuiState } from "@assistant-ui/react";
 import {
   RiArrowUpLine as ArrowUp,
@@ -74,6 +75,7 @@ import { findPlanModeToggleTarget } from "@/features/chat/runtime/mode-options";
 import { useChatRuntimeActions } from "@/features/chat/runtime/use-chat-runtime-actions";
 import {
   useChatComposerDraft,
+  useChatComposerMentionedFiles,
   useChatRunStore,
 } from "@/features/chat/state/chat-run-store";
 import {
@@ -81,10 +83,6 @@ import {
   useProjectFileMentionSearch,
 } from "@/features/chat/state/use-project-file-mention-search";
 import { cn } from "@/platform/utils";
-
-type ComposerMentionedFile = ProjectFileSearchResult & {
-  id: string;
-};
 
 interface ComposerAssistPanelProps {
   fileMentionOpen: boolean;
@@ -143,12 +141,16 @@ export function AssistantComposer({
   const isRunning = useAuiState((state) => state.thread.isRunning);
   const toast = useToast();
   const draftText = useChatComposerDraft(runtimeActions.slotKey);
+  const mentionedFiles = useChatComposerMentionedFiles(runtimeActions.slotKey);
   const setComposerDraft = useChatRunStore((state) => state.setComposerDraft);
   const clearComposerDraft = useChatRunStore(
     (state) => state.clearComposerDraft,
   );
-  const [mentionedFiles, setMentionedFiles] = useState<ComposerMentionedFile[]>(
-    [],
+  const setComposerMentionedFiles = useChatRunStore(
+    (state) => state.setComposerMentionedFiles,
+  );
+  const clearComposerMentionedFiles = useChatRunStore(
+    (state) => state.clearComposerMentionedFiles,
   );
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const projectToolsEnabled =
@@ -205,7 +207,7 @@ export function AssistantComposer({
 
         composer.send();
         clearComposerDraft(runtimeActions.slotKey, text);
-        setMentionedFiles([]);
+        clearComposerMentionedFiles(runtimeActions.slotKey, mentionedFiles);
       } catch (error) {
         await composer.clearAttachments().catch(() => undefined);
         throw error;
@@ -214,6 +216,7 @@ export function AssistantComposer({
     [
       aui,
       clearComposerDraft,
+      clearComposerMentionedFiles,
       mentionedFiles,
       onBeforeSubmit,
       runtimeActions.slotKey,
@@ -251,22 +254,36 @@ export function AssistantComposer({
 
   const selectMentionedFile = useCallback(
     (file: ProjectFileSearchResult) => {
-      setMentionedFiles((current) => {
-        if (current.some((item) => item.path === file.path)) return current;
-        return [...current, { ...file, id: file.path }];
-      });
+      if (!mentionedFiles.some((item) => item.path === file.path)) {
+        setComposerMentionedFiles(runtimeActions.slotKey, [
+          ...mentionedFiles,
+          { ...file, id: file.path },
+        ]);
+      }
       setComposerDraft(
         runtimeActions.slotKey,
         replaceMentionQuery(draftText, file.relativePath),
       );
       requestAnimationFrame(() => textareaRef.current?.focus());
     },
-    [draftText, runtimeActions.slotKey, setComposerDraft],
+    [
+      draftText,
+      mentionedFiles,
+      runtimeActions.slotKey,
+      setComposerDraft,
+      setComposerMentionedFiles,
+    ],
   );
 
-  const removeMentionedFile = useCallback((id: string) => {
-    setMentionedFiles((current) => current.filter((file) => file.id !== id));
-  }, []);
+  const removeMentionedFile = useCallback(
+    (id: string) => {
+      setComposerMentionedFiles(
+        runtimeActions.slotKey,
+        mentionedFiles.filter((file) => file.id !== id),
+      );
+    },
+    [mentionedFiles, runtimeActions.slotKey, setComposerMentionedFiles],
+  );
 
   const handleTextKeyDown = useCallback(
     (event: KeyboardEvent<HTMLTextAreaElement>) => {
@@ -393,7 +410,7 @@ function AssistantComposerHeader({
   mentionedFiles,
   onRemoveMentionedFile,
 }: {
-  mentionedFiles: ComposerMentionedFile[];
+  mentionedFiles: ChatComposerMentionedFile[];
   onRemoveMentionedFile: (id: string) => void;
 }) {
   const { t } = useTranslation();
@@ -1528,7 +1545,7 @@ function createAttachmentFromPromptFile(
 }
 
 function createMentionAttachment(
-  file: ComposerMentionedFile,
+  file: ChatComposerMentionedFile,
 ): CreateAttachment {
   const mimeType = file.mimeType;
   if (!is.nonEmptyString(mimeType)) {

@@ -12,6 +12,7 @@ import type {
   ChatHistoryMessage,
   ChatHistoryMessagePart,
   ChatPlanData,
+  ProjectFileSearchResult,
   ChatRuntimeConfig,
   ChatSendInput,
   ChatSendResult,
@@ -44,9 +45,14 @@ import { assign, createActor, setup } from "xstate";
 import { streamChatEvents } from "@/features/chat/api/chat-stream";
 import { getApiClient } from "@/platform/api-client";
 
+export type ChatComposerMentionedFile = ProjectFileSearchResult & {
+  id: string;
+};
+
 const STREAM_FLUSH_MIN_CHARS = 24;
 const STREAM_FLUSH_MAX_MS = 80;
 const EMPTY_MESSAGES: EngineMessage[] = [];
+const EMPTY_COMPOSER_MENTIONED_FILES: ChatComposerMentionedFile[] = [];
 const EMPTY_CHAT_ATTENTION: ChatAttentionState = {
   completed: false,
   needsInput: false,
@@ -182,7 +188,12 @@ interface ChatRunStore {
   attentions: Record<string, ChatAttentionState>;
   cancelRun: (slotKey: string) => void;
   composerDrafts: Record<string, string>;
+  composerMentionedFiles: Record<string, ChatComposerMentionedFile[]>;
   clearComposerDraft: (slotKey: string, expectedText?: string) => void;
+  clearComposerMentionedFiles: (
+    slotKey: string,
+    expectedFiles?: ChatComposerMentionedFile[],
+  ) => void;
   dropAllRuns: () => void;
   dropRun: (slotKey: string) => void;
   enablePermissionBypass: (
@@ -198,6 +209,10 @@ interface ChatRunStore {
   ) => void;
   setActiveChatId: (chatId?: string) => void;
   setComposerDraft: (slotKey: string, text: string) => void;
+  setComposerMentionedFiles: (
+    slotKey: string,
+    files: ChatComposerMentionedFile[],
+  ) => void;
   setMode: (slotKey: string, mode: string) => Promise<ChatRuntimeConfig>;
   setPermissionMode: (
     slotKey: string,
@@ -209,18 +224,33 @@ interface ChatRunStore {
 
 type ChatRunContext = Pick<
   ChatRunStore,
-  "activeChatId" | "aliases" | "attentions" | "composerDrafts" | "slots"
+  | "activeChatId"
+  | "aliases"
+  | "attentions"
+  | "composerDrafts"
+  | "composerMentionedFiles"
+  | "slots"
 >;
 
 type ChatRunEvent =
   | { chatId?: string; type: "activeChat.changed" }
   | { chatId: string; kind: ChatAttentionKind; type: "attention.marked" }
   | {
+      expectedFiles?: ChatComposerMentionedFile[];
+      slotKey: string;
+      type: "composerMentionedFiles.cleared";
+    }
+  | {
       expectedText?: string;
       slotKey: string;
       type: "composerDraft.cleared";
     }
   | { slotKey: string; text: string; type: "composerDraft.changed" }
+  | {
+      files: ChatComposerMentionedFile[];
+      slotKey: string;
+      type: "composerMentionedFiles.changed";
+    }
   | {
       input: InitializeSlotInput;
       messages: EngineMessage[];
@@ -273,6 +303,7 @@ const chatRunMachine = setup({
     aliases: {},
     attentions: {},
     composerDrafts: {},
+    composerMentionedFiles: {},
     slots: {},
   },
   id: "chatRunRegistry",
@@ -303,6 +334,16 @@ const chatRunMachine = setup({
         "composerDraft.cleared": {
           actions: assign(({ context, event }) =>
             clearComposerDraftContext(context, event),
+          ),
+        },
+        "composerMentionedFiles.changed": {
+          actions: assign(({ context, event }) =>
+            setComposerMentionedFilesContext(context, event),
+          ),
+        },
+        "composerMentionedFiles.cleared": {
+          actions: assign(({ context, event }) =>
+            clearComposerMentionedFilesContext(context, event),
           ),
         },
         "run.cancelled": {
@@ -355,6 +396,7 @@ const chatRunMachine = setup({
             aliases: {},
             attentions: {},
             composerDrafts: {},
+            composerMentionedFiles: {},
             slots: {},
           })),
         },
@@ -383,6 +425,13 @@ const chatRunActions: Omit<ChatRunStore, keyof ChatRunContext> = {
       expectedText,
       slotKey,
       type: "composerDraft.cleared",
+    });
+  },
+  clearComposerMentionedFiles(slotKey, expectedFiles) {
+    chatRunActor.send({
+      expectedFiles,
+      slotKey,
+      type: "composerMentionedFiles.cleared",
     });
   },
   dropAllRuns() {
@@ -441,6 +490,13 @@ const chatRunActions: Omit<ChatRunStore, keyof ChatRunContext> = {
   },
   setComposerDraft(slotKey, text) {
     chatRunActor.send({ slotKey, text, type: "composerDraft.changed" });
+  },
+  setComposerMentionedFiles(slotKey, files) {
+    chatRunActor.send({
+      files,
+      slotKey,
+      type: "composerMentionedFiles.changed",
+    });
   },
   async setMode(slotKey, mode) {
     const state = getChatRunContext();
@@ -590,6 +646,15 @@ export function useChatComposerDraft(slotKey?: string) {
   );
 }
 
+export function useChatComposerMentionedFiles(slotKey?: string) {
+  return useChatRunStore((state) =>
+    is.nonEmptyString(slotKey)
+      ? (state.composerMentionedFiles[resolveSlotKey(state, slotKey)] ??
+        EMPTY_COMPOSER_MENTIONED_FILES)
+      : EMPTY_COMPOSER_MENTIONED_FILES,
+  );
+}
+
 export function useChatAttention(chatId: string) {
   return useChatRunStore(
     (state) => state.attentions[chatId] ?? EMPTY_CHAT_ATTENTION,
@@ -713,6 +778,38 @@ function clearComposerDraftContext(
   const composerDrafts = { ...state.composerDrafts };
   delete composerDrafts[resolvedKey];
   return { composerDrafts };
+}
+
+function setComposerMentionedFilesContext(
+  state: ChatRunContext,
+  event: Extract<ChatRunEvent, { type: "composerMentionedFiles.changed" }>,
+): Partial<ChatRunContext> {
+  const resolvedKey = resolveSlotKey(state, event.slotKey);
+  if (state.composerMentionedFiles[resolvedKey] === event.files) return {};
+
+  const composerMentionedFiles = { ...state.composerMentionedFiles };
+  if (event.files.length === 0) {
+    delete composerMentionedFiles[resolvedKey];
+  } else {
+    composerMentionedFiles[resolvedKey] = event.files;
+  }
+  return { composerMentionedFiles };
+}
+
+function clearComposerMentionedFilesContext(
+  state: ChatRunContext,
+  event: Extract<ChatRunEvent, { type: "composerMentionedFiles.cleared" }>,
+): Partial<ChatRunContext> {
+  const resolvedKey = resolveSlotKey(state, event.slotKey);
+  const current = state.composerMentionedFiles[resolvedKey];
+  if (current === undefined) return {};
+  if (event.expectedFiles !== undefined && current !== event.expectedFiles) {
+    return {};
+  }
+
+  const composerMentionedFiles = { ...state.composerMentionedFiles };
+  delete composerMentionedFiles[resolvedKey];
+  return { composerMentionedFiles };
 }
 
 function summarizeChatAttention(state: ChatRunContext): ChatAttentionState {
@@ -915,12 +1012,16 @@ function dropRunContext(
   const composerDrafts = { ...state.composerDrafts };
   delete composerDrafts[resolvedKey];
   delete composerDrafts[slotKey];
+  const composerMentionedFiles = { ...state.composerMentionedFiles };
+  delete composerMentionedFiles[resolvedKey];
+  delete composerMentionedFiles[slotKey];
 
   const aliases = { ...state.aliases };
   for (const [alias, target] of Object.entries(aliases)) {
     if (alias === slotKey || alias === resolvedKey || target === resolvedKey) {
       delete aliases[alias];
       delete composerDrafts[alias];
+      delete composerMentionedFiles[alias];
     }
   }
 
@@ -928,6 +1029,7 @@ function dropRunContext(
     aliases,
     attentions: removeAttention(state.attentions, resolvedKey, slotKey),
     composerDrafts,
+    composerMentionedFiles,
     slots,
   };
 }
@@ -978,9 +1080,14 @@ function moveActiveRunToChatContext(
   const slots = { ...state.slots };
   const existingTarget = slots[event.chat.id];
   const existingTargetDraft = state.composerDrafts[event.chat.id];
+  const existingTargetMentionedFiles =
+    state.composerMentionedFiles[event.chat.id];
   const sourceDraft =
     state.composerDrafts[resolvedKey] ??
     state.composerDrafts[slot.activeRun.initialSlotKey];
+  const sourceMentionedFiles =
+    state.composerMentionedFiles[resolvedKey] ??
+    state.composerMentionedFiles[slot.activeRun.initialSlotKey];
   delete slots[resolvedKey];
   slots[event.chat.id] = {
     ...slot,
@@ -995,6 +1102,15 @@ function moveActiveRunToChatContext(
   if (sourceDraft !== undefined && existingTargetDraft === undefined) {
     composerDrafts[event.chat.id] = sourceDraft;
   }
+  const composerMentionedFiles = { ...state.composerMentionedFiles };
+  delete composerMentionedFiles[slot.activeRun.initialSlotKey];
+  delete composerMentionedFiles[resolvedKey];
+  if (
+    sourceMentionedFiles !== undefined &&
+    existingTargetMentionedFiles === undefined
+  ) {
+    composerMentionedFiles[event.chat.id] = sourceMentionedFiles;
+  }
 
   return {
     aliases: {
@@ -1003,6 +1119,7 @@ function moveActiveRunToChatContext(
       [resolvedKey]: event.chat.id,
     },
     composerDrafts,
+    composerMentionedFiles,
     slots,
   };
 }
