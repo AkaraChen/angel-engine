@@ -47,6 +47,7 @@ export function ChatRuntimeActionsProvider({
       async setPermissionMode(mode) {
         await setPermissionModeForSlot(slotKey, mode);
       },
+      slotKey,
     }),
     [
       enablePermissionBypassForSlot,

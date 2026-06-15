@@ -71,6 +71,11 @@ import {
 import { useChatEnvironment } from "@/features/chat/runtime/chat-environment-context";
 import { useChatOptions } from "@/features/chat/runtime/chat-options-context";
 import { findPlanModeToggleTarget } from "@/features/chat/runtime/mode-options";
+import { useChatRuntimeActions } from "@/features/chat/runtime/use-chat-runtime-actions";
+import {
+  useChatComposerDraft,
+  useChatRunStore,
+} from "@/features/chat/state/chat-run-store";
 import {
   mentionQueryFromDraft,
   useProjectFileMentionSearch,
@@ -132,11 +137,16 @@ export function AssistantComposer({
   const { t } = useTranslation();
   const aui = useAui();
   const environment = useChatEnvironment();
+  const runtimeActions = useChatRuntimeActions();
   const canCancel = useAuiState((state) => state.composer.canCancel);
   const isInputDisabled = useAuiState((state) => state.thread.isDisabled);
   const isRunning = useAuiState((state) => state.thread.isRunning);
   const toast = useToast();
-  const [draftText, setDraftText] = useState("");
+  const draftText = useChatComposerDraft(runtimeActions.slotKey);
+  const setComposerDraft = useChatRunStore((state) => state.setComposerDraft);
+  const clearComposerDraft = useChatRunStore(
+    (state) => state.clearComposerDraft,
+  );
   const [mentionedFiles, setMentionedFiles] = useState<ComposerMentionedFile[]>(
     [],
   );
@@ -194,14 +204,21 @@ export function AssistantComposer({
         ]);
 
         composer.send();
-        setDraftText("");
+        clearComposerDraft(runtimeActions.slotKey, text);
         setMentionedFiles([]);
       } catch (error) {
         await composer.clearAttachments().catch(() => undefined);
         throw error;
       }
     },
-    [aui, mentionedFiles, onBeforeSubmit, t],
+    [
+      aui,
+      clearComposerDraft,
+      mentionedFiles,
+      onBeforeSubmit,
+      runtimeActions.slotKey,
+      t,
+    ],
   );
 
   const handleAttachmentError = useCallback(
@@ -217,29 +234,35 @@ export function AssistantComposer({
 
   const handleTextChange = useCallback(
     (event: ChangeEvent<HTMLTextAreaElement>) => {
-      setDraftText(event.currentTarget.value);
+      setComposerDraft(runtimeActions.slotKey, event.currentTarget.value);
     },
-    [],
+    [runtimeActions.slotKey, setComposerDraft],
   );
 
   const insertSlashCommand = useCallback(
     (command?: ChatAvailableCommand) => {
       if (!command) return;
       const next = draftText.replace(/^\/\S*/, `/${command.name}`);
-      setDraftText(`${next.trimEnd()} `);
+      setComposerDraft(runtimeActions.slotKey, `${next.trimEnd()} `);
       requestAnimationFrame(() => textareaRef.current?.focus());
     },
-    [draftText],
+    [draftText, runtimeActions.slotKey, setComposerDraft],
   );
 
-  const selectMentionedFile = useCallback((file: ProjectFileSearchResult) => {
-    setMentionedFiles((current) => {
-      if (current.some((item) => item.path === file.path)) return current;
-      return [...current, { ...file, id: file.path }];
-    });
-    setDraftText((current) => replaceMentionQuery(current, file.relativePath));
-    requestAnimationFrame(() => textareaRef.current?.focus());
-  }, []);
+  const selectMentionedFile = useCallback(
+    (file: ProjectFileSearchResult) => {
+      setMentionedFiles((current) => {
+        if (current.some((item) => item.path === file.path)) return current;
+        return [...current, { ...file, id: file.path }];
+      });
+      setComposerDraft(
+        runtimeActions.slotKey,
+        replaceMentionQuery(draftText, file.relativePath),
+      );
+      requestAnimationFrame(() => textareaRef.current?.focus());
+    },
+    [draftText, runtimeActions.slotKey, setComposerDraft],
+  );
 
   const removeMentionedFile = useCallback((id: string) => {
     setMentionedFiles((current) => current.filter((file) => file.id !== id));
@@ -249,8 +272,9 @@ export function AssistantComposer({
     (event: KeyboardEvent<HTMLTextAreaElement>) => {
       if (event.key === "Escape") {
         if (slashCommandOpen || fileMentionOpen) {
-          setDraftText((current) =>
-            slashCommandOpen ? "" : current.replace(/(?:^|\s)@[^\s@]*$/, ""),
+          setComposerDraft(
+            runtimeActions.slotKey,
+            slashCommandOpen ? "" : draftText.replace(/(?:^|\s)@[^\s@]*$/, ""),
           );
           event.preventDefault();
           return;
@@ -294,12 +318,15 @@ export function AssistantComposer({
     [
       aui,
       canCancel,
+      draftText,
       fileMentionOpen,
       fileResults,
       fileSearchLoading,
       insertSlashCommand,
       isRunning,
+      runtimeActions.slotKey,
       selectMentionedFile,
+      setComposerDraft,
       slashCommandOpen,
       slashCommands,
       slashCommandsLoading,

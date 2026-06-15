@@ -181,6 +181,8 @@ interface ChatRunStore {
   aliases: Record<string, string>;
   attentions: Record<string, ChatAttentionState>;
   cancelRun: (slotKey: string) => void;
+  composerDrafts: Record<string, string>;
+  clearComposerDraft: (slotKey: string, expectedText?: string) => void;
   dropAllRuns: () => void;
   dropRun: (slotKey: string) => void;
   enablePermissionBypass: (
@@ -195,6 +197,7 @@ interface ChatRunStore {
     elicitationId?: string,
   ) => void;
   setActiveChatId: (chatId?: string) => void;
+  setComposerDraft: (slotKey: string, text: string) => void;
   setMode: (slotKey: string, mode: string) => Promise<ChatRuntimeConfig>;
   setPermissionMode: (
     slotKey: string,
@@ -206,12 +209,18 @@ interface ChatRunStore {
 
 type ChatRunContext = Pick<
   ChatRunStore,
-  "activeChatId" | "aliases" | "attentions" | "slots"
+  "activeChatId" | "aliases" | "attentions" | "composerDrafts" | "slots"
 >;
 
 type ChatRunEvent =
   | { chatId?: string; type: "activeChat.changed" }
   | { chatId: string; kind: ChatAttentionKind; type: "attention.marked" }
+  | {
+      expectedText?: string;
+      slotKey: string;
+      type: "composerDraft.cleared";
+    }
+  | { slotKey: string; text: string; type: "composerDraft.changed" }
   | {
       input: InitializeSlotInput;
       messages: EngineMessage[];
@@ -263,6 +272,7 @@ const chatRunMachine = setup({
     activeChatId: undefined,
     aliases: {},
     attentions: {},
+    composerDrafts: {},
     slots: {},
   },
   id: "chatRunRegistry",
@@ -283,6 +293,16 @@ const chatRunMachine = setup({
         "attention.marked": {
           actions: assign(({ context, event }) =>
             markAttentionContext(context, event),
+          ),
+        },
+        "composerDraft.changed": {
+          actions: assign(({ context, event }) =>
+            setComposerDraftContext(context, event),
+          ),
+        },
+        "composerDraft.cleared": {
+          actions: assign(({ context, event }) =>
+            clearComposerDraftContext(context, event),
           ),
         },
         "run.cancelled": {
@@ -334,6 +354,7 @@ const chatRunMachine = setup({
             activeChatId: undefined,
             aliases: {},
             attentions: {},
+            composerDrafts: {},
             slots: {},
           })),
         },
@@ -356,6 +377,13 @@ const chatRunActions: Omit<ChatRunStore, keyof ChatRunContext> = {
     activeRun.cancelled = true;
     activeRun.abortController.abort();
     chatRunActor.send({ slotKey, type: "run.cancelled" });
+  },
+  clearComposerDraft(slotKey, expectedText) {
+    chatRunActor.send({
+      expectedText,
+      slotKey,
+      type: "composerDraft.cleared",
+    });
   },
   dropAllRuns() {
     for (const slot of Object.values(getChatRunContext().slots)) {
@@ -410,6 +438,9 @@ const chatRunActions: Omit<ChatRunStore, keyof ChatRunContext> = {
       chatId: is.nonEmptyString(chatId) ? chatId : undefined,
       type: "activeChat.changed",
     });
+  },
+  setComposerDraft(slotKey, text) {
+    chatRunActor.send({ slotKey, text, type: "composerDraft.changed" });
   },
   async setMode(slotKey, mode) {
     const state = getChatRunContext();
@@ -551,6 +582,14 @@ export function useChatRunConfig(slotKey?: string) {
   );
 }
 
+export function useChatComposerDraft(slotKey?: string) {
+  return useChatRunStore((state) =>
+    is.nonEmptyString(slotKey)
+      ? (state.composerDrafts[resolveSlotKey(state, slotKey)] ?? "")
+      : "",
+  );
+}
+
 export function useChatAttention(chatId: string) {
   return useChatRunStore(
     (state) => state.attentions[chatId] ?? EMPTY_CHAT_ATTENTION,
@@ -642,6 +681,38 @@ function markAttentionContext(
       },
     },
   };
+}
+
+function setComposerDraftContext(
+  state: ChatRunContext,
+  event: Extract<ChatRunEvent, { type: "composerDraft.changed" }>,
+): Partial<ChatRunContext> {
+  const resolvedKey = resolveSlotKey(state, event.slotKey);
+  if (state.composerDrafts[resolvedKey] === event.text) return {};
+
+  const composerDrafts = { ...state.composerDrafts };
+  if (event.text.length === 0) {
+    delete composerDrafts[resolvedKey];
+  } else {
+    composerDrafts[resolvedKey] = event.text;
+  }
+  return { composerDrafts };
+}
+
+function clearComposerDraftContext(
+  state: ChatRunContext,
+  event: Extract<ChatRunEvent, { type: "composerDraft.cleared" }>,
+): Partial<ChatRunContext> {
+  const resolvedKey = resolveSlotKey(state, event.slotKey);
+  const current = state.composerDrafts[resolvedKey];
+  if (current === undefined) return {};
+  if (event.expectedText !== undefined && current !== event.expectedText) {
+    return {};
+  }
+
+  const composerDrafts = { ...state.composerDrafts };
+  delete composerDrafts[resolvedKey];
+  return { composerDrafts };
 }
 
 function summarizeChatAttention(state: ChatRunContext): ChatAttentionState {
@@ -841,17 +912,22 @@ function dropRunContext(
   const resolvedKey = resolveSlotKey(state, slotKey);
   const slots = { ...state.slots };
   delete slots[resolvedKey];
+  const composerDrafts = { ...state.composerDrafts };
+  delete composerDrafts[resolvedKey];
+  delete composerDrafts[slotKey];
 
   const aliases = { ...state.aliases };
   for (const [alias, target] of Object.entries(aliases)) {
     if (alias === slotKey || alias === resolvedKey || target === resolvedKey) {
       delete aliases[alias];
+      delete composerDrafts[alias];
     }
   }
 
   return {
     aliases,
     attentions: removeAttention(state.attentions, resolvedKey, slotKey),
+    composerDrafts,
     slots,
   };
 }
@@ -901,6 +977,10 @@ function moveActiveRunToChatContext(
 
   const slots = { ...state.slots };
   const existingTarget = slots[event.chat.id];
+  const existingTargetDraft = state.composerDrafts[event.chat.id];
+  const sourceDraft =
+    state.composerDrafts[resolvedKey] ??
+    state.composerDrafts[slot.activeRun.initialSlotKey];
   delete slots[resolvedKey];
   slots[event.chat.id] = {
     ...slot,
@@ -909,12 +989,20 @@ function moveActiveRunToChatContext(
     key: event.chat.id,
   };
 
+  const composerDrafts = { ...state.composerDrafts };
+  delete composerDrafts[slot.activeRun.initialSlotKey];
+  delete composerDrafts[resolvedKey];
+  if (sourceDraft !== undefined && existingTargetDraft === undefined) {
+    composerDrafts[event.chat.id] = sourceDraft;
+  }
+
   return {
     aliases: {
       ...state.aliases,
       [slot.activeRun.initialSlotKey]: event.chat.id,
       [resolvedKey]: event.chat.id,
     },
+    composerDrafts,
     slots,
   };
 }

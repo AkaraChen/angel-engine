@@ -12,6 +12,7 @@ export interface ChatRuntimeActionsContextValue {
   ) => void;
   setMode: (mode: string) => Promise<void>;
   setPermissionMode: (mode: string) => Promise<void>;
+  slotKey: string;
 }
 
 export const ChatRuntimeActionsContext =
