@@ -2,6 +2,8 @@ import type { Chat } from "@shared/chat";
 import type { Project } from "@shared/projects";
 import type { ReactElement } from "react";
 import {
+  RiArrowDownSLine as ChevronDown,
+  RiArrowRightSLine as ChevronRight,
   RiFolderLine as Folder,
   RiFolderAddLine as FolderPlus,
   RiLoader4Line as Loader2,
@@ -141,11 +143,16 @@ export function ProjectSidebarSection({
                     }}
                     title={project.path}
                   >
-                    <Folder />
+                    <m.span
+                      animate={{ rotate: isExpanded ? 0 : -90 }}
+                      transition={sidebarMotion}
+                    >
+                      <ChevronDown />
+                    </m.span>
                     <span
                       className="
                         block min-w-0 flex-1 truncate overflow-hidden text-left
-                        whitespace-nowrap
+                        whitespace-nowrap -ml-0.5
                       "
                       title={projectDisplayName}
                     >
@@ -188,6 +195,7 @@ export function ProjectSidebarSection({
                                 <ChatSidebarItem
                                   chatId={chat.id}
                                   isActive={chat.id === selectedChatId}
+                                  nested
                                   onArchiveChat={async () =>
                                     onArchiveChat(chat)
                                   }

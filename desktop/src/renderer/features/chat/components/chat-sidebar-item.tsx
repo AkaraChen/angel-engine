@@ -15,6 +15,7 @@ import {
   agentRuntimeLabel,
 } from "@/features/agents/agent-runtime-icons";
 import { useChatAttention } from "@/features/chat/state/chat-run-store";
+import { cn } from "@/platform/utils";
 
 import { ChatRunningPulse } from "./chat-running-pulse";
 
@@ -23,6 +24,7 @@ interface ChatSidebarItemProps {
   title: string;
   tooltip: string;
   isActive: boolean;
+  nested?: boolean;
   onArchiveChat?: () => Promise<void> | void;
   onOpenChat: () => void;
   onShowContextMenu?: () => Promise<void> | void;
@@ -34,6 +36,7 @@ export function ChatSidebarItem({
   title,
   tooltip,
   isActive,
+  nested,
   onArchiveChat,
   onOpenChat,
   onShowContextMenu,
@@ -52,11 +55,12 @@ export function ChatSidebarItem({
   return (
     <>
       <WorkspaceSidebarMenuButton
-        className="
-          gap-1.5
-          group-has-data-[sidebar=menu-action]/menu-item:pr-2.5!
-          md:group-hover/menu-item:pr-8!
-        "
+        className={cn(
+          "gap-1.5",
+          "group-has-data-[sidebar=menu-action]/menu-item:pr-2.5!",
+          "md:group-hover/menu-item:pr-8!",
+          nested && "pl-8",
+        )}
         isActive={isActive}
         onClick={onOpenChat}
         onContextMenu={onShowContextMenu ? handleContextMenu : undefined}
