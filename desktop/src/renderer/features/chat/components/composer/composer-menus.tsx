@@ -38,6 +38,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { agentRuntimeIconSvg } from "@/features/agents/agent-runtime-icons";
 import {
   composerSettingDisabledReason,
   filterComposerOptions,
@@ -106,6 +107,7 @@ function ComposerProviderMenu({
     providerOptions.find((agent) => agent.value === options.runtime)?.label ??
     AGENT_OPTIONS.find((agent) => agent.id === options.runtime)?.label ??
     options.runtime;
+  const providerIconSvg = agentRuntimeIconSvg(options.runtime);
   const providerDisabledReason =
     options.runtimeDisabledReason ??
     (providerOptions.every((provider) => provider.value === options.runtime)
@@ -137,7 +139,21 @@ function ComposerProviderMenu({
           type="button"
           variant="ghost"
         >
-          <Bot className="size-3.5 shrink-0 text-muted-foreground" />
+          {is.nonEmptyString(providerIconSvg) ? (
+            <span
+              aria-hidden="true"
+              className="
+                flex size-2.5 shrink-0 items-center justify-center
+                text-muted-foreground
+                [&_svg]:size-2.5 [&_svg]:shrink-0
+              "
+              // oxlint-disable-next-line react/no-danger -- Static bundled runtime icons need inline SVG to inherit local icon styling.
+              // eslint-disable-next-line react/dom-no-dangerously-set-innerhtml -- Static bundled runtime icons need inline SVG to inherit local icon styling.
+              dangerouslySetInnerHTML={{ __html: providerIconSvg }}
+            />
+          ) : (
+            <Bot className="size-3.5 shrink-0 text-muted-foreground" />
+          )}
           <span className={composerModelMenuValueClassName}>
             {providerLabel}
           </span>
@@ -160,6 +176,7 @@ function ComposerProviderMenu({
           <ComposerModelMenuItem
             disabled={providerDisabled}
             disabledReason={providerDisabledReason}
+            iconSvg={agentRuntimeIconSvg(provider.value)}
             key={provider.value}
             label={provider.label}
             onSelect={() => {
@@ -572,20 +589,23 @@ function ComposerModelMenuSub({
 function ComposerModelMenuItem({
   disabled,
   disabledReason,
+  iconSvg,
   label,
   onSelect,
   selected,
 }: {
   disabled?: boolean;
   disabledReason?: string;
+  iconSvg?: string;
   label: string;
   onSelect: () => void;
   selected: boolean;
 }) {
+  const hasIcon = is.nonEmptyString(iconSvg);
   const item = (
     <DropdownMenuItem
       className="
-        min-h-7 rounded-sm px-2 py-1 text-[13px] font-normal
+        min-h-7 gap-2 rounded-sm px-2 py-1 text-[13px] font-normal
         focus:bg-foreground/5.5 focus:text-foreground
         dark:focus:bg-white/[0.07]
       "
@@ -596,6 +616,24 @@ function ComposerModelMenuItem({
       }}
       title={label}
     >
+      {hasIcon ? (
+        <span
+          className="
+            flex size-4 shrink-0 items-center justify-center
+            text-muted-foreground
+            [&_svg]:size-3.5 [&_svg]:shrink-0
+          "
+        >
+          <span
+            aria-hidden="true"
+            className="flex size-3.5 items-center justify-center"
+            // oxlint-disable-next-line react/no-danger -- Static bundled runtime icons need inline SVG to inherit local icon styling.
+            // eslint-disable-next-line react/dom-no-dangerously-set-innerhtml -- Static bundled runtime icons need inline SVG to inherit local icon styling.
+            dangerouslySetInnerHTML={{ __html: iconSvg ?? "" }}
+          />
+        </span>
+      ) : null}
+      <span className="min-w-0 flex-1 truncate">{label}</span>
       <span
         className="
           flex size-4 shrink-0 items-center justify-center text-primary
@@ -603,7 +641,6 @@ function ComposerModelMenuItem({
       >
         {selected ? <Check className="size-3" /> : null}
       </span>
-      <span className="min-w-0 flex-1 truncate">{label}</span>
     </DropdownMenuItem>
   );
 

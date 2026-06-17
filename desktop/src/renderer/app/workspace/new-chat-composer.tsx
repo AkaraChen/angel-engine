@@ -315,8 +315,13 @@ export function NewChatComposer({
       "
     >
       <div className="w-full max-w-3xl">
-        <div className="mb-6 text-center">
-          <h2 className="text-2xl/tight font-semibold text-pretty text-foreground">
+        <div className="mb-12 text-center">
+          <h2
+            className="
+              font-semibold text-pretty text-foreground
+              text-[length:var(--workspace-new-chat-title-size)]/tight
+            "
+          >
             {is.nonEmptyString(projectName) ? (
               <Trans
                 components={{ project: <SketchUnderline /> }}
@@ -327,7 +332,12 @@ export function NewChatComposer({
               t("thread.empty.title")
             )}
           </h2>
-          <p className="mx-auto mt-2 max-w-120 text-sm/6 text-muted-foreground">
+          <p
+            className="
+              mx-auto mt-2 max-w-120 text-muted-foreground
+              text-[length:var(--workspace-new-chat-description-size)]/6
+            "
+          >
             {t("thread.empty.description")}
           </p>
         </div>
@@ -364,7 +374,9 @@ export function NewChatComposer({
             <PromptInputBody>
               <PromptInputTextarea
                 className="
-                  min-h-24 resize-none px-4 py-3.5 text-[15px] leading-relaxed
+                  max-h-40 min-h-(--workspace-composer-min-height) resize-none
+                  px-3.5 py-3 leading-(--workspace-composer-line-height)
+                  [font-size:var(--workspace-composer-text-size)]
                   placeholder:text-muted-foreground/55
                 "
                 disabled={isRunning}

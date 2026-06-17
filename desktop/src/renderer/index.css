@@ -117,6 +117,8 @@
   --sidebar-border: oklch(0.145 0 0 / 12%);
   --sidebar-ring: #0a84ff;
   --macos-sidebar-background: #ececec;
+  --workspace-new-chat-description-size: 0.875rem;
+  --workspace-new-chat-title-size: 1.875rem;
   --workspace-composer-line-height: 1.5rem;
   --workspace-composer-min-height: 4.2rem;
   --workspace-composer-text-size: 0.9375rem;
