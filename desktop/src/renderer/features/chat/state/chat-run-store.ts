@@ -688,11 +688,7 @@ function initializeSlotContext(
   const existing = getChatRunSlot(state.slots, resolvedKey);
   const isDraftSlot = !is.nonEmptyString(input.chatId);
 
-  if (
-    isDraftSlot &&
-    is.nonEmptyString(state.aliases[input.slotKey]) &&
-    !isSlotStreaming(existing)
-  ) {
+  if (isDraftSlot && is.nonEmptyString(state.aliases[input.slotKey])) {
     const aliases = { ...state.aliases };
     delete aliases[input.slotKey];
     return {
