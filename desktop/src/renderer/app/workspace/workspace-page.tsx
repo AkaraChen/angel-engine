@@ -63,7 +63,10 @@ import {
   draftRuntimeKeyFromProjectId,
   workspaceRuntimePageKey,
 } from "@/app/workspace/workspace-runtime-keys";
-import { WorkspaceSidebar } from "@/app/workspace/workspace-sidebar";
+import {
+  WorkspaceFloatingSidebar,
+  WorkspaceSidebar,
+} from "@/app/workspace/workspace-sidebar";
 import {
   WorkspaceSidebarControl,
   WorkspaceSidebarControlPortalProvider,
@@ -1146,6 +1149,25 @@ function WorkspacePageContent({
     >
       <WorkspaceSidebarControlPortalProvider>
         <WorkspaceSidebar
+          chats={chats}
+          isChatsLoading={chatsQuery.isPending}
+          isMacOS={isMacOS}
+          isProjectsLoading={projectsQuery.isPending}
+          onArchiveChat={archiveChat}
+          onCreateProject={() => void createProjectFromPicker()}
+          onCreateProjectChat={createChatForProject}
+          onCreateStandaloneChat={createChatForSelection}
+          onOpenChat={openChat}
+          onOpenSettings={openSettings}
+          onShowChatContextMenu={showChatContextMenu}
+          onShowProjectContextMenu={showProjectContextMenu}
+          projectChatsByProjectId={projectChatsByProjectId}
+          projects={projects}
+          selectedChatId={selectedChatId}
+          selectedProjectId={selectedProjectId}
+          settingsActive={settingsActive}
+        />
+        <WorkspaceFloatingSidebar
           chats={chats}
           isChatsLoading={chatsQuery.isPending}
           isMacOS={isMacOS}

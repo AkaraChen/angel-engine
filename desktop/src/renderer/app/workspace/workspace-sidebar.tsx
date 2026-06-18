@@ -9,6 +9,8 @@ import {
   RiChatNewLine as MessageSquarePlus,
   RiSettings3Line as Settings,
 } from "@remixicon/react";
+import { m } from "framer-motion";
+import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useWorkspaceUiStore } from "@/app/workspace/workspace-ui-store";
 import {
@@ -27,6 +29,14 @@ import { ProjectSidebarSection } from "@/features/projects/components/project-si
 import { cn } from "@/platform/utils";
 
 type MaybeAsync = void | Promise<void>;
+const FLOATING_SIDEBAR_OPEN_DELAY_MS = 80;
+const FLOATING_SIDEBAR_CLOSE_DELAY_MS = 140;
+const FLOATING_SIDEBAR_TRANSITION = {
+  damping: 36,
+  mass: 0.8,
+  stiffness: 420,
+  type: "spring",
+} as const;
 
 const WORKSPACE_MODES: Array<{
   icon: ComponentType<{ className?: string }>;
@@ -58,6 +68,131 @@ interface WorkspaceSidebarProps {
 }
 
 export function WorkspaceSidebar({
+  ...props
+}: WorkspaceSidebarProps): ReactElement {
+  const workspaceMode = useWorkspaceUiStore((state) => state.workspaceMode);
+
+  return (
+    <Sidebar
+      className="select-none"
+      data-workspace-mode={workspaceMode}
+      variant="inset"
+    >
+      <WorkspaceSidebarContent {...props} />
+    </Sidebar>
+  );
+}
+
+export function WorkspaceFloatingSidebar(
+  props: WorkspaceSidebarProps,
+): ReactElement | null {
+  const sidebarOpen = useWorkspaceUiStore((state) => state.sidebarOpen);
+  const workspaceMode = useWorkspaceUiStore((state) => state.workspaceMode);
+  const [peeked, setPeeked] = useState(false);
+  const openTimerRef = useRef<number | null>(null);
+  const closeTimerRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    if (sidebarOpen) {
+      if (openTimerRef.current !== null) {
+        window.clearTimeout(openTimerRef.current);
+        openTimerRef.current = null;
+      }
+      if (closeTimerRef.current !== null) {
+        window.clearTimeout(closeTimerRef.current);
+        closeTimerRef.current = null;
+      }
+      setPeeked(false);
+    }
+  }, [sidebarOpen]);
+
+  useEffect(
+    () => () => {
+      if (openTimerRef.current !== null) {
+        window.clearTimeout(openTimerRef.current);
+        openTimerRef.current = null;
+      }
+      if (closeTimerRef.current !== null) {
+        window.clearTimeout(closeTimerRef.current);
+        closeTimerRef.current = null;
+      }
+    },
+    [],
+  );
+
+  if (sidebarOpen) {
+    return null;
+  }
+
+  const handlePeekEnter = () => {
+    if (closeTimerRef.current !== null) {
+      window.clearTimeout(closeTimerRef.current);
+      closeTimerRef.current = null;
+    }
+    if (peeked || openTimerRef.current !== null) return;
+    openTimerRef.current = window.setTimeout(() => {
+      setPeeked(true);
+      openTimerRef.current = null;
+    }, FLOATING_SIDEBAR_OPEN_DELAY_MS);
+  };
+
+  const handlePeekLeave = () => {
+    if (openTimerRef.current !== null) {
+      window.clearTimeout(openTimerRef.current);
+      openTimerRef.current = null;
+    }
+    if (closeTimerRef.current !== null) {
+      window.clearTimeout(closeTimerRef.current);
+    }
+    closeTimerRef.current = window.setTimeout(() => {
+      setPeeked(false);
+      closeTimerRef.current = null;
+    }, FLOATING_SIDEBAR_CLOSE_DELAY_MS);
+  };
+
+  return (
+    <div
+      className="hidden text-sidebar-foreground md:block"
+      data-slot="workspace-floating-sidebar"
+      data-workspace-mode={workspaceMode}
+      onMouseEnter={handlePeekEnter}
+      onMouseLeave={handlePeekLeave}
+    >
+      <div
+        aria-hidden="true"
+        className="fixed inset-y-0 left-0 z-20 w-6"
+        data-slot="workspace-floating-sidebar-trigger"
+      />
+      <m.aside
+        animate={{ x: peeked ? 0 : "-110%" }}
+        aria-hidden={!peeked}
+        className="
+          fixed inset-y-0 left-0 z-30 hidden h-svh w-(--sidebar-width) p-2
+          md:flex
+        "
+        data-slot="workspace-floating-sidebar-container"
+        inert={!peeked ? true : undefined}
+        initial={false}
+        transition={FLOATING_SIDEBAR_TRANSITION}
+      >
+        <div
+          className="
+            flex size-full flex-col rounded-lg
+            bg-[var(--macos-sidebar-background)] shadow-xl ring-1
+            ring-sidebar-border
+          "
+          data-sidebar="sidebar"
+          data-slot="sidebar"
+          data-workspace-mode={workspaceMode}
+        >
+          <WorkspaceSidebarContent {...props} />
+        </div>
+      </m.aside>
+    </div>
+  );
+}
+
+function WorkspaceSidebarContent({
   chats,
   isChatsLoading,
   isMacOS,
@@ -98,11 +233,7 @@ export function WorkspaceSidebar({
   };
 
   return (
-    <Sidebar
-      className="select-none"
-      data-workspace-mode={workspaceMode}
-      variant="inset"
-    >
+    <>
       <SidebarHeader className="p-2" data-electron-drag>
         {isMacOS ? <div aria-hidden className="h-8 shrink-0" /> : null}
 
@@ -172,7 +303,7 @@ export function WorkspaceSidebar({
           </AnimatedSidebarMenuItem>
         </SidebarMenu>
       </SidebarFooter>
-    </Sidebar>
+    </>
   );
 }
 
