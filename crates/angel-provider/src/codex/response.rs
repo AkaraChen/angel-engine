@@ -872,9 +872,7 @@ fn codex_history_tool_raw_input(item: &Value) -> Option<String> {
     match item.get("type").and_then(Value::as_str) {
         Some("function_call") => first_item_string(item, &["arguments"])
             .or_else(|| item.get("arguments").map(Value::to_string)),
-        Some("custom_tool_call") => {
-            first_item_string(item, &["input"]).or_else(|| item.get("input").map(Value::to_string))
-        }
+        Some("custom_tool_call") => Some(item.to_string()),
         Some("dynamicToolCall") if dynamic_tool_is_output_only(item) => None,
         Some("function_call_output" | "custom_tool_call_output" | "tool_search_output") => None,
         _ => Some(item.to_string()),
@@ -1953,6 +1951,83 @@ mod tests {
             Some(&ActionKind::Command)
         );
         assert_eq!(replay[3].role, HistoryRole::Assistant);
+    }
+
+    #[test]
+    fn thread_read_hydrates_custom_tool_call_raw_input_as_json() {
+        let adapter = CodexAdapter::app_server();
+        let conversation_id = ConversationId::new("conv");
+        let mut engine = AngelEngine::with_available_runtime(
+            angel_engine::ProtocolFlavor::CodexAppServer,
+            angel_engine::RuntimeCapabilities::new("test"),
+            adapter.capabilities(),
+        );
+        engine
+            .apply_event(EngineEvent::ConversationProvisionStarted {
+                id: conversation_id.clone(),
+                remote: RemoteConversationId::Known("thread_1".to_string()),
+                op: angel_engine::ProvisionOp::Resume,
+                capabilities: adapter.capabilities(),
+            })
+            .expect("conversation provisioned");
+        engine
+            .apply_event(EngineEvent::ConversationReady {
+                id: conversation_id.clone(),
+                remote: Some(RemoteConversationId::Known("thread_1".to_string())),
+                context: Default::default(),
+                capabilities: Some(adapter.capabilities()),
+            })
+            .expect("conversation ready");
+
+        let request_id = engine
+            .plan_command(angel_engine::EngineCommand::ReadConversation { conversation_id })
+            .expect("read plan")
+            .request_id
+            .expect("request id");
+
+        let output = adapter
+            .decode_response(
+                &engine,
+                &request_id,
+                &json!({
+                    "thread": {
+                        "id": "thread_1",
+                        "turns": [
+                            {
+                                "id": "turn_1",
+                                "items": [
+                                    {
+                                        "id": "patch-1",
+                                        "type": "custom_tool_call",
+                                        "name": "apply_patch",
+                                        "input": "*** Begin Patch\n*** End Patch\n",
+                                        "status": "completed"
+                                    }
+                                ]
+                            }
+                        ]
+                    }
+                }),
+            )
+            .expect("thread read response");
+
+        let tool = output
+            .events
+            .iter()
+            .find_map(|event| match event {
+                EngineEvent::HistoryReplayChunk { entry, .. } => entry.tool.as_ref(),
+                _ => None,
+            })
+            .expect("tool replay");
+        let raw_input: Value = serde_json::from_str(tool.raw_input.as_deref().expect("raw input"))
+            .expect("raw input json");
+
+        assert_eq!(tool.kind.as_ref(), Some(&ActionKind::FileChange));
+        assert_eq!(raw_input["name"], json!("apply_patch"));
+        assert_eq!(
+            raw_input["input"],
+            json!("*** Begin Patch\n*** End Patch\n")
+        );
     }
 
     #[test]
