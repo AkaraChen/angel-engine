@@ -1702,7 +1702,7 @@ function useWorkspaceFileTreeModel(api: ApiClient, root: string) {
     flattenEmptyDirectories: true,
     icons: { colored: true, set: "complete" },
     id: `workspace-file-tree-${root}`,
-    initialExpansion: 1,
+    initialExpansion: 0,
     initialVisibleRowCount: 32,
     paths: [],
     search: false,
