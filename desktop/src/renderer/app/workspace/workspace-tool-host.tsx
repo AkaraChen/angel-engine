@@ -110,6 +110,11 @@ import {
 import { getApiClient } from "@/platform/api-client";
 import { queryKeys } from "@/platform/query-keys";
 import { cn } from "@/platform/utils";
+import {
+  defineWorkspaceMonacoThemes,
+  workspaceMonacoThemeDark,
+  workspaceMonacoThemeLight,
+} from "@/app/workspace/workspace-monaco-theme";
 
 const defaultWorkspaceToolBrowserUrl = "about:blank";
 
@@ -122,6 +127,7 @@ const WorkspaceMonacoEditor = lazy(async () => {
   ]);
   editorModule.loader.config({ monaco: monacoModule });
   disableWorkspaceMonacoTypeScriptServices(monacoModule);
+  defineWorkspaceMonacoThemes(monacoModule);
 
   return { default: editorModule.default };
 });
@@ -3290,7 +3296,9 @@ function getWorkspaceMonacoLanguageFromFileTree(path: string) {
 }
 
 function getWorkspaceMonacoTheme() {
-  return document.documentElement.classList.contains("dark") ? "vs-dark" : "vs";
+  return document.documentElement.classList.contains("dark")
+    ? workspaceMonacoThemeDark
+    : workspaceMonacoThemeLight;
 }
 
 function disableWorkspaceMonacoTypeScriptServices(
