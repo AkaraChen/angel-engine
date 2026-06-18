@@ -200,39 +200,39 @@
 
 .dark {
   color-scheme: dark;
-  --background: oklch(0.24 0.012 155);
-  --foreground: oklch(0.94 0.008 155);
-  --card: oklch(0.285 0.012 155);
-  --card-foreground: oklch(0.94 0.008 155);
-  --popover: oklch(0.285 0.012 155);
-  --popover-foreground: oklch(0.94 0.008 155);
-  --primary: #76a385;
-  --primary-foreground: #0f1a14;
-  --secondary: oklch(0.285 0.012 155);
-  --secondary-foreground: oklch(0.94 0.008 155);
-  --muted: oklch(0.27 0.012 155);
-  --muted-foreground: oklch(0.72 0.01 155);
-  --accent: #5c9370;
-  --accent-foreground: #f5f5f7;
+  --background: oklch(0.182 0.006 164);
+  --foreground: oklch(0.879 0.018 92.7 / 0.933);
+  --card: oklch(0.209 0 0);
+  --card-foreground: oklch(0.879 0.018 92.7 / 0.933);
+  --popover: oklch(0.209 0 0);
+  --popover-foreground: oklch(0.879 0.018 92.7 / 0.933);
+  --primary: oklch(0.609 0.085 164);
+  --primary-foreground: oklch(0.182 0 0);
+  --secondary: oklch(0.209 0 0);
+  --secondary-foreground: oklch(0.879 0.018 92.7 / 0.933);
+  --muted: oklch(0.209 0 0);
+  --muted-foreground: oklch(0.894 0.01 93.6 / 0.565);
+  --accent: oklch(0.243 0.007 164.4);
+  --accent-foreground: oklch(0.879 0.018 92.7 / 0.933);
   --destructive: oklch(0.704 0.191 22.216);
   --destructive-foreground: oklch(0.98 0 0);
-  --border: oklch(1 0.008 155 / 12%);
-  --input: oklch(1 0.008 155 / 14%);
+  --border: oklch(0.36 0.008 164 / 0.72);
+  --input: oklch(0.329 0.016 248.3);
   --ring: #76a385;
   --chart-1: oklch(0.488 0.243 264.376);
   --chart-2: oklch(0.696 0.17 162.48);
   --chart-3: oklch(0.769 0.188 70.08);
   --chart-4: oklch(0.627 0.265 303.9);
   --chart-5: oklch(0.645 0.246 16.439);
-  --sidebar: oklch(0.235 0.012 155);
-  --sidebar-foreground: oklch(0.94 0.008 155);
-  --sidebar-primary: oklch(0.294 0.012 155);
-  --sidebar-primary-foreground: oklch(0.965 0.008 155);
-  --sidebar-accent: oklch(1 0.008 155 / 8%);
-  --sidebar-accent-foreground: oklch(0.965 0.008 155);
-  --sidebar-border: oklch(1 0.008 155 / 12%);
-  --sidebar-ring: #76a385;
-  --macos-sidebar-background: oklch(0.294 0.012 155);
+  --sidebar: oklch(0.209 0.003 164);
+  --sidebar-foreground: oklch(0.789 0.023 92.6);
+  --sidebar-primary: oklch(0.209 0 0);
+  --sidebar-primary-foreground: oklch(0.879 0.018 92.7 / 0.933);
+  --sidebar-accent: oklch(0.209 0 0);
+  --sidebar-accent-foreground: oklch(0.879 0.018 92.7 / 0.933);
+  --sidebar-border: oklch(0.36 0.008 164 / 0.72);
+  --sidebar-ring: oklch(0.609 0.085 164);
+  --macos-sidebar-background: oklch(0.209 0.003 164);
 }
 
 @layer base {
@@ -245,7 +245,7 @@
   }
 
   .dark ::selection {
-    background-color: oklch(0.35 0.06 155);
+    background-color: oklch(0.609 0.085 164 / 0.314);
   }
 
   html,
