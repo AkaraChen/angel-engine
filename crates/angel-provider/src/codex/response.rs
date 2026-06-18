@@ -586,6 +586,7 @@ fn codex_replay_is_internal_user_message(item: &Value) -> bool {
     let trimmed = text.trim();
     codex_replay_is_environment_context_text(trimmed)
         || codex_replay_is_agents_instructions_text(trimmed)
+        || codex_replay_is_turn_aborted_text(trimmed)
 }
 
 fn codex_replay_is_environment_context_text(text: &str) -> bool {
@@ -596,6 +597,11 @@ fn codex_replay_is_agents_instructions_text(text: &str) -> bool {
     text.starts_with("# AGENTS.md instructions for ")
         && text.contains("\n<INSTRUCTIONS>\n")
         && text.contains("</INSTRUCTIONS>")
+}
+
+fn codex_replay_is_turn_aborted_text(text: &str) -> bool {
+    // TODO: model Codex turn aborts as a protocol-neutral abort message in angel-engine.
+    text == "<turn_aborted>\nThe user interrupted the previous turn on purpose. Any running unified exec processes may still be running in the background. If any tools/commands were aborted, they may have partially executed.\n</turn_aborted>"
 }
 
 fn append_hydrated_turns(
@@ -1836,6 +1842,15 @@ mod tests {
                                     {
                                         "type": "userMessage",
                                         "content": [{ "type": "text", "text": "真实问题" }]
+                                    },
+                                    {
+                                        "type": "userMessage",
+                                        "content": [
+                                            {
+                                                "type": "text",
+                                                "text": "<turn_aborted>\nThe user interrupted the previous turn on purpose. Any running unified exec processes may still be running in the background. If any tools/commands were aborted, they may have partially executed.\n</turn_aborted>"
+                                            }
+                                        ]
                                     }
                                 ]
                             }
@@ -2036,6 +2051,7 @@ mod tests {
         let mut output = TransportOutput::default();
         let content = r##"{"timestamp":"2026-05-17T23:55:29.683Z","type":"response_item","payload":{"type":"message","role":"user","content":[{"type":"input_text","text":"<environment_context>\n  <cwd>/Users/akrc</cwd>\n  <shell>zsh</shell>\n  <current_date>2026-05-18</current_date>\n  <timezone>Asia/Shanghai</timezone>\n</environment_context>"}]}}
 {"timestamp":"2026-05-17T23:55:29.700Z","type":"response_item","payload":{"type":"message","role":"user","content":[{"type":"input_text","text":"# AGENTS.md instructions for /Users/akrc/Developer/angel-engine\n\n<INSTRUCTIONS>\nDo not display this.\n</INSTRUCTIONS>"},{"type":"input_text","text":"<environment_context>\n  <cwd>/Users/akrc/Developer/angel-engine</cwd>\n</environment_context>"}]}}
+{"timestamp":"2026-05-17T23:55:29.750Z","type":"response_item","payload":{"type":"message","role":"user","content":[{"type":"input_text","text":"<turn_aborted>\nThe user interrupted the previous turn on purpose. Any running unified exec processes may still be running in the background. If any tools/commands were aborted, they may have partially executed.\n</turn_aborted>"}]}}
 {"timestamp":"2026-05-17T23:55:29.782Z","type":"response_item","payload":{"type":"message","role":"user","content":[{"type":"input_text","text":"你好"}]}}
 {"timestamp":"2026-05-17T23:55:29.782Z","type":"event_msg","payload":{"type":"user_message","message":"你好","images":[],"local_images":[],"text_elements":[]}}
 {"timestamp":"2026-05-17T23:55:31.725Z","type":"response_item","payload":{"type":"message","role":"assistant","content":[{"type":"output_text","text":"你好。你想让我帮你处理什么？"}]}}"##;
