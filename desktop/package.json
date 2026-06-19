@@ -1,7 +1,7 @@
 {
   "name": "desktop",
   "productName": "Angel Engine",
-  "version": "0.0.4-beta7",
+  "version": "0.0.4-beta8",
   "private": true,
   "packageManager": "pnpm@11.1.2",
   "description": "Desktop shell for Angel Engine.",
