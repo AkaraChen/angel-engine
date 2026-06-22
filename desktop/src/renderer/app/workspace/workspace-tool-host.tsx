@@ -224,8 +224,8 @@ const diffOptions = {
   overflow: "wrap",
   stickyHeader: true,
   theme: {
-    dark: "pierre-dark-soft",
-    light: "pierre-light-soft",
+    dark: "vitesse-dark",
+    light: "vitesse-light",
   },
   themeType: "system",
 } as const;
@@ -235,10 +235,10 @@ const diffMetrics = {
 } as const;
 
 const treeHostStyle: WorkspaceToolCssVariableStyle = {
-  "--trees-bg-muted-override": "var(--muted)",
+  "--trees-bg-muted-override": "var(--secondary)",
   "--trees-bg-override": "var(--background)",
   "--trees-gap-override": "6px",
-  "--trees-input-bg-override": "var(--background)",
+  "--trees-input-bg-override": "var(--muted)",
   "--trees-item-margin-x-override": "0px",
   "--trees-item-padding-x-override": "6px",
   "--trees-item-row-gap-override": "4px",
@@ -280,7 +280,7 @@ const workspaceFileTreeIconColorStyle: WorkspaceToolCssVariableStyle = {
   "--trees-file-icon-color-eslint":
     "var(--trees-file-icon-color, var(--trees-icon-indigo))",
   "--trees-file-icon-color-git":
-    "var(--trees-file-icon-vermilion, var(--trees-icon-vermilion))",
+    "var(--trees-file-icon-color, var(--trees-icon-vermilion))",
   "--trees-file-icon-color-go":
     "var(--trees-file-icon-color, var(--trees-icon-cyan))",
   "--trees-file-icon-color-graphql":
@@ -300,7 +300,7 @@ const workspaceFileTreeIconColorStyle: WorkspaceToolCssVariableStyle = {
   "--trees-file-icon-color-npm":
     "var(--trees-file-icon-color, var(--trees-icon-red))",
   "--trees-file-icon-color-oxc":
-    "var(--trees-file-icon-cyan, var(--trees-icon-cyan))",
+    "var(--trees-file-icon-color, var(--trees-icon-cyan))",
   "--trees-file-icon-color-postcss":
     "var(--trees-file-icon-color, var(--trees-icon-red))",
   "--trees-file-icon-color-prettier":
@@ -349,26 +349,26 @@ const workspaceFileTreeIconColorStyle: WorkspaceToolCssVariableStyle = {
     "var(--trees-file-icon-color, var(--trees-icon-orange))",
   "--trees-file-icon-color-zip":
     "var(--trees-file-icon-color, var(--trees-icon-orange))",
-  "--trees-icon-blue": "light-dark(#1a85d4, #69b1ff)",
-  "--trees-icon-cyan": "light-dark(#1ca1c7, #68cdf2)",
-  "--trees-icon-gray": "light-dark(#84848a, #adadb1)",
-  "--trees-icon-green": "light-dark(#199f43, #5ecc71)",
-  "--trees-icon-indigo": "light-dark(#693acf, #9d6afb)",
-  "--trees-icon-mauve": "light-dark(#594c5b, #79697b)",
-  "--trees-icon-orange": "light-dark(#d47628, #ffa359)",
-  "--trees-icon-pink": "light-dark(#d32a61, #ff678d)",
-  "--trees-icon-purple": "light-dark(#a631be, #d568ea)",
-  "--trees-icon-red": "light-dark(#d52c36, #ff6762)",
-  "--trees-icon-teal": "light-dark(#17a5af, #64d1db)",
-  "--trees-icon-vermilion": "light-dark(#ff8c5b, #d5512f)",
-  "--trees-icon-yellow": "light-dark(#d5a910, #ffd452)",
+  "--trees-icon-blue": "light-dark(#296aa3, #6394bf)",
+  "--trees-icon-cyan": "light-dark(#2993a3, #5eaab5)",
+  "--trees-icon-gray": "light-dark(#6a737d, #959da5)",
+  "--trees-icon-green": "light-dark(#1e754f, #4d9375)",
+  "--trees-icon-indigo": "light-dark(#5a6aa6, #6872ab)",
+  "--trees-icon-mauve": "light-dark(#b05a78, #db889a)",
+  "--trees-icon-orange": "light-dark(#a65e2b, #d4976c)",
+  "--trees-icon-pink": "light-dark(#a13865, #d9739f)",
+  "--trees-icon-purple": "light-dark(#6f42c1, #b392f0)",
+  "--trees-icon-red": "light-dark(#ab5959, #cb7676)",
+  "--trees-icon-teal": "light-dark(#2e808f, #5d99a9)",
+  "--trees-icon-vermilion": "light-dark(#ab5e3f, #c4704f)",
+  "--trees-icon-yellow": "light-dark(#bda437, #e6cc77)",
 };
 
 const diffHostStyle: WorkspaceToolCssVariableStyle = {
   "--diffs-bg-buffer-override": "var(--muted)",
   "--diffs-bg-context-gutter-override": "var(--background)",
   "--diffs-bg-context-override": "var(--background)",
-  "--diffs-bg-separator-override": "var(--muted)",
+  "--diffs-bg-separator-override": "var(--border)",
   "--diffs-dark": "var(--foreground)",
   "--diffs-dark-bg": "var(--background)",
   "--diffs-light": "var(--foreground)",
