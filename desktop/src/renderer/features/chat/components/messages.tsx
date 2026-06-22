@@ -80,7 +80,7 @@ const assistantTextContainerClassName = [
   "min-w-0 max-w-none text-foreground/90 hyphens-auto [font-size:var(--workspace-message-text-size)] [line-break:loose] [line-height:var(--workspace-message-line-height)] [overflow-wrap:anywhere] [text-rendering:optimizeLegibility] [word-break:normal]",
   "[&_a]:text-primary [&_a]:underline [&_a]:underline-offset-2 [&_a]:decoration-primary/35 [&_a:hover]:decoration-primary/70",
   "[&_blockquote]:my-4 [&_blockquote]:border-l-2 [&_blockquote]:border-foreground/10 [&_blockquote]:pl-3.5 [&_blockquote]:text-[14px] [&_blockquote]:leading-[1.72] [&_blockquote]:text-muted-foreground",
-  "[&_[data-streamdown=code-block]]:my-4 [&_[data-streamdown=code-block]]:overflow-hidden [&_[data-streamdown=code-block]]:rounded-lg [&_[data-streamdown=code-block]]:border [&_[data-streamdown=code-block]]:border-foreground/[0.08] [&_[data-streamdown=code-block]]:bg-[#edf6ef] [&_[data-streamdown=code-block]]:p-0 [&_[data-streamdown=code-block]]:shadow-[0_8px_22px_-24px_rgba(0,0,0,0.5)] dark:[&_[data-streamdown=code-block]]:border-white/10 dark:[&_[data-streamdown=code-block]]:bg-white/[0.045] dark:[&_[data-streamdown=code-block]]:shadow-[0_10px_26px_-26px_rgba(0,0,0,0.8)]",
+  "[&_[data-streamdown=code-block]]:my-4 [&_[data-streamdown=code-block]]:overflow-hidden [&_[data-streamdown=code-block]]:rounded-lg [&_[data-streamdown=code-block]]:border [&_[data-streamdown=code-block]]:border-foreground/[0.08] [&_[data-streamdown=code-block]]:bg-white [&_[data-streamdown=code-block]]:p-0 [&_[data-streamdown=code-block]]:shadow-[0_8px_22px_-24px_rgba(0,0,0,0.5)] dark:[&_[data-streamdown=code-block]]:border-white/10 dark:[&_[data-streamdown=code-block]]:bg-[#121212] dark:[&_[data-streamdown=code-block]]:shadow-[0_10px_26px_-26px_rgba(0,0,0,0.8)]",
   "[&_[data-streamdown=code-block-actions]]:rounded-full [&_[data-streamdown=code-block-actions]]:border-foreground/10 [&_[data-streamdown=code-block-actions]]:bg-background/80 [&_[data-streamdown=code-block-actions]]:px-1 [&_[data-streamdown=code-block-actions]]:py-0.5 [&_[data-streamdown=code-block-actions]]:shadow-sm [&_[data-streamdown=code-block-actions]]:backdrop-blur-xl dark:[&_[data-streamdown=code-block-actions]]:border-white/10 dark:[&_[data-streamdown=code-block-actions]]:bg-card/75",
   "[&_[data-streamdown=code-block-body]]:rounded-none [&_[data-streamdown=code-block-body]]:border-0 [&_[data-streamdown=code-block-body]]:bg-transparent [&_[data-streamdown=code-block-body]]:p-0 [&_[data-streamdown=code-block-body]]:text-[12.5px] [&_[data-streamdown=code-block-body]]:leading-[1.58]",
   "[&_[data-streamdown=code-block-body]_code>span]:block",
@@ -456,7 +456,7 @@ function AssistantTextMessagePart(
       lineNumbers={false}
       mode="streaming"
       plugins={{ cjk, code: streamdownCode, math, mermaid }}
-      shikiTheme={["github-light", "github-dark"]}
+      shikiTheme={["vitesse-light", "vitesse-dark"]}
     />
   );
 }
@@ -1454,7 +1454,7 @@ function PlanMessagePart({ plan }: { plan: ChatPlanData }) {
                   lineNumbers={false}
                   mode="streaming"
                   plugins={{ cjk, code: streamdownCode, math, mermaid }}
-                  shikiTheme={["github-light", "github-dark"]}
+                  shikiTheme={["vitesse-light", "vitesse-dark"]}
                 >
                   {plan.text}
                 </Streamdown>
