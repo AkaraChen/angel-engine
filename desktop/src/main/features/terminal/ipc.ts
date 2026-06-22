@@ -13,6 +13,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { ipcMain } from "electron";
+import log from "electron-log/main";
 import * as pty from "node-pty";
 
 import {
@@ -47,19 +48,39 @@ export function registerTerminalIpc() {
       return { sessionId: request.sessionId };
     }
 
-    const shell = defaultShell();
-    const cwd = resolveTerminalCwd(request.cwd);
-    const ptyProcess = pty.spawn(shell.file, shell.args, {
-      cols: request.cols,
-      cwd,
-      env: {
-        ...process.env,
-        COLORTERM: "truecolor",
-        TERM: "xterm-256color",
-      },
-      name: "xterm-256color",
-      rows: request.rows,
-    });
+    let shell: ReturnType<typeof defaultShell>;
+    let cwd: string;
+    let ptyProcess: IPty;
+    try {
+      shell = defaultShell();
+      cwd = resolveTerminalCwd(request.cwd);
+      ptyProcess = pty.spawn(shell.file, shell.args, {
+        cols: request.cols,
+        cwd,
+        env: {
+          ...process.env,
+          COLORTERM: "truecolor",
+          TERM: "xterm-256color",
+        },
+        name: "xterm-256color",
+        rows: request.rows,
+      });
+    } catch (error) {
+      const message = `Failed to start terminal: ${errorMessage(error)}`;
+      log.warn("Could not start terminal.", {
+        cols: request.cols,
+        cwd: resolveTerminalCwd(request.cwd),
+        platform: process.platform,
+        rows: request.rows,
+        shell: safeDefaultShell(),
+      });
+      log.warn(error);
+      event.sender.send(terminalEventChannel(request.sessionId), {
+        message,
+        type: "error",
+      });
+      return { sessionId: request.sessionId };
+    }
     const session: TerminalSession = {
       ptyProcess,
       scrollback: [],
@@ -184,6 +205,18 @@ function defaultShell() {
     case "win32":
       return { args: ["-NoLogo"], file: "powershell.exe" };
   }
+}
+
+function safeDefaultShell() {
+  try {
+    return defaultShell();
+  } catch (error) {
+    return { error: errorMessage(error) };
+  }
+}
+
+function errorMessage(error: unknown) {
+  return error instanceof Error ? error.message : String(error);
 }
 
 function resolveTerminalCwd(input: string) {

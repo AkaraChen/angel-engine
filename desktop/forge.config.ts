@@ -170,7 +170,9 @@ const config: ForgeConfig = {
   },
   packagerConfig: {
     appBundleId: "com.akrc.angel-engine",
-    asar: true,
+    asar: {
+      unpack: "**/node_modules/node-pty/**/spawn-helper",
+    },
     extraResource: [path.join(projectRoot, "build", "app-update.yml")],
     icon: appIconPath,
     osxSign:
