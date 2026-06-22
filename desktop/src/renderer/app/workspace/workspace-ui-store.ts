@@ -34,7 +34,11 @@ interface WorkspaceUiState {
   sidebarOpen: boolean;
   sidebarOpenMobile: boolean;
   sidebarProjectIds: Set<string>;
-  syncSidebarProjects: (projectIds: string[]) => void;
+  sidebarProjectIdsWithChats: Set<string>;
+  syncSidebarProjects: (
+    projectIds: string[],
+    projectIdsWithChats: string[],
+  ) => void;
   toggleRightSidebar: () => void;
   toggleSidebarChatDateGroup: (groupKey: SidebarChatDateGroupKey) => void;
   toggleSidebarProject: (projectId: string) => void;
@@ -66,11 +70,17 @@ export const useWorkspaceUiStore = create<WorkspaceUiState>()((set) => ({
   sidebarOpen: true,
   sidebarOpenMobile: false,
   sidebarProjectIds: new Set(),
-  syncSidebarProjects: (projectIds) =>
+  sidebarProjectIdsWithChats: new Set(),
+  syncSidebarProjects: (projectIds, projectIdsWithChats) =>
     set((current) => {
       const nextProjectIds = new Set(projectIds);
+      const nextProjectIdsWithChats = new Set(projectIdsWithChats);
       const currentProjectIds = current.sidebarProjectIds;
-      if (setsEqual(currentProjectIds, nextProjectIds)) {
+      const currentProjectIdsWithChats = current.sidebarProjectIdsWithChats;
+      if (
+        setsEqual(currentProjectIds, nextProjectIds) &&
+        setsEqual(currentProjectIdsWithChats, nextProjectIdsWithChats)
+      ) {
         return current;
       }
 
@@ -81,7 +91,11 @@ export const useWorkspaceUiStore = create<WorkspaceUiState>()((set) => ({
         }
       }
       for (const projectId of nextProjectIds) {
-        if (!currentProjectIds.has(projectId)) {
+        if (
+          nextProjectIdsWithChats.has(projectId) &&
+          (!currentProjectIds.has(projectId) ||
+            !currentProjectIdsWithChats.has(projectId))
+        ) {
           nextExpandedProjectIds.add(projectId);
         }
       }
@@ -89,6 +103,7 @@ export const useWorkspaceUiStore = create<WorkspaceUiState>()((set) => ({
       return {
         expandedProjectIds: nextExpandedProjectIds,
         sidebarProjectIds: nextProjectIds,
+        sidebarProjectIdsWithChats: nextProjectIdsWithChats,
       };
     }),
   toggleSidebarChatDateGroup: (groupKey) =>

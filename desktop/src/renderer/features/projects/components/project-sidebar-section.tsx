@@ -61,6 +61,16 @@ export function ProjectSidebarSection({
     () => projects.map((project) => project.id),
     [projects],
   );
+  const projectIdsWithChats = useMemo(
+    () =>
+      projects
+        .filter(
+          (project) =>
+            (projectChatsByProjectId.get(project.id)?.length ?? 0) > 0,
+        )
+        .map((project) => project.id),
+    [projectChatsByProjectId, projects],
+  );
   const expandedProjectIds = useWorkspaceUiStore(
     (state) => state.expandedProjectIds,
   );
@@ -73,9 +83,9 @@ export function ProjectSidebarSection({
 
   useEffect(() => {
     if (!isLoading) {
-      syncSidebarProjects(projectIds);
+      syncSidebarProjects(projectIds, projectIdsWithChats);
     }
-  }, [isLoading, projectIds, syncSidebarProjects]);
+  }, [isLoading, projectIds, projectIdsWithChats, syncSidebarProjects]);
 
   return (
     <SidebarGroup className="py-1">
