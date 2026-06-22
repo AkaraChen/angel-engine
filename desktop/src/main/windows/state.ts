@@ -13,7 +13,9 @@ const minimumMainBounds = {
   width: 960,
 };
 
-type WindowState = Partial<Rectangle>;
+type WindowState = Partial<Rectangle> & {
+  isMaximized?: boolean;
+};
 
 export function savedWindowBounds({
   defaultBounds = defaultMainBounds,
@@ -47,7 +49,7 @@ export function persistWindowBounds(
     if (saveTimer) clearTimeout(saveTimer);
     saveTimer = setTimeout(() => {
       saveTimer = undefined;
-      writeWindowState(stateFileName, window.getNormalBounds());
+      writeWindowState(stateFileName, window);
     }, 250);
   };
 
@@ -55,8 +57,17 @@ export function persistWindowBounds(
   window.on("resize", scheduleSave);
   window.on("close", () => {
     if (saveTimer) clearTimeout(saveTimer);
-    writeWindowState(stateFileName, window.getNormalBounds());
+    writeWindowState(stateFileName, window);
   });
+}
+
+export function restoreWindowState(
+  window: BrowserWindow,
+  stateFileName = mainWindowStateFileName,
+) {
+  if (readWindowState(stateFileName)?.isMaximized) {
+    window.maximize();
+  }
 }
 
 function readWindowState(stateFileName: string): WindowState | null {
@@ -69,12 +80,18 @@ function readWindowState(stateFileName: string): WindowState | null {
   }
 }
 
-function writeWindowState(stateFileName: string, bounds: Rectangle) {
+function writeWindowState(stateFileName: string, window: BrowserWindow) {
   try {
     fs.mkdirSync(path.dirname(stateFilePath(stateFileName)), {
       recursive: true,
     });
-    fs.writeFileSync(stateFilePath(stateFileName), JSON.stringify(bounds));
+    fs.writeFileSync(
+      stateFilePath(stateFileName),
+      JSON.stringify({
+        ...window.getNormalBounds(),
+        isMaximized: window.isMaximized(),
+      }),
+    );
   } catch {
     // Window state persistence should never block app shutdown.
   }

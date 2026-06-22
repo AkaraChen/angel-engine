@@ -9,7 +9,11 @@ import {
   desktopWindowChromeOptions,
 } from "./appearance";
 import { configureDesktopWindowNotifications } from "./notifications";
-import { persistWindowBounds, savedWindowBounds } from "./state";
+import {
+  persistWindowBounds,
+  restoreWindowState,
+  savedWindowBounds,
+} from "./state";
 
 interface CreateDesktopWindowOptions {
   bounds?: Parameters<typeof savedWindowBounds>[0];
@@ -39,6 +43,7 @@ export function createDesktopWindow({
   });
 
   configureDesktopWindowAppearance(window);
+  restoreWindowState(window, stateFileName);
   persistWindowBounds(window, stateFileName);
   configureExternalLinkHandling(window);
   configureDesktopWindowNotifications(window);
