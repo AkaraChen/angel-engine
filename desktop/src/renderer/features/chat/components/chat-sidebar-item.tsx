@@ -53,12 +53,12 @@ export function ChatSidebarItem({
   };
 
   return (
-    <>
+    <div className="group/chat-sidebar-item relative">
       <WorkspaceSidebarMenuButton
         className={cn(
           "gap-1.5",
-          "group-has-data-[sidebar=menu-action]/menu-item:pr-2.5!",
-          "md:group-hover/menu-item:pr-8!",
+          "group-has-data-[sidebar=menu-action]/chat-sidebar-item:pr-2.5!",
+          "md:group-hover/chat-sidebar-item:pr-8!",
           nested && "pl-8",
         )}
         isActive={isActive}
@@ -103,20 +103,26 @@ export function ChatSidebarItem({
       {onArchiveChat ? (
         <WorkspaceSidebarMenuAction
           aria-label={t("sidebar.archiveChat")}
-          className="[&_svg]:size-4"
+          className="
+            peer-data-active/menu-button:text-sidebar-foreground/78
+            aria-expanded:opacity-100
+            group-focus-within/chat-sidebar-item:opacity-100
+            group-hover/chat-sidebar-item:opacity-100
+            md:opacity-0
+            [&_svg]:size-4
+          "
           onClick={(event) => {
             event.preventDefault();
             event.stopPropagation();
             void onArchiveChat();
           }}
-          showOnHover
           title={t("sidebar.archiveChat")}
           type="button"
         >
           <Archive />
         </WorkspaceSidebarMenuAction>
       ) : null}
-    </>
+    </div>
   );
 }
 
