@@ -413,9 +413,11 @@ function WorkspacePageContent({
     : is.nonEmptyString(selectedProjectPath)
       ? getProjectDisplayName(selectedProjectPath)
       : undefined;
-  const workspaceToolRoot = is.nonEmptyString(selectedChatId)
-    ? selectedProjectPath
-    : undefined;
+  const workspaceToolRoot =
+    is.nonEmptyString(selectedChatId) &&
+    is.nonEmptyString(selectedChat?.projectId)
+      ? (selectedChat.cwd ?? selectedProjectPath)
+      : undefined;
   const canShowRightSidebar =
     showRightSidebar && is.nonEmptyString(workspaceToolRoot);
   const dockedWorkspaceToolContext =
