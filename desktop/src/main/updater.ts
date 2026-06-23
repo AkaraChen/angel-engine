@@ -36,15 +36,6 @@ export function configureAutoUpdates() {
   });
   autoUpdater.on("update-not-available", () => {
     checkingForUpdates = false;
-    if (userInitiatedCheck) {
-      userInitiatedCheck = false;
-      void showUpdateMessage({
-        detail: translate("updates.upToDateDetail", {
-          version: app.getVersion(),
-        }),
-        message: translate("updates.upToDate"),
-      });
-    }
   });
   autoUpdater.on("update-available", () => {
     checkingForUpdates = false;
@@ -176,7 +167,11 @@ function checkForStableUpdates(showUserError: boolean) {
 
 async function handleUpdateCheckResult(result: UpdateCheckResult | null) {
   const version = result?.updateInfo.version;
-  if (version === undefined) return;
+  if (result === null || version === undefined || !result.isUpdateAvailable) {
+    checkingForUpdates = false;
+    await showUpToDateMessage();
+    return;
+  }
 
   if (!isPrereleaseVersion(version)) {
     checkingForUpdates = true;
@@ -188,13 +183,7 @@ async function handleUpdateCheckResult(result: UpdateCheckResult | null) {
   log.info(`Skipping prerelease update ${version}.`);
 
   if (userInitiatedCheck) {
-    userInitiatedCheck = false;
-    await showUpdateMessage({
-      detail: translate("updates.upToDateDetail", {
-        version: app.getVersion(),
-      }),
-      message: translate("updates.upToDate"),
-    });
+    await showUpToDateMessage();
   }
 }
 
@@ -211,11 +200,22 @@ function handleUpdateCheckError(error: unknown, showUserError: boolean) {
       type: "error",
     });
   }
-  log.warn("Could not check for updates.", error);
 }
 
 function isPrereleaseVersion(version: string) {
   return version.includes("-");
+}
+
+async function showUpToDateMessage() {
+  if (!userInitiatedCheck) return;
+
+  userInitiatedCheck = false;
+  await showUpdateMessage({
+    detail: translate("updates.upToDateDetail", {
+      version: app.getVersion(),
+    }),
+    message: translate("updates.upToDate"),
+  });
 }
 
 function updateReleaseNotes(info: Pick<UpdateInfo, "releaseNotes">) {

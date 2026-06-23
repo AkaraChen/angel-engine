@@ -6,6 +6,12 @@ const process = require("node:process");
 const desktopRoot = path.resolve(__dirname, "..");
 const outDir = path.join(desktopRoot, "out");
 const packagedAppPathFile = path.join(outDir, ".prepackaged-app");
+const packageJson = JSON.parse(
+  fs.readFileSync(path.join(desktopRoot, "package.json"), "utf8"),
+);
+const releaseType = packageJson.version.includes("-")
+  ? "prerelease"
+  : "release";
 const electronBuilderBin = path.join(
   desktopRoot,
   "node_modules",
@@ -172,7 +178,16 @@ console.log(`Using prepackaged app: ${path.relative(desktopRoot, appPath)}`);
 
 execFileSync(
   electronBuilderBin,
-  ["--prepackaged", appPath, "--mac", "dmg", "zip", "--publish", publishMode],
+  [
+    "--prepackaged",
+    appPath,
+    "--mac",
+    "dmg",
+    "zip",
+    "--publish",
+    publishMode,
+    `--config.publish.releaseType=${releaseType}`,
+  ],
   {
     cwd: desktopRoot,
     stdio: "inherit",
