@@ -1,4 +1,4 @@
-import type { UpdateInfo } from "electron-updater";
+import type { UpdateCheckResult, UpdateInfo } from "electron-updater";
 import type { DesktopUpdateDownloadedEvent } from "../shared/desktop-window";
 
 import { app, BrowserWindow, dialog } from "electron";
@@ -22,7 +22,7 @@ export function configureAutoUpdates() {
   log.initialize();
 
   autoUpdater.logger = log;
-  autoUpdater.autoDownload = true;
+  autoUpdater.autoDownload = false;
   autoUpdater.autoInstallOnAppQuit = false;
   autoUpdater.allowPrerelease = false;
   autoUpdater.allowDowngrade = true;
@@ -87,10 +87,7 @@ export function checkForUpdatesInBackground() {
   }
 
   checkingForUpdates = true;
-  autoUpdater.checkForUpdates().catch((error: unknown) => {
-    checkingForUpdates = false;
-    log.warn("Could not check for updates.", error);
-  });
+  checkForStableUpdates(false);
 }
 
 export function checkForUpdatesFromMenu() {
@@ -139,19 +136,7 @@ export function checkForUpdatesFromMenu() {
 
   userInitiatedCheck = true;
   checkingForUpdates = true;
-  autoUpdater.checkForUpdates().catch((error: unknown) => {
-    userInitiatedCheck = false;
-    checkingForUpdates = false;
-    void showUpdateMessage({
-      detail:
-        error instanceof Error
-          ? error.message
-          : translate("updates.checkFailedDetail"),
-      message: translate("updates.checkFailed"),
-      type: "error",
-    });
-    log.warn("Could not check for updates.", error);
-  });
+  checkForStableUpdates(true);
 }
 
 export function installDownloadedUpdate() {
@@ -178,6 +163,59 @@ function notifyUpdateDownloaded(
   for (const window of BrowserWindow.getAllWindows()) {
     sendUpdateDownloaded(window, event);
   }
+}
+
+function checkForStableUpdates(showUserError: boolean) {
+  autoUpdater
+    .checkForUpdates()
+    .then((result) => handleUpdateCheckResult(result))
+    .catch((error: unknown) => {
+      handleUpdateCheckError(error, showUserError);
+    });
+}
+
+async function handleUpdateCheckResult(result: UpdateCheckResult | null) {
+  const version = result?.updateInfo.version;
+  if (version === undefined) return;
+
+  if (!isPrereleaseVersion(version)) {
+    checkingForUpdates = true;
+    await autoUpdater.downloadUpdate();
+    return;
+  }
+
+  checkingForUpdates = false;
+  log.info(`Skipping prerelease update ${version}.`);
+
+  if (userInitiatedCheck) {
+    userInitiatedCheck = false;
+    await showUpdateMessage({
+      detail: translate("updates.upToDateDetail", {
+        version: app.getVersion(),
+      }),
+      message: translate("updates.upToDate"),
+    });
+  }
+}
+
+function handleUpdateCheckError(error: unknown, showUserError: boolean) {
+  checkingForUpdates = false;
+  if (showUserError && userInitiatedCheck) {
+    userInitiatedCheck = false;
+    void showUpdateMessage({
+      detail:
+        error instanceof Error
+          ? error.message
+          : translate("updates.checkFailedDetail"),
+      message: translate("updates.checkFailed"),
+      type: "error",
+    });
+  }
+  log.warn("Could not check for updates.", error);
+}
+
+function isPrereleaseVersion(version: string) {
+  return version.includes("-");
 }
 
 function updateReleaseNotes(info: Pick<UpdateInfo, "releaseNotes">) {
