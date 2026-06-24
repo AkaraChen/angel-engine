@@ -25,8 +25,9 @@ function conversationSnapshot(
     },
     elicitations: [],
     history: {
-      restored: false,
-      source: null,
+      hydrated: false,
+      replay: [],
+      turnCount: 0,
     },
     id: "conversation-1",
     messages: [],
@@ -156,6 +157,99 @@ describe("projection", () => {
       action: { id: "action-1", title: "pwd", turnId: "turn-1" },
       type: "tool",
     });
+  });
+
+  it.each([
+    ["missing", undefined],
+    ["invalid JSON", '{"command":"pwd"'],
+    ["array JSON", "[]"],
+    ["string JSON", '"pwd"'],
+    ["boolean JSON", "true"],
+    ["null JSON", "null"],
+  ])(
+    "skips hydrated history tool actions with %s raw input",
+    (_name, rawInput) => {
+      expect(
+        conversationMessages(
+          conversationSnapshot({
+            history: {
+              hydrated: true,
+              replay: [],
+              turnCount: 1,
+            },
+            messages: [
+              {
+                content: [
+                  { text: "before", type: "text" },
+                  toolPart({ id: "bad-action", inputSummary: "pwd", rawInput }),
+                  toolPart({ id: "good-action" }),
+                  { text: "after", type: "text" },
+                ],
+                id: "history-1",
+                role: "assistant",
+              },
+            ],
+          }),
+        ),
+      ).toEqual([
+        {
+          content: [
+            { text: "before", type: "text" },
+            expect.objectContaining({
+              args: { command: "pwd" },
+              toolCallId: "good-action",
+              type: "tool-call",
+            }),
+            { text: "after", type: "text" },
+          ],
+          id: "history-1",
+          role: "assistant",
+        },
+      ]);
+    },
+  );
+
+  it("throws on non-history snapshot messages with malformed tool raw input", () => {
+    expect(() =>
+      conversationMessages(
+        conversationSnapshot({
+          history: {
+            hydrated: true,
+            replay: [],
+            turnCount: 1,
+          },
+          messages: [
+            {
+              content: [toolPart({ rawInput: "[]" })],
+              id: "turn-1:assistant",
+              role: "assistant",
+            },
+          ],
+        }),
+      ),
+    ).toThrow("Tool action raw input must be a JSON object.");
+  });
+
+  it("throws on live result snapshots with malformed tool raw input", () => {
+    expect(() =>
+      projectTurnRunResult({
+        conversation: conversationSnapshot({
+          history: {
+            hydrated: true,
+            replay: [],
+            turnCount: 1,
+          },
+          messages: [
+            {
+              content: [toolPart({ rawInput: "[]" })],
+              id: "turn-1:assistant",
+              role: "assistant",
+            },
+          ],
+        }),
+        turnId: "turn-1",
+      } as TurnRunResult),
+    ).toThrow("Tool action raw input must be a JSON object.");
   });
 
   it("projects elicitation tool actions", () => {

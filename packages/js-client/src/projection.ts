@@ -28,6 +28,7 @@ import {
   chatPlanPartName,
   chatToolActionToPart,
 } from "./utils/index.js";
+import { ChatToolRawInputError } from "./utils/tool-raw-input-error.js";
 import { imageDataUrl } from "./utils/media.js";
 import { isChatPlanData, normalizeChatPlanMessages } from "./utils/plans.js";
 
@@ -42,18 +43,41 @@ export type ProjectedTurnEvent =
 export function conversationMessages(
   snapshot: ConversationSnapshot,
 ): ChatHistoryMessage[] {
+  return conversationMessagesWithRawInputPolicy(
+    snapshot,
+    snapshot.history.hydrated === true,
+  );
+}
+
+function conversationMessagesWithRawInputPolicy(
+  snapshot: ConversationSnapshot,
+  tolerateMalformedToolRawInput: boolean,
+): ChatHistoryMessage[] {
   return normalizeChatPlanMessages(
     snapshot.messages
-      .map(displayMessageToChatMessage)
+      .map((message) =>
+        displayMessageToChatMessage(
+          message,
+          tolerateMalformedToolRawInput && isHydratedHistoryMessage(message),
+        ),
+      )
       .filter((message) => message.content.length > 0),
   );
 }
 
+function isHydratedHistoryMessage(message: DisplayMessageSnapshot): boolean {
+  return message.id.startsWith("history-");
+}
+
 function displayMessageToChatMessage(
   message: DisplayMessageSnapshot,
+  tolerateMalformedToolRawInput: boolean,
 ): ChatHistoryMessage {
   return {
-    content: displayMessagePartsToChatParts(message.content),
+    content: displayMessagePartsToChatParts(
+      message.content,
+      tolerateMalformedToolRawInput,
+    ),
     id: message.id,
     role:
       message.role === "user" || message.role === "system"
@@ -64,12 +88,16 @@ function displayMessageToChatMessage(
 
 function displayMessagePartsToChatParts(
   parts: DisplayMessagePartSnapshot[],
+  tolerateMalformedToolRawInput: boolean,
 ): ChatHistoryMessagePart[] {
-  return parts.flatMap(displayMessagePartToChatParts);
+  return parts.flatMap((part) =>
+    displayMessagePartToChatParts(part, tolerateMalformedToolRawInput),
+  );
 }
 
 function displayMessagePartToChatParts(
   part: DisplayMessagePartSnapshot,
+  tolerateMalformedToolRawInput: boolean,
 ): ChatHistoryMessagePart[] {
   switch (part.type) {
     case "reasoning":
@@ -88,7 +116,11 @@ function displayMessagePartToChatParts(
           return [{ data: elicitation, name: "elicitation", type: "data" }];
         }
       }
-      return [chatPartFromAction(toChatAction(part.action))];
+      const projected = chatPartFromAction(
+        toChatAction(part.action),
+        tolerateMalformedToolRawInput,
+      );
+      return projected ? [projected] : [];
     case "plan":
       if (!part.plan) {
         throw new Error("Display plan part is missing plan.");
@@ -390,7 +422,10 @@ function displayElicitationFromAction(
   };
 }
 
-function chatPartFromAction(action: ChatToolAction): ChatHistoryMessagePart {
+function chatPartFromAction(
+  action: ChatToolAction,
+  tolerateMalformedRawInput = false,
+): ChatHistoryMessagePart | undefined {
   const elicitation = questionElicitationFromAction(action);
   if (elicitation) {
     return {
@@ -399,7 +434,14 @@ function chatPartFromAction(action: ChatToolAction): ChatHistoryMessagePart {
       type: "data",
     };
   }
-  return chatToolActionToPart(action);
+  try {
+    return chatToolActionToPart(action);
+  } catch (error) {
+    if (tolerateMalformedRawInput && error instanceof ChatToolRawInputError) {
+      return undefined;
+    }
+    throw error;
+  }
 }
 
 function questionElicitationFromAction(

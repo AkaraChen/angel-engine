@@ -10,11 +10,12 @@ function toolAction(overrides: Partial<ChatToolAction> = {}): ChatToolAction {
   return {
     error: overrides.error,
     id: overrides.id ?? "action-1",
+    inputSummary: overrides.inputSummary,
     kind: overrides.kind ?? "command",
     output: overrides.output ?? [{ kind: "text", text: "done" }],
     outputText: overrides.outputText ?? "done",
     phase: overrides.phase ?? "completed",
-    rawInput: overrides.rawInput ?? '{"cmd":"pwd"}',
+    rawInput: "rawInput" in overrides ? overrides.rawInput : '{"cmd":"pwd"}',
     title: overrides.title ?? "Run command",
     turnId: overrides.turnId ?? "turn-1",
   };
@@ -31,6 +32,29 @@ describe("tool utils", () => {
       toolName: "command",
       type: "tool-call",
     });
+  });
+
+  it("fails fast when raw input is missing", () => {
+    expect(() =>
+      chatToolActionToPart(toolAction({ rawInput: undefined })),
+    ).toThrow("Tool action raw input is missing.");
+  });
+
+  it("fails fast when raw input is invalid JSON", () => {
+    expect(() =>
+      chatToolActionToPart(toolAction({ rawInput: '{"cmd":"pwd"' })),
+    ).toThrow("Tool action raw input is invalid JSON");
+  });
+
+  it.each([
+    ["array", "[]"],
+    ["string", '"pwd"'],
+    ["boolean", "true"],
+    ["null", "null"],
+  ])("fails fast when raw input is JSON %s", (_name, rawInput) => {
+    expect(() => chatToolActionToPart(toolAction({ rawInput }))).toThrow(
+      "Tool action raw input must be a JSON object.",
+    );
   });
 
   it("checks actions and classifies terminal phases", () => {

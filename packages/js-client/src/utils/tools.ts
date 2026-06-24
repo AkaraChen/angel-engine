@@ -5,11 +5,13 @@ import type {
   ChatToolCallPart,
 } from "../types.js";
 import is from "@sindresorhus/is";
+import { ChatToolRawInputError } from "./tool-raw-input-error.js";
 
 function toolActionToPart(action: ChatToolAction): ChatToolCallPart {
   const outputText = action.outputText
     ? action.outputText
     : action.error?.message;
+  const args = parseToolArgs(action.rawInput);
   const argsText =
     action.rawInput !== null && action.rawInput !== undefined
       ? action.rawInput
@@ -18,7 +20,7 @@ function toolActionToPart(action: ChatToolAction): ChatToolCallPart {
     throw new Error("Tool action input summary is missing.");
   }
   return {
-    args: parseToolArgs(action.rawInput),
+    args,
     argsText,
     artifact: action,
     ...(action.error ? { isError: true } : {}),
@@ -64,11 +66,22 @@ export function isTerminalChatToolPhase(phase?: ChatToolActionPhase): boolean {
 
 function parseToolArgs(value?: string | null): ChatJsonObject {
   if (!is.string(value)) {
-    throw new Error("Tool action raw input is missing.");
+    throw new ChatToolRawInputError("Tool action raw input is missing.");
   }
-  const parsed = JSON.parse(value);
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(value);
+  } catch (error) {
+    throw new ChatToolRawInputError(
+      error instanceof Error
+        ? `Tool action raw input is invalid JSON: ${error.message}`
+        : "Tool action raw input is invalid JSON.",
+    );
+  }
   if (!is.plainObject(parsed)) {
-    throw new Error("Tool action raw input must be a JSON object.");
+    throw new ChatToolRawInputError(
+      "Tool action raw input must be a JSON object.",
+    );
   }
   return parsed as ChatJsonObject;
 }
