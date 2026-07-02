@@ -13,7 +13,6 @@ import claudeIconUrl from "@lobehub/icons-static-svg/icons/claudecode-color.svg"
 import clineIconUrl from "@lobehub/icons-static-svg/icons/cline.svg";
 import codexIconUrl from "@lobehub/icons-static-svg/icons/codex-color.svg";
 import copilotIconUrl from "@lobehub/icons-static-svg/icons/copilot-color.svg";
-import cursorIconUrl from "@lobehub/icons-static-svg/icons/cursor.svg";
 import geminiIconUrl from "@lobehub/icons-static-svg/icons/geminicli-color.svg";
 import kimiIconUrl from "@lobehub/icons-static-svg/icons/kimi-color.svg";
 import opencodeIconUrl from "@lobehub/icons-static-svg/icons/opencode.svg";
@@ -77,7 +76,6 @@ const agentIconUrl: Partial<Record<AgentRuntime, string>> = {
   cline: clineIconUrl,
   codex: codexIconUrl,
   copilot: copilotIconUrl,
-  cursor: cursorIconUrl,
   gemini: geminiIconUrl,
   kimi: kimiIconUrl,
   opencode: opencodeIconUrl,

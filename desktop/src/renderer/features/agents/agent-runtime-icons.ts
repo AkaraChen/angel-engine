@@ -3,7 +3,6 @@ import claudeIconSvg from "@lobehub/icons-static-svg/icons/claudecode.svg?raw";
 import clineIconSvg from "@lobehub/icons-static-svg/icons/cline.svg?raw";
 import codexIconSvg from "@lobehub/icons-static-svg/icons/codex.svg?raw";
 import copilotIconSvg from "@lobehub/icons-static-svg/icons/copilot.svg?raw";
-import cursorIconSvg from "@lobehub/icons-static-svg/icons/cursor.svg?raw";
 import geminiIconSvg from "@lobehub/icons-static-svg/icons/geminicli.svg?raw";
 import kimiIconSvg from "@lobehub/icons-static-svg/icons/kimi.svg?raw";
 import opencodeIconSvg from "@lobehub/icons-static-svg/icons/opencode.svg?raw";
@@ -17,7 +16,6 @@ const builtinAgentIconSvg: Record<BuiltinAgentRuntime, string> = {
   cline: clineIconSvg,
   codex: codexIconSvg,
   copilot: copilotIconSvg,
-  cursor: cursorIconSvg,
   gemini: geminiIconSvg,
   kimi: kimiIconSvg,
   opencode: opencodeIconSvg,

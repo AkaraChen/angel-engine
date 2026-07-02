@@ -9,6 +9,12 @@ describe("normalizeChatRuntime", () => {
     );
   });
 
+  test("rejects removed cursor runtime ids", () => {
+    expect(() => normalizeChatRuntime("cursor")).toThrow(
+      "Unknown chat runtime.",
+    );
+  });
+
   test("accepts builtin runtime ids", () => {
     expect(normalizeChatRuntime("codex")).toBe("codex");
   });

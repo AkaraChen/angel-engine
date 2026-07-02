@@ -9,7 +9,6 @@ export type AgentRuntime =
   | "qoder"
   | "copilot"
   | "gemini"
-  | "cursor"
   | "cline"
   | "claude";
 
@@ -108,11 +107,6 @@ export const AGENT_OPTIONS: AgentOption[] = [
     label: "Gemini",
   },
   {
-    description: "Cursor CLI through its ACP server.",
-    id: "cursor",
-    label: "Cursor",
-  },
-  {
     description: "Cline CLI through its ACP server.",
     id: "cline",
     label: "Cline",
@@ -125,7 +119,7 @@ export const AGENT_OPTIONS: AgentOption[] = [
 ];
 
 const builtinAgentRuntime = arkType(
-  "'codex' | 'kimi' | 'opencode' | 'qoder' | 'copilot' | 'gemini' | 'cursor' | 'cline' | 'claude'",
+  "'codex' | 'kimi' | 'opencode' | 'qoder' | 'copilot' | 'gemini' | 'cline' | 'claude'",
 );
 
 const DEFAULT_AGENT_RUNTIME: AgentRuntime = "codex";

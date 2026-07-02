@@ -10,7 +10,6 @@ const runtimeCommands: Record<AgentRuntime, () => string> = {
   cline: () => "cline",
   codex: () => "codex",
   copilot: () => "copilot",
-  cursor: () => "agent",
   gemini: () => "gemini",
   kimi: () => "kimi",
   opencode: () => "opencode",
