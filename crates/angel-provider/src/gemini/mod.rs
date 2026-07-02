@@ -14,6 +14,10 @@ use angel_engine::{
 };
 use serde_json::{Value, json};
 
+use crate::acp::permission_modes::{
+    acp_permission_mode_session_id, decode_permission_mode, permission_mode_effect,
+    permission_mode_wire_id,
+};
 use crate::acp::{AcpAdapter, AcpAdapterCapabilities};
 use crate::{InterpretedUserInput, ProtocolAdapter};
 
@@ -65,14 +69,14 @@ impl GeminiAdapter {
                     conversation_id,
                     mode_id,
                 } => {
-                    let mode = decode_gemini_permission_mode(&mode_id)?;
+                    let mode = decode_permission_mode::<GeminiPermissionMode>(&mode_id, "Gemini")?;
                     if mode == GeminiPermissionMode::Plan {
                         filtered_plan_mode = true;
                         None
                     } else {
                         Some(EngineEvent::SessionPermissionModeChanged {
                             conversation_id,
-                            mode_id: gemini_permission_mode_wire_id(mode),
+                            mode_id: permission_mode_wire_id(mode),
                         })
                     }
                 }
@@ -172,7 +176,7 @@ impl GeminiAdapter {
         engine: &AngelEngine,
         effect: &ProtocolEffect,
     ) -> Result<Option<TransportOutput>, EngineError> {
-        let Some(mode) = gemini_permission_mode_effect(effect)? else {
+        let Some(mode) = permission_mode_effect::<GeminiPermissionMode>(effect, "Gemini")? else {
             return Ok(None);
         };
         if mode == GeminiPermissionMode::Plan {
@@ -186,7 +190,7 @@ impl GeminiAdapter {
             return Ok(Some(output));
         }
 
-        let session_id = gemini_session_id(engine, effect)?;
+        let session_id = acp_permission_mode_session_id(engine, effect, "Gemini")?;
         let method = "session/set_mode";
         let params = json!({
             "sessionId": session_id,
@@ -196,7 +200,7 @@ impl GeminiAdapter {
             TransportLogKind::Send,
             format!(
                 "Gemini permission mode set via ACP mode: {}",
-                gemini_permission_mode_wire_id(mode),
+                permission_mode_wire_id(mode),
             ),
         );
         if let Some(request_id) = &effect.request_id {
@@ -292,7 +296,7 @@ fn gemini_permission_modes(
     let mut filtered = false;
     let mut available_modes = Vec::new();
     for mode in modes.available_modes {
-        let permission_mode = decode_gemini_permission_mode(&mode.id)?;
+        let permission_mode = decode_permission_mode::<GeminiPermissionMode>(&mode.id, "Gemini")?;
         if permission_mode == GeminiPermissionMode::Plan {
             filtered = true;
             continue;
@@ -300,15 +304,16 @@ fn gemini_permission_modes(
         available_modes.push(gemini_permission_mode(mode, permission_mode));
     }
 
-    let current_mode = decode_gemini_permission_mode(&modes.current_mode_id)?;
+    let current_mode =
+        decode_permission_mode::<GeminiPermissionMode>(&modes.current_mode_id, "Gemini")?;
     let current_mode_id = if current_mode == GeminiPermissionMode::Plan {
         filtered = true;
         available_modes
             .first()
             .map(|mode| mode.id.clone())
-            .unwrap_or_else(|| gemini_permission_mode_wire_id(GeminiPermissionMode::Default))
+            .unwrap_or_else(|| permission_mode_wire_id(GeminiPermissionMode::Default))
     } else {
-        gemini_permission_mode_wire_id(current_mode)
+        permission_mode_wire_id(current_mode)
     };
 
     Ok((
@@ -325,7 +330,7 @@ fn gemini_permission_mode(
     permission_mode: GeminiPermissionMode,
 ) -> SessionPermissionMode {
     SessionPermissionMode {
-        id: gemini_permission_mode_wire_id(permission_mode),
+        id: permission_mode_wire_id(permission_mode),
         name: mode.name,
         description: mode.description,
     }
@@ -342,32 +347,34 @@ fn gemini_config_options(
                 option.category = Some("permissionMode".to_string());
                 let mut values = Vec::with_capacity(option.values.len());
                 for mut value in option.values {
-                    let mode = decode_gemini_permission_mode(&value.value)?;
+                    let mode =
+                        decode_permission_mode::<GeminiPermissionMode>(&value.value, "Gemini")?;
                     if mode == GeminiPermissionMode::Plan {
                         filtered_any = true;
                     } else {
-                        value.value = gemini_permission_mode_wire_id(mode);
+                        value.value = permission_mode_wire_id(mode);
                         values.push(value);
                     }
                 }
                 option.values = values;
-                let current_mode = decode_gemini_permission_mode(&option.current_value)?;
+                let current_mode = decode_permission_mode::<GeminiPermissionMode>(
+                    &option.current_value,
+                    "Gemini",
+                )?;
                 if current_mode == GeminiPermissionMode::Plan {
                     filtered_any = true;
                     option.current_value = option
                         .values
                         .iter()
                         .find(|value| {
-                            decode_gemini_permission_mode(&value.value)
+                            decode_permission_mode::<GeminiPermissionMode>(&value.value, "Gemini")
                                 .is_ok_and(|mode| mode == GeminiPermissionMode::Default)
                         })
                         .or_else(|| option.values.first())
                         .map(|value| value.value.clone())
-                        .unwrap_or_else(|| {
-                            gemini_permission_mode_wire_id(GeminiPermissionMode::Default)
-                        });
+                        .unwrap_or_else(|| permission_mode_wire_id(GeminiPermissionMode::Default));
                 } else {
-                    option.current_value = gemini_permission_mode_wire_id(current_mode);
+                    option.current_value = permission_mode_wire_id(current_mode);
                 }
             }
             Ok(option)
@@ -391,42 +398,6 @@ fn is_gemini_plan_mode(value: &str) -> bool {
     value == "plan"
 }
 
-fn gemini_permission_mode_effect(
-    effect: &ProtocolEffect,
-) -> Result<Option<GeminiPermissionMode>, EngineError> {
-    let fields = &effect.payload.fields;
-    if fields.get("contextUpdate").map(String::as_str) != Some("permissionMode") {
-        return Ok(None);
-    }
-    fields
-        .get("permissionMode")
-        .map(|mode| decode_gemini_permission_mode(mode))
-        .transpose()
-}
-
-fn gemini_session_id(engine: &AngelEngine, effect: &ProtocolEffect) -> Result<String, EngineError> {
-    let conversation_id =
-        effect
-            .conversation_id
-            .as_ref()
-            .ok_or_else(|| EngineError::InvalidCommand {
-                message: "missing conversation id for Gemini permission mode update".to_string(),
-            })?;
-    let conversation = engine.conversations.get(conversation_id).ok_or_else(|| {
-        EngineError::ConversationNotFound {
-            conversation_id: conversation_id.to_string(),
-        }
-    })?;
-    conversation
-        .remote
-        .as_protocol_id()
-        .map(str::to_string)
-        .ok_or_else(|| EngineError::InvalidState {
-            expected: "Gemini ACP session id".to_string(),
-            actual: format!("{:?}", conversation.remote),
-        })
-}
-
 #[derive(Clone, Copy, Debug, PartialEq, Eq, serde::Deserialize, serde::Serialize)]
 enum GeminiPermissionMode {
     #[serde(rename = "default")]
@@ -437,23 +408,6 @@ enum GeminiPermissionMode {
     Yolo,
     #[serde(rename = "plan")]
     Plan,
-}
-
-fn decode_gemini_permission_mode(value: &str) -> Result<GeminiPermissionMode, EngineError> {
-    serde_json::from_value(Value::String(value.to_string())).map_err(|error| {
-        EngineError::InvalidState {
-            expected: "canonical Gemini permission mode id".to_string(),
-            actual: format!("{value:?}: {error}"),
-        }
-    })
-}
-
-fn gemini_permission_mode_wire_id(mode: GeminiPermissionMode) -> String {
-    let value = serde_json::to_value(mode).expect("GeminiPermissionMode serializes to a string");
-    let Value::String(id) = value else {
-        unreachable!("GeminiPermissionMode serialized to non-string JSON");
-    };
-    id
 }
 
 fn gemini_plan_prompt_response(

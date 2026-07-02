@@ -29,6 +29,7 @@ use serde_json::{Value, json};
 mod encode;
 mod helpers;
 mod notifications;
+pub(crate) mod permission_modes;
 mod requests;
 mod response;
 mod transport;

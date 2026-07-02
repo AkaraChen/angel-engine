@@ -11,6 +11,9 @@ use angel_engine::{
 };
 use serde_json::{Value, json};
 
+use crate::acp::permission_modes::{
+    acp_permission_mode_session_id, permission_mode_effect, permission_mode_wire_id,
+};
 use crate::acp::{AcpAdapter, AcpAdapterCapabilities};
 use crate::{InterpretedUserInput, ProtocolAdapter};
 
@@ -133,7 +136,7 @@ impl CopilotAdapter {
         engine: &AngelEngine,
         effect: &ProtocolEffect,
     ) -> Result<Option<TransportOutput>, EngineError> {
-        let Some(mode) = copilot_permission_mode_effect(effect)? else {
+        let Some(mode) = permission_mode_effect::<CopilotPermissionMode>(effect, "Copilot")? else {
             return Ok(None);
         };
         if !conversation_has_allow_all_permission_mode(engine, effect) {
@@ -144,7 +147,7 @@ impl CopilotAdapter {
             CopilotPermissionMode::Default => "/allow-all off",
             CopilotPermissionMode::AllowAll => "/allow-all on",
         };
-        let session_id = copilot_session_id(engine, effect)?;
+        let session_id = acp_permission_mode_session_id(engine, effect, "Copilot")?;
         let method = "session/prompt";
         let params = json!({
             "sessionId": session_id,
@@ -154,7 +157,7 @@ impl CopilotAdapter {
             TransportLogKind::Send,
             format!(
                 "Copilot permission mode set via /allow-all: {}",
-                copilot_permission_mode_wire_id(mode)
+                permission_mode_wire_id(mode)
             ),
         );
         if let Some(request_id) = &effect.request_id {
@@ -265,7 +268,7 @@ fn needs_copilot_permission_modes(
     let Some(conversation) = engine.conversations.get(conversation_id) else {
         return false;
     };
-    let allow_all_mode_id = copilot_permission_mode_wire_id(CopilotPermissionMode::AllowAll);
+    let allow_all_mode_id = permission_mode_wire_id(CopilotPermissionMode::AllowAll);
     match &conversation.permission_mode_state {
         Some(modes) => !modes
             .available_modes
@@ -297,18 +300,18 @@ fn copilot_permission_mode_state(
                         .map(|modes| modes.current_mode_id.clone())
                 })
         })
-        .unwrap_or_else(|| copilot_permission_mode_wire_id(startup_permission_mode));
+        .unwrap_or_else(|| permission_mode_wire_id(startup_permission_mode));
 
     SessionPermissionModeState {
         current_mode_id,
         available_modes: vec![
             SessionPermissionMode {
-                id: copilot_permission_mode_wire_id(CopilotPermissionMode::Default),
+                id: permission_mode_wire_id(CopilotPermissionMode::Default),
                 name: "Default".to_string(),
                 description: Some("Ask for permissions according to Copilot policy.".to_string()),
             },
             SessionPermissionMode {
-                id: copilot_permission_mode_wire_id(CopilotPermissionMode::AllowAll),
+                id: permission_mode_wire_id(CopilotPermissionMode::AllowAll),
                 name: "Allow All".to_string(),
                 description: Some("Enable all Copilot permissions via /allow-all.".to_string()),
             },
@@ -326,51 +329,11 @@ fn conversation_has_allow_all_permission_mode(
         .and_then(|conversation_id| engine.conversations.get(conversation_id))
         .and_then(|conversation| conversation.permission_mode_state.as_ref())
         .is_some_and(|modes| {
-            let allow_all_mode_id =
-                copilot_permission_mode_wire_id(CopilotPermissionMode::AllowAll);
+            let allow_all_mode_id = permission_mode_wire_id(CopilotPermissionMode::AllowAll);
             modes
                 .available_modes
                 .iter()
                 .any(|mode| mode.id == allow_all_mode_id.as_str())
-        })
-}
-
-fn copilot_permission_mode_effect(
-    effect: &ProtocolEffect,
-) -> Result<Option<CopilotPermissionMode>, EngineError> {
-    let fields = &effect.payload.fields;
-    if fields.get("contextUpdate").map(String::as_str) != Some("permissionMode") {
-        return Ok(None);
-    }
-    fields
-        .get("permissionMode")
-        .map(|mode| decode_copilot_permission_mode(mode))
-        .transpose()
-}
-
-fn copilot_session_id(
-    engine: &AngelEngine,
-    effect: &ProtocolEffect,
-) -> Result<String, EngineError> {
-    let conversation_id =
-        effect
-            .conversation_id
-            .as_ref()
-            .ok_or_else(|| EngineError::InvalidCommand {
-                message: "missing conversation id for Copilot permission mode update".to_string(),
-            })?;
-    let conversation = engine.conversations.get(conversation_id).ok_or_else(|| {
-        EngineError::ConversationNotFound {
-            conversation_id: conversation_id.to_string(),
-        }
-    })?;
-    conversation
-        .remote
-        .as_protocol_id()
-        .map(str::to_string)
-        .ok_or_else(|| EngineError::InvalidState {
-            expected: "Copilot ACP session id".to_string(),
-            actual: format!("{:?}", conversation.remote),
         })
 }
 
@@ -388,23 +351,6 @@ fn copilot_startup_permission_mode(args: &[String]) -> CopilotPermissionMode {
     } else {
         CopilotPermissionMode::Default
     }
-}
-
-fn decode_copilot_permission_mode(value: &str) -> Result<CopilotPermissionMode, EngineError> {
-    serde_json::from_value(Value::String(value.to_string())).map_err(|error| {
-        EngineError::InvalidState {
-            expected: "canonical Copilot permission mode id".to_string(),
-            actual: format!("{value:?}: {error}"),
-        }
-    })
-}
-
-fn copilot_permission_mode_wire_id(mode: CopilotPermissionMode) -> String {
-    let value = serde_json::to_value(mode).expect("CopilotPermissionMode serializes to a string");
-    let Value::String(id) = value else {
-        unreachable!("CopilotPermissionMode serialized to non-string JSON");
-    };
-    id
 }
 
 #[cfg(test)]

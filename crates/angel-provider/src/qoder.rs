@@ -14,6 +14,10 @@ use angel_engine::{
 };
 use serde_json::{Value, json};
 
+use crate::acp::permission_modes::{
+    acp_permission_mode_session_id, decode_permission_mode, permission_mode_effect,
+    permission_mode_wire_id,
+};
 use crate::acp::{AcpAdapter, AcpAdapterCapabilities};
 use crate::{InterpretedUserInput, ProtocolAdapter};
 
@@ -56,10 +60,10 @@ impl QoderAdapter {
         engine: &AngelEngine,
         effect: &ProtocolEffect,
     ) -> Result<Option<TransportOutput>, EngineError> {
-        let Some(mode) = qoder_permission_mode_effect(effect)? else {
+        let Some(mode) = permission_mode_effect::<QoderPermissionMode>(effect, "Qoder")? else {
             return Ok(None);
         };
-        let session_id = qoder_session_id(engine, effect)?;
+        let session_id = acp_permission_mode_session_id(engine, effect, "Qoder")?;
         let method = "session/set_mode";
         let params = json!({
             "sessionId": session_id,
@@ -69,7 +73,7 @@ impl QoderAdapter {
             TransportLogKind::Send,
             format!(
                 "Qoder permission mode set via ACP mode: {}",
-                qoder_permission_mode_wire_id(mode),
+                permission_mode_wire_id(mode),
             ),
         );
         if let Some(request_id) = &effect.request_id {
@@ -153,10 +157,10 @@ fn qoder_event(event: EngineEvent) -> Result<Option<EngineEvent>, EngineError> {
             conversation_id,
             mode_id,
         } => {
-            let mode = decode_qoder_permission_mode(&mode_id)?;
+            let mode = decode_permission_mode::<QoderPermissionMode>(&mode_id, "Qoder")?;
             Ok(Some(EngineEvent::SessionPermissionModeChanged {
                 conversation_id,
-                mode_id: qoder_permission_mode_wire_id(mode),
+                mode_id: permission_mode_wire_id(mode),
             }))
         }
         EngineEvent::SessionConfigOptionsUpdated {
@@ -175,7 +179,7 @@ fn qoder_mode_state_is_permission_modes(modes: &SessionModeState) -> Result<bool
         return Ok(false);
     }
     for mode in &modes.available_modes {
-        decode_qoder_permission_mode(&mode.id)?;
+        decode_permission_mode::<QoderPermissionMode>(&mode.id, "Qoder")?;
     }
     Ok(true)
 }
@@ -183,8 +187,10 @@ fn qoder_mode_state_is_permission_modes(modes: &SessionModeState) -> Result<bool
 fn qoder_permission_mode_state(
     modes: SessionModeState,
 ) -> Result<SessionPermissionModeState, EngineError> {
-    let current_mode_id =
-        qoder_permission_mode_wire_id(decode_qoder_permission_mode(&modes.current_mode_id)?);
+    let current_mode_id = permission_mode_wire_id(decode_permission_mode::<QoderPermissionMode>(
+        &modes.current_mode_id,
+        "Qoder",
+    )?);
     let available_modes = modes
         .available_modes
         .into_iter()
@@ -197,9 +203,9 @@ fn qoder_permission_mode_state(
 }
 
 fn qoder_permission_mode(mode: SessionMode) -> Result<SessionPermissionMode, EngineError> {
-    let permission_mode = decode_qoder_permission_mode(&mode.id)?;
+    let permission_mode = decode_permission_mode::<QoderPermissionMode>(&mode.id, "Qoder")?;
     Ok(SessionPermissionMode {
-        id: qoder_permission_mode_wire_id(permission_mode),
+        id: permission_mode_wire_id(permission_mode),
         name: mode.name,
         description: mode.description,
     })
@@ -213,53 +219,22 @@ fn qoder_config_options(
         .map(|mut option| {
             if option.category.as_deref() == Some("mode") {
                 option.category = Some("permissionMode".to_string());
-                option.current_value = qoder_permission_mode_wire_id(decode_qoder_permission_mode(
-                    &option.current_value,
+                option.current_value = permission_mode_wire_id(decode_permission_mode::<
+                    QoderPermissionMode,
+                >(
+                    &option.current_value, "Qoder"
                 )?);
                 for value in &mut option.values {
-                    value.value =
-                        qoder_permission_mode_wire_id(decode_qoder_permission_mode(&value.value)?);
+                    value.value = permission_mode_wire_id(decode_permission_mode::<
+                        QoderPermissionMode,
+                    >(
+                        &value.value, "Qoder"
+                    )?);
                 }
             }
             Ok(option)
         })
         .collect()
-}
-
-fn qoder_permission_mode_effect(
-    effect: &ProtocolEffect,
-) -> Result<Option<QoderPermissionMode>, EngineError> {
-    let fields = &effect.payload.fields;
-    if fields.get("contextUpdate").map(String::as_str) != Some("permissionMode") {
-        return Ok(None);
-    }
-    fields
-        .get("permissionMode")
-        .map(|mode| decode_qoder_permission_mode(mode))
-        .transpose()
-}
-
-fn qoder_session_id(engine: &AngelEngine, effect: &ProtocolEffect) -> Result<String, EngineError> {
-    let conversation_id =
-        effect
-            .conversation_id
-            .as_ref()
-            .ok_or_else(|| EngineError::InvalidCommand {
-                message: "missing conversation id for Qoder permission mode update".to_string(),
-            })?;
-    let conversation = engine.conversations.get(conversation_id).ok_or_else(|| {
-        EngineError::ConversationNotFound {
-            conversation_id: conversation_id.to_string(),
-        }
-    })?;
-    conversation
-        .remote
-        .as_protocol_id()
-        .map(str::to_string)
-        .ok_or_else(|| EngineError::InvalidState {
-            expected: "Qoder ACP session id".to_string(),
-            actual: format!("{:?}", conversation.remote),
-        })
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, serde::Deserialize, serde::Serialize)]
@@ -274,23 +249,6 @@ enum QoderPermissionMode {
     DontAsk,
     #[serde(rename = "plan")]
     Plan,
-}
-
-fn decode_qoder_permission_mode(value: &str) -> Result<QoderPermissionMode, EngineError> {
-    serde_json::from_value(Value::String(value.to_string())).map_err(|error| {
-        EngineError::InvalidState {
-            expected: "canonical Qoder permission mode id".to_string(),
-            actual: format!("{value:?}: {error}"),
-        }
-    })
-}
-
-fn qoder_permission_mode_wire_id(mode: QoderPermissionMode) -> String {
-    let value = serde_json::to_value(mode).expect("QoderPermissionMode serializes to a string");
-    let Value::String(id) = value else {
-        unreachable!("QoderPermissionMode serialized to non-string JSON");
-    };
-    id
 }
 
 #[cfg(test)]

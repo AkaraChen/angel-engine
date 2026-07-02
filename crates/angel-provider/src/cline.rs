@@ -8,6 +8,7 @@ use angel_engine::{
 };
 use serde_json::Value;
 
+use crate::acp::permission_modes::permission_mode_wire_id;
 use crate::acp::{AcpAdapter, AcpAdapterCapabilities};
 use crate::{InterpretedUserInput, ProtocolAdapter};
 
@@ -103,9 +104,9 @@ impl ProtocolAdapter for ClineAdapter {
 
 fn cline_permission_mode_state(mode: ClinePermissionMode) -> SessionPermissionModeState {
     SessionPermissionModeState {
-        current_mode_id: cline_permission_mode_wire_id(mode),
+        current_mode_id: permission_mode_wire_id(mode),
         available_modes: vec![SessionPermissionMode {
-            id: cline_permission_mode_wire_id(mode),
+            id: permission_mode_wire_id(mode),
             name: cline_permission_mode_name(mode).to_string(),
             description: Some(
                 "Cline ACP does not expose runtime permission switching.".to_string(),
@@ -138,14 +139,6 @@ fn cline_permission_mode_name(mode: ClinePermissionMode) -> &'static str {
         ClinePermissionMode::Default => "Default",
         ClinePermissionMode::Yolo => "YOLO",
     }
-}
-
-fn cline_permission_mode_wire_id(mode: ClinePermissionMode) -> String {
-    let value = serde_json::to_value(mode).expect("ClinePermissionMode serializes to a string");
-    let Value::String(id) = value else {
-        unreachable!("ClinePermissionMode serialized to non-string JSON");
-    };
-    id
 }
 
 #[cfg(test)]

@@ -19,6 +19,10 @@ use angel_engine::{
 };
 use serde_json::{Value, json};
 
+use crate::acp::permission_modes::{
+    acp_permission_mode_session_id, decode_permission_mode, permission_mode_effect,
+    permission_mode_wire_id,
+};
 use crate::acp::wire::AcpSessionUpdateKind;
 use crate::acp::{AcpAdapter, AcpAdapterCapabilities, acp_tool_history_entry};
 use crate::{InterpretedUserInput, ProtocolAdapter};
@@ -122,14 +126,14 @@ impl KimiAdapter {
         engine: &AngelEngine,
         effect: &ProtocolEffect,
     ) -> Result<Option<TransportOutput>, EngineError> {
-        let Some(mode) = kimi_permission_mode_effect(effect)? else {
+        let Some(mode) = permission_mode_effect::<KimiPermissionMode>(effect, "Kimi")? else {
             return Ok(None);
         };
         if !conversation_has_yolo_permission_mode(engine, effect) {
             return Ok(None);
         }
 
-        let mode_id = kimi_permission_mode_wire_id(mode);
+        let mode_id = permission_mode_wire_id(mode);
         if current_kimi_permission_mode(engine, effect)?.is_some_and(|current| current == mode) {
             let mut output = TransportOutput::default().log(
                 TransportLogKind::State,
@@ -141,14 +145,11 @@ impl KimiAdapter {
             return Ok(Some(output));
         }
 
-        let conversation_id =
-            effect
-                .conversation_id
-                .clone()
-                .ok_or_else(|| EngineError::InvalidCommand {
-                    message: "missing conversation id for Kimi permission mode update".to_string(),
-                })?;
-        let session_id = kimi_session_id(engine, effect)?;
+        let session_id = acp_permission_mode_session_id(engine, effect, "Kimi")?;
+        let conversation_id = effect
+            .conversation_id
+            .clone()
+            .expect("permission mode session id resolver validated conversation id");
         let method = "session/prompt";
         let params = json!({
             "sessionId": session_id,
@@ -456,7 +457,7 @@ fn conversation_has_yolo_permission_mode(engine: &AngelEngine, effect: &Protocol
         .and_then(|conversation_id| engine.conversations.get(conversation_id))
         .and_then(|conversation| conversation.permission_mode_state.as_ref())
         .is_some_and(|modes| {
-            let yolo_mode_id = kimi_permission_mode_wire_id(KimiPermissionMode::Yolo);
+            let yolo_mode_id = permission_mode_wire_id(KimiPermissionMode::Yolo);
             modes
                 .available_modes
                 .iter()
@@ -558,7 +559,7 @@ fn needs_kimi_permission_modes(
     let Some(conversation) = engine.conversations.get(conversation_id) else {
         return false;
     };
-    let yolo_mode_id = kimi_permission_mode_wire_id(KimiPermissionMode::Yolo);
+    let yolo_mode_id = permission_mode_wire_id(KimiPermissionMode::Yolo);
     match &conversation.permission_mode_state {
         Some(modes) => !modes
             .available_modes
@@ -616,7 +617,7 @@ fn kimi_permission_mode_state(
         .conversations
         .get(conversation_id)
         .and_then(current_permission_mode)
-        .unwrap_or_else(|| kimi_permission_mode_wire_id(startup_permission_mode));
+        .unwrap_or_else(|| permission_mode_wire_id(startup_permission_mode));
 
     kimi_permission_mode_state_for(current_mode_id)
 }
@@ -626,12 +627,12 @@ fn kimi_permission_mode_state_for(current_mode_id: String) -> SessionPermissionM
         current_mode_id,
         available_modes: vec![
             SessionPermissionMode {
-                id: kimi_permission_mode_wire_id(KimiPermissionMode::Default),
+                id: permission_mode_wire_id(KimiPermissionMode::Default),
                 name: "Default".to_string(),
                 description: Some("Prompt before protected Kimi actions.".to_string()),
             },
             SessionPermissionMode {
-                id: kimi_permission_mode_wire_id(KimiPermissionMode::Yolo),
+                id: permission_mode_wire_id(KimiPermissionMode::Yolo),
                 name: "YOLO".to_string(),
                 description: Some("Auto-approve Kimi actions via /yolo.".to_string()),
             },
@@ -682,44 +683,8 @@ fn current_kimi_permission_mode(
     conversation
         .permission_mode_state
         .as_ref()
-        .map(|modes| decode_kimi_permission_mode(&modes.current_mode_id))
+        .map(|modes| decode_permission_mode::<KimiPermissionMode>(&modes.current_mode_id, "Kimi"))
         .transpose()
-}
-
-fn kimi_permission_mode_effect(
-    effect: &ProtocolEffect,
-) -> Result<Option<KimiPermissionMode>, EngineError> {
-    let fields = &effect.payload.fields;
-    if fields.get("contextUpdate").map(String::as_str) != Some("permissionMode") {
-        return Ok(None);
-    }
-    fields
-        .get("permissionMode")
-        .map(|mode| decode_kimi_permission_mode(mode))
-        .transpose()
-}
-
-fn kimi_session_id(engine: &AngelEngine, effect: &ProtocolEffect) -> Result<String, EngineError> {
-    let conversation_id =
-        effect
-            .conversation_id
-            .as_ref()
-            .ok_or_else(|| EngineError::InvalidCommand {
-                message: "missing conversation id for Kimi permission mode update".to_string(),
-            })?;
-    let conversation = engine.conversations.get(conversation_id).ok_or_else(|| {
-        EngineError::ConversationNotFound {
-            conversation_id: conversation_id.to_string(),
-        }
-    })?;
-    conversation
-        .remote
-        .as_protocol_id()
-        .map(str::to_string)
-        .ok_or_else(|| EngineError::InvalidState {
-            expected: "Kimi ACP session id".to_string(),
-            actual: format!("{:?}", conversation.remote),
-        })
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, serde::Deserialize, serde::Serialize)]
@@ -739,23 +704,6 @@ fn kimi_startup_permission_mode(args: &[String]) -> KimiPermissionMode {
     } else {
         KimiPermissionMode::Default
     }
-}
-
-fn decode_kimi_permission_mode(value: &str) -> Result<KimiPermissionMode, EngineError> {
-    serde_json::from_value(Value::String(value.to_string())).map_err(|error| {
-        EngineError::InvalidState {
-            expected: "canonical Kimi permission mode id".to_string(),
-            actual: format!("{value:?}: {error}"),
-        }
-    })
-}
-
-fn kimi_permission_mode_wire_id(mode: KimiPermissionMode) -> String {
-    let value = serde_json::to_value(mode).expect("KimiPermissionMode serializes to a string");
-    let Value::String(id) = value else {
-        unreachable!("KimiPermissionMode serialized to non-string JSON");
-    };
-    id
 }
 
 fn kimi_plan_file_event(engine: &AngelEngine, event: &EngineEvent) -> Option<Vec<EngineEvent>> {
@@ -1173,7 +1121,7 @@ fn kimi_local_permission_mode_event(
     };
     Ok(Some(EngineEvent::SessionPermissionModesUpdated {
         conversation_id: conversation_id.clone(),
-        modes: kimi_permission_mode_state_for(kimi_permission_mode_wire_id(mode)),
+        modes: kimi_permission_mode_state_for(permission_mode_wire_id(mode)),
     }))
 }
 
