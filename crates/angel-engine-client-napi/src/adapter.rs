@@ -832,17 +832,23 @@ fn transport_output_to_json(output: TransportOutput) -> serde_json::Result<Value
 }
 
 fn transport_output_from_json(value: Value) -> EngineResult<TransportOutput> {
-    let messages = required_array_field(&value, "messages")?
+    let TransportOutputJson {
+        messages,
+        events,
+        completed_requests,
+        logs,
+    } = serde_json::from_value(value)
+        .map_err(|error| invalid_command(format!("invalid adapter output: {error}")))?;
+
+    let messages = messages
         .into_iter()
         .map(JsonRpcMessage::from_value)
         .collect::<EngineResult<Vec<_>>>()?;
-    let events = serde_json::from_value::<Vec<EngineEvent>>(required_field(&value, "events")?)
-        .map_err(|error| invalid_command(format!("invalid adapter events: {error}")))?;
-    let completed_requests = required_array_field(&value, "completedRequests")?
+    let completed_requests = completed_requests
         .into_iter()
         .map(|value| JsonRpcRequestId::from_json_value(&value))
         .collect();
-    let logs = required_array_field(&value, "logs")?
+    let logs = logs
         .into_iter()
         .map(transport_log_from_json)
         .collect::<EngineResult<Vec<_>>>()?;
@@ -854,18 +860,13 @@ fn transport_output_from_json(value: Value) -> EngineResult<TransportOutput> {
     })
 }
 
-fn required_field(value: &Value, field: &str) -> EngineResult<Value> {
-    value
-        .get(field)
-        .cloned()
-        .ok_or_else(|| invalid_command(format!("adapter output is missing {field}")))
-}
-
-fn required_array_field(value: &Value, field: &str) -> EngineResult<Vec<Value>> {
-    required_field(value, field)?
-        .as_array()
-        .cloned()
-        .ok_or_else(|| invalid_command(format!("adapter output {field} must be an array")))
+#[derive(serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct TransportOutputJson {
+    messages: Vec<Value>,
+    events: Vec<EngineEvent>,
+    completed_requests: Vec<Value>,
+    logs: Vec<Value>,
 }
 
 fn transport_log_json(log: &TransportLog) -> Value {

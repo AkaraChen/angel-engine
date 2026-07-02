@@ -4,7 +4,14 @@ use super::*;
 use agent_client_protocol_schema::{
     PermissionOption as AcpPermissionOption, PermissionOptionKind as AcpPermissionOptionKind,
 };
+use serde::Deserialize;
 use std::str::FromStr;
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct AcpPermissionRequestParams {
+    session_id: String,
+}
 
 impl AcpAdapter {
     pub(super) fn decode_request(
@@ -33,11 +40,11 @@ impl AcpAdapter {
                     ));
             }
         }
-        let session_id = required_string(
-            params,
-            "sessionId",
-            "ACP permission request missing sessionId",
-        )?;
+        let request = serde_json::from_value::<AcpPermissionRequestParams>(params.clone())
+            .map_err(|error| angel_engine::EngineError::InvalidCommand {
+                message: format!("invalid ACP permission request params (sessionId): {error}"),
+            })?;
+        let session_id = request.session_id.as_str();
         let Some(conversation_id) = find_acp_conversation(engine, session_id) else {
             return Ok(TransportOutput::default()
                 .message(JsonRpcMessage::error(
@@ -498,16 +505,4 @@ fn content_text(value: &Value) -> Option<String> {
         }
     }
     None
-}
-
-fn required_string<'a>(
-    params: &'a Value,
-    field: &str,
-    message: &str,
-) -> Result<&'a str, angel_engine::EngineError> {
-    params.get(field).and_then(Value::as_str).ok_or_else(|| {
-        angel_engine::EngineError::InvalidCommand {
-            message: message.to_string(),
-        }
-    })
 }

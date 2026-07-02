@@ -1,4 +1,5 @@
 use angel_engine::*;
+use serde::Deserialize;
 use serde_json::Value;
 
 use super::super::helpers::*;
@@ -6,24 +7,45 @@ use super::super::wire::AcpSessionUpdateKind;
 use super::super::{AcpAdapter, AcpToolStatus};
 use std::str::FromStr;
 
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct AcpSessionUpdateParams {
+    session_id: String,
+    update: Value,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct AcpSessionUpdateHead {
+    session_update: String,
+}
+
 pub(super) fn decode_acp_update(
     adapter: &AcpAdapter,
     engine: &AngelEngine,
     params: &Value,
 ) -> Result<TransportOutput, angel_engine::EngineError> {
-    let session_id = required_string(params, "sessionId", "ACP session/update missing sessionId")?;
+    let params =
+        serde_json::from_value::<AcpSessionUpdateParams>(params.clone()).map_err(|error| {
+            angel_engine::EngineError::InvalidCommand {
+                message: format!("invalid ACP session/update params (sessionId, update): {error}"),
+            }
+        })?;
+    let session_id = params.session_id.as_str();
     let Some(conversation_id) = find_acp_conversation_or_pending_start(engine, session_id) else {
         return Ok(TransportOutput::default().log(
             TransportLogKind::Receive,
             format!("update for unknown session {session_id}"),
         ));
     };
-    let update = required_object(params, "update", "ACP session/update missing update")?;
-    let update_type = required_string(
-        update,
-        "sessionUpdate",
-        "ACP session/update missing sessionUpdate",
-    )?;
+    let update = &params.update;
+    let update_head =
+        serde_json::from_value::<AcpSessionUpdateHead>(update.clone()).map_err(|error| {
+            angel_engine::EngineError::InvalidCommand {
+                message: format!("invalid ACP session/update payload (sessionUpdate): {error}"),
+            }
+        })?;
+    let update_type = update_head.session_update.as_str();
 
     let update_kind = AcpSessionUpdateKind::from_str(update_type).ok();
 
@@ -700,31 +722,6 @@ fn available_commands(update: &Value) -> Vec<AvailableCommand> {
                 .collect()
         })
         .unwrap_or_default()
-}
-
-fn required_string<'a>(
-    params: &'a Value,
-    field: &str,
-    message: &str,
-) -> Result<&'a str, angel_engine::EngineError> {
-    params.get(field).and_then(Value::as_str).ok_or_else(|| {
-        angel_engine::EngineError::InvalidCommand {
-            message: message.to_string(),
-        }
-    })
-}
-
-fn required_object<'a>(
-    params: &'a Value,
-    field: &str,
-    message: &str,
-) -> Result<&'a Value, angel_engine::EngineError> {
-    params
-        .get(field)
-        .filter(|value| value.is_object())
-        .ok_or_else(|| angel_engine::EngineError::InvalidCommand {
-            message: message.to_string(),
-        })
 }
 
 #[cfg(test)]
