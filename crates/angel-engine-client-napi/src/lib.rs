@@ -2,11 +2,11 @@ use std::sync::{Arc, Mutex, OnceLock};
 use std::time::{Duration, Instant};
 
 use angel_engine_client::{
-    AgentRuntime as EngineAgentRuntime, AngelClient as ProcessAngelClient,
-    AngelSession as EngineAngelSession, Client as EngineClient, ClientAnswer as EngineClientAnswer,
-    ClientCommandResult as EngineClientCommandResult, ClientOptions as EngineClientOptions,
-    DiscoveryRequest as EngineDiscoveryRequest, ElicitationResponse as EngineElicitationResponse,
-    HydrateRequest as EngineHydrateRequest, InspectRequest as EngineInspectRequest,
+    AngelClient as ProcessAngelClient, AngelSession as EngineAngelSession, Client as EngineClient,
+    ClientAnswer as EngineClientAnswer, ClientCommandResult as EngineClientCommandResult,
+    ClientOptions as EngineClientOptions, DiscoveryRequest as EngineDiscoveryRequest,
+    ElicitationResponse as EngineElicitationResponse, HydrateRequest as EngineHydrateRequest,
+    InspectRequest as EngineInspectRequest,
     ResumeConversationRequest as EngineResumeConversationRequest,
     RuntimeOptions as EngineRuntimeOptions,
     RuntimeOptionsOverrides as EngineRuntimeOptionsOverrides,
@@ -1369,33 +1369,9 @@ pub fn create_runtime_options(
                 Some(overrides) => overrides,
                 None => return Err(to_napi_error("createRuntimeOptions overrides are required")),
             };
-            to_json(engine_create_runtime_options(runtime_name, overrides))
-        },
-    )
-}
-
-#[napi(js_name = "normalizeRuntimeName", ts_return_type = "`${AgentRuntime}`")]
-pub fn normalize_runtime_name(runtime: Option<String>) -> String {
-    trace_napi_value(
-        "normalizeRuntimeName",
-        format!("runtime={}", runtime.as_deref().unwrap_or("<none>")),
-        || {
-            let runtime = match runtime
-                .as_deref()
-                .map(|s| s.trim().to_ascii_lowercase())
-                .as_deref()
-            {
-                Some("kimi") => EngineAgentRuntime::Kimi,
-                Some("opencode") => EngineAgentRuntime::Opencode,
-                Some("qoder") => EngineAgentRuntime::Qoder,
-                Some("copilot") => EngineAgentRuntime::Copilot,
-                Some("gemini") => EngineAgentRuntime::Gemini,
-                Some("cursor") => EngineAgentRuntime::Cursor,
-                Some("cline") => EngineAgentRuntime::Cline,
-                Some("custom") => EngineAgentRuntime::Custom,
-                _ => EngineAgentRuntime::Codex,
-            };
-            runtime.to_string()
+            let options =
+                engine_create_runtime_options(runtime_name, overrides).map_err(to_napi_error)?;
+            to_json(options)
         },
     )
 }

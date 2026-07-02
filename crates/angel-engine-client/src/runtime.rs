@@ -2,7 +2,8 @@ use serde::{Deserialize, Serialize};
 use strum::Display;
 
 use crate::{
-    ClientAuthOptions, ClientEnvironmentVariable, ClientIdentity, ClientOptions, ClientProtocol,
+    ClientAuthOptions, ClientEnvironmentVariable, ClientError, ClientIdentity, ClientOptions,
+    ClientProtocol, ClientResult,
 };
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize, Display)]
@@ -70,11 +71,12 @@ impl RuntimeOptions {
 pub fn create_runtime_options(
     runtime_name: Option<&str>,
     overrides: RuntimeOptionsOverrides,
-) -> RuntimeOptions {
+) -> ClientResult<RuntimeOptions> {
     let runtime = match runtime_name
         .map(|s| s.trim().to_ascii_lowercase())
         .as_deref()
     {
+        Some("codex") => AgentRuntime::Codex,
         Some("kimi") => AgentRuntime::Kimi,
         Some("opencode") => AgentRuntime::Opencode,
         Some("qoder") => AgentRuntime::Qoder,
@@ -83,7 +85,20 @@ pub fn create_runtime_options(
         Some("cursor") => AgentRuntime::Cursor,
         Some("cline") => AgentRuntime::Cline,
         Some("custom") => AgentRuntime::Custom,
-        _ => AgentRuntime::Codex,
+        None => {
+            return Err(ClientError::Engine(
+                angel_engine::EngineError::InvalidCommand {
+                    message: "missing agent runtime name".to_string(),
+                },
+            ));
+        }
+        Some(other) => {
+            return Err(ClientError::Engine(
+                angel_engine::EngineError::InvalidCommand {
+                    message: format!("unknown agent runtime name: {other}"),
+                },
+            ));
+        }
     };
     let command_override = overrides
         .command
@@ -244,11 +259,11 @@ pub fn create_runtime_options(
         client.process_label = Some(process_label);
     }
 
-    RuntimeOptions {
+    Ok(RuntimeOptions {
         client,
         runtime,
         default_reasoning_effort: overrides.default_reasoning_effort,
-    }
+    })
 }
 
 #[cfg(test)]
@@ -257,7 +272,8 @@ mod tests {
 
     #[test]
     fn kimi_runtime_uses_kimi_adapter_protocol() {
-        let options = create_runtime_options(Some("kimi"), RuntimeOptionsOverrides::default());
+        let options = create_runtime_options(Some("kimi"), RuntimeOptionsOverrides::default())
+            .expect("valid runtime");
 
         assert_eq!(options.runtime, AgentRuntime::Kimi);
         assert_eq!(options.client.protocol, ClientProtocol::Kimi);
@@ -267,7 +283,8 @@ mod tests {
 
     #[test]
     fn opencode_runtime_stays_on_generic_acp_adapter() {
-        let options = create_runtime_options(Some("opencode"), RuntimeOptionsOverrides::default());
+        let options = create_runtime_options(Some("opencode"), RuntimeOptionsOverrides::default())
+            .expect("valid runtime");
 
         assert_eq!(options.runtime, AgentRuntime::Opencode);
         assert_eq!(options.client.protocol, ClientProtocol::Acp);
@@ -277,7 +294,8 @@ mod tests {
 
     #[test]
     fn gemini_runtime_uses_gemini_adapter_protocol() {
-        let options = create_runtime_options(Some("gemini"), RuntimeOptionsOverrides::default());
+        let options = create_runtime_options(Some("gemini"), RuntimeOptionsOverrides::default())
+            .expect("valid runtime");
 
         assert_eq!(options.runtime, AgentRuntime::Gemini);
         assert_eq!(options.client.protocol, ClientProtocol::Gemini);
@@ -287,7 +305,8 @@ mod tests {
 
     #[test]
     fn qoder_runtime_uses_qoder_adapter_protocol() {
-        let options = create_runtime_options(Some("qoder"), RuntimeOptionsOverrides::default());
+        let options = create_runtime_options(Some("qoder"), RuntimeOptionsOverrides::default())
+            .expect("valid runtime");
 
         assert_eq!(options.runtime, AgentRuntime::Qoder);
         assert_eq!(options.client.protocol, ClientProtocol::Qoder);
@@ -297,7 +316,8 @@ mod tests {
 
     #[test]
     fn copilot_runtime_uses_copilot_adapter_protocol() {
-        let options = create_runtime_options(Some("copilot"), RuntimeOptionsOverrides::default());
+        let options = create_runtime_options(Some("copilot"), RuntimeOptionsOverrides::default())
+            .expect("valid runtime");
 
         assert_eq!(options.runtime, AgentRuntime::Copilot);
         assert_eq!(options.client.protocol, ClientProtocol::Copilot);
@@ -307,7 +327,8 @@ mod tests {
 
     #[test]
     fn cursor_runtime_uses_cursor_adapter_protocol() {
-        let options = create_runtime_options(Some("cursor"), RuntimeOptionsOverrides::default());
+        let options = create_runtime_options(Some("cursor"), RuntimeOptionsOverrides::default())
+            .expect("valid runtime");
 
         assert_eq!(options.runtime, AgentRuntime::Cursor);
         assert_eq!(options.client.protocol, ClientProtocol::Cursor);
@@ -317,7 +338,8 @@ mod tests {
 
     #[test]
     fn cline_runtime_uses_cline_adapter_protocol() {
-        let options = create_runtime_options(Some("cline"), RuntimeOptionsOverrides::default());
+        let options = create_runtime_options(Some("cline"), RuntimeOptionsOverrides::default())
+            .expect("valid runtime");
 
         assert_eq!(options.runtime, AgentRuntime::Cline);
         assert_eq!(options.client.protocol, ClientProtocol::Cline);
@@ -345,10 +367,42 @@ mod tests {
             "agent",
             "open-code",
         ] {
-            let options = create_runtime_options(Some(name), RuntimeOptionsOverrides::default());
-
-            assert_eq!(options.runtime, AgentRuntime::Codex);
+            assert!(
+                create_runtime_options(Some(name), RuntimeOptionsOverrides::default()).is_err()
+            );
         }
+    }
+
+    #[test]
+    fn explicit_codex_name_resolves_to_codex() {
+        let options = create_runtime_options(Some("codex"), RuntimeOptionsOverrides::default())
+            .expect("valid runtime");
+
+        assert_eq!(options.runtime, AgentRuntime::Codex);
+        assert_eq!(options.client.protocol, ClientProtocol::CodexAppServer);
+    }
+
+    #[test]
+    fn missing_runtime_name_is_an_error() {
+        let err = create_runtime_options(None, RuntimeOptionsOverrides::default())
+            .expect_err("missing runtime should fail");
+
+        assert!(err.to_string().contains("missing agent runtime name"));
+    }
+
+    #[test]
+    fn unknown_runtime_name_is_an_error() {
+        let err = create_runtime_options(
+            Some("definitely-not-a-runtime"),
+            RuntimeOptionsOverrides::default(),
+        )
+        .expect_err("unknown runtime should fail");
+
+        assert!(
+            err.to_string()
+                .contains("unknown agent runtime name: definitely-not-a-runtime")
+        );
+        assert!(create_runtime_options(Some(""), RuntimeOptionsOverrides::default()).is_err());
     }
 
     #[test]
@@ -368,7 +422,8 @@ mod tests {
                 }]),
                 ..RuntimeOptionsOverrides::default()
             },
-        );
+        )
+        .expect("valid runtime");
 
         assert_eq!(options.runtime, AgentRuntime::Custom);
         assert_eq!(options.client.protocol, ClientProtocol::Acp);

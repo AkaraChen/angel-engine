@@ -175,7 +175,7 @@ impl AngelSession {
         runtime_name: Option<&str>,
         overrides: RuntimeOptionsOverrides,
     ) -> ClientResult<Self> {
-        Self::new(create_runtime_options(runtime_name, overrides))
+        Self::new(create_runtime_options(runtime_name, overrides)?)
     }
 
     pub fn has_conversation(&self) -> bool {
