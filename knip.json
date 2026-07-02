@@ -1,5 +1,10 @@
 {
   "$schema": "https://unpkg.com/knip@5/schema.json",
+  "ignore": [
+    ".agents/**",
+    ".claude/**",
+    "crates/angel-engine-client-napi/index.js"
+  ],
   "workspaces": {
     "desktop": {
       "entry": [
@@ -20,9 +25,27 @@
       "ignoreDependencies": ["react-grab"],
       "project": ["**/*.{cjs,mts,ts,tsx}"]
     },
+    "apps/website": {},
+    "packages/claude-client": {
+      "entry": ["src/index.ts", "src/adapter.ts", "src/context.ts"],
+      "project": ["src/**/*.ts"]
+    },
     "packages/js-client": {
       "entry": [
-        "src/**/*.ts",
+        "src/index.ts",
+        "src/assistant-ui.ts",
+        "src/mock.ts",
+        "src/projection.ts",
+        "src/utils/index.ts",
+        "src/utils/attachments.ts",
+        "src/utils/client-update.ts",
+        "src/utils/core.ts",
+        "src/utils/elicitations.ts",
+        "src/utils/errors.ts",
+        "src/utils/media.ts",
+        "src/utils/messages.ts",
+        "src/utils/plans.ts",
+        "src/utils/tools.ts",
         "playground/index.html",
         "playground/src/main.tsx",
         "playground/vite.config.ts"

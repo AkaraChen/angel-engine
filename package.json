@@ -4,8 +4,9 @@
   "packageManager": "pnpm@11.1.2",
   "scripts": {
     "build": "turbo run build",
-    "package": "turbo run package",
+    "knip": "knip",
     "make": "turbo run make",
+    "package": "turbo run package",
     "lint": "turbo run lint",
     "test": "turbo run test",
     "typecheck": "turbo run typecheck",
@@ -27,6 +28,7 @@
   },
   "devDependencies": {
     "husky": "^9.1.7",
+    "knip": "6.23.0",
     "lint-staged": "^17.0.4",
     "prettier": "^3.8.3",
     "turbo": "^2.9.14"
