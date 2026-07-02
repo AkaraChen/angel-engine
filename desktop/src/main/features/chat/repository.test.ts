@@ -1,43 +1,64 @@
-import { describe, expect, test, vi } from "vitest";
+import type { CustomAgent } from "../../../shared/agents";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { normalizeChatRuntime } from "./repository";
 
+afterEach(() => {
+  vi.unstubAllEnvs();
+});
+
 describe("normalizeChatRuntime", () => {
-  test("rejects unknown runtime ids", () => {
+  it("rejects missing runtime ids", () => {
+    vi.stubEnv("ANGEL_ENGINE_RUNTIME", undefined);
+
+    expect(() => normalizeChatRuntime(undefined)).toThrow(
+      "Chat runtime is required.",
+    );
+  });
+
+  it("rejects unknown runtime ids", () => {
     expect(() => normalizeChatRuntime("bad-runtime")).toThrow(
       "Unknown chat runtime.",
     );
   });
 
-  test("rejects removed cursor runtime ids", () => {
+  it("rejects unknown runtime ids from the environment", () => {
+    vi.stubEnv("ANGEL_ENGINE_RUNTIME", "bad-runtime");
+
+    expect(() => normalizeChatRuntime(undefined)).toThrow(
+      "Unknown chat runtime.",
+    );
+  });
+
+  it("rejects removed cursor runtime ids", () => {
     expect(() => normalizeChatRuntime("cursor")).toThrow(
       "Unknown chat runtime.",
     );
   });
 
-  test("accepts builtin runtime ids", () => {
+  it("accepts builtin runtime ids", () => {
     expect(normalizeChatRuntime("codex")).toBe("codex");
   });
 
-  test("accepts existing custom runtime ids", () => {
+  it("accepts existing custom runtime ids", () => {
     expect(
       normalizeChatRuntime(
         "custom:agent",
-        vi.fn(() => true),
+        vi.fn(() => customAgent("custom:agent")),
       ),
     ).toBe("custom:agent");
   });
 
-  test("rejects missing custom runtime ids", () => {
+  it("rejects missing custom runtime ids", () => {
     expect(() =>
       normalizeChatRuntime(
         "custom:missing",
-        vi.fn(() => false),
+        vi.fn(() => null),
       ),
     ).toThrow("Unknown chat runtime.");
   });
 
-  test("set-runtime validation happens before persistence", () => {
+  it("set-runtime validation happens before persistence", () => {
     const runtime = "codex";
 
     expect(() => normalizeChatRuntime("bad-runtime")).toThrow(
@@ -46,3 +67,17 @@ describe("normalizeChatRuntime", () => {
     expect(runtime).toBe("codex");
   });
 });
+
+function customAgent(id: CustomAgent["id"]): CustomAgent {
+  return {
+    args: [],
+    autoAuthenticate: false,
+    command: "agent",
+    createdAt: "2026-01-01T00:00:00.000Z",
+    environment: [],
+    id,
+    label: "Agent",
+    needAuth: false,
+    updatedAt: "2026-01-01T00:00:00.000Z",
+  };
+}

@@ -1,4 +1,4 @@
-import type { AgentRuntime } from "../../../shared/agents";
+import type { AgentRuntime, CustomAgent } from "../../../shared/agents";
 import type { Chat, ChatCreateInput } from "../../../shared/chat";
 import { randomUUID } from "node:crypto";
 import fs from "node:fs";
@@ -201,7 +201,7 @@ function uniqueChatIds(ids: string[]) {
   return uniqueIds;
 }
 
-type CustomAgentLookup = (runtime: string) => unknown;
+type CustomAgentLookup = (runtime: string) => CustomAgent | null;
 
 export function normalizeChatRuntime(
   runtime: string | undefined,
@@ -209,15 +209,20 @@ export function normalizeChatRuntime(
 ): AgentRuntime {
   const candidate = is.nonEmptyString(runtime)
     ? runtime
-    : isAgentRuntime(process.env.ANGEL_ENGINE_RUNTIME)
-      ? process.env.ANGEL_ENGINE_RUNTIME
-      : "codex";
+    : process.env.ANGEL_ENGINE_RUNTIME;
+
+  if (!is.nonEmptyString(candidate)) {
+    throw new Error("Chat runtime is required.");
+  }
 
   if (!isAgentRuntime(candidate)) {
     throw new Error("Unknown chat runtime.");
   }
 
-  if (isCustomAgentRuntime(candidate) && !customAgentLookup(candidate)) {
+  if (
+    isCustomAgentRuntime(candidate) &&
+    customAgentLookup(candidate) === null
+  ) {
     throw new Error("Unknown chat runtime.");
   }
 
