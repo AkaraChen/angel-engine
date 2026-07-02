@@ -800,8 +800,7 @@ impl TurnCollector {
                         action_id.clone(),
                         content.clone(),
                     );
-                    let message_part =
-                        DisplayMessagePartSnapshot::tool(action_delta_part(action, &content));
+                    let message_part = DisplayMessagePartSnapshot::tool(action);
                     events.push_back(TurnRunEvent::ActionOutputDelta {
                         action_id,
                         content,
@@ -954,27 +953,23 @@ impl TurnCollector {
         action_id: String,
         content: ActionOutputSnapshot,
     ) -> DisplayToolActionSnapshot {
-        match self.streaming_actions.entry(action_id.clone()) {
-            Entry::Vacant(entry) => entry
-                .insert(DisplayToolActionSnapshot::from_output_delta(
-                    turn_id, action_id, content,
-                ))
-                .clone(),
-            Entry::Occupied(mut entry) => {
-                let action = entry.get_mut();
+        let action = match self.streaming_actions.entry(action_id.clone()) {
+            Entry::Vacant(entry) => entry.insert(DisplayToolActionSnapshot::from_output_delta(
+                turn_id,
+                action_id,
+                content.clone(),
+            )),
+            Entry::Occupied(entry) => {
+                let action = entry.into_mut();
                 if !is_terminal_action_phase_label(&action.phase) {
                     action.phase = "streamingResult".to_string();
                 }
-                action.output.push(content);
-                action.output_text = action
-                    .output
-                    .iter()
-                    .map(|item| item.text.as_str())
-                    .collect::<Vec<_>>()
-                    .join("");
-                action.clone()
+                action.output_text.push_str(&content.text);
+                action.output.push(content.clone());
+                action
             }
-        }
+        };
+        action.single_output_delta(content)
     }
 
     fn upsert_streaming_action_metadata(&mut self, action: ActionSnapshot) {
@@ -1017,15 +1012,6 @@ fn action_output_delta_ids(deltas: &[ClientStreamDelta]) -> HashSet<String> {
             _ => None,
         })
         .collect()
-}
-
-fn action_delta_part(
-    mut action: DisplayToolActionSnapshot,
-    content: &ActionOutputSnapshot,
-) -> DisplayToolActionSnapshot {
-    action.output = vec![content.clone()];
-    action.output_text = content.text.clone();
-    action
 }
 
 fn is_terminal_action_phase_label(phase: &str) -> bool {

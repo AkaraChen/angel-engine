@@ -487,6 +487,22 @@ impl DisplayToolActionSnapshot {
         }
     }
 
+    pub(crate) fn single_output_delta(&self, content: ActionOutputSnapshot) -> Self {
+        Self {
+            id: self.id.clone(),
+            turn_id: self.turn_id.clone(),
+            elicitation_id: self.elicitation_id.clone(),
+            kind: self.kind.clone(),
+            phase: self.phase.clone(),
+            title: self.title.clone(),
+            input_summary: self.input_summary.clone(),
+            raw_input: self.raw_input.clone(),
+            output_text: content.text.clone(),
+            output: vec![content],
+            error: self.error.clone(),
+        }
+    }
+
     pub(crate) fn from_elicitation(elicitation: &ElicitationSnapshot) -> Self {
         let input_summary = elicitation.body.clone().or_else(|| {
             let questions = elicitation
