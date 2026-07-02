@@ -129,7 +129,6 @@ already-decoded `ClientUpdate` objects through `nextUpdate()`, including
 hosts that intentionally own runtime process IO themselves.
 
 ```sh
-cd crates/angel-engine-client-napi
-bun install
-bun run build:debug
+pnpm install
+pnpm napi:build:debug
 ```

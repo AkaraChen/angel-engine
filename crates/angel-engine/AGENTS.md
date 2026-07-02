@@ -32,5 +32,8 @@ Scope: `crates/angel-engine/` only. Global rules remain in root `AGENTS.md`.
 
 ```sh
 cargo test -p angel-engine
-cargo test -p angel-engine --test process_smoke -- --ignored
+cargo test -p angel-provider --test process_smoke -- --ignored
 ```
+
+The process smoke test lives in `angel-provider` because it exercises provider
+adapters against external CLIs.

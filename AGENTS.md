@@ -26,14 +26,19 @@ protocol-neutral engine concept by an adapter.
 
 - `crates/angel-provider/`
   - Rust provider adapter crate over `angel-engine`.
-  - Owns the `ProtocolAdapter` interface plus built-in Codex and ACP
-    implementations.
+  - Owns the `ProtocolAdapter` interface plus built-in adapters: Codex, ACP,
+    and the ACP-variant wrappers (kimi, gemini, copilot, qoder, cline, and
+    cursor behind the `cursor-history` feature).
   - Adapter folders:
     - `src/codex/` owns all Codex app-server wire format, hydrate replay
       normalization, request/response/notification decoding, model catalog
       parsing, and Codex-specific command encoding.
     - `src/acp/` owns all ACP wire format, session update decoding, config
       option parsing, tool call mapping, and ACP-specific command encoding.
+    - `src/kimi/`, `src/gemini/`, `src/copilot.rs`, `src/qoder.rs`,
+      `src/cline.rs`, and `src/cursor.rs` own the per-runtime quirk
+      normalization for their ACP-variant CLIs. Runtime-specific wire behavior
+      for these providers belongs here, not in shared state.
 
 - `crates/angel-engine-client/`
   - Rust client API over `angel-engine`.
@@ -60,13 +65,15 @@ protocol-neutral engine concept by an adapter.
   - Uses `@angel-engine/client-napi` as its backend API.
   - `src/main/` owns Electron main-process services: IPC routing, chat metadata
     persistence, session lifetime, abort handling, and elicitation handoff.
-  - `src/main/chat/projection.ts` may map normalized NAPI snapshots/events into
-    desktop shared chat types. It must not infer Codex/ACP semantics from raw
-    runtime payloads.
+  - `desktop/src/main/features/chat/` owns main-process chat services.
+    Snapshot/event projection into shared chat types lives in
+    `packages/js-client/src/projection.ts`. It must not infer Codex/ACP
+    semantics from raw runtime payloads.
   - `src/shared/` owns TypeScript types shared by main and renderer.
-  - `src/lib/engine-model-adapter.ts` owns assistant-ui runtime adaptation and
-    renderer-side message accumulation.
-  - `src/pages/`, `src/chat/`, `src/components/`, `src/app/` own UI only.
+  - `src/renderer/features/chat/runtime/engine-model-adapter.ts` owns
+    assistant-ui runtime adaptation and renderer-side message accumulation.
+  - `src/renderer/app/`, `src/renderer/features/<feature>/`,
+    `src/renderer/components/`, and `src/renderer/platform/` own UI only.
     Renderer state may track draft user selections, but available models,
     reasoning levels, modes, and current runtime settings should come from the
     engine/client snapshots.
@@ -169,7 +176,7 @@ protocol-neutral engine concept by an adapter.
 Common gates:
 
 ```sh
-cargo test -p angel-engine -p angel-engine-client
+cargo test --workspace
 cargo fmt --all --check
 npm --prefix crates/angel-engine-client-napi run build
 npm --prefix desktop run typecheck
