@@ -129,19 +129,40 @@ impl KimiAdapter {
             return Ok(None);
         }
 
+        let mode_id = kimi_permission_mode_wire_id(mode);
+        if current_kimi_permission_mode(engine, effect)?.is_some_and(|current| current == mode) {
+            let mut output = TransportOutput::default().log(
+                TransportLogKind::State,
+                format!("Kimi permission mode already {mode_id}; no /yolo toggle sent"),
+            );
+            if let Some(request_id) = &effect.request_id {
+                output.completed_requests.push(request_id.clone());
+            }
+            return Ok(Some(output));
+        }
+
+        let conversation_id =
+            effect
+                .conversation_id
+                .clone()
+                .ok_or_else(|| EngineError::InvalidCommand {
+                    message: "missing conversation id for Kimi permission mode update".to_string(),
+                })?;
         let session_id = kimi_session_id(engine, effect)?;
         let method = "session/prompt";
         let params = json!({
             "sessionId": session_id,
             "prompt": [{"type": "text", "text": "/yolo"}],
         });
-        let mut output = TransportOutput::default().log(
-            TransportLogKind::Send,
-            format!(
-                "Kimi permission mode set via /yolo toggle: {}",
-                kimi_permission_mode_wire_id(mode)
-            ),
-        );
+        let mut output = TransportOutput::default()
+            .event(EngineEvent::SessionPermissionModeChanged {
+                conversation_id,
+                mode_id: mode_id.clone(),
+            })
+            .log(
+                TransportLogKind::Send,
+                format!("Kimi permission mode set via /yolo toggle: {mode_id}"),
+            );
         if let Some(request_id) = &effect.request_id {
             output.messages.push(JsonRpcMessage::request(
                 request_id.clone(),
@@ -161,8 +182,8 @@ impl KimiAdapter {
         engine: &AngelEngine,
         message: &JsonRpcMessage,
         mut output: TransportOutput,
-    ) -> TransportOutput {
-        self.append_kimi_local_hydration(engine, message, &mut output);
+    ) -> Result<TransportOutput, EngineError> {
+        self.append_kimi_local_hydration(engine, message, &mut output)?;
 
         let mut plan_command_conversations = Vec::new();
         let mut yolo_command_conversations = Vec::new();
@@ -287,7 +308,7 @@ impl KimiAdapter {
                 "Kimi plan file write projected as plan update",
             ));
         }
-        output
+        Ok(output)
     }
 
     fn append_kimi_local_hydration(
@@ -295,24 +316,24 @@ impl KimiAdapter {
         engine: &AngelEngine,
         message: &JsonRpcMessage,
         output: &mut TransportOutput,
-    ) {
+    ) -> Result<(), EngineError> {
         if output
             .events
             .iter()
             .any(|event| matches!(event, EngineEvent::HistoryReplayChunk { .. }))
         {
-            return;
+            return Ok(());
         }
 
         let Some((conversation_id, remote_id)) = kimi_hydrate_response(engine, message) else {
-            return;
+            return Ok(());
         };
         let Some(context_path) = kimi_session_context_path(remote_id) else {
             output.logs.push(angel_engine::TransportLog::new(
                 TransportLogKind::State,
                 format!("Kimi local history not found for session {remote_id}"),
             ));
-            return;
+            return Ok(());
         };
 
         let history = fs::read_to_string(&context_path)
@@ -328,9 +349,15 @@ impl KimiAdapter {
             event_count += 1;
         }
 
-        if let Some(state) = kimi_session_state(&context_path) {
+        if let Some(state) = kimi_session_state(&context_path)? {
             if let Some(mode_event) = kimi_local_mode_event(&conversation_id, &state) {
                 output.events.push(mode_event);
+                event_count += 1;
+            }
+            if let Some(permission_mode_event) =
+                kimi_local_permission_mode_event(&conversation_id, &state)?
+            {
+                output.events.push(permission_mode_event);
                 event_count += 1;
             }
             if let Some(plan_entry) = kimi_local_plan_entry(&context_path, &state) {
@@ -349,6 +376,7 @@ impl KimiAdapter {
                 context_path.display()
             ),
         ));
+        Ok(())
     }
 }
 
@@ -389,7 +417,7 @@ impl ProtocolAdapter for KimiAdapter {
         message: &JsonRpcMessage,
     ) -> Result<TransportOutput, EngineError> {
         let output = self.acp.decode_message(engine, message)?;
-        Ok(self.normalize_kimi_output(engine, message, output))
+        self.normalize_kimi_output(engine, message, output)
     }
 
     fn model_catalog_from_runtime_debug(
@@ -639,6 +667,23 @@ fn current_permission_mode(conversation: &ConversationState) -> Option<String> {
                 .as_ref()
                 .map(|modes| modes.current_mode_id.clone())
         })
+}
+
+fn current_kimi_permission_mode(
+    engine: &AngelEngine,
+    effect: &ProtocolEffect,
+) -> Result<Option<KimiPermissionMode>, EngineError> {
+    let Some(conversation_id) = &effect.conversation_id else {
+        return Ok(None);
+    };
+    let Some(conversation) = engine.conversations.get(conversation_id) else {
+        return Ok(None);
+    };
+    conversation
+        .permission_mode_state
+        .as_ref()
+        .map(|modes| decode_kimi_permission_mode(&modes.current_mode_id))
+        .transpose()
 }
 
 fn kimi_permission_mode_effect(
@@ -1069,10 +1114,27 @@ fn kimi_tool_kind(name: &str) -> Option<&'static str> {
     }
 }
 
-fn kimi_session_state(context_path: &Path) -> Option<Value> {
-    let state_path = context_path.parent()?.join("state.json");
-    let state = fs::read_to_string(state_path).ok()?;
-    serde_json::from_str(&state).ok()
+fn kimi_session_state(context_path: &Path) -> Result<Option<Value>, EngineError> {
+    let Some(parent) = context_path.parent() else {
+        return Ok(None);
+    };
+    let state_path = parent.join("state.json");
+    let state = match fs::read_to_string(&state_path) {
+        Ok(state) => state,
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(None),
+        Err(error) => {
+            return Err(EngineError::InvalidState {
+                expected: "readable Kimi state.json".to_string(),
+                actual: format!("{}: {error}", state_path.display()),
+            });
+        }
+    };
+    serde_json::from_str(&state)
+        .map(Some)
+        .map_err(|error| EngineError::InvalidState {
+            expected: "valid Kimi state.json".to_string(),
+            actual: format!("{}: {error}", state_path.display()),
+        })
 }
 
 fn kimi_local_mode_event(conversation_id: &ConversationId, state: &Value) -> Option<EngineEvent> {
@@ -1085,6 +1147,34 @@ fn kimi_local_mode_event(conversation_id: &ConversationId, state: &Value) -> Opt
             "default".to_string()
         }),
     })
+}
+
+fn kimi_local_permission_mode_event(
+    conversation_id: &ConversationId,
+    state: &Value,
+) -> Result<Option<EngineEvent>, EngineError> {
+    let Some(approval) = state.get("approval") else {
+        return Ok(None);
+    };
+    let Some(yolo) = approval.get("yolo") else {
+        return Ok(None);
+    };
+    let Some(yolo) = yolo.as_bool() else {
+        return Err(EngineError::InvalidState {
+            expected: "Kimi state approval.yolo boolean".to_string(),
+            actual: yolo.to_string(),
+        });
+    };
+
+    let mode = if yolo {
+        KimiPermissionMode::Yolo
+    } else {
+        KimiPermissionMode::Default
+    };
+    Ok(Some(EngineEvent::SessionPermissionModesUpdated {
+        conversation_id: conversation_id.clone(),
+        modes: kimi_permission_mode_state_for(kimi_permission_mode_wire_id(mode)),
+    }))
 }
 
 fn kimi_local_plan_entry(context_path: &Path, state: &Value) -> Option<HistoryReplayEntry> {
@@ -1326,6 +1416,92 @@ mod tests {
                     && params["sessionId"] == json!("sess")
                     && params["prompt"] == json!([{"type": "text", "text": "/yolo"}])
         ));
+        assert!(output.events.iter().any(|event| {
+            matches!(
+                event,
+                EngineEvent::SessionPermissionModeChanged { mode_id, .. } if mode_id == "yolo"
+            )
+        }));
+    }
+
+    #[test]
+    fn set_default_permission_mode_encodes_kimi_yolo_prompt_when_current_is_yolo() {
+        let adapter = KimiAdapter::standard();
+        let (mut engine, conversation_id) = ready_engine(&adapter);
+        engine
+            .apply_event(EngineEvent::SessionPermissionModesUpdated {
+                conversation_id: conversation_id.clone(),
+                modes: kimi_permission_mode_state_for("yolo".to_string()),
+            })
+            .expect("permission modes");
+        let effect = ProtocolEffect::new(ProtocolFlavor::Acp, ProtocolMethod::UpdateContext)
+            .conversation_id(conversation_id)
+            .field("contextUpdate", "permissionMode")
+            .field("permissionMode", "default");
+
+        let output = adapter
+            .encode_effect(&engine, &effect, &TransportOptions::default())
+            .expect("encode permission mode");
+        assert!(matches!(
+            output.messages.first(),
+            Some(JsonRpcMessage::Notification { method, params })
+                if method == "session/prompt"
+                    && params["sessionId"] == json!("sess")
+                    && params["prompt"] == json!([{"type": "text", "text": "/yolo"}])
+        ));
+        assert_eq!(output.messages.len(), 1);
+        assert!(output.events.iter().any(|event| {
+            matches!(
+                event,
+                EngineEvent::SessionPermissionModeChanged { mode_id, .. } if mode_id == "default"
+            )
+        }));
+    }
+
+    #[test]
+    fn set_same_kimi_permission_mode_does_not_send_yolo_toggle() {
+        let adapter = KimiAdapter::standard();
+        let (mut engine, conversation_id) = ready_engine(&adapter);
+        engine
+            .apply_event(EngineEvent::SessionPermissionModesUpdated {
+                conversation_id: conversation_id.clone(),
+                modes: kimi_permission_mode_state_for("yolo".to_string()),
+            })
+            .expect("permission modes");
+        let request_id = angel_engine::JsonRpcRequestId::new("ctx");
+        let effect = ProtocolEffect::new(ProtocolFlavor::Acp, ProtocolMethod::UpdateContext)
+            .request_id(request_id.clone())
+            .conversation_id(conversation_id)
+            .field("contextUpdate", "permissionMode")
+            .field("permissionMode", "yolo");
+
+        let output = adapter
+            .encode_effect(&engine, &effect, &TransportOptions::default())
+            .expect("encode permission mode");
+
+        assert!(output.messages.is_empty());
+        assert!(output.events.is_empty());
+        assert!(output.completed_requests.contains(&request_id));
+    }
+
+    #[test]
+    fn unavailable_kimi_yolo_permission_mode_does_not_send_prompt() {
+        let adapter = KimiAdapter::standard();
+        let (engine, conversation_id) = ready_engine(&adapter);
+        let request_id = angel_engine::JsonRpcRequestId::new("ctx");
+        let effect = ProtocolEffect::new(ProtocolFlavor::Acp, ProtocolMethod::UpdateContext)
+            .request_id(request_id.clone())
+            .conversation_id(conversation_id)
+            .field("contextUpdate", "permissionMode")
+            .field("permissionMode", "yolo");
+
+        let output = adapter
+            .encode_effect(&engine, &effect, &TransportOptions::default())
+            .expect("encode permission mode");
+
+        assert!(output.messages.is_empty());
+        assert!(output.events.is_empty());
+        assert!(output.completed_requests.contains(&request_id));
     }
 
     #[test]
@@ -1651,7 +1827,9 @@ mod tests {
         let context_path = fixture_context_path();
         let plan_path = fixture_path("share/plans/fixture-plan.md");
 
-        let state = kimi_session_state(&context_path).expect("state");
+        let state = kimi_session_state(&context_path)
+            .expect("read state")
+            .expect("state");
         let event = kimi_local_mode_event(&ConversationId::new("conv"), &state).expect("mode");
         assert!(matches!(
             event,
@@ -1669,5 +1847,26 @@ mod tests {
         assert_eq!(plan["type"], json!("plan"));
         assert_eq!(plan["markdown"], json!("# Plan\n\nDo it.\n"));
         assert_eq!(plan["path"], json!(plan_path.to_string_lossy()));
+    }
+
+    #[test]
+    fn kimi_local_state_projects_yolo_permission_mode() {
+        let state = json!({
+            "approval": {
+                "yolo": true
+            }
+        });
+
+        let event = kimi_local_permission_mode_event(&ConversationId::new("conv"), &state)
+            .expect("permission state")
+            .expect("permission mode");
+
+        assert!(matches!(
+            event,
+            EngineEvent::SessionPermissionModesUpdated { modes, .. }
+                if modes.current_mode_id == "yolo"
+                    && modes.available_modes.iter().any(|mode| mode.id == "default")
+                    && modes.available_modes.iter().any(|mode| mode.id == "yolo")
+        ));
     }
 }
