@@ -157,10 +157,14 @@ mod tests {
     };
     use serde_json::json;
 
-    #[test]
-    fn cline_yolo_startup_flag_projects_single_permission_mode() {
-        let adapter =
-            ClineAdapter::standard_with_args(&["--yolo".to_string(), "--acp".to_string()]);
+    fn permission_modes_for_args(
+        args: &[&str],
+    ) -> angel_engine::settings::AvailablePermissionModeState {
+        let args = args
+            .iter()
+            .map(|arg| (*arg).to_string())
+            .collect::<Vec<_>>();
+        let adapter = ClineAdapter::standard_with_args(&args);
         let mut engine = AngelEngine::with_available_runtime(
             ProtocolFlavor::Acp,
             angel_engine::RuntimeCapabilities::new("Cline CLI"),
@@ -202,9 +206,14 @@ mod tests {
             .expect("decode session");
         apply_transport_output(&mut engine, &output).expect("apply output");
 
-        let permission_modes = engine
+        engine
             .permission_modes(conversation_id)
-            .expect("permission modes");
+            .expect("permission modes")
+    }
+
+    #[test]
+    fn cline_yolo_startup_flag_projects_single_permission_mode() {
+        let permission_modes = permission_modes_for_args(&["--yolo", "--acp"]);
         assert_eq!(permission_modes.current_mode_id.as_deref(), Some("yolo"));
         assert_eq!(
             permission_modes
@@ -213,6 +222,34 @@ mod tests {
                 .map(|mode| mode.id.as_str())
                 .collect::<Vec<_>>(),
             vec!["yolo"]
+        );
+    }
+
+    #[test]
+    fn cline_default_startup_projects_single_permission_mode() {
+        let permission_modes = permission_modes_for_args(&["--acp"]);
+        assert_eq!(permission_modes.current_mode_id.as_deref(), Some("default"));
+        assert_eq!(
+            permission_modes
+                .available_modes
+                .iter()
+                .map(|mode| (mode.id.as_str(), mode.name.as_str()))
+                .collect::<Vec<_>>(),
+            vec![("default", "Default")]
+        );
+    }
+
+    #[test]
+    fn cline_yolo_short_flag_projects_single_permission_mode() {
+        let permission_modes = permission_modes_for_args(&["-y"]);
+        assert_eq!(permission_modes.current_mode_id.as_deref(), Some("yolo"));
+        assert_eq!(
+            permission_modes
+                .available_modes
+                .iter()
+                .map(|mode| (mode.id.as_str(), mode.name.as_str()))
+                .collect::<Vec<_>>(),
+            vec![("yolo", "YOLO")]
         );
     }
 }
