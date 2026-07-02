@@ -8,6 +8,8 @@ extraResources:
   - from: build/app-update.yml
     to: app-update.yml
 artifactBuildCompleted: scripts/notarize-dmg-artifact.cjs
+# Signs/notarizes dmg + zip artifacts built from the already-.app-signed
+# prepackaged app; forge osxSign/osxNotarize signs the .app.
 mac:
   category: public.app-category.developer-tools
   notarize: true

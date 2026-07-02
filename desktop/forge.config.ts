@@ -2,11 +2,6 @@ import type { ForgeConfig } from "@electron-forge/shared-types";
 import fs from "node:fs";
 import { createRequire } from "node:module";
 import path from "node:path";
-import { MakerDeb } from "@electron-forge/maker-deb";
-import { MakerDMG } from "@electron-forge/maker-dmg";
-import { MakerRpm } from "@electron-forge/maker-rpm";
-import { MakerSquirrel } from "@electron-forge/maker-squirrel";
-import { MakerZIP } from "@electron-forge/maker-zip";
 import { AutoUnpackNativesPlugin } from "@electron-forge/plugin-auto-unpack-natives";
 import { FusesPlugin } from "@electron-forge/plugin-fuses";
 import { VitePlugin } from "@electron-forge/plugin-vite";
@@ -175,6 +170,8 @@ const config: ForgeConfig = {
     },
     extraResource: [path.join(projectRoot, "build", "app-update.yml")],
     icon: appIconPath,
+    // Installers are produced by electron-builder from the prepackaged app.
+    // Forge is used for dev start and package-app.cjs, including .app signing.
     osxSign:
       process.platform === "darwin"
         ? {
@@ -204,20 +201,6 @@ const config: ForgeConfig = {
     osxNotarize: macNotarize,
   },
   rebuildConfig: {},
-  makers: [
-    new MakerSquirrel({}),
-    new MakerDMG(
-      {
-        format: "ULFO",
-        icon: `${appIconPath}.icns`,
-        iconSize: 96,
-      },
-      ["darwin"],
-    ),
-    new MakerZIP({}, ["darwin"]),
-    new MakerRpm({}),
-    new MakerDeb({}),
-  ],
   plugins: [
     new VitePlugin({
       // `build` can specify multiple entry builds, which can be Main process, Preload scripts, Worker process, etc.
