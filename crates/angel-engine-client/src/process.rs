@@ -81,6 +81,10 @@ impl AngelClient {
         self.core.snapshot()
     }
 
+    pub fn turn_is_terminal(&self, conversation_id: &str, turn_id: &str) -> bool {
+        self.core.turn_is_terminal(conversation_id, turn_id)
+    }
+
     pub fn initialize(&mut self) -> ClientResult<ClientUpdate> {
         let result = self.core.initialize()?;
         let mut update = self.send_command_result(result)?;

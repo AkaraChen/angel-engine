@@ -299,15 +299,7 @@ impl AngelClient {
     pub fn turn_is_terminal(&self, conversation_id: String, turn_id: String) -> Result<bool> {
         let detail = format!("conversation_id={conversation_id} turn_id={turn_id}");
         self.with_client("AngelClient.turnIsTerminal", detail, |client| {
-            conversation_state_from_snapshot(client.snapshot(), &conversation_id)
-                .and_then(|conversation| {
-                    conversation
-                        .turns
-                        .into_iter()
-                        .find(|turn| turn.id == turn_id)
-                })
-                .map(|turn| turn.is_terminal)
-                .unwrap_or(false)
+            client.turn_is_terminal(&conversation_id, &turn_id)
         })
     }
 

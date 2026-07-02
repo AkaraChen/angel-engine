@@ -494,15 +494,7 @@ impl AngelSession {
     }
 
     fn client_turn_is_terminal(&self, conversation_id: &str, turn_id: &str) -> bool {
-        self.thread_state_by_id(conversation_id)
-            .and_then(|conversation| {
-                conversation
-                    .turns
-                    .into_iter()
-                    .find(|turn| turn.id == turn_id)
-            })
-            .map(|turn| turn.is_terminal)
-            .unwrap_or(false)
+        self.client.turn_is_terminal(conversation_id, turn_id)
     }
 
     fn finish_active_turn(&mut self) -> ClientResult<Option<TurnRunEvent>> {
