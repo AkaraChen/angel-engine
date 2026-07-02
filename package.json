@@ -7,6 +7,7 @@
     "package": "turbo run package",
     "make": "turbo run make",
     "lint": "turbo run lint",
+    "test": "turbo run test",
     "typecheck": "turbo run typecheck",
     "prepare": "husky",
     "precommit": "lint-staged --config lint-staged.config.mjs --relative",
