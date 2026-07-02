@@ -724,8 +724,7 @@ class DesktopAngelSession {
           throwIfAborted(request.signal);
         }
 
-        const event = await this.session.nextTurnEvent(50);
-        events = event ? [event] : [];
+        events = await this.session.nextTurnEvents(50);
         if (events.length === 0) {
           await yieldToEventLoop();
         }

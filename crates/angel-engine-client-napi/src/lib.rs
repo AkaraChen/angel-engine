@@ -690,16 +690,16 @@ impl AngelSession {
     }
 
     #[napi(
-        js_name = "nextTurnEvent",
+        js_name = "nextTurnEvents",
         ts_args_type = "timeoutMs?: number | null",
-        ts_return_type = "Promise<TurnRunEvent | null>"
+        ts_return_type = "Promise<TurnRunEvent[]>"
     )]
-    pub fn next_turn_event(&self, timeout_ms: Option<u32>) -> AsyncTask<SessionJsonTask> {
+    pub fn next_turn_events(&self, timeout_ms: Option<u32>) -> AsyncTask<SessionJsonTask> {
         self.task(
-            "AngelSession.nextTurnEvent",
+            "AngelSession.nextTurnEvents",
             format!("timeout_ms={}", option_u32(timeout_ms)),
             move |session| {
-                session.next_turn_event(Duration::from_millis(timeout_ms.unwrap_or(50) as u64))
+                session.next_turn_events(Duration::from_millis(timeout_ms.unwrap_or(50) as u64))
             },
         )
     }

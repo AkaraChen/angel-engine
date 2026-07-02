@@ -309,6 +309,30 @@ impl AngelSession {
         Ok(None)
     }
 
+    pub fn next_turn_events(&mut self, timeout: Duration) -> ClientResult<Vec<TurnRunEvent>> {
+        if let Some(active) = self.active_turn.as_mut() {
+            let batch = active.drain_batch();
+            if !batch.is_empty() {
+                return Ok(batch);
+            }
+        }
+
+        let Some(first) = self.next_turn_event(timeout)? else {
+            return Ok(Vec::new());
+        };
+        let stop = matches!(
+            first,
+            TurnRunEvent::Result { .. } | TurnRunEvent::Elicitation { .. }
+        );
+        let mut events = vec![first];
+        if !stop {
+            if let Some(active) = self.active_turn.as_mut() {
+                events.extend(active.drain_batch());
+            }
+        }
+        Ok(events)
+    }
+
     pub fn resolve_elicitation(
         &mut self,
         elicitation_id: String,
@@ -613,6 +637,18 @@ impl ActiveTurn {
 
     fn drain_events(&mut self) -> Vec<TurnRunEvent> {
         self.events.drain(..).collect()
+    }
+
+    fn drain_batch(&mut self) -> Vec<TurnRunEvent> {
+        let mut events = Vec::new();
+        while let Some(event) = self.events.pop_front() {
+            let is_elicitation = matches!(event, TurnRunEvent::Elicitation { .. });
+            events.push(event);
+            if is_elicitation {
+                break;
+            }
+        }
+        events
     }
 
     fn handle_update(&mut self, update: ClientUpdate) -> ClientResult<()> {
@@ -1116,6 +1152,79 @@ mod tests {
             active.pop_event(),
             Some(TurnRunEvent::ActionUpdated { .. })
         ));
+    }
+
+    #[test]
+    fn active_turn_drain_batch_batches_burst() {
+        let mut active =
+            ActiveTurn::new("conversation".to_string(), Some("turn".to_string()), None);
+        active
+            .handle_update(ClientUpdate {
+                events: vec![
+                    ClientEvent::ActionObserved {
+                        conversation_id: "conversation".to_string(),
+                        action: action("running"),
+                    },
+                    ClientEvent::ActionUpdated {
+                        conversation_id: "conversation".to_string(),
+                        action: action("completed"),
+                    },
+                ],
+                ..ClientUpdate::default()
+            })
+            .unwrap();
+
+        let events = active.drain_batch();
+
+        assert!(matches!(
+            events.as_slice(),
+            [
+                TurnRunEvent::ActionObserved { .. },
+                TurnRunEvent::ActionUpdated { .. },
+            ]
+        ));
+        assert!(active.pop_event().is_none());
+    }
+
+    #[test]
+    fn active_turn_drain_batch_stops_at_elicitation() {
+        let mut active =
+            ActiveTurn::new("conversation".to_string(), Some("turn".to_string()), None);
+        active
+            .handle_update(ClientUpdate {
+                events: vec![
+                    ClientEvent::ActionObserved {
+                        conversation_id: "conversation".to_string(),
+                        action: action("running"),
+                    },
+                    ClientEvent::ElicitationOpened {
+                        conversation_id: "conversation".to_string(),
+                        elicitation: elicitation("open"),
+                    },
+                    ClientEvent::ActionUpdated {
+                        conversation_id: "conversation".to_string(),
+                        action: action("completed"),
+                    },
+                ],
+                ..ClientUpdate::default()
+            })
+            .unwrap();
+
+        let first = active.drain_batch();
+        let second = active.drain_batch();
+
+        assert!(matches!(
+            first.as_slice(),
+            [
+                TurnRunEvent::ActionObserved { .. },
+                TurnRunEvent::Elicitation { .. },
+            ]
+        ));
+        assert!(matches!(
+            second.as_slice(),
+            [TurnRunEvent::ActionUpdated { .. }]
+        ));
+        assert!(active.pop_event().is_none());
     }
 
     #[test]
