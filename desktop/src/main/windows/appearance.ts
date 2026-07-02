@@ -7,6 +7,7 @@ import type {
   DesktopConfirmSaveWorkspaceFileChangesResult,
   DesktopThemeMode,
 } from "../../shared/desktop-window";
+import { type } from "arktype";
 import { BrowserWindow, dialog, ipcMain, nativeTheme } from "electron";
 import {
   DESKTOP_CONFIRM_DELETE_ALL_CHATS_CHANNEL,
@@ -21,6 +22,10 @@ import { installDownloadedUpdate } from "../updater";
 
 const isMacOS = process.platform === "darwin";
 const trafficLightPosition = { x: 16, y: 18 };
+const themeModeInput = type({
+  "+": "ignore",
+  "mode?": "'light' | 'dark' | 'system' | undefined",
+});
 
 let didRegisterIpc = false;
 
@@ -177,20 +182,9 @@ export function registerDesktopWindowAppearanceIpc() {
 }
 
 function readThemeMode(input: unknown): DesktopThemeMode | null {
-  if (!isObject(input)) return null;
-
-  switch (input.mode) {
-    case "light":
-    case "dark":
-    case "system":
-      return input.mode;
-    default:
-      return null;
-  }
-}
-
-function isObject(value: unknown): value is { mode?: unknown } {
-  return typeof value === "object" && value !== null;
+  const value = themeModeInput(input);
+  if (value instanceof type.errors) return null;
+  return value.mode ?? null;
 }
 
 function readConfirmDeleteArchivedChatsInput(

@@ -1,17 +1,15 @@
-import type { WorkspaceToolContextSetInput } from "../../shared/workspace-tool-instances";
 import type {
   WorkspaceToolSurfaceContext,
-  WorkspaceToolSurfaceContextSetInput,
   WorkspaceToolSurfaceHost,
-  WorkspaceToolSurfaceHostSetInput,
   WorkspaceToolSurfaceSnapshot,
-  WorkspaceToolSurfaceSnapshotSetInput,
   WorkspaceToolSurfaceState,
 } from "../../shared/workspace-tool-surface";
 
 import path from "node:path";
 import is from "@sindresorhus/is";
+import { type } from "arktype";
 import { BrowserWindow, ipcMain, screen } from "electron";
+import log from "electron-log/main";
 
 import {
   DESKTOP_WINDOW_CLOSE_CURRENT_CHANNEL,
@@ -32,6 +30,29 @@ import { createDesktopWindow } from "./factory";
 const workspaceToolWindowStateFileName = "workspace-tool-window-state.json";
 const workspaceToolWindowHash = "/workspace-tools";
 const workspaceToolWindowMinimumBounds = { height: 420, width: 640 };
+export const WORKSPACE_TOOL_SNAPSHOT_LIMIT = 32;
+
+const workspaceToolSurfaceContextSetInput = type({
+  "+": "ignore",
+  "chatId?": "string | null | undefined",
+  "root?": "string | null | undefined",
+});
+
+const workspaceToolSurfaceHostSetInput = type({
+  "+": "ignore",
+  host: "'sidebar' | 'window'",
+});
+
+const workspaceToolSurfaceSnapshotSetInput = type({
+  "+": "ignore",
+  chatId: "string > 0",
+  snapshot: "object",
+});
+
+const legacyWorkspaceToolContextSetInput = type({
+  "+": "ignore",
+  "root?": "string | null | undefined",
+});
 
 const workspaceToolSnapshots = new Map<string, WorkspaceToolSurfaceSnapshot>();
 
@@ -47,14 +68,28 @@ export function registerWorkspaceToolWindowIpc() {
 
   ipcMain.on(
     DESKTOP_WORKSPACE_TOOL_SURFACE_CONTEXT_SET_CHANNEL,
-    (_event, input: WorkspaceToolSurfaceContextSetInput) => {
+    (_event, raw: unknown) => {
+      const input = workspaceToolSurfaceContextSetInput(raw);
+      if (input instanceof type.errors) {
+        log.warn("Rejected workspace-tool surface context IPC.", {
+          summary: input.summary,
+        });
+        return;
+      }
       setWorkspaceToolSurfaceContext(input);
     },
   );
 
   ipcMain.on(
     DESKTOP_WORKSPACE_TOOL_SURFACE_HOST_SET_CHANNEL,
-    (event, input: WorkspaceToolSurfaceHostSetInput) => {
+    (event, raw: unknown) => {
+      const input = workspaceToolSurfaceHostSetInput(raw);
+      if (input instanceof type.errors) {
+        log.warn("Rejected workspace-tool surface host IPC.", {
+          summary: input.summary,
+        });
+        return;
+      }
       setWorkspaceToolSurfaceHost(
         input.host,
         BrowserWindow.fromWebContents(event.sender) ?? undefined,
@@ -64,8 +99,19 @@ export function registerWorkspaceToolWindowIpc() {
 
   ipcMain.on(
     DESKTOP_WORKSPACE_TOOL_SURFACE_SNAPSHOT_SET_CHANNEL,
-    (_event, input: WorkspaceToolSurfaceSnapshotSetInput) => {
-      workspaceToolSnapshots.set(input.chatId, input.snapshot);
+    (_event, raw: unknown) => {
+      const input = workspaceToolSurfaceSnapshotSetInput(raw);
+      if (input instanceof type.errors) {
+        log.warn("Rejected workspace-tool surface snapshot IPC.", {
+          summary: input.summary,
+        });
+        return;
+      }
+      workspaceToolSnapshots.set(
+        input.chatId,
+        input.snapshot as WorkspaceToolSurfaceSnapshot,
+      );
+      trimWorkspaceToolSnapshots(workspaceToolSnapshots);
       broadcastWorkspaceToolSurfaceState();
     },
   );
@@ -85,7 +131,14 @@ function registerLegacyWorkspaceToolIpc() {
   ipcMain.handle(DESKTOP_WORKSPACE_TOOL_WINDOW_GET_CHANNEL, () => null);
   ipcMain.on(
     DESKTOP_WORKSPACE_TOOL_CONTEXT_SET_CHANNEL,
-    (_event, context: WorkspaceToolContextSetInput) => {
+    (_event, raw: unknown) => {
+      const context = legacyWorkspaceToolContextSetInput(raw);
+      if (context instanceof type.errors) {
+        log.warn("Rejected legacy workspace-tool context IPC.", {
+          summary: context.summary,
+        });
+        return;
+      }
       setWorkspaceToolSurfaceContext({
         ...workspaceToolContext,
         root: context.root,
@@ -100,6 +153,17 @@ function registerLegacyWorkspaceToolIpc() {
   });
   ipcMain.on(DESKTOP_WORKSPACE_TOOL_INSTANCE_REGISTER_CHANNEL, () => {});
   ipcMain.on(DESKTOP_WORKSPACE_TOOL_INSTANCE_CLOSE_CHANNEL, () => {});
+}
+
+export function trimWorkspaceToolSnapshots<T>(
+  snapshots: Map<string, T>,
+  limit = WORKSPACE_TOOL_SNAPSHOT_LIMIT,
+) {
+  while (snapshots.size > limit) {
+    const oldest = snapshots.keys().next().value;
+    if (oldest === undefined) return;
+    snapshots.delete(oldest);
+  }
 }
 
 function setWorkspaceToolSurfaceContext(context: WorkspaceToolSurfaceContext) {

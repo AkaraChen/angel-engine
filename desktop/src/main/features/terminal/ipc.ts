@@ -12,6 +12,7 @@ import type {
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { type } from "arktype";
 import { ipcMain } from "electron";
 import log from "electron-log/main";
 import * as pty from "node-pty";
@@ -33,6 +34,45 @@ interface TerminalSession {
 
 const terminalSessions = new Map<string, TerminalSession>();
 const terminalScrollbackLimit = 1_000;
+
+const nonEmptyTrimmedString = type("string.trim").to("string > 0");
+const finiteNumber = type("number").narrow(
+  (value, ctx) => Number.isFinite(value) || ctx.mustBe("finite"),
+);
+const terminalDimension = finiteNumber
+  .pipe((value) => Math.max(1, Math.floor(value)))
+  .to("number");
+
+const terminalCreateInput = type({
+  "+": "ignore",
+  cols: terminalDimension,
+  cwd: nonEmptyTrimmedString,
+  rows: terminalDimension,
+  sessionId: nonEmptyTrimmedString,
+});
+
+const terminalWriteInput = type({
+  "+": "ignore",
+  data: "string",
+  sessionId: nonEmptyTrimmedString,
+});
+
+const terminalResizeInput = type({
+  "+": "ignore",
+  cols: terminalDimension,
+  rows: terminalDimension,
+  sessionId: nonEmptyTrimmedString,
+});
+
+const terminalDisposeInput = type({
+  "+": "ignore",
+  sessionId: nonEmptyTrimmedString,
+});
+
+const terminalKillInput = type({
+  "+": "ignore",
+  sessionId: nonEmptyTrimmedString,
+});
 
 export function registerTerminalIpc() {
   ipcMain.handle(TERMINAL_CREATE_CHANNEL, (event, input: unknown) => {
@@ -231,79 +271,46 @@ function resolveTerminalCwd(input: string) {
   return os.homedir();
 }
 
-function parseTerminalCreateRequest(input: unknown): TerminalCreateRequest {
-  if (!isObject(input)) {
-    throw new Error("Terminal create input is required.");
-  }
-  return {
-    cols: parseDimension(input.cols, "Terminal columns"),
-    cwd: parseNonEmptyString(input.cwd, "Terminal cwd"),
-    rows: parseDimension(input.rows, "Terminal rows"),
-    sessionId: parseNonEmptyString(input.sessionId, "Terminal session id"),
-  };
-}
-
-function parseTerminalWriteInput(input: unknown): TerminalWriteInput {
-  if (!isObject(input)) {
-    throw new Error("Terminal write input is required.");
-  }
-  return {
-    data: parseString(input.data, "Terminal data"),
-    sessionId: parseNonEmptyString(input.sessionId, "Terminal session id"),
-  };
-}
-
-function parseTerminalResizeInput(input: unknown): TerminalResizeInput {
-  if (!isObject(input)) {
-    throw new Error("Terminal resize input is required.");
-  }
-  return {
-    cols: parseDimension(input.cols, "Terminal columns"),
-    rows: parseDimension(input.rows, "Terminal rows"),
-    sessionId: parseNonEmptyString(input.sessionId, "Terminal session id"),
-  };
-}
-
-function parseTerminalDisposeInput(input: unknown): TerminalDisposeInput {
-  if (!isObject(input)) {
-    throw new Error("Terminal dispose input is required.");
-  }
-  return {
-    sessionId: parseNonEmptyString(input.sessionId, "Terminal session id"),
-  };
-}
-
-function parseTerminalKillInput(input: unknown): TerminalKillInput {
-  if (!isObject(input)) {
-    throw new Error("Terminal kill input is required.");
-  }
-  return {
-    sessionId: parseNonEmptyString(input.sessionId, "Terminal session id"),
-  };
-}
-
-function isObject(value: unknown): value is Record<string, unknown> {
-  return value !== null && typeof value === "object";
-}
-
-function parseString(value: unknown, label: string) {
-  if (typeof value !== "string") {
-    throw new TypeError(`${label} must be a string.`);
+export function parseTerminalCreateRequest(
+  input: unknown,
+): TerminalCreateRequest {
+  const value = terminalCreateInput(input);
+  if (value instanceof type.errors) {
+    throw new TypeError(value.summary);
   }
   return value;
 }
 
-function parseNonEmptyString(value: unknown, label: string) {
-  const parsed = parseString(value, label).trim();
-  if (!parsed) {
-    throw new Error(`${label} is required.`);
+export function parseTerminalWriteInput(input: unknown): TerminalWriteInput {
+  const value = terminalWriteInput(input);
+  if (value instanceof type.errors) {
+    throw new TypeError(value.summary);
   }
-  return parsed;
+  return value;
 }
 
-function parseDimension(value: unknown, label: string) {
-  if (typeof value !== "number" || !Number.isFinite(value)) {
-    throw new TypeError(`${label} must be a finite number.`);
+export function parseTerminalResizeInput(input: unknown): TerminalResizeInput {
+  const value = terminalResizeInput(input);
+  if (value instanceof type.errors) {
+    throw new TypeError(value.summary);
   }
-  return Math.max(1, Math.floor(value));
+  return value;
+}
+
+export function parseTerminalDisposeInput(
+  input: unknown,
+): TerminalDisposeInput {
+  const value = terminalDisposeInput(input);
+  if (value instanceof type.errors) {
+    throw new TypeError(value.summary);
+  }
+  return value;
+}
+
+export function parseTerminalKillInput(input: unknown): TerminalKillInput {
+  const value = terminalKillInput(input);
+  if (value instanceof type.errors) {
+    throw new TypeError(value.summary);
+  }
+  return value;
 }

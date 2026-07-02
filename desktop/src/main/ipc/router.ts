@@ -1,3 +1,4 @@
+import type { TipcChannel } from "../../shared/ipc-channels";
 import type { ChatRuntime } from "../features/chat/runtime";
 import { tipc } from "@egoist/tipc/main";
 
@@ -31,3 +32,14 @@ export function createAppRouter(chatRuntime: ChatRuntime) {
 }
 
 export type AppRouter = ReturnType<typeof createAppRouter>;
+
+type MissingFromAllowList = Exclude<keyof AppRouter, TipcChannel>;
+type ExtraInAllowList = Exclude<TipcChannel, keyof AppRouter>;
+
+const allowListMatchesRouter: [MissingFromAllowList, ExtraInAllowList] extends [
+  never,
+  never,
+]
+  ? true
+  : never = true;
+void allowListMatchesRouter;

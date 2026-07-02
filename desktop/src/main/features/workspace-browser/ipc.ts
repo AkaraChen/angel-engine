@@ -10,6 +10,7 @@ import type {
 } from "../../../shared/workspace-browser";
 
 import is from "@sindresorhus/is";
+import { type } from "arktype";
 import { BrowserWindow, ipcMain, shell, WebContentsView } from "electron";
 
 import {
@@ -41,6 +42,62 @@ interface WorkspaceBrowserInstance {
 }
 
 const workspaceBrowserInstances = new Map<string, WorkspaceBrowserInstance>();
+
+const nonEmptyTrimmedString = type("string.trim").to("string > 0");
+const finiteNumber = type("number").narrow(
+  (value, ctx) => Number.isFinite(value) || ctx.mustBe("finite"),
+);
+const workspaceBrowserDimension = finiteNumber
+  .pipe((value) => Math.max(1, Math.round(value)))
+  .to("number");
+const workspaceBrowserCoordinate = finiteNumber
+  .pipe((value) => Math.round(value))
+  .to("number");
+
+const workspaceBrowserBoundsInput = type({
+  "+": "ignore",
+  height: workspaceBrowserDimension,
+  width: workspaceBrowserDimension,
+  x: workspaceBrowserCoordinate,
+  y: workspaceBrowserCoordinate,
+});
+
+const workspaceBrowserCreateInput = type({
+  "+": "ignore",
+  browserViewId: nonEmptyTrimmedString,
+  url: nonEmptyTrimmedString,
+});
+
+const workspaceBrowserAttachInput = type({
+  "+": "ignore",
+  attachmentId: nonEmptyTrimmedString,
+  bounds: workspaceBrowserBoundsInput,
+  browserViewId: nonEmptyTrimmedString,
+});
+
+const workspaceBrowserDetachInput = type({
+  "+": "ignore",
+  attachmentId: nonEmptyTrimmedString,
+  browserViewId: nonEmptyTrimmedString,
+});
+
+const workspaceBrowserSetBoundsInput = type({
+  "+": "ignore",
+  attachmentId: nonEmptyTrimmedString,
+  bounds: workspaceBrowserBoundsInput,
+  browserViewId: nonEmptyTrimmedString,
+});
+
+const workspaceBrowserCommandInput = type({
+  "+": "ignore",
+  browserViewId: nonEmptyTrimmedString,
+});
+
+const workspaceBrowserNavigateInput = type({
+  "+": "ignore",
+  browserViewId: nonEmptyTrimmedString,
+  url: nonEmptyTrimmedString,
+});
 
 export function registerWorkspaceBrowserIpc() {
   ipcMain.handle(WORKSPACE_BROWSER_CREATE_CHANNEL, (_event, input: unknown) => {
@@ -333,116 +390,74 @@ function getWorkspaceBrowserInstance(browserViewId: string) {
   return instance;
 }
 
-function parseWorkspaceBrowserCreateInput(
+export function parseWorkspaceBrowserCreateInput(
   input: unknown,
 ): WorkspaceBrowserCreateInput {
-  if (!isObject(input)) {
-    throw new Error("Workspace browser create input is required.");
+  const value = workspaceBrowserCreateInput(input);
+  if (value instanceof type.errors) {
+    throw new TypeError(value.summary);
   }
-  return {
-    browserViewId: parseNonEmptyString(
-      input.browserViewId,
-      "Workspace browser id",
-    ),
-    url: parseNonEmptyString(input.url, "Workspace browser URL"),
-  };
+  return value;
 }
 
-function parseWorkspaceBrowserAttachInput(
+export function parseWorkspaceBrowserAttachInput(
   input: unknown,
 ): WorkspaceBrowserAttachInput {
-  if (!isObject(input)) {
-    throw new Error("Workspace browser attach input is required.");
+  const value = workspaceBrowserAttachInput(input);
+  if (value instanceof type.errors) {
+    throw new TypeError(value.summary);
   }
-  return {
-    attachmentId: parseNonEmptyString(
-      input.attachmentId,
-      "Workspace browser attachment id",
-    ),
-    bounds: parseWorkspaceBrowserBounds(input.bounds),
-    browserViewId: parseNonEmptyString(
-      input.browserViewId,
-      "Workspace browser id",
-    ),
-  };
+  return value;
 }
 
-function parseWorkspaceBrowserDetachInput(
+export function parseWorkspaceBrowserDetachInput(
   input: unknown,
 ): WorkspaceBrowserDetachInput {
-  if (!isObject(input)) {
-    throw new Error("Workspace browser detach input is required.");
+  const value = workspaceBrowserDetachInput(input);
+  if (value instanceof type.errors) {
+    throw new TypeError(value.summary);
   }
-  return {
-    attachmentId: parseNonEmptyString(
-      input.attachmentId,
-      "Workspace browser attachment id",
-    ),
-    browserViewId: parseNonEmptyString(
-      input.browserViewId,
-      "Workspace browser id",
-    ),
-  };
+  return value;
 }
 
-function parseWorkspaceBrowserSetBoundsInput(
+export function parseWorkspaceBrowserSetBoundsInput(
   input: unknown,
 ): WorkspaceBrowserSetBoundsInput {
-  if (!isObject(input)) {
-    throw new Error("Workspace browser bounds input is required.");
+  const value = workspaceBrowserSetBoundsInput(input);
+  if (value instanceof type.errors) {
+    throw new TypeError(value.summary);
   }
-  return {
-    attachmentId: parseNonEmptyString(
-      input.attachmentId,
-      "Workspace browser attachment id",
-    ),
-    bounds: parseWorkspaceBrowserBounds(input.bounds),
-    browserViewId: parseNonEmptyString(
-      input.browserViewId,
-      "Workspace browser id",
-    ),
-  };
+  return value;
 }
 
-function parseWorkspaceBrowserCommandInput(
+export function parseWorkspaceBrowserCommandInput(
   input: unknown,
 ): WorkspaceBrowserCommandInput {
-  if (!isObject(input)) {
-    throw new Error("Workspace browser command input is required.");
+  const value = workspaceBrowserCommandInput(input);
+  if (value instanceof type.errors) {
+    throw new TypeError(value.summary);
   }
-  return {
-    browserViewId: parseNonEmptyString(
-      input.browserViewId,
-      "Workspace browser id",
-    ),
-  };
+  return value;
 }
 
-function parseWorkspaceBrowserNavigateInput(
+export function parseWorkspaceBrowserNavigateInput(
   input: unknown,
 ): WorkspaceBrowserNavigateInput {
-  if (!isObject(input)) {
-    throw new Error("Workspace browser navigate input is required.");
+  const value = workspaceBrowserNavigateInput(input);
+  if (value instanceof type.errors) {
+    throw new TypeError(value.summary);
   }
-  return {
-    browserViewId: parseNonEmptyString(
-      input.browserViewId,
-      "Workspace browser id",
-    ),
-    url: parseNonEmptyString(input.url, "Workspace browser URL"),
-  };
+  return value;
 }
 
-function parseWorkspaceBrowserBounds(input: unknown): WorkspaceBrowserBounds {
-  if (!isObject(input)) {
-    throw new Error("Workspace browser bounds are required.");
+export function parseWorkspaceBrowserBounds(
+  input: unknown,
+): WorkspaceBrowserBounds {
+  const value = workspaceBrowserBoundsInput(input);
+  if (value instanceof type.errors) {
+    throw new TypeError(value.summary);
   }
-  return {
-    height: parseDimension(input.height, "Workspace browser height"),
-    width: parseDimension(input.width, "Workspace browser width"),
-    x: parseCoordinate(input.x, "Workspace browser x"),
-    y: parseCoordinate(input.y, "Workspace browser y"),
-  };
+  return value;
 }
 
 function toElectronBounds(bounds: WorkspaceBrowserBounds) {
@@ -473,29 +488,4 @@ function isAllowedExternalUrl(url: string) {
   } catch {
     return false;
   }
-}
-
-function isObject(value: unknown): value is Record<string, unknown> {
-  return value !== null && typeof value === "object";
-}
-
-function parseNonEmptyString(value: unknown, label: string) {
-  if (typeof value !== "string" || !value.trim()) {
-    throw new Error(`${label} is required.`);
-  }
-  return value.trim();
-}
-
-function parseDimension(value: unknown, label: string) {
-  if (typeof value !== "number" || !Number.isFinite(value)) {
-    throw new TypeError(`${label} must be a finite number.`);
-  }
-  return Math.max(1, Math.round(value));
-}
-
-function parseCoordinate(value: unknown, label: string) {
-  if (typeof value !== "number" || !Number.isFinite(value)) {
-    throw new TypeError(`${label} must be a finite number.`);
-  }
-  return Math.round(value);
 }
