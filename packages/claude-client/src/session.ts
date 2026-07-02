@@ -22,6 +22,7 @@ import type {
   SDKMessage,
   SDKPartialAssistantMessage,
   SDKResultMessage,
+  SDKSystemMessage,
   SDKUserMessage,
 } from "@anthropic-ai/claude-agent-sdk";
 
@@ -300,8 +301,7 @@ export class ClaudeCodeSession {
       ),
       includePartialMessages: true,
       model: request.model ?? this.currentModel,
-      pathToClaudeCodeExecutable:
-        process.env.CLAUDE_CODE_PATH ?? process.env.CLAUDE_PATH ?? "claude",
+      pathToClaudeCodeExecutable: claudeCodeExecutable(),
       permissionMode: normalizeClaudeMode(
         request.permissionMode ?? this.currentPermissionMode,
       ),
@@ -365,15 +365,50 @@ export class ClaudeCodeSession {
       case "prompt_suggestion":
       case "rate_limit_event":
       case "tool_progress":
+      case "control_request":
+      case "conversation_reset":
         return [];
     }
+    throw new Error(`Unsupported Claude SDK message type: ${message.type}`);
   }
 
   private systemEvents(
     message: Extract<SDKMessage, { type: "system" }>,
     active: ActiveClaudeTurn,
   ): EngineEventJson[] {
-    if (message.subtype !== "init") return [];
+    if (!isClaudeInitMessage(message)) {
+      switch (message.subtype) {
+        case "api_retry":
+        case "commands_changed":
+        case "compact_boundary":
+        case "elicitation_complete":
+        case "files_persisted":
+        case "hook_progress":
+        case "hook_response":
+        case "hook_started":
+        case "informational":
+        case "local_command_output":
+        case "memory_recall":
+        case "mirror_error":
+        case "model_refusal_fallback":
+        case "model_refusal_no_fallback":
+        case "notification":
+        case "permission_denied":
+        case "plugin_install":
+        case "session_state_changed":
+        case "status":
+        case "task_notification":
+        case "task_progress":
+        case "task_started":
+        case "task_updated":
+        case "thinking_tokens":
+        case "worker_shutting_down":
+          return [];
+      }
+      throw new Error(
+        `Unsupported Claude SDK system message subtype: ${message.subtype}`,
+      );
+    }
     const init = message;
     active.sessionId = init.session_id;
     this.currentPermissionMode = normalizeClaudeMode(init.permissionMode);
@@ -775,6 +810,7 @@ export class ClaudeCodeSession {
       prompt: emptyClaudePrompt(),
       options: {
         cwd,
+        pathToClaudeCodeExecutable: claudeCodeExecutable(),
         permissionMode: normalizeClaudeMode(this.currentPermissionMode),
       },
     });
@@ -992,6 +1028,16 @@ export class ClaudeCodeSession {
     );
     return run;
   }
+}
+
+function isClaudeInitMessage(
+  message: Extract<SDKMessage, { type: "system" }>,
+): message is SDKSystemMessage {
+  return message.subtype === "init";
+}
+
+function claudeCodeExecutable(): string {
+  return process.env.CLAUDE_CODE_PATH ?? process.env.CLAUDE_PATH ?? "claude";
 }
 
 export function claudeTurnErrorOutcome(

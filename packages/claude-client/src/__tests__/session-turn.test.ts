@@ -8,6 +8,10 @@ import { ClaudeCodeSession, claudeTurnErrorOutcome } from "../session";
 type SessionPermissionHarness = {
   canUseTool: (active: ActiveClaudeTurn) => CanUseTool;
   close: () => void;
+  eventsFromSdkMessage: (
+    message: { subtype?: string; type: string },
+    active: ActiveClaudeTurn,
+  ) => unknown[];
   emitEngineEvents: () => void;
   resolveElicitationNow: (
     elicitationId: string,
@@ -61,6 +65,28 @@ describe("claude session turn handling", () => {
           permissionContext(""),
         ),
       ).rejects.toThrow("missing toolUseID");
+    } finally {
+      session.close();
+    }
+  });
+
+  it("rejects unsupported sdk messages", () => {
+    const session =
+      new ClaudeCodeSession() as unknown as SessionPermissionHarness;
+    try {
+      expect(() =>
+        session.eventsFromSdkMessage(
+          { type: "new_runtime_event" },
+          activeTurn(),
+        ),
+      ).toThrow("Unsupported Claude SDK message type");
+
+      expect(() =>
+        session.eventsFromSdkMessage(
+          { subtype: "new_system_event", type: "system" },
+          activeTurn(),
+        ),
+      ).toThrow("Unsupported Claude SDK system message subtype");
     } finally {
       session.close();
     }

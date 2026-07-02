@@ -50,6 +50,52 @@ describe("Claude history replay", () => {
     ).toThrow("Claude assistant text history block is malformed.");
   });
 
+  it("restores tool calls with engine tool actions", () => {
+    const events = historyEventsFromSessionMessages("conversation-1", [
+      sessionMessage("assistant", [
+        {
+          id: "tool-1",
+          input: { file_path: "example.txt" },
+          name: "Read",
+          type: "tool_use",
+        },
+      ]),
+      sessionMessage("user", [
+        {
+          content: "ok",
+          tool_use_id: "tool-1",
+          type: "tool_result",
+        },
+      ]),
+    ]);
+
+    expect(events).toHaveLength(2);
+    expect(events[0]).toMatchObject({
+      HistoryReplayChunk: {
+        entry: {
+          role: EngineEventHistoryRole.Tool,
+          tool: {
+            id: "tool-1",
+            phase: "running",
+            title: "Read example.txt",
+          },
+        },
+      },
+    });
+    expect(events[1]).toMatchObject({
+      HistoryReplayChunk: {
+        entry: {
+          role: EngineEventHistoryRole.Tool,
+          tool: {
+            id: "tool-1",
+            output: [{ Text: "ok" }],
+            phase: "completed",
+          },
+        },
+      },
+    });
+  });
+
   it("restores user text and resource attachments as one replay message", () => {
     const events = historyEventsFromSessionMessages("conversation-1", [
       sessionMessage("user", [

@@ -4,6 +4,8 @@ import type { ClaudeToolInput } from "./sdk-types.js";
 import type { EngineEventJson } from "./types.js";
 
 import {
+  EngineEventActionOutputKind,
+  EngineEventActionPhase,
   EngineEventContentKind,
   EngineEventHistoryRole,
 } from "@angel-engine/client-napi";
@@ -11,7 +13,14 @@ import is from "@sindresorhus/is";
 import { lookup } from "mime-types";
 import path from "node:path";
 import { structuredPlanFromToolUse } from "./plan.js";
-import { claudeHistoryToolCall, claudeHistoryToolResult } from "./tooling.js";
+import {
+  actionKind,
+  claudeHistoryToolCall,
+  claudeHistoryToolResult,
+  stringifyToolResult,
+  toolInputSummary,
+  toolTitle,
+} from "./tooling.js";
 
 interface HistoryToolUse {
   id: string;
@@ -29,6 +38,17 @@ type HistoryContentPart =
         name: string | null;
       };
     };
+
+interface HistoryReplayToolAction {
+  error: null;
+  id: string;
+  input_summary?: string;
+  kind: string;
+  output: Array<{ [EngineEventActionOutputKind.Text]: string }>;
+  phase: string;
+  raw_input?: string;
+  title?: string;
+}
 
 type AssistantHistoryBlock =
   | { text: string; type: "text" }
@@ -289,11 +309,16 @@ function assistantHistoryEvents(
   }
 
   return [
-    historyReplayChunk(conversationId, EngineEventHistoryRole.Tool, {
-      [EngineEventContentKind.Structured]: JSON.stringify(
-        claudeHistoryToolCall(id, name, input),
-      ),
-    }),
+    historyReplayChunk(
+      conversationId,
+      EngineEventHistoryRole.Tool,
+      {
+        [EngineEventContentKind.Structured]: JSON.stringify(
+          claudeHistoryToolCall(id, name, input),
+        ),
+      },
+      historyToolCallAction(id, name, input),
+    ),
   ];
 }
 
@@ -320,18 +345,27 @@ function userHistoryEvents(
       `Claude history tool result has no matching tool_use: ${toolId}`,
     );
   }
+  const toolResult = claudeHistoryToolResult({
+    content: block.content,
+    input: toolUse.input,
+    isError: block.is_error === true,
+    toolId,
+    toolName: toolUse.name,
+  });
   return [
-    historyReplayChunk(conversationId, EngineEventHistoryRole.Tool, {
-      [EngineEventContentKind.Structured]: JSON.stringify(
-        claudeHistoryToolResult({
-          content: block.content,
-          input: toolUse.input,
-          isError: block.is_error === true,
-          toolId,
-          toolName: toolUse.name,
-        }),
+    historyReplayChunk(
+      conversationId,
+      EngineEventHistoryRole.Tool,
+      {
+        [EngineEventContentKind.Structured]: JSON.stringify(toolResult),
+      },
+      historyToolResultAction(
+        toolId,
+        toolUse.name,
+        block.content,
+        block.is_error === true,
       ),
-    }),
+    ),
   ];
 }
 
@@ -339,11 +373,50 @@ function historyReplayChunk(
   conversationId: string,
   role: `${EngineEventHistoryRole}`,
   content: ChatJsonObject,
+  tool?: HistoryReplayToolAction,
 ): EngineEventJson {
   return {
     HistoryReplayChunk: {
       conversation_id: conversationId,
-      entry: { content, role },
+      entry: { content, role, ...(tool ? { tool } : {}) },
     },
+  };
+}
+
+function historyToolCallAction(
+  toolId: string,
+  toolName: string,
+  input: ClaudeToolInput,
+): HistoryReplayToolAction {
+  return {
+    error: null,
+    id: toolId,
+    input_summary: toolInputSummary(toolName, input),
+    kind: actionKind(toolName, input),
+    output: [],
+    phase: EngineEventActionPhase.Running,
+    raw_input: JSON.stringify(input),
+    title: toolTitle(toolName, input),
+  };
+}
+
+function historyToolResultAction(
+  toolId: string,
+  toolName: string,
+  content: object | object[] | string,
+  isError: boolean,
+): HistoryReplayToolAction {
+  return {
+    error: null,
+    id: toolId,
+    kind: actionKind(toolName),
+    output: [
+      {
+        [EngineEventActionOutputKind.Text]: stringifyToolResult(content),
+      },
+    ],
+    phase: isError
+      ? EngineEventActionPhase.Failed
+      : EngineEventActionPhase.Completed,
   };
 }

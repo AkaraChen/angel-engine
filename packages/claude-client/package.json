@@ -41,7 +41,7 @@
   },
   "devDependencies": {
     "@angel-engine/client-napi": "workspace:*",
-    "@anthropic-ai/claude-agent-sdk": "^0.2.133",
+    "@anthropic-ai/claude-agent-sdk": "0.3.198",
     "@types/mime-types": "^3.0.1",
     "@typescript-eslint/eslint-plugin": "^8.59.2",
     "@typescript-eslint/parser": "^8.59.2",
