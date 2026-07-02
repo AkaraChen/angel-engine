@@ -28,6 +28,7 @@
   ],
   "scripts": {
     "build": "tsup",
+    "build:debug": "tsup",
     "lint": "eslint src",
     "test": "vitest run",
     "typecheck": "tsc --noEmit"

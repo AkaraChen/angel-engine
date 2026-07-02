@@ -14,7 +14,8 @@
   "main": ".vite/build/main.js",
   "scripts": {
     "runtime:build": "pnpm --filter @angel-engine/client-napi build && pnpm --filter @angel-engine/js-client build && pnpm --filter @angel-engine/claude-client build",
-    "prestart": "pnpm run runtime:build",
+    "runtime:build:debug": "turbo run build:debug --filter @angel-engine/client-napi --filter @angel-engine/js-client --filter @angel-engine/claude-client",
+    "prestart": "pnpm run runtime:build:debug",
     "start": "electron-forge start",
     "prepackage": "pnpm run runtime:build && pnpm run rebuild:native",
     "package": "node scripts/package-app.cjs",
