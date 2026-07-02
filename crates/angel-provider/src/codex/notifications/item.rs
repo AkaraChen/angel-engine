@@ -583,6 +583,7 @@ mod tests {
                     "threadId": "thread",
                     "turn": {
                         "id": "turn",
+                        "items": [],
                         "status": "completed"
                     }
                 }),
@@ -642,6 +643,7 @@ mod tests {
                     "threadId": "thread",
                     "turn": {
                         "id": "turn",
+                        "items": [],
                         "status": "completed"
                     }
                 }),

@@ -418,18 +418,6 @@ fn is_codex_command_tool_name(name: Option<&str>) -> bool {
     matches!(name, Some("shell" | "exec_command" | "write_stdin"))
 }
 
-pub(crate) fn turn_error(turn: Option<&Value>) -> Option<ErrorInfo> {
-    let error = turn?.get("error").filter(|value| !value.is_null())?;
-    Some(ErrorInfo::new(
-        "codex.turn_failed",
-        error
-            .get("message")
-            .and_then(Value::as_str)
-            .map(str::to_string)
-            .unwrap_or_else(|| error.to_string()),
-    ))
-}
-
 pub(crate) fn approval_body(method: &str, params: &Value) -> Option<String> {
     match method {
         "item/commandExecution/requestApproval" => params

@@ -5,6 +5,22 @@ use serde_json::json;
 fn codex_live_notifications_reject_missing_required_fields() {
     let cases = [
         (
+            "thread/status/changed",
+            json!({"threadId": "thread"}),
+            "status",
+        ),
+        ("turn/started", json!({"threadId": "thread"}), "turn"),
+        (
+            "turn/completed",
+            json!({"threadId": "thread", "turn": {"id": "turn", "items": []}}),
+            "status",
+        ),
+        (
+            "turn/completed",
+            json!({"threadId": "thread", "turn": {"items": [], "status": "completed"}}),
+            "id",
+        ),
+        (
             "item/agentMessage/delta",
             json!({"threadId": "thread", "turnId": "turn", "itemId": "msg"}),
             "delta",
@@ -44,6 +60,15 @@ fn codex_live_notifications_reject_missing_required_fields() {
             json!({"threadId": "thread", "turnId": "turn", "itemId": "patch"}),
             "changes",
         ),
+        (
+            "error",
+            json!({"threadId": "thread", "turnId": "turn", "willRetry": false}),
+            "error",
+        ),
+        ("warning", json!({}), "message"),
+        ("guardianWarning", json!({"message": "blocked"}), "threadId"),
+        ("configWarning", json!({}), "summary"),
+        ("remoteControl/status/changed", json!({}), "status"),
     ];
 
     for (method, params, field) in cases {

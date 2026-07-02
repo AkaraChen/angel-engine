@@ -168,8 +168,11 @@ fn codex_plan_mode_round_trip_handles_question_plan_path_and_exit() {
             "turn/completed",
             json!({
                 "threadId": "thread",
-                "turnId": "turn-remote",
-                "turn": {"status": "completed"}
+                "turn": {
+                    "id": "turn-remote",
+                    "items": [],
+                    "status": "completed"
+                }
             }),
         ),
     );

@@ -24,16 +24,31 @@ impl CodexAdapter {
         let notification_method = method.parse::<CodexServerNotificationMethod>().ok();
         let mut output = match notification_method {
             Some(CodexServerNotificationMethod::ThreadStatusChanged) => {
-                match codex_notification_params(params) {
-                    Some(notification) => self.decode_thread_status(engine, &notification),
-                    None => unknown_notification(method, params),
-                }
+                let notification: codex_schema::ThreadStatusChangedNotification =
+                    serde_json::from_value(params.clone()).map_err(|error| {
+                        angel_engine::EngineError::InvalidCommand {
+                            message: error.to_string(),
+                        }
+                    })?;
+                self.decode_thread_status(engine, &notification)
             }
             Some(CodexServerNotificationMethod::TurnStarted) => {
-                self.decode_turn_started(engine, params)
+                let notification: codex_schema::TurnStartedNotification =
+                    serde_json::from_value(params.clone()).map_err(|error| {
+                        angel_engine::EngineError::InvalidCommand {
+                            message: error.to_string(),
+                        }
+                    })?;
+                self.decode_turn_started(engine, &notification)
             }
             Some(CodexServerNotificationMethod::TurnCompleted) => {
-                self.decode_turn_completed(engine, params)
+                let notification: codex_schema::TurnCompletedNotification =
+                    serde_json::from_value(params.clone()).map_err(|error| {
+                        angel_engine::EngineError::InvalidCommand {
+                            message: error.to_string(),
+                        }
+                    })?;
+                self.decode_turn_completed(engine, &notification)
             }
             Some(CodexServerNotificationMethod::ItemAgentMessageDelta) => {
                 let notification: codex_schema::AgentMessageDeltaNotification =
@@ -110,44 +125,51 @@ impl CodexAdapter {
             }
             Some(CodexServerNotificationMethod::Error) => Ok(TransportOutput::default().log(
                 TransportLogKind::Error,
-                params
-                    .get("message")
-                    .and_then(Value::as_str)
-                    .unwrap_or("Codex error notification"),
+                serde_json::from_value::<codex_schema::ErrorNotification>(params.clone())
+                    .map_err(|error| angel_engine::EngineError::InvalidCommand {
+                        message: error.to_string(),
+                    })?
+                    .error
+                    .message,
             )),
             Some(CodexServerNotificationMethod::Warning) => {
-                match codex_notification_params::<codex_schema::WarningNotification>(params) {
-                    Some(notification) => Ok(TransportOutput::default()
-                        .log(TransportLogKind::Warning, &notification.message)),
-                    None => unknown_notification(method, params),
-                }
+                let notification: codex_schema::WarningNotification =
+                    serde_json::from_value(params.clone()).map_err(|error| {
+                        angel_engine::EngineError::InvalidCommand {
+                            message: error.to_string(),
+                        }
+                    })?;
+                Ok(TransportOutput::default().log(TransportLogKind::Warning, notification.message))
             }
             Some(CodexServerNotificationMethod::GuardianWarning) => {
-                match codex_notification_params::<codex_schema::GuardianWarningNotification>(params)
-                {
-                    Some(notification) => Ok(TransportOutput::default()
-                        .log(TransportLogKind::Warning, &notification.message)),
-                    None => unknown_notification(method, params),
-                }
+                let notification: codex_schema::GuardianWarningNotification =
+                    serde_json::from_value(params.clone()).map_err(|error| {
+                        angel_engine::EngineError::InvalidCommand {
+                            message: error.to_string(),
+                        }
+                    })?;
+                Ok(TransportOutput::default().log(TransportLogKind::Warning, notification.message))
             }
             Some(CodexServerNotificationMethod::ConfigWarning) => {
-                match codex_notification_params::<codex_schema::ConfigWarningNotification>(params) {
-                    Some(notification) => Ok(TransportOutput::default()
-                        .log(TransportLogKind::Warning, &notification.summary)),
-                    None => unknown_notification(method, params),
-                }
+                let notification: codex_schema::ConfigWarningNotification =
+                    serde_json::from_value(params.clone()).map_err(|error| {
+                        angel_engine::EngineError::InvalidCommand {
+                            message: error.to_string(),
+                        }
+                    })?;
+                Ok(TransportOutput::default().log(TransportLogKind::Warning, notification.summary))
             }
             Some(CodexServerNotificationMethod::RemoteControlStatusChanged) => {
-                match codex_notification_params::<
-                    codex_schema::RemoteControlStatusChangedNotification,
-                >(params)
-                {
-                    Some(notification) => Ok(TransportOutput::default().log(
-                        TransportLogKind::State,
-                        format!("remote control {}", notification.status),
-                    )),
-                    None => unknown_notification(method, params),
-                }
+                let notification: codex_schema::RemoteControlStatusChangedNotification =
+                    serde_json::from_value(params.clone()).map_err(|error| {
+                        angel_engine::EngineError::InvalidCommand {
+                            message: error.to_string(),
+                        }
+                    })?;
+                Ok(TransportOutput::default().log(
+                    TransportLogKind::State,
+                    format!("remote control {}", notification.status),
+                ))
             }
             Some(_) | None => unknown_notification(method, params),
         }?;
@@ -211,10 +233,6 @@ fn current_implicit_live_action_id(method: &str, params: &Value) -> Option<Actio
         return None;
     }
     action_id_from_item(item).map(|id| ActionId::new(id.to_string()))
-}
-
-fn codex_notification_params<T: serde::de::DeserializeOwned>(params: &Value) -> Option<T> {
-    serde_json::from_value(params.clone()).ok()
 }
 
 fn unknown_notification(
