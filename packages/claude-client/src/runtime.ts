@@ -97,16 +97,30 @@ function clientInputToContent(
           type: "text",
         });
         break;
-      case "embedded_blob_resource":
+      case "embedded_blob_resource": {
         const label = is.string(value.name) ? value.name : value.uri;
         if (!is.string(label)) {
           throw new Error("Embedded blob resource is missing name or uri.");
         }
-        content.push({
-          text: `Attachment: ${label}`,
-          type: "text",
-        });
-        break;
+        if (value.mimeType === "application/pdf") {
+          if (!is.nonEmptyString(value.data)) {
+            throw new Error("PDF attachment is missing data.");
+          }
+          content.push({
+            source: {
+              data: value.data,
+              media_type: "application/pdf",
+              type: "base64",
+            },
+            title: label,
+            type: "document",
+          });
+          break;
+        }
+        throw new Error(
+          `Attachment type "${value.mimeType}" is not supported by the Claude runtime: ${label}`,
+        );
+      }
       case "raw_content_block":
         if (!is.plainObject(value.value)) {
           throw new Error("Raw content block input must be an object.");
