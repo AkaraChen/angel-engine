@@ -158,6 +158,26 @@ describe("projection", () => {
     });
   });
 
+  it("only projects known remote ids as resumable chat thread ids", () => {
+    expect(
+      projectTurnRunResult({
+        conversation: conversationSnapshot({
+          remoteId: "req-token-123",
+          remoteKind: "pending",
+        }),
+      } as TurnRunResult).remoteThreadId,
+    ).toBeUndefined();
+
+    expect(
+      projectTurnRunResult({
+        conversation: conversationSnapshot({
+          remoteId: "sess-abc",
+          remoteKind: "known",
+        }),
+      } as TurnRunResult).remoteThreadId,
+    ).toBe("sess-abc");
+  });
+
   it("projects elicitation tool actions", () => {
     const event = projectTurnRunEvent({
       messagePart: toolPart({

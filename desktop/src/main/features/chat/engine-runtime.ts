@@ -85,6 +85,7 @@ interface ChatStreamControls {
 type DesktopChatSession = DesktopAngelSession | ClaudeCodeSession;
 
 const chatSessions = new Map<string, DesktopChatSession>();
+const chatSessionCreations = new Map<string, Promise<DesktopChatSession>>();
 const chatPrewarms = new Map<string, ChatPrewarm>();
 const MAX_PREWARM_SESSIONS = 4;
 
@@ -315,12 +316,36 @@ function closeChatSession(chatId?: string) {
 }
 
 async function getChatSession(chat: Chat): Promise<DesktopChatSession> {
-  const existing = chatSessions.get(chat.id);
-  if (existing) return existing;
+  return getOrCreateChatSession(
+    chat.id,
+    chatSessions,
+    chatSessionCreations,
+    async () => createChatSession(chat.runtime),
+  );
+}
 
-  const session = await createChatSession(chat.runtime);
-  chatSessions.set(chat.id, session);
-  return session;
+export async function getOrCreateChatSession<T>(
+  chatId: string,
+  sessions: Map<string, T>,
+  creations: Map<string, Promise<T>>,
+  createSession: () => Promise<T>,
+): Promise<T> {
+  const existing = sessions.get(chatId);
+  if (existing !== undefined) return existing;
+
+  const pending = creations.get(chatId);
+  if (pending !== undefined) return pending;
+
+  const creation = createSession()
+    .then((session) => {
+      sessions.set(chatId, session);
+      return session;
+    })
+    .finally(() => {
+      creations.delete(chatId);
+    });
+  creations.set(chatId, creation);
+  return creation;
 }
 
 async function createChatSession(

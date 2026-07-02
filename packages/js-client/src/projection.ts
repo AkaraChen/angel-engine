@@ -193,7 +193,10 @@ export function projectTurnRunResult(result: TurnRunResult) {
     content,
     model: config?.currentModel ?? undefined,
     reasoning: chatPartsText(content, "reasoning") || undefined,
-    remoteThreadId: snapshot?.remoteId ?? undefined,
+    remoteThreadId:
+      snapshot?.remoteKind === "known"
+        ? (snapshot.remoteId ?? undefined)
+        : undefined,
     text: chatPartsText(content, "text"),
     turnId: result.turnId,
   };
