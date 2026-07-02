@@ -1,4 +1,17 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-  "extends": ["config:recommended"]
+  "extends": ["config:recommended"],
+  "packageRules": [
+    {
+      "description": "SDK is pnpm-patched keyed to an exact version; bumps break pnpm install. Remove this rule when plan 033 (SDK migration) lands.",
+      "matchPackageNames": ["@anthropic-ai/claude-agent-sdk"],
+      "enabled": false
+    },
+    {
+      "description": "Group minor/patch devDependency updates to cut PR noise",
+      "matchDepTypes": ["devDependencies"],
+      "matchUpdateTypes": ["minor", "patch"],
+      "groupName": "dev dependencies (non-major)"
+    }
+  ]
 }
