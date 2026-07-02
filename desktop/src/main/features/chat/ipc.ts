@@ -68,7 +68,7 @@ export function createChatIpcRouter(runtime: ChatRuntime) {
           requireArchivedChat(chatId),
         );
         const deletedWorktrees =
-          await removeManagedWorktreesForChats(targetChats);
+          await removeWorktreesForDeletedChats(targetChats);
 
         for (const chat of targetChats) {
           runtime.closeChatSession(chat.id);
@@ -126,8 +126,14 @@ export function createChatIpcRouter(runtime: ChatRuntime) {
       }),
 
     chatsDeleteAll: t.procedure.action(async () => {
+      const targetChats = [...listChats(), ...listArchivedChats()];
+      const deletedWorktrees =
+        await removeWorktreesForDeletedChats(targetChats);
       runtime.closeChatSession();
-      return { deletedCount: deleteAllChats() };
+      return {
+        deletedCount: deleteAllChats(),
+        deletedWorktreeCount: deletedWorktrees.length,
+      };
     }),
 
     chatsGet: t.procedure.input<string>().action(async ({ input }) => {
@@ -229,9 +235,13 @@ export function createChatIpcRouter(runtime: ChatRuntime) {
 
         return new Promise<"cancelled" | "copied" | "deleted" | "rename">(
           (resolve) => {
+            let handled = false;
             const menuTemplate: MenuItemConstructorOptions[] = [
               {
-                click: () => resolve("rename"),
+                click: () => {
+                  handled = true;
+                  resolve("rename");
+                },
                 label: translate("common.rename"),
               },
             ];
@@ -242,6 +252,7 @@ export function createChatIpcRouter(runtime: ChatRuntime) {
                 {
                   click: () => {
                     clipboard.writeText(JSON.stringify(chat, null, 2));
+                    handled = true;
                     resolve("copied");
                   },
                   label: "Copy chat entity as JSON",
@@ -254,16 +265,22 @@ export function createChatIpcRouter(runtime: ChatRuntime) {
               { type: "separator" },
               {
                 click: () => {
-                  runtime.closeChatSession(chat.id);
-                  deleteChat(chat.id);
-                  resolve("deleted");
+                  handled = true;
+                  void (async () => {
+                    await removeWorktreesForDeletedChats([chat]);
+                    runtime.closeChatSession(chat.id);
+                    deleteChat(chat.id);
+                    resolve("deleted");
+                  })();
                 },
                 label: translate("common.delete"),
               },
             ]);
 
             menu.popup({
-              callback: () => resolve("cancelled"),
+              callback: () => {
+                if (!handled) resolve("cancelled");
+              },
               window:
                 BrowserWindow.fromWebContents(context.sender) ?? undefined,
             });
@@ -316,10 +333,27 @@ function managedWorktreesForChats(targetChats: Chat[]) {
   ];
 }
 
-async function removeManagedWorktreesForChats(targetChats: Chat[]) {
+export function removableManagedWorktreesForChats(
+  targetChats: Chat[],
+  survivingChats: Chat[],
+) {
+  const survivorWorktrees = new Set(managedWorktreesForChats(survivingChats));
+  return managedWorktreesForChats(targetChats).filter(
+    (worktreePath) => !survivorWorktrees.has(worktreePath),
+  );
+}
+
+async function removeWorktreesForDeletedChats(targetChats: Chat[]) {
+  const deletedIds = new Set(targetChats.map((chat) => chat.id));
+  const survivingChats = [...listChats(), ...listArchivedChats()].filter(
+    (chat) => !deletedIds.has(chat.id),
+  );
   const removedWorktrees: string[] = [];
 
-  for (const worktreePath of managedWorktreesForChats(targetChats)) {
+  for (const worktreePath of removableManagedWorktreesForChats(
+    targetChats,
+    survivingChats,
+  )) {
     const removedPath = await removeManagedWorktree(worktreePath);
     if (is.nonEmptyString(removedPath)) {
       removedWorktrees.push(removedPath);
