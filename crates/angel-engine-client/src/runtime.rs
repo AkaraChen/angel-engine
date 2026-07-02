@@ -6,12 +6,10 @@ use crate::{
     ClientProtocol, ClientResult,
 };
 
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize, Display)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize, Display)]
 #[serde(rename_all = "lowercase")]
 #[strum(serialize_all = "lowercase")]
 pub enum AgentRuntime {
-    #[default]
-    Codex,
     Kimi,
     Opencode,
     Qoder,
@@ -56,7 +54,6 @@ pub struct RuntimeOptionsOverrides {
 pub struct RuntimeOptions {
     #[serde(flatten)]
     pub client: ClientOptions,
-    #[serde(default)]
     pub runtime: AgentRuntime,
     #[serde(default)]
     pub default_reasoning_effort: Option<String>,
@@ -76,7 +73,13 @@ pub fn create_runtime_options(
         .map(|s| s.trim().to_ascii_lowercase())
         .as_deref()
     {
-        Some("codex") => AgentRuntime::Codex,
+        Some("codex") => {
+            return Err(ClientError::Engine(
+                angel_engine::EngineError::InvalidCommand {
+                    message: "codex is not a supported agent runtime name".to_string(),
+                },
+            ));
+        }
         Some("kimi") => AgentRuntime::Kimi,
         Some("opencode") => AgentRuntime::Opencode,
         Some("qoder") => AgentRuntime::Qoder,
@@ -231,16 +234,6 @@ pub fn create_runtime_options(
             protocol: ClientProtocol::Acp,
             ..ClientOptions::builder().build()
         },
-        AgentRuntime::Codex => ClientOptions {
-            args: overrides
-                .args
-                .clone()
-                .unwrap_or_else(|| vec!["app-server".to_string()]),
-            command: command_override.unwrap_or_else(|| "codex".to_string()),
-            identity,
-            protocol: ClientProtocol::CodexAppServer,
-            ..ClientOptions::builder().build()
-        },
     };
 
     if let Some(cwd) = overrides.cwd {
@@ -374,12 +367,14 @@ mod tests {
     }
 
     #[test]
-    fn explicit_codex_name_resolves_to_codex() {
-        let options = create_runtime_options(Some("codex"), RuntimeOptionsOverrides::default())
-            .expect("valid runtime");
+    fn codex_is_not_an_agent_runtime_name() {
+        let err = create_runtime_options(Some("codex"), RuntimeOptionsOverrides::default())
+            .expect_err("codex runtime should fail");
 
-        assert_eq!(options.runtime, AgentRuntime::Codex);
-        assert_eq!(options.client.protocol, ClientProtocol::CodexAppServer);
+        assert!(
+            err.to_string()
+                .contains("codex is not a supported agent runtime name")
+        );
     }
 
     #[test]

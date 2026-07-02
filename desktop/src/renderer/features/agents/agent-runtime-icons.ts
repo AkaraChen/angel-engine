@@ -1,7 +1,6 @@
 import type { BuiltinAgentRuntime } from "@shared/agents";
 import claudeIconSvg from "@lobehub/icons-static-svg/icons/claudecode.svg?raw";
 import clineIconSvg from "@lobehub/icons-static-svg/icons/cline.svg?raw";
-import codexIconSvg from "@lobehub/icons-static-svg/icons/codex.svg?raw";
 import copilotIconSvg from "@lobehub/icons-static-svg/icons/copilot.svg?raw";
 import geminiIconSvg from "@lobehub/icons-static-svg/icons/geminicli.svg?raw";
 import kimiIconSvg from "@lobehub/icons-static-svg/icons/kimi.svg?raw";
@@ -14,7 +13,6 @@ import is from "@sindresorhus/is";
 const builtinAgentIconSvg: Record<BuiltinAgentRuntime, string> = {
   claude: claudeIconSvg,
   cline: clineIconSvg,
-  codex: codexIconSvg,
   copilot: copilotIconSvg,
   gemini: geminiIconSvg,
   kimi: kimiIconSvg,

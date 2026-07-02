@@ -35,7 +35,7 @@ function chat(id: string, cwd: string | null): Chat {
     id,
     projectId: null,
     remoteThreadId: null,
-    runtime: "codex",
+    runtime: "kimi",
     title: id,
     updatedAt: "2026-07-02T00:00:00.000Z",
   };

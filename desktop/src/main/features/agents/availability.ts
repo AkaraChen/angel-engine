@@ -8,7 +8,6 @@ const runtimeCommands: Record<AgentRuntime, () => string> = {
   claude: () =>
     process.env.CLAUDE_CODE_PATH ?? process.env.CLAUDE_PATH ?? "claude",
   cline: () => "cline",
-  codex: () => "codex",
   copilot: () => "copilot",
   gemini: () => "gemini",
   kimi: () => "kimi",

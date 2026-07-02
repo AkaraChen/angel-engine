@@ -11,7 +11,6 @@ import type { SupportedLanguage } from "@/i18n";
 import type { DesktopThemeMode } from "@/platform/theme";
 import claudeIconUrl from "@lobehub/icons-static-svg/icons/claudecode-color.svg";
 import clineIconUrl from "@lobehub/icons-static-svg/icons/cline.svg";
-import codexIconUrl from "@lobehub/icons-static-svg/icons/codex-color.svg";
 import copilotIconUrl from "@lobehub/icons-static-svg/icons/copilot-color.svg";
 import geminiIconUrl from "@lobehub/icons-static-svg/icons/geminicli-color.svg";
 import kimiIconUrl from "@lobehub/icons-static-svg/icons/kimi-color.svg";
@@ -74,7 +73,6 @@ const themeModeOptions: Array<{
 const agentIconUrl: Partial<Record<AgentRuntime, string>> = {
   claude: claudeIconUrl,
   cline: clineIconUrl,
-  codex: codexIconUrl,
   copilot: copilotIconUrl,
   gemini: geminiIconUrl,
   kimi: kimiIconUrl,

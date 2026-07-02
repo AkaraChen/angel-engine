@@ -37,7 +37,13 @@ describe("normalizeChatRuntime", () => {
   });
 
   it("accepts builtin runtime ids", () => {
-    expect(normalizeChatRuntime("codex")).toBe("codex");
+    expect(normalizeChatRuntime("kimi")).toBe("kimi");
+  });
+
+  it("rejects codex as an agent runtime id", () => {
+    expect(() => normalizeChatRuntime("codex")).toThrow(
+      "Unknown chat runtime.",
+    );
   });
 
   it("accepts existing custom runtime ids", () => {
@@ -59,12 +65,12 @@ describe("normalizeChatRuntime", () => {
   });
 
   it("set-runtime validation happens before persistence", () => {
-    const runtime = "codex";
+    const runtime = "kimi";
 
     expect(() => normalizeChatRuntime("bad-runtime")).toThrow(
       "Unknown chat runtime.",
     );
-    expect(runtime).toBe("codex");
+    expect(runtime).toBe("kimi");
   });
 });
 

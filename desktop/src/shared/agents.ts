@@ -3,7 +3,6 @@ import { type as arkType } from "arktype";
 
 export type AgentRuntime =
   | CustomAgentRuntime
-  | "codex"
   | "kimi"
   | "opencode"
   | "qoder"
@@ -77,11 +76,6 @@ export interface AgentSettings {
 
 export const AGENT_OPTIONS: AgentOption[] = [
   {
-    description: "Codex app runtime with planning mode and effort controls.",
-    id: "codex",
-    label: "Codex",
-  },
-  {
     description: "Kimi runtime for Moonshot-based coding sessions.",
     id: "kimi",
     label: "Kimi",
@@ -119,10 +113,8 @@ export const AGENT_OPTIONS: AgentOption[] = [
 ];
 
 const builtinAgentRuntime = arkType(
-  "'codex' | 'kimi' | 'opencode' | 'qoder' | 'copilot' | 'gemini' | 'cline' | 'claude'",
+  "'kimi' | 'opencode' | 'qoder' | 'copilot' | 'gemini' | 'cline' | 'claude'",
 );
-
-const DEFAULT_AGENT_RUNTIME: AgentRuntime = "codex";
 
 export function isAgentRuntime(value: unknown): value is AgentRuntime {
   return isBuiltinAgentRuntime(value) || isCustomAgentRuntime(value);
@@ -173,7 +165,11 @@ export function resolveEnabledAgentRuntime(
     return settings.lastRuntime;
   }
 
-  return enabledRuntimes[0] ?? settings.enabledRuntimes[0];
+  const resolvedRuntime = enabledRuntimes[0] ?? settings.enabledRuntimes[0];
+  if (resolvedRuntime === undefined) {
+    throw new Error("No enabled agent runtime is available.");
+  }
+  return resolvedRuntime;
 }
 
 export function sanitizeAgentRuntimePreference(
@@ -210,17 +206,15 @@ export function sanitizeAgentSettings(value: unknown): AgentSettings {
       : {};
   const parsedLastRuntime = parseAgentRuntime(settings.lastRuntime);
   const parsedLegacyDefault = parseAgentRuntime(legacySettings.defaultRuntime);
-  const fallbackRuntime =
-    parsedLastRuntime === undefined
-      ? (parsedLegacyDefault ?? DEFAULT_AGENT_RUNTIME)
-      : parsedLastRuntime;
+  const fallbackRuntime = parsedLastRuntime ?? parsedLegacyDefault;
   const enabledRuntimes = sanitizeEnabledRuntimes(
     settings.enabledRuntimes,
     fallbackRuntime,
   );
-  const lastRuntime = enabledRuntimes.includes(fallbackRuntime)
-    ? fallbackRuntime
-    : enabledRuntimes[0];
+  const lastRuntime =
+    fallbackRuntime !== undefined && enabledRuntimes.includes(fallbackRuntime)
+      ? fallbackRuntime
+      : enabledRuntimes[0];
 
   return {
     enabledRuntimes,
@@ -253,7 +247,7 @@ export function rememberAgentRuntimePreference(
 
 function sanitizeEnabledRuntimes(
   value: unknown,
-  fallbackRuntime: AgentRuntime,
+  fallbackRuntime?: AgentRuntime,
 ): AgentRuntime[] {
   if (!Array.isArray(value)) {
     return AGENT_OPTIONS.map((agent) => agent.id);
@@ -274,7 +268,8 @@ function sanitizeEnabledRuntimes(
     ...Array.from(parsedRuntimes).filter(isCustomAgentRuntime),
   ];
 
-  return enabledRuntimes.length > 0 ? enabledRuntimes : [fallbackRuntime];
+  if (enabledRuntimes.length > 0) return enabledRuntimes;
+  return fallbackRuntime === undefined ? [] : [fallbackRuntime];
 }
 
 function sanitizeRuntimePreferences(
