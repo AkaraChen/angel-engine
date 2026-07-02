@@ -272,12 +272,9 @@ export class ClaudeCodeSession {
       }
       return this.finishTurn(active);
     } catch (error) {
+      const outcome = claudeTurnErrorOutcome(request.signal, error);
       this.applyEngineEvents([
-        turnTerminal(
-          active.conversationId,
-          active.turnId,
-          failedOutcome(errorMessage(error)),
-        ),
+        turnTerminal(active.conversationId, active.turnId, outcome),
       ]);
       throw error;
     } finally {
@@ -583,7 +580,10 @@ export class ClaudeCodeSession {
   private canUseTool(active: ActiveClaudeTurn): CanUseTool {
     return async (toolName, input, context) => {
       const toolInput: ClaudeToolInput = input;
-      const actionId = context.toolUseID || `permission-${Date.now()}`;
+      if (!is.nonEmptyString(context.toolUseID)) {
+        throw new Error("Claude tool permission context is missing toolUseID.");
+      }
+      const actionId = context.toolUseID;
       const pending = this.createPendingPermission(actionId);
       const inputSummary = toolInputSummary(toolName, toolInput);
       const elicitationKind = claudeElicitationKind(toolName, toolInput);
@@ -992,4 +992,13 @@ export class ClaudeCodeSession {
     );
     return run;
   }
+}
+
+export function claudeTurnErrorOutcome(
+  signal: AbortSignal | undefined,
+  error: unknown,
+): unknown {
+  return signal?.aborted
+    ? EngineEventTurnOutcome.Interrupted
+    : failedOutcome(errorMessage(error));
 }

@@ -315,6 +315,7 @@ function userHistoryEvents(
   const toolId = block.tool_use_id;
   const toolUse = toolUses.get(toolId);
   if (!toolUse) {
+    // Keep this fail-fast: 155 local Claude transcripts had no orphaned tool_result blocks.
     throw new Error(
       `Claude history tool result has no matching tool_use: ${toolId}`,
     );

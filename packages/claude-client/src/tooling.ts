@@ -146,6 +146,13 @@ export function contentBlockText(block: object): string {
     }
   }
 
+  if (block.type === "image") {
+    const source = is.plainObject(block.source) ? block.source : undefined;
+    const mediaType =
+      source && is.string(source.media_type) ? source.media_type : "image";
+    return "[image " + mediaType + "]";
+  }
+
   throw new Error("Unknown Claude content block type.");
 }
 
