@@ -125,11 +125,9 @@ pub enum TurnRunEvent {
         message_part: DisplayMessagePartSnapshot,
     },
     ActionObserved {
-        action: ActionSnapshot,
         message_part: DisplayMessagePartSnapshot,
     },
     ActionUpdated {
-        action: ActionSnapshot,
         message_part: DisplayMessagePartSnapshot,
     },
     ActionOutputDelta {
@@ -139,13 +137,11 @@ pub enum TurnRunEvent {
         message_part: DisplayMessagePartSnapshot,
     },
     Elicitation {
-        elicitation: ElicitationSnapshot,
         message_part: DisplayMessagePartSnapshot,
     },
     PlanUpdated {
         #[serde(default, skip_serializing_if = "Option::is_none")]
         turn_id: Option<String>,
-        plan: DisplayPlanSnapshot,
         message_part: DisplayMessagePartSnapshot,
     },
     Result {
@@ -701,10 +697,8 @@ impl ActiveTurn {
         let message_part = DisplayMessagePartSnapshot::tool(
             DisplayToolActionSnapshot::from_elicitation(&elicitation),
         );
-        self.events.push_back(TurnRunEvent::Elicitation {
-            elicitation,
-            message_part,
-        });
+        self.events
+            .push_back(TurnRunEvent::Elicitation { message_part });
     }
 
     fn accept_action_elicitation(&mut self, action: &ActionSnapshot) {
@@ -741,10 +735,8 @@ impl ActiveTurn {
         let message_part = DisplayMessagePartSnapshot::tool(
             DisplayToolActionSnapshot::from_elicitation(&elicitation),
         );
-        self.events.push_back(TurnRunEvent::Elicitation {
-            elicitation,
-            message_part,
-        });
+        self.events
+            .push_back(TurnRunEvent::Elicitation { message_part });
     }
 }
 
@@ -823,7 +815,6 @@ impl TurnCollector {
                 self.upsert_action(action.clone());
                 events.push_back(TurnRunEvent::ActionObserved {
                     message_part: DisplayMessagePartSnapshot::tool((&action).into()),
-                    action,
                 });
             }
             ClientEvent::ActionUpdated { action, .. } => {
@@ -834,7 +825,6 @@ impl TurnCollector {
                 self.upsert_action(action.clone());
                 events.push_back(TurnRunEvent::ActionUpdated {
                     message_part: DisplayMessagePartSnapshot::tool((&action).into()),
-                    action,
                 });
             }
             ClientEvent::AssistantDelta {
@@ -923,7 +913,6 @@ impl TurnCollector {
         let message_part = DisplayMessagePartSnapshot::plan(plan.clone());
         events.push_back(TurnRunEvent::PlanUpdated {
             turn_id,
-            plan,
             message_part,
         });
     }
@@ -1091,12 +1080,10 @@ mod tests {
         assert!(matches!(
             active.pop_event(),
             Some(TurnRunEvent::Elicitation {
-                elicitation,
                 message_part,
-            }) if elicitation.phase == "resolved:Allow"
-                && message_part.action.as_ref().is_some_and(|action| {
-                    action.id == "elicitation" && action.phase == "completed"
-                })
+            }) if message_part.action.as_ref().is_some_and(|action| {
+                action.id == "elicitation" && action.phase == "completed"
+            })
         ));
         assert!(active.pending_elicitation_id.is_none());
     }

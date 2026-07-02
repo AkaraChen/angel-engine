@@ -17,6 +17,7 @@ import type {
   ChatSendResult,
   ChatStreamController,
   ChatToolAction,
+  ChatToolActionOutput,
   ChatToolActionPhase,
 } from "@shared/chat";
 import {
@@ -1661,7 +1662,7 @@ function appendToolActionDeltaPart(
       throw new Error("Tool action delta is missing previous output.");
     }
     previousOutputText = previous.artifact.output
-      .map((chunk) => chunk.text)
+      .map((chunk: ChatToolActionOutput) => chunk.text)
       .join("");
   }
   upsertToolActionPart(parts, {
@@ -1678,7 +1679,9 @@ function toolActionDeltaText(action: ChatToolAction) {
   if (action.output === undefined) {
     throw new Error("Tool action delta is missing output.");
   }
-  return action.output.map((chunk) => chunk.text).join("");
+  return action.output
+    .map((chunk: ChatToolActionOutput) => chunk.text)
+    .join("");
 }
 
 function upsertTurnPlanPartAtEnd(
@@ -1903,7 +1906,9 @@ function elicitationPhaseFromAction(
 function actionHasOutput(action: ChatToolAction) {
   return (
     is.nonEmptyString(action.outputText) ||
-    action.output?.some((output) => is.nonEmptyString(output.text)) === true
+    action.output?.some((output: ChatToolActionOutput) =>
+      is.nonEmptyString(output.text),
+    ) === true
   );
 }
 
@@ -1916,7 +1921,9 @@ function isEmptyHostCapabilityAction(action: ChatToolAction) {
     action.kind === "hostCapability" &&
     !action.error &&
     !is.nonEmptyString(action.outputText) &&
-    action.output?.some((output) => is.nonEmptyString(output.text)) !== true
+    action.output?.some((output: ChatToolActionOutput) =>
+      is.nonEmptyString(output.text),
+    ) !== true
   );
 }
 

@@ -1,5 +1,6 @@
 import type {
   ActionOutputSnapshot,
+  ActionSnapshot,
   AgentStateSnapshot,
   AvailableCommandSnapshot,
   DisplayPlanSnapshot,
@@ -128,7 +129,7 @@ export type ChatToolActionOutput = ActionOutputSnapshot;
 
 export type ChatToolActionError = ErrorSnapshot;
 
-export type ChatToolAction = NonNullable<TurnRunEvent["action"]>;
+export type ChatToolAction = ActionSnapshot;
 
 export type ChatElicitationQuestionOption = PartialBy<
   QuestionOptionSnapshot,
@@ -254,18 +255,18 @@ export type ChatStreamDelta = RequireFrom<
 };
 
 type ChatPlanStreamEvent = {
-  plan: NonNullable<TurnRunEvent["plan"]> & ChatPlanData;
+  plan: ChatPlanData;
   turnId?: TurnRunEvent["turnId"];
   type: "plan";
 };
 
 type ChatToolStreamEvent = {
-  action: NonNullable<TurnRunEvent["action"]> & ChatToolAction;
+  action: ChatToolAction;
   type: "tool" | "toolDelta";
 };
 
 type ChatElicitationStreamEvent = {
-  elicitation: NonNullable<TurnRunEvent["elicitation"]> & ChatElicitation;
+  elicitation: ChatElicitation;
   type: "elicitation";
 };
 

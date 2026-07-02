@@ -4,6 +4,7 @@ import type {
   ClientUpdate,
   ConversationSnapshot,
   DisplayMessagePartSnapshot,
+  ElicitationSnapshot,
   EngineEventActionKind,
   EngineEventActionOutputKind,
   TurnRunEvent,
@@ -329,7 +330,6 @@ function turnRunEventFromClientEvent(
     case "actionObserved":
       return event.action
         ? {
-            action: event.action,
             messagePart: toolPart(event.action),
             type: TurnRunEventType.ActionObserved,
           }
@@ -337,7 +337,6 @@ function turnRunEventFromClientEvent(
     case "actionUpdated":
       return event.action
         ? {
-            action: event.action,
             messagePart: toolPart(event.action),
             type: TurnRunEventType.ActionUpdated,
           }
@@ -346,7 +345,7 @@ function turnRunEventFromClientEvent(
     case "elicitationUpdated":
       return event.elicitation
         ? {
-            elicitation: event.elicitation,
+            messagePart: elicitationPart(event.elicitation),
             type: TurnRunEventType.Elicitation,
           }
         : undefined;
@@ -357,7 +356,6 @@ function turnRunEventFromClientEvent(
               plan: event.plan,
               type: "plan",
             },
-            plan: event.plan,
             turnId: event.turnId,
             type: TurnRunEventType.PlanUpdated,
           }
@@ -404,4 +402,52 @@ function toolPart(action: ActionSnapshot): DisplayMessagePartSnapshot {
     },
     type: "tool-call",
   };
+}
+
+type DisplayToolAction = NonNullable<DisplayMessagePartSnapshot["action"]>;
+
+function elicitationPart(
+  elicitation: ElicitationSnapshot,
+): DisplayMessagePartSnapshot {
+  return {
+    action: {
+      elicitationId: elicitation.id,
+      error: undefined,
+      id: elicitation.id,
+      inputSummary: elicitationInputSummary(elicitation),
+      kind: "elicitation",
+      output: [],
+      outputText: "",
+      phase: elicitationActionPhase(elicitation.phase),
+      rawInput: JSON.stringify(elicitation),
+      title: elicitation.title ?? undefined,
+      turnId: elicitation.turnId ?? undefined,
+    },
+    type: "tool-call",
+  };
+}
+
+function elicitationInputSummary(
+  elicitation: ElicitationSnapshot,
+): string | undefined {
+  if (elicitation.body) return elicitation.body;
+  const questions = elicitation.questions
+    .map((question) => question.question || question.header)
+    .filter((text) => text.length > 0)
+    .join("\n");
+  return questions || undefined;
+}
+
+function elicitationActionPhase(phase: string): DisplayToolAction["phase"] {
+  if (phase.startsWith("resolved:")) return "completed";
+  switch (phase) {
+    case "open":
+      return "awaitingDecision";
+    case "resolving":
+      return "running";
+    case "cancelled":
+      return "cancelled";
+    default:
+      return "running";
+  }
 }

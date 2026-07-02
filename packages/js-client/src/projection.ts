@@ -241,13 +241,6 @@ export function projectTurnRunEvent(
     if (projected) return projected;
   }
 
-  if (event.type === "elicitation" && event.elicitation) {
-    return {
-      elicitation: toChatElicitation(event.elicitation),
-      type: "elicitation",
-    };
-  }
-
   return undefined;
 }
 

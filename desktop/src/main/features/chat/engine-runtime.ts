@@ -746,12 +746,10 @@ class DesktopAngelSession {
     for (const event of events) {
       request.onEvent?.(event);
 
-      if (
-        event.type === TurnRunEventType.Elicitation &&
-        event.elicitation?.phase === "open"
-      ) {
+      const openElicitationId = openElicitationEventId(event);
+      if (openElicitationId !== undefined) {
         const followup = await this.waitForElicitation(
-          event.elicitation.id,
+          openElicitationId,
           request.signal,
         );
         const result = await this.dispatchEvents(followup, request);
@@ -872,11 +870,7 @@ class DesktopAngelSession {
 }
 
 function pendingActionElicitationId(event: TurnRunEvent) {
-  const action =
-    event.action ??
-    (event.messagePart?.type === "tool-call"
-      ? event.messagePart.action
-      : undefined);
+  const action = turnRunEventAction(event);
   if (action?.phase !== ActionPhase.AwaitingDecision) {
     return undefined;
   }
@@ -888,6 +882,26 @@ function pendingActionElicitationId(event: TurnRunEvent) {
     return action.id;
   }
   return undefined;
+}
+
+function openElicitationEventId(event: TurnRunEvent) {
+  if (event.type !== TurnRunEventType.Elicitation) {
+    return undefined;
+  }
+  const action = turnRunEventAction(event);
+  if (
+    action?.kind !== "elicitation" ||
+    action.phase !== ActionPhase.AwaitingDecision
+  ) {
+    return undefined;
+  }
+  return action.elicitationId ?? action.id;
+}
+
+function turnRunEventAction(event: TurnRunEvent) {
+  return event.messagePart?.type === "tool-call"
+    ? event.messagePart.action
+    : undefined;
 }
 
 async function yieldToEventLoop() {

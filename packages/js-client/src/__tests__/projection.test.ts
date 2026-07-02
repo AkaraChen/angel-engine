@@ -1,6 +1,8 @@
 import type {
   ConversationSnapshot,
   DisplayMessagePartSnapshot,
+  DisplayPlanSnapshot,
+  ElicitationSnapshot,
   TurnRunEvent,
   TurnRunResult,
 } from "@angel-engine/client-napi";
@@ -76,6 +78,32 @@ function toolPart(
       ...overrides,
     },
     type: "tool-call",
+  };
+}
+
+function elicitationSnapshot(
+  overrides: Partial<ElicitationSnapshot> = {},
+): ElicitationSnapshot {
+  return {
+    choices: [],
+    id: "elicitation-1",
+    kind: "approval",
+    phase: "open",
+    questions: [],
+    title: "Permission request",
+    turnId: "turn-1",
+    ...overrides,
+  };
+}
+
+function planSnapshot(
+  overrides: Partial<DisplayPlanSnapshot> = {},
+): DisplayPlanSnapshot {
+  return {
+    entries: [{ content: "Ship it", status: "in_progress" }],
+    kind: "review",
+    text: "",
+    ...overrides,
   };
 }
 
@@ -179,16 +207,13 @@ describe("projection", () => {
   });
 
   it("projects elicitation tool actions", () => {
+    const elicitation = elicitationSnapshot();
     const event = projectTurnRunEvent({
       messagePart: toolPart({
         elicitationId: "elicitation-1",
         kind: "elicitation",
         phase: "awaitingDecision",
-        rawInput: JSON.stringify({
-          id: "elicitation-1",
-          kind: "approval",
-          phase: "open",
-        }),
+        rawInput: JSON.stringify(elicitation),
         title: "Permission request",
       }),
       turnId: "turn-1",
@@ -202,6 +227,67 @@ describe("projection", () => {
         phase: "open",
       },
       type: "elicitation",
+    });
+  });
+
+  it("projects action observed events from message parts", () => {
+    const event = projectTurnRunEvent({
+      messagePart: toolPart({ phase: "completed" }),
+      type: TurnRunEventType.ActionObserved,
+    } as TurnRunEvent);
+
+    expect(event).toMatchObject({
+      action: {
+        id: "action-1",
+        phase: "completed",
+        title: "pwd",
+      },
+      type: "tool",
+    });
+  });
+
+  it("projects elicitation events from message parts", () => {
+    const elicitation = elicitationSnapshot();
+    const event = projectTurnRunEvent({
+      messagePart: toolPart({
+        elicitationId: elicitation.id,
+        kind: "elicitation",
+        phase: "awaitingDecision",
+        rawInput: JSON.stringify(elicitation),
+        title: "Permission request",
+      }),
+      type: TurnRunEventType.Elicitation,
+    } as TurnRunEvent);
+
+    expect(event).toMatchObject({
+      elicitation: {
+        id: "elicitation-1",
+        phase: "open",
+      },
+      type: "elicitation",
+    });
+  });
+
+  it("projects plan updated events from message parts", () => {
+    const plan = planSnapshot();
+    const event = projectTurnRunEvent({
+      messagePart: {
+        plan,
+        type: "plan",
+      },
+      turnId: "turn-1",
+      type: TurnRunEventType.PlanUpdated,
+    } as TurnRunEvent);
+
+    expect(event).toEqual({
+      plan: {
+        entries: [{ content: "Ship it", status: "in_progress" }],
+        kind: "review",
+        path: null,
+        text: "",
+      },
+      turnId: "turn-1",
+      type: "plan",
     });
   });
 

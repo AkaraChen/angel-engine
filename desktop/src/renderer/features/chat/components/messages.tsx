@@ -9,6 +9,7 @@ import type {
   ChatElicitationResponse,
   ChatPlanData,
   ChatToolAction,
+  ChatToolActionOutput,
 } from "@shared/chat";
 import type { TFunction } from "i18next";
 import { useMessageError } from "@assistant-ui/core/react";
@@ -645,7 +646,9 @@ function isBareHostCapabilityToolAction(
     return false;
   }
   if (
-    action.output?.some((output) => is.nonEmptyString(output.text)) === true
+    action.output?.some((output: ChatToolActionOutput) =>
+      is.nonEmptyString(output.text),
+    ) === true
   ) {
     return false;
   }

@@ -624,11 +624,8 @@ pub struct TurnRunEvent {
     pub part: Option<TurnRunDeltaPart>,
     pub text: Option<String>,
     pub turn_id: Option<String>,
-    pub action: Option<ActionSnapshot>,
     pub action_id: Option<String>,
     pub content: Option<ActionOutputSnapshot>,
-    pub plan: Option<DisplayPlanSnapshot>,
     pub message_part: Option<DisplayMessagePartSnapshot>,
-    pub elicitation: Option<ElicitationSnapshot>,
     pub result: Option<TurnRunResult>,
 }
