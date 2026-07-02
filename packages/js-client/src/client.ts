@@ -105,7 +105,8 @@ export class AngelClient {
       runtime: string;
     }): Promise<Chat> => {
       const chat = await this.requireChat(input.chatId);
-      const updated = await this.touchChat({ ...chat, runtime: input.runtime });
+      const adapter = this.agents.get(input.runtime);
+      const updated = await this.touchChat({ ...chat, runtime: adapter.id });
       this.emit({ chat: updated, type: "chat.updated" });
       return updated;
     },
@@ -118,6 +119,7 @@ export class AngelClient {
       ? await this.store.getProject(input.projectId)
       : undefined;
     const createdAt = nowIso();
+    const adapter = this.agents.get(input.runtime);
     const chat: Chat = {
       archived: false,
       createdAt,
@@ -125,7 +127,7 @@ export class AngelClient {
       id: createId("chat"),
       projectId: input.projectId ?? null,
       remoteThreadId: null,
-      runtime: input.runtime ?? this.agents.get(input.runtime).id,
+      runtime: adapter.id,
       title: input.title ?? "Untitled chat",
       updatedAt: createdAt,
     };

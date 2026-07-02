@@ -55,8 +55,9 @@ must strip UI-only sentinels and send `undefined` for no override.
 For desktop-only frontend architecture changes, run:
 
 ```sh
-yarn --cwd desktop typecheck
-yarn --cwd desktop format:check
+pnpm --prefix desktop run runtime:build
+pnpm --prefix desktop run typecheck
+pnpm --prefix desktop run format:check
 git diff --check
 ```
 

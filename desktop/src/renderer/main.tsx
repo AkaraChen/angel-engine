@@ -13,6 +13,10 @@ if (import.meta.hot) {
   import.meta.hot.dispose(stopDesktopColorSchemeSync);
 }
 
+if (import.meta.env.DEV) {
+  void import("react-grab");
+}
+
 createRoot(document.getElementById("root") as HTMLElement).render(
   <StrictMode>
     <App />

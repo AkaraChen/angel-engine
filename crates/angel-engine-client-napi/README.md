@@ -12,17 +12,16 @@ bun run build:debug
 The build uses `napi build --platform` and writes a local
 `angel_engine_client.<platform>.node` artifact next to `index.js`.
 
-## CLI Demo
+## Runtime Examples
 
 ```sh
-bun run demo:kimi
-bun run demo:codex
-bun run demo:opencode
+cargo run -p angel-provider --example codex_shell
+cargo run -p angel-provider --example kimi_shell
+cargo run -p angel-provider --example opencode_shell
 ```
 
-The demo uses the native `AngelClient` binding to spawn the selected runtime
-process, write protocol messages, read runtime output, and return decoded
-updates to JavaScript.
+The Rust provider examples spawn the selected runtime process, write protocol
+messages, read runtime output, and return decoded updates.
 
 `initialize`, `startThread`, and `nextUpdate` return update objects. Use
 `update.streamDeltas` for incremental assistant, reasoning, plan, and action

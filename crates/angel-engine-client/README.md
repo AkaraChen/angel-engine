@@ -132,5 +132,4 @@ hosts that intentionally own runtime process IO themselves.
 cd crates/angel-engine-client-napi
 bun install
 bun run build:debug
-bun run demo:codex
 ```

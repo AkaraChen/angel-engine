@@ -17,8 +17,8 @@ adapter types, and shared chat data types.
 
 ```ts
 import {
-  AngelEngineChatClient,
-  createAngelEngineChatStore,
+  AngelClient,
+  InMemoryAngelStore,
   type ChatHistoryMessage,
 } from "@angel-engine/js-client";
 ```

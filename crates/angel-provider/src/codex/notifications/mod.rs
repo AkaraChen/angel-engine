@@ -36,12 +36,50 @@ impl CodexAdapter {
                 self.decode_turn_completed(engine, params)
             }
             Some(CodexServerNotificationMethod::ItemAgentMessageDelta) => {
-                self.decode_text_delta(engine, params, DeltaKind::Assistant)
+                let notification: codex_schema::AgentMessageDeltaNotification =
+                    serde_json::from_value(params.clone()).map_err(|error| {
+                        angel_engine::EngineError::InvalidCommand {
+                            message: error.to_string(),
+                        }
+                    })?;
+                self.decode_text_delta(
+                    engine,
+                    &notification.thread_id,
+                    &notification.turn_id,
+                    notification.delta,
+                    DeltaKind::Assistant,
+                )
             }
-            Some(
-                CodexServerNotificationMethod::ItemReasoningTextDelta
-                | CodexServerNotificationMethod::ItemReasoningSummaryTextDelta,
-            ) => self.decode_text_delta(engine, params, DeltaKind::Reasoning),
+            Some(CodexServerNotificationMethod::ItemReasoningTextDelta) => {
+                let notification: codex_schema::ReasoningTextDeltaNotification =
+                    serde_json::from_value(params.clone()).map_err(|error| {
+                        angel_engine::EngineError::InvalidCommand {
+                            message: error.to_string(),
+                        }
+                    })?;
+                self.decode_text_delta(
+                    engine,
+                    &notification.thread_id,
+                    &notification.turn_id,
+                    notification.delta,
+                    DeltaKind::Reasoning,
+                )
+            }
+            Some(CodexServerNotificationMethod::ItemReasoningSummaryTextDelta) => {
+                let notification: codex_schema::ReasoningSummaryTextDeltaNotification =
+                    serde_json::from_value(params.clone()).map_err(|error| {
+                        angel_engine::EngineError::InvalidCommand {
+                            message: error.to_string(),
+                        }
+                    })?;
+                self.decode_text_delta(
+                    engine,
+                    &notification.thread_id,
+                    &notification.turn_id,
+                    notification.delta,
+                    DeltaKind::Reasoning,
+                )
+            }
             Some(CodexServerNotificationMethod::ItemReasoningSummaryPartAdded) => {
                 Ok(TransportOutput::default())
             }

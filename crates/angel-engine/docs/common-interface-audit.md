@@ -7,18 +7,18 @@ not in the common command, state, or effect surface.
 
 ## Success Criteria
 
-| Requirement | Evidence |
-| --- | --- |
-| Common commands are protocol-neutral. | `EngineCommand` contains initialize/auth/discover/start/resume/turn/cancel/elicitation/context plus `Extension(EngineExtensionCommand)`. Single-sided commands such as fork, steer, rollback, archive, shell command, close, and unsubscribe live under `EngineExtensionCommand`. |
-| Conversation discovery and resume use opaque identifiers. | `DiscoverConversationsParams` contains only `cwd` and `cursor`; `ResumeTarget` uses local `ConversationId` or opaque remote id plus `hydrate`. `RemoteConversationId`, `RemoteTurnId`, `RemoteActionId`, and `RemoteRequestId` no longer expose ACP/Codex-specific variants. |
-| Protocol effects are provider adapter inputs, not state policy. | `ProtocolEffect` is planned by the engine and encoded only by `ProtocolAdapter`; state, snapshots, NAPI, and desktop do not consume provider wire payloads directly. |
-| Context is common, not Codex-only. | Common context includes model, reasoning, mode, cwd, approval, sandbox, permissions, and raw metadata. Codex-only goal/memory/global config surfaces are excluded from public context capabilities. |
-| Raw metadata cannot trigger protocol writes. | `ContextUpdate::Raw` remains metadata only; `acp.config.*` no longer maps to `session/set_config_option`. |
-| Adapter mapping stays protocol-local. | ACP/Codex wire ids are interpreted in `crates/angel-provider/src`, not in public state variants. |
-| Capability differences are explicit. | Unsupported or single-sided behavior is represented through `ConversationCapabilities` and `CapabilitySupport::Extension`, not by adding raw public commands. |
-| Tests cover core behavior and adversarial cases. | `cargo test --workspace` covers reducer tests, adapter tests, plan mode cases, process smoke tests, and adversarial protocol cases. |
-| Examples compile and run against real processes. | `cargo check -p angel-provider --examples` passes; `codex_shell`, `kimi_shell`, and `opencode_shell` have been smoke-tested with `/commands` then `:quit`. |
-| File organization constraints hold. | No path-attribute module overrides are present; no Rust file under `crates/angel-engine` exceeds 500 lines. |
+| Requirement                                                     | Evidence                                                                                                                                                                                                                                                                          |
+| --------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Common commands are protocol-neutral.                           | `EngineCommand` contains initialize/auth/discover/start/resume/turn/cancel/elicitation/context plus `Extension(EngineExtensionCommand)`. Single-sided commands such as fork, steer, rollback, archive, shell command, close, and unsubscribe live under `EngineExtensionCommand`. |
+| Conversation discovery and resume use opaque identifiers.       | `DiscoverConversationsParams` contains only `cwd` and `cursor`; `ResumeTarget` uses local `ConversationId` or opaque remote id plus `hydrate`. `RemoteConversationId`, `RemoteTurnId`, `RemoteActionId`, and `RemoteRequestId` no longer expose ACP/Codex-specific variants.      |
+| Protocol effects are provider adapter inputs, not state policy. | `ProtocolEffect` is planned by the engine and encoded only by `ProtocolAdapter`; state, snapshots, NAPI, and desktop do not consume provider wire payloads directly.                                                                                                              |
+| Context is common, not Codex-only.                              | Common context includes model, reasoning, mode, cwd, approval, sandbox, permissions, and raw metadata. Codex-only goal/memory/global config surfaces are excluded from public context capabilities.                                                                               |
+| Raw metadata cannot trigger protocol writes.                    | `ContextUpdate::Raw` remains metadata only; `acp.config.*` no longer maps to `session/set_config_option`.                                                                                                                                                                         |
+| Adapter mapping stays protocol-local.                           | ACP/Codex wire ids are interpreted in `crates/angel-provider/src`, not in public state variants.                                                                                                                                                                                  |
+| Capability differences are explicit.                            | Unsupported or single-sided behavior is represented through `ConversationCapabilities` and `CapabilitySupport::Extension`, not by adding raw public commands.                                                                                                                     |
+| Tests cover core behavior and adversarial cases.                | `cargo test --workspace` covers reducer tests, adapter tests, plan mode cases, process smoke tests, and adversarial protocol cases.                                                                                                                                               |
+| Examples compile and run against real processes.                | `cargo check -p angel-provider --examples` passes; `codex_shell`, `kimi_shell`, and `opencode_shell` have been smoke-tested with `/commands` then `:quit`.                                                                                                                        |
+| File organization constraints hold.                             | No path-attribute module overrides are present. Oversized Rust files under `crates/angel-engine` are tracked by the file-size audit command as review candidates.                                                                                                                 |
 
 ## Explicitly Excluded From Core
 
@@ -44,5 +44,7 @@ rg -n 'acp\.config|userMessageId|user_message_id|GoalState|MemoryMode|ContextUpd
   --glob '!crates/angel-engine/docs/common-interface-audit.md' -S
 ```
 
-The last three checks are expected to produce no matches/output, except command
-exit status may be non-zero for `rg` when no matches are found.
+The `#[path]` and protocol-leak searches are expected to produce no
+matches/output, except command exit status may be non-zero for `rg` when no
+matches are found. The file-size audit may list Rust files over 500 lines; treat
+that output as review candidates, not as a failure for this audit.

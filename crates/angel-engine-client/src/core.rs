@@ -239,7 +239,10 @@ where
         input: Vec<ClientInput>,
     ) -> ClientResult<ClientCommandResult> {
         let conversation_id = to_conversation_id(conversation_id);
-        let input = input.into_iter().map(UserInput::from).collect::<Vec<_>>();
+        let input = input
+            .into_iter()
+            .map(UserInput::try_from)
+            .collect::<ClientResult<Vec<_>>>()?;
         if let Some(interpreted) =
             self.adapter
                 .interpret_user_input(&self.engine, &conversation_id, &input)?
@@ -773,15 +776,27 @@ impl ClientInput {
     }
 }
 
-impl From<ClientInput> for UserInput {
-    fn from(input: ClientInput) -> Self {
-        match input {
+fn require_input_name(name: Option<String>, kind: &str) -> ClientResult<String> {
+    name.filter(|value| !value.trim().is_empty())
+        .ok_or_else(|| ClientError::InvalidInput {
+            message: format!("{kind} input requires a non-empty name"),
+        })
+}
+
+impl TryFrom<ClientInput> for UserInput {
+    type Error = ClientError;
+
+    fn try_from(input: ClientInput) -> Result<Self, Self::Error> {
+        Ok(match input {
             ClientInput::Text { text } => UserInput::text(text),
             ClientInput::Image {
                 data,
                 mime_type,
                 name,
-            } => UserInput::image(data, mime_type, name),
+            } => {
+                let name = require_input_name(name, "image")?;
+                UserInput::image(data, mime_type, Some(name))
+            }
             ClientInput::ResourceLink {
                 name,
                 uri,
@@ -813,9 +828,12 @@ impl From<ClientInput> for UserInput {
                 data,
                 mime_type,
                 name,
-            } => UserInput::embedded_blob_resource(uri, data, mime_type, name),
+            } => {
+                let name = require_input_name(name, "embedded blob resource")?;
+                UserInput::embedded_blob_resource(uri, data, mime_type, Some(name))
+            }
             ClientInput::RawContentBlock { value } => UserInput::raw_content_block(value),
-        }
+        })
     }
 }
 

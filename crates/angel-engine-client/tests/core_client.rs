@@ -1069,6 +1069,64 @@ fn inputs_event_encodes_every_supported_user_input_shape_for_acp() {
 }
 
 #[test]
+fn send_inputs_rejects_image_without_name() {
+    let (mut client, conversation_id) = ready_client();
+
+    let result = client
+        .thread(&conversation_id)
+        .send_event(ThreadEvent::input(vec![ClientInput::Image {
+            data: "ZmFrZQ==".to_string(),
+            mime_type: "image/png".to_string(),
+            name: None,
+        }]));
+
+    match result {
+        Err(ClientError::InvalidInput { message }) => {
+            assert!(message.contains("image"));
+        }
+        other => panic!("expected InvalidInput error, got {other:?}"),
+    }
+}
+
+#[test]
+fn send_inputs_rejects_embedded_blob_resource_without_name() {
+    let (mut client, conversation_id) = ready_client();
+
+    let result = client
+        .thread(&conversation_id)
+        .send_event(ThreadEvent::input(vec![
+            ClientInput::EmbeddedBlobResource {
+                uri: "file:///repo/archive.bin".to_string(),
+                data: "AAEC".to_string(),
+                mime_type: Some("application/zip".to_string()),
+                name: None,
+            },
+        ]));
+
+    match result {
+        Err(ClientError::InvalidInput { message }) => {
+            assert!(message.contains("embedded blob resource"));
+        }
+        other => panic!("expected InvalidInput error, got {other:?}"),
+    }
+}
+
+#[test]
+fn send_inputs_accepts_image_with_name() {
+    let (mut client, conversation_id) = ready_client();
+
+    let result = client
+        .thread(&conversation_id)
+        .send_event(ThreadEvent::input(vec![ClientInput::image(
+            "ZmFrZQ==",
+            "image/png",
+            Some("screenshot.png".to_string()),
+        )]));
+
+    assert!(result.is_ok(), "expected Ok, got {result:?}");
+}
+
+#[test]
 fn user_operation_errors_do_not_create_phantom_thread_state() {
     let (mut client, conversation_id) = ready_client();
 

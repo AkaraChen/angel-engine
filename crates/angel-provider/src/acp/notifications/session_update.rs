@@ -11,21 +11,19 @@ pub(super) fn decode_acp_update(
     engine: &AngelEngine,
     params: &Value,
 ) -> Result<TransportOutput, angel_engine::EngineError> {
-    let session_id = params
-        .get("sessionId")
-        .and_then(Value::as_str)
-        .unwrap_or("");
+    let session_id = required_string(params, "sessionId", "ACP session/update missing sessionId")?;
     let Some(conversation_id) = find_acp_conversation_or_pending_start(engine, session_id) else {
         return Ok(TransportOutput::default().log(
             TransportLogKind::Receive,
             format!("update for unknown session {session_id}"),
         ));
     };
-    let update = params.get("update").unwrap_or(&Value::Null);
-    let update_type = update
-        .get("sessionUpdate")
-        .and_then(Value::as_str)
-        .unwrap_or("");
+    let update = required_object(params, "update", "ACP session/update missing update")?;
+    let update_type = required_string(
+        update,
+        "sessionUpdate",
+        "ACP session/update missing sessionUpdate",
+    )?;
 
     let update_kind = AcpSessionUpdateKind::from_str(update_type).ok();
 
@@ -702,6 +700,31 @@ fn available_commands(update: &Value) -> Vec<AvailableCommand> {
                 .collect()
         })
         .unwrap_or_default()
+}
+
+fn required_string<'a>(
+    params: &'a Value,
+    field: &str,
+    message: &str,
+) -> Result<&'a str, angel_engine::EngineError> {
+    params.get(field).and_then(Value::as_str).ok_or_else(|| {
+        angel_engine::EngineError::InvalidCommand {
+            message: message.to_string(),
+        }
+    })
+}
+
+fn required_object<'a>(
+    params: &'a Value,
+    field: &str,
+    message: &str,
+) -> Result<&'a Value, angel_engine::EngineError> {
+    params
+        .get(field)
+        .filter(|value| value.is_object())
+        .ok_or_else(|| angel_engine::EngineError::InvalidCommand {
+            message: message.to_string(),
+        })
 }
 
 #[cfg(test)]

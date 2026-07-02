@@ -223,12 +223,12 @@ export async function workspaceWriteFile(
   const treePath = normalizeGitPath(treePathInput);
   const absolutePath = resolveWorkspaceTreePath(root, treePath);
   const realRoot = await fs.realpath(root);
-  let realPath = absolutePath;
+  let realPath: string;
 
   try {
     realPath = await fs.realpath(absolutePath);
   } catch {
-    // New files are allowed as long as their resolved path stays in the root.
+    realPath = await realpathNearestExistingParent(absolutePath);
   }
 
   if (!pathIsInside(realRoot, realPath)) {
@@ -243,6 +243,30 @@ export async function workspaceWriteFile(
     root,
     size: Buffer.byteLength(content, "utf8"),
   };
+}
+
+async function realpathNearestExistingParent(absolutePath: string) {
+  let directory = path.dirname(absolutePath);
+
+  while (true) {
+    try {
+      const stat = await fs.stat(directory);
+      if (!stat.isDirectory()) {
+        throw new Error("Workspace file parent must be a directory.");
+      }
+      return await fs.realpath(directory);
+    } catch (error) {
+      if (!isMissingPathError(error)) {
+        throw error;
+      }
+    }
+
+    const parent = path.dirname(directory);
+    if (parent === directory) {
+      throw new Error("Workspace file parent must exist.");
+    }
+    directory = parent;
+  }
 }
 
 async function resolveWorkspaceRoot(rootInput: string) {
@@ -554,6 +578,14 @@ function pathIsInside(root: string, absolutePath: string) {
   return (
     relativePath === "" ||
     (!relativePath.startsWith("..") && !path.isAbsolute(relativePath))
+  );
+}
+
+function isMissingPathError(error: unknown) {
+  return (
+    error instanceof Error &&
+    "code" in error &&
+    (error as NodeJS.ErrnoException).code === "ENOENT"
   );
 }
 

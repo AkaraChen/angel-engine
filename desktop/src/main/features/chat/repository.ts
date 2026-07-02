@@ -1,3 +1,4 @@
+import type { AgentRuntime } from "../../../shared/agents";
 import type { Chat, ChatCreateInput } from "../../../shared/chat";
 import { randomUUID } from "node:crypto";
 import fs from "node:fs";
@@ -5,8 +6,10 @@ import path from "node:path";
 
 import is from "@sindresorhus/is";
 import { desc, eq } from "drizzle-orm";
+import { isAgentRuntime, isCustomAgentRuntime } from "../../../shared/agents";
 import { getDatabase } from "../../db/client";
 import { chats } from "../../db/schema";
+import { getCustomAgent } from "../agents/repository";
 
 const DEFAULT_CHAT_TITLE = "New chat";
 
@@ -53,7 +56,7 @@ export function createChat(input: CreateChatRecordInput): Chat {
       id: randomUUID(),
       projectId: normalizeOptionalString(input.projectId),
       remoteThreadId: null,
-      runtime: normalizeRuntime(input.runtime),
+      runtime: normalizeChatRuntime(input.runtime),
       title: normalizeTitle(input.title),
       updatedAt: now,
       archived: false,
@@ -122,7 +125,7 @@ export function setChatRuntime(id: string, runtime: string): Chat {
   }
 
   return updateChat(id, {
-    runtime: normalizeRuntime(runtime),
+    runtime: normalizeChatRuntime(runtime),
     updatedAt: new Date().toISOString(),
   });
 }
@@ -198,12 +201,27 @@ function uniqueChatIds(ids: string[]) {
   return uniqueIds;
 }
 
-function normalizeRuntime(runtime: string | undefined) {
-  return is.nonEmptyString(runtime)
+type CustomAgentLookup = (runtime: string) => unknown;
+
+export function normalizeChatRuntime(
+  runtime: string | undefined,
+  customAgentLookup: CustomAgentLookup = getCustomAgent,
+): AgentRuntime {
+  const candidate = is.nonEmptyString(runtime)
     ? runtime
-    : is.nonEmptyString(process.env.ANGEL_ENGINE_RUNTIME)
+    : isAgentRuntime(process.env.ANGEL_ENGINE_RUNTIME)
       ? process.env.ANGEL_ENGINE_RUNTIME
       : "codex";
+
+  if (!isAgentRuntime(candidate)) {
+    throw new Error("Unknown chat runtime.");
+  }
+
+  if (isCustomAgentRuntime(candidate) && !customAgentLookup(candidate)) {
+    throw new Error("Unknown chat runtime.");
+  }
+
+  return candidate;
 }
 
 function normalizeTitle(title: string | undefined) {

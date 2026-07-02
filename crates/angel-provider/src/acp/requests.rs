@@ -33,10 +33,11 @@ impl AcpAdapter {
                     ));
             }
         }
-        let session_id = params
-            .get("sessionId")
-            .and_then(Value::as_str)
-            .unwrap_or("");
+        let session_id = required_string(
+            params,
+            "sessionId",
+            "ACP permission request missing sessionId",
+        )?;
         let Some(conversation_id) = find_acp_conversation(engine, session_id) else {
             return Ok(TransportOutput::default()
                 .message(JsonRpcMessage::error(
@@ -497,4 +498,16 @@ fn content_text(value: &Value) -> Option<String> {
         }
     }
     None
+}
+
+fn required_string<'a>(
+    params: &'a Value,
+    field: &str,
+    message: &str,
+) -> Result<&'a str, angel_engine::EngineError> {
+    params.get(field).and_then(Value::as_str).ok_or_else(|| {
+        angel_engine::EngineError::InvalidCommand {
+            message: message.to_string(),
+        }
+    })
 }

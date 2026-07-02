@@ -25,7 +25,7 @@ export function configureAutoUpdates() {
   autoUpdater.autoDownload = false;
   autoUpdater.autoInstallOnAppQuit = false;
   autoUpdater.allowPrerelease = false;
-  autoUpdater.allowDowngrade = true;
+  autoUpdater.allowDowngrade = false;
   autoUpdater.setFeedURL({
     provider: "github",
     ...updateRepository,
@@ -159,7 +159,7 @@ function notifyUpdateDownloaded(
 function checkForStableUpdates(showUserError: boolean) {
   autoUpdater
     .checkForUpdates()
-    .then((result) => handleUpdateCheckResult(result))
+    .then(async (result) => handleUpdateCheckResult(result))
     .catch((error: unknown) => {
       handleUpdateCheckError(error, showUserError);
     });

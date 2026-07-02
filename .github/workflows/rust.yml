@@ -26,3 +26,9 @@ jobs:
 
       - name: Run tests
         run: cargo test --workspace --all-targets
+
+      - name: Check formatting
+        run: cargo fmt --all --check
+
+      - name: Clippy
+        run: cargo clippy --workspace --all-targets

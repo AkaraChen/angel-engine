@@ -24,7 +24,6 @@ import { useCallback, useMemo, useRef, useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import { DraftProjectSelect } from "@/app/workspace/draft-project-select";
 import { useWorkspaceUiStore } from "@/app/workspace/workspace-ui-store";
-import { SketchUnderline } from "@/features/chat/components/sketch-underline";
 import {
   PromptInput,
   PromptInputBody,
@@ -50,6 +49,7 @@ import {
   PromptAttachmentButton,
 } from "@/features/chat/components/composer/composer-menus";
 import { PlanModeToggleButton } from "@/features/chat/components/composer/composer-plan-mode";
+import { SketchUnderline } from "@/features/chat/components/sketch-underline";
 import { useChatEnvironment } from "@/features/chat/runtime/chat-environment-context";
 import { useChatOptions } from "@/features/chat/runtime/chat-options-context";
 import { useSendChatMessage } from "@/features/chat/runtime/use-send-chat-message";
@@ -126,7 +126,6 @@ export function NewChatComposer({
   slotKey,
 }: NewChatComposerProps) {
   const { t } = useTranslation();
-  const chatOptions = useChatOptions();
   const environment = useChatEnvironment();
   const toast = useToast();
   const isRunning = useChatRunIsRunning(slotKey);
@@ -318,8 +317,8 @@ export function NewChatComposer({
         <div className="mb-12 text-center">
           <h2
             className="
-              font-semibold text-pretty text-foreground
-              text-[length:var(--workspace-new-chat-title-size)]/tight
+              text-(length:--workspace-new-chat-title-size)/tight font-semibold
+              text-pretty text-foreground
             "
           >
             {is.nonEmptyString(projectName) ? (
@@ -334,8 +333,9 @@ export function NewChatComposer({
           </h2>
           <p
             className="
-              mx-auto mt-2 max-w-120 text-muted-foreground
-              text-[length:var(--workspace-new-chat-description-size)]/6
+              mx-auto mt-2 max-w-120
+              text-(length:--workspace-new-chat-description-size)/6
+              text-muted-foreground
             "
           >
             {t("thread.empty.description")}
@@ -344,7 +344,8 @@ export function NewChatComposer({
 
         <div
           className="
-            overflow-hidden rounded-2xl border border-foreground/8 bg-background/86
+            overflow-hidden rounded-2xl border border-foreground/8
+            bg-background/86
             dark:border-white/9 dark:bg-card/82
           "
         >
@@ -375,8 +376,8 @@ export function NewChatComposer({
               <PromptInputTextarea
                 className="
                   max-h-40 min-h-(--workspace-composer-min-height) resize-none
-                  px-3.5 py-3 leading-(--workspace-composer-line-height)
-                  [font-size:var(--workspace-composer-text-size)]
+                  px-3.5 py-3 [font-size:var(--workspace-composer-text-size)]
+                  leading-(--workspace-composer-line-height)
                   placeholder:text-muted-foreground/55
                 "
                 disabled={isRunning}
@@ -399,8 +400,9 @@ export function NewChatComposer({
           {workspaceMode === "work" && (
             <div
               className="
-                flex items-center justify-start gap-2 border-t border-foreground/8
-                bg-muted/30 px-3 py-2 dark:border-white/9 dark:bg-white/[0.03]
+                flex items-center justify-start gap-2 border-t
+                border-foreground/8 bg-muted/30 px-3 py-2
+                dark:border-white/9 dark:bg-white/3
               "
             >
               <DraftProjectSelect
@@ -497,11 +499,7 @@ function NewChatComposerFooter({
   const isEmpty = draftText.length === 0 && attachments.files.length === 0;
 
   return (
-    <PromptInputFooter
-      className="
-        flex-wrap gap-2 px-3.5! py-2.5! shadow-none border-t-0
-      "
-    >
+    <PromptInputFooter className="flex-wrap gap-2 border-t-0 px-3.5! py-2.5! shadow-none">
       <PromptInputTools className="flex-wrap">
         <PromptAttachmentButton />
         <ComposerModelMenu disabled={isRunning} options={chatOptions} />

@@ -4,14 +4,9 @@
     <meta charset="UTF-8" />
     <meta
       http-equiv="Content-Security-Policy"
-      content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; connect-src 'self' https://www.react-grab.com; img-src 'self' data: blob:; font-src 'self' data:"
+      content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; connect-src 'self'; img-src 'self' data: blob:; font-src 'self' data:"
     />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <script type="module">
-      if (import.meta.env.DEV) {
-        import("react-grab");
-      }
-    </script>
     <title>Angel Engine</title>
   </head>
   <body>

@@ -3,7 +3,6 @@ import type { Project } from "@shared/projects";
 import type { ReactElement } from "react";
 import {
   RiArrowDownSLine as ChevronDown,
-  RiArrowRightSLine as ChevronRight,
   RiFolderLine as Folder,
   RiFolderAddLine as FolderPlus,
   RiLoader4Line as Loader2,
@@ -161,8 +160,8 @@ export function ProjectSidebarSection({
                     </m.span>
                     <span
                       className="
-                        block min-w-0 flex-1 truncate overflow-hidden text-left
-                        whitespace-nowrap -ml-0.5
+                        -ml-0.5 block min-w-0 flex-1 truncate overflow-hidden
+                        text-left whitespace-nowrap
                       "
                       title={projectDisplayName}
                     >

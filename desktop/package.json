@@ -25,6 +25,7 @@
     "format": "prettier --write . --ignore-unknown",
     "format:check": "prettier --check . --ignore-unknown",
     "rebuild:native": "electron-rebuild -f -w better-sqlite3 -w node-pty",
+    "test": "vitest run",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
@@ -34,7 +35,7 @@
     "@anthropic-ai/claude-agent-sdk": "^0.2.133",
     "@assistant-ui/core": "0.1.17",
     "@assistant-ui/react": "^0.12.28",
-    "@assistant-ui/react-streamdown": "^0.1.11",
+    "@assistant-ui/react-streamdown": "^0.3.4",
     "@chenglou/pretext": "^0.0.8",
     "@egoist/tipc": "^0.3.2",
     "@fontsource-variable/inter": "^5.2.8",
@@ -128,6 +129,7 @@
     "prettier": "^3.8.3",
     "tailwindcss": "^4.2.4",
     "typescript": "^6.0.3",
-    "vite": "^8.0.10"
+    "vite": "^8.0.10",
+    "vitest": "^4.1.6"
   }
 }

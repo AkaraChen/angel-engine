@@ -5,9 +5,6 @@ export function createMainWindow() {
     options: {
       minHeight: 640,
       minWidth: 960,
-      webPreferences: {
-        webviewTag: true,
-      },
     },
   });
 }

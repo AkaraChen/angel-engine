@@ -1494,38 +1494,34 @@ function resolveSlotKey(
   return current;
 }
 
-function normalizeEnginePlanMessages(
+export function normalizeEnginePlanMessages(
   messages: EngineMessage[],
 ): EngineMessage[] {
   const locations = enginePlanPartLocations(messages);
   if (locations.length === 0) return messages;
 
   const latestByKind = new Map<string, (typeof locations)[number]>();
+  const messagesWithPlans = new Set<number>();
+  const orderInKind = new Map<string, number>();
+  const kindCounters = new Map<string, number>();
   for (const location of locations) {
     latestByKind.set(location.kind, location);
+    messagesWithPlans.add(location.messageIndex);
+    const next = kindCounters.get(location.kind) ?? 0;
+    orderInKind.set(`${location.messageIndex}:${location.partIndex}`, next);
+    kindCounters.set(location.kind, next + 1);
   }
 
   return messages.map((message, messageIndex) => {
-    const hasPlan = locations.some(
-      (location) => location.messageIndex === messageIndex,
-    );
-    if (!hasPlan) return message;
+    if (!messagesWithPlans.has(messageIndex)) return message;
 
     return {
       ...message,
       content: message.content.map((part, partIndex) => {
         if (!isEnginePlanPart(part)) return part;
         const kind = chatPlanKind(part.data);
-        const kindLocations = locations.filter(
-          (location) => location.kind === kind,
-        );
-
-        const locationIndex = kindLocations.findIndex(
-          (location) =>
-            location.messageIndex === messageIndex &&
-            location.partIndex === partIndex,
-        );
-        if (locationIndex === -1) return part;
+        const locationIndex = orderInKind.get(`${messageIndex}:${partIndex}`);
+        if (locationIndex === undefined) return part;
 
         const presentation = enginePlanPresentationForLocation(
           locationIndex,

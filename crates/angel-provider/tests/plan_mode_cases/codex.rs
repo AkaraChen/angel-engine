@@ -125,7 +125,7 @@ fn codex_plan_mode_round_trip_handles_question_plan_path_and_exit() {
                 "turnId": "turn-remote",
                 "plan": [
                     {"step": "Inspect the request", "status": "completed"},
-                    {"step": "Write implementation tests", "status": "in_progress"}
+                    {"step": "Write implementation tests", "status": "inProgress"}
                 ]
             }),
         ),

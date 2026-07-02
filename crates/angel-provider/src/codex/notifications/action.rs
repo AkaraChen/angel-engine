@@ -1,5 +1,6 @@
 use super::super::actions::*;
 use super::super::ids::*;
+use super::super::wire::schema as codex_schema;
 use super::super::*;
 
 impl CodexAdapter {
@@ -10,21 +11,43 @@ impl CodexAdapter {
         fallback_kind: ActionKind,
         terminal: bool,
     ) -> Result<TransportOutput, angel_engine::EngineError> {
-        let Some((conversation_id, remote_turn_id)) = notification_turn(engine, params) else {
+        let (thread_id, remote_turn_id, item_id, delta) = match fallback_kind {
+            ActionKind::Command => {
+                let notification: codex_schema::CommandExecutionOutputDeltaNotification =
+                    serde_json::from_value(params.clone()).map_err(|error| {
+                        angel_engine::EngineError::InvalidCommand {
+                            message: error.to_string(),
+                        }
+                    })?;
+                (
+                    notification.thread_id,
+                    notification.turn_id,
+                    notification.item_id,
+                    notification.delta,
+                )
+            }
+            ActionKind::FileChange => {
+                let notification: codex_schema::FileChangeOutputDeltaNotification =
+                    serde_json::from_value(params.clone()).map_err(|error| {
+                        angel_engine::EngineError::InvalidCommand {
+                            message: error.to_string(),
+                        }
+                    })?;
+                (
+                    notification.thread_id,
+                    notification.turn_id,
+                    notification.item_id,
+                    notification.delta,
+                )
+            }
+            _ => unreachable!("Codex output delta only supports command and file change actions"),
+        };
+        let Some(conversation_id) = find_codex_conversation(engine, &thread_id) else {
             return Ok(TransportOutput::default());
         };
         let (turn_id, maybe_start) =
-            ensure_local_turn_event(engine, &conversation_id, remote_turn_id);
-        let item_id = params
-            .get("itemId")
-            .and_then(Value::as_str)
-            .unwrap_or("unknown");
-        let action_id = ActionId::new(item_id.to_string());
-        let delta = params
-            .get("delta")
-            .and_then(Value::as_str)
-            .unwrap_or_default()
-            .to_string();
+            ensure_local_turn_event(engine, &conversation_id, &remote_turn_id);
+        let action_id = ActionId::new(item_id);
         let mut output = TransportOutput::default().log(TransportLogKind::Output, delta.clone());
         if let Some(event) = maybe_start {
             output.events.push(event);
@@ -57,20 +80,23 @@ impl CodexAdapter {
         engine: &AngelEngine,
         params: &Value,
     ) -> Result<TransportOutput, angel_engine::EngineError> {
-        let Some((conversation_id, remote_turn_id)) = notification_turn(engine, params) else {
+        let notification: codex_schema::FileChangePatchUpdatedNotification =
+            serde_json::from_value(params.clone()).map_err(|error| {
+                angel_engine::EngineError::InvalidCommand {
+                    message: error.to_string(),
+                }
+            })?;
+        let Some(conversation_id) = find_codex_conversation(engine, &notification.thread_id) else {
             return Ok(TransportOutput::default());
         };
         let (turn_id, maybe_start) =
-            ensure_local_turn_event(engine, &conversation_id, remote_turn_id);
-        let item_id = params
-            .get("itemId")
-            .and_then(Value::as_str)
-            .unwrap_or("unknown");
-        let action_id = ActionId::new(item_id.to_string());
-        let patch = params
-            .get("changes")
-            .map(Value::to_string)
-            .unwrap_or_else(|| "[]".to_string());
+            ensure_local_turn_event(engine, &conversation_id, &notification.turn_id);
+        let action_id = ActionId::new(notification.item_id);
+        let patch = serde_json::to_string(&notification.changes).map_err(|error| {
+            angel_engine::EngineError::InvalidCommand {
+                message: error.to_string(),
+            }
+        })?;
         let mut output =
             TransportOutput::default().log(TransportLogKind::State, "file patch updated");
         if let Some(event) = maybe_start {

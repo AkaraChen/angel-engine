@@ -1,22 +1,20 @@
 use super::super::ids::*;
 use super::super::protocol_helpers::*;
+use super::super::wire::schema as codex_schema;
 use super::super::*;
 
 impl CodexAdapter {
     pub(super) fn decode_text_delta(
         &self,
         engine: &AngelEngine,
-        params: &Value,
+        thread_id: &str,
+        remote_turn_id: &str,
+        delta: String,
         kind: DeltaKind,
     ) -> Result<TransportOutput, angel_engine::EngineError> {
-        let Some((conversation_id, remote_turn_id)) = notification_turn(engine, params) else {
+        let Some(conversation_id) = find_codex_conversation(engine, thread_id) else {
             return Ok(TransportOutput::default());
         };
-        let delta = params
-            .get("delta")
-            .and_then(Value::as_str)
-            .unwrap_or_default()
-            .to_string();
         let (turn_id, maybe_start) =
             ensure_local_turn_event(engine, &conversation_id, remote_turn_id);
         let mut output = TransportOutput::default();
@@ -55,16 +53,17 @@ impl CodexAdapter {
         engine: &AngelEngine,
         params: &Value,
     ) -> Result<TransportOutput, angel_engine::EngineError> {
-        let Some((conversation_id, remote_turn_id)) = notification_turn(engine, params) else {
+        let notification: codex_schema::PlanDeltaNotification =
+            serde_json::from_value(params.clone()).map_err(|error| {
+                angel_engine::EngineError::InvalidCommand {
+                    message: error.to_string(),
+                }
+            })?;
+        let Some(conversation_id) = find_codex_conversation(engine, &notification.thread_id) else {
             return Ok(TransportOutput::default());
         };
-        let delta = params
-            .get("delta")
-            .and_then(Value::as_str)
-            .unwrap_or_default()
-            .to_string();
         let (turn_id, maybe_start) =
-            ensure_local_turn_event(engine, &conversation_id, remote_turn_id);
+            ensure_local_turn_event(engine, &conversation_id, &notification.turn_id);
         let mut output = TransportOutput::default();
         if let Some(event) = maybe_start {
             output.events.push(event);
@@ -72,7 +71,7 @@ impl CodexAdapter {
         output.events.push(EngineEvent::PlanDelta {
             conversation_id,
             turn_id,
-            delta: ContentDelta::Text(delta),
+            delta: ContentDelta::Text(notification.delta),
         });
         Ok(output)
     }
@@ -82,36 +81,29 @@ impl CodexAdapter {
         engine: &AngelEngine,
         params: &Value,
     ) -> Result<TransportOutput, angel_engine::EngineError> {
-        let Some((conversation_id, remote_turn_id)) = notification_turn(engine, params) else {
+        let notification: codex_schema::TurnPlanUpdatedNotification =
+            serde_json::from_value(params.clone()).map_err(|error| {
+                angel_engine::EngineError::InvalidCommand {
+                    message: error.to_string(),
+                }
+            })?;
+        let Some(conversation_id) = find_codex_conversation(engine, &notification.thread_id) else {
             return Ok(TransportOutput::default());
         };
         let (turn_id, maybe_start) =
-            ensure_local_turn_event(engine, &conversation_id, remote_turn_id);
-        let entries: Vec<PlanEntry> = params
-            .get("plan")
-            .and_then(Value::as_array)
-            .map(|steps| {
-                steps
-                    .iter()
-                    .map(|step| PlanEntry {
-                        content: step
-                            .get("step")
-                            .and_then(Value::as_str)
-                            .unwrap_or_default()
-                            .to_string(),
-                        status: match step
-                            .get("status")
-                            .and_then(Value::as_str)
-                            .unwrap_or("pending")
-                        {
-                            "in_progress" | "inProgress" => PlanEntryStatus::InProgress,
-                            "completed" => PlanEntryStatus::Completed,
-                            _ => PlanEntryStatus::Pending,
-                        },
-                    })
-                    .collect()
+            ensure_local_turn_event(engine, &conversation_id, &notification.turn_id);
+        let entries: Vec<PlanEntry> = notification
+            .plan
+            .into_iter()
+            .map(|step| PlanEntry {
+                content: step.step,
+                status: match step.status {
+                    codex_schema::TurnPlanStepStatus::Pending => PlanEntryStatus::Pending,
+                    codex_schema::TurnPlanStepStatus::InProgress => PlanEntryStatus::InProgress,
+                    codex_schema::TurnPlanStepStatus::Completed => PlanEntryStatus::Completed,
+                },
             })
-            .unwrap_or_default();
+            .collect();
         let mut output = TransportOutput::default().log(
             TransportLogKind::State,
             format!("plan updated ({} steps)", entries.len()),

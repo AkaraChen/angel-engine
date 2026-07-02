@@ -1,6 +1,7 @@
 import type { BrowserWindowConstructorOptions } from "electron";
 
 import path from "node:path";
+import { pathToFileURL } from "node:url";
 import is from "@sindresorhus/is";
 import { BrowserWindow, shell } from "electron";
 
@@ -45,7 +46,7 @@ export function createDesktopWindow({
   configureDesktopWindowAppearance(window);
   restoreWindowState(window, stateFileName);
   persistWindowBounds(window, stateFileName);
-  configureExternalLinkHandling(window);
+  configureExternalLinkHandling(window, rendererFilePath);
   configureDesktopWindowNotifications(window);
 
   if (MAIN_WINDOW_VITE_DEV_SERVER_URL) {
@@ -62,13 +63,45 @@ export function createDesktopWindow({
   return window;
 }
 
-function configureExternalLinkHandling(window: BrowserWindow) {
+function configureExternalLinkHandling(
+  window: BrowserWindow,
+  rendererFilePath: string,
+) {
+  window.webContents.on("will-navigate", (event, url) => {
+    if (isAppNavigationUrl(url, rendererFilePath)) {
+      return;
+    }
+
+    event.preventDefault();
+
+    if (isAllowedExternalUrl(url)) {
+      void shell.openExternal(url);
+    }
+  });
+
   window.webContents.setWindowOpenHandler(({ url }) => {
     if (isAllowedExternalUrl(url)) {
       void shell.openExternal(url);
     }
     return { action: "deny" };
   });
+}
+
+function isAppNavigationUrl(url: string, rendererFilePath: string) {
+  try {
+    const target = new URL(url);
+
+    if (MAIN_WINDOW_VITE_DEV_SERVER_URL) {
+      return target.origin === new URL(MAIN_WINDOW_VITE_DEV_SERVER_URL).origin;
+    }
+
+    const rendererUrl = pathToFileURL(rendererFilePath);
+    return (
+      target.protocol === "file:" && target.pathname === rendererUrl.pathname
+    );
+  } catch {
+    return false;
+  }
 }
 
 function isAllowedExternalUrl(url: string) {
