@@ -10,6 +10,7 @@ use crate::{
 #[serde(rename_all = "lowercase")]
 #[strum(serialize_all = "lowercase")]
 pub enum AgentRuntime {
+    Codex,
     Kimi,
     Opencode,
     Qoder,
@@ -73,13 +74,7 @@ pub fn create_runtime_options(
         .map(|s| s.trim().to_ascii_lowercase())
         .as_deref()
     {
-        Some("codex") => {
-            return Err(ClientError::Engine(
-                angel_engine::EngineError::InvalidCommand {
-                    message: "codex is not a supported agent runtime name".to_string(),
-                },
-            ));
-        }
+        Some("codex") => AgentRuntime::Codex,
         Some("kimi") => AgentRuntime::Kimi,
         Some("opencode") => AgentRuntime::Opencode,
         Some("qoder") => AgentRuntime::Qoder,
@@ -125,6 +120,20 @@ pub fn create_runtime_options(
         });
 
     let mut client = match runtime {
+        AgentRuntime::Codex => ClientOptions {
+            args: overrides
+                .args
+                .clone()
+                .unwrap_or_else(|| vec!["app-server".to_string()]),
+            auth: overrides.auth.unwrap_or(ClientAuthOptions {
+                auto_authenticate: false,
+                need_auth: false,
+            }),
+            command: command_override.unwrap_or_else(|| "codex".to_string()),
+            identity,
+            protocol: ClientProtocol::CodexAppServer,
+            ..ClientOptions::builder().build()
+        },
         AgentRuntime::Kimi => ClientOptions {
             args: overrides
                 .args
@@ -264,6 +273,17 @@ mod tests {
     use super::*;
 
     #[test]
+    fn codex_runtime_uses_codex_app_server_protocol() {
+        let options = create_runtime_options(Some("codex"), RuntimeOptionsOverrides::default())
+            .expect("valid runtime");
+
+        assert_eq!(options.runtime, AgentRuntime::Codex);
+        assert_eq!(options.client.protocol, ClientProtocol::CodexAppServer);
+        assert_eq!(options.client.command, "codex");
+        assert_eq!(options.client.args, vec!["app-server"]);
+    }
+
+    #[test]
     fn kimi_runtime_uses_kimi_adapter_protocol() {
         let options = create_runtime_options(Some("kimi"), RuntimeOptionsOverrides::default())
             .expect("valid runtime");
@@ -342,6 +362,7 @@ mod tests {
 
     #[test]
     fn runtime_display_uses_canonical_lowercase_ids() {
+        assert_eq!(AgentRuntime::Codex.to_string(), "codex");
         assert_eq!(AgentRuntime::Copilot.to_string(), "copilot");
         assert_eq!(AgentRuntime::Qoder.to_string(), "qoder");
         assert_eq!(AgentRuntime::Cursor.to_string(), "cursor");
@@ -364,17 +385,6 @@ mod tests {
                 create_runtime_options(Some(name), RuntimeOptionsOverrides::default()).is_err()
             );
         }
-    }
-
-    #[test]
-    fn codex_is_not_an_agent_runtime_name() {
-        let err = create_runtime_options(Some("codex"), RuntimeOptionsOverrides::default())
-            .expect_err("codex runtime should fail");
-
-        assert!(
-            err.to_string()
-                .contains("codex is not a supported agent runtime name")
-        );
     }
 
     #[test]

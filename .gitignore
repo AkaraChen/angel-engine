@@ -11,3 +11,4 @@ asahi.db
 /packages/*/playground/dist
 /packages/js-client/node_modules
 /packages/claude-client/node_modules
+/plans

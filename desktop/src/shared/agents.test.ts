@@ -8,20 +8,26 @@ import {
 } from "./agents";
 
 describe("agent runtime settings", () => {
-  it("does not treat codex as an agent runtime", () => {
-    expect(isAgentRuntime("codex")).toBe(false);
-    expect(AGENT_OPTIONS.map((agent) => agent.id)).not.toContain("codex");
+  it("treats codex as an agent runtime", () => {
+    expect(isAgentRuntime("codex")).toBe(true);
+    expect(AGENT_OPTIONS.map((agent) => agent.id)).toContain("codex");
   });
 
-  it("does not migrate invalid codex settings to another runtime", () => {
+  it("keeps explicit codex settings", () => {
     const settings = sanitizeAgentSettings({
       defaultRuntime: "codex",
       enabledRuntimes: ["codex"],
       lastRuntime: "codex",
     });
 
-    expect(settings.enabledRuntimes).toEqual([]);
-    expect(settings.lastRuntime).toBeUndefined();
+    expect(settings.enabledRuntimes).toEqual(["codex"]);
+    expect(settings.lastRuntime).toBe("codex");
+  });
+
+  it("does not make codex the implicit default runtime", () => {
+    const settings = sanitizeAgentSettings(undefined);
+
+    expect(settings.lastRuntime).not.toBe("codex");
   });
 
   it("fails when no enabled runtime can be resolved", () => {

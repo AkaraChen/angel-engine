@@ -3,6 +3,7 @@ import { type as arkType } from "arktype";
 
 export type AgentRuntime =
   | CustomAgentRuntime
+  | "codex"
   | "kimi"
   | "opencode"
   | "qoder"
@@ -110,10 +111,15 @@ export const AGENT_OPTIONS: AgentOption[] = [
     id: "claude",
     label: "Claude Code",
   },
+  {
+    description: "Codex runtime through the Codex app server.",
+    id: "codex",
+    label: "Codex",
+  },
 ];
 
 const builtinAgentRuntime = arkType(
-  "'kimi' | 'opencode' | 'qoder' | 'copilot' | 'gemini' | 'cline' | 'claude'",
+  "'codex' | 'kimi' | 'opencode' | 'qoder' | 'copilot' | 'gemini' | 'cline' | 'claude'",
 );
 
 export function isAgentRuntime(value: unknown): value is AgentRuntime {
