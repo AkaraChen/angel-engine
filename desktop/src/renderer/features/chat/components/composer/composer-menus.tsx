@@ -611,8 +611,11 @@ function ComposerModelMenuItem({
       "
       disabled={disabled}
       onSelect={(event) => {
-        event.preventDefault();
-        if (!disabled && !selected) onSelect();
+        if (disabled || selected) {
+          event.preventDefault();
+          return;
+        }
+        onSelect();
       }}
       title={label}
     >

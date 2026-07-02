@@ -758,6 +758,9 @@ export class ClaudeCodeSession {
 
   private finishTurn(active: ActiveClaudeTurn): TurnRunResult {
     const snapshot = this.requireConversation();
+    if (snapshot.remoteKind === "known") {
+      this.replayedSessionId = snapshot.remoteId;
+    }
 
     return {
       conversation: snapshot,

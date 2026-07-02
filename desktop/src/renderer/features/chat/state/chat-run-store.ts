@@ -2223,6 +2223,7 @@ function engineMessageContentToHistoryParts(
       case "file":
         return [fileHistoryPartFromMessagePart(part)];
       case "audio":
+      case "generative-ui":
       case "source":
         return [];
       case "data":

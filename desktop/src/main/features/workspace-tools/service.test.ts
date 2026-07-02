@@ -18,7 +18,9 @@ describe("workspaceWriteFile", () => {
     await Promise.all(
       tempRoots
         .splice(0)
-        .map((directory) => rm(directory, { force: true, recursive: true })),
+        .map(async (directory) =>
+          rm(directory, { force: true, recursive: true }),
+        ),
     );
   });
 

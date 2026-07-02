@@ -1,4 +1,8 @@
 import type { CanUseTool } from "@anthropic-ai/claude-agent-sdk";
+import type {
+  ConversationSnapshot,
+  TurnRunResult,
+} from "@angel-engine/client-napi";
 import type { ActiveClaudeTurn, ClaudeElicitationResponse } from "../types";
 import { EngineEventTurnOutcome } from "@angel-engine/client-napi";
 import { describe, expect, it } from "vitest";
@@ -17,6 +21,12 @@ type SessionPermissionHarness = {
     elicitationId: string,
     response: ClaudeElicitationResponse,
   ) => Promise<void>;
+};
+
+type SessionFinishHarness = SessionPermissionHarness & {
+  finishTurn: (active: ActiveClaudeTurn) => TurnRunResult;
+  replayedSessionId?: string;
+  requireConversation: () => ConversationSnapshot;
 };
 
 function activeTurn(events: unknown[] = []): ActiveClaudeTurn {
@@ -52,6 +62,24 @@ describe("claude session turn handling", () => {
     expect(claudeTurnErrorOutcome(controller.signal, new Error("boom"))).toBe(
       EngineEventTurnOutcome.Interrupted,
     );
+  });
+
+  it("does not replay history again after a live turn finishes", () => {
+    const session = new ClaudeCodeSession() as unknown as SessionFinishHarness;
+    session.requireConversation = (): ConversationSnapshot =>
+      ({
+        remoteId: "claude-session-1",
+        remoteKind: "known",
+      }) as ConversationSnapshot;
+
+    try {
+      expect(session.finishTurn(activeTurn()).remoteThreadId).toBe(
+        "claude-session-1",
+      );
+      expect(session.replayedSessionId).toBe("claude-session-1");
+    } finally {
+      session.close();
+    }
   });
 
   it("rejects missing permission tool ids", async () => {

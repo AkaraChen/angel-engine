@@ -40,10 +40,8 @@ describe("normalizeChatRuntime", () => {
     expect(normalizeChatRuntime("kimi")).toBe("kimi");
   });
 
-  it("rejects codex as an agent runtime id", () => {
-    expect(() => normalizeChatRuntime("codex")).toThrow(
-      "Unknown chat runtime.",
-    );
+  it("accepts codex as an agent runtime id", () => {
+    expect(normalizeChatRuntime("codex")).toBe("codex");
   });
 
   it("accepts existing custom runtime ids", () => {

@@ -2,7 +2,7 @@ import type { Chat } from "../../../shared/chat";
 import os from "node:os";
 import path from "node:path";
 
-import { describe, expect, test, vi } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 const tipcMock = vi.hoisted(() => {
   const procedure = {
@@ -25,7 +25,7 @@ vi.mock("electron", () => ({
   Menu: { buildFromTemplate: vi.fn() },
 }));
 
-import { removableManagedWorktreesForChats } from "./ipc";
+const { removableManagedWorktreesForChats } = await import("./ipc");
 
 function chat(id: string, cwd: string | null): Chat {
   return {
@@ -46,7 +46,7 @@ function managedWorktree(project: string, suffix: string) {
 }
 
 describe("removableManagedWorktreesForChats", () => {
-  test("selects the managed worktree when only deleted chats reference it", () => {
+  it("selects the managed worktree when only deleted chats reference it", () => {
     const cwd = managedWorktree("repo", "branch");
 
     expect(
@@ -54,7 +54,7 @@ describe("removableManagedWorktreesForChats", () => {
     ).toEqual([cwd]);
   });
 
-  test("keeps a managed worktree referenced by a surviving chat", () => {
+  it("keeps a managed worktree referenced by a surviving chat", () => {
     const cwd = managedWorktree("repo", "branch");
 
     expect(
@@ -65,7 +65,7 @@ describe("removableManagedWorktreesForChats", () => {
     ).toEqual([]);
   });
 
-  test("ignores non-managed chat directories", () => {
+  it("ignores non-managed chat directories", () => {
     expect(
       removableManagedWorktreesForChats([chat("deleted", "/tmp/repo")], []),
     ).toEqual([]);
