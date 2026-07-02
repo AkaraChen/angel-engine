@@ -144,6 +144,10 @@ interface AssistantAccumulator {
   status: MessageStatus;
 }
 
+export interface AssistantMaterializationCache {
+  engineParts: EngineMessage["content"];
+}
+
 interface RunCompletion {
   assistantMessage: EngineMessage;
   result?: ChatSendResult;
@@ -1013,14 +1017,26 @@ async function consumeRunStream({
     accumulator,
     activeRun.startedAt,
   );
+  const assistantMaterializationCache: AssistantMaterializationCache = {
+    engineParts: currentAssistantMessage.content,
+  };
+  let minDirtyIndex = accumulator.parts.length;
+  const markDirty = (index?: number) => {
+    dirty = true;
+    if (index !== undefined) {
+      minDirtyIndex = Math.min(minDirtyIndex, index);
+    }
+  };
 
   const flush = async () => {
     if (!dirty) return true;
 
-    const nextAssistantMessage = createAssistantMessage(
+    const nextAssistantMessage = materializeAssistantMessage(
       activeRun.assistantMessageId,
       accumulator,
       activeRun.startedAt,
+      assistantMaterializationCache,
+      minDirtyIndex,
     );
     const flushed = replaceAssistantMessage(
       currentSlotKey,
@@ -1032,14 +1048,16 @@ async function consumeRunStream({
 
     currentAssistantMessage = nextAssistantMessage;
     dirty = false;
+    minDirtyIndex = accumulator.parts.length;
     pendingDeltaChars = 0;
     lastFlushAt = performance.now();
     await yieldToRendererTask();
     return true;
   };
   activeRun.resolveElicitationLocally = (elicitationId, response) => {
-    resolveElicitationPartLocally(accumulator.parts, elicitationId, response);
-    dirty = true;
+    markDirty(
+      resolveElicitationPartLocally(accumulator.parts, elicitationId, response),
+    );
     void flush();
   };
 
@@ -1079,7 +1097,7 @@ async function consumeRunStream({
           name: "chat-error",
           type: "data",
         });
-        dirty = true;
+        markDirty(accumulator.parts.length - 1);
         await flush();
         return {
           assistantMessage: currentAssistantMessage,
@@ -1092,9 +1110,11 @@ async function consumeRunStream({
         accumulator.result = event.result;
         if (accumulator.parts.length === 0) {
           accumulator.parts = event.result.content.map(cloneChatHistoryPart);
+          markDirty(0);
+        } else {
+          markDirty();
         }
         markChatAttention(event.result.chatId, "completed");
-        dirty = true;
         if (!(await flush())) break;
         continue;
       }
@@ -1103,7 +1123,7 @@ async function consumeRunStream({
       let autoApprovedPermission = false;
       let shouldFlushToolState = false;
       if (event.type === "elicitation") {
-        upsertElicitationPart(accumulator.parts, event.elicitation);
+        markDirty(upsertElicitationPart(accumulator.parts, event.elicitation));
         autoApprovedPermission = autoApprovePermissionElicitation({
           activeRun,
           elicitation: event.elicitation,
@@ -1114,7 +1134,7 @@ async function consumeRunStream({
           markChatAttention(currentSlotKey, "needsInput");
         }
       } else if (event.type === "tool") {
-        upsertToolActionPart(accumulator.parts, event.action);
+        markDirty(upsertToolActionPart(accumulator.parts, event.action));
         shouldFlushToolState = isTerminalChatToolPhase(event.action.phase);
         autoApprovedPermission = autoApprovePermissionToolAction({
           action: event.action,
@@ -1129,18 +1149,20 @@ async function consumeRunStream({
           markChatAttention(currentSlotKey, "needsInput");
         }
       } else if (event.type === "toolDelta") {
-        pendingDeltaChars += appendToolActionDeltaPart(
+        const delta = appendToolActionDeltaPart(
           accumulator.parts,
           event.action,
         );
+        markDirty(delta.index);
+        pendingDeltaChars += delta.textLength;
         shouldFlushToolState = isTerminalChatToolPhase(event.action.phase);
       } else if (event.type === "plan") {
-        upsertTurnPlanPartAtEnd(accumulator.parts, event.plan);
+        markDirty(upsertTurnPlanPartAtEnd(accumulator.parts, event.plan));
       } else {
         appendChatTextPart(accumulator.parts, event.part, event.text);
+        markDirty(accumulator.parts.length - 1);
         pendingDeltaChars += event.text.length;
       }
-      dirty = true;
       if (
         autoApprovedPermission ||
         event.type === "elicitation" ||
@@ -1163,12 +1185,12 @@ async function consumeRunStream({
     accumulator.status = activeRun.cancelled
       ? { reason: "cancelled", type: "incomplete" }
       : { reason: "stop", type: "complete" };
-    dirty = true;
+    markDirty();
     await flush();
   } catch (error) {
     if (activeRun.abortController.signal.aborted) {
       accumulator.status = { reason: "cancelled", type: "incomplete" };
-      dirty = true;
+      markDirty();
       await flush();
       return {
         assistantMessage: currentAssistantMessage,
@@ -1193,7 +1215,7 @@ async function consumeRunStream({
       name: "chat-error",
       type: "data",
     });
-    dirty = true;
+    markDirty(accumulator.parts.length - 1);
     await flush();
   }
 
@@ -1606,15 +1628,14 @@ function upsertToolActionPart(
 ) {
   const questionElicitation = questionElicitationFromAction(action);
   if (questionElicitation) {
-    upsertElicitationPart(parts, questionElicitation);
-    return;
+    return upsertElicitationPart(parts, questionElicitation);
   }
 
   if (
     isEmptyHostCapabilityAction(action) &&
     parts.some((part) => partReferencesElicitationAction(part, action.id))
   ) {
-    return;
+    return undefined;
   }
 
   const nextPart = chatToolActionToPart(action);
@@ -1625,53 +1646,58 @@ function upsertToolActionPart(
 
   if (index === -1) {
     parts.push(nextPart);
-    return;
+    return parts.length - 1;
   }
 
   parts[index] = nextPart;
+  return index;
 }
 
-function appendToolActionDeltaPart(
+export function appendToolActionDeltaPart(
   parts: ChatHistoryMessagePart[],
   action: ChatToolAction,
-) {
+): { index: number | undefined; textLength: number } {
   const deltaText = toolActionDeltaText(action);
   const index = parts.findIndex(
     (part) => part.type === "tool-call" && part.toolCallId === action.id,
   );
 
   if (index === -1) {
-    upsertToolActionPart(parts, action);
-    return deltaText.length;
+    return {
+      index: upsertToolActionPart(parts, action),
+      textLength: deltaText.length,
+    };
   }
 
   const previous = parts[index];
   if (previous.type !== "tool-call" || !isChatToolAction(previous.artifact)) {
-    upsertToolActionPart(parts, action);
-    return deltaText.length;
+    return {
+      index: upsertToolActionPart(parts, action),
+      textLength: deltaText.length,
+    };
   }
 
-  const output =
-    previous.artifact.output !== undefined ? [...previous.artifact.output] : [];
+  const previousAction: ChatToolAction = previous.artifact;
+  const output: ChatToolActionOutput[] = previousAction.output ?? [];
   if (action.output !== undefined) {
     output.push(...action.output);
   }
-  let previousOutputText = previous.artifact.outputText;
+  let previousOutputText = previousAction.outputText;
   if (previousOutputText === undefined) {
-    if (previous.artifact.output === undefined) {
+    if (previousAction.output === undefined) {
       throw new Error("Tool action delta is missing previous output.");
     }
-    previousOutputText = previous.artifact.output
+    previousOutputText = previousAction.output
       .map((chunk: ChatToolActionOutput) => chunk.text)
       .join("");
   }
   upsertToolActionPart(parts, {
-    ...previous.artifact,
+    ...previousAction,
     ...action,
     output,
     outputText: `${previousOutputText}${deltaText}`,
   });
-  return deltaText.length;
+  return { index, textLength: deltaText.length };
 }
 
 function toolActionDeltaText(action: ChatToolAction) {
@@ -1697,8 +1723,10 @@ function upsertTurnPlanPartAtEnd(
     (part) =>
       isChatPlanPart(part) && chatPlanKind(part.data) === chatPlanKind(plan),
   );
+  const touchedIndex = index === -1 ? parts.length : index;
   if (index !== -1) parts.splice(index, 1);
   parts.push(nextPart);
+  return touchedIndex;
 }
 
 function chatPlanKind(plan: ChatPlanData) {
@@ -1716,6 +1744,7 @@ function upsertElicitationPart(
     parts,
     preserveResolvedElicitationPhase(parts, elicitation),
   );
+  return 0;
 }
 
 function preserveResolvedElicitationPhase(
@@ -1772,6 +1801,7 @@ function resolveElicitationPartLocally(
       };
     }
   }
+  return 0;
 }
 
 function markToolActionPermissionApprovedLocally(
@@ -1975,10 +2005,49 @@ function normalizeElicitationResponse(
   }
 }
 
-function createAssistantMessage(
+export function createAssistantMessage(
   id: string,
   accumulator: AssistantAccumulator,
   startedAt: number,
+): EngineMessage {
+  return assistantMessageFromContent(
+    id,
+    accumulator,
+    startedAt,
+    accumulator.parts
+      .map(cloneChatHistoryPart)
+      .map(historyPartToEngineMessagePart) as EngineMessage["content"],
+  );
+}
+
+export function materializeAssistantMessage(
+  id: string,
+  accumulator: AssistantAccumulator,
+  startedAt: number,
+  cache: AssistantMaterializationCache,
+  minDirtyIndex: number,
+): EngineMessage {
+  const content: Array<EngineMessage["content"][number]> = [];
+  for (let index = 0; index < accumulator.parts.length; index += 1) {
+    const cachedPart =
+      index < minDirtyIndex ? cache.engineParts[index] : undefined;
+    content.push(
+      cachedPart ??
+        historyPartToEngineMessagePart(
+          cloneChatHistoryPart(accumulator.parts[index]),
+        ),
+    );
+  }
+  const engineContent = content as EngineMessage["content"];
+  cache.engineParts = engineContent;
+  return assistantMessageFromContent(id, accumulator, startedAt, engineContent);
+}
+
+function assistantMessageFromContent(
+  id: string,
+  accumulator: AssistantAccumulator,
+  startedAt: number,
+  content: EngineMessage["content"],
 ): EngineMessage {
   const text = chatPartsText(accumulator.parts, "text");
   const toolCallCount = accumulator.parts.filter(
@@ -1986,9 +2055,7 @@ function createAssistantMessage(
   ).length;
 
   return {
-    content: accumulator.parts
-      .map(cloneChatHistoryPart)
-      .map(historyPartToEngineMessagePart) as EngineMessage["content"],
+    content,
     createdAt: new Date(),
     id,
     metadata: {
