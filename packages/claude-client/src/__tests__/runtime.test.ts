@@ -98,6 +98,44 @@ describe("claudePrompt", () => {
     );
   });
 
+  it("turns a lone skill mention into a slash-command prompt", () => {
+    const input: ClientInput = [
+      {
+        name: "skill-authoring",
+        path: "/home/user/.claude/skills/skill-authoring/SKILL.md",
+        type: "skill_mention",
+      },
+    ];
+
+    expect(claudePrompt("", input)).toBe("/skill-authoring");
+  });
+
+  it("keeps skill mentions alongside text as slash-command blocks", async () => {
+    const input: ClientInput = [
+      {
+        name: "skill-authoring",
+        path: "/home/user/.claude/skills/skill-authoring/SKILL.md",
+        type: "skill_mention",
+      },
+    ];
+
+    await expect(
+      readPrompt(claudePrompt("review this skill", input)),
+    ).resolves.toEqual([
+      {
+        message: {
+          content: [
+            { text: "review this skill", type: "text" },
+            { text: "/skill-authoring", type: "text" },
+          ],
+          role: "user",
+        },
+        parent_tool_use_id: null,
+        type: "user",
+      },
+    ]);
+  });
+
   it("keeps images as Claude image blocks", async () => {
     const input: ClientInput = [
       {

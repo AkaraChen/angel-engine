@@ -38,6 +38,14 @@ interface ChatRuntimeConfigQueryParams {
   staleTime?: number;
 }
 
+interface AgentSkillsQueryParams {
+  api: ApiClient;
+  enabled?: boolean;
+  projectPath?: string | null;
+  runtime?: string | null;
+  staleTime?: number;
+}
+
 interface ChatPrewarmQueryParams {
   api: ApiClient;
   creationLocation?: ChatCreationLocation | null;
@@ -162,6 +170,26 @@ export function chatRuntimeConfigQueryOptions({
         runtime: runtime ?? undefined,
       }),
     queryKey: queryKeys.chats.runtimeConfig(runtime ?? null, cwd ?? null),
+    retry: false,
+    staleTime,
+  });
+}
+
+export function agentSkillsQueryOptions({
+  api,
+  enabled = true,
+  projectPath,
+  runtime,
+  staleTime = 30_000,
+}: AgentSkillsQueryParams) {
+  return queryOptions({
+    enabled: enabled && Boolean(runtime),
+    queryFn: async () =>
+      api.agents.listSkills({
+        projectPath: projectPath ?? undefined,
+        runtime: runtime ?? "",
+      }),
+    queryKey: queryKeys.agents.skills(runtime ?? null, projectPath ?? null),
     retry: false,
     staleTime,
   });

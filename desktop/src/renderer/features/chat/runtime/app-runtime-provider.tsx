@@ -23,6 +23,7 @@ import { useMemo } from "react";
 import { ChatEnvironmentProvider } from "@/features/chat/runtime/chat-environment-context";
 import { ChatRuntimeActionsProvider } from "@/features/chat/runtime/chat-runtime-actions-context";
 import { useEngineRuntime } from "@/features/chat/runtime/engine-model-adapter";
+import { useAgentSkills } from "@/features/chat/state/use-agent-skills";
 
 interface AppRuntimeProviderProps {
   chatId?: string;
@@ -55,9 +56,6 @@ interface AppRuntimeProviderProps {
 
 const EMPTY_AVAILABLE_COMMANDS: NonNullable<
   ChatRuntimeConfig["availableCommands"]
-> = [];
-const EMPTY_AVAILABLE_SKILLS: NonNullable<
-  ChatRuntimeConfig["availableSkills"]
 > = [];
 
 const mockFeedbackAdapter: FeedbackAdapter = {
@@ -117,19 +115,29 @@ export function AppRuntimeProvider({
     runtimeConfig,
     slotKey,
   });
+  const { availableSkills, availableSkillsLoading } = useAgentSkills({
+    projectPath,
+    runtime: selectedRuntime,
+  });
   const chatEnvironment = useMemo(
     () => ({
       availableCommands:
         runtimeConfig?.availableCommands ?? EMPTY_AVAILABLE_COMMANDS,
       availableCommandsLoading: runtimeConfig === undefined,
-      availableSkills: runtimeConfig?.availableSkills ?? EMPTY_AVAILABLE_SKILLS,
-      availableSkillsLoading: runtimeConfig === undefined,
+      availableSkills,
+      availableSkillsLoading,
       isProjectChat:
         is.nonEmptyString(projectId) && is.nonEmptyString(projectPath),
       projectId,
       projectPath,
     }),
-    [projectId, projectPath, runtimeConfig],
+    [
+      availableSkills,
+      availableSkillsLoading,
+      projectId,
+      projectPath,
+      runtimeConfig,
+    ],
   );
 
   return (

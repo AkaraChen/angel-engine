@@ -675,6 +675,20 @@ fn acp_prompt_blocks(effect: &angel_engine::ProtocolEffect) -> Vec<Value> {
                 insert_optional_prompt_field(effect, &prefix, &mut block, "mimeType");
                 Value::Object(block)
             }
+            // ACP has no skill input type: pass the mention through as the
+            // `$name` prompt text the runtime's own skill loader understands.
+            "skill_mention" => {
+                let name = effect
+                    .payload
+                    .fields
+                    .get(&format!("{prefix}.name"))
+                    .cloned()
+                    .unwrap_or_else(|| content.clone());
+                json!({
+                    "type": "text",
+                    "text": format!("${name}"),
+                })
+            }
             "resource" => {
                 let mut resource = serde_json::Map::new();
                 resource.insert(
@@ -1215,6 +1229,59 @@ mod tests {
                 "data": "ZmFrZQ==",
                 "mimeType": "image/png"
             })
+        );
+    }
+
+    #[test]
+    fn session_prompt_encodes_skill_mention_as_text() {
+        let adapter = AcpAdapter::standard();
+        let mut engine = AngelEngine::with_available_runtime(
+            angel_engine::ProtocolFlavor::Acp,
+            angel_engine::RuntimeCapabilities::new("test"),
+            adapter.capabilities(),
+        );
+        let conversation_id = ConversationId::new("conv");
+        engine
+            .apply_event(EngineEvent::ConversationProvisionStarted {
+                id: conversation_id.clone(),
+                remote: RemoteConversationId::Known("sess".to_string()),
+                op: angel_engine::ProvisionOp::New,
+                capabilities: adapter.capabilities(),
+            })
+            .expect("conversation provision");
+        engine
+            .apply_event(EngineEvent::ConversationReady {
+                id: conversation_id.clone(),
+                remote: Some(RemoteConversationId::Known("sess".to_string())),
+                context: ContextPatch::empty(),
+                capabilities: None,
+            })
+            .expect("conversation ready");
+        let plan = engine
+            .plan_command(angel_engine::EngineCommand::StartTurn {
+                conversation_id,
+                input: vec![
+                    angel_engine::UserInput::skill_mention(
+                        "skill-authoring",
+                        "/home/user/.agents/skills/skill-authoring/SKILL.md",
+                    ),
+                    angel_engine::UserInput::text("use this skill"),
+                ],
+                overrides: angel_engine::TurnOverrides::default(),
+            })
+            .expect("start turn with skill mention");
+
+        let params = adapter
+            .encode_params(&engine, &plan.effects[0], &TransportOptions::default())
+            .expect("prompt params");
+
+        assert_eq!(
+            params["prompt"][0],
+            json!({"type": "text", "text": "$skill-authoring"})
+        );
+        assert_eq!(
+            params["prompt"][1],
+            json!({"type": "text", "text": "use this skill"})
         );
     }
 

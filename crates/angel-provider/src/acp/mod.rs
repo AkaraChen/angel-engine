@@ -175,7 +175,9 @@ pub fn acp_standard_capabilities() -> ConversationCapabilities {
         },
         skills: angel_engine::SkillsCapabilities {
             list: CapabilitySupport::Unsupported,
-            mention: CapabilitySupport::Unsupported,
+            // ACP has no skill input type; mentions pass through as prompt
+            // text and the runtime's own skill loader resolves the name.
+            mention: CapabilitySupport::Supported,
         },
     }
 }

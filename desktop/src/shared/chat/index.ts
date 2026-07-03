@@ -106,9 +106,6 @@ export interface ChatAvailableSkill {
 export interface ChatRuntimeConfig {
   agentState?: ChatAgentState;
   availableCommands?: ChatAvailableCommand[];
-  availableSkills?: ChatAvailableSkill[];
-  canListSkills?: boolean;
-  canMentionSkills?: boolean;
   canSetMode?: boolean;
   canSetModel?: boolean;
   canSetPermissionMode?: boolean;

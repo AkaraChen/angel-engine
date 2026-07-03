@@ -68,6 +68,7 @@ export const useSettingsStore = create<SettingsState>()((set, get) => ({
       (current) => ({
         agentSettings: sanitizeAgentSettings({
           ...current.agentSettings,
+          agentOrder: [...current.agentSettings.agentOrder, agent.id],
           enabledRuntimes: [...current.agentSettings.enabledRuntimes, agent.id],
           lastRuntime: agent.id,
         }),
@@ -86,6 +87,9 @@ export const useSettingsStore = create<SettingsState>()((set, get) => ({
       (current) => ({
         agentSettings: sanitizeAgentSettings({
           ...current.agentSettings,
+          agentOrder: current.agentSettings.agentOrder.filter(
+            (item) => item !== runtime,
+          ),
           enabledRuntimes: current.agentSettings.enabledRuntimes.filter(
             (item) => item !== runtime,
           ),

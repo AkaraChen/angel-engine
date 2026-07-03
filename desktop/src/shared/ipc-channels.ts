@@ -23,6 +23,7 @@ export const TIPC_CHANNELS = [
   "agentsDeleteCustom",
   "agentsListAvailable",
   "agentsListCustom",
+  "agentsListSkills",
   "agentsUpdateCustom",
   "projectsChooseDirectory",
   "projectsGitStatus",

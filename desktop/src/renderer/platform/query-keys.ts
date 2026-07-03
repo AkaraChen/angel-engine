@@ -1,4 +1,8 @@
 export const queryKeys = {
+  agents: {
+    skills: (runtime: string | null, projectPath: string | null) =>
+      ["agents", "skills", runtime, projectPath] as const,
+  },
   chats: {
     all: () => ["chats"] as const,
     archived: () => ["chats", "archived"] as const,

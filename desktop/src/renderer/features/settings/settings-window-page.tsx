@@ -1,4 +1,5 @@
 import type { Chat } from "@shared/chat";
+import { rememberAgentOrder } from "@shared/agents";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 import { useCallback } from "react";
@@ -20,7 +21,7 @@ export function SettingsWindowPage() {
   const queryClient = useQueryClient();
   const { t } = useTranslation();
   const toast = useToast();
-  const [agentSettings] = useAgentSettings();
+  const [agentSettings, updateAgentSettings] = useAgentSettings();
   const availableAgentOptions = useSettingsStore(
     (state) => state.availableAgentOptions,
   );
@@ -58,6 +59,11 @@ export function SettingsWindowPage() {
         availableAgentOptions={availableAgentOptions}
         isDeletingChats={deleteAllChatsMutation.isPending}
         onAgentEnabledChange={setAgentEnabled}
+        onAgentOrderChange={(orderedRuntimes) =>
+          updateAgentSettings((current) =>
+            rememberAgentOrder(current, orderedRuntimes),
+          )
+        }
         onDeleteAllChats={deleteAllChats}
       />
     </div>

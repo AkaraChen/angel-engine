@@ -4,13 +4,15 @@ import type {
   AgentSettings,
   CreateCustomAgentInput,
   CustomAgent,
+  CustomAgentRuntime,
   UpdateCustomAgentInput,
 } from "@shared/agents";
-import type { KeyboardEvent, ReactNode } from "react";
+import type { KeyboardEvent, PointerEvent, ReactNode } from "react";
 import type { SupportedLanguage } from "@/i18n";
 import type { DesktopThemeMode } from "@/platform/theme";
 import claudeIconUrl from "@lobehub/icons-static-svg/icons/claudecode-color.svg";
 import clineIconUrl from "@lobehub/icons-static-svg/icons/cline.svg";
+import codexIconUrl from "@lobehub/icons-static-svg/icons/codex-color.svg";
 import copilotIconUrl from "@lobehub/icons-static-svg/icons/copilot-color.svg";
 import geminiIconUrl from "@lobehub/icons-static-svg/icons/geminicli-color.svg";
 import kimiIconUrl from "@lobehub/icons-static-svg/icons/kimi-color.svg";
@@ -19,6 +21,7 @@ import qoderIconUrl from "@lobehub/icons-static-svg/icons/qoder-color.svg";
 import {
   RiErrorWarningLine as AlertTriangle,
   RiRobot2Line as Bot,
+  RiDraggable as DragHandle,
   RiPencilLine as Pencil,
   RiAddLine as Plus,
   RiSaveLine as Save,
@@ -26,10 +29,14 @@ import {
   RiCloseLine as X,
 } from "@remixicon/react";
 
-import { isCustomAgentRuntime } from "@shared/agents";
+import {
+  isCustomAgentRuntime,
+  sortAgentOptionsBySettings,
+} from "@shared/agents";
 import is from "@sindresorhus/is";
 import { useQueryClient } from "@tanstack/react-query";
-import { useCallback, useId, useReducer, useState } from "react";
+import { Reorder, useDragControls } from "framer-motion";
+import { useCallback, useId, useMemo, useReducer, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -73,6 +80,7 @@ const themeModeOptions: Array<{
 const agentIconUrl: Partial<Record<AgentRuntime, string>> = {
   claude: claudeIconUrl,
   cline: clineIconUrl,
+  codex: codexIconUrl,
   copilot: copilotIconUrl,
   gemini: geminiIconUrl,
   kimi: kimiIconUrl,
@@ -132,12 +140,14 @@ export function SettingsPage({
   availableAgentOptions,
   isDeletingChats,
   onAgentEnabledChange,
+  onAgentOrderChange,
   onDeleteAllChats,
 }: {
   agentSettings: AgentSettings;
   availableAgentOptions: AgentOption[];
   isDeletingChats: boolean;
   onAgentEnabledChange: (runtime: AgentRuntime, enabled: boolean) => void;
+  onAgentOrderChange: (orderedRuntimes: AgentRuntime[]) => void;
   onDeleteAllChats: () => Promise<void>;
 }) {
   const { t } = useTranslation();
@@ -166,13 +176,82 @@ export function SettingsPage({
   const deleteCustomAgentImpact = useSettingsStore(
     (state) => state.deleteCustomAgentImpact,
   );
-  const builtinAgentOptions = availableAgentOptions.filter(
+  const enabledRuntimeSet = useMemo(
+    () => new Set(agentSettings.enabledRuntimes),
+    [agentSettings.enabledRuntimes],
+  );
+  const orderedAgentOptions = useMemo(
+    () => sortAgentOptionsBySettings(agentSettings, availableAgentOptions),
+    [agentSettings, availableAgentOptions],
+  );
+  const orderedBuiltinAgentOptions = orderedAgentOptions.filter(
     (agent) => !isCustomAgentRuntime(agent.id),
   );
-  const enabledRuntimeSet = new Set(agentSettings.enabledRuntimes);
-  const visibleEnabledCount = availableAgentOptions.filter((agent) =>
+  const enabledBuiltinAgentOptions = orderedBuiltinAgentOptions.filter(
+    (agent) => enabledRuntimeSet.has(agent.id),
+  );
+  const disabledBuiltinAgentOptions = orderedBuiltinAgentOptions.filter(
+    (agent) => !enabledRuntimeSet.has(agent.id),
+  );
+  const builtinAgentOptions = [
+    ...enabledBuiltinAgentOptions,
+    ...disabledBuiltinAgentOptions,
+  ];
+  const customAgentsById = useMemo(
+    () => new Map(customAgents.map((agent) => [agent.id, agent])),
+    [customAgents],
+  );
+  const orderedCustomAgents = useMemo(() => {
+    const ordered = orderedAgentOptions.flatMap((agent) => {
+      if (!isCustomAgentRuntime(agent.id)) return [];
+      const customAgent = customAgentsById.get(agent.id);
+      return customAgent ? [customAgent] : [];
+    });
+    const orderedSet = new Set(ordered.map((agent) => agent.id));
+
+    return [
+      ...ordered,
+      ...customAgents.filter((agent) => !orderedSet.has(agent.id)),
+    ];
+  }, [customAgents, customAgentsById, orderedAgentOptions]);
+  const enabledCustomAgents = orderedCustomAgents.filter((agent) =>
+    enabledRuntimeSet.has(agent.id),
+  );
+  const disabledCustomAgents = orderedCustomAgents.filter(
+    (agent) => !enabledRuntimeSet.has(agent.id),
+  );
+  const visibleCustomAgents = [...enabledCustomAgents, ...disabledCustomAgents];
+  const enabledBuiltinAgentRuntimeOrder = useMemo(
+    () => enabledBuiltinAgentOptions.map((agent) => agent.id),
+    [enabledBuiltinAgentOptions],
+  );
+  const disabledBuiltinAgentRuntimeOrder = useMemo(
+    () => disabledBuiltinAgentOptions.map((agent) => agent.id),
+    [disabledBuiltinAgentOptions],
+  );
+  const builtinAgentRuntimeOrder = useMemo(
+    () => [
+      ...enabledBuiltinAgentRuntimeOrder,
+      ...disabledBuiltinAgentRuntimeOrder,
+    ],
+    [disabledBuiltinAgentRuntimeOrder, enabledBuiltinAgentRuntimeOrder],
+  );
+  const customAgentRuntimeOrder = visibleCustomAgents.map((agent) => agent.id);
+  const visibleEnabledCount = orderedAgentOptions.filter((agent) =>
     enabledRuntimeSet.has(agent.id),
   ).length;
+  const [builtinAgentOrderPreview, setBuiltinAgentOrderPreview] = useState<
+    AgentRuntime[] | null
+  >(null);
+  const builtinAgentOptionById = new Map(
+    builtinAgentOptions.map((agent) => [agent.id, agent]),
+  );
+  const displayedBuiltinAgentOptions = builtinAgentOrderPreview
+    ? builtinAgentOrderPreview.flatMap((runtime) => {
+        const agent = builtinAgentOptionById.get(runtime);
+        return agent ? [agent] : [];
+      })
+    : builtinAgentOptions;
   const activeTabLabel = t(
     settingsTabs.find((tab) => tab.id === activeTab)?.labelKey ??
       settingsTabs[0].labelKey,
@@ -300,14 +379,20 @@ export function SettingsPage({
               role="tabpanel"
             >
               <SettingsGroup>
-                <>
-                  {builtinAgentOptions.map((agent) => {
+                <Reorder.Group
+                  as="div"
+                  axis="y"
+                  className="divide-y divide-border"
+                  onReorder={setBuiltinAgentOrderPreview}
+                  values={displayedBuiltinAgentOptions.map((agent) => agent.id)}
+                >
+                  {displayedBuiltinAgentOptions.map((agent) => {
                     const enabled = enabledRuntimeSet.has(agent.id);
                     const iconUrl = agentIconUrl[agent.id];
                     const isOnlyEnabled = enabled && visibleEnabledCount <= 1;
 
                     return (
-                      <SettingsRow
+                      <ReorderableAgentRow
                         after={
                           <AgentEnabledSwitch
                             checked={enabled}
@@ -321,7 +406,18 @@ export function SettingsPage({
                           />
                         }
                         key={agent.id}
+                        label={agent.label}
                         muted={!enabled}
+                        onOrderCommit={() => {
+                          if (builtinAgentOrderPreview) {
+                            onAgentOrderChange([
+                              ...builtinAgentOrderPreview,
+                              ...customAgentRuntimeOrder,
+                            ]);
+                          }
+                          setBuiltinAgentOrderPreview(null);
+                        }}
+                        runtime={agent.id}
                       >
                         <span
                           className="
@@ -345,16 +441,22 @@ export function SettingsPage({
                             {agent.label}
                           </span>
                         </span>
-                      </SettingsRow>
+                      </ReorderableAgentRow>
                     );
                   })}
-                </>
+                </Reorder.Group>
               </SettingsGroup>
               <CustomAgentsSettingsGroup
-                customAgents={customAgents}
+                customAgents={visibleCustomAgents}
                 enabledRuntimeSet={enabledRuntimeSet}
                 visibleEnabledCount={visibleEnabledCount}
                 onAgentEnabledChange={onAgentEnabledChange}
+                onAgentOrderChange={(orderedCustomRuntimes) =>
+                  onAgentOrderChange([
+                    ...builtinAgentRuntimeOrder,
+                    ...orderedCustomRuntimes,
+                  ])
+                }
                 onCreateCustomAgent={createCustomAgent}
                 onDeleteCustomAgent={deleteCustomAgent}
                 onDeletedCustomAgent={async () => {
@@ -508,6 +610,7 @@ function CustomAgentsSettingsGroup({
   enabledRuntimeSet,
   visibleEnabledCount,
   onAgentEnabledChange,
+  onAgentOrderChange,
   onCreateCustomAgent,
   onDeleteCustomAgent,
   onDeletedCustomAgent,
@@ -518,6 +621,7 @@ function CustomAgentsSettingsGroup({
   enabledRuntimeSet: Set<AgentRuntime>;
   visibleEnabledCount: number;
   onAgentEnabledChange: (runtime: AgentRuntime, enabled: boolean) => void;
+  onAgentOrderChange: (orderedRuntimes: AgentRuntime[]) => void;
   onCreateCustomAgent: (input: CreateCustomAgentInput) => Promise<CustomAgent>;
   onDeleteCustomAgent: (runtime: AgentRuntime) => Promise<void>;
   onDeletedCustomAgent: () => Promise<void>;
@@ -543,70 +647,97 @@ function CustomAgentsSettingsGroup({
     [onDeleteCustomAgent, onDeletedCustomAgent, onDeleteCustomAgentImpact],
   );
 
+  const [orderPreview, setOrderPreview] = useState<CustomAgentRuntime[] | null>(
+    null,
+  );
+  const customAgentById = new Map(
+    customAgents.map((agent) => [agent.id, agent]),
+  );
+  const displayedCustomAgents = orderPreview
+    ? orderPreview.flatMap((runtime) => {
+        const agent = customAgentById.get(runtime);
+        return agent ? [agent] : [];
+      })
+    : customAgents;
+
   return (
     <SettingsGroup title="Custom Agents">
-      {customAgents.map((agent) => {
-        const enabled = enabledRuntimeSet.has(agent.id);
-        const isOnlyEnabled = enabled && visibleEnabledCount <= 1;
+      <Reorder.Group
+        as="div"
+        axis="y"
+        className="divide-y divide-border"
+        onReorder={setOrderPreview}
+        values={displayedCustomAgents.map((agent) => agent.id)}
+      >
+        {displayedCustomAgents.map((agent) => {
+          const enabled = enabledRuntimeSet.has(agent.id);
+          const isOnlyEnabled = enabled && visibleEnabledCount <= 1;
 
-        return (
-          <SettingsRow
-            after={
-              <div className="flex items-center gap-1.5">
-                <AgentEnabledSwitch
-                  checked={enabled}
-                  disabled={isOnlyEnabled}
-                  label={`Enable ${agent.label}`}
-                  onCheckedChange={(checked) =>
-                    onAgentEnabledChange(agent.id, checked)
-                  }
-                />
-                <Button
-                  aria-label={`Edit ${agent.label}`}
-                  onClick={() => setEditingAgent(agent)}
-                  size="icon-xs"
-                  type="button"
-                  variant="ghost"
-                >
-                  <Pencil />
-                </Button>
-                <Button
-                  aria-label={`Delete ${agent.label}`}
-                  onClick={() => void deleteAgent(agent)}
-                  size="icon-xs"
-                  type="button"
-                  variant="ghost"
-                >
-                  <Trash2 />
-                </Button>
-              </div>
-            }
-            key={agent.id}
-            muted={!enabled}
-          >
-            <span
-              className="
-                flex size-9 shrink-0 items-center justify-center rounded-lg
-                border border-foreground/10 bg-background
-              "
+          return (
+            <ReorderableAgentRow
+              after={
+                <div className="flex items-center gap-1.5">
+                  <AgentEnabledSwitch
+                    checked={enabled}
+                    disabled={isOnlyEnabled}
+                    label={`Enable ${agent.label}`}
+                    onCheckedChange={(checked) =>
+                      onAgentEnabledChange(agent.id, checked)
+                    }
+                  />
+                  <Button
+                    aria-label={`Edit ${agent.label}`}
+                    onClick={() => setEditingAgent(agent)}
+                    size="icon-xs"
+                    type="button"
+                    variant="ghost"
+                  >
+                    <Pencil />
+                  </Button>
+                  <Button
+                    aria-label={`Delete ${agent.label}`}
+                    onClick={() => void deleteAgent(agent)}
+                    size="icon-xs"
+                    type="button"
+                    variant="ghost"
+                  >
+                    <Trash2 />
+                  </Button>
+                </div>
+              }
+              key={agent.id}
+              label={agent.label}
+              muted={!enabled}
+              onOrderCommit={() => {
+                if (orderPreview) onAgentOrderChange(orderPreview);
+                setOrderPreview(null);
+              }}
+              runtime={agent.id}
             >
-              <Bot className="size-5 text-muted-foreground" />
-            </span>
-            <span className="min-w-0 flex-1">
-              <span className="block truncate text-sm font-medium">
-                {agent.label}
-              </span>
               <span
-                className={cn(
-                  "mt-0.5 block truncate text-xs text-muted-foreground",
-                )}
+                className="
+                  flex size-9 shrink-0 items-center justify-center rounded-lg
+                  border border-foreground/10 bg-background
+                "
               >
-                {[agent.command, ...agent.args].join(" ")}
+                <Bot className="size-5 text-muted-foreground" />
               </span>
-            </span>
-          </SettingsRow>
-        );
-      })}
+              <span className="min-w-0 flex-1">
+                <span className="block truncate text-sm font-medium">
+                  {agent.label}
+                </span>
+                <span
+                  className={cn(
+                    "mt-0.5 block truncate text-xs text-muted-foreground",
+                  )}
+                >
+                  {[agent.command, ...agent.args].join(" ")}
+                </span>
+              </span>
+            </ReorderableAgentRow>
+          );
+        })}
+      </Reorder.Group>
       {creating || editingAgent ? (
         <CustomAgentForm
           agent={editingAgent}
@@ -859,7 +990,7 @@ function SettingsRow({
   return (
     <article
       className={cn(
-        "flex min-h-12 items-center gap-3 px-4 py-3 transition-colors",
+        "flex min-h-12 items-center gap-3 px-4 py-3",
         muted && "text-muted-foreground",
       )}
     >
@@ -955,6 +1086,80 @@ function environmentToList(value: string) {
       };
     })
     .filter((item) => item.name.length > 0);
+}
+
+function AgentOrderHandle({
+  label,
+  onPointerDown,
+}: {
+  label: string;
+  onPointerDown: (event: PointerEvent<HTMLButtonElement>) => void;
+}) {
+  return (
+    <Button
+      aria-label={`Reorder ${label}`}
+      className="
+        shrink-0 cursor-grab touch-none text-muted-foreground
+        active:cursor-grabbing
+      "
+      onPointerDown={onPointerDown}
+      size="icon-xs"
+      title={`Reorder ${label}`}
+      type="button"
+      variant="ghost"
+    >
+      <DragHandle />
+    </Button>
+  );
+}
+
+function ReorderableAgentRow({
+  after,
+  children,
+  label,
+  muted,
+  onOrderCommit,
+  runtime,
+}: {
+  after: ReactNode;
+  children: ReactNode;
+  label: string;
+  muted?: boolean;
+  onOrderCommit: () => void;
+  runtime: AgentRuntime;
+}) {
+  const dragControls = useDragControls();
+  const [dragging, setDragging] = useState(false);
+
+  return (
+    <Reorder.Item
+      as="article"
+      className={cn(
+        "flex min-h-12 items-center gap-3 bg-card px-4 py-3",
+        dragging &&
+          "relative z-10 rounded-lg shadow-lg ring-1 ring-foreground/10",
+        muted && "text-muted-foreground",
+      )}
+      dragControls={dragControls}
+      dragListener={false}
+      onDragEnd={() => {
+        setDragging(false);
+        onOrderCommit();
+      }}
+      onDragStart={() => setDragging(true)}
+      value={runtime}
+    >
+      <AgentOrderHandle
+        label={label}
+        onPointerDown={(event) => {
+          event.preventDefault();
+          dragControls.start(event);
+        }}
+      />
+      {children}
+      <span className="ml-auto shrink-0">{after}</span>
+    </Reorder.Item>
+  );
 }
 
 function AgentEnabledSwitch({

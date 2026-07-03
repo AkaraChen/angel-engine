@@ -1431,6 +1431,31 @@ pub fn create_runtime_options(
     )
 }
 
+#[napi(
+    js_name = "listAgentSkills",
+    ts_args_type = "runtime: string, projectPath?: string | null",
+    ts_return_type = "SkillSnapshot[]"
+)]
+pub fn list_agent_skills(
+    runtime: String,
+    project_path: Option<String>,
+) -> Result<serde_json::Value> {
+    trace_napi_sync_result(
+        "listAgentSkills",
+        format!(
+            "runtime={} project_path={}",
+            runtime,
+            project_path.as_deref().unwrap_or("<none>")
+        ),
+        || {
+            to_json(angel_engine_client::list_agent_skills(
+                &runtime,
+                project_path.as_deref().map(std::path::Path::new),
+            ))
+        },
+    )
+}
+
 fn conversation_state(
     client: &EngineClient<NapiRuntimeAdapter>,
     conversation_id: &str,

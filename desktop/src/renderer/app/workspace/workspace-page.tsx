@@ -16,6 +16,7 @@ import type {
 import {
   getEnabledAgentOptions,
   isAgentRuntime,
+  rememberAgentOrder,
   rememberAgentRuntimePreference,
   resolveEnabledAgentRuntime,
   sanitizeAgentRuntimePreference,
@@ -1217,6 +1218,11 @@ function WorkspacePageContent({
               availableAgentOptions={availableAgentOptions}
               isDeletingChats={deleteAllChatsMutation.isPending}
               onAgentEnabledChange={setAgentEnabled}
+              onAgentOrderChange={(orderedRuntimes) =>
+                updateAgentSettings((current) =>
+                  rememberAgentOrder(current, orderedRuntimes),
+                )
+              }
               onDeleteAllChats={deleteAllChats}
             />
           </SidebarInset>

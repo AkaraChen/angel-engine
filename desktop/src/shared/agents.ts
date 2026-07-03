@@ -49,6 +49,11 @@ export interface DeleteCustomAgentImpact {
   chatCount: number;
 }
 
+export interface AgentSkillsInput {
+  projectPath?: string;
+  runtime: string;
+}
+
 export interface AgentOption {
   description: string;
   id: AgentRuntime;
@@ -70,6 +75,7 @@ export interface AgentRuntimePreference {
 }
 
 export interface AgentSettings {
+  agentOrder: AgentRuntime[];
   enabledRuntimes: AgentRuntime[];
   lastRuntime?: AgentRuntime;
   runtimePreferences: Partial<Record<AgentRuntime, AgentRuntimePreference>>;
@@ -147,7 +153,63 @@ export function getEnabledAgentOptions(
   availableAgents: AgentOption[] = AGENT_OPTIONS,
 ): AgentOption[] {
   const enabled = new Set(settings.enabledRuntimes);
-  return availableAgents.filter((agent) => enabled.has(agent.id));
+  return sortAgentOptionsBySettings(
+    settings,
+    availableAgents.filter((agent) => enabled.has(agent.id)),
+  );
+}
+
+export function sortAgentOptionsBySettings(
+  settings: Pick<AgentSettings, "agentOrder">,
+  agents: AgentOption[],
+): AgentOption[] {
+  const orderIndex = new Map(
+    settings.agentOrder.map((runtime, index) => [runtime, index]),
+  );
+
+  return agents
+    .map((agent, index) => ({ agent, index }))
+    .sort((left, right) => {
+      const leftOrder =
+        orderIndex.get(left.agent.id) ?? Number.MAX_SAFE_INTEGER;
+      const rightOrder =
+        orderIndex.get(right.agent.id) ?? Number.MAX_SAFE_INTEGER;
+      return leftOrder - rightOrder || left.index - right.index;
+    })
+    .map(({ agent }) => agent);
+}
+
+export function rememberAgentOrder(
+  settings: AgentSettings,
+  orderedRuntimes: AgentRuntime[],
+): AgentSettings {
+  const orderedRuntimeSet = new Set(orderedRuntimes);
+
+  return sanitizeAgentSettings({
+    ...settings,
+    agentOrder: [
+      ...orderedRuntimes,
+      ...settings.agentOrder.filter(
+        (runtime) => !orderedRuntimeSet.has(runtime),
+      ),
+    ],
+  });
+}
+
+export function moveAgentRuntimeOrder(
+  runtimes: AgentRuntime[],
+  runtime: AgentRuntime,
+  targetIndex: number,
+): AgentRuntime[] {
+  const fromIndex = runtimes.indexOf(runtime);
+  if (fromIndex < 0) return runtimes;
+
+  const next = [...runtimes];
+  const [item] = next.splice(fromIndex, 1);
+  const adjustedTargetIndex =
+    targetIndex > fromIndex ? targetIndex - 1 : targetIndex;
+  next.splice(Math.max(0, Math.min(adjustedTargetIndex, next.length)), 0, item);
+  return next;
 }
 
 export function resolveEnabledAgentRuntime(
@@ -155,9 +217,8 @@ export function resolveEnabledAgentRuntime(
   runtime?: AgentRuntime,
   availableAgents: AgentOption[] = AGENT_OPTIONS,
 ): AgentRuntime {
-  const available = new Set(availableAgents.map((agent) => agent.id));
-  const enabledRuntimes = settings.enabledRuntimes.filter((enabledRuntime) =>
-    available.has(enabledRuntime),
+  const enabledRuntimes = getEnabledAgentOptions(settings, availableAgents).map(
+    (agent) => agent.id,
   );
 
   if (is.nonEmptyString(runtime) && enabledRuntimes.includes(runtime)) {
@@ -171,7 +232,8 @@ export function resolveEnabledAgentRuntime(
     return settings.lastRuntime;
   }
 
-  const resolvedRuntime = enabledRuntimes[0] ?? settings.enabledRuntimes[0];
+  const resolvedRuntime =
+    enabledRuntimes[0] ?? orderedEnabledRuntimes(settings)[0];
   if (resolvedRuntime === undefined) {
     throw new Error("No enabled agent runtime is available.");
   }
@@ -217,15 +279,24 @@ export function sanitizeAgentSettings(value: unknown): AgentSettings {
     settings.enabledRuntimes,
     fallbackRuntime,
   );
+  const runtimePreferences = sanitizeRuntimePreferences(
+    settings.runtimePreferences,
+  );
   const lastRuntime =
     fallbackRuntime !== undefined && enabledRuntimes.includes(fallbackRuntime)
       ? fallbackRuntime
       : enabledRuntimes[0];
 
   return {
+    agentOrder: sanitizeAgentOrder({
+      enabledRuntimes,
+      fallbackRuntime,
+      runtimePreferences,
+      value: settings.agentOrder,
+    }),
     enabledRuntimes,
     lastRuntime,
-    runtimePreferences: sanitizeRuntimePreferences(settings.runtimePreferences),
+    runtimePreferences,
   };
 }
 
@@ -278,6 +349,58 @@ function sanitizeEnabledRuntimes(
   return fallbackRuntime === undefined ? [] : [fallbackRuntime];
 }
 
+function sanitizeAgentOrder({
+  enabledRuntimes,
+  fallbackRuntime,
+  runtimePreferences,
+  value,
+}: {
+  enabledRuntimes: AgentRuntime[];
+  fallbackRuntime?: AgentRuntime;
+  runtimePreferences: AgentSettings["runtimePreferences"];
+  value: unknown;
+}): AgentRuntime[] {
+  const parsedOrder = parseRuntimeList(value);
+  const referencedCustomRuntimes = new Set(
+    [
+      ...enabledRuntimes,
+      ...Object.keys(runtimePreferences).filter(isAgentRuntime),
+      fallbackRuntime,
+    ].filter(isCustomAgentRuntime),
+  );
+
+  if (parsedOrder.length === 0) {
+    return [
+      ...AGENT_OPTIONS.map((agent) => agent.id),
+      ...referencedCustomRuntimes,
+    ];
+  }
+
+  const ordered = [...parsedOrder];
+  const orderedSet = new Set(ordered);
+
+  for (const agent of AGENT_OPTIONS) {
+    if (!orderedSet.has(agent.id)) {
+      ordered.push(agent.id);
+      orderedSet.add(agent.id);
+    }
+  }
+
+  for (const runtime of referencedCustomRuntimes) {
+    if (!orderedSet.has(runtime)) {
+      ordered.push(runtime);
+      orderedSet.add(runtime);
+    }
+  }
+
+  return ordered;
+}
+
+function orderedEnabledRuntimes(settings: AgentSettings): AgentRuntime[] {
+  const enabled = new Set(settings.enabledRuntimes);
+  return settings.agentOrder.filter((runtime) => enabled.has(runtime));
+}
+
 function sanitizeRuntimePreferences(
   value: unknown,
 ): AgentSettings["runtimePreferences"] {
@@ -300,6 +423,21 @@ function sanitizeRuntimePreferences(
 
 function sanitizePreferenceValue(value: unknown): string | undefined {
   return typeof value === "string" && value.trim() ? value : undefined;
+}
+
+function parseRuntimeList(value: unknown): AgentRuntime[] {
+  if (!Array.isArray(value)) return [];
+
+  const runtimes: AgentRuntime[] = [];
+  const seen = new Set<AgentRuntime>();
+  for (const item of value) {
+    const runtime = parseAgentRuntime(item);
+    if (runtime === undefined || seen.has(runtime)) continue;
+    runtimes.push(runtime);
+    seen.add(runtime);
+  }
+
+  return runtimes;
 }
 
 function parseAgentRuntime(value: unknown): AgentRuntime | undefined {

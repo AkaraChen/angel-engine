@@ -85,6 +85,18 @@ function clientInputToContent(
           type: "text",
         });
         break;
+      case "skill_mention": {
+        if (!is.nonEmptyString(value.name)) {
+          throw new Error("Skill mention input is missing name.");
+        }
+        // "/name" is Claude Code's user-invocation syntax for skills; when the
+        // mention is the whole prompt it becomes a plain-string slash command.
+        content.push({
+          text: `/${value.name}`,
+          type: "text",
+        });
+        break;
+      }
       case "embedded_text_resource":
         content.push({
           text: [`Resource: ${value.uri}`, value.text].join("\n\n"),

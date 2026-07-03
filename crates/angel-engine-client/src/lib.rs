@@ -16,6 +16,7 @@ mod process;
 mod runtime;
 mod session;
 mod settings;
+mod skills;
 mod snapshot;
 mod thread;
 
@@ -45,6 +46,7 @@ pub use settings::{
     ModelListSettingSnapshot, ModelOptionSnapshot, PermissionModeOptionSnapshot,
     ReasoningLevelSettingSnapshot, ThreadSettingsSnapshot,
 };
+pub use skills::list_agent_skills;
 pub use snapshot::{
     ActionOutputSnapshot, ActionSnapshot, AgentStateSnapshot, AvailableCommandSnapshot,
     ClientSnapshot, ContentChunk, ContextSnapshot, ConversationSnapshot,

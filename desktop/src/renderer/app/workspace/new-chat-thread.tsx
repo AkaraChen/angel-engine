@@ -19,13 +19,11 @@ import { ChatEnvironmentProvider } from "@/features/chat/runtime/chat-environmen
 import { ChatOptionsProvider } from "@/features/chat/runtime/chat-options-context";
 import { ChatRuntimeActionsProvider } from "@/features/chat/runtime/chat-runtime-actions-context";
 import { useChatRunStore } from "@/features/chat/state/chat-run-store";
+import { useAgentSkills } from "@/features/chat/state/use-agent-skills";
 import { EMPTY_MESSAGES } from "./workspace-thread-types";
 
 const EMPTY_AVAILABLE_COMMANDS: NonNullable<
   ChatRuntimeConfig["availableCommands"]
-> = [];
-const EMPTY_AVAILABLE_SKILLS: NonNullable<
-  ChatRuntimeConfig["availableSkills"]
 > = [];
 
 interface NewChatThreadProps {
@@ -86,19 +84,29 @@ export function NewChatThread({
     onChatUpdated(chat, messages, config, runOrigin);
   };
 
+  const { availableSkills, availableSkillsLoading } = useAgentSkills({
+    projectPath,
+    runtime,
+  });
   const chatEnvironment = useMemo(
     () => ({
       availableCommands:
         runtimeConfig?.availableCommands ?? EMPTY_AVAILABLE_COMMANDS,
       availableCommandsLoading: runtimeConfig === undefined,
-      availableSkills: runtimeConfig?.availableSkills ?? EMPTY_AVAILABLE_SKILLS,
-      availableSkillsLoading: runtimeConfig === undefined,
+      availableSkills,
+      availableSkillsLoading,
       isProjectChat:
         is.nonEmptyString(projectId) && is.nonEmptyString(projectPath),
       projectId,
       projectPath,
     }),
-    [projectId, projectPath, runtimeConfig],
+    [
+      availableSkills,
+      availableSkillsLoading,
+      projectId,
+      projectPath,
+      runtimeConfig,
+    ],
   );
 
   useLayoutEffect(() => {

@@ -1,4 +1,5 @@
 import type {
+  AgentSkillsInput,
   CreateCustomAgentInput,
   UpdateCustomAgentInput,
 } from "@shared/agents";
@@ -37,6 +38,9 @@ interface AgentsApiClient {
   ) => ReturnType<typeof ipc.agentsCustomDeleteImpact>;
   listAvailable: () => ReturnType<typeof ipc.agentsListAvailable>;
   listCustom: () => ReturnType<typeof ipc.agentsListCustom>;
+  listSkills: (
+    input: AgentSkillsInput,
+  ) => ReturnType<typeof ipc.agentsListSkills>;
   updateCustom: (
     input: UpdateCustomAgentInput,
   ) => ReturnType<typeof ipc.agentsUpdateCustom>;
@@ -125,6 +129,8 @@ function createApiClient(): ApiClient {
         ipc.agentsCustomDeleteImpact(agentId),
       listAvailable: async () => ipc.agentsListAvailable(),
       listCustom: async () => ipc.agentsListCustom(),
+      listSkills: async (input: AgentSkillsInput) =>
+        ipc.agentsListSkills(input),
       updateCustom: async (input: UpdateCustomAgentInput) =>
         ipc.agentsUpdateCustom(input),
     },
