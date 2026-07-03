@@ -1319,6 +1319,7 @@ function WorkspacePageContent({
                     }
                     projectId={draftProject.id}
                     projectName={selectedProjectName}
+                    projectPath={draftProject.path}
                     projects={projects}
                     reasoningEffort={reasoningEffortOverride}
                     runOrigin={{
