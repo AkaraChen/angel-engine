@@ -55,12 +55,7 @@ export function ChatSidebarItem({
   return (
     <div className="group/chat-sidebar-item relative">
       <WorkspaceSidebarMenuButton
-        className={cn(
-          "gap-1.5",
-          "group-has-data-[sidebar=menu-action]/chat-sidebar-item:pr-2.5!",
-          "md:group-hover/chat-sidebar-item:pr-8!",
-          nested && "pl-8",
-        )}
+        className={cn("gap-1.5 pr-8!", nested && "pl-8")}
         isActive={isActive}
         onClick={onOpenChat}
         onContextMenu={onShowContextMenu ? handleContextMenu : undefined}
@@ -95,34 +90,77 @@ export function ChatSidebarItem({
         >
           {title}
         </span>
-        <span className="ml-auto flex shrink-0 items-center gap-1">
+      </WorkspaceSidebarMenuButton>
+      <ChatSidebarTrailingSlot
+        archiveLabel={t("sidebar.archiveChat")}
+        chatId={chatId}
+        onArchiveChat={onArchiveChat}
+      />
+    </div>
+  );
+}
+
+function ChatSidebarTrailingSlot({
+  archiveLabel,
+  chatId,
+  onArchiveChat,
+}: {
+  archiveLabel: string;
+  chatId: string;
+  onArchiveChat?: () => Promise<void> | void;
+}): ReactElement {
+  return (
+    <>
+      <span
+        className="
+          absolute top-1/2 right-2 flex size-5 -translate-y-1/2
+          items-center justify-center group-data-[collapsible=icon]:hidden
+        "
+      >
+        <span
+          className={cn(
+            `
+              pointer-events-none absolute inset-0 flex items-center
+              justify-center gap-1 transition-opacity
+            `,
+            onArchiveChat &&
+              `
+                group-focus-within/chat-sidebar-item:opacity-0
+                group-hover/chat-sidebar-item:opacity-0
+              `,
+          )}
+        >
           <ChatAttentionIndicators chatId={chatId} />
           <ChatRunningPulse chatId={chatId} />
         </span>
-      </WorkspaceSidebarMenuButton>
-      {onArchiveChat ? (
-        <WorkspaceSidebarMenuAction
-          aria-label={t("sidebar.archiveChat")}
-          className="
-            peer-data-active/menu-button:text-sidebar-foreground/78
-            aria-expanded:opacity-100
-            group-focus-within/chat-sidebar-item:opacity-100
-            group-hover/chat-sidebar-item:opacity-100
-            md:opacity-0
-            [&_svg]:size-4
-          "
-          onClick={(event) => {
-            event.preventDefault();
-            event.stopPropagation();
-            void onArchiveChat();
-          }}
-          title={t("sidebar.archiveChat")}
-          type="button"
-        >
-          <Archive />
-        </WorkspaceSidebarMenuAction>
-      ) : null}
-    </div>
+        {onArchiveChat ? (
+          <WorkspaceSidebarMenuAction
+            aria-label={archiveLabel}
+            className="
+              pointer-events-none inset-0! flex size-5! items-center
+              justify-center
+              peer-data-active/menu-button:text-sidebar-foreground/78
+              aria-expanded:opacity-100
+              group-focus-within/chat-sidebar-item:pointer-events-auto
+              group-focus-within/chat-sidebar-item:opacity-100
+              group-hover/chat-sidebar-item:pointer-events-auto
+              group-hover/chat-sidebar-item:opacity-100
+              opacity-0
+              [&_svg]:size-4
+            "
+            onClick={(event) => {
+              event.preventDefault();
+              event.stopPropagation();
+              void onArchiveChat();
+            }}
+            title={archiveLabel}
+            type="button"
+          >
+            <Archive />
+          </WorkspaceSidebarMenuAction>
+        ) : null}
+      </span>
+    </>
   );
 }
 
