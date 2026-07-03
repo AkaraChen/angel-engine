@@ -21,7 +21,8 @@ function normalizeChatAttachmentInput(input: unknown): ChatAttachmentInput {
   if (
     value.type !== "image" &&
     value.type !== "file" &&
-    value.type !== "fileMention"
+    value.type !== "fileMention" &&
+    value.type !== "skillMention"
   ) {
     throw new Error("Unsupported chat attachment type.");
   }
@@ -42,17 +43,31 @@ function normalizeChatAttachmentInput(input: unknown): ChatAttachmentInput {
       type: "fileMention",
     };
   }
+  if (value.type === "skillMention") {
+    if (typeof value.path !== "string" || !value.path) {
+      throw new Error("Skill mention path is required.");
+    }
+    if (typeof value.name !== "string" || !value.name) {
+      throw new Error("Skill mention name is required.");
+    }
+    return {
+      name: value.name,
+      path: value.path,
+      type: "skillMention",
+    };
+  }
 
   const dataValue = (value as { data?: unknown }).data;
   if (typeof dataValue !== "string" || !dataValue) {
     throw new Error("Chat attachment data is required.");
   }
-  if (typeof value.mimeType !== "string" || !value.mimeType) {
+  const mimeTypeValue = (value as { mimeType?: unknown }).mimeType;
+  if (typeof mimeTypeValue !== "string" || !mimeTypeValue) {
     throw new Error("Chat attachment MIME type is required.");
   }
 
   const parsed = parseDataUrl(dataValue);
-  const mimeType = parsed?.mimeType ?? value.mimeType;
+  const mimeType = parsed?.mimeType ?? mimeTypeValue;
   const data = parsed?.data ?? dataValue;
   if (value.type === "image" && !mimeType.startsWith("image/")) {
     throw new Error("Image attachment MIME type is required.");

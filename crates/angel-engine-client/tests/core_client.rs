@@ -1425,6 +1425,57 @@ fn codex_thread_events_cover_lifecycle_history_and_shell_operations() {
     ));
 }
 
+#[test]
+fn codex_refresh_skills_populates_conversation_snapshot() {
+    let (mut client, conversation_id) = ready_codex_client();
+
+    let refresh = client
+        .thread(&conversation_id)
+        .send_event(ThreadEvent::refresh_skills(true))
+        .expect("refresh skills");
+    assert_eq!(
+        refresh.update.outgoing[0].value["method"],
+        json!("skills/list")
+    );
+    assert_eq!(
+        refresh.update.outgoing[0].value["params"]["forceReload"],
+        json!(true)
+    );
+
+    client
+        .receive_json_value(response(
+            &refresh.request_id.expect("refresh skills request id"),
+            json!({
+                "data": [
+                    {
+                        "cwd": "/repo",
+                        "skills": [
+                            {
+                                "name": "skill-authoring",
+                                "description": "Create and validate skills",
+                                "path": "/home/user/.agents/skills/skill-authoring/SKILL.md",
+                                "scope": "user",
+                                "enabled": true
+                            }
+                        ],
+                        "errors": []
+                    }
+                ]
+            }),
+        ))
+        .expect("skills list response");
+
+    let snapshot = client
+        .thread(&conversation_id)
+        .require_state()
+        .expect("conversation state");
+    assert!(snapshot.skills.can_list);
+    assert!(snapshot.skills.can_mention);
+    assert_eq!(snapshot.skills.skills.len(), 1);
+    assert_eq!(snapshot.skills.skills[0].name, "skill-authoring");
+    assert!(snapshot.skills.skills[0].enabled);
+}
+
 fn ready_client() -> (Client, String) {
     let mut client = ClientOptions::builder()
         .acp("fake-agent")

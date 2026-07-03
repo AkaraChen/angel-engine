@@ -204,6 +204,10 @@ pub fn codex_app_server_capabilities() -> ConversationCapabilities {
         observer: angel_engine::ObserverCapabilities {
             unsubscribe: CapabilitySupport::Supported,
         },
+        skills: angel_engine::SkillsCapabilities {
+            list: CapabilitySupport::Supported,
+            mention: CapabilitySupport::Supported,
+        },
     }
 }
 

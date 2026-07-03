@@ -5,7 +5,8 @@ use angel_engine::{
     ContentDelta, ContentPart, ConversationLifecycle, ConversationState, EffectiveContext,
     ElicitationKind, ElicitationPhase, ElicitationState, HistoryReplayEntry, HistoryRole,
     PermissionMode, PlanEntryStatus, QuestionValueType, RuntimeState, SessionUsageCost,
-    SessionUsageState, TurnPhase, TurnState, UserQuestion, UserQuestionOption, UserQuestionSchema,
+    SessionUsageState, Skill, SkillScope, TurnPhase, TurnState, UserQuestion, UserQuestionOption,
+    UserQuestionSchema,
 };
 use serde::{Deserialize, Serialize};
 
@@ -102,6 +103,7 @@ pub struct ConversationSnapshot {
     pub agent_state: AgentStateSnapshot,
     pub settings: ThreadSettingsSnapshot,
     pub available_commands: Vec<AvailableCommandSnapshot>,
+    pub skills: SkillsSnapshot,
     pub usage: Option<SessionUsageSnapshot>,
 }
 
@@ -171,6 +173,7 @@ pub(crate) fn conversation_snapshot(conversation: &ConversationState) -> Convers
             .iter()
             .map(AvailableCommandSnapshot::from)
             .collect(),
+        skills: SkillsSnapshot::from_conversation(conversation),
         usage: conversation
             .usage_state
             .as_ref()
@@ -957,6 +960,70 @@ impl From<&AvailableCommand> for AvailableCommandSnapshot {
             name: command.name.clone(),
             description: command.description.clone(),
             input_hint: command.input.as_ref().map(|input| input.hint.clone()),
+        }
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SkillsSnapshot {
+    pub can_list: bool,
+    pub can_mention: bool,
+    pub skills: Vec<SkillSnapshot>,
+}
+
+impl SkillsSnapshot {
+    fn from_conversation(conversation: &ConversationState) -> Self {
+        Self {
+            can_list: conversation.capabilities.skills.list.is_supported(),
+            can_mention: conversation.capabilities.skills.mention.is_supported(),
+            skills: conversation
+                .available_skills
+                .iter()
+                .map(SkillSnapshot::from)
+                .collect(),
+        }
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SkillSnapshot {
+    pub name: String,
+    pub description: String,
+    pub path: String,
+    pub scope: SkillScopeSnapshot,
+    pub enabled: bool,
+}
+
+impl From<&Skill> for SkillSnapshot {
+    fn from(skill: &Skill) -> Self {
+        Self {
+            name: skill.name.clone(),
+            description: skill.description.clone(),
+            path: skill.path.clone(),
+            scope: SkillScopeSnapshot::from(skill.scope),
+            enabled: skill.enabled,
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum SkillScopeSnapshot {
+    User,
+    Repo,
+    System,
+    Admin,
+}
+
+impl From<SkillScope> for SkillScopeSnapshot {
+    fn from(scope: SkillScope) -> Self {
+        match scope {
+            SkillScope::User => Self::User,
+            SkillScope::Repo => Self::Repo,
+            SkillScope::System => Self::System,
+            SkillScope::Admin => Self::Admin,
         }
     }
 }

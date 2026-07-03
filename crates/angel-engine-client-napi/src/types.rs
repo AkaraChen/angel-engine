@@ -203,6 +203,7 @@ pub struct ConversationSnapshot {
     pub agent_state: AgentStateSnapshot,
     pub settings: ThreadSettingsSnapshot,
     pub available_commands: Vec<AvailableCommandSnapshot>,
+    pub skills: SkillsSnapshot,
     pub usage: Option<SessionUsageSnapshot>,
 }
 
@@ -347,6 +348,23 @@ pub struct AvailableCommandSnapshot {
     pub name: String,
     pub description: String,
     pub input_hint: Option<String>,
+}
+
+#[napi(object)]
+pub struct SkillsSnapshot {
+    pub can_list: bool,
+    pub can_mention: bool,
+    pub skills: Vec<SkillSnapshot>,
+}
+
+#[napi(object)]
+pub struct SkillSnapshot {
+    pub name: String,
+    pub description: String,
+    pub path: String,
+    #[napi(ts_type = "`${SkillScope}`")]
+    pub scope: SkillScope,
+    pub enabled: bool,
 }
 
 #[napi(object)]
@@ -527,6 +545,7 @@ pub struct ThreadEvent {
     pub at_turn_id: Option<String>,
     pub num_turns: Option<u32>,
     pub command: Option<String>,
+    pub force_reload: Option<bool>,
 }
 
 #[napi(object)]
@@ -573,7 +592,7 @@ pub struct RuntimeOptions {
 pub struct SendTextRequest {
     pub text: String,
     #[napi(
-        ts_type = "Array<{ type: 'text'; text: string } | { type: 'image'; data: string; mimeType: string; name?: string | null } | { type: 'resource_link'; name: string; uri: string; mimeType?: string | null; title?: string | null; description?: string | null } | { type: 'file_mention'; name: string; path: string; mimeType?: string | null } | { type: 'embedded_text_resource'; uri: string; text: string; mimeType?: string | null } | { type: 'embedded_blob_resource'; uri: string; data: string; mimeType?: string | null; name?: string | null } | { type: 'raw_content_block'; value: unknown }>"
+        ts_type = "Array<{ type: 'text'; text: string } | { type: 'image'; data: string; mimeType: string; name?: string | null } | { type: 'resource_link'; name: string; uri: string; mimeType?: string | null; title?: string | null; description?: string | null } | { type: 'file_mention'; name: string; path: string; mimeType?: string | null } | { type: 'skill_mention'; name: string; path: string } | { type: 'embedded_text_resource'; uri: string; text: string; mimeType?: string | null } | { type: 'embedded_blob_resource'; uri: string; data: string; mimeType?: string | null; name?: string | null } | { type: 'raw_content_block'; value: unknown }>"
     )]
     pub input: Option<Vec<serde_json::Value>>,
     pub cwd: Option<String>,
@@ -602,6 +621,13 @@ pub struct SetPermissionModeRequest {
 pub struct HydrateRequest {
     pub cwd: Option<String>,
     pub remote_id: Option<String>,
+}
+
+#[napi(object)]
+pub struct RefreshSkillsRequest {
+    pub cwd: Option<String>,
+    pub remote_id: Option<String>,
+    pub force_reload: Option<bool>,
 }
 
 #[napi(object)]

@@ -1,6 +1,7 @@
 import type {
   Chat,
   ChatAvailableCommand,
+  ChatAvailableSkill,
   ChatCreationLocation,
   ChatHistoryMessage,
   ChatRuntimeConfig,
@@ -12,7 +13,10 @@ import type {
   PromptInputFile,
   PromptInputMessage,
 } from "@/components/ai-elements/prompt-input";
-import type { ComposerMentionedFile } from "@/features/chat/components/composer/composer-attachments";
+import type {
+  ComposerMentionedFile,
+  ComposerMentionedSkill,
+} from "@/features/chat/components/composer/composer-attachments";
 
 import type { AttachmentInputError } from "@/features/chat/components/composer/composer-helpers";
 import {
@@ -40,8 +44,11 @@ import { ComposerAssistPanel } from "@/features/chat/components/composer/compose
 import {
   attachmentErrorMessage,
   attachmentErrorTitle,
+  filterSkills,
   filterSlashCommands,
   replaceMentionQuery,
+  replaceSkillQuery,
+  skillQueryFromDraft,
   slashQueryFromDraft,
 } from "@/features/chat/components/composer/composer-helpers";
 import {
@@ -151,6 +158,9 @@ export function NewChatComposer({
   const [mentionedFiles, setMentionedFiles] = useState<ComposerMentionedFile[]>(
     [],
   );
+  const [selectedSkills, setSelectedSkills] = useState<
+    ComposerMentionedSkill[]
+  >([]);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
 
   const projectToolsEnabled =
@@ -176,6 +186,16 @@ export function NewChatComposer({
   );
   const slashCommandOpen = slashQuery !== null;
   const slashCommandsLoading = environment.availableCommandsLoading;
+  const skillQuery = skillQueryFromDraft(draftText);
+  const skills = useMemo(
+    () =>
+      skillQuery === null
+        ? []
+        : filterSkills(environment.availableSkills, skillQuery),
+    [environment.availableSkills, skillQuery],
+  );
+  const skillOpen = skillQuery !== null;
+  const skillsLoading = environment.availableSkillsLoading;
 
   const handleSubmit = useCallback(
     async (message: PromptInputMessage) => {
@@ -183,7 +203,8 @@ export function NewChatComposer({
       const hasMessage =
         text.length > 0 ||
         message.files.length > 0 ||
-        mentionedFiles.length > 0;
+        mentionedFiles.length > 0 ||
+        selectedSkills.length > 0;
       if (!hasMessage) {
         return;
       }
@@ -194,14 +215,16 @@ export function NewChatComposer({
       await sendChatMessage.sendPromptMessage({
         attachments: message.files as PromptInputFile[],
         mentionedFiles,
+        selectedSkills,
         t,
         text,
       });
 
       setDraftText("");
       setMentionedFiles([]);
+      setSelectedSkills([]);
     },
-    [mentionedFiles, onBeforeSubmit, sendChatMessage, t],
+    [mentionedFiles, onBeforeSubmit, selectedSkills, sendChatMessage, t],
   );
 
   const handleAttachmentError = useCallback(
@@ -232,6 +255,16 @@ export function NewChatComposer({
     [draftText],
   );
 
+  const insertSkill = useCallback((skill?: ChatAvailableSkill) => {
+    if (!skill) return;
+    setSelectedSkills((current) => {
+      if (current.some((item) => item.path === skill.path)) return current;
+      return [...current, { ...skill, id: skill.path }];
+    });
+    setDraftText((current) => replaceSkillQuery(current, skill.name));
+    requestAnimationFrame(() => textareaRef.current?.focus());
+  }, []);
+
   const selectMentionedFile = useCallback((file: ProjectFileSearchResult) => {
     setMentionedFiles((current) => {
       if (current.some((item) => item.path === file.path)) return current;
@@ -248,10 +281,12 @@ export function NewChatComposer({
   const handleTextKeyDown = useCallback(
     (event: KeyboardEvent<HTMLTextAreaElement>) => {
       if (event.key === "Escape") {
-        if (slashCommandOpen || fileMentionOpen) {
-          setDraftText((current) =>
-            slashCommandOpen ? "" : current.replace(/(?:^|\s)@[^\s@]*$/, ""),
-          );
+        if (slashCommandOpen || skillOpen || fileMentionOpen) {
+          setDraftText((current) => {
+            if (slashCommandOpen) return "";
+            if (skillOpen) return current.replace(/(?:^|\s)\$[^\s$]*$/, "");
+            return current.replace(/(?:^|\s)@[^\s@]*$/, "");
+          });
           event.preventDefault();
           return;
         }
@@ -277,6 +312,18 @@ export function NewChatComposer({
       if (
         (event.key === "Enter" || event.key === "Tab") &&
         !event.shiftKey &&
+        skillOpen &&
+        !skillsLoading &&
+        skills[0] !== undefined
+      ) {
+        event.preventDefault();
+        insertSkill(skills[0]);
+        return;
+      }
+
+      if (
+        (event.key === "Enter" || event.key === "Tab") &&
+        !event.shiftKey &&
         fileMentionOpen
       ) {
         event.preventDefault();
@@ -296,9 +343,13 @@ export function NewChatComposer({
       fileMentionOpen,
       fileResults,
       fileSearchLoading,
+      insertSkill,
       insertSlashCommand,
       isRunning,
       selectMentionedFile,
+      skillOpen,
+      skills,
+      skillsLoading,
       slashCommandOpen,
       slashCommands,
       slashCommandsLoading,
@@ -360,7 +411,12 @@ export function NewChatComposer({
               fileResults={fileResults}
               fileSearchLoading={fileSearchLoading}
               onSelectMentionedFile={selectMentionedFile}
+              onSelectSkill={insertSkill}
               onSelectSlashCommand={insertSlashCommand}
+              skillCatalogSize={environment.availableSkills.length}
+              skillOpen={skillOpen}
+              skills={skills}
+              skillsLoading={skillsLoading}
               slashCommandCatalogSize={environment.availableCommands.length}
               slashCommands={slashCommands}
               slashCommandsLoading={slashCommandsLoading}

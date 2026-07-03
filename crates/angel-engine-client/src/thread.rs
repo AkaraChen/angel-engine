@@ -197,6 +197,10 @@ pub enum ThreadEvent {
     RunShellCommand {
         command: String,
     },
+    RefreshSkills {
+        #[serde(default)]
+        force_reload: bool,
+    },
 }
 
 impl ThreadEvent {
@@ -305,6 +309,10 @@ impl ThreadEvent {
         Self::RunShellCommand {
             command: command.into(),
         }
+    }
+
+    pub fn refresh_skills(force_reload: bool) -> Self {
+        Self::RefreshSkills { force_reload }
     }
 }
 

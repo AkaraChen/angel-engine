@@ -1,20 +1,25 @@
-import type { ChatAvailableCommand } from "@shared/chat";
+import type { ChatAvailableCommand, ChatAvailableSkill } from "@shared/chat";
 
 import { createContext, use } from "react";
 
 export interface ChatEnvironmentContextValue {
   availableCommands: ChatAvailableCommand[];
   availableCommandsLoading: boolean;
+  availableSkills: ChatAvailableSkill[];
+  availableSkillsLoading: boolean;
   isProjectChat: boolean;
   projectId?: string | null;
   projectPath?: string;
 }
 
 const EMPTY_COMMANDS: ChatAvailableCommand[] = [];
+const EMPTY_SKILLS: ChatAvailableSkill[] = [];
 
 const ChatEnvironmentContext = createContext<ChatEnvironmentContextValue>({
   availableCommands: EMPTY_COMMANDS,
   availableCommandsLoading: false,
+  availableSkills: EMPTY_SKILLS,
+  availableSkillsLoading: false,
   isProjectChat: false,
 });
 

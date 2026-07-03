@@ -74,6 +74,10 @@ pub enum EngineExtensionCommand {
     Unsubscribe {
         conversation_id: ConversationId,
     },
+    RefreshSkills {
+        conversation_id: ConversationId,
+        force_reload: bool,
+    },
 }
 
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
@@ -147,6 +151,17 @@ impl UserInput {
                 name,
                 path,
                 mime_type,
+            },
+        }
+    }
+
+    pub fn skill_mention(name: impl Into<String>, path: impl Into<String>) -> Self {
+        let name = name.into();
+        Self {
+            content: name.clone(),
+            kind: UserInputKind::SkillMention {
+                name,
+                path: path.into(),
             },
         }
     }
@@ -226,6 +241,10 @@ pub enum UserInputKind {
         name: String,
         path: String,
         mime_type: Option<String>,
+    },
+    SkillMention {
+        name: String,
+        path: String,
     },
     EmbeddedTextResource {
         uri: String,

@@ -21,6 +21,11 @@ function conversationSnapshot(
   return {
     agentState: {},
     availableCommands: [],
+    skills: {
+      canList: false,
+      canMention: false,
+      skills: [],
+    },
     context: {
       additionalDirectories: [],
       raw: {},
@@ -110,6 +115,19 @@ function planSnapshot(
 describe("projection", () => {
   it("projects snapshots into standard chat messages and runtime config", () => {
     const snapshot = conversationSnapshot({
+      skills: {
+        canList: true,
+        canMention: true,
+        skills: [
+          {
+            description: "Create and validate skills",
+            enabled: true,
+            name: "skill-authoring",
+            path: "/home/user/.agents/skills/skill-authoring/SKILL.md",
+            scope: "user",
+          },
+        ],
+      },
       messages: [
         {
           content: [{ text: "hello", type: "text" }],
@@ -152,6 +170,11 @@ describe("projection", () => {
       },
     ]);
     expect(runtimeConfigFromConversationSnapshot(snapshot)).toMatchObject({
+      availableSkills: [
+        { enabled: true, name: "skill-authoring", scope: "user" },
+      ],
+      canListSkills: true,
+      canMentionSkills: true,
       canSetMode: true,
       currentMode: "plan",
       currentModel: "sonnet",

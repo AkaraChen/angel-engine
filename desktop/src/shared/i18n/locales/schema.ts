@@ -276,13 +276,16 @@ export interface LocaleResourceTranslationComposer {
   fileTooLarge: string;
   files: string;
   loadingCommands: string;
+  loadingSkills: string;
   loadingValue: string;
   mode: string;
   model: string;
   noCommandsAdvertised: string;
   noFilesFound: string;
   noMatchingCommands: string;
+  noMatchingSkills: string;
   noModelsFound: string;
+  noSkillsAdvertised: string;
   permissionMode: string;
   placeholder: string;
   plan: string;
@@ -290,6 +293,7 @@ export interface LocaleResourceTranslationComposer {
   removeAttachment: string;
   searchModels: string;
   settingLabels: LocaleResourceTranslationComposerSettingLabels;
+  skills: string;
   switchToBuild: string;
   switchToPlan: string;
   toasts: LocaleResourceTranslationComposerToasts;

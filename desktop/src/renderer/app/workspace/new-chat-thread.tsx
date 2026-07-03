@@ -24,6 +24,9 @@ import { EMPTY_MESSAGES } from "./workspace-thread-types";
 const EMPTY_AVAILABLE_COMMANDS: NonNullable<
   ChatRuntimeConfig["availableCommands"]
 > = [];
+const EMPTY_AVAILABLE_SKILLS: NonNullable<
+  ChatRuntimeConfig["availableSkills"]
+> = [];
 
 interface NewChatThreadProps {
   chatOptions: ChatOptionsContextValue;
@@ -88,6 +91,8 @@ export function NewChatThread({
       availableCommands:
         runtimeConfig?.availableCommands ?? EMPTY_AVAILABLE_COMMANDS,
       availableCommandsLoading: runtimeConfig === undefined,
+      availableSkills: runtimeConfig?.availableSkills ?? EMPTY_AVAILABLE_SKILLS,
+      availableSkillsLoading: runtimeConfig === undefined,
       isProjectChat:
         is.nonEmptyString(projectId) && is.nonEmptyString(projectPath),
       projectId,

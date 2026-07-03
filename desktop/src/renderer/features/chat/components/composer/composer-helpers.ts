@@ -1,5 +1,5 @@
 import type { AgentValueOption } from "@shared/agents";
-import type { ChatAvailableCommand } from "@shared/chat";
+import type { ChatAvailableCommand, ChatAvailableSkill } from "@shared/chat";
 import type { TFunction } from "i18next";
 
 export interface AttachmentInputError {
@@ -66,6 +66,35 @@ export function replaceMentionQuery(text: string, relativePath: string) {
   if (/(?:^|\s)@[^\s@]*$/.test(text)) {
     return text.replace(
       /(^|\s)@[^\s@]*$/,
+      (_match, prefix: string) => `${prefix}${replacement}`,
+    );
+  }
+  const separator = text && !/\s$/.test(text) ? " " : "";
+  return `${text}${separator}${replacement}`;
+}
+
+const SKILL_QUERY_PATTERN = /(?:^|\s)\$([a-z][a-z0-9-]*)?$/i;
+
+export function skillQueryFromDraft(text: string) {
+  const match = SKILL_QUERY_PATTERN.exec(text);
+  return match ? (match[1] ?? "").toLowerCase() : null;
+}
+
+export function filterSkills(skills: ChatAvailableSkill[], query: string) {
+  const normalized = query.toLowerCase();
+  return skills
+    .filter((skill) => {
+      const name = skill.name.toLowerCase();
+      return !normalized || name.includes(normalized);
+    })
+    .slice(0, 8);
+}
+
+export function replaceSkillQuery(text: string, skillName: string) {
+  const replacement = `$${skillName} `;
+  if (SKILL_QUERY_PATTERN.test(text)) {
+    return text.replace(
+      /(^|\s)\$[a-z0-9-]*$/i,
       (_match, prefix: string) => `${prefix}${replacement}`,
     );
   }

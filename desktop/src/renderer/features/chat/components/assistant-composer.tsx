@@ -1,11 +1,15 @@
 import type {
   ChatAvailableCommand,
+  ChatAvailableSkill,
   ProjectFileSearchResult,
 } from "@shared/chat";
 import type { ChangeEvent, KeyboardEvent, ReactNode } from "react";
 import type { PromptInputMessage } from "@/components/ai-elements/prompt-input";
 
-import type { ComposerMentionedFile } from "@/features/chat/components/composer/composer-attachments";
+import type {
+  ComposerMentionedFile,
+  ComposerMentionedSkill,
+} from "@/features/chat/components/composer/composer-attachments";
 import { ComposerPrimitive, useAui, useAuiState } from "@assistant-ui/react";
 import {
   RiArrowUpLine as ArrowUp,
@@ -33,12 +37,16 @@ import { ComposerAssistPanel } from "@/features/chat/components/composer/compose
 import {
   createAttachmentFromPromptFile,
   createMentionAttachment,
+  createSkillMentionAttachment,
 } from "@/features/chat/components/composer/composer-attachments";
 import {
   attachmentErrorMessage,
   attachmentErrorTitle,
+  filterSkills,
   filterSlashCommands,
   replaceMentionQuery,
+  replaceSkillQuery,
+  skillQueryFromDraft,
   slashQueryFromDraft,
 } from "@/features/chat/components/composer/composer-helpers";
 import {
@@ -77,6 +85,9 @@ export function AssistantComposer({
   const [mentionedFiles, setMentionedFiles] = useState<ComposerMentionedFile[]>(
     [],
   );
+  const [selectedSkills, setSelectedSkills] = useState<
+    ComposerMentionedSkill[]
+  >([]);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const projectToolsEnabled =
     environment.isProjectChat && environment.projectPath !== undefined;
@@ -101,6 +112,16 @@ export function AssistantComposer({
   );
   const slashCommandOpen = slashQuery !== null;
   const slashCommandsLoading = environment.availableCommandsLoading;
+  const skillQuery = skillQueryFromDraft(draftText);
+  const skills = useMemo(
+    () =>
+      skillQuery === null
+        ? []
+        : filterSkills(environment.availableSkills, skillQuery),
+    [environment.availableSkills, skillQuery],
+  );
+  const skillOpen = skillQuery !== null;
+  const skillsLoading = environment.availableSkillsLoading;
   const hasFloatingAccessory = !is.falsy(floatingAccessory);
 
   const handleSubmit = useCallback(
@@ -109,7 +130,8 @@ export function AssistantComposer({
       const hasMessage =
         text.length > 0 ||
         message.files.length > 0 ||
-        mentionedFiles.length > 0;
+        mentionedFiles.length > 0 ||
+        selectedSkills.length > 0;
       if (!hasMessage) {
         return;
       }
@@ -128,17 +150,21 @@ export function AssistantComposer({
           ...mentionedFiles.map(async (file) =>
             composer.addAttachment(createMentionAttachment(file)),
           ),
+          ...selectedSkills.map(async (skill) =>
+            composer.addAttachment(createSkillMentionAttachment(skill)),
+          ),
         ]);
 
         composer.send();
         setDraftText("");
         setMentionedFiles([]);
+        setSelectedSkills([]);
       } catch (error) {
         await composer.clearAttachments().catch(() => undefined);
         throw error;
       }
     },
-    [aui, mentionedFiles, onBeforeSubmit, t],
+    [aui, mentionedFiles, onBeforeSubmit, selectedSkills, t],
   );
 
   const handleAttachmentError = useCallback(
@@ -172,6 +198,16 @@ export function AssistantComposer({
     [draftText],
   );
 
+  const insertSkill = useCallback((skill?: ChatAvailableSkill) => {
+    if (!skill) return;
+    setSelectedSkills((current) => {
+      if (current.some((item) => item.path === skill.path)) return current;
+      return [...current, { ...skill, id: skill.path }];
+    });
+    setDraftText((current) => replaceSkillQuery(current, skill.name));
+    requestAnimationFrame(() => textareaRef.current?.focus());
+  }, []);
+
   const selectMentionedFile = useCallback((file: ProjectFileSearchResult) => {
     setMentionedFiles((current) => {
       if (current.some((item) => item.path === file.path)) return current;
@@ -188,10 +224,12 @@ export function AssistantComposer({
   const handleTextKeyDown = useCallback(
     (event: KeyboardEvent<HTMLTextAreaElement>) => {
       if (event.key === "Escape") {
-        if (slashCommandOpen || fileMentionOpen) {
-          setDraftText((current) =>
-            slashCommandOpen ? "" : current.replace(/(?:^|\s)@[^\s@]*$/, ""),
-          );
+        if (slashCommandOpen || skillOpen || fileMentionOpen) {
+          setDraftText((current) => {
+            if (slashCommandOpen) return "";
+            if (skillOpen) return current.replace(/(?:^|\s)\$[^\s$]*$/, "");
+            return current.replace(/(?:^|\s)@[^\s@]*$/, "");
+          });
           event.preventDefault();
           return;
         }
@@ -211,6 +249,18 @@ export function AssistantComposer({
         if (firstCommand !== undefined && !slashCommandsLoading) {
           insertSlashCommand(firstCommand);
         }
+        return;
+      }
+
+      if (
+        (event.key === "Enter" || event.key === "Tab") &&
+        !event.shiftKey &&
+        skillOpen &&
+        !skillsLoading &&
+        skills[0] !== undefined
+      ) {
+        event.preventDefault();
+        insertSkill(skills[0]);
         return;
       }
 
@@ -237,9 +287,13 @@ export function AssistantComposer({
       fileMentionOpen,
       fileResults,
       fileSearchLoading,
+      insertSkill,
       insertSlashCommand,
       isRunning,
       selectMentionedFile,
+      skillOpen,
+      skills,
+      skillsLoading,
       slashCommandOpen,
       slashCommands,
       slashCommandsLoading,
@@ -267,7 +321,12 @@ export function AssistantComposer({
         fileResults={fileResults}
         fileSearchLoading={fileSearchLoading}
         onSelectMentionedFile={selectMentionedFile}
+        onSelectSkill={insertSkill}
         onSelectSlashCommand={insertSlashCommand}
+        skillCatalogSize={environment.availableSkills.length}
+        skillOpen={skillOpen}
+        skills={skills}
+        skillsLoading={skillsLoading}
         slashCommandCatalogSize={environment.availableCommands.length}
         slashCommandsLoading={slashCommandsLoading}
         slashCommandOpen={slashCommandOpen}

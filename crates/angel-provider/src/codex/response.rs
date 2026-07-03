@@ -199,6 +199,15 @@ impl CodexAdapter {
                 });
                 output = output.log(TransportLogKind::Receive, format!("response {id}"));
             }
+            PendingRequest::RefreshSkills { conversation_id } => {
+                let skills = codex_skills_from_response(result)?;
+                output = output
+                    .event(EngineEvent::SessionSkillsUpdated {
+                        conversation_id: conversation_id.clone(),
+                        skills,
+                    })
+                    .log(TransportLogKind::Receive, format!("response {id}"));
+            }
             PendingRequest::Authenticate
             | PendingRequest::ResolveElicitation { .. }
             | PendingRequest::UpdateContext { .. } => {
@@ -440,6 +449,71 @@ fn codex_rpc_error_event(
             Some(history_mutation_failed_event(conversation_id, message))
         }
         _ => None,
+    }
+}
+
+fn codex_skills_from_response(
+    result: &Value,
+) -> Result<Vec<angel_engine::state::Skill>, angel_engine::EngineError> {
+    let mut skills = Vec::new();
+    for entry in result
+        .get("data")
+        .and_then(Value::as_array)
+        .into_iter()
+        .flatten()
+    {
+        for skill in entry
+            .get("skills")
+            .and_then(Value::as_array)
+            .into_iter()
+            .flatten()
+        {
+            let name = skill.get("name").and_then(Value::as_str).ok_or_else(|| {
+                angel_engine::EngineError::InvalidCommand {
+                    message: "Codex skill metadata is missing name".to_string(),
+                }
+            })?;
+            let path = skill.get("path").and_then(Value::as_str).ok_or_else(|| {
+                angel_engine::EngineError::InvalidCommand {
+                    message: "Codex skill metadata is missing path".to_string(),
+                }
+            })?;
+            let description = skill
+                .get("description")
+                .and_then(Value::as_str)
+                .ok_or_else(|| angel_engine::EngineError::InvalidCommand {
+                    message: "Codex skill metadata is missing description".to_string(),
+                })?;
+            let scope = codex_skill_scope(skill.get("scope").and_then(Value::as_str))?;
+            let enabled = skill
+                .get("enabled")
+                .and_then(Value::as_bool)
+                .ok_or_else(|| angel_engine::EngineError::InvalidCommand {
+                    message: "Codex skill metadata is missing enabled".to_string(),
+                })?;
+            skills.push(angel_engine::state::Skill {
+                name: name.to_string(),
+                description: description.to_string(),
+                path: path.to_string(),
+                scope,
+                enabled,
+            });
+        }
+    }
+    Ok(skills)
+}
+
+fn codex_skill_scope(
+    value: Option<&str>,
+) -> Result<angel_engine::state::SkillScope, angel_engine::EngineError> {
+    match value {
+        Some("user") => Ok(angel_engine::state::SkillScope::User),
+        Some("repo") => Ok(angel_engine::state::SkillScope::Repo),
+        Some("system") => Ok(angel_engine::state::SkillScope::System),
+        Some("admin") => Ok(angel_engine::state::SkillScope::Admin),
+        other => Err(angel_engine::EngineError::InvalidCommand {
+            message: format!("unknown Codex skill scope: {other:?}"),
+        }),
     }
 }
 
@@ -1178,9 +1252,19 @@ fn codex_content_text(item: &Value) -> String {
         .and_then(Value::as_array)
         .into_iter()
         .flatten()
-        .filter_map(|part| part.get("text").and_then(Value::as_str))
+        .filter_map(codex_content_text_fragment)
         .collect::<Vec<_>>()
         .join("")
+}
+
+fn codex_content_text_fragment(part: &Value) -> Option<String> {
+    match part.get("type").and_then(Value::as_str) {
+        Some("skill") => {
+            let name = part.get("name").and_then(Value::as_str)?;
+            Some(format!("${name} "))
+        }
+        _ => part.get("text").and_then(Value::as_str).map(str::to_string),
+    }
 }
 
 fn codex_content_parts(item: &Value) -> Vec<ContentPart> {
@@ -1202,6 +1286,10 @@ fn codex_content_part(part: &Value) -> Option<ContentPart> {
             )
         }
         Some("image") | Some("input_image") => codex_image_part(part),
+        Some("skill") => {
+            let name = part.get("name").and_then(Value::as_str)?;
+            Some(ContentPart::text(format!("${name} ")))
+        }
         _ => None,
     }
 }
@@ -2322,5 +2410,276 @@ mod tests {
                         && name.as_deref() == Some("PRD_智能体.md")
                 )
         ));
+    }
+
+    #[test]
+    fn skills_list_response_populates_session_skills_updated() {
+        let adapter = CodexAdapter::app_server();
+        let mut engine = AngelEngine::with_available_runtime(
+            angel_engine::ProtocolFlavor::CodexAppServer,
+            angel_engine::RuntimeCapabilities::new("test"),
+            adapter.capabilities(),
+        );
+        let conversation_id = ConversationId::new("conv");
+        engine
+            .apply_event(EngineEvent::ConversationProvisionStarted {
+                id: conversation_id.clone(),
+                remote: RemoteConversationId::Known("thread".to_string()),
+                op: angel_engine::ProvisionOp::New,
+                capabilities: adapter.capabilities(),
+            })
+            .expect("conversation provision");
+        engine
+            .apply_event(EngineEvent::ConversationReady {
+                id: conversation_id.clone(),
+                remote: Some(RemoteConversationId::Known("thread".to_string())),
+                context: ContextPatch::empty(),
+                capabilities: None,
+            })
+            .expect("conversation ready");
+
+        let request_id = engine
+            .plan_command(angel_engine::EngineCommand::Extension(
+                angel_engine::EngineExtensionCommand::RefreshSkills {
+                    conversation_id: conversation_id.clone(),
+                    force_reload: true,
+                },
+            ))
+            .expect("refresh skills plan")
+            .request_id
+            .expect("request id");
+
+        let output = adapter
+            .decode_response(
+                &engine,
+                &request_id,
+                &json!({
+                    "data": [
+                        {
+                            "cwd": "/repo",
+                            "skills": [
+                                {
+                                    "name": "skill-authoring",
+                                    "description": "Create and validate skills",
+                                    "path": "/home/user/.agents/skills/skill-authoring/SKILL.md",
+                                    "scope": "user",
+                                    "enabled": true
+                                },
+                                {
+                                    "name": "eric-backend",
+                                    "description": "Backend standards",
+                                    "path": "/repo/.codex/skills/eric-backend/SKILL.md",
+                                    "scope": "repo",
+                                    "enabled": false
+                                }
+                            ],
+                            "errors": []
+                        }
+                    ]
+                }),
+            )
+            .expect("skills list response");
+
+        let skills = output
+            .events
+            .iter()
+            .find_map(|event| match event {
+                EngineEvent::SessionSkillsUpdated { skills, .. } => Some(skills),
+                _ => None,
+            })
+            .expect("skills updated event");
+
+        assert_eq!(skills.len(), 2);
+        assert_eq!(skills[0].name, "skill-authoring");
+        assert_eq!(skills[0].scope, angel_engine::state::SkillScope::User);
+        assert!(skills[0].enabled);
+        assert_eq!(skills[1].name, "eric-backend");
+        assert_eq!(skills[1].scope, angel_engine::state::SkillScope::Repo);
+        assert!(!skills[1].enabled);
+    }
+
+    #[test]
+    fn skills_list_response_rejects_unknown_scope() {
+        let adapter = CodexAdapter::app_server();
+        let mut engine = AngelEngine::with_available_runtime(
+            angel_engine::ProtocolFlavor::CodexAppServer,
+            angel_engine::RuntimeCapabilities::new("test"),
+            adapter.capabilities(),
+        );
+        let conversation_id = ConversationId::new("conv");
+        engine
+            .apply_event(EngineEvent::ConversationProvisionStarted {
+                id: conversation_id.clone(),
+                remote: RemoteConversationId::Known("thread".to_string()),
+                op: angel_engine::ProvisionOp::New,
+                capabilities: adapter.capabilities(),
+            })
+            .expect("conversation provision");
+        engine
+            .apply_event(EngineEvent::ConversationReady {
+                id: conversation_id.clone(),
+                remote: Some(RemoteConversationId::Known("thread".to_string())),
+                context: ContextPatch::empty(),
+                capabilities: None,
+            })
+            .expect("conversation ready");
+        let request_id = engine
+            .plan_command(angel_engine::EngineCommand::Extension(
+                angel_engine::EngineExtensionCommand::RefreshSkills {
+                    conversation_id,
+                    force_reload: false,
+                },
+            ))
+            .expect("refresh skills plan")
+            .request_id
+            .expect("request id");
+
+        let result = adapter.decode_response(
+            &engine,
+            &request_id,
+            &json!({
+                "data": [
+                    {
+                        "cwd": "/repo",
+                        "skills": [
+                            {
+                                "name": "mystery",
+                                "description": "unknown scope",
+                                "path": "/mystery/SKILL.md",
+                                "scope": "plugin",
+                                "enabled": true
+                            }
+                        ],
+                        "errors": []
+                    }
+                ]
+            }),
+        );
+
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn skill_content_part_hydrates_as_marker_text() {
+        let adapter = CodexAdapter::app_server();
+        let mut engine = AngelEngine::with_available_runtime(
+            angel_engine::ProtocolFlavor::CodexAppServer,
+            angel_engine::RuntimeCapabilities::new("test"),
+            adapter.capabilities(),
+        );
+        let request_id = engine
+            .plan_command(angel_engine::EngineCommand::ResumeConversation {
+                target: angel_engine::ResumeTarget::Remote {
+                    id: "thread_1".to_string(),
+                    hydrate: true,
+                    cwd: None,
+                },
+            })
+            .expect("resume plan")
+            .request_id
+            .expect("request id");
+
+        let output = adapter
+            .decode_response(
+                &engine,
+                &request_id,
+                &json!({
+                    "thread": {
+                        "id": "thread_1",
+                        "turns": [
+                            {
+                                "items": [
+                                    {
+                                        "type": "userMessage",
+                                        "content": [
+                                            {
+                                                "type": "skill",
+                                                "name": "skill-authoring",
+                                                "path": "/home/user/.agents/skills/skill-authoring/SKILL.md"
+                                            },
+                                            { "type": "text", "text": "use this skill" }
+                                        ]
+                                    }
+                                ]
+                            }
+                        ]
+                    }
+                }),
+            )
+            .expect("thread resume response");
+
+        let entry = output
+            .events
+            .iter()
+            .find_map(|event| match event {
+                EngineEvent::HistoryReplayChunk { entry, .. } => Some(entry),
+                _ => None,
+            })
+            .expect("history replay entry");
+
+        assert_eq!(entry.role, HistoryRole::User);
+        assert_eq!(
+            entry.content,
+            ContentDelta::Text("$skill-authoring ".to_string() + "use this skill")
+        );
+    }
+
+    #[test]
+    fn skills_list_response_rejects_missing_required_fields() {
+        let adapter = CodexAdapter::app_server();
+        let mut engine = AngelEngine::with_available_runtime(
+            angel_engine::ProtocolFlavor::CodexAppServer,
+            angel_engine::RuntimeCapabilities::new("test"),
+            adapter.capabilities(),
+        );
+        let conversation_id = ConversationId::new("conv");
+        engine
+            .apply_event(EngineEvent::ConversationProvisionStarted {
+                id: conversation_id.clone(),
+                remote: RemoteConversationId::Known("thread".to_string()),
+                op: angel_engine::ProvisionOp::New,
+                capabilities: adapter.capabilities(),
+            })
+            .expect("conversation provision");
+        engine
+            .apply_event(EngineEvent::ConversationReady {
+                id: conversation_id.clone(),
+                remote: Some(RemoteConversationId::Known("thread".to_string())),
+                context: ContextPatch::empty(),
+                capabilities: None,
+            })
+            .expect("conversation ready");
+        let request_id = engine
+            .plan_command(angel_engine::EngineCommand::Extension(
+                angel_engine::EngineExtensionCommand::RefreshSkills {
+                    conversation_id,
+                    force_reload: false,
+                },
+            ))
+            .expect("refresh skills plan")
+            .request_id
+            .expect("request id");
+
+        let result = adapter.decode_response(
+            &engine,
+            &request_id,
+            &json!({
+                "data": [
+                    {
+                        "cwd": "/repo",
+                        "skills": [
+                            {
+                                "name": "skill-authoring",
+                                "path": "/home/user/.agents/skills/skill-authoring/SKILL.md",
+                                "scope": "user"
+                            }
+                        ],
+                        "errors": []
+                    }
+                ]
+            }),
+        );
+
+        assert!(result.is_err());
     }
 }

@@ -2462,6 +2462,17 @@ function attachmentInputFromMessagePart(
   part: ThreadMessage["content"][number],
   fallbackName?: string,
 ): ChatAttachmentInput | undefined {
+  if (part.type === "file" && messagePartSkill(part)) {
+    const path = messagePartPath(part);
+    const name = part.filename ?? fallbackName;
+    if (!is.nonEmptyString(path) || !is.nonEmptyString(name)) return undefined;
+    return {
+      name,
+      path,
+      type: "skillMention",
+    };
+  }
+
   if (part.type === "file" && messagePartMention(part)) {
     const path = messagePartPath(part);
     if (!is.nonEmptyString(path)) return undefined;
@@ -2531,9 +2542,30 @@ function messagePartMention(part: ThreadMessage["content"][number]) {
   );
 }
 
+function messagePartSkill(part: ThreadMessage["content"][number]) {
+  return (
+    (
+      part as ThreadMessage["content"][number] & {
+        skill?: unknown;
+      }
+    ).skill === true
+  );
+}
+
 function attachmentInputToHistoryPart(
   input: ChatAttachmentInput,
 ): ChatHistoryMessagePart {
+  if (input.type === "skillMention") {
+    return {
+      data: input.path,
+      filename: input.name,
+      mention: true,
+      mimeType: "text/plain",
+      path: input.path,
+      type: "file",
+    };
+  }
+
   if (input.type === "fileMention") {
     if (!is.nonEmptyString(input.mimeType)) {
       throw new Error("File mention attachment is missing mimeType.");

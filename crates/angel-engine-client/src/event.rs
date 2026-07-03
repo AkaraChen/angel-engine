@@ -134,6 +134,10 @@ pub enum ClientEvent {
         conversation_id: String,
         count: usize,
     },
+    AvailableSkillsUpdated {
+        conversation_id: String,
+        count: usize,
+    },
     SessionUsageUpdated {
         conversation_id: String,
         usage: SessionUsageSnapshot,
@@ -279,6 +283,13 @@ pub(crate) fn events_from_engine_event(
         } => vec![ClientEvent::AvailableCommandsUpdated {
             conversation_id: conversation_id.to_string(),
             count: commands.len(),
+        }],
+        EngineEvent::SessionSkillsUpdated {
+            conversation_id,
+            skills,
+        } => vec![ClientEvent::AvailableSkillsUpdated {
+            conversation_id: conversation_id.to_string(),
+            count: skills.len(),
         }],
         EngineEvent::SessionConfigOptionsUpdated {
             conversation_id, ..

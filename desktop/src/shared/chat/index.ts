@@ -95,9 +95,20 @@ export interface ChatAvailableCommand {
   name: string;
 }
 
+export interface ChatAvailableSkill {
+  description: string;
+  enabled: boolean;
+  name: string;
+  path: string;
+  scope: "admin" | "repo" | "system" | "user";
+}
+
 export interface ChatRuntimeConfig {
   agentState?: ChatAgentState;
   availableCommands?: ChatAvailableCommand[];
+  availableSkills?: ChatAvailableSkill[];
+  canListSkills?: boolean;
+  canMentionSkills?: boolean;
   canSetMode?: boolean;
   canSetModel?: boolean;
   canSetPermissionMode?: boolean;

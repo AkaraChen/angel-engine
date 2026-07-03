@@ -13,6 +13,7 @@ mod discovery;
 mod elicitation;
 mod events;
 mod history;
+mod skills;
 mod turn_control;
 mod user_operations;
 
@@ -39,6 +40,8 @@ pub(super) fn acp_capabilities() -> ConversationCapabilities {
     capabilities.history.shell_command = CapabilitySupport::Unsupported;
     capabilities.context.turn_overrides = CapabilitySupport::Unsupported;
     capabilities.observer.unsubscribe = CapabilitySupport::Unsupported;
+    capabilities.skills.list = CapabilitySupport::Unsupported;
+    capabilities.skills.mention = CapabilitySupport::Unsupported;
     capabilities
 }
 
@@ -79,6 +82,8 @@ pub(super) fn codex_capabilities() -> ConversationCapabilities {
     capabilities.context.additional_directories = CapabilitySupport::Unsupported;
     capabilities.context.turn_overrides = CapabilitySupport::Supported;
     capabilities.observer.unsubscribe = CapabilitySupport::Supported;
+    capabilities.skills.list = CapabilitySupport::Supported;
+    capabilities.skills.mention = CapabilitySupport::Supported;
     capabilities
 }
 

@@ -76,4 +76,7 @@ pub enum PendingRequest {
     RunShellCommand {
         conversation_id: ConversationId,
     },
+    RefreshSkills {
+        conversation_id: ConversationId,
+    },
 }

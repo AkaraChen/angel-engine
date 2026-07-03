@@ -8,7 +8,7 @@ use crate::state::{
     ElicitationDecision, ElicitationState, HistoryMutationOp, HistoryMutationResult,
     HistoryReplayEntry, HydrationSource, ObserverState, PlanState, ProvisionOp,
     SessionConfigOption, SessionModeState, SessionModelState, SessionPermissionModeState,
-    SessionUsageState, TurnOutcome, UserInputRef,
+    SessionUsageState, Skill, TurnOutcome, UserInputRef,
 };
 
 #[derive(serde::Serialize, serde::Deserialize, Clone, Debug, PartialEq, Eq)]
@@ -84,6 +84,10 @@ pub enum EngineEvent {
     SessionUsageUpdated {
         conversation_id: ConversationId,
         usage: SessionUsageState,
+    },
+    SessionSkillsUpdated {
+        conversation_id: ConversationId,
+        skills: Vec<Skill>,
     },
     ConversationClosed {
         id: ConversationId,

@@ -7,12 +7,16 @@ import type {
 } from "@shared/chat";
 import type { TFunction } from "i18next";
 import type { PromptInputFile } from "@/components/ai-elements/prompt-input";
-import type { ComposerMentionedFile } from "@/features/chat/components/composer/composer-attachments";
+import type {
+  ComposerMentionedFile,
+  ComposerMentionedSkill,
+} from "@/features/chat/components/composer/composer-attachments";
 
 import { useCallback, useRef } from "react";
 import {
   createCompleteAttachmentFromPromptFile,
   createCompleteMentionAttachment,
+  createCompleteSkillMentionAttachment,
 } from "@/features/chat/components/composer/composer-attachments";
 import { useChatRunStore } from "@/features/chat/state/chat-run-store";
 
@@ -46,6 +50,7 @@ export interface SendPromptMessageInput {
   text: string;
   attachments: PromptInputFile[];
   mentionedFiles: ComposerMentionedFile[];
+  selectedSkills: ComposerMentionedSkill[];
   t: TFunction;
 }
 
@@ -93,7 +98,8 @@ export function useSendChatMessage(
       const hasContent =
         text.length > 0 ||
         input.attachments.length > 0 ||
-        input.mentionedFiles.length > 0;
+        input.mentionedFiles.length > 0 ||
+        input.selectedSkills.length > 0;
       if (!hasContent) {
         return;
       }
@@ -104,6 +110,9 @@ export function useSendChatMessage(
       }
       for (const file of input.mentionedFiles) {
         attachments.push(createCompleteMentionAttachment(file));
+      }
+      for (const skill of input.selectedSkills) {
+        attachments.push(createCompleteSkillMentionAttachment(skill));
       }
 
       const message: AppendMessage = {

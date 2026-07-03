@@ -67,6 +67,12 @@ fn generate_engine_event_enums() {
             "snake_case",
         ),
         generated_enum(
+            &client_src.join("snapshot.rs"),
+            "SkillScopeSnapshot",
+            "SkillScope",
+            "snake_case",
+        ),
+        generated_enum(
             &engine_src.join("ids.rs"),
             "RemoteConversationId",
             "RemoteKind",

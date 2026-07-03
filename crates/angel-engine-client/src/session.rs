@@ -98,6 +98,17 @@ pub struct InspectRequest {
     pub cwd: Option<String>,
 }
 
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct RefreshSkillsRequest {
+    #[serde(default)]
+    pub cwd: Option<String>,
+    #[serde(default)]
+    pub remote_id: Option<String>,
+    #[serde(default)]
+    pub force_reload: bool,
+}
+
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct TurnRunResult {
@@ -227,6 +238,27 @@ impl AngelSession {
         let conversation_id = self.require_conversation_id()?.to_string();
         let result = self.client.set_permission_mode(conversation_id, mode)?;
         self.drain_configuration_updates(result.update)?;
+        self.thread_state()
+            .ok_or_else(|| invalid_input("Runtime did not return a conversation snapshot."))
+    }
+
+    pub fn refresh_skills(
+        &mut self,
+        request: RefreshSkillsRequest,
+    ) -> ClientResult<ConversationSnapshot> {
+        if self.active_turn.is_some() {
+            return Err(invalid_input(
+                "Cannot refresh skills while a chat turn is running.",
+            ));
+        }
+
+        self.ensure_started(true, request.cwd, request.remote_id)?;
+        let conversation_id = self.require_conversation_id()?.to_string();
+        let result = self.client.send_thread_event(
+            conversation_id,
+            ThreadEvent::refresh_skills(request.force_reload),
+        )?;
+        self.wait_for_request_completion(result.request_id.as_deref(), result.update)?;
         self.thread_state()
             .ok_or_else(|| invalid_input("Runtime did not return a conversation snapshot."))
     }
@@ -483,6 +515,33 @@ impl AngelSession {
             check_update_fault(&update)?;
         }
         Ok(())
+    }
+
+    /// Blocks until `request_id` appears in a `ClientUpdate.completed_request_ids`,
+    /// rather than a fixed idle window - a slow runtime scan (e.g. a large
+    /// skills/list directory walk) can easily exceed a short poll timeout.
+    fn wait_for_request_completion(
+        &mut self,
+        request_id: Option<&str>,
+        initial: ClientUpdate,
+    ) -> ClientResult<()> {
+        check_update_fault(&initial)?;
+        let Some(request_id) = request_id else {
+            return Ok(());
+        };
+        if request_completed(&initial, request_id) {
+            return Ok(());
+        }
+        loop {
+            let update = self
+                .client
+                .next_update(None)?
+                .ok_or(ClientError::ChannelClosed)?;
+            check_update_fault(&update)?;
+            if request_completed(&update, request_id) {
+                return Ok(());
+            }
+        }
     }
 
     fn queue_open_elicitation(&mut self) -> ClientResult<bool> {
@@ -1077,6 +1136,13 @@ fn check_update_fault(update: &ClientUpdate) -> ClientResult<()> {
         }
     }
     Ok(())
+}
+
+fn request_completed(update: &ClientUpdate, request_id: &str) -> bool {
+    update
+        .completed_request_ids
+        .iter()
+        .any(|completed| completed == request_id)
 }
 
 #[cfg(test)]

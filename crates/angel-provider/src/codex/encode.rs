@@ -123,6 +123,24 @@ impl CodexAdapter {
                 message: "server request responses are encoded by encode_server_request_response"
                     .to_string(),
             }),
+            ProtocolMethod::ListSkills => {
+                let mut params = serde_json::Map::new();
+                if let Some(cwd) = codex_effect_context(engine, effect)?
+                    .and_then(|context| context.cwd.effective())
+                    .and_then(Option::as_ref)
+                {
+                    params.insert("cwds".to_string(), json!([cwd.display().to_string()]));
+                }
+                if effect
+                    .payload
+                    .fields
+                    .get("forceReload")
+                    .is_some_and(|value| value == "true")
+                {
+                    params.insert("forceReload".to_string(), json!(true));
+                }
+                Ok(Value::Object(params))
+            }
             _ => Ok(Value::Object(
                 effect
                     .payload
@@ -901,5 +919,111 @@ mod tests {
                 }
             ])
         );
+    }
+
+    #[test]
+    fn turn_start_encodes_skill_mention_as_codex_skill_input() {
+        let adapter = CodexAdapter::app_server();
+        let mut engine = AngelEngine::with_available_runtime(
+            angel_engine::ProtocolFlavor::CodexAppServer,
+            angel_engine::RuntimeCapabilities::new("test"),
+            adapter.capabilities(),
+        );
+        let conversation_id = ConversationId::new("conv");
+        engine
+            .apply_event(EngineEvent::ConversationProvisionStarted {
+                id: conversation_id.clone(),
+                remote: RemoteConversationId::Known("thread".to_string()),
+                op: angel_engine::ProvisionOp::New,
+                capabilities: adapter.capabilities(),
+            })
+            .expect("conversation provision");
+        engine
+            .apply_event(EngineEvent::ConversationReady {
+                id: conversation_id.clone(),
+                remote: Some(RemoteConversationId::Known("thread".to_string())),
+                context: ContextPatch::empty(),
+                capabilities: None,
+            })
+            .expect("conversation ready");
+
+        let plan = engine
+            .plan_command(angel_engine::EngineCommand::StartTurn {
+                conversation_id,
+                input: vec![
+                    angel_engine::UserInput::skill_mention(
+                        "skill-authoring",
+                        "/home/user/.agents/skills/skill-authoring/SKILL.md",
+                    ),
+                    angel_engine::UserInput::text("use this skill"),
+                ],
+                overrides: angel_engine::TurnOverrides::default(),
+            })
+            .expect("start turn");
+
+        let params = adapter
+            .encode_params(&engine, &plan.effects[0], &TransportOptions::default())
+            .expect("turn start params");
+
+        assert_eq!(
+            params["input"],
+            json!([
+                {
+                    "type": "skill",
+                    "name": "skill-authoring",
+                    "path": "/home/user/.agents/skills/skill-authoring/SKILL.md"
+                },
+                {
+                    "type": "text",
+                    "text": "use this skill",
+                    "text_elements": []
+                }
+            ])
+        );
+    }
+
+    #[test]
+    fn skills_list_encodes_conversation_cwd_and_force_reload() {
+        let adapter = CodexAdapter::app_server();
+        let mut engine = AngelEngine::with_available_runtime(
+            angel_engine::ProtocolFlavor::CodexAppServer,
+            angel_engine::RuntimeCapabilities::new("test"),
+            adapter.capabilities(),
+        );
+        let conversation_id = ConversationId::new("conv");
+        engine
+            .apply_event(EngineEvent::ConversationProvisionStarted {
+                id: conversation_id.clone(),
+                remote: RemoteConversationId::Known("thread".to_string()),
+                op: angel_engine::ProvisionOp::New,
+                capabilities: adapter.capabilities(),
+            })
+            .expect("conversation provision");
+        engine
+            .apply_event(EngineEvent::ConversationReady {
+                id: conversation_id.clone(),
+                remote: Some(RemoteConversationId::Known("thread".to_string())),
+                context: ContextPatch::one(angel_engine::ContextUpdate::Cwd {
+                    scope: angel_engine::ContextScope::Conversation,
+                    cwd: Some("/repo".to_string()),
+                }),
+                capabilities: None,
+            })
+            .expect("conversation ready");
+
+        let plan = engine
+            .plan_command(angel_engine::EngineCommand::Extension(
+                angel_engine::EngineExtensionCommand::RefreshSkills {
+                    conversation_id,
+                    force_reload: true,
+                },
+            ))
+            .expect("refresh skills plan");
+
+        let params = adapter
+            .encode_params(&engine, &plan.effects[0], &TransportOptions::default())
+            .expect("skills list params");
+
+        assert_eq!(params, json!({"cwds": ["/repo"], "forceReload": true}));
     }
 }

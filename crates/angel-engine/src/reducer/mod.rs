@@ -19,6 +19,7 @@ mod history_events;
 mod history_planning;
 mod methods;
 mod pending;
+mod skills_planning;
 mod turn_events;
 mod turn_planning;
 mod types;

@@ -233,6 +233,16 @@ impl AngelEngine {
                     conversation_id,
                 )))
             }
+            EngineEvent::SessionSkillsUpdated {
+                conversation_id,
+                skills,
+            } => {
+                let conversation = self.conversation_mut(&conversation_id)?;
+                conversation.available_skills = skills;
+                Ok(TransitionReport::one(UiEvent::ConversationChanged(
+                    conversation_id,
+                )))
+            }
             EngineEvent::ConversationClosed { id } => {
                 let conversation = self.conversation_mut(&id)?;
                 conversation.lifecycle = ConversationLifecycle::Closed;

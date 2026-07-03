@@ -14,6 +14,7 @@ import type {
   QuestionOptionSnapshot,
   QuestionSnapshot,
   ReasoningLevelOptionSnapshot,
+  SkillSnapshot,
   TurnRunEvent,
   TurnRunResult,
 } from "@angel-engine/client-napi";
@@ -82,11 +83,16 @@ export interface ChatRuntimeConfigOption {
 
 export type ChatAvailableCommand = AvailableCommandSnapshot;
 
+export type ChatAvailableSkill = SkillSnapshot;
+
 export type ChatAgentState = NullableOptional<AgentStateSnapshot>;
 
 export interface ChatRuntimeConfig {
   agentState?: ChatAgentState;
   availableCommands?: ChatAvailableCommand[];
+  availableSkills?: ChatAvailableSkill[];
+  canListSkills?: boolean;
+  canMentionSkills?: boolean;
   canSetMode?: boolean;
   canSetModel?: boolean;
   canSetPermissionMode?: boolean;
@@ -220,6 +226,11 @@ export type ChatAttachmentInput =
       name?: string | null;
       path: string;
       type: "fileMention";
+    }
+  | {
+      name: string;
+      path: string;
+      type: "skillMention";
     };
 
 export interface ChatSendInput {

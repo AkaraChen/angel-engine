@@ -76,6 +76,7 @@ pub(crate) fn codex_user_input(effect: &ProtocolEffect) -> Value {
                 }
             }
             "file_mention" => input.push(codex_file_mention_item(effect, &prefix, content)),
+            "skill_mention" => input.push(codex_skill_mention_item(effect, &prefix, content)),
             "resource" => input.push(codex_text_item(codex_text_resource_text(
                 effect, &prefix, content,
             ))),
@@ -169,6 +170,18 @@ fn codex_file_mention_item(effect: &ProtocolEffect, prefix: &str, content: Strin
 
     json!({
         "type": "mention",
+        "name": name,
+        "path": path,
+    })
+}
+
+fn codex_skill_mention_item(effect: &ProtocolEffect, prefix: &str, content: String) -> Value {
+    let name = field(effect, prefix, "name")
+        .filter(|name| !name.trim().is_empty())
+        .unwrap_or(content.as_str());
+    let path = field(effect, prefix, "path").unwrap_or_default();
+    json!({
+        "type": "skill",
         "name": name,
         "path": path,
     })

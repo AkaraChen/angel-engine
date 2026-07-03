@@ -77,6 +77,7 @@ pub enum ProtocolMethod {
     SetSessionMode,
     SetSessionConfigOption,
     RunShellCommand,
+    ListSkills,
     Extension(String),
 }
 

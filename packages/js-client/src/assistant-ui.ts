@@ -254,6 +254,17 @@ export function attachmentInputToHistoryPart(
     };
   }
 
+  if (input.type === "skillMention") {
+    return {
+      data: input.path,
+      filename: input.name,
+      mention: true,
+      mimeType: "text/plain",
+      path: input.path,
+      type: "file",
+    };
+  }
+
   return {
     data: input.data,
     filename: input.name ?? undefined,

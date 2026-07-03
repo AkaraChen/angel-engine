@@ -6,7 +6,7 @@ use angel_engine_client::{
     ClientAnswer as EngineClientAnswer, ClientCommandResult as EngineClientCommandResult,
     ClientOptions as EngineClientOptions, DiscoveryRequest as EngineDiscoveryRequest,
     ElicitationResponse as EngineElicitationResponse, HydrateRequest as EngineHydrateRequest,
-    InspectRequest as EngineInspectRequest,
+    InspectRequest as EngineInspectRequest, RefreshSkillsRequest as EngineRefreshSkillsRequest,
     ResumeConversationRequest as EngineResumeConversationRequest,
     RuntimeOptions as EngineRuntimeOptions,
     RuntimeOptionsOverrides as EngineRuntimeOptionsOverrides,
@@ -393,6 +393,24 @@ impl AngelClient {
         )
     }
 
+    #[napi(js_name = "refreshSkills", ts_return_type = "ClientCommandResult")]
+    pub fn refresh_skills(
+        &self,
+        conversation_id: String,
+        force_reload: bool,
+    ) -> Result<serde_json::Value> {
+        self.with_client_json(
+            "AngelClient.refreshSkills",
+            format!("conversation_id={conversation_id} force_reload={force_reload}"),
+            move |client| {
+                client.send_thread_event(
+                    conversation_id,
+                    EngineThreadEvent::refresh_skills(force_reload),
+                )
+            },
+        )
+    }
+
     #[napi(
         js_name = "resolveElicitation",
         ts_args_type = "conversationId: string, elicitationId: string, response: ElicitationResponse",
@@ -659,6 +677,25 @@ impl AngelSession {
                 request.remote_id.as_deref().unwrap_or("<none>")
             ),
             move |session| session.set_permission_mode(request),
+        ))
+    }
+
+    #[napi(
+        js_name = "refreshSkills",
+        ts_args_type = "request: RefreshSkillsRequest",
+        ts_return_type = "Promise<ConversationSnapshot>"
+    )]
+    pub fn refresh_skills(&self, request: serde_json::Value) -> Result<AsyncTask<SessionJsonTask>> {
+        let request = from_json::<EngineRefreshSkillsRequest>(request)?;
+        Ok(self.task(
+            "AngelSession.refreshSkills",
+            format!(
+                "cwd={} remote_id={} force_reload={}",
+                request.cwd.as_deref().unwrap_or("<none>"),
+                request.remote_id.as_deref().unwrap_or("<none>"),
+                request.force_reload
+            ),
+            move |session| session.refresh_skills(request),
         ))
     }
 
@@ -1227,6 +1264,24 @@ impl AngelEngineClient {
         )
     }
 
+    #[napi(js_name = "refreshSkills", ts_return_type = "ClientCommandResult")]
+    pub fn refresh_skills(
+        &mut self,
+        conversation_id: String,
+        force_reload: bool,
+    ) -> Result<serde_json::Value> {
+        trace_napi_sync_result(
+            "AngelEngineClient.refreshSkills",
+            format!("conversation_id={conversation_id} force_reload={force_reload}"),
+            || {
+                self.with_thread_raw(
+                    conversation_id,
+                    EngineThreadEvent::refresh_skills(force_reload),
+                )
+            },
+        )
+    }
+
     #[napi(
         js_name = "resolveElicitation",
         ts_args_type = "conversationId: string, elicitationId: string, response: ElicitationResponse",
@@ -1555,6 +1610,7 @@ fn thread_event_kind(event: &EngineThreadEvent) -> &'static str {
         EngineThreadEvent::CompactHistory => "compactHistory",
         EngineThreadEvent::RollbackHistory { .. } => "rollbackHistory",
         EngineThreadEvent::RunShellCommand { .. } => "runShellCommand",
+        EngineThreadEvent::RefreshSkills { .. } => "refreshSkills",
     }
 }
 

@@ -56,6 +56,7 @@ pub struct ConversationState {
     pub permission_mode_state: Option<SessionPermissionModeState>,
     pub model_state: Option<SessionModelState>,
     pub usage_state: Option<SessionUsageState>,
+    pub available_skills: Vec<Skill>,
     pub capabilities: ConversationCapabilities,
     pub generation: u64,
 }
@@ -85,6 +86,7 @@ impl ConversationState {
             permission_mode_state: None,
             model_state: None,
             usage_state: None,
+            available_skills: Vec::new(),
             capabilities,
             generation: 0,
         }
@@ -178,6 +180,23 @@ pub struct SessionModel {
     pub id: String,
     pub name: String,
     pub description: Option<String>,
+}
+
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug, PartialEq, Eq)]
+pub struct Skill {
+    pub name: String,
+    pub description: String,
+    pub path: String,
+    pub scope: SkillScope,
+    pub enabled: bool,
+}
+
+#[derive(serde::Serialize, serde::Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
+pub enum SkillScope {
+    User,
+    Repo,
+    System,
+    Admin,
 }
 
 #[derive(serde::Serialize, serde::Deserialize, Clone, Debug, PartialEq, Eq)]

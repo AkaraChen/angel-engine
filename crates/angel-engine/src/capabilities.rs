@@ -62,6 +62,7 @@ pub struct ConversationCapabilities {
     pub history: HistoryCapabilities,
     pub context: ContextCapabilities,
     pub observer: ObserverCapabilities,
+    pub skills: SkillsCapabilities,
 }
 
 impl ConversationCapabilities {
@@ -109,6 +110,10 @@ impl ConversationCapabilities {
             },
             observer: ObserverCapabilities {
                 unsubscribe: CapabilitySupport::Unknown,
+            },
+            skills: SkillsCapabilities {
+                list: CapabilitySupport::Unknown,
+                mention: CapabilitySupport::Unknown,
             },
         }
     }
@@ -169,4 +174,10 @@ pub struct ContextCapabilities {
 #[derive(serde::Serialize, serde::Deserialize, Clone, Debug, PartialEq, Eq)]
 pub struct ObserverCapabilities {
     pub unsubscribe: CapabilitySupport,
+}
+
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug, PartialEq, Eq)]
+pub struct SkillsCapabilities {
+    pub list: CapabilitySupport,
+    pub mention: CapabilitySupport,
 }

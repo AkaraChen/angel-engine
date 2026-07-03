@@ -3,6 +3,7 @@ import type {
   ElicitationResponse,
   HydrateRequest,
   InspectRequest,
+  RefreshSkillsRequest,
   RuntimeOptions,
   SendTextRequest,
   SetModeRequest,
@@ -133,17 +134,17 @@ async function loadChatSession(chatId: string): Promise<ChatLoadResult> {
     return { chat, messages: [] };
   }
 
-  const snapshot = await (
-    await getChatSession(chat)
-  ).hydrate({
+  const chatSession = await getChatSession(chat);
+  const snapshot = await chatSession.hydrate({
     cwd,
     remoteId: chat.remoteThreadId ?? undefined,
   });
-  const updatedChat = persistRemoteThreadId(chat, snapshot);
-  const messages = conversationMessages(snapshot);
+  const refreshed = await refreshSkillsIfSupported(chatSession, snapshot, cwd);
+  const updatedChat = persistRemoteThreadId(chat, refreshed ?? snapshot);
+  const messages = conversationMessages(refreshed ?? snapshot);
   return {
     chat: updatedChat,
-    config: runtimeConfigFromConversationSnapshot(snapshot),
+    config: runtimeConfigFromConversationSnapshot(refreshed ?? snapshot),
     messages,
   };
 }
@@ -153,11 +154,33 @@ async function inspectChatRuntimeConfig(
 ): Promise<ChatRuntimeConfig> {
   const session = await createChatSession(input.runtime);
   try {
-    return runtimeConfigFromConversationSnapshot(
-      await session.inspect(input.cwd ?? standaloneChatCwd()),
-    );
+    const cwd = input.cwd ?? standaloneChatCwd();
+    const snapshot = await session.inspect(cwd);
+    const refreshed = await refreshSkillsIfSupported(session, snapshot, cwd);
+    return runtimeConfigFromConversationSnapshot(refreshed ?? snapshot);
   } finally {
     session.close();
+  }
+}
+
+/**
+ * Whether skills can be listed is an engine-derived capability
+ * (`ConversationCapabilities.skills.list`), never a hardcoded runtime name -
+ * only providers whose adapter has actually implemented skill discovery
+ * report `skills.canList: true` on the snapshot.
+ */
+async function refreshSkillsIfSupported(
+  session: DesktopChatSession,
+  snapshot: ConversationSnapshot,
+  cwd: string,
+): Promise<ConversationSnapshot | undefined> {
+  if (!(session instanceof DesktopAngelSession) || !snapshot.skills.canList) {
+    return undefined;
+  }
+  try {
+    return await session.refreshSkills({ cwd });
+  } catch {
+    return undefined;
   }
 }
 
@@ -409,6 +432,14 @@ function chatAttachmentsToClientInput(
       };
     }
 
+    if (attachment.type === "skillMention") {
+      return {
+        name: attachment.name,
+        path: attachment.path,
+        type: ClientInputType.SkillMention,
+      };
+    }
+
     const uri = attachmentUri(attachment);
     if (isTextLikeMimeType(attachment.mimeType)) {
       return {
@@ -529,13 +560,16 @@ async function createChatPrewarm(
 
   prewarm.promise = session
     .inspect({ cwd })
-    .then((snapshot) => {
+    .then(async (snapshot) => {
       if (prewarm.closed) {
         throw new Error("Chat prewarm was closed.");
       }
 
-      prewarm.snapshot = snapshot;
-      prewarm.config = runtimeConfigFromConversationSnapshot(snapshot);
+      const refreshed = await refreshSkillsIfSupported(session, snapshot, cwd);
+      prewarm.snapshot = refreshed ?? snapshot;
+      prewarm.config = runtimeConfigFromConversationSnapshot(
+        refreshed ?? snapshot,
+      );
     })
     .catch((error: unknown) => {
       closeChatPrewarm(prewarm);
@@ -683,6 +717,12 @@ class DesktopAngelSession {
     request: SetPermissionModeRequest,
   ): Promise<ConversationSnapshot> {
     return this.enqueue(async () => this.session.setPermissionMode(request));
+  }
+
+  async refreshSkills(
+    request: RefreshSkillsRequest,
+  ): Promise<ConversationSnapshot> {
+    return this.enqueue(async () => this.session.refreshSkills(request));
   }
 
   async sendText(request: DesktopSendTextRequest): Promise<TurnRunResult> {

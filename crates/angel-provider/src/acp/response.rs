@@ -225,7 +225,8 @@ impl AcpAdapter {
             PendingRequest::SteerTurn { .. }
             | PendingRequest::ReadConversation { .. }
             | PendingRequest::HistoryMutation { .. }
-            | PendingRequest::RunShellCommand { .. } => {
+            | PendingRequest::RunShellCommand { .. }
+            | PendingRequest::RefreshSkills { .. } => {
                 output = output.log(TransportLogKind::Receive, format!("response {id}"));
             }
         }

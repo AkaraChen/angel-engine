@@ -173,6 +173,10 @@ pub fn acp_standard_capabilities() -> ConversationCapabilities {
         observer: angel_engine::ObserverCapabilities {
             unsubscribe: CapabilitySupport::Unsupported,
         },
+        skills: angel_engine::SkillsCapabilities {
+            list: CapabilitySupport::Unsupported,
+            mention: CapabilitySupport::Unsupported,
+        },
     }
 }
 

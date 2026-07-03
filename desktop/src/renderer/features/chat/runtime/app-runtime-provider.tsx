@@ -56,6 +56,9 @@ interface AppRuntimeProviderProps {
 const EMPTY_AVAILABLE_COMMANDS: NonNullable<
   ChatRuntimeConfig["availableCommands"]
 > = [];
+const EMPTY_AVAILABLE_SKILLS: NonNullable<
+  ChatRuntimeConfig["availableSkills"]
+> = [];
 
 const mockFeedbackAdapter: FeedbackAdapter = {
   submit() {
@@ -119,6 +122,8 @@ export function AppRuntimeProvider({
       availableCommands:
         runtimeConfig?.availableCommands ?? EMPTY_AVAILABLE_COMMANDS,
       availableCommandsLoading: runtimeConfig === undefined,
+      availableSkills: runtimeConfig?.availableSkills ?? EMPTY_AVAILABLE_SKILLS,
+      availableSkillsLoading: runtimeConfig === undefined,
       isProjectChat:
         is.nonEmptyString(projectId) && is.nonEmptyString(projectPath),
       projectId,

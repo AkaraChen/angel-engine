@@ -1,5 +1,6 @@
 import type {
   ChatAvailableCommand,
+  ChatAvailableSkill,
   ProjectFileSearchResult,
 } from "@shared/chat";
 import type { ReactNode } from "react";
@@ -13,7 +14,12 @@ export interface ComposerAssistPanelProps {
   fileResults: ProjectFileSearchResult[];
   fileSearchLoading: boolean;
   onSelectMentionedFile: (file: ProjectFileSearchResult) => void;
+  onSelectSkill: (skill: ChatAvailableSkill) => void;
   onSelectSlashCommand: (command: ChatAvailableCommand) => void;
+  skillCatalogSize: number;
+  skillOpen: boolean;
+  skills: ChatAvailableSkill[];
+  skillsLoading: boolean;
   slashCommandCatalogSize: number;
   slashCommands: ChatAvailableCommand[];
   slashCommandsLoading: boolean;
@@ -38,12 +44,24 @@ export interface FileMentionAssistPanelProps {
   onSelect: (file: ProjectFileSearchResult) => void;
 }
 
+export interface SkillAssistPanelProps {
+  catalogSize: number;
+  loading: boolean;
+  onSelect: (skill: ChatAvailableSkill) => void;
+  skills: ChatAvailableSkill[];
+}
+
 export function ComposerAssistPanel({
   fileMentionOpen,
   fileResults,
   fileSearchLoading,
   onSelectMentionedFile,
+  onSelectSkill,
   onSelectSlashCommand,
+  skillCatalogSize,
+  skillOpen,
+  skills,
+  skillsLoading,
   slashCommandCatalogSize,
   slashCommandsLoading,
   slashCommandOpen,
@@ -56,6 +74,17 @@ export function ComposerAssistPanel({
         commands={slashCommands}
         loading={slashCommandsLoading}
         onSelect={onSelectSlashCommand}
+      />
+    );
+  }
+
+  if (skillOpen) {
+    return (
+      <SkillAssistPanel
+        catalogSize={skillCatalogSize}
+        loading={skillsLoading}
+        onSelect={onSelectSkill}
+        skills={skills}
       />
     );
   }
@@ -170,6 +199,70 @@ export function SlashCommandAssistPanel({
           </button>
         );
       })}
+    </AssistPanelFrame>
+  );
+}
+
+export function SkillAssistPanel({
+  catalogSize,
+  loading,
+  onSelect,
+  skills,
+}: SkillAssistPanelProps) {
+  const { t } = useTranslation();
+
+  if (loading) {
+    return (
+      <AssistPanelFrame title={t("composer.skills")}>
+        <div
+          className={cn(
+            "flex items-center gap-2 p-2 text-sm text-muted-foreground",
+          )}
+        >
+          <Loader2 className="size-3.5 animate-spin" />
+          <span>{t("composer.loadingSkills")}</span>
+        </div>
+      </AssistPanelFrame>
+    );
+  }
+
+  if (skills.length === 0) {
+    const emptyMessage =
+      catalogSize === 0
+        ? t("composer.noSkillsAdvertised")
+        : t("composer.noMatchingSkills");
+
+    return (
+      <AssistPanelFrame title={t("composer.skills")}>
+        <div className="p-2 text-sm text-muted-foreground">{emptyMessage}</div>
+      </AssistPanelFrame>
+    );
+  }
+
+  return (
+    <AssistPanelFrame title={t("composer.skills")}>
+      {skills.map((skill) => (
+        <button
+          className={cn(
+            nativeControlRowClass,
+            `
+              flex w-full min-w-0 items-center gap-2 px-2 py-1.5 text-left
+              text-sm
+            `,
+          )}
+          key={skill.path}
+          onMouseDown={(event) => event.preventDefault()}
+          onClick={() => onSelect(skill)}
+          type="button"
+        >
+          <span className="shrink-0 font-mono text-xs text-primary">
+            {`$${skill.name}`}
+          </span>
+          <span className="min-w-0 flex-1 truncate text-muted-foreground">
+            {skill.description}
+          </span>
+        </button>
+      ))}
     </AssistPanelFrame>
   );
 }

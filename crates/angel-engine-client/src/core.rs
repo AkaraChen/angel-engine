@@ -222,6 +222,17 @@ where
         })
     }
 
+    pub fn refresh_skills(
+        &mut self,
+        conversation_id: impl Into<String>,
+        force_reload: bool,
+    ) -> ClientResult<ClientCommandResult> {
+        self.plan_extension(EngineExtensionCommand::RefreshSkills {
+            conversation_id: to_conversation_id(conversation_id),
+            force_reload,
+        })
+    }
+
     pub fn send_text(
         &mut self,
         conversation_id: impl Into<String>,
@@ -342,6 +353,9 @@ where
             }
             ThreadEvent::RunShellCommand { command } => {
                 self.run_shell_command(conversation_id, command)
+            }
+            ThreadEvent::RefreshSkills { force_reload } => {
+                self.refresh_skills(conversation_id, force_reload)
             }
         }
     }
@@ -691,6 +705,10 @@ pub enum ClientInput {
         #[serde(default)]
         mime_type: Option<String>,
     },
+    SkillMention {
+        name: String,
+        path: String,
+    },
     EmbeddedTextResource {
         uri: String,
         text: String,
@@ -734,6 +752,13 @@ impl ClientInput {
             name: name.into(),
             path: path.into(),
             mime_type,
+        }
+    }
+
+    pub fn skill_mention(name: impl Into<String>, path: impl Into<String>) -> Self {
+        Self::SkillMention {
+            name: name.into(),
+            path: path.into(),
         }
     }
 
@@ -818,6 +843,7 @@ impl TryFrom<ClientInput> for UserInput {
                 path,
                 mime_type,
             } => UserInput::file_mention(name, path, mime_type),
+            ClientInput::SkillMention { name, path } => UserInput::skill_mention(name, path),
             ClientInput::EmbeddedTextResource {
                 uri,
                 text,

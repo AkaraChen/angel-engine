@@ -26,6 +26,13 @@ impl AngelEngine {
                     .turn_overrides
                     .require("context.turn_overrides")?;
             }
+            if input.iter().any(is_skill_mention) {
+                conversation
+                    .capabilities
+                    .skills
+                    .mention
+                    .require("skills.mention")?;
+            }
         }
 
         let request_id = self.next_request_id();
@@ -80,6 +87,14 @@ impl AngelEngine {
         input: Vec<UserInput>,
     ) -> Result<CommandPlan, EngineError> {
         let selected_turn_id = self.select_turn_for_steer(&conversation_id, turn_id)?;
+        if input.iter().any(is_skill_mention) {
+            let conversation = self.conversation(&conversation_id)?;
+            conversation
+                .capabilities
+                .skills
+                .mention
+                .require("skills.mention")?;
+        }
 
         let request_id = self.next_request_id();
         let input_text = input_to_text(&input);
@@ -325,8 +340,13 @@ fn input_attachment_refs(
         | UserInputKind::ResourceLink { .. }
         | UserInputKind::FileMention { .. }
         | UserInputKind::EmbeddedTextResource { .. }
+        | UserInputKind::SkillMention { .. }
         | UserInputKind::RawContentBlock(_) => (None, None),
     })
+}
+
+fn is_skill_mention(input: &UserInput) -> bool {
+    matches!(input.kind, UserInputKind::SkillMention { .. })
 }
 
 fn input_to_text(input: &[UserInput]) -> String {
@@ -369,6 +389,11 @@ fn input_effect_fields(input: &[UserInput]) -> Vec<(String, String)> {
                 push_input_field(&mut fields, index, "name", name.clone());
                 push_input_field(&mut fields, index, "path", path.clone());
                 push_optional_input_field(&mut fields, index, "mimeType", mime_type);
+            }
+            UserInputKind::SkillMention { name, path } => {
+                push_input_field(&mut fields, index, "type", "skill_mention");
+                push_input_field(&mut fields, index, "name", name.clone());
+                push_input_field(&mut fields, index, "path", path.clone());
             }
             UserInputKind::EmbeddedTextResource { uri, mime_type } => {
                 push_input_field(&mut fields, index, "type", "resource");

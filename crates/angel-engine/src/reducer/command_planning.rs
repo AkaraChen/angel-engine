@@ -74,6 +74,10 @@ impl AngelEngine {
             EngineExtensionCommand::Unsubscribe { conversation_id } => {
                 self.plan_unsubscribe(conversation_id)
             }
+            EngineExtensionCommand::RefreshSkills {
+                conversation_id,
+                force_reload,
+            } => self.plan_refresh_skills(conversation_id, force_reload),
         }
     }
 }

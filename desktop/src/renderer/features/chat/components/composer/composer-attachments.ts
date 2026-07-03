@@ -1,5 +1,5 @@
 import type { CompleteAttachment, CreateAttachment } from "@assistant-ui/react";
-import type { ProjectFileSearchResult } from "@shared/chat";
+import type { ChatAvailableSkill, ProjectFileSearchResult } from "@shared/chat";
 import type { TFunction } from "i18next";
 import type {
   PromptInputFile,
@@ -10,6 +10,12 @@ import is from "@sindresorhus/is";
 export type ComposerMentionedFile = ProjectFileSearchResult & {
   id: string;
 };
+
+export type ComposerMentionedSkill = ChatAvailableSkill & {
+  id: string;
+};
+
+const SKILL_MENTION_MIME_TYPE = "application/vnd.angel-engine.skill-mention";
 
 export function createAttachmentFromPromptFile(
   file: PromptInputMessage["files"][number],
@@ -146,6 +152,46 @@ export function createCompleteMentionAttachment(
     contentType: mimeType,
     id: file.id,
     name: file.name,
+    status: { type: "complete" },
+    type: "file",
+  };
+}
+
+export function createSkillMentionAttachment(
+  skill: ComposerMentionedSkill,
+): CreateAttachment {
+  const content = {
+    data: skill.path,
+    filename: skill.name,
+    mimeType: SKILL_MENTION_MIME_TYPE,
+    path: skill.path,
+    skill: true,
+    type: "file" as const,
+  };
+  return {
+    content: [content],
+    contentType: SKILL_MENTION_MIME_TYPE,
+    name: skill.name,
+    type: "file",
+  };
+}
+
+export function createCompleteSkillMentionAttachment(
+  skill: ComposerMentionedSkill,
+): CompleteAttachment {
+  const content = {
+    data: skill.path,
+    filename: skill.name,
+    mimeType: SKILL_MENTION_MIME_TYPE,
+    path: skill.path,
+    skill: true,
+    type: "file" as const,
+  };
+  return {
+    content: [content],
+    contentType: SKILL_MENTION_MIME_TYPE,
+    id: skill.id,
+    name: skill.name,
     status: { type: "complete" },
     type: "file",
   };
