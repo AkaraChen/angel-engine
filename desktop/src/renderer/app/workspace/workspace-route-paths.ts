@@ -2,8 +2,11 @@ import type { Chat } from "@shared/chat";
 import type { DesktopOpenChatFromNotificationEvent } from "@shared/desktop-window";
 import is from "@sindresorhus/is";
 
-export function chatRoutePath(chat: Chat) {
-  if (is.nonEmptyString(chat.projectId)) {
+export function chatRoutePath(
+  chat: Chat,
+  { includeProject = true }: { includeProject?: boolean } = {},
+) {
+  if (includeProject && is.nonEmptyString(chat.projectId)) {
     return projectChatRoutePath(chat.projectId, chat.id);
   }
   return chatRoutePathId(chat.id);

@@ -60,6 +60,7 @@ interface WorkspaceSidebarProps {
   onOpenSettings: () => MaybeAsync;
   onShowChatContextMenu: (chat: Chat) => MaybeAsync;
   onShowProjectContextMenu: (project: Project) => MaybeAsync;
+  onWorkspaceModeChange: (workspaceMode: WorkspaceMode) => void;
   projectChatsByProjectId: Map<string, Chat[]>;
   projects: Project[];
   selectedChatId?: string;
@@ -205,6 +206,7 @@ function WorkspaceSidebarContent({
   onOpenSettings,
   onShowChatContextMenu,
   onShowProjectContextMenu,
+  onWorkspaceModeChange,
   projectChatsByProjectId,
   projects,
   selectedChatId,
@@ -213,9 +215,6 @@ function WorkspaceSidebarContent({
 }: WorkspaceSidebarProps): ReactElement {
   const { t } = useTranslation();
   const workspaceMode = useWorkspaceUiStore((state) => state.workspaceMode);
-  const setWorkspaceMode = useWorkspaceUiStore(
-    (state) => state.setWorkspaceMode,
-  );
   const createChatFromNewButton = async () => {
     if (workspaceMode === "work") {
       const selectedProject = projects.find(
@@ -238,7 +237,7 @@ function WorkspaceSidebarContent({
         {isMacOS ? <div aria-hidden className="h-8 shrink-0" /> : null}
 
         <WorkspaceModeControl
-          onValueChange={setWorkspaceMode}
+          onValueChange={onWorkspaceModeChange}
           value={workspaceMode}
         />
       </SidebarHeader>

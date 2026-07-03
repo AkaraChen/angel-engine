@@ -77,7 +77,10 @@ import {
   WorkspaceToolSurfaceHostControls,
 } from "@/app/workspace/workspace-tool-host";
 import { useWorkspaceToolStore } from "@/app/workspace/workspace-tool-store";
-import { useWorkspaceUiStore } from "@/app/workspace/workspace-ui-store";
+import {
+  type WorkspaceMode,
+  useWorkspaceUiStore,
+} from "@/app/workspace/workspace-ui-store";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -291,6 +294,9 @@ function WorkspacePageContent({
     (state) => state.rightSidebarWidth,
   );
   const workspaceMode = useWorkspaceUiStore((state) => state.workspaceMode);
+  const setWorkspaceMode = useWorkspaceUiStore(
+    (state) => state.setWorkspaceMode,
+  );
   const setRightSidebarOpen = useWorkspaceUiStore(
     (state) => state.setRightSidebarOpen,
   );
@@ -400,9 +406,12 @@ function WorkspacePageContent({
     projects,
     isDraftPage ? routeDraftProjectId : undefined,
   );
-  const selectedProjectId = isDraftPage
-    ? draftProject.id
-    : (routeProjectId ?? selectedChat?.projectId ?? undefined);
+  const selectedProjectId =
+    workspaceMode === "chat"
+      ? undefined
+      : isDraftPage
+        ? draftProject.id
+        : (routeProjectId ?? selectedChat?.projectId ?? undefined);
   const selectedProject = is.nonEmptyString(selectedProjectId)
     ? projects.find((project) => project.id === selectedProjectId)
     : undefined;
@@ -653,12 +662,61 @@ function WorkspacePageContent({
 
   const navigateToChat = useCallback(
     (chat: Chat, options?: { replace?: boolean }) => {
-      const path = chatRoutePath(chat);
+      const path = chatRoutePath(chat, {
+        includeProject: workspaceMode === "work",
+      });
       if (location !== path) {
         navigate(path, options);
       }
     },
-    [location, navigate],
+    [location, navigate, workspaceMode],
+  );
+
+  const changeWorkspaceMode = useCallback(
+    (nextWorkspaceMode: WorkspaceMode) => {
+      if (nextWorkspaceMode === workspaceMode) return;
+
+      setWorkspaceMode(nextWorkspaceMode);
+      if (settingsActive) return;
+
+      if (nextWorkspaceMode === "chat") {
+        navigate(
+          is.nonEmptyString(selectedChatId)
+            ? chatRoutePathId(selectedChatId)
+            : "/",
+          { replace: true },
+        );
+        return;
+      }
+
+      if (
+        is.nonEmptyString(selectedChatId) &&
+        is.nonEmptyString(selectedChat?.projectId)
+      ) {
+        navigate(projectChatRoutePath(selectedChat.projectId, selectedChatId), {
+          replace: true,
+        });
+        return;
+      }
+
+      const latestProjectChat = chats.find((chat) =>
+        is.nonEmptyString(chat.projectId),
+      );
+      if (is.nonEmptyString(latestProjectChat?.projectId)) {
+        navigate(projectDraftRoutePath(latestProjectChat.projectId), {
+          replace: true,
+        });
+      }
+    },
+    [
+      chats,
+      navigate,
+      selectedChat,
+      selectedChatId,
+      setWorkspaceMode,
+      settingsActive,
+      workspaceMode,
+    ],
   );
 
   const updateChatFromRun = useCallback(
@@ -1127,7 +1185,9 @@ function WorkspacePageContent({
   }, [applyAllChatsDeleted, deleteAllChatsMutation, t, toast]);
 
   if (selectedChat) {
-    const canonicalPath = chatRoutePath(selectedChat);
+    const canonicalPath = chatRoutePath(selectedChat, {
+      includeProject: workspaceMode === "work",
+    });
     if (canonicalPath !== currentRoutePath) {
       return <Redirect replace to={canonicalPath} />;
     }
@@ -1163,6 +1223,7 @@ function WorkspacePageContent({
           onOpenSettings={openSettings}
           onShowChatContextMenu={showChatContextMenu}
           onShowProjectContextMenu={showProjectContextMenu}
+          onWorkspaceModeChange={changeWorkspaceMode}
           projectChatsByProjectId={projectChatsByProjectId}
           projects={projects}
           selectedChatId={selectedChatId}
@@ -1182,6 +1243,7 @@ function WorkspacePageContent({
           onOpenSettings={openSettings}
           onShowChatContextMenu={showChatContextMenu}
           onShowProjectContextMenu={showProjectContextMenu}
+          onWorkspaceModeChange={changeWorkspaceMode}
           projectChatsByProjectId={projectChatsByProjectId}
           projects={projects}
           selectedChatId={selectedChatId}
@@ -1275,6 +1337,7 @@ function WorkspacePageContent({
                           api={api}
                           currentRoutePath={currentRoutePath}
                           draftAgentConfig={selectedChatAgentConfig}
+                          includeProjectInRoute={workspaceMode === "work"}
                           onChatCreated={updateChatFromRun}
                           onChatMessagesUpdated={setChatMessagesInCache}
                           onChatUpdated={updateChatFromRun}

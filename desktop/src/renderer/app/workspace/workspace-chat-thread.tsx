@@ -69,6 +69,7 @@ interface ActiveChatThreadProps {
 type RestoredChatThreadProps = Omit<ActiveChatThreadProps, "selectedChat"> & {
   api: ReturnType<typeof useApi>;
   currentRoutePath: string;
+  includeProjectInRoute: boolean;
   selectedChatId: string;
 };
 
@@ -131,6 +132,7 @@ export function RestoredChatThread({
   api,
   currentRoutePath,
   draftAgentConfig,
+  includeProjectInRoute,
   onChatCreated,
   onChatMessagesUpdated,
   onChatUpdated,
@@ -158,7 +160,9 @@ export function RestoredChatThread({
   });
   const runtimeConfig =
     liveRuntimeConfig ?? chatLoadData.config ?? inspectConfigQuery.data;
-  const canonicalPath = chatRoutePath(selectedChat);
+  const canonicalPath = chatRoutePath(selectedChat, {
+    includeProject: includeProjectInRoute,
+  });
 
   if (canonicalPath !== currentRoutePath) {
     return <Redirect replace to={canonicalPath} />;
