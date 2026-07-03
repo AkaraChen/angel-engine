@@ -12,7 +12,7 @@ export interface UseAgentSkillsInput {
 }
 
 /**
- * Skills discovered from the runtime's skill directories on disk (no agent
+ * Skills discovered from the JS-registered skill directories on disk (no agent
  * process involved), scoped to the project when one is associated.
  */
 export function useAgentSkills({ projectPath, runtime }: UseAgentSkillsInput) {

@@ -16,6 +16,7 @@ peerDependencyRules:
 
 allowBuilds:
   "@electron/node-gyp": true
+  "@google/genai": true
   "@parcel/watcher": true
   "@tailwindcss/oxide": true
   "better-sqlite3": true
@@ -27,6 +28,7 @@ allowBuilds:
   "msgpackr-extract": true
   "msw": true
   node-pty: true
+  "protobufjs": true
   "sharp": true
   "unrs-resolver": true
 

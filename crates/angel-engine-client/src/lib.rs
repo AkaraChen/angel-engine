@@ -46,7 +46,7 @@ pub use settings::{
     ModelListSettingSnapshot, ModelOptionSnapshot, PermissionModeOptionSnapshot,
     ReasoningLevelSettingSnapshot, ThreadSettingsSnapshot,
 };
-pub use skills::list_agent_skills;
+pub use skills::{list_agent_skills, list_agent_skills_from_dirs};
 pub use snapshot::{
     ActionOutputSnapshot, ActionSnapshot, AgentStateSnapshot, AvailableCommandSnapshot,
     ClientSnapshot, ContentChunk, ContextSnapshot, ConversationSnapshot,

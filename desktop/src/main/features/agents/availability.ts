@@ -13,6 +13,7 @@ const runtimeCommands: Record<AgentRuntime, () => string> = {
   gemini: () => "gemini",
   kimi: () => "kimi",
   opencode: () => "opencode",
+  pi: () => "pi",
   qoder: () => "qodercli",
 };
 

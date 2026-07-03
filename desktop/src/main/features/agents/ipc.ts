@@ -4,7 +4,6 @@ import type {
   UpdateCustomAgentInput,
 } from "../../../shared/agents";
 import type { ChatRuntime } from "../chat/runtime";
-import { listAgentSkills } from "@angel-engine/client-napi";
 import { tipc } from "@egoist/tipc/main";
 import { type as arkType } from "arktype";
 import { listAvailableAgents } from "./availability";
@@ -16,6 +15,7 @@ import {
   updateCustomAgent,
 } from "./repository";
 import { agentSkillsInput } from "./schemas";
+import { listSkillsForAgent } from "./skills";
 
 const t = tipc.create();
 
@@ -45,7 +45,7 @@ export function createAgentIpcRouter(chatRuntime: ChatRuntime) {
         if (value instanceof arkType.errors) {
           throw new TypeError("Agent skills input is required.");
         }
-        return listAgentSkills(value.runtime, value.projectPath ?? null);
+        return listSkillsForAgent(value);
       }),
     agentsUpdateCustom: t.procedure
       .input<UpdateCustomAgentInput>()

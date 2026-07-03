@@ -18,6 +18,7 @@ import geminiIconUrl from "@lobehub/icons-static-svg/icons/geminicli-color.svg";
 import kimiIconUrl from "@lobehub/icons-static-svg/icons/kimi-color.svg";
 import opencodeIconUrl from "@lobehub/icons-static-svg/icons/opencode.svg";
 import qoderIconUrl from "@lobehub/icons-static-svg/icons/qoder-color.svg";
+import piIconUrl from "@/features/agents/pi-coding-agent.svg";
 import {
   RiErrorWarningLine as AlertTriangle,
   RiRobot2Line as Bot,
@@ -85,6 +86,7 @@ const agentIconUrl: Partial<Record<AgentRuntime, string>> = {
   gemini: geminiIconUrl,
   kimi: kimiIconUrl,
   opencode: opencodeIconUrl,
+  pi: piIconUrl,
   qoder: qoderIconUrl,
 };
 

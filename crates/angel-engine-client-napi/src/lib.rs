@@ -19,8 +19,8 @@ use garde::Validate;
 use napi::ScopedTask;
 use napi::bindgen_prelude::*;
 use napi_derive::napi;
-use serde::Serialize;
 use serde::de::DeserializeOwned;
+use serde::{Deserialize, Serialize};
 
 mod adapter;
 mod types;
@@ -1454,6 +1454,49 @@ pub fn list_agent_skills(
             ))
         },
     )
+}
+
+#[napi(
+    js_name = "listAgentSkillsFromDirs",
+    ts_args_type = "request: { projectPath?: string | null; globalDirs: string[]; projectRelativeDirs: string[] }",
+    ts_return_type = "SkillSnapshot[]"
+)]
+pub fn list_agent_skills_from_dirs(request: serde_json::Value) -> Result<serde_json::Value> {
+    let request = from_json::<ListAgentSkillsFromDirsRequest>(request)?;
+    trace_napi_sync_result(
+        "listAgentSkillsFromDirs",
+        format!(
+            "project_path={} global_dirs={} project_relative_dirs={}",
+            request.project_path.as_deref().unwrap_or("<none>"),
+            request.global_dirs.len(),
+            request.project_relative_dirs.len()
+        ),
+        || {
+            let global_dirs = request
+                .global_dirs
+                .iter()
+                .map(std::path::PathBuf::from)
+                .collect::<Vec<_>>();
+            let project_relative_dirs = request
+                .project_relative_dirs
+                .iter()
+                .map(std::path::PathBuf::from)
+                .collect::<Vec<_>>();
+            to_json(angel_engine_client::list_agent_skills_from_dirs(
+                &global_dirs,
+                &project_relative_dirs,
+                request.project_path.as_deref().map(std::path::Path::new),
+            ))
+        },
+    )
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct ListAgentSkillsFromDirsRequest {
+    project_path: Option<String>,
+    global_dirs: Vec<String>,
+    project_relative_dirs: Vec<String>,
 }
 
 fn conversation_state(

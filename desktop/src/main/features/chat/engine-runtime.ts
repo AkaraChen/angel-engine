@@ -11,6 +11,7 @@ import type {
   TurnRunResult,
 } from "@angel-engine/client-napi";
 import type { ProjectedTurnEvent } from "@angel-engine/js-client/projection";
+import type { PiAgentSession as DesktopPiAgentSession } from "@angel-engine/pi-client";
 import type {
   Chat,
   ChatAttachmentInput,
@@ -82,7 +83,10 @@ interface ChatStreamControls {
   ) => void;
 }
 
-type DesktopChatSession = DesktopAngelSession | ClaudeCodeSession;
+type DesktopChatSession =
+  | DesktopAngelSession
+  | ClaudeCodeSession
+  | DesktopPiAgentSession;
 
 const chatSessions = new Map<string, DesktopChatSession>();
 const chatSessionCreations = new Map<string, Promise<DesktopChatSession>>();
@@ -353,6 +357,9 @@ async function createChatSession(
   if (runtime === "claude") {
     return new ClaudeCodeSession();
   }
+  if (runtime === "pi") {
+    return createPiAgentSession();
+  }
 
   if (isCustomAgentRuntime(runtime)) {
     const agent = getCustomAgent(runtime);
@@ -381,6 +388,11 @@ async function createChatSession(
       clientTitle: "Angel Engine",
     }),
   );
+}
+
+async function createPiAgentSession(): Promise<DesktopPiAgentSession> {
+  const { PiAgentSession } = await import("@angel-engine/pi-client");
+  return new PiAgentSession();
 }
 
 function chatAttachmentsToClientInput(

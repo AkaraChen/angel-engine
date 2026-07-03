@@ -30,6 +30,10 @@
       "entry": ["src/index.ts", "src/adapter.ts", "src/context.ts"],
       "project": ["src/**/*.ts"]
     },
+    "packages/pi-client": {
+      "entry": ["src/index.ts", "src/adapter.ts", "src/context.ts"],
+      "project": ["src/**/*.ts"]
+    },
     "packages/js-client": {
       "entry": [
         "src/index.ts",

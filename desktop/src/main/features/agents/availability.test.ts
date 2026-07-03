@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 
 import { listAvailableAgents } from "./availability";
+import which from "which";
 
 vi.mock("which", () => ({
   default: vi.fn(async () => "/usr/bin/fake-agent"),
@@ -15,5 +16,21 @@ describe("listAvailableAgents", () => {
     const agents = await listAvailableAgents();
 
     expect(agents.map((agent) => agent.id)).not.toContain("cursor");
+  });
+
+  it("advertises pi only when the cli exists", async () => {
+    vi.mocked(which).mockImplementation(async (command) =>
+      command === "pi" ? (null as unknown as string) : "/usr/bin/fake-agent",
+    );
+
+    await expect(listAvailableAgents()).resolves.not.toContainEqual(
+      expect.objectContaining({ id: "pi" }),
+    );
+
+    vi.mocked(which).mockResolvedValue("/usr/bin/pi");
+
+    await expect(listAvailableAgents()).resolves.toContainEqual(
+      expect.objectContaining({ id: "pi" }),
+    );
   });
 });

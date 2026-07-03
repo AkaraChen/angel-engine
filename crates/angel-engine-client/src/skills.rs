@@ -41,6 +41,40 @@ pub fn list_agent_skills(runtime: &str, project_root: Option<&Path>) -> Vec<Skil
     skills
 }
 
+/// Filesystem-based skill discovery from explicit JS-provided directories.
+///
+/// This is the extension path for JS-registered agents; it does not replace the
+/// runtime descriptor path above.
+pub fn list_agent_skills_from_dirs(
+    global_dirs: &[PathBuf],
+    project_relative_dirs: &[PathBuf],
+    project_root: Option<&Path>,
+) -> Vec<SkillSnapshot> {
+    let mut skills = Vec::new();
+    let mut seen_names = HashSet::new();
+    if let Some(root) = project_root {
+        let project_dirs = project_relative_dirs
+            .iter()
+            .map(|dir| root.join(dir))
+            .collect::<Vec<_>>();
+        collect_skills_from_dirs(
+            &project_dirs,
+            SkillScopeSnapshot::Repo,
+            &mut skills,
+            &mut seen_names,
+        );
+    }
+    collect_skills_from_dirs(
+        global_dirs,
+        SkillScopeSnapshot::User,
+        &mut skills,
+        &mut seen_names,
+    );
+
+    skills.sort_by(|a, b| a.name.cmp(&b.name));
+    skills
+}
+
 fn agent_descriptor(runtime: &str) -> Option<&'static AgentDescriptor> {
     match runtime {
         "claude" => Some(&agents::claude::DESCRIPTOR),
@@ -51,6 +85,7 @@ fn agent_descriptor(runtime: &str) -> Option<&'static AgentDescriptor> {
         "gemini" => Some(&agents::gemini::DESCRIPTOR),
         "kimi" => Some(&agents::kimi::DESCRIPTOR),
         "opencode" => Some(&agents::opencode::DESCRIPTOR),
+        "pi" => Some(&agents::pi::DESCRIPTOR),
         _ => None,
     }
 }
@@ -170,5 +205,54 @@ mod tests {
     fn unknown_runtime_resolves_to_empty_list() {
         assert!(list_agent_skills("qoder", None).is_empty());
         assert!(list_agent_skills("not-a-runtime", None).is_empty());
+    }
+
+    #[test]
+    fn pi_runtime_uses_descriptor_skill_paths() {
+        let temp = tempfile::tempdir().expect("tempdir");
+        let project = temp.path().join("project");
+        let skills = project.join(".pi").join("skills");
+        write_skill(&skills, "repo-pi", "repo-pi", "Repo Pi skill");
+
+        let skills = list_agent_skills("pi", Some(&project));
+
+        assert_eq!(skills.len(), 1);
+        assert_eq!(skills[0].name, "repo-pi");
+        assert_eq!(skills[0].scope, SkillScopeSnapshot::Repo);
+    }
+
+    #[test]
+    fn collects_explicit_dirs_for_js_registered_agents() {
+        let temp = tempfile::tempdir().expect("tempdir");
+        let global = temp.path().join("global");
+        let project_root = temp.path().join("project");
+        let project_skills = project_root.join(".agent").join("skills");
+        write_skill(&global, "global", "global-skill", "Global skill");
+        write_skill(&project_skills, "repo", "repo-skill", "Repo skill");
+
+        let skills = list_agent_skills_from_dirs(
+            &[global],
+            &[PathBuf::from(".agent/skills")],
+            Some(&project_root),
+        );
+
+        assert_eq!(skills.len(), 2);
+        assert_eq!(skills[0].name, "global-skill");
+        assert_eq!(skills[0].scope, SkillScopeSnapshot::User);
+        assert_eq!(skills[1].name, "repo-skill");
+        assert_eq!(skills[1].scope, SkillScopeSnapshot::Repo);
+    }
+
+    #[test]
+    fn explicit_dirs_skip_project_relative_dirs_without_project_root() {
+        let temp = tempfile::tempdir().expect("tempdir");
+        let global = temp.path().join("global");
+        write_skill(&global, "global", "global-skill", "Global skill");
+
+        let skills =
+            list_agent_skills_from_dirs(&[global], &[PathBuf::from(".agent/skills")], None);
+        assert_eq!(skills.len(), 1);
+        assert_eq!(skills[0].name, "global-skill");
+        assert_eq!(skills[0].scope, SkillScopeSnapshot::User);
     }
 }

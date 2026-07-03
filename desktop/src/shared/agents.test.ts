@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   AGENT_OPTIONS,
+  AGENT_SKILL_DIRECTORY_RULES,
   getEnabledAgentOptions,
   isAgentRuntime,
   moveAgentRuntimeOrder,
@@ -11,9 +12,25 @@ import {
 } from "./agents";
 
 describe("agent runtime settings", () => {
-  it("treats codex as an agent runtime", () => {
+  it("treats built-in ids as agent runtimes", () => {
     expect(isAgentRuntime("codex")).toBe(true);
+    expect(isAgentRuntime("pi")).toBe(true);
     expect(AGENT_OPTIONS.map((agent) => agent.id)).toContain("codex");
+    expect(AGENT_OPTIONS.map((agent) => agent.id)).toContain("pi");
+  });
+
+  it("keeps built-in skill directory rules in shared JS definitions", () => {
+    expect(AGENT_SKILL_DIRECTORY_RULES.claude).toEqual({
+      globalDirs: ["~/.claude/skills"],
+      projectRelativeDirs: [".claude/skills"],
+    });
+    expect(AGENT_SKILL_DIRECTORY_RULES.pi).toEqual({
+      globalDirs: ["~/.pi/agent/skills", "~/.agents/skills"],
+      projectRelativeDirs: [".pi/skills", ".agents/skills"],
+    });
+    expect(
+      AGENT_OPTIONS.find((agent) => agent.id === "pi")?.skillDirectories,
+    ).toBe(AGENT_SKILL_DIRECTORY_RULES.pi);
   });
 
   it("keeps explicit codex settings", () => {
@@ -46,6 +63,7 @@ describe("agent runtime settings", () => {
 
     expect(next.agentOrder.slice(0, 2)).toEqual(["codex", "kimi"]);
     expect(next.agentOrder).toContain("claude");
+    expect(next.agentOrder).toContain("pi");
   });
 
   it("moves an agent to a drop target index", () => {
