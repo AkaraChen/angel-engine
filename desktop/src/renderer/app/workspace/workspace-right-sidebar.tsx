@@ -1,10 +1,19 @@
-import type { PointerEvent as ReactPointerEvent } from "react";
+import type {
+  KeyboardEvent as ReactKeyboardEvent,
+  PointerEvent as ReactPointerEvent,
+} from "react";
 import type { ApiClient } from "@/platform/api-client";
 
 import { useCallback, useRef, useState } from "react";
 
 import { WorkspaceToolSurface } from "@/app/workspace/workspace-tool-host";
-import { clampWorkspaceRightSidebarWidth } from "@/app/workspace/workspace-ui-store";
+import {
+  clampWorkspaceRightSidebarWidth,
+  defaultWorkspaceRightSidebarWidth,
+  maxWorkspaceRightSidebarWidth,
+  minWorkspaceRightSidebarWidth,
+  useWorkspaceUiStore,
+} from "@/app/workspace/workspace-ui-store";
 import { cn } from "@/platform/utils";
 
 interface WorkspaceRightSidebarProps {
@@ -26,6 +35,7 @@ export function WorkspaceRightSidebar({
   width,
   onWidthChange,
 }: WorkspaceRightSidebarProps) {
+  const workspaceMode = useWorkspaceUiStore((state) => state.workspaceMode);
   const resizeStateRef = useRef<{ startWidth: number; startX: number } | null>(
     null,
   );
@@ -62,6 +72,23 @@ export function WorkspaceRightSidebar({
     },
     [],
   );
+  const handleResizeKeyDown = useCallback(
+    (event: ReactKeyboardEvent<HTMLDivElement>) => {
+      if (event.key === "ArrowLeft") {
+        onWidthChange(clampWorkspaceRightSidebarWidth(width + 16));
+      } else if (event.key === "ArrowRight") {
+        onWidthChange(clampWorkspaceRightSidebarWidth(width - 16));
+      } else if (event.key === "Home") {
+        onWidthChange(minWorkspaceRightSidebarWidth);
+      } else if (event.key === "End") {
+        onWidthChange(maxWorkspaceRightSidebarWidth);
+      } else {
+        return;
+      }
+      event.preventDefault();
+    },
+    [onWidthChange, width],
+  );
   const handleResizePointerEnd = useCallback(
     (event: ReactPointerEvent<HTMLDivElement>) => {
       const resizeState = resizeStateRef.current;
@@ -84,28 +111,43 @@ export function WorkspaceRightSidebar({
   return (
     <aside
       aria-hidden={!open}
+      data-workspace-mode={workspaceMode}
       inert={!open ? true : undefined}
       className={cn(
         `
-          relative min-h-0 shrink-0 overflow-hidden border-l border-border
-          bg-background/80
+          relative min-h-0 shrink-0 overflow-hidden border-l
+          border-border-subtle bg-background
         `,
         resizing
-          ? "transition-opacity"
-          : "transition-[width,opacity] duration-200 ease-linear",
-        open ? "opacity-100" : "opacity-0",
+          ? "transition-none"
+          : `
+            transition-[width] duration-200 ease-swift
+            motion-reduce:transition-none
+          `,
       )}
       style={widthStyle}
     >
       <div
-        aria-hidden="true"
-        className="
-          absolute inset-y-0 left-0 z-10 w-2 -translate-x-1/2 cursor-col-resize
-          touch-none
-          before:absolute before:inset-y-0 before:left-1/2 before:w-px
-          before:-translate-x-1/2 before:bg-transparent
-          hover:before:bg-primary/35
-        "
+        aria-label="Resize tool sidebar"
+        aria-orientation="vertical"
+        aria-valuemax={maxWorkspaceRightSidebarWidth}
+        aria-valuemin={minWorkspaceRightSidebarWidth}
+        aria-valuenow={currentWidth}
+        role="separator"
+        tabIndex={0}
+        className={cn(
+          `
+            absolute inset-y-0 left-0 z-10 w-2 -translate-x-1/2
+            cursor-col-resize touch-none outline-none
+            before:absolute before:inset-y-0 before:left-1/2 before:w-px
+            before:-translate-x-1/2 before:bg-transparent
+            hover:before:bg-border-strong
+            focus-visible:before:bg-primary
+          `,
+          resizing && "before:bg-primary",
+        )}
+        onDoubleClick={() => onWidthChange(defaultWorkspaceRightSidebarWidth)}
+        onKeyDown={handleResizeKeyDown}
         onPointerCancel={handleResizePointerEnd}
         onPointerDown={handleResizePointerDown}
         onPointerMove={handleResizePointerMove}

@@ -351,6 +351,25 @@
   --macos-sidebar-background: #151719;
 }
 
+/* File-tree icon palette for the third-party FileTree component (vendor
+   colors, not design tokens). light-dark() resolves via color-scheme set on
+   :root (light) and .dark (dark). */
+:root {
+  --trees-icon-blue: light-dark(#296aa3, #6394bf);
+  --trees-icon-cyan: light-dark(#2993a3, #5eaab5);
+  --trees-icon-gray: light-dark(#6a737d, #959da5);
+  --trees-icon-green: light-dark(#1e754f, #4d9375);
+  --trees-icon-indigo: light-dark(#5a6aa6, #6872ab);
+  --trees-icon-mauve: light-dark(#b05a78, #db889a);
+  --trees-icon-orange: light-dark(#a65e2b, #d4976c);
+  --trees-icon-pink: light-dark(#a13865, #d9739f);
+  --trees-icon-purple: light-dark(#6f42c1, #b392f0);
+  --trees-icon-red: light-dark(#ab5959, #cb7676);
+  --trees-icon-teal: light-dark(#2e808f, #5d99a9);
+  --trees-icon-vermilion: light-dark(#ab5e3f, #c4704f);
+  --trees-icon-yellow: light-dark(#bda437, #e6cc77);
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;

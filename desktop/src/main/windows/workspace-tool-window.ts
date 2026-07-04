@@ -250,12 +250,12 @@ function ensureWorkspaceToolWindow(sourceWindow?: BrowserWindow) {
 function defaultWorkspaceToolWindowBounds(sourceWindow?: BrowserWindow) {
   const { workArea } = workspaceToolWindowDisplay(sourceWindow);
   const width = clampWorkspaceToolWindowDimension(
-    Math.round(workArea.width * 0.94),
+    Math.round(Math.min(1280, workArea.width * 0.9)),
     workspaceToolWindowMinimumBounds.width,
     workArea.width,
   );
   const height = clampWorkspaceToolWindowDimension(
-    Math.round(workArea.height * 0.92),
+    Math.round(Math.min(820, workArea.height * 0.9)),
     workspaceToolWindowMinimumBounds.height,
     workArea.height,
   );

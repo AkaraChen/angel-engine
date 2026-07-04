@@ -15,9 +15,9 @@ const workspaceLastOpenedTargetsStorageKey =
   "angel-engine.workspace-last-opened-chat-ids";
 const rightSidebarWidthStorageKey = "angel-engine.right-sidebar-width";
 const defaultBrowserUrl = "about:blank";
-const defaultRightSidebarWidth = 288;
-const minRightSidebarWidth = 240;
-const maxRightSidebarWidth = 520;
+export const defaultWorkspaceRightSidebarWidth = 288;
+export const minWorkspaceRightSidebarWidth = 240;
+export const maxWorkspaceRightSidebarWidth = 520;
 const initialWorkspaceMode = readWorkspaceMode();
 const initialLastOpenedTargets = readLastOpenedTargets();
 const initialRightSidebarWidth = readRightSidebarWidth();
@@ -270,10 +270,10 @@ function readRightSidebarWidth() {
   try {
     const value = window.localStorage.getItem(rightSidebarWidthStorageKey);
     return value === null
-      ? defaultRightSidebarWidth
+      ? defaultWorkspaceRightSidebarWidth
       : clampWorkspaceRightSidebarWidth(Number(value));
   } catch {
-    return defaultRightSidebarWidth;
+    return defaultWorkspaceRightSidebarWidth;
   }
 }
 
@@ -287,9 +287,9 @@ function writeRightSidebarWidth(rightSidebarWidth: number) {
 export function clampWorkspaceRightSidebarWidth(value: unknown) {
   return clampNumber(
     value,
-    defaultRightSidebarWidth,
-    minRightSidebarWidth,
-    maxRightSidebarWidth,
+    defaultWorkspaceRightSidebarWidth,
+    minWorkspaceRightSidebarWidth,
+    maxWorkspaceRightSidebarWidth,
   );
 }
 

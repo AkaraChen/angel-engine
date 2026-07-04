@@ -55,6 +55,7 @@ import is from "@sindresorhus/is";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { basename } from "pathe";
 import {
+  Fragment,
   lazy,
   Suspense,
   useCallback,
@@ -84,6 +85,7 @@ import {
   workspaceToolFilesTabId,
   workspaceToolGitTabId,
 } from "@/app/workspace/workspace-tool-store";
+import { useWorkspaceUiStore } from "@/app/workspace/workspace-ui-store";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
@@ -98,7 +100,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
-import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Tooltip,
@@ -110,6 +111,47 @@ import { queryKeys } from "@/platform/query-keys";
 import { cn } from "@/platform/utils";
 
 const defaultWorkspaceToolBrowserUrl = "about:blank";
+
+const workspaceToolFileTreeWidthStorageKey =
+  "angel-engine.workspace-tool-file-tree-width";
+const workspaceToolFileTreeWidthMin = 200;
+const workspaceToolFileTreeWidthMax = 520;
+const workspaceToolGitListWidthStorageKey =
+  "angel-engine.workspace-tool-git-list-width";
+const workspaceToolGitListWidthMin = 240;
+const workspaceToolGitListWidthMax = 520;
+
+function readStoredWorkspaceToolPanelWidth({
+  fallback,
+  key,
+  max,
+  min,
+}: {
+  fallback: number;
+  key: string;
+  max: number;
+  min: number;
+}) {
+  const raw = window.localStorage.getItem(key);
+  const parsed = raw === null ? Number.NaN : Number.parseInt(raw, 10);
+  if (!Number.isFinite(parsed)) {
+    return fallback;
+  }
+  return Math.min(max, Math.max(min, parsed));
+}
+
+const initialWorkspaceToolFileTreeWidth = readStoredWorkspaceToolPanelWidth({
+  fallback: 288,
+  key: workspaceToolFileTreeWidthStorageKey,
+  max: workspaceToolFileTreeWidthMax,
+  min: workspaceToolFileTreeWidthMin,
+});
+const initialWorkspaceToolGitListWidth = readStoredWorkspaceToolPanelWidth({
+  fallback: 320,
+  key: workspaceToolGitListWidthStorageKey,
+  max: workspaceToolGitListWidthMax,
+  min: workspaceToolGitListWidthMin,
+});
 
 const loadWorkspaceMonacoModule = async () => import("monaco-editor");
 
@@ -349,19 +391,6 @@ const workspaceFileTreeIconColorStyle: WorkspaceToolCssVariableStyle = {
     "var(--trees-file-icon-color, var(--trees-icon-orange))",
   "--trees-file-icon-color-zip":
     "var(--trees-file-icon-color, var(--trees-icon-orange))",
-  "--trees-icon-blue": "light-dark(#296aa3, #6394bf)",
-  "--trees-icon-cyan": "light-dark(#2993a3, #5eaab5)",
-  "--trees-icon-gray": "light-dark(#6a737d, #959da5)",
-  "--trees-icon-green": "light-dark(#1e754f, #4d9375)",
-  "--trees-icon-indigo": "light-dark(#5a6aa6, #6872ab)",
-  "--trees-icon-mauve": "light-dark(#b05a78, #db889a)",
-  "--trees-icon-orange": "light-dark(#a65e2b, #d4976c)",
-  "--trees-icon-pink": "light-dark(#a13865, #d9739f)",
-  "--trees-icon-purple": "light-dark(#6f42c1, #b392f0)",
-  "--trees-icon-red": "light-dark(#ab5959, #cb7676)",
-  "--trees-icon-teal": "light-dark(#2e808f, #5d99a9)",
-  "--trees-icon-vermilion": "light-dark(#ab5e3f, #c4704f)",
-  "--trees-icon-yellow": "light-dark(#bda437, #e6cc77)",
 };
 
 const diffHostStyle: WorkspaceToolCssVariableStyle = {
@@ -397,10 +426,14 @@ export function WorkspaceToolWindowPage() {
   ensureWorkspaceToolSurfaceEvents();
   const api = getApiClient();
   const root = useWorkspaceToolStore((state) => state.context.root);
+  const workspaceMode = useWorkspaceUiStore((state) => state.workspaceMode);
   const trafficLightInset = window.desktopEnvironment.platform === "darwin";
 
   return (
-    <div className="flex h-screen min-h-0 bg-background text-foreground">
+    <div
+      className="flex h-screen min-h-0 bg-background text-foreground"
+      data-workspace-mode={workspaceMode}
+    >
       <WorkspaceToolWindowTitleBridge root={root} />
       <WorkspaceToolSurface
         api={api}
@@ -429,6 +462,23 @@ export function WorkspaceToolSurface({
   const requestHost = useWorkspaceToolStore(
     (state) => state.requestWorkspaceToolHost,
   );
+  const storeHost = useWorkspaceToolStore((state) => state.host);
+  const surfaceRef = useRef<HTMLElement>(null);
+  const previousStoreHostRef = useRef<WorkspaceToolSurfaceHost | null>(null);
+  useEffect(() => {
+    const previousHost = previousStoreHostRef.current;
+    previousStoreHostRef.current = storeHost;
+    if (
+      host !== "sidebar" ||
+      previousHost !== "window" ||
+      storeHost !== "sidebar"
+    ) {
+      return;
+    }
+    window.requestAnimationFrame(() => {
+      surfaceRef.current?.focus();
+    });
+  }, [host, storeHost]);
   const chatId = propChatId ?? context.chatId ?? null;
   const root = propRoot ?? context.root ?? null;
   const snapshot = currentWorkspaceToolSnapshot(chatId, snapshots);
@@ -611,12 +661,15 @@ export function WorkspaceToolSurface({
     <section
       className="
         flex h-full min-h-0 min-w-0 flex-1 flex-col overflow-hidden
-        bg-background text-foreground
+        bg-background text-foreground select-none
       "
+      ref={surfaceRef}
+      tabIndex={-1}
     >
       {host !== "sidebar" ? (
         <WorkspaceToolSurfaceHeader
           host={host}
+          root={root}
           trafficLightInset={trafficLightInset}
           onRequestHost={(nextHost) => {
             void requestSurfaceHost(nextHost);
@@ -635,7 +688,12 @@ export function WorkspaceToolSurface({
             onCloseDynamicTab={closeDynamicTab}
             onSelectTab={selectTab}
           />
-          <div className="min-h-0 flex-1 overflow-hidden">
+          <div
+            aria-labelledby={`workspace-tool-tab-${activeTabId}`}
+            className="min-h-0 flex-1 overflow-hidden"
+            id="workspace-tool-panel"
+            role="tabpanel"
+          >
             <WorkspaceToolContent
               activeDynamicTab={activeDynamicTab}
               activeTabId={activeTabId}
@@ -657,7 +715,12 @@ export function WorkspaceToolSurface({
             onCloseDynamicTab={closeDynamicTab}
             onSelectTab={selectTab}
           />
-          <div className="min-h-0 min-w-0 flex-1 overflow-hidden">
+          <div
+            aria-labelledby={`workspace-tool-tab-${activeTabId}`}
+            className="min-h-0 min-w-0 flex-1 overflow-hidden"
+            id="workspace-tool-panel"
+            role="tabpanel"
+          >
             <WorkspaceToolWindowContent
               activeDynamicTab={activeDynamicTab}
               activeTabId={activeTabId}
@@ -689,23 +752,30 @@ function WorkspaceToolWindowTitleBridge({ root }: { root?: string | null }) {
 
 function WorkspaceToolSurfaceHeader({
   host,
+  root,
   trafficLightInset,
   onRequestHost,
 }: {
   host: WorkspaceToolSurfaceHost;
+  root?: string | null;
   trafficLightInset: boolean;
   onRequestHost: (host: WorkspaceToolSurfaceHost) => void;
 }) {
   return (
     <div
       className={cn(
-        "flex h-11 shrink-0 items-center gap-2 border-b border-border/70 px-3",
-        trafficLightInset && "h-12 pl-[88px]",
+        `
+          flex h-12 shrink-0 items-center gap-2 border-b border-border-subtle
+          px-3
+        `,
+        trafficLightInset && "pl-[88px]",
       )}
       data-electron-drag={trafficLightInset ? true : undefined}
     >
       <div className="min-w-0 flex-1 truncate text-sm font-medium">
-        Workspace tools
+        {is.nonEmptyString(root)
+          ? `Workspace tools · ${workspaceToolRootName(root)}`
+          : "Workspace tools"}
       </div>
       <WorkspaceToolSurfaceHostControls
         host={host}
@@ -756,11 +826,13 @@ function WorkspaceToolSurfaceHostButton({
       <TooltipTrigger asChild>
         <Button
           aria-label={label}
-          className="text-muted-foreground"
+          className="
+            text-muted-foreground
+            active:bg-overlay-active
+          "
           data-electron-no-drag
           onClick={onClick}
           size="icon-sm"
-          title={label}
           type="button"
           variant="ghost"
         >
@@ -774,14 +846,16 @@ function WorkspaceToolSurfaceHostButton({
   );
 }
 
-function useWorkspaceToolTabKeyboard({
+function useWorkspaceToolTabKeyboard<T extends { id: string }>({
+  onCloseTab,
   onSelectTab,
   orientation,
   tabs,
 }: {
+  onCloseTab?: (tab: T) => void;
   onSelectTab: WorkspaceToolTabSelectHandler;
   orientation: "horizontal" | "vertical";
-  tabs: WorkspaceToolTabItem[];
+  tabs: readonly T[];
 }) {
   const tabButtonsRef = useRef(new Map<string, HTMLButtonElement>());
   const setTabButtonRef = useCallback(
@@ -819,6 +893,25 @@ function useWorkspaceToolTabKeyboard({
         return;
       }
 
+      if (
+        onCloseTab !== undefined &&
+        (event.key === "Delete" || event.key === "Backspace")
+      ) {
+        const tab = tabs.at(currentIndex);
+        if (tab === undefined) {
+          return;
+        }
+        const tablist = event.currentTarget.closest('[role="tablist"]');
+        event.preventDefault();
+        onCloseTab(tab);
+        window.requestAnimationFrame(() => {
+          tablist
+            ?.querySelector<HTMLButtonElement>('[role="tab"][tabindex="0"]')
+            ?.focus();
+        });
+        return;
+      }
+
       let nextIndex: number | null = null;
       if (event.key === "Home") {
         nextIndex = 0;
@@ -843,10 +936,10 @@ function useWorkspaceToolTabKeyboard({
       event.preventDefault();
       selectAndFocusTab(nextIndex);
     },
-    [orientation, selectAndFocusTab, tabs],
+    [onCloseTab, orientation, selectAndFocusTab, tabs],
   );
 
-  return { handleTabKeyDown, setTabButtonRef };
+  return { handleTabKeyDown, setTabButtonRef, tabButtonsRef };
 }
 
 function WorkspaceToolTabStrip({
@@ -864,94 +957,132 @@ function WorkspaceToolTabStrip({
   onCloseDynamicTab: (tab: WorkspaceToolSurfaceDynamicTab) => void;
   onSelectTab: WorkspaceToolTabSelectHandler;
 }) {
-  const { handleTabKeyDown, setTabButtonRef } = useWorkspaceToolTabKeyboard({
-    onSelectTab,
-    orientation: "horizontal",
-    tabs,
-  });
+  const stripRef = useRef<HTMLDivElement>(null);
+  const closeTab = useCallback(
+    (tab: WorkspaceToolTabItem) => {
+      if (tab.dynamicTab) {
+        onCloseDynamicTab(tab.dynamicTab);
+      }
+    },
+    [onCloseDynamicTab],
+  );
+  const { handleTabKeyDown, setTabButtonRef, tabButtonsRef } =
+    useWorkspaceToolTabKeyboard({
+      onCloseTab: closeTab,
+      onSelectTab,
+      orientation: "horizontal",
+      tabs,
+    });
+  useEffect(() => {
+    tabButtonsRef.current
+      .get(activeTabId)
+      ?.scrollIntoView({ block: "nearest", inline: "nearest" });
+  }, [activeTabId, tabButtonsRef]);
 
   return (
     <div
-      aria-label="Workspace tool tabs"
       className="
-        flex h-9 shrink-0 items-stretch border-b border-border/70 bg-muted/20
+        flex h-9 shrink-0 items-center gap-1 border-b border-border-subtle
+        px-1.5
       "
-      role="tablist"
+      ref={stripRef}
     >
-      <div className="flex min-w-0 shrink items-stretch overflow-x-auto">
-        {tabs.map((tab) => {
+      <div
+        aria-label="Workspace tool tabs"
+        className="
+          flex min-w-0 items-center gap-0.5 overflow-x-auto
+          [&::-webkit-scrollbar]:hidden
+        "
+        role="tablist"
+      >
+        {tabs.map((tab, index) => {
           const active = tab.id === activeTabId;
           const Icon = tab.icon;
           const dynamicTab = tab.dynamicTab;
+          const firstDynamicTab =
+            !tab.pinned && tabs.at(index - 1)?.pinned === true;
 
           return (
-            <div
-              className={cn(
-                `
-                  group relative flex h-full max-w-48 min-w-0 shrink-0
-                  items-center overflow-hidden border-r border-border/60 text-xs
-                  text-muted-foreground
-                `,
-                tab.pinned ? "w-9" : "min-w-32",
-                active
-                  ? `
-                    bg-background text-foreground
-                    after:absolute after:inset-x-0 after:bottom-0 after:h-px
-                    after:bg-primary
-                  `
-                  : `
-                    bg-muted/20
-                    hover:bg-muted/60 hover:text-foreground
-                  `,
-              )}
-              key={tab.id}
-            >
-              <button
-                aria-selected={active}
+            <Fragment key={tab.id}>
+              {firstDynamicTab ? (
+                <div
+                  aria-hidden="true"
+                  className="mx-0.5 h-4 w-px shrink-0 bg-border-subtle"
+                />
+              ) : null}
+              <div
                 className={cn(
                   `
-                    flex h-full min-w-0 flex-1 items-center gap-1.5 px-2
-                    text-left outline-none
-                    focus-visible:ring-2 focus-visible:ring-ring/30
+                    flex h-7 shrink-0 items-center overflow-hidden rounded-md
+                    text-muted-foreground
                   `,
-                  tab.pinned && "justify-center",
+                  active
+                    ? "bg-surface-1 text-foreground shadow-xs"
+                    : `
+                      hover:bg-overlay-hover hover:text-foreground
+                      active:bg-overlay-active
+                    `,
                 )}
-                onClick={() => {
-                  void onSelectTab(tab.id);
-                }}
-                onKeyDown={(event) => handleTabKeyDown(event, tab.id)}
-                ref={(button) => setTabButtonRef(tab.id, button)}
-                role="tab"
-                tabIndex={active ? 0 : -1}
-                title={tab.title}
-                type="button"
+                role="presentation"
               >
-                <Icon className="size-3.5 shrink-0" />
-                {!tab.pinned ? (
-                  <span className="truncate">{tab.title}</span>
-                ) : null}
-              </button>
-              {dynamicTab ? (
                 <button
-                  aria-label={`Close ${tab.title}`}
+                  aria-controls="workspace-tool-panel"
+                  aria-selected={active}
                   className="
-                    flex h-full w-6 shrink-0 items-center justify-center
-                    text-muted-foreground/70 outline-none
-                    hover:bg-foreground/5 hover:text-foreground
-                    focus-visible:ring-2 focus-visible:ring-ring/30
+                    flex h-full w-7 shrink-0 items-center justify-center
+                    outline-none
+                    focus-visible:ring-2 focus-visible:ring-ring/50
+                    focus-visible:ring-inset
                   "
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    onCloseDynamicTab(dynamicTab);
+                  id={`workspace-tool-tab-${tab.id}`}
+                  onAuxClick={(event) => {
+                    if (event.button === 1 && dynamicTab) {
+                      event.preventDefault();
+                      onCloseDynamicTab(dynamicTab);
+                    }
                   }}
+                  onClick={() => {
+                    void onSelectTab(tab.id);
+                  }}
+                  onKeyDown={(event) => handleTabKeyDown(event, tab.id)}
+                  ref={(button) => setTabButtonRef(tab.id, button)}
+                  role="tab"
                   tabIndex={active ? 0 : -1}
-                  title={`Close ${tab.title}`}
+                  title={tab.title}
                   type="button"
                 >
-                  <Close className="size-3.5" />
+                  <Icon className="size-3.5 shrink-0" />
                 </button>
-              ) : null}
-            </div>
+                {dynamicTab && active ? (
+                  <button
+                    aria-label={`Close ${tab.title}`}
+                    className="
+                      mr-1 flex size-4.5 shrink-0 items-center justify-center
+                      rounded-sm text-muted-foreground/70 outline-none
+                      hover:bg-overlay-hover hover:text-foreground
+                      focus-visible:ring-2 focus-visible:ring-ring/50
+                      focus-visible:ring-inset
+                      active:bg-overlay-active
+                    "
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      onCloseDynamicTab(dynamicTab);
+                      window.requestAnimationFrame(() => {
+                        stripRef.current
+                          ?.querySelector<HTMLButtonElement>(
+                            '[role="tab"][tabindex="0"]',
+                          )
+                          ?.focus();
+                      });
+                    }}
+                    title={`Close ${tab.title}`}
+                    type="button"
+                  >
+                    <Close className="size-3.5" />
+                  </button>
+                ) : null}
+              </div>
+            </Fragment>
           );
         })}
       </div>
@@ -978,95 +1109,153 @@ function WorkspaceToolVerticalTabSidebar({
   onCloseDynamicTab: (tab: WorkspaceToolSurfaceDynamicTab) => void;
   onSelectTab: WorkspaceToolTabSelectHandler;
 }) {
-  const { handleTabKeyDown, setTabButtonRef } = useWorkspaceToolTabKeyboard({
-    onSelectTab,
-    orientation: "vertical",
-    tabs,
-  });
+  const sidebarRef = useRef<HTMLDivElement>(null);
+  const closeTab = useCallback(
+    (tab: WorkspaceToolTabItem) => {
+      if (tab.dynamicTab) {
+        onCloseDynamicTab(tab.dynamicTab);
+      }
+    },
+    [onCloseDynamicTab],
+  );
+  const { handleTabKeyDown, setTabButtonRef, tabButtonsRef } =
+    useWorkspaceToolTabKeyboard({
+      onCloseTab: closeTab,
+      onSelectTab,
+      orientation: "vertical",
+      tabs,
+    });
+  useEffect(() => {
+    tabButtonsRef.current
+      .get(activeTabId)
+      ?.scrollIntoView({ block: "nearest", inline: "nearest" });
+  }, [activeTabId, tabButtonsRef]);
+
+  const renderTab = (tab: WorkspaceToolTabItem) => {
+    const active = tab.id === activeTabId;
+    const Icon = tab.icon;
+    const dynamicTab = tab.dynamicTab;
+
+    return (
+      <div
+        className={cn(
+          `
+            group flex h-8 min-w-0 shrink-0 items-center overflow-hidden
+            rounded-md text-xs text-muted-foreground
+          `,
+          active
+            ? "bg-background text-foreground shadow-xs"
+            : `
+              hover:bg-overlay-hover hover:text-foreground
+              active:bg-overlay-active
+            `,
+        )}
+        key={tab.id}
+        role="presentation"
+      >
+        <button
+          aria-controls="workspace-tool-panel"
+          aria-selected={active}
+          className="
+            flex h-full min-w-0 flex-1 items-center gap-2 pl-2 text-left
+            outline-none
+            focus-visible:ring-2 focus-visible:ring-ring/50
+            focus-visible:ring-inset
+          "
+          id={`workspace-tool-tab-${tab.id}`}
+          onAuxClick={(event) => {
+            if (event.button === 1 && dynamicTab) {
+              event.preventDefault();
+              onCloseDynamicTab(dynamicTab);
+            }
+          }}
+          onClick={() => {
+            void onSelectTab(tab.id);
+          }}
+          onKeyDown={(event) => handleTabKeyDown(event, tab.id)}
+          ref={(button) => setTabButtonRef(tab.id, button)}
+          role="tab"
+          tabIndex={active ? 0 : -1}
+          title={tab.title}
+          type="button"
+        >
+          <Icon className="size-3.5 shrink-0" />
+          <span className="truncate">{tab.title}</span>
+        </button>
+        {dynamicTab ? (
+          <button
+            aria-label={`Close ${tab.title}`}
+            className={cn(
+              `
+                mr-1 flex size-5 shrink-0 items-center justify-center
+                rounded-sm text-muted-foreground/70 outline-none
+                transition-opacity
+                group-focus-within:opacity-100
+                group-hover:opacity-100
+                hover:bg-overlay-hover hover:text-foreground
+                focus-visible:ring-2 focus-visible:ring-ring/50
+                focus-visible:ring-inset
+                active:bg-overlay-active
+                motion-reduce:transition-none
+              `,
+              active ? "opacity-100" : "opacity-0",
+            )}
+            onClick={(event) => {
+              event.stopPropagation();
+              onCloseDynamicTab(dynamicTab);
+              window.requestAnimationFrame(() => {
+                sidebarRef.current
+                  ?.querySelector<HTMLButtonElement>(
+                    '[role="tab"][tabindex="0"]',
+                  )
+                  ?.focus();
+              });
+            }}
+            tabIndex={active ? 0 : -1}
+            title={`Close ${tab.title}`}
+            type="button"
+          >
+            <Close className="size-3.5" />
+          </button>
+        ) : null}
+      </div>
+    );
+  };
+  const pinnedTabs = tabs.filter((tab) => tab.pinned);
+  const dynamicTabs = tabs.filter((tab) => !tab.pinned);
 
   return (
     <div
-      aria-label="Workspace tool tabs"
-      aria-orientation="vertical"
       className="
-        flex w-56 shrink-0 flex-col border-r border-border/70 bg-muted/20
+        flex w-56 shrink-0 flex-col border-r border-border-subtle bg-surface-1
       "
-      role="tablist"
+      ref={sidebarRef}
     >
-      <div className="flex h-12 shrink-0 items-center px-2">
-        <WorkspaceToolNewTabMenu
-          variant="row"
-          onAddBrowserTab={onAddBrowserTab}
-          onAddTerminalTab={onAddTerminalTab}
-        />
-      </div>
       <div
-        className={cn(
-          "-mt-1 flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto p-2",
-        )}
+        aria-label="Workspace tool tabs"
+        aria-orientation="vertical"
+        className="flex min-h-0 flex-1 flex-col overflow-y-auto p-2"
+        role="tablist"
       >
-        {tabs.map((tab) => {
-          const active = tab.id === activeTabId;
-          const Icon = tab.icon;
-          const dynamicTab = tab.dynamicTab;
-
-          return (
-            <div
-              className={cn(
-                `
-                  group flex h-8 min-w-0 shrink-0 items-center overflow-hidden
-                  rounded-md border border-transparent text-xs
-                  text-muted-foreground
-                `,
-                active
-                  ? "border-border/80 bg-background text-foreground shadow-sm"
-                  : "hover:bg-background/80 hover:text-foreground",
-              )}
-              key={tab.id}
-            >
-              <button
-                aria-selected={active}
-                className="
-                  flex h-full min-w-0 flex-1 items-center gap-2 px-2 text-left
-                  outline-none
-                  focus-visible:ring-2 focus-visible:ring-ring/30
-                "
-                onClick={() => {
-                  void onSelectTab(tab.id);
-                }}
-                onKeyDown={(event) => handleTabKeyDown(event, tab.id)}
-                ref={(button) => setTabButtonRef(tab.id, button)}
-                role="tab"
-                tabIndex={active ? 0 : -1}
-                title={tab.title}
-                type="button"
-              >
-                <Icon className="size-3.5 shrink-0" />
-                <span className="truncate">{tab.title}</span>
-              </button>
-              {dynamicTab ? (
-                <button
-                  aria-label={`Close ${tab.title}`}
-                  className="
-                    flex h-full w-7 shrink-0 items-center justify-center
-                    text-muted-foreground/70 outline-none
-                    hover:bg-foreground/5 hover:text-foreground
-                    focus-visible:ring-2 focus-visible:ring-ring/30
-                  "
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    onCloseDynamicTab(dynamicTab);
-                  }}
-                  tabIndex={active ? 0 : -1}
-                  title={`Close ${tab.title}`}
-                  type="button"
-                >
-                  <Close className="size-3.5" />
-                </button>
-              ) : null}
-            </div>
-          );
-        })}
+        <div className="flex flex-col gap-0.5" role="presentation">
+          {pinnedTabs.map(renderTab)}
+        </div>
+        <div
+          className="mt-3 mb-1 flex h-6 shrink-0 items-center justify-between pl-2"
+          role="presentation"
+        >
+          <span className="text-xs font-medium text-muted-foreground">
+            Tools
+          </span>
+          <WorkspaceToolNewTabMenu
+            variant="section"
+            onAddBrowserTab={onAddBrowserTab}
+            onAddTerminalTab={onAddTerminalTab}
+          />
+        </div>
+        <div className="flex flex-col gap-0.5" role="presentation">
+          {dynamicTabs.map(renderTab)}
+        </div>
       </div>
     </div>
   );
@@ -1075,11 +1264,11 @@ function WorkspaceToolVerticalTabSidebar({
 function WorkspaceToolNewTabMenu({
   onAddBrowserTab,
   onAddTerminalTab,
-  variant = "icon",
+  variant = "strip",
 }: {
   onAddBrowserTab: () => void;
   onAddTerminalTab: () => void;
-  variant?: "icon" | "row";
+  variant?: "section" | "strip";
 }) {
   return (
     <DropdownMenu>
@@ -1087,29 +1276,24 @@ function WorkspaceToolNewTabMenu({
         <Button
           aria-label="New tool tab"
           className={cn(
-            "text-xs",
-            variant === "row"
-              ? `
-                h-8 w-full justify-start gap-2 border-border/70 px-2
-                text-muted-foreground
-              `
-              : "h-full w-8 rounded-none border-0 px-0 text-muted-foreground",
+            `
+              text-muted-foreground
+              hover:bg-overlay-hover
+              active:bg-overlay-active
+            `,
+            variant === "section"
+              ? "size-6 rounded-sm"
+              : "size-7 shrink-0 rounded-md",
           )}
-          size={variant === "row" ? "xs" : "icon-xs"}
+          size="icon-xs"
           title="New tool tab"
           type="button"
-          variant={variant === "row" ? "outline" : "ghost"}
+          variant="ghost"
         >
           <Add className="size-3.5" />
-          {variant === "row" ? (
-            <span className="truncate">New tool tab</span>
-          ) : null}
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent
-        align={variant === "row" ? "start" : "end"}
-        variant="native"
-      >
+      <DropdownMenuContent align="start" variant="native">
         <DropdownMenuItem onSelect={onAddTerminalTab}>
           <TerminalIcon className="size-3.5" />
           <span>Terminal</span>
@@ -1323,6 +1507,102 @@ function useWorkspaceWindowFileOpener(api: ApiClient) {
   );
 }
 
+function WorkspaceToolPanelSplitter({
+  ariaLabel,
+  max,
+  min,
+  onChange,
+  value,
+}: {
+  ariaLabel: string;
+  max: number;
+  min: number;
+  onChange: (value: number) => void;
+  value: number;
+}) {
+  const [resizing, setResizing] = useState(false);
+  const dragStateRef = useRef<{
+    pointerId: number;
+    startWidth: number;
+    startX: number;
+  } | null>(null);
+  const clampWidth = useCallback(
+    (next: number) => Math.min(max, Math.max(min, next)),
+    [max, min],
+  );
+  const endResize = useCallback((event: React.PointerEvent<HTMLDivElement>) => {
+    if (dragStateRef.current?.pointerId !== event.pointerId) {
+      return;
+    }
+    dragStateRef.current = null;
+    setResizing(false);
+  }, []);
+
+  return (
+    <div
+      aria-label={ariaLabel}
+      aria-orientation="vertical"
+      aria-valuemax={max}
+      aria-valuemin={min}
+      aria-valuenow={value}
+      className={cn(
+        `
+          relative w-1 shrink-0 cursor-col-resize touch-none outline-none
+          before:absolute before:inset-y-0 before:left-1/2 before:w-px
+          before:-translate-x-1/2
+        `,
+        resizing
+          ? "before:bg-primary"
+          : `
+            before:bg-border-subtle
+            hover:before:bg-border-strong
+            focus-visible:before:bg-primary
+          `,
+      )}
+      onKeyDown={(event) => {
+        let next: number | null = null;
+        if (event.key === "ArrowLeft") {
+          next = value - 16;
+        } else if (event.key === "ArrowRight") {
+          next = value + 16;
+        } else if (event.key === "Home") {
+          next = min;
+        } else if (event.key === "End") {
+          next = max;
+        }
+        if (next === null) {
+          return;
+        }
+        event.preventDefault();
+        onChange(clampWidth(next));
+      }}
+      onPointerCancel={endResize}
+      onPointerDown={(event) => {
+        event.preventDefault();
+        dragStateRef.current = {
+          pointerId: event.pointerId,
+          startWidth: value,
+          startX: event.clientX,
+        };
+        setResizing(true);
+        event.currentTarget.setPointerCapture(event.pointerId);
+      }}
+      onPointerMove={(event) => {
+        const dragState = dragStateRef.current;
+        if (dragState?.pointerId !== event.pointerId) {
+          return;
+        }
+        onChange(
+          clampWidth(dragState.startWidth + event.clientX - dragState.startX),
+        );
+      }}
+      onPointerUp={endResize}
+      role="separator"
+      tabIndex={0}
+    />
+  );
+}
+
 function WorkspaceFilesPanel({
   api,
   onOpenFile,
@@ -1379,9 +1659,7 @@ function WorkspaceFilesPanel({
         onKeyDown={handleFileTreeKeyDown}
         role="presentation"
       >
-        {treeQuery.isLoading ? (
-          <WorkspaceFileTreeSkeleton />
-        ) : (
+        {treeQuery.isLoading ? null : (
           <FileTree
             className="h-full min-h-0 bg-background text-sm"
             model={model}
@@ -1422,7 +1700,16 @@ function WorkspaceWindowFilesPanel({
   const { model, treeQuery } = useWorkspaceFileTreeModel(api, root);
   const openWorkspaceWindowFile = useWorkspaceWindowFileOpener(api);
   const { activePath, fileStates, openFilePaths } = windowFilesState;
-  const [fileTreeWidth, setFileTreeWidth] = useState(288);
+  const [fileTreeWidth, setFileTreeWidth] = useState(
+    initialWorkspaceToolFileTreeWidth,
+  );
+  const updateFileTreeWidth = useCallback((width: number) => {
+    setFileTreeWidth(width);
+    window.localStorage.setItem(
+      workspaceToolFileTreeWidthStorageKey,
+      String(width),
+    );
+  }, []);
   const dirty = openFilePaths.some((path) =>
     isWorkspaceWindowFileStateDirty(fileStates[path]),
   );
@@ -1591,26 +1878,6 @@ function WorkspaceWindowFilesPanel({
     },
     [root, selectWindowFile],
   );
-  const startFileTreeResize = useCallback(
-    (event: React.PointerEvent<HTMLDivElement>) => {
-      event.preventDefault();
-      const startX = event.clientX;
-      const startWidth = fileTreeWidth;
-      const handlePointerMove = (moveEvent: PointerEvent) => {
-        setFileTreeWidth(
-          Math.min(520, Math.max(200, startWidth + moveEvent.clientX - startX)),
-        );
-      };
-      const stopResize = () => {
-        window.removeEventListener("pointermove", handlePointerMove);
-      };
-
-      window.addEventListener("pointermove", handlePointerMove);
-      window.addEventListener("pointerup", stopResize, { once: true });
-    },
-    [fileTreeWidth],
-  );
-
   if (treeQuery.isError) {
     return (
       <WorkspaceToolEmpty
@@ -1634,9 +1901,7 @@ function WorkspaceWindowFilesPanel({
           onKeyDown={handleFileTreeKeyDown}
           role="presentation"
         >
-          {treeQuery.isLoading ? (
-            <WorkspaceFileTreeSkeleton />
-          ) : (
+          {treeQuery.isLoading ? null : (
             <FileTree
               className="h-full min-h-0 bg-background text-sm"
               model={model}
@@ -1645,15 +1910,12 @@ function WorkspaceWindowFilesPanel({
           )}
         </div>
       </div>
-      <div
-        aria-orientation="vertical"
-        className="
-          w-1 shrink-0 cursor-col-resize border-x border-transparent
-          bg-border/70
-          hover:bg-ring/50
-        "
-        role="separator"
-        onPointerDown={startFileTreeResize}
+      <WorkspaceToolPanelSplitter
+        ariaLabel="Resize file tree"
+        max={workspaceToolFileTreeWidthMax}
+        min={workspaceToolFileTreeWidthMin}
+        value={fileTreeWidth}
+        onChange={updateFileTreeWidth}
       />
       <div className="min-w-0 flex-1">
         <WorkspaceWindowFileEditor
@@ -1757,9 +2019,7 @@ function WorkspaceWindowFileEditor({
         onSelect={onSelect}
       />
       {activeState.status === "loading" ? (
-        <div className="space-y-3 p-4">
-          <Skeleton className="h-[70vh] w-full rounded-md" />
-        </div>
+        <div className="min-h-0 flex-1 bg-background" />
       ) : activeState.status === "error" ? (
         <WorkspaceToolEmpty
           detail={activeState.message}
@@ -1771,13 +2031,7 @@ function WorkspaceWindowFileEditor({
           title={activeState.result.path}
         />
       ) : (
-        <Suspense
-          fallback={
-            <div className="space-y-3 p-4">
-              <Skeleton className="h-[70vh] w-full rounded-md" />
-            </div>
-          }
-        >
+        <Suspense fallback={<div className="min-h-0 flex-1 bg-background" />}>
           <WorkspaceMonacoEditor
             className="min-h-0 flex-1"
             defaultLanguage={getWorkspaceMonacoLanguageFromFileTree(activePath)}
@@ -1806,16 +2060,46 @@ function WorkspaceWindowFileTabBar({
   onClose: (path: string) => void;
   onSelect: (path: string) => void;
 }) {
+  const tabs = useMemo(
+    () => openFilePaths.map((path) => ({ id: path })),
+    [openFilePaths],
+  );
+  const closeTab = useCallback(
+    (tab: { id: string }) => {
+      onClose(tab.id);
+    },
+    [onClose],
+  );
+  const { handleTabKeyDown, setTabButtonRef, tabButtonsRef } =
+    useWorkspaceToolTabKeyboard({
+      onCloseTab: closeTab,
+      onSelectTab: onSelect,
+      orientation: "horizontal",
+      tabs,
+    });
+  useEffect(() => {
+    tabButtonsRef.current
+      .get(activePath)
+      ?.scrollIntoView({ block: "nearest", inline: "nearest" });
+  }, [activePath, tabButtonsRef]);
+
   return (
     <div
       className="
-        flex h-9 shrink-0 items-stretch border-b border-border/70 bg-muted/30
-        text-xs
+        flex h-9 shrink-0 items-stretch border-b border-border-subtle
+        bg-surface-1 text-xs
       "
       style={workspaceFileTreeIconColorStyle}
     >
       <WorkspaceFileTreeIconSprite />
-      <div className="flex min-w-0 flex-1 overflow-x-auto">
+      <div
+        aria-label="Open files"
+        className="
+          flex min-w-0 flex-1 overflow-x-auto
+          [&::-webkit-scrollbar]:hidden
+        "
+        role="tablist"
+      >
         {openFilePaths.map((path) => {
           const active = path === activePath;
           const dirty = isWorkspaceWindowFileStateDirty(fileStates[path]);
@@ -1826,11 +2110,17 @@ function WorkspaceWindowFileTabBar({
               className={cn(
                 `
                   group/tab flex h-9 max-w-80 min-w-32 items-center gap-2
-                  border-r border-border/70 px-3 text-muted-foreground
+                  border-r border-border-subtle px-3 text-muted-foreground
                 `,
-                active ? "bg-background text-foreground" : "hover:bg-muted/60",
+                active
+                  ? "bg-background text-foreground"
+                  : `
+                    hover:bg-overlay-hover hover:text-foreground
+                    active:bg-overlay-active
+                  `,
               )}
               key={path}
+              role="presentation"
               title={path}
             >
               <button
@@ -1838,10 +2128,20 @@ function WorkspaceWindowFileTabBar({
                 className="
                   flex h-full min-w-0 flex-1 items-center gap-2 text-left
                   outline-none
-                  focus-visible:ring-2 focus-visible:ring-ring/30
+                  focus-visible:ring-2 focus-visible:ring-ring/50
+                  focus-visible:ring-inset
                 "
+                onAuxClick={(event) => {
+                  if (event.button === 1) {
+                    event.preventDefault();
+                    onClose(path);
+                  }
+                }}
                 onClick={() => onSelect(path)}
+                onKeyDown={(event) => handleTabKeyDown(event, path)}
+                ref={(button) => setTabButtonRef(path, button)}
                 role="tab"
+                tabIndex={active ? 0 : -1}
                 type="button"
               >
                 <WorkspaceFileTreeFileIcon path={path} />
@@ -1850,15 +2150,18 @@ function WorkspaceWindowFileTabBar({
               <button
                 aria-label={`Close ${fileName}`}
                 className="
-                  ml-1 flex size-5 shrink-0 items-center justify-center
-                  rounded-sm text-muted-foreground outline-none
-                  hover:bg-muted hover:text-foreground
-                  focus-visible:ring-2 focus-visible:ring-ring/30
+                  group/close ml-1 flex size-5 shrink-0 items-center
+                  justify-center rounded-sm text-muted-foreground outline-none
+                  hover:bg-overlay-hover hover:text-foreground
+                  focus-visible:ring-2 focus-visible:ring-ring/50
+                  focus-visible:ring-inset
+                  active:bg-overlay-active
                 "
                 onClick={(event) => {
                   event.stopPropagation();
                   onClose(path);
                 }}
+                tabIndex={active ? 0 : -1}
                 title={`Close ${fileName}`}
                 type="button"
               >
@@ -1866,14 +2169,14 @@ function WorkspaceWindowFileTabBar({
                   <>
                     <span
                       className="
-                        size-2 rounded-full bg-muted-foreground
-                        group-hover/tab:hidden
+                        size-2 rounded-full bg-foreground
+                        group-hover/close:hidden
                       "
                     />
                     <Close
                       className="
                         hidden size-3.5
-                        group-hover/tab:block
+                        group-hover/close:block
                       "
                     />
                   </>
@@ -1885,7 +2188,6 @@ function WorkspaceWindowFileTabBar({
           );
         })}
       </div>
-      <div className="min-w-0 flex-1" />
     </div>
   );
 }
@@ -2035,13 +2337,7 @@ function WorkspaceGitPanel({ api, root }: { api: ApiClient; root: string }) {
   }
 
   if (gitQuery.isLoading) {
-    return (
-      <div className="space-y-3 p-3">
-        <Skeleton className="h-7 w-32 rounded-md" />
-        <Skeleton className="h-24 w-full rounded-md" />
-        <Skeleton className="h-40 w-full rounded-md" />
-      </div>
-    );
+    return null;
   }
 
   const data = gitQuery.data;
@@ -2068,8 +2364,9 @@ function WorkspaceGitPanel({ api, root }: { api: ApiClient; root: string }) {
         {data.warnings.length > 0 ? (
           <div
             className="
-              m-3 space-y-1 rounded-md border border-border/70 bg-muted/30 p-2
-              text-xs text-muted-foreground
+              m-3 space-y-1 rounded-md border border-status-attention-border
+              bg-status-attention-soft p-2 text-xs text-muted-foreground
+              select-text
             "
           >
             {data.warnings.map((warning) => (
@@ -2123,6 +2420,16 @@ function WorkspaceWindowGitPanel({
     setCommitSummary,
   } = useWorkspaceGitPanelState(api, root);
   const [activeFileKey, setActiveFileKey] = useState<string | null>(null);
+  const [gitListWidth, setGitListWidth] = useState(
+    initialWorkspaceToolGitListWidth,
+  );
+  const updateGitListWidth = useCallback((width: number) => {
+    setGitListWidth(width);
+    window.localStorage.setItem(
+      workspaceToolGitListWidthStorageKey,
+      String(width),
+    );
+  }, []);
 
   if (gitQuery.isError) {
     return (
@@ -2134,18 +2441,7 @@ function WorkspaceWindowGitPanel({
   }
 
   if (gitQuery.isLoading) {
-    return (
-      <div className="flex h-full min-h-0 bg-background">
-        <div className="w-80 shrink-0 border-r border-border/70 p-3">
-          <Skeleton className="h-8 w-full rounded-md" />
-          <Skeleton className="mt-3 h-48 w-full rounded-md" />
-        </div>
-        <div className="min-w-0 flex-1 p-3">
-          <Skeleton className="h-8 w-64 rounded-md" />
-          <Skeleton className="mt-3 h-[70vh] w-full rounded-md" />
-        </div>
-      </div>
-    );
+    return null;
   }
 
   const data = gitQuery.data;
@@ -2171,13 +2467,14 @@ function WorkspaceWindowGitPanel({
 
   return (
     <div className="flex h-full min-h-0 bg-background">
-      <div className="flex w-80 shrink-0 flex-col border-r border-border/70">
+      <div className="flex shrink-0 flex-col" style={{ width: gitListWidth }}>
         <div className="min-h-0 flex-1 overflow-auto">
           {data.warnings.length > 0 ? (
             <div
               className="
-                m-3 space-y-1 rounded-md border border-border/70 bg-muted/30 p-2
-                text-xs text-muted-foreground
+                m-3 space-y-1 rounded-md border border-status-attention-border
+                bg-status-attention-soft p-2 text-xs text-muted-foreground
+                select-text
               "
             >
               {data.warnings.map((warning) => (
@@ -2212,6 +2509,13 @@ function WorkspaceWindowGitPanel({
           onSummaryChange={setCommitSummary}
         />
       </div>
+      <WorkspaceToolPanelSplitter
+        ariaLabel="Resize Git change list"
+        max={workspaceToolGitListWidthMax}
+        min={workspaceToolGitListWidthMin}
+        value={gitListWidth}
+        onChange={updateGitListWidth}
+      />
       <div className="min-w-0 flex-1 overflow-hidden">
         <WorkspaceWindowGitDiffViewer file={activeFile} />
       </div>
@@ -2235,8 +2539,8 @@ function WorkspaceWindowGitDiffViewer({
     <div className="flex h-full min-h-0 flex-col bg-background">
       <div
         className="
-          flex h-8 shrink-0 items-center gap-2 border-b border-border/70 px-3
-          text-xs
+          flex h-9 shrink-0 items-center gap-2 border-b border-border-subtle
+          px-3 text-xs
         "
       >
         <span className="min-w-0 flex-1 truncate font-medium" title={fileName}>
@@ -2280,24 +2584,20 @@ function WorkspaceGitCommitComposer({
 
   return (
     <form
-      className="shrink-0 border-t border-border/70 bg-background p-2"
+      className="shrink-0 border-t border-border-subtle bg-background p-2"
       onSubmit={onSubmit}
     >
       <div className="space-y-1.5">
         <Input
           className="
-            h-6 rounded-md bg-muted/40 px-2 py-0.5 text-[11px]/4
-            md:text-[11px]
+            h-6 rounded-md bg-surface-1 px-2 py-0.5 text-xs select-text
           "
           placeholder="Summary"
           value={summary}
           onChange={(event) => onSummaryChange(event.currentTarget.value)}
         />
         <Textarea
-          className="
-            min-h-12 rounded-md bg-muted/40 p-1.5 text-[11px]/4
-            md:text-[11px]
-          "
+          className="min-h-12 rounded-md bg-surface-1 p-1.5 text-xs select-text"
           placeholder="Description"
           value={description}
           onChange={(event) => onDescriptionChange(event.currentTarget.value)}
@@ -2305,19 +2605,16 @@ function WorkspaceGitCommitComposer({
         {is.nonEmptyString(errorMessage) ? (
           <div
             className="
-              rounded-md border border-destructive/40 bg-destructive/5 px-2
-              py-1.5 text-[11px] text-destructive
+              rounded-md border border-status-danger-border
+              bg-status-danger-soft px-2 py-1.5 text-xs text-status-danger
+              select-text
             "
           >
             {errorMessage}
           </div>
         ) : null}
         <div className="flex items-center gap-1.5">
-          <div
-            className="
-              min-w-0 flex-1 truncate text-[11px] text-muted-foreground
-            "
-          >
+          <div className="min-w-0 flex-1 truncate text-xs text-muted-foreground">
             {selectedCount.toLocaleString()} of {totalCount.toLocaleString()}{" "}
             files selected
           </div>
@@ -2349,12 +2646,7 @@ function WorkspaceFilePreview({
   });
 
   if (fileQuery.isLoading) {
-    return (
-      <div className="space-y-3 p-4">
-        <Skeleton className="h-6 w-60 rounded-md" />
-        <Skeleton className="h-96 w-full rounded-md" />
-      </div>
-    );
+    return null;
   }
 
   if (fileQuery.isError) {
@@ -2384,13 +2676,7 @@ function WorkspaceGitDiffTool({
   });
 
   if (gitQuery.isLoading) {
-    return (
-      <div className="space-y-3 p-3">
-        <Skeleton className="h-7 w-32 rounded-md" />
-        <Skeleton className="h-24 w-full rounded-md" />
-        <Skeleton className="h-40 w-full rounded-md" />
-      </div>
-    );
+    return null;
   }
 
   if (gitQuery.isError) {
@@ -2553,15 +2839,18 @@ function WorkspaceBrowserTabContent({
     <div className="flex h-full min-h-0 flex-col">
       <form
         className="
-          flex h-11 shrink-0 items-center gap-1 border-b border-border/70 px-2
+          flex h-9 shrink-0 items-center gap-1 border-b border-border-subtle
+          px-2
         "
         onSubmit={handleSubmit}
       >
         <Button
           aria-label="Back"
+          className="active:bg-overlay-active"
           disabled={!browserState.canGoBack}
           onClick={goBack}
           size="icon-xs"
+          title="Back"
           type="button"
           variant="ghost"
         >
@@ -2569,9 +2858,11 @@ function WorkspaceBrowserTabContent({
         </Button>
         <Button
           aria-label="Forward"
+          className="active:bg-overlay-active"
           disabled={!browserState.canGoForward}
           onClick={goForward}
           size="icon-xs"
+          title="Forward"
           type="button"
           variant="ghost"
         >
@@ -2579,9 +2870,11 @@ function WorkspaceBrowserTabContent({
         </Button>
         <Button
           aria-label="Reload"
+          className="active:bg-overlay-active"
           disabled={!browserState.ready}
           onClick={reload}
           size="icon-xs"
+          title="Reload"
           type="button"
           variant="ghost"
         >
@@ -2589,8 +2882,16 @@ function WorkspaceBrowserTabContent({
         </Button>
         <Input
           aria-label="URL"
-          className="h-7 rounded-md px-2 text-xs"
+          className="h-7 rounded-md px-2 text-xs select-text"
           onChange={(event) => updateDraftUrl(event.currentTarget.value)}
+          onFocus={(event) => event.currentTarget.select()}
+          onKeyDown={(event) => {
+            if (event.key === "Escape") {
+              event.preventDefault();
+              updateDraftUrl(tab.url);
+              event.currentTarget.blur();
+            }
+          }}
           value={tab.draftUrl}
         />
       </form>
@@ -2627,8 +2928,8 @@ function WorkspaceFileReadResultView({
     <div className="flex h-full min-h-0 flex-col bg-background">
       <div
         className="
-          flex h-9 shrink-0 items-center gap-2 border-b border-border/70 px-3
-          text-xs text-muted-foreground
+          flex h-9 shrink-0 items-center gap-2 border-b border-border-subtle
+          px-3 text-xs text-muted-foreground
         "
       >
         <span className="min-w-0 flex-1 truncate" title={result.path}>
@@ -2639,7 +2940,7 @@ function WorkspaceFileReadResultView({
       <pre
         className="
           min-h-0 flex-1 overflow-auto p-4 font-mono text-xs/5 whitespace-pre
-          text-foreground
+          text-foreground select-text
         "
       >
         {result.content}
@@ -2672,8 +2973,9 @@ function WorkspaceGitDiffResultView({
       {data.warnings.length > 0 ? (
         <div
           className="
-            mb-3 space-y-1 rounded-md border border-border/70 bg-muted/30 p-2
-            text-xs text-muted-foreground
+            mb-3 space-y-1 rounded-md border border-status-attention-border
+            bg-status-attention-soft p-2 text-xs text-muted-foreground
+            select-text
           "
         >
           {data.warnings.map((warning) => (
@@ -2684,8 +2986,9 @@ function WorkspaceGitDiffResultView({
       {patchList.errors.map((error) => (
         <div
           className="
-            mb-2 rounded-md border border-destructive/40 bg-destructive/5 px-3
-            py-2 text-xs text-destructive
+            mb-2 rounded-md border border-status-danger-border
+            bg-status-danger-soft px-3 py-2 text-xs text-status-danger
+            select-text
           "
           key={error}
         >
@@ -2734,8 +3037,8 @@ function WorkspaceToolPatchFileList({
       {patchList.errors.map((error) => (
         <div
           className="
-            rounded-md border border-destructive/40 bg-destructive/5 px-3 py-2
-            text-xs text-destructive
+            rounded-md border border-status-danger-border bg-status-danger-soft
+            px-3 py-2 text-xs text-status-danger select-text
           "
           key={error}
         >
@@ -2803,7 +3106,7 @@ function WorkspaceToolPatchFileRows({
     <div
       className={cn(
         "overflow-hidden bg-background",
-        flush ? "" : "rounded-md border border-border/70",
+        flush ? "" : "rounded-md border border-border-subtle",
       )}
     >
       {files.map((file) => (
@@ -2845,17 +3148,18 @@ function WorkspaceToolPatchFileItem({
       <div
         className={cn(
           `
-            border-b border-border/70
+            border-b border-border-subtle
             last:border-b-0
           `,
-          active ? "bg-muted/60" : "",
+          active ? "bg-surface-1" : "",
         )}
       >
         <div
           className="
             group flex min-h-8 w-full items-center gap-2 px-2.5 py-1 text-xs
             transition-colors
-            hover:bg-muted/50
+            hover:bg-overlay-hover
+            active:bg-overlay-active
           "
         >
           <Checkbox
@@ -2868,7 +3172,8 @@ function WorkspaceToolPatchFileItem({
             aria-current={active ? "true" : undefined}
             className="
               flex min-w-0 flex-1 items-center gap-2 text-left outline-none
-              focus-visible:ring-2 focus-visible:ring-ring/30
+              focus-visible:ring-2 focus-visible:ring-ring/50
+              focus-visible:ring-inset
             "
             type="button"
             onClick={() => onActivate?.(file)}
@@ -2889,7 +3194,7 @@ function WorkspaceToolPatchFileItem({
   return (
     <Collapsible
       className="
-        border-b border-border/70
+        border-b border-border-subtle
         last:border-b-0
       "
       open={open}
@@ -2899,7 +3204,8 @@ function WorkspaceToolPatchFileItem({
         className="
           group flex min-h-8 w-full items-center gap-2 px-2.5 py-1 text-xs
           transition-colors
-          hover:bg-muted/50
+          hover:bg-overlay-hover
+          active:bg-overlay-active
         "
       >
         <Checkbox
@@ -2911,7 +3217,8 @@ function WorkspaceToolPatchFileItem({
         <CollapsibleTrigger
           className="
             flex min-w-0 flex-1 items-center gap-2 text-left outline-none
-            focus-visible:ring-2 focus-visible:ring-ring/30
+            focus-visible:ring-2 focus-visible:ring-ring/50
+            focus-visible:ring-inset
           "
           type="button"
         >
@@ -2930,6 +3237,7 @@ function WorkspaceToolPatchFileItem({
             overflow-hidden
             data-[state=closed]:animate-collapsible-up
             data-[state=open]:animate-collapsible-down
+            motion-reduce:animate-none
           "
         >
           <WorkspaceToolPatchFileDiffContent file={file} borderTop />
@@ -2947,11 +3255,11 @@ function WorkspaceToolPatchFileDiffContent({
   file: WorkspaceToolPatchFile;
 }) {
   return (
-    <div className={cn(borderTop ? "border-t border-border/70" : "")}>
+    <div className={cn(borderTop ? "border-t border-border-subtle" : "")}>
       {file.diffs.map((diff, index) => (
         <div
           className="
-            overflow-hidden border-b border-border/70
+            overflow-hidden border-b border-border-subtle
             last:border-b-0
           "
           key={workspaceToolFileDiffKey(diff.source, diff.fileDiff, index)}
@@ -2959,8 +3267,8 @@ function WorkspaceToolPatchFileDiffContent({
           {file.diffs.length > 1 ? (
             <div
               className="
-                border-b border-border/70 px-2.5 py-1 text-[11px] font-medium
-                text-muted-foreground
+                border-b border-border-subtle px-2.5 py-1 text-[11px]
+                font-medium text-muted-foreground
               "
             >
               {formatWorkspaceToolPatchSource(diff.source)}
@@ -2997,12 +3305,7 @@ function WorkspaceToolPatchFileLineStats({
         </span>
       ) : null}
       {lineChanges.deletions > 0 ? (
-        <span
-          className="
-            font-medium text-red-600
-            dark:text-red-400
-          "
-        >
+        <span className="font-medium text-status-danger">
           -{lineChanges.deletions.toLocaleString()}
         </span>
       ) : null}
@@ -3029,12 +3332,7 @@ function WorkspaceToolFileDiff({
   });
 
   if (!preloadQuery.data && !preloadQuery.isError) {
-    return (
-      <div className="space-y-2 p-2">
-        <Skeleton className="h-6 w-48 rounded-md" />
-        <Skeleton className="h-40 w-full rounded-md" />
-      </div>
-    );
+    return null;
   }
 
   if (preloadQuery.isError) {
@@ -3094,22 +3392,15 @@ function WorkspaceToolEmpty({
       <div className="max-w-80 space-y-1">
         <div className="text-sm font-medium">{title}</div>
         {is.nonEmptyString(detail) ? (
-          <div className="text-xs wrap-break-word text-muted-foreground">
+          <div
+            className="
+              text-xs wrap-break-word text-muted-foreground select-text
+            "
+          >
             {detail}
           </div>
         ) : null}
       </div>
-    </div>
-  );
-}
-
-function WorkspaceFileTreeSkeleton() {
-  return (
-    <div className="space-y-2 p-2">
-      <Skeleton className="h-6 w-11/12 rounded-md" />
-      <Skeleton className="h-6 w-9/12 rounded-md" />
-      <Skeleton className="h-6 w-10/12 rounded-md" />
-      <Skeleton className="h-6 w-8/12 rounded-md" />
     </div>
   );
 }
