@@ -57,6 +57,8 @@ import {
   chatRoutePath,
   chatRoutePathId,
   currentHashRoutePath,
+  isChatOpenableInWorkspaceMode,
+  lastOpenedTargetPath,
   projectChatRoutePath,
   projectDraftRoutePath,
 } from "@/app/workspace/workspace-route-paths";
@@ -292,6 +294,12 @@ function WorkspacePageContent({
     (state) => state.rightSidebarWidth,
   );
   const workspaceMode = useWorkspaceUiStore((state) => state.workspaceMode);
+  const lastOpenedTargets = useWorkspaceUiStore(
+    (state) => state.lastOpenedTargets,
+  );
+  const rememberLastOpenedTarget = useWorkspaceUiStore(
+    (state) => state.rememberLastOpenedTarget,
+  );
   const setWorkspaceMode = useWorkspaceUiStore(
     (state) => state.setWorkspaceMode,
   );
@@ -588,6 +596,33 @@ function WorkspacePageContent({
     window.desktopWindow.setActiveChatId(selectedChatId ?? null);
   }, [selectedChatId]);
 
+  useEffect(() => {
+    if (
+      selectedChat &&
+      isChatOpenableInWorkspaceMode(selectedChat, workspaceMode)
+    ) {
+      rememberLastOpenedTarget(workspaceMode, {
+        chatId: selectedChat.id,
+        type: "chat",
+      });
+      return;
+    }
+    if (isDraftPage) {
+      rememberLastOpenedTarget(
+        workspaceMode,
+        workspaceMode === "work" && routeDraftProjectId !== undefined
+          ? { projectId: routeDraftProjectId, type: "draft" }
+          : { type: "draft" },
+      );
+    }
+  }, [
+    isDraftPage,
+    rememberLastOpenedTarget,
+    routeDraftProjectId,
+    selectedChat,
+    workspaceMode,
+  ]);
+
   useEffect(
     () =>
       window.desktopWindow.onOpenChatFromNotification((event) => {
@@ -668,53 +703,6 @@ function WorkspacePageContent({
       }
     },
     [location, navigate, workspaceMode],
-  );
-
-  const changeWorkspaceMode = useCallback(
-    (nextWorkspaceMode: WorkspaceMode) => {
-      if (nextWorkspaceMode === workspaceMode) return;
-
-      setWorkspaceMode(nextWorkspaceMode);
-      if (settingsActive) return;
-
-      if (nextWorkspaceMode === "chat") {
-        navigate(
-          is.nonEmptyString(selectedChatId)
-            ? chatRoutePathId(selectedChatId)
-            : "/",
-          { replace: true },
-        );
-        return;
-      }
-
-      if (
-        is.nonEmptyString(selectedChatId) &&
-        is.nonEmptyString(selectedChat?.projectId)
-      ) {
-        navigate(projectChatRoutePath(selectedChat.projectId, selectedChatId), {
-          replace: true,
-        });
-        return;
-      }
-
-      const latestProjectChat = chats.find((chat) =>
-        is.nonEmptyString(chat.projectId),
-      );
-      if (is.nonEmptyString(latestProjectChat?.projectId)) {
-        navigate(projectDraftRoutePath(latestProjectChat.projectId), {
-          replace: true,
-        });
-      }
-    },
-    [
-      chats,
-      navigate,
-      selectedChat,
-      selectedChatId,
-      setWorkspaceMode,
-      settingsActive,
-      workspaceMode,
-    ],
   );
 
   const updateChatFromRun = useCallback(
@@ -967,7 +955,7 @@ function WorkspacePageContent({
   );
 
   const startNewDraftSession = useCallback(
-    (projectId?: string) => {
+    (projectId?: string, options?: { replace?: boolean }) => {
       const nextDraftRuntimeKey = draftRuntimeKeyFromProjectId(projectId);
       const nextSessionId = ++draftSessionCounterRef.current;
       const nextRuntimePageKey = workspaceRuntimePageKey({
@@ -1010,7 +998,7 @@ function WorkspacePageContent({
             inheritedConfig,
         }));
       }
-      navigateToDraft(projectId);
+      navigateToDraft(projectId, options);
     },
     [
       activeRuntime,
@@ -1023,6 +1011,37 @@ function WorkspacePageContent({
       setDraftAgentConfigs,
       setDraftRuntimes,
       setDraftSessionIds,
+    ],
+  );
+
+  const changeWorkspaceMode = useCallback(
+    (nextWorkspaceMode: WorkspaceMode) => {
+      if (nextWorkspaceMode === workspaceMode) return;
+
+      setWorkspaceMode(nextWorkspaceMode);
+
+      const path = lastOpenedTargetPath({
+        chats,
+        target: lastOpenedTargets[nextWorkspaceMode],
+        workspaceMode: nextWorkspaceMode,
+      });
+      if (path !== undefined) {
+        if (location !== path) {
+          navigate(path, { replace: true });
+        }
+        return;
+      }
+
+      startNewDraftSession(undefined, { replace: true });
+    },
+    [
+      chats,
+      lastOpenedTargets,
+      location,
+      navigate,
+      setWorkspaceMode,
+      startNewDraftSession,
+      workspaceMode,
     ],
   );
 

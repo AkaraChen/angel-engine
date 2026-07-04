@@ -9,6 +9,7 @@ import {
   RiChatNewLine as MessageSquarePlus,
   RiSettings3Line as Settings,
 } from "@remixicon/react";
+import is from "@sindresorhus/is";
 import { m } from "framer-motion";
 import { useEffect, useId, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -218,6 +219,9 @@ function WorkspaceSidebarContent({
 }: WorkspaceSidebarProps): ReactElement {
   const { t } = useTranslation();
   const workspaceMode = useWorkspaceUiStore((state) => state.workspaceMode);
+  const standaloneChats = chats.filter(
+    (chat) => !is.nonEmptyString(chat.projectId),
+  );
   const createChatFromNewButton = async () => {
     if (selectedChatId === undefined && !settingsActive) return;
 
@@ -261,7 +265,7 @@ function WorkspaceSidebarContent({
 
         {workspaceMode === "chat" ? (
           <SimpleChatSidebarSection
-            chats={chats}
+            chats={standaloneChats}
             isLoading={isChatsLoading}
             onArchiveChat={onArchiveChat}
             onOpenChat={onOpenChat}

@@ -2,13 +2,24 @@ import { create } from "zustand";
 
 export type WorkspaceMode = "chat" | "work";
 
+export type WorkspaceLastOpenedTarget =
+  | { chatId: string; type: "chat" }
+  | { projectId?: string; type: "draft" };
+
+type WorkspaceLastOpenedTargets = Partial<
+  Record<WorkspaceMode, WorkspaceLastOpenedTarget>
+>;
+
 const workspaceModeStorageKey = "angel-engine.workspace-mode";
+const workspaceLastOpenedTargetsStorageKey =
+  "angel-engine.workspace-last-opened-chat-ids";
 const rightSidebarWidthStorageKey = "angel-engine.right-sidebar-width";
 const defaultBrowserUrl = "about:blank";
 const defaultRightSidebarWidth = 288;
 const minRightSidebarWidth = 240;
 const maxRightSidebarWidth = 520;
 const initialWorkspaceMode = readWorkspaceMode();
+const initialLastOpenedTargets = readLastOpenedTargets();
 const initialRightSidebarWidth = readRightSidebarWidth();
 
 export type SidebarChatDateGroupKey =
@@ -23,6 +34,11 @@ interface WorkspaceUiState {
   browserUrl: string;
   collapsedChatDateGroupKeys: Set<SidebarChatDateGroupKey>;
   expandedProjectIds: Set<string>;
+  lastOpenedTargets: WorkspaceLastOpenedTargets;
+  rememberLastOpenedTarget: (
+    workspaceMode: WorkspaceMode,
+    target: WorkspaceLastOpenedTarget,
+  ) => void;
   rightSidebarOpen: boolean;
   rightSidebarWidth: number;
   setBrowserUrl: (browserUrl: string) => void;
@@ -49,6 +65,29 @@ export const useWorkspaceUiStore = create<WorkspaceUiState>()((set) => ({
   browserUrl: defaultBrowserUrl,
   collapsedChatDateGroupKeys: new Set(),
   expandedProjectIds: new Set(),
+  lastOpenedTargets: initialLastOpenedTargets,
+  rememberLastOpenedTarget: (workspaceMode, target) =>
+    set((current) => {
+      const nextWorkspaceMode = sanitizeWorkspaceMode(workspaceMode);
+      const nextTarget = sanitizeLastOpenedTarget(target);
+      if (nextTarget === undefined) return current;
+      if (
+        lastOpenedTargetsEqual(
+          current.lastOpenedTargets[nextWorkspaceMode],
+          nextTarget,
+        )
+      ) {
+        return current;
+      }
+
+      const lastOpenedTargets = {
+        ...current.lastOpenedTargets,
+        [nextWorkspaceMode]: nextTarget,
+      };
+      writeLastOpenedTargets(lastOpenedTargets);
+
+      return { lastOpenedTargets };
+    }),
   rightSidebarOpen: initialWorkspaceMode === "work",
   rightSidebarWidth: initialRightSidebarWidth,
   setBrowserUrl: (browserUrl) =>
@@ -147,8 +186,78 @@ function writeWorkspaceMode(workspaceMode: WorkspaceMode) {
   window.localStorage.setItem(workspaceModeStorageKey, workspaceMode);
 }
 
+function readLastOpenedTargets(): WorkspaceLastOpenedTargets {
+  try {
+    return sanitizeLastOpenedTargets(
+      JSON.parse(
+        window.localStorage.getItem(workspaceLastOpenedTargetsStorageKey) ??
+          "{}",
+      ),
+    );
+  } catch {
+    return {};
+  }
+}
+
+function writeLastOpenedTargets(lastOpenedTargets: WorkspaceLastOpenedTargets) {
+  window.localStorage.setItem(
+    workspaceLastOpenedTargetsStorageKey,
+    JSON.stringify(sanitizeLastOpenedTargets(lastOpenedTargets)),
+  );
+}
+
+function sanitizeLastOpenedTargets(value: unknown): WorkspaceLastOpenedTargets {
+  if (value === null || typeof value !== "object") return {};
+  const record = value as Record<string, unknown>;
+
+  return {
+    chat: sanitizeLastOpenedTarget(record.chat),
+    work: sanitizeLastOpenedTarget(record.work),
+  };
+}
+
+function sanitizeLastOpenedTarget(
+  value: unknown,
+): WorkspaceLastOpenedTarget | undefined {
+  const legacyChatId = sanitizeOptionalString(value);
+  if (legacyChatId !== undefined) {
+    return { chatId: legacyChatId, type: "chat" };
+  }
+  if (value === null || typeof value !== "object") return undefined;
+  const record = value as Record<string, unknown>;
+
+  if (record.type === "chat") {
+    const chatId = sanitizeOptionalString(record.chatId);
+    return chatId === undefined ? undefined : { chatId, type: "chat" };
+  }
+  if (record.type === "draft") {
+    const projectId = sanitizeOptionalString(record.projectId);
+    return projectId === undefined
+      ? { type: "draft" }
+      : { projectId, type: "draft" };
+  }
+  return undefined;
+}
+
+function lastOpenedTargetsEqual(
+  left: WorkspaceLastOpenedTarget | undefined,
+  right: WorkspaceLastOpenedTarget,
+) {
+  if (left === undefined) return false;
+  if (left.type === "chat" || right.type === "chat") {
+    return left.type === "chat" && right.type === "chat"
+      ? left.chatId === right.chatId
+      : false;
+  }
+  return left.projectId === right.projectId;
+}
+
 function sanitizeWorkspaceMode(value: unknown): WorkspaceMode {
   return value === "work" ? "work" : "chat";
+}
+
+function sanitizeOptionalString(value: unknown) {
+  return typeof value === "string" && value.trim() ? value.trim() : undefined;
 }
 
 function sanitizeBrowserUrl(value: unknown) {

@@ -1,5 +1,9 @@
 import type { Chat } from "@shared/chat";
 import type { DesktopOpenChatFromNotificationEvent } from "@shared/desktop-window";
+import type {
+  WorkspaceLastOpenedTarget,
+  WorkspaceMode,
+} from "@/app/workspace/workspace-ui-store";
 import is from "@sindresorhus/is";
 
 export function chatRoutePath(
@@ -22,6 +26,37 @@ export function projectChatRoutePath(projectId: string, chatId: string) {
 
 export function projectDraftRoutePath(projectId: string) {
   return `/project/${encodeURIComponent(projectId)}`;
+}
+
+export function isChatOpenableInWorkspaceMode(
+  chat: Chat,
+  workspaceMode: WorkspaceMode,
+) {
+  const isProjectChat = is.nonEmptyString(chat.projectId);
+  return workspaceMode === "work" ? isProjectChat : !isProjectChat;
+}
+
+export function lastOpenedTargetPath({
+  chats,
+  target,
+  workspaceMode,
+}: {
+  chats: Chat[];
+  target?: WorkspaceLastOpenedTarget;
+  workspaceMode: WorkspaceMode;
+}) {
+  if (target === undefined) return undefined;
+  if (target.type === "draft") {
+    if (workspaceMode === "chat" || target.projectId === undefined) return "/";
+    return projectDraftRoutePath(target.projectId);
+  }
+
+  const chat = chats.find((item) => item.id === target.chatId);
+  if (!chat || chat.archived) return undefined;
+
+  return isChatOpenableInWorkspaceMode(chat, workspaceMode)
+    ? chatRoutePath(chat, { includeProject: workspaceMode === "work" })
+    : undefined;
 }
 
 export function chatNotificationRoutePath(
