@@ -4,8 +4,8 @@
 @import "shadcn/tailwind.css";
 @import "katex/dist/katex.min.css";
 @import "streamdown/styles.css";
-@import "@fontsource-variable/inter/wght.css";
-@import "@fontsource-variable/inter/wght-italic.css";
+@import "@fontsource-variable/ibm-plex-sans/wght.css";
+@import "@fontsource-variable/ibm-plex-sans/wght-italic.css";
 @import "@fontsource-variable/playwrite-de-la/wght.css";
 @import "@fontsource/noto-sans-sc/chinese-simplified-400.css";
 @import "@fontsource/noto-sans-sc/chinese-simplified-500.css";
@@ -55,7 +55,6 @@
   --color-overlay-active: var(--overlay-active);
   --color-border-subtle: var(--border-subtle);
   --color-border-strong: var(--border-strong);
-  --color-brand-accent: var(--brand-accent);
   --color-primary-hover: var(--primary-hover);
   --color-primary-active: var(--primary-active);
   --color-primary-soft: var(--primary-soft);
@@ -119,13 +118,14 @@
 
 :root {
   color-scheme: light;
+  --app-font-latin: "IBM Plex Sans Variable";
   --app-font-cjk: "Noto Sans SC";
   --app-font-cjk-fallback: "Noto Sans TC", "Noto Sans JP", "Noto Sans KR";
   --app-font-family-sans:
+    var(--app-font-latin), var(--app-font-cjk), var(--app-font-cjk-fallback),
     -apple-system, BlinkMacSystemFont, "Segoe UI Variable", "Segoe UI",
-    var(--app-font-cjk), var(--app-font-cjk-fallback), ui-sans-serif, system-ui,
-    sans-serif;
-  --app-font-display: "Inter Variable", var(--app-font-family-sans);
+    ui-sans-serif, system-ui, sans-serif;
+  --app-font-display: var(--app-font-family-sans);
   --radius: 0.625rem;
   --green-50: #fafafa;
   --green-100: #f6f6f6;
@@ -144,19 +144,18 @@
   --card-foreground: #2f2f2e;
   --popover: #fbfbfa;
   --popover-foreground: #2f2f2e;
-  --brand-accent: #1c6b48;
-  --primary: #ebebea;
-  --primary-foreground: #2f2f2e;
-  --primary-hover: #e1e1e0;
-  --primary-active: #d7d7d6;
-  --primary-soft: #f0f0ef;
-  --primary-soft-foreground: #3f3f3d;
+  --primary: #1c6b48;
+  --primary-foreground: #ffffff;
+  --primary-hover: #175c3e;
+  --primary-active: #134f35;
+  --primary-soft: #e7f2ec;
+  --primary-soft-foreground: #14533a;
   --secondary: var(--surface-1);
   --secondary-foreground: #2f2f2e;
   --muted: var(--surface-1);
   --muted-foreground: #2f2f2e99;
   --accent: var(--surface-1);
-  --accent-foreground: #3f3f3d;
+  --accent-foreground: #1c6b48;
   --destructive: #ab5959;
   --destructive-foreground: #ffffff;
   --surface-1: #ebebea;
@@ -169,7 +168,7 @@
   --border-subtle: #dededc;
   --border-strong: #bfbfbd;
   --input: #d0d0ce;
-  --ring: #8f8e8a;
+  --ring: #1c6b48;
   --status-success: #2f7d57;
   --status-success-soft: #e7f2ec;
   --status-success-border: #c7e2d3;
@@ -189,7 +188,7 @@
     0 1px 3px rgb(33 33 32 / 0.04), 0 8px 20px -16px rgb(33 33 32 / 0.2);
   --elevation-overlay:
     0 2px 8px rgb(33 33 32 / 0.05), 0 16px 40px -24px rgb(33 33 32 / 0.24);
-  --chart-1: #8f8e8a;
+  --chart-1: #1e754f;
   --chart-2: #296aa3;
   --chart-3: #a65e2b;
   --chart-4: #a13865;
@@ -201,7 +200,7 @@
   --sidebar-accent: var(--surface-1);
   --sidebar-accent-foreground: #2f2f2e;
   --sidebar-border: var(--border-subtle);
-  --sidebar-ring: #8f8e8a;
+  --sidebar-ring: #1c6b48;
   --macos-sidebar-background: #ebebea;
   --workspace-new-chat-description-size: 0.875rem;
   --workspace-new-chat-title-size: 1.875rem;
@@ -292,13 +291,12 @@
   --card-foreground: #e4e4e2ee;
   --popover: #171819;
   --popover-foreground: #e4e4e2ee;
-  --brand-accent: #4d9375;
-  --primary: #d5d5d3;
+  --primary: #4d9375;
   --primary-foreground: #141516;
-  --primary-hover: #e1e1df;
-  --primary-active: #c2c2c0;
-  --primary-soft: rgb(235 235 234 / 0.14);
-  --primary-soft-foreground: #e6e6e4;
+  --primary-hover: #5aa385;
+  --primary-active: #427f65;
+  --primary-soft: rgb(77 147 117 / 0.14);
+  --primary-soft-foreground: #8fc4ab;
   --secondary: var(--surface-1);
   --secondary-foreground: #e4e4e2ee;
   --muted: var(--surface-1);
@@ -317,7 +315,7 @@
   --border-subtle: rgb(255 255 255 / 0.09);
   --border-strong: rgb(255 255 255 / 0.2);
   --input: rgb(255 255 255 / 0.13);
-  --ring: #d5d5d3;
+  --ring: #4d9375;
   --status-success: #6fb392;
   --status-success-soft: rgb(111 179 146 / 0.12);
   --status-success-border: rgb(111 179 146 / 0.28);
@@ -337,7 +335,7 @@
     inset 0 1px 0 rgb(255 255 255 / 0.04), 0 8px 24px -18px rgb(0 0 0 / 0.5);
   --elevation-overlay:
     inset 0 1px 0 rgb(255 255 255 / 0.04), 0 16px 44px -26px rgb(0 0 0 / 0.55);
-  --chart-1: #d5d5d3;
+  --chart-1: #4d9375;
   --chart-2: #6394bf;
   --chart-3: #d4976c;
   --chart-4: #d9739f;
@@ -349,7 +347,7 @@
   --sidebar-accent: var(--surface-1);
   --sidebar-accent-foreground: #e4e4e2ee;
   --sidebar-border: var(--border-subtle);
-  --sidebar-ring: #d5d5d3;
+  --sidebar-ring: #4d9375;
   --macos-sidebar-background: #151719;
 }
 

@@ -197,8 +197,8 @@ export function NewChatComposer({
           aria-hidden="true"
           className="
             pointer-events-none absolute -inset-x-24 -inset-y-16
-            bg-[radial-gradient(ellipse_50%_60%_at_50%_45%,--theme(--color-brand-accent/4%),transparent_65%)]
-            dark:bg-[radial-gradient(ellipse_50%_60%_at_50%_45%,--theme(--color-brand-accent/7%),transparent_65%)]
+            bg-[radial-gradient(ellipse_50%_60%_at_50%_45%,--theme(--color-primary/4%),transparent_65%)]
+            dark:bg-[radial-gradient(ellipse_50%_60%_at_50%_45%,--theme(--color-primary/7%),transparent_65%)]
           "
         />
         <div className="relative mb-12 text-center">
