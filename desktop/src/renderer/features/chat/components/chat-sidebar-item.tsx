@@ -55,7 +55,7 @@ export function ChatSidebarItem({
   return (
     <div className="group/chat-sidebar-item relative">
       <WorkspaceSidebarMenuButton
-        className={cn("gap-1.5 pr-8!", nested && "pl-8")}
+        className={cn("gap-1.5 pr-8!", nested && "pl-6")}
         isActive={isActive}
         onClick={onOpenChat}
         onContextMenu={onShowContextMenu ? handleContextMenu : undefined}

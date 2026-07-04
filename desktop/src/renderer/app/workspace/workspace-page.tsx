@@ -1050,14 +1050,18 @@ function WorkspacePageContent({
 
   const createChatForProject = useCallback(
     (project: Project) => {
+      if (isDraftPage && routeDraftProjectId === project.id) return;
+
       startNewDraftSession(project.id);
     },
-    [startNewDraftSession],
+    [isDraftPage, routeDraftProjectId, startNewDraftSession],
   );
 
   const createChatForSelection = useCallback(() => {
+    if (isDraftPage) return;
+
     startNewDraftSession();
-  }, [startNewDraftSession]);
+  }, [isDraftPage, startNewDraftSession]);
 
   const selectDraftProject = useCallback(
     (projectId: string | null) => {

@@ -603,7 +603,6 @@ const sidebarMenuButtonVariants = cva(
         outline: `
           bg-background/70 shadow-[0_0_0_1px_hsl(var(--sidebar-border))]
           hover:bg-black/[0.045] hover:text-sidebar-foreground
-          hover:shadow-[0_0_0_1px_hsl(var(--sidebar-border))]
           dark:hover:bg-white/[0.07]
         `,
       },

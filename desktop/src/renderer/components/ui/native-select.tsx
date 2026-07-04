@@ -35,8 +35,6 @@ function NativeSelect({
             border-transparent bg-input/50 py-1 pr-8 pl-3 text-sm
             transition-[color,box-shadow,background-color] outline-none
             select-none
-            focus-visible:border-primary/40 focus-visible:ring-3
-            focus-visible:ring-primary/12
             selection:bg-primary selection:text-primary-foreground
           placeholder:text-muted-foreground
           disabled:pointer-events-none disabled:cursor-not-allowed

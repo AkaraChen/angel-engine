@@ -152,21 +152,29 @@ export function ProjectSidebarSection({
                     }}
                     title={project.path}
                   >
-                    <m.span
-                      animate={{ rotate: isExpanded ? 0 : -90 }}
-                      transition={sidebarMotion}
-                    >
-                      <ChevronDown />
-                    </m.span>
                     <span
                       className="
-                        -ml-0.5 block min-w-0 flex-1 truncate overflow-hidden
-                        text-left whitespace-nowrap
+                        block min-w-0 flex-1 truncate overflow-hidden text-left
+                        whitespace-nowrap
                       "
                       title={projectDisplayName}
                     >
                       {projectDisplayName}
                     </span>
+                    <m.span
+                      animate={{ rotate: isExpanded ? 0 : -90 }}
+                      aria-hidden="true"
+                      className="
+                        ml-1 flex size-4 shrink-0 items-center justify-center
+                        opacity-0 transition-opacity
+                        group-focus-within/menu-item:opacity-70
+                        group-hover/menu-item:opacity-70
+                        group-data-[collapsible=icon]:hidden
+                      "
+                      transition={sidebarMotion}
+                    >
+                      <ChevronDown />
+                    </m.span>
                   </WorkspaceSidebarMenuButton>
                   <WorkspaceSidebarMenuAction
                     aria-label={t("sidebar.newChatInProject", {

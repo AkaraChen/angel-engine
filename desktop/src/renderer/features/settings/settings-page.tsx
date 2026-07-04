@@ -1018,7 +1018,7 @@ function SettingsRow({
   return (
     <article
       className={cn(
-        "flex min-h-12 items-center gap-3 px-4 py-3",
+        "flex min-h-12 items-center gap-3 bg-brand-accent/4 px-4 py-3 dark:bg-brand-accent/8",
         muted && "text-muted-foreground",
       )}
     >

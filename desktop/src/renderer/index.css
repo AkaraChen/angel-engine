@@ -55,6 +55,7 @@
   --color-overlay-active: var(--overlay-active);
   --color-border-subtle: var(--border-subtle);
   --color-border-strong: var(--border-strong);
+  --color-brand-accent: var(--brand-accent);
   --color-primary-hover: var(--primary-hover);
   --color-primary-active: var(--primary-active);
   --color-primary-soft: var(--primary-soft);
@@ -126,48 +127,49 @@
     sans-serif;
   --app-font-display: "Inter Variable", var(--app-font-family-sans);
   --radius: 0.625rem;
-  --green-50: #f2f8f4;
-  --green-100: #e3f0e9;
-  --green-200: #c7e2d3;
-  --green-300: #9ecbb3;
-  --green-400: #6bab8b;
-  --green-500: #4d9375;
-  --green-600: #2f7d57;
-  --green-700: #1c6b48;
-  --green-800: #14533a;
-  --green-900: #0e3d2b;
-  --green-950: #08281c;
-  --background: #fdfdfc;
-  --foreground: #393a34;
-  --card: #fdfdfc;
-  --card-foreground: #393a34;
-  --popover: #fdfdfc;
-  --popover-foreground: #393a34;
-  --primary: #1c6b48;
-  --primary-foreground: #ffffff;
-  --primary-hover: #175c3e;
-  --primary-active: #134f35;
-  --primary-soft: #e7f2ec;
-  --primary-soft-foreground: #14533a;
+  --green-50: #fafafa;
+  --green-100: #f6f6f6;
+  --green-200: #ebebea;
+  --green-300: #dededd;
+  --green-400: #c8c8c7;
+  --green-500: #aaa9a7;
+  --green-600: #858482;
+  --green-700: #676664;
+  --green-800: #464543;
+  --green-900: #2c2b29;
+  --green-950: #1a1918;
+  --background: #f6f6f6;
+  --foreground: #2f2f2e;
+  --card: #fbfbfa;
+  --card-foreground: #2f2f2e;
+  --popover: #fbfbfa;
+  --popover-foreground: #2f2f2e;
+  --brand-accent: #1c6b48;
+  --primary: #ebebea;
+  --primary-foreground: #2f2f2e;
+  --primary-hover: #e1e1e0;
+  --primary-active: #d7d7d6;
+  --primary-soft: #f0f0ef;
+  --primary-soft-foreground: #3f3f3d;
   --secondary: var(--surface-1);
-  --secondary-foreground: #393a34;
+  --secondary-foreground: #2f2f2e;
   --muted: var(--surface-1);
-  --muted-foreground: #393a3499;
+  --muted-foreground: #2f2f2e99;
   --accent: var(--surface-1);
-  --accent-foreground: #1c6b48;
+  --accent-foreground: #3f3f3d;
   --destructive: #ab5959;
   --destructive-foreground: #ffffff;
-  --surface-1: #f5f7f5;
-  --surface-2: #edf1ee;
-  --surface-3: #e3e9e5;
-  --panel: rgb(253 253 252 / 0.72);
-  --overlay-hover: rgb(45 58 50 / 0.055);
-  --overlay-active: rgb(45 58 50 / 0.085);
-  --border: #e4e8e5;
-  --border-subtle: #eef1ee;
-  --border-strong: #d3dad5;
-  --input: #e4e8e5;
-  --ring: #1c6b48;
+  --surface-1: #ebebea;
+  --surface-2: #e2e2e1;
+  --surface-3: #d6d6d5;
+  --panel: rgb(251 251 250 / 0.76);
+  --overlay-hover: rgb(37 37 36 / 0.055);
+  --overlay-active: rgb(37 37 36 / 0.085);
+  --border: #d0d0ce;
+  --border-subtle: #dededc;
+  --border-strong: #bfbfbd;
+  --input: #d0d0ce;
+  --ring: #8f8e8a;
   --status-success: #2f7d57;
   --status-success-soft: #e7f2ec;
   --status-success-border: #c7e2d3;
@@ -180,27 +182,27 @@
   --status-info: #296aa3;
   --status-info-soft: #e9f1f7;
   --status-info-border: #cfe0ee;
-  --elevation-xs: 0 1px 2px rgb(23 46 35 / 0.05);
+  --elevation-xs: 0 1px 1px rgb(33 33 32 / 0.035);
   --elevation-panel:
-    0 1px 2px rgb(23 46 35 / 0.04), 0 8px 24px -20px rgb(23 46 35 / 0.35);
+    0 1px 1px rgb(33 33 32 / 0.025), 0 4px 14px -14px rgb(33 33 32 / 0.18);
   --elevation-popover:
-    0 2px 6px rgb(23 46 35 / 0.06), 0 12px 32px -16px rgb(23 46 35 / 0.3);
+    0 1px 3px rgb(33 33 32 / 0.04), 0 8px 20px -16px rgb(33 33 32 / 0.2);
   --elevation-overlay:
-    0 4px 12px rgb(23 46 35 / 0.08), 0 24px 64px -24px rgb(23 46 35 / 0.35);
-  --chart-1: #1e754f;
+    0 2px 8px rgb(33 33 32 / 0.05), 0 16px 40px -24px rgb(33 33 32 / 0.24);
+  --chart-1: #8f8e8a;
   --chart-2: #296aa3;
   --chart-3: #a65e2b;
   --chart-4: #a13865;
   --chart-5: #bda437;
-  --sidebar: #fdfdfc;
-  --sidebar-foreground: #4e4f47;
-  --sidebar-primary: #fdfdfc;
-  --sidebar-primary-foreground: #393a34;
+  --sidebar: #f6f6f6;
+  --sidebar-foreground: #4a4a48;
+  --sidebar-primary: #f6f6f6;
+  --sidebar-primary-foreground: #2f2f2e;
   --sidebar-accent: var(--surface-1);
-  --sidebar-accent-foreground: #393a34;
+  --sidebar-accent-foreground: #2f2f2e;
   --sidebar-border: var(--border-subtle);
-  --sidebar-ring: #1c6b48;
-  --macos-sidebar-background: #f4f7f5;
+  --sidebar-ring: #8f8e8a;
+  --macos-sidebar-background: #ebebea;
   --workspace-new-chat-description-size: 0.875rem;
   --workspace-new-chat-title-size: 1.875rem;
   --workspace-composer-line-height: 1.5rem;
@@ -284,37 +286,38 @@
 
 .dark {
   color-scheme: dark;
-  --background: #131514;
-  --foreground: #dbd7caee;
-  --card: #131514;
-  --card-foreground: #dbd7caee;
-  --popover: #131514;
-  --popover-foreground: #dbd7caee;
-  --primary: #4d9375;
-  --primary-foreground: #131514;
-  --primary-hover: #5aa385;
-  --primary-active: #427f65;
-  --primary-soft: rgb(77 147 117 / 0.14);
-  --primary-soft-foreground: #8fc4ab;
+  --background: #141516;
+  --foreground: #e4e4e2ee;
+  --card: #171819;
+  --card-foreground: #e4e4e2ee;
+  --popover: #171819;
+  --popover-foreground: #e4e4e2ee;
+  --brand-accent: #4d9375;
+  --primary: #d5d5d3;
+  --primary-foreground: #141516;
+  --primary-hover: #e1e1df;
+  --primary-active: #c2c2c0;
+  --primary-soft: rgb(235 235 234 / 0.14);
+  --primary-soft-foreground: #e6e6e4;
   --secondary: var(--surface-1);
-  --secondary-foreground: #dbd7caee;
+  --secondary-foreground: #e4e4e2ee;
   --muted: var(--surface-1);
-  --muted-foreground: #dedcd590;
+  --muted-foreground: #e4e4e290;
   --accent: var(--surface-1);
-  --accent-foreground: #dbd7caee;
+  --accent-foreground: #e4e4e2ee;
   --destructive: #cb7676;
-  --destructive-foreground: #131514;
-  --surface-1: #1a1d1b;
-  --surface-2: #212523;
-  --surface-3: #292e2b;
+  --destructive-foreground: #141516;
+  --surface-1: #1d1d1c;
+  --surface-2: #252524;
+  --surface-3: #2f2f2d;
   --panel: rgb(255 255 255 / 0.035);
-  --overlay-hover: rgb(228 240 233 / 0.07);
-  --overlay-active: rgb(228 240 233 / 0.1);
-  --border: rgb(255 255 255 / 0.1);
-  --border-subtle: rgb(255 255 255 / 0.07);
-  --border-strong: rgb(255 255 255 / 0.16);
-  --input: rgb(255 255 255 / 0.1);
-  --ring: #4d9375;
+  --overlay-hover: rgb(235 235 234 / 0.07);
+  --overlay-active: rgb(235 235 234 / 0.1);
+  --border: rgb(255 255 255 / 0.13);
+  --border-subtle: rgb(255 255 255 / 0.09);
+  --border-strong: rgb(255 255 255 / 0.2);
+  --input: rgb(255 255 255 / 0.13);
+  --ring: #d5d5d3;
   --status-success: #6fb392;
   --status-success-soft: rgb(111 179 146 / 0.12);
   --status-success-border: rgb(111 179 146 / 0.28);
@@ -327,27 +330,27 @@
   --status-info: #6394bf;
   --status-info-soft: rgb(99 148 191 / 0.12);
   --status-info-border: rgb(99 148 191 / 0.28);
-  --elevation-xs: 0 1px 2px rgb(0 0 0 / 0.4);
+  --elevation-xs: 0 1px 1px rgb(0 0 0 / 0.22);
   --elevation-panel:
-    inset 0 1px 0 rgb(255 255 255 / 0.04), 0 8px 24px -20px rgb(0 0 0 / 0.8);
+    inset 0 1px 0 rgb(255 255 255 / 0.035), 0 4px 16px -16px rgb(0 0 0 / 0.45);
   --elevation-popover:
-    inset 0 1px 0 rgb(255 255 255 / 0.05), 0 12px 32px -16px rgb(0 0 0 / 0.8);
+    inset 0 1px 0 rgb(255 255 255 / 0.04), 0 8px 24px -18px rgb(0 0 0 / 0.5);
   --elevation-overlay:
-    inset 0 1px 0 rgb(255 255 255 / 0.05), 0 24px 64px -24px rgb(0 0 0 / 0.9);
-  --chart-1: #4d9375;
+    inset 0 1px 0 rgb(255 255 255 / 0.04), 0 16px 44px -26px rgb(0 0 0 / 0.55);
+  --chart-1: #d5d5d3;
   --chart-2: #6394bf;
   --chart-3: #d4976c;
   --chart-4: #d9739f;
   --chart-5: #e6cc77;
-  --sidebar: #131514;
-  --sidebar-foreground: #bfbaaa;
-  --sidebar-primary: #131514;
-  --sidebar-primary-foreground: #dbd7caee;
+  --sidebar: #141516;
+  --sidebar-foreground: #c9c9c6;
+  --sidebar-primary: #141516;
+  --sidebar-primary-foreground: #e4e4e2ee;
   --sidebar-accent: var(--surface-1);
-  --sidebar-accent-foreground: #dbd7caee;
+  --sidebar-accent-foreground: #e4e4e2ee;
   --sidebar-border: var(--border-subtle);
-  --sidebar-ring: #4d9375;
-  --macos-sidebar-background: #131514;
+  --sidebar-ring: #d5d5d3;
+  --macos-sidebar-background: #151719;
 }
 
 @layer base {
@@ -356,11 +359,11 @@
   }
 
   ::selection {
-    background-color: rgb(28 107 72 / 0.14);
+    background-color: rgb(143 142 138 / 0.2);
   }
 
   .dark ::selection {
-    background-color: rgb(77 147 117 / 0.22);
+    background-color: rgb(213 213 211 / 0.24);
   }
 
   html,

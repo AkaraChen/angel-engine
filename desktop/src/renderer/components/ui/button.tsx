@@ -12,7 +12,6 @@ const buttonVariants = cva(
     whitespace-nowrap
     transition-[color,background-color,border-color,box-shadow,transform]
     outline-none select-none
-    focus-visible:border-ring/40 focus-visible:ring-3 focus-visible:ring-ring/15
     active:not-aria-[haspopup]:translate-y-px
     disabled:pointer-events-none disabled:opacity-50
     aria-invalid:border-destructive aria-invalid:ring-3

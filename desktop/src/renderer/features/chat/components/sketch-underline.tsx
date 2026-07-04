@@ -6,7 +6,7 @@ export function SketchUnderline({ children }: { children?: ReactNode }) {
   return (
     <span
       className={cn(
-        "relative inline-block max-w-full align-baseline text-primary",
+        "relative inline-block max-w-full align-baseline text-brand-accent",
       )}
     >
       <span className="relative z-10 whitespace-nowrap">{children}</span>
@@ -14,7 +14,7 @@ export function SketchUnderline({ children }: { children?: ReactNode }) {
         aria-hidden
         className="
           pointer-events-none absolute -bottom-1.5 left-[-5%] h-3 w-[110%]
-          overflow-visible text-primary/70
+          overflow-visible text-brand-accent/55
         "
         focusable="false"
         preserveAspectRatio="none"

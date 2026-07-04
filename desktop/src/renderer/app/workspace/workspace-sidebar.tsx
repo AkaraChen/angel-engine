@@ -219,6 +219,8 @@ function WorkspaceSidebarContent({
   const { t } = useTranslation();
   const workspaceMode = useWorkspaceUiStore((state) => state.workspaceMode);
   const createChatFromNewButton = async () => {
+    if (selectedChatId === undefined && !settingsActive) return;
+
     if (workspaceMode === "work") {
       const selectedProject = projects.find(
         (project) => project.id === selectedProjectId,
