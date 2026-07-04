@@ -34,6 +34,47 @@
 
 @theme inline {
   --font-sans: var(--app-font-family-sans);
+  --font-display: var(--app-font-display);
+  --ease-swift: cubic-bezier(0.32, 0.72, 0, 1);
+  --color-green-50: var(--green-50);
+  --color-green-100: var(--green-100);
+  --color-green-200: var(--green-200);
+  --color-green-300: var(--green-300);
+  --color-green-400: var(--green-400);
+  --color-green-500: var(--green-500);
+  --color-green-600: var(--green-600);
+  --color-green-700: var(--green-700);
+  --color-green-800: var(--green-800);
+  --color-green-900: var(--green-900);
+  --color-green-950: var(--green-950);
+  --color-surface-1: var(--surface-1);
+  --color-surface-2: var(--surface-2);
+  --color-surface-3: var(--surface-3);
+  --color-panel: var(--panel);
+  --color-overlay-hover: var(--overlay-hover);
+  --color-overlay-active: var(--overlay-active);
+  --color-border-subtle: var(--border-subtle);
+  --color-border-strong: var(--border-strong);
+  --color-primary-hover: var(--primary-hover);
+  --color-primary-active: var(--primary-active);
+  --color-primary-soft: var(--primary-soft);
+  --color-primary-soft-foreground: var(--primary-soft-foreground);
+  --color-status-success: var(--status-success);
+  --color-status-success-soft: var(--status-success-soft);
+  --color-status-success-border: var(--status-success-border);
+  --color-status-attention: var(--status-attention);
+  --color-status-attention-soft: var(--status-attention-soft);
+  --color-status-attention-border: var(--status-attention-border);
+  --color-status-danger: var(--status-danger);
+  --color-status-danger-soft: var(--status-danger-soft);
+  --color-status-danger-border: var(--status-danger-border);
+  --color-status-info: var(--status-info);
+  --color-status-info-soft: var(--status-info-soft);
+  --color-status-info-border: var(--status-info-border);
+  --shadow-xs: var(--elevation-xs);
+  --shadow-panel: var(--elevation-panel);
+  --shadow-popover: var(--elevation-popover);
+  --shadow-overlay: var(--elevation-overlay);
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
@@ -83,40 +124,83 @@
     -apple-system, BlinkMacSystemFont, "Segoe UI Variable", "Segoe UI",
     var(--app-font-cjk), var(--app-font-cjk-fallback), ui-sans-serif, system-ui,
     sans-serif;
+  --app-font-display: "Inter Variable", var(--app-font-family-sans);
   --radius: 0.625rem;
-  --background: #ffffff;
+  --green-50: #f2f8f4;
+  --green-100: #e3f0e9;
+  --green-200: #c7e2d3;
+  --green-300: #9ecbb3;
+  --green-400: #6bab8b;
+  --green-500: #4d9375;
+  --green-600: #2f7d57;
+  --green-700: #1c6b48;
+  --green-800: #14533a;
+  --green-900: #0e3d2b;
+  --green-950: #08281c;
+  --background: #fdfdfc;
   --foreground: #393a34;
-  --card: #ffffff;
+  --card: #fdfdfc;
   --card-foreground: #393a34;
-  --popover: #ffffff;
+  --popover: #fdfdfc;
   --popover-foreground: #393a34;
   --primary: #1c6b48;
   --primary-foreground: #ffffff;
-  --secondary: #f7f7f7;
+  --primary-hover: #175c3e;
+  --primary-active: #134f35;
+  --primary-soft: #e7f2ec;
+  --primary-soft-foreground: #14533a;
+  --secondary: var(--surface-1);
   --secondary-foreground: #393a34;
-  --muted: #f7f7f7;
-  --muted-foreground: #393a3490;
-  --accent: #f7f7f7;
+  --muted: var(--surface-1);
+  --muted-foreground: #393a3499;
+  --accent: var(--surface-1);
   --accent-foreground: #1c6b48;
   --destructive: #ab5959;
   --destructive-foreground: #ffffff;
-  --border: #f0f0f0;
-  --input: #f0f0f0;
+  --surface-1: #f5f7f5;
+  --surface-2: #edf1ee;
+  --surface-3: #e3e9e5;
+  --panel: rgb(253 253 252 / 0.72);
+  --overlay-hover: rgb(45 58 50 / 0.055);
+  --overlay-active: rgb(45 58 50 / 0.085);
+  --border: #e4e8e5;
+  --border-subtle: #eef1ee;
+  --border-strong: #d3dad5;
+  --input: #e4e8e5;
   --ring: #1c6b48;
+  --status-success: #2f7d57;
+  --status-success-soft: #e7f2ec;
+  --status-success-border: #c7e2d3;
+  --status-attention: #9a7b1a;
+  --status-attention-soft: #f7f1dd;
+  --status-attention-border: #ebdcac;
+  --status-danger: #ab5959;
+  --status-danger-soft: #f7ebeb;
+  --status-danger-border: #ecd2d2;
+  --status-info: #296aa3;
+  --status-info-soft: #e9f1f7;
+  --status-info-border: #cfe0ee;
+  --elevation-xs: 0 1px 2px rgb(23 46 35 / 0.05);
+  --elevation-panel:
+    0 1px 2px rgb(23 46 35 / 0.04), 0 8px 24px -20px rgb(23 46 35 / 0.35);
+  --elevation-popover:
+    0 2px 6px rgb(23 46 35 / 0.06), 0 12px 32px -16px rgb(23 46 35 / 0.3);
+  --elevation-overlay:
+    0 4px 12px rgb(23 46 35 / 0.08), 0 24px 64px -24px rgb(23 46 35 / 0.35);
   --chart-1: #1e754f;
   --chart-2: #296aa3;
   --chart-3: #a65e2b;
   --chart-4: #a13865;
   --chart-5: #bda437;
-  --sidebar: #ffffff;
+  --sidebar: #fdfdfc;
   --sidebar-foreground: #4e4f47;
-  --sidebar-primary: #ffffff;
+  --sidebar-primary: #fdfdfc;
   --sidebar-primary-foreground: #393a34;
-  --sidebar-accent: #f7f7f7;
+  --sidebar-accent: var(--surface-1);
   --sidebar-accent-foreground: #393a34;
-  --sidebar-border: #f0f0f0;
+  --sidebar-border: var(--border-subtle);
   --sidebar-ring: #1c6b48;
-  --macos-sidebar-background: #f7f7f7;
+  --macos-sidebar-background: #f4f7f5;
   --workspace-new-chat-description-size: 0.875rem;
   --workspace-new-chat-title-size: 1.875rem;
   --workspace-composer-line-height: 1.5rem;
@@ -200,39 +284,70 @@
 
 .dark {
   color-scheme: dark;
-  --background: #121212;
+  --background: #131514;
   --foreground: #dbd7caee;
-  --card: #121212;
+  --card: #131514;
   --card-foreground: #dbd7caee;
-  --popover: #121212;
+  --popover: #131514;
   --popover-foreground: #dbd7caee;
   --primary: #4d9375;
-  --primary-foreground: #121212;
-  --secondary: #181818;
+  --primary-foreground: #131514;
+  --primary-hover: #5aa385;
+  --primary-active: #427f65;
+  --primary-soft: rgb(77 147 117 / 0.14);
+  --primary-soft-foreground: #8fc4ab;
+  --secondary: var(--surface-1);
   --secondary-foreground: #dbd7caee;
-  --muted: #181818;
+  --muted: var(--surface-1);
   --muted-foreground: #dedcd590;
-  --accent: #181818;
+  --accent: var(--surface-1);
   --accent-foreground: #dbd7caee;
   --destructive: #cb7676;
-  --destructive-foreground: #121212;
-  --border: #191919;
-  --input: #191919;
+  --destructive-foreground: #131514;
+  --surface-1: #1a1d1b;
+  --surface-2: #212523;
+  --surface-3: #292e2b;
+  --panel: rgb(255 255 255 / 0.035);
+  --overlay-hover: rgb(228 240 233 / 0.07);
+  --overlay-active: rgb(228 240 233 / 0.1);
+  --border: rgb(255 255 255 / 0.1);
+  --border-subtle: rgb(255 255 255 / 0.07);
+  --border-strong: rgb(255 255 255 / 0.16);
+  --input: rgb(255 255 255 / 0.1);
   --ring: #4d9375;
+  --status-success: #6fb392;
+  --status-success-soft: rgb(111 179 146 / 0.12);
+  --status-success-border: rgb(111 179 146 / 0.28);
+  --status-attention: #e6cc77;
+  --status-attention-soft: rgb(230 204 119 / 0.12);
+  --status-attention-border: rgb(230 204 119 / 0.28);
+  --status-danger: #cb7676;
+  --status-danger-soft: rgb(203 118 118 / 0.12);
+  --status-danger-border: rgb(203 118 118 / 0.28);
+  --status-info: #6394bf;
+  --status-info-soft: rgb(99 148 191 / 0.12);
+  --status-info-border: rgb(99 148 191 / 0.28);
+  --elevation-xs: 0 1px 2px rgb(0 0 0 / 0.4);
+  --elevation-panel:
+    inset 0 1px 0 rgb(255 255 255 / 0.04), 0 8px 24px -20px rgb(0 0 0 / 0.8);
+  --elevation-popover:
+    inset 0 1px 0 rgb(255 255 255 / 0.05), 0 12px 32px -16px rgb(0 0 0 / 0.8);
+  --elevation-overlay:
+    inset 0 1px 0 rgb(255 255 255 / 0.05), 0 24px 64px -24px rgb(0 0 0 / 0.9);
   --chart-1: #4d9375;
   --chart-2: #6394bf;
   --chart-3: #d4976c;
   --chart-4: #d9739f;
   --chart-5: #e6cc77;
-  --sidebar: #121212;
+  --sidebar: #131514;
   --sidebar-foreground: #bfbaaa;
-  --sidebar-primary: #121212;
+  --sidebar-primary: #131514;
   --sidebar-primary-foreground: #dbd7caee;
-  --sidebar-accent: #181818;
+  --sidebar-accent: var(--surface-1);
   --sidebar-accent-foreground: #dbd7caee;
-  --sidebar-border: #191919;
+  --sidebar-border: var(--border-subtle);
   --sidebar-ring: #4d9375;
-  --macos-sidebar-background: #121212;
+  --macos-sidebar-background: #131514;
 }
 
 @layer base {
@@ -241,11 +356,11 @@
   }
 
   ::selection {
-    background-color: #22222218;
+    background-color: rgb(28 107 72 / 0.14);
   }
 
   .dark ::selection {
-    background-color: #eeeeee18;
+    background-color: rgb(77 147 117 / 0.22);
   }
 
   html,
@@ -295,6 +410,189 @@
     backdrop-filter: none;
   }
 
+  /* Assistant message markdown typography. Spacing derives from --spacing so
+     the work-mode density remap keeps applying. */
+  .chat-markdown {
+    color: color-mix(in oklch, var(--foreground) 90%, transparent);
+    font-size: var(--workspace-message-text-size);
+    hyphens: auto;
+    line-break: loose;
+    line-height: var(--workspace-message-line-height);
+    max-width: none;
+    min-width: 0;
+    overflow-wrap: anywhere;
+    text-rendering: optimizeLegibility;
+    word-break: normal;
+  }
+
+  .chat-markdown a {
+    color: var(--primary);
+    text-decoration: underline;
+    text-decoration-color: color-mix(in oklch, var(--primary) 35%, transparent);
+    text-underline-offset: 2px;
+  }
+
+  .chat-markdown a:hover {
+    text-decoration-color: color-mix(in oklch, var(--primary) 70%, transparent);
+  }
+
+  .chat-markdown blockquote {
+    border-left: 2px solid color-mix(in oklch, var(--primary) 25%, transparent);
+    color: var(--muted-foreground);
+    font-size: 14px;
+    line-height: 1.72;
+    margin-block: calc(var(--spacing) * 4);
+    padding-left: calc(var(--spacing) * 3.5);
+  }
+
+  .chat-markdown h1,
+  .chat-markdown h2 {
+    font-family: var(--app-font-display);
+    letter-spacing: -0.015em;
+  }
+
+  .chat-markdown h1 {
+    font-size: 21px;
+    font-weight: 600;
+    line-height: 1.36;
+    margin-block: calc(var(--spacing) * 1) calc(var(--spacing) * 3);
+  }
+
+  .chat-markdown h2 {
+    font-size: 17px;
+    font-weight: 600;
+    line-height: 1.42;
+    margin-block: calc(var(--spacing) * 6) calc(var(--spacing) * 2);
+  }
+
+  .chat-markdown h3 {
+    font-size: 15px;
+    font-weight: 600;
+    line-height: 1.5;
+    margin-block: calc(var(--spacing) * 4) calc(var(--spacing) * 1.5);
+  }
+
+  .chat-markdown hr {
+    border-color: var(--border);
+    margin-block: calc(var(--spacing) * 5);
+  }
+
+  .chat-markdown li {
+    line-break: loose;
+    margin-block: calc(var(--spacing) * 1.5);
+    overflow-wrap: anywhere;
+  }
+
+  .chat-markdown li::marker {
+    color: var(--muted-foreground);
+  }
+
+  .chat-markdown ol {
+    list-style-type: decimal;
+    margin-block: calc(var(--spacing) * 3);
+    padding-left: calc(var(--spacing) * 5);
+  }
+
+  .chat-markdown ul {
+    list-style-type: disc;
+    margin-block: calc(var(--spacing) * 3);
+    padding-left: calc(var(--spacing) * 5);
+  }
+
+  .chat-markdown p {
+    line-break: loose;
+    margin-block: 0;
+    overflow-wrap: anywhere;
+  }
+
+  .chat-markdown p + p {
+    margin-top: calc(var(--spacing) * 3.5);
+  }
+
+  .chat-markdown pre {
+    background-color: transparent;
+    font-size: 12.5px;
+    line-break: normal;
+    line-height: 1.58;
+    margin: 0;
+    max-width: 100%;
+    overflow-x: auto;
+    overflow-wrap: normal;
+    padding: calc(var(--spacing) * 3.5);
+    word-break: normal;
+  }
+
+  .chat-markdown strong {
+    color: var(--foreground);
+    font-weight: 600;
+  }
+
+  .chat-markdown table {
+    border-collapse: separate;
+    border-radius: var(--radius-lg);
+    border-spacing: 0;
+    margin-block: calc(var(--spacing) * 4);
+    overflow: hidden;
+    width: 100%;
+  }
+
+  .chat-markdown td,
+  .chat-markdown th {
+    border-bottom: 1px solid var(--border);
+    line-break: loose;
+    overflow-wrap: anywhere;
+    padding-block: calc(var(--spacing) * 2);
+    padding-inline: calc(var(--spacing) * 2.5);
+  }
+
+  .chat-markdown td {
+    vertical-align: top;
+  }
+
+  .chat-markdown th {
+    background-color: var(--surface-1);
+    font-weight: 500;
+    text-align: left;
+  }
+
+  .chat-markdown [data-streamdown="inline-code"] {
+    background-color: var(--surface-2);
+    border-radius: 0.38rem;
+    color: color-mix(in oklch, var(--foreground) 90%, transparent);
+    font-family: var(--font-mono, ui-monospace, monospace);
+    font-size: 0.88em;
+    padding-block: 0.12em;
+    padding-inline: 0.32em;
+  }
+
+  .workspace-streaming-line {
+    overflow: hidden;
+    pointer-events: none;
+  }
+
+  .workspace-streaming-line::after {
+    animation: workspace-streaming-sweep 2.4s cubic-bezier(0.4, 0, 0.2, 1)
+      infinite;
+    background: linear-gradient(
+      90deg,
+      transparent 20%,
+      color-mix(in oklch, var(--primary) 65%, transparent) 50%,
+      transparent 80%
+    );
+    content: "";
+    inset: 0;
+    position: absolute;
+    transform: translateX(-100%);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .workspace-streaming-line::after {
+      animation: none;
+      background: color-mix(in oklch, var(--primary) 35%, transparent);
+      transform: none;
+    }
+  }
+
   .chat-restore-mark {
     color: color-mix(in oklch, var(--foreground) 72%, transparent);
   }
@@ -311,6 +609,84 @@
     transform-box: fill-box;
     transform-origin: center;
     text-transform: lowercase;
+  }
+}
+
+/* Chat markdown code blocks. Deliberately unlayered: streamdown bakes its own
+   Tailwind utility classes (bg-sidebar, p-2, border, …) into these elements,
+   and utilities are cascaded after @layer components — unlayered author rules
+   are the only way to reliably restyle them without !important. */
+.chat-markdown [data-streamdown="code-block"] {
+  background-color: #ffffff;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--elevation-xs);
+  gap: 0;
+  margin-block: calc(var(--spacing) * 4);
+  overflow: hidden;
+  padding: 0;
+}
+
+.dark .chat-markdown [data-streamdown="code-block"] {
+  background-color: var(--surface-1);
+}
+
+.chat-markdown [data-streamdown="code-block-header"] {
+  background-color: color-mix(in oklch, var(--surface-1) 55%, transparent);
+  border-bottom: 1px solid var(--border-subtle);
+  color: var(--muted-foreground);
+  font-size: 11px;
+  font-weight: 500;
+  height: calc(var(--spacing) * 8);
+  padding-inline: calc(var(--spacing) * 3);
+}
+
+.dark .chat-markdown [data-streamdown="code-block-header"] {
+  background-color: color-mix(in oklch, var(--surface-2) 55%, transparent);
+}
+
+.chat-markdown [data-streamdown="code-block-header"] > span {
+  color: color-mix(in oklch, var(--muted-foreground) 80%, transparent);
+  font-family: var(--font-mono, ui-monospace, monospace);
+  letter-spacing: 0.02em;
+  margin-left: 0;
+}
+
+.chat-markdown [data-streamdown="code-block-body"] {
+  background-color: transparent;
+  border: 0;
+  border-radius: 0;
+  font-size: 12.5px;
+  line-height: 1.6;
+  padding: 0;
+}
+
+.chat-markdown [data-streamdown="code-block-body"] pre {
+  background-color: transparent;
+  font-size: 12.5px;
+  line-height: 1.6;
+  margin: 0;
+  padding: calc(var(--spacing) * 3.5);
+}
+
+.chat-markdown [data-streamdown="code-block-body"] code > span {
+  display: block;
+}
+
+.chat-markdown [data-streamdown="code-block-actions"] {
+  backdrop-filter: blur(12px);
+  background-color: color-mix(in oklch, var(--background) 85%, transparent);
+  border: 1px solid var(--border-subtle);
+  border-radius: calc(infinity * 1px);
+  box-shadow: var(--elevation-xs);
+  margin-right: calc(var(--spacing) * 1);
+  padding-block: calc(var(--spacing) * 0.5);
+  padding-inline: calc(var(--spacing) * 1);
+}
+
+@keyframes workspace-streaming-sweep {
+  to {
+    transform: translateX(100%);
   }
 }
 

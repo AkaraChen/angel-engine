@@ -47,7 +47,7 @@ import {
 } from "./composer-helpers";
 
 export const composerModelMenuTriggerClassName =
-  "h-8 min-w-0 gap-1.5 rounded-md px-2 text-xs font-medium text-foreground focus-visible:!border-transparent focus-visible:!ring-0 hover:bg-foreground/[0.045] aria-expanded:bg-foreground/[0.065] dark:hover:bg-white/[0.055] dark:aria-expanded:bg-white/[0.08]";
+  "h-8 min-w-0 gap-1.5 rounded-md px-2 text-xs font-medium text-foreground focus-visible:!border-transparent focus-visible:!ring-0 hover:bg-overlay-hover aria-expanded:bg-overlay-active";
 export const composerModelMenuValueClassName =
   "min-w-0 max-w-28 truncate text-muted-foreground";
 export const composerNativeMenuClassName =
@@ -493,10 +493,9 @@ function ComposerModelMenuSearch({
           aria-label={placeholder}
           autoComplete="off"
           className="
-            h-7 rounded-md border-0 bg-foreground/5.5 pr-2 pl-8 text-xs
+            h-7 rounded-md border-0 bg-overlay-hover pr-2 pl-8 text-xs
             shadow-none
             focus-visible:ring-1 focus-visible:ring-ring/25
-            dark:bg-white/[0.07]
           "
           onChange={(event) => onChange(event.target.value)}
           placeholder={placeholder}
@@ -526,10 +525,8 @@ function ComposerModelMenuSub({
     <DropdownMenuSubTrigger
       className="
         min-h-7 w-full gap-2 rounded-sm px-2 py-1 text-[13px] font-normal
-        focus:bg-foreground/5.5 focus:text-foreground
-        dark:focus:bg-white/[0.07]
-        data-open:bg-foreground/5.5 data-open:text-foreground
-        dark:data-open:bg-white/[0.07]
+        focus:bg-overlay-hover focus:text-foreground
+        data-open:bg-overlay-hover data-open:text-foreground
         [&>svg:last-child]:ml-1 [&>svg:last-child]:size-3.5
         [&>svg:last-child]:opacity-45
         focus:[&>svg:last-child]:opacity-65
@@ -606,8 +603,7 @@ function ComposerModelMenuItem({
     <DropdownMenuItem
       className="
         min-h-7 gap-2 rounded-sm px-2 py-1 text-[13px] font-normal
-        focus:bg-foreground/5.5 focus:text-foreground
-        dark:focus:bg-white/[0.07]
+        focus:bg-overlay-hover focus:text-foreground
       "
       disabled={disabled}
       onSelect={(event) => {
@@ -700,7 +696,7 @@ export function ComposerOptionSelect({
         className="max-w-36"
         disabled={disabled}
         onChange={(event) => onValueChange(event.currentTarget.value)}
-        selectClassName="h-8 max-w-36 rounded-md border border-foreground/[0.08] bg-background/55 py-0 pr-8 pl-8 text-xs focus-visible:!border-foreground/12 focus-visible:!ring-0 dark:bg-card/60"
+        selectClassName="h-8 max-w-36 rounded-md border border-border-subtle bg-background/55 py-0 pr-8 pl-8 text-xs focus-visible:!border-primary/35 focus-visible:!ring-0 dark:bg-card/60"
         size="sm"
         title={title ?? label}
         value={value}

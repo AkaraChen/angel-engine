@@ -10,7 +10,7 @@ import {
   RiSettings3Line as Settings,
 } from "@remixicon/react";
 import { m } from "framer-motion";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useWorkspaceUiStore } from "@/app/workspace/workspace-ui-store";
 import {
@@ -26,6 +26,7 @@ import {
 } from "@/components/workspace-sidebar-primitives";
 import { SimpleChatSidebarSection } from "@/features/chat/components/simple-chat-sidebar-section";
 import { ProjectSidebarSection } from "@/features/projects/components/project-sidebar-section";
+import { springs } from "@/platform/motion";
 import { cn } from "@/platform/utils";
 
 type MaybeAsync = void | Promise<void>;
@@ -153,7 +154,10 @@ export function WorkspaceFloatingSidebar(
 
   return (
     <div
-      className="hidden text-sidebar-foreground md:block"
+      className="
+        hidden text-sidebar-foreground
+        md:block
+      "
       data-slot="workspace-floating-sidebar"
       data-workspace-mode={workspaceMode}
       onMouseEnter={handlePeekEnter}
@@ -178,9 +182,8 @@ export function WorkspaceFloatingSidebar(
       >
         <div
           className="
-            flex size-full flex-col rounded-lg
-            bg-[var(--macos-sidebar-background)] shadow-xl ring-1
-            ring-sidebar-border
+            flex size-full flex-col rounded-lg bg-(--macos-sidebar-background)
+            shadow-xl ring-1 ring-sidebar-border
           "
           data-sidebar="sidebar"
           data-slot="sidebar"
@@ -254,14 +257,6 @@ function WorkspaceSidebarContent({
           </AnimatedSidebarMenuItem>
         </SidebarMenu>
 
-        <div
-          aria-hidden="true"
-          className="
-            mx-2 mb-1 h-px shrink-0 bg-black/6
-            dark:bg-white/8
-          "
-        />
-
         {workspaceMode === "chat" ? (
           <SimpleChatSidebarSection
             chats={chats}
@@ -314,6 +309,7 @@ function WorkspaceModeControl({
   value: WorkspaceMode;
 }): ReactElement {
   const { t } = useTranslation();
+  const thumbLayoutId = useId();
 
   return (
     <div
@@ -342,33 +338,42 @@ function WorkspaceModeControl({
               aria-pressed={isActive}
               className={cn(
                 `
-                  flex h-7 min-w-0 items-center justify-center gap-1.5
+                  relative flex h-7 min-w-0 items-center justify-center gap-1.5
                   rounded-[5px] px-2
                   [font-size:var(--workspace-sidebar-label-text-size)]
                   font-medium text-sidebar-foreground/58 outline-hidden
                   transition-[background-color,color,box-shadow]
-                  hover:bg-white/25 hover:text-sidebar-foreground/78
-                  focus-visible:bg-white/40
                   focus-visible:text-sidebar-foreground
-                  dark:hover:bg-white/5.5
-                  dark:focus-visible:bg-white/10
                 `,
                 isActive
-                  ? `
-                    bg-white/58 text-sidebar-foreground
-                    shadow-[0_1px_2px_rgba(0,0,0,0.08)]
-                    dark:bg-white/[0.14]
-                    dark:shadow-[inset_0_0_0_1px_rgba(255,255,255,0.06)]
-                  `
-                  : "",
+                  ? "text-sidebar-foreground"
+                  : `
+                    hover:bg-white/25 hover:text-sidebar-foreground/78
+                    focus-visible:bg-white/40
+                    dark:hover:bg-white/5.5
+                    dark:focus-visible:bg-white/10
+                  `,
               )}
               key={option.value}
               onClick={() => onValueChange(option.value)}
               title={label}
               type="button"
             >
-              <Icon className="size-4 shrink-0" />
-              <span className="min-w-0 truncate">{label}</span>
+              {isActive ? (
+                <m.span
+                  aria-hidden="true"
+                  className="
+                    absolute inset-0 rounded-[5px] bg-white/58
+                    shadow-[0_1px_2px_rgba(0,0,0,0.08)]
+                    dark:bg-white/[0.14]
+                    dark:shadow-[inset_0_0_0_1px_rgba(255,255,255,0.06)]
+                  "
+                  layoutId={thumbLayoutId}
+                  transition={springs.snappy}
+                />
+              ) : null}
+              <Icon className="relative size-4 shrink-0" />
+              <span className="relative min-w-0 truncate">{label}</span>
             </button>
           );
         })}

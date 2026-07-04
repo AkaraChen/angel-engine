@@ -12,6 +12,7 @@ const buttonVariants = cva(
     whitespace-nowrap
     transition-[color,background-color,border-color,box-shadow,transform]
     outline-none select-none
+    focus-visible:border-ring/40 focus-visible:ring-3 focus-visible:ring-ring/15
     active:not-aria-[haspopup]:translate-y-px
     disabled:pointer-events-none disabled:opacity-50
     aria-invalid:border-destructive aria-invalid:ring-3
@@ -26,7 +27,15 @@ const buttonVariants = cva(
       variant: {
         default: `
           bg-primary text-primary-foreground
-          hover:bg-primary/80
+          hover:bg-primary-hover
+          active:bg-primary-active
+        `,
+        soft: `
+          bg-primary-soft text-primary-soft-foreground
+          hover:bg-primary/15
+          active:bg-primary/20
+          dark:hover:bg-primary/20
+          dark:active:bg-primary/25
         `,
         outline: `
           border-border bg-background

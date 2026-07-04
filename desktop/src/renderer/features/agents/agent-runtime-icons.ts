@@ -7,10 +7,10 @@ import geminiIconSvg from "@lobehub/icons-static-svg/icons/geminicli.svg?raw";
 import kimiIconSvg from "@lobehub/icons-static-svg/icons/kimi.svg?raw";
 import opencodeIconSvg from "@lobehub/icons-static-svg/icons/opencode.svg?raw";
 import qoderIconSvg from "@lobehub/icons-static-svg/icons/qoder.svg?raw";
-import piIconSvg from "./pi-coding-agent.svg?raw";
-
 import { AGENT_OPTIONS, isBuiltinAgentRuntime } from "@shared/agents";
+
 import is from "@sindresorhus/is";
+import piIconSvg from "./pi-coding-agent.svg?raw";
 
 const builtinAgentIconSvg: Record<BuiltinAgentRuntime, string> = {
   claude: claudeIconSvg,

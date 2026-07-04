@@ -1,4 +1,3 @@
-import type { ReactNode } from "react";
 import type { PromptInputMessage } from "@/components/ai-elements/prompt-input";
 
 import { ComposerPrimitive, useAui, useAuiState } from "@assistant-ui/react";
@@ -9,7 +8,6 @@ import {
   RiEqualizer2Line as SlidersHorizontal,
   RiCloseLine as X,
 } from "@remixicon/react";
-import is from "@sindresorhus/is";
 import { useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import {
@@ -41,14 +39,12 @@ import { iconButtonClass } from "@/features/chat/components/thread-styles";
 import { useChatOptions } from "@/features/chat/runtime/chat-options-context";
 
 const composerInputGroupClassName =
-  "overflow-visible !rounded-lg !border !border-foreground/[0.08] !bg-background/86 backdrop-blur-xl transition-[border-color,background-color] has-[textarea]:!rounded-lg has-[>[data-align=block-end]]:!rounded-lg has-[>[data-align=block-start]]:!rounded-lg has-[[data-slot=input-group-control]:focus-visible]:!border-foreground/14 has-[[data-slot=input-group-control]:focus-visible]:!ring-0 focus-within:!border-foreground/14 focus-within:!bg-background/94 dark:!border-white/[0.09] dark:!bg-card/82 dark:focus-within:!border-white/14 dark:focus-within:!bg-card/90 [&_button:focus-visible]:!border-transparent [&_button:focus-visible]:!ring-0 [&_button]:shadow-none";
+  "overflow-visible !rounded-xl !border !border-border-subtle !bg-background/86 !shadow-panel backdrop-blur-xl transition-[background-color] has-[textarea]:!rounded-xl has-[>[data-align=block-end]]:!rounded-xl has-[>[data-align=block-start]]:!rounded-xl has-[[data-slot=input-group-control]:focus-visible]:!ring-0 focus-within:!bg-background/94 dark:!bg-card/82 dark:focus-within:!bg-card/90 [&_button:focus-visible]:!border-transparent [&_button:focus-visible]:!ring-0 [&_button]:shadow-none";
 const quoteTextClassName = "line-clamp-2 flex-1 text-muted-foreground";
 
 export function AssistantComposer({
-  floatingAccessory,
   onBeforeSubmit,
 }: {
-  floatingAccessory?: ReactNode;
   onBeforeSubmit?: () => boolean | Promise<boolean>;
 }) {
   const { t } = useTranslation();
@@ -60,7 +56,6 @@ export function AssistantComposer({
   const toast = useToast();
   const editor = useComposerEditor();
   const { draftText, mentionedFiles, reset, selectedSkills } = editor;
-  const hasFloatingAccessory = !is.falsy(floatingAccessory);
 
   const handleSubmit = useCallback(
     async (message: PromptInputMessage) => {
@@ -124,9 +119,8 @@ export function AssistantComposer({
   const quoteHeader = hasQuote ? (
     <ComposerPrimitive.Quote
       className="
-        flex items-start gap-2 rounded-md border border-foreground/8 bg-muted/30
-        p-2 text-sm
-        dark:border-white/8
+        flex items-start gap-2 rounded-md border border-border-subtle
+        bg-surface-1 p-2 text-sm
       "
     >
       <Quote className="mt-0.5 size-3.5 shrink-0 text-muted-foreground" />
@@ -144,15 +138,6 @@ export function AssistantComposer({
       onError={handleAttachmentError}
       onSubmit={handleSubmit}
     >
-      {hasFloatingAccessory ? (
-        <div className="absolute top-0 left-3 z-30 -translate-y-1/2">
-          {floatingAccessory}
-        </div>
-      ) : null}
-      {hasFloatingAccessory ? (
-        <div aria-hidden="true" className="order-first h-4 w-full shrink-0" />
-      ) : null}
-
       <ComposerEditor
         blockSubmit={isRunning}
         canCancel={canCancel}
@@ -216,7 +201,7 @@ function AssistantComposerFooter({ draftText }: { draftText: string }) {
         {isRunning ? (
           <Button
             className="
-              h-8 rounded-md border-foreground/8 bg-background/55 px-3 text-xs
+              h-8 rounded-md border-border-subtle bg-background/55 px-3 text-xs
               focus-visible:ring-0!
               dark:bg-card/60
             "
@@ -232,15 +217,20 @@ function AssistantComposerFooter({ draftText }: { draftText: string }) {
         <Button
           aria-label={t("common.send")}
           className="
-            size-8 rounded-full p-0 shadow-none
+            group/send size-8 rounded-full p-0 shadow-none
             focus-visible:ring-0!
-            active:translate-y-px
+            active:scale-95
           "
           disabled={isRunning || isEmpty}
           size="sm"
           type="submit"
         >
-          <ArrowUp />
+          <ArrowUp
+            className="
+              transition-transform duration-150 ease-swift
+              group-hover/send:-translate-y-px
+            "
+          />
           <span className="sr-only">{t("common.send")}</span>
         </Button>
       </div>

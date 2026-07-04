@@ -1,4 +1,3 @@
-import type { ReactNode } from "react";
 import {
   AuiIf,
   SelectionToolbarPrimitive,
@@ -19,11 +18,9 @@ import { SketchUnderline } from "@/features/chat/components/sketch-underline";
 import { workspaceContentColumnClass } from "@/features/chat/components/thread-styles";
 
 export function AssistantThread({
-  composerFloatingAccessory,
   onBeforeSubmit,
   projectName,
 }: {
-  composerFloatingAccessory?: ReactNode;
   onBeforeSubmit?: () => boolean | Promise<boolean>;
   projectName?: string;
 }) {
@@ -58,18 +55,16 @@ export function AssistantThread({
 
         <SelectionToolbarPrimitive.Root
           className="
-            z-20 flex items-center gap-1 rounded-lg border border-foreground/8
-            bg-popover/95 p-1 text-popover-foreground
-            shadow-[0_10px_28px_-22px_rgba(0,0,0,0.6)] backdrop-blur-xl
-            dark:border-white/9
+            z-20 flex items-center gap-1 rounded-lg border border-border-subtle
+            bg-popover/95 p-1 text-popover-foreground shadow-popover
+            backdrop-blur-xl
           "
         >
           <SelectionToolbarPrimitive.Quote
             className="
               inline-flex h-7 items-center gap-1 rounded-md px-2 text-xs
-              hover:bg-foreground/5.5
-              active:bg-foreground/7.5
-              dark:hover:bg-white/[0.07]
+              hover:bg-overlay-hover
+              active:bg-overlay-active
             "
           >
             <Quote className="size-3" />
@@ -91,10 +86,7 @@ export function AssistantThread({
         "
       >
         <div className={workspaceContentColumnClass}>
-          <AssistantComposer
-            floatingAccessory={composerFloatingAccessory}
-            onBeforeSubmit={onBeforeSubmit}
-          />
+          <AssistantComposer onBeforeSubmit={onBeforeSubmit} />
         </div>
       </div>
     </ThreadPrimitive.Root>
@@ -114,7 +106,11 @@ function EmptyThread({ projectName }: { projectName?: string }) {
     >
       <div className="w-full max-w-136">
         <div className="min-w-0 text-center select-none">
-          <h2 className="text-2xl/tight font-semibold text-pretty text-foreground">
+          <h2
+            className="
+            text-2xl/tight font-semibold text-pretty text-foreground
+          "
+          >
             {is.nonEmptyString(projectName) ? (
               <Trans
                 components={{ project: <SketchUnderline /> }}

@@ -18,18 +18,22 @@ import {
 
 interface WorkspaceHeaderProps {
   attention?: ChatAttentionState;
+  breadcrumbProject?: string;
   onToggleRightSidebar?: () => void;
   rightSidebarOpen?: boolean;
   rightSidebarToggleLabel?: string;
+  running?: boolean;
   title: string;
   workspaceToolActions?: ReactNode;
 }
 
 export function WorkspaceHeader({
   attention,
+  breadcrumbProject,
   onToggleRightSidebar,
   rightSidebarOpen = false,
   rightSidebarToggleLabel = "Toggle workspace tools",
+  running = false,
   title,
   workspaceToolActions,
 }: WorkspaceHeaderProps) {
@@ -44,23 +48,47 @@ export function WorkspaceHeader({
   return (
     <header
       className="
-        flex h-12 shrink-0 items-center gap-3 border-b border-foreground/10
-        bg-background/80 px-4
-        dark:border-white/10
+        relative flex h-12 shrink-0 items-center gap-3 border-b
+        border-border-subtle bg-background/80 px-4
       "
       data-electron-drag
       data-workspace-mode="chat"
     >
+      {running ? (
+        <span
+          aria-hidden="true"
+          className="
+            workspace-streaming-line absolute inset-x-0 -bottom-px h-[1.5px]
+          "
+        />
+      ) : null}
       <WorkspaceSidebarControlTarget />
       <h1
         className="
-          min-w-0 flex-1 truncate text-sm font-medium transition-[margin]
-          duration-200 ease-linear
+          flex min-w-0 flex-1 items-baseline gap-1.5 truncate text-sm
+          font-medium transition-[margin] duration-200 ease-linear
         "
         style={{ marginLeft: reserveTitleStart ? titleMarginLeft : 0 }}
-        title={title}
+        title={
+          is.nonEmptyString(breadcrumbProject)
+            ? `${breadcrumbProject} › ${title}`
+            : title
+        }
       >
-        {title}
+        {is.nonEmptyString(breadcrumbProject) ? (
+          <>
+            <span className="shrink-0 font-normal text-muted-foreground">
+              {breadcrumbProject}
+            </span>
+            <span
+              aria-hidden="true"
+              className="shrink-0 font-normal text-muted-foreground/60"
+            >
+              ›
+            </span>
+          </>
+        ) : null}
+        <span className="truncate">{title}</span>
       </h1>
       {showAttention ? (
         <span
@@ -72,8 +100,8 @@ export function WorkspaceHeader({
             <span
               aria-label={t("workspace.backgroundChatNeedsInput")}
               className="
-                size-2 rounded-full bg-amber-400
-                shadow-[0_0_0_1px_rgba(245,158,11,0.42),0_0_0_4px_rgba(245,158,11,0.14)]
+                size-2 rounded-full bg-status-attention
+                shadow-[0_0_0_1px_var(--status-attention-border),0_0_0_4px_var(--status-attention-soft)]
               "
               role="img"
             />
@@ -82,8 +110,8 @@ export function WorkspaceHeader({
             <span
               aria-label={t("workspace.backgroundChatCompleted")}
               className="
-                size-2 rounded-full bg-emerald-500
-                shadow-[0_0_0_1px_rgba(16,185,129,0.35)]
+                size-2 rounded-full bg-status-success
+                shadow-[0_0_0_1px_var(--status-success-border)]
               "
               role="img"
             />

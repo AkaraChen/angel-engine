@@ -13,6 +13,7 @@ import type {
   DraftAgentConfig,
 } from "@/app/workspace/workspace-thread-types";
 
+import type { WorkspaceMode } from "@/app/workspace/workspace-ui-store";
 import {
   getEnabledAgentOptions,
   isAgentRuntime,
@@ -77,10 +78,7 @@ import {
   WorkspaceToolSurfaceHostControls,
 } from "@/app/workspace/workspace-tool-host";
 import { useWorkspaceToolStore } from "@/app/workspace/workspace-tool-store";
-import {
-  type WorkspaceMode,
-  useWorkspaceUiStore,
-} from "@/app/workspace/workspace-ui-store";
+import { useWorkspaceUiStore } from "@/app/workspace/workspace-ui-store";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -1292,6 +1290,12 @@ function WorkspacePageContent({
           <SidebarInset className="h-svh max-h-svh overflow-hidden">
             <WorkspaceHeader
               attention={chatAttention}
+              breadcrumbProject={
+                workspaceMode === "work" && selectedChat
+                  ? selectedProjectName
+                  : undefined
+              }
+              running={selectedChatIsRunning}
               rightSidebarOpen={
                 canShowRightSidebar &&
                 (rightSidebarOpen || workspaceToolHost !== "sidebar")

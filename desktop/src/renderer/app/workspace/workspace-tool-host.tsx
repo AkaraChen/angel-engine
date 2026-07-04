@@ -2992,12 +2992,7 @@ function WorkspaceToolPatchFileLineStats({
   return (
     <span className="flex shrink-0 items-center gap-2 text-[11px] tabular-nums">
       {lineChanges.additions > 0 ? (
-        <span
-          className="
-            font-medium text-emerald-600
-            dark:text-emerald-400
-          "
-        >
+        <span className="font-medium text-status-success">
           +{lineChanges.additions.toLocaleString()}
         </span>
       ) : null}

@@ -113,8 +113,9 @@ function ChatSidebarTrailingSlot({
     <>
       <span
         className="
-          absolute top-1/2 right-2 flex size-5 -translate-y-1/2
-          items-center justify-center group-data-[collapsible=icon]:hidden
+          absolute top-1/2 right-2 flex size-5 -translate-y-1/2 items-center
+          justify-center
+          group-data-[collapsible=icon]:hidden
         "
       >
         <span
@@ -138,14 +139,13 @@ function ChatSidebarTrailingSlot({
             aria-label={archiveLabel}
             className="
               pointer-events-none inset-0! flex size-5! items-center
-              justify-center
-              peer-data-active/menu-button:text-sidebar-foreground/78
-              aria-expanded:opacity-100
+              justify-center opacity-0
               group-focus-within/chat-sidebar-item:pointer-events-auto
               group-focus-within/chat-sidebar-item:opacity-100
               group-hover/chat-sidebar-item:pointer-events-auto
               group-hover/chat-sidebar-item:opacity-100
-              opacity-0
+              peer-data-active/menu-button:text-sidebar-foreground/78
+              aria-expanded:opacity-100
               [&_svg]:size-4
             "
             onClick={(event) => {

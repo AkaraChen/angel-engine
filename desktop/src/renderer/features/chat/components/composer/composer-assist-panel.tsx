@@ -107,9 +107,8 @@ export function AssistPanelFrame({ children, title }: AssistPanelFrameProps) {
     <div
       className="
         absolute inset-x-0 bottom-full z-50 mb-2 overflow-hidden rounded-lg
-        border border-foreground/8 bg-popover/96 p-1 text-popover-foreground
+        border border-border-subtle bg-popover/96 p-1 text-popover-foreground
         shadow-[0_12px_30px_-24px_rgba(0,0,0,0.62)] backdrop-blur-xl
-        dark:border-white/10
       "
     >
       <div

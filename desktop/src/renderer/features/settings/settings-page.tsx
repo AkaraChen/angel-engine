@@ -18,25 +18,27 @@ import geminiIconUrl from "@lobehub/icons-static-svg/icons/geminicli-color.svg";
 import kimiIconUrl from "@lobehub/icons-static-svg/icons/kimi-color.svg";
 import opencodeIconUrl from "@lobehub/icons-static-svg/icons/opencode.svg";
 import qoderIconUrl from "@lobehub/icons-static-svg/icons/qoder-color.svg";
-import piIconUrl from "@/features/agents/pi-coding-agent.svg";
 import {
   RiErrorWarningLine as AlertTriangle,
+  RiArchiveLine as ArchiveIcon,
   RiRobot2Line as Bot,
+  RiComputerLine as ComputerIcon,
   RiDraggable as DragHandle,
+  RiPaletteLine as PaletteIcon,
   RiPencilLine as Pencil,
   RiAddLine as Plus,
   RiSaveLine as Save,
   RiDeleteBinLine as Trash2,
   RiCloseLine as X,
 } from "@remixicon/react";
-
 import {
   isCustomAgentRuntime,
   sortAgentOptionsBySettings,
 } from "@shared/agents";
+
 import is from "@sindresorhus/is";
 import { useQueryClient } from "@tanstack/react-query";
-import { Reorder, useDragControls } from "framer-motion";
+import { m, Reorder, useDragControls } from "framer-motion";
 import { useCallback, useId, useMemo, useReducer, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
@@ -47,10 +49,12 @@ import {
 } from "@/components/ui/native-select";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
+import piIconUrl from "@/features/agents/pi-coding-agent.svg";
 import { ArchivedSettingsPanel } from "@/features/settings/archived-settings-panel";
 import { useSettingsStore } from "@/features/settings/settings-store";
 import { useThemeSettings } from "@/features/settings/use-theme-settings";
 import { languageOptions } from "@/i18n";
+import { springs } from "@/platform/motion";
 import { queryKeys } from "@/platform/query-keys";
 import { cn } from "@/platform/utils";
 
@@ -61,12 +65,16 @@ type SettingsTab =
   | "archived"
   | "danger";
 
-const settingsTabs: Array<{ id: SettingsTab; labelKey: string }> = [
-  { id: "agents", labelKey: "settings.tabs.agents" },
-  { id: "appearance", labelKey: "settings.tabs.appearance" },
-  { id: "workspace", labelKey: "settings.tabs.workspace" },
-  { id: "archived", labelKey: "settings.tabs.archived" },
-  { id: "danger", labelKey: "settings.tabs.danger" },
+const settingsTabs: Array<{
+  icon: typeof Bot;
+  id: SettingsTab;
+  labelKey: string;
+}> = [
+  { icon: Bot, id: "agents", labelKey: "settings.tabs.agents" },
+  { icon: PaletteIcon, id: "appearance", labelKey: "settings.tabs.appearance" },
+  { icon: ComputerIcon, id: "workspace", labelKey: "settings.tabs.workspace" },
+  { icon: ArchiveIcon, id: "archived", labelKey: "settings.tabs.archived" },
+  { icon: AlertTriangle, id: "danger", labelKey: "settings.tabs.danger" },
 ];
 
 const themeModeOptions: Array<{
@@ -332,33 +340,50 @@ export function SettingsPage({
           role="tablist"
           data-electron-no-drag
         >
-          {settingsTabs.map((tab) => (
-            <button
-              aria-controls={`${tabPanelId}-${tab.id}`}
-              aria-selected={activeTab === tab.id}
-              className={cn(
-                `
-                  flex h-8 items-center rounded-md px-2 text-left text-[13px]
-                  font-medium text-sidebar-foreground/70 transition-colors
-                  outline-none
-                  hover:bg-sidebar-accent hover:text-sidebar-accent-foreground
-                  focus-visible:ring-2 focus-visible:ring-ring/30
-                `,
-                activeTab === tab.id
-                  ? "bg-sidebar-accent text-sidebar-accent-foreground"
-                  : "bg-transparent",
-              )}
-              id={`${tabPanelId}-${tab.id}-tab`}
-              key={tab.id}
-              onKeyDown={(event) => handleTabKeyDown(event, tab.id)}
-              onClick={() => setActiveTab(tab.id)}
-              role="tab"
-              tabIndex={activeTab === tab.id ? 0 : -1}
-              type="button"
-            >
-              {t(tab.labelKey)}
-            </button>
-          ))}
+          {settingsTabs.map((tab) => {
+            const TabIcon = tab.icon;
+            const isActive = activeTab === tab.id;
+
+            return (
+              <button
+                aria-controls={`${tabPanelId}-${tab.id}`}
+                aria-selected={isActive}
+                className={cn(
+                  `
+                    relative flex h-8 items-center gap-2 rounded-md px-2
+                    text-left text-[13px] font-medium text-sidebar-foreground/70
+                    transition-colors outline-none
+                    hover:text-sidebar-accent-foreground
+                    focus-visible:ring-2 focus-visible:ring-ring/30
+                  `,
+                  isActive
+                    ? `
+                      text-primary-soft-foreground
+                      hover:text-primary-soft-foreground
+                    `
+                    : "hover:bg-sidebar-accent",
+                )}
+                id={`${tabPanelId}-${tab.id}-tab`}
+                key={tab.id}
+                onKeyDown={(event) => handleTabKeyDown(event, tab.id)}
+                onClick={() => setActiveTab(tab.id)}
+                role="tab"
+                tabIndex={isActive ? 0 : -1}
+                type="button"
+              >
+                {isActive ? (
+                  <m.span
+                    aria-hidden="true"
+                    className="absolute inset-0 rounded-md bg-primary-soft"
+                    layoutId="settings-active-tab"
+                    transition={springs.snappy}
+                  />
+                ) : null}
+                <TabIcon className="relative size-3.5 shrink-0 opacity-80" />
+                <span className="relative">{t(tab.labelKey)}</span>
+              </button>
+            );
+          })}
         </nav>
       </aside>
 
@@ -369,7 +394,7 @@ export function SettingsPage({
             activeTab === "archived" ? "max-w-4xl" : "max-w-2xl",
           )}
         >
-          <h2 className="text-xl font-semibold tracking-normal">
+          <h2 className="font-display text-xl font-semibold tracking-[-0.015em]">
             {activeTabLabel}
           </h2>
 
@@ -424,7 +449,7 @@ export function SettingsPage({
                         <span
                           className="
                             flex size-9 shrink-0 items-center justify-center
-                            rounded-lg border border-foreground/10 bg-background
+                            rounded-lg border border-border bg-background
                           "
                         >
                           {is.nonEmptyString(iconUrl) ? (
@@ -598,7 +623,8 @@ function SettingsGroup({
       ) : null}
       <div
         className="
-          divide-y divide-border overflow-hidden rounded-lg border bg-card
+          divide-y divide-border-subtle overflow-hidden rounded-xl border
+          border-border-subtle bg-surface-1/50 shadow-xs
         "
       >
         {children}
@@ -719,7 +745,7 @@ function CustomAgentsSettingsGroup({
               <span
                 className="
                   flex size-9 shrink-0 items-center justify-center rounded-lg
-                  border border-foreground/10 bg-background
+                  border border-border bg-background
                 "
               >
                 <Bot className="size-5 text-muted-foreground" />
@@ -1000,7 +1026,7 @@ function SettingsRow({
         <span
           className="
             flex size-8 shrink-0 items-center justify-center rounded-md border
-            border-foreground/10 bg-background
+            border-border bg-background
           "
         >
           {icon}

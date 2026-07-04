@@ -122,9 +122,8 @@ export function ChatAttachmentTile({
             absolute -top-1 -right-1 inline-flex size-5 items-center
             justify-center rounded-full border bg-background
             text-muted-foreground shadow-sm
-            hover:bg-foreground/5.5 hover:text-foreground
-            active:bg-foreground/7.5
-            dark:hover:bg-white/[0.07]
+            hover:bg-overlay-hover hover:text-foreground
+            active:bg-overlay-active
           "
           onClick={onRemove}
           type="button"
@@ -174,8 +173,7 @@ function AttachmentThumb({
     <span
       className="
         flex size-10 shrink-0 items-center justify-center overflow-hidden
-        rounded-md border border-foreground/8 bg-muted/45
-        dark:border-white/8
+        rounded-md border border-border-subtle bg-surface-1
       "
     >
       {hasPreviewUrl && !imageFailed ? (
@@ -204,21 +202,15 @@ function attachmentTileClassName({
   return cn(
     `
       inline-flex max-w-full min-w-0 items-center gap-2 rounded-lg border
-      border-foreground/8 bg-background/70 px-2 py-1.5 text-left text-xs
-      shadow-[0_8px_22px_-22px_rgba(0,0,0,0.55)] backdrop-blur-xl
-      transition-colors
-      dark:border-white/8
+      border-border-subtle bg-background/70 px-2 py-1.5 text-left text-xs
+      shadow-panel backdrop-blur-xl transition-colors
     `,
-    `
-      focus-visible:ring-2 focus-visible:ring-foreground/10
-      focus-visible:outline-none
-    `,
+    `focus-visible:ring-2 focus-visible:ring-ring/25 focus-visible:outline-none`,
     removable && "pr-7",
     interactive &&
       `
-        hover:bg-foreground/5.5
-        active:bg-foreground/7.5
-        dark:hover:bg-white/[0.07]
+        hover:bg-overlay-hover
+        active:bg-overlay-active
       `,
   );
 }

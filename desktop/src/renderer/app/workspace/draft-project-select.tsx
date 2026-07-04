@@ -6,7 +6,6 @@ import {
   RiFolderLine as Folder,
   RiGitBranchLine as GitBranch,
 } from "@remixicon/react";
-import is from "@sindresorhus/is";
 import { useTranslation } from "react-i18next";
 import { getProjectDisplayName } from "@/app/workspace/workspace-display";
 import {
@@ -76,7 +75,12 @@ export function DraftProjectSelect({
         selectClassName={cn(
           projectControlVariants[variant],
           variant === "default" &&
-            "hover:bg-background/92 focus-visible:!border-foreground/12 focus-visible:!ring-0 dark:hover:bg-card/90 dark:focus-visible:!border-white/14",
+            `
+              hover:bg-background/92
+              focus-visible:border-foreground/12! focus-visible:ring-0!
+              dark:hover:bg-card/90
+              dark:focus-visible:border-white/14!
+            `,
         )}
         size="sm"
         title={t("workspace.projectSelect")}
@@ -133,9 +137,14 @@ export function DraftCreationLocationSelect({
         }
         selectClassName={cn(
           projectControlVariants[variant],
-          "max-w-[12rem]",
+          "max-w-48",
           variant === "default" &&
-            "hover:bg-background/92 focus-visible:!border-foreground/12 focus-visible:!ring-0 dark:hover:bg-card/90 dark:focus-visible:!border-white/14",
+            `
+              hover:bg-background/92
+              focus-visible:border-foreground/12! focus-visible:ring-0!
+              dark:hover:bg-card/90
+              dark:focus-visible:border-white/14!
+            `,
         )}
         size="sm"
         title={t("workspace.creationLocationSelect")}
@@ -148,44 +157,6 @@ export function DraftCreationLocationSelect({
           {t("workspace.creationLocationWorktree")}
         </NativeSelectOption>
       </NativeSelect>
-    </div>
-  );
-}
-
-export function ReadonlyProjectLabel({
-  labelSuffix,
-  projectName,
-  projectPath,
-}: {
-  labelSuffix?: string;
-  projectName: string;
-  projectPath?: string;
-}) {
-  const { t } = useTranslation();
-
-  return (
-    <div className="relative w-fit max-w-[18rem]">
-      <Folder
-        className="
-          pointer-events-none absolute top-1/2 left-2.5 z-10 size-3.5
-          -translate-y-1/2 text-muted-foreground/85
-        "
-      />
-      <span
-        aria-label={t("workspace.projectSelect")}
-        className={`
-          ${projectControlVariants.default}
-          inline-flex min-w-0 items-center pr-3 text-muted-foreground
-        `}
-        title={projectPath ?? projectName}
-      >
-        <span className="min-w-0 truncate select-none">{projectName}</span>
-        {is.nonEmptyString(labelSuffix) ? (
-          <span className="shrink-0 text-muted-foreground/70 select-none">
-            &nbsp;· {labelSuffix}
-          </span>
-        ) : null}
-      </span>
     </div>
   );
 }

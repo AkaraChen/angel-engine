@@ -65,7 +65,12 @@ export default antfu(
         {
           cwd: ".",
           entryPoint: "src/renderer/index.css",
-          ignore: ["^aui-", "^chat-restore-"],
+          ignore: [
+            "^aui-",
+            "^chat-restore-",
+            "^chat-markdown$",
+            "^workspace-streaming-",
+          ],
         },
       ],
     },

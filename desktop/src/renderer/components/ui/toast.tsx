@@ -70,15 +70,21 @@ function ToastProvider({ children }: { children: React.ReactNode }) {
           <ToastPrimitive.Root
             className={cn(
               `
-                grid w-full max-w-sm gap-1 rounded-lg border bg-popover p-3
-                text-popover-foreground shadow-lg
+                relative grid w-full max-w-sm gap-1 overflow-hidden rounded-xl
+                border border-border-subtle bg-popover p-3
+                text-popover-foreground shadow-popover
+                before:absolute before:inset-y-0 before:left-0 before:w-[3px]
+                before:bg-primary/60
                 data-open:animate-in data-open:fade-in-0
                 data-open:slide-in-from-right-4
                 data-closed:animate-out data-closed:fade-out-0
                 data-closed:slide-out-to-right-4
               `,
               toast.variant === "destructive" &&
-                "border-destructive/40 text-destructive",
+                `
+                  border-status-danger-border text-status-danger
+                  before:bg-status-danger
+                `,
             )}
             key={toast.id}
             onOpenChange={(open) => {

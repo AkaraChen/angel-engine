@@ -998,8 +998,8 @@ export function PromptInput({
         <InputGroup
           className={cn(
             `
-              overflow-hidden rounded-lg border-foreground/8 bg-background/80
-              shadow-[0_8px_22px_-22px_rgba(0,0,0,0.55)] backdrop-blur-xl
+              overflow-hidden rounded-lg border-border-subtle bg-background/80
+              shadow-panel backdrop-blur-xl
             `,
             inputGroupClassName,
           )}
@@ -1395,9 +1395,8 @@ export function PromptInputHoverCardContent({
       align={align}
       className={cn(
         `
-          rounded-lg border-foreground/8 bg-popover/95 shadow-lg
+          rounded-lg border-border-subtle bg-popover/95 shadow-popover
           backdrop-blur-xl
-          dark:border-white/8
         `,
         className,
       )}
@@ -1458,9 +1457,8 @@ export function PromptInputTabItem({
       className={cn(
         `
           flex items-center gap-2 rounded-md px-3 py-2 text-xs
-          hover:bg-foreground/5.5
-          active:bg-foreground/7.5
-          dark:hover:bg-white/[0.07]
+          hover:bg-overlay-hover
+          active:bg-overlay-active
         `,
         className,
       )}

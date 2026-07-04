@@ -87,9 +87,8 @@ export function WorkspaceRightSidebar({
       inert={!open ? true : undefined}
       className={cn(
         `
-          relative min-h-0 shrink-0 overflow-hidden border-l
-          border-foreground/10 bg-background/80
-          dark:border-white/10
+          relative min-h-0 shrink-0 overflow-hidden border-l border-border
+          bg-background/80
         `,
         resizing
           ? "transition-opacity"

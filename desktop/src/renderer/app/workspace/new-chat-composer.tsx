@@ -187,16 +187,25 @@ export function NewChatComposer({
   return (
     <div
       className="
-        flex h-full flex-col items-center justify-center overflow-y-auto p-4
+        flex h-full animate-in flex-col items-center justify-center
+        overflow-y-auto p-4 duration-300 fade-in-0 slide-in-from-bottom-2
         sm:px-7
       "
     >
-      <div className="w-full max-w-3xl">
-        <div className="mb-12 text-center">
+      <div className="relative w-full max-w-3xl">
+        <div
+          aria-hidden="true"
+          className="
+            pointer-events-none absolute -inset-x-24 -inset-y-16
+            bg-[radial-gradient(ellipse_50%_60%_at_50%_45%,--theme(--color-primary/6%),transparent_65%)]
+            dark:bg-[radial-gradient(ellipse_50%_60%_at_50%_45%,--theme(--color-primary/9%),transparent_65%)]
+          "
+        />
+        <div className="relative mb-12 text-center">
           <h2
             className="
-              text-(length:--workspace-new-chat-title-size)/tight font-semibold
-              text-pretty text-foreground
+              font-display text-(length:--workspace-new-chat-title-size)/tight
+              font-semibold tracking-[-0.015em] text-pretty text-foreground
             "
           >
             {is.nonEmptyString(projectName) ? (
@@ -222,8 +231,9 @@ export function NewChatComposer({
 
         <div
           className="
-            rounded-2xl border border-foreground/8 bg-background/86
-            dark:border-white/9 dark:bg-card/82
+            relative rounded-2xl border border-border-subtle bg-background/86
+            shadow-panel
+            dark:bg-card/82
           "
         >
           <PromptInput
@@ -259,8 +269,7 @@ export function NewChatComposer({
             <div
               className="
                 flex items-center justify-start gap-2 rounded-b-2xl border-t
-                border-foreground/8 bg-muted/30 px-3 py-2
-                dark:border-white/9 dark:bg-white/3
+                border-border-subtle bg-surface-1/60 px-3 py-2
               "
             >
               <DraftProjectSelect
@@ -304,7 +313,7 @@ function NewChatComposerFooter({
         {isRunning ? (
           <Button
             className="
-              h-8 rounded-md border-foreground/8 bg-background/55 px-3 text-xs
+              h-8 rounded-md border-border-subtle bg-background/55 px-3 text-xs
               focus-visible:ring-0!
               dark:bg-card/60
             "
@@ -320,15 +329,20 @@ function NewChatComposerFooter({
         <Button
           aria-label={t("common.send")}
           className="
-            size-8 rounded-full p-0 shadow-none
+            group/send size-8 rounded-full p-0 shadow-none
             focus-visible:ring-0!
-            active:translate-y-px
+            active:scale-95
           "
           disabled={isRunning || isEmpty}
           size="sm"
           type="submit"
         >
-          <ArrowUp />
+          <ArrowUp
+            className="
+              transition-transform duration-150 ease-swift
+              group-hover/send:-translate-y-px
+            "
+          />
           <span className="sr-only">{t("common.send")}</span>
         </Button>
       </div>

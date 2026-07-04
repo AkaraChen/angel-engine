@@ -37,8 +37,8 @@ function SheetOverlay({
       data-slot="sheet-overlay"
       className={cn(
         `
-          fixed inset-0 z-50 bg-black/30 duration-100
-          supports-backdrop-filter:backdrop-blur-sm
+          fixed inset-0 z-50 bg-black/40 duration-100
+          supports-backdrop-filter:backdrop-blur-[2px]
           data-open:animate-in data-open:fade-in-0
           data-closed:animate-out data-closed:fade-out-0
         `,
@@ -70,8 +70,8 @@ function SheetContent({
         className={cn(
           `
             fixed z-50 flex flex-col bg-popover bg-clip-padding text-sm
-            text-popover-foreground shadow-xl transition duration-200
-            ease-in-out
+            text-popover-foreground shadow-overlay transition duration-200
+            ease-swift
             data-[side=bottom]:inset-x-0 data-[side=bottom]:bottom-0
             data-[side=bottom]:h-auto data-[side=bottom]:border-t
             data-[side=left]:inset-y-0 data-[side=left]:left-0

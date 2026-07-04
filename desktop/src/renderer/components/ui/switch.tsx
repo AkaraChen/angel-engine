@@ -16,7 +16,8 @@ function Switch({
           rounded-full border border-transparent bg-foreground/18
           transition-colors outline-none
           disabled:cursor-not-allowed disabled:opacity-60
-          data-[state=checked]:bg-foreground
+          focus-visible:ring-3 focus-visible:ring-primary/15
+          data-[state=checked]:bg-primary
         `,
         className,
       )}
@@ -26,7 +27,8 @@ function Switch({
         data-slot="switch-thumb"
         className="
           pointer-events-none block size-4 translate-x-0.5 rounded-full
-          bg-background shadow-sm transition-transform
+          bg-background shadow-sm transition-transform duration-260
+          [transition-timing-function:cubic-bezier(0.34,1.3,0.64,1)]
           data-[state=checked]:translate-x-4
         "
       />

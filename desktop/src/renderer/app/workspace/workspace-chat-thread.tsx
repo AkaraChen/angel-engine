@@ -10,7 +10,6 @@ import type {
 } from "@/app/workspace/workspace-thread-types";
 import type { useApi } from "@/platform/use-api";
 import { RiErrorWarningLine as AlertCircle } from "@remixicon/react";
-import is from "@sindresorhus/is";
 import { useQuery, useSuspenseQuery } from "@tanstack/react-query";
 import { Component, useCallback, useMemo } from "react";
 import { useTranslation } from "react-i18next";
@@ -22,7 +21,6 @@ import {
   runtimeConfigOptionsToAgentOptions,
   selectedConfigOverride,
 } from "@/app/workspace/chat-runtime-options";
-import { ReadonlyProjectLabel } from "@/app/workspace/draft-project-select";
 import {
   getErrorMessage,
   getProjectDisplayName,
@@ -398,18 +396,7 @@ function ChatThreadRuntime({
         runtimeConfig={runtimeConfig}
         slotKey={slotKey}
       >
-        <AssistantThread
-          composerFloatingAccessory={
-            is.nonEmptyString(projectContext.name) ? (
-              <ReadonlyProjectLabel
-                labelSuffix={projectContext.isWorktree ? "worktree" : undefined}
-                projectName={projectContext.name}
-                projectPath={projectContext.path}
-              />
-            ) : undefined
-          }
-          projectName={projectContext.name}
-        />
+        <AssistantThread projectName={projectContext.name} />
       </AppRuntimeProvider>
     </ChatOptionsProvider>
   );
@@ -441,26 +428,20 @@ export class ChatRestoreErrorBoundary extends Component<
           <div
             className={`
               ${workspaceContentColumnClass}
-              flex items-start gap-3 rounded-lg border border-rose-500/20
-              bg-rose-500/8 px-4 py-3 text-sm text-rose-950 shadow-sm
-              dark:border-rose-400/20 dark:bg-rose-400/10 dark:text-rose-100
+              flex items-start gap-3 rounded-lg border
+              border-status-danger-border bg-status-danger-soft px-4 py-3
+              text-sm text-foreground shadow-xs
             `}
             role="alert"
           >
-            <AlertCircle
-              className="
-                mt-0.5 size-4 shrink-0 text-rose-600
-                dark:text-rose-300
-              "
-            />
+            <AlertCircle className="mt-0.5 size-4 shrink-0 text-status-danger" />
             <div className="min-w-0">
               <div className="font-medium">
                 {i18n.t("notifications.chatActionFailed")}
               </div>
               <div
                 className="
-                  mt-1 text-[13px]/5 whitespace-pre-wrap text-rose-900/90
-                  dark:text-rose-100/85
+                  mt-1 text-[13px]/5 whitespace-pre-wrap text-muted-foreground
                 "
               >
                 {getErrorMessage(this.state.error)}

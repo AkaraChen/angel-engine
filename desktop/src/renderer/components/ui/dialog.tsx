@@ -39,8 +39,8 @@ function DialogOverlay({
       data-slot="dialog-overlay"
       className={cn(
         `
-          fixed inset-0 isolate z-50 bg-black/30 duration-100
-          supports-backdrop-filter:backdrop-blur-sm
+          fixed inset-0 isolate z-50 bg-black/40 duration-100
+          supports-backdrop-filter:backdrop-blur-[2px]
           data-open:animate-in data-open:fade-in-0
           data-closed:animate-out data-closed:fade-out-0
         `,
@@ -69,14 +69,13 @@ function DialogContent({
         className={cn(
           `
             fixed top-1/2 left-1/2 z-50 grid w-full max-w-[calc(100%-2rem)]
-            -translate-1/2 gap-6 rounded-lg bg-popover p-6 text-sm
-            text-popover-foreground shadow-xl ring-1 ring-foreground/5
-            duration-100 outline-none
+            -translate-1/2 gap-6 rounded-xl bg-popover p-6 text-sm
+            text-popover-foreground shadow-overlay ring-1 ring-border-subtle
+            duration-180 ease-swift outline-none
             sm:max-w-md
-            dark:ring-foreground/10
-            data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95
+            data-open:animate-in data-open:fade-in-0 data-open:zoom-in-[0.97]
             data-closed:animate-out data-closed:fade-out-0
-            data-closed:zoom-out-95
+            data-closed:zoom-out-[0.97] data-closed:duration-120
           `,
           className,
         )}
@@ -149,7 +148,10 @@ function DialogTitle({
   return (
     <DialogPrimitive.Title
       data-slot="dialog-title"
-      className={cn("text-base leading-none font-medium", className)}
+      className={cn(
+        "font-display text-base leading-none font-semibold tracking-[-0.015em]",
+        className,
+      )}
       {...props}
     />
   );
