@@ -1286,16 +1286,16 @@ function WorkspaceToolNewTabMenu({
           type="button"
           variant="ghost"
         >
-          <Add className="size-3.5" />
+          <Add className="size-3.5" weight="duotone" />
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start" variant="native">
         <DropdownMenuItem onSelect={onAddTerminalTab}>
-          <TerminalIcon className="size-3.5" />
+          <TerminalIcon className="size-3.5" weight="duotone" />
           <span>Terminal</span>
         </DropdownMenuItem>
         <DropdownMenuItem onSelect={onAddBrowserTab}>
-          <Browser className="size-3.5" />
+          <Browser className="size-3.5" weight="duotone" />
           <span>Browser</span>
         </DropdownMenuItem>
       </DropdownMenuContent>
