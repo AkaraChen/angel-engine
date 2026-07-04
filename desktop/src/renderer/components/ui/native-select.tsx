@@ -1,4 +1,4 @@
-import { RiArrowDownSLine as ChevronDownIcon } from "@remixicon/react";
+import { CaretDown as ChevronDownIcon } from "@phosphor-icons/react";
 
 import * as React from "react";
 import { cn } from "@/platform/utils";

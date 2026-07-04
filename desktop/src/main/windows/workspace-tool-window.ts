@@ -30,6 +30,7 @@ import { createDesktopWindow } from "./factory";
 const workspaceToolWindowStateFileName = "workspace-tool-window-state.json";
 const workspaceToolWindowHash = "/workspace-tools";
 const workspaceToolWindowMinimumBounds = { height: 420, width: 640 };
+const workspaceToolWindowTrafficLightPosition = { x: 16, y: 16 };
 export const WORKSPACE_TOOL_SNAPSHOT_LIMIT = 32;
 
 const workspaceToolSurfaceContextSetInput = type({
@@ -229,6 +230,10 @@ function ensureWorkspaceToolWindow(sourceWindow?: BrowserWindow) {
     stateFileName: workspaceToolWindowStateFileName,
   });
 
+  if (process.platform === "darwin") {
+    window.setWindowButtonPosition(workspaceToolWindowTrafficLightPosition);
+  }
+
   workspaceToolWindow = window;
   lockWorkspaceToolWindowTitle(window);
   window.on("closed", () => {
@@ -349,7 +354,5 @@ function workspaceToolWindowTitle() {
       : root
     : undefined;
 
-  return is.nonEmptyString(rootName)
-    ? `Angel Engine · Workspace tools · ${rootName}`
-    : "Angel Engine · Workspace tools";
+  return is.nonEmptyString(rootName) ? rootName : "Angel Engine";
 }

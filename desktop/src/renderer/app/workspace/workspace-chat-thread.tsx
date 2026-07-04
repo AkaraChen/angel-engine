@@ -9,7 +9,7 @@ import type {
   DraftAgentConfig,
 } from "@/app/workspace/workspace-thread-types";
 import type { useApi } from "@/platform/use-api";
-import { RiErrorWarningLine as AlertCircle } from "@remixicon/react";
+import { WarningCircle as AlertCircle } from "@phosphor-icons/react";
 import { useQuery, useSuspenseQuery } from "@tanstack/react-query";
 import { Component, useCallback, useMemo } from "react";
 import { useTranslation } from "react-i18next";

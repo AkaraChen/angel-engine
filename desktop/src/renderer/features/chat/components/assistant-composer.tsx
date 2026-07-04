@@ -2,12 +2,12 @@ import type { PromptInputMessage } from "@/components/ai-elements/prompt-input";
 
 import { ComposerPrimitive, useAui, useAuiState } from "@assistant-ui/react";
 import {
-  RiArrowUpLine as ArrowUp,
-  RiStopCircleLine as CircleStop,
-  RiDoubleQuotesL as Quote,
-  RiEqualizer2Line as SlidersHorizontal,
-  RiCloseLine as X,
-} from "@remixicon/react";
+  ArrowUp,
+  StopCircle as CircleStop,
+  Quotes as Quote,
+  SlidersHorizontal,
+  X,
+} from "@phosphor-icons/react";
 import { useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import {
@@ -123,7 +123,10 @@ export function AssistantComposer({
         bg-surface-1 p-2 text-sm
       "
     >
-      <Quote className="mt-0.5 size-3.5 shrink-0 text-muted-foreground" />
+      <Quote
+        className="mt-0.5 size-3.5 shrink-0 text-muted-foreground"
+        weight="duotone"
+      />
       <ComposerPrimitive.QuoteText className={quoteTextClassName} />
       <ComposerPrimitive.QuoteDismiss className={iconButtonClass}>
         <X className="size-3.5" />
@@ -190,7 +193,7 @@ function AssistantComposerFooter({ draftText }: { draftText: string }) {
             !chatOptions.canSetMode ||
             chatOptions.modeOptions.length < 2
           }
-          icon={<SlidersHorizontal />}
+          icon={<SlidersHorizontal weight="duotone" />}
           label={t("composer.mode")}
           onValueChange={(value) => {
             void chatOptions.setMode(value);

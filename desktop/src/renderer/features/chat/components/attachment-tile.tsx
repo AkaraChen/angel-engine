@@ -1,8 +1,4 @@
-import {
-  RiFileTextLine as FileText,
-  RiImageLine as ImageIcon,
-  RiCloseLine as X,
-} from "@remixicon/react";
+import { FileText, Image as ImageIcon, X } from "@phosphor-icons/react";
 import is from "@sindresorhus/is";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";

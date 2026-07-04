@@ -11,10 +11,7 @@ import type {
   PromptInputMessage,
 } from "@/components/ai-elements/prompt-input";
 import type { AttachmentInputError } from "@/features/chat/components/composer/composer-helpers";
-import {
-  RiArrowUpLine as ArrowUp,
-  RiStopCircleLine as CircleStop,
-} from "@remixicon/react";
+import { ArrowUp, StopCircle as CircleStop } from "@phosphor-icons/react";
 import is from "@sindresorhus/is";
 import { useCallback } from "react";
 import { Trans, useTranslation } from "react-i18next";

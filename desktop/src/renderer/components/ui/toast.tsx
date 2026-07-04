@@ -1,4 +1,4 @@
-import { RiCloseLine as XIcon } from "@remixicon/react";
+import { X as XIcon } from "@phosphor-icons/react";
 import { Toast as ToastPrimitive } from "radix-ui";
 import * as React from "react";
 import { useTranslation } from "react-i18next";

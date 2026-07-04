@@ -2,16 +2,16 @@ import type { AgentValueOption } from "@shared/agents";
 import type { ReactNode } from "react";
 import type { ChatOptionsContextValue } from "@/features/chat/runtime/chat-options-context";
 import {
-  RiRobot2Line as Bot,
-  RiBrainLine as Brain,
-  RiCheckLine as Check,
-  RiArrowDownSLine as ChevronDown,
-  RiCpuLine as Cpu,
-  RiAttachment2 as Paperclip,
-  RiSearchLine as Search,
-  RiShieldCheckLine as ShieldCheck,
-  RiEqualizer2Line as SlidersHorizontal,
-} from "@remixicon/react";
+  Robot as Bot,
+  Brain,
+  Check,
+  CaretDown as ChevronDown,
+  Cpu,
+  Paperclip,
+  MagnifyingGlass as Search,
+  ShieldCheck,
+  SlidersHorizontal,
+} from "@phosphor-icons/react";
 import { AGENT_OPTIONS } from "@shared/agents";
 import is from "@sindresorhus/is";
 import { useMemo, useState } from "react";
@@ -152,7 +152,10 @@ function ComposerProviderMenu({
               dangerouslySetInnerHTML={{ __html: providerIconSvg }}
             />
           ) : (
-            <Bot className="size-3.5 shrink-0 text-muted-foreground" />
+            <Bot
+              className="size-3.5 shrink-0 text-muted-foreground"
+              weight="duotone"
+            />
           )}
           <span className={composerModelMenuValueClassName}>
             {providerLabel}
@@ -257,7 +260,10 @@ function ComposerModelEffortMenu({
           type="button"
           variant="ghost"
         >
-          <Cpu className="size-3.5 shrink-0 text-muted-foreground" />
+          <Cpu
+            className="size-3.5 shrink-0 text-muted-foreground"
+            weight="duotone"
+          />
           <span className="max-w-52 min-w-0 truncate text-muted-foreground">
             {modelEffortLabel}
           </span>
@@ -279,7 +285,7 @@ function ComposerModelEffortMenu({
         <ComposerModelMenuSub
           disabled={modelDisabled}
           disabledReason={modelDisabledReason}
-          icon={<Cpu />}
+          icon={<Cpu weight="duotone" />}
           label={t("composer.model")}
           value={
             options.configLoading ? t("composer.loadingValue") : modelLabel
@@ -311,7 +317,7 @@ function ComposerModelEffortMenu({
         <ComposerModelMenuSub
           disabled={effortDisabled}
           disabledReason={effortDisabledReason}
-          icon={<Brain />}
+          icon={<Brain weight="duotone" />}
           label={t("composer.effort")}
           value={
             options.configLoading ? t("composer.loadingValue") : effortLabel
@@ -387,7 +393,10 @@ function ComposerAgentSettingsMenu({
           type="button"
           variant="ghost"
         >
-          <SlidersHorizontal className="size-3.5 shrink-0 text-muted-foreground" />
+          <SlidersHorizontal
+            className="size-3.5 shrink-0 text-muted-foreground"
+            weight="duotone"
+          />
           <span className={composerModelMenuValueClassName}>
             {t("composer.agentSettings")}
           </span>
@@ -409,7 +418,7 @@ function ComposerAgentSettingsMenu({
         <ComposerModelMenuSub
           disabled={modeDisabled}
           disabledReason={modeDisabledReason}
-          icon={<SlidersHorizontal />}
+          icon={<SlidersHorizontal weight="duotone" />}
           label={t("composer.agentMode")}
           value={options.configLoading ? t("composer.loadingValue") : modeLabel}
         >
@@ -427,7 +436,7 @@ function ComposerAgentSettingsMenu({
         <ComposerModelMenuSub
           disabled={permissionModeDisabled}
           disabledReason={permissionModeDisabledReason}
-          icon={<ShieldCheck />}
+          icon={<ShieldCheck weight="duotone" />}
           label={t("composer.permissionMode")}
           value={
             options.configLoading
@@ -459,6 +468,7 @@ function ComposerModelMenuChevron() {
         duration-150
         group-data-[state=open]/button:rotate-180
       "
+      weight="duotone"
     />
   );
 }
@@ -488,6 +498,7 @@ function ComposerModelMenuSearch({
             pointer-events-none absolute top-1/2 left-2.5 size-3.5
             -translate-y-1/2 text-muted-foreground/70
           "
+          weight="duotone"
         />
         <Input
           aria-label={placeholder}
@@ -638,7 +649,7 @@ function ComposerModelMenuItem({
           flex size-4 shrink-0 items-center justify-center text-primary
         "
       >
-        {selected ? <Check className="size-3" /> : null}
+        {selected ? <Check className="size-3" weight="duotone" /> : null}
       </span>
     </DropdownMenuItem>
   );

@@ -2,10 +2,7 @@ import type { ChatCreationLocation } from "@shared/chat";
 import type { Project } from "@shared/projects";
 import type { ChangeEvent } from "react";
 
-import {
-  RiFolderLine as Folder,
-  RiGitBranchLine as GitBranch,
-} from "@remixicon/react";
+import { Folder, GitBranch } from "@phosphor-icons/react";
 import { useTranslation } from "react-i18next";
 import { getProjectDisplayName } from "@/app/workspace/workspace-display";
 import {
@@ -67,6 +64,7 @@ export function DraftProjectSelect({
           pointer-events-none absolute top-1/2 left-2.5 z-10 size-3.5
           -translate-y-1/2 text-muted-foreground/85
         "
+        weight="duotone"
       />
       <NativeSelect
         aria-label={t("workspace.projectSelect")}
@@ -128,6 +126,7 @@ export function DraftCreationLocationSelect({
           pointer-events-none absolute top-1/2 left-2.5 z-10 size-3.5
           -translate-y-1/2 text-muted-foreground/85
         "
+        weight="duotone"
       />
       <NativeSelect
         aria-label={t("workspace.creationLocationSelect")}

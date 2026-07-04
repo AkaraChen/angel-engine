@@ -1,14 +1,15 @@
+import type { IconProps } from "@phosphor-icons/react";
 import type { Chat } from "@shared/chat";
 import type { Project } from "@shared/projects";
 import type { ComponentType, ReactElement } from "react";
 
 import type { WorkspaceMode } from "@/app/workspace/workspace-ui-store";
 import {
-  RiFolderLine as Folder,
-  RiMessage2Line as MessageSquare,
-  RiChatNewLine as MessageSquarePlus,
-  RiSettings3Line as Settings,
-} from "@remixicon/react";
+  Folder,
+  Chats as MessageSquare,
+  ChatCircleText as MessageSquarePlus,
+  GearSix as Settings,
+} from "@phosphor-icons/react";
 import is from "@sindresorhus/is";
 import { m } from "framer-motion";
 import { useEffect, useId, useRef, useState } from "react";
@@ -41,7 +42,7 @@ const FLOATING_SIDEBAR_TRANSITION = {
 } as const;
 
 const WORKSPACE_MODES: Array<{
-  icon: ComponentType<{ className?: string }>;
+  icon: ComponentType<Pick<IconProps, "className" | "weight">>;
   labelKey: "sidebar.modeChat" | "sidebar.modeWork";
   value: WorkspaceMode;
 }> = [
@@ -257,7 +258,7 @@ function WorkspaceSidebarContent({
             <WorkspaceSidebarMenuButton
               onClick={() => void createChatFromNewButton()}
             >
-              <MessageSquarePlus />
+              <MessageSquarePlus weight="duotone" />
               <span>{t("sidebar.newChat")}</span>
             </WorkspaceSidebarMenuButton>
           </AnimatedSidebarMenuItem>
@@ -297,7 +298,7 @@ function WorkspaceSidebarContent({
               isActive={settingsActive}
               onClick={() => void onOpenSettings()}
             >
-              <Settings />
+              <Settings weight="duotone" />
               <span>{t("sidebar.settings")}</span>
             </WorkspaceSidebarMenuButton>
           </AnimatedSidebarMenuItem>
@@ -378,7 +379,7 @@ function WorkspaceModeControl({
                   transition={springs.snappy}
                 />
               ) : null}
-              <Icon className="relative size-4 shrink-0" />
+              <Icon className="relative size-4 shrink-0" weight="duotone" />
               <span className="relative min-w-0 truncate">{label}</span>
             </button>
           );

@@ -7,7 +7,13 @@ import type {
   CustomAgentRuntime,
   UpdateCustomAgentInput,
 } from "@shared/agents";
-import type { KeyboardEvent, PointerEvent, ReactNode } from "react";
+import type { IconProps } from "@phosphor-icons/react";
+import type {
+  ComponentType,
+  KeyboardEvent,
+  PointerEvent,
+  ReactNode,
+} from "react";
 import type { SupportedLanguage } from "@/i18n";
 import type { DesktopThemeMode } from "@/platform/theme";
 import claudeIconUrl from "@lobehub/icons-static-svg/icons/claudecode-color.svg";
@@ -19,18 +25,18 @@ import kimiIconUrl from "@lobehub/icons-static-svg/icons/kimi-color.svg";
 import opencodeIconUrl from "@lobehub/icons-static-svg/icons/opencode.svg";
 import qoderIconUrl from "@lobehub/icons-static-svg/icons/qoder-color.svg";
 import {
-  RiErrorWarningLine as AlertTriangle,
-  RiArchiveLine as ArchiveIcon,
-  RiRobot2Line as Bot,
-  RiComputerLine as ComputerIcon,
-  RiDraggable as DragHandle,
-  RiPaletteLine as PaletteIcon,
-  RiPencilLine as Pencil,
-  RiAddLine as Plus,
-  RiSaveLine as Save,
-  RiDeleteBinLine as Trash2,
-  RiCloseLine as X,
-} from "@remixicon/react";
+  WarningCircle as AlertTriangle,
+  Archive as ArchiveIcon,
+  Robot as Bot,
+  Monitor as ComputerIcon,
+  DotsSixVertical as DragHandle,
+  Palette as PaletteIcon,
+  Pencil,
+  Plus,
+  FloppyDisk as Save,
+  Trash as Trash2,
+  X,
+} from "@phosphor-icons/react";
 import {
   isCustomAgentRuntime,
   sortAgentOptionsBySettings,
@@ -66,7 +72,7 @@ type SettingsTab =
   | "danger";
 
 const settingsTabs: Array<{
-  icon: typeof Bot;
+  icon: ComponentType<Pick<IconProps, "className" | "weight">>;
   id: SettingsTab;
   labelKey: string;
 }> = [
@@ -379,7 +385,10 @@ export function SettingsPage({
                     transition={springs.snappy}
                   />
                 ) : null}
-                <TabIcon className="relative size-3.5 shrink-0 opacity-80" />
+                <TabIcon
+                  className="relative size-3.5 shrink-0 opacity-80"
+                  weight="duotone"
+                />
                 <span className="relative">{t(tab.labelKey)}</span>
               </button>
             );
@@ -1018,7 +1027,7 @@ function SettingsRow({
   return (
     <article
       className={cn(
-        "flex min-h-12 items-center gap-3 bg-background px-4 py-3 dark:bg-card",
+        "flex min-h-12 items-center gap-3 bg-card px-4 py-3",
         muted && "text-muted-foreground",
       )}
     >

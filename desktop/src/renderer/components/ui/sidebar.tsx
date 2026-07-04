@@ -2,7 +2,7 @@
 
 import type { VariantProps } from "class-variance-authority";
 
-import { RiSidebarUnfoldLine as PanelLeftIcon } from "@remixicon/react";
+import { SidebarSimple as PanelLeftIcon } from "@phosphor-icons/react";
 import { cva } from "class-variance-authority";
 import { Slot } from "radix-ui";
 import * as React from "react";
@@ -330,7 +330,7 @@ function SidebarTrigger({
       }}
       {...props}
     >
-      <PanelLeftIcon />
+      <PanelLeftIcon weight="duotone" />
       <span className="sr-only">{t("sidebar.toggleSidebar")}</span>
     </Button>
   );

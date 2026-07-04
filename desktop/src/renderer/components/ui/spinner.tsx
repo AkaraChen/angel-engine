@@ -1,5 +1,5 @@
 import type { ComponentProps } from "react";
-import { RiLoader4Line as Loader2Icon } from "@remixicon/react";
+import { SpinnerGap as Loader2Icon } from "@phosphor-icons/react";
 import { useTranslation } from "react-i18next";
 import { cn } from "@/platform/utils";
 

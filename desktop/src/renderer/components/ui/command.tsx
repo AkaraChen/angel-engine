@@ -1,7 +1,7 @@
 import {
-  RiCheckLine as CheckIcon,
-  RiSearchLine as SearchIcon,
-} from "@remixicon/react";
+  Check as CheckIcon,
+  MagnifyingGlass as SearchIcon,
+} from "@phosphor-icons/react";
 import { Command as CommandPrimitive } from "cmdk";
 import * as React from "react";
 

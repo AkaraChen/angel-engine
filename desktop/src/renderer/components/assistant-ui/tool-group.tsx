@@ -9,9 +9,9 @@ import type {
 } from "react";
 import { useAuiState, useScrollLock } from "@assistant-ui/react";
 import {
-  RiArrowDownSLine as ChevronDownIcon,
-  RiToolsLine as ToolIcon,
-} from "@remixicon/react";
+  CaretDown as ChevronDownIcon,
+  Toolbox as ToolIcon,
+} from "@phosphor-icons/react";
 import { isChatToolAction, isTerminalChatToolPhase } from "@shared/chat";
 import is from "@sindresorhus/is";
 import { cva } from "class-variance-authority";

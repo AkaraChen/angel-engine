@@ -2,12 +2,12 @@ import type { Chat } from "@shared/chat";
 import type { Project } from "@shared/projects";
 import type { ReactElement } from "react";
 import {
-  RiArrowDownSLine as ChevronDown,
-  RiFolderLine as Folder,
-  RiFolderAddLine as FolderPlus,
-  RiLoader4Line as Loader2,
-  RiAddLine as Plus,
-} from "@remixicon/react";
+  CaretDown as ChevronDown,
+  Folder,
+  FolderPlus,
+  SpinnerGap as Loader2,
+  Plus,
+} from "@phosphor-icons/react";
 
 import { AnimatePresence, m } from "framer-motion";
 import { useEffect, useMemo } from "react";

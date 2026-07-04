@@ -4,7 +4,7 @@ import type {
   ProjectFileSearchResult,
 } from "@shared/chat";
 import type { ReactNode } from "react";
-import { RiLoader4Line as Loader2 } from "@remixicon/react";
+import { SpinnerGap as Loader2 } from "@phosphor-icons/react";
 import { useTranslation } from "react-i18next";
 import { nativeControlRowClass } from "@/features/chat/components/thread-styles";
 import { cn } from "@/platform/utils";

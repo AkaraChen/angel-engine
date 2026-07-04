@@ -2,10 +2,10 @@ import type { Chat } from "@shared/chat";
 import type { ReactElement } from "react";
 import type { SidebarChatDateGroupKey } from "@/app/workspace/workspace-ui-store";
 import {
-  RiArrowRightSLine as ChevronRight,
-  RiLoader4Line as Loader2,
-  RiMessage2Line as MessageSquare,
-} from "@remixicon/react";
+  CaretRight as ChevronRight,
+  SpinnerGap as Loader2,
+  Chats as MessageSquare,
+} from "@phosphor-icons/react";
 import { AnimatePresence, m } from "framer-motion";
 import { useMemo } from "react";
 

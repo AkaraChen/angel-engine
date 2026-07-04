@@ -6,9 +6,9 @@ import type { VariantProps } from "class-variance-authority";
 import type { ComponentProps, CSSProperties } from "react";
 import { useAuiState, useScrollLock } from "@assistant-ui/react";
 import {
-  RiBrainLine as BrainIcon,
-  RiArrowDownSLine as ChevronDownIcon,
-} from "@remixicon/react";
+  Brain as BrainIcon,
+  CaretDown as ChevronDownIcon,
+} from "@phosphor-icons/react";
 import { cva } from "class-variance-authority";
 import { memo, useCallback, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";

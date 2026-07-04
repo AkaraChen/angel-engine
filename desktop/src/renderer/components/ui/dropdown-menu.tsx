@@ -1,7 +1,7 @@
 import {
-  RiCheckLine as CheckIcon,
-  RiArrowRightSLine as ChevronRightIcon,
-} from "@remixicon/react";
+  Check as CheckIcon,
+  CaretRight as ChevronRightIcon,
+} from "@phosphor-icons/react";
 import { DropdownMenu as DropdownMenuPrimitive } from "radix-ui";
 
 import * as React from "react";

@@ -2,9 +2,9 @@ import type { ReactNode } from "react";
 import type { ChatAttentionState } from "@/features/chat/state/chat-run-store";
 
 import {
-  RiSidebarFoldLine as SidebarFold,
-  RiSidebarUnfoldLine as SidebarUnfold,
-} from "@remixicon/react";
+  SidebarSimple as SidebarFold,
+  SidebarSimple as SidebarUnfold,
+} from "@phosphor-icons/react";
 import is from "@sindresorhus/is";
 import { useTranslation } from "react-i18next";
 import { WorkspaceSidebarControlTarget } from "@/app/workspace/workspace-sidebar-control";

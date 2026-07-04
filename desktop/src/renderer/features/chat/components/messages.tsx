@@ -22,20 +22,20 @@ import {
 } from "@assistant-ui/react";
 import { StreamdownTextPrimitive } from "@assistant-ui/react-streamdown";
 import {
-  RiErrorWarningLine as AlertCircleIcon,
-  RiCheckLine as Check,
-  RiArrowDownSLine as ChevronDown,
-  RiCircleLine as Circle,
-  RiRadioButtonLine as CircleDot,
-  RiQuestionLine as CircleHelp,
-  RiFileCopyLine as Copy,
-  RiFileTextLine as FileText,
-  RiHammerLine as Hammer,
-  RiListCheck3 as ListChecks,
-  RiLoader4Line as Loader2,
-  RiPencilLine as Pencil,
-  RiSendPlaneLine as Send,
-} from "@remixicon/react";
+  WarningCircle as AlertCircleIcon,
+  Check,
+  CaretDown as ChevronDown,
+  Circle,
+  DotOutline as CircleDot,
+  Question as CircleHelp,
+  Copy,
+  FileText,
+  Hammer,
+  ListChecks,
+  SpinnerGap as Loader2,
+  Pencil,
+  PaperPlaneRight as Send,
+} from "@phosphor-icons/react";
 import {
   isChatElicitationData,
   isChatErrorData,
@@ -935,9 +935,9 @@ function ToolActionHeader({
         <ChevronDown
           className={cn(
             `
-              size-3.5 shrink-0 text-muted-foreground/70 transition-transform
-              duration-200 ease-swift
-            `,
+                size-3.5 shrink-0 text-muted-foreground/70 transition-transform
+                duration-200 ease-swift
+              `,
             !open && "-rotate-90",
           )}
         />

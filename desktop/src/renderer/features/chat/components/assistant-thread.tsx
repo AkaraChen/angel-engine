@@ -3,7 +3,7 @@ import {
   SelectionToolbarPrimitive,
   ThreadPrimitive,
 } from "@assistant-ui/react";
-import { RiDoubleQuotesL as Quote } from "@remixicon/react";
+import { Quotes as Quote } from "@phosphor-icons/react";
 import is from "@sindresorhus/is";
 import { Trans, useTranslation } from "react-i18next";
 

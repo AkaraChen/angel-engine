@@ -1,4 +1,4 @@
-import { RiCheckLine as CheckIcon } from "@remixicon/react";
+import { Check as CheckIcon } from "@phosphor-icons/react";
 import { Checkbox as CheckboxPrimitive } from "radix-ui";
 import * as React from "react";
 

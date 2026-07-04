@@ -24,6 +24,20 @@ import type { WorkspaceWindowFileState } from "@/app/workspace/workspace-tool-st
 import type { ApiClient } from "@/platform/api-client";
 
 import {
+  Plus as Add,
+  ArrowLeft,
+  ArrowRight,
+  Globe as Browser,
+  X as Close,
+  SidebarSimple as DockIcon,
+  FileText,
+  Folder,
+  GitBranch,
+  ArrowClockwise as Refresh,
+  TerminalWindow as TerminalIcon,
+  AppWindow as WindowIcon,
+} from "@phosphor-icons/react";
+import {
   DEFAULT_VIRTUAL_FILE_METRICS,
   getFiletypeFromFileName,
   getHighlighterOptions,
@@ -37,20 +51,6 @@ import {
   prepareFileTreeInput,
 } from "@pierre/trees";
 import { FileTree, useFileTree } from "@pierre/trees/react";
-import {
-  RiAddLine as Add,
-  RiArrowLeftLine as ArrowLeft,
-  RiArrowRightLine as ArrowRight,
-  RiGlobalLine as Browser,
-  RiCloseLine as Close,
-  RiSidebarFoldLine as DockIcon,
-  RiFileTextLine as FileText,
-  RiFolderLine as Folder,
-  RiGitBranchLine as GitBranch,
-  RiRefreshLine as Refresh,
-  RiTerminalBoxLine as TerminalIcon,
-  RiWindowLine as WindowIcon,
-} from "@remixicon/react";
 import is from "@sindresorhus/is";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { basename } from "pathe";
@@ -677,7 +677,7 @@ export function WorkspaceToolSurface({
         />
       ) : null}
       {!is.nonEmptyString(chatId) || !is.nonEmptyString(root) ? (
-        <WorkspaceToolEmpty title="No workspace tools for this chat" />
+        <WorkspaceToolEmpty title="No workspace for this chat" />
       ) : host === "sidebar" ? (
         <>
           <WorkspaceToolTabStrip
@@ -742,9 +742,7 @@ function WorkspaceToolWindowTitleBridge({ root }: { root?: string | null }) {
     const rootName = is.nonEmptyString(root)
       ? workspaceToolRootName(root)
       : undefined;
-    document.title = is.nonEmptyString(rootName)
-      ? `Angel Engine · Workspace tools · ${rootName}`
-      : "Angel Engine · Workspace tools";
+    document.title = is.nonEmptyString(rootName) ? rootName : "Angel Engine";
   }, [root]);
 
   return null;
@@ -773,9 +771,7 @@ function WorkspaceToolSurfaceHeader({
       data-electron-drag={trafficLightInset ? true : undefined}
     >
       <div className="min-w-0 flex-1 truncate text-sm font-medium">
-        {is.nonEmptyString(root)
-          ? `Workspace tools · ${workspaceToolRootName(root)}`
-          : "Workspace tools"}
+        {is.nonEmptyString(root) ? workspaceToolRootName(root) : "Angel Engine"}
       </div>
       <WorkspaceToolSurfaceHostControls
         host={host}
@@ -796,15 +792,15 @@ export function WorkspaceToolSurfaceHostControls({
     <>
       {host !== "sidebar" ? (
         <WorkspaceToolSurfaceHostButton
-          icon={<DockIcon />}
-          label="Dock tools in sidebar"
+          icon={<DockIcon weight="duotone" />}
+          label="Dock in sidebar"
           onClick={() => onRequestHost("sidebar")}
         />
       ) : null}
       {host !== "window" ? (
         <WorkspaceToolSurfaceHostButton
-          icon={<WindowIcon />}
-          label="Open tools in window"
+          icon={<WindowIcon weight="duotone" />}
+          label="Open in window"
           onClick={() => onRequestHost("window")}
         />
       ) : null}
@@ -988,7 +984,7 @@ function WorkspaceToolTabStrip({
       ref={stripRef}
     >
       <div
-        aria-label="Workspace tool tabs"
+        aria-label="Workspace tabs"
         className="
           flex min-w-0 items-center gap-0.5 overflow-x-auto
           [&::-webkit-scrollbar]:hidden
@@ -1051,7 +1047,7 @@ function WorkspaceToolTabStrip({
                   title={tab.title}
                   type="button"
                 >
-                  <Icon className="size-3.5 shrink-0" />
+                  <Icon className="size-3.5 shrink-0" weight="duotone" />
                 </button>
                 {dynamicTab && active ? (
                   <button
@@ -1179,7 +1175,7 @@ function WorkspaceToolVerticalTabSidebar({
           title={tab.title}
           type="button"
         >
-          <Icon className="size-3.5 shrink-0" />
+          <Icon className="size-3.5 shrink-0" weight="duotone" />
           <span className="truncate">{tab.title}</span>
         </button>
         {dynamicTab ? (
@@ -1232,7 +1228,7 @@ function WorkspaceToolVerticalTabSidebar({
       ref={sidebarRef}
     >
       <div
-        aria-label="Workspace tool tabs"
+        aria-label="Workspace tabs"
         aria-orientation="vertical"
         className="flex min-h-0 flex-1 flex-col overflow-y-auto p-2"
         role="tablist"
@@ -1245,7 +1241,7 @@ function WorkspaceToolVerticalTabSidebar({
           role="presentation"
         >
           <span className="text-xs font-medium text-muted-foreground">
-            Tools
+            Tabs
           </span>
           <WorkspaceToolNewTabMenu
             variant="section"
@@ -1274,7 +1270,7 @@ function WorkspaceToolNewTabMenu({
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button
-          aria-label="New tool tab"
+          aria-label="New tab"
           className={cn(
             `
               text-muted-foreground
@@ -1286,7 +1282,7 @@ function WorkspaceToolNewTabMenu({
               : "size-7 shrink-0 rounded-md",
           )}
           size="icon-xs"
-          title="New tool tab"
+          title="New tab"
           type="button"
           variant="ghost"
         >
@@ -1385,7 +1381,7 @@ function WorkspaceToolContent({
     return <WorkspaceGitPanel api={api} root={root} />;
   }
   if (!activeDynamicTab) {
-    return <WorkspaceToolEmpty title="Tool unavailable" />;
+    return <WorkspaceToolEmpty title="Unavailable" />;
   }
 
   switch (activeDynamicTab.kind) {

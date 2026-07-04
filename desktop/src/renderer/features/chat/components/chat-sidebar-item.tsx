@@ -1,8 +1,5 @@
 import type { MouseEventHandler, ReactElement } from "react";
-import {
-  RiArchiveLine as Archive,
-  RiRobot2Line as Bot,
-} from "@remixicon/react";
+import { Archive, Robot as Bot } from "@phosphor-icons/react";
 
 import is from "@sindresorhus/is";
 import { useTranslation } from "react-i18next";

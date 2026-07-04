@@ -1,8 +1,5 @@
 import type { ChatOptionsContextValue } from "@/features/chat/runtime/chat-options-context";
-import {
-  RiHammerLine as Hammer,
-  RiListCheck3 as ListChecks,
-} from "@remixicon/react";
+import { Hammer, ListChecks } from "@phosphor-icons/react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
@@ -77,7 +74,7 @@ export function PlanModeToggleButton({
       type="button"
       variant="ghost"
     >
-      <Icon className="size-3.5" />
+      <Icon className="size-3.5" weight="duotone" />
       <span>{label}</span>
     </Button>
   );

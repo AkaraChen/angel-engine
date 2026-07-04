@@ -3,13 +3,13 @@ import type { Project } from "@shared/projects";
 import type { ReactNode } from "react";
 
 import {
-  RiArchiveLine as Archive,
-  RiCheckLine as Check,
-  RiGitBranchLine as GitBranch,
-  RiRefreshLine as Restore,
-  RiDeleteBinLine as Trash2,
-  RiCloseLine as X,
-} from "@remixicon/react";
+  Archive,
+  Check,
+  GitBranch,
+  ArrowClockwise as Restore,
+  Trash as Trash2,
+  X,
+} from "@phosphor-icons/react";
 import is from "@sindresorhus/is";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useState } from "react";

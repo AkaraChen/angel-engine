@@ -1,3 +1,4 @@
+import { IconContext } from "@phosphor-icons/react";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 
@@ -17,8 +18,12 @@ if (import.meta.env.DEV) {
   void import("react-grab");
 }
 
+const iconContextValue = { weight: "regular" } as const;
+
 createRoot(document.getElementById("root") as HTMLElement).render(
   <StrictMode>
-    <App />
+    <IconContext value={iconContextValue}>
+      <App />
+    </IconContext>
   </StrictMode>,
 );

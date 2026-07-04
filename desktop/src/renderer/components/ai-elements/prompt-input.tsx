@@ -16,13 +16,13 @@ import type {
   RefObject,
 } from "react";
 import {
-  RiCornerDownLeftLine as CornerDownLeftIcon,
-  RiImageLine as ImageIcon,
-  RiComputerLine as Monitor,
-  RiAddLine as PlusIcon,
-  RiSquareLine as SquareIcon,
-  RiCloseLine as XIcon,
-} from "@remixicon/react";
+  KeyReturn as CornerDownLeftIcon,
+  Image as ImageIcon,
+  Monitor,
+  Plus as PlusIcon,
+  Square as SquareIcon,
+  X as XIcon,
+} from "@phosphor-icons/react";
 import { nanoid } from "nanoid";
 import {
   Children,
