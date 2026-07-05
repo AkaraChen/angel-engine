@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { getOrCreateChatSession } from "./engine-runtime";
+import { cwdForNewChat, getOrCreateChatSession } from "./engine-runtime";
 
 describe("chat session creation", () => {
   it("dedupes concurrent creation for one chat", async () => {
@@ -35,5 +35,13 @@ describe("chat session creation", () => {
     expect(createCount).toBe(1);
     expect(sessions.get("chat-1")).toEqual({ id: "session-1" });
     expect(creations.has("chat-1")).toBe(false);
+  });
+});
+
+describe("cwdForNewChat", () => {
+  it("uses an explicit cwd before project/worktree resolution", async () => {
+    await expect(
+      cwdForNewChat({ cwd: "/tmp/existing-worktree", text: "hi" }),
+    ).resolves.toBe("/tmp/existing-worktree");
   });
 });

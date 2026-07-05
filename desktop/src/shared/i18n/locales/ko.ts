@@ -305,10 +305,15 @@ export const ko = {
         userInput: "질문",
       },
       exportMarkdown: "Markdown 내보내기",
+      handoff: "핸드오프",
+      handoffMenuLabel: "구현 위임…",
+      handoffPromptIntro: "다음 계획을 구현하세요.",
+      handoffPromptPlanFile: "계획 파일: {{path}}",
       planMarker: "{{title}} {{presentation}}",
       response: "응답",
       startImplementation: "실행 시작",
       toasts: {
+        couldNotHandoffPlan: "계획을 넘길 수 없습니다",
         couldNotStartImplementation: "실행을 시작할 수 없습니다",
       },
       tool: {

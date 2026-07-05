@@ -308,10 +308,15 @@ export const es = {
         userInput: "Pregunta",
       },
       exportMarkdown: "Exportar Markdown",
+      handoff: "Transferir",
+      handoffMenuLabel: "Implementar con…",
+      handoffPromptIntro: "Implementa el siguiente plan.",
+      handoffPromptPlanFile: "Archivo del plan: {{path}}",
       planMarker: "{{title}} {{presentation}}",
       response: "Respuesta",
       startImplementation: "Iniciar ejecución",
       toasts: {
+        couldNotHandoffPlan: "No se pudo transferir el plan",
         couldNotStartImplementation: "No se pudo iniciar la ejecución",
       },
       tool: {

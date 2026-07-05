@@ -297,6 +297,7 @@ export function createChatIpcRouter(runtime: ChatRuntime) {
         attachments: normalizeChatAttachmentsInput(value.attachments),
         chatId: value.chatId,
         creationLocation: value.creationLocation,
+        cwd: value.cwd,
         model: value.model,
         projectId: value.projectId,
         mode: value.mode,

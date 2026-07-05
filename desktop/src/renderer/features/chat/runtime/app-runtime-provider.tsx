@@ -29,6 +29,7 @@ interface AppRuntimeProviderProps {
   chatId?: string;
   children: ReactNode;
   creationLocation?: ChatCreationLocation;
+  cwd?: string;
   historyMessages: ChatHistoryMessage[];
   historyRevision: number;
   model?: string;
@@ -68,6 +69,7 @@ export function AppRuntimeProvider({
   chatId,
   children,
   creationLocation,
+  cwd,
   historyMessages,
   historyRevision,
   model,
@@ -126,6 +128,7 @@ export function AppRuntimeProvider({
       availableCommandsLoading: runtimeConfig === undefined,
       availableSkills,
       availableSkillsLoading,
+      cwd,
       isProjectChat:
         is.nonEmptyString(projectId) && is.nonEmptyString(projectPath),
       projectId,
@@ -134,6 +137,7 @@ export function AppRuntimeProvider({
     [
       availableSkills,
       availableSkillsLoading,
+      cwd,
       projectId,
       projectPath,
       runtimeConfig,

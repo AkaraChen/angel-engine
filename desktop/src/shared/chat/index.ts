@@ -64,6 +64,9 @@ export type ChatCreationLocation = "project" | "worktree";
 export interface ChatCreationLocationInput {
   creationLocation?: ChatCreationLocation;
 }
+export interface ChatCwdInput {
+  cwd?: string;
+}
 
 export type Chat = JsChat;
 export type ChatCreateInput = JsChatCreateInput & ChatCreationLocationInput;
@@ -86,7 +89,9 @@ export type ChatElicitationQuestionOption = JsChatElicitationQuestionOption;
 export type ChatElicitationQuestion = JsChatElicitationQuestion;
 export type ChatElicitation = JsChatElicitation;
 export type ChatAttachmentInput = JsChatAttachmentInput;
-export type ChatSendInput = JsChatSendInput & ChatCreationLocationInput;
+export type ChatSendInput = JsChatSendInput &
+  ChatCreationLocationInput &
+  ChatCwdInput;
 export type ChatStreamPart = "reasoning" | "text";
 
 export interface ChatAvailableCommand {
