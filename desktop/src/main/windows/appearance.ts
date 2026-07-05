@@ -20,7 +20,6 @@ import {
 import { translate } from "../platform/i18n";
 import { installDownloadedUpdate } from "../updater";
 
-const isMacOS = process.platform === "darwin";
 const trafficLightPosition = { x: 16, y: 18 };
 const themeModeInput = type({
   "+": "ignore",
@@ -30,7 +29,17 @@ const themeModeInput = type({
 let didRegisterIpc = false;
 
 export function desktopWindowChromeOptions(): BrowserWindowConstructorOptions {
-  if (!isMacOS) {
+  return desktopWindowChromeOptionsForPlatform(process.platform);
+}
+
+export function desktopWindowChromeOptionsForPlatform(
+  platform: NodeJS.Platform,
+): BrowserWindowConstructorOptions {
+  if (platform === "linux") {
+    return { frame: true };
+  }
+
+  if (!usesCustomWindowChrome(platform)) {
     return {};
   }
 
@@ -42,9 +51,13 @@ export function desktopWindowChromeOptions(): BrowserWindowConstructorOptions {
 }
 
 export function configureDesktopWindowAppearance(window: BrowserWindow) {
-  if (isMacOS) {
+  if (usesCustomWindowChrome(process.platform)) {
     window.setWindowButtonPosition(trafficLightPosition);
   }
+}
+
+export function usesCustomWindowChrome(platform: NodeJS.Platform) {
+  return platform === "darwin";
 }
 
 export function registerDesktopWindowAppearanceIpc() {
