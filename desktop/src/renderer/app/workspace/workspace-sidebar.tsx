@@ -219,7 +219,10 @@ function WorkspaceSidebarContent({
   settingsActive,
 }: WorkspaceSidebarProps): ReactElement {
   const { t } = useTranslation();
+  const platform = window.desktopEnvironment.platform;
   const workspaceMode = useWorkspaceUiStore((state) => state.workspaceMode);
+  const reserveNativeSidebarControlSpace =
+    platform === "linux" || platform === "win32";
   const standaloneChats = chats.filter(
     (chat) => !is.nonEmptyString(chat.projectId),
   );
@@ -244,7 +247,9 @@ function WorkspaceSidebarContent({
   return (
     <>
       <SidebarHeader className="p-2" data-electron-drag>
-        {isMacOS ? <div aria-hidden className="h-8 shrink-0" /> : null}
+        {isMacOS || reserveNativeSidebarControlSpace ? (
+          <div aria-hidden className="h-8 shrink-0" />
+        ) : null}
 
         <WorkspaceModeControl
           onValueChange={onWorkspaceModeChange}
