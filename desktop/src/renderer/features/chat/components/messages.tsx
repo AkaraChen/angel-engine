@@ -315,11 +315,7 @@ function AssistantMessageErrorText() {
   if (!text) return null;
 
   return (
-    <div
-      className="
-      mt-1 text-[13px]/5 whitespace-pre-wrap text-muted-foreground
-    "
-    >
+    <div className="mt-1 text-[13px]/5 whitespace-pre-wrap text-muted-foreground">
       {text}
     </div>
   );
@@ -1516,17 +1512,25 @@ function PlanMessagePart({ plan }: { plan: ChatPlanData }) {
               </ol>
             ) : null}
             {isLastMessage && (canStartImplementation || canHandoff) ? (
-              <div
-                className="
-                flex justify-end gap-2 border-t border-border pt-2
-              "
-              >
+              <div className="flex justify-end gap-2 border-t border-border pt-2">
                 {canHandoff ? (
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <Button size="sm" type="button" variant="outline">
+                      <Button
+                        className="group/button"
+                        size="sm"
+                        type="button"
+                        variant="outline"
+                      >
                         <Handoff className="size-3.5" />
                         {t("messages.handoff")}
+                        <ChevronDown
+                          className="
+                            size-3.5 shrink-0 text-muted-foreground/80
+                            transition-transform duration-150
+                            group-data-[state=open]/button:rotate-180
+                          "
+                        />
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent
