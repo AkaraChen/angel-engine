@@ -380,6 +380,7 @@ function ChatThreadRuntime({
     <ChatOptionsProvider value={chatOptions}>
       <AppRuntimeProvider
         chatId={selectedChat.id}
+        cwd={selectedChat.cwd ?? undefined}
         historyMessages={historyMessages}
         historyRevision={historyRevision}
         key={chatRuntimeProviderKey(selectedChat.id, chatRuntime, keySuffix)}

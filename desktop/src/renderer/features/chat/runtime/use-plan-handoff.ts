@@ -18,7 +18,7 @@ export function usePlanHandoff() {
   const startRun = useChatRunStore((state) => state.startRun);
   const queryClient = useQueryClient();
   const [, navigate] = useLocation();
-  const { projectId } = useChatEnvironment();
+  const { cwd, projectId } = useChatEnvironment();
   const workspaceMode = useWorkspaceUiStore((state) => state.workspaceMode);
 
   return useCallback(
@@ -35,6 +35,7 @@ export function usePlanHandoff() {
           },
         },
         input: {
+          cwd: is.nonEmptyString(cwd) ? cwd : undefined,
           projectId: is.nonEmptyString(projectId) ? projectId : undefined,
           runtime,
         },
@@ -50,6 +51,6 @@ export function usePlanHandoff() {
         },
         slotKey: `handoff:${runtime}:${Date.now()}`,
       }),
-    [navigate, projectId, queryClient, startRun, workspaceMode],
+    [cwd, navigate, projectId, queryClient, startRun, workspaceMode],
   );
 }

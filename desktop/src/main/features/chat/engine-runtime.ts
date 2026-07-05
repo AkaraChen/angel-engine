@@ -565,6 +565,8 @@ async function createChatPrewarm(
 }
 
 function chatPrewarmMatches(prewarm: ChatPrewarm, sendInput: ChatSendInput) {
+  if (is.nonEmptyString(sendInput.cwd)) return false;
+
   const prewarmInput = prewarm.input;
   return (
     prewarm.cwd === cwdForProjectOrStandalone(sendInput.projectId) &&
@@ -592,7 +594,9 @@ function cwdForChat(chat: Chat, projectId?: string | null): string {
   );
 }
 
-async function cwdForNewChat(input: ChatSendInput) {
+export async function cwdForNewChat(input: ChatSendInput) {
+  if (is.nonEmptyString(input.cwd)) return input.cwd;
+
   if (input.creationLocation === "worktree") {
     if (!is.nonEmptyString(input.projectId)) {
       throw new Error("Project is required to create a git worktree.");

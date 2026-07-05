@@ -7,6 +7,7 @@ export interface ChatEnvironmentContextValue {
   availableCommandsLoading: boolean;
   availableSkills: ChatAvailableSkill[];
   availableSkillsLoading: boolean;
+  cwd?: string;
   isProjectChat: boolean;
   projectId?: string | null;
   projectPath?: string;

@@ -92,6 +92,7 @@ export function registerChatStreamIpc(runtime: ChatRuntime) {
         attachments: normalizeChatAttachmentsInput(request.input.attachments),
         chatId: request.input.chatId,
         creationLocation: request.input.creationLocation,
+        cwd: request.input.cwd,
         model: request.input.model,
         projectId: request.input.projectId,
         mode: request.input.mode,
