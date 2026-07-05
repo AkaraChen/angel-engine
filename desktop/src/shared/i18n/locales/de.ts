@@ -306,10 +306,15 @@ export const de = {
         userInput: "Frage",
       },
       exportMarkdown: "Markdown exportieren",
+      handoff: "Übergeben",
+      handoffMenuLabel: "Umsetzen mit…",
+      handoffPromptIntro: "Setze den folgenden Plan um.",
+      handoffPromptPlanFile: "Plandatei: {{path}}",
       planMarker: "{{title}} {{presentation}}",
       response: "Antwort",
       startImplementation: "Ausführung starten",
       toasts: {
+        couldNotHandoffPlan: "Plan konnte nicht übergeben werden",
         couldNotStartImplementation: "Ausführung konnte nicht gestartet werden",
       },
       tool: {

@@ -120,7 +120,12 @@ import {
   useChatAttentionSummary,
   useChatRunConfig,
   useChatRunIsRunning,
+  useChatRunStore,
 } from "@/features/chat/state/chat-run-store";
+import {
+  usePlanHandoffStore,
+  type PlanHandoffRequest,
+} from "@/features/chat/state/plan-handoff-store";
 import {
   createProjectMutationOptions,
   projectContextMenuMutationOptions,
@@ -770,6 +775,64 @@ function WorkspacePageContent({
       updateAgentSettings,
     ],
   );
+
+  const startChatRun = useChatRunStore((state) => state.startRun);
+  const pendingHandoff = usePlanHandoffStore((state) => state.pending);
+  const clearHandoff = usePlanHandoffStore((state) => state.clearHandoff);
+  const handledHandoffRef = useRef<PlanHandoffRequest | null>(null);
+
+  useEffect(() => {
+    if (
+      pendingHandoff === null ||
+      handledHandoffRef.current === pendingHandoff
+    ) {
+      return;
+    }
+    handledHandoffRef.current = pendingHandoff;
+    const request = pendingHandoff;
+    clearHandoff();
+
+    void startChatRun({
+      callbacks: {
+        onChatCreated: (chat) => {
+          setChatInCache(chat);
+          navigateToChat(chat);
+        },
+      },
+      input: {
+        chatId: undefined,
+        projectId: is.nonEmptyString(request.projectId)
+          ? request.projectId
+          : undefined,
+        runtime: request.runtime,
+      },
+      message: {
+        attachments: [],
+        content: [{ text: request.prompt, type: "text" }],
+        createdAt: new Date(),
+        metadata: { custom: {} },
+        parentId: null,
+        role: "user",
+        runConfig: undefined,
+        sourceId: null,
+      },
+      slotKey: `handoff:${request.runtime}:${Date.now()}`,
+    }).catch((error: unknown) => {
+      toast({
+        description: getErrorMessage(error),
+        title: t("messages.toasts.couldNotHandoffPlan"),
+        variant: "destructive",
+      });
+    });
+  }, [
+    clearHandoff,
+    navigateToChat,
+    pendingHandoff,
+    setChatInCache,
+    startChatRun,
+    t,
+    toast,
+  ]);
 
   const createProjectMutation = useMutation({
     ...createProjectMutationOptions({ api, queryClient }),

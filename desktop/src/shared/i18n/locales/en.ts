@@ -305,10 +305,15 @@ export const en = {
         userInput: "Question",
       },
       exportMarkdown: "Export Markdown",
+      handoff: "Hand off",
+      handoffMenuLabel: "Implement with…",
+      handoffPromptIntro: "Implement the following plan.",
+      handoffPromptPlanFile: "Plan file: {{path}}",
       planMarker: "{{title}} {{presentation}}",
       response: "Response",
       startImplementation: "Start implementation",
       toasts: {
+        couldNotHandoffPlan: "Could not hand off plan",
         couldNotStartImplementation: "Could not start implementation",
       },
       tool: {

@@ -295,10 +295,15 @@ export const zhCN = {
         userInput: "问题",
       },
       exportMarkdown: "导出 Markdown",
+      handoff: "移交",
+      handoffMenuLabel: "交给…实现",
+      handoffPromptIntro: "请实现以下计划。",
+      handoffPromptPlanFile: "计划文件：{{path}}",
       planMarker: "{{title}}{{presentation}}",
       response: "响应",
       startImplementation: "开始执行",
       toasts: {
+        couldNotHandoffPlan: "无法移交计划",
         couldNotStartImplementation: "无法开始执行",
       },
       tool: {

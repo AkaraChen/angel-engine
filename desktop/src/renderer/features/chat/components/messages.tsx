@@ -4,6 +4,7 @@ import type {
   EnrichedPartState,
   ToolCallMessagePartProps,
 } from "@assistant-ui/react";
+import type { AgentRuntime } from "@shared/agents";
 import type {
   ChatElicitation,
   ChatElicitationResponse,
@@ -30,6 +31,7 @@ import {
   Question as CircleHelp,
   Copy,
   FileText,
+  GitBranch as Handoff,
   Hammer,
   ListChecks,
   SpinnerGap as Loader2,
@@ -62,7 +64,15 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { useToast } from "@/components/ui/toast";
+import { agentRuntimeIconSvg } from "@/features/agents/agent-runtime-icons";
 import { ChatAttachmentTile } from "@/features/chat/components/attachment-tile";
 import {
   iconButtonClass,
@@ -71,9 +81,11 @@ import {
   nativePanelClass,
   workspaceContentColumnClass,
 } from "@/features/chat/components/thread-styles";
+import { useChatEnvironment } from "@/features/chat/runtime/chat-environment-context";
 import { useChatOptions } from "@/features/chat/runtime/chat-options-context";
 import { findPlanModeToggleTarget } from "@/features/chat/runtime/mode-options";
 import { useChatRuntimeActions } from "@/features/chat/runtime/use-chat-runtime-actions";
+import { usePlanHandoffStore } from "@/features/chat/state/plan-handoff-store";
 
 import { cn } from "@/platform/utils";
 
@@ -1292,6 +1304,8 @@ function PlanMessagePart({ plan }: { plan: ChatPlanData }) {
   const { t } = useTranslation();
   const aui = useAui();
   const chatOptions = useChatOptions();
+  const chatEnvironment = useChatEnvironment();
+  const requestHandoff = usePlanHandoffStore((state) => state.requestHandoff);
   const { setMode, setPermissionMode } = useChatRuntimeActions();
   const toast = useToast();
   const isLastMessage = useAuiState((state) => state.message.isLast);
@@ -1324,6 +1338,17 @@ function PlanMessagePart({ plan }: { plan: ChatPlanData }) {
     !startingImplementation &&
     !chatOptions.configLoading &&
     Boolean(target?.buildMode);
+  const handoffAgents = chatOptions.runtimeOptions;
+  const canHandoff =
+    plan.kind === "review" && hasDetails && handoffAgents.length > 0;
+
+  const handoffToAgent = (runtime: AgentRuntime) => {
+    requestHandoff({
+      projectId: chatEnvironment.projectId,
+      prompt: buildPlanHandoffPrompt(plan, t),
+      runtime,
+    });
+  };
 
   if (plan.presentation === "created" || plan.presentation === "updated") {
     return (
@@ -1486,23 +1511,55 @@ function PlanMessagePart({ plan }: { plan: ChatPlanData }) {
                 ))}
               </ol>
             ) : null}
-            {isLastMessage && canStartImplementation ? (
-              <div className="flex justify-end border-t border-border pt-2">
-                <Button
-                  onClick={() => {
-                    void startImplementation();
-                  }}
-                  size="sm"
-                  type="button"
-                  variant="outline"
-                >
-                  {startingImplementation ? (
-                    <Loader2 className="size-3.5 animate-spin" />
-                  ) : (
-                    <Hammer className="size-3.5" />
-                  )}
-                  {t("messages.startImplementation")}
-                </Button>
+            {isLastMessage && (canStartImplementation || canHandoff) ? (
+              <div className="flex justify-end gap-2 border-t border-border pt-2">
+                {canHandoff ? (
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button size="sm" type="button" variant="outline">
+                        <Handoff className="size-3.5" />
+                        {t("messages.handoff")}
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent
+                      align="end"
+                      className="w-52 min-w-0"
+                      sideOffset={4}
+                      variant="native"
+                    >
+                      <DropdownMenuLabel>
+                        {t("messages.handoffMenuLabel")}
+                      </DropdownMenuLabel>
+                      {handoffAgents.map((agent) => (
+                        <PlanHandoffAgentItem
+                          key={agent.value}
+                          label={agent.label}
+                          onSelect={() => {
+                            handoffToAgent(agent.value);
+                          }}
+                          runtime={agent.value}
+                        />
+                      ))}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                ) : null}
+                {canStartImplementation ? (
+                  <Button
+                    onClick={() => {
+                      void startImplementation();
+                    }}
+                    size="sm"
+                    type="button"
+                    variant="outline"
+                  >
+                    {startingImplementation ? (
+                      <Loader2 className="size-3.5 animate-spin" />
+                    ) : (
+                      <Hammer className="size-3.5" />
+                    )}
+                    {t("messages.startImplementation")}
+                  </Button>
+                ) : null}
               </div>
             ) : null}
           </div>
@@ -1510,6 +1567,57 @@ function PlanMessagePart({ plan }: { plan: ChatPlanData }) {
       ) : null}
     </Collapsible>
   );
+}
+
+function PlanHandoffAgentItem({
+  label,
+  onSelect,
+  runtime,
+}: {
+  label: string;
+  onSelect: () => void;
+  runtime: AgentRuntime;
+}) {
+  const iconSvg = agentRuntimeIconSvg(runtime);
+
+  return (
+    <DropdownMenuItem className="gap-2" onSelect={onSelect}>
+      {is.nonEmptyString(iconSvg) ? (
+        <span
+          aria-hidden="true"
+          className="
+            flex size-3.5 shrink-0 items-center justify-center
+            text-muted-foreground
+            [&_svg]:size-3.5 [&_svg]:shrink-0
+          "
+          // oxlint-disable-next-line react/no-danger -- Static bundled runtime icons need inline SVG to inherit local icon styling.
+          // eslint-disable-next-line react/dom-no-dangerously-set-innerhtml -- Static bundled runtime icons need inline SVG to inherit local icon styling.
+          dangerouslySetInnerHTML={{ __html: iconSvg }}
+        />
+      ) : (
+        <Handoff className="size-3.5 shrink-0 text-muted-foreground" />
+      )}
+      <span className="min-w-0 flex-1 truncate">{label}</span>
+    </DropdownMenuItem>
+  );
+}
+
+function buildPlanHandoffPrompt(plan: ChatPlanData, t: TFunction): string {
+  const sections: string[] = [t("messages.handoffPromptIntro")];
+  if (is.nonEmptyString(plan.text)) {
+    sections.push(plan.text.trim());
+  }
+  if (plan.entries.length > 0) {
+    sections.push(
+      plan.entries
+        .map((entry, index) => `${index + 1}. ${entry.content}`)
+        .join("\n"),
+    );
+  }
+  if (is.nonEmptyString(plan.path)) {
+    sections.push(t("messages.handoffPromptPlanFile", { path: plan.path }));
+  }
+  return sections.join("\n\n");
 }
 
 function PlanMarkerPart({

@@ -306,10 +306,15 @@ export const ja = {
         userInput: "質問",
       },
       exportMarkdown: "Markdown をエクスポート",
+      handoff: "引き継ぐ",
+      handoffMenuLabel: "実装を委任…",
+      handoffPromptIntro: "以下の計画を実装してください。",
+      handoffPromptPlanFile: "計画ファイル: {{path}}",
       planMarker: "{{title}} {{presentation}}",
       response: "応答",
       startImplementation: "実行を開始",
       toasts: {
+        couldNotHandoffPlan: "計画を引き継げませんでした",
         couldNotStartImplementation: "実行を開始できませんでした",
       },
       tool: {

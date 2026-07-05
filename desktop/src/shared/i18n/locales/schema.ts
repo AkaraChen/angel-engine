@@ -322,6 +322,7 @@ export interface LocaleResourceTranslationMessagesElicitation {
 }
 
 export interface LocaleResourceTranslationMessagesToasts {
+  couldNotHandoffPlan: string;
   couldNotStartImplementation: string;
 }
 
@@ -341,6 +342,10 @@ export interface LocaleResourceTranslationMessages {
   created: string;
   elicitation: LocaleResourceTranslationMessagesElicitation;
   exportMarkdown: string;
+  handoff: string;
+  handoffMenuLabel: string;
+  handoffPromptIntro: string;
+  handoffPromptPlanFile: string;
   planMarker: string;
   response: string;
   startImplementation: string;

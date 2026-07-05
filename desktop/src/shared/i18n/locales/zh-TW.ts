@@ -297,10 +297,15 @@ export const zhTW = {
         userInput: "問題",
       },
       exportMarkdown: "匯出 Markdown",
+      handoff: "移交",
+      handoffMenuLabel: "交給…實作",
+      handoffPromptIntro: "請實作以下計劃。",
+      handoffPromptPlanFile: "計劃檔案：{{path}}",
       planMarker: "{{title}}{{presentation}}",
       response: "回應",
       startImplementation: "開始執行",
       toasts: {
+        couldNotHandoffPlan: "無法移交計劃",
         couldNotStartImplementation: "無法開始執行",
       },
       tool: {
