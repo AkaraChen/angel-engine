@@ -81,7 +81,6 @@ import {
   nativePanelClass,
   workspaceContentColumnClass,
 } from "@/features/chat/components/thread-styles";
-import { useChatEnvironment } from "@/features/chat/runtime/chat-environment-context";
 import { useChatOptions } from "@/features/chat/runtime/chat-options-context";
 import { findPlanModeToggleTarget } from "@/features/chat/runtime/mode-options";
 import { useChatRuntimeActions } from "@/features/chat/runtime/use-chat-runtime-actions";
@@ -1304,7 +1303,6 @@ function PlanMessagePart({ plan }: { plan: ChatPlanData }) {
   const { t } = useTranslation();
   const aui = useAui();
   const chatOptions = useChatOptions();
-  const { projectPath } = useChatEnvironment();
   const handoffPlan = usePlanHandoff();
   const { setMode, setPermissionMode } = useChatRuntimeActions();
   const toast = useToast();
@@ -1343,15 +1341,13 @@ function PlanMessagePart({ plan }: { plan: ChatPlanData }) {
     plan.kind === "review" && hasDetails && handoffAgents.length > 0;
 
   const handoffToAgent = (runtime: AgentRuntime) => {
-    handoffPlan(runtime, buildPlanHandoffPrompt(plan, t, projectPath)).catch(
-      (error) => {
-        toast({
-          description: getErrorMessage(error),
-          title: t("messages.toasts.couldNotHandoffPlan"),
-          variant: "destructive",
-        });
-      },
-    );
+    handoffPlan(runtime, buildPlanHandoffPrompt(plan, t)).catch((error) => {
+      toast({
+        description: getErrorMessage(error),
+        title: t("messages.toasts.couldNotHandoffPlan"),
+        variant: "destructive",
+      });
+    });
   };
 
   if (plan.presentation === "created" || plan.presentation === "updated") {
@@ -1618,15 +1614,8 @@ function PlanHandoffAgentItem({
   );
 }
 
-function buildPlanHandoffPrompt(
-  plan: ChatPlanData,
-  t: TFunction,
-  projectPath?: string,
-): string {
+function buildPlanHandoffPrompt(plan: ChatPlanData, t: TFunction): string {
   const sections: string[] = [t("messages.handoffPromptIntro")];
-  if (is.nonEmptyString(projectPath)) {
-    sections.push(buildPlanHandoffProjectContext(projectPath));
-  }
   if (is.nonEmptyString(plan.text)) {
     sections.push(plan.text.trim());
   }
@@ -1641,21 +1630,6 @@ function buildPlanHandoffPrompt(
     sections.push(t("messages.handoffPromptPlanFile", { path: plan.path }));
   }
   return sections.join("\n\n");
-}
-
-function buildPlanHandoffProjectContext(projectPath: string): string {
-  const projectRoot = projectPath.trim();
-  return [
-    `Project root: ${projectRoot}`,
-    `README: ${joinProjectPath(projectRoot, "README.md")}`,
-    "Use that project root as the working directory.",
-  ].join("\n");
-}
-
-function joinProjectPath(projectRoot: string, childPath: string): string {
-  const root = projectRoot.replace(/[\\/]+$/, "");
-  const separator = root.includes("\\") && !root.includes("/") ? "\\" : "/";
-  return `${root}${separator}${childPath}`;
 }
 
 function PlanMarkerPart({
