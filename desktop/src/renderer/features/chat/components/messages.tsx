@@ -31,8 +31,8 @@ import {
   Question as CircleHelp,
   Copy,
   FileText,
-  GitBranch as Handoff,
   Hammer,
+  GitBranch as Handoff,
   ListChecks,
   SpinnerGap as Loader2,
   Pencil,
@@ -81,11 +81,10 @@ import {
   nativePanelClass,
   workspaceContentColumnClass,
 } from "@/features/chat/components/thread-styles";
-import { useChatEnvironment } from "@/features/chat/runtime/chat-environment-context";
 import { useChatOptions } from "@/features/chat/runtime/chat-options-context";
 import { findPlanModeToggleTarget } from "@/features/chat/runtime/mode-options";
 import { useChatRuntimeActions } from "@/features/chat/runtime/use-chat-runtime-actions";
-import { usePlanHandoffStore } from "@/features/chat/state/plan-handoff-store";
+import { usePlanHandoff } from "@/features/chat/runtime/use-plan-handoff";
 
 import { cn } from "@/platform/utils";
 
@@ -316,7 +315,11 @@ function AssistantMessageErrorText() {
   if (!text) return null;
 
   return (
-    <div className="mt-1 text-[13px]/5 whitespace-pre-wrap text-muted-foreground">
+    <div
+      className="
+      mt-1 text-[13px]/5 whitespace-pre-wrap text-muted-foreground
+    "
+    >
       {text}
     </div>
   );
@@ -947,9 +950,9 @@ function ToolActionHeader({
         <ChevronDown
           className={cn(
             `
-                size-3.5 shrink-0 text-muted-foreground/70 transition-transform
-                duration-200 ease-swift
-              `,
+              size-3.5 shrink-0 text-muted-foreground/70 transition-transform
+              duration-200 ease-swift
+            `,
             !open && "-rotate-90",
           )}
         />
@@ -1304,8 +1307,7 @@ function PlanMessagePart({ plan }: { plan: ChatPlanData }) {
   const { t } = useTranslation();
   const aui = useAui();
   const chatOptions = useChatOptions();
-  const chatEnvironment = useChatEnvironment();
-  const requestHandoff = usePlanHandoffStore((state) => state.requestHandoff);
+  const handoffPlan = usePlanHandoff();
   const { setMode, setPermissionMode } = useChatRuntimeActions();
   const toast = useToast();
   const isLastMessage = useAuiState((state) => state.message.isLast);
@@ -1343,10 +1345,12 @@ function PlanMessagePart({ plan }: { plan: ChatPlanData }) {
     plan.kind === "review" && hasDetails && handoffAgents.length > 0;
 
   const handoffToAgent = (runtime: AgentRuntime) => {
-    requestHandoff({
-      projectId: chatEnvironment.projectId,
-      prompt: buildPlanHandoffPrompt(plan, t),
-      runtime,
+    handoffPlan(runtime, buildPlanHandoffPrompt(plan, t)).catch((error) => {
+      toast({
+        description: getErrorMessage(error),
+        title: t("messages.toasts.couldNotHandoffPlan"),
+        variant: "destructive",
+      });
     });
   };
 
@@ -1512,7 +1516,11 @@ function PlanMessagePart({ plan }: { plan: ChatPlanData }) {
               </ol>
             ) : null}
             {isLastMessage && (canStartImplementation || canHandoff) ? (
-              <div className="flex justify-end gap-2 border-t border-border pt-2">
+              <div
+                className="
+                flex justify-end gap-2 border-t border-border pt-2
+              "
+              >
                 {canHandoff ? (
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
@@ -1665,11 +1673,7 @@ function PlanEntryStatusIcon({
       return <Check className="mt-0.5 size-3.5 shrink-0 text-status-success" />;
     case "in_progress":
       return (
-        <CircleDot
-          className="
-        mt-0.5 size-3.5 shrink-0 text-status-attention
-      "
-        />
+        <CircleDot className="mt-0.5 size-3.5 shrink-0 text-status-attention" />
       );
     case "pending":
       return (
