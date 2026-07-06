@@ -5,6 +5,7 @@ import type {
   WorkspaceMode,
 } from "@/app/workspace/workspace-ui-store";
 import is from "@sindresorhus/is";
+import { isProjectWorkspaceMode } from "@/app/workspace/workspace-ui-store";
 
 export function chatRoutePath(
   chat: Chat,
@@ -33,7 +34,7 @@ export function isChatOpenableInWorkspaceMode(
   workspaceMode: WorkspaceMode,
 ) {
   const isProjectChat = is.nonEmptyString(chat.projectId);
-  return workspaceMode === "work" ? isProjectChat : !isProjectChat;
+  return isProjectWorkspaceMode(workspaceMode) ? isProjectChat : !isProjectChat;
 }
 
 export function lastOpenedTargetPath({
@@ -55,7 +56,9 @@ export function lastOpenedTargetPath({
   if (!chat || chat.archived) return undefined;
 
   return isChatOpenableInWorkspaceMode(chat, workspaceMode)
-    ? chatRoutePath(chat, { includeProject: workspaceMode === "work" })
+    ? chatRoutePath(chat, {
+        includeProject: isProjectWorkspaceMode(workspaceMode),
+      })
     : undefined;
 }
 

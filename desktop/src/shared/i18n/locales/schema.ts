@@ -59,6 +59,7 @@ export interface LocaleResourceTranslationWorkspace {
   backgroundChatCompleted: string;
   backgroundChatNeedsInput: string;
   backgroundChatStatus: string;
+  closeTab: string;
   creationLocationProject: string;
   creationLocationSelect: string;
   creationLocationWorktree: string;
@@ -94,6 +95,7 @@ export interface LocaleResourceTranslationSidebar {
   loadingChats: string;
   loadingProjects: string;
   modeChat: string;
+  modePower: string;
   modeSwitcher: string;
   modeWork: string;
   needsInput: string;
@@ -109,6 +111,7 @@ export interface LocaleResourceTranslationSidebar {
   mobileDescription: string;
   title: string;
   toggleSidebar: string;
+  worktreeMain: string;
 }
 
 export interface LocaleResourceTranslationSettingsAgents {

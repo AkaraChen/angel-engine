@@ -16,7 +16,10 @@ import is from "@sindresorhus/is";
 import { useCallback } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import { DraftProjectSelect } from "@/app/workspace/draft-project-select";
-import { useWorkspaceUiStore } from "@/app/workspace/workspace-ui-store";
+import {
+  isProjectWorkspaceMode,
+  useWorkspaceUiStore,
+} from "@/app/workspace/workspace-ui-store";
 import {
   PromptInput,
   PromptInputFooter,
@@ -68,6 +71,7 @@ const newChatFooterClassName = cn(
 interface NewChatComposerProps {
   creationLocation?: ChatCreationLocation;
   creationLocationAccessory?: ReactNode;
+  cwd?: string;
   model?: string;
   mode?: string;
   onBeforeSubmit?: () => boolean | Promise<boolean>;
@@ -97,6 +101,7 @@ interface NewChatComposerProps {
 export function NewChatComposer({
   creationLocation,
   creationLocationAccessory,
+  cwd,
   model,
   mode,
   onBeforeSubmit,
@@ -123,6 +128,7 @@ export function NewChatComposer({
   const sendChatMessage = useSendChatMessage(slotKey, {
     chatId: undefined,
     creationLocation,
+    cwd,
     model,
     mode,
     onChatCreated,
@@ -262,7 +268,7 @@ export function NewChatComposer({
             />
           </PromptInput>
 
-          {workspaceMode === "work" && (
+          {isProjectWorkspaceMode(workspaceMode) && (
             <div
               className="
                 flex items-center justify-start gap-2 rounded-b-2xl border-t

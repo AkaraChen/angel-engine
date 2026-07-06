@@ -37,6 +37,7 @@ export interface SendChatMessageCallbacks {
 export interface SendChatMessageOptions extends SendChatMessageCallbacks {
   chatId?: string;
   creationLocation?: ChatCreationLocation;
+  cwd?: string;
   model?: string;
   mode?: string;
   permissionMode?: string;
@@ -77,6 +78,7 @@ export function useSendChatMessage(
         input: {
           chatId: latestOptionsRef.current.chatId,
           creationLocation: latestOptionsRef.current.creationLocation,
+          cwd: latestOptionsRef.current.cwd,
           model: latestOptionsRef.current.model,
           mode: modeOverride ?? latestOptionsRef.current.mode,
           permissionMode: latestOptionsRef.current.permissionMode,

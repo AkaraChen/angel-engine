@@ -60,6 +60,7 @@ export const ja = {
       backgroundChatCompleted: "バックグラウンドチャットが完了しました",
       backgroundChatNeedsInput: "バックグラウンドチャットに入力が必要です",
       backgroundChatStatus: "バックグラウンドチャットの状態",
+      closeTab: "タブを閉じる",
       creationLocationProject: "プロジェクト",
       creationLocationSelect: "作成先",
       creationLocationWorktree: "Worktree",
@@ -94,6 +95,7 @@ export const ja = {
       loadingChats: "チャットを読み込み中",
       loadingProjects: "プロジェクトを読み込み中",
       modeChat: "チャット",
+      modePower: "パワー",
       modeSwitcher: "ワークスペースモード",
       modeWork: "作業",
       needsInput: "入力が必要",
@@ -109,6 +111,7 @@ export const ja = {
       mobileDescription: "モバイルサイドバーを表示します。",
       title: "サイドバー",
       toggleSidebar: "サイドバーを切り替え",
+      worktreeMain: "メイン",
     },
     settings: {
       agents: {

@@ -61,6 +61,7 @@ export const fr = {
       backgroundChatNeedsInput:
         "La discussion en arrière-plan attend une saisie",
       backgroundChatStatus: "État de la discussion en arrière-plan",
+      closeTab: "Fermer l'onglet",
       creationLocationProject: "Projet",
       creationLocationSelect: "Créer dans",
       creationLocationWorktree: "Worktree",
@@ -95,6 +96,7 @@ export const fr = {
       loadingChats: "Chargement des discussions",
       loadingProjects: "Chargement des projets",
       modeChat: "Chat",
+      modePower: "Power",
       modeSwitcher: "Mode d'espace de travail",
       modeWork: "Travail",
       needsInput: "Saisie requise",
@@ -110,6 +112,7 @@ export const fr = {
       mobileDescription: "Affiche la barre latérale mobile.",
       title: "Barre latérale",
       toggleSidebar: "Afficher ou masquer la barre latérale",
+      worktreeMain: "Principal",
     },
     settings: {
       agents: {

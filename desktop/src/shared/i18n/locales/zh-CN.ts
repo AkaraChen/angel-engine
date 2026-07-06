@@ -60,6 +60,7 @@ export const zhCN = {
       backgroundChatCompleted: "后台聊天已完成",
       backgroundChatNeedsInput: "后台聊天需要输入",
       backgroundChatStatus: "后台聊天状态",
+      closeTab: "关闭标签页",
       creationLocationProject: "项目本地",
       creationLocationSelect: "创建位置",
       creationLocationWorktree: "Worktree",
@@ -93,6 +94,7 @@ export const zhCN = {
       loadingChats: "正在加载聊天",
       loadingProjects: "正在加载项目",
       modeChat: "聊天",
+      modePower: "增强",
       modeSwitcher: "工作区模式",
       modeWork: "工作",
       needsInput: "需要输入",
@@ -108,6 +110,7 @@ export const zhCN = {
       mobileDescription: "显示移动端侧边栏。",
       title: "侧边栏",
       toggleSidebar: "折叠或展开侧边栏",
+      worktreeMain: "主目录",
     },
     settings: {
       agents: {

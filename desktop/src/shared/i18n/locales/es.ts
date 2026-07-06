@@ -60,6 +60,7 @@ export const es = {
       backgroundChatCompleted: "Chat en segundo plano completado",
       backgroundChatNeedsInput: "El chat en segundo plano necesita entrada",
       backgroundChatStatus: "Estado del chat en segundo plano",
+      closeTab: "Cerrar pestaña",
       creationLocationProject: "Proyecto",
       creationLocationSelect: "Crear en",
       creationLocationWorktree: "Worktree",
@@ -94,6 +95,7 @@ export const es = {
       loadingChats: "Cargando chats",
       loadingProjects: "Cargando proyectos",
       modeChat: "Chat",
+      modePower: "Power",
       modeSwitcher: "Modo de espacio de trabajo",
       modeWork: "Trabajo",
       needsInput: "Necesita entrada",
@@ -109,6 +111,7 @@ export const es = {
       mobileDescription: "Muestra la barra lateral móvil.",
       title: "Barra lateral",
       toggleSidebar: "Alternar barra lateral",
+      worktreeMain: "Principal",
     },
     settings: {
       agents: {

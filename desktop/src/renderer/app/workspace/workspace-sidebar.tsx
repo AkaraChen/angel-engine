@@ -6,6 +6,7 @@ import type { ComponentType, ReactElement } from "react";
 import type { WorkspaceMode } from "@/app/workspace/workspace-ui-store";
 import {
   Folder,
+  Lightning,
   Chats as MessageSquare,
   ChatCircleText as MessageSquarePlus,
   GearSix as Settings,
@@ -14,7 +15,10 @@ import is from "@sindresorhus/is";
 import { m } from "framer-motion";
 import { useEffect, useId, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useWorkspaceUiStore } from "@/app/workspace/workspace-ui-store";
+import {
+  isProjectWorkspaceMode,
+  useWorkspaceUiStore,
+} from "@/app/workspace/workspace-ui-store";
 import {
   Sidebar,
   SidebarContent,
@@ -27,6 +31,7 @@ import {
   WorkspaceSidebarMenuButton,
 } from "@/components/workspace-sidebar-primitives";
 import { SimpleChatSidebarSection } from "@/features/chat/components/simple-chat-sidebar-section";
+import { PowerProjectSidebarSection } from "@/features/projects/components/power-project-sidebar-section";
 import { ProjectSidebarSection } from "@/features/projects/components/project-sidebar-section";
 import { springs } from "@/platform/motion";
 import { cn } from "@/platform/utils";
@@ -43,11 +48,12 @@ const FLOATING_SIDEBAR_TRANSITION = {
 
 const WORKSPACE_MODES: Array<{
   icon: ComponentType<Pick<IconProps, "className" | "weight">>;
-  labelKey: "sidebar.modeChat" | "sidebar.modeWork";
+  labelKey: "sidebar.modeChat" | "sidebar.modePower" | "sidebar.modeWork";
   value: WorkspaceMode;
 }> = [
   { icon: MessageSquare, labelKey: "sidebar.modeChat", value: "chat" },
   { icon: Folder, labelKey: "sidebar.modeWork", value: "work" },
+  { icon: Lightning, labelKey: "sidebar.modePower", value: "power" },
 ];
 
 interface WorkspaceSidebarProps {
@@ -229,7 +235,7 @@ function WorkspaceSidebarContent({
   const createChatFromNewButton = async () => {
     if (selectedChatId === undefined && !settingsActive) return;
 
-    if (workspaceMode === "work") {
+    if (isProjectWorkspaceMode(workspaceMode)) {
       const selectedProject = projects.find(
         (project) => project.id === selectedProjectId,
       );
@@ -276,6 +282,21 @@ function WorkspaceSidebarContent({
             onArchiveChat={onArchiveChat}
             onOpenChat={onOpenChat}
             onShowChatContextMenu={onShowChatContextMenu}
+            selectedChatId={selectedChatId}
+          />
+        ) : null}
+
+        {workspaceMode === "power" ? (
+          <PowerProjectSidebarSection
+            isLoading={isProjectsLoading}
+            onArchiveChat={onArchiveChat}
+            onCreateProject={onCreateProject}
+            onCreateProjectChat={onCreateProjectChat}
+            onOpenChat={onOpenChat}
+            onShowChatContextMenu={onShowChatContextMenu}
+            onShowProjectContextMenu={onShowProjectContextMenu}
+            projectChatsByProjectId={projectChatsByProjectId}
+            projects={projects}
             selectedChatId={selectedChatId}
           />
         ) : null}
@@ -333,7 +354,7 @@ function WorkspaceModeControl({
       <div
         aria-label={t("sidebar.modeSwitcher")}
         className="
-          grid grid-cols-2 gap-0.5 rounded-md bg-black/5.5 p-0.5
+          grid grid-cols-3 gap-0.5 rounded-md bg-black/5.5 p-0.5
           shadow-[inset_0_0_0_1px_rgba(0,0,0,0.06)]
           dark:bg-white/5.5 dark:shadow-[inset_0_0_0_1px_rgba(255,255,255,0.07)]
         "

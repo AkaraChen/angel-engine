@@ -5,7 +5,10 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useCallback } from "react";
 import { useLocation } from "wouter";
 import { chatRoutePath } from "@/app/workspace/workspace-route-paths";
-import { useWorkspaceUiStore } from "@/app/workspace/workspace-ui-store";
+import {
+  isProjectWorkspaceMode,
+  useWorkspaceUiStore,
+} from "@/app/workspace/workspace-ui-store";
 import { useChatEnvironment } from "@/features/chat/runtime/chat-environment-context";
 import { useChatRunStore } from "@/features/chat/state/chat-run-store";
 import { queryKeys } from "@/platform/query-keys";
@@ -30,7 +33,9 @@ export function usePlanHandoff() {
               queryKey: queryKeys.chats.list(),
             });
             navigate(
-              chatRoutePath(chat, { includeProject: workspaceMode === "work" }),
+              chatRoutePath(chat, {
+                includeProject: isProjectWorkspaceMode(workspaceMode),
+              }),
             );
           },
         },

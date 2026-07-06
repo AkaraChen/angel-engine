@@ -60,6 +60,7 @@ export const en = {
       backgroundChatCompleted: "Background chat completed",
       backgroundChatNeedsInput: "Background chat needs input",
       backgroundChatStatus: "Background chat status",
+      closeTab: "Close tab",
       creationLocationProject: "Project",
       creationLocationSelect: "Create in",
       creationLocationWorktree: "Worktree",
@@ -94,6 +95,7 @@ export const en = {
       loadingChats: "Loading chats",
       loadingProjects: "Loading projects",
       modeChat: "Chat",
+      modePower: "Power",
       modeSwitcher: "Workspace mode",
       modeWork: "Work",
       needsInput: "Needs input",
@@ -109,6 +111,7 @@ export const en = {
       mobileDescription: "Displays the mobile sidebar.",
       title: "Sidebar",
       toggleSidebar: "Toggle sidebar",
+      worktreeMain: "Main",
     },
     settings: {
       agents: {

@@ -1,6 +1,10 @@
 import { create } from "zustand";
 
-export type WorkspaceMode = "chat" | "work";
+export type WorkspaceMode = "chat" | "power" | "work";
+
+export function isProjectWorkspaceMode(workspaceMode: WorkspaceMode) {
+  return workspaceMode === "work" || workspaceMode === "power";
+}
 
 export type WorkspaceLastOpenedTarget =
   | { chatId: string; type: "chat" }
@@ -33,6 +37,7 @@ export type SidebarChatDateGroupKey =
 interface WorkspaceUiState {
   browserUrl: string;
   collapsedChatDateGroupKeys: Set<SidebarChatDateGroupKey>;
+  collapsedWorktreeGroupKeys: Set<string>;
   expandedProjectIds: Set<string>;
   lastOpenedTargets: WorkspaceLastOpenedTargets;
   rememberLastOpenedTarget: (
@@ -58,12 +63,14 @@ interface WorkspaceUiState {
   toggleRightSidebar: () => void;
   toggleSidebarChatDateGroup: (groupKey: SidebarChatDateGroupKey) => void;
   toggleSidebarProject: (projectId: string) => void;
+  toggleSidebarWorktreeGroup: (groupKey: string) => void;
   workspaceMode: WorkspaceMode;
 }
 
 export const useWorkspaceUiStore = create<WorkspaceUiState>()((set) => ({
   browserUrl: defaultBrowserUrl,
   collapsedChatDateGroupKeys: new Set(),
+  collapsedWorktreeGroupKeys: new Set(),
   expandedProjectIds: new Set(),
   lastOpenedTargets: initialLastOpenedTargets,
   rememberLastOpenedTarget: (workspaceMode, target) =>
@@ -88,7 +95,7 @@ export const useWorkspaceUiStore = create<WorkspaceUiState>()((set) => ({
 
       return { lastOpenedTargets };
     }),
-  rightSidebarOpen: initialWorkspaceMode === "work",
+  rightSidebarOpen: isProjectWorkspaceMode(initialWorkspaceMode),
   rightSidebarWidth: initialRightSidebarWidth,
   setBrowserUrl: (browserUrl) =>
     set({ browserUrl: sanitizeBrowserUrl(browserUrl) }),
@@ -169,6 +176,18 @@ export const useWorkspaceUiStore = create<WorkspaceUiState>()((set) => ({
       }
       return { expandedProjectIds };
     }),
+  toggleSidebarWorktreeGroup: (groupKey) =>
+    set((current) => {
+      const collapsedWorktreeGroupKeys = new Set(
+        current.collapsedWorktreeGroupKeys,
+      );
+      if (collapsedWorktreeGroupKeys.has(groupKey)) {
+        collapsedWorktreeGroupKeys.delete(groupKey);
+      } else {
+        collapsedWorktreeGroupKeys.add(groupKey);
+      }
+      return { collapsedWorktreeGroupKeys };
+    }),
   workspaceMode: initialWorkspaceMode,
 }));
 
@@ -212,6 +231,7 @@ function sanitizeLastOpenedTargets(value: unknown): WorkspaceLastOpenedTargets {
 
   return {
     chat: sanitizeLastOpenedTarget(record.chat),
+    power: sanitizeLastOpenedTarget(record.power),
     work: sanitizeLastOpenedTarget(record.work),
   };
 }
@@ -253,7 +273,7 @@ function lastOpenedTargetsEqual(
 }
 
 function sanitizeWorkspaceMode(value: unknown): WorkspaceMode {
-  return value === "work" ? "work" : "chat";
+  return value === "work" || value === "power" ? value : "chat";
 }
 
 function sanitizeOptionalString(value: unknown) {

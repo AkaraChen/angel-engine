@@ -80,7 +80,10 @@ import {
   WorkspaceToolSurfaceHostControls,
 } from "@/app/workspace/workspace-tool-host";
 import { useWorkspaceToolStore } from "@/app/workspace/workspace-tool-store";
-import { useWorkspaceUiStore } from "@/app/workspace/workspace-ui-store";
+import {
+  isProjectWorkspaceMode,
+  useWorkspaceUiStore,
+} from "@/app/workspace/workspace-ui-store";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -112,6 +115,7 @@ import {
   broadcastChatsChanged,
   subscribeToChatMetadataEvents,
 } from "@/features/chat/chat-metadata-events";
+import { ChatTabBar } from "@/features/chat/components/chat-tab-bar";
 import { RenameChatDialog } from "@/features/chat/components/rename-chat-dialog";
 import {
   cancelAllChatRuns,
@@ -121,6 +125,17 @@ import {
   useChatRunConfig,
   useChatRunIsRunning,
 } from "@/features/chat/state/chat-run-store";
+import {
+  clearChatTabs,
+  openChatTab,
+  removeChatFromTabGroups,
+  setPowerDraftWorktree,
+  useChatTabStore,
+} from "@/features/chat/state/chat-tab-store";
+import {
+  chatWorktreeCwd,
+  chatWorktreeGroupKey,
+} from "@/features/chat/worktree-grouping";
 import {
   createProjectMutationOptions,
   projectContextMenuMutationOptions,
@@ -341,14 +356,15 @@ function WorkspacePageContent({
       })),
     [enabledAgentOptions],
   );
-  const showRightSidebar = workspaceMode === "work";
+  const isProjectMode = isProjectWorkspaceMode(workspaceMode);
+  const showRightSidebar = isProjectMode;
   const previousWorkspaceModeRef = useRef(workspaceMode);
   const previousWorkspaceToolHostRef = useRef(workspaceToolHost);
 
   useEffect(() => {
     if (
-      previousWorkspaceModeRef.current !== "work" &&
-      workspaceMode === "work"
+      !isProjectWorkspaceMode(previousWorkspaceModeRef.current) &&
+      isProjectWorkspaceMode(workspaceMode)
     ) {
       setRightSidebarOpen(true);
     }
@@ -391,6 +407,16 @@ function WorkspacePageContent({
   const draftSessionCounterRef = useRef(0);
   const [renameChatId, setRenameChatId] = useState<string | null>(null);
   const isDraftPage = !is.nonEmptyString(selectedChatId) && !settingsActive;
+  const powerModeActive = workspaceMode === "power";
+  const draftWorktree = useChatTabStore((state) => state.draftWorktree);
+  const powerDraftContext =
+    powerModeActive &&
+    isDraftPage &&
+    draftWorktree !== undefined &&
+    routeDraftProjectId === draftWorktree.projectId
+      ? draftWorktree
+      : undefined;
+  const pinnedDraftCwd = powerDraftContext?.cwd;
 
   const projectsQuery = useQuery({
     ...projectListQueryOptions({ api }),
@@ -515,16 +541,14 @@ function WorkspacePageContent({
   const draftProjectGitStatusQuery = useQuery({
     ...projectGitStatusQueryOptions({
       api,
-      enabled:
-        isDraftPage &&
-        workspaceMode === "work" &&
-        draftProject.id !== undefined,
+      enabled: isDraftPage && isProjectMode && draftProject.id !== undefined,
       projectId: draftProject.id,
     }),
   });
   const canCreateDraftWorktree =
     isDraftPage &&
-    workspaceMode === "work" &&
+    isProjectMode &&
+    pinnedDraftCwd === undefined &&
     draftProjectGitStatusQuery.data?.isGitRepository === true;
   const draftCreationLocation: ChatCreationLocation = canCreateDraftWorktree
     ? requestedDraftCreationLocation
@@ -537,31 +561,32 @@ function WorkspacePageContent({
     ...chatPrewarmQueryOptions({
       api,
       creationLocation: draftCreationLocation,
-      enabled: shouldPrewarmChat && draftCreationLocation !== "worktree",
+      enabled:
+        shouldPrewarmChat &&
+        draftCreationLocation !== "worktree" &&
+        pinnedDraftCwd === undefined,
       projectId: draftProject.id,
       runtime: activeRuntime,
     }),
   });
+  const inspectDraftRuntimeConfig =
+    draftCreationLocation === "worktree" || pinnedDraftCwd !== undefined;
   const shouldInspectDraftRuntimeConfig =
-    isDraftPage &&
-    draftCreationLocation === "worktree" &&
-    draftProject.path !== undefined;
+    isDraftPage && inspectDraftRuntimeConfig && draftProject.path !== undefined;
   const draftRuntimeConfigQuery = useQuery({
     ...chatRuntimeConfigQueryOptions({
       api,
-      cwd: draftProject.path,
+      cwd: pinnedDraftCwd ?? draftProject.path,
       enabled: shouldInspectDraftRuntimeConfig,
       runtime: activeRuntime,
     }),
   });
-  const runtimeConfig =
-    draftCreationLocation === "worktree"
-      ? draftRuntimeConfigQuery.data
-      : prewarmQuery.data?.config;
-  const runtimeConfigLoading =
-    draftCreationLocation === "worktree"
-      ? draftRuntimeConfigQuery.isFetching
-      : prewarmQuery.isFetching;
+  const runtimeConfig = inspectDraftRuntimeConfig
+    ? draftRuntimeConfigQuery.data
+    : prewarmQuery.data?.config;
+  const runtimeConfigLoading = inspectDraftRuntimeConfig
+    ? draftRuntimeConfigQuery.isFetching
+    : prewarmQuery.isFetching;
   const {
     chatOptions,
     draftAgentConfig,
@@ -610,7 +635,8 @@ function WorkspacePageContent({
     if (isDraftPage) {
       rememberLastOpenedTarget(
         workspaceMode,
-        workspaceMode === "work" && routeDraftProjectId !== undefined
+        isProjectWorkspaceMode(workspaceMode) &&
+          routeDraftProjectId !== undefined
           ? { projectId: routeDraftProjectId, type: "draft" }
           : { type: "draft" },
       );
@@ -693,16 +719,31 @@ function WorkspacePageContent({
     [queryClient],
   );
 
+  const registerChatTab = useCallback(
+    (chat: Chat, mode: WorkspaceMode) => {
+      if (mode !== "power" || !is.nonEmptyString(chat.projectId)) return;
+
+      const project = projects.find((item) => item.id === chat.projectId);
+      const groupKey = chatWorktreeGroupKey(chat, project?.path);
+      if (groupKey !== undefined) {
+        openChatTab(groupKey, chat.id);
+      }
+    },
+    [projects],
+  );
+
   const navigateToChat = useCallback(
     (chat: Chat, options?: { replace?: boolean }) => {
+      setPowerDraftWorktree(undefined);
+      registerChatTab(chat, workspaceMode);
       const path = chatRoutePath(chat, {
-        includeProject: workspaceMode === "work",
+        includeProject: isProjectWorkspaceMode(workspaceMode),
       });
       if (location !== path) {
         navigate(path, options);
       }
     },
-    [location, navigate, workspaceMode],
+    [location, navigate, registerChatTab, workspaceMode],
   );
 
   const updateChatFromRun = useCallback(
@@ -795,6 +836,7 @@ function WorkspacePageContent({
 
   const applyAllChatsDeleted = useCallback(() => {
     cancelAllChatRuns();
+    clearChatTabs();
     queryClient.setQueryData<Chat[]>(queryKeys.chats.list(), EMPTY_CHATS);
     queryClient.removeQueries({ queryKey: queryKeys.chats.details() });
     navigate("/", { replace: true });
@@ -861,6 +903,7 @@ function WorkspacePageContent({
   const removeChatFromCache = useCallback(
     (chatId: string) => {
       cancelChatRun(chatId);
+      removeChatFromTabGroups(chatId);
       queryClient.setQueryData<Chat[]>(queryKeys.chats.list(), (current = []) =>
         current.filter((chat) => chat.id !== chatId),
       );
@@ -1018,14 +1061,22 @@ function WorkspacePageContent({
     (nextWorkspaceMode: WorkspaceMode) => {
       if (nextWorkspaceMode === workspaceMode) return;
 
+      setPowerDraftWorktree(undefined);
       setWorkspaceMode(nextWorkspaceMode);
 
+      const target = lastOpenedTargets[nextWorkspaceMode];
       const path = lastOpenedTargetPath({
         chats,
-        target: lastOpenedTargets[nextWorkspaceMode],
+        target,
         workspaceMode: nextWorkspaceMode,
       });
       if (path !== undefined) {
+        if (target?.type === "chat") {
+          const targetChat = chats.find((chat) => chat.id === target.chatId);
+          if (targetChat) {
+            registerChatTab(targetChat, nextWorkspaceMode);
+          }
+        }
         if (location !== path) {
           navigate(path, { replace: true });
         }
@@ -1039,6 +1090,7 @@ function WorkspacePageContent({
       lastOpenedTargets,
       location,
       navigate,
+      registerChatTab,
       setWorkspaceMode,
       startNewDraftSession,
       workspaceMode,
@@ -1049,6 +1101,7 @@ function WorkspacePageContent({
     async (chat: Chat) => {
       try {
         const archivedChat = await archiveChatMutation.mutateAsync(chat);
+        removeChatFromTabGroups(archivedChat.id);
         broadcastChatsChanged();
 
         if (selectedChatId === archivedChat.id) {
@@ -1069,6 +1122,7 @@ function WorkspacePageContent({
 
   const createChatForProject = useCallback(
     (project: Project) => {
+      setPowerDraftWorktree(undefined);
       if (isDraftPage && routeDraftProjectId === project.id) return;
 
       startNewDraftSession(project.id);
@@ -1077,6 +1131,7 @@ function WorkspacePageContent({
   );
 
   const createChatForSelection = useCallback(() => {
+    setPowerDraftWorktree(undefined);
     if (isDraftPage) return;
 
     startNewDraftSession();
@@ -1084,6 +1139,7 @@ function WorkspacePageContent({
 
   const selectDraftProject = useCallback(
     (projectId: string | null) => {
+      setPowerDraftWorktree(undefined);
       navigateToDraft(projectId ?? undefined);
     },
     [navigateToDraft],
@@ -1185,6 +1241,88 @@ function WorkspacePageContent({
     [navigateToChat],
   );
 
+  const selectedChatProject =
+    selectedChat && is.nonEmptyString(selectedChat.projectId)
+      ? projects.find((project) => project.id === selectedChat.projectId)
+      : undefined;
+  const selectedChatWorktreeKey =
+    powerModeActive && selectedChat
+      ? chatWorktreeGroupKey(selectedChat, selectedChatProject?.path)
+      : undefined;
+  const chatTabGroupKey =
+    selectedChatWorktreeKey ?? powerDraftContext?.groupKey;
+  const chatTabGroups = useChatTabStore((state) => state.tabGroups);
+  const closeChatTabInStore = useChatTabStore((state) => state.closeChatTab);
+
+  const chatTabChats = useMemo(() => {
+    if (chatTabGroupKey === undefined) return EMPTY_CHATS;
+
+    const group = chatTabGroups[chatTabGroupKey];
+    if (!group) return EMPTY_CHATS;
+
+    const chatsById = new Map(chats.map((chat) => [chat.id, chat]));
+    return group.chatIds
+      .map((chatId) => chatsById.get(chatId))
+      .filter((chat): chat is Chat => chat !== undefined && !chat.archived);
+  }, [chats, chatTabGroups, chatTabGroupKey]);
+
+  const closeChatTab = useCallback(
+    (chat: Chat) => {
+      if (chatTabGroupKey === undefined) return;
+
+      closeChatTabInStore(chatTabGroupKey, chat.id);
+      if (chat.id !== selectedChatId) return;
+
+      const tabIndex = chatTabChats.findIndex((tab) => tab.id === chat.id);
+      const nextChat =
+        chatTabChats.at(tabIndex + 1) ??
+        (tabIndex > 0 ? chatTabChats.at(tabIndex - 1) : undefined);
+      if (nextChat !== undefined) {
+        navigateToChat(nextChat);
+      } else {
+        navigateToDraft(chat.projectId ?? undefined);
+      }
+    },
+    [
+      chatTabChats,
+      chatTabGroupKey,
+      closeChatTabInStore,
+      navigateToChat,
+      navigateToDraft,
+      selectedChatId,
+    ],
+  );
+
+  const openDraftTabFromTabBar = useCallback(() => {
+    if (
+      !selectedChat ||
+      !selectedChatProject ||
+      selectedChatWorktreeKey === undefined
+    ) {
+      return;
+    }
+
+    setPowerDraftWorktree({
+      cwd: chatWorktreeCwd(selectedChat, selectedChatProject.path),
+      groupKey: selectedChatWorktreeKey,
+      projectId: selectedChatProject.id,
+    });
+    startNewDraftSession(selectedChatProject.id);
+  }, [
+    selectedChat,
+    selectedChatProject,
+    selectedChatWorktreeKey,
+    startNewDraftSession,
+  ]);
+
+  const closeDraftTab = useCallback(() => {
+    setPowerDraftWorktree(undefined);
+    const lastTab = chatTabChats.at(-1);
+    if (lastTab !== undefined) {
+      navigateToChat(lastTab);
+    }
+  }, [chatTabChats, navigateToChat]);
+
   const deleteAllChats = useCallback(async () => {
     try {
       const result = await deleteAllChatsMutation.mutateAsync();
@@ -1207,7 +1345,7 @@ function WorkspacePageContent({
 
   if (selectedChat) {
     const canonicalPath = chatRoutePath(selectedChat, {
-      includeProject: workspaceMode === "work",
+      includeProject: isProjectMode,
     });
     if (canonicalPath !== currentRoutePath) {
       return <Redirect replace to={canonicalPath} />;
@@ -1314,9 +1452,7 @@ function WorkspacePageContent({
             <WorkspaceHeader
               attention={chatAttention}
               breadcrumbProject={
-                workspaceMode === "work" && selectedChat
-                  ? selectedProjectName
-                  : undefined
+                isProjectMode && selectedChat ? selectedProjectName : undefined
               }
               running={selectedChatIsRunning}
               rightSidebarOpen={
@@ -1337,6 +1473,18 @@ function WorkspacePageContent({
                 canShowRightSidebar ? toggleWorkspaceTools : undefined
               }
             />
+            {powerModeActive &&
+            (chatTabChats.length > 0 || powerDraftContext !== undefined) ? (
+              <ChatTabBar
+                activeChatId={selectedChatId}
+                chats={chatTabChats}
+                draftTabActive={powerDraftContext !== undefined}
+                onCloseChat={closeChatTab}
+                onCloseDraftTab={closeDraftTab}
+                onNewChat={openDraftTabFromTabBar}
+                onOpenChat={openChat}
+              />
+            ) : null}
             <main className="flex min-h-0 flex-1 overflow-hidden">
               <section
                 className="flex min-h-0 min-w-0 flex-1 flex-col"
@@ -1364,7 +1512,7 @@ function WorkspacePageContent({
                           api={api}
                           currentRoutePath={currentRoutePath}
                           draftAgentConfig={selectedChatAgentConfig}
-                          includeProjectInRoute={workspaceMode === "work"}
+                          includeProjectInRoute={isProjectMode}
                           onChatCreated={updateChatFromRun}
                           onChatMessagesUpdated={setChatMessagesInCache}
                           onChatUpdated={updateChatFromRun}
@@ -1383,6 +1531,7 @@ function WorkspacePageContent({
                   <NewChatThread
                     chatOptions={chatOptions}
                     creationLocation={draftCreationLocation}
+                    cwd={pinnedDraftCwd}
                     creationLocationAccessory={
                       canCreateDraftWorktree ? (
                         <DraftCreationLocationSelect

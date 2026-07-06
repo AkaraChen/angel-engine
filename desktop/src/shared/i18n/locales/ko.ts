@@ -60,6 +60,7 @@ export const ko = {
       backgroundChatCompleted: "백그라운드 채팅 완료",
       backgroundChatNeedsInput: "백그라운드 채팅에 입력 필요",
       backgroundChatStatus: "백그라운드 채팅 상태",
+      closeTab: "탭 닫기",
       creationLocationProject: "프로젝트",
       creationLocationSelect: "생성 위치",
       creationLocationWorktree: "Worktree",
@@ -94,6 +95,7 @@ export const ko = {
       loadingChats: "채팅 로드 중",
       loadingProjects: "프로젝트 로드 중",
       modeChat: "채팅",
+      modePower: "파워",
       modeSwitcher: "워크스페이스 모드",
       modeWork: "작업",
       needsInput: "입력 필요",
@@ -109,6 +111,7 @@ export const ko = {
       mobileDescription: "모바일 사이드바를 표시합니다.",
       title: "사이드바",
       toggleSidebar: "사이드바 전환",
+      worktreeMain: "메인",
     },
     settings: {
       agents: {

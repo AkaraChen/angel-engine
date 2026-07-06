@@ -60,6 +60,7 @@ export const de = {
       backgroundChatCompleted: "Hintergrundchat abgeschlossen",
       backgroundChatNeedsInput: "Hintergrundchat benötigt Eingabe",
       backgroundChatStatus: "Status des Hintergrundchats",
+      closeTab: "Tab schließen",
       creationLocationProject: "Projekt",
       creationLocationSelect: "Erstellen in",
       creationLocationWorktree: "Worktree",
@@ -94,6 +95,7 @@ export const de = {
       loadingChats: "Chats werden geladen",
       loadingProjects: "Projekte werden geladen",
       modeChat: "Chat",
+      modePower: "Power",
       modeSwitcher: "Arbeitsbereichsmodus",
       modeWork: "Arbeit",
       needsInput: "Eingabe erforderlich",
@@ -109,6 +111,7 @@ export const de = {
       mobileDescription: "Zeigt die mobile Seitenleiste an.",
       title: "Seitenleiste",
       toggleSidebar: "Seitenleiste ein-/ausblenden",
+      worktreeMain: "Haupt",
     },
     settings: {
       agents: {

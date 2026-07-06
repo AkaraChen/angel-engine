@@ -60,6 +60,7 @@ export const zhTW = {
       backgroundChatCompleted: "背景聊天已完成",
       backgroundChatNeedsInput: "背景聊天需要輸入",
       backgroundChatStatus: "背景聊天狀態",
+      closeTab: "關閉標籤頁",
       creationLocationProject: "專案本機",
       creationLocationSelect: "建立位置",
       creationLocationWorktree: "Worktree",
@@ -93,6 +94,7 @@ export const zhTW = {
       loadingChats: "正在載入聊天",
       loadingProjects: "正在載入專案",
       modeChat: "聊天",
+      modePower: "增強",
       modeSwitcher: "工作區模式",
       modeWork: "工作",
       needsInput: "需要輸入",
@@ -108,6 +110,7 @@ export const zhTW = {
       mobileDescription: "顯示行動版側邊欄。",
       title: "側邊欄",
       toggleSidebar: "切換側邊欄",
+      worktreeMain: "主目錄",
     },
     settings: {
       agents: {
