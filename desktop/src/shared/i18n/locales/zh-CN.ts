@@ -33,6 +33,7 @@ export const zhCN = {
       notHelpful: "无帮助",
       other: "其他",
       pending: "等待中",
+      pin: "置顶",
       plan: "计划",
       proposed: "已提议",
       question: "问题",
@@ -49,6 +50,7 @@ export const zhCN = {
       submitting: "提交中",
       thinking: "思考中",
       todo: "待办",
+      unpin: "取消置顶",
       updated: "已更新",
       useDefault: "使用默认值",
       rename: "重命名",
@@ -85,6 +87,7 @@ export const zhCN = {
       dateGroups: {
         dayBeforeYesterday: "前天",
         older: "更早",
+        pinned: "已置顶",
         previousMonth: "近一月",
         previousWeek: "近一周",
         today: "今天",

@@ -33,6 +33,7 @@ export const zhTW = {
       notHelpful: "沒有幫助",
       other: "其他",
       pending: "等待中",
+      pin: "釘選",
       plan: "計畫",
       proposed: "已提議",
       question: "問題",
@@ -49,6 +50,7 @@ export const zhTW = {
       submitting: "提交中",
       thinking: "思考中",
       todo: "待辦",
+      unpin: "取消釘選",
       updated: "已更新",
       useDefault: "使用預設值",
       rename: "重新命名",
@@ -85,6 +87,7 @@ export const zhTW = {
       dateGroups: {
         dayBeforeYesterday: "前天",
         older: "更早",
+        pinned: "已釘選",
         previousMonth: "近一月",
         previousWeek: "近一週",
         today: "今天",

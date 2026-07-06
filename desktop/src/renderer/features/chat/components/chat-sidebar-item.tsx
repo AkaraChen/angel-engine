@@ -1,5 +1,5 @@
 import type { MouseEventHandler, ReactElement } from "react";
-import { Archive, Robot as Bot } from "@phosphor-icons/react";
+import { Archive, Robot as Bot, PushPin } from "@phosphor-icons/react";
 
 import is from "@sindresorhus/is";
 import { useTranslation } from "react-i18next";
@@ -25,6 +25,7 @@ interface ChatSidebarItemProps {
   onArchiveChat?: () => Promise<void> | void;
   onOpenChat: () => void;
   onShowContextMenu?: () => Promise<void> | void;
+  pinned?: boolean;
   runtime?: string | null;
 }
 
@@ -37,6 +38,7 @@ export function ChatSidebarItem({
   onArchiveChat,
   onOpenChat,
   onShowContextMenu,
+  pinned,
   runtime,
 }: ChatSidebarItemProps): ReactElement {
   const { t } = useTranslation();
@@ -60,9 +62,14 @@ export function ChatSidebarItem({
       >
         <span
           className="flex size-4 shrink-0 items-center justify-center"
-          title={runtimeLabel}
+          title={pinned ? t("sidebar.dateGroups.pinned") : runtimeLabel}
         >
-          {is.nonEmptyString(runtimeIconSvg) ? (
+          {pinned ? (
+            <PushPin
+              className="size-2.5 text-sidebar-foreground/55"
+              weight="fill"
+            />
+          ) : is.nonEmptyString(runtimeIconSvg) ? (
             <span
               aria-hidden="true"
               className="

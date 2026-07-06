@@ -33,6 +33,7 @@ export const chats = sqliteTable(
     createdAt: text("created_at").notNull(),
     updatedAt: text("updated_at").notNull(),
     archived: integer("archived", { mode: "boolean" }).notNull().default(false),
+    pinned: integer("pinned", { mode: "boolean" }).notNull().default(false),
   },
   (table) => [
     index("chats_project_id_idx").on(table.projectId),

@@ -33,6 +33,7 @@ function chat(id: string, cwd: string | null): Chat {
     createdAt: "2026-07-02T00:00:00.000Z",
     cwd,
     id,
+    pinned: false,
     projectId: null,
     remoteThreadId: null,
     runtime: "kimi",

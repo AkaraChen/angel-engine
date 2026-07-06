@@ -7,6 +7,7 @@ function chat(input: Partial<Chat> & Pick<Chat, "id">): Chat {
     archived: false,
     createdAt: "2026-07-04T00:00:00.000Z",
     cwd: null,
+    pinned: false,
     projectId: null,
     remoteThreadId: null,
     runtime: "codex",

@@ -46,6 +46,7 @@ const CHAT_DATE_GROUPS: Array<{
   key: SidebarChatDateGroupKey;
   labelKey: string;
 }> = [
+  { key: "pinned", labelKey: "sidebar.dateGroups.pinned" },
   { key: "today", labelKey: "sidebar.dateGroups.today" },
   { key: "yesterday", labelKey: "sidebar.dateGroups.yesterday" },
   {
@@ -161,6 +162,7 @@ export function SimpleChatSidebarSection({
                                   onShowContextMenu={async () =>
                                     onShowChatContextMenu(chat)
                                   }
+                                  pinned={chat.pinned}
                                   runtime={chat.runtime}
                                   title={displayChatTitle(chat.title, t)}
                                   tooltip={
@@ -210,6 +212,8 @@ function chatDateGroupKey(
   chat: Chat,
   todayStart: number,
 ): SidebarChatDateGroupKey {
+  if (chat.pinned) return "pinned";
+
   const timestamp = chatTimestamp(chat);
 
   if (timestamp >= todayStart) return "today";

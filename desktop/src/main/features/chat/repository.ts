@@ -60,6 +60,7 @@ export function createChat(input: CreateChatRecordInput): Chat {
       title: normalizeTitle(input.title),
       updatedAt: now,
       archived: false,
+      pinned: false,
     })
     .returning()
     .get();
@@ -100,6 +101,10 @@ export function deleteArchivedChats(ids: string[]): Chat[] {
   }
 
   return archivedChats;
+}
+
+export function setChatPinned(id: string, pinned: boolean): Chat {
+  return updateChat(id, { pinned });
 }
 
 export function touchChat(id: string): Chat {
@@ -168,7 +173,12 @@ function updateChat(
   patch: Partial<
     Pick<
       Chat,
-      "archived" | "remoteThreadId" | "runtime" | "title" | "updatedAt"
+      | "archived"
+      | "pinned"
+      | "remoteThreadId"
+      | "runtime"
+      | "title"
+      | "updatedAt"
     >
   >,
 ): Chat {

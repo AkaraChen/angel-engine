@@ -33,6 +33,7 @@ export const ja = {
       notHelpful: "役に立たない",
       other: "その他",
       pending: "保留中",
+      pin: "ピン留め",
       plan: "計画",
       proposed: "提案済み",
       question: "質問",
@@ -49,6 +50,7 @@ export const ja = {
       submitting: "送信中",
       thinking: "思考中",
       todo: "Todo",
+      unpin: "ピン留めを解除",
       updated: "更新済み",
       useDefault: "デフォルトを使用",
       rename: "名前を変更",
@@ -86,6 +88,7 @@ export const ja = {
       dateGroups: {
         dayBeforeYesterday: "一昨日",
         older: "それ以前",
+        pinned: "ピン留め",
         previousMonth: "過去 30 日",
         previousWeek: "過去 7 日",
         today: "今日",

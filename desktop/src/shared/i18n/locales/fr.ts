@@ -33,6 +33,7 @@ export const fr = {
       notHelpful: "Pas utile",
       other: "Autre",
       pending: "En attente",
+      pin: "Épingler",
       plan: "Plan",
       proposed: "Proposé",
       question: "Question",
@@ -49,6 +50,7 @@ export const fr = {
       submitting: "Envoi",
       thinking: "Réflexion",
       todo: "À faire",
+      unpin: "Désépingler",
       updated: "mis à jour",
       useDefault: "Utiliser la valeur par défaut",
       rename: "Renommer",
@@ -87,6 +89,7 @@ export const fr = {
       dateGroups: {
         dayBeforeYesterday: "Avant-hier",
         older: "Plus ancien",
+        pinned: "Épinglés",
         previousMonth: "30 derniers jours",
         previousWeek: "7 derniers jours",
         today: "Aujourd'hui",

@@ -35,6 +35,7 @@ import {
   renameChat,
   requireArchivedChat,
   restoreArchivedChats,
+  setChatPinned,
 } from "./repository";
 import {
   chatCreateInput,
@@ -233,59 +234,66 @@ export function createChatIpcRouter(runtime: ChatRuntime) {
           throw new Error("Chat not found.");
         }
 
-        return new Promise<"cancelled" | "copied" | "deleted" | "rename">(
-          (resolve) => {
-            let handled = false;
-            const menuTemplate: MenuItemConstructorOptions[] = [
-              {
-                click: () => {
-                  handled = true;
-                  resolve("rename");
-                },
-                label: translate("common.rename"),
+        return new Promise<
+          "cancelled" | "copied" | "deleted" | "pinned" | "rename" | "unpinned"
+        >((resolve) => {
+          let handled = false;
+          const menuTemplate: MenuItemConstructorOptions[] = [
+            {
+              click: () => {
+                handled = true;
+                setChatPinned(chat.id, !chat.pinned);
+                resolve(chat.pinned ? "unpinned" : "pinned");
               },
-            ];
+              label: translate(chat.pinned ? "common.unpin" : "common.pin"),
+            },
+            {
+              click: () => {
+                handled = true;
+                resolve("rename");
+              },
+              label: translate("common.rename"),
+            },
+          ];
 
-            if (!app.isPackaged) {
-              menuTemplate.push(
-                { type: "separator" },
-                {
-                  click: () => {
-                    clipboard.writeText(JSON.stringify(chat, null, 2));
-                    handled = true;
-                    resolve("copied");
-                  },
-                  label: "Copy chat entity as JSON",
-                },
-              );
-            }
-
-            const menu = Menu.buildFromTemplate([
-              ...menuTemplate,
+          if (!app.isPackaged) {
+            menuTemplate.push(
               { type: "separator" },
               {
                 click: () => {
+                  clipboard.writeText(JSON.stringify(chat, null, 2));
                   handled = true;
-                  void (async () => {
-                    await removeWorktreesForDeletedChats([chat]);
-                    runtime.closeChatSession(chat.id);
-                    deleteChat(chat.id);
-                    resolve("deleted");
-                  })();
+                  resolve("copied");
                 },
-                label: translate("common.delete"),
+                label: "Copy chat entity as JSON",
               },
-            ]);
+            );
+          }
 
-            menu.popup({
-              callback: () => {
-                if (!handled) resolve("cancelled");
+          const menu = Menu.buildFromTemplate([
+            ...menuTemplate,
+            { type: "separator" },
+            {
+              click: () => {
+                handled = true;
+                void (async () => {
+                  await removeWorktreesForDeletedChats([chat]);
+                  runtime.closeChatSession(chat.id);
+                  deleteChat(chat.id);
+                  resolve("deleted");
+                })();
               },
-              window:
-                BrowserWindow.fromWebContents(context.sender) ?? undefined,
-            });
-          },
-        );
+              label: translate("common.delete"),
+            },
+          ]);
+
+          menu.popup({
+            callback: () => {
+              if (!handled) resolve("cancelled");
+            },
+            window: BrowserWindow.fromWebContents(context.sender) ?? undefined,
+          });
+        });
       }),
 
     chatSend: t.procedure.input<ChatSendInput>().action(async ({ input }) => {
