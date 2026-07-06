@@ -36,17 +36,17 @@
   "dependencies": {
     "@angel-engine/js-client": "workspace:*",
     "@earendil-works/pi-coding-agent": "0.80.3",
-    "@sindresorhus/is": "^4.6.0"
+    "@sindresorhus/is": "^8.1.0"
   },
   "devDependencies": {
     "@angel-engine/client-napi": "workspace:*",
-    "@typescript-eslint/eslint-plugin": "^8.59.2",
-    "@typescript-eslint/parser": "^8.59.2",
-    "eslint": "^10.4.0",
+    "@typescript-eslint/eslint-plugin": "^8.62.1",
+    "@typescript-eslint/parser": "^8.62.1",
+    "eslint": "^10.6.0",
     "tsup": "^8.5.1",
     "typescript": "^6.0.3",
-    "vite": "^8.0.14",
-    "vitest": "^4.1.6"
+    "vite": "^8.1.3",
+    "vitest": "^4.1.9"
   },
   "peerDependencies": {
     "@angel-engine/client-napi": "0.1.0"

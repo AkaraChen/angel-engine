@@ -107,9 +107,7 @@ function EmptyThread({ projectName }: { projectName?: string }) {
       <div className="w-full max-w-136">
         <div className="min-w-0 text-center select-none">
           <h2
-            className="
-            text-2xl/tight font-semibold text-pretty text-foreground
-          "
+            className="text-2xl/tight font-semibold text-pretty text-foreground"
           >
             {is.nonEmptyString(projectName) ? (
               <Trans

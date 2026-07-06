@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { listAvailableAgents } from "./availability";
 import which from "which";
+import { listAvailableAgents } from "./availability";
 
 vi.mock("which", () => ({
   default: vi.fn(async () => "/usr/bin/fake-agent"),

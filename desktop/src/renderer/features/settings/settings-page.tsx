@@ -1,3 +1,4 @@
+import type { IconProps } from "@phosphor-icons/react";
 import type {
   AgentOption,
   AgentRuntime,
@@ -7,7 +8,6 @@ import type {
   CustomAgentRuntime,
   UpdateCustomAgentInput,
 } from "@shared/agents";
-import type { IconProps } from "@phosphor-icons/react";
 import type {
   ComponentType,
   KeyboardEvent,

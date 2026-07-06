@@ -1,6 +1,6 @@
-import { describe, expect, it, vi } from "vitest";
-
 import { listAgentSkillsFromDirs } from "@angel-engine/client-napi";
+
+import { describe, expect, it, vi } from "vitest";
 
 import { createAgentSkillDiscoveryRequest, listSkillsForAgent } from "./skills";
 

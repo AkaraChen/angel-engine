@@ -1183,9 +1183,8 @@ function WorkspaceToolVerticalTabSidebar({
             aria-label={`Close ${tab.title}`}
             className={cn(
               `
-                mr-1 flex size-5 shrink-0 items-center justify-center
-                rounded-sm text-muted-foreground/70 outline-none
-                transition-opacity
+                mr-1 flex size-5 shrink-0 items-center justify-center rounded-sm
+                text-muted-foreground/70 transition-opacity outline-none
                 group-focus-within:opacity-100
                 group-hover:opacity-100
                 hover:bg-overlay-hover hover:text-foreground
@@ -1237,7 +1236,9 @@ function WorkspaceToolVerticalTabSidebar({
           {pinnedTabs.map(renderTab)}
         </div>
         <div
-          className="mt-3 mb-1 flex h-6 shrink-0 items-center justify-between pl-2"
+          className="
+            mt-3 mb-1 flex h-6 shrink-0 items-center justify-between pl-2
+          "
           role="presentation"
         >
           <span className="text-xs font-medium text-muted-foreground">
@@ -1783,7 +1784,7 @@ function WorkspaceWindowFilesPanel({
           root,
           size: result.size,
         });
-        queryClient.setQueryData<WorkspaceFileReadResult>(
+        queryClient.setQueryData(
           queryKeys.workspaceTools.readFile(root, path),
           {
             content: state.draftContent,
@@ -1791,7 +1792,7 @@ function WorkspaceWindowFilesPanel({
             root,
             size: result.size,
             type: "text",
-          },
+          } satisfies WorkspaceFileReadResult,
         );
         void queryClient.invalidateQueries({
           queryKey: queryKeys.workspaceTools.fileTree(root),
@@ -3495,7 +3496,7 @@ async function confirmWorkspaceWindowFilesExit({
         root,
         size: result.size,
       });
-      queryClient.setQueryData<WorkspaceFileReadResult>(
+      queryClient.setQueryData(
         queryKeys.workspaceTools.readFile(root, path),
         {
           content: state.draftContent,
@@ -3503,7 +3504,7 @@ async function confirmWorkspaceWindowFilesExit({
           root,
           size: result.size,
           type: "text",
-        },
+        } satisfies WorkspaceFileReadResult,
       );
     } catch (error: unknown) {
       console.error("Failed to save workspace file before leaving editor.", {
