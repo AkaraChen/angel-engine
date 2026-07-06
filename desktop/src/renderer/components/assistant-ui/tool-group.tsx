@@ -10,7 +10,7 @@ import type {
 import { useAuiState, useScrollLock } from "@assistant-ui/react";
 import {
   CaretDown as ChevronDownIcon,
-  Toolbox as ToolIcon,
+  Wrench as ToolIcon,
 } from "@phosphor-icons/react";
 import { isChatToolAction, isTerminalChatToolPhase } from "@shared/chat";
 import is from "@sindresorhus/is";
