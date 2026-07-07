@@ -150,9 +150,7 @@ export function PowerProjectSidebarSection({
                 <AnimatedSidebarMenuItem key={project.id}>
                   <WorkspaceSidebarMenuButton
                     aria-expanded={
-                      singleWorktreeGroup === undefined
-                        ? isExpanded
-                        : undefined
+                      singleWorktreeGroup === undefined ? isExpanded : undefined
                     }
                     onClick={() => {
                       if (singleWorktreeGroup !== undefined) {

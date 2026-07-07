@@ -426,7 +426,9 @@ function WorkspacePageContent({
       : undefined;
   const powerDraftTabActive =
     powerWorktreeView === "draft" && powerDraftContext !== undefined;
-  const pinnedDraftCwd = powerDraftTabActive ? powerDraftContext.cwd : undefined;
+  const pinnedDraftCwd = powerDraftTabActive
+    ? powerDraftContext.cwd
+    : undefined;
   const powerHomePageContext =
     powerModeActive &&
     powerWorktreeView === "home" &&

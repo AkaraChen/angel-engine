@@ -25,20 +25,17 @@ export function PowerWorktreeHistoryPage({
   projectPath,
 }: PowerWorktreeHistoryPageProps): ReactElement {
   const { t } = useTranslation();
-  const historyChats = useMemo(
-    () => {
-      if (projectPath === undefined) return [];
+  const historyChats = useMemo(() => {
+    if (projectPath === undefined) return [];
 
-      return chats
-        .filter(
-          (chat) =>
-            !chat.archived &&
-            chatWorktreeGroupKey(chat, projectPath) === groupKey,
-        )
-        .sort((left, right) => right.updatedAt.localeCompare(left.updatedAt));
-    },
-    [chats, groupKey, projectPath],
-  );
+    return chats
+      .filter(
+        (chat) =>
+          !chat.archived &&
+          chatWorktreeGroupKey(chat, projectPath) === groupKey,
+      )
+      .sort((left, right) => right.updatedAt.localeCompare(left.updatedAt));
+  }, [chats, groupKey, projectPath]);
 
   return (
     <div className="flex min-h-0 flex-1 items-center justify-center overflow-y-auto p-6">

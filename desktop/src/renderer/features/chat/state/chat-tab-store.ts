@@ -92,9 +92,7 @@ export const useChatTabStore = create<ChatTabState>()((set) => ({
     }),
   setActiveWorktree: (activeWorktree) =>
     set((current) =>
-      current.activeWorktree === activeWorktree
-        ? current
-        : { activeWorktree },
+      current.activeWorktree === activeWorktree ? current : { activeWorktree },
     ),
   setActiveWorktreeView: (activeWorktreeView) =>
     set((current) =>
