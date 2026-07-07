@@ -108,6 +108,8 @@ export const en = {
       noProjects: "No projects yet",
       noStandaloneChats: "No standalone chats",
       projects: "Projects",
+      powerWorktreeHome: "Home",
+      powerWorktreeHistoricalChat: "Historical Chat",
       refreshProjects: "Refresh projects",
       settings: "Settings",
       toggleChats: "Toggle chats",

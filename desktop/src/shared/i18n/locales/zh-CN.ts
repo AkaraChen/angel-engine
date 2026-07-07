@@ -107,6 +107,8 @@ export const zhCN = {
       noProjects: "还没有项目",
       noStandaloneChats: "没有独立聊天",
       projects: "项目",
+      powerWorktreeHome: "主页",
+      powerWorktreeHistoricalChat: "历史聊天",
       refreshProjects: "刷新项目",
       settings: "设置",
       toggleChats: "折叠或展开聊天",

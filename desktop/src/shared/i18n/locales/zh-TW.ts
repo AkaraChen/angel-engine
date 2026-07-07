@@ -107,6 +107,8 @@ export const zhTW = {
       noProjects: "尚無專案",
       noStandaloneChats: "沒有獨立聊天",
       projects: "專案",
+      powerWorktreeHome: "首頁",
+      powerWorktreeHistoricalChat: "歷史聊天",
       refreshProjects: "重新整理專案",
       settings: "設定",
       toggleChats: "切換聊天",

@@ -11,22 +11,29 @@ export interface PowerDraftWorktree {
   projectId: string;
 }
 
+export type PowerWorktreeView = "draft" | "home" | null;
+
 type ChatTabGroups = Partial<Record<string, WorktreeChatTabs>>;
 
 const chatTabGroupsStorageKey = "angel-engine.power-chat-tabs";
 const initialChatTabGroups = readChatTabGroups();
 
 interface ChatTabState {
+  activeWorktree?: PowerDraftWorktree;
+  activeWorktreeView: PowerWorktreeView;
   clearChatTabs: () => void;
   closeChatTab: (groupKey: string, chatId: string) => void;
   draftWorktree?: PowerDraftWorktree;
   openChatTab: (groupKey: string, chatId: string) => void;
   removeChatFromTabGroups: (chatId: string) => void;
+  setActiveWorktree: (activeWorktree?: PowerDraftWorktree) => void;
+  setActiveWorktreeView: (activeWorktreeView: PowerWorktreeView) => void;
   setDraftWorktree: (draftWorktree?: PowerDraftWorktree) => void;
   tabGroups: ChatTabGroups;
 }
 
 export const useChatTabStore = create<ChatTabState>()((set) => ({
+  activeWorktreeView: null,
   clearChatTabs: () =>
     set(() => {
       const tabGroups: ChatTabGroups = {};
@@ -83,6 +90,18 @@ export const useChatTabStore = create<ChatTabState>()((set) => ({
 
       return { tabGroups };
     }),
+  setActiveWorktree: (activeWorktree) =>
+    set((current) =>
+      current.activeWorktree === activeWorktree
+        ? current
+        : { activeWorktree },
+    ),
+  setActiveWorktreeView: (activeWorktreeView) =>
+    set((current) =>
+      current.activeWorktreeView === activeWorktreeView
+        ? current
+        : { activeWorktreeView },
+    ),
   setDraftWorktree: (draftWorktree) =>
     set((current) =>
       current.draftWorktree === draftWorktree ? current : { draftWorktree },
@@ -106,10 +125,21 @@ export function setPowerDraftWorktree(draftWorktree?: PowerDraftWorktree) {
   useChatTabStore.getState().setDraftWorktree(draftWorktree);
 }
 
+export function setPowerActiveWorktree(activeWorktree?: PowerDraftWorktree) {
+  useChatTabStore.getState().setActiveWorktree(activeWorktree);
+}
+
+export function setPowerWorktreeView(activeWorktreeView: PowerWorktreeView) {
+  useChatTabStore.getState().setActiveWorktreeView(activeWorktreeView);
+}
+
 function readChatTabGroups(): ChatTabGroups {
+  const storage = localStorageForChatTabs();
+  if (storage === undefined) return {};
+
   try {
     return sanitizeChatTabGroups(
-      JSON.parse(window.localStorage.getItem(chatTabGroupsStorageKey) ?? "{}"),
+      JSON.parse(storage.getItem(chatTabGroupsStorageKey) ?? "{}"),
     );
   } catch {
     return {};
@@ -117,10 +147,14 @@ function readChatTabGroups(): ChatTabGroups {
 }
 
 function writeChatTabGroups(tabGroups: ChatTabGroups) {
-  window.localStorage.setItem(
+  localStorageForChatTabs()?.setItem(
     chatTabGroupsStorageKey,
     JSON.stringify(tabGroups),
   );
+}
+
+function localStorageForChatTabs(): Storage | undefined {
+  return typeof window === "undefined" ? undefined : window.localStorage;
 }
 
 function sanitizeChatTabGroups(value: unknown): ChatTabGroups {

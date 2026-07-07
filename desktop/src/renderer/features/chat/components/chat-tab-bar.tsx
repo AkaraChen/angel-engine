@@ -15,16 +15,22 @@ interface ChatTabBarProps {
   draftTabActive?: boolean;
   onCloseChat: (chat: Chat) => MaybeAsync;
   onCloseDraftTab?: () => MaybeAsync;
+  onOpenHistory?: () => MaybeAsync;
   onNewChat: () => MaybeAsync;
   onOpenChat: (chat: Chat) => MaybeAsync;
+  historyTabLabel?: string;
+  historyTabActive?: boolean;
 }
 
 export function ChatTabBar({
   activeChatId,
   chats,
   draftTabActive = false,
+  historyTabActive = false,
+  historyTabLabel,
   onCloseChat,
   onCloseDraftTab,
+  onOpenHistory,
   onNewChat,
   onOpenChat,
 }: ChatTabBarProps): ReactElement {
@@ -39,10 +45,19 @@ export function ChatTabBar({
       data-slot="chat-tab-bar"
       role="tablist"
     >
+      {historyTabLabel && onOpenHistory ? (
+        <HistoryTab
+          isActive={historyTabActive}
+          label={historyTabLabel}
+          onOpen={onOpenHistory}
+        />
+      ) : null}
       {chats.map((chat) => (
         <ChatTab
           chat={chat}
-          isActive={!draftTabActive && chat.id === activeChatId}
+          isActive={
+            !historyTabActive && !draftTabActive && chat.id === activeChatId
+          }
           key={chat.id}
           onClose={() => void onCloseChat(chat)}
           onOpen={() => void onOpenChat(chat)}
@@ -64,6 +79,40 @@ export function ChatTabBar({
         </Button>
       )}
     </div>
+  );
+}
+
+function HistoryTab({
+  isActive,
+  label,
+  onOpen,
+}: {
+  isActive: boolean;
+  label: string;
+  onOpen: () => MaybeAsync;
+}): ReactElement {
+  return (
+    <button
+      aria-selected={isActive}
+      className={cn(
+        `
+          flex h-7 max-w-52 min-w-0 shrink-0 items-center rounded-md px-2.5
+          text-xs transition-colors
+        `,
+        isActive
+          ? "bg-muted text-foreground"
+          : `
+            text-muted-foreground
+            hover:bg-muted/55 hover:text-foreground
+          `,
+      )}
+      onClick={() => void onOpen()}
+      role="tab"
+      title={label}
+      type="button"
+    >
+      <span className="min-w-0 truncate text-left">{label}</span>
+    </button>
   );
 }
 

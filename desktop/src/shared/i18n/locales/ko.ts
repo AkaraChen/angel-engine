@@ -108,6 +108,8 @@ export const ko = {
       noProjects: "아직 프로젝트가 없습니다",
       noStandaloneChats: "독립 채팅이 없습니다",
       projects: "프로젝트",
+      powerWorktreeHome: "홈",
+      powerWorktreeHistoricalChat: "채팅 기록",
       refreshProjects: "프로젝트 새로고침",
       settings: "설정",
       toggleChats: "채팅 전환",

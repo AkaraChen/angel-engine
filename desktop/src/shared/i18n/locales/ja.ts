@@ -108,6 +108,8 @@ export const ja = {
       noProjects: "まだプロジェクトはありません",
       noStandaloneChats: "単独チャットはありません",
       projects: "プロジェクト",
+      powerWorktreeHome: "ホーム",
+      powerWorktreeHistoricalChat: "チャット履歴",
       refreshProjects: "プロジェクトを更新",
       settings: "設定",
       toggleChats: "チャットを切り替え",

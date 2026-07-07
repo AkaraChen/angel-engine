@@ -108,6 +108,8 @@ export interface LocaleResourceTranslationSidebar {
   noProjects: string;
   noStandaloneChats: string;
   projects: string;
+  powerWorktreeHome: string;
+  powerWorktreeHistoricalChat: string;
   refreshProjects: string;
   settings: string;
   toggleChats: string;

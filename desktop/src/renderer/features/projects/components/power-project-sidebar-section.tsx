@@ -27,35 +27,34 @@ import {
   WorkspaceSidebarMenuAction,
   WorkspaceSidebarMenuButton,
 } from "@/components/workspace-sidebar-primitives";
-import { ChatSidebarItem } from "@/features/chat/components/chat-sidebar-item";
-import { groupProjectChatsByWorktree } from "@/features/chat/worktree-grouping";
+import {
+  groupProjectChatsByWorktree,
+  type ProjectWorktreeChatGroup,
+} from "@/features/chat/worktree-grouping";
 
 type MaybeAsync = void | Promise<void>;
 
 interface PowerProjectSidebarSectionProps {
   isLoading: boolean;
-  onArchiveChat: (chat: Chat) => MaybeAsync;
   onCreateProject: () => MaybeAsync;
   onCreateProjectChat: (project: Project) => MaybeAsync;
-  onOpenChat: (chat: Chat) => MaybeAsync;
-  onShowChatContextMenu: (chat: Chat) => MaybeAsync;
+  onOpenWorktree: (
+    project: Project,
+    worktreeGroup: ProjectWorktreeChatGroup,
+  ) => MaybeAsync;
   onShowProjectContextMenu: (project: Project) => MaybeAsync;
   projectChatsByProjectId: Map<string, Chat[]>;
   projects: Project[];
-  selectedChatId?: string;
 }
 
 export function PowerProjectSidebarSection({
   isLoading,
-  onArchiveChat,
   onCreateProject,
   onCreateProjectChat,
-  onOpenChat,
-  onShowChatContextMenu,
+  onOpenWorktree,
   onShowProjectContextMenu,
   projectChatsByProjectId,
   projects,
-  selectedChatId,
 }: PowerProjectSidebarSectionProps): ReactElement {
   const { t } = useTranslation();
   const projectIds = useMemo(
@@ -80,12 +79,6 @@ export function PowerProjectSidebarSection({
   );
   const toggleProjectExpanded = useWorkspaceUiStore(
     (state) => state.toggleSidebarProject,
-  );
-  const collapsedWorktreeGroupKeys = useWorkspaceUiStore(
-    (state) => state.collapsedWorktreeGroupKeys,
-  );
-  const toggleWorktreeGroup = useWorkspaceUiStore(
-    (state) => state.toggleSidebarWorktreeGroup,
   );
 
   useEffect(() => {
@@ -148,14 +141,25 @@ export function PowerProjectSidebarSection({
                 projectChats,
                 project,
                 t("sidebar.worktreeMain"),
-              );
+              ).filter((group) => group.isMain || group.chats.length > 0);
+              const singleWorktreeGroup =
+                worktreeGroups.length === 1 ? worktreeGroups[0] : undefined;
               const isExpanded = expandedProjectIds.has(project.id);
 
               return (
                 <AnimatedSidebarMenuItem key={project.id}>
                   <WorkspaceSidebarMenuButton
-                    aria-expanded={isExpanded}
+                    aria-expanded={
+                      singleWorktreeGroup === undefined
+                        ? isExpanded
+                        : undefined
+                    }
                     onClick={() => {
+                      if (singleWorktreeGroup !== undefined) {
+                        void onOpenWorktree(project, singleWorktreeGroup);
+                        return;
+                      }
+
                       toggleProjectExpanded(project.id);
                     }}
                     onContextMenu={(event) => {
@@ -173,20 +177,22 @@ export function PowerProjectSidebarSection({
                     >
                       {projectDisplayName}
                     </span>
-                    <m.span
-                      animate={{ rotate: isExpanded ? 0 : -90 }}
-                      aria-hidden="true"
-                      className="
-                        ml-1 flex size-4 shrink-0 items-center justify-center
-                        opacity-0 transition-opacity
-                        group-focus-within/menu-item:opacity-70
-                        group-hover/menu-item:opacity-70
-                        group-data-[collapsible=icon]:hidden
-                      "
-                      transition={sidebarMotion}
-                    >
-                      <ChevronDown />
-                    </m.span>
+                    {singleWorktreeGroup === undefined ? (
+                      <m.span
+                        animate={{ rotate: isExpanded ? 0 : -90 }}
+                        aria-hidden="true"
+                        className="
+                          ml-1 flex size-4 shrink-0 items-center justify-center
+                          opacity-0 transition-opacity
+                          group-focus-within/menu-item:opacity-70
+                          group-hover/menu-item:opacity-70
+                          group-data-[collapsible=icon]:hidden
+                        "
+                        transition={sidebarMotion}
+                      >
+                        <ChevronDown />
+                      </m.span>
+                    ) : null}
                   </WorkspaceSidebarMenuButton>
                   <WorkspaceSidebarMenuAction
                     aria-label={t("sidebar.newChatInProject", {
@@ -207,132 +213,41 @@ export function PowerProjectSidebarSection({
                   </WorkspaceSidebarMenuAction>
 
                   <AnimatePresence initial={false}>
-                    {isExpanded ? (
+                    {isExpanded && singleWorktreeGroup === undefined ? (
                       <m.div
                         animate={{ height: "auto", opacity: 1 }}
                         className="overflow-hidden py-0.5"
                         exit={{ height: 0, opacity: 0 }}
                         initial={{ height: 0, opacity: 0 }}
                         key={`project-worktrees-${project.id}`}
-                        transition={sidebarMotion}
                         layout="position"
+                        transition={sidebarMotion}
                       >
                         <SidebarMenu>
-                          {projectChats.length === 0 ? (
-                            <AnimatedSidebarMenuItem key="no-chats">
-                              <WorkspaceSidebarMenuButton
-                                className="text-sidebar-foreground/45"
-                                disabled
+                          {worktreeGroups.map((group) => (
+                            <AnimatedSidebarMenuItem key={group.key}>
+                              <button
+                                className="
+                                  group/worktree-group flex h-6 w-full
+                                  items-center gap-1.5 rounded-sm pr-2 pl-6
+                                  text-left text-[11px] font-medium
+                                  text-sidebar-foreground/50 outline-hidden
+                                  hover:text-sidebar-foreground/75
+                                  focus-visible:text-sidebar-foreground/75
+                                "
+                                onClick={() =>
+                                  void onOpenWorktree(project, group)
+                                }
+                                title={group.cwd}
+                                type="button"
                               >
-                                <span>{t("sidebar.noChats")}</span>
-                              </WorkspaceSidebarMenuButton>
+                                <GitBranch className="size-3 shrink-0" />
+                                <span className="min-w-0 truncate">
+                                  {group.label}
+                                </span>
+                              </button>
                             </AnimatedSidebarMenuItem>
-                          ) : (
-                            worktreeGroups
-                              .filter(
-                                (group) =>
-                                  group.isMain || group.chats.length > 0,
-                              )
-                              .map((group) => {
-                                const isGroupExpanded =
-                                  !collapsedWorktreeGroupKeys.has(group.key);
-
-                                return (
-                                  <AnimatedSidebarMenuItem key={group.key}>
-                                    <button
-                                      aria-expanded={isGroupExpanded}
-                                      className="
-                                        group/worktree-group flex h-6 w-full
-                                        items-center gap-1.5 rounded-sm pr-2
-                                        pl-6 text-left text-[11px] font-medium
-                                        text-sidebar-foreground/50
-                                        outline-hidden
-                                        hover:text-sidebar-foreground/75
-                                        focus-visible:text-sidebar-foreground/75
-                                      "
-                                      onClick={() => {
-                                        toggleWorktreeGroup(group.key);
-                                      }}
-                                      title={group.cwd}
-                                      type="button"
-                                    >
-                                      <GitBranch className="size-3 shrink-0" />
-                                      <span className="min-w-0 truncate">
-                                        {group.label}
-                                      </span>
-                                      <m.span
-                                        animate={{
-                                          rotate: isGroupExpanded ? 0 : -90,
-                                        }}
-                                        aria-hidden="true"
-                                        className="
-                                          ml-auto flex size-3.5 shrink-0
-                                          items-center justify-center opacity-0
-                                          transition-opacity
-                                          group-hover/worktree-group:opacity-70
-                                          group-focus-visible/worktree-group:opacity-70
-                                        "
-                                        transition={sidebarMotion}
-                                      >
-                                        <ChevronDown />
-                                      </m.span>
-                                    </button>
-                                    <AnimatePresence initial={false}>
-                                      {isGroupExpanded ? (
-                                        <m.div
-                                          animate={{
-                                            height: "auto",
-                                            opacity: 1,
-                                          }}
-                                          className="overflow-hidden"
-                                          exit={{ height: 0, opacity: 0 }}
-                                          initial={{ height: 0, opacity: 0 }}
-                                          key={`worktree-chats-${group.key}`}
-                                          transition={sidebarMotion}
-                                        >
-                                          <SidebarMenu>
-                                            {group.chats.map((chat) => (
-                                              <AnimatedSidebarMenuItem
-                                                key={chat.id}
-                                              >
-                                                <ChatSidebarItem
-                                                  chatId={chat.id}
-                                                  isActive={
-                                                    chat.id === selectedChatId
-                                                  }
-                                                  nested
-                                                  onArchiveChat={async () =>
-                                                    onArchiveChat(chat)
-                                                  }
-                                                  onOpenChat={() =>
-                                                    void onOpenChat(chat)
-                                                  }
-                                                  onShowContextMenu={async () =>
-                                                    onShowChatContextMenu(chat)
-                                                  }
-                                                  runtime={chat.runtime}
-                                                  title={displayChatTitle(
-                                                    chat.title,
-                                                    t,
-                                                  )}
-                                                  tooltip={
-                                                    chat.cwd ??
-                                                    displayChatTitle(
-                                                      chat.title,
-                                                      t,
-                                                    )
-                                                  }
-                                                />
-                                              </AnimatedSidebarMenuItem>
-                                            ))}
-                                          </SidebarMenu>
-                                        </m.div>
-                                      ) : null}
-                                    </AnimatePresence>
-                                  </AnimatedSidebarMenuItem>
-                                );
-                              })
-                          )}
+                          ))}
                         </SidebarMenu>
                       </m.div>
                     ) : null}
@@ -350,11 +265,4 @@ export function PowerProjectSidebarSection({
 function getProjectDisplayName(projectPath: string): string {
   const parts = projectPath.split(/[\\/]/).filter(Boolean);
   return parts[parts.length - 1] ?? projectPath;
-}
-
-function displayChatTitle(
-  title: string,
-  t: (key: string, options?: Record<string, unknown>) => string,
-) {
-  return title === "New chat" ? t("workspace.newChat") : title;
 }

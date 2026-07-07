@@ -109,6 +109,8 @@ export const fr = {
       noProjects: "Aucun projet pour le moment",
       noStandaloneChats: "Aucune discussion autonome",
       projects: "Projets",
+      powerWorktreeHome: "Accueil",
+      powerWorktreeHistoricalChat: "Historique des discussions",
       refreshProjects: "Actualiser les projets",
       settings: "Paramètres",
       toggleChats: "Afficher ou masquer les discussions",

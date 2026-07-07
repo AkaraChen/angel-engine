@@ -9,7 +9,7 @@ export function SketchUnderline({ children }: { children?: ReactNode }) {
         "relative inline-block max-w-full align-baseline text-primary",
       )}
     >
-      <span className="relative z-10 whitespace-nowrap">{children}</span>
+      <span className="relative z-0 whitespace-nowrap">{children}</span>
       <svg
         aria-hidden
         className="

@@ -4,6 +4,7 @@ import type { Project } from "@shared/projects";
 import type { ComponentType, ReactElement } from "react";
 
 import type { WorkspaceMode } from "@/app/workspace/workspace-ui-store";
+import type { ProjectWorktreeChatGroup } from "@/features/chat/worktree-grouping";
 import {
   Folder,
   Lightning,
@@ -67,6 +68,10 @@ interface WorkspaceSidebarProps {
   onCreateStandaloneChat: () => MaybeAsync;
   onOpenChat: (chat: Chat) => MaybeAsync;
   onOpenSettings: () => MaybeAsync;
+  onOpenWorktree: (
+    project: Project,
+    worktreeGroup: ProjectWorktreeChatGroup,
+  ) => MaybeAsync;
   onShowChatContextMenu: (chat: Chat) => MaybeAsync;
   onShowProjectContextMenu: (project: Project) => MaybeAsync;
   onWorkspaceModeChange: (workspaceMode: WorkspaceMode) => void;
@@ -215,6 +220,7 @@ function WorkspaceSidebarContent({
   onCreateStandaloneChat,
   onOpenChat,
   onOpenSettings,
+  onOpenWorktree,
   onShowChatContextMenu,
   onShowProjectContextMenu,
   onWorkspaceModeChange,
@@ -289,15 +295,12 @@ function WorkspaceSidebarContent({
         {workspaceMode === "power" ? (
           <PowerProjectSidebarSection
             isLoading={isProjectsLoading}
-            onArchiveChat={onArchiveChat}
             onCreateProject={onCreateProject}
             onCreateProjectChat={onCreateProjectChat}
-            onOpenChat={onOpenChat}
-            onShowChatContextMenu={onShowChatContextMenu}
+            onOpenWorktree={onOpenWorktree}
             onShowProjectContextMenu={onShowProjectContextMenu}
             projectChatsByProjectId={projectChatsByProjectId}
             projects={projects}
-            selectedChatId={selectedChatId}
           />
         ) : null}
 
