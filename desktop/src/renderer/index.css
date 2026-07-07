@@ -384,6 +384,11 @@
   }
 
   html,
+  body {
+    overscroll-behavior-y: none;
+  }
+
+  html,
   body,
   #root {
     background: transparent;
