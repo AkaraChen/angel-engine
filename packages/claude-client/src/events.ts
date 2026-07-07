@@ -361,6 +361,7 @@ function turnRunEventFromClientEvent(
           }
         : undefined;
     case "availableCommandsUpdated":
+    case "availableSkillsUpdated":
     case "contextUpdated":
     case "conversationDiscovered":
     case "conversationReady":

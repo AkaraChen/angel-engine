@@ -315,7 +315,9 @@ function AssistantMessageErrorText() {
   if (!text) return null;
 
   return (
-    <div className="mt-1 text-[13px]/5 whitespace-pre-wrap text-muted-foreground">
+    <div className="
+      mt-1 text-[13px]/5 whitespace-pre-wrap text-muted-foreground
+    ">
       {text}
     </div>
   );
@@ -1512,7 +1514,9 @@ function PlanMessagePart({ plan }: { plan: ChatPlanData }) {
               </ol>
             ) : null}
             {isLastMessage && (canStartImplementation || canHandoff) ? (
-              <div className="flex justify-end gap-2 border-t border-border pt-2">
+              <div className="
+                flex justify-end gap-2 border-t border-border pt-2
+              ">
                 {canHandoff ? (
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>

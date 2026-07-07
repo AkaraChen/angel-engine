@@ -1,13 +1,10 @@
+import type { AgentSkillsInput } from "../../../shared/agents";
 import { homedir } from "node:os";
+
 import path from "node:path";
 
 import { listAgentSkillsFromDirs } from "@angel-engine/client-napi";
-
-import {
-  AGENT_OPTIONS,
-  isBuiltinAgentRuntime,
-  type AgentSkillsInput,
-} from "../../../shared/agents";
+import { AGENT_OPTIONS, isBuiltinAgentRuntime } from "../../../shared/agents";
 
 export interface AgentSkillDiscoveryRequest {
   globalDirs: string[];

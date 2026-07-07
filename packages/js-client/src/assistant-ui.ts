@@ -159,6 +159,7 @@ export function assistantMessageContentToHistoryParts(
         }
         return [];
       case "audio":
+      case "generative-ui":
       case "source":
         return [];
     }
