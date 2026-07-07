@@ -53,6 +53,7 @@ export interface Chat {
   createdAt: string;
   cwd: string | null;
   id: string;
+  pinned: boolean;
   projectId: string | null;
   remoteThreadId: string | null;
   runtime: string;

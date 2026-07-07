@@ -33,6 +33,7 @@ export const ko = {
       notHelpful: "도움 안 됨",
       other: "기타",
       pending: "대기 중",
+      pin: "고정",
       plan: "계획",
       proposed: "제안됨",
       question: "질문",
@@ -49,6 +50,7 @@ export const ko = {
       submitting: "제출 중",
       thinking: "생각 중",
       todo: "할 일",
+      unpin: "고정 해제",
       updated: "업데이트됨",
       useDefault: "기본값 사용",
       rename: "이름 변경",
@@ -87,6 +89,7 @@ export const ko = {
       dateGroups: {
         dayBeforeYesterday: "그저께",
         older: "이전",
+        pinned: "고정됨",
         previousMonth: "지난 30일",
         previousWeek: "지난 7일",
         today: "오늘",

@@ -347,7 +347,7 @@ export function chatContextMenuMutationOptions({
   return mutationOptions({
     mutationFn: async (chat: Chat) => api.chats.showContextMenu(chat.id),
     onSuccess: async (data, variables) => {
-      if (data === "deleted") {
+      if (data === "deleted" || data === "pinned" || data === "unpinned") {
         await invalidateChatQueries(queryClient);
       }
       await onSuccess?.(data, variables);

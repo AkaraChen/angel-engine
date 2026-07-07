@@ -33,6 +33,7 @@ export const en = {
       notHelpful: "Not helpful",
       other: "Other",
       pending: "Pending",
+      pin: "Pin",
       plan: "Plan",
       proposed: "Proposed",
       question: "Question",
@@ -49,6 +50,7 @@ export const en = {
       submitting: "Submitting",
       thinking: "Thinking",
       todo: "Todo",
+      unpin: "Unpin",
       updated: "updated",
       useDefault: "Use default",
       rename: "Rename",
@@ -87,6 +89,7 @@ export const en = {
       dateGroups: {
         dayBeforeYesterday: "Day before yesterday",
         older: "Older",
+        pinned: "Pinned",
         previousMonth: "Previous 30 days",
         previousWeek: "Previous 7 days",
         today: "Today",

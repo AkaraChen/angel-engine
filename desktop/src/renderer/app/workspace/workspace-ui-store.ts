@@ -29,6 +29,7 @@ const initialRightSidebarWidth = readRightSidebarWidth();
 export type SidebarChatDateGroupKey =
   | "dayBeforeYesterday"
   | "older"
+  | "pinned"
   | "previousMonth"
   | "previousWeek"
   | "today"

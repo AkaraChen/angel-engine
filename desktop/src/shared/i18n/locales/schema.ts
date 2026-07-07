@@ -30,6 +30,7 @@ export interface LocaleResourceTranslationCommon {
   notHelpful: string;
   other: string;
   pending: string;
+  pin: string;
   plan: string;
   proposed: string;
   question: string;
@@ -46,6 +47,7 @@ export interface LocaleResourceTranslationCommon {
   submitting: string;
   thinking: string;
   todo: string;
+  unpin: string;
   updated: string;
   useDefault: string;
   rename: string;
@@ -79,6 +81,7 @@ export interface LocaleResourceTranslationWorkspace {
 export interface LocaleResourceTranslationSidebarDateGroups {
   dayBeforeYesterday: string;
   older: string;
+  pinned: string;
   previousMonth: string;
   previousWeek: string;
   today: string;

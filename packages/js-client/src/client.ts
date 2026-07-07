@@ -125,6 +125,7 @@ export class AngelClient {
       createdAt,
       cwd: project?.path ?? null,
       id: createId("chat"),
+      pinned: false,
       projectId: input.projectId ?? null,
       remoteThreadId: null,
       runtime: adapter.id,
