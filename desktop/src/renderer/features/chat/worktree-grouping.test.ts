@@ -18,6 +18,7 @@ function chat(input: Partial<Chat> & Pick<Chat, "id">): Chat {
     title: input.id,
     updatedAt: "2026-07-04T00:00:00.000Z",
     ...input,
+    pinned: input.pinned ?? false,
   };
 }
 

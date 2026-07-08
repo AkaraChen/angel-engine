@@ -1,8 +1,13 @@
 import type { Chat } from "@shared/chat";
 import type { ReactElement } from "react";
-import { Plus, X } from "@phosphor-icons/react";
+import { House, Plus, Robot as Bot, X } from "@phosphor-icons/react";
+import is from "@sindresorhus/is";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
+import {
+  agentRuntimeIconSvg,
+  agentRuntimeLabel,
+} from "@/features/agents/agent-runtime-icons";
 import { ChatRunningPulse } from "@/features/chat/components/chat-running-pulse";
 import { useChatAttention } from "@/features/chat/state/chat-run-store";
 import { cn } from "@/platform/utils";
@@ -39,8 +44,8 @@ export function ChatTabBar({
   return (
     <div
       className="
-        flex h-9 shrink-0 items-center gap-1 overflow-x-auto border-b
-        border-border-subtle bg-background/60 px-2
+        flex h-10 shrink-0 items-center gap-1.5 overflow-x-auto border-b
+        border-border-subtle bg-background/60 px-2.5
       "
       data-slot="chat-tab-bar"
       role="tablist"
@@ -68,14 +73,14 @@ export function ChatTabBar({
       ) : (
         <Button
           aria-label={t("workspace.newChat")}
-          className="size-6 shrink-0 text-muted-foreground"
+          className="size-7 shrink-0 text-muted-foreground"
           onClick={() => void onNewChat()}
-          size="icon-xs"
+          size="icon-sm"
           title={t("workspace.newChat")}
           type="button"
           variant="ghost"
         >
-          <Plus className="size-3.5" />
+          <Plus className="size-4" />
         </Button>
       )}
     </div>
@@ -96,8 +101,8 @@ function HistoryTab({
       aria-selected={isActive}
       className={cn(
         `
-          flex h-7 max-w-52 min-w-0 shrink-0 items-center rounded-md px-2.5
-          text-xs transition-colors
+          flex h-8 max-w-60 min-w-0 shrink-0 items-center gap-2 rounded-md px-3
+          text-sm transition-colors
         `,
         isActive
           ? "bg-muted text-foreground"
@@ -111,7 +116,8 @@ function HistoryTab({
       title={label}
       type="button"
     >
-      <span className="min-w-0 truncate text-left">{label}</span>
+      <House className="size-4 shrink-0" weight="duotone" />
+      <span className="min-w-0 max-w-40 truncate text-left">{label}</span>
     </button>
   );
 }
@@ -123,25 +129,25 @@ function DraftTab({ onClose }: { onClose?: () => MaybeAsync }): ReactElement {
     <div
       aria-selected
       className="
-        group/chat-tab flex h-7 max-w-52 min-w-0 shrink-0 items-center gap-1.5
-        rounded-md bg-muted pr-1 pl-2.5 text-xs text-foreground
+        group/chat-tab flex h-8 max-w-60 min-w-0 shrink-0 items-center gap-2
+        rounded-md bg-muted pr-1.5 pl-3 text-sm text-foreground
       "
       role="tab"
     >
-      <span className="min-w-0 flex-1 truncate text-left">
+      <span className="min-w-0 max-w-40 flex-1 truncate text-left">
         {t("workspace.newChat")}
       </span>
       {onClose ? (
         <Button
           aria-label={t("workspace.closeTab")}
-          className="size-5 shrink-0"
+          className="size-6 shrink-0"
           onClick={() => void onClose()}
           size="icon-xs"
           title={t("workspace.closeTab")}
           type="button"
           variant="ghost"
         >
-          <X className="size-3" />
+          <X className="size-3.5" />
         </Button>
       ) : null}
     </div>
@@ -167,8 +173,8 @@ function ChatTab({
     <div
       className={cn(
         `
-          group/chat-tab flex h-7 max-w-52 min-w-0 shrink-0 items-center gap-1.5
-          rounded-md pr-1 pl-2.5 text-xs transition-colors
+          group/chat-tab flex h-8 max-w-60 min-w-0 shrink-0 items-center gap-2
+          rounded-md pr-1.5 pl-3 text-sm transition-colors
         `,
         isActive
           ? "bg-muted text-foreground"
@@ -181,12 +187,15 @@ function ChatTab({
       aria-selected={isActive}
     >
       <button
-        className="flex min-w-0 flex-1 items-center gap-1.5 outline-hidden"
+        className="flex min-w-0 flex-1 items-center gap-2 outline-hidden"
         onClick={onOpen}
         title={title}
         type="button"
       >
-        <span className="min-w-0 flex-1 truncate text-left">{title}</span>
+        <AgentIcon runtime={chat.runtime} />
+        <span className="min-w-0 max-w-40 flex-1 truncate text-left">
+          {title}
+        </span>
         {attention.needsInput ? (
           <span
             aria-label={t("sidebar.needsInput")}
@@ -206,7 +215,7 @@ function ChatTab({
       <Button
         aria-label={t("workspace.closeTab")}
         className={cn(
-          "size-5 shrink-0 opacity-0 transition-opacity",
+          "size-6 shrink-0 opacity-0 transition-opacity",
           `
             group-focus-within/chat-tab:opacity-100
             group-hover/chat-tab:opacity-100
@@ -222,8 +231,35 @@ function ChatTab({
         type="button"
         variant="ghost"
       >
-        <X className="size-3" />
+        <X className="size-3.5" />
       </Button>
     </div>
+  );
+}
+
+function AgentIcon({ runtime }: { runtime?: string | null }): ReactElement {
+  const runtimeIconSvg = agentRuntimeIconSvg(runtime);
+  const runtimeLabel = agentRuntimeLabel(runtime);
+
+  return (
+    <span
+      className="flex size-4 shrink-0 items-center justify-center"
+      title={runtimeLabel}
+    >
+      {is.nonEmptyString(runtimeIconSvg) ? (
+        <span
+          aria-hidden="true"
+          className="
+            flex size-3.5 items-center justify-center text-muted-foreground
+            [&_svg]:block [&_svg]:size-3.5 [&_svg]:shrink-0
+          "
+          // oxlint-disable-next-line react/no-danger -- Static bundled runtime icons need inline SVG to inherit local icon styling.
+          // eslint-disable-next-line react/dom-no-dangerously-set-innerhtml -- Static bundled runtime icons need inline SVG to inherit local icon styling.
+          dangerouslySetInnerHTML={{ __html: runtimeIconSvg }}
+        />
+      ) : (
+        <Bot className="size-3.5 text-muted-foreground" />
+      )}
+    </span>
   );
 }

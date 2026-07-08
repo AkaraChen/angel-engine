@@ -1614,6 +1614,7 @@ function WorkspacePageContent({
                     chats={chats}
                     groupKey={powerHomePageContext.groupKey}
                     label={t("sidebar.powerWorktreeHistoricalChat")}
+                    onArchiveChat={archiveChat}
                     onNewChat={openDraftTabFromTabBar}
                     onOpenChat={openPowerHistoryChatTab}
                     projectPath={activePowerWorktreeProject?.path}
