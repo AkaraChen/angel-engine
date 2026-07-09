@@ -3,5 +3,18 @@ exports.default = async function notarizeDmgArtifact(event) {
     return;
   }
 
-  await event.packager.notarizeIfProvided(event.file);
+  if (typeof event.packager.notarizeIfProvided === "function") {
+    await event.packager.notarizeIfProvided(event.file);
+    return;
+  }
+
+  const { notarize } = require("@electron/notarize");
+
+  await notarize({
+    appPath: event.file,
+    appleApiIssuer: process.env.APPLE_API_ISSUER,
+    appleApiKey: process.env.APPLE_API_KEY,
+    appleApiKeyId: process.env.APPLE_API_KEY_ID,
+    tool: "notarytool",
+  });
 };
