@@ -193,3 +193,46 @@ execFileSync(
     stdio: "inherit",
   },
 );
+
+if (publishMode !== "never") {
+  const version = packageJson.version;
+  const tag = `v${version}`;
+  const builderOutDir = path.join(outDir, "builder");
+  const artifactNames = [
+    `Angel-Engine-${version}-arm64.dmg`,
+    `Angel-Engine-${version}-arm64.zip`,
+    `Angel-Engine-${version}-arm64.zip.blockmap`,
+    "latest-mac.yml",
+  ];
+  const artifactPaths = artifactNames.map((name) =>
+    path.join(builderOutDir, name),
+  );
+  const missingArtifacts = artifactPaths.filter((artifactPath) => {
+    return !fs.existsSync(artifactPath);
+  });
+
+  if (missingArtifacts.length > 0) {
+    throw new Error(
+      `Missing release artifacts: ${missingArtifacts
+        .map((artifactPath) => path.relative(desktopRoot, artifactPath))
+        .join(", ")}`,
+    );
+  }
+
+  execFileSync(
+    "gh",
+    [
+      "release",
+      "upload",
+      tag,
+      ...artifactPaths,
+      "--repo",
+      "AkaraChen/angel-engine",
+      "--clobber",
+    ],
+    {
+      cwd: desktopRoot,
+      stdio: "inherit",
+    },
+  );
+}
