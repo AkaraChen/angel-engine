@@ -16,6 +16,8 @@ export type PowerWorktreeView = "draft" | "home" | null;
 type ChatTabGroups = Partial<Record<string, WorktreeChatTabs>>;
 
 const chatTabGroupsStorageKey = "angel-engine.power-chat-tabs";
+const activeWorktreeStorageKey = "angel-engine.power-active-worktree";
+const initialActiveWorktree = readActiveWorktree();
 const initialChatTabGroups = readChatTabGroups();
 
 interface ChatTabState {
@@ -33,6 +35,7 @@ interface ChatTabState {
 }
 
 export const useChatTabStore = create<ChatTabState>()((set) => ({
+  activeWorktree: initialActiveWorktree,
   activeWorktreeView: null,
   clearChatTabs: () =>
     set(() => {
@@ -91,9 +94,11 @@ export const useChatTabStore = create<ChatTabState>()((set) => ({
       return { tabGroups };
     }),
   setActiveWorktree: (activeWorktree) =>
-    set((current) =>
-      current.activeWorktree === activeWorktree ? current : { activeWorktree },
-    ),
+    set((current) => {
+      if (current.activeWorktree === activeWorktree) return current;
+      writeActiveWorktree(activeWorktree);
+      return { activeWorktree };
+    }),
   setActiveWorktreeView: (activeWorktreeView) =>
     set((current) =>
       current.activeWorktreeView === activeWorktreeView
@@ -151,8 +156,48 @@ function writeChatTabGroups(tabGroups: ChatTabGroups) {
   );
 }
 
+function readActiveWorktree(): PowerDraftWorktree | undefined {
+  const storage = localStorageForChatTabs();
+  if (storage === undefined) return undefined;
+
+  try {
+    return sanitizeActiveWorktree(
+      JSON.parse(storage.getItem(activeWorktreeStorageKey) ?? "null"),
+    );
+  } catch {
+    return undefined;
+  }
+}
+
+function writeActiveWorktree(activeWorktree?: PowerDraftWorktree) {
+  const storage = localStorageForChatTabs();
+  if (storage === undefined) return;
+
+  if (activeWorktree === undefined) {
+    storage.removeItem(activeWorktreeStorageKey);
+    return;
+  }
+
+  storage.setItem(activeWorktreeStorageKey, JSON.stringify(activeWorktree));
+}
+
 function localStorageForChatTabs(): Storage | undefined {
   return typeof window === "undefined" ? undefined : window.localStorage;
+}
+
+function sanitizeActiveWorktree(
+  value: unknown,
+): PowerDraftWorktree | undefined {
+  if (!is.plainObject(value)) return undefined;
+  if (!is.nonEmptyString(value.groupKey)) return undefined;
+  if (!is.nonEmptyString(value.projectId)) return undefined;
+  if (value.cwd !== undefined && !is.string(value.cwd)) return undefined;
+
+  return {
+    cwd: value.cwd,
+    groupKey: value.groupKey,
+    projectId: value.projectId,
+  };
 }
 
 function sanitizeChatTabGroups(value: unknown): ChatTabGroups {

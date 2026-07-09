@@ -1105,9 +1105,15 @@ function WorkspacePageContent({
       if (nextWorkspaceMode === workspaceMode) return;
 
       setPowerDraftWorktree(undefined);
-      setPowerActiveWorktree(undefined);
-      setPowerWorktreeView(null);
       setWorkspaceMode(nextWorkspaceMode);
+
+      if (nextWorkspaceMode === "power" && activePowerWorktree !== undefined) {
+        setPowerWorktreeView("home");
+        navigateToDraft(activePowerWorktree.projectId, { replace: true });
+        return;
+      }
+
+      setPowerWorktreeView(null);
 
       const target = lastOpenedTargets[nextWorkspaceMode];
       const path = lastOpenedTargetPath({
@@ -1132,9 +1138,11 @@ function WorkspacePageContent({
     },
     [
       chats,
+      activePowerWorktree,
       lastOpenedTargets,
       location,
       navigate,
+      navigateToDraft,
       registerChatTab,
       setWorkspaceMode,
       startNewDraftSession,
