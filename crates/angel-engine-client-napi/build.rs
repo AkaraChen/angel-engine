@@ -61,13 +61,13 @@ fn generate_engine_event_enums() {
             "PascalCase",
         ),
         generated_enum(
-            &client_src.join("snapshot.rs"),
+            &client_src.join("snapshot/runtime.rs"),
             "RuntimeSnapshot",
             "RuntimeStatus",
             "snake_case",
         ),
         generated_enum(
-            &client_src.join("snapshot.rs"),
+            &client_src.join("snapshot/catalog_history.rs"),
             "SkillScopeSnapshot",
             "SkillScope",
             "snake_case",
