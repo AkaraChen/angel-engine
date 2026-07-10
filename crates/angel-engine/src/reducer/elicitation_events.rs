@@ -97,4 +97,53 @@ impl AngelEngine {
             elicitation_id,
         }))
     }
+
+    pub(super) fn apply_elicitation_resolving(
+        &mut self,
+        conversation_id: ConversationId,
+        elicitation_id: ElicitationId,
+    ) -> Result<TransitionReport, EngineError> {
+        let conversation = self.conversation_mut(&conversation_id)?;
+        let elicitation = conversation
+            .elicitations
+            .get_mut(&elicitation_id)
+            .ok_or_else(|| EngineError::ElicitationNotFound {
+                elicitation_id: elicitation_id.to_string(),
+            })?;
+        elicitation.phase = ElicitationPhase::Resolving;
+        Ok(TransitionReport::one(UiEvent::ElicitationChanged {
+            conversation_id,
+            elicitation_id,
+        }))
+    }
+
+    pub(super) fn apply_elicitation_cancelled(
+        &mut self,
+        conversation_id: ConversationId,
+        elicitation_id: ElicitationId,
+    ) -> Result<TransitionReport, EngineError> {
+        let conversation = self.conversation_mut(&conversation_id)?;
+        let elicitation = conversation
+            .elicitations
+            .get_mut(&elicitation_id)
+            .ok_or_else(|| EngineError::ElicitationNotFound {
+                elicitation_id: elicitation_id.to_string(),
+            })?;
+        elicitation.phase = ElicitationPhase::Cancelled;
+        if let Some(action_id) = elicitation.action_id.clone()
+            && let Some(action) = conversation.actions.get_mut(&action_id)
+        {
+            action.phase = ActionPhase::Cancelled;
+        }
+        if let Some(turn_id) = elicitation.turn_id.clone()
+            && let Some(turn) = conversation.turns.get_mut(&turn_id)
+            && !turn.is_terminal()
+        {
+            turn.phase = TurnPhase::Reasoning;
+        }
+        Ok(TransitionReport::one(UiEvent::ElicitationChanged {
+            conversation_id,
+            elicitation_id,
+        }))
+    }
 }

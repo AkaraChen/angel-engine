@@ -1,14 +1,9 @@
 use crate::error::EngineError;
 use crate::event::{EngineEvent, TransitionReport, UiEvent};
-use crate::state::{
-    ActionPhase, AgentMode, ContextPatch, ContextScope, ContextUpdate, ConversationLifecycle,
-    ConversationState, ElicitationPhase, HistoryRole, PermissionMode, RuntimeState, TurnPhase,
-};
+use crate::state::{ConversationLifecycle, ConversationState, RuntimeState};
 
 use super::AngelEngine;
-use super::context_effects::sync_context_from_config_options;
 use super::event_helpers::DeltaKind;
-use super::turn_events::{mark_turn_planning, mark_turn_todo_updated};
 
 impl AngelEngine {
     pub fn apply_event(&mut self, event: EngineEvent) -> Result<TransitionReport, EngineError> {
@@ -127,102 +122,27 @@ impl AngelEngine {
             EngineEvent::SessionConfigOptionsUpdated {
                 conversation_id,
                 options,
-            } => {
-                let conversation = self.conversation_mut(&conversation_id)?;
-                sync_context_from_config_options(&mut conversation.context, &options);
-                conversation.config_options = options;
-                Ok(TransitionReport::one(UiEvent::ContextChanged(
-                    conversation_id,
-                )))
-            }
+            } => self.apply_session_config_options_updated(conversation_id, options),
             EngineEvent::SessionModesUpdated {
                 conversation_id,
                 modes,
-            } => {
-                let conversation = self.conversation_mut(&conversation_id)?;
-                conversation
-                    .context
-                    .apply_patch(ContextPatch::one(ContextUpdate::Mode {
-                        scope: ContextScope::TurnAndFuture,
-                        mode: Some(AgentMode {
-                            id: modes.current_mode_id.clone(),
-                        }),
-                    }));
-                conversation.mode_state = Some(modes);
-                Ok(TransitionReport::one(UiEvent::ContextChanged(
-                    conversation_id,
-                )))
-            }
+            } => self.apply_session_modes_updated(conversation_id, modes),
             EngineEvent::SessionModeChanged {
                 conversation_id,
                 mode_id,
-            } => {
-                let conversation = self.conversation_mut(&conversation_id)?;
-                if let Some(modes) = &mut conversation.mode_state {
-                    modes.current_mode_id = mode_id.clone();
-                }
-                conversation
-                    .context
-                    .apply_patch(ContextPatch::one(ContextUpdate::Mode {
-                        scope: ContextScope::TurnAndFuture,
-                        mode: Some(AgentMode { id: mode_id }),
-                    }));
-                Ok(TransitionReport::one(UiEvent::ContextChanged(
-                    conversation_id,
-                )))
-            }
+            } => self.apply_session_mode_changed(conversation_id, mode_id),
             EngineEvent::SessionPermissionModesUpdated {
                 conversation_id,
                 modes,
-            } => {
-                let conversation = self.conversation_mut(&conversation_id)?;
-                conversation.context.apply_patch(ContextPatch::one(
-                    ContextUpdate::PermissionMode {
-                        scope: ContextScope::TurnAndFuture,
-                        mode: Some(PermissionMode {
-                            id: modes.current_mode_id.clone(),
-                        }),
-                    },
-                ));
-                conversation.permission_mode_state = Some(modes);
-                Ok(TransitionReport::one(UiEvent::ContextChanged(
-                    conversation_id,
-                )))
-            }
+            } => self.apply_session_permission_modes_updated(conversation_id, modes),
             EngineEvent::SessionPermissionModeChanged {
                 conversation_id,
                 mode_id,
-            } => {
-                let conversation = self.conversation_mut(&conversation_id)?;
-                if let Some(modes) = &mut conversation.permission_mode_state {
-                    modes.current_mode_id = mode_id.clone();
-                }
-                conversation.context.apply_patch(ContextPatch::one(
-                    ContextUpdate::PermissionMode {
-                        scope: ContextScope::TurnAndFuture,
-                        mode: Some(PermissionMode { id: mode_id }),
-                    },
-                ));
-                Ok(TransitionReport::one(UiEvent::ContextChanged(
-                    conversation_id,
-                )))
-            }
+            } => self.apply_session_permission_mode_changed(conversation_id, mode_id),
             EngineEvent::SessionModelsUpdated {
                 conversation_id,
                 models,
-            } => {
-                let conversation = self.conversation_mut(&conversation_id)?;
-                conversation
-                    .context
-                    .apply_patch(ContextPatch::one(ContextUpdate::Model {
-                        scope: ContextScope::TurnAndFuture,
-                        model: Some(models.current_model_id.clone()),
-                    }));
-                conversation.model_state = Some(models);
-                Ok(TransitionReport::one(UiEvent::ContextChanged(
-                    conversation_id,
-                )))
-            }
+            } => self.apply_session_models_updated(conversation_id, models),
             EngineEvent::SessionUsageUpdated {
                 conversation_id,
                 usage,
@@ -261,20 +181,7 @@ impl AngelEngine {
                 conversation_id,
                 turn_id,
                 input,
-            } => {
-                let conversation = self.conversation_mut(&conversation_id)?;
-                let turn = conversation.turns.get_mut(&turn_id).ok_or_else(|| {
-                    EngineError::TurnNotFound {
-                        turn_id: turn_id.to_string(),
-                    }
-                })?;
-                turn.input.extend(input);
-                turn.phase = TurnPhase::Reasoning;
-                Ok(TransitionReport::one(UiEvent::TurnChanged {
-                    conversation_id,
-                    turn_id,
-                }))
-            }
+            } => self.apply_turn_steered(conversation_id, turn_id, input),
             EngineEvent::AssistantDelta {
                 conversation_id,
                 turn_id,
@@ -294,56 +201,17 @@ impl AngelEngine {
                 conversation_id,
                 turn_id,
                 plan,
-            } => {
-                let conversation = self.conversation_mut(&conversation_id)?;
-                let turn = conversation.turns.get_mut(&turn_id).ok_or_else(|| {
-                    EngineError::TurnNotFound {
-                        turn_id: turn_id.to_string(),
-                    }
-                })?;
-                turn.plan = Some(plan);
-                mark_turn_planning(turn);
-                Ok(TransitionReport::one(UiEvent::TurnChanged {
-                    conversation_id,
-                    turn_id,
-                }))
-            }
+            } => self.apply_plan_updated(conversation_id, turn_id, plan),
             EngineEvent::TodoUpdated {
                 conversation_id,
                 turn_id,
                 todo,
-            } => {
-                let conversation = self.conversation_mut(&conversation_id)?;
-                let turn = conversation.turns.get_mut(&turn_id).ok_or_else(|| {
-                    EngineError::TurnNotFound {
-                        turn_id: turn_id.to_string(),
-                    }
-                })?;
-                turn.todo = Some(todo);
-                mark_turn_todo_updated(turn);
-                Ok(TransitionReport::one(UiEvent::TurnChanged {
-                    conversation_id,
-                    turn_id,
-                }))
-            }
+            } => self.apply_todo_updated(conversation_id, turn_id, todo),
             EngineEvent::PlanPathUpdated {
                 conversation_id,
                 turn_id,
                 path,
-            } => {
-                let conversation = self.conversation_mut(&conversation_id)?;
-                let turn = conversation.turns.get_mut(&turn_id).ok_or_else(|| {
-                    EngineError::TurnNotFound {
-                        turn_id: turn_id.to_string(),
-                    }
-                })?;
-                turn.plan_path = Some(path);
-                mark_turn_planning(turn);
-                Ok(TransitionReport::one(UiEvent::TurnChanged {
-                    conversation_id,
-                    turn_id,
-                }))
-            }
+            } => self.apply_plan_path_updated(conversation_id, turn_id, path),
             EngineEvent::TurnTerminal {
                 conversation_id,
                 turn_id,
@@ -365,20 +233,7 @@ impl AngelEngine {
             EngineEvent::ElicitationResolving {
                 conversation_id,
                 elicitation_id,
-            } => {
-                let conversation = self.conversation_mut(&conversation_id)?;
-                let elicitation = conversation
-                    .elicitations
-                    .get_mut(&elicitation_id)
-                    .ok_or_else(|| EngineError::ElicitationNotFound {
-                        elicitation_id: elicitation_id.to_string(),
-                    })?;
-                elicitation.phase = ElicitationPhase::Resolving;
-                Ok(TransitionReport::one(UiEvent::ElicitationChanged {
-                    conversation_id,
-                    elicitation_id,
-                }))
-            }
+            } => self.apply_elicitation_resolving(conversation_id, elicitation_id),
             EngineEvent::ElicitationResolved {
                 conversation_id,
                 elicitation_id,
@@ -387,96 +242,15 @@ impl AngelEngine {
             EngineEvent::ElicitationCancelled {
                 conversation_id,
                 elicitation_id,
-            } => {
-                let conversation = self.conversation_mut(&conversation_id)?;
-                let elicitation = conversation
-                    .elicitations
-                    .get_mut(&elicitation_id)
-                    .ok_or_else(|| EngineError::ElicitationNotFound {
-                        elicitation_id: elicitation_id.to_string(),
-                    })?;
-                elicitation.phase = ElicitationPhase::Cancelled;
-                if let Some(action_id) = elicitation.action_id.clone()
-                    && let Some(action) = conversation.actions.get_mut(&action_id)
-                {
-                    action.phase = ActionPhase::Cancelled;
-                }
-                if let Some(turn_id) = elicitation.turn_id.clone()
-                    && let Some(turn) = conversation.turns.get_mut(&turn_id)
-                    && !turn.is_terminal()
-                {
-                    turn.phase = TurnPhase::Reasoning;
-                }
-                Ok(TransitionReport::one(UiEvent::ElicitationChanged {
-                    conversation_id,
-                    elicitation_id,
-                }))
-            }
+            } => self.apply_elicitation_cancelled(conversation_id, elicitation_id),
             EngineEvent::ContextUpdated {
                 conversation_id,
                 patch,
-            } => {
-                let conversation = self.conversation_mut(&conversation_id)?;
-                let model = patch.updates.iter().find_map(|update| {
-                    if let ContextUpdate::Model {
-                        model: Some(model), ..
-                    } = update
-                    {
-                        Some(model.clone())
-                    } else {
-                        None
-                    }
-                });
-                let mode = patch.updates.iter().find_map(|update| {
-                    if let ContextUpdate::Mode {
-                        mode: Some(mode), ..
-                    } = update
-                    {
-                        Some(mode.id.clone())
-                    } else {
-                        None
-                    }
-                });
-                let permission_mode = patch.updates.iter().find_map(|update| {
-                    if let ContextUpdate::PermissionMode {
-                        mode: Some(mode), ..
-                    } = update
-                    {
-                        Some(mode.id.clone())
-                    } else {
-                        None
-                    }
-                });
-                conversation.context.apply_patch(patch);
-                if let Some(model) = model
-                    && let Some(models) = &mut conversation.model_state
-                {
-                    models.current_model_id = model;
-                }
-                if let Some(mode) = mode
-                    && let Some(modes) = &mut conversation.mode_state
-                {
-                    modes.current_mode_id = mode;
-                }
-                if let Some(mode) = permission_mode
-                    && let Some(modes) = &mut conversation.permission_mode_state
-                {
-                    modes.current_mode_id = mode;
-                }
-                Ok(TransitionReport::one(UiEvent::ContextChanged(
-                    conversation_id,
-                )))
-            }
+            } => self.apply_context_updated(conversation_id, patch),
             EngineEvent::HistoryMutationStarted {
                 conversation_id,
                 op,
-            } => {
-                let conversation = self.conversation_mut(&conversation_id)?;
-                conversation.lifecycle = ConversationLifecycle::MutatingHistory { op };
-                Ok(TransitionReport::one(UiEvent::HistoryChanged(
-                    conversation_id,
-                )))
-            }
+            } => self.apply_history_mutation_started(conversation_id, op),
             EngineEvent::HistoryMutationFinished {
                 conversation_id,
                 result,
@@ -484,28 +258,7 @@ impl AngelEngine {
             EngineEvent::HistoryReplayChunk {
                 conversation_id,
                 entry,
-            } => {
-                if entry.role == HistoryRole::Tool {
-                    let Some(tool) = entry.tool.as_ref() else {
-                        return Err(EngineError::InvalidCommand {
-                            message: "history tool replay entry is missing tool action".to_string(),
-                        });
-                    };
-                    if tool.id.as_deref().is_none_or(str::is_empty) {
-                        return Err(EngineError::InvalidCommand {
-                            message: "history tool replay entry is missing tool id".to_string(),
-                        });
-                    }
-                }
-                let conversation = self.conversation_mut(&conversation_id)?;
-                if entry.role == HistoryRole::User {
-                    conversation.history.turn_count += 1;
-                }
-                conversation.history.replay.push(entry);
-                Ok(TransitionReport::one(UiEvent::HistoryChanged(
-                    conversation_id,
-                )))
-            }
+            } => self.apply_history_replay_chunk(conversation_id, entry),
             EngineEvent::ObserverChanged {
                 conversation_id,
                 observer,
