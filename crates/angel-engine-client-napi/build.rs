@@ -151,13 +151,13 @@ fn generate_engine_event_enums() {
             "snake_case",
         ),
         generated_enum(
-            &client_src.join("session.rs"),
+            &client_src.join("session/types.rs"),
             "TurnRunEvent",
             "TurnRunEventType",
             "snake_case",
         ),
         generated_enum(
-            &client_src.join("session.rs"),
+            &client_src.join("session/types.rs"),
             "TurnRunDeltaPart",
             "TurnRunDeltaPart",
             "lowercase",
