@@ -17,7 +17,7 @@ use angel_engine::state::{
     ElicitationOptions, ElicitationPhase, ElicitationState, ExhaustionReason, HistoryReplayEntry,
     HistoryReplayToolAction, HistoryRole, SessionConfigOption, SessionConfigValue, SessionMode,
     SessionModeState, SessionModel, SessionModelState, SessionUsageCost, SessionUsageState,
-    TurnOutcome, UserQuestion, UserQuestionOption,
+    TurnOutcome,
 };
 use angel_engine::transport::{
     JsonRpcMessage, TransportLogKind, TransportOptions, TransportOutput, client_info_json,
