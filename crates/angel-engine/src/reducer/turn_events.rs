@@ -2,7 +2,7 @@ use crate::error::EngineError;
 use crate::event::{TransitionReport, UiEvent};
 use crate::ids::{ConversationId, RemoteTurnId, TurnId};
 use crate::state::{
-    ActionPhase, ContentDelta, ConversationLifecycle, ElicitationPhase, PlanDisplayKind,
+    ActionPhase, ContentDelta, ConversationLifecycle, ElicitationPhase, PlanDisplayKind, PlanState,
     TurnDisplayContentKind, TurnDisplayPart, TurnOutcome, TurnPhase, TurnState, UserInputRef,
 };
 
@@ -137,6 +137,94 @@ impl AngelEngine {
         } else {
             conversation.lifecycle = ConversationLifecycle::Active;
         }
+        Ok(TransitionReport::one(UiEvent::TurnChanged {
+            conversation_id,
+            turn_id,
+        }))
+    }
+
+    pub(super) fn apply_turn_steered(
+        &mut self,
+        conversation_id: ConversationId,
+        turn_id: TurnId,
+        input: Vec<UserInputRef>,
+    ) -> Result<TransitionReport, EngineError> {
+        let conversation = self.conversation_mut(&conversation_id)?;
+        let turn =
+            conversation
+                .turns
+                .get_mut(&turn_id)
+                .ok_or_else(|| EngineError::TurnNotFound {
+                    turn_id: turn_id.to_string(),
+                })?;
+        turn.input.extend(input);
+        turn.phase = TurnPhase::Reasoning;
+        Ok(TransitionReport::one(UiEvent::TurnChanged {
+            conversation_id,
+            turn_id,
+        }))
+    }
+
+    pub(super) fn apply_plan_updated(
+        &mut self,
+        conversation_id: ConversationId,
+        turn_id: TurnId,
+        plan: PlanState,
+    ) -> Result<TransitionReport, EngineError> {
+        let conversation = self.conversation_mut(&conversation_id)?;
+        let turn =
+            conversation
+                .turns
+                .get_mut(&turn_id)
+                .ok_or_else(|| EngineError::TurnNotFound {
+                    turn_id: turn_id.to_string(),
+                })?;
+        turn.plan = Some(plan);
+        mark_turn_planning(turn);
+        Ok(TransitionReport::one(UiEvent::TurnChanged {
+            conversation_id,
+            turn_id,
+        }))
+    }
+
+    pub(super) fn apply_todo_updated(
+        &mut self,
+        conversation_id: ConversationId,
+        turn_id: TurnId,
+        todo: PlanState,
+    ) -> Result<TransitionReport, EngineError> {
+        let conversation = self.conversation_mut(&conversation_id)?;
+        let turn =
+            conversation
+                .turns
+                .get_mut(&turn_id)
+                .ok_or_else(|| EngineError::TurnNotFound {
+                    turn_id: turn_id.to_string(),
+                })?;
+        turn.todo = Some(todo);
+        mark_turn_todo_updated(turn);
+        Ok(TransitionReport::one(UiEvent::TurnChanged {
+            conversation_id,
+            turn_id,
+        }))
+    }
+
+    pub(super) fn apply_plan_path_updated(
+        &mut self,
+        conversation_id: ConversationId,
+        turn_id: TurnId,
+        path: String,
+    ) -> Result<TransitionReport, EngineError> {
+        let conversation = self.conversation_mut(&conversation_id)?;
+        let turn =
+            conversation
+                .turns
+                .get_mut(&turn_id)
+                .ok_or_else(|| EngineError::TurnNotFound {
+                    turn_id: turn_id.to_string(),
+                })?;
+        turn.plan_path = Some(path);
+        mark_turn_planning(turn);
         Ok(TransitionReport::one(UiEvent::TurnChanged {
             conversation_id,
             turn_id,

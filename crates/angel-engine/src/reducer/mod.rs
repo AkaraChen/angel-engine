@@ -9,6 +9,7 @@ use crate::state::{ConversationDiscoveryState, ConversationState, RuntimeState};
 mod action_events;
 mod command_planning;
 mod context_effects;
+mod context_events;
 mod context_planning;
 mod conversation_control_planning;
 mod conversation_planning;
