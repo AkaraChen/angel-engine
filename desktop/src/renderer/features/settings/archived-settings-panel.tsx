@@ -1,11 +1,8 @@
 import type { Chat } from "@shared/chat";
 import type { Project } from "@shared/projects";
-import type { ReactNode } from "react";
-
+import type { TimeFilter } from "./archived-settings-filters";
 import {
-  Archive,
   Check,
-  GitBranch,
   ArrowClockwise as Restore,
   Trash as Trash2,
   X,
@@ -16,11 +13,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { getProjectDisplayName } from "@/app/workspace/workspace-display";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
-import {
-  NativeSelect,
-  NativeSelectOption,
-} from "@/components/ui/native-select";
+import { NativeSelectOption } from "@/components/ui/native-select";
 import { useToast } from "@/components/ui/toast";
 import {
   archivedChatListQueryOptions,
@@ -35,20 +28,19 @@ import { projectListQueryOptions } from "@/features/projects/api/queries";
 import { queryKeys } from "@/platform/query-keys";
 import { useApi } from "@/platform/use-api";
 
+import {
+  chatMatchesProjectFilter,
+  chatMatchesTimeFilter,
+  NO_PROJECT_FILTER,
+  timeFilterOptions,
+} from "./archived-settings-filters";
+import {
+  ArchivedChatRow,
+  ArchivedFilterSelect,
+} from "./archived-settings-list";
+
 const EMPTY_CHATS: Chat[] = [];
 const EMPTY_PROJECTS: Project[] = [];
-const NO_PROJECT_FILTER = "__none__";
-
-type TimeFilter = "all" | "today" | "7d" | "30d" | "90d";
-
-const timeFilterOptions: Array<{ labelKey: string; value: TimeFilter }> = [
-  { labelKey: "settings.archived.timeAll", value: "all" },
-  { labelKey: "settings.archived.timeToday", value: "today" },
-  { labelKey: "settings.archived.timeLast7Days", value: "7d" },
-  { labelKey: "settings.archived.timeLast30Days", value: "30d" },
-  { labelKey: "settings.archived.timeLast90Days", value: "90d" },
-];
-
 export function ArchivedSettingsPanel() {
   const api = useApi();
   const { t } = useTranslation();
@@ -346,185 +338,4 @@ export function ArchivedSettingsPanel() {
       </div>
     </div>
   );
-}
-
-function ArchivedFilterSelect({
-  children,
-  label,
-  onValueChange,
-  value,
-}: {
-  children: ReactNode;
-  label: string;
-  onValueChange: (value: string) => void;
-  value: string;
-}) {
-  return (
-    <label
-      className="
-        flex min-w-44 flex-col gap-1.5 text-xs font-medium text-muted-foreground
-      "
-    >
-      {label}
-      <NativeSelect
-        aria-label={label}
-        className="w-full"
-        onChange={(event) => onValueChange(event.currentTarget.value)}
-        selectClassName="h-8 w-full rounded-md border-border bg-background py-0 pr-8 pl-3 text-xs"
-        size="sm"
-        value={value}
-      >
-        {children}
-      </NativeSelect>
-    </label>
-  );
-}
-
-function ArchivedChatRow({
-  bulkMode,
-  chat,
-  disabled,
-  project,
-  selected,
-  onDelete,
-  onRestore,
-  onSelectedChange,
-}: {
-  bulkMode: boolean;
-  chat: Chat;
-  disabled: boolean;
-  project?: Project;
-  selected: boolean;
-  onDelete: () => void;
-  onRestore: () => void;
-  onSelectedChange: (selected: boolean) => void;
-}) {
-  const { t } = useTranslation();
-  const isWorktree = Boolean(
-    is.nonEmptyString(project?.path) &&
-    is.nonEmptyString(chat.cwd) &&
-    chat.cwd !== project.path,
-  );
-  const projectName = project
-    ? getProjectDisplayName(project.path)
-    : t("settings.archived.noProject");
-
-  return (
-    <article className="flex min-w-0 items-start gap-3 px-4 py-3">
-      {bulkMode ? (
-        <Checkbox
-          aria-label={chat.title}
-          checked={selected}
-          className="mt-0.5"
-          disabled={disabled}
-          onCheckedChange={(checked) => onSelectedChange(checked === true)}
-        />
-      ) : (
-        <Archive className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
-      )}
-      <div className="min-w-0 flex-1">
-        <div className="flex min-w-0 items-center gap-2">
-          <span className="min-w-0 truncate text-sm font-medium">
-            {chat.title}
-          </span>
-          {isWorktree ? (
-            <span
-              className="
-                inline-flex shrink-0 items-center gap-1 rounded-sm bg-muted
-                px-1.5 py-0.5 text-[11px] text-muted-foreground
-              "
-            >
-              <GitBranch className="size-3" />
-              {t("settings.archived.worktree")}
-            </span>
-          ) : null}
-        </div>
-        <div
-          className="
-            mt-1 flex min-w-0 flex-wrap gap-x-2 gap-y-1 text-xs
-            text-muted-foreground
-          "
-        >
-          <span>{projectName}</span>
-          <span>{chat.runtime}</span>
-          <span>{formatDateTime(chat.updatedAt)}</span>
-        </div>
-        {isWorktree && is.nonEmptyString(chat.cwd) ? (
-          <div className="mt-1 truncate text-xs text-muted-foreground/70">
-            {chat.cwd}
-          </div>
-        ) : null}
-      </div>
-      {!bulkMode ? (
-        <div className="flex shrink-0 items-center gap-1.5">
-          <Button
-            disabled={disabled}
-            onClick={onRestore}
-            size="sm"
-            type="button"
-            variant="outline"
-          >
-            <Restore />
-            {t("settings.archived.restore")}
-          </Button>
-          <Button
-            disabled={disabled}
-            onClick={onDelete}
-            size="sm"
-            type="button"
-            variant="destructive"
-          >
-            <Trash2 />
-            {t("settings.archived.deletePermanently")}
-          </Button>
-        </div>
-      ) : null}
-    </article>
-  );
-}
-
-function chatMatchesProjectFilter(chat: Chat, projectFilter: string) {
-  if (projectFilter === "all") return true;
-  if (projectFilter === NO_PROJECT_FILTER) {
-    return !is.nonEmptyString(chat.projectId);
-  }
-  return chat.projectId === projectFilter;
-}
-
-function chatMatchesTimeFilter(chat: Chat, timeFilter: TimeFilter) {
-  const cutoff = timeFilterCutoff(timeFilter);
-  if (!cutoff) return true;
-
-  const updatedAt = Date.parse(chat.updatedAt);
-  return Number.isFinite(updatedAt) && updatedAt >= cutoff.getTime();
-}
-
-function timeFilterCutoff(timeFilter: TimeFilter) {
-  const now = new Date();
-  switch (timeFilter) {
-    case "today": {
-      return new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    }
-    case "7d":
-      return daysAgo(7, now);
-    case "30d":
-      return daysAgo(30, now);
-    case "90d":
-      return daysAgo(90, now);
-    case "all":
-      return null;
-  }
-}
-
-function daysAgo(days: number, now: Date) {
-  return new Date(now.getTime() - days * 24 * 60 * 60 * 1000);
-}
-
-function formatDateTime(value: string) {
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return value;
-  return new Intl.DateTimeFormat(undefined, {
-    dateStyle: "medium",
-    timeStyle: "short",
-  }).format(date);
 }
