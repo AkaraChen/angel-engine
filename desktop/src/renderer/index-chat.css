@@ -1,0 +1,313 @@
+@layer components {
+  html[data-platform="darwin"] [data-slot="sidebar-container"] {
+    background-color: var(--macos-sidebar-background);
+  }
+
+  html[data-platform="darwin"] [data-slot="sidebar-inner"] {
+    backdrop-filter: none;
+  }
+
+  /* Assistant message markdown typography. Spacing derives from --spacing so
+     the work-mode density remap keeps applying. */
+  .chat-markdown {
+    color: color-mix(in oklch, var(--foreground) 90%, transparent);
+    font-size: var(--workspace-message-text-size);
+    hyphens: auto;
+    line-break: loose;
+    line-height: var(--workspace-message-line-height);
+    max-width: none;
+    min-width: 0;
+    overflow-wrap: anywhere;
+    text-rendering: optimizeLegibility;
+    word-break: normal;
+  }
+
+  .chat-markdown a {
+    color: var(--primary);
+    text-decoration: underline;
+    text-decoration-color: color-mix(in oklch, var(--primary) 35%, transparent);
+    text-underline-offset: 2px;
+  }
+
+  .chat-markdown a:hover {
+    text-decoration-color: color-mix(in oklch, var(--primary) 70%, transparent);
+  }
+
+  .chat-markdown blockquote {
+    border-left: 2px solid color-mix(in oklch, var(--primary) 25%, transparent);
+    color: var(--muted-foreground);
+    font-size: 14px;
+    line-height: 1.72;
+    margin-block: calc(var(--spacing) * 4);
+    padding-left: calc(var(--spacing) * 3.5);
+  }
+
+  .chat-markdown h1,
+  .chat-markdown h2 {
+    font-family: var(--app-font-display);
+    letter-spacing: -0.015em;
+  }
+
+  .chat-markdown h1 {
+    font-size: 21px;
+    font-weight: 600;
+    line-height: 1.36;
+    margin-block: calc(var(--spacing) * 1) calc(var(--spacing) * 3);
+  }
+
+  .chat-markdown h2 {
+    font-size: 17px;
+    font-weight: 600;
+    line-height: 1.42;
+    margin-block: calc(var(--spacing) * 6) calc(var(--spacing) * 2);
+  }
+
+  .chat-markdown h3 {
+    font-size: 15px;
+    font-weight: 600;
+    line-height: 1.5;
+    margin-block: calc(var(--spacing) * 4) calc(var(--spacing) * 1.5);
+  }
+
+  .chat-markdown hr {
+    border-color: var(--border);
+    margin-block: calc(var(--spacing) * 5);
+  }
+
+  .chat-markdown li {
+    line-break: loose;
+    margin-block: calc(var(--spacing) * 1.5);
+    overflow-wrap: anywhere;
+  }
+
+  .chat-markdown li::marker {
+    color: var(--muted-foreground);
+  }
+
+  .chat-markdown ol {
+    list-style-type: decimal;
+    margin-block: calc(var(--spacing) * 3);
+    padding-left: calc(var(--spacing) * 5);
+  }
+
+  .chat-markdown ul {
+    list-style-type: disc;
+    margin-block: calc(var(--spacing) * 3);
+    padding-left: calc(var(--spacing) * 5);
+  }
+
+  .chat-markdown p {
+    line-break: loose;
+    margin-block: 0;
+    overflow-wrap: anywhere;
+  }
+
+  .chat-markdown p + p {
+    margin-top: calc(var(--spacing) * 3.5);
+  }
+
+  .chat-markdown pre {
+    background-color: transparent;
+    font-size: 12.5px;
+    line-break: normal;
+    line-height: 1.58;
+    margin: 0;
+    max-width: 100%;
+    overflow-x: auto;
+    overflow-wrap: normal;
+    padding: calc(var(--spacing) * 3.5);
+    word-break: normal;
+  }
+
+  .chat-markdown strong {
+    color: var(--foreground);
+    font-weight: 600;
+  }
+
+  .chat-markdown table {
+    border-collapse: separate;
+    border-radius: var(--radius-lg);
+    border-spacing: 0;
+    margin-block: calc(var(--spacing) * 4);
+    overflow: hidden;
+    width: 100%;
+  }
+
+  .chat-markdown td,
+  .chat-markdown th {
+    border-bottom: 1px solid var(--border);
+    line-break: loose;
+    overflow-wrap: anywhere;
+    padding-block: calc(var(--spacing) * 2);
+    padding-inline: calc(var(--spacing) * 2.5);
+  }
+
+  .chat-markdown td {
+    vertical-align: top;
+  }
+
+  .chat-markdown th {
+    background-color: var(--surface-1);
+    font-weight: 500;
+    text-align: left;
+  }
+
+  .chat-markdown [data-streamdown="inline-code"] {
+    background-color: var(--surface-2);
+    border-radius: 0.38rem;
+    color: color-mix(in oklch, var(--foreground) 90%, transparent);
+    font-family: var(--font-mono, ui-monospace, monospace);
+    font-size: 0.88em;
+    padding-block: 0.12em;
+    padding-inline: 0.32em;
+  }
+
+  .workspace-streaming-line {
+    overflow: hidden;
+    pointer-events: none;
+  }
+
+  .workspace-streaming-line::after {
+    animation: workspace-streaming-sweep 2.4s cubic-bezier(0.4, 0, 0.2, 1)
+      infinite;
+    background: linear-gradient(
+      90deg,
+      transparent 20%,
+      color-mix(in oklch, var(--primary) 65%, transparent) 50%,
+      transparent 80%
+    );
+    content: "";
+    inset: 0;
+    position: absolute;
+    transform: translateX(-100%);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .workspace-streaming-line::after {
+      animation: none;
+      background: color-mix(in oklch, var(--primary) 35%, transparent);
+      transform: none;
+    }
+  }
+
+  .chat-restore-mark {
+    color: color-mix(in oklch, var(--foreground) 72%, transparent);
+  }
+
+  .chat-restore-signature {
+    animation: chat-restore-signature-pulse 1.7s ease-in-out infinite;
+    fill: currentColor;
+    font-family: "Playwrite DE LA Variable", cursive;
+    font-size: 56px;
+    font-style: normal;
+    font-weight: 400;
+    letter-spacing: 0;
+    opacity: 0.62;
+    transform-box: fill-box;
+    transform-origin: center;
+    text-transform: lowercase;
+  }
+}
+
+/* Chat markdown code blocks. Deliberately unlayered: streamdown bakes its own
+   Tailwind utility classes (bg-sidebar, p-2, border, …) into these elements,
+   and utilities are cascaded after @layer components — unlayered author rules
+   are the only way to reliably restyle them without !important. */
+.chat-markdown [data-streamdown="code-block"] {
+  background-color: #ffffff;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--elevation-xs);
+  gap: 0;
+  margin-block: calc(var(--spacing) * 4);
+  overflow: hidden;
+  padding: 0;
+}
+
+.dark .chat-markdown [data-streamdown="code-block"] {
+  background-color: var(--surface-1);
+}
+
+.chat-markdown [data-streamdown="code-block-header"] {
+  background-color: color-mix(in oklch, var(--surface-1) 55%, transparent);
+  border-bottom: 1px solid var(--border-subtle);
+  color: var(--muted-foreground);
+  font-size: 11px;
+  font-weight: 500;
+  height: calc(var(--spacing) * 8);
+  padding-inline: calc(var(--spacing) * 3);
+}
+
+.dark .chat-markdown [data-streamdown="code-block-header"] {
+  background-color: color-mix(in oklch, var(--surface-2) 55%, transparent);
+}
+
+.chat-markdown [data-streamdown="code-block-header"] > span {
+  color: color-mix(in oklch, var(--muted-foreground) 80%, transparent);
+  font-family: var(--font-mono, ui-monospace, monospace);
+  letter-spacing: 0.02em;
+  margin-left: 0;
+}
+
+.chat-markdown [data-streamdown="code-block-body"] {
+  background-color: transparent;
+  border: 0;
+  border-radius: 0;
+  font-size: 12.5px;
+  line-height: 1.6;
+  padding: 0;
+}
+
+.chat-markdown [data-streamdown="code-block-body"] pre {
+  background-color: transparent;
+  font-size: 12.5px;
+  line-height: 1.6;
+  margin: 0;
+  padding: calc(var(--spacing) * 3.5);
+}
+
+.chat-markdown [data-streamdown="code-block-body"] code > span {
+  display: block;
+}
+
+.chat-markdown [data-streamdown="code-block-actions"] {
+  backdrop-filter: blur(12px);
+  background-color: color-mix(in oklch, var(--background) 85%, transparent);
+  border: 1px solid var(--border-subtle);
+  border-radius: calc(infinity * 1px);
+  box-shadow: var(--elevation-xs);
+  margin-right: calc(var(--spacing) * 1);
+  padding-block: calc(var(--spacing) * 0.5);
+  padding-inline: calc(var(--spacing) * 1);
+}
+
+@keyframes workspace-streaming-sweep {
+  to {
+    transform: translateX(100%);
+  }
+}
+
+@keyframes chat-restore-signature-pulse {
+  0% {
+    opacity: 0.38;
+    transform: translateY(1px);
+  }
+
+  45% {
+    opacity: 0.78;
+    transform: translateY(0);
+  }
+
+  100% {
+    opacity: 0.38;
+    transform: translateY(-1px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .chat-restore-signature {
+    animation: none;
+    opacity: 0.68;
+    transform: none;
+  }
+}
