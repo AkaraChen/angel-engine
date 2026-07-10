@@ -19,7 +19,7 @@ fn generate_engine_event_enums() {
             "lowercase",
         ),
         generated_enum(
-            &client_src.join("event.rs"),
+            &client_src.join("event/mod.rs"),
             "ClientLogKind",
             "ClientLogKind",
             "camelCase",
@@ -31,13 +31,13 @@ fn generate_engine_event_enums() {
             "camelCase",
         ),
         generated_enum(
-            &client_src.join("event.rs"),
+            &client_src.join("event/mod.rs"),
             "ClientEvent",
             "ClientEventType",
             "camelCase",
         ),
         generated_enum(
-            &client_src.join("event.rs"),
+            &client_src.join("event/mod.rs"),
             "ClientStreamDelta",
             "ClientStreamDeltaType",
             "camelCase",
