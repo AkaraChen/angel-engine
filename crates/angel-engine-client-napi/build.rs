@@ -85,13 +85,13 @@ fn generate_engine_event_enums() {
             "camelCase",
         ),
         generated_enum(
-            &client_src.join("core.rs"),
+            &client_src.join("core/types.rs"),
             "ClientInput",
             "ClientInputType",
             "snake_case",
         ),
         generated_enum(
-            &client_src.join("core.rs"),
+            &client_src.join("core/types.rs"),
             "ElicitationResponse",
             "ElicitationResponseType",
             "snake_case",
