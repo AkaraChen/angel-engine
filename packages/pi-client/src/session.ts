@@ -1,21 +1,16 @@
 import type {
-  ClientCommandResult,
-  ClientUpdate,
   ConversationSnapshot,
   HydrateRequest,
   InspectRequest,
   SendTextRequest,
   SetModeRequest,
   SetPermissionModeRequest,
-  TurnRunEvent,
   TurnRunResult,
 } from "@angel-engine/client-napi";
 import type {
   ActivePiTurn,
   EngineEventJson,
-  PiAgentMessage,
   PiAgentSession as PiSdkAgentSession,
-  PiAgentSessionEvent,
   PiModel,
   PiModelRegistry,
   PiSendTextRequest,
@@ -34,36 +29,39 @@ import {
 import {
   AngelEngineClient,
   ClientProtocol,
-  EngineEventActionPhase,
   EngineEventContextScope,
   EngineEventContextUpdateType,
   EngineEventTurnOutcome,
 } from "@angel-engine/client-napi";
 import is from "@sindresorhus/is";
-import { emptyUpdate } from "@angel-engine/js-client/utils/client-update";
 import {
   errorMessage,
   throwIfAborted,
 } from "@angel-engine/js-client/utils/errors";
 import { PiEngineAdapter } from "./adapter.js";
-import { contextPatch, contextUpdated } from "./context.js";
+import { contextUpdated } from "./context.js";
 import {
-  actionObserved,
-  actionOutputUpdated,
-  assistantDelta,
   availableCommandsUpdated,
-  configValuesFromIds,
   failedOutcome,
   modelStateFromModels,
-  piModelId,
-  reasoningDelta,
   sessionModelsUpdated,
-  sessionUsageUpdated,
-  turnRunEventsFromUpdate,
   turnTerminal,
 } from "./events.js";
 import { historyEventsFromSessionMessages } from "./history.js";
-import { piPrompt, piThinkingLevel, piThinkingLevelIds } from "./runtime.js";
+import { piPrompt, piThinkingLevel } from "./runtime.js";
+import {
+  applyEngineEvents,
+  emitEngineEvents,
+  startConversation,
+  startEngineTurn,
+} from "./session-engine.js";
+import {
+  compactEvents,
+  conversationReadyEvent,
+  reasoningConfigUpdated,
+  reasoningEffortState,
+} from "./session-state.js";
+import { eventsFromSdkEvent, piTurnOutcome } from "./session-stream.js";
 
 type NativeEngineClient = InstanceType<typeof AngelEngineClient>;
 
@@ -193,7 +191,7 @@ export class PiAgentSession {
     await this.loadRuntimeConfiguration(request.cwd);
     await this.applySelections(conversation.id, request);
 
-    const turn = this.startEngineTurn(conversation.id, text, input);
+    const turn = startEngineTurn(this.client, conversation.id, text, input);
     const active: ActivePiTurn = {
       actionIds: new Set(),
       conversationId: conversation.id,
@@ -229,147 +227,6 @@ export class PiAgentSession {
     }
   }
 
-  private eventsFromSdkEvent(
-    event: PiAgentSessionEvent,
-    active: ActivePiTurn,
-  ): EngineEventJson[] {
-    switch (event.type) {
-      case "message_update": {
-        const messageEvent = event.assistantMessageEvent;
-        if (messageEvent.type === "text_delta") {
-          active.sawTextDelta =
-            active.sawTextDelta || messageEvent.delta.length > 0;
-          return messageEvent.delta
-            ? [
-                assistantDelta(
-                  active.conversationId,
-                  active.turnId,
-                  messageEvent.delta,
-                ),
-              ]
-            : [];
-        }
-        if (messageEvent.type === "thinking_delta") {
-          active.sawReasoningDelta =
-            active.sawReasoningDelta || messageEvent.delta.length > 0;
-          return messageEvent.delta
-            ? [
-                reasoningDelta(
-                  active.conversationId,
-                  active.turnId,
-                  messageEvent.delta,
-                ),
-              ]
-            : [];
-        }
-        if (messageEvent.type === "done") {
-          active.finalMessage = messageEvent.message;
-        } else if (messageEvent.type === "error") {
-          active.finalMessage = messageEvent.error;
-        }
-        return [];
-      }
-      case "message_end":
-        return this.messageEndEvents(event.message, active);
-      case "turn_end": {
-        const events = this.messageEndEvents(event.message, active);
-        const usageMessage =
-          active.finalMessage ??
-          (event.message.role === "assistant" ? event.message : undefined);
-        const usageEvent = usageMessage
-          ? sessionUsageUpdated(
-              active.conversationId,
-              usageMessage,
-              this.currentModel,
-            )
-          : undefined;
-        return usageEvent ? [...events, usageEvent] : events;
-      }
-      case "tool_execution_start":
-        return [
-          actionObserved(active, event.toolCallId, event.toolName, event.args),
-        ];
-      case "tool_execution_update":
-        return [
-          actionOutputUpdated(
-            active,
-            event.toolCallId,
-            event.toolName,
-            event.partialResult,
-            EngineEventActionPhase.StreamingResult,
-            false,
-          ),
-        ];
-      case "tool_execution_end":
-        return [
-          actionOutputUpdated(
-            active,
-            event.toolCallId,
-            event.toolName,
-            event.result,
-            event.isError
-              ? EngineEventActionPhase.Failed
-              : EngineEventActionPhase.Completed,
-            event.isError,
-          ),
-        ];
-      case "agent_start":
-      case "agent_end":
-      case "turn_start":
-      case "message_start":
-      case "queue_update":
-      case "compaction_start":
-      case "compaction_end":
-      case "auto_retry_start":
-      case "auto_retry_end":
-      case "session_info_changed":
-      case "thinking_level_changed":
-        return [];
-    }
-  }
-
-  private messageEndEvents(
-    message: PiAgentMessage,
-    active: ActivePiTurn,
-  ): EngineEventJson[] {
-    if (message.role !== "assistant") return [];
-    active.finalMessage = message;
-    const events: EngineEventJson[] = [];
-    for (const block of message.content) {
-      if (block.type === "text" && !active.sawTextDelta && block.text) {
-        active.sawTextDelta = true;
-        events.push(
-          assistantDelta(active.conversationId, active.turnId, block.text),
-        );
-      } else if (
-        block.type === "thinking" &&
-        !active.sawReasoningDelta &&
-        block.thinking
-      ) {
-        active.sawReasoningDelta = true;
-        events.push(
-          reasoningDelta(active.conversationId, active.turnId, block.thinking),
-        );
-      }
-    }
-    return events;
-  }
-
-  private startEngineTurn(
-    conversationId: string,
-    text: string,
-    input: SendTextRequest["input"],
-  ): { turnId: string } {
-    const result = this.client.sendThreadEvent(conversationId, {
-      input: [{ text, type: "text" }, ...(input ?? [])],
-      type: "inputs",
-    });
-    if (!result.turnId) {
-      throw new Error("Pi runtime turn did not produce an engine turn id.");
-    }
-    return { turnId: result.turnId };
-  }
-
   private finishTurn(active: ActivePiTurn): TurnRunResult {
     const snapshot = this.requireConversation();
     const remoteThreadId =
@@ -400,19 +257,12 @@ export class PiAgentSession {
           hydrate: false,
           remoteId: input.remoteId,
         })
-      : this.startConversation(input.cwd);
+      : startConversation(this.client, input.cwd);
     if (!result.conversationId) {
       throw new Error("Pi runtime did not start a conversation.");
     }
     this.conversationId = result.conversationId;
     return this.requireConversation();
-  }
-
-  private startConversation(cwd: string | undefined): ClientCommandResult {
-    if (!is.string(cwd) || cwd.length === 0) {
-      throw new Error("Pi conversation cwd is required.");
-    }
-    return this.client.startThread({ cwd });
   }
 
   private async ensurePiSession(input: {
@@ -441,13 +291,14 @@ export class PiAgentSession {
     this.unsubscribe = session.subscribe((event) => {
       const active = this.activeTurn;
       if (!active) return;
-      this.emitEngineEvents(
-        this.eventsFromSdkEvent(event, active),
+      emitEngineEvents(
+        this.client,
+        eventsFromSdkEvent(event, active, this.currentModel),
         active.request.onEvent,
       );
     });
-    this.applyEngineEvents([
-      this.conversationReadyEvent(
+    applyEngineEvents(this.client, [
+      conversationReadyEvent(
         this.requireConversation().id,
         cwd,
         session.sessionFile,
@@ -480,7 +331,8 @@ export class PiAgentSession {
       name: prompt.name,
     }));
 
-    this.applyEngineEvents(
+    applyEngineEvents(
+      this.client,
       compactEvents([
         availableCommandsUpdated(this.conversationId, commands),
         this.modelInfos.length > 0
@@ -506,9 +358,7 @@ export class PiAgentSession {
       conversationId,
       this.piSession.messages,
     );
-    if (events.length > 0) {
-      this.applyEngineEvents(events);
-    }
+    if (events.length > 0) applyEngineEvents(this.client, events);
     this.replayedSessionId = remoteId;
   }
 
@@ -550,9 +400,7 @@ export class PiAgentSession {
         ]),
       );
     }
-    if (events.length > 0) {
-      this.applyEngineEvents(events);
-    }
+    if (events.length > 0) applyEngineEvents(this.client, events);
   }
 
   private async setPiModel(modelId: string): Promise<PiModel> {
@@ -572,62 +420,17 @@ export class PiAgentSession {
   private reasoningConfigUpdated(
     conversationId: string,
   ): EngineEventJson | undefined {
-    if (this.availableEfforts.length === 0) return undefined;
-    return {
-      SessionConfigOptionsUpdated: {
-        conversation_id: conversationId,
-        options: [
-          {
-            category: "thought_level",
-            current_value: this.currentReasoningEffort,
-            description: null,
-            id: "reasoning_effort",
-            name: "Reasoning",
-            values: this.availableEfforts,
-          },
-        ],
-      },
-    };
+    return reasoningConfigUpdated(
+      conversationId,
+      this.availableEfforts,
+      this.currentReasoningEffort,
+    );
   }
 
   private updateEffortsForModel(model?: PiModel): void {
-    const levels = piThinkingLevelIds.filter((level) => {
-      if (level === "off") return true;
-      if (!model?.reasoning) return false;
-      return model.thinkingLevelMap?.[level] !== null;
-    });
-    this.availableEfforts = configValuesFromIds(levels);
-    if (
-      this.availableEfforts.length > 0 &&
-      !this.availableEfforts.some(
-        (effort) => effort.value === this.currentReasoningEffort,
-      )
-    ) {
-      this.currentReasoningEffort = this.availableEfforts[0]
-        .value as PiThinkingLevel;
-    }
-  }
-
-  private conversationReadyEvent(
-    conversationId: string,
-    cwd: string,
-    remoteId?: string,
-  ): EngineEventJson {
-    return {
-      ConversationReady: {
-        capabilities: null,
-        context: contextPatch([
-          {
-            Cwd: {
-              cwd,
-              scope: "Conversation",
-            },
-          },
-        ]),
-        id: conversationId,
-        remote: remoteId ? { Known: remoteId } : { Local: conversationId },
-      },
-    };
+    const state = reasoningEffortState(model, this.currentReasoningEffort);
+    this.availableEfforts = state.availableEfforts;
+    this.currentReasoningEffort = state.currentReasoningEffort;
   }
 
   private emitTerminalIfNeeded(
@@ -636,28 +439,9 @@ export class PiAgentSession {
   ): void {
     if (active.terminalEmitted) return;
     active.terminalEmitted = true;
-    this.emitEngineEvents([
+    emitEngineEvents(this.client, [
       turnTerminal(active.conversationId, active.turnId, outcome),
     ]);
-  }
-
-  private emitEngineEvents(
-    events: EngineEventJson[],
-    onEvent?: (event: TurnRunEvent) => void,
-  ): void {
-    const update = this.applyEngineEvents(events);
-    for (const event of turnRunEventsFromUpdate(update)) {
-      onEvent?.(event);
-    }
-  }
-
-  private applyEngineEvents(events: EngineEventJson[]): ClientUpdate {
-    if (events.length === 0) return emptyUpdate();
-    return this.client.receiveJson({
-      jsonrpc: "2.0",
-      method: "pi/event",
-      params: { events },
-    });
   }
 
   private requireConversation(): ConversationSnapshot {
@@ -696,28 +480,4 @@ export function piTurnErrorOutcome(
 ): `${EngineEventTurnOutcome}` | EngineEventJson {
   if (signal?.aborted) return EngineEventTurnOutcome.Interrupted;
   return failedOutcome(errorMessage(error));
-}
-
-function piTurnOutcome(
-  signal: AbortSignal | undefined,
-  active: ActivePiTurn,
-): `${EngineEventTurnOutcome}` | EngineEventJson {
-  if (signal?.aborted) return EngineEventTurnOutcome.Interrupted;
-  const stopReason = active.finalMessage?.stopReason;
-  if (stopReason === "aborted") return EngineEventTurnOutcome.Interrupted;
-  if (stopReason === "length") return EngineEventTurnOutcome.Exhausted;
-  if (stopReason === "error") {
-    return failedOutcome(
-      active.finalMessage?.errorMessage ?? "Pi turn failed.",
-    );
-  }
-  return EngineEventTurnOutcome.Succeeded;
-}
-
-function compactEvents(
-  events: Array<EngineEventJson | undefined>,
-): EngineEventJson[] {
-  return events.filter(
-    (event): event is EngineEventJson => event !== undefined,
-  );
 }
