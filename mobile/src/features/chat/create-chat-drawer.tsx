@@ -1,5 +1,5 @@
 import type { FormEvent } from "react";
-import type { CreateChatFormState, WorktreeMode } from "./create-chat-form";
+import type { CreateChatFormState } from "./create-chat-form";
 
 import { useState } from "react";
 import { useLocation } from "wouter";
@@ -35,13 +35,9 @@ import {
   canSubmitCreateChat,
   canUseWorktree,
   INITIAL_CREATE_CHAT_FORM,
-  isWorktreeSelectionComplete,
 } from "./create-chat-form";
-import {
-  useCreateChat,
-  useProjectList,
-  useProjectWorktrees,
-} from "./use-chats";
+import { stashNewChatPrompt } from "./new-chat-prompt";
+import { useAgentList, useCreateChat, useProjectList } from "./use-chats";
 
 export function CreateChatDrawer({ children }: { children: React.ReactNode }) {
   const [open, setOpen] = useState(false);
@@ -51,10 +47,15 @@ export function CreateChatDrawer({ children }: { children: React.ReactNode }) {
   const [, navigate] = useLocation();
 
   const projectsQuery = useProjectList();
-  const worktreesQuery = useProjectWorktrees(
-    form.projectId.length > 0 ? form.projectId : undefined,
-  );
+  const agentsQuery = useAgentList();
   const createChat = useCreateChat();
+
+  // Prefer the daemon's agent list; fall back to the built-in catalog while it
+  // loads or if the daemon returns none.
+  const agentOptions =
+    agentsQuery.data !== undefined && agentsQuery.data.length > 0
+      ? agentsQuery.data
+      : AGENT_OPTIONS;
 
   function update<K extends keyof CreateChatFormState>(
     key: K,
@@ -73,17 +74,17 @@ export function CreateChatDrawer({ children }: { children: React.ReactNode }) {
     if (!canSubmitCreateChat(form)) return;
 
     try {
-      const result = await createChat.mutateAsync(buildCreateChatInput(form));
+      const chat = await createChat.mutateAsync(buildCreateChatInput(form));
+      stashNewChatPrompt(chat.id, form.prompt);
       setOpen(false);
       reset();
-      navigate(`/chat/${result.chatId}`);
+      navigate(`/chat/${chat.id}`);
     } catch {
       // The mutation's error state drives the inline message below; swallow the
       // rejection here so it isn't an unhandled promise.
     }
   }
 
-  const worktreeIncomplete = !isWorktreeSelectionComplete(form);
   const canSubmit = canSubmitCreateChat(form) && !createChat.isPending;
 
   return (
@@ -130,9 +131,8 @@ export function CreateChatDrawer({ children }: { children: React.ReactNode }) {
                   setForm((previous) => ({
                     ...previous,
                     projectId,
-                    // Reset worktree selection; a worktree can't outlive its
-                    // project, so clearing the project disables it entirely.
-                    worktreeBranch: "",
+                    // A worktree can't outlive its project, so clearing the
+                    // project disables the worktree option.
                     useWorktree:
                       projectId.length > 0 ? previous.useWorktree : false,
                   }));
@@ -156,7 +156,7 @@ export function CreateChatDrawer({ children }: { children: React.ReactNode }) {
                 value={form.runtime}
                 onChange={(event) => update("runtime", event.target.value)}
               >
-                {AGENT_OPTIONS.map((agent) => (
+                {agentOptions.map((agent) => (
                   <NativeSelectOption key={agent.id} value={agent.id}>
                     {agent.label}
                   </NativeSelectOption>
@@ -191,15 +191,17 @@ export function CreateChatDrawer({ children }: { children: React.ReactNode }) {
               </Field>
             </div>
 
-            <div className="flex flex-col gap-3 rounded-lg border border-border p-3">
+            <div className="flex flex-col gap-2 rounded-lg border border-border p-3">
               <label
                 className="flex items-center justify-between gap-3"
                 htmlFor="new-chat-worktree"
               >
                 <span className="flex flex-col gap-0.5">
-                  <span className="text-sm font-medium">Use worktree</span>
+                  <span className="text-sm font-medium">
+                    Run in a new worktree
+                  </span>
                   <span className="text-xs text-muted-foreground">
-                    Run in an isolated git worktree
+                    Isolate this chat in its own git worktree
                   </span>
                 </span>
                 <Switch
@@ -213,29 +215,6 @@ export function CreateChatDrawer({ children }: { children: React.ReactNode }) {
               {!canUseWorktree(form) ? (
                 <p className="text-xs text-muted-foreground">
                   Select a project to run in a worktree.
-                </p>
-              ) : null}
-
-              {form.useWorktree && canUseWorktree(form) ? (
-                <WorktreeFields
-                  branchInputId="new-chat-branch"
-                  mode={form.worktreeMode}
-                  branch={form.worktreeBranch}
-                  worktrees={worktreesQuery.data ?? []}
-                  loading={worktreesQuery.isPending}
-                  onModeChange={(mode) => {
-                    update("worktreeMode", mode);
-                    update("worktreeBranch", "");
-                  }}
-                  onBranchChange={(branch) => update("worktreeBranch", branch)}
-                />
-              ) : null}
-
-              {worktreeIncomplete ? (
-                <p className="text-xs text-destructive">
-                  {form.worktreeMode === "create"
-                    ? "Enter a branch name for the new worktree."
-                    : "Select a branch for the worktree."}
                 </p>
               ) : null}
             </div>
@@ -262,92 +241,6 @@ export function CreateChatDrawer({ children }: { children: React.ReactNode }) {
         </form>
       </DrawerContent>
     </Drawer>
-  );
-}
-
-function WorktreeFields({
-  branch,
-  branchInputId,
-  loading,
-  mode,
-  onBranchChange,
-  onModeChange,
-  worktrees,
-}: {
-  branch: string;
-  branchInputId: string;
-  loading: boolean;
-  mode: WorktreeMode;
-  onBranchChange: (branch: string) => void;
-  onModeChange: (mode: WorktreeMode) => void;
-  worktrees: { branch: string; cwd: string; isMain: boolean }[];
-}) {
-  return (
-    <div className="flex flex-col gap-2">
-      <div className="grid grid-cols-2 gap-2">
-        <ModeButton
-          active={mode === "existing"}
-          label="Existing"
-          onClick={() => onModeChange("existing")}
-        />
-        <ModeButton
-          active={mode === "create"}
-          label="Create new"
-          onClick={() => onModeChange("create")}
-        />
-      </div>
-
-      {mode === "existing" ? (
-        <Field htmlFor={branchInputId} label="Branch">
-          <NativeSelect
-            className="w-full"
-            disabled={loading}
-            id={branchInputId}
-            value={branch}
-            onChange={(event) => onBranchChange(event.target.value)}
-          >
-            <NativeSelectOption value="">Select a branch</NativeSelectOption>
-            {worktrees.map((worktree) => (
-              <NativeSelectOption key={worktree.cwd} value={worktree.branch}>
-                {worktree.branch}
-                {worktree.isMain ? " (main)" : ""}
-              </NativeSelectOption>
-            ))}
-          </NativeSelect>
-        </Field>
-      ) : (
-        <Field htmlFor={branchInputId} label="New branch name">
-          <Input
-            id={branchInputId}
-            placeholder="feature/my-change"
-            value={branch}
-            onChange={(event) => onBranchChange(event.target.value)}
-          />
-        </Field>
-      )}
-    </div>
-  );
-}
-
-function ModeButton({
-  active,
-  label,
-  onClick,
-}: {
-  active: boolean;
-  label: string;
-  onClick: () => void;
-}) {
-  return (
-    <Button
-      className="w-full"
-      onClick={onClick}
-      size="sm"
-      type="button"
-      variant={active ? "default" : "outline"}
-    >
-      {label}
-    </Button>
   );
 }
 

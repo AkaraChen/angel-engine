@@ -7,7 +7,6 @@ import {
   canSubmitCreateChat,
   canUseWorktree,
   INITIAL_CREATE_CHAT_FORM,
-  isWorktreeSelectionComplete,
 } from "./create-chat-form";
 
 function form(overrides: Partial<CreateChatFormState>): CreateChatFormState {
@@ -19,27 +18,6 @@ describe("canSubmitCreateChat", () => {
     expect(canSubmitCreateChat(form({ prompt: "   " }))).toBe(false);
     expect(canSubmitCreateChat(form({ prompt: "do the thing" }))).toBe(true);
   });
-
-  it("blocks submit when a worktree is requested without a branch", () => {
-    const state = form({
-      prompt: "go",
-      projectId: "p1",
-      useWorktree: true,
-      worktreeBranch: "",
-    });
-    expect(isWorktreeSelectionComplete(state)).toBe(false);
-    expect(canSubmitCreateChat(state)).toBe(false);
-  });
-
-  it("allows submit once a branch is chosen for the worktree", () => {
-    const state = form({
-      prompt: "go",
-      projectId: "p1",
-      useWorktree: true,
-      worktreeBranch: "feature/x",
-    });
-    expect(canSubmitCreateChat(state)).toBe(true);
-  });
 });
 
 describe("canUseWorktree", () => {
@@ -50,19 +28,16 @@ describe("canUseWorktree", () => {
 });
 
 describe("buildCreateChatInput", () => {
-  it("strips empty optional fields", () => {
+  it("strips empty optional fields and omits creationLocation without a project", () => {
     const input = buildCreateChatInput(
-      form({ prompt: "  hi  ", model: "  ", reasoningEffort: "" }),
+      form({ prompt: "hi", model: "  ", reasoningEffort: "" }),
     );
-    expect(input).toMatchObject({
-      prompt: "hi",
-      runtime: "claude",
+    expect(input).toEqual({
       projectId: undefined,
+      runtime: "claude",
       model: undefined,
       reasoningEffort: undefined,
-      useWorktree: false,
-      worktreeBranch: undefined,
-      createWorktree: undefined,
+      creationLocation: undefined,
     });
   });
 
@@ -74,47 +49,26 @@ describe("buildCreateChatInput", () => {
     expect(input.reasoningEffort).toBe("high");
   });
 
-  it("never emits a worktree without a project even if the flag is stale", () => {
+  it("sends creationLocation=project for a project chat", () => {
     const input = buildCreateChatInput(
-      form({
-        prompt: "hi",
-        projectId: "",
-        useWorktree: true,
-        worktreeBranch: "feature/x",
-      }),
-    );
-    expect(input.useWorktree).toBe(false);
-    expect(input.worktreeBranch).toBeUndefined();
-    expect(input.createWorktree).toBeUndefined();
-  });
-
-  it("marks createWorktree for a new branch and trims it", () => {
-    const input = buildCreateChatInput(
-      form({
-        prompt: "hi",
-        projectId: "p1",
-        useWorktree: true,
-        worktreeMode: "create",
-        worktreeBranch: "  feature/new  ",
-      }),
+      form({ prompt: "hi", projectId: "p1", useWorktree: false }),
     );
     expect(input.projectId).toBe("p1");
-    expect(input.useWorktree).toBe(true);
-    expect(input.worktreeBranch).toBe("feature/new");
-    expect(input.createWorktree).toBe(true);
+    expect(input.creationLocation).toBe("project");
   });
 
-  it("uses an existing branch without the create flag", () => {
+  it("sends creationLocation=worktree when the worktree toggle is on", () => {
     const input = buildCreateChatInput(
-      form({
-        prompt: "hi",
-        projectId: "p1",
-        useWorktree: true,
-        worktreeMode: "existing",
-        worktreeBranch: "main",
-      }),
+      form({ prompt: "hi", projectId: "p1", useWorktree: true }),
     );
-    expect(input.worktreeBranch).toBe("main");
-    expect(input.createWorktree).toBe(false);
+    expect(input.creationLocation).toBe("worktree");
+  });
+
+  it("never requests a worktree without a project even if the flag is stale", () => {
+    const input = buildCreateChatInput(
+      form({ prompt: "hi", projectId: "", useWorktree: true }),
+    );
+    expect(input.projectId).toBeUndefined();
+    expect(input.creationLocation).toBeUndefined();
   });
 });

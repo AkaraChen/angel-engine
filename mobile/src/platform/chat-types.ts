@@ -24,18 +24,25 @@ export interface DaemonChat {
   updatedAt: string;
 }
 
-/** Mirrors `Project` from `@angel-engine/js-client` (serialized over HTTP). */
+/** Mirrors `Project` from `@angel-engine/daemon-api/projects` (over HTTP). */
 export interface DaemonProject {
   id: string;
   path: string;
 }
 
-/** A git worktree available to base a chat on, per project. */
-export interface DaemonWorktree {
-  branch: string;
-  cwd: string;
-  isMain: boolean;
+/**
+ * Mirrors `AgentOption` from `@angel-engine/daemon-api/agents`, as served by
+ * `GET /api/agents` (the daemon's agent-management API). `skillDirectories` is
+ * omitted because the mobile composer doesn't use it.
+ */
+export interface DaemonAgentOption {
+  id: string;
+  label: string;
+  description: string;
 }
+
+/** Where a new chat runs, mirroring `ChatCreationLocation`. */
+export type ChatCreationLocation = "project" | "worktree";
 
 /**
  * The mobile chat-list row model: a {@link DaemonChat} enriched with the
@@ -53,23 +60,20 @@ export interface ChatSummary {
   updatedAt: string;
 }
 
-/** Payload for creating a chat from the mobile composer. */
+/**
+ * Payload for `POST /api/chats`, mirroring `ChatCreateInput` from
+ * `@angel-engine/daemon-api/chat`. The daemon creates an (empty) chat; the
+ * first message is sent later from the Chat page. A worktree is requested via
+ * `creationLocation: "worktree"` rather than a branch name — the daemon owns
+ * managed-worktree creation.
+ */
 export interface CreateChatInput {
   projectId?: string;
-  prompt: string;
-  runtime: string;
+  runtime?: string;
   model?: string;
   reasoningEffort?: string;
-  /** When false, the chat runs in the project root (no worktree). */
-  useWorktree: boolean;
-  /** Existing branch to check out, or a new branch name to create. */
-  worktreeBranch?: string;
-  /** When true, create a fresh worktree/branch instead of reusing one. */
-  createWorktree?: boolean;
-}
-
-export interface CreateChatResult {
-  chatId: string;
+  creationLocation?: ChatCreationLocation;
+  title?: string;
 }
 
 export interface ChatMessage {

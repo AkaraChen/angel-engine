@@ -1,9 +1,8 @@
 import type {
   CreateChatInput,
-  CreateChatResult,
+  DaemonAgentOption,
   DaemonChat,
   DaemonProject,
-  DaemonWorktree,
 } from "./chat-types";
 import type { DaemonConfig } from "./daemon-config";
 
@@ -47,8 +46,8 @@ export interface DaemonClient {
   listProcesses: () => Promise<ProcessRegistrySnapshot>;
   listChats: () => Promise<DaemonChat[]>;
   listProjects: () => Promise<DaemonProject[]>;
-  listProjectWorktrees: (projectId: string) => Promise<DaemonWorktree[]>;
-  createChat: (input: CreateChatInput) => Promise<CreateChatResult>;
+  listAgents: () => Promise<DaemonAgentOption[]>;
+  createChat: (input: CreateChatInput) => Promise<DaemonChat>;
 }
 
 export function createDaemonClient(config: DaemonConfig): DaemonClient {
@@ -95,12 +94,9 @@ export function createDaemonClient(config: DaemonConfig): DaemonClient {
       request<ProcessRegistrySnapshot>("/api/process-registry"),
     listChats: async () => request<DaemonChat[]>("/api/chats"),
     listProjects: async () => request<DaemonProject[]>("/api/projects"),
-    listProjectWorktrees: async (projectId) =>
-      request<DaemonWorktree[]>(
-        `/api/projects/${encodeURIComponent(projectId)}/worktrees`,
-      ),
+    listAgents: async () => request<DaemonAgentOption[]>("/api/agents"),
     createChat: async (input) =>
-      request<CreateChatResult>("/api/chats", {
+      request<DaemonChat>("/api/chats", {
         method: "POST",
         body: JSON.stringify(input),
       }),

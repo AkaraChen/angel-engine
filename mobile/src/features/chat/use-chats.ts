@@ -36,12 +36,12 @@ export function useProjectList() {
   });
 }
 
-export function useProjectWorktrees(projectId: string | undefined) {
+/** The agents available to start a chat with (`GET /api/agents`). */
+export function useAgentList() {
   const daemon = useDaemonClient();
   return useQuery({
-    queryKey: queryKeys.projects.worktrees(projectId ?? ""),
-    enabled: projectId !== undefined && projectId.length > 0,
-    queryFn: async () => daemon.listProjectWorktrees(projectId ?? ""),
+    queryKey: queryKeys.agents.list,
+    queryFn: async () => daemon.listAgents(),
   });
 }
 
