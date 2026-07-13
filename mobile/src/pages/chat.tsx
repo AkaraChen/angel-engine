@@ -23,12 +23,8 @@ const DEMO_MESSAGES: ChatMessage[] = [
 export function ChatPage({ chatId }: { chatId: string }) {
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <header
-        className="
-        flex shrink-0 items-center gap-2 border-b border-border p-2
-      "
-      >
-        <Button asChild size="icon" variant="ghost">
+      <header className="flex shrink-0 items-center gap-2 border-b border-border p-2">
+        <Button aria-label="Back" asChild size="icon" variant="ghost">
           <Link href="/">
             <ArrowLeft size={20} />
           </Link>
@@ -73,7 +69,7 @@ export function ChatPage({ chatId }: { chatId: string }) {
         onSubmit={(event) => event.preventDefault()}
       >
         <Input className="flex-1" placeholder="Message" />
-        <Button size="icon" type="submit">
+        <Button aria-label="Send" size="icon" type="submit">
           <PaperPlaneTilt size={18} />
         </Button>
       </form>

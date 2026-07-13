@@ -1,13 +1,19 @@
 /**
  * Resolves how the mobile app reaches the desktop daemon.
  *
- * The mobile frontend is served by the desktop app, so it talks to the daemon's
- * Hono HTTP server (`/api/*`, guarded by a `Bearer <token>` header). The host
- * can inject the connection at runtime on `window.__ANGEL_DAEMON__`; otherwise
- * we fall back to Vite env vars (handy for `pnpm dev` against a running daemon),
- * and finally to same-origin with no token.
+ * The mobile app is normally served by the daemon itself, so by default it
+ * talks to the daemon over the **same origin** — an empty base URL, i.e. every
+ * request goes to `/api/*` on `/`. No host wiring is required for that case.
+ *
+ * Two optional overrides exist, applied independently for base URL and token:
+ *   1. `window.__ANGEL_DAEMON__` — the host injects a base URL and/or token at
+ *      runtime (e.g. when the frontend and daemon are on different origins, or
+ *      when the daemon's bearer token must be supplied).
+ *   2. Vite env (`VITE_DAEMON_URL` / `VITE_DAEMON_TOKEN`) — handy for
+ *      `pnpm dev` against a separately running daemon.
  */
 export interface DaemonConfig {
+  /** Empty string means same-origin: requests are made to `/api/*` on `/`. */
   baseUrl: string;
   token: string | null;
 }
@@ -18,34 +24,29 @@ declare global {
   }
 }
 
-function trimTrailingSlash(value: string): string {
-  return value.endsWith("/") ? value.slice(0, -1) : value;
+function firstNonEmpty(...values: Array<string | undefined>): string | null {
+  for (const value of values) {
+    if (typeof value === "string" && value.length > 0) return value;
+  }
+  return null;
+}
+
+function normalizeBaseUrl(value: string | null): string {
+  // null / "" / "/" all mean "same origin" — a relative "" base.
+  if (value === null || value === "/") return "";
+  const trimmed = value.trim();
+  if (trimmed === "" || trimmed === "/") return "";
+  return trimmed.endsWith("/") ? trimmed.slice(0, -1) : trimmed;
 }
 
 export function resolveDaemonConfig(): DaemonConfig {
   const injected =
     typeof window !== "undefined" ? window.__ANGEL_DAEMON__ : undefined;
-  if (injected?.baseUrl !== undefined && injected.baseUrl.length > 0) {
-    return {
-      baseUrl: trimTrailingSlash(injected.baseUrl),
-      token: injected.token ?? null,
-    };
-  }
 
-  const envUrl = import.meta.env.VITE_DAEMON_URL;
-  const envToken = import.meta.env.VITE_DAEMON_TOKEN;
-  if (typeof envUrl === "string" && envUrl.length > 0) {
-    return {
-      baseUrl: trimTrailingSlash(envUrl),
-      token:
-        typeof envToken === "string" && envToken.length > 0 ? envToken : null,
-    };
-  }
-
-  const origin = typeof window !== "undefined" ? window.location.origin : "";
   return {
-    baseUrl: trimTrailingSlash(origin),
-    token:
-      typeof envToken === "string" && envToken.length > 0 ? envToken : null,
+    baseUrl: normalizeBaseUrl(
+      firstNonEmpty(injected?.baseUrl, import.meta.env.VITE_DAEMON_URL),
+    ),
+    token: firstNonEmpty(injected?.token, import.meta.env.VITE_DAEMON_TOKEN),
   };
 }

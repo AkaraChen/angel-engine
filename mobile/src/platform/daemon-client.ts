@@ -60,6 +60,19 @@ export function createDaemonClient(config: DaemonConfig): DaemonClient {
         response.status,
       );
     }
+
+    // When the mobile app is served by a plain static server (not the daemon),
+    // unknown routes fall back to `index.html`. Guard against parsing that HTML
+    // as JSON so the failure is legible instead of an opaque parse error.
+    const contentType = response.headers.get("content-type") ?? "";
+    if (!contentType.includes("application/json")) {
+      throw new DaemonRequestError(
+        `Daemon returned a non-JSON response for ${path} ` +
+          `(content-type: ${contentType.length > 0 ? contentType : "unknown"}). ` +
+          `Is the mobile app being served by the daemon?`,
+        response.status,
+      );
+    }
     return (await response.json()) as T;
   }
 

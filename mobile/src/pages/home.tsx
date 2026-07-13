@@ -16,13 +16,9 @@ export function HomePage() {
 
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <header
-        className="
-        flex shrink-0 items-center justify-between px-4 pt-3 pb-2
-      "
-      >
+      <header className="flex shrink-0 items-center justify-between px-4 pt-3 pb-2">
         <h1 className="font-heading text-xl font-semibold">Chats</h1>
-        <Button size="icon" variant="ghost">
+        <Button aria-label="New chat" size="icon" variant="ghost">
           <PencilSimple size={20} />
         </Button>
       </header>
@@ -65,9 +61,9 @@ function EmptyState() {
   return (
     <div
       className="
-      flex flex-col items-center gap-2 px-6 py-16 text-center
-      text-muted-foreground
-    "
+        flex flex-col items-center gap-2 px-6 py-16 text-center
+        text-muted-foreground
+      "
     >
       <ChatCircle size={40} />
       <p className="text-sm">No chats yet.</p>
