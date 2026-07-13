@@ -40,7 +40,12 @@ impl AngelSession {
     }
 
     pub fn hydrate(&mut self, request: HydrateRequest) -> ClientResult<ConversationSnapshot> {
+        let conversation_was_started = self.conversation_id.is_some();
         self.ensure_started(false, request.cwd, request.remote_id)?;
+        if conversation_was_started && self.active_turn.is_none() {
+            let update = self.client.drain(Duration::from_millis(250))?;
+            check_update_fault(&update)?;
+        }
         self.thread_state()
             .ok_or_else(|| invalid_input("Runtime did not return a conversation snapshot."))
     }

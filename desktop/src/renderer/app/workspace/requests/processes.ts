@@ -3,6 +3,7 @@ import type { QueryClient } from "@tanstack/react-query";
 import type { DaemonClient } from "@/platform/daemon";
 
 import { mutationOptions, queryOptions } from "@tanstack/react-query";
+import { queryKeys } from "@/platform/query-keys";
 import { workspaceProcessQueryKeys } from "./keys";
 
 export interface ProcessRegistrySnapshot {
@@ -33,9 +34,11 @@ export function processRegistryQueryOptions({
 }
 
 export function killProcessMutationOptions({
+  chatId,
   client,
   queryClient,
 }: {
+  chatId?: string | null;
   client: DaemonClient;
   queryClient: QueryClient;
 }) {
@@ -59,6 +62,12 @@ export function killProcessMutationOptions({
       await queryClient.invalidateQueries({
         queryKey: workspaceProcessQueryKeys.all(),
       });
+      if (typeof chatId === "string" && chatId.length > 0) {
+        await queryClient.refetchQueries({
+          queryKey: queryKeys.chats.detail(chatId),
+          type: "active",
+        });
+      }
     },
   });
 }

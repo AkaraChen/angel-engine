@@ -47,7 +47,7 @@ export const WorkspaceProcessesView: FC<WorkspaceProcessesViewProps> = ({
   const killMutation = useMutation(
     client === null
       ? { mutationFn: async () => undefined }
-      : killProcessMutationOptions({ client, queryClient }),
+      : killProcessMutationOptions({ chatId, client, queryClient }),
   );
 
   if (client === null) return <PanelMessage message="Backend unavailable" />;
