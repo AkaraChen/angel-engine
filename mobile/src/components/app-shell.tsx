@@ -2,16 +2,39 @@ import type { PropsWithChildren } from "react";
 
 import { useRoute } from "wouter";
 
-import { TabBar } from "@/components/tab-bar";
+import { AppSidebar } from "@/components/app-sidebar";
+import { Separator } from "@/components/ui/separator";
+import {
+  SidebarInset,
+  SidebarProvider,
+  SidebarTrigger,
+} from "@/components/ui/sidebar";
+
+function useRouteTitle(): string {
+  const [isSettings] = useRoute("/settings");
+  const chatMatch = useRoute("/chat/:chatId");
+  if (isSettings) return "Settings";
+  if (chatMatch[0]) return `Chat ${chatMatch[1].chatId}`;
+  return "Chats";
+}
 
 export function AppShell({ children }: PropsWithChildren) {
-  // The chat detail view is immersive and manages its own footer input, so the
-  // bottom tab bar is hidden there.
-  const [isChatDetail] = useRoute("/chat/:chatId");
+  const title = useRouteTitle();
   return (
-    <div className="flex size-full min-h-0 flex-col bg-background text-foreground">
-      <main className="min-h-0 flex-1 overflow-hidden">{children}</main>
-      {isChatDetail ? null : <TabBar />}
-    </div>
+    <SidebarProvider>
+      <AppSidebar />
+      <SidebarInset className="h-svh min-h-0">
+        <header
+          className="
+          flex h-12 shrink-0 items-center gap-2 border-b border-border px-2
+        "
+        >
+          <SidebarTrigger />
+          <Separator className="mr-1 h-5" orientation="vertical" />
+          <h1 className="font-heading text-base font-semibold">{title}</h1>
+        </header>
+        <main className="min-h-0 flex-1 overflow-hidden">{children}</main>
+      </SidebarInset>
+    </SidebarProvider>
   );
 }

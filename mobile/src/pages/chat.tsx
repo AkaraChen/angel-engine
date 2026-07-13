@@ -1,7 +1,6 @@
 import type { ChatMessage } from "@/platform/chat-types";
 
-import { ArrowLeft, PaperPlaneTilt } from "@phosphor-icons/react";
-import { Link } from "wouter";
+import { PaperPlaneTilt } from "@phosphor-icons/react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -20,20 +19,9 @@ const DEMO_MESSAGES: ChatMessage[] = [
   { id: "1", role: "assistant", text: "Hi! How can I help you today?" },
 ];
 
-export function ChatPage({ chatId }: { chatId: string }) {
+export function ChatPage(_props: { chatId: string }) {
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <header className="flex shrink-0 items-center gap-2 border-b border-border p-2">
-        <Button aria-label="Back" asChild size="icon" variant="ghost">
-          <Link href="/">
-            <ArrowLeft size={20} />
-          </Link>
-        </Button>
-        <h1 className="min-w-0 flex-1 truncate font-heading font-semibold">
-          Chat {chatId}
-        </h1>
-      </header>
-
       <MessageScrollerProvider>
         <MessageScroller className="min-h-0 flex-1">
           <MessageScrollerViewport className="h-full">

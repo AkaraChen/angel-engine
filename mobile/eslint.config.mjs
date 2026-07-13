@@ -4,7 +4,12 @@ import betterTailwindcss from "eslint-plugin-better-tailwindcss";
 export default antfu(
   {
     type: "app",
-    ignores: ["dist/**", "node_modules/**", "src/components/ui/**"],
+    ignores: [
+      "dist/**",
+      "node_modules/**",
+      "src/components/ui/**",
+      "src/hooks/**",
+    ],
     react: true,
     typescript: {
       tsconfigPath: "tsconfig.json",
