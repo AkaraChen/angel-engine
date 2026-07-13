@@ -34,6 +34,9 @@ export default antfu(
       },
     },
     rules: {
+      // Prettier owns line formatting; this stylistic rule fights it, so keep
+      // the correctness-oriented tailwind rules and drop the wrapping one.
+      "better-tailwindcss/enforce-consistent-line-wrapping": "off",
       "better-tailwindcss/enforce-shorthand-classes": "error",
       "better-tailwindcss/no-conflicting-classes": "error",
       "better-tailwindcss/no-duplicate-classes": "error",
