@@ -207,6 +207,11 @@ const config: ForgeConfig = {
       // If you are familiar with Vite configuration, it will look really familiar.
       build: [
         {
+          entry: "../packages/daemon/src/main.ts",
+          config: "vite.daemon.config.ts",
+          target: "main",
+        },
+        {
           // `entry` is just an alias for `build.lib.entry` in the corresponding file of `config`.
           entry: "src/main/index.ts",
           config: "vite.main.config.ts",

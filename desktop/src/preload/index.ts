@@ -11,3 +11,5 @@ exposeTipcClientBridge();
 exposeChatStreamBridge();
 exposeTerminalBridge();
 exposeWorkspaceBrowserBridge();
+import { exposeDaemonBridge } from "./bridges/daemon";
+exposeDaemonBridge();

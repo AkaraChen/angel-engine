@@ -1,4 +1,5 @@
 import type { ChatStreamApi } from "@shared/chat";
+import type { DaemonApi } from "@shared/daemon";
 import type {
   DesktopConfirmDeleteArchivedChatsInput,
   DesktopConfirmDeleteCustomAgentInput,
@@ -40,6 +41,7 @@ declare global {
     | "netbsd";
 
   interface Window {
+    daemon: DaemonApi;
     desktopEnvironment: {
       getPathForFile: (file: File) => string | null;
       platform: DesktopPlatform;

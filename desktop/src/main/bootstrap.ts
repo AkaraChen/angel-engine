@@ -1,4 +1,8 @@
 import { getDatabase } from "./db/client";
+import {
+  startDaemonSupervisor,
+  stopDaemonSupervisor,
+} from "./daemon/supervisor";
 import { createChatRuntime } from "./features/chat/engine-runtime";
 import { closeProjectsDatabase } from "./features/projects/repository";
 import { registerAllIpc } from "./ipc/register";
@@ -9,15 +13,17 @@ import { openSettingsWindow } from "./windows/settings-window";
 
 const chatRuntime = createChatRuntime();
 
-export function bootstrap() {
+export async function bootstrap() {
   getDatabase();
   registerAllIpc({ chatRuntime, openSettingsWindow });
+  await startDaemonSupervisor();
   configureApplicationMenu({ openSettingsWindow });
   configureAutoUpdates();
   createMainWindow();
 }
 
-export function beforeQuit() {
+export async function beforeQuit() {
+  await stopDaemonSupervisor();
   chatRuntime.closeChatSession();
   closeProjectsDatabase();
 }

@@ -3,6 +3,7 @@ import { registerIpcMain } from "@egoist/tipc/main";
 
 import { ipcMain } from "electron";
 import { DESKTOP_SETTINGS_OPEN_CHANNEL } from "../../shared/desktop-window";
+import { registerDaemonIpc } from "../daemon/supervisor";
 import { registerChatStreamIpc } from "../features/chat/stream-handler";
 import { registerTerminalIpc } from "../features/terminal/ipc";
 import { registerWorkspaceBrowserIpc } from "../features/workspace-browser/ipc";
@@ -20,6 +21,7 @@ export function registerAllIpc({
   chatRuntime,
   openSettingsWindow,
 }: RegisterAllIpcOptions) {
+  registerDaemonIpc();
   registerIpcMain(createAppRouter(chatRuntime));
   registerDesktopWindowAppearanceIpc();
   registerDesktopWindowIpc();

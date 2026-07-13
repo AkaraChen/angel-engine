@@ -25,7 +25,13 @@ void app
     app.quit();
   });
 
-app.on("before-quit", beforeQuit);
+let shuttingDown = false;
+app.on("before-quit", (event) => {
+  if (shuttingDown) return;
+  event.preventDefault();
+  shuttingDown = true;
+  void beforeQuit().finally(() => app.quit());
+});
 
 app.on("window-all-closed", () => {
   if (process.platform !== "darwin") {
