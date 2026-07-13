@@ -8,7 +8,7 @@
   }
 
   /* Assistant message markdown typography. Spacing derives from --spacing so
-     the work-mode density remap keeps applying. */
+     the project-mode density remap keeps applying. */
   .chat-markdown {
     color: color-mix(in oklch, var(--foreground) 90%, transparent);
     font-size: var(--workspace-message-text-size);
