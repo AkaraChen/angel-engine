@@ -118,7 +118,7 @@ describe("useConversation", () => {
                 ],
         });
       }
-      if (url.includes("/api/chat-streams") && method === "POST") {
+      if (url.includes("/api/chat-streams?") && method === "POST") {
         sse = controllableSse(init?.signal ?? undefined);
         return sse.response;
       }
@@ -168,7 +168,7 @@ describe("useConversation", () => {
         const id = url.includes("c2") ? "c2" : "c1";
         return jsonResponse({ chat: { id, title: id }, messages: [] });
       }
-      if (url.includes("/api/chat-streams") && method === "POST") {
+      if (url.includes("/api/chat-streams?") && method === "POST") {
         sse = controllableSse(init?.signal ?? undefined);
         return sse.response;
       }
@@ -201,5 +201,114 @@ describe("useConversation", () => {
           init?.method === "DELETE",
       ),
     ).toBe(true);
+  });
+
+  it("surfaces an elicitation and resolves it so the turn continues", async () => {
+    let sse: SseHandle | undefined;
+    const fetchMock = vi.fn(async (url: string, init?: RequestInit) => {
+      const method = init?.method ?? "GET";
+      if (url.endsWith("/load"))
+        return jsonResponse({ chat: { id: "c1", title: "c1" }, messages: [] });
+      if (url.includes("/api/chat-streams?") && method === "POST") {
+        sse = controllableSse(init?.signal ?? undefined);
+        return sse.response;
+      }
+      return jsonResponse({ ok: true });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const { result } = renderHook(() => useConversation("c1"), { wrapper });
+    await waitFor(() => expect(result.current.isPending).toBe(false));
+
+    act(() => result.current.send("hi"));
+    await waitFor(() => expect(sse).toBeDefined());
+    act(() =>
+      sse!.push({
+        type: "elicitation",
+        elicitation: { id: "elic-1", kind: "Approval", title: "Run tests?" },
+      }),
+    );
+
+    await waitFor(() =>
+      expect(result.current.pendingElicitation?.id).toBe("elic-1"),
+    );
+
+    act(() => result.current.respondElicitation({ type: "allow" }));
+
+    // The response is posted and the prompt clears.
+    await waitFor(() =>
+      expect(
+        fetchMock.mock.calls.some(
+          ([url]) => typeof url === "string" && url.endsWith("/elicitation"),
+        ),
+      ).toBe(true),
+    );
+    expect(result.current.pendingElicitation).toBeNull();
+
+    act(() => {
+      sse!.push({ type: "delta", part: "text", text: "Done" });
+      sse!.push({ type: "done" });
+      sse!.close();
+    });
+    await waitFor(() => expect(result.current.isStreaming).toBe(false));
+  });
+
+  it("stop finalizes the partial turn without an error bubble", async () => {
+    let loadCalls = 0;
+    let sse: SseHandle | undefined;
+    const fetchMock = vi.fn(async (url: string, init?: RequestInit) => {
+      const method = init?.method ?? "GET";
+      if (url.endsWith("/load")) {
+        loadCalls += 1;
+        return jsonResponse({
+          chat: { id: "c1", title: "c1" },
+          messages:
+            loadCalls === 1
+              ? []
+              : [
+                  {
+                    id: "u",
+                    role: "user",
+                    content: [{ type: "text", text: "hi" }],
+                  },
+                  {
+                    id: "a",
+                    role: "assistant",
+                    content: [{ type: "text", text: "Partial" }],
+                  },
+                ],
+        });
+      }
+      if (url.includes("/api/chat-streams?") && method === "POST") {
+        sse = controllableSse(init?.signal ?? undefined);
+        return sse.response;
+      }
+      return jsonResponse({ ok: true });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const { result } = renderHook(() => useConversation("c1"), { wrapper });
+    await waitFor(() => expect(result.current.isPending).toBe(false));
+
+    act(() => result.current.send("hi"));
+    await waitFor(() => expect(sse).toBeDefined());
+    act(() => sse!.push({ type: "delta", part: "text", text: "Partial" }));
+    await waitFor(() =>
+      expect(result.current.messages.at(-1)?.text).toBe("Partial"),
+    );
+
+    act(() => result.current.stop());
+
+    // Stop is not a failure: no error bubble, and the partial reply is kept.
+    await waitFor(() => expect(result.current.isStreaming).toBe(false));
+    expect(result.current.messages.some((m) => m.status === "error")).toBe(
+      false,
+    );
+    await waitFor(() =>
+      expect(result.current.messages.map((m) => [m.role, m.text])).toEqual([
+        ["user", "hi"],
+        ["assistant", "Partial"],
+      ]),
+    );
   });
 });

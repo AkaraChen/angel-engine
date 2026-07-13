@@ -118,14 +118,47 @@ export interface ChatSendInput {
 }
 
 /**
+ * An elicitation the daemon raises mid-turn (a permission prompt or an input
+ * request). Narrowed projection of `ChatElicitation`: the mobile UI renders the
+ * title/body and, for approval-style prompts, the allow/deny choices. `kind`
+ * mirrors the engine's `ElicitationKind` ("Approval", "PermissionProfile",
+ * "UserInput", "ExternalFlow", "DynamicToolCall").
+ */
+export interface DaemonElicitation {
+  id: string;
+  kind: string;
+  title?: string | null;
+  body?: string | null;
+  choices?: string[];
+}
+
+/**
+ * The subset of `ChatElicitationResponse` the mobile UI can produce: approve or
+ * deny a permission prompt, or cancel any elicitation to unblock the turn. Answer
+ * / dynamic-tool / raw responses are a follow-up.
+ */
+export type ChatElicitationResponse =
+  | { type: "allow" }
+  | { type: "allowForSession" }
+  | { type: "deny" }
+  | { type: "cancel" };
+
+/** Payload for `POST /api/chat-streams/:id/elicitation`. */
+export interface ElicitationResolveInput {
+  elicitationId: string;
+  response: ChatElicitationResponse;
+}
+
+/**
  * The streaming events the daemon emits over SSE while an assistant turn runs
  * (`POST /api/chat-streams`), mirroring the `ChatStreamEvent` union in
- * `@angel-engine/daemon-api/chat`. The mobile view consumes text/reasoning deltas
- * plus the terminal `result`/`error`/`done` events; richer events (chat, plan,
- * tool, elicitation) still arrive but are ignored.
+ * `@angel-engine/daemon-api/chat`. The mobile view consumes text/reasoning deltas,
+ * `elicitation` prompts, and the terminal `result`/`error`/`done` events; the
+ * remaining events (chat, plan, tool) still arrive but are ignored.
  */
 export type ChatStreamEvent =
   | { type: "delta"; part: "reasoning" | "text"; text: string; turnId?: string }
+  | { type: "elicitation"; elicitation: DaemonElicitation }
   | { type: "result"; result: { text: string } }
   | { type: "error"; message: string }
   | { type: "done" };

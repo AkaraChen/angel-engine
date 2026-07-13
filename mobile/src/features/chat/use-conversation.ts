@@ -1,6 +1,8 @@
 import type {
+  ChatElicitationResponse,
   ChatLoadResult,
   ConversationMessage,
+  DaemonElicitation,
   DaemonMessagePart,
 } from "@/platform/chat-types";
 
@@ -39,6 +41,10 @@ export interface Conversation {
   send: (text: string) => void;
   /** Abort the in-flight assistant turn, if any. */
   stop: () => void;
+  /** An elicitation (permission/input prompt) the daemon is waiting on, if any. */
+  pendingElicitation: DaemonElicitation | null;
+  /** Answer the pending elicitation so the waiting turn can continue. */
+  respondElicitation: (response: ChatElicitationResponse) => void;
 }
 
 interface LiveTurn {
@@ -58,7 +64,19 @@ const EMPTY_TURN: LiveTurn = {
 };
 
 function newStreamId(): string {
-  return crypto.randomUUID();
+  // `crypto.randomUUID` is only available in secure contexts; the mobile app may
+  // be served over plain http from the daemon, so fall back to a manual v4.
+  if (
+    typeof crypto !== "undefined" &&
+    typeof crypto.randomUUID === "function"
+  ) {
+    return crypto.randomUUID();
+  }
+  return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (char) => {
+    const random = Math.floor(Math.random() * 16);
+    const value = char === "x" ? random : (random & 0x3) | 0x8;
+    return value.toString(16);
+  });
 }
 
 /**
@@ -78,6 +96,7 @@ export function useConversation(chatId: string): Conversation {
   const abortRef = useRef<AbortController | null>(null);
   const streamIdRef = useRef<string | null>(null);
   const liveTurnRef = useRef<LiveTurn>(EMPTY_TURN);
+  const elicitationRef = useRef<DaemonElicitation | null>(null);
   const [, forceRender] = useReducer((n: number) => n + 1, 0);
 
   const updateAssistant = useCallback((patch: Partial<LiveTurn>) => {
@@ -105,6 +124,10 @@ export function useConversation(chatId: string): Conversation {
                 ? { assistantReasoning: turn.assistantReasoning + delta }
                 : { assistantText: turn.assistantText + delta },
             );
+          } else if (event.type === "elicitation") {
+            // The daemon is blocked waiting for the user to answer; surface it.
+            elicitationRef.current = event.elicitation;
+            forceRender();
           } else if (event.type === "result") {
             updateAssistant({ assistantText: event.result.text });
           } else if (event.type === "error") {
@@ -113,13 +136,21 @@ export function useConversation(chatId: string): Conversation {
             break;
           }
         }
+      } catch (error) {
+        // A user Stop or a chat switch aborts the fetch, which surfaces as an
+        // expected AbortError — not a turn failure. Swallow it and let the
+        // partial turn finalize; rethrow anything else so it shows as an error.
+        if (!controller.signal.aborted) throw error;
       } finally {
         abortRef.current = null;
         streamIdRef.current = null;
+        elicitationRef.current = null;
       }
     },
     onSuccess: async (_data, text) => {
       const turn = liveTurnRef.current;
+      // Skip if the turn was disposed (chat switch/unmount cleared the ref).
+      if (turn.userId.length === 0) return;
       const content: DaemonMessagePart[] = [];
       if (turn.assistantReasoning.length > 0)
         content.push({ type: "reasoning", text: turn.assistantReasoning });
@@ -183,9 +214,28 @@ export function useConversation(chatId: string): Conversation {
   const stop = useCallback(() => {
     const streamId = streamIdRef.current;
     abortRef.current?.abort();
+    elicitationRef.current = null;
+    forceRender();
     if (streamId !== null)
       void daemon.abortChatStream(streamId).catch(() => {});
   }, [daemon]);
+
+  const respondElicitation = useCallback(
+    (response: ChatElicitationResponse) => {
+      const streamId = streamIdRef.current;
+      const elicitation = elicitationRef.current;
+      if (streamId === null || elicitation === null) return;
+      elicitationRef.current = null;
+      forceRender();
+      void daemon
+        .resolveElicitation(streamId, {
+          elicitationId: elicitation.id,
+          response,
+        })
+        .catch(() => {});
+    },
+    [daemon],
+  );
 
   // Reset all live/optimistic state when the chat changes (or on unmount): abort
   // the in-flight stream, drop the local turn, and clear mutation status so the
@@ -199,6 +249,7 @@ export function useConversation(chatId: string): Conversation {
       abortRef.current = null;
       streamIdRef.current = null;
       liveTurnRef.current = EMPTY_TURN;
+      elicitationRef.current = null;
       reset();
     };
   }, [chatId, daemon, reset]);
@@ -218,6 +269,8 @@ export function useConversation(chatId: string): Conversation {
     isStreaming: mutation.isPending,
     send,
     stop,
+    pendingElicitation: elicitationRef.current,
+    respondElicitation,
   };
 }
 

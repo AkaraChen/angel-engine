@@ -133,4 +133,23 @@ describe("chat metadata + history", () => {
     expect(url).toBe("/api/chat-streams/stream-9");
     expect(init.method).toBe("DELETE");
   });
+
+  it("resolves an elicitation via POST /api/chat-streams/:id/elicitation", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue(jsonResponse({ resolved: true }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const client = createDaemonClient({ baseUrl: "", token: null });
+    await client.resolveElicitation("stream-9", {
+      elicitationId: "elic-1",
+      response: { type: "allow" },
+    });
+    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(url).toBe("/api/chat-streams/stream-9/elicitation");
+    expect(init.method).toBe("POST");
+    expect(init.body).toBe(
+      JSON.stringify({ elicitationId: "elic-1", response: { type: "allow" } }),
+    );
+  });
 });

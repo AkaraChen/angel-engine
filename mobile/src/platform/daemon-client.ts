@@ -6,6 +6,7 @@ import type {
   DaemonAgentOption,
   DaemonChat,
   DaemonProject,
+  ElicitationResolveInput,
 } from "./chat-types";
 import type { DaemonConfig } from "./daemon-config";
 
@@ -71,6 +72,14 @@ export interface DaemonClient {
   ) => AsyncIterable<ChatStreamEvent>;
   /** Ask the daemon to abort an in-flight stream (`DELETE /api/chat-streams/:id`). */
   abortChatStream: (streamId: string) => Promise<void>;
+  /**
+   * Answer an elicitation the daemon raised mid-stream
+   * (`POST /api/chat-streams/:id/elicitation`), letting the waiting turn proceed.
+   */
+  resolveElicitation: (
+    streamId: string,
+    input: ElicitationResolveInput,
+  ) => Promise<void>;
 }
 
 /**
@@ -186,6 +195,12 @@ export function createDaemonClient(config: DaemonConfig): DaemonClient {
       await request<{ ok: boolean }>(
         `/api/chat-streams/${encodeURIComponent(streamId)}`,
         { method: "DELETE" },
+      );
+    },
+    resolveElicitation: async (streamId, input) => {
+      await request<{ resolved: boolean }>(
+        `/api/chat-streams/${encodeURIComponent(streamId)}/elicitation`,
+        { method: "POST", body: JSON.stringify(input) },
       );
     },
   };

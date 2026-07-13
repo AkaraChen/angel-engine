@@ -1,10 +1,21 @@
 import type { FormEvent, KeyboardEvent } from "react";
-import type { ConversationMessage } from "@/platform/chat-types";
+import type {
+  ChatElicitationResponse,
+  ConversationMessage,
+  DaemonElicitation,
+} from "@/platform/chat-types";
 
-import { ArrowUp, ChatCircle, Square, Warning } from "@phosphor-icons/react";
+import {
+  ArrowUp,
+  ChatCircle,
+  ShieldCheck,
+  Square,
+  Warning,
+} from "@phosphor-icons/react";
 import { useState } from "react";
 
 import { Bubble, BubbleContent } from "@/components/ui/bubble";
+import { Button } from "@/components/ui/button";
 import {
   Empty,
   EmptyDescription,
@@ -61,6 +72,14 @@ export function ChatPage({ chatId }: { chatId: string }) {
                   </MessageScrollerItem>
                 ))
               )}
+              {conversation.pendingElicitation !== null ? (
+                <MessageScrollerItem scrollAnchor>
+                  <ElicitationPrompt
+                    elicitation={conversation.pendingElicitation}
+                    onRespond={conversation.respondElicitation}
+                  />
+                </MessageScrollerItem>
+              ) : null}
             </MessageScrollerContent>
           </MessageScrollerViewport>
           <MessageScrollerButton />
@@ -117,6 +136,66 @@ function MessageBubble({ message }: { message: ConversationMessage }) {
         </MessageContent>
       </Message>
     </MessageGroup>
+  );
+}
+
+const APPROVAL_KINDS = new Set(["Approval", "PermissionProfile"]);
+
+function ElicitationPrompt({
+  elicitation,
+  onRespond,
+}: {
+  elicitation: DaemonElicitation;
+  onRespond: (response: ChatElicitationResponse) => void;
+}) {
+  const isApproval = APPROVAL_KINDS.has(elicitation.kind);
+  return (
+    <div className="rounded-xl border border-border bg-card p-3">
+      <div className="flex items-center gap-1.5 text-sm font-medium">
+        <ShieldCheck
+          className="shrink-0 text-primary"
+          size={16}
+          weight="fill"
+        />
+        {elicitation.title ?? "The agent needs your input"}
+      </div>
+      {elicitation.body !== null && elicitation.body !== undefined ? (
+        <p className="mt-1 text-sm whitespace-pre-wrap text-muted-foreground">
+          {elicitation.body}
+        </p>
+      ) : null}
+      <div className="mt-3 flex flex-wrap gap-2">
+        {isApproval ? (
+          <>
+            <Button onClick={() => onRespond({ type: "allow" })} size="sm">
+              Allow
+            </Button>
+            <Button
+              onClick={() => onRespond({ type: "allowForSession" })}
+              size="sm"
+              variant="outline"
+            >
+              Allow for session
+            </Button>
+            <Button
+              onClick={() => onRespond({ type: "deny" })}
+              size="sm"
+              variant="outline"
+            >
+              Deny
+            </Button>
+          </>
+        ) : (
+          <Button
+            onClick={() => onRespond({ type: "cancel" })}
+            size="sm"
+            variant="outline"
+          >
+            Dismiss
+          </Button>
+        )}
+      </div>
+    </div>
   );
 }
 
