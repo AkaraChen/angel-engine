@@ -1,16 +1,20 @@
-import type { AgentOption, AgentRuntime, AgentSettings } from "@shared/agents";
+import type {
+  AgentOption,
+  AgentRuntime,
+  AgentSettings,
+} from "@angel-engine/daemon-api/agents";
 import type { KeyboardEvent } from "react";
 import type { SettingsTab } from "@/features/settings/settings-tabs";
 import type { SupportedLanguage } from "@/i18n";
 import type { DesktopThemeMode } from "@/platform/theme";
 import {
+  isCustomAgentRuntime,
+  sortAgentOptionsBySettings,
+} from "@angel-engine/daemon-api/agents";
+import {
   WarningCircle as AlertTriangle,
   Trash as Trash2,
 } from "@phosphor-icons/react";
-import {
-  isCustomAgentRuntime,
-  sortAgentOptionsBySettings,
-} from "@shared/agents";
 
 import { useQueryClient } from "@tanstack/react-query";
 import { m } from "framer-motion";
@@ -18,6 +22,7 @@ import { useCallback, useId, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
+import { useAgentCatalog } from "@/features/agents/agent-catalog-context";
 import { ArchivedSettingsPanel } from "@/features/settings/archived-settings-panel";
 import { BuiltinAgentsSettingsGroup } from "@/features/settings/builtin-agent-settings";
 import { CustomAgentsSettingsGroup } from "@/features/settings/custom-agent-settings";
@@ -71,7 +76,7 @@ export function SettingsPage({
   const setWorktreeDirtyPromptEnabled = useSettingsStore(
     (state) => state.setWorktreeDirtyPromptEnabled,
   );
-  const customAgents = useSettingsStore((state) => state.customAgents);
+  const { customAgents } = useAgentCatalog();
   const createCustomAgent = useSettingsStore(
     (state) => state.createCustomAgent,
   );

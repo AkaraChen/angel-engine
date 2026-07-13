@@ -1,6 +1,8 @@
-import type { Chat } from "@shared/chat";
-import type { Project } from "@shared/projects";
+import type { Chat } from "@angel-engine/daemon-api/chat";
+import type { Project } from "@angel-engine/daemon-api/projects";
 import type { ReactElement } from "react";
+import type { ProjectWorktreeChatGroup } from "@/features/chat/worktree-grouping";
+
 import {
   CaretDown as ChevronDown,
   Folder,
@@ -9,7 +11,6 @@ import {
   SpinnerGap as Loader2,
   Plus,
 } from "@phosphor-icons/react";
-
 import { AnimatePresence, m } from "framer-motion";
 import { useEffect, useMemo } from "react";
 import { useTranslation } from "react-i18next";
@@ -27,10 +28,7 @@ import {
   WorkspaceSidebarMenuAction,
   WorkspaceSidebarMenuButton,
 } from "@/components/workspace-sidebar-primitives";
-import {
-  groupProjectChatsByWorktree,
-  type ProjectWorktreeChatGroup,
-} from "@/features/chat/worktree-grouping";
+import { groupProjectChatsByWorktree } from "@/features/chat/worktree-grouping";
 
 type MaybeAsync = void | Promise<void>;
 

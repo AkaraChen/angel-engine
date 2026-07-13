@@ -1,8 +1,8 @@
-import type { WorkspaceToolSurfaceDynamicTab } from "@shared/workspace-tool-surface";
 import type {
   WorkspaceFileReadResult,
   WorkspaceGitDiffResult,
-} from "@shared/workspace-tools";
+} from "@angel-engine/daemon-api/workspace-tools";
+import type { WorkspaceToolSurfaceDynamicTab } from "@shared/workspace-tool-surface";
 import type { ApiClient } from "@/platform/api-client";
 
 import is from "@sindresorhus/is";
@@ -14,8 +14,8 @@ import {
   getErrorMessage,
 } from "@/app/workspace/workspace-file-display";
 import { WorkspaceToolEmpty } from "@/app/workspace/workspace-tool-layout";
-import { buildWorkspaceToolPatchList } from "@/app/workspace/workspace-tool-patch-model";
 import { WorkspaceToolPatchFileRows } from "@/app/workspace/workspace-tool-patch-list";
+import { buildWorkspaceToolPatchList } from "@/app/workspace/workspace-tool-patch-model";
 import { queryKeys } from "@/platform/query-keys";
 
 export function WorkspaceFilePreview({

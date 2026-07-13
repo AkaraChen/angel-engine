@@ -1,6 +1,9 @@
 "use client";
 
-import type { AgentOption, AgentRuntime } from "@shared/agents";
+import type {
+  AgentOption,
+  AgentRuntime,
+} from "@angel-engine/daemon-api/agents";
 
 import claudeIconUrl from "@lobehub/icons-static-svg/icons/claudecode-color.svg";
 import clineIconUrl from "@lobehub/icons-static-svg/icons/cline.svg";

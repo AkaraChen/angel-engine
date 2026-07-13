@@ -1,13 +1,14 @@
 import type {
+  ChatSendInput,
+  ChatStreamController,
+  ChatStreamEvent,
+} from "@angel-engine/daemon-api/chat";
+import type {
   AgentAdapter,
   AgentRunContext,
   ChatStreamEvent as ClientChatStreamEvent,
 } from "@angel-engine/js-client";
-import type {
-  ChatSendInput,
-  ChatStreamController,
-  ChatStreamEvent,
-} from "@shared/chat";
+import { getDaemonTransport } from "@/platform/daemon-transport";
 
 interface DesktopAgentAdapterOptions {
   onController?: (controller: ChatStreamController) => void;
@@ -32,49 +33,82 @@ async function* streamDesktopChatEvents(
   context: AgentRunContext,
   onController?: (controller: ChatStreamController) => void,
 ) {
-  const events = new AsyncEventQueue<ChatStreamEvent>();
-  const controller = window.chatStream.send(input, (event) =>
-    events.push(event),
-  );
-  const abort = () => events.push({ type: "done" });
+  const streamId = crypto.randomUUID();
+  const transport = getDaemonTransport();
+  const abortController = new AbortController();
+  const abort = () => abortController.abort();
+  const controller: ChatStreamController = {
+    cancel() {
+      abortController.abort();
+      void transport.fetch(`/api/chat-streams/${streamId}`, {
+        method: "DELETE",
+      });
+    },
+    async resolveElicitation({ elicitationId, response }) {
+      const result = await transport.fetch(
+        `/api/chat-streams/${streamId}/elicitation`,
+        {
+          body: JSON.stringify({ elicitationId, response }),
+          headers: { "content-type": "application/json" },
+          method: "POST",
+        },
+      );
+      if (!result.ok)
+        throw new Error(`Could not resolve elicitation (${result.status}).`);
+    },
+  };
   onController?.(controller);
-
   context.signal.addEventListener("abort", abort, { once: true });
 
   try {
-    while (!context.signal.aborted) {
-      const event = await events.next();
+    const response = await transport.fetch(
+      `/api/chat-streams?streamId=${encodeURIComponent(streamId)}`,
+      {
+        body: JSON.stringify(input),
+        headers: {
+          accept: "text/event-stream",
+          "content-type": "application/json",
+        },
+        method: "POST",
+        signal: abortController.signal,
+      },
+    );
+    if (!response.ok || response.body === null) {
+      throw new Error(`Chat stream failed (${response.status}).`);
+    }
+    for await (const event of parseSse(response.body)) {
       yield event;
-      if (event.type === "done") break;
+      if (event.type === "done") return;
     }
   } finally {
     context.signal.removeEventListener("abort", abort);
-    controller.cancel();
+    abortController.abort();
   }
 }
 
-class AsyncEventQueue<T> {
-  private readonly items: T[] = [];
-  private readonly waiters: Array<(item: T) => void> = [];
-
-  async next() {
-    const item = this.items.shift();
-    if (item !== undefined) {
-      return Promise.resolve(item);
+async function* parseSse(stream: ReadableStream<Uint8Array>) {
+  const reader = stream.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+      let boundary = buffer.indexOf("\n\n");
+      while (boundary >= 0) {
+        const frame = buffer.slice(0, boundary);
+        buffer = buffer.slice(boundary + 2);
+        const data = frame
+          .split("\n")
+          .filter((line) => line.startsWith("data:"))
+          .map((line) => line.slice(5).trimStart())
+          .join("\n");
+        if (data.length > 0) yield JSON.parse(data) as ChatStreamEvent;
+        boundary = buffer.indexOf("\n\n");
+      }
     }
-
-    return new Promise<T>((resolve) => {
-      this.waiters.push(resolve);
-    });
-  }
-
-  push(item: T) {
-    const waiter = this.waiters.shift();
-    if (waiter) {
-      waiter(item);
-      return;
-    }
-
-    this.items.push(item);
+  } finally {
+    reader.releaseLock();
   }
 }

@@ -3,8 +3,8 @@ import type {
   ChatCreationLocation,
   ChatHistoryMessage,
   ChatRuntimeConfig,
-} from "@shared/chat";
-import type { Project } from "@shared/projects";
+} from "@angel-engine/daemon-api/chat";
+import type { Project } from "@angel-engine/daemon-api/projects";
 import type { ReactNode } from "react";
 import type { ChatComposerSubmission } from "@/features/chat/components/composer/chat-composer";
 import { ArrowUp, StopCircle as CircleStop } from "@phosphor-icons/react";

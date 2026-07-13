@@ -1,23 +1,12 @@
 import type {
-  ListeningPortInfo,
-  SubprocessInfo,
-} from "@angel-engine/client-napi";
+  ProcessRegistryEntry,
+  ProcessRegistrySnapshotEntry,
+} from "@angel-engine/daemon-api/daemon";
 
 import {
   listListeningPorts,
   listSubprocesses,
 } from "@angel-engine/client-napi";
-
-export interface ProcessRegistryEntry {
-  id: string;
-  label: string;
-  rootPid: number;
-}
-
-export interface ProcessRegistrySnapshotEntry extends ProcessRegistryEntry {
-  processes: SubprocessInfo[];
-  ports: ListeningPortInfo[];
-}
 
 export class ProcessRegistry {
   readonly #entries = new Map<string, ProcessRegistryEntry>();

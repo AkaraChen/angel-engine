@@ -1,5 +1,5 @@
-import type { AgentValueOption } from "@shared/agents";
-import type { ChatRuntimeConfigOption } from "@shared/chat";
+import type { AgentValueOption } from "@angel-engine/daemon-api/agents";
+import type { ChatRuntimeConfigOption } from "@angel-engine/daemon-api/chat";
 
 const NO_CONFIG_OVERRIDE_VALUE = "__angel_no_override__";
 

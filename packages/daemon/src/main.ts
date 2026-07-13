@@ -5,6 +5,8 @@ const { values } = parseArgs({
   options: {
     "data-dir": { type: "string" },
     host: { default: "127.0.0.1", type: "string" },
+    "migrations-dir": { type: "string" },
+    packaged: { default: false, type: "boolean" },
     port: { default: "0", type: "string" },
     "print-handshake": { default: false, type: "boolean" },
     version: { default: "0.1.0", type: "string" },
@@ -24,6 +26,8 @@ if (!Number.isInteger(port) || port < 0 || port > 65_535) {
 async function main() {
   const daemon = await createDaemon({
     dataDir: values["data-dir"] as string,
+    migrationsDir: values["migrations-dir"],
+    packaged: values.packaged,
     host: values.host,
     port,
     version: values.version,

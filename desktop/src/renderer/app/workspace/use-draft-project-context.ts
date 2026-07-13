@@ -1,4 +1,4 @@
-import type { Project } from "@shared/projects";
+import type { Project } from "@angel-engine/daemon-api/projects";
 
 import is from "@sindresorhus/is";
 import { useMemo } from "react";

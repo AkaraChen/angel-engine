@@ -1,6 +1,6 @@
-import type { Chat } from "@shared/chat";
+import type { Chat } from "@angel-engine/daemon-api/chat";
 import type { ReactElement } from "react";
-import { House, Plus, Robot as Bot, X } from "@phosphor-icons/react";
+import { Robot as Bot, House, Plus, X } from "@phosphor-icons/react";
 import is from "@sindresorhus/is";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
@@ -117,7 +117,7 @@ function HistoryTab({
       type="button"
     >
       <House className="size-4 shrink-0" weight="duotone" />
-      <span className="min-w-0 max-w-40 truncate text-left">{label}</span>
+      <span className="max-w-40 min-w-0 truncate text-left">{label}</span>
     </button>
   );
 }
@@ -134,7 +134,7 @@ function DraftTab({ onClose }: { onClose?: () => MaybeAsync }): ReactElement {
       "
       role="tab"
     >
-      <span className="min-w-0 max-w-40 flex-1 truncate text-left">
+      <span className="max-w-40 min-w-0 flex-1 truncate text-left">
         {t("workspace.newChat")}
       </span>
       {onClose ? (
@@ -193,7 +193,7 @@ function ChatTab({
         type="button"
       >
         <AgentIcon runtime={chat.runtime} />
-        <span className="min-w-0 max-w-40 flex-1 truncate text-left">
+        <span className="max-w-40 min-w-0 flex-1 truncate text-left">
           {title}
         </span>
         {attention.needsInput ? (

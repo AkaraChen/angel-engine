@@ -1,20 +1,20 @@
-import { useState } from "react";
+import type { WorkspaceToolPatchFile } from "@/app/workspace/workspace-tool-patch-model";
 
+import { useState } from "react";
+import {
+  WorkspaceToolPatchFileDiffContent,
+  WorkspaceToolPatchFileLineStats,
+} from "@/app/workspace/workspace-tool-diff";
+import {
+  formatWorkspaceToolPatchFileName,
+  getWorkspaceToolPatchFileLineChanges,
+} from "@/app/workspace/workspace-tool-patch-model";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
-import {
-  WorkspaceToolPatchFileDiffContent,
-  WorkspaceToolPatchFileLineStats,
-} from "@/app/workspace/workspace-tool-diff";
-import type { WorkspaceToolPatchFile } from "@/app/workspace/workspace-tool-patch-model";
-import {
-  formatWorkspaceToolPatchFileName,
-  getWorkspaceToolPatchFileLineChanges,
-} from "@/app/workspace/workspace-tool-patch-model";
 import { cn } from "@/platform/utils";
 
 export function WorkspaceToolPatchFileList({

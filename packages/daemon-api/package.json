@@ -1,0 +1,70 @@
+{
+  "name": "@angel-engine/daemon-api",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./client": {
+      "types": "./dist/client.d.ts",
+      "import": "./dist/client.js"
+    },
+    "./daemon": {
+      "types": "./dist/daemon.d.ts",
+      "import": "./dist/daemon.js"
+    },
+    "./agents": {
+      "types": "./dist/agents.d.ts",
+      "import": "./dist/agents.js"
+    },
+    "./chat": {
+      "types": "./dist/chat/index.d.ts",
+      "import": "./dist/chat/index.js"
+    },
+    "./mime": {
+      "types": "./dist/mime.d.ts",
+      "import": "./dist/mime.js"
+    },
+    "./projects": {
+      "types": "./dist/projects.d.ts",
+      "import": "./dist/projects.js"
+    },
+    "./terminal": {
+      "types": "./dist/terminal.d.ts",
+      "import": "./dist/terminal.js"
+    },
+    "./workspace-tools": {
+      "types": "./dist/workspace-tools.d.ts",
+      "import": "./dist/workspace-tools.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "build:debug": "tsup",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@angel-engine/client-napi": "workspace:*",
+    "@angel-engine/js-client": "workspace:*",
+    "@sindresorhus/is": "^8.1.0",
+    "arktype": "^2.2.2",
+    "mime-db": "^1.54.0",
+    "whatwg-mimetype": "^5.0.0"
+  },
+  "devDependencies": {
+    "tsup": "^8.5.1",
+    "@types/mime-db": "^1.43.6",
+    "@types/whatwg-mimetype": "^5.0.0",
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.9"
+  }
+}

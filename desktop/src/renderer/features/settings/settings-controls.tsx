@@ -1,6 +1,6 @@
 "use client";
 
-import type { AgentRuntime } from "@shared/agents";
+import type { AgentRuntime } from "@angel-engine/daemon-api/agents";
 import type { PointerEvent, ReactNode } from "react";
 
 import { DotsSixVertical as DragHandle } from "@phosphor-icons/react";

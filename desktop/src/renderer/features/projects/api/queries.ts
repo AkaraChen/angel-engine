@@ -1,5 +1,8 @@
-import type { ProjectFileSearchResult } from "@shared/chat";
-import type { Project, ProjectGitStatusResult } from "@shared/projects";
+import type { ProjectFileSearchResult } from "@angel-engine/daemon-api/chat";
+import type {
+  Project,
+  ProjectGitStatusResult,
+} from "@angel-engine/daemon-api/projects";
 
 import type { QueryClient } from "@tanstack/react-query";
 import type { ApiClient } from "@/platform/api-client";

@@ -1,4 +1,4 @@
-import type { DaemonInfo } from "@angel-engine/daemon";
+import type { DaemonInfo } from "@angel-engine/daemon-api/daemon";
 import type { UtilityProcess } from "electron";
 import type { DaemonConnection } from "../../shared/daemon";
 
@@ -72,11 +72,14 @@ export async function stopDaemonSupervisor() {
   setConnection({ error: "Backend is shutting down.", status: "unavailable" });
   if (active !== undefined) {
     try {
-      await fetch(daemonUrl(active, "/api/shutdown"), {
+      const response = await fetch(daemonUrl(active, "/api/shutdown"), {
         headers: authorizationHeaders(active),
         method: "POST",
         signal: AbortSignal.timeout(5_000),
       });
+      if (!response.ok) {
+        throw new Error(`Daemon shutdown returned ${response.status}.`);
+      }
     } catch (error) {
       console.warn("Failed to stop daemon gracefully.", error);
       child?.kill();
@@ -114,8 +117,13 @@ async function tryReattach() {
     healthVersion !== app.getVersion() ||
     candidate.version !== app.getVersion()
   ) {
-    await stopDiscoveredDaemon(candidate);
-    await rm(filePath, { force: true });
+    try {
+      await stopDiscoveredDaemon(candidate);
+    } catch (error) {
+      console.warn("Failed to stop an incompatible daemon.", error);
+    } finally {
+      await rm(filePath, { force: true });
+    }
     return undefined;
   }
   return candidate;
@@ -140,12 +148,15 @@ async function spawnDaemon() {
     [
       "--data-dir",
       app.getPath("userData"),
+      "--migrations-dir",
+      path.join(app.getAppPath(), "drizzle"),
       "--host",
       "127.0.0.1",
       "--port",
       "0",
       "--version",
       app.getVersion(),
+      ...(app.isPackaged ? ["--packaged"] : []),
     ],
     { stdio: "pipe" },
   );
@@ -218,15 +229,19 @@ async function runHealthCheck() {
 
 async function waitForHandshake(process: UtilityProcess) {
   return new Promise<DaemonInfo>((resolve, reject) => {
-    const timeout = setTimeout(() => {
-      cleanup();
-      reject(new Error("Timed out waiting for daemon handshake."));
-    }, HANDSHAKE_TIMEOUT_MS);
-    const onExit = (code: number) => {
+    let timeout: NodeJS.Timeout;
+    let onExit: (code: number) => void;
+    let onMessage: (message: unknown) => void;
+    const cleanup = () => {
+      clearTimeout(timeout);
+      process.off("exit", onExit);
+      process.off("message", onMessage);
+    };
+    onExit = (code) => {
       cleanup();
       reject(new Error(`Daemon exited before handshake with code ${code}.`));
     };
-    const onMessage = (message: unknown) => {
+    onMessage = (message) => {
       try {
         const info = parseDaemonInfo(message);
         cleanup();
@@ -236,11 +251,10 @@ async function waitForHandshake(process: UtilityProcess) {
         reject(error);
       }
     };
-    const cleanup = () => {
-      clearTimeout(timeout);
-      process.off("exit", onExit);
-      process.off("message", onMessage);
-    };
+    timeout = setTimeout(() => {
+      cleanup();
+      reject(new Error("Timed out waiting for daemon handshake."));
+    }, HANDSHAKE_TIMEOUT_MS);
     process.once("exit", onExit);
     process.once("message", onMessage);
   });
@@ -287,7 +301,8 @@ function authorizationHeaders(info: DaemonInfo) {
 }
 
 function parseDaemonInfo(value: unknown): DaemonInfo {
-  const parsed = typeof value === "string" ? JSON.parse(value) : value;
+  const parsed: unknown =
+    typeof value === "string" ? (JSON.parse(value) as unknown) : value;
   if (
     !is.plainObject(parsed) ||
     !is.nonEmptyString(parsed.host) ||

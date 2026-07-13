@@ -1,4 +1,4 @@
-import type { DaemonInfo } from "@angel-engine/daemon";
+import type { DaemonInfo } from "@angel-engine/daemon-api/daemon";
 
 export const DAEMON_INFO_CHANNEL = "daemon:info";
 export const DAEMON_CHANGED_CHANNEL = "daemon:changed";

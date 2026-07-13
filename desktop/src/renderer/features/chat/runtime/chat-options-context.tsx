@@ -1,4 +1,7 @@
-import type { AgentRuntime, AgentValueOption } from "@shared/agents";
+import type {
+  AgentRuntime,
+  AgentValueOption,
+} from "@angel-engine/daemon-api/agents";
 
 import { createContext, use } from "react";
 

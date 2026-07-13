@@ -1,17 +1,17 @@
 import type {
-  AgentOption,
   AgentRuntime,
   AgentSettings,
   CreateCustomAgentInput,
   CustomAgent,
   UpdateCustomAgentInput,
-} from "@shared/agents";
+} from "@angel-engine/daemon-api/agents";
 
 import type { SupportedLanguage } from "@shared/i18n/resources";
 import type { DesktopThemeMode } from "@/platform/theme";
-import { sanitizeAgentSettings } from "@shared/agents";
+import { sanitizeAgentSettings } from "@angel-engine/daemon-api/agents";
 import { normalizeSupportedLanguage } from "@shared/i18n/resources";
 import { create } from "zustand";
+import { invalidateAgentCatalog } from "@/features/agents/agent-catalog-resource";
 import { getApiClient } from "@/platform/api-client";
 import { readDesktopThemeMode, setDesktopThemeMode } from "@/platform/theme";
 
@@ -33,15 +33,12 @@ interface SettingsBroadcastMessage {
 
 interface SettingsState {
   agentSettings: AgentSettings;
-  availableAgentOptions: AgentOption[];
-  customAgents: CustomAgent[];
   createCustomAgent: (input: CreateCustomAgentInput) => Promise<CustomAgent>;
   deleteCustomAgent: (runtime: AgentRuntime) => Promise<void>;
   deleteCustomAgentImpact: (
     runtime: AgentRuntime,
   ) => Promise<{ chatCount: number }>;
   language: SupportedLanguage;
-  refreshAvailableAgentOptions: () => Promise<void>;
   setAgentEnabled: (runtime: AgentRuntime, enabled: boolean) => void;
   setAgentSettings: (
     updater: (settings: AgentSettings) => AgentSettings,
@@ -58,8 +55,6 @@ const broadcastChannel = createBroadcastChannel();
 
 export const useSettingsStore = create<SettingsState>()((set, get) => ({
   agentSettings: readAgentSettings(),
-  availableAgentOptions: [],
-  customAgents: [],
   createCustomAgent: async (input) => {
     const agent = await getApiClient().agents.createCustom(input);
     updateSettingsState(
@@ -72,11 +67,10 @@ export const useSettingsStore = create<SettingsState>()((set, get) => ({
           enabledRuntimes: [...current.agentSettings.enabledRuntimes, agent.id],
           lastRuntime: agent.id,
         }),
-        customAgents: [...current.customAgents, agent],
       }),
       { refreshAgentOptions: true },
     );
-    await get().refreshAvailableAgentOptions();
+    invalidateAgentCatalog();
     return agent;
   },
   deleteCustomAgent: async (runtime) => {
@@ -103,48 +97,30 @@ export const useSettingsStore = create<SettingsState>()((set, get) => ({
             ),
           ),
         }),
-        customAgents: current.customAgents.filter(
-          (agent) => agent.id !== runtime,
-        ),
       }),
       { refreshAgentOptions: true },
     );
-    await get().refreshAvailableAgentOptions();
+    invalidateAgentCatalog();
   },
   deleteCustomAgentImpact: async (runtime) =>
     getApiClient().agents.deleteCustomImpact(runtime),
   language: readLanguage(),
-  refreshAvailableAgentOptions: async () => {
-    const [availableAgentOptions, customAgents] = await Promise.all([
-      getApiClient().agents.listAvailable(),
-      getApiClient().agents.listCustom(),
-    ]);
-    set({ availableAgentOptions, customAgents });
-  },
   setAgentEnabled: (runtime, enabled) => {
-    updateSettingsState(
-      set,
-      get,
-      (current) => {
-        const enabledRuntimes = new Set(current.agentSettings.enabledRuntimes);
-        if (enabled) {
-          enabledRuntimes.add(runtime);
-        } else {
-          enabledRuntimes.delete(runtime);
-        }
+    updateSettingsState(set, get, (current) => {
+      const enabledRuntimes = new Set(current.agentSettings.enabledRuntimes);
+      if (enabled) {
+        enabledRuntimes.add(runtime);
+      } else {
+        enabledRuntimes.delete(runtime);
+      }
 
-        return {
-          agentSettings: sanitizeAgentSettings({
-            ...current.agentSettings,
-            enabledRuntimes: [...enabledRuntimes],
-          }),
-        };
-      },
-      { refreshAgentOptions: true },
-    );
-    void get()
-      .refreshAvailableAgentOptions()
-      .catch(() => {});
+      return {
+        agentSettings: sanitizeAgentSettings({
+          ...current.agentSettings,
+          enabledRuntimes: [...enabledRuntimes],
+        }),
+      };
+    });
   },
   setAgentSettings: (updater) => {
     updateSettingsState(set, get, (current) => ({
@@ -174,26 +150,14 @@ export const useSettingsStore = create<SettingsState>()((set, get) => ({
   themeMode: readDesktopThemeMode(),
   updateCustomAgent: async (input) => {
     const agent = await getApiClient().agents.updateCustom(input);
-    updateSettingsState(
-      set,
-      get,
-      (current) => ({
-        customAgents: current.customAgents.map((item) =>
-          item.id === agent.id ? agent : item,
-        ),
-      }),
-      { refreshAgentOptions: true },
+    invalidateAgentCatalog();
+    broadcastChannel?.postMessage(
+      settingsBroadcastMessage(get(), { refreshAgentOptions: true }),
     );
-    await get().refreshAvailableAgentOptions();
     return agent;
   },
   worktreeDirtyPromptEnabled: readWorktreeDirtyPromptEnabled(),
 }));
-
-void useSettingsStore
-  .getState()
-  .refreshAvailableAgentOptions()
-  .catch(() => {});
 
 broadcastChannel?.addEventListener("message", (event) => {
   const message = readBroadcastMessage(event.data);
@@ -207,10 +171,7 @@ broadcastChannel?.addEventListener("message", (event) => {
     worktreeDirtyPromptEnabled: message.worktreeDirtyPromptEnabled,
   });
   if (message.refreshAgentOptions === true) {
-    void useSettingsStore
-      .getState()
-      .refreshAvailableAgentOptions()
-      .catch(() => {});
+    invalidateAgentCatalog();
   }
 });
 

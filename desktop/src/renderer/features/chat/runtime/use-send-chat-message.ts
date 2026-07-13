@@ -1,10 +1,10 @@
-import type { AppendMessage, CompleteAttachment } from "@assistant-ui/react";
 import type {
   Chat,
   ChatCreationLocation,
   ChatHistoryMessage,
   ChatRuntimeConfig,
-} from "@shared/chat";
+} from "@angel-engine/daemon-api/chat";
+import type { AppendMessage, CompleteAttachment } from "@assistant-ui/react";
 import type { TFunction } from "i18next";
 import type { PromptInputFile } from "@/components/ai-elements/prompt-input";
 import type {

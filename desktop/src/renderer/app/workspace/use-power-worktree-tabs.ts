@@ -1,4 +1,4 @@
-import type { Chat } from "@shared/chat";
+import type { Chat } from "@angel-engine/daemon-api/chat";
 import type { WorkspaceNavigation } from "@/app/workspace/use-workspace-navigation";
 import type { WorkspacePageModel } from "@/app/workspace/use-workspace-page-model";
 

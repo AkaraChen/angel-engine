@@ -1,10 +1,10 @@
-import type { AgentRuntime } from "@shared/agents";
+import type { AgentRuntime } from "@angel-engine/daemon-api/agents";
 import type {
   Chat,
   ChatCreationLocation,
   ChatRuntimeConfig,
-} from "@shared/chat";
-import type { Project } from "@shared/projects";
+} from "@angel-engine/daemon-api/chat";
+import type { Project } from "@angel-engine/daemon-api/projects";
 import type { ReactNode } from "react";
 import type {
   ChatMessagesUpdateHandler,

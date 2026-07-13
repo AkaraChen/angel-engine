@@ -1,4 +1,4 @@
-import type { AgentSettings } from "@shared/agents";
+import type { AgentSettings } from "@angel-engine/daemon-api/agents";
 import { useSettingsStore } from "@/features/settings/settings-store";
 
 export function useAgentSettings() {

@@ -1,11 +1,11 @@
 import type { FormEvent } from "react";
-import type { ApiClient } from "@/platform/api-client";
+import type { WorkspaceToolPatchFile } from "@/app/workspace/workspace-tool-patch-model";
 
+import type { ApiClient } from "@/platform/api-client";
 import is from "@sindresorhus/is";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useCallback, useState } from "react";
 
-import type { WorkspaceToolPatchFile } from "@/app/workspace/workspace-tool-patch-model";
+import { useCallback, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";

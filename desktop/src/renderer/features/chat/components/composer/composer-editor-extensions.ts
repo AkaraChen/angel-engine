@@ -1,4 +1,7 @@
-import type { ChatAvailableCommand, ChatAvailableSkill } from "@shared/chat";
+import type {
+  ChatAvailableCommand,
+  ChatAvailableSkill,
+} from "@angel-engine/daemon-api/chat";
 import type { Editor, Extensions } from "@tiptap/core";
 import type { ReactRenderer } from "@tiptap/react";
 import type { SuggestionOptions, SuggestionProps } from "@tiptap/suggestion";

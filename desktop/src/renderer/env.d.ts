@@ -1,4 +1,3 @@
-import type { ChatStreamApi } from "@shared/chat";
 import type { DaemonApi } from "@shared/daemon";
 import type {
   DesktopConfirmDeleteArchivedChatsInput,
@@ -10,7 +9,6 @@ import type {
   DesktopUpdateDownloadedEvent,
   DesktopWindowCommand,
 } from "@shared/desktop-window";
-import type { TerminalApi } from "@shared/terminal";
 import type { WorkspaceBrowserApi } from "@shared/workspace-browser";
 import type {
   WorkspaceToolContextSetInput,
@@ -103,8 +101,6 @@ declare global {
         input: WorkspaceToolSurfaceSnapshotSetInput,
       ) => void;
     };
-    chatStream: ChatStreamApi;
-    terminal: TerminalApi;
     workspaceBrowser: WorkspaceBrowserApi;
     tipc: {
       invoke: (channel: string, input?: unknown) => Promise<unknown>;

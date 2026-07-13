@@ -1,5 +1,7 @@
 import type { ServerType } from "@hono/node-server";
-import type { DaemonHealth, DaemonInfo, DaemonOptions } from "./types";
+import type { Server as HttpServer } from "node:http";
+import type { DaemonHealth, DaemonInfo } from "@angel-engine/daemon-api/daemon";
+import type { DaemonOptions } from "./types";
 
 import { randomBytes } from "node:crypto";
 import { chmod, mkdir, rename, writeFile } from "node:fs/promises";
@@ -7,6 +9,11 @@ import path from "node:path";
 import { serve } from "@hono/node-server";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
+import { WebSocketServer } from "ws";
+import { registerApi } from "./api";
+import { closeDatabase, configureDatabase } from "./db/client";
+import { createChatRuntime } from "./features/chat/engine-runtime";
+import { TerminalManager } from "./features/terminal/manager";
 import {
   isProcessId,
   parseKillBody,
@@ -27,13 +34,24 @@ export async function createDaemon(options: DaemonOptions): Promise<Daemon> {
   const startedAt = process.uptime();
   const app = new Hono();
   const processRegistry = new ProcessRegistry();
+  const chatRuntime = createChatRuntime(processRegistry);
+  const terminalManager = new TerminalManager();
+  const eventSockets = new Set<import("ws").WebSocket>();
+  const webSockets = new WebSocketServer({ noServer: true });
   let server: ServerType | undefined;
+
+  configureDatabase({
+    dataDir: options.dataDir,
+    migrationsDir:
+      options.migrationsDir ?? path.resolve(process.cwd(), "drizzle"),
+    packaged: options.packaged ?? false,
+  });
 
   app.use(
     "/api/*",
     cors({
       allowHeaders: ["Authorization", "Content-Type"],
-      allowMethods: ["GET", "POST", "PUT", "OPTIONS"],
+      allowMethods: ["DELETE", "GET", "PATCH", "POST", "PUT", "OPTIONS"],
       origin: "*",
     }),
   );
@@ -52,6 +70,20 @@ export async function createDaemon(options: DaemonOptions): Promise<Daemon> {
       version,
     };
     return context.json(health);
+  });
+
+  app.onError((error, context) => {
+    const status = error instanceof TypeError ? 400 : 500;
+    return context.json({ error: error.message }, status);
+  });
+
+  registerApi(app, chatRuntime, {
+    publish(event) {
+      const payload = JSON.stringify(event);
+      for (const socket of eventSockets) {
+        if (socket.readyState === socket.OPEN) socket.send(payload);
+      }
+    },
   });
 
   app.put("/api/process-registry", async (context) => {
@@ -94,12 +126,18 @@ export async function createDaemon(options: DaemonOptions): Promise<Daemon> {
     if (server === undefined) return;
     const activeServer = server;
     server = undefined;
+    chatRuntime.closeChatSession();
+    terminalManager.close();
+    for (const socket of webSockets.clients)
+      socket.close(1001, "Daemon shutdown");
     await new Promise<void>((resolve, reject) => {
       activeServer.close((error) => {
         if (error) reject(error);
         else resolve();
       });
     });
+    webSockets.close();
+    closeDatabase();
   };
 
   app.post("/api/shutdown", async (context) => {
@@ -118,6 +156,45 @@ export async function createDaemon(options: DaemonOptions): Promise<Daemon> {
       (address) => resolve(candidate),
     );
     candidate.once("error", reject);
+  });
+
+  (server as HttpServer).on("upgrade", (request, socket, head) => {
+    const url = new URL(request.url ?? "/", `http://${host}`);
+    if (
+      (request.headers.authorization !== `Bearer ${token}` &&
+        request.headers["sec-websocket-protocol"] !==
+          `angel-engine-token.${token}`) ||
+      (url.pathname !== "/api/events" && url.pathname !== "/api/terminals")
+    ) {
+      socket.write("HTTP/1.1 401 Unauthorized\r\nConnection: close\r\n\r\n");
+      socket.destroy();
+      return;
+    }
+    webSockets.handleUpgrade(request, socket, head, (webSocket) => {
+      if (url.pathname === "/api/events") {
+        eventSockets.add(webSocket);
+        webSocket.once("close", () => eventSockets.delete(webSocket));
+        return;
+      }
+      webSocket.on("message", (data) => {
+        try {
+          terminalManager.handle(
+            webSocket,
+            JSON.parse(data.toString()) as unknown,
+          );
+        } catch (error) {
+          webSocket.send(
+            JSON.stringify({
+              event: {
+                message: error instanceof Error ? error.message : String(error),
+                type: "error",
+              },
+            }),
+          );
+        }
+      });
+      webSocket.once("close", () => terminalManager.disconnect(webSocket));
+    });
   });
 
   const address = server.address();

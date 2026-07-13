@@ -1,4 +1,4 @@
-import type { AgentRuntime } from "@shared/agents";
+import type { AgentRuntime } from "@angel-engine/daemon-api/agents";
 
 import is from "@sindresorhus/is";
 import { useQueryClient } from "@tanstack/react-query";

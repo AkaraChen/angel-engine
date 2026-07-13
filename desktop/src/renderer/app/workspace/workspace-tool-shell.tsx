@@ -1,11 +1,11 @@
 import { useEffect } from "react";
 
-import { WorkspaceToolSurface } from "@/app/workspace/workspace-tool-surface";
-import { WorkspaceToolWindowTitleBridge } from "@/app/workspace/workspace-tool-surface-header";
 import {
   ensureWorkspaceToolSurfaceEvents,
   useWorkspaceToolStore,
 } from "@/app/workspace/workspace-tool-store";
+import { WorkspaceToolSurface } from "@/app/workspace/workspace-tool-surface";
+import { WorkspaceToolWindowTitleBridge } from "@/app/workspace/workspace-tool-surface-header";
 import { useWorkspaceUiStore } from "@/app/workspace/workspace-ui-store";
 import { getApiClient } from "@/platform/api-client";
 

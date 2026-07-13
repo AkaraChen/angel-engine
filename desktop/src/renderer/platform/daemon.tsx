@@ -1,8 +1,9 @@
-import type { DaemonInfo } from "@angel-engine/daemon";
+import type { DaemonInfo } from "@angel-engine/daemon-api/daemon";
 import type { DaemonConnection } from "@shared/daemon";
 import type { PropsWithChildren } from "react";
 
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
+import { setDaemonTransport } from "./daemon-transport";
 
 export interface DaemonClient {
   fetch: (pathname: string, init?: RequestInit) => Promise<Response>;
@@ -38,19 +39,21 @@ export function DaemonProvider({ children }: PropsWithChildren) {
     } satisfies DaemonClient;
   }, [connection]);
 
+  setDaemonTransport(client ?? undefined);
+
   return (
     <DaemonClientContext.Provider value={client}>
       {connection.status === "unavailable" ? (
         <div
           className="
-          fixed inset-x-0 top-0 z-100 bg-destructive px-3 py-1 text-center
-          text-xs text-destructive-foreground
-        "
+            fixed inset-x-0 top-0 z-100 bg-destructive px-3 py-1 text-center
+            text-xs text-destructive-foreground
+          "
         >
           Backend unavailable: {connection.error}
         </div>
       ) : null}
-      {children}
+      {client === null ? null : children}
     </DaemonClientContext.Provider>
   );
 }

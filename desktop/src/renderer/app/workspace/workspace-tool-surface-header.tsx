@@ -8,6 +8,7 @@ import {
 import is from "@sindresorhus/is";
 import { useEffect } from "react";
 
+import { workspaceToolRootName } from "@/app/workspace/workspace-file-display";
 import { Button } from "@/components/ui/button";
 import {
   Tooltip,
@@ -15,7 +16,6 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { cn } from "@/platform/utils";
-import { workspaceToolRootName } from "@/app/workspace/workspace-file-display";
 
 export function WorkspaceToolWindowTitleBridge({
   root,

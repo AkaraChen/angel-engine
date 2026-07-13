@@ -9,16 +9,16 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { useDaemonClient } from "@/platform/daemon";
-import { useWorkspaceToolStore } from "./workspace-tool-store";
 import {
   killProcessMutationOptions,
   processRegistryQueryOptions,
 } from "./requests/processes";
+import { useWorkspaceToolStore } from "./workspace-tool-store";
 
-type WorkspaceProcessesViewProps = {
+interface WorkspaceProcessesViewProps {
   active: boolean;
   onOpenBrowser: (url: string) => void;
-};
+}
 
 const COMMON_PORT_SERVICES: Readonly<Record<number, string>> = {
   3000: "Web app",
@@ -72,6 +72,8 @@ export const WorkspaceProcessesView: FC<WorkspaceProcessesViewProps> = ({
   }
 
   const kill = (pid: number, name: string) => {
+    // The process inspector is already a desktop-only privileged surface.
+    // eslint-disable-next-line no-alert
     if (!window.confirm(`Kill ${name} (${pid})?`)) return;
     killMutation.mutate({ pid });
   };
@@ -92,7 +94,10 @@ export const WorkspaceProcessesView: FC<WorkspaceProcessesViewProps> = ({
                 action={
                   <Button
                     aria-label={`Kill ${process.name}`}
-                    className="text-destructive hover:text-destructive"
+                    className="
+                      text-destructive
+                      hover:text-destructive
+                    "
                     size="icon-sm"
                     title={`Kill ${process.name}`}
                     variant="ghost"
@@ -159,7 +164,12 @@ const ProcessRow: FC<{
         {service === undefined ? null : (
           <Tooltip>
             <TooltipTrigger asChild>
-              <span className="shrink-0 rounded bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
+              <span
+                className="
+                shrink-0 rounded-sm bg-muted px-1.5 py-0.5 text-[10px]
+                font-medium text-muted-foreground
+              "
+              >
                 {service}
               </span>
             </TooltipTrigger>
@@ -179,7 +189,12 @@ const ProcessRow: FC<{
 );
 
 const PanelMessage: FC<{ message: string }> = ({ message }) => (
-  <div className="flex h-full items-center justify-center p-6 text-center text-xs text-muted-foreground">
+  <div
+    className="
+    flex h-full items-center justify-center p-6 text-center text-xs
+    text-muted-foreground
+  "
+  >
     {message}
   </div>
 );
