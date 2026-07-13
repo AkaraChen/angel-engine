@@ -74,7 +74,9 @@ describe("homePage", () => {
     expect(await screen.findByText("Fix the login redirect")).toBeDefined();
     expect(screen.getByText("angel-engine")).toBeDefined();
     expect(screen.getByText("feature-x")).toBeDefined();
-    expect(screen.getByText("Claude Code")).toBeDefined();
+    // "Claude Code" appears both as the runtime label and inside the brand
+    // icon's <title>, so assert at least one match rather than exactly one.
+    expect(screen.getAllByText("Claude Code").length).toBeGreaterThan(0);
   });
 
   it("shows the empty state when there are no chats", async () => {

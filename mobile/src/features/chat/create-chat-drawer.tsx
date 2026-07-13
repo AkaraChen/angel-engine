@@ -1,5 +1,5 @@
 import type { FormEvent } from "react";
-import type { CreateChatInput } from "@/platform/chat-types";
+import type { CreateChatFormState, WorktreeMode } from "./create-chat-form";
 
 import { useState } from "react";
 import { useLocation } from "wouter";
@@ -26,44 +26,28 @@ import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import {
   AGENT_OPTIONS,
-  DEFAULT_AGENT_RUNTIME,
   REASONING_EFFORT_OPTIONS,
 } from "@/platform/agent-catalog";
 
 import { basename } from "./chat-summary";
+import {
+  buildCreateChatInput,
+  canSubmitCreateChat,
+  canUseWorktree,
+  INITIAL_CREATE_CHAT_FORM,
+  isWorktreeSelectionComplete,
+} from "./create-chat-form";
 import {
   useCreateChat,
   useProjectList,
   useProjectWorktrees,
 } from "./use-chats";
 
-type WorktreeMode = "existing" | "create";
-
-interface CreateChatFormState {
-  projectId: string;
-  prompt: string;
-  runtime: string;
-  model: string;
-  reasoningEffort: string;
-  useWorktree: boolean;
-  worktreeMode: WorktreeMode;
-  worktreeBranch: string;
-}
-
-const INITIAL_STATE: CreateChatFormState = {
-  projectId: "",
-  prompt: "",
-  runtime: DEFAULT_AGENT_RUNTIME,
-  model: "",
-  reasoningEffort: "",
-  useWorktree: false,
-  worktreeMode: "existing",
-  worktreeBranch: "",
-};
-
 export function CreateChatDrawer({ children }: { children: React.ReactNode }) {
   const [open, setOpen] = useState(false);
-  const [form, setForm] = useState<CreateChatFormState>(INITIAL_STATE);
+  const [form, setForm] = useState<CreateChatFormState>(
+    INITIAL_CREATE_CHAT_FORM,
+  );
   const [, navigate] = useLocation();
 
   const projectsQuery = useProjectList();
@@ -80,36 +64,27 @@ export function CreateChatDrawer({ children }: { children: React.ReactNode }) {
   }
 
   function reset() {
-    setForm(INITIAL_STATE);
+    setForm(INITIAL_CREATE_CHAT_FORM);
     createChat.reset();
   }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const prompt = form.prompt.trim();
-    if (prompt.length === 0) return;
+    if (!canSubmitCreateChat(form)) return;
 
-    const branch = form.worktreeBranch.trim();
-    const input: CreateChatInput = {
-      prompt,
-      runtime: form.runtime,
-      projectId: form.projectId.length > 0 ? form.projectId : undefined,
-      model: form.model.trim().length > 0 ? form.model.trim() : undefined,
-      reasoningEffort:
-        form.reasoningEffort.length > 0 ? form.reasoningEffort : undefined,
-      useWorktree: form.useWorktree,
-      worktreeBranch:
-        form.useWorktree && branch.length > 0 ? branch : undefined,
-      createWorktree: form.useWorktree && form.worktreeMode === "create",
-    };
-
-    const result = await createChat.mutateAsync(input);
-    setOpen(false);
-    reset();
-    navigate(`/chat/${result.chatId}`);
+    try {
+      const result = await createChat.mutateAsync(buildCreateChatInput(form));
+      setOpen(false);
+      reset();
+      navigate(`/chat/${result.chatId}`);
+    } catch {
+      // The mutation's error state drives the inline message below; swallow the
+      // rejection here so it isn't an unhandled promise.
+    }
   }
 
-  const canSubmit = form.prompt.trim().length > 0 && !createChat.isPending;
+  const worktreeIncomplete = !isWorktreeSelectionComplete(form);
+  const canSubmit = canSubmitCreateChat(form) && !createChat.isPending;
 
   return (
     <Drawer
@@ -151,8 +126,16 @@ export function CreateChatDrawer({ children }: { children: React.ReactNode }) {
                 id="new-chat-project"
                 value={form.projectId}
                 onChange={(event) => {
-                  update("projectId", event.target.value);
-                  update("worktreeBranch", "");
+                  const projectId = event.target.value;
+                  setForm((previous) => ({
+                    ...previous,
+                    projectId,
+                    // Reset worktree selection; a worktree can't outlive its
+                    // project, so clearing the project disables it entirely.
+                    worktreeBranch: "",
+                    useWorktree:
+                      projectId.length > 0 ? previous.useWorktree : false,
+                  }));
                 }}
               >
                 <NativeSelectOption value="">
@@ -221,13 +204,19 @@ export function CreateChatDrawer({ children }: { children: React.ReactNode }) {
                 </span>
                 <Switch
                   checked={form.useWorktree}
-                  disabled={form.projectId.length === 0}
+                  disabled={!canUseWorktree(form)}
                   id="new-chat-worktree"
                   onCheckedChange={(checked) => update("useWorktree", checked)}
                 />
               </label>
 
-              {form.useWorktree ? (
+              {!canUseWorktree(form) ? (
+                <p className="text-xs text-muted-foreground">
+                  Select a project to run in a worktree.
+                </p>
+              ) : null}
+
+              {form.useWorktree && canUseWorktree(form) ? (
                 <WorktreeFields
                   branchInputId="new-chat-branch"
                   mode={form.worktreeMode}
@@ -240,6 +229,14 @@ export function CreateChatDrawer({ children }: { children: React.ReactNode }) {
                   }}
                   onBranchChange={(branch) => update("worktreeBranch", branch)}
                 />
+              ) : null}
+
+              {worktreeIncomplete ? (
+                <p className="text-xs text-destructive">
+                  {form.worktreeMode === "create"
+                    ? "Enter a branch name for the new worktree."
+                    : "Select a branch for the worktree."}
+                </p>
               ) : null}
             </div>
 

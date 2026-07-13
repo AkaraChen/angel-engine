@@ -1,12 +1,6 @@
 import type { ChatSummary } from "@/platform/chat-types";
 
-import {
-  ChatCircle,
-  GitBranch,
-  Plus,
-  PushPin,
-  Robot,
-} from "@phosphor-icons/react";
+import { ChatCircle, GitBranch, Plus, PushPin } from "@phosphor-icons/react";
 import { formatDistanceToNow } from "date-fns";
 import { Link } from "wouter";
 
@@ -21,6 +15,7 @@ import {
 } from "@/components/ui/empty";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
+import { AgentRuntimeIcon } from "@/features/agents/agent-runtime-icon";
 import { CreateChatDrawer } from "@/features/chat/create-chat-drawer";
 import { useChatList } from "@/features/chat/use-chats";
 import { agentLabel } from "@/platform/agent-catalog";
@@ -81,11 +76,11 @@ function ChatListItem({ chat }: { chat: ChatSummary }) {
         <span
           className="
             flex size-10 shrink-0 items-center justify-center rounded-full
-            bg-muted text-muted-foreground
+            bg-muted text-foreground
           "
           title={agentLabel(chat.runtime)}
         >
-          <Robot size={20} />
+          <AgentRuntimeIcon className="size-5" runtime={chat.runtime} />
         </span>
         <span className="flex min-w-0 flex-1 flex-col gap-0.5">
           <span className="flex items-center gap-1.5">
