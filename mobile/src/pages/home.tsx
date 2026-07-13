@@ -98,25 +98,24 @@ function ChatListItem({ chat }: { chat: ChatSummary }) {
               {formatUpdatedAt(chat.updatedAt)}
             </span>
           </span>
-          <span className="flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground">
-            <span className="shrink-0">{agentLabel(chat.runtime)}</span>
-            {subtitle.length > 0 ? (
-              <>
+          {subtitle.length > 0 ? (
+            <span className="flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground">
+              {chat.projectName !== null ? (
+                <span className="truncate">{chat.projectName}</span>
+              ) : null}
+              {chat.projectName !== null && chat.worktreeBranch !== null ? (
                 <span aria-hidden className="shrink-0">
                   ·
                 </span>
-                {chat.projectName !== null ? (
-                  <span className="truncate">{chat.projectName}</span>
-                ) : null}
-                {chat.worktreeBranch !== null ? (
-                  <span className="flex min-w-0 shrink items-center gap-0.5">
-                    <GitBranch className="shrink-0" size={12} />
-                    <span className="truncate">{chat.worktreeBranch}</span>
-                  </span>
-                ) : null}
-              </>
-            ) : null}
-          </span>
+              ) : null}
+              {chat.worktreeBranch !== null ? (
+                <span className="flex min-w-0 shrink items-center gap-0.5">
+                  <GitBranch className="shrink-0" size={12} />
+                  <span className="truncate">{chat.worktreeBranch}</span>
+                </span>
+              ) : null}
+            </span>
+          ) : null}
         </span>
       </Link>
     </li>

@@ -30,7 +30,7 @@ export function AppShell({ children }: PropsWithChildren) {
         "
         >
           <SidebarTrigger />
-          <Separator className="mr-1 h-5" orientation="vertical" />
+          <Separator className="mr-1" orientation="vertical" />
           <h1 className="font-heading text-base font-semibold">{title}</h1>
         </header>
         <main className="min-h-0 flex-1 overflow-hidden">{children}</main>
