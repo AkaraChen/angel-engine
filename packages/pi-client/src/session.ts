@@ -10,21 +10,22 @@ import type {
 import type {
   ActivePiTurn,
   EngineEventJson,
-  PiAgentSession as PiSdkAgentSession,
   PiModel,
   PiModelRegistry,
   PiSendTextRequest,
   PiThinkingLevel,
   SessionConfigValueJson,
 } from "./types.js";
+import type {
+  SessionProcess,
+  SessionProcessIdListener,
+} from "@angel-engine/js-client";
 
 import {
   AuthStorage,
-  createAgentSession,
   DefaultResourceLoader,
   getAgentDir,
   ModelRegistry,
-  SessionManager,
 } from "@earendil-works/pi-coding-agent";
 import {
   AngelEngineClient,
@@ -49,6 +50,7 @@ import {
 } from "./events.js";
 import { historyEventsFromSessionMessages } from "./history.js";
 import { piPrompt, piThinkingLevel } from "./runtime.js";
+import { PiRpcClient } from "./rpc-client.js";
 import {
   applyEngineEvents,
   emitEngineEvents,
@@ -65,9 +67,10 @@ import { eventsFromSdkEvent, piTurnOutcome } from "./session-stream.js";
 
 type NativeEngineClient = InstanceType<typeof AngelEngineClient>;
 
-export class PiAgentSession {
+export class PiAgentSession implements SessionProcess {
   private readonly adapter = new PiEngineAdapter();
   private readonly client: NativeEngineClient;
+  private readonly processIdListeners = new Set<SessionProcessIdListener>();
   private activeTurn?: ActivePiTurn;
   private availableEfforts: SessionConfigValueJson[] = [];
   private conversationId?: string;
@@ -76,10 +79,11 @@ export class PiAgentSession {
   private modelInfos: PiModel[] = [];
   private modelRegistry?: PiModelRegistry;
   private operationQueue = Promise.resolve();
-  private piSession?: PiSdkAgentSession;
+  private piSession?: PiRpcClient;
   private replayedSessionId?: string;
   private runtimeConfigurationLoaded = false;
   private sessionCwd?: string;
+  private sessionFile?: string;
   private unsubscribe?: () => void;
 
   constructor() {
@@ -102,7 +106,7 @@ export class PiAgentSession {
     void this.piSession?.abort().catch(() => undefined);
     this.unsubscribe?.();
     this.unsubscribe = undefined;
-    this.piSession?.dispose();
+    void this.piSession?.stop().catch(() => undefined);
     this.piSession = undefined;
   }
 
@@ -110,9 +114,15 @@ export class PiAgentSession {
     return Boolean(this.conversationId);
   }
 
-  processId(): undefined {
-    // The pinned Pi SDK runs in-process and exposes no child process pid.
-    return undefined;
+  processId(): number | undefined {
+    return this.piSession?.processId();
+  }
+
+  subscribeProcessId(listener: SessionProcessIdListener): () => void {
+    this.processIdListeners.add(listener);
+    return (): void => {
+      this.processIdListeners.delete(listener);
+    };
   }
 
   async hydrate(request: HydrateRequest): Promise<ConversationSnapshot> {
@@ -127,7 +137,7 @@ export class PiAgentSession {
       });
       await this.loadRuntimeConfiguration(request.cwd);
       await this.replayHistory(
-        request.remoteId ?? this.piSession?.sessionFile,
+        request.remoteId ?? this.sessionFile,
         conversation.id,
       );
       return this.requireConversation();
@@ -138,6 +148,7 @@ export class PiAgentSession {
     const request: InspectRequest = typeof cwd === "string" ? { cwd } : cwd;
     return this.enqueue(async () => {
       this.ensureConversation({ cwd: request.cwd });
+      await this.ensurePiSession({ cwd: request.cwd });
       await this.loadRuntimeConfiguration(request.cwd);
       return this.requireConversation();
     });
@@ -215,9 +226,10 @@ export class PiAgentSession {
 
     try {
       const prompt = piPrompt(text, input);
-      await session.prompt(prompt.text, {
-        ...(prompt.images.length > 0 ? { images: prompt.images } : {}),
-      });
+      await session.prompt(
+        prompt.text,
+        prompt.images.length > 0 ? prompt.images : undefined,
+      );
       this.emitTerminalIfNeeded(active, piTurnOutcome(request.signal, active));
       return this.finishTurn(active);
     } catch (error) {
@@ -235,7 +247,7 @@ export class PiAgentSession {
   private finishTurn(active: ActivePiTurn): TurnRunResult {
     const snapshot = this.requireConversation();
     const remoteThreadId =
-      this.piSession?.sessionFile ??
+      this.sessionFile ??
       (snapshot.remoteKind === "known" ? snapshot.remoteId : undefined);
     if (remoteThreadId) {
       this.replayedSessionId = remoteThreadId;
@@ -273,27 +285,25 @@ export class PiAgentSession {
   private async ensurePiSession(input: {
     cwd?: string;
     remoteId?: string;
-  }): Promise<PiSdkAgentSession> {
+  }): Promise<PiRpcClient> {
     if (this.piSession) return this.piSession;
 
     const cwd = this.requireCwd(input.cwd);
     const authStorage = AuthStorage.create();
     const modelRegistry = ModelRegistry.create(authStorage);
-    const sessionManager = input.remoteId
-      ? SessionManager.open(input.remoteId, undefined, cwd)
-      : SessionManager.create(cwd);
-    const { session } = await createAgentSession({
-      authStorage,
+    const session = new PiRpcClient({
       cwd,
-      modelRegistry,
-      sessionManager,
+      onProcessId: (processId) => this.emitProcessId(processId),
+      remoteId: input.remoteId,
     });
+    const state = await session.start();
     this.modelRegistry = modelRegistry;
     this.piSession = session;
     this.sessionCwd = cwd;
-    this.currentModel = session.model;
-    this.currentReasoningEffort = session.thinkingLevel;
-    this.unsubscribe = session.subscribe((event) => {
+    this.sessionFile = state.sessionFile;
+    this.currentModel = state.model;
+    this.currentReasoningEffort = state.thinkingLevel;
+    this.unsubscribe = session.onEvent((event) => {
       const active = this.activeTurn;
       if (!active) return;
       emitEngineEvents(
@@ -306,7 +316,7 @@ export class PiAgentSession {
       conversationReadyEvent(
         this.requireConversation().id,
         cwd,
-        session.sessionFile,
+        state.sessionFile,
       ),
     ]);
     return session;
@@ -361,7 +371,7 @@ export class PiAgentSession {
     }
     const events = historyEventsFromSessionMessages(
       conversationId,
-      this.piSession.messages,
+      await this.piSession.getMessages(),
     );
     if (events.length > 0) applyEngineEvents(this.client, events);
     this.replayedSessionId = remoteId;
@@ -390,7 +400,7 @@ export class PiAgentSession {
     }
     if (request.reasoningEffort) {
       const level = piThinkingLevel(request.reasoningEffort);
-      this.piSession?.setThinkingLevel(level);
+      await this.piSession?.setThinkingLevel(level);
       this.currentReasoningEffort = level;
       const reasoningEvent = this.reasoningConfigUpdated(conversationId);
       if (reasoningEvent) events.push(reasoningEvent);
@@ -418,8 +428,12 @@ export class PiAgentSession {
     if (!model) {
       throw new Error(`Pi model not found: ${modelId}`);
     }
-    await this.piSession?.setModel(model);
+    await this.piSession?.setModel(model.provider, model.id);
     return model;
+  }
+
+  private emitProcessId(processId: number | undefined): void {
+    for (const listener of this.processIdListeners) listener(processId);
   }
 
   private reasoningConfigUpdated(

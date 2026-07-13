@@ -1,22 +1,21 @@
 import type { SendTextRequest, TurnRunEvent } from "@angel-engine/client-napi";
+import type { AgentSessionEvent } from "@earendil-works/pi-coding-agent";
 
 export type EngineEventJson = object;
 export type PiJsonObject = object;
 export type PiSdkModule = typeof import("@earendil-works/pi-coding-agent");
-export type PiAgentSession = Awaited<
-  ReturnType<PiSdkModule["createAgentSession"]>
->["session"];
-export type PiAgentSessionEvent = Parameters<
-  PiAgentSession["subscribe"]
->[0] extends (event: infer Event) => void
-  ? Event
-  : never;
-export type PiAgentMessage = PiAgentSession["messages"][number];
-export type PiModel = NonNullable<PiAgentSession["model"]>;
+export type PiSdkRpcClient = InstanceType<PiSdkModule["RpcClient"]>;
+export type PiAgentSessionEvent = AgentSessionEvent;
+export type PiAgentMessage = Awaited<
+  ReturnType<PiSdkRpcClient["getMessages"]>
+>[number];
+export type PiModel = NonNullable<
+  Awaited<ReturnType<PiSdkRpcClient["getState"]>>["model"]
+>;
 export type PiModelRegistry = ReturnType<
   PiSdkModule["ModelRegistry"]["create"]
 >;
-export type PiThinkingLevel = Parameters<PiAgentSession["setThinkingLevel"]>[0];
+export type PiThinkingLevel = Parameters<PiSdkRpcClient["setThinkingLevel"]>[0];
 
 export type PiSendTextRequest = SendTextRequest & {
   input?: NonNullable<SendTextRequest["input"]>;

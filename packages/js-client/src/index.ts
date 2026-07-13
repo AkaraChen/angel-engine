@@ -8,4 +8,5 @@ export { AngelClient } from "./client.js";
 export type { AngelClientListener, AngelClientOptions } from "./client.js";
 export { InMemoryAngelStore } from "./store.js";
 export type { AngelStore } from "./store.js";
+export type { SessionProcess, SessionProcessIdListener } from "./process.js";
 export type * from "./types.js";

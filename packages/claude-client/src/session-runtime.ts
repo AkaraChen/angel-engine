@@ -8,6 +8,7 @@ import type {
 import type {
   CanUseTool,
   ModelInfo,
+  Options as ClaudeQueryOptions,
   Query,
   SDKControlInitializeResponse,
 } from "@anthropic-ai/claude-agent-sdk";
@@ -74,8 +75,12 @@ export class ClaudeCodeSessionRuntime {
   private operationQueue = Promise.resolve();
   private runtimeConfigurationLoaded = false;
   replayedSessionId?: string;
+  private readonly spawnClaudeCodeProcess: ClaudeQueryOptions["spawnClaudeCodeProcess"];
 
-  constructor() {
+  constructor(
+    spawnClaudeCodeProcess?: ClaudeQueryOptions["spawnClaudeCodeProcess"],
+  ) {
+    this.spawnClaudeCodeProcess = spawnClaudeCodeProcess;
     this.client = new AngelEngineClient(
       {
         auth: { autoAuthenticate: false, needAuth: false },
@@ -167,6 +172,7 @@ export class ClaudeCodeSessionRuntime {
         cwd,
         pathToClaudeCodeExecutable: claudeCodeExecutable(),
         permissionMode: normalizeClaudeMode(this.currentPermissionMode),
+        spawnClaudeCodeProcess: this.spawnClaudeCodeProcess,
       },
     });
     try {

@@ -21,6 +21,9 @@
       "types": "./dist/context.d.ts",
       "import": "./dist/context.js",
       "require": "./dist/context.cjs"
+    },
+    "./pi-agent-entry": {
+      "import": "./dist/pi-agent-entry.js"
     }
   },
   "files": [

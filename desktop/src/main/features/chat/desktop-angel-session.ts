@@ -11,6 +11,10 @@ import type {
   TurnRunResult,
 } from "@angel-engine/client-napi";
 import type { ChatElicitationResponse } from "../../../shared/chat";
+import type {
+  SessionProcess,
+  SessionProcessIdListener,
+} from "@angel-engine/js-client";
 
 import {
   ActionPhase,
@@ -42,7 +46,7 @@ interface PendingElicitation {
   resolve: (events?: TurnRunEvent[]) => void;
 }
 
-export class DesktopAngelSession {
+export class DesktopAngelSession implements SessionProcess {
   private readonly pendingElicitations = new Map<string, PendingElicitation>();
   private readonly session: NativeAngelSessionInstance;
   private operationQueue = Promise.resolve();
@@ -65,6 +69,10 @@ export class DesktopAngelSession {
 
   processId(): number {
     return this.session.processId();
+  }
+
+  subscribeProcessId(_listener: SessionProcessIdListener): () => void {
+    return (): void => undefined;
   }
 
   async hydrate(request: HydrateRequest): Promise<ConversationSnapshot> {

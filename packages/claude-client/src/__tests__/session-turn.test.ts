@@ -1,4 +1,8 @@
-import type { CanUseTool } from "@anthropic-ai/claude-agent-sdk";
+import type {
+  CanUseTool,
+  SpawnedProcess,
+  SpawnOptions,
+} from "@anthropic-ai/claude-agent-sdk";
 import type {
   ConversationSnapshot,
   TurnRunResult,
@@ -29,6 +33,12 @@ type SessionFinishHarness = SessionPermissionHarness & {
   requireConversation: () => ConversationSnapshot;
 };
 
+type SessionProcessHarness = {
+  spawnClaudeProcess: (
+    options: SpawnOptions,
+  ) => SpawnedProcess & { pid?: number };
+};
+
 function activeTurn(events: unknown[] = []): ActiveClaudeTurn {
   return {
     actionIds: new Set(),
@@ -51,6 +61,38 @@ function permissionContext(toolUseID: string): Parameters<CanUseTool>[2] {
 }
 
 describe("claude session turn handling", () => {
+  it("publishes the pid lifecycle of a spawned Claude process", async () => {
+    const session = new ClaudeCodeSession();
+    const processIds: Array<number | undefined> = [];
+    const unsubscribe = session.subscribeProcessId((processId) => {
+      processIds.push(processId);
+    });
+    const child = (
+      session as unknown as SessionProcessHarness
+    ).spawnClaudeProcess({
+      args: ["-e", "setInterval(() => undefined, 1_000)"],
+      command: process.execPath,
+      env: process.env,
+      signal: new AbortController().signal,
+    });
+
+    try {
+      expect(session.processId()).toBe(child.pid);
+      expect(processIds).toEqual([child.pid]);
+      const exited = new Promise<void>((resolve) => {
+        child.once("exit", () => resolve());
+      });
+      child.kill("SIGTERM");
+      await exited;
+      expect(session.processId()).toBeUndefined();
+      expect(processIds).toEqual([child.pid, undefined]);
+    } finally {
+      unsubscribe();
+      child.kill("SIGKILL");
+      session.close();
+    }
+  });
+
   it("records aborted turn errors as interrupted", () => {
     const controller = new AbortController();
 

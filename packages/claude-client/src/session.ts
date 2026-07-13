@@ -10,6 +10,14 @@ import type {
   TurnRunResult,
 } from "@angel-engine/client-napi";
 import type {
+  SessionProcess,
+  SessionProcessIdListener,
+} from "@angel-engine/js-client";
+import type {
+  SpawnedProcess,
+  SpawnOptions,
+} from "@anthropic-ai/claude-agent-sdk";
+import type {
   CanUseTool,
   Options as ClaudeQueryOptions,
   Query,
@@ -30,6 +38,7 @@ import {
   EngineEventContextUpdateType,
   EngineEventTurnOutcome,
 } from "@angel-engine/client-napi";
+import { spawn } from "node:child_process";
 import is from "@sindresorhus/is";
 import {
   abortError,
@@ -59,10 +68,16 @@ import {
 } from "./session-runtime.js";
 import { claudeEffort, normalizeClaudeMode } from "./utils.js";
 
-export class ClaudeCodeSession {
-  private readonly runtime = new ClaudeCodeSessionRuntime();
+export class ClaudeCodeSession implements SessionProcess {
+  private readonly runtime: ClaudeCodeSessionRuntime;
+  private readonly processIdListeners = new Set<SessionProcessIdListener>();
+  private claudeProcess?: SpawnedProcess & { pid?: number };
 
-  constructor() {}
+  constructor() {
+    this.runtime = new ClaudeCodeSessionRuntime((options) =>
+      this.spawnClaudeProcess(options),
+    );
+  }
 
   close(): void {
     this.runtime.close();
@@ -72,9 +87,18 @@ export class ClaudeCodeSession {
     return this.runtime.hasConversation();
   }
 
-  processId(): undefined {
-    // The pinned Claude Agent SDK owns its child process and exposes no pid.
-    return undefined;
+  processId(): number | undefined {
+    const process = this.claudeProcess;
+    return process && !process.killed && process.exitCode === null
+      ? process.pid
+      : undefined;
+  }
+
+  subscribeProcessId(listener: SessionProcessIdListener): () => void {
+    this.processIdListeners.add(listener);
+    return (): void => {
+      this.processIdListeners.delete(listener);
+    };
   }
 
   async hydrate(request: HydrateRequest): Promise<ConversationSnapshot> {
@@ -223,7 +247,31 @@ export class ClaudeCodeSession {
         request.permissionMode ?? this.runtime.currentPermissionMode,
       ),
       resume: request.remoteId,
+      spawnClaudeCodeProcess: (options) => this.spawnClaudeProcess(options),
     };
+  }
+
+  private spawnClaudeProcess(
+    options: SpawnOptions,
+  ): SpawnedProcess & { pid?: number } {
+    const child = spawn(options.command, options.args, {
+      cwd: options.cwd,
+      env: options.env,
+      signal: options.signal,
+      stdio: ["pipe", "pipe", "inherit"] as const,
+    });
+    this.claudeProcess = child;
+    this.emitProcessId(child.pid);
+    child.once("exit", () => {
+      if (this.claudeProcess !== child) return;
+      this.claudeProcess = undefined;
+      this.emitProcessId(undefined);
+    });
+    return child;
+  }
+
+  private emitProcessId(processId: number | undefined): void {
+    for (const listener of this.processIdListeners) listener(processId);
   }
 
   private async applyInitialization(

@@ -1,10 +1,10 @@
 import type { SendTextRequest } from "@angel-engine/client-napi";
-import type { PiAgentSession, PiThinkingLevel } from "./types.js";
+import type { PiSdkRpcClient, PiThinkingLevel } from "./types.js";
 
 import is from "@sindresorhus/is";
 
 type PiPromptImage =
-  NonNullable<Parameters<PiAgentSession["prompt"]>[1]>["images"] extends Array<
+  NonNullable<Parameters<PiSdkRpcClient["prompt"]>[1]> extends Array<
     infer Image
   >
     ? Image
