@@ -1,5 +1,9 @@
-import type { AgentRuntime } from "@shared/agents";
-import type { Chat, ChatHistoryMessage, ChatRuntimeConfig } from "@shared/chat";
+import type { AgentRuntime } from "@angel-engine/daemon-api/agents";
+import type {
+  Chat,
+  ChatHistoryMessage,
+  ChatRuntimeConfig,
+} from "@angel-engine/daemon-api/chat";
 
 export const EMPTY_MESSAGES: ChatHistoryMessage[] = [];
 

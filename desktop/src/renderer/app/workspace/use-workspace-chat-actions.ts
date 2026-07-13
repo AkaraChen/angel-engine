@@ -1,16 +1,19 @@
-import type { AgentRuntime } from "@shared/agents";
+import type { AgentRuntime } from "@angel-engine/daemon-api/agents";
 import type {
   Chat,
   ChatHistoryMessage,
   ChatLoadResult,
   ChatRuntimeConfig,
-} from "@shared/chat";
-import type { Project } from "@shared/projects";
+} from "@angel-engine/daemon-api/chat";
+import type { Project } from "@angel-engine/daemon-api/projects";
 import type { WorkspaceNavigation } from "@/app/workspace/use-workspace-navigation";
 import type { WorkspacePageModel } from "@/app/workspace/use-workspace-page-model";
 import type { ChatRunOrigin } from "@/app/workspace/workspace-thread-types";
 
-import { isAgentRuntime, rememberAgentRuntimePreference } from "@shared/agents";
+import {
+  isAgentRuntime,
+  rememberAgentRuntimePreference,
+} from "@angel-engine/daemon-api/agents";
 import is from "@sindresorhus/is";
 import { useMutation } from "@tanstack/react-query";
 import { useCallback, useEffect, useState } from "react";

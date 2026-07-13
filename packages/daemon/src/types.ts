@@ -1,19 +1,7 @@
-export interface DaemonInfo {
-  host: string;
-  port: number;
-  token: string;
-  pid: number;
-  version: string;
-}
-
-export interface DaemonHealth {
-  pid: number;
-  uptime: number;
-  version: string;
-}
-
 export interface DaemonOptions {
   dataDir: string;
+  migrationsDir?: string;
+  packaged?: boolean;
   host?: string;
   port?: number;
   token?: string;

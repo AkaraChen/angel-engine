@@ -13,8 +13,8 @@ import {
   WorkspaceGitPanel,
   WorkspaceWindowGitPanel,
 } from "@/app/workspace/workspace-git-panels";
-import { WorkspaceTerminalView } from "@/app/workspace/workspace-terminal-view";
 import { WorkspaceProcessesView } from "@/app/workspace/workspace-processes-view";
+import { WorkspaceTerminalView } from "@/app/workspace/workspace-terminal-view";
 import { WorkspaceToolEmpty } from "@/app/workspace/workspace-tool-layout";
 import {
   WorkspaceFilePreview,

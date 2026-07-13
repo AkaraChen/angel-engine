@@ -2,7 +2,7 @@ import type {
   ChatSendInput,
   ChatStreamController,
   ChatStreamEvent,
-} from "@shared/chat";
+} from "@angel-engine/daemon-api/chat";
 import { createDesktopAgentAdapter } from "./desktop-agent-adapter";
 
 export async function* streamChatEvents(

@@ -1,5 +1,5 @@
-import type { Chat } from "@shared/chat";
-import { rememberAgentOrder } from "@shared/agents";
+import type { Chat } from "@angel-engine/daemon-api/chat";
+import { rememberAgentOrder } from "@angel-engine/daemon-api/agents";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 import { useCallback } from "react";

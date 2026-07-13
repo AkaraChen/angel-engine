@@ -1,4 +1,4 @@
-import type { WorkspaceFileReadResult } from "@shared/workspace-tools";
+import type { WorkspaceFileReadResult } from "@angel-engine/daemon-api/workspace-tools";
 import type {
   KeyboardEvent as ReactKeyboardEvent,
   MouseEvent as ReactMouseEvent,
@@ -11,19 +11,19 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useState } from "react";
 
 import { getErrorMessage } from "@/app/workspace/workspace-file-display";
+import { WorkspaceWindowFileEditor } from "@/app/workspace/workspace-file-editor";
 import {
   getFileTreePathFromEvent,
   treeHostStyle,
   useWorkspaceFileTreeModel,
 } from "@/app/workspace/workspace-file-tree";
-import { WorkspaceWindowFileEditor } from "@/app/workspace/workspace-file-editor";
 import {
   initialWorkspaceToolFileTreeWidth,
   WorkspaceToolEmpty,
-  WorkspaceToolPanelSplitter,
   workspaceToolFileTreeWidthMax,
   workspaceToolFileTreeWidthMin,
   workspaceToolFileTreeWidthStorageKey,
+  WorkspaceToolPanelSplitter,
 } from "@/app/workspace/workspace-tool-layout";
 import {
   emptyWorkspaceWindowFilesState,

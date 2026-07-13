@@ -9,7 +9,7 @@ import {
 
 export function exposeDaemonBridge() {
   contextBridge.exposeInMainWorld("daemon", {
-    getInfo() {
+    async getInfo() {
       return ipcRenderer.invoke(
         DAEMON_INFO_CHANNEL,
       ) as Promise<DaemonConnection>;

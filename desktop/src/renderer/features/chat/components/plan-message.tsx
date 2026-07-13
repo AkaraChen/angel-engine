@@ -1,5 +1,5 @@
-import type { AgentRuntime } from "@shared/agents";
-import type { ChatPlanData } from "@shared/chat";
+import type { AgentRuntime } from "@angel-engine/daemon-api/agents";
+import type { ChatPlanData } from "@angel-engine/daemon-api/chat";
 import type { TFunction } from "i18next";
 
 import { useAui, useAuiState } from "@assistant-ui/react";
@@ -262,11 +262,7 @@ function PlanMessagePart({ plan }: { plan: ChatPlanData }) {
               </ol>
             ) : null}
             {isLastMessage && (canStartImplementation || canHandoff) ? (
-              <div
-                className="
-                flex justify-end gap-2 border-t border-border pt-2
-              "
-              >
+              <div className="flex justify-end gap-2 border-t border-border pt-2">
                 {canHandoff ? (
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>

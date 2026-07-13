@@ -2,7 +2,7 @@ import type {
   ChatAvailableCommand,
   ChatAvailableSkill,
   ProjectFileSearchResult,
-} from "@shared/chat";
+} from "@angel-engine/daemon-api/chat";
 import type { SuggestionProps } from "@tiptap/suggestion";
 import type { Ref } from "react";
 import { SpinnerGap as Loader2 } from "@phosphor-icons/react";

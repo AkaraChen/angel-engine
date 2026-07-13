@@ -1,7 +1,10 @@
-import type { AgentRuntime, AgentRuntimePreference } from "@shared/agents";
+import type {
+  AgentRuntime,
+  AgentRuntimePreference,
+} from "@angel-engine/daemon-api/agents";
 import type { DraftAgentConfig } from "@/app/workspace/workspace-thread-types";
 
-import { sanitizeAgentRuntimePreference } from "@shared/agents";
+import { sanitizeAgentRuntimePreference } from "@angel-engine/daemon-api/agents";
 import {
   draftAgentConfigKey,
   workspaceRuntimePageKey,

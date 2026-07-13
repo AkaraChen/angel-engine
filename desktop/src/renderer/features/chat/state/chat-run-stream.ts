@@ -5,7 +5,7 @@ import type {
   ChatHistoryMessagePart,
   ChatSendInput,
   ChatToolAction,
-} from "@shared/chat";
+} from "@angel-engine/daemon-api/chat";
 import type {
   ActiveRun,
   AssistantAccumulator,
@@ -16,7 +16,7 @@ import {
   appendChatTextPart,
   cloneChatHistoryPart,
   isTerminalChatToolPhase,
-} from "@shared/chat";
+} from "@angel-engine/daemon-api/chat";
 import { streamChatEvents } from "@/features/chat/api/chat-stream";
 import {
   createAssistantMessage,

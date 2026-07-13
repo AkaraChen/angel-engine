@@ -1,5 +1,8 @@
+import type {
+  ChatAvailableSkill,
+  ProjectFileSearchResult,
+} from "@angel-engine/daemon-api/chat";
 import type { CompleteAttachment, CreateAttachment } from "@assistant-ui/react";
-import type { ChatAvailableSkill, ProjectFileSearchResult } from "@shared/chat";
 import type { TFunction } from "i18next";
 import type {
   PromptInputFile,

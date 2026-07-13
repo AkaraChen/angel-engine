@@ -1,10 +1,10 @@
-import type { ChatPlanData } from "@shared/chat";
+import type { ChatPlanData } from "@angel-engine/daemon-api/chat";
 import type { EngineMessage } from "./chat-run-types";
 import {
   chatPlanPartName,
   cloneChatPlanData,
   isChatPlanData,
-} from "@shared/chat";
+} from "@angel-engine/daemon-api/chat";
 
 export function normalizeEnginePlanMessages(
   messages: EngineMessage[],

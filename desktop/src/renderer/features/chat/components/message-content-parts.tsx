@@ -4,11 +4,11 @@ import type {
 } from "@assistant-ui/react";
 import type { TFunction } from "i18next";
 
+import { parseDataUrl } from "@angel-engine/daemon-api/chat";
+import { isTextLikeMimeType } from "@angel-engine/daemon-api/mime";
 import { useAuiState } from "@assistant-ui/react";
 import { StreamdownTextPrimitive } from "@assistant-ui/react-streamdown";
 import { SpinnerGap as Loader2 } from "@phosphor-icons/react";
-import { parseDataUrl } from "@shared/chat";
-import { isTextLikeMimeType } from "@shared/mime";
 import is from "@sindresorhus/is";
 import { cjk } from "@streamdown/cjk";
 import { code as streamdownCode } from "@streamdown/code";

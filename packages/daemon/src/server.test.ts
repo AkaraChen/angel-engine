@@ -3,6 +3,7 @@ import os from "node:os";
 import path from "node:path";
 import { spawn, type ChildProcess } from "node:child_process";
 import { afterEach, describe, expect, it } from "vitest";
+import { WebSocket } from "ws";
 import { createDaemon, type Daemon } from "./index";
 
 const daemons: Daemon[] = [];
@@ -135,6 +136,53 @@ describe("createDaemon", () => {
     expect(response.status).toBe(200);
     await exited;
   });
+
+  it.skipIf(process.platform === "win32")(
+    "runs terminal sessions over authenticated WebSocket",
+    async () => {
+      const daemon = await startDaemon();
+      const socket = new WebSocket(
+        `ws://${daemon.info.host}:${daemon.info.port}/api/terminals`,
+        `angel-engine-token.${daemon.info.token}`,
+      );
+      const marker = `daemon-terminal-${Date.now()}`;
+      const output = new Promise<void>((resolve, reject) => {
+        const timeout = setTimeout(
+          () => reject(new Error("Terminal output timed out.")),
+          5_000,
+        );
+        socket.on("message", (raw) => {
+          const message = JSON.parse(raw.toString()) as {
+            event?: { data?: string };
+          };
+          if (message.event?.data?.includes(marker)) {
+            clearTimeout(timeout);
+            resolve();
+          }
+        });
+      });
+      await new Promise<void>((resolve) => socket.once("open", resolve));
+      socket.send(
+        JSON.stringify({
+          cols: 80,
+          cwd: os.tmpdir(),
+          rows: 24,
+          sessionId: "terminal-1",
+          type: "create",
+        }),
+      );
+      socket.send(
+        JSON.stringify({
+          data: `printf '${marker}\\n'\n`,
+          sessionId: "terminal-1",
+          type: "write",
+        }),
+      );
+      await output;
+      socket.send(JSON.stringify({ sessionId: "terminal-1", type: "kill" }));
+      socket.close();
+    },
+  );
 });
 
 async function startDaemon() {

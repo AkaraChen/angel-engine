@@ -5,11 +5,11 @@ import type {
   CreateCustomAgentInput,
   CustomAgent,
   UpdateCustomAgentInput,
-} from "@shared/agents";
+} from "@angel-engine/daemon-api/agents";
 
 import type { SupportedLanguage } from "@shared/i18n/resources";
 import type { DesktopThemeMode } from "@/platform/theme";
-import { sanitizeAgentSettings } from "@shared/agents";
+import { sanitizeAgentSettings } from "@angel-engine/daemon-api/agents";
 import { normalizeSupportedLanguage } from "@shared/i18n/resources";
 import { create } from "zustand";
 import { getApiClient } from "@/platform/api-client";

@@ -12,6 +12,7 @@ import {
 } from "@phosphor-icons/react";
 import { Fragment, useCallback, useEffect, useRef } from "react";
 
+import { useWorkspaceToolTabKeyboard } from "@/app/workspace/workspace-tool-tab-model";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -20,7 +21,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/platform/utils";
-import { useWorkspaceToolTabKeyboard } from "@/app/workspace/workspace-tool-tab-model";
 
 export function WorkspaceToolTabStrip({
   activeTabId,

@@ -1,4 +1,4 @@
-import type { Chat } from "@shared/chat";
+import type { Chat } from "@angel-engine/daemon-api/chat";
 
 import is from "@sindresorhus/is";
 

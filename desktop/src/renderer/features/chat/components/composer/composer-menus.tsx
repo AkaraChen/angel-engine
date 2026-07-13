@@ -1,4 +1,4 @@
-import type { AgentValueOption } from "@shared/agents";
+import type { AgentValueOption } from "@angel-engine/daemon-api/agents";
 import type { ReactNode } from "react";
 import { Paperclip } from "@phosphor-icons/react";
 import { useTranslation } from "react-i18next";

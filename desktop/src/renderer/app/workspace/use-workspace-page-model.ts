@@ -1,12 +1,12 @@
-import type { AgentRuntime } from "@shared/agents";
-import type { Chat, ChatCreationLocation } from "@shared/chat";
-import type { Project } from "@shared/projects";
+import type { AgentRuntime } from "@angel-engine/daemon-api/agents";
+import type { Chat, ChatCreationLocation } from "@angel-engine/daemon-api/chat";
+import type { Project } from "@angel-engine/daemon-api/projects";
 import type { useApi } from "@/platform/use-api";
 
 import {
   getEnabledAgentOptions,
   resolveEnabledAgentRuntime,
-} from "@shared/agents";
+} from "@angel-engine/daemon-api/agents";
 import is from "@sindresorhus/is";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useRef } from "react";

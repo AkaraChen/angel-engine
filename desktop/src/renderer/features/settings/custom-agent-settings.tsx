@@ -6,7 +6,7 @@ import type {
   CustomAgent,
   CustomAgentRuntime,
   UpdateCustomAgentInput,
-} from "@shared/agents";
+} from "@angel-engine/daemon-api/agents";
 
 import {
   Robot as Bot,

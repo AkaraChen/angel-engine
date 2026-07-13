@@ -1,4 +1,4 @@
-import type { AgentRuntime } from "@shared/agents";
+import type { AgentRuntime } from "@angel-engine/daemon-api/agents";
 
 export function chatRuntimeProviderKey(
   chatId: string,

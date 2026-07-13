@@ -2,7 +2,7 @@ import type {
   Chat,
   ChatHistoryMessagePart,
   ChatSendResult,
-} from "@shared/chat";
+} from "@angel-engine/daemon-api/chat";
 import type {
   ChatAttentionKind,
   ChatRunContext,
@@ -11,7 +11,7 @@ import type {
   ChatRunStore,
   EngineMessage,
 } from "./chat-run-types";
-import { isChatToolAction } from "@shared/chat";
+import { isChatToolAction } from "@angel-engine/daemon-api/chat";
 import is from "@sindresorhus/is";
 import { assign, createActor, setup } from "xstate";
 import { engineMessageContentToHistoryParts } from "./chat-run-history";

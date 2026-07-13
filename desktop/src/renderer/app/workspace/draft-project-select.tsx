@@ -1,5 +1,5 @@
-import type { ChatCreationLocation } from "@shared/chat";
-import type { Project } from "@shared/projects";
+import type { ChatCreationLocation } from "@angel-engine/daemon-api/chat";
+import type { Project } from "@angel-engine/daemon-api/projects";
 import type { ChangeEvent } from "react";
 
 import { Folder, GitBranch } from "@phosphor-icons/react";

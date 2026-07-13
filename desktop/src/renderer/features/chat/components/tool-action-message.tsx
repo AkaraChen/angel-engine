@@ -1,7 +1,11 @@
+import type {
+  ChatToolAction,
+  ChatToolActionOutput,
+} from "@angel-engine/daemon-api/chat";
 import type { ToolCallMessagePartProps } from "@assistant-ui/react";
-import type { ChatToolAction, ChatToolActionOutput } from "@shared/chat";
 import type { TFunction } from "i18next";
 
+import { isChatToolAction } from "@angel-engine/daemon-api/chat";
 import { useAuiState } from "@assistant-ui/react";
 import {
   WarningCircle as AlertCircleIcon,
@@ -9,7 +13,6 @@ import {
   CaretDown as ChevronDown,
   SpinnerGap as Loader2,
 } from "@phosphor-icons/react";
-import { isChatToolAction } from "@shared/chat";
 import is from "@sindresorhus/is";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";

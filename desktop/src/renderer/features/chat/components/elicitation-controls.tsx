@@ -1,4 +1,7 @@
-import type { ChatElicitation, ChatElicitationResponse } from "@shared/chat";
+import type {
+  ChatElicitation,
+  ChatElicitationResponse,
+} from "@angel-engine/daemon-api/chat";
 
 import is from "@sindresorhus/is";
 import { useState } from "react";

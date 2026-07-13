@@ -140,8 +140,8 @@ export function UserEditComposer() {
     >
       <div
         className="
-        w-full rounded-lg bg-background/90 shadow-panel backdrop-blur-xl
-      "
+          w-full rounded-lg bg-background/90 shadow-panel backdrop-blur-xl
+        "
       >
         <ChatComposer
           allowAttachments={false}
@@ -265,7 +265,11 @@ function AssistantMessageErrorText() {
   if (!text) return null;
 
   return (
-    <div className="mt-1 text-[13px]/5 whitespace-pre-wrap text-muted-foreground">
+    <div
+      className="
+      mt-1 text-[13px]/5 whitespace-pre-wrap text-muted-foreground
+    "
+    >
       {text}
     </div>
   );

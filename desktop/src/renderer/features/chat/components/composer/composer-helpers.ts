@@ -1,5 +1,8 @@
-import type { AgentValueOption } from "@shared/agents";
-import type { ChatAvailableCommand, ChatAvailableSkill } from "@shared/chat";
+import type { AgentValueOption } from "@angel-engine/daemon-api/agents";
+import type {
+  ChatAvailableCommand,
+  ChatAvailableSkill,
+} from "@angel-engine/daemon-api/chat";
 import type { TFunction } from "i18next";
 
 export interface AttachmentInputError {

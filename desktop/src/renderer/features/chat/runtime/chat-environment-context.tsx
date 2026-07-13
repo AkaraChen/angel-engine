@@ -1,4 +1,7 @@
-import type { ChatAvailableCommand, ChatAvailableSkill } from "@shared/chat";
+import type {
+  ChatAvailableCommand,
+  ChatAvailableSkill,
+} from "@angel-engine/daemon-api/chat";
 
 import { createContext, use } from "react";
 

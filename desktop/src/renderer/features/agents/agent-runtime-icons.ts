@@ -1,4 +1,8 @@
-import type { BuiltinAgentRuntime } from "@shared/agents";
+import type { BuiltinAgentRuntime } from "@angel-engine/daemon-api/agents";
+import {
+  AGENT_OPTIONS,
+  isBuiltinAgentRuntime,
+} from "@angel-engine/daemon-api/agents";
 import claudeIconSvg from "@lobehub/icons-static-svg/icons/claudecode.svg?raw";
 import clineIconSvg from "@lobehub/icons-static-svg/icons/cline.svg?raw";
 import codexIconSvg from "@lobehub/icons-static-svg/icons/codex.svg?raw";
@@ -7,7 +11,6 @@ import geminiIconSvg from "@lobehub/icons-static-svg/icons/geminicli.svg?raw";
 import kimiIconSvg from "@lobehub/icons-static-svg/icons/kimi.svg?raw";
 import opencodeIconSvg from "@lobehub/icons-static-svg/icons/opencode.svg?raw";
 import qoderIconSvg from "@lobehub/icons-static-svg/icons/qoder.svg?raw";
-import { AGENT_OPTIONS, isBuiltinAgentRuntime } from "@shared/agents";
 
 import is from "@sindresorhus/is";
 import piIconSvg from "./pi-coding-agent.svg?raw";
