@@ -14,6 +14,8 @@ use angel_engine_client::{
     SetPermissionModeRequest as EngineSetPermissionModeRequest,
     StartConversationRequest as EngineStartConversationRequest, ThreadEvent as EngineThreadEvent,
     create_runtime_options as engine_create_runtime_options,
+    list_listening_ports as engine_list_listening_ports,
+    list_subprocesses as engine_list_subprocesses,
 };
 use garde::Validate;
 use napi::ScopedTask;

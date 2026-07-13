@@ -24,6 +24,13 @@ impl AngelClient {
         })
     }
 
+    #[napi(js_name = "processId")]
+    pub fn process_id(&self) -> Result<u32> {
+        self.with_client("AngelClient.processId", "no_args", |client| {
+            client.process_id()
+        })
+    }
+
     #[napi(ts_return_type = "Promise<ClientUpdate>")]
     pub fn initialize(&self) -> AsyncTask<ClientJsonTask> {
         self.task("AngelClient.initialize", "no_args", |client| {

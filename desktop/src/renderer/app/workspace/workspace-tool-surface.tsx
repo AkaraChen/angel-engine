@@ -34,6 +34,7 @@ import {
   confirmWorkspaceWindowFilesExit,
   useWorkspaceWindowFileOpener,
 } from "@/app/workspace/workspace-window-file-state";
+import { browserTitleFromUrl } from "./workspace-browser-url";
 
 const defaultWorkspaceToolBrowserUrl = "about:blank";
 
@@ -195,25 +196,34 @@ export function WorkspaceToolSurface({
       };
     });
   }, [root, setSnapshot]);
-  const addBrowserTab = useCallback(() => {
-    setSnapshot((current) => {
-      const tab = {
-        browserViewId: crypto.randomUUID(),
-        draftUrl: defaultWorkspaceToolBrowserUrl,
-        id: crypto.randomUUID(),
-        kind: "browser" as const,
-        title: `Browser ${current.nextBrowserOrdinal}`,
-        url: defaultWorkspaceToolBrowserUrl,
-      };
+  const openBrowserTab = useCallback(
+    (url: string) => {
+      setSnapshot((current) => {
+        const tab = {
+          browserViewId: crypto.randomUUID(),
+          draftUrl: url,
+          id: crypto.randomUUID(),
+          kind: "browser" as const,
+          title:
+            url === defaultWorkspaceToolBrowserUrl
+              ? `Browser ${current.nextBrowserOrdinal}`
+              : browserTitleFromUrl(url),
+          url,
+        };
 
-      return {
-        ...current,
-        activeTabId: tab.id,
-        nextBrowserOrdinal: current.nextBrowserOrdinal + 1,
-        tabs: [...current.tabs, tab],
-      };
-    });
-  }, [setSnapshot]);
+        return {
+          ...current,
+          activeTabId: tab.id,
+          nextBrowserOrdinal: current.nextBrowserOrdinal + 1,
+          tabs: [...current.tabs, tab],
+        };
+      });
+    },
+    [setSnapshot],
+  );
+  const addBrowserTab = useCallback(() => {
+    openBrowserTab(defaultWorkspaceToolBrowserUrl);
+  }, [openBrowserTab]);
   const closeDynamicTab = useCallback(
     (tab: WorkspaceToolSurfaceDynamicTab) => {
       if (tab.kind === "terminal") {
@@ -303,6 +313,7 @@ export function WorkspaceToolSurface({
               surfaceActive={active}
               root={root}
               onBrowserTabChange={setSnapshot}
+              onOpenBrowser={openBrowserTab}
               onOpenFile={openFileTab}
             />
           </div>
@@ -330,6 +341,7 @@ export function WorkspaceToolSurface({
               root={root}
               surfaceActive={active}
               onBrowserTabChange={setSnapshot}
+              onOpenBrowser={openBrowserTab}
               onOpenFile={openFileTab}
             />
           </div>

@@ -1,12 +1,15 @@
 import { mkdtemp, readFile, stat } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
+import { spawn, type ChildProcess } from "node:child_process";
 import { afterEach, describe, expect, it } from "vitest";
 import { createDaemon, type Daemon } from "./index";
 
 const daemons: Daemon[] = [];
+const children: ChildProcess[] = [];
 
 afterEach(async () => {
+  for (const child of children.splice(0)) child.kill("SIGKILL");
   await Promise.all(daemons.splice(0).map((daemon) => daemon.close()));
 });
 
@@ -39,6 +42,27 @@ describe("createDaemon", () => {
     }
   });
 
+  it("allows renderer preflight before bearer authentication", async () => {
+    const daemon = await startDaemon();
+    const response = await fetch(
+      `http://${daemon.info.host}:${daemon.info.port}/api/process-registry`,
+      {
+        headers: {
+          "access-control-request-headers": "authorization,content-type",
+          "access-control-request-method": "GET",
+          origin: "file://",
+        },
+        method: "OPTIONS",
+      },
+    );
+
+    expect(response.status).toBe(204);
+    expect(response.headers.get("access-control-allow-origin")).toBe("*");
+    expect(response.headers.get("access-control-allow-headers")).toContain(
+      "Authorization",
+    );
+  });
+
   it("acknowledges shutdown before invoking the process callback", async () => {
     const dataDir = await mkdtemp(path.join(os.tmpdir(), "angel-daemon-"));
     let resolveShutdown: (() => void) | undefined;
@@ -64,4 +88,71 @@ describe("createDaemon", () => {
     await expect(response.json()).resolves.toEqual({ ok: true });
     await shutdown;
   });
+
+  it("replaces and enumerates the authenticated process registry", async () => {
+    const daemon = await startDaemon();
+    const response = await daemonFetch(daemon, "/api/process-registry", {
+      body: JSON.stringify({
+        entries: [{ id: "chat-1", label: "Codex", rootPid: process.pid }],
+      }),
+      method: "PUT",
+    });
+    expect(response.status).toBe(200);
+
+    const snapshot = await daemonFetch(daemon, "/api/process-registry");
+    expect(snapshot.status).toBe(200);
+    await expect(snapshot.json()).resolves.toMatchObject({
+      entries: [{ id: "chat-1", label: "Codex", rootPid: process.pid }],
+    });
+  });
+
+  it("rejects killing an unregistered process", async () => {
+    const daemon = await startDaemon();
+    const response = await daemonFetch(daemon, "/api/processes/1/kill", {
+      method: "POST",
+    });
+    expect(response.status).toBe(403);
+  });
+
+  it("kills a current descendant of a registered root", async () => {
+    const daemon = await startDaemon();
+    const child = spawnSleep();
+    children.push(child);
+    await daemonFetch(daemon, "/api/process-registry", {
+      body: JSON.stringify({
+        entries: [{ id: "chat-1", label: "Test", rootPid: process.pid }],
+      }),
+      method: "PUT",
+    });
+
+    const exited = new Promise<void>((resolve) => child.once("exit", resolve));
+    const response = await daemonFetch(
+      daemon,
+      `/api/processes/${child.pid}/kill`,
+      { method: "POST" },
+    );
+
+    expect(response.status).toBe(200);
+    await exited;
+  });
 });
+
+async function startDaemon() {
+  const dataDir = await mkdtemp(path.join(os.tmpdir(), "angel-daemon-"));
+  const daemon = await createDaemon({ dataDir, token: "secret" });
+  daemons.push(daemon);
+  return daemon;
+}
+
+function daemonFetch(daemon: Daemon, pathname: string, init?: RequestInit) {
+  return fetch(`http://${daemon.info.host}:${daemon.info.port}${pathname}`, {
+    ...init,
+    headers: { authorization: "Bearer secret", ...init?.headers },
+  });
+}
+
+function spawnSleep() {
+  return process.platform === "win32"
+    ? spawn("powershell", ["-NoProfile", "-Command", "Start-Sleep -Seconds 30"])
+    : spawn("sleep", ["30"]);
+}

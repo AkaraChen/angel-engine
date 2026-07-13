@@ -22,6 +22,14 @@ impl AngelSession {
         })
     }
 
+    #[napi(js_name = "processId")]
+    pub fn process_id(&self) -> Result<u32> {
+        trace_napi_sync_result("AngelSession.processId", "no_args", || {
+            let session = self.session.lock().map_err(lock_error)?;
+            Ok(session.process_id())
+        })
+    }
+
     #[napi(js_name = "hasConversation")]
     pub fn has_conversation(&self) -> Result<bool> {
         trace_napi_sync_result("AngelSession.hasConversation", "no_args", || {

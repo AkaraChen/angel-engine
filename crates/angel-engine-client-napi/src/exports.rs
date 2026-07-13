@@ -1,5 +1,44 @@
 use super::*;
 
+use crate::types::process::{ListeningPortInfo, SubprocessInfo};
+
+#[napi(js_name = "listSubprocesses")]
+pub fn list_subprocesses(root_pid: u32) -> Result<Vec<SubprocessInfo>> {
+    trace_napi_sync_result("listSubprocesses", format!("root_pid={root_pid}"), || {
+        engine_list_subprocesses(root_pid)
+            .map(|processes| {
+                processes
+                    .into_iter()
+                    .map(|process| SubprocessInfo {
+                        pid: process.pid,
+                        parent_pid: process.parent_pid,
+                        name: process.name,
+                        command: process.command,
+                    })
+                    .collect()
+            })
+            .map_err(to_napi_error)
+    })
+}
+
+#[napi(js_name = "listListeningPorts")]
+pub fn list_listening_ports(pids: Vec<u32>) -> Result<Vec<ListeningPortInfo>> {
+    trace_napi_sync_result("listListeningPorts", format!("pids={}", pids.len()), || {
+        engine_list_listening_ports(&pids)
+            .map(|ports| {
+                ports
+                    .into_iter()
+                    .map(|port| ListeningPortInfo {
+                        pid: port.pid,
+                        port: port.port,
+                        address: port.address,
+                    })
+                    .collect()
+            })
+            .map_err(to_napi_error)
+    })
+}
+
 #[napi(
     js_name = "normalizeClientOptions",
     ts_args_type = "options: ClientOptions",

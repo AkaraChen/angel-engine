@@ -72,6 +72,11 @@ export class ClaudeCodeSession {
     return this.runtime.hasConversation();
   }
 
+  processId(): undefined {
+    // The pinned Claude Agent SDK owns its child process and exposes no pid.
+    return undefined;
+  }
+
   async hydrate(request: HydrateRequest): Promise<ConversationSnapshot> {
     return this.enqueue(async () => {
       this.ensureConversation({

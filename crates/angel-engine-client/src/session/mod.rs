@@ -25,3 +25,9 @@ pub struct AngelSession {
     conversation_id: Option<String>,
     active_turn: Option<ActiveTurn>,
 }
+
+impl AngelSession {
+    pub fn process_id(&self) -> u32 {
+        self.client.process_id()
+    }
+}

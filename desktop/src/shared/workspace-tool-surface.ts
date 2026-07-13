@@ -5,7 +5,7 @@ export interface WorkspaceToolSurfaceContext {
   root?: string | null;
 }
 
-export type WorkspaceToolPinnedTabId = "files" | "git";
+export type WorkspaceToolPinnedTabId = "files" | "git" | "processes";
 
 export type WorkspaceToolSurfaceDynamicTab =
   | WorkspaceToolSurfaceBrowserTab

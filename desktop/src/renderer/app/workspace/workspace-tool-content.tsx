@@ -14,6 +14,7 @@ import {
   WorkspaceWindowGitPanel,
 } from "@/app/workspace/workspace-git-panels";
 import { WorkspaceTerminalView } from "@/app/workspace/workspace-terminal-view";
+import { WorkspaceProcessesView } from "@/app/workspace/workspace-processes-view";
 import { WorkspaceToolEmpty } from "@/app/workspace/workspace-tool-layout";
 import {
   WorkspaceFilePreview,
@@ -22,6 +23,7 @@ import {
 import {
   workspaceToolFilesTabId,
   workspaceToolGitTabId,
+  workspaceToolProcessesTabId,
 } from "@/app/workspace/workspace-tool-store";
 
 export function WorkspaceToolContent({
@@ -31,6 +33,7 @@ export function WorkspaceToolContent({
   root,
   surfaceActive,
   onBrowserTabChange,
+  onOpenBrowser,
   onOpenFile,
 }: {
   activeDynamicTab?: WorkspaceToolSurfaceDynamicTab;
@@ -43,6 +46,7 @@ export function WorkspaceToolContent({
       current: WorkspaceToolSurfaceSnapshot,
     ) => WorkspaceToolSurfaceSnapshot,
   ) => void;
+  onOpenBrowser: (url: string) => void;
   onOpenFile: (path: string) => void;
 }) {
   if (activeTabId === workspaceToolFilesTabId) {
@@ -52,6 +56,14 @@ export function WorkspaceToolContent({
   }
   if (activeTabId === workspaceToolGitTabId) {
     return <WorkspaceGitPanel api={api} root={root} />;
+  }
+  if (activeTabId === workspaceToolProcessesTabId) {
+    return (
+      <WorkspaceProcessesView
+        active={surfaceActive}
+        onOpenBrowser={onOpenBrowser}
+      />
+    );
   }
   if (!activeDynamicTab) {
     return <WorkspaceToolEmpty title="Unavailable" />;
@@ -90,6 +102,7 @@ export function WorkspaceToolWindowContent({
   root,
   surfaceActive,
   onBrowserTabChange,
+  onOpenBrowser,
   onOpenFile,
 }: {
   activeDynamicTab?: WorkspaceToolSurfaceDynamicTab;
@@ -102,6 +115,7 @@ export function WorkspaceToolWindowContent({
       current: WorkspaceToolSurfaceSnapshot,
     ) => WorkspaceToolSurfaceSnapshot,
   ) => void;
+  onOpenBrowser: (url: string) => void;
   onOpenFile: (path: string) => void;
 }) {
   if (activeTabId === workspaceToolFilesTabId) {
@@ -119,6 +133,7 @@ export function WorkspaceToolWindowContent({
       root={root}
       surfaceActive={surfaceActive}
       onBrowserTabChange={onBrowserTabChange}
+      onOpenBrowser={onOpenBrowser}
       onOpenFile={onOpenFile}
     />
   );

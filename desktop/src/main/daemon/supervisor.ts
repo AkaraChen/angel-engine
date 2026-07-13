@@ -24,6 +24,22 @@ let intentionalShutdown = false;
 let respawnAttempt = 0;
 let respawnTimer: NodeJS.Timeout | undefined;
 let healthTimer: NodeJS.Timeout | undefined;
+const connectionListeners = new Set<(connection: DaemonConnection) => void>();
+
+export function subscribeDaemonConnection(
+  listener: (connection: DaemonConnection) => void,
+) {
+  connectionListeners.add(listener);
+  return () => connectionListeners.delete(listener);
+}
+
+export async function fetchDaemon(pathname: string, init?: RequestInit) {
+  if (connection.status !== "available") return undefined;
+  return fetch(daemonUrl(connection.info, pathname), {
+    ...init,
+    headers: { ...authorizationHeaders(connection.info), ...init?.headers },
+  });
+}
 
 export function registerDaemonIpc() {
   ipcMain.handle(DAEMON_INFO_CHANNEL, () => connection);
@@ -243,6 +259,7 @@ function scheduleRespawn() {
 
 function setConnection(next: DaemonConnection) {
   connection = next;
+  for (const listener of connectionListeners) listener(next);
   for (const window of BrowserWindow.getAllWindows()) {
     window.webContents.send(DAEMON_CHANGED_CHANNEL, next);
   }

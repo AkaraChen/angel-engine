@@ -77,6 +77,10 @@ impl AngelClient {
         })
     }
 
+    pub fn process_id(&self) -> u32 {
+        self.child.id()
+    }
+
     pub fn snapshot(&self) -> crate::ClientSnapshot {
         self.core.snapshot()
     }

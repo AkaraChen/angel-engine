@@ -6,6 +6,13 @@ import { chmod, mkdir, rename, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { serve } from "@hono/node-server";
 import { Hono } from "hono";
+import { cors } from "hono/cors";
+import {
+  isProcessId,
+  parseKillBody,
+  parseRegistryBody,
+  ProcessRegistry,
+} from "./processes";
 
 export interface Daemon {
   app: Hono;
@@ -19,7 +26,17 @@ export async function createDaemon(options: DaemonOptions): Promise<Daemon> {
   const version = options.version ?? "0.1.0";
   const startedAt = process.uptime();
   const app = new Hono();
+  const processRegistry = new ProcessRegistry();
   let server: ServerType | undefined;
+
+  app.use(
+    "/api/*",
+    cors({
+      allowHeaders: ["Authorization", "Content-Type"],
+      allowMethods: ["GET", "POST", "PUT", "OPTIONS"],
+      origin: "*",
+    }),
+  );
 
   app.use("/api/*", async (context, next) => {
     if (context.req.header("authorization") !== `Bearer ${token}`) {
@@ -35,6 +52,42 @@ export async function createDaemon(options: DaemonOptions): Promise<Daemon> {
       version,
     };
     return context.json(health);
+  });
+
+  app.put("/api/process-registry", async (context) => {
+    try {
+      processRegistry.replace(parseRegistryBody(await context.req.json()));
+      return context.json({ ok: true });
+    } catch (error) {
+      return context.json(
+        { error: error instanceof Error ? error.message : "Invalid request." },
+        400,
+      );
+    }
+  });
+
+  app.get("/api/process-registry", (context) => {
+    return context.json({ entries: processRegistry.snapshot() });
+  });
+
+  app.post("/api/processes/:pid/kill", async (context) => {
+    const pid = Number(context.req.param("pid"));
+    if (!isProcessId(pid)) return context.json({ error: "Invalid pid." }, 400);
+    try {
+      const bodyText = await context.req.text();
+      const { force } = parseKillBody(
+        bodyText.length === 0 ? undefined : JSON.parse(bodyText),
+      );
+      if (!processRegistry.kill(pid, force)) {
+        return context.json({ error: "Process is not registered." }, 403);
+      }
+      return context.json({ ok: true });
+    } catch (error) {
+      return context.json(
+        { error: error instanceof Error ? error.message : "Invalid request." },
+        400,
+      );
+    }
   });
 
   const close = async () => {

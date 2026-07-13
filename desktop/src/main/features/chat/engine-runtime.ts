@@ -46,6 +46,7 @@ import {
   setChatRuntime as setChatRuntimeRecord,
   touchChat,
 } from "./repository";
+import { ChatProcessRegistry } from "./process-registry";
 
 export { cwdForNewChat, getOrCreateChatSession };
 
@@ -54,6 +55,7 @@ type ChatStreamObserver = (
 ) => void;
 
 const chatSessions = new Map<string, DesktopChatSession>();
+const processRegistry = new ChatProcessRegistry(chatSessions);
 const chatSessionCreations = new Map<string, Promise<DesktopChatSession>>();
 const chatPrewarms = new Map<string, ChatPrewarm>();
 const MAX_PREWARM_SESSIONS = 4;
@@ -190,6 +192,7 @@ function setChatRuntime(input: ChatSetRuntimeInput): Chat {
 
   session?.close();
   chatSessions.delete(chat.id);
+  void processRegistry.refresh();
   return setChatRuntimeRecord(chat.id, input.runtime);
 }
 
@@ -250,6 +253,7 @@ async function streamChat(
 
   if (is.nonEmptyString(input.text)) {
     renameChatFromPrompt(chat.id, input.text);
+    void processRegistry.refresh();
   }
   const projected = projectTurnRunResult(result);
   const finalChat = is.nonEmptyString(projected.remoteThreadId)
@@ -273,6 +277,7 @@ function closeChatSession(chatId?: string) {
   if (is.nonEmptyString(chatId)) {
     chatSessions.get(chatId)?.close();
     chatSessions.delete(chatId);
+    void processRegistry.refresh();
     return;
   }
 
@@ -280,16 +285,19 @@ function closeChatSession(chatId?: string) {
     session.close();
   }
   chatSessions.clear();
+  void processRegistry.refresh();
   closeChatPrewarms();
 }
 
 async function getChatSession(chat: Chat): Promise<DesktopChatSession> {
-  return getOrCreateChatSession(
+  const session = await getOrCreateChatSession(
     chat.id,
     chatSessions,
     chatSessionCreations,
     async () => createChatSession(chat.runtime),
   );
+  void processRegistry.refresh();
+  return session;
 }
 
 async function prepareChatForSend(input: ChatSendInput): Promise<{
@@ -312,6 +320,7 @@ async function prepareChatForSend(input: ChatSendInput): Promise<{
       runtime: prewarm.input.runtime,
     });
     chatSessions.set(createdChat.id, prewarm.session);
+    void processRegistry.refresh();
     const chat = persistRemoteThreadId(createdChat, prewarm.snapshot);
     return { chat, isNewChat: true, session: prewarm.session };
   }

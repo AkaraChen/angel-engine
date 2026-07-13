@@ -110,6 +110,11 @@ export class PiAgentSession {
     return Boolean(this.conversationId);
   }
 
+  processId(): undefined {
+    // The pinned Pi SDK runs in-process and exposes no child process pid.
+    return undefined;
+  }
+
   async hydrate(request: HydrateRequest): Promise<ConversationSnapshot> {
     return this.enqueue(async () => {
       const conversation = this.ensureConversation({

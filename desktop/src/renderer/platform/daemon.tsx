@@ -4,7 +4,7 @@ import type { PropsWithChildren } from "react";
 
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
 
-interface DaemonClient {
+export interface DaemonClient {
   fetch: (pathname: string, init?: RequestInit) => Promise<Response>;
   info: DaemonInfo;
 }

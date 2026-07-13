@@ -63,6 +63,10 @@ export class DesktopAngelSession {
     return this.session.hasConversation();
   }
 
+  processId(): number {
+    return this.session.processId();
+  }
+
   async hydrate(request: HydrateRequest): Promise<ConversationSnapshot> {
     return this.enqueue(async () => this.session.hydrate(request));
   }

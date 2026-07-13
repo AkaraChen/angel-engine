@@ -9,6 +9,7 @@ import {
   FileText,
   Folder,
   GitBranch,
+  Cpu,
   TerminalWindow as TerminalIcon,
 } from "@phosphor-icons/react";
 import { useCallback, useRef } from "react";
@@ -16,6 +17,7 @@ import { useCallback, useRef } from "react";
 import {
   workspaceToolFilesTabId,
   workspaceToolGitTabId,
+  workspaceToolProcessesTabId,
 } from "@/app/workspace/workspace-tool-store";
 
 export type WorkspaceToolTabSelectHandler = (
@@ -142,6 +144,12 @@ export function workspaceToolTabItems(
       pinned: true,
       title: "Git changes",
     },
+    {
+      icon: Cpu,
+      id: workspaceToolProcessesTabId,
+      pinned: true,
+      title: "Processes",
+    },
     ...dynamicTabs.map((tab) => ({
       dynamicTab: tab,
       icon: workspaceToolTabIcon(tab),
@@ -158,6 +166,7 @@ export function visibleActiveWorkspaceToolTabId(
   if (
     snapshot.activeTabId === workspaceToolFilesTabId ||
     snapshot.activeTabId === workspaceToolGitTabId ||
+    snapshot.activeTabId === workspaceToolProcessesTabId ||
     snapshot.tabs.some((tab) => tab.id === snapshot.activeTabId)
   ) {
     return snapshot.activeTabId;

@@ -439,6 +439,9 @@ importers:
 
   packages/daemon:
     dependencies:
+      '@angel-engine/client-napi':
+        specifier: workspace:*
+        version: link:../../crates/angel-engine-client-napi
       '@hono/node-server':
         specifier: ^1.19.9
         version: 1.19.14(hono@4.12.25)

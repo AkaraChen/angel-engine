@@ -13,6 +13,7 @@ mod core;
 mod error;
 mod event;
 mod process;
+mod process_manager;
 mod runtime;
 mod session;
 mod settings;
@@ -36,6 +37,9 @@ pub use event::{
     RuntimeAuthMethod,
 };
 pub use process::AngelClient;
+pub use process_manager::{
+    ListeningPortInfo, SubprocessInfo, list_listening_ports, list_subprocesses,
+};
 pub use runtime::{AgentRuntime, RuntimeOptions, RuntimeOptionsOverrides, create_runtime_options};
 pub use session::{
     AngelSession, HydrateRequest, InspectRequest, RefreshSkillsRequest, SendTextRequest,
