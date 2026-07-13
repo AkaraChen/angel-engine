@@ -1,6 +1,7 @@
 import type { ChatMessage } from "@/platform/chat-types";
 
 import { PaperPlaneTilt } from "@phosphor-icons/react";
+import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,6 +12,7 @@ import {
   MessageScrollerProvider,
   MessageScrollerViewport,
 } from "@/components/ui/message-scroller";
+import { takeNewChatPrompt } from "@/features/chat/new-chat-prompt";
 import { cn } from "@/lib/utils";
 
 // Placeholder transcript so the shadcn chat components render in the shell.
@@ -19,7 +21,11 @@ const DEMO_MESSAGES: ChatMessage[] = [
   { id: "1", role: "assistant", text: "Hi! How can I help you today?" },
 ];
 
-export function ChatPage(_props: { chatId: string }) {
+export function ChatPage({ chatId }: { chatId: string }) {
+  // The Home composer creates an empty chat and stashes the first message; pick
+  // it up once so it isn't lost (a later sub-issue wires the real send).
+  const [draft, setDraft] = useState(() => takeNewChatPrompt(chatId) ?? "");
+
   return (
     <div className="flex h-full min-h-0 flex-col">
       <MessageScrollerProvider>
@@ -56,7 +62,12 @@ export function ChatPage(_props: { chatId: string }) {
         "
         onSubmit={(event) => event.preventDefault()}
       >
-        <Input className="flex-1" placeholder="Message" />
+        <Input
+          className="flex-1"
+          onChange={(event) => setDraft(event.target.value)}
+          placeholder="Message"
+          value={draft}
+        />
         <Button aria-label="Send" size="icon" type="submit">
           <PaperPlaneTilt size={18} />
         </Button>

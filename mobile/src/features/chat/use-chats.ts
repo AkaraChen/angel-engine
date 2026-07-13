@@ -1,4 +1,4 @@
-import type { CreateChatInput } from "@/platform/chat-types";
+import type { ChatCreateInput } from "@angel-engine/daemon-api/chat";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
@@ -49,7 +49,7 @@ export function useCreateChat() {
   const daemon = useDaemonClient();
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (input: CreateChatInput) => daemon.createChat(input),
+    mutationFn: async (input: ChatCreateInput) => daemon.createChat(input),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: queryKeys.chats.list });
     },

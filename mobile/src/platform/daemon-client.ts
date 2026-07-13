@@ -1,18 +1,16 @@
-import type {
-  CreateChatInput,
-  DaemonAgentOption,
-  DaemonChat,
-  DaemonProject,
-} from "./chat-types";
+import type { AgentOption } from "@angel-engine/daemon-api/agents";
+import type { Chat, ChatCreateInput } from "@angel-engine/daemon-api/chat";
+import type { Project } from "@angel-engine/daemon-api/projects";
 import type { DaemonConfig } from "./daemon-config";
 
+import { createDaemonApiClient } from "@angel-engine/daemon-api/client";
+
 /**
- * Typed fetch client for the desktop daemon HTTP API.
- *
- * These DTOs mirror the daemon's `/api` response contract
- * (`packages/daemon/src/server.ts`). They are kept local because `mobile` is a
- * browser bundle and must not depend on the native `@angel-engine/daemon`
- * package; treat this file as the HTTP boundary for the daemon.
+ * The mobile daemon client. Chat/project/agent calls delegate to the shared
+ * `@angel-engine/daemon-api` client so the wire contract and types stay in one
+ * place; `health`/`listProcesses` stay local because they aren't part of that
+ * client but the mobile status UI needs them. `daemon-api/client` is
+ * runtime-safe in a browser bundle (its type imports are erased).
  */
 export interface DaemonHealth {
   pid: number;
@@ -41,17 +39,16 @@ export class DaemonRequestError extends Error {
 
 export interface DaemonClient {
   readonly baseUrl: string;
-  request: <T>(path: string, init?: RequestInit) => Promise<T>;
   health: () => Promise<DaemonHealth>;
   listProcesses: () => Promise<ProcessRegistrySnapshot>;
-  listChats: () => Promise<DaemonChat[]>;
-  listProjects: () => Promise<DaemonProject[]>;
-  listAgents: () => Promise<DaemonAgentOption[]>;
-  createChat: (input: CreateChatInput) => Promise<DaemonChat>;
+  listChats: () => Promise<Chat[]>;
+  listProjects: () => Promise<Project[]>;
+  listAgents: () => Promise<AgentOption[]>;
+  createChat: (input: ChatCreateInput) => Promise<Chat>;
 }
 
 export function createDaemonClient(config: DaemonConfig): DaemonClient {
-  async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
+  const authorizedFetch = async (path: string, init: RequestInit = {}) => {
     const headers = new Headers(init.headers);
     if (config.token !== null) {
       headers.set("authorization", `Bearer ${config.token}`);
@@ -59,21 +56,22 @@ export function createDaemonClient(config: DaemonConfig): DaemonClient {
     if (!headers.has("content-type") && init.body !== undefined) {
       headers.set("content-type", "application/json");
     }
+    return fetch(`${config.baseUrl}${path}`, { ...init, headers });
+  };
 
-    const response = await fetch(`${config.baseUrl}${path}`, {
-      ...init,
-      headers,
-    });
+  const api = createDaemonApiClient({ fetch: authorizedFetch });
+
+  // Local request helper for the endpoints daemon-api doesn't wrap, with a
+  // guard for the "served by a static server" case where unknown routes fall
+  // back to index.html and would otherwise blow up as an opaque JSON error.
+  async function request<T>(path: string): Promise<T> {
+    const response = await authorizedFetch(path);
     if (!response.ok) {
       throw new DaemonRequestError(
-        `Daemon request failed: ${init.method ?? "GET"} ${path}`,
+        `Daemon request failed: GET ${path}`,
         response.status,
       );
     }
-
-    // When the mobile app is served by a plain static server (not the daemon),
-    // unknown routes fall back to `index.html`. Guard against parsing that HTML
-    // as JSON so the failure is legible instead of an opaque parse error.
     const contentType = response.headers.get("content-type") ?? "";
     if (!contentType.includes("application/json")) {
       throw new DaemonRequestError(
@@ -88,17 +86,12 @@ export function createDaemonClient(config: DaemonConfig): DaemonClient {
 
   return {
     baseUrl: config.baseUrl,
-    request,
     health: async () => request<DaemonHealth>("/api/health"),
     listProcesses: async () =>
       request<ProcessRegistrySnapshot>("/api/process-registry"),
-    listChats: async () => request<DaemonChat[]>("/api/chats"),
-    listProjects: async () => request<DaemonProject[]>("/api/projects"),
-    listAgents: async () => request<DaemonAgentOption[]>("/api/agents"),
-    createChat: async (input) =>
-      request<DaemonChat>("/api/chats", {
-        method: "POST",
-        body: JSON.stringify(input),
-      }),
+    listChats: async () => api.chats.list(),
+    listProjects: async () => api.projects.list(),
+    listAgents: async () => api.agents.listAvailable(),
+    createChat: async (input) => api.chats.create(input),
   };
 }

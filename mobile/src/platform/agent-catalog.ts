@@ -26,8 +26,6 @@ export const AGENT_OPTIONS: AgentOption[] = [
   { id: "pi", label: "Pi" },
 ];
 
-export const DEFAULT_AGENT_RUNTIME = "claude";
-
 export function agentLabel(runtime: string | null | undefined): string {
   if (runtime === null || runtime === undefined || runtime.length === 0) {
     return "Agent";

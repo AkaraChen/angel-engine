@@ -1,13 +1,14 @@
-import type { CreateChatInput } from "@/platform/chat-types";
-
-import { DEFAULT_AGENT_RUNTIME } from "@/platform/agent-catalog";
+import type {
+  ChatCreateInput,
+  ChatCreationLocation,
+} from "@angel-engine/daemon-api/chat";
 
 export interface CreateChatFormState {
   projectId: string;
   /**
    * The first message. `POST /api/chats` creates an empty chat, so this is
-   * handed to the Chat page to send once the new chat opens (see
-   * `stashNewChatPrompt`).
+   * handed to the Chat page to prefill/send once the new chat opens (see
+   * `stashNewChatPrompt`). Optional — an empty chat is allowed.
    */
   prompt: string;
   runtime: string;
@@ -20,7 +21,7 @@ export interface CreateChatFormState {
 export const INITIAL_CREATE_CHAT_FORM: CreateChatFormState = {
   projectId: "",
   prompt: "",
-  runtime: DEFAULT_AGENT_RUNTIME,
+  runtime: "",
   model: "",
   reasoningEffort: "",
   useWorktree: false,
@@ -31,8 +32,31 @@ export function canUseWorktree(form: CreateChatFormState): boolean {
   return form.projectId.length > 0;
 }
 
-export function canSubmitCreateChat(form: CreateChatFormState): boolean {
-  return form.prompt.trim().length > 0;
+/**
+ * Keeps the selected runtime pointing at an agent the daemon actually offers:
+ * the current value if still valid, otherwise the first available id, or `""`
+ * when nothing is available (which blocks submission). Treating the daemon list
+ * as authoritative avoids submitting a runtime it never returned.
+ */
+export function reconcileRuntime(
+  currentRuntime: string,
+  availableRuntimeIds: readonly string[],
+): string {
+  if (currentRuntime.length > 0 && availableRuntimeIds.includes(currentRuntime))
+    return currentRuntime;
+  return availableRuntimeIds[0] ?? "";
+}
+
+/**
+ * Submittable once a valid runtime is chosen. The runtime must come from the
+ * daemon's agent list (the caller passes the available ids), so an empty or
+ * unavailable list blocks creation rather than silently sending a default.
+ */
+export function canSubmitCreateChat(
+  form: CreateChatFormState,
+  availableRuntimeIds: readonly string[],
+): boolean {
+  return form.runtime.length > 0 && availableRuntimeIds.includes(form.runtime);
 }
 
 /**
@@ -43,9 +67,14 @@ export function canSubmitCreateChat(form: CreateChatFormState): boolean {
  */
 export function buildCreateChatInput(
   form: CreateChatFormState,
-): CreateChatInput {
+): ChatCreateInput {
   const hasProject = canUseWorktree(form);
   const model = form.model.trim();
+  const creationLocation: ChatCreationLocation | undefined = hasProject
+    ? form.useWorktree
+      ? "worktree"
+      : "project"
+    : undefined;
 
   return {
     projectId: hasProject ? form.projectId : undefined,
@@ -53,10 +82,6 @@ export function buildCreateChatInput(
     model: model.length > 0 ? model : undefined,
     reasoningEffort:
       form.reasoningEffort.length > 0 ? form.reasoningEffort : undefined,
-    creationLocation: hasProject
-      ? form.useWorktree
-        ? "worktree"
-        : "project"
-      : undefined,
+    creationLocation,
   };
 }

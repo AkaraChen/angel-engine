@@ -24,10 +24,7 @@ import {
 import { Spinner } from "@/components/ui/spinner";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  AGENT_OPTIONS,
-  REASONING_EFFORT_OPTIONS,
-} from "@/platform/agent-catalog";
+import { REASONING_EFFORT_OPTIONS } from "@/platform/agent-catalog";
 
 import { basename } from "./chat-summary";
 import {
@@ -35,6 +32,7 @@ import {
   canSubmitCreateChat,
   canUseWorktree,
   INITIAL_CREATE_CHAT_FORM,
+  reconcileRuntime,
 } from "./create-chat-form";
 import { stashNewChatPrompt } from "./new-chat-prompt";
 import { useAgentList, useCreateChat, useProjectList } from "./use-chats";
@@ -50,12 +48,14 @@ export function CreateChatDrawer({ children }: { children: React.ReactNode }) {
   const agentsQuery = useAgentList();
   const createChat = useCreateChat();
 
-  // Prefer the daemon's agent list; fall back to the built-in catalog while it
-  // loads or if the daemon returns none.
-  const agentOptions =
-    agentsQuery.data !== undefined && agentsQuery.data.length > 0
-      ? agentsQuery.data
-      : AGENT_OPTIONS;
+  // The daemon's agent list is authoritative — no built-in fallback. The
+  // effective runtime is derived (not stored) so it always points at a returned
+  // agent (defaulting to the first); we never submit one the daemon didn't
+  // offer, and there's no effect syncing state to props.
+  const agents = agentsQuery.data ?? [];
+  const runtimeIds: string[] = agents.map((agent) => agent.id);
+  const runtime = reconcileRuntime(form.runtime, runtimeIds);
+  const submitForm: CreateChatFormState = { ...form, runtime };
 
   function update<K extends keyof CreateChatFormState>(
     key: K,
@@ -71,11 +71,13 @@ export function CreateChatDrawer({ children }: { children: React.ReactNode }) {
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!canSubmitCreateChat(form)) return;
+    if (!canSubmitCreateChat(submitForm, runtimeIds)) return;
 
     try {
-      const chat = await createChat.mutateAsync(buildCreateChatInput(form));
-      stashNewChatPrompt(chat.id, form.prompt);
+      const chat = await createChat.mutateAsync(
+        buildCreateChatInput(submitForm),
+      );
+      stashNewChatPrompt(chat.id, submitForm.prompt);
       setOpen(false);
       reset();
       navigate(`/chat/${chat.id}`);
@@ -85,7 +87,9 @@ export function CreateChatDrawer({ children }: { children: React.ReactNode }) {
     }
   }
 
-  const canSubmit = canSubmitCreateChat(form) && !createChat.isPending;
+  const agentsUnavailable = agentsQuery.isSuccess && agents.length === 0;
+  const canSubmit =
+    canSubmitCreateChat(submitForm, runtimeIds) && !createChat.isPending;
 
   return (
     <Drawer
@@ -152,16 +156,29 @@ export function CreateChatDrawer({ children }: { children: React.ReactNode }) {
             <Field htmlFor="new-chat-agent" label="Agent">
               <NativeSelect
                 className="w-full"
+                disabled={agentsQuery.isPending || agents.length === 0}
                 id="new-chat-agent"
-                value={form.runtime}
+                value={runtime}
                 onChange={(event) => update("runtime", event.target.value)}
               >
-                {agentOptions.map((agent) => (
+                {agentsQuery.isPending ? (
+                  <NativeSelectOption value="">Loading…</NativeSelectOption>
+                ) : null}
+                {agents.map((agent) => (
                   <NativeSelectOption key={agent.id} value={agent.id}>
                     {agent.label}
                   </NativeSelectOption>
                 ))}
               </NativeSelect>
+              {agentsQuery.isError ? (
+                <p className="text-xs text-destructive">
+                  Couldn&apos;t load agents from the daemon.
+                </p>
+              ) : agentsUnavailable ? (
+                <p className="text-xs text-destructive">
+                  No agents are available. Enable one in the desktop app first.
+                </p>
+              ) : null}
             </Field>
 
             <div className="grid grid-cols-2 gap-3">

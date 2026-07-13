@@ -1,10 +1,11 @@
-import type { DaemonChat, DaemonProject } from "@/platform/chat-types";
+import type { Chat } from "@angel-engine/daemon-api/chat";
+import type { Project } from "@angel-engine/daemon-api/projects";
 
 import { describe, expect, it } from "vitest";
 
 import { deriveChatSummaries } from "./chat-summary";
 
-function chat(overrides: Partial<DaemonChat>): DaemonChat {
+function chat(overrides: Partial<Chat>): Chat {
   return {
     archived: false,
     createdAt: "2026-07-13T10:00:00Z",
@@ -20,7 +21,7 @@ function chat(overrides: Partial<DaemonChat>): DaemonChat {
   };
 }
 
-const projects: DaemonProject[] = [
+const projects: Project[] = [
   { id: "project-1", path: "/Users/dev/angel-engine" },
 ];
 

@@ -1,8 +1,6 @@
-import type {
-  ChatSummary,
-  DaemonChat,
-  DaemonProject,
-} from "@/platform/chat-types";
+import type { Chat } from "@angel-engine/daemon-api/chat";
+import type { Project } from "@angel-engine/daemon-api/projects";
+import type { ChatSummary } from "@/platform/chat-types";
 
 /**
  * Projects the raw daemon `Chat` list into the mobile row model, deriving the
@@ -12,8 +10,8 @@ import type {
  * path segment; otherwise it sits on the project's main worktree.
  */
 export function deriveChatSummaries(
-  chats: DaemonChat[],
-  projects: DaemonProject[],
+  chats: Chat[],
+  projects: Project[],
 ): ChatSummary[] {
   const projectsById = new Map(
     projects.map((project) => [project.id, project]),
@@ -25,8 +23,8 @@ export function deriveChatSummaries(
 }
 
 function deriveChatSummary(
-  chat: DaemonChat,
-  projectsById: Map<string, DaemonProject>,
+  chat: Chat,
+  projectsById: Map<string, Project>,
 ): ChatSummary {
   const project =
     chat.projectId === null ? undefined : projectsById.get(chat.projectId);
