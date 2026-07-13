@@ -22,6 +22,7 @@ import { useCallback, useId, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
+import { useAgentCatalog } from "@/features/agents/agent-catalog-context";
 import { ArchivedSettingsPanel } from "@/features/settings/archived-settings-panel";
 import { BuiltinAgentsSettingsGroup } from "@/features/settings/builtin-agent-settings";
 import { CustomAgentsSettingsGroup } from "@/features/settings/custom-agent-settings";
@@ -75,7 +76,7 @@ export function SettingsPage({
   const setWorktreeDirtyPromptEnabled = useSettingsStore(
     (state) => state.setWorktreeDirtyPromptEnabled,
   );
-  const customAgents = useSettingsStore((state) => state.customAgents);
+  const { customAgents } = useAgentCatalog();
   const createCustomAgent = useSettingsStore(
     (state) => state.createCustomAgent,
   );

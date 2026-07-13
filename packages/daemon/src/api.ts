@@ -239,7 +239,9 @@ export function registerApi(
     });
   });
 
-  app.get("/api/agents", (context) => context.json(listAvailableAgents()));
+  app.get("/api/agents", async (context) =>
+    context.json(await listAvailableAgents()),
+  );
   app.get("/api/agents/custom", (context) => context.json(listCustomAgents()));
   app.post("/api/agents/custom", async (context) => {
     const input = createCustomAgentInputSchema(await context.req.json());

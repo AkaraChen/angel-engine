@@ -34,6 +34,7 @@ import {
   useWorkspaceUiStore,
 } from "@/app/workspace/workspace-ui-store";
 import { useToast } from "@/components/ui/toast";
+import { useAgentCatalog } from "@/features/agents/agent-catalog-context";
 import {
   chatListQueryOptions,
   chatPrewarmQueryOptions,
@@ -77,9 +78,7 @@ export function useWorkspacePageModel({
   const [location, navigate] = useLocation();
   const isMacOS = window.desktopEnvironment.platform === "darwin";
   const [agentSettings, updateAgentSettings] = useAgentSettings();
-  const availableAgentOptions = useSettingsStore(
-    (state) => state.availableAgentOptions,
-  );
+  const { availableAgentOptions } = useAgentCatalog();
   const setAgentEnabled = useSettingsStore((state) => state.setAgentEnabled);
   const sidebarOpen = useWorkspaceUiStore((state) => state.sidebarOpen);
   const sidebarOpenMobile = useWorkspaceUiStore(

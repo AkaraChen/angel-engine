@@ -64,6 +64,15 @@ describe("createDaemon", () => {
     );
   });
 
+  it("returns the resolved available-agent catalog", async () => {
+    const daemon = await startDaemon();
+
+    const response = await daemonFetch(daemon, "/api/agents");
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toBeInstanceOf(Array);
+  });
+
   it("acknowledges shutdown before invoking the process callback", async () => {
     const dataDir = await mkdtemp(path.join(os.tmpdir(), "angel-daemon-"));
     let resolveShutdown: (() => void) | undefined;
@@ -187,7 +196,14 @@ describe("createDaemon", () => {
 
 async function startDaemon() {
   const dataDir = await mkdtemp(path.join(os.tmpdir(), "angel-daemon-"));
-  const daemon = await createDaemon({ dataDir, token: "secret" });
+  const daemon = await createDaemon({
+    dataDir,
+    migrationsDir: path.resolve(
+      import.meta.dirname,
+      "../../../desktop/drizzle",
+    ),
+    token: "secret",
+  });
   daemons.push(daemon);
   return daemon;
 }
