@@ -1,4 +1,7 @@
 import type {
+  ChatLoadResult,
+  ChatSendInput,
+  ChatStreamEvent,
   CreateChatInput,
   DaemonAgentOption,
   DaemonChat,
@@ -10,9 +13,10 @@ import type { DaemonConfig } from "./daemon-config";
  * Typed fetch client for the desktop daemon HTTP API.
  *
  * These DTOs mirror the daemon's `/api` response contract
- * (`packages/daemon/src/server.ts`). They are kept local because `mobile` is a
- * browser bundle and must not depend on the native `@angel-engine/daemon`
- * package; treat this file as the HTTP boundary for the daemon.
+ * (`packages/daemon/src/api.ts`). They are kept local because `mobile` is a
+ * browser bundle and must not depend on `@angel-engine/daemon-api` (which
+ * transitively pulls the native binding); treat this file as the HTTP boundary
+ * for the daemon.
  */
 export interface DaemonHealth {
   pid: number;
@@ -45,9 +49,79 @@ export interface DaemonClient {
   health: () => Promise<DaemonHealth>;
   listProcesses: () => Promise<ProcessRegistrySnapshot>;
   listChats: () => Promise<DaemonChat[]>;
+  getChat: (chatId: string) => Promise<DaemonChat>;
   listProjects: () => Promise<DaemonProject[]>;
   listAgents: () => Promise<DaemonAgentOption[]>;
   createChat: (input: CreateChatInput) => Promise<DaemonChat>;
+  /**
+   * Load a chat's metadata + persisted transcript (`POST /api/chats/:id/load`).
+   * The daemon hydrates the runtime session and returns its history.
+   */
+  loadChat: (chatId: string) => Promise<ChatLoadResult>;
+  /**
+   * Send a message and stream the assistant turn back over SSE
+   * (`POST /api/chat-streams?streamId=…`). Yields {@link ChatStreamEvent}s as
+   * they arrive. Pass `streamId` so the turn can be cancelled with
+   * {@link DaemonClient.abortChatStream}; the `AbortSignal` cancels the fetch.
+   */
+  streamChat: (
+    input: ChatSendInput,
+    streamId: string,
+    signal?: AbortSignal,
+  ) => AsyncIterable<ChatStreamEvent>;
+  /** Ask the daemon to abort an in-flight stream (`DELETE /api/chat-streams/:id`). */
+  abortChatStream: (streamId: string) => Promise<void>;
+}
+
+/**
+ * Parse a `ReadableStream` of an SSE (`text/event-stream`) response and yield the
+ * JSON-decoded `data:` payload of each event. Per the SSE spec, events are
+ * separated by a blank line and multiple `data:` lines within one event are
+ * joined with `\n`. Tolerates chunk boundaries splitting a line. Exported for
+ * testing the parser in isolation.
+ */
+export async function* readSseEvents(
+  stream: ReadableStream<Uint8Array>,
+): AsyncIterable<unknown> {
+  const reader = stream.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+  let dataLines: string[] = [];
+
+  function consumeLine(line: string): void {
+    if (line.startsWith("data:"))
+      dataLines.push(line.slice(5).replace(/^ /, ""));
+    // Other SSE fields (`event:`, `id:`, comments) carry no payload we need; the
+    // event type is redundant with the `type` inside the JSON `data`.
+  }
+
+  function* flush(): Generator<unknown> {
+    if (dataLines.length === 0) return;
+    const payload = dataLines.join("\n");
+    dataLines = [];
+    if (payload.length > 0) yield JSON.parse(payload);
+  }
+
+  try {
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+      let newlineIndex = buffer.indexOf("\n");
+      while (newlineIndex !== -1) {
+        const line = buffer.slice(0, newlineIndex).replace(/\r$/, "");
+        buffer = buffer.slice(newlineIndex + 1);
+        if (line.length === 0) yield* flush();
+        else consumeLine(line);
+        newlineIndex = buffer.indexOf("\n");
+      }
+    }
+  } finally {
+    reader.releaseLock();
+  }
+  // Handle a final event that was not terminated by a blank line.
+  if (buffer.length > 0) consumeLine(buffer.replace(/\r$/, ""));
+  yield* flush();
 }
 
 export function createDaemonClient(config: DaemonConfig): DaemonClient {
@@ -93,6 +167,8 @@ export function createDaemonClient(config: DaemonConfig): DaemonClient {
     listProcesses: async () =>
       request<ProcessRegistrySnapshot>("/api/process-registry"),
     listChats: async () => request<DaemonChat[]>("/api/chats"),
+    getChat: async (chatId) =>
+      request<DaemonChat>(`/api/chats/${encodeURIComponent(chatId)}`),
     listProjects: async () => request<DaemonProject[]>("/api/projects"),
     listAgents: async () => request<DaemonAgentOption[]>("/api/agents"),
     createChat: async (input) =>
@@ -100,5 +176,56 @@ export function createDaemonClient(config: DaemonConfig): DaemonClient {
         method: "POST",
         body: JSON.stringify(input),
       }),
+    loadChat: async (chatId) =>
+      request<ChatLoadResult>(`/api/chats/${encodeURIComponent(chatId)}/load`, {
+        method: "POST",
+      }),
+    streamChat: (input, streamId, signal) =>
+      streamChat(config, input, streamId, signal),
+    abortChatStream: async (streamId) => {
+      await request<{ ok: boolean }>(
+        `/api/chat-streams/${encodeURIComponent(streamId)}`,
+        { method: "DELETE" },
+      );
+    },
   };
+}
+
+async function* streamChat(
+  config: DaemonConfig,
+  input: ChatSendInput,
+  streamId: string,
+  signal?: AbortSignal,
+): AsyncIterable<ChatStreamEvent> {
+  const headers = new Headers({
+    accept: "text/event-stream",
+    "content-type": "application/json",
+  });
+  if (config.token !== null) {
+    headers.set("authorization", `Bearer ${config.token}`);
+  }
+
+  const path = `/api/chat-streams?streamId=${encodeURIComponent(streamId)}`;
+  const response = await fetch(`${config.baseUrl}${path}`, {
+    method: "POST",
+    headers,
+    body: JSON.stringify(input),
+    signal,
+  });
+  if (!response.ok) {
+    throw new DaemonRequestError(
+      `Daemon request failed: POST ${path}`,
+      response.status,
+    );
+  }
+  if (response.body === null) {
+    throw new DaemonRequestError(
+      `Daemon returned an empty stream for ${path}.`,
+      response.status,
+    );
+  }
+
+  for await (const event of readSseEvents(response.body)) {
+    yield event as ChatStreamEvent;
+  }
 }

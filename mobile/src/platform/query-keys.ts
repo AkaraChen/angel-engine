@@ -6,6 +6,7 @@ export const queryKeys = {
   chats: {
     list: ["chats", "list"] as const,
     detail: (chatId: string) => ["chats", "detail", chatId] as const,
+    load: (chatId: string) => ["chats", "load", chatId] as const,
   },
   projects: {
     list: ["projects", "list"] as const,

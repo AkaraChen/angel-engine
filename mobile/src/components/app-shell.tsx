@@ -1,24 +1,47 @@
 import type { PropsWithChildren } from "react";
 
-import { useRoute } from "wouter";
+import { ArrowLeft } from "@phosphor-icons/react";
+import { useQuery } from "@tanstack/react-query";
+import { Link, useRoute } from "wouter";
 
 import { AppSidebar } from "@/components/app-sidebar";
+import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import {
   SidebarInset,
   SidebarProvider,
   SidebarTrigger,
 } from "@/components/ui/sidebar";
+import { useDaemonClient } from "@/platform/daemon-provider";
+import { queryKeys } from "@/platform/query-keys";
+
+/**
+ * The chat header title: the conversation's own title, not the raw UUID. Falls
+ * back to a generic "Chat" while the metadata loads or the daemon is unreachable.
+ */
+function useChatTitle(chatId: string | undefined): string {
+  const daemon = useDaemonClient();
+  const query = useQuery({
+    queryKey: queryKeys.chats.detail(chatId ?? ""),
+    queryFn: async () => daemon.getChat(chatId ?? ""),
+    enabled: chatId !== undefined && chatId.length > 0,
+  });
+  const title = query.data?.title.trim();
+  return title !== undefined && title.length > 0 ? title : "Chat";
+}
 
 function useRouteTitle(): string {
   const [isSettings] = useRoute("/settings");
   const chatMatch = useRoute("/chat/:chatId");
+  const chatId = chatMatch[0] ? chatMatch[1].chatId : undefined;
+  const chatTitle = useChatTitle(chatId);
   if (isSettings) return "Settings";
-  if (chatMatch[0]) return `Chat ${chatMatch[1].chatId}`;
+  if (chatMatch[0]) return chatTitle;
   return "Chats";
 }
 
 export function AppShell({ children }: PropsWithChildren) {
+  const [isChat] = useRoute("/chat/:chatId");
   const title = useRouteTitle();
   return (
     <SidebarProvider>
@@ -29,9 +52,24 @@ export function AppShell({ children }: PropsWithChildren) {
           flex h-12 shrink-0 items-center gap-2 border-b border-border px-2
         "
         >
-          <SidebarTrigger />
+          {isChat ? (
+            <Button
+              aria-label="Back to chats"
+              asChild
+              size="icon"
+              variant="ghost"
+            >
+              <Link href="/">
+                <ArrowLeft size={18} />
+              </Link>
+            </Button>
+          ) : (
+            <SidebarTrigger />
+          )}
           <Separator className="mr-1" orientation="vertical" />
-          <h1 className="font-heading text-base font-semibold">{title}</h1>
+          <h1 className="min-w-0 truncate font-heading text-base font-semibold">
+            {title}
+          </h1>
         </header>
         <main className="min-h-0 flex-1 overflow-hidden">{children}</main>
       </SidebarInset>

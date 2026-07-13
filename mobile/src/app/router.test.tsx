@@ -29,11 +29,11 @@ describe("app routing", () => {
     ).toBeDefined();
   });
 
-  it("renders the Chat page with the route param", async () => {
+  it("renders the Chat page with a title fallback when the daemon is down", async () => {
     window.location.hash = "#/chat/abc123";
     render(<App />);
-    expect(
-      await screen.findByRole("heading", { name: "Chat abc123" }),
-    ).toBeDefined();
+    // The header shows the conversation title, not the raw id; with no daemon it
+    // falls back to a generic "Chat".
+    expect(await screen.findByRole("heading", { name: "Chat" })).toBeDefined();
   });
 });

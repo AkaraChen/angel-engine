@@ -1,12 +1,12 @@
 /**
  * View-model and HTTP-boundary shapes for the mobile chat UI.
  *
- * The desktop's chat types live in `@angel-engine/js-client`, but that package
- * pulls in the native `@angel-engine/client-napi` binding and is not consumable
- * from a browser bundle. These DTOs therefore mirror the serialized subset the
- * daemon exposes (or should expose — see `packages/daemon/src/server.ts`) over
- * HTTP: they intentionally match the `Chat`/`Project` field names in
- * `packages/js-client/src/types.ts` so the client boundary stays a faithful
+ * The daemon's chat contract lives in `@angel-engine/daemon-api`, but that package
+ * transitively pulls in the native `@angel-engine/client-napi` binding and is not
+ * consumable from a browser bundle. These DTOs therefore mirror the serialized
+ * subset the daemon exposes over HTTP (`packages/daemon/src/api.ts`): they
+ * intentionally match the `Chat`/`Project`/`ChatHistoryMessage` field names in
+ * `@angel-engine/daemon-api/chat` so the client boundary stays a faithful
  * projection of the shared types rather than a re-derivation.
  */
 
@@ -76,8 +76,66 @@ export interface CreateChatInput {
   title?: string;
 }
 
-export interface ChatMessage {
+/**
+ * One content part of a chat message. A narrowed projection of the
+ * `ChatHistoryMessagePart` union from `@angel-engine/daemon-api/chat`: the mobile
+ * conversation view only reads the `text` of `text`/`reasoning` parts. Richer
+ * parts (tool calls, plans, images) still arrive from the daemon — structural
+ * typing lets them satisfy this shape — but their extra fields are intentionally
+ * not modeled because the mobile transcript ignores them.
+ */
+export interface DaemonMessagePart {
+  type: string;
+  text?: string;
+}
+
+/** Mirrors `ChatHistoryMessage` from `@angel-engine/daemon-api/chat`. */
+export interface DaemonHistoryMessage {
   id: string;
-  role: "user" | "assistant";
+  role: "assistant" | "system" | "user";
+  content: DaemonMessagePart[];
+  createdAt?: string;
+}
+
+/**
+ * Result of `POST /api/chats/:id/load` — the chat metadata plus its persisted
+ * transcript. Narrowed projection of `ChatLoadResult` (the runtime config is not
+ * needed by the mobile conversation view).
+ */
+export interface ChatLoadResult {
+  chat: DaemonChat;
+  messages: DaemonHistoryMessage[];
+}
+
+/**
+ * Payload for `POST /api/chat-streams` (and `/api/chats/send`). A narrowed subset
+ * of `ChatSendInput`: the mobile composer only sends free-text into an existing
+ * chat, so it passes the target `chatId` and the message `text`.
+ */
+export interface ChatSendInput {
+  chatId: string;
   text: string;
+}
+
+/**
+ * The streaming events the daemon emits over SSE while an assistant turn runs
+ * (`POST /api/chat-streams`), mirroring the `ChatStreamEvent` union in
+ * `@angel-engine/daemon-api/chat`. The mobile view consumes text/reasoning deltas
+ * plus the terminal `result`/`error`/`done` events; richer events (chat, plan,
+ * tool, elicitation) still arrive but are ignored.
+ */
+export type ChatStreamEvent =
+  | { type: "delta"; part: "reasoning" | "text"; text: string; turnId?: string }
+  | { type: "result"; result: { text: string } }
+  | { type: "error"; message: string }
+  | { type: "done" };
+
+/** Rendered conversation row derived from history + live stream state. */
+export interface ConversationMessage {
+  id: string;
+  role: "assistant" | "system" | "user";
+  text: string;
+  reasoning: string;
+  status: "complete" | "error" | "streaming";
+  error?: string;
 }
