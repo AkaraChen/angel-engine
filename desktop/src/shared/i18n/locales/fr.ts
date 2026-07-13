@@ -272,12 +272,14 @@ export const fr = {
       noMatchingSkills: "Aucune compétence correspondante",
       noModelsFound: "Aucun modèle trouvé",
       noSkillsAdvertised: "Aucune compétence annoncée",
+      pasteSource: "Source",
       permissionMode: "Mode d’autorisation",
       placeholder:
         "Demandez à Angel Engine d’inspecter, corriger, tester ou expliquer...",
       plan: "Plan",
       provider: "Fournisseur",
       removeAttachment: "Retirer {{name}}",
+      removePasteSource: "Retirer la source {{url}}",
       searchModels: "Rechercher des modèles",
       settingLabels: {
         agentMode: "mode agent",

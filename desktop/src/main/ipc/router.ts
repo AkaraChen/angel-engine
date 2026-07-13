@@ -8,10 +8,20 @@ import { createChatIpcRouter } from "../features/chat/ipc";
 import { projectIpcRouter } from "../features/projects/ipc";
 import { workspaceToolsIpcRouter } from "../features/workspace-tools/ipc";
 import { setMainLanguage } from "../platform/i18n";
+import { readClipboardSourceUrl } from "./clipboard-source";
 
 const t = tipc.create();
 
 const appIpcRouter = {
+  appReadClipboardSourceUrl: t.procedure
+    .input<{ text: string }>()
+    .action(async ({ input }) => {
+      const value = arkType({ text: "string" })(input);
+      if (value instanceof arkType.errors) {
+        throw new TypeError("Clipboard text is required.");
+      }
+      return readClipboardSourceUrl(value.text);
+    }),
   appSetLanguage: t.procedure.input<string>().action(async ({ input }) => {
     const value = arkType("string")(input);
     if (value instanceof arkType.errors) {

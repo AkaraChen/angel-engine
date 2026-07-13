@@ -259,11 +259,13 @@ export const zhCN = {
       noMatchingSkills: "没有匹配技能",
       noModelsFound: "未找到模型",
       noSkillsAdvertised: "没有可用技能",
+      pasteSource: "来源",
       permissionMode: "权限模式",
       placeholder: "让 Angel Engine 检查、修改、测试或解释...",
       plan: "计划",
       provider: "提供方",
       removeAttachment: "移除 {{name}}",
+      removePasteSource: "移除来源 {{url}}",
       searchModels: "搜索模型",
       settingLabels: {
         agentMode: "Agent 模式",

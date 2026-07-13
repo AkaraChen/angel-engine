@@ -35,7 +35,7 @@ export function ComposerModelMenuChevron() {
         duration-150
         group-data-[state=open]/button:rotate-180
       "
-      weight="duotone"
+      weight="regular"
     />
   );
 }
@@ -216,7 +216,7 @@ export function ComposerModelMenuItem({
           flex size-4 shrink-0 items-center justify-center text-primary
         "
       >
-        {selected ? <Check className="size-3" weight="duotone" /> : null}
+        {selected ? <Check className="size-3" weight="regular" /> : null}
       </span>
     </DropdownMenuItem>
   );

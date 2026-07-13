@@ -261,11 +261,13 @@ export const zhTW = {
       noMatchingSkills: "沒有符合的技能",
       noModelsFound: "找不到模型",
       noSkillsAdvertised: "沒有可用技能",
+      pasteSource: "來源",
       permissionMode: "權限模式",
       placeholder: "讓 Angel Engine 檢查、修補、測試或解釋...",
       plan: "計畫",
       provider: "提供者",
       removeAttachment: "移除 {{name}}",
+      removePasteSource: "移除來源 {{url}}",
       searchModels: "搜尋模型",
       settingLabels: {
         agentMode: "Agent 模式",

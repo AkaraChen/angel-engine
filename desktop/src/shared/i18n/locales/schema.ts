@@ -294,11 +294,13 @@ export interface LocaleResourceTranslationComposer {
   noMatchingSkills: string;
   noModelsFound: string;
   noSkillsAdvertised: string;
+  pasteSource: string;
   permissionMode: string;
   placeholder: string;
   plan: string;
   provider: string;
   removeAttachment: string;
+  removePasteSource: string;
   searchModels: string;
   settingLabels: LocaleResourceTranslationComposerSettingLabels;
   skills: string;

@@ -154,7 +154,7 @@ export function ProjectSidebarSection({
                   >
                     <span
                       className="
-                        block min-w-0 flex-1 truncate overflow-hidden text-left
+                        block min-w-0 truncate overflow-hidden text-left
                         whitespace-nowrap
                       "
                       title={projectDisplayName}

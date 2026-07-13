@@ -55,6 +55,7 @@ function NativeSelect({
           text-muted-foreground select-none
         "
         data-slot="native-select-icon"
+        weight="regular"
       />
     </div>
   );

@@ -1,4 +1,4 @@
-import type { PromptInputMessage } from "@/components/ai-elements/prompt-input";
+import type { ChatComposerSubmission } from "@/features/chat/components/composer/chat-composer";
 
 import { ComposerPrimitive, useAui, useAuiState } from "@assistant-ui/react";
 import {
@@ -11,23 +11,17 @@ import {
 import { useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import {
-  PromptInput,
   PromptInputFooter,
   PromptInputTools,
   usePromptInputAttachments,
 } from "@/components/ai-elements/prompt-input";
 import { Button } from "@/components/ui/button";
-import { useToast } from "@/components/ui/toast";
+import { ChatComposer } from "@/features/chat/components/composer/chat-composer";
 import {
   createAttachmentFromPromptFile,
   createMentionAttachment,
   createSkillMentionAttachment,
 } from "@/features/chat/components/composer/composer-attachments";
-import { ComposerEditor } from "@/features/chat/components/composer/composer-editor";
-import {
-  attachmentErrorMessage,
-  attachmentErrorTitle,
-} from "@/features/chat/components/composer/composer-helpers";
 import {
   ComposerModelMenu,
   ComposerOptionSelect,
@@ -53,31 +47,23 @@ export function AssistantComposer({
   const isInputDisabled = useAuiState((state) => state.thread.isDisabled);
   const isRunning = useAuiState((state) => state.thread.isRunning);
   const hasQuote = useAuiState((state) => Boolean(state.composer.quote));
-  const toast = useToast();
   const editor = useComposerEditor();
-  const { draftText, mentionedFiles, reset, selectedSkills } = editor;
+  const { isEmpty } = editor;
 
-  const handleSubmit = useCallback(
-    async (message: PromptInputMessage) => {
-      const text = message.text;
-      const hasMessage =
-        text.length > 0 ||
-        message.files.length > 0 ||
-        mentionedFiles.length > 0 ||
-        selectedSkills.length > 0;
-      if (!hasMessage) {
-        return;
-      }
-      if (onBeforeSubmit && !(await onBeforeSubmit())) {
-        return;
-      }
+  const send = useCallback(
+    async ({
+      files,
+      mentionedFiles,
+      selectedSkills,
+      text,
+    }: ChatComposerSubmission) => {
       const composer = aui.composer();
 
       composer.setText(text);
 
       try {
         await Promise.all([
-          ...message.files.map(async (file) =>
+          ...files.map(async (file) =>
             composer.addAttachment(createAttachmentFromPromptFile(file, t)),
           ),
           ...mentionedFiles.map(async (file) =>
@@ -89,27 +75,12 @@ export function AssistantComposer({
         ]);
 
         composer.send();
-        reset();
       } catch (error) {
         await composer.clearAttachments().catch(() => undefined);
         throw error;
       }
     },
-    [aui, mentionedFiles, onBeforeSubmit, reset, selectedSkills, t],
-  );
-
-  const handleAttachmentError = useCallback(
-    (error: {
-      code: "max_files" | "max_file_size" | "accept" | "file_read" | "submit";
-      message: string;
-    }) => {
-      toast({
-        description: attachmentErrorMessage(error.code, t),
-        title: attachmentErrorTitle(error.code, t),
-        variant: "destructive",
-      });
-    },
-    [t, toast],
+    [aui, t],
   );
 
   const cancelRun = useCallback(() => {
@@ -135,40 +106,40 @@ export function AssistantComposer({
   ) : null;
 
   return (
-    <PromptInput
+    <ChatComposer
+      blockSubmit={isRunning}
+      canCancel={canCancel}
+      controller={editor}
+      disabled={isInputDisabled}
+      headerClassName="flex-col items-stretch gap-2 px-3! pt-3! pb-2!"
+      headerLeading={quoteHeader}
       inputGroupClassName={composerInputGroupClassName}
-      multiple
-      onError={handleAttachmentError}
-      onSubmit={handleSubmit}
+      onBeforeSubmit={onBeforeSubmit}
+      onCancel={cancelRun}
+      send={send}
+      textareaClassName="
+        max-h-40 min-h-(--workspace-composer-min-height) px-3.5 py-3
+        [font-size:var(--workspace-composer-text-size)]
+        leading-(--workspace-composer-line-height)
+        placeholder:text-muted-foreground/62
+      "
     >
-      <ComposerEditor
-        blockSubmit={isRunning}
-        canCancel={canCancel}
-        controller={editor}
-        disabled={isInputDisabled}
-        headerClassName="flex-col items-stretch gap-2 px-3! pt-3! pb-2!"
-        headerLeading={quoteHeader}
-        onCancel={cancelRun}
-        textareaClassName="
-          max-h-40 min-h-(--workspace-composer-min-height) px-3.5 py-3
-          [font-size:var(--workspace-composer-text-size)]
-          leading-(--workspace-composer-line-height)
-          placeholder:text-muted-foreground/62
-        "
-      />
-
-      <AssistantComposerFooter draftText={draftText} />
-    </PromptInput>
+      <AssistantComposerFooter editorIsEmpty={isEmpty} />
+    </ChatComposer>
   );
 }
 
-function AssistantComposerFooter({ draftText }: { draftText: string }) {
+function AssistantComposerFooter({
+  editorIsEmpty,
+}: {
+  editorIsEmpty: boolean;
+}) {
   const { t } = useTranslation();
   const aui = useAui();
   const attachments = usePromptInputAttachments();
   const chatOptions = useChatOptions();
   const isRunning = useAuiState((state) => state.thread.isRunning);
-  const isEmpty = draftText.length === 0 && attachments.files.length === 0;
+  const isEmpty = editorIsEmpty && attachments.files.length === 0;
 
   const stopRun = useCallback(() => {
     aui.composer().cancel();

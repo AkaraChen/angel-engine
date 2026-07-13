@@ -371,7 +371,7 @@ function WorkspaceToolNewTabMenu({
           type="button"
           variant="ghost"
         >
-          <Add className="size-3.5" weight="duotone" />
+          <Add className="size-3.5" weight="regular" />
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start" variant="native">

@@ -268,12 +268,14 @@ export const ko = {
       noMatchingSkills: "일치하는 스킬이 없습니다",
       noModelsFound: "모델을 찾을 수 없습니다",
       noSkillsAdvertised: "알려진 스킬이 없습니다",
+      pasteSource: "출처",
       permissionMode: "권한 모드",
       placeholder:
         "Angel Engine에 검사, 수정, 테스트 또는 설명을 요청하세요...",
       plan: "계획",
       provider: "제공자",
       removeAttachment: "{{name}} 제거",
+      removePasteSource: "출처 {{url}} 제거",
       searchModels: "모델 검색",
       settingLabels: {
         agentMode: "Agent 모드",

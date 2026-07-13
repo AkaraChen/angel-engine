@@ -7,6 +7,14 @@ export interface AttachmentInputError {
   message: string;
 }
 
+export function appendPasteSourceUrl(text: string, sourceUrl?: string) {
+  if (sourceUrl === undefined || text.trim().length === 0) {
+    return text;
+  }
+
+  return `${text}\n\n(Pasted from ${sourceUrl})`;
+}
+
 export function attachmentErrorTitle(
   code: AttachmentInputError["code"],
   t: TFunction,
@@ -43,11 +51,6 @@ export function attachmentErrorMessage(
   }
 }
 
-export function slashQueryFromDraft(text: string) {
-  const match = /^\/([^\s/]*)$/.exec(text);
-  return match ? match[1].toLowerCase() : null;
-}
-
 export function filterSlashCommands(
   commands: ChatAvailableCommand[],
   query: string,
@@ -61,25 +64,6 @@ export function filterSlashCommands(
     .slice(0, 8);
 }
 
-export function replaceMentionQuery(text: string, relativePath: string) {
-  const replacement = `@${relativePath} `;
-  if (/(?:^|\s)@[^\s@]*$/.test(text)) {
-    return text.replace(
-      /(^|\s)@[^\s@]*$/,
-      (_match, prefix: string) => `${prefix}${replacement}`,
-    );
-  }
-  const separator = text && !/\s$/.test(text) ? " " : "";
-  return `${text}${separator}${replacement}`;
-}
-
-const SKILL_QUERY_PATTERN = /(?:^|\s)\$([a-z][a-z0-9-]*)?$/i;
-
-export function skillQueryFromDraft(text: string) {
-  const match = SKILL_QUERY_PATTERN.exec(text);
-  return match ? (match[1] ?? "").toLowerCase() : null;
-}
-
 export function filterSkills(skills: ChatAvailableSkill[], query: string) {
   const normalized = query.toLowerCase();
   return skills
@@ -88,18 +72,6 @@ export function filterSkills(skills: ChatAvailableSkill[], query: string) {
       return !normalized || name.includes(normalized);
     })
     .slice(0, 8);
-}
-
-export function replaceSkillQuery(text: string, skillName: string) {
-  const replacement = `$${skillName} `;
-  if (SKILL_QUERY_PATTERN.test(text)) {
-    return text.replace(
-      /(^|\s)\$[a-z0-9-]*$/i,
-      (_match, prefix: string) => `${prefix}${replacement}`,
-    );
-  }
-  const separator = text && !/\s$/.test(text) ? " " : "";
-  return `${text}${separator}${replacement}`;
 }
 
 export function optionLabel(options: AgentValueOption[], value: string) {

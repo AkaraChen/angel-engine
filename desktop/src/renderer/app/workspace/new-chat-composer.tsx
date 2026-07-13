@@ -6,11 +6,7 @@ import type {
 } from "@shared/chat";
 import type { Project } from "@shared/projects";
 import type { ReactNode } from "react";
-import type {
-  PromptInputFile,
-  PromptInputMessage,
-} from "@/components/ai-elements/prompt-input";
-import type { AttachmentInputError } from "@/features/chat/components/composer/composer-helpers";
+import type { ChatComposerSubmission } from "@/features/chat/components/composer/chat-composer";
 import { ArrowUp, StopCircle as CircleStop } from "@phosphor-icons/react";
 import is from "@sindresorhus/is";
 import { useCallback } from "react";
@@ -21,18 +17,12 @@ import {
   useWorkspaceUiStore,
 } from "@/app/workspace/workspace-ui-store";
 import {
-  PromptInput,
   PromptInputFooter,
   PromptInputTools,
   usePromptInputAttachments,
 } from "@/components/ai-elements/prompt-input";
 import { Button } from "@/components/ui/button";
-import { useToast } from "@/components/ui/toast";
-import { ComposerEditor } from "@/features/chat/components/composer/composer-editor";
-import {
-  attachmentErrorMessage,
-  attachmentErrorTitle,
-} from "@/features/chat/components/composer/composer-helpers";
+import { ChatComposer } from "@/features/chat/components/composer/chat-composer";
 import {
   ComposerModelMenu,
   PromptAttachmentButton,
@@ -120,7 +110,6 @@ export function NewChatComposer({
   slotKey,
 }: NewChatComposerProps) {
   const { t } = useTranslation();
-  const toast = useToast();
   const isRunning = useChatRunIsRunning(slotKey);
   const cancelRun = useChatRunStore((state) => state.cancelRun);
   const workspaceMode = useWorkspaceUiStore((state) => state.workspaceMode);
@@ -142,45 +131,24 @@ export function NewChatComposer({
   });
 
   const editor = useComposerEditor();
-  const { draftText, mentionedFiles, reset, selectedSkills } = editor;
+  const { isEmpty } = editor;
 
-  const handleSubmit = useCallback(
-    async (message: PromptInputMessage) => {
-      const text = message.text;
-      const hasMessage =
-        text.length > 0 ||
-        message.files.length > 0 ||
-        mentionedFiles.length > 0 ||
-        selectedSkills.length > 0;
-      if (!hasMessage) {
-        return;
-      }
-      if (onBeforeSubmit && !(await onBeforeSubmit())) {
-        return;
-      }
-
+  const send = useCallback(
+    async ({
+      files,
+      mentionedFiles,
+      selectedSkills,
+      text,
+    }: ChatComposerSubmission) => {
       await sendChatMessage.sendPromptMessage({
-        attachments: message.files as PromptInputFile[],
+        attachments: files,
         mentionedFiles,
         selectedSkills,
         t,
         text,
       });
-
-      reset();
     },
-    [mentionedFiles, onBeforeSubmit, reset, selectedSkills, sendChatMessage, t],
-  );
-
-  const handleAttachmentError = useCallback(
-    (error: { code: AttachmentInputError["code"]; message: string }) => {
-      toast({
-        description: attachmentErrorMessage(error.code, t),
-        title: attachmentErrorTitle(error.code, t),
-        variant: "destructive",
-      });
-    },
-    [t, toast],
+    [sendChatMessage, t],
   );
 
   const handleCancel = useCallback(() => {
@@ -239,34 +207,30 @@ export function NewChatComposer({
             dark:bg-card/82
           "
         >
-          <PromptInput
+          <ChatComposer
+            blockSubmit={isRunning}
+            canCancel={isRunning}
+            controller={editor}
+            disabled={isRunning}
+            headerClassName={newChatHeaderClassName}
             inputGroupClassName={newChatInputGroupClassName}
-            multiple
-            onError={handleAttachmentError}
-            onSubmit={handleSubmit}
+            onBeforeSubmit={onBeforeSubmit}
+            onCancel={handleCancel}
+            rows={3}
+            send={send}
+            textareaClassName="
+              max-h-40 min-h-(--workspace-composer-min-height) resize-none
+              px-3.5 py-3 [font-size:var(--workspace-composer-text-size)]
+              leading-(--workspace-composer-line-height)
+              placeholder:text-muted-foreground/55
+            "
           >
-            <ComposerEditor
-              blockSubmit={isRunning}
-              canCancel={isRunning}
-              controller={editor}
-              disabled={isRunning}
-              headerClassName={newChatHeaderClassName}
-              onCancel={handleCancel}
-              rows={3}
-              textareaClassName="
-                max-h-40 min-h-(--workspace-composer-min-height) resize-none
-                px-3.5 py-3 [font-size:var(--workspace-composer-text-size)]
-                leading-(--workspace-composer-line-height)
-                placeholder:text-muted-foreground/55
-              "
-            />
-
             <NewChatComposerFooter
-              draftText={draftText}
+              editorIsEmpty={isEmpty}
               isRunning={isRunning}
               onCancel={handleCancel}
             />
-          </PromptInput>
+          </ChatComposer>
 
           {isProjectWorkspaceMode(workspaceMode) && (
             <div
@@ -292,18 +256,18 @@ export function NewChatComposer({
 }
 
 function NewChatComposerFooter({
-  draftText,
+  editorIsEmpty,
   isRunning,
   onCancel,
 }: {
-  draftText: string;
+  editorIsEmpty: boolean;
   isRunning: boolean;
   onCancel: () => void;
 }) {
   const { t } = useTranslation();
   const chatOptions = useChatOptions();
   const attachments = usePromptInputAttachments();
-  const isEmpty = draftText.length === 0 && attachments.files.length === 0;
+  const isEmpty = editorIsEmpty && attachments.files.length === 0;
 
   return (
     <PromptInputFooter className={newChatFooterClassName}>

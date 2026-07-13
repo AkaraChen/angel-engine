@@ -269,12 +269,14 @@ export const de = {
       noMatchingSkills: "Keine passenden Skills",
       noModelsFound: "Keine Modelle gefunden",
       noSkillsAdvertised: "Keine Skills angekündigt",
+      pasteSource: "Quelle",
       permissionMode: "Berechtigungsmodus",
       placeholder:
         "Bitten Sie Angel Engine zu prüfen, zu ändern, zu testen oder zu erklären...",
       plan: "Plan",
       provider: "Anbieter",
       removeAttachment: "{{name}} entfernen",
+      removePasteSource: "Quelle {{url}} entfernen",
       searchModels: "Modelle suchen",
       settingLabels: {
         agentMode: "Agent-Modus",

@@ -271,12 +271,14 @@ export const es = {
       noMatchingSkills: "No hay habilidades coincidentes",
       noModelsFound: "No se encontraron modelos",
       noSkillsAdvertised: "No hay habilidades anunciadas",
+      pasteSource: "Fuente",
       permissionMode: "Modo de permisos",
       placeholder:
         "Pide a Angel Engine que inspeccione, corrija, pruebe o explique...",
       plan: "Plan",
       provider: "Proveedor",
       removeAttachment: "Eliminar {{name}}",
+      removePasteSource: "Eliminar fuente {{url}}",
       searchModels: "Buscar modelos",
       settingLabels: {
         agentMode: "modo Agent",

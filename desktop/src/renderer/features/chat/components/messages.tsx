@@ -1,8 +1,9 @@
+import type { ChatComposerSubmission } from "@/features/chat/components/composer/chat-composer";
 import { useMessageError } from "@assistant-ui/core/react";
 import {
   ActionBarPrimitive,
-  ComposerPrimitive,
   MessagePrimitive,
+  useAui,
   useAuiState,
 } from "@assistant-ui/react";
 import {
@@ -11,12 +12,15 @@ import {
   Copy,
   Pencil,
 } from "@phosphor-icons/react";
+import { useCallback } from "react";
 import { useTranslation } from "react-i18next";
 
 import { useWorkspaceUiStore } from "@/app/workspace/workspace-ui-store";
 import { Reasoning, ReasoningGroup } from "@/components/assistant-ui/reasoning";
 import { ToolGroup } from "@/components/assistant-ui/tool-group";
 import { Button } from "@/components/ui/button";
+import { ChatComposer } from "@/features/chat/components/composer/chat-composer";
+import { useComposerEditor } from "@/features/chat/components/composer/use-composer-editor";
 import {
   AssistantTextMessagePart,
   FileMessagePart,
@@ -112,40 +116,60 @@ export function UserMessage() {
 
 export function UserEditComposer() {
   const { t } = useTranslation();
+  const aui = useAui();
+  const initialText = useAuiState((state) => state.composer.text);
   const workspaceMode = useWorkspaceUiStore((state) => state.workspaceMode);
+  const editor = useComposerEditor({ initialMarkdown: initialText });
+
+  const cancel = useCallback(() => {
+    aui.composer().cancel();
+  }, [aui]);
+  const send = useCallback(
+    async ({ text }: ChatComposerSubmission) => {
+      const composer = aui.composer();
+      composer.setText(text);
+      composer.send();
+    },
+    [aui],
+  );
 
   return (
     <MessagePrimitive.Root
       className={cn(messageColumnClassName, "flex justify-end")}
       data-workspace-mode={workspaceMode}
     >
-      <ComposerPrimitive.Root
+      <div
         className="
-          w-full rounded-lg border border-border-subtle bg-background/90 p-2.5
-          shadow-panel backdrop-blur-xl
-        "
+        w-full rounded-lg bg-background/90 shadow-panel backdrop-blur-xl
+      "
       >
-        <ComposerPrimitive.Input
-          className="
-            min-h-24 w-full resize-none rounded-md bg-surface-1 px-3 py-2
-            text-sm outline-none
-            focus-visible:ring-3 focus-visible:ring-primary/12
+        <ChatComposer
+          allowAttachments={false}
+          canCancel
+          controller={editor}
+          inputGroupClassName="
+            h-auto! rounded-lg! border! border-border-subtle! bg-transparent!
+            p-2.5! shadow-none!
           "
-        />
-        <div className="mt-2 flex justify-end gap-2">
-          <ComposerPrimitive.Cancel asChild>
-            <Button size="sm" type="button" variant="ghost">
+          onCancel={cancel}
+          send={send}
+          textareaClassName="
+            [&_.tiptap]:min-h-24 [&_.tiptap]:rounded-md
+            [&_.tiptap]:bg-surface-1 [&_.tiptap]:px-3 [&_.tiptap]:py-2
+            [&_.tiptap]:text-sm
+          "
+        >
+          <div className="flex w-full justify-end gap-2 px-2.5 pb-2.5">
+            <Button onClick={cancel} size="sm" type="button" variant="ghost">
               {t("common.cancel")}
             </Button>
-          </ComposerPrimitive.Cancel>
-          <ComposerPrimitive.Send asChild>
-            <Button size="sm" type="submit">
+            <Button disabled={editor.isEmpty} size="sm" type="submit">
               <Check />
               {t("common.save")}
             </Button>
-          </ComposerPrimitive.Send>
-        </div>
-      </ComposerPrimitive.Root>
+          </div>
+        </ChatComposer>
+      </div>
     </MessagePrimitive.Root>
   );
 }
@@ -241,11 +265,7 @@ function AssistantMessageErrorText() {
   if (!text) return null;
 
   return (
-    <div
-      className="
-      mt-1 text-[13px]/5 whitespace-pre-wrap text-muted-foreground
-    "
-    >
+    <div className="mt-1 text-[13px]/5 whitespace-pre-wrap text-muted-foreground">
       {text}
     </div>
   );

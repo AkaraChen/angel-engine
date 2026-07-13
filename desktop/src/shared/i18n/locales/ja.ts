@@ -270,11 +270,13 @@ export const ja = {
       noMatchingSkills: "一致するスキルはありません",
       noModelsFound: "モデルが見つかりません",
       noSkillsAdvertised: "利用可能なスキルはありません",
+      pasteSource: "ソース",
       permissionMode: "権限モード",
       placeholder: "Angel Engine に調査、修正、テスト、説明を依頼...",
       plan: "計画",
       provider: "プロバイダー",
       removeAttachment: "{{name}} を削除",
+      removePasteSource: "ソース {{url}} を削除",
       searchModels: "モデルを検索",
       settingLabels: {
         agentMode: "Agent モード",
