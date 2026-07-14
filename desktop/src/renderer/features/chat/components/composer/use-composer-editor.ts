@@ -10,6 +10,7 @@ import type {
 import { useEditor, useEditorState } from "@tiptap/react";
 import { useCallback, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { nextDraftRevision } from "@/components/ai-elements/draft-submission";
 import { createComposerExtensions } from "@/features/chat/components/composer/composer-editor-extensions";
 import { composerMentionsFromDocument } from "@/features/chat/components/composer/composer-editor-model";
 import { useChatEnvironment } from "@/features/chat/runtime/chat-environment-context";
@@ -26,6 +27,7 @@ export interface ComposerEditorController {
   editor: Editor | null;
   focus: () => void;
   getMarkdown: () => string;
+  getRevision: () => number;
   isEmpty: boolean;
   mentionedFiles: ComposerMentionedFile[];
   pasteSourceUrl: string | undefined;
@@ -53,6 +55,7 @@ export function useComposerEditor({
     ComposerMentionedSkill[]
   >([]);
   const textInputRef = useRef<(value: string) => void>(() => undefined);
+  const revisionRef = useRef(0);
   const catalogRef = useRef<ComposerCatalog>({
     api,
     commands: environment.availableCommands,
@@ -87,6 +90,7 @@ export function useComposerEditor({
   );
 
   const syncMentions = useCallback((editor: Editor) => {
+    revisionRef.current = nextDraftRevision(revisionRef.current);
     const { files, skills } = composerMentionsFromDocument(editor.state.doc);
     setMentionedFiles(files);
     setSelectedSkills(skills);
@@ -127,6 +131,7 @@ export function useComposerEditor({
 
   const focus = useCallback(() => editor?.commands.focus(), [editor]);
   const getMarkdown = useCallback(() => editor?.getMarkdown() ?? "", [editor]);
+  const getRevision = useCallback(() => revisionRef.current, []);
   const reset = useCallback(() => {
     editor?.commands.clearContent();
     setPasteSourceUrl(undefined);
@@ -156,6 +161,10 @@ export function useComposerEditor({
     onCancelRef.current = next.onCancel;
     removeLastAttachmentRef.current = next.removeLastAttachment;
   }, []);
+  const updatePasteSourceUrl = useCallback((sourceUrl: string | undefined) => {
+    revisionRef.current = nextDraftRevision(revisionRef.current);
+    setPasteSourceUrl(sourceUrl);
+  }, []);
   const setTextInput = useCallback(
     (setInput: (value: string) => void) => {
       textInputRef.current = setInput;
@@ -168,6 +177,7 @@ export function useComposerEditor({
     editor,
     focus,
     getMarkdown,
+    getRevision,
     isEmpty: emptyState ?? true,
     mentionedFiles,
     pasteSourceUrl,
@@ -175,7 +185,7 @@ export function useComposerEditor({
     reset,
     selectedSkills,
     setInteractions,
-    setPasteSourceUrl,
+    setPasteSourceUrl: updatePasteSourceUrl,
     setTextInput,
   };
 }

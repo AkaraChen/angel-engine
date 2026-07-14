@@ -7,7 +7,7 @@ import type { WorktreeDraftGuard } from "@/app/workspace/use-worktree-draft-guar
 
 import { rememberAgentOrder } from "@angel-engine/daemon-api/agents";
 import is from "@sindresorhus/is";
-import { Suspense } from "react";
+import { Suspense, useRef } from "react";
 import { ChatRestoreLoading } from "@/app/workspace/chat-restore-loading";
 import { DraftCreationLocationSelect } from "@/app/workspace/draft-project-select";
 import { NewChatThread } from "@/app/workspace/new-chat-thread";
@@ -156,6 +156,18 @@ export const WorkspacePageView: FC<WorkspacePageViewProps> = ({
     openSelectedPowerWorktreeHome,
     powerHomeTabContext,
   } = powerTabs;
+  // Keep the live thread mounted after a run so its in-progress composer draft
+  // is not discarded when the restored thread replaces it.
+  const liveChatIdRef = useRef<string | undefined>(undefined);
+  if (selectedChatIsRunning && selectedChat !== undefined) {
+    liveChatIdRef.current = selectedChat.id;
+  } else if (liveChatIdRef.current !== selectedChatId) {
+    liveChatIdRef.current = undefined;
+  }
+
+  const useLiveChatThread =
+    selectedChat !== undefined &&
+    (selectedChatIsRunning || liveChatIdRef.current === selectedChatId);
 
   return (
     <SidebarProvider
@@ -300,7 +312,7 @@ export const WorkspacePageView: FC<WorkspacePageViewProps> = ({
                     projectPath={activePowerWorktreeProject?.path}
                   />
                 ) : is.nonEmptyString(selectedChatId) ? (
-                  selectedChatIsRunning && selectedChat ? (
+                  useLiveChatThread ? (
                     <ActiveChatThread
                       draftAgentConfig={selectedChatAgentConfig}
                       onChatCreated={updateChatFromRun}
