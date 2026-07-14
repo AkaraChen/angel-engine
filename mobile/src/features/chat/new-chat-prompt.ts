@@ -18,14 +18,20 @@ export function stashNewChatPrompt(chatId: string, prompt: string): void {
   }
 }
 
-/** Reads and clears the stashed prompt for a chat, if any. */
-export function takeNewChatPrompt(chatId: string): string | undefined {
-  const key = `${KEY_PREFIX}${chatId}`;
+/** Reads the stashed prompt without clearing it. */
+export function readNewChatPrompt(chatId: string): string | undefined {
   try {
-    const value = sessionStorage.getItem(key);
-    if (value !== null) sessionStorage.removeItem(key);
-    return value ?? undefined;
+    return sessionStorage.getItem(`${KEY_PREFIX}${chatId}`) ?? undefined;
   } catch {
     return undefined;
+  }
+}
+
+/** Clears the prompt after the daemon has accepted the first turn. */
+export function clearNewChatPrompt(chatId: string): void {
+  try {
+    sessionStorage.removeItem(`${KEY_PREFIX}${chatId}`);
+  } catch {
+    // Best-effort cleanup for blocked sessionStorage.
   }
 }

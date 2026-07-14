@@ -1,6 +1,8 @@
 import type { Icon } from "@phosphor-icons/react";
+import type { ParseKeys } from "i18next";
 
-import { GearSix, House, PencilSimple, Sparkle } from "@phosphor-icons/react";
+import { GearSix, House, Sparkle } from "@phosphor-icons/react";
+import { useTranslation } from "react-i18next";
 import { Link, useRoute } from "wouter";
 
 import { DaemonStatus } from "@/components/daemon-status";
@@ -19,31 +21,31 @@ import {
 
 interface NavItem {
   href: string;
-  label: string;
+  labelKey: ParseKeys;
   icon: Icon;
   match: string;
 }
 
 const NAV_ITEMS: NavItem[] = [
-  { href: "/", label: "Home", icon: House, match: "/" },
-  { href: "/settings", label: "Settings", icon: GearSix, match: "/settings" },
+  { href: "/", labelKey: "sidebar.home", icon: House, match: "/" },
+  {
+    href: "/settings",
+    labelKey: "common.settings",
+    icon: GearSix,
+    match: "/settings",
+  },
 ];
 
 export function AppSidebar() {
   return (
     <Sidebar>
-      <SidebarHeader className="gap-2">
+      <SidebarHeader>
         <div className="flex items-center gap-2 px-2 py-1.5">
           <Sparkle className="text-primary" size={22} weight="fill" />
           <span className="font-heading text-base font-semibold">
             Angel Engine
           </span>
         </div>
-        <SidebarMenu>
-          <SidebarMenuItem>
-            <NewChatButton />
-          </SidebarMenuItem>
-        </SidebarMenu>
       </SidebarHeader>
       <SidebarContent>
         <SidebarGroup>
@@ -63,26 +65,8 @@ export function AppSidebar() {
   );
 }
 
-function NewChatButton() {
-  const { setOpenMobile } = useSidebar();
-  return (
-    <SidebarMenuButton
-      asChild
-      className="
-        bg-primary text-primary-foreground
-        hover:bg-primary/90 hover:text-primary-foreground
-        active:bg-primary/90 active:text-primary-foreground
-      "
-    >
-      <Link href="/" onClick={() => setOpenMobile(false)}>
-        <PencilSimple size={18} />
-        <span>New chat</span>
-      </Link>
-    </SidebarMenuButton>
-  );
-}
-
 function NavMenuItem({ item }: { item: NavItem }) {
+  const { t } = useTranslation();
   const [isActive] = useRoute(item.match);
   const { setOpenMobile } = useSidebar();
   const Icon = item.icon;
@@ -91,7 +75,7 @@ function NavMenuItem({ item }: { item: NavItem }) {
       <SidebarMenuButton asChild isActive={isActive}>
         <Link href={item.href} onClick={() => setOpenMobile(false)}>
           <Icon size={18} weight={isActive ? "fill" : "regular"} />
-          <span>{item.label}</span>
+          <span>{t(item.labelKey)}</span>
         </Link>
       </SidebarMenuButton>
     </SidebarMenuItem>

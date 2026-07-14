@@ -18,12 +18,12 @@
     "dist"
   ],
   "scripts": {
-    "build": "tsup",
-    "build:debug": "tsup",
+    "build": "tsup && tsc -p tsconfig.build.json",
+    "build:debug": "tsup && tsc -p tsconfig.build.json",
     "dev": "tsx src/main.ts --data-dir .data --print-handshake",
     "lint": "oxlint --type-aware src",
     "test": "vitest run",
-    "typecheck": "node node_modules/typescript7/bin/tsc --noEmit"
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@angel-engine/claude-client": "workspace:*",
@@ -53,8 +53,7 @@
     "oxlint-tsgolint": "^0.24.0",
     "tsup": "^8.5.1",
     "tsx": "^4.21.0",
-    "typescript": "^6.0.3",
-    "typescript7": "npm:typescript@^7.0.2",
+    "typescript": "^7.0.2",
     "vitest": "^4.1.9"
   }
 }

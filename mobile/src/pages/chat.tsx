@@ -13,6 +13,7 @@ import {
   Warning,
 } from "@phosphor-icons/react";
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 
 import { Bubble, BubbleContent } from "@/components/ui/bubble";
 import { Button } from "@/components/ui/button";
@@ -60,7 +61,7 @@ export function ChatPage({ chatId }: { chatId: string }) {
         <MessageScroller className="min-h-0 flex-1">
           <MessageScrollerViewport className="h-full">
             <MessageScrollerContent className="gap-4 p-4">
-              {conversation.isPending ? (
+              {conversation.isPending && !hasMessages ? (
                 <TranscriptSkeleton />
               ) : conversation.isError && !hasMessages ? (
                 <ErrorState onRetry={conversation.refetch} />
@@ -97,6 +98,7 @@ export function ChatPage({ chatId }: { chatId: string }) {
 }
 
 function MessageBubble({ message }: { message: ConversationMessage }) {
+  const { t } = useTranslation();
   const isUser = message.role === "user";
   const isError = message.status === "error";
   const hasTools = message.toolCalls.length > 0;
@@ -133,12 +135,12 @@ function MessageBubble({ message }: { message: ConversationMessage }) {
                     <MarkerIcon>
                       <Spinner className="size-3.5" />
                     </MarkerIcon>
-                    <MarkerContent>Thinking…</MarkerContent>
+                    <MarkerContent>{t("chat.thinking")}</MarkerContent>
                   </Marker>
                 ) : isError ? (
                   <span className="flex items-center gap-1.5">
                     <Warning className="shrink-0" size={16} weight="fill" />
-                    {message.error ?? "The assistant turn failed."}
+                    {message.error ?? t("chat.turnFailed")}
                   </span>
                 ) : isReasoningOnly ? (
                   <span className="text-muted-foreground italic">{body}</span>
@@ -163,6 +165,7 @@ function ElicitationPrompt({
   elicitation: DaemonElicitation;
   onRespond: (response: ChatElicitationResponse) => void;
 }) {
+  const { t } = useTranslation();
   const isApproval = APPROVAL_KINDS.has(elicitation.kind);
   return (
     <div className="rounded-xl border border-border bg-card p-3">
@@ -172,7 +175,7 @@ function ElicitationPrompt({
           size={16}
           weight="fill"
         />
-        {elicitation.title ?? "The agent needs your input"}
+        {elicitation.title ?? t("elicitation.defaultTitle")}
       </div>
       {elicitation.body !== null && elicitation.body !== undefined ? (
         <p className="mt-1 text-sm whitespace-pre-wrap text-muted-foreground">
@@ -183,21 +186,21 @@ function ElicitationPrompt({
         {isApproval ? (
           <>
             <Button onClick={() => onRespond({ type: "allow" })} size="sm">
-              Allow
+              {t("elicitation.allow")}
             </Button>
             <Button
               onClick={() => onRespond({ type: "allowForSession" })}
               size="sm"
               variant="outline"
             >
-              Allow for session
+              {t("elicitation.allowForSession")}
             </Button>
             <Button
               onClick={() => onRespond({ type: "deny" })}
               size="sm"
               variant="outline"
             >
-              Deny
+              {t("elicitation.deny")}
             </Button>
           </>
         ) : (
@@ -206,7 +209,7 @@ function ElicitationPrompt({
             size="sm"
             variant="outline"
           >
-            Dismiss
+            {t("elicitation.dismiss")}
           </Button>
         )}
       </div>
@@ -223,6 +226,7 @@ function Composer({
   onSend: (text: string) => void;
   onStop: () => void;
 }) {
+  const { t } = useTranslation();
   const [value, setValue] = useState("");
   const canSend = value.trim().length > 0 && !isStreaming;
 
@@ -252,17 +256,17 @@ function Composer({
     >
       <InputGroup>
         <InputGroupTextarea
-          aria-label="Message"
+          aria-label={t("chat.messagePlaceholder")}
           className="max-h-40 min-h-11"
           onChange={(event) => setValue(event.target.value)}
           onKeyDown={onKeyDown}
-          placeholder="Message"
+          placeholder={t("chat.messagePlaceholder")}
           value={value}
         />
         <InputGroupAddon align="inline-end">
           {isStreaming ? (
             <InputGroupButton
-              aria-label="Stop"
+              aria-label={t("chat.stopAria")}
               onClick={onStop}
               size="icon-sm"
               variant="secondary"
@@ -271,7 +275,7 @@ function Composer({
             </InputGroupButton>
           ) : (
             <InputGroupButton
-              aria-label="Send"
+              aria-label={t("chat.sendAria")}
               disabled={!canSend}
               size="icon-sm"
               type="submit"
@@ -307,39 +311,37 @@ function TranscriptSkeleton() {
 }
 
 function EmptyState() {
+  const { t } = useTranslation();
   return (
     <Empty className="py-16">
       <EmptyHeader>
         <EmptyMedia variant="icon">
           <ChatCircle size={28} />
         </EmptyMedia>
-        <EmptyTitle>No messages yet</EmptyTitle>
-        <EmptyDescription>
-          Send a message to start the conversation.
-        </EmptyDescription>
+        <EmptyTitle>{t("chat.emptyTitle")}</EmptyTitle>
+        <EmptyDescription>{t("chat.emptyDescription")}</EmptyDescription>
       </EmptyHeader>
     </Empty>
   );
 }
 
 function ErrorState({ onRetry }: { onRetry: () => void }) {
+  const { t } = useTranslation();
   return (
     <Empty className="py-16">
       <EmptyHeader>
         <EmptyMedia variant="icon">
           <Warning size={28} />
         </EmptyMedia>
-        <EmptyTitle>Couldn&apos;t load this chat</EmptyTitle>
-        <EmptyDescription>
-          The daemon may be offline or unreachable.
-        </EmptyDescription>
+        <EmptyTitle>{t("chat.errorTitle")}</EmptyTitle>
+        <EmptyDescription>{t("common.daemonOfflineHint")}</EmptyDescription>
       </EmptyHeader>
       <button
         className="text-sm font-medium text-primary underline underline-offset-4"
         onClick={onRetry}
         type="button"
       >
-        Try again
+        {t("common.tryAgain")}
       </button>
     </Empty>
   );

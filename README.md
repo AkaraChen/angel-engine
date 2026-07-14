@@ -29,19 +29,19 @@ Vendored submodules live under `vendor/agent-client-protocol/`,
 
 ```sh
 git submodule update --init
-corepack enable
-pnpm install
+bun install
 ```
 
-Use Node 24.x; CI currently pins Node 24.15.0. `pnpm install` also installs the
-Husky pre-commit hook through the root `prepare` script.
+Use Bun 1.3.x as the package manager and Node 24.x as the runtime; CI currently
+pins Node 24.15.0 and Bun 1.3.14. `bun install` also installs the Husky
+pre-commit hook through the root `prepare` script.
 
 ## Verification
 
 ```sh
 cargo test --workspace --all-targets
-pnpm typecheck
-pnpm lint
+bun run typecheck
+bun run lint
 ```
 
 External agent process smoke tests require installed and authenticated `codex`
@@ -55,5 +55,5 @@ Format Rust and desktop JS/TS:
 
 ```sh
 cargo fmt --all
-npm --prefix desktop run format
+bun run --filter desktop format
 ```

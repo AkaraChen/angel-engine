@@ -2,11 +2,11 @@ import type { PropsWithChildren } from "react";
 
 import { ArrowLeft } from "@phosphor-icons/react";
 import { useQuery } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
 import { Link, useRoute } from "wouter";
 
 import { AppSidebar } from "@/components/app-sidebar";
 import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
 import {
   SidebarInset,
   SidebarProvider,
@@ -21,6 +21,7 @@ import { queryKeys } from "@/platform/query-keys";
  * back to a generic "Chat" while the metadata loads or the daemon is unreachable.
  */
 function useChatTitle(chatId: string | undefined): string {
+  const { t } = useTranslation();
   const daemon = useDaemonClient();
   const query = useQuery({
     queryKey: queryKeys.chats.detail(chatId ?? ""),
@@ -28,20 +29,24 @@ function useChatTitle(chatId: string | undefined): string {
     enabled: chatId !== undefined && chatId.length > 0,
   });
   const title = query.data?.title.trim();
-  return title !== undefined && title.length > 0 ? title : "Chat";
+  return title !== undefined && title.length > 0
+    ? title
+    : t("shell.titleChatFallback");
 }
 
 function useRouteTitle(): string {
+  const { t } = useTranslation();
   const [isSettings] = useRoute("/settings");
   const chatMatch = useRoute("/chat/:chatId");
   const chatId = chatMatch[0] ? chatMatch[1].chatId : undefined;
   const chatTitle = useChatTitle(chatId);
-  if (isSettings) return "Settings";
+  if (isSettings) return t("common.settings");
   if (chatMatch[0]) return chatTitle;
-  return "Chats";
+  return t("shell.titleChats");
 }
 
 export function AppShell({ children }: PropsWithChildren) {
+  const { t } = useTranslation();
   const [isChat, chatParams] = useRoute("/chat/:chatId");
   const title = useRouteTitle();
   return (
@@ -50,12 +55,12 @@ export function AppShell({ children }: PropsWithChildren) {
       <SidebarInset className="h-svh min-h-0">
         <header
           className="
-          flex h-12 shrink-0 items-center gap-2 border-b border-border px-2
+          flex h-12 shrink-0 items-center gap-2 px-2
         "
         >
           {isChat ? (
             <Button
-              aria-label="Back to chats"
+              aria-label={t("shell.backToChats")}
               asChild
               size="icon"
               variant="ghost"
@@ -67,7 +72,6 @@ export function AppShell({ children }: PropsWithChildren) {
           ) : (
             <SidebarTrigger />
           )}
-          <Separator className="mr-1" orientation="vertical" />
           <h1 className="min-w-0 flex-1 truncate font-heading text-base font-semibold">
             {title}
           </h1>

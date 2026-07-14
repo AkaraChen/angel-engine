@@ -57,7 +57,7 @@ describe("buildCreateChatInput", () => {
     expect(input.creationLocation).toBe("project");
   });
 
-  it("sends creationLocation=worktree when the worktree toggle is on", () => {
+  it("sends creationLocation=worktree when worktree creation is selected", () => {
     const input = buildCreateChatInput(
       form({ prompt: "hi", projectId: "p1", useWorktree: true }),
     );

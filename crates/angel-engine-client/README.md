@@ -129,6 +129,6 @@ already-decoded `ClientUpdate` objects through `nextUpdate()`, including
 hosts that intentionally own runtime process IO themselves.
 
 ```sh
-pnpm install
-pnpm napi:build:debug
+bun install
+bun run napi:build:debug
 ```

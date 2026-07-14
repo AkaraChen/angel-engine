@@ -1,7 +1,8 @@
-import type { FormEvent } from "react";
+import type { FC, FormEvent, ReactNode } from "react";
 import type { CreateChatFormState } from "./create-chat-form";
 
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useLocation } from "wouter";
 
 import { Button } from "@/components/ui/button";
@@ -15,19 +16,14 @@ import {
   DrawerTitle,
   DrawerTrigger,
 } from "@/components/ui/drawer";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
   NativeSelect,
   NativeSelectOption,
 } from "@/components/ui/native-select";
 import { Spinner } from "@/components/ui/spinner";
-import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  AGENT_OPTIONS,
-  REASONING_EFFORT_OPTIONS,
-} from "@/platform/agent-catalog";
+import { AGENT_OPTIONS } from "@/platform/agent-catalog";
 
 import { basename } from "./chat-summary";
 import {
@@ -37,9 +33,19 @@ import {
   INITIAL_CREATE_CHAT_FORM,
 } from "./create-chat-form";
 import { stashNewChatPrompt } from "./new-chat-prompt";
-import { useAgentList, useCreateChat, useProjectList } from "./use-chats";
+import {
+  useAgentList,
+  useCreateChat,
+  useProjectList,
+  useRuntimeConfig,
+} from "./use-chats";
 
-export function CreateChatDrawer({ children }: { children: React.ReactNode }) {
+type CreateChatDrawerProps = {
+  children: ReactNode;
+};
+
+export const CreateChatDrawer: FC<CreateChatDrawerProps> = ({ children }) => {
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState<CreateChatFormState>(
     INITIAL_CREATE_CHAT_FORM,
@@ -49,6 +55,14 @@ export function CreateChatDrawer({ children }: { children: React.ReactNode }) {
   const projectsQuery = useProjectList();
   const agentsQuery = useAgentList();
   const createChat = useCreateChat();
+  const selectedProject = projectsQuery.data?.find(
+    (project) => project.id === form.projectId,
+  );
+  const runtimeConfigQuery = useRuntimeConfig({
+    cwd: selectedProject?.path,
+    enabled: open,
+    runtime: form.runtime,
+  });
 
   // Prefer the daemon's agent list; fall back to the built-in catalog while it
   // loads or if the daemon returns none.
@@ -98,10 +112,8 @@ export function CreateChatDrawer({ children }: { children: React.ReactNode }) {
       <DrawerTrigger asChild>{children}</DrawerTrigger>
       <DrawerContent className="max-h-[92vh]">
         <DrawerHeader>
-          <DrawerTitle>New chat</DrawerTitle>
-          <DrawerDescription>
-            Start an agent session in a project or worktree.
-          </DrawerDescription>
+          <DrawerTitle>{t("common.newChat")}</DrawerTitle>
+          <DrawerDescription>{t("createChat.description")}</DrawerDescription>
         </DrawerHeader>
 
         <form
@@ -109,18 +121,24 @@ export function CreateChatDrawer({ children }: { children: React.ReactNode }) {
           onSubmit={(event) => void handleSubmit(event)}
         >
           <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-4">
-            <Field htmlFor="new-chat-prompt" label="Initial prompt">
+            <Field
+              htmlFor="new-chat-prompt"
+              label={t("createChat.promptLabel")}
+            >
               <Textarea
                 autoFocus
                 id="new-chat-prompt"
-                placeholder="What should the agent work on?"
+                placeholder={t("createChat.promptPlaceholder")}
                 rows={3}
                 value={form.prompt}
                 onChange={(event) => update("prompt", event.target.value)}
               />
             </Field>
 
-            <Field htmlFor="new-chat-project" label="Project">
+            <Field
+              htmlFor="new-chat-project"
+              label={t("createChat.projectLabel")}
+            >
               <NativeSelect
                 className="w-full"
                 disabled={projectsQuery.isPending}
@@ -130,7 +148,9 @@ export function CreateChatDrawer({ children }: { children: React.ReactNode }) {
                   const projectId = event.target.value;
                   setForm((previous) => ({
                     ...previous,
+                    model: "",
                     projectId,
+                    reasoningEffort: "",
                     // A worktree can't outlive its project, so clearing the
                     // project disables the worktree option.
                     useWorktree:
@@ -139,7 +159,7 @@ export function CreateChatDrawer({ children }: { children: React.ReactNode }) {
                 }}
               >
                 <NativeSelectOption value="">
-                  No project (ad hoc)
+                  {t("createChat.noProject")}
                 </NativeSelectOption>
                 {(projectsQuery.data ?? []).map((project) => (
                   <NativeSelectOption key={project.id} value={project.id}>
@@ -149,12 +169,40 @@ export function CreateChatDrawer({ children }: { children: React.ReactNode }) {
               </NativeSelect>
             </Field>
 
-            <Field htmlFor="new-chat-agent" label="Agent">
+            {canUseWorktree(form) ? (
+              <Field htmlFor="new-chat-location" label="Create in">
+                <NativeSelect
+                  className="w-full"
+                  id="new-chat-location"
+                  value={form.useWorktree ? "worktree" : "project"}
+                  onChange={(event) =>
+                    update("useWorktree", event.target.value === "worktree")
+                  }
+                >
+                  <NativeSelectOption value="project">
+                    Project
+                  </NativeSelectOption>
+                  <NativeSelectOption value="worktree">
+                    Create worktree
+                  </NativeSelectOption>
+                </NativeSelect>
+              </Field>
+            ) : null}
+
+            <Field htmlFor="new-chat-agent" label={t("createChat.agentLabel")}>
               <NativeSelect
                 className="w-full"
                 id="new-chat-agent"
                 value={form.runtime}
-                onChange={(event) => update("runtime", event.target.value)}
+                onChange={(event) => {
+                  const runtime = event.target.value;
+                  setForm((previous) => ({
+                    ...previous,
+                    model: "",
+                    reasoningEffort: "",
+                    runtime,
+                  }));
+                }}
               >
                 {agentOptions.map((agent) => (
                   <NativeSelectOption key={agent.id} value={agent.id}>
@@ -165,64 +213,66 @@ export function CreateChatDrawer({ children }: { children: React.ReactNode }) {
             </Field>
 
             <div className="grid grid-cols-2 gap-3">
-              <Field htmlFor="new-chat-model" label="Model">
-                <Input
-                  id="new-chat-model"
-                  placeholder="Default"
-                  value={form.model}
-                  onChange={(event) => update("model", event.target.value)}
-                />
-              </Field>
-              <Field htmlFor="new-chat-reasoning" label="Reasoning">
+              <Field
+                htmlFor="new-chat-model"
+                label={t("createChat.modelLabel")}
+              >
                 <NativeSelect
                   className="w-full"
+                  disabled={
+                    runtimeConfigQuery.isFetching ||
+                    runtimeConfigQuery.data?.canSetModel === false
+                  }
+                  id="new-chat-model"
+                  value={form.model}
+                  onChange={(event) => update("model", event.target.value)}
+                >
+                  <NativeSelectOption value="">
+                    {t("createChat.reasoningOptions.default")}
+                  </NativeSelectOption>
+                  {(runtimeConfigQuery.data?.models ?? []).map((model) => (
+                    <NativeSelectOption key={model.value} value={model.value}>
+                      {model.label}
+                    </NativeSelectOption>
+                  ))}
+                </NativeSelect>
+              </Field>
+              <Field
+                htmlFor="new-chat-reasoning"
+                label={t("createChat.reasoningLabel")}
+              >
+                <NativeSelect
+                  className="w-full"
+                  disabled={
+                    runtimeConfigQuery.isFetching ||
+                    runtimeConfigQuery.data?.canSetReasoningEffort === false
+                  }
                   id="new-chat-reasoning"
                   value={form.reasoningEffort}
                   onChange={(event) =>
                     update("reasoningEffort", event.target.value)
                   }
                 >
-                  {REASONING_EFFORT_OPTIONS.map((option) => (
-                    <NativeSelectOption key={option.value} value={option.value}>
-                      {option.label}
-                    </NativeSelectOption>
-                  ))}
+                  <NativeSelectOption value="">
+                    {t("createChat.reasoningOptions.default")}
+                  </NativeSelectOption>
+                  {(runtimeConfigQuery.data?.reasoningEfforts ?? []).map(
+                    (option) => (
+                      <NativeSelectOption
+                        key={option.value}
+                        value={option.value}
+                      >
+                        {option.label}
+                      </NativeSelectOption>
+                    ),
+                  )}
                 </NativeSelect>
               </Field>
             </div>
 
-            <div className="flex flex-col gap-2 rounded-lg border border-border p-3">
-              <label
-                className="flex items-center justify-between gap-3"
-                htmlFor="new-chat-worktree"
-              >
-                <span className="flex flex-col gap-0.5">
-                  <span className="text-sm font-medium">
-                    Run in a new worktree
-                  </span>
-                  <span className="text-xs text-muted-foreground">
-                    Isolate this chat in its own git worktree
-                  </span>
-                </span>
-                <Switch
-                  checked={form.useWorktree}
-                  disabled={!canUseWorktree(form)}
-                  id="new-chat-worktree"
-                  onCheckedChange={(checked) => update("useWorktree", checked)}
-                />
-              </label>
-
-              {!canUseWorktree(form) ? (
-                <p className="text-xs text-muted-foreground">
-                  Select a project to run in a worktree.
-                </p>
-              ) : null}
-            </div>
-
             {createChat.isError ? (
               <p className="text-sm text-destructive">
-                Couldn&apos;t create the chat. Check the daemon connection and
-                try again.
+                {t("createChat.error")}
               </p>
             ) : null}
           </div>
@@ -230,33 +280,31 @@ export function CreateChatDrawer({ children }: { children: React.ReactNode }) {
           <DrawerFooter className="flex-row gap-2 pb-[max(1rem,env(safe-area-inset-bottom))]">
             <DrawerClose asChild>
               <Button className="flex-1" type="button" variant="outline">
-                Cancel
+                {t("common.cancel")}
               </Button>
             </DrawerClose>
             <Button className="flex-1" disabled={!canSubmit} type="submit">
               {createChat.isPending ? <Spinner /> : null}
-              Create chat
+              {t("createChat.create")}
             </Button>
           </DrawerFooter>
         </form>
       </DrawerContent>
     </Drawer>
   );
-}
+};
 
-function Field({
-  children,
-  htmlFor,
-  label,
-}: {
-  children: React.ReactNode;
+type FieldProps = {
+  children: ReactNode;
   htmlFor: string;
   label: string;
-}) {
+};
+
+const Field: FC<FieldProps> = ({ children, htmlFor, label }) => {
   return (
     <div className="flex flex-col gap-1.5">
       <Label htmlFor={htmlFor}>{label}</Label>
       {children}
     </div>
   );
-}
+};

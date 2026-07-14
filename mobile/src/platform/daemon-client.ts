@@ -6,6 +6,8 @@ import type {
   DaemonAgentOption,
   DaemonChat,
   DaemonProject,
+  DaemonRuntimeConfig,
+  DaemonRuntimeConfigInput,
   ElicitationResolveInput,
 } from "./chat-types";
 import type { WorkspaceGitDiffResult } from "./workspace-types";
@@ -69,6 +71,9 @@ export interface DaemonClient {
   getChat: (chatId: string) => Promise<DaemonChat>;
   listProjects: () => Promise<DaemonProject[]>;
   listAgents: () => Promise<DaemonAgentOption[]>;
+  inspectRuntimeConfig: (
+    input: DaemonRuntimeConfigInput,
+  ) => Promise<DaemonRuntimeConfig>;
   createChat: (input: CreateChatInput) => Promise<DaemonChat>;
   /**
    * Load a chat's metadata + persisted transcript (`POST /api/chats/:id/load`).
@@ -205,6 +210,11 @@ export function createDaemonClient(
       request<DaemonChat>(`/api/chats/${encodeURIComponent(chatId)}`),
     listProjects: async () => request<DaemonProject[]>("/api/projects"),
     listAgents: async () => request<DaemonAgentOption[]>("/api/agents"),
+    inspectRuntimeConfig: async (input) =>
+      request<DaemonRuntimeConfig>("/api/chats/runtime-config", {
+        method: "POST",
+        body: JSON.stringify(input),
+      }),
     createChat: async (input) =>
       request<DaemonChat>("/api/chats", {
         method: "POST",

@@ -1,7 +1,9 @@
+import type { Locale } from "date-fns";
 import type { ChatSummary } from "@/platform/chat-types";
 
 import { ChatCircle, GitBranch, Plus, PushPin } from "@phosphor-icons/react";
 import { formatDistanceToNow } from "date-fns";
+import { useTranslation } from "react-i18next";
 import { Link } from "wouter";
 
 import { Button } from "@/components/ui/button";
@@ -18,6 +20,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { AgentRuntimeIcon } from "@/features/agents/agent-runtime-icon";
 import { CreateChatDrawer } from "@/features/chat/create-chat-drawer";
 import { useChatList } from "@/features/chat/use-chats";
+import { useDateFnsLocale } from "@/i18n/date-locale";
 import { agentLabel } from "@/platform/agent-catalog";
 
 /**
@@ -26,11 +29,15 @@ import { agentLabel } from "@/platform/agent-catalog";
  * full-width touch rows, and hosts the New chat composer.
  */
 export function HomePage() {
+  const { t } = useTranslation();
   const chatsQuery = useChatList();
 
   return (
-    <div className="relative h-full">
-      <ScrollArea className="h-full">
+    <div className="relative h-full min-w-0 overflow-hidden">
+      <ScrollArea
+        className="h-full min-w-0 max-w-full"
+        viewportClassName="[&>div]:block! [&>div]:w-full! [&>div]:min-w-0!"
+      >
         {chatsQuery.isPending ? (
           <ChatListSkeleton />
         ) : chatsQuery.isError ? (
@@ -38,7 +45,7 @@ export function HomePage() {
         ) : chatsQuery.data.length === 0 ? (
           <EmptyState />
         ) : (
-          <ul className="flex flex-col pb-24">
+          <ul className="flex w-full min-w-0 max-w-full flex-col overflow-hidden pb-24">
             {chatsQuery.data.map((chat) => (
               <ChatListItem key={chat.id} chat={chat} />
             ))}
@@ -48,7 +55,7 @@ export function HomePage() {
 
       <CreateChatDrawer>
         <Button
-          aria-label="New chat"
+          aria-label={t("common.newChat")}
           className="
             absolute right-4 bottom-[max(1rem,env(safe-area-inset-bottom))]
             size-14 rounded-full shadow-lg
@@ -63,12 +70,14 @@ export function HomePage() {
 }
 
 function ChatListItem({ chat }: { chat: ChatSummary }) {
+  const locale = useDateFnsLocale();
   const subtitle = [chat.projectName, chat.worktreeBranch].filter(Boolean);
   return (
-    <li className="border-b border-border/60 last:border-b-0">
+    <li className="w-full min-w-0 max-w-full border-b border-border/60 last:border-b-0">
       <Link
         className="
-          flex items-center gap-3 px-4 py-3
+          flex w-full min-w-0 max-w-full items-center gap-3 overflow-hidden px-4
+          py-3
           active:bg-accent
         "
         href={`/chat/${chat.id}`}
@@ -83,7 +92,7 @@ function ChatListItem({ chat }: { chat: ChatSummary }) {
           <AgentRuntimeIcon className="size-5" runtime={chat.runtime} />
         </span>
         <span className="flex min-w-0 flex-1 flex-col gap-0.5">
-          <span className="flex items-center gap-1.5">
+          <span className="flex min-w-0 items-center gap-1.5">
             {chat.pinned ? (
               <PushPin
                 className="shrink-0 text-muted-foreground"
@@ -94,8 +103,8 @@ function ChatListItem({ chat }: { chat: ChatSummary }) {
             <span className="min-w-0 flex-1 truncate font-medium">
               {chat.title}
             </span>
-            <span className="shrink-0 text-xs text-muted-foreground">
-              {formatUpdatedAt(chat.updatedAt)}
+            <span className="ml-auto shrink-0 whitespace-nowrap text-right text-xs text-muted-foreground">
+              {formatUpdatedAt(chat.updatedAt, locale)}
             </span>
           </span>
           {subtitle.length > 0 ? (
@@ -122,10 +131,10 @@ function ChatListItem({ chat }: { chat: ChatSummary }) {
   );
 }
 
-function formatUpdatedAt(updatedAt: string): string {
+function formatUpdatedAt(updatedAt: string, locale: Locale): string {
   const date = new Date(updatedAt);
   if (Number.isNaN(date.getTime())) return "";
-  return formatDistanceToNow(date, { addSuffix: true });
+  return formatDistanceToNow(date, { addSuffix: true, locale });
 }
 
 function ChatListSkeleton() {
@@ -148,22 +157,21 @@ function ChatListSkeleton() {
 }
 
 function EmptyState() {
+  const { t } = useTranslation();
   return (
     <Empty className="px-6 py-16">
       <EmptyHeader>
         <EmptyMedia variant="icon">
           <ChatCircle size={28} />
         </EmptyMedia>
-        <EmptyTitle>No chats yet</EmptyTitle>
-        <EmptyDescription>
-          Start a new agent session to see it here.
-        </EmptyDescription>
+        <EmptyTitle>{t("home.emptyTitle")}</EmptyTitle>
+        <EmptyDescription>{t("home.emptyDescription")}</EmptyDescription>
       </EmptyHeader>
       <EmptyContent>
         <CreateChatDrawer>
           <Button>
             <Plus size={18} weight="bold" />
-            New chat
+            {t("common.newChat")}
           </Button>
         </CreateChatDrawer>
       </EmptyContent>
@@ -172,20 +180,19 @@ function EmptyState() {
 }
 
 function ErrorState({ onRetry }: { onRetry: () => void }) {
+  const { t } = useTranslation();
   return (
     <Empty className="px-6 py-16">
       <EmptyHeader>
         <EmptyMedia variant="icon">
           <ChatCircle size={28} />
         </EmptyMedia>
-        <EmptyTitle>Couldn&apos;t load chats</EmptyTitle>
-        <EmptyDescription>
-          The daemon may be offline or unreachable.
-        </EmptyDescription>
+        <EmptyTitle>{t("home.errorTitle")}</EmptyTitle>
+        <EmptyDescription>{t("common.daemonOfflineHint")}</EmptyDescription>
       </EmptyHeader>
       <EmptyContent>
         <Button onClick={onRetry} variant="outline">
-          Try again
+          {t("common.tryAgain")}
         </Button>
       </EmptyContent>
     </Empty>

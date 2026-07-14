@@ -1,0 +1,117 @@
+import type { LocaleResource } from "./schema";
+
+export const ko = {
+  translation: {
+    app: {
+      name: "Angel Engine",
+    },
+    common: {
+      cancel: "취소",
+      tryAgain: "다시 시도",
+      newChat: "새 채팅",
+      settings: "설정",
+      daemonOfflineHint: "데몬이 오프라인이거나 연결할 수 없습니다.",
+    },
+    login: {
+      title: "Angel Engine 잠금 해제",
+      description:
+        "이 기기를 연결하려면 데스크톱 앱에서 설정한 페어링 비밀번호를 입력하세요.",
+      passwordLabel: "비밀번호",
+      passwordPlaceholder: "페어링 비밀번호",
+      incorrectPassword: "비밀번호가 올바르지 않습니다. 다시 시도하세요.",
+      connectionError:
+        "데스크톱 앱에 연결할 수 없습니다. 연결을 확인한 후 다시 시도하세요.",
+      connecting: "연결 중…",
+      connect: "연결",
+    },
+    shell: {
+      backToChats: "채팅 목록으로",
+      titleChats: "채팅",
+      titleChatFallback: "채팅",
+    },
+    sidebar: {
+      home: "홈",
+    },
+    daemonStatus: {
+      unreachable: "데몬에 연결할 수 없음",
+      connecting: "데몬에 연결 중…",
+      online: "데몬 온라인 · v{{version}}",
+    },
+    home: {
+      emptyTitle: "아직 채팅이 없습니다",
+      emptyDescription: "새 에이전트 세션을 시작하면 여기에 표시됩니다.",
+      errorTitle: "채팅을 불러올 수 없습니다",
+    },
+    chat: {
+      thinking: "생각 중…",
+      turnFailed: "어시스턴트 턴이 실패했습니다.",
+      emptyTitle: "아직 메시지가 없습니다",
+      emptyDescription: "메시지를 보내 대화를 시작하세요.",
+      errorTitle: "이 채팅을 불러올 수 없습니다",
+      messagePlaceholder: "메시지",
+      sendAria: "보내기",
+      stopAria: "중지",
+    },
+    elicitation: {
+      defaultTitle: "에이전트가 입력을 필요로 합니다",
+      allow: "허용",
+      allowForSession: "세션 동안 허용",
+      deny: "거부",
+      dismiss: "닫기",
+    },
+    createChat: {
+      description: "프로젝트 또는 워크트리에서 에이전트 세션을 시작합니다.",
+      promptLabel: "초기 프롬프트",
+      promptPlaceholder: "에이전트가 무엇을 하길 원하나요?",
+      projectLabel: "프로젝트",
+      noProject: "프로젝트 없음(임시)",
+      agentLabel: "에이전트",
+      modelLabel: "모델",
+      modelPlaceholder: "기본값",
+      reasoningLabel: "추론",
+      reasoningOptions: {
+        default: "기본값",
+        minimal: "최소",
+        low: "낮음",
+        medium: "보통",
+        high: "높음",
+      },
+      worktreeTitle: "새 워크트리에서 실행",
+      worktreeDescription: "이 채팅을 전용 git 워크트리에 격리합니다",
+      worktreeHint: "워크트리에서 실행하려면 프로젝트를 선택하세요.",
+      error: "채팅을 만들 수 없습니다. 데몬 연결을 확인한 후 다시 시도하세요.",
+      create: "채팅 만들기",
+    },
+    settings: {
+      appearance: {
+        title: "모양",
+        theme: "테마",
+        themeDescription: "이 기기에서 앱의 모양을 선택하세요.",
+        themeOptions: {
+          system: "시스템",
+          light: "라이트",
+          dark: "다크",
+        },
+        language: "언어",
+        languageDescription: "이 기기에서 사용할 언어를 선택하세요.",
+        languageOptions: {
+          en: "English",
+          "zh-CN": "简体中文",
+          "zh-TW": "繁體中文",
+          fr: "Français",
+          de: "Deutsch",
+          ko: "한국어",
+          ja: "日本語",
+          es: "Español",
+        },
+      },
+      about: {
+        title: "정보",
+        description:
+          "이 설정은 이 기기에만 적용되며 데스크톱 앱의 구성과 별개로 유지됩니다.",
+        appName: "Angel Engine Mobile",
+        appDescription: "Angel Engine 데스크톱 앱의 모바일 동반 앱입니다.",
+      },
+    },
+  },
+} satisfies LocaleResource;

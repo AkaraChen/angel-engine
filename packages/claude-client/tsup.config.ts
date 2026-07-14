@@ -32,7 +32,7 @@ const cjsSdkLoaderAlias = {
 export default defineConfig([
   {
     clean: true,
-    dts: true,
+    dts: false,
     entry,
     external: [
       ...external,

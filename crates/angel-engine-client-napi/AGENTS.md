@@ -30,5 +30,5 @@ N-API bridge for exposing `angel-engine-client` primitives to TypeScript. Keep t
 ## Commands
 
 ```sh
-npm --prefix crates/angel-engine-client-napi run build
+bun run napi:build
 ```
