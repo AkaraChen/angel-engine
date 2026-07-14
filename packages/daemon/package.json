@@ -32,9 +32,9 @@
     "@angel-engine/js-client": "workspace:*",
     "@angel-engine/pi-client": "workspace:*",
     "@hono/node-server": "^1.19.9",
+    "@libsql/client": "^0.17.4",
     "@sindresorhus/is": "^8.1.0",
     "arktype": "^2.2.2",
-    "better-sqlite3": "^12.11.1",
     "drizzle-orm": "^0.45.2",
     "hono": "4.12.25",
     "httpxy": "^0.5.5",
@@ -44,7 +44,6 @@
     "ws": "^8.18.3"
   },
   "devDependencies": {
-    "@types/better-sqlite3": "^7.6.13",
     "@types/mime-types": "^3.0.1",
     "@types/node": "^24.10.1",
     "@types/which": "^3.0.4",

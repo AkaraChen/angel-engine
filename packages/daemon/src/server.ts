@@ -249,7 +249,7 @@ export async function createDaemon(options: DaemonOptions): Promise<Daemon> {
       });
     });
     webSockets.close();
-    closeDatabase();
+    await closeDatabase();
   };
 
   app.post("/api/shutdown", async (context) => {

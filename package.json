@@ -49,7 +49,6 @@
     "@google/genai",
     "@parcel/watcher",
     "@tailwindcss/oxide",
-    "better-sqlite3",
     "electron",
     "electron-winstaller",
     "esbuild",

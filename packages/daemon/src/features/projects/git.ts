@@ -21,7 +21,7 @@ const WORKTREE_BRANCH_PREFIX = "angel";
 export async function projectGitStatus(
   input: ProjectGitStatusInput,
 ): Promise<ProjectGitStatusResult> {
-  const project = getProject(input.projectId);
+  const project = await getProject(input.projectId);
   if (!project) {
     throw new Error("Project not found.");
   }

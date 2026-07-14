@@ -51,7 +51,7 @@ describe("daemon chat streams", () => {
   it("publishes chat metadata changes for non-stream clients", async () => {
     const publish = vi.fn();
     const runtime = fakeRuntime();
-    runtime.createChatFromInput = vi.fn(() => chat);
+    runtime.createChatFromInput = vi.fn(async () => chat);
     const app = new Hono();
     registerApi(app, runtime, { publish });
 

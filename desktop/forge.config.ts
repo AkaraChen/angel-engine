@@ -9,18 +9,34 @@ import { FuseV1Options, FuseVersion } from "@electron/fuses";
 import is from "@sindresorhus/is";
 
 const nativeRuntimeModules = [
-  "better-sqlite3",
-  "bindings",
-  "file-uri-to-path",
+  "libsql",
+  "@neon-rs/load",
+  "detect-libc",
   "node-pty",
 ];
 const nativeRuntimeModuleParents = new Map([
-  ["bindings", "better-sqlite3"],
-  ["file-uri-to-path", "bindings"],
+  ["libsql", "@libsql/client"],
+  ["@neon-rs/load", "libsql"],
+  ["detect-libc", "libsql"],
 ]);
+const optionalLibsqlNativeModules = [
+  "@libsql/darwin-arm64",
+  "@libsql/darwin-x64",
+  "@libsql/linux-arm-gnueabihf",
+  "@libsql/linux-arm-musleabihf",
+  "@libsql/linux-arm64-gnu",
+  "@libsql/linux-arm64-musl",
+  "@libsql/linux-x64-gnu",
+  "@libsql/linux-x64-musl",
+  "@libsql/win32-x64-msvc",
+];
+for (const moduleName of optionalLibsqlNativeModules) {
+  nativeRuntimeModuleParents.set(moduleName, "libsql");
+}
 
 const projectRoot = __dirname;
 const workspaceRoot = path.resolve(projectRoot, "..");
+const daemonRoot = path.join(workspaceRoot, "packages", "daemon");
 const workspaceRequire = createRequire(
   path.join(workspaceRoot, "package.json"),
 );
@@ -114,7 +130,7 @@ function copyMobileBundle(buildPath: string) {
 }
 
 function resolveRuntimeModulePackageJson(moduleName: string): string {
-  const paths = [projectRoot, workspaceRoot];
+  const paths = [projectRoot, daemonRoot, workspaceRoot];
   const parentModuleName = nativeRuntimeModuleParents.get(moduleName);
 
   if (is.nonEmptyString(parentModuleName)) {
@@ -123,7 +139,26 @@ function resolveRuntimeModulePackageJson(moduleName: string): string {
     );
   }
 
-  return workspaceRequire.resolve(`${moduleName}/package.json`, { paths });
+  let currentPath = path.dirname(
+    workspaceRequire.resolve(moduleName, { paths }),
+  );
+  while (currentPath !== path.dirname(currentPath)) {
+    const packageJsonPath = path.join(currentPath, "package.json");
+    if (fs.existsSync(packageJsonPath)) {
+      const packageJson: unknown = JSON.parse(
+        fs.readFileSync(packageJsonPath, "utf8"),
+      );
+      if (
+        is.plainObject<{ name?: unknown }>(packageJson) &&
+        packageJson.name === moduleName
+      ) {
+        return packageJsonPath;
+      }
+    }
+    currentPath = path.dirname(currentPath);
+  }
+
+  throw new Error(`Could not resolve runtime package: ${moduleName}`);
 }
 
 function copyRuntimeModule(buildPath: string, moduleName: string) {
@@ -141,6 +176,13 @@ function copyRuntimeModule(buildPath: string, moduleName: string) {
 function copyNativeRuntimeDependencies(buildPath: string) {
   for (const moduleName of nativeRuntimeModules) {
     copyRuntimeModule(buildPath, moduleName);
+  }
+  for (const moduleName of optionalLibsqlNativeModules) {
+    try {
+      copyRuntimeModule(buildPath, moduleName);
+    } catch {
+      // Bun only installs the libSQL binary package for the current platform.
+    }
   }
 
   const clientNapiSource = path.resolve(

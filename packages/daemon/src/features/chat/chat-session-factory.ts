@@ -46,7 +46,7 @@ export async function createChatSession(
   }
 
   if (isCustomAgentRuntime(runtime)) {
-    const agent = getCustomAgent(runtime);
+    const agent = await getCustomAgent(runtime);
     if (!agent) {
       throw new Error(`Custom agent not found: ${runtime}`);
     }

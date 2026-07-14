@@ -23,8 +23,9 @@ type CreateChatRecordInput = ChatCreateInput & {
   cwd: string;
 };
 
-export function listChats(): Chat[] {
-  return getDatabase()
+export async function listChats(): Promise<Chat[]> {
+  const database = await getDatabase();
+  return database
     .select()
     .from(chats)
     .where(eq(chats.archived, false))
@@ -32,8 +33,9 @@ export function listChats(): Chat[] {
     .all();
 }
 
-export function listArchivedChats(): Chat[] {
-  return getDatabase()
+export async function listArchivedChats(): Promise<Chat[]> {
+  const database = await getDatabase();
+  return database
     .select()
     .from(chats)
     .where(eq(chats.archived, true))
@@ -41,8 +43,9 @@ export function listArchivedChats(): Chat[] {
     .all();
 }
 
-export function getChat(id: string): Chat | null {
-  const chat = getDatabase()
+export async function getChat(id: string): Promise<Chat | null> {
+  const database = await getDatabase();
+  const chat = await database
     .select()
     .from(chats)
     .where(eq(chats.id, requireChatId(id)))
@@ -52,9 +55,10 @@ export function getChat(id: string): Chat | null {
   return chat ?? null;
 }
 
-export function createChat(input: CreateChatRecordInput): Chat {
+export async function createChat(input: CreateChatRecordInput): Promise<Chat> {
   const now = new Date().toISOString();
-  const chat = getDatabase()
+  const database = await getDatabase();
+  const chat = await database
     .insert(chats)
     .values({
       createdAt: now,
@@ -62,7 +66,7 @@ export function createChat(input: CreateChatRecordInput): Chat {
       id: randomUUID(),
       projectId: normalizeOptionalString(input.projectId),
       remoteThreadId: null,
-      runtime: normalizeChatRuntime(input.runtime),
+      runtime: await normalizeChatRuntime(input.runtime),
       title: normalizeTitle(input.title),
       updatedAt: now,
       archived: false,
@@ -74,61 +78,71 @@ export function createChat(input: CreateChatRecordInput): Chat {
   return chat;
 }
 
-export function deleteChat(id: string): Chat {
-  const chat = requireChat(id);
+export async function deleteChat(id: string): Promise<Chat> {
+  const chat = await requireChat(id);
 
-  getDatabase().delete(chats).where(eq(chats.id, chat.id)).run();
+  const database = await getDatabase();
+  await database.delete(chats).where(eq(chats.id, chat.id)).run();
 
   return chat;
 }
 
-export function deleteAllChats(): number {
-  const deletedCount = getDatabase().select().from(chats).all().length;
-  getDatabase().delete(chats).run();
-  return deletedCount;
+export async function deleteAllChats(): Promise<number> {
+  const database = await getDatabase();
+  const existingChats = await database.select().from(chats).all();
+  await database.delete(chats).run();
+  return existingChats.length;
 }
 
-export function archiveChat(id: string): Chat {
+export function archiveChat(id: string): Promise<Chat> {
   return updateChat(id, { archived: true });
 }
 
-export function restoreArchivedChats(ids: string[]): Chat[] {
-  return uniqueChatIds(ids).map((id) => {
-    requireArchivedChat(id);
-    return updateChat(id, { archived: false });
-  });
+export async function restoreArchivedChats(ids: string[]): Promise<Chat[]> {
+  const restoredChats: Chat[] = [];
+  for (const id of uniqueChatIds(ids)) {
+    await requireArchivedChat(id);
+    restoredChats.push(await updateChat(id, { archived: false }));
+  }
+  return restoredChats;
 }
 
-export function deleteArchivedChats(ids: string[]): Chat[] {
-  const archivedChats = uniqueChatIds(ids).map((id) => requireArchivedChat(id));
+export async function deleteArchivedChats(ids: string[]): Promise<Chat[]> {
+  const archivedChats = await Promise.all(
+    uniqueChatIds(ids).map((id) => requireArchivedChat(id)),
+  );
 
+  const database = await getDatabase();
   for (const chat of archivedChats) {
-    getDatabase().delete(chats).where(eq(chats.id, chat.id)).run();
+    await database.delete(chats).where(eq(chats.id, chat.id)).run();
   }
 
   return archivedChats;
 }
 
-export function setChatPinned(id: string, pinned: boolean): Chat {
+export function setChatPinned(id: string, pinned: boolean): Promise<Chat> {
   return updateChat(id, { pinned });
 }
 
-export function touchChat(id: string): Chat {
+export function touchChat(id: string): Promise<Chat> {
   return updateChat(id, { updatedAt: new Date().toISOString() });
 }
 
 export function setChatRemoteThreadId(
   id: string,
   remoteThreadId: string | null,
-): Chat {
+): Promise<Chat> {
   return updateChat(id, {
     remoteThreadId: normalizeOptionalString(remoteThreadId),
     updatedAt: new Date().toISOString(),
   });
 }
 
-export function setChatRuntime(id: string, runtime: string): Chat {
-  const chat = requireChat(id);
+export async function setChatRuntime(
+  id: string,
+  runtime: string,
+): Promise<Chat> {
+  const chat = await requireChat(id);
   if (is.nonEmptyString(chat.remoteThreadId)) {
     throw new Error(
       "Chat runtime cannot be changed after the chat has started.",
@@ -136,13 +150,16 @@ export function setChatRuntime(id: string, runtime: string): Chat {
   }
 
   return updateChat(id, {
-    runtime: normalizeChatRuntime(runtime),
+    runtime: await normalizeChatRuntime(runtime),
     updatedAt: new Date().toISOString(),
   });
 }
 
-export function renameChatFromPrompt(id: string, prompt: string): Chat {
-  const chat = requireChat(id);
+export async function renameChatFromPrompt(
+  id: string,
+  prompt: string,
+): Promise<Chat> {
+  const chat = await requireChat(id);
   if (chat.title !== DEFAULT_CHAT_TITLE) return chat;
 
   return updateChat(id, {
@@ -151,30 +168,30 @@ export function renameChatFromPrompt(id: string, prompt: string): Chat {
   });
 }
 
-export function renameChat(id: string, title: string): Chat {
+export function renameChat(id: string, title: string): Promise<Chat> {
   return updateChat(id, {
     title: normalizeManualTitle(title),
     updatedAt: new Date().toISOString(),
   });
 }
 
-export function requireChat(id: string): Chat {
-  const chat = getChat(id);
+export async function requireChat(id: string): Promise<Chat> {
+  const chat = await getChat(id);
   if (is.falsy(chat)) {
     throw new Error("Chat not found.");
   }
   return chat;
 }
 
-export function requireArchivedChat(id: string): Chat {
-  const chat = requireChat(id);
+export async function requireArchivedChat(id: string): Promise<Chat> {
+  const chat = await requireChat(id);
   if (!chat.archived) {
     throw new Error("Chat is not archived.");
   }
   return chat;
 }
 
-function updateChat(
+async function updateChat(
   id: string,
   patch: Partial<
     Pick<
@@ -187,8 +204,9 @@ function updateChat(
       | "updatedAt"
     >
   >,
-): Chat {
-  const chat = getDatabase()
+): Promise<Chat> {
+  const database = await getDatabase();
+  const chat = await database
     .update(chats)
     .set(patch)
     .where(eq(chats.id, requireChatId(id)))
@@ -217,12 +235,14 @@ function uniqueChatIds(ids: string[]) {
   return uniqueIds;
 }
 
-type CustomAgentLookup = (runtime: string) => CustomAgent | null;
+type CustomAgentLookup = (
+  runtime: string,
+) => CustomAgent | null | Promise<CustomAgent | null>;
 
-export function normalizeChatRuntime(
+export async function normalizeChatRuntime(
   runtime: string | undefined,
   customAgentLookup: CustomAgentLookup = getCustomAgent,
-): AgentRuntime {
+): Promise<AgentRuntime> {
   const candidate = is.nonEmptyString(runtime)
     ? runtime
     : process.env.ANGEL_ENGINE_RUNTIME;
@@ -235,11 +255,11 @@ export function normalizeChatRuntime(
     throw new Error("Unknown chat runtime.");
   }
 
-  if (
-    isCustomAgentRuntime(candidate) &&
-    customAgentLookup(candidate) === null
-  ) {
-    throw new Error("Unknown chat runtime.");
+  if (isCustomAgentRuntime(candidate)) {
+    const customAgent = await customAgentLookup(candidate);
+    if (customAgent === null) {
+      throw new Error("Unknown chat runtime.");
+    }
   }
 
   return candidate;

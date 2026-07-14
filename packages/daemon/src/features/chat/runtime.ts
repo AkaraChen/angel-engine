@@ -28,7 +28,7 @@ export interface ChatStreamControls {
 
 export interface ChatRuntime {
   closeChatSession: (chatId?: string) => void;
-  createChatFromInput: (input: ChatCreateInput) => Chat;
+  createChatFromInput: (input: ChatCreateInput) => Promise<Chat>;
   inspectChatRuntimeConfig: (
     input: ChatRuntimeConfigInput,
   ) => Promise<ChatRuntimeConfig>;
@@ -39,7 +39,7 @@ export interface ChatRuntime {
   setChatPermissionMode: (
     input: ChatSetPermissionModeInput,
   ) => Promise<ChatSetPermissionModeResult>;
-  setChatRuntime: (input: ChatSetRuntimeInput) => Chat;
+  setChatRuntime: (input: ChatSetRuntimeInput) => Promise<Chat>;
   streamChat: (
     input: ChatSendInput,
     onEvent: (event: ChatStreamEvent) => void,
