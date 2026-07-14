@@ -12,6 +12,7 @@ import {
   SidebarProvider,
   SidebarTrigger,
 } from "@/components/ui/sidebar";
+import { WorkspacePanel } from "@/features/workspace/workspace-panel";
 import { useDaemonClient } from "@/platform/daemon-provider";
 import { queryKeys } from "@/platform/query-keys";
 
@@ -46,7 +47,7 @@ function useRouteTitle(): string {
 
 export function AppShell({ children }: PropsWithChildren) {
   const { t } = useTranslation();
-  const [isChat] = useRoute("/chat/:chatId");
+  const [isChat, chatParams] = useRoute("/chat/:chatId");
   const title = useRouteTitle();
   return (
     <SidebarProvider>
@@ -71,9 +72,10 @@ export function AppShell({ children }: PropsWithChildren) {
           ) : (
             <SidebarTrigger />
           )}
-          <h1 className="min-w-0 truncate font-heading text-base font-semibold">
+          <h1 className="min-w-0 flex-1 truncate font-heading text-base font-semibold">
             {title}
           </h1>
+          {isChat ? <WorkspacePanel chatId={chatParams.chatId} /> : null}
         </header>
         <main className="min-h-0 flex-1 overflow-hidden">{children}</main>
       </SidebarInset>

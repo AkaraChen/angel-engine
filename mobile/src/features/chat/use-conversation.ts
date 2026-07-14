@@ -2,6 +2,7 @@ import type {
   ChatElicitationResponse,
   ChatLoadResult,
   ConversationMessage,
+  ConversationToolCall,
   DaemonElicitation,
   DaemonMessagePart,
 } from "@/platform/chat-types";
@@ -12,7 +13,7 @@ import { useCallback, useEffect, useReducer, useRef } from "react";
 import { useDaemonClient } from "@/platform/daemon-provider";
 import { queryKeys } from "@/platform/query-keys";
 
-import { toConversation } from "./message-view";
+import { toConversation, toolCallFromAction } from "./message-view";
 import { clearNewChatPrompt, readNewChatPrompt } from "./new-chat-prompt";
 
 export interface Conversation {
@@ -40,6 +41,8 @@ interface LiveTurn {
   userText: string;
   assistantText: string;
   assistantReasoning: string;
+  /** Tool calls streamed this turn, in first-seen order and upserted by id. */
+  assistantToolCalls: ConversationToolCall[];
 }
 
 const EMPTY_TURN: LiveTurn = {
@@ -48,7 +51,20 @@ const EMPTY_TURN: LiveTurn = {
   userText: "",
   assistantText: "",
   assistantReasoning: "",
+  assistantToolCalls: [],
 };
+
+/** Upsert a streamed tool action into the turn's ordered tool-call list. */
+function upsertToolCall(
+  calls: ConversationToolCall[],
+  call: ConversationToolCall,
+): ConversationToolCall[] {
+  const index = calls.findIndex((existing) => existing.id === call.id);
+  if (index === -1) return [...calls, call];
+  const next = calls.slice();
+  next[index] = call;
+  return next;
+}
 
 function newStreamId(): string {
   // `crypto.randomUUID` is only available in secure contexts; the mobile app may
@@ -123,6 +139,20 @@ export function useConversation(chatId: string): Conversation {
                 ? { assistantReasoning: turn.assistantReasoning + delta }
                 : { assistantText: turn.assistantText + delta },
             );
+          } else if (event.type === "tool" || event.type === "toolDelta") {
+            // Tool actions stream as a full snapshot each time (a `tool` when a
+            // call is proposed/started, `toolDelta` as its output/phase update);
+            // upsert by id so the inline card reflects the latest state.
+            const call = toolCallFromAction(event.action);
+            if (call !== null) {
+              const turn = liveTurnRef.current;
+              updateAssistant({
+                assistantToolCalls: upsertToolCall(
+                  turn.assistantToolCalls,
+                  call,
+                ),
+              });
+            }
           } else if (event.type === "elicitation") {
             elicitationRef.current = event.elicitation;
             forceRender();
@@ -164,6 +194,7 @@ export function useConversation(chatId: string): Conversation {
         userText: initialPrompt,
         assistantText: "",
         assistantReasoning: "",
+        assistantToolCalls: [],
       };
       forceRender();
 
@@ -193,6 +224,10 @@ export function useConversation(chatId: string): Conversation {
       const content: DaemonMessagePart[] = [];
       if (turn.assistantReasoning.length > 0)
         content.push({ type: "reasoning", text: turn.assistantReasoning });
+      // Keep the streamed tool cards visible between the optimistic append and
+      // the background refetch that replaces this turn with the daemon's copy.
+      for (const call of turn.assistantToolCalls)
+        content.push(toolCallToPart(call));
       content.push({ type: "text", text: turn.assistantText });
       const appendTurn = (result: ChatLoadResult): ChatLoadResult => ({
         ...result,
@@ -243,6 +278,7 @@ export function useConversation(chatId: string): Conversation {
         userText: text,
         assistantText: "",
         assistantReasoning: "",
+        assistantToolCalls: [],
       };
       forceRender();
       mutate(text);
@@ -331,16 +367,19 @@ function buildLiveMessages(
       text: turn.userText,
       reasoning: "",
       status: "complete",
+      toolCalls: [],
     },
   ];
   // Always show the assistant row while a turn is live (even before the first
-  // token, so the "Thinking…" indicator appears), on error, and while a
-  // completed initial turn is waiting for canonical history hydration.
+  // token, so the "Thinking…" indicator appears), on error, while tool calls are
+  // streaming, and while a completed initial turn is waiting for canonical
+  // history hydration.
   if (
     isStreaming ||
     error !== null ||
     turn.assistantText.length > 0 ||
-    turn.assistantReasoning.length > 0
+    turn.assistantReasoning.length > 0 ||
+    turn.assistantToolCalls.length > 0
   ) {
     messages.push({
       id: turn.assistantId,
@@ -349,7 +388,32 @@ function buildLiveMessages(
       reasoning: turn.assistantReasoning,
       status: error !== null ? "error" : isStreaming ? "streaming" : "complete",
       error: error ?? undefined,
+      toolCalls: turn.assistantToolCalls,
     });
   }
   return messages;
+}
+
+/**
+ * Reproject a rendered tool call back into a `tool-call` history part so an
+ * optimistically-appended turn keeps its cards until the daemon's canonical copy
+ * arrives. Lossy but transient — `toolCallFromPart` reads it back the same way.
+ */
+function toolCallToPart(call: ConversationToolCall): DaemonMessagePart {
+  return {
+    type: "tool-call",
+    toolCallId: call.id,
+    toolName: call.name,
+    argsText: call.argsText,
+    isError: call.isError,
+    artifact: {
+      id: call.id,
+      phase: call.phase,
+      // `name` reprojects via `toolName`; keep the human summary as the title so
+      // the round-trip preserves both the identifier and its secondary label.
+      title: call.summary,
+      outputText: call.outputText,
+      error: call.errorText.length > 0 ? { message: call.errorText } : null,
+    },
+  };
 }

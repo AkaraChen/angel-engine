@@ -10,6 +10,7 @@ import type {
   DaemonRuntimeConfigInput,
   ElicitationResolveInput,
 } from "./chat-types";
+import type { WorkspaceGitDiffResult } from "./workspace-types";
 
 /** The transport fields the client needs: where to reach the daemon + a token. */
 export interface DaemonClientConfig {
@@ -92,6 +93,11 @@ export interface DaemonClient {
   ) => AsyncIterable<ChatStreamEvent>;
   /** Ask the daemon to abort an in-flight stream (`DELETE /api/chat-streams/:id`). */
   abortChatStream: (streamId: string) => Promise<void>;
+  /**
+   * Read live git state for a workspace root (`GET /api/workspace/git-diff`).
+   * Backs the mobile workspace panel; the `root` is the chat's `cwd`.
+   */
+  workspaceGitDiff: (root: string) => Promise<WorkspaceGitDiffResult>;
   /**
    * Answer an elicitation the daemon raised mid-stream
    * (`POST /api/chat-streams/:id/elicitation`), letting the waiting turn proceed.
@@ -226,6 +232,10 @@ export function createDaemonClient(
         { method: "DELETE" },
       );
     },
+    workspaceGitDiff: async (root) =>
+      request<WorkspaceGitDiffResult>(
+        `/api/workspace/git-diff?root=${encodeURIComponent(root)}`,
+      ),
     resolveElicitation: async (streamId, input) => {
       await request<{ resolved: boolean }>(
         `/api/chat-streams/${encodeURIComponent(streamId)}/elicitation`,

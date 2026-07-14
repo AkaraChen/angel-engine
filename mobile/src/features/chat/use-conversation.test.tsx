@@ -239,6 +239,80 @@ describe("useConversation", () => {
     );
   });
 
+  it("renders streamed tool calls and upserts them by id", async () => {
+    let sse: SseHandle | undefined;
+    const fetchMock = vi.fn(async (url: string, init?: RequestInit) => {
+      const method = init?.method ?? "GET";
+      if (url.endsWith("/load")) {
+        return jsonResponse({ chat: { id: "c1", title: "c1" }, messages: [] });
+      }
+      if (url.includes("/api/chat-streams?") && method === "POST") {
+        sse = controllableSse(init?.signal ?? undefined);
+        return sse.response;
+      }
+      return jsonResponse({ ok: true });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const { result } = renderHook(() => useConversation("c1"), { wrapper });
+    await waitFor(() => expect(result.current.isPending).toBe(false));
+
+    act(() => result.current.send("run it"));
+    await waitFor(() => expect(result.current.isStreaming).toBe(true));
+    await waitFor(() => expect(sse).toBeDefined());
+
+    // A `tool` event opens the card; the identifier is the action `kind`.
+    act(() =>
+      sse!.push({
+        type: "tool",
+        action: {
+          id: "act-1",
+          kind: "command",
+          title: "Run command",
+          phase: "running",
+        },
+      }),
+    );
+    await waitFor(() =>
+      expect(result.current.messages.at(-1)?.toolCalls).toMatchObject([
+        {
+          id: "act-1",
+          name: "command",
+          summary: "Run command",
+          phase: "running",
+        },
+      ]),
+    );
+
+    // A `toolDelta` with the SAME id updates the existing card in place.
+    act(() =>
+      sse!.push({
+        type: "toolDelta",
+        action: {
+          id: "act-1",
+          kind: "command",
+          title: "Run command",
+          phase: "completed",
+          outputText: "done",
+        },
+      }),
+    );
+    await waitFor(() =>
+      expect(result.current.messages.at(-1)?.toolCalls).toMatchObject([
+        { id: "act-1", phase: "completed", outputText: "done" },
+      ]),
+    );
+    // Upsert, not append: still exactly one tool call.
+    expect(result.current.messages.at(-1)?.toolCalls).toHaveLength(1);
+
+    act(() => {
+      sse!.push({ type: "result", result: { text: "" } });
+      sse!.push({ type: "done" });
+      sse!.close();
+    });
+    await waitFor(() => expect(result.current.isStreaming).toBe(false));
+  });
+
   it("resets the live turn and aborts the stream when the chat changes", async () => {
     let sse: SseHandle | undefined;
     const fetchMock = vi.fn(async (url: string, init?: RequestInit) => {
