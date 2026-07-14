@@ -201,6 +201,82 @@ describe("createDaemon", () => {
     expect(health.status).toBe(200);
   });
 
+  it("scopes the mobile session token to data routes only", async () => {
+    const dataDir = await mkdtemp(path.join(os.tmpdir(), "angel-daemon-"));
+    const daemon = await createDaemon({
+      dataDir,
+      mobilePassword: "hunter2",
+      token: "primary",
+    });
+    daemons.push(daemon);
+    const baseUrl = `http://${daemon.info.host}:${daemon.info.port}`;
+
+    const paired = await fetch(`${baseUrl}/api/auth/pair`, {
+      body: JSON.stringify({ password: "hunter2" }),
+      headers: { "content-type": "application/json" },
+      method: "POST",
+    });
+    const { token: sessionToken } = (await paired.json()) as { token: string };
+    const auth = { authorization: `Bearer ${sessionToken}` };
+
+    // Data routes are allowed.
+    expect(
+      (await fetch(`${baseUrl}/api/health`, { headers: auth })).status,
+    ).toBe(200);
+
+    // Lifecycle / process-control routes are forbidden for the mobile token.
+    const shutdown = await fetch(`${baseUrl}/api/shutdown`, {
+      headers: auth,
+      method: "POST",
+    });
+    expect(shutdown.status).toBe(403);
+    const kill = await fetch(`${baseUrl}/api/processes/1/kill`, {
+      headers: auth,
+      method: "POST",
+    });
+    expect(kill.status).toBe(403);
+    const registry = await fetch(`${baseUrl}/api/process-registry`, {
+      headers: auth,
+    });
+    expect(registry.status).toBe(403);
+
+    // The daemon is still alive (shutdown was refused, not executed).
+    expect(
+      (await fetch(`${baseUrl}/api/health`, { headers: auth })).status,
+    ).toBe(200);
+  });
+
+  it("throttles repeated failed pairing attempts", async () => {
+    const dataDir = await mkdtemp(path.join(os.tmpdir(), "angel-daemon-"));
+    const daemon = await createDaemon({
+      dataDir,
+      mobilePassword: "hunter2",
+      token: "primary",
+    });
+    daemons.push(daemon);
+    const baseUrl = `http://${daemon.info.host}:${daemon.info.port}`;
+
+    const attempt = () =>
+      fetch(`${baseUrl}/api/auth/pair`, {
+        body: JSON.stringify({ password: "wrong" }),
+        headers: { "content-type": "application/json" },
+        method: "POST",
+      });
+
+    // First failures are rejected with 401 …
+    for (let index = 0; index < 5; index += 1) {
+      expect((await attempt()).status).toBe(401);
+    }
+    // … then the endpoint is blocked with 429, even for the correct password.
+    expect((await attempt()).status).toBe(429);
+    const correct = await fetch(`${baseUrl}/api/auth/pair`, {
+      body: JSON.stringify({ password: "hunter2" }),
+      headers: { "content-type": "application/json" },
+      method: "POST",
+    });
+    expect(correct.status).toBe(429);
+  });
+
   it("refuses pairing when no mobile password is configured", async () => {
     const daemon = await startDaemon();
     const response = await fetch(

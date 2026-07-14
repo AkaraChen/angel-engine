@@ -28,6 +28,45 @@ function advertiseHostFor(bindHost: string): string {
   return bindHost;
 }
 
+/**
+ * Routes that control the daemon's lifecycle or host processes. Only the
+ * desktop's primary token may reach these — a paired mobile session token is
+ * restricted to data routes.
+ */
+function isPrivilegedPath(pathname: string): boolean {
+  return pathname === "/api/shutdown" || pathname.startsWith("/api/process");
+}
+
+const PAIR_MAX_FAILURES = 5;
+const PAIR_BLOCK_MS = 60_000;
+
+/**
+ * Fixed-window throttle for `/api/auth/pair`. After too many failed attempts the
+ * endpoint is blocked for a cooldown, slowing password brute-forcing on the LAN.
+ * Deliberately in-memory and process-wide: a daemon restart clears it, which is
+ * acceptable for a local-network tool.
+ */
+class PairThrottle {
+  private failures = 0;
+  private blockedUntil = 0;
+
+  isBlocked(): boolean {
+    return this.failures >= PAIR_MAX_FAILURES && Date.now() < this.blockedUntil;
+  }
+
+  recordFailure(): void {
+    this.failures += 1;
+    if (this.failures >= PAIR_MAX_FAILURES) {
+      this.blockedUntil = Date.now() + PAIR_BLOCK_MS;
+    }
+  }
+
+  reset(): void {
+    this.failures = 0;
+    this.blockedUntil = 0;
+  }
+}
+
 export interface Daemon {
   app: Hono;
   info: DaemonInfo;
@@ -52,6 +91,7 @@ export async function createDaemon(options: DaemonOptions): Promise<Daemon> {
       : undefined;
   const app = new Hono();
   const processRegistry = new ProcessRegistry();
+  const pairThrottle = new PairThrottle();
   let server: ServerType | undefined;
 
   app.use(
@@ -64,10 +104,17 @@ export async function createDaemon(options: DaemonOptions): Promise<Daemon> {
   );
 
   // Pairing is the one unauthenticated `/api/*` route: it is how a mobile client
-  // obtains a token in the first place.
+  // obtains a token in the first place. Repeated failures are throttled so a LAN
+  // attacker cannot brute-force the password.
   app.post("/api/auth/pair", async (context) => {
     if (mobilePassword === undefined || mobileToken === undefined) {
       return context.json({ error: "Pairing is not enabled." }, 403);
+    }
+    if (pairThrottle.isBlocked()) {
+      return context.json(
+        { error: "Too many attempts. Try again later." },
+        429,
+      );
     }
     let password: string | undefined;
     try {
@@ -79,18 +126,27 @@ export async function createDaemon(options: DaemonOptions): Promise<Daemon> {
       password = undefined;
     }
     if (password === undefined || !safeEqual(password, mobilePassword)) {
+      pairThrottle.recordFailure();
       return context.json({ error: "Invalid password." }, 401);
     }
+    pairThrottle.reset();
     return context.json({ token: mobileToken });
   });
 
   app.use("/api/*", async (context, next) => {
     const authorization = context.req.header("authorization");
-    const authorized =
-      authorization === `Bearer ${token}` ||
-      (mobileToken !== undefined && authorization === `Bearer ${mobileToken}`);
-    if (!authorized) {
+    const isPrimary = authorization === `Bearer ${token}`;
+    const isMobile =
+      mobileToken !== undefined && authorization === `Bearer ${mobileToken}`;
+    if (!isPrimary && !isMobile) {
       return context.json({ error: "Unauthorized" }, 401);
+    }
+    // A paired mobile client is scoped to data routes only. Daemon lifecycle and
+    // process control (shutdown, the process registry, killing processes) stay
+    // exclusive to the desktop's primary token, so a phone — or anyone who
+    // recovers a session token — cannot stop the backend or kill processes.
+    if (isMobile && !isPrimary && isPrivilegedPath(context.req.path)) {
+      return context.json({ error: "Forbidden" }, 403);
     }
     await next();
   });
