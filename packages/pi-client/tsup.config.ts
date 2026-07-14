@@ -33,7 +33,7 @@ const cjsEntryPathAlias = {
 export default defineConfig([
   {
     clean: true,
-    dts: true,
+    dts: false,
     entry,
     external,
     format: ["esm"],

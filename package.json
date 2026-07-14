@@ -1,7 +1,14 @@
 {
   "name": "angel-engine-workspace",
   "private": true,
-  "packageManager": "pnpm@11.1.2",
+  "packageManager": "bun@1.3.14",
+  "workspaces": [
+    "apps/*",
+    "desktop",
+    "mobile",
+    "packages/*",
+    "crates/angel-engine-client-napi"
+  ],
   "scripts": {
     "build": "turbo run build",
     "knip": "knip",
@@ -16,15 +23,15 @@
     "precommit": "lint-staged --config lint-staged.config.mjs --relative",
     "napi:build": "turbo run build --filter @angel-engine/client-napi",
     "napi:build:debug": "turbo run build:debug --filter @angel-engine/client-napi",
-    "desktop:start": "pnpm --filter desktop start",
+    "desktop:start": "bun run --filter desktop start",
     "desktop:package": "turbo run package --filter desktop",
     "desktop:make": "turbo run make --filter desktop",
     "desktop:typecheck": "turbo run typecheck --filter desktop",
-    "desktop:rebuild-native": "pnpm --filter desktop rebuild:native",
+    "desktop:rebuild-native": "bun run --filter desktop rebuild:native",
     "claude-client:build": "turbo run build --filter @angel-engine/claude-client",
     "claude-client:test": "turbo run test --filter @angel-engine/claude-client",
     "js-client:build": "turbo run build --filter @angel-engine/js-client",
-    "js-client:playground": "pnpm --filter @angel-engine/js-client playground",
+    "js-client:playground": "bun run --filter @angel-engine/js-client playground",
     "js-client:playground:build": "turbo run playground:build --filter @angel-engine/js-client",
     "js-client:test": "turbo run test --filter @angel-engine/js-client",
     "pi-client:build": "turbo run build --filter @angel-engine/pi-client",
@@ -36,5 +43,34 @@
     "knip": "6.24.0",
     "lint-staged": "^17.0.8",
     "turbo": "^2.10.3"
+  },
+  "trustedDependencies": [
+    "@electron/node-gyp",
+    "@google/genai",
+    "@parcel/watcher",
+    "@tailwindcss/oxide",
+    "better-sqlite3",
+    "electron",
+    "electron-winstaller",
+    "esbuild",
+    "fs-xattr",
+    "macos-alias",
+    "msgpackr-extract",
+    "msw",
+    "node-pty",
+    "protobufjs",
+    "sharp",
+    "unrs-resolver"
+  ],
+  "patchedDependencies": {
+    "@anthropic-ai/claude-agent-sdk@0.3.198": "patches/@anthropic-ai__claude-agent-sdk@0.3.198.patch"
+  },
+  "overrides": {
+    "@babel/core": "7.29.7",
+    "dompurify": "3.4.11",
+    "hono": "4.12.25",
+    "js-yaml": "5.1.0",
+    "postcss": "8.5.10",
+    "qs": "6.15.2"
   }
 }

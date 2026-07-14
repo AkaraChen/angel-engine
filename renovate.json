@@ -3,7 +3,7 @@
   "extends": ["config:recommended"],
   "packageRules": [
     {
-      "description": "SDK is pnpm-patched keyed to an exact version; bumps break pnpm install. Remove this rule when plan 033 (SDK migration) lands.",
+      "description": "SDK is patched keyed to an exact version; bumps break bun install. Remove this rule when plan 033 (SDK migration) lands.",
       "matchPackageNames": ["@anthropic-ai/claude-agent-sdk"],
       "enabled": false
     },

@@ -58,7 +58,7 @@ protocol-neutral engine concept by an adapter.
     classes/functions and generated TypeScript definitions.
   - Do not add settings policy, protocol normalization, stream merging rules, or
     desktop UI assumptions here. Rebuild it after Rust API/type changes with:
-    `npm --prefix crates/angel-engine-client-napi run build`.
+    `bun run napi:build`.
 
 - `desktop/`
   - Electron desktop application.
@@ -166,10 +166,10 @@ protocol-neutral engine concept by an adapter.
 
 ## Package Manager Files
 
-- Do not edit `pnpm-lock.yaml` by hand. Any lockfile changes must be produced by
-  pnpm commands such as `pnpm install`, `pnpm patch`, or `pnpm patch-commit`.
-- After pnpm changes workspace metadata or lockfiles, run the repository
-  formatter instead of manually preserving or rewriting pnpm's formatting.
+- Do not edit `bun.lock` by hand. Any lockfile changes must be produced by bun
+  commands such as `bun install`, `bun patch`, or `bun patch --commit`.
+- After bun changes workspace metadata or lockfiles, run the repository
+  formatter instead of manually preserving or rewriting bun's formatting.
 
 ## Verification
 
@@ -178,8 +178,8 @@ Common gates:
 ```sh
 cargo test --workspace
 cargo fmt --all --check
-npm --prefix crates/angel-engine-client-napi run build
-npm --prefix desktop run typecheck
+bun run napi:build
+bun run desktop:typecheck
 git diff --check
 ```
 
@@ -191,5 +191,5 @@ Rust engine, Rust client, NAPI crate, or any snapshot/event/settings type used
 by desktop changed:
 
 ```sh
-npm --prefix crates/angel-engine-client-napi run build
+bun run napi:build
 ```

@@ -30,11 +30,11 @@
     "dist"
   ],
   "scripts": {
-    "build": "tsup",
-    "build:debug": "tsup",
+    "build": "tsup && tsc -p tsconfig.build.json",
+    "build:debug": "tsup && tsc -p tsconfig.build.json",
     "lint": "oxlint --type-aware src",
     "test": "vitest run",
-    "typecheck": "node node_modules/typescript7/bin/tsc --noEmit"
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@angel-engine/js-client": "workspace:*",
@@ -46,8 +46,7 @@
     "oxlint": "^1.73.0",
     "oxlint-tsgolint": "^0.24.0",
     "tsup": "^8.5.1",
-    "typescript": "^6.0.3",
-    "typescript7": "npm:typescript@^7.0.2",
+    "typescript": "^7.0.2",
     "vite": "^8.1.3",
     "vitest": "^4.1.9"
   },

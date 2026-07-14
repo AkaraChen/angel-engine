@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "oxlint",
-    "typecheck": "node node_modules/typescript7/bin/tsc --noEmit"
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "motion": "^12.42.2",
@@ -23,7 +23,6 @@
     "@types/react-dom": "^19.2.3",
     "oxlint": "^1.73.0",
     "tailwindcss": "^4.3.2",
-    "typescript": "^6.0.3",
-    "typescript7": "npm:typescript@^7.0.2"
+    "typescript": "^7.0.2"
   }
 }

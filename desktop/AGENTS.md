@@ -26,7 +26,7 @@ Electron app with explicit main/preload/renderer/shared boundaries, consuming no
   truthy checks when the semantics match. ReactNode visibility checks may use
   `is.falsy`; desktop UI does not treat numeric `0` as meaningful rendered
   content.
-- Use workspace `pnpm` commands for desktop tasks.
+- Use workspace `bun` commands for desktop tasks.
 - Use agent-browser for UI/browser validation when requested.
 
 ## Anti-Patterns
