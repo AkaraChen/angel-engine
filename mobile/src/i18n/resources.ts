@@ -34,14 +34,16 @@ export const resources = {
 } satisfies Record<SupportedLanguage, LocaleResource>;
 
 /**
- * Map an arbitrary BCP-47 tag (e.g. from `navigator.language`) onto one of the
- * eight supported languages, matching the desktop normalization so both clients
- * resolve the same regional variants. Falls back to English.
+ * Match a single BCP-47 tag against the eight supported languages, returning
+ * `null` when the tag maps to no supported language. Unlike
+ * {@link normalizeSupportedLanguage} this does NOT silently fall back to
+ * English, so a preference list can distinguish "explicitly English" from
+ * "unsupported" and keep scanning.
  */
-export function normalizeSupportedLanguage(
+export function matchSupportedLanguage(
   language: string | null | undefined,
-): SupportedLanguage {
-  if (typeof language !== "string" || language.length === 0) return "en";
+): SupportedLanguage | null {
+  if (typeof language !== "string" || language.length === 0) return null;
   const normalized = language.toLowerCase();
 
   if (
@@ -59,6 +61,34 @@ export function normalizeSupportedLanguage(
   if (normalized.startsWith("ko")) return "ko";
   if (normalized.startsWith("ja")) return "ja";
   if (normalized.startsWith("es")) return "es";
+  if (normalized.startsWith("en")) return "en";
 
+  return null;
+}
+
+/**
+ * Map an arbitrary BCP-47 tag (e.g. from `navigator.language`) onto one of the
+ * eight supported languages, matching the desktop normalization so both clients
+ * resolve the same regional variants. Falls back to English.
+ */
+export function normalizeSupportedLanguage(
+  language: string | null | undefined,
+): SupportedLanguage {
+  return matchSupportedLanguage(language) ?? "en";
+}
+
+/**
+ * Pick the first supported language from an ordered preference list (e.g.
+ * `navigator.languages`). This honours a user whose primary locale is
+ * unsupported but whose secondary preference is one we ship, instead of jumping
+ * straight to English. Falls back to English when nothing matches.
+ */
+export function detectPreferredLanguage(
+  candidates: ReadonlyArray<string | null | undefined>,
+): SupportedLanguage {
+  for (const candidate of candidates) {
+    const matched = matchSupportedLanguage(candidate);
+    if (matched !== null) return matched;
+  }
   return "en";
 }

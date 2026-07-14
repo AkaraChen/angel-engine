@@ -1,3 +1,4 @@
+import type { Locale } from "date-fns";
 import type { ChatSummary } from "@/platform/chat-types";
 
 import { ChatCircle, GitBranch, Plus, PushPin } from "@phosphor-icons/react";
@@ -19,6 +20,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { AgentRuntimeIcon } from "@/features/agents/agent-runtime-icon";
 import { CreateChatDrawer } from "@/features/chat/create-chat-drawer";
 import { useChatList } from "@/features/chat/use-chats";
+import { useDateFnsLocale } from "@/i18n/date-locale";
 import { agentLabel } from "@/platform/agent-catalog";
 
 /**
@@ -65,6 +67,7 @@ export function HomePage() {
 }
 
 function ChatListItem({ chat }: { chat: ChatSummary }) {
+  const locale = useDateFnsLocale();
   const subtitle = [chat.projectName, chat.worktreeBranch].filter(Boolean);
   return (
     <li className="border-b border-border/60 last:border-b-0">
@@ -97,7 +100,7 @@ function ChatListItem({ chat }: { chat: ChatSummary }) {
               {chat.title}
             </span>
             <span className="shrink-0 text-xs text-muted-foreground">
-              {formatUpdatedAt(chat.updatedAt)}
+              {formatUpdatedAt(chat.updatedAt, locale)}
             </span>
           </span>
           {subtitle.length > 0 ? (
@@ -124,10 +127,10 @@ function ChatListItem({ chat }: { chat: ChatSummary }) {
   );
 }
 
-function formatUpdatedAt(updatedAt: string): string {
+function formatUpdatedAt(updatedAt: string, locale: Locale): string {
   const date = new Date(updatedAt);
   if (Number.isNaN(date.getTime())) return "";
-  return formatDistanceToNow(date, { addSuffix: true });
+  return formatDistanceToNow(date, { addSuffix: true, locale });
 }
 
 function ChatListSkeleton() {

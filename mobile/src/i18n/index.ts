@@ -4,6 +4,7 @@ import i18n from "i18next";
 import { initReactI18next } from "react-i18next";
 
 import {
+  detectPreferredLanguage,
   normalizeSupportedLanguage,
   resources,
   supportedLanguages,
@@ -52,7 +53,14 @@ function detectInitialLanguage(): SupportedLanguage {
     return normalizeSupportedLanguage(persistedLanguage);
   }
 
-  return normalizeSupportedLanguage(window.navigator.language);
+  // Honour the full ordered preference list — a user whose primary locale is
+  // unsupported but whose next choice is one we ship should get that language,
+  // not English. `navigator.languages` may be empty, so fall back to the single
+  // `navigator.language`.
+  return detectPreferredLanguage([
+    ...(window.navigator.languages ?? []),
+    window.navigator.language,
+  ]);
 }
 
 function applyDocumentLanguage(language: SupportedLanguage): void {
