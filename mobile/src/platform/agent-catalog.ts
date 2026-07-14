@@ -37,17 +37,18 @@ export function agentLabel(runtime: string | null | undefined): string {
 
 export interface ReasoningEffortOption {
   value: string;
-  label: string;
+  labelKey: `createChat.reasoningOptions.${"default" | "minimal" | "low" | "medium" | "high"}`;
 }
 
 /**
  * Common reasoning levels. Empty value means "runtime default" (no override),
  * matching the desktop convention of using a missing value for no override.
+ * Labels are translation keys resolved by the composer at render time.
  */
 export const REASONING_EFFORT_OPTIONS: ReasoningEffortOption[] = [
-  { value: "", label: "Default" },
-  { value: "minimal", label: "Minimal" },
-  { value: "low", label: "Low" },
-  { value: "medium", label: "Medium" },
-  { value: "high", label: "High" },
+  { value: "", labelKey: "createChat.reasoningOptions.default" },
+  { value: "minimal", labelKey: "createChat.reasoningOptions.minimal" },
+  { value: "low", labelKey: "createChat.reasoningOptions.low" },
+  { value: "medium", labelKey: "createChat.reasoningOptions.medium" },
+  { value: "high", labelKey: "createChat.reasoningOptions.high" },
 ];

@@ -2,6 +2,7 @@ import type { ChatSummary } from "@/platform/chat-types";
 
 import { ChatCircle, GitBranch, Plus, PushPin } from "@phosphor-icons/react";
 import { formatDistanceToNow } from "date-fns";
+import { useTranslation } from "react-i18next";
 import { Link } from "wouter";
 
 import { Button } from "@/components/ui/button";
@@ -26,6 +27,7 @@ import { agentLabel } from "@/platform/agent-catalog";
  * full-width touch rows, and hosts the New chat composer.
  */
 export function HomePage() {
+  const { t } = useTranslation();
   const chatsQuery = useChatList();
 
   return (
@@ -48,7 +50,7 @@ export function HomePage() {
 
       <CreateChatDrawer>
         <Button
-          aria-label="New chat"
+          aria-label={t("common.newChat")}
           className="
             absolute right-4 bottom-[max(1rem,env(safe-area-inset-bottom))]
             size-14 rounded-full shadow-lg
@@ -148,22 +150,21 @@ function ChatListSkeleton() {
 }
 
 function EmptyState() {
+  const { t } = useTranslation();
   return (
     <Empty className="px-6 py-16">
       <EmptyHeader>
         <EmptyMedia variant="icon">
           <ChatCircle size={28} />
         </EmptyMedia>
-        <EmptyTitle>No chats yet</EmptyTitle>
-        <EmptyDescription>
-          Start a new agent session to see it here.
-        </EmptyDescription>
+        <EmptyTitle>{t("home.emptyTitle")}</EmptyTitle>
+        <EmptyDescription>{t("home.emptyDescription")}</EmptyDescription>
       </EmptyHeader>
       <EmptyContent>
         <CreateChatDrawer>
           <Button>
             <Plus size={18} weight="bold" />
-            New chat
+            {t("common.newChat")}
           </Button>
         </CreateChatDrawer>
       </EmptyContent>
@@ -172,20 +173,19 @@ function EmptyState() {
 }
 
 function ErrorState({ onRetry }: { onRetry: () => void }) {
+  const { t } = useTranslation();
   return (
     <Empty className="px-6 py-16">
       <EmptyHeader>
         <EmptyMedia variant="icon">
           <ChatCircle size={28} />
         </EmptyMedia>
-        <EmptyTitle>Couldn&apos;t load chats</EmptyTitle>
-        <EmptyDescription>
-          The daemon may be offline or unreachable.
-        </EmptyDescription>
+        <EmptyTitle>{t("home.errorTitle")}</EmptyTitle>
+        <EmptyDescription>{t("common.daemonOfflineHint")}</EmptyDescription>
       </EmptyHeader>
       <EmptyContent>
         <Button onClick={onRetry} variant="outline">
-          Try again
+          {t("common.tryAgain")}
         </Button>
       </EmptyContent>
     </Empty>

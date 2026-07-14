@@ -14,10 +14,22 @@ export type ThemeMode = "system" | "light" | "dark";
 
 export const themeModeOptions: Array<{
   value: ThemeMode;
-  label: string;
+  labelKey: `settings.appearance.themeOptions.${ThemeMode}`;
   icon: Icon;
 }> = [
-  { value: "system", label: "System", icon: Desktop },
-  { value: "light", label: "Light", icon: Sun },
-  { value: "dark", label: "Dark", icon: Moon },
+  {
+    value: "system",
+    labelKey: "settings.appearance.themeOptions.system",
+    icon: Desktop,
+  },
+  {
+    value: "light",
+    labelKey: "settings.appearance.themeOptions.light",
+    icon: Sun,
+  },
+  {
+    value: "dark",
+    labelKey: "settings.appearance.themeOptions.dark",
+    icon: Moon,
+  },
 ];

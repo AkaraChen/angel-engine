@@ -2,6 +2,7 @@ import type { FormEvent } from "react";
 
 import { LockKey } from "@phosphor-icons/react";
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -17,6 +18,7 @@ import { useAuth } from "@/features/auth/auth-provider";
 import { PairingError } from "@/features/auth/session";
 
 export function LoginPage() {
+  const { t } = useTranslation();
   const { signIn } = useAuth();
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -32,8 +34,8 @@ export function LoginPage() {
     } catch (cause) {
       setError(
         cause instanceof PairingError && cause.reason === "invalid-password"
-          ? "Incorrect password. Try again."
-          : "Couldn't reach the desktop app. Check your connection and try again.",
+          ? t("login.incorrectPassword")
+          : t("login.connectionError"),
       );
       setIsSubmitting(false);
     }
@@ -51,11 +53,8 @@ export function LoginPage() {
           >
             <LockKey className="size-5" weight="duotone" />
           </div>
-          <CardTitle>Unlock Angel Engine</CardTitle>
-          <CardDescription>
-            Enter the pairing password set on your desktop app to connect this
-            device.
-          </CardDescription>
+          <CardTitle>{t("login.title")}</CardTitle>
+          <CardDescription>{t("login.description")}</CardDescription>
         </CardHeader>
         <CardContent>
           <form
@@ -63,13 +62,15 @@ export function LoginPage() {
             onSubmit={(event) => void handleSubmit(event)}
           >
             <div className="flex flex-col gap-1.5">
-              <Label htmlFor="pairing-password">Password</Label>
+              <Label htmlFor="pairing-password">
+                {t("login.passwordLabel")}
+              </Label>
               <Input
                 autoComplete="current-password"
                 autoFocus
                 id="pairing-password"
                 onChange={(event) => setPassword(event.currentTarget.value)}
-                placeholder="Pairing password"
+                placeholder={t("login.passwordPlaceholder")}
                 type="password"
                 value={password}
               />
@@ -82,7 +83,7 @@ export function LoginPage() {
               disabled={password.length === 0 || isSubmitting}
               type="submit"
             >
-              {isSubmitting ? "Connecting…" : "Connect"}
+              {isSubmitting ? t("login.connecting") : t("login.connect")}
             </Button>
           </form>
         </CardContent>
