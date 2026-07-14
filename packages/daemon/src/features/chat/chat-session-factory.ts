@@ -7,7 +7,9 @@ import { getCustomAgent } from "../agents/repository";
 import { DesktopAngelSession } from "./desktop-angel-session";
 
 export type DesktopChatSession =
-  DesktopAngelSession | ClaudeCodeSession | DesktopPiAgentSession;
+  | DesktopAngelSession
+  | ClaudeCodeSession
+  | DesktopPiAgentSession;
 
 export async function getOrCreateChatSession<T>(
   chatId: string,

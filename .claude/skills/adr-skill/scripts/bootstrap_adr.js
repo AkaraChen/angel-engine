@@ -6,8 +6,8 @@
  * - create first ADR: "Adopt architecture decision records"
  */
 
-const fs = require('node:fs');
-const path = require('node:path');
+const fs = require("node:fs");
+const path = require("node:path");
 
 function die(msg) {
   process.stderr.write(`${msg}\n`);
@@ -16,15 +16,15 @@ function die(msg) {
 
 function parseArgs(argv) {
   const out = {
-    repoRoot: '.',
-    dir: 'adr',
+    repoRoot: ".",
+    dir: "adr",
     forceIndex: false,
     indexFile: null,
-    firstTitle: 'Adopt architecture decision records',
-    firstStatus: 'accepted',
-    deciders: '',
-    technicalStory: '',
-    strategy: 'date',
+    firstTitle: "Adopt architecture decision records",
+    firstStatus: "accepted",
+    deciders: "",
+    technicalStory: "",
+    strategy: "date",
     json: false,
   };
 
@@ -35,32 +35,32 @@ function parseArgs(argv) {
       return argv[++i];
     };
 
-    if (a === '--repo-root') out.repoRoot = next();
-    else if (a === '--dir') out.dir = next();
-    else if (a === '--force-index') out.forceIndex = true;
-    else if (a === '--index-file') out.indexFile = next();
-    else if (a === '--first-title') out.firstTitle = next();
-    else if (a === '--first-status') out.firstStatus = next();
-    else if (a === '--deciders') out.deciders = next();
-    else if (a === '--technical-story') out.technicalStory = next();
-    else if (a === '--strategy') out.strategy = next();
-    else if (a === '--json') out.json = true;
-    else if (a === '--help' || a === '-h') {
+    if (a === "--repo-root") out.repoRoot = next();
+    else if (a === "--dir") out.dir = next();
+    else if (a === "--force-index") out.forceIndex = true;
+    else if (a === "--index-file") out.indexFile = next();
+    else if (a === "--first-title") out.firstTitle = next();
+    else if (a === "--first-status") out.firstStatus = next();
+    else if (a === "--deciders") out.deciders = next();
+    else if (a === "--technical-story") out.technicalStory = next();
+    else if (a === "--strategy") out.strategy = next();
+    else if (a === "--json") out.json = true;
+    else if (a === "--help" || a === "-h") {
       process.stdout.write(
         [
-          'Usage: node bootstrap_adr.js [options]',
-          '',
-          'Options:',
-          '  --repo-root <path>     Repo root (default: .)',
-          '  --dir <path>           ADR directory (default: adr)',
-          '  --index-file <path>    Override index file path (relative to repo root unless absolute)',
-          '  --force-index          Overwrite index file if it exists',
-          '  --first-title <text>   Title for initial ADR',
-          '  --first-status <text>  Status for initial ADR (default: accepted)',
-          '  --strategy date|slug|auto  Filename strategy for initial ADR (default: date)',
-          '  --json                 Output machine-readable JSON (default: off)',
-          '',
-        ].join('\n'),
+          "Usage: node bootstrap_adr.js [options]",
+          "",
+          "Options:",
+          "  --repo-root <path>     Repo root (default: .)",
+          "  --dir <path>           ADR directory (default: adr)",
+          "  --index-file <path>    Override index file path (relative to repo root unless absolute)",
+          "  --force-index          Overwrite index file if it exists",
+          "  --first-title <text>   Title for initial ADR",
+          "  --first-status <text>  Status for initial ADR (default: accepted)",
+          "  --strategy date|slug|auto  Filename strategy for initial ADR (default: date)",
+          "  --json                 Output machine-readable JSON (default: off)",
+          "",
+        ].join("\n"),
       );
       process.exit(0);
     } else {
@@ -68,53 +68,53 @@ function parseArgs(argv) {
     }
   }
 
-  if (!['auto', 'date', 'slug'].includes(out.strategy))
+  if (!["auto", "date", "slug"].includes(out.strategy))
     die(`Invalid --strategy: ${out.strategy}`);
   return out;
 }
 
 function loadReadmeTemplate() {
-  const skillRoot = path.resolve(__dirname, '..');
+  const skillRoot = path.resolve(__dirname, "..");
   const templatePath = path.join(
     skillRoot,
-    'assets',
-    'templates',
-    'adr-readme.md',
+    "assets",
+    "templates",
+    "adr-readme.md",
   );
   if (!fs.existsSync(templatePath))
     die(`README template not found: ${templatePath}`);
-  return fs.readFileSync(templatePath, 'utf8');
+  return fs.readFileSync(templatePath, "utf8");
 }
 
 function writeIndex(indexFile, adrDirName, { force }) {
   if (fs.existsSync(indexFile) && !force) return;
-  const content = loadReadmeTemplate().replaceAll('{ADR_DIR}', adrDirName);
+  const content = loadReadmeTemplate().replaceAll("{ADR_DIR}", adrDirName);
   fs.mkdirSync(path.dirname(indexFile), { recursive: true });
-  fs.writeFileSync(indexFile, `${content.trimEnd()}\n`, 'utf8');
+  fs.writeFileSync(indexFile, `${content.trimEnd()}\n`, "utf8");
 }
 
 function slugify(text) {
-  const t = String(text || '')
+  const t = String(text || "")
     .trim()
     .toLowerCase();
-  const noQuotes = t.replace(/['"`]/g, '');
-  const dashed = noQuotes.replace(/[^a-z0-9]+/g, '-').replace(/-{2,}/g, '-');
-  const trimmed = dashed.replace(/^-+/, '').replace(/-+$/, '');
-  return trimmed || 'decision';
+  const noQuotes = t.replace(/['"`]/g, "");
+  const dashed = noQuotes.replace(/[^a-z0-9]+/g, "-").replace(/-{2,}/g, "-");
+  const trimmed = dashed.replace(/^-+/, "").replace(/-+$/, "");
+  return trimmed || "decision";
 }
 
 function toPosix(p) {
-  return p.split(path.sep).join('/');
+  return p.split(path.sep).join("/");
 }
 
 function generateFirstAdr({ title, status, date, deciders, adrDir }) {
   const deciderLine = deciders
     ? String(deciders)
-        .split(',')
-        .map(s => s.trim())
+        .split(",")
+        .map((s) => s.trim())
         .filter(Boolean)
-        .join(', ')
-    : '';
+        .join(", ")
+    : "";
 
   return `---
 status: ${status}
@@ -166,26 +166,26 @@ Conventions:
 
 function updateIndexFile(indexFile, { relLink, title, status, date }) {
   if (!fs.existsSync(indexFile)) return;
-  let content = fs.readFileSync(indexFile, 'utf8');
+  let content = fs.readFileSync(indexFile, "utf8");
   if (content.includes(relLink)) return;
 
   const entryLine = `- [${title}](${relLink}) (${status}, ${date})`;
 
   // Append after "## ADRs" heading if found, otherwise append at end
-  const normalized = content.replace(/\r\n/g, '\n');
-  const lines = normalized.split('\n');
-  const headingIdx = lines.findIndex(l => /^##\s+ADRs\s*$/i.test(l));
+  const normalized = content.replace(/\r\n/g, "\n");
+  const lines = normalized.split("\n");
+  const headingIdx = lines.findIndex((l) => /^##\s+ADRs\s*$/i.test(l));
 
   if (headingIdx !== -1) {
     // Insert after the heading (and any blank line after it)
     let insertAt = headingIdx + 1;
-    while (insertAt < lines.length && lines[insertAt].trim() === '') insertAt++;
+    while (insertAt < lines.length && lines[insertAt].trim() === "") insertAt++;
     lines.splice(insertAt, 0, entryLine);
   } else {
     lines.push(entryLine);
   }
 
-  fs.writeFileSync(indexFile, lines.join('\n'), 'utf8');
+  fs.writeFileSync(indexFile, lines.join("\n"), "utf8");
 }
 
 function main() {
@@ -201,7 +201,7 @@ function main() {
     ? path.isAbsolute(args.indexFile)
       ? args.indexFile
       : path.resolve(repoRoot, args.indexFile)
-    : path.join(adrDir, 'README.md');
+    : path.join(adrDir, "README.md");
 
   const indexExistedBefore = fs.existsSync(indexFile);
   writeIndex(indexFile, args.dir, { force: args.forceIndex });
@@ -223,15 +223,15 @@ function main() {
   });
 
   // Determine filename using same logic as new_adr.js
-  const strategy = args.strategy === 'auto' ? 'date' : args.strategy;
+  const strategy = args.strategy === "auto" ? "date" : args.strategy;
   let firstAdrFilename;
-  if (strategy === 'date') {
+  if (strategy === "date") {
     firstAdrFilename = `${today}-${slugify(args.firstTitle)}.md`;
   } else {
     firstAdrFilename = `${slugify(args.firstTitle)}.md`;
   }
   const firstAdrPath = path.join(adrDir, firstAdrFilename);
-  fs.writeFileSync(firstAdrPath, `${firstAdrContent.trimEnd()}\n`, 'utf8');
+  fs.writeFileSync(firstAdrPath, `${firstAdrContent.trimEnd()}\n`, "utf8");
 
   // Update index
   const relLink = toPosix(path.relative(path.dirname(indexFile), firstAdrPath));

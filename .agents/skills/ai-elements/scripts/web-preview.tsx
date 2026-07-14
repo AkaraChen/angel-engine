@@ -65,7 +65,7 @@ const Example = () => {
 
   const handleToggleFullscreen = useCallback(
     () => setFullscreen((prev) => !prev),
-    []
+    [],
   );
 
   return (

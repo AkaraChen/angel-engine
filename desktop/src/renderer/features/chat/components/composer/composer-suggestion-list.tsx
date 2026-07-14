@@ -20,10 +20,8 @@ export interface ComposerSuggestionListHandle {
   onKeyDown: (event: KeyboardEvent) => boolean;
 }
 
-interface ComposerSuggestionListProps extends SuggestionProps<
-  ComposerSuggestionItem,
-  ComposerSuggestionItem
-> {
+interface ComposerSuggestionListProps
+  extends SuggestionProps<ComposerSuggestionItem, ComposerSuggestionItem> {
   ref?: Ref<ComposerSuggestionListHandle>;
 }
 

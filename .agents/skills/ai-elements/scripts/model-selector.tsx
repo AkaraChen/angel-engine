@@ -288,7 +288,7 @@ interface ModelItemProps {
 const ModelItem = memo(({ model, selectedModel, onSelect }: ModelItemProps) => {
   const handleSelect = useCallback(
     () => onSelect(model.id),
-    [onSelect, model.id]
+    [onSelect, model.id],
   );
   return (
     <ModelSelectorItem key={model.id} onSelect={handleSelect} value={model.id}>

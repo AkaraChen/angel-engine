@@ -82,7 +82,7 @@ export function createComposerExtensions({
 export const ComposerMention = Mention.extend({
   addAttributes() {
     return {
-      ...(this.parent?.() ?? {}),
+      ...this.parent?.(),
       kind: {
         default: null,
         parseHTML: (element) => element.getAttribute("data-kind"),

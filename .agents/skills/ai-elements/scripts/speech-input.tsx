@@ -21,7 +21,7 @@ const handleAudioRecorded = async (audioBlob: Blob): Promise<string> => {
         Authorization: `Bearer ${process.env.NEXT_PUBLIC_OPENAI_API_KEY}`,
       },
       method: "POST",
-    }
+    },
   );
 
   if (!response.ok) {

@@ -49,7 +49,8 @@ export interface WorkspaceBrowserCommandInput {
   browserViewId: string;
 }
 
-export interface WorkspaceBrowserNavigateInput extends WorkspaceBrowserCommandInput {
+export interface WorkspaceBrowserNavigateInput
+  extends WorkspaceBrowserCommandInput {
   url: string;
 }
 

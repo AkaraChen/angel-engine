@@ -1,8 +1,8 @@
 import type {
-  WorkspaceToolPinnedTabId,
   WorkspaceToolSurfaceDynamicTab,
   WorkspaceToolSurfaceHost,
   WorkspaceToolSurfaceSnapshot,
+  WorkspaceToolTabId,
 } from "@shared/workspace-tool-surface";
 import type { ApiClient } from "@/platform/api-client";
 
@@ -141,7 +141,7 @@ export function WorkspaceToolSurface({
     );
   }, [host, openWorkspaceWindowFile, setSnapshot, windowFileOpenRequest]);
   const selectTab = useCallback(
-    async (tabId: WorkspaceToolPinnedTabId | string) => {
+    async (tabId: WorkspaceToolTabId) => {
       if (tabId !== activeTabId && !(await confirmWindowFilesEditorExit())) {
         return false;
       }

@@ -33,7 +33,8 @@ function runtimeMarkerPath() {
 
 /** Records the config a live daemon was launched with (for reattach checks). */
 export function readMobileHostingRuntimeMarker():
-  MobileHostingConfig | undefined {
+  | MobileHostingConfig
+  | undefined {
   try {
     return sanitizeMobileHostingConfig(
       JSON.parse(readFileSync(runtimeMarkerPath(), "utf8")),

@@ -44,8 +44,8 @@ function isPermissionElicitation(
 ): elicitation is ChatElicitation {
   return Boolean(
     elicitation &&
-    (elicitation.kind === "approval" ||
-      elicitation.kind === "permissionProfile"),
+      (elicitation.kind === "approval" ||
+        elicitation.kind === "permissionProfile"),
   );
 }
 

@@ -2,6 +2,7 @@ export const TIPC_CHANNELS = [
   "appReadClipboardSourceUrl",
   "appSetLanguage",
   "daemonMobileHostingGet",
+  "daemonMobileHostingListenAddresses",
   "daemonMobileHostingSet",
   "chatsShowContextMenu",
   "projectsChooseDirectory",

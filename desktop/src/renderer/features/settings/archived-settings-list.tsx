@@ -69,8 +69,8 @@ export function ArchivedChatRow({
   const { t } = useTranslation();
   const isWorktree = Boolean(
     is.nonEmptyString(project?.path) &&
-    is.nonEmptyString(chat.cwd) &&
-    chat.cwd !== project.path,
+      is.nonEmptyString(chat.cwd) &&
+      chat.cwd !== project.path,
   );
   const projectName = project
     ? getProjectDisplayName(project.path)

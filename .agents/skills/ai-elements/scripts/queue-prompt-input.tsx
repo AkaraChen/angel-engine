@@ -105,7 +105,7 @@ interface AttachmentItemProps {
 const AttachmentItem = memo(({ attachment, onRemove }: AttachmentItemProps) => {
   const handleRemove = useCallback(
     () => onRemove(attachment.id),
-    [onRemove, attachment.id]
+    [onRemove, attachment.id],
   );
   return (
     <Attachment data={attachment} key={attachment.id} onRemove={handleRemove}>
@@ -126,7 +126,7 @@ const TodoItem = memo(({ todo, onRemove }: TodoItemProps) => {
   const isCompleted = todo.status === "completed";
   const handleRemove = useCallback(
     () => onRemove(todo.id),
-    [onRemove, todo.id]
+    [onRemove, todo.id],
   );
 
   return (
@@ -218,7 +218,7 @@ const PromptInputAttachmentsDisplay = () => {
 
   const handleRemove = useCallback(
     (id: string) => attachments.remove(id),
-    [attachments]
+    [attachments],
   );
 
   if (attachments.files.length === 0) {
@@ -255,7 +255,7 @@ const Example = () => {
 
   const handleTextChange = useCallback(
     (e: React.ChangeEvent<HTMLTextAreaElement>) => setText(e.target.value),
-    []
+    [],
   );
 
   const handleModelSelect = useCallback((id: string) => {
@@ -305,7 +305,7 @@ const Example = () => {
         timeoutRef.current = null;
       }, STREAMING_TIMEOUT);
     },
-    [status]
+    [status],
   );
 
   return (

@@ -8,6 +8,7 @@
     "module": "ESNext",
     "moduleResolution": "bundler",
     "noImplicitAny": true,
+    "noEmit": true,
     "outDir": "dist",
     "paths": {
       "@angel-engine/js-client": ["./src/index.ts"],

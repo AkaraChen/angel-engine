@@ -159,10 +159,13 @@ export function subscribeDaemonConnection(
 
 export async function fetchDaemon(pathname: string, init?: RequestInit) {
   if (connection.status !== "available") return undefined;
-  return fetch(daemonUrl(connection.info, pathname), {
-    ...init,
-    headers: { ...authorizationHeaders(connection.info), ...init?.headers },
-  });
+  const headers = new Headers(init?.headers);
+  for (const [name, value] of Object.entries(
+    authorizationHeaders(connection.info),
+  )) {
+    if (!headers.has(name)) headers.set(name, value);
+  }
+  return fetch(daemonUrl(connection.info, pathname), { ...init, headers });
 }
 
 export function registerDaemonIpc() {

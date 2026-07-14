@@ -63,7 +63,7 @@ const SuggestionItem = memo(
   ({ suggestion, onSuggestionClick }: SuggestionItemProps) => {
     const handleClick = useCallback(
       () => onSuggestionClick(suggestion.value),
-      [onSuggestionClick, suggestion.value]
+      [onSuggestionClick, suggestion.value],
     );
     return (
       <Suggestion
@@ -72,7 +72,7 @@ const SuggestionItem = memo(
         suggestion={suggestion.value}
       />
     );
-  }
+  },
 );
 
 SuggestionItem.displayName = "SuggestionItem";
@@ -87,7 +87,7 @@ const Example = () => {
 
   const handleTextChange = useCallback(
     (e: React.ChangeEvent<HTMLTextAreaElement>) => setText(e.target.value),
-    []
+    [],
   );
 
   return (

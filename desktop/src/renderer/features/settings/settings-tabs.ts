@@ -11,7 +11,12 @@ import {
 } from "@phosphor-icons/react";
 
 type SettingsTab =
-  "agents" | "appearance" | "mobile" | "workspace" | "archived" | "danger";
+  | "agents"
+  | "appearance"
+  | "mobile"
+  | "workspace"
+  | "archived"
+  | "danger";
 
 const settingsTabs: Array<{
   icon: ComponentType<Pick<IconProps, "className" | "weight">>;

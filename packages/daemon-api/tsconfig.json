@@ -9,6 +9,7 @@
     "moduleResolution": "bundler",
     "noImplicitAny": true,
     "outDir": "dist",
+    "rootDir": "src",
     "skipLibCheck": true,
     "sourceMap": true,
     "strict": true,

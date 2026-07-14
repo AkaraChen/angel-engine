@@ -7,6 +7,7 @@ import {
   getMobileHostingState,
   setMobileHostingConfig,
 } from "../daemon/supervisor";
+import { listMobileHostingListenAddresses } from "../daemon/mobile-hosting";
 import { chatPlatformIpcRouter } from "../features/chat/ipc";
 import { projectPlatformIpcRouter } from "../features/projects/ipc";
 import { setMainLanguage } from "../platform/i18n";
@@ -33,6 +34,9 @@ const appIpcRouter = {
   }),
   daemonMobileHostingGet: t.procedure.action(async () =>
     getMobileHostingState(),
+  ),
+  daemonMobileHostingListenAddresses: t.procedure.action(async () =>
+    listMobileHostingListenAddresses(),
   ),
   daemonMobileHostingSet: t.procedure
     .input<MobileHostingUpdate>()
