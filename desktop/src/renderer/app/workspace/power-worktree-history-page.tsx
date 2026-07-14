@@ -1,11 +1,11 @@
-import type { Chat } from "@shared/chat";
+import type { Chat } from "@angel-engine/daemon-api/chat";
 import type { ReactElement } from "react";
 
 import {
   Archive,
+  Robot as Bot,
   ChatCircleText,
   Plus,
-  Robot as Bot,
 } from "@phosphor-icons/react";
 import is from "@sindresorhus/is";
 import { useMemo } from "react";
@@ -50,16 +50,29 @@ export function PowerWorktreeHistoryPage({
   }, [chats, groupKey, projectPath]);
 
   return (
-    <div className="flex min-h-0 flex-1 items-center justify-center overflow-y-auto p-6">
+    <div
+      className="
+      flex min-h-0 flex-1 items-center justify-center overflow-y-auto p-6
+    "
+    >
       <div className="w-full max-w-md">
         {historyChats.length > 0 ? (
-          <h2 className="mb-5 truncate text-center text-2xl font-semibold text-foreground">
+          <h2
+            className="
+            mb-5 truncate text-center text-2xl font-semibold text-foreground
+          "
+          >
             {label}
           </h2>
         ) : null}
         <div className="h-80 overflow-y-auto">
           {historyChats.length === 0 ? (
-            <div className="flex h-full flex-col items-center justify-center gap-2 text-sm text-muted-foreground">
+            <div
+              className="
+              flex h-full flex-col items-center justify-center gap-2 text-sm
+              text-muted-foreground
+            "
+            >
               <ChatCircleText className="size-10" weight="duotone" />
               <span>{t("sidebar.noChats")}</span>
               <Button className="mt-2" onClick={onNewChat} size="sm">
@@ -74,7 +87,8 @@ export function PowerWorktreeHistoryPage({
                   className="
                     group/history-chat flex min-w-0 items-center gap-1
                     rounded-md transition-colors
-                    hover:bg-muted/55 focus-visible:bg-muted/55
+                    hover:bg-muted/55
+                    focus-visible:bg-muted/55
                   "
                   key={chat.id}
                   title={chat.title}
@@ -89,7 +103,11 @@ export function PowerWorktreeHistoryPage({
                     type="button"
                   >
                     <AgentIcon runtime={chat.runtime} />
-                    <span className="min-w-0 max-w-full flex-1 truncate text-sm text-foreground">
+                    <span
+                      className="
+                      max-w-full min-w-0 flex-1 truncate text-sm text-foreground
+                    "
+                    >
                       {displayChatTitle(chat.title, t)}
                     </span>
                     <span

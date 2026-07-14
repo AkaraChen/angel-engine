@@ -1,4 +1,5 @@
 import type { ChatOptionsContextValue } from "@/features/chat/runtime/chat-options-context";
+import { AGENT_OPTIONS } from "@angel-engine/daemon-api/agents";
 import {
   Robot as Bot,
   Brain,
@@ -6,7 +7,6 @@ import {
   ShieldCheck,
   SlidersHorizontal,
 } from "@phosphor-icons/react";
-import { AGENT_OPTIONS } from "@shared/agents";
 import is from "@sindresorhus/is";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";

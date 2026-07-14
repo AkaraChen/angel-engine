@@ -183,11 +183,34 @@ export const es = {
         title: "Zona peligrosa",
       },
       description: "Configura el comportamiento del espacio de trabajo.",
+      mobile: {
+        copied: "Copiado",
+        copy: "Copiar",
+        enabledDescription:
+          "Sirve la aplicación web móvil desde este ordenador. Úsala solo en una red de confianza; el tráfico HTTP no está cifrado.",
+        enabledTitle: "Servir vista móvil",
+        hostDescription:
+          "Interfaz de red a la que se enlaza el servidor. Usa 0.0.0.0 para permitir el acceso de otros dispositivos de tu red local.",
+        hostTitle: "Dirección de escucha",
+        passwordDescription:
+          "Contraseña que un teléfono debe introducir para emparejarse con el daemon y recibir un token de acceso.",
+        passwordSetPlaceholder: "Déjalo en blanco para mantenerla",
+        passwordTitle: "Contraseña de emparejamiento",
+        passwordTooShort: "Usa al menos {{count}} caracteres.",
+        passwordUnsetPlaceholder: "Establecer una contraseña",
+        urlDisabled:
+          "Activa la vista móvil para obtener un enlace que puedas abrir en tu teléfono.",
+        urlNeedsPassword:
+          "Establece una contraseña de emparejamiento para habilitar el acceso móvil.",
+        urlPending: "Iniciando el servidor…",
+        urlTitle: "URL móvil",
+      },
       tabs: {
         agents: "Agents",
         appearance: "Apariencia",
         archived: "Archivadas",
         danger: "Avanzado",
+        mobile: "Vista móvil",
         workspace: "Espacio de trabajo",
       },
       title: "Configuración",

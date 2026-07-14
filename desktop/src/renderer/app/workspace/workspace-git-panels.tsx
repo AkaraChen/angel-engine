@@ -1,32 +1,32 @@
 import type { FormEvent } from "react";
+import type { WorkspaceToolPatchFile } from "@/app/workspace/workspace-tool-patch-model";
+
 import type { ApiClient } from "@/platform/api-client";
 
 import { useCallback, useState } from "react";
-
 import { getErrorMessage } from "@/app/workspace/workspace-file-display";
 import {
-  WorkspaceGitCommitComposer,
   useWorkspaceGitPanelState,
+  WorkspaceGitCommitComposer,
 } from "@/app/workspace/workspace-git-commit";
+import {
+  WorkspaceToolPatchFileDiffContent,
+  WorkspaceToolPatchFileLineStats,
+} from "@/app/workspace/workspace-tool-diff";
 import {
   initialWorkspaceToolGitListWidth,
   WorkspaceToolEmpty,
-  WorkspaceToolPanelSplitter,
   workspaceToolGitListWidthMax,
   workspaceToolGitListWidthMin,
   workspaceToolGitListWidthStorageKey,
+  WorkspaceToolPanelSplitter,
 } from "@/app/workspace/workspace-tool-layout";
+import { WorkspaceToolPatchFileList } from "@/app/workspace/workspace-tool-patch-list";
 import {
   buildWorkspaceToolPatchList,
   formatWorkspaceToolPatchFileName,
   getWorkspaceToolPatchFileLineChanges,
 } from "@/app/workspace/workspace-tool-patch-model";
-import type { WorkspaceToolPatchFile } from "@/app/workspace/workspace-tool-patch-model";
-import {
-  WorkspaceToolPatchFileDiffContent,
-  WorkspaceToolPatchFileLineStats,
-} from "@/app/workspace/workspace-tool-diff";
-import { WorkspaceToolPatchFileList } from "@/app/workspace/workspace-tool-patch-list";
 
 export function WorkspaceGitPanel({
   api,

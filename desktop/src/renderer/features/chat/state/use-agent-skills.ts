@@ -1,4 +1,4 @@
-import type { ChatAvailableSkill } from "@shared/chat";
+import type { ChatAvailableSkill } from "@angel-engine/daemon-api/chat";
 
 import { useQuery } from "@tanstack/react-query";
 import { agentSkillsQueryOptions } from "@/features/chat/api/queries";

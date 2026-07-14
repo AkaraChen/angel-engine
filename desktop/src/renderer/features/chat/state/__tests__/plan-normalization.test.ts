@@ -1,4 +1,4 @@
-import type { ChatPlanData } from "@shared/chat";
+import type { ChatPlanData } from "@angel-engine/daemon-api/chat";
 import { describe, expect, it, vi } from "vitest";
 
 vi.mock("@/platform/api-client", () => ({

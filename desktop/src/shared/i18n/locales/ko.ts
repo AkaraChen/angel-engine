@@ -182,11 +182,34 @@ export const ko = {
         title: "위험 구역",
       },
       description: "데스크톱 워크스페이스 동작을 설정합니다.",
+      mobile: {
+        copied: "복사됨",
+        copy: "복사",
+        enabledDescription:
+          "이 컴퓨터에서 모바일 웹 앱을 제공합니다. HTTP 트래픽은 암호화되지 않으므로 신뢰할 수 있는 네트워크에서만 사용하세요.",
+        enabledTitle: "모바일 보기 제공",
+        hostDescription:
+          "서버가 바인딩할 네트워크 인터페이스입니다. 0.0.0.0을 사용하면 로컬 네트워크의 다른 기기에서 접속할 수 있습니다.",
+        hostTitle: "수신 주소",
+        passwordDescription:
+          "휴대폰이 데몬과 페어링하고 액세스 토큰을 받기 위해 입력하는 비밀번호입니다.",
+        passwordSetPlaceholder: "변경하지 않으려면 비워 두세요",
+        passwordTitle: "페어링 비밀번호",
+        passwordTooShort: "{{count}}자 이상 입력하세요.",
+        passwordUnsetPlaceholder: "비밀번호 설정",
+        urlDisabled:
+          "모바일 보기를 켜면 휴대폰에서 열 수 있는 링크가 표시됩니다.",
+        urlNeedsPassword:
+          "페어링 비밀번호를 설정하면 모바일 접속을 사용할 수 있습니다.",
+        urlPending: "서버를 시작하는 중…",
+        urlTitle: "모바일 URL",
+      },
       tabs: {
         agents: "Agents",
         appearance: "모양",
         archived: "보관됨",
         danger: "고급",
+        mobile: "모바일 보기",
         workspace: "작업 공간",
       },
       title: "설정",

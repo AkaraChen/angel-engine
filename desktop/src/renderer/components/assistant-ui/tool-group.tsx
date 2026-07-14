@@ -7,12 +7,15 @@ import type {
   FC,
   PropsWithChildren,
 } from "react";
+import {
+  isChatToolAction,
+  isTerminalChatToolPhase,
+} from "@angel-engine/daemon-api/chat";
 import { useAuiState, useScrollLock } from "@assistant-ui/react";
 import {
   CaretDown as ChevronDownIcon,
   Wrench as ToolIcon,
 } from "@phosphor-icons/react";
-import { isChatToolAction, isTerminalChatToolPhase } from "@shared/chat";
 import is from "@sindresorhus/is";
 import { cva } from "class-variance-authority";
 import { memo, useCallback, useRef, useState } from "react";

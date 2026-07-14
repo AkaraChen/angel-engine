@@ -1,11 +1,8 @@
-import type { ChatRuntime } from "../features/chat/runtime";
 import { registerIpcMain } from "@egoist/tipc/main";
 
 import { ipcMain } from "electron";
 import { DESKTOP_SETTINGS_OPEN_CHANNEL } from "../../shared/desktop-window";
 import { registerDaemonIpc } from "../daemon/supervisor";
-import { registerChatStreamIpc } from "../features/chat/stream-handler";
-import { registerTerminalIpc } from "../features/terminal/ipc";
 import { registerWorkspaceBrowserIpc } from "../features/workspace-browser/ipc";
 import { registerDesktopWindowAppearanceIpc } from "../windows/appearance";
 import { registerDesktopWindowIpc } from "../windows/notifications";
@@ -13,21 +10,15 @@ import { registerWorkspaceToolWindowIpc } from "../windows/workspace-tool-window
 import { createAppRouter } from "./router";
 
 interface RegisterAllIpcOptions {
-  chatRuntime: ChatRuntime;
   openSettingsWindow: () => void;
 }
 
-export function registerAllIpc({
-  chatRuntime,
-  openSettingsWindow,
-}: RegisterAllIpcOptions) {
+export function registerAllIpc({ openSettingsWindow }: RegisterAllIpcOptions) {
   registerDaemonIpc();
-  registerIpcMain(createAppRouter(chatRuntime));
+  registerIpcMain(createAppRouter());
   registerDesktopWindowAppearanceIpc();
   registerDesktopWindowIpc();
   registerWorkspaceToolWindowIpc();
-  registerChatStreamIpc(chatRuntime);
-  registerTerminalIpc();
   registerWorkspaceBrowserIpc();
   ipcMain.on(DESKTOP_SETTINGS_OPEN_CHANNEL, openSettingsWindow);
 }

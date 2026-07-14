@@ -1,150 +1,56 @@
-import type { ProjectFileSearchInput } from "../../../shared/chat";
-import type {
-  CreateProjectInput,
-  ProjectGitStatusInput,
-  UpdateProjectInput,
-} from "../../../shared/projects";
-import { tipc } from "@egoist/tipc/main";
+import type { Project } from "@angel-engine/daemon-api/projects";
 
+import { tipc } from "@egoist/tipc/main";
 import { type as arkType } from "arktype";
 import { BrowserWindow, dialog, Menu, shell } from "electron";
+import { daemonJson } from "../../daemon/client";
 import { translate } from "../../platform/i18n";
-import { searchProjectFiles } from "./file-search";
-import { projectGitStatus } from "./git";
-import {
-  createProject,
-  deleteProject,
-  getProject,
-  listProjects,
-  updateProject,
-} from "./repository";
-import {
-  createProjectInput,
-  projectFileSearchInput,
-  projectGitStatusInput,
-  updateProjectInput,
-} from "./schemas";
 
 const t = tipc.create();
 
-export const projectIpcRouter = {
+export const projectPlatformIpcRouter = {
   projectsChooseDirectory: t.procedure.action(async () => {
     const result = await dialog.showOpenDialog({
       properties: ["openDirectory"],
       title: translate("projects.chooseFolder"),
     });
-
     return result.canceled ? null : result.filePaths[0];
   }),
-
-  projectsGitStatus: t.procedure
-    .input<ProjectGitStatusInput>()
-    .action(async ({ input }) => {
-      const value = projectGitStatusInput(input);
-      if (value instanceof arkType.errors) {
-        throw new TypeError("Project input is required.");
-      }
-      return projectGitStatus({ projectId: value.projectId });
-    }),
-
-  projectsCreate: t.procedure
-    .input<CreateProjectInput>()
-    .action(async ({ input }) => {
-      const value = createProjectInput(input);
-      if (value instanceof arkType.errors) {
-        throw new TypeError("Project input is required.");
-      }
-      return createProject({
-        id: value.id,
-        path: value.path,
-      });
-    }),
-
-  projectsDelete: t.procedure.input<string>().action(async ({ input }) => {
-    const value = arkType("string")(input);
-    if (value instanceof arkType.errors) {
-      throw new TypeError("Project id is required.");
-    }
-    return deleteProject(value);
-  }),
-
-  projectsGet: t.procedure.input<string>().action(async ({ input }) => {
-    const value = arkType("string")(input);
-    if (value instanceof arkType.errors) {
-      throw new TypeError("Project id is required.");
-    }
-    return getProject(value);
-  }),
-
-  projectsList: t.procedure.action(async () => listProjects()),
-
-  projectsSearchFiles: t.procedure
-    .input<ProjectFileSearchInput>()
-    .action(async ({ input }) => {
-      const value = projectFileSearchInput(input);
-      if (value instanceof arkType.errors) {
-        throw new TypeError("Project file search input is required.");
-      }
-      const query = {
-        limit:
-          typeof value.limit === "number" && Number.isFinite(value.limit)
-            ? value.limit
-            : undefined,
-        query: value.query,
-        root: value.root,
-      };
-      return searchProjectFiles(query);
-    }),
-
   projectsShowContextMenu: t.procedure
     .input<string>()
     .action(async ({ context, input }) => {
       const projectId = arkType("string")(input);
-      if (projectId instanceof arkType.errors) {
+      if (projectId instanceof arkType.errors)
         throw new TypeError("Project id is required.");
-      }
-      const project = getProject(projectId);
-      if (!project) {
-        throw new Error("Project not found.");
-      }
-
+      const project = await daemonJson<Project | null>(
+        `/api/projects/${encodeURIComponent(projectId)}`,
+      );
+      if (project === null) throw new Error("Project not found.");
       return new Promise<"cancelled" | "deleted" | "opened">((resolve) => {
         const menu = Menu.buildFromTemplate([
           {
             click: () => {
-              void shell.openPath(project.path).finally(() => {
-                resolve("opened");
-              });
+              void shell
+                .openPath(project.path)
+                .finally(() => resolve("opened"));
             },
             label: translate("projects.openInFinder"),
           },
           { type: "separator" },
           {
             click: () => {
-              deleteProject(project.id);
-              resolve("deleted");
+              void daemonJson(
+                `/api/projects/${encodeURIComponent(project.id)}`,
+                { method: "DELETE" },
+              ).then(() => resolve("deleted"));
             },
             label: translate("common.delete"),
           },
         ]);
-
         menu.popup({
           callback: () => resolve("cancelled"),
           window: BrowserWindow.fromWebContents(context.sender) ?? undefined,
         });
-      });
-    }),
-
-  projectsUpdate: t.procedure
-    .input<UpdateProjectInput>()
-    .action(async ({ input }) => {
-      const value = updateProjectInput(input);
-      if (value instanceof arkType.errors) {
-        throw new TypeError("Project input is required.");
-      }
-      return updateProject({
-        id: value.id,
-        path: value.path,
       });
     }),
 };

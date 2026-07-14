@@ -1,4 +1,4 @@
-import type { WorkspaceFileReadResult } from "@shared/workspace-tools";
+import type { WorkspaceFileReadResult } from "@angel-engine/daemon-api/workspace-tools";
 
 export function formatUnsupportedFileReason(
   result: Extract<WorkspaceFileReadResult, { type: "unsupported" }>,

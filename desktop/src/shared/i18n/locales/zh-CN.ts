@@ -179,11 +179,32 @@ export const zhCN = {
         title: "危险区",
       },
       description: "配置桌面工作区行为。",
+      mobile: {
+        copied: "已复制",
+        copy: "复制",
+        enabledDescription:
+          "从这台电脑提供移动网页应用。HTTP 流量不会加密，请仅在可信网络中使用。",
+        enabledTitle: "启用移动端访问",
+        hostDescription:
+          "服务器绑定的网络接口。使用 0.0.0.0 可允许本地网络中的其他设备访问。",
+        hostTitle: "监听地址",
+        passwordDescription:
+          "手机与守护进程配对并获取访问令牌时需要输入的密码。",
+        passwordSetPlaceholder: "留空则保持不变",
+        passwordTitle: "配对密码",
+        passwordTooShort: "请至少输入 {{count}} 个字符。",
+        passwordUnsetPlaceholder: "设置密码",
+        urlDisabled: "开启移动端访问后即可获得可在手机上打开的链接。",
+        urlNeedsPassword: "设置配对密码后即可启用移动端访问。",
+        urlPending: "正在启动服务器…",
+        urlTitle: "移动端网址",
+      },
       tabs: {
         agents: "Agents",
         appearance: "外观",
         archived: "已归档",
         danger: "高级",
+        mobile: "移动端",
         workspace: "工作区",
       },
       title: "设置",

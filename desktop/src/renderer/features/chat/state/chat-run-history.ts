@@ -1,9 +1,12 @@
 import type {
+  ChatHistoryMessage,
+  ChatHistoryMessagePart,
+} from "@angel-engine/daemon-api/chat";
+import type {
   AppendMessage,
   CompleteAttachment,
   ThreadMessage,
 } from "@assistant-ui/react";
-import type { ChatHistoryMessage, ChatHistoryMessagePart } from "@shared/chat";
 import type { EngineMessage } from "./chat-run-types";
 import {
   chatPartsText,
@@ -15,7 +18,7 @@ import {
   isChatPlanData,
   isChatToolAction,
   normalizeChatPlanMessages,
-} from "@shared/chat";
+} from "@angel-engine/daemon-api/chat";
 import is from "@sindresorhus/is";
 import {
   engineMessageAttachmentsToHistoryParts,

@@ -1,4 +1,4 @@
-import type { Chat, ChatElicitation } from "../../shared/chat";
+import type { Chat, ChatElicitation } from "@angel-engine/daemon-api/chat";
 
 import type { DesktopOpenChatFromNotificationEvent } from "../../shared/desktop-window";
 import is from "@sindresorhus/is";

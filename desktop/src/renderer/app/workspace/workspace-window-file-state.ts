@@ -1,4 +1,4 @@
-import type { WorkspaceFileReadResult } from "@shared/workspace-tools";
+import type { WorkspaceFileReadResult } from "@angel-engine/daemon-api/workspace-tools";
 import type { QueryClient } from "@tanstack/react-query";
 import type { ApiClient } from "@/platform/api-client";
 

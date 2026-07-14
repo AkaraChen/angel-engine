@@ -15,13 +15,13 @@ import {
   WorkspaceToolWindowContent,
 } from "@/app/workspace/workspace-tool-content";
 import { WorkspaceToolEmpty } from "@/app/workspace/workspace-tool-layout";
-import { WorkspaceToolSurfaceHeader } from "@/app/workspace/workspace-tool-surface-header";
 import {
   currentWorkspaceToolSnapshot,
   ensureWorkspaceToolSurfaceEvents,
   useWorkspaceToolStore,
   workspaceToolFilesTabId,
 } from "@/app/workspace/workspace-tool-store";
+import { WorkspaceToolSurfaceHeader } from "@/app/workspace/workspace-tool-surface-header";
 import {
   visibleActiveWorkspaceToolTabId,
   workspaceToolTabItems,
@@ -34,6 +34,7 @@ import {
   confirmWorkspaceWindowFilesExit,
   useWorkspaceWindowFileOpener,
 } from "@/app/workspace/workspace-window-file-state";
+import { terminalClient } from "@/platform/terminal-client";
 import { browserTitleFromUrl } from "./workspace-browser-url";
 
 const defaultWorkspaceToolBrowserUrl = "about:blank";
@@ -227,7 +228,7 @@ export function WorkspaceToolSurface({
   const closeDynamicTab = useCallback(
     (tab: WorkspaceToolSurfaceDynamicTab) => {
       if (tab.kind === "terminal") {
-        window.terminal.kill({ sessionId: tab.sessionId });
+        terminalClient.kill({ sessionId: tab.sessionId });
       }
       if (tab.kind === "browser") {
         void window.workspaceBrowser

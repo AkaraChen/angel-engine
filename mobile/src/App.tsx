@@ -5,6 +5,7 @@ import { queryClient } from "@/app/query-client";
 import { AppRouter } from "@/app/router";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { AuthProvider } from "@/features/auth/auth-provider";
 import { themeStorageKey } from "@/features/settings/theme";
 import { DaemonProvider } from "@/platform/daemon-provider";
 
@@ -19,14 +20,16 @@ export function App() {
       enableSystem
       storageKey={themeStorageKey}
     >
-      <DaemonProvider>
-        <QueryClientProvider client={queryClient}>
-          <TooltipProvider>
-            <AppRouter />
-            <Toaster />
-          </TooltipProvider>
-        </QueryClientProvider>
-      </DaemonProvider>
+      <AuthProvider>
+        <DaemonProvider>
+          <QueryClientProvider client={queryClient}>
+            <TooltipProvider>
+              <AppRouter />
+              <Toaster />
+            </TooltipProvider>
+          </QueryClientProvider>
+        </DaemonProvider>
+      </AuthProvider>
     </ThemeProvider>
   );
 }

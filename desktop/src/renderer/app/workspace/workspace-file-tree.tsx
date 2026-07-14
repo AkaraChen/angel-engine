@@ -1,10 +1,12 @@
+import type { WorkspaceToolGitStatus } from "@angel-engine/daemon-api/workspace-tools";
 import type { GitStatus } from "@pierre/trees";
-import type { WorkspaceToolGitStatus } from "@shared/workspace-tools";
 import type {
   KeyboardEvent as ReactKeyboardEvent,
   MouseEvent as ReactMouseEvent,
 } from "react";
 
+import type { WorkspaceToolCssVariableStyle } from "@/app/workspace/workspace-tool-layout";
+import type { ApiClient } from "@/platform/api-client";
 import {
   createFileTreeIconResolver,
   getBuiltInSpriteSheet,
@@ -12,11 +14,9 @@ import {
 } from "@pierre/trees";
 import { useFileTree } from "@pierre/trees/react";
 import is from "@sindresorhus/is";
+
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useRef } from "react";
-
-import type { ApiClient } from "@/platform/api-client";
-import type { WorkspaceToolCssVariableStyle } from "@/app/workspace/workspace-tool-layout";
 import { queryKeys } from "@/platform/query-keys";
 
 export const workspaceFileIconResolver = createFileTreeIconResolver({

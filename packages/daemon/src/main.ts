@@ -5,8 +5,12 @@ const { values } = parseArgs({
   options: {
     "data-dir": { type: "string" },
     host: { default: "127.0.0.1", type: "string" },
+    "mobile-dir": { type: "string" },
+    "migrations-dir": { type: "string" },
+    packaged: { default: false, type: "boolean" },
     port: { default: "0", type: "string" },
     "print-handshake": { default: false, type: "boolean" },
+    "serve-mobile": { default: false, type: "boolean" },
     version: { default: "0.1.0", type: "string" },
   },
   strict: true,
@@ -24,8 +28,15 @@ if (!Number.isInteger(port) || port < 0 || port > 65_535) {
 async function main() {
   const daemon = await createDaemon({
     dataDir: values["data-dir"] as string,
+    migrationsDir: values["migrations-dir"],
+    packaged: values.packaged,
     host: values.host,
+    mobileDir: values["mobile-dir"],
+    // The password is passed via the environment, not argv, so it does not leak
+    // into process listings or logs.
+    mobilePassword: process.env.ANGEL_MOBILE_PASSWORD,
     port,
+    serveMobile: values["serve-mobile"],
     version: values.version,
     onShutdown: () => process.exit(0),
   });

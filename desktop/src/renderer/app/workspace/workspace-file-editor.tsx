@@ -12,21 +12,21 @@ import {
   useState,
 } from "react";
 
+import { formatUnsupportedFileReason } from "@/app/workspace/workspace-file-display";
+import {
+  workspaceFileIconResolver,
+  WorkspaceFileTreeFileIcon,
+  workspaceFileTreeIconColorStyle,
+  WorkspaceFileTreeIconSprite,
+} from "@/app/workspace/workspace-file-tree";
 import {
   defineWorkspaceMonacoThemes,
   workspaceMonacoThemeDark,
   workspaceMonacoThemeLight,
 } from "@/app/workspace/workspace-monaco-theme";
-import {
-  WorkspaceFileTreeFileIcon,
-  WorkspaceFileTreeIconSprite,
-  workspaceFileIconResolver,
-  workspaceFileTreeIconColorStyle,
-} from "@/app/workspace/workspace-file-tree";
-import { formatUnsupportedFileReason } from "@/app/workspace/workspace-file-display";
 import { WorkspaceToolEmpty } from "@/app/workspace/workspace-tool-layout";
-import { useWorkspaceToolTabKeyboard } from "@/app/workspace/workspace-tool-tab-model";
 import { isWorkspaceWindowFileStateDirty } from "@/app/workspace/workspace-tool-store";
+import { useWorkspaceToolTabKeyboard } from "@/app/workspace/workspace-tool-tab-model";
 import { cn } from "@/platform/utils";
 
 const loadWorkspaceMonacoModule = async () => import("monaco-editor");

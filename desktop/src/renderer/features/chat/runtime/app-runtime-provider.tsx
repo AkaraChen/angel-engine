@@ -1,16 +1,16 @@
 import type {
+  Chat,
+  ChatCreationLocation,
+  ChatHistoryMessage,
+  ChatRuntimeConfig,
+} from "@angel-engine/daemon-api/chat";
+import type {
   AttachmentAdapter,
   CompleteAttachment,
   FeedbackAdapter,
   PendingAttachment,
   SpeechSynthesisAdapter,
 } from "@assistant-ui/react";
-import type {
-  Chat,
-  ChatCreationLocation,
-  ChatHistoryMessage,
-  ChatRuntimeConfig,
-} from "@shared/chat";
 import type { ReactNode } from "react";
 
 import {

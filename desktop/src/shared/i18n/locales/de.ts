@@ -182,11 +182,34 @@ export const de = {
         title: "Gefahrenbereich",
       },
       description: "Desktop-Arbeitsbereich konfigurieren.",
+      mobile: {
+        copied: "Kopiert",
+        copy: "Kopieren",
+        enabledDescription:
+          "Die mobile Web-App von diesem Computer bereitstellen. Nur in vertrauenswürdigen Netzwerken verwenden; HTTP-Datenverkehr ist nicht verschlüsselt.",
+        enabledTitle: "Mobile Ansicht bereitstellen",
+        hostDescription:
+          "Netzwerkschnittstelle, an die der Server gebunden wird. Verwenden Sie 0.0.0.0, um anderen Geräten im lokalen Netzwerk den Zugriff zu erlauben.",
+        hostTitle: "Listen-Adresse",
+        passwordDescription:
+          "Passwort, das ein Telefon eingeben muss, um sich mit dem Daemon zu koppeln und ein Zugriffstoken zu erhalten.",
+        passwordSetPlaceholder: "Leer lassen, um beizubehalten",
+        passwordTitle: "Kopplungspasswort",
+        passwordTooShort: "Verwende mindestens {{count}} Zeichen.",
+        passwordUnsetPlaceholder: "Passwort festlegen",
+        urlDisabled:
+          "Aktivieren Sie die mobile Ansicht, um einen Link zu erhalten, den Sie auf Ihrem Telefon öffnen können.",
+        urlNeedsPassword:
+          "Legen Sie ein Kopplungspasswort fest, um den mobilen Zugriff zu aktivieren.",
+        urlPending: "Server wird gestartet…",
+        urlTitle: "Mobile URL",
+      },
       tabs: {
         agents: "Agents",
         appearance: "Darstellung",
         archived: "Archiviert",
         danger: "Erweitert",
+        mobile: "Mobile Ansicht",
         workspace: "Arbeitsbereich",
       },
       title: "Einstellungen",

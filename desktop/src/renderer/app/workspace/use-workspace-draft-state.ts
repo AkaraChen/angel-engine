@@ -1,5 +1,5 @@
-import type { AgentRuntime } from "@shared/agents";
-import type { ChatCreationLocation } from "@shared/chat";
+import type { AgentRuntime } from "@angel-engine/daemon-api/agents";
+import type { ChatCreationLocation } from "@angel-engine/daemon-api/chat";
 import type { SetStateAction } from "react";
 import type { DraftAgentConfig } from "@/app/workspace/workspace-thread-types";
 

@@ -1,6 +1,9 @@
+import type {
+  ChatAttachmentInput,
+  ChatHistoryMessagePart,
+} from "@angel-engine/daemon-api/chat";
 import type { CompleteAttachment, ThreadMessage } from "@assistant-ui/react";
-import type { ChatAttachmentInput, ChatHistoryMessagePart } from "@shared/chat";
-import { imageDataUrl, parseDataUrl } from "@shared/chat";
+import { imageDataUrl, parseDataUrl } from "@angel-engine/daemon-api/chat";
 import is from "@sindresorhus/is";
 
 export function historyImagePartToAttachment(

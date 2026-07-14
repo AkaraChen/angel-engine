@@ -3,24 +3,28 @@
  *
  * The mobile app is normally served by the daemon itself, so by default it
  * talks to the daemon over the **same origin** — an empty base URL, i.e. every
- * request goes to `/api/*` on `/`. No host wiring is required for that case.
+ * request goes to `/api/*` on `/`.
  *
- * Two optional overrides exist, applied independently for base URL and token:
- *   1. `window.__ANGEL_DAEMON__` — the host injects a base URL and/or token at
- *      runtime (e.g. when the frontend and daemon are on different origins, or
- *      when the daemon's bearer token must be supplied).
- *   2. Vite env (`VITE_DAEMON_URL` / `VITE_DAEMON_TOKEN`) — handy for
- *      `pnpm dev` against a separately running daemon.
+ * Auth is a **pairing flow**, not an injected credential: the served page
+ * carries no token. When the daemon requires auth it injects
+ * `window.__ANGEL_DAEMON__.requiresAuth = true`; the app then asks the user for
+ * the pairing password and exchanges it for a session token via
+ * `/api/auth/pair` (see `features/auth`). The resolved token below is only the
+ * optional `VITE_DAEMON_TOKEN` dev override for running `pnpm dev` against a
+ * separately running daemon.
  */
 export interface DaemonConfig {
   /** Empty string means same-origin: requests are made to `/api/*` on `/`. */
   baseUrl: string;
+  /** Dev-only bearer token (from `VITE_DAEMON_TOKEN`); null in production. */
   token: string | null;
+  /** Whether the daemon requires the mobile app to pair before calling `/api/*`. */
+  requiresAuth: boolean;
 }
 
 declare global {
   interface Window {
-    __ANGEL_DAEMON__?: { baseUrl?: string; token?: string };
+    __ANGEL_DAEMON__?: { baseUrl?: string; requiresAuth?: boolean };
   }
 }
 
@@ -47,6 +51,7 @@ export function resolveDaemonConfig(): DaemonConfig {
     baseUrl: normalizeBaseUrl(
       firstNonEmpty(injected?.baseUrl, import.meta.env.VITE_DAEMON_URL),
     ),
-    token: firstNonEmpty(injected?.token, import.meta.env.VITE_DAEMON_TOKEN),
+    requiresAuth: injected?.requiresAuth === true,
+    token: firstNonEmpty(import.meta.env.VITE_DAEMON_TOKEN),
   };
 }

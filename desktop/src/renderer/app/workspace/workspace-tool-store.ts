@@ -1,10 +1,10 @@
+import type { WorkspaceFileReadResult } from "@angel-engine/daemon-api/workspace-tools";
 import type {
   WorkspaceToolSurfaceContext,
   WorkspaceToolSurfaceHost,
   WorkspaceToolSurfaceSnapshot,
   WorkspaceToolSurfaceState,
 } from "@shared/workspace-tool-surface";
-import type { WorkspaceFileReadResult } from "@shared/workspace-tools";
 
 import is from "@sindresorhus/is";
 import { create } from "zustand";

@@ -6,9 +6,7 @@ export interface DesktopOpenChatFromNotificationEvent {
 export type DesktopThemeMode = "light" | "dark" | "system";
 
 export type DesktopWindowCommand =
-  | "new-chat"
-  | "open-settings"
-  | "toggle-sidebar";
+  "new-chat" | "open-settings" | "toggle-sidebar";
 
 export interface DesktopThemeSetInput {
   mode: DesktopThemeMode;
@@ -29,9 +27,7 @@ export interface DesktopConfirmSaveWorkspaceFileChangesInput {
 }
 
 export type DesktopConfirmSaveWorkspaceFileChangesResult =
-  | "cancel"
-  | "discard"
-  | "save";
+  "cancel" | "discard" | "save";
 
 export interface DesktopUpdateDownloadedEvent {
   releaseName: string;

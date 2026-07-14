@@ -8,27 +8,39 @@ afterEach(() => {
 });
 
 describe("resolveDaemonConfig", () => {
-  it("defaults to same-origin root with no token", () => {
-    expect(resolveDaemonConfig()).toEqual({ baseUrl: "", token: null });
-  });
-
-  it("prefers the host-injected base URL and token", () => {
-    window.__ANGEL_DAEMON__ = {
-      baseUrl: "http://127.0.0.1:8721/",
-      token: "abc",
-    };
-    expect(resolveDaemonConfig()).toEqual({
-      baseUrl: "http://127.0.0.1:8721",
-      token: "abc",
-    });
-  });
-
-  it("injects a token while staying same-origin when only a token is given", () => {
-    window.__ANGEL_DAEMON__ = { token: "same-origin-token" };
+  it("defaults to same-origin root with no token and no auth", () => {
     expect(resolveDaemonConfig()).toEqual({
       baseUrl: "",
-      token: "same-origin-token",
+      requiresAuth: false,
+      token: null,
     });
+  });
+
+  it("prefers the host-injected base URL", () => {
+    window.__ANGEL_DAEMON__ = { baseUrl: "http://127.0.0.1:8721/" };
+    expect(resolveDaemonConfig()).toEqual({
+      baseUrl: "http://127.0.0.1:8721",
+      requiresAuth: false,
+      token: null,
+    });
+  });
+
+  it("reads the requiresAuth flag injected by the daemon", () => {
+    window.__ANGEL_DAEMON__ = { requiresAuth: true };
+    expect(resolveDaemonConfig()).toEqual({
+      baseUrl: "",
+      requiresAuth: true,
+      token: null,
+    });
+  });
+
+  it("never reads a token from the injected config", () => {
+    // A token must never be injected into the served page; ignore it if present.
+    window.__ANGEL_DAEMON__ = {
+      requiresAuth: true,
+    };
+    (window.__ANGEL_DAEMON__ as { token?: string }).token = "should-be-ignored";
+    expect(resolveDaemonConfig().token).toBeNull();
   });
 
   it("falls back to Vite env vars for dev", () => {
@@ -36,6 +48,7 @@ describe("resolveDaemonConfig", () => {
     vi.stubEnv("VITE_DAEMON_TOKEN", "dev-token");
     expect(resolveDaemonConfig()).toEqual({
       baseUrl: "http://localhost:9000",
+      requiresAuth: false,
       token: "dev-token",
     });
   });

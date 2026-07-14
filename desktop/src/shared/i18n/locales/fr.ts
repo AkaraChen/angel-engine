@@ -183,11 +183,34 @@ export const fr = {
         title: "Zone dangereuse",
       },
       description: "Configurer le comportement de l’espace de travail.",
+      mobile: {
+        copied: "Copié",
+        copy: "Copier",
+        enabledDescription:
+          "Diffuser l’application web mobile depuis cet ordinateur. À utiliser uniquement sur un réseau de confiance ; le trafic HTTP n’est pas chiffré.",
+        enabledTitle: "Diffuser la vue mobile",
+        hostDescription:
+          "Interface réseau à laquelle le serveur se lie. Utilisez 0.0.0.0 pour autoriser l’accès aux autres appareils de votre réseau local.",
+        hostTitle: "Adresse d’écoute",
+        passwordDescription:
+          "Mot de passe qu’un téléphone doit saisir pour s’appairer au démon et recevoir un jeton d’accès.",
+        passwordSetPlaceholder: "Laisser vide pour conserver",
+        passwordTitle: "Mot de passe d’appairage",
+        passwordTooShort: "Utilisez au moins {{count}} caractères.",
+        passwordUnsetPlaceholder: "Définir un mot de passe",
+        urlDisabled:
+          "Activez la vue mobile pour obtenir un lien à ouvrir sur votre téléphone.",
+        urlNeedsPassword:
+          "Définissez un mot de passe d’appairage pour activer l’accès mobile.",
+        urlPending: "Démarrage du serveur…",
+        urlTitle: "URL mobile",
+      },
       tabs: {
         agents: "Agents",
         appearance: "Apparence",
         archived: "Archivées",
         danger: "Avancé",
+        mobile: "Vue mobile",
         workspace: "Espace de travail",
       },
       title: "Paramètres",

@@ -1,10 +1,11 @@
-import type { Chat } from "@shared/chat";
-import { rememberAgentOrder } from "@shared/agents";
+import type { Chat } from "@angel-engine/daemon-api/chat";
+import { rememberAgentOrder } from "@angel-engine/daemon-api/agents";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 import { useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import { useToast } from "@/components/ui/toast";
+import { useAgentCatalog } from "@/features/agents/agent-catalog-context";
 import { deleteAllChatsMutationOptions } from "@/features/chat/api/queries";
 import { broadcastAllChatsDeleted } from "@/features/chat/chat-metadata-events";
 import { cancelAllChatRuns } from "@/features/chat/state/chat-run-store";
@@ -22,9 +23,7 @@ export function SettingsWindowPage() {
   const { t } = useTranslation();
   const toast = useToast();
   const [agentSettings, updateAgentSettings] = useAgentSettings();
-  const availableAgentOptions = useSettingsStore(
-    (state) => state.availableAgentOptions,
-  );
+  const { availableAgentOptions } = useAgentCatalog();
   const setAgentEnabled = useSettingsStore((state) => state.setAgentEnabled);
   const deleteAllChatsMutation = useMutation({
     ...deleteAllChatsMutationOptions({ api, queryClient }),

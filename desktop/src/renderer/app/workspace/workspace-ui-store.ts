@@ -7,8 +7,7 @@ export function isProjectWorkspaceMode(workspaceMode: WorkspaceMode) {
 }
 
 export type WorkspaceLastOpenedTarget =
-  | { chatId: string; type: "chat" }
-  | { projectId?: string; type: "draft" };
+  { chatId: string; type: "chat" } | { projectId?: string; type: "draft" };
 
 type WorkspaceLastOpenedTargets = Partial<
   Record<WorkspaceMode, WorkspaceLastOpenedTarget>

@@ -6,7 +6,7 @@ import type {
   ChatToolAction,
   ChatToolActionOutput,
   ChatToolActionPhase,
-} from "@shared/chat";
+} from "@angel-engine/daemon-api/chat";
 import {
   chatPlanPartName,
   chatToolActionToPart,
@@ -14,7 +14,7 @@ import {
   isChatPlanPart,
   isChatToolAction,
   upsertChatElicitationPart,
-} from "@shared/chat";
+} from "@angel-engine/daemon-api/chat";
 import is from "@sindresorhus/is";
 import { chatPlanKind } from "./chat-run-plan";
 

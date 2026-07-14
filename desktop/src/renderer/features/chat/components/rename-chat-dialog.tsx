@@ -1,4 +1,4 @@
-import type { Chat } from "@shared/chat";
+import type { Chat } from "@angel-engine/daemon-api/chat";
 import type { FormEventHandler, ReactElement, RefObject } from "react";
 import { useRef, useState } from "react";
 

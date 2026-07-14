@@ -5,7 +5,7 @@ import type { WorkspaceNavigation } from "@/app/workspace/use-workspace-navigati
 import type { WorkspacePageModel } from "@/app/workspace/use-workspace-page-model";
 import type { WorktreeDraftGuard } from "@/app/workspace/use-worktree-draft-guard";
 
-import { rememberAgentOrder } from "@shared/agents";
+import { rememberAgentOrder } from "@angel-engine/daemon-api/agents";
 import is from "@sindresorhus/is";
 import { Suspense } from "react";
 import { ChatRestoreLoading } from "@/app/workspace/chat-restore-loading";

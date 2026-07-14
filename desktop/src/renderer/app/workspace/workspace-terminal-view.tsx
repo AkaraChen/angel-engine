@@ -1,9 +1,10 @@
-import type { TerminalSessionController } from "@shared/terminal";
+import type { TerminalSessionController } from "@angel-engine/daemon-api/terminal";
 import type { ITheme } from "@xterm/xterm";
 
 import { FitAddon } from "@xterm/addon-fit";
 import { Terminal } from "@xterm/xterm";
 import { useCallback, useRef } from "react";
+import { terminalClient } from "@/platform/terminal-client";
 import "@xterm/xterm/css/xterm.css";
 
 const vitesseTerminalThemes = {
@@ -104,7 +105,7 @@ export function WorkspaceTerminalView({
       });
       let replayWriteDepth = 0;
 
-      const controller = window.terminal.create(
+      const controller = terminalClient.create(
         {
           cols: terminal.cols,
           cwd: root,

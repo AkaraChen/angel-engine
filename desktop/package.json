@@ -13,8 +13,8 @@
   "keywords": [],
   "main": ".vite/build/main.js",
   "scripts": {
-    "runtime:build": "pnpm --filter @angel-engine/client-napi build && pnpm --filter @angel-engine/js-client build && pnpm --filter @angel-engine/claude-client build && pnpm --filter @angel-engine/pi-client build && pnpm --filter @angel-engine/daemon build",
-    "runtime:build:debug": "turbo run build:debug --filter @angel-engine/client-napi --filter @angel-engine/js-client --filter @angel-engine/claude-client --filter @angel-engine/pi-client --filter @angel-engine/daemon",
+    "runtime:build": "pnpm --filter @angel-engine/client-napi build && pnpm --filter @angel-engine/js-client build && pnpm --filter @angel-engine/claude-client build && pnpm --filter @angel-engine/pi-client build && pnpm --filter @angel-engine/daemon-api build && pnpm --filter @angel-engine/daemon build && pnpm --filter mobile build",
+    "runtime:build:debug": "turbo run build:debug --filter @angel-engine/client-napi --filter @angel-engine/js-client --filter @angel-engine/claude-client --filter @angel-engine/pi-client --filter @angel-engine/daemon-api --filter @angel-engine/daemon",
     "prestart": "pnpm run runtime:build:debug",
     "start": "electron-forge start",
     "prepackage": "pnpm run runtime:build && pnpm run rebuild:native",
@@ -33,6 +33,7 @@
     "@angel-engine/claude-client": "workspace:*",
     "@angel-engine/client-napi": "workspace:*",
     "@angel-engine/daemon": "workspace:*",
+    "@angel-engine/daemon-api": "workspace:*",
     "@angel-engine/js-client": "workspace:*",
     "@angel-engine/pi-client": "workspace:*",
     "@anthropic-ai/claude-agent-sdk": "0.3.198",

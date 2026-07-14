@@ -183,11 +183,34 @@ export const ja = {
         title: "危険エリア",
       },
       description: "デスクトップワークスペースの動作を設定します。",
+      mobile: {
+        copied: "コピーしました",
+        copy: "コピー",
+        enabledDescription:
+          "このコンピューターからモバイル用 Web アプリを配信します。HTTP 通信は暗号化されないため、信頼できるネットワークでのみ使用してください。",
+        enabledTitle: "モバイル表示を配信",
+        hostDescription:
+          "サーバーがバインドするネットワークインターフェース。0.0.0.0 を指定するとローカルネットワーク上の他のデバイスから接続できます。",
+        hostTitle: "リッスンアドレス",
+        passwordDescription:
+          "スマートフォンがデーモンとペアリングしてアクセストークンを受け取るために入力するパスワード。",
+        passwordSetPlaceholder: "変更しない場合は空欄",
+        passwordTitle: "ペアリングパスワード",
+        passwordTooShort: "{{count}}文字以上で入力してください。",
+        passwordUnsetPlaceholder: "パスワードを設定",
+        urlDisabled:
+          "モバイル表示を有効にすると、スマートフォンで開けるリンクが表示されます。",
+        urlNeedsPassword:
+          "ペアリングパスワードを設定するとモバイルアクセスを有効にできます。",
+        urlPending: "サーバーを起動しています…",
+        urlTitle: "モバイル URL",
+      },
       tabs: {
         agents: "Agents",
         appearance: "外観",
         archived: "アーカイブ",
         danger: "詳細",
+        mobile: "モバイル表示",
         workspace: "ワークスペース",
       },
       title: "設定",
