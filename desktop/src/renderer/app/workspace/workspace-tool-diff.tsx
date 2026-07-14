@@ -1,6 +1,10 @@
 import type { FileDiffMetadata } from "@pierre/diffs";
 import type { WorkspaceToolCssVariableStyle } from "@/app/workspace/workspace-tool-layout";
 
+import type {
+  WorkspaceToolPatchFile,
+  WorkspaceToolPatchFileLineChanges,
+} from "@/app/workspace/workspace-tool-patch-model";
 import {
   DEFAULT_VIRTUAL_FILE_METRICS,
   getFiletypeFromFileName,
@@ -8,14 +12,10 @@ import {
   preloadHighlighter,
 } from "@pierre/diffs";
 import { FileDiff } from "@pierre/diffs/react";
-import { useQuery } from "@tanstack/react-query";
 
+import { useQuery } from "@tanstack/react-query";
 import { getErrorMessage } from "@/app/workspace/workspace-file-display";
 import { WorkspaceToolEmpty } from "@/app/workspace/workspace-tool-layout";
-import type {
-  WorkspaceToolPatchFile,
-  WorkspaceToolPatchFileLineChanges,
-} from "@/app/workspace/workspace-tool-patch-model";
 import {
   formatWorkspaceToolPatchSource,
   workspaceToolFileDiffKey,

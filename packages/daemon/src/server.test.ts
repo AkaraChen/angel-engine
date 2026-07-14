@@ -1,8 +1,10 @@
 import { mkdir, mkdtemp, readFile, stat, writeFile } from "node:fs/promises";
+import { createHash } from "node:crypto";
 import os from "node:os";
 import path from "node:path";
 import { spawn, type ChildProcess } from "node:child_process";
 import { afterEach, describe, expect, it } from "vitest";
+import { WebSocket } from "ws";
 import { createDaemon, type Daemon } from "./index";
 
 const daemons: Daemon[] = [];
@@ -61,6 +63,15 @@ describe("createDaemon", () => {
     expect(response.headers.get("access-control-allow-headers")).toContain(
       "Authorization",
     );
+  });
+
+  it("returns the resolved available-agent catalog", async () => {
+    const daemon = await startDaemon();
+
+    const response = await daemonFetch(daemon, "/api/agents");
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toBeInstanceOf(Array);
   });
 
   it("acknowledges shutdown before invoking the process callback", async () => {
@@ -130,7 +141,7 @@ describe("createDaemon", () => {
     const daemon = await createDaemon({
       dataDir,
       mobileDir,
-      mobilePassword: "hunter2",
+      mobilePassword: "correct horse battery staple",
       serveMobile: true,
       token: "secret",
       version: "test",
@@ -168,7 +179,7 @@ describe("createDaemon", () => {
     const dataDir = await mkdtemp(path.join(os.tmpdir(), "angel-daemon-"));
     const daemon = await createDaemon({
       dataDir,
-      mobilePassword: "hunter2",
+      mobilePassword: "correct horse battery staple",
       token: "primary",
       version: "test",
     });
@@ -185,7 +196,7 @@ describe("createDaemon", () => {
 
     // Correct password returns a session token distinct from the primary token.
     const ok = await fetch(`${baseUrl}/api/auth/pair`, {
-      body: JSON.stringify({ password: "hunter2" }),
+      body: JSON.stringify({ password: "correct horse battery staple" }),
       headers: { "content-type": "application/json" },
       method: "POST",
     });
@@ -193,6 +204,11 @@ describe("createDaemon", () => {
     const { token: sessionToken } = (await ok.json()) as { token: string };
     expect(sessionToken).toBeTruthy();
     expect(sessionToken).not.toBe("primary");
+    expect(sessionToken).not.toBe(
+      createHash("sha256")
+        .update("angel-mobile-session:correct horse battery staple")
+        .digest("base64url"),
+    );
 
     // The session token authorizes `/api/*` just like the primary token.
     const health = await fetch(`${baseUrl}/api/health`, {
@@ -205,14 +221,14 @@ describe("createDaemon", () => {
     const dataDir = await mkdtemp(path.join(os.tmpdir(), "angel-daemon-"));
     const daemon = await createDaemon({
       dataDir,
-      mobilePassword: "hunter2",
+      mobilePassword: "correct horse battery staple",
       token: "primary",
     });
     daemons.push(daemon);
     const baseUrl = `http://${daemon.info.host}:${daemon.info.port}`;
 
     const paired = await fetch(`${baseUrl}/api/auth/pair`, {
-      body: JSON.stringify({ password: "hunter2" }),
+      body: JSON.stringify({ password: "correct horse battery staple" }),
       headers: { "content-type": "application/json" },
       method: "POST",
     });
@@ -250,7 +266,7 @@ describe("createDaemon", () => {
     const dataDir = await mkdtemp(path.join(os.tmpdir(), "angel-daemon-"));
     const daemon = await createDaemon({
       dataDir,
-      mobilePassword: "hunter2",
+      mobilePassword: "correct horse battery staple",
       token: "primary",
     });
     daemons.push(daemon);
@@ -270,7 +286,7 @@ describe("createDaemon", () => {
     // … then the endpoint is blocked with 429, even for the correct password.
     expect((await attempt()).status).toBe(429);
     const correct = await fetch(`${baseUrl}/api/auth/pair`, {
-      body: JSON.stringify({ password: "hunter2" }),
+      body: JSON.stringify({ password: "correct horse battery staple" }),
       headers: { "content-type": "application/json" },
       method: "POST",
     });
@@ -288,6 +304,34 @@ describe("createDaemon", () => {
       },
     );
     expect(response.status).toBe(403);
+  });
+
+  it("serves the mobile data routes with a paired session", async () => {
+    const dataDir = await mkdtemp(path.join(os.tmpdir(), "angel-daemon-"));
+    const daemon = await createDaemon({
+      dataDir,
+      migrationsDir: path.resolve(
+        import.meta.dirname,
+        "../../../desktop/drizzle",
+      ),
+      mobilePassword: "correct horse battery staple",
+      token: "primary",
+    });
+    daemons.push(daemon);
+    const baseUrl = `http://${daemon.info.host}:${daemon.info.port}`;
+    const paired = await fetch(`${baseUrl}/api/auth/pair`, {
+      body: JSON.stringify({ password: "correct horse battery staple" }),
+      headers: { "content-type": "application/json" },
+      method: "POST",
+    });
+    const { token: sessionToken } = (await paired.json()) as { token: string };
+    const headers = { authorization: `Bearer ${sessionToken}` };
+
+    for (const pathname of ["/api/projects", "/api/agents", "/api/chats"]) {
+      const response = await fetch(`${baseUrl}${pathname}`, { headers });
+      expect(response.status, pathname).toBe(200);
+      expect(await response.json(), pathname).toBeInstanceOf(Array);
+    }
   });
 
   it("advertises a loopback host when binding the wildcard address", async () => {
@@ -322,11 +366,65 @@ describe("createDaemon", () => {
     expect(response.status).toBe(200);
     await exited;
   });
+
+  it.skipIf(process.platform === "win32")(
+    "runs terminal sessions over authenticated WebSocket",
+    async () => {
+      const daemon = await startDaemon();
+      const socket = new WebSocket(
+        `ws://${daemon.info.host}:${daemon.info.port}/api/terminals`,
+        `angel-engine-token.${daemon.info.token}`,
+      );
+      const marker = `daemon-terminal-${Date.now()}`;
+      const output = new Promise<void>((resolve, reject) => {
+        const timeout = setTimeout(
+          () => reject(new Error("Terminal output timed out.")),
+          5_000,
+        );
+        socket.on("message", (raw) => {
+          const message = JSON.parse(raw.toString()) as {
+            event?: { data?: string };
+          };
+          if (message.event?.data?.includes(marker)) {
+            clearTimeout(timeout);
+            resolve();
+          }
+        });
+      });
+      await new Promise<void>((resolve) => socket.once("open", resolve));
+      socket.send(
+        JSON.stringify({
+          cols: 80,
+          cwd: os.tmpdir(),
+          rows: 24,
+          sessionId: "terminal-1",
+          type: "create",
+        }),
+      );
+      socket.send(
+        JSON.stringify({
+          data: `printf '${marker}\\n'\n`,
+          sessionId: "terminal-1",
+          type: "write",
+        }),
+      );
+      await output;
+      socket.send(JSON.stringify({ sessionId: "terminal-1", type: "kill" }));
+      socket.close();
+    },
+  );
 });
 
 async function startDaemon() {
   const dataDir = await mkdtemp(path.join(os.tmpdir(), "angel-daemon-"));
-  const daemon = await createDaemon({ dataDir, token: "secret" });
+  const daemon = await createDaemon({
+    dataDir,
+    migrationsDir: path.resolve(
+      import.meta.dirname,
+      "../../../desktop/drizzle",
+    ),
+    token: "secret",
+  });
   daemons.push(daemon);
   return daemon;
 }

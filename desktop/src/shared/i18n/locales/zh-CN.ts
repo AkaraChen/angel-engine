@@ -183,7 +183,7 @@ export const zhCN = {
         copied: "已复制",
         copy: "复制",
         enabledDescription:
-          "从这台电脑提供移动网页应用，让局域网内的其他设备可以打开。",
+          "从这台电脑提供移动网页应用。HTTP 流量不会加密，请仅在可信网络中使用。",
         enabledTitle: "启用移动端访问",
         hostDescription:
           "服务器绑定的网络接口。使用 0.0.0.0 可允许本地网络中的其他设备访问。",
@@ -192,6 +192,7 @@ export const zhCN = {
           "手机与守护进程配对并获取访问令牌时需要输入的密码。",
         passwordSetPlaceholder: "留空则保持不变",
         passwordTitle: "配对密码",
+        passwordTooShort: "请至少输入 {{count}} 个字符。",
         passwordUnsetPlaceholder: "设置密码",
         urlDisabled: "开启移动端访问后即可获得可在手机上打开的链接。",
         urlNeedsPassword: "设置配对密码后即可启用移动端访问。",

@@ -9,7 +9,7 @@ import {
   isChatElicitationData,
   isChatToolAction,
   isTerminalChatToolPhase,
-} from "@shared/chat";
+} from "@angel-engine/daemon-api/chat";
 import { historyPartToEngineMessagePart } from "./chat-run-history";
 import { isClosedElicitationPhase } from "./chat-run-parts";
 

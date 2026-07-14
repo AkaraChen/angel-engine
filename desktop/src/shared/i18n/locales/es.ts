@@ -187,7 +187,7 @@ export const es = {
         copied: "Copiado",
         copy: "Copiar",
         enabledDescription:
-          "Sirve la aplicación web móvil desde este ordenador para que otros dispositivos de tu red puedan abrirla.",
+          "Sirve la aplicación web móvil desde este ordenador. Úsala solo en una red de confianza; el tráfico HTTP no está cifrado.",
         enabledTitle: "Servir vista móvil",
         hostDescription:
           "Interfaz de red a la que se enlaza el servidor. Usa 0.0.0.0 para permitir el acceso de otros dispositivos de tu red local.",
@@ -196,6 +196,7 @@ export const es = {
           "Contraseña que un teléfono debe introducir para emparejarse con el daemon y recibir un token de acceso.",
         passwordSetPlaceholder: "Déjalo en blanco para mantenerla",
         passwordTitle: "Contraseña de emparejamiento",
+        passwordTooShort: "Usa al menos {{count}} caracteres.",
         passwordUnsetPlaceholder: "Establecer una contraseña",
         urlDisabled:
           "Activa la vista móvil para obtener un enlace que puedas abrir en tu teléfono.",

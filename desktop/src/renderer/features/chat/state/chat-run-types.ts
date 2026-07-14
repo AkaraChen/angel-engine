@@ -1,9 +1,4 @@
 import type {
-  AppendMessage,
-  MessageStatus,
-  ThreadMessage,
-} from "@assistant-ui/react";
-import type {
   Chat,
   ChatElicitationResponse,
   ChatHistoryMessage,
@@ -12,7 +7,12 @@ import type {
   ChatSendInput,
   ChatSendResult,
   ChatStreamController,
-} from "@shared/chat";
+} from "@angel-engine/daemon-api/chat";
+import type {
+  AppendMessage,
+  MessageStatus,
+  ThreadMessage,
+} from "@assistant-ui/react";
 
 export type EngineMessage = ThreadMessage;
 

@@ -187,7 +187,7 @@ export const ja = {
         copied: "コピーしました",
         copy: "コピー",
         enabledDescription:
-          "このコンピューターからモバイル用 Web アプリを配信し、ネットワーク上の他のデバイスから開けるようにします。",
+          "このコンピューターからモバイル用 Web アプリを配信します。HTTP 通信は暗号化されないため、信頼できるネットワークでのみ使用してください。",
         enabledTitle: "モバイル表示を配信",
         hostDescription:
           "サーバーがバインドするネットワークインターフェース。0.0.0.0 を指定するとローカルネットワーク上の他のデバイスから接続できます。",
@@ -196,6 +196,7 @@ export const ja = {
           "スマートフォンがデーモンとペアリングしてアクセストークンを受け取るために入力するパスワード。",
         passwordSetPlaceholder: "変更しない場合は空欄",
         passwordTitle: "ペアリングパスワード",
+        passwordTooShort: "{{count}}文字以上で入力してください。",
         passwordUnsetPlaceholder: "パスワードを設定",
         urlDisabled:
           "モバイル表示を有効にすると、スマートフォンで開けるリンクが表示されます。",

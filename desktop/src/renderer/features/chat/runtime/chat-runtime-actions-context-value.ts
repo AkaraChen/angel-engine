@@ -1,4 +1,4 @@
-import type { ChatElicitationResponse } from "@shared/chat";
+import type { ChatElicitationResponse } from "@angel-engine/daemon-api/chat";
 
 import { createContext } from "react";
 

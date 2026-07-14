@@ -1,6 +1,7 @@
 import { Check, Copy } from "@phosphor-icons/react";
 import { useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { MIN_MOBILE_PASSWORD_LENGTH } from "@shared/mobile-hosting";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -39,9 +40,13 @@ export function MobileViewSettings() {
 
   const commitPassword = () => {
     const next = passwordDraft;
-    if (next.length === 0) return;
+    if (next.length < MIN_MOBILE_PASSWORD_LENGTH) return;
     void setPassword(next).then(() => setPasswordDraft(""));
   };
+
+  const passwordTooShort =
+    passwordDraft.length > 0 &&
+    passwordDraft.length < MIN_MOBILE_PASSWORD_LENGTH;
 
   const copyUrl = () => {
     if (state.url === null) return;
@@ -77,6 +82,7 @@ export function MobileViewSettings() {
         after={
           <Input
             aria-label={t("settings.mobile.passwordTitle")}
+            aria-invalid={passwordTooShort}
             autoComplete="off"
             className="h-8 w-40 bg-background text-sm"
             disabled={isSaving}
@@ -90,11 +96,18 @@ export function MobileViewSettings() {
                 ? t("settings.mobile.passwordSetPlaceholder")
                 : t("settings.mobile.passwordUnsetPlaceholder")
             }
+            minLength={MIN_MOBILE_PASSWORD_LENGTH}
             type="password"
             value={passwordDraft}
           />
         }
-        description={t("settings.mobile.passwordDescription")}
+        description={
+          passwordTooShort
+            ? t("settings.mobile.passwordTooShort", {
+                count: MIN_MOBILE_PASSWORD_LENGTH,
+              })
+            : t("settings.mobile.passwordDescription")
+        }
         title={t("settings.mobile.passwordTitle")}
       />
       <SettingsRow

@@ -1,28 +1,53 @@
-import { createHash, timingSafeEqual } from "node:crypto";
+import {
+  randomBytes,
+  scrypt as scryptCallback,
+  timingSafeEqual,
+} from "node:crypto";
+const VERIFIER_BYTES = 32;
 
-/**
- * Derives the session token handed to a mobile client after it proves knowledge
- * of the configured mobile password.
- *
- * The token is a deterministic function of the password, so it survives daemon
- * restarts (the mobile app keeps working without re-entering the password until
- * the password itself changes) without the daemon persisting any session state.
- * It never reveals the password: recovering the password from the token would
- * require breaking SHA-256. Changing the password invalidates every previously
- * issued token.
- */
-export function deriveMobileToken(password: string): string {
-  return createHash("sha256")
-    .update(`angel-mobile-session:${password}`)
-    .digest("base64url");
+export const MIN_MOBILE_PASSWORD_LENGTH = 12;
+
+export interface MobileAuth {
+  salt: Buffer;
+  sessionToken: string;
+  verifier: Buffer;
 }
 
-/** Constant-time string comparison that tolerates unequal lengths. */
-export function safeEqual(a: string, b: string): boolean {
-  const aBuffer = Buffer.from(a, "utf8");
-  const bBuffer = Buffer.from(b, "utf8");
-  if (aBuffer.length !== bBuffer.length) return false;
-  return timingSafeEqual(aBuffer, bBuffer);
+/**
+ * Builds an in-memory password verifier and an independent random session
+ * credential. Neither value is derived into the other, so a recovered bearer
+ * token cannot be used as an offline password oracle.
+ */
+export async function createMobileAuth(password: string): Promise<MobileAuth> {
+  if (password.length < MIN_MOBILE_PASSWORD_LENGTH) {
+    throw new TypeError(
+      `Mobile pairing password must be at least ${MIN_MOBILE_PASSWORD_LENGTH} characters.`,
+    );
+  }
+  const salt = randomBytes(16);
+  return {
+    salt,
+    sessionToken: randomBytes(32).toString("base64url"),
+    verifier: await passwordVerifier(password, salt),
+  };
+}
+
+/** Always runs scrypt, including for malformed or differently-sized input. */
+export async function verifyMobilePassword(
+  password: string,
+  auth: MobileAuth,
+): Promise<boolean> {
+  const candidate = await passwordVerifier(password, auth.salt);
+  return timingSafeEqual(candidate, auth.verifier);
+}
+
+async function passwordVerifier(password: string, salt: Buffer) {
+  return new Promise<Buffer>((resolve, reject) => {
+    scryptCallback(password, salt, VERIFIER_BYTES, (error, derivedKey) => {
+      if (error) reject(error);
+      else resolve(derivedKey);
+    });
+  });
 }
 
 /** Extracts the password from a pairing request body, or undefined if invalid. */

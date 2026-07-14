@@ -184,7 +184,7 @@ export const zhTW = {
         copied: "已複製",
         copy: "複製",
         enabledDescription:
-          "從這台電腦提供行動網頁應用程式，讓區域網路中的其他裝置可以開啟。",
+          "從這台電腦提供行動網頁應用程式。HTTP 流量不會加密，請僅在受信任的網路中使用。",
         enabledTitle: "啟用行動版存取",
         hostDescription:
           "伺服器綁定的網路介面。使用 0.0.0.0 可允許區域網路中的其他裝置存取。",
@@ -193,6 +193,7 @@ export const zhTW = {
           "手機與守護程序配對並取得存取權杖時需要輸入的密碼。",
         passwordSetPlaceholder: "留空則保持不變",
         passwordTitle: "配對密碼",
+        passwordTooShort: "請至少輸入 {{count}} 個字元。",
         passwordUnsetPlaceholder: "設定密碼",
         urlDisabled: "開啟行動版存取後即可取得可在手機上開啟的連結。",
         urlNeedsPassword: "設定配對密碼後即可啟用行動版存取。",

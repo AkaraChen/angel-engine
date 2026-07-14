@@ -204,6 +204,7 @@ export interface LocaleResourceTranslationSettingsMobile {
   passwordDescription: string;
   passwordSetPlaceholder: string;
   passwordTitle: string;
+  passwordTooShort: string;
   passwordUnsetPlaceholder: string;
   urlDisabled: string;
   urlNeedsPassword: string;

@@ -1,15 +1,15 @@
 import type {
+  Chat,
+  ChatCreationLocation,
+  ChatHistoryMessage,
+  ChatRuntimeConfig,
+} from "@angel-engine/daemon-api/chat";
+import type {
   AppendMessage,
   AssistantRuntime,
   ExternalStoreAdapter,
   ThreadMessage,
 } from "@assistant-ui/react";
-import type {
-  Chat,
-  ChatCreationLocation,
-  ChatHistoryMessage,
-  ChatRuntimeConfig,
-} from "@shared/chat";
 import type { EngineMessage } from "@/features/chat/state/chat-run-store";
 
 import { useExternalStoreRuntime } from "@assistant-ui/react";

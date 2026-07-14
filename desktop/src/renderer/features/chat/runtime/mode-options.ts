@@ -1,4 +1,4 @@
-import type { AgentValueOption } from "@shared/agents";
+import type { AgentValueOption } from "@angel-engine/daemon-api/agents";
 
 const BUILD_MODE_FALLBACKS = ["build", "code", "default"];
 

@@ -1,4 +1,4 @@
-import type { DaemonInfo } from "@angel-engine/daemon";
+import type { DaemonInfo } from "@angel-engine/daemon-api/daemon";
 import type { MobileHostingState } from "./mobile-hosting";
 
 export const DAEMON_INFO_CHANNEL = "daemon:info";

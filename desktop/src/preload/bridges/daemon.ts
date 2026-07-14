@@ -11,7 +11,7 @@ import { MOBILE_HOSTING_CHANGED_CHANNEL } from "../../shared/mobile-hosting";
 
 export function exposeDaemonBridge() {
   contextBridge.exposeInMainWorld("daemon", {
-    getInfo() {
+    async getInfo() {
       return ipcRenderer.invoke(
         DAEMON_INFO_CHANNEL,
       ) as Promise<DaemonConnection>;
@@ -27,7 +27,10 @@ export function exposeDaemonBridge() {
       return () => ipcRenderer.removeListener(DAEMON_CHANGED_CHANNEL, listener);
     },
     onMobileHostingChanged(handler: (state: MobileHostingState) => void) {
-      const listener = (_event: IpcRendererEvent, state: MobileHostingState) => {
+      const listener = (
+        _event: IpcRendererEvent,
+        state: MobileHostingState,
+      ) => {
         handler(state);
       };
       ipcRenderer.on(MOBILE_HOSTING_CHANGED_CHANNEL, listener);

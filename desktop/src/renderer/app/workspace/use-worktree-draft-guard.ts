@@ -1,5 +1,5 @@
-import type { ChatCreationLocation } from "@shared/chat";
-import type { ProjectGitStatusResult } from "@shared/projects";
+import type { ChatCreationLocation } from "@angel-engine/daemon-api/chat";
+import type { ProjectGitStatusResult } from "@angel-engine/daemon-api/projects";
 import type { WorkspacePageModel } from "@/app/workspace/use-workspace-page-model";
 
 import is from "@sindresorhus/is";

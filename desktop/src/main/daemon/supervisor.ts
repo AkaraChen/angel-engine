@@ -1,4 +1,4 @@
-import type { DaemonInfo } from "@angel-engine/daemon";
+import type { DaemonInfo } from "@angel-engine/daemon-api/daemon";
 import type { UtilityProcess } from "electron";
 import type { DaemonConnection } from "../../shared/daemon";
 import type {
@@ -16,6 +16,7 @@ import {
   DAEMON_INFO_CHANNEL,
 } from "../../shared/daemon";
 import {
+  MIN_MOBILE_PASSWORD_LENGTH,
   MOBILE_HOSTING_CHANGED_CHANNEL,
   sanitizeMobileHostingConfig,
 } from "../../shared/mobile-hosting";
@@ -55,7 +56,7 @@ function getMobileConfig(): MobileHostingConfig {
 // Serving the mobile bundle requires both the toggle and a pairing password —
 // without a password there is no safe way to expose the LAN surface.
 function mobileServingEnabled(config: MobileHostingConfig): boolean {
-  return config.enabled && config.password.length > 0;
+  return config.enabled && config.password.length >= MIN_MOBILE_PASSWORD_LENGTH;
 }
 
 function buildDaemonArgs(): string[] {
@@ -64,12 +65,15 @@ function buildDaemonArgs(): string[] {
   const args = [
     "--data-dir",
     app.getPath("userData"),
+    "--migrations-dir",
+    path.join(app.getAppPath(), "drizzle"),
     "--host",
     serve ? config.host : "127.0.0.1",
     "--port",
     "0",
     "--version",
     app.getVersion(),
+    ...(app.isPackaged ? ["--packaged"] : []),
   ];
   if (serve) {
     const mobileDir = resolveMobileDir();
@@ -97,7 +101,7 @@ function currentMobileState(): MobileHostingState {
   return {
     available: serving,
     enabled: config.enabled,
-    hasPassword: config.password.length > 0,
+    hasPassword: config.password.length >= MIN_MOBILE_PASSWORD_LENGTH,
     host: config.host,
     port,
     url: serve ? resolveMobileUrl(config.host, port) : null,
@@ -123,6 +127,15 @@ export async function setMobileHostingConfig(
   // renderer never has to receive the secret just to edit other fields.
   const hasNewPassword =
     typeof input.password === "string" && input.password.length > 0;
+  if (
+    hasNewPassword &&
+    input.password !== undefined &&
+    input.password.length < MIN_MOBILE_PASSWORD_LENGTH
+  ) {
+    throw new TypeError(
+      `Pairing password must be at least ${MIN_MOBILE_PASSWORD_LENGTH} characters.`,
+    );
+  }
   const next = sanitizeMobileHostingConfig({
     enabled: input.enabled,
     host: input.host,
@@ -183,11 +196,14 @@ export async function stopDaemonSupervisor() {
   setConnection({ error: "Backend is shutting down.", status: "unavailable" });
   if (active !== undefined) {
     try {
-      await fetch(daemonUrl(active, "/api/shutdown"), {
+      const response = await fetch(daemonUrl(active, "/api/shutdown"), {
         headers: authorizationHeaders(active),
         method: "POST",
         signal: AbortSignal.timeout(5_000),
       });
+      if (!response.ok) {
+        throw new Error(`Daemon shutdown returned ${response.status}.`);
+      }
     } catch (error) {
       console.warn("Failed to stop daemon gracefully.", error);
       child?.kill();
@@ -225,8 +241,13 @@ async function tryReattach() {
     healthVersion !== app.getVersion() ||
     candidate.version !== app.getVersion()
   ) {
-    await stopDiscoveredDaemon(candidate);
-    await rm(filePath, { force: true });
+    try {
+      await stopDiscoveredDaemon(candidate);
+    } catch (error) {
+      console.warn("Failed to stop an incompatible daemon.", error);
+    } finally {
+      await rm(filePath, { force: true });
+    }
     return undefined;
   }
 
@@ -260,8 +281,9 @@ async function spawnDaemon() {
   setConnection({ error: "Backend is starting.", status: "unavailable" });
   const daemonEntry = path.join(__dirname, "daemon.js");
   const launchConfig = getMobileConfig();
+  const env = buildDaemonEnv();
   const nextChild = utilityProcess.fork(daemonEntry, buildDaemonArgs(), {
-    env: buildDaemonEnv(),
+    ...(env === undefined ? {} : { env }),
     stdio: "pipe",
   });
   child = nextChild;
@@ -334,15 +356,19 @@ async function runHealthCheck() {
 
 async function waitForHandshake(process: UtilityProcess) {
   return new Promise<DaemonInfo>((resolve, reject) => {
-    const timeout = setTimeout(() => {
-      cleanup();
-      reject(new Error("Timed out waiting for daemon handshake."));
-    }, HANDSHAKE_TIMEOUT_MS);
-    const onExit = (code: number) => {
+    let timeout: NodeJS.Timeout;
+    let onExit: (code: number) => void;
+    let onMessage: (message: unknown) => void;
+    const cleanup = () => {
+      clearTimeout(timeout);
+      process.off("exit", onExit);
+      process.off("message", onMessage);
+    };
+    onExit = (code) => {
       cleanup();
       reject(new Error(`Daemon exited before handshake with code ${code}.`));
     };
-    const onMessage = (message: unknown) => {
+    onMessage = (message) => {
       try {
         const info = parseDaemonInfo(message);
         cleanup();
@@ -352,11 +378,10 @@ async function waitForHandshake(process: UtilityProcess) {
         reject(error);
       }
     };
-    const cleanup = () => {
-      clearTimeout(timeout);
-      process.off("exit", onExit);
-      process.off("message", onMessage);
-    };
+    timeout = setTimeout(() => {
+      cleanup();
+      reject(new Error("Timed out waiting for daemon handshake."));
+    }, HANDSHAKE_TIMEOUT_MS);
     process.once("exit", onExit);
     process.once("message", onMessage);
   });
@@ -441,7 +466,8 @@ function authorizationHeaders(info: DaemonInfo) {
 }
 
 function parseDaemonInfo(value: unknown): DaemonInfo {
-  const parsed = typeof value === "string" ? JSON.parse(value) : value;
+  const parsed: unknown =
+    typeof value === "string" ? (JSON.parse(value) as unknown) : value;
   if (
     !is.plainObject(parsed) ||
     !is.nonEmptyString(parsed.host) ||

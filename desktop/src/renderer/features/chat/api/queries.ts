@@ -4,7 +4,7 @@ import type {
   ChatLoadResult,
   ChatPrewarmResult,
   ChatRuntimeConfig,
-} from "@shared/chat";
+} from "@angel-engine/daemon-api/chat";
 
 import type { QueryClient } from "@tanstack/react-query";
 import type { ApiClient } from "@/platform/api-client";

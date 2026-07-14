@@ -185,7 +185,7 @@ export const en = {
         copied: "Copied",
         copy: "Copy",
         enabledDescription:
-          "Serve the mobile web app from this computer so other devices on your network can open it.",
+          "Serve the mobile web app from this computer. Use only on a trusted network; HTTP traffic is not encrypted.",
         enabledTitle: "Serve mobile view",
         hostDescription:
           "Network interface the server binds to. Use 0.0.0.0 to allow other devices on your local network.",
@@ -194,6 +194,7 @@ export const en = {
           "Password a phone must enter to pair with the daemon and receive an access token.",
         passwordSetPlaceholder: "Leave blank to keep current",
         passwordTitle: "Pairing password",
+        passwordTooShort: "Use at least {{count}} characters.",
         passwordUnsetPlaceholder: "Set a password",
         urlDisabled:
           "Turn on the mobile view to get a link you can open on your phone.",

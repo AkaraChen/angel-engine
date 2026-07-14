@@ -1,6 +1,6 @@
+import type { Chat } from "@angel-engine/daemon-api/chat";
+import type { Project } from "@angel-engine/daemon-api/projects";
 import type { IconProps } from "@phosphor-icons/react";
-import type { Chat } from "@shared/chat";
-import type { Project } from "@shared/projects";
 import type { ComponentType, ReactElement } from "react";
 
 import type { WorkspaceMode } from "@/app/workspace/workspace-ui-store";

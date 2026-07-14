@@ -1,23 +1,23 @@
-import type { DataMessagePartProps } from "@assistant-ui/react";
 import type {
   ChatElicitation,
   ChatElicitationResponse,
   ChatToolAction,
-} from "@shared/chat";
+} from "@angel-engine/daemon-api/chat";
+import type { DataMessagePartProps } from "@assistant-ui/react";
 import type { TFunction } from "i18next";
 
+import {
+  isChatElicitationData,
+  isChatErrorData,
+  isChatPlanData,
+  isChatToolAction,
+} from "@angel-engine/daemon-api/chat";
 import { useAuiState } from "@assistant-ui/react";
 import {
   CaretDown as ChevronDown,
   Question as CircleHelp,
   PaperPlaneRight as Send,
 } from "@phosphor-icons/react";
-import {
-  isChatElicitationData,
-  isChatErrorData,
-  isChatPlanData,
-  isChatToolAction,
-} from "@shared/chat";
 import is from "@sindresorhus/is";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";

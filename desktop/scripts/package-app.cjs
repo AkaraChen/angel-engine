@@ -56,6 +56,11 @@ function selectAppBundle(appBundles) {
 }
 
 async function main() {
+  if (!process.versions.node.startsWith("24.")) {
+    throw new Error(
+      `Desktop packaging requires Node 24.x (received ${process.versions.node}).`,
+    );
+  }
   console.log(`Packaging Angel Engine for ${process.platform}/${process.arch}`);
   fs.rmSync(packagedAppPathFile, { force: true });
 
@@ -88,7 +93,12 @@ async function main() {
   console.log(`Prepared app bundle: ${path.relative(desktopRoot, appPath)}`);
 }
 
-main().catch((error) => {
-  console.error(error);
-  process.exitCode = 1;
-});
+// Forge's callback-based packager hooks can leave only unresolved promises
+// between stages, which lets Node exit early before `packageApp()` settles.
+const keepAlive = setInterval(() => {}, 1_000);
+main()
+  .catch((error) => {
+    console.error(error);
+    process.exitCode = 1;
+  })
+  .finally(() => clearInterval(keepAlive));

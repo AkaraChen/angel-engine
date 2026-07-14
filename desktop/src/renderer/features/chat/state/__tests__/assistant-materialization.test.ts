@@ -2,8 +2,8 @@ import type {
   ChatHistoryMessagePart,
   ChatToolAction,
   ChatToolActionOutput,
-} from "@shared/chat";
-import { chatToolActionToPart } from "@shared/chat";
+} from "@angel-engine/daemon-api/chat";
+import { chatToolActionToPart } from "@angel-engine/daemon-api/chat";
 import { describe, expect, it, vi } from "vitest";
 import {
   appendToolActionDeltaPart,

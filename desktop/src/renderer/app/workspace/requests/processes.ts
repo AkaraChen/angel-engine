@@ -1,4 +1,4 @@
-import type { ProcessRegistrySnapshotEntry } from "@angel-engine/daemon";
+import type { ProcessRegistrySnapshotEntry } from "@angel-engine/daemon-api/daemon";
 import type { QueryClient } from "@tanstack/react-query";
 import type { DaemonClient } from "@/platform/daemon";
 

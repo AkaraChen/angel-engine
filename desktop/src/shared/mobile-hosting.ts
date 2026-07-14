@@ -2,6 +2,7 @@ export const MOBILE_HOSTING_CHANGED_CHANNEL = "mobile-hosting:changed";
 
 /** Default bind host — the wildcard address so LAN devices can reach the app. */
 export const DEFAULT_MOBILE_HOST = "0.0.0.0";
+export const MIN_MOBILE_PASSWORD_LENGTH = 12;
 
 /** Persisted, user-editable mobile hosting settings. */
 export interface MobileHostingConfig {

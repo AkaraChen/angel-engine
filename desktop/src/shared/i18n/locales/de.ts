@@ -186,7 +186,7 @@ export const de = {
         copied: "Kopiert",
         copy: "Kopieren",
         enabledDescription:
-          "Die mobile Web-App von diesem Computer bereitstellen, damit andere Geräte im Netzwerk sie öffnen können.",
+          "Die mobile Web-App von diesem Computer bereitstellen. Nur in vertrauenswürdigen Netzwerken verwenden; HTTP-Datenverkehr ist nicht verschlüsselt.",
         enabledTitle: "Mobile Ansicht bereitstellen",
         hostDescription:
           "Netzwerkschnittstelle, an die der Server gebunden wird. Verwenden Sie 0.0.0.0, um anderen Geräten im lokalen Netzwerk den Zugriff zu erlauben.",
@@ -195,6 +195,7 @@ export const de = {
           "Passwort, das ein Telefon eingeben muss, um sich mit dem Daemon zu koppeln und ein Zugriffstoken zu erhalten.",
         passwordSetPlaceholder: "Leer lassen, um beizubehalten",
         passwordTitle: "Kopplungspasswort",
+        passwordTooShort: "Verwende mindestens {{count}} Zeichen.",
         passwordUnsetPlaceholder: "Passwort festlegen",
         urlDisabled:
           "Aktivieren Sie die mobile Ansicht, um einen Link zu erhalten, den Sie auf Ihrem Telefon öffnen können.",
