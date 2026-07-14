@@ -4,7 +4,6 @@
     "jsx": "react-jsx",
     "lib": ["DOM", "DOM.Iterable", "ES2022"],
     "ignoreDeprecations": "6.0",
-    "baseUrl": ".",
     "module": "ESNext",
     "moduleResolution": "bundler",
     "paths": {
@@ -19,6 +18,7 @@
     "allowJs": true,
     "strict": true,
     "noImplicitAny": true,
+    "noEmit": true,
     "outDir": "dist",
     "sourceMap": true,
     "allowSyntheticDefaultImports": true,

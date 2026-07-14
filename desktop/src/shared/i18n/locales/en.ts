@@ -192,10 +192,15 @@ export const en = {
         hostTitle: "Listen address",
         passwordDescription:
           "Password a phone must enter to pair with the daemon and receive an access token.",
-        passwordSetPlaceholder: "Leave blank to keep current",
+        passwordDialogDescription:
+          "Enter the password a phone will use to pair with this computer.",
+        passwordDialogTitle: "Set pairing password",
+        passwordReset: "Reset password",
+        passwordSet: "Set password",
         passwordTitle: "Pairing password",
-        passwordTooShort: "Use at least {{count}} characters.",
-        passwordUnsetPlaceholder: "Set a password",
+        portDescription:
+          "TCP port to listen on. Use 0 to choose automatically.",
+        portTitle: "Listen port",
         urlDisabled:
           "Turn on the mobile view to get a link you can open on your phone.",
         urlNeedsPassword: "Set a pairing password to enable mobile access.",

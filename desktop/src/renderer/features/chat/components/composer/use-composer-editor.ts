@@ -39,7 +39,9 @@ export interface ComposerEditorController {
 
 export function useComposerEditor({
   initialMarkdown = "",
-}: { initialMarkdown?: string } = {}): ComposerEditorController {
+}: {
+  initialMarkdown?: string;
+} = {}): ComposerEditorController {
   const { t } = useTranslation();
   const api = useApi();
   const environment = useChatEnvironment();

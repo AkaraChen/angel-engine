@@ -74,7 +74,7 @@ const Example = () => {
         clearInterval(intervalRef.current);
       }
     },
-    []
+    [],
   );
 
   return (

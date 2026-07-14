@@ -48,7 +48,7 @@ interface AttachmentItemProps {
 const AttachmentItem = memo(({ attachment, onRemove }: AttachmentItemProps) => {
   const handleRemove = useCallback(
     () => onRemove(attachment.id),
-    [onRemove, attachment.id]
+    [onRemove, attachment.id],
   );
   return (
     <Attachment data={attachment} onRemove={handleRemove}>

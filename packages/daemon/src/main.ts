@@ -5,6 +5,7 @@ const { values } = parseArgs({
   options: {
     "data-dir": { type: "string" },
     host: { default: "127.0.0.1", type: "string" },
+    "mobile-dev-server-url": { type: "string" },
     "mobile-dir": { type: "string" },
     "migrations-dir": { type: "string" },
     packaged: { default: false, type: "boolean" },
@@ -31,6 +32,7 @@ async function main() {
     migrationsDir: values["migrations-dir"],
     packaged: values.packaged,
     host: values.host,
+    mobileDevServerUrl: values["mobile-dev-server-url"],
     mobileDir: values["mobile-dir"],
     // The password is passed via the environment, not argv, so it does not leak
     // into process listings or logs.

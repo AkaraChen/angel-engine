@@ -21,14 +21,14 @@
     "build": "tsup",
     "build:debug": "tsup",
     "dev": "tsx src/main.ts --data-dir .data --print-handshake",
-    "lint": "eslint src",
+    "lint": "oxlint --type-aware src",
     "test": "vitest run",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "node node_modules/typescript7/bin/tsc --noEmit"
   },
   "dependencies": {
+    "@angel-engine/claude-client": "workspace:*",
     "@angel-engine/client-napi": "workspace:*",
     "@angel-engine/daemon-api": "workspace:*",
-    "@angel-engine/claude-client": "workspace:*",
     "@angel-engine/js-client": "workspace:*",
     "@angel-engine/pi-client": "workspace:*",
     "@hono/node-server": "^1.19.9",
@@ -37,23 +37,24 @@
     "better-sqlite3": "^12.11.1",
     "drizzle-orm": "^0.45.2",
     "hono": "4.12.25",
+    "httpxy": "^0.5.5",
     "mime-types": "^3.0.2",
     "node-pty": "1.1.0",
     "which": "^7.0.0",
     "ws": "^8.18.3"
   },
   "devDependencies": {
-    "@typescript-eslint/eslint-plugin": "^8.62.1",
-    "@typescript-eslint/parser": "^8.62.1",
-    "@types/node": "^24.10.1",
     "@types/better-sqlite3": "^7.6.13",
     "@types/mime-types": "^3.0.1",
-    "@types/ws": "^8.18.1",
+    "@types/node": "^24.10.1",
     "@types/which": "^3.0.4",
-    "eslint": "^10.6.0",
-    "tsx": "^4.21.0",
+    "@types/ws": "^8.18.1",
+    "oxlint": "^1.73.0",
+    "oxlint-tsgolint": "^0.24.0",
     "tsup": "^8.5.1",
+    "tsx": "^4.21.0",
     "typescript": "^6.0.3",
+    "typescript7": "npm:typescript@^7.0.2",
     "vitest": "^4.1.9"
   }
 }

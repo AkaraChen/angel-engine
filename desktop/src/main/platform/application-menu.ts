@@ -118,14 +118,9 @@ function menuTemplate({
     },
     {
       role: "help",
-      submenu: [
-        ...(!isMacOS
-          ? [
-              { role: "about" } satisfies MenuItemConstructorOptions,
-              updateItem(),
-            ]
-          : []),
-      ],
+      submenu: !isMacOS
+        ? [{ role: "about" } satisfies MenuItemConstructorOptions, updateItem()]
+        : [],
     },
   ];
 }

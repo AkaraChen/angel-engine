@@ -7,6 +7,9 @@ export interface WorkspaceToolSurfaceContext {
 
 export type WorkspaceToolPinnedTabId = "files" | "git" | "processes";
 
+// Pinned tab ids or dynamic tab ids; dynamic ids are runtime-generated strings.
+export type WorkspaceToolTabId = WorkspaceToolPinnedTabId | (string & {});
+
 export type WorkspaceToolSurfaceDynamicTab =
   | WorkspaceToolSurfaceBrowserTab
   | WorkspaceToolSurfaceFilePreviewTab
@@ -18,25 +21,29 @@ interface WorkspaceToolSurfaceDynamicTabBase {
   title: string;
 }
 
-export interface WorkspaceToolSurfaceFilePreviewTab extends WorkspaceToolSurfaceDynamicTabBase {
+export interface WorkspaceToolSurfaceFilePreviewTab
+  extends WorkspaceToolSurfaceDynamicTabBase {
   kind: "file-preview";
   path: string;
   root: string;
 }
 
-export interface WorkspaceToolSurfaceGitDiffTab extends WorkspaceToolSurfaceDynamicTabBase {
+export interface WorkspaceToolSurfaceGitDiffTab
+  extends WorkspaceToolSurfaceDynamicTabBase {
   kind: "git-diff";
   path?: string;
   root: string;
 }
 
-export interface WorkspaceToolSurfaceTerminalTab extends WorkspaceToolSurfaceDynamicTabBase {
+export interface WorkspaceToolSurfaceTerminalTab
+  extends WorkspaceToolSurfaceDynamicTabBase {
   kind: "terminal";
   root: string;
   sessionId: string;
 }
 
-export interface WorkspaceToolSurfaceBrowserTab extends WorkspaceToolSurfaceDynamicTabBase {
+export interface WorkspaceToolSurfaceBrowserTab
+  extends WorkspaceToolSurfaceDynamicTabBase {
   browserViewId: string;
   draftUrl: string;
   kind: "browser";
@@ -44,7 +51,7 @@ export interface WorkspaceToolSurfaceBrowserTab extends WorkspaceToolSurfaceDyna
 }
 
 export interface WorkspaceToolSurfaceSnapshot {
-  activeTabId: WorkspaceToolPinnedTabId | string;
+  activeTabId: WorkspaceToolTabId;
   nextBrowserOrdinal: number;
   nextTerminalOrdinal: number;
   tabs: WorkspaceToolSurfaceDynamicTab[];

@@ -193,10 +193,15 @@ export const de = {
         hostTitle: "Listen-Adresse",
         passwordDescription:
           "Passwort, das ein Telefon eingeben muss, um sich mit dem Daemon zu koppeln und ein Zugriffstoken zu erhalten.",
-        passwordSetPlaceholder: "Leer lassen, um beizubehalten",
+        passwordDialogDescription:
+          "Geben Sie das Passwort ein, mit dem sich ein Telefon mit diesem Computer koppelt.",
+        passwordDialogTitle: "Kopplungspasswort festlegen",
+        passwordReset: "Passwort zurücksetzen",
+        passwordSet: "Passwort festlegen",
         passwordTitle: "Kopplungspasswort",
-        passwordTooShort: "Verwende mindestens {{count}} Zeichen.",
-        passwordUnsetPlaceholder: "Passwort festlegen",
+        portDescription:
+          "TCP-Port, auf dem gelauscht wird. 0 wählt automatisch einen Port.",
+        portTitle: "Listen-Port",
         urlDisabled:
           "Aktivieren Sie die mobile Ansicht, um einen Link zu erhalten, den Sie auf Ihrem Telefon öffnen können.",
         urlNeedsPassword:

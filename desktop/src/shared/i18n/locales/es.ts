@@ -194,10 +194,15 @@ export const es = {
         hostTitle: "Dirección de escucha",
         passwordDescription:
           "Contraseña que un teléfono debe introducir para emparejarse con el daemon y recibir un token de acceso.",
-        passwordSetPlaceholder: "Déjalo en blanco para mantenerla",
+        passwordDialogDescription:
+          "Introduce la contraseña que usará un teléfono para emparejarse con este ordenador.",
+        passwordDialogTitle: "Establecer contraseña de emparejamiento",
+        passwordReset: "Restablecer contraseña",
+        passwordSet: "Establecer contraseña",
         passwordTitle: "Contraseña de emparejamiento",
-        passwordTooShort: "Usa al menos {{count}} caracteres.",
-        passwordUnsetPlaceholder: "Establecer una contraseña",
+        portDescription:
+          "Puerto TCP de escucha. Usa 0 para elegirlo automáticamente.",
+        portTitle: "Puerto de escucha",
         urlDisabled:
           "Activa la vista móvil para obtener un enlace que puedas abrir en tu teléfono.",
         urlNeedsPassword:

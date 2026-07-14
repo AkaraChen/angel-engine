@@ -14,6 +14,10 @@ import {
   parsePairBody,
   verifyMobilePassword,
 } from "./mobile-auth";
+import {
+  proxyMobileDevWebSocket,
+  registerMobileDevProxy,
+} from "./mobile-dev-proxy";
 import { registerMobileHosting } from "./mobile-hosting";
 import { WebSocketServer } from "ws";
 import { registerApi } from "./api";
@@ -258,11 +262,16 @@ export async function createDaemon(options: DaemonOptions): Promise<Daemon> {
     return context.json({ ok: true });
   });
 
-  // Static mobile hosting is registered last so the token-guarded `/api/*`
-  // routes above keep precedence over the SPA fallback. Only serve the bundle
-  // when a mobile password is configured, so the LAN surface always sits behind
-  // the pairing flow.
-  if (
+  // Mobile hosting is registered last so the token-guarded `/api/*` routes
+  // above keep precedence. Development proxies Vite (including HMR); packaged
+  // builds serve the compiled bundle. Both remain behind the pairing flow.
+  const mobileDevServerUrl =
+    options.serveMobile === true && mobilePassword !== undefined
+      ? options.mobileDevServerUrl
+      : undefined;
+  if (mobileDevServerUrl !== undefined) {
+    registerMobileDevProxy(app, mobileDevServerUrl);
+  } else if (
     options.serveMobile === true &&
     options.mobileDir !== undefined &&
     mobilePassword !== undefined
@@ -280,6 +289,10 @@ export async function createDaemon(options: DaemonOptions): Promise<Daemon> {
 
   (server as HttpServer).on("upgrade", (request, socket, head) => {
     const url = new URL(request.url ?? "/", `http://${host}`);
+    if (mobileDevServerUrl !== undefined && !url.pathname.startsWith("/api/")) {
+      proxyMobileDevWebSocket(request, socket, head, mobileDevServerUrl);
+      return;
+    }
     if (
       (request.headers.authorization !== `Bearer ${token}` &&
         request.headers["sec-websocket-protocol"] !==

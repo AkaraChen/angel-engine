@@ -45,7 +45,8 @@ export interface CreateCustomAgentInput {
   needAuth?: boolean;
 }
 
-export interface UpdateCustomAgentInput extends Partial<CreateCustomAgentInput> {
+export interface UpdateCustomAgentInput
+  extends Partial<CreateCustomAgentInput> {
   id: CustomAgentRuntime;
 }
 

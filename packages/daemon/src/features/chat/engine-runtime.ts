@@ -148,9 +148,7 @@ async function setChatMode(
   input: ChatSetModeInput,
 ): Promise<ChatSetModeResult> {
   const chat = requireChat(input.chatId);
-  const snapshot = await (
-    await getChatSession(chat)
-  ).setMode({
+  const snapshot = await (await getChatSession(chat)).setMode({
     cwd: cwdForChat(chat),
     mode: input.mode,
     remoteId: chat.remoteThreadId ?? undefined,
@@ -166,9 +164,7 @@ async function setChatPermissionMode(
   input: ChatSetPermissionModeInput,
 ): Promise<ChatSetPermissionModeResult> {
   const chat = requireChat(input.chatId);
-  const snapshot = await (
-    await getChatSession(chat)
-  ).setPermissionMode({
+  const snapshot = await (await getChatSession(chat)).setPermissionMode({
     cwd: cwdForChat(chat),
     mode: input.mode,
     remoteId: chat.remoteThreadId ?? undefined,

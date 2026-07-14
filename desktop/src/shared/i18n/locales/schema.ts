@@ -202,10 +202,13 @@ export interface LocaleResourceTranslationSettingsMobile {
   hostDescription: string;
   hostTitle: string;
   passwordDescription: string;
-  passwordSetPlaceholder: string;
+  passwordDialogDescription: string;
+  passwordDialogTitle: string;
+  passwordReset: string;
+  passwordSet: string;
   passwordTitle: string;
-  passwordTooShort: string;
-  passwordUnsetPlaceholder: string;
+  portDescription: string;
+  portTitle: string;
   urlDisabled: string;
   urlNeedsPassword: string;
   urlPending: string;

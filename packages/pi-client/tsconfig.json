@@ -9,6 +9,7 @@
     "moduleResolution": "bundler",
     "noImplicitAny": true,
     "outDir": "dist",
+    "rootDir": "src",
     "paths": {
       "@angel-engine/pi-client": ["./src/index.ts"],
       "@angel-engine/pi-client/*": ["./src/*"]

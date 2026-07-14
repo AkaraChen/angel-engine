@@ -1,0 +1,27 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "ignorePatterns": ["dist/**"],
+  "rules": {
+    "no-restricted-imports": [
+      "error",
+      {
+        "paths": [
+          {
+            "name": "electron",
+            "message": "The daemon must remain independent of Electron."
+          }
+        ],
+        "patterns": [
+          {
+            "group": ["electron/*"],
+            "message": "The daemon must remain independent of Electron."
+          }
+        ]
+      }
+    ],
+    "typescript/await-thenable": "error",
+    "typescript/no-floating-promises": "error",
+    "typescript/no-misused-promises": "error",
+    "typescript/switch-exhaustiveness-check": "error"
+  }
+}

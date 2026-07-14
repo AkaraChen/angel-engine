@@ -29,7 +29,7 @@ const StateButton = memo(
   ({ state, currentState, onStateChange }: StateButtonProps) => {
     const handleClick = useCallback(
       () => onStateChange(state.state),
-      [onStateChange, state.state]
+      [onStateChange, state.state],
     );
     return (
       <Tooltip key={state.state}>
@@ -45,7 +45,7 @@ const StateButton = memo(
         <TooltipContent>{state.label}</TooltipContent>
       </Tooltip>
     );
-  }
+  },
 );
 
 StateButton.displayName = "StateButton";

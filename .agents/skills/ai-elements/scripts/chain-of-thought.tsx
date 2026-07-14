@@ -71,7 +71,7 @@ const ChainOfThoughtExample = () => (
               <ChainOfThoughtSearchResult key={website}>
                 {new URL(website).hostname}
               </ChainOfThoughtSearchResult>
-            )
+            ),
           )}
         </ChainOfThoughtSearchResults>
       </ChainOfThoughtStep>

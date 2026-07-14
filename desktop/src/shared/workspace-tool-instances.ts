@@ -12,25 +12,29 @@ interface WorkspaceToolInstanceBase {
   title: string;
 }
 
-export interface WorkspaceFilePreviewToolInstance extends WorkspaceToolInstanceBase {
+export interface WorkspaceFilePreviewToolInstance
+  extends WorkspaceToolInstanceBase {
   kind: "file-preview";
   path: string;
   root: string;
 }
 
-export interface WorkspaceGitDiffToolInstance extends WorkspaceToolInstanceBase {
+export interface WorkspaceGitDiffToolInstance
+  extends WorkspaceToolInstanceBase {
   kind: "git-diff";
   path?: string;
   root: string;
 }
 
-export interface WorkspaceTerminalToolInstance extends WorkspaceToolInstanceBase {
+export interface WorkspaceTerminalToolInstance
+  extends WorkspaceToolInstanceBase {
   kind: "terminal";
   root: string;
   sessionId: string;
 }
 
-export interface WorkspaceBrowserToolInstance extends WorkspaceToolInstanceBase {
+export interface WorkspaceBrowserToolInstance
+  extends WorkspaceToolInstanceBase {
   browserViewId: string;
   kind: "browser";
   url: string;

@@ -1,5 +1,9 @@
 import { startDaemonEvents, stopDaemonEvents } from "./daemon/events";
 import {
+  startMobileDevServer,
+  stopMobileDevServer,
+} from "./daemon/mobile-dev-server";
+import {
   startDaemonSupervisor,
   stopDaemonSupervisor,
 } from "./daemon/supervisor";
@@ -11,6 +15,7 @@ import { openSettingsWindow } from "./windows/settings-window";
 
 export async function bootstrap() {
   startDaemonEvents();
+  await startMobileDevServer();
   await startDaemonSupervisor();
   registerAllIpc({ openSettingsWindow });
   configureApplicationMenu({ openSettingsWindow });
@@ -20,5 +25,6 @@ export async function bootstrap() {
 
 export async function beforeQuit() {
   stopDaemonEvents();
+  await stopMobileDevServer();
   await stopDaemonSupervisor();
 }

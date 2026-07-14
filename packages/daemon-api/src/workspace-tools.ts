@@ -6,7 +6,8 @@ export interface WorkspaceToolReadFileInput extends WorkspaceToolRootInput {
   path: string;
 }
 
-export interface WorkspaceToolWriteFileInput extends WorkspaceToolReadFileInput {
+export interface WorkspaceToolWriteFileInput
+  extends WorkspaceToolReadFileInput {
   content: string;
 }
 
@@ -37,7 +38,12 @@ export interface WorkspaceToolGitCommitResult {
 }
 
 export type WorkspaceToolGitStatus =
-  "added" | "deleted" | "ignored" | "modified" | "renamed" | "untracked";
+  | "added"
+  | "deleted"
+  | "ignored"
+  | "modified"
+  | "renamed"
+  | "untracked";
 
 export interface WorkspaceToolGitStatusEntry {
   path: string;

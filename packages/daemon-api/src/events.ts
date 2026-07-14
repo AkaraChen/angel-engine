@@ -12,4 +12,5 @@ export interface DaemonChatMetadataChangedEvent {
 }
 
 export type DaemonGlobalEvent =
-  DaemonChatMetadataChangedEvent | DaemonChatStreamEvent;
+  | DaemonChatMetadataChangedEvent
+  | DaemonChatStreamEvent;

@@ -9,6 +9,7 @@
     "moduleResolution": "bundler",
     "noImplicitAny": true,
     "outDir": "dist",
+    "rootDir": "src",
     "paths": {
       "@angel-engine/claude-client": ["./src/index.ts"],
       "@angel-engine/claude-client/*": ["./src/*"]
