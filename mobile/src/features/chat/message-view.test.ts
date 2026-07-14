@@ -1,13 +1,34 @@
-import type { DaemonHistoryMessage } from "@/platform/chat-types";
+import type {
+  ConversationToolCall,
+  DaemonHistoryMessage,
+} from "@/platform/chat-types";
 
 import { describe, expect, it } from "vitest";
 
 import {
+  formatToolPhase,
   partsToText,
   toConversation,
   toolCallFromAction,
   toolCallFromPart,
+  toolGroupLabel,
 } from "./message-view";
+
+function toolCall(
+  overrides: Partial<ConversationToolCall> = {},
+): ConversationToolCall {
+  return {
+    id: "t",
+    name: "bash",
+    summary: "",
+    phase: "completed",
+    argsText: "",
+    outputText: "",
+    errorText: "",
+    isError: false,
+    ...overrides,
+  };
+}
 
 function message(
   overrides: Partial<DaemonHistoryMessage> & Pick<DaemonHistoryMessage, "id">,
@@ -199,5 +220,31 @@ describe("toolCallFromAction", () => {
       phase: "running",
       isError: false,
     });
+  });
+});
+
+describe("toolGroupLabel", () => {
+  it("labels a single call as name · phase", () => {
+    expect(toolGroupLabel([toolCall({ name: "bash", phase: "running" })])).toBe(
+      "bash · Running",
+    );
+  });
+
+  it("labels multiple calls with a plain count", () => {
+    expect(
+      toolGroupLabel([
+        toolCall({ id: "a" }),
+        toolCall({ id: "b" }),
+        toolCall({ id: "c" }),
+      ]),
+    ).toBe("3 tool calls");
+  });
+});
+
+describe("formatToolPhase", () => {
+  it("maps known phases to human labels and passes through unknown ones", () => {
+    expect(formatToolPhase("completed")).toBe("Done");
+    expect(formatToolPhase("awaitingDecision")).toBe("Awaiting approval");
+    expect(formatToolPhase("mystery")).toBe("mystery");
   });
 });

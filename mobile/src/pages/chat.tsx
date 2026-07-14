@@ -41,7 +41,7 @@ import {
 } from "@/components/ui/message-scroller";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Spinner } from "@/components/ui/spinner";
-import { ToolCallCard } from "@/features/chat/tool-call-card";
+import { ToolCallGroup } from "@/features/chat/tool-call-group";
 import { useConversation } from "@/features/chat/use-conversation";
 
 /**
@@ -117,11 +117,10 @@ function MessageBubble({ message }: { message: ConversationMessage }) {
       <Message align={isUser ? "end" : "start"}>
         <MessageContent>
           {!isUser && hasTools ? (
-            <div className="flex flex-col gap-1.5">
-              {message.toolCalls.map((call) => (
-                <ToolCallCard call={call} key={call.id} />
-              ))}
-            </div>
+            <ToolCallGroup
+              calls={message.toolCalls}
+              collapsed={message.text.length > 0}
+            />
           ) : null}
           {showBubble ? (
             <Bubble

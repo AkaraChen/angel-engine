@@ -43,6 +43,43 @@ export function isFailedToolPhase(phase: string): boolean {
   return phase === "failed" || phase === "declined";
 }
 
+/** Human-friendly label for a daemon tool lifecycle phase. */
+export function formatToolPhase(phase: string): string {
+  switch (phase) {
+    case "proposed":
+      return "Proposed";
+    case "awaitingDecision":
+      return "Awaiting approval";
+    case "running":
+      return "Running";
+    case "streamingResult":
+      return "Streaming";
+    case "completed":
+      return "Done";
+    case "failed":
+      return "Failed";
+    case "declined":
+      return "Declined";
+    case "cancelled":
+      return "Cancelled";
+    default:
+      return phase;
+  }
+}
+
+/**
+ * The summary shown on a collapsed tool-call group (the mobile counterpart to
+ * the desktop `ToolGroup` label): a single call reads as `name · phase`, while
+ * several collapse to a plain count. Pure so it stays trivially testable.
+ */
+export function toolGroupLabel(calls: ConversationToolCall[]): string {
+  if (calls.length === 1) {
+    const [call] = calls;
+    return `${call.name} · ${formatToolPhase(call.phase)}`;
+  }
+  return `${calls.length} tool calls`;
+}
+
 function coerceText(value: unknown): string {
   if (typeof value === "string") return value;
   if (value === undefined || value === null) return "";

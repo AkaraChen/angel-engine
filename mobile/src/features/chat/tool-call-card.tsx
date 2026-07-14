@@ -13,7 +13,10 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
-import { isRunningToolPhase } from "@/features/chat/message-view";
+import {
+  formatToolPhase,
+  isRunningToolPhase,
+} from "@/features/chat/message-view";
 import { cn } from "@/lib/utils";
 
 /**
@@ -105,7 +108,7 @@ function ToolCallHeader({
         ) : null}
       </span>
       <span className="shrink-0 text-xs text-muted-foreground/75">
-        {formatPhase(phase)}
+        {formatToolPhase(phase)}
       </span>
       {details ? (
         <CaretDown
@@ -177,28 +180,4 @@ function ToolPreBlock({
       </pre>
     </div>
   );
-}
-
-/** Human-friendly label for a daemon tool lifecycle phase. */
-function formatPhase(phase: string): string {
-  switch (phase) {
-    case "proposed":
-      return "Proposed";
-    case "awaitingDecision":
-      return "Awaiting approval";
-    case "running":
-      return "Running";
-    case "streamingResult":
-      return "Streaming";
-    case "completed":
-      return "Done";
-    case "failed":
-      return "Failed";
-    case "declined":
-      return "Declined";
-    case "cancelled":
-      return "Cancelled";
-    default:
-      return phase;
-  }
 }
