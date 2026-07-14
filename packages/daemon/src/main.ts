@@ -28,6 +28,9 @@ async function main() {
     dataDir: values["data-dir"] as string,
     host: values.host,
     mobileDir: values["mobile-dir"],
+    // The password is passed via the environment, not argv, so it does not leak
+    // into process listings or logs.
+    mobilePassword: process.env.ANGEL_MOBILE_PASSWORD,
     port,
     serveMobile: values["serve-mobile"],
     version: values.version,

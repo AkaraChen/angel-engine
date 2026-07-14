@@ -191,8 +191,15 @@ export const de = {
         hostDescription:
           "Netzwerkschnittstelle, an die der Server gebunden wird. Verwenden Sie 0.0.0.0, um anderen Geräten im lokalen Netzwerk den Zugriff zu erlauben.",
         hostTitle: "Listen-Adresse",
+        passwordDescription:
+          "Passwort, das ein Telefon eingeben muss, um sich mit dem Daemon zu koppeln und ein Zugriffstoken zu erhalten.",
+        passwordSetPlaceholder: "Leer lassen, um beizubehalten",
+        passwordTitle: "Kopplungspasswort",
+        passwordUnsetPlaceholder: "Passwort festlegen",
         urlDisabled:
           "Aktivieren Sie die mobile Ansicht, um einen Link zu erhalten, den Sie auf Ihrem Telefon öffnen können.",
+        urlNeedsPassword:
+          "Legen Sie ein Kopplungspasswort fest, um den mobilen Zugriff zu aktivieren.",
         urlPending: "Server wird gestartet…",
         urlTitle: "Mobile URL",
       },

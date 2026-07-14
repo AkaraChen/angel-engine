@@ -19,7 +19,7 @@ export function readMobileHostingConfig(): MobileHostingConfig {
       JSON.parse(readFileSync(configPath(), "utf8")),
     );
   } catch {
-    return { enabled: false, host: DEFAULT_MOBILE_HOST };
+    return { enabled: false, host: DEFAULT_MOBILE_HOST, password: "" };
   }
 }
 
@@ -33,8 +33,7 @@ function runtimeMarkerPath() {
 
 /** Records the config a live daemon was launched with (for reattach checks). */
 export function readMobileHostingRuntimeMarker():
-  | MobileHostingConfig
-  | undefined {
+  MobileHostingConfig | undefined {
   try {
     return sanitizeMobileHostingConfig(
       JSON.parse(readFileSync(runtimeMarkerPath(), "utf8")),
@@ -58,7 +57,9 @@ export function mobileHostingConfigEquals(
   a: MobileHostingConfig,
   b: MobileHostingConfig,
 ) {
-  return a.enabled === b.enabled && a.host === b.host;
+  return (
+    a.enabled === b.enabled && a.host === b.host && a.password === b.password
+  );
 }
 
 /**

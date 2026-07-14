@@ -1,5 +1,5 @@
 import type { TipcChannel } from "../../shared/ipc-channels";
-import type { MobileHostingConfig } from "../../shared/mobile-hosting";
+import type { MobileHostingUpdate } from "../../shared/mobile-hosting";
 import type { ChatRuntime } from "../features/chat/runtime";
 import { tipc } from "@egoist/tipc/main";
 
@@ -38,7 +38,7 @@ const appIpcRouter = {
     getMobileHostingState(),
   ),
   daemonMobileHostingSet: t.procedure
-    .input<MobileHostingConfig>()
+    .input<MobileHostingUpdate>()
     .action(async ({ input }) => setMobileHostingConfig(input)),
 };
 

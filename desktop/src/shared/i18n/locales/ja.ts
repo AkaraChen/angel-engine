@@ -192,8 +192,15 @@ export const ja = {
         hostDescription:
           "サーバーがバインドするネットワークインターフェース。0.0.0.0 を指定するとローカルネットワーク上の他のデバイスから接続できます。",
         hostTitle: "リッスンアドレス",
+        passwordDescription:
+          "スマートフォンがデーモンとペアリングしてアクセストークンを受け取るために入力するパスワード。",
+        passwordSetPlaceholder: "変更しない場合は空欄",
+        passwordTitle: "ペアリングパスワード",
+        passwordUnsetPlaceholder: "パスワードを設定",
         urlDisabled:
           "モバイル表示を有効にすると、スマートフォンで開けるリンクが表示されます。",
+        urlNeedsPassword:
+          "ペアリングパスワードを設定するとモバイルアクセスを有効にできます。",
         urlPending: "サーバーを起動しています…",
         urlTitle: "モバイル URL",
       },

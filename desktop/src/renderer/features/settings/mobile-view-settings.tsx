@@ -13,8 +13,10 @@ import { useMobileHosting } from "@/features/settings/use-mobile-hosting";
 
 export function MobileViewSettings() {
   const { t } = useTranslation();
-  const { isSaving, setEnabled, setHost, state } = useMobileHosting();
+  const { isSaving, setEnabled, setHost, setPassword, state } =
+    useMobileHosting();
   const [hostDraft, setHostDraft] = useState(state.host);
+  const [passwordDraft, setPasswordDraft] = useState("");
   const [copied, setCopied] = useState(false);
 
   // Adopt the persisted host when it changes elsewhere (e.g. another window).
@@ -35,6 +37,12 @@ export function MobileViewSettings() {
     void setHost(next);
   };
 
+  const commitPassword = () => {
+    const next = passwordDraft;
+    if (next.length === 0) return;
+    void setPassword(next).then(() => setPasswordDraft(""));
+  };
+
   const copyUrl = () => {
     if (state.url === null) return;
     void navigator.clipboard.writeText(state.url).then(() => {
@@ -42,6 +50,14 @@ export function MobileViewSettings() {
       window.setTimeout(setCopied, 1500, false);
     });
   };
+
+  const urlDescription = !state.enabled
+    ? t("settings.mobile.urlDisabled")
+    : !state.hasPassword
+      ? t("settings.mobile.urlNeedsPassword")
+      : state.url !== null
+        ? state.url
+        : t("settings.mobile.urlPending");
 
   return (
     <SettingsGroup>
@@ -56,6 +72,30 @@ export function MobileViewSettings() {
         }
         description={t("settings.mobile.enabledDescription")}
         title={t("settings.mobile.enabledTitle")}
+      />
+      <SettingsRow
+        after={
+          <Input
+            aria-label={t("settings.mobile.passwordTitle")}
+            autoComplete="off"
+            className="h-8 w-40 bg-background text-sm"
+            disabled={isSaving}
+            onBlur={commitPassword}
+            onChange={(event) => setPasswordDraft(event.currentTarget.value)}
+            onKeyDown={(event) => {
+              if (event.key === "Enter") event.currentTarget.blur();
+            }}
+            placeholder={
+              state.hasPassword
+                ? t("settings.mobile.passwordSetPlaceholder")
+                : t("settings.mobile.passwordUnsetPlaceholder")
+            }
+            type="password"
+            value={passwordDraft}
+          />
+        }
+        description={t("settings.mobile.passwordDescription")}
+        title={t("settings.mobile.passwordTitle")}
       />
       <SettingsRow
         after={
@@ -91,13 +131,7 @@ export function MobileViewSettings() {
             </Button>
           ) : null
         }
-        description={
-          state.enabled
-            ? state.url !== null
-              ? state.url
-              : t("settings.mobile.urlPending")
-            : t("settings.mobile.urlDisabled")
-        }
+        description={urlDescription}
         title={t("settings.mobile.urlTitle")}
       />
     </SettingsGroup>

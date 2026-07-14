@@ -4,6 +4,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { Router } from "wouter";
 import { memoryLocation } from "wouter/memory-location";
 
+import { AuthProvider } from "@/features/auth/auth-provider";
 import { DaemonProvider } from "@/platform/daemon-provider";
 
 import { HomePage } from "./home";
@@ -21,13 +22,15 @@ function renderHome() {
   });
   const { hook } = memoryLocation({ path: "/" });
   return render(
-    <DaemonProvider>
-      <QueryClientProvider client={queryClient}>
-        <Router hook={hook}>
-          <HomePage />
-        </Router>
-      </QueryClientProvider>
-    </DaemonProvider>,
+    <AuthProvider>
+      <DaemonProvider>
+        <QueryClientProvider client={queryClient}>
+          <Router hook={hook}>
+            <HomePage />
+          </Router>
+        </QueryClientProvider>
+      </DaemonProvider>
+    </AuthProvider>,
   );
 }
 

@@ -188,8 +188,13 @@ export const zhCN = {
         hostDescription:
           "服务器绑定的网络接口。使用 0.0.0.0 可允许本地网络中的其他设备访问。",
         hostTitle: "监听地址",
-        urlDisabled:
-          "开启移动端访问后即可获得可在手机上打开的链接。",
+        passwordDescription:
+          "手机与守护进程配对并获取访问令牌时需要输入的密码。",
+        passwordSetPlaceholder: "留空则保持不变",
+        passwordTitle: "配对密码",
+        passwordUnsetPlaceholder: "设置密码",
+        urlDisabled: "开启移动端访问后即可获得可在手机上打开的链接。",
+        urlNeedsPassword: "设置配对密码后即可启用移动端访问。",
         urlPending: "正在启动服务器…",
         urlTitle: "移动端网址",
       },

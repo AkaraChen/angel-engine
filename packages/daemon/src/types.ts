@@ -27,5 +27,11 @@ export interface DaemonOptions {
   mobileDir?: string;
   /** Whether to serve the mobile bundle from `mobileDir`. Defaults to false. */
   serveMobile?: boolean;
+  /**
+   * Password a mobile client must present to `POST /api/auth/pair` to obtain a
+   * session token. When set, the served bundle carries no bearer token; the
+   * mobile app must pair first. Required for LAN mobile hosting to be safe.
+   */
+  mobilePassword?: string;
   onShutdown?: () => void;
 }

@@ -7,6 +7,7 @@ import path from "node:path";
 import { serve } from "@hono/node-server";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
+import { deriveMobileToken, parsePairBody, safeEqual } from "./mobile-auth";
 import { registerMobileHosting } from "./mobile-hosting";
 import {
   isProcessId,
@@ -38,6 +39,17 @@ export async function createDaemon(options: DaemonOptions): Promise<Daemon> {
   const token = options.token ?? randomBytes(32).toString("base64url");
   const version = options.version ?? "0.1.0";
   const startedAt = process.uptime();
+  // A mobile client trades the configured password for this session token. It is
+  // accepted alongside the primary token so paired phones can reach `/api/*`
+  // without ever seeing the primary token.
+  const mobilePassword =
+    options.mobilePassword !== undefined && options.mobilePassword.length > 0
+      ? options.mobilePassword
+      : undefined;
+  const mobileToken =
+    mobilePassword !== undefined
+      ? deriveMobileToken(mobilePassword)
+      : undefined;
   const app = new Hono();
   const processRegistry = new ProcessRegistry();
   let server: ServerType | undefined;
@@ -46,13 +58,38 @@ export async function createDaemon(options: DaemonOptions): Promise<Daemon> {
     "/api/*",
     cors({
       allowHeaders: ["Authorization", "Content-Type"],
-      allowMethods: ["GET", "POST", "PUT", "OPTIONS"],
+      allowMethods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
       origin: "*",
     }),
   );
 
+  // Pairing is the one unauthenticated `/api/*` route: it is how a mobile client
+  // obtains a token in the first place.
+  app.post("/api/auth/pair", async (context) => {
+    if (mobilePassword === undefined || mobileToken === undefined) {
+      return context.json({ error: "Pairing is not enabled." }, 403);
+    }
+    let password: string | undefined;
+    try {
+      const bodyText = await context.req.text();
+      password = parsePairBody(
+        bodyText.length === 0 ? undefined : JSON.parse(bodyText),
+      );
+    } catch {
+      password = undefined;
+    }
+    if (password === undefined || !safeEqual(password, mobilePassword)) {
+      return context.json({ error: "Invalid password." }, 401);
+    }
+    return context.json({ token: mobileToken });
+  });
+
   app.use("/api/*", async (context, next) => {
-    if (context.req.header("authorization") !== `Bearer ${token}`) {
+    const authorization = context.req.header("authorization");
+    const authorized =
+      authorization === `Bearer ${token}` ||
+      (mobileToken !== undefined && authorization === `Bearer ${mobileToken}`);
+    if (!authorized) {
       return context.json({ error: "Unauthorized" }, 401);
     }
     await next();
@@ -126,9 +163,15 @@ export async function createDaemon(options: DaemonOptions): Promise<Daemon> {
   });
 
   // Static mobile hosting is registered last so the token-guarded `/api/*`
-  // routes above keep precedence over the SPA fallback.
-  if (options.serveMobile === true && options.mobileDir !== undefined) {
-    await registerMobileHosting(app, options.mobileDir, token);
+  // routes above keep precedence over the SPA fallback. Only serve the bundle
+  // when a mobile password is configured, so the LAN surface always sits behind
+  // the pairing flow.
+  if (
+    options.serveMobile === true &&
+    options.mobileDir !== undefined &&
+    mobilePassword !== undefined
+  ) {
+    await registerMobileHosting(app, options.mobileDir);
   }
 
   server = await new Promise<ServerType>((resolve, reject) => {

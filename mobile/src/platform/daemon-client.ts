@@ -8,7 +8,22 @@ import type {
   DaemonProject,
   ElicitationResolveInput,
 } from "./chat-types";
-import type { DaemonConfig } from "./daemon-config";
+
+/** The transport fields the client needs: where to reach the daemon + a token. */
+export interface DaemonClientConfig {
+  baseUrl: string;
+  token: string | null;
+}
+
+/** Runtime hooks for the client (kept separate from serializable config). */
+export interface DaemonClientOptions {
+  /**
+   * Called when any request is rejected with 401 — the paired session token is
+   * no longer valid (e.g. the daemon restarted or the password changed), so the
+   * app should drop it and prompt the user to pair again.
+   */
+  onUnauthorized?: () => void;
+}
 
 /**
  * Typed fetch client for the desktop daemon HTTP API.
@@ -133,7 +148,10 @@ export async function* readSseEvents(
   yield* flush();
 }
 
-export function createDaemonClient(config: DaemonConfig): DaemonClient {
+export function createDaemonClient(
+  config: DaemonClientConfig,
+  options: DaemonClientOptions = {},
+): DaemonClient {
   async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
     const headers = new Headers(init.headers);
     if (config.token !== null) {
@@ -148,6 +166,7 @@ export function createDaemonClient(config: DaemonConfig): DaemonClient {
       headers,
     });
     if (!response.ok) {
+      if (response.status === 401) options.onUnauthorized?.();
       throw new DaemonRequestError(
         `Daemon request failed: ${init.method ?? "GET"} ${path}`,
         response.status,
@@ -190,7 +209,7 @@ export function createDaemonClient(config: DaemonConfig): DaemonClient {
         method: "POST",
       }),
     streamChat: (input, streamId, signal) =>
-      streamChat(config, input, streamId, signal),
+      streamChat(config, input, streamId, signal, options.onUnauthorized),
     abortChatStream: async (streamId) => {
       await request<{ ok: boolean }>(
         `/api/chat-streams/${encodeURIComponent(streamId)}`,
@@ -207,10 +226,11 @@ export function createDaemonClient(config: DaemonConfig): DaemonClient {
 }
 
 async function* streamChat(
-  config: DaemonConfig,
+  config: DaemonClientConfig,
   input: ChatSendInput,
   streamId: string,
   signal?: AbortSignal,
+  onUnauthorized?: () => void,
 ): AsyncIterable<ChatStreamEvent> {
   const headers = new Headers({
     accept: "text/event-stream",
@@ -228,6 +248,7 @@ async function* streamChat(
     signal,
   });
   if (!response.ok) {
+    if (response.status === 401) onUnauthorized?.();
     throw new DaemonRequestError(
       `Daemon request failed: POST ${path}`,
       response.status,

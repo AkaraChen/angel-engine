@@ -192,8 +192,15 @@ export const es = {
         hostDescription:
           "Interfaz de red a la que se enlaza el servidor. Usa 0.0.0.0 para permitir el acceso de otros dispositivos de tu red local.",
         hostTitle: "Dirección de escucha",
+        passwordDescription:
+          "Contraseña que un teléfono debe introducir para emparejarse con el daemon y recibir un token de acceso.",
+        passwordSetPlaceholder: "Déjalo en blanco para mantenerla",
+        passwordTitle: "Contraseña de emparejamiento",
+        passwordUnsetPlaceholder: "Establecer una contraseña",
         urlDisabled:
           "Activa la vista móvil para obtener un enlace que puedas abrir en tu teléfono.",
+        urlNeedsPassword:
+          "Establece una contraseña de emparejamiento para habilitar el acceso móvil.",
         urlPending: "Iniciando el servidor…",
         urlTitle: "URL móvil",
       },

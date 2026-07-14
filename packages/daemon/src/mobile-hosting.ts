@@ -26,8 +26,10 @@ const CONTENT_TYPES: Record<string, string> = {
 };
 
 function contentTypeFor(filePath: string): string {
-  return CONTENT_TYPES[path.extname(filePath).toLowerCase()] ??
-    "application/octet-stream";
+  return (
+    CONTENT_TYPES[path.extname(filePath).toLowerCase()] ??
+    "application/octet-stream"
+  );
 }
 
 /**
@@ -39,9 +41,7 @@ function resolveWithinRoot(
   rootDir: string,
   requestPath: string,
 ): string | undefined {
-  const normalized = path
-    .normalize(requestPath)
-    .replace(/^(\.\.[/\\])+/, "");
+  const normalized = path.normalize(requestPath).replace(/^(\.\.[/\\])+/, "");
   const resolved = path.resolve(rootDir, `.${path.sep}${normalized}`);
   const rootWithSep = rootDir.endsWith(path.sep)
     ? rootDir
@@ -53,18 +53,17 @@ function resolveWithinRoot(
 }
 
 /**
- * Reads the mobile bundle's `index.html` and injects a bootstrap script that
- * hands the daemon bearer token to the mobile app (which reads
- * `window.__ANGEL_DAEMON__`). The mobile app is served from the same origin,
- * so only the token needs to be supplied.
+ * Reads the mobile bundle's `index.html` and injects a bootstrap script telling
+ * the mobile app it must authenticate (read via `window.__ANGEL_DAEMON__`).
+ *
+ * Crucially, this injects NO bearer token: the served page is reachable by any
+ * device on the LAN, so it must not carry a credential. The mobile app pairs by
+ * posting the user's password to `/api/auth/pair` to obtain a session token.
  */
-async function buildIndexHtml(
-  mobileDir: string,
-  token: string,
-): Promise<string> {
+async function buildIndexHtml(mobileDir: string): Promise<string> {
   const html = await readFile(path.join(mobileDir, "index.html"), "utf8");
   const bootstrap = `<script>window.__ANGEL_DAEMON__=${JSON.stringify({
-    token,
+    requiresAuth: true,
   })};</script>`;
   if (html.includes("<head>")) {
     return html.replace("<head>", `<head>${bootstrap}`);
@@ -84,10 +83,9 @@ async function buildIndexHtml(
 export async function registerMobileHosting(
   app: Hono,
   mobileDir: string,
-  token: string,
 ): Promise<void> {
   const rootDir = path.resolve(mobileDir);
-  const indexHtml = await buildIndexHtml(rootDir, token);
+  const indexHtml = await buildIndexHtml(rootDir);
 
   app.get("/*", async (context, next) => {
     const pathname = safeDecode(new URL(context.req.url).pathname);

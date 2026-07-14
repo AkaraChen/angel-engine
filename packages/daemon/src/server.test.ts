@@ -114,7 +114,7 @@ describe("createDaemon", () => {
     expect(response.status).toBe(403);
   });
 
-  it("serves the mobile bundle with token injection and SPA fallback", async () => {
+  it("serves the mobile bundle without leaking a token, behind pairing", async () => {
     const dataDir = await mkdtemp(path.join(os.tmpdir(), "angel-daemon-"));
     const mobileDir = path.join(dataDir, "mobile");
     await mkdir(path.join(mobileDir, "assets"), { recursive: true });
@@ -130,6 +130,7 @@ describe("createDaemon", () => {
     const daemon = await createDaemon({
       dataDir,
       mobileDir,
+      mobilePassword: "hunter2",
       serveMobile: true,
       token: "secret",
       version: "test",
@@ -137,11 +138,12 @@ describe("createDaemon", () => {
     daemons.push(daemon);
     const baseUrl = `http://${daemon.info.host}:${daemon.info.port}`;
 
-    // Root serves index.html with the token injected for the mobile client.
+    // Root serves index.html that signals auth is required but carries NO token.
     const root = await fetch(`${baseUrl}/`);
     expect(root.status).toBe(200);
     const rootHtml = await root.text();
-    expect(rootHtml).toContain('window.__ANGEL_DAEMON__={"token":"secret"}');
+    expect(rootHtml).toContain('window.__ANGEL_DAEMON__={"requiresAuth":true}');
+    expect(rootHtml).not.toContain("secret");
 
     // Real assets are served with a sensible content type, no token injection.
     const asset = await fetch(`${baseUrl}/assets/app.js`);
@@ -160,6 +162,56 @@ describe("createDaemon", () => {
     // Path traversal cannot escape the mobile root.
     const traversal = await fetch(`${baseUrl}/../secret`);
     expect(await traversal.text()).toContain("window.__ANGEL_DAEMON__");
+  });
+
+  it("exchanges the mobile password for a session token via pairing", async () => {
+    const dataDir = await mkdtemp(path.join(os.tmpdir(), "angel-daemon-"));
+    const daemon = await createDaemon({
+      dataDir,
+      mobilePassword: "hunter2",
+      token: "primary",
+      version: "test",
+    });
+    daemons.push(daemon);
+    const baseUrl = `http://${daemon.info.host}:${daemon.info.port}`;
+
+    // Wrong password is rejected.
+    const bad = await fetch(`${baseUrl}/api/auth/pair`, {
+      body: JSON.stringify({ password: "nope" }),
+      headers: { "content-type": "application/json" },
+      method: "POST",
+    });
+    expect(bad.status).toBe(401);
+
+    // Correct password returns a session token distinct from the primary token.
+    const ok = await fetch(`${baseUrl}/api/auth/pair`, {
+      body: JSON.stringify({ password: "hunter2" }),
+      headers: { "content-type": "application/json" },
+      method: "POST",
+    });
+    expect(ok.status).toBe(200);
+    const { token: sessionToken } = (await ok.json()) as { token: string };
+    expect(sessionToken).toBeTruthy();
+    expect(sessionToken).not.toBe("primary");
+
+    // The session token authorizes `/api/*` just like the primary token.
+    const health = await fetch(`${baseUrl}/api/health`, {
+      headers: { authorization: `Bearer ${sessionToken}` },
+    });
+    expect(health.status).toBe(200);
+  });
+
+  it("refuses pairing when no mobile password is configured", async () => {
+    const daemon = await startDaemon();
+    const response = await fetch(
+      `http://${daemon.info.host}:${daemon.info.port}/api/auth/pair`,
+      {
+        body: JSON.stringify({ password: "anything" }),
+        headers: { "content-type": "application/json" },
+        method: "POST",
+      },
+    );
+    expect(response.status).toBe(403);
   });
 
   it("advertises a loopback host when binding the wildcard address", async () => {

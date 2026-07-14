@@ -190,8 +190,14 @@ export const en = {
         hostDescription:
           "Network interface the server binds to. Use 0.0.0.0 to allow other devices on your local network.",
         hostTitle: "Listen address",
+        passwordDescription:
+          "Password a phone must enter to pair with the daemon and receive an access token.",
+        passwordSetPlaceholder: "Leave blank to keep current",
+        passwordTitle: "Pairing password",
+        passwordUnsetPlaceholder: "Set a password",
         urlDisabled:
           "Turn on the mobile view to get a link you can open on your phone.",
+        urlNeedsPassword: "Set a pairing password to enable mobile access.",
         urlPending: "Starting the server…",
         urlTitle: "Mobile URL",
       },

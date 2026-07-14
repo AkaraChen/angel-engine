@@ -189,8 +189,13 @@ export const zhTW = {
         hostDescription:
           "伺服器綁定的網路介面。使用 0.0.0.0 可允許區域網路中的其他裝置存取。",
         hostTitle: "監聽位址",
-        urlDisabled:
-          "開啟行動版存取後即可取得可在手機上開啟的連結。",
+        passwordDescription:
+          "手機與守護程序配對並取得存取權杖時需要輸入的密碼。",
+        passwordSetPlaceholder: "留空則保持不變",
+        passwordTitle: "配對密碼",
+        passwordUnsetPlaceholder: "設定密碼",
+        urlDisabled: "開啟行動版存取後即可取得可在手機上開啟的連結。",
+        urlNeedsPassword: "設定配對密碼後即可啟用行動版存取。",
         urlPending: "正在啟動伺服器…",
         urlTitle: "行動版網址",
       },

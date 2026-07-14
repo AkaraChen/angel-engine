@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { AuthProvider } from "@/features/auth/auth-provider";
 import { DaemonProvider } from "@/platform/daemon-provider";
 
 import { useConversation } from "./use-conversation";
@@ -54,7 +55,9 @@ function wrapper({ children }: PropsWithChildren) {
   });
   return (
     <QueryClientProvider client={client}>
-      <DaemonProvider>{children}</DaemonProvider>
+      <AuthProvider>
+        <DaemonProvider>{children}</DaemonProvider>
+      </AuthProvider>
     </QueryClientProvider>
   );
 }

@@ -36,3 +36,35 @@ if (typeof window.IntersectionObserver !== "function") {
 if (typeof Element.prototype.scrollIntoView !== "function") {
   Element.prototype.scrollIntoView = () => {};
 }
+
+// jsdom does not always expose a working localStorage (depends on the document
+// origin); provide an in-memory implementation so storage-backed code can run.
+function hasWorkingLocalStorage(): boolean {
+  try {
+    return typeof window.localStorage?.setItem === "function";
+  } catch {
+    return false;
+  }
+}
+
+if (!hasWorkingLocalStorage()) {
+  const store = new Map<string, string>();
+  const storage: Storage = {
+    clear: () => store.clear(),
+    getItem: (key) => (store.has(key) ? (store.get(key) as string) : null),
+    key: (index) => [...store.keys()][index] ?? null,
+    get length() {
+      return store.size;
+    },
+    removeItem: (key) => {
+      store.delete(key);
+    },
+    setItem: (key, value) => {
+      store.set(key, String(value));
+    },
+  };
+  Object.defineProperty(window, "localStorage", {
+    configurable: true,
+    value: storage,
+  });
+}

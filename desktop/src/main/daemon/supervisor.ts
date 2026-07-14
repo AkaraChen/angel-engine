@@ -4,6 +4,7 @@ import type { DaemonConnection } from "../../shared/daemon";
 import type {
   MobileHostingConfig,
   MobileHostingState,
+  MobileHostingUpdate,
 } from "../../shared/mobile-hosting";
 
 import { readFile, rm } from "node:fs/promises";
@@ -51,19 +52,26 @@ function getMobileConfig(): MobileHostingConfig {
   return mobileConfig;
 }
 
+// Serving the mobile bundle requires both the toggle and a pairing password —
+// without a password there is no safe way to expose the LAN surface.
+function mobileServingEnabled(config: MobileHostingConfig): boolean {
+  return config.enabled && config.password.length > 0;
+}
+
 function buildDaemonArgs(): string[] {
   const config = getMobileConfig();
+  const serve = mobileServingEnabled(config);
   const args = [
     "--data-dir",
     app.getPath("userData"),
     "--host",
-    config.enabled ? config.host : "127.0.0.1",
+    serve ? config.host : "127.0.0.1",
     "--port",
     "0",
     "--version",
     app.getVersion(),
   ];
-  if (config.enabled) {
+  if (serve) {
     const mobileDir = resolveMobileDir();
     if (mobileDir !== undefined) {
       args.push("--serve-mobile", "--mobile-dir", mobileDir);
@@ -72,17 +80,27 @@ function buildDaemonArgs(): string[] {
   return args;
 }
 
+// The pairing password is handed to the daemon via the environment (never argv
+// or logs). utilityProcess.fork replaces the env when one is supplied, so the
+// parent env is spread through.
+function buildDaemonEnv(): NodeJS.ProcessEnv | undefined {
+  const config = getMobileConfig();
+  if (!mobileServingEnabled(config)) return undefined;
+  return { ...process.env, ANGEL_MOBILE_PASSWORD: config.password };
+}
+
 function currentMobileState(): MobileHostingState {
   const config = getMobileConfig();
+  const serve = mobileServingEnabled(config);
   const port = connection.status === "available" ? connection.info.port : null;
-  const serving =
-    port !== null && config.enabled && resolveMobileDir() !== undefined;
+  const serving = port !== null && serve && resolveMobileDir() !== undefined;
   return {
     available: serving,
     enabled: config.enabled,
+    hasPassword: config.password.length > 0,
     host: config.host,
     port,
-    url: config.enabled ? resolveMobileUrl(config.host, port) : null,
+    url: serve ? resolveMobileUrl(config.host, port) : null,
   };
 }
 
@@ -98,10 +116,18 @@ export function getMobileHostingState(): MobileHostingState {
 }
 
 export async function setMobileHostingConfig(
-  input: unknown,
+  input: MobileHostingUpdate,
 ): Promise<MobileHostingState> {
-  const next = sanitizeMobileHostingConfig(input);
   const previous = getMobileConfig();
+  // A blank/omitted password means "leave the stored one unchanged" so the
+  // renderer never has to receive the secret just to edit other fields.
+  const hasNewPassword =
+    typeof input.password === "string" && input.password.length > 0;
+  const next = sanitizeMobileHostingConfig({
+    enabled: input.enabled,
+    host: input.host,
+    password: hasNewPassword ? input.password : previous.password,
+  });
   mobileConfig = next;
   writeMobileHostingConfig(next);
   if (!mobileHostingConfigEquals(previous, next)) {
@@ -208,7 +234,10 @@ async function tryReattach() {
   // hosting config; otherwise it may be bound to the wrong host or (still)
   // serving the mobile app after the toggle changed while the app was closed.
   const marker = readMobileHostingRuntimeMarker();
-  if (marker === undefined || !mobileHostingConfigEquals(marker, getMobileConfig())) {
+  if (
+    marker === undefined ||
+    !mobileHostingConfigEquals(marker, getMobileConfig())
+  ) {
     await stopDiscoveredDaemon(candidate);
     await rm(filePath, { force: true });
     return undefined;
@@ -232,6 +261,7 @@ async function spawnDaemon() {
   const daemonEntry = path.join(__dirname, "daemon.js");
   const launchConfig = getMobileConfig();
   const nextChild = utilityProcess.fork(daemonEntry, buildDaemonArgs(), {
+    env: buildDaemonEnv(),
     stdio: "pipe",
   });
   child = nextChild;

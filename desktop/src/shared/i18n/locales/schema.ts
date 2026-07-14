@@ -201,7 +201,12 @@ export interface LocaleResourceTranslationSettingsMobile {
   enabledTitle: string;
   hostDescription: string;
   hostTitle: string;
+  passwordDescription: string;
+  passwordSetPlaceholder: string;
+  passwordTitle: string;
+  passwordUnsetPlaceholder: string;
   urlDisabled: string;
+  urlNeedsPassword: string;
   urlPending: string;
   urlTitle: string;
 }
