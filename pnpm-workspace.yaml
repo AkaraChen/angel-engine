@@ -1,6 +1,7 @@
 packages:
   - "apps/*"
   - "desktop"
+  - "mobile"
   - "packages/*"
   - "crates/angel-engine-client-napi"
   - "!vendor/**"

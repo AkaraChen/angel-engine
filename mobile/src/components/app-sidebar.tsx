@@ -1,0 +1,99 @@
+import type { Icon } from "@phosphor-icons/react";
+
+import { GearSix, House, PencilSimple, Sparkle } from "@phosphor-icons/react";
+import { Link, useRoute } from "wouter";
+
+import { DaemonStatus } from "@/components/daemon-status";
+import {
+  Sidebar,
+  SidebarContent,
+  SidebarFooter,
+  SidebarGroup,
+  SidebarGroupContent,
+  SidebarHeader,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+  useSidebar,
+} from "@/components/ui/sidebar";
+
+interface NavItem {
+  href: string;
+  label: string;
+  icon: Icon;
+  match: string;
+}
+
+const NAV_ITEMS: NavItem[] = [
+  { href: "/", label: "Home", icon: House, match: "/" },
+  { href: "/settings", label: "Settings", icon: GearSix, match: "/settings" },
+];
+
+export function AppSidebar() {
+  return (
+    <Sidebar>
+      <SidebarHeader className="gap-2">
+        <div className="flex items-center gap-2 px-2 py-1.5">
+          <Sparkle className="text-primary" size={22} weight="fill" />
+          <span className="font-heading text-base font-semibold">
+            Angel Engine
+          </span>
+        </div>
+        <SidebarMenu>
+          <SidebarMenuItem>
+            <NewChatButton />
+          </SidebarMenuItem>
+        </SidebarMenu>
+      </SidebarHeader>
+      <SidebarContent>
+        <SidebarGroup>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {NAV_ITEMS.map((item) => (
+                <NavMenuItem key={item.href} item={item} />
+              ))}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+      </SidebarContent>
+      <SidebarFooter>
+        <DaemonStatus />
+      </SidebarFooter>
+    </Sidebar>
+  );
+}
+
+function NewChatButton() {
+  const { setOpenMobile } = useSidebar();
+  return (
+    <SidebarMenuButton
+      asChild
+      className="
+        bg-primary text-primary-foreground
+        hover:bg-primary/90 hover:text-primary-foreground
+        active:bg-primary/90 active:text-primary-foreground
+      "
+    >
+      <Link href="/" onClick={() => setOpenMobile(false)}>
+        <PencilSimple size={18} />
+        <span>New chat</span>
+      </Link>
+    </SidebarMenuButton>
+  );
+}
+
+function NavMenuItem({ item }: { item: NavItem }) {
+  const [isActive] = useRoute(item.match);
+  const { setOpenMobile } = useSidebar();
+  const Icon = item.icon;
+  return (
+    <SidebarMenuItem>
+      <SidebarMenuButton asChild isActive={isActive}>
+        <Link href={item.href} onClick={() => setOpenMobile(false)}>
+          <Icon size={18} weight={isActive ? "fill" : "regular"} />
+          <span>{item.label}</span>
+        </Link>
+      </SidebarMenuButton>
+    </SidebarMenuItem>
+  );
+}
