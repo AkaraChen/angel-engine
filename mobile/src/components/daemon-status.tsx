@@ -1,3 +1,5 @@
+import { useTranslation } from "react-i18next";
+
 import { useDaemonHealth } from "@/platform/use-daemon-health";
 
 /**
@@ -5,13 +7,14 @@ import { useDaemonHealth } from "@/platform/use-daemon-health";
  * end to end. Purely a foundation smoke test; page sub-issues can remove it.
  */
 export function DaemonStatus() {
+  const { t } = useTranslation();
   const { data, isPending, isError } = useDaemonHealth();
 
   const label = isError
-    ? "Daemon unreachable"
+    ? t("daemonStatus.unreachable")
     : isPending
-      ? "Connecting to daemon…"
-      : `Daemon online · v${data.version}`;
+      ? t("daemonStatus.connecting")
+      : t("daemonStatus.online", { version: data.version });
 
   const dotClass = isError
     ? "bg-destructive"

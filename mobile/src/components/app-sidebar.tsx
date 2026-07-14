@@ -1,6 +1,8 @@
 import type { Icon } from "@phosphor-icons/react";
+import type { ParseKeys } from "i18next";
 
 import { GearSix, House, PencilSimple, Sparkle } from "@phosphor-icons/react";
+import { useTranslation } from "react-i18next";
 import { Link, useRoute } from "wouter";
 
 import { DaemonStatus } from "@/components/daemon-status";
@@ -19,14 +21,19 @@ import {
 
 interface NavItem {
   href: string;
-  label: string;
+  labelKey: ParseKeys;
   icon: Icon;
   match: string;
 }
 
 const NAV_ITEMS: NavItem[] = [
-  { href: "/", label: "Home", icon: House, match: "/" },
-  { href: "/settings", label: "Settings", icon: GearSix, match: "/settings" },
+  { href: "/", labelKey: "sidebar.home", icon: House, match: "/" },
+  {
+    href: "/settings",
+    labelKey: "common.settings",
+    icon: GearSix,
+    match: "/settings",
+  },
 ];
 
 export function AppSidebar() {
@@ -64,6 +71,7 @@ export function AppSidebar() {
 }
 
 function NewChatButton() {
+  const { t } = useTranslation();
   const { setOpenMobile } = useSidebar();
   return (
     <SidebarMenuButton
@@ -76,13 +84,14 @@ function NewChatButton() {
     >
       <Link href="/" onClick={() => setOpenMobile(false)}>
         <PencilSimple size={18} />
-        <span>New chat</span>
+        <span>{t("common.newChat")}</span>
       </Link>
     </SidebarMenuButton>
   );
 }
 
 function NavMenuItem({ item }: { item: NavItem }) {
+  const { t } = useTranslation();
   const [isActive] = useRoute(item.match);
   const { setOpenMobile } = useSidebar();
   const Icon = item.icon;
@@ -91,7 +100,7 @@ function NavMenuItem({ item }: { item: NavItem }) {
       <SidebarMenuButton asChild isActive={isActive}>
         <Link href={item.href} onClick={() => setOpenMobile(false)}>
           <Icon size={18} weight={isActive ? "fill" : "regular"} />
-          <span>{item.label}</span>
+          <span>{t(item.labelKey)}</span>
         </Link>
       </SidebarMenuButton>
     </SidebarMenuItem>

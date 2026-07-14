@@ -68,3 +68,10 @@ if (!hasWorkingLocalStorage()) {
     value: storage,
   });
 }
+
+// Initialize the i18n singleton once (after the localStorage/navigator stubs
+// above are in place) so component tests that render a sub-tree without the
+// App-level I18nextProvider still resolve real translation strings.
+await import("@/i18n");
+
+export {};

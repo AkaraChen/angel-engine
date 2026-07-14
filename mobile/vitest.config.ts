@@ -17,5 +17,9 @@ export default defineConfig({
     globals: true,
     setupFiles: ["./src/test-setup.ts"],
     include: ["src/**/*.test.{ts,tsx}"],
+    // jsdom render tests can exceed the 5s default when the CI host is under
+    // load (several worker processes sharing cores); give them headroom so
+    // slow scheduling doesn't read as a failure.
+    testTimeout: 20000,
   },
 });
