@@ -4,7 +4,6 @@
   "type": "module",
   "version": "0.0.1",
   "private": true,
-  "packageManager": "pnpm@11.1.2",
   "description": "Mobile web shell for Angel Engine, served by the desktop app.",
   "author": {
     "name": "akarachen",
@@ -42,6 +41,7 @@
     "react-day-picker": "^10.0.1",
     "react-dom": "^19.2.7",
     "react-i18next": "^17.0.8",
+    "react-grab": "^0.1.48",
     "react-resizable-panels": "^4.12.1",
     "recharts": "3.8.0",
     "shadcn": "^4.13.0",

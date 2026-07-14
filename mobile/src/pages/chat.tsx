@@ -60,7 +60,7 @@ export function ChatPage({ chatId }: { chatId: string }) {
         <MessageScroller className="min-h-0 flex-1">
           <MessageScrollerViewport className="h-full">
             <MessageScrollerContent className="gap-4 p-4">
-              {conversation.isPending ? (
+              {conversation.isPending && !hasMessages ? (
                 <TranscriptSkeleton />
               ) : conversation.isError && !hasMessages ? (
                 <ErrorState onRetry={conversation.refetch} />

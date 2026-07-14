@@ -45,6 +45,26 @@ export function useAgentList() {
   });
 }
 
+/** Runtime-owned model options for a new chat. */
+export function useRuntimeConfig({
+  cwd,
+  enabled,
+  runtime,
+}: {
+  cwd?: string;
+  enabled: boolean;
+  runtime: string;
+}) {
+  const daemon = useDaemonClient();
+  return useQuery({
+    enabled: enabled && runtime.length > 0,
+    queryKey: queryKeys.chats.runtimeConfig(runtime, cwd),
+    queryFn: async () => daemon.inspectRuntimeConfig({ cwd, runtime }),
+    retry: false,
+    staleTime: 300_000,
+  });
+}
+
 export function useCreateChat() {
   const daemon = useDaemonClient();
   const queryClient = useQueryClient();

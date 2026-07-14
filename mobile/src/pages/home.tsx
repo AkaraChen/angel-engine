@@ -33,8 +33,11 @@ export function HomePage() {
   const chatsQuery = useChatList();
 
   return (
-    <div className="relative h-full">
-      <ScrollArea className="h-full">
+    <div className="relative h-full min-w-0 overflow-hidden">
+      <ScrollArea
+        className="h-full min-w-0 max-w-full"
+        viewportClassName="[&>div]:block! [&>div]:w-full! [&>div]:min-w-0!"
+      >
         {chatsQuery.isPending ? (
           <ChatListSkeleton />
         ) : chatsQuery.isError ? (
@@ -42,7 +45,7 @@ export function HomePage() {
         ) : chatsQuery.data.length === 0 ? (
           <EmptyState />
         ) : (
-          <ul className="flex flex-col pb-24">
+          <ul className="flex w-full min-w-0 max-w-full flex-col overflow-hidden pb-24">
             {chatsQuery.data.map((chat) => (
               <ChatListItem key={chat.id} chat={chat} />
             ))}
@@ -70,10 +73,11 @@ function ChatListItem({ chat }: { chat: ChatSummary }) {
   const locale = useDateFnsLocale();
   const subtitle = [chat.projectName, chat.worktreeBranch].filter(Boolean);
   return (
-    <li className="border-b border-border/60 last:border-b-0">
+    <li className="w-full min-w-0 max-w-full border-b border-border/60 last:border-b-0">
       <Link
         className="
-          flex items-center gap-3 px-4 py-3
+          flex w-full min-w-0 max-w-full items-center gap-3 overflow-hidden px-4
+          py-3
           active:bg-accent
         "
         href={`/chat/${chat.id}`}
@@ -88,7 +92,7 @@ function ChatListItem({ chat }: { chat: ChatSummary }) {
           <AgentRuntimeIcon className="size-5" runtime={chat.runtime} />
         </span>
         <span className="flex min-w-0 flex-1 flex-col gap-0.5">
-          <span className="flex items-center gap-1.5">
+          <span className="flex min-w-0 items-center gap-1.5">
             {chat.pinned ? (
               <PushPin
                 className="shrink-0 text-muted-foreground"
@@ -99,7 +103,7 @@ function ChatListItem({ chat }: { chat: ChatSummary }) {
             <span className="min-w-0 flex-1 truncate font-medium">
               {chat.title}
             </span>
-            <span className="shrink-0 text-xs text-muted-foreground">
+            <span className="ml-auto shrink-0 whitespace-nowrap text-right text-xs text-muted-foreground">
               {formatUpdatedAt(chat.updatedAt, locale)}
             </span>
           </span>

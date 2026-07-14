@@ -7,6 +7,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { AuthProvider } from "@/features/auth/auth-provider";
 import { DaemonProvider } from "@/platform/daemon-provider";
 
+import { stashNewChatPrompt } from "./new-chat-prompt";
 import { useConversation } from "./use-conversation";
 
 interface SseHandle {
@@ -63,6 +64,7 @@ function wrapper({ children }: PropsWithChildren) {
 }
 
 afterEach(() => {
+  sessionStorage.clear();
   vi.unstubAllGlobals();
 });
 
@@ -91,6 +93,80 @@ describe("useConversation", () => {
     expect(result.current.messages.map((m) => [m.role, m.text])).toEqual([
       ["user", "hi"],
       ["assistant", "hello"],
+    ]);
+  });
+
+  it("sends a stashed new-chat prompt as the first turn", async () => {
+    let sse: SseHandle | undefined;
+    const fetchMock = vi.fn(async (url: string, init?: RequestInit) => {
+      if (url.includes("/api/chat-streams?") && init?.method === "POST") {
+        sse = controllableSse(init.signal ?? undefined);
+        return sse.response;
+      }
+      if (url.endsWith("/load")) {
+        return jsonResponse({
+          chat: { id: "new-chat", title: "New chat" },
+          messages: [
+            {
+              id: "u1",
+              role: "user",
+              content: [{ type: "text", text: "start here" }],
+            },
+            {
+              id: "a1",
+              role: "assistant",
+              content: [{ type: "text", text: "Started" }],
+            },
+          ],
+        });
+      }
+      return jsonResponse({ ok: true });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    stashNewChatPrompt("new-chat", "start here");
+
+    const { result } = renderHook(() => useConversation("new-chat"), {
+      wrapper,
+    });
+
+    await waitFor(() => expect(result.current.isStreaming).toBe(true));
+    expect(result.current.messages[0]).toMatchObject({
+      role: "user",
+      text: "start here",
+    });
+    expect(result.current.messages[1]).toMatchObject({
+      role: "assistant",
+      status: "streaming",
+    });
+
+    await waitFor(() => expect(sse).toBeDefined());
+    const streamRequest = fetchMock.mock.calls.find(
+      ([url]) => typeof url === "string" && url.includes("/api/chat-streams?"),
+    );
+    expect(streamRequest?.[1]?.body).toBe(
+      JSON.stringify({ chatId: "new-chat", text: "start here" }),
+    );
+    act(() => sse!.push({ type: "delta", part: "text", text: "Started" }));
+    await waitFor(() =>
+      expect(result.current.messages.at(-1)?.text).toBe("Started"),
+    );
+
+    act(() => {
+      sse!.push({ type: "result", result: { text: "Started" } });
+      sse!.push({ type: "done" });
+      sse!.close();
+    });
+    await waitFor(() => expect(result.current.isStreaming).toBe(false));
+    await waitFor(() => expect(result.current.isPending).toBe(false));
+    expect(
+      fetchMock.mock.calls.filter(
+        ([url]) =>
+          typeof url === "string" && url.includes("/api/chat-streams?"),
+      ),
+    ).toHaveLength(1);
+    expect(result.current.messages.map((message) => message.text)).toEqual([
+      "start here",
+      "Started",
     ]);
   });
 

@@ -13,20 +13,7 @@ import { useDaemonClient } from "@/platform/daemon-provider";
 import { queryKeys } from "@/platform/query-keys";
 
 import { toConversation } from "./message-view";
-
-/**
- * Loads a chat's persisted transcript from the daemon (`POST /api/chats/:id/load`)
- * and projects it into the mobile conversation view model.
- */
-export function useChatMessages(chatId: string) {
-  const daemon = useDaemonClient();
-  return useQuery({
-    queryKey: queryKeys.chats.load(chatId),
-    queryFn: async () => daemon.loadChat(chatId),
-    select: (result) => toConversation(result.messages),
-    enabled: chatId.length > 0,
-  });
-}
+import { clearNewChatPrompt, readNewChatPrompt } from "./new-chat-prompt";
 
 export interface Conversation {
   /** Persisted history plus the live (streaming) turn, in render order. */
@@ -91,7 +78,6 @@ function newStreamId(): string {
 export function useConversation(chatId: string): Conversation {
   const daemon = useDaemonClient();
   const queryClient = useQueryClient();
-  const history = useChatMessages(chatId);
 
   const abortRef = useRef<AbortController | null>(null);
   const streamIdRef = useRef<string | null>(null);
@@ -104,18 +90,31 @@ export function useConversation(chatId: string): Conversation {
     forceRender();
   }, []);
 
-  const mutation = useMutation<void, Error, string>({
-    mutationFn: async (text) => {
+  const streamTurn = useCallback(
+    async (
+      text: string,
+      externalSignal?: AbortSignal,
+      onStarted?: () => void,
+    ) => {
       const controller = new AbortController();
       const streamId = newStreamId();
+      const abortFromExternal = () => controller.abort(externalSignal?.reason);
+      externalSignal?.addEventListener("abort", abortFromExternal, {
+        once: true,
+      });
       abortRef.current = controller;
       streamIdRef.current = streamId;
+      let started = false;
       try {
         for await (const event of daemon.streamChat(
           { chatId, text },
           streamId,
           controller.signal,
         )) {
+          if (!started) {
+            started = true;
+            onStarted?.();
+          }
           if (event.type === "delta") {
             const { part, text: delta } = event;
             const turn = liveTurnRef.current;
@@ -125,7 +124,6 @@ export function useConversation(chatId: string): Conversation {
                 : { assistantText: turn.assistantText + delta },
             );
           } else if (event.type === "elicitation") {
-            // The daemon is blocked waiting for the user to answer; surface it.
             elicitationRef.current = event.elicitation;
             forceRender();
           } else if (event.type === "result") {
@@ -137,16 +135,57 @@ export function useConversation(chatId: string): Conversation {
           }
         }
       } catch (error) {
-        // A user Stop or a chat switch aborts the fetch, which surfaces as an
-        // expected AbortError — not a turn failure. Swallow it and let the
-        // partial turn finalize; rethrow anything else so it shows as an error.
         if (!controller.signal.aborted) throw error;
+        // TanStack Query cancellation must propagate so StrictMode can retry
+        // the still-stashed initial prompt. A user Stop is an expected partial
+        // completion and continues to canonical history hydration.
+        if (externalSignal?.aborted) throw error;
       } finally {
+        externalSignal?.removeEventListener("abort", abortFromExternal);
         abortRef.current = null;
         streamIdRef.current = null;
         elicitationRef.current = null;
+        forceRender();
       }
     },
+    [chatId, daemon, updateAssistant],
+  );
+
+  const history = useQuery({
+    queryKey: queryKeys.chats.load(chatId),
+    queryFn: async ({ signal }) => {
+      const initialPrompt = readNewChatPrompt(chatId);
+      if (initialPrompt === undefined) return daemon.loadChat(chatId);
+
+      const stamp = newStreamId();
+      liveTurnRef.current = {
+        userId: `local-user-${stamp}`,
+        assistantId: `local-assistant-${stamp}`,
+        userText: initialPrompt,
+        assistantText: "",
+        assistantReasoning: "",
+      };
+      forceRender();
+
+      let promptCleared = false;
+      const clearPrompt = () => {
+        if (promptCleared) return;
+        promptCleared = true;
+        clearNewChatPrompt(chatId);
+      };
+      await streamTurn(initialPrompt, signal, clearPrompt);
+      clearPrompt();
+      const result = await daemon.loadChat(chatId);
+      liveTurnRef.current = EMPTY_TURN;
+      return result;
+    },
+    select: (result) => toConversation(result.messages),
+    enabled: chatId.length > 0,
+    retry: false,
+  });
+
+  const mutation = useMutation<void, Error, string>({
+    mutationFn: async (text) => streamTurn(text),
     onSuccess: async (_data, text) => {
       const turn = liveTurnRef.current;
       // Skip if the turn was disposed (chat switch/unmount cleared the ref).
@@ -255,10 +294,15 @@ export function useConversation(chatId: string): Conversation {
   }, [chatId, daemon, reset]);
 
   const persisted = history.data ?? [];
+  const liveError = mutation.isError
+    ? (mutation.error?.message ?? "The turn failed.")
+    : history.isError && liveTurnRef.current.userId.length > 0
+      ? (history.error?.message ?? "The turn failed.")
+      : null;
   const live = buildLiveMessages(
     liveTurnRef.current,
-    mutation.isPending,
-    mutation.isError ? (mutation.error?.message ?? "The turn failed.") : null,
+    mutation.isPending || abortRef.current !== null,
+    liveError,
   );
 
   return {
@@ -266,7 +310,7 @@ export function useConversation(chatId: string): Conversation {
     isPending: history.isPending,
     isError: history.isError,
     refetch: () => void history.refetch(),
-    isStreaming: mutation.isPending,
+    isStreaming: mutation.isPending || abortRef.current !== null,
     send,
     stop,
     pendingElicitation: elicitationRef.current,
@@ -290,14 +334,20 @@ function buildLiveMessages(
     },
   ];
   // Always show the assistant row while a turn is live (even before the first
-  // token, so the "Thinking…" indicator appears) and on error.
-  if (isStreaming || error !== null) {
+  // token, so the "Thinking…" indicator appears), on error, and while a
+  // completed initial turn is waiting for canonical history hydration.
+  if (
+    isStreaming ||
+    error !== null ||
+    turn.assistantText.length > 0 ||
+    turn.assistantReasoning.length > 0
+  ) {
     messages.push({
       id: turn.assistantId,
       role: "assistant",
       text: turn.assistantText,
       reasoning: turn.assistantReasoning,
-      status: error !== null ? "error" : "streaming",
+      status: error !== null ? "error" : isStreaming ? "streaming" : "complete",
       error: error ?? undefined,
     });
   }

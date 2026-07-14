@@ -7,7 +7,6 @@ import { Link, useRoute } from "wouter";
 
 import { AppSidebar } from "@/components/app-sidebar";
 import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
 import {
   SidebarInset,
   SidebarProvider,
@@ -55,7 +54,7 @@ export function AppShell({ children }: PropsWithChildren) {
       <SidebarInset className="h-svh min-h-0">
         <header
           className="
-          flex h-12 shrink-0 items-center gap-2 border-b border-border px-2
+          flex h-12 shrink-0 items-center gap-2 px-2
         "
         >
           {isChat ? (
@@ -72,7 +71,6 @@ export function AppShell({ children }: PropsWithChildren) {
           ) : (
             <SidebarTrigger />
           )}
-          <Separator className="mr-1" orientation="vertical" />
           <h1 className="min-w-0 truncate font-heading text-base font-semibold">
             {title}
           </h1>

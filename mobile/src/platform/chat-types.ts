@@ -76,6 +76,33 @@ export interface CreateChatInput {
   title?: string;
 }
 
+/** Mirrors `ChatRuntimeConfigInput` from `@angel-engine/daemon-api/chat`. */
+export interface DaemonRuntimeConfigInput {
+  cwd?: string;
+  runtime?: string;
+}
+
+/** Mirrors `ChatRuntimeConfigOption` from `@angel-engine/daemon-api/chat`. */
+export interface DaemonRuntimeConfigOption {
+  description?: string | null;
+  label: string;
+  value: string;
+}
+
+/**
+ * Settings projection of `ChatRuntimeConfig`. The daemon obtains these values
+ * from the runtime adapter, keeping provider-specific option catalogs out of
+ * the mobile UI.
+ */
+export interface DaemonRuntimeConfig {
+  canSetModel?: boolean;
+  canSetReasoningEffort?: boolean;
+  currentModel?: string | null;
+  currentReasoningEffort?: string | null;
+  models: DaemonRuntimeConfigOption[];
+  reasoningEfforts: DaemonRuntimeConfigOption[];
+}
+
 /**
  * One content part of a chat message. A narrowed projection of the
  * `ChatHistoryMessagePart` union from `@angel-engine/daemon-api/chat`: the mobile

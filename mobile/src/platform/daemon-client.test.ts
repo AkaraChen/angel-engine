@@ -68,6 +68,31 @@ describe("createDaemonClient", () => {
     });
   });
 
+  it("requests runtime config for the selected runtime and project path", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      jsonResponse({
+        canSetModel: true,
+        canSetReasoningEffort: true,
+        currentModel: "sonnet",
+        currentReasoningEffort: "high",
+        models: [{ label: "Sonnet", value: "sonnet" }],
+        reasoningEfforts: [{ label: "High", value: "high" }],
+      }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const client = createDaemonClient({ baseUrl: "", token: null });
+    await client.inspectRuntimeConfig({ runtime: "claude", cwd: "/repo" });
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/chats/runtime-config",
+      expect.objectContaining({
+        method: "POST",
+        body: JSON.stringify({ runtime: "claude", cwd: "/repo" }),
+      }),
+    );
+  });
+
   it("throws a legible error when the response is HTML (static fallback)", async () => {
     const fetchMock = vi.fn().mockResolvedValue(
       new Response("<!doctype html><html></html>", {
