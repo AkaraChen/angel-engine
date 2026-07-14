@@ -65,7 +65,8 @@ export function ChatComposer({
 }: ChatComposerProps) {
   const { t } = useTranslation();
   const toast = useToast();
-  const { mentionedFiles, pasteSourceUrl, reset, selectedSkills } = controller;
+  const { getMarkdown, mentionedFiles, pasteSourceUrl, reset, selectedSkills } =
+    controller;
 
   const handleSubmit = useCallback(
     async (message: PromptInputMessage) => {
@@ -83,9 +84,10 @@ export function ChatComposer({
         selectedSkills,
         text: appendPasteSourceUrl(message.text, pasteSourceUrl),
       });
-      reset();
+      if (getMarkdown() === message.text) reset();
     },
     [
+      getMarkdown,
       mentionedFiles,
       onBeforeSubmit,
       pasteSourceUrl,

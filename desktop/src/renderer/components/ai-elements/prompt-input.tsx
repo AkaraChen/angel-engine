@@ -210,7 +210,7 @@ export type PromptInputFile = PromptInputSubmittedFile & {
 export interface TextInputContext {
   value: string;
   setInput: (v: string) => void;
-  clear: () => void;
+  clear: (expectedValue?: string) => void;
 }
 
 export interface PromptInputControllerProps {
@@ -275,7 +275,15 @@ export function PromptInputProvider({
 }: PromptInputProviderProps) {
   // ----- textInput state
   const [textInput, setTextInput] = useState(initialTextInput);
-  const clearInput = useCallback(() => setTextInput(""), []);
+  const clearInput = useCallback(
+    (expectedValue?: string) =>
+      setTextInput((currentValue) =>
+        expectedValue === undefined || currentValue === expectedValue
+          ? ""
+          : currentValue,
+      ),
+    [],
+  );
 
   // ----- attachments state (global when wrapped)
   const [attachmentFiles, setAttachmentFiles] = useState<PromptInputFile[]>([]);
@@ -934,7 +942,7 @@ export function PromptInput({
         const clearSubmittedInput = () => {
           clear();
           if (usingProvider) {
-            controller.textInput.clear();
+            controller.textInput.clear(text);
           }
         };
         const reportSubmitError = (error: unknown) => {
