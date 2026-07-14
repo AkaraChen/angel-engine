@@ -1,18 +1,28 @@
 import { mkdir, mkdtemp, readFile, stat, writeFile } from "node:fs/promises";
 import { createHash } from "node:crypto";
+import { createServer, type Server } from "node:http";
 import os from "node:os";
 import path from "node:path";
 import { spawn, type ChildProcess } from "node:child_process";
 import { afterEach, describe, expect, it } from "vitest";
-import { WebSocket } from "ws";
+import { WebSocket, WebSocketServer } from "ws";
 import { createDaemon, type Daemon } from "./index";
 
 const daemons: Daemon[] = [];
 const children: ChildProcess[] = [];
+const mobileDevServers: Array<{ http: Server; webSockets: WebSocketServer }> =
+  [];
 
 afterEach(async () => {
   for (const child of children.splice(0)) child.kill("SIGKILL");
   await Promise.all(daemons.splice(0).map((daemon) => daemon.close()));
+  await Promise.all(
+    mobileDevServers.splice(0).map(async ({ http, webSockets }) => {
+      for (const socket of webSockets.clients) socket.terminate();
+      webSockets.close();
+      await new Promise<void>((resolve) => http.close(() => resolve()));
+    }),
+  );
 });
 
 describe("createDaemon", () => {
@@ -173,6 +183,44 @@ describe("createDaemon", () => {
     // Path traversal cannot escape the mobile root.
     const traversal = await fetch(`${baseUrl}/../secret`);
     expect(await traversal.text()).toContain("window.__ANGEL_DAEMON__");
+  });
+
+  it("proxies the mobile Vite server, including HMR WebSockets", async () => {
+    const mobileDevServerUrl = await startMobileDevServer();
+    const dataDir = await mkdtemp(path.join(os.tmpdir(), "angel-daemon-"));
+    const daemon = await createDaemon({
+      dataDir,
+      mobileDevServerUrl,
+      mobilePassword: "correct horse battery staple",
+      serveMobile: true,
+      token: "secret",
+    });
+    daemons.push(daemon);
+    const baseUrl = `http://${daemon.info.host}:${daemon.info.port}`;
+
+    const root = await fetch(`${baseUrl}/`);
+    expect(root.status).toBe(200);
+    expect(await root.text()).toContain(
+      'window.__ANGEL_DAEMON__={"requiresAuth":true}',
+    );
+
+    const module = await fetch(`${baseUrl}/src/main.tsx`);
+    expect(module.status).toBe(200);
+    expect(await module.text()).toBe("export const mobile = true;");
+
+    expect((await fetch(`${baseUrl}/api/health`)).status).toBe(401);
+
+    const socket = new WebSocket(
+      `ws://${daemon.info.host}:${daemon.info.port}/`,
+      "vite-hmr",
+    );
+    const echoed = new Promise<string>((resolve, reject) => {
+      socket.once("error", reject);
+      socket.once("open", () => socket.send("ping"));
+      socket.once("message", (message) => resolve(message.toString()));
+    });
+    await expect(echoed).resolves.toBe("echo:ping");
+    socket.close();
   });
 
   it("exchanges the mobile password for a session token via pairing", async () => {
@@ -440,4 +488,34 @@ function spawnSleep() {
   return process.platform === "win32"
     ? spawn("powershell", ["-NoProfile", "-Command", "Start-Sleep -Seconds 30"])
     : spawn("sleep", ["30"]);
+}
+
+async function startMobileDevServer(): Promise<string> {
+  const http = createServer((request, response) => {
+    if (request.url === "/src/main.tsx") {
+      response.setHeader("content-type", "text/javascript");
+      response.end("export const mobile = true;");
+      return;
+    }
+    response.setHeader("content-type", "text/html");
+    response.end("<!doctype html><head></head><body>mobile dev</body>");
+  });
+  const webSockets = new WebSocketServer({ noServer: true });
+  http.on("upgrade", (request, socket, head) => {
+    webSockets.handleUpgrade(request, socket, head, (webSocket) => {
+      webSocket.on("message", (message) => {
+        webSocket.send(`echo:${message.toString()}`);
+      });
+    });
+  });
+  await new Promise<void>((resolve, reject) => {
+    http.once("error", reject);
+    http.listen(0, "127.0.0.1", resolve);
+  });
+  mobileDevServers.push({ http, webSockets });
+  const address = http.address();
+  if (address === null || typeof address === "string") {
+    throw new Error("Mobile development test server did not bind a TCP port.");
+  }
+  return `http://127.0.0.1:${address.port}`;
 }

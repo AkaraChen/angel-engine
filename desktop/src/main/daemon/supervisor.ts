@@ -16,10 +16,10 @@ import {
   DAEMON_INFO_CHANNEL,
 } from "../../shared/daemon";
 import {
-  MIN_MOBILE_PASSWORD_LENGTH,
   MOBILE_HOSTING_CHANGED_CHANNEL,
   sanitizeMobileHostingConfig,
 } from "../../shared/mobile-hosting";
+import { getMobileDevServerUrl } from "./mobile-dev-server";
 import {
   mobileHostingConfigEquals,
   readMobileHostingConfig,
@@ -56,7 +56,7 @@ function getMobileConfig(): MobileHostingConfig {
 // Serving the mobile bundle requires both the toggle and a pairing password —
 // without a password there is no safe way to expose the LAN surface.
 function mobileServingEnabled(config: MobileHostingConfig): boolean {
-  return config.enabled && config.password.length >= MIN_MOBILE_PASSWORD_LENGTH;
+  return config.enabled && config.password.length > 0;
 }
 
 function buildDaemonArgs(): string[] {
@@ -70,15 +70,26 @@ function buildDaemonArgs(): string[] {
     "--host",
     serve ? config.host : "127.0.0.1",
     "--port",
-    "0",
+    String(serve ? config.port : 0),
     "--version",
     app.getVersion(),
     ...(app.isPackaged ? ["--packaged"] : []),
   ];
   if (serve) {
-    const mobileDir = resolveMobileDir();
-    if (mobileDir !== undefined) {
-      args.push("--serve-mobile", "--mobile-dir", mobileDir);
+    if (app.isPackaged) {
+      const mobileDir = resolveMobileDir();
+      if (mobileDir !== undefined) {
+        args.push("--serve-mobile", "--mobile-dir", mobileDir);
+      }
+    } else {
+      const mobileDevServerUrl = getMobileDevServerUrl();
+      if (mobileDevServerUrl !== undefined) {
+        args.push(
+          "--serve-mobile",
+          "--mobile-dev-server-url",
+          mobileDevServerUrl,
+        );
+      }
     }
   }
   return args;
@@ -97,12 +108,18 @@ function currentMobileState(): MobileHostingState {
   const config = getMobileConfig();
   const serve = mobileServingEnabled(config);
   const port = connection.status === "available" ? connection.info.port : null;
-  const serving = port !== null && serve && resolveMobileDir() !== undefined;
+  const serving =
+    port !== null &&
+    serve &&
+    (app.isPackaged
+      ? resolveMobileDir() !== undefined
+      : getMobileDevServerUrl() !== undefined);
   return {
     available: serving,
     enabled: config.enabled,
-    hasPassword: config.password.length >= MIN_MOBILE_PASSWORD_LENGTH,
+    hasPassword: config.password.length > 0,
     host: config.host,
+    listenPort: config.port,
     port,
     url: serve ? resolveMobileUrl(config.host, port) : null,
   };
@@ -127,19 +144,11 @@ export async function setMobileHostingConfig(
   // renderer never has to receive the secret just to edit other fields.
   const hasNewPassword =
     typeof input.password === "string" && input.password.length > 0;
-  if (
-    hasNewPassword &&
-    input.password !== undefined &&
-    input.password.length < MIN_MOBILE_PASSWORD_LENGTH
-  ) {
-    throw new TypeError(
-      `Pairing password must be at least ${MIN_MOBILE_PASSWORD_LENGTH} characters.`,
-    );
-  }
   const next = sanitizeMobileHostingConfig({
     enabled: input.enabled,
     host: input.host,
     password: hasNewPassword ? input.password : previous.password,
+    port: input.port,
   });
   mobileConfig = next;
   writeMobileHostingConfig(next);

@@ -5,8 +5,6 @@ import {
 } from "node:crypto";
 const VERIFIER_BYTES = 32;
 
-export const MIN_MOBILE_PASSWORD_LENGTH = 12;
-
 export interface MobileAuth {
   salt: Buffer;
   sessionToken: string;
@@ -19,11 +17,6 @@ export interface MobileAuth {
  * token cannot be used as an offline password oracle.
  */
 export async function createMobileAuth(password: string): Promise<MobileAuth> {
-  if (password.length < MIN_MOBILE_PASSWORD_LENGTH) {
-    throw new TypeError(
-      `Mobile pairing password must be at least ${MIN_MOBILE_PASSWORD_LENGTH} characters.`,
-    );
-  }
   const salt = randomBytes(16);
   return {
     salt,

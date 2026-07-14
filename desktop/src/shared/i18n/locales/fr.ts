@@ -194,10 +194,15 @@ export const fr = {
         hostTitle: "Adresse d’écoute",
         passwordDescription:
           "Mot de passe qu’un téléphone doit saisir pour s’appairer au démon et recevoir un jeton d’accès.",
-        passwordSetPlaceholder: "Laisser vide pour conserver",
+        passwordDialogDescription:
+          "Saisissez le mot de passe qu’un téléphone utilisera pour s’appairer avec cet ordinateur.",
+        passwordDialogTitle: "Définir le mot de passe d’appairage",
+        passwordReset: "Réinitialiser le mot de passe",
+        passwordSet: "Définir le mot de passe",
         passwordTitle: "Mot de passe d’appairage",
-        passwordTooShort: "Utilisez au moins {{count}} caractères.",
-        passwordUnsetPlaceholder: "Définir un mot de passe",
+        portDescription:
+          "Port TCP d’écoute. Utilisez 0 pour le choisir automatiquement.",
+        portTitle: "Port d’écoute",
         urlDisabled:
           "Activez la vue mobile pour obtenir un lien à ouvrir sur votre téléphone.",
         urlNeedsPassword:

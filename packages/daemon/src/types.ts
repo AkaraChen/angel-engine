@@ -15,9 +15,11 @@ export interface DaemonOptions {
   mobileDir?: string;
   /** Whether to serve the mobile bundle from `mobileDir`. Defaults to false. */
   serveMobile?: boolean;
+  /** Development-only Vite origin proxied through the daemon's public origin. */
+  mobileDevServerUrl?: string;
   /**
    * Password a mobile client must present to `POST /api/auth/pair` to obtain an
-   * independent random session token. Must contain at least 12 characters.
+   * independent random session token.
    */
   mobilePassword?: string;
   onShutdown?: () => void;

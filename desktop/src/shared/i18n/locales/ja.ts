@@ -194,10 +194,15 @@ export const ja = {
         hostTitle: "リッスンアドレス",
         passwordDescription:
           "スマートフォンがデーモンとペアリングしてアクセストークンを受け取るために入力するパスワード。",
-        passwordSetPlaceholder: "変更しない場合は空欄",
+        passwordDialogDescription:
+          "スマートフォンがこのコンピューターとペアリングするときに使用するパスワードを入力します。",
+        passwordDialogTitle: "ペアリングパスワードを設定",
+        passwordReset: "パスワードをリセット",
+        passwordSet: "パスワードを設定",
         passwordTitle: "ペアリングパスワード",
-        passwordTooShort: "{{count}}文字以上で入力してください。",
-        passwordUnsetPlaceholder: "パスワードを設定",
+        portDescription:
+          "待ち受ける TCP ポート。0 を指定すると自動的に選択されます。",
+        portTitle: "リッスンポート",
         urlDisabled:
           "モバイル表示を有効にすると、スマートフォンで開けるリンクが表示されます。",
         urlNeedsPassword:

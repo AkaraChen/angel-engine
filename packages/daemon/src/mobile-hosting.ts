@@ -2,6 +2,7 @@ import type { Hono } from "hono";
 
 import { readFile } from "node:fs/promises";
 import path from "node:path";
+import { injectMobileBootstrap } from "./mobile-index";
 
 const CONTENT_TYPES: Record<string, string> = {
   ".css": "text/css; charset=utf-8",
@@ -62,13 +63,7 @@ function resolveWithinRoot(
  */
 async function buildIndexHtml(mobileDir: string): Promise<string> {
   const html = await readFile(path.join(mobileDir, "index.html"), "utf8");
-  const bootstrap = `<script>window.__ANGEL_DAEMON__=${JSON.stringify({
-    requiresAuth: true,
-  })};</script>`;
-  if (html.includes("<head>")) {
-    return html.replace("<head>", `<head>${bootstrap}`);
-  }
-  return `${bootstrap}${html}`;
+  return injectMobileBootstrap(html);
 }
 
 /**

@@ -1,4 +1,7 @@
-import type { MobileHostingConfig } from "../../shared/mobile-hosting";
+import type {
+  MobileHostingConfig,
+  MobileHostingListenAddress,
+} from "../../shared/mobile-hosting";
 
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import os from "node:os";
@@ -19,7 +22,7 @@ export function readMobileHostingConfig(): MobileHostingConfig {
       JSON.parse(readFileSync(configPath(), "utf8")),
     );
   } catch {
-    return { enabled: false, host: DEFAULT_MOBILE_HOST, password: "" };
+    return { enabled: false, host: DEFAULT_MOBILE_HOST, password: "", port: 0 };
   }
 }
 
@@ -59,8 +62,36 @@ export function mobileHostingConfigEquals(
   b: MobileHostingConfig,
 ) {
   return (
-    a.enabled === b.enabled && a.host === b.host && a.password === b.password
+    a.enabled === b.enabled &&
+    a.host === b.host &&
+    a.password === b.password &&
+    a.port === b.port
   );
+}
+
+export function listMobileHostingListenAddresses(): MobileHostingListenAddress[] {
+  const addresses = Object.entries(os.networkInterfaces()).flatMap(
+    ([interfaceName, entries]) =>
+      (entries ?? [])
+        .filter((entry) => entry.family === "IPv4" && !entry.internal)
+        .map((entry) => ({ address: entry.address, interfaceName })),
+  );
+
+  return [
+    { address: DEFAULT_MOBILE_HOST, interfaceName: "*" },
+    ...addresses
+      .filter(
+        (candidate, index, candidates) =>
+          candidates.findIndex(
+            (other) => other.address === candidate.address,
+          ) === index,
+      )
+      .sort(
+        (a, b) =>
+          a.interfaceName.localeCompare(b.interfaceName) ||
+          a.address.localeCompare(b.address),
+      ),
+  ];
 }
 
 /**

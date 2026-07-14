@@ -1,11 +1,15 @@
 import { Check, Copy } from "@phosphor-icons/react";
 import { useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { MIN_MOBILE_PASSWORD_LENGTH } from "@shared/mobile-hosting";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import {
+  NativeSelect,
+  NativeSelectOption,
+} from "@/components/ui/native-select";
 import { Switch } from "@/components/ui/switch";
+import { ResetMobilePasswordDialog } from "@/features/settings/reset-mobile-password-dialog";
 import {
   SettingsGroup,
   SettingsRow,
@@ -14,39 +18,40 @@ import { useMobileHosting } from "@/features/settings/use-mobile-hosting";
 
 export function MobileViewSettings() {
   const { t } = useTranslation();
-  const { isSaving, setEnabled, setHost, setPassword, state } =
-    useMobileHosting();
-  const [hostDraft, setHostDraft] = useState(state.host);
-  const [passwordDraft, setPasswordDraft] = useState("");
+  const {
+    enableWithPassword,
+    isSaving,
+    listenAddresses,
+    setEnabled,
+    setHost,
+    setPassword,
+    setPort,
+    state,
+  } = useMobileHosting();
+  const [portDraft, setPortDraft] = useState(String(state.listenPort));
+  const [passwordDialogOpen, setPasswordDialogOpen] = useState(false);
+  const [enableAfterPassword, setEnableAfterPassword] = useState(false);
   const [copied, setCopied] = useState(false);
 
-  // Adopt the persisted host when it changes elsewhere (e.g. another window).
-  // Adjusting state during render is React's recommended alternative to a
-  // syncing effect here.
-  const lastHostRef = useRef(state.host);
-  if (lastHostRef.current !== state.host) {
-    lastHostRef.current = state.host;
-    setHostDraft(state.host);
+  const lastPortRef = useRef(state.listenPort);
+  if (lastPortRef.current !== state.listenPort) {
+    lastPortRef.current = state.listenPort;
+    setPortDraft(String(state.listenPort));
   }
 
-  const commitHost = () => {
-    const next = hostDraft.trim();
-    if (next.length === 0 || next === state.host) {
-      setHostDraft(state.host);
+  const commitPort = () => {
+    const next = Number(portDraft);
+    if (
+      !Number.isInteger(next) ||
+      next < 0 ||
+      next > 65_535 ||
+      next === state.listenPort
+    ) {
+      setPortDraft(String(state.listenPort));
       return;
     }
-    void setHost(next);
+    void setPort(next);
   };
-
-  const commitPassword = () => {
-    const next = passwordDraft;
-    if (next.length < MIN_MOBILE_PASSWORD_LENGTH) return;
-    void setPassword(next).then(() => setPasswordDraft(""));
-  };
-
-  const passwordTooShort =
-    passwordDraft.length > 0 &&
-    passwordDraft.length < MIN_MOBILE_PASSWORD_LENGTH;
 
   const copyUrl = () => {
     if (state.url === null) return;
@@ -54,6 +59,23 @@ export function MobileViewSettings() {
       setCopied(true);
       window.setTimeout(setCopied, 1500, false);
     });
+  };
+
+  const setMobileEnabled = (enabled: boolean) => {
+    if (enabled && !state.hasPassword) {
+      setEnableAfterPassword(true);
+      setPasswordDialogOpen(true);
+      return;
+    }
+    void setEnabled(enabled);
+  };
+  const openPasswordDialog = () => {
+    setEnableAfterPassword(false);
+    setPasswordDialogOpen(true);
+  };
+  const setPasswordDialog = (open: boolean) => {
+    setPasswordDialogOpen(open);
+    if (!open) setEnableAfterPassword(false);
   };
 
   const urlDescription = !state.enabled
@@ -72,7 +94,7 @@ export function MobileViewSettings() {
             aria-label={t("settings.mobile.enabledTitle")}
             checked={state.enabled}
             disabled={isSaving}
-            onCheckedChange={(checked) => void setEnabled(checked)}
+            onCheckedChange={setMobileEnabled}
           />
         }
         description={t("settings.mobile.enabledDescription")}
@@ -80,54 +102,73 @@ export function MobileViewSettings() {
       />
       <SettingsRow
         after={
-          <Input
-            aria-label={t("settings.mobile.passwordTitle")}
-            aria-invalid={passwordTooShort}
-            autoComplete="off"
-            className="h-8 w-40 bg-background text-sm"
+          <Button
             disabled={isSaving}
-            onBlur={commitPassword}
-            onChange={(event) => setPasswordDraft(event.currentTarget.value)}
-            onKeyDown={(event) => {
-              if (event.key === "Enter") event.currentTarget.blur();
-            }}
-            placeholder={
-              state.hasPassword
-                ? t("settings.mobile.passwordSetPlaceholder")
-                : t("settings.mobile.passwordUnsetPlaceholder")
-            }
-            minLength={MIN_MOBILE_PASSWORD_LENGTH}
-            type="password"
-            value={passwordDraft}
-          />
+            onClick={openPasswordDialog}
+            size="sm"
+            type="button"
+            variant="outline"
+          >
+            {state.hasPassword
+              ? t("settings.mobile.passwordReset")
+              : t("settings.mobile.passwordSet")}
+          </Button>
         }
-        description={
-          passwordTooShort
-            ? t("settings.mobile.passwordTooShort", {
-                count: MIN_MOBILE_PASSWORD_LENGTH,
-              })
-            : t("settings.mobile.passwordDescription")
-        }
+        description={t("settings.mobile.passwordDescription")}
         title={t("settings.mobile.passwordTitle")}
       />
       <SettingsRow
         after={
-          <Input
+          <NativeSelect
             aria-label={t("settings.mobile.hostTitle")}
-            className="h-8 w-40 bg-background text-sm"
-            disabled={isSaving}
-            onBlur={commitHost}
-            onChange={(event) => setHostDraft(event.currentTarget.value)}
-            onKeyDown={(event) => {
-              if (event.key === "Enter") event.currentTarget.blur();
-            }}
-            placeholder="0.0.0.0"
-            spellCheck={false}
-            value={hostDraft}
-          />
+            className="w-56"
+            disabled={isSaving || listenAddresses.length === 0}
+            onChange={(event) => void setHost(event.currentTarget.value)}
+            selectClassName="bg-background"
+            size="sm"
+            value={state.host}
+          >
+            {!listenAddresses.some(
+              (candidate) => candidate.address === state.host,
+            ) && (
+              <NativeSelectOption value={state.host}>
+                {state.host}
+              </NativeSelectOption>
+            )}
+            {listenAddresses.map((candidate) => (
+              <NativeSelectOption
+                key={`${candidate.interfaceName}:${candidate.address}`}
+                value={candidate.address}
+              >
+                {candidate.interfaceName === "*"
+                  ? candidate.address
+                  : `${candidate.interfaceName} — ${candidate.address}`}
+              </NativeSelectOption>
+            ))}
+          </NativeSelect>
         }
         description={t("settings.mobile.hostDescription")}
         title={t("settings.mobile.hostTitle")}
+      />
+      <SettingsRow
+        after={
+          <Input
+            aria-label={t("settings.mobile.portTitle")}
+            className="h-8 w-40 bg-background text-sm"
+            disabled={isSaving}
+            max={65_535}
+            min={0}
+            onBlur={commitPort}
+            onChange={(event) => setPortDraft(event.currentTarget.value)}
+            onKeyDown={(event) => {
+              if (event.key === "Enter") event.currentTarget.blur();
+            }}
+            type="number"
+            value={portDraft}
+          />
+        }
+        description={t("settings.mobile.portDescription")}
+        title={t("settings.mobile.portTitle")}
       />
       <SettingsRow
         after={
@@ -146,6 +187,12 @@ export function MobileViewSettings() {
         }
         description={urlDescription}
         title={t("settings.mobile.urlTitle")}
+      />
+      <ResetMobilePasswordDialog
+        isSaving={isSaving}
+        onOpenChange={setPasswordDialog}
+        onSave={enableAfterPassword ? enableWithPassword : setPassword}
+        open={passwordDialogOpen}
       />
     </SettingsGroup>
   );

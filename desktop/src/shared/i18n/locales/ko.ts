@@ -193,10 +193,15 @@ export const ko = {
         hostTitle: "수신 주소",
         passwordDescription:
           "휴대폰이 데몬과 페어링하고 액세스 토큰을 받기 위해 입력하는 비밀번호입니다.",
-        passwordSetPlaceholder: "변경하지 않으려면 비워 두세요",
+        passwordDialogDescription:
+          "휴대폰이 이 컴퓨터와 페어링할 때 사용할 비밀번호를 입력하세요.",
+        passwordDialogTitle: "페어링 비밀번호 설정",
+        passwordReset: "비밀번호 재설정",
+        passwordSet: "비밀번호 설정",
         passwordTitle: "페어링 비밀번호",
-        passwordTooShort: "{{count}}자 이상 입력하세요.",
-        passwordUnsetPlaceholder: "비밀번호 설정",
+        portDescription:
+          "수신할 TCP 포트입니다. 0을 사용하면 자동으로 선택합니다.",
+        portTitle: "수신 포트",
         urlDisabled:
           "모바일 보기를 켜면 휴대폰에서 열 수 있는 링크가 표시됩니다.",
         urlNeedsPassword:
