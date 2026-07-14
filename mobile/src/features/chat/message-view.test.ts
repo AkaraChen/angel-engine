@@ -107,6 +107,7 @@ describe("toConversation", () => {
       {
         id: "t1",
         name: "bash",
+        summary: "",
         phase: "completed",
         argsText: "ls -la",
         outputText: "file.ts",
@@ -118,7 +119,7 @@ describe("toConversation", () => {
 });
 
 describe("toolCallFromPart", () => {
-  it("prefers the artifact title and marks failures", () => {
+  it("renders the tool identifier as the name with the title as summary", () => {
     const call = toolCallFromPart({
       type: "tool-call",
       toolCallId: "t9",
@@ -127,20 +128,39 @@ describe("toolCallFromPart", () => {
       artifact: {
         id: "t9",
         phase: "failed",
+        kind: "fileChange",
         title: "Write file",
         inputSummary: "src/x.ts",
         rawInput: '{"path":"src/x.ts"}',
         error: { message: "permission denied" },
       },
     });
+    // The identifier (`write`) is the primary name, not the human title.
     expect(call).toMatchObject({
       id: "t9",
-      name: "Write file",
+      name: "write",
+      summary: "Write file",
       phase: "failed",
       argsText: '{"path":"src/x.ts"}',
       errorText: "permission denied",
       isError: true,
     });
+  });
+
+  it("falls back to the artifact kind when no toolName is present", () => {
+    const call = toolCallFromPart({
+      type: "tool-call",
+      artifact: { id: "k1", phase: "running", kind: "command", title: "ls" },
+    });
+    expect(call).toMatchObject({ name: "command", summary: "ls" });
+  });
+
+  it("promotes the summary when there is no identifier at all", () => {
+    const call = toolCallFromPart({
+      type: "tool-call",
+      artifact: { id: "s1", phase: "completed", title: "Do the thing" },
+    });
+    expect(call).toMatchObject({ name: "Do the thing", summary: "" });
   });
 
   it("returns null for a degenerate tool-call part", () => {
@@ -149,7 +169,24 @@ describe("toolCallFromPart", () => {
 });
 
 describe("toolCallFromAction", () => {
-  it("projects a streamed action, defaulting the phase to running", () => {
+  it("renders the action kind as the name with the title as summary", () => {
+    const call = toolCallFromAction({
+      id: "a2",
+      kind: "command",
+      title: "Run command",
+      inputSummary: "npm test",
+    });
+    // Mid-stream the identifier is `kind`; the human title is secondary.
+    expect(call).toMatchObject({
+      id: "a2",
+      name: "command",
+      summary: "Run command",
+      phase: "running",
+      isError: false,
+    });
+  });
+
+  it("promotes the title when the streamed action has no kind", () => {
     const call = toolCallFromAction({
       id: "a1",
       title: "Read file",
@@ -158,6 +195,7 @@ describe("toolCallFromAction", () => {
     expect(call).toMatchObject({
       id: "a1",
       name: "Read file",
+      summary: "",
       phase: "running",
       isError: false,
     });

@@ -66,24 +66,31 @@ export function toolCallFromPart(
   part: DaemonMessagePart,
 ): ConversationToolCall | null {
   const action = part.artifact;
-  const name = firstNonEmpty([
-    action?.title,
-    action?.inputSummary,
-    part.toolName,
-  ]);
+  // The tool identifier (`command`, `Read`, `mcp__x__y`) is the primary label;
+  // the human title/summary is secondary. Keeping them distinct is what surfaces
+  // *which* tool ran rather than only a paraphrase (KIT-146 acceptance).
+  const identifier = firstNonEmpty([part.toolName, action?.kind]);
+  const summary = firstNonEmpty([action?.title, action?.inputSummary]);
   const phase =
     action?.phase ??
-    (part.isError === true ? "failed" : name.length > 0 ? "completed" : "");
-  if (name.length === 0 && phase.length === 0) return null;
+    (part.isError === true
+      ? "failed"
+      : identifier.length > 0 || summary.length > 0
+        ? "completed"
+        : "");
+  if (identifier.length === 0 && summary.length === 0 && phase.length === 0)
+    return null;
 
   const errorText = firstNonEmpty([action?.error?.message]);
   const outputText = firstNonEmpty([
     action?.outputText,
     coerceText(part.result),
   ]);
+  const label = resolveToolLabel(identifier, summary);
   return {
-    id: firstNonEmpty([part.toolCallId, action?.id]) || name,
-    name: name.length > 0 ? name : "Tool call",
+    id: firstNonEmpty([part.toolCallId, action?.id]) || label.name,
+    name: label.name,
+    summary: label.summary,
     phase: phase.length > 0 ? phase : "completed",
     argsText: firstNonEmpty([part.argsText, action?.rawInput]),
     outputText,
@@ -95,23 +102,48 @@ export function toolCallFromPart(
 
 /**
  * Project a streamed tool action (`tool`/`toolDelta` event) into a rendered tool
- * call, mirroring {@link toolCallFromPart} for the live turn.
+ * call, mirroring {@link toolCallFromPart} for the live turn. Mid-stream the
+ * snapshot exposes `kind` (the tool category) as the identifier; the persisted
+ * part carries the precise `toolName` once history refetches.
  */
 export function toolCallFromAction(
   action: DaemonToolAction,
 ): ConversationToolCall | null {
-  const name = firstNonEmpty([action.title, action.inputSummary, action.kind]);
+  const identifier = firstNonEmpty([action.kind]);
+  const summary = firstNonEmpty([action.title, action.inputSummary]);
   const phase = action.phase ?? "";
-  if (name.length === 0 && phase.length === 0) return null;
+  if (identifier.length === 0 && summary.length === 0 && phase.length === 0)
+    return null;
   const errorText = firstNonEmpty([action.error?.message]);
+  const label = resolveToolLabel(identifier, summary);
   return {
-    id: action.id ?? name,
-    name: name.length > 0 ? name : "Tool call",
+    id: action.id ?? label.name,
+    name: label.name,
+    summary: label.summary,
     phase: phase.length > 0 ? phase : "running",
     argsText: firstNonEmpty([action.rawInput, action.inputSummary]),
     outputText: firstNonEmpty([action.outputText]),
     errorText,
     isError: isFailedToolPhase(phase) || errorText.length > 0,
+  };
+}
+
+/**
+ * Decide the primary name and secondary summary. Prefer the tool identifier as
+ * the name; if none exists, promote the summary so the card is never nameless,
+ * and drop the now-redundant secondary line. Also collapse the secondary line
+ * when it merely repeats the identifier.
+ */
+function resolveToolLabel(
+  identifier: string,
+  summary: string,
+): { name: string; summary: string } {
+  if (identifier.length === 0) {
+    return { name: summary.length > 0 ? summary : "Tool call", summary: "" };
+  }
+  return {
+    name: identifier,
+    summary: summary === identifier ? "" : summary,
   };
 }
 

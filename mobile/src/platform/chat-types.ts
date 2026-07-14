@@ -127,8 +127,18 @@ export interface DaemonMessagePart {
 export interface ConversationToolCall {
   /** Stable identity (tool-call id or action id) used for React keys + upserts. */
   id: string;
-  /** Human label: title / input summary / tool name. */
+  /**
+   * The actual tool identifier — `toolName` for a persisted part, `kind` for a
+   * streamed action — always rendered so the transcript shows *which* tool ran
+   * (e.g. `command`, `Read`, `mcp__x__y`), not just a human paraphrase.
+   */
   name: string;
+  /**
+   * The human action label (`title` / `inputSummary`) shown as secondary text
+   * beneath {@link name}. Empty when the daemon gave no summary, or when it was
+   * promoted to {@link name} because no tool identifier was available.
+   */
+  summary: string;
   /** Raw lifecycle phase from the daemon (see {@link DaemonToolAction.phase}). */
   phase: string;
   /** Rendered input (args text / raw input), possibly empty. */

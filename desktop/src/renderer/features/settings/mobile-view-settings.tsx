@@ -1,7 +1,7 @@
 import { Check, Copy } from "@phosphor-icons/react";
+import { MIN_MOBILE_PASSWORD_LENGTH } from "@shared/mobile-hosting";
 import { useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { MIN_MOBILE_PASSWORD_LENGTH } from "@shared/mobile-hosting";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";

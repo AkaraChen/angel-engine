@@ -356,7 +356,9 @@ function toolCallToPart(call: ConversationToolCall): DaemonMessagePart {
     artifact: {
       id: call.id,
       phase: call.phase,
-      title: call.name,
+      // `name` reprojects via `toolName`; keep the human summary as the title so
+      // the round-trip preserves both the identifier and its secondary label.
+      title: call.summary,
       outputText: call.outputText,
       error: call.errorText.length > 0 ? { message: call.errorText } : null,
     },

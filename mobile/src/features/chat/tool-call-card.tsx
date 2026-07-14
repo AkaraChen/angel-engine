@@ -45,10 +45,11 @@ export function ToolCallCard({ call }: { call: ConversationToolCall }) {
       <ToolCallHeader
         details={hasDetails}
         failed={failed}
+        name={call.name}
         open={isOpen}
         phase={call.phase}
         running={running}
-        title={call.name}
+        summary={call.summary}
       />
       {hasDetails ? (
         <CollapsibleContent
@@ -78,23 +79,30 @@ export function ToolCallCard({ call }: { call: ConversationToolCall }) {
 function ToolCallHeader({
   details,
   failed,
+  name,
   open,
   phase,
   running,
-  title,
+  summary,
 }: {
   details: boolean;
   failed: boolean;
+  name: string;
   open: boolean;
   phase: string;
   running: boolean;
-  title: string;
+  summary: string;
 }) {
   const content = (
     <>
       <ToolStatusIcon failed={failed} running={running} />
-      <span className="min-w-0 flex-1 truncate font-medium text-foreground/90">
-        {title}
+      <span className="flex min-w-0 flex-1 flex-col">
+        <span className="truncate font-medium text-foreground/90">{name}</span>
+        {summary.length > 0 ? (
+          <span className="truncate text-xs text-muted-foreground/75">
+            {summary}
+          </span>
+        ) : null}
       </span>
       <span className="shrink-0 text-xs text-muted-foreground/75">
         {formatPhase(phase)}
