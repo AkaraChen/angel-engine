@@ -11,7 +11,12 @@
 
 /** Mirrors `WorkspaceToolGitStatus` from `@angel-engine/daemon-api/workspace-tools`. */
 export type WorkspaceGitStatus =
-  "added" | "deleted" | "ignored" | "modified" | "renamed" | "untracked";
+  | "added"
+  | "deleted"
+  | "ignored"
+  | "modified"
+  | "renamed"
+  | "untracked";
 
 /** Mirrors `WorkspaceToolGitStatusEntry`. */
 export interface WorkspaceGitStatusEntry {

@@ -8,8 +8,8 @@ exports.default = async function notarizeDmgArtifact(event) {
     return;
   }
 
-  const process = require("node:process");
   const { notarize } = require("@electron/notarize");
+  const process = require("node:process");
 
   await notarize({
     appPath: event.file,
