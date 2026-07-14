@@ -190,7 +190,20 @@ export interface LocaleResourceTranslationSettingsTabs {
   appearance: string;
   archived: string;
   danger: string;
+  mobile: string;
   workspace: string;
+}
+
+export interface LocaleResourceTranslationSettingsMobile {
+  copied: string;
+  copy: string;
+  enabledDescription: string;
+  enabledTitle: string;
+  hostDescription: string;
+  hostTitle: string;
+  urlDisabled: string;
+  urlPending: string;
+  urlTitle: string;
 }
 
 export interface LocaleResourceTranslationSettingsWorkspace {
@@ -205,6 +218,7 @@ export interface LocaleResourceTranslationSettings {
   archived: LocaleResourceTranslationSettingsArchived;
   danger: LocaleResourceTranslationSettingsDanger;
   description: string;
+  mobile: LocaleResourceTranslationSettingsMobile;
   tabs: LocaleResourceTranslationSettingsTabs;
   title: string;
   workspace: LocaleResourceTranslationSettingsWorkspace;

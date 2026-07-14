@@ -1,6 +1,8 @@
 export const TIPC_CHANNELS = [
   "appReadClipboardSourceUrl",
   "appSetLanguage",
+  "daemonMobileHostingGet",
+  "daemonMobileHostingSet",
   "chatsArchive",
   "chatsArchivedDelete",
   "chatsArchivedDeleteImpact",

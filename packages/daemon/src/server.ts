@@ -7,12 +7,25 @@ import path from "node:path";
 import { serve } from "@hono/node-server";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
+import { registerMobileHosting } from "./mobile-hosting";
 import {
   isProcessId,
   parseKillBody,
   parseRegistryBody,
   ProcessRegistry,
 } from "./processes";
+
+/**
+ * Wildcard bind hosts cannot be dialed back by the desktop shell on every OS
+ * (e.g. macOS refuses `connect(0.0.0.0)`), so the daemon advertises a loopback
+ * address in its handshake/info file while still binding the wildcard for LAN
+ * reachability.
+ */
+function advertiseHostFor(bindHost: string): string {
+  if (bindHost === "0.0.0.0") return "127.0.0.1";
+  if (bindHost === "::" || bindHost === "::0") return "::1";
+  return bindHost;
+}
 
 export interface Daemon {
   app: Hono;
@@ -112,6 +125,12 @@ export async function createDaemon(options: DaemonOptions): Promise<Daemon> {
     return context.json({ ok: true });
   });
 
+  // Static mobile hosting is registered last so the token-guarded `/api/*`
+  // routes above keep precedence over the SPA fallback.
+  if (options.serveMobile === true && options.mobileDir !== undefined) {
+    await registerMobileHosting(app, options.mobileDir, token);
+  }
+
   server = await new Promise<ServerType>((resolve, reject) => {
     const candidate = serve(
       { fetch: app.fetch, hostname: host, port: options.port ?? 0 },
@@ -127,7 +146,7 @@ export async function createDaemon(options: DaemonOptions): Promise<Daemon> {
   }
 
   const info: DaemonInfo = {
-    host,
+    host: advertiseHostFor(host),
     pid: process.pid,
     port: address.port,
     token,

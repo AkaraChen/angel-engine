@@ -182,11 +182,26 @@ export const de = {
         title: "Gefahrenbereich",
       },
       description: "Desktop-Arbeitsbereich konfigurieren.",
+      mobile: {
+        copied: "Kopiert",
+        copy: "Kopieren",
+        enabledDescription:
+          "Die mobile Web-App von diesem Computer bereitstellen, damit andere Geräte im Netzwerk sie öffnen können.",
+        enabledTitle: "Mobile Ansicht bereitstellen",
+        hostDescription:
+          "Netzwerkschnittstelle, an die der Server gebunden wird. Verwenden Sie 0.0.0.0, um anderen Geräten im lokalen Netzwerk den Zugriff zu erlauben.",
+        hostTitle: "Listen-Adresse",
+        urlDisabled:
+          "Aktivieren Sie die mobile Ansicht, um einen Link zu erhalten, den Sie auf Ihrem Telefon öffnen können.",
+        urlPending: "Server wird gestartet…",
+        urlTitle: "Mobile URL",
+      },
       tabs: {
         agents: "Agents",
         appearance: "Darstellung",
         archived: "Archiviert",
         danger: "Erweitert",
+        mobile: "Mobile Ansicht",
         workspace: "Arbeitsbereich",
       },
       title: "Einstellungen",

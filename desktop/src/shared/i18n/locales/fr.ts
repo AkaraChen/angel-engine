@@ -183,11 +183,26 @@ export const fr = {
         title: "Zone dangereuse",
       },
       description: "Configurer le comportement de l’espace de travail.",
+      mobile: {
+        copied: "Copié",
+        copy: "Copier",
+        enabledDescription:
+          "Diffuser l’application web mobile depuis cet ordinateur afin que d’autres appareils du réseau puissent l’ouvrir.",
+        enabledTitle: "Diffuser la vue mobile",
+        hostDescription:
+          "Interface réseau à laquelle le serveur se lie. Utilisez 0.0.0.0 pour autoriser l’accès aux autres appareils de votre réseau local.",
+        hostTitle: "Adresse d’écoute",
+        urlDisabled:
+          "Activez la vue mobile pour obtenir un lien à ouvrir sur votre téléphone.",
+        urlPending: "Démarrage du serveur…",
+        urlTitle: "URL mobile",
+      },
       tabs: {
         agents: "Agents",
         appearance: "Apparence",
         archived: "Archivées",
         danger: "Avancé",
+        mobile: "Vue mobile",
         workspace: "Espace de travail",
       },
       title: "Paramètres",

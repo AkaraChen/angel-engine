@@ -5,8 +5,10 @@ const { values } = parseArgs({
   options: {
     "data-dir": { type: "string" },
     host: { default: "127.0.0.1", type: "string" },
+    "mobile-dir": { type: "string" },
     port: { default: "0", type: "string" },
     "print-handshake": { default: false, type: "boolean" },
+    "serve-mobile": { default: false, type: "boolean" },
     version: { default: "0.1.0", type: "string" },
   },
   strict: true,
@@ -25,7 +27,9 @@ async function main() {
   const daemon = await createDaemon({
     dataDir: values["data-dir"] as string,
     host: values.host,
+    mobileDir: values["mobile-dir"],
     port,
+    serveMobile: values["serve-mobile"],
     version: values.version,
     onShutdown: () => process.exit(0),
   });

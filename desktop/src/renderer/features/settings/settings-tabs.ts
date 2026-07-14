@@ -6,11 +6,12 @@ import {
   Archive as ArchiveIcon,
   Robot as Bot,
   Monitor as ComputerIcon,
+  DeviceMobile as MobileIcon,
   Palette as PaletteIcon,
 } from "@phosphor-icons/react";
 
 type SettingsTab =
-  "agents" | "appearance" | "workspace" | "archived" | "danger";
+  "agents" | "appearance" | "mobile" | "workspace" | "archived" | "danger";
 
 const settingsTabs: Array<{
   icon: ComponentType<Pick<IconProps, "className" | "weight">>;
@@ -19,6 +20,7 @@ const settingsTabs: Array<{
 }> = [
   { icon: Bot, id: "agents", labelKey: "settings.tabs.agents" },
   { icon: PaletteIcon, id: "appearance", labelKey: "settings.tabs.appearance" },
+  { icon: MobileIcon, id: "mobile", labelKey: "settings.tabs.mobile" },
   { icon: ComputerIcon, id: "workspace", labelKey: "settings.tabs.workspace" },
   { icon: ArchiveIcon, id: "archived", labelKey: "settings.tabs.archived" },
   { icon: AlertTriangle, id: "danger", labelKey: "settings.tabs.danger" },

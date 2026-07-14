@@ -21,6 +21,7 @@ import { Switch } from "@/components/ui/switch";
 import { ArchivedSettingsPanel } from "@/features/settings/archived-settings-panel";
 import { BuiltinAgentsSettingsGroup } from "@/features/settings/builtin-agent-settings";
 import { CustomAgentsSettingsGroup } from "@/features/settings/custom-agent-settings";
+import { MobileViewSettings } from "@/features/settings/mobile-view-settings";
 import {
   SettingsGroup,
   SettingsRow,
@@ -366,6 +367,16 @@ export function SettingsPage({
                   title={t("settings.appearance.language")}
                 />
               </SettingsGroup>
+            </div>
+          ) : null}
+
+          {activeTab === "mobile" ? (
+            <div
+              aria-labelledby={`${tabPanelId}-mobile-tab`}
+              id={`${tabPanelId}-mobile`}
+              role="tabpanel"
+            >
+              <MobileViewSettings />
             </div>
           ) : null}
 

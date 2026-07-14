@@ -97,6 +97,22 @@ function copyRuntimePath(buildPath: string, relativePath: string) {
   );
 }
 
+// Ship the built mobile web bundle inside the app so the daemon can serve it to
+// phones on the LAN. Resolved at runtime via `app.getAppPath()/mobile`.
+function copyMobileBundle(buildPath: string) {
+  const source = path.resolve(workspaceRoot, "mobile", "dist");
+  if (!fs.existsSync(path.join(source, "index.html"))) {
+    throw new Error(
+      "Mobile bundle not found at mobile/dist. Run `pnpm run runtime:build` first.",
+    );
+  }
+  fs.cpSync(source, path.join(buildPath, "mobile"), {
+    dereference: true,
+    force: true,
+    recursive: true,
+  });
+}
+
 function resolveRuntimeModulePackageJson(moduleName: string): string {
   const paths = [projectRoot, workspaceRoot];
   const parentModuleName = nativeRuntimeModuleParents.get(moduleName);
@@ -160,6 +176,7 @@ const config: ForgeConfig = {
   hooks: {
     packageAfterCopy: async (_config, buildPath) => {
       copyRuntimePath(buildPath, "drizzle");
+      copyMobileBundle(buildPath);
       copyNativeRuntimeDependencies(buildPath);
     },
   },

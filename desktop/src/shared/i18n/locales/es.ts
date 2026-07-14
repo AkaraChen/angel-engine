@@ -183,11 +183,26 @@ export const es = {
         title: "Zona peligrosa",
       },
       description: "Configura el comportamiento del espacio de trabajo.",
+      mobile: {
+        copied: "Copiado",
+        copy: "Copiar",
+        enabledDescription:
+          "Sirve la aplicación web móvil desde este ordenador para que otros dispositivos de tu red puedan abrirla.",
+        enabledTitle: "Servir vista móvil",
+        hostDescription:
+          "Interfaz de red a la que se enlaza el servidor. Usa 0.0.0.0 para permitir el acceso de otros dispositivos de tu red local.",
+        hostTitle: "Dirección de escucha",
+        urlDisabled:
+          "Activa la vista móvil para obtener un enlace que puedas abrir en tu teléfono.",
+        urlPending: "Iniciando el servidor…",
+        urlTitle: "URL móvil",
+      },
       tabs: {
         agents: "Agents",
         appearance: "Apariencia",
         archived: "Archivadas",
         danger: "Avanzado",
+        mobile: "Vista móvil",
         workspace: "Espacio de trabajo",
       },
       title: "Configuración",

@@ -181,11 +181,26 @@ export const en = {
         title: "Danger Area",
       },
       description: "Configure desktop workspace behavior.",
+      mobile: {
+        copied: "Copied",
+        copy: "Copy",
+        enabledDescription:
+          "Serve the mobile web app from this computer so other devices on your network can open it.",
+        enabledTitle: "Serve mobile view",
+        hostDescription:
+          "Network interface the server binds to. Use 0.0.0.0 to allow other devices on your local network.",
+        hostTitle: "Listen address",
+        urlDisabled:
+          "Turn on the mobile view to get a link you can open on your phone.",
+        urlPending: "Starting the server…",
+        urlTitle: "Mobile URL",
+      },
       tabs: {
         agents: "Agents",
         appearance: "Appearance",
         archived: "Archived",
         danger: "Advanced",
+        mobile: "Mobile view",
         workspace: "Workspace",
       },
       title: "Settings",

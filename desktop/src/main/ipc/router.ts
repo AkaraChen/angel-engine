@@ -1,8 +1,13 @@
 import type { TipcChannel } from "../../shared/ipc-channels";
+import type { MobileHostingConfig } from "../../shared/mobile-hosting";
 import type { ChatRuntime } from "../features/chat/runtime";
 import { tipc } from "@egoist/tipc/main";
 
 import { type as arkType } from "arktype";
+import {
+  getMobileHostingState,
+  setMobileHostingConfig,
+} from "../daemon/supervisor";
 import { createAgentIpcRouter } from "../features/agents/ipc";
 import { createChatIpcRouter } from "../features/chat/ipc";
 import { projectIpcRouter } from "../features/projects/ipc";
@@ -29,6 +34,12 @@ const appIpcRouter = {
     }
     return setMainLanguage(value);
   }),
+  daemonMobileHostingGet: t.procedure.action(async () =>
+    getMobileHostingState(),
+  ),
+  daemonMobileHostingSet: t.procedure
+    .input<MobileHostingConfig>()
+    .action(async ({ input }) => setMobileHostingConfig(input)),
 };
 
 export function createAppRouter(chatRuntime: ChatRuntime) {

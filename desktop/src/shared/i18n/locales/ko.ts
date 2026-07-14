@@ -182,11 +182,26 @@ export const ko = {
         title: "위험 구역",
       },
       description: "데스크톱 워크스페이스 동작을 설정합니다.",
+      mobile: {
+        copied: "복사됨",
+        copy: "복사",
+        enabledDescription:
+          "이 컴퓨터에서 모바일 웹 앱을 제공하여 네트워크의 다른 기기에서 열 수 있도록 합니다.",
+        enabledTitle: "모바일 보기 제공",
+        hostDescription:
+          "서버가 바인딩할 네트워크 인터페이스입니다. 0.0.0.0을 사용하면 로컬 네트워크의 다른 기기에서 접속할 수 있습니다.",
+        hostTitle: "수신 주소",
+        urlDisabled:
+          "모바일 보기를 켜면 휴대폰에서 열 수 있는 링크가 표시됩니다.",
+        urlPending: "서버를 시작하는 중…",
+        urlTitle: "모바일 URL",
+      },
       tabs: {
         agents: "Agents",
         appearance: "모양",
         archived: "보관됨",
         danger: "고급",
+        mobile: "모바일 보기",
         workspace: "작업 공간",
       },
       title: "설정",

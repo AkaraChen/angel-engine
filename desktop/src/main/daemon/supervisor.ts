@@ -1,6 +1,10 @@
 import type { DaemonInfo } from "@angel-engine/daemon";
 import type { UtilityProcess } from "electron";
 import type { DaemonConnection } from "../../shared/daemon";
+import type {
+  MobileHostingConfig,
+  MobileHostingState,
+} from "../../shared/mobile-hosting";
 
 import { readFile, rm } from "node:fs/promises";
 import path from "node:path";
@@ -10,6 +14,19 @@ import {
   DAEMON_CHANGED_CHANNEL,
   DAEMON_INFO_CHANNEL,
 } from "../../shared/daemon";
+import {
+  MOBILE_HOSTING_CHANGED_CHANNEL,
+  sanitizeMobileHostingConfig,
+} from "../../shared/mobile-hosting";
+import {
+  mobileHostingConfigEquals,
+  readMobileHostingConfig,
+  readMobileHostingRuntimeMarker,
+  resolveMobileDir,
+  resolveMobileUrl,
+  writeMobileHostingConfig,
+  writeMobileHostingRuntimeMarker,
+} from "./mobile-hosting";
 
 const HANDSHAKE_TIMEOUT_MS = 10_000;
 const HEALTH_CHECK_INTERVAL_MS = 2_000;
@@ -24,7 +41,75 @@ let intentionalShutdown = false;
 let respawnAttempt = 0;
 let respawnTimer: NodeJS.Timeout | undefined;
 let healthTimer: NodeJS.Timeout | undefined;
+let mobileConfig: MobileHostingConfig | undefined;
 const connectionListeners = new Set<(connection: DaemonConnection) => void>();
+
+function getMobileConfig(): MobileHostingConfig {
+  if (mobileConfig === undefined) {
+    mobileConfig = readMobileHostingConfig();
+  }
+  return mobileConfig;
+}
+
+function buildDaemonArgs(): string[] {
+  const config = getMobileConfig();
+  const args = [
+    "--data-dir",
+    app.getPath("userData"),
+    "--host",
+    config.enabled ? config.host : "127.0.0.1",
+    "--port",
+    "0",
+    "--version",
+    app.getVersion(),
+  ];
+  if (config.enabled) {
+    const mobileDir = resolveMobileDir();
+    if (mobileDir !== undefined) {
+      args.push("--serve-mobile", "--mobile-dir", mobileDir);
+    }
+  }
+  return args;
+}
+
+function currentMobileState(): MobileHostingState {
+  const config = getMobileConfig();
+  const port = connection.status === "available" ? connection.info.port : null;
+  const serving =
+    port !== null && config.enabled && resolveMobileDir() !== undefined;
+  return {
+    available: serving,
+    enabled: config.enabled,
+    host: config.host,
+    port,
+    url: config.enabled ? resolveMobileUrl(config.host, port) : null,
+  };
+}
+
+function broadcastMobileState() {
+  const state = currentMobileState();
+  for (const window of BrowserWindow.getAllWindows()) {
+    window.webContents.send(MOBILE_HOSTING_CHANGED_CHANNEL, state);
+  }
+}
+
+export function getMobileHostingState(): MobileHostingState {
+  return currentMobileState();
+}
+
+export async function setMobileHostingConfig(
+  input: unknown,
+): Promise<MobileHostingState> {
+  const next = sanitizeMobileHostingConfig(input);
+  const previous = getMobileConfig();
+  mobileConfig = next;
+  writeMobileHostingConfig(next);
+  if (!mobileHostingConfigEquals(previous, next)) {
+    await restartDaemon();
+  }
+  broadcastMobileState();
+  return currentMobileState();
+}
 
 export function subscribeDaemonConnection(
   listener: (connection: DaemonConnection) => void,
@@ -118,6 +203,16 @@ async function tryReattach() {
     await rm(filePath, { force: true });
     return undefined;
   }
+
+  // Only reuse a running daemon when it was launched with the current mobile
+  // hosting config; otherwise it may be bound to the wrong host or (still)
+  // serving the mobile app after the toggle changed while the app was closed.
+  const marker = readMobileHostingRuntimeMarker();
+  if (marker === undefined || !mobileHostingConfigEquals(marker, getMobileConfig())) {
+    await stopDiscoveredDaemon(candidate);
+    await rm(filePath, { force: true });
+    return undefined;
+  }
   return candidate;
 }
 
@@ -135,20 +230,10 @@ async function stopDiscoveredDaemon(candidate: DaemonInfo) {
 async function spawnDaemon() {
   setConnection({ error: "Backend is starting.", status: "unavailable" });
   const daemonEntry = path.join(__dirname, "daemon.js");
-  const nextChild = utilityProcess.fork(
-    daemonEntry,
-    [
-      "--data-dir",
-      app.getPath("userData"),
-      "--host",
-      "127.0.0.1",
-      "--port",
-      "0",
-      "--version",
-      app.getVersion(),
-    ],
-    { stdio: "pipe" },
-  );
+  const launchConfig = getMobileConfig();
+  const nextChild = utilityProcess.fork(daemonEntry, buildDaemonArgs(), {
+    stdio: "pipe",
+  });
   child = nextChild;
   pipeDaemonLogs(nextChild);
 
@@ -156,6 +241,7 @@ async function spawnDaemon() {
     const info = await waitForHandshake(nextChild);
     if (child !== nextChild) return;
     respawnAttempt = 0;
+    writeMobileHostingRuntimeMarker(launchConfig);
     setConnection({ info, status: "available" });
     scheduleHealthCheck();
   } catch (error) {
@@ -263,6 +349,44 @@ function setConnection(next: DaemonConnection) {
   for (const window of BrowserWindow.getAllWindows()) {
     window.webContents.send(DAEMON_CHANGED_CHANNEL, next);
   }
+  // The reachable mobile URL depends on the daemon port, which changes on
+  // every respawn — keep renderers in sync whenever the connection changes.
+  broadcastMobileState();
+}
+
+async function restartDaemon() {
+  if (respawnTimer !== undefined) {
+    clearTimeout(respawnTimer);
+    respawnTimer = undefined;
+  }
+  if (healthTimer !== undefined) {
+    clearTimeout(healthTimer);
+    healthTimer = undefined;
+  }
+  respawnAttempt = 0;
+
+  const active =
+    connection.status === "available" ? connection.info : undefined;
+  const previousChild = child;
+  // Detach the current child so its exit handler no-ops (its `child !==
+  // nextChild` guard now holds) and does not trigger an extra respawn.
+  child = undefined;
+  if (active !== undefined) {
+    try {
+      await fetch(daemonUrl(active, "/api/shutdown"), {
+        headers: authorizationHeaders(active),
+        method: "POST",
+        signal: AbortSignal.timeout(5_000),
+      });
+    } catch (error) {
+      console.warn("Failed to stop daemon for reconfigure.", error);
+      previousChild?.kill();
+    }
+  } else {
+    previousChild?.kill();
+  }
+  await rm(daemonInfoPath(), { force: true });
+  await spawnDaemon();
 }
 
 function pipeDaemonLogs(daemonProcess: UtilityProcess) {

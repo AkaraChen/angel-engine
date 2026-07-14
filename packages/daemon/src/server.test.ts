@@ -1,4 +1,4 @@
-import { mkdtemp, readFile, stat } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, stat, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { spawn, type ChildProcess } from "node:child_process";
@@ -112,6 +112,65 @@ describe("createDaemon", () => {
       method: "POST",
     });
     expect(response.status).toBe(403);
+  });
+
+  it("serves the mobile bundle with token injection and SPA fallback", async () => {
+    const dataDir = await mkdtemp(path.join(os.tmpdir(), "angel-daemon-"));
+    const mobileDir = path.join(dataDir, "mobile");
+    await mkdir(path.join(mobileDir, "assets"), { recursive: true });
+    await writeFile(
+      path.join(mobileDir, "index.html"),
+      "<!doctype html><head></head><body>hi</body>",
+    );
+    await writeFile(
+      path.join(mobileDir, "assets", "app.js"),
+      "console.log('app')",
+    );
+
+    const daemon = await createDaemon({
+      dataDir,
+      mobileDir,
+      serveMobile: true,
+      token: "secret",
+      version: "test",
+    });
+    daemons.push(daemon);
+    const baseUrl = `http://${daemon.info.host}:${daemon.info.port}`;
+
+    // Root serves index.html with the token injected for the mobile client.
+    const root = await fetch(`${baseUrl}/`);
+    expect(root.status).toBe(200);
+    const rootHtml = await root.text();
+    expect(rootHtml).toContain('window.__ANGEL_DAEMON__={"token":"secret"}');
+
+    // Real assets are served with a sensible content type, no token injection.
+    const asset = await fetch(`${baseUrl}/assets/app.js`);
+    expect(asset.status).toBe(200);
+    expect(asset.headers.get("content-type")).toContain("javascript");
+    expect(await asset.text()).toBe("console.log('app')");
+
+    // Deep client-routes fall back to the injected index.html (SPA routing).
+    const deep = await fetch(`${baseUrl}/chat/123`);
+    expect(deep.status).toBe(200);
+    expect(await deep.text()).toContain("window.__ANGEL_DAEMON__");
+
+    // `/api/*` stays behind bearer auth even with static hosting mounted.
+    expect((await fetch(`${baseUrl}/api/health`)).status).toBe(401);
+
+    // Path traversal cannot escape the mobile root.
+    const traversal = await fetch(`${baseUrl}/../secret`);
+    expect(await traversal.text()).toContain("window.__ANGEL_DAEMON__");
+  });
+
+  it("advertises a loopback host when binding the wildcard address", async () => {
+    const dataDir = await mkdtemp(path.join(os.tmpdir(), "angel-daemon-"));
+    const daemon = await createDaemon({
+      dataDir,
+      host: "0.0.0.0",
+      token: "secret",
+    });
+    daemons.push(daemon);
+    expect(daemon.info.host).toBe("127.0.0.1");
   });
 
   it("kills a current descendant of a registered root", async () => {
