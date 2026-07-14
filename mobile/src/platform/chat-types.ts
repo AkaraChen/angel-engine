@@ -77,16 +77,68 @@ export interface CreateChatInput {
 }
 
 /**
+ * A tool action snapshot as the daemon serializes it — the `artifact` carried by
+ * a `tool-call` history part and the `action` of a `tool`/`toolDelta` stream
+ * event both share this shape (`ActionSnapshot` in `@angel-engine/client-napi`).
+ * Only the fields the mobile tool card renders are modeled; the rest still arrive
+ * and are ignored.
+ */
+export interface DaemonToolAction {
+  id?: string;
+  kind?: string | null;
+  /** Lifecycle phase: `proposed` / `running` / `streamingResult` / `completed` / `failed` / … */
+  phase?: string;
+  title?: string | null;
+  inputSummary?: string | null;
+  rawInput?: string | null;
+  outputText?: string;
+  output?: { text?: string }[];
+  error?: { message?: string } | null;
+}
+
+/**
  * One content part of a chat message. A narrowed projection of the
  * `ChatHistoryMessagePart` union from `@angel-engine/daemon-api/chat`: the mobile
- * conversation view only reads the `text` of `text`/`reasoning` parts. Richer
- * parts (tool calls, plans, images) still arrive from the daemon — structural
- * typing lets them satisfy this shape — but their extra fields are intentionally
- * not modeled because the mobile transcript ignores them.
+ * conversation view reads the `text` of `text`/`reasoning` parts and the tool
+ * fields of `tool-call` parts. Other richer parts (plans, images) still arrive
+ * from the daemon — structural typing lets them satisfy this shape — but their
+ * extra fields are intentionally not modeled because the mobile transcript
+ * ignores them.
  */
 export interface DaemonMessagePart {
   type: string;
   text?: string;
+  /** Present on `tool-call` parts (mirrors `ChatToolCallPart`). */
+  toolCallId?: string;
+  toolName?: string;
+  argsText?: string;
+  args?: unknown;
+  result?: unknown;
+  isError?: boolean;
+  artifact?: DaemonToolAction;
+}
+
+/**
+ * A tool call as the mobile transcript renders it: a flat projection of a
+ * `tool-call` history part or a streamed tool action, with the name, lifecycle
+ * phase, input, output, and error text the {@link ConversationMessage} card
+ * needs. Derived in `message-view.ts` so the projection stays pure and testable.
+ */
+export interface ConversationToolCall {
+  /** Stable identity (tool-call id or action id) used for React keys + upserts. */
+  id: string;
+  /** Human label: title / input summary / tool name. */
+  name: string;
+  /** Raw lifecycle phase from the daemon (see {@link DaemonToolAction.phase}). */
+  phase: string;
+  /** Rendered input (args text / raw input), possibly empty. */
+  argsText: string;
+  /** Rendered output text, possibly empty. */
+  outputText: string;
+  /** Error message when the call failed, possibly empty. */
+  errorText: string;
+  /** Whether the call is in a failed/errored terminal state. */
+  isError: boolean;
 }
 
 /** Mirrors `ChatHistoryMessage` from `@angel-engine/daemon-api/chat`. */
@@ -153,13 +205,16 @@ export interface ElicitationResolveInput {
  * The streaming events the daemon emits over SSE while an assistant turn runs
  * (`POST /api/chat-streams`), mirroring the `ChatStreamEvent` union in
  * `@angel-engine/daemon-api/chat`. The mobile view consumes text/reasoning deltas,
- * `elicitation` prompts, and the terminal `result`/`error`/`done` events; the
- * remaining events (chat, plan, tool) still arrive but are ignored.
+ * `tool`/`toolDelta` actions, `elicitation` prompts, and the terminal
+ * `result`/`error`/`done` events; the remaining events (chat, plan) still arrive
+ * but are ignored.
  */
 export type ChatStreamEvent =
   | { type: "delta"; part: "reasoning" | "text"; text: string; turnId?: string }
+  | { type: "tool"; action: DaemonToolAction }
+  | { type: "toolDelta"; action: DaemonToolAction }
   | { type: "elicitation"; elicitation: DaemonElicitation }
-  | { type: "result"; result: { text: string } }
+  | { type: "result"; result: { text: string; content?: DaemonMessagePart[] } }
   | { type: "error"; message: string }
   | { type: "done" };
 
@@ -171,4 +226,6 @@ export interface ConversationMessage {
   reasoning: string;
   status: "complete" | "error" | "streaming";
   error?: string;
+  /** Inline tool calls made during this turn, in arrival order. */
+  toolCalls: ConversationToolCall[];
 }

@@ -41,6 +41,7 @@ import {
 } from "@/components/ui/message-scroller";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Spinner } from "@/components/ui/spinner";
+import { ToolCallCard } from "@/features/chat/tool-call-card";
 import { useConversation } from "@/features/chat/use-conversation";
 
 /**
@@ -98,41 +99,56 @@ export function ChatPage({ chatId }: { chatId: string }) {
 function MessageBubble({ message }: { message: ConversationMessage }) {
   const isUser = message.role === "user";
   const isError = message.status === "error";
+  const hasTools = message.toolCalls.length > 0;
   // Fall back to reasoning when a turn produced only reasoning (no prose) so the
   // bubble is never empty; show "Thinking…" only before any token has arrived.
   const body = message.text.length > 0 ? message.text : message.reasoning;
   const isReasoningOnly =
     message.text.length === 0 && message.reasoning.length > 0;
-  const isTyping = message.status === "streaming" && body.length === 0;
+  // Don't show "Thinking…" once tool cards are on screen — they already convey
+  // that the turn is in progress (parity with the desktop thread).
+  const isTyping =
+    message.status === "streaming" && body.length === 0 && !hasTools;
+  // A pure tool-call turn has cards but no prose/error/typing: skip the bubble.
+  const showBubble = isUser || isError || isTyping || body.length > 0;
 
   return (
     <MessageGroup>
       <Message align={isUser ? "end" : "start"}>
         <MessageContent>
-          <Bubble
-            align={isUser ? "end" : "start"}
-            variant={isError ? "destructive" : isUser ? "default" : "muted"}
-          >
-            <BubbleContent className="whitespace-pre-wrap">
-              {isTyping ? (
-                <Marker>
-                  <MarkerIcon>
-                    <Spinner className="size-3.5" />
-                  </MarkerIcon>
-                  <MarkerContent>Thinking…</MarkerContent>
-                </Marker>
-              ) : isError ? (
-                <span className="flex items-center gap-1.5">
-                  <Warning className="shrink-0" size={16} weight="fill" />
-                  {message.error ?? "The assistant turn failed."}
-                </span>
-              ) : isReasoningOnly ? (
-                <span className="text-muted-foreground italic">{body}</span>
-              ) : (
-                body
-              )}
-            </BubbleContent>
-          </Bubble>
+          {!isUser && hasTools ? (
+            <div className="flex flex-col gap-1.5">
+              {message.toolCalls.map((call) => (
+                <ToolCallCard call={call} key={call.id} />
+              ))}
+            </div>
+          ) : null}
+          {showBubble ? (
+            <Bubble
+              align={isUser ? "end" : "start"}
+              variant={isError ? "destructive" : isUser ? "default" : "muted"}
+            >
+              <BubbleContent className="whitespace-pre-wrap">
+                {isTyping ? (
+                  <Marker>
+                    <MarkerIcon>
+                      <Spinner className="size-3.5" />
+                    </MarkerIcon>
+                    <MarkerContent>Thinking…</MarkerContent>
+                  </Marker>
+                ) : isError ? (
+                  <span className="flex items-center gap-1.5">
+                    <Warning className="shrink-0" size={16} weight="fill" />
+                    {message.error ?? "The assistant turn failed."}
+                  </span>
+                ) : isReasoningOnly ? (
+                  <span className="text-muted-foreground italic">{body}</span>
+                ) : (
+                  body
+                )}
+              </BubbleContent>
+            </Bubble>
+          ) : null}
         </MessageContent>
       </Message>
     </MessageGroup>
