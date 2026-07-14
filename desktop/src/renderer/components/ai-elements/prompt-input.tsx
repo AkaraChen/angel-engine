@@ -64,6 +64,11 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { cn } from "@/platform/utils";
+import {
+  clearRevisionedText,
+  updateRevisionedText,
+  withoutSubmittedItems,
+} from "./draft-submission";
 
 // ============================================================================
 // Helpers
@@ -195,6 +200,7 @@ export interface AttachmentsContext {
   add: (files: File[] | FileList) => void;
   remove: (id: string) => void;
   clear: () => void;
+  clearSubmitted: (files: readonly PromptInputFile[]) => void;
   openFileDialog: () => void;
   fileInputRef: RefObject<HTMLInputElement | null>;
 }
@@ -208,9 +214,10 @@ export type PromptInputFile = PromptInputSubmittedFile & {
 };
 
 export interface TextInputContext {
+  revision: number;
   value: string;
   setInput: (v: string) => void;
-  clear: (expectedValue?: string) => void;
+  clear: (expectedRevision?: number) => void;
 }
 
 export interface PromptInputControllerProps {
@@ -274,14 +281,18 @@ export function PromptInputProvider({
   children,
 }: PromptInputProviderProps) {
   // ----- textInput state
-  const [textInput, setTextInput] = useState(initialTextInput);
+  const [textInput, setTextInput] = useState({
+    revision: 0,
+    value: initialTextInput,
+  });
+  const setInput = useCallback(
+    (value: string) =>
+      setTextInput((current) => updateRevisionedText(current, value)),
+    [],
+  );
   const clearInput = useCallback(
-    (expectedValue?: string) =>
-      setTextInput((currentValue) =>
-        expectedValue === undefined || currentValue === expectedValue
-          ? ""
-          : currentValue,
-      ),
+    (expectedRevision?: number) =>
+      setTextInput((current) => clearRevisionedText(current, expectedRevision)),
     [],
   );
 
@@ -331,6 +342,21 @@ export function PromptInputProvider({
     });
   }, []);
 
+  const clearSubmitted = useCallback(
+    (submittedFiles: readonly PromptInputFile[]) => {
+      const submittedIds = new Set(submittedFiles.map(({ id }) => id));
+      setAttachmentFiles((current) => {
+        for (const file of current) {
+          if (submittedIds.has(file.id) && file.url) {
+            URL.revokeObjectURL(file.url);
+          }
+        }
+        return withoutSubmittedItems(current, submittedFiles);
+      });
+    },
+    [],
+  );
+
   // Keep a ref to attachments for cleanup on unmount (avoids stale closure)
   const attachmentsRef = useRef(attachmentFiles);
   attachmentsRef.current = attachmentFiles;
@@ -355,12 +381,13 @@ export function PromptInputProvider({
     () => ({
       add,
       clear,
+      clearSubmitted,
       fileInputRef,
       files: attachmentFiles,
       openFileDialog,
       remove,
     }),
-    [attachmentFiles, add, remove, clear, openFileDialog],
+    [attachmentFiles, add, remove, clear, clearSubmitted, openFileDialog],
   );
 
   const __registerFileInput = useCallback(
@@ -377,11 +404,12 @@ export function PromptInputProvider({
       attachments,
       textInput: {
         clear: clearInput,
-        setInput: setTextInput,
-        value: textInput,
+        revision: textInput.revision,
+        setInput,
+        value: textInput.value,
       },
     }),
-    [textInput, clearInput, attachments, __registerFileInput],
+    [textInput, setInput, clearInput, attachments, __registerFileInput],
   );
 
   return (
@@ -520,6 +548,7 @@ export function PromptInputActionAddScreenshot({
 export interface PromptInputMessage {
   text: string;
   files: PromptInputSubmittedFile[];
+  submissionRevision?: number;
 }
 
 export type PromptInputProps = Omit<
@@ -536,6 +565,7 @@ export type PromptInputProps = Omit<
   maxFiles?: number;
   // bytes
   maxFileSize?: number;
+  getSubmissionRevision?: () => number;
   onError?: (err: {
     code: "max_files" | "max_file_size" | "accept" | "file_read" | "submit";
     message: string;
@@ -554,6 +584,7 @@ export function PromptInput({
   globalDrop,
   maxFiles,
   maxFileSize,
+  getSubmissionRevision,
   onError,
   onSubmit,
   children,
@@ -747,6 +778,22 @@ export function PromptInput({
     [usingProvider, controller],
   );
 
+  const clearSubmittedAttachments = useCallback(
+    (submittedFiles: readonly PromptInputFile[]) =>
+      usingProvider
+        ? controller?.attachments.clearSubmitted(submittedFiles)
+        : setItems((current) => {
+            const submittedIds = new Set(submittedFiles.map(({ id }) => id));
+            for (const file of current) {
+              if (submittedIds.has(file.id) && file.url) {
+                URL.revokeObjectURL(file.url);
+              }
+            }
+            return withoutSubmittedItems(current, submittedFiles);
+          }),
+    [usingProvider, controller],
+  );
+
   const clearReferencedSources = useCallback(
     () => setReferencedSources([]),
     [],
@@ -757,11 +804,6 @@ export function PromptInput({
   const openFileDialog = usingProvider
     ? controller.attachments.openFileDialog
     : openFileDialogLocal;
-
-  const clear = useCallback(() => {
-    clearAttachments();
-    clearReferencedSources();
-  }, [clearAttachments, clearReferencedSources]);
 
   // Attach drop handlers on nearest form and document (opt-in)
   useEffect(() => {
@@ -849,12 +891,20 @@ export function PromptInput({
     () => ({
       add,
       clear: clearAttachments,
+      clearSubmitted: clearSubmittedAttachments,
       fileInputRef: inputRef,
       files: files.map((item) => ({ ...item, id: item.id })),
       openFileDialog,
       remove,
     }),
-    [files, add, remove, clearAttachments, openFileDialog],
+    [
+      files,
+      add,
+      remove,
+      clearAttachments,
+      clearSubmittedAttachments,
+      openFileDialog,
+    ],
   );
 
   const refsCtx = useMemo<ReferencedSourcesContext>(
@@ -881,6 +931,10 @@ export function PromptInput({
 
       void (async () => {
         const form = event.currentTarget;
+        const submissionRevision = getSubmissionRevision?.();
+        const textRevision = usingProvider
+          ? controller.textInput.revision
+          : undefined;
         const text = usingProvider
           ? controller.textInput.value
           : (() => {
@@ -940,9 +994,12 @@ export function PromptInput({
         }
 
         const clearSubmittedInput = () => {
-          clear();
+          clearSubmittedAttachments(files);
+          setReferencedSources((current) =>
+            withoutSubmittedItems(current, referencedSources),
+          );
           if (usingProvider) {
-            controller.textInput.clear(text);
+            controller.textInput.clear(textRevision);
           }
         };
         const reportSubmitError = (error: unknown) => {
@@ -953,7 +1010,10 @@ export function PromptInput({
         };
 
         try {
-          const result = onSubmit({ files: convertedFiles, text }, event);
+          const result = onSubmit(
+            { files: convertedFiles, submissionRevision, text },
+            event,
+          );
           if (result instanceof Promise) {
             try {
               await result;
@@ -976,7 +1036,16 @@ export function PromptInput({
         });
       });
     },
-    [usingProvider, controller, files, onSubmit, clear, onError],
+    [
+      usingProvider,
+      controller,
+      files,
+      referencedSources,
+      getSubmissionRevision,
+      onSubmit,
+      clearSubmittedAttachments,
+      onError,
+    ],
   );
 
   // Render with or without local provider

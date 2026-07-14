@@ -11,6 +11,7 @@ import type { AttachmentInputError } from "@/features/chat/components/composer/c
 import type { ComposerEditorController } from "@/features/chat/components/composer/use-composer-editor";
 import { useCallback } from "react";
 import { useTranslation } from "react-i18next";
+import { isDraftRevisionCurrent } from "@/components/ai-elements/draft-submission";
 import {
   PromptInput,
   PromptInputProvider,
@@ -65,7 +66,7 @@ export function ChatComposer({
 }: ChatComposerProps) {
   const { t } = useTranslation();
   const toast = useToast();
-  const { getMarkdown, mentionedFiles, pasteSourceUrl, reset, selectedSkills } =
+  const { getRevision, mentionedFiles, pasteSourceUrl, reset, selectedSkills } =
     controller;
 
   const handleSubmit = useCallback(
@@ -84,10 +85,12 @@ export function ChatComposer({
         selectedSkills,
         text: appendPasteSourceUrl(message.text, pasteSourceUrl),
       });
-      if (getMarkdown() === message.text) reset();
+      if (isDraftRevisionCurrent(getRevision(), message.submissionRevision)) {
+        reset();
+      }
     },
     [
-      getMarkdown,
+      getRevision,
       mentionedFiles,
       onBeforeSubmit,
       pasteSourceUrl,
@@ -111,6 +114,7 @@ export function ChatComposer({
   return (
     <PromptInputProvider>
       <PromptInput
+        getSubmissionRevision={getRevision}
         inputGroupClassName={inputGroupClassName}
         multiple
         onError={handleAttachmentError}
