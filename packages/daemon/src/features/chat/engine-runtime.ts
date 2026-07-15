@@ -98,9 +98,9 @@ export function createChatRuntime(registry: ProcessRegistry): ChatRuntime {
 }
 
 async function loadChatSession(chatId: string): Promise<ChatLoadResult> {
-  const chat = requireChat(chatId);
+  const chat = await requireChat(chatId);
   const session = chatSessions.get(chat.id);
-  const cwd = cwdForChat(chat);
+  const cwd = await cwdForChat(chat);
 
   if (!is.nonEmptyString(chat.remoteThreadId) && !session?.hasConversation()) {
     return { chat, messages: [] };
@@ -111,7 +111,7 @@ async function loadChatSession(chatId: string): Promise<ChatLoadResult> {
     cwd,
     remoteId: chat.remoteThreadId ?? undefined,
   });
-  const updatedChat = persistRemoteThreadId(chat, snapshot);
+  const updatedChat = await persistRemoteThreadId(chat, snapshot);
   const messages = conversationMessages(snapshot);
   return {
     chat: updatedChat,
@@ -133,27 +133,28 @@ async function inspectChatRuntimeConfig(
   }
 }
 
-function createChatFromInput(input: ChatCreateInput): Chat {
+async function createChatFromInput(input: ChatCreateInput): Promise<Chat> {
   if (input.creationLocation === "worktree") {
     throw new Error("Worktree chats must be created by sending a message.");
   }
 
   return createChat({
     ...input,
-    cwd: cwdForProjectOrStandalone(input.projectId),
+    cwd: await cwdForProjectOrStandalone(input.projectId),
   });
 }
 
 async function setChatMode(
   input: ChatSetModeInput,
 ): Promise<ChatSetModeResult> {
-  const chat = requireChat(input.chatId);
-  const snapshot = await (await getChatSession(chat)).setMode({
-    cwd: cwdForChat(chat),
+  const chat = await requireChat(input.chatId);
+  const session = await getChatSession(chat);
+  const snapshot = await session.setMode({
+    cwd: await cwdForChat(chat),
     mode: input.mode,
     remoteId: chat.remoteThreadId ?? undefined,
   });
-  const updatedChat = persistRemoteThreadId(chat, snapshot);
+  const updatedChat = await persistRemoteThreadId(chat, snapshot);
   return {
     chat: updatedChat,
     config: runtimeConfigFromConversationSnapshot(snapshot),
@@ -163,21 +164,22 @@ async function setChatMode(
 async function setChatPermissionMode(
   input: ChatSetPermissionModeInput,
 ): Promise<ChatSetPermissionModeResult> {
-  const chat = requireChat(input.chatId);
-  const snapshot = await (await getChatSession(chat)).setPermissionMode({
-    cwd: cwdForChat(chat),
+  const chat = await requireChat(input.chatId);
+  const session = await getChatSession(chat);
+  const snapshot = await session.setPermissionMode({
+    cwd: await cwdForChat(chat),
     mode: input.mode,
     remoteId: chat.remoteThreadId ?? undefined,
   });
-  const updatedChat = persistRemoteThreadId(chat, snapshot);
+  const updatedChat = await persistRemoteThreadId(chat, snapshot);
   return {
     chat: updatedChat,
     config: runtimeConfigFromConversationSnapshot(snapshot),
   };
 }
 
-function setChatRuntime(input: ChatSetRuntimeInput): Chat {
-  const chat = requireChat(input.chatId);
+async function setChatRuntime(input: ChatSetRuntimeInput): Promise<Chat> {
+  const chat = await requireChat(input.chatId);
   const session = chatSessions.get(chat.id);
   if (
     is.nonEmptyString(chat.remoteThreadId) ||
@@ -201,7 +203,7 @@ async function prewarmChat(
     throw new Error("Worktree chats cannot be prewarmed.");
   }
 
-  const key = chatPrewarmKey(input);
+  const key = await chatPrewarmKey(input);
   const existing = chatPrewarms.get(key);
   if (existing) {
     await existing.promise;
@@ -233,7 +235,7 @@ async function streamChat(
   }
 
   const result = await session.sendText({
-    cwd: cwdForChat(chat, input.projectId),
+    cwd: await cwdForChat(chat, input.projectId),
     model: input.model ?? undefined,
     mode: input.mode ?? undefined,
     permissionMode: input.permissionMode ?? undefined,
@@ -250,13 +252,13 @@ async function streamChat(
   });
 
   if (is.nonEmptyString(input.text)) {
-    renameChatFromPrompt(chat.id, input.text);
+    await renameChatFromPrompt(chat.id, input.text);
     void processRegistry.refresh();
   }
   const projected = projectTurnRunResult(result);
-  const finalChat = is.nonEmptyString(projected.remoteThreadId)
+  const finalChat = await (is.nonEmptyString(projected.remoteThreadId)
     ? setChatRemoteThreadId(chat.id, projected.remoteThreadId)
-    : touchChat(chat.id);
+    : touchChat(chat.id));
   const content = projected.content;
 
   return {
@@ -304,26 +306,26 @@ async function prepareChatForSend(input: ChatSendInput): Promise<{
   session: DesktopChatSession;
 }> {
   if (is.nonEmptyString(input.chatId)) {
-    const chat = requireChat(input.chatId);
+    const chat = await requireChat(input.chatId);
     return { chat, isNewChat: false, session: await getChatSession(chat) };
   }
 
   const prewarm = is.nonEmptyString(input.prewarmId)
-    ? takeChatPrewarm(input.prewarmId, input)
+    ? await takeChatPrewarm(input.prewarmId, input)
     : undefined;
   if (prewarm) {
-    const createdChat = createChat({
+    const createdChat = await createChat({
       cwd: prewarm.cwd,
       projectId: prewarm.input.projectId,
       runtime: prewarm.input.runtime,
     });
     chatSessions.set(createdChat.id, prewarm.session);
     void processRegistry.refresh();
-    const chat = persistRemoteThreadId(createdChat, prewarm.snapshot);
+    const chat = await persistRemoteThreadId(createdChat, prewarm.snapshot);
     return { chat, isNewChat: true, session: prewarm.session };
   }
 
-  const chat = createChat({
+  const chat = await createChat({
     cwd: await cwdForNewChat(input),
     projectId: input.projectId,
     runtime: input.runtime,
@@ -331,7 +333,10 @@ async function prepareChatForSend(input: ChatSendInput): Promise<{
   return { chat, isNewChat: true, session: await getChatSession(chat) };
 }
 
-function persistRemoteThreadId(chat: Chat, snapshot: ConversationSnapshot) {
+async function persistRemoteThreadId(
+  chat: Chat,
+  snapshot: ConversationSnapshot,
+): Promise<Chat> {
   if (
     snapshot.remoteKind !== "known" ||
     !is.nonEmptyString(snapshot.remoteId) ||
@@ -353,16 +358,17 @@ function chatPrewarmResult(prewarm: ChatPrewarm): ChatPrewarmResult {
   };
 }
 
-function takeChatPrewarm(
+async function takeChatPrewarm(
   prewarmId: string,
   input: ChatSendInput,
-): ReadyChatPrewarm | undefined {
+): Promise<ReadyChatPrewarm | undefined> {
   const prewarm = chatPrewarms.get(prewarmId);
   if (!prewarm || !isReadyChatPrewarm(prewarm)) return undefined;
 
   chatPrewarms.delete(prewarm.key);
 
-  if (!chatPrewarmMatches(prewarm, input)) {
+  const matches = await chatPrewarmMatches(prewarm, input);
+  if (!matches) {
     closeChatPrewarm(prewarm);
     return undefined;
   }
@@ -379,7 +385,7 @@ async function createChatPrewarm(
   key: string,
 ): Promise<ChatPrewarm> {
   const session = await createChatSession(input.runtime);
-  const cwd = cwdForProjectOrStandalone(input.projectId);
+  const cwd = await cwdForProjectOrStandalone(input.projectId);
   const prewarm: ChatPrewarm = {
     closed: false,
     createdAt: Date.now(),
@@ -408,12 +414,16 @@ async function createChatPrewarm(
   return prewarm;
 }
 
-function chatPrewarmMatches(prewarm: ChatPrewarm, sendInput: ChatSendInput) {
+async function chatPrewarmMatches(
+  prewarm: ChatPrewarm,
+  sendInput: ChatSendInput,
+) {
   if (is.nonEmptyString(sendInput.cwd)) return false;
 
   const prewarmInput = prewarm.input;
+  const sendCwd = await cwdForProjectOrStandalone(sendInput.projectId);
   return (
-    prewarm.cwd === cwdForProjectOrStandalone(sendInput.projectId) &&
+    prewarm.cwd === sendCwd &&
     (prewarmInput.creationLocation ?? "project") ===
       (sendInput.creationLocation ?? "project") &&
     (prewarmInput.projectId ?? null) === (sendInput.projectId ?? null) &&
@@ -421,12 +431,13 @@ function chatPrewarmMatches(prewarm: ChatPrewarm, sendInput: ChatSendInput) {
   );
 }
 
-function chatPrewarmKey(input: ChatPrewarmInput) {
+async function chatPrewarmKey(input: ChatPrewarmInput) {
+  const cwd = await cwdForProjectOrStandalone(input.projectId);
   return JSON.stringify([
     input.runtime ?? null,
     input.projectId ?? null,
     input.creationLocation ?? "project",
-    cwdForProjectOrStandalone(input.projectId),
+    cwd,
   ]);
 }
 

@@ -1,21 +1,23 @@
-import type { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
+import type { Client } from "@libsql/client";
+import type { LibSQLDatabase } from "drizzle-orm/libsql";
 import fs from "node:fs";
 import path from "node:path";
+import { pathToFileURL } from "node:url";
+import { createClient } from "@libsql/client";
 import is from "@sindresorhus/is";
-import BetterSqliteDatabase from "better-sqlite3";
-import { drizzle } from "drizzle-orm/better-sqlite3";
-import { migrate } from "drizzle-orm/better-sqlite3/migrator";
+import { drizzle } from "drizzle-orm/libsql";
+import { migrate } from "drizzle-orm/libsql/migrator";
 
 import { chats, customAgents, projects } from "./schema";
 
-type AppDatabase = BetterSQLite3Database<{
+type AppDatabase = LibSQLDatabase<{
   chats: typeof chats;
   customAgents: typeof customAgents;
   projects: typeof projects;
 }>;
 
-let sqlite: BetterSqliteDatabase.Database | undefined;
-let db: AppDatabase | undefined;
+let client: Client | undefined;
+let databasePromise: Promise<AppDatabase> | undefined;
 let configuration: DatabaseConfiguration | undefined;
 
 export interface DatabaseConfiguration {
@@ -25,35 +27,52 @@ export interface DatabaseConfiguration {
 }
 
 export function configureDatabase(next: DatabaseConfiguration) {
-  if (db !== undefined) throw new Error("Database is already open.");
+  if (databasePromise !== undefined)
+    throw new Error("Database is already open.");
   configuration = next;
 }
 
 export function getDatabase() {
-  if (db) return db;
-
-  const current = requireConfiguration();
-  const dbDirectory = current.dataDir;
-  fs.mkdirSync(dbDirectory, { recursive: true });
-
-  sqlite = new BetterSqliteDatabase(
-    path.join(
-      dbDirectory,
-      current.packaged ? "angel-engine.sqlite" : "angel-engine.dev.sqlite",
-    ),
-  );
-  sqlite.pragma("journal_mode = WAL");
-  sqlite.pragma("foreign_keys = ON");
-
-  db = drizzle(sqlite, { schema: { chats, customAgents, projects } });
-  migrate(db, { migrationsFolder: resolveMigrationsFolder(current) });
-  return db;
+  databasePromise ??= openDatabase();
+  return databasePromise;
 }
 
-export function closeDatabase() {
-  sqlite?.close();
-  sqlite = undefined;
-  db = undefined;
+async function openDatabase(): Promise<AppDatabase> {
+  const current = requireConfiguration();
+  fs.mkdirSync(current.dataDir, { recursive: true });
+
+  const databasePath = path.join(
+    current.dataDir,
+    current.packaged ? "angel-engine.sqlite" : "angel-engine.dev.sqlite",
+  );
+  const nextClient = createClient({ url: pathToFileURL(databasePath).href });
+  client = nextClient;
+  try {
+    await nextClient.execute("PRAGMA journal_mode = WAL");
+    await nextClient.execute("PRAGMA foreign_keys = ON");
+
+    const database = drizzle(nextClient, {
+      schema: { chats, customAgents, projects },
+    });
+    await migrate(database, {
+      migrationsFolder: resolveMigrationsFolder(current),
+    });
+    return database;
+  } catch (error) {
+    nextClient.close();
+    client = undefined;
+    databasePromise = undefined;
+    throw error;
+  }
+}
+
+export async function closeDatabase() {
+  if (databasePromise !== undefined) {
+    await databasePromise.catch(() => undefined);
+  }
+  client?.close();
+  client = undefined;
+  databasePromise = undefined;
 }
 
 function resolveMigrationsFolder(current: DatabaseConfiguration) {

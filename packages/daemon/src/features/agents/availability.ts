@@ -31,7 +31,8 @@ export async function listAvailableAgents(): Promise<AgentOption[]> {
   const builtinAgents = availability.flatMap(({ agent, available }) =>
     available ? [agent] : [],
   );
-  const customAgents = listCustomAgents().map((agent) => ({
+  const availableCustomAgents = await listCustomAgents();
+  const customAgents = availableCustomAgents.map((agent) => ({
     description: `${agent.command} ${agent.args.join(" ")}`.trim(),
     id: agent.id,
     label: agent.label,

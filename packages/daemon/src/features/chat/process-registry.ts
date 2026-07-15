@@ -18,17 +18,16 @@ export class ChatProcessRegistry {
     this.#registry = registry;
   }
 
-  refresh(): Promise<void> {
+  async refresh(): Promise<void> {
     this.#refreshSubscriptions();
     const entries: ProcessRegistryEntry[] = [];
     for (const [chatId, session] of this.#sessions) {
       const rootPid = session.processId();
       if (rootPid === undefined) continue;
-      const chat = requireChat(chatId);
+      const chat = await requireChat(chatId);
       entries.push({ id: chatId, label: chat.title || chat.runtime, rootPid });
     }
     this.#registry.replace(entries);
-    return Promise.resolve();
   }
 
   #refreshSubscriptions(): void {

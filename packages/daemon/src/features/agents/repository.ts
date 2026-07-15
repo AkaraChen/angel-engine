@@ -13,16 +13,15 @@ import { eq } from "drizzle-orm";
 import { getDatabase } from "../../db/client";
 import { chats, customAgents } from "../../db/schema";
 
-export function listCustomAgents(): CustomAgent[] {
-  return getDatabase()
-    .select()
-    .from(customAgents)
-    .all()
-    .map(customAgentFromRow);
+export async function listCustomAgents(): Promise<CustomAgent[]> {
+  const database = await getDatabase();
+  const agents = await database.select().from(customAgents).all();
+  return agents.map(customAgentFromRow);
 }
 
-export function getCustomAgent(id: string): CustomAgent | null {
-  const agent = getDatabase()
+export async function getCustomAgent(id: string): Promise<CustomAgent | null> {
+  const database = await getDatabase();
+  const agent = await database
     .select()
     .from(customAgents)
     .where(eq(customAgents.id, requireCustomAgentId(id)))
@@ -32,9 +31,12 @@ export function getCustomAgent(id: string): CustomAgent | null {
   return agent ? customAgentFromRow(agent) : null;
 }
 
-export function createCustomAgent(input: CreateCustomAgentInput): CustomAgent {
+export async function createCustomAgent(
+  input: CreateCustomAgentInput,
+): Promise<CustomAgent> {
   const now = new Date().toISOString();
-  const agent = getDatabase()
+  const database = await getDatabase();
+  const agent = await database
     .insert(customAgents)
     .values({
       args: JSON.stringify(normalizeStringList(input.args)),
@@ -53,7 +55,9 @@ export function createCustomAgent(input: CreateCustomAgentInput): CustomAgent {
   return customAgentFromRow(agent);
 }
 
-export function updateCustomAgent(input: UpdateCustomAgentInput): CustomAgent {
+export async function updateCustomAgent(
+  input: UpdateCustomAgentInput,
+): Promise<CustomAgent> {
   const patch: Partial<typeof customAgents.$inferInsert> = {
     updatedAt: new Date().toISOString(),
   };
@@ -77,7 +81,8 @@ export function updateCustomAgent(input: UpdateCustomAgentInput): CustomAgent {
     patch.needAuth = input.needAuth;
   }
 
-  const agent = getDatabase()
+  const database = await getDatabase();
+  const agent = await database
     .update(customAgents)
     .set(patch)
     .where(eq(customAgents.id, requireCustomAgentId(input.id)))
@@ -90,34 +95,42 @@ export function updateCustomAgent(input: UpdateCustomAgentInput): CustomAgent {
   return customAgentFromRow(agent);
 }
 
-export function customAgentDeleteImpact(id: string): DeleteCustomAgentImpact {
+export async function customAgentDeleteImpact(
+  id: string,
+): Promise<DeleteCustomAgentImpact> {
+  const chatIds = await chatIdsForCustomAgent(id);
   return {
-    chatCount: chatIdsForCustomAgent(id).length,
+    chatCount: chatIds.length,
   };
 }
 
-export function deleteCustomAgentWithChats(id: string): string[] {
+export async function deleteCustomAgentWithChats(
+  id: string,
+): Promise<string[]> {
   const agentId = requireCustomAgentId(id);
-  if (!getCustomAgent(agentId)) {
+  const agent = await getCustomAgent(agentId);
+  if (agent === null) {
     throw new Error("Custom agent not found.");
   }
-  const deletedChatIds = chatIdsForCustomAgent(agentId);
+  const deletedChatIds = await chatIdsForCustomAgent(agentId);
 
-  getDatabase().transaction((tx) => {
-    tx.delete(chats).where(eq(chats.runtime, agentId)).run();
-    tx.delete(customAgents).where(eq(customAgents.id, agentId)).run();
+  const database = await getDatabase();
+  await database.transaction(async (tx) => {
+    await tx.delete(chats).where(eq(chats.runtime, agentId)).run();
+    await tx.delete(customAgents).where(eq(customAgents.id, agentId)).run();
   });
 
   return deletedChatIds;
 }
 
-function chatIdsForCustomAgent(id: string): string[] {
-  return getDatabase()
+async function chatIdsForCustomAgent(id: string): Promise<string[]> {
+  const database = await getDatabase();
+  const agentChats = await database
     .select({ id: chats.id })
     .from(chats)
     .where(eq(chats.runtime, requireCustomAgentId(id)))
-    .all()
-    .map((chat) => chat.id);
+    .all();
+  return agentChats.map((chat) => chat.id);
 }
 
 function customAgentFromRow(

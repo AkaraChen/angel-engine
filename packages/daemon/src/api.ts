@@ -96,18 +96,18 @@ export function registerApi(
 ) {
   const streams = new Map<string, ActiveStream>();
 
-  app.get("/api/chats", (context) => context.json(listChats()));
-  app.get("/api/chats/archived", (context) =>
-    context.json(listArchivedChats()),
+  app.get("/api/chats", async (context) => context.json(await listChats()));
+  app.get("/api/chats/archived", async (context) =>
+    context.json(await listArchivedChats()),
   );
-  app.get("/api/chats/:id", (context) =>
-    context.json(getChat(context.req.param("id"))),
+  app.get("/api/chats/:id", async (context) =>
+    context.json(await getChat(context.req.param("id"))),
   );
   app.post("/api/chats", async (context) => {
     const input = chatCreateInputSchema(await context.req.json());
     if (input instanceof arkType.errors)
       throw new TypeError("Chat input is required.");
-    const chat = runtime.createChatFromInput(input);
+    const chat = await runtime.createChatFromInput(input);
     publishChatMetadata(publisher, [chat.id]);
     return context.json(chat);
   });
@@ -115,12 +115,12 @@ export function registerApi(
     const body = await context.req.json<{ pinned?: boolean; title?: string }>();
     const chatId = context.req.param("id");
     if (typeof body.title === "string") {
-      const chat = renameChat(chatId, body.title);
+      const chat = await renameChat(chatId, body.title);
       publishChatMetadata(publisher, [chat.id]);
       return context.json(chat);
     }
     if (typeof body.pinned === "boolean") {
-      const chat = setChatPinned(chatId, body.pinned);
+      const chat = await setChatPinned(chatId, body.pinned);
       publishChatMetadata(publisher, [chat.id]);
       return context.json(chat);
     }
@@ -128,15 +128,15 @@ export function registerApi(
   });
   app.delete("/api/chats/:id", async (context) => {
     const chatId = context.req.param("id");
-    const chat = getChat(chatId);
+    const chat = await getChat(chatId);
     if (chat !== null) await removeWorktreesForDeletedChats([chat]);
     runtime.closeChatSession(chatId);
-    deleteChat(chatId);
+    await deleteChat(chatId);
     publishChatMetadata(publisher, [chatId]);
     return context.json({ ok: true });
   });
-  app.post("/api/chats/:id/archive", (context) => {
-    const chat = archiveChat(context.req.param("id"));
+  app.post("/api/chats/:id/archive", async (context) => {
+    const chat = await archiveChat(context.req.param("id"));
     publishChatMetadata(publisher, [chat.id]);
     return context.json(chat);
   });
@@ -173,7 +173,7 @@ export function registerApi(
     });
     if (input instanceof arkType.errors)
       throw new TypeError("Chat runtime input is required.");
-    const chat = runtime.setChatRuntime(input);
+    const chat = await runtime.setChatRuntime(input);
     publishChatMetadata(publisher, [chat.id]);
     return context.json(chat);
   });
@@ -189,13 +189,17 @@ export function registerApi(
       throw new TypeError("Chat runtime config input is required.");
     return context.json(await runtime.inspectChatRuntimeConfig(input));
   });
-  app.post("/api/chats/send", async (context) =>
-    context.json(
-      await runtime.sendChat(parseSendInput(await context.req.json())),
-    ),
-  );
+  app.post("/api/chats/send", async (context) => {
+    const body = await context.req.json();
+    const result = await runtime.sendChat(parseSendInput(body));
+    return context.json(result);
+  });
   app.delete("/api/chats", async (context) => {
-    const targets = [...listChats(), ...listArchivedChats()];
+    const [activeChats, archivedChats] = await Promise.all([
+      listChats(),
+      listArchivedChats(),
+    ]);
+    const targets = [...activeChats, ...archivedChats];
     const worktrees = await removeWorktreesForDeletedChats(targets);
     runtime.closeChatSession();
     publishChatMetadata(
@@ -203,12 +207,13 @@ export function registerApi(
       targets.map((chat) => chat.id),
     );
     return context.json({
-      deletedCount: deleteAllChats(),
+      deletedCount: await deleteAllChats(),
       deletedWorktreeCount: worktrees.length,
     });
   });
   app.post("/api/chats/archived/restore", async (context) => {
-    const chats = restoreArchivedChats(readChatIds(await context.req.json()));
+    const body = await context.req.json();
+    const chats = await restoreArchivedChats(readChatIds(body));
     publishChatMetadata(
       publisher,
       chats.map((chat) => chat.id),
@@ -216,9 +221,9 @@ export function registerApi(
     return context.json(chats);
   });
   app.post("/api/chats/archived/delete-impact", async (context) => {
-    const targets = readChatIds(await context.req.json()).map(
-      requireArchivedChat,
-    );
+    const body = await context.req.json();
+    const chatIds = readChatIds(body);
+    const targets = await Promise.all(chatIds.map(requireArchivedChat));
     const worktrees = managedWorktreesForChats(targets);
     return context.json({
       chatCount: targets.length,
@@ -228,12 +233,13 @@ export function registerApi(
   });
   app.post("/api/chats/archived/delete", async (context) => {
     const chatIds = readChatIds(await context.req.json());
-    const targets = chatIds.map(requireArchivedChat);
+    const targets = await Promise.all(chatIds.map(requireArchivedChat));
     const worktrees = await removeWorktreesForDeletedChats(targets);
     for (const chat of targets) runtime.closeChatSession(chat.id);
     publishChatMetadata(publisher, chatIds);
+    const deletedChats = await deleteArchivedChats(chatIds);
     return context.json({
-      deletedCount: deleteArchivedChats(chatIds).length,
+      deletedCount: deletedChats.length,
       deletedWorktreeCount: worktrees.length,
       deletedWorktrees: worktrees,
     });
@@ -242,30 +248,35 @@ export function registerApi(
   app.get("/api/agents", async (context) =>
     context.json(await listAvailableAgents()),
   );
-  app.get("/api/agents/custom", (context) => context.json(listCustomAgents()));
+  app.get("/api/agents/custom", async (context) =>
+    context.json(await listCustomAgents()),
+  );
   app.post("/api/agents/custom", async (context) => {
     const input = createCustomAgentInputSchema(await context.req.json());
     if (input instanceof arkType.errors)
       throw new TypeError("Custom agent input is invalid.");
-    return context.json(createCustomAgent(input));
+    return context.json(await createCustomAgent(input));
   });
   app.put("/api/agents/custom/:id", async (context) => {
     const id = context.req.param("id");
     if (!isCustomAgentRuntime(id))
       throw new TypeError("Custom agent id is invalid.");
+    const body = await context.req.json();
     const input = updateCustomAgentInputSchema({
-      ...(await context.req.json()),
+      ...body,
       id,
     });
     if (input instanceof arkType.errors)
       throw new TypeError("Custom agent input is invalid.");
-    return context.json(updateCustomAgent({ ...input, id }));
+    return context.json(await updateCustomAgent({ ...input, id }));
   });
-  app.get("/api/agents/custom/:id/delete-impact", (context) =>
-    context.json(customAgentDeleteImpact(context.req.param("id"))),
+  app.get("/api/agents/custom/:id/delete-impact", async (context) =>
+    context.json(await customAgentDeleteImpact(context.req.param("id"))),
   );
-  app.delete("/api/agents/custom/:id", (context) => {
-    const deletedChatIds = deleteCustomAgentWithChats(context.req.param("id"));
+  app.delete("/api/agents/custom/:id", async (context) => {
+    const deletedChatIds = await deleteCustomAgentWithChats(
+      context.req.param("id"),
+    );
     for (const chatId of deletedChatIds) runtime.closeChatSession(chatId);
     publishChatMetadata(publisher, deletedChatIds);
     return context.json({ deletedChatIds });
@@ -279,7 +290,9 @@ export function registerApi(
     ),
   );
 
-  app.get("/api/projects", (context) => context.json(listProjects()));
+  app.get("/api/projects", async (context) =>
+    context.json(await listProjects()),
+  );
   app.get("/api/projects/files/search", (context) =>
     searchProjectFiles({
       limit: optionalNumber(context.req.query("limit")),
@@ -287,26 +300,27 @@ export function registerApi(
       root: requireQuery(context.req.query("root"), "root"),
     }).then((value) => context.json(value)),
   );
-  app.get("/api/projects/:id", (context) =>
-    context.json(getProject(context.req.param("id"))),
+  app.get("/api/projects/:id", async (context) =>
+    context.json(await getProject(context.req.param("id"))),
   );
   app.post("/api/projects", async (context) => {
     const input = createProjectInputSchema(await context.req.json());
     if (input instanceof arkType.errors)
       throw new TypeError("Project input is invalid.");
-    return context.json(createProject(input));
+    return context.json(await createProject(input));
   });
   app.patch("/api/projects/:id", async (context) => {
+    const body = await context.req.json();
     const input = updateProjectInputSchema({
-      ...(await context.req.json()),
+      ...body,
       id: context.req.param("id"),
     });
     if (input instanceof arkType.errors)
       throw new TypeError("Project input is invalid.");
-    return context.json(updateProject(input));
+    return context.json(await updateProject(input));
   });
-  app.delete("/api/projects/:id", (context) => {
-    deleteProject(context.req.param("id"));
+  app.delete("/api/projects/:id", async (context) => {
+    await deleteProject(context.req.param("id"));
     return context.json({ ok: true });
   });
   app.get("/api/projects/:id/git-status", (context) =>
@@ -449,7 +463,11 @@ function managedWorktreesForChats(chats: Chat[]) {
 
 async function removeWorktreesForDeletedChats(targets: Chat[]) {
   const ids = new Set(targets.map((chat) => chat.id));
-  const survivors = [...listChats(), ...listArchivedChats()].filter(
+  const [activeChats, archivedChats] = await Promise.all([
+    listChats(),
+    listArchivedChats(),
+  ]);
+  const survivors = [...activeChats, ...archivedChats].filter(
     (chat) => !ids.has(chat.id),
   );
   const survivorPaths = new Set(managedWorktreesForChats(survivors));

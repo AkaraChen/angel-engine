@@ -12,16 +12,14 @@ import { asc, eq } from "drizzle-orm";
 import { closeDatabase, getDatabase } from "../../db/client";
 import { projects } from "../../db/schema";
 
-export function listProjects(): Project[] {
-  return getDatabase()
-    .select()
-    .from(projects)
-    .orderBy(asc(projects.path))
-    .all();
+export async function listProjects(): Promise<Project[]> {
+  const database = await getDatabase();
+  return database.select().from(projects).orderBy(asc(projects.path)).all();
 }
 
-export function getProject(id: string): Project | null {
-  const project = getDatabase()
+export async function getProject(id: string): Promise<Project | null> {
+  const database = await getDatabase();
+  const project = await database
     .select()
     .from(projects)
     .where(eq(projects.id, requireProjectId(id)))
@@ -31,13 +29,16 @@ export function getProject(id: string): Project | null {
   return project ?? null;
 }
 
-export function createProject(input: CreateProjectInput): Project {
+export async function createProject(
+  input: CreateProjectInput,
+): Promise<Project> {
   const nextProject = {
     id: is.nonEmptyString(input.id) ? input.id : randomUUID(),
     path: normalizeProjectPath(input.path),
   };
 
-  const project = getDatabase()
+  const database = await getDatabase();
+  const project = await database
     .insert(projects)
     .values(nextProject)
     .returning()
@@ -45,8 +46,11 @@ export function createProject(input: CreateProjectInput): Project {
   return project;
 }
 
-export function updateProject(input: UpdateProjectInput): Project {
-  const project = getDatabase()
+export async function updateProject(
+  input: UpdateProjectInput,
+): Promise<Project> {
+  const database = await getDatabase();
+  const project = await database
     .update(projects)
     .set({ path: normalizeProjectPath(input.path) })
     .where(eq(projects.id, requireProjectId(input.id)))
@@ -60,15 +64,16 @@ export function updateProject(input: UpdateProjectInput): Project {
   return project;
 }
 
-export function deleteProject(id: string): void {
-  getDatabase()
+export async function deleteProject(id: string): Promise<void> {
+  const database = await getDatabase();
+  await database
     .delete(projects)
     .where(eq(projects.id, requireProjectId(id)))
     .run();
 }
 
-export function closeProjectsDatabase() {
-  closeDatabase();
+export async function closeProjectsDatabase() {
+  await closeDatabase();
 }
 
 function requireProjectId(id: string) {
