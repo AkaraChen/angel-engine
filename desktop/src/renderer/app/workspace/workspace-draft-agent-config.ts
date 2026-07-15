@@ -36,7 +36,6 @@ export function carryDraftAgentConfigToChat(
     workspaceRuntimePageKey({
       chatRuntime: runtime,
       selectedChatId: targetChatId,
-      settingsActive: false,
     }),
     runtime,
   );

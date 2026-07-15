@@ -79,7 +79,6 @@ interface WorkspaceSidebarProps {
   projects: Project[];
   selectedChatId?: string;
   selectedProjectId?: string;
-  settingsActive: boolean;
 }
 
 export function WorkspaceSidebar({
@@ -228,7 +227,6 @@ function WorkspaceSidebarContent({
   projects,
   selectedChatId,
   selectedProjectId,
-  settingsActive,
 }: WorkspaceSidebarProps): ReactElement {
   const { t } = useTranslation();
   const platform = window.desktopEnvironment.platform;
@@ -239,7 +237,7 @@ function WorkspaceSidebarContent({
     (chat) => !is.nonEmptyString(chat.projectId),
   );
   const createChatFromNewButton = async () => {
-    if (selectedChatId === undefined && !settingsActive) return;
+    if (selectedChatId === undefined) return;
 
     if (isProjectWorkspaceMode(workspaceMode)) {
       const selectedProject = projects.find(
@@ -323,10 +321,7 @@ function WorkspaceSidebarContent({
       <SidebarFooter className="p-2">
         <SidebarMenu>
           <AnimatedSidebarMenuItem>
-            <WorkspaceSidebarMenuButton
-              isActive={settingsActive}
-              onClick={() => void onOpenSettings()}
-            >
+            <WorkspaceSidebarMenuButton onClick={() => void onOpenSettings()}>
               <Settings weight="duotone" />
               <span>{t("sidebar.settings")}</span>
             </WorkspaceSidebarMenuButton>

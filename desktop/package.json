@@ -80,6 +80,7 @@
     "framer-motion": "^12.42.2",
     "i18next": "^26.3.4",
     "katex": "^0.17.0",
+    "libsql": "0.5.29",
     "mime-db": "^1.54.0",
     "mime-types": "^3.0.2",
     "monaco-editor": "^0.55.1",

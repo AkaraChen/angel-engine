@@ -7,7 +7,6 @@ import {
   WorkspaceDraftPage,
 } from "@/app/workspace/workspace-page";
 import { WorkspaceToolWindowPage } from "@/app/workspace/workspace-tool-host";
-import { SettingsWindowPage } from "@/features/settings/settings-window-page";
 
 export function AppRouter() {
   return (
@@ -15,9 +14,6 @@ export function AppRouter() {
       <Switch>
         <Route path="/">
           <WorkspaceDraftPage />
-        </Route>
-        <Route path="/settings">
-          <SettingsWindowPage />
         </Route>
         <Route path="/workspace-tools">
           <WorkspaceToolWindowPage />

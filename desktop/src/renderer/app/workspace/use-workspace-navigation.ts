@@ -122,7 +122,6 @@ export function useWorkspaceNavigation(model: WorkspacePageModel) {
       const nextRuntimePageKey = workspaceRuntimePageKey({
         draftProjectId: projectId,
         draftSessionId: nextSessionId,
-        settingsActive: false,
       });
       const inheritedConfig = draftAgentConfigFromExplicitOverrides({
         mode: optionalString(

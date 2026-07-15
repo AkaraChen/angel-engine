@@ -5,7 +5,6 @@ import type { WorkspaceNavigation } from "@/app/workspace/use-workspace-navigati
 import type { WorkspacePageModel } from "@/app/workspace/use-workspace-page-model";
 import type { WorktreeDraftGuard } from "@/app/workspace/use-worktree-draft-guard";
 
-import { rememberAgentOrder } from "@angel-engine/daemon-api/agents";
 import is from "@sindresorhus/is";
 import { Suspense } from "react";
 import { ChatRestoreLoading } from "@/app/workspace/chat-restore-loading";
@@ -37,7 +36,6 @@ import {
 import { WorktreeDirtyDialog } from "@/app/workspace/worktree-dirty-dialog";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { RenameChatDialog } from "@/features/chat/components/rename-chat-dialog";
-import { SettingsPage } from "@/features/settings/settings-page";
 
 interface WorkspacePageViewProps {
   chatActions: WorkspaceChatActions;
@@ -59,9 +57,7 @@ export const WorkspacePageView: FC<WorkspacePageViewProps> = ({
   const {
     activePowerWorktreeProject,
     activeRuntime,
-    agentSettings,
     api,
-    availableAgentOptions,
     canCreateDraftWorktree,
     canShowRightSidebar,
     chatAttention,
@@ -97,18 +93,15 @@ export const WorkspacePageView: FC<WorkspacePageViewProps> = ({
     selectedChatIsRunning,
     selectedProjectId,
     selectedProjectName,
-    setAgentEnabled,
     setAgentModel,
     setAgentReasoningEffort,
     setRightSidebarWidth,
     setSidebarOpen,
     setSidebarOpenMobile,
-    settingsActive,
     sidebarOpen,
     sidebarOpenMobile,
     t,
     toggleWorkspaceTools,
-    updateAgentSettings,
     workspaceMode,
     workspaceToolHost,
     workspaceToolRoot,
@@ -119,8 +112,6 @@ export const WorkspacePageView: FC<WorkspacePageViewProps> = ({
     archiveChat,
     closeRenameChatDialog,
     createProjectFromPicker,
-    deleteAllChats,
-    deleteAllChatsPending,
     renameChat,
     renameChatPending,
     renameTargetChat,
@@ -184,7 +175,6 @@ export const WorkspacePageView: FC<WorkspacePageViewProps> = ({
           projects={projects}
           selectedChatId={selectedChatId}
           selectedProjectId={selectedProjectId}
-          settingsActive={settingsActive}
         />
         <WorkspaceFloatingSidebar
           chats={chats}
@@ -205,7 +195,6 @@ export const WorkspacePageView: FC<WorkspacePageViewProps> = ({
           projects={projects}
           selectedChatId={selectedChatId}
           selectedProjectId={selectedProjectId}
-          settingsActive={settingsActive}
         />
         <WorkspaceSidebarControl />
         <WorkspaceNativeCommandHandler
@@ -229,178 +218,160 @@ export const WorkspacePageView: FC<WorkspacePageViewProps> = ({
           root={workspaceToolRoot ?? null}
         />
 
-        {settingsActive ? (
-          <SidebarInset className="h-svh max-h-svh overflow-hidden">
-            <WorkspaceHeader attention={chatAttention} title={workspaceTitle} />
-            <SettingsPage
-              agentSettings={agentSettings}
-              availableAgentOptions={availableAgentOptions}
-              isDeletingChats={deleteAllChatsPending}
-              onAgentEnabledChange={setAgentEnabled}
-              onAgentOrderChange={(orderedRuntimes) =>
-                updateAgentSettings((current) =>
-                  rememberAgentOrder(current, orderedRuntimes),
-                )
-              }
-              onDeleteAllChats={deleteAllChats}
+        <SidebarInset className="h-svh max-h-svh overflow-hidden">
+          <WorkspaceHeader
+            attention={chatAttention}
+            breadcrumbProject={
+              isProjectMode && selectedChat ? selectedProjectName : undefined
+            }
+            running={selectedChatIsRunning}
+            rightSidebarOpen={
+              canShowRightSidebar &&
+              (rightSidebarOpen || workspaceToolHost !== "sidebar")
+            }
+            rightSidebarToggleLabel={workspaceToolsToggleLabel}
+            title={workspaceTitle}
+            workspaceToolActions={
+              canShowRightSidebar && workspaceToolHost === "sidebar" ? (
+                <WorkspaceToolSurfaceHostControls
+                  host="sidebar"
+                  onRequestHost={requestWorkspaceToolHost}
+                />
+              ) : undefined
+            }
+            onToggleRightSidebar={
+              canShowRightSidebar ? toggleWorkspaceTools : undefined
+            }
+          />
+          {powerModeActive && powerHomeTabContext !== undefined ? (
+            <PowerWorktreeTabBar
+              activeChatId={selectedChatId}
+              chats={chatTabChats}
+              draftTabActive={powerDraftTabActive}
+              homeTabActive={powerHomePageContext !== undefined}
+              onCloseChat={closeChatTab}
+              onCloseDraftTab={closeDraftTab}
+              onNewChat={openDraftTabFromTabBar}
+              onOpenChat={openChat}
+              onOpenHome={openSelectedPowerWorktreeHome}
             />
-          </SidebarInset>
-        ) : (
-          <SidebarInset className="h-svh max-h-svh overflow-hidden">
-            <WorkspaceHeader
-              attention={chatAttention}
-              breadcrumbProject={
-                isProjectMode && selectedChat ? selectedProjectName : undefined
-              }
-              running={selectedChatIsRunning}
-              rightSidebarOpen={
-                canShowRightSidebar &&
-                (rightSidebarOpen || workspaceToolHost !== "sidebar")
-              }
-              rightSidebarToggleLabel={workspaceToolsToggleLabel}
-              title={workspaceTitle}
-              workspaceToolActions={
-                canShowRightSidebar && workspaceToolHost === "sidebar" ? (
-                  <WorkspaceToolSurfaceHostControls
-                    host="sidebar"
-                    onRequestHost={requestWorkspaceToolHost}
-                  />
-                ) : undefined
-              }
-              onToggleRightSidebar={
-                canShowRightSidebar ? toggleWorkspaceTools : undefined
-              }
-            />
-            {powerModeActive && powerHomeTabContext !== undefined ? (
-              <PowerWorktreeTabBar
-                activeChatId={selectedChatId}
-                chats={chatTabChats}
-                draftTabActive={powerDraftTabActive}
-                homeTabActive={powerHomePageContext !== undefined}
-                onCloseChat={closeChatTab}
-                onCloseDraftTab={closeDraftTab}
-                onNewChat={openDraftTabFromTabBar}
-                onOpenChat={openChat}
-                onOpenHome={openSelectedPowerWorktreeHome}
-              />
-            ) : null}
-            <main className="flex min-h-0 flex-1 overflow-hidden">
-              <section
-                className="flex min-h-0 min-w-0 flex-1 flex-col"
-                data-workspace-mode={workspaceMode}
-              >
-                {powerHomePageContext !== undefined ? (
-                  <PowerWorktreeHistoryPage
-                    chats={chats}
-                    groupKey={powerHomePageContext.groupKey}
-                    label={t("sidebar.powerWorktreeHistoricalChat")}
-                    onArchiveChat={(chat) => void archiveChat(chat)}
-                    onNewChat={openDraftTabFromTabBar}
-                    onOpenChat={openPowerHistoryChatTab}
-                    projectPath={activePowerWorktreeProject?.path}
-                  />
-                ) : is.nonEmptyString(selectedChatId) ? (
-                  selectedChatIsRunning && selectedChat ? (
-                    <ActiveChatThread
-                      draftAgentConfig={selectedChatAgentConfig}
-                      onChatCreated={updateChatFromRun}
-                      onChatMessagesUpdated={setChatMessagesInCache}
-                      onChatUpdated={updateChatFromRun}
-                      projects={projects}
-                      routeProjectId={routeProjectId}
-                      runtimeOptions={runtimeOptions}
-                      selectedChat={selectedChat}
-                      setAgentModel={setAgentModel}
-                      setAgentReasoningEffort={setAgentReasoningEffort}
-                      setPersistedChatRuntime={setPersistedChatRuntime}
-                    />
-                  ) : (
-                    <ChatRestoreErrorBoundary key={selectedChatId}>
-                      <Suspense fallback={<ChatRestoreLoading />}>
-                        <RestoredChatThread
-                          api={api}
-                          currentRoutePath={currentRoutePath}
-                          draftAgentConfig={selectedChatAgentConfig}
-                          includeProjectInRoute={isProjectMode}
-                          onChatCreated={updateChatFromRun}
-                          onChatMessagesUpdated={setChatMessagesInCache}
-                          onChatUpdated={updateChatFromRun}
-                          projects={projects}
-                          routeProjectId={routeProjectId}
-                          runtimeOptions={runtimeOptions}
-                          selectedChatId={selectedChatId}
-                          setAgentModel={setAgentModel}
-                          setAgentReasoningEffort={setAgentReasoningEffort}
-                          setPersistedChatRuntime={setPersistedChatRuntime}
-                        />
-                      </Suspense>
-                    </ChatRestoreErrorBoundary>
-                  )
-                ) : (
-                  <NewChatThread
-                    chatOptions={chatOptions}
-                    creationLocation={draftCreationLocation}
-                    cwd={pinnedDraftCwd}
-                    creationLocationAccessory={
-                      canCreateDraftWorktree ? (
-                        <DraftCreationLocationSelect
-                          onValueChange={setDraftCreationLocation}
-                          value={draftCreationLocation}
-                          variant="ghost"
-                        />
-                      ) : undefined
-                    }
-                    key={runtimePageKey}
-                    model={modelOverride}
-                    mode={modeOverride}
-                    onBeforeSubmit={ensureDraftChatCanSubmit}
+          ) : null}
+          <main className="flex min-h-0 flex-1 overflow-hidden">
+            <section
+              className="flex min-h-0 min-w-0 flex-1 flex-col"
+              data-workspace-mode={workspaceMode}
+            >
+              {powerHomePageContext !== undefined ? (
+                <PowerWorktreeHistoryPage
+                  chats={chats}
+                  groupKey={powerHomePageContext.groupKey}
+                  label={t("sidebar.powerWorktreeHistoricalChat")}
+                  onArchiveChat={(chat) => void archiveChat(chat)}
+                  onNewChat={openDraftTabFromTabBar}
+                  onOpenChat={openPowerHistoryChatTab}
+                  projectPath={activePowerWorktreeProject?.path}
+                />
+              ) : is.nonEmptyString(selectedChatId) ? (
+                selectedChatIsRunning && selectedChat ? (
+                  <ActiveChatThread
+                    draftAgentConfig={selectedChatAgentConfig}
                     onChatCreated={updateChatFromRun}
                     onChatMessagesUpdated={setChatMessagesInCache}
                     onChatUpdated={updateChatFromRun}
-                    onCreateProject={createProjectFromPicker}
-                    onProjectChange={selectDraftProject}
-                    permissionMode={permissionModeOverride}
-                    prewarmId={
-                      draftCreationLocation === "worktree"
-                        ? undefined
-                        : model.prewarmQuery.data?.prewarmId
-                    }
-                    projectId={draftProject.id}
-                    projectName={selectedProjectName}
-                    projectPath={draftProject.path}
                     projects={projects}
-                    reasoningEffort={reasoningEffortOverride}
-                    runOrigin={{
-                      config: draftAgentConfigFromExplicitOverrides({
-                        mode: modeOverride,
-                        model: modelOverride,
-                        permissionMode: permissionModeOverride,
-                        reasoningEffort: reasoningEffortOverride,
-                      }),
-                      isDraft: true,
-                      runtime: activeRuntime,
-                      runtimePageKey,
-                    }}
-                    runtime={activeRuntime}
-                    runtimeConfig={runtimeConfig}
-                    slotKey={runtimePageKey}
+                    routeProjectId={routeProjectId}
+                    runtimeOptions={runtimeOptions}
+                    selectedChat={selectedChat}
+                    setAgentModel={setAgentModel}
+                    setAgentReasoningEffort={setAgentReasoningEffort}
+                    setPersistedChatRuntime={setPersistedChatRuntime}
                   />
-                )}
-              </section>
-              {dockedWorkspaceToolContext ? (
-                <WorkspaceRightSidebar
-                  active={workspaceToolHost === "sidebar"}
-                  api={api}
-                  chatId={dockedWorkspaceToolContext.chatId}
-                  open={rightSidebarOpen}
-                  root={dockedWorkspaceToolContext.root}
-                  width={rightSidebarWidth}
-                  onWidthChange={setRightSidebarWidth}
+                ) : (
+                  <ChatRestoreErrorBoundary key={selectedChatId}>
+                    <Suspense fallback={<ChatRestoreLoading />}>
+                      <RestoredChatThread
+                        api={api}
+                        currentRoutePath={currentRoutePath}
+                        draftAgentConfig={selectedChatAgentConfig}
+                        includeProjectInRoute={isProjectMode}
+                        onChatCreated={updateChatFromRun}
+                        onChatMessagesUpdated={setChatMessagesInCache}
+                        onChatUpdated={updateChatFromRun}
+                        projects={projects}
+                        routeProjectId={routeProjectId}
+                        runtimeOptions={runtimeOptions}
+                        selectedChatId={selectedChatId}
+                        setAgentModel={setAgentModel}
+                        setAgentReasoningEffort={setAgentReasoningEffort}
+                        setPersistedChatRuntime={setPersistedChatRuntime}
+                      />
+                    </Suspense>
+                  </ChatRestoreErrorBoundary>
+                )
+              ) : (
+                <NewChatThread
+                  chatOptions={chatOptions}
+                  creationLocation={draftCreationLocation}
+                  cwd={pinnedDraftCwd}
+                  creationLocationAccessory={
+                    canCreateDraftWorktree ? (
+                      <DraftCreationLocationSelect
+                        onValueChange={setDraftCreationLocation}
+                        value={draftCreationLocation}
+                        variant="ghost"
+                      />
+                    ) : undefined
+                  }
+                  key={runtimePageKey}
+                  model={modelOverride}
+                  mode={modeOverride}
+                  onBeforeSubmit={ensureDraftChatCanSubmit}
+                  onChatCreated={updateChatFromRun}
+                  onChatMessagesUpdated={setChatMessagesInCache}
+                  onChatUpdated={updateChatFromRun}
+                  onCreateProject={createProjectFromPicker}
+                  onProjectChange={selectDraftProject}
+                  permissionMode={permissionModeOverride}
+                  prewarmId={
+                    draftCreationLocation === "worktree"
+                      ? undefined
+                      : model.prewarmQuery.data?.prewarmId
+                  }
+                  projectId={draftProject.id}
+                  projectName={selectedProjectName}
+                  projectPath={draftProject.path}
+                  projects={projects}
+                  reasoningEffort={reasoningEffortOverride}
+                  runOrigin={{
+                    config: draftAgentConfigFromExplicitOverrides({
+                      mode: modeOverride,
+                      model: modelOverride,
+                      permissionMode: permissionModeOverride,
+                      reasoningEffort: reasoningEffortOverride,
+                    }),
+                    isDraft: true,
+                    runtime: activeRuntime,
+                    runtimePageKey,
+                  }}
+                  runtime={activeRuntime}
+                  runtimeConfig={runtimeConfig}
+                  slotKey={runtimePageKey}
                 />
-              ) : null}
-            </main>
-          </SidebarInset>
-        )}
+              )}
+            </section>
+            {dockedWorkspaceToolContext ? (
+              <WorkspaceRightSidebar
+                active={workspaceToolHost === "sidebar"}
+                api={api}
+                chatId={dockedWorkspaceToolContext.chatId}
+                open={rightSidebarOpen}
+                root={dockedWorkspaceToolContext.root}
+                width={rightSidebarWidth}
+                onWidthChange={setRightSidebarWidth}
+              />
+            ) : null}
+          </main>
+        </SidebarInset>
       </WorkspaceSidebarControlPortalProvider>
     </SidebarProvider>
   );

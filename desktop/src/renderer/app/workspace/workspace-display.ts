@@ -11,15 +11,12 @@ export function getErrorMessage(error: unknown) {
 export function getWorkspaceTitle({
   selectedChat,
   selectedProjectName,
-  settingsActive,
   t,
 }: {
   selectedChat?: Chat;
   selectedProjectName?: string;
-  settingsActive: boolean;
   t: (key: string, options?: Record<string, unknown>) => string;
 }) {
-  if (settingsActive) return t("workspace.settings");
   if (selectedChat) return displayChatTitle(selectedChat.title, t);
   if (is.nonEmptyString(selectedProjectName)) {
     return t("workspace.newChatInProject", {

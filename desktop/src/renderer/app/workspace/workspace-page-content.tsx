@@ -15,7 +15,6 @@ interface WorkspacePageContentProps {
   draftProjectId?: string;
   routeProjectId?: string;
   selectedChatId?: string;
-  settingsActive?: boolean;
 }
 
 export function WorkspacePageContent({
@@ -24,14 +23,12 @@ export function WorkspacePageContent({
   draftProjectId,
   routeProjectId,
   selectedChatId,
-  settingsActive = false,
 }: WorkspacePageContentProps) {
   const model = useWorkspacePageModel({
     api,
     draftProjectId,
     routeProjectId,
     selectedChatId,
-    settingsActive,
   });
   const navigation = useWorkspaceNavigation(model);
   const chatActions = useWorkspaceChatActions({

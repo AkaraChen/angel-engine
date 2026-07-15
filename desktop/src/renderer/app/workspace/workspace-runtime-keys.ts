@@ -14,20 +14,14 @@ export function workspaceRuntimePageKey({
   draftSessionId,
   draftProjectId,
   selectedChatId,
-  settingsActive,
 }: {
   chatRuntime?: AgentRuntime;
   draftSessionId?: number;
   draftProjectId?: string;
   selectedChatId?: string;
-  settingsActive: boolean;
 }): string {
   if (selectedChatId !== undefined) {
     return `chat:${selectedChatId}:${chatRuntime ?? "pending"}`;
-  }
-
-  if (settingsActive) {
-    return "settings";
   }
 
   const key =

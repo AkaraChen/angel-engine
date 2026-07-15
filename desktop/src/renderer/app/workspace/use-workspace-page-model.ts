@@ -62,7 +62,6 @@ interface UseWorkspacePageModelOptions {
   draftProjectId?: string;
   routeProjectId?: string;
   selectedChatId?: string;
-  settingsActive: boolean;
 }
 
 export function useWorkspacePageModel({
@@ -70,7 +69,6 @@ export function useWorkspacePageModel({
   draftProjectId: routeDraftProjectId,
   routeProjectId,
   selectedChatId,
-  settingsActive,
 }: UseWorkspacePageModelOptions) {
   const { t } = useTranslation();
   const toast = useToast();
@@ -79,7 +77,6 @@ export function useWorkspacePageModel({
   const isMacOS = window.desktopEnvironment.platform === "darwin";
   const [agentSettings, updateAgentSettings] = useAgentSettings();
   const { availableAgentOptions } = useAgentCatalog();
-  const setAgentEnabled = useSettingsStore((state) => state.setAgentEnabled);
   const sidebarOpen = useWorkspaceUiStore((state) => state.sidebarOpen);
   const sidebarOpenMobile = useWorkspaceUiStore(
     (state) => state.sidebarOpenMobile,
@@ -155,7 +152,7 @@ export function useWorkspacePageModel({
 
   const draftState = useWorkspaceDraftState();
   const draftSessionCounterRef = useRef(0);
-  const isDraftPage = !is.nonEmptyString(selectedChatId) && !settingsActive;
+  const isDraftPage = !is.nonEmptyString(selectedChatId);
   const powerModeActive = workspaceMode === "power";
   const draftWorktree = useChatTabStore((state) => state.draftWorktree);
   const activePowerWorktree = useChatTabStore((state) => state.activeWorktree);
@@ -265,7 +262,6 @@ export function useWorkspacePageModel({
   const workspaceTitle = getWorkspaceTitle({
     selectedChat,
     selectedProjectName,
-    settingsActive,
     t,
   });
   const chatRuntime = selectedChat?.runtime as AgentRuntime | undefined;
@@ -282,7 +278,6 @@ export function useWorkspacePageModel({
       ? draftState.draftSessionIds[draftRuntimeKey]
       : undefined,
     selectedChatId,
-    settingsActive,
   });
   const draftRuntime = is.nonEmptyString(draftRuntimeKey)
     ? resolveEnabledAgentRuntime(
@@ -426,9 +421,7 @@ export function useWorkspacePageModel({
     activePowerWorktree,
     activePowerWorktreeProject,
     activeRuntime,
-    agentSettings,
     api,
-    availableAgentOptions,
     canCreateDraftWorktree,
     canShowRightSidebar,
     chatAttention,
@@ -470,13 +463,11 @@ export function useWorkspacePageModel({
     selectedChatRuntimeConfig,
     selectedProjectId,
     selectedProjectName,
-    setAgentEnabled,
     setRightSidebarWidth,
     setSidebarOpen,
     setSidebarOpenMobile,
     setWorkspaceMode,
     setWorktreeDirtyPromptEnabled,
-    settingsActive,
     sidebarOpen,
     sidebarOpenMobile,
     t,

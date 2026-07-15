@@ -2,7 +2,7 @@ import { IconContext } from "@phosphor-icons/react";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 
-import { App } from "./App";
+import { App, SettingsApp } from "./App";
 import { applyDesktopPlatform, syncDesktopColorScheme } from "./platform/theme";
 import "./i18n";
 import "./index.css";
@@ -20,10 +20,16 @@ if (import.meta.env.DEV) {
 
 const iconContextValue = { weight: "regular" } as const;
 
+// The settings window is its own page: it is loaded with the `/settings` hash
+// (see main/windows/settings-window.ts) and never mounts the main app router.
+const isSettingsWindow = window.location.hash
+  .replace(/^#/, "")
+  .startsWith("/settings");
+
 createRoot(document.getElementById("root") as HTMLElement).render(
   <StrictMode>
     <IconContext value={iconContextValue}>
-      <App />
+      {isSettingsWindow ? <SettingsApp /> : <App />}
     </IconContext>
   </StrictMode>,
 );
