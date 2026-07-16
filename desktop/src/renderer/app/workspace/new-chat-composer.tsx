@@ -140,7 +140,7 @@ export function NewChatComposer({
       selectedSkills,
       text,
     }: ChatComposerSubmission) => {
-      await sendChatMessage.sendPromptMessage({
+      return sendChatMessage.sendPromptMessage({
         attachments: files,
         mentionedFiles,
         selectedSkills,

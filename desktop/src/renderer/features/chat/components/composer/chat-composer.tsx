@@ -43,7 +43,7 @@ export interface ChatComposerProps {
   onBeforeSubmit?: () => boolean | Promise<boolean>;
   onCancel?: () => void;
   rows?: number;
-  send: (submission: ChatComposerSubmission) => Promise<void>;
+  send: (submission: ChatComposerSubmission) => Promise<boolean | void>;
   textareaClassName?: string;
 }
 
@@ -74,16 +74,18 @@ export function ChatComposer({
         message.files.length > 0 ||
         mentionedFiles.length > 0 ||
         selectedSkills.length > 0;
-      if (!hasMessage) return;
-      if (onBeforeSubmit && !(await onBeforeSubmit())) return;
+      if (!hasMessage) return false;
+      if (onBeforeSubmit && !(await onBeforeSubmit())) return false;
 
-      await send({
+      const accepted = await send({
         files: message.files as PromptInputFile[],
         mentionedFiles,
         selectedSkills,
         text: appendPasteSourceUrl(message.text, pasteSourceUrl),
       });
+      if (accepted === false) return false;
       reset();
+      return true;
     },
     [
       mentionedFiles,
@@ -97,6 +99,14 @@ export function ChatComposer({
 
   const handleAttachmentError = useCallback(
     (error: { code: AttachmentInputError["code"]; message: string }) => {
+      if (error.code === "submit") {
+        toast({
+          description: error.message,
+          title: t("common.error"),
+          variant: "destructive",
+        });
+        return;
+      }
       toast({
         description: attachmentErrorMessage(error.code, t),
         title: attachmentErrorTitle(error.code, t),

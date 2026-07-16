@@ -130,7 +130,7 @@ export interface ChatRunStore {
     mode: string,
   ) => Promise<ChatRuntimeConfig>;
   slots: Record<string, ChatRunSlot>;
-  startRun: (input: StartRunInput) => Promise<void>;
+  startRun: (input: StartRunInput) => Promise<boolean>;
 }
 
 export type ChatRunContext = Pick<

@@ -31,6 +31,7 @@ import {
   subscribeChatRunActor,
 } from "./chat-run-registry";
 import { consumeRunStream } from "./chat-run-stream";
+import { resolveChatRunAccepted } from "./chat-run-submission";
 import { EMPTY_CHAT_ATTENTION, EMPTY_MESSAGES } from "./chat-run-types";
 
 export {
@@ -147,7 +148,7 @@ const chatRunActions: Omit<ChatRunStore, keyof ChatRunContext> = {
   async startRun({ callbacks, input, message, slotKey }) {
     const prompt = getMessageText(message);
     const attachments = getMessageAttachments(message);
-    if (!prompt && attachments.length === 0) return;
+    if (!prompt && attachments.length === 0) return false;
 
     const assistantMessageId = createId("assistant");
     const runId = createId("run");
@@ -219,6 +220,14 @@ const chatRunActions: Omit<ChatRunStore, keyof ChatRunContext> = {
           );
         }
       }
+      return resolveChatRunAccepted({
+        cancelled: activeRun.cancelled,
+        error: accumulator.error,
+        hadChatId: is.nonEmptyString(input.chatId),
+        hasResult: completion.result !== undefined,
+        initialSlotKey: runSlotKey,
+        slotKey: completion.slotKey,
+      });
     } finally {
       finishRun(completion.slotKey, runId, completion.result);
     }

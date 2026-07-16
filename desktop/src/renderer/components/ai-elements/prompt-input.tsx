@@ -64,6 +64,10 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { cn } from "@/platform/utils";
+import {
+  shouldClearSubmittedInput,
+  type PromptInputSubmissionResult,
+} from "./prompt-input-submission";
 
 // ============================================================================
 // Helpers
@@ -535,7 +539,7 @@ export type PromptInputProps = Omit<
   onSubmit: (
     message: PromptInputMessage,
     event: FormEvent<HTMLFormElement>,
-  ) => void | Promise<void>;
+  ) => PromptInputSubmissionResult | Promise<PromptInputSubmissionResult>;
 };
 
 export function PromptInput({
@@ -948,15 +952,19 @@ export function PromptInput({
           const result = onSubmit({ files: convertedFiles, text }, event);
           if (result instanceof Promise) {
             try {
-              await result;
-              clearSubmittedInput();
+              const submissionResult = await result;
+              if (shouldClearSubmittedInput(submissionResult)) {
+                clearSubmittedInput();
+              }
             } catch (error) {
               reportSubmitError(error);
             }
             return;
           }
 
-          clearSubmittedInput();
+          if (shouldClearSubmittedInput(result)) {
+            clearSubmittedInput();
+          }
         } catch (error) {
           // Don't clear on error - user may want to retry
           reportSubmitError(error);

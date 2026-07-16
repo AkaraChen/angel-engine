@@ -69,7 +69,7 @@ export function useSendChatMessage(
       const modeOverride =
         typeof runConfig?.mode === "string" ? runConfig.mode : undefined;
 
-      await startRun({
+      return startRun({
         callbacks: {
           onChatCreated: latestOptionsRef.current.onChatCreated,
           onChatMessagesUpdated: latestOptionsRef.current.onChatMessagesUpdated,
@@ -103,7 +103,7 @@ export function useSendChatMessage(
         input.mentionedFiles.length > 0 ||
         input.selectedSkills.length > 0;
       if (!hasContent) {
-        return;
+        return false;
       }
 
       const attachments: CompleteAttachment[] = [];
@@ -128,7 +128,7 @@ export function useSendChatMessage(
         sourceId: null,
       };
 
-      await sendAppendMessage(message);
+      return sendAppendMessage(message);
     },
     [sendAppendMessage],
   );
