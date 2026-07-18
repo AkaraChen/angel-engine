@@ -11,3 +11,4 @@ asahi.db
 /packages/*/playground/dist
 /packages/*/node_modules
 /plans
+/.data/

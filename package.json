@@ -32,6 +32,7 @@
     "claude-client:test": "turbo run test --filter @angel-engine/claude-client",
     "js-client:build": "turbo run build --filter @angel-engine/js-client",
     "js-client:playground": "bun run --filter @angel-engine/js-client playground",
+    "mobile:dev": "node scripts/dev-mobile.mjs",
     "js-client:playground:build": "turbo run playground:build --filter @angel-engine/js-client",
     "js-client:test": "turbo run test --filter @angel-engine/js-client",
     "pi-client:build": "turbo run build --filter @angel-engine/pi-client",
