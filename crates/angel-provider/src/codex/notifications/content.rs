@@ -76,7 +76,7 @@ impl CodexAdapter {
         Ok(output)
     }
 
-    pub(super) fn decode_todo(
+    pub(super) fn decode_plan(
         &self,
         engine: &AngelEngine,
         params: &Value,
@@ -104,20 +104,45 @@ impl CodexAdapter {
                 },
             })
             .collect();
+        let is_plan_update =
+            codex_collaboration_mode(engine, &conversation_id) == CodexCollaborationMode::Plan;
+        let kind = if is_plan_update { "plan" } else { "todo" };
         let mut output = TransportOutput::default().log(
             TransportLogKind::State,
-            format!("todo updated ({} steps)", entries.len()),
+            format!("{kind} updated ({} steps)", entries.len()),
         );
         if let Some(event) = maybe_start {
             output.events.push(event);
         }
-        output.events.push(EngineEvent::TodoUpdated {
-            conversation_id,
-            turn_id,
-            todo: PlanState { entries },
-        });
+        let state = PlanState { entries };
+        if is_plan_update {
+            output.events.push(EngineEvent::PlanUpdated {
+                conversation_id,
+                turn_id,
+                plan: state,
+            });
+        } else {
+            output.events.push(EngineEvent::TodoUpdated {
+                conversation_id,
+                turn_id,
+                todo: state,
+            });
+        }
         Ok(output)
     }
+}
+
+fn codex_collaboration_mode(
+    engine: &AngelEngine,
+    conversation_id: &ConversationId,
+) -> CodexCollaborationMode {
+    engine
+        .conversations
+        .get(conversation_id)
+        .and_then(|conversation| conversation.context.mode.effective())
+        .and_then(Option::as_ref)
+        .and_then(|mode| CodexCollaborationMode::from_id(&mode.id))
+        .unwrap_or(CodexCollaborationMode::Default)
 }
 
 #[cfg(test)]
@@ -154,7 +179,7 @@ mod tests {
     }
 
     #[test]
-    fn turn_plan_update_emits_todo_event() {
+    fn turn_plan_update_emits_todo_event_in_default_mode() {
         let adapter = CodexAdapter::app_server();
         let engine = engine_with_thread(&adapter);
 
