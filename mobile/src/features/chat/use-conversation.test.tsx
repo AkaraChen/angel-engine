@@ -7,7 +7,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { AuthProvider } from "@/features/auth/auth-provider";
 import { DaemonProvider } from "@/platform/daemon-provider";
 
-import { stashNewChatPrompt } from "./new-chat-prompt";
+import { readNewChatPrompt, stashNewChatPrompt } from "./new-chat-prompt";
 import { useConversation } from "./use-conversation";
 
 interface SseHandle {
@@ -97,27 +97,33 @@ describe("useConversation", () => {
   });
 
   it("sends a stashed new-chat prompt as the first turn", async () => {
+    let loadCalls = 0;
     let sse: SseHandle | undefined;
     const fetchMock = vi.fn(async (url: string, init?: RequestInit) => {
-      if (url.includes("/api/chat-streams?") && init?.method === "POST") {
-        sse = controllableSse(init.signal ?? undefined);
+      const method = init?.method ?? "GET";
+      if (url.includes("/api/chat-streams?") && method === "POST") {
+        sse = controllableSse(init?.signal ?? undefined);
         return sse.response;
       }
       if (url.endsWith("/load")) {
+        loadCalls += 1;
         return jsonResponse({
           chat: { id: "new-chat", title: "New chat" },
-          messages: [
-            {
-              id: "u1",
-              role: "user",
-              content: [{ type: "text", text: "start here" }],
-            },
-            {
-              id: "a1",
-              role: "assistant",
-              content: [{ type: "text", text: "Started" }],
-            },
-          ],
+          messages:
+            loadCalls === 1
+              ? []
+              : [
+                  {
+                    id: "u1",
+                    role: "user",
+                    content: [{ type: "text", text: "start here" }],
+                  },
+                  {
+                    id: "a1",
+                    role: "assistant",
+                    content: [{ type: "text", text: "Started" }],
+                  },
+                ],
         });
       }
       return jsonResponse({ ok: true });
@@ -130,6 +136,8 @@ describe("useConversation", () => {
     });
 
     await waitFor(() => expect(result.current.isStreaming).toBe(true));
+    // The prompt is consumed when the auto-send starts so it cannot be resent.
+    expect(readNewChatPrompt("new-chat")).toBeUndefined();
     expect(result.current.messages[0]).toMatchObject({
       role: "user",
       text: "start here",
@@ -168,6 +176,46 @@ describe("useConversation", () => {
       "start here",
       "Started",
     ]);
+  });
+
+  it("does not resend a stashed prompt when the hook remounts before the send fires", async () => {
+    let sse: SseHandle | undefined;
+    const fetchMock = vi.fn(async (url: string, init?: RequestInit) => {
+      const method = init?.method ?? "GET";
+      if (url.includes("/api/chat-streams?") && method === "POST") {
+        sse = controllableSse(init?.signal ?? undefined);
+        return sse.response;
+      }
+      if (url.endsWith("/load")) {
+        return jsonResponse({
+          chat: { id: "remount-chat", title: "Remount chat" },
+          messages: [],
+        });
+      }
+      return jsonResponse({ ok: true });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    stashNewChatPrompt("remount-chat", "start here");
+
+    // First render schedules the deferred auto-send; unmount before it fires.
+    const { unmount } = renderHook(() => useConversation("remount-chat"), {
+      wrapper,
+    });
+    unmount();
+
+    // A StrictMode-style remount should still send exactly once.
+    const { result } = renderHook(() => useConversation("remount-chat"), {
+      wrapper,
+    });
+    await waitFor(() => expect(result.current.isStreaming).toBe(true));
+    await waitFor(() => expect(sse).toBeDefined());
+    expect(
+      fetchMock.mock.calls.filter(
+        ([url]) =>
+          typeof url === "string" && url.includes("/api/chat-streams?"),
+      ),
+    ).toHaveLength(1);
+    expect(readNewChatPrompt("remount-chat")).toBeUndefined();
   });
 
   it("streams an assistant reply and reconciles with the daemon", async () => {
