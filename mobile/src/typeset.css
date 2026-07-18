@@ -491,9 +491,9 @@
 
 @layer components {
   .typeset-chat {
-    --typeset-size: 1em;
+    --typeset-size: 0.875em;
     --typeset-leading: 1.6;
-    --typeset-flow: 0.875em;
+    --typeset-flow: 0.75em;
     --typeset-font-mono:
       ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono",
       monospace;
@@ -504,5 +504,16 @@
      language label floats unstyled in the narrow bubble layout. */
   .typeset-chat [data-streamdown="code-block-header"] {
     display: none !important;
+  }
+
+  /* Tone down headings inside narrow chat bubbles so they don't dominate. */
+  .typeset-chat :where(h1) {
+    font-size: 1.35em;
+  }
+  .typeset-chat :where(h2) {
+    font-size: 1.15em;
+  }
+  .typeset-chat :where(h3) {
+    font-size: 1.05em;
   }
 }
