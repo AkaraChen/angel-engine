@@ -498,4 +498,11 @@
       ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono",
       monospace;
   }
+
+  /* Hide the bare Streamdown code-block language header inside chat bubbles.
+     The code block body already carries its own border/background and the
+     language label floats unstyled in the narrow bubble layout. */
+  .typeset-chat [data-streamdown="code-block-header"] {
+    display: none !important;
+  }
 }
