@@ -407,7 +407,7 @@ describe("useConversation", () => {
     );
 
     act(() => {
-      sse!.push({ type: "result", result: {} });
+      sse!.push({ type: "result", result: { text: "" } });
       sse!.push({ type: "done" });
       sse!.close();
     });
