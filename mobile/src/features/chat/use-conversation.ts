@@ -148,7 +148,16 @@ export function useConversation(chatId: string): Conversation {
             elicitationRef.current = event.elicitation;
             forceRender();
           } else if (event.type === "result") {
-            updateAssistant({ assistantText: event.result.text });
+            // Some runtimes send the final text in `result.text`; others only
+            // include it as part of `result.content`. Keep any text we already
+            // streamed so an absent `text` field never wipes the live bubble.
+            const turn = liveTurnRef.current;
+            updateAssistant({
+              assistantText:
+                typeof event.result.text === "string"
+                  ? event.result.text
+                  : turn.assistantText,
+            });
           } else if (event.type === "error") {
             throw new Error(event.message || "The assistant turn failed.");
           } else if (event.type === "done") {
