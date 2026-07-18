@@ -76,7 +76,7 @@ impl CodexAdapter {
         Ok(output)
     }
 
-    pub(super) fn decode_plan(
+    pub(super) fn decode_todo(
         &self,
         engine: &AngelEngine,
         params: &Value,
@@ -106,15 +106,15 @@ impl CodexAdapter {
             .collect();
         let mut output = TransportOutput::default().log(
             TransportLogKind::State,
-            format!("plan updated ({} steps)", entries.len()),
+            format!("todo updated ({} steps)", entries.len()),
         );
         if let Some(event) = maybe_start {
             output.events.push(event);
         }
-        output.events.push(EngineEvent::PlanUpdated {
+        output.events.push(EngineEvent::TodoUpdated {
             conversation_id,
             turn_id,
-            plan: PlanState { entries },
+            todo: PlanState { entries },
         });
         Ok(output)
     }
@@ -151,6 +151,41 @@ mod tests {
                 ..
             } if text == "# Plan\n"
         )));
+    }
+
+    #[test]
+    fn turn_plan_update_emits_todo_event() {
+        let adapter = CodexAdapter::app_server();
+        let engine = engine_with_thread(&adapter);
+
+        let output = adapter
+            .decode_notification(
+                &engine,
+                "turn/plan/updated",
+                &json!({
+                    "threadId": "thread",
+                    "turnId": "turn",
+                    "plan": [
+                        {"step": "Inspect the request", "status": "inProgress"},
+                        {"step": "Apply the change", "status": "pending"}
+                    ],
+                }),
+            )
+            .expect("todo update");
+
+        assert!(output.events.iter().any(|event| matches!(
+            event,
+            EngineEvent::TodoUpdated { todo, .. }
+                if todo.entries[0].content == "Inspect the request"
+                    && todo.entries[0].status == PlanEntryStatus::InProgress
+                    && todo.entries[1].status == PlanEntryStatus::Pending
+        )));
+        assert!(
+            !output
+                .events
+                .iter()
+                .any(|event| matches!(event, EngineEvent::PlanUpdated { .. }))
+        );
     }
 
     #[test]

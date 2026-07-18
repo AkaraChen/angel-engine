@@ -150,9 +150,10 @@ fn codex_plan_mode_round_trip_handles_question_plan_path_and_exit() {
     );
     let turn = &engine.conversations[&conversation_id].turns[&turn_id];
     assert_eq!(
-        turn.plan.as_ref().expect("structured plan").entries[1].content,
+        turn.todo.as_ref().expect("structured todo").entries[1].content,
         "Write implementation tests"
     );
+    assert!(turn.plan.is_none());
     assert_eq!(
         turn.plan_text.chunks,
         vec![ContentDelta::Text(

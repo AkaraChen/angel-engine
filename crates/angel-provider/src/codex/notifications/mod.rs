@@ -102,7 +102,7 @@ impl CodexAdapter {
                 self.decode_plan_delta(engine, params)
             }
             Some(CodexServerNotificationMethod::TurnPlanUpdated) => {
-                self.decode_plan(engine, params)
+                self.decode_todo(engine, params)
             }
             Some(CodexServerNotificationMethod::ItemStarted) => {
                 self.decode_item(engine, params, false)
