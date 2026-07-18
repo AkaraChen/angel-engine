@@ -42,6 +42,7 @@ import {
 } from "@/components/ui/message-scroller";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Spinner } from "@/components/ui/spinner";
+import { MarkdownMessage } from "@/features/chat/markdown-message";
 import { ToolCallGroup } from "@/features/chat/tool-call-group";
 import { useConversation } from "@/features/chat/use-conversation";
 
@@ -113,6 +114,9 @@ function MessageBubble({ message }: { message: ConversationMessage }) {
     message.status === "streaming" && body.length === 0 && !hasTools;
   // A pure tool-call turn has cards but no prose/error/typing: skip the bubble.
   const showBubble = isUser || isError || isTyping || body.length > 0;
+  // Only the assistant's final prose gets markdown/typeset rendering; user,
+  // error, reasoning-only and typing states stay plain text.
+  const renderMarkdown = !isUser && !isError && !isTyping && !isReasoningOnly;
 
   return (
     <MessageGroup>
@@ -129,7 +133,9 @@ function MessageBubble({ message }: { message: ConversationMessage }) {
               align={isUser ? "end" : "start"}
               variant={isError ? "destructive" : isUser ? "default" : "muted"}
             >
-              <BubbleContent className="whitespace-pre-wrap">
+              <BubbleContent
+                className={renderMarkdown ? undefined : "whitespace-pre-wrap"}
+              >
                 {isTyping ? (
                   <Marker>
                     <MarkerIcon>
@@ -144,6 +150,11 @@ function MessageBubble({ message }: { message: ConversationMessage }) {
                   </span>
                 ) : isReasoningOnly ? (
                   <span className="text-muted-foreground italic">{body}</span>
+                ) : renderMarkdown ? (
+                  <MarkdownMessage
+                    content={body}
+                    isStreaming={message.status === "streaming"}
+                  />
                 ) : (
                   body
                 )}
