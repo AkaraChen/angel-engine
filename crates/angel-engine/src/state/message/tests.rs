@@ -9,8 +9,8 @@ use crate::{
     ActionId, ActionKind, ActionOutputDelta, ActionPhase, ActionState, ContentDelta, ContentPart,
     ConversationCapabilities, ConversationId, ConversationLifecycle, ConversationState,
     HistoryReplayEntry, HistoryReplayToolAction, HistoryRole, PlanDisplayKind, PlanEntry,
-    PlanEntryStatus, PlanState, RemoteConversationId, RemoteTurnId, TurnId, TurnState,
-    UserImageInputRef, UserInputRef,
+    PlanEntryStatus, PlanState, RemoteConversationId, RemoteTurnId, TurnDisplayContentKind,
+    TurnDisplayPart, TurnId, TurnState, UserImageInputRef, UserInputRef,
 };
 
 #[test]
@@ -347,6 +347,43 @@ fn live_turn_projects_plan_as_independent_part() {
             && plan_text == "draft plan"
             && path.as_deref() == Some("/tmp/plan.md")
             && text == "done"
+    ));
+}
+
+#[test]
+fn live_turn_preserves_whitespace_only_stream_chunks() {
+    // Token-level streaming can emit whitespace as standalone chunks (the
+    // newline after a code-fence language tag, single spaces between words).
+    // The ordered display path must fold consecutive chunks instead of
+    // treating each whitespace-only chunk as an empty part.
+    let mut conversation = conversation(ConversationCapabilities::unknown());
+    let turn_id = TurnId::new("turn-1");
+    let mut turn = TurnState::new(
+        turn_id.clone(),
+        RemoteTurnId::Known("remote-turn-1".to_string()),
+        0,
+    );
+    for (chunk_index, text) in ["```", "python", "\n", "x", " =", " ", "1", "\n", "```"]
+        .into_iter()
+        .enumerate()
+    {
+        turn.output
+            .chunks
+            .push(ContentDelta::Text(text.to_string()));
+        turn.display_parts.push(TurnDisplayPart::Content {
+            kind: TurnDisplayContentKind::Assistant,
+            chunk_index,
+        });
+    }
+    conversation.turns.insert(turn_id, turn);
+
+    let messages = conversation_display_messages(&conversation);
+
+    assert_eq!(messages.len(), 1);
+    assert!(matches!(
+        messages[0].content.as_slice(),
+        [DisplayMessagePart::Text { kind: DisplayTextPartKind::Text, text }]
+            if text == "```python\nx = 1\n```"
     ));
 }
 
