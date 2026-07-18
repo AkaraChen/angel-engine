@@ -14,7 +14,7 @@ import {
 } from "@phosphor-icons/react";
 import is from "@sindresorhus/is";
 import { m } from "framer-motion";
-import { useEffect, useId, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   isProjectWorkspaceMode,
@@ -34,7 +34,6 @@ import {
 import { SimpleChatSidebarSection } from "@/features/chat/components/simple-chat-sidebar-section";
 import { PowerProjectSidebarSection } from "@/features/projects/components/power-project-sidebar-section";
 import { ProjectSidebarSection } from "@/features/projects/components/project-sidebar-section";
-import { springs } from "@/platform/motion";
 import { cn } from "@/platform/utils";
 
 type MaybeAsync = void | Promise<void>;
@@ -340,7 +339,6 @@ function WorkspaceModeControl({
   value: WorkspaceMode;
 }): ReactElement {
   const { t } = useTranslation();
-  const thumbLayoutId = useId();
 
   return (
     <div
@@ -373,7 +371,6 @@ function WorkspaceModeControl({
                   rounded-[5px] px-2
                   [font-size:var(--workspace-sidebar-label-text-size)]
                   font-medium text-sidebar-foreground/58 outline-hidden
-                  transition-[background-color,color,box-shadow]
                   focus-visible:text-sidebar-foreground
                 `,
                 isActive
@@ -391,7 +388,7 @@ function WorkspaceModeControl({
               type="button"
             >
               {isActive ? (
-                <m.span
+                <span
                   aria-hidden="true"
                   className="
                     absolute inset-0 rounded-[5px] bg-white/58
@@ -399,8 +396,6 @@ function WorkspaceModeControl({
                     dark:bg-white/[0.14]
                     dark:shadow-[inset_0_0_0_1px_rgba(255,255,255,0.06)]
                   "
-                  layoutId={thumbLayoutId}
-                  transition={springs.snappy}
                 />
               ) : null}
               <Icon className="relative size-4 shrink-0" weight="duotone" />
