@@ -153,6 +153,7 @@ fn codex_plan_mode_round_trip_handles_question_plan_path_and_exit() {
         turn.plan.as_ref().expect("structured plan").entries[1].content,
         "Write implementation tests"
     );
+    assert!(turn.todo.is_none());
     assert_eq!(
         turn.plan_text.chunks,
         vec![ContentDelta::Text(

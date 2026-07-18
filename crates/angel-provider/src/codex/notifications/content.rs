@@ -104,20 +104,45 @@ impl CodexAdapter {
                 },
             })
             .collect();
+        let is_plan_update =
+            codex_collaboration_mode(engine, &conversation_id) == CodexCollaborationMode::Plan;
+        let kind = if is_plan_update { "plan" } else { "todo" };
         let mut output = TransportOutput::default().log(
             TransportLogKind::State,
-            format!("plan updated ({} steps)", entries.len()),
+            format!("{kind} updated ({} steps)", entries.len()),
         );
         if let Some(event) = maybe_start {
             output.events.push(event);
         }
-        output.events.push(EngineEvent::PlanUpdated {
-            conversation_id,
-            turn_id,
-            plan: PlanState { entries },
-        });
+        let state = PlanState { entries };
+        if is_plan_update {
+            output.events.push(EngineEvent::PlanUpdated {
+                conversation_id,
+                turn_id,
+                plan: state,
+            });
+        } else {
+            output.events.push(EngineEvent::TodoUpdated {
+                conversation_id,
+                turn_id,
+                todo: state,
+            });
+        }
         Ok(output)
     }
+}
+
+fn codex_collaboration_mode(
+    engine: &AngelEngine,
+    conversation_id: &ConversationId,
+) -> CodexCollaborationMode {
+    engine
+        .conversations
+        .get(conversation_id)
+        .and_then(|conversation| conversation.context.mode.effective())
+        .and_then(Option::as_ref)
+        .and_then(|mode| CodexCollaborationMode::from_id(&mode.id))
+        .unwrap_or(CodexCollaborationMode::Default)
 }
 
 #[cfg(test)]
@@ -151,6 +176,41 @@ mod tests {
                 ..
             } if text == "# Plan\n"
         )));
+    }
+
+    #[test]
+    fn turn_plan_update_emits_todo_event_in_default_mode() {
+        let adapter = CodexAdapter::app_server();
+        let engine = engine_with_thread(&adapter);
+
+        let output = adapter
+            .decode_notification(
+                &engine,
+                "turn/plan/updated",
+                &json!({
+                    "threadId": "thread",
+                    "turnId": "turn",
+                    "plan": [
+                        {"step": "Inspect the request", "status": "inProgress"},
+                        {"step": "Apply the change", "status": "pending"}
+                    ],
+                }),
+            )
+            .expect("todo update");
+
+        assert!(output.events.iter().any(|event| matches!(
+            event,
+            EngineEvent::TodoUpdated { todo, .. }
+                if todo.entries[0].content == "Inspect the request"
+                    && todo.entries[0].status == PlanEntryStatus::InProgress
+                    && todo.entries[1].status == PlanEntryStatus::Pending
+        )));
+        assert!(
+            !output
+                .events
+                .iter()
+                .any(|event| matches!(event, EngineEvent::PlanUpdated { .. }))
+        );
     }
 
     #[test]
