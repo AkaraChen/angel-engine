@@ -1,5 +1,12 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
+import {
+  act,
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { AuthProvider } from "@/features/auth/auth-provider";
@@ -160,5 +167,144 @@ describe("ChatPage", () => {
     renderChat("c1");
 
     expect(await screen.findByText("Couldn't load this chat")).toBeDefined();
+  });
+
+  it("renders persisted assistant text alongside tool-call cards", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () =>
+        jsonResponse({
+          chat: { id: "c1", title: "Mixed turn" },
+          messages: [
+            { id: "u1", role: "user", content: [{ type: "text", text: "hi" }] },
+            {
+              id: "a1",
+              role: "assistant",
+              content: [
+                { type: "text", text: "I'll run a command." },
+                {
+                  type: "tool-call",
+                  toolCallId: "t1",
+                  toolName: "command",
+                  argsText: "ls -la",
+                  artifact: {
+                    id: "t1",
+                    phase: "completed",
+                    outputText: "done",
+                  },
+                },
+                { type: "text", text: " Done." },
+              ],
+            },
+          ],
+        }),
+      ),
+    );
+
+    renderChat("c1");
+
+    expect(await screen.findByText("hi")).toBeDefined();
+    expect(screen.getByText("I'll run a command. Done.")).toBeDefined();
+    expect(screen.getByText("command · Done")).toBeDefined();
+  });
+
+  it("streams a tool-call reply and re-enables the composer after done", async () => {
+    let sse: SseHandle | undefined;
+    let loadCalls = 0;
+    const fetchMock = vi.fn(async (url: string, init?: RequestInit) => {
+      const method = init?.method ?? "GET";
+      if (url.endsWith("/load")) {
+        loadCalls += 1;
+        return jsonResponse({
+          chat: { id: "tool-chat", title: "Tool chat" },
+          messages:
+            loadCalls === 1
+              ? []
+              : [
+                  {
+                    id: "u1",
+                    role: "user",
+                    content: [{ type: "text", text: "run it" }],
+                  },
+                  {
+                    id: "a1",
+                    role: "assistant",
+                    content: [
+                      { type: "text", text: "Done." },
+                      {
+                        type: "tool-call",
+                        toolCallId: "t1",
+                        toolName: "command",
+                        argsText: "ls",
+                        artifact: {
+                          id: "t1",
+                          phase: "completed",
+                          outputText: "x",
+                        },
+                      },
+                    ],
+                  },
+                ],
+        });
+      }
+      if (url.includes("/api/chat-streams?") && method === "POST") {
+        sse = controllableSse(init?.signal ?? undefined);
+        return sse.response;
+      }
+      return jsonResponse({ ok: true });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    renderChat("tool-chat");
+    const textarea = await screen.findByLabelText("Message");
+
+    await act(async () => {
+      fireEvent.change(textarea, { target: { value: "run it" } });
+    });
+    const sendButton = screen.getByLabelText("Send");
+    await act(async () => {
+      fireEvent.click(sendButton);
+    });
+
+    await waitFor(() => expect(sse).toBeDefined());
+    act(() =>
+      sse!.push({
+        type: "tool",
+        action: {
+          id: "t1",
+          kind: "command",
+          title: "Run command",
+          phase: "running",
+        },
+      }),
+    );
+    await waitFor(() =>
+      expect(screen.getByText("command · Running")).toBeDefined(),
+    );
+
+    act(() =>
+      sse!.push({
+        type: "toolDelta",
+        action: {
+          id: "t1",
+          kind: "command",
+          title: "Run command",
+          phase: "completed",
+          outputText: "x",
+        },
+      }),
+    );
+    await waitFor(() =>
+      expect(screen.getByText("command · Done")).toBeDefined(),
+    );
+
+    act(() => {
+      sse!.push({ type: "result", result: { text: "Done." } });
+      sse!.push({ type: "done" });
+      sse!.close();
+    });
+
+    await waitFor(() => expect(screen.queryByLabelText("Stop")).toBeNull());
+    expect(screen.getByLabelText("Send")).toBeDefined();
   });
 });

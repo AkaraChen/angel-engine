@@ -66,14 +66,15 @@ function MessageScrollerItem({
   scrollAnchor = false,
   ...props
 }: React.ComponentProps<typeof MessageScrollerPrimitive.Item>) {
+  // `content-visibility: auto` can leave items unpainted on initial load (and
+  // after navigation) when the scroller's estimated size places them outside
+  // the visible region. Rendering every row keeps the transcript correct on
+  // mobile; long chats can opt back into virtualization later if needed.
   return (
     <MessageScrollerPrimitive.Item
       data-slot="message-scroller-item"
       scrollAnchor={scrollAnchor}
-      className={cn(
-        "min-w-0 shrink-0 [contain-intrinsic-size:auto_10rem] [content-visibility:auto]",
-        className,
-      )}
+      className={cn("min-w-0 shrink-0", className)}
       {...props}
     />
   );

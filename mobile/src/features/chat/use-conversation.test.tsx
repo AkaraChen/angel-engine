@@ -361,6 +361,61 @@ describe("useConversation", () => {
     await waitFor(() => expect(result.current.isStreaming).toBe(false));
   });
 
+  it("keeps streamed text when a result event omits the final text", async () => {
+    let sse: SseHandle | undefined;
+    let loadCalls = 0;
+    const fetchMock = vi.fn(async (url: string, init?: RequestInit) => {
+      const method = init?.method ?? "GET";
+      if (url.endsWith("/load")) {
+        loadCalls += 1;
+        return jsonResponse({
+          chat: { id: "c1", title: "c1" },
+          messages:
+            loadCalls === 1
+              ? []
+              : [
+                  {
+                    id: "u",
+                    role: "user",
+                    content: [{ type: "text", text: "run it" }],
+                  },
+                  {
+                    id: "a",
+                    role: "assistant",
+                    content: [{ type: "text", text: "Done." }],
+                  },
+                ],
+        });
+      }
+      if (url.includes("/api/chat-streams?") && method === "POST") {
+        sse = controllableSse(init?.signal ?? undefined);
+        return sse.response;
+      }
+      return jsonResponse({ ok: true });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const { result } = renderHook(() => useConversation("c1"), { wrapper });
+    await waitFor(() => expect(result.current.isPending).toBe(false));
+
+    act(() => result.current.send("run it"));
+    await waitFor(() => expect(sse).toBeDefined());
+
+    act(() => sse!.push({ type: "delta", part: "text", text: "Done." }));
+    await waitFor(() =>
+      expect(result.current.messages.at(-1)?.text).toBe("Done."),
+    );
+
+    act(() => {
+      sse!.push({ type: "result", result: { text: "" } });
+      sse!.push({ type: "done" });
+      sse!.close();
+    });
+
+    await waitFor(() => expect(result.current.isStreaming).toBe(false));
+    expect(result.current.messages.at(-1)?.text).toBe("Done.");
+  });
+
   it("resets the live turn and aborts the stream when the chat changes", async () => {
     let sse: SseHandle | undefined;
     const fetchMock = vi.fn(async (url: string, init?: RequestInit) => {
