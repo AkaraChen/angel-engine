@@ -112,7 +112,17 @@ let shuttingDown = false;
 function shutdown(code = 0) {
   if (shuttingDown) return;
   shuttingDown = true;
-  for (const child of children) child.kill("SIGINT");
+  for (const child of children) {
+    // Children are spawned detached, so signal the whole process group —
+    // otherwise grandchildren (e.g. Vite under `bun run dev`) survive as
+    // orphans and keep holding the dev ports.
+    try {
+      if (process.platform === "win32") child.kill("SIGINT");
+      else process.kill(-child.pid, "SIGINT");
+    } catch {
+      child.kill("SIGINT");
+    }
+  }
   setTimeout(() => process.exit(code), 500).unref();
 }
 
@@ -122,6 +132,7 @@ process.once("SIGTERM", () => shutdown(0));
 function start(label, command, args, options) {
   const child = spawn(command, args, {
     cwd: repoRoot,
+    detached: process.platform !== "win32",
     stdio: ["ignore", "pipe", "pipe"],
     ...options,
   });
