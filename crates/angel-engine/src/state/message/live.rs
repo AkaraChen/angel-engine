@@ -1,8 +1,8 @@
 use std::collections::BTreeSet;
 
 use super::super::{
-    ActionState, ConversationState, PlanDisplayKind, TurnDisplayContentKind, TurnDisplayPart,
-    TurnState, UserInputRef,
+    ActionState, ContentDelta, ConversationState, PlanDisplayKind, TurnDisplayContentKind,
+    TurnDisplayPart, TurnState, UserInputRef,
 };
 use super::history::append_history_display_message;
 use super::parts::{append_display_parts, append_display_plan_part, append_display_text_part};
@@ -88,6 +88,19 @@ fn ordered_display_content_from_turn(
 ) -> Vec<DisplayMessagePart> {
     let mut parts = Vec::new();
     let mut rendered_actions = BTreeSet::new();
+    // Streaming deltas can split on arbitrary token boundaries, leaving chunks
+    // that are only whitespace (the newline after a code-fence language tag,
+    // the space between words). Folding consecutive text chunks into one
+    // pending buffer keeps that whitespace; emitting per chunk would drop it,
+    // because a whitespace-only part is treated as empty.
+    let mut pending_text = String::new();
+    fn flush_pending(parts: &mut Vec<DisplayMessagePart>, pending: &mut String) {
+        if pending.trim().is_empty() {
+            pending.clear();
+            return;
+        }
+        append_display_text_part(parts, DisplayTextPartKind::Text, std::mem::take(pending));
+    }
 
     for part in &turn.display_parts {
         match part {
@@ -99,19 +112,31 @@ fn ordered_display_content_from_turn(
                 let Some(delta) = delta else {
                     continue;
                 };
-                match kind {
-                    TurnDisplayContentKind::Assistant => {
+                match (kind, delta) {
+                    (TurnDisplayContentKind::Assistant, ContentDelta::Text(text))
+                    | (TurnDisplayContentKind::Assistant, ContentDelta::ResourceRef(text)) => {
+                        pending_text.push_str(text);
+                    }
+                    (TurnDisplayContentKind::Assistant, _) => {
+                        flush_pending(&mut parts, &mut pending_text);
                         append_display_parts(&mut parts, content_delta_display_parts(delta));
                     }
-                    TurnDisplayContentKind::Reasoning => append_display_text_part(
-                        &mut parts,
-                        DisplayTextPartKind::Reasoning,
-                        content_delta_text(delta),
-                    ),
+                    (TurnDisplayContentKind::Reasoning, _) => {
+                        flush_pending(&mut parts, &mut pending_text);
+                        append_display_text_part(
+                            &mut parts,
+                            DisplayTextPartKind::Reasoning,
+                            content_delta_text(delta),
+                        );
+                    }
                 }
             }
-            TurnDisplayPart::Plan { kind } => append_display_plan_part(&mut parts, turn, *kind),
+            TurnDisplayPart::Plan { kind } => {
+                flush_pending(&mut parts, &mut pending_text);
+                append_display_plan_part(&mut parts, turn, *kind);
+            }
             TurnDisplayPart::Action { action_id } => {
+                flush_pending(&mut parts, &mut pending_text);
                 if let Some(action) = actions.iter().find(|action| action.id == *action_id) {
                     parts.push(DisplayMessagePart::tool(DisplayToolAction::from_action(
                         action,
@@ -121,6 +146,7 @@ fn ordered_display_content_from_turn(
             }
         }
     }
+    flush_pending(&mut parts, &mut pending_text);
 
     for action in actions {
         if !rendered_actions.contains(&action.id) {

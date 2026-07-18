@@ -139,11 +139,38 @@ fn codex_rollout_history_entry(
 }
 
 fn codex_replay_is_internal_user_message(item: &Value) -> bool {
-    let text = codex_content_text(item);
-    let trimmed = text.trim();
-    codex_replay_is_environment_context_text(trimmed)
-        || codex_replay_is_agents_instructions_text(trimmed)
-        || codex_replay_is_turn_aborted_text(trimmed)
+    // Codex bundles context into user-role messages, sometimes as several
+    // content parts in one message (e.g. `<recommended_plugins>` followed by
+    // `<environment_context>`). The message is internal only when every text
+    // part is an internal block; a single user-authored part keeps the whole
+    // message visible.
+    let mut saw_text = false;
+    for part in item
+        .get("content")
+        .and_then(Value::as_array)
+        .into_iter()
+        .flatten()
+    {
+        let Some(text) = part.get("text").and_then(Value::as_str) else {
+            continue;
+        };
+        saw_text = true;
+        if !codex_replay_is_internal_user_text(text.trim()) {
+            return false;
+        }
+    }
+    saw_text
+}
+
+fn codex_replay_is_internal_user_text(text: &str) -> bool {
+    codex_replay_is_environment_context_text(text)
+        || codex_replay_is_agents_instructions_text(text)
+        || codex_replay_is_turn_aborted_text(text)
+        || codex_replay_is_recommended_plugins_text(text)
+}
+
+fn codex_replay_is_recommended_plugins_text(text: &str) -> bool {
+    text.starts_with("<recommended_plugins>") && text.ends_with("</recommended_plugins>")
 }
 
 fn codex_replay_is_environment_context_text(text: &str) -> bool {

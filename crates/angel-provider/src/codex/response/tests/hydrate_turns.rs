@@ -361,3 +361,79 @@ fn thread_resume_drops_codex_internal_agents_instructions() {
         ContentDelta::Text(text) if text == "真实问题"
     ));
 }
+
+#[test]
+fn thread_resume_drops_codex_recommended_plugins_message() {
+    let adapter = CodexAdapter::app_server();
+    let mut engine = AngelEngine::with_available_runtime(
+        angel_engine::ProtocolFlavor::CodexAppServer,
+        angel_engine::RuntimeCapabilities::new("test"),
+        adapter.capabilities(),
+    );
+    let request_id = engine
+        .plan_command(angel_engine::EngineCommand::ResumeConversation {
+            target: angel_engine::ResumeTarget::Remote {
+                id: "thread_1".to_string(),
+                hydrate: true,
+                cwd: None,
+            },
+        })
+        .expect("resume plan")
+        .request_id
+        .expect("request id");
+
+    let output = adapter
+        .decode_response(
+            &engine,
+            &request_id,
+            &json!({
+                "thread": {
+                    "id": "thread_1",
+                    "turns": [
+                        {
+                            "items": [
+                                {
+                                    "type": "response_item",
+                                    "payload": {
+                                        "type": "message",
+                                        "role": "user",
+                                        "content": [
+                                            {
+                                                "type": "input_text",
+                                                "text": "<recommended_plugins>\nHere is a list of plugins that are available but not installed.\n\n- Box (box@openai-curated-remote)\n</recommended_plugins>"
+                                            },
+                                            {
+                                                "type": "input_text",
+                                                "text": "<environment_context>\n  <cwd>/tmp/project</cwd>\n</environment_context>"
+                                            }
+                                        ]
+                                    }
+                                },
+                                {
+                                    "type": "userMessage",
+                                    "content": [{ "type": "text", "text": "真实问题" }]
+                                }
+                            ]
+                        }
+                    ]
+                }
+            }),
+        )
+        .expect("thread resume response");
+
+    let replay = output
+        .events
+        .iter()
+        .filter_map(|event| match event {
+            EngineEvent::HistoryReplayChunk { entry, .. } => Some(entry),
+            _ => None,
+        })
+        .collect::<Vec<_>>();
+
+    assert_eq!(replay.len(), 1);
+    assert_eq!(replay[0].role, HistoryRole::User);
+    assert!(matches!(
+        &replay[0].content,
+        ContentDelta::Text(text) if text == "真实问题"
+    ));
+}
