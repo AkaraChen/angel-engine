@@ -107,11 +107,7 @@ export function useConversation(chatId: string): Conversation {
   }, []);
 
   const streamTurn = useCallback(
-    async (
-      text: string,
-      externalSignal?: AbortSignal,
-      onStarted?: () => void,
-    ) => {
+    async (text: string, externalSignal?: AbortSignal) => {
       const controller = new AbortController();
       const streamId = newStreamId();
       const abortFromExternal = () => controller.abort(externalSignal?.reason);
@@ -120,17 +116,12 @@ export function useConversation(chatId: string): Conversation {
       });
       abortRef.current = controller;
       streamIdRef.current = streamId;
-      let started = false;
       try {
         for await (const event of daemon.streamChat(
           { chatId, text },
           streamId,
           controller.signal,
         )) {
-          if (!started) {
-            started = true;
-            onStarted?.();
-          }
           if (event.type === "delta") {
             const { part, text: delta } = event;
             const turn = liveTurnRef.current;
@@ -166,9 +157,8 @@ export function useConversation(chatId: string): Conversation {
         }
       } catch (error) {
         if (!controller.signal.aborted) throw error;
-        // TanStack Query cancellation must propagate so StrictMode can retry
-        // the still-stashed initial prompt. A user Stop is an expected partial
-        // completion and continues to canonical history hydration.
+        // A user Stop is an expected partial completion and continues to
+        // canonical history hydration.
         if (externalSignal?.aborted) throw error;
       } finally {
         externalSignal?.removeEventListener("abort", abortFromExternal);
@@ -183,33 +173,7 @@ export function useConversation(chatId: string): Conversation {
 
   const history = useQuery({
     queryKey: queryKeys.chats.load(chatId),
-    queryFn: async ({ signal }) => {
-      const initialPrompt = readNewChatPrompt(chatId);
-      if (initialPrompt === undefined) return daemon.loadChat(chatId);
-
-      const stamp = newStreamId();
-      liveTurnRef.current = {
-        userId: `local-user-${stamp}`,
-        assistantId: `local-assistant-${stamp}`,
-        userText: initialPrompt,
-        assistantText: "",
-        assistantReasoning: "",
-        assistantToolCalls: [],
-      };
-      forceRender();
-
-      let promptCleared = false;
-      const clearPrompt = () => {
-        if (promptCleared) return;
-        promptCleared = true;
-        clearNewChatPrompt(chatId);
-      };
-      await streamTurn(initialPrompt, signal, clearPrompt);
-      clearPrompt();
-      const result = await daemon.loadChat(chatId);
-      liveTurnRef.current = EMPTY_TURN;
-      return result;
-    },
+    queryFn: async () => daemon.loadChat(chatId),
     select: (result) => toConversation(result.messages),
     enabled: chatId.length > 0,
     retry: false,
@@ -271,6 +235,8 @@ export function useConversation(chatId: string): Conversation {
     (raw: string) => {
       const text = raw.trim();
       if (text.length === 0 || abortRef.current !== null) return;
+      // Consume any stashed initial prompt so it is never auto-sent again.
+      clearNewChatPrompt(chatId);
       const stamp = newStreamId();
       liveTurnRef.current = {
         userId: `local-user-${stamp}`,
@@ -283,8 +249,39 @@ export function useConversation(chatId: string): Conversation {
       forceRender();
       mutate(text);
     },
-    [mutate],
+    [chatId, mutate],
   );
+
+  // Auto-send a stashed new-chat prompt once the empty chat has loaded.
+  // The send is deferred by a macrotask so React StrictMode's mount/cleanup/
+  // remount cycle does not start (and abort) a stream on the first, discarded
+  // render; only the final mount actually fires the request.
+  const initialPromptTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(
+    null,
+  );
+  useEffect(() => {
+    if (chatId.length === 0) return;
+    if (history.isPending || history.isError) return;
+    if (abortRef.current !== null || liveTurnRef.current.userId.length > 0)
+      return;
+    const prompt = readNewChatPrompt(chatId);
+    if (prompt === undefined) return;
+
+    initialPromptTimeoutRef.current = setTimeout(() => {
+      initialPromptTimeoutRef.current = null;
+      if (abortRef.current !== null || liveTurnRef.current.userId.length > 0)
+        return;
+      clearNewChatPrompt(chatId);
+      send(prompt);
+    }, 0);
+
+    return () => {
+      if (initialPromptTimeoutRef.current !== null) {
+        clearTimeout(initialPromptTimeoutRef.current);
+        initialPromptTimeoutRef.current = null;
+      }
+    };
+  }, [chatId, history.isPending, history.isError, send]);
 
   const stop = useCallback(() => {
     const streamId = streamIdRef.current;
@@ -330,6 +327,7 @@ export function useConversation(chatId: string): Conversation {
   }, [chatId, daemon, reset]);
 
   const persisted = history.data ?? [];
+  const hasStashedPrompt = readNewChatPrompt(chatId) !== undefined;
   const liveError = mutation.isError
     ? (mutation.error?.message ?? "The turn failed.")
     : history.isError && liveTurnRef.current.userId.length > 0
@@ -343,7 +341,9 @@ export function useConversation(chatId: string): Conversation {
 
   return {
     messages: [...persisted, ...live],
-    isPending: history.isPending,
+    isPending:
+      history.isPending ||
+      (hasStashedPrompt && liveTurnRef.current.userId.length === 0),
     isError: history.isError,
     refetch: () => void history.refetch(),
     isStreaming: mutation.isPending || abortRef.current !== null,
