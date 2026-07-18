@@ -1,6 +1,8 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
+@import "./typeset.css";
+@import "streamdown/styles.css";
 @import "@fontsource-variable/ibm-plex-sans/wght.css";
 @import "@fontsource-variable/ibm-plex-sans/wght-italic.css";
 @import "@fontsource-variable/geist/wght.css";

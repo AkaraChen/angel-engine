@@ -100,6 +100,44 @@ describe("ChatPage", () => {
     expect(screen.getByText("Hello!")).toBeDefined();
   });
 
+  it("renders assistant markdown with headings, lists and inline code", async () => {
+    const markdown = "# Title\n\n- First\n- Second\n\nUse `code` here.";
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () =>
+        jsonResponse({
+          chat: { id: "md", title: "Markdown" },
+          messages: [
+            {
+              id: "u1",
+              role: "user",
+              content: [{ type: "text", text: "format please" }],
+            },
+            {
+              id: "a1",
+              role: "assistant",
+              content: [{ type: "text", text: markdown }],
+            },
+          ],
+        }),
+      ),
+    );
+
+    renderChat("md");
+
+    await waitFor(() => {
+      expect(screen.getByRole("heading", { name: "Title" })).toBeDefined();
+    });
+    expect(screen.getByText("First")).toBeDefined();
+    expect(screen.getByText("Second")).toBeDefined();
+    expect(
+      screen.getByText((content, element) => {
+        const el = element as Element | null;
+        return content === "code" && el?.tagName.toLowerCase() === "code";
+      }),
+    ).toBeDefined();
+  });
+
   it("sends a stashed new-chat prompt and streams the greet reply", async () => {
     let sse: SseHandle | undefined;
     let streamCalls = 0;
