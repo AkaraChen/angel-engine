@@ -60,6 +60,13 @@ export interface LocaleResourceTranslationElicitation {
   allowForSession: string;
   deny: string;
   dismiss: string;
+  submit: string;
+  other: string;
+  question: string;
+  userInput: string;
+  dynamicTool: string;
+  permissionProfile: string;
+  externalFlow: string;
 }
 
 export interface LocaleResourceTranslationCreateChatReasoningOptions {

@@ -61,6 +61,13 @@ export const ja = {
       allowForSession: "セッション中は許可",
       deny: "拒否",
       dismiss: "閉じる",
+      submit: "Submit",
+      other: "Other",
+      question: "Question",
+      userInput: "User input",
+      dynamicTool: "Dynamic tool",
+      permissionProfile: "Permission profile",
+      externalFlow: "External flow",
     },
     createChat: {
       description:

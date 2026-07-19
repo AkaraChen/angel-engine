@@ -56,6 +56,13 @@ export const zhCN = {
       allowForSession: "本次会话允许",
       deny: "拒绝",
       dismiss: "忽略",
+      submit: "提交",
+      other: "其他",
+      question: "问题",
+      userInput: "用户输入",
+      dynamicTool: "动态工具",
+      permissionProfile: "权限配置",
+      externalFlow: "外部流程",
     },
     createChat: {
       description: "在项目或工作树中开启一个智能体会话。",

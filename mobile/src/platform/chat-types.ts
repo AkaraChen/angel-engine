@@ -207,30 +207,64 @@ export interface ChatSendInput {
 }
 
 /**
+ * One question inside a structured `UserInput` elicitation. Mirrors
+ * `ChatElicitationQuestion` from `@angel-engine/daemon-api/chat`.
+ */
+export interface DaemonElicitationQuestion {
+  id: string;
+  header?: string | null;
+  question?: string | null;
+  isSecret?: boolean;
+  isOther?: boolean;
+  options?: { label: string; description?: string | null }[];
+}
+
+/** Known elicitation kinds the daemon sends over the wire (camelCase). */
+export type DaemonElicitationKind =
+  | "approval"
+  | "permissionProfile"
+  | "userInput"
+  | "dynamicToolCall"
+  | "externalFlow"
+  | (string & {});
+
+/**
  * An elicitation the daemon raises mid-turn (a permission prompt or an input
  * request). Narrowed projection of `ChatElicitation`: the mobile UI renders the
  * title/body and, for approval-style prompts, the allow/deny choices. `kind`
- * mirrors the engine's `ElicitationKind` ("Approval", "PermissionProfile",
- * "UserInput", "ExternalFlow", "DynamicToolCall").
+ * mirrors the engine's `ElicitationKind` (camelCase on the wire).
  */
 export interface DaemonElicitation {
   id: string;
-  kind: string;
+  kind: DaemonElicitationKind;
   title?: string | null;
   body?: string | null;
   choices?: string[];
+  questions?: DaemonElicitationQuestion[];
 }
 
 /**
- * The subset of `ChatElicitationResponse` the mobile UI can produce: approve or
- * deny a permission prompt, or cancel any elicitation to unblock the turn. Answer
- * / dynamic-tool / raw responses are a follow-up.
+ * One answer in an `answers` elicitation response. Mirrors
+ * `ChatElicitationAnswer` from `@angel-engine/daemon-api/chat`.
+ */
+export interface ChatElicitationAnswer {
+  id: string;
+  value: string;
+}
+
+/**
+ * Responses the mobile UI can send back to resolve an elicitation.
+ * Mirrors the daemon's `ChatElicitationResponse` union.
  */
 export type ChatElicitationResponse =
   | { type: "allow" }
   | { type: "allowForSession" }
   | { type: "deny" }
-  | { type: "cancel" };
+  | { type: "cancel" }
+  | { type: "answers"; answers: ChatElicitationAnswer[] }
+  | { type: "dynamicToolResult"; success: boolean }
+  | { type: "externalComplete" }
+  | { type: "raw"; value: string };
 
 /** Payload for `POST /api/chat-streams/:id/elicitation`. */
 export interface ElicitationResolveInput {
