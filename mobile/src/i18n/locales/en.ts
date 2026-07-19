@@ -58,6 +58,13 @@ export const en = {
       allowForSession: "Allow for session",
       deny: "Deny",
       dismiss: "Dismiss",
+      submit: "Submit",
+      other: "Other",
+      question: "Question",
+      userInput: "User input",
+      dynamicTool: "Dynamic tool",
+      permissionProfile: "Permission profile",
+      externalFlow: "External flow",
     },
     createChat: {
       description: "Start an agent session in a project or worktree.",

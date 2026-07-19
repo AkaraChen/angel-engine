@@ -61,6 +61,13 @@ export const de = {
       allowForSession: "Für Sitzung zulassen",
       deny: "Ablehnen",
       dismiss: "Verwerfen",
+      submit: "Submit",
+      other: "Other",
+      question: "Question",
+      userInput: "User input",
+      dynamicTool: "Dynamic tool",
+      permissionProfile: "Permission profile",
+      externalFlow: "External flow",
     },
     createChat: {
       description: "Starte eine Agent-Sitzung in einem Projekt oder Worktree.",

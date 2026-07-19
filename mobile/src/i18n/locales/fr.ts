@@ -59,6 +59,13 @@ export const fr = {
       allowForSession: "Autoriser pour la session",
       deny: "Refuser",
       dismiss: "Ignorer",
+      submit: "Submit",
+      other: "Other",
+      question: "Question",
+      userInput: "User input",
+      dynamicTool: "Dynamic tool",
+      permissionProfile: "Permission profile",
+      externalFlow: "External flow",
     },
     createChat: {
       description:

@@ -56,6 +56,13 @@ export const zhTW = {
       allowForSession: "本次工作階段允許",
       deny: "拒絕",
       dismiss: "忽略",
+      submit: "提交",
+      other: "其他",
+      question: "問題",
+      userInput: "使用者輸入",
+      dynamicTool: "動態工具",
+      permissionProfile: "權限設定",
+      externalFlow: "外部流程",
     },
     createChat: {
       description: "在專案或工作樹中開啟一個代理工作階段。",

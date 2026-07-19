@@ -58,6 +58,13 @@ export const ko = {
       allowForSession: "세션 동안 허용",
       deny: "거부",
       dismiss: "닫기",
+      submit: "Submit",
+      other: "Other",
+      question: "Question",
+      userInput: "User input",
+      dynamicTool: "Dynamic tool",
+      permissionProfile: "Permission profile",
+      externalFlow: "External flow",
     },
     createChat: {
       description: "프로젝트 또는 워크트리에서 에이전트 세션을 시작합니다.",
