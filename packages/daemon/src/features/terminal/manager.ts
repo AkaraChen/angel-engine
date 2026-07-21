@@ -1,8 +1,6 @@
 import type {
   TerminalCreateRequest,
   TerminalEvent,
-  TerminalResizeInput,
-  TerminalWriteInput,
 } from "@angel-engine/daemon-api/terminal";
 import type { IPty } from "node-pty";
 import type { WebSocket } from "ws";
@@ -10,8 +8,11 @@ import type { WebSocket } from "ws";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { Effect } from "effect";
 import * as pty from "node-pty";
 import { parseTerminalClientMessage } from "@angel-engine/daemon-api/terminal";
+
+import { DaemonError } from "../../platform/errors";
 
 interface TerminalSession {
   ptyProcess: IPty;
@@ -19,7 +20,7 @@ interface TerminalSession {
   subscribers: Set<WebSocket>;
 }
 
-export class TerminalManager {
+class TerminalManager {
   readonly #sessions = new Map<string, TerminalSession>();
 
   handle(socket: WebSocket, input: unknown) {
@@ -103,6 +104,32 @@ export class TerminalManager {
     for (const socket of session.subscribers) send(socket, sessionId, event);
   }
 }
+
+/** Owns PTY sessions for the daemon lifetime; kills them all on scope close. */
+export class TerminalService extends Effect.Service<TerminalService>()(
+  "daemon/TerminalService",
+  {
+    scoped: Effect.gen(function* () {
+      const manager = yield* Effect.acquireRelease(
+        Effect.sync(() => new TerminalManager()),
+        (activeManager) => Effect.sync(() => activeManager.close()),
+      );
+
+      return {
+        disconnect: (socket: WebSocket) =>
+          Effect.sync(() => manager.disconnect(socket)),
+        handle: (socket: WebSocket, input: unknown) =>
+          Effect.try({
+            catch: (cause) =>
+              DaemonError.invalidRequest(
+                cause instanceof Error ? cause.message : String(cause),
+              ),
+            try: () => manager.handle(socket, input),
+          }),
+      };
+    }),
+  },
+) {}
 
 function send(socket: WebSocket, sessionId: string, event: TerminalEvent) {
   if (socket.readyState === socket.OPEN) {

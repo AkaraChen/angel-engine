@@ -1,23 +1,47 @@
 import type { CustomAgent } from "@angel-engine/daemon-api/agents";
+import type { AppDatabase } from "../../platform/db";
+import type { DaemonError } from "../../platform/errors";
+
+import { Cause, Effect, Exit, Layer } from "effect";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { Db } from "../../platform/db";
 import { normalizeChatRuntime } from "./repository";
 
 afterEach(() => {
   vi.unstubAllEnvs();
 });
 
+// Lookups are stubbed per test, so the database is never touched.
+const testDbLayer = Layer.succeed(
+  Db,
+  new Db({ database: undefined as unknown as AppDatabase }),
+);
+
+async function runNormalizeChatRuntime(
+  runtime: string | undefined,
+  lookup?: (
+    runtime: string,
+  ) => Effect.Effect<CustomAgent | null, DaemonError, Db>,
+) {
+  const exit = await Effect.runPromiseExit(
+    normalizeChatRuntime(runtime, lookup).pipe(Effect.provide(testDbLayer)),
+  );
+  if (Exit.isSuccess(exit)) return exit.value;
+  throw Cause.squash(exit.cause);
+}
+
 describe("normalizeChatRuntime", () => {
   it("rejects missing runtime ids", async () => {
     vi.stubEnv("ANGEL_ENGINE_RUNTIME", undefined);
 
-    await expect(normalizeChatRuntime(undefined)).rejects.toThrow(
+    await expect(runNormalizeChatRuntime(undefined)).rejects.toThrow(
       "Chat runtime is required.",
     );
   });
 
   it("rejects unknown runtime ids", async () => {
-    await expect(normalizeChatRuntime("bad-runtime")).rejects.toThrow(
+    await expect(runNormalizeChatRuntime("bad-runtime")).rejects.toThrow(
       "Unknown chat runtime.",
     );
   });
@@ -25,47 +49,43 @@ describe("normalizeChatRuntime", () => {
   it("rejects unknown runtime ids from the environment", async () => {
     vi.stubEnv("ANGEL_ENGINE_RUNTIME", "bad-runtime");
 
-    await expect(normalizeChatRuntime(undefined)).rejects.toThrow(
+    await expect(runNormalizeChatRuntime(undefined)).rejects.toThrow(
       "Unknown chat runtime.",
     );
   });
 
   it("rejects removed cursor runtime ids", async () => {
-    await expect(normalizeChatRuntime("cursor")).rejects.toThrow(
+    await expect(runNormalizeChatRuntime("cursor")).rejects.toThrow(
       "Unknown chat runtime.",
     );
   });
 
   it("accepts builtin runtime ids", async () => {
-    await expect(normalizeChatRuntime("kimi")).resolves.toBe("kimi");
+    await expect(runNormalizeChatRuntime("kimi")).resolves.toBe("kimi");
   });
 
   it("accepts codex as an agent runtime id", async () => {
-    await expect(normalizeChatRuntime("codex")).resolves.toBe("codex");
+    await expect(runNormalizeChatRuntime("codex")).resolves.toBe("codex");
   });
 
   it("accepts existing custom runtime ids", async () => {
     await expect(
-      normalizeChatRuntime(
-        "custom:agent",
-        vi.fn(() => customAgent("custom:agent")),
+      runNormalizeChatRuntime("custom:agent", () =>
+        Effect.succeed(customAgent("custom:agent")),
       ),
     ).resolves.toBe("custom:agent");
   });
 
   it("rejects missing custom runtime ids", async () => {
     await expect(
-      normalizeChatRuntime(
-        "custom:missing",
-        vi.fn(() => null),
-      ),
+      runNormalizeChatRuntime("custom:missing", () => Effect.succeed(null)),
     ).rejects.toThrow("Unknown chat runtime.");
   });
 
   it("set-runtime validation happens before persistence", async () => {
     const runtime = "kimi";
 
-    await expect(normalizeChatRuntime("bad-runtime")).rejects.toThrow(
+    await expect(runNormalizeChatRuntime("bad-runtime")).rejects.toThrow(
       "Unknown chat runtime.",
     );
     expect(runtime).toBe("kimi");

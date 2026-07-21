@@ -7,6 +7,7 @@ import fs from "node:fs/promises";
 
 import path from "node:path";
 import is from "@sindresorhus/is";
+import { Effect } from "effect";
 import { lookup } from "mime-types";
 
 const DEFAULT_LIMIT = 20;
@@ -26,7 +27,13 @@ const IGNORED_DIRECTORIES = new Set([
   "target",
 ]);
 
-export async function searchProjectFiles(
+export function searchProjectFiles(
+  input: ProjectFileSearchInput,
+): Effect.Effect<ProjectFileSearchResult[]> {
+  return Effect.promise(() => scanProjectFiles(input));
+}
+
+async function scanProjectFiles(
   input: ProjectFileSearchInput,
 ): Promise<ProjectFileSearchResult[]> {
   const root = path.resolve(input.root);

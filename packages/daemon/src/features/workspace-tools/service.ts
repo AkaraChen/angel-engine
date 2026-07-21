@@ -11,6 +11,8 @@ import type {
 import fs from "node:fs/promises";
 import path from "node:path";
 import is from "@sindresorhus/is";
+import { Effect } from "effect";
+import { DaemonError } from "../../platform/errors";
 import {
   buildUntrackedPatch,
   gitOutput,
@@ -45,81 +47,94 @@ const IGNORED_DIRECTORIES = new Set([
   "target",
 ]);
 
-export async function workspaceFileTree(
+export function workspaceFileTree(
   rootInput: string,
-): Promise<WorkspaceFileTreeResult> {
-  const root = await resolveWorkspaceRoot(rootInput);
-  const scan = await scanWorkspaceTree(root);
-  const gitRoot = await gitRootFor(root);
-  const gitStatus = is.nonEmptyString(gitRoot)
-    ? await gitStatusEntries({ gitRoot, root }).catch(() => [])
-    : [];
+): Effect.Effect<WorkspaceFileTreeResult, DaemonError> {
+  return Effect.gen(function* () {
+    const root = yield* resolveWorkspaceRoot(rootInput);
+    const scan = yield* Effect.promise(() => scanWorkspaceTree(root));
+    const gitRoot = yield* gitRootFor(root);
+    const gitStatus = is.nonEmptyString(gitRoot)
+      ? yield* gitStatusEntries({ gitRoot, root }).pipe(
+          Effect.orElseSucceed((): WorkspaceToolGitStatusEntry[] => []),
+        )
+      : [];
 
-  return {
-    gitStatus,
-    paths: scan.paths,
-    root,
-    truncated: scan.truncated,
-  };
-}
-
-export async function workspaceGitDiff(
-  rootInput: string,
-): Promise<WorkspaceGitDiffResult> {
-  const root = await resolveWorkspaceRoot(rootInput);
-  const gitRoot = await gitRootFor(root);
-  if (!is.nonEmptyString(gitRoot)) {
     return {
-      isGitRepository: false,
+      gitStatus,
+      paths: scan.paths,
       root,
-      skippedFiles: [],
-      stagedPatch: "",
-      status: [],
-      unstagedPatch: "",
-      warnings: [],
+      truncated: scan.truncated,
     };
-  }
-
-  const [branch, status, stagedPatch, unstagedTrackedPatch] = await Promise.all(
-    [
-      gitOutput(gitRoot, ["branch", "--show-current"]).catch(() => ""),
-      gitStatusEntries({ gitRoot, root }),
-      gitOutput(gitRoot, [
-        "diff",
-        "--cached",
-        "--patch",
-        "--find-renames",
-        "--no-ext-diff",
-        "--no-color",
-      ]),
-      gitOutput(gitRoot, [
-        "diff",
-        "--patch",
-        "--find-renames",
-        "--no-ext-diff",
-        "--no-color",
-      ]),
-    ],
-  );
-  const untrackedResult = await buildUntrackedPatch(root, status);
-  const unstagedPatch = joinPatches(
-    unstagedTrackedPatch,
-    untrackedResult.patch,
-  );
-
-  return {
-    branch: branch || undefined,
-    isGitRepository: true,
-    root,
-    skippedFiles: untrackedResult.skippedFiles,
-    stagedPatch,
-    status,
-    unstagedPatch,
-    warnings: untrackedResult.warnings,
-  };
+  });
 }
 
-export async function workspaceGitCommit({
+export function workspaceGitDiff(
+  rootInput: string,
+): Effect.Effect<WorkspaceGitDiffResult, DaemonError> {
+  return Effect.gen(function* () {
+    const root = yield* resolveWorkspaceRoot(rootInput);
+    const gitRoot = yield* gitRootFor(root);
+    if (!is.nonEmptyString(gitRoot)) {
+      return {
+        isGitRepository: false,
+        root,
+        skippedFiles: [],
+        stagedPatch: "",
+        status: [],
+        unstagedPatch: "",
+        warnings: [],
+      };
+    }
+
+    const [branch, status, stagedPatch, unstagedTrackedPatch] =
+      yield* Effect.all(
+        [
+          workspaceGitOutput(gitRoot, ["branch", "--show-current"]).pipe(
+            Effect.orElseSucceed(() => ""),
+          ),
+          gitStatusEntries({ gitRoot, root }),
+          workspaceGitOutput(gitRoot, [
+            "diff",
+            "--cached",
+            "--patch",
+            "--find-renames",
+            "--no-ext-diff",
+            "--no-color",
+          ]),
+          workspaceGitOutput(gitRoot, [
+            "diff",
+            "--patch",
+            "--find-renames",
+            "--no-ext-diff",
+            "--no-color",
+          ]),
+        ],
+        { concurrency: "unbounded" },
+      );
+    const untrackedResult = yield* Effect.tryPromise({
+      catch: (cause) => DaemonError.gitFailed(cause),
+      try: () => buildUntrackedPatch(root, status),
+    });
+    const unstagedPatch = joinPatches(
+      unstagedTrackedPatch,
+      untrackedResult.patch,
+    );
+
+    return {
+      branch: branch || undefined,
+      isGitRepository: true,
+      root,
+      skippedFiles: untrackedResult.skippedFiles,
+      stagedPatch,
+      status,
+      unstagedPatch,
+      warnings: untrackedResult.warnings,
+    };
+  });
+}
+
+export function workspaceGitCommit({
   description,
   paths: pathInputs,
   root: rootInput,
@@ -129,131 +144,185 @@ export async function workspaceGitCommit({
   paths: string[];
   root: string;
   summary: string;
-}): Promise<WorkspaceToolGitCommitResult> {
-  const root = await resolveWorkspaceRoot(rootInput);
-  const gitRoot = await gitRootFor(root);
-  if (!is.nonEmptyString(gitRoot)) {
-    throw new Error("Workspace root is not a Git repository.");
-  }
+}): Effect.Effect<WorkspaceToolGitCommitResult, DaemonError> {
+  return Effect.gen(function* () {
+    const root = yield* resolveWorkspaceRoot(rootInput);
+    const gitRoot = yield* gitRootFor(root);
+    if (!is.nonEmptyString(gitRoot)) {
+      return yield* Effect.fail(DaemonError.workspaceNotGitRepository());
+    }
 
-  const trimmedSummary = summary.trim();
-  if (!is.nonEmptyString(trimmedSummary)) {
-    throw new Error("Commit summary is required.");
-  }
+    const trimmedSummary = summary.trim();
+    if (!is.nonEmptyString(trimmedSummary)) {
+      return yield* Effect.fail(
+        DaemonError.workspaceCommitInputInvalid("Commit summary is required."),
+      );
+    }
 
-  const paths = uniqueWorkspaceGitPaths(root, pathInputs);
-  if (paths.length === 0) {
-    throw new Error("Select at least one file to commit.");
-  }
+    const paths = uniqueWorkspaceGitPaths(root, pathInputs);
+    if (paths.length === 0) {
+      return yield* Effect.fail(
+        DaemonError.workspaceCommitInputInvalid(
+          "Select at least one file to commit.",
+        ),
+      );
+    }
 
-  await gitOutput(root, ["add", "--", ...paths]);
+    yield* workspaceGitOutput(root, ["add", "--", ...paths]);
 
-  const commitArgs = ["commit", "-m", trimmedSummary];
-  const trimmedDescription = description?.trim();
-  if (is.nonEmptyString(trimmedDescription)) {
-    commitArgs.push("-m", trimmedDescription);
-  }
-  commitArgs.push("--only", "--", ...paths);
+    const commitArgs = ["commit", "-m", trimmedSummary];
+    const trimmedDescription = description?.trim();
+    if (is.nonEmptyString(trimmedDescription)) {
+      commitArgs.push("-m", trimmedDescription);
+    }
+    commitArgs.push("--only", "--", ...paths);
 
-  await gitOutput(root, commitArgs);
-  const commitHash = await gitOutput(root, ["rev-parse", "--short", "HEAD"]);
+    yield* workspaceGitOutput(root, commitArgs);
+    const commitHash = yield* workspaceGitOutput(root, [
+      "rev-parse",
+      "--short",
+      "HEAD",
+    ]);
 
-  return {
-    commitHash,
-    root,
-  };
+    return {
+      commitHash,
+      root,
+    };
+  });
 }
 
-export async function workspaceReadFile(
+export function workspaceReadFile(
   rootInput: string,
   treePathInput: string,
-): Promise<WorkspaceFileReadResult> {
-  const root = await resolveWorkspaceRoot(rootInput);
-  const absolutePath = resolveWorkspaceTreePath(root, treePathInput);
-  const treePath = absolutePathToTreePath(root, absolutePath);
-  if (!is.nonEmptyString(treePath)) {
-    throw new Error("Workspace file path must stay inside the workspace root.");
-  }
+): Effect.Effect<WorkspaceFileReadResult, DaemonError> {
+  return Effect.gen(function* () {
+    const root = yield* resolveWorkspaceRoot(rootInput);
+    const absolutePath = yield* Effect.try({
+      catch: (cause) => DaemonError.workspacePathInvalid(causeMessage(cause)),
+      try: () => resolveWorkspaceTreePath(root, treePathInput),
+    });
+    const treePath = absolutePathToTreePath(root, absolutePath);
+    if (!is.nonEmptyString(treePath)) {
+      return yield* Effect.fail(
+        DaemonError.workspacePathInvalid(
+          "Workspace file path must stay inside the workspace root.",
+        ),
+      );
+    }
 
-  const [realRoot, realPath] = await Promise.all([
-    fs.realpath(root),
-    fs.realpath(absolutePath),
-  ]);
-  if (!pathIsInside(realRoot, realPath)) {
-    throw new Error("Workspace file path must stay inside the workspace root.");
-  }
+    const [realRoot, realPath] = yield* Effect.tryPromise({
+      catch: (cause) => DaemonError.workspacePathInvalid(causeMessage(cause)),
+      try: () => Promise.all([fs.realpath(root), fs.realpath(absolutePath)]),
+    });
+    if (!pathIsInside(realRoot, realPath)) {
+      return yield* Effect.fail(
+        DaemonError.workspacePathInvalid(
+          "Workspace file path must stay inside the workspace root.",
+        ),
+      );
+    }
 
-  const stat = await fs.stat(realPath);
+    return yield* Effect.tryPromise({
+      catch: (cause) => DaemonError.workspacePathInvalid(causeMessage(cause)),
+      try: async (): Promise<WorkspaceFileReadResult> => {
+        const stat = await fs.stat(realPath);
 
-  if (!stat.isFile()) {
-    return {
-      path: treePath,
-      reason: "not-file",
-      root,
-      size: stat.size,
-      type: "unsupported",
-    };
-  }
+        if (!stat.isFile()) {
+          return {
+            path: treePath,
+            reason: "not-file",
+            root,
+            size: stat.size,
+            type: "unsupported",
+          };
+        }
 
-  if (stat.size > MAX_FILE_PREVIEW_BYTES) {
-    return {
-      path: treePath,
-      reason: "too-large",
-      root,
-      size: stat.size,
-      type: "unsupported",
-    };
-  }
+        if (stat.size > MAX_FILE_PREVIEW_BYTES) {
+          return {
+            path: treePath,
+            reason: "too-large",
+            root,
+            size: stat.size,
+            type: "unsupported",
+          };
+        }
 
-  const buffer = await fs.readFile(realPath);
-  if (isProbablyBinary(buffer)) {
-    return {
-      path: treePath,
-      reason: "binary",
-      root,
-      size: stat.size,
-      type: "unsupported",
-    };
-  }
+        const buffer = await fs.readFile(realPath);
+        if (isProbablyBinary(buffer)) {
+          return {
+            path: treePath,
+            reason: "binary",
+            root,
+            size: stat.size,
+            type: "unsupported",
+          };
+        }
 
-  return {
-    content: buffer.toString("utf8"),
-    path: treePath,
-    root,
-    size: stat.size,
-    type: "text",
-  };
+        return {
+          content: buffer.toString("utf8"),
+          path: treePath,
+          root,
+          size: stat.size,
+          type: "text",
+        };
+      },
+    });
+  });
 }
 
-export async function workspaceWriteFile(
+export function workspaceWriteFile(
   rootInput: string,
   treePathInput: string,
   content: string,
-): Promise<WorkspaceFileWriteResult> {
-  const root = await resolveWorkspaceRoot(rootInput);
-  const treePath = normalizeGitPath(treePathInput);
-  const absolutePath = resolveWorkspaceTreePath(root, treePath);
-  const realRoot = await fs.realpath(root);
-  let realPath: string;
+): Effect.Effect<WorkspaceFileWriteResult, DaemonError> {
+  return Effect.gen(function* () {
+    const root = yield* resolveWorkspaceRoot(rootInput);
+    const { absolutePath, treePath } = yield* Effect.try({
+      catch: (cause) => DaemonError.workspacePathInvalid(causeMessage(cause)),
+      try: () => {
+        const normalizedTreePath = normalizeGitPath(treePathInput);
+        return {
+          absolutePath: resolveWorkspaceTreePath(root, normalizedTreePath),
+          treePath: normalizedTreePath,
+        };
+      },
+    });
+    const { realPath, realRoot } = yield* Effect.tryPromise({
+      catch: (cause) => DaemonError.workspacePathInvalid(causeMessage(cause)),
+      try: async () => {
+        const resolvedRoot = await fs.realpath(root);
+        let resolvedPath: string;
+        try {
+          resolvedPath = await fs.realpath(absolutePath);
+        } catch {
+          resolvedPath = await realpathNearestExistingParent(absolutePath);
+        }
+        return { realPath: resolvedPath, realRoot: resolvedRoot };
+      },
+    });
 
-  try {
-    realPath = await fs.realpath(absolutePath);
-  } catch {
-    realPath = await realpathNearestExistingParent(absolutePath);
-  }
+    if (!pathIsInside(realRoot, realPath)) {
+      return yield* Effect.fail(
+        DaemonError.workspacePathInvalid(
+          "Workspace file path must stay inside the workspace root.",
+        ),
+      );
+    }
 
-  if (!pathIsInside(realRoot, realPath)) {
-    throw new Error("Workspace file path must stay inside the workspace root.");
-  }
+    yield* Effect.tryPromise({
+      catch: (cause) => DaemonError.workspacePathInvalid(causeMessage(cause)),
+      try: async () => {
+        await fs.mkdir(path.dirname(absolutePath), { recursive: true });
+        await fs.writeFile(absolutePath, content, "utf8");
+      },
+    });
 
-  await fs.mkdir(path.dirname(absolutePath), { recursive: true });
-  await fs.writeFile(absolutePath, content, "utf8");
-
-  return {
-    path: treePath,
-    root,
-    size: Buffer.byteLength(content, "utf8"),
-  };
+    return {
+      path: treePath,
+      root,
+      size: Buffer.byteLength(content, "utf8"),
+    };
+  });
 }
 
 async function realpathNearestExistingParent(absolutePath: string) {
@@ -280,13 +349,20 @@ async function realpathNearestExistingParent(absolutePath: string) {
   }
 }
 
-async function resolveWorkspaceRoot(rootInput: string) {
-  const root = path.resolve(rootInput);
-  const stat = await fs.stat(root);
-  if (!stat.isDirectory()) {
-    throw new Error("Workspace root must be a directory.");
-  }
-  return root;
+function resolveWorkspaceRoot(
+  rootInput: string,
+): Effect.Effect<string, DaemonError> {
+  return Effect.tryPromise({
+    catch: (cause) => DaemonError.workspacePathInvalid(causeMessage(cause)),
+    try: async () => {
+      const root = path.resolve(rootInput);
+      const stat = await fs.stat(root);
+      if (!stat.isDirectory()) {
+        throw new Error("Workspace root must be a directory.");
+      }
+      return root;
+    },
+  });
 }
 
 async function scanWorkspaceTree(root: string) {
@@ -342,51 +418,65 @@ async function scanWorkspaceTree(root: string) {
   return { paths, truncated };
 }
 
-async function gitRootFor(root: string) {
-  try {
-    return await gitOutput(root, ["rev-parse", "--show-toplevel"]);
-  } catch {
-    return null;
-  }
+function workspaceGitOutput(
+  cwd: string,
+  args: string[],
+): Effect.Effect<string, DaemonError> {
+  return Effect.tryPromise({
+    catch: (cause) => DaemonError.gitFailed(cause),
+    try: () => gitOutput(cwd, args),
+  });
 }
 
-async function gitStatusEntries({
+function gitRootFor(root: string): Effect.Effect<string | null, never> {
+  return workspaceGitOutput(root, ["rev-parse", "--show-toplevel"]).pipe(
+    Effect.orElseSucceed(() => null),
+  );
+}
+
+function gitStatusEntries({
   gitRoot,
   root,
 }: {
   gitRoot: string;
   root: string;
-}) {
-  const output = await gitOutput(gitRoot, [
-    "status",
-    "--porcelain=v1",
-    "--ignored=matching",
-    "--untracked-files=all",
-    "-z",
-  ]);
-  const entries = parseGitStatusOutput(output);
-  const byPath = new Map<string, WorkspaceToolGitStatusEntry>();
+}): Effect.Effect<WorkspaceToolGitStatusEntry[], DaemonError> {
+  return Effect.gen(function* () {
+    const output = yield* workspaceGitOutput(gitRoot, [
+      "status",
+      "--porcelain=v1",
+      "--ignored=matching",
+      "--untracked-files=all",
+      "-z",
+    ]);
+    const entries = parseGitStatusOutput(output);
+    const byPath = new Map<string, WorkspaceToolGitStatusEntry>();
 
-  for (const entry of entries) {
-    const absolutePath = path.resolve(gitRoot, entry.path);
-    const treePath = absolutePathToTreePath(root, absolutePath);
-    if (!is.nonEmptyString(treePath)) continue;
+    for (const entry of entries) {
+      const absolutePath = path.resolve(gitRoot, entry.path);
+      const treePath = absolutePathToTreePath(root, absolutePath);
+      if (!is.nonEmptyString(treePath)) continue;
 
-    const current = byPath.get(treePath);
-    if (!current) {
-      byPath.set(treePath, { ...entry, path: treePath });
-      continue;
+      const current = byPath.get(treePath);
+      if (!current) {
+        byPath.set(treePath, { ...entry, path: treePath });
+        continue;
+      }
+
+      byPath.set(treePath, {
+        path: treePath,
+        staged: current.staged || entry.staged,
+        status: higherPriorityStatus(current.status, entry.status),
+        unstaged: current.unstaged || entry.unstaged,
+      });
     }
 
-    byPath.set(treePath, {
-      path: treePath,
-      staged: current.staged || entry.staged,
-      status: higherPriorityStatus(current.status, entry.status),
-      unstaged: current.unstaged || entry.unstaged,
-    });
-  }
+    return [...byPath.values()].sort((left, right) =>
+      left.path.localeCompare(right.path),
+    );
+  });
+}
 
-  return [...byPath.values()].sort((left, right) =>
-    left.path.localeCompare(right.path),
-  );
+function causeMessage(cause: unknown) {
+  return cause instanceof Error ? cause.message : String(cause);
 }

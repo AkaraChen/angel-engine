@@ -8,12 +8,25 @@ import {
 } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
+import { Cause, Effect, Exit } from "effect";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { buildUntrackedPatch } from "./git";
 import { workspaceWriteFile } from "./service";
 
 const tempRoots: string[] = [];
+
+async function runWorkspaceWriteFile(
+  root: string,
+  treePath: string,
+  content: string,
+) {
+  const exit = await Effect.runPromiseExit(
+    workspaceWriteFile(root, treePath, content),
+  );
+  if (Exit.isSuccess(exit)) return exit.value;
+  throw Cause.squash(exit.cause);
+}
 
 async function makeTempDir() {
   const directory = await mkdtemp(path.join(os.tmpdir(), "workspace-tools-"));
@@ -35,7 +48,7 @@ describe("workspaceWriteFile", () => {
   it("writes a new file inside the workspace", async () => {
     const workspace = await makeTempDir();
 
-    await workspaceWriteFile(workspace, "nested/file.txt", "x");
+    await runWorkspaceWriteFile(workspace, "nested/file.txt", "x");
 
     await expect(
       readFile(path.join(workspace, "nested/file.txt"), "utf8"),
@@ -49,7 +62,7 @@ describe("workspaceWriteFile", () => {
     await symlink(outside, path.join(workspace, "link"));
 
     await expect(
-      workspaceWriteFile(workspace, "link/escape.txt", "x"),
+      runWorkspaceWriteFile(workspace, "link/escape.txt", "x"),
     ).rejects.toThrow(
       "Workspace file path must stay inside the workspace root.",
     );

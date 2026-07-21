@@ -6,10 +6,13 @@ import type {
   ChatStreamEvent,
 } from "@angel-engine/daemon-api/chat";
 import type { Hono } from "hono";
-import type { ChatRuntime, ChatStreamControls } from "./features/chat/runtime";
 import type { DaemonGlobalEvent } from "@angel-engine/daemon-api";
+import type { Db } from "./platform/db";
+import type { DaemonRuntime } from "./platform/runtime";
+import type { ChatStreamControls } from "./features/chat/runtime";
 
 import { type as arkType } from "arktype";
+import { Effect } from "effect";
 import { streamSSE } from "hono/streaming";
 import {
   createCustomAgentInputSchema,
@@ -43,6 +46,7 @@ import {
   updateCustomAgent,
 } from "./features/agents/repository";
 import { listSkillsForAgent } from "./features/agents/skills";
+import { ChatEngine } from "./features/chat/engine-runtime";
 import {
   archiveChat,
   deleteAllChats,
@@ -76,6 +80,8 @@ import {
   workspaceReadFile,
   workspaceWriteFile,
 } from "./features/workspace-tools/service";
+import { DaemonError } from "./platform/errors";
+import { runDaemonApi } from "./platform/runtime";
 
 export interface EventPublisher {
   publish: (event: DaemonGlobalEvent) => void;
@@ -91,23 +97,33 @@ interface ActiveStream {
 
 export function registerApi(
   app: Hono,
-  runtime: ChatRuntime,
+  runtime: DaemonRuntime,
   publisher: EventPublisher,
 ) {
   const streams = new Map<string, ActiveStream>();
+  const run = <A>(
+    effect: Effect.Effect<A, DaemonError, Db | ChatEngine>,
+  ): Promise<A> => runDaemonApi(runtime, effect);
+  const engine = <A>(
+    use: (
+      chatEngine: Effect.Effect.Success<typeof ChatEngine>,
+    ) => Effect.Effect<A, DaemonError, Db>,
+  ) => Effect.flatMap(ChatEngine, use);
 
-  app.get("/api/chats", async (context) => context.json(await listChats()));
+  app.get("/api/chats", async (context) =>
+    context.json(await run(listChats())),
+  );
   app.get("/api/chats/archived", async (context) =>
-    context.json(await listArchivedChats()),
+    context.json(await run(listArchivedChats())),
   );
   app.get("/api/chats/:id", async (context) =>
-    context.json(await getChat(context.req.param("id"))),
+    context.json(await run(getChat(context.req.param("id")))),
   );
   app.post("/api/chats", async (context) => {
     const input = chatCreateInputSchema(await context.req.json());
     if (input instanceof arkType.errors)
-      throw new TypeError("Chat input is required.");
-    const chat = await runtime.createChatFromInput(input);
+      throw DaemonError.invalidRequest("Chat input is required.");
+    const chat = await run(engine((e) => e.createChatFromInput(input)));
     publishChatMetadata(publisher, [chat.id]);
     return context.json(chat);
   });
@@ -115,35 +131,40 @@ export function registerApi(
     const body = await context.req.json<{ pinned?: boolean; title?: string }>();
     const chatId = context.req.param("id");
     if (typeof body.title === "string") {
-      const chat = await renameChat(chatId, body.title);
+      const chat = await run(renameChat(chatId, body.title));
       publishChatMetadata(publisher, [chat.id]);
       return context.json(chat);
     }
     if (typeof body.pinned === "boolean") {
-      const chat = await setChatPinned(chatId, body.pinned);
+      const chat = await run(setChatPinned(chatId, body.pinned));
       publishChatMetadata(publisher, [chat.id]);
       return context.json(chat);
     }
-    throw new TypeError("Chat title or pinned state is required.");
+    throw DaemonError.invalidRequest("Chat title or pinned state is required.");
   });
   app.delete("/api/chats/:id", async (context) => {
     const chatId = context.req.param("id");
-    const chat = await getChat(chatId);
-    if (chat !== null) await removeWorktreesForDeletedChats([chat]);
-    runtime.closeChatSession(chatId);
-    await deleteChat(chatId);
+    await run(
+      Effect.gen(function* () {
+        const chat = yield* getChat(chatId);
+        if (chat !== null) yield* removeWorktreesForDeletedChats([chat]);
+        const chatEngine = yield* ChatEngine;
+        yield* chatEngine.closeChatSession(chatId);
+        yield* deleteChat(chatId);
+      }),
+    );
     publishChatMetadata(publisher, [chatId]);
     return context.json({ ok: true });
   });
   app.post("/api/chats/:id/archive", async (context) => {
-    const chat = await archiveChat(context.req.param("id"));
+    const chat = await run(archiveChat(context.req.param("id")));
     publishChatMetadata(publisher, [chat.id]);
     return context.json(chat);
   });
-  app.post("/api/chats/:id/load", (context) =>
-    runtime
-      .loadChatSession(context.req.param("id"))
-      .then((value) => context.json(value)),
+  app.post("/api/chats/:id/load", async (context) =>
+    context.json(
+      await run(engine((e) => e.loadChatSession(context.req.param("id")))),
+    ),
   );
   app.put("/api/chats/:id/mode", async (context) => {
     const body = await context.req.json<{ mode: string }>();
@@ -152,8 +173,8 @@ export function registerApi(
       mode: body.mode,
     });
     if (input instanceof arkType.errors)
-      throw new TypeError("Chat mode input is required.");
-    return context.json(await runtime.setChatMode(input));
+      throw DaemonError.invalidRequest("Chat mode input is required.");
+    return context.json(await run(engine((e) => e.setChatMode(input))));
   });
   app.put("/api/chats/:id/permission-mode", async (context) => {
     const body = await context.req.json<{ mode: string }>();
@@ -162,8 +183,12 @@ export function registerApi(
       mode: body.mode,
     });
     if (input instanceof arkType.errors)
-      throw new TypeError("Chat permission mode input is required.");
-    return context.json(await runtime.setChatPermissionMode(input));
+      throw DaemonError.invalidRequest(
+        "Chat permission mode input is required.",
+      );
+    return context.json(
+      await run(engine((e) => e.setChatPermissionMode(input))),
+    );
   });
   app.put("/api/chats/:id/runtime", async (context) => {
     const body = await context.req.json<{ runtime: string }>();
@@ -172,48 +197,63 @@ export function registerApi(
       runtime: body.runtime,
     });
     if (input instanceof arkType.errors)
-      throw new TypeError("Chat runtime input is required.");
-    const chat = await runtime.setChatRuntime(input);
+      throw DaemonError.invalidRequest("Chat runtime input is required.");
+    const chat = await run(engine((e) => e.setChatRuntime(input)));
     publishChatMetadata(publisher, [chat.id]);
     return context.json(chat);
   });
   app.post("/api/chats/prewarm", async (context) => {
     const input = chatPrewarmInputSchema(await context.req.json());
     if (input instanceof arkType.errors)
-      throw new TypeError("Chat prewarm input is required.");
-    return context.json(await runtime.prewarmChat(input));
+      throw DaemonError.invalidRequest("Chat prewarm input is required.");
+    return context.json(await run(engine((e) => e.prewarmChat(input))));
   });
   app.post("/api/chats/runtime-config", async (context) => {
     const input = chatRuntimeConfigInputSchema(await context.req.json());
     if (input instanceof arkType.errors)
-      throw new TypeError("Chat runtime config input is required.");
-    return context.json(await runtime.inspectChatRuntimeConfig(input));
+      throw DaemonError.invalidRequest(
+        "Chat runtime config input is required.",
+      );
+    return context.json(
+      await run(engine((e) => e.inspectChatRuntimeConfig(input))),
+    );
   });
   app.post("/api/chats/send", async (context) => {
-    const body = await context.req.json();
-    const result = await runtime.sendChat(parseSendInput(body));
+    const input = parseSendInput(await context.req.json());
+    const result = await run(engine((e) => e.sendChat(input)));
     return context.json(result);
   });
   app.delete("/api/chats", async (context) => {
-    const [activeChats, archivedChats] = await Promise.all([
-      listChats(),
-      listArchivedChats(),
-    ]);
-    const targets = [...activeChats, ...archivedChats];
-    const worktrees = await removeWorktreesForDeletedChats(targets);
-    runtime.closeChatSession();
+    const { deletedCount, targets, worktrees } = await run(
+      Effect.gen(function* () {
+        const [activeChats, archivedChats] = yield* Effect.all([
+          listChats(),
+          listArchivedChats(),
+        ]);
+        const allTargets = [...activeChats, ...archivedChats];
+        const removedWorktrees =
+          yield* removeWorktreesForDeletedChats(allTargets);
+        const chatEngine = yield* ChatEngine;
+        yield* chatEngine.closeChatSession();
+        return {
+          deletedCount: yield* deleteAllChats(),
+          targets: allTargets,
+          worktrees: removedWorktrees,
+        };
+      }),
+    );
     publishChatMetadata(
       publisher,
       targets.map((chat) => chat.id),
     );
     return context.json({
-      deletedCount: await deleteAllChats(),
+      deletedCount,
       deletedWorktreeCount: worktrees.length,
     });
   });
   app.post("/api/chats/archived/restore", async (context) => {
-    const body = await context.req.json();
-    const chats = await restoreArchivedChats(readChatIds(body));
+    const body = await context.req.json<ChatIdsInput>();
+    const chats = await run(restoreArchivedChats(readChatIds(body)));
     publishChatMetadata(
       publisher,
       chats.map((chat) => chat.id),
@@ -221,9 +261,11 @@ export function registerApi(
     return context.json(chats);
   });
   app.post("/api/chats/archived/delete-impact", async (context) => {
-    const body = await context.req.json();
+    const body = await context.req.json<ChatIdsInput>();
     const chatIds = readChatIds(body);
-    const targets = await Promise.all(chatIds.map(requireArchivedChat));
+    const targets = await run(
+      Effect.all(chatIds.map((id) => requireArchivedChat(id))),
+    );
     const worktrees = managedWorktreesForChats(targets);
     return context.json({
       chatCount: targets.length,
@@ -232,12 +274,24 @@ export function registerApi(
     });
   });
   app.post("/api/chats/archived/delete", async (context) => {
-    const chatIds = readChatIds(await context.req.json());
-    const targets = await Promise.all(chatIds.map(requireArchivedChat));
-    const worktrees = await removeWorktreesForDeletedChats(targets);
-    for (const chat of targets) runtime.closeChatSession(chat.id);
+    const chatIds = readChatIds(await context.req.json<ChatIdsInput>());
+    const { deletedChats, worktrees } = await run(
+      Effect.gen(function* () {
+        const targets = yield* Effect.all(
+          chatIds.map((id) => requireArchivedChat(id)),
+        );
+        const removedWorktrees = yield* removeWorktreesForDeletedChats(targets);
+        const chatEngine = yield* ChatEngine;
+        for (const chat of targets) {
+          yield* chatEngine.closeChatSession(chat.id);
+        }
+        return {
+          deletedChats: yield* deleteArchivedChats(chatIds),
+          worktrees: removedWorktrees,
+        };
+      }),
+    );
     publishChatMetadata(publisher, chatIds);
-    const deletedChats = await deleteArchivedChats(chatIds);
     return context.json({
       deletedCount: deletedChats.length,
       deletedWorktreeCount: worktrees.length,
@@ -246,38 +300,46 @@ export function registerApi(
   });
 
   app.get("/api/agents", async (context) =>
-    context.json(await listAvailableAgents()),
+    context.json(await run(listAvailableAgents())),
   );
   app.get("/api/agents/custom", async (context) =>
-    context.json(await listCustomAgents()),
+    context.json(await run(listCustomAgents())),
   );
   app.post("/api/agents/custom", async (context) => {
     const input = createCustomAgentInputSchema(await context.req.json());
     if (input instanceof arkType.errors)
-      throw new TypeError("Custom agent input is invalid.");
-    return context.json(await createCustomAgent(input));
+      throw DaemonError.invalidRequest("Custom agent input is invalid.");
+    return context.json(await run(createCustomAgent(input)));
   });
   app.put("/api/agents/custom/:id", async (context) => {
     const id = context.req.param("id");
     if (!isCustomAgentRuntime(id))
-      throw new TypeError("Custom agent id is invalid.");
-    const body = await context.req.json();
+      throw DaemonError.invalidRequest("Custom agent id is invalid.");
+    const body = await context.req.json<Record<string, unknown>>();
     const input = updateCustomAgentInputSchema({
       ...body,
       id,
     });
     if (input instanceof arkType.errors)
-      throw new TypeError("Custom agent input is invalid.");
-    return context.json(await updateCustomAgent({ ...input, id }));
+      throw DaemonError.invalidRequest("Custom agent input is invalid.");
+    return context.json(await run(updateCustomAgent({ ...input, id })));
   });
   app.get("/api/agents/custom/:id/delete-impact", async (context) =>
-    context.json(await customAgentDeleteImpact(context.req.param("id"))),
+    context.json(await run(customAgentDeleteImpact(context.req.param("id")))),
   );
   app.delete("/api/agents/custom/:id", async (context) => {
-    const deletedChatIds = await deleteCustomAgentWithChats(
-      context.req.param("id"),
+    const deletedChatIds = await run(
+      Effect.gen(function* () {
+        const chatIds = yield* deleteCustomAgentWithChats(
+          context.req.param("id"),
+        );
+        const chatEngine = yield* ChatEngine;
+        for (const chatId of chatIds) {
+          yield* chatEngine.closeChatSession(chatId);
+        }
+        return chatIds;
+      }),
     );
-    for (const chatId of deletedChatIds) runtime.closeChatSession(chatId);
     publishChatMetadata(publisher, deletedChatIds);
     return context.json({ deletedChatIds });
   });
@@ -291,79 +353,95 @@ export function registerApi(
   );
 
   app.get("/api/projects", async (context) =>
-    context.json(await listProjects()),
+    context.json(await run(listProjects())),
   );
-  app.get("/api/projects/files/search", (context) =>
-    searchProjectFiles({
-      limit: optionalNumber(context.req.query("limit")),
-      query: requireQuery(context.req.query("query"), "query"),
-      root: requireQuery(context.req.query("root"), "root"),
-    }).then((value) => context.json(value)),
+  app.get("/api/projects/files/search", async (context) =>
+    context.json(
+      await run(
+        searchProjectFiles({
+          limit: optionalNumber(context.req.query("limit")),
+          query: requireQuery(context.req.query("query"), "query"),
+          root: requireQuery(context.req.query("root"), "root"),
+        }),
+      ),
+    ),
   );
   app.get("/api/projects/:id", async (context) =>
-    context.json(await getProject(context.req.param("id"))),
+    context.json(await run(getProject(context.req.param("id")))),
   );
   app.post("/api/projects", async (context) => {
     const input = createProjectInputSchema(await context.req.json());
     if (input instanceof arkType.errors)
-      throw new TypeError("Project input is invalid.");
-    return context.json(await createProject(input));
+      throw DaemonError.invalidRequest("Project input is invalid.");
+    return context.json(await run(createProject(input)));
   });
   app.patch("/api/projects/:id", async (context) => {
-    const body = await context.req.json();
+    const body = await context.req.json<Record<string, unknown>>();
     const input = updateProjectInputSchema({
       ...body,
       id: context.req.param("id"),
     });
     if (input instanceof arkType.errors)
-      throw new TypeError("Project input is invalid.");
-    return context.json(await updateProject(input));
+      throw DaemonError.invalidRequest("Project input is invalid.");
+    return context.json(await run(updateProject(input)));
   });
   app.delete("/api/projects/:id", async (context) => {
-    await deleteProject(context.req.param("id"));
+    await run(deleteProject(context.req.param("id")));
     return context.json({ ok: true });
   });
-  app.get("/api/projects/:id/git-status", (context) =>
-    projectGitStatus({ projectId: context.req.param("id") }).then((value) =>
-      context.json(value),
+  app.get("/api/projects/:id/git-status", async (context) =>
+    context.json(
+      await run(projectGitStatus({ projectId: context.req.param("id") })),
     ),
   );
-  app.get("/api/projects/:id/files", (context) =>
-    searchProjectFiles({
-      limit: optionalNumber(context.req.query("limit")),
-      query: requireQuery(context.req.query("query"), "query"),
-      root: requireQuery(context.req.query("root"), "root"),
-    }).then((value) => context.json(value)),
+  app.get("/api/projects/:id/files", async (context) =>
+    context.json(
+      await run(
+        searchProjectFiles({
+          limit: optionalNumber(context.req.query("limit")),
+          query: requireQuery(context.req.query("query"), "query"),
+          root: requireQuery(context.req.query("root"), "root"),
+        }),
+      ),
+    ),
   );
 
-  app.get("/api/workspace/file-tree", (context) =>
-    workspaceFileTree(requireQuery(context.req.query("root"), "root")).then(
-      (value) => context.json(value),
+  app.get("/api/workspace/file-tree", async (context) =>
+    context.json(
+      await run(
+        workspaceFileTree(requireQuery(context.req.query("root"), "root")),
+      ),
     ),
   );
-  app.get("/api/workspace/git-diff", (context) =>
-    workspaceGitDiff(requireQuery(context.req.query("root"), "root")).then(
-      (value) => context.json(value),
+  app.get("/api/workspace/git-diff", async (context) =>
+    context.json(
+      await run(
+        workspaceGitDiff(requireQuery(context.req.query("root"), "root")),
+      ),
     ),
   );
   app.post("/api/workspace/git-commit", async (context) => {
     const input = workspaceToolGitCommitInputSchema(await context.req.json());
     if (input instanceof arkType.errors)
-      throw new TypeError("Git commit input is invalid.");
-    return context.json(await workspaceGitCommit(input));
+      throw DaemonError.invalidRequest("Git commit input is invalid.");
+    return context.json(await run(workspaceGitCommit(input)));
   });
-  app.get("/api/workspace/file", (context) =>
-    workspaceReadFile(
-      requireQuery(context.req.query("root"), "root"),
-      requireQuery(context.req.query("path"), "path"),
-    ).then((value) => context.json(value)),
+  app.get("/api/workspace/file", async (context) =>
+    context.json(
+      await run(
+        workspaceReadFile(
+          requireQuery(context.req.query("root"), "root"),
+          requireQuery(context.req.query("path"), "path"),
+        ),
+      ),
+    ),
   );
   app.put("/api/workspace/file", async (context) => {
     const body = workspaceToolWriteFileInputSchema(await context.req.json());
     if (body instanceof arkType.errors)
-      throw new TypeError("Workspace file input is invalid.");
+      throw DaemonError.invalidRequest("Workspace file input is invalid.");
     return context.json(
-      await workspaceWriteFile(body.root, body.path, body.content),
+      await run(workspaceWriteFile(body.root, body.path, body.content)),
     );
   });
 
@@ -392,13 +470,17 @@ export function registerApi(
       };
       stream.onAbort(() => abortController.abort());
       try {
-        const result = await runtime.streamChat(
-          input,
-          (event) => {
-            void send(event).catch(() => abortController.abort());
-          },
-          abortController.signal,
-          controls,
+        const result = await run(
+          engine((e) =>
+            e.streamChat(
+              input,
+              (event) => {
+                void send(event).catch(() => abortController.abort());
+              },
+              abortController.signal,
+              controls,
+            ),
+          ),
         );
         await send({ result, type: "result" });
       } catch (error) {
@@ -419,7 +501,7 @@ export function registerApi(
   app.post("/api/chat-streams/:id/elicitation", async (context) => {
     const active = streams.get(context.req.param("id"));
     if (active?.resolveElicitation === undefined)
-      throw new Error("Chat stream is not waiting for user input.");
+      throw DaemonError.chatStreamNotWaiting();
     const body = await context.req.json<{
       elicitationId: string;
       response: ChatElicitationResponse;
@@ -437,7 +519,7 @@ function publishChatMetadata(publisher: EventPublisher, chatIds: string[]) {
 function parseSendInput(value: unknown): ChatSendInput {
   const input = chatSendInputSchema(value);
   if (input instanceof arkType.errors)
-    throw new TypeError("Chat input is required.");
+    throw DaemonError.invalidRequest("Chat input is required.");
   return {
     ...input,
     attachments: normalizeChatAttachmentsInput(input.attachments),
@@ -447,7 +529,7 @@ function parseSendInput(value: unknown): ChatSendInput {
 
 function readChatIds(input: ChatIdsInput) {
   if (!Array.isArray(input.chatIds) || input.chatIds.length === 0)
-    throw new TypeError("Chat ids are required.");
+    throw DaemonError.invalidRequest("Chat ids are required.");
   return [...new Set(input.chatIds)];
 }
 
@@ -461,29 +543,31 @@ function managedWorktreesForChats(chats: Chat[]) {
   ];
 }
 
-async function removeWorktreesForDeletedChats(targets: Chat[]) {
-  const ids = new Set(targets.map((chat) => chat.id));
-  const [activeChats, archivedChats] = await Promise.all([
-    listChats(),
-    listArchivedChats(),
-  ]);
-  const survivors = [...activeChats, ...archivedChats].filter(
-    (chat) => !ids.has(chat.id),
-  );
-  const survivorPaths = new Set(managedWorktreesForChats(survivors));
-  const removed: string[] = [];
-  for (const worktree of managedWorktreesForChats(targets).filter(
-    (value) => !survivorPaths.has(value),
-  )) {
-    const result = await removeManagedWorktree(worktree);
-    if (result !== undefined) removed.push(result);
-  }
-  return removed;
+function removeWorktreesForDeletedChats(targets: Chat[]) {
+  return Effect.gen(function* () {
+    const ids = new Set(targets.map((chat) => chat.id));
+    const [activeChats, archivedChats] = yield* Effect.all([
+      listChats(),
+      listArchivedChats(),
+    ]);
+    const survivors = [...activeChats, ...archivedChats].filter(
+      (chat) => !ids.has(chat.id),
+    );
+    const survivorPaths = new Set(managedWorktreesForChats(survivors));
+    const removed: string[] = [];
+    for (const worktree of managedWorktreesForChats(targets).filter(
+      (value) => !survivorPaths.has(value),
+    )) {
+      const result = yield* removeManagedWorktree(worktree);
+      if (result !== undefined) removed.push(result);
+    }
+    return removed;
+  });
 }
 
 function requireQuery(value: string | undefined, name: string) {
   if (value === undefined || value.length === 0)
-    throw new TypeError(`${name} is required.`);
+    throw DaemonError.invalidRequest(`${name} is required.`);
   return value;
 }
 
@@ -491,7 +575,7 @@ function optionalNumber(value: string | undefined) {
   if (value === undefined) return undefined;
   const number = Number(value);
   if (!Number.isFinite(number))
-    throw new TypeError("Expected a finite number.");
+    throw DaemonError.invalidRequest("Expected a finite number.");
   return number;
 }
 

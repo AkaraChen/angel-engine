@@ -1,50 +1,69 @@
 import type { Chat, ChatSendInput } from "@angel-engine/daemon-api/chat";
+import type { Db } from "../../platform/db";
 
 import is from "@sindresorhus/is";
 import os from "node:os";
+import { Effect } from "effect";
+import { DaemonError } from "../../platform/errors";
 import { createProjectWorktree } from "../projects/git";
 import { getProject } from "../projects/repository";
 
-export async function cwdForChat(
+export function cwdForChat(
   chat: Chat,
   projectId?: string | null,
-): Promise<string> {
-  if (chat.cwd !== null) return chat.cwd;
+): Effect.Effect<string, DaemonError, Db> {
+  return Effect.gen(function* () {
+    if (chat.cwd !== null) return chat.cwd;
 
-  const projectCwd = await cwdForProjectId(projectId ?? chat.projectId);
-  return projectCwd ?? standaloneChatCwd();
+    const projectCwd = yield* cwdForProjectId(projectId ?? chat.projectId);
+    return projectCwd ?? standaloneChatCwd();
+  });
 }
 
-export async function cwdForNewChat(input: ChatSendInput) {
-  if (is.nonEmptyString(input.cwd)) return input.cwd;
+export function cwdForNewChat(
+  input: ChatSendInput,
+): Effect.Effect<string, DaemonError, Db> {
+  return Effect.gen(function* () {
+    if (is.nonEmptyString(input.cwd)) return input.cwd;
 
-  if (input.creationLocation === "worktree") {
-    if (!is.nonEmptyString(input.projectId)) {
-      throw new Error("Project is required to create a git worktree.");
+    if (input.creationLocation === "worktree") {
+      if (!is.nonEmptyString(input.projectId)) {
+        return yield* Effect.fail(DaemonError.projectRequiredForWorktree());
+      }
+      const worktree = yield* createProjectWorktree({
+        projectId: input.projectId,
+      });
+      return worktree.cwd;
     }
-    const worktree = await createProjectWorktree({
-      projectId: input.projectId,
-    });
-    return worktree.cwd;
-  }
 
-  return cwdForProjectOrStandalone(input.projectId);
+    return yield* cwdForProjectOrStandalone(input.projectId);
+  });
 }
 
-export async function cwdForProjectOrStandalone(
+export function cwdForProjectOrStandalone(
   projectId: string | null | undefined,
-): Promise<string> {
-  const projectCwd = await cwdForProjectId(projectId);
-  return projectCwd ?? standaloneChatCwd();
+): Effect.Effect<string, DaemonError, Db> {
+  return Effect.map(
+    cwdForProjectId(projectId),
+    (projectCwd) => projectCwd ?? standaloneChatCwd(),
+  );
 }
 
-async function cwdForProjectId(projectId: string | null | undefined) {
-  if (!is.nonEmptyString(projectId)) return undefined;
-  const project = await getProject(projectId);
-  if (!project) {
-    throw new Error(`Project path not found for project id: ${projectId}`);
-  }
-  return project.path;
+function cwdForProjectId(
+  projectId: string | null | undefined,
+): Effect.Effect<string | undefined, DaemonError, Db> {
+  return Effect.gen(function* () {
+    if (!is.nonEmptyString(projectId)) return undefined;
+    const project = yield* getProject(projectId);
+    if (!project) {
+      return yield* Effect.fail(
+        DaemonError.projectNotFound(
+          `Project path not found for project id: ${projectId}`,
+        ),
+      );
+    }
+    return project.path;
+  });
 }
 
 export function standaloneChatCwd() {

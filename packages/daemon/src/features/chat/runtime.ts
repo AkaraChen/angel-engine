@@ -16,6 +16,9 @@ import type {
   ChatSetRuntimeInput,
   ChatStreamEvent,
 } from "@angel-engine/daemon-api/chat";
+import type { Effect } from "effect";
+import type { Db } from "../../platform/db";
+import type { DaemonError } from "../../platform/errors";
 
 export interface ChatStreamControls {
   setResolveElicitation?: (
@@ -26,24 +29,40 @@ export interface ChatStreamControls {
   ) => void;
 }
 
+/**
+ * The chat engine's operation surface. Every operation is an Effect that fails
+ * with `DaemonError`; the transport runs them on the daemon runtime.
+ */
 export interface ChatRuntime {
-  closeChatSession: (chatId?: string) => void;
-  createChatFromInput: (input: ChatCreateInput) => Promise<Chat>;
+  closeChatSession: (chatId?: string) => Effect.Effect<void>;
+  createChatFromInput: (
+    input: ChatCreateInput,
+  ) => Effect.Effect<Chat, DaemonError, Db>;
   inspectChatRuntimeConfig: (
     input: ChatRuntimeConfigInput,
-  ) => Promise<ChatRuntimeConfig>;
-  loadChatSession: (chatId: string) => Promise<ChatLoadResult>;
-  prewarmChat: (input: ChatPrewarmInput) => Promise<ChatPrewarmResult>;
-  sendChat: (input: ChatSendInput) => Promise<ChatSendResult>;
-  setChatMode: (input: ChatSetModeInput) => Promise<ChatSetModeResult>;
+  ) => Effect.Effect<ChatRuntimeConfig, DaemonError, Db>;
+  loadChatSession: (
+    chatId: string,
+  ) => Effect.Effect<ChatLoadResult, DaemonError, Db>;
+  prewarmChat: (
+    input: ChatPrewarmInput,
+  ) => Effect.Effect<ChatPrewarmResult, DaemonError, Db>;
+  sendChat: (
+    input: ChatSendInput,
+  ) => Effect.Effect<ChatSendResult, DaemonError, Db>;
+  setChatMode: (
+    input: ChatSetModeInput,
+  ) => Effect.Effect<ChatSetModeResult, DaemonError, Db>;
   setChatPermissionMode: (
     input: ChatSetPermissionModeInput,
-  ) => Promise<ChatSetPermissionModeResult>;
-  setChatRuntime: (input: ChatSetRuntimeInput) => Promise<Chat>;
+  ) => Effect.Effect<ChatSetPermissionModeResult, DaemonError, Db>;
+  setChatRuntime: (
+    input: ChatSetRuntimeInput,
+  ) => Effect.Effect<Chat, DaemonError, Db>;
   streamChat: (
     input: ChatSendInput,
     onEvent: (event: ChatStreamEvent) => void,
     abortSignal: AbortSignal,
     controls?: ChatStreamControls,
-  ) => Promise<ChatSendResult>;
+  ) => Effect.Effect<ChatSendResult, DaemonError, Db>;
 }

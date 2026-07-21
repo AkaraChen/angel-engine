@@ -9,93 +9,113 @@ import path from "node:path";
 
 import is from "@sindresorhus/is";
 import { asc, eq } from "drizzle-orm";
-import { closeDatabase, getDatabase } from "../../db/client";
+import { Effect } from "effect";
 import { projects } from "../../db/schema";
+import { type Db, withDatabase } from "../../platform/db";
+import { DaemonError } from "../../platform/errors";
 
-export async function listProjects(): Promise<Project[]> {
-  const database = await getDatabase();
-  return database.select().from(projects).orderBy(asc(projects.path)).all();
+export function listProjects() {
+  return withDatabase((database) =>
+    database.select().from(projects).orderBy(asc(projects.path)).all(),
+  );
 }
 
-export async function getProject(id: string): Promise<Project | null> {
-  const database = await getDatabase();
-  const project = await database
-    .select()
-    .from(projects)
-    .where(eq(projects.id, requireProjectId(id)))
-    .limit(1)
-    .get();
-
-  return project ?? null;
+export function getProject(
+  id: string,
+): Effect.Effect<Project | null, DaemonError, Db> {
+  return Effect.gen(function* () {
+    const projectId = yield* requireProjectId(id);
+    const project = yield* withDatabase((database) =>
+      database
+        .select()
+        .from(projects)
+        .where(eq(projects.id, projectId))
+        .limit(1)
+        .get(),
+    );
+    return project ?? null;
+  });
 }
 
-export async function createProject(
+export function createProject(
   input: CreateProjectInput,
-): Promise<Project> {
-  const nextProject = {
-    id: is.nonEmptyString(input.id) ? input.id : randomUUID(),
-    path: normalizeProjectPath(input.path),
-  };
+): Effect.Effect<Project, DaemonError, Db> {
+  return Effect.gen(function* () {
+    const nextProject = {
+      id: is.nonEmptyString(input.id) ? input.id : randomUUID(),
+      path: yield* normalizeProjectPath(input.path),
+    };
 
-  const database = await getDatabase();
-  const project = await database
-    .insert(projects)
-    .values(nextProject)
-    .returning()
-    .get();
-  return project;
+    return yield* withDatabase((database) =>
+      database.insert(projects).values(nextProject).returning().get(),
+    );
+  });
 }
 
-export async function updateProject(
+export function updateProject(
   input: UpdateProjectInput,
-): Promise<Project> {
-  const database = await getDatabase();
-  const project = await database
-    .update(projects)
-    .set({ path: normalizeProjectPath(input.path) })
-    .where(eq(projects.id, requireProjectId(input.id)))
-    .returning()
-    .get();
+): Effect.Effect<Project, DaemonError, Db> {
+  return Effect.gen(function* () {
+    const projectId = yield* requireProjectId(input.id);
+    const projectPath = yield* normalizeProjectPath(input.path);
+    const project = yield* withDatabase((database) =>
+      database
+        .update(projects)
+        .set({ path: projectPath })
+        .where(eq(projects.id, projectId))
+        .returning()
+        .get(),
+    );
 
-  if (is.falsy(project)) {
-    throw new Error("Project not found.");
-  }
+    if (is.falsy(project)) {
+      return yield* Effect.fail(DaemonError.projectNotFound());
+    }
 
-  return project;
+    return project;
+  });
 }
 
-export async function deleteProject(id: string): Promise<void> {
-  const database = await getDatabase();
-  await database
-    .delete(projects)
-    .where(eq(projects.id, requireProjectId(id)))
-    .run();
+export function deleteProject(
+  id: string,
+): Effect.Effect<void, DaemonError, Db> {
+  return Effect.gen(function* () {
+    const projectId = yield* requireProjectId(id);
+    yield* withDatabase((database) =>
+      database.delete(projects).where(eq(projects.id, projectId)).run(),
+    );
+  });
 }
 
-export async function closeProjectsDatabase() {
-  await closeDatabase();
-}
-
-function requireProjectId(id: string) {
+function requireProjectId(id: string): Effect.Effect<string, DaemonError> {
   if (!id) {
-    throw new Error("Project id is required.");
+    return Effect.fail(DaemonError.projectIdRequired());
   }
-  return id;
+  return Effect.succeed(id);
 }
 
-function normalizeProjectPath(projectPath: string) {
-  if (!projectPath) {
-    throw new Error("Project path is required.");
-  }
+function normalizeProjectPath(
+  projectPath: string,
+): Effect.Effect<string, DaemonError> {
+  return Effect.gen(function* () {
+    if (!projectPath) {
+      return yield* Effect.fail(
+        DaemonError.projectPathInvalid("Project path is required."),
+      );
+    }
 
-  const resolvedPath = path.resolve(projectPath);
-  if (!fs.existsSync(resolvedPath)) {
-    throw new Error("Project path does not exist.");
-  }
+    const resolvedPath = path.resolve(projectPath);
+    if (!fs.existsSync(resolvedPath)) {
+      return yield* Effect.fail(
+        DaemonError.projectPathInvalid("Project path does not exist."),
+      );
+    }
 
-  if (!fs.statSync(resolvedPath).isDirectory()) {
-    throw new Error("Project path must be a directory.");
-  }
+    if (!fs.statSync(resolvedPath).isDirectory()) {
+      return yield* Effect.fail(
+        DaemonError.projectPathInvalid("Project path must be a directory."),
+      );
+    }
 
-  return resolvedPath;
+    return resolvedPath;
+  });
 }

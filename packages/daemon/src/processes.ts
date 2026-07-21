@@ -7,8 +7,11 @@ import {
   listListeningPorts,
   listSubprocesses,
 } from "@angel-engine/client-napi";
+import { Effect } from "effect";
 
-export class ProcessRegistry {
+import { DaemonError } from "./platform/errors";
+
+class ProcessRegistry {
   readonly #entries = new Map<string, ProcessRegistryEntry>();
 
   replace(entries: ProcessRegistryEntry[]) {
@@ -46,34 +49,80 @@ export class ProcessRegistry {
   }
 }
 
-export function parseRegistryBody(value: unknown): ProcessRegistryEntry[] {
-  if (!isObject(value) || !Array.isArray(value.entries)) {
-    throw new Error("Expected an object with an entries array.");
-  }
-  return value.entries.map((entry, index) => {
-    if (
-      !isObject(entry) ||
-      typeof entry.id !== "string" ||
-      entry.id.length === 0 ||
-      typeof entry.label !== "string" ||
-      entry.label.length === 0 ||
-      !isProcessId(entry.rootPid)
-    ) {
-      throw new Error(`Invalid process registry entry at index ${index}.`);
+/** Tracks external process trees advertised by the desktop and live sessions. */
+export class ProcessRegistryService extends Effect.Service<ProcessRegistryService>()(
+  "daemon/ProcessRegistryService",
+  {
+    sync: () => {
+      const registry = new ProcessRegistry();
+      return {
+        kill: (pid: number, force: boolean) =>
+          Effect.try({
+            catch: (cause) => DaemonError.internal(cause),
+            try: () => registry.kill(pid, force),
+          }),
+        replace: (entries: ProcessRegistryEntry[]) =>
+          Effect.sync(() => registry.replace(entries)),
+        snapshot: () =>
+          Effect.try({
+            catch: (cause) => DaemonError.internal(cause),
+            try: () => registry.snapshot(),
+          }),
+      };
+    },
+  },
+) {}
+
+export function parseRegistryBody(
+  value: unknown,
+): Effect.Effect<ProcessRegistryEntry[], DaemonError> {
+  return Effect.gen(function* () {
+    if (!isObject(value) || !Array.isArray(value.entries)) {
+      return yield* Effect.fail(
+        DaemonError.invalidRequest("Expected an object with an entries array."),
+      );
     }
-    return { id: entry.id, label: entry.label, rootPid: entry.rootPid };
+    const entries: ProcessRegistryEntry[] = [];
+    for (const [index, entry] of value.entries.entries()) {
+      if (
+        !isObject(entry) ||
+        typeof entry.id !== "string" ||
+        entry.id.length === 0 ||
+        typeof entry.label !== "string" ||
+        entry.label.length === 0 ||
+        !isProcessId(entry.rootPid)
+      ) {
+        return yield* Effect.fail(
+          DaemonError.invalidRequest(
+            `Invalid process registry entry at index ${index}.`,
+          ),
+        );
+      }
+      entries.push({
+        id: entry.id,
+        label: entry.label,
+        rootPid: entry.rootPid,
+      });
+    }
+    return entries;
   });
 }
 
-export function parseKillBody(value: unknown): { force: boolean } {
-  if (value === undefined) return { force: false };
+export function parseKillBody(
+  value: unknown,
+): Effect.Effect<{ force: boolean }, DaemonError> {
+  if (value === undefined) return Effect.succeed({ force: false });
   if (
     !isObject(value) ||
     (value.force !== undefined && typeof value.force !== "boolean")
   ) {
-    throw new Error("Expected an object with an optional boolean force field.");
+    return Effect.fail(
+      DaemonError.invalidRequest(
+        "Expected an object with an optional boolean force field.",
+      ),
+    );
   }
-  return { force: value.force ?? false };
+  return Effect.succeed({ force: value.force ?? false });
 }
 
 export function isProcessId(value: unknown): value is number {

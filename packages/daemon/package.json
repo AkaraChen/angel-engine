@@ -36,6 +36,7 @@
     "@sindresorhus/is": "^8.1.0",
     "arktype": "^2.2.2",
     "drizzle-orm": "^0.45.2",
+    "effect": "3.22.0",
     "hono": "4.12.25",
     "httpxy": "^0.5.5",
     "mime-types": "^3.0.2",

@@ -1,6 +1,10 @@
+import type { AppDatabase } from "../../platform/db";
+
+import { Effect, Layer } from "effect";
 import { describe, expect, it, vi } from "vitest";
 
 import which from "which";
+import { Db } from "../../platform/db";
 import { listAvailableAgents } from "./availability";
 
 vi.mock("which", () => ({
@@ -8,12 +12,24 @@ vi.mock("which", () => ({
 }));
 
 vi.mock("./repository", () => ({
-  listCustomAgents: () => [],
+  listCustomAgents: () => Effect.succeed([]),
 }));
+
+// The repository is mocked, so the database is never touched.
+const testDbLayer = Layer.succeed(
+  Db,
+  new Db({ database: undefined as unknown as AppDatabase }),
+);
+
+function runListAvailableAgents() {
+  return Effect.runPromise(
+    listAvailableAgents().pipe(Effect.provide(testDbLayer)),
+  );
+}
 
 describe("listAvailableAgents", () => {
   it("does not advertise cursor", async () => {
-    const agents = await listAvailableAgents();
+    const agents = await runListAvailableAgents();
 
     expect(agents.map((agent) => agent.id)).not.toContain("cursor");
   });
@@ -23,13 +39,13 @@ describe("listAvailableAgents", () => {
       command === "pi" ? (null as unknown as string) : "/usr/bin/fake-agent",
     );
 
-    await expect(listAvailableAgents()).resolves.not.toContainEqual(
+    await expect(runListAvailableAgents()).resolves.not.toContainEqual(
       expect.objectContaining({ id: "pi" }),
     );
 
     vi.mocked(which).mockResolvedValue("/usr/bin/pi");
 
-    await expect(listAvailableAgents()).resolves.toContainEqual(
+    await expect(runListAvailableAgents()).resolves.toContainEqual(
       expect.objectContaining({ id: "pi" }),
     );
   });

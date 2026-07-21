@@ -1,21 +1,30 @@
-import type { DesktopChatSession } from "./chat-session-factory";
+import type { Chat } from "@angel-engine/daemon-api/chat";
 import type { ProcessRegistryEntry } from "@angel-engine/daemon-api/daemon";
-import type { ProcessRegistry } from "../../processes";
-import { requireChat } from "./repository";
+import type { DesktopChatSession } from "./chat-session-factory";
 
+/**
+ * Mirrors live chat sessions into the process registry. Lives in the
+ * callback/promise world because sessions push PID changes through plain
+ * subscriptions; the chat engine injects Effect-backed lookups via the
+ * constructor bridges.
+ */
 export class ChatProcessRegistry {
   readonly #sessions: Map<string, DesktopChatSession>;
-  readonly #registry: ProcessRegistry;
+  readonly #replaceEntries: (entries: ProcessRegistryEntry[]) => Promise<void>;
+  readonly #lookupChat: (chatId: string) => Promise<Chat>;
   readonly #subscriptions = new Map<
     string,
     { session: DesktopChatSession; unsubscribe: () => void }
   >();
-  constructor(
-    sessions: Map<string, DesktopChatSession>,
-    registry: ProcessRegistry,
-  ) {
-    this.#sessions = sessions;
-    this.#registry = registry;
+
+  constructor(options: {
+    lookupChat: (chatId: string) => Promise<Chat>;
+    replaceEntries: (entries: ProcessRegistryEntry[]) => Promise<void>;
+    sessions: Map<string, DesktopChatSession>;
+  }) {
+    this.#sessions = options.sessions;
+    this.#replaceEntries = options.replaceEntries;
+    this.#lookupChat = options.lookupChat;
   }
 
   async refresh(): Promise<void> {
@@ -24,10 +33,10 @@ export class ChatProcessRegistry {
     for (const [chatId, session] of this.#sessions) {
       const rootPid = session.processId();
       if (rootPid === undefined) continue;
-      const chat = await requireChat(chatId);
+      const chat = await this.#lookupChat(chatId);
       entries.push({ id: chatId, label: chat.title || chat.runtime, rootPid });
     }
-    this.#registry.replace(entries);
+    await this.#replaceEntries(entries);
   }
 
   #refreshSubscriptions(): void {

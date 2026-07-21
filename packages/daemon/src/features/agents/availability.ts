@@ -2,7 +2,10 @@ import type {
   AgentOption,
   AgentRuntime,
 } from "@angel-engine/daemon-api/agents";
+import type { Db } from "../../platform/db";
+import type { DaemonError } from "../../platform/errors";
 
+import { Effect } from "effect";
 import which from "which";
 import { AGENT_OPTIONS } from "@angel-engine/daemon-api/agents";
 import { listCustomAgents } from "./repository";
@@ -20,27 +23,38 @@ const runtimeCommands: Record<AgentRuntime, () => string> = {
   qoder: () => "qodercli",
 };
 
-export async function listAvailableAgents(): Promise<AgentOption[]> {
-  const availability = await Promise.all(
-    AGENT_OPTIONS.map(async (agent) => ({
-      agent,
-      available: await commandExists(runtimeCommands[agent.id]()),
-    })),
-  );
+export function listAvailableAgents(): Effect.Effect<
+  AgentOption[],
+  DaemonError,
+  Db
+> {
+  return Effect.gen(function* () {
+    const availability = yield* Effect.all(
+      AGENT_OPTIONS.map((agent) =>
+        Effect.map(commandExists(runtimeCommands[agent.id]()), (available) => ({
+          agent,
+          available,
+        })),
+      ),
+      { concurrency: "unbounded" },
+    );
 
-  const builtinAgents = availability.flatMap(({ agent, available }) =>
-    available ? [agent] : [],
-  );
-  const availableCustomAgents = await listCustomAgents();
-  const customAgents = availableCustomAgents.map((agent) => ({
-    description: `${agent.command} ${agent.args.join(" ")}`.trim(),
-    id: agent.id,
-    label: agent.label,
-  }));
+    const builtinAgents = availability.flatMap(({ agent, available }) =>
+      available ? [agent] : [],
+    );
+    const availableCustomAgents = yield* listCustomAgents();
+    const customAgents = availableCustomAgents.map((agent) => ({
+      description: `${agent.command} ${agent.args.join(" ")}`.trim(),
+      id: agent.id,
+      label: agent.label,
+    }));
 
-  return [...builtinAgents, ...customAgents];
+    return [...builtinAgents, ...customAgents];
+  });
 }
 
-async function commandExists(command: string): Promise<boolean> {
-  return (await which(command, { nothrow: true })) !== null;
+function commandExists(command: string): Effect.Effect<boolean> {
+  return Effect.promise(async () => {
+    return (await which(command, { nothrow: true })) !== null;
+  });
 }

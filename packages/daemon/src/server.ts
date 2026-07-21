@@ -1,12 +1,14 @@
 import type { ServerType } from "@hono/node-server";
 import type { Server as HttpServer } from "node:http";
 import type { DaemonHealth, DaemonInfo } from "@angel-engine/daemon-api/daemon";
+import type { DaemonRuntime } from "./platform/runtime";
 import type { DaemonOptions } from "./types";
 
 import { randomBytes } from "node:crypto";
 import { chmod, mkdir, rename, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { serve } from "@hono/node-server";
+import { Effect, Layer, ManagedRuntime } from "effect";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import {
@@ -21,14 +23,16 @@ import {
 import { registerMobileHosting } from "./mobile-hosting";
 import { WebSocketServer } from "ws";
 import { registerApi } from "./api";
-import { closeDatabase, configureDatabase } from "./db/client";
-import { createChatRuntime } from "./features/chat/engine-runtime";
-import { TerminalManager } from "./features/terminal/manager";
+import { ChatEngine } from "./features/chat/engine-runtime";
+import { TerminalService } from "./features/terminal/manager";
+import { Db, dbConfigLayer } from "./platform/db";
+import { DaemonError, daemonErrorPayload } from "./platform/errors";
+import { runDaemonApi } from "./platform/runtime";
 import {
   isProcessId,
   parseKillBody,
   parseRegistryBody,
-  ProcessRegistry,
+  ProcessRegistryService,
 } from "./processes";
 
 /**
@@ -88,6 +92,22 @@ export interface Daemon {
   close: () => Promise<void>;
 }
 
+function createDaemonRuntime(options: DaemonOptions): DaemonRuntime {
+  const configLayer = dbConfigLayer({
+    dataDir: options.dataDir,
+    migrationsDir:
+      options.migrationsDir ?? path.resolve(process.cwd(), "drizzle"),
+    packaged: options.packaged ?? false,
+  });
+  const baseLayer = Layer.mergeAll(
+    Layer.provide(Db.Default, configLayer),
+    ProcessRegistryService.Default,
+    TerminalService.Default,
+  );
+  const appLayer = Layer.provideMerge(ChatEngine.Default, baseLayer);
+  return ManagedRuntime.make(appLayer);
+}
+
 export async function createDaemon(options: DaemonOptions): Promise<Daemon> {
   const host = options.host ?? "127.0.0.1";
   const token = options.token ?? randomBytes(32).toString("base64url");
@@ -100,23 +120,14 @@ export async function createDaemon(options: DaemonOptions): Promise<Daemon> {
   const mobileAuth =
     mobilePassword === undefined
       ? undefined
-      : await createMobileAuth(mobilePassword);
+      : await Effect.runPromise(createMobileAuth(mobilePassword));
   const mobileToken = mobileAuth?.sessionToken;
   const app = new Hono();
-  const processRegistry = new ProcessRegistry();
   const pairThrottle = new PairThrottle();
-  const chatRuntime = createChatRuntime(processRegistry);
-  const terminalManager = new TerminalManager();
+  const runtime = createDaemonRuntime(options);
   const eventSockets = new Set<import("ws").WebSocket>();
   const webSockets = new WebSocketServer({ noServer: true });
   let server: ServerType | undefined;
-
-  configureDatabase({
-    dataDir: options.dataDir,
-    migrationsDir:
-      options.migrationsDir ?? path.resolve(process.cwd(), "drizzle"),
-    packaged: options.packaged ?? false,
-  });
 
   app.use(
     "/api/*",
@@ -149,7 +160,10 @@ export async function createDaemon(options: DaemonOptions): Promise<Daemon> {
     } catch {
       password = undefined;
     }
-    if (!(await verifyMobilePassword(password ?? "", mobileAuth))) {
+    const verified = await Effect.runPromise(
+      verifyMobilePassword(password ?? "", mobileAuth),
+    );
+    if (!verified) {
       pairThrottle.recordFailure();
       return context.json({ error: "Invalid password." }, 401);
     }
@@ -185,11 +199,13 @@ export async function createDaemon(options: DaemonOptions): Promise<Daemon> {
   });
 
   app.onError((error, context) => {
-    const status = error instanceof TypeError ? 400 : 500;
-    return context.json({ error: error.message }, status);
+    if (error instanceof DaemonError) {
+      return context.json(daemonErrorPayload(error), error.status);
+    }
+    return context.json({ code: "internal", error: error.message }, 500);
   });
 
-  registerApi(app, chatRuntime, {
+  registerApi(app, runtime, {
     publish(event) {
       const payload = JSON.stringify(event);
       for (const socket of eventSockets) {
@@ -199,47 +215,58 @@ export async function createDaemon(options: DaemonOptions): Promise<Daemon> {
   });
 
   app.put("/api/process-registry", async (context) => {
-    try {
-      processRegistry.replace(parseRegistryBody(await context.req.json()));
-      return context.json({ ok: true });
-    } catch (error) {
-      return context.json(
-        { error: error instanceof Error ? error.message : "Invalid request." },
-        400,
-      );
-    }
+    const body = await context.req.json<unknown>();
+    await runDaemonApi(
+      runtime,
+      Effect.gen(function* () {
+        const entries = yield* parseRegistryBody(body);
+        const registry = yield* ProcessRegistryService;
+        yield* registry.replace(entries);
+      }),
+    );
+    return context.json({ ok: true });
   });
 
-  app.get("/api/process-registry", (context) => {
-    return context.json({ entries: processRegistry.snapshot() });
+  app.get("/api/process-registry", async (context) => {
+    const entries = await runDaemonApi(
+      runtime,
+      Effect.flatMap(ProcessRegistryService, (registry) => registry.snapshot()),
+    );
+    return context.json({ entries });
   });
 
   app.post("/api/processes/:pid/kill", async (context) => {
     const pid = Number(context.req.param("pid"));
-    if (!isProcessId(pid)) return context.json({ error: "Invalid pid." }, 400);
+    if (!isProcessId(pid)) {
+      throw DaemonError.invalidRequest("Invalid pid.");
+    }
+    const bodyText = await context.req.text();
+    let body: unknown;
     try {
-      const bodyText = await context.req.text();
-      const { force } = parseKillBody(
-        bodyText.length === 0 ? undefined : JSON.parse(bodyText),
-      );
-      if (!processRegistry.kill(pid, force)) {
-        return context.json({ error: "Process is not registered." }, 403);
-      }
-      return context.json({ ok: true });
-    } catch (error) {
-      return context.json(
-        { error: error instanceof Error ? error.message : "Invalid request." },
-        400,
+      body = bodyText.length === 0 ? undefined : JSON.parse(bodyText);
+    } catch (cause) {
+      throw DaemonError.invalidRequest(
+        cause instanceof Error ? cause.message : "Invalid request.",
       );
     }
+    await runDaemonApi(
+      runtime,
+      Effect.gen(function* () {
+        const { force } = yield* parseKillBody(body);
+        const registry = yield* ProcessRegistryService;
+        const killed = yield* registry.kill(pid, force);
+        if (!killed) {
+          return yield* Effect.fail(DaemonError.processNotRegistered());
+        }
+      }),
+    );
+    return context.json({ ok: true });
   });
 
   const close = async () => {
     if (server === undefined) return;
     const activeServer = server;
     server = undefined;
-    chatRuntime.closeChatSession();
-    terminalManager.close();
     for (const socket of webSockets.clients)
       socket.close(1001, "Daemon shutdown");
     await new Promise<void>((resolve, reject) => {
@@ -249,7 +276,9 @@ export async function createDaemon(options: DaemonOptions): Promise<Daemon> {
       });
     });
     webSockets.close();
-    await closeDatabase();
+    // Disposes every built layer: chat sessions, PTYs, and the database close
+    // through their scope finalizers.
+    await runtime.dispose();
   };
 
   app.post("/api/shutdown", async (context) => {
@@ -309,24 +338,41 @@ export async function createDaemon(options: DaemonOptions): Promise<Daemon> {
         webSocket.once("close", () => eventSockets.delete(webSocket));
         return;
       }
+      // Terminal messages must apply in arrival order (a `create` immediately
+      // followed by `write` would otherwise race), so each socket gets a
+      // sequential effect chain.
+      let messageChain = Promise.resolve();
       webSocket.on("message", (data) => {
-        try {
-          terminalManager.handle(
-            webSocket,
-            JSON.parse(data.toString()) as unknown,
-          );
-        } catch (error) {
-          webSocket.send(
-            JSON.stringify({
-              event: {
-                message: error instanceof Error ? error.message : String(error),
-                type: "error",
-              },
-            }),
-          );
-        }
+        messageChain = messageChain.then(async () => {
+          try {
+            const input = JSON.parse(data.toString()) as unknown;
+            await runDaemonApi(
+              runtime,
+              Effect.flatMap(TerminalService, (terminals) =>
+                terminals.handle(webSocket, input),
+              ),
+            );
+          } catch (error) {
+            webSocket.send(
+              JSON.stringify({
+                event: {
+                  message:
+                    error instanceof Error ? error.message : String(error),
+                  type: "error",
+                },
+              }),
+            );
+          }
+        });
       });
-      webSocket.once("close", () => terminalManager.disconnect(webSocket));
+      webSocket.once("close", () => {
+        void runDaemonApi(
+          runtime,
+          Effect.flatMap(TerminalService, (terminals) =>
+            terminals.disconnect(webSocket),
+          ),
+        ).catch(() => undefined);
+      });
     });
   });
 

@@ -1,9 +1,16 @@
 import type { Chat, ChatSendResult } from "@angel-engine/daemon-api/chat";
-import type { ChatRuntime } from "./features/chat/runtime";
+import type { AppDatabase } from "./platform/db";
+import type { DaemonRuntime } from "./platform/runtime";
 
+import { Effect, Layer, ManagedRuntime } from "effect";
 import { Hono } from "hono";
 import { describe, expect, it, vi } from "vitest";
 import { registerApi } from "./api";
+import { ChatEngine } from "./features/chat/engine-runtime";
+import { TerminalService } from "./features/terminal/manager";
+import { Db } from "./platform/db";
+import { DaemonError } from "./platform/errors";
+import { ProcessRegistryService } from "./processes";
 
 const chat: Chat = {
   archived: false,
@@ -28,9 +35,8 @@ const result: ChatSendResult = {
 describe("daemon chat streams", () => {
   it("streams runtime events and publishes the global feed", async () => {
     const publish = vi.fn();
-    const runtime = fakeRuntime();
     const app = new Hono();
-    registerApi(app, runtime, { publish });
+    registerApi(app, fakeDaemonRuntime(), { publish });
 
     const response = await app.request("/api/chat-streams?streamId=stream-1", {
       body: JSON.stringify({ text: "hello" }),
@@ -50,10 +56,14 @@ describe("daemon chat streams", () => {
 
   it("publishes chat metadata changes for non-stream clients", async () => {
     const publish = vi.fn();
-    const runtime = fakeRuntime();
-    runtime.createChatFromInput = vi.fn(async () => chat);
     const app = new Hono();
-    registerApi(app, runtime, { publish });
+    registerApi(
+      app,
+      fakeDaemonRuntime({
+        createChatFromInput: () => Effect.succeed(chat),
+      }),
+      { publish },
+    );
 
     const response = await app.request("/api/chats", {
       body: "{}",
@@ -69,12 +79,15 @@ describe("daemon chat streams", () => {
   });
 });
 
-function fakeRuntime(): ChatRuntime {
-  const unsupported = () => {
-    throw new Error("Not used in this test.");
-  };
-  return {
-    closeChatSession: vi.fn(),
+type ChatEngineValue = Omit<Effect.Effect.Success<typeof ChatEngine>, "_tag">;
+
+function fakeDaemonRuntime(
+  overrides: Partial<ChatEngineValue> = {},
+): DaemonRuntime {
+  const unsupported = () =>
+    Effect.die(DaemonError.internal(new Error("Not used in this test.")));
+  const engine: ChatEngineValue = {
+    closeChatSession: () => Effect.void,
     createChatFromInput: unsupported,
     inspectChatRuntimeConfig: unsupported,
     loadChatSession: unsupported,
@@ -83,9 +96,24 @@ function fakeRuntime(): ChatRuntime {
     setChatMode: unsupported,
     setChatPermissionMode: unsupported,
     setChatRuntime: unsupported,
-    async streamChat(_input, onEvent) {
-      onEvent({ part: "text", text: "hello", type: "delta" });
-      return result;
-    },
+    streamChat: (_input, onEvent) =>
+      Effect.sync(() => {
+        onEvent?.({ part: "text", text: "hello", type: "delta" });
+        return result;
+      }),
+    ...overrides,
   };
+
+  return ManagedRuntime.make(
+    Layer.mergeAll(
+      Layer.succeed(ChatEngine, new ChatEngine(engine)),
+      // The fake engine never touches the database.
+      Layer.succeed(
+        Db,
+        new Db({ database: undefined as unknown as AppDatabase }),
+      ),
+      ProcessRegistryService.Default,
+      TerminalService.Default,
+    ),
+  );
 }

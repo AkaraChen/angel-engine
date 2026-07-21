@@ -1,6 +1,11 @@
+import type { AppDatabase } from "../../platform/db";
+
+import { Effect, Layer } from "effect";
 import { describe, expect, it } from "vitest";
 
-import { cwdForNewChat, getOrCreateChatSession } from "./engine-runtime";
+import { Db } from "../../platform/db";
+import { getOrCreateChatSession } from "./chat-session-factory";
+import { cwdForNewChat } from "./engine-runtime";
 
 describe("chat session creation", () => {
   it("dedupes concurrent creation for one chat", async () => {
@@ -40,8 +45,18 @@ describe("chat session creation", () => {
 
 describe("cwdForNewChat", () => {
   it("uses an explicit cwd before project/worktree resolution", async () => {
+    // The explicit cwd short-circuits before any project lookup happens.
+    const testDbLayer = Layer.succeed(
+      Db,
+      new Db({ database: undefined as unknown as AppDatabase }),
+    );
+
     await expect(
-      cwdForNewChat({ cwd: "/tmp/existing-worktree", text: "hi" }),
+      Effect.runPromise(
+        cwdForNewChat({ cwd: "/tmp/existing-worktree", text: "hi" }).pipe(
+          Effect.provide(testDbLayer),
+        ),
+      ),
     ).resolves.toBe("/tmp/existing-worktree");
   });
 });

@@ -3,6 +3,10 @@ import {
   scrypt as scryptCallback,
   timingSafeEqual,
 } from "node:crypto";
+import { Effect } from "effect";
+
+import { DaemonError } from "./platform/errors";
+
 const VERIFIER_BYTES = 32;
 
 export interface MobileAuth {
@@ -16,29 +20,37 @@ export interface MobileAuth {
  * credential. Neither value is derived into the other, so a recovered bearer
  * token cannot be used as an offline password oracle.
  */
-export async function createMobileAuth(password: string): Promise<MobileAuth> {
-  const salt = randomBytes(16);
-  return {
-    salt,
-    sessionToken: randomBytes(32).toString("base64url"),
-    verifier: await passwordVerifier(password, salt),
-  };
+export function createMobileAuth(
+  password: string,
+): Effect.Effect<MobileAuth, DaemonError> {
+  return Effect.gen(function* () {
+    const salt = randomBytes(16);
+    return {
+      salt,
+      sessionToken: randomBytes(32).toString("base64url"),
+      verifier: yield* passwordVerifier(password, salt),
+    };
+  });
 }
 
 /** Always runs scrypt, including for malformed or differently-sized input. */
-export async function verifyMobilePassword(
+export function verifyMobilePassword(
   password: string,
   auth: MobileAuth,
-): Promise<boolean> {
-  const candidate = await passwordVerifier(password, auth.salt);
-  return timingSafeEqual(candidate, auth.verifier);
+): Effect.Effect<boolean, DaemonError> {
+  return Effect.map(passwordVerifier(password, auth.salt), (candidate) =>
+    timingSafeEqual(candidate, auth.verifier),
+  );
 }
 
-async function passwordVerifier(password: string, salt: Buffer) {
-  return new Promise<Buffer>((resolve, reject) => {
+function passwordVerifier(
+  password: string,
+  salt: Buffer,
+): Effect.Effect<Buffer, DaemonError> {
+  return Effect.async<Buffer, DaemonError>((resume) => {
     scryptCallback(password, salt, VERIFIER_BYTES, (error, derivedKey) => {
-      if (error) reject(error);
-      else resolve(derivedKey);
+      if (error) resume(Effect.fail(DaemonError.internal(error)));
+      else resume(Effect.succeed(derivedKey));
     });
   });
 }
