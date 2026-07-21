@@ -1,3 +1,4 @@
+import { AgentSessionError } from "@angel-engine/agent-session";
 import type {
   CanUseTool,
   PermissionResult,
@@ -37,7 +38,7 @@ export class ClaudeSessionPermissions {
 
   close(): void {
     for (const pending of this.pendingPermissions.values()) {
-      pending.reject(new Error("Chat session closed."));
+      pending.reject(AgentSessionError.sessionClosed("claude"));
     }
     this.pendingPermissions.clear();
   }

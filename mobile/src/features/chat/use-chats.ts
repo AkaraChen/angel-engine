@@ -20,8 +20,8 @@ export function useChatList() {
     queryKey: queryKeys.chats.list,
     queryFn: async () => {
       const [chats, projects] = await Promise.all([
-        daemon.listChats(),
-        daemon.listProjects(),
+        daemon.chats.list(),
+        daemon.projects.list(),
       ]);
       return deriveChatSummaries(chats, projects);
     },
@@ -32,7 +32,7 @@ export function useProjectList() {
   const daemon = useDaemonClient();
   return useQuery({
     queryKey: queryKeys.projects.list,
-    queryFn: async () => daemon.listProjects(),
+    queryFn: async () => daemon.projects.list(),
   });
 }
 
@@ -41,7 +41,7 @@ export function useAgentList() {
   const daemon = useDaemonClient();
   return useQuery({
     queryKey: queryKeys.agents.list,
-    queryFn: async () => daemon.listAgents(),
+    queryFn: async () => daemon.agents.listAvailable(),
   });
 }
 
@@ -59,7 +59,7 @@ export function useRuntimeConfig({
   return useQuery({
     enabled: enabled && runtime.length > 0,
     queryKey: queryKeys.chats.runtimeConfig(runtime, cwd),
-    queryFn: async () => daemon.inspectRuntimeConfig({ cwd, runtime }),
+    queryFn: async () => daemon.chats.inspectConfig({ cwd, runtime }),
     retry: false,
     staleTime: 300_000,
   });
@@ -69,7 +69,7 @@ export function useCreateChat() {
   const daemon = useDaemonClient();
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (input: CreateChatInput) => daemon.createChat(input),
+    mutationFn: async (input: CreateChatInput) => daemon.chats.create(input),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: queryKeys.chats.list });
     },

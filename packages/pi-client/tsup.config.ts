@@ -3,6 +3,8 @@ import { defineConfig } from "tsup";
 
 const entry = ["src/index.ts", "src/adapter.ts", "src/context.ts"];
 const external = [
+  "@angel-engine/agent-session",
+  "effect",
   "@angel-engine/client-napi",
   "@angel-engine/js-client",
   "@earendil-works/pi-coding-agent",

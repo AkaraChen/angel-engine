@@ -42,7 +42,8 @@
     "mime-types": "^3.0.2",
     "node-pty": "1.1.0",
     "which": "^7.0.0",
-    "ws": "^8.18.3"
+    "ws": "^8.18.3",
+    "@angel-engine/agent-session": "workspace:*"
   },
   "devDependencies": {
     "@types/mime-types": "^3.0.1",

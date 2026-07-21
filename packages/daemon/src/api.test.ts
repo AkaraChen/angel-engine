@@ -1,5 +1,4 @@
 import type { Chat, ChatSendResult } from "@angel-engine/daemon-api/chat";
-import type { AppDatabase } from "./platform/db";
 import type { DaemonRuntime } from "./platform/runtime";
 
 import { Effect, Layer, ManagedRuntime } from "effect";
@@ -110,7 +109,7 @@ function fakeDaemonRuntime(
       // The fake engine never touches the database.
       Layer.succeed(
         Db,
-        new Db({ database: undefined as unknown as AppDatabase }),
+        new Db({ database: Effect.die("Database is not used in this test.") }),
       ),
       ProcessRegistryService.Default,
       TerminalService.Default,

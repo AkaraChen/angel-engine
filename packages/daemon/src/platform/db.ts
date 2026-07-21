@@ -8,7 +8,7 @@ import { createClient } from "@libsql/client";
 import is from "@sindresorhus/is";
 import { drizzle } from "drizzle-orm/libsql";
 import { migrate } from "drizzle-orm/libsql/migrator";
-import { Context, Effect, Layer } from "effect";
+import { Context, Effect, Layer, Ref } from "effect";
 
 import { chats, customAgents, projects } from "../db/schema";
 import { DaemonError } from "./errors";
@@ -35,47 +35,33 @@ export function dbConfigLayer(configuration: DatabaseConfiguration) {
 }
 
 /**
- * Owns the libSQL client for the daemon lifetime: opens the database file,
- * applies PRAGMAs and Drizzle migrations on acquire, closes the client on
- * scope release.
+ * Owns the libSQL client for the daemon lifetime. The database opens lazily on
+ * first use (routes that never touch it must not fail when it cannot open,
+ * and a failed open is retried on the next query); the scope finalizer closes
+ * whatever was opened.
  */
 export class Db extends Effect.Service<Db>()("daemon/Db", {
   scoped: Effect.gen(function* () {
     const configuration = yield* DbConfig;
-    const databasePath = path.join(
-      configuration.dataDir,
-      configuration.packaged
-        ? "angel-engine.sqlite"
-        : "angel-engine.dev.sqlite",
-    );
-    const client = yield* Effect.acquireRelease(
-      Effect.try({
-        catch: (cause) =>
-          DaemonError.databaseFailed(cause, "Could not open the database."),
-        try: () => {
-          fs.mkdirSync(configuration.dataDir, { recursive: true });
-          return createClient({ url: pathToFileURL(databasePath).href });
-        },
+    const openedRef = yield* Ref.make<AppDatabase | undefined>(undefined);
+    const gate = yield* Effect.makeSemaphore(1);
+    yield* Effect.addFinalizer(() =>
+      Effect.gen(function* () {
+        const opened = yield* Ref.get(openedRef);
+        opened?.$client.close();
       }),
-      (activeClient) => Effect.sync(() => activeClient.close()),
     );
-    yield* Effect.tryPromise({
-      catch: (cause) =>
-        DaemonError.databaseFailed(cause, "Could not initialize the database."),
-      try: async () => {
-        await client.execute("PRAGMA journal_mode = WAL");
-        await client.execute("PRAGMA foreign_keys = ON");
-      },
-    });
-    const database = drizzle(client, {
-      schema: { chats, customAgents, projects },
-    });
-    const migrationsFolder = yield* resolveMigrationsFolder(configuration);
-    yield* Effect.tryPromise({
-      catch: (cause) =>
-        DaemonError.databaseFailed(cause, "Database migration failed."),
-      try: () => migrate(database, { migrationsFolder }),
-    });
+
+    const database = gate.withPermits(1)(
+      Effect.gen(function* () {
+        const opened = yield* Ref.get(openedRef);
+        if (opened !== undefined) return opened;
+        const next = yield* openDatabase(configuration);
+        yield* Ref.set(openedRef, next);
+        return next;
+      }),
+    );
+
     return { database };
   }),
 }) {}
@@ -86,12 +72,56 @@ export class Db extends Effect.Service<Db>()("daemon/Db", {
  */
 export function withDatabase<A>(run: (database: AppDatabase) => Promise<A>) {
   return Effect.gen(function* () {
-    const { database } = yield* Db;
+    const database = yield* (yield* Db).database;
     return yield* Effect.tryPromise({
       catch: (cause) =>
         DaemonError.databaseFailed(cause, "Database operation failed."),
       try: () => run(database),
     });
+  });
+}
+
+function openDatabase(
+  configuration: DatabaseConfiguration,
+): Effect.Effect<AppDatabase, DaemonError> {
+  return Effect.gen(function* () {
+    const databasePath = path.join(
+      configuration.dataDir,
+      configuration.packaged
+        ? "angel-engine.sqlite"
+        : "angel-engine.dev.sqlite",
+    );
+    const client = yield* Effect.try({
+      catch: (cause) =>
+        DaemonError.databaseFailed(cause, "Could not open the database."),
+      try: () => {
+        fs.mkdirSync(configuration.dataDir, { recursive: true });
+        return createClient({ url: pathToFileURL(databasePath).href });
+      },
+    });
+    return yield* Effect.gen(function* () {
+      yield* Effect.tryPromise({
+        catch: (cause) =>
+          DaemonError.databaseFailed(
+            cause,
+            "Could not initialize the database.",
+          ),
+        try: async () => {
+          await client.execute("PRAGMA journal_mode = WAL");
+          await client.execute("PRAGMA foreign_keys = ON");
+        },
+      });
+      const database = drizzle(client, {
+        schema: { chats, customAgents, projects },
+      }) as AppDatabase;
+      const migrationsFolder = yield* resolveMigrationsFolder(configuration);
+      yield* Effect.tryPromise({
+        catch: (cause) =>
+          DaemonError.databaseFailed(cause, "Database migration failed."),
+        try: () => migrate(database, { migrationsFolder }),
+      });
+      return database;
+    }).pipe(Effect.tapError(() => Effect.sync(() => client.close())));
   });
 }
 

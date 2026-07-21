@@ -117,7 +117,7 @@ export function useConversation(chatId: string): Conversation {
       abortRef.current = controller;
       streamIdRef.current = streamId;
       try {
-        for await (const event of daemon.streamChat(
+        for await (const event of daemon.chatStreams.send(
           { chatId, text },
           streamId,
           controller.signal,
@@ -179,7 +179,7 @@ export function useConversation(chatId: string): Conversation {
 
   const history = useQuery({
     queryKey: queryKeys.chats.load(chatId),
-    queryFn: async () => daemon.loadChat(chatId),
+    queryFn: async () => daemon.chats.load(chatId),
     select: (result) => toConversation(result.messages),
     enabled: chatId.length > 0,
     retry: false,
@@ -295,7 +295,7 @@ export function useConversation(chatId: string): Conversation {
     elicitationRef.current = null;
     forceRender();
     if (streamId !== null)
-      void daemon.abortChatStream(streamId).catch(() => {});
+      void daemon.chatStreams.abort(streamId).catch(() => {});
   }, [daemon]);
 
   const respondElicitation = useCallback(
@@ -305,7 +305,7 @@ export function useConversation(chatId: string): Conversation {
       if (streamId === null || elicitation === null) return;
       elicitationRef.current = null;
       forceRender();
-      void daemon
+      void daemon.chatStreams
         .resolveElicitation(streamId, {
           elicitationId: elicitation.id,
           response,
@@ -323,7 +323,7 @@ export function useConversation(chatId: string): Conversation {
       abortRef.current?.abort();
       const streamId = streamIdRef.current;
       if (streamId !== null)
-        void daemon.abortChatStream(streamId).catch(() => {});
+        void daemon.chatStreams.abort(streamId).catch(() => {});
       abortRef.current = null;
       streamIdRef.current = null;
       liveTurnRef.current = EMPTY_TURN;

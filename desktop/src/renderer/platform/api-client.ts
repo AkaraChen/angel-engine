@@ -1,9 +1,10 @@
-import { createDaemonApiClient } from "@angel-engine/daemon-api/client";
+import { createDaemonClient } from "@angel-engine/daemon-client";
 import { getDaemonTransport } from "@/platform/daemon-transport";
 import { ipc } from "@/platform/ipc";
 
 export function getApiClient() {
-  const daemon = createDaemonApiClient({
+  const daemon = createDaemonClient({
+    baseUrl: "",
     fetch: async (pathname, init) => getDaemonTransport().fetch(pathname, init),
   });
   return {

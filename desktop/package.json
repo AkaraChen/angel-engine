@@ -102,7 +102,9 @@
     "wouter": "^3.10.0",
     "xstate": "^5.32.4",
     "zod": "^4.4.3",
-    "zustand": "^5.0.14"
+    "zustand": "^5.0.14",
+    "effect": "3.22.0",
+    "@angel-engine/daemon-client": "workspace:*"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.5.3",

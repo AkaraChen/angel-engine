@@ -1,7 +1,17 @@
-import type {
-  ListeningPortInfo,
-  SubprocessInfo,
-} from "@angel-engine/client-napi";
+/** A live subprocess in a tracked process tree. */
+export interface SubprocessInfo {
+  pid: number;
+  parentPid: number;
+  name: string;
+  command: string[];
+}
+
+/** A TCP port a tracked process is listening on. */
+export interface ListeningPortInfo {
+  pid: number;
+  port: number;
+  address: string;
+}
 
 export interface DaemonInfo {
   host: string;

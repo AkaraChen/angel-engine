@@ -1,5 +1,4 @@
 import type { CustomAgent } from "@angel-engine/daemon-api/agents";
-import type { AppDatabase } from "../../platform/db";
 import type { DaemonError } from "../../platform/errors";
 
 import { Cause, Effect, Exit, Layer } from "effect";
@@ -15,7 +14,7 @@ afterEach(() => {
 // Lookups are stubbed per test, so the database is never touched.
 const testDbLayer = Layer.succeed(
   Db,
-  new Db({ database: undefined as unknown as AppDatabase }),
+  new Db({ database: Effect.die("Database is not used in this test.") }),
 );
 
 async function runNormalizeChatRuntime(

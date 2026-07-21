@@ -1,5 +1,5 @@
 {
-  "name": "@angel-engine/pi-client",
+  "name": "@angel-engine/agent-session",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -11,19 +11,6 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js",
       "require": "./dist/index.cjs"
-    },
-    "./adapter": {
-      "types": "./dist/adapter.d.ts",
-      "import": "./dist/adapter.js",
-      "require": "./dist/adapter.cjs"
-    },
-    "./context": {
-      "types": "./dist/context.d.ts",
-      "import": "./dist/context.js",
-      "require": "./dist/context.cjs"
-    },
-    "./pi-agent-entry": {
-      "import": "./dist/pi-agent-entry.js"
     }
   },
   "files": [
@@ -37,22 +24,13 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@angel-engine/js-client": "workspace:*",
-    "@earendil-works/pi-coding-agent": "0.80.3",
-    "@sindresorhus/is": "^8.1.0",
-    "effect": "3.22.0",
-    "@angel-engine/agent-session": "workspace:*"
+    "effect": "3.22.0"
   },
   "devDependencies": {
-    "@angel-engine/client-napi": "workspace:*",
     "oxlint": "^1.73.0",
     "oxlint-tsgolint": "^0.24.0",
     "tsup": "^8.5.1",
     "typescript": "^7.0.2",
-    "vite": "^8.1.3",
     "vitest": "^4.1.9"
-  },
-  "peerDependencies": {
-    "@angel-engine/client-napi": "0.1.0"
   }
 }

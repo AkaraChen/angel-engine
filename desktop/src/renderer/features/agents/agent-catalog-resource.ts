@@ -1,7 +1,7 @@
 import type { AgentCatalog } from "./agent-catalog-context";
 import type { DaemonClient } from "@/platform/daemon";
 
-import { createDaemonApiClient } from "@angel-engine/daemon-api/client";
+import { createDaemonClient } from "@angel-engine/daemon-client";
 import { use, useSyncExternalStore } from "react";
 
 const listeners = new Set<() => void>();
@@ -24,7 +24,10 @@ export function invalidateAgentCatalog() {
 function agentCatalogResource(daemon: DaemonClient) {
   const existing = resources.get(daemon);
   if (existing !== undefined) return existing;
-  const api = createDaemonApiClient(daemon);
+  const api = createDaemonClient({
+    baseUrl: "",
+    fetch: async (url, init) => daemon.fetch(url, init),
+  });
   const resource = Promise.all([
     api.agents.listAvailable(),
     api.agents.listCustom(),

@@ -14,7 +14,7 @@ export function useChatWorkspaceRoot(chatId: string): {
   const daemon = useDaemonClient();
   const query = useQuery({
     queryKey: queryKeys.chats.detail(chatId),
-    queryFn: async () => daemon.getChat(chatId),
+    queryFn: async () => daemon.chats.get(chatId),
     enabled: chatId.length > 0,
   });
   const cwd = query.data?.cwd ?? null;
@@ -32,7 +32,7 @@ export function useWorkspaceGitStatus(root: string | null, enabled: boolean) {
   const daemon = useDaemonClient();
   return useQuery({
     queryKey: queryKeys.workspace.gitDiff(root ?? ""),
-    queryFn: async () => daemon.workspaceGitDiff(root ?? ""),
+    queryFn: async () => daemon.workspaceTools.gitDiff({ root: root ?? "" }),
     enabled: enabled && root !== null,
     // Workspace state changes as the agent works; keep it fresh but avoid a
     // request storm while the sheet is open.

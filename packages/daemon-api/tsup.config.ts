@@ -6,7 +6,6 @@ export default defineConfig({
   entry: [
     "src/index.ts",
     "src/agents.ts",
-    "src/client.ts",
     "src/daemon.ts",
     "src/events.ts",
     "src/chat/index.ts",

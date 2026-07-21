@@ -1,7 +1,7 @@
-import type { DaemonTransport } from "@angel-engine/daemon-api/client";
 import type { DaemonInfo } from "@angel-engine/daemon-api/daemon";
 
-export interface RendererDaemonTransport extends DaemonTransport {
+export interface RendererDaemonTransport {
+  fetch: (pathname: string, init?: RequestInit) => Promise<Response>;
   info: DaemonInfo;
 }
 

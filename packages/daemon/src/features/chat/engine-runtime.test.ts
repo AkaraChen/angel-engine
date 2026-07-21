@@ -1,5 +1,3 @@
-import type { AppDatabase } from "../../platform/db";
-
 import { Effect, Layer } from "effect";
 import { describe, expect, it } from "vitest";
 
@@ -48,7 +46,7 @@ describe("cwdForNewChat", () => {
     // The explicit cwd short-circuits before any project lookup happens.
     const testDbLayer = Layer.succeed(
       Db,
-      new Db({ database: undefined as unknown as AppDatabase }),
+      new Db({ database: Effect.die("Database is not used in this test.") }),
     );
 
     await expect(

@@ -1,8 +1,8 @@
-import type { ChatStreamEvent } from "./chat-types";
+import type { ChatStreamEvent } from "@angel-engine/daemon-api/chat";
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { createDaemonClient, readSseEvents } from "./daemon-client";
+import { createDaemonClient, readSseEvents } from "../index";
 
 function streamFrom(chunks: string[]): ReadableStream<Uint8Array> {
   const encoder = new TextEncoder();
@@ -74,7 +74,7 @@ describe("streamChat", () => {
 
     const client = createDaemonClient({ baseUrl: "", token: "secret" });
     const received = await collect(
-      client.streamChat({ chatId: "chat-1", text: "hi" }, "stream-9"),
+      client.chatStreams.send({ chatId: "chat-1", text: "hi" }, "stream-9"),
     );
 
     expect(received).toEqual(events);
@@ -95,7 +95,7 @@ describe("streamChat", () => {
 
     const client = createDaemonClient({ baseUrl: "", token: null });
     await expect(
-      collect(client.streamChat({ chatId: "c", text: "hi" }, "s")),
+      collect(client.chatStreams.send({ chatId: "c", text: "hi" }, "s")),
     ).rejects.toThrow(/POST \/api\/chat-streams/);
   });
 });
@@ -107,7 +107,7 @@ describe("chat metadata + history", () => {
     vi.stubGlobal("fetch", fetchMock);
 
     const client = createDaemonClient({ baseUrl: "", token: null });
-    expect(await client.loadChat("c1")).toEqual(result);
+    expect(await client.chats.load("c1")).toEqual(result);
     const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
     expect(url).toBe("/api/chats/c1/load");
     expect(init.method).toBe("POST");
@@ -119,7 +119,7 @@ describe("chat metadata + history", () => {
     vi.stubGlobal("fetch", fetchMock);
 
     const client = createDaemonClient({ baseUrl: "", token: null });
-    expect(await client.getChat("c1")).toEqual(chat);
+    expect(await client.chats.get("c1")).toEqual(chat);
     expect(fetchMock.mock.calls[0][0]).toBe("/api/chats/c1");
   });
 
@@ -128,7 +128,7 @@ describe("chat metadata + history", () => {
     vi.stubGlobal("fetch", fetchMock);
 
     const client = createDaemonClient({ baseUrl: "", token: null });
-    await client.abortChatStream("stream-9");
+    await client.chatStreams.abort("stream-9");
     const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
     expect(url).toBe("/api/chat-streams/stream-9");
     expect(init.method).toBe("DELETE");
@@ -141,7 +141,7 @@ describe("chat metadata + history", () => {
     vi.stubGlobal("fetch", fetchMock);
 
     const client = createDaemonClient({ baseUrl: "", token: null });
-    await client.resolveElicitation("stream-9", {
+    await client.chatStreams.resolveElicitation("stream-9", {
       elicitationId: "elic-1",
       response: { type: "allow" },
     });

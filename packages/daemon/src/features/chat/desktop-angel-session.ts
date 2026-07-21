@@ -22,10 +22,12 @@ import {
   AngelSession as NativeAngelSession,
   TurnRunEventType,
 } from "@angel-engine/client-napi";
+import { AgentSessionError } from "@angel-engine/agent-session";
 import {
   abortError,
   throwIfAborted,
 } from "@angel-engine/js-client/utils/errors";
+import { Effect } from "effect";
 
 type NativeAngelSessionInstance = InstanceType<typeof NativeAngelSession>;
 type DesktopSendTextRequest = SendTextRequest & {
@@ -57,7 +59,7 @@ export class DesktopAngelSession implements SessionProcess {
 
   close(): void {
     for (const pending of this.pendingElicitations.values()) {
-      pending.reject(new Error("Chat session closed."));
+      pending.reject(AgentSessionError.sessionClosed("angel"));
     }
     this.pendingElicitations.clear();
     this.session.close();
@@ -75,27 +77,49 @@ export class DesktopAngelSession implements SessionProcess {
     return (): void => undefined;
   }
 
-  async hydrate(request: HydrateRequest): Promise<ConversationSnapshot> {
-    return this.enqueue(async () => this.session.hydrate(request));
+  hydrate(
+    request: HydrateRequest,
+  ): Effect.Effect<ConversationSnapshot, AgentSessionError> {
+    return this.runOperation(async () => this.session.hydrate(request));
   }
 
-  async inspect(cwd: string | InspectRequest): Promise<ConversationSnapshot> {
+  inspect(
+    cwd: string | InspectRequest,
+  ): Effect.Effect<ConversationSnapshot, AgentSessionError> {
     const request: InspectRequest = typeof cwd === "string" ? { cwd } : cwd;
-    return this.enqueue(async () => this.session.inspect(request));
+    return this.runOperation(async () => this.session.inspect(request));
   }
 
-  async setMode(request: SetModeRequest): Promise<ConversationSnapshot> {
-    return this.enqueue(async () => this.session.setMode(request));
+  setMode(
+    request: SetModeRequest,
+  ): Effect.Effect<ConversationSnapshot, AgentSessionError> {
+    return this.runOperation(async () => this.session.setMode(request));
   }
 
-  async setPermissionMode(
+  setPermissionMode(
     request: SetPermissionModeRequest,
-  ): Promise<ConversationSnapshot> {
-    return this.enqueue(async () => this.session.setPermissionMode(request));
+  ): Effect.Effect<ConversationSnapshot, AgentSessionError> {
+    return this.runOperation(async () =>
+      this.session.setPermissionMode(request),
+    );
   }
 
-  async sendText(request: DesktopSendTextRequest): Promise<TurnRunResult> {
-    return this.enqueue(async () => this.sendTextNow(request));
+  sendText(
+    request: DesktopSendTextRequest,
+  ): Effect.Effect<TurnRunResult, AgentSessionError> {
+    return this.runOperation(async () => this.sendTextNow(request));
+  }
+
+  private runOperation<A>(
+    operation: () => Promise<A>,
+  ): Effect.Effect<A, AgentSessionError> {
+    return Effect.tryPromise({
+      catch: (cause) =>
+        cause instanceof AgentSessionError
+          ? cause
+          : AgentSessionError.operationFailed("angel", cause),
+      try: () => this.enqueue(operation),
+    });
   }
 
   private async sendTextNow(
@@ -104,7 +128,10 @@ export class DesktopAngelSession implements SessionProcess {
     const text = request.text;
     const input = request.input;
     if (!text && input.length === 0) {
-      throw new Error("Text or input is required.");
+      throw AgentSessionError.invalidRequest(
+        "angel",
+        "Text or input is required.",
+      );
     }
 
     throwIfAborted(request.signal);

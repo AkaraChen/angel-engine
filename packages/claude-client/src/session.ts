@@ -40,6 +40,8 @@ import {
 } from "@angel-engine/client-napi";
 import { spawn } from "node:child_process";
 import is from "@sindresorhus/is";
+import { AgentSessionError } from "@angel-engine/agent-session";
+import { Effect } from "effect";
 import {
   abortError,
   errorMessage,
@@ -101,8 +103,10 @@ export class ClaudeCodeSession implements SessionProcess {
     };
   }
 
-  async hydrate(request: HydrateRequest): Promise<ConversationSnapshot> {
-    return this.enqueue(async () => {
+  hydrate(
+    request: HydrateRequest,
+  ): Effect.Effect<ConversationSnapshot, AgentSessionError> {
+    return this.runOperation(async () => {
       this.ensureConversation({
         cwd: request.cwd,
         remoteId: request.remoteId,
@@ -113,17 +117,21 @@ export class ClaudeCodeSession implements SessionProcess {
     });
   }
 
-  async inspect(cwd: string | InspectRequest): Promise<ConversationSnapshot> {
+  inspect(
+    cwd: string | InspectRequest,
+  ): Effect.Effect<ConversationSnapshot, AgentSessionError> {
     const request: InspectRequest = typeof cwd === "string" ? { cwd } : cwd;
-    return this.enqueue(async () => {
+    return this.runOperation(async () => {
       this.ensureConversation({ cwd: request.cwd });
       await this.loadRuntimeConfiguration(request.cwd);
       return this.requireConversation();
     });
   }
 
-  async setMode(request: SetModeRequest): Promise<ConversationSnapshot> {
-    return this.enqueue(async () => {
+  setMode(
+    request: SetModeRequest,
+  ): Effect.Effect<ConversationSnapshot, AgentSessionError> {
+    return this.runOperation(async () => {
       this.ensureConversation({
         cwd: request.cwd,
         remoteId: request.remoteId,
@@ -132,10 +140,10 @@ export class ClaudeCodeSession implements SessionProcess {
     });
   }
 
-  async setPermissionMode(
+  setPermissionMode(
     request: SetPermissionModeRequest,
-  ): Promise<ConversationSnapshot> {
-    return this.enqueue(async () => {
+  ): Effect.Effect<ConversationSnapshot, AgentSessionError> {
+    return this.runOperation(async () => {
       const conversation = this.ensureConversation({
         cwd: request.cwd,
         remoteId: request.remoteId,
@@ -156,20 +164,40 @@ export class ClaudeCodeSession implements SessionProcess {
     });
   }
 
-  async sendText(request: ClaudeCodeSendTextRequest): Promise<TurnRunResult> {
-    return this.enqueue(async () => this.sendTextNow(request));
+  sendText(
+    request: ClaudeCodeSendTextRequest,
+  ): Effect.Effect<TurnRunResult, AgentSessionError> {
+    return this.runOperation(async () => this.sendTextNow(request));
+  }
+
+  private runOperation<A>(
+    operation: () => Promise<A>,
+  ): Effect.Effect<A, AgentSessionError> {
+    return Effect.tryPromise({
+      catch: (cause) =>
+        cause instanceof AgentSessionError
+          ? cause
+          : AgentSessionError.operationFailed("claude", cause),
+      try: () => this.enqueue(operation),
+    });
   }
 
   private async sendTextNow(
     request: ClaudeCodeSendTextRequest,
   ): Promise<TurnRunResult> {
     if (!is.string(request.text)) {
-      throw new Error("Claude sendText request is missing text.");
+      throw AgentSessionError.invalidRequest(
+        "claude",
+        "Claude sendText request is missing text.",
+      );
     }
     const text = request.text;
     const input = request.input ?? [];
     if (!text && input.length === 0) {
-      throw new Error("Text or input is required.");
+      throw AgentSessionError.invalidRequest(
+        "claude",
+        "Text or input is required.",
+      );
     }
 
     throwIfAborted(request.signal);

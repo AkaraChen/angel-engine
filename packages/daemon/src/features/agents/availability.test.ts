@@ -1,5 +1,3 @@
-import type { AppDatabase } from "../../platform/db";
-
 import { Effect, Layer } from "effect";
 import { describe, expect, it, vi } from "vitest";
 
@@ -18,7 +16,7 @@ vi.mock("./repository", () => ({
 // The repository is mocked, so the database is never touched.
 const testDbLayer = Layer.succeed(
   Db,
-  new Db({ database: undefined as unknown as AppDatabase }),
+  new Db({ database: Effect.die("Database is not used in this test.") }),
 );
 
 function runListAvailableAgents() {

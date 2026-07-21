@@ -16,6 +16,8 @@ import type { Db } from "../../platform/db";
 import type { DesktopChatSession } from "./chat-session-factory";
 import type { ChatStreamControls } from "./runtime";
 
+import type { AgentSessionError } from "@angel-engine/agent-session";
+
 import {
   conversationMessages,
   projectTurnRunEvent,
@@ -116,6 +118,8 @@ export class ChatEngine extends Effect.Service<ChatEngine>()(
               : DaemonError.sessionFailed(cause),
           try: run,
         });
+      const sessionFailure = (cause: AgentSessionError) =>
+        DaemonError.sessionFailed(cause);
 
       const getChatSession = (chat: Chat) =>
         Effect.map(
@@ -198,8 +202,7 @@ export class ChatEngine extends Effect.Service<ChatEngine>()(
             session,
           };
 
-          prewarm.promise = session
-            .inspect({ cwd })
+          prewarm.promise = Effect.runPromise(session.inspect({ cwd }))
             .then((snapshot) => {
               if (prewarm.closed) {
                 throw new Error("Chat prewarm was closed.");
@@ -327,8 +330,8 @@ export class ChatEngine extends Effect.Service<ChatEngine>()(
           }
 
           const cwd = yield* cwdForChat(chat, input.projectId);
-          const result = yield* trySession(() =>
-            session.sendText({
+          const result = yield* session
+            .sendText({
               cwd,
               model: input.model ?? undefined,
               mode: input.mode ?? undefined,
@@ -343,8 +346,8 @@ export class ChatEngine extends Effect.Service<ChatEngine>()(
               signal: abortSignal,
               input: chatAttachmentsToClientInput(attachments),
               text: input.text,
-            }),
-          );
+            })
+            .pipe(Effect.mapError(sessionFailure));
 
           if (is.nonEmptyString(input.text)) {
             yield* renameChatFromPrompt(chat.id, input.text);
@@ -410,15 +413,13 @@ export class ChatEngine extends Effect.Service<ChatEngine>()(
         inspectChatRuntimeConfig: (input: ChatRuntimeConfigInput) =>
           Effect.gen(function* () {
             const session = yield* createChatSession(input.runtime);
-            return yield* trySession(async () => {
-              try {
-                return runtimeConfigFromConversationSnapshot(
-                  await session.inspect(input.cwd ?? standaloneChatCwd()),
-                );
-              } finally {
-                session.close();
-              }
-            });
+            return yield* session
+              .inspect(input.cwd ?? standaloneChatCwd())
+              .pipe(
+                Effect.map(runtimeConfigFromConversationSnapshot),
+                Effect.mapError(sessionFailure),
+                Effect.ensuring(Effect.sync(() => session.close())),
+              );
           }),
         loadChatSession: (chatId: string) =>
           Effect.gen(function* () {
@@ -434,12 +435,12 @@ export class ChatEngine extends Effect.Service<ChatEngine>()(
             }
 
             const chatSession = yield* getChatSession(chat);
-            const snapshot = yield* trySession(() =>
-              chatSession.hydrate({
+            const snapshot = yield* chatSession
+              .hydrate({
                 cwd,
                 remoteId: chat.remoteThreadId ?? undefined,
-              }),
-            );
+              })
+              .pipe(Effect.mapError(sessionFailure));
             const updatedChat = yield* persistRemoteThreadId(chat, snapshot);
             const messages = conversationMessages(snapshot);
             return {
@@ -477,13 +478,13 @@ export class ChatEngine extends Effect.Service<ChatEngine>()(
             const chat = yield* requireChat(input.chatId);
             const session = yield* getChatSession(chat);
             const cwd = yield* cwdForChat(chat);
-            const snapshot = yield* trySession(() =>
-              session.setMode({
+            const snapshot = yield* session
+              .setMode({
                 cwd,
                 mode: input.mode,
                 remoteId: chat.remoteThreadId ?? undefined,
-              }),
-            );
+              })
+              .pipe(Effect.mapError(sessionFailure));
             const updatedChat = yield* persistRemoteThreadId(chat, snapshot);
             return {
               chat: updatedChat,
@@ -495,13 +496,13 @@ export class ChatEngine extends Effect.Service<ChatEngine>()(
             const chat = yield* requireChat(input.chatId);
             const session = yield* getChatSession(chat);
             const cwd = yield* cwdForChat(chat);
-            const snapshot = yield* trySession(() =>
-              session.setPermissionMode({
+            const snapshot = yield* session
+              .setPermissionMode({
                 cwd,
                 mode: input.mode,
                 remoteId: chat.remoteThreadId ?? undefined,
-              }),
-            );
+              })
+              .pipe(Effect.mapError(sessionFailure));
             const updatedChat = yield* persistRemoteThreadId(chat, snapshot);
             return {
               chat: updatedChat,

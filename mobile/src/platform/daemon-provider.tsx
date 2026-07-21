@@ -1,10 +1,10 @@
+import type { DaemonClient } from "@angel-engine/daemon-client";
 import type { PropsWithChildren } from "react";
-import type { DaemonClient } from "./daemon-client";
 
+import { createDaemonClient } from "@angel-engine/daemon-client";
 import { createContext, use, useMemo } from "react";
 import { useAuth } from "@/features/auth/auth-provider";
 import { LoginPage } from "@/features/auth/login-page";
-import { createDaemonClient } from "./daemon-client";
 
 const DaemonClientContext = createContext<DaemonClient | null>(null);
 
@@ -13,12 +13,9 @@ export function DaemonProvider({ children }: PropsWithChildren) {
 
   const client = useMemo(
     () =>
-      createDaemonClient(
-        { baseUrl, token },
-        // A 401 means the paired token is stale (daemon restarted or the
-        // password changed) — drop it and bounce back to the login screen.
-        { onUnauthorized: signOut },
-      ),
+      // A 401 means the paired token is stale (daemon restarted or the
+      // password changed) — drop it and bounce back to the login screen.
+      createDaemonClient({ baseUrl, onUnauthorized: signOut, token }),
     [baseUrl, token, signOut],
   );
 

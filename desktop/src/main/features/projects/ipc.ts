@@ -1,9 +1,10 @@
-import type { Project } from "@angel-engine/daemon-api/projects";
-
+import { DaemonRequestError } from "@angel-engine/daemon-client";
 import { tipc } from "@egoist/tipc/main";
 import { type as arkType } from "arktype";
+import { Effect } from "effect";
 import { BrowserWindow, dialog, Menu, shell } from "electron";
-import { daemonJson } from "../../daemon/client";
+import { daemonClient } from "../../daemon/client";
+import { MainIpcError } from "../../platform/errors";
 import { translate } from "../../platform/i18n";
 
 const t = tipc.create();
@@ -18,39 +19,57 @@ export const projectPlatformIpcRouter = {
   }),
   projectsShowContextMenu: t.procedure
     .input<string>()
-    .action(async ({ context, input }) => {
-      const projectId = arkType("string")(input);
-      if (projectId instanceof arkType.errors)
-        throw new TypeError("Project id is required.");
-      const project = await daemonJson<Project | null>(
-        `/api/projects/${encodeURIComponent(projectId)}`,
-      );
-      if (project === null) throw new Error("Project not found.");
-      return new Promise<"cancelled" | "deleted" | "opened">((resolve) => {
-        const menu = Menu.buildFromTemplate([
-          {
-            click: () => {
-              void shell
-                .openPath(project.path)
-                .finally(() => resolve("opened"));
-            },
-            label: translate("projects.openInFinder"),
-          },
-          { type: "separator" },
-          {
-            click: () => {
-              void daemonJson(
-                `/api/projects/${encodeURIComponent(project.id)}`,
-                { method: "DELETE" },
-              ).then(() => resolve("deleted"));
-            },
-            label: translate("common.delete"),
-          },
-        ]);
-        menu.popup({
-          callback: () => resolve("cancelled"),
-          window: BrowserWindow.fromWebContents(context.sender) ?? undefined,
-        });
-      });
-    }),
+    .action(async ({ context, input }) =>
+      Effect.runPromise(
+        Effect.gen(function* () {
+          const projectId = arkType("string")(input);
+          if (projectId instanceof arkType.errors) {
+            return yield* Effect.fail(
+              MainIpcError.invalidRequest("Project id is required."),
+            );
+          }
+          const project = yield* Effect.tryPromise({
+            catch: (cause) =>
+              cause instanceof DaemonRequestError
+                ? MainIpcError.daemonRequestFailed(cause.message)
+                : MainIpcError.operationFailed(cause),
+            try: () => daemonClient.projects.get(projectId),
+          });
+          if (project === null) {
+            return yield* Effect.fail(
+              MainIpcError.notFound("Project not found."),
+            );
+          }
+          return yield* Effect.promise(
+            () =>
+              new Promise<"cancelled" | "deleted" | "opened">((resolve) => {
+                const menu = Menu.buildFromTemplate([
+                  {
+                    click: () => {
+                      void shell
+                        .openPath(project.path)
+                        .finally(() => resolve("opened"));
+                    },
+                    label: translate("projects.openInFinder"),
+                  },
+                  { type: "separator" },
+                  {
+                    click: () => {
+                      void daemonClient.projects
+                        .delete(project.id)
+                        .then(() => resolve("deleted"));
+                    },
+                    label: translate("common.delete"),
+                  },
+                ]);
+                menu.popup({
+                  callback: () => resolve("cancelled"),
+                  window:
+                    BrowserWindow.fromWebContents(context.sender) ?? undefined,
+                });
+              }),
+          );
+        }),
+      ),
+    ),
 };

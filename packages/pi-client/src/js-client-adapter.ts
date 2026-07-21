@@ -14,6 +14,7 @@ import {
 } from "@angel-engine/js-client/projection";
 import { normalizeChatAttachmentsInput } from "@angel-engine/js-client/utils/attachments";
 import is from "@sindresorhus/is";
+import { Effect } from "effect";
 import { PiAgentSession } from "./session.js";
 
 type ClientInput = NonNullable<SendTextRequest["input"]>;
@@ -26,7 +27,7 @@ export class PiAgentAdapter implements AgentAdapter {
     const session = new PiAgentSession();
     try {
       return runtimeConfigFromConversationSnapshot(
-        await session.inspect(input.cwd ?? process.cwd()),
+        await Effect.runPromise(session.inspect(input.cwd ?? process.cwd())),
       );
     } finally {
       session.close();
@@ -48,8 +49,8 @@ export class PiAgentAdapter implements AgentAdapter {
       wake = undefined;
     };
 
-    const run = session
-      .sendText({
+    const run = Effect.runPromise(
+      session.sendText({
         cwd: cwdFromContext(context),
         input: piClientInputFromChatAttachments(
           normalizeChatAttachmentsInput(input.attachments),
@@ -65,7 +66,8 @@ export class PiAgentAdapter implements AgentAdapter {
         remoteId: context.chat?.remoteThreadId ?? undefined,
         signal: context.signal,
         text: input.text,
-      })
+      }),
+    )
       .catch((caught: unknown) => {
         error = caught;
       })

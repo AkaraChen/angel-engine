@@ -25,7 +25,7 @@ function useChatTitle(chatId: string | undefined): string {
   const daemon = useDaemonClient();
   const query = useQuery({
     queryKey: queryKeys.chats.detail(chatId ?? ""),
-    queryFn: async () => daemon.getChat(chatId ?? ""),
+    queryFn: async () => daemon.chats.get(chatId ?? ""),
     enabled: chatId !== undefined && chatId.length > 0,
   });
   const title = query.data?.title.trim();

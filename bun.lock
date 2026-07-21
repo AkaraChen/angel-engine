@@ -47,6 +47,7 @@
         "@angel-engine/client-napi": "workspace:*",
         "@angel-engine/daemon": "workspace:*",
         "@angel-engine/daemon-api": "workspace:*",
+        "@angel-engine/daemon-client": "workspace:*",
         "@angel-engine/js-client": "workspace:*",
         "@angel-engine/pi-client": "workspace:*",
         "@anthropic-ai/claude-agent-sdk": "0.3.198",
@@ -89,6 +90,7 @@
         "clsx": "^2.1.1",
         "cmdk": "^1.1.1",
         "drizzle-orm": "^0.45.2",
+        "effect": "3.22.0",
         "electron-log": "^5.4.4",
         "electron-squirrel-startup": "^1.0.1",
         "electron-updater": "^6.8.9",
@@ -156,6 +158,7 @@
       "name": "mobile",
       "version": "0.0.1",
       "dependencies": {
+        "@angel-engine/daemon-client": "workspace:*",
         "@base-ui/react": "^1.6.0",
         "@fontsource-variable/geist": "^5.2.5",
         "@fontsource-variable/ibm-plex-sans": "^5.2.8",
@@ -206,13 +209,29 @@
         "vitest": "^4.1.9",
       },
     },
+    "packages/agent-session": {
+      "name": "@angel-engine/agent-session",
+      "version": "0.1.0",
+      "dependencies": {
+        "effect": "3.22.0",
+      },
+      "devDependencies": {
+        "oxlint": "^1.73.0",
+        "oxlint-tsgolint": "^0.24.0",
+        "tsup": "^8.5.1",
+        "typescript": "^7.0.2",
+        "vitest": "^4.1.9",
+      },
+    },
     "packages/claude-client": {
       "name": "@angel-engine/claude-client",
       "version": "0.1.0",
       "dependencies": {
         "@agentclientprotocol/sdk": "^1.1.0",
+        "@angel-engine/agent-session": "workspace:*",
         "@angel-engine/js-client": "workspace:*",
         "@sindresorhus/is": "^8.1.0",
+        "effect": "3.22.0",
         "mime-types": "^3.0.2",
       },
       "devDependencies": {
@@ -237,6 +256,7 @@
         "angel-engine-daemon": "./dist/main.js",
       },
       "dependencies": {
+        "@angel-engine/agent-session": "workspace:*",
         "@angel-engine/claude-client": "workspace:*",
         "@angel-engine/client-napi": "workspace:*",
         "@angel-engine/daemon-api": "workspace:*",
@@ -272,7 +292,6 @@
       "name": "@angel-engine/daemon-api",
       "version": "0.1.0",
       "dependencies": {
-        "@angel-engine/client-napi": "workspace:*",
         "@angel-engine/js-client": "workspace:*",
         "@sindresorhus/is": "^8.1.0",
         "arktype": "^2.2.2",
@@ -282,6 +301,20 @@
       "devDependencies": {
         "@types/mime-db": "^1.43.6",
         "@types/whatwg-mimetype": "^5.0.0",
+        "tsup": "^8.5.1",
+        "typescript": "^7.0.2",
+        "vitest": "^4.1.9",
+      },
+    },
+    "packages/daemon-client": {
+      "name": "@angel-engine/daemon-client",
+      "version": "0.1.0",
+      "dependencies": {
+        "@angel-engine/daemon-api": "workspace:*",
+      },
+      "devDependencies": {
+        "oxlint": "^1.73.0",
+        "oxlint-tsgolint": "^0.24.0",
         "tsup": "^8.5.1",
         "typescript": "^7.0.2",
         "vitest": "^4.1.9",
@@ -326,9 +359,11 @@
       "name": "@angel-engine/pi-client",
       "version": "0.1.0",
       "dependencies": {
+        "@angel-engine/agent-session": "workspace:*",
         "@angel-engine/js-client": "workspace:*",
         "@earendil-works/pi-coding-agent": "0.80.3",
         "@sindresorhus/is": "^8.1.0",
+        "effect": "3.22.0",
       },
       "devDependencies": {
         "@angel-engine/client-napi": "workspace:*",
@@ -379,6 +414,8 @@
 
     "@alloc/quick-lru": ["@alloc/quick-lru@5.2.0", "", {}, "sha512-UrcABB+4bUrFABwbluTIBErXwvbsU/V7TZWfmbgJfbkwiBuziS9gxdODUyuiecfdGQ85jglMW6juS3+z5TsKLw=="],
 
+    "@angel-engine/agent-session": ["@angel-engine/agent-session@workspace:packages/agent-session"],
+
     "@angel-engine/claude-client": ["@angel-engine/claude-client@workspace:packages/claude-client"],
 
     "@angel-engine/client-napi": ["@angel-engine/client-napi@workspace:crates/angel-engine-client-napi"],
@@ -386,6 +423,8 @@
     "@angel-engine/daemon": ["@angel-engine/daemon@workspace:packages/daemon"],
 
     "@angel-engine/daemon-api": ["@angel-engine/daemon-api@workspace:packages/daemon-api"],
+
+    "@angel-engine/daemon-client": ["@angel-engine/daemon-client@workspace:packages/daemon-client"],
 
     "@angel-engine/js-client": ["@angel-engine/js-client@workspace:packages/js-client"],
 

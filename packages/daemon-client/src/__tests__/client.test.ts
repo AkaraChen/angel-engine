@@ -2,7 +2,7 @@ import type { Mock } from "vitest";
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { createDaemonClient, DaemonRequestError } from "./daemon-client";
+import { createDaemonClient, DaemonRequestError } from "../index";
 
 function jsonResponse(body: unknown, init?: ResponseInit): Response {
   return new Response(JSON.stringify(body), {
@@ -82,13 +82,13 @@ describe("createDaemonClient", () => {
     vi.stubGlobal("fetch", fetchMock);
 
     const client = createDaemonClient({ baseUrl: "", token: null });
-    await client.inspectRuntimeConfig({ runtime: "claude", cwd: "/repo" });
+    await client.chats.inspectConfig({ cwd: "/repo", runtime: "claude" });
 
     expect(fetchMock).toHaveBeenCalledWith(
       "/api/chats/runtime-config",
       expect.objectContaining({
         method: "POST",
-        body: JSON.stringify({ runtime: "claude", cwd: "/repo" }),
+        body: JSON.stringify({ cwd: "/repo", runtime: "claude" }),
       }),
     );
   });
@@ -117,5 +117,42 @@ describe("createDaemonClient", () => {
 
     const client = createDaemonClient({ baseUrl: "", token: null });
     await expect(client.health()).rejects.toMatchObject({ status: 401 });
+  });
+
+  it("surfaces the daemon error code from the payload", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue(
+        jsonResponse(
+          { code: "chat-not-found", error: "Chat not found." },
+          { status: 404 },
+        ),
+      );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const client = createDaemonClient({ baseUrl: "", token: null });
+    await expect(client.chats.load("missing")).rejects.toMatchObject({
+      code: "chat-not-found",
+      message: "Chat not found.",
+      status: 404,
+    });
+  });
+
+  it("notifies onUnauthorized on 401", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue(
+        jsonResponse({ error: "Unauthorized" }, { status: 401 }),
+      );
+    vi.stubGlobal("fetch", fetchMock);
+    const onUnauthorized = vi.fn();
+
+    const client = createDaemonClient({
+      baseUrl: "",
+      onUnauthorized,
+      token: "t",
+    });
+    await expect(client.health()).rejects.toBeInstanceOf(DaemonRequestError);
+    expect(onUnauthorized).toHaveBeenCalledTimes(1);
   });
 });
