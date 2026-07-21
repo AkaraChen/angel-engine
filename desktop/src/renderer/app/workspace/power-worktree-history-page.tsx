@@ -8,14 +8,25 @@ import {
   Plus,
 } from "@phosphor-icons/react";
 import is from "@sindresorhus/is";
+import { useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
+import {
+  buildWorkspaceToolPatchList,
+  getWorkspaceToolPatchFileLineChanges,
+} from "@/app/workspace/workspace-tool-patch-model";
 import { Button } from "@/components/ui/button";
 import {
   agentRuntimeIconSvg,
   agentRuntimeLabel,
 } from "@/features/agents/agent-runtime-icons";
-import { chatWorktreeGroupKey } from "@/features/chat/worktree-grouping";
+import {
+  chatWorktreeCwd,
+  chatWorktreeGroupKey,
+} from "@/features/chat/worktree-grouping";
+import { workspaceToolRootName } from "@/app/workspace/workspace-file-display";
+import { getApiClient } from "@/platform/api-client";
+import { queryKeys } from "@/platform/query-keys";
 
 interface PowerWorktreeHistoryPageProps {
   chats: Chat[];
@@ -48,92 +59,241 @@ export function PowerWorktreeHistoryPage({
       )
       .sort((left, right) => right.updatedAt.localeCompare(left.updatedAt));
   }, [chats, groupKey, projectPath]);
+  const worktreeRoot =
+    historyChats.length > 0
+      ? (chatWorktreeCwd(historyChats[0], projectPath) ?? projectPath)
+      : projectPath;
+  const gitStats = usePowerWorktreeGitStats(worktreeRoot);
+  const latestChat = historyChats[0];
+  const worktreeName = is.nonEmptyString(worktreeRoot)
+    ? workspaceToolRootName(worktreeRoot)
+    : undefined;
+  const pageTitle = is.nonEmptyString(worktreeName) ? worktreeName : label;
 
   return (
-    <div
-      className="
-      flex min-h-0 flex-1 items-center justify-center overflow-y-auto p-6
-    "
-    >
-      <div className="w-full max-w-md">
-        {historyChats.length > 0 ? (
+    <div className="min-h-0 flex-1 overflow-y-auto">
+      <div className="mx-auto w-full max-w-2xl px-8 py-10">
+        <header className="flex items-center gap-4">
           <h2
             className="
-            mb-5 truncate text-center text-2xl font-semibold text-foreground
-          "
-          >
-            {label}
-          </h2>
-        ) : null}
-        <div className="h-80 overflow-y-auto">
-          {historyChats.length === 0 ? (
-            <div
-              className="
-              flex h-full flex-col items-center justify-center gap-2 text-sm
-              text-muted-foreground
+              min-w-0 flex-1 truncate text-2xl font-semibold text-foreground
             "
-            >
-              <ChatCircleText className="size-10" weight="duotone" />
-              <span>{t("sidebar.noChats")}</span>
-              <Button className="mt-2" onClick={onNewChat} size="sm">
-                <Plus />
-                {t("workspace.newChat")}
-              </Button>
-            </div>
-          ) : (
-            <div className="grid gap-1">
-              {historyChats.map((chat) => (
-                <div
+            title={pageTitle}
+          >
+            {pageTitle}
+          </h2>
+          <Button onClick={onNewChat} size="sm" variant="soft">
+            <Plus />
+            {t("workspace.newChat")}
+          </Button>
+        </header>
+        <dl className="mt-6 grid grid-cols-2 gap-3 md:grid-cols-4">
+          <PowerWorktreeStat
+            label={t("sidebar.chats")}
+            value={historyChats.length.toLocaleString()}
+          />
+          <PowerWorktreeStat
+            label={t("workspace.statsLastActive")}
+            title={
+              latestChat ? formatDateTime(latestChat.updatedAt) : undefined
+            }
+            value={latestChat ? formatRelativeTime(latestChat.updatedAt) : "—"}
+          />
+          <PowerWorktreeStat
+            label={t("workspace.statsBranch")}
+            title={gitStats?.branch}
+            value={gitStats?.branch ?? "—"}
+          />
+          <PowerWorktreeStat
+            label={t("workspace.statsChanges")}
+            value={
+              gitStats === undefined ? (
+                "—"
+              ) : gitStats.changedFiles === 0 ? (
+                "0"
+              ) : (
+                <span className="flex items-baseline gap-2 tabular-nums">
+                  <span>{gitStats.changedFiles.toLocaleString()}</span>
+                  {gitStats.additions > 0 ? (
+                    <span className="text-xs font-medium text-status-success">
+                      +{gitStats.additions.toLocaleString()}
+                    </span>
+                  ) : null}
+                  {gitStats.deletions > 0 ? (
+                    <span className="text-xs font-medium text-status-danger">
+                      -{gitStats.deletions.toLocaleString()}
+                    </span>
+                  ) : null}
+                </span>
+              )
+            }
+          />
+        </dl>
+        <h3
+          className="
+            mt-8 pl-1 text-xs font-medium tracking-wide text-muted-foreground
+          "
+        >
+          {label}
+        </h3>
+        {historyChats.length === 0 ? (
+          <div
+            className="
+              mt-2 flex flex-col items-center justify-center gap-1 rounded-xl
+              bg-surface-1/50 px-6 py-16 text-center
+            "
+          >
+            <ChatCircleText
+              aria-hidden="true"
+              className="mb-1 size-8 text-muted-foreground/60"
+              weight="duotone"
+            />
+            <span className="text-sm font-medium text-foreground">
+              {t("sidebar.noChats")}
+            </span>
+            <Button className="mt-3" onClick={onNewChat} size="sm">
+              <Plus />
+              {t("workspace.newChat")}
+            </Button>
+          </div>
+        ) : (
+          <div
+            className="
+              mt-2 space-y-px overflow-hidden rounded-xl border
+              border-border-subtle bg-card p-1.5 shadow-xs
+            "
+          >
+            {historyChats.map((chat) => (
+              <div
+                className="
+                  group/history-chat flex min-w-0 items-center gap-1 rounded-lg
+                "
+                key={chat.id}
+                title={chat.title}
+              >
+                <button
                   className="
-                    group/history-chat flex min-w-0 items-center gap-1
-                    rounded-md transition-colors
-                    hover:bg-muted/55
-                    focus-visible:bg-muted/55
+                    flex min-w-0 flex-1 items-center gap-3 rounded-lg px-3 py-2
+                    text-left outline-none
+                    focus-visible:ring-2 focus-visible:ring-ring/50
+                    focus-visible:ring-inset
                   "
-                  key={chat.id}
-                  title={chat.title}
+                  onClick={() => onOpenChat(chat)}
+                  type="button"
                 >
-                  <button
+                  <AgentIcon runtime={chat.runtime} />
+                  <span
                     className="
-                      flex min-w-0 flex-1 items-center justify-between gap-3
-                      rounded-md px-3 py-2 text-left outline-hidden
-                      focus-visible:bg-muted/55
-                    "
-                    onClick={() => onOpenChat(chat)}
-                    type="button"
-                  >
-                    <AgentIcon runtime={chat.runtime} />
-                    <span
-                      className="
                       max-w-full min-w-0 flex-1 truncate text-sm text-foreground
                     "
-                    >
-                      {displayChatTitle(chat.title, t)}
-                    </span>
-                    <span
-                      className="shrink-0 text-xs text-muted-foreground"
-                      title={formatDateTime(chat.updatedAt)}
-                    >
-                      {formatRelativeTime(chat.updatedAt)}
-                    </span>
-                  </button>
-                  <Button
-                    aria-label={t("sidebar.archiveChat")}
-                    className="mr-1 size-7 shrink-0"
-                    onClick={() => onArchiveChat(chat)}
-                    size="icon-sm"
-                    title={t("sidebar.archiveChat")}
-                    type="button"
-                    variant="ghost"
                   >
-                    <Archive className="size-4" />
-                  </Button>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
+                    {displayChatTitle(chat.title, t)}
+                  </span>
+                  <span
+                    className="shrink-0 text-xs text-muted-foreground"
+                    title={formatDateTime(chat.updatedAt)}
+                  >
+                    {formatRelativeTime(chat.updatedAt)}
+                  </span>
+                </button>
+                <Button
+                  aria-label={t("sidebar.archiveChat")}
+                  className="
+                    mr-1.5 size-7 shrink-0 opacity-0 transition-opacity
+                    group-focus-within/history-chat:opacity-100
+                    group-hover/history-chat:opacity-100
+                    motion-reduce:transition-none
+                  "
+                  onClick={() => onArchiveChat(chat)}
+                  size="icon-sm"
+                  title={t("sidebar.archiveChat")}
+                  type="button"
+                  variant="ghost"
+                >
+                  <Archive className="size-4" />
+                </Button>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
+    </div>
+  );
+}
+
+interface PowerWorktreeGitStats {
+  additions: number;
+  branch?: string;
+  changedFiles: number;
+  deletions: number;
+}
+
+function usePowerWorktreeGitStats(
+  root: string | undefined,
+): PowerWorktreeGitStats | undefined {
+  const api = getApiClient();
+  const hasRoot = is.nonEmptyString(root);
+  const gitQuery = useQuery({
+    enabled: hasRoot,
+    queryFn: async () => {
+      if (!hasRoot) {
+        throw new Error("Worktree git stats query requires a root.");
+      }
+      return api.workspaceTools.gitDiff({ root });
+    },
+    queryKey: queryKeys.workspaceTools.gitDiff(hasRoot ? root : ""),
+    retry: false,
+    select: (data): PowerWorktreeGitStats | undefined => {
+      if (!data.isGitRepository) {
+        return undefined;
+      }
+
+      const patchList = buildWorkspaceToolPatchList(
+        data.stagedPatch,
+        data.unstagedPatch,
+        data.skippedFiles,
+      );
+      let additions = 0;
+      let deletions = 0;
+      for (const file of patchList.files) {
+        const lineChanges = getWorkspaceToolPatchFileLineChanges(file);
+        additions += lineChanges.additions;
+        deletions += lineChanges.deletions;
+      }
+
+      return {
+        additions,
+        branch: data.branch,
+        changedFiles: patchList.files.length,
+        deletions,
+      };
+    },
+    staleTime: 5_000,
+  });
+
+  return gitQuery.data;
+}
+
+function PowerWorktreeStat({
+  label,
+  title,
+  value,
+}: {
+  label: string;
+  title?: string;
+  value: ReactElement | string;
+}): ReactElement {
+  return (
+    <div className="min-w-0 rounded-lg bg-surface-1/50 px-3 py-2">
+      <dt className="truncate text-xs text-muted-foreground">{label}</dt>
+      <dd
+        className="
+          mt-0.5 truncate text-sm font-medium text-foreground tabular-nums
+        "
+        title={title}
+      >
+        {value}
+      </dd>
     </div>
   );
 }

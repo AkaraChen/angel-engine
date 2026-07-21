@@ -227,7 +227,6 @@ export const WorkspacePageView: FC<WorkspacePageViewProps> = ({
               (rightSidebarOpen || workspaceToolHost !== "sidebar")
             }
             rightSidebarToggleLabel={workspaceToolsToggleLabel}
-            showBottomBorder={!powerModeActive}
             title={workspaceTitle}
             onToggleRightSidebar={
               canShowRightSidebar &&

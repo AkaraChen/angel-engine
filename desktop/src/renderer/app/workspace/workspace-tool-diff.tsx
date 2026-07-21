@@ -39,9 +39,13 @@ const diffOptions = {
 const diffMetrics = {
   ...DEFAULT_VIRTUAL_FILE_METRICS,
   paddingTop: 0,
+  paddingBottom: 0,
 } as const;
 
 const diffHostStyle: WorkspaceToolCssVariableStyle = {
+  // Zeroes the shadow-DOM [data-code] padding-block (vendor fallback 8px);
+  // custom properties are the supported way through the shadow root.
+  "--diffs-gap-block": "0px",
   "--diffs-bg-buffer-override": "var(--muted)",
   "--diffs-bg-context-gutter-override": "var(--background)",
   "--diffs-bg-context-override": "var(--background)",
@@ -53,22 +57,19 @@ const diffHostStyle: WorkspaceToolCssVariableStyle = {
 } as const;
 
 export function WorkspaceToolPatchFileDiffContent({
-  borderTop = false,
   file,
+  rounded = false,
 }: {
-  borderTop?: boolean;
   file: WorkspaceToolPatchFile;
+  rounded?: boolean;
 }) {
   if (file.previewNotice) {
     return (
       <div
-        className={cn(
-          `
-            flex min-h-24 items-center justify-center px-4 py-6 text-center
-            text-xs text-muted-foreground select-text
-          `,
-          borderTop ? "border-t border-border-subtle" : "",
-        )}
+        className="
+          flex min-h-24 items-center justify-center px-4 py-6 text-center
+          text-xs text-muted-foreground select-text
+        "
       >
         {file.previewNotice}
       </div>
@@ -76,13 +77,17 @@ export function WorkspaceToolPatchFileDiffContent({
   }
 
   return (
-    <div className={cn(borderTop ? "border-t border-border-subtle" : "")}>
+    <div className={cn(rounded && "overflow-hidden rounded-b-md")}>
       {file.diffs.map((diff, index) => (
         <div
-          className="
-            overflow-hidden border-b border-border-subtle
-            last:border-b-0
-          "
+          className={cn(
+            "overflow-hidden",
+            rounded &&
+              `
+                last:rounded-b-md
+                [&:last-child_diffs-container]:rounded-b-md
+              `,
+          )}
           key={workspaceToolFileDiffKey(diff.source, diff.fileDiff, index)}
         >
           {file.diffs.length > 1 ? (
@@ -167,7 +172,7 @@ function WorkspaceToolFileDiff({
 
   return (
     <FileDiff
-      className="block overflow-hidden bg-background"
+      className="block overflow-hidden rounded-[inherit] bg-background"
       disableWorkerPool
       fileDiff={fileDiff}
       key={preloadKey}

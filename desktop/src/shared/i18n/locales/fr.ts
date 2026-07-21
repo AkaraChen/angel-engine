@@ -74,6 +74,9 @@ export const fr = {
       noProject: "Aucun projet",
       projectSelect: "Projet",
       settings: "Paramètres",
+      statsBranch: "Branche",
+      statsChanges: "Modifications",
+      statsLastActive: "Dernière activité",
       worktreeDirtyContinue: "Continuer",
       worktreeDirtyDescription:
         "Le projet sélectionné a des modifications non validées. Le nouveau worktree sera créé depuis le HEAD actuel, donc ces modifications ne seront pas incluses.",

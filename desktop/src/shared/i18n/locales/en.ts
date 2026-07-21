@@ -73,6 +73,9 @@ export const en = {
       noProject: "No project",
       projectSelect: "Project",
       settings: "Settings",
+      statsBranch: "Branch",
+      statsChanges: "Changes",
+      statsLastActive: "Last active",
       worktreeDirtyContinue: "Continue",
       worktreeDirtyDescription:
         "The selected project has uncommitted changes. The new worktree will be created from the current HEAD, so those changes will not be included.",

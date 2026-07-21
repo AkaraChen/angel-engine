@@ -11,7 +11,7 @@ import { useCallback, useRef, useState } from "react";
 import { WorkspaceToolSurface } from "@/app/workspace/workspace-tool-host";
 import {
   WorkspaceToolHeaderButton,
-  WorkspaceToolSurfaceHeader,
+  WorkspaceToolSidebarHeader,
 } from "@/app/workspace/workspace-tool-surface-header";
 import {
   clampWorkspaceRightSidebarWidth,
@@ -135,10 +135,9 @@ export function WorkspaceRightSidebar({
       style={widthStyle}
     >
       <div className="flex h-full flex-col" style={contentStyle}>
-        <WorkspaceToolSurfaceHeader
-          host="sidebar"
+        <WorkspaceToolSidebarHeader
+          api={api}
           root={root}
-          trafficLightInset={false}
           trailingActions={
             <WorkspaceToolHeaderButton
               icon={<SidebarFold className="scale-x-[-1]" weight="duotone" />}
@@ -177,7 +176,7 @@ export function WorkspaceRightSidebar({
             onPointerMove={handleResizePointerMove}
             onPointerUp={handleResizePointerEnd}
           />
-          <div className="flex h-full min-h-0 overflow-hidden rounded-[inherit] [&>section]:bg-card">
+          <div className="flex h-full min-h-0 overflow-hidden rounded-[inherit]">
             <WorkspaceToolSurface
               active={active && open}
               api={api}

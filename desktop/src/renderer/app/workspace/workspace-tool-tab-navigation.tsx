@@ -1,8 +1,5 @@
-import type { WorkspaceToolSurfaceDynamicTab } from "@shared/workspace-tool-surface";
-import type {
-  WorkspaceToolTabItem,
-  WorkspaceToolTabSelectHandler,
-} from "@/app/workspace/workspace-tool-tab-model";
+import type { KeyboardEvent as ReactKeyboardEvent } from "react";
+import type { WorkspaceToolTabItem } from "@/app/workspace/workspace-tool-tab-model";
 
 import {
   Plus as Add,
@@ -12,6 +9,7 @@ import {
 } from "@phosphor-icons/react";
 import { Fragment, useCallback, useEffect, useRef } from "react";
 
+import { useWorkspaceToolSurface } from "@/app/workspace/workspace-tool-surface-model";
 import { useWorkspaceToolTabKeyboard } from "@/app/workspace/workspace-tool-tab-model";
 import { Button } from "@/components/ui/button";
 import {
@@ -22,333 +20,261 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/platform/utils";
 
-export function WorkspaceToolTabStrip({
-  activeTabId,
-  tabs,
-  onAddBrowserTab,
-  onAddTerminalTab,
-  onCloseDynamicTab,
-  onSelectTab,
+export type WorkspaceToolTabRailOrientation = "horizontal" | "vertical";
+
+export function WorkspaceToolTabRail({
+  orientation,
 }: {
-  activeTabId: string;
-  tabs: WorkspaceToolTabItem[];
-  onAddBrowserTab: () => void;
-  onAddTerminalTab: () => void;
-  onCloseDynamicTab: (tab: WorkspaceToolSurfaceDynamicTab) => void;
-  onSelectTab: WorkspaceToolTabSelectHandler;
+  orientation: WorkspaceToolTabRailOrientation;
 }) {
-  const stripRef = useRef<HTMLDivElement>(null);
+  const { activeTabId, closeDynamicTab, selectTab, tabItems } =
+    useWorkspaceToolSurface();
+  const railRef = useRef<HTMLDivElement>(null);
   const closeTab = useCallback(
     (tab: WorkspaceToolTabItem) => {
       if (tab.dynamicTab) {
-        onCloseDynamicTab(tab.dynamicTab);
+        closeDynamicTab(tab.dynamicTab);
       }
     },
-    [onCloseDynamicTab],
+    [closeDynamicTab],
   );
   const { handleTabKeyDown, setTabButtonRef, tabButtonsRef } =
     useWorkspaceToolTabKeyboard({
       onCloseTab: closeTab,
-      onSelectTab,
-      orientation: "horizontal",
-      tabs,
+      onSelectTab: selectTab,
+      orientation,
+      tabs: tabItems,
     });
   useEffect(() => {
     tabButtonsRef.current
       .get(activeTabId)
       ?.scrollIntoView({ block: "nearest", inline: "nearest" });
   }, [activeTabId, tabButtonsRef]);
+  const focusCurrentTab = useCallback(() => {
+    window.requestAnimationFrame(() => {
+      railRef.current
+        ?.querySelector<HTMLButtonElement>('[role="tab"][tabindex="0"]')
+        ?.focus();
+    });
+  }, []);
+  const renderTab = (tab: WorkspaceToolTabItem, index: number) => (
+    <WorkspaceToolTabButton
+      active={tab.id === activeTabId}
+      firstDynamicTab={
+        orientation === "horizontal" &&
+        !tab.pinned &&
+        tabItems.at(index - 1)?.pinned === true
+      }
+      key={tab.id}
+      orientation={orientation}
+      setTabButtonRef={setTabButtonRef}
+      tab={tab}
+      onFocusCurrentTab={focusCurrentTab}
+      onKeyDown={handleTabKeyDown}
+    />
+  );
+
+  if (orientation === "horizontal") {
+    return (
+      <div
+        className="flex h-10 shrink-0 items-center gap-1 px-2 pt-2 pb-1"
+        ref={railRef}
+      >
+        <div
+          aria-label="Workspace tabs"
+          className="
+            flex min-w-0 items-center gap-px overflow-x-auto rounded-lg
+            bg-surface-1 p-0.5
+            [&::-webkit-scrollbar]:hidden
+          "
+          role="tablist"
+        >
+          {tabItems.map(renderTab)}
+        </div>
+        <WorkspaceToolNewTabMenu />
+      </div>
+    );
+  }
+
+  const pinnedTabs = tabItems.filter((tab) => tab.pinned);
+  const dynamicTabs = tabItems.filter((tab) => !tab.pinned);
 
   return (
     <div
-      className="flex h-[40px] shrink-0 items-center gap-[4px] p-[8px]"
-      ref={stripRef}
+      aria-label="Workspace tabs"
+      aria-orientation="vertical"
+      className="flex min-h-0 flex-1 flex-col overflow-y-auto p-2"
+      ref={railRef}
+      role="tablist"
     >
       <div
-        aria-label="Workspace tabs"
         className="
-          flex min-w-0 items-center gap-0.5 overflow-x-auto
-          [&::-webkit-scrollbar]:hidden
+          mb-1 flex h-6 shrink-0 items-center pl-2 text-xs font-medium
+          tracking-wide text-muted-foreground
         "
-        role="tablist"
+        role="presentation"
       >
-        {tabs.map((tab, index) => {
-          const active = tab.id === activeTabId;
-          const Icon = tab.icon;
-          const dynamicTab = tab.dynamicTab;
-          const firstDynamicTab =
-            !tab.pinned && tabs.at(index - 1)?.pinned === true;
-
-          return (
-            <Fragment key={tab.id}>
-              {firstDynamicTab ? (
-                <div
-                  aria-hidden="true"
-                  className="mx-0.5 h-4 w-px shrink-0 bg-border-subtle"
-                />
-              ) : null}
-              <div
-                className={cn(
-                  `
-                    flex h-[24px] shrink-0 items-center overflow-hidden
-                    rounded-md
-                    text-muted-foreground
-                  `,
-                  active
-                    ? "bg-surface-1 text-foreground shadow-xs"
-                    : `
-                      hover:bg-overlay-hover hover:text-foreground
-                      active:bg-overlay-active
-                    `,
-                )}
-                role="presentation"
-              >
-                <button
-                  aria-controls="workspace-tool-panel"
-                  aria-selected={active}
-                  className="
-                    flex h-full w-[24px] shrink-0 items-center justify-center
-                    outline-none
-                    focus-visible:ring-2 focus-visible:ring-ring/50
-                    focus-visible:ring-inset
-                  "
-                  id={`workspace-tool-tab-${tab.id}`}
-                  onAuxClick={(event) => {
-                    if (event.button === 1 && dynamicTab) {
-                      event.preventDefault();
-                      onCloseDynamicTab(dynamicTab);
-                    }
-                  }}
-                  onClick={() => {
-                    void onSelectTab(tab.id);
-                  }}
-                  onKeyDown={(event) => handleTabKeyDown(event, tab.id)}
-                  ref={(button) => setTabButtonRef(tab.id, button)}
-                  role="tab"
-                  tabIndex={active ? 0 : -1}
-                  title={tab.title}
-                  type="button"
-                >
-                  <Icon className="size-[16px] shrink-0" weight="duotone" />
-                </button>
-                {dynamicTab && active ? (
-                  <button
-                    aria-label={`Close ${tab.title}`}
-                    className="
-                      mr-1 flex size-4.5 shrink-0 items-center justify-center
-                      rounded-sm text-muted-foreground/70 outline-none
-                      hover:bg-overlay-hover hover:text-foreground
-                      focus-visible:ring-2 focus-visible:ring-ring/50
-                      focus-visible:ring-inset
-                      active:bg-overlay-active
-                    "
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      onCloseDynamicTab(dynamicTab);
-                      window.requestAnimationFrame(() => {
-                        stripRef.current
-                          ?.querySelector<HTMLButtonElement>(
-                            '[role="tab"][tabindex="0"]',
-                          )
-                          ?.focus();
-                      });
-                    }}
-                    title={`Close ${tab.title}`}
-                    type="button"
-                  >
-                    <Close className="size-3.5" />
-                  </button>
-                ) : null}
-              </div>
-            </Fragment>
-          );
-        })}
+        Tools
       </div>
-      <WorkspaceToolNewTabMenu
-        onAddBrowserTab={onAddBrowserTab}
-        onAddTerminalTab={onAddTerminalTab}
-      />
+      <div className="flex flex-col gap-0.5" role="presentation">
+        {pinnedTabs.map((tab) => renderTab(tab, tabItems.indexOf(tab)))}
+      </div>
+      <div
+        className="
+          mt-3 mb-1 flex h-6 shrink-0 items-center justify-between pl-2
+        "
+        role="presentation"
+      >
+        <span className="text-xs font-medium tracking-wide text-muted-foreground">
+          Tabs
+        </span>
+        <WorkspaceToolNewTabMenu variant="section" />
+      </div>
+      <div className="flex flex-col gap-0.5" role="presentation">
+        {dynamicTabs.map((tab) => renderTab(tab, tabItems.indexOf(tab)))}
+      </div>
     </div>
   );
 }
 
-export function WorkspaceToolVerticalTabSidebar({
-  activeTabId,
-  tabs,
-  onAddBrowserTab,
-  onAddTerminalTab,
-  onCloseDynamicTab,
-  onSelectTab,
+function WorkspaceToolTabButton({
+  active,
+  firstDynamicTab,
+  onFocusCurrentTab,
+  onKeyDown,
+  orientation,
+  setTabButtonRef,
+  tab,
 }: {
-  activeTabId: string;
-  tabs: WorkspaceToolTabItem[];
-  onAddBrowserTab: () => void;
-  onAddTerminalTab: () => void;
-  onCloseDynamicTab: (tab: WorkspaceToolSurfaceDynamicTab) => void;
-  onSelectTab: WorkspaceToolTabSelectHandler;
+  active: boolean;
+  firstDynamicTab: boolean;
+  onFocusCurrentTab: () => void;
+  onKeyDown: (
+    event: ReactKeyboardEvent<HTMLButtonElement>,
+    tabId: string,
+  ) => void;
+  orientation: WorkspaceToolTabRailOrientation;
+  setTabButtonRef: (tabId: string, button: HTMLButtonElement | null) => void;
+  tab: WorkspaceToolTabItem;
 }) {
-  const sidebarRef = useRef<HTMLDivElement>(null);
-  const closeTab = useCallback(
-    (tab: WorkspaceToolTabItem) => {
-      if (tab.dynamicTab) {
-        onCloseDynamicTab(tab.dynamicTab);
-      }
-    },
-    [onCloseDynamicTab],
-  );
-  const { handleTabKeyDown, setTabButtonRef, tabButtonsRef } =
-    useWorkspaceToolTabKeyboard({
-      onCloseTab: closeTab,
-      onSelectTab,
-      orientation: "vertical",
-      tabs,
-    });
-  useEffect(() => {
-    tabButtonsRef.current
-      .get(activeTabId)
-      ?.scrollIntoView({ block: "nearest", inline: "nearest" });
-  }, [activeTabId, tabButtonsRef]);
+  const { closeDynamicTab, selectTab } = useWorkspaceToolSurface();
+  const Icon = tab.icon;
+  const dynamicTab = tab.dynamicTab;
+  const horizontal = orientation === "horizontal";
+  const showClose = dynamicTab !== undefined && (horizontal ? active : true);
+  const closeButton = showClose ? (
+    <button
+      aria-label={`Close ${tab.title}`}
+      className={cn(
+        `
+          mr-1 flex shrink-0 items-center justify-center rounded-sm
+          text-muted-foreground/70 outline-none
+          hover:bg-overlay-hover hover:text-foreground
+          focus-visible:ring-2 focus-visible:ring-ring/50
+          focus-visible:ring-inset
+          active:bg-overlay-active
+        `,
+        horizontal
+          ? "size-4.5"
+          : `
+            size-5 transition-opacity
+            group-focus-within:opacity-100
+            group-hover:opacity-100
+            motion-reduce:transition-none
+          `,
+        !horizontal && (active ? "opacity-100" : "opacity-0"),
+      )}
+      onClick={(event) => {
+        event.stopPropagation();
+        if (dynamicTab) {
+          closeDynamicTab(dynamicTab);
+        }
+        onFocusCurrentTab();
+      }}
+      tabIndex={horizontal || active ? 0 : -1}
+      title={`Close ${tab.title}`}
+      type="button"
+    >
+      <Close className="size-3.5" />
+    </button>
+  ) : null;
 
-  const renderTab = (tab: WorkspaceToolTabItem) => {
-    const active = tab.id === activeTabId;
-    const Icon = tab.icon;
-    const dynamicTab = tab.dynamicTab;
-
-    return (
+  return (
+    <Fragment>
+      {firstDynamicTab ? (
+        <div
+          aria-hidden="true"
+          className="mx-0.5 h-4 w-px shrink-0 bg-border-subtle"
+        />
+      ) : null}
       <div
         className={cn(
           `
-            group flex h-8 min-w-0 shrink-0 items-center overflow-hidden
-            rounded-md text-xs text-muted-foreground
+            group flex shrink-0 items-center overflow-hidden rounded-md
+            text-muted-foreground
           `,
+          horizontal ? "h-6" : "h-8 min-w-0 text-xs",
           active
-            ? "bg-background text-foreground shadow-xs"
+            ? cn(
+                "text-foreground shadow-xs",
+                horizontal ? "bg-card" : "bg-background",
+              )
             : `
               hover:bg-overlay-hover hover:text-foreground
               active:bg-overlay-active
             `,
         )}
-        key={tab.id}
         role="presentation"
       >
         <button
           aria-controls="workspace-tool-panel"
           aria-selected={active}
-          className="
-            flex h-full min-w-0 flex-1 items-center gap-2 pl-2 text-left
-            outline-none
-            focus-visible:ring-2 focus-visible:ring-ring/50
-            focus-visible:ring-inset
-          "
+          className={cn(
+            `
+              flex h-full items-center outline-none
+              focus-visible:ring-2 focus-visible:ring-ring/50
+              focus-visible:ring-inset
+            `,
+            horizontal
+              ? "w-6 shrink-0 justify-center"
+              : "min-w-0 flex-1 gap-2 pl-2 text-left",
+          )}
           id={`workspace-tool-tab-${tab.id}`}
           onAuxClick={(event) => {
             if (event.button === 1 && dynamicTab) {
               event.preventDefault();
-              onCloseDynamicTab(dynamicTab);
+              closeDynamicTab(dynamicTab);
             }
           }}
           onClick={() => {
-            void onSelectTab(tab.id);
+            void selectTab(tab.id);
           }}
-          onKeyDown={(event) => handleTabKeyDown(event, tab.id)}
+          onKeyDown={(event) => onKeyDown(event, tab.id)}
           ref={(button) => setTabButtonRef(tab.id, button)}
           role="tab"
           tabIndex={active ? 0 : -1}
           title={tab.title}
           type="button"
         >
-          <Icon className="size-3.5 shrink-0" weight="duotone" />
-          <span className="truncate">{tab.title}</span>
-        </button>
-        {dynamicTab ? (
-          <button
-            aria-label={`Close ${tab.title}`}
-            className={cn(
-              `
-                mr-1 flex size-5 shrink-0 items-center justify-center rounded-sm
-                text-muted-foreground/70 transition-opacity outline-none
-                group-focus-within:opacity-100
-                group-hover:opacity-100
-                hover:bg-overlay-hover hover:text-foreground
-                focus-visible:ring-2 focus-visible:ring-ring/50
-                focus-visible:ring-inset
-                active:bg-overlay-active
-                motion-reduce:transition-none
-              `,
-              active ? "opacity-100" : "opacity-0",
-            )}
-            onClick={(event) => {
-              event.stopPropagation();
-              onCloseDynamicTab(dynamicTab);
-              window.requestAnimationFrame(() => {
-                sidebarRef.current
-                  ?.querySelector<HTMLButtonElement>(
-                    '[role="tab"][tabindex="0"]',
-                  )
-                  ?.focus();
-              });
-            }}
-            tabIndex={active ? 0 : -1}
-            title={`Close ${tab.title}`}
-            type="button"
-          >
-            <Close className="size-3.5" />
-          </button>
-        ) : null}
-      </div>
-    );
-  };
-  const pinnedTabs = tabs.filter((tab) => tab.pinned);
-  const dynamicTabs = tabs.filter((tab) => !tab.pinned);
-
-  return (
-    <div
-      className="
-        flex w-56 shrink-0 flex-col border-r border-border-subtle bg-surface-1
-      "
-      ref={sidebarRef}
-    >
-      <div
-        aria-label="Workspace tabs"
-        aria-orientation="vertical"
-        className="flex min-h-0 flex-1 flex-col overflow-y-auto p-2"
-        role="tablist"
-      >
-        <div className="flex flex-col gap-0.5" role="presentation">
-          {pinnedTabs.map(renderTab)}
-        </div>
-        <div
-          className="
-            mt-3 mb-1 flex h-6 shrink-0 items-center justify-between pl-2
-          "
-          role="presentation"
-        >
-          <span className="text-xs font-medium text-muted-foreground">
-            Tabs
-          </span>
-          <WorkspaceToolNewTabMenu
-            variant="section"
-            onAddBrowserTab={onAddBrowserTab}
-            onAddTerminalTab={onAddTerminalTab}
+          <Icon
+            className={cn("shrink-0", horizontal ? "size-4" : "size-3.5")}
+            weight="duotone"
           />
-        </div>
-        <div className="flex flex-col gap-0.5" role="presentation">
-          {dynamicTabs.map(renderTab)}
-        </div>
+          {horizontal ? null : <span className="truncate">{tab.title}</span>}
+        </button>
+        {closeButton}
       </div>
-    </div>
+    </Fragment>
   );
 }
 
 function WorkspaceToolNewTabMenu({
-  onAddBrowserTab,
-  onAddTerminalTab,
   variant = "strip",
 }: {
-  onAddBrowserTab: () => void;
-  onAddTerminalTab: () => void;
   variant?: "section" | "strip";
 }) {
+  const { addBrowserTab, addTerminalTab } = useWorkspaceToolSurface();
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -373,11 +299,11 @@ function WorkspaceToolNewTabMenu({
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start" variant="native">
-        <DropdownMenuItem onSelect={onAddTerminalTab}>
+        <DropdownMenuItem onSelect={addTerminalTab}>
           <TerminalIcon className="size-3.5" weight="duotone" />
           <span>Terminal</span>
         </DropdownMenuItem>
-        <DropdownMenuItem onSelect={onAddBrowserTab}>
+        <DropdownMenuItem onSelect={addBrowserTab}>
           <Browser className="size-3.5" weight="duotone" />
           <span>Browser</span>
         </DropdownMenuItem>

@@ -73,6 +73,9 @@ export const ja = {
       noProject: "プロジェクトなし",
       projectSelect: "プロジェクト",
       settings: "設定",
+      statsBranch: "ブランチ",
+      statsChanges: "変更",
+      statsLastActive: "最終アクティブ",
       worktreeDirtyContinue: "続行",
       worktreeDirtyDescription:
         "選択したプロジェクトには未コミットの変更があります。新しい worktree は現在の HEAD から作成されるため、それらの変更は含まれません。",

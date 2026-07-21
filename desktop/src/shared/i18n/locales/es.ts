@@ -73,6 +73,9 @@ export const es = {
       noProject: "Sin proyecto",
       projectSelect: "Proyecto",
       settings: "Configuración",
+      statsBranch: "Rama",
+      statsChanges: "Cambios",
+      statsLastActive: "Última actividad",
       worktreeDirtyContinue: "Continuar",
       worktreeDirtyDescription:
         "El proyecto seleccionado tiene cambios sin confirmar. El nuevo worktree se creará desde el HEAD actual, por lo que esos cambios no se incluirán.",

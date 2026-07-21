@@ -3,8 +3,8 @@ import type {
   KeyboardEvent as ReactKeyboardEvent,
   MouseEvent as ReactMouseEvent,
 } from "react";
-import type { ApiClient } from "@/platform/api-client";
 
+import { Folder } from "@phosphor-icons/react";
 import { FileTree } from "@pierre/trees/react";
 import is from "@sindresorhus/is";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -30,27 +30,43 @@ import {
   isWorkspaceWindowFileStateDirty,
   useWorkspaceToolStore,
 } from "@/app/workspace/workspace-tool-store";
+import { useWorkspaceToolSurface } from "@/app/workspace/workspace-tool-surface-model";
 import { useWorkspaceWindowFileOpener } from "@/app/workspace/workspace-window-file-state";
 import { queryKeys } from "@/platform/query-keys";
 
+export type WorkspaceToolPanelLayout = "compact" | "split";
+
 export function WorkspaceFilesPanel({
-  api,
-  onOpenFile,
+  layout,
   root,
 }: {
-  api: ApiClient;
-  onOpenFile: (path: string) => void;
+  layout: WorkspaceToolPanelLayout;
   root: string;
 }) {
+  return layout === "compact" ? (
+    <WorkspaceCompactFilesPanel root={root} />
+  ) : (
+    <WorkspaceSplitFilesPanel root={root} />
+  );
+}
+
+function WorkspaceFileTreePane({
+  onOpenPath,
+  root,
+}: {
+  onOpenPath: (path: string) => void;
+  root: string;
+}) {
+  const { api } = useWorkspaceToolSurface();
   const { model, treeQuery } = useWorkspaceFileTreeModel(api, root);
   const handleFileTreeClick = useCallback(
     (event: ReactMouseEvent<HTMLDivElement>) => {
       const path = getFileTreePathFromEvent(event);
       if (is.nonEmptyString(path)) {
-        onOpenFile(path);
+        onOpenPath(path);
       }
     },
-    [onOpenFile],
+    [onOpenPath],
   );
   const handleFileTreeKeyDown = useCallback(
     (event: ReactKeyboardEvent<HTMLDivElement>) => {
@@ -62,15 +78,16 @@ export function WorkspaceFilesPanel({
         return;
       }
       event.preventDefault();
-      onOpenFile(path);
+      onOpenPath(path);
     },
-    [onOpenFile],
+    [onOpenPath],
   );
 
   if (treeQuery.isError) {
     return (
       <WorkspaceToolEmpty
         detail={getErrorMessage(treeQuery.error)}
+        icon={Folder}
         title="File tree unavailable"
       />
     );
@@ -91,7 +108,7 @@ export function WorkspaceFilesPanel({
       >
         {treeQuery.isLoading ? null : (
           <FileTree
-            className="h-full min-h-0 bg-background text-sm"
+            className="h-full min-h-0 text-sm"
             model={model}
             style={treeHostStyle}
           />
@@ -101,13 +118,14 @@ export function WorkspaceFilesPanel({
   );
 }
 
-export function WorkspaceWindowFilesPanel({
-  api,
-  root,
-}: {
-  api: ApiClient;
-  root: string;
-}) {
+function WorkspaceCompactFilesPanel({ root }: { root: string }) {
+  const { openFileTab } = useWorkspaceToolSurface();
+
+  return <WorkspaceFileTreePane root={root} onOpenPath={openFileTab} />;
+}
+
+function WorkspaceSplitFilesPanel({ root }: { root: string }) {
+  const { api } = useWorkspaceToolSurface();
   const queryClient = useQueryClient();
   const closeWindowFile = useWorkspaceToolStore(
     (state) => state.closeWindowFile,
@@ -127,7 +145,6 @@ export function WorkspaceWindowFilesPanel({
   const windowFilesState = useWorkspaceToolStore(
     (state) => state.windowFilesByRoot[root] ?? emptyWorkspaceWindowFilesState,
   );
-  const { model, treeQuery } = useWorkspaceFileTreeModel(api, root);
   const openWorkspaceWindowFile = useWorkspaceWindowFileOpener(api);
   const { activePath, fileStates, openFilePaths } = windowFilesState;
   const [fileTreeWidth, setFileTreeWidth] = useState(
@@ -173,24 +190,8 @@ export function WorkspaceWindowFilesPanel({
     };
   }, [dirty]);
 
-  const handleFileTreeClick = useCallback(
-    (event: ReactMouseEvent<HTMLDivElement>) => {
-      const path = getFileTreePathFromEvent(event);
-      if (!is.nonEmptyString(path)) return;
-      openWorkspaceWindowFile({ path, root });
-    },
-    [openWorkspaceWindowFile, root],
-  );
-  const handleFileTreeKeyDown = useCallback(
-    (event: ReactKeyboardEvent<HTMLDivElement>) => {
-      if (event.key !== "Enter" && event.key !== " ") {
-        return;
-      }
-      const path = getFileTreePathFromEvent(event);
-      if (!is.nonEmptyString(path)) {
-        return;
-      }
-      event.preventDefault();
+  const openPath = useCallback(
+    (path: string) => {
       openWorkspaceWindowFile({ path, root });
     },
     [openWorkspaceWindowFile, root],
@@ -308,37 +309,11 @@ export function WorkspaceWindowFilesPanel({
     },
     [root, selectWindowFile],
   );
-  if (treeQuery.isError) {
-    return (
-      <WorkspaceToolEmpty
-        detail={getErrorMessage(treeQuery.error)}
-        title="File tree unavailable"
-      />
-    );
-  }
 
   return (
     <div className="flex h-full min-h-0 bg-background">
       <div className="flex shrink-0 flex-col" style={{ width: fileTreeWidth }}>
-        {treeQuery.data?.truncated ? (
-          <div className="shrink-0 px-3 py-2 text-xs text-muted-foreground">
-            Limited result set
-          </div>
-        ) : null}
-        <div
-          className="min-h-0 flex-1 overflow-hidden"
-          onClick={handleFileTreeClick}
-          onKeyDown={handleFileTreeKeyDown}
-          role="presentation"
-        >
-          {treeQuery.isLoading ? null : (
-            <FileTree
-              className="h-full min-h-0 bg-background text-sm"
-              model={model}
-              style={treeHostStyle}
-            />
-          )}
-        </div>
+        <WorkspaceFileTreePane root={root} onOpenPath={openPath} />
       </div>
       <WorkspaceToolPanelSplitter
         ariaLabel="Resize file tree"

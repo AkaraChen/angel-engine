@@ -1,11 +1,14 @@
 import type { WorkspaceToolSurfaceHost } from "@shared/workspace-tool-surface";
 import type { ReactNode } from "react";
+import type { ApiClient } from "@/platform/api-client";
 
 import {
-  SidebarSimple as DockIcon,
+  FolderOpen,
+  GitBranch,
   AppWindow as WindowIcon,
 } from "@phosphor-icons/react";
 import is from "@sindresorhus/is";
+import { useQuery } from "@tanstack/react-query";
 import { useEffect } from "react";
 
 import { workspaceToolRootName } from "@/app/workspace/workspace-file-display";
@@ -15,7 +18,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { cn } from "@/platform/utils";
+import { queryKeys } from "@/platform/query-keys";
 
 export function WorkspaceToolWindowTitleBridge({
   root,
@@ -32,72 +35,82 @@ export function WorkspaceToolWindowTitleBridge({
   return null;
 }
 
-export function WorkspaceToolSurfaceHeader({
-  host,
+export function WorkspaceToolSidebarHeader({
+  api,
   root,
   trailingActions,
-  trafficLightInset,
   onRequestHost,
 }: {
-  host: WorkspaceToolSurfaceHost;
+  api: ApiClient;
   root?: string | null;
   trailingActions?: ReactNode;
-  trafficLightInset: boolean;
   onRequestHost: (host: WorkspaceToolSurfaceHost) => void;
 }) {
   return (
     <div
-      className={cn(
-        "flex h-12 shrink-0 items-center gap-2 px-3",
-        host === "sidebar" &&
-          "[&_button]:size-[32px]! [&_button_svg]:size-[16px]!",
-        host !== "sidebar" && "border-b border-border-subtle",
-        trafficLightInset && "pl-[88px]",
-      )}
-      data-electron-drag={trafficLightInset ? true : undefined}
+      className="
+        flex h-12 shrink-0 items-center gap-2 px-3
+        [&_button]:size-[32px]!
+        [&_button_svg]:size-[16px]!
+      "
     >
-      {host === "sidebar" ? (
-        <div className="flex-1" />
-      ) : (
-        <div className="min-w-0 flex-1 truncate text-sm font-medium">
-          {is.nonEmptyString(root)
-            ? workspaceToolRootName(root)
-            : "Angel Engine"}
-        </div>
-      )}
-      <WorkspaceToolSurfaceHostControls
-        host={host}
-        onRequestHost={onRequestHost}
+      <WorkspaceToolContextLabel api={api} root={root} />
+      <WorkspaceToolHeaderButton
+        icon={<WindowIcon weight="duotone" />}
+        label="Open in window"
+        onClick={() => onRequestHost("window")}
       />
       {trailingActions}
     </div>
   );
 }
 
-export function WorkspaceToolSurfaceHostControls({
-  host,
-  onRequestHost,
+function WorkspaceToolContextLabel({
+  api,
+  root,
 }: {
-  host: WorkspaceToolSurfaceHost;
-  onRequestHost: (host: WorkspaceToolSurfaceHost) => void;
+  api?: ApiClient;
+  root?: string | null;
 }) {
+  const hasRoot = is.nonEmptyString(root);
+  const branchQuery = useQuery({
+    enabled: api !== undefined && hasRoot,
+    queryFn: async () => {
+      if (api === undefined || !hasRoot) {
+        throw new Error("Workspace git branch query requires an api and root.");
+      }
+      return api.workspaceTools.gitDiff({ root });
+    },
+    queryKey: queryKeys.workspaceTools.gitDiff(hasRoot ? root : ""),
+    retry: false,
+    select: (data) => (data.isGitRepository ? data.branch : undefined),
+    staleTime: 5_000,
+  });
+  const branch = branchQuery.data;
+  const showBranch = is.nonEmptyString(branch);
+  const LabelIcon = showBranch ? GitBranch : FolderOpen;
+  const label = showBranch
+    ? branch
+    : hasRoot
+      ? workspaceToolRootName(root)
+      : "Workspace";
+
   return (
-    <>
-      {host !== "sidebar" ? (
-        <WorkspaceToolHeaderButton
-          icon={<DockIcon weight="duotone" />}
-          label="Dock in sidebar"
-          onClick={() => onRequestHost("sidebar")}
-        />
-      ) : null}
-      {host !== "window" ? (
-        <WorkspaceToolHeaderButton
-          icon={<WindowIcon weight="duotone" />}
-          label="Open in window"
-          onClick={() => onRequestHost("window")}
-        />
-      ) : null}
-    </>
+    <div
+      className="
+        flex min-w-0 flex-1 items-center gap-1.5 text-xs font-medium
+        text-muted-foreground
+      "
+    >
+      <LabelIcon
+        aria-hidden="true"
+        className="size-3.5 shrink-0"
+        weight="duotone"
+      />
+      <span className="truncate" title={showBranch ? branch : undefined}>
+        {label}
+      </span>
+    </div>
   );
 }
 

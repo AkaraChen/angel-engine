@@ -73,6 +73,9 @@ export const ko = {
       noProject: "프로젝트 없음",
       projectSelect: "프로젝트",
       settings: "설정",
+      statsBranch: "브랜치",
+      statsChanges: "변경 사항",
+      statsLastActive: "마지막 활동",
       worktreeDirtyContinue: "계속",
       worktreeDirtyDescription:
         "선택한 프로젝트에 커밋되지 않은 변경 사항이 있습니다. 새 worktree는 현재 HEAD에서 생성되므로 해당 변경 사항은 포함되지 않습니다.",

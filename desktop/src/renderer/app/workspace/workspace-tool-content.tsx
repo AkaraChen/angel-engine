@@ -1,18 +1,6 @@
-import type {
-  WorkspaceToolSurfaceDynamicTab,
-  WorkspaceToolSurfaceSnapshot,
-} from "@shared/workspace-tool-surface";
-import type { ApiClient } from "@/platform/api-client";
-
 import { WorkspaceBrowserTabContent } from "@/app/workspace/workspace-browser-tab";
-import {
-  WorkspaceFilesPanel,
-  WorkspaceWindowFilesPanel,
-} from "@/app/workspace/workspace-files-panels";
-import {
-  WorkspaceGitPanel,
-  WorkspaceWindowGitPanel,
-} from "@/app/workspace/workspace-git-panels";
+import { WorkspaceFilesPanel } from "@/app/workspace/workspace-files-panels";
+import { WorkspaceGitPanel } from "@/app/workspace/workspace-git-panels";
 import { WorkspaceProcessesView } from "@/app/workspace/workspace-processes-view";
 import { WorkspaceTerminalView } from "@/app/workspace/workspace-terminal-view";
 import { WorkspaceToolEmpty } from "@/app/workspace/workspace-tool-layout";
@@ -25,43 +13,31 @@ import {
   workspaceToolGitTabId,
   workspaceToolProcessesTabId,
 } from "@/app/workspace/workspace-tool-store";
+import { useWorkspaceToolSurface } from "@/app/workspace/workspace-tool-surface-model";
 
-export function WorkspaceToolContent({
-  activeDynamicTab,
-  activeTabId,
-  api,
-  root,
-  surfaceActive,
-  onBrowserTabChange,
-  onOpenBrowser,
-  onOpenFile,
-}: {
-  activeDynamicTab?: WorkspaceToolSurfaceDynamicTab;
-  activeTabId: string;
-  api: ApiClient;
-  root: string;
-  surfaceActive: boolean;
-  onBrowserTabChange: (
-    updater: (
-      current: WorkspaceToolSurfaceSnapshot,
-    ) => WorkspaceToolSurfaceSnapshot,
-  ) => void;
-  onOpenBrowser: (url: string) => void;
-  onOpenFile: (path: string) => void;
-}) {
+export function WorkspaceToolContent({ root }: { root: string }) {
+  const {
+    active,
+    activeDynamicTab,
+    activeTabId,
+    host,
+    openBrowserTab,
+    updateSnapshot,
+  } = useWorkspaceToolSurface();
+  const layout = host === "sidebar" ? "compact" : "split";
+
   if (activeTabId === workspaceToolFilesTabId) {
-    return (
-      <WorkspaceFilesPanel api={api} root={root} onOpenFile={onOpenFile} />
-    );
+    return <WorkspaceFilesPanel layout={layout} root={root} />;
   }
   if (activeTabId === workspaceToolGitTabId) {
-    return <WorkspaceGitPanel api={api} root={root} />;
+    return <WorkspaceGitPanel layout={layout} root={root} />;
   }
   if (activeTabId === workspaceToolProcessesTabId) {
     return (
       <WorkspaceProcessesView
-        active={surfaceActive}
-        onOpenBrowser={onOpenBrowser}
+        active={active}
+        layout={layout}
+        onOpenBrowser={openBrowserTab}
       />
     );
   }
@@ -73,18 +49,18 @@ export function WorkspaceToolContent({
     case "browser":
       return (
         <WorkspaceBrowserTabContent
-          active={surfaceActive}
+          active={active}
           tab={activeDynamicTab}
-          onBrowserTabChange={onBrowserTabChange}
+          onBrowserTabChange={updateSnapshot}
         />
       );
     case "file-preview":
-      return <WorkspaceFilePreview api={api} tab={activeDynamicTab} />;
+      return <WorkspaceFilePreview tab={activeDynamicTab} />;
     case "git-diff":
-      return <WorkspaceGitDiffTool api={api} tab={activeDynamicTab} />;
+      return <WorkspaceGitDiffTool tab={activeDynamicTab} />;
     case "terminal":
       return (
-        <div className="h-full min-h-0 overflow-hidden bg-background p-2">
+        <div className="h-full min-h-0 overflow-hidden p-2">
           <WorkspaceTerminalView
             focusOnMount
             root={activeDynamicTab.root}
@@ -93,48 +69,4 @@ export function WorkspaceToolContent({
         </div>
       );
   }
-}
-
-export function WorkspaceToolWindowContent({
-  activeDynamicTab,
-  activeTabId,
-  api,
-  root,
-  surfaceActive,
-  onBrowserTabChange,
-  onOpenBrowser,
-  onOpenFile,
-}: {
-  activeDynamicTab?: WorkspaceToolSurfaceDynamicTab;
-  activeTabId: string;
-  api: ApiClient;
-  root: string;
-  surfaceActive: boolean;
-  onBrowserTabChange: (
-    updater: (
-      current: WorkspaceToolSurfaceSnapshot,
-    ) => WorkspaceToolSurfaceSnapshot,
-  ) => void;
-  onOpenBrowser: (url: string) => void;
-  onOpenFile: (path: string) => void;
-}) {
-  if (activeTabId === workspaceToolFilesTabId) {
-    return <WorkspaceWindowFilesPanel api={api} root={root} />;
-  }
-  if (activeTabId === workspaceToolGitTabId) {
-    return <WorkspaceWindowGitPanel api={api} root={root} />;
-  }
-
-  return (
-    <WorkspaceToolContent
-      activeDynamicTab={activeDynamicTab}
-      activeTabId={activeTabId}
-      api={api}
-      root={root}
-      surfaceActive={surfaceActive}
-      onBrowserTabChange={onBrowserTabChange}
-      onOpenBrowser={onOpenBrowser}
-      onOpenFile={onOpenFile}
-    />
-  );
 }

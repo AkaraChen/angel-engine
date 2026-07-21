@@ -1,4 +1,5 @@
-import type { CSSProperties } from "react";
+import type { Icon } from "@phosphor-icons/react";
+import type { CSSProperties, ReactNode } from "react";
 
 import is from "@sindresorhus/is";
 import { useCallback, useRef, useState } from "react";
@@ -149,9 +150,11 @@ export function WorkspaceToolPanelSplitter({
 
 export function WorkspaceToolEmpty({
   detail,
+  icon: EmptyIcon,
   title,
 }: {
   detail?: string;
+  icon?: Icon;
   title: string;
 }) {
   return (
@@ -160,7 +163,14 @@ export function WorkspaceToolEmpty({
         flex h-full min-h-0 items-center justify-center p-4 text-center
       "
     >
-      <div className="max-w-80 space-y-1">
+      <div className="flex max-w-80 flex-col items-center gap-1">
+        {EmptyIcon === undefined ? null : (
+          <EmptyIcon
+            aria-hidden="true"
+            className="mb-1 size-7 text-muted-foreground/60"
+            weight="duotone"
+          />
+        )}
         <div className="text-sm font-medium">{title}</div>
         {is.nonEmptyString(detail) ? (
           <div
@@ -172,6 +182,36 @@ export function WorkspaceToolEmpty({
           </div>
         ) : null}
       </div>
+    </div>
+  );
+}
+
+export function WorkspaceToolBanner({
+  children,
+  className,
+  tone,
+}: {
+  children: ReactNode;
+  className?: string;
+  tone: "attention" | "danger";
+}) {
+  return (
+    <div
+      className={cn(
+        "space-y-1 rounded-md border px-2.5 py-2 text-xs select-text",
+        tone === "attention"
+          ? `
+            border-status-attention-border bg-status-attention-soft
+            text-muted-foreground
+          `
+          : `
+            border-status-danger-border bg-status-danger-soft
+            text-status-danger
+          `,
+        className,
+      )}
+    >
+      {children}
     </div>
   );
 }

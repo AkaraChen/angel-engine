@@ -1,9 +1,10 @@
 import type { FormEvent } from "react";
+import type { WorkspaceToolPanelLayout } from "@/app/workspace/workspace-files-panels";
 import type { WorkspaceToolPatchFile } from "@/app/workspace/workspace-tool-patch-model";
 
-import type { ApiClient } from "@/platform/api-client";
-
+import { GitBranch } from "@phosphor-icons/react";
 import { useCallback, useState } from "react";
+
 import { getErrorMessage } from "@/app/workspace/workspace-file-display";
 import {
   useWorkspaceGitPanelState,
@@ -15,6 +16,7 @@ import {
 } from "@/app/workspace/workspace-tool-diff";
 import {
   initialWorkspaceToolGitListWidth,
+  WorkspaceToolBanner,
   WorkspaceToolEmpty,
   workspaceToolGitListWidthMax,
   workspaceToolGitListWidthMin,
@@ -27,108 +29,16 @@ import {
   formatWorkspaceToolPatchFileName,
   getWorkspaceToolPatchFileLineChanges,
 } from "@/app/workspace/workspace-tool-patch-model";
+import { useWorkspaceToolSurface } from "@/app/workspace/workspace-tool-surface-model";
 
 export function WorkspaceGitPanel({
-  api,
+  layout,
   root,
 }: {
-  api: ApiClient;
+  layout: WorkspaceToolPanelLayout;
   root: string;
 }) {
-  const {
-    commitDescription,
-    commitMutation,
-    commitSelectedPaths,
-    commitSummary,
-    gitQuery,
-    handleFileSelectedChange,
-    selectedFileKeys,
-    setCommitDescription,
-    setCommitSummary,
-  } = useWorkspaceGitPanelState(api, root);
-
-  if (gitQuery.isError) {
-    return (
-      <WorkspaceToolEmpty
-        detail={getErrorMessage(gitQuery.error)}
-        title="Git unavailable"
-      />
-    );
-  }
-
-  if (gitQuery.isLoading) {
-    return null;
-  }
-
-  const data = gitQuery.data;
-  if (!data?.isGitRepository) {
-    return <WorkspaceToolEmpty title="Not a Git repository" detail={root} />;
-  }
-
-  const patchList = buildWorkspaceToolPatchList(
-    data.stagedPatch,
-    data.unstagedPatch,
-    data.skippedFiles,
-  );
-  const selectedFiles = patchList.files.filter(
-    (file) => selectedFileKeys[file.key] ?? true,
-  );
-  const selectedPaths = selectedFiles.map((file) => file.name);
-  const handleCommitSubmit = (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    commitSelectedPaths(selectedPaths);
-  };
-
-  return (
-    <div className="flex h-full min-h-0 flex-col">
-      <div className="min-h-0 flex-1 overflow-auto">
-        {data.warnings.length > 0 ? (
-          <div
-            className="
-              m-3 space-y-1 rounded-md border border-status-attention-border
-              bg-status-attention-soft p-2 text-xs text-muted-foreground
-              select-text
-            "
-          >
-            {data.warnings.map((warning) => (
-              <div key={warning}>{warning}</div>
-            ))}
-          </div>
-        ) : null}
-        <WorkspaceToolPatchFileList
-          flush
-          patchList={patchList}
-          selectedFileKeys={selectedFileKeys}
-          onFileSelectedChange={handleFileSelectedChange}
-        />
-      </div>
-      <WorkspaceGitCommitComposer
-        branch={data.branch}
-        description={commitDescription}
-        errorMessage={
-          commitMutation.isError
-            ? getErrorMessage(commitMutation.error)
-            : undefined
-        }
-        pending={commitMutation.isPending}
-        selectedCount={selectedFiles.length}
-        summary={commitSummary}
-        totalCount={patchList.files.length}
-        onDescriptionChange={setCommitDescription}
-        onSubmit={handleCommitSubmit}
-        onSummaryChange={setCommitSummary}
-      />
-    </div>
-  );
-}
-
-export function WorkspaceWindowGitPanel({
-  api,
-  root,
-}: {
-  api: ApiClient;
-  root: string;
-}) {
+  const { api } = useWorkspaceToolSurface();
   const {
     commitDescription,
     commitMutation,
@@ -156,6 +66,7 @@ export function WorkspaceWindowGitPanel({
     return (
       <WorkspaceToolEmpty
         detail={getErrorMessage(gitQuery.error)}
+        icon={GitBranch}
         title="Git unavailable"
       />
     );
@@ -167,7 +78,13 @@ export function WorkspaceWindowGitPanel({
 
   const data = gitQuery.data;
   if (!data?.isGitRepository) {
-    return <WorkspaceToolEmpty title="Not a Git repository" detail={root} />;
+    return (
+      <WorkspaceToolEmpty
+        detail={root}
+        icon={GitBranch}
+        title="Not a Git repository"
+      />
+    );
   }
 
   const patchList = buildWorkspaceToolPatchList(
@@ -179,57 +96,64 @@ export function WorkspaceWindowGitPanel({
     (file) => selectedFileKeys[file.key] ?? true,
   );
   const selectedPaths = selectedFiles.map((file) => file.name);
-  const activeFile =
-    patchList.files.find((file) => file.key === activeFileKey) ??
-    patchList.files[0];
   const handleCommitSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     commitSelectedPaths(selectedPaths);
   };
+  const split = layout === "split";
+  const activeFile = split
+    ? (patchList.files.find((file) => file.key === activeFileKey) ??
+      patchList.files[0])
+    : undefined;
+  const changeColumn = (
+    <>
+      <div className="min-h-0 flex-1 overflow-auto">
+        {data.warnings.length > 0 ? (
+          <WorkspaceToolBanner className="m-3" tone="attention">
+            {data.warnings.map((warning) => (
+              <div key={warning}>{warning}</div>
+            ))}
+          </WorkspaceToolBanner>
+        ) : null}
+        <WorkspaceToolPatchFileList
+          flush
+          activeFileKey={activeFile?.key}
+          patchList={patchList}
+          rowMode={split ? "select" : "expand"}
+          selectedFileKeys={selectedFileKeys}
+          onFileActivate={
+            split ? (file) => setActiveFileKey(file.key) : undefined
+          }
+          onFileSelectedChange={handleFileSelectedChange}
+        />
+      </div>
+      <WorkspaceGitCommitComposer
+        branch={data.branch}
+        description={commitDescription}
+        errorMessage={
+          commitMutation.isError
+            ? getErrorMessage(commitMutation.error)
+            : undefined
+        }
+        pending={commitMutation.isPending}
+        selectedCount={selectedFiles.length}
+        summary={commitSummary}
+        totalCount={patchList.files.length}
+        onDescriptionChange={setCommitDescription}
+        onSubmit={handleCommitSubmit}
+        onSummaryChange={setCommitSummary}
+      />
+    </>
+  );
+
+  if (!split) {
+    return <div className="flex h-full min-h-0 flex-col">{changeColumn}</div>;
+  }
 
   return (
     <div className="flex h-full min-h-0 bg-background">
       <div className="flex shrink-0 flex-col" style={{ width: gitListWidth }}>
-        <div className="min-h-0 flex-1 overflow-auto">
-          {data.warnings.length > 0 ? (
-            <div
-              className="
-                m-3 space-y-1 rounded-md border border-status-attention-border
-                bg-status-attention-soft p-2 text-xs text-muted-foreground
-                select-text
-              "
-            >
-              {data.warnings.map((warning) => (
-                <div key={warning}>{warning}</div>
-              ))}
-            </div>
-          ) : null}
-          <WorkspaceToolPatchFileList
-            flush
-            activeFileKey={activeFile?.key}
-            patchList={patchList}
-            rowMode="select"
-            selectedFileKeys={selectedFileKeys}
-            onFileActivate={(file) => setActiveFileKey(file.key)}
-            onFileSelectedChange={handleFileSelectedChange}
-          />
-        </div>
-        <WorkspaceGitCommitComposer
-          branch={data.branch}
-          description={commitDescription}
-          errorMessage={
-            commitMutation.isError
-              ? getErrorMessage(commitMutation.error)
-              : undefined
-          }
-          pending={commitMutation.isPending}
-          selectedCount={selectedFiles.length}
-          summary={commitSummary}
-          totalCount={patchList.files.length}
-          onDescriptionChange={setCommitDescription}
-          onSubmit={handleCommitSubmit}
-          onSummaryChange={setCommitSummary}
-        />
+        {changeColumn}
       </div>
       <WorkspaceToolPanelSplitter
         ariaLabel="Resize Git change list"
@@ -239,19 +163,15 @@ export function WorkspaceWindowGitPanel({
         onChange={updateGitListWidth}
       />
       <div className="min-w-0 flex-1 overflow-hidden">
-        <WorkspaceWindowGitDiffViewer file={activeFile} />
+        <WorkspaceGitDiffViewer file={activeFile} />
       </div>
     </div>
   );
 }
 
-function WorkspaceWindowGitDiffViewer({
-  file,
-}: {
-  file?: WorkspaceToolPatchFile;
-}) {
+function WorkspaceGitDiffViewer({ file }: { file?: WorkspaceToolPatchFile }) {
   if (!file) {
-    return <WorkspaceToolEmpty title="No changes" />;
+    return <WorkspaceToolEmpty icon={GitBranch} title="No changes" />;
   }
 
   const fileName = formatWorkspaceToolPatchFileName(file);

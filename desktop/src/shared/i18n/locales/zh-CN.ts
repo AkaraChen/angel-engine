@@ -73,6 +73,9 @@ export const zhCN = {
       noProject: "无项目",
       projectSelect: "项目",
       settings: "设置",
+      statsBranch: "分支",
+      statsChanges: "更改",
+      statsLastActive: "最近活动",
       worktreeDirtyContinue: "继续",
       worktreeDirtyDescription:
         "当前项目有未提交更改。新的 worktree 会从当前 HEAD 创建，不会包含这些未提交内容。",

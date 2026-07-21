@@ -6,6 +6,7 @@ import is from "@sindresorhus/is";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { useCallback, useState } from "react";
+import { WorkspaceToolBanner } from "@/app/workspace/workspace-tool-layout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -112,7 +113,7 @@ export function WorkspaceGitCommitComposer({
 
   return (
     <form
-      className="shrink-0 border-t border-border-subtle bg-background p-2"
+      className="shrink-0 border-t border-border-subtle p-2"
       onSubmit={onSubmit}
     >
       <div className="space-y-1.5">
@@ -131,15 +132,9 @@ export function WorkspaceGitCommitComposer({
           onChange={(event) => onDescriptionChange(event.currentTarget.value)}
         />
         {is.nonEmptyString(errorMessage) ? (
-          <div
-            className="
-              rounded-md border border-status-danger-border
-              bg-status-danger-soft px-2 py-1.5 text-xs text-status-danger
-              select-text
-            "
-          >
+          <WorkspaceToolBanner tone="danger">
             {errorMessage}
-          </div>
+          </WorkspaceToolBanner>
         ) : null}
         <div className="flex items-center gap-1.5">
           <div className="min-w-0 flex-1 truncate text-xs text-muted-foreground">

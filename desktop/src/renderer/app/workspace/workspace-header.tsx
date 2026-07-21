@@ -9,7 +9,6 @@ import { useTranslation } from "react-i18next";
 import { WorkspaceSidebarControlTarget } from "@/app/workspace/workspace-sidebar-control";
 import { WorkspaceToolHeaderButton } from "@/app/workspace/workspace-tool-surface-header";
 import { useSidebar } from "@/components/ui/sidebar";
-import { cn } from "@/platform/utils";
 
 interface WorkspaceHeaderProps {
   attention?: ChatAttentionState;
@@ -18,7 +17,6 @@ interface WorkspaceHeaderProps {
   rightSidebarOpen?: boolean;
   rightSidebarToggleLabel?: string;
   running?: boolean;
-  showBottomBorder?: boolean;
   title: string;
 }
 
@@ -29,7 +27,6 @@ export function WorkspaceHeader({
   rightSidebarOpen = false,
   rightSidebarToggleLabel = "Toggle workspace tools",
   running = false,
-  showBottomBorder = true,
   title,
 }: WorkspaceHeaderProps) {
   const { t } = useTranslation();
@@ -42,10 +39,9 @@ export function WorkspaceHeader({
 
   return (
     <header
-      className={cn(
-        "relative flex h-12 shrink-0 items-center gap-3 bg-background/80 px-4",
-        showBottomBorder && "border-b border-border-subtle",
-      )}
+      className="
+        relative flex h-12 shrink-0 items-center gap-3 bg-background/80 px-4
+      "
       data-electron-drag
       data-workspace-mode="chat"
     >

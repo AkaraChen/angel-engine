@@ -5,6 +5,7 @@ import {
   WorkspaceToolPatchFileDiffContent,
   WorkspaceToolPatchFileLineStats,
 } from "@/app/workspace/workspace-tool-diff";
+import { WorkspaceToolBanner } from "@/app/workspace/workspace-tool-layout";
 import {
   formatWorkspaceToolPatchFileName,
   getWorkspaceToolPatchFileLineChanges,
@@ -16,6 +17,14 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import { cn } from "@/platform/utils";
+
+interface WorkspaceToolPatchFileSelection {
+  onFileSelectedChange: (
+    file: WorkspaceToolPatchFile,
+    selected: boolean,
+  ) => void;
+  selectedFileKeys: Record<string, boolean>;
+}
 
 export function WorkspaceToolPatchFileList({
   activeFileKey,
@@ -40,18 +49,17 @@ export function WorkspaceToolPatchFileList({
   rowMode?: "expand" | "select";
   selectedFileKeys?: Record<string, boolean>;
 }) {
+  const selection =
+    onFileSelectedChange !== undefined && selectedFileKeys !== undefined
+      ? { onFileSelectedChange, selectedFileKeys }
+      : undefined;
+
   return (
     <section className="space-y-2">
       {patchList.errors.map((error) => (
-        <div
-          className="
-            rounded-md border border-status-danger-border bg-status-danger-soft
-            px-3 py-2 text-xs text-status-danger select-text
-          "
-          key={error}
-        >
+        <WorkspaceToolBanner key={error} tone="danger">
           {error}
-        </div>
+        </WorkspaceToolBanner>
       ))}
       {patchList.files.length > 0 ? (
         <WorkspaceToolPatchFileRows
@@ -59,9 +67,8 @@ export function WorkspaceToolPatchFileList({
           files={patchList.files}
           flush={flush}
           rowMode={rowMode}
-          selectedFileKeys={selectedFileKeys}
+          selection={selection}
           onFileActivate={onFileActivate}
-          onFileSelectedChange={onFileSelectedChange}
         />
       ) : patchList.errors.length === 0 ? (
         <div className="px-3 py-6 text-center text-sm text-muted-foreground">
@@ -77,75 +84,70 @@ export function WorkspaceToolPatchFileRows({
   files,
   flush = false,
   onFileActivate,
-  onFileSelectedChange,
   rowMode = "expand",
-  selectedFileKeys: controlledSelectedFileKeys,
+  selection,
 }: {
   activeFileKey?: string;
   files: WorkspaceToolPatchFile[];
   flush?: boolean;
   onFileActivate?: (file: WorkspaceToolPatchFile) => void;
-  onFileSelectedChange?: (
-    file: WorkspaceToolPatchFile,
-    selected: boolean,
-  ) => void;
   rowMode?: "expand" | "select";
-  selectedFileKeys?: Record<string, boolean>;
+  selection?: WorkspaceToolPatchFileSelection;
 }) {
-  const [localSelectedFileKeys, setLocalSelectedFileKeys] = useState<
-    Record<string, boolean>
-  >({});
-  const selectedFileKeys = controlledSelectedFileKeys ?? localSelectedFileKeys;
-  const handleFileSelectedChange = (
-    file: WorkspaceToolPatchFile,
-    selected: boolean,
-  ) => {
-    if (onFileSelectedChange) {
-      onFileSelectedChange(file, selected);
-      return;
-    }
-    setLocalSelectedFileKeys((current) => ({
-      ...current,
-      [file.key]: selected,
-    }));
-  };
-
   return (
     <div
       className={cn(
-        "overflow-hidden bg-background",
+        "space-y-px overflow-hidden p-1.5",
         flush ? "" : "rounded-md border border-border-subtle",
       )}
     >
       {files.map((file) => (
         <WorkspaceToolPatchFileItem
           active={file.key === activeFileKey}
-          checked={selectedFileKeys[file.key] ?? true}
           file={file}
           key={file.key}
           mode={rowMode}
+          selection={selection}
           onActivate={onFileActivate}
-          onCheckedChange={handleFileSelectedChange}
         />
       ))}
     </div>
   );
 }
 
+function WorkspaceToolPatchFileCheckbox({
+  file,
+  fileName,
+  selection,
+}: {
+  file: WorkspaceToolPatchFile;
+  fileName: string;
+  selection: WorkspaceToolPatchFileSelection;
+}) {
+  return (
+    <Checkbox
+      aria-label={`Include ${fileName} in commit`}
+      checked={selection.selectedFileKeys[file.key] ?? true}
+      className="size-3.5"
+      onCheckedChange={(value) =>
+        selection.onFileSelectedChange(file, value === true)
+      }
+    />
+  );
+}
+
 function WorkspaceToolPatchFileItem({
   active = false,
-  checked,
   file,
   mode,
   onActivate,
-  onCheckedChange,
+  selection,
 }: {
   active?: boolean;
-  checked: boolean;
   file: WorkspaceToolPatchFile;
   mode: "expand" | "select";
   onActivate?: (file: WorkspaceToolPatchFile) => void;
-  onCheckedChange: (file: WorkspaceToolPatchFile, checked: boolean) => void;
+  selection?: WorkspaceToolPatchFileSelection;
 }) {
   const fileName = formatWorkspaceToolPatchFileName(file);
   const lineChanges = getWorkspaceToolPatchFileLineChanges(file);
@@ -155,27 +157,25 @@ function WorkspaceToolPatchFileItem({
     return (
       <div
         className={cn(
-          `
-            border-b border-border-subtle
-            last:border-b-0
-          `,
+          "overflow-hidden rounded-md",
           active ? "bg-surface-1" : "",
         )}
       >
         <div
           className="
-            group flex min-h-8 w-full items-center gap-2 px-2.5 py-1 text-xs
+            group flex min-h-8 w-full items-center gap-2 px-2 py-1 text-xs
             transition-colors
             hover:bg-overlay-hover
             active:bg-overlay-active
           "
         >
-          <Checkbox
-            aria-label={`Include ${fileName} in commit`}
-            checked={checked}
-            className="size-3.5"
-            onCheckedChange={(value) => onCheckedChange(file, value === true)}
-          />
+          {selection === undefined ? null : (
+            <WorkspaceToolPatchFileCheckbox
+              file={file}
+              fileName={fileName}
+              selection={selection}
+            />
+          )}
           <button
             aria-current={active ? "true" : undefined}
             className="
@@ -201,27 +201,28 @@ function WorkspaceToolPatchFileItem({
 
   return (
     <Collapsible
-      className="
-        border-b border-border-subtle
-        last:border-b-0
-      "
+      className={cn(
+        "overflow-hidden rounded-md",
+        open ? "bg-surface-1/50" : "",
+      )}
       open={open}
       onOpenChange={setOpen}
     >
       <div
         className="
-          group flex min-h-8 w-full items-center gap-2 px-2.5 py-1 text-xs
+          group flex min-h-8 w-full items-center gap-2 px-2 py-1 text-xs
           transition-colors
           hover:bg-overlay-hover
           active:bg-overlay-active
         "
       >
-        <Checkbox
-          aria-label={`Include ${fileName} in commit`}
-          checked={checked}
-          className="size-3.5"
-          onCheckedChange={(value) => onCheckedChange(file, value === true)}
-        />
+        {selection === undefined ? null : (
+          <WorkspaceToolPatchFileCheckbox
+            file={file}
+            fileName={fileName}
+            selection={selection}
+          />
+        )}
         <CollapsibleTrigger
           className="
             flex min-w-0 flex-1 items-center gap-2 text-left outline-none
@@ -242,13 +243,13 @@ function WorkspaceToolPatchFileItem({
       {open ? (
         <CollapsibleContent
           className="
-            overflow-hidden
+            overflow-hidden rounded-b-[inherit]
             data-[state=closed]:animate-collapsible-up
             data-[state=open]:animate-collapsible-down
             motion-reduce:animate-none
           "
         >
-          <WorkspaceToolPatchFileDiffContent file={file} borderTop />
+          <WorkspaceToolPatchFileDiffContent file={file} rounded />
         </CollapsibleContent>
       ) : null}
     </Collapsible>

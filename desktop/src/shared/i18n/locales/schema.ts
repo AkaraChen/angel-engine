@@ -72,6 +72,9 @@ export interface LocaleResourceTranslationWorkspace {
   noProject: string;
   projectSelect: string;
   settings: string;
+  statsBranch: string;
+  statsChanges: string;
+  statsLastActive: string;
   worktreeDirtyContinue: string;
   worktreeDirtyDescription: string;
   worktreeDirtyRemember: string;

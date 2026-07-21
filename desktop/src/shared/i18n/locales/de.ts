@@ -73,6 +73,9 @@ export const de = {
       noProject: "Kein Projekt",
       projectSelect: "Projekt",
       settings: "Einstellungen",
+      statsBranch: "Branch",
+      statsChanges: "Änderungen",
+      statsLastActive: "Zuletzt aktiv",
       worktreeDirtyContinue: "Fortfahren",
       worktreeDirtyDescription:
         "Das ausgewählte Projekt hat nicht übernommene Änderungen. Der neue Worktree wird aus dem aktuellen HEAD erstellt und enthält diese Änderungen nicht.",
