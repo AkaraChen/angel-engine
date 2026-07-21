@@ -68,8 +68,8 @@ function SettingsRow({
       {!is.falsy(icon) ? (
         <span
           className="
-            flex size-8 shrink-0 items-center justify-center rounded-md border
-            border-border bg-background
+            flex size-8 shrink-0 items-center justify-center rounded-md
+            bg-background
           "
         >
           {icon}

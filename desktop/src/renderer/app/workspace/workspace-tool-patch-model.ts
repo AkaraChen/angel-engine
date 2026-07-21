@@ -1,4 +1,5 @@
 import type { FileDiffMetadata } from "@pierre/diffs";
+import type { WorkspaceGitSkippedFile } from "@angel-engine/daemon-api/workspace-tools";
 
 import { parsePatchFiles } from "@pierre/diffs";
 import is from "@sindresorhus/is";
@@ -17,6 +18,7 @@ export interface WorkspaceToolPatchFile {
   key: string;
   name: string;
   prevName?: string;
+  previewNotice?: string;
 }
 
 export interface WorkspaceToolPatchFileLineChanges {
@@ -27,13 +29,14 @@ export interface WorkspaceToolPatchFileLineChanges {
 export function buildWorkspaceToolPatchList(
   stagedPatch: string,
   unstagedPatch: string,
+  skippedFiles: WorkspaceGitSkippedFile[] = [],
 ) {
   const staged = parseWorkspaceToolPatch(stagedPatch, "workspace-tool-staged");
   const unstaged = parseWorkspaceToolPatch(
     unstagedPatch,
     "workspace-tool-unstaged",
   );
-  const files = groupWorkspaceToolPatchFiles([
+  const patchedFiles = groupWorkspaceToolPatchFiles([
     ...staged.files.map((fileDiff) => ({
       fileDiff,
       source: "staged" as const,
@@ -44,12 +47,34 @@ export function buildWorkspaceToolPatchList(
     })),
   ]);
 
+  const patchedPaths = new Set(patchedFiles.map((file) => file.name));
+  const skippedPatchFiles = skippedFiles
+    .filter((file) => !patchedPaths.has(file.path))
+    .map<WorkspaceToolPatchFile>((file) => ({
+      diffs: [],
+      key: file.path,
+      name: file.path,
+      previewNotice: formatWorkspaceGitSkippedFileNotice(file),
+    }));
+  const files = [...patchedFiles, ...skippedPatchFiles].sort((a, b) =>
+    formatWorkspaceToolPatchFileName(a).localeCompare(
+      formatWorkspaceToolPatchFileName(b),
+    ),
+  );
+
   return {
     errors: [staged.error, unstaged.error].flatMap((error) =>
       is.nonEmptyString(error) ? [error] : [],
     ),
     files,
   };
+}
+
+function formatWorkspaceGitSkippedFileNotice(file: WorkspaceGitSkippedFile) {
+  if (file.reason === "binary") {
+    return `Skipped binary untracked file: ${file.path}`;
+  }
+  return `Skipped large untracked file: ${file.path}`;
 }
 
 export function parseWorkspaceToolPatch(

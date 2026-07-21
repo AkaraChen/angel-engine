@@ -1,4 +1,3 @@
-import type { ReactNode } from "react";
 import type { ChatAttentionState } from "@/features/chat/state/chat-run-store";
 
 import {
@@ -8,13 +7,9 @@ import {
 import is from "@sindresorhus/is";
 import { useTranslation } from "react-i18next";
 import { WorkspaceSidebarControlTarget } from "@/app/workspace/workspace-sidebar-control";
-import { Button } from "@/components/ui/button";
+import { WorkspaceToolHeaderButton } from "@/app/workspace/workspace-tool-surface-header";
 import { useSidebar } from "@/components/ui/sidebar";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
+import { cn } from "@/platform/utils";
 
 interface WorkspaceHeaderProps {
   attention?: ChatAttentionState;
@@ -23,8 +18,8 @@ interface WorkspaceHeaderProps {
   rightSidebarOpen?: boolean;
   rightSidebarToggleLabel?: string;
   running?: boolean;
+  showBottomBorder?: boolean;
   title: string;
-  workspaceToolActions?: ReactNode;
 }
 
 export function WorkspaceHeader({
@@ -34,8 +29,8 @@ export function WorkspaceHeader({
   rightSidebarOpen = false,
   rightSidebarToggleLabel = "Toggle workspace tools",
   running = false,
+  showBottomBorder = true,
   title,
-  workspaceToolActions,
 }: WorkspaceHeaderProps) {
   const { t } = useTranslation();
   const { isMobile, state } = useSidebar();
@@ -47,10 +42,10 @@ export function WorkspaceHeader({
 
   return (
     <header
-      className="
-        relative flex h-12 shrink-0 items-center gap-3 border-b
-        border-border-subtle bg-background/80 px-4
-      "
+      className={cn(
+        "relative flex h-12 shrink-0 items-center gap-3 bg-background/80 px-4",
+        showBottomBorder && "border-b border-border-subtle",
+      )}
       data-electron-drag
       data-workspace-mode="chat"
     >
@@ -118,35 +113,18 @@ export function WorkspaceHeader({
           ) : null}
         </span>
       ) : null}
-      {!is.falsy(workspaceToolActions) ? (
-        <div className="flex shrink-0 items-center gap-1">
-          {workspaceToolActions}
-        </div>
-      ) : null}
       {onToggleRightSidebar ? (
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              aria-label={rightSidebarToggleLabel}
-              className="text-muted-foreground"
-              data-electron-no-drag
-              onClick={onToggleRightSidebar}
-              size="icon-sm"
-              title={rightSidebarToggleLabel}
-              type="button"
-              variant="ghost"
-            >
-              {rightSidebarOpen ? (
-                <SidebarFold className="scale-x-[-1]" />
-              ) : (
-                <SidebarUnfold className="scale-x-[-1]" />
-              )}
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent side="bottom" sideOffset={6}>
-            {rightSidebarToggleLabel}
-          </TooltipContent>
-        </Tooltip>
+        <WorkspaceToolHeaderButton
+          icon={
+            rightSidebarOpen ? (
+              <SidebarFold className="scale-x-[-1]" weight="duotone" />
+            ) : (
+              <SidebarUnfold className="scale-x-[-1]" weight="duotone" />
+            )
+          }
+          label={rightSidebarToggleLabel}
+          onClick={onToggleRightSidebar}
+        />
       ) : null}
     </header>
   );

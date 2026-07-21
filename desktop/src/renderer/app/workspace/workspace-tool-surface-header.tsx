@@ -35,32 +35,41 @@ export function WorkspaceToolWindowTitleBridge({
 export function WorkspaceToolSurfaceHeader({
   host,
   root,
+  trailingActions,
   trafficLightInset,
   onRequestHost,
 }: {
   host: WorkspaceToolSurfaceHost;
   root?: string | null;
+  trailingActions?: ReactNode;
   trafficLightInset: boolean;
   onRequestHost: (host: WorkspaceToolSurfaceHost) => void;
 }) {
   return (
     <div
       className={cn(
-        `
-          flex h-12 shrink-0 items-center gap-2 border-b border-border-subtle
-          px-3
-        `,
+        "flex h-12 shrink-0 items-center gap-2 px-3",
+        host === "sidebar" &&
+          "[&_button]:size-[32px]! [&_button_svg]:size-[16px]!",
+        host !== "sidebar" && "border-b border-border-subtle",
         trafficLightInset && "pl-[88px]",
       )}
       data-electron-drag={trafficLightInset ? true : undefined}
     >
-      <div className="min-w-0 flex-1 truncate text-sm font-medium">
-        {is.nonEmptyString(root) ? workspaceToolRootName(root) : "Angel Engine"}
-      </div>
+      {host === "sidebar" ? (
+        <div className="flex-1" />
+      ) : (
+        <div className="min-w-0 flex-1 truncate text-sm font-medium">
+          {is.nonEmptyString(root)
+            ? workspaceToolRootName(root)
+            : "Angel Engine"}
+        </div>
+      )}
       <WorkspaceToolSurfaceHostControls
         host={host}
         onRequestHost={onRequestHost}
       />
+      {trailingActions}
     </div>
   );
 }
@@ -75,14 +84,14 @@ export function WorkspaceToolSurfaceHostControls({
   return (
     <>
       {host !== "sidebar" ? (
-        <WorkspaceToolSurfaceHostButton
+        <WorkspaceToolHeaderButton
           icon={<DockIcon weight="duotone" />}
           label="Dock in sidebar"
           onClick={() => onRequestHost("sidebar")}
         />
       ) : null}
       {host !== "window" ? (
-        <WorkspaceToolSurfaceHostButton
+        <WorkspaceToolHeaderButton
           icon={<WindowIcon weight="duotone" />}
           label="Open in window"
           onClick={() => onRequestHost("window")}
@@ -92,7 +101,7 @@ export function WorkspaceToolSurfaceHostControls({
   );
 }
 
-function WorkspaceToolSurfaceHostButton({
+export function WorkspaceToolHeaderButton({
   icon,
   label,
   onClick,
@@ -106,13 +115,11 @@ function WorkspaceToolSurfaceHostButton({
       <TooltipTrigger asChild>
         <Button
           aria-label={label}
-          className="
-            text-muted-foreground
-            active:bg-overlay-active
-          "
+          className="text-muted-foreground"
           data-electron-no-drag
           onClick={onClick}
           size="icon-sm"
+          title={label}
           type="button"
           variant="ghost"
         >

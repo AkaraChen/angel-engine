@@ -61,10 +61,7 @@ export function WorkspaceToolTabStrip({
 
   return (
     <div
-      className="
-        flex h-9 shrink-0 items-center gap-1 border-b border-border-subtle
-        px-1.5
-      "
+      className="flex h-[40px] shrink-0 items-center gap-[4px] p-[8px]"
       ref={stripRef}
     >
       <div
@@ -93,7 +90,8 @@ export function WorkspaceToolTabStrip({
               <div
                 className={cn(
                   `
-                    flex h-7 shrink-0 items-center overflow-hidden rounded-md
+                    flex h-[24px] shrink-0 items-center overflow-hidden
+                    rounded-md
                     text-muted-foreground
                   `,
                   active
@@ -109,7 +107,7 @@ export function WorkspaceToolTabStrip({
                   aria-controls="workspace-tool-panel"
                   aria-selected={active}
                   className="
-                    flex h-full w-7 shrink-0 items-center justify-center
+                    flex h-full w-[24px] shrink-0 items-center justify-center
                     outline-none
                     focus-visible:ring-2 focus-visible:ring-ring/50
                     focus-visible:ring-inset
@@ -131,7 +129,7 @@ export function WorkspaceToolTabStrip({
                   title={tab.title}
                   type="button"
                 >
-                  <Icon className="size-3.5 shrink-0" weight="duotone" />
+                  <Icon className="size-[16px] shrink-0" weight="duotone" />
                 </button>
                 {dynamicTab && active ? (
                   <button

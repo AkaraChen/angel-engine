@@ -2,17 +2,22 @@ import type {
   KeyboardEvent as ReactKeyboardEvent,
   PointerEvent as ReactPointerEvent,
 } from "react";
+import type { WorkspaceToolSurfaceHost } from "@shared/workspace-tool-surface";
 import type { ApiClient } from "@/platform/api-client";
 
+import { SidebarSimple as SidebarFold } from "@phosphor-icons/react";
 import { useCallback, useRef, useState } from "react";
 
 import { WorkspaceToolSurface } from "@/app/workspace/workspace-tool-host";
+import {
+  WorkspaceToolHeaderButton,
+  WorkspaceToolSurfaceHeader,
+} from "@/app/workspace/workspace-tool-surface-header";
 import {
   clampWorkspaceRightSidebarWidth,
   defaultWorkspaceRightSidebarWidth,
   maxWorkspaceRightSidebarWidth,
   minWorkspaceRightSidebarWidth,
-  useWorkspaceUiStore,
 } from "@/app/workspace/workspace-ui-store";
 import { cn } from "@/platform/utils";
 
@@ -23,6 +28,8 @@ interface WorkspaceRightSidebarProps {
   open: boolean;
   root: string;
   width: number;
+  onClose: () => void;
+  onRequestHost: (host: WorkspaceToolSurfaceHost) => void;
   onWidthChange: (width: number) => void;
 }
 
@@ -33,9 +40,10 @@ export function WorkspaceRightSidebar({
   open,
   root,
   width,
+  onClose,
+  onRequestHost,
   onWidthChange,
 }: WorkspaceRightSidebarProps) {
-  const workspaceMode = useWorkspaceUiStore((state) => state.workspaceMode);
   const resizeStateRef = useRef<{ startWidth: number; startX: number } | null>(
     null,
   );
@@ -111,12 +119,11 @@ export function WorkspaceRightSidebar({
   return (
     <aside
       aria-hidden={!open}
-      data-workspace-mode={workspaceMode}
       inert={!open ? true : undefined}
       className={cn(
         `
-          relative min-h-0 shrink-0 overflow-hidden border-l
-          border-border-subtle bg-background
+          relative h-svh min-h-0 max-h-svh shrink-0 overflow-hidden
+          bg-background
         `,
         resizing
           ? "transition-none"
@@ -127,40 +134,59 @@ export function WorkspaceRightSidebar({
       )}
       style={widthStyle}
     >
-      <div
-        aria-label="Resize tool sidebar"
-        aria-orientation="vertical"
-        aria-valuemax={maxWorkspaceRightSidebarWidth}
-        aria-valuemin={minWorkspaceRightSidebarWidth}
-        aria-valuenow={currentWidth}
-        role="separator"
-        tabIndex={0}
-        className={cn(
-          `
-            absolute inset-y-0 left-0 z-10 w-2 -translate-x-1/2
-            cursor-col-resize touch-none outline-none
-            before:absolute before:inset-y-0 before:left-1/2 before:w-px
-            before:-translate-x-1/2 before:bg-transparent
-            hover:before:bg-border-strong
-            focus-visible:before:bg-primary
-          `,
-          resizing && "before:bg-primary",
-        )}
-        onDoubleClick={() => onWidthChange(defaultWorkspaceRightSidebarWidth)}
-        onKeyDown={handleResizeKeyDown}
-        onPointerCancel={handleResizePointerEnd}
-        onPointerDown={handleResizePointerDown}
-        onPointerMove={handleResizePointerMove}
-        onPointerUp={handleResizePointerEnd}
-      />
       <div className="flex h-full flex-col" style={contentStyle}>
-        <WorkspaceToolSurface
-          active={active && open}
-          api={api}
-          chatId={chatId}
+        <WorkspaceToolSurfaceHeader
           host="sidebar"
           root={root}
+          trafficLightInset={false}
+          trailingActions={
+            <WorkspaceToolHeaderButton
+              icon={<SidebarFold className="scale-x-[-1]" weight="duotone" />}
+              label="Hide workspace tools"
+              onClick={onClose}
+            />
+          }
+          onRequestHost={onRequestHost}
         />
+        <div
+          className="
+            relative mx-2 mt-1 mb-2 min-h-0 flex-1 rounded-xl border
+            border-border-subtle/60 bg-card
+            shadow-[0_0_20px_-10px_rgba(33,33,32,0.18)]
+            dark:shadow-[0_0_22px_-10px_rgba(0,0,0,0.4)]
+          "
+        >
+          <div
+            aria-label="Resize tool sidebar"
+            aria-orientation="vertical"
+            aria-valuemax={maxWorkspaceRightSidebarWidth}
+            aria-valuemin={minWorkspaceRightSidebarWidth}
+            aria-valuenow={currentWidth}
+            role="separator"
+            tabIndex={0}
+            className="
+              absolute inset-y-0 left-0 z-10 w-2 -translate-x-1/2
+              cursor-col-resize touch-none outline-none
+            "
+            onDoubleClick={() =>
+              onWidthChange(defaultWorkspaceRightSidebarWidth)
+            }
+            onKeyDown={handleResizeKeyDown}
+            onPointerCancel={handleResizePointerEnd}
+            onPointerDown={handleResizePointerDown}
+            onPointerMove={handleResizePointerMove}
+            onPointerUp={handleResizePointerEnd}
+          />
+          <div className="flex h-full min-h-0 overflow-hidden rounded-[inherit] [&>section]:bg-card">
+            <WorkspaceToolSurface
+              active={active && open}
+              api={api}
+              chatId={chatId}
+              host="sidebar"
+              root={root}
+            />
+          </div>
+        </div>
       </div>
     </aside>
   );

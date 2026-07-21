@@ -1,4 +1,5 @@
 import type {
+  WorkspaceGitSkippedFile,
   WorkspaceToolGitStatus,
   WorkspaceToolGitStatusEntry,
 } from "@angel-engine/daemon-api/workspace-tools";
@@ -74,6 +75,7 @@ export async function buildUntrackedPatch(
 ) {
   const warnings: string[] = [];
   const patches: string[] = [];
+  const skippedFiles: WorkspaceGitSkippedFile[] = [];
   let totalBytes = 0;
 
   for (const entry of status) {
@@ -89,7 +91,11 @@ export async function buildUntrackedPatch(
     if (!stat.isFile()) continue;
 
     if (stat.size > MAX_UNTRACKED_PATCH_BYTES) {
-      warnings.push(`Skipped large untracked file: ${entry.path}`);
+      skippedFiles.push({
+        path: entry.path,
+        reason: "too-large",
+        size: stat.size,
+      });
       continue;
     }
     if (totalBytes + stat.size > MAX_TOTAL_UNTRACKED_PATCH_BYTES) {
@@ -101,7 +107,11 @@ export async function buildUntrackedPatch(
 
     const buffer = await fs.readFile(absolutePath);
     if (isProbablyBinary(buffer)) {
-      warnings.push(`Skipped binary untracked file: ${entry.path}`);
+      skippedFiles.push({
+        path: entry.path,
+        reason: "binary",
+        size: stat.size,
+      });
       continue;
     }
 
@@ -111,6 +121,7 @@ export async function buildUntrackedPatch(
 
   return {
     patch: joinPatches(...patches),
+    skippedFiles,
     warnings,
   };
 }

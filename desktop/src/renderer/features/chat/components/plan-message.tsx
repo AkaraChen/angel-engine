@@ -229,9 +229,8 @@ function PlanMessagePart({ plan }: { plan: ChatPlanData }) {
             {is.nonEmptyString(plan.path) ? (
               <div
                 className="
-                  flex min-w-0 items-center gap-2 rounded-md border
-                  border-border-subtle bg-background/70 px-2 py-1.5
-                  text-muted-foreground
+                  flex min-w-0 items-center gap-2 rounded-md bg-background/70
+                  px-2 py-1.5 text-muted-foreground
                 "
               >
                 <FileText className="size-3.5 shrink-0" />
@@ -397,8 +396,8 @@ function PlanMarkerPart({
   return (
     <div
       className="
-        flex min-h-10 w-full items-center gap-2 rounded-lg border
-        border-border-subtle bg-surface-1/50 px-3 py-2 text-xs shadow-panel
+        flex min-h-10 w-full items-center gap-2 rounded-lg bg-surface-1/50 px-3
+        py-2 text-xs shadow-panel
       "
     >
       <ListChecks className="size-3.5 shrink-0 text-muted-foreground" />

@@ -44,8 +44,8 @@ export function ChatTabBar({
   return (
     <div
       className="
-        flex h-10 shrink-0 items-center gap-1.5 overflow-x-auto border-b
-        border-border-subtle bg-background/60 px-2.5
+        flex h-10 shrink-0 items-center gap-1.5 overflow-x-auto
+        bg-background/60 px-2.5
       "
       data-slot="chat-tab-bar"
       role="tablist"

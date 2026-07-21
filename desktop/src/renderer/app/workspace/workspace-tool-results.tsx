@@ -141,6 +141,7 @@ function WorkspaceGitDiffResultView({
   const patchList = buildWorkspaceToolPatchList(
     data.stagedPatch,
     data.unstagedPatch,
+    data.skippedFiles,
   );
   const files = is.nonEmptyString(pathFilter)
     ? patchList.files.filter((file) => file.name === pathFilter)

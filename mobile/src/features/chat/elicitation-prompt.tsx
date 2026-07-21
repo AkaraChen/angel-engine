@@ -58,7 +58,7 @@ export function ElicitationPrompt({
   const hasQuestions = questions.length > 0;
 
   return (
-    <div className="rounded-xl border border-border bg-card p-3">
+    <div className="rounded-xl bg-card p-3">
       <ElicitationHeader elicitation={elicitation} />
 
       {elicitation.body !== null && elicitation.body !== undefined ? (

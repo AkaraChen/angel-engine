@@ -79,7 +79,7 @@ export const WorkspaceProcessesView: FC<WorkspaceProcessesViewProps> = ({
   };
 
   return (
-    <div className="grid h-full min-h-0 grid-rows-2 divide-y divide-border">
+    <div className="grid h-full min-h-0 grid-rows-2">
       <section className="min-h-0 overflow-auto p-3">
         <h2 className="mb-2 text-xs font-semibold text-muted-foreground">
           Subprocesses

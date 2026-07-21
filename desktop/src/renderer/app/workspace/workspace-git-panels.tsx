@@ -68,6 +68,7 @@ export function WorkspaceGitPanel({
   const patchList = buildWorkspaceToolPatchList(
     data.stagedPatch,
     data.unstagedPatch,
+    data.skippedFiles,
   );
   const selectedFiles = patchList.files.filter(
     (file) => selectedFileKeys[file.key] ?? true,
@@ -172,6 +173,7 @@ export function WorkspaceWindowGitPanel({
   const patchList = buildWorkspaceToolPatchList(
     data.stagedPatch,
     data.unstagedPatch,
+    data.skippedFiles,
   );
   const selectedFiles = patchList.files.filter(
     (file) => selectedFileKeys[file.key] ?? true,

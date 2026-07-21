@@ -90,8 +90,7 @@ export function AssistantComposer({
   const quoteHeader = hasQuote ? (
     <ComposerPrimitive.Quote
       className="
-        flex items-start gap-2 rounded-md border border-border-subtle
-        bg-surface-1 p-2 text-sm
+        flex items-start gap-2 rounded-md bg-surface-1 p-2 text-sm
       "
     >
       <Quote

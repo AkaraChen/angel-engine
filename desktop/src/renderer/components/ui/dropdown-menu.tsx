@@ -12,10 +12,10 @@ type DropdownMenuContentVariant = "default" | "apple" | "native";
 const dropdownMenuContentVariants: Record<DropdownMenuContentVariant, string> =
   {
     apple:
-      "rounded-lg border border-white/[0.55] bg-white/80 bg-clip-padding shadow-[0_18px_45px_-28px_rgba(0,0,0,0.78),0_1px_0_rgba(255,255,255,0.95)_inset] ring-1 ring-black/[0.04] backdrop-blur-2xl backdrop-saturate-150 supports-backdrop-filter:bg-white/[0.72] dark:border-white/[0.12] dark:bg-card/90 dark:shadow-[0_18px_45px_-28px_rgba(0,0,0,0.95),0_1px_0_rgba(255,255,255,0.08)_inset] dark:ring-white/[0.08] dark:supports-backdrop-filter:bg-card/82",
+      "rounded-lg border border-white/[0.55] bg-white/80 bg-clip-padding shadow-[0_18px_45px_-28px_rgba(0,0,0,0.78),0_1px_0_rgba(255,255,255,0.95)_inset] backdrop-blur-2xl backdrop-saturate-150 supports-backdrop-filter:bg-white/[0.72] dark:border-white/[0.12] dark:bg-card/90 dark:shadow-[0_18px_45px_-28px_rgba(0,0,0,0.95),0_1px_0_rgba(255,255,255,0.08)_inset] dark:supports-backdrop-filter:bg-card/82",
     default: "rounded-lg bg-popover shadow-popover ring-1 ring-border-subtle",
     native:
-      "rounded-md border border-black/10 bg-white/90 bg-clip-padding shadow-[0_12px_30px_-24px_rgba(0,0,0,0.72),0_1px_0_rgba(255,255,255,0.82)_inset] ring-1 ring-black/[0.035] backdrop-blur-xl backdrop-saturate-150 dark:border-white/[0.12] dark:bg-card/95 dark:shadow-[0_12px_30px_-24px_rgba(0,0,0,0.9),0_1px_0_rgba(255,255,255,0.06)_inset] dark:ring-white/[0.06]",
+      "rounded-md border border-black/10 bg-white/90 bg-clip-padding shadow-[0_12px_30px_-24px_rgba(0,0,0,0.72),0_1px_0_rgba(255,255,255,0.82)_inset] backdrop-blur-xl backdrop-saturate-150 dark:border-white/[0.12] dark:bg-card/95 dark:shadow-[0_12px_30px_-24px_rgba(0,0,0,0.9),0_1px_0_rgba(255,255,255,0.06)_inset]",
   };
 
 function DropdownMenu({

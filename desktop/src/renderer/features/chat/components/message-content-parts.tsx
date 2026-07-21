@@ -164,11 +164,7 @@ function NullMessagePart(): null {
 
 function JsonBlock({ label, value }: { label: string; value: unknown }) {
   return (
-    <div
-      className="
-        min-w-0 rounded-lg border border-border-subtle bg-surface-1 p-3
-      "
-    >
+    <div className="min-w-0 rounded-lg bg-surface-1 p-3">
       <div
         className="
           mb-1 text-[11px] font-medium tracking-wide text-muted-foreground

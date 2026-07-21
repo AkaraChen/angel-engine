@@ -254,9 +254,8 @@ function ToolPreBlock({
       </div>
       <pre
         className="
-          max-h-48 overflow-auto rounded-md border border-border-subtle
-          bg-surface-1/70 p-2.5 font-mono text-[11px]/4 wrap-break-word
-          whitespace-pre-wrap
+          max-h-48 overflow-auto rounded-md bg-surface-1/70 p-2.5 font-mono
+          text-[11px]/4 wrap-break-word whitespace-pre-wrap
         "
       >
         {value}

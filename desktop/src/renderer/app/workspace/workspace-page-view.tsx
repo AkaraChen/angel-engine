@@ -29,10 +29,7 @@ import {
   WorkspaceSidebarControl,
   WorkspaceSidebarControlPortalProvider,
 } from "@/app/workspace/workspace-sidebar-control";
-import {
-  WorkspaceToolContextBridge,
-  WorkspaceToolSurfaceHostControls,
-} from "@/app/workspace/workspace-tool-host";
+import { WorkspaceToolContextBridge } from "@/app/workspace/workspace-tool-host";
 import { WorktreeDirtyDialog } from "@/app/workspace/worktree-dirty-dialog";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { RenameChatDialog } from "@/features/chat/components/rename-chat-dialog";
@@ -218,7 +215,7 @@ export const WorkspacePageView: FC<WorkspacePageViewProps> = ({
           root={workspaceToolRoot ?? null}
         />
 
-        <SidebarInset className="h-svh max-h-svh overflow-hidden">
+        <SidebarInset className="h-svh min-w-0 max-h-svh overflow-hidden">
           <WorkspaceHeader
             attention={chatAttention}
             breadcrumbProject={
@@ -230,17 +227,13 @@ export const WorkspacePageView: FC<WorkspacePageViewProps> = ({
               (rightSidebarOpen || workspaceToolHost !== "sidebar")
             }
             rightSidebarToggleLabel={workspaceToolsToggleLabel}
+            showBottomBorder={!powerModeActive}
             title={workspaceTitle}
-            workspaceToolActions={
-              canShowRightSidebar && workspaceToolHost === "sidebar" ? (
-                <WorkspaceToolSurfaceHostControls
-                  host="sidebar"
-                  onRequestHost={requestWorkspaceToolHost}
-                />
-              ) : undefined
-            }
             onToggleRightSidebar={
-              canShowRightSidebar ? toggleWorkspaceTools : undefined
+              canShowRightSidebar &&
+              (!rightSidebarOpen || workspaceToolHost !== "sidebar")
+                ? toggleWorkspaceTools
+                : undefined
             }
           />
           {powerModeActive && powerHomeTabContext !== undefined ? (
@@ -359,19 +352,21 @@ export const WorkspacePageView: FC<WorkspacePageViewProps> = ({
                 />
               )}
             </section>
-            {dockedWorkspaceToolContext ? (
-              <WorkspaceRightSidebar
-                active={workspaceToolHost === "sidebar"}
-                api={api}
-                chatId={dockedWorkspaceToolContext.chatId}
-                open={rightSidebarOpen}
-                root={dockedWorkspaceToolContext.root}
-                width={rightSidebarWidth}
-                onWidthChange={setRightSidebarWidth}
-              />
-            ) : null}
           </main>
         </SidebarInset>
+        {dockedWorkspaceToolContext ? (
+          <WorkspaceRightSidebar
+            active={workspaceToolHost === "sidebar"}
+            api={api}
+            chatId={dockedWorkspaceToolContext.chatId}
+            open={rightSidebarOpen}
+            root={dockedWorkspaceToolContext.root}
+            width={rightSidebarWidth}
+            onClose={toggleWorkspaceTools}
+            onRequestHost={requestWorkspaceToolHost}
+            onWidthChange={setRightSidebarWidth}
+          />
+        ) : null}
       </WorkspaceSidebarControlPortalProvider>
     </SidebarProvider>
   );

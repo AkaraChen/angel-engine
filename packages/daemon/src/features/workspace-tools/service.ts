@@ -72,6 +72,7 @@ export async function workspaceGitDiff(
     return {
       isGitRepository: false,
       root,
+      skippedFiles: [],
       stagedPatch: "",
       status: [],
       unstagedPatch: "",
@@ -110,6 +111,7 @@ export async function workspaceGitDiff(
     branch: branch || undefined,
     isGitRepository: true,
     root,
+    skippedFiles: untrackedResult.skippedFiles,
     stagedPatch,
     status,
     unstagedPatch,

@@ -81,10 +81,17 @@ export interface WorkspaceFileWriteResult {
   size: number;
 }
 
+export interface WorkspaceGitSkippedFile {
+  path: string;
+  reason: "binary" | "too-large";
+  size?: number;
+}
+
 export interface WorkspaceGitDiffResult {
   branch?: string;
   isGitRepository: boolean;
   root: string;
+  skippedFiles: WorkspaceGitSkippedFile[];
   stagedPatch: string;
   status: WorkspaceToolGitStatusEntry[];
   unstagedPatch: string;

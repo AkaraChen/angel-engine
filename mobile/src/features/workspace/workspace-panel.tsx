@@ -156,7 +156,7 @@ function WorkspaceStatus({
       )}
 
       {data.warnings.length > 0 ? (
-        <div className="rounded-lg border border-border bg-muted/40 p-2 text-xs text-muted-foreground">
+        <div className="rounded-lg bg-muted/40 p-2 text-xs text-muted-foreground">
           {data.warnings.join(" ")}
         </div>
       ) : null}

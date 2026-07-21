@@ -59,6 +59,22 @@ export function WorkspaceToolPatchFileDiffContent({
   borderTop?: boolean;
   file: WorkspaceToolPatchFile;
 }) {
+  if (file.previewNotice) {
+    return (
+      <div
+        className={cn(
+          `
+            flex min-h-24 items-center justify-center px-4 py-6 text-center
+            text-xs text-muted-foreground select-text
+          `,
+          borderTop ? "border-t border-border-subtle" : "",
+        )}
+      >
+        {file.previewNotice}
+      </div>
+    );
+  }
+
   return (
     <div className={cn(borderTop ? "border-t border-border-subtle" : "")}>
       {file.diffs.map((diff, index) => (

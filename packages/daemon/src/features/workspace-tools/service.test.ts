@@ -1,8 +1,16 @@
-import { access, mkdtemp, readFile, rm, symlink } from "node:fs/promises";
+import {
+  access,
+  mkdtemp,
+  readFile,
+  rm,
+  symlink,
+  writeFile,
+} from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 
+import { buildUntrackedPatch } from "./git";
 import { workspaceWriteFile } from "./service";
 
 const tempRoots: string[] = [];
@@ -13,17 +21,17 @@ async function makeTempDir() {
   return directory;
 }
 
-describe("workspaceWriteFile", () => {
-  afterEach(async () => {
-    await Promise.all(
-      tempRoots
-        .splice(0)
-        .map(async (directory) =>
-          rm(directory, { force: true, recursive: true }),
-        ),
-    );
-  });
+afterEach(async () => {
+  await Promise.all(
+    tempRoots
+      .splice(0)
+      .map(async (directory) =>
+        rm(directory, { force: true, recursive: true }),
+      ),
+  );
+});
 
+describe("workspaceWriteFile", () => {
   it("writes a new file inside the workspace", async () => {
     const workspace = await makeTempDir();
 
@@ -46,5 +54,31 @@ describe("workspaceWriteFile", () => {
       "Workspace file path must stay inside the workspace root.",
     );
     await expect(access(escapedPath)).rejects.toThrow();
+  });
+});
+
+describe("buildUntrackedPatch", () => {
+  it("returns binary files as preview-specific skipped files", async () => {
+    const workspace = await makeTempDir();
+    await writeFile(path.join(workspace, "image.png"), Buffer.from([0, 1, 2]));
+
+    const result = await buildUntrackedPatch(workspace, [
+      {
+        path: "image.png",
+        staged: false,
+        status: "untracked",
+        unstaged: true,
+      },
+    ]);
+
+    expect(result.patch).toBe("");
+    expect(result.warnings).toEqual([]);
+    expect(result.skippedFiles).toEqual([
+      {
+        path: "image.png",
+        reason: "binary",
+        size: 3,
+      },
+    ]);
   });
 });
