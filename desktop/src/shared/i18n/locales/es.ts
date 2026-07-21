@@ -10,6 +10,7 @@ export const es = {
       allowSession: "Permitir sesión",
       answered: "Respondido",
       attachment: "Adjunto",
+      backendUnavailable: "Backend no disponible",
       build: "Ejecutar",
       bypassPermission: "Omitir permiso",
       cancel: "Cancelar",

@@ -10,6 +10,7 @@ export const ja = {
       allowSession: "セッションで許可",
       answered: "回答済み",
       attachment: "添付ファイル",
+      backendUnavailable: "バックエンドを利用できません",
       build: "実行",
       bypassPermission: "権限をバイパス",
       cancel: "キャンセル",

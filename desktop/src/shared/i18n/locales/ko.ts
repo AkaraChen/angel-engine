@@ -10,6 +10,7 @@ export const ko = {
       allowSession: "세션 허용",
       answered: "응답됨",
       attachment: "첨부 파일",
+      backendUnavailable: "백엔드를 사용할 수 없음",
       build: "실행",
       bypassPermission: "권한 건너뛰기",
       cancel: "취소",

@@ -3,6 +3,7 @@ import type { DaemonConnection } from "@shared/daemon";
 import type { PropsWithChildren } from "react";
 
 import { createContext, useContext, useSyncExternalStore } from "react";
+import { useTranslation } from "react-i18next";
 import { queryClient } from "@/app/query-client";
 import { setDaemonTransport } from "./daemon-transport";
 
@@ -58,7 +59,7 @@ function publish(next: DaemonSnapshot) {
 function showOutageNotice() {
   outageTimer = undefined;
   if (snapshot.connection.status === "available") return;
-  publish({ ...snapshot, outageNoticeVisible: true });
+  publish({ ...snapshot, client: null, outageNoticeVisible: true });
 }
 
 function applyConnection(connection: DaemonConnection) {
@@ -68,15 +69,17 @@ function applyConnection(connection: DaemonConnection) {
       outageTimer = undefined;
     }
     const previous = snapshot.client?.info;
+    const outageWasVisible = snapshot.outageNoticeVisible;
     publish({
       client: createClient(connection.info),
       connection,
       outageNoticeVisible: false,
     });
     if (
-      previous !== undefined &&
-      (previous.port !== connection.info.port ||
-        previous.token !== connection.info.token)
+      outageWasVisible ||
+      (previous !== undefined &&
+        (previous.port !== connection.info.port ||
+          previous.token !== connection.info.token))
     ) {
       // A restarted daemon is a fresh process on a new port/token — refetch
       // everything that failed or went stale while it was down.
@@ -108,6 +111,7 @@ function getSnapshot() {
 }
 
 export function DaemonProvider({ children }: PropsWithChildren) {
+  const { t } = useTranslation();
   const { client, connection, outageNoticeVisible } = useSyncExternalStore(
     subscribe,
     getSnapshot,
@@ -118,14 +122,30 @@ export function DaemonProvider({ children }: PropsWithChildren) {
       {connection.status === "unavailable" && outageNoticeVisible ? (
         <div
           className="
-            fixed inset-x-0 top-0 z-100 bg-destructive px-3 py-1 text-center
-            text-xs text-destructive-foreground
+            fixed inset-0 z-100 flex items-center justify-center bg-background
+            p-6
           "
+          role="alert"
         >
-          Backend unavailable: {connection.error}
+          <div
+            className="
+              w-full max-w-lg rounded-lg border border-status-danger-border
+              bg-status-danger-soft px-5 py-4 text-foreground shadow-sm
+            "
+          >
+            <div className="font-medium">{t("common.backendUnavailable")}</div>
+            <div
+              className="
+                mt-1 text-[13px]/5 whitespace-pre-wrap text-muted-foreground
+              "
+            >
+              {connection.error}
+            </div>
+          </div>
         </div>
-      ) : null}
-      {client === null ? null : children}
+      ) : client === null ? null : (
+        children
+      )}
     </DaemonClientContext.Provider>
   );
 }

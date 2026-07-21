@@ -10,6 +10,7 @@ export const zhTW = {
       allowSession: "本工作階段允許",
       answered: "已回答",
       attachment: "附件",
+      backendUnavailable: "後端無法使用",
       build: "執行",
       bypassPermission: "略過權限",
       cancel: "取消",

@@ -10,6 +10,7 @@ export const de = {
       allowSession: "Für Sitzung erlauben",
       answered: "Beantwortet",
       attachment: "Anhang",
+      backendUnavailable: "Backend nicht verfügbar",
       build: "Ausführen",
       bypassPermission: "Berechtigung umgehen",
       cancel: "Abbrechen",

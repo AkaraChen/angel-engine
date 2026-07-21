@@ -29,10 +29,16 @@ import {
   writeMobileHostingConfig,
   writeMobileHostingRuntimeMarker,
 } from "./mobile-hosting";
+import { daemonStartupError } from "./startup-error";
 
 const HANDSHAKE_TIMEOUT_MS = 10_000;
 const HEALTH_CHECK_INTERVAL_MS = 2_000;
 const RESPAWN_DELAYS_MS = [250, 1_000, 3_000, 10_000] as const;
+const MAX_DAEMON_STDERR_LENGTH = 8_192;
+
+interface DaemonDiagnostics {
+  stderr: string;
+}
 
 let child: UtilityProcess | undefined;
 let connection: DaemonConnection = {
@@ -299,10 +305,10 @@ async function spawnDaemon() {
     stdio: "pipe",
   });
   child = nextChild;
-  pipeDaemonLogs(nextChild);
+  const diagnostics = pipeDaemonLogs(nextChild);
 
   try {
-    const info = await waitForHandshake(nextChild);
+    const info = await waitForHandshake(nextChild, diagnostics);
     if (child !== nextChild) return;
     respawnAttempt = 0;
     writeMobileHostingRuntimeMarker(launchConfig);
@@ -366,7 +372,10 @@ async function runHealthCheck() {
   }
 }
 
-async function waitForHandshake(process: UtilityProcess) {
+async function waitForHandshake(
+  process: UtilityProcess,
+  diagnostics: DaemonDiagnostics,
+) {
   return new Promise<DaemonInfo>((resolve, reject) => {
     let timeout: NodeJS.Timeout;
     let onExit: (code: number) => void;
@@ -378,7 +387,7 @@ async function waitForHandshake(process: UtilityProcess) {
     };
     onExit = (code) => {
       cleanup();
-      reject(new Error(`Daemon exited before handshake with code ${code}.`));
+      reject(new Error(daemonStartupError(diagnostics.stderr, code)));
     };
     onMessage = (message) => {
       try {
@@ -456,13 +465,19 @@ async function restartDaemon() {
   await spawnDaemon();
 }
 
-function pipeDaemonLogs(daemonProcess: UtilityProcess) {
+function pipeDaemonLogs(daemonProcess: UtilityProcess): DaemonDiagnostics {
+  const diagnostics: DaemonDiagnostics = { stderr: "" };
   daemonProcess.stdout?.on("data", (chunk: Buffer) =>
     console.warn(`[daemon] ${chunk.toString().trimEnd()}`),
   );
-  daemonProcess.stderr?.on("data", (chunk: Buffer) =>
-    console.error(`[daemon] ${chunk.toString().trimEnd()}`),
-  );
+  daemonProcess.stderr?.on("data", (chunk: Buffer) => {
+    const message = chunk.toString();
+    diagnostics.stderr = `${diagnostics.stderr}${message}`.slice(
+      -MAX_DAEMON_STDERR_LENGTH,
+    );
+    console.error(`[daemon] ${message.trimEnd()}`);
+  });
+  return diagnostics;
 }
 
 function daemonInfoPath() {

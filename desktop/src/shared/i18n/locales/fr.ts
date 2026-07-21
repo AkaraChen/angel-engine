@@ -10,6 +10,7 @@ export const fr = {
       allowSession: "Autoriser pour la session",
       answered: "Répondu",
       attachment: "Pièce jointe",
+      backendUnavailable: "Backend indisponible",
       build: "Exécuter",
       bypassPermission: "Contourner l’autorisation",
       cancel: "Annuler",

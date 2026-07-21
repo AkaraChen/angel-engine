@@ -10,6 +10,7 @@ export const en = {
       allowSession: "Allow session",
       answered: "Answered",
       attachment: "Attachment",
+      backendUnavailable: "Backend unavailable",
       build: "Build",
       bypassPermission: "Bypass permission",
       cancel: "Cancel",

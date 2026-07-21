@@ -10,6 +10,7 @@ export const zhCN = {
       allowSession: "本会话允许",
       answered: "已回答",
       attachment: "附件",
+      backendUnavailable: "后端不可用",
       build: "执行",
       bypassPermission: "绕过权限",
       cancel: "取消",

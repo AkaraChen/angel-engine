@@ -3,6 +3,7 @@ import started from "electron-squirrel-startup";
 import fixPath from "fix-path";
 
 import { beforeQuit, bootstrap } from "./bootstrap";
+import { developmentUserDataPath } from "./platform/user-data";
 import { checkForUpdatesInBackground } from "./updater";
 import { createMainWindow } from "./windows/main-window";
 
@@ -13,6 +14,10 @@ if (started) {
 
 if (process.platform === "win32") {
   app.setAppUserModelId(process.execPath);
+}
+
+if (!app.isPackaged) {
+  app.setPath("userData", developmentUserDataPath(app.getPath("userData")));
 }
 
 fixPath();

@@ -7,6 +7,7 @@ export interface LocaleResourceTranslationCommon {
   allowSession: string;
   answered: string;
   attachment: string;
+  backendUnavailable: string;
   build: string;
   bypassPermission: string;
   cancel: string;
