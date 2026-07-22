@@ -6,7 +6,6 @@ import type {
   ChatRuntimeConfig,
   ChatSendInput,
   ChatSendResult,
-  ChatStreamController,
 } from "@angel-engine/daemon-api/chat";
 import type {
   AppendMessage,
@@ -16,19 +15,16 @@ import type {
 
 export type EngineMessage = ThreadMessage;
 
+/**
+ * Serializable metadata of an in-flight run. Effectful handles (abort
+ * controller, stream controller, ...) live in `chat-run-handles.ts`, keyed by
+ * `runId`.
+ */
 export interface ActiveRun {
-  abortController: AbortController;
   assistantMessageId: string;
-  autoApprovedPermissionIds: Set<string>;
-  cancelled: boolean;
   initialSlotKey: string;
-  resolveElicitationLocally?: (
-    elicitationId: string,
-    response: ChatElicitationResponse,
-  ) => void;
   runId: string;
   startedAt: number;
-  streamController?: ChatStreamController;
 }
 
 interface BaseChatRunSlot {
@@ -44,21 +40,31 @@ interface BaseChatRunSlot {
 type IdleChatRunSlot = BaseChatRunSlot & {
   activeRun?: undefined;
   status: "idle";
+  streamingAssistant?: undefined;
 };
 
 type StreamingChatRunSlot = BaseChatRunSlot & {
   activeRun: ActiveRun;
   status: "streaming";
+  /**
+   * The in-flight assistant message. Kept out of `messages` so stream deltas
+   * replace one field while the transcript array stays reference-stable; it
+   * merges into `messages` when the run finishes or cancels.
+   */
+  streamingAssistant: EngineMessage;
 };
 
 export type ChatRunSlot = IdleChatRunSlot | StreamingChatRunSlot;
 
+/**
+ * Consumer-facing attention view. `completed` is event-marked; `needsInput`
+ * is derived from slot content (an open elicitation in a streaming slot), so
+ * it has a single source of truth and clears itself when input arrives.
+ */
 export interface ChatAttentionState {
   completed: boolean;
   needsInput: boolean;
 }
-
-export type ChatAttentionKind = keyof ChatAttentionState;
 
 export interface AssistantAccumulator {
   chunkCount: number;
@@ -107,8 +113,13 @@ export interface StartRunInput {
 
 export interface ChatRunStore {
   activeChatId?: string;
-  aliases: Record<string, string>;
-  attentions: Record<string, ChatAttentionState>;
+  /** Chats (excluding the active one) whose background run completed. */
+  completedChats: Record<string, true>;
+  /**
+   * Single-hop redirects from a retired draft slot key to the chat id its run
+   * moved to. A slot re-keys at most once (draft -> chat id), so no chains.
+   */
+  draftRedirects: Record<string, string>;
   cancelRun: (slotKey: string) => void;
   dropAllRuns: () => void;
   dropRun: (slotKey: string) => void;
@@ -135,12 +146,12 @@ export interface ChatRunStore {
 
 export type ChatRunContext = Pick<
   ChatRunStore,
-  "activeChatId" | "aliases" | "attentions" | "slots"
+  "activeChatId" | "completedChats" | "draftRedirects" | "slots"
 >;
 
 export type ChatRunEvent =
   | { chatId?: string; type: "activeChat.changed" }
-  | { chatId: string; kind: ChatAttentionKind; type: "attention.marked" }
+  | { chatId: string; type: "chat.completed" }
   | {
       input: InitializeSlotInput;
       messages: EngineMessage[];
@@ -174,8 +185,15 @@ export type ChatRunEvent =
       slotKey: string;
       type: "assistant.replaced";
     }
-  | { chat: Chat; runId: string; slotKey: string; type: "run.movedToChat" }
   | {
+      chat: Chat;
+      initialSlotKey: string;
+      runId: string;
+      slotKey: string;
+      type: "run.movedToChat";
+    }
+  | {
+      assistantMessage: EngineMessage;
       result?: ChatSendResult;
       runId: string;
       slotKey: string;

@@ -15,11 +15,19 @@ import {
   getMessageText,
   historyMessageToEngineMessage,
 } from "./chat-run-history";
+import {
+  cancelRunHandles,
+  createRunHandles,
+  disposeRunHandles,
+  getRunHandles,
+} from "./chat-run-handles";
 import { normalizeElicitationResponse } from "./chat-run-parts";
 import {
+  chatAttentionForChat,
   isPermissionBypassEnabledForSlot,
   resolveSlotKey,
   selectSlot,
+  slotMessagesWithStreaming,
   summarizeChatAttention,
 } from "./chat-run-reducer";
 import {
@@ -31,7 +39,7 @@ import {
   subscribeChatRunActor,
 } from "./chat-run-registry";
 import { consumeRunStream } from "./chat-run-stream";
-import { EMPTY_CHAT_ATTENTION, EMPTY_MESSAGES } from "./chat-run-types";
+import { EMPTY_MESSAGES } from "./chat-run-types";
 
 export {
   createAssistantMessage,
@@ -50,29 +58,24 @@ let cachedChatRunStore: ChatRunStore | undefined;
 
 const chatRunActions: Omit<ChatRunStore, keyof ChatRunContext> = {
   cancelRun(slotKey) {
-    const state = getChatRunContext();
-    const slot = selectSlot(state, slotKey);
-    const activeRun = slot?.activeRun;
-    if (!activeRun) return;
+    const slot = selectSlot(getChatRunContext(), slotKey);
+    if (!slot?.activeRun) return;
 
-    activeRun.cancelled = true;
-    activeRun.abortController.abort();
+    // The slot machine's `streaming` exit action aborts the stream handles.
     sendChatRunEvent({ slotKey, type: "run.cancelled" });
   },
   dropAllRuns() {
     for (const slot of Object.values(getChatRunContext().slots)) {
       const activeRun = slot.activeRun;
       if (!activeRun) continue;
-      activeRun.cancelled = true;
-      activeRun.abortController.abort();
+      cancelRunHandles(activeRun.runId);
     }
     sendChatRunEvent({ type: "slots.dropped" });
   },
   dropRun(slotKey) {
     const slot = selectSlot(getChatRunContext(), slotKey);
     if (slot?.activeRun) {
-      slot.activeRun.cancelled = true;
-      slot.activeRun.abortController.abort();
+      cancelRunHandles(slot.activeRun.runId);
     }
 
     sendChatRunEvent({ slotKey, type: "slot.dropped" });
@@ -101,8 +104,9 @@ const chatRunActions: Omit<ChatRunStore, keyof ChatRunContext> = {
       toolCallId,
       elicitationId,
     );
-    activeRun?.resolveElicitationLocally?.(toolCallId, response);
-    void activeRun?.streamController?.resolveElicitation({
+    const handles = activeRun ? getRunHandles(activeRun.runId) : undefined;
+    handles?.resolveElicitationLocally?.(toolCallId, response);
+    void handles?.streamController?.resolveElicitation({
       elicitationId: elicitationId ?? toolCallId,
       response,
     });
@@ -153,14 +157,12 @@ const chatRunActions: Omit<ChatRunStore, keyof ChatRunContext> = {
     const runId = createId("run");
     const startedAt = performance.now();
     const activeRun: ActiveRun = {
-      abortController: new AbortController(),
       assistantMessageId,
-      autoApprovedPermissionIds: new Set(),
-      cancelled: false,
       initialSlotKey: slotKey,
       runId,
       startedAt,
     };
+    const handles = createRunHandles(runId);
     const accumulator: AssistantAccumulator = {
       chunkCount: 0,
       parts: [],
@@ -178,8 +180,8 @@ const chatRunActions: Omit<ChatRunStore, keyof ChatRunContext> = {
     const resolvedKey = resolveSlotKey(state, slotKey);
     const existing = state.slots[resolvedKey];
     if (existing?.activeRun) {
-      existing.activeRun.cancelled = true;
-      existing.activeRun.abortController.abort();
+      cancelRunHandles(existing.activeRun.runId);
+      disposeRunHandles(existing.activeRun.runId);
     }
     runSlotKey = resolvedKey;
     sendChatRunEvent({
@@ -193,6 +195,7 @@ const chatRunActions: Omit<ChatRunStore, keyof ChatRunContext> = {
     const completion = await consumeRunStream({
       activeRun,
       accumulator,
+      handles,
       input: {
         ...input,
         attachments,
@@ -205,7 +208,7 @@ const chatRunActions: Omit<ChatRunStore, keyof ChatRunContext> = {
     const historyMessages = engineMessagesToHistoryMessages(finalMessages);
 
     try {
-      if (!activeRun.cancelled) {
+      if (!handles.cancelled) {
         if (completion.result) {
           callbacks?.onChatUpdated?.(
             completion.result.chat,
@@ -220,7 +223,13 @@ const chatRunActions: Omit<ChatRunStore, keyof ChatRunContext> = {
         }
       }
     } finally {
-      finishRun(completion.slotKey, runId, completion.result);
+      finishRun(
+        completion.slotKey,
+        runId,
+        completion.assistantMessage,
+        completion.result,
+      );
+      disposeRunHandles(runId);
     }
   },
 };
@@ -234,9 +243,10 @@ export function useChatRunStore<T>(selector: (state: ChatRunStore) => T): T {
 }
 
 export function useChatRunMessages(slotKey: string) {
-  return useChatRunStore(
-    (state) => selectSlot(state, slotKey)?.messages ?? EMPTY_MESSAGES,
-  );
+  return useChatRunStore((state) => {
+    const slot = selectSlot(state, slotKey);
+    return slot ? slotMessagesWithStreaming(slot) : EMPTY_MESSAGES;
+  });
 }
 
 export function useChatRunIsRunning(slotKey?: string) {
@@ -254,9 +264,7 @@ export function useChatRunConfig(slotKey?: string) {
 }
 
 export function useChatAttention(chatId: string) {
-  return useChatRunStore(
-    (state) => state.attentions[chatId] ?? EMPTY_CHAT_ATTENTION,
-  );
+  return useChatRunStore((state) => chatAttentionForChat(state, chatId));
 }
 
 export function useChatAttentionSummary() {

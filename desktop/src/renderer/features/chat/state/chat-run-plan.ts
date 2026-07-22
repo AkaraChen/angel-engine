@@ -54,6 +54,11 @@ export function normalizeEnginePlanMessages(
   });
 }
 
+/** Whether a message carries any plan part (drives combined-view normalization). */
+export function engineMessageHasPlanParts(message: EngineMessage): boolean {
+  return message.content.some((part) => isEnginePlanPart(part));
+}
+
 function enginePlanPartLocations(messages: EngineMessage[]) {
   const locations: Array<{
     kind: string;

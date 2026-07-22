@@ -101,7 +101,7 @@ export const zhCN = {
       loadingChats: "正在加载聊天",
       loadingProjects: "正在加载项目",
       modeChat: "聊天",
-      modePower: "Mega",
+      modePower: "强力",
       modeSwitcher: "工作区模式",
       modeWork: "工作",
       needsInput: "需要输入",

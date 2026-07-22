@@ -6,6 +6,7 @@ import type {
   ChatSendInput,
   ChatToolAction,
 } from "@angel-engine/daemon-api/chat";
+import type { RunHandles } from "./chat-run-handles";
 import type {
   ActiveRun,
   AssistantAccumulator,
@@ -37,7 +38,7 @@ import {
 import { selectSlot } from "./chat-run-reducer";
 import {
   getChatRunContext,
-  markChatAttention,
+  markChatCompleted,
   moveActiveRunToChat,
   replaceAssistantMessage,
 } from "./chat-run-registry";
@@ -49,12 +50,14 @@ const ALLOW_PERMISSION_RESPONSE: ChatElicitationResponse = { type: "allow" };
 export async function consumeRunStream({
   activeRun,
   accumulator,
+  handles,
   input,
   onChatCreated,
   slotKey,
 }: {
   activeRun: ActiveRun;
   accumulator: AssistantAccumulator;
+  handles: RunHandles;
   input: ChatSendInput;
   onChatCreated?: (chat: Chat) => void;
   slotKey: string;
@@ -105,7 +108,7 @@ export async function consumeRunStream({
     await yieldToRendererTask();
     return true;
   };
-  activeRun.resolveElicitationLocally = (elicitationId, response) => {
+  handles.resolveElicitationLocally = (elicitationId, response) => {
     markDirty(
       resolveElicitationPartLocally(accumulator.parts, elicitationId, response),
     );
@@ -115,12 +118,12 @@ export async function consumeRunStream({
   try {
     for await (const event of streamChatEvents(
       input,
-      activeRun.abortController.signal,
+      handles.abortController.signal,
       (controller) => {
-        activeRun.streamController = controller;
+        handles.streamController = controller;
       },
     )) {
-      if (activeRun.cancelled || event.type === "done") break;
+      if (handles.cancelled || event.type === "done") break;
 
       if (event.type === "chat") {
         currentSlotKey = moveActiveRunToChat(
@@ -165,7 +168,7 @@ export async function consumeRunStream({
         } else {
           markDirty();
         }
-        markChatAttention(event.result.chatId, "completed");
+        markChatCompleted(event.result.chatId);
         if (!(await flush())) break;
         continue;
       }
@@ -176,29 +179,20 @@ export async function consumeRunStream({
       if (event.type === "elicitation") {
         markDirty(upsertElicitationPart(accumulator.parts, event.elicitation));
         autoApprovedPermission = autoApprovePermissionElicitation({
-          activeRun,
           elicitation: event.elicitation,
+          handles,
           parts: accumulator.parts,
           slotKey: currentSlotKey,
         });
-        if (!autoApprovedPermission && event.elicitation.phase === "open") {
-          markChatAttention(currentSlotKey, "needsInput");
-        }
       } else if (event.type === "tool") {
         markDirty(upsertToolActionPart(accumulator.parts, event.action));
         shouldFlushToolState = isTerminalChatToolPhase(event.action.phase);
         autoApprovedPermission = autoApprovePermissionToolAction({
           action: event.action,
-          activeRun,
+          handles,
           parts: accumulator.parts,
           slotKey: currentSlotKey,
         });
-        if (
-          !autoApprovedPermission &&
-          event.action.phase === "awaitingDecision"
-        ) {
-          markChatAttention(currentSlotKey, "needsInput");
-        }
       } else if (event.type === "toolDelta") {
         const delta = appendToolActionDeltaPart(
           accumulator.parts,
@@ -233,13 +227,13 @@ export async function consumeRunStream({
       }
     }
 
-    accumulator.status = activeRun.cancelled
+    accumulator.status = handles.cancelled
       ? { reason: "cancelled", type: "incomplete" }
       : { reason: "stop", type: "complete" };
     markDirty();
     await flush();
   } catch (error) {
-    if (activeRun.abortController.signal.aborted) {
+    if (handles.abortController.signal.aborted) {
       accumulator.status = { reason: "cancelled", type: "incomplete" };
       markDirty();
       await flush();
@@ -278,20 +272,20 @@ export async function consumeRunStream({
 }
 
 function autoApprovePermissionElicitation({
-  activeRun,
   elicitation,
+  handles,
   parts,
   slotKey,
 }: {
-  activeRun: ActiveRun;
   elicitation: ChatElicitation;
+  handles: RunHandles;
   parts: ChatHistoryMessagePart[];
   slotKey: string;
 }) {
   if (!isPermissionElicitation(elicitation)) return false;
   if (isPlanApprovalElicitation(elicitation, parts)) return false;
   const response = shouldAutoApprovePermission(
-    activeRun,
+    handles,
     slotKey,
     elicitation.id,
   );
@@ -300,18 +294,18 @@ function autoApprovePermissionElicitation({
   }
 
   resolveElicitationPartLocally(parts, elicitation.id, response);
-  sendAutoPermissionApproval(activeRun, elicitation.id, response);
+  sendAutoPermissionApproval(handles, elicitation.id, response);
   return true;
 }
 
 function autoApprovePermissionToolAction({
   action,
-  activeRun,
+  handles,
   parts,
   slotKey,
 }: {
   action: ChatToolAction;
-  activeRun: ActiveRun;
+  handles: RunHandles;
   parts: ChatHistoryMessagePart[];
   slotKey: string;
 }) {
@@ -320,40 +314,36 @@ function autoApprovePermissionToolAction({
   const elicitation = chatElicitationFromAction(action);
   if (!isPermissionElicitation(elicitation)) return false;
   const elicitationId = action.elicitationId ?? action.id;
-  const response = shouldAutoApprovePermission(
-    activeRun,
-    slotKey,
-    elicitationId,
-  );
+  const response = shouldAutoApprovePermission(handles, slotKey, elicitationId);
   if (!response) {
     return false;
   }
 
   markToolActionPermissionApprovedLocally(parts, action.id);
-  sendAutoPermissionApproval(activeRun, elicitationId, response);
+  sendAutoPermissionApproval(handles, elicitationId, response);
   return true;
 }
 
 function shouldAutoApprovePermission(
-  activeRun: ActiveRun,
+  handles: RunHandles,
   slotKey: string,
   elicitationId: string,
 ): ChatElicitationResponse | undefined {
-  if (!activeRun.streamController) return undefined;
+  if (!handles.streamController) return undefined;
   const slot = selectSlot(getChatRunContext(), slotKey);
   if (!slot?.permissionBypassEnabled) return undefined;
-  if (activeRun.autoApprovedPermissionIds.has(elicitationId)) return undefined;
+  if (handles.autoApprovedPermissionIds.has(elicitationId)) return undefined;
 
-  activeRun.autoApprovedPermissionIds.add(elicitationId);
+  handles.autoApprovedPermissionIds.add(elicitationId);
   return slot.permissionBypassResponse ?? ALLOW_PERMISSION_RESPONSE;
 }
 
 function sendAutoPermissionApproval(
-  activeRun: ActiveRun,
+  handles: RunHandles,
   elicitationId: string,
   response: ChatElicitationResponse,
 ) {
-  void activeRun.streamController
+  void handles.streamController
     ?.resolveElicitation({
       elicitationId,
       response,
