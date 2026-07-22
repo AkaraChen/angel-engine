@@ -44,45 +44,52 @@ export function ChatTabBar({
   return (
     <div
       className="
-        flex h-10 shrink-0 items-center gap-1.5 overflow-x-auto
-        bg-background/60 px-2.5
+        flex h-10 shrink-0 items-center bg-background/60 px-2.5
       "
-      data-slot="chat-tab-bar"
-      role="tablist"
     >
-      {historyTabLabel && onOpenHistory ? (
-        <HistoryTab
-          isActive={historyTabActive}
-          label={historyTabLabel}
-          onOpen={onOpenHistory}
-        />
-      ) : null}
-      {chats.map((chat) => (
-        <ChatTab
-          chat={chat}
-          isActive={
-            !historyTabActive && !draftTabActive && chat.id === activeChatId
-          }
-          key={chat.id}
-          onClose={() => void onCloseChat(chat)}
-          onOpen={() => void onOpenChat(chat)}
-        />
-      ))}
-      {draftTabActive ? (
-        <DraftTab onClose={onCloseDraftTab} />
-      ) : (
-        <Button
-          aria-label={t("workspace.newChat")}
-          className="size-7 shrink-0 text-muted-foreground"
-          onClick={() => void onNewChat()}
-          size="icon-sm"
-          title={t("workspace.newChat")}
-          type="button"
-          variant="ghost"
-        >
-          <Plus className="size-4" />
-        </Button>
-      )}
+      <div
+        className="
+          flex min-w-0 items-center gap-px overflow-x-auto rounded-full
+          bg-surface-1 p-0.5
+          [&::-webkit-scrollbar]:hidden
+        "
+        data-slot="chat-tab-bar"
+        role="tablist"
+      >
+        {historyTabLabel && onOpenHistory ? (
+          <HistoryTab
+            isActive={historyTabActive}
+            label={historyTabLabel}
+            onOpen={onOpenHistory}
+          />
+        ) : null}
+        {chats.map((chat) => (
+          <ChatTab
+            chat={chat}
+            isActive={
+              !historyTabActive && !draftTabActive && chat.id === activeChatId
+            }
+            key={chat.id}
+            onClose={() => void onCloseChat(chat)}
+            onOpen={() => void onOpenChat(chat)}
+          />
+        ))}
+        {draftTabActive ? (
+          <DraftTab onClose={onCloseDraftTab} />
+        ) : (
+          <Button
+            aria-label={t("workspace.newChat")}
+            className="size-7 shrink-0 rounded-full text-muted-foreground"
+            onClick={() => void onNewChat()}
+            size="icon-sm"
+            title={t("workspace.newChat")}
+            type="button"
+            variant="ghost"
+          >
+            <Plus className="size-4" />
+          </Button>
+        )}
+      </div>
     </div>
   );
 }
@@ -101,14 +108,15 @@ function HistoryTab({
       aria-selected={isActive}
       className={cn(
         `
-          flex h-8 max-w-60 min-w-0 shrink-0 items-center gap-2 rounded-md px-3
-          text-sm transition-colors
+          flex h-7 max-w-60 min-w-0 shrink-0 items-center gap-2 rounded-full
+          px-3 text-sm transition-colors
         `,
         isActive
-          ? "bg-muted text-foreground"
+          ? "bg-card text-foreground shadow-xs"
           : `
             text-muted-foreground
-            hover:bg-muted/55 hover:text-foreground
+            hover:bg-overlay-hover hover:text-foreground
+            active:bg-overlay-active
           `,
       )}
       onClick={() => void onOpen()}
@@ -129,8 +137,8 @@ function DraftTab({ onClose }: { onClose?: () => MaybeAsync }): ReactElement {
     <div
       aria-selected
       className="
-        group/chat-tab flex h-8 max-w-60 min-w-0 shrink-0 items-center gap-2
-        rounded-md bg-muted pr-1.5 pl-3 text-sm text-foreground
+        group/chat-tab flex h-7 max-w-60 min-w-0 shrink-0 items-center gap-2
+        rounded-full bg-card pr-1 pl-3 text-sm text-foreground shadow-xs
       "
       role="tab"
     >
@@ -173,14 +181,15 @@ function ChatTab({
     <div
       className={cn(
         `
-          group/chat-tab flex h-8 max-w-60 min-w-0 shrink-0 items-center gap-2
-          rounded-md pr-1.5 pl-3 text-sm transition-colors
+          group/chat-tab flex h-7 max-w-60 min-w-0 shrink-0 items-center gap-2
+          rounded-full pr-1 pl-3 text-sm transition-colors
         `,
         isActive
-          ? "bg-muted text-foreground"
+          ? "bg-card text-foreground shadow-xs"
           : `
             text-muted-foreground
-            hover:bg-muted/55 hover:text-foreground
+            hover:bg-overlay-hover hover:text-foreground
+            active:bg-overlay-active
           `,
       )}
       role="tab"
