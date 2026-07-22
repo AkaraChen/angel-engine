@@ -257,6 +257,9 @@ export interface LocaleResourceTranslationUpdates {
 
 export interface LocaleResourceTranslationThreadEmpty {
   description: string;
+  suggestionExplore: string;
+  suggestionFix: string;
+  suggestionTests: string;
   title: string;
   titleWithProject: string;
 }

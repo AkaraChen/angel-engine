@@ -241,7 +241,7 @@ export const en = {
       downloadedDetail:
         "The update has been downloaded and is ready to install.",
       restartAndInstall: "Restart and Install",
-      title: "Angel Engine Updates",
+      title: "<brand>Angel Engine</brand> Updates",
       unsupportedPlatform: "Updates unavailable",
       unsupportedPlatformDetail:
         "Automatic updates are supported on macOS and Windows.",
@@ -252,6 +252,9 @@ export const en = {
       empty: {
         description:
           "Point to a file, bug, behavior, or workspace slice to patch or test.",
+        suggestionExplore: "Explain how this codebase is structured",
+        suggestionFix: "Track down a bug from an error message",
+        suggestionTests: "Add tests for a recent change",
         title: "What would you like Angel Engine to do?",
         titleWithProject:
           "What would you like Angel Engine to do in <project>{{projectName}}</project>?",

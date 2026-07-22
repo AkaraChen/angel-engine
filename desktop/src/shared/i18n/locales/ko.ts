@@ -241,7 +241,7 @@ export const ko = {
       downloaded: "업데이트 준비됨",
       downloadedDetail: "업데이트가 다운로드되었으며 설치할 준비가 되었습니다.",
       restartAndInstall: "다시 시작하여 설치",
-      title: "Angel Engine 업데이트",
+      title: "<brand>Angel Engine</brand> 업데이트",
       unsupportedPlatform: "업데이트를 사용할 수 없음",
       unsupportedPlatformDetail:
         "자동 업데이트는 macOS와 Windows에서 지원됩니다.",
@@ -252,6 +252,9 @@ export const ko = {
       empty: {
         description:
           "수정하거나 테스트할 파일, 버그, 동작 또는 워크스페이스 범위를 지정하세요.",
+        suggestionExplore: "이 코드베이스의 구조를 설명해 줘",
+        suggestionFix: "오류 메시지로 버그를 찾아 줘",
+        suggestionTests: "최근 변경에 테스트를 추가해 줘",
         title: "Angel Engine이 무엇을 하길 원하시나요?",
         titleWithProject:
           "<project>{{projectName}}</project>에서 Angel Engine이 무엇을 하길 원하시나요?",

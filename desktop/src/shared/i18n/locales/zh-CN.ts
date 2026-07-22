@@ -233,7 +233,7 @@ export const zhCN = {
       downloaded: "更新已就绪",
       downloadedDetail: "更新已下载完成，可以重启安装。",
       restartAndInstall: "重启并安装",
-      title: "Angel Engine 更新",
+      title: "<brand>Angel Engine</brand> 更新",
       unsupportedPlatform: "更新不可用",
       unsupportedPlatformDetail: "自动更新目前支持 macOS 和 Windows。",
       upToDate: "Angel Engine 已是最新版本",
@@ -242,6 +242,9 @@ export const zhCN = {
     thread: {
       empty: {
         description: "指定文件、缺陷、行为或工作区范围，让它修复或测试。",
+        suggestionExplore: "讲解这个代码库的结构",
+        suggestionFix: "根据报错信息定位一个缺陷",
+        suggestionTests: "为最近的改动补充测试",
         title: "希望 Angel Engine 做些什么？",
         titleWithProject:
           "希望 Angel Engine 在 <project>{{projectName}}</project> 做些什么？",

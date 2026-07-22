@@ -242,7 +242,7 @@ export const de = {
       downloadedDetail:
         "Das Update wurde heruntergeladen und ist bereit zur Installation.",
       restartAndInstall: "Neu starten und installieren",
-      title: "Angel Engine Updates",
+      title: "<brand>Angel Engine</brand> Updates",
       unsupportedPlatform: "Updates nicht verfügbar",
       unsupportedPlatformDetail:
         "Automatische Updates werden unter macOS und Windows unterstützt.",
@@ -253,6 +253,9 @@ export const de = {
       empty: {
         description:
           "Verweisen Sie auf eine Datei, einen Fehler, ein Verhalten oder einen Arbeitsbereich, der korrigiert oder getestet werden soll.",
+        suggestionExplore: "Erkläre den Aufbau dieser Codebasis",
+        suggestionFix: "Finde einen Fehler anhand einer Fehlermeldung",
+        suggestionTests: "Ergänze Tests für eine aktuelle Änderung",
         title: "Was soll Angel Engine tun?",
         titleWithProject:
           "Was soll Angel Engine in <project>{{projectName}}</project> tun?",

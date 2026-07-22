@@ -401,3 +401,13 @@
     -webkit-app-region: no-drag;
   }
 }
+
+/* The brand sketch stroke draws itself in on mount (path is pathLength=1). */
+@keyframes sketch-draw {
+  from {
+    stroke-dashoffset: 1;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}

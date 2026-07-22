@@ -235,7 +235,7 @@ export const zhTW = {
       downloaded: "更新已就緒",
       downloadedDetail: "更新已下載完成，可以重新啟動安裝。",
       restartAndInstall: "重新啟動並安裝",
-      title: "Angel Engine 更新",
+      title: "<brand>Angel Engine</brand> 更新",
       unsupportedPlatform: "更新不可用",
       unsupportedPlatformDetail: "自動更新目前支援 macOS 和 Windows。",
       upToDate: "Angel Engine 已是最新版本",
@@ -244,6 +244,9 @@ export const zhTW = {
     thread: {
       empty: {
         description: "指定檔案、錯誤、行為或工作區範圍，讓它修補或測試。",
+        suggestionExplore: "講解這個程式碼庫的結構",
+        suggestionFix: "根據錯誤訊息定位一個缺陷",
+        suggestionTests: "為最近的變更補充測試",
         title: "希望 Angel Engine 做些什麼？",
         titleWithProject:
           "希望 Angel Engine 在 <project>{{projectName}}</project> 做些什麼？",

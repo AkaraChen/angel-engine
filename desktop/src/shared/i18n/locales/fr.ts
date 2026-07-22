@@ -244,7 +244,7 @@ export const fr = {
       downloadedDetail:
         "La mise à jour a été téléchargée et peut être installée.",
       restartAndInstall: "Redémarrer et installer",
-      title: "Mises à jour Angel Engine",
+      title: "Mises à jour <brand>Angel Engine</brand>",
       unsupportedPlatform: "Mises à jour indisponibles",
       unsupportedPlatformDetail:
         "Les mises à jour automatiques sont prises en charge sur macOS et Windows.",
@@ -256,6 +256,9 @@ export const fr = {
       empty: {
         description:
           "Indiquez un fichier, un bug, un comportement ou une zone de travail à corriger ou tester.",
+        suggestionExplore: "Explique la structure de ce code",
+        suggestionFix: "Retrouve un bug à partir d'un message d'erreur",
+        suggestionTests: "Ajoute des tests pour un changement récent",
         title: "Que voulez-vous qu’Angel Engine fasse ?",
         titleWithProject:
           "Que voulez-vous qu’Angel Engine fasse dans <project>{{projectName}}</project> ?",

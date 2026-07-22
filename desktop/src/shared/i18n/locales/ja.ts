@@ -244,7 +244,7 @@ export const ja = {
       downloadedDetail:
         "アップデートのダウンロードが完了し、インストールできます。",
       restartAndInstall: "再起動してインストール",
-      title: "Angel Engine アップデート",
+      title: "<brand>Angel Engine</brand> アップデート",
       unsupportedPlatform: "アップデートは利用できません",
       unsupportedPlatformDetail:
         "自動アップデートは macOS と Windows でサポートされています。",
@@ -255,6 +255,9 @@ export const ja = {
       empty: {
         description:
           "修正またはテストするファイル、バグ、挙動、ワークスペース範囲を指定してください。",
+        suggestionExplore: "このコードベースの構成を説明して",
+        suggestionFix: "エラーメッセージからバグを特定して",
+        suggestionTests: "最近の変更にテストを追加して",
         title: "Angel Engine に何をさせますか？",
         titleWithProject:
           "<project>{{projectName}}</project> で Angel Engine に何をさせますか？",
