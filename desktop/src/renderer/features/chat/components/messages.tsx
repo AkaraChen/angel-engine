@@ -27,7 +27,7 @@ import {
   ImageMessagePart,
   MessageAttachment,
   NullMessagePart,
-  PlainTextMessagePart,
+  UserTextMessagePart,
 } from "@/features/chat/components/message-content-parts";
 import { DataMessagePart } from "@/features/chat/components/message-elicitation";
 import { isUserBubblePart } from "@/features/chat/components/message-part-utils";
@@ -286,7 +286,7 @@ function formatAssistantMessageError(error: unknown, title: string) {
 }
 
 const userMessagePartComponents = {
-  Text: PlainTextMessagePart,
+  Text: UserTextMessagePart,
   Source: NullMessagePart,
   Image: NullMessagePart,
   File: NullMessagePart,

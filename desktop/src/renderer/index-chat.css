@@ -162,6 +162,52 @@
     padding-inline: 0.32em;
   }
 
+  .chat-markdown-user {
+    color: var(--primary-foreground);
+    font-size: var(--workspace-user-bubble-text-size);
+    line-height: var(--workspace-user-bubble-line-height);
+  }
+
+  .chat-markdown-user a,
+  .chat-markdown-user blockquote,
+  .chat-markdown-user li::marker,
+  .chat-markdown-user strong {
+    color: var(--primary-foreground);
+  }
+
+  .chat-markdown-user a {
+    text-decoration-color: color-mix(
+      in oklch,
+      var(--primary-foreground) 45%,
+      transparent
+    );
+  }
+
+  .chat-markdown-user a:hover {
+    text-decoration-color: color-mix(
+      in oklch,
+      var(--primary-foreground) 80%,
+      transparent
+    );
+  }
+
+  .chat-markdown-user blockquote {
+    border-left-color: color-mix(
+      in oklch,
+      var(--primary-foreground) 35%,
+      transparent
+    );
+  }
+
+  .chat-markdown-user [data-streamdown="inline-code"] {
+    background-color: color-mix(
+      in oklch,
+      var(--primary-foreground) 14%,
+      transparent
+    );
+    color: var(--primary-foreground);
+  }
+
   .workspace-streaming-line {
     overflow: hidden;
     pointer-events: none;
@@ -279,6 +325,42 @@
   margin-right: calc(var(--spacing) * 1);
   padding-block: calc(var(--spacing) * 0.5);
   padding-inline: calc(var(--spacing) * 1);
+}
+
+.chat-markdown-user [data-streamdown="code-block"] {
+  background-color: color-mix(
+    in oklch,
+    var(--primary-foreground) 10%,
+    transparent
+  );
+  border-color: color-mix(in oklch, var(--primary-foreground) 22%, transparent);
+  box-shadow: none;
+}
+
+.dark .chat-markdown-user [data-streamdown="code-block"] {
+  background-color: color-mix(
+    in oklch,
+    var(--primary-foreground) 10%,
+    transparent
+  );
+}
+
+.chat-markdown-user [data-streamdown="code-block-header"] {
+  background-color: color-mix(
+    in oklch,
+    var(--primary-foreground) 8%,
+    transparent
+  );
+  border-bottom-color: color-mix(
+    in oklch,
+    var(--primary-foreground) 18%,
+    transparent
+  );
+  color: var(--primary-foreground);
+}
+
+.chat-markdown-user [data-streamdown="code-block-header"] > span {
+  color: color-mix(in oklch, var(--primary-foreground) 72%, transparent);
 }
 
 @keyframes workspace-streaming-sweep {

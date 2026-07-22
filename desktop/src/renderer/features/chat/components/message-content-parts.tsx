@@ -17,36 +17,36 @@ import { mermaid } from "@streamdown/mermaid";
 import { useTranslation } from "react-i18next";
 
 import { ChatAttachmentTile } from "@/features/chat/components/attachment-tile";
-import { assistantTextContainerClassName } from "@/features/chat/components/message-styles";
+import {
+  assistantTextContainerClassName,
+  userTextContainerClassName,
+} from "@/features/chat/components/message-styles";
 
-function PlainTextMessagePart(
+function UserTextMessagePart(
   part: Extract<EnrichedPartState, { type: "text" }>,
 ) {
   const { t } = useTranslation();
 
-  if (part.type === "text") {
-    if (part.status.type === "running" && !part.text) {
-      return (
-        <span className="inline-flex items-center gap-2 text-muted-foreground">
-          <Loader2 className="size-3.5 animate-spin" />
-          {t("common.thinking")}
-        </span>
-      );
-    }
+  if (part.status.type === "running" && !part.text) {
     return (
-      <div
-        className="
-          [font-size:var(--workspace-user-bubble-text-size)]
-          leading-(--workspace-user-bubble-line-height) wrap-anywhere
-          [word-break:normal] whitespace-pre-wrap
-        "
-      >
-        {part.text}
-      </div>
+      <span className="inline-flex items-center gap-2 opacity-70">
+        <Loader2 className="size-3.5 animate-spin" />
+        {t("common.thinking")}
+      </span>
     );
   }
 
-  return null;
+  return (
+    <StreamdownTextPrimitive
+      containerClassName={userTextContainerClassName}
+      controls={{ code: false }}
+      linkSafety={{ enabled: false }}
+      lineNumbers={false}
+      mode="static"
+      plugins={{ cjk, code: streamdownCode, math, mermaid }}
+      shikiTheme={["vitesse-light", "vitesse-dark"]}
+    />
+  );
 }
 
 function AssistantTextMessagePart(
@@ -232,5 +232,5 @@ export {
   JsonBlock,
   MessageAttachment,
   NullMessagePart,
-  PlainTextMessagePart,
+  UserTextMessagePart,
 };
