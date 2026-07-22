@@ -310,7 +310,7 @@ export const zhCN = {
         couldNotChangeMode: "无法更改模式",
         couldNotReadFile: "无法读取文件",
         couldNotSearchFiles: "无法搜索文件",
-        couldNotSendAttachment: "无法发送附件",
+        couldNotSendMessage: "无法发送消息",
         tooManyFiles: "文件过多",
       },
     },

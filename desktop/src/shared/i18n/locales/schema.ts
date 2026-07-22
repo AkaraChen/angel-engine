@@ -297,7 +297,7 @@ export interface LocaleResourceTranslationComposerToasts {
   couldNotChangeMode: string;
   couldNotReadFile: string;
   couldNotSearchFiles: string;
-  couldNotSendAttachment: string;
+  couldNotSendMessage: string;
   tooManyFiles: string;
 }
 

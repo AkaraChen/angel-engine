@@ -328,7 +328,7 @@ export const fr = {
         couldNotChangeMode: "Impossible de changer de mode",
         couldNotReadFile: "Impossible de lire le fichier",
         couldNotSearchFiles: "Impossible de rechercher des fichiers",
-        couldNotSendAttachment: "Impossible d’envoyer la pièce jointe",
+        couldNotSendMessage: "Impossible d’envoyer le message",
         tooManyFiles: "Trop de fichiers",
       },
     },

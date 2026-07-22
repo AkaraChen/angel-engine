@@ -128,7 +128,11 @@ export function useComposerEditor({
   const focus = useCallback(() => editor?.commands.focus(), [editor]);
   const getMarkdown = useCallback(() => editor?.getMarkdown() ?? "", [editor]);
   const reset = useCallback(() => {
-    editor?.commands.clearContent();
+    // A destroyed editor throws from its `commands` getter, so `?.` alone
+    // is not enough once the composer has unmounted.
+    if (editor !== null && !editor.isDestroyed) {
+      editor.commands.clearContent();
+    }
     setPasteSourceUrl(undefined);
   }, [editor]);
   const removeMention = useCallback(

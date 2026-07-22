@@ -325,7 +325,7 @@ export const ja = {
         couldNotChangeMode: "モードを変更できませんでした",
         couldNotReadFile: "ファイルを読み取れませんでした",
         couldNotSearchFiles: "ファイルを検索できませんでした",
-        couldNotSendAttachment: "添付ファイルを送信できませんでした",
+        couldNotSendMessage: "メッセージを送信できませんでした",
         tooManyFiles: "ファイルが多すぎます",
       },
     },

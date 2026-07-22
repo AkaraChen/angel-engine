@@ -325,7 +325,7 @@ export const de = {
         couldNotChangeMode: "Modus konnte nicht geändert werden",
         couldNotReadFile: "Datei konnte nicht gelesen werden",
         couldNotSearchFiles: "Dateien konnten nicht gesucht werden",
-        couldNotSendAttachment: "Anhang konnte nicht gesendet werden",
+        couldNotSendMessage: "Nachricht konnte nicht gesendet werden",
         tooManyFiles: "Zu viele Dateien",
       },
     },

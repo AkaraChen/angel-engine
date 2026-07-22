@@ -323,7 +323,7 @@ export const en = {
         couldNotChangeMode: "Could not change mode",
         couldNotReadFile: "Could not read file",
         couldNotSearchFiles: "Could not search files",
-        couldNotSendAttachment: "Could not send attachment",
+        couldNotSendMessage: "Could not send message",
         tooManyFiles: "Too many files",
       },
     },

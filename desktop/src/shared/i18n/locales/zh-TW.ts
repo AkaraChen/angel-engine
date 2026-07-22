@@ -312,7 +312,7 @@ export const zhTW = {
         couldNotChangeMode: "無法變更模式",
         couldNotReadFile: "無法讀取檔案",
         couldNotSearchFiles: "無法搜尋檔案",
-        couldNotSendAttachment: "無法傳送附件",
+        couldNotSendMessage: "無法傳送訊息",
         tooManyFiles: "檔案過多",
       },
     },

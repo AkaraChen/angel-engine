@@ -32,7 +32,7 @@ export function attachmentErrorTitle(
     case "file_read":
       return t("composer.toasts.couldNotReadFile");
     case "submit":
-      return t("composer.toasts.couldNotSendAttachment");
+      return t("composer.toasts.couldNotSendMessage");
   }
 }
 

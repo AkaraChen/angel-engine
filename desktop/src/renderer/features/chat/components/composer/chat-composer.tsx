@@ -9,6 +9,7 @@ import type {
 } from "@/features/chat/components/composer/composer-attachments";
 import type { AttachmentInputError } from "@/features/chat/components/composer/composer-helpers";
 import type { ComposerEditorController } from "@/features/chat/components/composer/use-composer-editor";
+import is from "@sindresorhus/is";
 import { useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import {
@@ -77,13 +78,17 @@ export function ChatComposer({
       if (!hasMessage) return;
       if (onBeforeSubmit && !(await onBeforeSubmit())) return;
 
-      await send({
+      // Capture the submission, then clear right away: awaiting the whole
+      // turn first would run reset() against an editor that may have been
+      // unmounted mid-turn (draft composers navigate to the created chat).
+      const submission: ChatComposerSubmission = {
         files: message.files as PromptInputFile[],
-        mentionedFiles,
-        selectedSkills,
+        mentionedFiles: [...mentionedFiles],
+        selectedSkills: [...selectedSkills],
         text: appendPasteSourceUrl(message.text, pasteSourceUrl),
-      });
+      };
       reset();
+      await send(submission);
     },
     [
       mentionedFiles,
@@ -98,7 +103,10 @@ export function ChatComposer({
   const handleAttachmentError = useCallback(
     (error: { code: AttachmentInputError["code"]; message: string }) => {
       toast({
-        description: attachmentErrorMessage(error.code, t),
+        description:
+          error.code === "submit" && is.nonEmptyString(error.message)
+            ? error.message
+            : attachmentErrorMessage(error.code, t),
         title: attachmentErrorTitle(error.code, t),
         variant: "destructive",
       });

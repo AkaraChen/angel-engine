@@ -324,7 +324,7 @@ export const ko = {
         couldNotChangeMode: "모드를 변경할 수 없습니다",
         couldNotReadFile: "파일을 읽을 수 없습니다",
         couldNotSearchFiles: "파일을 검색할 수 없습니다",
-        couldNotSendAttachment: "첨부 파일을 보낼 수 없습니다",
+        couldNotSendMessage: "메시지를 보낼 수 없습니다",
         tooManyFiles: "파일이 너무 많습니다",
       },
     },

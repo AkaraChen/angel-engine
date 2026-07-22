@@ -327,7 +327,7 @@ export const es = {
         couldNotChangeMode: "No se pudo cambiar el modo",
         couldNotReadFile: "No se pudo leer el archivo",
         couldNotSearchFiles: "No se pudieron buscar archivos",
-        couldNotSendAttachment: "No se pudo enviar el adjunto",
+        couldNotSendMessage: "No se pudo enviar el mensaje",
         tooManyFiles: "Demasiados archivos",
       },
     },
