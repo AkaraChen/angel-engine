@@ -49,7 +49,7 @@ export function ChatTabBar({
     >
       <div
         className="
-          flex min-w-0 items-center gap-px overflow-x-auto rounded-full
+          flex min-w-0 items-center gap-px overflow-x-auto rounded-md
           bg-surface-1 p-0.5
           [&::-webkit-scrollbar]:hidden
         "
@@ -79,7 +79,7 @@ export function ChatTabBar({
         ) : (
           <Button
             aria-label={t("workspace.newChat")}
-            className="size-7 shrink-0 rounded-full text-muted-foreground"
+            className="size-7 shrink-0 rounded-sm text-muted-foreground"
             onClick={() => void onNewChat()}
             size="icon-sm"
             title={t("workspace.newChat")}
@@ -108,7 +108,7 @@ function HistoryTab({
       aria-selected={isActive}
       className={cn(
         `
-          flex h-7 max-w-60 min-w-0 shrink-0 items-center gap-2 rounded-full
+          flex h-7 max-w-60 min-w-0 shrink-0 items-center gap-2 rounded-sm
           px-3 text-sm transition-colors
         `,
         isActive
@@ -138,7 +138,7 @@ function DraftTab({ onClose }: { onClose?: () => MaybeAsync }): ReactElement {
       aria-selected
       className="
         group/chat-tab flex h-7 max-w-60 min-w-0 shrink-0 items-center gap-2
-        rounded-full bg-card pr-1 pl-3 text-sm text-foreground shadow-xs
+        rounded-sm bg-card pr-1 pl-3 text-sm text-foreground shadow-xs
       "
       role="tab"
     >
@@ -182,7 +182,7 @@ function ChatTab({
       className={cn(
         `
           group/chat-tab flex h-7 max-w-60 min-w-0 shrink-0 items-center gap-2
-          rounded-full pr-1 pl-3 text-sm transition-colors
+          rounded-sm pr-1 pl-3 text-sm transition-colors
         `,
         isActive
           ? "bg-card text-foreground shadow-xs"

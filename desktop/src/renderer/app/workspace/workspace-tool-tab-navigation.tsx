@@ -83,7 +83,7 @@ export function WorkspaceToolTabRail({
         <div
           aria-label="Workspace tabs"
           className="
-            flex min-w-0 items-center gap-px overflow-x-auto rounded-lg
+            flex min-w-0 items-center gap-px overflow-x-auto rounded-md
             bg-surface-1 p-0.5
             [&::-webkit-scrollbar]:hidden
           "
@@ -210,10 +210,10 @@ function WorkspaceToolTabButton({
       <div
         className={cn(
           `
-            group flex shrink-0 items-center overflow-hidden rounded-md
+            group flex shrink-0 items-center overflow-hidden
             text-muted-foreground
           `,
-          horizontal ? "h-6" : "h-8 min-w-0 text-xs",
+          horizontal ? "h-6 rounded-sm" : "h-8 min-w-0 rounded-md text-xs",
           active
             ? cn(
                 "text-foreground shadow-xs",
