@@ -253,9 +253,13 @@ export const de = {
       empty: {
         description:
           "Verweisen Sie auf eine Datei, einen Fehler, ein Verhalten oder einen Arbeitsbereich, der korrigiert oder getestet werden soll.",
+        suggestionClarify: "Hilf mir, eine komplexe Frage zu durchdenken",
         suggestionExplore: "Erkläre den Aufbau dieser Codebasis",
         suggestionFix: "Finde einen Fehler anhand einer Fehlermeldung",
+        suggestionSummarize:
+          "Fasse Inhalte zusammen und arbeite die Kernaussagen heraus",
         suggestionTests: "Ergänze Tests für eine aktuelle Änderung",
+        suggestionWrite: "Entwirf oder überarbeite einen Text",
         title: "Was soll Angel Engine tun?",
         titleWithProject:
           "Was soll Angel Engine in <project>{{projectName}}</project> tun?",
@@ -309,6 +313,7 @@ export const de = {
       placeholder:
         "Bitten Sie Angel Engine zu prüfen, zu ändern, zu testen oder zu erklären...",
       plan: "Plan",
+      previewUnavailable: "Vorschau nicht verfügbar",
       provider: "Anbieter",
       removeAttachment: "{{name}} entfernen",
       removePasteSource: "Quelle {{url}} entfernen",

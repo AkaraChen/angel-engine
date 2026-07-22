@@ -10,12 +10,20 @@ export interface AttachmentInputError {
   message: string;
 }
 
-export function appendPasteSourceUrl(text: string, sourceUrl?: string) {
-  if (sourceUrl === undefined || text.trim().length === 0) {
+export function appendPasteSourceUrls(text: string, sourceUrls: string[]) {
+  if (sourceUrls.length === 0 || text.trim().length === 0) {
     return text;
   }
 
-  return `${text}\n\n(Pasted from ${sourceUrl})`;
+  const sourceLines = sourceUrls.map(
+    (sourceUrl) => `(Pasted from ${sourceUrl})`,
+  );
+  return `${text}\n\n${sourceLines.join("\n")}`;
+}
+
+export function pasteSourceUrlPath(sourceUrl: string): string {
+  const url = new URL(sourceUrl);
+  return `${url.pathname}${url.search}${url.hash}`;
 }
 
 export function attachmentErrorTitle(

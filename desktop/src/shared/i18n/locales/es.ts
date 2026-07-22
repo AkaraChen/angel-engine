@@ -255,9 +255,12 @@ export const es = {
       empty: {
         description:
           "Señala un archivo, error, comportamiento o parte del espacio de trabajo para corregir o probar.",
+        suggestionClarify: "Ayúdame a pensar una cuestión compleja",
         suggestionExplore: "Explica cómo está estructurado este código",
         suggestionFix: "Localiza un error a partir de un mensaje de error",
+        suggestionSummarize: "Resume un contenido y extrae los puntos clave",
         suggestionTests: "Añade pruebas para un cambio reciente",
+        suggestionWrite: "Redacta o mejora un texto",
         title: "¿Qué quieres que haga Angel Engine?",
         titleWithProject:
           "¿Qué quieres que haga Angel Engine en <project>{{projectName}}</project>?",
@@ -311,6 +314,7 @@ export const es = {
       placeholder:
         "Pide a Angel Engine que inspeccione, corrija, pruebe o explique...",
       plan: "Plan",
+      previewUnavailable: "Vista previa no disponible",
       provider: "Proveedor",
       removeAttachment: "Eliminar {{name}}",
       removePasteSource: "Eliminar fuente {{url}}",

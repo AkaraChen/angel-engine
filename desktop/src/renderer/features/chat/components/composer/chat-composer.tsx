@@ -19,7 +19,7 @@ import {
 import { useToast } from "@/components/ui/toast";
 import { ComposerEditor } from "@/features/chat/components/composer/composer-editor";
 import {
-  appendPasteSourceUrl,
+  appendPasteSourceUrls,
   attachmentErrorMessage,
   attachmentErrorTitle,
 } from "@/features/chat/components/composer/composer-helpers";
@@ -66,7 +66,7 @@ export function ChatComposer({
 }: ChatComposerProps) {
   const { t } = useTranslation();
   const toast = useToast();
-  const { mentionedFiles, pasteSourceUrl, reset, selectedSkills } = controller;
+  const { mentionedFiles, pasteSourceUrls, reset, selectedSkills } = controller;
 
   const handleSubmit = useCallback(
     async (message: PromptInputMessage) => {
@@ -85,7 +85,7 @@ export function ChatComposer({
         files: message.files as PromptInputFile[],
         mentionedFiles: [...mentionedFiles],
         selectedSkills: [...selectedSkills],
-        text: appendPasteSourceUrl(message.text, pasteSourceUrl),
+        text: appendPasteSourceUrls(message.text, pasteSourceUrls),
       };
       reset();
       await send(submission);
@@ -93,7 +93,7 @@ export function ChatComposer({
     [
       mentionedFiles,
       onBeforeSubmit,
-      pasteSourceUrl,
+      pasteSourceUrls,
       reset,
       selectedSkills,
       send,

@@ -242,9 +242,12 @@ export const zhCN = {
     thread: {
       empty: {
         description: "指定文件、缺陷、行为或工作区范围，让它修复或测试。",
+        suggestionClarify: "帮我理清一个复杂问题",
         suggestionExplore: "讲解这个代码库的结构",
         suggestionFix: "根据报错信息定位一个缺陷",
+        suggestionSummarize: "总结内容并提炼重点",
         suggestionTests: "为最近的改动补充测试",
+        suggestionWrite: "帮我起草或润色一段文字",
         title: "希望 Angel Engine 做些什么？",
         titleWithProject:
           "希望 Angel Engine 在 <project>{{projectName}}</project> 做些什么？",
@@ -294,6 +297,7 @@ export const zhCN = {
       permissionMode: "权限模式",
       placeholder: "让 Angel Engine 检查、修改、测试或解释...",
       plan: "计划",
+      previewUnavailable: "无法加载预览",
       provider: "提供方",
       removeAttachment: "移除 {{name}}",
       removePasteSource: "移除来源 {{url}}",

@@ -257,9 +257,12 @@ export interface LocaleResourceTranslationUpdates {
 
 export interface LocaleResourceTranslationThreadEmpty {
   description: string;
+  suggestionClarify: string;
   suggestionExplore: string;
   suggestionFix: string;
+  suggestionSummarize: string;
   suggestionTests: string;
+  suggestionWrite: string;
   title: string;
   titleWithProject: string;
 }
@@ -328,6 +331,7 @@ export interface LocaleResourceTranslationComposer {
   permissionMode: string;
   placeholder: string;
   plan: string;
+  previewUnavailable: string;
   provider: string;
   removeAttachment: string;
   removePasteSource: string;

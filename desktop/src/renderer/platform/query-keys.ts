@@ -26,6 +26,10 @@ export const queryKeys = {
     gitStatus: (id: string | null) => ["projects", "git-status", id] as const,
     list: () => ["projects", "list"] as const,
   },
+  urlPreviews: {
+    all: () => ["url-previews"] as const,
+    detail: (url: string) => ["url-previews", "detail", url] as const,
+  },
   workspaceTools: {
     fileTree: (root: string | null) =>
       ["workspace-tools", "file-tree", root] as const,

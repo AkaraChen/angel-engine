@@ -1,5 +1,12 @@
 import type { ReactNode } from "react";
 import type { ComposerEditorController } from "@/features/chat/components/composer/use-composer-editor";
+import {
+  Globe,
+  SpinnerGap as Loader2,
+  WarningCircle,
+} from "@phosphor-icons/react";
+import is from "@sindresorhus/is";
+import { useQuery } from "@tanstack/react-query";
 import { EditorContent } from "@tiptap/react";
 import { useCallback, useEffect } from "react";
 import { useTranslation } from "react-i18next";
@@ -11,6 +18,8 @@ import {
   usePromptInputController,
 } from "@/components/ai-elements/prompt-input";
 import { ChatAttachmentTile } from "@/features/chat/components/attachment-tile";
+import { urlPreviewQueryOptions } from "@/features/chat/api/url-preview-query";
+import { pasteSourceUrlPath } from "@/features/chat/components/composer/composer-helpers";
 import { ipc } from "@/platform/ipc";
 import { cn } from "@/platform/utils";
 
@@ -41,10 +50,11 @@ export function ComposerEditor({
   const promptController = usePromptInputController();
   const attachments = usePromptInputAttachments();
   const {
+    addPasteSourceUrl,
     editor,
-    pasteSourceUrl,
+    pasteSourceUrls,
+    removePasteSourceUrl,
     setInteractions,
-    setPasteSourceUrl,
     setTextInput,
   } = controller;
 
@@ -53,7 +63,11 @@ export function ComposerEditor({
       const text = event.clipboardData?.getData("text/plain");
       if (text !== undefined && text.length > 0) {
         void ipc.appReadClipboardSourceUrl({ text }).then(({ sourceUrl }) => {
-          if (sourceUrl !== undefined) setPasteSourceUrl(sourceUrl);
+          if (sourceUrl === undefined) return;
+          // Copies made inside this app carry our own origin as the source;
+          // attributing them as an external paste source is just noise.
+          if (new URL(sourceUrl).host === window.location.host) return;
+          addPasteSourceUrl(sourceUrl);
         });
       }
 
@@ -69,7 +83,7 @@ export function ComposerEditor({
       attachments.add(files);
       return true;
     },
-    [allowAttachments, attachments, setPasteSourceUrl],
+    [addPasteSourceUrl, allowAttachments, attachments],
   );
   const removeLastAttachment = useCallback(() => {
     const attachment = attachments.files.at(-1);
@@ -106,8 +120,8 @@ export function ComposerEditor({
       <ComposerEditorHeader
         headerClassName={headerClassName}
         headerLeading={headerLeading}
-        onRemovePasteSource={() => setPasteSourceUrl(undefined)}
-        pasteSourceUrl={pasteSourceUrl}
+        onRemovePasteSource={removePasteSourceUrl}
+        pasteSourceUrls={pasteSourceUrls}
       />
 
       <PromptInputBody>
@@ -149,12 +163,12 @@ function ComposerEditorHeader({
   headerClassName,
   headerLeading,
   onRemovePasteSource,
-  pasteSourceUrl,
+  pasteSourceUrls,
 }: {
   headerClassName?: string;
   headerLeading?: ReactNode;
-  onRemovePasteSource: () => void;
-  pasteSourceUrl: string | undefined;
+  onRemovePasteSource: (sourceUrl: string) => void;
+  pasteSourceUrls: string[];
 }) {
   const { t } = useTranslation();
   const attachments = usePromptInputAttachments();
@@ -164,7 +178,7 @@ function ComposerEditorHeader({
   if (
     !hasHeaderLeading &&
     attachments.files.length === 0 &&
-    pasteSourceUrl === undefined
+    pasteSourceUrls.length === 0
   ) {
     return null;
   }
@@ -173,18 +187,13 @@ function ComposerEditorHeader({
     <PromptInputHeader className={headerClassName}>
       {headerLeading}
 
-      {pasteSourceUrl !== undefined ? (
-        <ChatAttachmentTile
-          className="max-w-80"
-          contentType={sourceUrlPath(pasteSourceUrl)}
-          name={new URL(pasteSourceUrl).host}
-          onRemove={onRemovePasteSource}
-          removeLabel={t("composer.removePasteSource", {
-            url: pasteSourceUrl,
-          })}
-          typeLabel={t("composer.pasteSource")}
+      {pasteSourceUrls.map((sourceUrl) => (
+        <PasteSourceTile
+          key={sourceUrl}
+          onRemove={() => onRemovePasteSource(sourceUrl)}
+          sourceUrl={sourceUrl}
         />
-      ) : null}
+      ))}
 
       {attachments.files.map((file) => {
         if (!file.mediaType) {
@@ -211,7 +220,50 @@ function ComposerEditorHeader({
   );
 }
 
-function sourceUrlPath(sourceUrl: string): string {
-  const url = new URL(sourceUrl);
-  return `${url.pathname}${url.search}${url.hash}`;
+function PasteSourceTile({
+  onRemove,
+  sourceUrl,
+}: {
+  onRemove: () => void;
+  sourceUrl: string;
+}) {
+  const { t } = useTranslation();
+  const preview = useQuery(urlPreviewQueryOptions({ url: sourceUrl }));
+  const host = new URL(sourceUrl).host;
+  const title = preview.data?.title;
+  const hasTitle = is.nonEmptyString(title);
+  const fallbackIcon = preview.isPending ? (
+    <Loader2
+      aria-hidden
+      className="size-4 animate-spin text-muted-foreground"
+    />
+  ) : preview.isError ? (
+    <WarningCircle aria-hidden className="size-4 text-muted-foreground" />
+  ) : (
+    <Globe
+      aria-hidden
+      className="size-4 text-muted-foreground"
+      weight="duotone"
+    />
+  );
+  const contentType = hasTitle
+    ? host
+    : preview.isPending
+      ? t("composer.loadingValue")
+      : preview.isError
+        ? t("composer.previewUnavailable")
+        : pasteSourceUrlPath(sourceUrl);
+
+  return (
+    <ChatAttachmentTile
+      className="max-w-80"
+      contentType={contentType}
+      fallbackIcon={fallbackIcon}
+      name={hasTitle ? title : host}
+      onRemove={onRemove}
+      previewUrl={preview.data?.imageDataUrl}
+      removeLabel={t("composer.removePasteSource", { url: sourceUrl })}
+      typeLabel={pasteSourceUrlPath(sourceUrl)}
+    />
+  );
 }

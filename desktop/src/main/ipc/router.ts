@@ -14,10 +14,39 @@ import { projectPlatformIpcRouter } from "../features/projects/ipc";
 import { MainIpcError } from "../platform/errors";
 import { setMainLanguage } from "../platform/i18n";
 import { readClipboardSourceUrl } from "./clipboard-source";
+import { fetchUrlPreview } from "./url-preview";
 
 const t = tipc.create();
 
 const appIpcRouter = {
+  appFetchUrlPreview: t.procedure
+    .input<{ url: string }>()
+    .action(async ({ input }) =>
+      Effect.runPromise(
+        Effect.gen(function* () {
+          const value = arkType({ url: "string" })(input);
+          if (value instanceof arkType.errors) {
+            return yield* Effect.fail(
+              MainIpcError.invalidRequest("Preview URL is required."),
+            );
+          }
+          const url = yield* Effect.try({
+            catch: () =>
+              MainIpcError.invalidRequest("Preview URL is not a valid URL."),
+            try: () => new URL(value.url),
+          });
+          if (url.protocol !== "http:" && url.protocol !== "https:") {
+            return yield* Effect.fail(
+              MainIpcError.invalidRequest("Preview URL must be http(s)."),
+            );
+          }
+          return yield* Effect.tryPromise({
+            catch: (cause) => MainIpcError.operationFailed(cause),
+            try: () => fetchUrlPreview(url),
+          });
+        }),
+      ),
+    ),
   appReadClipboardSourceUrl: t.procedure
     .input<{ text: string }>()
     .action(async ({ input }) =>

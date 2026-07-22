@@ -244,9 +244,12 @@ export const zhTW = {
     thread: {
       empty: {
         description: "指定檔案、錯誤、行為或工作區範圍，讓它修補或測試。",
+        suggestionClarify: "幫我理清一個複雜問題",
         suggestionExplore: "講解這個程式碼庫的結構",
         suggestionFix: "根據錯誤訊息定位一個缺陷",
+        suggestionSummarize: "總結內容並提煉重點",
         suggestionTests: "為最近的變更補充測試",
+        suggestionWrite: "幫我起草或潤飾一段文字",
         title: "希望 Angel Engine 做些什麼？",
         titleWithProject:
           "希望 Angel Engine 在 <project>{{projectName}}</project> 做些什麼？",
@@ -296,6 +299,7 @@ export const zhTW = {
       permissionMode: "權限模式",
       placeholder: "讓 Angel Engine 檢查、修補、測試或解釋...",
       plan: "計畫",
+      previewUnavailable: "無法載入預覽",
       provider: "提供者",
       removeAttachment: "移除 {{name}}",
       removePasteSource: "移除來源 {{url}}",

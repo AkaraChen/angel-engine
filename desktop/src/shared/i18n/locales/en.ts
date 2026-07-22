@@ -252,9 +252,12 @@ export const en = {
       empty: {
         description:
           "Point to a file, bug, behavior, or workspace slice to patch or test.",
+        suggestionClarify: "Help me think through a complex question",
         suggestionExplore: "Explain how this codebase is structured",
         suggestionFix: "Track down a bug from an error message",
+        suggestionSummarize: "Summarize and extract the key points",
         suggestionTests: "Add tests for a recent change",
+        suggestionWrite: "Draft or polish a piece of writing",
         title: "What would you like Angel Engine to do?",
         titleWithProject:
           "What would you like Angel Engine to do in <project>{{projectName}}</project>?",
@@ -307,6 +310,7 @@ export const en = {
       permissionMode: "Permission Mode",
       placeholder: "Ask Angel Engine to inspect, patch, test, or explain...",
       plan: "Plan",
+      previewUnavailable: "Preview unavailable",
       provider: "Provider",
       removeAttachment: "Remove {{name}}",
       removePasteSource: "Remove source {{url}}",

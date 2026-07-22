@@ -1,4 +1,5 @@
 export const TIPC_CHANNELS = [
+  "appFetchUrlPreview",
   "appReadClipboardSourceUrl",
   "appSetLanguage",
   "daemonMobileHostingGet",

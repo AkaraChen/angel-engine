@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { FileText, Image as ImageIcon, X } from "@phosphor-icons/react";
 import is from "@sindresorhus/is";
 import { useState } from "react";
@@ -14,6 +15,7 @@ import { cn } from "@/platform/utils";
 interface ChatAttachmentTileProps {
   className?: string;
   contentType?: string;
+  fallbackIcon?: ReactNode;
   name: string;
   onRemove?: () => void;
   previewText?: string;
@@ -25,6 +27,7 @@ interface ChatAttachmentTileProps {
 export function ChatAttachmentTile({
   className,
   contentType,
+  fallbackIcon,
   name,
   onRemove,
   previewText,
@@ -38,6 +41,7 @@ export function ChatAttachmentTile({
   const body = (
     <AttachmentTileBody
       contentType={contentType}
+      fallbackIcon={fallbackIcon}
       name={name}
       previewUrl={previewUrl}
       typeLabel={typeLabel}
@@ -133,18 +137,24 @@ export function ChatAttachmentTile({
 
 function AttachmentTileBody({
   contentType,
+  fallbackIcon,
   name,
   previewUrl,
   typeLabel,
 }: {
   contentType?: string;
+  fallbackIcon?: ReactNode;
   name: string;
   previewUrl?: string;
   typeLabel: string;
 }) {
   return (
     <>
-      <AttachmentThumb name={name} previewUrl={previewUrl} />
+      <AttachmentThumb
+        fallbackIcon={fallbackIcon}
+        name={name}
+        previewUrl={previewUrl}
+      />
       <span className="flex min-w-0 flex-col">
         <span className="truncate font-medium text-foreground">{name}</span>
         <span className="truncate text-[11px]/4 text-muted-foreground">
@@ -156,9 +166,11 @@ function AttachmentTileBody({
 }
 
 function AttachmentThumb({
+  fallbackIcon,
   name,
   previewUrl,
 }: {
+  fallbackIcon?: ReactNode;
   name: string;
   previewUrl?: string;
 }) {
@@ -182,7 +194,12 @@ function AttachmentThumb({
       ) : hasPreviewUrl ? (
         <ImageIcon aria-label={name} className="size-4 text-muted-foreground" />
       ) : (
-        <FileText aria-label={name} className="size-4 text-muted-foreground" />
+        (fallbackIcon ?? (
+          <FileText
+            aria-label={name}
+            className="size-4 text-muted-foreground"
+          />
+        ))
       )}
     </span>
   );
@@ -197,7 +214,7 @@ function attachmentTileClassName({
 }) {
   return cn(
     `
-      inline-flex max-w-full min-w-0 items-center gap-2 rounded-lg border
+      inline-flex w-full min-w-0 items-center gap-2 rounded-lg border
       border-border-subtle bg-background/70 px-2 py-1.5 text-left text-xs
       shadow-panel backdrop-blur-xl transition-colors
     `,

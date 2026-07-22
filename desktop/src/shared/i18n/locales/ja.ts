@@ -255,9 +255,12 @@ export const ja = {
       empty: {
         description:
           "修正またはテストするファイル、バグ、挙動、ワークスペース範囲を指定してください。",
+        suggestionClarify: "複雑な問題を整理して考えるのを手伝って",
         suggestionExplore: "このコードベースの構成を説明して",
         suggestionFix: "エラーメッセージからバグを特定して",
+        suggestionSummarize: "内容を要約して要点をまとめて",
         suggestionTests: "最近の変更にテストを追加して",
+        suggestionWrite: "文章の下書きや推敲を手伝って",
         title: "Angel Engine に何をさせますか？",
         titleWithProject:
           "<project>{{projectName}}</project> で Angel Engine に何をさせますか？",
@@ -309,6 +312,7 @@ export const ja = {
       permissionMode: "権限モード",
       placeholder: "Angel Engine に調査、修正、テスト、説明を依頼...",
       plan: "計画",
+      previewUnavailable: "プレビューを読み込めません",
       provider: "プロバイダー",
       removeAttachment: "{{name}} を削除",
       removePasteSource: "ソース {{url}} を削除",

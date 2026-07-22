@@ -23,17 +23,18 @@ export interface ComposerEditorInteractions {
 }
 
 export interface ComposerEditorController {
+  addPasteSourceUrl: (sourceUrl: string) => void;
   editor: Editor | null;
   focus: () => void;
   getMarkdown: () => string;
   isEmpty: boolean;
   mentionedFiles: ComposerMentionedFile[];
-  pasteSourceUrl: string | undefined;
+  pasteSourceUrls: string[];
   removeMention: (id: string) => void;
+  removePasteSourceUrl: (sourceUrl: string) => void;
   reset: () => void;
   selectedSkills: ComposerMentionedSkill[];
   setInteractions: (interactions: ComposerEditorInteractions) => void;
-  setPasteSourceUrl: (sourceUrl: string | undefined) => void;
   setTextInput: (setInput: (value: string) => void) => void;
 }
 
@@ -48,7 +49,15 @@ export function useComposerEditor({
   const [mentionedFiles, setMentionedFiles] = useState<ComposerMentionedFile[]>(
     [],
   );
-  const [pasteSourceUrl, setPasteSourceUrl] = useState<string>();
+  const [pasteSourceUrls, setPasteSourceUrls] = useState<string[]>([]);
+  const addPasteSourceUrl = useCallback((sourceUrl: string) => {
+    setPasteSourceUrls((current) =>
+      current.includes(sourceUrl) ? current : [...current, sourceUrl],
+    );
+  }, []);
+  const removePasteSourceUrl = useCallback((sourceUrl: string) => {
+    setPasteSourceUrls((current) => current.filter((url) => url !== sourceUrl));
+  }, []);
   const [selectedSkills, setSelectedSkills] = useState<
     ComposerMentionedSkill[]
   >([]);
@@ -133,7 +142,7 @@ export function useComposerEditor({
     if (editor !== null && !editor.isDestroyed) {
       editor.commands.clearContent();
     }
-    setPasteSourceUrl(undefined);
+    setPasteSourceUrls([]);
   }, [editor]);
   const removeMention = useCallback(
     (id: string) => {
@@ -169,17 +178,18 @@ export function useComposerEditor({
   );
 
   return {
+    addPasteSourceUrl,
     editor,
     focus,
     getMarkdown,
     isEmpty: emptyState ?? true,
     mentionedFiles,
-    pasteSourceUrl,
+    pasteSourceUrls,
     removeMention,
+    removePasteSourceUrl,
     reset,
     selectedSkills,
     setInteractions,
-    setPasteSourceUrl,
     setTextInput,
   };
 }

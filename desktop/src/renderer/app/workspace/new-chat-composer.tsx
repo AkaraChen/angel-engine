@@ -54,6 +54,16 @@ const newChatHeaderClassName = cn(
 const newChatFooterClassName = cn(
   "flex-wrap gap-2 border-t-0 px-3.5! py-2.5! shadow-none",
 );
+const chatSuggestionKeys = [
+  "thread.empty.suggestionClarify",
+  "thread.empty.suggestionSummarize",
+  "thread.empty.suggestionWrite",
+] as const;
+const projectSuggestionKeys = [
+  "thread.empty.suggestionExplore",
+  "thread.empty.suggestionFix",
+  "thread.empty.suggestionTests",
+] as const;
 
 interface NewChatComposerProps {
   creationLocation?: ChatCreationLocation;
@@ -110,6 +120,9 @@ export function NewChatComposer({
   const isRunning = useChatRunIsRunning(slotKey);
   const cancelRun = useChatRunStore((state) => state.cancelRun);
   const workspaceMode = useWorkspaceUiStore((state) => state.workspaceMode);
+  const suggestionKeys = isProjectWorkspaceMode(workspaceMode)
+    ? projectSuggestionKeys
+    : chatSuggestionKeys;
 
   const sendChatMessage = useSendChatMessage(slotKey, {
     chatId: undefined,
@@ -237,13 +250,7 @@ export function NewChatComposer({
             [animation-fill-mode:backwards]
           "
         >
-          {(
-            [
-              "thread.empty.suggestionExplore",
-              "thread.empty.suggestionFix",
-              "thread.empty.suggestionTests",
-            ] as const
-          ).map((suggestionKey) => (
+          {suggestionKeys.map((suggestionKey) => (
             <button
               className="
                 rounded-lg border border-border-subtle bg-card px-3 py-1.5

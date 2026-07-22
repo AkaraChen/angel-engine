@@ -252,9 +252,12 @@ export const ko = {
       empty: {
         description:
           "수정하거나 테스트할 파일, 버그, 동작 또는 워크스페이스 범위를 지정하세요.",
+        suggestionClarify: "복잡한 문제를 정리해서 생각할 수 있게 도와줘",
         suggestionExplore: "이 코드베이스의 구조를 설명해 줘",
         suggestionFix: "오류 메시지로 버그를 찾아 줘",
+        suggestionSummarize: "내용을 요약하고 핵심을 정리해 줘",
         suggestionTests: "최근 변경에 테스트를 추가해 줘",
+        suggestionWrite: "글을 초안 작성하거나 다듬어 줘",
         title: "Angel Engine이 무엇을 하길 원하시나요?",
         titleWithProject:
           "<project>{{projectName}}</project>에서 Angel Engine이 무엇을 하길 원하시나요?",
@@ -308,6 +311,7 @@ export const ko = {
       placeholder:
         "Angel Engine에 검사, 수정, 테스트 또는 설명을 요청하세요...",
       plan: "계획",
+      previewUnavailable: "미리보기를 불러올 수 없음",
       provider: "제공자",
       removeAttachment: "{{name}} 제거",
       removePasteSource: "출처 {{url}} 제거",
