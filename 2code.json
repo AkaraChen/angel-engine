@@ -8,6 +8,14 @@
       "name": "Start",
       "cwd": "",
       "commands": ["nr desktop:start"]
+    },
+    {
+      "id": "cd5c3e25-a2c9-4eb0-91a5-7fec7a9f7e54",
+      "name": "Release",
+      "cwd": "",
+      "commands": [
+        "codex --yolo \"\\$angel-engine-release and install it for me"
+      ]
     }
   ]
 }
