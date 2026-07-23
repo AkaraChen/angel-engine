@@ -190,14 +190,13 @@ impl DisplayPlanSnapshot {
         (!plan.is_empty()).then_some(plan)
     }
 
-    pub(crate) fn todo_from_turn(turn: &TurnSnapshot) -> Option<Self> {
-        let plan = Self {
+    pub(crate) fn todo_from_turn(turn: &TurnSnapshot) -> Self {
+        Self {
             kind: "todo".to_string(),
             entries: turn.todo.clone(),
             text: String::new(),
             path: None,
-        };
-        (!plan.is_empty()).then_some(plan)
+        }
     }
 
     pub(crate) fn is_empty(&self) -> bool {

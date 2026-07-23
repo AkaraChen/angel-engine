@@ -345,7 +345,10 @@ fn todo_snapshot_for_turn(
         .get(conversation_id)?
         .turns
         .get(turn_id)?;
-    DisplayPlanSnapshot::todo_from_turn(&TurnSnapshot::from(turn))
+    turn.todo.as_ref()?;
+    Some(DisplayPlanSnapshot::todo_from_turn(&TurnSnapshot::from(
+        turn,
+    )))
 }
 
 fn content_chunk(delta: &ContentDelta) -> ContentChunk {

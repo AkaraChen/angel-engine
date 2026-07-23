@@ -65,7 +65,11 @@ function PlanMessagePart({ plan }: { plan: ChatPlanData }) {
   ).length;
   const isTodoPlan = plan.kind === "todo";
   const planTitle = isTodoPlan ? t("common.todo") : t("common.plan");
-  const hasDetails = plan.entries.length > 0 || Boolean(plan.text);
+  const planText =
+    is.nonEmptyString(plan.text) && plan.text.trim().length > 0
+      ? plan.text
+      : undefined;
+  const hasDetails = plan.entries.length > 0 || planText !== undefined;
   const target = findPlanModeToggleTarget([
     {
       canSet: chatOptions.canSetMode,
@@ -184,24 +188,6 @@ function PlanMessagePart({ plan }: { plan: ChatPlanData }) {
           />
         ) : null}
       </CollapsibleTrigger>
-      {plan.entries.length > 0 ? (
-        <div
-          aria-hidden="true"
-          className="
-            mx-3 mb-1.5 h-0.5 overflow-hidden rounded-full bg-surface-2
-          "
-        >
-          <div
-            className="
-              h-full rounded-full bg-primary transition-[width] duration-500
-              ease-swift
-            "
-            style={{
-              width: `${Math.round((completed / plan.entries.length) * 100)}%`,
-            }}
-          />
-        </div>
-      ) : null}
       {hasDetails ? (
         <CollapsibleContent
           className="
@@ -211,7 +197,7 @@ function PlanMessagePart({ plan }: { plan: ChatPlanData }) {
           "
         >
           <div className="space-y-3 border-t border-border px-3 py-2.5">
-            {is.nonEmptyString(plan.text) ? (
+            {planText !== undefined ? (
               <div className="p-2">
                 <Streamdown
                   className={assistantTextContainerClassName}
@@ -222,7 +208,7 @@ function PlanMessagePart({ plan }: { plan: ChatPlanData }) {
                   plugins={{ cjk, code: streamdownCode, math, mermaid }}
                   shikiTheme={["vitesse-light", "vitesse-dark"]}
                 >
-                  {plan.text}
+                  {planText}
                 </Streamdown>
               </div>
             ) : null}

@@ -162,6 +162,72 @@ fn acp_plan_update_surfaces_independent_plan_message_part() {
 }
 
 #[test]
+fn codex_plan_text_allows_an_empty_todo_update() {
+    let (mut client, conversation_id) = ready_codex_client();
+
+    let sent = client
+        .thread(&conversation_id)
+        .send_event(ThreadEvent::text("make a plan"))
+        .expect("send codex text");
+    let turn_id = sent.turn_id.expect("turn id");
+    client
+        .receive_json_value(response(
+            &sent.request_id.expect("turn request id"),
+            json!({
+                "turn": {
+                    "id": "turn-1",
+                    "status": "inProgress"
+                }
+            }),
+        ))
+        .expect("turn accepted");
+
+    client
+        .receive_json_value(json!({
+            "jsonrpc": "2.0",
+            "method": "item/plan/delta",
+            "params": {
+                "threadId": "thread-1",
+                "turnId": "turn-1",
+                "itemId": "plan-1",
+                "delta": "# Plan\nInspect the implementation."
+            }
+        }))
+        .expect("plan text");
+
+    let update = client
+        .receive_json_value(json!({
+            "jsonrpc": "2.0",
+            "method": "turn/plan/updated",
+            "params": {
+                "threadId": "thread-1",
+                "turnId": "turn-1",
+                "plan": []
+            }
+        }))
+        .expect("empty todo update");
+
+    assert!(update.events.iter().any(|event| {
+        matches!(
+            event,
+            ClientEvent::PlanUpdated { conversation_id: id, turn_id: tid, plan }
+                if id == &conversation_id
+                    && tid == &turn_id
+                    && plan.kind == "todo"
+                    && plan.entries.is_empty()
+                    && plan.text.is_empty()
+        )
+    }));
+
+    let snapshot = client
+        .thread(&conversation_id)
+        .turn(&turn_id)
+        .expect("turn snapshot");
+    assert_eq!(snapshot.plan_text, "# Plan\nInspect the implementation.");
+    assert!(snapshot.todo.is_empty());
+}
+
+#[test]
 fn codex_completed_reasoning_item_surfaces_reasoning_updates() {
     let (mut client, conversation_id) = ready_codex_client();
 
