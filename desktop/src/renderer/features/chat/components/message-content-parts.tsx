@@ -3,6 +3,7 @@ import type {
   EnrichedPartState,
 } from "@assistant-ui/react";
 import type { TFunction } from "i18next";
+import type { FC } from "react";
 
 import { parseDataUrl } from "@angel-engine/daemon-api/chat";
 import { isTextLikeMimeType } from "@angel-engine/daemon-api/mime";
@@ -14,13 +15,15 @@ import { cjk } from "@streamdown/cjk";
 import { code as streamdownCode } from "@streamdown/code";
 import { math } from "@streamdown/math";
 import { mermaid } from "@streamdown/mermaid";
+import { EditorContent, useEditor } from "@tiptap/react";
+import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 
 import { ChatAttachmentTile } from "@/features/chat/components/attachment-tile";
-import {
-  assistantTextContainerClassName,
-  userTextContainerClassName,
-} from "@/features/chat/components/message-styles";
+import { createComposerDisplayExtensions } from "@/features/chat/components/composer/composer-editor-extensions";
+import { composerRichTextClassName } from "@/features/chat/components/composer/composer-rich-text";
+import { assistantTextContainerClassName } from "@/features/chat/components/message-styles";
+import { cn } from "@/platform/utils";
 
 function UserTextMessagePart(
   part: Extract<EnrichedPartState, { type: "text" }>,
@@ -36,18 +39,43 @@ function UserTextMessagePart(
     );
   }
 
+  return <UserMessageRichText text={part.text} />;
+}
+
+type UserMessageRichTextProps = {
+  text: string;
+};
+
+const UserMessageRichText: FC<UserMessageRichTextProps> = ({ text }) => {
+  const extensions = useMemo(createComposerDisplayExtensions, []);
+  const editor = useEditor(
+    {
+      content: text,
+      contentType: "markdown",
+      editable: false,
+      extensions,
+      immediatelyRender: false,
+      shouldRerenderOnTransaction: false,
+    },
+    [extensions, text],
+  );
+
   return (
-    <StreamdownTextPrimitive
-      containerClassName={userTextContainerClassName}
-      controls={{ code: false }}
-      linkSafety={{ enabled: false }}
-      lineNumbers={false}
-      mode="static"
-      plugins={{ cjk, code: streamdownCode, math, mermaid }}
-      shikiTheme={["vitesse-light", "vitesse-dark"]}
+    <EditorContent
+      className={cn(
+        composerRichTextClassName,
+        `
+          select-text
+          [&_.tiptap]:max-h-none! [&_.tiptap]:min-h-0!
+          [&_.tiptap]:overflow-visible!
+          [&_[data-type=mention]]:text-primary-foreground!
+          [&_[data-mention-kind=skill]]:bg-primary-foreground/12!
+        `,
+      )}
+      editor={editor}
     />
   );
-}
+};
 
 function AssistantTextMessagePart(
   part: Extract<EnrichedPartState, { type: "text" }>,
@@ -106,6 +134,7 @@ function ImageMessagePart(part: Extract<EnrichedPartState, { type: "image" }>) {
 function FileMessagePart(part: Extract<EnrichedPartState, { type: "file" }>) {
   const { t } = useTranslation();
   const isMention = messageFileMention(part);
+  if (isMention) return null;
   const isImage = part.mimeType.startsWith("image/");
   const previewText =
     isMention || isImage
@@ -189,6 +218,12 @@ function MessageAttachment({ attachment }: { attachment: CompleteAttachment }) {
   const { t } = useTranslation();
   const imagePart = attachment.content.find((part) => part.type === "image");
   const filePart = attachment.content.find((part) => part.type === "file");
+  if (
+    filePart &&
+    (messageFileMention(filePart) || messageSkillMention(filePart))
+  ) {
+    return null;
+  }
   const isMention = filePart ? messageFileMention(filePart) : false;
   const previewUrl = isMention
     ? undefined
@@ -223,6 +258,10 @@ function MessageAttachment({ attachment }: { attachment: CompleteAttachment }) {
 
 function messageFileMention(part: unknown) {
   return (part as { mention?: unknown }).mention === true;
+}
+
+function messageSkillMention(part: unknown) {
+  return (part as { skill?: unknown }).skill === true;
 }
 
 export {

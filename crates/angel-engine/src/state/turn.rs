@@ -175,6 +175,8 @@ pub struct UserInputRef {
     pub image: Option<UserImageInputRef>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub file: Option<UserFileInputRef>,
+    #[serde(default)]
+    pub reference: bool,
 }
 
 #[derive(serde::Serialize, serde::Deserialize, Clone, Debug, PartialEq, Eq)]

@@ -8,7 +8,6 @@ import type {
   PromptInputFile,
   PromptInputMessage,
 } from "@/components/ai-elements/prompt-input";
-import is from "@sindresorhus/is";
 
 export type ComposerMentionedFile = ProjectFileSearchResult & {
   id: string;
@@ -17,8 +16,6 @@ export type ComposerMentionedFile = ProjectFileSearchResult & {
 export type ComposerMentionedSkill = ChatAvailableSkill & {
   id: string;
 };
-
-const SKILL_MENTION_MIME_TYPE = "application/vnd.angel-engine.skill-mention";
 
 export function createAttachmentFromPromptFile(
   file: PromptInputMessage["files"][number],
@@ -105,98 +102,6 @@ export function createCompleteAttachmentFromPromptFile(
     name: filename,
     status: { type: "complete" },
     type: isImage ? "image" : "file",
-  };
-}
-
-export function createMentionAttachment(
-  file: ComposerMentionedFile,
-): CreateAttachment {
-  const mimeType = file.mimeType;
-  if (!is.nonEmptyString(mimeType)) {
-    throw new Error(
-      `Mentioned file is missing MIME type: ${file.relativePath}`,
-    );
-  }
-  const content = {
-    data: file.path,
-    filename: file.name,
-    mention: true,
-    mimeType,
-    path: file.path,
-    type: "file" as const,
-  };
-  return {
-    content: [content],
-    contentType: mimeType,
-    name: file.name,
-    type: "file",
-  };
-}
-
-export function createCompleteMentionAttachment(
-  file: ComposerMentionedFile,
-): CompleteAttachment {
-  const mimeType = file.mimeType;
-  if (!is.nonEmptyString(mimeType)) {
-    throw new Error(
-      `Mentioned file is missing MIME type: ${file.relativePath}`,
-    );
-  }
-  const content = {
-    data: file.path,
-    filename: file.name,
-    mention: true,
-    mimeType,
-    path: file.path,
-    type: "file" as const,
-  };
-  return {
-    content: [content],
-    contentType: mimeType,
-    id: file.id,
-    name: file.name,
-    status: { type: "complete" },
-    type: "file",
-  };
-}
-
-export function createSkillMentionAttachment(
-  skill: ComposerMentionedSkill,
-): CreateAttachment {
-  const content = {
-    data: skill.path,
-    filename: skill.name,
-    mimeType: SKILL_MENTION_MIME_TYPE,
-    path: skill.path,
-    skill: true,
-    type: "file" as const,
-  };
-  return {
-    content: [content],
-    contentType: SKILL_MENTION_MIME_TYPE,
-    name: skill.name,
-    type: "file",
-  };
-}
-
-export function createCompleteSkillMentionAttachment(
-  skill: ComposerMentionedSkill,
-): CompleteAttachment {
-  const content = {
-    data: skill.path,
-    filename: skill.name,
-    mimeType: SKILL_MENTION_MIME_TYPE,
-    path: skill.path,
-    skill: true,
-    type: "file" as const,
-  };
-  return {
-    content: [content],
-    contentType: SKILL_MENTION_MIME_TYPE,
-    id: skill.id,
-    name: skill.name,
-    status: { type: "complete" },
-    type: "file",
   };
 }
 

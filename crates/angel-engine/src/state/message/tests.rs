@@ -258,6 +258,13 @@ fn live_turn_projects_same_message_shape() {
         content: "status".to_string(),
         file: None,
         image: None,
+        reference: false,
+    });
+    turn.input.push(UserInputRef {
+        content: "skill-authoring".to_string(),
+        file: None,
+        image: None,
+        reference: true,
     });
     turn.reasoning
         .chunks
@@ -284,6 +291,11 @@ fn live_turn_projects_same_message_shape() {
 
     assert_eq!(messages.len(), 2);
     assert_eq!(messages[0].role, DisplayMessageRole::User);
+    assert!(matches!(
+        messages[0].content.as_slice(),
+        [DisplayMessagePart::Text { kind: DisplayTextPartKind::Text, text }]
+            if text == "status"
+    ));
     assert_eq!(messages[1].id, "turn-1:assistant");
     assert!(matches!(
         messages[1].content.as_slice(),
@@ -400,6 +412,7 @@ fn live_turn_projects_image_input_parts() {
         content: "describe this".to_string(),
         file: None,
         image: None,
+        reference: false,
     });
     turn.input.push(UserInputRef {
         content: "sample.png".to_string(),
@@ -409,6 +422,7 @@ fn live_turn_projects_image_input_parts() {
             mime_type: "image/png".to_string(),
             name: Some("sample.png".to_string()),
         }),
+        reference: false,
     });
     conversation.turns.insert(turn_id, turn);
 

@@ -4,6 +4,7 @@ import StarterKit from "@tiptap/starter-kit";
 import { afterEach, describe, expect, it } from "vitest";
 import {
   composerEnterAction,
+  ComposerDisplayMention,
   ComposerMention,
 } from "@/features/chat/components/composer/composer-editor-extensions";
 import { composerMentionsFromDocument } from "@/features/chat/components/composer/composer-editor-model";
@@ -93,6 +94,43 @@ describe("composer markdown", () => {
     const editor = createEditor("**bold**\n\n- one\n- two\n\n`code`");
     expect(editor.getMarkdown()).toBe("**bold**\n\n- one\n- two\n\n`code`");
   });
+
+  it("restores command, skill, and file mentions for read-only messages", () => {
+    const editor = createDisplayEditor(
+      "/review with $skill-authoring and @src/app.ts",
+    );
+    const paragraph = editor.getJSON().content?.[0];
+
+    expect(
+      paragraph?.content
+        ?.filter((node) => node.type === "mention")
+        .map((node) => {
+          const mention = node as {
+            attrs?: { kind?: unknown; label?: unknown };
+          };
+          return {
+            kind: mention.attrs?.kind,
+            label: mention.attrs?.label,
+          };
+        }),
+    ).toEqual([
+      { kind: "command", label: "review" },
+      { kind: "skill", label: "skill-authoring" },
+      { kind: "file", label: "src/app.ts" },
+    ]);
+  });
+
+  it("does not turn email addresses into file mentions", () => {
+    const editor = createDisplayEditor(
+      "email dev@example.com and inspect /tmp/output",
+    );
+
+    expect(
+      editor
+        .getJSON()
+        .content?.[0]?.content?.some((node) => node.type === "mention"),
+    ).toBe(false);
+  });
 });
 
 describe("composer Enter key decisions", () => {
@@ -139,6 +177,20 @@ function createEditor(content: object | string) {
       StarterKit.configure({ heading: false, horizontalRule: false }),
       Markdown,
       ComposerMention,
+    ],
+  });
+  editors.push(editor);
+  return editor;
+}
+
+function createDisplayEditor(content: string) {
+  const editor = new Editor({
+    content,
+    contentType: "markdown",
+    extensions: [
+      StarterKit.configure({ heading: false, horizontalRule: false }),
+      Markdown,
+      ComposerDisplayMention,
     ],
   });
   editors.push(editor);

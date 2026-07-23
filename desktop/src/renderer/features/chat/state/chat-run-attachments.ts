@@ -2,9 +2,14 @@ import type {
   ChatAttachmentInput,
   ChatHistoryMessagePart,
 } from "@angel-engine/daemon-api/chat";
-import type { CompleteAttachment, ThreadMessage } from "@assistant-ui/react";
+import type {
+  AppendMessage,
+  CompleteAttachment,
+  ThreadMessage,
+} from "@assistant-ui/react";
 import { imageDataUrl, parseDataUrl } from "@angel-engine/daemon-api/chat";
 import is from "@sindresorhus/is";
+import { chatMessageReferencesFromRunConfig } from "@/features/chat/chat-message-references";
 
 export function historyImagePartToAttachment(
   messageId: string,
@@ -117,9 +122,11 @@ export function engineMessageAttachmentsToHistoryParts(
 }
 
 export function getMessageAttachments(
-  message: Pick<ThreadMessage, "attachments" | "content">,
+  message: Pick<AppendMessage, "attachments" | "content" | "runConfig">,
 ): ChatAttachmentInput[] {
-  const inputs: ChatAttachmentInput[] = [];
+  const inputs: ChatAttachmentInput[] = [
+    ...chatMessageReferencesFromRunConfig(message.runConfig),
+  ];
 
   if (message.attachments) {
     for (const attachment of message.attachments) {

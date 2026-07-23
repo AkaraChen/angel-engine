@@ -14,10 +14,10 @@ import type {
 
 import { useCallback, useRef } from "react";
 import {
-  createCompleteAttachmentFromPromptFile,
-  createCompleteMentionAttachment,
-  createCompleteSkillMentionAttachment,
-} from "@/features/chat/components/composer/composer-attachments";
+  chatMessageReferences,
+  runConfigWithChatMessageReferences,
+} from "@/features/chat/chat-message-references";
+import { createCompleteAttachmentFromPromptFile } from "@/features/chat/components/composer/composer-attachments";
 import { useChatRunStore } from "@/features/chat/state/chat-run-store";
 
 export interface SendChatMessageCallbacks {
@@ -110,12 +110,10 @@ export function useSendChatMessage(
       for (const file of input.attachments) {
         attachments.push(createCompleteAttachmentFromPromptFile(file, input.t));
       }
-      for (const file of input.mentionedFiles) {
-        attachments.push(createCompleteMentionAttachment(file));
-      }
-      for (const skill of input.selectedSkills) {
-        attachments.push(createCompleteSkillMentionAttachment(skill));
-      }
+      const references = chatMessageReferences(
+        input.mentionedFiles,
+        input.selectedSkills,
+      );
 
       const message: AppendMessage = {
         attachments,
@@ -124,7 +122,7 @@ export function useSendChatMessage(
         metadata: { custom: {} },
         parentId: null,
         role: "user",
-        runConfig: undefined,
+        runConfig: runConfigWithChatMessageReferences(undefined, references),
         sourceId: null,
       };
 

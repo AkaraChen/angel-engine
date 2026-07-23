@@ -16,12 +16,12 @@ import {
   usePromptInputAttachments,
 } from "@/components/ai-elements/prompt-input";
 import { Button } from "@/components/ui/button";
-import { ChatComposer } from "@/features/chat/components/composer/chat-composer";
 import {
-  createAttachmentFromPromptFile,
-  createMentionAttachment,
-  createSkillMentionAttachment,
-} from "@/features/chat/components/composer/composer-attachments";
+  chatMessageReferences,
+  runConfigWithChatMessageReferences,
+} from "@/features/chat/chat-message-references";
+import { ChatComposer } from "@/features/chat/components/composer/chat-composer";
+import { createAttachmentFromPromptFile } from "@/features/chat/components/composer/composer-attachments";
 import {
   ComposerModelMenu,
   ComposerOptionSelect,
@@ -60,19 +60,20 @@ export function AssistantComposer({
       const composer = aui.composer();
 
       composer.setText(text);
+      const references = chatMessageReferences(mentionedFiles, selectedSkills);
+      composer.setRunConfig(
+        runConfigWithChatMessageReferences(
+          composer.getState().runConfig,
+          references,
+        ) ?? { custom: {} },
+      );
 
       try {
-        await Promise.all([
-          ...files.map(async (file) =>
+        await Promise.all(
+          files.map(async (file) =>
             composer.addAttachment(createAttachmentFromPromptFile(file, t)),
           ),
-          ...mentionedFiles.map(async (file) =>
-            composer.addAttachment(createMentionAttachment(file)),
-          ),
-          ...selectedSkills.map(async (skill) =>
-            composer.addAttachment(createSkillMentionAttachment(skill)),
-          ),
-        ]);
+        );
 
         composer.send();
       } catch (error) {

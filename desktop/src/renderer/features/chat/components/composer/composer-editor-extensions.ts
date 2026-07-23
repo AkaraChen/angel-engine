@@ -14,6 +14,7 @@ import { Extension } from "@tiptap/core";
 import Mention from "@tiptap/extension-mention";
 import { Placeholder } from "@tiptap/extensions";
 import { Markdown } from "@tiptap/markdown";
+import type { DOMOutputSpec } from "@tiptap/pm/model";
 import { PluginKey } from "@tiptap/pm/state";
 import { ReactRenderer as TiptapReactRenderer } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
@@ -79,6 +80,17 @@ export function createComposerExtensions({
   ];
 }
 
+export function createComposerDisplayExtensions(): Extensions {
+  return [
+    StarterKit.configure({
+      heading: false,
+      horizontalRule: false,
+    }),
+    Markdown,
+    ComposerDisplayMention,
+  ];
+}
+
 export const ComposerMention = Mention.extend({
   addAttributes() {
     return {
@@ -141,6 +153,34 @@ export const ComposerMention = Mention.extend({
   },
 });
 
+export const ComposerDisplayMention = ComposerMention.extend({
+  markdownTokenizer: {
+    level: "inline",
+    name: "mention",
+    start: displayMentionStart,
+    tokenize: displayMentionToken,
+  },
+  parseMarkdown: (token) => {
+    const value = token as {
+      kind: "command" | "file" | "skill";
+      label: string;
+    };
+    return {
+      attrs: {
+        id: value.label,
+        kind: value.kind,
+        label: value.label,
+        name: value.label,
+        path: value.kind === "file" ? value.label : null,
+      },
+      type: "mention",
+    };
+  },
+}).configure({
+  renderHTML: renderComposerMentionHtml,
+  renderText: renderComposerMentionText,
+});
+
 function dataAttribute(name: string, value: unknown): Record<string, string> {
   if (typeof value === "string" || typeof value === "boolean") {
     return { [name]: String(value) };
@@ -150,25 +190,70 @@ function dataAttribute(name: string, value: unknown): Record<string, string> {
 
 function createComposerMentionExtension(interactions: ComposerInteractionRefs) {
   return ComposerMention.configure({
-    renderHTML: ({ node }) => [
-      "span",
-      {
-        class: mentionClass(node.attrs.kind),
-        "data-type": "mention",
-        ...mentionTooltip(node.attrs.kind, node.attrs.description),
-      },
-      ...(node.attrs.kind === "file"
-        ? fileMentionContent(String(node.attrs.path))
-        : [`${mentionPrefix(node.attrs.kind)}${node.attrs.label}`]),
-    ],
-    renderText: ({ node }) =>
-      `${mentionPrefix(node.attrs.kind)}${node.attrs.label}`,
+    renderHTML: renderComposerMentionHtml,
+    renderText: renderComposerMentionText,
     suggestions: [
       fileSuggestion(interactions),
       skillSuggestion(interactions),
       commandSuggestion(interactions),
     ] as never,
   });
+}
+
+function renderComposerMentionHtml({
+  node,
+}: Parameters<
+  NonNullable<typeof ComposerMention.options.renderHTML>
+>[0]): DOMOutputSpec {
+  return [
+    "span",
+    {
+      class: mentionClass(node.attrs.kind),
+      "data-mention-kind": String(node.attrs.kind),
+      "data-type": "mention",
+      ...mentionTooltip(node.attrs.kind, node.attrs.description),
+    },
+    ...(node.attrs.kind === "file"
+      ? fileMentionContent(String(node.attrs.path))
+      : [`${mentionPrefix(node.attrs.kind)}${node.attrs.label}`]),
+  ] as DOMOutputSpec;
+}
+
+function renderComposerMentionText({
+  node,
+}: Parameters<NonNullable<typeof ComposerMention.options.renderText>>[0]) {
+  return `${mentionPrefix(node.attrs.kind)}${node.attrs.label}`;
+}
+
+function displayMentionStart(source: string) {
+  const inline = /(^|\s)(?=\$[A-Za-z]|@[A-Za-z0-9._~/-])/.exec(source);
+  const command = /(^|\n)(?=\/[A-Za-z])/.exec(source);
+  const inlineIndex = inline === null ? -1 : inline.index + inline[1].length;
+  const commandIndex =
+    command === null ? -1 : command.index + command[1].length;
+  if (inlineIndex === -1) return commandIndex;
+  if (commandIndex === -1) return inlineIndex;
+  return Math.min(inlineIndex, commandIndex);
+}
+
+function displayMentionToken(source: string) {
+  const named = /^([$/])([A-Za-z][\w:.-]*)/.exec(source);
+  if (named !== null) {
+    return {
+      kind: named[1] === "$" ? ("skill" as const) : ("command" as const),
+      label: named[2],
+      raw: named[0],
+      type: "mention",
+    };
+  }
+  const file = /^@([^\s]+)/.exec(source);
+  if (file === null) return undefined;
+  return {
+    kind: "file" as const,
+    label: file[1],
+    raw: file[0],
+    type: "mention",
+  };
 }
 
 function fileSuggestion(
@@ -312,7 +397,7 @@ function mentionTooltip(kind: unknown, description: unknown) {
   return title.length === 0 ? {} : { title };
 }
 
-function fileMentionContent(path: string) {
+function fileMentionContent(path: string): DOMOutputSpec[] {
   const icon = workspaceFileIconResolver.resolveIcon(
     "file-tree-icon-file",
     path,
@@ -338,7 +423,7 @@ function fileMentionContent(path: string) {
       ["http://www.w3.org/2000/svg use", { href: `#${name}` }],
     ],
     basename(path),
-  ];
+  ] as DOMOutputSpec[];
 }
 
 function renderComposerSuggestion() {

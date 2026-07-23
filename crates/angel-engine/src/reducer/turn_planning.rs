@@ -293,10 +293,15 @@ fn to_input_refs(input: Vec<UserInput>) -> Result<Vec<UserInputRef>, EngineError
 
 fn to_input_ref(input: UserInput) -> Result<UserInputRef, EngineError> {
     let (image, file) = input_attachment_refs(&input.kind)?;
+    let reference = matches!(
+        input.kind,
+        UserInputKind::FileMention { .. } | UserInputKind::SkillMention { .. }
+    );
     Ok(UserInputRef {
         content: input.content,
         image,
         file,
+        reference,
     })
 }
 

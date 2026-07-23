@@ -170,6 +170,9 @@ fn turn_input_display_parts(turn: &TurnState) -> Vec<DisplayMessagePart> {
 }
 
 fn input_display_part(input: &UserInputRef) -> Option<DisplayMessagePart> {
+    if input.reference {
+        return None;
+    }
     if let Some(image) = &input.image {
         return Some(DisplayMessagePart::image(
             image.data.clone(),
