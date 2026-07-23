@@ -2,10 +2,11 @@ import { DaemonRequestError } from "@angel-engine/daemon-client";
 import { tipc } from "@egoist/tipc/main";
 import { type as arkType } from "arktype";
 import { Effect } from "effect";
-import { BrowserWindow, dialog, Menu, shell } from "electron";
+import { BrowserWindow, dialog } from "electron";
 import { daemonClient } from "../../daemon/client";
 import { MainIpcError } from "../../platform/errors";
 import { translate } from "../../platform/i18n";
+import { showProjectContextMenu } from "./context-menu";
 
 const t = tipc.create();
 
@@ -40,34 +41,15 @@ export const projectPlatformIpcRouter = {
               MainIpcError.notFound("Project not found."),
             );
           }
-          return yield* Effect.promise(
-            () =>
-              new Promise<"cancelled" | "deleted" | "opened">((resolve) => {
-                const menu = Menu.buildFromTemplate([
-                  {
-                    click: () => {
-                      void shell
-                        .openPath(project.path)
-                        .finally(() => resolve("opened"));
-                    },
-                    label: translate("projects.openInFinder"),
-                  },
-                  { type: "separator" },
-                  {
-                    click: () => {
-                      void daemonClient.projects
-                        .delete(project.id)
-                        .then(() => resolve("deleted"));
-                    },
-                    label: translate("common.delete"),
-                  },
-                ]);
-                menu.popup({
-                  callback: () => resolve("cancelled"),
-                  window:
-                    BrowserWindow.fromWebContents(context.sender) ?? undefined,
-                });
-              }),
+          return yield* Effect.promise(() =>
+            showProjectContextMenu(
+              project,
+              {
+                delete: translate("common.delete"),
+                openInFinder: translate("projects.openInFinder"),
+              },
+              BrowserWindow.fromWebContents(context.sender) ?? undefined,
+            ),
           );
         }),
       ),
