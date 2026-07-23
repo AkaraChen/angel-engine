@@ -110,6 +110,15 @@ where
         let value = serde_json::from_str(&line)
             .map_err(|error| format!("failed to parse agent JSON line `{line}`: {error}"))?;
         let message = JsonRpcMessage::from_value(value)?;
+        if let JsonRpcMessage::Error {
+            code,
+            message,
+            data,
+            ..
+        } = &message
+        {
+            return Err(format!("agent RPC error {code}: {message}; data={data:?}").into());
+        }
         let output = self.adapter.decode_message(&self.engine, &message)?;
         self.apply_output(output)?;
         Ok(true)
@@ -342,6 +351,44 @@ fn codex_app_server_process_smoke_enters_and_exits_plan_mode() -> TestResult {
             .map(|mode| mode.id.as_str()),
         Some("default")
     );
+
+    Ok(())
+}
+
+#[test]
+#[ignore = "requires installed and authenticated codex CLI with goals enabled"]
+fn codex_app_server_process_smoke_sets_and_clears_goal() -> TestResult {
+    let adapter = CodexAdapter::app_server();
+    let capabilities = adapter.capabilities();
+    let mut process = AgentProcess::spawn(
+        "codex",
+        &["app-server"],
+        adapter,
+        ProtocolFlavor::CodexAppServer,
+        capabilities,
+    )?;
+    process.initialize_runtime()?;
+    let conversation_id = process.start_conversation()?;
+    assert!(
+        process.engine.conversations[&conversation_id]
+            .available_commands
+            .iter()
+            .any(|command| command.name == "goal"),
+        "Codex adapter did not advertise /goal"
+    );
+
+    for input in ["/goal verify Angel Engine goal support", "/goal clear"] {
+        let interpreted = process
+            .adapter
+            .interpret_user_input(&process.engine, &conversation_id, &[UserInput::text(input)])?
+            .ok_or_else(|| format!("Codex adapter did not interpret {input}"))?;
+        let plan = process.engine.plan_command(interpreted.command)?;
+        let request_id = plan.request_id.clone().ok_or("goal request id")?;
+        process.send_engine_plan(plan)?;
+        process.process_until(input, Duration::from_secs(30), |engine| {
+            !engine.pending.requests.contains_key(&request_id)
+        })?;
+    }
 
     Ok(())
 }

@@ -78,6 +78,8 @@ pub enum ProtocolMethod {
     SetSessionConfigOption,
     RunShellCommand,
     ListSkills,
+    SetGoal,
+    ClearGoal,
     Extension(String),
 }
 

@@ -175,3 +175,90 @@ fn skills_list_encodes_conversation_cwd_and_force_reload() {
 
     assert_eq!(params, json!({"cwds": ["/repo"], "forceReload": true}));
 }
+
+#[test]
+fn goal_commands_encode_codex_thread_goal_params() {
+    let adapter = CodexAdapter::app_server();
+    let mut engine = AngelEngine::with_available_runtime(
+        angel_engine::ProtocolFlavor::CodexAppServer,
+        angel_engine::RuntimeCapabilities::new("test"),
+        adapter.capabilities(),
+    );
+    let conversation_id = ConversationId::new("conv");
+    engine
+        .apply_event(EngineEvent::ConversationProvisionStarted {
+            id: conversation_id.clone(),
+            remote: RemoteConversationId::Known("thread".to_string()),
+            op: angel_engine::ProvisionOp::New,
+            capabilities: adapter.capabilities(),
+        })
+        .expect("conversation provision");
+    engine
+        .apply_event(EngineEvent::ConversationReady {
+            id: conversation_id.clone(),
+            remote: Some(RemoteConversationId::Known("thread".to_string())),
+            context: ContextPatch::empty(),
+            capabilities: None,
+        })
+        .expect("conversation ready");
+
+    let set_plan = engine
+        .plan_command(angel_engine::EngineCommand::Extension(
+            angel_engine::EngineExtensionCommand::SetGoal {
+                conversation_id: conversation_id.clone(),
+                objective: "ship goal support".to_string(),
+            },
+        ))
+        .expect("set goal plan");
+    let set_output = adapter
+        .encode_effect(&engine, &set_plan.effects[0], &TransportOptions::default())
+        .expect("set goal output");
+    assert!(matches!(
+        set_output.messages.as_slice(),
+        [JsonRpcMessage::Request { method, params, .. }]
+            if method == "thread/goal/set"
+                && params == &json!({
+                    "threadId": "thread",
+                    "objective": "ship goal support"
+                })
+    ));
+
+    let pause_plan = engine
+        .plan_command(angel_engine::EngineCommand::Extension(
+            angel_engine::EngineExtensionCommand::SetGoalStatus {
+                conversation_id: conversation_id.clone(),
+                status: angel_engine::GoalStatus::Paused,
+            },
+        ))
+        .expect("pause goal plan");
+    let pause_params = adapter
+        .encode_params(
+            &engine,
+            &pause_plan.effects[0],
+            &TransportOptions::default(),
+        )
+        .expect("pause goal params");
+    assert_eq!(
+        pause_params,
+        json!({"threadId": "thread", "status": "paused"})
+    );
+
+    let clear_plan = engine
+        .plan_command(angel_engine::EngineCommand::Extension(
+            angel_engine::EngineExtensionCommand::ClearGoal { conversation_id },
+        ))
+        .expect("clear goal plan");
+    let clear_output = adapter
+        .encode_effect(
+            &engine,
+            &clear_plan.effects[0],
+            &TransportOptions::default(),
+        )
+        .expect("clear goal output");
+    assert!(matches!(
+        clear_output.messages.as_slice(),
+        [JsonRpcMessage::Request { method, params, .. }]
+            if method == "thread/goal/clear"
+                && params == &json!({"threadId": "thread"})
+    ));
+}

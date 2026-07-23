@@ -78,6 +78,27 @@ pub enum EngineExtensionCommand {
         conversation_id: ConversationId,
         force_reload: bool,
     },
+    SetGoal {
+        conversation_id: ConversationId,
+        objective: String,
+    },
+    SetGoalStatus {
+        conversation_id: ConversationId,
+        status: GoalStatus,
+    },
+    ClearGoal {
+        conversation_id: ConversationId,
+    },
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum GoalStatus {
+    Active,
+    Paused,
+    Blocked,
+    UsageLimited,
+    BudgetLimited,
+    Complete,
 }
 
 #[derive(Clone, Debug, Default, PartialEq, Eq)]

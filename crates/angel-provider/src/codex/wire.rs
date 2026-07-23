@@ -38,6 +38,8 @@ pub(crate) fn codex_client_request_method(method: &ProtocolMethod) -> Option<Cli
         ProtocolMethod::Unsubscribe => Some(ClientRequestMethod::ThreadUnsubscribe),
         ProtocolMethod::RunShellCommand => Some(ClientRequestMethod::ThreadShellCommand),
         ProtocolMethod::ListSkills => Some(ClientRequestMethod::SkillsList),
+        ProtocolMethod::SetGoal => Some(ClientRequestMethod::ThreadGoalSet),
+        ProtocolMethod::ClearGoal => Some(ClientRequestMethod::ThreadGoalClear),
         _ => None,
     }
 }

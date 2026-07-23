@@ -101,6 +101,7 @@ export const WorkspacePageView: FC<WorkspacePageViewProps> = ({
     toggleWorkspaceTools,
     workspaceMode,
     workspaceToolHost,
+    workspaceToolContextKey,
     workspaceToolRoot,
     workspaceTitle,
     workspaceToolsToggleLabel,
@@ -212,6 +213,7 @@ export const WorkspacePageView: FC<WorkspacePageViewProps> = ({
         />
         <WorkspaceToolContextBridge
           chatId={selectedChatId ?? null}
+          contextKey={workspaceToolContextKey ?? null}
           root={workspaceToolRoot ?? null}
         />
 
@@ -357,7 +359,7 @@ export const WorkspacePageView: FC<WorkspacePageViewProps> = ({
           <WorkspaceRightSidebar
             active={workspaceToolHost === "sidebar"}
             api={api}
-            chatId={dockedWorkspaceToolContext.chatId}
+            contextKey={dockedWorkspaceToolContext.contextKey}
             open={rightSidebarOpen}
             root={dockedWorkspaceToolContext.root}
             width={rightSidebarWidth}

@@ -87,6 +87,11 @@ fn insert_codex_extension_discriminants(
     server_notification_methods: &mut BTreeMap<String, String>,
 ) {
     client_request_methods.insert("THREAD_CLOSE".to_string(), "thread/close".to_string());
+    client_request_methods.insert(
+        "THREAD_GOAL_CLEAR".to_string(),
+        "thread/goal/clear".to_string(),
+    );
+    client_request_methods.insert("THREAD_GOAL_SET".to_string(), "thread/goal/set".to_string());
     server_notification_methods.insert(
         "RAW_RESPONSE_ITEM_COMPLETED".to_string(),
         "rawResponseItem/completed".to_string(),

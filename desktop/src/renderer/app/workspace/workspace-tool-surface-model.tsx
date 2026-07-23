@@ -48,7 +48,7 @@ export interface WorkspaceToolSurfaceModel {
   addBrowserTab: () => void;
   addTerminalTab: () => void;
   api: ApiClient;
-  chatId: string | null;
+  contextKey: string | null;
   closeDynamicTab: (tab: WorkspaceToolSurfaceDynamicTab) => void;
   host: WorkspaceToolSurfaceHost;
   openBrowserTab: (url: string) => void;
@@ -63,13 +63,13 @@ export interface WorkspaceToolSurfaceModel {
 export function useWorkspaceToolSurfaceModel({
   active,
   api,
-  chatId: propChatId,
+  contextKey: propContextKey,
   host,
   root: propRoot,
 }: {
   active: boolean;
   api: ApiClient;
-  chatId?: string | null;
+  contextKey?: string | null;
   host: WorkspaceToolSurfaceHost;
   root?: string | null;
 }): WorkspaceToolSurfaceModel {
@@ -82,9 +82,9 @@ export function useWorkspaceToolSurfaceModel({
   const requestHost = useWorkspaceToolStore(
     (state) => state.requestWorkspaceToolHost,
   );
-  const chatId = propChatId ?? context.chatId ?? null;
+  const contextKey = propContextKey ?? context.contextKey ?? null;
   const root = propRoot ?? context.root ?? null;
-  const snapshot = currentWorkspaceToolSnapshot(chatId, snapshots);
+  const snapshot = currentWorkspaceToolSnapshot(contextKey, snapshots);
   const activeTabId = visibleActiveWorkspaceToolTabId(snapshot);
   const activeDynamicTab = snapshot.tabs.find((tab) => tab.id === activeTabId);
   const openWorkspaceWindowFile = useWorkspaceWindowFileOpener(api);
@@ -105,13 +105,13 @@ export function useWorkspaceToolSurfaceModel({
   );
   const updateSnapshot = useCallback(
     (updater: WorkspaceToolSnapshotUpdater) => {
-      if (!is.nonEmptyString(chatId)) {
+      if (!is.nonEmptyString(contextKey)) {
         return;
       }
 
-      storeUpdateSnapshot(chatId, updater);
+      storeUpdateSnapshot(contextKey, updater);
     },
-    [chatId, storeUpdateSnapshot],
+    [contextKey, storeUpdateSnapshot],
   );
   const windowFileOpenRequest = snapshot.windowFileOpenRequest;
   const handledWindowFileOpenRequestIdRef = useRef<string | null>(null);
@@ -274,7 +274,7 @@ export function useWorkspaceToolSurfaceModel({
       addBrowserTab,
       addTerminalTab,
       api,
-      chatId,
+      contextKey,
       closeDynamicTab,
       host,
       openBrowserTab,
@@ -292,7 +292,7 @@ export function useWorkspaceToolSurfaceModel({
       addBrowserTab,
       addTerminalTab,
       api,
-      chatId,
+      contextKey,
       closeDynamicTab,
       host,
       openBrowserTab,

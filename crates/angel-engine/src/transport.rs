@@ -328,6 +328,8 @@ pub fn method_name(method: &ProtocolMethod) -> String {
         ProtocolMethod::SetSessionConfigOption => "set_session_config_option".to_string(),
         ProtocolMethod::RunShellCommand => "run_shell_command".to_string(),
         ProtocolMethod::ListSkills => "list_skills".to_string(),
+        ProtocolMethod::SetGoal => "set_goal".to_string(),
+        ProtocolMethod::ClearGoal => "clear_goal".to_string(),
         ProtocolMethod::Extension(method) => method.clone(),
     }
 }

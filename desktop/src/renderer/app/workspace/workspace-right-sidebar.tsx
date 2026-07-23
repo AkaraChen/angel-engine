@@ -24,7 +24,7 @@ import { cn } from "@/platform/utils";
 interface WorkspaceRightSidebarProps {
   active?: boolean;
   api: ApiClient;
-  chatId: string;
+  contextKey: string;
   open: boolean;
   root: string;
   width: number;
@@ -36,7 +36,7 @@ interface WorkspaceRightSidebarProps {
 export function WorkspaceRightSidebar({
   active = true,
   api,
-  chatId,
+  contextKey,
   open,
   root,
   width,
@@ -180,7 +180,7 @@ export function WorkspaceRightSidebar({
             <WorkspaceToolSurface
               active={active && open}
               api={api}
-              chatId={chatId}
+              contextKey={contextKey}
               host="sidebar"
               root={root}
             />

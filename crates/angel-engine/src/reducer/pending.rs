@@ -79,4 +79,7 @@ pub enum PendingRequest {
     RefreshSkills {
         conversation_id: ConversationId,
     },
+    GoalMutation {
+        conversation_id: ConversationId,
+    },
 }

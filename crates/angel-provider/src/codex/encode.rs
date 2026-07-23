@@ -92,6 +92,23 @@ impl CodexAdapter {
                 "threadId": codex_thread_id(engine, effect)?,
                 "command": effect.payload.fields.get("command").cloned().unwrap_or_default(),
             })),
+            ProtocolMethod::SetGoal => {
+                let mut params = serde_json::Map::new();
+                params.insert(
+                    "threadId".to_string(),
+                    json!(codex_thread_id(engine, effect)?),
+                );
+                if let Some(objective) = effect.payload.fields.get("objective") {
+                    params.insert("objective".to_string(), json!(objective));
+                }
+                if let Some(status) = effect.payload.fields.get("status") {
+                    params.insert("status".to_string(), json!(codex_goal_status(status)?));
+                }
+                Ok(Value::Object(params))
+            }
+            ProtocolMethod::ClearGoal => Ok(json!({
+                "threadId": codex_thread_id(engine, effect)?,
+            })),
             ProtocolMethod::ListConversations => {
                 let mut params = serde_json::Map::new();
                 if let Some(cwd) = effect.payload.fields.get("cwd") {
@@ -211,6 +228,20 @@ impl CodexAdapter {
             output.completed_requests.push(request_id.clone());
         }
         Ok(output)
+    }
+}
+
+fn codex_goal_status(status: &str) -> Result<&'static str, angel_engine::EngineError> {
+    match status {
+        "active" => Ok("active"),
+        "paused" => Ok("paused"),
+        "blocked" => Ok("blocked"),
+        "usage_limited" => Ok("usageLimited"),
+        "budget_limited" => Ok("budgetLimited"),
+        "complete" => Ok("complete"),
+        _ => Err(angel_engine::EngineError::InvalidCommand {
+            message: format!("unknown goal status `{status}`"),
+        }),
     }
 }
 

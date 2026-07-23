@@ -113,6 +113,9 @@ impl CodexAdapter {
                 output =
                     self.decode_refresh_skills_response(output, id, conversation_id, result)?;
             }
+            PendingRequest::GoalMutation { .. } => {
+                output = output.log(TransportLogKind::State, "goal mutation accepted");
+            }
             PendingRequest::Authenticate
             | PendingRequest::ResolveElicitation { .. }
             | PendingRequest::UpdateContext { .. } => {

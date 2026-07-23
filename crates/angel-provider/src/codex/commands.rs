@@ -3,8 +3,8 @@ use angel_engine::state::{
     ReasoningProfile,
 };
 use angel_engine::{
-    ConversationId, EngineCommand, EngineExtensionCommand, HistoryMutationOp, TurnOverrides,
-    UserInput, UserInputKind,
+    ConversationId, EngineCommand, EngineExtensionCommand, GoalStatus, HistoryMutationOp,
+    TurnOverrides, UserInput, UserInputKind,
 };
 
 use super::CodexAdapter;
@@ -41,6 +41,11 @@ pub(super) fn codex_slash_commands() -> Vec<AvailableCommand> {
             "compact",
             "summarize conversation to prevent hitting the context limit",
             None,
+        ),
+        command(
+            "goal",
+            "set or control the goal for a long-running task",
+            Some("objective|pause|resume|clear"),
         ),
     ]
 }
@@ -81,9 +86,46 @@ impl CodexAdapter {
                 }),
                 message: None,
             },
+            "goal" => goal_command(conversation_id, args),
             _ => return Ok(None),
         };
         Ok(Some(interpreted))
+    }
+}
+
+fn goal_command(conversation_id: &ConversationId, args: &str) -> InterpretedUserInput {
+    match args.to_ascii_lowercase().as_str() {
+        "" => no_op(
+            conversation_id,
+            "Usage: /goal <objective|pause|resume|clear>",
+        ),
+        "pause" => InterpretedUserInput {
+            command: EngineCommand::Extension(EngineExtensionCommand::SetGoalStatus {
+                conversation_id: conversation_id.clone(),
+                status: GoalStatus::Paused,
+            }),
+            message: Some("Goal paused.".to_string()),
+        },
+        "resume" => InterpretedUserInput {
+            command: EngineCommand::Extension(EngineExtensionCommand::SetGoalStatus {
+                conversation_id: conversation_id.clone(),
+                status: GoalStatus::Active,
+            }),
+            message: Some("Goal resumed.".to_string()),
+        },
+        "clear" => InterpretedUserInput {
+            command: EngineCommand::Extension(EngineExtensionCommand::ClearGoal {
+                conversation_id: conversation_id.clone(),
+            }),
+            message: Some("Goal cleared.".to_string()),
+        },
+        _ => InterpretedUserInput {
+            command: EngineCommand::Extension(EngineExtensionCommand::SetGoal {
+                conversation_id: conversation_id.clone(),
+                objective: args.to_string(),
+            }),
+            message: Some("Goal set.".to_string()),
+        },
     }
 }
 
@@ -332,6 +374,68 @@ mod tests {
     }
 
     #[test]
+    fn goal_slash_sets_objective_through_goal_command() {
+        let adapter = CodexAdapter::app_server();
+        let engine = engine_with_conversation(&adapter);
+        let conversation_id = ConversationId::new("conv");
+
+        let interpreted = adapter
+            .interpret_slash_command(
+                &engine,
+                &conversation_id,
+                &[UserInput::text("/goal improve benchmark coverage")],
+            )
+            .expect("interpret")
+            .expect("slash command");
+
+        assert_eq!(interpreted.message.as_deref(), Some("Goal set."));
+        assert_eq!(
+            interpreted.command,
+            EngineCommand::Extension(EngineExtensionCommand::SetGoal {
+                conversation_id,
+                objective: "improve benchmark coverage".to_string(),
+            })
+        );
+    }
+
+    #[test]
+    fn goal_slash_controls_existing_goal() {
+        let adapter = CodexAdapter::app_server();
+        let engine = engine_with_conversation(&adapter);
+        let conversation_id = ConversationId::new("conv");
+
+        for (input, expected) in [
+            (
+                "/goal pause",
+                EngineExtensionCommand::SetGoalStatus {
+                    conversation_id: conversation_id.clone(),
+                    status: GoalStatus::Paused,
+                },
+            ),
+            (
+                "/goal resume",
+                EngineExtensionCommand::SetGoalStatus {
+                    conversation_id: conversation_id.clone(),
+                    status: GoalStatus::Active,
+                },
+            ),
+            (
+                "/goal clear",
+                EngineExtensionCommand::ClearGoal {
+                    conversation_id: conversation_id.clone(),
+                },
+            ),
+        ] {
+            let interpreted = adapter
+                .interpret_slash_command(&engine, &conversation_id, &[UserInput::text(input)])
+                .expect("interpret")
+                .expect("slash command");
+
+            assert_eq!(interpreted.command, EngineCommand::Extension(expected));
+        }
+    }
+
+    #[test]
     fn unknown_slash_is_not_intercepted() {
         let adapter = CodexAdapter::app_server();
         let engine = engine_with_conversation(&adapter);
@@ -363,6 +467,7 @@ mod tests {
                 "mode" => "/mode default",
                 "plan" => "/plan",
                 "compact" => "/compact",
+                "goal" => "/goal improve benchmark coverage",
                 name => panic!("advertised /{name} is not covered by the adapter"),
             };
             let interpreted = adapter

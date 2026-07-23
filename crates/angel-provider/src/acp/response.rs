@@ -99,7 +99,8 @@ impl AcpAdapter {
             | PendingRequest::ReadConversation { .. }
             | PendingRequest::HistoryMutation { .. }
             | PendingRequest::RunShellCommand { .. }
-            | PendingRequest::RefreshSkills { .. } => {
+            | PendingRequest::RefreshSkills { .. }
+            | PendingRequest::GoalMutation { .. } => {
                 output = output.log(TransportLogKind::Receive, format!("response {id}"));
             }
         }

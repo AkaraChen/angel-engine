@@ -11,9 +11,11 @@ import { getApiClient } from "@/platform/api-client";
 
 export function WorkspaceToolContextBridge({
   chatId,
+  contextKey,
   root,
 }: {
   chatId?: string | null;
+  contextKey?: string | null;
   root?: string | null;
 }) {
   const syncWorkspaceToolContext = useWorkspaceToolStore(
@@ -21,8 +23,8 @@ export function WorkspaceToolContextBridge({
   );
 
   useEffect(() => {
-    syncWorkspaceToolContext({ chatId, root });
-  }, [chatId, root, syncWorkspaceToolContext]);
+    syncWorkspaceToolContext({ chatId, contextKey, root });
+  }, [chatId, contextKey, root, syncWorkspaceToolContext]);
 
   return null;
 }

@@ -36,6 +36,7 @@ export const WORKSPACE_TOOL_SNAPSHOT_LIMIT = 32;
 const workspaceToolSurfaceContextSetInput = type({
   "+": "ignore",
   "chatId?": "string | null | undefined",
+  "contextKey?": "string | null | undefined",
   "root?": "string | null | undefined",
 });
 
@@ -46,7 +47,7 @@ const workspaceToolSurfaceHostSetInput = type({
 
 const workspaceToolSurfaceSnapshotSetInput = type({
   "+": "ignore",
-  chatId: "string > 0",
+  contextKey: "string > 0",
   snapshot: "object",
 });
 
@@ -109,7 +110,7 @@ export function registerWorkspaceToolWindowIpc() {
         return;
       }
       workspaceToolSnapshots.set(
-        input.chatId,
+        input.contextKey,
         input.snapshot as WorkspaceToolSurfaceSnapshot,
       );
       trimWorkspaceToolSnapshots(workspaceToolSnapshots);
@@ -170,6 +171,7 @@ export function trimWorkspaceToolSnapshots<T>(
 function setWorkspaceToolSurfaceContext(context: WorkspaceToolSurfaceContext) {
   if (
     context.chatId === workspaceToolContext.chatId &&
+    context.contextKey === workspaceToolContext.contextKey &&
     context.root === workspaceToolContext.root
   ) {
     return;
@@ -306,13 +308,13 @@ function closeWorkspaceToolWindowForHostChange() {
 }
 
 function workspaceToolSurfaceState(): WorkspaceToolSurfaceState {
-  const chatId = workspaceToolContext.chatId ?? undefined;
+  const contextKey = workspaceToolContext.contextKey ?? undefined;
 
   return {
     context: workspaceToolContext,
     host: workspaceToolHost,
-    snapshot: is.nonEmptyString(chatId)
-      ? (workspaceToolSnapshots.get(chatId) ?? null)
+    snapshot: is.nonEmptyString(contextKey)
+      ? (workspaceToolSnapshots.get(contextKey) ?? null)
       : null,
   };
 }

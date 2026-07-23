@@ -76,7 +76,7 @@ interface WorkspaceToolState {
   syncWorkspaceToolContext: (context: WorkspaceToolSurfaceContext) => void;
   syncWorkspaceToolState: (state: WorkspaceToolSurfaceState) => void;
   updateWorkspaceToolSnapshot: (
-    chatId: string,
+    contextKey: string,
     updater: (
       snapshot: WorkspaceToolSurfaceSnapshot,
     ) => WorkspaceToolSurfaceSnapshot,
@@ -282,33 +282,33 @@ export const useWorkspaceToolStore = create<WorkspaceToolState>()(
     windowFilesByRoot: {},
     windowFilesEditorDirty: false,
     syncWorkspaceToolState: (state) => {
-      const chatId = state.context.chatId ?? undefined;
+      const contextKey = state.context.contextKey ?? undefined;
       set((current) => ({
         context: state.context,
         host: state.host,
         hydrated: true,
         snapshots:
-          is.nonEmptyString(chatId) && !is.falsy(state.snapshot)
+          is.nonEmptyString(contextKey) && !is.falsy(state.snapshot)
             ? {
                 ...current.snapshots,
-                [chatId]: state.snapshot,
+                [contextKey]: state.snapshot,
               }
             : current.snapshots,
       }));
     },
-    updateWorkspaceToolSnapshot: (chatId, updater) => {
+    updateWorkspaceToolSnapshot: (contextKey, updater) => {
       const currentSnapshot =
-        get().snapshots[chatId] ?? createDefaultWorkspaceToolSnapshot();
+        get().snapshots[contextKey] ?? createDefaultWorkspaceToolSnapshot();
       const snapshot = updater(currentSnapshot);
 
       set((current) => ({
         snapshots: {
           ...current.snapshots,
-          [chatId]: snapshot,
+          [contextKey]: snapshot,
         },
       }));
       window.desktopWindow.setWorkspaceToolSurfaceSnapshot({
-        chatId,
+        contextKey,
         snapshot,
       });
     },
@@ -348,14 +348,14 @@ function createDefaultWorkspaceToolSnapshot(): WorkspaceToolSurfaceSnapshot {
 }
 
 export function currentWorkspaceToolSnapshot(
-  chatId: string | null | undefined,
+  contextKey: string | null | undefined,
   snapshots: Record<string, WorkspaceToolSurfaceSnapshot>,
 ) {
-  if (!is.nonEmptyString(chatId)) {
+  if (!is.nonEmptyString(contextKey)) {
     return createDefaultWorkspaceToolSnapshot();
   }
 
-  return snapshots[chatId] ?? createDefaultWorkspaceToolSnapshot();
+  return snapshots[contextKey] ?? createDefaultWorkspaceToolSnapshot();
 }
 
 function createWorkspaceWindowFileState(

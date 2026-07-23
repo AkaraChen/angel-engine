@@ -17,6 +17,7 @@ mod elicitation_events;
 mod elicitation_planning;
 mod event_dispatch;
 mod event_helpers;
+mod goal_planning;
 mod history_events;
 mod history_planning;
 mod methods;

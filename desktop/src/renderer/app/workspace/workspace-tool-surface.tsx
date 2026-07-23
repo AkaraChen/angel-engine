@@ -20,7 +20,7 @@ import { WorkspaceToolWindowShell } from "@/app/workspace/workspace-tool-window-
 interface WorkspaceToolSurfaceProps {
   active?: boolean;
   api: ApiClient;
-  chatId?: string | null;
+  contextKey?: string | null;
   host: WorkspaceToolSurfaceHost;
   root?: string | null;
   trafficLightInset?: boolean;
@@ -29,7 +29,7 @@ interface WorkspaceToolSurfaceProps {
 export function WorkspaceToolSurface({
   active = true,
   api,
-  chatId,
+  contextKey,
   host,
   root,
   trafficLightInset = false,
@@ -38,7 +38,7 @@ export function WorkspaceToolSurface({
   const model = useWorkspaceToolSurfaceModel({
     active,
     api,
-    chatId,
+    contextKey,
     host,
     root,
   });
@@ -71,7 +71,8 @@ export function WorkspaceToolSurface({
         tabIndex={-1}
       >
         {host === "sidebar" ? (
-          !is.nonEmptyString(model.chatId) || !is.nonEmptyString(model.root) ? (
+          !is.nonEmptyString(model.contextKey) ||
+          !is.nonEmptyString(model.root) ? (
             <WorkspaceToolEmpty title="No workspace for this chat" />
           ) : (
             <>

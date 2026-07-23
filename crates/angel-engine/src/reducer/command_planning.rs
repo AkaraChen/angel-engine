@@ -78,6 +78,17 @@ impl AngelEngine {
                 conversation_id,
                 force_reload,
             } => self.plan_refresh_skills(conversation_id, force_reload),
+            EngineExtensionCommand::SetGoal {
+                conversation_id,
+                objective,
+            } => self.plan_set_goal(conversation_id, objective),
+            EngineExtensionCommand::SetGoalStatus {
+                conversation_id,
+                status,
+            } => self.plan_set_goal_status(conversation_id, status),
+            EngineExtensionCommand::ClearGoal { conversation_id } => {
+                self.plan_clear_goal(conversation_id)
+            }
         }
     }
 }

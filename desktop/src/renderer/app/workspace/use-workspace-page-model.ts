@@ -29,6 +29,7 @@ import {
   workspaceRuntimePageKey,
 } from "@/app/workspace/workspace-runtime-keys";
 import { useWorkspaceToolStore } from "@/app/workspace/workspace-tool-store";
+import { resolveWorkspaceToolContext } from "@/app/workspace/workspace-tool-context";
 import {
   isProjectWorkspaceMode,
   useWorkspaceUiStore,
@@ -213,19 +214,32 @@ export function useWorkspacePageModel({
     : is.nonEmptyString(selectedProjectPath)
       ? getProjectDisplayName(selectedProjectPath)
       : undefined;
-  const workspaceToolRoot =
-    is.nonEmptyString(selectedChatId) &&
-    is.nonEmptyString(selectedChat?.projectId)
-      ? (selectedChat.cwd ?? selectedProjectPath)
-      : undefined;
-  const canShowRightSidebar =
-    showRightSidebar && is.nonEmptyString(workspaceToolRoot);
+  const projectWorkspaceToolRoot =
+    pinnedDraftCwd ?? powerHomePageContext?.cwd ?? selectedProjectPath;
+  const workspaceToolContext = resolveWorkspaceToolContext({
+    projectId:
+      selectedChat?.projectId ??
+      powerDraftContext?.projectId ??
+      powerHomePageContext?.projectId ??
+      selectedProjectId,
+    projectRoot:
+      is.nonEmptyString(selectedChat?.projectId) &&
+      is.nonEmptyString(selectedChatId)
+        ? (selectedChat.cwd ?? projectWorkspaceToolRoot)
+        : projectWorkspaceToolRoot,
+    selectedChatId,
+    selectedChatProjectId: selectedChat?.projectId,
+    workspaceMode,
+  });
+  const workspaceToolContextKey = workspaceToolContext?.contextKey;
+  const workspaceToolRoot = workspaceToolContext?.root;
+  const canShowRightSidebar = showRightSidebar && workspaceToolContext !== null;
   const dockedWorkspaceToolContext =
     canShowRightSidebar &&
     workspaceToolHost === "sidebar" &&
-    is.nonEmptyString(selectedChatId) &&
+    is.nonEmptyString(workspaceToolContextKey) &&
     is.nonEmptyString(workspaceToolRoot)
-      ? { chatId: selectedChatId, root: workspaceToolRoot }
+      ? { contextKey: workspaceToolContextKey, root: workspaceToolRoot }
       : null;
 
   useEffect(() => {
@@ -233,7 +247,7 @@ export function useWorkspacePageModel({
       previousWorkspaceToolHostRef.current !== "sidebar" &&
       workspaceToolHost === "sidebar" &&
       canShowRightSidebar &&
-      is.nonEmptyString(selectedChatId) &&
+      is.nonEmptyString(workspaceToolContextKey) &&
       is.nonEmptyString(workspaceToolRoot)
     ) {
       setRightSidebarOpen(true);
@@ -241,9 +255,9 @@ export function useWorkspacePageModel({
     previousWorkspaceToolHostRef.current = workspaceToolHost;
   }, [
     canShowRightSidebar,
-    selectedChatId,
     setRightSidebarOpen,
     workspaceToolHost,
+    workspaceToolContextKey,
     workspaceToolRoot,
   ]);
   const toggleWorkspaceTools = useCallback(() => {
@@ -476,6 +490,7 @@ export function useWorkspacePageModel({
     updateAgentSettings,
     workspaceMode,
     workspaceToolHost,
+    workspaceToolContextKey,
     workspaceToolRoot,
     workspaceTitle,
     workspaceToolsToggleLabel,
