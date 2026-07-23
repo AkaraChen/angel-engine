@@ -220,6 +220,10 @@ export const zhCN = {
           "当所选项目存在未提交更改时，创建 worktree 前先询问。",
         dirtyPromptSwitchLabel: "从 dirty 仓库创建 worktree 前提醒",
         dirtyPromptTitle: "Dirty 仓库提醒",
+        sendWithModEnterDescription:
+          "开启后，Enter 换行，{{shortcut}} 发送消息。",
+        sendWithModEnterSwitchLabel: "使用 {{shortcut}} 发送消息",
+        sendWithModEnterTitle: "使用 {{shortcut}} 发送消息",
       },
     },
     updates: {

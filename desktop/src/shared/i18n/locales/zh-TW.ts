@@ -221,6 +221,10 @@ export const zhTW = {
           "當所選專案存在未提交變更時，建立 worktree 前先詢問。",
         dirtyPromptSwitchLabel: "從 dirty 倉庫建立 worktree 前提醒",
         dirtyPromptTitle: "Dirty 倉庫提醒",
+        sendWithModEnterDescription:
+          "開啟後，Enter 換行，{{shortcut}} 傳送訊息。",
+        sendWithModEnterSwitchLabel: "使用 {{shortcut}} 傳送訊息",
+        sendWithModEnterTitle: "使用 {{shortcut}} 傳送訊息",
       },
     },
     updates: {

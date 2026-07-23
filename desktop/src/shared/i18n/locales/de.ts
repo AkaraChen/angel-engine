@@ -227,6 +227,10 @@ export const de = {
           "Vor dem Erstellen eines Worktrees nachfragen, wenn das ausgewählte Projekt nicht übernommene Änderungen hat.",
         dirtyPromptSwitchLabel: "Vor Worktrees aus dirty Repositories warnen",
         dirtyPromptTitle: "Dirty-Repository-Warnung",
+        sendWithModEnterDescription:
+          "Wenn aktiviert, fügt Enter eine neue Zeile ein und {{shortcut}} sendet.",
+        sendWithModEnterSwitchLabel: "Nachrichten mit {{shortcut}} senden",
+        sendWithModEnterTitle: "Mit {{shortcut}} senden",
       },
     },
     updates: {

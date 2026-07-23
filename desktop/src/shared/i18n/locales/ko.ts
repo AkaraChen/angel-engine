@@ -227,6 +227,10 @@ export const ko = {
           "선택한 프로젝트에 커밋되지 않은 변경 사항이 있을 때 worktree 생성 전에 확인합니다.",
         dirtyPromptSwitchLabel: "dirty 저장소에서 worktree를 만들기 전에 경고",
         dirtyPromptTitle: "dirty 저장소 경고",
+        sendWithModEnterDescription:
+          "활성화하면 Enter로 줄을 바꾸고 {{shortcut}}로 전송합니다.",
+        sendWithModEnterSwitchLabel: "{{shortcut}}로 메시지 전송",
+        sendWithModEnterTitle: "{{shortcut}}로 전송",
       },
     },
     updates: {

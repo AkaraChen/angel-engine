@@ -229,6 +229,10 @@ export const ja = {
         dirtyPromptSwitchLabel:
           "dirty リポジトリから worktree を作成する前に警告する",
         dirtyPromptTitle: "dirty リポジトリ警告",
+        sendWithModEnterDescription:
+          "有効にすると、Enter で改行し、{{shortcut}} で送信します。",
+        sendWithModEnterSwitchLabel: "{{shortcut}} でメッセージを送信",
+        sendWithModEnterTitle: "{{shortcut}} で送信",
       },
     },
     updates: {

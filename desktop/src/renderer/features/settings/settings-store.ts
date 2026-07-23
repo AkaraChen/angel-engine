@@ -19,6 +19,7 @@ const agentSettingsStorageKey = "angel-engine.agent-settings.v1";
 const languageStorageKey = "angel-engine.language";
 const settingsBroadcastChannel = "angel-engine.settings.v1";
 const senderId = globalThis.crypto?.randomUUID?.() ?? String(Date.now());
+const sendWithModEnterStorageKey = "angel-engine.send-with-mod-enter";
 const worktreeDirtyPromptStorageKey =
   "angel-engine.worktree-dirty-prompt-enabled";
 
@@ -26,6 +27,7 @@ interface SettingsBroadcastMessage {
   agentSettings: AgentSettings;
   language: SupportedLanguage;
   refreshAgentOptions?: boolean;
+  sendWithModEnter: boolean;
   senderId: string;
   themeMode: DesktopThemeMode;
   worktreeDirtyPromptEnabled: boolean;
@@ -39,11 +41,13 @@ interface SettingsState {
     runtime: AgentRuntime,
   ) => Promise<{ chatCount: number }>;
   language: SupportedLanguage;
+  sendWithModEnter: boolean;
   setAgentEnabled: (runtime: AgentRuntime, enabled: boolean) => void;
   setAgentSettings: (
     updater: (settings: AgentSettings) => AgentSettings,
   ) => void;
   setLanguage: (language: SupportedLanguage) => void;
+  setSendWithModEnter: (enabled: boolean) => void;
   setThemeMode: (themeMode: DesktopThemeMode) => void;
   setWorktreeDirtyPromptEnabled: (enabled: boolean) => void;
   themeMode: DesktopThemeMode;
@@ -105,6 +109,7 @@ export const useSettingsStore = create<SettingsState>()((set, get) => ({
   deleteCustomAgentImpact: async (runtime) =>
     getApiClient().agents.deleteCustomImpact(runtime),
   language: readLanguage(),
+  sendWithModEnter: readSendWithModEnter(),
   setAgentEnabled: (runtime, enabled) => {
     updateSettingsState(set, get, (current) => {
       const enabledRuntimes = new Set(current.agentSettings.enabledRuntimes);
@@ -134,6 +139,11 @@ export const useSettingsStore = create<SettingsState>()((set, get) => ({
         ? {}
         : { language: normalizedLanguage };
     });
+  },
+  setSendWithModEnter: (enabled) => {
+    updateSettingsState(set, get, (current) =>
+      current.sendWithModEnter === enabled ? {} : { sendWithModEnter: enabled },
+    );
   },
   setThemeMode: (themeMode) => {
     updateSettingsState(set, get, (current) =>
@@ -167,6 +177,7 @@ broadcastChannel?.addEventListener("message", (event) => {
   useSettingsStore.setState({
     agentSettings: message.agentSettings,
     language: message.language,
+    sendWithModEnter: message.sendWithModEnter,
     themeMode: message.themeMode,
     worktreeDirtyPromptEnabled: message.worktreeDirtyPromptEnabled,
   });
@@ -202,7 +213,11 @@ function updateSettingsState(
 function settingsBroadcastMessage(
   state: Pick<
     SettingsState,
-    "agentSettings" | "language" | "themeMode" | "worktreeDirtyPromptEnabled"
+    | "agentSettings"
+    | "language"
+    | "sendWithModEnter"
+    | "themeMode"
+    | "worktreeDirtyPromptEnabled"
   >,
   options: UpdateSettingsStateOptions = {},
 ): SettingsBroadcastMessage {
@@ -210,6 +225,7 @@ function settingsBroadcastMessage(
     agentSettings: state.agentSettings,
     language: state.language,
     refreshAgentOptions: options.refreshAgentOptions,
+    sendWithModEnter: state.sendWithModEnter,
     senderId,
     themeMode: state.themeMode,
     worktreeDirtyPromptEnabled: state.worktreeDirtyPromptEnabled,
@@ -219,6 +235,7 @@ function settingsBroadcastMessage(
 function applySettingsSideEffects(message: SettingsBroadcastMessage) {
   writeAgentSettings(message.agentSettings);
   writeLanguage(message.language);
+  writeSendWithModEnter(message.sendWithModEnter);
   writeWorktreeDirtyPromptEnabled(message.worktreeDirtyPromptEnabled);
   setDesktopThemeMode(message.themeMode);
 }
@@ -232,6 +249,7 @@ function readBroadcastMessage(value: unknown): SettingsBroadcastMessage | null {
     agentSettings: sanitizeAgentSettings(input.agentSettings),
     language: normalizeSupportedLanguage(input.language),
     refreshAgentOptions: input.refreshAgentOptions === true,
+    sendWithModEnter: sanitizeSendWithModEnter(input.sendWithModEnter),
     senderId: input.senderId,
     themeMode: sanitizeThemeMode(input.themeMode),
     worktreeDirtyPromptEnabled: sanitizeWorktreeDirtyPromptEnabled(
@@ -275,6 +293,27 @@ function readLanguage() {
 
 function writeLanguage(language: SupportedLanguage) {
   window.localStorage.setItem(languageStorageKey, language);
+}
+
+function readSendWithModEnter() {
+  try {
+    return sanitizeSendWithModEnter(
+      window.localStorage.getItem(sendWithModEnterStorageKey),
+    );
+  } catch {
+    return false;
+  }
+}
+
+function writeSendWithModEnter(enabled: boolean) {
+  window.localStorage.setItem(
+    sendWithModEnterStorageKey,
+    enabled ? "true" : "false",
+  );
+}
+
+function sanitizeSendWithModEnter(value: unknown) {
+  return value === true || value === "true";
 }
 
 function readWorktreeDirtyPromptEnabled() {

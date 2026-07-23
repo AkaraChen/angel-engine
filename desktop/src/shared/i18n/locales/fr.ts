@@ -229,6 +229,10 @@ export const fr = {
         dirtyPromptSwitchLabel:
           "Avertir avant de créer des worktrees depuis des dépôts dirty",
         dirtyPromptTitle: "Avertissement de dépôt dirty",
+        sendWithModEnterDescription:
+          "Si activé, Entrée insère une nouvelle ligne et {{shortcut}} envoie.",
+        sendWithModEnterSwitchLabel: "Envoyer les messages avec {{shortcut}}",
+        sendWithModEnterTitle: "Envoyer avec {{shortcut}}",
       },
     },
     updates: {

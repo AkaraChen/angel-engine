@@ -226,6 +226,10 @@ export const en = {
         dirtyPromptSwitchLabel:
           "Warn before creating worktrees from dirty repositories",
         dirtyPromptTitle: "Dirty repository warning",
+        sendWithModEnterDescription:
+          "When enabled, Enter inserts a new line and {{shortcut}} sends.",
+        sendWithModEnterSwitchLabel: "Use {{shortcut}} to send messages",
+        sendWithModEnterTitle: "Send messages with {{shortcut}}",
       },
     },
     updates: {

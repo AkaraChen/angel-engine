@@ -40,6 +40,7 @@ export interface ComposerInteractionRefs {
   handlePaste: { current: (event: ClipboardEvent) => boolean };
   onCancel: { current: (() => void) | undefined };
   removeLastAttachment: { current: () => boolean };
+  sendWithModEnter: { current: boolean };
 }
 
 const FILE_MENTION_PLUGIN_KEY = new PluginKey("composerFileMention");
@@ -47,6 +48,17 @@ const SKILL_MENTION_PLUGIN_KEY = new PluginKey("composerSkillMention");
 const SLASH_COMMAND_PLUGIN_KEY = new PluginKey("composerSlashCommand");
 
 export type ComposerEnterAction = "allow-ime" | "block" | "submit";
+export type ComposerEnterIntent = "newline" | "submit";
+
+export function composerEnterIntent({
+  modKey,
+  sendWithModEnter,
+}: {
+  modKey: boolean;
+  sendWithModEnter: boolean;
+}): ComposerEnterIntent {
+  return modKey === sendWithModEnter ? "submit" : "newline";
+}
 
 export function composerEnterAction({
   blockSubmit,
@@ -74,9 +86,9 @@ export function createComposerExtensions({
       horizontalRule: false,
     }),
     Markdown,
+    createComposerKeymap(interactions),
     createComposerMentionExtension(interactions),
     Placeholder.configure({ placeholder }),
-    createComposerKeymap(interactions),
   ];
 }
 
@@ -457,37 +469,57 @@ function renderComposerSuggestion() {
   };
 }
 
-function createComposerKeymap(interactions: ComposerInteractionRefs) {
+export function createComposerKeymap(
+  interactions: Pick<
+    ComposerInteractionRefs,
+    "blockSubmit" | "onCancel" | "removeLastAttachment" | "sendWithModEnter"
+  >,
+) {
+  const handleSubmit = (editor: Editor) => {
+    const form = editor.view.dom.closest("form");
+    const submitButton = form?.querySelector<HTMLButtonElement>(
+      'button[type="submit"]',
+    );
+    const action = composerEnterAction({
+      blockSubmit: interactions.blockSubmit.current,
+      composing: editor.view.composing,
+      submitDisabled: submitButton?.disabled ?? false,
+    });
+    if (action === "allow-ime") return false;
+    if (action === "block") return true;
+    form?.requestSubmit();
+    return true;
+  };
+
   return Extension.create({
     addKeyboardShortcuts() {
       return {
         Backspace: () =>
           this.editor.isEmpty && interactions.removeLastAttachment.current(),
-        Enter: () => {
-          const form = this.editor.view.dom.closest("form");
-          const submitButton = form?.querySelector<HTMLButtonElement>(
-            'button[type="submit"]',
-          );
-          const action = composerEnterAction({
-            blockSubmit: interactions.blockSubmit.current,
-            composing: this.editor.view.composing,
-            submitDisabled: submitButton?.disabled ?? false,
-          });
-          if (action === "allow-ime") return false;
-          if (action === "block") return true;
-          form?.requestSubmit();
-          return true;
-        },
+        Enter: () =>
+          composerEnterIntent({
+            modKey: false,
+            sendWithModEnter: interactions.sendWithModEnter.current,
+          }) === "submit"
+            ? handleSubmit(this.editor)
+            : false,
         Escape: () => {
           const onCancel = interactions.onCancel.current;
           if (onCancel === undefined) return false;
           onCancel();
           return true;
         },
+        "Mod-Enter": () =>
+          composerEnterIntent({
+            modKey: true,
+            sendWithModEnter: interactions.sendWithModEnter.current,
+          }) === "submit"
+            ? handleSubmit(this.editor)
+            : this.editor.commands.enter(),
         "Shift-Enter": () => this.editor.commands.setHardBreak(),
       };
     },
     name: "composerKeymap",
-    priority: 50,
+    priority: 100,
   });
 }

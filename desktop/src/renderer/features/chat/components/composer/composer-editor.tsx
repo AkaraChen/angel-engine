@@ -21,6 +21,7 @@ import { ChatAttachmentTile } from "@/features/chat/components/attachment-tile";
 import { urlPreviewQueryOptions } from "@/features/chat/api/url-preview-query";
 import { pasteSourceUrlPath } from "@/features/chat/components/composer/composer-helpers";
 import { composerRichTextClassName } from "@/features/chat/components/composer/composer-rich-text";
+import { useSettingsStore } from "@/features/settings/settings-store";
 import { ipc } from "@/platform/ipc";
 import { cn } from "@/platform/utils";
 
@@ -50,6 +51,7 @@ export function ComposerEditor({
 }: ComposerEditorProps) {
   const promptController = usePromptInputController();
   const attachments = usePromptInputAttachments();
+  const sendWithModEnter = useSettingsStore((state) => state.sendWithModEnter);
   const {
     addPasteSourceUrl,
     editor,
@@ -99,6 +101,7 @@ export function ComposerEditor({
       handlePaste,
       onCancel: canCancel ? onCancel : undefined,
       removeLastAttachment,
+      sendWithModEnter,
     });
   }, [
     blockSubmit,
@@ -106,6 +109,7 @@ export function ComposerEditor({
     handlePaste,
     onCancel,
     removeLastAttachment,
+    sendWithModEnter,
     setInteractions,
   ]);
   useEffect(() => {

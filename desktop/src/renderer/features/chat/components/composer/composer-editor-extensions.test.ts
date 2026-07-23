@@ -1,11 +1,17 @@
-import { Editor } from "@tiptap/core";
+import {
+  Editor,
+  extensions as coreExtensions,
+  sortExtensions,
+} from "@tiptap/core";
 import { Markdown } from "@tiptap/markdown";
 import StarterKit from "@tiptap/starter-kit";
 import { afterEach, describe, expect, it } from "vitest";
 import {
   composerEnterAction,
+  composerEnterIntent,
   ComposerDisplayMention,
   ComposerMention,
+  createComposerKeymap,
 } from "@/features/chat/components/composer/composer-editor-extensions";
 import { composerMentionsFromDocument } from "@/features/chat/components/composer/composer-editor-model";
 
@@ -134,6 +140,35 @@ describe("composer markdown", () => {
 });
 
 describe("composer Enter key decisions", () => {
+  it("handles Enter after mentions and before the default TipTap keymap", () => {
+    const composerKeymap = createComposerKeymap({
+      blockSubmit: { current: false },
+      onCancel: { current: undefined },
+      removeLastAttachment: { current: () => false },
+      sendWithModEnter: { current: false },
+    });
+    const orderedKeymaps = sortExtensions(
+      [coreExtensions.Keymap, composerKeymap, ComposerMention].reverse(),
+    ).map((extension) => extension.name);
+
+    expect(orderedKeymaps).toEqual(["mention", "composerKeymap", "keymap"]);
+  });
+
+  it("sends with Enter by default and reverses the shortcuts when configured", () => {
+    expect(
+      composerEnterIntent({ modKey: false, sendWithModEnter: false }),
+    ).toBe("submit");
+    expect(composerEnterIntent({ modKey: true, sendWithModEnter: false })).toBe(
+      "newline",
+    );
+    expect(composerEnterIntent({ modKey: false, sendWithModEnter: true })).toBe(
+      "newline",
+    );
+    expect(composerEnterIntent({ modKey: true, sendWithModEnter: true })).toBe(
+      "submit",
+    );
+  });
+
   it("allows IME composition to consume Enter", () => {
     expect(
       composerEnterAction({

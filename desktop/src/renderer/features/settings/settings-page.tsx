@@ -71,6 +71,10 @@ export function SettingsPage({
   const [themeMode, setThemeMode] = useThemeSettings();
   const language = useSettingsStore((state) => state.language);
   const setLanguage = useSettingsStore((state) => state.setLanguage);
+  const sendWithModEnter = useSettingsStore((state) => state.sendWithModEnter);
+  const setSendWithModEnter = useSettingsStore(
+    (state) => state.setSendWithModEnter,
+  );
   const worktreeDirtyPromptEnabled = useSettingsStore(
     (state) => state.worktreeDirtyPromptEnabled,
   );
@@ -158,6 +162,8 @@ export function SettingsPage({
     settingsTabs.find((tab) => tab.id === activeTab)?.labelKey ??
       settingsTabs[0].labelKey,
   );
+  const modEnterShortcut =
+    window.desktopEnvironment.platform === "darwin" ? "⌘ Enter" : "Ctrl Enter";
 
   const deleteAllChats = useCallback(async () => {
     const confirmed = await window.desktopWindow.confirmDeleteAllChats();
@@ -392,6 +398,25 @@ export function SettingsPage({
               role="tabpanel"
             >
               <SettingsGroup>
+                <SettingsRow
+                  after={
+                    <Switch
+                      aria-label={t(
+                        "settings.workspace.sendWithModEnterSwitchLabel",
+                        { shortcut: modEnterShortcut },
+                      )}
+                      checked={sendWithModEnter}
+                      onCheckedChange={setSendWithModEnter}
+                    />
+                  }
+                  description={t(
+                    "settings.workspace.sendWithModEnterDescription",
+                    { shortcut: modEnterShortcut },
+                  )}
+                  title={t("settings.workspace.sendWithModEnterTitle", {
+                    shortcut: modEnterShortcut,
+                  })}
+                />
                 <SettingsRow
                   after={
                     <Switch

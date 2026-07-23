@@ -20,6 +20,7 @@ export interface ComposerEditorInteractions {
   handlePaste: (event: ClipboardEvent) => boolean;
   onCancel?: () => void;
   removeLastAttachment: () => boolean;
+  sendWithModEnter: boolean;
 }
 
 export interface ComposerEditorController {
@@ -84,6 +85,7 @@ export function useComposerEditor({
   const blockSubmitRef = useRef(false);
   const onCancelRef = useRef<(() => void) | undefined>(undefined);
   const removeLastAttachmentRef = useRef<() => boolean>(() => false);
+  const sendWithModEnterRef = useRef(false);
   const interactions = useMemo<ComposerInteractionRefs>(
     () => ({
       blockSubmit: blockSubmitRef,
@@ -91,6 +93,7 @@ export function useComposerEditor({
       handlePaste: handlePasteRef,
       onCancel: onCancelRef,
       removeLastAttachment: removeLastAttachmentRef,
+      sendWithModEnter: sendWithModEnterRef,
     }),
     [],
   );
@@ -168,6 +171,7 @@ export function useComposerEditor({
     handlePasteRef.current = next.handlePaste;
     onCancelRef.current = next.onCancel;
     removeLastAttachmentRef.current = next.removeLastAttachment;
+    sendWithModEnterRef.current = next.sendWithModEnter;
   }, []);
   const setTextInput = useCallback(
     (setInput: (value: string) => void) => {

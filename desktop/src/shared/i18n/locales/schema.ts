@@ -223,6 +223,9 @@ export interface LocaleResourceTranslationSettingsWorkspace {
   dirtyPromptDescription: string;
   dirtyPromptSwitchLabel: string;
   dirtyPromptTitle: string;
+  sendWithModEnterDescription: string;
+  sendWithModEnterSwitchLabel: string;
+  sendWithModEnterTitle: string;
 }
 
 export interface LocaleResourceTranslationSettings {

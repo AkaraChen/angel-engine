@@ -3,7 +3,8 @@ import type { WorkspaceNavigation } from "@/app/workspace/use-workspace-navigati
 import type { WorkspacePageModel } from "@/app/workspace/use-workspace-page-model";
 
 import is from "@sindresorhus/is";
-import { useCallback, useMemo } from "react";
+import { useCallback, useEffect, useMemo } from "react";
+import { powerWorktreeShortcutAction } from "@/app/workspace/power-worktree-shortcuts";
 import {
   openChatTab,
   setPowerActiveWorktree,
@@ -179,6 +180,57 @@ export function usePowerWorktreeTabs(
       navigateToDraft(powerHomeTabContext.projectId);
     }
   }, [navigateToDraft, powerHomeTabContext]);
+
+  const openOrFocusDraftTab = useCallback(() => {
+    if (!powerDraftTabActive) {
+      openDraftTabFromTabBar();
+    }
+    window.requestAnimationFrame(() => {
+      document
+        .querySelector<HTMLElement>('[data-slot="input-group-control"]')
+        ?.focus();
+    });
+  }, [openDraftTabFromTabBar, powerDraftTabActive]);
+
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.defaultPrevented) return;
+
+      const action = powerWorktreeShortcutAction({
+        altKey: event.altKey,
+        ctrlKey: event.ctrlKey,
+        draftTabActive: powerDraftTabActive,
+        hasActiveChat: selectedChat !== undefined,
+        key: event.key,
+        metaKey: event.metaKey,
+        powerModeActive,
+        repeat: event.repeat,
+        shiftKey: event.shiftKey,
+      });
+      if (action === null) return;
+
+      event.preventDefault();
+      if (action === "close-draft") {
+        closeDraftTab();
+      } else if (action === "close-chat" && selectedChat !== undefined) {
+        closeChatTab(selectedChat);
+      } else if (action === "open-or-focus-draft") {
+        openOrFocusDraftTab();
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [
+    closeChatTab,
+    closeDraftTab,
+    openOrFocusDraftTab,
+    powerDraftTabActive,
+    powerModeActive,
+    selectedChat,
+  ]);
 
   return {
     chatTabChats,
