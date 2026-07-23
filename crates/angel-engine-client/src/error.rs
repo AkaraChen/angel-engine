@@ -10,6 +10,7 @@ pub enum ClientError {
     Json(serde_json::Error),
     Io(io::Error),
     RuntimeFaulted { code: String, message: String },
+    TurnFailed { code: String, message: String },
     Timeout { message: String },
     ChannelClosed,
     InvalidInput { message: String },
@@ -24,6 +25,7 @@ impl fmt::Display for ClientError {
             Self::RuntimeFaulted { code, message } => {
                 write!(f, "runtime faulted ({code}): {message}")
             }
+            Self::TurnFailed { code, message } => write!(f, "turn failed ({code}): {message}"),
             Self::Timeout { message } => write!(f, "timeout: {message}"),
             Self::ChannelClosed => f.write_str("runtime process channel closed"),
             Self::InvalidInput { message } => write!(f, "invalid input: {message}"),
@@ -38,6 +40,7 @@ impl Error for ClientError {
             Self::Json(error) => Some(error),
             Self::Io(error) => Some(error),
             Self::RuntimeFaulted { .. }
+            | Self::TurnFailed { .. }
             | Self::Timeout { .. }
             | Self::ChannelClosed
             | Self::InvalidInput { .. } => None,

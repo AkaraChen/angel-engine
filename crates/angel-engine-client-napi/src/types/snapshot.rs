@@ -249,6 +249,7 @@ pub struct TurnSnapshot {
     pub plan_text: String,
     pub plan_path: Option<String>,
     pub outcome: Option<String>,
+    pub error: Option<ErrorSnapshot>,
     pub output: Vec<ContentChunk>,
     pub reasoning: Vec<ContentChunk>,
     pub plan: Vec<PlanEntrySnapshot>,

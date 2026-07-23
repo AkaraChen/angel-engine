@@ -1,6 +1,6 @@
 use std::time::Duration;
 
-use crate::error::ClientResult;
+use crate::error::{ClientError, ClientResult};
 use crate::{ClientInput, ConversationSnapshot, ElicitationResponse, ThreadEvent};
 
 use super::AngelSession;
@@ -227,10 +227,20 @@ impl AngelSession {
             let snapshot = snapshot.as_ref().ok_or_else(|| {
                 invalid_input("Runtime did not return a final conversation snapshot.")
             })?;
-            if !snapshot.turns.iter().any(|turn| turn.id == turn_id) {
-                return Err(invalid_input(format!(
-                    "Final conversation snapshot is missing turn {turn_id}."
-                )));
+            let turn = snapshot
+                .turns
+                .iter()
+                .find(|turn| turn.id == turn_id)
+                .ok_or_else(|| {
+                    invalid_input(format!(
+                        "Final conversation snapshot is missing turn {turn_id}."
+                    ))
+                })?;
+            if let Some(error) = &turn.error {
+                return Err(ClientError::TurnFailed {
+                    code: error.code.clone(),
+                    message: error.message.clone(),
+                });
             }
         }
 

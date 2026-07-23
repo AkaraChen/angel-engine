@@ -88,6 +88,7 @@ pub struct TurnSnapshot {
     pub plan_text: String,
     pub plan_path: Option<String>,
     pub outcome: Option<String>,
+    pub error: Option<ErrorSnapshot>,
     pub output: Vec<ContentChunk>,
     pub reasoning: Vec<ContentChunk>,
     pub plan: Vec<PlanEntrySnapshot>,
@@ -122,6 +123,10 @@ impl From<&TurnState> for TurnSnapshot {
             .iter()
             .map(ContentChunk::from)
             .collect::<Vec<_>>();
+        let error = match turn.outcome.as_ref() {
+            Some(angel_engine::TurnOutcome::Failed(error)) => Some(ErrorSnapshot::from(error)),
+            _ => None,
+        };
         Self {
             id: turn.id.to_string(),
             remote_id,
@@ -139,6 +144,7 @@ impl From<&TurnState> for TurnSnapshot {
             plan_text: chunks_text(&plan_text_chunks),
             plan_path: turn.plan_path.clone(),
             outcome: turn.outcome.as_ref().map(|outcome| format!("{outcome:?}")),
+            error,
             output,
             reasoning,
             plan: match turn.plan.as_ref() {

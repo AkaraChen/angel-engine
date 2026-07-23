@@ -92,6 +92,42 @@ fn thread_send_event_streams_turn_deltas_and_terminal_state() {
 }
 
 #[test]
+fn acp_prompt_error_is_preserved_in_turn_snapshot() {
+    let (mut client, conversation_id) = ready_client();
+
+    let turn = client
+        .thread(&conversation_id)
+        .send_event(ThreadEvent::text("explain the current file"))
+        .expect("send text");
+    let turn_id = turn.turn_id.expect("turn id");
+    let request_id = turn.request_id.expect("turn request id");
+
+    client
+        .receive_json_value(json!({
+            "jsonrpc": "2.0",
+            "id": request_id,
+            "error": {
+                "code": 403,
+                "message": "usage limit reached"
+            }
+        }))
+        .expect("turn error response");
+
+    let snapshot = client
+        .thread(&conversation_id)
+        .turn(&turn_id)
+        .expect("turn snapshot");
+    assert_eq!(
+        snapshot.error,
+        Some(angel_engine_client::ErrorSnapshot {
+            code: "acp.rpc.403".to_string(),
+            message: "usage limit reached".to_string(),
+            recoverable: false,
+        })
+    );
+}
+
+#[test]
 fn acp_plan_update_surfaces_independent_plan_message_part() {
     let (mut client, conversation_id) = ready_client();
 

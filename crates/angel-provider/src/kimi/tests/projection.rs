@@ -5,6 +5,80 @@ use serde_json::json;
 use super::*;
 
 #[test]
+fn empty_successful_prompt_is_normalized_to_a_failed_turn() {
+    let adapter = KimiAdapter::standard();
+    let (mut engine, conversation_id) = ready_engine(&adapter);
+    let plan = engine
+        .plan_command(EngineCommand::StartTurn {
+            conversation_id: conversation_id.clone(),
+            input: vec![UserInput::text("hello")],
+            overrides: TurnOverrides::default(),
+        })
+        .expect("plan turn");
+    let request_id = plan.request_id.expect("request id");
+
+    let output = adapter
+        .decode_message(
+            &engine,
+            &JsonRpcMessage::response(request_id, json!({"stopReason": "end_turn"})),
+        )
+        .expect("decode prompt response");
+
+    assert!(output.events.iter().any(|event| {
+        matches!(
+            event,
+            EngineEvent::TurnTerminal {
+                conversation_id: id,
+                outcome: TurnOutcome::Failed(error),
+                ..
+            } if id == &conversation_id
+                && error.code == "kimi.empty_response"
+                && error.message == "Kimi ended the turn without producing a response."
+        )
+    }));
+}
+
+#[test]
+fn successful_prompt_with_output_remains_successful() {
+    let adapter = KimiAdapter::standard();
+    let (mut engine, conversation_id) = ready_engine(&adapter);
+    let plan = engine
+        .plan_command(EngineCommand::StartTurn {
+            conversation_id: conversation_id.clone(),
+            input: vec![UserInput::text("hello")],
+            overrides: TurnOverrides::default(),
+        })
+        .expect("plan turn");
+    let turn_id = plan.turn_id.expect("turn id");
+    let request_id = plan.request_id.expect("request id");
+    engine
+        .apply_event(EngineEvent::AssistantDelta {
+            conversation_id: conversation_id.clone(),
+            turn_id,
+            delta: ContentDelta::Text("hello".to_string()),
+        })
+        .expect("assistant delta");
+
+    let output = adapter
+        .decode_message(
+            &engine,
+            &JsonRpcMessage::response(request_id, json!({"stopReason": "end_turn"})),
+        )
+        .expect("decode prompt response");
+
+    assert!(output.events.iter().any(|event| {
+        matches!(
+            event,
+            EngineEvent::TurnTerminal {
+                conversation_id: id,
+                outcome: TurnOutcome::Succeeded,
+                ..
+            } if id == &conversation_id
+        )
+    }));
+}
+
+#[test]
 fn write_plan_file_tool_call_projects_kimi_plan_update() {
     let adapter = KimiAdapter::standard();
     let (mut engine, conversation_id) = ready_engine(&adapter);

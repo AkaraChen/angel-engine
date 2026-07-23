@@ -1,6 +1,6 @@
 use angel_engine::event::EngineEvent;
 use angel_engine::transport::{JsonRpcMessage, TransportLogKind, TransportOutput};
-use angel_engine::{AngelEngine, EngineError};
+use angel_engine::{AngelEngine, EngineError, ErrorInfo, TurnOutcome};
 
 use super::KimiAdapter;
 use super::plan::kimi_plan_file_event;
@@ -22,10 +22,26 @@ impl KimiAdapter {
         let mut yolo_command_conversations = Vec::new();
         let mut filtered_plan_command = false;
         let mut filtered_yolo_command = false;
+        let mut normalized_empty_turn = false;
         output.events = output
             .events
             .into_iter()
             .map(|event| match event {
+                EngineEvent::TurnTerminal {
+                    conversation_id,
+                    turn_id,
+                    outcome: TurnOutcome::Succeeded,
+                } if kimi_turn_has_no_output(engine, &conversation_id, &turn_id) => {
+                    normalized_empty_turn = true;
+                    EngineEvent::TurnTerminal {
+                        conversation_id,
+                        turn_id,
+                        outcome: TurnOutcome::Failed(ErrorInfo::new(
+                            "kimi.empty_response",
+                            "Kimi ended the turn without producing a response.",
+                        )),
+                    }
+                }
                 EngineEvent::AvailableCommandsUpdated {
                     conversation_id,
                     commands,
@@ -128,6 +144,12 @@ impl KimiAdapter {
                 "Kimi /yolo command hidden because it is exposed as permission mode",
             ));
         }
+        if normalized_empty_turn {
+            output.logs.push(angel_engine::TransportLog::new(
+                TransportLogKind::Warning,
+                "Kimi reported a successful turn without producing a response; normalized as a failed turn",
+            ));
+        }
         let plan_file_updates = output
             .events
             .iter()
@@ -143,4 +165,16 @@ impl KimiAdapter {
         }
         Ok(output)
     }
+}
+
+fn kimi_turn_has_no_output(
+    engine: &AngelEngine,
+    conversation_id: &angel_engine::ConversationId,
+    turn_id: &angel_engine::TurnId,
+) -> bool {
+    engine
+        .conversations
+        .get(conversation_id)
+        .and_then(|conversation| conversation.turns.get(turn_id))
+        .is_some_and(|turn| turn.display_parts.is_empty())
 }
