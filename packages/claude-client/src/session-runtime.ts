@@ -193,6 +193,8 @@ export class ClaudeCodeSessionRuntime {
     currentModel?: string,
   ): Promise<void> {
     this.modelInfos = result.models;
+    const modelState = modelStateFromModelInfo(result.models, currentModel);
+    this.currentModel = modelState.current_model_id;
     const [modeIds, fallbackEffortLevels] = await Promise.all([
       loadClaudePermissionModeIds(),
       loadClaudeEffortLevelIds(),
@@ -201,15 +203,12 @@ export class ClaudeCodeSessionRuntime {
       modeIds,
       this.currentPermissionMode,
     );
-    this.updateEffortsForModel(currentModel, fallbackEffortLevels);
+    this.updateEffortsForModel(this.currentModel, fallbackEffortLevels);
 
     this.applyEngineEvents(
       compactEvents([
         availableCommandsUpdated(conversationId, result.commands),
-        sessionModelsUpdated(
-          conversationId,
-          modelStateFromModelInfo(result.models, currentModel),
-        ),
+        sessionModelsUpdated(conversationId, modelState),
         this.sessionPermissionModesUpdated(conversationId),
         this.reasoningConfigUpdated(conversationId),
       ]),
@@ -310,7 +309,7 @@ export class ClaudeCodeSessionRuntime {
         conversation_id: conversationId,
         options: [
           {
-            category: "thought_level",
+            category: "reasoning",
             current_value: this.currentReasoningEffort,
             description: null,
             id: "reasoning_effort",
