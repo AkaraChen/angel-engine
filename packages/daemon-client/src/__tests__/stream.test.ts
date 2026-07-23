@@ -1,8 +1,21 @@
-import type { ChatStreamEvent } from "@angel-engine/daemon-api/chat";
+import type { Chat, ChatStreamEvent } from "@angel-engine/daemon-api/chat";
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { createDaemonClient, readSseEvents } from "../index";
+
+const chat: Chat = {
+  archived: false,
+  createdAt: "2026-07-13T00:00:00.000Z",
+  cwd: "/tmp",
+  id: "chat-1",
+  pinned: false,
+  projectId: null,
+  remoteThreadId: null,
+  runtime: "codex",
+  title: "Test",
+  updatedAt: "2026-07-13T00:00:00.000Z",
+};
 
 function streamFrom(chunks: string[]): ReadableStream<Uint8Array> {
   const encoder = new TextEncoder();
@@ -66,7 +79,15 @@ describe("streamChat", () => {
     const events: ChatStreamEvent[] = [
       { type: "delta", part: "text", text: "Hel" },
       { type: "delta", part: "text", text: "lo" },
-      { type: "result", result: { text: "Hello" } },
+      {
+        type: "result",
+        result: {
+          chat,
+          chatId: chat.id,
+          content: [{ text: "Hello", type: "text" }],
+          text: "Hello",
+        },
+      },
       { type: "done" },
     ];
     const fetchMock = vi.fn().mockResolvedValue(sseResponse(events));
