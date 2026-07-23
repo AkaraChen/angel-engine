@@ -14,7 +14,7 @@
       "name": "Release",
       "cwd": "",
       "commands": [
-        "codex --yolo \"\\$angel-engine-release and install it for me"
+        "codex --yolo \"\\$angel-engine-release and install it for me\""
       ]
     }
   ]
