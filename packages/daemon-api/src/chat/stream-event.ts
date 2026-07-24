@@ -4,6 +4,7 @@ import type {
   Chat,
   ChatElicitation,
   ChatElicitationQuestion,
+  ChatHistoryMessage,
   ChatHistoryMessagePart,
   ChatJsonObject,
   ChatJsonValue,
@@ -257,7 +258,7 @@ function isElicitationQuestion(
   );
 }
 
-function isElicitation(value: unknown): value is ChatElicitation {
+export function isChatElicitation(value: unknown): value is ChatElicitation {
   if (!isBoundaryRecord(value)) return false;
   return (
     typeof value.id === "string" &&
@@ -360,7 +361,7 @@ function isHistoryMessagePart(value: unknown): value is ChatHistoryMessagePart {
         case "todo":
           return isPlanData(value.data);
         case "elicitation":
-          return isElicitation(value.data);
+          return isChatElicitation(value.data);
         case "chat-error":
           return isChatErrorData(value.data);
         default:
@@ -379,6 +380,19 @@ function isHistoryMessagePart(value: unknown): value is ChatHistoryMessagePart {
     default:
       return false;
   }
+}
+
+export function isChatHistoryMessage(
+  value: unknown,
+): value is ChatHistoryMessage {
+  if (!isBoundaryRecord(value)) return false;
+  return (
+    Array.isArray(value.content) &&
+    value.content.every(isHistoryMessagePart) &&
+    isOptionalString(value.createdAt) &&
+    typeof value.id === "string" &&
+    isOneOf(value.role, ["assistant", "system", "user"])
+  );
 }
 
 function isSendResult(value: unknown): value is ChatSendResult {
@@ -418,7 +432,7 @@ export function isChatStreamEvent(value: unknown): value is ChatStreamEvent {
     case "plan":
       return isPlanData(value.plan) && isOptionalString(value.turnId);
     case "elicitation":
-      return isElicitation(value.elicitation);
+      return isChatElicitation(value.elicitation);
     case "tool":
     case "toolDelta":
       return isToolAction(value.action);

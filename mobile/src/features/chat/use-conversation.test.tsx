@@ -485,7 +485,7 @@ describe("useConversation", () => {
     expect(result.current.messages.at(-1)?.text).toBe("Done.");
   });
 
-  it("resets the live turn and aborts the stream when the chat changes", async () => {
+  it("drops pending input and aborts the stream when the chat changes", async () => {
     let sse: SseHandle | undefined;
     const fetchMock = vi.fn(async (url: string, init?: RequestInit) => {
       const method = init?.method ?? "GET";
@@ -510,10 +510,26 @@ describe("useConversation", () => {
     act(() => result.current.send("hi"));
     await waitFor(() => expect(result.current.isStreaming).toBe(true));
 
+    act(() =>
+      sse!.push({
+        elicitation: elicitation({
+          id: "elic-switch",
+          kind: "approval",
+          title: "Allow the command?",
+        }),
+        type: "elicitation",
+      }),
+    );
+    await waitFor(() =>
+      expect(result.current.pendingElicitation?.id).toBe("elic-switch"),
+    );
+
     rerender({ id: "c2" });
 
-    // The in-flight turn is dropped and the composer is idle for the new chat.
+    // This captures the pre-reattach behavior: the in-flight turn and its
+    // pending decision are dropped, leaving the new chat idle.
     await waitFor(() => expect(result.current.isStreaming).toBe(false));
+    expect(result.current.pendingElicitation).toBeNull();
     expect(result.current.messages.some((m) => m.status === "streaming")).toBe(
       false,
     );
