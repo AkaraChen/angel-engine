@@ -17,6 +17,7 @@ import { queryKeys } from "@/platform/query-keys";
 
 import { toConversation, toolCallFromAction } from "./message-view";
 import { clearNewChatPrompt, readNewChatPrompt } from "./new-chat-prompt";
+import { findPlanModeToggleTarget } from "./mode-options";
 import {
   chatPlanPartName,
   cloneChatPlanData,
@@ -211,6 +212,17 @@ export function useConversation(chatId: string): Conversation {
               assistantText: event.result.text || turn.assistantText,
               assistantPlans: nextPlans,
             });
+            // ExitPlanMode (and similar) may update permission mode mid-turn;
+            // apply the final config so the composer chip leaves Plan mode.
+            if (event.result.config) {
+              queryClient.setQueryData<ChatLoadResult>(
+                queryKeys.chats.load(chatId),
+                (current) =>
+                  current
+                    ? { ...current, config: event.result.config }
+                    : current,
+              );
+            }
           } else if (event.type === "error") {
             throw new Error(event.message || "The assistant turn failed.");
           } else if (event.type === "done") {
@@ -410,6 +422,9 @@ export function useConversation(chatId: string): Conversation {
       const streamId = streamIdRef.current;
       const elicitation = elicitationRef.current;
       if (streamId === null || elicitation === null) return;
+      const leavePlan =
+        (response.type === "allow" || response.type === "allowForSession") &&
+        isExitPlanModeElicitation(elicitation);
       elicitationRef.current = null;
       forceRender();
       void daemon.chatStreams
@@ -418,8 +433,21 @@ export function useConversation(chatId: string): Conversation {
           response,
         })
         .catch(() => {});
+      // Optimistic UI: leave Plan as soon as the user approves ExitPlanMode so
+      // the chip matches provider-driven build mode before the turn finishes.
+      if (leavePlan) {
+        const buildMode = buildPermissionModeValue(
+          queryClient.getQueryData<ChatLoadResult>(queryKeys.chats.load(chatId))
+            ?.config ?? null,
+        );
+        if (buildMode) {
+          void modeMutation
+            .mutateAsync({ chatId, family: "permission", mode: buildMode })
+            .catch(() => {});
+        }
+      }
     },
-    [daemon],
+    [chatId, daemon, modeMutation, queryClient],
   );
 
   // Reset all live/optimistic state when the chat changes (or on unmount): abort
@@ -539,4 +567,33 @@ function toolCallToPart(call: ConversationToolCall): DaemonMessagePart {
       error: call.errorText.length > 0 ? { message: call.errorText } : null,
     },
   };
+}
+
+/** ExitPlanMode permissions use the tool name in title/body from claude-client. */
+function isExitPlanModeElicitation(elicitation: {
+  title?: string | null;
+  body?: string | null;
+}): boolean {
+  const haystack = `${elicitation.title ?? ""} ${elicitation.body ?? ""}`;
+  return /ExitPlanMode/i.test(haystack);
+}
+
+function buildPermissionModeValue(
+  config: DaemonRuntimeConfig | null,
+): string | null {
+  const target = findPlanModeToggleTarget([
+    {
+      canSet: config?.canSetMode === true,
+      family: "agent",
+      options: config?.modes ?? [],
+      value: config?.currentMode ?? "",
+    },
+    {
+      canSet: config?.canSetPermissionMode === true,
+      family: "permission",
+      options: config?.permissionModes ?? [],
+      value: config?.currentPermissionMode ?? "",
+    },
+  ]);
+  return target?.buildMode.value ?? "default";
 }

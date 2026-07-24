@@ -314,7 +314,15 @@ export type ChatStreamEvent =
   | { type: "toolDelta"; action: DaemonToolAction }
   | { type: "elicitation"; elicitation: DaemonElicitation }
   | { type: "plan"; plan: DaemonPlanData; turnId?: string }
-  | { type: "result"; result: { text: string; content?: DaemonMessagePart[] } }
+  | {
+      type: "result";
+      result: {
+        text: string;
+        content?: DaemonMessagePart[];
+        /** Present when the turn finishes with an updated runtime config. */
+        config?: DaemonRuntimeConfig;
+      };
+    }
   | { type: "error"; message: string }
   | { type: "done" };
 

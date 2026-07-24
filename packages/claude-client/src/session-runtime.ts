@@ -48,6 +48,7 @@ import {
   loadClaudeSdk,
 } from "./runtime.js";
 import { ClaudeSessionPermissions } from "./session-permissions.js";
+import { CLAUDE_TOOL } from "./sdk-types.js";
 import {
   claudePermissionModeIds,
   compactEvents,
@@ -113,7 +114,65 @@ export class ClaudeCodeSessionRuntime {
       onEvent?: (event: TurnRunEvent) => void,
     ) => void,
   ): CanUseTool {
-    return this.permissions.canUseTool(active, emitEngineEvents);
+    const canUse = this.permissions.canUseTool(active, emitEngineEvents);
+    return async (toolName, input, context) => {
+      const result = await canUse(toolName, input, context);
+      // Approving ExitPlanMode means the user accepted the plan and left plan
+      // mode. Switch runtime + live query to build (`default`) so subsequent
+      // tools are not still constrained as plan, and so clients see Build.
+      if (
+        result.behavior === "allow" &&
+        toolName === CLAUDE_TOOL.ExitPlanMode &&
+        this.currentPermissionMode === "plan"
+      ) {
+        await this.leavePlanPermissionMode(active, emitEngineEvents);
+      }
+      return result;
+    };
+  }
+
+  /**
+   * Leave Claude `plan` permission mode after ExitPlanMode is allowed.
+   * Updates engine agent state (for UI) and the active SDK query (for behavior).
+   */
+  async leavePlanPermissionMode(
+    active: ActiveClaudeTurn,
+    emitEngineEvents: (
+      events: EngineEventJson[],
+      onEvent?: (event: TurnRunEvent) => void,
+    ) => void,
+  ): Promise<void> {
+    const buildMode = normalizeClaudeMode("default");
+    this.currentPermissionMode = buildMode;
+    if (this.availablePermissionModes.length === 0) {
+      this.availablePermissionModes = permissionModeOptionsFromIds(
+        claudePermissionModeIds(),
+        buildMode,
+      );
+    } else {
+      this.availablePermissionModes = permissionModeOptionsFromIds(
+        this.availablePermissionModes.map((mode) => mode.id),
+        buildMode,
+      );
+    }
+    emitEngineEvents(
+      [
+        this.sessionPermissionModesUpdated(active.conversationId),
+        contextUpdated(active.conversationId, [
+          {
+            [EngineEventContextUpdateType.PermissionMode]: {
+              mode: { id: buildMode },
+              scope: EngineEventContextScope.TurnAndFuture,
+            },
+          },
+        ]),
+      ],
+      active.request.onEvent,
+    );
+    const query = this.activeQuery;
+    if (query) {
+      await query.setPermissionMode(buildMode);
+    }
   }
 
   resolveElicitation(
