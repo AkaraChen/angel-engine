@@ -4,6 +4,8 @@ import {
   EngineEventContentKind,
   PlanEntryStatus,
 } from "@angel-engine/client-napi";
+import { homedir } from "node:os";
+import path from "node:path";
 import { describe, expect, it } from "vitest";
 import {
   isClaudePlanToolUse,
@@ -22,6 +24,21 @@ function activeTurn(): ActiveClaudeTurn {
     turnId: "turn-1",
   };
 }
+
+const planBody = `# Plan: Add a README Note
+
+## Context
+Ship plan mode.
+
+## Steps
+- Toggle
+- Render
+
+## Verification
+- Tests green
+`;
+
+const planFilePath = path.join(homedir(), ".claude", "plans", "plan.md");
 
 describe("claude plan tools", () => {
   it("recognizes explicit plan tools only", () => {
@@ -117,5 +134,112 @@ describe("claude plan tools", () => {
     expect(
       planEventsFromToolUse(activeTurn(), CLAUDE_TOOL.Bash, { command: "pwd" }),
     ).toEqual([]);
+  });
+
+  it("emits one plan body for Write(plan.md) then ExitPlanMode with the same text", () => {
+    const active = activeTurn();
+    const writeEvents = planEventsFromToolUse(active, CLAUDE_TOOL.Write, {
+      content: planBody,
+      file_path: planFilePath,
+    });
+    expect(writeEvents.length).toBeGreaterThan(0);
+    expect(writeEvents).toEqual(
+      expect.arrayContaining([
+        {
+          PlanDelta: {
+            conversation_id: "conversation-1",
+            delta: { [EngineEventContentKind.Text]: planBody },
+            turn_id: "turn-1",
+          },
+        },
+      ]),
+    );
+
+    // ToolSearch is not a plan tool; it must not reset the fingerprint.
+    expect(
+      planEventsFromToolUse(active, "ToolSearch", { query: "ExitPlanMode" }),
+    ).toEqual([]);
+
+    const exitEvents = planEventsFromToolUse(active, CLAUDE_TOOL.ExitPlanMode, {
+      plan: planBody,
+      planFilePath,
+    });
+    expect(exitEvents).toEqual([]);
+
+    // A revised plan body at exit still projects.
+    const revised = `${planBody}\n- Extra step\n`;
+    const revisedEvents = planEventsFromToolUse(
+      active,
+      CLAUDE_TOOL.ExitPlanMode,
+      { plan: revised, planFilePath },
+    );
+    expect(revisedEvents).toEqual(
+      expect.arrayContaining([
+        {
+          PlanDelta: {
+            conversation_id: "conversation-1",
+            delta: { [EngineEventContentKind.Text]: revised },
+            turn_id: "turn-1",
+          },
+        },
+      ]),
+    );
+  });
+
+  it("history-style structured projection also keeps a single plan for Write → ExitPlanMode", () => {
+    const state = {};
+    const fromWrite = structuredPlanFromToolUse(
+      CLAUDE_TOOL.Write,
+      { content: planBody, file_path: planFilePath },
+      state,
+    );
+    expect(fromWrite).toMatchObject({
+      kind: "review",
+      path: planFilePath,
+      text: planBody,
+      type: "plan",
+    });
+
+    const fromExit = structuredPlanFromToolUse(
+      CLAUDE_TOOL.ExitPlanMode,
+      { plan: planBody, planFilePath },
+      state,
+    );
+    expect(fromExit).toBeUndefined();
+  });
+
+  it("resets history plan fingerprint across user turns so the same plan can project again", () => {
+    const state: { lastReviewPlan?: { path?: string; text: string } } = {};
+    expect(
+      structuredPlanFromToolUse(
+        CLAUDE_TOOL.Write,
+        { content: planBody, file_path: planFilePath },
+        state,
+      ),
+    ).toBeDefined();
+    expect(
+      structuredPlanFromToolUse(
+        CLAUDE_TOOL.ExitPlanMode,
+        { plan: planBody, planFilePath },
+        state,
+      ),
+    ).toBeUndefined();
+
+    // New user turn clears fingerprint (history does this on user text).
+    state.lastReviewPlan = undefined;
+
+    const turn2Write = structuredPlanFromToolUse(
+      CLAUDE_TOOL.Write,
+      { content: planBody, file_path: planFilePath },
+      state,
+    );
+    expect(turn2Write).toMatchObject({ text: planBody, path: planFilePath });
+    expect(
+      structuredPlanFromToolUse(
+        CLAUDE_TOOL.ExitPlanMode,
+        { plan: planBody, planFilePath },
+        state,
+      ),
+    ).toBeUndefined();
   });
 });

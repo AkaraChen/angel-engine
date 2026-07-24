@@ -96,10 +96,16 @@ export interface DaemonRuntimeConfigOption {
  */
 export interface DaemonRuntimeConfig {
   canSetModel?: boolean;
+  canSetMode?: boolean;
+  canSetPermissionMode?: boolean;
   canSetReasoningEffort?: boolean;
+  currentMode?: string | null;
   currentModel?: string | null;
+  currentPermissionMode?: string | null;
   currentReasoningEffort?: string | null;
+  modes?: DaemonRuntimeConfigOption[];
   models: DaemonRuntimeConfigOption[];
+  permissionModes?: DaemonRuntimeConfigOption[];
   reasoningEfforts: DaemonRuntimeConfigOption[];
 }
 
@@ -126,15 +132,15 @@ export interface DaemonToolAction {
 /**
  * One content part of a chat message. A narrowed projection of the
  * `ChatHistoryMessagePart` union from `@angel-engine/daemon-api/chat`: the mobile
- * conversation view reads the `text` of `text`/`reasoning` parts and the tool
- * fields of `tool-call` parts. Other richer parts (plans, images) still arrive
- * from the daemon — structural typing lets them satisfy this shape — but their
- * extra fields are intentionally not modeled because the mobile transcript
- * ignores them.
+ * conversation view reads the `text` of `text`/`reasoning` parts, tool fields of
+ * `tool-call` parts, and plan data of `data` parts named `plan`/`todo`.
  */
 export interface DaemonMessagePart {
   type: string;
   text?: string;
+  /** Present on `data` parts (`plan` / `todo` / `elicitation` / …). */
+  name?: string;
+  data?: unknown;
   /** Present on `tool-call` parts (mirrors `ChatToolCallPart`). */
   toolCallId?: string;
   toolName?: string;
@@ -143,6 +149,28 @@ export interface DaemonMessagePart {
   result?: unknown;
   isError?: boolean;
   artifact?: DaemonToolAction;
+}
+
+/** One checklist entry inside a plan, mirroring `ChatPlanEntry`. */
+export interface DaemonPlanEntry {
+  content: string;
+  status: "pending" | "in_progress" | "completed";
+}
+
+/**
+ * A plan snapshot as the daemon serializes it over SSE (`type: "plan"`) and in
+ * history `data` parts. Mirrors `ChatPlanData` from `@angel-engine/daemon-api/chat`.
+ */
+export interface DaemonPlanData {
+  text: string;
+  entries: DaemonPlanEntry[];
+  kind?: "review" | "todo" | null;
+  path?: string | null;
+  /**
+   * Set client-side when normalizing history: older plans of the same kind
+   * collapse to a created/updated marker so only the latest is expanded.
+   */
+  presentation?: "created" | "updated" | null;
 }
 
 /**
@@ -187,23 +215,25 @@ export interface DaemonHistoryMessage {
 }
 
 /**
- * Result of `POST /api/chats/:id/load` — the chat metadata plus its persisted
- * transcript. Narrowed projection of `ChatLoadResult` (the runtime config is not
- * needed by the mobile conversation view).
+ * Result of `POST /api/chats/:id/load` — chat metadata, transcript, and the
+ * runtime config (modes / permission modes) the composer needs for plan mode.
  */
 export interface ChatLoadResult {
   chat: DaemonChat;
   messages: DaemonHistoryMessage[];
+  config?: DaemonRuntimeConfig;
 }
 
 /**
- * Payload for `POST /api/chat-streams` (and `/api/chats/send`). A narrowed subset
- * of `ChatSendInput`: the mobile composer only sends free-text into an existing
- * chat, so it passes the target `chatId` and the message `text`.
+ * Payload for `POST /api/chat-streams` (and `/api/chats/send`). Mirrors the
+ * mobile-relevant subset of `ChatSendInput`: free-text into an existing chat,
+ * optionally carrying the active agent/permission mode so plan mode sticks.
  */
 export interface ChatSendInput {
   chatId: string;
   text: string;
+  mode?: string | null;
+  permissionMode?: string | null;
 }
 
 /**
@@ -275,17 +305,24 @@ export interface ElicitationResolveInput {
 /**
  * The streaming events the daemon emits over SSE while an assistant turn runs
  * (`POST /api/chat-streams`), mirroring the `ChatStreamEvent` union in
- * `@angel-engine/daemon-api/chat`. The mobile view consumes text/reasoning deltas,
- * `tool`/`toolDelta` actions, `elicitation` prompts, and the terminal
- * `result`/`error`/`done` events; the remaining events (chat, plan) still arrive
- * but are ignored.
+ * `@angel-engine/daemon-api/chat`. Mobile consumes text/reasoning deltas,
+ * tools, elicitations, plans, and terminal result/error/done events.
  */
 export type ChatStreamEvent =
   | { type: "delta"; part: "reasoning" | "text"; text: string; turnId?: string }
   | { type: "tool"; action: DaemonToolAction }
   | { type: "toolDelta"; action: DaemonToolAction }
   | { type: "elicitation"; elicitation: DaemonElicitation }
-  | { type: "result"; result: { text: string; content?: DaemonMessagePart[] } }
+  | { type: "plan"; plan: DaemonPlanData; turnId?: string }
+  | {
+      type: "result";
+      result: {
+        text: string;
+        content?: DaemonMessagePart[];
+        /** Present when the turn finishes with an updated runtime config. */
+        config?: DaemonRuntimeConfig;
+      };
+    }
   | { type: "error"; message: string }
   | { type: "done" };
 
@@ -299,4 +336,6 @@ export interface ConversationMessage {
   error?: string;
   /** Inline tool calls made during this turn, in arrival order. */
   toolCalls: ConversationToolCall[];
+  /** Plan/todo snapshots attached to this turn (history + live stream). */
+  plans: DaemonPlanData[];
 }

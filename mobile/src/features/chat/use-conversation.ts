@@ -5,6 +5,8 @@ import type {
   ConversationToolCall,
   DaemonElicitation,
   DaemonMessagePart,
+  DaemonPlanData,
+  DaemonRuntimeConfig,
 } from "@/platform/chat-types";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -15,6 +17,14 @@ import { queryKeys } from "@/platform/query-keys";
 
 import { toConversation, toolCallFromAction } from "./message-view";
 import { clearNewChatPrompt, readNewChatPrompt } from "./new-chat-prompt";
+import { findPlanModeToggleTarget } from "./mode-options";
+import {
+  chatPlanPartName,
+  cloneChatPlanData,
+  isChatPlanData,
+  normalizeConversationPlans,
+  upsertPlan,
+} from "./plan-utils";
 
 export interface Conversation {
   /** Persisted history plus the live (streaming) turn, in render order. */
@@ -33,6 +43,14 @@ export interface Conversation {
   pendingElicitation: DaemonElicitation | null;
   /** Answer the pending elicitation so the waiting turn can continue. */
   respondElicitation: (response: ChatElicitationResponse) => void;
+  /** Runtime config from chat load / mode mutations (drives plan mode UI). */
+  runtimeConfig: DaemonRuntimeConfig | null;
+  /** True while a setMode / setPermissionMode call is in flight. */
+  isModePending: boolean;
+  /** Switch the agent mode (when `canSetMode`). */
+  setMode: (mode: string) => Promise<void>;
+  /** Switch the permission mode (when `canSetPermissionMode`). */
+  setPermissionMode: (mode: string) => Promise<void>;
 }
 
 interface LiveTurn {
@@ -43,6 +61,8 @@ interface LiveTurn {
   assistantReasoning: string;
   /** Tool calls streamed this turn, in first-seen order and upserted by id. */
   assistantToolCalls: ConversationToolCall[];
+  /** Plan snapshots streamed this turn, upserted by kind. */
+  assistantPlans: DaemonPlanData[];
 }
 
 const EMPTY_TURN: LiveTurn = {
@@ -52,6 +72,7 @@ const EMPTY_TURN: LiveTurn = {
   assistantText: "",
   assistantReasoning: "",
   assistantToolCalls: [],
+  assistantPlans: [],
 };
 
 /** Upsert a streamed tool action into the turn's ordered tool-call list. */
@@ -116,9 +137,20 @@ export function useConversation(chatId: string): Conversation {
       });
       abortRef.current = controller;
       streamIdRef.current = streamId;
+      const config = queryClient.getQueryData<ChatLoadResult>(
+        queryKeys.chats.load(chatId),
+      )?.config;
+      const sendInput = {
+        chatId,
+        text,
+        ...(config?.currentMode ? { mode: config.currentMode } : {}),
+        ...(config?.currentPermissionMode
+          ? { permissionMode: config.currentPermissionMode }
+          : {}),
+      };
       try {
         for await (const event of daemon.chatStreams.send(
-          { chatId, text },
+          sendInput,
           streamId,
           controller.signal,
         )) {
@@ -144,6 +176,16 @@ export function useConversation(chatId: string): Conversation {
                 ),
               });
             }
+          } else if (event.type === "plan") {
+            if (!isChatPlanData(event.plan)) {
+              throw new Error(
+                "Daemon sent a plan event with invalid plan data.",
+              );
+            }
+            const turn = liveTurnRef.current;
+            updateAssistant({
+              assistantPlans: upsertPlan(turn.assistantPlans, event.plan),
+            });
           } else if (event.type === "elicitation") {
             elicitationRef.current = event.elicitation;
             forceRender();
@@ -152,9 +194,35 @@ export function useConversation(chatId: string): Conversation {
             // no prose). Keep any text we already streamed so a final empty
             // result does not wipe the live bubble.
             const turn = liveTurnRef.current;
+            const resultContent: DaemonMessagePart[] =
+              event.result.content ?? [];
+            const resultPlans = resultContent
+              .filter(
+                (part): part is DaemonMessagePart & { data: DaemonPlanData } =>
+                  part.type === "data" &&
+                  (part.name === "plan" || part.name === "todo") &&
+                  isChatPlanData(part.data),
+              )
+              .map((part) => cloneChatPlanData(part.data));
+            let nextPlans = turn.assistantPlans;
+            for (const plan of resultPlans) {
+              nextPlans = upsertPlan(nextPlans, plan);
+            }
             updateAssistant({
               assistantText: event.result.text || turn.assistantText,
+              assistantPlans: nextPlans,
             });
+            // ExitPlanMode (and similar) may update permission mode mid-turn;
+            // apply the final config so the composer chip leaves Plan mode.
+            if (event.result.config) {
+              queryClient.setQueryData<ChatLoadResult>(
+                queryKeys.chats.load(chatId),
+                (current) =>
+                  current
+                    ? { ...current, config: event.result.config }
+                    : current,
+              );
+            }
           } else if (event.type === "error") {
             throw new Error(event.message || "The assistant turn failed.");
           } else if (event.type === "done") {
@@ -174,13 +242,12 @@ export function useConversation(chatId: string): Conversation {
         forceRender();
       }
     },
-    [chatId, daemon, updateAssistant],
+    [chatId, daemon, queryClient, updateAssistant],
   );
 
   const history = useQuery({
     queryKey: queryKeys.chats.load(chatId),
     queryFn: async () => daemon.chats.load(chatId),
-    select: (result) => toConversation(result.messages),
     enabled: chatId.length > 0,
     retry: false,
   });
@@ -198,6 +265,13 @@ export function useConversation(chatId: string): Conversation {
       // the background refetch that replaces this turn with the daemon's copy.
       for (const call of turn.assistantToolCalls)
         content.push(toolCallToPart(call));
+      for (const plan of turn.assistantPlans) {
+        content.push({
+          type: "data",
+          name: chatPlanPartName(plan),
+          data: cloneChatPlanData(plan),
+        });
+      }
       content.push({ type: "text", text: turn.assistantText });
       const appendTurn = (result: ChatLoadResult): ChatLoadResult => ({
         ...result,
@@ -237,6 +311,50 @@ export function useConversation(chatId: string): Conversation {
 
   const { mutate, reset } = mutation;
 
+  const modeMutation = useMutation({
+    mutationFn: async (input: {
+      chatId: string;
+      family: "agent" | "permission";
+      mode: string;
+    }) => {
+      // Bind the target chat in the mutation variables so a late success after
+      // a chat switch cannot write config into the newly selected transcript.
+      if (input.family === "agent") {
+        return daemon.chats.setMode({
+          chatId: input.chatId,
+          mode: input.mode,
+        });
+      }
+      return daemon.chats.setPermissionMode({
+        chatId: input.chatId,
+        mode: input.mode,
+      });
+    },
+    onSuccess: (result, input) => {
+      queryClient.setQueryData<ChatLoadResult>(
+        queryKeys.chats.load(input.chatId),
+        (current) =>
+          current
+            ? { ...current, chat: result.chat, config: result.config }
+            : current,
+      );
+    },
+  });
+
+  const setMode = useCallback(
+    async (mode: string) => {
+      await modeMutation.mutateAsync({ chatId, family: "agent", mode });
+    },
+    [chatId, modeMutation],
+  );
+
+  const setPermissionMode = useCallback(
+    async (mode: string) => {
+      await modeMutation.mutateAsync({ chatId, family: "permission", mode });
+    },
+    [chatId, modeMutation],
+  );
+
   const send = useCallback(
     (raw: string) => {
       const text = raw.trim();
@@ -251,6 +369,7 @@ export function useConversation(chatId: string): Conversation {
         assistantText: "",
         assistantReasoning: "",
         assistantToolCalls: [],
+        assistantPlans: [],
       };
       forceRender();
       mutate(text);
@@ -303,16 +422,62 @@ export function useConversation(chatId: string): Conversation {
       const streamId = streamIdRef.current;
       const elicitation = elicitationRef.current;
       if (streamId === null || elicitation === null) return;
+      const leavePlan =
+        (response.type === "allow" || response.type === "allowForSession") &&
+        isExitPlanModeElicitation(elicitation);
+      // Snapshot for rollback if resolve fails after an optimistic leave-plan.
+      const previousLoad = queryClient.getQueryData<ChatLoadResult>(
+        queryKeys.chats.load(chatId),
+      );
+      const previousConfig = previousLoad?.config;
       elicitationRef.current = null;
       forceRender();
+      // Optimistic UI: patch permission mode in the load cache *synchronously*
+      // before resolving the elicitation. `setPermissionMode` is queued behind
+      // the in-flight sendText on the provider, so waiting for onSuccess would
+      // leave the composer chip on Plan while the next Bash/Write elicits.
+      if (leavePlan && previousLoad?.config) {
+        const buildMode = buildPermissionModeValue(previousLoad.config);
+        if (buildMode) {
+          queryClient.setQueryData<ChatLoadResult>(
+            queryKeys.chats.load(chatId),
+            {
+              ...previousLoad,
+              config: {
+                ...previousLoad.config,
+                currentPermissionMode: buildMode,
+              },
+            },
+          );
+          forceRender();
+        }
+      }
       void daemon.chatStreams
         .resolveElicitation(streamId, {
           elicitationId: elicitation.id,
           response,
         })
-        .catch(() => {});
+        .catch(() => {
+          // Network/daemon failure: roll back optimistic Build and re-open the
+          // elicitation so the user can retry (provider is still Plan).
+          if (
+            leavePlan &&
+            streamIdRef.current === streamId &&
+            previousConfig !== undefined
+          ) {
+            queryClient.setQueryData<ChatLoadResult>(
+              queryKeys.chats.load(chatId),
+              (current) =>
+                current ? { ...current, config: previousConfig } : current,
+            );
+          }
+          if (streamIdRef.current === streamId) {
+            elicitationRef.current = elicitation;
+          }
+          forceRender();
+        });
     },
-    [daemon],
+    [chatId, daemon, queryClient],
   );
 
   // Reset all live/optimistic state when the chat changes (or on unmount): abort
@@ -332,7 +497,7 @@ export function useConversation(chatId: string): Conversation {
     };
   }, [chatId, daemon, reset]);
 
-  const persisted = history.data ?? [];
+  const persisted = history.data ? toConversation(history.data.messages) : [];
   const hasStashedPrompt = readNewChatPrompt(chatId) !== undefined;
   const liveError = mutation.isError
     ? (mutation.error?.message ?? "The turn failed.")
@@ -344,9 +509,12 @@ export function useConversation(chatId: string): Conversation {
     mutation.isPending || abortRef.current !== null,
     liveError,
   );
+  // Re-collapse plan presentations across the full transcript so a live plan
+  // supersedes older persisted plans of the same kind (desktop parity).
+  const messages = normalizeConversationPlans([...persisted, ...live]);
 
   return {
-    messages: [...persisted, ...live],
+    messages,
     isPending:
       history.isPending ||
       (hasStashedPrompt && liveTurnRef.current.userId.length === 0),
@@ -357,6 +525,10 @@ export function useConversation(chatId: string): Conversation {
     stop,
     pendingElicitation: elicitationRef.current,
     respondElicitation,
+    runtimeConfig: history.data?.config ?? null,
+    isModePending: modeMutation.isPending,
+    setMode,
+    setPermissionMode,
   };
 }
 
@@ -374,18 +546,20 @@ function buildLiveMessages(
       reasoning: "",
       status: "complete",
       toolCalls: [],
+      plans: [],
     },
   ];
   // Always show the assistant row while a turn is live (even before the first
-  // token, so the "Thinking…" indicator appears), on error, while tool calls are
-  // streaming, and while a completed initial turn is waiting for canonical
-  // history hydration.
+  // token, so the "Thinking…" indicator appears), on error, while tool calls /
+  // plans are streaming, and while a completed initial turn is waiting for
+  // canonical history hydration.
   if (
     isStreaming ||
     error !== null ||
     turn.assistantText.length > 0 ||
     turn.assistantReasoning.length > 0 ||
-    turn.assistantToolCalls.length > 0
+    turn.assistantToolCalls.length > 0 ||
+    turn.assistantPlans.length > 0
   ) {
     messages.push({
       id: turn.assistantId,
@@ -395,6 +569,7 @@ function buildLiveMessages(
       status: error !== null ? "error" : isStreaming ? "streaming" : "complete",
       error: error ?? undefined,
       toolCalls: turn.assistantToolCalls,
+      plans: turn.assistantPlans,
     });
   }
   return messages;
@@ -422,4 +597,33 @@ function toolCallToPart(call: ConversationToolCall): DaemonMessagePart {
       error: call.errorText.length > 0 ? { message: call.errorText } : null,
     },
   };
+}
+
+/** ExitPlanMode permissions use the tool name in title/body from claude-client. */
+function isExitPlanModeElicitation(elicitation: {
+  title?: string | null;
+  body?: string | null;
+}): boolean {
+  const haystack = `${elicitation.title ?? ""} ${elicitation.body ?? ""}`;
+  return /ExitPlanMode/i.test(haystack);
+}
+
+function buildPermissionModeValue(
+  config: DaemonRuntimeConfig | null,
+): string | null {
+  const target = findPlanModeToggleTarget([
+    {
+      canSet: config?.canSetMode === true,
+      family: "agent",
+      options: config?.modes ?? [],
+      value: config?.currentMode ?? "",
+    },
+    {
+      canSet: config?.canSetPermissionMode === true,
+      family: "permission",
+      options: config?.permissionModes ?? [],
+      value: config?.currentPermissionMode ?? "",
+    },
+  ]);
+  return target?.buildMode.value ?? "default";
 }

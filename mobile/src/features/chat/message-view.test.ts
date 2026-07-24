@@ -77,6 +77,32 @@ describe("toConversation", () => {
     ]);
     expect(result[1].reasoning).toBe("hmm");
     expect(result[0].status).toBe("complete");
+    expect(result[0].plans).toEqual([]);
+    expect(result[1].plans).toEqual([]);
+  });
+
+  it("projects plan data parts and keeps plan-only assistant turns", () => {
+    const result = toConversation([
+      message({
+        id: "a1",
+        role: "assistant",
+        content: [
+          {
+            type: "data",
+            name: "plan",
+            data: {
+              text: "Ship plan mode",
+              entries: [{ content: "Toggle", status: "pending" }],
+              kind: "review",
+            },
+          },
+        ],
+      }),
+    ]);
+    expect(result).toHaveLength(1);
+    expect(result[0].plans).toHaveLength(1);
+    expect(result[0].plans[0].text).toBe("Ship plan mode");
+    expect(result[0].text).toBe("");
   });
 
   it("drops system messages", () => {

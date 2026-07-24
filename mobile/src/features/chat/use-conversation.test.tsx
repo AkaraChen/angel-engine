@@ -509,6 +509,148 @@ describe("useConversation", () => {
     await waitFor(() => expect(result.current.isStreaming).toBe(false));
   });
 
+  it("rolls plan chip back when ExitPlanMode resolve fails", async () => {
+    let sse: SseHandle | undefined;
+    const modes = [
+      { label: "Plan", value: "plan" },
+      { label: "Default", value: "default" },
+    ];
+    const fetchMock = vi.fn(async (url: string, init?: RequestInit) => {
+      const method = init?.method ?? "GET";
+      if (url.endsWith("/load")) {
+        return jsonResponse({
+          chat: { id: "c1", title: "c1" },
+          messages: [],
+          config: {
+            canSetPermissionMode: true,
+            currentPermissionMode: "plan",
+            permissionModes: modes,
+            models: [],
+            reasoningEfforts: [],
+          },
+        });
+      }
+      if (url.includes("/api/chat-streams?") && method === "POST") {
+        sse = controllableSse(init?.signal ?? undefined);
+        return sse.response;
+      }
+      if (url.endsWith("/elicitation") && method === "POST") {
+        return new Response(JSON.stringify({ message: "offline" }), {
+          status: 503,
+          headers: { "content-type": "application/json" },
+        });
+      }
+      return jsonResponse({ ok: true });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const { result } = renderHook(() => useConversation("c1"), { wrapper });
+    await waitFor(() => expect(result.current.isPending).toBe(false));
+
+    act(() => result.current.send("plan then implement"));
+    await waitFor(() => expect(sse).toBeDefined());
+    act(() =>
+      sse!.push({
+        type: "elicitation",
+        elicitation: {
+          id: "exit-1",
+          kind: "approval",
+          title: "Allow ExitPlanMode?",
+        },
+      }),
+    );
+    await waitFor(() =>
+      expect(result.current.pendingElicitation?.id).toBe("exit-1"),
+    );
+
+    act(() => result.current.respondElicitation({ type: "allow" }));
+    // Optimistic patch applied immediately…
+    expect(result.current.runtimeConfig?.currentPermissionMode).toBe("default");
+
+    // …then rolled back when resolve fails, with elicitation restored.
+    await waitFor(() =>
+      expect(result.current.runtimeConfig?.currentPermissionMode).toBe("plan"),
+    );
+    await waitFor(() =>
+      expect(result.current.pendingElicitation?.id).toBe("exit-1"),
+    );
+  });
+
+  it("switches the plan chip to build as soon as ExitPlanMode is allowed", async () => {
+    let sse: SseHandle | undefined;
+    const modes = [
+      { label: "Plan", value: "plan" },
+      { label: "Default", value: "default" },
+    ];
+    const fetchMock = vi.fn(async (url: string, init?: RequestInit) => {
+      const method = init?.method ?? "GET";
+      if (url.endsWith("/load")) {
+        return jsonResponse({
+          chat: { id: "c1", title: "c1" },
+          messages: [],
+          config: {
+            canSetPermissionMode: true,
+            currentPermissionMode: "plan",
+            permissionModes: modes,
+            models: [],
+            reasoningEfforts: [],
+          },
+        });
+      }
+      if (url.includes("/api/chat-streams?") && method === "POST") {
+        sse = controllableSse(init?.signal ?? undefined);
+        return sse.response;
+      }
+      // Keep setPermissionMode pending forever if called — UI must not wait.
+      if (url.endsWith("/permission-mode") && method === "PUT") {
+        return await new Promise<Response>(() => {});
+      }
+      return jsonResponse({ ok: true });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const { result } = renderHook(() => useConversation("c1"), { wrapper });
+    await waitFor(() => expect(result.current.isPending).toBe(false));
+    expect(result.current.runtimeConfig?.currentPermissionMode).toBe("plan");
+
+    act(() => result.current.send("plan then implement"));
+    await waitFor(() => expect(sse).toBeDefined());
+    act(() =>
+      sse!.push({
+        type: "elicitation",
+        elicitation: {
+          id: "exit-1",
+          kind: "approval",
+          title: "Allow ExitPlanMode?",
+        },
+      }),
+    );
+    await waitFor(() =>
+      expect(result.current.pendingElicitation?.id).toBe("exit-1"),
+    );
+
+    act(() => result.current.respondElicitation({ type: "allow" }));
+
+    // Chip must leave Plan before the turn result (next Bash may elicit next).
+    expect(result.current.runtimeConfig?.currentPermissionMode).toBe("default");
+
+    act(() =>
+      sse!.push({
+        type: "elicitation",
+        elicitation: {
+          id: "bash-1",
+          kind: "approval",
+          title: "Allow Bash?",
+        },
+      }),
+    );
+    await waitFor(() =>
+      expect(result.current.pendingElicitation?.id).toBe("bash-1"),
+    );
+    // Still build while the next elicitation is open and no result yet.
+    expect(result.current.runtimeConfig?.currentPermissionMode).toBe("default");
+  });
+
   it("stop finalizes the partial turn without an error bubble", async () => {
     let loadCalls = 0;
     let sse: SseHandle | undefined;
@@ -566,5 +708,267 @@ describe("useConversation", () => {
         ["assistant", "Partial"],
       ]),
     );
+  });
+
+  it("streams plan events, sends permissionMode, and updates mode via API", async () => {
+    let sse: SseHandle | undefined;
+    let permissionMode = "plan";
+    const config = () => ({
+      canSetPermissionMode: true,
+      currentPermissionMode: permissionMode,
+      permissionModes: [
+        { label: "Plan", value: "plan" },
+        { label: "Default", value: "default" },
+      ],
+      models: [],
+      reasoningEfforts: [],
+    });
+    const fetchMock = vi.fn(async (url: string, init?: RequestInit) => {
+      const method = init?.method ?? "GET";
+      if (url.endsWith("/load")) {
+        return jsonResponse({
+          chat: { id: "c1", title: "c1" },
+          messages: [],
+          config: config(),
+        });
+      }
+      if (url.includes("/api/chat-streams?") && method === "POST") {
+        sse = controllableSse(init?.signal ?? undefined);
+        return sse.response;
+      }
+      if (url.endsWith("/permission-mode") && method === "PUT") {
+        const rawBody = typeof init?.body === "string" ? init.body : "{}";
+        const body = JSON.parse(rawBody) as { mode?: string };
+        permissionMode = body.mode ?? permissionMode;
+        return jsonResponse({
+          chat: { id: "c1", title: "c1" },
+          config: config(),
+        });
+      }
+      return jsonResponse({ ok: true });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const { result } = renderHook(() => useConversation("c1"), { wrapper });
+    await waitFor(() => expect(result.current.isPending).toBe(false));
+    expect(result.current.runtimeConfig?.currentPermissionMode).toBe("plan");
+
+    act(() => result.current.send("make a plan"));
+    await waitFor(() => expect(sse).toBeDefined());
+    const streamRequest = fetchMock.mock.calls.find(
+      ([url]) => typeof url === "string" && url.includes("/api/chat-streams?"),
+    );
+    expect(streamRequest?.[1]?.body).toBe(
+      JSON.stringify({
+        chatId: "c1",
+        text: "make a plan",
+        permissionMode: "plan",
+      }),
+    );
+
+    act(() =>
+      sse!.push({
+        type: "plan",
+        plan: {
+          text: "Step one",
+          entries: [{ content: "Toggle", status: "pending" }],
+          kind: "review",
+        },
+      }),
+    );
+    await waitFor(() =>
+      expect(result.current.messages.at(-1)?.plans[0]?.text).toBe("Step one"),
+    );
+
+    act(() => {
+      sse!.push({ type: "result", result: { text: "Here is the plan." } });
+      sse!.push({ type: "done" });
+      sse!.close();
+    });
+    await waitFor(() => expect(result.current.isStreaming).toBe(false));
+
+    await act(async () => {
+      await result.current.setPermissionMode("default");
+    });
+    await waitFor(() =>
+      expect(result.current.runtimeConfig?.currentPermissionMode).toBe(
+        "default",
+      ),
+    );
+    expect(
+      fetchMock.mock.calls.some(
+        ([url, init]) =>
+          typeof url === "string" &&
+          url.endsWith("/permission-mode") &&
+          init?.method === "PUT",
+      ),
+    ).toBe(true);
+  });
+
+  it("keeps a late mode mutation on the original chat after a switch", async () => {
+    let resolveMode: ((response: Response) => void) | undefined;
+    let c1PermissionMode = "plan";
+    const modes = [
+      { label: "Plan", value: "plan" },
+      { label: "Accept edits", value: "acceptEdits" },
+      { label: "Default", value: "default" },
+    ];
+    const fetchMock = vi.fn(async (url: string, init?: RequestInit) => {
+      const method = init?.method ?? "GET";
+      if (
+        typeof url === "string" &&
+        url.includes("/c1/") &&
+        url.endsWith("/load")
+      ) {
+        return jsonResponse({
+          chat: { id: "c1", title: "c1" },
+          messages: [],
+          config: {
+            canSetPermissionMode: true,
+            currentPermissionMode: c1PermissionMode,
+            permissionModes: modes,
+            models: [],
+            reasoningEfforts: [],
+          },
+        });
+      }
+      if (
+        typeof url === "string" &&
+        url.includes("/c2/") &&
+        url.endsWith("/load")
+      ) {
+        return jsonResponse({
+          chat: { id: "c2", title: "c2" },
+          messages: [],
+          config: {
+            canSetPermissionMode: true,
+            currentPermissionMode: "default",
+            permissionModes: modes,
+            models: [],
+            reasoningEfforts: [],
+          },
+        });
+      }
+      if (
+        typeof url === "string" &&
+        url.includes("/c1/") &&
+        url.endsWith("/permission-mode") &&
+        method === "PUT"
+      ) {
+        return await new Promise<Response>((resolve) => {
+          resolveMode = resolve;
+        });
+      }
+      return jsonResponse({ ok: true });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const { result, rerender } = renderHook(({ id }) => useConversation(id), {
+      wrapper,
+      initialProps: { id: "c1" },
+    });
+    await waitFor(() => expect(result.current.isPending).toBe(false));
+    expect(result.current.runtimeConfig?.currentPermissionMode).toBe("plan");
+
+    let modePromise!: Promise<void>;
+    act(() => {
+      // Distinct from c2's `default` so a wrong-chat cache write fails loudly.
+      modePromise = result.current.setPermissionMode("acceptEdits");
+    });
+    await waitFor(() => expect(resolveMode).toBeDefined());
+
+    // Switch chats while the mode request for c1 is still in flight.
+    rerender({ id: "c2" });
+    await waitFor(() =>
+      expect(result.current.runtimeConfig?.currentPermissionMode).toBe(
+        "default",
+      ),
+    );
+
+    act(() => {
+      c1PermissionMode = "acceptEdits";
+      resolveMode!(
+        jsonResponse({
+          chat: { id: "c1", title: "c1" },
+          config: {
+            canSetPermissionMode: true,
+            currentPermissionMode: "acceptEdits",
+            permissionModes: modes,
+            models: [],
+            reasoningEfforts: [],
+          },
+        }),
+      );
+    });
+    await act(async () => {
+      await modePromise;
+    });
+
+    // c2 must stay on its own load config — not acceptEdits from c1's response.
+    expect(result.current.runtimeConfig?.currentPermissionMode).toBe("default");
+
+    // Switching back surfaces the late c1 update in c1's cache only.
+    rerender({ id: "c1" });
+    await waitFor(() =>
+      expect(result.current.runtimeConfig?.currentPermissionMode).toBe(
+        "acceptEdits",
+      ),
+    );
+  });
+
+  it("collapses persisted plans when a live plan of the same kind streams in", async () => {
+    let sse: SseHandle | undefined;
+    const fetchMock = vi.fn(async (url: string, init?: RequestInit) => {
+      const method = init?.method ?? "GET";
+      if (url.endsWith("/load")) {
+        return jsonResponse({
+          chat: { id: "c1", title: "c1" },
+          messages: [
+            {
+              id: "a0",
+              role: "assistant",
+              content: [
+                {
+                  type: "data",
+                  name: "plan",
+                  data: {
+                    text: "Old plan",
+                    entries: [],
+                    kind: "review",
+                  },
+                },
+              ],
+            },
+          ],
+        });
+      }
+      if (url.includes("/api/chat-streams?") && method === "POST") {
+        sse = controllableSse(init?.signal ?? undefined);
+        return sse.response;
+      }
+      return jsonResponse({ ok: true });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const { result } = renderHook(() => useConversation("c1"), { wrapper });
+    await waitFor(() => expect(result.current.isPending).toBe(false));
+    expect(result.current.messages[0]?.plans[0]?.presentation).toBeNull();
+
+    act(() => result.current.send("revise"));
+    await waitFor(() => expect(sse).toBeDefined());
+    act(() =>
+      sse!.push({
+        type: "plan",
+        plan: { text: "New plan", entries: [], kind: "review" },
+      }),
+    );
+    await waitFor(() => {
+      const plans = result.current.messages.flatMap((m) => m.plans);
+      expect(plans).toHaveLength(2);
+      expect(plans[0].presentation).toBe("created");
+      expect(plans[0].text).toBe("Old plan");
+      expect(plans[1].presentation).toBeNull();
+      expect(plans[1].text).toBe("New plan");
+    });
   });
 });

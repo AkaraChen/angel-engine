@@ -1,5 +1,10 @@
 import type { SessionMessage } from "@anthropic-ai/claude-agent-sdk";
-import { EngineEventHistoryRole } from "@angel-engine/client-napi";
+import {
+  EngineEventContentKind,
+  EngineEventHistoryRole,
+} from "@angel-engine/client-napi";
+import { homedir } from "node:os";
+import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { historyEventsFromSessionMessages } from "../history";
 
@@ -164,5 +169,52 @@ describe("Claude history replay", () => {
         },
       },
     ]);
+  });
+
+  it("dedupes Write→ExitPlanMode within a turn but allows the same plan on the next user turn", () => {
+    const planBody = "# Plan\n\n- Step one\n";
+    const planFilePath = path.join(homedir(), ".claude", "plans", "note.md");
+    const writeTool = (id: string) => ({
+      id,
+      input: { content: planBody, file_path: planFilePath },
+      name: "Write",
+      type: "tool_use" as const,
+    });
+    const exitTool = (id: string) => ({
+      id,
+      input: { plan: planBody, planFilePath },
+      name: "ExitPlanMode",
+      type: "tool_use" as const,
+    });
+
+    const events = historyEventsFromSessionMessages("conversation-1", [
+      sessionMessage("user", "make a plan"),
+      sessionMessage("assistant", [writeTool("w1"), exitTool("e1")]),
+      sessionMessage("user", "make the same plan again"),
+      sessionMessage("assistant", [writeTool("w2"), exitTool("e2")]),
+    ]);
+
+    const structuredPlans = events.flatMap((event) => {
+      const chunk = (
+        event as {
+          HistoryReplayChunk?: { entry?: { content?: Record<string, string> } };
+        }
+      ).HistoryReplayChunk;
+      const structured =
+        chunk?.entry?.content?.[EngineEventContentKind.Structured];
+      if (typeof structured !== "string") return [];
+      try {
+        const parsed = JSON.parse(structured) as {
+          type?: string;
+          text?: string;
+        };
+        return parsed.type === "plan" ? [parsed] : [];
+      } catch {
+        return [];
+      }
+    });
+
+    expect(structuredPlans).toHaveLength(2);
+    expect(structuredPlans.every((plan) => plan.text === planBody)).toBe(true);
   });
 });

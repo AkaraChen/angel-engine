@@ -12,6 +12,7 @@ import {
 import is from "@sindresorhus/is";
 import { lookup } from "mime-types";
 import path from "node:path";
+import type { ClaudePlanProjectionState } from "./plan.js";
 import { structuredPlanFromToolUse } from "./plan.js";
 import {
   actionKind,
@@ -69,8 +70,14 @@ export function historyEventsFromSessionMessages(
   messages: SessionMessage[],
 ): EngineEventJson[] {
   const toolUses = new Map<string, HistoryToolUse>();
+  const planState: ClaudePlanProjectionState = {};
   return messages.flatMap((message) =>
-    historyEventsFromSessionMessage(conversationId, message, toolUses),
+    historyEventsFromSessionMessage(
+      conversationId,
+      message,
+      toolUses,
+      planState,
+    ),
   );
 }
 
@@ -78,12 +85,18 @@ function historyEventsFromSessionMessage(
   conversationId: string,
   message: SessionMessage,
   toolUses: Map<string, HistoryToolUse>,
+  planState: ClaudePlanProjectionState,
 ): EngineEventJson[] {
   if (!is.plainObject(message.message)) {
     throw new Error("Claude history message must be an object.");
   }
   const content = message.message.content;
   if (is.string(content)) {
+    // A real user prompt starts a new turn — do not carry review-plan
+    // fingerprints across turns (same plan text in turn 2 must still project).
+    if (message.type === "user" && content.length > 0) {
+      planState.lastReviewPlan = undefined;
+    }
     const role =
       message.type === "user"
         ? EngineEventHistoryRole.User
@@ -102,6 +115,15 @@ function historyEventsFromSessionMessage(
     );
   }
   const blocks = content as readonly ReadonlyJsonObject[];
+  if (
+    message.type === "user" &&
+    blocks.some(
+      (block) =>
+        block.type === "text" && is.string(block.text) && block.text.length > 0,
+    )
+  ) {
+    planState.lastReviewPlan = undefined;
+  }
   if (message.type === "assistant") {
     return blocks.flatMap((block) => {
       if (block.type === "text") {
@@ -112,6 +134,7 @@ function historyEventsFromSessionMessage(
           conversationId,
           { text: block.text, type: "text" },
           toolUses,
+          planState,
         );
       }
       if (block.type === "thinking") {
@@ -124,6 +147,7 @@ function historyEventsFromSessionMessage(
           conversationId,
           { thinking: block.thinking, type: "thinking" },
           toolUses,
+          planState,
         );
       }
       if (block.type === "tool_use") {
@@ -145,6 +169,7 @@ function historyEventsFromSessionMessage(
             type: "tool_use",
           },
           toolUses,
+          planState,
         );
       }
       return [];
@@ -273,6 +298,7 @@ function assistantHistoryEvents(
   conversationId: string,
   block: AssistantHistoryBlock,
   toolUses: Map<string, HistoryToolUse>,
+  planState: ClaudePlanProjectionState,
 ): EngineEventJson[] {
   if (block.type === "text") {
     const text = block.text;
@@ -299,7 +325,7 @@ function assistantHistoryEvents(
   const input = block.input as ClaudeToolInput;
   toolUses.set(id, { id, input, name });
 
-  const plan = structuredPlanFromToolUse(name, input);
+  const plan = structuredPlanFromToolUse(name, input, planState);
   if (plan) {
     return [
       historyReplayChunk(conversationId, EngineEventHistoryRole.Assistant, {
