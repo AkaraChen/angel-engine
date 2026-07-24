@@ -1,8 +1,11 @@
 import { describe, expect, it } from "vitest";
 
+import type { ConversationMessage } from "@/platform/chat-types";
+
 import {
   isChatPlanData,
   normalizeChatPlanMessages,
+  normalizeConversationPlans,
   upsertPlan,
 } from "./plan-utils";
 
@@ -11,6 +14,21 @@ const plan = (text: string, kind: "review" | "todo" = "review") => ({
   entries: [] as { content: string; status: "pending" }[],
   kind,
 });
+
+function conversationRow(
+  id: string,
+  plans: ConversationMessage["plans"],
+): ConversationMessage {
+  return {
+    id,
+    role: "assistant",
+    text: "",
+    reasoning: "",
+    status: "complete",
+    toolCalls: [],
+    plans,
+  };
+}
 
 describe("isChatPlanData", () => {
   it("accepts valid plan snapshots", () => {
@@ -67,5 +85,18 @@ describe("upsertPlan", () => {
     expect(twice).toHaveLength(1);
     expect(twice[0].text).toBe("v2");
     expect(withTodo.map((p) => p.kind)).toEqual(["review", "todo"]);
+  });
+});
+
+describe("normalizeConversationPlans", () => {
+  it("collapses a persisted full plan when a later live plan supersedes it", () => {
+    const messages = normalizeConversationPlans([
+      conversationRow("persisted", [plan("old plan")]),
+      conversationRow("live", [plan("new plan")]),
+    ]);
+    expect(messages[0].plans[0].presentation).toBe("created");
+    expect(messages[0].plans[0].text).toBe("old plan");
+    expect(messages[1].plans[0].presentation).toBeNull();
+    expect(messages[1].plans[0].text).toBe("new plan");
   });
 });
