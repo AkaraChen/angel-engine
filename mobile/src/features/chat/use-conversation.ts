@@ -21,6 +21,7 @@ import {
   chatPlanPartName,
   cloneChatPlanData,
   isChatPlanData,
+  normalizeConversationPlans,
   upsertPlan,
 } from "./plan-utils";
 
@@ -300,17 +301,26 @@ export function useConversation(chatId: string): Conversation {
 
   const modeMutation = useMutation({
     mutationFn: async (input: {
+      chatId: string;
       family: "agent" | "permission";
       mode: string;
     }) => {
+      // Bind the target chat in the mutation variables so a late success after
+      // a chat switch cannot write config into the newly selected transcript.
       if (input.family === "agent") {
-        return daemon.chats.setMode({ chatId, mode: input.mode });
+        return daemon.chats.setMode({
+          chatId: input.chatId,
+          mode: input.mode,
+        });
       }
-      return daemon.chats.setPermissionMode({ chatId, mode: input.mode });
+      return daemon.chats.setPermissionMode({
+        chatId: input.chatId,
+        mode: input.mode,
+      });
     },
-    onSuccess: (result) => {
+    onSuccess: (result, input) => {
       queryClient.setQueryData<ChatLoadResult>(
-        queryKeys.chats.load(chatId),
+        queryKeys.chats.load(input.chatId),
         (current) =>
           current
             ? { ...current, chat: result.chat, config: result.config }
@@ -321,16 +331,16 @@ export function useConversation(chatId: string): Conversation {
 
   const setMode = useCallback(
     async (mode: string) => {
-      await modeMutation.mutateAsync({ family: "agent", mode });
+      await modeMutation.mutateAsync({ chatId, family: "agent", mode });
     },
-    [modeMutation],
+    [chatId, modeMutation],
   );
 
   const setPermissionMode = useCallback(
     async (mode: string) => {
-      await modeMutation.mutateAsync({ family: "permission", mode });
+      await modeMutation.mutateAsync({ chatId, family: "permission", mode });
     },
-    [modeMutation],
+    [chatId, modeMutation],
   );
 
   const send = useCallback(
@@ -441,9 +451,12 @@ export function useConversation(chatId: string): Conversation {
     mutation.isPending || abortRef.current !== null,
     liveError,
   );
+  // Re-collapse plan presentations across the full transcript so a live plan
+  // supersedes older persisted plans of the same kind (desktop parity).
+  const messages = normalizeConversationPlans([...persisted, ...live]);
 
   return {
-    messages: [...persisted, ...live],
+    messages,
     isPending:
       history.isPending ||
       (hasStashedPrompt && liveTurnRef.current.userId.length === 0),
