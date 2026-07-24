@@ -153,6 +153,18 @@ export function contentBlockText(block: object): string {
     return "[image " + mediaType + "]";
   }
 
+  // ToolSearch / deferred-tool results include `tool_reference` blocks that
+  // name available tools (e.g. ExitPlanMode after a plan is written). Project
+  // them as a stable label so plan flows do not throw on stringifyToolResult.
+  if (block.type === "tool_reference") {
+    const toolName =
+      (is.string(block.tool_name) && block.tool_name) ||
+      (is.string(block.toolName) && block.toolName) ||
+      (is.string(block.name) && block.name) ||
+      "tool";
+    return `[tool_reference ${toolName}]`;
+  }
+
   throw new Error("Unknown Claude content block type.");
 }
 

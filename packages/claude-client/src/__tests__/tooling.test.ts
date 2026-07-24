@@ -27,6 +27,35 @@ describe("claude tooling content blocks", () => {
     );
   });
 
+  it("projects tool_reference blocks used by ToolSearch / plan exits", () => {
+    expect(
+      contentBlockText({
+        type: "tool_reference",
+        tool_name: "ExitPlanMode",
+      }),
+    ).toBe("[tool_reference ExitPlanMode]");
+    expect(
+      contentBlockText({
+        type: "tool_reference",
+        toolName: "AskUserQuestion",
+      }),
+    ).toBe("[tool_reference AskUserQuestion]");
+  });
+
+  it("stringifies ToolSearch result arrays that only contain tool_references", () => {
+    expect(
+      stringifyToolResult([
+        { type: "tool_reference", tool_name: "ExitPlanMode" },
+      ]),
+    ).toBe("[tool_reference ExitPlanMode]");
+    expect(
+      stringifyToolResult([
+        { type: "tool_reference", tool_name: "ExitPlanMode" },
+        { type: "tool_reference", tool_name: "AskUserQuestion" },
+      ]),
+    ).toBe("[tool_reference ExitPlanMode]\n[tool_reference AskUserQuestion]");
+  });
+
   it("renders mixed text and image tool-result arrays", () => {
     expect(
       stringifyToolResult([
