@@ -1,4 +1,3 @@
-import type { Effect } from "effect";
 import { Effect, Service } from "effect";
 import type {
   ChatActiveRunSnapshot,
@@ -11,17 +10,16 @@ import {
   isChatActiveRunResult,
   isChatRunObserverEvent,
 } from "@angel-engine/daemon-api/chat";
-import { v4 as uuidv4 } from "uuid"; // assuming uuid is available or use nanoid
+import { v4 as uuidv4 } from "uuid";
 
 export class ChatRegistryService extends Service<ChatRegistryService>() {
   readonly name = "daemon/ChatRegistryService";
-  readonly registry = new Map<string, ChatActiveRunSnapshot>(); // runId -> snapshot
-
-  private clock = Effect.sync(() => new Date().toISOString());
+  private registry = new Map<string, ChatActiveRunSnapshot>(); // runId -> snapshot (deep copy on write)
+  private subscribers = new Set<Effect<ChatRunObserverEvent, never>>();
 
   replace(entries: ChatActiveRunResult[]) {
     for (const { run } of entries) {
-      if (run) this.registry.set(run.runId, run);
+      if (run) this.registry.set(run.runId, this.deepCopy(run));
     }
   }
 
@@ -29,14 +27,26 @@ export class ChatRegistryService extends Service<ChatRegistryService>() {
     const snapshot = Array.from(this.registry.values()).find(
       (s) => s.chatId === chatId,
     );
-    return Effect.sync(() => snapshot || null);
+    return Effect.sync(() => (snapshot ? this.deepCopy(snapshot) : null));
   }
 
   kill(runId: string): Effect<boolean, never> {
-    this.registry.delete(runId);
-    return Effect.sync(() => true);
+    const deleted = this.registry.delete(runId);
+    return Effect.sync(() => deleted);
   }
 
-  // Add the other methods for atomic attach, sequence, etc. as per invariants
-  // For brevity, stub the full service here and expand in next steps
+  // Atomic publish path: snapshot update + sequence + fan-out in same sync section
+  publish(event: ChatRunObserverEvent): Effect<void, never> {
+    return Effect.sync(() => {
+      this.registry.set(event.snapshot!.runId, this.deepCopy(event.snapshot!));
+      for (const sub of this.subscribers) {
+        sub(event);
+      }
+    });
+  }
+
+  // Deep copy for defensive copy of message parts / nested data
+  private deepCopy<T>(obj: T): T {
+    return JSON.parse(JSON.stringify(obj));
+  }
 }
