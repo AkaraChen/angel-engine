@@ -509,6 +509,81 @@ describe("useConversation", () => {
     await waitFor(() => expect(result.current.isStreaming).toBe(false));
   });
 
+  it("switches the plan chip to build as soon as ExitPlanMode is allowed", async () => {
+    let sse: SseHandle | undefined;
+    const modes = [
+      { label: "Plan", value: "plan" },
+      { label: "Default", value: "default" },
+    ];
+    const fetchMock = vi.fn(async (url: string, init?: RequestInit) => {
+      const method = init?.method ?? "GET";
+      if (url.endsWith("/load")) {
+        return jsonResponse({
+          chat: { id: "c1", title: "c1" },
+          messages: [],
+          config: {
+            canSetPermissionMode: true,
+            currentPermissionMode: "plan",
+            permissionModes: modes,
+            models: [],
+            reasoningEfforts: [],
+          },
+        });
+      }
+      if (url.includes("/api/chat-streams?") && method === "POST") {
+        sse = controllableSse(init?.signal ?? undefined);
+        return sse.response;
+      }
+      // Keep setPermissionMode pending forever if called — UI must not wait.
+      if (url.endsWith("/permission-mode") && method === "PUT") {
+        return await new Promise<Response>(() => {});
+      }
+      return jsonResponse({ ok: true });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const { result } = renderHook(() => useConversation("c1"), { wrapper });
+    await waitFor(() => expect(result.current.isPending).toBe(false));
+    expect(result.current.runtimeConfig?.currentPermissionMode).toBe("plan");
+
+    act(() => result.current.send("plan then implement"));
+    await waitFor(() => expect(sse).toBeDefined());
+    act(() =>
+      sse!.push({
+        type: "elicitation",
+        elicitation: {
+          id: "exit-1",
+          kind: "approval",
+          title: "Allow ExitPlanMode?",
+        },
+      }),
+    );
+    await waitFor(() =>
+      expect(result.current.pendingElicitation?.id).toBe("exit-1"),
+    );
+
+    act(() => result.current.respondElicitation({ type: "allow" }));
+
+    // Chip must leave Plan before the turn result (next Bash may elicit next).
+    expect(result.current.runtimeConfig?.currentPermissionMode).toBe("default");
+
+    act(() =>
+      sse!.push({
+        type: "elicitation",
+        elicitation: {
+          id: "bash-1",
+          kind: "approval",
+          title: "Allow Bash?",
+        },
+      }),
+    );
+    await waitFor(() =>
+      expect(result.current.pendingElicitation?.id).toBe("bash-1"),
+    );
+    // Still build while the next elicitation is open and no result yet.
+    expect(result.current.runtimeConfig?.currentPermissionMode).toBe("default");
+  });
+
   it("stop finalizes the partial turn without an error bubble", async () => {
     let loadCalls = 0;
     let sse: SseHandle | undefined;

@@ -427,27 +427,37 @@ export function useConversation(chatId: string): Conversation {
         isExitPlanModeElicitation(elicitation);
       elicitationRef.current = null;
       forceRender();
+      // Optimistic UI: patch permission mode in the load cache *synchronously*
+      // before resolving the elicitation. `setPermissionMode` is queued behind
+      // the in-flight sendText on the provider, so waiting for onSuccess would
+      // leave the composer chip on Plan while the next Bash/Write elicits.
+      if (leavePlan) {
+        const previous = queryClient.getQueryData<ChatLoadResult>(
+          queryKeys.chats.load(chatId),
+        );
+        const buildMode = buildPermissionModeValue(previous?.config ?? null);
+        if (previous?.config && buildMode) {
+          queryClient.setQueryData<ChatLoadResult>(
+            queryKeys.chats.load(chatId),
+            {
+              ...previous,
+              config: {
+                ...previous.config,
+                currentPermissionMode: buildMode,
+              },
+            },
+          );
+          forceRender();
+        }
+      }
       void daemon.chatStreams
         .resolveElicitation(streamId, {
           elicitationId: elicitation.id,
           response,
         })
         .catch(() => {});
-      // Optimistic UI: leave Plan as soon as the user approves ExitPlanMode so
-      // the chip matches provider-driven build mode before the turn finishes.
-      if (leavePlan) {
-        const buildMode = buildPermissionModeValue(
-          queryClient.getQueryData<ChatLoadResult>(queryKeys.chats.load(chatId))
-            ?.config ?? null,
-        );
-        if (buildMode) {
-          void modeMutation
-            .mutateAsync({ chatId, family: "permission", mode: buildMode })
-            .catch(() => {});
-        }
-      }
     },
-    [chatId, daemon, modeMutation, queryClient],
+    [chatId, daemon, queryClient],
   );
 
   // Reset all live/optimistic state when the chat changes (or on unmount): abort
