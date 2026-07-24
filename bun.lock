@@ -41,7 +41,7 @@
     },
     "desktop": {
       "name": "desktop",
-      "version": "0.0.4-beta31",
+      "version": "0.0.4-beta32",
       "dependencies": {
         "@angel-engine/claude-client": "workspace:*",
         "@angel-engine/client-napi": "workspace:*",

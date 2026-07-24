@@ -3,17 +3,26 @@ import type {
   ConversationToolCall,
   DaemonHistoryMessage,
   DaemonMessagePart,
+  DaemonPlanData,
   DaemonToolAction,
 } from "@/platform/chat-types";
+
+import {
+  cloneChatPlanData,
+  isChatPlanPart,
+  normalizeChatPlanMessages,
+  normalizeConversationPlans,
+} from "./plan-utils";
 
 /**
  * Derives the mobile conversation view model from the daemon's history shape.
  *
  * The daemon message is a list of typed parts (text, reasoning, tool calls,
  * plans, …). This flattens the `text` and `reasoning` parts into strings,
- * projects `tool-call` parts into {@link ConversationToolCall}s so they render
- * inline, and drops the rest. Keeping the projection pure (no React, no client)
- * makes the streaming reducer and the page trivial to test.
+ * projects `tool-call` parts into {@link ConversationToolCall}s and plan data
+ * parts into {@link DaemonPlanData} so they render inline, and drops the rest.
+ * Keeping the projection pure (no React, no client) makes the streaming reducer
+ * and the page trivial to test.
  */
 
 /** Concatenate the text of every part with the given `type`. */
@@ -197,6 +206,16 @@ export function partsToToolCalls(
   return calls;
 }
 
+/** Project every plan/todo data part of a message into plan snapshots. */
+export function partsToPlans(parts: DaemonMessagePart[]): DaemonPlanData[] {
+  const plans: DaemonPlanData[] = [];
+  for (const part of parts) {
+    if (!isChatPlanPart(part)) continue;
+    plans.push(cloneChatPlanData(part.data));
+  }
+  return plans;
+}
+
 /** Project a single daemon history message into a rendered conversation row. */
 export function toConversationMessage(
   message: DaemonHistoryMessage,
@@ -208,26 +227,31 @@ export function toConversationMessage(
     reasoning: partsToText(message.content, "reasoning"),
     status: "complete",
     toolCalls: partsToToolCalls(message.content),
+    plans: partsToPlans(message.content),
   };
 }
 
 /**
  * Project the daemon history into conversation rows, dropping `system` messages
  * (agent bootstrap prompts) and any assistant turn that produced no visible
- * content at all (no prose, reasoning, or tool calls) so the mobile transcript
- * stays readable while still surfacing pure tool-call turns.
+ * content at all (no prose, reasoning, tool calls, or plans) so the mobile
+ * transcript stays readable while still surfacing pure tool-call / plan turns.
  */
 export function toConversation(
   messages: DaemonHistoryMessage[],
 ): ConversationMessage[] {
-  return messages
-    .filter((message) => message.role !== "system")
-    .map(toConversationMessage)
-    .filter(
-      (message) =>
-        message.role === "user" ||
-        message.text.length > 0 ||
-        message.reasoning.length > 0 ||
-        message.toolCalls.length > 0,
-    );
+  const normalized = normalizeChatPlanMessages(messages);
+  return normalizeConversationPlans(
+    normalized
+      .filter((message) => message.role !== "system")
+      .map(toConversationMessage)
+      .filter(
+        (message) =>
+          message.role === "user" ||
+          message.text.length > 0 ||
+          message.reasoning.length > 0 ||
+          message.toolCalls.length > 0 ||
+          message.plans.length > 0,
+      ),
+  );
 }

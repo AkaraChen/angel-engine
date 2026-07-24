@@ -567,4 +567,100 @@ describe("useConversation", () => {
       ]),
     );
   });
+
+  it("streams plan events, sends permissionMode, and updates mode via API", async () => {
+    let sse: SseHandle | undefined;
+    let permissionMode = "plan";
+    const config = () => ({
+      canSetPermissionMode: true,
+      currentPermissionMode: permissionMode,
+      permissionModes: [
+        { label: "Plan", value: "plan" },
+        { label: "Default", value: "default" },
+      ],
+      models: [],
+      reasoningEfforts: [],
+    });
+    const fetchMock = vi.fn(async (url: string, init?: RequestInit) => {
+      const method = init?.method ?? "GET";
+      if (url.endsWith("/load")) {
+        return jsonResponse({
+          chat: { id: "c1", title: "c1" },
+          messages: [],
+          config: config(),
+        });
+      }
+      if (url.includes("/api/chat-streams?") && method === "POST") {
+        sse = controllableSse(init?.signal ?? undefined);
+        return sse.response;
+      }
+      if (url.endsWith("/permission-mode") && method === "PUT") {
+        const body = JSON.parse(String(init?.body ?? "{}")) as {
+          mode?: string;
+        };
+        permissionMode = body.mode ?? permissionMode;
+        return jsonResponse({
+          chat: { id: "c1", title: "c1" },
+          config: config(),
+        });
+      }
+      return jsonResponse({ ok: true });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const { result } = renderHook(() => useConversation("c1"), { wrapper });
+    await waitFor(() => expect(result.current.isPending).toBe(false));
+    expect(result.current.runtimeConfig?.currentPermissionMode).toBe("plan");
+
+    act(() => result.current.send("make a plan"));
+    await waitFor(() => expect(sse).toBeDefined());
+    const streamRequest = fetchMock.mock.calls.find(
+      ([url]) => typeof url === "string" && url.includes("/api/chat-streams?"),
+    );
+    expect(streamRequest?.[1]?.body).toBe(
+      JSON.stringify({
+        chatId: "c1",
+        text: "make a plan",
+        permissionMode: "plan",
+      }),
+    );
+
+    act(() =>
+      sse!.push({
+        type: "plan",
+        plan: {
+          text: "Step one",
+          entries: [{ content: "Toggle", status: "pending" }],
+          kind: "review",
+        },
+      }),
+    );
+    await waitFor(() =>
+      expect(result.current.messages.at(-1)?.plans[0]?.text).toBe("Step one"),
+    );
+
+    act(() => {
+      sse!.push({ type: "result", result: { text: "Here is the plan." } });
+      sse!.push({ type: "done" });
+      sse!.close();
+    });
+    await waitFor(() => expect(result.current.isStreaming).toBe(false));
+
+    await act(async () => {
+      await result.current.setPermissionMode("default");
+    });
+    await waitFor(() =>
+      expect(result.current.runtimeConfig?.currentPermissionMode).toBe(
+        "default",
+      ),
+    );
+    expect(
+      fetchMock.mock.calls.some(
+        ([url, init]) =>
+          typeof url === "string" &&
+          url.endsWith("/permission-mode") &&
+          init?.method === "PUT",
+      ),
+    ).toBe(true);
+  });
 });

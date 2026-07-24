@@ -52,6 +52,14 @@ export interface LocaleResourceTranslationChat {
   messagePlaceholder: string;
   sendAria: string;
   stopAria: string;
+  plan: string;
+  todo: string;
+  build: string;
+  switchToPlan: string;
+  switchToBuild: string;
+  planCreated: string;
+  planUpdated: string;
+  planProgress: string;
 }
 
 export interface LocaleResourceTranslationElicitation {
