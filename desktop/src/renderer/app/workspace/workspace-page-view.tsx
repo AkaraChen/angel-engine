@@ -263,6 +263,9 @@ export const WorkspacePageView: FC<WorkspacePageViewProps> = ({
                   onArchiveChat={(chat) => void archiveChat(chat)}
                   onNewChat={openDraftTabFromTabBar}
                   onOpenChat={openPowerHistoryChatTab}
+                  onShowChatContextMenu={(chat) =>
+                    void showChatContextMenu(chat)
+                  }
                   projectPath={activePowerWorktreeProject?.path}
                 />
               ) : is.nonEmptyString(selectedChatId) ? (

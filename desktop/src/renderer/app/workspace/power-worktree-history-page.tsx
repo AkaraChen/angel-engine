@@ -6,6 +6,7 @@ import {
   Robot as Bot,
   ChatCircleText,
   Plus,
+  PushPin,
 } from "@phosphor-icons/react";
 import is from "@sindresorhus/is";
 import { useQuery } from "@tanstack/react-query";
@@ -24,6 +25,7 @@ import {
   chatWorktreeCwd,
   chatWorktreeGroupKey,
 } from "@/features/chat/worktree-grouping";
+import { sortChatsPinnedFirst } from "@/features/chat/chat-order";
 import { workspaceToolRootName } from "@/app/workspace/workspace-file-display";
 import { getApiClient } from "@/platform/api-client";
 import { queryKeys } from "@/platform/query-keys";
@@ -35,6 +37,7 @@ interface PowerWorktreeHistoryPageProps {
   onArchiveChat: (chat: Chat) => void;
   onNewChat: () => void;
   onOpenChat: (chat: Chat) => void;
+  onShowChatContextMenu: (chat: Chat) => void;
   projectPath?: string;
 }
 
@@ -45,26 +48,31 @@ export function PowerWorktreeHistoryPage({
   onArchiveChat,
   onNewChat,
   onOpenChat,
+  onShowChatContextMenu,
   projectPath,
 }: PowerWorktreeHistoryPageProps): ReactElement {
   const { t } = useTranslation();
   const historyChats = useMemo(() => {
     if (projectPath === undefined) return [];
 
-    return chats
-      .filter(
+    return sortChatsPinnedFirst(
+      chats.filter(
         (chat) =>
           !chat.archived &&
           chatWorktreeGroupKey(chat, projectPath) === groupKey,
-      )
-      .sort((left, right) => right.updatedAt.localeCompare(left.updatedAt));
+      ),
+    );
   }, [chats, groupKey, projectPath]);
+  const latestChat = historyChats.reduce<Chat | undefined>(
+    (latest, chat) =>
+      latest === undefined || chat.updatedAt > latest.updatedAt ? chat : latest,
+    undefined,
+  );
   const worktreeRoot =
-    historyChats.length > 0
-      ? (chatWorktreeCwd(historyChats[0], projectPath) ?? projectPath)
+    latestChat !== undefined
+      ? (chatWorktreeCwd(latestChat, projectPath) ?? projectPath)
       : projectPath;
   const gitStats = usePowerWorktreeGitStats(worktreeRoot);
-  const latestChat = historyChats[0];
   const worktreeName = is.nonEmptyString(worktreeRoot)
     ? workspaceToolRootName(worktreeRoot)
     : undefined;
@@ -169,6 +177,10 @@ export function PowerWorktreeHistoryPage({
                   group/history-chat flex min-w-0 items-center gap-1 rounded-lg
                 "
                 key={chat.id}
+                onContextMenu={(event) => {
+                  event.preventDefault();
+                  onShowChatContextMenu(chat);
+                }}
                 title={chat.title}
               >
                 <button
@@ -189,6 +201,13 @@ export function PowerWorktreeHistoryPage({
                   >
                     {displayChatTitle(chat.title, t)}
                   </span>
+                  {chat.pinned ? (
+                    <PushPin
+                      aria-label={t("sidebar.dateGroups.pinned")}
+                      className="size-3 shrink-0 text-muted-foreground"
+                      weight="fill"
+                    />
+                  ) : null}
                   <span
                     className="shrink-0 text-xs text-muted-foreground"
                     title={formatDateTime(chat.updatedAt)}

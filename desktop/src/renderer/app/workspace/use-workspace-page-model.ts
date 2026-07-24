@@ -41,6 +41,7 @@ import {
   chatPrewarmQueryOptions,
   chatRuntimeConfigQueryOptions,
 } from "@/features/chat/api/queries";
+import { sortChatsPinnedFirst } from "@/features/chat/chat-order";
 import {
   setActiveChatRunId,
   useChatAttentionSummary,
@@ -425,6 +426,9 @@ export function useWorkspacePageModel({
         continue;
       }
       groupedChats.set(chat.projectId, [chat]);
+    }
+    for (const [projectId, projectChats] of groupedChats) {
+      groupedChats.set(projectId, sortChatsPinnedFirst(projectChats));
     }
     return groupedChats;
   }, [chats]);

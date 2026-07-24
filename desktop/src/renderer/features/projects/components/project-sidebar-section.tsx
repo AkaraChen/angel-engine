@@ -220,6 +220,7 @@ export function ProjectSidebarSection({
                                   onShowContextMenu={async () =>
                                     onShowChatContextMenu(chat)
                                   }
+                                  pinned={chat.pinned}
                                   runtime={chat.runtime}
                                   title={displayChatTitle(chat.title, t)}
                                   tooltip={
