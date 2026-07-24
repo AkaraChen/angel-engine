@@ -49,7 +49,7 @@ export function WorkspaceHeader({
         <span
           aria-hidden="true"
           className="
-            workspace-streaming-line absolute inset-x-0 -bottom-px h-[1.5px]
+            workspace-streaming-line absolute inset-x-0 -bottom-px h-[2px]
           "
         />
       ) : null}

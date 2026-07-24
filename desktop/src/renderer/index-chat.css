@@ -214,18 +214,17 @@
   }
 
   .workspace-streaming-line::after {
-    animation: workspace-streaming-sweep 2.4s cubic-bezier(0.4, 0, 0.2, 1)
-      infinite;
-    background: linear-gradient(
-      90deg,
-      transparent 20%,
-      color-mix(in oklch, var(--primary) 65%, transparent) 50%,
-      transparent 80%
-    );
+    animation: workspace-streaming-sweep 1.6s cubic-bezier(0.65, 0, 0.35, 1)
+      infinite alternate;
+    background: var(--primary);
+    border-radius: 9999px;
+    bottom: 0;
     content: "";
-    inset: 0;
+    left: 0;
     position: absolute;
-    transform: translateX(-100%);
+    top: 0;
+    transform: translateX(0);
+    width: 42%;
   }
 
   @media (prefers-reduced-motion: reduce) {
@@ -233,6 +232,7 @@
       animation: none;
       background: color-mix(in oklch, var(--primary) 35%, transparent);
       transform: none;
+      width: 100%;
     }
   }
 
@@ -364,8 +364,11 @@
 }
 
 @keyframes workspace-streaming-sweep {
+  from {
+    transform: translateX(0);
+  }
   to {
-    transform: translateX(100%);
+    transform: translateX(138%);
   }
 }
 
