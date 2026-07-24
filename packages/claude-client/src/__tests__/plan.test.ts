@@ -207,4 +207,39 @@ describe("claude plan tools", () => {
     );
     expect(fromExit).toBeUndefined();
   });
+
+  it("resets history plan fingerprint across user turns so the same plan can project again", () => {
+    const state: { lastReviewPlan?: { path?: string; text: string } } = {};
+    expect(
+      structuredPlanFromToolUse(
+        CLAUDE_TOOL.Write,
+        { content: planBody, file_path: planFilePath },
+        state,
+      ),
+    ).toBeDefined();
+    expect(
+      structuredPlanFromToolUse(
+        CLAUDE_TOOL.ExitPlanMode,
+        { plan: planBody, planFilePath },
+        state,
+      ),
+    ).toBeUndefined();
+
+    // New user turn clears fingerprint (history does this on user text).
+    state.lastReviewPlan = undefined;
+
+    const turn2Write = structuredPlanFromToolUse(
+      CLAUDE_TOOL.Write,
+      { content: planBody, file_path: planFilePath },
+      state,
+    );
+    expect(turn2Write).toMatchObject({ text: planBody, path: planFilePath });
+    expect(
+      structuredPlanFromToolUse(
+        CLAUDE_TOOL.ExitPlanMode,
+        { plan: planBody, planFilePath },
+        state,
+      ),
+    ).toBeUndefined();
+  });
 });

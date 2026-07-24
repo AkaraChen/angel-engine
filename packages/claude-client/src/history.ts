@@ -92,6 +92,11 @@ function historyEventsFromSessionMessage(
   }
   const content = message.message.content;
   if (is.string(content)) {
+    // A real user prompt starts a new turn — do not carry review-plan
+    // fingerprints across turns (same plan text in turn 2 must still project).
+    if (message.type === "user" && content.length > 0) {
+      planState.lastReviewPlan = undefined;
+    }
     const role =
       message.type === "user"
         ? EngineEventHistoryRole.User
@@ -110,6 +115,15 @@ function historyEventsFromSessionMessage(
     );
   }
   const blocks = content as readonly ReadonlyJsonObject[];
+  if (
+    message.type === "user" &&
+    blocks.some(
+      (block) =>
+        block.type === "text" && is.string(block.text) && block.text.length > 0,
+    )
+  ) {
+    planState.lastReviewPlan = undefined;
+  }
   if (message.type === "assistant") {
     return blocks.flatMap((block) => {
       if (block.type === "text") {
