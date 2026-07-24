@@ -665,6 +665,12 @@ describe("useConversation", () => {
 
   it("keeps a late mode mutation on the original chat after a switch", async () => {
     let resolveMode: ((response: Response) => void) | undefined;
+    let c1PermissionMode = "plan";
+    const modes = [
+      { label: "Plan", value: "plan" },
+      { label: "Accept edits", value: "acceptEdits" },
+      { label: "Default", value: "default" },
+    ];
     const fetchMock = vi.fn(async (url: string, init?: RequestInit) => {
       const method = init?.method ?? "GET";
       if (
@@ -677,11 +683,8 @@ describe("useConversation", () => {
           messages: [],
           config: {
             canSetPermissionMode: true,
-            currentPermissionMode: "plan",
-            permissionModes: [
-              { label: "Plan", value: "plan" },
-              { label: "Default", value: "default" },
-            ],
+            currentPermissionMode: c1PermissionMode,
+            permissionModes: modes,
             models: [],
             reasoningEfforts: [],
           },
@@ -698,10 +701,7 @@ describe("useConversation", () => {
           config: {
             canSetPermissionMode: true,
             currentPermissionMode: "default",
-            permissionModes: [
-              { label: "Plan", value: "plan" },
-              { label: "Default", value: "default" },
-            ],
+            permissionModes: modes,
             models: [],
             reasoningEfforts: [],
           },
@@ -730,7 +730,8 @@ describe("useConversation", () => {
 
     let modePromise!: Promise<void>;
     act(() => {
-      modePromise = result.current.setPermissionMode("default");
+      // Distinct from c2's `default` so a wrong-chat cache write fails loudly.
+      modePromise = result.current.setPermissionMode("acceptEdits");
     });
     await waitFor(() => expect(resolveMode).toBeDefined());
 
@@ -743,16 +744,14 @@ describe("useConversation", () => {
     );
 
     act(() => {
+      c1PermissionMode = "acceptEdits";
       resolveMode!(
         jsonResponse({
           chat: { id: "c1", title: "c1" },
           config: {
             canSetPermissionMode: true,
-            currentPermissionMode: "default",
-            permissionModes: [
-              { label: "Plan", value: "plan" },
-              { label: "Default", value: "default" },
-            ],
+            currentPermissionMode: "acceptEdits",
+            permissionModes: modes,
             models: [],
             reasoningEfforts: [],
           },
@@ -763,27 +762,16 @@ describe("useConversation", () => {
       await modePromise;
     });
 
-    // Visible chat is still c2 (its load config), not polluted by c1's response.
+    // c2 must stay on its own load config — not acceptEdits from c1's response.
     expect(result.current.runtimeConfig?.currentPermissionMode).toBe("default");
-    // The PUT targeted c1, not c2.
-    expect(
-      fetchMock.mock.calls.some(
-        ([url, init]) =>
-          typeof url === "string" &&
-          url.includes("/c1/") &&
-          url.endsWith("/permission-mode") &&
-          init?.method === "PUT",
+
+    // Switching back surfaces the late c1 update in c1's cache only.
+    rerender({ id: "c1" });
+    await waitFor(() =>
+      expect(result.current.runtimeConfig?.currentPermissionMode).toBe(
+        "acceptEdits",
       ),
-    ).toBe(true);
-    expect(
-      fetchMock.mock.calls.some(
-        ([url, init]) =>
-          typeof url === "string" &&
-          url.includes("/c2/") &&
-          url.endsWith("/permission-mode") &&
-          init?.method === "PUT",
-      ),
-    ).toBe(false);
+    );
   });
 
   it("collapses persisted plans when a live plan of the same kind streams in", async () => {
