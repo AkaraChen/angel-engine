@@ -33,10 +33,15 @@ export function PlanMessage({
   isStreaming?: boolean;
 }) {
   const { t } = useTranslation();
+  // Hooks must run unconditionally: a plan can flip from full card →
+  // created/updated marker after history normalization without unmounting.
+  const [open, setOpen] = useState(true);
   const kind = chatPlanKind(plan);
   const title = kind === "todo" ? t("chat.todo") : t("chat.plan");
+  const isMarker =
+    plan.presentation === "created" || plan.presentation === "updated";
 
-  if (plan.presentation === "created" || plan.presentation === "updated") {
+  if (isMarker) {
     const label =
       plan.presentation === "created"
         ? t("chat.planCreated", { title })
@@ -66,7 +71,6 @@ export function PlanMessage({
     (entry) => entry.status === "completed",
   ).length;
   const hasDetails = plan.entries.length > 0 || planText !== undefined;
-  const [open, setOpen] = useState(true);
 
   return (
     <Collapsible

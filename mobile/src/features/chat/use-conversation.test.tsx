@@ -595,9 +595,8 @@ describe("useConversation", () => {
         return sse.response;
       }
       if (url.endsWith("/permission-mode") && method === "PUT") {
-        const body = JSON.parse(String(init?.body ?? "{}")) as {
-          mode?: string;
-        };
+        const rawBody = typeof init?.body === "string" ? init.body : "{}";
+        const body = JSON.parse(rawBody) as { mode?: string };
         permissionMode = body.mode ?? permissionMode;
         return jsonResponse({
           chat: { id: "c1", title: "c1" },
