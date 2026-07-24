@@ -1,6 +1,9 @@
 import type {
   ConversationToolCall,
   DaemonHistoryMessage,
+  DaemonMessagePart,
+  DaemonToolAction,
+  DaemonToolCallPart,
 } from "@/platform/chat-types";
 
 import { describe, expect, it } from "vitest";
@@ -30,6 +33,37 @@ function toolCall(
   };
 }
 
+function toolAction(
+  overrides: Partial<DaemonToolAction> = {},
+): DaemonToolAction {
+  return {
+    id: "t",
+    turnId: "turn-1",
+    kind: "command",
+    phase: "completed",
+    title: "Run command",
+    rawInput: "{}",
+    output: [],
+    outputText: "",
+    ...overrides,
+  };
+}
+
+function toolPart(
+  overrides: Partial<DaemonToolCallPart> = {},
+): DaemonToolCallPart {
+  const artifact = overrides.artifact ?? toolAction();
+  return {
+    args: {},
+    argsText: artifact.rawInput ?? "{}",
+    artifact,
+    toolCallId: artifact.id,
+    toolName: artifact.kind,
+    type: "tool-call",
+    ...overrides,
+  };
+}
+
 function message(
   overrides: Partial<DaemonHistoryMessage> & Pick<DaemonHistoryMessage, "id">,
 ): DaemonHistoryMessage {
@@ -38,18 +72,21 @@ function message(
 
 describe("partsToText", () => {
   it("concatenates only parts of the requested type", () => {
-    const parts = [
+    const parts: DaemonMessagePart[] = [
       { type: "reasoning", text: "thinking " },
       { type: "text", text: "hello " },
       { type: "text", text: "world" },
-      { type: "tool-call", text: "ignored" },
+      toolPart(),
     ];
     expect(partsToText(parts, "text")).toBe("hello world");
     expect(partsToText(parts, "reasoning")).toBe("thinking ");
   });
 
   it("ignores parts without string text", () => {
-    const parts = [{ type: "image" }, { type: "text", text: "kept" }];
+    const parts: DaemonMessagePart[] = [
+      { type: "image", image: "data:image/png;base64,AA==" },
+      { type: "text", text: "kept" },
+    ];
     expect(partsToText(parts, "text")).toBe("kept");
   });
 });
@@ -124,11 +161,7 @@ describe("toConversation", () => {
   it("keeps empty user turns but drops content-less assistant turns", () => {
     const result = toConversation([
       message({ id: "u1", role: "user", content: [] }),
-      message({
-        id: "a1",
-        role: "assistant",
-        content: [{ type: "tool-call" }],
-      }),
+      message({ id: "a1", role: "assistant", content: [] }),
     ]);
     expect(result.map((m) => m.id)).toEqual(["u1"]);
   });
@@ -139,18 +172,22 @@ describe("toConversation", () => {
         id: "a1",
         role: "assistant",
         content: [
-          {
-            type: "tool-call",
+          toolPart({
+            argsText: "ls -la",
+            artifact: toolAction({
+              id: "t1",
+              outputText: "file.ts",
+              rawInput: '{"command":"ls -la"}',
+              title: undefined,
+            }),
             toolCallId: "t1",
             toolName: "bash",
-            argsText: "ls -la",
-            artifact: { id: "t1", phase: "completed", outputText: "file.ts" },
-          },
+          }),
         ],
       }),
     ]);
     expect(result.map((m) => m.id)).toEqual(["a1"]);
-    expect(result[0].toolCalls).toEqual([
+    expect(result[0].toolCalls).toMatchObject([
       {
         id: "t1",
         name: "bash",
@@ -167,21 +204,27 @@ describe("toConversation", () => {
 
 describe("toolCallFromPart", () => {
   it("renders the tool identifier as the name with the title as summary", () => {
-    const call = toolCallFromPart({
-      type: "tool-call",
-      toolCallId: "t9",
-      toolName: "write",
-      isError: true,
-      artifact: {
-        id: "t9",
-        phase: "failed",
-        kind: "fileChange",
-        title: "Write file",
-        inputSummary: "src/x.ts",
-        rawInput: '{"path":"src/x.ts"}',
-        error: { message: "permission denied" },
-      },
-    });
+    const call = toolCallFromPart(
+      toolPart({
+        argsText: '{"path":"src/x.ts"}',
+        toolCallId: "t9",
+        toolName: "write",
+        isError: true,
+        artifact: toolAction({
+          id: "t9",
+          phase: "failed",
+          kind: "fileChange",
+          title: "Write file",
+          inputSummary: "src/x.ts",
+          rawInput: '{"path":"src/x.ts"}',
+          error: {
+            code: "permission_denied",
+            message: "permission denied",
+            recoverable: false,
+          },
+        }),
+      }),
+    );
     // The identifier (`write`) is the primary name, not the human title.
     expect(call).toMatchObject({
       id: "t9",
@@ -194,55 +237,39 @@ describe("toolCallFromPart", () => {
     });
   });
 
-  it("falls back to the artifact kind when no toolName is present", () => {
-    const call = toolCallFromPart({
-      type: "tool-call",
-      artifact: { id: "k1", phase: "running", kind: "command", title: "ls" },
-    });
+  it("falls back to the artifact kind when toolName is empty", () => {
+    const call = toolCallFromPart(
+      toolPart({
+        artifact: toolAction({
+          id: "k1",
+          phase: "running",
+          kind: "command",
+          title: "ls",
+        }),
+        toolName: "",
+      }),
+    );
     expect(call).toMatchObject({ name: "command", summary: "ls" });
-  });
-
-  it("promotes the summary when there is no identifier at all", () => {
-    const call = toolCallFromPart({
-      type: "tool-call",
-      artifact: { id: "s1", phase: "completed", title: "Do the thing" },
-    });
-    expect(call).toMatchObject({ name: "Do the thing", summary: "" });
-  });
-
-  it("returns null for a degenerate tool-call part", () => {
-    expect(toolCallFromPart({ type: "tool-call" })).toBeNull();
   });
 });
 
 describe("toolCallFromAction", () => {
   it("renders the action kind as the name with the title as summary", () => {
-    const call = toolCallFromAction({
-      id: "a2",
-      kind: "command",
-      title: "Run command",
-      inputSummary: "npm test",
-    });
+    const call = toolCallFromAction(
+      toolAction({
+        id: "a2",
+        kind: "command",
+        phase: "running",
+        title: "Run command",
+        inputSummary: "npm test",
+        rawInput: '{"command":"npm test"}',
+      }),
+    );
     // Mid-stream the identifier is `kind`; the human title is secondary.
     expect(call).toMatchObject({
       id: "a2",
       name: "command",
       summary: "Run command",
-      phase: "running",
-      isError: false,
-    });
-  });
-
-  it("promotes the title when the streamed action has no kind", () => {
-    const call = toolCallFromAction({
-      id: "a1",
-      title: "Read file",
-      inputSummary: "README.md",
-    });
-    expect(call).toMatchObject({
-      id: "a1",
-      name: "Read file",
-      summary: "",
       phase: "running",
       isError: false,
     });
@@ -268,9 +295,8 @@ describe("toolGroupLabel", () => {
 });
 
 describe("formatToolPhase", () => {
-  it("maps known phases to human labels and passes through unknown ones", () => {
+  it("maps the upstream closed phase union to human labels", () => {
     expect(formatToolPhase("completed")).toBe("Done");
     expect(formatToolPhase("awaitingDecision")).toBe("Awaiting approval");
-    expect(formatToolPhase("mystery")).toBe("mystery");
   });
 });

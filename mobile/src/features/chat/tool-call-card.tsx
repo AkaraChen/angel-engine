@@ -92,7 +92,7 @@ function ToolCallHeader({
   failed: boolean;
   name: string;
   open: boolean;
-  phase: string;
+  phase: ConversationToolCall["phase"];
   running: boolean;
   summary: string;
 }) {

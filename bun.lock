@@ -158,6 +158,7 @@
       "name": "mobile",
       "version": "0.0.1",
       "dependencies": {
+        "@angel-engine/daemon-api": "workspace:*",
         "@angel-engine/daemon-client": "workspace:*",
         "@base-ui/react": "^1.6.0",
         "@fontsource-variable/geist": "^5.2.5",

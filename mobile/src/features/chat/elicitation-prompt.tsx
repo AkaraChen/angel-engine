@@ -20,17 +20,13 @@ interface ElicitationPromptProps {
   onRespond: (response: ChatElicitationResponse) => void;
 }
 
-const PERMISSION_KINDS = new Set(["approval", "permissionProfile"]);
-
-function isPermissionElicitation(elicitation: DaemonElicitation): boolean {
-  return PERMISSION_KINDS.has(elicitation.kind);
-}
-
 function formatKind(
-  kind: string,
+  kind: DaemonElicitation["kind"],
   t: TFunction<"translation", undefined>,
 ): string {
   switch (kind) {
+    case "approval":
+      return "approval";
     case "userInput":
       return t("elicitation.userInput");
     case "dynamicToolCall":
@@ -39,9 +35,9 @@ function formatKind(
       return t("elicitation.permissionProfile");
     case "externalFlow":
       return t("elicitation.externalFlow");
-    default:
-      return kind;
   }
+  const exhaustive: never = kind;
+  return exhaustive;
 }
 
 /**
@@ -53,10 +49,6 @@ export function ElicitationPrompt({
   elicitation,
   onRespond,
 }: ElicitationPromptProps) {
-  const questions = elicitation.questions ?? [];
-  const isPermission = isPermissionElicitation(elicitation);
-  const hasQuestions = questions.length > 0;
-
   return (
     <div className="rounded-xl bg-card p-3">
       <ElicitationHeader elicitation={elicitation} />
@@ -68,25 +60,34 @@ export function ElicitationPrompt({
       ) : null}
 
       <div className="mt-3 space-y-3">
-        {isPermission ? (
-          <PermissionActions onRespond={onRespond} />
-        ) : hasQuestions ? (
-          <QuestionForm questions={questions} onRespond={onRespond} />
-        ) : elicitation.kind === "dynamicToolCall" ? (
-          <DynamicToolActions onRespond={onRespond} />
-        ) : elicitation.kind === "externalFlow" ? (
-          <ExternalFlowActions onRespond={onRespond} />
-        ) : elicitation.kind === "userInput" ? (
-          <TextAnswerForm kind={elicitation.kind} onRespond={onRespond} />
-        ) : elicitation.choices !== undefined &&
-          elicitation.choices.length > 0 ? (
-          <ChoiceList choices={elicitation.choices} onRespond={onRespond} />
-        ) : (
-          <TextAnswerForm kind={elicitation.kind} onRespond={onRespond} />
-        )}
+        <ElicitationActions elicitation={elicitation} onRespond={onRespond} />
       </div>
     </div>
   );
+}
+
+function ElicitationActions({
+  elicitation,
+  onRespond,
+}: ElicitationPromptProps) {
+  const questions = elicitation.questions ?? [];
+  if (questions.length > 0) {
+    return <QuestionForm questions={questions} onRespond={onRespond} />;
+  }
+
+  switch (elicitation.kind) {
+    case "approval":
+    case "permissionProfile":
+      return <PermissionActions onRespond={onRespond} />;
+    case "dynamicToolCall":
+      return <DynamicToolActions onRespond={onRespond} />;
+    case "externalFlow":
+      return <ExternalFlowActions onRespond={onRespond} />;
+    case "userInput":
+      return <TextAnswerForm kind={elicitation.kind} onRespond={onRespond} />;
+  }
+  const exhaustive: never = elicitation.kind;
+  return exhaustive;
 }
 
 function ElicitationHeader({
@@ -380,44 +381,6 @@ function ExternalFlowActions({
         {t("elicitation.submit")}
       </Button>
       <Button
-        onClick={() => onRespond({ type: "cancel" })}
-        size="sm"
-        variant="ghost"
-      >
-        {t("common.cancel")}
-      </Button>
-    </div>
-  );
-}
-
-function ChoiceList({
-  choices,
-  onRespond,
-}: {
-  choices: string[];
-  onRespond: (response: ChatElicitationResponse) => void;
-}) {
-  const { t } = useTranslation();
-  return (
-    <div className="flex flex-col gap-1.5">
-      {choices.map((choice) => (
-        <Button
-          className="justify-start"
-          key={choice}
-          onClick={() =>
-            onRespond({
-              type: "answers",
-              answers: [{ id: "choice", value: choice }],
-            })
-          }
-          size="sm"
-          variant="outline"
-        >
-          {choice}
-        </Button>
-      ))}
-      <Button
-        className="justify-start"
         onClick={() => onRespond({ type: "cancel" })}
         size="sm"
         variant="ghost"

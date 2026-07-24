@@ -13,6 +13,7 @@ function elicitation(
   return {
     id: "e1",
     kind: "userInput",
+    phase: "pending",
     title: "Need input",
     body: "Please provide the missing value.",
     ...overrides,
@@ -163,24 +164,5 @@ describe("ElicitationPrompt", () => {
 
     fireEvent.click(screen.getByRole("button", { name: /submit/i }));
     expect(onRespond).toHaveBeenCalledWith({ type: "externalComplete" });
-  });
-
-  it("renders simple choices as answer buttons", () => {
-    const onRespond = vi.fn();
-    render(
-      <ElicitationPrompt
-        elicitation={elicitation({
-          kind: "SomeChoice",
-          choices: ["option-a", "option-b"],
-        })}
-        onRespond={onRespond}
-      />,
-    );
-
-    fireEvent.click(screen.getByRole("button", { name: "option-a" }));
-    expect(onRespond).toHaveBeenCalledWith({
-      type: "answers",
-      answers: [{ id: "choice", value: "option-a" }],
-    });
   });
 });

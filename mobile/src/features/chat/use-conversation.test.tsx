@@ -6,14 +6,81 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { AuthProvider } from "@/features/auth/auth-provider";
 import { DaemonProvider } from "@/platform/daemon-provider";
+import type {
+  ChatSendResult,
+  ChatStreamEvent,
+  DaemonChat,
+  DaemonElicitation,
+  DaemonToolAction,
+} from "@/platform/chat-types";
 
 import { readNewChatPrompt, stashNewChatPrompt } from "./new-chat-prompt";
 import { useConversation } from "./use-conversation";
 
 interface SseHandle {
   response: Response;
-  push: (event: unknown) => void;
+  push: (event: ChatStreamEvent) => void;
   close: () => void;
+}
+
+function daemonChat(id = "c1"): DaemonChat {
+  return {
+    archived: false,
+    createdAt: "2026-07-24T00:00:00.000Z",
+    cwd: "/tmp",
+    id,
+    pinned: false,
+    projectId: null,
+    remoteThreadId: null,
+    runtime: "codex",
+    title: id,
+    updatedAt: "2026-07-24T00:00:00.000Z",
+  };
+}
+
+function resultEvent(
+  text: string,
+  overrides: Partial<ChatSendResult> = {},
+): ChatStreamEvent {
+  const chat = overrides.chat ?? daemonChat(overrides.chatId);
+  return {
+    type: "result",
+    result: {
+      chat,
+      chatId: chat.id,
+      content: [],
+      text,
+      ...overrides,
+    },
+  };
+}
+
+function toolAction(
+  overrides: Partial<DaemonToolAction> = {},
+): DaemonToolAction {
+  return {
+    id: "act-1",
+    turnId: "turn-1",
+    kind: "command",
+    phase: "running",
+    title: "Run command",
+    rawInput: "{}",
+    output: [],
+    outputText: "",
+    ...overrides,
+  };
+}
+
+function elicitation(
+  overrides: Partial<DaemonElicitation> = {},
+): DaemonElicitation {
+  return {
+    id: "elic-1",
+    kind: "approval",
+    phase: "pending",
+    title: "Allow?",
+    ...overrides,
+  };
 }
 
 /** A live SSE stream whose events are pushed by the test; errors on abort. */
@@ -160,7 +227,7 @@ describe("useConversation", () => {
     );
 
     act(() => {
-      sse!.push({ type: "result", result: { text: "Started" } });
+      sse!.push(resultEvent("Started", { chat: daemonChat("new-chat") }));
       sse!.push({ type: "done" });
       sse!.close();
     });
@@ -273,7 +340,7 @@ describe("useConversation", () => {
     );
 
     act(() => {
-      sse!.push({ type: "result", result: { text: "Hello" } });
+      sse!.push(resultEvent("Hello"));
       sse!.push({ type: "done" });
       sse!.close();
     });
@@ -313,12 +380,13 @@ describe("useConversation", () => {
     act(() =>
       sse!.push({
         type: "tool",
-        action: {
+        action: toolAction({
           id: "act-1",
           kind: "command",
           title: "Run command",
           phase: "running",
-        },
+          rawInput: '{"command":"npm test"}',
+        }),
       }),
     );
     await waitFor(() =>
@@ -336,13 +404,14 @@ describe("useConversation", () => {
     act(() =>
       sse!.push({
         type: "toolDelta",
-        action: {
+        action: toolAction({
           id: "act-1",
           kind: "command",
           title: "Run command",
           phase: "completed",
           outputText: "done",
-        },
+          rawInput: '{"command":"npm test"}',
+        }),
       }),
     );
     await waitFor(() =>
@@ -354,7 +423,7 @@ describe("useConversation", () => {
     expect(result.current.messages.at(-1)?.toolCalls).toHaveLength(1);
 
     act(() => {
-      sse!.push({ type: "result", result: { text: "" } });
+      sse!.push(resultEvent(""));
       sse!.push({ type: "done" });
       sse!.close();
     });
@@ -407,7 +476,7 @@ describe("useConversation", () => {
     );
 
     act(() => {
-      sse!.push({ type: "result", result: { text: "" } });
+      sse!.push(resultEvent(""));
       sse!.push({ type: "done" });
       sse!.close();
     });
@@ -481,7 +550,11 @@ describe("useConversation", () => {
     act(() =>
       sse!.push({
         type: "elicitation",
-        elicitation: { id: "elic-1", kind: "Approval", title: "Run tests?" },
+        elicitation: elicitation({
+          id: "elic-1",
+          kind: "approval",
+          title: "Run tests?",
+        }),
       }),
     );
 
@@ -552,11 +625,11 @@ describe("useConversation", () => {
     act(() =>
       sse!.push({
         type: "elicitation",
-        elicitation: {
+        elicitation: elicitation({
           id: "exit-1",
           kind: "approval",
           title: "Allow ExitPlanMode?",
-        },
+        }),
       }),
     );
     await waitFor(() =>
@@ -618,11 +691,11 @@ describe("useConversation", () => {
     act(() =>
       sse!.push({
         type: "elicitation",
-        elicitation: {
+        elicitation: elicitation({
           id: "exit-1",
           kind: "approval",
           title: "Allow ExitPlanMode?",
-        },
+        }),
       }),
     );
     await waitFor(() =>
@@ -637,11 +710,11 @@ describe("useConversation", () => {
     act(() =>
       sse!.push({
         type: "elicitation",
-        elicitation: {
+        elicitation: elicitation({
           id: "bash-1",
           kind: "approval",
           title: "Allow Bash?",
-        },
+        }),
       }),
     );
     await waitFor(() =>
@@ -781,7 +854,7 @@ describe("useConversation", () => {
     );
 
     act(() => {
-      sse!.push({ type: "result", result: { text: "Here is the plan." } });
+      sse!.push(resultEvent("Here is the plan."));
       sse!.push({ type: "done" });
       sse!.close();
     });

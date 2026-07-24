@@ -2,11 +2,11 @@ import type {
   ChatElicitationResponse,
   ChatLoadResult,
   ConversationMessage,
-  ConversationToolCall,
   DaemonElicitation,
   DaemonMessagePart,
   DaemonPlanData,
   DaemonRuntimeConfig,
+  ProjectedConversationToolCall,
 } from "@/platform/chat-types";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -21,7 +21,7 @@ import { findPlanModeToggleTarget } from "./mode-options";
 import {
   chatPlanPartName,
   cloneChatPlanData,
-  isChatPlanData,
+  isChatPlanPart,
   normalizeConversationPlans,
   upsertPlan,
 } from "./plan-utils";
@@ -60,7 +60,7 @@ interface LiveTurn {
   assistantText: string;
   assistantReasoning: string;
   /** Tool calls streamed this turn, in first-seen order and upserted by id. */
-  assistantToolCalls: ConversationToolCall[];
+  assistantToolCalls: ProjectedConversationToolCall[];
   /** Plan snapshots streamed this turn, upserted by kind. */
   assistantPlans: DaemonPlanData[];
 }
@@ -77,9 +77,9 @@ const EMPTY_TURN: LiveTurn = {
 
 /** Upsert a streamed tool action into the turn's ordered tool-call list. */
 function upsertToolCall(
-  calls: ConversationToolCall[],
-  call: ConversationToolCall,
-): ConversationToolCall[] {
+  calls: ProjectedConversationToolCall[],
+  call: ProjectedConversationToolCall,
+): ProjectedConversationToolCall[] {
   const index = calls.findIndex((existing) => existing.id === call.id);
   if (index === -1) return [...calls, call];
   const next = calls.slice();
@@ -167,21 +167,11 @@ export function useConversation(chatId: string): Conversation {
             // call is proposed/started, `toolDelta` as its output/phase update);
             // upsert by id so the inline card reflects the latest state.
             const call = toolCallFromAction(event.action);
-            if (call !== null) {
-              const turn = liveTurnRef.current;
-              updateAssistant({
-                assistantToolCalls: upsertToolCall(
-                  turn.assistantToolCalls,
-                  call,
-                ),
-              });
-            }
+            const turn = liveTurnRef.current;
+            updateAssistant({
+              assistantToolCalls: upsertToolCall(turn.assistantToolCalls, call),
+            });
           } else if (event.type === "plan") {
-            if (!isChatPlanData(event.plan)) {
-              throw new Error(
-                "Daemon sent a plan event with invalid plan data.",
-              );
-            }
             const turn = liveTurnRef.current;
             updateAssistant({
               assistantPlans: upsertPlan(turn.assistantPlans, event.plan),
@@ -194,15 +184,9 @@ export function useConversation(chatId: string): Conversation {
             // no prose). Keep any text we already streamed so a final empty
             // result does not wipe the live bubble.
             const turn = liveTurnRef.current;
-            const resultContent: DaemonMessagePart[] =
-              event.result.content ?? [];
+            const resultContent: DaemonMessagePart[] = event.result.content;
             const resultPlans = resultContent
-              .filter(
-                (part): part is DaemonMessagePart & { data: DaemonPlanData } =>
-                  part.type === "data" &&
-                  (part.name === "plan" || part.name === "todo") &&
-                  isChatPlanData(part.data),
-              )
+              .filter(isChatPlanPart)
               .map((part) => cloneChatPlanData(part.data));
             let nextPlans = turn.assistantPlans;
             for (const plan of resultPlans) {
@@ -575,28 +559,11 @@ function buildLiveMessages(
   return messages;
 }
 
-/**
- * Reproject a rendered tool call back into a `tool-call` history part so an
- * optimistically-appended turn keeps its cards until the daemon's canonical copy
- * arrives. Lossy but transient — `toolCallFromPart` reads it back the same way.
- */
-function toolCallToPart(call: ConversationToolCall): DaemonMessagePart {
-  return {
-    type: "tool-call",
-    toolCallId: call.id,
-    toolName: call.name,
-    argsText: call.argsText,
-    isError: call.isError,
-    artifact: {
-      id: call.id,
-      phase: call.phase,
-      // `name` reprojects via `toolName`; keep the human summary as the title so
-      // the round-trip preserves both the identifier and its secondary label.
-      title: call.summary,
-      outputText: call.outputText,
-      error: call.errorText.length > 0 ? { message: call.errorText } : null,
-    },
-  };
+/** Retain the canonical part so optimistic history never invents wire fields. */
+function toolCallToPart(
+  call: ProjectedConversationToolCall,
+): DaemonMessagePart {
+  return call.historyPart;
 }
 
 /** ExitPlanMode permissions use the tool name in title/body from claude-client. */

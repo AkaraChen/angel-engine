@@ -60,6 +60,7 @@ export {
   parseDataUrl,
   parseImageDataUrl,
 };
+export { isChatStreamEvent } from "./stream-event";
 
 export type ChatCreationLocation = "project" | "worktree";
 export interface ChatCreationLocationInput {

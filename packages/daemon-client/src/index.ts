@@ -32,6 +32,7 @@ import type {
   ProjectFileSearchInput,
   ProjectFileSearchResult,
 } from "@angel-engine/daemon-api/chat";
+import { isChatStreamEvent } from "@angel-engine/daemon-api/chat";
 import type {
   DaemonErrorPayload,
   DaemonHealth,
@@ -159,7 +160,13 @@ export function createDaemonClient(options: DaemonClientOptions) {
       );
     }
     for await (const event of readSseEvents(response.body)) {
-      yield event as ChatStreamEvent;
+      if (!isChatStreamEvent(event)) {
+        throw DaemonRequestError.invalidResponse(
+          `Daemon returned an invalid chat stream event for ${path}.`,
+          response.status,
+        );
+      }
+      yield event;
     }
   }
 

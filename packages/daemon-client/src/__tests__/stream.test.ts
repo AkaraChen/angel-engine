@@ -2,7 +2,11 @@ import type { Chat, ChatStreamEvent } from "@angel-engine/daemon-api/chat";
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { createDaemonClient, readSseEvents } from "../index";
+import {
+  createDaemonClient,
+  DaemonRequestError,
+  readSseEvents,
+} from "../index";
 
 const chat: Chat = {
   archived: false,
@@ -27,11 +31,9 @@ function streamFrom(chunks: string[]): ReadableStream<Uint8Array> {
   });
 }
 
-function sseResponse(events: ChatStreamEvent[]): Response {
+function sseResponse(events: readonly unknown[]): Response {
   const body = streamFrom(
-    events.map(
-      (event) => `event: ${event.type}\ndata: ${JSON.stringify(event)}\n\n`,
-    ),
+    events.map((event) => `data: ${JSON.stringify(event)}\n\n`),
   );
   return new Response(body, {
     status: 200,
@@ -118,6 +120,26 @@ describe("streamChat", () => {
     await expect(
       collect(client.chatStreams.send({ chatId: "c", text: "hi" }, "s")),
     ).rejects.toThrow(/POST \/api\/chat-streams/);
+  });
+
+  it.each([
+    ["unknown event type", { type: "futureEvent" }],
+    ["missing required field", { part: "text", type: "delta" }],
+  ])("fails fast on %s", async (_label, event) => {
+    const fetchMock = vi.fn().mockResolvedValue(sseResponse([event]));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const client = createDaemonClient({ baseUrl: "", token: null });
+    const rejection = collect(
+      client.chatStreams.send({ chatId: "c", text: "hi" }, "s"),
+    );
+
+    await expect(rejection).rejects.toBeInstanceOf(DaemonRequestError);
+    await expect(rejection).rejects.toMatchObject({
+      name: "DaemonRequestError",
+      status: 200,
+    });
+    await expect(rejection).rejects.toThrow(/invalid chat stream event/);
   });
 });
 
