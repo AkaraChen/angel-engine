@@ -60,6 +60,7 @@ export interface LocaleResourceTranslationChat {
   planCreated: string;
   planUpdated: string;
   planProgress: string;
+  couldNotChangeMode: string;
 }
 
 export interface LocaleResourceTranslationElicitation {

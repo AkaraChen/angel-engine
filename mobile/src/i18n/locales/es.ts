@@ -60,6 +60,7 @@ export const es = {
       planCreated: "{{title}} creado",
       planUpdated: "{{title}} actualizado",
       planProgress: "{{completed}}/{{total}}",
+      couldNotChangeMode: "No se pudo cambiar el modo",
     },
     elicitation: {
       defaultTitle: "El agente necesita tu entrada",

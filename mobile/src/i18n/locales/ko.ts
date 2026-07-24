@@ -59,6 +59,7 @@ export const ko = {
       planCreated: "{{title}} 생성됨",
       planUpdated: "{{title}} 업데이트됨",
       planProgress: "{{completed}}/{{total}}",
+      couldNotChangeMode: "모드를 변경할 수 없습니다",
     },
     elicitation: {
       defaultTitle: "에이전트가 입력을 필요로 합니다",

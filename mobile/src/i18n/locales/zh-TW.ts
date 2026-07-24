@@ -57,6 +57,7 @@ export const zhTW = {
       planCreated: "{{title}} 已建立",
       planUpdated: "{{title}} 已更新",
       planProgress: "{{completed}}/{{total}}",
+      couldNotChangeMode: "無法切換模式",
     },
     elicitation: {
       defaultTitle: "代理需要你的輸入",

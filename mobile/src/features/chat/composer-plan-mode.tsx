@@ -3,6 +3,7 @@ import type { DaemonRuntimeConfig } from "@/platform/chat-types";
 import { Hammer, ListChecks } from "@phosphor-icons/react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
+import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 
@@ -62,9 +63,13 @@ export function ComposerPlanMode({
         setPending(true);
         const setMode =
           target.family === "agent" ? onSetMode : onSetPermissionMode;
-        void Promise.resolve(setMode(target.targetMode.value)).finally(() =>
-          setPending(false),
-        );
+        void Promise.resolve(setMode(target.targetMode.value))
+          .catch((error: unknown) => {
+            toast.error(t("chat.couldNotChangeMode"), {
+              description: getErrorMessage(error),
+            });
+          })
+          .finally(() => setPending(false));
       }}
       title={title}
       type="button"
@@ -74,4 +79,9 @@ export function ComposerPlanMode({
       <span>{label}</span>
     </Button>
   );
+}
+
+function getErrorMessage(error: unknown): string {
+  if (error instanceof Error) return error.message;
+  return String(error);
 }
