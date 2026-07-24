@@ -425,24 +425,26 @@ export function useConversation(chatId: string): Conversation {
       const leavePlan =
         (response.type === "allow" || response.type === "allowForSession") &&
         isExitPlanModeElicitation(elicitation);
+      // Snapshot for rollback if resolve fails after an optimistic leave-plan.
+      const previousLoad = queryClient.getQueryData<ChatLoadResult>(
+        queryKeys.chats.load(chatId),
+      );
+      const previousConfig = previousLoad?.config;
       elicitationRef.current = null;
       forceRender();
       // Optimistic UI: patch permission mode in the load cache *synchronously*
       // before resolving the elicitation. `setPermissionMode` is queued behind
       // the in-flight sendText on the provider, so waiting for onSuccess would
       // leave the composer chip on Plan while the next Bash/Write elicits.
-      if (leavePlan) {
-        const previous = queryClient.getQueryData<ChatLoadResult>(
-          queryKeys.chats.load(chatId),
-        );
-        const buildMode = buildPermissionModeValue(previous?.config ?? null);
-        if (previous?.config && buildMode) {
+      if (leavePlan && previousLoad?.config) {
+        const buildMode = buildPermissionModeValue(previousLoad.config);
+        if (buildMode) {
           queryClient.setQueryData<ChatLoadResult>(
             queryKeys.chats.load(chatId),
             {
-              ...previous,
+              ...previousLoad,
               config: {
-                ...previous.config,
+                ...previousLoad.config,
                 currentPermissionMode: buildMode,
               },
             },
@@ -455,7 +457,25 @@ export function useConversation(chatId: string): Conversation {
           elicitationId: elicitation.id,
           response,
         })
-        .catch(() => {});
+        .catch(() => {
+          // Network/daemon failure: roll back optimistic Build and re-open the
+          // elicitation so the user can retry (provider is still Plan).
+          if (
+            leavePlan &&
+            streamIdRef.current === streamId &&
+            previousConfig !== undefined
+          ) {
+            queryClient.setQueryData<ChatLoadResult>(
+              queryKeys.chats.load(chatId),
+              (current) =>
+                current ? { ...current, config: previousConfig } : current,
+            );
+          }
+          if (streamIdRef.current === streamId) {
+            elicitationRef.current = elicitation;
+          }
+          forceRender();
+        });
     },
     [chatId, daemon, queryClient],
   );

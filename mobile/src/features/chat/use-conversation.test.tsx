@@ -509,6 +509,73 @@ describe("useConversation", () => {
     await waitFor(() => expect(result.current.isStreaming).toBe(false));
   });
 
+  it("rolls plan chip back when ExitPlanMode resolve fails", async () => {
+    let sse: SseHandle | undefined;
+    const modes = [
+      { label: "Plan", value: "plan" },
+      { label: "Default", value: "default" },
+    ];
+    const fetchMock = vi.fn(async (url: string, init?: RequestInit) => {
+      const method = init?.method ?? "GET";
+      if (url.endsWith("/load")) {
+        return jsonResponse({
+          chat: { id: "c1", title: "c1" },
+          messages: [],
+          config: {
+            canSetPermissionMode: true,
+            currentPermissionMode: "plan",
+            permissionModes: modes,
+            models: [],
+            reasoningEfforts: [],
+          },
+        });
+      }
+      if (url.includes("/api/chat-streams?") && method === "POST") {
+        sse = controllableSse(init?.signal ?? undefined);
+        return sse.response;
+      }
+      if (url.endsWith("/elicitation") && method === "POST") {
+        return new Response(JSON.stringify({ message: "offline" }), {
+          status: 503,
+          headers: { "content-type": "application/json" },
+        });
+      }
+      return jsonResponse({ ok: true });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const { result } = renderHook(() => useConversation("c1"), { wrapper });
+    await waitFor(() => expect(result.current.isPending).toBe(false));
+
+    act(() => result.current.send("plan then implement"));
+    await waitFor(() => expect(sse).toBeDefined());
+    act(() =>
+      sse!.push({
+        type: "elicitation",
+        elicitation: {
+          id: "exit-1",
+          kind: "approval",
+          title: "Allow ExitPlanMode?",
+        },
+      }),
+    );
+    await waitFor(() =>
+      expect(result.current.pendingElicitation?.id).toBe("exit-1"),
+    );
+
+    act(() => result.current.respondElicitation({ type: "allow" }));
+    // Optimistic patch applied immediately…
+    expect(result.current.runtimeConfig?.currentPermissionMode).toBe("default");
+
+    // …then rolled back when resolve fails, with elicitation restored.
+    await waitFor(() =>
+      expect(result.current.runtimeConfig?.currentPermissionMode).toBe("plan"),
+    );
+    await waitFor(() =>
+      expect(result.current.pendingElicitation?.id).toBe("exit-1"),
+    );
+  });
+
   it("switches the plan chip to build as soon as ExitPlanMode is allowed", async () => {
     let sse: SseHandle | undefined;
     const modes = [
