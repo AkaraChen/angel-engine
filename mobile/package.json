@@ -65,7 +65,7 @@
     "@vitejs/plugin-react": "^6.0.3",
     "jsdom": "^28.0.0",
     "oxlint": "^1.73.0",
-    "oxlint-tsgolint": "^0.24.0",
+    "oxlint-tsgolint": "^0.25.0",
     "tailwindcss": "^4.3.2",
     "typescript": "^7.0.2",
     "vite": "^8.1.3",
