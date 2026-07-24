@@ -4,8 +4,11 @@ import type {
   DaemonHistoryMessage,
   DaemonMessagePart,
   DaemonPlanData,
+  DaemonToolCallPart,
   DaemonToolAction,
+  ProjectedConversationToolCall,
 } from "@/platform/chat-types";
+import { chatToolActionToPart } from "@angel-engine/daemon-api/chat";
 
 import {
   cloneChatPlanData,
@@ -31,29 +34,29 @@ export function partsToText(
   type: "reasoning" | "text",
 ): string {
   return parts
-    .filter((part) => part.type === type && typeof part.text === "string")
-    .map((part) => part.text)
+    .flatMap((part) => (part.type === type ? [part.text] : []))
     .join("");
 }
 
 /** Phases the daemon reports while a tool call is still in flight. */
-const RUNNING_TOOL_PHASES = new Set([
-  "proposed",
-  "awaitingDecision",
-  "running",
-  "streamingResult",
-]);
+const RUNNING_TOOL_PHASES: ReadonlySet<ConversationToolCall["phase"]> = new Set(
+  ["proposed", "awaitingDecision", "running", "streamingResult"],
+);
 
-export function isRunningToolPhase(phase: string): boolean {
+export function isRunningToolPhase(
+  phase: ConversationToolCall["phase"],
+): boolean {
   return RUNNING_TOOL_PHASES.has(phase);
 }
 
-export function isFailedToolPhase(phase: string): boolean {
+export function isFailedToolPhase(
+  phase: ConversationToolCall["phase"],
+): boolean {
   return phase === "failed" || phase === "declined";
 }
 
 /** Human-friendly label for a daemon tool lifecycle phase. */
-export function formatToolPhase(phase: string): string {
+export function formatToolPhase(phase: ConversationToolCall["phase"]): string {
   switch (phase) {
     case "proposed":
       return "Proposed";
@@ -71,9 +74,9 @@ export function formatToolPhase(phase: string): string {
       return "Declined";
     case "cancelled":
       return "Cancelled";
-    default:
-      return phase;
   }
+  const exhaustive: never = phase;
+  return exhaustive;
 }
 
 /**
@@ -103,46 +106,35 @@ function firstNonEmpty(candidates: (string | null | undefined)[]): string {
   return "";
 }
 
-/**
- * Project a `tool-call` history part into a rendered tool call. Returns `null`
- * for a degenerate part with no identifying name/artifact so a bare
- * `{ type: "tool-call" }` doesn't render an empty card.
- */
+/** Project a canonical `tool-call` history part into a rendered tool call. */
 export function toolCallFromPart(
-  part: DaemonMessagePart,
-): ConversationToolCall | null {
+  part: DaemonToolCallPart,
+): ProjectedConversationToolCall {
   const action = part.artifact;
   // The tool identifier (`command`, `Read`, `mcp__x__y`) is the primary label;
   // the human title/summary is secondary. Keeping them distinct is what surfaces
   // *which* tool ran rather than only a paraphrase (KIT-146 acceptance).
-  const identifier = firstNonEmpty([part.toolName, action?.kind]);
-  const summary = firstNonEmpty([action?.title, action?.inputSummary]);
-  const phase =
-    action?.phase ??
-    (part.isError === true
-      ? "failed"
-      : identifier.length > 0 || summary.length > 0
-        ? "completed"
-        : "");
-  if (identifier.length === 0 && summary.length === 0 && phase.length === 0)
-    return null;
+  const identifier = firstNonEmpty([part.toolName, action.kind]);
+  const summary = firstNonEmpty([action.title, action.inputSummary]);
+  const phase = action.phase;
 
-  const errorText = firstNonEmpty([action?.error?.message]);
+  const errorText = firstNonEmpty([action.error?.message]);
   const outputText = firstNonEmpty([
-    action?.outputText,
+    action.outputText,
     coerceText(part.result),
   ]);
   const label = resolveToolLabel(identifier, summary);
   return {
-    id: firstNonEmpty([part.toolCallId, action?.id]) || label.name,
+    id: firstNonEmpty([part.toolCallId, action.id]) || label.name,
     name: label.name,
     summary: label.summary,
-    phase: phase.length > 0 ? phase : "completed",
-    argsText: firstNonEmpty([part.argsText, action?.rawInput]),
+    phase,
+    argsText: firstNonEmpty([part.argsText, action.rawInput]),
     outputText,
     errorText,
     isError:
       part.isError === true || isFailedToolPhase(phase) || errorText.length > 0,
+    historyPart: part,
   };
 }
 
@@ -154,24 +146,8 @@ export function toolCallFromPart(
  */
 export function toolCallFromAction(
   action: DaemonToolAction,
-): ConversationToolCall | null {
-  const identifier = firstNonEmpty([action.kind]);
-  const summary = firstNonEmpty([action.title, action.inputSummary]);
-  const phase = action.phase ?? "";
-  if (identifier.length === 0 && summary.length === 0 && phase.length === 0)
-    return null;
-  const errorText = firstNonEmpty([action.error?.message]);
-  const label = resolveToolLabel(identifier, summary);
-  return {
-    id: action.id ?? label.name,
-    name: label.name,
-    summary: label.summary,
-    phase: phase.length > 0 ? phase : "running",
-    argsText: firstNonEmpty([action.rawInput, action.inputSummary]),
-    outputText: firstNonEmpty([action.outputText]),
-    errorText,
-    isError: isFailedToolPhase(phase) || errorText.length > 0,
-  };
+): ProjectedConversationToolCall {
+  return toolCallFromPart(chatToolActionToPart(action));
 }
 
 /**
@@ -196,12 +172,11 @@ function resolveToolLabel(
 /** Project every `tool-call` part of a message into rendered tool calls. */
 export function partsToToolCalls(
   parts: DaemonMessagePart[],
-): ConversationToolCall[] {
-  const calls: ConversationToolCall[] = [];
+): ProjectedConversationToolCall[] {
+  const calls: ProjectedConversationToolCall[] = [];
   for (const part of parts) {
     if (part.type !== "tool-call") continue;
-    const call = toolCallFromPart(part);
-    if (call !== null) calls.push(call);
+    calls.push(toolCallFromPart(part));
   }
   return calls;
 }

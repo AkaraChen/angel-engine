@@ -22,6 +22,7 @@ const permissionConfig = {
     { label: "Plan", value: "plan" },
     { label: "Default", value: "default" },
   ],
+  modes: [],
   models: [],
   reasoningEfforts: [],
 };
@@ -36,7 +37,12 @@ describe("ComposerPlanMode", () => {
   it("renders nothing when the runtime cannot set modes", () => {
     const { container } = render(
       <ComposerPlanMode
-        config={{ models: [], reasoningEfforts: [] }}
+        config={{
+          modes: [],
+          models: [],
+          permissionModes: [],
+          reasoningEfforts: [],
+        }}
         onSetMode={vi.fn()}
         onSetPermissionMode={vi.fn()}
       />,

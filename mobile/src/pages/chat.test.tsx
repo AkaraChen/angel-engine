@@ -12,13 +12,68 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { AuthProvider } from "@/features/auth/auth-provider";
 import { stashNewChatPrompt } from "@/features/chat/new-chat-prompt";
 import { DaemonProvider } from "@/platform/daemon-provider";
+import type {
+  ChatSendResult,
+  ChatStreamEvent,
+  DaemonChat,
+  DaemonToolAction,
+} from "@/platform/chat-types";
 
 import { ChatPage } from "./chat";
 
 interface SseHandle {
   response: Response;
-  push: (event: unknown) => void;
+  push: (event: ChatStreamEvent) => void;
   close: () => void;
+}
+
+function daemonChat(id: string): DaemonChat {
+  return {
+    archived: false,
+    createdAt: "2026-07-24T00:00:00.000Z",
+    cwd: "/tmp",
+    id,
+    pinned: false,
+    projectId: null,
+    remoteThreadId: null,
+    runtime: "codex",
+    title: id,
+    updatedAt: "2026-07-24T00:00:00.000Z",
+  };
+}
+
+function resultEvent(
+  chatId: string,
+  text: string,
+  overrides: Partial<ChatSendResult> = {},
+): ChatStreamEvent {
+  const chat = overrides.chat ?? daemonChat(chatId);
+  return {
+    type: "result",
+    result: {
+      chat,
+      chatId: chat.id,
+      content: [],
+      text,
+      ...overrides,
+    },
+  };
+}
+
+function toolAction(
+  overrides: Partial<DaemonToolAction> = {},
+): DaemonToolAction {
+  return {
+    id: "t1",
+    turnId: "turn-1",
+    kind: "command",
+    phase: "running",
+    title: "Run command",
+    rawInput: '{"command":"ls"}',
+    output: [],
+    outputText: "",
+    ...overrides,
+  };
 }
 
 function controllableSse(signal: AbortSignal | undefined): SseHandle {
@@ -181,7 +236,7 @@ describe("ChatPage", () => {
     await waitFor(() => expect(screen.getByText("Hello!")).toBeDefined());
 
     act(() => {
-      sse!.push({ type: "result", result: { text: "Hello!" } });
+      sse!.push(resultEvent("new-chat", "Hello!"));
       sse!.push({ type: "done" });
       sse!.close();
     });
@@ -221,15 +276,17 @@ describe("ChatPage", () => {
               content: [
                 { type: "text", text: "I'll run a command." },
                 {
+                  args: { command: "ls -la" },
                   type: "tool-call",
                   toolCallId: "t1",
                   toolName: "command",
                   argsText: "ls -la",
-                  artifact: {
+                  artifact: toolAction({
                     id: "t1",
                     phase: "completed",
+                    rawInput: '{"command":"ls -la"}',
                     outputText: "done",
-                  },
+                  }),
                 },
                 { type: "text", text: " Done." },
               ],
@@ -270,15 +327,16 @@ describe("ChatPage", () => {
                     content: [
                       { type: "text", text: "Done." },
                       {
+                        args: { command: "ls" },
                         type: "tool-call",
                         toolCallId: "t1",
                         toolName: "command",
                         argsText: "ls",
-                        artifact: {
+                        artifact: toolAction({
                           id: "t1",
                           phase: "completed",
                           outputText: "x",
-                        },
+                        }),
                       },
                     ],
                   },
@@ -308,12 +366,12 @@ describe("ChatPage", () => {
     act(() =>
       sse!.push({
         type: "tool",
-        action: {
+        action: toolAction({
           id: "t1",
           kind: "command",
           title: "Run command",
           phase: "running",
-        },
+        }),
       }),
     );
     await waitFor(() =>
@@ -323,13 +381,13 @@ describe("ChatPage", () => {
     act(() =>
       sse!.push({
         type: "toolDelta",
-        action: {
+        action: toolAction({
           id: "t1",
           kind: "command",
           title: "Run command",
           phase: "completed",
           outputText: "x",
-        },
+        }),
       }),
     );
     await waitFor(() =>
@@ -337,7 +395,7 @@ describe("ChatPage", () => {
     );
 
     act(() => {
-      sse!.push({ type: "result", result: { text: "Done." } });
+      sse!.push(resultEvent("tool-chat", "Done."));
       sse!.push({ type: "done" });
       sse!.close();
     });
