@@ -50,10 +50,21 @@ export interface PendingPermission {
   promise: Promise<ClaudeElicitationResponse>;
 }
 
+/** Fingerprint of the last review plan projected this turn (Write / ExitPlanMode). */
+export interface ClaudeReviewPlanFingerprint {
+  path?: string;
+  text: string;
+}
+
 export interface ActiveClaudeTurn {
   actionIds: Set<string>;
   conversationId: string;
   finalResult?: SDKResultMessage;
+  /**
+   * Last review-plan body emitted on this turn. ExitPlanMode often repeats the
+   * same text/path after Write(plan.md); projection skips that duplicate.
+   */
+  lastReviewPlan?: ClaudeReviewPlanFingerprint;
   model?: string;
   request: ClaudeCodeSendTextRequest;
   sawReasoningDelta: boolean;

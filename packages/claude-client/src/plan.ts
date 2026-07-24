@@ -5,7 +5,11 @@ import type {
   ClaudeTodoWriteInput,
 } from "./sdk-types.js";
 import type { ChatJsonObject } from "@angel-engine/js-client";
-import type { ActiveClaudeTurn, EngineEventJson } from "./types.js";
+import type {
+  ActiveClaudeTurn,
+  ClaudeReviewPlanFingerprint,
+  EngineEventJson,
+} from "./types.js";
 
 import { homedir } from "node:os";
 
@@ -21,6 +25,11 @@ interface PlanStateJson {
   entries: Array<{ content: string; status: string }>;
 }
 
+/** Mutable state for review-plan dedupe across a live turn or history scan. */
+export interface ClaudePlanProjectionState {
+  lastReviewPlan?: ClaudeReviewPlanFingerprint;
+}
+
 export function planEventsFromToolUse(
   active: ActiveClaudeTurn,
   toolName: string,
@@ -28,6 +37,8 @@ export function planEventsFromToolUse(
 ): EngineEventJson[] {
   const filePlan = planFromFileWriteToolUse(toolName, input);
   if (filePlan) {
+    if (shouldSkipDuplicateReviewPlan(active, filePlan)) return [];
+    rememberReviewPlan(active, filePlan);
     return planEventsFromStructuredPlan(active, filePlan);
   }
 
@@ -55,6 +66,16 @@ export function planEventsFromToolUse(
   if (!exitPlanInput) return [];
   const text = planTextFromExitPlanModeInput(exitPlanInput);
   if (!text) return [];
+  const planPath = planPathFromExitPlanModeInput(exitPlanInput);
+  const exitPlan: ChatJsonObject = {
+    entries: markdownPlanEntries(text),
+    kind: "review",
+    ...(planPath ? { path: planPath } : {}),
+    text,
+    type: "plan",
+  };
+  if (shouldSkipDuplicateReviewPlan(active, exitPlan)) return [];
+  rememberReviewPlan(active, exitPlan);
 
   const events: EngineEventJson[] = [
     {
@@ -65,12 +86,11 @@ export function planEventsFromToolUse(
       },
     },
   ];
-  const path = planPathFromExitPlanModeInput(exitPlanInput);
-  if (path) {
+  if (planPath) {
     events.push({
       PlanPathUpdated: {
         conversation_id: active.conversationId,
-        path,
+        path: planPath,
         turn_id: active.turnId,
       },
     });
@@ -87,12 +107,21 @@ export function isClaudePlanToolUse(
   return Boolean(input && planFromFileWriteToolUse(toolName, input));
 }
 
+/**
+ * Structured plan for history replay. Pass a shared {@link state} across
+ * sequential tool_use blocks so Write + ExitPlanMode of the same body emit once.
+ */
 export function structuredPlanFromToolUse(
   toolName: string,
   input: ClaudeToolInput,
+  state?: ClaudePlanProjectionState,
 ): ChatJsonObject | undefined {
   const filePlan = planFromFileWriteToolUse(toolName, input);
-  if (filePlan) return filePlan;
+  if (filePlan) {
+    if (shouldSkipDuplicateReviewPlan(state, filePlan)) return undefined;
+    rememberReviewPlan(state, filePlan);
+    return filePlan;
+  }
 
   const todoInput = typedClaudeInput(toolName, input, CLAUDE_TOOL.TodoWrite);
   if (todoInput) {
@@ -108,15 +137,18 @@ export function structuredPlanFromToolUse(
   );
   if (!exitPlanInput) return undefined;
   const text = planTextFromExitPlanModeInput(exitPlanInput);
-  const path = planPathFromExitPlanModeInput(exitPlanInput);
-  if (!text && !path) return undefined;
-  return {
+  const planPath = planPathFromExitPlanModeInput(exitPlanInput);
+  if (!text && !planPath) return undefined;
+  const exitPlan: ChatJsonObject = {
     entries: markdownPlanEntries(text),
     kind: "review",
-    ...(path ? { path } : {}),
+    ...(planPath ? { path: planPath } : {}),
     text,
     type: "plan",
   };
+  if (shouldSkipDuplicateReviewPlan(state, exitPlan)) return undefined;
+  rememberReviewPlan(state, exitPlan);
+  return exitPlan;
 }
 
 function planEventsFromStructuredPlan(
@@ -245,4 +277,42 @@ function markdownPlanEntries(
     .filter((line) => line && !line.startsWith("`"))
     .slice(0, 20)
     .map((content) => ({ content, status: PlanEntryStatus.Pending }));
+}
+
+function reviewPlanFingerprint(
+  plan: ChatJsonObject,
+): ClaudeReviewPlanFingerprint | undefined {
+  if (plan.kind !== undefined && plan.kind !== null && plan.kind !== "review") {
+    return undefined;
+  }
+  const text = typeof plan.text === "string" ? plan.text : "";
+  if (!text) return undefined;
+  const planPath = typeof plan.path === "string" ? plan.path : undefined;
+  return planPath ? { path: planPath, text } : { text };
+}
+
+/**
+ * True when this review plan body was already projected (same text; path equal
+ * when both sides have one). Write then ExitPlanMode with the same markdown is
+ * the common Claude plan happy path that must not double-emit.
+ */
+export function shouldSkipDuplicateReviewPlan(
+  state: ClaudePlanProjectionState | undefined | null,
+  plan: ChatJsonObject,
+): boolean {
+  const previous = state?.lastReviewPlan;
+  const next = reviewPlanFingerprint(plan);
+  if (!previous || !next) return false;
+  if (previous.text !== next.text) return false;
+  if (previous.path && next.path && previous.path !== next.path) return false;
+  return true;
+}
+
+function rememberReviewPlan(
+  state: ClaudePlanProjectionState | undefined | null,
+  plan: ChatJsonObject,
+): void {
+  if (!state) return;
+  const fingerprint = reviewPlanFingerprint(plan);
+  if (fingerprint) state.lastReviewPlan = fingerprint;
 }
