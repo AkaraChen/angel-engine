@@ -60,6 +60,11 @@ export {
   parseDataUrl,
   parseImageDataUrl,
 };
+export {
+  isChatActiveRunResult,
+  isChatActiveRunSnapshot,
+  isChatRunObserverEvent,
+} from "./active-run";
 export { isChatStreamEvent } from "./stream-event";
 
 export type ChatCreationLocation = "project" | "worktree";
@@ -206,6 +211,48 @@ export type ChatStreamEvent =
   | { result: ChatSendResult; type: "result" }
   | { message: string; type: "error" }
   | { type: "done" };
+
+export type ChatRunStartInput = Pick<
+  ChatSendInput,
+  | "attachments"
+  | "mode"
+  | "model"
+  | "permissionMode"
+  | "reasoningEffort"
+  | "text"
+> & {
+  chatId: string;
+};
+
+interface ChatActiveRunBase {
+  assistantMessage: ChatHistoryMessage;
+  chatId: string;
+  lastEventSequence: number;
+  runId: string;
+  startedAt: string;
+  updatedAt: string;
+  userMessage: ChatHistoryMessage;
+}
+
+export type ChatOpenElicitation = ChatElicitation & { phase: "open" };
+
+export type ChatActiveRunSnapshot =
+  | (ChatActiveRunBase & {
+      pendingElicitation: null;
+      status: "running";
+    })
+  | (ChatActiveRunBase & {
+      pendingElicitation: ChatOpenElicitation;
+      status: "needsInput";
+    });
+
+export interface ChatActiveRunResult {
+  run: ChatActiveRunSnapshot | null;
+}
+
+export type ChatRunObserverEvent =
+  | { snapshot: ChatActiveRunSnapshot; type: "snapshot" }
+  | { event: ChatStreamEvent; sequence: number; type: "event" };
 
 export interface ChatPrewarmInput {
   creationLocation?: ChatCreationLocation;
