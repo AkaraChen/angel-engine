@@ -41,7 +41,7 @@
     },
     "desktop": {
       "name": "desktop",
-      "version": "0.0.4-beta31",
+      "version": "0.0.4-beta32",
       "dependencies": {
         "@angel-engine/claude-client": "workspace:*",
         "@angel-engine/client-napi": "workspace:*",
@@ -268,7 +268,7 @@
         "arktype": "^2.2.2",
         "drizzle-orm": "^0.45.2",
         "effect": "3.22.0",
-        "hono": "4.12.25",
+        "hono": "4.12.32",
         "httpxy": "^0.5.5",
         "mime-types": "^3.0.2",
         "node-pty": "1.1.0",
@@ -396,7 +396,7 @@
   "overrides": {
     "@babel/core": "7.29.7",
     "dompurify": "3.4.12",
-    "hono": "4.12.25",
+    "hono": "4.12.32",
     "js-yaml": "5.1.0",
     "postcss": "8.5.22",
     "qs": "6.15.3",
@@ -2600,7 +2600,7 @@
 
     "highlight.js": ["highlight.js@10.7.3", "", {}, "sha512-tzcUFauisWKNHaRkN4Wjl/ZA07gENAjFl3J/c480dprkGTg5EQstgaNFqBfUqCq54kZRIEcreTsAgF/m2quD7A=="],
 
-    "hono": ["hono@4.12.25", "", {}, "sha512-2NFaIyNVgJmBs/ecmtGzlmluTFs5cHEWGTdu0t1HBwYzoGXOL5nUQBRMXsXWla5i4KkG//QMzVP88m1+I3fdAQ=="],
+    "hono": ["hono@4.12.32", "", {}, "sha512-XcuyW9qE2kJn07PkecMOBd5Vq/hMy7mmGw+idz1yblbg9N17ijJODrvPkn7/dwL3Kulj8LcRJ69DLOWf91dRUg=="],
 
     "hosted-git-info": ["hosted-git-info@9.0.3", "", { "dependencies": { "lru-cache": "^11.1.0" } }, "sha512-Hc+ghLoSt6QaYZUv0WBiIvmMDZuZZ7oaDvdH8MbfOO4lOsxdXLEvuC6ePoGs9H1X9oCLyq6+NVN0MKqD+ydxyg=="],
 
