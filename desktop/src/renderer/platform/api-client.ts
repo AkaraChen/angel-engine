@@ -1,5 +1,5 @@
 import { createDaemonClient } from "@angel-engine/daemon-client";
-import type { PathLauncherTargetRef } from "@shared/path-launcher";
+import type { PathLauncherMenuRequest } from "@shared/path-launcher";
 import { getDaemonTransport } from "@/platform/daemon-transport";
 import { ipc } from "@/platform/ipc";
 
@@ -22,8 +22,8 @@ export function getApiClient() {
         ipc.projectsShowContextMenu(projectId),
     },
     pathLauncher: {
-      showContextMenu: async (ref: PathLauncherTargetRef) =>
-        ipc.pathLauncherShowContextMenu(ref),
+      showContextMenu: async (request: PathLauncherMenuRequest) =>
+        ipc.pathLauncherShowContextMenu(request),
     },
   };
 }

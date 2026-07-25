@@ -482,6 +482,7 @@ export function useWorkspacePageModel({
     selectedProjectId,
     selectedProjectName,
     setRightSidebarWidth,
+    setRightSidebarOpen,
     setSidebarOpen,
     setSidebarOpenMobile,
     setWorkspaceMode,

@@ -296,15 +296,22 @@ export function useWorkspaceChatActions({
     ],
   );
   const showPathLauncherContextMenu = useCallback(
-    async (ref: PathLauncherTargetRef) => {
+    async (
+      ref: PathLauncherTargetRef,
+      options: { includeAngelTerminal?: boolean } = {},
+    ) => {
       try {
-        await api.pathLauncher.showContextMenu(ref);
+        return await api.pathLauncher.showContextMenu({
+          includeAngelTerminal: options.includeAngelTerminal,
+          target: ref,
+        });
       } catch (error) {
         toast({
           description: getErrorMessage(error),
           title: t("notifications.projectActionFailed"),
           variant: "destructive",
         });
+        return undefined;
       }
     },
     [api, t, toast],

@@ -98,6 +98,7 @@ describe("Linux path launcher", () => {
           candidate === "/opt/bin/cursor" ||
           candidate === "/opt/bin/xdg-terminal-exec",
       ),
+      run: vi.fn(async () => ({ stdout: "/usr/bin/kitty\n" })),
     });
     const target = "/tmp/项目 repo; echo nope";
 
@@ -109,13 +110,47 @@ describe("Linux path launcher", () => {
     expect(editors.map(({ id }) => id)).toEqual(["cursor"]);
     expect(editors[0]?.createInvocation(target)).toEqual({
       args: [target],
-      awaitExit: false,
+      awaitExit: true,
       executable: "/opt/bin/cursor",
     });
     expect(terminal?.createInvocation(target)).toEqual({
       args: [`--dir=${target}`],
       awaitExit: false,
       executable: "/opt/bin/xdg-terminal-exec",
+    });
+    expect(probe.run).toHaveBeenCalledWith("/opt/bin/xdg-terminal-exec", [
+      "--print-cmd",
+      "--dir=/",
+    ]);
+  });
+
+  it("ignores relative PATH entries and falls back from an unusable xdg terminal", async () => {
+    const executableExists = vi.fn(
+      async (candidate) =>
+        candidate === "/opt/bin/cursor" ||
+        candidate === "/opt/bin/xdg-terminal-exec" ||
+        candidate === "/opt/bin/x-terminal-emulator",
+    );
+    const probe = createProbe({
+      env: { PATH: ".:/opt/bin" },
+      executableExists,
+      run: vi.fn(async () => {
+        throw new Error("No terminal is configured");
+      }),
+    });
+
+    const [editors, terminal] = await Promise.all([
+      linuxPathLauncherAdapter.discoverEditors(probe),
+      linuxPathLauncherAdapter.discoverTerminal(probe),
+    ]);
+
+    expect(editors.map(({ id }) => id)).toEqual(["cursor"]);
+    expect(executableExists).not.toHaveBeenCalledWith("cursor");
+    expect(terminal?.createInvocation("/repo")).toEqual({
+      args: [],
+      awaitExit: false,
+      cwd: "/repo",
+      executable: "/opt/bin/x-terminal-emulator",
     });
   });
 });

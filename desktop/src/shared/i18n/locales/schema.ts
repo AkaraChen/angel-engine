@@ -435,6 +435,7 @@ export interface LocaleResourceTranslationProjects {
 
 export interface LocaleResourceTranslationPathLauncher {
   copyPath: string;
+  openInAngelTerminal: string;
   openInEditor: string;
   openInFileExplorer: string;
   openInFileManager: string;

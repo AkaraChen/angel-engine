@@ -39,8 +39,10 @@ export async function findExecutableOnPath(
   const delimiter = platform === "win32" ? ";" : ":";
   const pathDirectories = (probe.env.PATH ?? "")
     .split(delimiter)
-    .filter((directory) => directory.length > 0);
-  const directories = [...pathDirectories, ...additionalDirectories];
+    .filter((directory) => pathApi.isAbsolute(directory));
+  const directories = [...pathDirectories, ...additionalDirectories].filter(
+    (directory) => pathApi.isAbsolute(directory),
+  );
   const seen = new Set<string>();
 
   for (const directory of directories) {

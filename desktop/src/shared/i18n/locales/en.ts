@@ -409,6 +409,7 @@ export const en = {
     },
     pathLauncher: {
       copyPath: "Copy Path",
+      openInAngelTerminal: "Open in Angel Terminal",
       openInEditor: "Open in {{editor}}",
       openInFileExplorer: "Open in File Explorer",
       openInFileManager: "Open in File Manager",

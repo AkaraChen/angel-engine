@@ -5,6 +5,7 @@ import type { PathLauncherMenuResult } from "@shared/path-launcher";
 import { Menu } from "electron";
 import { daemonClient } from "../../daemon/client";
 import { createPathLauncherMenuItems } from "../path-launcher/context-menu";
+import { resolvePathLauncherTarget } from "../path-launcher/target";
 
 export type ProjectContextMenuResult = PathLauncherMenuResult | "deleted";
 
@@ -23,11 +24,13 @@ export async function showProjectContextMenu(
       handled = true;
       void action.then(resolve, reject);
     };
-    void createPathLauncherMenuItems(project.path, select).then(
-      (launcherItems) => {
+    void resolvePathLauncherTarget({ projectId: project.id })
+      .then((target) => createPathLauncherMenuItems(target, select))
+      .catch(() => [])
+      .then((launcherItems) => {
         const menu = Menu.buildFromTemplate([
           ...launcherItems,
-          { type: "separator" },
+          ...(launcherItems.length > 0 ? [{ type: "separator" as const }] : []),
           {
             click: () => {
               handled = true;
@@ -45,8 +48,6 @@ export async function showProjectContextMenu(
           },
           window,
         });
-      },
-      reject,
-    );
+      });
   });
 }

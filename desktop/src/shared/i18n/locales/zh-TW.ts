@@ -398,6 +398,7 @@ export const zhTW = {
     },
     pathLauncher: {
       copyPath: "複製路徑",
+      openInAngelTerminal: "在 Angel 終端機中開啟",
       openInEditor: "在 {{editor}} 中開啟",
       openInFileExplorer: "在檔案總管中開啟",
       openInFileManager: "在檔案管理員中開啟",

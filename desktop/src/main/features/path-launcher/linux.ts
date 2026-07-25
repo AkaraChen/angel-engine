@@ -28,7 +28,7 @@ export async function discoverLinuxEditors(
       return {
         createInvocation: (target: string) => ({
           args: [target],
-          awaitExit: false,
+          awaitExit: true,
           executable,
         }),
         id: editor.id,
@@ -50,14 +50,24 @@ export const linuxPathLauncherAdapter: PlatformPathLauncherAdapter = {
       commonExecutableDirectories,
     );
     if (xdgTerminal !== undefined) {
-      return {
-        createInvocation: (target) => ({
-          args: [`--dir=${target}`],
-          awaitExit: false,
-          executable: xdgTerminal,
-        }),
-        name: "System Terminal",
-      };
+      try {
+        const { stdout } = await probe.run(xdgTerminal, [
+          "--print-cmd",
+          "--dir=/",
+        ]);
+        if (stdout.trim().length > 0) {
+          return {
+            createInvocation: (target) => ({
+              args: [`--dir=${target}`],
+              awaitExit: false,
+              executable: xdgTerminal,
+            }),
+            name: "System Terminal",
+          };
+        }
+      } catch {
+        // A launcher without an applicable terminal is not available.
+      }
     }
 
     const systemTerminal = await findExecutableOnPath(

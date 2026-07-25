@@ -410,6 +410,7 @@ export const ko = {
     },
     pathLauncher: {
       copyPath: "경로 복사",
+      openInAngelTerminal: "Angel 터미널에서 열기",
       openInEditor: "{{editor}}에서 열기",
       openInFileExplorer: "파일 탐색기에서 열기",
       openInFileManager: "파일 관리자에서 열기",

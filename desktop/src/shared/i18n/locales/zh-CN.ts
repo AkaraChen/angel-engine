@@ -396,6 +396,7 @@ export const zhCN = {
     },
     pathLauncher: {
       copyPath: "复制路径",
+      openInAngelTerminal: "在 Angel 终端中打开",
       openInEditor: "在 {{editor}} 中打开",
       openInFileExplorer: "在文件资源管理器中打开",
       openInFileManager: "在文件管理器中打开",

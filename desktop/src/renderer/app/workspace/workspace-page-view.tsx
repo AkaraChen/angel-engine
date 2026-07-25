@@ -1,5 +1,4 @@
 import type { FC } from "react";
-import type { PathLauncherTargetRef } from "@shared/path-launcher";
 import type { PowerWorktreeTabs } from "@/app/workspace/use-power-worktree-tabs";
 import type { WorkspaceChatActions } from "@/app/workspace/use-workspace-chat-actions";
 import type { WorkspaceNavigation } from "@/app/workspace/use-workspace-navigation";
@@ -21,6 +20,7 @@ import {
 import { draftAgentConfigFromExplicitOverrides } from "@/app/workspace/workspace-draft-agent-config";
 import { WorkspaceHeader } from "@/app/workspace/workspace-header";
 import { WorkspaceNativeCommandHandler } from "@/app/workspace/workspace-native-command-handler";
+import { resolveWorkspacePathLauncherTarget } from "@/app/workspace/workspace-path-launcher";
 import { WorkspaceRightSidebar } from "@/app/workspace/workspace-right-sidebar";
 import {
   WorkspaceFloatingSidebar,
@@ -31,6 +31,7 @@ import {
   WorkspaceSidebarControlPortalProvider,
 } from "@/app/workspace/workspace-sidebar-control";
 import { WorkspaceToolContextBridge } from "@/app/workspace/workspace-tool-host";
+import { useWorkspaceToolStore } from "@/app/workspace/workspace-tool-store";
 import { WorktreeDirtyDialog } from "@/app/workspace/worktree-dirty-dialog";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { RenameChatDialog } from "@/features/chat/components/rename-chat-dialog";
@@ -71,6 +72,7 @@ export const WorkspacePageView: FC<WorkspacePageViewProps> = ({
     modelOverride,
     permissionModeOverride,
     pinnedDraftCwd,
+    powerDraftContext,
     powerDraftTabActive,
     powerHomePageContext,
     powerModeActive,
@@ -93,6 +95,7 @@ export const WorkspacePageView: FC<WorkspacePageViewProps> = ({
     selectedProjectName,
     setAgentModel,
     setAgentReasoningEffort,
+    setRightSidebarOpen,
     setRightSidebarWidth,
     setSidebarOpen,
     setSidebarOpenMobile,
@@ -121,6 +124,9 @@ export const WorkspacePageView: FC<WorkspacePageViewProps> = ({
     showProjectContextMenu,
     updateChatFromRun,
   } = chatActions;
+  const openWorkspaceTerminal = useWorkspaceToolStore(
+    (state) => state.openWorkspaceTerminal,
+  );
   const {
     changeWorkspaceMode,
     createChatForProject,
@@ -147,27 +153,41 @@ export const WorkspacePageView: FC<WorkspacePageViewProps> = ({
     openSelectedPowerWorktreeHome,
     powerHomeTabContext,
   } = powerTabs;
-  const powerHomeChat =
-    powerHomePageContext === undefined
-      ? undefined
-      : projectChatsByProjectId
-          .get(powerHomePageContext.projectId)
-          ?.find((chat) => chat.cwd === powerHomePageContext.cwd);
-  const currentLauncherTarget: PathLauncherTargetRef | undefined =
-    selectedChat && is.nonEmptyString(selectedChat.projectId)
-      ? { chatId: selectedChat.id, projectId: selectedChat.projectId }
-      : powerHomePageContext !== undefined
-        ? powerHomeChat === undefined
-          ? powerHomePageContext.cwd === activePowerWorktreeProject?.path
-            ? { projectId: powerHomePageContext.projectId }
-            : undefined
-          : {
-              chatId: powerHomeChat.id,
-              projectId: powerHomePageContext.projectId,
-            }
-        : is.nonEmptyString(draftProject.id) && pinnedDraftCwd === undefined
-          ? { projectId: draftProject.id }
-          : undefined;
+  const currentLauncherTarget = resolveWorkspacePathLauncherTarget({
+    chats,
+    draftProjectId: draftProject.id,
+    projects,
+    selectedChat,
+    worktree: powerHomePageContext ?? powerDraftContext,
+  });
+  const canOpenAngelTerminal =
+    canShowRightSidebar &&
+    is.nonEmptyString(workspaceToolContextKey) &&
+    is.nonEmptyString(workspaceToolRoot);
+  const showCurrentWorkspaceContextMenu = async () => {
+    if (currentLauncherTarget === undefined) return;
+
+    const action = await showPathLauncherContextMenu(currentLauncherTarget, {
+      includeAngelTerminal: canOpenAngelTerminal,
+    });
+    if (
+      typeof action !== "object" ||
+      action.action !== "open_angel_terminal" ||
+      !is.nonEmptyString(workspaceToolContextKey)
+    ) {
+      return;
+    }
+
+    openWorkspaceTerminal({
+      contextKey: workspaceToolContextKey,
+      root: action.target,
+    });
+    if (workspaceToolHost === "sidebar") {
+      setRightSidebarOpen(true);
+    } else {
+      toggleWorkspaceTools();
+    }
+  };
   const showWorktreeContextMenu = (
     project: (typeof projects)[number],
     worktree: Parameters<typeof navigation.openPowerWorktree>[1],
@@ -268,7 +288,7 @@ export const WorkspacePageView: FC<WorkspacePageViewProps> = ({
             onShowContextMenu={
               currentLauncherTarget === undefined
                 ? undefined
-                : () => void showPathLauncherContextMenu(currentLauncherTarget)
+                : () => void showCurrentWorkspaceContextMenu()
             }
             onToggleRightSidebar={
               canShowRightSidebar &&

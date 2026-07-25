@@ -7,4 +7,18 @@ export interface PathLauncherTargetRef {
   projectId: string;
 }
 
-export type PathLauncherMenuResult = "cancelled" | "copied" | "opened";
+export interface PathLauncherMenuRequest {
+  includeAngelTerminal?: boolean;
+  target: PathLauncherTargetRef;
+}
+
+export interface PathLauncherAngelTerminalResult {
+  action: "open_angel_terminal";
+  target: string;
+}
+
+export type PathLauncherMenuResult =
+  | PathLauncherAngelTerminalResult
+  | "cancelled"
+  | "copied"
+  | "opened";

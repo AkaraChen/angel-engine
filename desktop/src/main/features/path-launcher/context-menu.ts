@@ -25,6 +25,7 @@ function fileManagerLabel(): string {
 export async function createPathLauncherMenuItems(
   target: string,
   select: SelectPathLauncherAction,
+  options: { includeAngelTerminal?: boolean } = {},
 ): Promise<MenuItemConstructorOptions[]> {
   const availability = await pathLauncher.availability();
   const items: MenuItemConstructorOptions[] = availability.editors.map(
@@ -52,6 +53,18 @@ export async function createPathLauncherMenuItems(
       label: translate("pathLauncher.openInSystemTerminal"),
     });
   }
+  if (options.includeAngelTerminal === true) {
+    items.push({
+      click: () =>
+        select(
+          Promise.resolve({
+            action: "open_angel_terminal",
+            target,
+          }),
+        ),
+      label: translate("pathLauncher.openInAngelTerminal"),
+    });
+  }
   items.push({
     click: () =>
       select(
@@ -68,6 +81,7 @@ export async function createPathLauncherMenuItems(
 export async function showPathLauncherContextMenu(
   ref: PathLauncherTargetRef,
   window: BrowserWindow | undefined,
+  options: { includeAngelTerminal?: boolean } = {},
 ): Promise<PathLauncherMenuResult> {
   const target = await resolvePathLauncherTarget(ref);
   return new Promise((resolve, reject) => {
@@ -77,14 +91,17 @@ export async function showPathLauncherContextMenu(
       void action.then(resolve, reject);
     };
 
-    void createPathLauncherMenuItems(target, select).then((template) => {
-      const menu = Menu.buildFromTemplate(template);
-      menu.popup({
-        callback: () => {
-          if (!handled) resolve("cancelled");
-        },
-        window,
-      });
-    }, reject);
+    void createPathLauncherMenuItems(target, select, options).then(
+      (template) => {
+        const menu = Menu.buildFromTemplate(template);
+        menu.popup({
+          callback: () => {
+            if (!handled) resolve("cancelled");
+          },
+          window,
+        });
+      },
+      reject,
+    );
   });
 }

@@ -411,6 +411,7 @@ export const ja = {
     },
     pathLauncher: {
       copyPath: "パスをコピー",
+      openInAngelTerminal: "Angel ターミナルで開く",
       openInEditor: "{{editor}} で開く",
       openInFileExplorer: "エクスプローラーで開く",
       openInFileManager: "ファイルマネージャーで開く",

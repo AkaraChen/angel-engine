@@ -414,6 +414,7 @@ export const fr = {
     },
     pathLauncher: {
       copyPath: "Copier le chemin",
+      openInAngelTerminal: "Ouvrir dans le terminal Angel",
       openInEditor: "Ouvrir dans {{editor}}",
       openInFileExplorer: "Ouvrir dans l’Explorateur de fichiers",
       openInFileManager: "Ouvrir dans le gestionnaire de fichiers",
