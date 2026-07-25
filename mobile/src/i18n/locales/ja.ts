@@ -7,6 +7,9 @@ export const ja = {
     },
     common: {
       cancel: "キャンセル",
+      delete: "削除",
+      edit: "編集",
+      save: "保存",
       tryAgain: "再試行",
       newChat: "新しいチャット",
       settings: "設定",
@@ -126,6 +129,68 @@ export const ja = {
           ja: "日本語",
           es: "Español",
         },
+      },
+      projects: {
+        actionError:
+          "プロジェクトの操作を完了できませんでした。再試行してください。",
+        add: "プロジェクトを追加",
+        createTitle: "プロジェクトを追加",
+        deleteAria: "{{name}}を削除",
+        deleteChecking: "関連チャットを確認しています…",
+        deleteImpact:
+          "このプロジェクトを削除すると、関連する {{count}} 件のチャットも完全に削除されます。",
+        deleteImpactOne:
+          "このプロジェクトを削除すると、関連する 1 件のチャットも完全に削除されます。",
+        deleteImpactUnknown:
+          "このプロジェクトを削除すると、関連するチャットも完全に削除されます。",
+        deleteNoChats: "このプロジェクトに関連するチャットはありません。",
+        deleteTitle: "プロジェクトを削除しますか？",
+        description:
+          "プロジェクトは Angel Engine を実行しているコンピューター上のフォルダーを参照します。",
+        editAria: "{{name}}を編集",
+        editTitle: "プロジェクトを編集",
+        empty: "プロジェクトはまだありません。",
+        filesKept: "プロジェクトフォルダー内のファイルは保持されます。",
+        formDescription:
+          "Angel Engine を実行しているコンピューター上の絶対フォルダーパスを入力してください。",
+        loadError: "プロジェクトを読み込めませんでした。",
+        pathInvalid: "既存のフォルダーへのパスを入力してください。",
+        pathLabel: "フォルダーのパス",
+        pathPlaceholder: "/path/to/project",
+        title: "プロジェクト",
+      },
+      customAgents: {
+        actionError:
+          "カスタムエージェントの操作を完了できませんでした。再試行してください。",
+        add: "カスタムエージェントを追加",
+        argsLabel: "引数",
+        argsPlaceholder: "1 行に 1 つの引数",
+        autoAuthenticateLabel: "自動的に認証",
+        commandLabel: "コマンド",
+        createTitle: "カスタムエージェントを追加",
+        deleteAria: "{{name}}を削除",
+        deleteChecking: "関連チャットを確認しています…",
+        deleteImpact:
+          "このエージェントを削除すると、関連する {{count}} 件のチャットも完全に削除されます。",
+        deleteImpactOne:
+          "このエージェントを削除すると、関連する 1 件のチャットも完全に削除されます。",
+        deleteImpactUnknown:
+          "このエージェントを削除すると、関連するチャットも完全に削除されます。",
+        deleteNoChats: "このエージェントに関連するチャットはありません。",
+        deleteTitle: "カスタムエージェントを削除しますか？",
+        description: "軽量な ACP 互換エージェントコマンドを管理します。",
+        editAria: "{{name}}を編集",
+        editTitle: "カスタムエージェントを編集",
+        empty: "カスタムエージェントはまだありません。",
+        environmentHint: "環境変数の値はローカルに平文で保存されます。",
+        environmentLabel: "環境変数",
+        environmentPlaceholder: "NAME=value（1 行に 1 つ）",
+        formDescription:
+          "このエージェントの起動に使用するコマンドと任意の引数を設定します。",
+        loadError: "カスタムエージェントを読み込めませんでした。",
+        nameLabel: "名前",
+        needAuthLabel: "認証が必要",
+        title: "カスタムエージェント",
       },
       about: {
         title: "情報",
