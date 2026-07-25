@@ -152,8 +152,8 @@ export const CustomAgentFormDrawer: FC<CustomAgentFormDrawerProps> = ({
     <Drawer
       open={open}
       onOpenChange={(next) => {
+        reset();
         setOpen(next);
-        if (!next) reset();
       }}
     >
       <DrawerTrigger asChild>{children}</DrawerTrigger>

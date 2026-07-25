@@ -149,6 +149,12 @@ describe("resource settings", () => {
     });
     fireEvent.click(screen.getByRole("button", { name: "Save" }));
     expect(await screen.findByText("renamed")).toBeDefined();
+    fireEvent.click(screen.getByRole("button", { name: "Edit renamed" }));
+    expect(
+      ((await screen.findByLabelText("Project path")) as HTMLInputElement)
+        .value,
+    ).toBe("/Users/dev/renamed");
+    fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
 
     fireEvent.click(
       screen.getByRole("button", { name: "Edit Original agent" }),
@@ -158,6 +164,11 @@ describe("resource settings", () => {
     });
     fireEvent.click(screen.getByRole("button", { name: "Save" }));
     expect(await screen.findByText("Renamed agent")).toBeDefined();
+    fireEvent.click(screen.getByRole("button", { name: "Edit Renamed agent" }));
+    expect(
+      ((await screen.findByLabelText("Name")) as HTMLInputElement).value,
+    ).toBe("Renamed agent");
+    fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
 
     fireEvent.click(screen.getByRole("button", { name: "Delete renamed" }));
     expect(await screen.findByText(/2 linked chats/i)).toBeDefined();

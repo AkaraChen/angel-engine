@@ -90,8 +90,8 @@ export const ProjectFormDrawer: FC<ProjectFormDrawerProps> = ({
     <Drawer
       open={open}
       onOpenChange={(next) => {
+        reset();
         setOpen(next);
-        if (!next) reset();
       }}
     >
       <DrawerTrigger asChild>{children}</DrawerTrigger>
