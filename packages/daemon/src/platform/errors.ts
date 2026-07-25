@@ -130,6 +130,22 @@ export class DaemonError extends Data.TaggedError(
     });
   }
 
+  static chatRunAlreadyActive() {
+    return new DaemonError({
+      code: "chat-run-already-active",
+      message: "The chat already has an active run.",
+      status: 409,
+    });
+  }
+
+  static chatRunNotFound() {
+    return new DaemonError({
+      code: "chat-run-not-found",
+      message: "Chat run not found.",
+      status: 404,
+    });
+  }
+
   static chatStreamNotWaiting() {
     return new DaemonError({
       code: "chat-stream-not-waiting",

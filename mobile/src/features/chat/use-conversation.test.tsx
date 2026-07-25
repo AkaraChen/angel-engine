@@ -7,6 +7,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { AuthProvider } from "@/features/auth/auth-provider";
 import { DaemonProvider } from "@/platform/daemon-provider";
 import type {
+  ChatActiveRunSnapshot,
   ChatSendResult,
   ChatStreamEvent,
   DaemonChat,
@@ -19,8 +20,10 @@ import { useConversation } from "./use-conversation";
 
 interface SseHandle {
   response: Response;
+  snapshot: ChatActiveRunSnapshot;
   push: (event: ChatStreamEvent) => void;
   close: () => void;
+  fail: () => void;
 }
 
 function daemonChat(id = "c1"): DaemonChat {
@@ -77,16 +80,52 @@ function elicitation(
   return {
     id: "elic-1",
     kind: "approval",
-    phase: "pending",
+    phase: "open",
     title: "Allow?",
     ...overrides,
   };
 }
 
-/** A live SSE stream whose events are pushed by the test; errors on abort. */
-function controllableSse(signal: AbortSignal | undefined): SseHandle {
+/** A snapshot-first run observer whose sequenced events are pushed by a test. */
+function controllableRunSse(url: string, init?: RequestInit): SseHandle {
+  const body = init?.body;
+  const input = JSON.parse(typeof body === "string" ? body : "{}") as {
+    chatId?: string;
+    text?: string;
+  };
+  const runId = /\/api\/chat-runs\/([^/]+)$/.exec(url)?.[1] ?? "test-run";
+  const timestamp = "2026-07-24T00:00:00.000Z";
+  const snapshot: ChatActiveRunSnapshot = {
+    assistantMessage: {
+      content: [],
+      createdAt: timestamp,
+      id: `${runId}:assistant`,
+      role: "assistant",
+    },
+    chatId: input.chatId ?? "c1",
+    lastEventSequence: 0,
+    pendingElicitation: null,
+    runId,
+    startedAt: timestamp,
+    status: "running",
+    updatedAt: timestamp,
+    userMessage: {
+      content: [{ text: input.text ?? "", type: "text" }],
+      createdAt: timestamp,
+      id: `${runId}:user`,
+      role: "user",
+    },
+  };
+  return controllableObserverSse(snapshot, init?.signal ?? undefined);
+}
+
+function controllableObserverSse(
+  snapshot: ChatActiveRunSnapshot,
+  signal: AbortSignal | undefined,
+): SseHandle {
   const encoder = new TextEncoder();
   let controller!: ReadableStreamDefaultController<Uint8Array>;
+  let sequence = snapshot.lastEventSequence;
   const stream = new ReadableStream<Uint8Array>({
     start(c) {
       controller = c;
@@ -99,15 +138,46 @@ function controllableSse(signal: AbortSignal | undefined): SseHandle {
       // already closed
     }
   });
+  controller.enqueue(
+    encoder.encode(
+      `data: ${JSON.stringify({ snapshot, type: "snapshot" })}\n\n`,
+    ),
+  );
   return {
     response: new Response(stream, {
       status: 200,
       headers: { "content-type": "text/event-stream" },
     }),
-    push: (event) =>
-      controller.enqueue(encoder.encode(`data: ${JSON.stringify(event)}\n\n`)),
+    snapshot,
+    push: (event) => {
+      sequence += 1;
+      controller.enqueue(
+        encoder.encode(
+          `data: ${JSON.stringify({
+            event,
+            sequence,
+            type: "event",
+          })}\n\n`,
+        ),
+      );
+    },
     close: () => controller.close(),
+    fail: () => controller.error(new TypeError("connection lost")),
   };
+}
+
+function isRunStartRequest(url: string, init?: RequestInit): boolean {
+  return (
+    url.includes("/api/chat-runs/") &&
+    (init?.method ?? "GET") === "POST" &&
+    !url.endsWith("/elicitation")
+  );
+}
+
+function defaultApiResponse(url: string): Response {
+  return jsonResponse(
+    url.endsWith("/active-run") ? { run: null } : { ok: true },
+  );
 }
 
 function jsonResponse(body: unknown): Response {
@@ -137,20 +207,23 @@ afterEach(() => {
 
 describe("useConversation", () => {
   it("loads and projects the persisted transcript", async () => {
+    const transcript = {
+      chat: { id: "c1", title: "Fix bug" },
+      messages: [
+        { id: "u1", role: "user", content: [{ type: "text", text: "hi" }] },
+        {
+          id: "a1",
+          role: "assistant",
+          content: [{ type: "text", text: "hello" }],
+        },
+      ],
+    };
     vi.stubGlobal(
       "fetch",
-      vi.fn().mockResolvedValue(
-        jsonResponse({
-          chat: { id: "c1", title: "Fix bug" },
-          messages: [
-            { id: "u1", role: "user", content: [{ type: "text", text: "hi" }] },
-            {
-              id: "a1",
-              role: "assistant",
-              content: [{ type: "text", text: "hello" }],
-            },
-          ],
-        }),
+      vi.fn(async (url: string) =>
+        url.endsWith("/active-run")
+          ? jsonResponse({ run: null })
+          : jsonResponse(transcript),
       ),
     );
 
@@ -167,9 +240,8 @@ describe("useConversation", () => {
     let loadCalls = 0;
     let sse: SseHandle | undefined;
     const fetchMock = vi.fn(async (url: string, init?: RequestInit) => {
-      const method = init?.method ?? "GET";
-      if (url.includes("/api/chat-streams?") && method === "POST") {
-        sse = controllableSse(init?.signal ?? undefined);
+      if (isRunStartRequest(url, init)) {
+        sse = controllableRunSse(url, init);
         return sse.response;
       }
       if (url.endsWith("/load")) {
@@ -193,7 +265,7 @@ describe("useConversation", () => {
                 ],
         });
       }
-      return jsonResponse({ ok: true });
+      return defaultApiResponse(url);
     });
     vi.stubGlobal("fetch", fetchMock);
     stashNewChatPrompt("new-chat", "start here");
@@ -216,7 +288,7 @@ describe("useConversation", () => {
 
     await waitFor(() => expect(sse).toBeDefined());
     const streamRequest = fetchMock.mock.calls.find(
-      ([url]) => typeof url === "string" && url.includes("/api/chat-streams?"),
+      ([url, init]) => typeof url === "string" && isRunStartRequest(url, init),
     );
     expect(streamRequest?.[1]?.body).toBe(
       JSON.stringify({ chatId: "new-chat", text: "start here" }),
@@ -235,8 +307,8 @@ describe("useConversation", () => {
     await waitFor(() => expect(result.current.isPending).toBe(false));
     expect(
       fetchMock.mock.calls.filter(
-        ([url]) =>
-          typeof url === "string" && url.includes("/api/chat-streams?"),
+        ([url, init]) =>
+          typeof url === "string" && isRunStartRequest(url, init),
       ),
     ).toHaveLength(1);
     expect(result.current.messages.map((message) => message.text)).toEqual([
@@ -248,9 +320,8 @@ describe("useConversation", () => {
   it("does not resend a stashed prompt when the hook remounts before the send fires", async () => {
     let sse: SseHandle | undefined;
     const fetchMock = vi.fn(async (url: string, init?: RequestInit) => {
-      const method = init?.method ?? "GET";
-      if (url.includes("/api/chat-streams?") && method === "POST") {
-        sse = controllableSse(init?.signal ?? undefined);
+      if (isRunStartRequest(url, init)) {
+        sse = controllableRunSse(url, init);
         return sse.response;
       }
       if (url.endsWith("/load")) {
@@ -259,7 +330,7 @@ describe("useConversation", () => {
           messages: [],
         });
       }
-      return jsonResponse({ ok: true });
+      return defaultApiResponse(url);
     });
     vi.stubGlobal("fetch", fetchMock);
     stashNewChatPrompt("remount-chat", "start here");
@@ -278,8 +349,8 @@ describe("useConversation", () => {
     await waitFor(() => expect(sse).toBeDefined());
     expect(
       fetchMock.mock.calls.filter(
-        ([url]) =>
-          typeof url === "string" && url.includes("/api/chat-streams?"),
+        ([url, init]) =>
+          typeof url === "string" && isRunStartRequest(url, init),
       ),
     ).toHaveLength(1);
     expect(readNewChatPrompt("remount-chat")).toBeUndefined();
@@ -289,7 +360,6 @@ describe("useConversation", () => {
     let loadCalls = 0;
     let sse: SseHandle | undefined;
     const fetchMock = vi.fn(async (url: string, init?: RequestInit) => {
-      const method = init?.method ?? "GET";
       if (url.endsWith("/load")) {
         loadCalls += 1;
         // First load: empty. After the turn, the daemon has persisted it.
@@ -312,11 +382,11 @@ describe("useConversation", () => {
                 ],
         });
       }
-      if (url.includes("/api/chat-streams?") && method === "POST") {
-        sse = controllableSse(init?.signal ?? undefined);
+      if (isRunStartRequest(url, init)) {
+        sse = controllableRunSse(url, init);
         return sse.response;
       }
-      return jsonResponse({ ok: true });
+      return defaultApiResponse(url);
     });
     vi.stubGlobal("fetch", fetchMock);
 
@@ -357,15 +427,14 @@ describe("useConversation", () => {
   it("renders streamed tool calls and upserts them by id", async () => {
     let sse: SseHandle | undefined;
     const fetchMock = vi.fn(async (url: string, init?: RequestInit) => {
-      const method = init?.method ?? "GET";
       if (url.endsWith("/load")) {
         return jsonResponse({ chat: { id: "c1", title: "c1" }, messages: [] });
       }
-      if (url.includes("/api/chat-streams?") && method === "POST") {
-        sse = controllableSse(init?.signal ?? undefined);
+      if (isRunStartRequest(url, init)) {
+        sse = controllableRunSse(url, init);
         return sse.response;
       }
-      return jsonResponse({ ok: true });
+      return defaultApiResponse(url);
     });
     vi.stubGlobal("fetch", fetchMock);
 
@@ -434,7 +503,6 @@ describe("useConversation", () => {
     let sse: SseHandle | undefined;
     let loadCalls = 0;
     const fetchMock = vi.fn(async (url: string, init?: RequestInit) => {
-      const method = init?.method ?? "GET";
       if (url.endsWith("/load")) {
         loadCalls += 1;
         return jsonResponse({
@@ -456,11 +524,11 @@ describe("useConversation", () => {
                 ],
         });
       }
-      if (url.includes("/api/chat-streams?") && method === "POST") {
-        sse = controllableSse(init?.signal ?? undefined);
+      if (isRunStartRequest(url, init)) {
+        sse = controllableRunSse(url, init);
         return sse.response;
       }
-      return jsonResponse({ ok: true });
+      return defaultApiResponse(url);
     });
     vi.stubGlobal("fetch", fetchMock);
 
@@ -485,19 +553,33 @@ describe("useConversation", () => {
     expect(result.current.messages.at(-1)?.text).toBe("Done.");
   });
 
-  it("drops pending input and aborts the stream when the chat changes", async () => {
+  it("detaches on chat switch and rebuilds the run from a snapshot", async () => {
     let sse: SseHandle | undefined;
+    let reattachedSse: SseHandle | undefined;
+    let activeRun: ChatActiveRunSnapshot | null = null;
     const fetchMock = vi.fn(async (url: string, init?: RequestInit) => {
       const method = init?.method ?? "GET";
       if (url.endsWith("/load")) {
         const id = url.includes("c2") ? "c2" : "c1";
         return jsonResponse({ chat: { id, title: id }, messages: [] });
       }
-      if (url.includes("/api/chat-streams?") && method === "POST") {
-        sse = controllableSse(init?.signal ?? undefined);
+      if (url.endsWith("/active-run")) {
+        return jsonResponse({
+          run: url.includes("/c1/") ? activeRun : null,
+        });
+      }
+      if (url.endsWith("/events") && method === "GET" && activeRun !== null) {
+        reattachedSse = controllableObserverSse(
+          activeRun,
+          init?.signal ?? undefined,
+        );
+        return reattachedSse.response;
+      }
+      if (isRunStartRequest(url, init)) {
+        sse = controllableRunSse(url, init);
         return sse.response;
       }
-      return jsonResponse({ ok: true });
+      return defaultApiResponse(url);
     });
     vi.stubGlobal("fetch", fetchMock);
 
@@ -510,51 +592,153 @@ describe("useConversation", () => {
     act(() => result.current.send("hi"));
     await waitFor(() => expect(result.current.isStreaming).toBe(true));
 
-    act(() =>
-      sse!.push({
-        elicitation: elicitation({
-          id: "elic-switch",
-          kind: "approval",
-          title: "Allow the command?",
-        }),
-        type: "elicitation",
+    const pending = {
+      ...elicitation({
+        id: "elic-switch",
+        kind: "approval",
+        title: "Allow the command?",
       }),
-    );
+      phase: "open" as const,
+    };
+    act(() => {
+      sse!.push({
+        elicitation: pending,
+        type: "elicitation",
+      });
+      activeRun = {
+        ...sse!.snapshot,
+        lastEventSequence: 1,
+        pendingElicitation: pending,
+        status: "needsInput",
+      };
+    });
     await waitFor(() =>
       expect(result.current.pendingElicitation?.id).toBe("elic-switch"),
     );
 
     rerender({ id: "c2" });
 
-    // This captures the pre-reattach behavior: the in-flight turn and its
-    // pending decision are dropped, leaving the new chat idle.
     await waitFor(() => expect(result.current.isStreaming).toBe(false));
     expect(result.current.pendingElicitation).toBeNull();
     expect(result.current.messages.some((m) => m.status === "streaming")).toBe(
       false,
     );
-    // The stream was cancelled server-side via DELETE /api/chat-streams/:id.
+
+    // Route cleanup detached only; it never sent the explicit Stop request.
     expect(
       fetchMock.mock.calls.some(
         ([url, init]) =>
           typeof url === "string" &&
-          url.includes("/api/chat-streams/") &&
+          url.includes("/api/chat-runs/") &&
           init?.method === "DELETE",
       ),
-    ).toBe(true);
+    ).toBe(false);
+
+    rerender({ id: "c1" });
+    await waitFor(() => expect(reattachedSse).toBeDefined());
+    await waitFor(() => expect(result.current.isStreaming).toBe(true));
+    expect(result.current.pendingElicitation?.id).toBe("elic-switch");
+    expect(result.current.messages[0]).toMatchObject({
+      role: "user",
+      text: "hi",
+    });
+  });
+
+  it("reconnects after a temporary stream failure from a fresh snapshot", async () => {
+    let loadCalls = 0;
+    let sse: SseHandle | undefined;
+    let reattachedSse: SseHandle | undefined;
+    let activeRun: ChatActiveRunSnapshot | null = null;
+    const fetchMock = vi.fn(async (url: string, init?: RequestInit) => {
+      if (url.endsWith("/load")) {
+        loadCalls += 1;
+        return jsonResponse({
+          chat: { id: "c1", title: "c1" },
+          messages:
+            loadCalls === 1
+              ? []
+              : [
+                  {
+                    id: "u",
+                    role: "user",
+                    content: [{ text: "hi", type: "text" }],
+                  },
+                  {
+                    id: "a",
+                    role: "assistant",
+                    content: [{ text: "Hello!", type: "text" }],
+                  },
+                ],
+        });
+      }
+      if (url.endsWith("/active-run")) return jsonResponse({ run: activeRun });
+      if (url.endsWith("/events") && activeRun !== null) {
+        reattachedSse = controllableObserverSse(
+          activeRun,
+          init?.signal ?? undefined,
+        );
+        return reattachedSse.response;
+      }
+      if (isRunStartRequest(url, init)) {
+        sse = controllableRunSse(url, init);
+        return sse.response;
+      }
+      return defaultApiResponse(url);
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const { result } = renderHook(() => useConversation("c1"), { wrapper });
+    await waitFor(() => expect(result.current.isPending).toBe(false));
+
+    act(() => result.current.send("hi"));
+    await waitFor(() => expect(sse).toBeDefined());
+    act(() => sse!.push({ part: "text", text: "Hel", type: "delta" }));
+    await waitFor(() =>
+      expect(result.current.messages.at(-1)?.text).toBe("Hel"),
+    );
+
+    activeRun = {
+      ...sse!.snapshot,
+      assistantMessage: {
+        ...sse!.snapshot.assistantMessage,
+        content: [{ text: "Hello", type: "text" }],
+      },
+      lastEventSequence: 2,
+    };
+    act(() => sse!.fail());
+
+    await waitFor(() => expect(reattachedSse).toBeDefined());
+    await waitFor(() =>
+      expect(result.current.messages.at(-1)?.text).toBe("Hello"),
+    );
+
+    act(() => {
+      reattachedSse!.push({ part: "text", text: "!", type: "delta" });
+      reattachedSse!.push(resultEvent("Hello!"));
+      activeRun = null;
+      reattachedSse!.push({ type: "done" });
+      reattachedSse!.close();
+    });
+
+    await waitFor(() => expect(result.current.isStreaming).toBe(false));
+    await waitFor(() =>
+      expect(result.current.messages.map((message) => message.text)).toEqual([
+        "hi",
+        "Hello!",
+      ]),
+    );
   });
 
   it("surfaces an elicitation and resolves it so the turn continues", async () => {
     let sse: SseHandle | undefined;
     const fetchMock = vi.fn(async (url: string, init?: RequestInit) => {
-      const method = init?.method ?? "GET";
       if (url.endsWith("/load"))
         return jsonResponse({ chat: { id: "c1", title: "c1" }, messages: [] });
-      if (url.includes("/api/chat-streams?") && method === "POST") {
-        sse = controllableSse(init?.signal ?? undefined);
+      if (isRunStartRequest(url, init)) {
+        sse = controllableRunSse(url, init);
         return sse.response;
       }
-      return jsonResponse({ ok: true });
+      return defaultApiResponse(url);
     });
     vi.stubGlobal("fetch", fetchMock);
 
@@ -619,8 +803,8 @@ describe("useConversation", () => {
           },
         });
       }
-      if (url.includes("/api/chat-streams?") && method === "POST") {
-        sse = controllableSse(init?.signal ?? undefined);
+      if (isRunStartRequest(url, init)) {
+        sse = controllableRunSse(url, init);
         return sse.response;
       }
       if (url.endsWith("/elicitation") && method === "POST") {
@@ -629,7 +813,7 @@ describe("useConversation", () => {
           headers: { "content-type": "application/json" },
         });
       }
-      return jsonResponse({ ok: true });
+      return defaultApiResponse(url);
     });
     vi.stubGlobal("fetch", fetchMock);
 
@@ -686,15 +870,15 @@ describe("useConversation", () => {
           },
         });
       }
-      if (url.includes("/api/chat-streams?") && method === "POST") {
-        sse = controllableSse(init?.signal ?? undefined);
+      if (isRunStartRequest(url, init)) {
+        sse = controllableRunSse(url, init);
         return sse.response;
       }
       // Keep setPermissionMode pending forever if called — UI must not wait.
       if (url.endsWith("/permission-mode") && method === "PUT") {
         return await new Promise<Response>(() => {});
       }
-      return jsonResponse({ ok: true });
+      return defaultApiResponse(url);
     });
     vi.stubGlobal("fetch", fetchMock);
 
@@ -766,11 +950,19 @@ describe("useConversation", () => {
                 ],
         });
       }
-      if (url.includes("/api/chat-streams?") && method === "POST") {
-        sse = controllableSse(init?.signal ?? undefined);
+      if (isRunStartRequest(url, init)) {
+        sse = controllableRunSse(url, init);
         return sse.response;
       }
-      return jsonResponse({ ok: true });
+      if (
+        url.includes("/api/chat-runs/") &&
+        method === "DELETE" &&
+        sse !== undefined
+      ) {
+        sse.push({ type: "done" });
+        sse.close();
+      }
+      return defaultApiResponse(url);
     });
     vi.stubGlobal("fetch", fetchMock);
 
@@ -821,8 +1013,8 @@ describe("useConversation", () => {
           config: config(),
         });
       }
-      if (url.includes("/api/chat-streams?") && method === "POST") {
-        sse = controllableSse(init?.signal ?? undefined);
+      if (isRunStartRequest(url, init)) {
+        sse = controllableRunSse(url, init);
         return sse.response;
       }
       if (url.endsWith("/permission-mode") && method === "PUT") {
@@ -834,7 +1026,7 @@ describe("useConversation", () => {
           config: config(),
         });
       }
-      return jsonResponse({ ok: true });
+      return defaultApiResponse(url);
     });
     vi.stubGlobal("fetch", fetchMock);
 
@@ -845,7 +1037,7 @@ describe("useConversation", () => {
     act(() => result.current.send("make a plan"));
     await waitFor(() => expect(sse).toBeDefined());
     const streamRequest = fetchMock.mock.calls.find(
-      ([url]) => typeof url === "string" && url.includes("/api/chat-streams?"),
+      ([url, init]) => typeof url === "string" && isRunStartRequest(url, init),
     );
     expect(streamRequest?.[1]?.body).toBe(
       JSON.stringify({
@@ -948,7 +1140,7 @@ describe("useConversation", () => {
           resolveMode = resolve;
         });
       }
-      return jsonResponse({ ok: true });
+      return defaultApiResponse(url);
     });
     vi.stubGlobal("fetch", fetchMock);
 
@@ -1008,7 +1200,6 @@ describe("useConversation", () => {
   it("collapses persisted plans when a live plan of the same kind streams in", async () => {
     let sse: SseHandle | undefined;
     const fetchMock = vi.fn(async (url: string, init?: RequestInit) => {
-      const method = init?.method ?? "GET";
       if (url.endsWith("/load")) {
         return jsonResponse({
           chat: { id: "c1", title: "c1" },
@@ -1031,11 +1222,11 @@ describe("useConversation", () => {
           ],
         });
       }
-      if (url.includes("/api/chat-streams?") && method === "POST") {
-        sse = controllableSse(init?.signal ?? undefined);
+      if (isRunStartRequest(url, init)) {
+        sse = controllableRunSse(url, init);
         return sse.response;
       }
-      return jsonResponse({ ok: true });
+      return defaultApiResponse(url);
     });
     vi.stubGlobal("fetch", fetchMock);
 

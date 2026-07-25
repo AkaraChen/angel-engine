@@ -13,6 +13,7 @@ import { AuthProvider } from "@/features/auth/auth-provider";
 import { stashNewChatPrompt } from "@/features/chat/new-chat-prompt";
 import { DaemonProvider } from "@/platform/daemon-provider";
 import type {
+  ChatActiveRunSnapshot,
   ChatSendResult,
   ChatStreamEvent,
   DaemonChat,
@@ -76,30 +77,85 @@ function toolAction(
   };
 }
 
-function controllableSse(signal: AbortSignal | undefined): SseHandle {
+function controllableRunSse(
+  url: string,
+  init: RequestInit | undefined,
+): SseHandle {
   const encoder = new TextEncoder();
   let controller!: ReadableStreamDefaultController<Uint8Array>;
+  let sequence = 0;
+  const body = init?.body;
+  const input = JSON.parse(typeof body === "string" ? body : "{}") as {
+    chatId?: string;
+    text?: string;
+  };
+  const runId = /\/api\/chat-runs\/([^/]+)$/.exec(url)?.[1] ?? "test-run";
+  const timestamp = "2026-07-24T00:00:00.000Z";
+  const snapshot: ChatActiveRunSnapshot = {
+    assistantMessage: {
+      content: [],
+      createdAt: timestamp,
+      id: `${runId}:assistant`,
+      role: "assistant",
+    },
+    chatId: input.chatId ?? "test-chat",
+    lastEventSequence: 0,
+    pendingElicitation: null,
+    runId,
+    startedAt: timestamp,
+    status: "running",
+    updatedAt: timestamp,
+    userMessage: {
+      content: [{ text: input.text ?? "", type: "text" }],
+      createdAt: timestamp,
+      id: `${runId}:user`,
+      role: "user",
+    },
+  };
   const stream = new ReadableStream<Uint8Array>({
     start(c) {
       controller = c;
     },
   });
-  signal?.addEventListener("abort", () => {
+  init?.signal?.addEventListener("abort", () => {
     try {
       controller.error(new DOMException("aborted", "AbortError"));
     } catch {
       // already closed
     }
   });
+  controller.enqueue(
+    encoder.encode(
+      `data: ${JSON.stringify({ snapshot, type: "snapshot" })}\n\n`,
+    ),
+  );
   return {
     response: new Response(stream, {
       status: 200,
       headers: { "content-type": "text/event-stream" },
     }),
-    push: (event) =>
-      controller.enqueue(encoder.encode(`data: ${JSON.stringify(event)}\n\n`)),
+    push: (event) => {
+      sequence += 1;
+      controller.enqueue(
+        encoder.encode(
+          `data: ${JSON.stringify({
+            event,
+            sequence,
+            type: "event",
+          })}\n\n`,
+        ),
+      );
+    },
     close: () => controller.close(),
   };
+}
+
+function isRunStartRequest(url: string, init?: RequestInit): boolean {
+  return (
+    url.includes("/api/chat-runs/") &&
+    (init?.method ?? "GET") === "POST" &&
+    !url.endsWith("/elicitation")
+  );
 }
 
 function jsonResponse(body: unknown): Response {
@@ -134,18 +190,26 @@ describe("ChatPage", () => {
   it("renders a persisted transcript", async () => {
     vi.stubGlobal(
       "fetch",
-      vi.fn(async () =>
-        jsonResponse({
-          chat: { id: "c1", title: "Greeting" },
-          messages: [
-            { id: "u1", role: "user", content: [{ type: "text", text: "hi" }] },
-            {
-              id: "a1",
-              role: "assistant",
-              content: [{ type: "text", text: "Hello!" }],
-            },
-          ],
-        }),
+      vi.fn(async (url: string) =>
+        jsonResponse(
+          url.endsWith("/active-run")
+            ? { run: null }
+            : {
+                chat: { id: "c1", title: "Greeting" },
+                messages: [
+                  {
+                    id: "u1",
+                    role: "user",
+                    content: [{ type: "text", text: "hi" }],
+                  },
+                  {
+                    id: "a1",
+                    role: "assistant",
+                    content: [{ type: "text", text: "Hello!" }],
+                  },
+                ],
+              },
+        ),
       ),
     );
 
@@ -159,22 +223,26 @@ describe("ChatPage", () => {
     const markdown = "# Title\n\n- First\n- Second\n\nUse `code` here.";
     vi.stubGlobal(
       "fetch",
-      vi.fn(async () =>
-        jsonResponse({
-          chat: { id: "md", title: "Markdown" },
-          messages: [
-            {
-              id: "u1",
-              role: "user",
-              content: [{ type: "text", text: "format please" }],
-            },
-            {
-              id: "a1",
-              role: "assistant",
-              content: [{ type: "text", text: markdown }],
-            },
-          ],
-        }),
+      vi.fn(async (url: string) =>
+        jsonResponse(
+          url.endsWith("/active-run")
+            ? { run: null }
+            : {
+                chat: { id: "md", title: "Markdown" },
+                messages: [
+                  {
+                    id: "u1",
+                    role: "user",
+                    content: [{ type: "text", text: "format please" }],
+                  },
+                  {
+                    id: "a1",
+                    role: "assistant",
+                    content: [{ type: "text", text: markdown }],
+                  },
+                ],
+              },
+        ),
       ),
     );
 
@@ -197,7 +265,6 @@ describe("ChatPage", () => {
     let sse: SseHandle | undefined;
     let streamCalls = 0;
     const fetchMock = vi.fn(async (url: string, init?: RequestInit) => {
-      const method = init?.method ?? "GET";
       if (url.endsWith("/load")) {
         return jsonResponse({
           chat: { id: "new-chat", title: "New chat" },
@@ -215,9 +282,10 @@ describe("ChatPage", () => {
           ],
         });
       }
-      if (url.includes("/api/chat-streams?") && method === "POST") {
+      if (url.endsWith("/active-run")) return jsonResponse({ run: null });
+      if (isRunStartRequest(url, init)) {
         streamCalls += 1;
-        sse = controllableSse(init?.signal ?? undefined);
+        sse = controllableRunSse(url, init);
         return sse.response;
       }
       return jsonResponse({ ok: true });
@@ -265,34 +333,42 @@ describe("ChatPage", () => {
   it("renders persisted assistant text alongside tool-call cards", async () => {
     vi.stubGlobal(
       "fetch",
-      vi.fn(async () =>
-        jsonResponse({
-          chat: { id: "c1", title: "Mixed turn" },
-          messages: [
-            { id: "u1", role: "user", content: [{ type: "text", text: "hi" }] },
-            {
-              id: "a1",
-              role: "assistant",
-              content: [
-                { type: "text", text: "I'll run a command." },
-                {
-                  args: { command: "ls -la" },
-                  type: "tool-call",
-                  toolCallId: "t1",
-                  toolName: "command",
-                  argsText: "ls -la",
-                  artifact: toolAction({
-                    id: "t1",
-                    phase: "completed",
-                    rawInput: '{"command":"ls -la"}',
-                    outputText: "done",
-                  }),
-                },
-                { type: "text", text: " Done." },
-              ],
-            },
-          ],
-        }),
+      vi.fn(async (url: string) =>
+        jsonResponse(
+          url.endsWith("/active-run")
+            ? { run: null }
+            : {
+                chat: { id: "c1", title: "Mixed turn" },
+                messages: [
+                  {
+                    id: "u1",
+                    role: "user",
+                    content: [{ type: "text", text: "hi" }],
+                  },
+                  {
+                    id: "a1",
+                    role: "assistant",
+                    content: [
+                      { type: "text", text: "I'll run a command." },
+                      {
+                        args: { command: "ls -la" },
+                        type: "tool-call",
+                        toolCallId: "t1",
+                        toolName: "command",
+                        argsText: "ls -la",
+                        artifact: toolAction({
+                          id: "t1",
+                          phase: "completed",
+                          rawInput: '{"command":"ls -la"}',
+                          outputText: "done",
+                        }),
+                      },
+                      { type: "text", text: " Done." },
+                    ],
+                  },
+                ],
+              },
+        ),
       ),
     );
 
@@ -307,7 +383,6 @@ describe("ChatPage", () => {
     let sse: SseHandle | undefined;
     let loadCalls = 0;
     const fetchMock = vi.fn(async (url: string, init?: RequestInit) => {
-      const method = init?.method ?? "GET";
       if (url.endsWith("/load")) {
         loadCalls += 1;
         return jsonResponse({
@@ -343,8 +418,9 @@ describe("ChatPage", () => {
                 ],
         });
       }
-      if (url.includes("/api/chat-streams?") && method === "POST") {
-        sse = controllableSse(init?.signal ?? undefined);
+      if (url.endsWith("/active-run")) return jsonResponse({ run: null });
+      if (isRunStartRequest(url, init)) {
+        sse = controllableRunSse(url, init);
         return sse.response;
       }
       return jsonResponse({ ok: true });

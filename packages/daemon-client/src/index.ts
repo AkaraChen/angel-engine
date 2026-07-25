@@ -8,6 +8,7 @@ import type {
 } from "@angel-engine/daemon-api/agents";
 import type {
   Chat,
+  ChatActiveRunResult,
   ChatArchivedDeleteImpact,
   ChatArchivedDeleteImpactInput,
   ChatArchivedDeleteInput,
@@ -22,6 +23,8 @@ import type {
   ChatRenameInput,
   ChatRuntimeConfig,
   ChatRuntimeConfigInput,
+  ChatRunObserverEvent,
+  ChatRunStartInput,
   ChatSendInput,
   ChatSetModeInput,
   ChatSetModeResult,
@@ -32,7 +35,11 @@ import type {
   ProjectFileSearchInput,
   ProjectFileSearchResult,
 } from "@angel-engine/daemon-api/chat";
-import { isChatStreamEvent } from "@angel-engine/daemon-api/chat";
+import {
+  isChatActiveRunResult,
+  isChatRunObserverEvent,
+  isChatStreamEvent,
+} from "@angel-engine/daemon-api/chat";
 import type {
   DaemonErrorPayload,
   DaemonHealth,
@@ -64,7 +71,7 @@ import { readSseEvents } from "./sse";
 export { DaemonRequestError } from "./errors";
 export { readSseEvents } from "./sse";
 
-/** Response of `POST /api/chat-streams/:id/elicitation`. */
+/** Input for either chat-stream or chat-run elicitation resolution. */
 export interface ChatStreamElicitationInput {
   elicitationId: string;
   response: ChatElicitationResponse;
@@ -170,6 +177,51 @@ export function createDaemonClient(options: DaemonClientOptions) {
     }
   }
 
+  async function* streamChatRun(
+    path: string,
+    init: RequestInit,
+  ): AsyncIterable<ChatRunObserverEvent> {
+    const response = await send(path, {
+      ...init,
+      headers: { ...headersRecord(init.headers), accept: "text/event-stream" },
+    });
+    if (!response.ok) {
+      throw DaemonRequestError.http(
+        response.status,
+        undefined,
+        `Daemon request failed: ${init.method ?? "GET"} ${path}`,
+      );
+    }
+    if (response.body === null) {
+      throw DaemonRequestError.invalidResponse(
+        `Daemon returned an empty stream for ${path}.`,
+        response.status,
+      );
+    }
+
+    let lastSequence: number | undefined;
+    for await (const message of readSseEvents(response.body)) {
+      if (!isChatRunObserverEvent(message)) {
+        throw invalidRunResponse(path, response.status);
+      }
+      if (lastSequence === undefined) {
+        if (message.type !== "snapshot") {
+          throw invalidRunResponse(path, response.status);
+        }
+        lastSequence = message.snapshot.lastEventSequence;
+      } else {
+        if (message.type !== "event" || message.sequence !== lastSequence + 1) {
+          throw invalidRunResponse(path, response.status);
+        }
+        lastSequence = message.sequence;
+      }
+      yield message;
+    }
+    if (lastSequence === undefined) {
+      throw invalidRunResponse(path, response.status);
+    }
+  }
+
   return {
     agents: {
       createCustom: (input: CreateCustomAgentInput) =>
@@ -208,6 +260,44 @@ export function createDaemonClient(options: DaemonClientOptions) {
           json("POST", input),
         ),
       send: streamChat,
+    },
+    chatRuns: {
+      getActive: async (
+        chatId: string,
+        signal?: AbortSignal,
+      ): Promise<ChatActiveRunResult> => {
+        const path = `/api/chats/${encodeURIComponent(chatId)}/active-run`;
+        const result = await request<unknown>(path, { signal });
+        if (!isChatActiveRunResult(result)) {
+          throw invalidRunResponse(path);
+        }
+        return result;
+      },
+      observe: (runId: string, signal?: AbortSignal) => {
+        const path = `/api/chat-runs/${encodeURIComponent(runId)}/events`;
+        return streamChatRun(path, { method: "GET", signal });
+      },
+      resolveElicitation: (runId: string, input: ChatStreamElicitationInput) =>
+        request<{ resolved: boolean }>(
+          `/api/chat-runs/${encodeURIComponent(runId)}/elicitation`,
+          json("POST", input),
+        ),
+      start: (
+        input: ChatRunStartInput,
+        runId: string,
+        signal?: AbortSignal,
+      ) => {
+        const path = `/api/chat-runs/${encodeURIComponent(runId)}`;
+        return streamChatRun(path, {
+          ...json("POST", input),
+          signal,
+        });
+      },
+      stop: (runId: string) =>
+        request<{ ok: boolean }>(
+          `/api/chat-runs/${encodeURIComponent(runId)}`,
+          { method: "DELETE" },
+        ),
     },
     chats: {
       archive: (id: string) =>
@@ -351,4 +441,17 @@ function query(input: object) {
     if (value !== undefined) parameters.set(key, String(value));
   }
   return parameters.toString();
+}
+
+function headersRecord(
+  headers: HeadersInit | undefined,
+): Record<string, string> {
+  return Object.fromEntries(new Headers(headers).entries());
+}
+
+function invalidRunResponse(path: string, status = 200) {
+  return DaemonRequestError.invalidResponse(
+    `Daemon returned an invalid chat run response for ${path}.`,
+    status,
+  );
 }

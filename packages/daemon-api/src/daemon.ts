@@ -50,6 +50,8 @@ export type DaemonErrorCode =
   | "chat-not-archived"
   | "chat-not-found"
   | "chat-prewarm-failed"
+  | "chat-run-already-active"
+  | "chat-run-not-found"
   | "chat-runtime-locked"
   | "chat-runtime-unknown"
   | "chat-stream-not-waiting"

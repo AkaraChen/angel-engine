@@ -485,6 +485,17 @@ export const chatRuntimeConfigInputSchema = arkType({
   "runtime?": "string > 0 | undefined",
 });
 
+export const chatRunStartInputSchema = arkType({
+  "+": "ignore",
+  "attachments?": "unknown | undefined",
+  chatId: "string > 0",
+  "model?": "string > 0 | undefined",
+  "mode?": "string > 0 | null | undefined",
+  "permissionMode?": "string > 0 | null | undefined",
+  "reasoningEffort?": "string > 0 | null | undefined",
+  text: "string",
+});
+
 export const chatSendInputSchema = arkType({
   "+": "ignore",
   "attachments?": "unknown | undefined",

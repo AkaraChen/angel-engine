@@ -1,9 +1,11 @@
 import type {
+  ChatActiveRunSnapshot,
   ChatElicitationResponse,
   ChatLoadResult,
+  ChatRunObserverEvent,
+  ChatRunStartInput,
   ConversationMessage,
   DaemonElicitation,
-  DaemonMessagePart,
   DaemonPlanData,
   DaemonRuntimeConfig,
   ProjectedConversationToolCall,
@@ -11,20 +13,21 @@ import type {
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useReducer, useRef } from "react";
+import { DaemonRequestError } from "@angel-engine/daemon-client";
 
 import { useDaemonClient } from "@/platform/daemon-provider";
 import { queryKeys } from "@/platform/query-keys";
 
-import { toConversation, toolCallFromAction } from "./message-view";
+import {
+  partsToPlans,
+  partsToText,
+  partsToToolCalls,
+  toConversation,
+  toolCallFromAction,
+} from "./message-view";
 import { clearNewChatPrompt, readNewChatPrompt } from "./new-chat-prompt";
 import { findPlanModeToggleTarget } from "./mode-options";
-import {
-  chatPlanPartName,
-  cloneChatPlanData,
-  isChatPlanPart,
-  normalizeConversationPlans,
-  upsertPlan,
-} from "./plan-utils";
+import { normalizeConversationPlans, upsertPlan } from "./plan-utils";
 
 export interface Conversation {
   /** Persisted history plus the live (streaming) turn, in render order. */
@@ -104,21 +107,21 @@ function newStreamId(): string {
 }
 
 /**
- * Drives a single conversation: history query + an optimistic, streamed turn.
- *
- * The live turn (the just-sent user message and the assistant reply as it
- * arrives) lives in a ref rather than the query cache so partial tokens never
- * leak into the cached transcript. When the turn finishes we append it to the
- * cache and reconcile with the daemon's canonical copy. All live state is keyed
- * to `chatId` and reset on switch so chat A's stream never bleeds into chat B.
+ * Drives one conversation from canonical history plus a daemon-owned active run.
+ * Route/component cleanup only detaches this observer; the daemon keeps the
+ * provider alive until completion or an explicit Stop.
  */
 export function useConversation(chatId: string): Conversation {
   const daemon = useDaemonClient();
   const queryClient = useQueryClient();
 
-  const abortRef = useRef<AbortController | null>(null);
-  const streamIdRef = useRef<string | null>(null);
+  const observerRef = useRef<{
+    controller: AbortController;
+    runId: string | null;
+  } | null>(null);
+  const runIdRef = useRef<string | null>(null);
   const liveTurnRef = useRef<LiveTurn>(EMPTY_TURN);
+  const liveErrorRef = useRef<string | null>(null);
   const elicitationRef = useRef<DaemonElicitation | null>(null);
   const [, forceRender] = useReducer((n: number) => n + 1, 0);
 
@@ -127,108 +130,6 @@ export function useConversation(chatId: string): Conversation {
     forceRender();
   }, []);
 
-  const streamTurn = useCallback(
-    async (text: string, externalSignal?: AbortSignal) => {
-      const controller = new AbortController();
-      const streamId = newStreamId();
-      const abortFromExternal = () => controller.abort(externalSignal?.reason);
-      externalSignal?.addEventListener("abort", abortFromExternal, {
-        once: true,
-      });
-      abortRef.current = controller;
-      streamIdRef.current = streamId;
-      const config = queryClient.getQueryData<ChatLoadResult>(
-        queryKeys.chats.load(chatId),
-      )?.config;
-      const sendInput = {
-        chatId,
-        text,
-        ...(config?.currentMode ? { mode: config.currentMode } : {}),
-        ...(config?.currentPermissionMode
-          ? { permissionMode: config.currentPermissionMode }
-          : {}),
-      };
-      try {
-        for await (const event of daemon.chatStreams.send(
-          sendInput,
-          streamId,
-          controller.signal,
-        )) {
-          if (event.type === "delta") {
-            const { part, text: delta } = event;
-            const turn = liveTurnRef.current;
-            updateAssistant(
-              part === "reasoning"
-                ? { assistantReasoning: turn.assistantReasoning + delta }
-                : { assistantText: turn.assistantText + delta },
-            );
-          } else if (event.type === "tool" || event.type === "toolDelta") {
-            // Tool actions stream as a full snapshot each time (a `tool` when a
-            // call is proposed/started, `toolDelta` as its output/phase update);
-            // upsert by id so the inline card reflects the latest state.
-            const call = toolCallFromAction(event.action);
-            const turn = liveTurnRef.current;
-            updateAssistant({
-              assistantToolCalls: upsertToolCall(turn.assistantToolCalls, call),
-            });
-          } else if (event.type === "plan") {
-            const turn = liveTurnRef.current;
-            updateAssistant({
-              assistantPlans: upsertPlan(turn.assistantPlans, event.plan),
-            });
-          } else if (event.type === "elicitation") {
-            elicitationRef.current = event.elicitation;
-            forceRender();
-          } else if (event.type === "result") {
-            // The daemon always sends `result.text` (empty string when there is
-            // no prose). Keep any text we already streamed so a final empty
-            // result does not wipe the live bubble.
-            const turn = liveTurnRef.current;
-            const resultContent: DaemonMessagePart[] = event.result.content;
-            const resultPlans = resultContent
-              .filter(isChatPlanPart)
-              .map((part) => cloneChatPlanData(part.data));
-            let nextPlans = turn.assistantPlans;
-            for (const plan of resultPlans) {
-              nextPlans = upsertPlan(nextPlans, plan);
-            }
-            updateAssistant({
-              assistantText: event.result.text || turn.assistantText,
-              assistantPlans: nextPlans,
-            });
-            // ExitPlanMode (and similar) may update permission mode mid-turn;
-            // apply the final config so the composer chip leaves Plan mode.
-            if (event.result.config) {
-              queryClient.setQueryData<ChatLoadResult>(
-                queryKeys.chats.load(chatId),
-                (current) =>
-                  current
-                    ? { ...current, config: event.result.config }
-                    : current,
-              );
-            }
-          } else if (event.type === "error") {
-            throw new Error(event.message || "The assistant turn failed.");
-          } else if (event.type === "done") {
-            break;
-          }
-        }
-      } catch (error) {
-        if (!controller.signal.aborted) throw error;
-        // A user Stop is an expected partial completion and continues to
-        // canonical history hydration.
-        if (externalSignal?.aborted) throw error;
-      } finally {
-        externalSignal?.removeEventListener("abort", abortFromExternal);
-        abortRef.current = null;
-        streamIdRef.current = null;
-        elicitationRef.current = null;
-        forceRender();
-      }
-    },
-    [chatId, daemon, queryClient, updateAssistant],
-  );
-
   const history = useQuery({
     queryKey: queryKeys.chats.load(chatId),
     queryFn: async () => daemon.chats.load(chatId),
@@ -236,64 +137,183 @@ export function useConversation(chatId: string): Conversation {
     retry: false,
   });
 
-  const mutation = useMutation<void, Error, string>({
-    mutationFn: async (text) => streamTurn(text),
-    onSuccess: async (_data, text) => {
-      const turn = liveTurnRef.current;
-      // Skip if the turn was disposed (chat switch/unmount cleared the ref).
-      if (turn.userId.length === 0) return;
-      const content: DaemonMessagePart[] = [];
-      if (turn.assistantReasoning.length > 0)
-        content.push({ type: "reasoning", text: turn.assistantReasoning });
-      // Keep the streamed tool cards visible between the optimistic append and
-      // the background refetch that replaces this turn with the daemon's copy.
-      for (const call of turn.assistantToolCalls)
-        content.push(toolCallToPart(call));
-      for (const plan of turn.assistantPlans) {
-        content.push({
-          type: "data",
-          name: chatPlanPartName(plan),
-          data: cloneChatPlanData(plan),
-        });
-      }
-      content.push({ type: "text", text: turn.assistantText });
-      const appendTurn = (result: ChatLoadResult): ChatLoadResult => ({
-        ...result,
-        messages: [
-          ...result.messages,
-          { id: turn.userId, role: "user", content: [{ type: "text", text }] },
-          { id: turn.assistantId, role: "assistant", content },
-        ],
-      });
+  const applySnapshot = useCallback((snapshot: ChatActiveRunSnapshot) => {
+    liveTurnRef.current = {
+      assistantId: snapshot.assistantMessage.id,
+      assistantPlans: partsToPlans(snapshot.assistantMessage.content),
+      assistantReasoning: partsToText(
+        snapshot.assistantMessage.content,
+        "reasoning",
+      ),
+      assistantText: partsToText(snapshot.assistantMessage.content, "text"),
+      assistantToolCalls: partsToToolCalls(snapshot.assistantMessage.content),
+      userId: snapshot.userMessage.id,
+      userText: partsToText(snapshot.userMessage.content, "text"),
+    };
+    runIdRef.current = snapshot.runId;
+    liveErrorRef.current = null;
+    elicitationRef.current = snapshot.pendingElicitation;
+    forceRender();
+  }, []);
 
-      const cached = queryClient.getQueryData<ChatLoadResult>(
-        queryKeys.chats.load(chatId),
-      );
-      if (cached) {
-        // Append the finished turn so it stays put, then invalidate in the
-        // background so the daemon's canonical copy replaces it.
-        queryClient.setQueryData(
-          queryKeys.chats.load(chatId),
-          appendTurn(cached),
+  const applyEvent = useCallback(
+    (message: Extract<ChatRunObserverEvent, { type: "event" }>): boolean => {
+      const event = message.event;
+      if (event.type === "delta") {
+        const turn = liveTurnRef.current;
+        updateAssistant(
+          event.part === "reasoning"
+            ? {
+                assistantReasoning: turn.assistantReasoning + event.text,
+              }
+            : { assistantText: turn.assistantText + event.text },
         );
-        liveTurnRef.current = EMPTY_TURN;
-        forceRender();
-        void queryClient.invalidateQueries({
-          queryKey: queryKeys.chats.load(chatId),
+      } else if (event.type === "tool" || event.type === "toolDelta") {
+        const turn = liveTurnRef.current;
+        updateAssistant({
+          assistantToolCalls: upsertToolCall(
+            turn.assistantToolCalls,
+            toolCallFromAction(event.action),
+          ),
         });
-      } else {
-        // No history cached yet: wait for the refetch (which now includes the
-        // persisted turn) before dropping the optimistic one, to avoid a gap.
-        await queryClient.invalidateQueries({
-          queryKey: queryKeys.chats.load(chatId),
+      } else if (event.type === "plan") {
+        const turn = liveTurnRef.current;
+        updateAssistant({
+          assistantPlans: upsertPlan(turn.assistantPlans, event.plan),
         });
-        liveTurnRef.current = EMPTY_TURN;
+      } else if (event.type === "elicitation") {
+        elicitationRef.current = event.elicitation;
         forceRender();
+      } else if (event.type === "result") {
+        const turn = liveTurnRef.current;
+        const content = event.result.content;
+        const resultPlans = partsToPlans(content);
+        const resultToolCalls = partsToToolCalls(content);
+        updateAssistant({
+          assistantPlans:
+            resultPlans.length > 0 ? resultPlans : turn.assistantPlans,
+          assistantReasoning:
+            partsToText(content, "reasoning") ||
+            event.result.reasoning ||
+            turn.assistantReasoning,
+          assistantText:
+            partsToText(content, "text") ||
+            event.result.text ||
+            turn.assistantText,
+          assistantToolCalls:
+            resultToolCalls.length > 0
+              ? resultToolCalls
+              : turn.assistantToolCalls,
+        });
+        if (event.result.config) {
+          queryClient.setQueryData<ChatLoadResult>(
+            queryKeys.chats.load(chatId),
+            (current) =>
+              current ? { ...current, config: event.result.config } : current,
+          );
+        }
+      } else if (event.type === "error") {
+        liveErrorRef.current = event.message || "The assistant turn failed.";
+        forceRender();
+      }
+      return event.type === "done";
+    },
+    [chatId, queryClient, updateAssistant],
+  );
+
+  const reconcileHistory = useCallback(
+    async (controller: AbortController) => {
+      await queryClient.invalidateQueries({
+        queryKey: queryKeys.chats.load(chatId),
+      });
+      if (observerRef.current?.controller !== controller) return;
+      if (liveErrorRef.current === null) liveTurnRef.current = EMPTY_TURN;
+      forceRender();
+    },
+    [chatId, queryClient],
+  );
+
+  const followRun = useCallback(
+    async (
+      initialRunId: string,
+      initialEvents: AsyncIterable<ChatRunObserverEvent>,
+      controller: AbortController,
+      knownActive: boolean,
+    ) => {
+      let runId = initialRunId;
+      let events = initialEvents;
+      let hasSnapshot = knownActive;
+      for (;;) {
+        let streamError: unknown;
+        try {
+          for await (const message of events) {
+            if (controller.signal.aborted) return;
+            if (message.type === "snapshot") {
+              hasSnapshot = true;
+              applySnapshot(message.snapshot);
+            } else if (applyEvent(message)) {
+              await reconcileHistory(controller);
+              return;
+            }
+          }
+        } catch (error) {
+          if (controller.signal.aborted) return;
+          if (isInvalidRunResponse(error)) throw error;
+          streamError = error;
+        }
+
+        if (controller.signal.aborted) return;
+        for (;;) {
+          try {
+            const active = await daemon.chatRuns.getActive(
+              chatId,
+              controller.signal,
+            );
+            if (active.run === null) {
+              if (!hasSnapshot && streamError !== undefined) throw streamError;
+              await reconcileHistory(controller);
+              return;
+            }
+            runId = active.run.runId;
+            hasSnapshot = true;
+            observerRef.current = { controller, runId };
+            applySnapshot(active.run);
+            events = daemon.chatRuns.observe(runId, controller.signal);
+            break;
+          } catch (error) {
+            if (controller.signal.aborted) return;
+            if (error === streamError) throw error;
+            if (isInvalidRunResponse(error)) throw error;
+            await reconnectDelay(controller.signal);
+          }
+        }
       }
     },
-  });
+    [applyEvent, applySnapshot, chatId, daemon, reconcileHistory],
+  );
 
-  const { mutate, reset } = mutation;
+  const observeRun = useCallback(
+    (
+      runId: string,
+      events: AsyncIterable<ChatRunObserverEvent>,
+      controller: AbortController,
+      knownActive: boolean,
+    ) => {
+      void followRun(runId, events, controller, knownActive)
+        .catch((error: unknown) => {
+          if (controller.signal.aborted) return;
+          liveErrorRef.current = errorMessage(error);
+        })
+        .finally(() => {
+          if (observerRef.current?.controller !== controller) return;
+          observerRef.current = null;
+          runIdRef.current = null;
+          elicitationRef.current = null;
+          forceRender();
+        });
+    },
+    [followRun],
+  );
 
   const modeMutation = useMutation({
     mutationFn: async (input: {
@@ -342,70 +362,143 @@ export function useConversation(chatId: string): Conversation {
   const send = useCallback(
     (raw: string) => {
       const text = raw.trim();
-      if (text.length === 0 || abortRef.current !== null) return;
-      // Consume any stashed initial prompt so it is never auto-sent again.
+      if (text.length === 0 || observerRef.current !== null) return;
       clearNewChatPrompt(chatId);
-      const stamp = newStreamId();
+      const runId = newStreamId();
+      const controller = new AbortController();
+      const config = queryClient.getQueryData<ChatLoadResult>(
+        queryKeys.chats.load(chatId),
+      )?.config;
+      const input: ChatRunStartInput = {
+        chatId,
+        text,
+        ...(config?.currentMode ? { mode: config.currentMode } : {}),
+        ...(config?.currentPermissionMode
+          ? { permissionMode: config.currentPermissionMode }
+          : {}),
+      };
+      observerRef.current = { controller, runId };
+      runIdRef.current = runId;
       liveTurnRef.current = {
-        userId: `local-user-${stamp}`,
-        assistantId: `local-assistant-${stamp}`,
+        userId: `local-user-${runId}`,
+        assistantId: `local-assistant-${runId}`,
         userText: text,
         assistantText: "",
         assistantReasoning: "",
         assistantToolCalls: [],
         assistantPlans: [],
       };
+      liveErrorRef.current = null;
+      elicitationRef.current = null;
       forceRender();
-      mutate(text);
+      observeRun(
+        runId,
+        daemon.chatRuns.start(input, runId, controller.signal),
+        controller,
+        false,
+      );
     },
-    [chatId, mutate],
+    [chatId, daemon, observeRun, queryClient],
   );
 
-  // Auto-send a stashed new-chat prompt once the empty chat has loaded.
-  // The send is deferred by a macrotask so React StrictMode's mount/cleanup/
-  // remount cycle does not start (and abort) a stream on the first, discarded
-  // render; only the final mount actually fires the request.
   const initialPromptTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(
     null,
   );
+
+  // Bootstrap from the daemon registry before accepting a new turn. The
+  // observer stream starts with another atomic snapshot, so an event cannot
+  // fall between this lookup and attachment.
   useEffect(() => {
     if (chatId.length === 0) return;
     if (history.isPending || history.isError) return;
-    if (abortRef.current !== null || liveTurnRef.current.userId.length > 0)
-      return;
-    const prompt = readNewChatPrompt(chatId);
-    if (prompt === undefined) return;
+    if (observerRef.current !== null) return;
 
-    initialPromptTimeoutRef.current = setTimeout(() => {
-      initialPromptTimeoutRef.current = null;
-      if (abortRef.current !== null || liveTurnRef.current.userId.length > 0)
-        return;
-      clearNewChatPrompt(chatId);
-      send(prompt);
-    }, 0);
+    const controller = new AbortController();
+    observerRef.current = { controller, runId: null };
+    forceRender();
+    void daemon.chatRuns
+      .getActive(chatId, controller.signal)
+      .then((active) => {
+        if (controller.signal.aborted) return;
+        if (active.run !== null) {
+          observerRef.current = {
+            controller,
+            runId: active.run.runId,
+          };
+          applySnapshot(active.run);
+          observeRun(
+            active.run.runId,
+            daemon.chatRuns.observe(active.run.runId, controller.signal),
+            controller,
+            true,
+          );
+          return;
+        }
 
+        if (observerRef.current?.controller === controller) {
+          observerRef.current = null;
+          forceRender();
+        }
+        const prompt = readNewChatPrompt(chatId);
+        if (prompt === undefined) return;
+        // Defer the first send so React StrictMode's discarded mount can detach
+        // before the daemon run is created.
+        initialPromptTimeoutRef.current = setTimeout(() => {
+          initialPromptTimeoutRef.current = null;
+          if (
+            controller.signal.aborted ||
+            observerRef.current !== null ||
+            liveTurnRef.current.userId.length > 0
+          ) {
+            return;
+          }
+          send(prompt);
+        }, 0);
+      })
+      .catch((error: unknown) => {
+        if (controller.signal.aborted) return;
+        if (observerRef.current?.controller === controller) {
+          observerRef.current = null;
+          if (liveTurnRef.current.userId.length > 0) {
+            liveErrorRef.current = errorMessage(error);
+          }
+          forceRender();
+        }
+      });
+
+    // Detach only. The provider abort controller belongs to the daemon.
     return () => {
+      observerRef.current?.controller.abort();
+      observerRef.current = null;
+      runIdRef.current = null;
+      liveTurnRef.current = EMPTY_TURN;
+      liveErrorRef.current = null;
+      elicitationRef.current = null;
       if (initialPromptTimeoutRef.current !== null) {
         clearTimeout(initialPromptTimeoutRef.current);
         initialPromptTimeoutRef.current = null;
       }
     };
-  }, [chatId, history.isPending, history.isError, send]);
+  }, [
+    applySnapshot,
+    chatId,
+    daemon,
+    history.isError,
+    history.isPending,
+    observeRun,
+    send,
+  ]);
 
   const stop = useCallback(() => {
-    const streamId = streamIdRef.current;
-    abortRef.current?.abort();
-    elicitationRef.current = null;
-    forceRender();
-    if (streamId !== null)
-      void daemon.chatStreams.abort(streamId).catch(() => {});
+    const runId = runIdRef.current;
+    if (runId !== null) void daemon.chatRuns.stop(runId).catch(() => {});
   }, [daemon]);
 
   const respondElicitation = useCallback(
     (response: ChatElicitationResponse) => {
-      const streamId = streamIdRef.current;
+      const runId = runIdRef.current;
       const elicitation = elicitationRef.current;
-      if (streamId === null || elicitation === null) return;
+      if (runId === null || elicitation === null) return;
       const leavePlan =
         (response.type === "allow" || response.type === "allowForSession") &&
         isExitPlanModeElicitation(elicitation);
@@ -436,8 +529,8 @@ export function useConversation(chatId: string): Conversation {
           forceRender();
         }
       }
-      void daemon.chatStreams
-        .resolveElicitation(streamId, {
+      void daemon.chatRuns
+        .resolveElicitation(runId, {
           elicitationId: elicitation.id,
           response,
         })
@@ -446,7 +539,7 @@ export function useConversation(chatId: string): Conversation {
           // elicitation so the user can retry (provider is still Plan).
           if (
             leavePlan &&
-            streamIdRef.current === streamId &&
+            runIdRef.current === runId &&
             previousConfig !== undefined
           ) {
             queryClient.setQueryData<ChatLoadResult>(
@@ -455,7 +548,7 @@ export function useConversation(chatId: string): Conversation {
                 current ? { ...current, config: previousConfig } : current,
             );
           }
-          if (streamIdRef.current === streamId) {
+          if (runIdRef.current === runId) {
             elicitationRef.current = elicitation;
           }
           forceRender();
@@ -464,33 +557,16 @@ export function useConversation(chatId: string): Conversation {
     [chatId, daemon, queryClient],
   );
 
-  // Reset all live/optimistic state when the chat changes (or on unmount): abort
-  // the in-flight stream, drop the local turn, and clear mutation status so the
-  // new chat starts clean.
-  useEffect(() => {
-    return () => {
-      abortRef.current?.abort();
-      const streamId = streamIdRef.current;
-      if (streamId !== null)
-        void daemon.chatStreams.abort(streamId).catch(() => {});
-      abortRef.current = null;
-      streamIdRef.current = null;
-      liveTurnRef.current = EMPTY_TURN;
-      elicitationRef.current = null;
-      reset();
-    };
-  }, [chatId, daemon, reset]);
-
   const persisted = history.data ? toConversation(history.data.messages) : [];
   const hasStashedPrompt = readNewChatPrompt(chatId) !== undefined;
-  const liveError = mutation.isError
-    ? (mutation.error?.message ?? "The turn failed.")
-    : history.isError && liveTurnRef.current.userId.length > 0
+  const liveError =
+    liveErrorRef.current ??
+    (history.isError && liveTurnRef.current.userId.length > 0
       ? (history.error?.message ?? "The turn failed.")
-      : null;
+      : null);
   const live = buildLiveMessages(
     liveTurnRef.current,
-    mutation.isPending || abortRef.current !== null,
+    runIdRef.current !== null,
     liveError,
   );
   // Re-collapse plan presentations across the full transcript so a live plan
@@ -501,10 +577,11 @@ export function useConversation(chatId: string): Conversation {
     messages,
     isPending:
       history.isPending ||
+      (observerRef.current !== null && runIdRef.current === null) ||
       (hasStashedPrompt && liveTurnRef.current.userId.length === 0),
     isError: history.isError,
     refetch: () => void history.refetch(),
-    isStreaming: mutation.isPending || abortRef.current !== null,
+    isStreaming: runIdRef.current !== null,
     send,
     stop,
     pendingElicitation: elicitationRef.current,
@@ -559,13 +636,6 @@ function buildLiveMessages(
   return messages;
 }
 
-/** Retain the canonical part so optimistic history never invents wire fields. */
-function toolCallToPart(
-  call: ProjectedConversationToolCall,
-): DaemonMessagePart {
-  return call.historyPart;
-}
-
 /** ExitPlanMode permissions use the tool name in title/body from claude-client. */
 function isExitPlanModeElicitation(elicitation: {
   title?: string | null;
@@ -593,4 +663,29 @@ function buildPermissionModeValue(
     },
   ]);
   return target?.buildMode.value ?? "default";
+}
+
+function isInvalidRunResponse(error: unknown): boolean {
+  return (
+    error instanceof DaemonRequestError &&
+    error.message.includes("invalid chat run response")
+  );
+}
+
+function errorMessage(error: unknown): string {
+  return error instanceof Error && error.message.length > 0
+    ? error.message
+    : "The assistant turn failed.";
+}
+
+function reconnectDelay(signal: AbortSignal): Promise<void> {
+  return new Promise((resolve) => {
+    const finish = () => {
+      clearTimeout(timeout);
+      signal.removeEventListener("abort", finish);
+      resolve();
+    };
+    const timeout = setTimeout(finish, 250);
+    signal.addEventListener("abort", finish, { once: true });
+  });
 }

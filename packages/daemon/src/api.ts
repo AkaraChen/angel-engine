@@ -2,10 +2,12 @@ import type {
   Chat,
   ChatElicitationResponse,
   ChatIdsInput,
+  ChatRunObserverEvent,
+  ChatRunStartInput,
   ChatSendInput,
   ChatStreamEvent,
 } from "@angel-engine/daemon-api/chat";
-import type { Hono } from "hono";
+import type { Context, Hono } from "hono";
 import type { DaemonGlobalEvent } from "@angel-engine/daemon-api";
 import type { Db } from "./platform/db";
 import type { DaemonRuntime } from "./platform/runtime";
@@ -22,6 +24,7 @@ import {
 import {
   chatCreateInputSchema,
   chatPrewarmInputSchema,
+  chatRunStartInputSchema,
   chatRuntimeConfigInputSchema,
   chatSendInputSchema,
   chatSetModeInputSchema,
@@ -47,6 +50,7 @@ import {
 } from "./features/agents/repository";
 import { listSkillsForAgent } from "./features/agents/skills";
 import { ChatEngine } from "./features/chat/engine-runtime";
+import { ChatRunRegistry } from "./features/chat/chat-run-registry";
 import {
   archiveChat,
   deleteAllChats,
@@ -109,6 +113,38 @@ export function registerApi(
       chatEngine: Effect.Effect.Success<typeof ChatEngine>,
     ) => Effect.Effect<A, DaemonError, Db>,
   ) => Effect.flatMap(ChatEngine, use);
+  const chatRuns = new ChatRunRegistry({
+    execute: (input, onEvent, signal, controls) =>
+      run(
+        engine((chatEngine) =>
+          chatEngine.streamChat(input, onEvent, signal, controls),
+        ),
+      ),
+    publishEvent: (runId, event) =>
+      publisher.publish({ event, streamId: runId, type: "chat-stream" }),
+  });
+  const observeChatRun = (context: Context, runId: string, launch: boolean) => {
+    const queue = new AsyncQueue<ChatRunObserverEvent>();
+    const detach = chatRuns.attach(runId, (message) => queue.push(message));
+    if (launch) chatRuns.launch(runId);
+    return streamSSE(context, async (stream) => {
+      stream.onAbort(() => queue.close());
+      try {
+        for (;;) {
+          const message = await queue.shift();
+          if (message === undefined) break;
+          await stream.writeSSE({
+            data: JSON.stringify(message),
+            event: message.type,
+          });
+          if (message.type === "event" && message.event.type === "done") break;
+        }
+      } finally {
+        detach();
+        queue.close();
+      }
+    });
+  };
 
   app.get("/api/chats", async (context) =>
     context.json(await run(listChats())),
@@ -445,6 +481,40 @@ export function registerApi(
     );
   });
 
+  app.post("/api/chat-runs/:runId", async (context) => {
+    const runId = context.req.param("runId");
+    const input = parseChatRunStartInput(await context.req.json());
+    chatRuns.prepare(runId, input);
+    return observeChatRun(context, runId, true);
+  });
+  app.get("/api/chats/:chatId/active-run", (context) =>
+    context.json({ run: chatRuns.activeForChat(context.req.param("chatId")) }),
+  );
+  app.get("/api/chat-runs/:runId/events", (context) =>
+    observeChatRun(context, context.req.param("runId"), false),
+  );
+  app.delete("/api/chat-runs/:runId", (context) => {
+    chatRuns.stop(context.req.param("runId"));
+    return context.json({ ok: true });
+  });
+  app.post("/api/chat-runs/:runId/elicitation", async (context) => {
+    const body = await context.req.json<{
+      elicitationId: string;
+      response: ChatElicitationResponse;
+    }>();
+    if (
+      typeof body.elicitationId !== "string" ||
+      body.elicitationId.length === 0
+    )
+      throw DaemonError.invalidRequest("Elicitation id is required.");
+    await chatRuns.resolveElicitation(
+      context.req.param("runId"),
+      body.elicitationId,
+      body.response,
+    );
+    return context.json({ resolved: true });
+  });
+
   app.post("/api/chat-streams", async (context) => {
     const streamId = requireQuery(context.req.query("streamId"), "streamId");
     const input = parseSendInput(await context.req.json());
@@ -527,6 +597,29 @@ function parseSendInput(value: unknown): ChatSendInput {
   };
 }
 
+function parseChatRunStartInput(value: unknown): ChatRunStartInput {
+  const input = chatRunStartInputSchema(value);
+  if (input instanceof arkType.errors)
+    throw DaemonError.invalidRequest("Chat run input is required.");
+  let attachments;
+  try {
+    attachments = normalizeChatAttachmentsInput(input.attachments);
+  } catch (error) {
+    throw DaemonError.invalidRequest(errorMessage(error));
+  }
+  if (input.text.length === 0 && attachments.length === 0)
+    throw DaemonError.chatInputRequired();
+  return {
+    attachments,
+    chatId: input.chatId,
+    model: input.model,
+    mode: input.mode,
+    permissionMode: input.permissionMode,
+    reasoningEffort: input.reasoningEffort,
+    text: input.text,
+  };
+}
+
 function readChatIds(input: ChatIdsInput) {
   if (!Array.isArray(input.chatIds) || input.chatIds.length === 0)
     throw DaemonError.invalidRequest("Chat ids are required.");
@@ -581,4 +674,31 @@ function optionalNumber(value: string | undefined) {
 
 function errorMessage(error: unknown) {
   return error instanceof Error ? error.message : String(error);
+}
+
+class AsyncQueue<T> {
+  readonly #items: T[] = [];
+  readonly #waiters: Array<(item: T | undefined) => void> = [];
+  #closed = false;
+
+  push(item: T): void {
+    if (this.#closed) return;
+    const waiter = this.#waiters.shift();
+    if (waiter === undefined) this.#items.push(item);
+    else waiter(item);
+  }
+
+  shift(): Promise<T | undefined> {
+    const item = this.#items.shift();
+    if (item !== undefined) return Promise.resolve(item);
+    if (this.#closed) return Promise.resolve(undefined);
+    return new Promise((resolve) => this.#waiters.push(resolve));
+  }
+
+  close(): void {
+    if (this.#closed) return;
+    this.#closed = true;
+    this.#items.length = 0;
+    for (const waiter of this.#waiters.splice(0)) waiter(undefined);
+  }
 }

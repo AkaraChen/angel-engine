@@ -1,4 +1,9 @@
-import type { Chat, ChatStreamEvent } from "@angel-engine/daemon-api/chat";
+import type {
+  Chat,
+  ChatActiveRunSnapshot,
+  ChatRunObserverEvent,
+  ChatStreamEvent,
+} from "@angel-engine/daemon-api/chat";
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -19,6 +24,28 @@ const chat: Chat = {
   runtime: "codex",
   title: "Test",
   updatedAt: "2026-07-13T00:00:00.000Z",
+};
+
+const activeRun: ChatActiveRunSnapshot = {
+  assistantMessage: {
+    content: [{ text: "Hel", type: "text" }],
+    createdAt: "2026-07-24T00:00:00.000Z",
+    id: "run-1:assistant",
+    role: "assistant",
+  },
+  chatId: "chat-1",
+  lastEventSequence: 1,
+  pendingElicitation: null,
+  runId: "run-1",
+  startedAt: "2026-07-24T00:00:00.000Z",
+  status: "running",
+  updatedAt: "2026-07-24T00:00:01.000Z",
+  userMessage: {
+    content: [{ text: "Hi", type: "text" }],
+    createdAt: "2026-07-24T00:00:00.000Z",
+    id: "run-1:user",
+    role: "user",
+  },
 };
 
 function streamFrom(chunks: string[]): ReadableStream<Uint8Array> {
@@ -140,6 +167,110 @@ describe("streamChat", () => {
       status: 200,
     });
     await expect(rejection).rejects.toThrow(/invalid chat stream event/);
+  });
+});
+
+describe("chatRuns", () => {
+  it("starts with a validated snapshot and contiguous observer events", async () => {
+    const messages: ChatRunObserverEvent[] = [
+      { snapshot: activeRun, type: "snapshot" },
+      {
+        event: { part: "text", text: "lo", type: "delta" },
+        sequence: 2,
+        type: "event",
+      },
+      { event: { type: "done" }, sequence: 3, type: "event" },
+    ];
+    const fetchMock = vi.fn().mockResolvedValue(sseResponse(messages));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const client = createDaemonClient({ baseUrl: "", token: "secret" });
+    await expect(
+      collect(client.chatRuns.start({ chatId: "chat-1", text: "Hi" }, "run-1")),
+    ).resolves.toEqual(messages);
+
+    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(url).toBe("/api/chat-runs/run-1");
+    expect(init.method).toBe("POST");
+    expect(init.body).toBe(JSON.stringify({ chatId: "chat-1", text: "Hi" }));
+  });
+
+  it.each([
+    [
+      "an event before the snapshot",
+      [
+        {
+          event: { part: "text", text: "x", type: "delta" },
+          sequence: 1,
+          type: "event",
+        },
+      ],
+    ],
+    [
+      "a sequence gap",
+      [
+        { snapshot: activeRun, type: "snapshot" },
+        {
+          event: { part: "text", text: "x", type: "delta" },
+          sequence: 3,
+          type: "event",
+        },
+      ],
+    ],
+    ["an empty stream", []],
+  ])("rejects %s", async (_label, messages) => {
+    const fetchMock = vi.fn().mockResolvedValue(sseResponse(messages));
+    vi.stubGlobal("fetch", fetchMock);
+    const client = createDaemonClient({ baseUrl: "", token: null });
+
+    await expect(collect(client.chatRuns.observe("run-1"))).rejects.toThrow(
+      /invalid chat run response/,
+    );
+  });
+
+  it("validates active-run lookup responses", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue(jsonResponse({ run: activeRun }));
+    vi.stubGlobal("fetch", fetchMock);
+    const client = createDaemonClient({ baseUrl: "", token: null });
+
+    await expect(client.chatRuns.getActive("chat-1")).resolves.toEqual({
+      run: activeRun,
+    });
+    expect(fetchMock.mock.calls[0]?.[0]).toBe("/api/chats/chat-1/active-run");
+  });
+
+  it("rejects a malformed active-run lookup before product state", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue(jsonResponse({ run: { ...activeRun, runId: "" } }));
+    vi.stubGlobal("fetch", fetchMock);
+    const client = createDaemonClient({ baseUrl: "", token: null });
+
+    await expect(client.chatRuns.getActive("chat-1")).rejects.toThrow(
+      /invalid chat run response/,
+    );
+  });
+
+  it("stops and resolves a run through run-owned routes", async () => {
+    const fetchMock = vi.fn(async (_url: string, _init?: RequestInit) =>
+      jsonResponse({ ok: true }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+    const client = createDaemonClient({ baseUrl: "", token: null });
+
+    await client.chatRuns.stop("run-1");
+    await client.chatRuns.resolveElicitation("run-1", {
+      elicitationId: "elic-1",
+      response: { type: "allow" },
+    });
+
+    expect(fetchMock.mock.calls[0]?.[0]).toBe("/api/chat-runs/run-1");
+    expect(fetchMock.mock.calls[0]?.[1]).toMatchObject({ method: "DELETE" });
+    expect(fetchMock.mock.calls[1]?.[0]).toBe(
+      "/api/chat-runs/run-1/elicitation",
+    );
   });
 });
 

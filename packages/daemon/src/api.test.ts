@@ -32,6 +32,28 @@ const result: ChatSendResult = {
 };
 
 describe("daemon chat streams", () => {
+  it("starts daemon-owned runs with a snapshot and sequenced events", async () => {
+    const app = new Hono();
+    registerApi(app, fakeDaemonRuntime(), { publish: vi.fn() });
+
+    const response = await app.request("/api/chat-runs/run-1", {
+      body: JSON.stringify({ chatId: "chat-1", text: "hello" }),
+      headers: { "content-type": "application/json" },
+      method: "POST",
+    });
+    const body = await response.text();
+
+    expect(response.headers.get("content-type")).toContain("text/event-stream");
+    expect(body).toContain('"type":"snapshot"');
+    expect(body).toContain('"sequence":1');
+    expect(body).toContain('"type":"delta"');
+    expect(body).toContain('"type":"result"');
+    expect(body).toContain('"type":"done"');
+
+    const active = await app.request("/api/chats/chat-1/active-run");
+    await expect(active.json()).resolves.toEqual({ run: null });
+  });
+
   it("streams runtime events and publishes the global feed", async () => {
     const publish = vi.fn();
     const app = new Hono();
