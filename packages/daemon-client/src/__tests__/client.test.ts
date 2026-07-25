@@ -126,6 +126,56 @@ describe("createDaemonClient", () => {
     ]);
   });
 
+  it("lists and acknowledges daemon-owned chat activity", async () => {
+    const activity = {
+      chatId: "chat-1",
+      runId: "run-1",
+      status: "running",
+      updatedAt: "2026-07-25T01:00:00.000Z",
+    };
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(jsonResponse({ items: [activity] }))
+      .mockResolvedValueOnce(jsonResponse({ read: true }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const client = createDaemonClient({ baseUrl: "", token: null });
+    await expect(client.activity.list()).resolves.toEqual({
+      items: [activity],
+    });
+    await expect(
+      client.activity.read("chat-1", { attentionId: "run-1:done" }),
+    ).resolves.toEqual({ read: true });
+
+    expect(fetchMock.mock.calls[0]?.[0]).toBe("/api/chat-activity");
+    expect(fetchMock.mock.calls[1]?.[0]).toBe(
+      "/api/chats/chat-1/attention/read",
+    );
+  });
+
+  it("rejects a malformed chat activity snapshot", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(
+        jsonResponse({
+          items: [
+            {
+              chatId: "chat-1",
+              runId: "run-1",
+              status: "future-status",
+              updatedAt: "2026-07-25T01:00:00.000Z",
+            },
+          ],
+        }),
+      ),
+    );
+
+    const client = createDaemonClient({ baseUrl: "", token: null });
+    await expect(client.activity.list()).rejects.toBeInstanceOf(
+      DaemonRequestError,
+    );
+  });
+
   it("rejects a malformed chat attention snapshot", async () => {
     vi.stubGlobal(
       "fetch",

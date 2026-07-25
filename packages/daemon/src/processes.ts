@@ -13,14 +13,31 @@ import { DaemonError } from "./platform/errors";
 
 class ProcessRegistry {
   readonly #entries = new Map<string, ProcessRegistryEntry>();
+  readonly #listeners = new Set<
+    (entries: readonly ProcessRegistryEntry[]) => void
+  >();
 
   replace(entries: ProcessRegistryEntry[]) {
     this.#entries.clear();
     for (const entry of entries) this.#entries.set(entry.id, entry);
+    const current = this.entries();
+    for (const listener of this.#listeners) listener(current);
+  }
+
+  entries(): ProcessRegistryEntry[] {
+    return [...this.#entries.values()].map((entry) => ({ ...entry }));
+  }
+
+  observe(listener: (entries: readonly ProcessRegistryEntry[]) => void) {
+    this.#listeners.add(listener);
+    listener(this.entries());
+    return () => {
+      this.#listeners.delete(listener);
+    };
   }
 
   snapshot(): ProcessRegistrySnapshotEntry[] {
-    return [...this.#entries.values()].map((entry) => {
+    return this.entries().map((entry) => {
       const processes = listSubprocesses(entry.rootPid);
       const ports = listListeningPorts([
         entry.rootPid,
@@ -63,6 +80,9 @@ export class ProcessRegistryService extends Effect.Service<ProcessRegistryServic
           }),
         replace: (entries: ProcessRegistryEntry[]) =>
           Effect.sync(() => registry.replace(entries)),
+        observe: (
+          listener: (entries: readonly ProcessRegistryEntry[]) => void,
+        ) => Effect.sync(() => registry.observe(listener)),
         snapshot: () =>
           Effect.try({
             catch: (cause) => DaemonError.internal(cause),

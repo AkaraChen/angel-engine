@@ -61,6 +61,10 @@ export {
   parseImageDataUrl,
 };
 export {
+  isChatActivity,
+  isChatActivityListResult,
+} from "./activity";
+export {
   isChatAttention,
   isChatAttentionListResult,
   isChatAttentionReadInput,
@@ -234,6 +238,53 @@ export type ChatStreamEvent =
   | { result: ChatSendResult; type: "result" }
   | { message: string; type: "error" }
   | { type: "done" };
+
+interface ChatActivityBase {
+  chatId: string;
+  runId: string;
+  updatedAt: string;
+}
+
+export type ChatActivityStatus =
+  | "running"
+  | "waiting_for_you"
+  | "stuck"
+  | "done"
+  | "failed";
+
+export type ChatActivityReason =
+  | "approval"
+  | "question"
+  | "process_exited"
+  | "runtime_error";
+
+export type ChatActivity =
+  | (ChatActivityBase & {
+      status: "running";
+    })
+  | (ChatActivityBase & {
+      attentionId: string;
+      reason: "approval" | "question";
+      status: "waiting_for_you";
+    })
+  | (ChatActivityBase & {
+      reason: "process_exited";
+      status: "stuck";
+    })
+  | (ChatActivityBase & {
+      attentionId: string;
+      status: "done";
+    })
+  | (ChatActivityBase & {
+      attentionId: string;
+      failure: { message: string };
+      reason: "runtime_error";
+      status: "failed";
+    });
+
+export interface ChatActivityListResult {
+  items: ChatActivity[];
+}
 
 export interface ChatAttention {
   chatId: string;

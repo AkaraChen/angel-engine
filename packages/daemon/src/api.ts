@@ -52,7 +52,7 @@ import {
   updateCustomAgent,
 } from "./features/agents/repository";
 import { listSkillsForAgent } from "./features/agents/skills";
-import { ChatAttentionStore } from "./features/chat/attention";
+import { ChatActivityStore } from "./features/chat/activity";
 import { ChatEngine } from "./features/chat/engine-runtime";
 import { ChatRunRegistry } from "./features/chat/run-registry";
 import {
@@ -98,6 +98,7 @@ import {
 } from "./features/workspace-tools/service";
 import { DaemonError } from "./platform/errors";
 import { runDaemonApi } from "./platform/runtime";
+import { ProcessRegistryService } from "./processes";
 
 export interface EventPublisher {
   publish: (event: DaemonGlobalEvent) => void;
@@ -108,7 +109,9 @@ export function registerApi(
   runtime: DaemonRuntime,
   publisher: EventPublisher,
 ) {
-  const attention = new ChatAttentionStore();
+  const activity = new ChatActivityStore({
+    onChange: (chatId) => publishChatActivity(publisher, chatId),
+  });
   const run = <A>(
     effect: Effect.Effect<A, DaemonError, Db | ChatEngine>,
   ): Promise<A> => runDaemonApi(runtime, effect);
@@ -121,23 +124,27 @@ export function registerApi(
     execute: (input, onEvent, signal, controls) =>
       run(engine((e) => e.streamChat(input, onEvent, signal, controls))),
     onEvent: ({ chatId, event, runId }) => {
-      publishChatAttention(
-        publisher,
-        chatId,
-        attention.apply(chatId, runId, event),
-      );
+      activity.apply(chatId, runId, event);
     },
   });
+  void runDaemonApi(
+    runtime,
+    Effect.flatMap(ProcessRegistryService, (registry) =>
+      registry.observe((entries) => activity.replaceProcessEntries(entries)),
+    ),
+  ).catch(() => undefined);
 
-  app.get("/api/chat-attention", (context) => context.json(attention.list()));
+  app.get("/api/chat-activity", (context) => context.json(activity.list()));
+  app.get("/api/chat-attention", (context) =>
+    context.json(activity.attentionList()),
+  );
   app.post("/api/chats/:id/attention/read", async (context) => {
     const input = await context.req.json<unknown>();
     if (!isChatAttentionReadInput(input)) {
       throw DaemonError.invalidRequest("Chat attention input is invalid.");
     }
     const chatId = requirePath(context.req.param("id"), "chatId");
-    const read = attention.acknowledge(chatId, input.attentionId);
-    publishChatAttention(publisher, chatId, read);
+    const read = activity.acknowledge(chatId, input.attentionId);
     return context.json({ read });
   });
 
@@ -186,13 +193,13 @@ export function registerApi(
         yield* deleteChat(chatId);
       }),
     );
-    publishChatAttention(publisher, chatId, attention.clearChat(chatId));
+    activity.clearChat(chatId);
     publishChatMetadata(publisher, [chatId]);
     return context.json({ ok: true });
   });
   app.post("/api/chats/:id/archive", async (context) => {
     const chat = await run(archiveChat(context.req.param("id")));
-    publishChatAttention(publisher, chat.id, attention.clearChat(chat.id));
+    activity.clearChat(chat.id);
     publishChatMetadata(publisher, [chat.id]);
     return context.json(chat);
   });
@@ -282,7 +289,7 @@ export function registerApi(
       targets.map((chat) => chat.id),
     );
     for (const chat of targets) {
-      publishChatAttention(publisher, chat.id, attention.clearChat(chat.id));
+      activity.clearChat(chat.id);
     }
     return context.json({
       deletedCount,
@@ -330,7 +337,7 @@ export function registerApi(
       }),
     );
     for (const chatId of chatIds) {
-      publishChatAttention(publisher, chatId, attention.clearChat(chatId));
+      activity.clearChat(chatId);
     }
     publishChatMetadata(publisher, chatIds);
     return context.json({
@@ -382,7 +389,7 @@ export function registerApi(
       }),
     );
     for (const chatId of deletedChatIds) {
-      publishChatAttention(publisher, chatId, attention.clearChat(chatId));
+      activity.clearChat(chatId);
     }
     publishChatMetadata(publisher, deletedChatIds);
     return context.json({ deletedChatIds });
@@ -496,7 +503,7 @@ export function registerApi(
       }),
     );
     for (const chatId of result.deletedChatIds) {
-      publishChatAttention(publisher, chatId, attention.clearChat(chatId));
+      activity.clearChat(chatId);
     }
     publishChatMetadata(publisher, result.deletedChatIds);
     return context.json(result);
@@ -545,11 +552,7 @@ export function registerApi(
     const runId = requirePath(context.req.param("runId"), "runId");
     const input = parseRunStartInput(await context.req.json());
     chatRuns.reserve(runId, input);
-    publishChatAttention(
-      publisher,
-      input.chatId,
-      attention.clearChat(input.chatId),
-    );
+    activity.start(input.chatId, runId);
     return observeChatRun(context, chatRuns, runId, true);
   });
   app.get("/api/chats/:chatId/active-run", (context) =>
@@ -563,7 +566,10 @@ export function registerApi(
     return observeChatRun(context, chatRuns, runId, false);
   });
   app.delete("/api/chat-runs/:runId", (context) => {
-    chatRuns.stop(requirePath(context.req.param("runId"), "runId"));
+    const runId = requirePath(context.req.param("runId"), "runId");
+    const snapshot = chatRuns.snapshot(runId);
+    activity.cancel(snapshot.chatId, runId);
+    chatRuns.stop(runId);
     return context.json({ ok: true });
   });
   app.post("/api/chat-runs/:runId/elicitation", async (context) => {
@@ -571,11 +577,7 @@ export function registerApi(
     const body = parseElicitationResolveInput(await context.req.json());
     const snapshot = chatRuns.snapshot(runId);
     await chatRuns.resolveElicitation(runId, body.elicitationId, body.response);
-    publishChatAttention(
-      publisher,
-      snapshot.chatId,
-      attention.resolveInput(snapshot.chatId, runId, body.elicitationId),
-    );
+    activity.resolveInput(snapshot.chatId, runId, body.elicitationId);
     return context.json({ resolved: true });
   });
 }
@@ -603,12 +605,8 @@ function observeChatRun(
   });
 }
 
-function publishChatAttention(
-  publisher: EventPublisher,
-  chatId: string,
-  changed: boolean,
-) {
-  if (!changed) return;
+function publishChatActivity(publisher: EventPublisher, chatId: string) {
+  publisher.publish({ chatIds: [chatId], type: "chat-activity-changed" });
   publisher.publish({ chatIds: [chatId], type: "chat-attention-changed" });
 }
 

@@ -10,7 +10,13 @@ export interface DaemonChatAttentionChangedEvent {
   type: "chat-attention-changed";
 }
 
+export interface DaemonChatActivityChangedEvent {
+  chatIds: string[];
+  type: "chat-activity-changed";
+}
+
 export type DaemonGlobalEvent =
+  | DaemonChatActivityChangedEvent
   | DaemonChatAttentionChangedEvent
   | DaemonChatMetadataChangedEvent;
 
@@ -19,6 +25,7 @@ export function isDaemonGlobalEvent(
 ): value is DaemonGlobalEvent {
   if (!is.plainObject(value)) return false;
   switch (value.type) {
+    case "chat-activity-changed":
     case "chat-attention-changed":
     case "chat-metadata-changed":
       return (

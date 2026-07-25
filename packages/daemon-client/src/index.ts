@@ -9,6 +9,7 @@ import type {
 import type {
   Chat,
   ChatActiveRunResult,
+  ChatActivityListResult,
   ChatAttentionListResult,
   ChatAttentionReadInput,
   ChatAttentionReadResult,
@@ -19,7 +20,6 @@ import type {
   ChatArchivedRestoreInput,
   ChatAvailableSkill,
   ChatCreateInput,
-  ChatElicitationResponse,
   ChatLoadResult,
   ChatPrewarmInput,
   ChatPrewarmResult,
@@ -39,6 +39,7 @@ import type {
 } from "@angel-engine/daemon-api/chat";
 import {
   isChatActiveRunResult,
+  isChatActivityListResult,
   isChatAttentionListResult,
   isChatAttentionReadResult,
   isChatRunObserverEvent,
@@ -239,6 +240,17 @@ export function createDaemonClient(options: DaemonClientOptions) {
     return result;
   };
 
+  const listActivity = async (): Promise<ChatActivityListResult> => {
+    const result = await request<unknown>("/api/chat-activity");
+    if (!isChatActivityListResult(result)) {
+      throw DaemonRequestError.invalidResponse(
+        "Daemon returned an invalid chat activity snapshot.",
+        200,
+      );
+    }
+    return result;
+  };
+
   const readAttention = async (
     chatId: string,
     input: ChatAttentionReadInput,
@@ -307,6 +319,10 @@ export function createDaemonClient(options: DaemonClientOptions) {
     },
     attention: {
       list: listAttention,
+      read: readAttention,
+    },
+    activity: {
+      list: listActivity,
       read: readAttention,
     },
     chats: {
