@@ -26,7 +26,8 @@ const gitHubAuthorSchema = arkType({
 const gitHubIssuePayloadSchema = arkType({
   "+": "ignore",
   author: gitHubAuthorSchema,
-  body: "string",
+  // GitHub often returns null for empty issue/PR bodies.
+  body: "string | null",
   number: positiveInteger,
   state: "string > 0",
   title: "string > 0",
@@ -36,7 +37,8 @@ const gitHubPullRequestPayloadSchema = arkType({
   "+": "ignore",
   author: gitHubAuthorSchema,
   baseRefName: "string > 0",
-  body: "string",
+  // GitHub often returns null for empty issue/PR bodies.
+  body: "string | null",
   headRefName: "string > 0",
   isDraft: "boolean",
   number: positiveInteger,
@@ -212,7 +214,7 @@ function buildResolvedItem(
       throw unexpectedGitHubPayload(payload.summary);
     }
     const identity = gitHubPayloadIdentity(parsed, payload.number, payload.url);
-    const { body } = truncateBody(payload.body);
+    const { body } = truncateBody(payload.body ?? "");
     return finalizeResolvedItem(identity, {
       author: payload.author?.login ?? null,
       body,
@@ -227,7 +229,7 @@ function buildResolvedItem(
     throw unexpectedGitHubPayload(payload.summary);
   }
   const identity = gitHubPayloadIdentity(parsed, payload.number, payload.url);
-  const { body } = truncateBody(payload.body);
+  const { body } = truncateBody(payload.body ?? "");
   return finalizeResolvedItem(identity, {
     author: payload.author?.login ?? null,
     baseRefName: payload.baseRefName,

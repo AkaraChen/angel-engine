@@ -148,6 +148,31 @@ describe("resolveGitHubUrl", () => {
     expect(result.contextText).toContain("Draft: yes");
   });
 
+  it("accepts a null GitHub body as empty context", async () => {
+    const result = await Effect.runPromise(
+      resolveGitHubUrl(
+        { url: "https://github.com/acme/widgets/issues/3" },
+        {
+          runGh: async () => ({
+            stderr: "",
+            stdout: JSON.stringify({
+              author: { login: "bob" },
+              body: null,
+              number: 3,
+              state: "OPEN",
+              title: "Empty body",
+              url: "https://github.com/acme/widgets/issues/3",
+            }),
+          }),
+          whichGh: async () => "/usr/local/bin/gh",
+        },
+      ),
+    );
+
+    expect(result.body).toBe("");
+    expect(result.contextText).toContain("Body:\n(empty)");
+  });
+
   it("rejects malformed GitHub CLI payloads", async () => {
     await expectDaemonFailure(
       resolveGitHubUrl(
