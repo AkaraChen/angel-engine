@@ -676,6 +676,73 @@ describe("useConversation", () => {
     ).toBe(false);
   });
 
+  it("reattaches after a lock-screen lifecycle without stopping the run", async () => {
+    const baseSnapshot = activeRunSnapshot("c1", "hi", "run-lock");
+    const snapshot: ChatActiveRunSnapshot = {
+      ...baseSnapshot,
+      assistantMessage: {
+        ...baseSnapshot.assistantMessage,
+        content: [{ text: "Working", type: "text" }],
+      },
+      lastEventSequence: 1,
+      updatedAt: "2026-07-25T00:00:01.000Z",
+    };
+    const observers: SseHandle[] = [];
+    const fetchMock = vi.fn(async (url: string, init?: RequestInit) => {
+      const method = init?.method ?? "GET";
+      if (url.endsWith("/active-run")) {
+        return jsonResponse({ run: snapshot });
+      }
+      if (url.endsWith("/load")) {
+        return jsonResponse({ chat: { id: "c1", title: "c1" }, messages: [] });
+      }
+      if (url.endsWith("/events") && method === "GET") {
+        const observer = controllableObserverSse(
+          snapshot,
+          init?.signal ?? undefined,
+        );
+        observers.push(observer);
+        return observer.response;
+      }
+      return jsonResponse({ ok: true });
+    });
+    Object.assign(fetchMock, { handlesActiveRun: true });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const first = renderHook(() => useConversation("c1"), { wrapper });
+    await waitFor(() => expect(first.result.current.isStreaming).toBe(true));
+    expect(first.result.current.messages.at(-1)?.text).toBe("Working");
+    expect(observers).toHaveLength(1);
+
+    first.unmount();
+    expect(
+      fetchMock.mock.calls.some(
+        ([url, init]) =>
+          typeof url === "string" &&
+          url.includes("/api/chat-runs/") &&
+          init?.method === "DELETE",
+      ),
+    ).toBe(false);
+
+    const resumed = renderHook(() => useConversation("c1"), { wrapper });
+    await waitFor(() => expect(observers).toHaveLength(2));
+    await waitFor(() => expect(resumed.result.current.isStreaming).toBe(true));
+    expect(resumed.result.current.messages.at(-1)?.text).toBe("Working");
+
+    act(() => observers[1].push({ part: "text", text: "!", type: "delta" }));
+    await waitFor(() =>
+      expect(resumed.result.current.messages.at(-1)?.text).toBe("Working!"),
+    );
+    expect(
+      fetchMock.mock.calls.some(
+        ([url, init]) =>
+          typeof url === "string" &&
+          url.includes("/api/chat-runs/") &&
+          init?.method === "DELETE",
+      ),
+    ).toBe(false);
+  });
+
   it("reattaches from the active snapshot after temporary network loss", async () => {
     let snapshot: ChatActiveRunSnapshot | null = null;
     let firstObserver: SseHandle | undefined;
