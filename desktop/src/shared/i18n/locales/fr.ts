@@ -412,6 +412,14 @@ export const fr = {
       chooseFolder: "Choisir le dossier du projet",
       openInFinder: "Ouvrir dans le Finder",
     },
+    pathLauncher: {
+      copyPath: "Copier le chemin",
+      openInEditor: "Ouvrir dans {{editor}}",
+      openInFileExplorer: "Ouvrir dans l’Explorateur de fichiers",
+      openInFileManager: "Ouvrir dans le gestionnaire de fichiers",
+      openInFinder: "Ouvrir dans le Finder",
+      openInSystemTerminal: "Ouvrir dans le terminal système",
+    },
     ui: {
       commandDescription: "Rechercher une commande à exécuter...",
       commandPalette: "Palette de commandes",

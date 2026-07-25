@@ -6,6 +6,7 @@ export const TIPC_CHANNELS = [
   "daemonMobileHostingListenAddresses",
   "daemonMobileHostingSet",
   "chatsShowContextMenu",
+  "pathLauncherShowContextMenu",
   "projectsChooseDirectory",
   "projectsShowContextMenu",
 ] as const;

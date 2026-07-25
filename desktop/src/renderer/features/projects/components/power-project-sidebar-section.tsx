@@ -41,6 +41,10 @@ interface PowerProjectSidebarSectionProps {
     worktreeGroup: ProjectWorktreeChatGroup,
   ) => MaybeAsync;
   onShowProjectContextMenu: (project: Project) => MaybeAsync;
+  onShowWorktreeContextMenu: (
+    project: Project,
+    worktreeGroup: ProjectWorktreeChatGroup,
+  ) => MaybeAsync;
   projectChatsByProjectId: Map<string, Chat[]>;
   projects: Project[];
 }
@@ -51,6 +55,7 @@ export function PowerProjectSidebarSection({
   onCreateProjectChat,
   onOpenWorktree,
   onShowProjectContextMenu,
+  onShowWorktreeContextMenu,
   projectChatsByProjectId,
   projects,
 }: PowerProjectSidebarSectionProps): ReactElement {
@@ -234,6 +239,13 @@ export function PowerProjectSidebarSection({
                                 onClick={() =>
                                   void onOpenWorktree(project, group)
                                 }
+                                onContextMenu={(event) => {
+                                  event.preventDefault();
+                                  void onShowWorktreeContextMenu(
+                                    project,
+                                    group,
+                                  );
+                                }}
                                 title={group.cwd}
                                 type="button"
                               >

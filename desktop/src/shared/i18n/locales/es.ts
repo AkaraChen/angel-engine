@@ -411,6 +411,14 @@ export const es = {
       chooseFolder: "Elegir carpeta del proyecto",
       openInFinder: "Abrir en Finder",
     },
+    pathLauncher: {
+      copyPath: "Copiar ruta",
+      openInEditor: "Abrir en {{editor}}",
+      openInFileExplorer: "Abrir en el Explorador de archivos",
+      openInFileManager: "Abrir en el gestor de archivos",
+      openInFinder: "Abrir en Finder",
+      openInSystemTerminal: "Abrir en la terminal del sistema",
+    },
     ui: {
       commandDescription: "Buscar un comando para ejecutar...",
       commandPalette: "Paleta de comandos",

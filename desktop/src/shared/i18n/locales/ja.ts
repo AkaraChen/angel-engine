@@ -409,6 +409,14 @@ export const ja = {
       chooseFolder: "プロジェクトフォルダーを選択",
       openInFinder: "Finder で開く",
     },
+    pathLauncher: {
+      copyPath: "パスをコピー",
+      openInEditor: "{{editor}} で開く",
+      openInFileExplorer: "エクスプローラーで開く",
+      openInFileManager: "ファイルマネージャーで開く",
+      openInFinder: "Finder で開く",
+      openInSystemTerminal: "システムターミナルで開く",
+    },
     ui: {
       commandDescription: "実行するコマンドを検索...",
       commandPalette: "コマンドパレット",

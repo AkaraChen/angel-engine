@@ -1,4 +1,5 @@
 import type { FC } from "react";
+import type { PathLauncherTargetRef } from "@shared/path-launcher";
 import type { PowerWorktreeTabs } from "@/app/workspace/use-power-worktree-tabs";
 import type { WorkspaceChatActions } from "@/app/workspace/use-workspace-chat-actions";
 import type { WorkspaceNavigation } from "@/app/workspace/use-workspace-navigation";
@@ -116,6 +117,7 @@ export const WorkspacePageView: FC<WorkspacePageViewProps> = ({
     setChatMessagesInCache,
     setPersistedChatRuntime,
     showChatContextMenu,
+    showPathLauncherContextMenu,
     showProjectContextMenu,
     updateChatFromRun,
   } = chatActions;
@@ -145,6 +147,37 @@ export const WorkspacePageView: FC<WorkspacePageViewProps> = ({
     openSelectedPowerWorktreeHome,
     powerHomeTabContext,
   } = powerTabs;
+  const powerHomeChat =
+    powerHomePageContext === undefined
+      ? undefined
+      : projectChatsByProjectId
+          .get(powerHomePageContext.projectId)
+          ?.find((chat) => chat.cwd === powerHomePageContext.cwd);
+  const currentLauncherTarget: PathLauncherTargetRef | undefined =
+    selectedChat && is.nonEmptyString(selectedChat.projectId)
+      ? { chatId: selectedChat.id, projectId: selectedChat.projectId }
+      : powerHomePageContext !== undefined
+        ? powerHomeChat === undefined
+          ? powerHomePageContext.cwd === activePowerWorktreeProject?.path
+            ? { projectId: powerHomePageContext.projectId }
+            : undefined
+          : {
+              chatId: powerHomeChat.id,
+              projectId: powerHomePageContext.projectId,
+            }
+        : is.nonEmptyString(draftProject.id) && pinnedDraftCwd === undefined
+          ? { projectId: draftProject.id }
+          : undefined;
+  const showWorktreeContextMenu = (
+    project: (typeof projects)[number],
+    worktree: Parameters<typeof navigation.openPowerWorktree>[1],
+  ) => {
+    const chatId = worktree.isMain ? undefined : worktree.chats[0]?.id;
+    void showPathLauncherContextMenu({
+      chatId,
+      projectId: project.id,
+    });
+  };
 
   return (
     <SidebarProvider
@@ -168,6 +201,7 @@ export const WorkspacePageView: FC<WorkspacePageViewProps> = ({
           onOpenWorktree={openPowerWorktree}
           onShowChatContextMenu={showChatContextMenu}
           onShowProjectContextMenu={showProjectContextMenu}
+          onShowWorktreeContextMenu={showWorktreeContextMenu}
           onWorkspaceModeChange={changeWorkspaceMode}
           projectChatsByProjectId={projectChatsByProjectId}
           projects={projects}
@@ -188,6 +222,7 @@ export const WorkspacePageView: FC<WorkspacePageViewProps> = ({
           onOpenWorktree={openPowerWorktree}
           onShowChatContextMenu={showChatContextMenu}
           onShowProjectContextMenu={showProjectContextMenu}
+          onShowWorktreeContextMenu={showWorktreeContextMenu}
           onWorkspaceModeChange={changeWorkspaceMode}
           projectChatsByProjectId={projectChatsByProjectId}
           projects={projects}
@@ -230,6 +265,11 @@ export const WorkspacePageView: FC<WorkspacePageViewProps> = ({
             }
             rightSidebarToggleLabel={workspaceToolsToggleLabel}
             title={workspaceTitle}
+            onShowContextMenu={
+              currentLauncherTarget === undefined
+                ? undefined
+                : () => void showPathLauncherContextMenu(currentLauncherTarget)
+            }
             onToggleRightSidebar={
               canShowRightSidebar &&
               (!rightSidebarOpen || workspaceToolHost !== "sidebar")

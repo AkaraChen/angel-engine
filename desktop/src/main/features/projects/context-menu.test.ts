@@ -15,7 +15,6 @@ vi.mock("electron", () => ({
       },
     ),
   },
-  shell: { openPath: vi.fn() },
 }));
 
 vi.mock("../../daemon/client", () => ({
@@ -24,6 +23,12 @@ vi.mock("../../daemon/client", () => ({
       delete: mocks.deleteProject,
     },
   },
+}));
+
+vi.mock("../path-launcher/context-menu", () => ({
+  createPathLauncherMenuItems: vi.fn(async () => [
+    { label: "Open in Visual Studio Code" },
+  ]),
 }));
 
 import { showProjectContextMenu } from "./context-menu";
@@ -45,9 +50,12 @@ describe("project context menu", () => {
 
     const result = showProjectContextMenu(
       { id: "project-1", path: "/repo" },
-      { delete: "Delete", openInFinder: "Open in Finder" },
+      { delete: "Delete" },
       undefined,
     );
+    await vi.waitFor(() => {
+      expect(mocks.template).toHaveLength(3);
+    });
     const deleteItem = mocks.template.at(-1);
     deleteItem?.click?.(
       {} as Electron.MenuItem,

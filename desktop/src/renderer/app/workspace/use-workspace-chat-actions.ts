@@ -6,6 +6,7 @@ import type {
   ChatRuntimeConfig,
 } from "@angel-engine/daemon-api/chat";
 import type { Project } from "@angel-engine/daemon-api/projects";
+import type { PathLauncherTargetRef } from "@shared/path-launcher";
 import type { WorkspaceNavigation } from "@/app/workspace/use-workspace-navigation";
 import type { WorkspacePageModel } from "@/app/workspace/use-workspace-page-model";
 import type { ChatRunOrigin } from "@/app/workspace/workspace-thread-types";
@@ -294,6 +295,20 @@ export function useWorkspaceChatActions({
       toast,
     ],
   );
+  const showPathLauncherContextMenu = useCallback(
+    async (ref: PathLauncherTargetRef) => {
+      try {
+        await api.pathLauncher.showContextMenu(ref);
+      } catch (error) {
+        toast({
+          description: getErrorMessage(error),
+          title: t("notifications.projectActionFailed"),
+          variant: "destructive",
+        });
+      }
+    },
+    [api, t, toast],
+  );
 
   const removeChatFromCache = useCallback(
     (chatId: string) => {
@@ -420,6 +435,7 @@ export function useWorkspaceChatActions({
     setChatMessagesInCache,
     setPersistedChatRuntime,
     showChatContextMenu,
+    showPathLauncherContextMenu,
     showProjectContextMenu,
     updateChatFromRun,
   };

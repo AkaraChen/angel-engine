@@ -396,6 +396,14 @@ export const zhTW = {
       chooseFolder: "選擇專案資料夾",
       openInFinder: "在 Finder 中開啟",
     },
+    pathLauncher: {
+      copyPath: "複製路徑",
+      openInEditor: "在 {{editor}} 中開啟",
+      openInFileExplorer: "在檔案總管中開啟",
+      openInFileManager: "在檔案管理員中開啟",
+      openInFinder: "在 Finder 中開啟",
+      openInSystemTerminal: "在系統終端機中開啟",
+    },
     ui: {
       commandDescription: "搜尋要執行的命令...",
       commandPalette: "命令面板",
