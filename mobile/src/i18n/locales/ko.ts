@@ -7,6 +7,8 @@ export const ko = {
     },
     common: {
       cancel: "취소",
+      delete: "삭제",
+      save: "저장",
       tryAgain: "다시 시도",
       newChat: "새 채팅",
       settings: "설정",
@@ -82,6 +84,8 @@ export const ko = {
       projectLabel: "프로젝트",
       noProject: "프로젝트 없음(임시)",
       agentLabel: "에이전트",
+      agentsError: "에이전트를 불러올 수 없습니다.",
+      noAgents: "사용 가능한 에이전트가 없습니다",
       modelLabel: "모델",
       modelPlaceholder: "기본값",
       reasoningLabel: "추론",
@@ -99,6 +103,58 @@ export const ko = {
       create: "채팅 만들기",
     },
     settings: {
+      projects: {
+        title: "프로젝트",
+        description:
+          "프로젝트를 삭제해도 데스크톱 컴퓨터의 파일은 삭제되지 않습니다.",
+        empty: "아직 프로젝트가 없습니다.",
+        add: "프로젝트 추가",
+        createTitle: "프로젝트 추가",
+        editTitle: "프로젝트 편집",
+        formDescription: "데스크톱 컴퓨터에 존재하는 폴더 경로를 입력하세요.",
+        pathLabel: "프로젝트 경로",
+        pathPlaceholder: "/Users/you/project",
+        editAction: "{{name}} 편집",
+        deleteAction: "{{name}} 삭제",
+        deleteTitle: "{{name}}을(를) 삭제할까요?",
+        deleteWithoutChats:
+          "Angel Engine에서 프로젝트를 제거합니다. 파일은 디스크에 남습니다.",
+        deleteWithChats:
+          "프로젝트와 연결된 채팅 {{count}}개를 제거합니다. 파일은 디스크에 남습니다.",
+        loadError: "프로젝트를 불러올 수 없습니다.",
+        saveError: "프로젝트를 저장할 수 없습니다.",
+        deleteError: "프로젝트를 삭제할 수 없습니다.",
+      },
+      customAgents: {
+        title: "사용자 지정 에이전트",
+        description:
+          "에이전트는 데스크톱에 보관됩니다. 환경 변수는 로컬에 일반 텍스트로 저장됩니다.",
+        empty: "아직 사용자 지정 에이전트가 없습니다.",
+        add: "에이전트 추가",
+        createTitle: "사용자 지정 에이전트 추가",
+        editTitle: "사용자 지정 에이전트 편집",
+        formDescription:
+          "데스크톱 컴퓨터에서 실행할 ACP 호환 명령을 설정하세요.",
+        nameLabel: "이름",
+        commandLabel: "명령",
+        commandPlaceholder: "my-agent",
+        argsLabel: "인수(한 줄에 하나)",
+        argsPlaceholder: "acp\n--stdio",
+        environmentLabel: "환경 변수(한 줄에 NAME=value 하나)",
+        environmentPlaceholder: "API_KEY=value",
+        needAuth: "인증 필요",
+        autoAuthenticate: "자동 인증",
+        editAction: "{{name}} 편집",
+        deleteAction: "{{name}} 삭제",
+        deleteTitle: "{{name}}을(를) 삭제할까요?",
+        deleteWithoutChats:
+          "Angel Engine에서 사용자 지정 에이전트를 제거합니다.",
+        deleteWithChats:
+          "사용자 지정 에이전트와 이를 사용하는 채팅 {{count}}개를 제거합니다.",
+        loadError: "사용자 지정 에이전트를 불러올 수 없습니다.",
+        saveError: "사용자 지정 에이전트를 저장할 수 없습니다.",
+        deleteError: "사용자 지정 에이전트를 삭제할 수 없습니다.",
+      },
       appearance: {
         title: "모양",
         theme: "테마",

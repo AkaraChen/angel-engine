@@ -1,5 +1,7 @@
 import { useTranslation } from "react-i18next";
 
+import { CustomAgentsSettingsSection } from "@/features/resources/custom-agent-management";
+import { ProjectsSettingsSection } from "@/features/resources/project-management";
 import { AppearanceSection } from "@/features/settings/appearance-section";
 import {
   SettingsRow,
@@ -12,6 +14,8 @@ export function SettingsPage() {
   return (
     <div className="h-full overflow-y-auto">
       <div className="mx-auto flex max-w-xl flex-col gap-6 p-4">
+        <ProjectsSettingsSection />
+        <CustomAgentsSettingsSection />
         <AppearanceSection />
 
         <SettingsSection

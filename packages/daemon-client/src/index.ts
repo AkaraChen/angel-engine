@@ -4,7 +4,15 @@ import type {
   CreateCustomAgentInput,
   CustomAgent,
   DeleteCustomAgentImpact,
+  DeleteCustomAgentResult,
   UpdateCustomAgentInput,
+} from "@angel-engine/daemon-api/agents";
+import {
+  isAgentOptionList,
+  isCustomAgent,
+  isCustomAgentList,
+  isDeleteCustomAgentImpact,
+  isDeleteCustomAgentResult,
 } from "@angel-engine/daemon-api/agents";
 import type {
   Chat,
@@ -41,10 +49,18 @@ import type {
 } from "@angel-engine/daemon-api/daemon";
 import type {
   CreateProjectInput,
+  DeleteProjectImpact,
+  DeleteProjectResult,
   Project,
   ProjectGitStatusInput,
   ProjectGitStatusResult,
   UpdateProjectInput,
+} from "@angel-engine/daemon-api/projects";
+import {
+  isDeleteProjectImpact,
+  isDeleteProjectResult,
+  isProject,
+  isProjectList,
 } from "@angel-engine/daemon-api/projects";
 import type {
   WorkspaceFileReadResult,
@@ -84,6 +100,8 @@ export interface DaemonClientOptions {
   token?: string | null;
 }
 
+type ResponseValidator<T> = (value: unknown) => value is T;
+
 export function createDaemonClient(options: DaemonClientOptions) {
   const fetchImpl =
     options.fetch ?? ((url, init) => globalThis.fetch(url, init));
@@ -104,7 +122,11 @@ export function createDaemonClient(options: DaemonClientOptions) {
     return response;
   };
 
-  const request = async <T>(path: string, init?: RequestInit): Promise<T> => {
+  const request = async <T>(
+    path: string,
+    init?: RequestInit,
+    validate?: ResponseValidator<T>,
+  ): Promise<T> => {
     const response = await send(path, init);
     if (!response.ok) {
       const payload = (await response.json().catch(() => undefined)) as
@@ -128,7 +150,22 @@ export function createDaemonClient(options: DaemonClientOptions) {
         response.status,
       );
     }
-    return (await response.json()) as T;
+    let payload: unknown;
+    try {
+      payload = await response.json();
+    } catch {
+      throw DaemonRequestError.invalidResponse(
+        `Daemon returned invalid JSON for ${path}.`,
+        response.status,
+      );
+    }
+    if (validate !== undefined && !validate(payload)) {
+      throw DaemonRequestError.invalidResponse(
+        `Daemon returned an invalid response for ${path}.`,
+        response.status,
+      );
+    }
+    return payload as T;
   };
   const json = (method: string, body?: object): RequestInit => ({
     body: body === undefined ? undefined : JSON.stringify(body),
@@ -173,24 +210,38 @@ export function createDaemonClient(options: DaemonClientOptions) {
   return {
     agents: {
       createCustom: (input: CreateCustomAgentInput) =>
-        request<CustomAgent>("/api/agents/custom", json("POST", input)),
+        request<CustomAgent>(
+          "/api/agents/custom",
+          json("POST", input),
+          isCustomAgent,
+        ),
       deleteCustom: (id: string) =>
-        request<{ deletedChatIds: string[] }>(
+        request<DeleteCustomAgentResult>(
           `/api/agents/custom/${encodeURIComponent(id)}`,
           { method: "DELETE" },
+          isDeleteCustomAgentResult,
         ),
       deleteCustomImpact: (id: string) =>
         request<DeleteCustomAgentImpact>(
           `/api/agents/custom/${encodeURIComponent(id)}/delete-impact`,
+          undefined,
+          isDeleteCustomAgentImpact,
         ),
-      listAvailable: () => request<AgentOption[]>("/api/agents"),
-      listCustom: () => request<CustomAgent[]>("/api/agents/custom"),
+      listAvailable: () =>
+        request<AgentOption[]>("/api/agents", undefined, isAgentOptionList),
+      listCustom: () =>
+        request<CustomAgent[]>(
+          "/api/agents/custom",
+          undefined,
+          isCustomAgentList,
+        ),
       listSkills: (input: AgentSkillsInput) =>
         request<ChatAvailableSkill[]>(`/api/agents/skills?${query(input)}`),
       updateCustom: (input: UpdateCustomAgentInput) =>
         request<CustomAgent>(
           `/api/agents/custom/${encodeURIComponent(input.id)}`,
           json("PUT", input),
+          isCustomAgent,
         ),
     },
     chatStreams: {
@@ -296,18 +347,30 @@ export function createDaemonClient(options: DaemonClientOptions) {
     },
     projects: {
       create: (input: CreateProjectInput) =>
-        request<Project>("/api/projects", json("POST", input)),
+        request<Project>("/api/projects", json("POST", input), isProject),
       delete: (id: string) =>
-        request<{ ok: boolean }>(`/api/projects/${encodeURIComponent(id)}`, {
-          method: "DELETE",
-        }),
+        request<DeleteProjectResult>(
+          `/api/projects/${encodeURIComponent(id)}`,
+          { method: "DELETE" },
+          isDeleteProjectResult,
+        ),
+      deleteImpact: (id: string) =>
+        request<DeleteProjectImpact>(
+          `/api/projects/${encodeURIComponent(id)}/delete-impact`,
+          undefined,
+          isDeleteProjectImpact,
+        ),
       get: (id: string) =>
-        request<Project | null>(`/api/projects/${encodeURIComponent(id)}`),
+        request<Project | null>(
+          `/api/projects/${encodeURIComponent(id)}`,
+          undefined,
+          isNullableProject,
+        ),
       gitStatus: (input: ProjectGitStatusInput) =>
         request<ProjectGitStatusResult>(
           `/api/projects/${encodeURIComponent(input.projectId)}/git-status`,
         ),
-      list: () => request<Project[]>("/api/projects"),
+      list: () => request<Project[]>("/api/projects", undefined, isProjectList),
       searchFiles: (input: ProjectFileSearchInput) =>
         request<ProjectFileSearchResult[]>(
           `/api/projects/files/search?${query(input)}`,
@@ -316,6 +379,7 @@ export function createDaemonClient(options: DaemonClientOptions) {
         request<Project>(
           `/api/projects/${encodeURIComponent(input.id)}`,
           json("PATCH", { path: input.path }),
+          isProject,
         ),
     },
     workspaceTools: {
@@ -344,6 +408,10 @@ export function createDaemonClient(options: DaemonClientOptions) {
 }
 
 export type DaemonClient = ReturnType<typeof createDaemonClient>;
+
+function isNullableProject(value: unknown): value is Project | null {
+  return value === null || isProject(value);
+}
 
 function query(input: object) {
   const parameters = new URLSearchParams();

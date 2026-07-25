@@ -7,6 +7,8 @@ export const fr = {
     },
     common: {
       cancel: "Annuler",
+      delete: "Supprimer",
+      save: "Enregistrer",
       tryAgain: "Réessayer",
       newChat: "Nouvelle discussion",
       settings: "Paramètres",
@@ -84,6 +86,8 @@ export const fr = {
       projectLabel: "Projet",
       noProject: "Aucun projet (ponctuel)",
       agentLabel: "Agent",
+      agentsError: "Impossible de charger les agents.",
+      noAgents: "Aucun agent disponible",
       modelLabel: "Modèle",
       modelPlaceholder: "Par défaut",
       reasoningLabel: "Raisonnement",
@@ -103,6 +107,58 @@ export const fr = {
       create: "Créer la discussion",
     },
     settings: {
+      projects: {
+        title: "Projets",
+        description:
+          "Supprimer un projet ne supprime jamais ses fichiers de l’ordinateur.",
+        empty: "Aucun projet.",
+        add: "Ajouter un projet",
+        createTitle: "Ajouter un projet",
+        editTitle: "Modifier le projet",
+        formDescription:
+          "Saisissez le chemin d’un dossier existant sur l’ordinateur.",
+        pathLabel: "Chemin du projet",
+        pathPlaceholder: "/Users/you/project",
+        editAction: "Modifier {{name}}",
+        deleteAction: "Supprimer {{name}}",
+        deleteTitle: "Supprimer {{name}} ?",
+        deleteWithoutChats:
+          "Le projet sera retiré d’Angel Engine. Les fichiers resteront sur le disque.",
+        deleteWithChats:
+          "Le projet et ses {{count}} discussions associées seront supprimés. Les fichiers resteront sur le disque.",
+        loadError: "Impossible de charger les projets.",
+        saveError: "Impossible d’enregistrer le projet.",
+        deleteError: "Impossible de supprimer le projet.",
+      },
+      customAgents: {
+        title: "Agents personnalisés",
+        description:
+          "Les agents restent sur l’ordinateur. Les variables d’environnement sont stockées localement en texte brut.",
+        empty: "Aucun agent personnalisé.",
+        add: "Ajouter un agent",
+        createTitle: "Ajouter un agent personnalisé",
+        editTitle: "Modifier l’agent personnalisé",
+        formDescription:
+          "Configurez une commande compatible ACP exécutée sur l’ordinateur.",
+        nameLabel: "Nom",
+        commandLabel: "Commande",
+        commandPlaceholder: "mon-agent",
+        argsLabel: "Arguments, un par ligne",
+        argsPlaceholder: "acp\n--stdio",
+        environmentLabel: "Environnement, un NAME=value par ligne",
+        environmentPlaceholder: "API_KEY=value",
+        needAuth: "Authentification requise",
+        autoAuthenticate: "S’authentifier automatiquement",
+        editAction: "Modifier {{name}}",
+        deleteAction: "Supprimer {{name}}",
+        deleteTitle: "Supprimer {{name}} ?",
+        deleteWithoutChats: "L’agent personnalisé sera retiré d’Angel Engine.",
+        deleteWithChats:
+          "L’agent personnalisé et les {{count}} discussions qui l’utilisent seront supprimés.",
+        loadError: "Impossible de charger les agents personnalisés.",
+        saveError: "Impossible d’enregistrer l’agent personnalisé.",
+        deleteError: "Impossible de supprimer l’agent personnalisé.",
+      },
       appearance: {
         title: "Apparence",
         theme: "Thème",

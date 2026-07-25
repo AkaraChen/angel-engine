@@ -7,6 +7,8 @@ export const ja = {
     },
     common: {
       cancel: "キャンセル",
+      delete: "削除",
+      save: "保存",
       tryAgain: "再試行",
       newChat: "新しいチャット",
       settings: "設定",
@@ -86,6 +88,8 @@ export const ja = {
       projectLabel: "プロジェクト",
       noProject: "プロジェクトなし（アドホック）",
       agentLabel: "エージェント",
+      agentsError: "エージェントを読み込めませんでした。",
+      noAgents: "利用可能なエージェントがありません",
       modelLabel: "モデル",
       modelPlaceholder: "デフォルト",
       reasoningLabel: "推論",
@@ -105,6 +109,59 @@ export const ja = {
       create: "チャットを作成",
     },
     settings: {
+      projects: {
+        title: "プロジェクト",
+        description:
+          "プロジェクトを削除しても、デスクトップ上のファイルは削除されません。",
+        empty: "プロジェクトはまだありません。",
+        add: "プロジェクトを追加",
+        createTitle: "プロジェクトを追加",
+        editTitle: "プロジェクトを編集",
+        formDescription:
+          "デスクトップ上に存在するフォルダのパスを入力してください。",
+        pathLabel: "プロジェクトのパス",
+        pathPlaceholder: "/Users/you/project",
+        editAction: "{{name}} を編集",
+        deleteAction: "{{name}} を削除",
+        deleteTitle: "{{name}} を削除しますか？",
+        deleteWithoutChats:
+          "Angel Engine からプロジェクトを削除します。ファイルはディスクに残ります。",
+        deleteWithChats:
+          "プロジェクトと関連する {{count}} 件のチャットを削除します。ファイルはディスクに残ります。",
+        loadError: "プロジェクトを読み込めませんでした。",
+        saveError: "プロジェクトを保存できませんでした。",
+        deleteError: "プロジェクトを削除できませんでした。",
+      },
+      customAgents: {
+        title: "カスタムエージェント",
+        description:
+          "エージェントはデスクトップに保存されます。環境変数はローカルに平文で保存されます。",
+        empty: "カスタムエージェントはまだありません。",
+        add: "エージェントを追加",
+        createTitle: "カスタムエージェントを追加",
+        editTitle: "カスタムエージェントを編集",
+        formDescription:
+          "デスクトップ上で実行する ACP 互換コマンドを設定します。",
+        nameLabel: "名前",
+        commandLabel: "コマンド",
+        commandPlaceholder: "my-agent",
+        argsLabel: "引数（1 行に 1 つ）",
+        argsPlaceholder: "acp\n--stdio",
+        environmentLabel: "環境変数（1 行に 1 つの NAME=value）",
+        environmentPlaceholder: "API_KEY=value",
+        needAuth: "認証が必要",
+        autoAuthenticate: "自動的に認証",
+        editAction: "{{name}} を編集",
+        deleteAction: "{{name}} を削除",
+        deleteTitle: "{{name}} を削除しますか？",
+        deleteWithoutChats:
+          "Angel Engine からカスタムエージェントを削除します。",
+        deleteWithChats:
+          "カスタムエージェントと、それを使用する {{count}} 件のチャットを削除します。",
+        loadError: "カスタムエージェントを読み込めませんでした。",
+        saveError: "カスタムエージェントを保存できませんでした。",
+        deleteError: "カスタムエージェントを削除できませんでした。",
+      },
       appearance: {
         title: "外観",
         theme: "テーマ",

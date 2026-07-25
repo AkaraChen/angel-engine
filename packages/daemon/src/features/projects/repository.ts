@@ -1,5 +1,6 @@
 import type {
   CreateProjectInput,
+  DeleteProjectImpact,
   Project,
   UpdateProjectInput,
 } from "@angel-engine/daemon-api/projects";
@@ -10,7 +11,7 @@ import path from "node:path";
 import is from "@sindresorhus/is";
 import { asc, eq } from "drizzle-orm";
 import { Effect } from "effect";
-import { projects } from "../../db/schema";
+import { chats, projects } from "../../db/schema";
 import { type Db, withDatabase } from "../../platform/db";
 import { DaemonError } from "../../platform/errors";
 
@@ -72,6 +73,26 @@ export function updateProject(
     }
 
     return project;
+  });
+}
+
+export function projectDeleteImpact(
+  id: string,
+): Effect.Effect<DeleteProjectImpact, DaemonError, Db> {
+  return Effect.gen(function* () {
+    const projectId = yield* requireProjectId(id);
+    const project = yield* getProject(projectId);
+    if (project === null) {
+      return yield* Effect.fail(DaemonError.projectNotFound());
+    }
+    const projectChats = yield* withDatabase((database) =>
+      database
+        .select({ id: chats.id })
+        .from(chats)
+        .where(eq(chats.projectId, projectId))
+        .all(),
+    );
+    return { chatCount: projectChats.length };
   });
 }
 

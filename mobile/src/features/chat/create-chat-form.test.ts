@@ -10,12 +10,15 @@ import {
 } from "./create-chat-form";
 
 function form(overrides: Partial<CreateChatFormState>): CreateChatFormState {
-  return { ...INITIAL_CREATE_CHAT_FORM, ...overrides };
+  return { ...INITIAL_CREATE_CHAT_FORM, runtime: "claude", ...overrides };
 }
 
 describe("canSubmitCreateChat", () => {
-  it("requires a non-empty prompt", () => {
+  it("requires a non-empty prompt and a daemon-provided runtime", () => {
     expect(canSubmitCreateChat(form({ prompt: "   " }))).toBe(false);
+    expect(
+      canSubmitCreateChat(form({ prompt: "do the thing", runtime: "" })),
+    ).toBe(false);
     expect(canSubmitCreateChat(form({ prompt: "do the thing" }))).toBe(true);
   });
 });

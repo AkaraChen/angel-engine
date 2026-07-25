@@ -7,6 +7,8 @@ export const es = {
     },
     common: {
       cancel: "Cancelar",
+      delete: "Eliminar",
+      save: "Guardar",
       tryAgain: "Reintentar",
       newChat: "Nuevo chat",
       settings: "Ajustes",
@@ -83,6 +85,8 @@ export const es = {
       projectLabel: "Proyecto",
       noProject: "Sin proyecto (ad hoc)",
       agentLabel: "Agente",
+      agentsError: "No se pudieron cargar los agentes.",
+      noAgents: "No hay agentes disponibles",
       modelLabel: "Modelo",
       modelPlaceholder: "Predeterminado",
       reasoningLabel: "Razonamiento",
@@ -101,6 +105,59 @@ export const es = {
       create: "Crear chat",
     },
     settings: {
+      projects: {
+        title: "Proyectos",
+        description:
+          "Eliminar un proyecto nunca borra sus archivos del ordenador.",
+        empty: "Aún no hay proyectos.",
+        add: "Añadir proyecto",
+        createTitle: "Añadir proyecto",
+        editTitle: "Editar proyecto",
+        formDescription:
+          "Introduce la ruta de una carpeta existente en el ordenador.",
+        pathLabel: "Ruta del proyecto",
+        pathPlaceholder: "/Users/you/project",
+        editAction: "Editar {{name}}",
+        deleteAction: "Eliminar {{name}}",
+        deleteTitle: "¿Eliminar {{name}}?",
+        deleteWithoutChats:
+          "Esto elimina el proyecto de Angel Engine. Los archivos permanecen en el disco.",
+        deleteWithChats:
+          "Esto elimina el proyecto y {{count}} chats vinculados. Los archivos permanecen en el disco.",
+        loadError: "No se pudieron cargar los proyectos.",
+        saveError: "No se pudo guardar el proyecto.",
+        deleteError: "No se pudo eliminar el proyecto.",
+      },
+      customAgents: {
+        title: "Agentes personalizados",
+        description:
+          "Los agentes permanecen en el ordenador. Las variables de entorno se guardan localmente como texto sin cifrar.",
+        empty: "Aún no hay agentes personalizados.",
+        add: "Añadir agente",
+        createTitle: "Añadir agente personalizado",
+        editTitle: "Editar agente personalizado",
+        formDescription:
+          "Configura un comando compatible con ACP que se ejecute en el ordenador.",
+        nameLabel: "Nombre",
+        commandLabel: "Comando",
+        commandPlaceholder: "mi-agente",
+        argsLabel: "Argumentos, uno por línea",
+        argsPlaceholder: "acp\n--stdio",
+        environmentLabel: "Entorno, un NAME=value por línea",
+        environmentPlaceholder: "API_KEY=value",
+        needAuth: "Requiere autenticación",
+        autoAuthenticate: "Autenticar automáticamente",
+        editAction: "Editar {{name}}",
+        deleteAction: "Eliminar {{name}}",
+        deleteTitle: "¿Eliminar {{name}}?",
+        deleteWithoutChats:
+          "Esto elimina el agente personalizado de Angel Engine.",
+        deleteWithChats:
+          "Esto elimina el agente personalizado y {{count}} chats que lo usan.",
+        loadError: "No se pudieron cargar los agentes personalizados.",
+        saveError: "No se pudo guardar el agente personalizado.",
+        deleteError: "No se pudo eliminar el agente personalizado.",
+      },
       appearance: {
         title: "Apariencia",
         theme: "Tema",

@@ -155,4 +155,44 @@ describe("createDaemonClient", () => {
     await expect(client.health()).rejects.toBeInstanceOf(DaemonRequestError);
     expect(onUnauthorized).toHaveBeenCalledTimes(1);
   });
+
+  it("fails fast when a project response is malformed", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue(jsonResponse([{ id: "project-without-a-path" }]));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const client = createDaemonClient({ baseUrl: "", token: null });
+
+    await expect(client.projects.list()).rejects.toBeInstanceOf(
+      DaemonRequestError,
+    );
+  });
+
+  it("fails fast when a custom-agent response is malformed", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue(jsonResponse([{ id: "custom:missing-fields" }]));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const client = createDaemonClient({ baseUrl: "", token: null });
+
+    await expect(client.agents.listCustom()).rejects.toBeInstanceOf(
+      DaemonRequestError,
+    );
+  });
+
+  it("requests project delete impact with an encoded id", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse({ chatCount: 2 }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const client = createDaemonClient({ baseUrl: "", token: null });
+
+    await expect(client.projects.deleteImpact("project/one")).resolves.toEqual({
+      chatCount: 2,
+    });
+    expect(fetchMock.mock.calls[0][0]).toBe(
+      "/api/projects/project%2Fone/delete-impact",
+    );
+  });
 });

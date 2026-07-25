@@ -1,6 +1,7 @@
 import type { FC, FormEvent, ReactNode } from "react";
 import type { CreateChatFormState } from "./create-chat-form";
 
+import { Plus } from "@phosphor-icons/react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useLocation } from "wouter";
@@ -23,7 +24,12 @@ import {
 } from "@/components/ui/native-select";
 import { Spinner } from "@/components/ui/spinner";
 import { Textarea } from "@/components/ui/textarea";
-import { AGENT_OPTIONS } from "@/platform/agent-catalog";
+import { CustomAgentFormDrawer } from "@/features/resources/custom-agent-management";
+import { ProjectFormDrawer } from "@/features/resources/project-management";
+import {
+  useAgentList,
+  useProjectList,
+} from "@/features/resources/use-resources";
 
 import { basename } from "./chat-summary";
 import {
@@ -33,12 +39,7 @@ import {
   INITIAL_CREATE_CHAT_FORM,
 } from "./create-chat-form";
 import { stashNewChatPrompt } from "./new-chat-prompt";
-import {
-  useAgentList,
-  useCreateChat,
-  useProjectList,
-  useRuntimeConfig,
-} from "./use-chats";
+import { useCreateChat, useRuntimeConfig } from "./use-chats";
 
 type CreateChatDrawerProps = {
   children: ReactNode;
@@ -58,18 +59,14 @@ export const CreateChatDrawer: FC<CreateChatDrawerProps> = ({ children }) => {
   const selectedProject = projectsQuery.data?.find(
     (project) => project.id === form.projectId,
   );
+  const agentOptions = agentsQuery.data ?? [];
+  const runtime =
+    form.runtime.length > 0 ? form.runtime : (agentOptions[0]?.id ?? "");
   const runtimeConfigQuery = useRuntimeConfig({
     cwd: selectedProject?.path,
     enabled: open,
-    runtime: form.runtime,
+    runtime,
   });
-
-  // Prefer the daemon's agent list; fall back to the built-in catalog while it
-  // loads or if the daemon returns none.
-  const agentOptions =
-    agentsQuery.data !== undefined && agentsQuery.data.length > 0
-      ? agentsQuery.data
-      : AGENT_OPTIONS;
 
   function update<K extends keyof CreateChatFormState>(
     key: K,
@@ -85,10 +82,13 @@ export const CreateChatDrawer: FC<CreateChatDrawerProps> = ({ children }) => {
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!canSubmitCreateChat(form)) return;
+    const submittedForm = { ...form, runtime };
+    if (!canSubmitCreateChat(submittedForm)) return;
 
     try {
-      const chat = await createChat.mutateAsync(buildCreateChatInput(form));
+      const chat = await createChat.mutateAsync(
+        buildCreateChatInput(submittedForm),
+      );
       stashNewChatPrompt(chat.id, form.prompt);
       setOpen(false);
       reset();
@@ -99,7 +99,8 @@ export const CreateChatDrawer: FC<CreateChatDrawerProps> = ({ children }) => {
     }
   }
 
-  const canSubmit = canSubmitCreateChat(form) && !createChat.isPending;
+  const canSubmit =
+    canSubmitCreateChat({ ...form, runtime }) && !createChat.isPending;
 
   return (
     <Drawer
@@ -136,6 +137,23 @@ export const CreateChatDrawer: FC<CreateChatDrawerProps> = ({ children }) => {
             </Field>
 
             <Field
+              action={
+                <ProjectFormDrawer
+                  onSaved={(project) =>
+                    setForm((previous) => ({
+                      ...previous,
+                      model: "",
+                      projectId: project.id,
+                      reasoningEffort: "",
+                    }))
+                  }
+                >
+                  <Button size="xs" type="button" variant="ghost">
+                    <Plus />
+                    {t("settings.projects.add")}
+                  </Button>
+                </ProjectFormDrawer>
+              }
               htmlFor="new-chat-project"
               label={t("createChat.projectLabel")}
             >
@@ -189,11 +207,32 @@ export const CreateChatDrawer: FC<CreateChatDrawerProps> = ({ children }) => {
               </Field>
             ) : null}
 
-            <Field htmlFor="new-chat-agent" label={t("createChat.agentLabel")}>
+            <Field
+              action={
+                <CustomAgentFormDrawer
+                  onSaved={(agent) =>
+                    setForm((previous) => ({
+                      ...previous,
+                      model: "",
+                      reasoningEffort: "",
+                      runtime: agent.id,
+                    }))
+                  }
+                >
+                  <Button size="xs" type="button" variant="ghost">
+                    <Plus />
+                    {t("settings.customAgents.add")}
+                  </Button>
+                </CustomAgentFormDrawer>
+              }
+              htmlFor="new-chat-agent"
+              label={t("createChat.agentLabel")}
+            >
               <NativeSelect
                 className="w-full"
+                disabled={agentsQuery.isPending || agentOptions.length === 0}
                 id="new-chat-agent"
-                value={form.runtime}
+                value={runtime}
                 onChange={(event) => {
                   const runtime = event.target.value;
                   setForm((previous) => ({
@@ -204,6 +243,11 @@ export const CreateChatDrawer: FC<CreateChatDrawerProps> = ({ children }) => {
                   }));
                 }}
               >
+                {agentOptions.length === 0 ? (
+                  <NativeSelectOption value="">
+                    {t("createChat.noAgents")}
+                  </NativeSelectOption>
+                ) : null}
                 {agentOptions.map((agent) => (
                   <NativeSelectOption key={agent.id} value={agent.id}>
                     {agent.label}
@@ -211,6 +255,20 @@ export const CreateChatDrawer: FC<CreateChatDrawerProps> = ({ children }) => {
                 ))}
               </NativeSelect>
             </Field>
+
+            {agentsQuery.isError ? (
+              <div className="flex items-center justify-between gap-3 text-sm text-destructive">
+                <span>{t("createChat.agentsError")}</span>
+                <Button
+                  onClick={() => void agentsQuery.refetch()}
+                  size="xs"
+                  type="button"
+                  variant="outline"
+                >
+                  {t("common.tryAgain")}
+                </Button>
+              </div>
+            ) : null}
 
             <div className="grid grid-cols-2 gap-3">
               <Field
@@ -295,15 +353,19 @@ export const CreateChatDrawer: FC<CreateChatDrawerProps> = ({ children }) => {
 };
 
 type FieldProps = {
+  action?: ReactNode;
   children: ReactNode;
   htmlFor: string;
   label: string;
 };
 
-const Field: FC<FieldProps> = ({ children, htmlFor, label }) => {
+const Field: FC<FieldProps> = ({ action, children, htmlFor, label }) => {
   return (
     <div className="flex flex-col gap-1.5">
-      <Label htmlFor={htmlFor}>{label}</Label>
+      <div className="flex min-h-6 items-center justify-between gap-2">
+        <Label htmlFor={htmlFor}>{label}</Label>
+        {action}
+      </div>
       {children}
     </div>
   );

@@ -7,6 +7,8 @@ export const en = {
     },
     common: {
       cancel: "Cancel",
+      delete: "Delete",
+      save: "Save",
       tryAgain: "Try again",
       newChat: "New chat",
       settings: "Settings",
@@ -82,6 +84,8 @@ export const en = {
       projectLabel: "Project",
       noProject: "No project (ad hoc)",
       agentLabel: "Agent",
+      agentsError: "Couldn't load agents.",
+      noAgents: "No agents available",
       modelLabel: "Model",
       modelPlaceholder: "Default",
       reasoningLabel: "Reasoning",
@@ -100,6 +104,58 @@ export const en = {
       create: "Create chat",
     },
     settings: {
+      projects: {
+        title: "Projects",
+        description:
+          "Deleting a project never removes its files from the desktop computer.",
+        empty: "No projects yet.",
+        add: "Add project",
+        createTitle: "Add project",
+        editTitle: "Edit project",
+        formDescription:
+          "Enter an existing directory path on the desktop computer.",
+        pathLabel: "Project path",
+        pathPlaceholder: "/Users/you/project",
+        editAction: "Edit {{name}}",
+        deleteAction: "Delete {{name}}",
+        deleteTitle: "Delete {{name}}?",
+        deleteWithoutChats:
+          "This removes the project from Angel Engine. Files stay on disk.",
+        deleteWithChats:
+          "This removes the project and {{count}} linked chats. Files stay on disk.",
+        loadError: "Couldn't load projects.",
+        saveError: "Couldn't save the project.",
+        deleteError: "Couldn't delete the project.",
+      },
+      customAgents: {
+        title: "Custom agents",
+        description:
+          "Custom agents stay on your desktop. Environment variables are stored locally in plain text.",
+        empty: "No custom agents yet.",
+        add: "Add agent",
+        createTitle: "Add custom agent",
+        editTitle: "Edit custom agent",
+        formDescription:
+          "Configure an ACP-compatible command running on the desktop computer.",
+        nameLabel: "Name",
+        commandLabel: "Command",
+        commandPlaceholder: "my-agent",
+        argsLabel: "Arguments, one per line",
+        argsPlaceholder: "acp\n--stdio",
+        environmentLabel: "Environment, one NAME=value per line",
+        environmentPlaceholder: "API_KEY=value",
+        needAuth: "Requires authentication",
+        autoAuthenticate: "Authenticate automatically",
+        editAction: "Edit {{name}}",
+        deleteAction: "Delete {{name}}",
+        deleteTitle: "Delete {{name}}?",
+        deleteWithoutChats: "This removes the custom agent from Angel Engine.",
+        deleteWithChats:
+          "This removes the custom agent and {{count}} chats that use it.",
+        loadError: "Couldn't load custom agents.",
+        saveError: "Couldn't save the custom agent.",
+        deleteError: "Couldn't delete the custom agent.",
+      },
       appearance: {
         title: "Appearance",
         theme: "Theme",

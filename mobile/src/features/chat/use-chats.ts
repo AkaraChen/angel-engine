@@ -28,23 +28,6 @@ export function useChatList() {
   });
 }
 
-export function useProjectList() {
-  const daemon = useDaemonClient();
-  return useQuery({
-    queryKey: queryKeys.projects.list,
-    queryFn: async () => daemon.projects.list(),
-  });
-}
-
-/** The agents available to start a chat with (`GET /api/agents`). */
-export function useAgentList() {
-  const daemon = useDaemonClient();
-  return useQuery({
-    queryKey: queryKeys.agents.list,
-    queryFn: async () => daemon.agents.listAvailable(),
-  });
-}
-
 /** Runtime-owned model options for a new chat. */
 export function useRuntimeConfig({
   cwd,

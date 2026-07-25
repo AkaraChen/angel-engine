@@ -103,6 +103,19 @@ describe("createDaemon", () => {
     const listResponse = await daemonFetch(daemon, "/api/projects");
     await expect(listResponse.json()).resolves.toContainEqual(project);
 
+    const chatResponse = await daemonFetch(daemon, "/api/chats", {
+      body: JSON.stringify({ projectId: project.id, runtime: "codex" }),
+      headers: { "content-type": "application/json" },
+      method: "POST",
+    });
+    expect(chatResponse.status).toBe(200);
+
+    const impactResponse = await daemonFetch(
+      daemon,
+      `/api/projects/${project.id}/delete-impact`,
+    );
+    await expect(impactResponse.json()).resolves.toEqual({ chatCount: 1 });
+
     const deleteResponse = await daemonFetch(
       daemon,
       `/api/projects/${project.id}`,
@@ -112,6 +125,8 @@ describe("createDaemon", () => {
 
     const finalListResponse = await daemonFetch(daemon, "/api/projects");
     await expect(finalListResponse.json()).resolves.toEqual([]);
+    const finalChatListResponse = await daemonFetch(daemon, "/api/chats");
+    await expect(finalChatListResponse.json()).resolves.toEqual([]);
   });
 
   it("acknowledges shutdown before invoking the process callback", async () => {

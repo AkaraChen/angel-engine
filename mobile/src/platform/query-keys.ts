@@ -15,6 +15,7 @@ export const queryKeys = {
   },
   agents: {
     list: ["agents", "list"] as const,
+    custom: ["agents", "custom"] as const,
   },
   workspace: {
     gitDiff: (root: string) => ["workspace", "git-diff", root] as const,

@@ -71,6 +71,7 @@ import {
   deleteProject,
   getProject,
   listProjects,
+  projectDeleteImpact,
   updateProject,
 } from "./features/projects/repository";
 import {
@@ -365,6 +366,9 @@ export function registerApi(
         }),
       ),
     ),
+  );
+  app.get("/api/projects/:id/delete-impact", async (context) =>
+    context.json(await run(projectDeleteImpact(context.req.param("id")))),
   );
   app.get("/api/projects/:id", async (context) =>
     context.json(await run(getProject(context.req.param("id")))),

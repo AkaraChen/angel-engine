@@ -4,6 +4,8 @@ export interface LocaleResourceTranslationApp {
 
 export interface LocaleResourceTranslationCommon {
   cancel: string;
+  delete: string;
+  save: string;
   tryAgain: string;
   newChat: string;
   settings: string;
@@ -93,6 +95,8 @@ export interface LocaleResourceTranslationCreateChat {
   projectLabel: string;
   noProject: string;
   agentLabel: string;
+  agentsError: string;
+  noAgents: string;
   modelLabel: string;
   modelPlaceholder: string;
   reasoningLabel: string;
@@ -138,9 +142,58 @@ export interface LocaleResourceTranslationSettingsAbout {
   appDescription: string;
 }
 
+export interface LocaleResourceTranslationSettingsProjects {
+  title: string;
+  description: string;
+  empty: string;
+  add: string;
+  createTitle: string;
+  editTitle: string;
+  formDescription: string;
+  pathLabel: string;
+  pathPlaceholder: string;
+  editAction: string;
+  deleteAction: string;
+  deleteTitle: string;
+  deleteWithoutChats: string;
+  deleteWithChats: string;
+  loadError: string;
+  saveError: string;
+  deleteError: string;
+}
+
+export interface LocaleResourceTranslationSettingsCustomAgents {
+  title: string;
+  description: string;
+  empty: string;
+  add: string;
+  createTitle: string;
+  editTitle: string;
+  formDescription: string;
+  nameLabel: string;
+  commandLabel: string;
+  commandPlaceholder: string;
+  argsLabel: string;
+  argsPlaceholder: string;
+  environmentLabel: string;
+  environmentPlaceholder: string;
+  needAuth: string;
+  autoAuthenticate: string;
+  editAction: string;
+  deleteAction: string;
+  deleteTitle: string;
+  deleteWithoutChats: string;
+  deleteWithChats: string;
+  loadError: string;
+  saveError: string;
+  deleteError: string;
+}
+
 export interface LocaleResourceTranslationSettings {
   appearance: LocaleResourceTranslationSettingsAppearance;
   about: LocaleResourceTranslationSettingsAbout;
+  projects: LocaleResourceTranslationSettingsProjects;
+  customAgents: LocaleResourceTranslationSettingsCustomAgents;
 }
 
 export interface LocaleResourceTranslation {

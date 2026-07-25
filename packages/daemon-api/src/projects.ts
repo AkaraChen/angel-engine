@@ -3,6 +3,14 @@ export interface Project {
   path: string;
 }
 
+export interface DeleteProjectImpact {
+  chatCount: number;
+}
+
+export interface DeleteProjectResult {
+  ok: boolean;
+}
+
 export interface ProjectGitStatusInput {
   projectId: string;
 }
@@ -35,6 +43,42 @@ export interface CreateProjectInput {
 export interface UpdateProjectInput {
   id: string;
   path: string;
+}
+
+const projectResponseSchema = arkType({
+  "+": "ignore",
+  id: "string > 0",
+  path: "string > 0",
+});
+
+const deleteProjectImpactResponseSchema = arkType({
+  "+": "ignore",
+  chatCount: "number.integer >= 0",
+});
+
+const deleteProjectResultResponseSchema = arkType({
+  "+": "ignore",
+  ok: "boolean",
+});
+
+export function isProject(value: unknown): value is Project {
+  return !(projectResponseSchema(value) instanceof arkType.errors);
+}
+
+export function isProjectList(value: unknown): value is Project[] {
+  return !(projectResponseSchema.array()(value) instanceof arkType.errors);
+}
+
+export function isDeleteProjectImpact(
+  value: unknown,
+): value is DeleteProjectImpact {
+  return !(deleteProjectImpactResponseSchema(value) instanceof arkType.errors);
+}
+
+export function isDeleteProjectResult(
+  value: unknown,
+): value is DeleteProjectResult {
+  return !(deleteProjectResultResponseSchema(value) instanceof arkType.errors);
 }
 
 export const createProjectInputSchema = arkType({

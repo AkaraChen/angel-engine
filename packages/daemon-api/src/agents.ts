@@ -54,6 +54,10 @@ export interface DeleteCustomAgentImpact {
   chatCount: number;
 }
 
+export interface DeleteCustomAgentResult {
+  deletedChatIds: string[];
+}
+
 export interface AgentSkillsInput {
   projectPath?: string;
   runtime: string;
@@ -92,6 +96,54 @@ export const updateCustomAgentInputSchema = arkType({
   "needAuth?": "boolean | undefined",
 });
 
+const customAgentResponseSchema = arkType({
+  "+": "ignore",
+  args: stringListSchema,
+  autoAuthenticate: "boolean",
+  command: "string > 0",
+  createdAt: "string > 0",
+  environment: customAgentEnvironmentVariableSchema.array(),
+  id: "string > 0",
+  label: "string > 0",
+  needAuth: "boolean",
+  updatedAt: "string > 0",
+});
+
+const deleteCustomAgentImpactResponseSchema = arkType({
+  "+": "ignore",
+  chatCount: "number.integer >= 0",
+});
+
+const deleteCustomAgentResultResponseSchema = arkType({
+  "+": "ignore",
+  deletedChatIds: stringListSchema,
+});
+
+export function isCustomAgent(value: unknown): value is CustomAgent {
+  const parsed = customAgentResponseSchema(value);
+  return !(parsed instanceof arkType.errors) && isCustomAgentRuntime(parsed.id);
+}
+
+export function isCustomAgentList(value: unknown): value is CustomAgent[] {
+  return Array.isArray(value) && value.every(isCustomAgent);
+}
+
+export function isDeleteCustomAgentImpact(
+  value: unknown,
+): value is DeleteCustomAgentImpact {
+  return !(
+    deleteCustomAgentImpactResponseSchema(value) instanceof arkType.errors
+  );
+}
+
+export function isDeleteCustomAgentResult(
+  value: unknown,
+): value is DeleteCustomAgentResult {
+  return !(
+    deleteCustomAgentResultResponseSchema(value) instanceof arkType.errors
+  );
+}
+
 export interface AgentOption {
   description: string;
   id: AgentRuntime;
@@ -123,6 +175,27 @@ export interface AgentSettings {
   enabledRuntimes: AgentRuntime[];
   lastRuntime?: AgentRuntime;
   runtimePreferences: Partial<Record<AgentRuntime, AgentRuntimePreference>>;
+}
+
+const agentSkillDirectoryRulesResponseSchema = arkType({
+  globalDirs: stringListSchema,
+  projectRelativeDirs: stringListSchema,
+});
+
+const agentOptionResponseSchema = arkType({
+  "+": "ignore",
+  description: "string",
+  id: "string > 0",
+  label: "string > 0",
+  "skillDirectories?": agentSkillDirectoryRulesResponseSchema.or("undefined"),
+});
+
+export function isAgentOptionList(value: unknown): value is AgentOption[] {
+  const parsed = agentOptionResponseSchema.array()(value);
+  return (
+    !(parsed instanceof arkType.errors) &&
+    parsed.every((agent) => isAgentRuntime(agent.id))
+  );
 }
 
 const builtinAgentRuntime = arkType(

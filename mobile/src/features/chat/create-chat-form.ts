@@ -1,7 +1,5 @@
 import type { CreateChatInput } from "@/platform/chat-types";
 
-import { DEFAULT_AGENT_RUNTIME } from "@/platform/agent-catalog";
-
 export interface CreateChatFormState {
   projectId: string;
   /**
@@ -20,7 +18,7 @@ export interface CreateChatFormState {
 export const INITIAL_CREATE_CHAT_FORM: CreateChatFormState = {
   projectId: "",
   prompt: "",
-  runtime: DEFAULT_AGENT_RUNTIME,
+  runtime: "",
   model: "",
   reasoningEffort: "",
   useWorktree: false,
@@ -32,7 +30,7 @@ export function canUseWorktree(form: CreateChatFormState): boolean {
 }
 
 export function canSubmitCreateChat(form: CreateChatFormState): boolean {
-  return form.prompt.trim().length > 0;
+  return form.prompt.trim().length > 0 && form.runtime.length > 0;
 }
 
 /**

@@ -7,6 +7,8 @@ export const de = {
     },
     common: {
       cancel: "Abbrechen",
+      delete: "Löschen",
+      save: "Speichern",
       tryAgain: "Erneut versuchen",
       newChat: "Neuer Chat",
       settings: "Einstellungen",
@@ -85,6 +87,8 @@ export const de = {
       projectLabel: "Projekt",
       noProject: "Kein Projekt (ad hoc)",
       agentLabel: "Agent",
+      agentsError: "Agenten konnten nicht geladen werden.",
+      noAgents: "Keine Agenten verfügbar",
       modelLabel: "Modell",
       modelPlaceholder: "Standard",
       reasoningLabel: "Reasoning",
@@ -104,6 +108,61 @@ export const de = {
       create: "Chat erstellen",
     },
     settings: {
+      projects: {
+        title: "Projekte",
+        description:
+          "Beim Löschen eines Projekts bleiben die Dateien auf dem Desktop-Computer erhalten.",
+        empty: "Noch keine Projekte.",
+        add: "Projekt hinzufügen",
+        createTitle: "Projekt hinzufügen",
+        editTitle: "Projekt bearbeiten",
+        formDescription:
+          "Gib den Pfad eines vorhandenen Ordners auf dem Desktop-Computer ein.",
+        pathLabel: "Projektpfad",
+        pathPlaceholder: "/Users/you/project",
+        editAction: "{{name}} bearbeiten",
+        deleteAction: "{{name}} löschen",
+        deleteTitle: "{{name}} löschen?",
+        deleteWithoutChats:
+          "Das Projekt wird aus Angel Engine entfernt. Die Dateien bleiben erhalten.",
+        deleteWithChats:
+          "Das Projekt und {{count}} verknüpfte Chats werden entfernt. Die Dateien bleiben erhalten.",
+        loadError: "Projekte konnten nicht geladen werden.",
+        saveError: "Das Projekt konnte nicht gespeichert werden.",
+        deleteError: "Das Projekt konnte nicht gelöscht werden.",
+      },
+      customAgents: {
+        title: "Benutzerdefinierte Agenten",
+        description:
+          "Agenten bleiben auf dem Desktop-Computer. Umgebungsvariablen werden lokal im Klartext gespeichert.",
+        empty: "Noch keine benutzerdefinierten Agenten.",
+        add: "Agent hinzufügen",
+        createTitle: "Benutzerdefinierten Agenten hinzufügen",
+        editTitle: "Benutzerdefinierten Agenten bearbeiten",
+        formDescription:
+          "Konfiguriere einen ACP-kompatiblen Befehl auf dem Desktop-Computer.",
+        nameLabel: "Name",
+        commandLabel: "Befehl",
+        commandPlaceholder: "mein-agent",
+        argsLabel: "Argumente, eines pro Zeile",
+        argsPlaceholder: "acp\n--stdio",
+        environmentLabel: "Umgebung, ein NAME=Wert pro Zeile",
+        environmentPlaceholder: "API_KEY=Wert",
+        needAuth: "Authentifizierung erforderlich",
+        autoAuthenticate: "Automatisch authentifizieren",
+        editAction: "{{name}} bearbeiten",
+        deleteAction: "{{name}} löschen",
+        deleteTitle: "{{name}} löschen?",
+        deleteWithoutChats:
+          "Der benutzerdefinierte Agent wird aus Angel Engine entfernt.",
+        deleteWithChats:
+          "Der benutzerdefinierte Agent und {{count}} zugehörige Chats werden entfernt.",
+        loadError: "Benutzerdefinierte Agenten konnten nicht geladen werden.",
+        saveError:
+          "Der benutzerdefinierte Agent konnte nicht gespeichert werden.",
+        deleteError:
+          "Der benutzerdefinierte Agent konnte nicht gelöscht werden.",
+      },
       appearance: {
         title: "Darstellung",
         theme: "Design",
