@@ -40,6 +40,12 @@ export const zhCN = {
       emptyDescription: "开启一个新的智能体会话后即可在此看到。",
       errorTitle: "无法加载对话",
     },
+    attention: {
+      needsInput: "需要处理",
+      needsInputDescription: "智能体正在等待你的回复。",
+      newReply: "有新回复",
+      review: "查看",
+    },
     chat: {
       thinking: "思考中…",
       turnFailed: "本轮助手回复失败。",

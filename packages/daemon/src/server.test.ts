@@ -410,6 +410,23 @@ describe("createDaemon", () => {
       expect(response.status, pathname).toBe(200);
       expect(await response.json(), pathname).toBeInstanceOf(Array);
     }
+    const attention = await fetch(`${baseUrl}/api/chat-attention`, { headers });
+    expect(attention.status).toBe(200);
+    await expect(attention.json()).resolves.toEqual({ attentions: [] });
+
+    const eventSocket = new WebSocket(
+      `${baseUrl.replace("http:", "ws:")}/api/events`,
+      `angel-engine-token.${sessionToken}`,
+    );
+    await new Promise<void>((resolve, reject) => {
+      eventSocket.once("open", resolve);
+      eventSocket.once("error", reject);
+    });
+    const closed = new Promise<void>((resolve) =>
+      eventSocket.once("close", () => resolve()),
+    );
+    eventSocket.close();
+    await closed;
   });
 
   it("advertises a loopback host when binding the wildcard address", async () => {

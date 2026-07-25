@@ -43,6 +43,12 @@ export const fr = {
         "Démarrez une nouvelle session d'agent pour la voir apparaître ici.",
       errorTitle: "Impossible de charger les discussions",
     },
+    attention: {
+      needsInput: "Saisie requise",
+      needsInputDescription: "L’agent attend votre réponse.",
+      newReply: "Nouvelle réponse",
+      review: "Voir",
+    },
     chat: {
       thinking: "Réflexion…",
       turnFailed: "Le tour de l'assistant a échoué.",

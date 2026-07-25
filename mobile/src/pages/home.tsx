@@ -1,11 +1,19 @@
 import type { Locale } from "date-fns";
 import type { ChatSummary } from "@/platform/chat-types";
 
-import { ChatCircle, GitBranch, Plus, PushPin } from "@phosphor-icons/react";
+import {
+  ChatCircle,
+  CheckCircle,
+  GitBranch,
+  Plus,
+  PushPin,
+  WarningCircle,
+} from "@phosphor-icons/react";
 import { formatDistanceToNow } from "date-fns";
 import { useTranslation } from "react-i18next";
 import { Link } from "wouter";
 
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Empty,
@@ -70,6 +78,7 @@ export function HomePage() {
 }
 
 function ChatListItem({ chat }: { chat: ChatSummary }) {
+  const { t } = useTranslation();
   const locale = useDateFnsLocale();
   const subtitle = [chat.projectName, chat.worktreeBranch].filter(Boolean);
   return (
@@ -107,8 +116,26 @@ function ChatListItem({ chat }: { chat: ChatSummary }) {
               {formatUpdatedAt(chat.updatedAt, locale)}
             </span>
           </span>
-          {subtitle.length > 0 ? (
+          {subtitle.length > 0 || chat.attention !== null ? (
             <span className="flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground">
+              {chat.attention !== null ? (
+                <Badge
+                  variant={
+                    chat.attention.status === "needsInput"
+                      ? "destructive"
+                      : "secondary"
+                  }
+                >
+                  {chat.attention.status === "needsInput" ? (
+                    <WarningCircle data-icon="inline-start" weight="fill" />
+                  ) : (
+                    <CheckCircle data-icon="inline-start" weight="fill" />
+                  )}
+                  {chat.attention.status === "needsInput"
+                    ? t("attention.needsInput")
+                    : t("attention.newReply")}
+                </Badge>
+              ) : null}
               {chat.projectName !== null ? (
                 <span className="truncate">{chat.projectName}</span>
               ) : null}

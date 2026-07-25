@@ -44,6 +44,12 @@ export const de = {
         "Starte eine neue Agent-Sitzung, damit sie hier erscheint.",
       errorTitle: "Chats konnten nicht geladen werden",
     },
+    attention: {
+      needsInput: "Eingabe nötig",
+      needsInputDescription: "Der Agent wartet auf deine Antwort.",
+      newReply: "Neue Antwort",
+      review: "Ansehen",
+    },
     chat: {
       thinking: "Denkt nach…",
       turnFailed: "Der Assistenten-Durchlauf ist fehlgeschlagen.",

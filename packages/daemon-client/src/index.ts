@@ -7,6 +7,9 @@ import type {
   UpdateCustomAgentInput,
 } from "@angel-engine/daemon-api/agents";
 import type {
+  ChatAttentionListResult,
+  ChatAttentionReadInput,
+  ChatAttentionReadResult,
   Chat,
   ChatArchivedDeleteImpact,
   ChatArchivedDeleteImpactInput,
@@ -32,7 +35,13 @@ import type {
   ProjectFileSearchInput,
   ProjectFileSearchResult,
 } from "@angel-engine/daemon-api/chat";
-import { isChatStreamEvent } from "@angel-engine/daemon-api/chat";
+import {
+  isChatAttentionListResult,
+  isChatAttentionReadResult,
+  isChatStreamEvent,
+} from "@angel-engine/daemon-api/chat";
+import type { DaemonGlobalEvent } from "@angel-engine/daemon-api";
+import { isDaemonGlobalEvent } from "@angel-engine/daemon-api";
 import type {
   DaemonErrorPayload,
   DaemonHealth,
@@ -82,6 +91,12 @@ export interface DaemonClientOptions {
   onUnauthorized?: () => void;
   /** Bearer token; omit when the transport injects authorization itself. */
   token?: string | null;
+}
+
+export interface DaemonEventHandlers {
+  onEvent: (event: DaemonGlobalEvent) => void;
+  onInvalidEvent?: (error: DaemonRequestError) => void;
+  onOpen?: () => void;
 }
 
 export function createDaemonClient(options: DaemonClientOptions) {
@@ -134,6 +149,34 @@ export function createDaemonClient(options: DaemonClientOptions) {
     body: body === undefined ? undefined : JSON.stringify(body),
     method,
   });
+
+  const listAttention = async (): Promise<ChatAttentionListResult> => {
+    const result = await request<unknown>("/api/chat-attention");
+    if (!isChatAttentionListResult(result)) {
+      throw DaemonRequestError.invalidResponse(
+        "Daemon returned an invalid chat attention snapshot.",
+        200,
+      );
+    }
+    return result;
+  };
+
+  const readAttention = async (
+    chatId: string,
+    input: ChatAttentionReadInput,
+  ): Promise<ChatAttentionReadResult> => {
+    const result = await request<unknown>(
+      `/api/chats/${encodeURIComponent(chatId)}/attention/read`,
+      json("POST", input),
+    );
+    if (!isChatAttentionReadResult(result)) {
+      throw DaemonRequestError.invalidResponse(
+        "Daemon returned an invalid chat attention read result.",
+        200,
+      );
+    }
+    return result;
+  };
 
   async function* streamChat(
     input: ChatSendInput,
@@ -209,6 +252,10 @@ export function createDaemonClient(options: DaemonClientOptions) {
         ),
       send: streamChat,
     },
+    attention: {
+      list: listAttention,
+      read: readAttention,
+    },
     chats: {
       archive: (id: string) =>
         request<Chat>(`/api/chats/${encodeURIComponent(id)}/archive`, {
@@ -279,6 +326,10 @@ export function createDaemonClient(options: DaemonClientOptions) {
         ),
     },
     health: () => request<DaemonHealth>("/api/health"),
+    events: {
+      subscribe: (handlers: DaemonEventHandlers) =>
+        subscribeDaemonEvents(options, handlers),
+    },
     processes: {
       kill: (pid: number, force = false) =>
         request<{ ok: boolean }>(`/api/processes/${pid}/kill`, {
@@ -351,4 +402,96 @@ function query(input: object) {
     if (value !== undefined) parameters.set(key, String(value));
   }
   return parameters.toString();
+}
+
+function subscribeDaemonEvents(
+  options: DaemonClientOptions,
+  handlers: DaemonEventHandlers,
+): () => void {
+  let reconnectTimer: ReturnType<typeof setTimeout> | undefined;
+  let socket: WebSocket | undefined;
+  let stopped = false;
+
+  const connect = () => {
+    let url: string;
+    try {
+      url = daemonEventUrl(options.baseUrl);
+    } catch (cause) {
+      stopped = true;
+      handlers.onInvalidEvent?.(
+        DaemonRequestError.invalidResponse(
+          cause instanceof Error ? cause.message : String(cause),
+          0,
+        ),
+      );
+      return;
+    }
+
+    const protocol =
+      options.token === undefined || options.token === null
+        ? undefined
+        : `angel-engine-token.${options.token}`;
+    const next =
+      protocol === undefined
+        ? new WebSocket(url)
+        : new WebSocket(url, protocol);
+    socket = next;
+    next.addEventListener("open", () => handlers.onOpen?.());
+    next.addEventListener("message", (message) => {
+      let event: DaemonGlobalEvent;
+      try {
+        const candidate: unknown = JSON.parse(String(message.data));
+        if (!isDaemonGlobalEvent(candidate)) {
+          throw DaemonRequestError.invalidResponse(
+            "Daemon returned an invalid global event.",
+            0,
+          );
+        }
+        event = candidate;
+      } catch (cause) {
+        stopped = true;
+        const error =
+          cause instanceof DaemonRequestError
+            ? cause
+            : DaemonRequestError.invalidResponse(
+                cause instanceof Error ? cause.message : String(cause),
+                0,
+              );
+        handlers.onInvalidEvent?.(error);
+        next.close(1003, "Invalid daemon event");
+        return;
+      }
+      handlers.onEvent(event);
+    });
+    next.addEventListener("close", () => {
+      if (socket !== next) return;
+      socket = undefined;
+      if (!stopped) reconnectTimer = setTimeout(connect, 1_000);
+    });
+  };
+
+  connect();
+  return () => {
+    stopped = true;
+    if (reconnectTimer !== undefined) clearTimeout(reconnectTimer);
+    socket?.close();
+    socket = undefined;
+  };
+}
+
+function daemonEventUrl(baseUrl: string): string {
+  const origin =
+    baseUrl.length > 0
+      ? baseUrl
+      : typeof location === "undefined"
+        ? undefined
+        : location.origin;
+  if (origin === undefined) {
+    throw new Error("Daemon event URL requires an absolute base URL.");
+  }
+  const url = new URL("/api/events", origin);
+  if (url.protocol === "http:") url.protocol = "ws:";
+  else if (url.protocol === "https:") url.protocol = "wss:";
+  else throw new Error(`Unsupported daemon event protocol: ${url.protocol}`);
+  return url.toString();
 }

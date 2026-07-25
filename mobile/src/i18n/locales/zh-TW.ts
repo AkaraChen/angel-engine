@@ -40,6 +40,12 @@ export const zhTW = {
       emptyDescription: "開啟一個新的代理工作階段後即可在此看到。",
       errorTitle: "無法載入對話",
     },
+    attention: {
+      needsInput: "需要處理",
+      needsInputDescription: "智慧代理正在等待你的回覆。",
+      newReply: "有新回覆",
+      review: "查看",
+    },
     chat: {
       thinking: "思考中…",
       turnFailed: "本輪助理回覆失敗。",

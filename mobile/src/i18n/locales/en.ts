@@ -42,6 +42,12 @@ export const en = {
       emptyDescription: "Start a new agent session to see it here.",
       errorTitle: "Couldn't load chats",
     },
+    attention: {
+      needsInput: "Needs input",
+      needsInputDescription: "The agent is waiting for your response.",
+      newReply: "New reply",
+      review: "Review",
+    },
     chat: {
       thinking: "Thinking…",
       turnFailed: "The assistant turn failed.",

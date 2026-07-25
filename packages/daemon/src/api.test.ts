@@ -53,6 +53,50 @@ describe("daemon chat streams", () => {
     );
   });
 
+  it("records completed attention until the matching chat read", async () => {
+    const publish = vi.fn();
+    const app = new Hono();
+    registerApi(app, fakeDaemonRuntime(), { publish });
+
+    const stream = await app.request(
+      "/api/chat-streams?streamId=stream-attention",
+      {
+        body: JSON.stringify({ chatId: chat.id, text: "hello" }),
+        headers: { "content-type": "application/json" },
+        method: "POST",
+      },
+    );
+    await stream.text();
+
+    const snapshot = await app.request("/api/chat-attention");
+    await expect(snapshot.json()).resolves.toEqual({
+      attentions: [
+        {
+          chatId: chat.id,
+          id: "stream-attention:completed",
+          status: "completed",
+          updatedAt: expect.any(String),
+        },
+      ],
+    });
+
+    const read = await app.request(`/api/chats/${chat.id}/attention/read`, {
+      body: JSON.stringify({
+        attentionId: "stream-attention:completed",
+      }),
+      headers: { "content-type": "application/json" },
+      method: "POST",
+    });
+    await expect(read.json()).resolves.toEqual({ read: true });
+    await expect(
+      (await app.request("/api/chat-attention")).json(),
+    ).resolves.toEqual({ attentions: [] });
+    expect(publish).toHaveBeenCalledWith({
+      chatIds: [chat.id],
+      type: "chat-attention-changed",
+    });
+  });
+
   it("publishes chat metadata changes for non-stream clients", async () => {
     const publish = vi.fn();
     const app = new Hono();

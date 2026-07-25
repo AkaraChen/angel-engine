@@ -45,6 +45,12 @@ export const ja = {
         "新しいエージェントセッションを開始すると、ここに表示されます。",
       errorTitle: "チャットを読み込めませんでした",
     },
+    attention: {
+      needsInput: "入力が必要",
+      needsInputDescription: "エージェントが返信を待っています。",
+      newReply: "新しい返信",
+      review: "確認",
+    },
     chat: {
       thinking: "思考中…",
       turnFailed: "アシスタントのターンが失敗しました。",

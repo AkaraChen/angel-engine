@@ -322,18 +322,26 @@ export async function createDaemon(options: DaemonOptions): Promise<Daemon> {
       proxyMobileDevWebSocket(request, socket, head, mobileDevServerUrl);
       return;
     }
+    const protocol = request.headers["sec-websocket-protocol"];
+    const isPrimary =
+      request.headers.authorization === `Bearer ${token}` ||
+      protocol === `angel-engine-token.${token}`;
+    const isMobile =
+      mobileToken !== undefined &&
+      (request.headers.authorization === `Bearer ${mobileToken}` ||
+        protocol === `angel-engine-token.${mobileToken}`);
+    const isEventFeed = url.pathname === "/api/events";
+    const isTerminal = url.pathname === "/api/terminals";
     if (
-      (request.headers.authorization !== `Bearer ${token}` &&
-        request.headers["sec-websocket-protocol"] !==
-          `angel-engine-token.${token}`) ||
-      (url.pathname !== "/api/events" && url.pathname !== "/api/terminals")
+      (!isEventFeed && !isTerminal) ||
+      (!isPrimary && !(isEventFeed && isMobile))
     ) {
       socket.write("HTTP/1.1 401 Unauthorized\r\nConnection: close\r\n\r\n");
       socket.destroy();
       return;
     }
     webSockets.handleUpgrade(request, socket, head, (webSocket) => {
-      if (url.pathname === "/api/events") {
+      if (isEventFeed) {
         eventSockets.add(webSocket);
         webSocket.once("close", () => eventSockets.delete(webSocket));
         return;

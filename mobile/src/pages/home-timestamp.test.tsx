@@ -52,6 +52,8 @@ describe("home timestamps", () => {
         const url = String(input);
         if (url.endsWith("/api/projects"))
           return Promise.resolve(jsonResponse([]));
+        if (url.endsWith("/api/chat-attention"))
+          return Promise.resolve(jsonResponse({ attentions: [] }));
         if (url.endsWith("/api/chats")) {
           return Promise.resolve(
             jsonResponse([

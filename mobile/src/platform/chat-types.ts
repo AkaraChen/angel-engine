@@ -1,5 +1,6 @@
 import type { AgentOption as ApiAgentOption } from "@angel-engine/daemon-api/agents";
 import type {
+  ChatAttention as ApiChatAttention,
   Chat as ApiChat,
   ChatCreateInput as ApiChatCreateInput,
   ChatCreationLocation as ApiChatCreationLocation,
@@ -26,6 +27,7 @@ import type { Project as ApiProject } from "@angel-engine/daemon-api/projects";
 
 /** Raw daemon contracts consumed by the mobile HTTP/SSE client. */
 export type DaemonChat = ApiChat;
+export type ChatAttention = ApiChatAttention;
 export type DaemonProject = ApiProject;
 export type DaemonAgentOption = Pick<
   ApiAgentOption,
@@ -75,6 +77,7 @@ export type ChatSummary = Pick<
   ApiChat,
   "id" | "pinned" | "projectId" | "runtime" | "title" | "updatedAt"
 > & {
+  attention: ChatAttention | null;
   projectName: string | null;
   worktreeBranch: string | null;
 };

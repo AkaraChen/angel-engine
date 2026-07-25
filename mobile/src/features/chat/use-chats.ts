@@ -6,6 +6,7 @@ import { useDaemonClient } from "@/platform/daemon-provider";
 import { queryKeys } from "@/platform/query-keys";
 
 import { deriveChatSummaries } from "./chat-summary";
+import { useChatAttentionList } from "./use-attention";
 
 /**
  * The mobile chat list: fetches the daemon chat + project snapshots in parallel
@@ -16,7 +17,7 @@ import { deriveChatSummaries } from "./chat-summary";
 export function useChatList() {
   const daemon = useDaemonClient();
 
-  return useQuery({
+  const chatsQuery = useQuery({
     queryKey: queryKeys.chats.list,
     queryFn: async () => {
       const [chats, projects] = await Promise.all([
@@ -26,6 +27,23 @@ export function useChatList() {
       return deriveChatSummaries(chats, projects);
     },
   });
+  const attentionQuery = useChatAttentionList();
+  const attentions = new Map(
+    attentionQuery.data?.map((attention) => [attention.chatId, attention]),
+  );
+
+  return {
+    data:
+      chatsQuery.data?.map((chat) => ({
+        ...chat,
+        attention: attentions.get(chat.id) ?? null,
+      })) ?? [],
+    isError: chatsQuery.isError || attentionQuery.isError,
+    isPending: chatsQuery.isPending || attentionQuery.isPending,
+    refetch: async () => {
+      await Promise.all([chatsQuery.refetch(), attentionQuery.refetch()]);
+    },
+  };
 }
 
 export function useProjectList() {

@@ -43,6 +43,13 @@ export interface LocaleResourceTranslationHome {
   errorTitle: string;
 }
 
+export interface LocaleResourceTranslationAttention {
+  needsInput: string;
+  needsInputDescription: string;
+  newReply: string;
+  review: string;
+}
+
 export interface LocaleResourceTranslationChat {
   thinking: string;
   turnFailed: string;
@@ -151,6 +158,7 @@ export interface LocaleResourceTranslation {
   sidebar: LocaleResourceTranslationSidebar;
   daemonStatus: LocaleResourceTranslationDaemonStatus;
   home: LocaleResourceTranslationHome;
+  attention: LocaleResourceTranslationAttention;
   chat: LocaleResourceTranslationChat;
   elicitation: LocaleResourceTranslationElicitation;
   createChat: LocaleResourceTranslationCreateChat;

@@ -43,6 +43,12 @@ export const es = {
       emptyDescription: "Inicia una nueva sesión de agente para verla aquí.",
       errorTitle: "No se pudieron cargar los chats",
     },
+    attention: {
+      needsInput: "Necesita respuesta",
+      needsInputDescription: "El agente está esperando tu respuesta.",
+      newReply: "Nueva respuesta",
+      review: "Revisar",
+    },
     chat: {
       thinking: "Pensando…",
       turnFailed: "El turno del asistente falló.",

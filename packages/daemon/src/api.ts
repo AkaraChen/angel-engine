@@ -27,6 +27,7 @@ import {
   chatSetModeInputSchema,
   chatSetPermissionModeInputSchema,
   chatSetRuntimeInputSchema,
+  isChatAttentionReadInput,
   normalizeChatAttachmentsInput,
 } from "@angel-engine/daemon-api/chat";
 import {
@@ -46,6 +47,7 @@ import {
   updateCustomAgent,
 } from "./features/agents/repository";
 import { listSkillsForAgent } from "./features/agents/skills";
+import { ChatAttentionStore } from "./features/chat/attention";
 import { ChatEngine } from "./features/chat/engine-runtime";
 import {
   archiveChat,
@@ -89,6 +91,8 @@ export interface EventPublisher {
 
 interface ActiveStream {
   abortController: AbortController;
+  chatId: string;
+  pendingElicitationId?: string;
   resolveElicitation?: (
     elicitationId: string,
     response: ChatElicitationResponse,
@@ -100,6 +104,7 @@ export function registerApi(
   runtime: DaemonRuntime,
   publisher: EventPublisher,
 ) {
+  const attention = new ChatAttentionStore();
   const streams = new Map<string, ActiveStream>();
   const run = <A>(
     effect: Effect.Effect<A, DaemonError, Db | ChatEngine>,
@@ -109,6 +114,18 @@ export function registerApi(
       chatEngine: Effect.Effect.Success<typeof ChatEngine>,
     ) => Effect.Effect<A, DaemonError, Db>,
   ) => Effect.flatMap(ChatEngine, use);
+
+  app.get("/api/chat-attention", (context) => context.json(attention.list()));
+  app.post("/api/chats/:id/attention/read", async (context) => {
+    const input = await context.req.json<unknown>();
+    if (!isChatAttentionReadInput(input)) {
+      throw DaemonError.invalidRequest("Chat attention input is invalid.");
+    }
+    const chatId = context.req.param("id");
+    const read = attention.acknowledge(chatId, input.attentionId);
+    publishChatAttention(publisher, chatId, read);
+    return context.json({ read });
+  });
 
   app.get("/api/chats", async (context) =>
     context.json(await run(listChats())),
@@ -153,11 +170,13 @@ export function registerApi(
         yield* deleteChat(chatId);
       }),
     );
+    publishChatAttention(publisher, chatId, attention.clearChat(chatId));
     publishChatMetadata(publisher, [chatId]);
     return context.json({ ok: true });
   });
   app.post("/api/chats/:id/archive", async (context) => {
     const chat = await run(archiveChat(context.req.param("id")));
+    publishChatAttention(publisher, chat.id, attention.clearChat(chat.id));
     publishChatMetadata(publisher, [chat.id]);
     return context.json(chat);
   });
@@ -246,6 +265,9 @@ export function registerApi(
       publisher,
       targets.map((chat) => chat.id),
     );
+    for (const chat of targets) {
+      publishChatAttention(publisher, chat.id, attention.clearChat(chat.id));
+    }
     return context.json({
       deletedCount,
       deletedWorktreeCount: worktrees.length,
@@ -340,6 +362,9 @@ export function registerApi(
         return chatIds;
       }),
     );
+    for (const chatId of deletedChatIds) {
+      publishChatAttention(publisher, chatId, attention.clearChat(chatId));
+    }
     publishChatMetadata(publisher, deletedChatIds);
     return context.json({ deletedChatIds });
   });
@@ -450,7 +475,10 @@ export function registerApi(
     const input = parseSendInput(await context.req.json());
     return streamSSE(context, async (stream) => {
       const abortController = new AbortController();
-      const active: ActiveStream = { abortController };
+      const active: ActiveStream = {
+        abortController,
+        chatId: input.chatId ?? "",
+      };
       streams.set(streamId, active);
       const controls: ChatStreamControls = {
         setResolveElicitation(handler) {
@@ -460,6 +488,7 @@ export function registerApi(
       let sendQueue = Promise.resolve();
       const send = (event: ChatStreamEvent) => {
         sendQueue = sendQueue.then(async () => {
+          updateChatAttention(attention, publisher, active, streamId, event);
           publisher.publish({ event, streamId, type: "chat-stream" });
           await stream.writeSSE({
             data: JSON.stringify(event),
@@ -507,8 +536,87 @@ export function registerApi(
       response: ChatElicitationResponse;
     }>();
     await active.resolveElicitation(body.elicitationId, body.response);
+    if (
+      active.chatId.length > 0 &&
+      attention.resolveInput(
+        active.chatId,
+        context.req.param("id"),
+        body.elicitationId,
+      )
+    ) {
+      publishChatAttention(publisher, active.chatId, true);
+    }
+    if (active.pendingElicitationId === body.elicitationId) {
+      active.pendingElicitationId = undefined;
+    }
     return context.json({ resolved: true });
   });
+}
+
+function updateChatAttention(
+  attention: ChatAttentionStore,
+  publisher: EventPublisher,
+  active: ActiveStream,
+  streamId: string,
+  event: ChatStreamEvent,
+) {
+  if (event.type === "chat") {
+    active.chatId = event.chat.id;
+    return;
+  }
+  if (event.type === "result") {
+    active.chatId = event.result.chatId;
+    active.pendingElicitationId = undefined;
+    publishChatAttention(
+      publisher,
+      active.chatId,
+      attention.completed(active.chatId, streamId),
+    );
+    return;
+  }
+  if (event.type === "elicitation" && active.chatId.length > 0) {
+    const elicitationId = event.elicitation.id;
+    if (event.elicitation.phase === "open") {
+      active.pendingElicitationId = elicitationId;
+      publishChatAttention(
+        publisher,
+        active.chatId,
+        attention.needsInput(active.chatId, streamId, elicitationId),
+      );
+      return;
+    }
+    if (active.pendingElicitationId === elicitationId) {
+      active.pendingElicitationId = undefined;
+    }
+    publishChatAttention(
+      publisher,
+      active.chatId,
+      attention.resolveInput(active.chatId, streamId, elicitationId),
+    );
+    return;
+  }
+  if (
+    (event.type === "error" || event.type === "done") &&
+    active.chatId.length > 0 &&
+    active.pendingElicitationId !== undefined
+  ) {
+    const elicitationId = active.pendingElicitationId;
+    active.pendingElicitationId = undefined;
+    publishChatAttention(
+      publisher,
+      active.chatId,
+      attention.resolveInput(active.chatId, streamId, elicitationId),
+    );
+  }
+}
+
+function publishChatAttention(
+  publisher: EventPublisher,
+  chatId: string,
+  changed: boolean,
+) {
+  if (!changed) return;
+  publisher.publish({ chatIds: [chatId], type: "chat-attention-changed" });
 }
 
 function publishChatMetadata(publisher: EventPublisher, chatIds: string[]) {

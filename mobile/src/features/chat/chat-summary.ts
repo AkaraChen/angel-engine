@@ -33,6 +33,7 @@ function deriveChatSummary(
   const worktreeCwd = chatWorktreeCwd(chat.cwd, project?.path);
 
   return {
+    attention: null,
     id: chat.id,
     title: chat.title,
     runtime: chat.runtime,

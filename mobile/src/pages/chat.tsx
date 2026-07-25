@@ -1,11 +1,24 @@
 import type { FormEvent, KeyboardEvent } from "react";
 import type { ConversationMessage } from "@/platform/chat-types";
 
-import { ArrowUp, ChatCircle, Square, Warning } from "@phosphor-icons/react";
-import { useState } from "react";
+import {
+  ArrowDown,
+  ArrowUp,
+  ChatCircle,
+  Square,
+  Warning,
+} from "@phosphor-icons/react";
+import { useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
+import {
+  Alert,
+  AlertAction,
+  AlertDescription,
+  AlertTitle,
+} from "@/components/ui/alert";
 import { Bubble, BubbleContent } from "@/components/ui/bubble";
+import { Button } from "@/components/ui/button";
 import {
   Empty,
   EmptyDescription,
@@ -36,6 +49,7 @@ import { ElicitationPrompt } from "@/features/chat/elicitation-prompt";
 import { MarkdownMessage } from "@/features/chat/markdown-message";
 import { PlanMessage } from "@/features/chat/plan-message";
 import { ToolCallGroup } from "@/features/chat/tool-call-group";
+import { useReadCompletedAttention } from "@/features/chat/use-attention";
 import {
   type Conversation,
   useConversation,
@@ -48,12 +62,21 @@ import {
  * from {@link useConversation}.
  */
 export function ChatPage({ chatId }: { chatId: string }) {
+  const pendingInputRef = useRef<HTMLDivElement>(null);
   const conversation = useConversation(chatId);
+  useReadCompletedAttention(chatId);
   const hasMessages = conversation.messages.length > 0;
+  const reviewPendingInput = () => {
+    pendingInputRef.current?.scrollIntoView({ block: "center" });
+    pendingInputRef.current?.focus({ preventScroll: true });
+  };
 
   return (
     <div className="flex h-full min-h-0 flex-col">
       <MessageScrollerProvider>
+        {conversation.pendingElicitation !== null ? (
+          <AttentionBanner onReview={reviewPendingInput} />
+        ) : null}
         <MessageScroller className="min-h-0 flex-1">
           <MessageScrollerViewport className="h-full">
             <MessageScrollerContent className="gap-4 p-4">
@@ -71,7 +94,15 @@ export function ChatPage({ chatId }: { chatId: string }) {
                 ))
               )}
               {conversation.pendingElicitation !== null ? (
-                <MessageScrollerItem scrollAnchor>
+                <MessageScrollerItem
+                  className="
+                    rounded-xl focus-visible:outline-2
+                    focus-visible:outline-offset-2 focus-visible:outline-ring
+                  "
+                  ref={pendingInputRef}
+                  scrollAnchor
+                  tabIndex={-1}
+                >
                   <ElicitationPrompt
                     elicitation={conversation.pendingElicitation}
                     onRespond={conversation.respondElicitation}
@@ -86,6 +117,25 @@ export function ChatPage({ chatId }: { chatId: string }) {
 
       <Composer conversation={conversation} />
     </div>
+  );
+}
+
+function AttentionBanner({ onReview }: { onReview: () => void }) {
+  const { t } = useTranslation();
+  return (
+    <Alert className="mx-3 mb-2 w-auto border-destructive/30 bg-destructive/5 pr-24">
+      <Warning className="text-destructive" weight="fill" />
+      <AlertTitle>{t("attention.needsInput")}</AlertTitle>
+      <AlertDescription>
+        {t("attention.needsInputDescription")}
+      </AlertDescription>
+      <AlertAction>
+        <Button onClick={onReview} size="sm" variant="outline">
+          {t("attention.review")}
+          <ArrowDown data-icon="inline-end" />
+        </Button>
+      </AlertAction>
+    </Alert>
   );
 }
 

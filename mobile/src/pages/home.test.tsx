@@ -50,6 +50,9 @@ describe("homePage", () => {
             jsonResponse([{ id: "p1", path: "/Users/dev/angel-engine" }]),
           );
         }
+        if (url.endsWith("/api/chat-attention")) {
+          return Promise.resolve(jsonResponse({ attentions: [] }));
+        }
         if (url.endsWith("/api/chats")) {
           return Promise.resolve(
             jsonResponse([
@@ -89,6 +92,8 @@ describe("homePage", () => {
         const url = String(input);
         if (url.endsWith("/api/projects"))
           return Promise.resolve(jsonResponse([]));
+        if (url.endsWith("/api/chat-attention"))
+          return Promise.resolve(jsonResponse({ attentions: [] }));
         if (url.endsWith("/api/chats"))
           return Promise.resolve(jsonResponse([]));
         return Promise.reject(new Error(`unexpected fetch: ${url}`));
@@ -98,6 +103,68 @@ describe("homePage", () => {
     renderHome();
 
     expect(await screen.findByText("No chats yet")).toBeDefined();
+  });
+
+  it("shows needs-input and new-reply markers from daemon attention", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: string) => {
+        const url = String(input);
+        if (url.endsWith("/api/projects")) return jsonResponse([]);
+        if (url.endsWith("/api/chat-attention")) {
+          return jsonResponse({
+            attentions: [
+              {
+                chatId: "needs-input",
+                id: "run-1:input:elicitation-1",
+                status: "needsInput",
+                updatedAt: "2026-07-25T01:00:00.000Z",
+              },
+              {
+                chatId: "completed",
+                id: "run-2:completed",
+                status: "completed",
+                updatedAt: "2026-07-25T01:01:00.000Z",
+              },
+            ],
+          });
+        }
+        if (url.endsWith("/api/chats")) {
+          return jsonResponse([
+            {
+              archived: false,
+              createdAt: "2026-07-25T00:00:00.000Z",
+              cwd: null,
+              id: "needs-input",
+              pinned: false,
+              projectId: null,
+              remoteThreadId: null,
+              runtime: "codex",
+              title: "Waiting chat",
+              updatedAt: "2026-07-25T01:00:00.000Z",
+            },
+            {
+              archived: false,
+              createdAt: "2026-07-25T00:00:00.000Z",
+              cwd: null,
+              id: "completed",
+              pinned: false,
+              projectId: null,
+              remoteThreadId: null,
+              runtime: "codex",
+              title: "Finished chat",
+              updatedAt: "2026-07-25T01:01:00.000Z",
+            },
+          ]);
+        }
+        return Promise.reject(new Error(`unexpected fetch: ${url}`));
+      }),
+    );
+
+    renderHome();
+
+    expect(await screen.findByText("Needs input")).toBeDefined();
+    expect(screen.getByText("New reply")).toBeDefined();
   });
 
   it("shows the error state when the daemon is unreachable", async () => {

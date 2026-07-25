@@ -42,6 +42,12 @@ export const ko = {
       emptyDescription: "새 에이전트 세션을 시작하면 여기에 표시됩니다.",
       errorTitle: "채팅을 불러올 수 없습니다",
     },
+    attention: {
+      needsInput: "입력 필요",
+      needsInputDescription: "에이전트가 응답을 기다리고 있습니다.",
+      newReply: "새 답변",
+      review: "확인",
+    },
     chat: {
       thinking: "생각 중…",
       turnFailed: "어시스턴트 턴이 실패했습니다.",
