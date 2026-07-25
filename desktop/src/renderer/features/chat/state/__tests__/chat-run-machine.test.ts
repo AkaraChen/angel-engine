@@ -1,4 +1,4 @@
-import type { Chat } from "@angel-engine/daemon-api/chat";
+import type { ChatRuntimeConfig } from "@angel-engine/daemon-api/chat";
 import type { ActiveRun, EngineMessage } from "../chat-run-types";
 
 import { describe, expect, it } from "vitest";
@@ -7,7 +7,6 @@ import { createRunHandles, getRunHandles } from "../chat-run-handles";
 import { selectSlot } from "../chat-run-reducer";
 import {
   getChatRunContext,
-  moveActiveRunToChat,
   replaceAssistantMessage,
   sendChatRunEvent,
 } from "../chat-run-registry";
@@ -16,6 +15,16 @@ let counter = 0;
 function uniqueKey(prefix: string) {
   counter += 1;
   return `${prefix}-${counter}`;
+}
+
+function runtimeConfig(): ChatRuntimeConfig {
+  return {
+    currentModel: "prewarmed-model",
+    modes: [],
+    models: [],
+    permissionModes: [],
+    reasoningEfforts: [],
+  };
 }
 
 function engineMessage(id: string, role: "assistant" | "user"): EngineMessage {
@@ -35,35 +44,20 @@ function engineMessage(id: string, role: "assistant" | "user"): EngineMessage {
   } as unknown as EngineMessage;
 }
 
-function activeRun(runId: string, slotKey: string): ActiveRun {
+function activeRun(runId: string): ActiveRun {
   return {
     assistantMessageId: `${runId}-assistant`,
-    initialSlotKey: slotKey,
     runId,
     startedAt: 0,
   };
 }
 
-function chat(id: string): Chat {
-  return {
-    archived: false,
-    createdAt: "2026-01-01T00:00:00.000Z",
-    cwd: null,
-    id,
-    pinned: false,
-    projectId: null,
-    remoteThreadId: null,
-    runtime: "codex",
-    title: "Chat",
-    updatedAt: "2026-01-01T00:00:00.000Z",
-  };
-}
-
 function startRun(slotKey: string, runId: string) {
-  const run = activeRun(runId, slotKey);
+  const run = activeRun(runId);
   sendChatRunEvent({
     activeRun: run,
     assistantMessage: engineMessage(run.assistantMessageId, "assistant"),
+    chatId: slotKey,
     slotKey,
     type: "run.started",
     userMessage: engineMessage(`${runId}-user`, "user"),
@@ -133,19 +127,25 @@ describe("chat run registry machine", () => {
     expect(slot?.activeRun?.runId).toBe(run.runId);
   });
 
-  it("re-keys a draft slot to its created chat and resolves the old key", () => {
-    const key = uniqueKey("draft");
-    const run = startRun(key, "run-c");
-    const created = chat(uniqueKey("chat"));
+  it("spawns the run's slot under the real chat id, seeded with the draft config", () => {
+    // create-before-run: the chat exists before `run.started`, so the slot is
+    // keyed by the chat id immediately and never re-keyed afterwards.
+    const chatId = uniqueKey("chat");
+    const run = activeRun("run-c");
+    sendChatRunEvent({
+      activeRun: run,
+      assistantMessage: engineMessage(run.assistantMessageId, "assistant"),
+      chatId,
+      config: runtimeConfig(),
+      slotKey: chatId,
+      type: "run.started",
+      userMessage: engineMessage("run-c-user", "user"),
+    });
 
-    const nextKey = moveActiveRunToChat(key, created, run.runId);
-
-    expect(nextKey).toBe(created.id);
-    const state = getChatRunContext();
-    expect(Object.hasOwn(state.slots, key)).toBe(false);
-    const slot = selectSlot(state, key);
-    expect(slot?.key).toBe(created.id);
-    expect(slot?.chatId).toBe(created.id);
+    const slot = selectSlot(getChatRunContext(), chatId);
+    expect(slot?.key).toBe(chatId);
+    expect(slot?.chatId).toBe(chatId);
+    expect(slot?.config?.currentModel).toBe("prewarmed-model");
     expect(slot?.status).toBe("streaming");
   });
 
@@ -191,33 +191,23 @@ describe("chat run registry machine", () => {
     });
   });
 
-  it("lets a fresh draft reclaim a redirected draft key", () => {
-    const key = uniqueKey("draft");
-    const run = startRun(key, "run-f");
-    const created = chat(uniqueKey("chat"));
-    moveActiveRunToChat(key, created, run.runId);
+  it("keeps a draft slot empty after its run moved to a real chat slot", () => {
+    const draftKey = uniqueKey("draft");
     sendChatRunEvent({
-      assistantMessage: engineMessage(run.assistantMessageId, "assistant"),
-      runId: run.runId,
-      slotKey: key,
-      type: "run.finished",
-    });
-
-    sendChatRunEvent({
-      input: { historyMessages: [], historyRevision: 0, slotKey: key },
+      input: { historyMessages: [], historyRevision: 0, slotKey: draftKey },
       messages: [],
       type: "slot.initialized",
     });
+    const chatId = uniqueKey("chat");
+    startRun(chatId, "run-f");
 
     const state = getChatRunContext();
-    const draftSlot = state.slots[key];
-    expect(draftSlot?.messages).toEqual([]);
-    expect(draftSlot?.chatId).toBeUndefined();
-    // The finished chat remains addressable under its own id.
-    expect(state.slots[created.id]?.chatId).toBe(created.id);
+    expect(state.slots[draftKey]?.messages).toEqual([]);
+    expect(state.slots[draftKey]?.chatId).toBeUndefined();
+    expect(state.slots[chatId]?.chatId).toBe(chatId);
   });
 
-  it("drops a slot and its redirects", () => {
+  it("drops a slot", () => {
     const key = uniqueKey("slot");
     startRun(key, "run-g");
 

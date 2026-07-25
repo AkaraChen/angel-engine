@@ -11,10 +11,6 @@ import {
   materializeAssistantMessage,
 } from "../chat-run-store";
 
-vi.mock("@/features/chat/api/chat-stream", () => ({
-  streamChatEvents: vi.fn(),
-}));
-
 vi.mock("@/platform/api-client", () => ({
   getApiClient: vi.fn(),
 }));

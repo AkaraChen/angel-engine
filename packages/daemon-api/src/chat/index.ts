@@ -93,6 +93,7 @@ export interface ChatPrewarmIdInput {
 export type Chat = JsChat;
 export type ChatCreateInput = JsChatCreateInput &
   ChatCreationLocationInput &
+  ChatCwdInput &
   ChatPrewarmIdInput;
 export type ChatRuntimeConfigInput = JsChatRuntimeConfigInput;
 export type ChatRuntimeConfigOption = JsChatRuntimeConfigOption;
@@ -488,6 +489,7 @@ const chatId = arkType("string > 0");
 export const chatCreateInputSchema = arkType({
   "+": "ignore",
   "creationLocation?": "'project' | 'worktree' | undefined",
+  "cwd?": "string > 0 | undefined",
   "model?": "string > 0 | undefined",
   "mode?": "string > 0 | undefined",
   "permissionMode?": "string > 0 | undefined",

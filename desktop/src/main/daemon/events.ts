@@ -1,27 +1,31 @@
 import type { DaemonGlobalEvent } from "@angel-engine/daemon-api";
 import type {
-  Chat,
-  ChatElicitation,
-  ChatToolAction,
+  ChatAttention,
+  ChatHistoryMessage,
 } from "@angel-engine/daemon-api/chat";
 import type { DaemonInfo } from "@angel-engine/daemon-api/daemon";
 
+import { chatPartsText } from "@angel-engine/daemon-api/chat";
 import { BrowserWindow } from "electron";
-import { translate } from "../platform/i18n";
 import {
   notifyChatNeedsInput,
   notifyChatTurnCompleted,
 } from "../windows/notifications";
+import { daemonClient } from "./client";
 import { subscribeDaemonConnection } from "./supervisor";
-
-interface StreamState {
-  chat?: Chat;
-  notified: Set<string>;
-}
 
 let socket: WebSocket | undefined;
 let unsubscribe: (() => void) | undefined;
-const streams = new Map<string, StreamState>();
+
+/**
+ * Attention ids already turned into a notification. The id is
+ * `<runId>:input:<elicitationId>` or `<runId>:completed`, so it survives the
+ * run leaving the daemon registry and dedupes per event rather than per chat.
+ */
+const notified = new Set<string>();
+
+/** Attention reads are serialized so overlapping events cannot interleave. */
+let queue: Promise<void> = Promise.resolve();
 
 export function startDaemonEvents() {
   unsubscribe = subscribeDaemonConnection((connection) => {
@@ -55,54 +59,72 @@ export function stopDaemonEvents() {
   unsubscribe = undefined;
   socket?.close();
   socket = undefined;
-  streams.clear();
+  notified.clear();
 }
 
+/**
+ * `chat-attention-changed` is a hint, not a verdict: the daemon publishes it on
+ * clears too, so the authoritative status always comes from a pull. The main
+ * process no longer mirrors run events of its own.
+ */
 function handleEvent(message: DaemonGlobalEvent) {
-  if (message.type !== "chat-stream") return;
-  const state = streams.get(message.streamId) ?? {
-    notified: new Set<string>(),
-  };
-  streams.set(message.streamId, state);
-  const event = message.event;
-  if (event.type === "chat") state.chat = event.chat;
-  else if (event.type === "result") {
-    state.chat = event.result.chat;
-    notifyChatTurnCompleted({
-      body: event.result.text,
-      chat: event.result.chat,
+  if (message.type !== "chat-attention-changed") return;
+  const chatIds = new Set(message.chatIds);
+  queue = queue.then(() =>
+    notifyChangedAttention(chatIds).catch((): undefined => undefined),
+  );
+}
+
+async function notifyChangedAttention(chatIds: Set<string>) {
+  const { attentions } = await daemonClient.attention.list();
+  const live = new Set(attentions.map((attention) => attention.id));
+  for (const id of notified) {
+    if (!live.has(id)) notified.delete(id);
+  }
+
+  // A chat with no row was cleared — acknowledged, answered, or cancelled.
+  // Nothing to show, and specifically never a completion.
+  for (const attention of attentions) {
+    if (!chatIds.has(attention.chatId)) continue;
+    if (notified.has(attention.id)) continue;
+    notified.add(attention.id);
+    await notifyAttention(attention);
+  }
+}
+
+async function notifyAttention(attention: ChatAttention) {
+  if (attention.status === "needsInput") {
+    const { run } = await daemonClient.chatRuns.active(attention.chatId);
+    // The run may have been answered or cancelled between event and read.
+    if (run === null || run.status !== "needsInput") return;
+    const chat = await daemonClient.chats.get(attention.chatId);
+    if (chat === null) return;
+    notifyChatNeedsInput({
+      chat,
+      elicitation: run.pendingElicitation,
       window: notificationWindow(),
     });
-  } else if (event.type === "elicitation")
-    notifyElicitation(state, event.elicitation);
-  else if (event.type === "tool") notifyTool(state, event.action);
-  else if (event.type === "done") streams.delete(message.streamId);
-}
-
-function notifyTool(state: StreamState, action: ChatToolAction) {
-  if (action.phase !== "awaitingDecision") return;
-  notifyElicitation(state, {
-    body: action.inputSummary ?? action.rawInput ?? null,
-    id: action.id,
-    kind: "approval",
-    phase: "open",
-    title: action.title ?? translate("notifications.permissionRequired"),
-  });
-}
-
-function notifyElicitation(state: StreamState, elicitation: ChatElicitation) {
-  if (
-    elicitation.phase !== "open" ||
-    state.notified.has(elicitation.id) ||
-    state.chat === undefined
-  )
     return;
-  state.notified.add(elicitation.id);
-  notifyChatNeedsInput({
-    chat: state.chat,
-    elicitation,
+  }
+
+  // A completed run has left the registry, so there is no `result.text`; the
+  // body comes from the chat's canonical history instead.
+  const loaded = await daemonClient.chats.load(attention.chatId);
+  notifyChatTurnCompleted({
+    body: lastAssistantText(loaded.messages),
+    chat: loaded.chat,
     window: notificationWindow(),
   });
+}
+
+function lastAssistantText(messages: ChatHistoryMessage[]) {
+  for (let index = messages.length - 1; index >= 0; index -= 1) {
+    const message = messages[index];
+    if (message.role === "assistant") {
+      return chatPartsText(message.content, "text");
+    }
+  }
+  return "";
 }
 
 function notificationWindow() {

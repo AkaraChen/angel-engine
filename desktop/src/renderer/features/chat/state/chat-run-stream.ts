@@ -1,9 +1,9 @@
 import type {
-  Chat,
+  ChatActiveRunSnapshot,
   ChatElicitation,
   ChatElicitationResponse,
   ChatHistoryMessagePart,
-  ChatSendInput,
+  ChatRunObserverEvent,
   ChatToolAction,
 } from "@angel-engine/daemon-api/chat";
 import type { RunHandles } from "./chat-run-handles";
@@ -18,7 +18,6 @@ import {
   cloneChatHistoryPart,
   isTerminalChatToolPhase,
 } from "@angel-engine/daemon-api/chat";
-import { streamChatEvents } from "@/features/chat/api/chat-stream";
 import {
   createAssistantMessage,
   materializeAssistantMessage,
@@ -39,7 +38,6 @@ import { selectSlot } from "./chat-run-reducer";
 import {
   getChatRunContext,
   markChatCompleted,
-  moveActiveRunToChat,
   replaceAssistantMessage,
 } from "./chat-run-registry";
 
@@ -47,22 +45,26 @@ const STREAM_FLUSH_MIN_CHARS = 24;
 const STREAM_FLUSH_MAX_MS = 80;
 const ALLOW_PERMISSION_RESPONSE: ChatElicitationResponse = { type: "allow" };
 
+/**
+ * Drives one slot from a daemon-owned run observer.
+ *
+ * The observer always opens with a snapshot, so a reattach rebuilds the
+ * in-flight assistant message from daemon state rather than replaying events.
+ * Ending this loop detaches; it never cancels the run.
+ */
 export async function consumeRunStream({
   activeRun,
   accumulator,
   handles,
-  input,
-  onChatCreated,
+  observe,
   slotKey,
 }: {
   activeRun: ActiveRun;
   accumulator: AssistantAccumulator;
   handles: RunHandles;
-  input: ChatSendInput;
-  onChatCreated?: (chat: Chat) => void;
+  observe: (signal: AbortSignal) => AsyncIterable<ChatRunObserverEvent>;
   slotKey: string;
 }): Promise<RunCompletion> {
-  let currentSlotKey = slotKey;
   let dirty = false;
   let pendingDeltaChars = 0;
   let lastFlushAt = performance.now();
@@ -93,7 +95,7 @@ export async function consumeRunStream({
       minDirtyIndex,
     );
     const flushed = replaceAssistantMessage(
-      currentSlotKey,
+      slotKey,
       activeRun.runId,
       activeRun.assistantMessageId,
       nextAssistantMessage,
@@ -115,25 +117,28 @@ export async function consumeRunStream({
     void flush();
   };
 
-  try {
-    for await (const event of streamChatEvents(
-      input,
-      handles.abortController.signal,
-      (controller) => {
-        handles.streamController = controller;
-      },
-    )) {
-      if (handles.cancelled || event.type === "done") break;
+  const applySnapshot = (snapshot: ChatActiveRunSnapshot) => {
+    accumulator.parts =
+      snapshot.assistantMessage.content.map(cloneChatHistoryPart);
+    assistantMaterializationCache.engineParts = [];
+    markDirty(0);
+  };
 
-      if (event.type === "chat") {
-        currentSlotKey = moveActiveRunToChat(
-          currentSlotKey,
-          event.chat,
-          activeRun.runId,
-        );
-        onChatCreated?.(event.chat);
+  try {
+    for await (const message of observe(handles.abortController.signal)) {
+      if (handles.cancelled) break;
+
+      if (message.type === "snapshot") {
+        applySnapshot(message.snapshot);
+        if (!(await flush())) break;
         continue;
       }
+
+      const event = message.event;
+      if (event.type === "done") break;
+      // A run always targets an existing chat, so the create-time `chat` event
+      // of the legacy send route can never appear here.
+      if (event.type === "chat") continue;
 
       if (event.type === "error") {
         accumulator.error = event.message;
@@ -156,7 +161,6 @@ export async function consumeRunStream({
         return {
           assistantMessage: currentAssistantMessage,
           result: accumulator.result,
-          slotKey: currentSlotKey,
         };
       }
 
@@ -182,7 +186,7 @@ export async function consumeRunStream({
           elicitation: event.elicitation,
           handles,
           parts: accumulator.parts,
-          slotKey: currentSlotKey,
+          slotKey,
         });
       } else if (event.type === "tool") {
         markDirty(upsertToolActionPart(accumulator.parts, event.action));
@@ -191,7 +195,7 @@ export async function consumeRunStream({
           action: event.action,
           handles,
           parts: accumulator.parts,
-          slotKey: currentSlotKey,
+          slotKey,
         });
       } else if (event.type === "toolDelta") {
         const delta = appendToolActionDeltaPart(
@@ -240,7 +244,6 @@ export async function consumeRunStream({
       return {
         assistantMessage: currentAssistantMessage,
         result: accumulator.result,
-        slotKey: currentSlotKey,
       };
     }
 
@@ -267,7 +270,6 @@ export async function consumeRunStream({
   return {
     assistantMessage: currentAssistantMessage,
     result: accumulator.result,
-    slotKey: currentSlotKey,
   };
 }
 
@@ -329,7 +331,7 @@ function shouldAutoApprovePermission(
   slotKey: string,
   elicitationId: string,
 ): ChatElicitationResponse | undefined {
-  if (!handles.streamController) return undefined;
+  if (!handles.resolveElicitation) return undefined;
   const slot = selectSlot(getChatRunContext(), slotKey);
   if (!slot?.permissionBypassEnabled) return undefined;
   if (handles.autoApprovedPermissionIds.has(elicitationId)) return undefined;
@@ -343,8 +345,8 @@ function sendAutoPermissionApproval(
   elicitationId: string,
   response: ChatElicitationResponse,
 ) {
-  void handles.streamController
-    ?.resolveElicitation({
+  void handles
+    .resolveElicitation?.({
       elicitationId,
       response,
     })

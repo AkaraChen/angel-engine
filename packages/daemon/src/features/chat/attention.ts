@@ -4,6 +4,8 @@ import type {
   ChatStreamEvent,
 } from "@angel-engine/daemon-api/chat";
 
+import { toolDecisionId } from "./run-registry";
+
 interface StoredAttention {
   attention: ChatAttention;
   elicitationId?: string;
@@ -36,6 +38,14 @@ export class ChatAttentionStore {
     if (event.type === "result") return this.#completed(chatId, runId);
     if (event.type === "error" || event.type === "done") {
       return this.#clearPendingRun(chatId, runId);
+    }
+    if (event.type === "tool" || event.type === "toolDelta") {
+      // Permission prompts arrive as tool actions awaiting a decision; they
+      // need the user just as much as an `elicitation` event does.
+      const decisionId = toolDecisionId(event.action);
+      return event.action.phase === "awaitingDecision"
+        ? this.#needsInput(chatId, runId, decisionId)
+        : this.resolveInput(chatId, runId, decisionId);
     }
     if (event.type !== "elicitation") return false;
     return event.elicitation.phase === "open"

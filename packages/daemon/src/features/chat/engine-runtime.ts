@@ -392,14 +392,6 @@ export class ChatEngine extends Effect.Service<ChatEngine>()(
         closeChatSession,
         createChatFromInput: (input: ChatCreateInput) =>
           Effect.gen(function* () {
-            if (input.creationLocation === "worktree") {
-              return yield* Effect.fail(
-                DaemonError.chatWorktreeCreationForbidden(
-                  "Worktree chats must be created by sending a message.",
-                ),
-              );
-            }
-
             const prewarm = is.nonEmptyString(input.prewarmId)
               ? yield* takeChatPrewarm(input.prewarmId, input)
               : undefined;
@@ -416,9 +408,12 @@ export class ChatEngine extends Effect.Service<ChatEngine>()(
               );
             }
 
+            // Worktree chats resolve here too: `cwdForNewChat` creates the
+            // project worktree, so creation no longer depends on the send
+            // route. It still fails when `projectId` is missing.
             return yield* createChat({
               ...input,
-              cwd: yield* cwdForProjectOrStandalone(input.projectId),
+              cwd: yield* cwdForNewChat(input),
             });
           }),
         inspectChatRuntimeConfig: (input: ChatRuntimeConfigInput) =>

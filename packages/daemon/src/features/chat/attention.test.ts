@@ -1,3 +1,5 @@
+import type { ChatToolAction } from "@angel-engine/daemon-api/chat";
+
 import { describe, expect, it } from "vitest";
 
 import { ChatAttentionStore } from "./attention";
@@ -12,6 +14,42 @@ const openInput = {
 } as const;
 
 describe("ChatAttentionStore", () => {
+  it("raises and clears attention for a permission prompt awaiting a decision", () => {
+    // Permission prompts arrive as tool actions, not elicitation events; a
+    // client that only watched elicitations would never be told to look.
+    const store = new ChatAttentionStore(() => "2026-07-25T01:00:00.000Z");
+    const action: ChatToolAction = {
+      id: "tool-1",
+      inputSummary: "rm -rf /",
+      kind: "command",
+      output: [],
+      outputText: "",
+      phase: "running",
+      rawInput: '{"command":"rm -rf /"}',
+      title: "Shell",
+      turnId: "turn-1",
+    };
+
+    expect(
+      store.apply("chat-1", "run-1", {
+        action: { ...action, phase: "awaitingDecision" },
+        type: "tool",
+      }),
+    ).toBe(true);
+    expect(store.list().attentions[0]).toMatchObject({
+      id: "run-1:input:tool-1",
+      status: "needsInput",
+    });
+
+    expect(
+      store.apply("chat-1", "run-1", {
+        action: { ...action, phase: "running" },
+        type: "tool",
+      }),
+    ).toBe(true);
+    expect(store.list()).toEqual({ attentions: [] });
+  });
+
   it("keeps daemon-owned attention until the exact state clears", () => {
     const store = new ChatAttentionStore(() => "2026-07-25T01:00:00.000Z");
 

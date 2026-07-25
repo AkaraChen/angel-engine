@@ -4,9 +4,6 @@ import { describe, expect, it, vi } from "vitest";
 vi.mock("@/platform/api-client", () => ({
   getApiClient: () => ({}),
 }));
-vi.mock("@/features/chat/api/chat-stream", () => ({
-  async *streamChatEvents() {},
-}));
 
 const { normalizeEnginePlanMessages } = await import("../chat-run-store");
 type EngineMessage = Parameters<typeof normalizeEnginePlanMessages>[0][number];

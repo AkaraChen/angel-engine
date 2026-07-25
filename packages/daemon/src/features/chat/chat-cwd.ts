@@ -1,4 +1,8 @@
-import type { Chat, ChatSendInput } from "@angel-engine/daemon-api/chat";
+import type {
+  Chat,
+  ChatCreationLocationInput,
+  ChatCwdInput,
+} from "@angel-engine/daemon-api/chat";
 import type { Db } from "../../platform/db";
 
 import is from "@sindresorhus/is";
@@ -20,8 +24,16 @@ export function cwdForChat(
   });
 }
 
+/**
+ * The fields that decide where a brand-new chat runs. Both `POST /api/chats`
+ * and the legacy send route resolve through this one rule, so a worktree chat
+ * materializes its worktree the same way whichever route created it.
+ */
+export type ChatCwdResolutionInput = ChatCreationLocationInput &
+  ChatCwdInput & { projectId?: string | null };
+
 export function cwdForNewChat(
-  input: ChatSendInput,
+  input: ChatCwdResolutionInput,
 ): Effect.Effect<string, DaemonError, Db> {
   return Effect.gen(function* () {
     if (is.nonEmptyString(input.cwd)) return input.cwd;

@@ -12,8 +12,15 @@ import type {
 } from "@assistant-ui/react";
 import type { EngineMessage } from "@/features/chat/state/chat-run-store";
 
+import is from "@sindresorhus/is";
 import { useExternalStoreRuntime } from "@assistant-ui/react";
-import { useCallback, useLayoutEffect, useMemo } from "react";
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+} from "react";
 import { useSendChatMessage } from "@/features/chat/runtime/use-send-chat-message";
 import {
   useChatRunIsRunning,
@@ -75,6 +82,7 @@ export function useEngineRuntime({
   const messages = useChatRunMessages(slotKey);
   const isRunning = useChatRunIsRunning(slotKey);
   const initializeSlot = useChatRunStore((state) => state.initializeSlot);
+  const attachToActiveRun = useChatRunStore((state) => state.attachToActiveRun);
   const cancelRunForSlot = useChatRunStore((state) => state.cancelRun);
   const resolveElicitation = useChatRunStore(
     (state) => state.resolveElicitation,
@@ -111,6 +119,21 @@ export function useEngineRuntime({
     runtimeConfig,
     slotKey,
   ]);
+
+  // Mounting a chat — first open, chat switch back, renderer reload — attaches
+  // an observer to whatever run the daemon is still executing. Unmounting only
+  // detaches; the run keeps going.
+  const attachCallbacksRef = useRef({ onChatMessagesUpdated, onChatUpdated });
+  attachCallbacksRef.current = { onChatMessagesUpdated, onChatUpdated };
+  useEffect(() => {
+    if (!is.nonEmptyString(chatId)) return;
+    attachToActiveRun(chatId, {
+      onChatMessagesUpdated: (...args) =>
+        attachCallbacksRef.current.onChatMessagesUpdated?.(...args),
+      onChatUpdated: (...args) =>
+        attachCallbacksRef.current.onChatUpdated?.(...args),
+    });
+  }, [attachToActiveRun, chatId]);
 
   const cancelRun = useCallback(async () => {
     cancelRunForSlot(slotKey);

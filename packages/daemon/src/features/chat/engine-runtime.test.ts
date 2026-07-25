@@ -96,11 +96,23 @@ describe("cwdForNewChat", () => {
 
     await expect(
       Effect.runPromise(
-        cwdForNewChat({ cwd: "/tmp/existing-worktree", text: "hi" }).pipe(
+        cwdForNewChat({ cwd: "/tmp/existing-worktree" }).pipe(
           Effect.provide(testDbLayer),
         ),
       ),
     ).resolves.toBe("/tmp/existing-worktree");
+  });
+
+  it("still refuses a worktree chat without a project", async () => {
+    // Chat creation now routes through here, so this guard is the only thing
+    // stopping a projectless worktree chat from being created.
+    await expect(
+      Effect.runPromise(
+        cwdForNewChat({ creationLocation: "worktree" }).pipe(
+          Effect.provide(dieDbLayer()),
+        ),
+      ),
+    ).rejects.toThrow(/project/i);
   });
 });
 

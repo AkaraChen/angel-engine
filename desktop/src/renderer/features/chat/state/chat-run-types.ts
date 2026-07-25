@@ -1,10 +1,10 @@
 import type {
   Chat,
+  ChatCreationLocation,
   ChatElicitationResponse,
   ChatHistoryMessage,
   ChatHistoryMessagePart,
   ChatRuntimeConfig,
-  ChatSendInput,
   ChatSendResult,
 } from "@angel-engine/daemon-api/chat";
 import type {
@@ -16,13 +16,12 @@ import type {
 export type EngineMessage = ThreadMessage;
 
 /**
- * Serializable metadata of an in-flight run. Effectful handles (abort
- * controller, stream controller, ...) live in `chat-run-handles.ts`, keyed by
- * `runId`.
+ * Serializable metadata of an in-flight run. Effectful handles (observer abort
+ * controller, elicitation forwarding, ...) live in `chat-run-handles.ts`, keyed
+ * by `runId`. `runId` is the id the daemon knows the run by.
  */
 export interface ActiveRun {
   assistantMessageId: string;
-  initialSlotKey: string;
   runId: string;
   startedAt: number;
 }
@@ -81,7 +80,6 @@ export interface AssistantMaterializationCache {
 export interface RunCompletion {
   assistantMessage: EngineMessage;
   result?: ChatSendResult;
-  slotKey: string;
 }
 
 export interface InitializeSlotInput {
@@ -90,6 +88,23 @@ export interface InitializeSlotInput {
   historyMessages: ChatHistoryMessage[];
   historyRevision: number;
   slotKey: string;
+}
+
+/**
+ * What the composer knows before a chat exists. Creation fields feed
+ * `POST /api/chats`; per-turn fields feed `POST /api/chat-runs/:runId`.
+ */
+export interface StartRunOptions {
+  chatId?: string;
+  creationLocation?: ChatCreationLocation;
+  cwd?: string;
+  model?: string;
+  mode?: string;
+  permissionMode?: string;
+  prewarmId?: string;
+  projectId?: string;
+  reasoningEffort?: string;
+  runtime?: string;
 }
 
 export interface StartRunInput {
@@ -106,7 +121,7 @@ export interface StartRunInput {
       config?: ChatRuntimeConfig,
     ) => void;
   };
-  input: Omit<ChatSendInput, "text">;
+  input: StartRunOptions;
   message: AppendMessage;
   slotKey: string;
 }
@@ -115,11 +130,11 @@ export interface ChatRunStore {
   activeChatId?: string;
   /** Chats (excluding the active one) whose background run completed. */
   completedChats: Record<string, true>;
-  /**
-   * Single-hop redirects from a retired draft slot key to the chat id its run
-   * moved to. A slot re-keys at most once (draft -> chat id), so no chains.
-   */
-  draftRedirects: Record<string, string>;
+  /** Reattaches to the chat's daemon-owned run, if one is still executing. */
+  attachToActiveRun: (
+    chatId: string,
+    callbacks?: StartRunInput["callbacks"],
+  ) => void;
   cancelRun: (slotKey: string) => void;
   dropAllRuns: () => void;
   dropRun: (slotKey: string) => void;
@@ -146,7 +161,7 @@ export interface ChatRunStore {
 
 export type ChatRunContext = Pick<
   ChatRunStore,
-  "activeChatId" | "completedChats" | "draftRedirects" | "slots"
+  "activeChatId" | "completedChats" | "slots"
 >;
 
 export type ChatRunEvent =
@@ -174,6 +189,9 @@ export type ChatRunEvent =
   | {
       activeRun: ActiveRun;
       assistantMessage: EngineMessage;
+      /** Seeds a slot spawned for a chat the renderer has not rendered yet. */
+      chatId: string;
+      config?: ChatRuntimeConfig;
       slotKey: string;
       type: "run.started";
       userMessage: EngineMessage;
@@ -184,13 +202,6 @@ export type ChatRunEvent =
       runId: string;
       slotKey: string;
       type: "assistant.replaced";
-    }
-  | {
-      chat: Chat;
-      initialSlotKey: string;
-      runId: string;
-      slotKey: string;
-      type: "run.movedToChat";
     }
   | {
       assistantMessage: EngineMessage;

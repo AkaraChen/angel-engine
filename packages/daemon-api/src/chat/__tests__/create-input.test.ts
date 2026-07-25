@@ -30,6 +30,26 @@ describe("chat create input", () => {
     );
   });
 
+  it("carries a pinned cwd and a worktree location so create owns placement", () => {
+    // Desktop drafts can pin an existing worktree cwd; without these fields the
+    // create route would silently place the chat at the project root instead.
+    const input = chatCreateInputSchema({
+      creationLocation: "worktree",
+      cwd: "/repo/.worktrees/feature",
+      projectId: "project-1",
+    });
+
+    expect(input).not.toBeInstanceOf(arkType.errors);
+    expect(input).toMatchObject({
+      creationLocation: "worktree",
+      cwd: "/repo/.worktrees/feature",
+    });
+  });
+
+  it("rejects an empty cwd instead of silently dropping it", () => {
+    expect(chatCreateInputSchema({ cwd: "" })).toBeInstanceOf(arkType.errors);
+  });
+
   it("keeps prewarm off run start input", () => {
     const runStartHasNoPrewarm: RunStartHasNoPrewarm = true;
 
