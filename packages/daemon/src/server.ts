@@ -322,11 +322,18 @@ export async function createDaemon(options: DaemonOptions): Promise<Daemon> {
       proxyMobileDevWebSocket(request, socket, head, mobileDevServerUrl);
       return;
     }
+    const protocol = request.headers["sec-websocket-protocol"];
+    const isPrimary =
+      request.headers.authorization === `Bearer ${token}` ||
+      protocol === `angel-engine-token.${token}`;
+    const isMobile =
+      mobileToken !== undefined &&
+      protocol === `angel-engine-token.${mobileToken}`;
+    const isEvents = url.pathname === "/api/events";
+    const isTerminals = url.pathname === "/api/terminals";
     if (
-      (request.headers.authorization !== `Bearer ${token}` &&
-        request.headers["sec-websocket-protocol"] !==
-          `angel-engine-token.${token}`) ||
-      (url.pathname !== "/api/events" && url.pathname !== "/api/terminals")
+      (!isEvents && !isTerminals) ||
+      (!isPrimary && !(isEvents && isMobile))
     ) {
       socket.write("HTTP/1.1 401 Unauthorized\r\nConnection: close\r\n\r\n");
       socket.destroy();

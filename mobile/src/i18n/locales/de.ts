@@ -63,6 +63,8 @@ export const de = {
       planUpdated: "{{title}} aktualisiert",
       planProgress: "{{completed}}/{{total}}",
       couldNotChangeMode: "Modus konnte nicht gewechselt werden",
+      attentionCompleted: "Abgeschlossen",
+      attentionNeedsInput: "Eingabe erforderlich",
     },
     elicitation: {
       defaultTitle: "Der Agent benötigt deine Eingabe",

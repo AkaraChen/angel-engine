@@ -1,11 +1,12 @@
 import type {
   Chat,
+  ChatRunStartInput,
   ChatElicitationResponse,
   ChatIdsInput,
   ChatSendInput,
   ChatStreamEvent,
 } from "@angel-engine/daemon-api/chat";
-import type { Hono } from "hono";
+import type { Context, Hono } from "hono";
 import type { DaemonGlobalEvent } from "@angel-engine/daemon-api";
 import type { Db } from "./platform/db";
 import type { DaemonRuntime } from "./platform/runtime";
@@ -23,6 +24,7 @@ import {
   chatCreateInputSchema,
   chatPrewarmInputSchema,
   chatRuntimeConfigInputSchema,
+  isChatRunStartInput,
   chatSendInputSchema,
   chatSetModeInputSchema,
   chatSetPermissionModeInputSchema,
@@ -47,6 +49,7 @@ import {
 } from "./features/agents/repository";
 import { listSkillsForAgent } from "./features/agents/skills";
 import { ChatEngine } from "./features/chat/engine-runtime";
+import { ChatRunRegistry } from "./features/chat/run-registry";
 import {
   archiveChat,
   deleteAllChats,
@@ -109,6 +112,19 @@ export function registerApi(
       chatEngine: Effect.Effect.Success<typeof ChatEngine>,
     ) => Effect.Effect<A, DaemonError, Db>,
   ) => Effect.flatMap(ChatEngine, use);
+  const chatRuns = new ChatRunRegistry({
+    execute: (input, onEvent, signal, controls) =>
+      run(engine((e) => e.streamChat(input, onEvent, signal, controls))),
+    publish: ({ chatId, event, runId, sequence }) => {
+      publisher.publish({
+        chatId,
+        event,
+        runId,
+        sequence,
+        type: "chat-run",
+      });
+    },
+  });
 
   app.get("/api/chats", async (context) =>
     context.json(await run(listChats())),
@@ -445,6 +461,45 @@ export function registerApi(
     );
   });
 
+  app.post("/api/chat-runs/:runId", async (context) => {
+    const runId = requirePath(context.req.param("runId"), "runId");
+    const input = parseRunStartInput(await context.req.json());
+    chatRuns.reserve(runId, input);
+    return observeChatRun(context, chatRuns, runId, true);
+  });
+  app.get("/api/chats/:chatId/active-run", (context) =>
+    context.json(
+      chatRuns.active(requirePath(context.req.param("chatId"), "chatId")),
+    ),
+  );
+  app.get("/api/chat-runs/:runId/events", (context) => {
+    const runId = requirePath(context.req.param("runId"), "runId");
+    chatRuns.snapshot(runId);
+    return observeChatRun(context, chatRuns, runId, false);
+  });
+  app.delete("/api/chat-runs/:runId", (context) => {
+    chatRuns.stop(requirePath(context.req.param("runId"), "runId"));
+    return context.json({ ok: true });
+  });
+  app.post("/api/chat-runs/:runId/elicitation", async (context) => {
+    const body = await context.req.json<{
+      elicitationId: string;
+      response: ChatElicitationResponse;
+    }>();
+    if (
+      typeof body.elicitationId !== "string" ||
+      body.elicitationId.length === 0
+    ) {
+      throw DaemonError.invalidRequest("elicitationId is required.");
+    }
+    await chatRuns.resolveElicitation(
+      requirePath(context.req.param("runId"), "runId"),
+      body.elicitationId,
+      body.response,
+    );
+    return context.json({ resolved: true });
+  });
+
   app.post("/api/chat-streams", async (context) => {
     const streamId = requireQuery(context.req.query("streamId"), "streamId");
     const input = parseSendInput(await context.req.json());
@@ -511,6 +566,29 @@ export function registerApi(
   });
 }
 
+function observeChatRun(
+  context: Context,
+  registry: ChatRunRegistry,
+  runId: string,
+  begin: boolean,
+) {
+  return streamSSE(context, async (stream) => {
+    await new Promise<void>((resolve) => {
+      const detach = registry.observe(runId, {
+        close: resolve,
+        write: async (message) => {
+          await stream.writeSSE({
+            data: JSON.stringify(message),
+            event: message.type,
+          });
+        },
+      });
+      stream.onAbort(detach);
+      if (begin) registry.begin(runId);
+    });
+  });
+}
+
 function publishChatMetadata(publisher: EventPublisher, chatIds: string[]) {
   if (chatIds.length === 0) return;
   publisher.publish({ chatIds, type: "chat-metadata-changed" });
@@ -524,6 +602,21 @@ function parseSendInput(value: unknown): ChatSendInput {
     ...input,
     attachments: normalizeChatAttachmentsInput(input.attachments),
     runtime: input.runtime ?? undefined,
+  };
+}
+
+function parseRunStartInput(value: unknown): ChatRunStartInput {
+  if (!isChatRunStartInput(value)) {
+    throw DaemonError.invalidRequest("Chat run input is invalid.");
+  }
+  return {
+    attachments: normalizeChatAttachmentsInput(value.attachments),
+    chatId: value.chatId,
+    mode: value.mode,
+    model: value.model,
+    permissionMode: value.permissionMode,
+    reasoningEffort: value.reasoningEffort,
+    text: value.text,
   };
 }
 
@@ -567,6 +660,12 @@ function removeWorktreesForDeletedChats(targets: Chat[]) {
 
 function requireQuery(value: string | undefined, name: string) {
   if (value === undefined || value.length === 0)
+    throw DaemonError.invalidRequest(`${name} is required.`);
+  return value;
+}
+
+function requirePath(value: string, name: string) {
+  if (value.length === 0)
     throw DaemonError.invalidRequest(`${name} is required.`);
   return value;
 }

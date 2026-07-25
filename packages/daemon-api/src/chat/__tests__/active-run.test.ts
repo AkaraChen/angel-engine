@@ -3,11 +3,13 @@ import type {
   ChatActiveRunSnapshot,
   ChatOpenElicitation,
   ChatRunObserverEvent,
+  ChatRunStartInput,
 } from "..";
 import {
   isChatActiveRunResult,
   isChatActiveRunSnapshot,
   isChatRunObserverEvent,
+  isChatRunStartInput,
 } from "..";
 import { describe, expect, it } from "vitest";
 
@@ -49,6 +51,38 @@ const needsInput: ChatActiveRunSnapshot = {
 };
 
 describe("active run boundary guards", () => {
+  it("accepts the narrow daemon-owned run input", () => {
+    const input: ChatRunStartInput = {
+      attachments: [
+        {
+          data: "aGVsbG8=",
+          mimeType: "text/plain",
+          name: "note.txt",
+          path: null,
+          type: "file",
+        },
+      ],
+      chatId: "chat-1",
+      mode: null,
+      permissionMode: "ask",
+      text: "Run the tests",
+    };
+
+    expect(isChatRunStartInput(input)).toBe(true);
+  });
+
+  it.each([
+    ["an empty chat id", { chatId: "", text: "hello" }],
+    ["missing text", { chatId: "chat-1" }],
+    ["an empty model override", { chatId: "chat-1", model: "", text: "" }],
+    [
+      "a malformed attachment",
+      { attachments: [{}], chatId: "chat-1", text: "" },
+    ],
+  ])("rejects %s", (_label, input) => {
+    expect(isChatRunStartInput(input)).toBe(false);
+  });
+
   it("accepts both valid active-run states", () => {
     expect(isChatActiveRunSnapshot(running)).toBe(true);
     expect(isChatActiveRunSnapshot(needsInput)).toBe(true);

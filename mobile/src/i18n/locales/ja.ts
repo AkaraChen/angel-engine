@@ -63,6 +63,8 @@ export const ja = {
       planUpdated: "{{title}} を更新",
       planProgress: "{{completed}}/{{total}}",
       couldNotChangeMode: "モードを変更できませんでした",
+      attentionCompleted: "完了",
+      attentionNeedsInput: "入力が必要",
     },
     elicitation: {
       defaultTitle: "エージェントが入力を求めています",

@@ -64,6 +64,7 @@ export {
   isChatActiveRunResult,
   isChatActiveRunSnapshot,
   isChatRunObserverEvent,
+  isChatRunStartInput,
 } from "./active-run";
 export { isChatStreamEvent } from "./stream-event";
 

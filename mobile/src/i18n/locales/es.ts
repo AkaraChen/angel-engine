@@ -61,6 +61,8 @@ export const es = {
       planUpdated: "{{title}} actualizado",
       planProgress: "{{completed}}/{{total}}",
       couldNotChangeMode: "No se pudo cambiar el modo",
+      attentionCompleted: "Completado",
+      attentionNeedsInput: "Necesita entrada",
     },
     elicitation: {
       defaultTitle: "El agente necesita tu entrada",

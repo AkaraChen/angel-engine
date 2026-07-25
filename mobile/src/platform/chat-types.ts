@@ -1,6 +1,7 @@
 import type { AgentOption as ApiAgentOption } from "@angel-engine/daemon-api/agents";
 import type {
   Chat as ApiChat,
+  ChatActiveRunSnapshot as ApiChatActiveRunSnapshot,
   ChatCreateInput as ApiChatCreateInput,
   ChatCreationLocation as ApiChatCreationLocation,
   ChatElicitation as ApiChatElicitation,
@@ -15,6 +16,8 @@ import type {
   ChatRuntimeConfig as ApiChatRuntimeConfig,
   ChatRuntimeConfigInput as ApiChatRuntimeConfigInput,
   ChatRuntimeConfigOption as ApiChatRuntimeConfigOption,
+  ChatRunObserverEvent as ApiChatRunObserverEvent,
+  ChatRunStartInput as ApiChatRunStartInput,
   ChatSendInput as ApiChatSendInput,
   ChatSendResult as ApiChatSendResult,
   ChatStreamElicitationResolveInput as ApiChatStreamElicitationResolveInput,
@@ -59,6 +62,9 @@ export type ChatSendInput = Required<
 > &
   Pick<ApiChatSendInput, "mode" | "permissionMode">;
 export type ChatSendResult = ApiChatSendResult;
+export type ChatActiveRunSnapshot = ApiChatActiveRunSnapshot;
+export type ChatRunObserverEvent = ApiChatRunObserverEvent;
+export type ChatRunStartInput = ApiChatRunStartInput;
 export type DaemonElicitationQuestion = ApiChatElicitationQuestion;
 export type DaemonElicitationKind = ApiChatElicitation["kind"];
 export type DaemonElicitation = ApiChatElicitation;

@@ -58,6 +58,8 @@ export const zhCN = {
       planUpdated: "{{title}} 已更新",
       planProgress: "{{completed}}/{{total}}",
       couldNotChangeMode: "无法切换模式",
+      attentionCompleted: "已完成",
+      attentionNeedsInput: "需要输入",
     },
     elicitation: {
       defaultTitle: "智能体需要你的输入",

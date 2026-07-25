@@ -8,6 +8,7 @@ import type {
 } from "@angel-engine/daemon-api/agents";
 import type {
   Chat,
+  ChatActiveRunResult,
   ChatArchivedDeleteImpact,
   ChatArchivedDeleteImpactInput,
   ChatArchivedDeleteInput,
@@ -22,6 +23,8 @@ import type {
   ChatRenameInput,
   ChatRuntimeConfig,
   ChatRuntimeConfigInput,
+  ChatRunObserverEvent,
+  ChatRunStartInput,
   ChatSendInput,
   ChatSetModeInput,
   ChatSetModeResult,
@@ -32,7 +35,11 @@ import type {
   ProjectFileSearchInput,
   ProjectFileSearchResult,
 } from "@angel-engine/daemon-api/chat";
-import { isChatStreamEvent } from "@angel-engine/daemon-api/chat";
+import {
+  isChatActiveRunResult,
+  isChatRunObserverEvent,
+  isChatStreamEvent,
+} from "@angel-engine/daemon-api/chat";
 import type {
   DaemonErrorPayload,
   DaemonHealth,
@@ -170,6 +177,76 @@ export function createDaemonClient(options: DaemonClientOptions) {
     }
   }
 
+  async function* streamRun(
+    path: string,
+    init: RequestInit,
+  ): AsyncIterable<ChatRunObserverEvent> {
+    const headers = new Headers(init.headers);
+    headers.set("accept", "text/event-stream");
+    const response = await send(path, { ...init, headers });
+    if (!response.ok) {
+      throw DaemonRequestError.http(
+        response.status,
+        undefined,
+        `Daemon request failed: ${init.method ?? "GET"} ${path}`,
+      );
+    }
+    if (response.body === null) {
+      throw DaemonRequestError.invalidResponse(
+        `Daemon returned an empty stream for ${path}.`,
+        response.status,
+      );
+    }
+
+    let sawSnapshot = false;
+    let lastSequence = 0;
+    for await (const message of readSseEvents(response.body)) {
+      if (!isChatRunObserverEvent(message)) {
+        throw DaemonRequestError.invalidResponse(
+          `Daemon returned an invalid chat run event for ${path}.`,
+          response.status,
+        );
+      }
+      if (!sawSnapshot) {
+        if (message.type !== "snapshot") {
+          throw DaemonRequestError.invalidResponse(
+            `Daemon did not start the chat run stream with a snapshot for ${path}.`,
+            response.status,
+          );
+        }
+        sawSnapshot = true;
+        lastSequence = message.snapshot.lastEventSequence;
+      } else {
+        if (message.type !== "event" || message.sequence !== lastSequence + 1) {
+          throw DaemonRequestError.invalidResponse(
+            `Daemon returned a non-contiguous chat run sequence for ${path}.`,
+            response.status,
+          );
+        }
+        lastSequence = message.sequence;
+      }
+      yield message;
+    }
+    if (!sawSnapshot) {
+      throw DaemonRequestError.invalidResponse(
+        `Daemon returned a chat run stream without a snapshot for ${path}.`,
+        response.status,
+      );
+    }
+  }
+
+  const activeRun = async (chatId: string): Promise<ChatActiveRunResult> => {
+    const path = `/api/chats/${encodeURIComponent(chatId)}/active-run`;
+    const result = await request<unknown>(path);
+    if (!isChatActiveRunResult(result)) {
+      throw DaemonRequestError.invalidResponse(
+        `Daemon returned an invalid active chat run for ${path}.`,
+        200,
+      );
+    }
+    return result;
+  };
+
   return {
     agents: {
       createCustom: (input: CreateCustomAgentInput) =>
@@ -191,6 +268,29 @@ export function createDaemonClient(options: DaemonClientOptions) {
         request<CustomAgent>(
           `/api/agents/custom/${encodeURIComponent(input.id)}`,
           json("PUT", input),
+        ),
+    },
+    chatRuns: {
+      active: activeRun,
+      observe: (runId: string, signal?: AbortSignal) =>
+        streamRun(`/api/chat-runs/${encodeURIComponent(runId)}/events`, {
+          method: "GET",
+          signal,
+        }),
+      resolveElicitation: (runId: string, input: ChatStreamElicitationInput) =>
+        request<{ resolved: boolean }>(
+          `/api/chat-runs/${encodeURIComponent(runId)}/elicitation`,
+          json("POST", input),
+        ),
+      start: (runId: string, input: ChatRunStartInput, signal?: AbortSignal) =>
+        streamRun(`/api/chat-runs/${encodeURIComponent(runId)}`, {
+          ...json("POST", input),
+          signal,
+        }),
+      stop: (runId: string) =>
+        request<{ ok: boolean }>(
+          `/api/chat-runs/${encodeURIComponent(runId)}`,
+          { method: "DELETE" },
         ),
     },
     chatStreams: {

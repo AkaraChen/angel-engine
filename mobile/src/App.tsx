@@ -7,6 +7,7 @@ import { AppRouter } from "@/app/router";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider } from "@/features/auth/auth-provider";
+import { ChatRunAttentionProvider } from "@/features/chat/run-attention-provider";
 import { themeStorageKey } from "@/features/settings/theme";
 import i18n from "@/i18n";
 import { DaemonProvider } from "@/platform/daemon-provider";
@@ -26,10 +27,12 @@ export function App() {
         <AuthProvider>
           <DaemonProvider>
             <QueryClientProvider client={queryClient}>
-              <TooltipProvider>
-                <AppRouter />
-                <Toaster />
-              </TooltipProvider>
+              <ChatRunAttentionProvider>
+                <TooltipProvider>
+                  <AppRouter />
+                  <Toaster />
+                </TooltipProvider>
+              </ChatRunAttentionProvider>
             </QueryClientProvider>
           </DaemonProvider>
         </AuthProvider>

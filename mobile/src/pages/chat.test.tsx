@@ -76,15 +76,50 @@ function toolAction(
   };
 }
 
-function controllableSse(signal: AbortSignal | undefined): SseHandle {
+function controllableSse(url: string, init?: RequestInit): SseHandle {
   const encoder = new TextEncoder();
   let controller!: ReadableStreamDefaultController<Uint8Array>;
+  let sequence = 0;
+  const input = JSON.parse(requestBody(init)) as {
+    chatId: string;
+    text: string;
+  };
+  const runId = url.match(/\/api\/chat-runs\/([^/]+)$/)?.[1] ?? "test-run";
+  const timestamp = "2026-07-25T00:00:00.000Z";
   const stream = new ReadableStream<Uint8Array>({
     start(c) {
       controller = c;
+      controller.enqueue(
+        encoder.encode(
+          `data: ${JSON.stringify({
+            snapshot: {
+              assistantMessage: {
+                content: [],
+                createdAt: timestamp,
+                id: `${runId}:assistant`,
+                role: "assistant",
+              },
+              chatId: input.chatId,
+              lastEventSequence: 0,
+              pendingElicitation: null,
+              runId,
+              startedAt: timestamp,
+              status: "running",
+              updatedAt: timestamp,
+              userMessage: {
+                content: [{ text: input.text, type: "text" }],
+                createdAt: timestamp,
+                id: `${runId}:user`,
+                role: "user",
+              },
+            },
+            type: "snapshot",
+          })}\n\n`,
+        ),
+      );
     },
   });
-  signal?.addEventListener("abort", () => {
+  init?.signal?.addEventListener("abort", () => {
     try {
       controller.error(new DOMException("aborted", "AbortError"));
     } catch {
@@ -97,7 +132,15 @@ function controllableSse(signal: AbortSignal | undefined): SseHandle {
       headers: { "content-type": "text/event-stream" },
     }),
     push: (event) =>
-      controller.enqueue(encoder.encode(`data: ${JSON.stringify(event)}\n\n`)),
+      controller.enqueue(
+        encoder.encode(
+          `data: ${JSON.stringify({
+            event,
+            sequence: (sequence += 1),
+            type: "event",
+          })}\n\n`,
+        ),
+      ),
     close: () => controller.close(),
   };
 }
@@ -109,7 +152,29 @@ function jsonResponse(body: unknown): Response {
   });
 }
 
+function requestBody(init?: RequestInit): string {
+  if (typeof init?.body !== "string") {
+    throw new Error("Expected a JSON request body.");
+  }
+  return init.body;
+}
+
 function renderChat(chatId: string) {
+  const testFetch = globalThis.fetch;
+  vi.stubGlobal(
+    "fetch",
+    (input: string | URL | Request, init?: RequestInit) => {
+      const url =
+        typeof input === "string"
+          ? input
+          : input instanceof URL
+            ? input.href
+            : input.url;
+      return url.endsWith("/active-run")
+        ? Promise.resolve(jsonResponse({ run: null }))
+        : testFetch(input, init);
+    },
+  );
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
@@ -215,9 +280,13 @@ describe("ChatPage", () => {
           ],
         });
       }
-      if (url.includes("/api/chat-streams?") && method === "POST") {
+      if (
+        url.includes("/api/chat-runs/") &&
+        !url.endsWith("/elicitation") &&
+        method === "POST"
+      ) {
         streamCalls += 1;
-        sse = controllableSse(init?.signal ?? undefined);
+        sse = controllableSse(url, init);
         return sse.response;
       }
       return jsonResponse({ ok: true });
@@ -343,8 +412,12 @@ describe("ChatPage", () => {
                 ],
         });
       }
-      if (url.includes("/api/chat-streams?") && method === "POST") {
-        sse = controllableSse(init?.signal ?? undefined);
+      if (
+        url.includes("/api/chat-runs/") &&
+        !url.endsWith("/elicitation") &&
+        method === "POST"
+      ) {
+        sse = controllableSse(url, init);
         return sse.response;
       }
       return jsonResponse({ ok: true });

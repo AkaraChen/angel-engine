@@ -412,6 +412,35 @@ describe("createDaemon", () => {
     }
   });
 
+  it("allows a paired mobile session to observe daemon events", async () => {
+    const dataDir = await mkdtemp(path.join(os.tmpdir(), "angel-daemon-"));
+    const daemon = await createDaemon({
+      dataDir,
+      mobilePassword: "correct horse battery staple",
+      token: "secret",
+    });
+    daemons.push(daemon);
+    const baseUrl = `http://${daemon.info.host}:${daemon.info.port}`;
+    const paired = await fetch(`${baseUrl}/api/auth/pair`, {
+      body: JSON.stringify({ password: "correct horse battery staple" }),
+      headers: { "content-type": "application/json" },
+      method: "POST",
+    });
+    const { token: sessionToken } = (await paired.json()) as { token: string };
+    const socket = new WebSocket(
+      `ws://${daemon.info.host}:${daemon.info.port}/api/events`,
+      `angel-engine-token.${sessionToken}`,
+    );
+
+    await expect(
+      new Promise<void>((resolve, reject) => {
+        socket.once("open", resolve);
+        socket.once("error", reject);
+      }),
+    ).resolves.toBeUndefined();
+    socket.close();
+  });
+
   it("advertises a loopback host when binding the wildcard address", async () => {
     const dataDir = await mkdtemp(path.join(os.tmpdir(), "angel-daemon-"));
     const daemon = await createDaemon({

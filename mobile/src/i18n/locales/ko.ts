@@ -60,6 +60,8 @@ export const ko = {
       planUpdated: "{{title}} 업데이트됨",
       planProgress: "{{completed}}/{{total}}",
       couldNotChangeMode: "모드를 변경할 수 없습니다",
+      attentionCompleted: "완료됨",
+      attentionNeedsInput: "입력 필요",
     },
     elicitation: {
       defaultTitle: "에이전트가 입력을 필요로 합니다",

@@ -60,6 +60,8 @@ export const en = {
       planUpdated: "{{title}} updated",
       planProgress: "{{completed}}/{{total}}",
       couldNotChangeMode: "Couldn't change mode",
+      attentionCompleted: "Completed",
+      attentionNeedsInput: "Needs input",
     },
     elicitation: {
       defaultTitle: "The agent needs your input",

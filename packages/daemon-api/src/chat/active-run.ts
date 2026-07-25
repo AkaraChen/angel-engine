@@ -5,7 +5,9 @@ import type {
   ChatActiveRunSnapshot,
   ChatHistoryMessage,
   ChatRunObserverEvent,
+  ChatRunStartInput,
 } from "./index";
+import { normalizeChatAttachmentsInput } from "@angel-engine/js-client/utils/attachments";
 import {
   isChatElicitation,
   isChatHistoryMessage,
@@ -20,6 +22,41 @@ function isBoundaryRecord(value: unknown): value is BoundaryRecord {
 
 function isNonEmptyString(value: unknown): value is string {
   return typeof value === "string" && value.length > 0;
+}
+
+function isOptionalNonEmptyString(value: unknown): value is string | undefined {
+  return value === undefined || isNonEmptyString(value);
+}
+
+function isOptionalNullableNonEmptyString(
+  value: unknown,
+): value is string | null | undefined {
+  return value === undefined || value === null || isNonEmptyString(value);
+}
+
+/**
+ * Validate the daemon-owned run request at the HTTP trust boundary.
+ *
+ * Attachments keep their existing shared normalizer as the single source of
+ * truth; all other fields are the deliberately narrow per-turn run contract.
+ */
+export function isChatRunStartInput(
+  value: unknown,
+): value is ChatRunStartInput {
+  if (!isBoundaryRecord(value)) return false;
+  try {
+    normalizeChatAttachmentsInput(value.attachments);
+  } catch {
+    return false;
+  }
+  return (
+    isNonEmptyString(value.chatId) &&
+    typeof value.text === "string" &&
+    isOptionalNonEmptyString(value.model) &&
+    isOptionalNullableNonEmptyString(value.mode) &&
+    isOptionalNullableNonEmptyString(value.permissionMode) &&
+    isOptionalNullableNonEmptyString(value.reasoningEffort)
+  );
 }
 
 function isCanonicalTimestamp(value: unknown): value is string {
