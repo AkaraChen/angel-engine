@@ -111,6 +111,88 @@ describe("resolveGitHubUrl", () => {
     expect(result.contextText).toContain("body text");
   });
 
+  it("resolves a pull request through a fake gh runner", async () => {
+    const result = await Effect.runPromise(
+      resolveGitHubUrl(
+        { url: "https://github.com/acme/widgets/pull/4" },
+        {
+          runGh: async () => ({
+            stderr: "",
+            stdout: JSON.stringify({
+              author: null,
+              baseRefName: "main",
+              body: "pull request body",
+              headRefName: "fix/widget",
+              isDraft: true,
+              number: 4,
+              state: "OPEN",
+              title: "Fix widget",
+              url: "https://github.com/acme/widgets/pull/4",
+            }),
+          }),
+          whichGh: async () => "/usr/local/bin/gh",
+        },
+      ),
+    );
+
+    expect(result).toMatchObject({
+      author: null,
+      baseRefName: "main",
+      headRefName: "fix/widget",
+      isDraft: true,
+      kind: "pullRequest",
+      number: 4,
+      title: "Fix widget",
+    });
+    expect(result.contextText).toContain("Branches: main ← fix/widget");
+    expect(result.contextText).toContain("Draft: yes");
+  });
+
+  it("rejects malformed GitHub CLI payloads", async () => {
+    await expectDaemonFailure(
+      resolveGitHubUrl(
+        { url: "https://github.com/acme/widgets/issues/3" },
+        {
+          runGh: async () => ({
+            stderr: "",
+            stdout: JSON.stringify({
+              author: { login: "bob" },
+              body: "body text",
+              number: 3,
+              state: "OPEN",
+              url: "https://github.com/acme/widgets/issues/3",
+            }),
+          }),
+          whichGh: async () => "/usr/local/bin/gh",
+        },
+      ),
+      "github-fetch-failed",
+    );
+  });
+
+  it("rejects a payload for a different GitHub item", async () => {
+    await expectDaemonFailure(
+      resolveGitHubUrl(
+        { url: "https://github.com/acme/widgets/issues/3" },
+        {
+          runGh: async () => ({
+            stderr: "",
+            stdout: JSON.stringify({
+              author: { login: "bob" },
+              body: "body text",
+              number: 5,
+              state: "OPEN",
+              title: "Wrong issue",
+              url: "https://github.com/acme/widgets/issues/5",
+            }),
+          }),
+          whichGh: async () => "/usr/local/bin/gh",
+        },
+      ),
+      "github-fetch-failed",
+    );
+  });
+
   it("fails when gh is missing", async () => {
     await expectDaemonFailure(
       resolveGitHubUrl(

@@ -6,6 +6,7 @@ import type {
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import is from "@sindresorhus/is";
+import { type as arkType } from "arktype";
 import { Effect } from "effect";
 import which from "which";
 
@@ -15,6 +16,34 @@ const execFileAsync = promisify(execFile);
 const GH_OUTPUT_MAX_BUFFER = 2 * 1024 * 1024;
 const BODY_MAX_CHARS = 12_000;
 const GH_TIMEOUT_MS = 30_000;
+const positiveInteger = arkType("number").narrow(
+  (value) => Number.isInteger(value) && value > 0,
+);
+const gitHubAuthorSchema = arkType({
+  "+": "ignore",
+  login: "string > 0",
+}).or("null");
+const gitHubIssuePayloadSchema = arkType({
+  "+": "ignore",
+  author: gitHubAuthorSchema,
+  body: "string",
+  number: positiveInteger,
+  state: "string > 0",
+  title: "string > 0",
+  url: "string > 0",
+});
+const gitHubPullRequestPayloadSchema = arkType({
+  "+": "ignore",
+  author: gitHubAuthorSchema,
+  baseRefName: "string > 0",
+  body: "string",
+  headRefName: "string > 0",
+  isDraft: "boolean",
+  number: positiveInteger,
+  state: "string > 0",
+  title: "string > 0",
+  url: "string > 0",
+});
 
 export interface ParsedGitHubUrl {
   kind: GitHubItemKind;
@@ -177,66 +206,82 @@ function buildResolvedItem(
   parsed: ParsedGitHubUrl,
   json: unknown,
 ): GitHubResolvedItem {
-  if (!is.plainObject(json)) {
-    throw DaemonError.githubFetchFailed(
-      new Error("Unexpected GitHub CLI payload."),
-    );
+  if (parsed.kind === "issue") {
+    const payload = gitHubIssuePayloadSchema(json);
+    if (payload instanceof arkType.errors) {
+      throw unexpectedGitHubPayload(payload.summary);
+    }
+    const identity = gitHubPayloadIdentity(parsed, payload.number, payload.url);
+    const { body } = truncateBody(payload.body);
+    return finalizeResolvedItem(identity, {
+      author: payload.author?.login ?? null,
+      body,
+      state: payload.state,
+      title: payload.title,
+      url: payload.url,
+    });
   }
 
-  const title = stringField(json, "title") ?? `Untitled #${parsed.number}`;
-  const state = stringField(json, "state") ?? "unknown";
-  const url = stringField(json, "url") ?? parsed.url;
-  const author = authorLogin(json.author);
-  const rawBody = stringField(json, "body") ?? "";
-  const { body } = truncateBody(rawBody);
-  const baseRefName = stringField(json, "baseRefName");
-  const headRefName = stringField(json, "headRefName");
-  const isDraft = typeof json.isDraft === "boolean" ? json.isDraft : undefined;
-
-  const contextText = formatGitHubContextText({
-    author,
-    baseRefName: baseRefName ?? undefined,
+  const payload = gitHubPullRequestPayloadSchema(json);
+  if (payload instanceof arkType.errors) {
+    throw unexpectedGitHubPayload(payload.summary);
+  }
+  const identity = gitHubPayloadIdentity(parsed, payload.number, payload.url);
+  const { body } = truncateBody(payload.body);
+  return finalizeResolvedItem(identity, {
+    author: payload.author?.login ?? null,
+    baseRefName: payload.baseRefName,
     body,
-    headRefName: headRefName ?? undefined,
-    isDraft,
-    kind: parsed.kind,
-    number: parsed.number,
-    owner: parsed.owner,
-    repo: parsed.repo,
-    state,
-    title,
-    url,
+    headRefName: payload.headRefName,
+    isDraft: payload.isDraft,
+    state: payload.state,
+    title: payload.title,
+    url: payload.url,
   });
+}
 
+type ResolvedGitHubFields = Omit<
+  GitHubResolvedItem,
+  "contextText" | "kind" | "number" | "owner" | "repo"
+>;
+
+function finalizeResolvedItem(
+  parsed: ParsedGitHubUrl,
+  fields: ResolvedGitHubFields,
+): GitHubResolvedItem {
+  const item = {
+    ...parsed,
+    ...fields,
+  };
   return {
-    author,
-    ...(baseRefName !== null ? { baseRefName } : {}),
-    body,
-    contextText,
-    ...(headRefName !== null ? { headRefName } : {}),
-    ...(isDraft !== undefined ? { isDraft } : {}),
-    kind: parsed.kind,
-    number: parsed.number,
-    owner: parsed.owner,
-    repo: parsed.repo,
-    state,
-    title,
-    url,
+    ...item,
+    contextText: formatGitHubContextText(item),
   };
 }
 
-function stringField(
-  record: Record<string, unknown>,
-  key: string,
-): string | null {
-  const value = record[key];
-  return typeof value === "string" ? value : null;
+function gitHubPayloadIdentity(
+  parsed: ParsedGitHubUrl,
+  number: number,
+  url: string,
+): ParsedGitHubUrl {
+  const resolved = parseGitHubUrl(url);
+  if (
+    resolved !== null &&
+    resolved.kind === parsed.kind &&
+    resolved.number === parsed.number &&
+    number === parsed.number
+  ) {
+    return resolved;
+  }
+  throw unexpectedGitHubPayload(
+    `expected ${parsed.url}, received item #${number} at ${url}`,
+  );
 }
 
-function authorLogin(author: unknown): string | null {
-  if (!is.plainObject(author)) return null;
-  const login = author.login;
-  return typeof login === "string" && login.length > 0 ? login : null;
+function unexpectedGitHubPayload(details: string): DaemonError {
+  return DaemonError.githubFetchFailed(
+    new TypeError(`Unexpected GitHub CLI payload: ${details}`),
+  );
 }
 
 function normalizeText(value: string) {
