@@ -426,6 +426,15 @@ export const en = {
       chooseFolder: "Choose project folder",
       openInFinder: "Open in Finder",
     },
+    pathLauncher: {
+      copyPath: "Copy Path",
+      openInAngelTerminal: "Open in Angel Terminal",
+      openInEditor: "Open in {{editor}}",
+      openInFileExplorer: "Open in File Explorer",
+      openInFileManager: "Open in File Manager",
+      openInFinder: "Open in Finder",
+      openInSystemTerminal: "Open in System Terminal",
+    },
     ui: {
       commandDescription: "Search for a command to run...",
       commandPalette: "Command Palette",

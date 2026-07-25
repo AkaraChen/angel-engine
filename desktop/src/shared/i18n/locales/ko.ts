@@ -425,6 +425,15 @@ export const ko = {
       chooseFolder: "프로젝트 폴더 선택",
       openInFinder: "Finder에서 열기",
     },
+    pathLauncher: {
+      copyPath: "경로 복사",
+      openInAngelTerminal: "Angel 터미널에서 열기",
+      openInEditor: "{{editor}}에서 열기",
+      openInFileExplorer: "파일 탐색기에서 열기",
+      openInFileManager: "파일 관리자에서 열기",
+      openInFinder: "Finder에서 열기",
+      openInSystemTerminal: "시스템 터미널에서 열기",
+    },
     ui: {
       commandDescription: "실행할 명령 검색...",
       commandPalette: "명령 팔레트",

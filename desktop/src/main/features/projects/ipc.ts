@@ -46,7 +46,6 @@ export const projectPlatformIpcRouter = {
               project,
               {
                 delete: translate("common.delete"),
-                openInFinder: translate("projects.openInFinder"),
               },
               BrowserWindow.fromWebContents(context.sender) ?? undefined,
             ),

@@ -79,6 +79,9 @@ export function useWorkspaceToolSurfaceModel({
   const storeUpdateSnapshot = useWorkspaceToolStore(
     (state) => state.updateWorkspaceToolSnapshot,
   );
+  const openWorkspaceTerminal = useWorkspaceToolStore(
+    (state) => state.openWorkspaceTerminal,
+  );
   const requestHost = useWorkspaceToolStore(
     (state) => state.requestWorkspaceToolHost,
   );
@@ -171,27 +174,12 @@ export function useWorkspaceToolSurfaceModel({
     [host, openWorkspaceWindowFile, requestSurfaceHost, root, updateSnapshot],
   );
   const addTerminalTab = useCallback(() => {
-    if (!is.nonEmptyString(root)) {
+    if (!is.nonEmptyString(contextKey) || !is.nonEmptyString(root)) {
       return;
     }
 
-    updateSnapshot((current) => {
-      const tab = {
-        id: crypto.randomUUID(),
-        kind: "terminal" as const,
-        root,
-        sessionId: crypto.randomUUID(),
-        title: `Terminal ${current.nextTerminalOrdinal}`,
-      };
-
-      return {
-        ...current,
-        activeTabId: tab.id,
-        nextTerminalOrdinal: current.nextTerminalOrdinal + 1,
-        tabs: [...current.tabs, tab],
-      };
-    });
-  }, [root, updateSnapshot]);
+    openWorkspaceTerminal({ contextKey, root });
+  }, [contextKey, openWorkspaceTerminal, root]);
   const openBrowserTab = useCallback(
     (url: string) => {
       updateSnapshot((current) => {

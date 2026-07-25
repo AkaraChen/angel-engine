@@ -49,6 +49,7 @@ interface WorkspaceToolState {
   windowFilesEditorDirty: boolean;
   focusWorkspaceToolSurface: () => void;
   closeWindowFile: (input: { path: string; root: string }) => void;
+  openWorkspaceTerminal: (input: { contextKey: string; root: string }) => void;
   openWindowFile: (input: { path: string; root: string }) => void;
   requestWorkspaceToolHost: (host: WorkspaceToolSurfaceHost) => void;
   selectWindowFile: (input: { path: string; root: string }) => void;
@@ -125,6 +126,15 @@ export const useWorkspaceToolStore = create<WorkspaceToolState>()(
     },
     host: "sidebar",
     hydrated: false,
+    openWorkspaceTerminal: ({ contextKey, root }) => {
+      get().updateWorkspaceToolSnapshot(contextKey, (current) =>
+        appendWorkspaceTerminalTab(current, {
+          id: crypto.randomUUID(),
+          root,
+          sessionId: crypto.randomUUID(),
+        }),
+      );
+    },
     openWindowFile: (input) => {
       set((current) => {
         const rootState =
@@ -356,6 +366,26 @@ export function currentWorkspaceToolSnapshot(
   }
 
   return snapshots[contextKey] ?? createDefaultWorkspaceToolSnapshot();
+}
+
+export function appendWorkspaceTerminalTab(
+  current: WorkspaceToolSurfaceSnapshot,
+  input: { id: string; root: string; sessionId: string },
+): WorkspaceToolSurfaceSnapshot {
+  const tab = {
+    id: input.id,
+    kind: "terminal" as const,
+    root: input.root,
+    sessionId: input.sessionId,
+    title: `Terminal ${current.nextTerminalOrdinal}`,
+  };
+
+  return {
+    ...current,
+    activeTabId: tab.id,
+    nextTerminalOrdinal: current.nextTerminalOrdinal + 1,
+    tabs: [...current.tabs, tab],
+  };
 }
 
 function createWorkspaceWindowFileState(

@@ -13,6 +13,7 @@ import { useSidebar } from "@/components/ui/sidebar";
 interface WorkspaceHeaderProps {
   attention?: ChatAttentionState;
   breadcrumbProject?: string;
+  onShowContextMenu?: () => void;
   onToggleRightSidebar?: () => void;
   rightSidebarOpen?: boolean;
   rightSidebarToggleLabel?: string;
@@ -23,6 +24,7 @@ interface WorkspaceHeaderProps {
 export function WorkspaceHeader({
   attention,
   breadcrumbProject,
+  onShowContextMenu,
   onToggleRightSidebar,
   rightSidebarOpen = false,
   rightSidebarToggleLabel = "Toggle workspace tools",
@@ -59,6 +61,15 @@ export function WorkspaceHeader({
           flex min-w-0 flex-1 items-baseline gap-1.5 truncate text-sm
           font-medium transition-[margin] duration-200 ease-linear
         "
+        data-electron-no-drag={onShowContextMenu ? true : undefined}
+        onContextMenu={
+          onShowContextMenu
+            ? (event) => {
+                event.preventDefault();
+                onShowContextMenu();
+              }
+            : undefined
+        }
         style={{ marginLeft: reserveTitleStart ? titleMarginLeft : 0 }}
         title={
           is.nonEmptyString(breadcrumbProject)

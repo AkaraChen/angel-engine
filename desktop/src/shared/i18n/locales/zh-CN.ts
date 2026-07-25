@@ -411,6 +411,15 @@ export const zhCN = {
       chooseFolder: "选择项目文件夹",
       openInFinder: "在 Finder 中打开",
     },
+    pathLauncher: {
+      copyPath: "复制路径",
+      openInAngelTerminal: "在 Angel 终端中打开",
+      openInEditor: "在 {{editor}} 中打开",
+      openInFileExplorer: "在文件资源管理器中打开",
+      openInFileManager: "在文件管理器中打开",
+      openInFinder: "在 Finder 中打开",
+      openInSystemTerminal: "在系统终端中打开",
+    },
     ui: {
       commandDescription: "搜索要运行的命令...",
       commandPalette: "命令面板",

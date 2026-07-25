@@ -73,6 +73,10 @@ interface WorkspaceSidebarProps {
   ) => MaybeAsync;
   onShowChatContextMenu: (chat: Chat) => MaybeAsync;
   onShowProjectContextMenu: (project: Project) => MaybeAsync;
+  onShowWorktreeContextMenu: (
+    project: Project,
+    worktreeGroup: ProjectWorktreeChatGroup,
+  ) => MaybeAsync;
   onWorkspaceModeChange: (workspaceMode: WorkspaceMode) => void;
   projectChatsByProjectId: Map<string, Chat[]>;
   projects: Project[];
@@ -221,6 +225,7 @@ function WorkspaceSidebarContent({
   onOpenWorktree,
   onShowChatContextMenu,
   onShowProjectContextMenu,
+  onShowWorktreeContextMenu,
   onWorkspaceModeChange,
   projectChatsByProjectId,
   projects,
@@ -296,6 +301,7 @@ function WorkspaceSidebarContent({
             onCreateProjectChat={onCreateProjectChat}
             onOpenWorktree={onOpenWorktree}
             onShowProjectContextMenu={onShowProjectContextMenu}
+            onShowWorktreeContextMenu={onShowWorktreeContextMenu}
             projectChatsByProjectId={projectChatsByProjectId}
             projects={projects}
           />

@@ -428,6 +428,15 @@ export const de = {
       chooseFolder: "Projektordner auswählen",
       openInFinder: "Im Finder öffnen",
     },
+    pathLauncher: {
+      copyPath: "Pfad kopieren",
+      openInAngelTerminal: "Im Angel-Terminal öffnen",
+      openInEditor: "In {{editor}} öffnen",
+      openInFileExplorer: "Im Datei-Explorer öffnen",
+      openInFileManager: "Im Dateimanager öffnen",
+      openInFinder: "Im Finder öffnen",
+      openInSystemTerminal: "Im Systemterminal öffnen",
+    },
     ui: {
       commandDescription: "Nach einem auszuführenden Befehl suchen...",
       commandPalette: "Befehlspalette",

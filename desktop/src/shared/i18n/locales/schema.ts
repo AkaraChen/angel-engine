@@ -450,6 +450,16 @@ export interface LocaleResourceTranslationProjects {
   openInFinder: string;
 }
 
+export interface LocaleResourceTranslationPathLauncher {
+  copyPath: string;
+  openInAngelTerminal: string;
+  openInEditor: string;
+  openInFileExplorer: string;
+  openInFileManager: string;
+  openInFinder: string;
+  openInSystemTerminal: string;
+}
+
 export interface LocaleResourceTranslationUi {
   commandDescription: string;
   commandPalette: string;
@@ -476,6 +486,7 @@ export interface LocaleResourceTranslation {
   messages: LocaleResourceTranslationMessages;
   dialog: LocaleResourceTranslationDialog;
   notifications: LocaleResourceTranslationNotifications;
+  pathLauncher: LocaleResourceTranslationPathLauncher;
   projects: LocaleResourceTranslationProjects;
   ui: LocaleResourceTranslationUi;
   promptInput: LocaleResourceTranslationPromptInput;

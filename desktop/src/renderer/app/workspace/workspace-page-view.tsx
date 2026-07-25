@@ -20,6 +20,7 @@ import {
 import { draftAgentConfigFromExplicitOverrides } from "@/app/workspace/workspace-draft-agent-config";
 import { WorkspaceHeader } from "@/app/workspace/workspace-header";
 import { WorkspaceNativeCommandHandler } from "@/app/workspace/workspace-native-command-handler";
+import { resolveWorkspacePathLauncherTarget } from "@/app/workspace/workspace-path-launcher";
 import { WorkspaceRightSidebar } from "@/app/workspace/workspace-right-sidebar";
 import {
   WorkspaceFloatingSidebar,
@@ -30,6 +31,7 @@ import {
   WorkspaceSidebarControlPortalProvider,
 } from "@/app/workspace/workspace-sidebar-control";
 import { WorkspaceToolContextBridge } from "@/app/workspace/workspace-tool-host";
+import { useWorkspaceToolStore } from "@/app/workspace/workspace-tool-store";
 import { WorktreeDirtyDialog } from "@/app/workspace/worktree-dirty-dialog";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { RenameChatDialog } from "@/features/chat/components/rename-chat-dialog";
@@ -70,6 +72,7 @@ export const WorkspacePageView: FC<WorkspacePageViewProps> = ({
     modelOverride,
     permissionModeOverride,
     pinnedDraftCwd,
+    powerDraftContext,
     powerDraftTabActive,
     powerHomePageContext,
     powerModeActive,
@@ -92,6 +95,7 @@ export const WorkspacePageView: FC<WorkspacePageViewProps> = ({
     selectedProjectName,
     setAgentModel,
     setAgentReasoningEffort,
+    setRightSidebarOpen,
     setRightSidebarWidth,
     setSidebarOpen,
     setSidebarOpenMobile,
@@ -116,9 +120,13 @@ export const WorkspacePageView: FC<WorkspacePageViewProps> = ({
     setChatMessagesInCache,
     setPersistedChatRuntime,
     showChatContextMenu,
+    showPathLauncherContextMenu,
     showProjectContextMenu,
     updateChatFromRun,
   } = chatActions;
+  const openWorkspaceTerminal = useWorkspaceToolStore(
+    (state) => state.openWorkspaceTerminal,
+  );
   const {
     changeWorkspaceMode,
     createChatForProject,
@@ -145,6 +153,51 @@ export const WorkspacePageView: FC<WorkspacePageViewProps> = ({
     openSelectedPowerWorktreeHome,
     powerHomeTabContext,
   } = powerTabs;
+  const currentLauncherTarget = resolveWorkspacePathLauncherTarget({
+    chats,
+    draftProjectId: draftProject.id,
+    projects,
+    selectedChat,
+    worktree: powerHomePageContext ?? powerDraftContext,
+  });
+  const canOpenAngelTerminal =
+    canShowRightSidebar &&
+    is.nonEmptyString(workspaceToolContextKey) &&
+    is.nonEmptyString(workspaceToolRoot);
+  const showCurrentWorkspaceContextMenu = async () => {
+    if (currentLauncherTarget === undefined) return;
+
+    const action = await showPathLauncherContextMenu(currentLauncherTarget, {
+      includeAngelTerminal: canOpenAngelTerminal,
+    });
+    if (
+      typeof action !== "object" ||
+      action.action !== "open_angel_terminal" ||
+      !is.nonEmptyString(workspaceToolContextKey)
+    ) {
+      return;
+    }
+
+    openWorkspaceTerminal({
+      contextKey: workspaceToolContextKey,
+      root: action.target,
+    });
+    if (workspaceToolHost === "sidebar") {
+      setRightSidebarOpen(true);
+    } else {
+      toggleWorkspaceTools();
+    }
+  };
+  const showWorktreeContextMenu = (
+    project: (typeof projects)[number],
+    worktree: Parameters<typeof navigation.openPowerWorktree>[1],
+  ) => {
+    const chatId = worktree.isMain ? undefined : worktree.chats[0]?.id;
+    void showPathLauncherContextMenu({
+      chatId,
+      projectId: project.id,
+    });
+  };
 
   return (
     <SidebarProvider
@@ -168,6 +221,7 @@ export const WorkspacePageView: FC<WorkspacePageViewProps> = ({
           onOpenWorktree={openPowerWorktree}
           onShowChatContextMenu={showChatContextMenu}
           onShowProjectContextMenu={showProjectContextMenu}
+          onShowWorktreeContextMenu={showWorktreeContextMenu}
           onWorkspaceModeChange={changeWorkspaceMode}
           projectChatsByProjectId={projectChatsByProjectId}
           projects={projects}
@@ -188,6 +242,7 @@ export const WorkspacePageView: FC<WorkspacePageViewProps> = ({
           onOpenWorktree={openPowerWorktree}
           onShowChatContextMenu={showChatContextMenu}
           onShowProjectContextMenu={showProjectContextMenu}
+          onShowWorktreeContextMenu={showWorktreeContextMenu}
           onWorkspaceModeChange={changeWorkspaceMode}
           projectChatsByProjectId={projectChatsByProjectId}
           projects={projects}
@@ -230,6 +285,11 @@ export const WorkspacePageView: FC<WorkspacePageViewProps> = ({
             }
             rightSidebarToggleLabel={workspaceToolsToggleLabel}
             title={workspaceTitle}
+            onShowContextMenu={
+              currentLauncherTarget === undefined
+                ? undefined
+                : () => void showCurrentWorkspaceContextMenu()
+            }
             onToggleRightSidebar={
               canShowRightSidebar &&
               (!rightSidebarOpen || workspaceToolHost !== "sidebar")
