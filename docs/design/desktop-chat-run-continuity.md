@@ -136,12 +136,13 @@ desktop stream bypass and keep that path, so the ordering is fixed:
 Worktree chats stay non-prewarmable (`prewarmChat` rejects them), so a worktree
 create simply skips the prewarm claim.
 
-Open question for the Stage 2 implementer, to settle before step 1: creating on
-`POST /api/chats` materializes a git worktree at create time rather than at
-first send, so abandoning a new-chat draft can now leak a worktree that the old
-flow never created. Either reuse the existing archived-chat worktree cleanup for
-chats that never ran, or keep worktree creation lazy inside the create call and
-document it. Do not resolve this by leaving the send route alive.
+**Settled in Stage 2: there is no new worktree leak.** The renderer calls
+`POST /api/chats` from the send handler, not from opening a draft tab, so a
+worktree is still materialized by the user's first message and an abandoned
+draft creates nothing. The only new window is a create that succeeds while the
+run start fails, which leaves the same orphan chat + worktree the old flow left
+when a stream failed after `prepareChatForSend`. Existing archived-chat worktree
+cleanup covers both.
 
 ### 4. Real chat ids delete the draft redirect machinery
 
@@ -258,6 +259,30 @@ stays manual until there is a fake `DesktopChatSession`.
    completed, absent row clears silently, dedupe by `attention.id`. Delete the
    `chat-stream` handler, the `streams` map, and `notifyTool`'s stream-derived
    dedupe.
+
+## Landed in Stage 2
+
+The checklist above is implemented. Two things the Stage 1 contract did not
+anticipate had to change with it:
+
+- **`cwd` joins `ChatCreateInput`.** Power-worktree drafts pin an existing
+  worktree cwd, and the old send route honored it through `cwdForNewChat`.
+  Without `cwd` on create, those chats would have been silently created at the
+  project root. `createChatFromInput` now resolves placement through the same
+  `cwdForNewChat`, so explicit cwd, worktree creation, and project/standalone
+  fallback behave identically on both routes. `chatPrewarmMatches` already
+  refuses a prewarm for an explicit cwd or a worktree, so create still falls
+  back to a cold session there.
+- **A tool action awaiting a decision is pending input.** Permission prompts
+  reach clients as `{ type: "tool", phase: "awaitingDecision" }`, never as an
+  `elicitation` event — `projectTurnRunEvent` only emits `elicitation` for
+  display elicitations and question elicitations. The old desktop main process
+  synthesized its own elicitation from those tool events, so moving
+  notifications onto attention would have dropped every permission
+  notification. `ChatRunRegistry.materialize` now raises `needsInput` with a
+  synthesized `pendingElicitation` for them, and `ChatAttentionStore.apply`
+  records and clears the matching attention. Mobile gains the same pending
+  input from its snapshot.
 
 ## Acceptance for Stage 2
 

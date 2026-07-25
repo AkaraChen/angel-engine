@@ -2,6 +2,8 @@ import type {
   ChatActiveRunResult,
   ChatActiveRunSnapshot,
   ChatElicitationResponse,
+  ChatOpenElicitation,
+  ChatToolAction,
   ChatHistoryMessagePart,
   ChatRunObserverEvent,
   ChatRunStartInput,
@@ -326,9 +328,21 @@ function materialize(
       }
       break;
     case "tool":
-    case "toolDelta":
+    case "toolDelta": {
       upsertToolPart(content, chatToolActionToPart(event.action));
+      // A permission prompt reaches the client as a tool action awaiting a
+      // decision, not as an `elicitation` event, so it has to raise the same
+      // pending-input state or the run would look like it is still working.
+      const decisionId = toolDecisionId(event.action);
+      if (event.action.phase === "awaitingDecision") {
+        pendingElicitation = permissionElicitationFromAction(event.action);
+        status = "needsInput";
+      } else if (pendingElicitation?.id === decisionId) {
+        pendingElicitation = null;
+        status = "running";
+      }
       break;
+    }
     case "result":
       content.splice(
         0,
@@ -365,6 +379,23 @@ function materialize(
     status === "needsInput" && pendingElicitation !== null
       ? { ...base, pendingElicitation, status }
       : { ...base, pendingElicitation: null, status: "running" };
+}
+
+/** The id a tool action's pending decision is answered by. */
+export function toolDecisionId(action: ChatToolAction): string {
+  return action.elicitationId ?? action.id;
+}
+
+function permissionElicitationFromAction(
+  action: ChatToolAction,
+): ChatOpenElicitation {
+  return {
+    body: action.inputSummary ?? action.rawInput ?? null,
+    id: toolDecisionId(action),
+    kind: "approval",
+    phase: "open",
+    title: action.title ?? null,
+  };
 }
 
 function upsertToolPart(

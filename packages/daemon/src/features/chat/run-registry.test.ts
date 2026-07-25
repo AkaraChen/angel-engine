@@ -4,6 +4,7 @@ import type {
   ChatRunStartInput,
   ChatSendResult,
   ChatStreamEvent,
+  ChatToolAction,
 } from "@angel-engine/daemon-api/chat";
 import type { ChatStreamControls } from "./runtime";
 
@@ -163,6 +164,43 @@ describe("ChatRunRegistry", () => {
       registry.start("run-1", { chatId: "chat-2", text: "hello" }),
     ).toThrow("Run id is already active");
     run.resolve(result);
+  });
+
+  it("treats a tool action awaiting a decision as pending input", async () => {
+    // Permission prompts never reach the client as `elicitation` events, so
+    // without this the run would report `running` while it is actually stuck.
+    const run = deferredRun();
+    const registry = new ChatRunRegistry({ execute: run.execute });
+    registry.start("run-1", input);
+    const action: ChatToolAction = {
+      id: "tool-1",
+      inputSummary: "rm -rf /",
+      kind: "command",
+      output: [],
+      outputText: "",
+      phase: "running",
+      rawInput: '{"command":"rm -rf /"}',
+      title: "Shell",
+      turnId: "turn-1",
+    };
+
+    run.emit({
+      action: { ...action, phase: "awaitingDecision" },
+      type: "tool",
+    });
+    expect(registry.active(chat.id).run).toMatchObject({
+      pendingElicitation: { body: "rm -rf /", id: "tool-1", title: "Shell" },
+      status: "needsInput",
+    });
+
+    run.emit({ action: { ...action, phase: "running" }, type: "tool" });
+    expect(registry.active(chat.id).run).toMatchObject({
+      pendingElicitation: null,
+      status: "running",
+    });
+
+    run.resolve(result);
+    await vi.waitFor(() => expect(registry.active(chat.id).run).toBeNull());
   });
 
   it("commits and recovers pending elicitation state atomically", async () => {

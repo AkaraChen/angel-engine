@@ -23,11 +23,9 @@ export function setActiveChatIdContext(
   state: ChatRunContext,
   chatId: string | undefined,
 ): Partial<ChatRunContext> {
-  const resolvedChatId = is.nonEmptyString(chatId)
-    ? resolveSlotKey(state, chatId)
-    : undefined;
+  const resolvedChatId = is.nonEmptyString(chatId) ? chatId : undefined;
   const completedChats = is.nonEmptyString(resolvedChatId)
-    ? removeCompleted(state.completedChats, resolvedChatId, chatId)
+    ? removeCompleted(state.completedChats, resolvedChatId)
     : state.completedChats;
   if (
     state.activeChatId === resolvedChatId &&
@@ -46,13 +44,12 @@ export function markChatCompletedContext(
   state: ChatRunContext,
   chatId: string,
 ): Partial<ChatRunContext> {
-  const resolvedChatId = resolveSlotKey(state, chatId);
-  if (state.completedChats[resolvedChatId]) return {};
+  if (state.completedChats[chatId]) return {};
 
   return {
     completedChats: {
       ...state.completedChats,
-      [resolvedChatId]: true,
+      [chatId]: true,
     },
   };
 }
@@ -77,9 +74,8 @@ export function chatAttentionForChat(
   state: ChatRunContext,
   chatId: string,
 ): ChatAttentionState {
-  const resolvedChatId = resolveSlotKey(state, chatId);
-  const completed = state.completedChats[resolvedChatId] === true;
-  const slot = state.slots[resolvedChatId];
+  const completed = state.completedChats[chatId] === true;
+  const slot = state.slots[chatId];
   const needsInput = slot !== undefined && slotNeedsInput(slot);
 
   if (completed && needsInput) return COMPLETED_AND_NEEDS_INPUT_CHAT_ATTENTION;
@@ -107,11 +103,8 @@ export function removeCompleted(
   return next;
 }
 
-export function selectSlot(
-  state: Pick<ChatRunStore, "draftRedirects" | "slots">,
-  key: string,
-) {
-  return getChatRunSlot(state.slots, resolveSlotKey(state, key));
+export function selectSlot(state: Pick<ChatRunStore, "slots">, key: string) {
+  return getChatRunSlot(state.slots, key);
 }
 
 function getChatRunSlot(slots: Record<string, ChatRunSlot>, key: string) {
@@ -119,18 +112,10 @@ function getChatRunSlot(slots: Record<string, ChatRunSlot>, key: string) {
 }
 
 export function isPermissionBypassEnabledForSlot(
-  state: Pick<ChatRunStore, "draftRedirects" | "slots">,
+  state: Pick<ChatRunStore, "slots">,
   key: string,
 ) {
   return selectSlot(state, key)?.permissionBypassEnabled ?? false;
-}
-
-export function resolveSlotKey(
-  state: Pick<ChatRunStore, "draftRedirects" | "slots">,
-  key: string,
-) {
-  if (Object.hasOwn(state.slots, key)) return key;
-  return state.draftRedirects[key] ?? key;
 }
 
 const combinedMessagesCache = new WeakMap<ChatRunSlot, EngineMessage[]>();

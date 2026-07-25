@@ -27,16 +27,12 @@ export type ChatRunSlotEvent =
   | {
       activeRun: ActiveRun;
       assistantMessage: EngineMessage;
+      chatId: string;
+      config?: ChatRuntimeConfig;
       type: "run.started";
       userMessage: EngineMessage;
     }
   | { message: EngineMessage; runId: string; type: "assistant.replaced" }
-  | {
-      chatId: string;
-      config?: ChatRuntimeConfig;
-      runId: string;
-      type: "chat.bound";
-    }
   | {
       assistantMessage: EngineMessage;
       chatId?: string;
@@ -82,9 +78,9 @@ function mergeCancelledStreaming(context: ChatRunSlotContext): EngineMessage[] {
 /**
  * One conversation surface. The `idle`/`streaming` statechart is the real
  * per-slot lifecycle: streaming-only events (`assistant.replaced`,
- * `run.finished`, `chat.bound`) are accepted only in `streaming` and only for
- * the active run's id, so stale stream events die here instead of being
- * guarded in every reducer.
+ * `run.finished`) are accepted only in `streaming` and only for the active
+ * run's id, so stale observer events die here instead of being guarded in
+ * every reducer.
  */
 export const chatRunSlotMachine = setup({
   guards: {
@@ -128,6 +124,8 @@ export const chatRunSlotMachine = setup({
         "run.started": {
           actions: assign(({ context, event }) => ({
             activeRun: event.activeRun,
+            chatId: event.chatId,
+            config: context.config ?? event.config,
             messages: normalizeEnginePlanMessages([
               ...context.messages,
               event.userMessage,
@@ -157,7 +155,8 @@ export const chatRunSlotMachine = setup({
     },
     streaming: {
       // Leaving `streaming` for any reason (finish, cancel, replacement run)
-      // aborts the run's stream: interruption is owned by the statechart.
+      // detaches this window's observer. Stopping the daemon-owned run is a
+      // separate, explicit action; the statechart never cancels it.
       exit: ({ context }) => {
         if (context.activeRun) cancelRunHandles(context.activeRun.runId);
       },
@@ -165,16 +164,6 @@ export const chatRunSlotMachine = setup({
         "assistant.replaced": {
           actions: assign(({ event }) => ({
             streamingAssistant: event.message,
-          })),
-          guard: {
-            params: ({ event }) => ({ runId: event.runId }),
-            type: "isActiveRun",
-          },
-        },
-        "chat.bound": {
-          actions: assign(({ context, event }) => ({
-            chatId: event.chatId,
-            config: context.config ?? event.config,
           })),
           guard: {
             params: ({ event }) => ({ runId: event.runId }),
@@ -213,6 +202,8 @@ export const chatRunSlotMachine = setup({
           // re-entering fires the exit action, aborting the replaced stream.
           actions: assign(({ context, event }) => ({
             activeRun: event.activeRun,
+            chatId: event.chatId,
+            config: context.config ?? event.config,
             messages: normalizeEnginePlanMessages([
               ...mergeCancelledStreaming(context),
               event.userMessage,

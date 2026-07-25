@@ -1,6 +1,5 @@
 import type { ActorRefFrom, SnapshotFrom } from "xstate";
 import type {
-  Chat,
   ChatHistoryMessagePart,
   ChatSendResult,
 } from "@angel-engine/daemon-api/chat";
@@ -30,20 +29,17 @@ type ChatRunSlotRef = ActorRefFrom<typeof chatRunSlotMachine>;
 interface ChatRunRegistryContext {
   activeChatId?: string;
   completedChats: Record<string, true>;
-  draftRedirects: Record<string, string>;
   slotRefs: Record<string, ChatRunSlotRef>;
 }
 
-function resolveRefKey(context: ChatRunRegistryContext, key: string) {
-  if (Object.hasOwn(context.slotRefs, key)) return key;
-  return context.draftRedirects[key] ?? key;
-}
-
 /**
- * The registry machine owns cross-slot concerns (attention, active chat,
- * draft-key redirects) and spawns one `chatRunSlotMachine` actor per
- * conversation surface. Slot-scoped events are forwarded to the owning child;
- * the child's `idle`/`streaming` statechart guards them.
+ * The registry machine owns cross-slot concerns (attention, active chat) and
+ * spawns one `chatRunSlotMachine` actor per conversation surface. Slot-scoped
+ * events are forwarded to the owning child; the child's `idle`/`streaming`
+ * statechart guards them.
+ *
+ * Slots are keyed by the real chat id from the first run onward: a chat is
+ * created before its run starts, so there is no draft-key rewrite to track.
  */
 const chatRunMachine = setup({
   actors: {
@@ -57,7 +53,6 @@ const chatRunMachine = setup({
   context: {
     activeChatId: undefined,
     completedChats: {},
-    draftRedirects: {},
     slotRefs: {},
   },
   id: "chatRunRegistry",
@@ -72,7 +67,7 @@ const chatRunMachine = setup({
         },
         "assistant.replaced": {
           actions: enqueueActions(({ context, enqueue, event }) => {
-            const ref = context.slotRefs[resolveRefKey(context, event.slotKey)];
+            const ref = context.slotRefs[event.slotKey];
             if (!ref) return;
             enqueue.sendTo(ref, {
               message: event.message,
@@ -91,14 +86,14 @@ const chatRunMachine = setup({
         },
         "run.cancelled": {
           actions: enqueueActions(({ context, enqueue, event }) => {
-            const ref = context.slotRefs[resolveRefKey(context, event.slotKey)];
+            const ref = context.slotRefs[event.slotKey];
             if (!ref) return;
             enqueue.sendTo(ref, { type: "run.cancelled" });
           }),
         },
         "run.finished": {
           actions: enqueueActions(({ context, enqueue, event }) => {
-            const ref = context.slotRefs[resolveRefKey(context, event.slotKey)];
+            const ref = context.slotRefs[event.slotKey];
             if (!ref) return;
             enqueue.sendTo(ref, {
               assistantMessage: event.assistantMessage,
@@ -109,65 +104,34 @@ const chatRunMachine = setup({
             });
           }),
         },
-        "run.movedToChat": {
-          actions: enqueueActions(({ context, enqueue, event }) => {
-            const resolvedKey = resolveRefKey(context, event.slotKey);
-            const ref = context.slotRefs[resolvedKey];
-            if (!ref) return;
-
-            if (resolvedKey === event.chat.id) {
-              enqueue.sendTo(ref, {
-                chatId: event.chat.id,
-                runId: event.runId,
-                type: "chat.bound",
-              });
-              return;
-            }
-
-            const existingTarget = context.slotRefs[event.chat.id];
-            const targetConfig = existingTarget?.getSnapshot().context.config;
-            if (existingTarget) {
-              enqueue.stopChild(existingTarget);
-            }
-            enqueue.assign(({ context: current }) => {
-              const slotRefs = { ...current.slotRefs };
-              delete slotRefs[resolvedKey];
-              slotRefs[event.chat.id] = ref;
-              return {
-                draftRedirects: {
-                  ...current.draftRedirects,
-                  [event.initialSlotKey]: event.chat.id,
-                  [resolvedKey]: event.chat.id,
-                },
-                slotRefs,
-              };
-            });
-            enqueue.sendTo(ref, {
-              chatId: event.chat.id,
-              config: targetConfig,
-              runId: event.runId,
-              type: "chat.bound",
-            });
-          }),
-        },
         "run.started": {
           actions: enqueueActions(({ context, enqueue, event }) => {
-            const resolvedKey = resolveRefKey(context, event.slotKey);
-            if (!context.slotRefs[resolvedKey]) {
+            const slotKey = event.slotKey;
+            if (!context.slotRefs[slotKey]) {
+              // A run started from a draft lands on a slot the renderer has
+              // not mounted yet, so the seed carries the chat identity and the
+              // config the draft had already resolved.
               enqueue.assign(({ context: current, spawn }) => ({
                 slotRefs: {
                   ...current.slotRefs,
-                  [resolvedKey]: spawn("slot", {
-                    input: { historyRevision: 0, key: resolvedKey },
+                  [slotKey]: spawn("slot", {
+                    input: {
+                      chatId: event.chatId,
+                      config: event.config,
+                      historyRevision: 0,
+                      key: slotKey,
+                    },
                   }),
                 },
               }));
             }
             enqueue.sendTo(
-              ({ context: current }) => current.slotRefs[resolvedKey],
+              ({ context: current }) => current.slotRefs[slotKey],
               {
                 activeRun: event.activeRun,
                 assistantMessage: event.assistantMessage,
+                chatId: event.chatId,
+                config: event.config,
                 type: "run.started",
                 userMessage: event.userMessage,
               },
@@ -176,7 +140,7 @@ const chatRunMachine = setup({
         },
         "slot.configUpdated": {
           actions: enqueueActions(({ context, enqueue, event }) => {
-            const resolvedKey = resolveRefKey(context, event.slotKey);
+            const resolvedKey = event.slotKey;
             if (!context.slotRefs[resolvedKey]) {
               enqueue.assign(({ context: current, spawn }) => ({
                 slotRefs: {
@@ -203,29 +167,17 @@ const chatRunMachine = setup({
         },
         "slot.dropped": {
           actions: enqueueActions(({ context, enqueue, event }) => {
-            const resolvedKey = resolveRefKey(context, event.slotKey);
+            const resolvedKey = event.slotKey;
             const ref = context.slotRefs[resolvedKey];
             if (ref) enqueue.stopChild(ref);
             enqueue.assign(({ context: current }) => {
               const slotRefs = { ...current.slotRefs };
               delete slotRefs[resolvedKey];
-              const draftRedirects = { ...current.draftRedirects };
-              for (const [draftKey, chatId] of Object.entries(draftRedirects)) {
-                if (
-                  draftKey === event.slotKey ||
-                  draftKey === resolvedKey ||
-                  chatId === resolvedKey
-                ) {
-                  delete draftRedirects[draftKey];
-                }
-              }
               return {
                 completedChats: removeCompleted(
                   current.completedChats,
                   resolvedKey,
-                  event.slotKey,
                 ),
-                draftRedirects,
                 slotRefs,
               };
             });
@@ -234,37 +186,7 @@ const chatRunMachine = setup({
         "slot.initialized": {
           actions: enqueueActions(({ context, enqueue, event }) => {
             const input = event.input;
-            const isDraftSlot = !is.nonEmptyString(input.chatId);
-
-            if (
-              isDraftSlot &&
-              is.nonEmptyString(context.draftRedirects[input.slotKey])
-            ) {
-              // The draft key was retired by a run that moved to a chat; a
-              // fresh draft reclaims the key with a brand-new slot actor.
-              enqueue.assign(({ context: current, spawn }) => {
-                const draftRedirects = { ...current.draftRedirects };
-                delete draftRedirects[input.slotKey];
-                return {
-                  draftRedirects,
-                  slotRefs: {
-                    ...current.slotRefs,
-                    [input.slotKey]: spawn("slot", {
-                      input: {
-                        chatId: input.chatId,
-                        config: input.config,
-                        historyRevision: input.historyRevision,
-                        key: input.slotKey,
-                        messages: event.messages,
-                      },
-                    }),
-                  },
-                };
-              });
-              return;
-            }
-
-            const resolvedKey = resolveRefKey(context, input.slotKey);
+            const resolvedKey = input.slotKey;
             const ref = context.slotRefs[resolvedKey];
             if (ref) {
               enqueue.sendTo(ref, {
@@ -292,7 +214,7 @@ const chatRunMachine = setup({
         },
         "slot.permissionBypassEnabled": {
           actions: enqueueActions(({ context, enqueue, event }) => {
-            const resolvedKey = resolveRefKey(context, event.slotKey);
+            const resolvedKey = event.slotKey;
             if (!context.slotRefs[resolvedKey]) {
               enqueue.assign(({ context: current, spawn }) => ({
                 slotRefs: {
@@ -320,7 +242,6 @@ const chatRunMachine = setup({
             enqueue.assign({
               activeChatId: undefined,
               completedChats: {},
-              draftRedirects: {},
               slotRefs: {},
             });
           }),
@@ -420,7 +341,6 @@ export function getChatRunContext(): ChatRunContext {
   cachedContext = {
     activeChatId: registry.activeChatId,
     completedChats: registry.completedChats,
-    draftRedirects: registry.draftRedirects,
     slots,
   };
   return cachedContext;
@@ -434,7 +354,6 @@ function contextForAttention(context: ChatRunRegistryContext): ChatRunContext {
   return {
     activeChatId: context.activeChatId,
     completedChats: context.completedChats,
-    draftRedirects: context.draftRedirects,
     slots: getChatRunContext().slots,
   };
 }
@@ -456,25 +375,6 @@ export function replaceAssistantMessage(
     type: "assistant.replaced",
   });
   return true;
-}
-
-export function moveActiveRunToChat(
-  slotKey: string,
-  chat: Chat,
-  runId: string,
-) {
-  const slot = selectSlot(getChatRunContext(), slotKey);
-  const activeRun = slot?.activeRun;
-  if (activeRun?.runId !== runId) return slotKey;
-
-  sendChatRunEvent({
-    chat,
-    initialSlotKey: activeRun.initialSlotKey,
-    runId,
-    slotKey,
-    type: "run.movedToChat",
-  });
-  return chat.id;
 }
 
 export function getActiveRunMessages(slotKey: string, runId: string) {
@@ -503,13 +403,10 @@ export function finishRun(
 export function markChatCompleted(chatId: string | undefined) {
   if (!is.nonEmptyString(chatId)) return;
   const state = getChatRunContext();
-  const resolvedChatId = Object.hasOwn(state.slots, chatId)
-    ? chatId
-    : (state.draftRedirects[chatId] ?? chatId);
-  if (!shouldMarkChatCompleted(state, resolvedChatId)) return;
+  if (!shouldMarkChatCompleted(state, chatId)) return;
 
   sendChatRunEvent({
-    chatId: resolvedChatId,
+    chatId,
     type: "chat.completed",
   });
 }
@@ -523,7 +420,7 @@ function isRendererWindowVisible() {
 }
 
 export function selectActiveRunForElicitation(
-  state: Pick<ChatRunStore, "draftRedirects" | "slots">,
+  state: Pick<ChatRunStore, "slots">,
   slotKey: string,
   toolCallId: string,
   elicitationId?: string,
