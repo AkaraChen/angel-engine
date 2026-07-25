@@ -82,9 +82,18 @@ export interface ChatCreationLocationInput {
 export interface ChatCwdInput {
   cwd?: string;
 }
+/**
+ * Claims a prewarmed session for the chat being created. Prewarm is a chat
+ * creation optimization, so it belongs here and never on run start input.
+ */
+export interface ChatPrewarmIdInput {
+  prewarmId?: string;
+}
 
 export type Chat = JsChat;
-export type ChatCreateInput = JsChatCreateInput & ChatCreationLocationInput;
+export type ChatCreateInput = JsChatCreateInput &
+  ChatCreationLocationInput &
+  ChatPrewarmIdInput;
 export type ChatRuntimeConfigInput = JsChatRuntimeConfigInput;
 export type ChatRuntimeConfigOption = JsChatRuntimeConfigOption;
 export type ChatAgentState = JsChatAgentState;
@@ -482,6 +491,7 @@ export const chatCreateInputSchema = arkType({
   "model?": "string > 0 | undefined",
   "mode?": "string > 0 | undefined",
   "permissionMode?": "string > 0 | undefined",
+  "prewarmId?": "string > 0 | undefined",
   "projectId?": "string > 0 | undefined",
   "reasoningEffort?": "string > 0 | undefined",
   "runtime?": "string > 0 | undefined",

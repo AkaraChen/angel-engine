@@ -2,6 +2,7 @@ import type { ConversationSnapshot } from "@angel-engine/client-napi";
 import type {
   Chat,
   ChatCreateInput,
+  ChatCreationLocation,
   ChatPrewarmInput,
   ChatRuntimeConfig,
   ChatRuntimeConfigInput,
@@ -69,6 +70,17 @@ type ReadyChatPrewarm = ChatPrewarm & {
   config: ChatRuntimeConfig;
   snapshot: ConversationSnapshot;
 };
+
+/**
+ * The fields a prewarm must agree on before its session can be claimed. Both
+ * chat creation and the legacy send path claim through this shape.
+ */
+export interface ChatPrewarmClaimInput {
+  creationLocation?: ChatCreationLocation;
+  cwd?: string;
+  projectId?: string;
+  runtime?: string;
+}
 
 /**
  * The chat engine: owns live sessions, dedup of session creation, and the
@@ -234,27 +246,10 @@ export class ChatEngine extends Effect.Service<ChatEngine>()(
         });
       };
 
-      const chatPrewarmMatches = (
-        prewarm: ChatPrewarm,
-        sendInput: ChatSendInput,
+      const takeChatPrewarm = (
+        prewarmId: string,
+        input: ChatPrewarmClaimInput,
       ) =>
-        Effect.gen(function* () {
-          if (is.nonEmptyString(sendInput.cwd)) return false;
-
-          const prewarmInput = prewarm.input;
-          const sendCwd = yield* cwdForProjectOrStandalone(sendInput.projectId);
-          return (
-            prewarm.cwd === sendCwd &&
-            (prewarmInput.creationLocation ?? "project") ===
-              (sendInput.creationLocation ?? "project") &&
-            (prewarmInput.projectId ?? null) ===
-              (sendInput.projectId ?? null) &&
-            (prewarmInput.runtime ?? undefined) ===
-              (sendInput.runtime ?? undefined)
-          );
-        });
-
-      const takeChatPrewarm = (prewarmId: string, input: ChatSendInput) =>
         Effect.gen(function* () {
           const prewarm = chatPrewarms.get(prewarmId);
           if (!prewarm || !isReadyChatPrewarm(prewarm)) return undefined;
@@ -405,6 +400,22 @@ export class ChatEngine extends Effect.Service<ChatEngine>()(
               );
             }
 
+            const prewarm = is.nonEmptyString(input.prewarmId)
+              ? yield* takeChatPrewarm(input.prewarmId, input)
+              : undefined;
+            if (prewarm) {
+              const createdChat = yield* createChat({
+                ...input,
+                cwd: prewarm.cwd,
+              });
+              chatSessions.set(createdChat.id, prewarm.session);
+              refreshProcessRegistry();
+              return yield* persistRemoteThreadId(
+                createdChat,
+                prewarm.snapshot,
+              );
+            }
+
             return yield* createChat({
               ...input,
               cwd: yield* cwdForProjectOrStandalone(input.projectId),
@@ -530,6 +541,32 @@ export class ChatEngine extends Effect.Service<ChatEngine>()(
     }),
   },
 ) {}
+
+/**
+ * Whether a prewarmed session can be claimed for this create/send. Everything
+ * that decides which runtime the session booted with — resolved cwd, project,
+ * runtime, worktree-vs-project — has to agree, and an explicit `cwd` override
+ * never matches because the prewarm was inspected against the project cwd.
+ * A mismatch means the caller gets a cold create, never a wrong session.
+ */
+export function chatPrewarmMatches(
+  prewarm: Pick<ChatPrewarm, "cwd" | "input">,
+  claimInput: ChatPrewarmClaimInput,
+): Effect.Effect<boolean, DaemonError, Db> {
+  return Effect.gen(function* () {
+    if (is.nonEmptyString(claimInput.cwd)) return false;
+
+    const prewarmInput = prewarm.input;
+    const claimCwd = yield* cwdForProjectOrStandalone(claimInput.projectId);
+    return (
+      prewarm.cwd === claimCwd &&
+      (prewarmInput.creationLocation ?? "project") ===
+        (claimInput.creationLocation ?? "project") &&
+      (prewarmInput.projectId ?? null) === (claimInput.projectId ?? null) &&
+      (prewarmInput.runtime ?? undefined) === (claimInput.runtime ?? undefined)
+    );
+  });
+}
 
 function isReadyChatPrewarm(prewarm: ChatPrewarm): prewarm is ReadyChatPrewarm {
   return Boolean(prewarm.config && prewarm.snapshot);
