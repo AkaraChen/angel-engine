@@ -26,6 +26,14 @@ describe("chat run attention", () => {
 
     act(() =>
       applyChatRunAttentionEvent("chat-attention", "run-1", {
+        message: "failed",
+        type: "error",
+      }),
+    );
+    expect(result.current).toBeNull();
+
+    act(() =>
+      applyChatRunAttentionEvent("chat-attention", "run-1", {
         type: "done",
       }),
     );

@@ -33,11 +33,7 @@ export function applyChatRunAttentionEvent(
   runId: string,
   event: ChatStreamEvent,
 ): void {
-  if (
-    event.type === "result" ||
-    event.type === "error" ||
-    event.type === "done"
-  ) {
+  if (event.type === "done") {
     setChatRunAttention(chatId, runId, "completed");
     return;
   }
