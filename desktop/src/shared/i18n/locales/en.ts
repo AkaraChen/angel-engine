@@ -275,11 +275,11 @@ export const en = {
       attachFiles: "Attach files",
       attachGitHub: "Attach GitHub issue or PR",
       attachGitHubConfirm: "Attach",
-      attachGitHubDescription:
-        "Paste a github.com issue or pull request URL. Context is fetched with your local gh CLI.",
+      attachGitHubEmpty: "No issues or pull requests found.",
       attachGitHubLoading: "Fetching…",
-      attachGitHubPlaceholder: "https://github.com/owner/repo/issues/123",
+      attachGitHubPlaceholder: "Search issues and pull requests…",
       attachGitHubTitle: "Attach from GitHub",
+      attachGitHubUpdated: "updated {{time}}",
       attachmentErrors: {
         accept: "No files match the accepted types.",
         fileRead: "The selected file could not be read.",

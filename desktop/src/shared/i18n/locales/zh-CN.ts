@@ -265,11 +265,11 @@ export const zhCN = {
       attachFiles: "附加文件",
       attachGitHub: "附加 GitHub Issue 或 PR",
       attachGitHubConfirm: "附加",
-      attachGitHubDescription:
-        "粘贴 github.com 的 Issue 或 PR 链接。将通过本机 gh CLI 拉取上下文。",
+      attachGitHubEmpty: "未找到 Issue 或 PR。",
       attachGitHubLoading: "获取中…",
-      attachGitHubPlaceholder: "https://github.com/owner/repo/issues/123",
+      attachGitHubPlaceholder: "搜索 Issue 和 PR…",
       attachGitHubTitle: "从 GitHub 附加",
+      attachGitHubUpdated: "更新于 {{time}}",
       attachmentErrors: {
         accept: "没有文件符合允许的类型。",
         fileRead: "无法读取所选文件。",

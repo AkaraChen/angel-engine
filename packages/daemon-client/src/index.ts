@@ -54,6 +54,8 @@ import type {
   ProcessRegistrySnapshotEntry,
 } from "@angel-engine/daemon-api/daemon";
 import type {
+  GitHubListItemsInput,
+  GitHubListItemsResult,
   GitHubResolveUrlInput,
   GitHubResolvedItem,
 } from "@angel-engine/daemon-api/github";
@@ -428,6 +430,8 @@ export function createDaemonClient(options: DaemonClientOptions) {
         ),
     },
     github: {
+      listItems: (input: GitHubListItemsInput) =>
+        request<GitHubListItemsResult>(`/api/github/items?${query(input)}`),
       resolveUrl: (input: GitHubResolveUrlInput) =>
         request<GitHubResolvedItem>("/api/github/resolve", json("POST", input)),
     },

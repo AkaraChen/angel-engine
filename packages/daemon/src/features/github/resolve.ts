@@ -3,19 +3,20 @@ import type {
   GitHubResolveUrlInput,
   GitHubResolvedItem,
 } from "@angel-engine/daemon-api/github";
-import { execFile } from "node:child_process";
-import { promisify } from "node:util";
 import is from "@sindresorhus/is";
 import { type as arkType } from "arktype";
 import { Effect } from "effect";
-import which from "which";
 
 import { DaemonError } from "../../platform/errors";
+import {
+  findGhPath,
+  type GhRunner,
+  mapGhFailure,
+  normalizeText,
+  runGhCli,
+} from "./gh-cli";
 
-const execFileAsync = promisify(execFile);
-const GH_OUTPUT_MAX_BUFFER = 2 * 1024 * 1024;
 const BODY_MAX_CHARS = 12_000;
-const GH_TIMEOUT_MS = 30_000;
 const positiveInteger = arkType("number").narrow(
   (value) => Number.isInteger(value) && value > 0,
 );
@@ -54,11 +55,6 @@ export interface ParsedGitHubUrl {
   repo: string;
   url: string;
 }
-
-export type GhRunner = (args: string[]) => Promise<{
-  stderr: string;
-  stdout: string;
-}>;
 
 export function parseGitHubUrl(raw: string): ParsedGitHubUrl | null {
   let parsed: URL;
@@ -157,8 +153,7 @@ export function resolveGitHubUrl(
       return yield* Effect.fail(DaemonError.githubUrlUnsupported());
     }
 
-    const whichGh =
-      deps.whichGh ?? (async () => which("gh", { nothrow: true }));
+    const whichGh = deps.whichGh ?? findGhPath;
     const ghPath = yield* Effect.tryPromise({
       catch: (cause) => DaemonError.githubFetchFailed(cause),
       try: whichGh,
@@ -167,7 +162,7 @@ export function resolveGitHubUrl(
       return yield* Effect.fail(DaemonError.githubCliMissing());
     }
 
-    const runGh = deps.runGh ?? defaultRunGh;
+    const runGh = deps.runGh ?? runGhCli;
     const fields =
       parsed.kind === "issue"
         ? "number,title,body,state,author,url"
@@ -284,68 +279,4 @@ function unexpectedGitHubPayload(details: string): DaemonError {
   return DaemonError.githubFetchFailed(
     new TypeError(`Unexpected GitHub CLI payload: ${details}`),
   );
-}
-
-function normalizeText(value: string) {
-  return value
-    .replaceAll("\u0000", "")
-    .replaceAll("\r\n", "\n")
-    .replaceAll("\r", "\n")
-    .trim();
-}
-
-async function defaultRunGh(args: string[]) {
-  const result = await execFileAsync("gh", args, {
-    env: {
-      ...process.env,
-      GH_NO_UPDATE_NOTIFIER: "1",
-      GH_PAGER: "cat",
-      GH_PROMPT_DISABLED: "1",
-      GIT_TERMINAL_PROMPT: "0",
-      NO_COLOR: "1",
-    },
-    maxBuffer: GH_OUTPUT_MAX_BUFFER,
-    timeout: GH_TIMEOUT_MS,
-  });
-  return {
-    stderr: result.stderr.toString(),
-    stdout: result.stdout.toString(),
-  };
-}
-
-function mapGhFailure(cause: unknown): DaemonError {
-  const message = stderrOrMessage(cause).toLowerCase();
-  if (
-    message.includes("not logged into") ||
-    message.includes("to re-authenticate") ||
-    message.includes("authentication required") ||
-    message.includes("gh auth login")
-  ) {
-    return DaemonError.githubCliUnauthenticated(
-      "GitHub CLI is not authenticated. Run `gh auth login` and try again.",
-    );
-  }
-  if (
-    message.includes("could not resolve") ||
-    message.includes("not found") ||
-    message.includes("http 404") ||
-    message.includes("status 404")
-  ) {
-    return DaemonError.githubItemNotFound();
-  }
-  return DaemonError.githubFetchFailed(cause);
-}
-
-function stderrOrMessage(cause: unknown): string {
-  if (typeof cause === "object" && cause !== null) {
-    const record = cause as { message?: unknown; stderr?: unknown };
-    if (typeof record.stderr === "string" && record.stderr.trim().length > 0) {
-      return record.stderr;
-    }
-    if (typeof record.message === "string") {
-      return record.message;
-    }
-  }
-  if (cause instanceof Error) return cause.message;
-  return String(cause);
 }

@@ -277,11 +277,11 @@ export const de = {
       attachFiles: "Dateien anhängen",
       attachGitHub: "GitHub-Issue oder PR anhängen",
       attachGitHubConfirm: "Anhängen",
-      attachGitHubDescription:
-        "Füge eine github.com Issue- oder PR-URL ein. Der Kontext wird mit der lokalen gh CLI geladen.",
+      attachGitHubEmpty: "Keine Issues oder PRs gefunden.",
       attachGitHubLoading: "Wird geladen…",
-      attachGitHubPlaceholder: "https://github.com/owner/repo/issues/123",
+      attachGitHubPlaceholder: "Issues und PRs durchsuchen…",
       attachGitHubTitle: "Von GitHub anhängen",
+      attachGitHubUpdated: "aktualisiert {{time}}",
       attachmentErrors: {
         accept: "Keine Dateien entsprechen den erlaubten Typen.",
         fileRead: "Die ausgewählte Datei konnte nicht gelesen werden.",

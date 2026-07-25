@@ -321,10 +321,11 @@ export interface LocaleResourceTranslationComposer {
   attachFiles: string;
   attachGitHub: string;
   attachGitHubConfirm: string;
-  attachGitHubDescription: string;
+  attachGitHubEmpty: string;
   attachGitHubLoading: string;
   attachGitHubPlaceholder: string;
   attachGitHubTitle: string;
+  attachGitHubUpdated: string;
   attachmentErrors: LocaleResourceTranslationComposerAttachmentErrors;
   commands: string;
   couldNotReadAttachment: string;

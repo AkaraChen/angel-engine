@@ -279,11 +279,11 @@ export const fr = {
       attachFiles: "Joindre des fichiers",
       attachGitHub: "Joindre une issue ou PR GitHub",
       attachGitHubConfirm: "Joindre",
-      attachGitHubDescription:
-        "Collez une URL d'issue ou de PR github.com. Le contexte est récupéré via la CLI gh locale.",
+      attachGitHubEmpty: "Aucune issue ni PR trouvée.",
       attachGitHubLoading: "Récupération…",
-      attachGitHubPlaceholder: "https://github.com/owner/repo/issues/123",
+      attachGitHubPlaceholder: "Rechercher des issues et PR…",
       attachGitHubTitle: "Joindre depuis GitHub",
+      attachGitHubUpdated: "mis à jour {{time}}",
       attachmentErrors: {
         accept: "Aucun fichier ne correspond aux types autorisés.",
         fileRead: "Le fichier sélectionné n’a pas pu être lu.",

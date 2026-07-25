@@ -278,11 +278,11 @@ export const ja = {
       attachFiles: "ファイルを添付",
       attachGitHub: "GitHub Issue / PR を添付",
       attachGitHubConfirm: "添付",
-      attachGitHubDescription:
-        "github.com の Issue または PR の URL を貼り付けます。ローカルの gh CLI で取得します。",
+      attachGitHubEmpty: "Issue / PR が見つかりません。",
       attachGitHubLoading: "取得中…",
-      attachGitHubPlaceholder: "https://github.com/owner/repo/issues/123",
+      attachGitHubPlaceholder: "Issue / PR を検索…",
       attachGitHubTitle: "GitHub から添付",
+      attachGitHubUpdated: "{{time}}に更新",
       attachmentErrors: {
         accept: "許可された種類に一致するファイルがありません。",
         fileRead: "選択したファイルを読み取れませんでした。",

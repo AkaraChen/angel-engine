@@ -267,11 +267,11 @@ export const zhTW = {
       attachFiles: "附加檔案",
       attachGitHub: "附加 GitHub Issue 或 PR",
       attachGitHubConfirm: "附加",
-      attachGitHubDescription:
-        "貼上 github.com 的 Issue 或 PR 連結。將透過本機 gh CLI 拉取上下文。",
+      attachGitHubEmpty: "找不到 Issue 或 PR。",
       attachGitHubLoading: "取得中…",
-      attachGitHubPlaceholder: "https://github.com/owner/repo/issues/123",
+      attachGitHubPlaceholder: "搜尋 Issue 和 PR…",
       attachGitHubTitle: "從 GitHub 附加",
+      attachGitHubUpdated: "更新於 {{time}}",
       attachmentErrors: {
         accept: "沒有檔案符合允許的類型。",
         fileRead: "無法讀取所選檔案。",

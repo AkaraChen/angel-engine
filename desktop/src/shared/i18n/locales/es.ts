@@ -278,11 +278,11 @@ export const es = {
       attachFiles: "Adjuntar archivos",
       attachGitHub: "Adjuntar issue o PR de GitHub",
       attachGitHubConfirm: "Adjuntar",
-      attachGitHubDescription:
-        "Pega una URL de issue o PR de github.com. El contexto se obtiene con la CLI gh local.",
+      attachGitHubEmpty: "No se encontraron issues ni PRs.",
       attachGitHubLoading: "Obteniendo…",
-      attachGitHubPlaceholder: "https://github.com/owner/repo/issues/123",
+      attachGitHubPlaceholder: "Buscar issues y PRs…",
       attachGitHubTitle: "Adjuntar desde GitHub",
+      attachGitHubUpdated: "actualizado {{time}}",
       attachmentErrors: {
         accept: "Ningún archivo coincide con los tipos permitidos.",
         fileRead: "No se pudo leer el archivo seleccionado.",
