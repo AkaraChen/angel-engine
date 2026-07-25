@@ -15,6 +15,7 @@ import is from "@sindresorhus/is";
 import { Effect } from "effect";
 
 import { DaemonError } from "../../platform/errors";
+import { executeProjectSetupScripts, loadProjectSetupScripts } from "./config";
 import { getProject } from "./repository";
 
 const execFileAsync = promisify(execFile);
@@ -68,6 +69,10 @@ export function createProjectWorktree(
       return yield* Effect.fail(DaemonError.projectNotGitRepository());
     }
     const root = status.root;
+    const setupScripts = yield* Effect.tryPromise({
+      catch: (cause) => DaemonError.worktreeCreateFailed(cause),
+      try: () => loadProjectSetupScripts(root),
+    });
 
     const projectSlug = projectSlugFromPath(status.path);
     const parent = path.join(managedWorktreeRoot(), projectSlug);
@@ -105,7 +110,20 @@ export function createProjectWorktree(
           }),
         ),
       );
-      if (created !== undefined) return created;
+      if (created !== undefined) {
+        yield* Effect.tryPromise({
+          catch: (cause) => DaemonError.worktreeCreateFailed(cause),
+          try: () => executeProjectSetupScripts(setupScripts, created.cwd),
+        }).pipe(
+          Effect.catchAll((error) =>
+            Effect.gen(function* () {
+              yield* rollbackCreatedWorktree(root, created.cwd, created.branch);
+              return yield* Effect.fail(error);
+            }),
+          ),
+        );
+        return created;
+      }
     }
 
     return yield* Effect.fail(DaemonError.worktreeCreateFailed(undefined));
@@ -205,6 +223,30 @@ function removeGitWorktree(
           { maxBuffer: GIT_OUTPUT_MAX_BUFFER },
         ),
     });
+  });
+}
+
+function rollbackCreatedWorktree(root: string, cwd: string, branch: string) {
+  return Effect.gen(function* () {
+    yield* Effect.tryPromise({
+      catch: () => undefined,
+      try: () =>
+        execFileAsync(
+          "git",
+          ["-C", root, "worktree", "remove", "--force", cwd],
+          { maxBuffer: GIT_OUTPUT_MAX_BUFFER },
+        ),
+    }).pipe(Effect.orElseSucceed(() => undefined));
+    yield* Effect.tryPromise({
+      catch: () => undefined,
+      try: () =>
+        execFileAsync("git", ["-C", root, "branch", "-D", branch], {
+          maxBuffer: GIT_OUTPUT_MAX_BUFFER,
+        }),
+    }).pipe(Effect.orElseSucceed(() => undefined));
+    yield* Effect.sync(() =>
+      fs.rmSync(cwd, { force: true, recursive: true }),
+    ).pipe(Effect.orElseSucceed(() => undefined));
   });
 }
 
