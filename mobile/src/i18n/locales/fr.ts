@@ -64,6 +64,10 @@ export const fr = {
       planUpdated: "{{title}} mis à jour",
       planProgress: "{{completed}}/{{total}}",
       couldNotChangeMode: "Impossible de changer de mode",
+      attentionCompleted: "Terminé",
+      attentionNeedsInput: "Saisie requise",
+      attentionNeedsInputDescription: "L’agent attend votre réponse.",
+      attentionReview: "Voir",
     },
     elicitation: {
       defaultTitle: "L'agent a besoin de votre saisie",

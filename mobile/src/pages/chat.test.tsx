@@ -76,15 +76,50 @@ function toolAction(
   };
 }
 
-function controllableSse(signal: AbortSignal | undefined): SseHandle {
+function controllableSse(url: string, init?: RequestInit): SseHandle {
   const encoder = new TextEncoder();
   let controller!: ReadableStreamDefaultController<Uint8Array>;
+  let sequence = 0;
+  const input = JSON.parse(requestBody(init)) as {
+    chatId: string;
+    text: string;
+  };
+  const runId = url.match(/\/api\/chat-runs\/([^/]+)$/)?.[1] ?? "test-run";
+  const timestamp = "2026-07-25T00:00:00.000Z";
   const stream = new ReadableStream<Uint8Array>({
     start(c) {
       controller = c;
+      controller.enqueue(
+        encoder.encode(
+          `data: ${JSON.stringify({
+            snapshot: {
+              assistantMessage: {
+                content: [],
+                createdAt: timestamp,
+                id: `${runId}:assistant`,
+                role: "assistant",
+              },
+              chatId: input.chatId,
+              lastEventSequence: 0,
+              pendingElicitation: null,
+              runId,
+              startedAt: timestamp,
+              status: "running",
+              updatedAt: timestamp,
+              userMessage: {
+                content: [{ text: input.text, type: "text" }],
+                createdAt: timestamp,
+                id: `${runId}:user`,
+                role: "user",
+              },
+            },
+            type: "snapshot",
+          })}\n\n`,
+        ),
+      );
     },
   });
-  signal?.addEventListener("abort", () => {
+  init?.signal?.addEventListener("abort", () => {
     try {
       controller.error(new DOMException("aborted", "AbortError"));
     } catch {
@@ -97,7 +132,15 @@ function controllableSse(signal: AbortSignal | undefined): SseHandle {
       headers: { "content-type": "text/event-stream" },
     }),
     push: (event) =>
-      controller.enqueue(encoder.encode(`data: ${JSON.stringify(event)}\n\n`)),
+      controller.enqueue(
+        encoder.encode(
+          `data: ${JSON.stringify({
+            event,
+            sequence: (sequence += 1),
+            type: "event",
+          })}\n\n`,
+        ),
+      ),
     close: () => controller.close(),
   };
 }
@@ -109,7 +152,29 @@ function jsonResponse(body: unknown): Response {
   });
 }
 
+function requestBody(init?: RequestInit): string {
+  if (typeof init?.body !== "string") {
+    throw new Error("Expected a JSON request body.");
+  }
+  return init.body;
+}
+
 function renderChat(chatId: string) {
+  const testFetch = globalThis.fetch;
+  vi.stubGlobal(
+    "fetch",
+    (input: string | URL | Request, init?: RequestInit) => {
+      const url =
+        typeof input === "string"
+          ? input
+          : input instanceof URL
+            ? input.href
+            : input.url;
+      return url.endsWith("/active-run")
+        ? Promise.resolve(jsonResponse({ run: null }))
+        : testFetch(input, init);
+    },
+  );
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
@@ -215,9 +280,13 @@ describe("ChatPage", () => {
           ],
         });
       }
-      if (url.includes("/api/chat-streams?") && method === "POST") {
+      if (
+        url.includes("/api/chat-runs/") &&
+        !url.endsWith("/elicitation") &&
+        method === "POST"
+      ) {
         streamCalls += 1;
-        sse = controllableSse(init?.signal ?? undefined);
+        sse = controllableSse(url, init);
         return sse.response;
       }
       return jsonResponse({ ok: true });
@@ -260,6 +329,99 @@ describe("ChatPage", () => {
     renderChat("c1");
 
     expect(await screen.findByText("Couldn't load this chat")).toBeDefined();
+  });
+
+  it("acknowledges a completed marker after entering the chat", async () => {
+    const fetchMock = vi.fn(async (url: string, init?: RequestInit) => {
+      if (url.endsWith("/api/chat-attention")) {
+        return jsonResponse({
+          attentions: [
+            {
+              chatId: "completed-chat",
+              id: "run-1:completed",
+              status: "completed",
+              updatedAt: "2026-07-25T01:00:00.000Z",
+            },
+          ],
+        });
+      }
+      if (url.endsWith("/attention/read") && init?.method === "POST") {
+        return jsonResponse({ read: true });
+      }
+      if (url.endsWith("/load")) {
+        return jsonResponse({
+          chat: daemonChat("completed-chat"),
+          messages: [],
+        });
+      }
+      return Promise.reject(new Error(`unexpected fetch: ${url}`));
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    renderChat("completed-chat");
+
+    await waitFor(() => {
+      expect(fetchMock).toHaveBeenCalledWith(
+        "/api/chats/completed-chat/attention/read",
+        expect.objectContaining({
+          body: JSON.stringify({ attentionId: "run-1:completed" }),
+          method: "POST",
+        }),
+      );
+    });
+  });
+
+  it("highlights pending input and jumps to the elicitation", async () => {
+    let sse: SseHandle | undefined;
+    const scrollIntoView = vi.spyOn(Element.prototype, "scrollIntoView");
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: string, init?: RequestInit) => {
+        const method = init?.method ?? "GET";
+        if (url.endsWith("/api/chat-attention")) {
+          return jsonResponse({ attentions: [] });
+        }
+        if (url.endsWith("/load")) {
+          return jsonResponse({
+            chat: daemonChat("input-chat"),
+            messages: [],
+          });
+        }
+        if (
+          url.includes("/api/chat-runs/") &&
+          !url.endsWith("/elicitation") &&
+          method === "POST"
+        ) {
+          sse = controllableSse(url, init);
+          return sse.response;
+        }
+        return jsonResponse({ ok: true });
+      }),
+    );
+
+    renderChat("input-chat");
+    const textarea = await screen.findByLabelText("Message");
+    fireEvent.change(textarea, { target: { value: "continue" } });
+    fireEvent.click(screen.getByLabelText("Send"));
+    await waitFor(() => expect(sse).toBeDefined());
+    act(() =>
+      sse?.push({
+        elicitation: {
+          body: "Run the focused tests?",
+          id: "elicitation-1",
+          kind: "approval",
+          phase: "open",
+          title: "Permission",
+        },
+        type: "elicitation",
+      }),
+    );
+
+    expect(
+      await screen.findByText("The agent is waiting for your response."),
+    ).toBeDefined();
+    fireEvent.click(screen.getByRole("button", { name: "Review" }));
+    expect(scrollIntoView).toHaveBeenCalledWith({ block: "center" });
   });
 
   it("renders persisted assistant text alongside tool-call cards", async () => {
@@ -343,8 +505,12 @@ describe("ChatPage", () => {
                 ],
         });
       }
-      if (url.includes("/api/chat-streams?") && method === "POST") {
-        sse = controllableSse(init?.signal ?? undefined);
+      if (
+        url.includes("/api/chat-runs/") &&
+        !url.endsWith("/elicitation") &&
+        method === "POST"
+      ) {
+        sse = controllableSse(url, init);
         return sse.response;
       }
       return jsonResponse({ ok: true });

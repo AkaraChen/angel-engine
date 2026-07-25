@@ -32,6 +32,139 @@ const result: ChatSendResult = {
 };
 
 describe("daemon chat streams", () => {
+  it("starts a daemon-owned run with a snapshot-first observer stream", async () => {
+    const publish = vi.fn();
+    const app = new Hono();
+    registerApi(app, fakeDaemonRuntime(), { publish });
+
+    const response = await app.request("/api/chat-runs/run-1", {
+      body: JSON.stringify({ chatId: "chat-1", text: "hello" }),
+      headers: { "content-type": "application/json" },
+      method: "POST",
+    });
+    const body = await response.text();
+
+    expect(response.headers.get("content-type")).toContain("text/event-stream");
+    expect(body.indexOf('"type":"snapshot"')).toBeLessThan(
+      body.indexOf('"type":"event"'),
+    );
+    expect(body).toContain('"sequence":1');
+    expect(body).toContain('"sequence":3');
+    expect(body).toContain('"type":"result"');
+    expect(body).toContain('"type":"done"');
+    expect(publish).toHaveBeenCalledWith({
+      chatIds: ["chat-1"],
+      type: "chat-attention-changed",
+    });
+  });
+
+  it("keeps completed attention until the exact marker is read", async () => {
+    const publish = vi.fn();
+    const app = new Hono();
+    registerApi(app, fakeDaemonRuntime(), { publish });
+
+    const run = await app.request("/api/chat-runs/run-attention", {
+      body: JSON.stringify({ chatId: chat.id, text: "hello" }),
+      headers: { "content-type": "application/json" },
+      method: "POST",
+    });
+    await run.text();
+
+    await expect(
+      (await app.request("/api/chat-attention")).json(),
+    ).resolves.toEqual({
+      attentions: [
+        {
+          chatId: chat.id,
+          id: "run-attention:completed",
+          status: "completed",
+          updatedAt: expect.any(String),
+        },
+      ],
+    });
+
+    const staleRead = await app.request(
+      `/api/chats/${chat.id}/attention/read`,
+      {
+        body: JSON.stringify({ attentionId: "stale" }),
+        headers: { "content-type": "application/json" },
+        method: "POST",
+      },
+    );
+    await expect(staleRead.json()).resolves.toEqual({ read: false });
+    await expect(
+      (await app.request("/api/chat-attention")).json(),
+    ).resolves.toMatchObject({
+      attentions: [{ id: "run-attention:completed" }],
+    });
+
+    const read = await app.request(`/api/chats/${chat.id}/attention/read`, {
+      body: JSON.stringify({ attentionId: "run-attention:completed" }),
+      headers: { "content-type": "application/json" },
+      method: "POST",
+    });
+    await expect(read.json()).resolves.toEqual({ read: true });
+    await expect(
+      (await app.request("/api/chat-attention")).json(),
+    ).resolves.toEqual({ attentions: [] });
+  });
+
+  it("keeps a run active until explicit stop aborts its provider", async () => {
+    let providerSignal: AbortSignal | undefined;
+    const app = new Hono();
+    registerApi(
+      app,
+      fakeDaemonRuntime({
+        streamChat: (_input, _onEvent, signal) => {
+          if (signal === undefined) {
+            return Effect.fail(
+              DaemonError.internal(new Error("Expected an abort signal.")),
+            );
+          }
+          return Effect.async<ChatSendResult, DaemonError>((resume) => {
+            providerSignal = signal;
+            const abort = () =>
+              resume(
+                Effect.fail(
+                  DaemonError.sessionFailed(new Error("run cancelled")),
+                ),
+              );
+            signal.addEventListener("abort", abort, { once: true });
+            return Effect.sync(() =>
+              signal.removeEventListener("abort", abort),
+            );
+          });
+        },
+      }),
+      { publish: vi.fn() },
+    );
+
+    const response = await app.request("/api/chat-runs/run-1", {
+      body: JSON.stringify({ chatId: "chat-1", text: "hello" }),
+      headers: { "content-type": "application/json" },
+      method: "POST",
+    });
+    const bodyPromise = response.text();
+    await vi.waitFor(() => expect(providerSignal).toBeDefined());
+
+    const active = await app.request("/api/chats/chat-1/active-run");
+    expect(await active.json()).toMatchObject({
+      run: { chatId: "chat-1", runId: "run-1", status: "running" },
+    });
+    expect(providerSignal?.aborted).toBe(false);
+
+    const stopped = await app.request("/api/chat-runs/run-1", {
+      method: "DELETE",
+    });
+    expect(stopped.status).toBe(200);
+    expect(providerSignal?.aborted).toBe(true);
+    expect(await bodyPromise).toContain('"type":"done"');
+    await vi.waitFor(async () => {
+      const after = await app.request("/api/chats/chat-1/active-run");
+      expect(await after.json()).toEqual({ run: null });
+    });
+  });
+
   it("streams runtime events and publishes the global feed", async () => {
     const publish = vi.fn();
     const app = new Hono();

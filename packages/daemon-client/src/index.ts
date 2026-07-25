@@ -8,6 +8,10 @@ import type {
 } from "@angel-engine/daemon-api/agents";
 import type {
   Chat,
+  ChatActiveRunResult,
+  ChatAttentionListResult,
+  ChatAttentionReadInput,
+  ChatAttentionReadResult,
   ChatArchivedDeleteImpact,
   ChatArchivedDeleteImpactInput,
   ChatArchivedDeleteInput,
@@ -22,6 +26,8 @@ import type {
   ChatRenameInput,
   ChatRuntimeConfig,
   ChatRuntimeConfigInput,
+  ChatRunObserverEvent,
+  ChatRunStartInput,
   ChatSendInput,
   ChatSetModeInput,
   ChatSetModeResult,
@@ -32,7 +38,15 @@ import type {
   ProjectFileSearchInput,
   ProjectFileSearchResult,
 } from "@angel-engine/daemon-api/chat";
-import { isChatStreamEvent } from "@angel-engine/daemon-api/chat";
+import {
+  isChatActiveRunResult,
+  isChatAttentionListResult,
+  isChatAttentionReadResult,
+  isChatRunObserverEvent,
+  isChatStreamEvent,
+} from "@angel-engine/daemon-api/chat";
+import type { DaemonGlobalEvent } from "@angel-engine/daemon-api";
+import { isDaemonGlobalEvent } from "@angel-engine/daemon-api";
 import type {
   DaemonErrorPayload,
   DaemonHealth,
@@ -82,6 +96,12 @@ export interface DaemonClientOptions {
   onUnauthorized?: () => void;
   /** Bearer token; omit when the transport injects authorization itself. */
   token?: string | null;
+}
+
+export interface DaemonEventHandlers {
+  onEvent: (event: DaemonGlobalEvent) => void;
+  onInvalidEvent?: (error: DaemonRequestError) => void;
+  onOpen?: () => void;
 }
 
 export function createDaemonClient(options: DaemonClientOptions) {
@@ -170,6 +190,104 @@ export function createDaemonClient(options: DaemonClientOptions) {
     }
   }
 
+  async function* streamRun(
+    path: string,
+    init: RequestInit,
+  ): AsyncIterable<ChatRunObserverEvent> {
+    const headers = new Headers(init.headers);
+    headers.set("accept", "text/event-stream");
+    const response = await send(path, { ...init, headers });
+    if (!response.ok) {
+      throw DaemonRequestError.http(
+        response.status,
+        undefined,
+        `Daemon request failed: ${init.method ?? "GET"} ${path}`,
+      );
+    }
+    if (response.body === null) {
+      throw DaemonRequestError.invalidResponse(
+        `Daemon returned an empty stream for ${path}.`,
+        response.status,
+      );
+    }
+
+    let sawSnapshot = false;
+    let lastSequence = 0;
+    for await (const message of readSseEvents(response.body)) {
+      if (!isChatRunObserverEvent(message)) {
+        throw DaemonRequestError.invalidResponse(
+          `Daemon returned an invalid chat run event for ${path}.`,
+          response.status,
+        );
+      }
+      if (!sawSnapshot) {
+        if (message.type !== "snapshot") {
+          throw DaemonRequestError.invalidResponse(
+            `Daemon did not start the chat run stream with a snapshot for ${path}.`,
+            response.status,
+          );
+        }
+        sawSnapshot = true;
+        lastSequence = message.snapshot.lastEventSequence;
+      } else {
+        if (message.type !== "event" || message.sequence !== lastSequence + 1) {
+          throw DaemonRequestError.invalidResponse(
+            `Daemon returned a non-contiguous chat run sequence for ${path}.`,
+            response.status,
+          );
+        }
+        lastSequence = message.sequence;
+      }
+      yield message;
+    }
+    if (!sawSnapshot) {
+      throw DaemonRequestError.invalidResponse(
+        `Daemon returned a chat run stream without a snapshot for ${path}.`,
+        response.status,
+      );
+    }
+  }
+
+  const activeRun = async (chatId: string): Promise<ChatActiveRunResult> => {
+    const path = `/api/chats/${encodeURIComponent(chatId)}/active-run`;
+    const result = await request<unknown>(path);
+    if (!isChatActiveRunResult(result)) {
+      throw DaemonRequestError.invalidResponse(
+        `Daemon returned an invalid active chat run for ${path}.`,
+        200,
+      );
+    }
+    return result;
+  };
+
+  const listAttention = async (): Promise<ChatAttentionListResult> => {
+    const result = await request<unknown>("/api/chat-attention");
+    if (!isChatAttentionListResult(result)) {
+      throw DaemonRequestError.invalidResponse(
+        "Daemon returned an invalid chat attention snapshot.",
+        200,
+      );
+    }
+    return result;
+  };
+
+  const readAttention = async (
+    chatId: string,
+    input: ChatAttentionReadInput,
+  ): Promise<ChatAttentionReadResult> => {
+    const result = await request<unknown>(
+      `/api/chats/${encodeURIComponent(chatId)}/attention/read`,
+      json("POST", input),
+    );
+    if (!isChatAttentionReadResult(result)) {
+      throw DaemonRequestError.invalidResponse(
+        "Daemon returned an invalid chat attention read result.",
+        200,
+      );
+    }
+    return result;
+  };
+
   return {
     agents: {
       createCustom: (input: CreateCustomAgentInput) =>
@@ -192,6 +310,33 @@ export function createDaemonClient(options: DaemonClientOptions) {
           `/api/agents/custom/${encodeURIComponent(input.id)}`,
           json("PUT", input),
         ),
+    },
+    chatRuns: {
+      active: activeRun,
+      observe: (runId: string, signal?: AbortSignal) =>
+        streamRun(`/api/chat-runs/${encodeURIComponent(runId)}/events`, {
+          method: "GET",
+          signal,
+        }),
+      resolveElicitation: (runId: string, input: ChatStreamElicitationInput) =>
+        request<{ resolved: boolean }>(
+          `/api/chat-runs/${encodeURIComponent(runId)}/elicitation`,
+          json("POST", input),
+        ),
+      start: (runId: string, input: ChatRunStartInput, signal?: AbortSignal) =>
+        streamRun(`/api/chat-runs/${encodeURIComponent(runId)}`, {
+          ...json("POST", input),
+          signal,
+        }),
+      stop: (runId: string) =>
+        request<{ ok: boolean }>(
+          `/api/chat-runs/${encodeURIComponent(runId)}`,
+          { method: "DELETE" },
+        ),
+    },
+    attention: {
+      list: listAttention,
+      read: readAttention,
     },
     chatStreams: {
       abort: (streamId: string) =>
@@ -279,6 +424,10 @@ export function createDaemonClient(options: DaemonClientOptions) {
         ),
     },
     health: () => request<DaemonHealth>("/api/health"),
+    events: {
+      subscribe: (handlers: DaemonEventHandlers) =>
+        subscribeDaemonEvents(options, handlers),
+    },
     processes: {
       kill: (pid: number, force = false) =>
         request<{ ok: boolean }>(`/api/processes/${pid}/kill`, {
@@ -351,4 +500,96 @@ function query(input: object) {
     if (value !== undefined) parameters.set(key, String(value));
   }
   return parameters.toString();
+}
+
+function subscribeDaemonEvents(
+  options: DaemonClientOptions,
+  handlers: DaemonEventHandlers,
+): () => void {
+  let reconnectTimer: ReturnType<typeof setTimeout> | undefined;
+  let socket: WebSocket | undefined;
+  let stopped = false;
+
+  const connect = () => {
+    let url: string;
+    try {
+      url = daemonEventUrl(options.baseUrl);
+    } catch (cause) {
+      stopped = true;
+      handlers.onInvalidEvent?.(
+        DaemonRequestError.invalidResponse(
+          cause instanceof Error ? cause.message : String(cause),
+          0,
+        ),
+      );
+      return;
+    }
+
+    const protocol =
+      options.token === undefined || options.token === null
+        ? undefined
+        : `angel-engine-token.${options.token}`;
+    const next =
+      protocol === undefined
+        ? new WebSocket(url)
+        : new WebSocket(url, protocol);
+    socket = next;
+    next.addEventListener("open", () => handlers.onOpen?.());
+    next.addEventListener("message", (message) => {
+      let candidate: unknown;
+      try {
+        candidate = JSON.parse(String(message.data));
+      } catch (cause) {
+        stopped = true;
+        handlers.onInvalidEvent?.(
+          DaemonRequestError.invalidResponse(
+            cause instanceof Error ? cause.message : String(cause),
+            0,
+          ),
+        );
+        next.close(1003, "Invalid daemon event");
+        return;
+      }
+      if (!isDaemonGlobalEvent(candidate)) {
+        handlers.onInvalidEvent?.(
+          DaemonRequestError.invalidResponse(
+            "Daemon returned an invalid global event.",
+            0,
+          ),
+        );
+        return;
+      }
+      handlers.onEvent(candidate);
+    });
+    next.addEventListener("close", () => {
+      if (socket !== next) return;
+      socket = undefined;
+      if (!stopped) reconnectTimer = setTimeout(connect, 1_000);
+    });
+  };
+
+  connect();
+  return () => {
+    stopped = true;
+    if (reconnectTimer !== undefined) clearTimeout(reconnectTimer);
+    socket?.close();
+    socket = undefined;
+  };
+}
+
+function daemonEventUrl(baseUrl: string): string {
+  const origin =
+    baseUrl.length > 0
+      ? baseUrl
+      : typeof location === "undefined"
+        ? undefined
+        : location.origin;
+  if (origin === undefined) {
+    throw new Error("Daemon event URL requires an absolute base URL.");
+  }
+  const url = new URL("/api/events", origin);
+  if (url.protocol === "http:") url.protocol = "ws:";
+  else if (url.protocol === "https:") url.protocol = "wss:";
+  else throw new Error(`Unsupported daemon event protocol: ${url.protocol}`);
+  return url.toString();
 }

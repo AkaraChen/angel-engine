@@ -64,6 +64,10 @@ export interface LocaleResourceTranslationChat {
   planUpdated: string;
   planProgress: string;
   couldNotChangeMode: string;
+  attentionCompleted: string;
+  attentionNeedsInput: string;
+  attentionNeedsInputDescription: string;
+  attentionReview: string;
 }
 
 export interface LocaleResourceTranslationElicitation {

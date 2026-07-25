@@ -10,6 +10,7 @@ import { AuthProvider } from "@/features/auth/auth-provider";
 import { themeStorageKey } from "@/features/settings/theme";
 import i18n from "@/i18n";
 import { DaemonProvider } from "@/platform/daemon-provider";
+import { DaemonEventSync } from "@/platform/daemon-events";
 
 export function App() {
   return (
@@ -26,6 +27,7 @@ export function App() {
         <AuthProvider>
           <DaemonProvider>
             <QueryClientProvider client={queryClient}>
+              <DaemonEventSync />
               <TooltipProvider>
                 <AppRouter />
                 <Toaster />

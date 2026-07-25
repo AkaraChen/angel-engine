@@ -12,6 +12,8 @@ import {
   SidebarProvider,
   SidebarTrigger,
 } from "@/components/ui/sidebar";
+import { ChatRunAttentionBadge } from "@/features/chat/run-attention-badge";
+import { useChatAttention } from "@/features/chat/use-attention";
 import { WorkspacePanel } from "@/features/workspace/workspace-panel";
 import { useDaemonClient } from "@/platform/daemon-provider";
 import { queryKeys } from "@/platform/query-keys";
@@ -49,6 +51,9 @@ export function AppShell({ children }: PropsWithChildren) {
   const { t } = useTranslation();
   const [isChat, chatParams] = useRoute("/chat/:chatId");
   const title = useRouteTitle();
+  const currentChatId = isChat ? chatParams.chatId : "";
+  const attention = useChatAttention(currentChatId);
+
   return (
     <SidebarProvider>
       <AppSidebar />
@@ -75,6 +80,9 @@ export function AppShell({ children }: PropsWithChildren) {
           <h1 className="min-w-0 flex-1 truncate font-heading text-base font-semibold">
             {title}
           </h1>
+          {isChat && attention?.status === "needsInput" ? (
+            <ChatRunAttentionBadge status={attention.status} />
+          ) : null}
           {isChat ? <WorkspacePanel chatId={chatParams.chatId} /> : null}
         </header>
         <main className="min-h-0 flex-1 overflow-hidden">{children}</main>
