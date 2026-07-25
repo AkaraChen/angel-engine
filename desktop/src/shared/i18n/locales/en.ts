@@ -273,6 +273,13 @@ export const en = {
       agentMode: "Agent Mode",
       agentSettings: "Agent settings",
       attachFiles: "Attach files",
+      attachGitHub: "Attach GitHub issue or PR",
+      attachGitHubConfirm: "Attach",
+      attachGitHubDescription:
+        "Paste a github.com issue or pull request URL. Context is fetched with your local gh CLI.",
+      attachGitHubLoading: "Fetching…",
+      attachGitHubPlaceholder: "https://github.com/owner/repo/issues/123",
+      attachGitHubTitle: "Attach from GitHub",
       attachmentErrors: {
         accept: "No files match the accepted types.",
         fileRead: "The selected file could not be read.",
@@ -299,6 +306,18 @@ export const en = {
       fileTypeBlocked: "File type blocked",
       fileTooLarge: "File is too large",
       files: "Files",
+      githubErrors: {
+        cliMissing:
+          "GitHub CLI (gh) is not installed or not on PATH. Install it and try again.",
+        cliUnauthenticated:
+          "GitHub CLI is not authenticated. Run `gh auth login` and try again.",
+        fetchFailed: "Could not fetch that GitHub item.",
+        notFound: "GitHub issue or pull request was not found.",
+        urlUnsupported:
+          "Only github.com issue or pull request URLs are supported.",
+      },
+      githubIssue: "Issue",
+      githubPullRequest: "Pull request",
       loadingCommands: "Loading commands",
       loadingSkills: "Loading skills",
       loadingValue: "Loading...",

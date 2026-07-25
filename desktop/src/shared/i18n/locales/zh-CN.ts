@@ -263,6 +263,13 @@ export const zhCN = {
       agentMode: "Agent 模式",
       agentSettings: "Agent 设置",
       attachFiles: "附加文件",
+      attachGitHub: "附加 GitHub Issue 或 PR",
+      attachGitHubConfirm: "附加",
+      attachGitHubDescription:
+        "粘贴 github.com 的 Issue 或 PR 链接。将通过本机 gh CLI 拉取上下文。",
+      attachGitHubLoading: "获取中…",
+      attachGitHubPlaceholder: "https://github.com/owner/repo/issues/123",
+      attachGitHubTitle: "从 GitHub 附加",
       attachmentErrors: {
         accept: "没有文件符合允许的类型。",
         fileRead: "无法读取所选文件。",
@@ -286,6 +293,16 @@ export const zhCN = {
       fileTypeBlocked: "文件类型被阻止",
       fileTooLarge: "文件过大",
       files: "文件",
+      githubErrors: {
+        cliMissing: "未安装 GitHub CLI (gh) 或不在 PATH 中。请安装后重试。",
+        cliUnauthenticated:
+          "GitHub CLI 未登录。请运行 `gh auth login` 后重试。",
+        fetchFailed: "无法获取该 GitHub 条目。",
+        notFound: "未找到该 GitHub Issue 或 PR。",
+        urlUnsupported: "仅支持 github.com 的 Issue 或 PR 链接。",
+      },
+      githubIssue: "Issue",
+      githubPullRequest: "Pull request",
       loadingCommands: "正在加载命令",
       loadingSkills: "正在加载技能",
       loadingValue: "加载中...",

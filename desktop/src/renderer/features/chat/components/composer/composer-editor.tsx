@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import type { ComposerEditorController } from "@/features/chat/components/composer/use-composer-editor";
 import {
+  GithubLogo,
   Globe,
   SpinnerGap as Loader2,
   WarningCircle,
@@ -20,6 +21,10 @@ import {
 import { ChatAttachmentTile } from "@/features/chat/components/attachment-tile";
 import { urlPreviewQueryOptions } from "@/features/chat/api/url-preview-query";
 import { pasteSourceUrlPath } from "@/features/chat/components/composer/composer-helpers";
+import {
+  githubAttachmentLabel,
+  type ComposerGitHubAttachment,
+} from "@/features/chat/components/composer/github-attachments";
 import { composerRichTextClassName } from "@/features/chat/components/composer/composer-rich-text";
 import { useSettingsStore } from "@/features/settings/settings-store";
 import { ipc } from "@/platform/ipc";
@@ -55,7 +60,9 @@ export function ComposerEditor({
   const {
     addPasteSourceUrl,
     editor,
+    githubAttachments,
     pasteSourceUrls,
+    removeGitHubAttachment,
     removePasteSourceUrl,
     setInteractions,
     setTextInput,
@@ -123,8 +130,10 @@ export function ComposerEditor({
     <>
       <WorkspaceFileTreeIconSprite />
       <ComposerEditorHeader
+        githubAttachments={githubAttachments}
         headerClassName={headerClassName}
         headerLeading={headerLeading}
+        onRemoveGitHubAttachment={removeGitHubAttachment}
         onRemovePasteSource={removePasteSourceUrl}
         pasteSourceUrls={pasteSourceUrls}
       />
@@ -140,13 +149,17 @@ export function ComposerEditor({
 }
 
 function ComposerEditorHeader({
+  githubAttachments,
   headerClassName,
   headerLeading,
+  onRemoveGitHubAttachment,
   onRemovePasteSource,
   pasteSourceUrls,
 }: {
+  githubAttachments: ComposerGitHubAttachment[];
   headerClassName?: string;
   headerLeading?: ReactNode;
+  onRemoveGitHubAttachment: (id: string) => void;
   onRemovePasteSource: (sourceUrl: string) => void;
   pasteSourceUrls: string[];
 }) {
@@ -158,7 +171,8 @@ function ComposerEditorHeader({
   if (
     !hasHeaderLeading &&
     attachments.files.length === 0 &&
-    pasteSourceUrls.length === 0
+    pasteSourceUrls.length === 0 &&
+    githubAttachments.length === 0
   ) {
     return null;
   }
@@ -174,6 +188,26 @@ function ComposerEditorHeader({
           sourceUrl={sourceUrl}
         />
       ))}
+
+      {githubAttachments.map((item) => {
+        const name = githubAttachmentLabel(item);
+        return (
+          <ChatAttachmentTile
+            className="max-w-64"
+            fallbackIcon={<GithubLogo className="size-4" weight="duotone" />}
+            key={item.id}
+            name={name}
+            onRemove={() => onRemoveGitHubAttachment(item.id)}
+            previewText={item.contextText}
+            removeLabel={t("composer.removeAttachment", { name })}
+            typeLabel={
+              item.kind === "issue"
+                ? t("composer.githubIssue")
+                : t("composer.githubPullRequest")
+            }
+          />
+        );
+      })}
 
       {attachments.files.map((file) => {
         if (!file.mediaType) {

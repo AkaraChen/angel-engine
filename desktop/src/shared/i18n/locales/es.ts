@@ -276,6 +276,13 @@ export const es = {
       agentMode: "Modo Agent",
       agentSettings: "Configuración del Agent",
       attachFiles: "Adjuntar archivos",
+      attachGitHub: "Adjuntar issue o PR de GitHub",
+      attachGitHubConfirm: "Adjuntar",
+      attachGitHubDescription:
+        "Pega una URL de issue o PR de github.com. El contexto se obtiene con la CLI gh local.",
+      attachGitHubLoading: "Obteniendo…",
+      attachGitHubPlaceholder: "https://github.com/owner/repo/issues/123",
+      attachGitHubTitle: "Adjuntar desde GitHub",
       attachmentErrors: {
         accept: "Ningún archivo coincide con los tipos permitidos.",
         fileRead: "No se pudo leer el archivo seleccionado.",
@@ -302,6 +309,16 @@ export const es = {
       fileTypeBlocked: "Tipo de archivo bloqueado",
       fileTooLarge: "El archivo es demasiado grande",
       files: "Archivos",
+      githubErrors: {
+        cliMissing: "GitHub CLI (gh) no está instalada o no está en el PATH.",
+        cliUnauthenticated:
+          "GitHub CLI no está autenticada. Ejecuta `gh auth login`.",
+        fetchFailed: "No se pudo obtener ese elemento de GitHub.",
+        notFound: "No se encontró el issue o PR de GitHub.",
+        urlUnsupported: "Solo se admiten URLs de issues o PR de github.com.",
+      },
+      githubIssue: "Issue",
+      githubPullRequest: "Pull request",
       loadingCommands: "Cargando comandos",
       loadingSkills: "Cargando habilidades",
       loadingValue: "Cargando...",

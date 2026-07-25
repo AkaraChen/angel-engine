@@ -307,10 +307,24 @@ export interface LocaleResourceTranslationComposerToasts {
   tooManyFiles: string;
 }
 
+export interface LocaleResourceTranslationComposerGitHubErrors {
+  cliMissing: string;
+  cliUnauthenticated: string;
+  fetchFailed: string;
+  notFound: string;
+  urlUnsupported: string;
+}
+
 export interface LocaleResourceTranslationComposer {
   agentMode: string;
   agentSettings: string;
   attachFiles: string;
+  attachGitHub: string;
+  attachGitHubConfirm: string;
+  attachGitHubDescription: string;
+  attachGitHubLoading: string;
+  attachGitHubPlaceholder: string;
+  attachGitHubTitle: string;
   attachmentErrors: LocaleResourceTranslationComposerAttachmentErrors;
   commands: string;
   couldNotReadAttachment: string;
@@ -319,6 +333,9 @@ export interface LocaleResourceTranslationComposer {
   fileTypeBlocked: string;
   fileTooLarge: string;
   files: string;
+  githubErrors: LocaleResourceTranslationComposerGitHubErrors;
+  githubIssue: string;
+  githubPullRequest: string;
   loadingCommands: string;
   loadingSkills: string;
   loadingValue: string;

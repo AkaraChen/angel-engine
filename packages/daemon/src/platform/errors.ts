@@ -211,6 +211,53 @@ export class DaemonError extends Data.TaggedError(
     });
   }
 
+  static githubCliMissing() {
+    return new DaemonError({
+      code: "github-cli-missing",
+      message: "GitHub CLI (gh) is not installed or not on PATH.",
+      status: 400,
+    });
+  }
+
+  static githubCliUnauthenticated(
+    message = "GitHub CLI is not authenticated.",
+  ) {
+    return new DaemonError({
+      code: "github-cli-unauthenticated",
+      message,
+      status: 400,
+    });
+  }
+
+  static githubUrlUnsupported(
+    message = "Only github.com issue or pull request URLs are supported.",
+  ) {
+    return new DaemonError({
+      code: "github-url-unsupported",
+      message,
+      status: 400,
+    });
+  }
+
+  static githubItemNotFound(
+    message = "GitHub issue or pull request was not found.",
+  ) {
+    return new DaemonError({
+      code: "github-item-not-found",
+      message,
+      status: 404,
+    });
+  }
+
+  static githubFetchFailed(cause: unknown, fallback = "GitHub fetch failed.") {
+    return new DaemonError({
+      cause,
+      code: "github-fetch-failed",
+      message: gitMessageFromCause(cause, fallback),
+      status: 500,
+    });
+  }
+
   static worktreeCreateFailed(cause: unknown) {
     return new DaemonError({
       cause,
