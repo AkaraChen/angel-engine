@@ -9,8 +9,10 @@ export default defineConfig({
     "src/daemon.ts",
     "src/events.ts",
     "src/chat/index.ts",
+    "src/github.ts",
     "src/mime.ts",
     "src/projects.ts",
+
     "src/terminal.ts",
     "src/workspace-tools.ts",
   ],

@@ -54,6 +54,10 @@ import type {
   ProcessRegistrySnapshotEntry,
 } from "@angel-engine/daemon-api/daemon";
 import type {
+  GitHubResolveUrlInput,
+  GitHubResolvedItem,
+} from "@angel-engine/daemon-api/github";
+import type {
   CreateProjectInput,
   Project,
   ProjectGitStatusInput,
@@ -422,6 +426,10 @@ export function createDaemonClient(options: DaemonClientOptions) {
           `/api/chats/${encodeURIComponent(input.chatId)}/runtime`,
           json("PUT", { runtime: input.runtime }),
         ),
+    },
+    github: {
+      resolveUrl: (input: GitHubResolveUrlInput) =>
+        request<GitHubResolvedItem>("/api/github/resolve", json("POST", input)),
     },
     health: () => request<DaemonHealth>("/api/health"),
     events: {

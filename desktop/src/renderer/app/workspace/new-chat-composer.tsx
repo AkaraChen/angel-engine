@@ -27,6 +27,7 @@ import {
   ComposerModelMenu,
   PromptAttachmentButton,
 } from "@/features/chat/components/composer/composer-menus";
+import { PromptGitHubAttachButton } from "@/features/chat/components/composer/github-attach-button";
 import { PlanModeToggleButton } from "@/features/chat/components/composer/composer-plan-mode";
 import { useComposerEditor } from "@/features/chat/components/composer/use-composer-editor";
 import { SketchUnderline } from "@/features/chat/components/sketch-underline";
@@ -219,6 +220,7 @@ export function NewChatComposer({
             "
           >
             <NewChatComposerFooter
+              editor={editor}
               editorIsEmpty={isEmpty}
               isRunning={isRunning}
               onCancel={handleCancel}
@@ -279,10 +281,12 @@ export function NewChatComposer({
 }
 
 function NewChatComposerFooter({
+  editor,
   editorIsEmpty,
   isRunning,
   onCancel,
 }: {
+  editor: ReturnType<typeof useComposerEditor>;
   editorIsEmpty: boolean;
   isRunning: boolean;
   onCancel: () => void;
@@ -290,12 +294,19 @@ function NewChatComposerFooter({
   const { t } = useTranslation();
   const chatOptions = useChatOptions();
   const attachments = usePromptInputAttachments();
-  const isEmpty = editorIsEmpty && attachments.files.length === 0;
+  const isEmpty =
+    editorIsEmpty &&
+    attachments.files.length === 0 &&
+    editor.githubAttachments.length === 0;
 
   return (
     <PromptInputFooter className={newChatFooterClassName}>
       <PromptInputTools className="flex-wrap">
         <PromptAttachmentButton />
+        <PromptGitHubAttachButton
+          disabled={isRunning}
+          onAttached={editor.addGitHubAttachment}
+        />
         <ComposerModelMenu disabled={isRunning} options={chatOptions} />
       </PromptInputTools>
       <div className="flex min-w-0 flex-1 items-center justify-end gap-2">

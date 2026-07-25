@@ -7,6 +7,7 @@ import type {
   ComposerCatalog,
   ComposerInteractionRefs,
 } from "@/features/chat/components/composer/composer-editor-extensions";
+import type { ComposerGitHubAttachment } from "@/features/chat/components/composer/github-attachments";
 import { useEditor, useEditorState } from "@tiptap/react";
 import { useCallback, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -24,13 +25,16 @@ export interface ComposerEditorInteractions {
 }
 
 export interface ComposerEditorController {
+  addGitHubAttachment: (attachment: ComposerGitHubAttachment) => void;
   addPasteSourceUrl: (sourceUrl: string) => void;
   editor: Editor | null;
   focus: () => void;
   getMarkdown: () => string;
+  githubAttachments: ComposerGitHubAttachment[];
   isEmpty: boolean;
   mentionedFiles: ComposerMentionedFile[];
   pasteSourceUrls: string[];
+  removeGitHubAttachment: (id: string) => void;
   removeMention: (id: string) => void;
   removePasteSourceUrl: (sourceUrl: string) => void;
   reset: () => void;
@@ -51,6 +55,9 @@ export function useComposerEditor({
     [],
   );
   const [pasteSourceUrls, setPasteSourceUrls] = useState<string[]>([]);
+  const [githubAttachments, setGitHubAttachments] = useState<
+    ComposerGitHubAttachment[]
+  >([]);
   const addPasteSourceUrl = useCallback((sourceUrl: string) => {
     setPasteSourceUrls((current) =>
       current.includes(sourceUrl) ? current : [...current, sourceUrl],
@@ -58,6 +65,20 @@ export function useComposerEditor({
   }, []);
   const removePasteSourceUrl = useCallback((sourceUrl: string) => {
     setPasteSourceUrls((current) => current.filter((url) => url !== sourceUrl));
+  }, []);
+  const addGitHubAttachment = useCallback(
+    (attachment: ComposerGitHubAttachment) => {
+      setGitHubAttachments((current) => {
+        if (current.some((item) => item.url === attachment.url)) {
+          return current;
+        }
+        return [...current, attachment];
+      });
+    },
+    [],
+  );
+  const removeGitHubAttachment = useCallback((id: string) => {
+    setGitHubAttachments((current) => current.filter((item) => item.id !== id));
   }, []);
   const [selectedSkills, setSelectedSkills] = useState<
     ComposerMentionedSkill[]
@@ -146,6 +167,7 @@ export function useComposerEditor({
       editor.commands.clearContent();
     }
     setPasteSourceUrls([]);
+    setGitHubAttachments([]);
   }, [editor]);
   const removeMention = useCallback(
     (id: string) => {
@@ -182,13 +204,16 @@ export function useComposerEditor({
   );
 
   return {
+    addGitHubAttachment,
     addPasteSourceUrl,
     editor,
     focus,
     getMarkdown,
+    githubAttachments,
     isEmpty: emptyState ?? true,
     mentionedFiles,
     pasteSourceUrls,
+    removeGitHubAttachment,
     removeMention,
     removePasteSourceUrl,
     reset,

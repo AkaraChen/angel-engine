@@ -273,6 +273,13 @@ export const ko = {
       agentMode: "Agent 모드",
       agentSettings: "Agent 설정",
       attachFiles: "파일 첨부",
+      attachGitHub: "GitHub 이슈 또는 PR 첨부",
+      attachGitHubConfirm: "첨부",
+      attachGitHubDescription:
+        "github.com 이슈 또는 PR URL을 붙여넣으세요. 로컬 gh CLI로 가져옵니다.",
+      attachGitHubLoading: "가져오는 중…",
+      attachGitHubPlaceholder: "https://github.com/owner/repo/issues/123",
+      attachGitHubTitle: "GitHub에서 첨부",
       attachmentErrors: {
         accept: "허용된 형식과 일치하는 파일이 없습니다.",
         fileRead: "선택한 파일을 읽을 수 없습니다.",
@@ -299,6 +306,16 @@ export const ko = {
       fileTypeBlocked: "파일 형식 차단됨",
       fileTooLarge: "파일이 너무 큽니다",
       files: "파일",
+      githubErrors: {
+        cliMissing: "GitHub CLI(gh)가 설치되지 않았거나 PATH에 없습니다.",
+        cliUnauthenticated:
+          "GitHub CLI가 인증되지 않았습니다. `gh auth login`을 실행하세요.",
+        fetchFailed: "GitHub 항목을 가져오지 못했습니다.",
+        notFound: "GitHub 이슈 또는 PR을 찾을 수 없습니다.",
+        urlUnsupported: "github.com 이슈/PR URL만 지원합니다.",
+      },
+      githubIssue: "Issue",
+      githubPullRequest: "Pull request",
       loadingCommands: "명령 로드 중",
       loadingSkills: "스킬 로드 중",
       loadingValue: "로드 중...",

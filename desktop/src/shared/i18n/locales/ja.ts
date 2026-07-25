@@ -276,6 +276,13 @@ export const ja = {
       agentMode: "Agent モード",
       agentSettings: "Agent 設定",
       attachFiles: "ファイルを添付",
+      attachGitHub: "GitHub Issue / PR を添付",
+      attachGitHubConfirm: "添付",
+      attachGitHubDescription:
+        "github.com の Issue または PR の URL を貼り付けます。ローカルの gh CLI で取得します。",
+      attachGitHubLoading: "取得中…",
+      attachGitHubPlaceholder: "https://github.com/owner/repo/issues/123",
+      attachGitHubTitle: "GitHub から添付",
       attachmentErrors: {
         accept: "許可された種類に一致するファイルがありません。",
         fileRead: "選択したファイルを読み取れませんでした。",
@@ -301,6 +308,17 @@ export const ja = {
       fileTypeBlocked: "ファイル形式がブロックされました",
       fileTooLarge: "ファイルが大きすぎます",
       files: "ファイル",
+      githubErrors: {
+        cliMissing:
+          "GitHub CLI (gh) がインストールされていないか PATH にありません。",
+        cliUnauthenticated:
+          "GitHub CLI が認証されていません。`gh auth login` を実行してください。",
+        fetchFailed: "GitHub の項目を取得できませんでした。",
+        notFound: "GitHub Issue または PR が見つかりません。",
+        urlUnsupported: "github.com の Issue / PR URL のみ対応しています。",
+      },
+      githubIssue: "Issue",
+      githubPullRequest: "Pull request",
       loadingCommands: "コマンドを読み込み中",
       loadingSkills: "スキルを読み込み中",
       loadingValue: "読み込み中...",

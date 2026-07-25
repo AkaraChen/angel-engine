@@ -22,10 +22,15 @@
       "types": "./dist/chat/index.d.ts",
       "import": "./dist/chat/index.js"
     },
+    "./github": {
+      "types": "./dist/github.d.ts",
+      "import": "./dist/github.js"
+    },
     "./mime": {
       "types": "./dist/mime.d.ts",
       "import": "./dist/mime.js"
     },
+
     "./projects": {
       "types": "./dist/projects.d.ts",
       "import": "./dist/projects.js"

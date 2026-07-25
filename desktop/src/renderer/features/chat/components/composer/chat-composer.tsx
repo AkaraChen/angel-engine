@@ -8,6 +8,7 @@ import type {
   ComposerMentionedSkill,
 } from "@/features/chat/components/composer/composer-attachments";
 import type { AttachmentInputError } from "@/features/chat/components/composer/composer-helpers";
+import type { ComposerGitHubAttachment } from "@/features/chat/components/composer/github-attachments";
 import type { ComposerEditorController } from "@/features/chat/components/composer/use-composer-editor";
 import is from "@sindresorhus/is";
 import { useCallback } from "react";
@@ -23,9 +24,11 @@ import {
   attachmentErrorMessage,
   attachmentErrorTitle,
 } from "@/features/chat/components/composer/composer-helpers";
+import { appendGitHubContexts } from "@/features/chat/components/composer/github-attachments";
 
 export interface ChatComposerSubmission {
   files: PromptInputFile[];
+  githubAttachments: ComposerGitHubAttachment[];
   mentionedFiles: ComposerMentionedFile[];
   selectedSkills: ComposerMentionedSkill[];
   text: string;
@@ -66,7 +69,13 @@ export function ChatComposer({
 }: ChatComposerProps) {
   const { t } = useTranslation();
   const toast = useToast();
-  const { mentionedFiles, pasteSourceUrls, reset, selectedSkills } = controller;
+  const {
+    githubAttachments,
+    mentionedFiles,
+    pasteSourceUrls,
+    reset,
+    selectedSkills,
+  } = controller;
 
   const handleSubmit = useCallback(
     async (message: PromptInputMessage) => {
@@ -74,23 +83,30 @@ export function ChatComposer({
         message.text.length > 0 ||
         message.files.length > 0 ||
         mentionedFiles.length > 0 ||
-        selectedSkills.length > 0;
+        selectedSkills.length > 0 ||
+        githubAttachments.length > 0;
       if (!hasMessage) return;
       if (onBeforeSubmit && !(await onBeforeSubmit())) return;
 
       // Capture the submission, then clear right away: awaiting the whole
       // turn first would run reset() against an editor that may have been
       // unmounted mid-turn (draft composers navigate to the created chat).
+      const githubSnapshot = [...githubAttachments];
       const submission: ChatComposerSubmission = {
         files: message.files as PromptInputFile[],
+        githubAttachments: githubSnapshot,
         mentionedFiles: [...mentionedFiles],
         selectedSkills: [...selectedSkills],
-        text: appendPasteSourceUrls(message.text, pasteSourceUrls),
+        text: appendGitHubContexts(
+          appendPasteSourceUrls(message.text, pasteSourceUrls),
+          githubSnapshot,
+        ),
       };
       reset();
       await send(submission);
     },
     [
+      githubAttachments,
       mentionedFiles,
       onBeforeSubmit,
       pasteSourceUrls,

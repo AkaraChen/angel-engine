@@ -34,6 +34,7 @@ import {
   chatSetRuntimeInputSchema,
   normalizeChatAttachmentsInput,
 } from "@angel-engine/daemon-api/chat";
+import { githubResolveUrlInputSchema } from "@angel-engine/daemon-api/github";
 import {
   createProjectInputSchema,
   updateProjectInputSchema,
@@ -42,6 +43,7 @@ import {
   workspaceToolGitCommitInputSchema,
   workspaceToolWriteFileInputSchema,
 } from "@angel-engine/daemon-api/workspace-tools";
+import { resolveGitHubUrl } from "./features/github/resolve";
 import { listAvailableAgents } from "./features/agents/availability";
 import {
   createCustomAgent,
@@ -393,6 +395,13 @@ export function registerApi(
       }),
     ),
   );
+
+  app.post("/api/github/resolve", async (context) => {
+    const input = githubResolveUrlInputSchema(await context.req.json());
+    if (input instanceof arkType.errors)
+      throw DaemonError.invalidRequest("GitHub URL is required.");
+    return context.json(await run(resolveGitHubUrl(input)));
+  });
 
   app.get("/api/projects", async (context) =>
     context.json(await run(listProjects())),
