@@ -209,6 +209,25 @@ describe("daemon chat streams", () => {
       type: "chat-metadata-changed",
     });
   });
+
+  it("forwards prewarmId to chat creation", async () => {
+    const createChatFromInput = vi.fn(() => Effect.succeed(chat));
+    const app = new Hono();
+    registerApi(app, fakeDaemonRuntime({ createChatFromInput }), {
+      publish: vi.fn(),
+    });
+
+    const response = await app.request("/api/chats", {
+      body: JSON.stringify({ prewarmId: "prewarm-1", runtime: "codex" }),
+      headers: { "content-type": "application/json" },
+      method: "POST",
+    });
+
+    expect(response.status).toBe(200);
+    expect(createChatFromInput).toHaveBeenCalledWith(
+      expect.objectContaining({ prewarmId: "prewarm-1", runtime: "codex" }),
+    );
+  });
 });
 
 type ChatEngineValue = Omit<Effect.Effect.Success<typeof ChatEngine>, "_tag">;

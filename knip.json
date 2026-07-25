@@ -26,6 +26,39 @@
       "project": ["**/*.{cjs,mts,ts,tsx}"]
     },
     "apps/website": {},
+    "mobile": {
+      "entry": [
+        "src/main.tsx",
+        "src/test-setup.ts",
+        "vite.config.ts",
+        "vitest.config.ts"
+      ],
+      "ignore": ["src/components/ui/**"],
+      "project": ["src/**/*.{ts,tsx}", "*.ts"]
+    },
+    "packages/daemon": {
+      "entry": ["src/index.ts", "src/main.ts", "src/mobile-index.ts"],
+      "project": ["src/**/*.ts"]
+    },
+    "packages/daemon-api": {
+      "entry": [
+        "src/index.ts",
+        "src/agents.ts",
+        "src/daemon.ts",
+        "src/events.ts",
+        "src/chat/index.ts",
+        "src/github.ts",
+        "src/mime.ts",
+        "src/projects.ts",
+        "src/terminal.ts",
+        "src/workspace-tools.ts"
+      ],
+      "project": ["src/**/*.ts"]
+    },
+    "packages/daemon-client": {
+      "entry": ["src/index.ts"],
+      "project": ["src/**/*.ts"]
+    },
     "packages/claude-client": {
       "entry": ["src/index.ts", "src/adapter.ts", "src/context.ts"],
       "project": ["src/**/*.ts"]

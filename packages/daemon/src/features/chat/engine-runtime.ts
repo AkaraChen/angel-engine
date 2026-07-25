@@ -2,6 +2,7 @@ import type { ConversationSnapshot } from "@angel-engine/client-napi";
 import type {
   Chat,
   ChatCreateInput,
+  ChatCreationLocation,
   ChatPrewarmInput,
   ChatRuntimeConfig,
   ChatRuntimeConfigInput,
@@ -69,6 +70,17 @@ type ReadyChatPrewarm = ChatPrewarm & {
   config: ChatRuntimeConfig;
   snapshot: ConversationSnapshot;
 };
+
+/**
+ * The fields a prewarm must agree on before its session can be claimed. Both
+ * chat creation and the legacy send path claim through this shape.
+ */
+interface ChatPrewarmClaimInput {
+  creationLocation?: ChatCreationLocation;
+  cwd?: string;
+  projectId?: string;
+  runtime?: string;
+}
 
 /**
  * The chat engine: owns live sessions, dedup of session creation, and the
@@ -236,25 +248,30 @@ export class ChatEngine extends Effect.Service<ChatEngine>()(
 
       const chatPrewarmMatches = (
         prewarm: ChatPrewarm,
-        sendInput: ChatSendInput,
+        claimInput: ChatPrewarmClaimInput,
       ) =>
         Effect.gen(function* () {
-          if (is.nonEmptyString(sendInput.cwd)) return false;
+          if (is.nonEmptyString(claimInput.cwd)) return false;
 
           const prewarmInput = prewarm.input;
-          const sendCwd = yield* cwdForProjectOrStandalone(sendInput.projectId);
+          const claimCwd = yield* cwdForProjectOrStandalone(
+            claimInput.projectId,
+          );
           return (
-            prewarm.cwd === sendCwd &&
+            prewarm.cwd === claimCwd &&
             (prewarmInput.creationLocation ?? "project") ===
-              (sendInput.creationLocation ?? "project") &&
+              (claimInput.creationLocation ?? "project") &&
             (prewarmInput.projectId ?? null) ===
-              (sendInput.projectId ?? null) &&
+              (claimInput.projectId ?? null) &&
             (prewarmInput.runtime ?? undefined) ===
-              (sendInput.runtime ?? undefined)
+              (claimInput.runtime ?? undefined)
           );
         });
 
-      const takeChatPrewarm = (prewarmId: string, input: ChatSendInput) =>
+      const takeChatPrewarm = (
+        prewarmId: string,
+        input: ChatPrewarmClaimInput,
+      ) =>
         Effect.gen(function* () {
           const prewarm = chatPrewarms.get(prewarmId);
           if (!prewarm || !isReadyChatPrewarm(prewarm)) return undefined;
@@ -402,6 +419,22 @@ export class ChatEngine extends Effect.Service<ChatEngine>()(
                 DaemonError.chatWorktreeCreationForbidden(
                   "Worktree chats must be created by sending a message.",
                 ),
+              );
+            }
+
+            const prewarm = is.nonEmptyString(input.prewarmId)
+              ? yield* takeChatPrewarm(input.prewarmId, input)
+              : undefined;
+            if (prewarm) {
+              const createdChat = yield* createChat({
+                ...input,
+                cwd: prewarm.cwd,
+              });
+              chatSessions.set(createdChat.id, prewarm.session);
+              refreshProcessRegistry();
+              return yield* persistRemoteThreadId(
+                createdChat,
+                prewarm.snapshot,
               );
             }
 
