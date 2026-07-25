@@ -165,28 +165,25 @@ describe("daemon chat streams", () => {
     });
   });
 
-  it("streams runtime events and publishes the global feed", async () => {
-    const publish = vi.fn();
+  it("streams runtime events over a chat run", async () => {
     const app = new Hono();
-    registerApi(app, fakeDaemonRuntime(), { publish });
+    registerApi(app, fakeDaemonRuntime(), { publish: vi.fn() });
 
-    const response = await app.request("/api/chat-streams?streamId=stream-1", {
-      body: JSON.stringify({ text: "hello" }),
+    const response = await app.request("/api/chat-runs/run-1", {
+      body: JSON.stringify({ chatId: "chat-1", text: "hello" }),
       headers: { "content-type": "application/json" },
       method: "POST",
     });
     const body = await response.text();
 
     expect(response.headers.get("content-type")).toContain("text/event-stream");
+    expect(body).toContain('"type":"snapshot"');
     expect(body).toContain('"type":"delta"');
     expect(body).toContain('"type":"result"');
     expect(body).toContain('"type":"done"');
-    expect(publish).toHaveBeenCalledWith(
-      expect.objectContaining({ streamId: "stream-1", type: "chat-stream" }),
-    );
   });
 
-  it("publishes chat metadata changes for non-stream clients", async () => {
+  it("publishes chat metadata changes to observers", async () => {
     const publish = vi.fn();
     const app = new Hono();
     registerApi(

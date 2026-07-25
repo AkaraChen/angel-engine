@@ -55,7 +55,6 @@ export type DaemonErrorCode =
   | "chat-run-not-waiting"
   | "chat-runtime-locked"
   | "chat-runtime-unknown"
-  | "chat-stream-not-waiting"
   | "chat-title-required"
   | "chat-worktree-creation-forbidden"
   | "custom-agent-field-required"

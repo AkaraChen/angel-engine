@@ -371,20 +371,6 @@ export interface ChatStreamElicitationResolveInput {
   response: ChatElicitationResponse;
 }
 
-export interface ChatStreamController {
-  cancel: () => void;
-  resolveElicitation: (
-    input: ChatStreamElicitationResolveInput,
-  ) => Promise<void>;
-}
-
-export interface ChatStreamApi {
-  send: (
-    input: ChatSendInput,
-    onEvent: (streamEvent: ChatStreamEvent) => void,
-  ) => ChatStreamController;
-}
-
 export function chatToolActionToPart(action: ChatToolAction): ChatToolCallPart {
   return jsChatToolActionToPart(action);
 }

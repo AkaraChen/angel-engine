@@ -13,30 +13,34 @@ cancel the provider run. Only an explicit Stop cancels it.
 
 Stage 1 freezes the contract that lets Stage 2 be a semantic migration instead
 of an HTTP re-skin: run lifecycle, the notification event source, where prewarm
-lives, and which client the desktop is allowed to use. Stage 2 implements the
-desktop switch; Stage 3 removes `/api/chat-streams`.
+lives, and which client the desktop is allowed to use. Stage 2 implemented the
+desktop switch; Stage 3 removed `/api/chat-streams` outright.
 
 This document is the desktop counterpart to
 [`mobile-chat-run-continuity.md`](./mobile-chat-run-continuity.md). Wire
 contract, route table, and ordering invariants are shared and are not repeated
 here — only the desktop-specific decisions are.
 
-## Current Baseline
+## Baseline at Stage 1 (historical)
 
-`desktop/src/renderer/features/chat/api/desktop-agent-adapter.ts` opens
+This section records the pre-migration behavior. Every file and route it names
+was deleted in Stage 2 (desktop, KIT-207) and Stage 3 (daemon and client,
+KIT-208).
+
+`desktop/src/renderer/features/chat/api/desktop-agent-adapter.ts` opened
 `POST /api/chat-streams?streamId=...` through a raw
-`getDaemonTransport().fetch` and decodes SSE by hand. `chat-run-stream.ts`
-consumes it via `streamChatEvents`, and the chat id for a new chat arrives
-mid-stream as a `{ type: "chat" }` event. The renderer therefore starts every
-new chat against a synthetic draft slot key and rewrites it afterwards through
+`getDaemonTransport().fetch` and decoded SSE by hand. `chat-run-stream.ts`
+consumed it via `streamChatEvents`, and the chat id for a new chat arrived
+mid-stream as a `{ type: "chat" }` event. The renderer therefore started every
+new chat against a synthetic draft slot key and rewrote it afterwards through
 `draftRedirects` / `moveActiveRunToChat` in `chat-run-registry.ts`.
 
-Main-process notifications come from `desktop/src/main/daemon/events.ts`, which
-subscribes to the global `chat-stream` WebSocket event and mirrors every stream
-event to derive "needs input" and "turn completed". That makes the main process
+Main-process notifications came from `desktop/src/main/daemon/events.ts`, which
+subscribed to the global `chat-stream` WebSocket event and mirrored every stream
+event to derive "needs input" and "turn completed". That made the main process
 a second consumer of raw stream semantics.
 
-Both are migration debt, not desired behavior.
+Both were migration debt, not desired behavior.
 
 ## Locked Decisions
 
@@ -187,9 +191,8 @@ route directly.
 ### 6. `ChatStreamEvent` stays
 
 The event union is the shared payload of `ChatRunObserverEvent` and is not part
-of the debt. Stage 3 deletes `ChatStreamApi` and the `/api/chat-streams` routes,
-not the event type. Renaming `ChatStreamController` to `ChatRunController` is
-optional and non-blocking.
+of the debt. Stage 3 deleted `ChatStreamApi`, `ChatStreamController`, and the
+`/api/chat-streams` routes, not the event type.
 
 ## Implemented in Stage 1
 
@@ -297,12 +300,39 @@ anticipate had to change with it:
   cancelled `needsInput` run produces no completion notification.
 - No file under `desktop/src` imports SSE decoding of its own.
 
+## Landed in Stage 3
+
+Stage 2 left the streams implementation in place as a rollback point. Stage 3
+deleted it, so chat runs are now the only chat transport:
+
+- Daemon: the `POST /api/chat-streams`, `DELETE /api/chat-streams/:id`, and
+  `POST /api/chat-streams/:id/elicitation` routes, the `ActiveStream` type, the
+  per-stream `streams` map, and `DaemonError.chatStreamNotWaiting()`.
+- Contract: `ChatStreamApi`, `ChatStreamController`, the
+  `DaemonChatStreamEvent` global event and its `chat-stream` guard branch, and
+  the `chat-stream-not-waiting` error code.
+- Client: `daemon.chatStreams.*` and the `streamChat` SSE reader.
+
+Kept deliberately: `ChatStreamEvent` (shared `ChatRunObserverEvent` payload),
+the engine-side `ChatRuntime.streamChat` primitive that `ChatRunRegistry`
+executes, `ChatStreamElicitationResolveInput` (used by
+`POST /api/chat-runs/:runId/elicitation`), and the `js-client` / `pi-client`
+adapter surfaces, which never spoke the daemon HTTP protocol.
+
+### Acceptance for Stage 3
+
+- No `chat-streams` route, `chatStreams` client method, `ActiveStream`,
+  `ChatStreamApi`, `chatStreamNotWaiting`, or `chat-stream` global event
+  remains under `packages`, `desktop`, or `mobile`.
+- Typecheck, lint, and the daemon / daemon-api / daemon-client / desktop /
+  mobile test suites pass.
+- `bun run knip` reports no dead export left behind by the deletion.
+
 ## Out of Scope
 
 - Fleet, multiple simultaneous active runs per chat, and cross-device handoff
 - Native/remote push delivery
 - Surviving a daemon process restart
-- Removing `/api/chat-streams` (Stage 3)
 - An unbounded event replay log
 
 ## Repository Hygiene

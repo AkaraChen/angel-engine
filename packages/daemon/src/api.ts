@@ -1,17 +1,14 @@
 import type {
   Chat,
-  ChatElicitationResponse,
   ChatIdsInput,
   ChatRunStartInput,
   ChatSendInput,
   ChatStreamElicitationResolveInput,
-  ChatStreamEvent,
 } from "@angel-engine/daemon-api/chat";
 import type { Context, Hono } from "hono";
 import type { DaemonGlobalEvent } from "@angel-engine/daemon-api";
 import type { Db } from "./platform/db";
 import type { DaemonRuntime } from "./platform/runtime";
-import type { ChatStreamControls } from "./features/chat/runtime";
 
 import { type as arkType } from "arktype";
 import { Effect } from "effect";
@@ -96,21 +93,12 @@ export interface EventPublisher {
   publish: (event: DaemonGlobalEvent) => void;
 }
 
-interface ActiveStream {
-  abortController: AbortController;
-  resolveElicitation?: (
-    elicitationId: string,
-    response: ChatElicitationResponse,
-  ) => Promise<void>;
-}
-
 export function registerApi(
   app: Hono,
   runtime: DaemonRuntime,
   publisher: EventPublisher,
 ) {
   const attention = new ChatAttentionStore();
-  const streams = new Map<string, ActiveStream>();
   const run = <A>(
     effect: Effect.Effect<A, DaemonError, Db | ChatEngine>,
   ): Promise<A> => runDaemonApi(runtime, effect);
@@ -533,68 +521,6 @@ export function registerApi(
     );
     return context.json({ resolved: true });
   });
-
-  app.post("/api/chat-streams", async (context) => {
-    const streamId = requireQuery(context.req.query("streamId"), "streamId");
-    const input = parseSendInput(await context.req.json());
-    return streamSSE(context, async (stream) => {
-      const abortController = new AbortController();
-      const active: ActiveStream = { abortController };
-      streams.set(streamId, active);
-      const controls: ChatStreamControls = {
-        setResolveElicitation(handler) {
-          active.resolveElicitation = handler;
-        },
-      };
-      let sendQueue = Promise.resolve();
-      const send = (event: ChatStreamEvent) => {
-        sendQueue = sendQueue.then(async () => {
-          publisher.publish({ event, streamId, type: "chat-stream" });
-          await stream.writeSSE({
-            data: JSON.stringify(event),
-            event: event.type,
-          });
-        });
-        return sendQueue;
-      };
-      stream.onAbort(() => abortController.abort());
-      try {
-        const result = await run(
-          engine((e) =>
-            e.streamChat(
-              input,
-              (event) => {
-                void send(event).catch(() => abortController.abort());
-              },
-              abortController.signal,
-              controls,
-            ),
-          ),
-        );
-        await send({ result, type: "result" });
-      } catch (error) {
-        await send({ message: errorMessage(error), type: "error" });
-      } finally {
-        try {
-          await send({ type: "done" });
-        } finally {
-          streams.delete(streamId);
-        }
-      }
-    });
-  });
-  app.delete("/api/chat-streams/:id", (context) => {
-    streams.get(context.req.param("id"))?.abortController.abort();
-    return context.json({ ok: true });
-  });
-  app.post("/api/chat-streams/:id/elicitation", async (context) => {
-    const active = streams.get(context.req.param("id"));
-    if (active?.resolveElicitation === undefined)
-      throw DaemonError.chatStreamNotWaiting();
-    const body = parseElicitationResolveInput(await context.req.json());
-    await active.resolveElicitation(body.elicitationId, body.response);
-    return context.json({ resolved: true });
-  });
 }
 
 function observeChatRun(
@@ -738,8 +664,4 @@ function optionalNumber(value: string | undefined) {
   if (!Number.isFinite(number))
     throw DaemonError.invalidRequest("Expected a finite number.");
   return number;
-}
-
-function errorMessage(error: unknown) {
-  return error instanceof Error ? error.message : String(error);
 }

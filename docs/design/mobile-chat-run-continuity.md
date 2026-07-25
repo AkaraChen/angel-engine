@@ -15,13 +15,17 @@ Phase 0 freezes the wire contract and migration invariants. The daemon registry,
 new routes, mobile store, recoverable elicitation, attention UI, and device
 acceptance are separate follow-up tasks.
 
-## Current Baseline
+## Baseline at Phase 0 (historical)
 
-`POST /api/chat-streams?streamId=...` currently starts the provider run and
-opens its only SSE observer in the same request. `stream.onAbort` aborts the
-provider, while the mobile `useConversation` cleanup also sends
-`DELETE /api/chat-streams/:id` when the selected chat changes or the hook
-unmounts. Its pending elicitation is component-local and is cleared with the
+This section records the pre-migration behavior this contract replaced. The
+chat-streams routes it describes were deleted in KIT-208; the run contract
+below is the only chat transport.
+
+`POST /api/chat-streams?streamId=...` started the provider run and opened its
+only SSE observer in the same request. `stream.onAbort` aborted the provider,
+while the mobile `useConversation` cleanup also sent
+`DELETE /api/chat-streams/:id` when the selected chat changed or the hook
+unmounted. Its pending elicitation was component-local and was cleared with the
 stream.
 
 That behavior is now characterized in
@@ -65,9 +69,8 @@ Follow-up implementation should converge on these semantics:
 | `DELETE` | `/api/chat-runs/:runId` | Explicitly stop the run. This is the only observer-facing cancellation path. |
 | `POST` | `/api/chat-runs/:runId/elicitation` | Resolve the snapshot's current pending elicitation. |
 
-The old `/api/chat-streams` routes may remain during the migration, but new
-mobile continuity code must use the run contract rather than infer lifecycle
-from the legacy request.
+The old `/api/chat-streams` routes are gone (KIT-208). This table is the whole
+chat transport; lifecycle is never inferred from the shape of a request.
 
 ## State and Ordering Invariants
 
