@@ -4,6 +4,9 @@ export interface LocaleResourceTranslationApp {
 
 export interface LocaleResourceTranslationCommon {
   cancel: string;
+  delete: string;
+  edit: string;
+  save: string;
   tryAgain: string;
   newChat: string;
   settings: string;
@@ -138,8 +141,53 @@ export interface LocaleResourceTranslationSettingsAbout {
   appDescription: string;
 }
 
+export interface LocaleResourceTranslationSettingsProjects {
+  actionError: string;
+  add: string;
+  createTitle: string;
+  deleteChecking: string;
+  deleteImpact: string;
+  deleteImpactUnknown: string;
+  deleteTitle: string;
+  description: string;
+  editTitle: string;
+  empty: string;
+  filesKept: string;
+  formDescription: string;
+  loadError: string;
+  pathLabel: string;
+  pathPlaceholder: string;
+  title: string;
+}
+
+export interface LocaleResourceTranslationSettingsCustomAgents {
+  actionError: string;
+  add: string;
+  argsLabel: string;
+  argsPlaceholder: string;
+  commandLabel: string;
+  createTitle: string;
+  deleteChecking: string;
+  deleteImpact: string;
+  deleteImpactUnknown: string;
+  deleteNoChats: string;
+  deleteTitle: string;
+  description: string;
+  editTitle: string;
+  empty: string;
+  environmentHint: string;
+  environmentLabel: string;
+  environmentPlaceholder: string;
+  formDescription: string;
+  loadError: string;
+  nameLabel: string;
+  title: string;
+}
+
 export interface LocaleResourceTranslationSettings {
   appearance: LocaleResourceTranslationSettingsAppearance;
+  customAgents: LocaleResourceTranslationSettingsCustomAgents;
+  projects: LocaleResourceTranslationSettingsProjects;
   about: LocaleResourceTranslationSettingsAbout;
 }
 

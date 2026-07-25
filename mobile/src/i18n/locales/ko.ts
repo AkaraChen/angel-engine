@@ -7,6 +7,9 @@ export const ko = {
     },
     common: {
       cancel: "취소",
+      delete: "삭제",
+      edit: "편집",
+      save: "저장",
       tryAgain: "다시 시도",
       newChat: "새 채팅",
       settings: "설정",
@@ -120,6 +123,55 @@ export const ko = {
           ja: "日本語",
           es: "Español",
         },
+      },
+      projects: {
+        actionError: "프로젝트 작업을 완료하지 못했습니다. 다시 시도하세요.",
+        add: "프로젝트 추가",
+        createTitle: "프로젝트 추가",
+        deleteChecking: "연결된 채팅을 확인하는 중…",
+        deleteImpact:
+          "이 프로젝트를 삭제하면 연결된 채팅 {{count}}개도 영구적으로 삭제됩니다.",
+        deleteImpactUnknown:
+          "이 프로젝트를 삭제하면 연결된 채팅도 영구적으로 삭제됩니다.",
+        deleteTitle: "프로젝트를 삭제할까요?",
+        description:
+          "프로젝트는 Angel Engine을 실행하는 컴퓨터의 폴더를 가리킵니다.",
+        editTitle: "프로젝트 편집",
+        empty: "아직 프로젝트가 없습니다.",
+        filesKept: "프로젝트 폴더의 파일은 유지됩니다.",
+        formDescription:
+          "Angel Engine을 실행하는 컴퓨터의 절대 폴더 경로를 입력하세요.",
+        loadError: "프로젝트를 불러오지 못했습니다.",
+        pathLabel: "폴더 경로",
+        pathPlaceholder: "/path/to/project",
+        title: "프로젝트",
+      },
+      customAgents: {
+        actionError:
+          "사용자 지정 에이전트 작업을 완료하지 못했습니다. 다시 시도하세요.",
+        add: "사용자 지정 에이전트 추가",
+        argsLabel: "인수",
+        argsPlaceholder: "한 줄에 인수 하나",
+        commandLabel: "명령어",
+        createTitle: "사용자 지정 에이전트 추가",
+        deleteChecking: "연결된 채팅을 확인하는 중…",
+        deleteImpact:
+          "이 에이전트를 삭제하면 연결된 채팅 {{count}}개도 영구적으로 삭제됩니다.",
+        deleteImpactUnknown:
+          "이 에이전트를 삭제하면 연결된 채팅도 영구적으로 삭제됩니다.",
+        deleteNoChats: "이 에이전트에 연결된 채팅이 없습니다.",
+        deleteTitle: "사용자 지정 에이전트를 삭제할까요?",
+        description: "가벼운 ACP 호환 에이전트 명령을 관리합니다.",
+        editTitle: "사용자 지정 에이전트 편집",
+        empty: "아직 사용자 지정 에이전트가 없습니다.",
+        environmentHint: "환경 값은 로컬에 일반 텍스트로 저장됩니다.",
+        environmentLabel: "환경",
+        environmentPlaceholder: "NAME=value, 한 줄에 하나",
+        formDescription:
+          "이 에이전트를 시작할 때 사용할 명령어와 선택적 인수를 설정하세요.",
+        loadError: "사용자 지정 에이전트를 불러오지 못했습니다.",
+        nameLabel: "이름",
+        title: "사용자 지정 에이전트",
       },
       about: {
         title: "정보",

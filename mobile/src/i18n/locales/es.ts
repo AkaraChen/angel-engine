@@ -7,6 +7,9 @@ export const es = {
     },
     common: {
       cancel: "Cancelar",
+      delete: "Eliminar",
+      edit: "Editar",
+      save: "Guardar",
       tryAgain: "Reintentar",
       newChat: "Nuevo chat",
       settings: "Ajustes",
@@ -122,6 +125,58 @@ export const es = {
           ja: "日本語",
           es: "Español",
         },
+      },
+      projects: {
+        actionError:
+          "No se pudo completar esa acción del proyecto. Inténtalo de nuevo.",
+        add: "Añadir proyecto",
+        createTitle: "Añadir proyecto",
+        deleteChecking: "Comprobando chats vinculados…",
+        deleteImpact:
+          "Al eliminar este proyecto se borrarán permanentemente {{count}} chats vinculados.",
+        deleteImpactUnknown:
+          "Al eliminar este proyecto también se borrarán permanentemente sus chats vinculados.",
+        deleteTitle: "¿Eliminar proyecto?",
+        description:
+          "Los proyectos apuntan a carpetas del ordenador que ejecuta Angel Engine.",
+        editTitle: "Editar proyecto",
+        empty: "Aún no hay proyectos.",
+        filesKept: "Los archivos de la carpeta del proyecto se conservarán.",
+        formDescription:
+          "Introduce una ruta de carpeta absoluta en el ordenador que ejecuta Angel Engine.",
+        loadError: "No se pudieron cargar los proyectos.",
+        pathLabel: "Ruta de la carpeta",
+        pathPlaceholder: "/ruta/al/proyecto",
+        title: "Proyectos",
+      },
+      customAgents: {
+        actionError:
+          "No se pudo completar esa acción del agente personalizado. Inténtalo de nuevo.",
+        add: "Añadir agente personalizado",
+        argsLabel: "Argumentos",
+        argsPlaceholder: "Un argumento por línea",
+        commandLabel: "Comando",
+        createTitle: "Añadir agente personalizado",
+        deleteChecking: "Comprobando chats vinculados…",
+        deleteImpact:
+          "Al eliminar este agente se borrarán permanentemente {{count}} chats vinculados.",
+        deleteImpactUnknown:
+          "Al eliminar este agente también se borrarán permanentemente sus chats vinculados.",
+        deleteNoChats: "Este agente no tiene chats vinculados.",
+        deleteTitle: "¿Eliminar agente personalizado?",
+        description:
+          "Gestiona comandos ligeros de agentes compatibles con ACP.",
+        editTitle: "Editar agente personalizado",
+        empty: "Aún no hay agentes personalizados.",
+        environmentHint:
+          "Los valores de entorno se guardan localmente en texto sin formato.",
+        environmentLabel: "Entorno",
+        environmentPlaceholder: "NOMBRE=valor, uno por línea",
+        formDescription:
+          "Configura el comando y los argumentos opcionales para iniciar este agente.",
+        loadError: "No se pudieron cargar los agentes personalizados.",
+        nameLabel: "Nombre",
+        title: "Agentes personalizados",
       },
       about: {
         title: "Acerca de",

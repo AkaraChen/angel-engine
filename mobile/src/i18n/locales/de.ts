@@ -7,6 +7,9 @@ export const de = {
     },
     common: {
       cancel: "Abbrechen",
+      delete: "Löschen",
+      edit: "Bearbeiten",
+      save: "Speichern",
       tryAgain: "Erneut versuchen",
       newChat: "Neuer Chat",
       settings: "Einstellungen",
@@ -125,6 +128,57 @@ export const de = {
           ja: "日本語",
           es: "Español",
         },
+      },
+      projects: {
+        actionError:
+          "Die Projektaktion konnte nicht abgeschlossen werden. Versuche es erneut.",
+        add: "Projekt hinzufügen",
+        createTitle: "Projekt hinzufügen",
+        deleteChecking: "Verknüpfte Chats werden geprüft…",
+        deleteImpact:
+          "Beim Löschen dieses Projekts werden {{count}} verknüpfte Chats dauerhaft gelöscht.",
+        deleteImpactUnknown:
+          "Beim Löschen dieses Projekts werden auch seine verknüpften Chats dauerhaft gelöscht.",
+        deleteTitle: "Projekt löschen?",
+        description:
+          "Projekte verweisen auf Ordner auf dem Computer, auf dem Angel Engine ausgeführt wird.",
+        editTitle: "Projekt bearbeiten",
+        empty: "Noch keine Projekte.",
+        filesKept: "Die Dateien im Projektordner bleiben erhalten.",
+        formDescription:
+          "Gib einen absoluten Ordnerpfad auf dem Computer ein, auf dem Angel Engine ausgeführt wird.",
+        loadError: "Projekte konnten nicht geladen werden.",
+        pathLabel: "Ordnerpfad",
+        pathPlaceholder: "/pfad/zum/projekt",
+        title: "Projekte",
+      },
+      customAgents: {
+        actionError:
+          "Die Aktion für den benutzerdefinierten Agent konnte nicht abgeschlossen werden. Versuche es erneut.",
+        add: "Benutzerdefinierten Agent hinzufügen",
+        argsLabel: "Argumente",
+        argsPlaceholder: "Ein Argument pro Zeile",
+        commandLabel: "Befehl",
+        createTitle: "Benutzerdefinierten Agent hinzufügen",
+        deleteChecking: "Verknüpfte Chats werden geprüft…",
+        deleteImpact:
+          "Beim Löschen dieses Agents werden {{count}} verknüpfte Chats dauerhaft gelöscht.",
+        deleteImpactUnknown:
+          "Beim Löschen dieses Agents werden auch seine verknüpften Chats dauerhaft gelöscht.",
+        deleteNoChats: "Dieser Agent hat keine verknüpften Chats.",
+        deleteTitle: "Benutzerdefinierten Agent löschen?",
+        description: "Verwalte schlanke ACP-kompatible Agent-Befehle.",
+        editTitle: "Benutzerdefinierten Agent bearbeiten",
+        empty: "Noch keine benutzerdefinierten Agents.",
+        environmentHint:
+          "Umgebungswerte werden lokal als Klartext gespeichert.",
+        environmentLabel: "Umgebung",
+        environmentPlaceholder: "NAME=Wert, einer pro Zeile",
+        formDescription:
+          "Konfiguriere den Befehl und optionale Argumente zum Starten dieses Agents.",
+        loadError: "Benutzerdefinierte Agents konnten nicht geladen werden.",
+        nameLabel: "Name",
+        title: "Benutzerdefinierte Agents",
       },
       about: {
         title: "Über",
