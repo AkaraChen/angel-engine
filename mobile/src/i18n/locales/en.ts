@@ -62,6 +62,8 @@ export const en = {
       couldNotChangeMode: "Couldn't change mode",
       attentionCompleted: "Completed",
       attentionNeedsInput: "Needs input",
+      attentionNeedsInputDescription: "The agent is waiting for your response.",
+      attentionReview: "Review",
     },
     elicitation: {
       defaultTitle: "The agent needs your input",

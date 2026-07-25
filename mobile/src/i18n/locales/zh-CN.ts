@@ -60,6 +60,8 @@ export const zhCN = {
       couldNotChangeMode: "无法切换模式",
       attentionCompleted: "已完成",
       attentionNeedsInput: "需要输入",
+      attentionNeedsInputDescription: "智能体正在等待你的回复。",
+      attentionReview: "查看",
     },
     elicitation: {
       defaultTitle: "智能体需要你的输入",

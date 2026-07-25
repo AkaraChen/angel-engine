@@ -62,6 +62,8 @@ export const ko = {
       couldNotChangeMode: "모드를 변경할 수 없습니다",
       attentionCompleted: "완료됨",
       attentionNeedsInput: "입력 필요",
+      attentionNeedsInputDescription: "에이전트가 응답을 기다리고 있습니다.",
+      attentionReview: "확인",
     },
     elicitation: {
       defaultTitle: "에이전트가 입력을 필요로 합니다",

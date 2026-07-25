@@ -63,6 +63,8 @@ export const fr = {
       couldNotChangeMode: "Impossible de changer de mode",
       attentionCompleted: "Terminé",
       attentionNeedsInput: "Saisie requise",
+      attentionNeedsInputDescription: "L’agent attend votre réponse.",
+      attentionReview: "Voir",
     },
     elicitation: {
       defaultTitle: "L'agent a besoin de votre saisie",

@@ -331,6 +331,99 @@ describe("ChatPage", () => {
     expect(await screen.findByText("Couldn't load this chat")).toBeDefined();
   });
 
+  it("acknowledges a completed marker after entering the chat", async () => {
+    const fetchMock = vi.fn(async (url: string, init?: RequestInit) => {
+      if (url.endsWith("/api/chat-attention")) {
+        return jsonResponse({
+          attentions: [
+            {
+              chatId: "completed-chat",
+              id: "run-1:completed",
+              status: "completed",
+              updatedAt: "2026-07-25T01:00:00.000Z",
+            },
+          ],
+        });
+      }
+      if (url.endsWith("/attention/read") && init?.method === "POST") {
+        return jsonResponse({ read: true });
+      }
+      if (url.endsWith("/load")) {
+        return jsonResponse({
+          chat: daemonChat("completed-chat"),
+          messages: [],
+        });
+      }
+      return Promise.reject(new Error(`unexpected fetch: ${url}`));
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    renderChat("completed-chat");
+
+    await waitFor(() => {
+      expect(fetchMock).toHaveBeenCalledWith(
+        "/api/chats/completed-chat/attention/read",
+        expect.objectContaining({
+          body: JSON.stringify({ attentionId: "run-1:completed" }),
+          method: "POST",
+        }),
+      );
+    });
+  });
+
+  it("highlights pending input and jumps to the elicitation", async () => {
+    let sse: SseHandle | undefined;
+    const scrollIntoView = vi.spyOn(Element.prototype, "scrollIntoView");
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: string, init?: RequestInit) => {
+        const method = init?.method ?? "GET";
+        if (url.endsWith("/api/chat-attention")) {
+          return jsonResponse({ attentions: [] });
+        }
+        if (url.endsWith("/load")) {
+          return jsonResponse({
+            chat: daemonChat("input-chat"),
+            messages: [],
+          });
+        }
+        if (
+          url.includes("/api/chat-runs/") &&
+          !url.endsWith("/elicitation") &&
+          method === "POST"
+        ) {
+          sse = controllableSse(url, init);
+          return sse.response;
+        }
+        return jsonResponse({ ok: true });
+      }),
+    );
+
+    renderChat("input-chat");
+    const textarea = await screen.findByLabelText("Message");
+    fireEvent.change(textarea, { target: { value: "continue" } });
+    fireEvent.click(screen.getByLabelText("Send"));
+    await waitFor(() => expect(sse).toBeDefined());
+    act(() =>
+      sse?.push({
+        elicitation: {
+          body: "Run the focused tests?",
+          id: "elicitation-1",
+          kind: "approval",
+          phase: "open",
+          title: "Permission",
+        },
+        type: "elicitation",
+      }),
+    );
+
+    expect(
+      await screen.findByText("The agent is waiting for your response."),
+    ).toBeDefined();
+    fireEvent.click(screen.getByRole("button", { name: "Review" }));
+    expect(scrollIntoView).toHaveBeenCalledWith({ block: "center" });
+  });
+
   it("renders persisted assistant text alongside tool-call cards", async () => {
     vi.stubGlobal(
       "fetch",

@@ -1,18 +1,7 @@
-import {
-  act,
-  cleanup,
-  render,
-  renderHook,
-  screen,
-  waitFor,
-} from "@testing-library/react";
+import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { App } from "@/App";
-import {
-  setChatRunAttention,
-  useChatRunAttention,
-} from "@/features/chat/run-attention";
 
 beforeEach(() => {
   // The daemon isn't reachable in tests; fail fast so the shell still renders.
@@ -21,7 +10,6 @@ beforeEach(() => {
 
 afterEach(() => {
   cleanup();
-  setChatRunAttention("foreground-chat", "", null);
   vi.unstubAllGlobals();
   window.location.hash = "";
 });
@@ -47,19 +35,5 @@ describe("app routing", () => {
     // The header shows the conversation title, not the raw id; with no daemon it
     // falls back to a generic "Chat".
     expect(await screen.findByRole("heading", { name: "Chat" })).toBeDefined();
-  });
-
-  it("dismisses completion attention while its chat remains on screen", async () => {
-    window.location.hash = "#/chat/foreground-chat";
-    render(<App />);
-    expect(await screen.findByRole("heading", { name: "Chat" })).toBeDefined();
-    const attention = renderHook(() => useChatRunAttention("foreground-chat"));
-
-    act(() =>
-      setChatRunAttention("foreground-chat", "foreground-run", "completed"),
-    );
-
-    await waitFor(() => expect(attention.result.current).toBeNull());
-    expect(screen.queryByText("Completed")).toBeNull();
   });
 });

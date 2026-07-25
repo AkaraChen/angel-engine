@@ -2,7 +2,6 @@ import type { PropsWithChildren } from "react";
 
 import { ArrowLeft } from "@phosphor-icons/react";
 import { useQuery } from "@tanstack/react-query";
-import { useLayoutEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useRoute } from "wouter";
 
@@ -14,10 +13,7 @@ import {
   SidebarTrigger,
 } from "@/components/ui/sidebar";
 import { ChatRunAttentionBadge } from "@/features/chat/run-attention-badge";
-import {
-  setChatRunAttention,
-  useChatRunAttention,
-} from "@/features/chat/run-attention";
+import { useChatAttention } from "@/features/chat/use-attention";
 import { WorkspacePanel } from "@/features/workspace/workspace-panel";
 import { useDaemonClient } from "@/platform/daemon-provider";
 import { queryKeys } from "@/platform/query-keys";
@@ -56,13 +52,7 @@ export function AppShell({ children }: PropsWithChildren) {
   const [isChat, chatParams] = useRoute("/chat/:chatId");
   const title = useRouteTitle();
   const currentChatId = isChat ? chatParams.chatId : "";
-  const attention = useChatRunAttention(currentChatId);
-
-  useLayoutEffect(() => {
-    if (attention === "completed" && currentChatId.length > 0) {
-      setChatRunAttention(currentChatId, "", null);
-    }
-  }, [attention, currentChatId]);
+  const attention = useChatAttention(currentChatId);
 
   return (
     <SidebarProvider>
@@ -90,8 +80,8 @@ export function AppShell({ children }: PropsWithChildren) {
           <h1 className="min-w-0 flex-1 truncate font-heading text-base font-semibold">
             {title}
           </h1>
-          {isChat && attention !== null ? (
-            <ChatRunAttentionBadge status={attention} />
+          {isChat && attention?.status === "needsInput" ? (
+            <ChatRunAttentionBadge status={attention.status} />
           ) : null}
           {isChat ? <WorkspacePanel chatId={chatParams.chatId} /> : null}
         </header>

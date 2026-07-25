@@ -93,6 +93,62 @@ describe("createDaemonClient", () => {
     );
   });
 
+  it("lists and acknowledges daemon-owned chat attention", async () => {
+    const attention = {
+      chatId: "chat-1",
+      id: "run-1:completed",
+      status: "completed",
+      updatedAt: "2026-07-25T01:00:00.000Z",
+    };
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(jsonResponse({ attentions: [attention] }))
+      .mockResolvedValueOnce(jsonResponse({ read: true }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const client = createDaemonClient({ baseUrl: "", token: null });
+    await expect(client.attention.list()).resolves.toEqual({
+      attentions: [attention],
+    });
+    await expect(
+      client.attention.read("chat-1", {
+        attentionId: "run-1:completed",
+      }),
+    ).resolves.toEqual({ read: true });
+
+    expect(fetchMock.mock.calls[0]?.[0]).toBe("/api/chat-attention");
+    expect(fetchMock.mock.calls[1]).toEqual([
+      "/api/chats/chat-1/attention/read",
+      expect.objectContaining({
+        body: JSON.stringify({ attentionId: "run-1:completed" }),
+        method: "POST",
+      }),
+    ]);
+  });
+
+  it("rejects a malformed chat attention snapshot", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(
+        jsonResponse({
+          attentions: [
+            {
+              chatId: "chat-1",
+              id: "run-1",
+              status: "future-status",
+              updatedAt: "2026-07-25T01:00:00.000Z",
+            },
+          ],
+        }),
+      ),
+    );
+
+    const client = createDaemonClient({ baseUrl: "", token: null });
+    await expect(client.attention.list()).rejects.toBeInstanceOf(
+      DaemonRequestError,
+    );
+  });
+
   it("throws a legible error when the response is HTML (static fallback)", async () => {
     const fetchMock = vi.fn().mockResolvedValue(
       new Response("<!doctype html><html></html>", {

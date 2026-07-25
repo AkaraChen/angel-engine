@@ -26,7 +26,7 @@ export interface ChatRunObserver {
   write: (message: ChatRunObserverEvent) => Promise<void>;
 }
 
-export interface ChatRunPublishedEvent {
+export interface ChatRunEvent {
   chatId: string;
   event: ChatStreamEvent;
   runId: string;
@@ -40,7 +40,7 @@ interface ChatRunRegistryOptions {
     signal: AbortSignal,
     controls: ChatStreamControls,
   ) => Promise<ChatSendResult>;
-  publish?: (event: ChatRunPublishedEvent) => void;
+  onEvent?: (event: ChatRunEvent) => void;
 }
 
 interface ObserverRecord {
@@ -71,11 +71,11 @@ export class ChatRunRegistry {
   readonly #activeByChat = new Map<string, ActiveRun>();
   readonly #activeById = new Map<string, ActiveRun>();
   readonly #execute: ChatRunRegistryOptions["execute"];
-  readonly #publish?: ChatRunRegistryOptions["publish"];
+  readonly #onEvent?: ChatRunRegistryOptions["onEvent"];
 
   constructor(options: ChatRunRegistryOptions) {
     this.#execute = options.execute;
-    this.#publish = options.publish;
+    this.#onEvent = options.onEvent;
   }
 
   start(runId: string, input: ChatRunStartInput): ChatActiveRunSnapshot {
@@ -248,7 +248,7 @@ export class ChatRunRegistry {
     for (const observer of run.observers) {
       this.#enqueue(run, observer, message);
     }
-    this.#publish?.({
+    this.#onEvent?.({
       chatId: run.snapshot.chatId,
       event: structuredClone(event),
       runId: run.snapshot.runId,

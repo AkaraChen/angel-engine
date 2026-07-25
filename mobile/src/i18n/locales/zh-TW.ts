@@ -60,6 +60,8 @@ export const zhTW = {
       couldNotChangeMode: "無法切換模式",
       attentionCompleted: "已完成",
       attentionNeedsInput: "需要輸入",
+      attentionNeedsInputDescription: "智慧代理正在等待你的回覆。",
+      attentionReview: "查看",
     },
     elicitation: {
       defaultTitle: "代理需要你的輸入",

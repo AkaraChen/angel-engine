@@ -217,7 +217,10 @@ describe("ChatRunRegistry", () => {
   it("publishes result and done before removing terminal state", async () => {
     const run = deferredRun();
     const publish = vi.fn();
-    const registry = new ChatRunRegistry({ execute: run.execute, publish });
+    const registry = new ChatRunRegistry({
+      execute: run.execute,
+      onEvent: publish,
+    });
     registry.start("run-1", input);
     const messages: ChatRunObserverEvent[] = [];
     const close = vi.fn();

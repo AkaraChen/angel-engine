@@ -61,6 +61,12 @@ export {
   parseImageDataUrl,
 };
 export {
+  isChatAttention,
+  isChatAttentionListResult,
+  isChatAttentionReadInput,
+  isChatAttentionReadResult,
+} from "./attention";
+export {
   isChatActiveRunResult,
   isChatActiveRunSnapshot,
   isChatElicitationResponse,
@@ -213,6 +219,25 @@ export type ChatStreamEvent =
   | { result: ChatSendResult; type: "result" }
   | { message: string; type: "error" }
   | { type: "done" };
+
+export interface ChatAttention {
+  chatId: string;
+  id: string;
+  status: "completed" | "needsInput";
+  updatedAt: string;
+}
+
+export interface ChatAttentionListResult {
+  attentions: ChatAttention[];
+}
+
+export interface ChatAttentionReadInput {
+  attentionId: string;
+}
+
+export interface ChatAttentionReadResult {
+  read: boolean;
+}
 
 export type ChatRunStartInput = Pick<
   ChatSendInput,

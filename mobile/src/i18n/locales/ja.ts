@@ -65,6 +65,8 @@ export const ja = {
       couldNotChangeMode: "モードを変更できませんでした",
       attentionCompleted: "完了",
       attentionNeedsInput: "入力が必要",
+      attentionNeedsInputDescription: "エージェントが返信を待っています。",
+      attentionReview: "確認",
     },
     elicitation: {
       defaultTitle: "エージェントが入力を求めています",

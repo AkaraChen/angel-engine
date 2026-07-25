@@ -63,6 +63,8 @@ export const es = {
       couldNotChangeMode: "No se pudo cambiar el modo",
       attentionCompleted: "Completado",
       attentionNeedsInput: "Necesita entrada",
+      attentionNeedsInputDescription: "El agente está esperando tu respuesta.",
+      attentionReview: "Revisar",
     },
     elicitation: {
       defaultTitle: "El agente necesita tu entrada",

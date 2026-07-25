@@ -20,7 +20,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { AgentRuntimeIcon } from "@/features/agents/agent-runtime-icon";
 import { CreateChatDrawer } from "@/features/chat/create-chat-drawer";
 import { ChatRunAttentionBadge } from "@/features/chat/run-attention-badge";
-import { useChatRunAttention } from "@/features/chat/run-attention";
+import { useChatAttention } from "@/features/chat/use-attention";
 import { useChatList } from "@/features/chat/use-chats";
 import { useDateFnsLocale } from "@/i18n/date-locale";
 import { agentLabel } from "@/platform/agent-catalog";
@@ -73,7 +73,7 @@ export function HomePage() {
 
 function ChatListItem({ chat }: { chat: ChatSummary }) {
   const locale = useDateFnsLocale();
-  const attention = useChatRunAttention(chat.id);
+  const attention = useChatAttention(chat.id);
   const subtitle = [chat.projectName, chat.worktreeBranch].filter(Boolean);
   return (
     <li className="w-full min-w-0 max-w-full border-b border-border/60 last:border-b-0">
@@ -111,7 +111,7 @@ function ChatListItem({ chat }: { chat: ChatSummary }) {
             </span>
           </span>
           {attention !== null ? (
-            <ChatRunAttentionBadge status={attention} />
+            <ChatRunAttentionBadge status={attention.status} />
           ) : subtitle.length > 0 ? (
             <span className="flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground">
               {chat.projectName !== null ? (

@@ -65,6 +65,8 @@ export const de = {
       couldNotChangeMode: "Modus konnte nicht gewechselt werden",
       attentionCompleted: "Abgeschlossen",
       attentionNeedsInput: "Eingabe erforderlich",
+      attentionNeedsInputDescription: "Der Agent wartet auf deine Antwort.",
+      attentionReview: "Ansehen",
     },
     elicitation: {
       defaultTitle: "Der Agent benötigt deine Eingabe",

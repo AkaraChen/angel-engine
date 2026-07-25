@@ -52,13 +52,61 @@ describe("daemon chat streams", () => {
     expect(body).toContain('"sequence":3');
     expect(body).toContain('"type":"result"');
     expect(body).toContain('"type":"done"');
-    expect(publish).toHaveBeenCalledWith(
-      expect.objectContaining({
-        chatId: "chat-1",
-        runId: "run-1",
-        type: "chat-run",
-      }),
+    expect(publish).toHaveBeenCalledWith({
+      chatIds: ["chat-1"],
+      type: "chat-attention-changed",
+    });
+  });
+
+  it("keeps completed attention until the exact marker is read", async () => {
+    const publish = vi.fn();
+    const app = new Hono();
+    registerApi(app, fakeDaemonRuntime(), { publish });
+
+    const run = await app.request("/api/chat-runs/run-attention", {
+      body: JSON.stringify({ chatId: chat.id, text: "hello" }),
+      headers: { "content-type": "application/json" },
+      method: "POST",
+    });
+    await run.text();
+
+    await expect(
+      (await app.request("/api/chat-attention")).json(),
+    ).resolves.toEqual({
+      attentions: [
+        {
+          chatId: chat.id,
+          id: "run-attention:completed",
+          status: "completed",
+          updatedAt: expect.any(String),
+        },
+      ],
+    });
+
+    const staleRead = await app.request(
+      `/api/chats/${chat.id}/attention/read`,
+      {
+        body: JSON.stringify({ attentionId: "stale" }),
+        headers: { "content-type": "application/json" },
+        method: "POST",
+      },
     );
+    await expect(staleRead.json()).resolves.toEqual({ read: false });
+    await expect(
+      (await app.request("/api/chat-attention")).json(),
+    ).resolves.toMatchObject({
+      attentions: [{ id: "run-attention:completed" }],
+    });
+
+    const read = await app.request(`/api/chats/${chat.id}/attention/read`, {
+      body: JSON.stringify({ attentionId: "run-attention:completed" }),
+      headers: { "content-type": "application/json" },
+      method: "POST",
+    });
+    await expect(read.json()).resolves.toEqual({ read: true });
+    await expect(
+      (await app.request("/api/chat-attention")).json(),
+    ).resolves.toEqual({ attentions: [] });
   });
 
   it("keeps a run active until explicit stop aborts its provider", async () => {

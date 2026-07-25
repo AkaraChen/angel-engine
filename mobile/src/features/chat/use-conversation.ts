@@ -33,11 +33,6 @@ import {
   normalizeConversationPlans,
   upsertPlan,
 } from "./plan-utils";
-import {
-  applyChatRunAttentionEvent,
-  applyChatRunAttentionSnapshot,
-  setChatRunAttention,
-} from "./run-attention";
 
 export interface Conversation {
   messages: ConversationMessage[];
@@ -142,7 +137,6 @@ export function useConversation(chatId: string): Conversation {
       stopRequestedRef.current = false;
       isStreamingRef.current = true;
       isBootstrappingRef.current = false;
-      applyChatRunAttentionSnapshot(snapshot);
       forceRender();
     },
     [isCurrent],
@@ -155,10 +149,6 @@ export function useConversation(chatId: string): Conversation {
     ): boolean => {
       if (!isCurrent(controller)) return false;
       const event = message.event;
-      const runId = runIdRef.current;
-      if (runId !== null) {
-        applyChatRunAttentionEvent(chatId, runId, message.sequence, event);
-      }
       if (event.type === "delta") {
         const turn = liveTurnRef.current;
         updateAssistant(
@@ -330,7 +320,6 @@ export function useConversation(chatId: string): Conversation {
     stopRequestedRef.current = false;
     isStreamingRef.current = false;
     isBootstrappingRef.current = true;
-    setChatRunAttention(chatId, "", null);
 
     void (async () => {
       while (isCurrent(controller)) {
@@ -455,7 +444,6 @@ export function useConversation(chatId: string): Conversation {
       streamErrorRef.current = null;
       stopRequestedRef.current = false;
       isStreamingRef.current = true;
-      setChatRunAttention(chatId, "", null);
       forceRender();
       void consumeRun(controller, () =>
         daemon.chatRuns.start(runId, input, controller.signal),
@@ -530,7 +518,6 @@ export function useConversation(chatId: string): Conversation {
       );
       const previousConfig = previousLoad?.config;
       elicitationRef.current = null;
-      setChatRunAttention(chatId, runId, null);
       forceRender();
       if (leavePlan && previousLoad?.config) {
         const buildMode = buildPermissionModeValue(previousLoad.config);

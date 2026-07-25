@@ -1,11 +1,11 @@
-import type { ChatRunAttention } from "./run-attention";
+import type { ChatAttention } from "@/platform/chat-types";
 import type { FC } from "react";
 
 import { CheckCircle, WarningCircle } from "@phosphor-icons/react";
 import { useTranslation } from "react-i18next";
 
 type ChatRunAttentionBadgeProps = {
-  status: ChatRunAttention;
+  status: ChatAttention["status"];
 };
 
 export const ChatRunAttentionBadge: FC<ChatRunAttentionBadgeProps> = ({
