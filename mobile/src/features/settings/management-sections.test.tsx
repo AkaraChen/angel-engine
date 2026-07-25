@@ -1,7 +1,10 @@
 import type { CustomAgent } from "@angel-engine/daemon-api/agents";
-import type { DaemonClient } from "@angel-engine/daemon-client";
 import type { ReactNode } from "react";
 
+import {
+  DaemonRequestError,
+  type DaemonClient,
+} from "@angel-engine/daemon-client";
 import {
   cleanup,
   fireEvent,
@@ -116,7 +119,12 @@ describe("ProjectsSection", () => {
     await screen.findByText("old-project");
 
     fireEvent.click(screen.getByRole("button", { name: "Add project" }));
-    fireEvent.change(screen.getByLabelText("Folder path"), {
+    const pathInput = screen.getByLabelText("Folder path");
+    expect(pathInput.getAttribute("autocapitalize")).toBe("off");
+    expect(pathInput.getAttribute("autocomplete")).toBe("off");
+    expect(pathInput.getAttribute("autocorrect")).toBe("off");
+    expect(pathInput.getAttribute("spellcheck")).toBe("false");
+    fireEvent.change(pathInput, {
       target: { value: "/workspace/new-project" },
     });
     fireEvent.click(screen.getByRole("button", { name: "Save" }));
@@ -130,6 +138,10 @@ describe("ProjectsSection", () => {
       expect(screen.queryByRole("dialog")).toBeNull();
     });
     fireEvent.click(screen.getByRole("button", { name: "Edit old-project" }));
+    expect(
+      (screen.getByRole("button", { name: "Save" }) as HTMLButtonElement)
+        .disabled,
+    ).toBe(false);
     fireEvent.change(screen.getByLabelText("Folder path"), {
       target: { value: "/workspace/renamed-project" },
     });
@@ -156,6 +168,65 @@ describe("ProjectsSection", () => {
       expect(mocks.deleteProject).toHaveBeenCalledWith("project-1");
     });
   });
+
+  it.each([
+    {
+      activeChats: [],
+      archivedChats: [],
+      message: /This project has no linked chats\./,
+      name: "no linked chats",
+    },
+    {
+      activeChats: [{ id: "chat-1", projectId: "project-1" }],
+      archivedChats: [],
+      message: /permanently delete 1 linked chat\./,
+      name: "one linked chat",
+    },
+  ])("shows the correct delete impact for $name", async (testCase) => {
+    mocks.listChats.mockResolvedValue(testCase.activeChats);
+    mocks.listArchivedChats.mockResolvedValue(testCase.archivedChats);
+
+    renderWithQueryClient(<ProjectsSection />);
+    await screen.findByText("old-project");
+    fireEvent.click(screen.getByRole("button", { name: "Delete old-project" }));
+
+    expect(
+      await within(await screen.findByRole("alertdialog")).findByText(
+        testCase.message,
+      ),
+    ).toBeDefined();
+  });
+
+  it("shows project path validation inline and keeps the form open", async () => {
+    mocks.createProject.mockRejectedValueOnce(
+      DaemonRequestError.http(
+        400,
+        "project-path-invalid",
+        "Project path does not exist.",
+      ),
+    );
+
+    renderWithQueryClient(<ProjectsSection />);
+    await screen.findByText("old-project");
+    fireEvent.click(screen.getByRole("button", { name: "Add project" }));
+    const pathInput = screen.getByLabelText("Folder path");
+    fireEvent.change(pathInput, {
+      target: { value: "/workspace/missing" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Save" }));
+
+    expect(await screen.findByRole("alert")).toHaveProperty(
+      "textContent",
+      "Enter a path to an existing folder.",
+    );
+    expect(pathInput.getAttribute("aria-invalid")).toBe("true");
+    expect(screen.getByRole("dialog")).toBeDefined();
+
+    fireEvent.change(pathInput, {
+      target: { value: "/workspace/another" },
+    });
+    expect(screen.queryByRole("alert")).toBeNull();
+  });
 });
 
 describe("CustomAgentsSection", () => {
@@ -176,16 +247,30 @@ describe("CustomAgentsSection", () => {
     fireEvent.change(screen.getByLabelText("Environment"), {
       target: { value: "TOKEN=secret\nEMPTY" },
     });
+    for (const label of ["Command", "Arguments", "Environment"]) {
+      const input = screen.getByLabelText(label);
+      expect(input.getAttribute("autocapitalize")).toBe("off");
+      expect(input.getAttribute("autocorrect")).toBe("off");
+      expect(input.getAttribute("spellcheck")).toBe("false");
+    }
+    fireEvent.click(
+      screen.getByRole("switch", { name: "Requires authentication" }),
+    );
+    fireEvent.click(
+      screen.getByRole("switch", { name: "Authenticate automatically" }),
+    );
     fireEvent.click(screen.getByRole("button", { name: "Save" }));
     await waitFor(() => {
       expect(mocks.createCustomAgent).toHaveBeenCalledWith({
         args: ["acp", "--stdio"],
+        autoAuthenticate: true,
         command: "local-agent",
         environment: [
           { name: "TOKEN", value: "secret" },
           { name: "EMPTY", value: "" },
         ],
         label: "Local agent",
+        needAuth: true,
       });
     });
 
@@ -200,10 +285,12 @@ describe("CustomAgentsSection", () => {
     await waitFor(() => {
       expect(mocks.updateCustomAgent).toHaveBeenCalledWith({
         args: ["acp"],
+        autoAuthenticate: true,
         command: "old-agent",
         environment: [{ name: "TOKEN", value: "old" }],
         id: "custom:test",
         label: "Updated agent",
+        needAuth: true,
       });
     });
 
@@ -221,5 +308,32 @@ describe("CustomAgentsSection", () => {
     await waitFor(() => {
       expect(mocks.deleteCustomAgent).toHaveBeenCalledWith("custom:test");
     });
+  });
+
+  it.each([
+    {
+      count: 0,
+      message: /This agent has no linked chats\./,
+      name: "no linked chats",
+    },
+    {
+      count: 1,
+      message: /permanently delete 1 linked chat\./,
+      name: "one linked chat",
+    },
+  ])("shows the correct delete impact for $name", async (testCase) => {
+    mocks.deleteCustomAgentImpact.mockResolvedValue({
+      chatCount: testCase.count,
+    });
+
+    renderWithQueryClient(<CustomAgentsSection />);
+    await screen.findByText("Test agent");
+    fireEvent.click(screen.getByRole("button", { name: "Delete Test agent" }));
+
+    expect(
+      await within(await screen.findByRole("alertdialog")).findByText(
+        testCase.message,
+      ),
+    ).toBeDefined();
   });
 });

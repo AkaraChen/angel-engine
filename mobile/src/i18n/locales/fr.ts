@@ -133,20 +133,26 @@ export const fr = {
           "Impossible d'effectuer cette action sur le projet. Veuillez réessayer.",
         add: "Ajouter un projet",
         createTitle: "Ajouter un projet",
+        deleteAria: "Supprimer {{name}}",
         deleteChecking: "Vérification des discussions liées…",
         deleteImpact:
           "La suppression de ce projet supprimera définitivement {{count}} discussions liées.",
+        deleteImpactOne:
+          "La suppression de ce projet supprimera définitivement 1 discussion liée.",
         deleteImpactUnknown:
           "La suppression de ce projet supprimera aussi définitivement ses discussions liées.",
+        deleteNoChats: "Ce projet n'a aucune discussion liée.",
         deleteTitle: "Supprimer le projet ?",
         description:
           "Les projets pointent vers des dossiers sur l'ordinateur qui exécute Angel Engine.",
+        editAria: "Modifier {{name}}",
         editTitle: "Modifier le projet",
         empty: "Aucun projet pour le moment.",
         filesKept: "Les fichiers du dossier du projet seront conservés.",
         formDescription:
           "Saisissez un chemin de dossier absolu sur l'ordinateur qui exécute Angel Engine.",
         loadError: "Impossible de charger les projets.",
+        pathInvalid: "Saisissez le chemin d'un dossier existant.",
         pathLabel: "Chemin du dossier",
         pathPlaceholder: "/chemin/du/projet",
         title: "Projets",
@@ -157,17 +163,22 @@ export const fr = {
         add: "Ajouter un agent personnalisé",
         argsLabel: "Arguments",
         argsPlaceholder: "Un argument par ligne",
+        autoAuthenticateLabel: "S'authentifier automatiquement",
         commandLabel: "Commande",
         createTitle: "Ajouter un agent personnalisé",
+        deleteAria: "Supprimer {{name}}",
         deleteChecking: "Vérification des discussions liées…",
         deleteImpact:
           "La suppression de cet agent supprimera définitivement {{count}} discussions liées.",
+        deleteImpactOne:
+          "La suppression de cet agent supprimera définitivement 1 discussion liée.",
         deleteImpactUnknown:
           "La suppression de cet agent supprimera aussi définitivement ses discussions liées.",
         deleteNoChats: "Cet agent n'a aucune discussion liée.",
         deleteTitle: "Supprimer l'agent personnalisé ?",
         description:
           "Gérez des commandes légères d'agents compatibles avec ACP.",
+        editAria: "Modifier {{name}}",
         editTitle: "Modifier l'agent personnalisé",
         empty: "Aucun agent personnalisé pour le moment.",
         environmentHint:
@@ -178,6 +189,7 @@ export const fr = {
           "Configurez la commande et les arguments facultatifs utilisés pour démarrer cet agent.",
         loadError: "Impossible de charger les agents personnalisés.",
         nameLabel: "Nom",
+        needAuthLabel: "Authentification requise",
         title: "Agents personnalisés",
       },
       about: {

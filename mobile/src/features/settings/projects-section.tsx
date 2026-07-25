@@ -1,6 +1,7 @@
 import type { Project } from "@angel-engine/daemon-api/projects";
 import type { FC, FormEvent } from "react";
 
+import { DaemonRequestError } from "@angel-engine/daemon-client";
 import { Folder, PencilSimple, Plus, Trash } from "@phosphor-icons/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
@@ -60,9 +61,6 @@ export function ProjectsSection() {
   const [formTarget, setFormTarget] = useState<ProjectFormTarget | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Project | null>(null);
 
-  const reportActionError = () =>
-    toast.error(t("settings.projects.actionError"));
-
   return (
     <>
       <SettingsSection
@@ -108,7 +106,7 @@ export function ProjectsSection() {
                   </span>
                 </span>
                 <Button
-                  aria-label={`${t("common.edit")} ${name}`}
+                  aria-label={t("settings.projects.editAria", { name })}
                   onClick={() => setFormTarget({ mode: "edit", project })}
                   size="icon-sm"
                   type="button"
@@ -117,7 +115,7 @@ export function ProjectsSection() {
                   <PencilSimple />
                 </Button>
                 <Button
-                  aria-label={`${t("common.delete")} ${name}`}
+                  aria-label={t("settings.projects.deleteAria", { name })}
                   onClick={() => setDeleteTarget(project)}
                   size="icon-sm"
                   type="button"
@@ -151,19 +149,15 @@ export function ProjectsSection() {
           }
           onClose={() => setFormTarget(null)}
           onSave={async (path) => {
-            try {
-              if (formTarget.mode === "edit") {
-                await updateProject.mutateAsync({
-                  id: formTarget.project.id,
-                  path,
-                });
-              } else {
-                await createProject.mutateAsync({ path });
-              }
-              setFormTarget(null);
-            } catch {
-              reportActionError();
+            if (formTarget.mode === "edit") {
+              await updateProject.mutateAsync({
+                id: formTarget.project.id,
+                path,
+              });
+            } else {
+              await createProject.mutateAsync({ path });
             }
+            setFormTarget(null);
           }}
           pending={createProject.isPending || updateProject.isPending}
           target={formTarget}
@@ -194,16 +188,25 @@ const ProjectFormDrawer: FC<ProjectFormDrawerProps> = ({
   const { t } = useTranslation();
   const project = target.mode === "edit" ? target.project : null;
   const [path, setPath] = useState(project?.path ?? "");
+  const [pathError, setPathError] = useState<string | null>(null);
   const normalizedPath = path.trim();
-  const canSave =
-    normalizedPath.length > 0 &&
-    (project === null || normalizedPath !== project.path) &&
-    !pending;
+  const canSave = normalizedPath.length > 0 && !pending;
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!canSave) return;
-    await onSave(normalizedPath);
+    try {
+      await onSave(normalizedPath);
+    } catch (error) {
+      if (
+        error instanceof DaemonRequestError &&
+        error.code === "project-path-invalid"
+      ) {
+        setPathError(t("settings.projects.pathInvalid"));
+        return;
+      }
+      toast.error(t("settings.projects.actionError"));
+    }
   }
 
   return (
@@ -230,12 +233,32 @@ const ProjectFormDrawer: FC<ProjectFormDrawerProps> = ({
               {t("settings.projects.pathLabel")}
             </Label>
             <Input
+              aria-describedby={
+                pathError === null ? undefined : "project-path-error"
+              }
+              aria-invalid={pathError !== null}
+              autoCapitalize="off"
+              autoComplete="off"
+              autoCorrect="off"
               autoFocus
               id="project-path"
-              onChange={(event) => setPath(event.currentTarget.value)}
+              onChange={(event) => {
+                setPath(event.currentTarget.value);
+                setPathError(null);
+              }}
               placeholder={t("settings.projects.pathPlaceholder")}
+              spellCheck={false}
               value={path}
             />
+            {pathError === null ? null : (
+              <p
+                className="mt-1.5 text-xs text-destructive"
+                id="project-path-error"
+                role="alert"
+              >
+                {pathError}
+              </p>
+            )}
           </div>
           <DrawerFooter>
             <Button disabled={!canSave} type="submit">
@@ -290,9 +313,13 @@ const ProjectDeleteDialog: FC<ProjectDeleteDialogProps> = ({
   const impactMessage = impactQuery.isPending
     ? t("settings.projects.deleteChecking")
     : impactQuery.data
-      ? t("settings.projects.deleteImpact", {
-          count: impactQuery.data.chatCount,
-        })
+      ? impactQuery.data.chatCount === 0
+        ? t("settings.projects.deleteNoChats")
+        : impactQuery.data.chatCount === 1
+          ? t("settings.projects.deleteImpactOne")
+          : t("settings.projects.deleteImpact", {
+              count: impactQuery.data.chatCount,
+            })
       : t("settings.projects.deleteImpactUnknown");
 
   return (

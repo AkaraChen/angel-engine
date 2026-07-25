@@ -145,16 +145,21 @@ export interface LocaleResourceTranslationSettingsProjects {
   actionError: string;
   add: string;
   createTitle: string;
+  deleteAria: string;
   deleteChecking: string;
   deleteImpact: string;
+  deleteImpactOne: string;
   deleteImpactUnknown: string;
+  deleteNoChats: string;
   deleteTitle: string;
   description: string;
+  editAria: string;
   editTitle: string;
   empty: string;
   filesKept: string;
   formDescription: string;
   loadError: string;
+  pathInvalid: string;
   pathLabel: string;
   pathPlaceholder: string;
   title: string;
@@ -165,14 +170,18 @@ export interface LocaleResourceTranslationSettingsCustomAgents {
   add: string;
   argsLabel: string;
   argsPlaceholder: string;
+  autoAuthenticateLabel: string;
   commandLabel: string;
   createTitle: string;
+  deleteAria: string;
   deleteChecking: string;
   deleteImpact: string;
+  deleteImpactOne: string;
   deleteImpactUnknown: string;
   deleteNoChats: string;
   deleteTitle: string;
   description: string;
+  editAria: string;
   editTitle: string;
   empty: string;
   environmentHint: string;
@@ -181,6 +190,7 @@ export interface LocaleResourceTranslationSettingsCustomAgents {
   formDescription: string;
   loadError: string;
   nameLabel: string;
+  needAuthLabel: string;
   title: string;
 }
 

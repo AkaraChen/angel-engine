@@ -134,20 +134,26 @@ export const de = {
           "Die Projektaktion konnte nicht abgeschlossen werden. Versuche es erneut.",
         add: "Projekt hinzufügen",
         createTitle: "Projekt hinzufügen",
+        deleteAria: "{{name}} löschen",
         deleteChecking: "Verknüpfte Chats werden geprüft…",
         deleteImpact:
           "Beim Löschen dieses Projekts werden {{count}} verknüpfte Chats dauerhaft gelöscht.",
+        deleteImpactOne:
+          "Beim Löschen dieses Projekts wird 1 verknüpfter Chat dauerhaft gelöscht.",
         deleteImpactUnknown:
           "Beim Löschen dieses Projekts werden auch seine verknüpften Chats dauerhaft gelöscht.",
+        deleteNoChats: "Dieses Projekt hat keine verknüpften Chats.",
         deleteTitle: "Projekt löschen?",
         description:
           "Projekte verweisen auf Ordner auf dem Computer, auf dem Angel Engine ausgeführt wird.",
+        editAria: "{{name}} bearbeiten",
         editTitle: "Projekt bearbeiten",
         empty: "Noch keine Projekte.",
         filesKept: "Die Dateien im Projektordner bleiben erhalten.",
         formDescription:
           "Gib einen absoluten Ordnerpfad auf dem Computer ein, auf dem Angel Engine ausgeführt wird.",
         loadError: "Projekte konnten nicht geladen werden.",
+        pathInvalid: "Gib den Pfad zu einem vorhandenen Ordner ein.",
         pathLabel: "Ordnerpfad",
         pathPlaceholder: "/pfad/zum/projekt",
         title: "Projekte",
@@ -158,16 +164,21 @@ export const de = {
         add: "Benutzerdefinierten Agent hinzufügen",
         argsLabel: "Argumente",
         argsPlaceholder: "Ein Argument pro Zeile",
+        autoAuthenticateLabel: "Automatisch authentifizieren",
         commandLabel: "Befehl",
         createTitle: "Benutzerdefinierten Agent hinzufügen",
+        deleteAria: "{{name}} löschen",
         deleteChecking: "Verknüpfte Chats werden geprüft…",
         deleteImpact:
           "Beim Löschen dieses Agents werden {{count}} verknüpfte Chats dauerhaft gelöscht.",
+        deleteImpactOne:
+          "Beim Löschen dieses Agents wird 1 verknüpfter Chat dauerhaft gelöscht.",
         deleteImpactUnknown:
           "Beim Löschen dieses Agents werden auch seine verknüpften Chats dauerhaft gelöscht.",
         deleteNoChats: "Dieser Agent hat keine verknüpften Chats.",
         deleteTitle: "Benutzerdefinierten Agent löschen?",
         description: "Verwalte schlanke ACP-kompatible Agent-Befehle.",
+        editAria: "{{name}} bearbeiten",
         editTitle: "Benutzerdefinierten Agent bearbeiten",
         empty: "Noch keine benutzerdefinierten Agents.",
         environmentHint:
@@ -178,6 +189,7 @@ export const de = {
           "Konfiguriere den Befehl und optionale Argumente zum Starten dieses Agents.",
         loadError: "Benutzerdefinierte Agents konnten nicht geladen werden.",
         nameLabel: "Name",
+        needAuthLabel: "Authentifizierung erforderlich",
         title: "Benutzerdefinierte Agents",
       },
       about: {

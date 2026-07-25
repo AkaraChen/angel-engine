@@ -35,6 +35,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Spinner } from "@/components/ui/spinner";
+import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import {
   buildCustomAgentInput,
@@ -118,7 +119,9 @@ export function CustomAgentsSection() {
                 </span>
               </span>
               <Button
-                aria-label={`${t("common.edit")} ${agent.label}`}
+                aria-label={t("settings.customAgents.editAria", {
+                  name: agent.label,
+                })}
                 onClick={() => setFormTarget({ agent, mode: "edit" })}
                 size="icon-sm"
                 type="button"
@@ -127,7 +130,9 @@ export function CustomAgentsSection() {
                 <PencilSimple />
               </Button>
               <Button
-                aria-label={`${t("common.delete")} ${agent.label}`}
+                aria-label={t("settings.customAgents.deleteAria", {
+                  name: agent.label,
+                })}
                 onClick={() => setDeleteTarget(agent)}
                 size="icon-sm"
                 type="button"
@@ -262,6 +267,8 @@ const CustomAgentFormDrawer: FC<CustomAgentFormDrawerProps> = ({
                 {t("settings.customAgents.commandLabel")}
               </Label>
               <Input
+                autoCapitalize="off"
+                autoCorrect="off"
                 id="custom-agent-command"
                 onChange={(event) =>
                   updateDraft({
@@ -270,6 +277,7 @@ const CustomAgentFormDrawer: FC<CustomAgentFormDrawerProps> = ({
                   })
                 }
                 placeholder="my-agent"
+                spellCheck={false}
                 value={draft.command}
               />
             </div>
@@ -278,6 +286,8 @@ const CustomAgentFormDrawer: FC<CustomAgentFormDrawerProps> = ({
                 {t("settings.customAgents.argsLabel")}
               </Label>
               <Textarea
+                autoCapitalize="off"
+                autoCorrect="off"
                 id="custom-agent-args"
                 onChange={(event) =>
                   updateDraft({
@@ -286,6 +296,7 @@ const CustomAgentFormDrawer: FC<CustomAgentFormDrawerProps> = ({
                   })
                 }
                 placeholder={t("settings.customAgents.argsPlaceholder")}
+                spellCheck={false}
                 value={draft.argsText}
               />
             </div>
@@ -294,6 +305,8 @@ const CustomAgentFormDrawer: FC<CustomAgentFormDrawerProps> = ({
                 {t("settings.customAgents.environmentLabel")}
               </Label>
               <Textarea
+                autoCapitalize="off"
+                autoCorrect="off"
                 id="custom-agent-environment"
                 onChange={(event) =>
                   updateDraft({
@@ -302,11 +315,51 @@ const CustomAgentFormDrawer: FC<CustomAgentFormDrawerProps> = ({
                   })
                 }
                 placeholder={t("settings.customAgents.environmentPlaceholder")}
+                spellCheck={false}
                 value={draft.environmentText}
               />
               <p className="mt-1.5 text-xs text-muted-foreground">
                 {t("settings.customAgents.environmentHint")}
               </p>
+            </div>
+            <div className="space-y-3">
+              <label
+                className="flex items-center justify-between gap-4 text-sm"
+                htmlFor="custom-agent-need-auth"
+              >
+                {t("settings.customAgents.needAuthLabel")}
+                <Switch
+                  checked={draft.needAuth}
+                  id="custom-agent-need-auth"
+                  onCheckedChange={(checked) => {
+                    updateDraft({ field: "needAuth", value: checked });
+                    if (!checked) {
+                      updateDraft({
+                        field: "autoAuthenticate",
+                        value: false,
+                      });
+                    }
+                  }}
+                />
+              </label>
+              {draft.needAuth ? (
+                <label
+                  className="ml-4 flex items-center justify-between gap-4 text-sm"
+                  htmlFor="custom-agent-auto-authenticate"
+                >
+                  {t("settings.customAgents.autoAuthenticateLabel")}
+                  <Switch
+                    checked={draft.autoAuthenticate}
+                    id="custom-agent-auto-authenticate"
+                    onCheckedChange={(checked) =>
+                      updateDraft({
+                        field: "autoAuthenticate",
+                        value: checked,
+                      })
+                    }
+                  />
+                </label>
+              ) : null}
             </div>
           </div>
           <DrawerFooter>
@@ -363,9 +416,11 @@ const CustomAgentDeleteDialog: FC<CustomAgentDeleteDialogProps> = ({
     : impactQuery.data
       ? impactQuery.data.chatCount === 0
         ? t("settings.customAgents.deleteNoChats")
-        : t("settings.customAgents.deleteImpact", {
-            count: impactQuery.data.chatCount,
-          })
+        : impactQuery.data.chatCount === 1
+          ? t("settings.customAgents.deleteImpactOne")
+          : t("settings.customAgents.deleteImpact", {
+              count: impactQuery.data.chatCount,
+            })
       : t("settings.customAgents.deleteImpactUnknown");
 
   return (

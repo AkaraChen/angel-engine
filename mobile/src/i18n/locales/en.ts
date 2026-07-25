@@ -129,20 +129,26 @@ export const en = {
         actionError: "Couldn't complete that project action. Try again.",
         add: "Add project",
         createTitle: "Add project",
+        deleteAria: "Delete {{name}}",
         deleteChecking: "Checking linked chats…",
         deleteImpact:
           "Deleting this project will permanently delete {{count}} linked chats.",
+        deleteImpactOne:
+          "Deleting this project will permanently delete 1 linked chat.",
         deleteImpactUnknown:
           "Deleting this project will also permanently delete its linked chats.",
+        deleteNoChats: "This project has no linked chats.",
         deleteTitle: "Delete project?",
         description:
           "Projects point to folders on the computer running Angel Engine.",
+        editAria: "Edit {{name}}",
         editTitle: "Edit project",
         empty: "No projects yet.",
         filesKept: "Files in the project folder will be kept.",
         formDescription:
           "Enter an absolute folder path on the computer running Angel Engine.",
         loadError: "Couldn't load projects.",
+        pathInvalid: "Enter a path to an existing folder.",
         pathLabel: "Folder path",
         pathPlaceholder: "/path/to/project",
         title: "Projects",
@@ -152,16 +158,21 @@ export const en = {
         add: "Add custom agent",
         argsLabel: "Arguments",
         argsPlaceholder: "One argument per line",
+        autoAuthenticateLabel: "Authenticate automatically",
         commandLabel: "Command",
         createTitle: "Add custom agent",
+        deleteAria: "Delete {{name}}",
         deleteChecking: "Checking linked chats…",
         deleteImpact:
           "Deleting this agent will permanently delete {{count}} linked chats.",
+        deleteImpactOne:
+          "Deleting this agent will permanently delete 1 linked chat.",
         deleteImpactUnknown:
           "Deleting this agent will also permanently delete its linked chats.",
         deleteNoChats: "This agent has no linked chats.",
         deleteTitle: "Delete custom agent?",
         description: "Manage lightweight ACP-compatible agent commands.",
+        editAria: "Edit {{name}}",
         editTitle: "Edit custom agent",
         empty: "No custom agents yet.",
         environmentHint: "Environment values are stored locally in plain text.",
@@ -171,6 +182,7 @@ export const en = {
           "Configure the command and optional arguments used to start this agent.",
         loadError: "Couldn't load custom agents.",
         nameLabel: "Name",
+        needAuthLabel: "Requires authentication",
         title: "Custom agents",
       },
       about: {
