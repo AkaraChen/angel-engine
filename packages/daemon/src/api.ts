@@ -1,9 +1,10 @@
 import type {
   Chat,
-  ChatRunStartInput,
   ChatElicitationResponse,
   ChatIdsInput,
+  ChatRunStartInput,
   ChatSendInput,
+  ChatStreamElicitationResolveInput,
   ChatStreamEvent,
 } from "@angel-engine/daemon-api/chat";
 import type { Context, Hono } from "hono";
@@ -24,6 +25,7 @@ import {
   chatCreateInputSchema,
   chatPrewarmInputSchema,
   chatRuntimeConfigInputSchema,
+  isChatElicitationResponse,
   isChatRunStartInput,
   chatSendInputSchema,
   chatSetModeInputSchema,
@@ -482,16 +484,7 @@ export function registerApi(
     return context.json({ ok: true });
   });
   app.post("/api/chat-runs/:runId/elicitation", async (context) => {
-    const body = await context.req.json<{
-      elicitationId: string;
-      response: ChatElicitationResponse;
-    }>();
-    if (
-      typeof body.elicitationId !== "string" ||
-      body.elicitationId.length === 0
-    ) {
-      throw DaemonError.invalidRequest("elicitationId is required.");
-    }
+    const body = parseElicitationResolveInput(await context.req.json());
     await chatRuns.resolveElicitation(
       requirePath(context.req.param("runId"), "runId"),
       body.elicitationId,
@@ -557,10 +550,7 @@ export function registerApi(
     const active = streams.get(context.req.param("id"));
     if (active?.resolveElicitation === undefined)
       throw DaemonError.chatStreamNotWaiting();
-    const body = await context.req.json<{
-      elicitationId: string;
-      response: ChatElicitationResponse;
-    }>();
+    const body = parseElicitationResolveInput(await context.req.json());
     await active.resolveElicitation(body.elicitationId, body.response);
     return context.json({ resolved: true });
   });
@@ -617,6 +607,28 @@ function parseRunStartInput(value: unknown): ChatRunStartInput {
     permissionMode: value.permissionMode,
     reasoningEffort: value.reasoningEffort,
     text: value.text,
+  };
+}
+
+function parseElicitationResolveInput(
+  value: unknown,
+): ChatStreamElicitationResolveInput {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    throw DaemonError.invalidRequest("Elicitation input is invalid.");
+  }
+  const input = value as Record<string, unknown>;
+  if (
+    typeof input.elicitationId !== "string" ||
+    input.elicitationId.length === 0
+  ) {
+    throw DaemonError.invalidRequest("elicitationId is required.");
+  }
+  if (!isChatElicitationResponse(input.response)) {
+    throw DaemonError.invalidRequest("Elicitation response is invalid.");
+  }
+  return {
+    elicitationId: input.elicitationId,
+    response: input.response,
   };
 }
 

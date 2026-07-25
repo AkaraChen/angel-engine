@@ -138,6 +138,19 @@ describe("ChatRunRegistry", () => {
     await vi.waitFor(() => expect(registry.active(chat.id).run).toBeNull());
   });
 
+  it("removes a stopped reservation before execution starts", () => {
+    const run = deferredRun();
+    const registry = new ChatRunRegistry({ execute: run.execute });
+
+    registry.reserve("run-1", input);
+    registry.stop("run-1");
+
+    expect(run.execute).not.toHaveBeenCalled();
+    expect(registry.active(chat.id).run).toBeNull();
+    expect(() => registry.reserve("run-2", input)).not.toThrow();
+    registry.stop("run-2");
+  });
+
   it("enforces one active run per chat and per run id", () => {
     const run = deferredRun();
     const registry = new ChatRunRegistry({ execute: run.execute });

@@ -3,6 +3,7 @@ import is from "@sindresorhus/is";
 import type {
   ChatActiveRunResult,
   ChatActiveRunSnapshot,
+  ChatElicitationResponse,
   ChatHistoryMessage,
   ChatRunObserverEvent,
   ChatRunStartInput,
@@ -32,6 +33,36 @@ function isOptionalNullableNonEmptyString(
   value: unknown,
 ): value is string | null | undefined {
   return value === undefined || value === null || isNonEmptyString(value);
+}
+
+export function isChatElicitationResponse(
+  value: unknown,
+): value is ChatElicitationResponse {
+  if (!isBoundaryRecord(value)) return false;
+  switch (value.type) {
+    case "allow":
+    case "allowForSession":
+    case "cancel":
+    case "deny":
+    case "externalComplete":
+      return true;
+    case "answers":
+      return (
+        Array.isArray(value.answers) &&
+        value.answers.every(
+          (answer) =>
+            isBoundaryRecord(answer) &&
+            isNonEmptyString(answer.id) &&
+            typeof answer.value === "string",
+        )
+      );
+    case "dynamicToolResult":
+      return typeof value.success === "boolean";
+    case "raw":
+      return typeof value.value === "string";
+    default:
+      return false;
+  }
 }
 
 /**

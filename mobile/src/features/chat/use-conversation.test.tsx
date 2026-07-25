@@ -16,6 +16,7 @@ import type {
 } from "@/platform/chat-types";
 
 import { readNewChatPrompt, stashNewChatPrompt } from "./new-chat-prompt";
+import { setChatRunAttention, useChatRunAttention } from "./run-attention";
 import { useConversation } from "./use-conversation";
 
 interface SseHandle {
@@ -396,6 +397,7 @@ describe("useConversation", () => {
 
   it("streams an assistant reply and reconciles with the daemon", async () => {
     let loadCalls = 0;
+    let runId: string | undefined;
     let sse: SseHandle | undefined;
     const fetchMock = vi.fn(async (url: string, init?: RequestInit) => {
       const method = init?.method ?? "GET";
@@ -426,6 +428,7 @@ describe("useConversation", () => {
         !url.endsWith("/elicitation") &&
         method === "POST"
       ) {
+        runId = url.match(/\/api\/chat-runs\/([^/]+)$/)?.[1];
         sse = controllableSse(url, init);
         return sse.response;
       }
@@ -441,6 +444,7 @@ describe("useConversation", () => {
     vi.stubGlobal("fetch", fetchMock);
 
     const { result } = renderHook(() => useConversation("c1"), { wrapper });
+    const attention = renderHook(() => useChatRunAttention("c1"));
     await waitFor(() => expect(result.current.isPending).toBe(false));
 
     act(() => result.current.send("hi"));
@@ -459,6 +463,9 @@ describe("useConversation", () => {
       expect(result.current.messages.at(-1)?.text).toBe("Hello"),
     );
 
+    act(() => setChatRunAttention("c1", runId!, "completed"));
+    expect(attention.result.current).toBe("completed");
+
     act(() => {
       sse!.push(resultEvent("Hello"));
       sse!.push({ type: "done" });
@@ -466,6 +473,7 @@ describe("useConversation", () => {
     });
 
     await waitFor(() => expect(result.current.isStreaming).toBe(false));
+    await waitFor(() => expect(attention.result.current).toBeNull());
     await waitFor(() =>
       expect(result.current.messages.map((m) => [m.role, m.text])).toEqual([
         ["user", "hi"],

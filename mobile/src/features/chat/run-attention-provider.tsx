@@ -42,7 +42,12 @@ export const ChatRunAttentionProvider: FC<PropsWithChildren> = ({
           return;
         }
         if (event.type === "chat-run") {
-          applyChatRunAttentionEvent(event.chatId, event.runId, event.event);
+          applyChatRunAttentionEvent(
+            event.chatId,
+            event.runId,
+            event.sequence,
+            event.event,
+          );
         }
       });
       next.addEventListener("close", () => {

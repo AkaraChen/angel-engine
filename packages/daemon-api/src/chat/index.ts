@@ -63,6 +63,7 @@ export {
 export {
   isChatActiveRunResult,
   isChatActiveRunSnapshot,
+  isChatElicitationResponse,
   isChatRunObserverEvent,
   isChatRunStartInput,
 } from "./active-run";

@@ -35,6 +35,7 @@ import {
 } from "./plan-utils";
 import {
   applyChatRunAttentionEvent,
+  applyChatRunAttentionSnapshot,
   setChatRunAttention,
 } from "./run-attention";
 
@@ -141,11 +142,7 @@ export function useConversation(chatId: string): Conversation {
       stopRequestedRef.current = false;
       isStreamingRef.current = true;
       isBootstrappingRef.current = false;
-      setChatRunAttention(
-        snapshot.chatId,
-        snapshot.runId,
-        snapshot.status === "needsInput" ? "needsInput" : null,
-      );
+      applyChatRunAttentionSnapshot(snapshot);
       forceRender();
     },
     [isCurrent],
@@ -160,7 +157,7 @@ export function useConversation(chatId: string): Conversation {
       const event = message.event;
       const runId = runIdRef.current;
       if (runId !== null) {
-        applyChatRunAttentionEvent(chatId, runId, event);
+        applyChatRunAttentionEvent(chatId, runId, message.sequence, event);
       }
       if (event.type === "delta") {
         const turn = liveTurnRef.current;
@@ -227,6 +224,7 @@ export function useConversation(chatId: string): Conversation {
   const reconcileCanonicalHistory = useCallback(
     async (controller: AbortController) => {
       if (!isCurrent(controller)) return;
+      const runId = runIdRef.current;
       const retainError =
         streamErrorRef.current !== null && !stopRequestedRef.current;
       runIdRef.current = null;
@@ -246,6 +244,7 @@ export function useConversation(chatId: string): Conversation {
       }
       stopRequestedRef.current = false;
       observerRef.current = null;
+      if (runId !== null) setChatRunAttention(chatId, runId, null);
       forceRender();
     },
     [chatId, isCurrent, queryClient],
@@ -458,7 +457,7 @@ export function useConversation(chatId: string): Conversation {
       streamErrorRef.current = null;
       stopRequestedRef.current = false;
       isStreamingRef.current = true;
-      setChatRunAttention(chatId, runId, null);
+      setChatRunAttention(chatId, "", null);
       forceRender();
       void consumeRun(controller, () =>
         daemon.chatRuns.start(runId, input, controller.signal),

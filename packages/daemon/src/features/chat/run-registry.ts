@@ -169,7 +169,12 @@ export class ChatRunRegistry {
   }
 
   stop(runId: string): void {
-    this.#require(runId).abortController.abort();
+    const run = this.#require(runId);
+    if (!run.started) {
+      this.#remove(run);
+      return;
+    }
+    run.abortController.abort();
   }
 
   async resolveElicitation(
