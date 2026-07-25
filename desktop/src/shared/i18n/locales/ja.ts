@@ -45,6 +45,8 @@ export const ja = {
       search: "検索",
       searching: "検索中...",
       send: "送信",
+      showLess: "折りたたむ",
+      showMore: "もっと見る",
       speak: "読み上げ",
       stopSpeaking: "読み上げを停止",
       submit: "送信",

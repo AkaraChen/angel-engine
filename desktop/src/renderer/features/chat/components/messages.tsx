@@ -19,6 +19,7 @@ import { useWorkspaceUiStore } from "@/app/workspace/workspace-ui-store";
 import { Reasoning, ReasoningGroup } from "@/components/assistant-ui/reasoning";
 import { ToolGroup } from "@/components/assistant-ui/tool-group";
 import { Button } from "@/components/ui/button";
+import { CollapsibleMessageBody } from "@/features/chat/components/collapsible-message-body";
 import { ChatComposer } from "@/features/chat/components/composer/chat-composer";
 import { useComposerEditor } from "@/features/chat/components/composer/use-composer-editor";
 import {
@@ -72,7 +73,9 @@ export function UserMessage() {
         <UserMessageAttachmentParts />
         {hasBubbleContent ? (
           <div className={userMessageBubbleClassName}>
-            <UserMessageParts />
+            <CollapsibleMessageBody toggleClassName="text-primary-foreground">
+              <UserMessageParts />
+            </CollapsibleMessageBody>
           </div>
         ) : null}
         <div className={messageActionFooterClass}>

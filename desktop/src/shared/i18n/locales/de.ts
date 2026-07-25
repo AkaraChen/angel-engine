@@ -45,6 +45,8 @@ export const de = {
       search: "Suchen",
       searching: "Suche...",
       send: "Senden",
+      showLess: "Weniger anzeigen",
+      showMore: "Mehr anzeigen",
       speak: "Vorlesen",
       stopSpeaking: "Vorlesen beenden",
       submit: "Absenden",

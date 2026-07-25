@@ -15,6 +15,8 @@ export const ja = {
       settings: "設定",
       daemonOfflineHint:
         "デーモンがオフラインか、到達できない可能性があります。",
+      showLess: "折りたたむ",
+      showMore: "もっと見る",
     },
     login: {
       title: "Angel Engine のロック解除",

@@ -14,6 +14,8 @@ export const zhTW = {
       newChat: "新增對話",
       settings: "設定",
       daemonOfflineHint: "背景程序可能已離線或無法連線。",
+      showLess: "收合",
+      showMore: "展開",
     },
     login: {
       title: "解鎖 Angel Engine",

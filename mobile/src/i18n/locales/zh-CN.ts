@@ -14,6 +14,8 @@ export const zhCN = {
       newChat: "新建对话",
       settings: "设置",
       daemonOfflineHint: "守护进程可能已离线或无法连接。",
+      showLess: "收起",
+      showMore: "展开",
     },
     login: {
       title: "解锁 Angel Engine",

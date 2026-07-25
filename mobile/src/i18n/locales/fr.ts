@@ -14,6 +14,8 @@ export const fr = {
       newChat: "Nouvelle discussion",
       settings: "Paramètres",
       daemonOfflineHint: "Le démon est peut-être hors ligne ou injoignable.",
+      showLess: "Afficher moins",
+      showMore: "Afficher plus",
     },
     login: {
       title: "Déverrouiller Angel Engine",

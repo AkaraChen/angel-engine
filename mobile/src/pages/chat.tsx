@@ -44,6 +44,7 @@ import {
 } from "@/components/ui/message-scroller";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Spinner } from "@/components/ui/spinner";
+import { CollapsibleMessageBody } from "@/features/chat/collapsible-message-body";
 import { ComposerPlanMode } from "@/features/chat/composer-plan-mode";
 import { ElicitationPrompt } from "@/features/chat/elicitation-prompt";
 import { MarkdownMessage } from "@/features/chat/markdown-message";
@@ -163,6 +164,9 @@ function MessageBubble({ message }: { message: ConversationMessage }) {
   // Only the assistant's final prose gets markdown/typeset rendering; user,
   // error, reasoning-only and typing states stay plain text.
   const renderMarkdown = !isUser && !isError && !isTyping && !isReasoningOnly;
+  // Long user prompts collapse so they can't push the assistant reply off
+  // screen (parity with the desktop thread).
+  const collapseBody = isUser && !isError && !isTyping;
 
   return (
     <MessageGroup>
@@ -191,7 +195,11 @@ function MessageBubble({ message }: { message: ConversationMessage }) {
               <BubbleContent
                 className={renderMarkdown ? undefined : "whitespace-pre-wrap"}
               >
-                {isTyping ? (
+                {collapseBody ? (
+                  <CollapsibleMessageBody toggleClassName="text-primary-foreground">
+                    {body}
+                  </CollapsibleMessageBody>
+                ) : isTyping ? (
                   <Marker>
                     <MarkerIcon>
                       <Spinner className="size-3.5" />

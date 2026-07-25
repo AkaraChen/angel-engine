@@ -15,6 +15,8 @@ export const es = {
       settings: "Ajustes",
       daemonOfflineHint:
         "Puede que el demonio esté desconectado o no se pueda alcanzar.",
+      showLess: "Mostrar menos",
+      showMore: "Mostrar más",
     },
     login: {
       title: "Desbloquear Angel Engine",
