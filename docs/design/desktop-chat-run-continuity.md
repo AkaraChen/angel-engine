@@ -43,26 +43,44 @@ Both are migration debt, not desired behavior.
 ### 1. Notifications are a pull model on `chat-attention-changed`
 
 No new run-level global WebSocket event is added. `chat-attention-changed` is
-the only signal; it carries chat ids, never payloads.
+the only signal.
 
-- **needsInput** — on `chat-attention-changed`, the main process calls
-  `GET /api/chats/:chatId/active-run` and renders the notification from the
-  snapshot's `pendingElicitation` title/body. A snapshot whose status is not
-  `needsInput` produces no notification.
-- **completed** — once the run leaves the registry there is no `result.text` to
-  read, so the completed notification takes its body from the chat's canonical
-  history. Preferred: read the last assistant message via
-  `POST /api/chats/:chatId/load`. Acceptable fallback: show a title-only
-  notification. Adding a global `completed` event to carry the text is
-  explicitly forbidden.
-- `GET /api/chat-attention` remains the bootstrap/refresh read; the store in
-  `packages/daemon/src/features/chat/attention.ts` is already the tombstone that
-  survives the run leaving the registry.
+**The event is a hint, not a verdict.** It carries `chatIds` and nothing else
+(`packages/daemon-api/src/events.ts`), and the daemon publishes it on *every*
+attention transition — including clears: run start, acknowledge, elicitation
+resolve, chat archive/delete (`packages/daemon/src/api.ts`). So the event says
+"attention for this chat changed", never "this chat completed".
+
+`GET /api/chat-attention` is the authoritative status read. The store in
+`packages/daemon/src/features/chat/attention.ts` is the tombstone that survives
+the run leaving the registry, and its `status` is a closed union of
+`needsInput | completed`.
+
+Required sequence on `chat-attention-changed`:
+
+1. `GET /api/chat-attention`; find the row for the chat id.
+2. **Row absent** — attention was cleared. Drop local state for that chat and
+   show nothing. Never infer completion from a missing row.
+3. **`status: "needsInput"`** — `GET /api/chats/:chatId/active-run` and render
+   the notification from the snapshot's `pendingElicitation` title/body. A
+   snapshot that is `null` or not `needsInput` produces no notification (the run
+   was answered or cancelled between the event and the read).
+4. **`status: "completed"`** — the run has left the registry, so there is no
+   `result.text`. Take the body from the chat's canonical history:
+   `POST /api/chats/:chatId/load`, last assistant message. Acceptable fallback
+   is a title-only notification. Adding a global `completed` event to carry the
+   text is explicitly forbidden.
+5. Dedupe on `attention.id` (`<runId>:input:<elicitationId>`,
+   `<runId>:completed`), not on chat id. Notify once per id.
+
+Deriving completion from `active-run === null` is specifically wrong on two
+paths: acknowledging a completed marker publishes the same event and would
+re-notify, and a `needsInput` run that is cancelled or fails clears attention
+with no run left, which would report a false completion.
 
 Consequence: `desktop/src/main/daemon/events.ts` stops mirroring
 `chat-stream` events and stops keeping its own `streams` map with per-stream
-`notified` sets. Attention identity (`<runId>:input:<elicitationId>`,
-`<runId>:completed`) replaces that dedupe.
+`notified` sets. Attention identity replaces that dedupe.
 
 ### 2. Continuity matches mobile
 
@@ -102,9 +120,28 @@ Desktop send for a new chat becomes two calls:
    → real `chatId`.
 2. `POST /api/chat-runs/:runId` with `{ chatId, text, ... }`.
 
-Worktree chats still cannot be created through `POST /api/chats`
-(`chat-worktree-creation-forbidden`) and are also not prewarmable; that path
-keeps using the send route until Stage 3 gives it a create-side equivalent.
+**Worktree chats need a create-side path, and it lands in Stage 2 before any
+legacy call site is deleted.** Today `createChatFromInput` rejects
+`creationLocation: "worktree"` with `chat-worktree-creation-forbidden`
+("Worktree chats must be created by sending a message"), so worktree creation is
+only reachable through `POST /api/chat-streams`. Stage 2 cannot both delete the
+desktop stream bypass and keep that path, so the ordering is fixed:
+
+1. Lift the restriction: `createChatFromInput` resolves `creationLocation:
+   "worktree"` through `cwdForNewChat`, which already creates the project
+   worktree and still fails with `project-required-for-worktree` when
+   `projectId` is missing.
+2. Only then delete the desktop send-route call sites.
+
+Worktree chats stay non-prewarmable (`prewarmChat` rejects them), so a worktree
+create simply skips the prewarm claim.
+
+Open question for the Stage 2 implementer, to settle before step 1: creating on
+`POST /api/chats` materializes a git worktree at create time rather than at
+first send, so abandoning a new-chat draft can now leak a worktree that the old
+flow never created. Either reuse the existing archived-chat worktree cleanup for
+chats that never ran, or keep worktree creation lazy inside the create call and
+document it. Do not resolve this by leaving the send route alive.
 
 ### 4. Real chat ids delete the draft redirect machinery
 
@@ -166,41 +203,59 @@ optional and non-blocking.
   the new chat id, and persists the remote thread id. A `prewarmId` that is
   unknown, not ready, or mismatched falls back to a cold create rather than
   failing — same tolerance the send path already had.
-- `chatPrewarmMatches` / `takeChatPrewarm` now take a `ChatPrewarmClaimInput`
-  (`creationLocation`, `cwd`, `projectId`, `runtime`) so create and the legacy
-  send path share one matching rule.
+- `chatPrewarmMatches` is now a module-level export taking a
+  `ChatPrewarmClaimInput` (`creationLocation`, `cwd`, `projectId`, `runtime`),
+  so create and the legacy send path share one matching rule and it is testable
+  without booting a session.
 - `daemon-client` needs no change: `chats.create` forwards the whole input.
 
-Tests: `packages/daemon-api/src/chat/__tests__/create-input.test.ts` (schema
-accepts `prewarmId`, rejects an empty one, and a type-level assertion that
-fails to compile if `ChatRunStartInput` ever grows `prewarmId`) and a
-`POST /api/chats` forwarding case in `packages/daemon/src/api.test.ts`.
+Tests:
+
+- `packages/daemon-api/src/chat/__tests__/create-input.test.ts` — schema accepts
+  `prewarmId`, rejects an empty one, plus a type-level assertion that fails to
+  compile if `ChatRunStartInput` ever grows `prewarmId`.
+- `packages/daemon/src/features/chat/engine-runtime.test.ts` — the claim rule:
+  matching runtime/location claims, a missing `creationLocation` reads as
+  `project` on both sides, and an explicit `cwd`, a different runtime, a
+  worktree claim, or a project/standalone cwd mismatch all refuse the prewarm
+  (cold create instead of a wrong session).
+- `packages/daemon/src/api.test.ts` — `POST /api/chats` forwards `prewarmId`.
+
+Not covered by a test: the session adoption itself
+(`chatSessions.set` + `persistRemoteThreadId`) needs a live NAPI session, so it
+stays manual until there is a fake `DesktopChatSession`.
 
 ## Stage 2 Implementation Checklist
 
-1. **Create then run.** In `chat-run-store.ts` / `chat-run-stream.ts`, when
+1. **Unblock worktree create first.** Lift
+   `chat-worktree-creation-forbidden` from `createChatFromInput` and resolve
+   `creationLocation: "worktree"` through `cwdForNewChat`, settling the
+   abandoned-draft worktree question above. Nothing else in this list may land
+   before it, or worktree chats lose their only creation path.
+2. **Create then run.** In `chat-run-store.ts` / `chat-run-stream.ts`, when
    `input.chatId` is absent, call `daemon.chats.create({ projectId, runtime,
    creationLocation, prewarmId, model, mode, permissionMode, reasoningEffort })`
    first, then start the run against the returned id.
-2. **Drop the draft indirection.** Remove `draftRedirects`,
+3. **Drop the draft indirection.** Remove `draftRedirects`,
    `moveActiveRunToChat`, and the stream-driven `onChatCreated`, and key slots
    by real chat id from the start. Update
    `state/__tests__/chat-run-machine.test.ts` accordingly.
-3. **Replace the transport.** Delete `chat-stream.ts` and
+4. **Replace the transport.** Delete `chat-stream.ts` and
    `desktop-agent-adapter.ts`; drive runs through `daemon.chatRuns.start` /
    `observe` / `stop` / `resolveElicitation`. Test doubles that currently mock
    `streamChatEvents` (`state/__tests__/plan-normalization.test.ts`,
    `state/__tests__/assistant-materialization.test.ts`) move to mocking the
    daemon client's run methods.
-4. **Detach, don't cancel.** Observer teardown on chat switch / unmount /
+5. **Detach, don't cancel.** Observer teardown on chat switch / unmount /
    window close aborts the observer only. Stop is the single caller of
    `daemon.chatRuns.stop`.
-5. **Reconnect on mount.** On chat open and on renderer reload, call
+6. **Reconnect on mount.** On chat open and on renderer reload, call
    `daemon.chatRuns.active(chatId)`; if a run is returned, apply its snapshot
    and attach `observe(runId)`.
-6. **Rewrite main notifications.** `desktop/src/main/daemon/events.ts` handles
-   only `chat-attention-changed`: fetch `active-run` for needsInput, and read
-   the last assistant message via chat load for completed. Delete the
+7. **Rewrite main notifications.** `desktop/src/main/daemon/events.ts` handles
+   only `chat-attention-changed`, following the five-step sequence in decision 1:
+   `attention.list` for status, `active-run` for needsInput, chat load for
+   completed, absent row clears silently, dedupe by `attention.id`. Delete the
    `chat-stream` handler, the `streams` map, and `notifyTool`'s stream-derived
    dedupe.
 
@@ -211,6 +266,10 @@ fails to compile if `ChatRunStartInput` ever grows `prewarmId`) and a
 - Stop is the only action that ends a run.
 - A permission prompt raised while the window is in the background produces
   exactly one OS notification, sourced from `active-run`.
+- Creating a worktree chat works through `POST /api/chats` with no send-route
+  fallback left in `desktop/src`.
+- Acknowledging a completed notification does not produce a second one, and a
+  cancelled `needsInput` run produces no completion notification.
 - No file under `desktop/src` imports SSE decoding of its own.
 
 ## Out of Scope
