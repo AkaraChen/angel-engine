@@ -227,6 +227,8 @@ function wrapper({ children }: PropsWithChildren) {
 
 afterEach(() => {
   sessionStorage.clear();
+  setChatRunAttention("c1", "", null);
+  setChatRunAttention("c2", "", null);
   vi.unstubAllGlobals();
 });
 
@@ -473,7 +475,9 @@ describe("useConversation", () => {
     });
 
     await waitFor(() => expect(result.current.isStreaming).toBe(false));
-    await waitFor(() => expect(attention.result.current).toBeNull());
+    // Canonical reconciliation does not own visibility. The route currently
+    // showing this chat dismisses foreground completion attention.
+    await waitFor(() => expect(attention.result.current).toBe("completed"));
     await waitFor(() =>
       expect(result.current.messages.map((m) => [m.role, m.text])).toEqual([
         ["user", "hi"],
@@ -619,6 +623,86 @@ describe("useConversation", () => {
 
     await waitFor(() => expect(result.current.isStreaming).toBe(false));
     expect(result.current.messages.at(-1)?.text).toBe("Done.");
+  });
+
+  it("does not duplicate a canonical turn while retaining its error bubble", async () => {
+    let loadCalls = 0;
+    let runId: string | undefined;
+    let sse: SseHandle | undefined;
+    const fetchMock = vi.fn(async (url: string, init?: RequestInit) => {
+      const method = init?.method ?? "GET";
+      if (url.endsWith("/load")) {
+        loadCalls += 1;
+        return jsonResponse({
+          chat: { id: "c1", title: "c1" },
+          messages:
+            loadCalls === 1
+              ? []
+              : [
+                  {
+                    id: "previous-user",
+                    role: "user",
+                    content: [{ type: "text", text: "before" }],
+                  },
+                  {
+                    id: "previous-assistant",
+                    role: "assistant",
+                    content: [{ type: "text", text: "Earlier reply" }],
+                  },
+                  {
+                    id: `${runId}:user`,
+                    role: "user",
+                    content: [{ type: "text", text: "hi" }],
+                  },
+                  {
+                    id: `${runId}:assistant`,
+                    role: "assistant",
+                    content: [{ type: "text", text: "Partial" }],
+                  },
+                ],
+        });
+      }
+      if (
+        url.includes("/api/chat-runs/") &&
+        !url.endsWith("/elicitation") &&
+        method === "POST"
+      ) {
+        runId = url.match(/\/api\/chat-runs\/([^/]+)$/)?.[1];
+        sse = controllableSse(url, init);
+        return sse.response;
+      }
+      return jsonResponse({ ok: true });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const { result } = renderHook(() => useConversation("c1"), { wrapper });
+    await waitFor(() => expect(result.current.isPending).toBe(false));
+
+    act(() => result.current.send("hi"));
+    await waitFor(() => expect(sse).toBeDefined());
+    act(() => {
+      sse!.push({ type: "delta", part: "text", text: "Partial" });
+      sse!.push({ type: "error", message: "Provider failed" });
+      sse!.push({ type: "done" });
+      sse!.close();
+    });
+
+    await waitFor(() =>
+      expect(
+        result.current.messages.some(({ id }) => id === "previous-user"),
+      ).toBe(true),
+    );
+    expect(result.current.messages).toHaveLength(4);
+    expect(
+      result.current.messages.filter(
+        ({ id }) => id === `${runId}:user` || id === `${runId}:assistant`,
+      ),
+    ).toHaveLength(2);
+    expect(result.current.messages.at(-1)).toMatchObject({
+      error: "Provider failed",
+      id: `${runId}:assistant`,
+      status: "error",
+    });
   });
 
   it("detaches the observer without stopping the run when the chat changes", async () => {

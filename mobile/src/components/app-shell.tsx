@@ -2,6 +2,7 @@ import type { PropsWithChildren } from "react";
 
 import { ArrowLeft } from "@phosphor-icons/react";
 import { useQuery } from "@tanstack/react-query";
+import { useLayoutEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useRoute } from "wouter";
 
@@ -12,9 +13,12 @@ import {
   SidebarProvider,
   SidebarTrigger,
 } from "@/components/ui/sidebar";
-import { WorkspacePanel } from "@/features/workspace/workspace-panel";
 import { ChatRunAttentionBadge } from "@/features/chat/run-attention-badge";
-import { useChatRunAttention } from "@/features/chat/run-attention";
+import {
+  setChatRunAttention,
+  useChatRunAttention,
+} from "@/features/chat/run-attention";
+import { WorkspacePanel } from "@/features/workspace/workspace-panel";
 import { useDaemonClient } from "@/platform/daemon-provider";
 import { queryKeys } from "@/platform/query-keys";
 
@@ -51,7 +55,15 @@ export function AppShell({ children }: PropsWithChildren) {
   const { t } = useTranslation();
   const [isChat, chatParams] = useRoute("/chat/:chatId");
   const title = useRouteTitle();
-  const attention = useChatRunAttention(isChat ? chatParams.chatId : "");
+  const currentChatId = isChat ? chatParams.chatId : "";
+  const attention = useChatRunAttention(currentChatId);
+
+  useLayoutEffect(() => {
+    if (attention === "completed" && currentChatId.length > 0) {
+      setChatRunAttention(currentChatId, "", null);
+    }
+  }, [attention, currentChatId]);
+
   return (
     <SidebarProvider>
       <AppSidebar />

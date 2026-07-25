@@ -224,7 +224,6 @@ export function useConversation(chatId: string): Conversation {
   const reconcileCanonicalHistory = useCallback(
     async (controller: AbortController) => {
       if (!isCurrent(controller)) return;
-      const runId = runIdRef.current;
       const retainError =
         streamErrorRef.current !== null && !stopRequestedRef.current;
       runIdRef.current = null;
@@ -244,7 +243,6 @@ export function useConversation(chatId: string): Conversation {
       }
       stopRequestedRef.current = false;
       observerRef.current = null;
-      if (runId !== null) setChatRunAttention(chatId, runId, null);
       forceRender();
     },
     [chatId, isCurrent, queryClient],
@@ -585,7 +583,12 @@ export function useConversation(chatId: string): Conversation {
     isStreaming,
     liveChatIdRef.current === chatId ? streamErrorRef.current : null,
   );
-  const messages = normalizeConversationPlans([...persisted, ...live]);
+  const messages = normalizeConversationPlans([
+    ...persisted.filter(
+      ({ id }) => id !== visibleTurn.userId && id !== visibleTurn.assistantId,
+    ),
+    ...live,
+  ]);
 
   return {
     messages,
