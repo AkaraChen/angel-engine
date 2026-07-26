@@ -192,165 +192,165 @@ export function ArchivedSettingsPanel() {
   }, []);
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       <RemovableWorktreesSection projectsById={projectsById} />
 
-      <div className="border-t pt-4">
-        <h2 className="text-sm font-medium">
+      <section aria-labelledby="archived-sessions-title" className="space-y-3">
+        <h2 className="text-sm font-medium" id="archived-sessions-title">
           {t("settings.archived.sessionsTitle")}
         </h2>
-      </div>
 
-      <div className="flex flex-wrap items-end gap-3">
-        <ArchivedFilterSelect
-          label={t("settings.archived.filterTime")}
-          onValueChange={(value) => setTimeFilter(value as TimeFilter)}
-          value={timeFilter}
-        >
-          {timeFilterOptions.map((option) => (
-            <NativeSelectOption key={option.value} value={option.value}>
-              {t(option.labelKey)}
+        <div className="flex flex-wrap items-end gap-3">
+          <ArchivedFilterSelect
+            label={t("settings.archived.filterTime")}
+            onValueChange={(value) => setTimeFilter(value as TimeFilter)}
+            value={timeFilter}
+          >
+            {timeFilterOptions.map((option) => (
+              <NativeSelectOption key={option.value} value={option.value}>
+                {t(option.labelKey)}
+              </NativeSelectOption>
+            ))}
+          </ArchivedFilterSelect>
+          <ArchivedFilterSelect
+            label={t("settings.archived.filterProject")}
+            onValueChange={setProjectFilter}
+            value={projectFilter}
+          >
+            <NativeSelectOption value="all">
+              {t("settings.archived.allProjects")}
             </NativeSelectOption>
-          ))}
-        </ArchivedFilterSelect>
-        <ArchivedFilterSelect
-          label={t("settings.archived.filterProject")}
-          onValueChange={setProjectFilter}
-          value={projectFilter}
-        >
-          <NativeSelectOption value="all">
-            {t("settings.archived.allProjects")}
-          </NativeSelectOption>
-          <NativeSelectOption value={NO_PROJECT_FILTER}>
-            {t("settings.archived.noProject")}
-          </NativeSelectOption>
-          {projects.map((project) => (
-            <NativeSelectOption key={project.id} value={project.id}>
-              {getProjectDisplayName(project.path)}
+            <NativeSelectOption value={NO_PROJECT_FILTER}>
+              {t("settings.archived.noProject")}
             </NativeSelectOption>
-          ))}
-        </ArchivedFilterSelect>
-        <div className="ml-auto flex items-center gap-2">
-          {bulkMode ? (
-            <>
+            {projects.map((project) => (
+              <NativeSelectOption key={project.id} value={project.id}>
+                {getProjectDisplayName(project.path)}
+              </NativeSelectOption>
+            ))}
+          </ArchivedFilterSelect>
+          <div className="ml-auto flex items-center gap-2">
+            {bulkMode ? (
+              <>
+                <Button
+                  disabled={busy || selectedChats.length === 0}
+                  onClick={() => void restoreChats(selectedChats)}
+                  size="sm"
+                  type="button"
+                  variant="outline"
+                >
+                  <Restore />
+                  {t("settings.archived.restoreSelected")}
+                </Button>
+                <Button
+                  disabled={busy || selectedChats.length === 0}
+                  onClick={() => void deleteChats(selectedChats)}
+                  size="sm"
+                  type="button"
+                  variant="destructive"
+                >
+                  <Trash2 />
+                  {t("settings.archived.deleteSelected")}
+                </Button>
+              </>
+            ) : null}
+            <Button
+              onClick={toggleBulkMode}
+              size="sm"
+              type="button"
+              variant={bulkMode ? "outline" : "secondary"}
+            >
+              {bulkMode ? <X /> : <Check />}
+              {bulkMode
+                ? t("settings.archived.done")
+                : t("settings.archived.bulkSelect")}
+            </Button>
+          </div>
+        </div>
+
+        {bulkMode ? (
+          <div
+            className="
+            flex items-center justify-between gap-3 text-xs
+            text-muted-foreground
+          "
+          >
+            <div>
+              {t("settings.archived.selectedCount", {
+                count: selectedChats.length,
+              })}
+            </div>
+            <Button
+              className="h-7 px-2 text-xs"
+              disabled={busy || filteredChats.length === 0}
+              onClick={toggleAllVisible}
+              size="sm"
+              type="button"
+              variant="ghost"
+            >
+              {allVisibleSelected ? <X /> : <Check />}
+              {allVisibleSelected
+                ? t("settings.archived.clearSelection")
+                : t("settings.archived.selectAll")}
+            </Button>
+          </div>
+        ) : null}
+
+        <div className="overflow-hidden rounded-lg border bg-card">
+          {archivedChatsQuery.isPending ? (
+            <div className="px-4 py-6 text-sm text-muted-foreground">
+              {t("common.loading")}
+            </div>
+          ) : archivedChatsQuery.isError ? (
+            <div className="flex items-start justify-between gap-4 px-4 py-6">
+              <div className="min-w-0 space-y-1">
+                <div className="text-sm font-medium text-destructive">
+                  {t("common.failed")}
+                </div>
+                <div className="text-xs wrap-break-word text-muted-foreground">
+                  {archivedChatsQuery.error instanceof Error
+                    ? archivedChatsQuery.error.message
+                    : String(archivedChatsQuery.error)}
+                </div>
+              </div>
               <Button
-                disabled={busy || selectedChats.length === 0}
-                onClick={() => void restoreChats(selectedChats)}
+                onClick={() => void archivedChatsQuery.refetch()}
                 size="sm"
                 type="button"
                 variant="outline"
               >
-                <Restore />
-                {t("settings.archived.restoreSelected")}
+                {t("common.reload")}
               </Button>
-              <Button
-                disabled={busy || selectedChats.length === 0}
-                onClick={() => void deleteChats(selectedChats)}
-                size="sm"
-                type="button"
-                variant="destructive"
-              >
-                <Trash2 />
-                {t("settings.archived.deleteSelected")}
-              </Button>
-            </>
-          ) : null}
-          <Button
-            onClick={toggleBulkMode}
-            size="sm"
-            type="button"
-            variant={bulkMode ? "outline" : "secondary"}
-          >
-            {bulkMode ? <X /> : <Check />}
-            {bulkMode
-              ? t("settings.archived.done")
-              : t("settings.archived.bulkSelect")}
-          </Button>
-        </div>
-      </div>
-
-      {bulkMode ? (
-        <div
-          className="
-            flex items-center justify-between gap-3 text-xs
-            text-muted-foreground
-          "
-        >
-          <div>
-            {t("settings.archived.selectedCount", {
-              count: selectedChats.length,
-            })}
-          </div>
-          <Button
-            className="h-7 px-2 text-xs"
-            disabled={busy || filteredChats.length === 0}
-            onClick={toggleAllVisible}
-            size="sm"
-            type="button"
-            variant="ghost"
-          >
-            {allVisibleSelected ? <X /> : <Check />}
-            {allVisibleSelected
-              ? t("settings.archived.clearSelection")
-              : t("settings.archived.selectAll")}
-          </Button>
-        </div>
-      ) : null}
-
-      <div className="overflow-hidden rounded-lg border bg-card">
-        {archivedChatsQuery.isPending ? (
-          <div className="px-4 py-6 text-sm text-muted-foreground">
-            {t("common.loading")}
-          </div>
-        ) : archivedChatsQuery.isError ? (
-          <div className="flex items-start justify-between gap-4 px-4 py-6">
-            <div className="min-w-0 space-y-1">
-              <div className="text-sm font-medium text-destructive">
-                {t("common.failed")}
-              </div>
-              <div className="text-xs wrap-break-word text-muted-foreground">
-                {archivedChatsQuery.error instanceof Error
-                  ? archivedChatsQuery.error.message
-                  : String(archivedChatsQuery.error)}
-              </div>
             </div>
-            <Button
-              onClick={() => void archivedChatsQuery.refetch()}
-              size="sm"
-              type="button"
-              variant="outline"
-            >
-              {t("common.reload")}
-            </Button>
-          </div>
-        ) : filteredChats.length === 0 ? (
-          <div className="px-4 py-6 text-sm text-muted-foreground">
-            {t("settings.archived.empty")}
-          </div>
-        ) : (
-          <div className="divide-y divide-border">
-            {filteredChats.map((chat) => (
-              <ArchivedChatRow
-                bulkMode={bulkMode}
-                chat={chat}
-                disabled={busy}
-                key={chat.id}
-                project={
-                  is.nonEmptyString(chat.projectId)
-                    ? projectsById.get(chat.projectId)
-                    : undefined
-                }
-                selected={selectedIds.has(chat.id)}
-                onDelete={() => void deleteChats([chat])}
-                onRestore={() => void restoreChats([chat])}
-                onSelectedChange={(selected) =>
-                  toggleSelected(chat.id, selected)
-                }
-              />
-            ))}
-          </div>
-        )}
-      </div>
+          ) : filteredChats.length === 0 ? (
+            <div className="px-4 py-6 text-sm text-muted-foreground">
+              {t("settings.archived.empty")}
+            </div>
+          ) : (
+            <div className="divide-y divide-border">
+              {filteredChats.map((chat) => (
+                <ArchivedChatRow
+                  bulkMode={bulkMode}
+                  chat={chat}
+                  disabled={busy}
+                  key={chat.id}
+                  project={
+                    is.nonEmptyString(chat.projectId)
+                      ? projectsById.get(chat.projectId)
+                      : undefined
+                  }
+                  selected={selectedIds.has(chat.id)}
+                  onDelete={() => void deleteChats([chat])}
+                  onRestore={() => void restoreChats([chat])}
+                  onSelectedChange={(selected) =>
+                    toggleSelected(chat.id, selected)
+                  }
+                />
+              ))}
+            </div>
+          )}
+        </div>
+      </section>
     </div>
   );
 }

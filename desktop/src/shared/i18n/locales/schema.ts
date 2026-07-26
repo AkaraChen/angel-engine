@@ -141,12 +141,12 @@ export interface LocaleResourceTranslationSettingsArchivedRemovableWorktrees {
   confirmDeleteTitle: string;
   deleteFailed: string;
   deletedToast: string;
-  description: string;
   empty: string;
   missingOnDisk: string;
   partialFailure: string;
   scanAgain: string;
-  sessionCount: string;
+  sessionCount_one: string;
+  sessionCount_other: string;
   title: string;
 }
 
