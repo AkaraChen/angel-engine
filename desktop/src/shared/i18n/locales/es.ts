@@ -436,6 +436,13 @@ export const es = {
     projects: {
       chooseFolder: "Elegir carpeta del proyecto",
       openInFinder: "Abrir en Finder",
+      settings: "Ajustes",
+      settingsLoadFailed: "No se pudieron cargar los ajustes del proyecto",
+      settingsSaveFailed: "No se pudieron guardar los ajustes del proyecto",
+      settingsSaved: "Ajustes del proyecto guardados",
+      settingsTitle: "Ajustes de {{project}}",
+      setupScript: "Script de preparación del worktree",
+      setupScriptPlaceholder: "bun install",
     },
     pathLauncher: {
       copyPath: "Copiar ruta",

@@ -70,6 +70,8 @@ export type DaemonErrorCode =
   | "internal"
   | "invalid-request"
   | "process-not-registered"
+  | "project-config-invalid"
+  | "project-config-write-failed"
   | "project-id-required"
   | "project-not-found"
   | "project-not-git-repository"

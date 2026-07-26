@@ -419,6 +419,13 @@ export const zhCN = {
     projects: {
       chooseFolder: "选择项目文件夹",
       openInFinder: "在 Finder 中打开",
+      settings: "设置",
+      settingsLoadFailed: "无法加载项目设置",
+      settingsSaveFailed: "无法保存项目设置",
+      settingsSaved: "已保存项目设置",
+      settingsTitle: "{{project}} 设置",
+      setupScript: "Worktree 初始化脚本",
+      setupScriptPlaceholder: "bun install",
     },
     pathLauncher: {
       copyPath: "复制路径",

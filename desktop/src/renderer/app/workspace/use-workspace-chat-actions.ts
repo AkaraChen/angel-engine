@@ -87,6 +87,7 @@ export function useWorkspaceChatActions({
     modelOverride,
     navigate,
     permissionModeOverride,
+    projects,
     queryClient,
     reasoningEffortOverride,
     routeDraftProjectId,
@@ -102,6 +103,12 @@ export function useWorkspaceChatActions({
   const [renameChatId, setRenameChatId] = useState<string | null>(null);
   const renameTargetChat = is.nonEmptyString(renameChatId)
     ? (chats.find((chat) => chat.id === renameChatId) ?? null)
+    : null;
+  const [settingsProjectId, setSettingsProjectId] = useState<string | null>(
+    null,
+  );
+  const settingsTargetProject = is.nonEmptyString(settingsProjectId)
+    ? (projects.find((project) => project.id === settingsProjectId) ?? null)
     : null;
 
   const setChatInCache = useCallback(
@@ -272,7 +279,9 @@ export function useWorkspaceChatActions({
       try {
         const action =
           await showProjectContextMenuMutation.mutateAsync(project);
-        if (
+        if (action === "settings") {
+          setSettingsProjectId(project.id);
+        } else if (
           action === "deleted" &&
           (routeProjectId ?? routeDraftProjectId) === project.id
         ) {
@@ -358,6 +367,10 @@ export function useWorkspaceChatActions({
     ],
   );
   const closeRenameChatDialog = useCallback(() => setRenameChatId(null), []);
+  const closeProjectSettingsDialog = useCallback(
+    () => setSettingsProjectId(null),
+    [],
+  );
   const renameChat = useCallback(
     async (chat: Chat, title: string) => {
       try {
@@ -432,6 +445,7 @@ export function useWorkspaceChatActions({
 
   return {
     archiveChat,
+    closeProjectSettingsDialog,
     closeRenameChatDialog,
     createProjectFromPicker,
     deleteAllChats,
@@ -441,6 +455,7 @@ export function useWorkspaceChatActions({
     renameTargetChat,
     setChatMessagesInCache,
     setPersistedChatRuntime,
+    settingsTargetProject,
     showChatContextMenu,
     showPathLauncherContextMenu,
     showProjectContextMenu,

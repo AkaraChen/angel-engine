@@ -455,6 +455,13 @@ export interface LocaleResourceTranslationNotifications {
 export interface LocaleResourceTranslationProjects {
   chooseFolder: string;
   openInFinder: string;
+  settings: string;
+  settingsLoadFailed: string;
+  settingsSaveFailed: string;
+  settingsSaved: string;
+  settingsTitle: string;
+  setupScript: string;
+  setupScriptPlaceholder: string;
 }
 
 export interface LocaleResourceTranslationPathLauncher {

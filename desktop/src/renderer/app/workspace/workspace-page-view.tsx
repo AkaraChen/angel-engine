@@ -35,6 +35,7 @@ import { useWorkspaceToolStore } from "@/app/workspace/workspace-tool-store";
 import { WorktreeDirtyDialog } from "@/app/workspace/worktree-dirty-dialog";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { RenameChatDialog } from "@/features/chat/components/rename-chat-dialog";
+import { ProjectSettingsDialog } from "@/features/projects/components/project-settings-dialog";
 
 interface WorkspacePageViewProps {
   chatActions: WorkspaceChatActions;
@@ -112,6 +113,7 @@ export const WorkspacePageView: FC<WorkspacePageViewProps> = ({
   } = model;
   const {
     archiveChat,
+    closeProjectSettingsDialog,
     closeRenameChatDialog,
     createProjectFromPicker,
     renameChat,
@@ -119,6 +121,7 @@ export const WorkspacePageView: FC<WorkspacePageViewProps> = ({
     renameTargetChat,
     setChatMessagesInCache,
     setPersistedChatRuntime,
+    settingsTargetProject,
     showChatContextMenu,
     showPathLauncherContextMenu,
     showProjectContextMenu,
@@ -259,6 +262,10 @@ export const WorkspacePageView: FC<WorkspacePageViewProps> = ({
           isSaving={renameChatPending}
           onClose={closeRenameChatDialog}
           onRename={renameChat}
+        />
+        <ProjectSettingsDialog
+          onClose={closeProjectSettingsDialog}
+          project={settingsTargetProject}
         />
         <WorktreeDirtyDialog
           checked={rememberWorktreeDirtyChoice}

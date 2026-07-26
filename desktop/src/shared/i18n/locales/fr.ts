@@ -438,6 +438,13 @@ export const fr = {
     projects: {
       chooseFolder: "Choisir le dossier du projet",
       openInFinder: "Ouvrir dans le Finder",
+      settings: "Paramètres",
+      settingsLoadFailed: "Impossible de charger les paramètres du projet",
+      settingsSaveFailed: "Impossible d'enregistrer les paramètres du projet",
+      settingsSaved: "Paramètres du projet enregistrés",
+      settingsTitle: "Paramètres de {{project}}",
+      setupScript: "Script d'initialisation du worktree",
+      setupScriptPlaceholder: "bun install",
     },
     pathLauncher: {
       copyPath: "Copier le chemin",

@@ -19,6 +19,7 @@ export const queryKeys = {
   },
   projects: {
     all: () => ["projects"] as const,
+    config: (id: string | null) => ["projects", "config", id] as const,
     detail: (id: string | null) => ["projects", "detail", id] as const,
     details: () => ["projects", "detail"] as const,
     fileSearch: (root: string, query: string, limit: number) =>
