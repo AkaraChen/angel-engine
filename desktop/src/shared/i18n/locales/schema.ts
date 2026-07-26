@@ -286,9 +286,9 @@ export interface LocaleResourceTranslationSettingsMobile {
   passwordTitle: string;
   portDescription: string;
   portTitle: string;
+  qrCode: string;
   qrDialogDescription: string;
   qrDialogTitle: string;
-  qrShow: string;
   urlDisabled: string;
   urlNeedsPassword: string;
   urlOpen: string;

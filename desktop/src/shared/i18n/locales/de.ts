@@ -265,10 +265,10 @@ export const de = {
         portDescription:
           "TCP-Port, auf dem gelauscht wird. 0 wählt automatisch einen Port.",
         portTitle: "Listen-Port",
+        qrCode: "QR-Code",
         qrDialogDescription:
           "Mit der Handykamera scannen. Das Telefon muss im selben Netzwerk sein, und das Kopplungspasswort wird abgefragt.",
         qrDialogTitle: "Auf dem Telefon öffnen",
-        qrShow: "QR-Code anzeigen",
         urlDisabled:
           "Aktivieren Sie die mobile Ansicht, um einen Link zu erhalten, den Sie auf Ihrem Telefon öffnen können.",
         urlNeedsPassword:

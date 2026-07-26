@@ -265,10 +265,10 @@ export const ja = {
         portDescription:
           "待ち受ける TCP ポート。0 を指定すると自動的に選択されます。",
         portTitle: "リッスンポート",
+        qrCode: "QR コード",
         qrDialogDescription:
           "スマートフォンのカメラで読み取ってください。同じネットワークに接続している必要があり、ペアリングパスワードの入力を求められます。",
         qrDialogTitle: "スマートフォンで開く",
-        qrShow: "QR コードを表示",
         urlDisabled:
           "モバイル表示を有効にすると、スマートフォンで開けるリンクが表示されます。",
         urlNeedsPassword:

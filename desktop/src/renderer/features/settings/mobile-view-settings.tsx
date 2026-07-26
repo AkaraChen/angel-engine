@@ -180,14 +180,14 @@ export function MobileViewSettings() {
           shareUrl !== null ? (
             <div className="flex items-center gap-1.5">
               <Button
-                aria-label={t("settings.mobile.qrShow")}
+                className="gap-1.5"
                 onClick={() => setQrDialogOpen(true)}
-                size="icon-sm"
-                title={t("settings.mobile.qrShow")}
+                size="sm"
                 type="button"
                 variant="outline"
               >
                 <QrCode />
+                {t("settings.mobile.qrCode")}
               </Button>
               <Button
                 className="gap-1.5"

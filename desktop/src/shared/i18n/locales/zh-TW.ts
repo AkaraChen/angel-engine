@@ -260,10 +260,10 @@ export const zhTW = {
         passwordTitle: "配對密碼",
         portDescription: "守護程序監聽的 TCP 連接埠。輸入 0 可自動選擇。",
         portTitle: "監聽連接埠",
+        qrCode: "QR Code",
         qrDialogDescription:
           "用手機相機掃描。手機需連接同一網路，並需要輸入配對密碼。",
         qrDialogTitle: "在手機上開啟",
-        qrShow: "顯示 QR Code",
         urlDisabled: "開啟行動版存取後即可取得可在手機上開啟的連結。",
         urlNeedsPassword: "設定配對密碼後即可啟用行動版存取。",
         urlOpen: "在瀏覽器中開啟",

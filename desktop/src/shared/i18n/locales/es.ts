@@ -265,10 +265,10 @@ export const es = {
         portDescription:
           "Puerto TCP de escucha. Usa 0 para elegirlo automáticamente.",
         portTitle: "Puerto de escucha",
+        qrCode: "Código QR",
         qrDialogDescription:
           "Escanéalo con la cámara de tu teléfono. Debe estar en la misma red y se te pedirá la contraseña de emparejamiento.",
         qrDialogTitle: "Abrir en el teléfono",
-        qrShow: "Mostrar código QR",
         urlDisabled:
           "Activa la vista móvil para obtener un enlace que puedas abrir en tu teléfono.",
         urlNeedsPassword:
