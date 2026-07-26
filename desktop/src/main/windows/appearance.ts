@@ -3,6 +3,7 @@ import type { BrowserWindowConstructorOptions } from "electron";
 import type {
   DesktopConfirmDeleteArchivedChatsInput,
   DesktopConfirmDeleteCustomAgentInput,
+  DesktopConfirmDeleteManagedWorktreesInput,
   DesktopConfirmSaveWorkspaceFileChangesInput,
   DesktopConfirmSaveWorkspaceFileChangesResult,
   DesktopThemeMode,
@@ -13,6 +14,7 @@ import {
   DESKTOP_CONFIRM_DELETE_ALL_CHATS_CHANNEL,
   DESKTOP_CONFIRM_DELETE_ARCHIVED_CHATS_CHANNEL,
   DESKTOP_CONFIRM_DELETE_CUSTOM_AGENT_CHANNEL,
+  DESKTOP_CONFIRM_DELETE_MANAGED_WORKTREES_CHANNEL,
   DESKTOP_CONFIRM_SAVE_WORKSPACE_FILE_CHANGES_CHANNEL,
   DESKTOP_INSTALL_UPDATE_CHANNEL,
   DESKTOP_THEME_SET_CHANNEL,
@@ -155,6 +157,38 @@ export function registerDesktopWindowAppearanceIpc() {
   );
 
   ipcMain.handle(
+    DESKTOP_CONFIRM_DELETE_MANAGED_WORKTREES_CHANNEL,
+    async (event, input: unknown) => {
+      const value = readConfirmDeleteManagedWorktreesInput(input);
+      if (!value) return false;
+
+      const options = {
+        buttons: [translate("common.cancel"), translate("common.delete")],
+        cancelId: 0,
+        defaultId: 0,
+        detail: translate(
+          "settings.archived.removableWorktrees.confirmDeleteDetail",
+          {
+            chatCount: value.chatCount,
+            managedWorktreeCount: value.managedWorktreeCount,
+          },
+        ),
+        message: translate(
+          "settings.archived.removableWorktrees.confirmDeleteTitle",
+        ),
+        noLink: true,
+        type: "warning" as const,
+      };
+      const parentWindow = BrowserWindow.fromWebContents(event.sender);
+      const result = parentWindow
+        ? await dialog.showMessageBox(parentWindow, options)
+        : await dialog.showMessageBox(options);
+
+      return result.response === 1;
+    },
+  );
+
+  ipcMain.handle(
     DESKTOP_CONFIRM_SAVE_WORKSPACE_FILE_CHANGES_CHANNEL,
     async (event, input: unknown) => {
       const value = readConfirmSaveWorkspaceFileChangesInput(input);
@@ -241,6 +275,31 @@ function readConfirmDeleteCustomAgentInput(
     chatCount: Math.max(0, Math.trunc(value.chatCount)),
     label: value.label,
   };
+}
+
+function readConfirmDeleteManagedWorktreesInput(
+  input: unknown,
+): DesktopConfirmDeleteManagedWorktreesInput | null {
+  if (typeof input !== "object" || input === null) return null;
+  const value = input as Partial<DesktopConfirmDeleteManagedWorktreesInput>;
+  if (
+    typeof value.chatCount !== "number" ||
+    !Number.isFinite(value.chatCount) ||
+    value.chatCount < 0
+  ) {
+    return null;
+  }
+  if (
+    typeof value.managedWorktreeCount !== "number" ||
+    !Number.isFinite(value.managedWorktreeCount) ||
+    value.managedWorktreeCount < 0
+  ) {
+    return null;
+  }
+  const chatCount = Math.trunc(value.chatCount);
+  const managedWorktreeCount = Math.trunc(value.managedWorktreeCount);
+  if (chatCount + managedWorktreeCount === 0) return null;
+  return { chatCount, managedWorktreeCount };
 }
 
 function readConfirmSaveWorkspaceFileChangesInput(

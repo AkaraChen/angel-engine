@@ -2,6 +2,7 @@ import type { IpcRendererEvent } from "electron";
 import type {
   DesktopConfirmDeleteArchivedChatsInput,
   DesktopConfirmDeleteCustomAgentInput,
+  DesktopConfirmDeleteManagedWorktreesInput,
   DesktopConfirmSaveWorkspaceFileChangesInput,
   DesktopConfirmSaveWorkspaceFileChangesResult,
   DesktopOpenChatFromNotificationEvent,
@@ -29,6 +30,7 @@ import {
   DESKTOP_CONFIRM_DELETE_ALL_CHATS_CHANNEL,
   DESKTOP_CONFIRM_DELETE_ARCHIVED_CHATS_CHANNEL,
   DESKTOP_CONFIRM_DELETE_CUSTOM_AGENT_CHANNEL,
+  DESKTOP_CONFIRM_DELETE_MANAGED_WORKTREES_CHANNEL,
   DESKTOP_CONFIRM_SAVE_WORKSPACE_FILE_CHANGES_CHANNEL,
   DESKTOP_INSTALL_UPDATE_CHANNEL,
   DESKTOP_OPEN_CHAT_FROM_NOTIFICATION_CHANNEL,
@@ -71,6 +73,14 @@ export function exposeDesktopWindowBridge() {
     ) {
       return ipcRenderer.invoke(
         DESKTOP_CONFIRM_DELETE_CUSTOM_AGENT_CHANNEL,
+        input,
+      ) as Promise<boolean>;
+    },
+    async confirmDeleteManagedWorktrees(
+      input: DesktopConfirmDeleteManagedWorktreesInput,
+    ) {
+      return ipcRenderer.invoke(
+        DESKTOP_CONFIRM_DELETE_MANAGED_WORKTREES_CHANNEL,
         input,
       ) as Promise<boolean>;
     },

@@ -38,6 +38,8 @@ import {
   ArchivedChatRow,
   ArchivedFilterSelect,
 } from "./archived-settings-list";
+import { invalidateManagedWorktreeQueries } from "./api/managed-worktrees";
+import { RemovableWorktreesSection } from "./removable-worktrees-section";
 
 const EMPTY_CHATS: Chat[] = [];
 const EMPTY_PROJECTS: Project[] = [];
@@ -93,6 +95,9 @@ export function ArchivedSettingsPanel() {
         void queryClient.invalidateQueries({
           queryKey: queryKeys.chats.archived(),
         });
+        void queryClient.invalidateQueries({
+          queryKey: queryKeys.worktrees.all(),
+        });
       }),
     [queryClient],
   );
@@ -105,6 +110,7 @@ export function ArchivedSettingsPanel() {
         await restoreArchivedChatsMutation.mutateAsync({
           chatIds: chats.map((chat) => chat.id),
         });
+        await invalidateManagedWorktreeQueries(queryClient);
         broadcastChatsChanged();
         setSelectedIds(new Set());
         toast({
@@ -120,7 +126,7 @@ export function ArchivedSettingsPanel() {
         });
       }
     },
-    [restoreArchivedChatsMutation, t, toast],
+    [queryClient, restoreArchivedChatsMutation, t, toast],
   );
 
   const deleteChats = useCallback(
@@ -141,6 +147,7 @@ export function ArchivedSettingsPanel() {
         const result = await deleteArchivedChatsMutation.mutateAsync({
           chatIds,
         });
+        await invalidateManagedWorktreeQueries(queryClient);
         broadcastChatsChanged();
         setSelectedIds(new Set());
         toast({
@@ -156,7 +163,7 @@ export function ArchivedSettingsPanel() {
         });
       }
     },
-    [api, deleteArchivedChatsMutation, t, toast],
+    [api, deleteArchivedChatsMutation, queryClient, t, toast],
   );
 
   const toggleBulkMode = useCallback(() => {
@@ -186,6 +193,14 @@ export function ArchivedSettingsPanel() {
 
   return (
     <div className="space-y-4">
+      <RemovableWorktreesSection projectsById={projectsById} />
+
+      <div className="border-t pt-4">
+        <h2 className="text-sm font-medium">
+          {t("settings.archived.sessionsTitle")}
+        </h2>
+      </div>
+
       <div className="flex flex-wrap items-end gap-3">
         <ArchivedFilterSelect
           label={t("settings.archived.filterTime")}

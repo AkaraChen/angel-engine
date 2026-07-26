@@ -30,6 +30,10 @@ export const queryKeys = {
     all: () => ["url-previews"] as const,
     detail: (url: string) => ["url-previews", "detail", url] as const,
   },
+  worktrees: {
+    all: () => ["worktrees"] as const,
+    managedEligible: () => ["worktrees", "managed", "eligible"] as const,
+  },
   workspaceTools: {
     fileTree: (root: string | null) =>
       ["workspace-tools", "file-tree", root] as const,

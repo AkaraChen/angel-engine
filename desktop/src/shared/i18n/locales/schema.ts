@@ -136,6 +136,20 @@ export interface LocaleResourceTranslationSettingsAgents {
   title: string;
 }
 
+export interface LocaleResourceTranslationSettingsArchivedRemovableWorktrees {
+  confirmDeleteDetail: string;
+  confirmDeleteTitle: string;
+  deleteFailed: string;
+  deletedToast: string;
+  description: string;
+  empty: string;
+  missingOnDisk: string;
+  partialFailure: string;
+  scanAgain: string;
+  sessionCount: string;
+  title: string;
+}
+
 export interface LocaleResourceTranslationSettingsArchived {
   allProjects: string;
   bulkSelect: string;
@@ -151,11 +165,13 @@ export interface LocaleResourceTranslationSettingsArchived {
   filterProject: string;
   filterTime: string;
   noProject: string;
+  removableWorktrees: LocaleResourceTranslationSettingsArchivedRemovableWorktrees;
   restore: string;
   restoredToast: string;
   restoreSelected: string;
   selectAll: string;
   selectedCount: string;
+  sessionsTitle: string;
   timeAll: string;
   timeLast7Days: string;
   timeLast30Days: string;
