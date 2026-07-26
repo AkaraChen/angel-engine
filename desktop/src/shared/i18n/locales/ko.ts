@@ -449,6 +449,13 @@ export const ko = {
     projects: {
       chooseFolder: "프로젝트 폴더 선택",
       openInFinder: "Finder에서 열기",
+      settings: "설정",
+      settingsLoadFailed: "프로젝트 설정을 불러오지 못했습니다",
+      settingsSaveFailed: "프로젝트 설정을 저장하지 못했습니다",
+      settingsSaved: "프로젝트 설정을 저장했습니다",
+      settingsTitle: "{{project}} 설정",
+      setupScript: "워크트리 설정 스크립트",
+      setupScriptPlaceholder: "bun install",
     },
     pathLauncher: {
       copyPath: "경로 복사",

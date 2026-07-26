@@ -7,10 +7,14 @@ import { daemonClient } from "../../daemon/client";
 import { createPathLauncherMenuItems } from "../path-launcher/context-menu";
 import { resolvePathLauncherTarget } from "../path-launcher/target";
 
-export type ProjectContextMenuResult = PathLauncherMenuResult | "deleted";
+export type ProjectContextMenuResult =
+  | PathLauncherMenuResult
+  | "deleted"
+  | "settings";
 
 interface ProjectContextMenuLabels {
   delete: string;
+  settings: string;
 }
 
 export async function showProjectContextMenu(
@@ -31,6 +35,14 @@ export async function showProjectContextMenu(
         const menu = Menu.buildFromTemplate([
           ...launcherItems,
           ...(launcherItems.length > 0 ? [{ type: "separator" as const }] : []),
+          {
+            click: () => {
+              handled = true;
+              resolve("settings");
+            },
+            label: labels.settings,
+          },
+          { type: "separator" as const },
           {
             click: () => {
               handled = true;

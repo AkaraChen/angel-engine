@@ -437,6 +437,13 @@ export const zhTW = {
     projects: {
       chooseFolder: "選擇專案資料夾",
       openInFinder: "在 Finder 中開啟",
+      settings: "設定",
+      settingsLoadFailed: "無法載入專案設定",
+      settingsSaveFailed: "無法儲存專案設定",
+      settingsSaved: "已儲存專案設定",
+      settingsTitle: "{{project}} 設定",
+      setupScript: "Worktree 初始化指令",
+      setupScriptPlaceholder: "bun install",
     },
     pathLauncher: {
       copyPath: "複製路徑",

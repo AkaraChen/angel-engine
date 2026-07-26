@@ -3,7 +3,7 @@ import { createHash } from "node:crypto";
 import fs from "node:fs/promises";
 import path from "node:path";
 
-const PROJECT_CONFIG_FILE = "2code.json";
+export const PROJECT_CONFIG_FILE = "2code.json";
 const SETUP_ERROR_TAIL_LENGTH = 4096;
 const SETUP_SCRIPT_TIMEOUT_MS = 5 * 60 * 1000;
 const SETUP_TERMINATION_GRACE_MS = 1000;
@@ -19,14 +19,55 @@ export interface ProjectSetupExecutionOptions {
   timeoutMs?: number;
 }
 
+export function projectConfigPath(projectRoot: string) {
+  return path.join(projectRoot, PROJECT_CONFIG_FILE);
+}
+
 export async function loadProjectSetupConfig(
   projectRoot: string,
 ): Promise<ProjectSetupConfig | undefined> {
-  const configPath = path.join(projectRoot, PROJECT_CONFIG_FILE);
+  const file = await readProjectConfigFile(projectRoot);
+  if (file === undefined) return undefined;
+
+  return {
+    digest: createHash("sha256").update(file.content).digest("hex"),
+    scripts: readSetupScript(file.config),
+  };
+}
+
+/**
+ * Replaces `setup_script` and leaves every other key in the file untouched, so
+ * hand-written config the app does not model survives an edit from the UI.
+ * Blank commands are dropped rather than persisted as no-op steps.
+ */
+export async function saveProjectSetupScript(
+  projectRoot: string,
+  setupScript: string[],
+): Promise<string[]> {
+  // Read first: a file we cannot parse must fail loudly instead of being
+  // silently replaced with a fresh one.
+  const file = await readProjectConfigFile(projectRoot);
+  if (file !== undefined) readSetupScript(file.config);
+
+  const scripts = setupScript
+    .map((command) => command.trim())
+    .filter((command) => command.length > 0);
+  const config = { ...(file?.config ?? {}), setup_script: scripts };
+
+  await fs.writeFile(
+    projectConfigPath(projectRoot),
+    `${JSON.stringify(config, null, 2)}\n`,
+    "utf8",
+  );
+
+  return scripts;
+}
+
+async function readProjectConfigFile(projectRoot: string) {
   let content: string;
 
   try {
-    content = await fs.readFile(configPath, "utf8");
+    content = await fs.readFile(projectConfigPath(projectRoot), "utf8");
   } catch (cause) {
     if (errorCode(cause) === "ENOENT") return undefined;
     throw new Error(
@@ -49,21 +90,21 @@ export async function loadProjectSetupConfig(
     throw new Error(`${PROJECT_CONFIG_FILE} must contain a JSON object.`);
   }
 
+  return { config, content };
+}
+
+function readSetupScript(config: Record<string, unknown>): string[] {
   const scripts = config.setup_script;
+  if (scripts === undefined) return [];
   if (
-    scripts !== undefined &&
-    (!Array.isArray(scripts) ||
-      !scripts.every((script) => typeof script === "string"))
+    !Array.isArray(scripts) ||
+    !scripts.every((script) => typeof script === "string")
   ) {
     throw new Error(
       `${PROJECT_CONFIG_FILE} setup_script must be an array of strings.`,
     );
   }
-
-  return {
-    digest: createHash("sha256").update(content).digest("hex"),
-    scripts: scripts ?? [],
-  };
+  return scripts;
 }
 
 export async function executeProjectSetupScripts(

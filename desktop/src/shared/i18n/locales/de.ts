@@ -453,6 +453,14 @@ export const de = {
     projects: {
       chooseFolder: "Projektordner auswählen",
       openInFinder: "Im Finder öffnen",
+      settings: "Einstellungen",
+      settingsLoadFailed: "Projekteinstellungen konnten nicht geladen werden",
+      settingsSaveFailed:
+        "Projekteinstellungen konnten nicht gespeichert werden",
+      settingsSaved: "Projekteinstellungen gespeichert",
+      settingsTitle: "Einstellungen für {{project}}",
+      setupScript: "Worktree-Setup-Skript",
+      setupScriptPlaceholder: "bun install",
     },
     pathLauncher: {
       copyPath: "Pfad kopieren",

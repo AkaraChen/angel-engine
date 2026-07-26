@@ -451,6 +451,13 @@ export const ja = {
     projects: {
       chooseFolder: "プロジェクトフォルダーを選択",
       openInFinder: "Finder で開く",
+      settings: "設定",
+      settingsLoadFailed: "プロジェクト設定を読み込めませんでした",
+      settingsSaveFailed: "プロジェクト設定を保存できませんでした",
+      settingsSaved: "プロジェクト設定を保存しました",
+      settingsTitle: "{{project}} の設定",
+      setupScript: "ワークツリーのセットアップスクリプト",
+      setupScriptPlaceholder: "bun install",
     },
     pathLauncher: {
       copyPath: "パスをコピー",

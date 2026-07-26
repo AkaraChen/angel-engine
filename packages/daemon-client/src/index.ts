@@ -62,8 +62,11 @@ import type {
   ManagedWorktreeScanInput,
   ManagedWorktreeSummary,
   Project,
+  ProjectConfigInput,
+  ProjectConfigResult,
   ProjectGitStatusInput,
   ProjectGitStatusResult,
+  UpdateProjectConfigInput,
   UpdateProjectInput,
 } from "@angel-engine/daemon-api/projects";
 import type {
@@ -400,6 +403,10 @@ export function createDaemonClient(options: DaemonClientOptions) {
         ),
     },
     projects: {
+      config: (input: ProjectConfigInput) =>
+        request<ProjectConfigResult>(
+          `/api/projects/${encodeURIComponent(input.projectId)}/config`,
+        ),
       create: (input: CreateProjectInput) =>
         request<Project>("/api/projects", json("POST", input)),
       delete: (id: string) =>
@@ -421,6 +428,11 @@ export function createDaemonClient(options: DaemonClientOptions) {
         request<Project>(
           `/api/projects/${encodeURIComponent(input.id)}`,
           json("PATCH", { path: input.path }),
+        ),
+      updateConfig: (input: UpdateProjectConfigInput) =>
+        request<ProjectConfigResult>(
+          `/api/projects/${encodeURIComponent(input.projectId)}/config`,
+          json("PUT", { setupScript: input.setupScript }),
         ),
     },
     worktrees: {
