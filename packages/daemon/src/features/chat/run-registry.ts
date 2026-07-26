@@ -55,6 +55,7 @@ interface ActiveRun {
   abortController: AbortController;
   input: ChatRunStartInput;
   observers: Set<ObserverRecord>;
+  providerCompleted: boolean;
   started: boolean;
   resolveElicitation?: (
     elicitationId: string,
@@ -74,6 +75,7 @@ export class ChatRunRegistry {
   readonly #activeById = new Map<string, ActiveRun>();
   readonly #execute: ChatRunRegistryOptions["execute"];
   readonly #onEvent?: ChatRunRegistryOptions["onEvent"];
+  readonly #usedRunIds = new Set<string>();
 
   constructor(options: ChatRunRegistryOptions) {
     this.#execute = options.execute;
@@ -93,6 +95,9 @@ export class ChatRunRegistry {
     if (this.#activeById.has(runId)) {
       throw DaemonError.chatRunConflict("Run id is already active.");
     }
+    if (this.#usedRunIds.has(runId)) {
+      throw DaemonError.chatRunConflict("Run id has already been used.");
+    }
     if (this.#activeByChat.has(input.chatId)) {
       throw DaemonError.chatRunConflict();
     }
@@ -111,6 +116,7 @@ export class ChatRunRegistry {
       abortController: new AbortController(),
       input: normalizedInput,
       observers: new Set(),
+      providerCompleted: false,
       started: false,
       snapshot: {
         assistantMessage: {
@@ -134,6 +140,7 @@ export class ChatRunRegistry {
         },
       },
     };
+    this.#usedRunIds.add(runId);
     this.#activeById.set(runId, run);
     this.#activeByChat.set(input.chatId, run);
     return cloneSnapshot(run.snapshot);
@@ -176,6 +183,10 @@ export class ChatRunRegistry {
       this.#remove(run);
       return;
     }
+    if (run.providerCompleted) {
+      this.#finish(run);
+      return;
+    }
     run.abortController.abort();
   }
 
@@ -206,15 +217,21 @@ export class ChatRunRegistry {
       await handler(elicitationId, response);
     } catch (error) {
       if (this.#activeById.get(runId) === run) {
-        run.snapshot = {
-          ...run.snapshot,
-          pendingElicitation,
-          status: "needsInput",
-          updatedAt: nextTimestamp(run.snapshot.updatedAt),
-        };
+        if (run.providerCompleted) {
+          this.#emit(run, { message: errorMessage(error), type: "error" });
+          this.#finish(run);
+        } else {
+          run.snapshot = {
+            ...run.snapshot,
+            pendingElicitation,
+            status: "needsInput",
+            updatedAt: nextTimestamp(run.snapshot.updatedAt),
+          };
+        }
       }
       throw error;
     }
+    if (run.providerCompleted) this.#finish(run);
   }
 
   async #run(run: ActiveRun): Promise<void> {
@@ -229,13 +246,29 @@ export class ChatRunRegistry {
           },
         },
       );
-      this.#emit(run, { result, type: "result" });
+      run.providerCompleted = true;
+      if (
+        run.snapshot.status === "needsInput" &&
+        run.resolveElicitation === undefined
+      ) {
+        this.#emit(run, {
+          message: "Runtime completed before pending input could be resolved.",
+          type: "error",
+        });
+      } else {
+        this.#emit(run, { result, type: "result" });
+        if (run.snapshot.status === "needsInput") return;
+      }
     } catch (error) {
       this.#emit(run, { message: errorMessage(error), type: "error" });
-    } finally {
-      this.#emit(run, { type: "done" });
-      this.#remove(run);
     }
+    this.#finish(run);
+  }
+
+  #finish(run: ActiveRun): void {
+    if (this.#activeById.get(run.snapshot.runId) !== run) return;
+    this.#emit(run, { type: "done" });
+    this.#remove(run);
   }
 
   #emit(run: ActiveRun, event: ChatStreamEvent): void {

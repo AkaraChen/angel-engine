@@ -116,6 +116,78 @@ describe("daemon chat runs", () => {
     ).resolves.toEqual({ items: [] });
   });
 
+  it("keeps late-success input resolvable through the run API", async () => {
+    const resolveElicitation = vi.fn().mockResolvedValue(undefined);
+    const app = new Hono();
+    registerApi(
+      app,
+      fakeDaemonRuntime({
+        streamChat: (_input, onEvent, _signal, controls) =>
+          Effect.sync(() => {
+            controls?.setResolveElicitation?.(resolveElicitation);
+            onEvent?.({
+              elicitation: {
+                body: "Continue?",
+                id: "elic-1",
+                kind: "approval",
+                phase: "open",
+                title: "Permission",
+              },
+              type: "elicitation",
+            });
+            return result;
+          }),
+      }),
+      { publish: vi.fn() },
+    );
+
+    const response = await app.request("/api/chat-runs/run-late-success", {
+      body: JSON.stringify({ chatId: chat.id, text: "hello" }),
+      headers: { "content-type": "application/json" },
+      method: "POST",
+    });
+    const body = response.text();
+    await vi.waitFor(async () => {
+      await expect(
+        (await app.request("/api/chat-activity")).json(),
+      ).resolves.toMatchObject({
+        items: [
+          {
+            attentionId: "run-late-success:input:elic-1",
+            status: "waiting_for_you",
+          },
+        ],
+      });
+    });
+
+    const resolved = await app.request(
+      "/api/chat-runs/run-late-success/elicitation",
+      {
+        body: JSON.stringify({
+          elicitationId: "elic-1",
+          response: { type: "allow" },
+        }),
+        headers: { "content-type": "application/json" },
+        method: "POST",
+      },
+    );
+
+    expect(resolved.status).toBe(200);
+    await expect(resolved.json()).resolves.toEqual({ resolved: true });
+    expect(resolveElicitation).toHaveBeenCalledWith("elic-1", {
+      type: "allow",
+    });
+    expect(await body).toContain('"type":"done"');
+    await expect(
+      (await app.request("/api/chat-activity")).json(),
+    ).resolves.toMatchObject({
+      items: [{ runId: "run-late-success", status: "done" }],
+    });
+    await expect(
+      (await app.request(`/api/chats/${chat.id}/active-run`)).json(),
+    ).resolves.toEqual({ run: null });
+  });
+
   it("keeps a run active until explicit stop aborts its provider", async () => {
     let providerSignal: AbortSignal | undefined;
     const app = new Hono();

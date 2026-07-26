@@ -132,9 +132,7 @@ describe("ChatActivityStore", () => {
       type: "error",
     });
     expect(store.list().items[0]?.status).toBe("failed");
-    expect(store.attentionList()).toMatchObject({
-      attentions: [{ id: "run-1:failed", status: "completed" }],
-    });
+    expect(store.attentionList()).toEqual({ attentions: [] });
   });
 
   it("projects tool decisions and multiple chats without message payloads", () => {

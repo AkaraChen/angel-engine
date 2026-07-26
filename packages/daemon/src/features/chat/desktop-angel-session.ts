@@ -21,6 +21,7 @@ import {
   ElicitationResponseType,
   AngelSession as NativeAngelSession,
   TurnRunEventType,
+  isProcessRunning,
 } from "@angel-engine/client-napi";
 import { AgentSessionError } from "@angel-engine/agent-session";
 import {
@@ -48,13 +49,19 @@ interface PendingElicitation {
   resolve: (events?: TurnRunEvent[]) => void;
 }
 
+const PROCESS_LIVENESS_INTERVAL_MS = 1_000;
+
 export class DesktopAngelSession implements SessionProcess {
   private readonly pendingElicitations = new Map<string, PendingElicitation>();
+  private readonly processIdListeners = new Set<SessionProcessIdListener>();
   private readonly session: NativeAngelSessionInstance;
+  private currentProcessId: number | undefined;
   private operationQueue = Promise.resolve();
+  private processLivenessTimer?: ReturnType<typeof setInterval>;
 
   constructor(options: RuntimeOptions) {
     this.session = new NativeAngelSession(options);
+    this.currentProcessId = this.session.processId();
   }
 
   close(): void {
@@ -63,18 +70,26 @@ export class DesktopAngelSession implements SessionProcess {
     }
     this.pendingElicitations.clear();
     this.session.close();
+    this.setProcessId(undefined);
   }
 
   hasConversation(): boolean {
     return this.session.hasConversation();
   }
 
-  processId(): number {
-    return this.session.processId();
+  processId(): number | undefined {
+    return this.currentProcessId;
   }
 
-  subscribeProcessId(_listener: SessionProcessIdListener): () => void {
-    return (): void => undefined;
+  subscribeProcessId(listener: SessionProcessIdListener): () => void {
+    this.processIdListeners.add(listener);
+    this.startProcessLivenessMonitor();
+    return (): void => {
+      this.processIdListeners.delete(listener);
+      if (this.processIdListeners.size === 0) {
+        this.stopProcessLivenessMonitor();
+      }
+    };
   }
 
   hydrate(
@@ -301,6 +316,35 @@ export class DesktopAngelSession implements SessionProcess {
     }
     this.pendingElicitations.clear();
     return this.session.cancelTurn();
+  }
+
+  private startProcessLivenessMonitor(): void {
+    if (
+      this.currentProcessId === undefined ||
+      this.processLivenessTimer !== undefined
+    ) {
+      return;
+    }
+    this.processLivenessTimer = setInterval(() => {
+      const processId = this.currentProcessId;
+      if (processId !== undefined && !isProcessRunning(processId)) {
+        this.setProcessId(undefined);
+      }
+    }, PROCESS_LIVENESS_INTERVAL_MS);
+    this.processLivenessTimer.unref();
+  }
+
+  private stopProcessLivenessMonitor(): void {
+    if (this.processLivenessTimer === undefined) return;
+    clearInterval(this.processLivenessTimer);
+    this.processLivenessTimer = undefined;
+  }
+
+  private setProcessId(processId: number | undefined): void {
+    if (this.currentProcessId === processId) return;
+    this.currentProcessId = processId;
+    if (processId === undefined) this.stopProcessLivenessMonitor();
+    for (const listener of this.processIdListeners) listener(processId);
   }
 }
 

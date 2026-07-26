@@ -166,6 +166,19 @@ describe("ChatRunRegistry", () => {
     run.resolve(result);
   });
 
+  it("rejects reuse after a run id leaves the active registry", async () => {
+    const run = deferredRun();
+    const registry = new ChatRunRegistry({ execute: run.execute });
+    registry.start("run-1", input);
+
+    run.resolve(result);
+    await vi.waitFor(() => expect(registry.active(chat.id).run).toBeNull());
+
+    expect(() =>
+      registry.start("run-1", { chatId: "chat-2", text: "again" }),
+    ).toThrow("Run id has already been used");
+  });
+
   it("treats a tool action awaiting a decision as pending input", async () => {
     // Permission prompts never reach the client as `elicitation` events, so
     // without this the run would report `running` while it is actually stuck.
@@ -250,6 +263,89 @@ describe("ChatRunRegistry", () => {
 
     run.resolve(result);
     await vi.waitFor(() => expect(registry.active(chat.id).run).toBeNull());
+  });
+
+  it("keeps a late-success input resolvable before removing the run", async () => {
+    const run = deferredRun();
+    const resolveElicitation = vi.fn().mockResolvedValue(undefined);
+    const publish = vi.fn();
+    const registry = new ChatRunRegistry({
+      execute: run.execute,
+      onEvent: publish,
+    });
+    registry.start("run-1", input);
+    run.controls().setResolveElicitation?.(resolveElicitation);
+    run.emit({
+      elicitation: {
+        body: "Continue?",
+        id: "elic-1",
+        kind: "approval",
+        phase: "open",
+        title: "Permission",
+      },
+      type: "elicitation",
+    });
+
+    run.resolve(result);
+    await vi.waitFor(() =>
+      expect(publish.mock.calls.map(([event]) => event.event.type)).toContain(
+        "result",
+      ),
+    );
+    expect(registry.active(chat.id).run).toMatchObject({
+      pendingElicitation: { id: "elic-1" },
+      status: "needsInput",
+    });
+
+    await registry.resolveElicitation("run-1", "elic-1", { type: "allow" });
+    expect(resolveElicitation).toHaveBeenCalledWith("elic-1", {
+      type: "allow",
+    });
+    expect(publish.mock.calls.map(([event]) => event.event.type)).toEqual([
+      "elicitation",
+      "result",
+      "done",
+    ]);
+    expect(registry.active(chat.id).run).toBeNull();
+  });
+
+  it("fails a late-success run when its retained input is no longer resolvable", async () => {
+    const run = deferredRun();
+    const resolveElicitation = vi
+      .fn()
+      .mockRejectedValue(new Error("Runtime already closed"));
+    const publish = vi.fn();
+    const registry = new ChatRunRegistry({
+      execute: run.execute,
+      onEvent: publish,
+    });
+    registry.start("run-1", input);
+    run.controls().setResolveElicitation?.(resolveElicitation);
+    run.emit({
+      elicitation: {
+        id: "elic-1",
+        kind: "approval",
+        phase: "open",
+      },
+      type: "elicitation",
+    });
+    run.resolve(result);
+    await vi.waitFor(() =>
+      expect(publish.mock.calls.map(([event]) => event.event.type)).toContain(
+        "result",
+      ),
+    );
+
+    await expect(
+      registry.resolveElicitation("run-1", "elic-1", { type: "allow" }),
+    ).rejects.toThrow("Runtime already closed");
+    expect(publish.mock.calls.map(([event]) => event.event.type)).toEqual([
+      "elicitation",
+      "result",
+      "error",
+      "done",
+    ]);
+    expect(registry.active(chat.id).run).toBeNull();
   });
 
   it("publishes result and done before removing terminal state", async () => {
