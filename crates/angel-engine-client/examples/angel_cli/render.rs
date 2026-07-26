@@ -50,11 +50,7 @@ impl MultiRuntimeCli {
 
     pub(super) fn print_banner(&self) -> Result<(), Box<dyn Error>> {
         println!("{}", self.runtime.banner());
-        if self.runtime.supports_shell() {
-            println!("Type a message, /shell <command>, /model, /mode, /effort, or :quit.");
-        } else {
-            println!("Type a message, /model, /mode, /effort, or :quit.");
-        }
+        println!("Type a message, /model, /mode, /effort, or :quit.");
         self.print_available_commands()?;
         Ok(())
     }

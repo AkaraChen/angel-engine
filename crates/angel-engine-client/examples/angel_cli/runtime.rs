@@ -123,10 +123,6 @@ impl RuntimeKind {
         }
     }
 
-    pub(super) fn supports_shell(self) -> bool {
-        matches!(self, Self::Codex)
-    }
-
     pub(super) fn is_codex(self) -> bool {
         matches!(self, Self::Codex)
     }

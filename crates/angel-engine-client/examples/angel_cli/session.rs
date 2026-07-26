@@ -48,16 +48,6 @@ impl MultiRuntimeCli {
             if self.handle_setting_command(line)? {
                 continue;
             }
-            if let Some(command) = line.strip_prefix("/shell ") {
-                if self.runtime.supports_shell() {
-                    self.send_thread_event(ThreadEvent::shell(command.to_string()))?;
-                    self.pump_until_no_activity(Duration::from_millis(250))?;
-                    println!();
-                } else {
-                    println!("[warn] direct shell command is only available for codex");
-                }
-                continue;
-            }
 
             self.run_turn(ThreadEvent::text(line.to_string()))?;
         }

@@ -67,7 +67,6 @@ Confirm these CLI controls from the source:
 - `/model [value]`
 - `/mode [value]`
 - `/effort [value]` or `/reasoning [value]`
-- `/shell <command>` for `codex` only
 - `:quit`
 
 Then open a terminal and start the one selected agent:
@@ -116,7 +115,6 @@ Verify:
 - Available commands print without crashing.
 - Current model/mode/reasoning state is visible, or the CLI clearly reports that
   a setting is unavailable.
-- Non-Codex agents reject `/shell` with the expected warning and no new turn.
 
 ### 2. Settings
 
@@ -206,20 +204,7 @@ Verify:
 - After exiting, a normal follow-up turn does not create a new plan and does not
   keep the old plan as the active turn plan.
 
-### 8. Direct Shell
-
-For `codex`, run one safe `/shell` command by typing it into the CLI.
-
-Verify:
-
-- The shell command is sent through the Codex shell surface.
-- Output appears in the terminal.
-- The conversation returns to idle.
-
-For every non-Codex agent, try `/shell` once and verify the CLI warning appears
-without starting a runtime turn.
-
-### 9. Runtime Slash Commands
+### 8. Runtime Slash Commands
 
 Use `/commands` to choose one safe advertised runtime command and run it. Also
 try one unknown slash-like input.
@@ -243,6 +228,7 @@ by manual CLI QA unless the CLI is extended before the run:
 - `unsubscribe`.
 - `archive` and `unarchive`.
 - `rollback_history`.
+- Direct shell command execution.
 - Direct `compact_history`, except when an advertised runtime command such as
   `/compact` reaches the same provider operation.
 - `discover_threads`.
