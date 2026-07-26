@@ -250,12 +250,20 @@ function FleetRowButton({
         </span>
       ) : null}
       <span
-        className={cn("shrink-0 text-xs font-medium", STATUS_TONE[row.status])}
+        className={cn(
+          "shrink-0 text-xs font-medium whitespace-nowrap",
+          STATUS_TONE[row.status],
+        )}
       >
         {t(STATUS_LABEL_KEYS[row.status])}
       </span>
+      {/* Relative times vary in width across locales, so the column is sized
+          to hold the longest of them rather than wrapping onto a second line. */}
       <span
-        className="w-16 shrink-0 text-right text-xs text-muted-foreground"
+        className="
+          w-28 shrink-0 truncate text-right text-xs whitespace-nowrap
+          text-muted-foreground
+        "
         title={formatDateTime(row.updatedAt)}
       >
         {formatRelativeTime(row.updatedAt)}
