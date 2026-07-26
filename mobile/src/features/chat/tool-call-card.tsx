@@ -38,10 +38,14 @@ export function ToolCallCard({ call }: { call: ConversationToolCall }) {
 
   return (
     <Collapsible
+      // The width cap is deliberately viewport-relative as well as
+      // parent-relative: `truncate` makes the tool name's min-content width the
+      // whole string, so a percentage cap alone lets the card blow past the
+      // screen as soon as any ancestor sizes to its content. `2rem` is the
+      // transcript's horizontal padding.
       className="
-        w-full max-w-[90%] min-w-0 overflow-hidden rounded-xl border
-        border-border
-        bg-card text-sm
+        w-full max-w-[min(90%,calc(100vw_-_2rem))] min-w-0 overflow-hidden
+        rounded-xl border border-border bg-card text-sm
       "
       onOpenChange={setOpen}
       open={isOpen}

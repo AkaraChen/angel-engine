@@ -50,7 +50,7 @@ export function ElicitationPrompt({
   onRespond,
 }: ElicitationPromptProps) {
   return (
-    <div className="w-full max-w-full min-w-0 overflow-hidden rounded-xl bg-card p-3">
+    <div className="w-full max-w-[calc(100vw_-_2rem)] min-w-0 overflow-hidden rounded-xl bg-card p-3">
       <ElicitationHeader elicitation={elicitation} />
 
       {elicitation.body !== null && elicitation.body !== undefined ? (

@@ -41,7 +41,9 @@ export function ToolCallGroup({
 
   return (
     <Collapsible
-      className="w-full max-w-[90%] min-w-0"
+      // Viewport-relative cap for the same reason as `ToolCallCard`: the
+      // truncated summary line can't be allowed to widen the group.
+      className="w-full max-w-[min(90%,calc(100vw_-_2rem))] min-w-0"
       onOpenChange={setManualOpen}
       open={open}
     >
