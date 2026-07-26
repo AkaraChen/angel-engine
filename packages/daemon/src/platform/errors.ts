@@ -292,6 +292,14 @@ export class DaemonError extends Data.TaggedError(
     });
   }
 
+  static worktreeSetupApprovalRequired() {
+    return new DaemonError({
+      code: "worktree-setup-approval-required",
+      message: "Worktree setup requires approval for the current 2code.json.",
+      status: 409,
+    });
+  }
+
   static workspacePathInvalid(message: string) {
     return new DaemonError({
       code: "workspace-path-invalid",

@@ -15,7 +15,7 @@ import is from "@sindresorhus/is";
 import { Effect } from "effect";
 
 import { DaemonError } from "../../platform/errors";
-import { executeProjectSetupScripts, loadProjectSetupScripts } from "./config";
+import { executeProjectSetupScripts, loadProjectSetupConfig } from "./config";
 import { getProject } from "./repository";
 
 const execFileAsync = promisify(execFile);
@@ -31,14 +31,14 @@ export function projectGitStatus(
       return yield* Effect.fail(DaemonError.projectNotFound());
     }
 
-    const baseResult = {
+    const baseResult: ProjectGitStatusResult = {
       isDirty: false,
       isGitRepository: false,
       path: project.path,
       projectId: project.id,
     };
 
-    return yield* Effect.gen(function* () {
+    const gitStatus = yield* Effect.gen(function* () {
       const root = yield* gitOutput(project.path, [
         "rev-parse",
         "--show-toplevel",
@@ -57,11 +57,33 @@ export function projectGitStatus(
         root: root.trim(),
       };
     }).pipe(Effect.orElseSucceed(() => baseResult));
+
+    const root = gitStatus.root;
+    if (!gitStatus.isGitRepository || !is.nonEmptyString(root)) {
+      return gitStatus;
+    }
+
+    const setupConfig = yield* Effect.tryPromise({
+      catch: (cause) => DaemonError.worktreeCreateFailed(cause),
+      try: () => loadProjectSetupConfig(root),
+    });
+
+    return {
+      ...gitStatus,
+      worktreeSetup:
+        setupConfig && setupConfig.scripts.length > 0
+          ? {
+              commands: setupConfig.scripts,
+              digest: setupConfig.digest,
+            }
+          : undefined,
+    };
   });
 }
 
 export function createProjectWorktree(
   input: ProjectWorktreeCreateInput,
+  signal?: AbortSignal,
 ): Effect.Effect<ProjectWorktreeCreateResult, DaemonError, Db> {
   return Effect.gen(function* () {
     const status = yield* projectGitStatus(input);
@@ -69,10 +91,10 @@ export function createProjectWorktree(
       return yield* Effect.fail(DaemonError.projectNotGitRepository());
     }
     const root = status.root;
-    const setupScripts = yield* Effect.tryPromise({
-      catch: (cause) => DaemonError.worktreeCreateFailed(cause),
-      try: () => loadProjectSetupScripts(root),
-    });
+    const setup = status.worktreeSetup;
+    if (setup && input.setupApproval !== setup.digest) {
+      return yield* Effect.fail(DaemonError.worktreeSetupApprovalRequired());
+    }
 
     const projectSlug = projectSlugFromPath(status.path);
     const parent = path.join(managedWorktreeRoot(), projectSlug);
@@ -113,15 +135,30 @@ export function createProjectWorktree(
       if (created !== undefined) {
         yield* Effect.tryPromise({
           catch: (cause) => DaemonError.worktreeCreateFailed(cause),
-          try: () => executeProjectSetupScripts(setupScripts, created.cwd),
-        }).pipe(
-          Effect.catchAll((error) =>
-            Effect.gen(function* () {
-              yield* rollbackCreatedWorktree(root, created.cwd, created.branch);
-              return yield* Effect.fail(error);
-            }),
-          ),
-        );
+          try: async () => {
+            try {
+              await executeProjectSetupScripts(
+                setup?.commands ?? [],
+                created.cwd,
+                { signal },
+              );
+            } catch (setupCause) {
+              try {
+                await rollbackCreatedWorktree(
+                  root,
+                  created.cwd,
+                  created.branch,
+                );
+              } catch (cleanupCause) {
+                throw new AggregateError(
+                  [setupCause, cleanupCause],
+                  `Worktree setup failed: ${errorMessage(setupCause)} Cleanup also failed: ${errorMessage(cleanupCause)}`,
+                );
+              }
+              throw setupCause;
+            }
+          },
+        });
         return created;
       }
     }
@@ -226,31 +263,96 @@ function removeGitWorktree(
   });
 }
 
-function rollbackCreatedWorktree(root: string, cwd: string, branch: string) {
-  return Effect.gen(function* () {
-    yield* Effect.tryPromise({
-      catch: () => undefined,
-      try: () =>
-        execFileAsync(
-          "git",
-          ["-C", root, "worktree", "remove", "--force", cwd],
-          { maxBuffer: GIT_OUTPUT_MAX_BUFFER },
-        ),
-    }).pipe(Effect.orElseSucceed(() => undefined));
-    yield* Effect.tryPromise({
-      catch: () => undefined,
-      try: () =>
-        execFileAsync("git", ["-C", root, "branch", "-D", branch], {
-          maxBuffer: GIT_OUTPUT_MAX_BUFFER,
-        }),
-    }).pipe(Effect.orElseSucceed(() => undefined));
-    yield* Effect.sync(() =>
-      fs.rmSync(cwd, { force: true, recursive: true }),
-    ).pipe(Effect.orElseSucceed(() => undefined));
+async function rollbackCreatedWorktree(
+  root: string,
+  cwd: string,
+  branch: string,
+) {
+  const operationErrors: unknown[] = [];
+
+  await execFileAsync(
+    "git",
+    ["-C", root, "worktree", "remove", "--force", cwd],
+    { maxBuffer: GIT_OUTPUT_MAX_BUFFER },
+  ).catch((cause) => operationErrors.push(cause));
+
+  try {
+    fs.rmSync(cwd, { force: true, recursive: true });
+  } catch (cause) {
+    operationErrors.push(cause);
+  }
+
+  await execFileAsync(
+    "git",
+    ["-C", root, "worktree", "prune", "--expire", "now"],
+    { maxBuffer: GIT_OUTPUT_MAX_BUFFER },
+  ).catch((cause) => operationErrors.push(cause));
+
+  const branchBeforeDelete = await gitOutputAsync(root, [
+    "branch",
+    "--list",
+    branch,
+  ]).catch((cause) => {
+    operationErrors.push(cause);
+    return branch;
   });
+  if (branchBeforeDelete.trim().length > 0) {
+    await execFileAsync("git", ["-C", root, "branch", "-D", branch], {
+      maxBuffer: GIT_OUTPUT_MAX_BUFFER,
+    }).catch((cause) => operationErrors.push(cause));
+  }
+
+  const residue: string[] = [];
+  if (fs.existsSync(cwd)) residue.push(`directory still exists: ${cwd}`);
+
+  const worktreeList = await gitOutputAsync(root, [
+    "worktree",
+    "list",
+    "--porcelain",
+  ]).catch((cause) => {
+    operationErrors.push(cause);
+    residue.push("could not verify worktree metadata");
+    return "";
+  });
+  if (worktreeList.split(/\r?\n/).some((line) => line === `worktree ${cwd}`)) {
+    residue.push(`worktree metadata still exists: ${cwd}`);
+  }
+
+  const branchAfterDelete = await gitOutputAsync(root, [
+    "branch",
+    "--list",
+    branch,
+  ]).catch((cause) => {
+    operationErrors.push(cause);
+    residue.push("could not verify worktree branch");
+    return "";
+  });
+  if (branchAfterDelete.trim().length > 0) {
+    residue.push(`branch still exists: ${branch}`);
+  }
+
+  if (residue.length > 0) {
+    throw new AggregateError(
+      operationErrors,
+      `Could not fully roll back worktree: ${residue.join("; ")}`,
+    );
+  }
 }
 
 function nonEmpty(value: string) {
   const trimmed = value.trim();
   return is.nonEmptyString(trimmed) ? trimmed : undefined;
+}
+
+async function gitOutputAsync(cwd: string, args: string[]) {
+  const result = await execFileAsync("git", ["-C", cwd, ...args], {
+    maxBuffer: GIT_OUTPUT_MAX_BUFFER,
+  });
+  return result.stdout.trim();
+}
+
+function errorMessage(cause: unknown) {
+  return cause instanceof Error && cause.message.length > 0
+    ? cause.message
+    : "Unknown error.";
 }

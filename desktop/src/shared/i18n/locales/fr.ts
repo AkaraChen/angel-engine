@@ -86,6 +86,13 @@ export const fr = {
       worktreeDirtyTitle: "Créer un worktree depuis un dépôt dirty ?",
       worktreeNotGitRepository:
         "Ce projet n’est plus disponible comme dépôt Git.",
+      worktreeSetupCommands: "Commandes de 2code.json",
+      worktreeSetupContinue: "Exécuter et créer le worktree",
+      worktreeSetupDescription:
+        "Ces commandes shell seront exécutées avec votre compte local et pourront accéder aux fichiers, identifiants et réseau. Vérifiez-les avant de les autoriser.",
+      worktreeSetupDirtyWarning:
+        "Ce dépôt contient aussi des modifications non validées. Le worktree partira tout de même du HEAD actuel.",
+      worktreeSetupTitle: "Exécuter les commandes de configuration ?",
     },
     sidebar: {
       addProject: "Ajouter un projet",

@@ -89,12 +89,16 @@ export interface ChatCwdInput {
 export interface ChatPrewarmIdInput {
   prewarmId?: string;
 }
+export interface WorktreeSetupApprovalInput {
+  worktreeSetupApproval?: string;
+}
 
 export type Chat = JsChat;
 export type ChatCreateInput = JsChatCreateInput &
   ChatCreationLocationInput &
   ChatCwdInput &
-  ChatPrewarmIdInput;
+  ChatPrewarmIdInput &
+  WorktreeSetupApprovalInput;
 export type ChatRuntimeConfigInput = JsChatRuntimeConfigInput;
 export type ChatRuntimeConfigOption = JsChatRuntimeConfigOption;
 export type ChatAgentState = JsChatAgentState;
@@ -116,7 +120,8 @@ export type ChatElicitation = JsChatElicitation;
 export type ChatAttachmentInput = JsChatAttachmentInput;
 export type ChatSendInput = JsChatSendInput &
   ChatCreationLocationInput &
-  ChatCwdInput;
+  ChatCwdInput &
+  WorktreeSetupApprovalInput;
 export type ChatStreamPart = "reasoning" | "text";
 
 export interface ChatAvailableCommand {
@@ -484,6 +489,7 @@ export const chatCreateInputSchema = arkType({
   "reasoningEffort?": "string > 0 | undefined",
   "runtime?": "string > 0 | undefined",
   "title?": "string > 0 | undefined",
+  "worktreeSetupApproval?": "string > 0 | undefined",
 });
 
 export const chatPrewarmInputSchema = arkType({
@@ -524,6 +530,7 @@ export const chatSendInputSchema = arkType({
   "reasoningEffort?": "string > 0 | undefined",
   "runtime?": "string > 0 | undefined",
   text: "string",
+  "worktreeSetupApproval?": "string > 0 | undefined",
 });
 
 export const chatSetModeInputSchema = arkType({

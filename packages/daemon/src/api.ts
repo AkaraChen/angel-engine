@@ -144,7 +144,9 @@ export function registerApi(
     const input = chatCreateInputSchema(await context.req.json());
     if (input instanceof arkType.errors)
       throw DaemonError.invalidRequest("Chat input is required.");
-    const chat = await run(engine((e) => e.createChatFromInput(input)));
+    const chat = await run(
+      engine((e) => e.createChatFromInput(input, context.req.raw.signal)),
+    );
     publishChatMetadata(publisher, [chat.id]);
     return context.json(chat);
   });

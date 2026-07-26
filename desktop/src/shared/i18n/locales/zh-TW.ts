@@ -84,6 +84,13 @@ export const zhTW = {
       worktreeDirtyRemember: "以後不再提醒",
       worktreeDirtyTitle: "要從未提交的倉庫建立 worktree 嗎？",
       worktreeNotGitRepository: "這個專案目前不是可用的 Git 倉庫。",
+      worktreeSetupCommands: "2code.json 中的命令",
+      worktreeSetupContinue: "執行並建立 worktree",
+      worktreeSetupDescription:
+        "這些 shell 命令會以你的本機使用者身分執行，並可存取檔案、憑證和網路。請確認內容後再允許執行。",
+      worktreeSetupDirtyWarning:
+        "這個倉庫還有未提交變更；worktree 仍會從目前 HEAD 建立。",
+      worktreeSetupTitle: "執行 worktree 初始化命令？",
     },
     sidebar: {
       addProject: "新增專案",

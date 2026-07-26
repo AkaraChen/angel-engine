@@ -55,7 +55,11 @@ export function useWorktreeDraftGuard(model: WorkspacePageModel) {
     (confirmed: boolean) => {
       if (!worktreeDirtyPrompt) return;
 
-      if (confirmed && rememberWorktreeDirtyChoice) {
+      if (
+        confirmed &&
+        rememberWorktreeDirtyChoice &&
+        !worktreeDirtyPrompt.status.worktreeSetup
+      ) {
         setWorktreeDirtyPromptEnabled(false);
       }
       const { resolve } = worktreeDirtyPrompt;
@@ -90,8 +94,13 @@ export function useWorktreeDraftGuard(model: WorkspacePageModel) {
         });
         return false;
       }
-      if (!status.isDirty || !worktreeDirtyPromptEnabled) return true;
-      return await confirmDirtyWorktree(status);
+      const needsDirtyConfirmation =
+        status.isDirty && worktreeDirtyPromptEnabled;
+      if (!needsDirtyConfirmation && !status.worktreeSetup) return true;
+
+      const confirmed = await confirmDirtyWorktree(status);
+      if (!confirmed) return false;
+      return status.worktreeSetup?.digest ?? true;
     } catch (error) {
       toast({
         description: getErrorMessage(error),
