@@ -451,13 +451,11 @@ export interface LocaleResourceTranslationProjects {
   chooseFolder: string;
   openInFinder: string;
   settings: string;
-  settingsDescription: string;
   settingsLoadFailed: string;
-  settingsPath: string;
   settingsSaveFailed: string;
   settingsSaved: string;
+  settingsTitle: string;
   setupScript: string;
-  setupScriptHint: string;
   setupScriptPlaceholder: string;
 }
 

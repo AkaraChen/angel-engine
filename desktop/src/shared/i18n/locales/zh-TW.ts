@@ -415,14 +415,11 @@ export const zhTW = {
       chooseFolder: "選擇專案資料夾",
       openInFinder: "在 Finder 中開啟",
       settings: "設定",
-      settingsDescription: "僅對目前專案生效的設定。",
       settingsLoadFailed: "無法載入專案設定",
-      settingsPath: "專案路徑",
       settingsSaveFailed: "無法儲存專案設定",
       settingsSaved: "已儲存專案設定",
+      settingsTitle: "{{project}} 設定",
       setupScript: "Worktree 初始化指令",
-      setupScriptHint:
-        "每行一條指令。建立 worktree 後、agent 啟動前依序在 worktree 內執行；任一條失敗都會中止建立。儲存到專案根目錄的 {{file}}，不會自動提交。",
       setupScriptPlaceholder: "bun install",
     },
     pathLauncher: {

@@ -429,14 +429,11 @@ export const ja = {
       chooseFolder: "プロジェクトフォルダーを選択",
       openInFinder: "Finder で開く",
       settings: "設定",
-      settingsDescription: "このプロジェクトにのみ適用される設定です。",
       settingsLoadFailed: "プロジェクト設定を読み込めませんでした",
-      settingsPath: "プロジェクトのパス",
       settingsSaveFailed: "プロジェクト設定を保存できませんでした",
       settingsSaved: "プロジェクト設定を保存しました",
+      settingsTitle: "{{project}} の設定",
       setupScript: "ワークツリーのセットアップスクリプト",
-      setupScriptHint:
-        "1 行につき 1 コマンド。ワークツリー作成後、エージェント起動前にワークツリー内で順番に実行されます。失敗するとワークツリーの作成は中止されます。プロジェクトルートの {{file}} に保存され、コミットは自動では行われません。",
       setupScriptPlaceholder: "bun install",
     },
     pathLauncher: {

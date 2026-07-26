@@ -4,11 +4,13 @@ import type {
 } from "@angel-engine/daemon-api/projects";
 import type { FormEventHandler, ReactElement } from "react";
 
-import { PROJECT_CONFIG_FILE_NAME } from "@angel-engine/daemon-api/projects";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { getErrorMessage } from "@/app/workspace/workspace-display";
+import {
+  getErrorMessage,
+  getProjectDisplayName,
+} from "@/app/workspace/workspace-display";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -42,9 +44,15 @@ export function ProjectSettingsDialog({
     <Dialog open={Boolean(project)} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="gap-5 rounded-2xl">
         <DialogHeader>
-          <DialogTitle>{t("projects.settings")}</DialogTitle>
-          <DialogDescription>
-            {t("projects.settingsDescription")}
+          <DialogTitle>
+            {project
+              ? t("projects.settingsTitle", {
+                  project: getProjectDisplayName(project.path),
+                })
+              : t("projects.settings")}
+          </DialogTitle>
+          <DialogDescription className="sr-only">
+            {t("projects.setupScript")}
           </DialogDescription>
         </DialogHeader>
         {project ? (
@@ -90,7 +98,6 @@ function ProjectSettingsForm({
       <ProjectSettingsError
         message={getErrorMessage(configQuery.error)}
         onClose={onClose}
-        project={project}
       />
     );
   }
@@ -116,7 +123,6 @@ function ProjectSettingsForm({
           });
         }
       }}
-      project={project}
     />
   );
 }
@@ -126,13 +132,11 @@ function ProjectSettingsEditor({
   isSaving,
   onClose,
   onSave,
-  project,
 }: {
   config: ProjectConfigResult;
   isSaving: boolean;
   onClose: () => void;
   onSave: (setupScript: string[]) => Promise<void>;
-  project: Project;
 }) {
   const { t } = useTranslation();
   const [setupScriptText, setSetupScriptText] = useState(() =>
@@ -147,7 +151,6 @@ function ProjectSettingsEditor({
 
   return (
     <form className="grid gap-5" onSubmit={handleSubmit}>
-      <ProjectPathField path={project.path} />
       <div className="grid gap-2">
         <span className="text-sm font-medium">{t("projects.setupScript")}</span>
         <Textarea
@@ -159,9 +162,6 @@ function ProjectSettingsEditor({
           spellCheck={false}
           value={setupScriptText}
         />
-        <p className="text-xs text-muted-foreground">
-          {t("projects.setupScriptHint", { file: PROJECT_CONFIG_FILE_NAME })}
-        </p>
       </div>
       <DialogFooter>
         <Button
@@ -183,17 +183,14 @@ function ProjectSettingsEditor({
 function ProjectSettingsError({
   message,
   onClose,
-  project,
 }: {
   message: string;
   onClose: () => void;
-  project: Project;
 }) {
   const { t } = useTranslation();
 
   return (
     <div className="grid gap-5">
-      <ProjectPathField path={project.path} />
       <div className="grid gap-1">
         <span className="text-sm font-medium text-destructive">
           {t("projects.settingsLoadFailed")}
@@ -205,19 +202,6 @@ function ProjectSettingsError({
           {t("common.close")}
         </Button>
       </DialogFooter>
-    </div>
-  );
-}
-
-function ProjectPathField({ path }: { path: string }) {
-  const { t } = useTranslation();
-
-  return (
-    <div className="grid gap-1">
-      <span className="text-sm font-medium">{t("projects.settingsPath")}</span>
-      <p className="font-mono text-xs break-all text-muted-foreground">
-        {path}
-      </p>
     </div>
   );
 }

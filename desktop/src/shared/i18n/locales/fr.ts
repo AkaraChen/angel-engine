@@ -432,14 +432,11 @@ export const fr = {
       chooseFolder: "Choisir le dossier du projet",
       openInFinder: "Ouvrir dans le Finder",
       settings: "Paramètres",
-      settingsDescription: "Paramètres propres à ce projet.",
       settingsLoadFailed: "Impossible de charger les paramètres du projet",
-      settingsPath: "Chemin du projet",
       settingsSaveFailed: "Impossible d'enregistrer les paramètres du projet",
       settingsSaved: "Paramètres du projet enregistrés",
+      settingsTitle: "Paramètres de {{project}}",
       setupScript: "Script d'initialisation du worktree",
-      setupScriptHint:
-        "Une commande par ligne. Les commandes s'exécutent dans l'ordre dans le nouveau worktree avant le démarrage de l'agent. Une commande en échec interrompt la création du worktree. Enregistré dans {{file}} à la racine du projet ; le fichier n'est pas commité automatiquement.",
       setupScriptPlaceholder: "bun install",
     },
     pathLauncher: {

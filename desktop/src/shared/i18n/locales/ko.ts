@@ -427,14 +427,11 @@ export const ko = {
       chooseFolder: "프로젝트 폴더 선택",
       openInFinder: "Finder에서 열기",
       settings: "설정",
-      settingsDescription: "이 프로젝트에만 적용되는 설정입니다.",
       settingsLoadFailed: "프로젝트 설정을 불러오지 못했습니다",
-      settingsPath: "프로젝트 경로",
       settingsSaveFailed: "프로젝트 설정을 저장하지 못했습니다",
       settingsSaved: "프로젝트 설정을 저장했습니다",
+      settingsTitle: "{{project}} 설정",
       setupScript: "워크트리 설정 스크립트",
-      setupScriptHint:
-        "한 줄에 명령 하나씩 입력하세요. 워크트리 생성 후 에이전트 시작 전에 워크트리 안에서 순서대로 실행되며, 하나라도 실패하면 워크트리 생성이 중단됩니다. 프로젝트 루트의 {{file}}에 저장되며 자동으로 커밋되지 않습니다.",
       setupScriptPlaceholder: "bun install",
     },
     pathLauncher: {

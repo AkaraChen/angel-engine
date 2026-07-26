@@ -428,14 +428,11 @@ export const en = {
       chooseFolder: "Choose project folder",
       openInFinder: "Open in Finder",
       settings: "Settings",
-      settingsDescription: "Settings for this project only.",
       settingsLoadFailed: "Could not load project settings",
-      settingsPath: "Project path",
       settingsSaveFailed: "Could not save project settings",
       settingsSaved: "Project settings saved",
+      settingsTitle: "{{project}} settings",
       setupScript: "Worktree setup script",
-      setupScriptHint:
-        "One command per line. Commands run in order inside a new worktree before the agent starts. A failing command stops worktree creation. Saved to {{file}} in the project root; the file is not committed for you.",
       setupScriptPlaceholder: "bun install",
     },
     pathLauncher: {
