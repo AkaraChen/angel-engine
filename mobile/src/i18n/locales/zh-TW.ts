@@ -44,6 +44,23 @@ export const zhTW = {
       emptyTitle: "尚無對話",
       emptyDescription: "開啟一個新的代理工作階段後即可在此看到。",
       errorTitle: "無法載入對話",
+      filterSegments: "篩選對話",
+      segmentEmpty: "這裡暫時沒有內容。",
+      segments: {
+        all: "全部",
+        attention: "需要我",
+        running: "執行中",
+        done: "已完成",
+      },
+    },
+    activity: {
+      status: {
+        waitingForYou: "等待你處理",
+        failed: "失敗",
+        stuck: "卡住",
+        running: "執行中",
+        done: "已完成",
+      },
     },
     chat: {
       thinking: "思考中…",
@@ -63,7 +80,6 @@ export const zhTW = {
       planUpdated: "{{title}} 已更新",
       planProgress: "{{completed}}/{{total}}",
       couldNotChangeMode: "無法切換模式",
-      attentionCompleted: "已完成",
       attentionNeedsInput: "需要輸入",
       attentionNeedsInputDescription: "智慧代理正在等待你的回覆。",
       attentionReview: "查看",

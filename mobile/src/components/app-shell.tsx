@@ -12,8 +12,8 @@ import {
   SidebarProvider,
   SidebarTrigger,
 } from "@/components/ui/sidebar";
-import { ChatRunAttentionBadge } from "@/features/chat/run-attention-badge";
-import { useChatAttention } from "@/features/chat/use-attention";
+import { ChatActivityBadge } from "@/features/chat/chat-activity-badge";
+import { useChatActivity } from "@/features/chat/use-activity";
 import { WorkspacePanel } from "@/features/workspace/workspace-panel";
 import { useDaemonClient } from "@/platform/daemon-provider";
 import { queryKeys } from "@/platform/query-keys";
@@ -52,7 +52,7 @@ export function AppShell({ children }: PropsWithChildren) {
   const [isChat, chatParams] = useRoute("/chat/:chatId");
   const title = useRouteTitle();
   const currentChatId = isChat ? chatParams.chatId : "";
-  const attention = useChatAttention(currentChatId);
+  const activity = useChatActivity(currentChatId);
 
   return (
     <SidebarProvider>
@@ -80,8 +80,8 @@ export function AppShell({ children }: PropsWithChildren) {
           <h1 className="min-w-0 flex-1 truncate font-heading text-base font-semibold">
             {title}
           </h1>
-          {isChat && attention?.status === "needsInput" ? (
-            <ChatRunAttentionBadge status={attention.status} />
+          {isChat && activity?.status === "waiting_for_you" ? (
+            <ChatActivityBadge status={activity.status} />
           ) : null}
           {isChat ? <WorkspacePanel chatId={chatParams.chatId} /> : null}
         </header>

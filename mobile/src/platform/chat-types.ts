@@ -2,7 +2,8 @@ import type { AgentOption as ApiAgentOption } from "@angel-engine/daemon-api/age
 import type {
   Chat as ApiChat,
   ChatActiveRunSnapshot as ApiChatActiveRunSnapshot,
-  ChatAttention as ApiChatAttention,
+  ChatActivity as ApiChatActivity,
+  ChatActivityStatus as ApiChatActivityStatus,
   ChatCreateInput as ApiChatCreateInput,
   ChatCreationLocation as ApiChatCreationLocation,
   ChatElicitation as ApiChatElicitation,
@@ -63,7 +64,8 @@ export type ChatSendInput = Required<
 > &
   Pick<ApiChatSendInput, "mode" | "permissionMode">;
 export type ChatSendResult = ApiChatSendResult;
-export type ChatAttention = ApiChatAttention;
+export type ChatActivity = ApiChatActivity;
+export type ChatActivityStatus = ApiChatActivityStatus;
 export type ChatActiveRunSnapshot = ApiChatActiveRunSnapshot;
 export type ChatRunObserverEvent = ApiChatRunObserverEvent;
 export type ChatRunStartInput = ApiChatRunStartInput;

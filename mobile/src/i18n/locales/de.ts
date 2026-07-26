@@ -48,6 +48,23 @@ export const de = {
       emptyDescription:
         "Starte eine neue Agent-Sitzung, damit sie hier erscheint.",
       errorTitle: "Chats konnten nicht geladen werden",
+      filterSegments: "Chats filtern",
+      segmentEmpty: "Hier ist gerade nichts.",
+      segments: {
+        all: "Alle",
+        attention: "Für dich",
+        running: "Läuft",
+        done: "Fertig",
+      },
+    },
+    activity: {
+      status: {
+        waitingForYou: "Wartet auf dich",
+        failed: "Fehlgeschlagen",
+        stuck: "Hängt",
+        running: "Läuft",
+        done: "Fertig",
+      },
     },
     chat: {
       thinking: "Denkt nach…",
@@ -68,7 +85,6 @@ export const de = {
       planUpdated: "{{title}} aktualisiert",
       planProgress: "{{completed}}/{{total}}",
       couldNotChangeMode: "Modus konnte nicht gewechselt werden",
-      attentionCompleted: "Abgeschlossen",
       attentionNeedsInput: "Eingabe erforderlich",
       attentionNeedsInputDescription: "Der Agent wartet auf deine Antwort.",
       attentionReview: "Ansehen",

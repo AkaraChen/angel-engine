@@ -49,6 +49,23 @@ export const ja = {
       emptyDescription:
         "新しいエージェントセッションを開始すると、ここに表示されます。",
       errorTitle: "チャットを読み込めませんでした",
+      filterSegments: "チャットを絞り込む",
+      segmentEmpty: "ここには何もありません。",
+      segments: {
+        all: "すべて",
+        attention: "要対応",
+        running: "実行中",
+        done: "完了",
+      },
+    },
+    activity: {
+      status: {
+        waitingForYou: "対応待ち",
+        failed: "失敗",
+        stuck: "停止",
+        running: "実行中",
+        done: "完了",
+      },
     },
     chat: {
       thinking: "思考中…",
@@ -68,7 +85,6 @@ export const ja = {
       planUpdated: "{{title}} を更新",
       planProgress: "{{completed}}/{{total}}",
       couldNotChangeMode: "モードを変更できませんでした",
-      attentionCompleted: "完了",
       attentionNeedsInput: "入力が必要",
       attentionNeedsInputDescription: "エージェントが返信を待っています。",
       attentionReview: "確認",

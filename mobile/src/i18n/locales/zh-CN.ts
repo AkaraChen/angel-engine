@@ -44,6 +44,23 @@ export const zhCN = {
       emptyTitle: "暂无对话",
       emptyDescription: "开启一个新的智能体会话后即可在此看到。",
       errorTitle: "无法加载对话",
+      filterSegments: "筛选对话",
+      segmentEmpty: "这里暂时没有内容。",
+      segments: {
+        all: "全部",
+        attention: "需要我",
+        running: "运行中",
+        done: "已完成",
+      },
+    },
+    activity: {
+      status: {
+        waitingForYou: "等待你处理",
+        failed: "失败",
+        stuck: "卡住",
+        running: "运行中",
+        done: "已完成",
+      },
     },
     chat: {
       thinking: "思考中…",
@@ -63,7 +80,6 @@ export const zhCN = {
       planUpdated: "{{title}} 已更新",
       planProgress: "{{completed}}/{{total}}",
       couldNotChangeMode: "无法切换模式",
-      attentionCompleted: "已完成",
       attentionNeedsInput: "需要输入",
       attentionNeedsInputDescription: "智能体正在等待你的回复。",
       attentionReview: "查看",

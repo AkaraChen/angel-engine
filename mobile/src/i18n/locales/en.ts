@@ -46,6 +46,23 @@ export const en = {
       emptyTitle: "No chats yet",
       emptyDescription: "Start a new agent session to see it here.",
       errorTitle: "Couldn't load chats",
+      filterSegments: "Filter chats",
+      segmentEmpty: "Nothing here right now.",
+      segments: {
+        all: "All",
+        attention: "Needs you",
+        running: "Running",
+        done: "Done",
+      },
+    },
+    activity: {
+      status: {
+        waitingForYou: "Waiting for you",
+        failed: "Failed",
+        stuck: "Stuck",
+        running: "Running",
+        done: "Done",
+      },
     },
     chat: {
       thinking: "Thinking…",
@@ -65,7 +82,6 @@ export const en = {
       planUpdated: "{{title}} updated",
       planProgress: "{{completed}}/{{total}}",
       couldNotChangeMode: "Couldn't change mode",
-      attentionCompleted: "Completed",
       attentionNeedsInput: "Needs input",
       attentionNeedsInputDescription: "The agent is waiting for your response.",
       attentionReview: "Review",

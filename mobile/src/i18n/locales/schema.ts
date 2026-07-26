@@ -42,10 +42,32 @@ export interface LocaleResourceTranslationDaemonStatus {
   online: string;
 }
 
+export interface LocaleResourceTranslationHomeSegments {
+  all: string;
+  attention: string;
+  running: string;
+  done: string;
+}
+
 export interface LocaleResourceTranslationHome {
   emptyTitle: string;
   emptyDescription: string;
   errorTitle: string;
+  filterSegments: string;
+  segmentEmpty: string;
+  segments: LocaleResourceTranslationHomeSegments;
+}
+
+export interface LocaleResourceTranslationActivityStatus {
+  waitingForYou: string;
+  failed: string;
+  stuck: string;
+  running: string;
+  done: string;
+}
+
+export interface LocaleResourceTranslationActivity {
+  status: LocaleResourceTranslationActivityStatus;
 }
 
 export interface LocaleResourceTranslationChat {
@@ -66,7 +88,6 @@ export interface LocaleResourceTranslationChat {
   planUpdated: string;
   planProgress: string;
   couldNotChangeMode: string;
-  attentionCompleted: string;
   attentionNeedsInput: string;
   attentionNeedsInputDescription: string;
   attentionReview: string;
@@ -215,6 +236,7 @@ export interface LocaleResourceTranslation {
   sidebar: LocaleResourceTranslationSidebar;
   daemonStatus: LocaleResourceTranslationDaemonStatus;
   home: LocaleResourceTranslationHome;
+  activity: LocaleResourceTranslationActivity;
   chat: LocaleResourceTranslationChat;
   elicitation: LocaleResourceTranslationElicitation;
   createChat: LocaleResourceTranslationCreateChat;

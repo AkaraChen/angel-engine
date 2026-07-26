@@ -331,15 +331,16 @@ describe("ChatPage", () => {
     expect(await screen.findByText("Couldn't load this chat")).toBeDefined();
   });
 
-  it("acknowledges a completed marker after entering the chat", async () => {
+  it("acknowledges a terminal marker after entering the chat", async () => {
     const fetchMock = vi.fn(async (url: string, init?: RequestInit) => {
-      if (url.endsWith("/api/chat-attention")) {
+      if (url.endsWith("/api/chat-activity")) {
         return jsonResponse({
-          attentions: [
+          items: [
             {
+              attentionId: "run-1:done",
               chatId: "completed-chat",
-              id: "run-1:completed",
-              status: "completed",
+              runId: "run-1",
+              status: "done",
               updatedAt: "2026-07-25T01:00:00.000Z",
             },
           ],
@@ -364,11 +365,45 @@ describe("ChatPage", () => {
       expect(fetchMock).toHaveBeenCalledWith(
         "/api/chats/completed-chat/attention/read",
         expect.objectContaining({
-          body: JSON.stringify({ attentionId: "run-1:completed" }),
+          body: JSON.stringify({ attentionId: "run-1:done" }),
           method: "POST",
         }),
       );
     });
+  });
+
+  it("re-reads activity when the daemon rejects a stale marker", async () => {
+    // The chat still holds the marker of a newer run, so the daemon refuses the
+    // ack. The stale local marker must not be dropped on the client's own say-so.
+    let activityRequests = 0;
+    const fetchMock = vi.fn(async (url: string, init?: RequestInit) => {
+      if (url.endsWith("/api/chat-activity")) {
+        activityRequests += 1;
+        return jsonResponse({
+          items: [
+            {
+              attentionId: "run-2:done",
+              chatId: "stale-chat",
+              runId: "run-2",
+              status: "done",
+              updatedAt: "2026-07-25T01:00:00.000Z",
+            },
+          ],
+        });
+      }
+      if (url.endsWith("/attention/read") && init?.method === "POST") {
+        return jsonResponse({ read: false });
+      }
+      if (url.endsWith("/load")) {
+        return jsonResponse({ chat: daemonChat("stale-chat"), messages: [] });
+      }
+      return Promise.reject(new Error(`unexpected fetch: ${url}`));
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    renderChat("stale-chat");
+
+    await waitFor(() => expect(activityRequests).toBeGreaterThan(1));
   });
 
   it("highlights pending input and jumps to the elicitation", async () => {
@@ -378,8 +413,8 @@ describe("ChatPage", () => {
       "fetch",
       vi.fn(async (url: string, init?: RequestInit) => {
         const method = init?.method ?? "GET";
-        if (url.endsWith("/api/chat-attention")) {
-          return jsonResponse({ attentions: [] });
+        if (url.endsWith("/api/chat-activity")) {
+          return jsonResponse({ items: [] });
         }
         if (url.endsWith("/load")) {
           return jsonResponse({
