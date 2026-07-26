@@ -213,9 +213,12 @@
     pointer-events: none;
   }
 
+  /* Two segments share one left-to-right sweep, half a cycle apart, so the
+     trailing segment is still leaving on the right while the next one is
+     already entering on the left. */
+  .workspace-streaming-line::before,
   .workspace-streaming-line::after {
-    animation: workspace-streaming-sweep 1.6s cubic-bezier(0.65, 0, 0.35, 1)
-      infinite alternate;
+    animation: workspace-streaming-sweep 2.6s linear infinite;
     background: var(--primary);
     border-radius: 9999px;
     bottom: 0;
@@ -223,11 +226,19 @@
     left: 0;
     position: absolute;
     top: 0;
-    transform: translateX(0);
+    transform: translateX(-100%);
     width: 42%;
   }
 
+  .workspace-streaming-line::before {
+    animation-delay: -1.3s;
+  }
+
   @media (prefers-reduced-motion: reduce) {
+    .workspace-streaming-line::before {
+      content: none;
+    }
+
     .workspace-streaming-line::after {
       animation: none;
       background: color-mix(in oklch, var(--primary) 35%, transparent);
@@ -363,12 +374,14 @@
   color: color-mix(in oklch, var(--primary-foreground) 72%, transparent);
 }
 
+/* -100% starts the segment just off the left edge; 238% is 100% of the track
+   width for a segment that is 42% as wide, so it ends just off the right. */
 @keyframes workspace-streaming-sweep {
   from {
-    transform: translateX(0);
+    transform: translateX(-100%);
   }
   to {
-    transform: translateX(138%);
+    transform: translateX(238%);
   }
 }
 
