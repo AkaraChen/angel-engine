@@ -5,6 +5,7 @@ import { useHashLocation } from "wouter/use-hash-location";
 import {
   WorkspaceChatPage,
   WorkspaceDraftPage,
+  WorkspaceFleetPage,
 } from "@/app/workspace/workspace-page";
 import { WorkspaceToolWindowPage } from "@/app/workspace/workspace-tool-host";
 
@@ -14,6 +15,9 @@ export function AppRouter() {
       <Switch>
         <Route path="/">
           <WorkspaceDraftPage />
+        </Route>
+        <Route path="/fleet">
+          <WorkspaceFleetPage />
         </Route>
         <Route path="/workspace-tools">
           <WorkspaceToolWindowPage />

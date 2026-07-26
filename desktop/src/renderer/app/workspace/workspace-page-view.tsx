@@ -35,12 +35,14 @@ import { useWorkspaceToolStore } from "@/app/workspace/workspace-tool-store";
 import { WorktreeDirtyDialog } from "@/app/workspace/worktree-dirty-dialog";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { RenameChatDialog } from "@/features/chat/components/rename-chat-dialog";
+import { FleetPage } from "@/features/fleet/fleet-page";
 import { ProjectSettingsDialog } from "@/features/projects/components/project-settings-dialog";
 
 interface WorkspacePageViewProps {
   chatActions: WorkspaceChatActions;
   currentRoutePath: string;
   draftGuard: WorktreeDraftGuard;
+  fleetActive: boolean;
   model: WorkspacePageModel;
   navigation: WorkspaceNavigation;
   powerTabs: PowerWorktreeTabs;
@@ -50,6 +52,7 @@ export const WorkspacePageView: FC<WorkspacePageViewProps> = ({
   chatActions,
   currentRoutePath,
   draftGuard,
+  fleetActive,
   model,
   navigation,
   powerTabs,
@@ -135,6 +138,8 @@ export const WorkspacePageView: FC<WorkspacePageViewProps> = ({
     createChatForProject,
     createChatForSelection,
     openChat,
+    openChatFromFleet,
+    openFleet,
     openPowerWorktree,
     openSettings,
     selectDraftProject,
@@ -212,6 +217,7 @@ export const WorkspacePageView: FC<WorkspacePageViewProps> = ({
       <WorkspaceSidebarControlPortalProvider>
         <WorkspaceSidebar
           chats={chats}
+          fleetActive={fleetActive}
           isChatsLoading={chatsQuery.isPending}
           isMacOS={isMacOS}
           isProjectsLoading={projectsQuery.isPending}
@@ -220,6 +226,7 @@ export const WorkspacePageView: FC<WorkspacePageViewProps> = ({
           onCreateProjectChat={createChatForProject}
           onCreateStandaloneChat={createChatForSelection}
           onOpenChat={openChat}
+          onOpenFleet={openFleet}
           onOpenSettings={openSettings}
           onOpenWorktree={openPowerWorktree}
           onShowChatContextMenu={showChatContextMenu}
@@ -233,6 +240,7 @@ export const WorkspacePageView: FC<WorkspacePageViewProps> = ({
         />
         <WorkspaceFloatingSidebar
           chats={chats}
+          fleetActive={fleetActive}
           isChatsLoading={chatsQuery.isPending}
           isMacOS={isMacOS}
           isProjectsLoading={projectsQuery.isPending}
@@ -241,6 +249,7 @@ export const WorkspacePageView: FC<WorkspacePageViewProps> = ({
           onCreateProjectChat={createChatForProject}
           onCreateStandaloneChat={createChatForSelection}
           onOpenChat={openChat}
+          onOpenFleet={openFleet}
           onOpenSettings={openSettings}
           onOpenWorktree={openPowerWorktree}
           onShowChatContextMenu={showChatContextMenu}
@@ -291,7 +300,7 @@ export const WorkspacePageView: FC<WorkspacePageViewProps> = ({
               (rightSidebarOpen || workspaceToolHost !== "sidebar")
             }
             rightSidebarToggleLabel={workspaceToolsToggleLabel}
-            title={workspaceTitle}
+            title={fleetActive ? t("fleet.title") : workspaceTitle}
             onShowContextMenu={
               currentLauncherTarget === undefined
                 ? undefined
@@ -322,7 +331,13 @@ export const WorkspacePageView: FC<WorkspacePageViewProps> = ({
               className="flex min-h-0 min-w-0 flex-1 flex-col"
               data-workspace-mode={workspaceMode}
             >
-              {powerHomePageContext !== undefined ? (
+              {fleetActive ? (
+                <FleetPage
+                  chats={chats}
+                  onOpenChat={openChatFromFleet}
+                  projects={projects}
+                />
+              ) : powerHomePageContext !== undefined ? (
                 <PowerWorktreeHistoryPage
                   chats={chats}
                   groupKey={powerHomePageContext.groupKey}

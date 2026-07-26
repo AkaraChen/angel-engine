@@ -62,6 +62,8 @@ const EMPTY_PROJECTS: Project[] = [];
 interface UseWorkspacePageModelOptions {
   api: ReturnType<typeof useApi>;
   draftProjectId?: string;
+  /** The Fleet overview owns the main pane; no draft composer is mounted. */
+  fleetActive?: boolean;
   routeProjectId?: string;
   selectedChatId?: string;
 }
@@ -69,6 +71,7 @@ interface UseWorkspacePageModelOptions {
 export function useWorkspacePageModel({
   api,
   draftProjectId: routeDraftProjectId,
+  fleetActive = false,
   routeProjectId,
   selectedChatId,
 }: UseWorkspacePageModelOptions) {
@@ -154,7 +157,9 @@ export function useWorkspacePageModel({
 
   const draftState = useWorkspaceDraftState();
   const draftSessionCounterRef = useRef(0);
-  const isDraftPage = !is.nonEmptyString(selectedChatId);
+  // Fleet is a chat-less route but not a draft: treating it as one would
+  // prewarm a runtime session and overwrite the remembered last-opened target.
+  const isDraftPage = !fleetActive && !is.nonEmptyString(selectedChatId);
   const powerModeActive = workspaceMode === "power";
   const draftWorktree = useChatTabStore((state) => state.draftWorktree);
   const activePowerWorktree = useChatTabStore((state) => state.activeWorktree);
