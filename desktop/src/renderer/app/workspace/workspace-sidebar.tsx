@@ -17,10 +17,8 @@ import is from "@sindresorhus/is";
 import { m } from "framer-motion";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import {
-  isProjectWorkspaceMode,
-  useWorkspaceUiStore,
-} from "@/app/workspace/workspace-ui-store";
+import { resolveWorkspaceNewChatTarget } from "@/app/workspace/workspace-new-chat-target";
+import { useWorkspaceUiStore } from "@/app/workspace/workspace-ui-store";
 import {
   Sidebar,
   SidebarContent,
@@ -246,21 +244,22 @@ function WorkspaceSidebarContent({
     (chat) => !is.nonEmptyString(chat.projectId),
   );
   const createChatFromNewButton = async () => {
-    if (selectedChatId === undefined) return;
+    const target = resolveWorkspaceNewChatTarget({
+      fleetActive,
+      projects,
+      selectedChatId,
+      selectedProjectId,
+      workspaceMode,
+    });
 
-    if (isProjectWorkspaceMode(workspaceMode)) {
-      const selectedProject = projects.find(
-        (project) => project.id === selectedProjectId,
-      );
-      if (selectedProject !== undefined) {
-        return onCreateProjectChat(selectedProject);
-      }
-      if (projects.length > 0) {
-        return onCreateProjectChat(projects[0]);
-      }
+    switch (target.type) {
+      case "none":
+        return;
+      case "project":
+        return onCreateProjectChat(target.project);
+      case "standalone":
+        return onCreateStandaloneChat();
     }
-
-    return onCreateStandaloneChat();
   };
 
   return (

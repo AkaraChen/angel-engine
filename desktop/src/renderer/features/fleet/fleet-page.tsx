@@ -1,4 +1,8 @@
-import type { Chat, ChatActivityStatus } from "@angel-engine/daemon-api/chat";
+import type {
+  Chat,
+  ChatActivity,
+  ChatActivityStatus,
+} from "@angel-engine/daemon-api/chat";
 import type { Project } from "@angel-engine/daemon-api/projects";
 import type { ReactElement } from "react";
 import type {
@@ -9,8 +13,8 @@ import type {
 
 import { Robot as Bot } from "@phosphor-icons/react";
 import is from "@sindresorhus/is";
-import { useQuery } from "@tanstack/react-query";
-import { useMemo, useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useCallback, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   agentRuntimeIconSvg,
@@ -26,6 +30,7 @@ import {
   fleetProjectOptions,
   groupFleetRows,
   resolveFleetProjectFilter,
+  terminalAttentionId,
 } from "@/features/fleet/fleet-model";
 import {
   NativeSelect,
@@ -33,6 +38,7 @@ import {
 } from "@/components/ui/native-select";
 import { getApiClient } from "@/platform/api-client";
 import { formatDateTime, formatRelativeTime } from "@/platform/format-time";
+import { queryKeys } from "@/platform/query-keys";
 import { cn } from "@/platform/utils";
 
 const EMPTY_ACTIVITIES: never[] = [];
@@ -72,23 +78,74 @@ const STATUS_TONE: Record<ChatActivityStatus, string> = {
 
 interface FleetPageProps {
   chats: Chat[];
+  /** Chats/projects failed to load; their rows would be missing, not absent. */
+  isMetadataError: boolean;
+  isMetadataPending: boolean;
   onOpenChat: (chat: Chat) => void;
   projects: Project[];
 }
 
 export function FleetPage({
   chats,
+  isMetadataError,
+  isMetadataPending,
   onOpenChat,
   projects,
 }: FleetPageProps): ReactElement {
   const { t } = useTranslation();
   const api = getApiClient();
+  const queryClient = useQueryClient();
   const [segment, setSegment] = useState<FleetSegment>("all");
   const [requestedProjectFilter, setRequestedProjectFilter] = useState(
     FLEET_PROJECT_FILTER_ALL,
   );
   const activityQuery = useQuery({ ...chatActivityListQueryOptions({ api }) });
   const activities = activityQuery.data ?? EMPTY_ACTIVITIES;
+
+  /**
+   * Opening a finished run is what marks it read. The ack carries the row's own
+   * `attentionId`, so a marker that already belongs to a newer run is rejected
+   * by the daemon (`read: false`) and refetched instead of silently cleared.
+   */
+  const { mutate: readTerminalActivity } = useMutation({
+    mutationFn: async ({
+      attentionId,
+      chatId,
+    }: {
+      attentionId: string;
+      chatId: string;
+    }) => api.activity.read(chatId, { attentionId }),
+    onSuccess: (result, { attentionId, chatId }) => {
+      if (!result.read) {
+        void queryClient.invalidateQueries({
+          queryKey: queryKeys.chatActivity.all(),
+        });
+        return;
+      }
+      queryClient.setQueryData<ChatActivity[]>(
+        queryKeys.chatActivity.list(),
+        (current) =>
+          current?.filter(
+            (candidate) =>
+              candidate.chatId !== chatId ||
+              terminalAttentionId(candidate) !== attentionId,
+          ) ?? [],
+      );
+    },
+  });
+
+  const openRow = useCallback(
+    (row: FleetRow) => {
+      if (row.terminalAttentionId !== undefined) {
+        readTerminalActivity({
+          attentionId: row.terminalAttentionId,
+          chatId: row.chatId,
+        });
+      }
+      onOpenChat(row.chat);
+    },
+    [onOpenChat, readTerminalActivity],
+  );
 
   const rows = useMemo(
     () => buildFleetRows({ activities, chats, projects }),
@@ -177,9 +234,9 @@ export function FleetPage({
           ) : null}
         </header>
 
-        {activityQuery.isPending ? (
+        {activityQuery.isPending || isMetadataPending ? (
           <FleetNotice text={t("fleet.loading")} />
-        ) : activityQuery.isError ? (
+        ) : activityQuery.isError || isMetadataError ? (
           <FleetNotice text={t("fleet.disconnected")} />
         ) : sections.length === 0 ? (
           <FleetNotice text={t("fleet.empty")} />
@@ -201,11 +258,7 @@ export function FleetPage({
                 "
               >
                 {section.rows.map((row) => (
-                  <FleetRowButton
-                    key={row.chatId}
-                    onOpenChat={onOpenChat}
-                    row={row}
-                  />
+                  <FleetRowButton key={row.chatId} onOpen={openRow} row={row} />
                 ))}
               </div>
             </section>
@@ -217,10 +270,10 @@ export function FleetPage({
 }
 
 function FleetRowButton({
-  onOpenChat,
+  onOpen,
   row,
 }: {
-  onOpenChat: (chat: Chat) => void;
+  onOpen: (row: FleetRow) => void;
   row: FleetRow;
 }): ReactElement {
   const { t } = useTranslation();
@@ -236,7 +289,7 @@ function FleetRowButton({
         hover:bg-muted/50
         focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:ring-inset
       "
-      onClick={() => onOpenChat(row.chat)}
+      onClick={() => onOpen(row)}
       title={row.failureMessage ?? row.title}
       type="button"
     >
