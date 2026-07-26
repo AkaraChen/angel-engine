@@ -66,12 +66,22 @@ describe("daemon global events", () => {
         type: "chat-activity-changed",
       }),
     });
+    socket?.emit("message", {
+      data: JSON.stringify({
+        chatIds: ["chat-1"],
+        type: "chat-conversation-changed",
+      }),
+    });
     socket?.emit("message", { data: JSON.stringify({ type: "future-event" }) });
 
     expect(onOpen).toHaveBeenCalledOnce();
     expect(onEvent).toHaveBeenCalledWith({
       chatIds: ["chat-1"],
       type: "chat-activity-changed",
+    });
+    expect(onEvent).toHaveBeenCalledWith({
+      chatIds: ["chat-1"],
+      type: "chat-conversation-changed",
     });
     expect(onInvalidEvent.mock.calls[0]?.[0]).toBeInstanceOf(
       DaemonRequestError,

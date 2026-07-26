@@ -1,10 +1,12 @@
 import type { Chat, ChatSendResult } from "@angel-engine/daemon-api/chat";
+import type { DaemonGlobalEvent } from "@angel-engine/daemon-api";
 import type { DaemonRuntime } from "./platform/runtime";
 
 import { Effect, Layer, ManagedRuntime } from "effect";
 import { Hono } from "hono";
 import { describe, expect, it, vi } from "vitest";
 import { registerApi } from "./api";
+import { createChatEvents } from "./features/chat/chat-events";
 import { ChatEngine } from "./features/chat/engine-runtime";
 import { TerminalService } from "./features/terminal/manager";
 import { Db } from "./platform/db";
@@ -35,7 +37,7 @@ describe("daemon chat runs", () => {
   it("starts a daemon-owned run with a snapshot-first observer stream", async () => {
     const publish = vi.fn();
     const app = new Hono();
-    registerApi(app, fakeDaemonRuntime(), { publish });
+    registerApi(app, fakeDaemonRuntime(), createChatEvents({ publish }));
 
     const response = await app.request("/api/chat-runs/run-1", {
       body: JSON.stringify({ chatId: "chat-1", text: "hello" }),
@@ -65,7 +67,7 @@ describe("daemon chat runs", () => {
   it("keeps completed attention until the exact marker is read", async () => {
     const publish = vi.fn();
     const app = new Hono();
-    registerApi(app, fakeDaemonRuntime(), { publish });
+    registerApi(app, fakeDaemonRuntime(), createChatEvents({ publish }));
 
     const run = await app.request("/api/chat-runs/run-attention", {
       body: JSON.stringify({ chatId: chat.id, text: "hello" }),
@@ -138,7 +140,7 @@ describe("daemon chat runs", () => {
             return result;
           }),
       }),
-      { publish: vi.fn() },
+      createChatEvents({ publish: vi.fn() }),
     );
 
     const response = await app.request("/api/chat-runs/run-late-success", {
@@ -215,7 +217,7 @@ describe("daemon chat runs", () => {
           });
         },
       }),
-      { publish: vi.fn() },
+      createChatEvents({ publish: vi.fn() }),
     );
 
     const response = await app.request("/api/chat-runs/run-1", {
@@ -254,7 +256,11 @@ describe("daemon chat runs", () => {
 
   it("streams runtime events over a chat run", async () => {
     const app = new Hono();
-    registerApi(app, fakeDaemonRuntime(), { publish: vi.fn() });
+    registerApi(
+      app,
+      fakeDaemonRuntime(),
+      createChatEvents({ publish: vi.fn() }),
+    );
 
     const response = await app.request("/api/chat-runs/run-1", {
       body: JSON.stringify({ chatId: "chat-1", text: "hello" }),
@@ -278,7 +284,7 @@ describe("daemon chat runs", () => {
       fakeDaemonRuntime({
         createChatFromInput: () => Effect.succeed(chat),
       }),
-      { publish },
+      createChatEvents({ publish }),
     );
 
     const response = await app.request("/api/chats", {
@@ -294,12 +300,77 @@ describe("daemon chat runs", () => {
     });
   });
 
+  it("publishes a conversation change when a run starts and when it settles", async () => {
+    const publish = vi.fn();
+    const app = new Hono();
+    registerApi(app, fakeDaemonRuntime(), createChatEvents({ publish }));
+
+    const response = await app.request("/api/chat-runs/run-conversation", {
+      body: JSON.stringify({ chatId: chat.id, text: "hello" }),
+      headers: { "content-type": "application/json" },
+      method: "POST",
+    });
+    await response.text();
+
+    // Once for the reserve (so other devices attach) and once for the settled
+    // run (so devices that never attached refetch the grown history).
+    const conversationEvents = publish.mock.calls
+      .map((call) => call[0] as DaemonGlobalEvent)
+      .filter((event) => event.type === "chat-conversation-changed");
+    expect(conversationEvents).toEqual([
+      { chatIds: [chat.id], type: "chat-conversation-changed" },
+      { chatIds: [chat.id], type: "chat-conversation-changed" },
+    ]);
+  });
+
+  it("publishes a conversation change when an in-flight run is cancelled", async () => {
+    const publish = vi.fn();
+    const app = new Hono();
+    // A run that never settles on its own, so `DELETE` sees it as still active.
+    registerApi(
+      app,
+      fakeDaemonRuntime({
+        streamChat: (_input, onEvent) =>
+          Effect.async<ChatSendResult, DaemonError>(() => {
+            onEvent?.({ part: "text", text: "thinking", type: "delta" });
+          }),
+      }),
+      createChatEvents({ publish }),
+    );
+
+    const response = await app.request("/api/chat-runs/run-cancel", {
+      body: JSON.stringify({ chatId: chat.id, text: "hello" }),
+      headers: { "content-type": "application/json" },
+      method: "POST",
+    });
+    // Read one chunk instead of draining: draining would wait for a run that
+    // never finishes. The first chunk proves the observer attached and the run
+    // began, which is what makes the cancel below meaningful.
+    const reader = response.body?.getReader();
+    await reader?.read();
+    publish.mockClear();
+
+    const cancelled = await app.request("/api/chat-runs/run-cancel", {
+      method: "DELETE",
+    });
+
+    expect(cancelled.status).toBe(200);
+    expect(publish).toHaveBeenCalledWith({
+      chatIds: [chat.id],
+      type: "chat-conversation-changed",
+    });
+
+    await reader?.cancel();
+  });
+
   it("forwards create input and the request abort signal to chat creation", async () => {
     const createChatFromInput = vi.fn(() => Effect.succeed(chat));
     const app = new Hono();
-    registerApi(app, fakeDaemonRuntime({ createChatFromInput }), {
-      publish: vi.fn(),
-    });
+    registerApi(
+      app,
+      fakeDaemonRuntime({ createChatFromInput }),
+      createChatEvents({ publish: vi.fn() }),
+    );
 
     const response = await app.request("/api/chats", {
       body: JSON.stringify({
@@ -331,7 +402,11 @@ describe("managed worktrees", () => {
         ? context.json({ code: error.code }, error.status)
         : context.json({ code: "internal" }, 500),
     );
-    registerApi(app, fakeDaemonRuntime(), { publish: vi.fn() });
+    registerApi(
+      app,
+      fakeDaemonRuntime(),
+      createChatEvents({ publish: vi.fn() }),
+    );
 
     const response = await app.request("/api/worktrees/managed/delete", {
       body: JSON.stringify({

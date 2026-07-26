@@ -6,7 +6,7 @@ import type {
   ChatStreamElicitationResolveInput,
 } from "@angel-engine/daemon-api/chat";
 import type { Context, Hono } from "hono";
-import type { DaemonGlobalEvent } from "@angel-engine/daemon-api";
+import type { ChatEventsApi } from "./features/chat/chat-events";
 import type { Db } from "./platform/db";
 import type { DaemonRuntime } from "./platform/runtime";
 
@@ -100,17 +100,13 @@ import { DaemonError } from "./platform/errors";
 import { runDaemonApi } from "./platform/runtime";
 import { ProcessRegistryService } from "./processes";
 
-export interface EventPublisher {
-  publish: (event: DaemonGlobalEvent) => void;
-}
-
 export function registerApi(
   app: Hono,
   runtime: DaemonRuntime,
-  publisher: EventPublisher,
+  chatEvents: ChatEventsApi,
 ) {
   const activity = new ChatActivityStore({
-    onChange: (chatId) => publishChatActivity(publisher, chatId),
+    onChange: (chatId) => chatEvents.activityChanged(chatId),
   });
   const run = <A>(
     effect: Effect.Effect<A, DaemonError, Db | ChatEngine>,
@@ -126,6 +122,12 @@ export function registerApi(
     isRunIdRetained: (chatId, runId) => activity.hasRun(chatId, runId),
     onEvent: ({ chatId, event, runId }) => {
       activity.apply(chatId, runId, event);
+      // A settled run means the chat's persisted history grew. Clients attached
+      // to the run stream already saw the turn; those that were not attached
+      // hold stale history and have no other signal to refetch on.
+      if (event.type === "result" || event.type === "error") {
+        chatEvents.conversationChanged([chatId]);
+      }
     },
   });
   void runDaemonApi(
@@ -167,7 +169,7 @@ export function registerApi(
     const chat = await run(
       engine((e) => e.createChatFromInput(input, context.req.raw.signal)),
     );
-    publishChatMetadata(publisher, [chat.id]);
+    chatEvents.metadataChanged([chat.id]);
     return context.json(chat);
   });
   app.patch("/api/chats/:id", async (context) => {
@@ -175,12 +177,12 @@ export function registerApi(
     const chatId = context.req.param("id");
     if (typeof body.title === "string") {
       const chat = await run(renameChat(chatId, body.title));
-      publishChatMetadata(publisher, [chat.id]);
+      chatEvents.metadataChanged([chat.id]);
       return context.json(chat);
     }
     if (typeof body.pinned === "boolean") {
       const chat = await run(setChatPinned(chatId, body.pinned));
-      publishChatMetadata(publisher, [chat.id]);
+      chatEvents.metadataChanged([chat.id]);
       return context.json(chat);
     }
     throw DaemonError.invalidRequest("Chat title or pinned state is required.");
@@ -197,13 +199,13 @@ export function registerApi(
       }),
     );
     activity.clearChat(chatId);
-    publishChatMetadata(publisher, [chatId]);
+    chatEvents.metadataChanged([chatId]);
     return context.json({ ok: true });
   });
   app.post("/api/chats/:id/archive", async (context) => {
     const chat = await run(archiveChat(context.req.param("id")));
     activity.clearChat(chat.id);
-    publishChatMetadata(publisher, [chat.id]);
+    chatEvents.metadataChanged([chat.id]);
     return context.json(chat);
   });
   app.post("/api/chats/:id/load", async (context) =>
@@ -244,7 +246,7 @@ export function registerApi(
     if (input instanceof arkType.errors)
       throw DaemonError.invalidRequest("Chat runtime input is required.");
     const chat = await run(engine((e) => e.setChatRuntime(input)));
-    publishChatMetadata(publisher, [chat.id]);
+    chatEvents.metadataChanged([chat.id]);
     return context.json(chat);
   });
   app.post("/api/chats/prewarm", async (context) => {
@@ -287,10 +289,7 @@ export function registerApi(
         };
       }),
     );
-    publishChatMetadata(
-      publisher,
-      targets.map((chat) => chat.id),
-    );
+    chatEvents.metadataChanged(targets.map((chat) => chat.id));
     for (const chat of targets) {
       activity.clearChat(chat.id);
     }
@@ -302,10 +301,7 @@ export function registerApi(
   app.post("/api/chats/archived/restore", async (context) => {
     const body = await context.req.json<ChatIdsInput>();
     const chats = await run(restoreArchivedChats(readChatIds(body)));
-    publishChatMetadata(
-      publisher,
-      chats.map((chat) => chat.id),
-    );
+    chatEvents.metadataChanged(chats.map((chat) => chat.id));
     return context.json(chats);
   });
   app.post("/api/chats/archived/delete-impact", async (context) => {
@@ -342,7 +338,7 @@ export function registerApi(
     for (const chatId of chatIds) {
       activity.clearChat(chatId);
     }
-    publishChatMetadata(publisher, chatIds);
+    chatEvents.metadataChanged(chatIds);
     return context.json({
       deletedCount: deletedChats.length,
       deletedWorktreeCount: worktrees.length,
@@ -394,7 +390,7 @@ export function registerApi(
     for (const chatId of deletedChatIds) {
       activity.clearChat(chatId);
     }
-    publishChatMetadata(publisher, deletedChatIds);
+    chatEvents.metadataChanged(deletedChatIds);
     return context.json({ deletedChatIds });
   });
   app.get("/api/agents/skills", (context) =>
@@ -508,7 +504,7 @@ export function registerApi(
     for (const chatId of result.deletedChatIds) {
       activity.clearChat(chatId);
     }
-    publishChatMetadata(publisher, result.deletedChatIds);
+    chatEvents.metadataChanged(result.deletedChatIds);
     return context.json(result);
   });
 
@@ -556,6 +552,10 @@ export function registerApi(
     const input = parseRunStartInput(await context.req.json());
     chatRuns.reserve(runId, input);
     activity.start(input.chatId, runId);
+    // Other devices with this chat open are not attached to anything yet: they
+    // probed `active-run` when they mounted and found nothing. Tell them a run
+    // exists so they attach instead of sitting idle for the whole turn.
+    chatEvents.conversationChanged([input.chatId]);
     return observeChatRun(context, chatRuns, runId, true);
   });
   app.get("/api/chats/:chatId/active-run", (context) =>
@@ -573,6 +573,7 @@ export function registerApi(
     const snapshot = chatRuns.snapshot(runId);
     activity.cancel(snapshot.chatId, runId);
     chatRuns.stop(runId);
+    chatEvents.conversationChanged([snapshot.chatId]);
     return context.json({ ok: true });
   });
   app.post("/api/chat-runs/:runId/elicitation", async (context) => {
@@ -606,16 +607,6 @@ function observeChatRun(
       if (begin) registry.begin(runId);
     });
   });
-}
-
-function publishChatActivity(publisher: EventPublisher, chatId: string) {
-  publisher.publish({ chatIds: [chatId], type: "chat-activity-changed" });
-  publisher.publish({ chatIds: [chatId], type: "chat-attention-changed" });
-}
-
-function publishChatMetadata(publisher: EventPublisher, chatIds: string[]) {
-  if (chatIds.length === 0) return;
-  publisher.publish({ chatIds, type: "chat-metadata-changed" });
 }
 
 function parseSendInput(value: unknown): ChatSendInput {

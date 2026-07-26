@@ -4,10 +4,20 @@ import type { DaemonInfo } from "@angel-engine/daemon-api/daemon";
 import { isDaemonGlobalEvent } from "@angel-engine/daemon-api";
 import { useQueryClient } from "@tanstack/react-query";
 import { useEffect } from "react";
+import {
+  mountedChatIds,
+  reconcileChatConversation,
+} from "@/features/chat/state/chat-conversation-sync";
 import { useDaemonClient } from "@/platform/daemon";
 import { queryKeys } from "@/platform/query-keys";
 
 const RECONNECT_DELAY_MS = 1_000;
+/**
+ * A single turn publishes a conversation change on start and again on settle, and
+ * the window that started the run receives its own echo. Batching collapses that
+ * burst into one reconcile per chat.
+ */
+const CONVERSATION_COALESCE_MS = 150;
 
 /**
  * Renderer-side subscription to the daemon's global event stream. The events
@@ -30,6 +40,33 @@ export function DaemonEventSync() {
     let stopped = false;
     let socket: WebSocket | undefined;
     let reconnectTimer: ReturnType<typeof setTimeout> | undefined;
+    let conversationTimer: ReturnType<typeof setTimeout> | undefined;
+    const pendingConversations = new Set<string>();
+
+    const flushConversations = () => {
+      conversationTimer = undefined;
+      const chatIds = [...pendingConversations];
+      pendingConversations.clear();
+      for (const chatId of chatIds) {
+        reconcileChatConversation(chatId, queryClient);
+      }
+    };
+
+    const queueConversations = (chatIds: string[]) => {
+      for (const chatId of chatIds) pendingConversations.add(chatId);
+      if (conversationTimer !== undefined) return;
+      conversationTimer = setTimeout(
+        flushConversations,
+        CONVERSATION_COALESCE_MS,
+      );
+    };
+
+    const invalidateChatLists = () => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.chats.list() });
+      void queryClient.invalidateQueries({
+        queryKey: queryKeys.chats.archived(),
+      });
+    };
 
     const handleEvent = (event: DaemonGlobalEvent) => {
       switch (event.type) {
@@ -39,10 +76,12 @@ export function DaemonEventSync() {
             queryKey: queryKeys.chatActivity.all(),
           });
           return;
+        case "chat-conversation-changed":
+          queueConversations(event.chatIds);
+          return;
         case "chat-metadata-changed":
-          void queryClient.invalidateQueries({
-            queryKey: queryKeys.chats.list(),
-          });
+          // Archive/restore moves a row between the two lists, so both are stale.
+          invalidateChatLists();
       }
     };
 
@@ -66,9 +105,10 @@ export function DaemonEventSync() {
         void queryClient.invalidateQueries({
           queryKey: queryKeys.chatActivity.all(),
         });
-        void queryClient.invalidateQueries({
-          queryKey: queryKeys.chats.list(),
-        });
+        invalidateChatLists();
+        // Conversation hints published while the socket was down are simply gone
+        // — there is no replay — so every open chat reconciles on reconnect.
+        queueConversations(mountedChatIds());
       });
       next.addEventListener("close", () => {
         if (stopped || socket !== next) return;
@@ -82,6 +122,7 @@ export function DaemonEventSync() {
     return () => {
       stopped = true;
       if (reconnectTimer !== undefined) clearTimeout(reconnectTimer);
+      if (conversationTimer !== undefined) clearTimeout(conversationTimer);
       socket?.close();
       socket = undefined;
     };

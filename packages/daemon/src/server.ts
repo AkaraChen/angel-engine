@@ -1,6 +1,7 @@
 import type { ServerType } from "@hono/node-server";
 import type { Server as HttpServer } from "node:http";
 import type { DaemonHealth, DaemonInfo } from "@angel-engine/daemon-api/daemon";
+import type { ChatEventsApi } from "./features/chat/chat-events";
 import type { DaemonRuntime } from "./platform/runtime";
 import type { DaemonOptions } from "./types";
 
@@ -23,6 +24,7 @@ import {
 import { registerMobileHosting } from "./mobile-hosting";
 import { WebSocketServer } from "ws";
 import { registerApi } from "./api";
+import { chatEventsLayer, createChatEvents } from "./features/chat/chat-events";
 import { ChatEngine } from "./features/chat/engine-runtime";
 import { TerminalService } from "./features/terminal/manager";
 import { Db, dbConfigLayer } from "./platform/db";
@@ -92,7 +94,10 @@ export interface Daemon {
   close: () => Promise<void>;
 }
 
-function createDaemonRuntime(options: DaemonOptions): DaemonRuntime {
+function createDaemonRuntime(
+  options: DaemonOptions,
+  chatEvents: ChatEventsApi,
+): DaemonRuntime {
   const configLayer = dbConfigLayer({
     dataDir: options.dataDir,
     migrationsDir:
@@ -103,6 +108,7 @@ function createDaemonRuntime(options: DaemonOptions): DaemonRuntime {
     Layer.provide(Db.Default, configLayer),
     ProcessRegistryService.Default,
     TerminalService.Default,
+    chatEventsLayer(chatEvents),
   );
   const appLayer = Layer.provideMerge(ChatEngine.Default, baseLayer);
   return ManagedRuntime.make(appLayer);
@@ -124,8 +130,19 @@ export async function createDaemon(options: DaemonOptions): Promise<Daemon> {
   const mobileToken = mobileAuth?.sessionToken;
   const app = new Hono();
   const pairThrottle = new PairThrottle();
-  const runtime = createDaemonRuntime(options);
   const eventSockets = new Set<import("ws").WebSocket>();
+  // The event vocabulary is built before the runtime so engine-level code — which
+  // owns the mutations that reorder and retitle chat list rows — can publish
+  // through the same channel the API routes use.
+  const chatEvents = createChatEvents({
+    publish(event) {
+      const payload = JSON.stringify(event);
+      for (const socket of eventSockets) {
+        if (socket.readyState === socket.OPEN) socket.send(payload);
+      }
+    },
+  });
+  const runtime = createDaemonRuntime(options, chatEvents);
   const webSockets = new WebSocketServer({ noServer: true });
   let server: ServerType | undefined;
 
@@ -205,14 +222,7 @@ export async function createDaemon(options: DaemonOptions): Promise<Daemon> {
     return context.json({ code: "internal", error: error.message }, 500);
   });
 
-  registerApi(app, runtime, {
-    publish(event) {
-      const payload = JSON.stringify(event);
-      for (const socket of eventSockets) {
-        if (socket.readyState === socket.OPEN) socket.send(payload);
-      }
-    },
-  });
+  registerApi(app, runtime, chatEvents);
 
   app.put("/api/process-registry", async (context) => {
     const body = await context.req.json<unknown>();

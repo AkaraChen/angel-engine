@@ -41,6 +41,7 @@ import {
   createChatSession,
   getOrCreateChatSession,
 } from "./chat-session-factory";
+import { ChatEvents } from "./chat-events";
 import { ChatProcessRegistry } from "./process-registry";
 import {
   createChat,
@@ -93,6 +94,7 @@ export class ChatEngine extends Effect.Service<ChatEngine>()(
   {
     scoped: Effect.gen(function* () {
       const processRegistryService = yield* ProcessRegistryService;
+      const chatEvents = yield* ChatEvents;
       const runtime = yield* Effect.runtime<Db>();
 
       const chatSessions = new Map<string, DesktopChatSession>();
@@ -358,6 +360,10 @@ export class ChatEngine extends Effect.Service<ChatEngine>()(
             ? setChatRemoteThreadId(chat.id, projected.remoteThreadId)
             : touchChat(chat.id);
           const content = projected.content;
+          // Every send retitles (first prompt) and/or bumps `updatedAt`, which
+          // reorders every client's chat list. Without this, a send from one
+          // device leaves the other showing a stale title and sort position.
+          chatEvents.metadataChanged([finalChat.id]);
 
           return {
             chat: finalChat,
@@ -500,6 +506,7 @@ export class ChatEngine extends Effect.Service<ChatEngine>()(
               })
               .pipe(Effect.mapError(sessionFailure));
             const updatedChat = yield* persistRemoteThreadId(chat, snapshot);
+            chatEvents.conversationChanged([updatedChat.id]);
             return {
               chat: updatedChat,
               config: runtimeConfigFromConversationSnapshot(snapshot),
@@ -518,6 +525,7 @@ export class ChatEngine extends Effect.Service<ChatEngine>()(
               })
               .pipe(Effect.mapError(sessionFailure));
             const updatedChat = yield* persistRemoteThreadId(chat, snapshot);
+            chatEvents.conversationChanged([updatedChat.id]);
             return {
               chat: updatedChat,
               config: runtimeConfigFromConversationSnapshot(snapshot),

@@ -15,6 +15,7 @@ import type {
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useReducer, useRef } from "react";
 
+import { subscribeChatConversation } from "@/platform/daemon-events";
 import { useDaemonClient } from "@/platform/daemon-provider";
 import { queryKeys } from "@/platform/query-keys";
 
@@ -309,26 +310,21 @@ export function useConversation(chatId: string): Conversation {
     retry: false,
   });
 
-  useEffect(() => {
-    const controller = new AbortController();
-    observerRef.current = controller;
-    runIdRef.current = null;
-    liveChatIdRef.current = "";
-    liveTurnRef.current = EMPTY_TURN;
-    elicitationRef.current = null;
-    streamErrorRef.current = null;
-    stopRequestedRef.current = false;
-    isStreamingRef.current = false;
-    isBootstrappingRef.current = true;
-
-    void (async () => {
+  /**
+   * Attaches to whatever run the daemon is executing for this chat, retrying
+   * while the daemon is unreachable. Finding no run leaves the slot idle rather
+   * than ending the story: a run started on another device arrives later as a
+   * `chat-conversation-changed` hint, which calls this again.
+   */
+  const observeActiveRun = useCallback(
+    async (controller: AbortController) => {
       while (isCurrent(controller)) {
         try {
           const active = await daemon.chatRuns.active(chatId);
           if (!isCurrent(controller)) return;
           if (active.run === null) {
             isBootstrappingRef.current = false;
-            observerRef.current = null;
+            if (observerRef.current === controller) observerRef.current = null;
             forceRender();
             return;
           }
@@ -342,7 +338,23 @@ export function useConversation(chatId: string): Conversation {
           await retryDelay(controller.signal);
         }
       }
-    })();
+    },
+    [applySnapshot, chatId, consumeRun, daemon, isCurrent],
+  );
+
+  useEffect(() => {
+    const controller = new AbortController();
+    observerRef.current = controller;
+    runIdRef.current = null;
+    liveChatIdRef.current = "";
+    liveTurnRef.current = EMPTY_TURN;
+    elicitationRef.current = null;
+    streamErrorRef.current = null;
+    stopRequestedRef.current = false;
+    isStreamingRef.current = false;
+    isBootstrappingRef.current = true;
+
+    void observeActiveRun(controller);
 
     return () => {
       // Observer detach only. Explicit Stop is the sole DELETE path.
@@ -359,7 +371,24 @@ export function useConversation(chatId: string): Conversation {
         isBootstrappingRef.current = true;
       }
     };
-  }, [applySnapshot, chatId, consumeRun, daemon, isCurrent]);
+  }, [chatId, observeActiveRun]);
+
+  // The other device's changes to this chat. Skipped while a local observer is
+  // attached: the run stream is authoritative then, and refetching history
+  // mid-turn would fight the accumulating transcript.
+  useEffect(
+    () =>
+      subscribeChatConversation(chatId, () => {
+        if (observerRef.current !== null) return;
+        void queryClient.invalidateQueries({
+          queryKey: queryKeys.chats.load(chatId),
+        });
+        const controller = new AbortController();
+        observerRef.current = controller;
+        void observeActiveRun(controller);
+      }),
+    [chatId, observeActiveRun, queryClient],
+  );
 
   const modeMutation = useMutation({
     mutationFn: async (input: {

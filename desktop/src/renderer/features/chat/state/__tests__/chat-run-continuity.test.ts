@@ -23,6 +23,15 @@ vi.mock("@/platform/api-client", () => ({
 const { selectSlot } = await import("../chat-run-reducer");
 const { getChatRunContext } = await import("../chat-run-registry");
 const store = await import("../chat-run-store");
+const { mountedChatIds, reconcileChatConversation } = await import(
+  "../chat-conversation-sync"
+);
+
+/** Just enough of a `QueryClient` for the reconcile path. */
+function fakeQueryClient() {
+  const invalidateQueries = vi.fn(() => Promise.resolve());
+  return { client: { invalidateQueries } as never, invalidateQueries };
+}
 
 let counter = 0;
 function uniqueId(prefix: string) {
@@ -260,6 +269,66 @@ describe("desktop chat run continuity", () => {
 
     expect(chatRuns.observe).not.toHaveBeenCalled();
     expect(selectSlot(getChatRunContext(), chatId)).toBeUndefined();
+  });
+
+  it("reconciles an idle chat by refetching history and attaching", async () => {
+    const chatId = uniqueId("chat");
+    const runId = uniqueId("run");
+    chatRuns.active.mockResolvedValue({ run: snapshot(chatId, runId) });
+    const stream = controllableStream();
+    chatRuns.observe.mockReturnValue(stream.iterate());
+    const { client, invalidateQueries } = fakeQueryClient();
+
+    reconcileChatConversation(chatId, client);
+    await settle();
+
+    expect(invalidateQueries).toHaveBeenCalledWith({
+      queryKey: ["chats", "detail", chatId],
+    });
+    expect(chatRuns.observe).toHaveBeenCalledWith(runId, expect.anything());
+    expect(selectSlot(getChatRunContext(), chatId)?.status).toBe("streaming");
+
+    stream.close();
+    await settle();
+  });
+
+  it("leaves a locally streaming chat untouched — the run stream owns it", async () => {
+    const chatId = uniqueId("chat");
+    const runId = uniqueId("run");
+    chatRuns.active.mockResolvedValue({ run: snapshot(chatId, runId) });
+    const stream = controllableStream();
+    chatRuns.observe.mockReturnValue(stream.iterate());
+
+    store.chatRunActions.attachToActiveRun(chatId);
+    await settle();
+    expect(selectSlot(getChatRunContext(), chatId)?.status).toBe("streaming");
+
+    const { client, invalidateQueries } = fakeQueryClient();
+    chatRuns.observe.mockClear();
+    reconcileChatConversation(chatId, client);
+    await settle();
+
+    expect(invalidateQueries).not.toHaveBeenCalled();
+    expect(chatRuns.observe).not.toHaveBeenCalled();
+
+    stream.close();
+    await settle();
+  });
+
+  it("reports streaming chats as mounted so a reconnect can reconcile them", async () => {
+    const chatId = uniqueId("chat");
+    const runId = uniqueId("run");
+    chatRuns.active.mockResolvedValue({ run: snapshot(chatId, runId) });
+    const stream = controllableStream();
+    chatRuns.observe.mockReturnValue(stream.iterate());
+
+    store.chatRunActions.attachToActiveRun(chatId);
+    await settle();
+
+    expect(mountedChatIds()).toContain(chatId);
+
+    stream.close();
+    await settle();
   });
 
   it("answers an elicitation on the run route", async () => {
