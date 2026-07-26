@@ -42,6 +42,54 @@ afterEach(async () => {
 });
 
 describe("home timestamps", () => {
+  it("shows the activity time a row is ordered by, not the chat's own", async () => {
+    const twoMinutesAgo = new Date(Date.now() - 2 * 60 * 1000).toISOString();
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: string) => {
+        const url = String(input);
+        if (url.endsWith("/api/projects")) return jsonResponse([]);
+        if (url.endsWith("/api/chat-activity")) {
+          return jsonResponse({
+            items: [
+              {
+                chatId: "c1",
+                runId: "run-1",
+                status: "running",
+                updatedAt: twoMinutesAgo,
+              },
+            ],
+          });
+        }
+        if (url.endsWith("/api/chats")) {
+          return jsonResponse([
+            {
+              archived: false,
+              createdAt: "2026-01-01T00:00:00.000Z",
+              cwd: null,
+              id: "c1",
+              pinned: false,
+              projectId: null,
+              remoteThreadId: null,
+              runtime: "claude",
+              title: "Long-lived chat",
+              // Months old: sorting floats this row to the top on the new run,
+              // so showing the chat's own time would read "6 months ago".
+              updatedAt: "2026-01-01T00:00:00.000Z",
+            },
+          ]);
+        }
+        return Promise.reject(new Error(`unexpected fetch: ${url}`));
+      }),
+    );
+
+    renderHome();
+
+    await screen.findByText("Long-lived chat");
+    expect(await screen.findByText(/minutes ago/)).toBeDefined();
+    expect(screen.queryByText(/months ago/)).toBeNull();
+  });
+
   it("renders relative timestamps in the active (non-English) language", async () => {
     await i18n.changeLanguage("zh-CN");
 

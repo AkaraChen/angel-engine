@@ -45,6 +45,7 @@ export const ko = {
     home: {
       emptyTitle: "아직 채팅이 없습니다",
       emptyDescription: "새 에이전트 세션을 시작하면 여기에 표시됩니다.",
+      activityErrorTitle: "활동을 불러올 수 없습니다",
       errorTitle: "채팅을 불러올 수 없습니다",
       filterSegments: "채팅 필터",
       segmentEmpty: "여기에는 아무것도 없습니다.",
@@ -70,6 +71,7 @@ export const ko = {
       emptyTitle: "아직 메시지가 없습니다",
       emptyDescription: "메시지를 보내 대화를 시작하세요.",
       errorTitle: "이 채팅을 불러올 수 없습니다",
+      runFailedTitle: "마지막 실행이 실패했습니다",
       messagePlaceholder: "메시지",
       sendAria: "보내기",
       stopAria: "중지",

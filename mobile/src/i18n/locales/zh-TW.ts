@@ -43,6 +43,7 @@ export const zhTW = {
     home: {
       emptyTitle: "尚無對話",
       emptyDescription: "開啟一個新的代理工作階段後即可在此看到。",
+      activityErrorTitle: "無法載入活動",
       errorTitle: "無法載入對話",
       filterSegments: "篩選對話",
       segmentEmpty: "這裡暫時沒有內容。",
@@ -68,6 +69,7 @@ export const zhTW = {
       emptyTitle: "尚無訊息",
       emptyDescription: "傳送一則訊息以開始對話。",
       errorTitle: "無法載入此對話",
+      runFailedTitle: "上一次執行失敗",
       messagePlaceholder: "訊息",
       sendAria: "傳送",
       stopAria: "停止",

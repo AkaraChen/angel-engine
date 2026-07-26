@@ -4,6 +4,8 @@ import { describe, expect, it } from "vitest";
 
 import {
   buildChatActivityRows,
+  chatActivityFailureMessage,
+  chatActivityRowTimestamp,
   countChatActivityRows,
   filterChatActivityRows,
   terminalAttentionId,
@@ -158,6 +160,48 @@ describe("countChatActivityRows", () => {
       done: 1,
       running: 1,
     });
+  });
+});
+
+describe("chatActivityRowTimestamp", () => {
+  it("reports the timestamp the row is ordered by, not the chat's own", () => {
+    // The chat has been idle for months; the run that floated it to the top
+    // started a minute ago, and that is the time the row has to show.
+    const rows = buildChatActivityRows({
+      activities: [
+        {
+          chatId: "running",
+          runId: "run-1",
+          status: "running",
+          updatedAt: "2026-07-25T01:02:00.000Z",
+        },
+      ],
+      chats: [{ ...chat("running"), updatedAt: "2026-01-01T00:00:00.000Z" }],
+    });
+
+    expect(chatActivityRowTimestamp(rows[0])).toBe("2026-07-25T01:02:00.000Z");
+  });
+
+  it("falls back to the chat for a row with no activity", () => {
+    const rows = buildChatActivityRows({ activities: [], chats: [chat("a")] });
+
+    expect(chatActivityRowTimestamp(rows[0])).toBe("2026-07-25T00:00:00.000Z");
+  });
+});
+
+describe("chatActivityFailureMessage", () => {
+  it("surfaces the daemon failure message only for failed rows", () => {
+    const rows = buildChatActivityRows({
+      activities: ACTIVITIES,
+      chats: CHATS,
+    });
+    const byChatId = new Map(rows.map((row) => [row.chat.id, row]));
+
+    expect(chatActivityFailureMessage(byChatId.get("failed")!)).toBe(
+      "the runtime exited",
+    );
+    expect(chatActivityFailureMessage(byChatId.get("stuck")!)).toBeUndefined();
+    expect(chatActivityFailureMessage(byChatId.get("idle")!)).toBeUndefined();
   });
 });
 

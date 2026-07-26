@@ -1,11 +1,18 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import {
+  act,
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+} from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { Router } from "wouter";
 import { memoryLocation } from "wouter/memory-location";
 
 import { AuthProvider } from "@/features/auth/auth-provider";
 import { DaemonProvider } from "@/platform/daemon-provider";
+import { queryKeys } from "@/platform/query-keys";
 
 import { HomePage } from "./home";
 
@@ -21,17 +28,20 @@ function renderHome() {
     defaultOptions: { queries: { retry: false } },
   });
   const { hook } = memoryLocation({ path: "/" });
-  return render(
-    <AuthProvider>
-      <DaemonProvider>
-        <QueryClientProvider client={queryClient}>
-          <Router hook={hook}>
-            <HomePage />
-          </Router>
-        </QueryClientProvider>
-      </DaemonProvider>
-    </AuthProvider>,
-  );
+  return {
+    ...render(
+      <AuthProvider>
+        <DaemonProvider>
+          <QueryClientProvider client={queryClient}>
+            <Router hook={hook}>
+              <HomePage />
+            </Router>
+          </QueryClientProvider>
+        </DaemonProvider>
+      </AuthProvider>,
+    ),
+    queryClient,
+  };
 }
 
 /**
@@ -219,6 +229,75 @@ describe("homePage", () => {
     ).toBeDefined();
     expect(screen.getByRole("button", { name: /Running\s*1/ })).toBeDefined();
     expect(screen.getByRole("button", { name: /Done\s*1/ })).toBeDefined();
+  });
+
+  it("says the activity projection is unavailable instead of showing 0s", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: string) => {
+        const url = String(input);
+        if (url.endsWith("/api/chat-activity")) {
+          return Promise.reject(new Error("activity is down"));
+        }
+        return fleetFetch(url);
+      }),
+    );
+
+    renderHome();
+
+    expect(await screen.findByText("Couldn't load activity")).toBeDefined();
+    // Counts and badges would all read 0/absent without the projection, which is
+    // indistinguishable from an idle fleet — the chips stay away entirely.
+    expect(screen.queryByRole("button", { name: /Needs you/ })).toBeNull();
+    expect(screen.getByText("Waiting chat")).toBeDefined();
+  });
+
+  it("restores the full list when a background activity refetch fails", async () => {
+    let activityFails = false;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: string) => {
+        const url = String(input);
+        if (url.endsWith("/api/chat-activity") && activityFails) {
+          return Promise.reject(new Error("activity is down"));
+        }
+        return fleetFetch(url);
+      }),
+    );
+
+    const { queryClient } = renderHome();
+
+    fireEvent.click(
+      await screen.findByRole("button", { name: /Needs you\s*2/ }),
+    );
+    expect(screen.queryByText("Idle chat")).toBeNull();
+
+    activityFails = true;
+    await act(async () => {
+      await queryClient.refetchQueries({ queryKey: queryKeys.activity.list });
+    });
+
+    // The filter controls are gone, so a stale "Needs you" subset would strand
+    // the user on two rows with no way back to the rest of the chats.
+    expect(await screen.findByText("Couldn't load activity")).toBeDefined();
+    for (const title of [
+      "Waiting chat",
+      "Failed chat",
+      "Running chat",
+      "Done chat",
+      "Idle chat",
+    ]) {
+      expect(screen.getByText(title)).toBeDefined();
+    }
+    expect(screen.queryByLabelText("Running")).toBeNull();
+  });
+
+  it("shows the failure message of a failed run on its row", async () => {
+    vi.stubGlobal("fetch", vi.fn(fleetFetch));
+
+    renderHome();
+
+    expect(await screen.findByText("the runtime exited")).toBeDefined();
   });
 
   it("shows the error state when the daemon is unreachable", async () => {

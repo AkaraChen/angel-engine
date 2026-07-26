@@ -4,7 +4,13 @@ import type {
   ChatActivitySegment,
 } from "@/features/chat/activity-model";
 
-import { ChatCircle, GitBranch, Plus, PushPin } from "@phosphor-icons/react";
+import {
+  ChatCircle,
+  GitBranch,
+  Plus,
+  PushPin,
+  WarningOctagon,
+} from "@phosphor-icons/react";
 import { formatDistanceToNow } from "date-fns";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -25,6 +31,8 @@ import { AgentRuntimeIcon } from "@/features/agents/agent-runtime-icon";
 import {
   buildChatActivityRows,
   CHAT_ACTIVITY_SEGMENTS,
+  chatActivityFailureMessage,
+  chatActivityRowTimestamp,
   countChatActivityRows,
   filterChatActivityRows,
 } from "@/features/chat/activity-model";
@@ -58,23 +66,36 @@ export function HomePage() {
   const [segment, setSegment] = useState<ChatActivitySegment>("all");
 
   const chats = chatsQuery.data ?? EMPTY_LIST;
+  // Without the projection every count is 0 and every badge is missing, which
+  // is indistinguishable from "nothing is running" — say so instead of guessing.
+  // The last snapshot is dropped with it: it would otherwise keep badging rows
+  // and filtering the list by a state nobody can still verify.
+  const activityUnavailable = activityQuery.isError;
+  const activities = activityUnavailable
+    ? EMPTY_LIST
+    : (activityQuery.data ?? EMPTY_LIST);
   const rows = useMemo(
-    () =>
-      buildChatActivityRows({
-        activities: activityQuery.data ?? EMPTY_LIST,
-        chats,
-      }),
-    [activityQuery.data, chats],
+    () => buildChatActivityRows({ activities, chats }),
+    [activities, chats],
   );
   const counts = useMemo(() => countChatActivityRows(rows), [rows]);
+  // A segment the user picked earlier would now match nothing but a stale
+  // subset, with the controls hidden and no way back, so the list falls back to
+  // the full one. The choice itself is kept for when the projection returns.
+  const effectiveSegment = activityUnavailable ? "all" : segment;
   const visibleRows = useMemo(
-    () => filterChatActivityRows(rows, segment),
-    [rows, segment],
+    () => filterChatActivityRows(rows, effectiveSegment),
+    [effectiveSegment, rows],
   );
 
   return (
     <div className="relative flex h-full min-w-0 flex-col overflow-hidden">
-      {chatsQuery.isSuccess && chatsQuery.data.length > 0 ? (
+      {activityUnavailable ? (
+        <ActivityErrorNotice onRetry={() => void activityQuery.refetch()} />
+      ) : null}
+      {!activityUnavailable &&
+      chatsQuery.isSuccess &&
+      chatsQuery.data.length > 0 ? (
         <div
           aria-label={t("home.filterSegments")}
           className="flex shrink-0 gap-1 overflow-x-auto px-4 py-2"
@@ -105,7 +126,7 @@ export function HomePage() {
         className="min-h-0 flex-1 min-w-0 max-w-full"
         viewportClassName="[&>div]:block! [&>div]:w-full! [&>div]:min-w-0!"
       >
-        {chatsQuery.isPending ? (
+        {chatsQuery.isPending || activityQuery.isPending ? (
           <ChatListSkeleton />
         ) : chatsQuery.isError ? (
           <ErrorState onRetry={() => void chatsQuery.refetch()} />
@@ -142,6 +163,7 @@ function ChatListItem({ row }: { row: ChatActivityRow }) {
   const locale = useDateFnsLocale();
   const { activity, chat } = row;
   const subtitle = [chat.projectName, chat.worktreeBranch].filter(Boolean);
+  const failureMessage = chatActivityFailureMessage(row);
   return (
     <li className="w-full min-w-0 max-w-full border-b border-border/60 last:border-b-0">
       <Link
@@ -174,7 +196,7 @@ function ChatListItem({ row }: { row: ChatActivityRow }) {
               {chat.title}
             </span>
             <span className="ml-auto shrink-0 whitespace-nowrap text-right text-xs text-muted-foreground">
-              {formatUpdatedAt(chat.updatedAt, locale)}
+              {formatUpdatedAt(chatActivityRowTimestamp(row), locale)}
             </span>
           </span>
           {activity !== null || subtitle.length > 0 ? (
@@ -203,9 +225,37 @@ function ChatListItem({ row }: { row: ChatActivityRow }) {
               ) : null}
             </span>
           ) : null}
+          {failureMessage !== undefined ? (
+            <span className="truncate text-xs text-destructive">
+              {failureMessage}
+            </span>
+          ) : null}
         </span>
       </Link>
     </li>
+  );
+}
+
+/**
+ * The chat list still works without the activity projection, so the failure is
+ * a notice above it rather than a full error state.
+ */
+function ActivityErrorNotice({ onRetry }: { onRetry: () => void }) {
+  const { t } = useTranslation();
+  return (
+    <div
+      className="
+        flex shrink-0 items-center gap-2 border-b border-border/60 px-4 py-2
+        text-xs text-muted-foreground
+      "
+      role="status"
+    >
+      <WarningOctagon className="shrink-0 text-destructive" size={14} />
+      <span className="min-w-0 flex-1">{t("home.activityErrorTitle")}</span>
+      <Button onClick={onRetry} size="sm" variant="ghost">
+        {t("common.tryAgain")}
+      </Button>
+    </div>
   );
 }
 

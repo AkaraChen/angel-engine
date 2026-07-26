@@ -46,6 +46,7 @@ export const fr = {
       emptyTitle: "Aucune discussion",
       emptyDescription:
         "Démarrez une nouvelle session d'agent pour la voir apparaître ici.",
+      activityErrorTitle: "Impossible de charger l'activité",
       errorTitle: "Impossible de charger les discussions",
       filterSegments: "Filtrer les discussions",
       segmentEmpty: "Rien ici pour le moment.",
@@ -71,6 +72,7 @@ export const fr = {
       emptyTitle: "Aucun message",
       emptyDescription: "Envoyez un message pour démarrer la conversation.",
       errorTitle: "Impossible de charger cette discussion",
+      runFailedTitle: "La dernière exécution a échoué",
       messagePlaceholder: "Message",
       sendAria: "Envoyer",
       stopAria: "Arrêter",

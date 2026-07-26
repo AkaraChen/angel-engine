@@ -47,6 +47,7 @@ export const de = {
       emptyTitle: "Noch keine Chats",
       emptyDescription:
         "Starte eine neue Agent-Sitzung, damit sie hier erscheint.",
+      activityErrorTitle: "Aktivität konnte nicht geladen werden",
       errorTitle: "Chats konnten nicht geladen werden",
       filterSegments: "Chats filtern",
       segmentEmpty: "Hier ist gerade nichts.",
@@ -73,6 +74,7 @@ export const de = {
       emptyDescription:
         "Sende eine Nachricht, um die Unterhaltung zu beginnen.",
       errorTitle: "Dieser Chat konnte nicht geladen werden",
+      runFailedTitle: "Der letzte Lauf ist fehlgeschlagen",
       messagePlaceholder: "Nachricht",
       sendAria: "Senden",
       stopAria: "Stoppen",

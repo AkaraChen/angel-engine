@@ -52,6 +52,7 @@ export interface LocaleResourceTranslationHomeSegments {
 export interface LocaleResourceTranslationHome {
   emptyTitle: string;
   emptyDescription: string;
+  activityErrorTitle: string;
   errorTitle: string;
   filterSegments: string;
   segmentEmpty: string;
@@ -76,6 +77,7 @@ export interface LocaleResourceTranslationChat {
   emptyTitle: string;
   emptyDescription: string;
   errorTitle: string;
+  runFailedTitle: string;
   messagePlaceholder: string;
   sendAria: string;
   stopAria: string;
