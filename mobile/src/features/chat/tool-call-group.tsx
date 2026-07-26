@@ -41,7 +41,7 @@ export function ToolCallGroup({
 
   return (
     <Collapsible
-      className="w-full max-w-[90%]"
+      className="w-full max-w-[90%] min-w-0"
       onOpenChange={setManualOpen}
       open={open}
     >

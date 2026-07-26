@@ -39,7 +39,8 @@ export function ToolCallCard({ call }: { call: ConversationToolCall }) {
   return (
     <Collapsible
       className="
-        w-full max-w-[90%] overflow-hidden rounded-xl border border-border
+        w-full max-w-[90%] min-w-0 overflow-hidden rounded-xl border
+        border-border
         bg-card text-sm
       "
       onOpenChange={setOpen}
@@ -171,9 +172,11 @@ function ToolPreBlock({
         {label}
       </div>
       <pre
+        // `wrap-anywhere` (not `break-word`) so a long path / base64 blob also
+        // shrinks the block's min-content width instead of widening the card.
         className="
-          max-h-48 overflow-auto rounded-md bg-muted/40 p-2 font-mono
-          text-[11px]/4 wrap-break-word whitespace-pre-wrap
+          max-h-48 max-w-full overflow-y-auto rounded-md bg-muted/40 p-2
+          font-mono text-[11px]/4 wrap-anywhere whitespace-pre-wrap
         "
       >
         {value}
