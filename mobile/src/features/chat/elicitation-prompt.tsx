@@ -50,11 +50,18 @@ export function ElicitationPrompt({
   onRespond,
 }: ElicitationPromptProps) {
   return (
-    <div className="rounded-xl bg-card p-3">
+    <div className="w-full max-w-[calc(100vw_-_2rem)] min-w-0 overflow-hidden rounded-xl bg-card p-3">
       <ElicitationHeader elicitation={elicitation} />
 
       {elicitation.body !== null && elicitation.body !== undefined ? (
-        <p className="mt-1 text-sm whitespace-pre-wrap text-muted-foreground">
+        // Approval bodies are raw shell commands / absolute paths: they have no
+        // break opportunities, so `pre-wrap` alone would run them off screen.
+        <p
+          className="
+            mt-1 max-h-48 overflow-y-auto text-sm wrap-anywhere
+            whitespace-pre-wrap text-muted-foreground
+          "
+        >
           {elicitation.body}
         </p>
       ) : null}
@@ -227,7 +234,7 @@ function QuestionInput({
         </div>
       ) : null}
       {question.question !== null && question.question !== undefined ? (
-        <div className="text-sm">{question.question}</div>
+        <div className="text-sm wrap-anywhere">{question.question}</div>
       ) : null}
 
       {hasOptions ? (
@@ -236,7 +243,7 @@ function QuestionInput({
             <button
               aria-pressed={selectedOptionLabel === option.label}
               className={cn(
-                "w-full rounded-md border border-border bg-background px-3 py-2 text-left text-sm transition-colors hover:bg-accent",
+                "w-full min-w-0 rounded-md border border-border bg-background px-3 py-2 text-left text-sm wrap-anywhere transition-colors hover:bg-accent",
                 selectedOptionLabel === option.label &&
                   "border-primary/35 bg-primary/10",
               )}
@@ -260,7 +267,7 @@ function QuestionInput({
             <button
               aria-pressed={selectedOther}
               className={cn(
-                "w-full rounded-md border border-border bg-background px-3 py-2 text-left text-sm transition-colors hover:bg-accent",
+                "w-full min-w-0 rounded-md border border-border bg-background px-3 py-2 text-left text-sm wrap-anywhere transition-colors hover:bg-accent",
                 selectedOther && "border-primary/35 bg-primary/10",
               )}
               onClick={() => {
