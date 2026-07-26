@@ -9,10 +9,11 @@ import { Db } from "../../platform/db";
 import { DaemonError } from "../../platform/errors";
 import {
   type ManagedWorktreeDependencies,
-  executeManagedWorktreeDeletion,
-  planManagedWorktreeDeletion,
+  deleteManagedWorktrees,
   scanManagedWorktrees,
 } from "./managed-worktrees";
+
+const closeChatSession = () => Effect.void;
 
 // Every dependency is faked, so the database is never touched.
 const testDbLayer = Layer.succeed(
@@ -154,9 +155,10 @@ describe("deleteManagedWorktrees", () => {
     });
 
     const result = await runEffect(
-      Effect.flatMap(
-        planManagedWorktreeDeletion({ paths: [alphaPath] }, dependencies),
-        (targets) => executeManagedWorktreeDeletion(targets, dependencies),
+      deleteManagedWorktrees(
+        { paths: [alphaPath] },
+        closeChatSession,
+        dependencies,
       ),
     );
 
@@ -165,6 +167,7 @@ describe("deleteManagedWorktrees", () => {
       deletedChatIds: ["chat-1", "chat-2"],
       deletedWorktreeCount: 1,
       deletedWorktrees: [alphaPath],
+      failedWorktrees: [],
     });
     expect(removed).toEqual([alphaPath]);
 
@@ -180,9 +183,10 @@ describe("deleteManagedWorktrees", () => {
     });
 
     const result = await runEffect(
-      Effect.flatMap(
-        planManagedWorktreeDeletion({ paths: [alphaPath] }, dependencies),
-        (targets) => executeManagedWorktreeDeletion(targets, dependencies),
+      deleteManagedWorktrees(
+        { paths: [alphaPath] },
+        closeChatSession,
+        dependencies,
       ),
     );
 
@@ -191,6 +195,7 @@ describe("deleteManagedWorktrees", () => {
       deletedChatIds: ["chat-1"],
       deletedWorktreeCount: 0,
       deletedWorktrees: [],
+      failedWorktrees: [],
     });
   });
 
@@ -201,7 +206,11 @@ describe("deleteManagedWorktrees", () => {
 
     await expect(
       runEffect(
-        planManagedWorktreeDeletion({ paths: [alphaPath] }, dependencies),
+        deleteManagedWorktrees(
+          { paths: [alphaPath] },
+          closeChatSession,
+          dependencies,
+        ),
       ),
     ).rejects.toMatchObject({ code: "worktree-has-active-chats" });
   });
@@ -217,7 +226,11 @@ describe("deleteManagedWorktrees", () => {
     ]) {
       await expect(
         runEffect(
-          planManagedWorktreeDeletion({ paths: [candidate] }, dependencies),
+          deleteManagedWorktrees(
+            { paths: [candidate] },
+            closeChatSession,
+            dependencies,
+          ),
         ),
       ).rejects.toMatchObject({ code: "worktree-not-managed" });
     }
@@ -226,12 +239,170 @@ describe("deleteManagedWorktrees", () => {
   it("rejects an empty path list", async () => {
     await expect(
       runEffect(
-        planManagedWorktreeDeletion(
+        deleteManagedWorktrees(
           { paths: [] },
+          closeChatSession,
           fakeDependencies({ chats: [] }),
         ),
       ),
     ).rejects.toMatchObject({ code: "invalid-request" });
+  });
+});
+
+describe("deleteManagedWorktrees ownership re-resolution", () => {
+  it("deletes the chats the path owns now, not the ones a stale scan saw", async () => {
+    const state = { chats: [] as Chat[], onDisk: [alphaPath] };
+    const dependencies = fakeDependencies({
+      chats: [],
+      deleteChats: (chatIds) =>
+        Effect.sync(() => {
+          state.chats = state.chats.filter(
+            (target) => !chatIds.includes(target.id),
+          );
+        }),
+      onDisk: [alphaPath],
+      state,
+    });
+
+    state.chats = [chat({ archived: true, cwd: alphaPath, id: "scanned" })];
+    const scanned = await runEffect(scanManagedWorktrees({}, dependencies));
+    expect(scanned[0]?.chatIds).toEqual(["scanned"]);
+
+    // A chat is archived onto the same path between the scan and the delete.
+    state.chats.push(chat({ archived: true, cwd: alphaPath, id: "late" }));
+
+    const result = await runEffect(
+      deleteManagedWorktrees(
+        { paths: [alphaPath] },
+        closeChatSession,
+        dependencies,
+      ),
+    );
+
+    expect(result.deletedChatIds).toEqual(["scanned", "late"]);
+    expect(state.chats).toEqual([]);
+  });
+
+  it("blocks the delete when a chat went active after the scan", async () => {
+    const state = { chats: [] as Chat[], onDisk: [alphaPath] };
+    const deleted: string[] = [];
+    const removed: string[] = [];
+    const dependencies = fakeDependencies({
+      chats: [],
+      deleteChats: (chatIds) => Effect.sync(() => deleted.push(...chatIds)),
+      onDisk: [alphaPath],
+      removeWorktree: (worktreePath) =>
+        Effect.sync(() => {
+          removed.push(worktreePath);
+          return worktreePath;
+        }),
+      state,
+    });
+
+    state.chats = [chat({ archived: true, cwd: alphaPath, id: "archived" })];
+    const scanned = await runEffect(
+      scanManagedWorktrees({ eligibleOnly: true }, dependencies),
+    );
+    expect(scanned.map((worktree) => worktree.path)).toEqual([alphaPath]);
+
+    state.chats.push(chat({ archived: false, cwd: alphaPath, id: "revived" }));
+
+    await expect(
+      runEffect(
+        deleteManagedWorktrees(
+          { paths: [alphaPath] },
+          closeChatSession,
+          dependencies,
+        ),
+      ),
+    ).rejects.toMatchObject({ code: "worktree-has-active-chats" });
+    expect(deleted).toEqual([]);
+    expect(removed).toEqual([]);
+  });
+
+  it("rejects the whole request before mutating when one path is ineligible", async () => {
+    const deleted: string[] = [];
+    const dependencies = fakeDependencies({
+      chats: [
+        chat({ archived: true, cwd: alphaPath, id: "chat-1" }),
+        chat({ archived: false, cwd: betaPath, id: "chat-2" }),
+      ],
+      deleteChats: (chatIds) => Effect.sync(() => deleted.push(...chatIds)),
+    });
+
+    await expect(
+      runEffect(
+        deleteManagedWorktrees(
+          { paths: [alphaPath, betaPath] },
+          closeChatSession,
+          dependencies,
+        ),
+      ),
+    ).rejects.toMatchObject({ code: "worktree-has-active-chats" });
+    expect(deleted).toEqual([]);
+  });
+});
+
+describe("deleteManagedWorktrees partial failures", () => {
+  it("reports a failed removal instead of hiding the chats it already deleted", async () => {
+    const dependencies = fakeDependencies({
+      chats: [
+        chat({ archived: true, cwd: alphaPath, id: "chat-1" }),
+        chat({ archived: true, cwd: betaPath, id: "chat-2" }),
+      ],
+      removeWorktree: (worktreePath) =>
+        worktreePath === alphaPath
+          ? Effect.fail(
+              DaemonError.worktreeRemoveFailed(new Error("git is unhappy")),
+            )
+          : Effect.succeed(worktreePath),
+    });
+
+    const result = await runEffect(
+      deleteManagedWorktrees(
+        { paths: [alphaPath, betaPath] },
+        closeChatSession,
+        dependencies,
+      ),
+    );
+
+    // chat-1 is gone from the database, so the caller must still publish it.
+    expect(result).toEqual({
+      deletedChatCount: 2,
+      deletedChatIds: ["chat-1", "chat-2"],
+      deletedWorktreeCount: 1,
+      deletedWorktrees: [betaPath],
+      failedWorktrees: [{ error: "git is unhappy", path: alphaPath }],
+    });
+  });
+
+  it("keeps deleting the remaining paths when a chat delete fails", async () => {
+    const dependencies = fakeDependencies({
+      chats: [
+        chat({ archived: true, cwd: alphaPath, id: "chat-1" }),
+        chat({ archived: true, cwd: betaPath, id: "chat-2" }),
+      ],
+      deleteChats: (chatIds) =>
+        chatIds.includes("chat-1")
+          ? Effect.fail(
+              DaemonError.databaseFailed(new Error("locked"), "locked"),
+            )
+          : Effect.void,
+    });
+
+    const result = await runEffect(
+      deleteManagedWorktrees(
+        { paths: [alphaPath, betaPath] },
+        closeChatSession,
+        dependencies,
+      ),
+    );
+
+    expect(result).toMatchObject({
+      deletedChatIds: ["chat-2"],
+      deletedWorktrees: [betaPath],
+      failedWorktrees: [{ error: "locked", path: alphaPath }],
+    });
   });
 });
 

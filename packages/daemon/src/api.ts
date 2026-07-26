@@ -76,8 +76,7 @@ import {
 } from "./features/projects/git";
 import { projectGitStatus } from "./features/projects/git";
 import {
-  executeManagedWorktreeDeletion,
-  planManagedWorktreeDeletion,
+  deleteManagedWorktrees,
   scanManagedWorktrees,
 } from "./features/projects/managed-worktrees";
 import { searchProjectFiles } from "./features/projects/file-search";
@@ -478,14 +477,10 @@ export function registerApi(
       throw DaemonError.invalidRequest("Worktree paths are required.");
     const result = await run(
       Effect.gen(function* () {
-        const targets = yield* planManagedWorktreeDeletion(input);
         const chatEngine = yield* ChatEngine;
-        for (const target of targets) {
-          for (const chatId of target.chatIds) {
-            yield* chatEngine.closeChatSession(chatId);
-          }
-        }
-        return yield* executeManagedWorktreeDeletion(targets);
+        return yield* deleteManagedWorktrees(input, (chatId) =>
+          chatEngine.closeChatSession(chatId),
+        );
       }),
     );
     for (const chatId of result.deletedChatIds) {

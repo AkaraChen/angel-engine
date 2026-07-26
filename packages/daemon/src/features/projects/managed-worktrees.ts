@@ -1,5 +1,6 @@
 import type { Chat } from "@angel-engine/daemon-api/chat";
 import type {
+  ManagedWorktreeDeleteFailure,
   ManagedWorktreeDeleteInput,
   ManagedWorktreeDeleteResult,
   ManagedWorktreeScanInput,
@@ -9,7 +10,7 @@ import type { Db } from "../../platform/db";
 
 import fs from "node:fs";
 import path from "node:path";
-import { Effect } from "effect";
+import { Effect, Either } from "effect";
 
 import {
   deleteArchivedChats,
@@ -17,6 +18,7 @@ import {
   listChats,
 } from "../chat/repository";
 import { DaemonError } from "../../platform/errors";
+import { withManagedWorktreeLock } from "./managed-worktree-lock";
 import {
   managedWorktreePath,
   managedWorktreeRoot,
@@ -24,7 +26,7 @@ import {
 } from "./git";
 
 /** A managed worktree selected for deletion together with its chats. */
-export interface ManagedWorktreeDeletionTarget {
+interface ManagedWorktreeDeletionTarget {
   chatIds: string[];
   path: string;
 }
@@ -82,13 +84,101 @@ export function scanManagedWorktrees(
 }
 
 /**
- * Validates the requested paths and resolves the chats each one owns. Fails
- * when a path is not an app-managed worktree or still has an active chat, so
- * eligibility is re-checked at delete time rather than trusted from the scan.
+ * Permanently deletes the requested managed worktrees and every chat mapped to
+ * them.
+ *
+ * Ownership and eligibility are resolved inside the managed-worktree lock and
+ * are never taken from an earlier scan: a chat that went active after the scan
+ * blocks the whole request, and a chat that was archived onto the path after
+ * the scan is deleted with it. Because chat create/restore take the same lock,
+ * nothing can claim a path between the check and the removal.
+ *
+ * Failure split: validation and eligibility fail the request before anything is
+ * mutated. Once mutation starts, a per-path failure is reported in
+ * `failedWorktrees` instead of failing the request, so the caller still learns
+ * which chats are gone and can publish for them.
  */
-export function planManagedWorktreeDeletion(
+export function deleteManagedWorktrees(
   input: ManagedWorktreeDeleteInput,
+  closeChatSession: (chatId: string) => Effect.Effect<void, DaemonError, Db>,
   dependencies: ManagedWorktreeDependencies = defaultDependencies,
+): Effect.Effect<ManagedWorktreeDeleteResult, DaemonError, Db> {
+  return withManagedWorktreeLock(
+    Effect.gen(function* () {
+      const targets = yield* resolveDeletionTargets(input, dependencies);
+      for (const target of targets) {
+        for (const chatId of target.chatIds) {
+          yield* closeChatSession(chatId);
+        }
+      }
+
+      const deletedChatIds: string[] = [];
+      const deletedWorktrees: string[] = [];
+      const failedWorktrees: ManagedWorktreeDeleteFailure[] = [];
+      for (const target of targets) {
+        const outcome = yield* Effect.either(
+          deleteOneWorktree(target, dependencies),
+        );
+        if (Either.isLeft(outcome)) {
+          failedWorktrees.push({
+            error: outcome.left.failure.message,
+            path: target.path,
+          });
+          deletedChatIds.push(...outcome.left.deletedChatIds);
+          continue;
+        }
+        deletedChatIds.push(...target.chatIds);
+        if (outcome.right !== undefined) deletedWorktrees.push(outcome.right);
+      }
+
+      return {
+        deletedChatCount: deletedChatIds.length,
+        deletedChatIds,
+        deletedWorktreeCount: deletedWorktrees.length,
+        deletedWorktrees,
+        failedWorktrees,
+      };
+    }),
+  );
+}
+
+interface WorktreeDeletionFailure {
+  /** Chats already gone when the failure hit; the caller still publishes them. */
+  deletedChatIds: string[];
+  failure: DaemonError;
+}
+
+function deleteOneWorktree(
+  target: ManagedWorktreeDeletionTarget,
+  dependencies: ManagedWorktreeDependencies,
+): Effect.Effect<string | undefined, WorktreeDeletionFailure, Db> {
+  return Effect.gen(function* () {
+    yield* dependencies.deleteChats(target.chatIds).pipe(
+      Effect.mapError(
+        (failure): WorktreeDeletionFailure => ({
+          deletedChatIds: [],
+          failure,
+        }),
+      ),
+    );
+    return yield* dependencies.removeWorktree(target.path).pipe(
+      Effect.mapError(
+        (failure): WorktreeDeletionFailure => ({
+          deletedChatIds: target.chatIds,
+          failure,
+        }),
+      ),
+    );
+  });
+}
+
+/**
+ * Validates the requested paths and resolves the chats each one currently owns.
+ * Fails when a path is not an app-managed worktree or still has an active chat.
+ */
+function resolveDeletionTargets(
+  input: ManagedWorktreeDeleteInput,
+  dependencies: ManagedWorktreeDependencies,
 ): Effect.Effect<ManagedWorktreeDeletionTarget[], DaemonError, Db> {
   return Effect.gen(function* () {
     const requested = yield* requireManagedPaths(input.paths);
@@ -109,33 +199,6 @@ export function planManagedWorktreeDeletion(
       });
     }
     return targets;
-  });
-}
-
-/**
- * Permanently deletes the chats of each planned worktree and then removes the
- * worktree directory. A worktree already gone from disk still deletes its
- * chats; `removeManagedWorktree` no-ops on a missing path.
- */
-export function executeManagedWorktreeDeletion(
-  targets: ManagedWorktreeDeletionTarget[],
-  dependencies: ManagedWorktreeDependencies = defaultDependencies,
-): Effect.Effect<ManagedWorktreeDeleteResult, DaemonError, Db> {
-  return Effect.gen(function* () {
-    const deletedChatIds: string[] = [];
-    const deletedWorktrees: string[] = [];
-    for (const target of targets) {
-      yield* dependencies.deleteChats(target.chatIds);
-      deletedChatIds.push(...target.chatIds);
-      const removed = yield* dependencies.removeWorktree(target.path);
-      if (removed !== undefined) deletedWorktrees.push(removed);
-    }
-    return {
-      deletedChatCount: deletedChatIds.length,
-      deletedChatIds,
-      deletedWorktreeCount: deletedWorktrees.length,
-      deletedWorktrees,
-    };
   });
 }
 

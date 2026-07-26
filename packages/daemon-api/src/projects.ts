@@ -50,11 +50,22 @@ export interface ManagedWorktreeDeleteInput {
   paths: string[];
 }
 
+/** A worktree whose chats were deleted but whose directory could not be removed. */
+export interface ManagedWorktreeDeleteFailure {
+  error: string;
+  path: string;
+}
+
 export interface ManagedWorktreeDeleteResult {
   deletedChatCount: number;
   deletedChatIds: string[];
   deletedWorktreeCount: number;
   deletedWorktrees: string[];
+  /**
+   * Per-path failures hit after deletion started. Validation and eligibility
+   * failures reject the whole request instead and never reach this list.
+   */
+  failedWorktrees: ManagedWorktreeDeleteFailure[];
 }
 
 export interface CreateProjectInput {
