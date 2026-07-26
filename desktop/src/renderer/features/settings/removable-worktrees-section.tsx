@@ -52,7 +52,13 @@ export const RemovableWorktreesSection: FC<RemovableWorktreesSectionProps> = ({
       if (!confirmed) return;
 
       const result = await deleteWorktreesMutation.mutateAsync({
-        paths: [worktree.path],
+        targets: [
+          {
+            expectedChatIds: worktree.chatIds,
+            expectedExistsOnDisk: worktree.existsOnDisk,
+            path: worktree.path,
+          },
+        ],
       });
       broadcastChatsChanged();
       toast({

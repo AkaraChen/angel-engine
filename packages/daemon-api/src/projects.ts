@@ -53,8 +53,14 @@ export interface ManagedWorktreeScanInput {
   eligibleOnly?: boolean;
 }
 
+export interface ManagedWorktreeDeleteTarget {
+  expectedChatIds: string[];
+  expectedExistsOnDisk: boolean;
+  path: string;
+}
+
 export interface ManagedWorktreeDeleteInput {
-  paths: string[];
+  targets: ManagedWorktreeDeleteTarget[];
 }
 
 /** A worktree whose chats were deleted but whose directory could not be removed. */
@@ -103,9 +109,16 @@ export const projectGitStatusInputSchema = arkType({
   projectId: "string > 0",
 });
 
+const managedWorktreeDeleteTargetSchema = arkType({
+  "+": "ignore",
+  expectedChatIds: arkType("string > 0").array(),
+  expectedExistsOnDisk: "boolean",
+  path: "string > 0",
+});
+
 export const managedWorktreeDeleteInputSchema = arkType({
   "+": "ignore",
-  paths: arkType("string > 0").array(),
+  targets: managedWorktreeDeleteTargetSchema.array(),
 });
 
 export const updateProjectInputSchema = arkType({

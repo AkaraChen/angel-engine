@@ -223,6 +223,7 @@ describe("daemon chat streams", () => {
     expect(response.status).toBe(200);
     expect(createChatFromInput).toHaveBeenCalledWith(
       expect.objectContaining({ prewarmId: "prewarm-1", runtime: "codex" }),
+      expect.any(AbortSignal),
     );
   });
 });
@@ -238,7 +239,15 @@ describe("managed worktrees", () => {
     registerApi(app, fakeDaemonRuntime(), { publish: vi.fn() });
 
     const response = await app.request("/api/worktrees/managed/delete", {
-      body: JSON.stringify({ paths: ["/tmp/not-managed"] }),
+      body: JSON.stringify({
+        targets: [
+          {
+            expectedChatIds: [],
+            expectedExistsOnDisk: false,
+            path: "/tmp/not-managed",
+          },
+        ],
+      }),
       headers: { "content-type": "application/json" },
       method: "POST",
     });

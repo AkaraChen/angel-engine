@@ -3,6 +3,7 @@ import type {
   ManagedWorktreeDeleteFailure,
   ManagedWorktreeDeleteInput,
   ManagedWorktreeDeleteResult,
+  ManagedWorktreeDeleteTarget,
   ManagedWorktreeScanInput,
   ManagedWorktreeSummary,
 } from "@angel-engine/daemon-api/projects";
@@ -87,11 +88,10 @@ export function scanManagedWorktrees(
  * Permanently deletes the requested managed worktrees and every chat mapped to
  * them.
  *
- * Ownership and eligibility are resolved inside the managed-worktree lock and
- * are never taken from an earlier scan: a chat that went active after the scan
- * blocks the whole request, and a chat that was archived onto the path after
- * the scan is deleted with it. Because chat create/restore take the same lock,
- * nothing can claim a path between the check and the removal.
+ * Ownership, eligibility, and the confirmed chat/disk impact are revalidated
+ * inside the managed-worktree lock. Any drift rejects the whole request so the
+ * caller can scan and confirm again. Because chat create/restore take the same
+ * lock, nothing can claim a path between the check and the removal.
  *
  * Failure split: validation and eligibility fail the request before anything is
  * mutated. Once mutation starts, a per-path failure is reported in
@@ -173,55 +173,83 @@ function deleteOneWorktree(
 }
 
 /**
- * Validates the requested paths and resolves the chats each one currently owns.
- * Fails when a path is not an app-managed worktree or still has an active chat.
+ * Validates each confirmed target and resolves the chats it currently owns.
+ * Fails when a path is not app-managed, still has an active chat, or no longer
+ * matches the chat IDs and disk state the caller confirmed.
  */
 function resolveDeletionTargets(
   input: ManagedWorktreeDeleteInput,
   dependencies: ManagedWorktreeDependencies,
 ): Effect.Effect<ManagedWorktreeDeletionTarget[], DaemonError, Db> {
   return Effect.gen(function* () {
-    const requested = yield* requireManagedPaths(input.paths);
+    const requested = yield* requireManagedTargets(input.targets);
     const chats = yield* dependencies.listAllChats();
     const grouped = groupChatsByManagedWorktree(chats);
 
     const targets: ManagedWorktreeDeletionTarget[] = [];
-    for (const worktreePath of requested) {
-      const owned = grouped.get(worktreePath) ?? [];
+    for (const confirmed of requested) {
+      const owned = grouped.get(confirmed.path) ?? [];
       if (owned.some((chat) => !chat.archived)) {
         return yield* Effect.fail(
-          DaemonError.worktreeHasActiveChats(worktreePath),
+          DaemonError.worktreeHasActiveChats(confirmed.path),
         );
       }
+      const chatIds = owned.map((chat) => chat.id);
+      if (
+        !sameChatIds(chatIds, confirmed.expectedChatIds) ||
+        dependencies.pathExists(confirmed.path) !==
+          confirmed.expectedExistsOnDisk
+      ) {
+        return yield* Effect.fail(DaemonError.worktreeChanged(confirmed.path));
+      }
       targets.push({
-        chatIds: owned.map((chat) => chat.id),
-        path: worktreePath,
+        chatIds,
+        path: confirmed.path,
       });
     }
     return targets;
   });
 }
 
-function requireManagedPaths(
-  paths: string[],
-): Effect.Effect<string[], DaemonError> {
+function requireManagedTargets(
+  targets: ManagedWorktreeDeleteTarget[],
+): Effect.Effect<ManagedWorktreeDeleteTarget[], DaemonError> {
   return Effect.gen(function* () {
-    const managed: string[] = [];
-    for (const candidate of paths) {
-      const worktreePath = managedWorktreePath(candidate);
+    const managed: ManagedWorktreeDeleteTarget[] = [];
+    const seen = new Set<string>();
+    for (const target of targets) {
+      const worktreePath = managedWorktreePath(target.path);
       if (worktreePath === undefined) {
-        return yield* Effect.fail(DaemonError.worktreeNotManaged(candidate));
+        return yield* Effect.fail(DaemonError.worktreeNotManaged(target.path));
       }
-      managed.push(worktreePath);
+      if (seen.has(worktreePath)) {
+        return yield* Effect.fail(
+          DaemonError.invalidRequest(
+            `Worktree path ${worktreePath} was requested more than once.`,
+          ),
+        );
+      }
+      seen.add(worktreePath);
+      managed.push({ ...target, path: worktreePath });
     }
-    const unique = [...new Set(managed)];
-    if (unique.length === 0) {
+    if (managed.length === 0) {
       return yield* Effect.fail(
-        DaemonError.invalidRequest("At least one worktree path is required."),
+        DaemonError.invalidRequest(
+          "At least one confirmed worktree is required.",
+        ),
       );
     }
-    return unique;
+    return managed;
   });
+}
+
+function sameChatIds(actual: string[], expected: string[]) {
+  if (actual.length !== expected.length) return false;
+  const sortedActual = [...actual].sort();
+  const sortedExpected = [...expected].sort();
+  return sortedActual.every(
+    (chatId, index) => chatId === sortedExpected[index],
+  );
 }
 
 function summarizeManagedWorktrees(

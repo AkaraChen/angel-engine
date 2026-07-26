@@ -291,6 +291,14 @@ export class DaemonError extends Data.TaggedError(
     });
   }
 
+  static worktreeChanged(worktreePath: string) {
+    return new DaemonError({
+      code: "worktree-changed",
+      message: `${worktreePath} changed since it was confirmed. Scan and confirm the cleanup again.`,
+      status: 409,
+    });
+  }
+
   static worktreeHasActiveChats(worktreePath: string) {
     return new DaemonError({
       code: "worktree-has-active-chats",
