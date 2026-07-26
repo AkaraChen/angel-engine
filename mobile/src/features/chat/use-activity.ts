@@ -73,12 +73,25 @@ export function useReadTerminalActivity(
   const [retainedFailure, setRetainedFailure] = useState<{
     chatId: string;
     message: string;
+    runId: string;
   } | null>(null);
 
   useEffect(() => {
-    if (activity?.status === "failed") {
-      setRetainedFailure({ chatId, message: activity.failure.message });
+    // No record left to judge by: the ack already dropped the row, so the
+    // retained reason stands until the daemon reports this chat again.
+    if (activity === null) return;
+    if (activity.status === "failed") {
+      setRetainedFailure({
+        chatId,
+        message: activity.failure.message,
+        runId: activity.runId,
+      });
+      return;
     }
+    // Any other status is a later run for this chat — a retry that is under way
+    // or has finished — so the old failure is no longer the last word. Dropping
+    // it here (not just hiding it) survives that run's own ack.
+    setRetainedFailure(null);
   }, [activity, chatId]);
 
   useEffect(() => {
@@ -88,8 +101,17 @@ export function useReadTerminalActivity(
     read(attentionId);
   }, [activity, enabled, read]);
 
-  return {
-    failureMessage:
-      retainedFailure?.chatId === chatId ? retainedFailure.message : undefined,
-  };
+  /**
+   * The message outlives the ack — the projection drops the row on it — but not
+   * the run it belongs to: once the daemon reports a different run for this
+   * chat, a successful retry included, the old failure is history.
+   */
+  const failureMessage =
+    retainedFailure !== null &&
+    retainedFailure.chatId === chatId &&
+    (activity === null || activity.runId === retainedFailure.runId)
+      ? retainedFailure.message
+      : undefined;
+
+  return { failureMessage };
 }

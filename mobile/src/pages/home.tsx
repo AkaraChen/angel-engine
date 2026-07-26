@@ -66,22 +66,27 @@ export function HomePage() {
   const [segment, setSegment] = useState<ChatActivitySegment>("all");
 
   const chats = chatsQuery.data ?? EMPTY_LIST;
-  const rows = useMemo(
-    () =>
-      buildChatActivityRows({
-        activities: activityQuery.data ?? EMPTY_LIST,
-        chats,
-      }),
-    [activityQuery.data, chats],
-  );
-  const counts = useMemo(() => countChatActivityRows(rows), [rows]);
-  const visibleRows = useMemo(
-    () => filterChatActivityRows(rows, segment),
-    [rows, segment],
-  );
   // Without the projection every count is 0 and every badge is missing, which
   // is indistinguishable from "nothing is running" — say so instead of guessing.
+  // The last snapshot is dropped with it: it would otherwise keep badging rows
+  // and filtering the list by a state nobody can still verify.
   const activityUnavailable = activityQuery.isError;
+  const activities = activityUnavailable
+    ? EMPTY_LIST
+    : (activityQuery.data ?? EMPTY_LIST);
+  const rows = useMemo(
+    () => buildChatActivityRows({ activities, chats }),
+    [activities, chats],
+  );
+  const counts = useMemo(() => countChatActivityRows(rows), [rows]);
+  // A segment the user picked earlier would now match nothing but a stale
+  // subset, with the controls hidden and no way back, so the list falls back to
+  // the full one. The choice itself is kept for when the projection returns.
+  const effectiveSegment = activityUnavailable ? "all" : segment;
+  const visibleRows = useMemo(
+    () => filterChatActivityRows(rows, effectiveSegment),
+    [effectiveSegment, rows],
+  );
 
   return (
     <div className="relative flex h-full min-w-0 flex-col overflow-hidden">
