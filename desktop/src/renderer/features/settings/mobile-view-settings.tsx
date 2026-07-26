@@ -1,4 +1,4 @@
-import { Check, Copy } from "@phosphor-icons/react";
+import { Check, Copy, QrCode } from "@phosphor-icons/react";
 import { useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -9,6 +9,7 @@ import {
   NativeSelectOption,
 } from "@/components/ui/native-select";
 import { Switch } from "@/components/ui/switch";
+import { MobileUrlQrDialog } from "@/features/settings/mobile-url-qr-dialog";
 import { ResetMobilePasswordDialog } from "@/features/settings/reset-mobile-password-dialog";
 import {
   SettingsGroup,
@@ -30,6 +31,7 @@ export function MobileViewSettings() {
   } = useMobileHosting();
   const [portDraft, setPortDraft] = useState(String(state.listenPort));
   const [passwordDialogOpen, setPasswordDialogOpen] = useState(false);
+  const [qrDialogOpen, setQrDialogOpen] = useState(false);
   const [enableAfterPassword, setEnableAfterPassword] = useState(false);
   const [copied, setCopied] = useState(false);
 
@@ -53,9 +55,15 @@ export function MobileViewSettings() {
     void setPort(next);
   };
 
+  /**
+   * The URL is only actionable once the server is on and paired; before that
+   * `state.url` may still hold a stale address from a previous session.
+   */
+  const shareUrl = state.enabled && state.hasPassword ? state.url : null;
+
   const copyUrl = () => {
-    if (state.url === null) return;
-    void navigator.clipboard.writeText(state.url).then(() => {
+    if (shareUrl === null) return;
+    void navigator.clipboard.writeText(shareUrl).then(() => {
       setCopied(true);
       window.setTimeout(setCopied, 1500, false);
     });
@@ -78,13 +86,11 @@ export function MobileViewSettings() {
     if (!open) setEnableAfterPassword(false);
   };
 
-  const urlDescription = !state.enabled
+  const urlPlaceholder = !state.enabled
     ? t("settings.mobile.urlDisabled")
     : !state.hasPassword
       ? t("settings.mobile.urlNeedsPassword")
-      : state.url !== null
-        ? state.url
-        : t("settings.mobile.urlPending");
+      : t("settings.mobile.urlPending");
 
   return (
     <SettingsGroup>
@@ -124,7 +130,6 @@ export function MobileViewSettings() {
             className="w-56"
             disabled={isSaving || listenAddresses.length === 0}
             onChange={(event) => void setHost(event.currentTarget.value)}
-            selectClassName="bg-background"
             size="sm"
             value={state.host}
           >
@@ -154,7 +159,7 @@ export function MobileViewSettings() {
         after={
           <Input
             aria-label={t("settings.mobile.portTitle")}
-            className="h-8 w-40 bg-background text-sm"
+            className="h-8 w-40 text-sm"
             disabled={isSaving}
             max={65_535}
             min={0}
@@ -172,22 +177,60 @@ export function MobileViewSettings() {
       />
       <SettingsRow
         after={
-          state.url !== null ? (
-            <Button
-              className="gap-1.5"
-              onClick={copyUrl}
-              size="sm"
-              type="button"
-              variant="outline"
-            >
-              {copied ? <Check /> : <Copy />}
-              {copied ? t("settings.mobile.copied") : t("settings.mobile.copy")}
-            </Button>
+          shareUrl !== null ? (
+            <div className="flex items-center gap-1.5">
+              <Button
+                className="gap-1.5"
+                onClick={() => setQrDialogOpen(true)}
+                size="sm"
+                type="button"
+                variant="outline"
+              >
+                <QrCode />
+                {t("settings.mobile.qrCode")}
+              </Button>
+              <Button
+                className="gap-1.5"
+                onClick={copyUrl}
+                size="sm"
+                type="button"
+                variant="outline"
+              >
+                {copied ? <Check /> : <Copy />}
+                {copied
+                  ? t("settings.mobile.copied")
+                  : t("settings.mobile.copy")}
+              </Button>
+            </div>
           ) : null
         }
-        description={urlDescription}
+        description={
+          shareUrl !== null ? (
+            <a
+              className="
+                text-primary underline-offset-4
+                hover:underline
+              "
+              href={shareUrl}
+              rel="noreferrer"
+              target="_blank"
+              title={t("settings.mobile.urlOpen")}
+            >
+              {shareUrl}
+            </a>
+          ) : (
+            urlPlaceholder
+          )
+        }
         title={t("settings.mobile.urlTitle")}
       />
+      {shareUrl !== null ? (
+        <MobileUrlQrDialog
+          onOpenChange={setQrDialogOpen}
+          open={qrDialogOpen}
+          url={shareUrl}
+        />
+      ) : null}
       <ResetMobilePasswordDialog
         isSaving={isSaving}
         onOpenChange={setPasswordDialog}

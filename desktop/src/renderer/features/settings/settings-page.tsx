@@ -3,7 +3,7 @@ import type {
   AgentRuntime,
   AgentSettings,
 } from "@angel-engine/daemon-api/agents";
-import type { KeyboardEvent } from "react";
+import type { ReactNode, UIEvent } from "react";
 import type { SettingsTab } from "@/features/settings/settings-tabs";
 import type { SupportedLanguage } from "@/i18n";
 import type { DesktopThemeMode } from "@/platform/theme";
@@ -11,14 +11,10 @@ import {
   isCustomAgentRuntime,
   sortAgentOptionsBySettings,
 } from "@angel-engine/daemon-api/agents";
-import {
-  WarningCircle as AlertTriangle,
-  Trash as Trash2,
-} from "@phosphor-icons/react";
+import { Trash as Trash2 } from "@phosphor-icons/react";
 
 import { useQueryClient } from "@tanstack/react-query";
-import { m } from "framer-motion";
-import { useCallback, useId, useMemo, useState } from "react";
+import { useCallback, useId, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
@@ -27,16 +23,17 @@ import { ArchivedSettingsPanel } from "@/features/settings/archived-settings-pan
 import { BuiltinAgentsSettingsGroup } from "@/features/settings/builtin-agent-settings";
 import { CustomAgentsSettingsGroup } from "@/features/settings/custom-agent-settings";
 import { MobileViewSettings } from "@/features/settings/mobile-view-settings";
+import { SettingsNav } from "@/features/settings/settings-nav";
 import {
   SettingsGroup,
   SettingsRow,
   SettingsSelect,
 } from "@/features/settings/settings-controls";
 import { useSettingsStore } from "@/features/settings/settings-store";
-import { settingsTabs } from "@/features/settings/settings-tabs";
+import { findSettingsTab } from "@/features/settings/settings-tabs";
+import { useSettingsTab } from "@/features/settings/use-settings-tab";
 import { useThemeSettings } from "@/features/settings/use-theme-settings";
 import { languageOptions } from "@/i18n";
-import { springs } from "@/platform/motion";
 import { queryKeys } from "@/platform/query-keys";
 import { cn } from "@/platform/utils";
 
@@ -48,6 +45,9 @@ const themeModeOptions: Array<{
   { labelKey: "settings.appearance.themeOptions.light", value: "light" },
   { labelKey: "settings.appearance.themeOptions.dark", value: "dark" },
 ];
+
+/** Scroll offset past which the page title condenses into the sticky bar. */
+const CONDENSE_SCROLL_OFFSET = 36;
 
 export function SettingsPage({
   agentSettings,
@@ -65,12 +65,217 @@ export function SettingsPage({
   onDeleteAllChats: () => Promise<void>;
 }) {
   const { t } = useTranslation();
-  const queryClient = useQueryClient();
   const tabPanelId = useId();
-  const [activeTab, setActiveTab] = useState<SettingsTab>("mobile");
+  const [activeTab, setActiveTab] = useSettingsTab();
+  const scrollRef = useRef<HTMLElement | null>(null);
+  const [pageScroll, setPageScroll] = useState({
+    condensed: false,
+    scrolled: false,
+  });
+
+  const activeTabDefinition = findSettingsTab(activeTab);
+  const activeTabLabel = t(activeTabDefinition.labelKey);
+
+  const selectTab = useCallback(
+    (tab: SettingsTab) => {
+      setActiveTab(tab);
+      scrollRef.current?.scrollTo({ top: 0 });
+      setPageScroll({ condensed: false, scrolled: false });
+    },
+    [setActiveTab],
+  );
+
+  const handleScroll = useCallback((event: UIEvent<HTMLElement>) => {
+    const { scrollTop } = event.currentTarget;
+    const next = {
+      condensed: scrollTop > CONDENSE_SCROLL_OFFSET,
+      scrolled: scrollTop > 2,
+    };
+    setPageScroll((current) =>
+      current.condensed === next.condensed && current.scrolled === next.scrolled
+        ? current
+        : next,
+    );
+  }, []);
+
+  return (
+    <main className="flex min-h-0 flex-1 overflow-hidden bg-background">
+      <SettingsNav
+        activeTab={activeTab}
+        onActiveTabChange={selectTab}
+        tabPanelId={tabPanelId}
+      />
+
+      <section
+        className="min-w-0 flex-1 overflow-y-auto"
+        onScroll={handleScroll}
+        ref={scrollRef}
+      >
+        <div
+          className={cn(
+            `
+              sticky top-0 z-10 flex h-12 items-center border-b bg-background/80
+              px-8 transition-colors
+              supports-backdrop-filter:backdrop-blur-md
+            `,
+            pageScroll.scrolled ? "border-border-subtle" : "border-transparent",
+          )}
+          data-electron-drag
+        >
+          {pageScroll.condensed ? (
+            <span
+              className="
+                truncate font-display text-sm font-semibold tracking-[-0.01em]
+              "
+            >
+              {activeTabLabel}
+            </span>
+          ) : null}
+        </div>
+
+        <div
+          className={cn(
+            "mx-auto flex w-full flex-col gap-6 px-8 pt-2 pb-14",
+            activeTabDefinition.wide ? "max-w-4xl" : "max-w-2xl",
+          )}
+        >
+          <header className="space-y-1.5">
+            <h2 className="font-display text-xl font-semibold tracking-[-0.015em]">
+              {activeTabLabel}
+            </h2>
+            <p className="text-sm text-muted-foreground">
+              {t(activeTabDefinition.descriptionKey)}
+            </p>
+          </header>
+
+          <SettingsTabPanel
+            activeTab={activeTab}
+            tab="appearance"
+            tabPanelId={tabPanelId}
+          >
+            <AppearanceSettings />
+          </SettingsTabPanel>
+
+          <SettingsTabPanel
+            activeTab={activeTab}
+            tab="workspace"
+            tabPanelId={tabPanelId}
+          >
+            <WorkspaceSettings />
+          </SettingsTabPanel>
+
+          <SettingsTabPanel
+            activeTab={activeTab}
+            tab="agents"
+            tabPanelId={tabPanelId}
+          >
+            <AgentsSettings
+              agentSettings={agentSettings}
+              availableAgentOptions={availableAgentOptions}
+              onAgentEnabledChange={onAgentEnabledChange}
+              onAgentOrderChange={onAgentOrderChange}
+            />
+          </SettingsTabPanel>
+
+          <SettingsTabPanel
+            activeTab={activeTab}
+            tab="mobile"
+            tabPanelId={tabPanelId}
+          >
+            <MobileViewSettings />
+          </SettingsTabPanel>
+
+          <SettingsTabPanel
+            activeTab={activeTab}
+            tab="archived"
+            tabPanelId={tabPanelId}
+          >
+            <ArchivedSettingsPanel />
+          </SettingsTabPanel>
+
+          <SettingsTabPanel
+            activeTab={activeTab}
+            tab="danger"
+            tabPanelId={tabPanelId}
+          >
+            <DangerSettings
+              isDeletingChats={isDeletingChats}
+              onDeleteAllChats={onDeleteAllChats}
+            />
+          </SettingsTabPanel>
+        </div>
+      </section>
+    </main>
+  );
+}
+
+function SettingsTabPanel({
+  activeTab,
+  children,
+  tab,
+  tabPanelId,
+}: {
+  activeTab: SettingsTab;
+  children: ReactNode;
+  tab: SettingsTab;
+  tabPanelId: string;
+}) {
+  if (activeTab !== tab) return null;
+
+  return (
+    <div
+      aria-labelledby={`${tabPanelId}-${tab}-tab`}
+      className="flex flex-col gap-6"
+      id={`${tabPanelId}-${tab}`}
+      role="tabpanel"
+    >
+      {children}
+    </div>
+  );
+}
+
+function AppearanceSettings() {
+  const { t } = useTranslation();
   const [themeMode, setThemeMode] = useThemeSettings();
   const language = useSettingsStore((state) => state.language);
   const setLanguage = useSettingsStore((state) => state.setLanguage);
+
+  return (
+    <SettingsGroup>
+      <SettingsRow
+        after={
+          <SettingsSelect
+            label={t("settings.appearance.theme")}
+            onValueChange={(value) => setThemeMode(value as DesktopThemeMode)}
+            options={themeModeOptions.map((option) => ({
+              label: t(option.labelKey),
+              value: option.value,
+            }))}
+            value={themeMode}
+          />
+        }
+        title={t("settings.appearance.theme")}
+      />
+      <SettingsRow
+        after={
+          <SettingsSelect
+            label={t("settings.appearance.language")}
+            onValueChange={(value) => setLanguage(value as SupportedLanguage)}
+            options={languageOptions.map((option) => ({
+              label: t(option.labelKey),
+              value: option.value,
+            }))}
+            value={language}
+          />
+        }
+        title={t("settings.appearance.language")}
+      />
+    </SettingsGroup>
+  );
+}
+
+function WorkspaceSettings() {
+  const { t } = useTranslation();
   const sendWithModEnter = useSettingsStore((state) => state.sendWithModEnter);
   const setSendWithModEnter = useSettingsStore(
     (state) => state.setSendWithModEnter,
@@ -81,6 +286,55 @@ export function SettingsPage({
   const setWorktreeDirtyPromptEnabled = useSettingsStore(
     (state) => state.setWorktreeDirtyPromptEnabled,
   );
+  const modEnterShortcut =
+    window.desktopEnvironment.platform === "darwin" ? "⌘ Enter" : "Ctrl Enter";
+
+  return (
+    <SettingsGroup>
+      <SettingsRow
+        after={
+          <Switch
+            aria-label={t("settings.workspace.sendWithModEnterSwitchLabel", {
+              shortcut: modEnterShortcut,
+            })}
+            checked={sendWithModEnter}
+            onCheckedChange={setSendWithModEnter}
+          />
+        }
+        description={t("settings.workspace.sendWithModEnterDescription", {
+          shortcut: modEnterShortcut,
+        })}
+        title={t("settings.workspace.sendWithModEnterTitle", {
+          shortcut: modEnterShortcut,
+        })}
+      />
+      <SettingsRow
+        after={
+          <Switch
+            aria-label={t("settings.workspace.dirtyPromptSwitchLabel")}
+            checked={worktreeDirtyPromptEnabled}
+            onCheckedChange={setWorktreeDirtyPromptEnabled}
+          />
+        }
+        description={t("settings.workspace.dirtyPromptDescription")}
+        title={t("settings.workspace.dirtyPromptTitle")}
+      />
+    </SettingsGroup>
+  );
+}
+
+function AgentsSettings({
+  agentSettings,
+  availableAgentOptions,
+  onAgentEnabledChange,
+  onAgentOrderChange,
+}: {
+  agentSettings: AgentSettings;
+  availableAgentOptions: AgentOption[];
+  onAgentEnabledChange: (runtime: AgentRuntime, enabled: boolean) => void;
+  onAgentOrderChange: (orderedRuntimes: AgentRuntime[]) => void;
+}) {
+  const queryClient = useQueryClient();
   const { customAgents } = useAgentCatalog();
   const createCustomAgent = useSettingsStore(
     (state) => state.createCustomAgent,
@@ -139,31 +393,55 @@ export function SettingsPage({
     (agent) => !enabledRuntimeSet.has(agent.id),
   );
   const visibleCustomAgents = [...enabledCustomAgents, ...disabledCustomAgents];
-  const enabledBuiltinAgentRuntimeOrder = useMemo(
-    () => enabledBuiltinAgentOptions.map((agent) => agent.id),
-    [enabledBuiltinAgentOptions],
-  );
-  const disabledBuiltinAgentRuntimeOrder = useMemo(
-    () => disabledBuiltinAgentOptions.map((agent) => agent.id),
-    [disabledBuiltinAgentOptions],
-  );
-  const builtinAgentRuntimeOrder = useMemo(
-    () => [
-      ...enabledBuiltinAgentRuntimeOrder,
-      ...disabledBuiltinAgentRuntimeOrder,
-    ],
-    [disabledBuiltinAgentRuntimeOrder, enabledBuiltinAgentRuntimeOrder],
-  );
+  const builtinAgentRuntimeOrder = builtinAgentOptions.map((agent) => agent.id);
   const customAgentRuntimeOrder = visibleCustomAgents.map((agent) => agent.id);
   const visibleEnabledCount = orderedAgentOptions.filter((agent) =>
     enabledRuntimeSet.has(agent.id),
   ).length;
-  const activeTabLabel = t(
-    settingsTabs.find((tab) => tab.id === activeTab)?.labelKey ??
-      settingsTabs[0].labelKey,
+
+  return (
+    <>
+      <BuiltinAgentsSettingsGroup
+        agentOptions={builtinAgentOptions}
+        customAgentRuntimeOrder={customAgentRuntimeOrder}
+        enabledRuntimeSet={enabledRuntimeSet}
+        onAgentEnabledChange={onAgentEnabledChange}
+        onAgentOrderChange={onAgentOrderChange}
+        visibleEnabledCount={visibleEnabledCount}
+      />
+      <CustomAgentsSettingsGroup
+        customAgents={visibleCustomAgents}
+        enabledRuntimeSet={enabledRuntimeSet}
+        onAgentEnabledChange={onAgentEnabledChange}
+        onAgentOrderChange={(orderedCustomRuntimes) =>
+          onAgentOrderChange([
+            ...builtinAgentRuntimeOrder,
+            ...orderedCustomRuntimes,
+          ])
+        }
+        onCreateCustomAgent={createCustomAgent}
+        onDeleteCustomAgent={deleteCustomAgent}
+        onDeleteCustomAgentImpact={deleteCustomAgentImpact}
+        onDeletedCustomAgent={async () => {
+          await queryClient.invalidateQueries({
+            queryKey: queryKeys.chats.all(),
+          });
+        }}
+        onUpdateCustomAgent={updateCustomAgent}
+        visibleEnabledCount={visibleEnabledCount}
+      />
+    </>
   );
-  const modEnterShortcut =
-    window.desktopEnvironment.platform === "darwin" ? "⌘ Enter" : "Ctrl Enter";
+}
+
+function DangerSettings({
+  isDeletingChats,
+  onDeleteAllChats,
+}: {
+  isDeletingChats: boolean;
+  onDeleteAllChats: () => Promise<void>;
+}) {
+  const { t } = useTranslation();
 
   const deleteAllChats = useCallback(async () => {
     const confirmed = await window.desktopWindow.confirmDeleteAllChats();
@@ -172,309 +450,27 @@ export function SettingsPage({
     await onDeleteAllChats();
   }, [onDeleteAllChats]);
 
-  const selectAdjacentTab = useCallback(
-    (currentTab: SettingsTab, direction: -1 | 1) => {
-      const currentIndex = settingsTabs.findIndex(
-        (tab) => tab.id === currentTab,
-      );
-      const nextIndex =
-        (currentIndex + direction + settingsTabs.length) % settingsTabs.length;
-      const nextTab = settingsTabs[nextIndex].id;
-      setActiveTab(nextTab);
-      window.requestAnimationFrame(() => {
-        document.getElementById(`${tabPanelId}-${nextTab}-tab`)?.focus();
-      });
-    },
-    [tabPanelId],
-  );
-
-  const handleTabKeyDown = useCallback(
-    (event: KeyboardEvent<HTMLButtonElement>, tab: SettingsTab) => {
-      if (event.key === "ArrowLeft" || event.key === "ArrowUp") {
-        event.preventDefault();
-        selectAdjacentTab(tab, -1);
-      } else if (event.key === "ArrowRight" || event.key === "ArrowDown") {
-        event.preventDefault();
-        selectAdjacentTab(tab, 1);
-      } else if (event.key === "Home") {
-        event.preventDefault();
-        const firstTab = settingsTabs[0].id;
-        setActiveTab(firstTab);
-        window.requestAnimationFrame(() => {
-          document.getElementById(`${tabPanelId}-${firstTab}-tab`)?.focus();
-        });
-      } else if (event.key === "End") {
-        event.preventDefault();
-        const lastTab = settingsTabs[settingsTabs.length - 1].id;
-        setActiveTab(lastTab);
-        window.requestAnimationFrame(() => {
-          document.getElementById(`${tabPanelId}-${lastTab}-tab`)?.focus();
-        });
-      }
-    },
-    [selectAdjacentTab, tabPanelId],
-  );
-
   return (
-    <main className="flex min-h-0 flex-1 overflow-hidden bg-background">
-      <aside
-        className="
-          flex w-48 shrink-0 flex-col border-r border-border/70 bg-sidebar/80
-          px-3 pt-14
-        "
-        data-electron-drag
-      >
-        <h1
-          className="
-            px-2 pb-4 text-[13px] font-semibold text-sidebar-foreground
-          "
-        >
-          {t("settings.title")}
-        </h1>
-        <nav
-          aria-label={t("settings.title")}
-          aria-orientation="vertical"
-          className="flex flex-col gap-1"
-          role="tablist"
-          data-electron-no-drag
-        >
-          {settingsTabs.map((tab) => {
-            const TabIcon = tab.icon;
-            const isActive = activeTab === tab.id;
-
-            return (
-              <button
-                aria-controls={`${tabPanelId}-${tab.id}`}
-                aria-selected={isActive}
-                className={cn(
-                  `
-                    relative flex h-8 items-center gap-2 rounded-md px-2
-                    text-left text-[13px] font-medium text-sidebar-foreground/70
-                    transition-colors outline-none
-                    hover:text-sidebar-accent-foreground
-                    focus-visible:ring-2 focus-visible:ring-ring/30
-                  `,
-                  isActive
-                    ? `
-                      text-primary-soft-foreground
-                      hover:text-primary-soft-foreground
-                    `
-                    : "hover:bg-sidebar-accent",
-                )}
-                id={`${tabPanelId}-${tab.id}-tab`}
-                key={tab.id}
-                onKeyDown={(event) => handleTabKeyDown(event, tab.id)}
-                onClick={() => setActiveTab(tab.id)}
-                role="tab"
-                tabIndex={isActive ? 0 : -1}
-                type="button"
-              >
-                {isActive ? (
-                  <m.span
-                    aria-hidden="true"
-                    className="absolute inset-0 rounded-md bg-primary-soft"
-                    layoutId="settings-active-tab"
-                    transition={springs.snappy}
-                  />
-                ) : null}
-                <TabIcon
-                  className="relative size-3.5 shrink-0 opacity-80"
-                  weight="duotone"
-                />
-                <span className="relative">{t(tab.labelKey)}</span>
-              </button>
-            );
-          })}
-        </nav>
-      </aside>
-
-      <section className="min-w-0 flex-1 overflow-auto">
-        <div
-          className={cn(
-            "mx-auto flex w-full flex-col gap-5 px-8 pt-14 pb-8",
-            activeTab === "archived" ? "max-w-4xl" : "max-w-2xl",
-          )}
-        >
-          <h2 className="font-display text-xl font-semibold tracking-[-0.015em]">
-            {activeTabLabel}
-          </h2>
-
-          {activeTab === "agents" ? (
-            <div
-              aria-labelledby={`${tabPanelId}-agents-tab`}
-              className="space-y-5"
-              id={`${tabPanelId}-agents`}
-              role="tabpanel"
-            >
-              <BuiltinAgentsSettingsGroup
-                agentOptions={builtinAgentOptions}
-                customAgentRuntimeOrder={customAgentRuntimeOrder}
-                enabledRuntimeSet={enabledRuntimeSet}
-                visibleEnabledCount={visibleEnabledCount}
-                onAgentEnabledChange={onAgentEnabledChange}
-                onAgentOrderChange={onAgentOrderChange}
-              />
-              <CustomAgentsSettingsGroup
-                customAgents={visibleCustomAgents}
-                enabledRuntimeSet={enabledRuntimeSet}
-                visibleEnabledCount={visibleEnabledCount}
-                onAgentEnabledChange={onAgentEnabledChange}
-                onAgentOrderChange={(orderedCustomRuntimes) =>
-                  onAgentOrderChange([
-                    ...builtinAgentRuntimeOrder,
-                    ...orderedCustomRuntimes,
-                  ])
-                }
-                onCreateCustomAgent={createCustomAgent}
-                onDeleteCustomAgent={deleteCustomAgent}
-                onDeletedCustomAgent={async () => {
-                  await queryClient.invalidateQueries({
-                    queryKey: queryKeys.chats.all(),
-                  });
-                }}
-                onDeleteCustomAgentImpact={deleteCustomAgentImpact}
-                onUpdateCustomAgent={updateCustomAgent}
-              />
-            </div>
-          ) : null}
-
-          {activeTab === "appearance" ? (
-            <div
-              aria-labelledby={`${tabPanelId}-appearance-tab`}
-              id={`${tabPanelId}-appearance`}
-              role="tabpanel"
-            >
-              <SettingsGroup>
-                <SettingsRow
-                  after={
-                    <SettingsSelect
-                      label={t("settings.appearance.theme")}
-                      onValueChange={(value) =>
-                        setThemeMode(value as DesktopThemeMode)
-                      }
-                      options={themeModeOptions.map((option) => ({
-                        label: t(option.labelKey),
-                        value: option.value,
-                      }))}
-                      value={themeMode}
-                    />
-                  }
-                  title={t("settings.appearance.theme")}
-                />
-                <SettingsRow
-                  after={
-                    <SettingsSelect
-                      label={t("settings.appearance.language")}
-                      onValueChange={(value) =>
-                        setLanguage(value as SupportedLanguage)
-                      }
-                      options={languageOptions.map((option) => ({
-                        label: t(option.labelKey),
-                        value: option.value,
-                      }))}
-                      value={language}
-                    />
-                  }
-                  title={t("settings.appearance.language")}
-                />
-              </SettingsGroup>
-            </div>
-          ) : null}
-
-          {activeTab === "mobile" ? (
-            <div
-              aria-labelledby={`${tabPanelId}-mobile-tab`}
-              id={`${tabPanelId}-mobile`}
-              role="tabpanel"
-            >
-              <MobileViewSettings />
-            </div>
-          ) : null}
-
-          {activeTab === "workspace" ? (
-            <div
-              aria-labelledby={`${tabPanelId}-workspace-tab`}
-              id={`${tabPanelId}-workspace`}
-              role="tabpanel"
-            >
-              <SettingsGroup>
-                <SettingsRow
-                  after={
-                    <Switch
-                      aria-label={t(
-                        "settings.workspace.sendWithModEnterSwitchLabel",
-                        { shortcut: modEnterShortcut },
-                      )}
-                      checked={sendWithModEnter}
-                      onCheckedChange={setSendWithModEnter}
-                    />
-                  }
-                  description={t(
-                    "settings.workspace.sendWithModEnterDescription",
-                    { shortcut: modEnterShortcut },
-                  )}
-                  title={t("settings.workspace.sendWithModEnterTitle", {
-                    shortcut: modEnterShortcut,
-                  })}
-                />
-                <SettingsRow
-                  after={
-                    <Switch
-                      aria-label={t(
-                        "settings.workspace.dirtyPromptSwitchLabel",
-                      )}
-                      checked={worktreeDirtyPromptEnabled}
-                      onCheckedChange={setWorktreeDirtyPromptEnabled}
-                    />
-                  }
-                  description={t("settings.workspace.dirtyPromptDescription")}
-                  title={t("settings.workspace.dirtyPromptTitle")}
-                />
-              </SettingsGroup>
-            </div>
-          ) : null}
-
-          {activeTab === "archived" ? (
-            <div
-              aria-labelledby={`${tabPanelId}-archived-tab`}
-              id={`${tabPanelId}-archived`}
-              role="tabpanel"
-            >
-              <ArchivedSettingsPanel />
-            </div>
-          ) : null}
-
-          {activeTab === "danger" ? (
-            <div
-              aria-labelledby={`${tabPanelId}-danger-tab`}
-              id={`${tabPanelId}-danger`}
-              role="tabpanel"
-            >
-              <SettingsGroup>
-                <SettingsRow
-                  after={
-                    <Button
-                      disabled={isDeletingChats}
-                      onClick={() => void deleteAllChats()}
-                      type="button"
-                      variant="destructive"
-                    >
-                      <Trash2 />
-                      {isDeletingChats
-                        ? t("settings.danger.deleting")
-                        : t("settings.danger.deleteTitle")}
-                    </Button>
-                  }
-                  description={t("settings.danger.description")}
-                  icon={<AlertTriangle className="size-4 text-destructive" />}
-                  title={t("settings.danger.deleteTitle")}
-                  variant="destructive"
-                />
-              </SettingsGroup>
-            </div>
-          ) : null}
-        </div>
-      </section>
-    </main>
+    <SettingsGroup title={t("settings.danger.title")} tone="danger">
+      <SettingsRow
+        after={
+          <Button
+            disabled={isDeletingChats}
+            onClick={() => void deleteAllChats()}
+            type="button"
+            variant="destructive"
+          >
+            <Trash2 />
+            {isDeletingChats
+              ? t("settings.danger.deleting")
+              : t("settings.danger.deleteTitle")}
+          </Button>
+        }
+        align="start"
+        description={t("settings.danger.description")}
+        title={t("settings.danger.deleteTitle")}
+        variant="destructive"
+      />
+    </SettingsGroup>
   );
 }

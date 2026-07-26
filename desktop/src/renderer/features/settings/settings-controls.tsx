@@ -17,23 +17,52 @@ import {
 import { Switch } from "@/components/ui/switch";
 import { cn } from "@/platform/utils";
 
+/**
+ * Grouped-list card: an optional heading block above a hairline-divided
+ * container. `tone="danger"` swaps the card chrome for the danger triple
+ * (soft border + danger heading) instead of a saturated block.
+ */
 function SettingsGroup({
   children,
+  description,
   title,
+  tone = "default",
 }: {
   children: ReactNode;
+  description?: string;
   title?: string;
+  tone?: "default" | "danger";
 }) {
+  const hasHeader = is.nonEmptyString(title) || is.nonEmptyString(description);
+
   return (
-    <section className="space-y-2">
-      {is.nonEmptyString(title) ? (
-        <h3 className="text-sm font-semibold">{title}</h3>
+    <section className="space-y-2.5">
+      {hasHeader ? (
+        <div className="space-y-1 px-0.5">
+          {is.nonEmptyString(title) ? (
+            <h3
+              className={cn(
+                "font-display text-sm font-semibold tracking-[-0.01em]",
+                tone === "danger" && "text-destructive",
+              )}
+            >
+              {title}
+            </h3>
+          ) : null}
+          {is.nonEmptyString(description) ? (
+            <p className="text-xs leading-[1.55] text-muted-foreground">
+              {description}
+            </p>
+          ) : null}
+        </div>
       ) : null}
       <div
-        className="
-          divide-y divide-border-subtle overflow-hidden rounded-xl border
-          border-border-subtle bg-surface-1/50 shadow-xs
-        "
+        className={cn(
+          "divide-y overflow-hidden rounded-xl border bg-card shadow-xs",
+          tone === "danger"
+            ? "divide-status-danger-border border-status-danger-border"
+            : "divide-border-subtle border-border-subtle",
+        )}
       >
         {children}
       </div>
@@ -41,8 +70,14 @@ function SettingsGroup({
   );
 }
 
+/**
+ * One line of a grouped list: optional leading icon tile, a title/description
+ * stack, and a trailing control pinned right. Rows are not interactive
+ * themselves, so they carry no hover affordance.
+ */
 function SettingsRow({
   after,
+  align = "center",
   children,
   description,
   icon,
@@ -51,8 +86,9 @@ function SettingsRow({
   variant,
 }: {
   after: ReactNode;
+  align?: "center" | "start";
   children?: ReactNode;
-  description?: string;
+  description?: ReactNode;
   icon?: ReactNode;
   muted?: boolean;
   title?: string;
@@ -61,15 +97,16 @@ function SettingsRow({
   return (
     <article
       className={cn(
-        "flex min-h-12 items-center gap-3 bg-card px-4 py-3",
+        "flex min-h-12 gap-3.5 px-4 py-3",
+        align === "start" ? "items-start" : "items-center",
         muted && "text-muted-foreground",
       )}
     >
       {!is.falsy(icon) ? (
         <span
           className="
-            flex size-8 shrink-0 items-center justify-center rounded-md
-            bg-background
+            flex size-7 shrink-0 items-center justify-center rounded-lg border
+            border-border-subtle bg-background
           "
         >
           {icon}
@@ -82,21 +119,28 @@ function SettingsRow({
           {is.nonEmptyString(title) ? (
             <span
               className={cn(
-                "block text-sm font-medium",
+                "block text-sm leading-snug font-medium",
                 variant === "destructive" && "text-destructive",
               )}
             >
               {title}
             </span>
           ) : null}
-          {is.nonEmptyString(description) ? (
-            <span className="mt-1 block text-sm text-muted-foreground">
+          {!is.falsy(description) ? (
+            <span
+              className="
+                mt-1 block text-xs leading-[1.55] wrap-break-word
+                text-muted-foreground
+              "
+            >
               {description}
             </span>
           ) : null}
         </span>
       )}
-      <span className="ml-auto shrink-0">{after}</span>
+      <span className={cn("ml-auto shrink-0", align === "start" && "-mt-0.5")}>
+        {after}
+      </span>
     </article>
   );
 }
@@ -113,26 +157,19 @@ function SettingsSelect({
   value: string;
 }) {
   return (
-    <label
-      className="
-        flex min-w-44 flex-col gap-1.5 text-xs font-medium text-muted-foreground
-      "
+    <NativeSelect
+      aria-label={label}
+      className="w-44"
+      onChange={(event) => onValueChange(event.currentTarget.value)}
+      size="sm"
+      value={value}
     >
-      <NativeSelect
-        aria-label={label}
-        className="w-full"
-        onChange={(event) => onValueChange(event.currentTarget.value)}
-        selectClassName="h-8 w-full rounded-md border-border bg-background py-0 pr-8 pl-3 text-xs"
-        size="sm"
-        value={value}
-      >
-        {options.map((option) => (
-          <NativeSelectOption key={option.value} value={option.value}>
-            {option.label}
-          </NativeSelectOption>
-        ))}
-      </NativeSelect>
-    </label>
+      {options.map((option) => (
+        <NativeSelectOption key={option.value} value={option.value}>
+          {option.label}
+        </NativeSelectOption>
+      ))}
+    </NativeSelect>
   );
 }
 
@@ -147,7 +184,8 @@ function AgentOrderHandle({
     <Button
       aria-label={`Reorder ${label}`}
       className="
-        shrink-0 cursor-grab touch-none text-muted-foreground
+        -ml-1.5 shrink-0 cursor-grab touch-none text-muted-foreground/70
+        hover:text-foreground
         active:cursor-grabbing
       "
       onPointerDown={onPointerDown}
@@ -183,9 +221,9 @@ function ReorderableAgentRow({
     <Reorder.Item
       as="article"
       className={cn(
-        "flex min-h-12 items-center gap-3 bg-card px-4 py-3",
+        "flex min-h-12 items-center gap-3 bg-card px-4 py-2.5",
         dragging &&
-          "relative z-10 rounded-lg shadow-lg ring-1 ring-foreground/10",
+          "relative z-10 rounded-lg shadow-popover ring-1 ring-border-strong",
         muted && "text-muted-foreground",
       )}
       dragControls={dragControls}

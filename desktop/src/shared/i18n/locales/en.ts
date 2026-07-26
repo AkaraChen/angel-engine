@@ -238,6 +238,11 @@ export const en = {
         title: "Danger Area",
       },
       description: "Configure desktop workspace behavior.",
+      groups: {
+        connectivity: "Connectivity",
+        data: "Data",
+        general: "General",
+      },
       mobile: {
         copied: "Copied",
         copy: "Copy",
@@ -258,11 +263,28 @@ export const en = {
         portDescription:
           "TCP port to listen on. Use 0 to choose automatically.",
         portTitle: "Listen port",
+        qrCode: "QR code",
+        qrDialogDescription:
+          "Scan with your phone's camera. It must be on the same network, and you will be asked for the pairing password.",
+        qrDialogTitle: "Open on your phone",
         urlDisabled:
           "Turn on the mobile view to get a link you can open on your phone.",
         urlNeedsPassword: "Set a pairing password to enable mobile access.",
+        urlOpen: "Open in your browser",
         urlPending: "Starting the server…",
         urlTitle: "Mobile URL",
+      },
+      tabDescriptions: {
+        agents:
+          "Choose which coding agents appear in the picker, and in what order.",
+        appearance: "Theme and display language for the desktop app.",
+        archived:
+          "Restore archived sessions, or remove them and their worktrees for good.",
+        danger:
+          "Irreversible actions that affect every chat stored on this computer.",
+        mobile:
+          "Serve the mobile web app from this computer over your local network.",
+        workspace: "How the composer and worktrees behave while you work.",
       },
       tabs: {
         agents: "Agents",

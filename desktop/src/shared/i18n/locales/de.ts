@@ -240,6 +240,11 @@ export const de = {
         title: "Gefahrenbereich",
       },
       description: "Desktop-Arbeitsbereich konfigurieren.",
+      groups: {
+        connectivity: "Konnektivität",
+        data: "Daten",
+        general: "Allgemein",
+      },
       mobile: {
         copied: "Kopiert",
         copy: "Kopieren",
@@ -260,12 +265,30 @@ export const de = {
         portDescription:
           "TCP-Port, auf dem gelauscht wird. 0 wählt automatisch einen Port.",
         portTitle: "Listen-Port",
+        qrCode: "QR-Code",
+        qrDialogDescription:
+          "Mit der Handykamera scannen. Das Telefon muss im selben Netzwerk sein, und das Kopplungspasswort wird abgefragt.",
+        qrDialogTitle: "Auf dem Telefon öffnen",
         urlDisabled:
           "Aktivieren Sie die mobile Ansicht, um einen Link zu erhalten, den Sie auf Ihrem Telefon öffnen können.",
         urlNeedsPassword:
           "Legen Sie ein Kopplungspasswort fest, um den mobilen Zugriff zu aktivieren.",
+        urlOpen: "Im Browser öffnen",
         urlPending: "Server wird gestartet…",
         urlTitle: "Mobile URL",
+      },
+      tabDescriptions: {
+        agents:
+          "Legen Sie fest, welche Coding-Agents in der Auswahl erscheinen und in welcher Reihenfolge.",
+        appearance: "Design und Anzeigesprache der Desktop-App.",
+        archived:
+          "Archivierte Sitzungen wiederherstellen oder samt Worktrees endgültig löschen.",
+        danger:
+          "Unumkehrbare Aktionen, die alle auf diesem Computer gespeicherten Chats betreffen.",
+        mobile:
+          "Die mobile Web-App von diesem Computer im lokalen Netzwerk bereitstellen.",
+        workspace:
+          "Verhalten von Eingabefeld und Worktrees während der Arbeit.",
       },
       tabs: {
         agents: "Agents",

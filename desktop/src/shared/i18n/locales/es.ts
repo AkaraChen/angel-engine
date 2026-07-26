@@ -240,6 +240,11 @@ export const es = {
         title: "Zona peligrosa",
       },
       description: "Configura el comportamiento del espacio de trabajo.",
+      groups: {
+        connectivity: "Conectividad",
+        data: "Datos",
+        general: "General",
+      },
       mobile: {
         copied: "Copiado",
         copy: "Copiar",
@@ -260,12 +265,30 @@ export const es = {
         portDescription:
           "Puerto TCP de escucha. Usa 0 para elegirlo automáticamente.",
         portTitle: "Puerto de escucha",
+        qrCode: "Código QR",
+        qrDialogDescription:
+          "Escanéalo con la cámara de tu teléfono. Debe estar en la misma red y se te pedirá la contraseña de emparejamiento.",
+        qrDialogTitle: "Abrir en el teléfono",
         urlDisabled:
           "Activa la vista móvil para obtener un enlace que puedas abrir en tu teléfono.",
         urlNeedsPassword:
           "Establece una contraseña de emparejamiento para habilitar el acceso móvil.",
+        urlOpen: "Abrir en el navegador",
         urlPending: "Iniciando el servidor…",
         urlTitle: "URL móvil",
+      },
+      tabDescriptions: {
+        agents:
+          "Elige qué agentes de código aparecen en el selector y en qué orden.",
+        appearance: "Tema e idioma de la aplicación de escritorio.",
+        archived:
+          "Restaura sesiones archivadas o elimínalas de forma permanente junto con sus worktrees.",
+        danger:
+          "Acciones irreversibles que afectan a todos los chats guardados en este equipo.",
+        mobile:
+          "Sirve la aplicación web móvil desde este equipo en tu red local.",
+        workspace:
+          "Cómo se comportan el campo de escritura y los worktrees mientras trabajas.",
       },
       tabs: {
         agents: "Agents",

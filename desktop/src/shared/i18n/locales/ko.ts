@@ -239,6 +239,11 @@ export const ko = {
         title: "위험 구역",
       },
       description: "데스크톱 워크스페이스 동작을 설정합니다.",
+      groups: {
+        connectivity: "연결",
+        data: "데이터",
+        general: "일반",
+      },
       mobile: {
         copied: "복사됨",
         copy: "복사",
@@ -259,12 +264,26 @@ export const ko = {
         portDescription:
           "수신할 TCP 포트입니다. 0을 사용하면 자동으로 선택합니다.",
         portTitle: "수신 포트",
+        qrCode: "QR 코드",
+        qrDialogDescription:
+          "휴대폰 카메라로 스캔하세요. 같은 네트워크에 연결되어 있어야 하며, 페어링 비밀번호를 입력해야 합니다.",
+        qrDialogTitle: "휴대폰에서 열기",
         urlDisabled:
           "모바일 보기를 켜면 휴대폰에서 열 수 있는 링크가 표시됩니다.",
         urlNeedsPassword:
           "페어링 비밀번호를 설정하면 모바일 접속을 사용할 수 있습니다.",
+        urlOpen: "브라우저에서 열기",
         urlPending: "서버를 시작하는 중…",
         urlTitle: "모바일 URL",
+      },
+      tabDescriptions: {
+        agents: "선택기에 표시할 코딩 에이전트와 순서를 정합니다.",
+        appearance: "데스크톱 앱의 테마와 표시 언어입니다.",
+        archived: "보관된 세션을 복원하거나 워크트리와 함께 영구 삭제합니다.",
+        danger:
+          "이 컴퓨터에 저장된 모든 채팅에 영향을 주는 되돌릴 수 없는 작업입니다.",
+        mobile: "로컬 네트워크를 통해 이 컴퓨터에서 모바일 웹 앱을 제공합니다.",
+        workspace: "작업 중 입력창과 워크트리가 동작하는 방식입니다.",
       },
       tabs: {
         agents: "Agents",

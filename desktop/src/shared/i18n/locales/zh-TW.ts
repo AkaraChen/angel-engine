@@ -237,6 +237,11 @@ export const zhTW = {
         title: "危險區",
       },
       description: "設定桌面工作區行為。",
+      groups: {
+        connectivity: "連線",
+        data: "資料",
+        general: "一般",
+      },
       mobile: {
         copied: "已複製",
         copy: "複製",
@@ -255,10 +260,23 @@ export const zhTW = {
         passwordTitle: "配對密碼",
         portDescription: "守護程序監聽的 TCP 連接埠。輸入 0 可自動選擇。",
         portTitle: "監聽連接埠",
+        qrCode: "QR Code",
+        qrDialogDescription:
+          "用手機相機掃描。手機需連接同一網路，並需要輸入配對密碼。",
+        qrDialogTitle: "在手機上開啟",
         urlDisabled: "開啟行動版存取後即可取得可在手機上開啟的連結。",
         urlNeedsPassword: "設定配對密碼後即可啟用行動版存取。",
+        urlOpen: "在瀏覽器中開啟",
         urlPending: "正在啟動伺服器…",
         urlTitle: "行動版網址",
+      },
+      tabDescriptions: {
+        agents: "選擇要在選擇器中顯示哪些編碼代理，以及它們的順序。",
+        appearance: "桌面應用程式的主題與顯示語言。",
+        archived: "還原已封存的工作階段，或連同工作樹一併永久刪除。",
+        danger: "影響本機所有聊天記錄的不可復原操作。",
+        mobile: "透過本機網路從這台電腦提供行動版網頁應用程式。",
+        workspace: "工作時輸入區與工作樹的行為方式。",
       },
       tabs: {
         agents: "Agents",
