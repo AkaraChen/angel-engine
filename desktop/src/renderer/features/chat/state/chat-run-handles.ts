@@ -1,5 +1,7 @@
-import type { ChatElicitationResponse } from "@angel-engine/daemon-api/chat";
-import type { ChatStreamElicitationInput } from "@angel-engine/daemon-client";
+import type {
+  ChatElicitationResponse,
+  ChatStreamElicitationResolveInput,
+} from "@angel-engine/daemon-api/chat";
 
 /**
  * Side-effectful handles of an in-flight run. These live outside the machine
@@ -14,7 +16,9 @@ export interface RunHandles {
   autoApprovedPermissionIds: Set<string>;
   cancelled: boolean;
   /** Set while an observer is attached; forwards to the daemon run. */
-  resolveElicitation?: (input: ChatStreamElicitationInput) => Promise<void>;
+  resolveElicitation?: (
+    input: ChatStreamElicitationResolveInput,
+  ) => Promise<void>;
   resolveElicitationLocally?: (
     elicitationId: string,
     response: ChatElicitationResponse,

@@ -28,13 +28,12 @@ import type {
   ChatRuntimeConfigInput,
   ChatRunObserverEvent,
   ChatRunStartInput,
-  ChatSendInput,
   ChatSetModeInput,
   ChatSetModeResult,
   ChatSetPermissionModeInput,
   ChatSetPermissionModeResult,
   ChatSetRuntimeInput,
-  ChatStreamEvent,
+  ChatStreamElicitationResolveInput,
   ProjectFileSearchInput,
   ProjectFileSearchResult,
 } from "@angel-engine/daemon-api/chat";
@@ -43,7 +42,6 @@ import {
   isChatAttentionListResult,
   isChatAttentionReadResult,
   isChatRunObserverEvent,
-  isChatStreamEvent,
 } from "@angel-engine/daemon-api/chat";
 import type { DaemonGlobalEvent } from "@angel-engine/daemon-api";
 import { isDaemonGlobalEvent } from "@angel-engine/daemon-api";
@@ -81,12 +79,6 @@ import { readSseEvents } from "./sse";
 
 export { DaemonRequestError } from "./errors";
 export { readSseEvents } from "./sse";
-
-/** Response of `POST /api/chat-streams/:id/elicitation`. */
-export interface ChatStreamElicitationInput {
-  elicitationId: string;
-  response: ChatElicitationResponse;
-}
 
 export interface DaemonClientOptions {
   /** Origin the daemon listens on; `""` when `fetch` already addresses it. */
@@ -158,41 +150,6 @@ export function createDaemonClient(options: DaemonClientOptions) {
     body: body === undefined ? undefined : JSON.stringify(body),
     method,
   });
-
-  async function* streamChat(
-    input: ChatSendInput,
-    streamId: string,
-    signal?: AbortSignal,
-  ): AsyncIterable<ChatStreamEvent> {
-    const path = `/api/chat-streams?streamId=${encodeURIComponent(streamId)}`;
-    const response = await send(path, {
-      ...json("POST", input),
-      headers: { accept: "text/event-stream" },
-      signal,
-    });
-    if (!response.ok) {
-      throw DaemonRequestError.http(
-        response.status,
-        undefined,
-        `Daemon request failed: POST ${path}`,
-      );
-    }
-    if (response.body === null) {
-      throw DaemonRequestError.invalidResponse(
-        `Daemon returned an empty stream for ${path}.`,
-        response.status,
-      );
-    }
-    for await (const event of readSseEvents(response.body)) {
-      if (!isChatStreamEvent(event)) {
-        throw DaemonRequestError.invalidResponse(
-          `Daemon returned an invalid chat stream event for ${path}.`,
-          response.status,
-        );
-      }
-      yield event;
-    }
-  }
 
   async function* streamRun(
     path: string,
@@ -322,7 +279,10 @@ export function createDaemonClient(options: DaemonClientOptions) {
           method: "GET",
           signal,
         }),
-      resolveElicitation: (runId: string, input: ChatStreamElicitationInput) =>
+      resolveElicitation: (
+        runId: string,
+        input: ChatStreamElicitationResolveInput,
+      ) =>
         request<{ resolved: boolean }>(
           `/api/chat-runs/${encodeURIComponent(runId)}/elicitation`,
           json("POST", input),
@@ -341,22 +301,6 @@ export function createDaemonClient(options: DaemonClientOptions) {
     attention: {
       list: listAttention,
       read: readAttention,
-    },
-    chatStreams: {
-      abort: (streamId: string) =>
-        request<{ ok: boolean }>(
-          `/api/chat-streams/${encodeURIComponent(streamId)}`,
-          { method: "DELETE" },
-        ),
-      resolveElicitation: (
-        streamId: string,
-        input: ChatStreamElicitationInput,
-      ) =>
-        request<{ resolved: boolean }>(
-          `/api/chat-streams/${encodeURIComponent(streamId)}/elicitation`,
-          json("POST", input),
-        ),
-      send: streamChat,
     },
     chats: {
       archive: (id: string) =>

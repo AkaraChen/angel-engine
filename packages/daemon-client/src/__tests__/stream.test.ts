@@ -1,30 +1,11 @@
 import type {
-  Chat,
   ChatActiveRunSnapshot,
   ChatRunObserverEvent,
-  ChatStreamEvent,
 } from "@angel-engine/daemon-api/chat";
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import {
-  createDaemonClient,
-  DaemonRequestError,
-  readSseEvents,
-} from "../index";
-
-const chat: Chat = {
-  archived: false,
-  createdAt: "2026-07-13T00:00:00.000Z",
-  cwd: "/tmp",
-  id: "chat-1",
-  pinned: false,
-  projectId: null,
-  remoteThreadId: null,
-  runtime: "codex",
-  title: "Test",
-  updatedAt: "2026-07-13T00:00:00.000Z",
-};
+import { createDaemonClient, readSseEvents } from "../index";
 
 const runSnapshot: ChatActiveRunSnapshot = {
   assistantMessage: {
@@ -100,73 +81,6 @@ describe("readSseEvents", () => {
       ': keep-alive comment\ndata: {"a":\ndata: 1}\n\ndata: {"b":2}',
     ]);
     expect(await collect(readSseEvents(stream))).toEqual([{ a: 1 }, { b: 2 }]);
-  });
-});
-
-describe("streamChat", () => {
-  it("streams parsed SSE events and posts to /api/chat-streams with the stream id", async () => {
-    const events: ChatStreamEvent[] = [
-      { type: "delta", part: "text", text: "Hel" },
-      { type: "delta", part: "text", text: "lo" },
-      {
-        type: "result",
-        result: {
-          chat,
-          chatId: chat.id,
-          content: [{ text: "Hello", type: "text" }],
-          text: "Hello",
-        },
-      },
-      { type: "done" },
-    ];
-    const fetchMock = vi.fn().mockResolvedValue(sseResponse(events));
-    vi.stubGlobal("fetch", fetchMock);
-
-    const client = createDaemonClient({ baseUrl: "", token: "secret" });
-    const received = await collect(
-      client.chatStreams.send({ chatId: "chat-1", text: "hi" }, "stream-9"),
-    );
-
-    expect(received).toEqual(events);
-    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
-    expect(url).toBe("/api/chat-streams?streamId=stream-9");
-    expect(init.method).toBe("POST");
-    expect(new Headers(init.headers).get("authorization")).toBe(
-      "Bearer secret",
-    );
-    expect(init.body).toBe(JSON.stringify({ chatId: "chat-1", text: "hi" }));
-  });
-
-  it("throws on a non-ok response", async () => {
-    const fetchMock = vi
-      .fn()
-      .mockResolvedValue(new Response("nope", { status: 404 }));
-    vi.stubGlobal("fetch", fetchMock);
-
-    const client = createDaemonClient({ baseUrl: "", token: null });
-    await expect(
-      collect(client.chatStreams.send({ chatId: "c", text: "hi" }, "s")),
-    ).rejects.toThrow(/POST \/api\/chat-streams/);
-  });
-
-  it.each([
-    ["unknown event type", { type: "futureEvent" }],
-    ["missing required field", { part: "text", type: "delta" }],
-  ])("fails fast on %s", async (_label, event) => {
-    const fetchMock = vi.fn().mockResolvedValue(sseResponse([event]));
-    vi.stubGlobal("fetch", fetchMock);
-
-    const client = createDaemonClient({ baseUrl: "", token: null });
-    const rejection = collect(
-      client.chatStreams.send({ chatId: "c", text: "hi" }, "s"),
-    );
-
-    await expect(rejection).rejects.toBeInstanceOf(DaemonRequestError);
-    await expect(rejection).rejects.toMatchObject({
-      name: "DaemonRequestError",
-      status: 200,
-    });
-    await expect(rejection).rejects.toThrow(/invalid chat stream event/);
   });
 });
 
@@ -305,35 +219,5 @@ describe("chat metadata + history", () => {
     const client = createDaemonClient({ baseUrl: "", token: null });
     expect(await client.chats.get("c1")).toEqual(chat);
     expect(fetchMock.mock.calls[0][0]).toBe("/api/chats/c1");
-  });
-
-  it("aborts a stream via DELETE /api/chat-streams/:id", async () => {
-    const fetchMock = vi.fn().mockResolvedValue(jsonResponse({ ok: true }));
-    vi.stubGlobal("fetch", fetchMock);
-
-    const client = createDaemonClient({ baseUrl: "", token: null });
-    await client.chatStreams.abort("stream-9");
-    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
-    expect(url).toBe("/api/chat-streams/stream-9");
-    expect(init.method).toBe("DELETE");
-  });
-
-  it("resolves an elicitation via POST /api/chat-streams/:id/elicitation", async () => {
-    const fetchMock = vi
-      .fn()
-      .mockResolvedValue(jsonResponse({ resolved: true }));
-    vi.stubGlobal("fetch", fetchMock);
-
-    const client = createDaemonClient({ baseUrl: "", token: null });
-    await client.chatStreams.resolveElicitation("stream-9", {
-      elicitationId: "elic-1",
-      response: { type: "allow" },
-    });
-    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
-    expect(url).toBe("/api/chat-streams/stream-9/elicitation");
-    expect(init.method).toBe("POST");
-    expect(init.body).toBe(
-      JSON.stringify({ elicitationId: "elic-1", response: { type: "allow" } }),
-    );
   });
 });

@@ -5,11 +5,6 @@ import { describe, expect, it } from "vitest";
 const validEvents: DaemonGlobalEvent[] = [
   { chatIds: ["chat-1"], type: "chat-attention-changed" },
   { chatIds: ["chat-1"], type: "chat-metadata-changed" },
-  {
-    event: { part: "text", text: "hello", type: "delta" },
-    streamId: "stream-1",
-    type: "chat-stream",
-  },
 ];
 
 describe("isDaemonGlobalEvent", () => {
@@ -22,14 +17,7 @@ describe("isDaemonGlobalEvent", () => {
   it.each([
     ["an unknown event", { type: "future-event" }],
     ["an empty chat id list", { chatIds: [], type: "chat-attention-changed" }],
-    [
-      "a malformed nested stream event",
-      {
-        event: { part: "analysis", text: "hello", type: "delta" },
-        streamId: "stream-1",
-        type: "chat-stream",
-      },
-    ],
+    ["a non-string chat id", { chatIds: [42], type: "chat-metadata-changed" }],
   ])("rejects %s", (_label, event) => {
     expect(isDaemonGlobalEvent(event)).toBe(false);
   });

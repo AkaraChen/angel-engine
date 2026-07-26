@@ -154,14 +154,6 @@ export class DaemonError extends Data.TaggedError(
     });
   }
 
-  static chatStreamNotWaiting() {
-    return new DaemonError({
-      code: "chat-stream-not-waiting",
-      message: "Chat stream is not waiting for user input.",
-      status: 409,
-    });
-  }
-
   static customAgentIdRequired() {
     return new DaemonError({
       code: "custom-agent-id-required",

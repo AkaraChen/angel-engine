@@ -1,12 +1,4 @@
-import type { ChatStreamEvent } from "./chat";
 import is from "@sindresorhus/is";
-import { isChatStreamEvent } from "./chat";
-
-export interface DaemonChatStreamEvent {
-  event: ChatStreamEvent;
-  streamId: string;
-  type: "chat-stream";
-}
 
 export interface DaemonChatMetadataChangedEvent {
   chatIds: string[];
@@ -20,8 +12,7 @@ export interface DaemonChatAttentionChangedEvent {
 
 export type DaemonGlobalEvent =
   | DaemonChatAttentionChangedEvent
-  | DaemonChatMetadataChangedEvent
-  | DaemonChatStreamEvent;
+  | DaemonChatMetadataChangedEvent;
 
 export function isDaemonGlobalEvent(
   value: unknown,
@@ -36,12 +27,6 @@ export function isDaemonGlobalEvent(
         value.chatIds.every(
           (chatId) => typeof chatId === "string" && chatId.length > 0,
         )
-      );
-    case "chat-stream":
-      return (
-        typeof value.streamId === "string" &&
-        value.streamId.length > 0 &&
-        isChatStreamEvent(value.event)
       );
     default:
       return false;
