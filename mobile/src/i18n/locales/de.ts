@@ -15,6 +15,8 @@ export const de = {
       settings: "Einstellungen",
       daemonOfflineHint:
         "Der Daemon ist möglicherweise offline oder nicht erreichbar.",
+      showLess: "Weniger anzeigen",
+      showMore: "Mehr anzeigen",
     },
     login: {
       title: "Angel Engine entsperren",

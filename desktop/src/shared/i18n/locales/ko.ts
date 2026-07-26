@@ -45,6 +45,8 @@ export const ko = {
       search: "검색",
       searching: "검색 중...",
       send: "보내기",
+      showLess: "접기",
+      showMore: "더 보기",
       speak: "읽어주기",
       stopSpeaking: "읽기 중지",
       submit: "제출",

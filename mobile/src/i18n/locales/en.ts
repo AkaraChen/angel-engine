@@ -14,6 +14,8 @@ export const en = {
       newChat: "New chat",
       settings: "Settings",
       daemonOfflineHint: "The daemon may be offline or unreachable.",
+      showLess: "Show less",
+      showMore: "Show more",
     },
     login: {
       title: "Unlock Angel Engine",

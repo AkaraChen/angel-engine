@@ -45,6 +45,8 @@ export const es = {
       search: "Buscar",
       searching: "Buscando...",
       send: "Enviar",
+      showLess: "Mostrar menos",
+      showMore: "Mostrar más",
       speak: "Leer en voz alta",
       stopSpeaking: "Detener lectura",
       submit: "Enviar",

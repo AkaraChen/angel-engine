@@ -42,6 +42,8 @@ export interface LocaleResourceTranslationCommon {
   search: string;
   searching: string;
   send: string;
+  showLess: string;
+  showMore: string;
   speak: string;
   stopSpeaking: string;
   submit: string;

@@ -14,6 +14,8 @@ export const ko = {
       newChat: "새 채팅",
       settings: "설정",
       daemonOfflineHint: "데몬이 오프라인이거나 연결할 수 없습니다.",
+      showLess: "접기",
+      showMore: "더 보기",
     },
     login: {
       title: "Angel Engine 잠금 해제",

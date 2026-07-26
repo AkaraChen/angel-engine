@@ -45,6 +45,8 @@ export const en = {
       search: "Search",
       searching: "Searching...",
       send: "Send",
+      showLess: "Show less",
+      showMore: "Show more",
       speak: "Speak",
       stopSpeaking: "Stop speaking",
       submit: "Submit",

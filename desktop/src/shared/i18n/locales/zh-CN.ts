@@ -45,6 +45,8 @@ export const zhCN = {
       search: "搜索",
       searching: "搜索中...",
       send: "发送",
+      showLess: "收起",
+      showMore: "展开",
       speak: "朗读",
       stopSpeaking: "停止朗读",
       submit: "提交",

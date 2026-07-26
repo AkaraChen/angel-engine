@@ -45,6 +45,8 @@ export const zhTW = {
       search: "搜尋",
       searching: "搜尋中...",
       send: "傳送",
+      showLess: "收合",
+      showMore: "展開",
       speak: "朗讀",
       stopSpeaking: "停止朗讀",
       submit: "提交",

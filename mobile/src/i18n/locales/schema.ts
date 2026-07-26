@@ -11,6 +11,8 @@ export interface LocaleResourceTranslationCommon {
   newChat: string;
   settings: string;
   daemonOfflineHint: string;
+  showLess: string;
+  showMore: string;
 }
 
 export interface LocaleResourceTranslationLogin {
