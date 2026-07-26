@@ -123,6 +123,7 @@ export function registerApi(
   const chatRuns = new ChatRunRegistry({
     execute: (input, onEvent, signal, controls) =>
       run(engine((e) => e.streamChat(input, onEvent, signal, controls))),
+    isRunIdRetained: (chatId, runId) => activity.hasRun(chatId, runId),
     onEvent: ({ chatId, event, runId }) => {
       activity.apply(chatId, runId, event);
     },

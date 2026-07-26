@@ -42,6 +42,7 @@ interface ChatRunRegistryOptions {
     signal: AbortSignal,
     controls: ChatStreamControls,
   ) => Promise<ChatSendResult>;
+  isRunIdRetained?: (chatId: string, runId: string) => boolean;
   onEvent?: (event: ChatRunEvent) => void;
 }
 
@@ -81,11 +82,15 @@ export class ChatRunRegistry {
   readonly #activeByChat = new Map<string, ActiveRun>();
   readonly #activeById = new Map<string, ActiveRun>();
   readonly #execute: ChatRunRegistryOptions["execute"];
+  readonly #isRunIdRetained: NonNullable<
+    ChatRunRegistryOptions["isRunIdRetained"]
+  >;
   readonly #onEvent?: ChatRunRegistryOptions["onEvent"];
   readonly #retiredRunIds = new Set<string>();
 
   constructor(options: ChatRunRegistryOptions) {
     this.#execute = options.execute;
+    this.#isRunIdRetained = options.isRunIdRetained ?? (() => false);
     this.#onEvent = options.onEvent;
   }
 
@@ -103,6 +108,9 @@ export class ChatRunRegistry {
       throw DaemonError.chatRunConflict("Run id is already active.");
     }
     if (this.#retiredRunIds.has(runId)) {
+      throw DaemonError.chatRunConflict("Run id has already been used.");
+    }
+    if (this.#isRunIdRetained(input.chatId, runId)) {
       throw DaemonError.chatRunConflict("Run id has already been used.");
     }
     if (this.#activeByChat.has(input.chatId)) {

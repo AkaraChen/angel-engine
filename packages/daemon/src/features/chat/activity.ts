@@ -78,6 +78,10 @@ export class ChatActivityStore {
     return { attentions };
   }
 
+  hasRun(chatId: string, runId: string): boolean {
+    return this.#current(chatId, runId) !== undefined;
+  }
+
   start(chatId: string, runId: string): boolean {
     const current = this.#activities.get(chatId);
     if (current?.activity.runId === runId) return false;

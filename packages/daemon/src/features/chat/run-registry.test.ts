@@ -9,6 +9,7 @@ import type {
 import type { ChatStreamControls } from "./runtime";
 
 import { describe, expect, it, vi } from "vitest";
+import { ChatActivityStore } from "./activity";
 import { CHAT_RUN_ID_RETENTION_LIMIT, ChatRunRegistry } from "./run-registry";
 
 const chat: Chat = {
@@ -185,20 +186,34 @@ describe("ChatRunRegistry", () => {
     ).toThrow("Run id has already been used");
   });
 
-  it("bounds retained run ids after stopped reservations", () => {
+  it("keeps an evicted run id unavailable while its tombstone is unread", () => {
     const run = deferredRun();
-    const registry = new ChatRunRegistry({ execute: run.execute });
+    const activity = new ChatActivityStore();
+    const registry = new ChatRunRegistry({
+      execute: run.execute,
+      isRunIdRetained: (chatId, runId) => activity.hasRun(chatId, runId),
+    });
 
-    for (let index = 0; index <= CHAT_RUN_ID_RETENTION_LIMIT; index += 1) {
+    registry.reserve("run-0", input);
+    activity.start(chat.id, "run-0");
+    registry.stop("run-0");
+    activity.apply(chat.id, "run-0", { result, type: "result" });
+
+    for (let index = 1; index <= CHAT_RUN_ID_RETENTION_LIMIT; index += 1) {
       const runId = `run-${index}`;
       registry.reserve(runId, input);
       registry.stop(runId);
     }
 
-    expect(() => registry.reserve("run-0", input)).not.toThrow();
+    expect(() => registry.reserve("run-0", input)).toThrow(
+      "Run id has already been used",
+    );
     expect(() =>
       registry.reserve("run-1", { ...input, chatId: "chat-2" }),
     ).toThrow("Run id has already been used");
+
+    expect(activity.acknowledge(chat.id, "run-0:done")).toBe(true);
+    expect(() => registry.reserve("run-0", input)).not.toThrow();
     registry.stop("run-0");
   });
 
