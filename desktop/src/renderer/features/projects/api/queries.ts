@@ -1,7 +1,9 @@
 import type { ProjectFileSearchResult } from "@angel-engine/daemon-api/chat";
 import type {
   Project,
+  ProjectConfigResult,
   ProjectGitStatusResult,
+  UpdateProjectConfigInput,
 } from "@angel-engine/daemon-api/projects";
 
 import type { QueryClient } from "@tanstack/react-query";
@@ -31,6 +33,17 @@ interface ProjectGitStatusQueryParams {
   enabled?: boolean;
   projectId?: string | null;
   staleTime?: number;
+}
+
+interface ProjectConfigQueryParams {
+  api: ApiClient;
+  enabled?: boolean;
+  projectId?: string | null;
+}
+
+interface UpdateProjectConfigMutationParams {
+  api: ApiClient;
+  queryClient: QueryClient;
 }
 
 interface CreateProjectMutationParams {
@@ -104,6 +117,43 @@ export function projectGitStatusQueryOptions({
     queryKey: queryKeys.projects.gitStatus(projectId ?? null),
     retry: false,
     staleTime,
+  });
+}
+
+export function projectConfigQueryOptions({
+  api,
+  enabled = true,
+  projectId,
+}: ProjectConfigQueryParams) {
+  return queryOptions({
+    enabled: enabled && is.nonEmptyString(projectId),
+    queryFn: async (): Promise<ProjectConfigResult> => {
+      if (!is.nonEmptyString(projectId)) {
+        throw new Error("No project selected");
+      }
+      return api.projects.config({ projectId });
+    },
+    queryKey: queryKeys.projects.config(projectId ?? null),
+    retry: false,
+    // Settings live in a file the user can edit outside the app, so refetch on
+    // every dialog open instead of trusting a cached read.
+    staleTime: 0,
+  });
+}
+
+export function updateProjectConfigMutationOptions({
+  api,
+  queryClient,
+}: UpdateProjectConfigMutationParams) {
+  return mutationOptions({
+    mutationFn: async (input: UpdateProjectConfigInput) =>
+      api.projects.updateConfig(input),
+    onSuccess: (data) => {
+      queryClient.setQueryData<ProjectConfigResult>(
+        queryKeys.projects.config(data.projectId),
+        data,
+      );
+    },
   });
 }
 

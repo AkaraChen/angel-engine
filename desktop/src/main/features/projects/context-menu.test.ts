@@ -60,11 +60,11 @@ describe("project context menu", () => {
 
     const result = showProjectContextMenu(
       { id: "project-1", path: "/repo" },
-      { delete: "Delete" },
+      { delete: "Delete", settings: "Settings" },
       undefined,
     );
     await vi.waitFor(() => {
-      expect(mocks.template).toHaveLength(3);
+      expect(mocks.template).toHaveLength(5);
     });
     expect(mocks.resolvePathLauncherTarget).toHaveBeenCalledWith({
       projectId: "project-1",
@@ -88,6 +88,33 @@ describe("project context menu", () => {
     await expect(result).resolves.toBe("deleted");
   });
 
+  it("reports the settings selection without touching the project", async () => {
+    const result = showProjectContextMenu(
+      { id: "project-1", path: "/repo" },
+      { delete: "Delete", settings: "Settings" },
+      undefined,
+    );
+    await vi.waitFor(() => {
+      expect(mocks.template).toHaveLength(5);
+    });
+
+    const settingsItem = mocks.template.find(
+      (item) => item.label === "Settings",
+    );
+    settingsItem?.click?.(
+      {} as Electron.MenuItem,
+      undefined,
+      {} as Electron.KeyboardEvent,
+    );
+    const popupOptions = mocks.popup.mock.calls[0]?.[0] as
+      | Electron.PopupOptions
+      | undefined;
+    popupOptions?.callback?.();
+
+    await expect(result).resolves.toBe("settings");
+    expect(mocks.deleteProject).not.toHaveBeenCalled();
+  });
+
   it("keeps delete available when the project directory is unavailable", async () => {
     mocks.resolvePathLauncherTarget.mockRejectedValue(
       new Error("Workspace directory is unavailable."),
@@ -95,11 +122,11 @@ describe("project context menu", () => {
 
     const result = showProjectContextMenu(
       { id: "project-1", path: "/missing" },
-      { delete: "Delete" },
+      { delete: "Delete", settings: "Settings" },
       undefined,
     );
     await vi.waitFor(() => {
-      expect(mocks.template).toHaveLength(1);
+      expect(mocks.template).toHaveLength(3);
     });
     expect(mocks.createPathLauncherMenuItems).not.toHaveBeenCalled();
 

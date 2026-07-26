@@ -1,0 +1,231 @@
+import type {
+  Project,
+  ProjectConfigResult,
+} from "@angel-engine/daemon-api/projects";
+import type { FormEventHandler, ReactElement } from "react";
+
+import { PROJECT_CONFIG_FILE_NAME } from "@angel-engine/daemon-api/projects";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useState } from "react";
+import { useTranslation } from "react-i18next";
+import { getErrorMessage } from "@/app/workspace/workspace-display";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Spinner } from "@/components/ui/spinner";
+import { Textarea } from "@/components/ui/textarea";
+import { useToast } from "@/components/ui/toast";
+import {
+  projectConfigQueryOptions,
+  updateProjectConfigMutationOptions,
+} from "@/features/projects/api/queries";
+import { useApi } from "@/platform/use-api";
+
+interface ProjectSettingsDialogProps {
+  onClose: () => void;
+  project: Project | null;
+}
+
+export function ProjectSettingsDialog({
+  onClose,
+  project,
+}: ProjectSettingsDialogProps): ReactElement {
+  const { t } = useTranslation();
+
+  return (
+    <Dialog open={Boolean(project)} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="gap-5 rounded-2xl">
+        <DialogHeader>
+          <DialogTitle>{t("projects.settings")}</DialogTitle>
+          <DialogDescription>
+            {t("projects.settingsDescription")}
+          </DialogDescription>
+        </DialogHeader>
+        {project ? (
+          <ProjectSettingsForm
+            key={project.id}
+            onClose={onClose}
+            project={project}
+          />
+        ) : null}
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function ProjectSettingsForm({
+  onClose,
+  project,
+}: {
+  onClose: () => void;
+  project: Project;
+}) {
+  const api = useApi();
+  const queryClient = useQueryClient();
+  const { t } = useTranslation();
+  const toast = useToast();
+  const configQuery = useQuery(
+    projectConfigQueryOptions({ api, projectId: project.id }),
+  );
+  const saveMutation = useMutation(
+    updateProjectConfigMutationOptions({ api, queryClient }),
+  );
+
+  if (configQuery.isPending) {
+    return (
+      <div className="flex justify-center py-6">
+        <Spinner />
+      </div>
+    );
+  }
+
+  if (configQuery.isError) {
+    return (
+      <ProjectSettingsError
+        message={getErrorMessage(configQuery.error)}
+        onClose={onClose}
+        project={project}
+      />
+    );
+  }
+
+  return (
+    <ProjectSettingsEditor
+      config={configQuery.data}
+      isSaving={saveMutation.isPending}
+      onClose={onClose}
+      onSave={async (setupScript) => {
+        try {
+          await saveMutation.mutateAsync({
+            projectId: project.id,
+            setupScript,
+          });
+          toast({ title: t("projects.settingsSaved") });
+          onClose();
+        } catch (error) {
+          toast({
+            description: getErrorMessage(error),
+            title: t("projects.settingsSaveFailed"),
+            variant: "destructive",
+          });
+        }
+      }}
+      project={project}
+    />
+  );
+}
+
+function ProjectSettingsEditor({
+  config,
+  isSaving,
+  onClose,
+  onSave,
+  project,
+}: {
+  config: ProjectConfigResult;
+  isSaving: boolean;
+  onClose: () => void;
+  onSave: (setupScript: string[]) => Promise<void>;
+  project: Project;
+}) {
+  const { t } = useTranslation();
+  const [setupScriptText, setSetupScriptText] = useState(() =>
+    config.setupScript.join("\n"),
+  );
+
+  const handleSubmit: FormEventHandler<HTMLFormElement> = (event) => {
+    event.preventDefault();
+    if (isSaving) return;
+    void onSave(toSetupScript(setupScriptText));
+  };
+
+  return (
+    <form className="grid gap-5" onSubmit={handleSubmit}>
+      <ProjectPathField path={project.path} />
+      <div className="grid gap-2">
+        <span className="text-sm font-medium">{t("projects.setupScript")}</span>
+        <Textarea
+          aria-label={t("projects.setupScript")}
+          className="min-h-32 font-mono text-xs"
+          disabled={isSaving}
+          onChange={(event) => setSetupScriptText(event.target.value)}
+          placeholder={t("projects.setupScriptPlaceholder")}
+          spellCheck={false}
+          value={setupScriptText}
+        />
+        <p className="text-xs text-muted-foreground">
+          {t("projects.setupScriptHint", { file: PROJECT_CONFIG_FILE_NAME })}
+        </p>
+      </div>
+      <DialogFooter>
+        <Button
+          disabled={isSaving}
+          onClick={onClose}
+          type="button"
+          variant="outline"
+        >
+          {t("common.cancel")}
+        </Button>
+        <Button disabled={isSaving} type="submit">
+          {isSaving ? t("common.saving") : t("common.save")}
+        </Button>
+      </DialogFooter>
+    </form>
+  );
+}
+
+function ProjectSettingsError({
+  message,
+  onClose,
+  project,
+}: {
+  message: string;
+  onClose: () => void;
+  project: Project;
+}) {
+  const { t } = useTranslation();
+
+  return (
+    <div className="grid gap-5">
+      <ProjectPathField path={project.path} />
+      <div className="grid gap-1">
+        <span className="text-sm font-medium text-destructive">
+          {t("projects.settingsLoadFailed")}
+        </span>
+        <p className="text-xs break-all text-muted-foreground">{message}</p>
+      </div>
+      <DialogFooter>
+        <Button onClick={onClose} type="button" variant="outline">
+          {t("common.close")}
+        </Button>
+      </DialogFooter>
+    </div>
+  );
+}
+
+function ProjectPathField({ path }: { path: string }) {
+  const { t } = useTranslation();
+
+  return (
+    <div className="grid gap-1">
+      <span className="text-sm font-medium">{t("projects.settingsPath")}</span>
+      <p className="font-mono text-xs break-all text-muted-foreground">
+        {path}
+      </p>
+    </div>
+  );
+}
+
+/** One command per line; blank lines are not commands. */
+function toSetupScript(text: string): string[] {
+  return text
+    .split("\n")
+    .map((command) => command.trim())
+    .filter((command) => command.length > 0);
+}

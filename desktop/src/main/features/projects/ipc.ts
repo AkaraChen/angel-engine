@@ -46,6 +46,7 @@ export const projectPlatformIpcRouter = {
               project,
               {
                 delete: translate("common.delete"),
+                settings: translate("projects.settings"),
               },
               BrowserWindow.fromWebContents(context.sender) ?? undefined,
             ),

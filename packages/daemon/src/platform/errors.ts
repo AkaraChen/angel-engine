@@ -178,6 +178,23 @@ export class DaemonError extends Data.TaggedError(
     });
   }
 
+  static projectConfigInvalid(message: string) {
+    return new DaemonError({
+      code: "project-config-invalid",
+      message,
+      status: 409,
+    });
+  }
+
+  static projectConfigWriteFailed(cause: unknown) {
+    return new DaemonError({
+      cause,
+      code: "project-config-write-failed",
+      message: messageFromCause(cause, "Could not write project settings."),
+      status: 500,
+    });
+  }
+
   static projectIdRequired() {
     return new DaemonError({
       code: "project-id-required",

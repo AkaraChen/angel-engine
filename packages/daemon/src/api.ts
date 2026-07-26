@@ -34,6 +34,7 @@ import {
 import { githubResolveUrlInputSchema } from "@angel-engine/daemon-api/github";
 import {
   createProjectInputSchema,
+  updateProjectConfigInputSchema,
   updateProjectInputSchema,
 } from "@angel-engine/daemon-api/projects";
 import {
@@ -71,6 +72,10 @@ import {
   removeManagedWorktree,
 } from "./features/projects/git";
 import { projectGitStatus } from "./features/projects/git";
+import {
+  readProjectConfig,
+  updateProjectConfig,
+} from "./features/projects/config";
 import { searchProjectFiles } from "./features/projects/file-search";
 import {
   createProject,
@@ -427,6 +432,21 @@ export function registerApi(
   app.delete("/api/projects/:id", async (context) => {
     await run(deleteProject(context.req.param("id")));
     return context.json({ ok: true });
+  });
+  app.get("/api/projects/:id/config", async (context) =>
+    context.json(
+      await run(readProjectConfig({ projectId: context.req.param("id") })),
+    ),
+  );
+  app.put("/api/projects/:id/config", async (context) => {
+    const body = await context.req.json<Record<string, unknown>>();
+    const input = updateProjectConfigInputSchema({
+      ...body,
+      projectId: context.req.param("id"),
+    });
+    if (input instanceof arkType.errors)
+      throw DaemonError.invalidRequest("Project settings are invalid.");
+    return context.json(await run(updateProjectConfig(input)));
   });
   app.get("/api/projects/:id/git-status", async (context) =>
     context.json(
