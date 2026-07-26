@@ -23,9 +23,13 @@ here — only the desktop-specific decisions are.
 
 ## Baseline at Stage 1 (historical)
 
-This section records the pre-migration behavior. Every file and route it names
-was deleted in Stage 2 (desktop, KIT-207) and Stage 3 (daemon and client,
-KIT-208).
+This section records the pre-migration behavior. None of it is current. The
+`/api/chat-streams` routes are gone (Stage 3, KIT-208), and so are
+`desktop-agent-adapter.ts` and `api/chat-stream.ts` (Stage 2, KIT-207). The
+other files named below still exist but no longer work this way:
+`chat-run-stream.ts` and `chat-run-registry.ts` now drive `daemon.chatRuns.*`
+and key slots by real chat id, and `main/daemon/events.ts` now handles only
+`chat-attention-changed`.
 
 `desktop/src/renderer/features/chat/api/desktop-agent-adapter.ts` opened
 `POST /api/chat-streams?streamId=...` through a raw

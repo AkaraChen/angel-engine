@@ -33,6 +33,7 @@ import type {
   ChatSetPermissionModeInput,
   ChatSetPermissionModeResult,
   ChatSetRuntimeInput,
+  ChatStreamElicitationResolveInput,
   ProjectFileSearchInput,
   ProjectFileSearchResult,
 } from "@angel-engine/daemon-api/chat";
@@ -78,12 +79,6 @@ import { readSseEvents } from "./sse";
 
 export { DaemonRequestError } from "./errors";
 export { readSseEvents } from "./sse";
-
-/** Body of `POST /api/chat-runs/:runId/elicitation`. */
-export interface ChatStreamElicitationInput {
-  elicitationId: string;
-  response: ChatElicitationResponse;
-}
 
 export interface DaemonClientOptions {
   /** Origin the daemon listens on; `""` when `fetch` already addresses it. */
@@ -284,7 +279,10 @@ export function createDaemonClient(options: DaemonClientOptions) {
           method: "GET",
           signal,
         }),
-      resolveElicitation: (runId: string, input: ChatStreamElicitationInput) =>
+      resolveElicitation: (
+        runId: string,
+        input: ChatStreamElicitationResolveInput,
+      ) =>
         request<{ resolved: boolean }>(
           `/api/chat-runs/${encodeURIComponent(runId)}/elicitation`,
           json("POST", input),

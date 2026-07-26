@@ -28,10 +28,11 @@ while the mobile `useConversation` cleanup also sent
 unmounted. Its pending elicitation was component-local and was cleared with the
 stream.
 
-That behavior is now characterized in
-`mobile/src/features/chat/use-conversation.test.tsx`. It is a migration guard,
-not the desired product behavior; the continuity task will deliberately invert
-it after daemon-owned runs exist.
+That behavior was characterized in
+`mobile/src/features/chat/use-conversation.test.tsx` as a migration guard, not
+as desired product behavior, and the continuity work has since inverted it.
+The same test now asserts the opposite: changing the selected chat detaches the
+observer without stopping the run.
 
 ## Typed Contract
 
