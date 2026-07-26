@@ -7,6 +7,7 @@ import {
   ChatCircle,
   Square,
   Warning,
+  WarningOctagon,
 } from "@phosphor-icons/react";
 import { useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -65,8 +66,12 @@ import {
 export function ChatPage({ chatId }: { chatId: string }) {
   const pendingInputRef = useRef<HTMLDivElement>(null);
   const conversation = useConversation(chatId);
-  useReadTerminalActivity(chatId);
   const hasMessages = conversation.messages.length > 0;
+  // Acknowledging is irreversible, so it waits until the transcript is really
+  // open: a chat that failed to load keeps its marker for the next attempt.
+  const { failureMessage } = useReadTerminalActivity(chatId, {
+    enabled: !conversation.isPending && !conversation.isError,
+  });
   const reviewPendingInput = () => {
     pendingInputRef.current?.scrollIntoView({ block: "center" });
     pendingInputRef.current?.focus({ preventScroll: true });
@@ -77,6 +82,9 @@ export function ChatPage({ chatId }: { chatId: string }) {
       <MessageScrollerProvider>
         {conversation.pendingElicitation !== null ? (
           <AttentionBanner onReview={reviewPendingInput} />
+        ) : null}
+        {failureMessage !== undefined ? (
+          <RunFailureBanner message={failureMessage} />
         ) : null}
         <MessageScroller className="min-h-0 flex-1">
           <MessageScrollerViewport className="h-full">
@@ -136,6 +144,21 @@ function AttentionBanner({ onReview }: { onReview: () => void }) {
           <ArrowDown data-icon="inline-end" />
         </Button>
       </AlertAction>
+    </Alert>
+  );
+}
+
+/**
+ * The reason the last run failed. Opening the chat clears the daemon marker, so
+ * this is the only place the message is still readable afterwards.
+ */
+function RunFailureBanner({ message }: { message: string }) {
+  const { t } = useTranslation();
+  return (
+    <Alert className="mx-3 mb-2 w-auto border-destructive/30 bg-destructive/5">
+      <WarningOctagon className="text-destructive" weight="fill" />
+      <AlertTitle>{t("chat.runFailedTitle")}</AlertTitle>
+      <AlertDescription>{message}</AlertDescription>
     </Alert>
   );
 }

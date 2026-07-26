@@ -48,6 +48,7 @@ export const ja = {
       emptyTitle: "まだチャットがありません",
       emptyDescription:
         "新しいエージェントセッションを開始すると、ここに表示されます。",
+      activityErrorTitle: "アクティビティを読み込めませんでした",
       errorTitle: "チャットを読み込めませんでした",
       filterSegments: "チャットを絞り込む",
       segmentEmpty: "ここには何もありません。",
@@ -73,6 +74,7 @@ export const ja = {
       emptyTitle: "まだメッセージがありません",
       emptyDescription: "メッセージを送信して会話を始めましょう。",
       errorTitle: "このチャットを読み込めませんでした",
+      runFailedTitle: "前回の実行が失敗しました",
       messagePlaceholder: "メッセージ",
       sendAria: "送信",
       stopAria: "停止",

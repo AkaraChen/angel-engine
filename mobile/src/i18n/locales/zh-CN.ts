@@ -43,6 +43,7 @@ export const zhCN = {
     home: {
       emptyTitle: "暂无对话",
       emptyDescription: "开启一个新的智能体会话后即可在此看到。",
+      activityErrorTitle: "无法加载活动",
       errorTitle: "无法加载对话",
       filterSegments: "筛选对话",
       segmentEmpty: "这里暂时没有内容。",
@@ -68,6 +69,7 @@ export const zhCN = {
       emptyTitle: "暂无消息",
       emptyDescription: "发送一条消息以开始对话。",
       errorTitle: "无法加载此对话",
+      runFailedTitle: "上一次运行失败",
       messagePlaceholder: "消息",
       sendAria: "发送",
       stopAria: "停止",

@@ -54,6 +54,24 @@ function chatActivitySegment(
   return STATUS_SEGMENT[status];
 }
 
+/**
+ * The timestamp a row is actually ordered by. A chat that has been sitting
+ * untouched for months but just started a new run sorts to the top, so showing
+ * `chat.updatedAt` next to it would read as "months ago" on the first row.
+ */
+export function chatActivityRowTimestamp(row: ChatActivityRow): string {
+  return row.activity?.updatedAt ?? row.chat.updatedAt;
+}
+
+/** The failure the daemon reported for a row, if its last run failed. */
+export function chatActivityFailureMessage(
+  row: ChatActivityRow,
+): string | undefined {
+  return row.activity?.status === "failed"
+    ? row.activity.failure.message
+    : undefined;
+}
+
 /** The marker id an opened chat can acknowledge, if the run has ended. */
 export function terminalAttentionId(
   activity: ChatActivity,

@@ -1,7 +1,7 @@
 import type { ChatActivity } from "@/platform/chat-types";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 
 import { useDaemonClient } from "@/platform/daemon-provider";
 import { queryKeys } from "@/platform/query-keys";
@@ -35,8 +35,16 @@ export function useChatActivity(chatId: string): ChatActivity | null {
  * Acknowledges the terminal marker of an opened chat. The ack carries the
  * activity's own `attentionId`, so a marker that belongs to a newer run is
  * rejected by the daemon (`read: false`) and refetched instead of cleared.
+ *
+ * The ack is irreversible, so it waits for `enabled` — the caller passes the
+ * transcript's own loaded state, and a chat that failed to open keeps its
+ * marker. The failure message is retained across the ack and returned so the
+ * reason survives on screen after the projection has dropped the row.
  */
-export function useReadTerminalActivity(chatId: string) {
+export function useReadTerminalActivity(
+  chatId: string,
+  { enabled }: { enabled: boolean },
+): { failureMessage?: string } {
   const daemon = useDaemonClient();
   const queryClient = useQueryClient();
   const activity = useChatActivity(chatId);
@@ -62,9 +70,26 @@ export function useReadTerminalActivity(chatId: string) {
     },
   });
 
+  const [retainedFailure, setRetainedFailure] = useState<{
+    chatId: string;
+    message: string;
+  } | null>(null);
+
   useEffect(() => {
-    if (activity?.status === "done" || activity?.status === "failed") {
-      read(activity.attentionId);
+    if (activity?.status === "failed") {
+      setRetainedFailure({ chatId, message: activity.failure.message });
     }
-  }, [activity, read]);
+  }, [activity, chatId]);
+
+  useEffect(() => {
+    if (!enabled || activity === null) return;
+    const attentionId = terminalAttentionId(activity);
+    if (attentionId === undefined) return;
+    read(attentionId);
+  }, [activity, enabled, read]);
+
+  return {
+    failureMessage:
+      retainedFailure?.chatId === chatId ? retainedFailure.message : undefined,
+  };
 }

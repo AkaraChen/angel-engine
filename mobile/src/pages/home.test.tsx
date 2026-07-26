@@ -221,6 +221,35 @@ describe("homePage", () => {
     expect(screen.getByRole("button", { name: /Done\s*1/ })).toBeDefined();
   });
 
+  it("says the activity projection is unavailable instead of showing 0s", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: string) => {
+        const url = String(input);
+        if (url.endsWith("/api/chat-activity")) {
+          return Promise.reject(new Error("activity is down"));
+        }
+        return fleetFetch(url);
+      }),
+    );
+
+    renderHome();
+
+    expect(await screen.findByText("Couldn't load activity")).toBeDefined();
+    // Counts and badges would all read 0/absent without the projection, which is
+    // indistinguishable from an idle fleet — the chips stay away entirely.
+    expect(screen.queryByRole("button", { name: /Needs you/ })).toBeNull();
+    expect(screen.getByText("Waiting chat")).toBeDefined();
+  });
+
+  it("shows the failure message of a failed run on its row", async () => {
+    vi.stubGlobal("fetch", vi.fn(fleetFetch));
+
+    renderHome();
+
+    expect(await screen.findByText("the runtime exited")).toBeDefined();
+  });
+
   it("shows the error state when the daemon is unreachable", async () => {
     vi.stubGlobal(
       "fetch",

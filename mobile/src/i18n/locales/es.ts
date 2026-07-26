@@ -46,6 +46,7 @@ export const es = {
     home: {
       emptyTitle: "Aún no hay chats",
       emptyDescription: "Inicia una nueva sesión de agente para verla aquí.",
+      activityErrorTitle: "No se pudo cargar la actividad",
       errorTitle: "No se pudieron cargar los chats",
       filterSegments: "Filtrar chats",
       segmentEmpty: "Aquí no hay nada por ahora.",
@@ -71,6 +72,7 @@ export const es = {
       emptyTitle: "Aún no hay mensajes",
       emptyDescription: "Envía un mensaje para empezar la conversación.",
       errorTitle: "No se pudo cargar este chat",
+      runFailedTitle: "La última ejecución falló",
       messagePlaceholder: "Mensaje",
       sendAria: "Enviar",
       stopAria: "Detener",
