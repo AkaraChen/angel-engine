@@ -50,7 +50,7 @@ import { ElicitationPrompt } from "@/features/chat/elicitation-prompt";
 import { MarkdownMessage } from "@/features/chat/markdown-message";
 import { PlanMessage } from "@/features/chat/plan-message";
 import { ToolCallGroup } from "@/features/chat/tool-call-group";
-import { useReadCompletedAttention } from "@/features/chat/use-attention";
+import { useReadTerminalActivity } from "@/features/chat/use-activity";
 import {
   type Conversation,
   useConversation,
@@ -65,7 +65,7 @@ import {
 export function ChatPage({ chatId }: { chatId: string }) {
   const pendingInputRef = useRef<HTMLDivElement>(null);
   const conversation = useConversation(chatId);
-  useReadCompletedAttention(chatId);
+  useReadTerminalActivity(chatId);
   const hasMessages = conversation.messages.length > 0;
   const reviewPendingInput = () => {
     pendingInputRef.current?.scrollIntoView({ block: "center" });

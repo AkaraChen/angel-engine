@@ -14,15 +14,18 @@ export function DaemonEventSync() {
     if (token === null) return;
     const reconcile = () => {
       void queryClient.invalidateQueries({
-        queryKey: queryKeys.attention.list,
+        queryKey: queryKeys.activity.all,
       });
       void queryClient.invalidateQueries({ queryKey: queryKeys.chats.list });
     };
     return daemon.events.subscribe({
       onEvent: (event) => {
-        if (event.type === "chat-attention-changed") {
+        if (
+          event.type === "chat-activity-changed" ||
+          event.type === "chat-attention-changed"
+        ) {
           void queryClient.invalidateQueries({
-            queryKey: queryKeys.attention.list,
+            queryKey: queryKeys.activity.all,
           });
         } else if (event.type === "chat-metadata-changed") {
           void queryClient.invalidateQueries({

@@ -46,6 +46,23 @@ export const ko = {
       emptyTitle: "아직 채팅이 없습니다",
       emptyDescription: "새 에이전트 세션을 시작하면 여기에 표시됩니다.",
       errorTitle: "채팅을 불러올 수 없습니다",
+      filterSegments: "채팅 필터",
+      segmentEmpty: "여기에는 아무것도 없습니다.",
+      segments: {
+        all: "전체",
+        attention: "확인 필요",
+        running: "실행 중",
+        done: "완료",
+      },
+    },
+    activity: {
+      status: {
+        waitingForYou: "응답 대기 중",
+        failed: "실패",
+        stuck: "멈춤",
+        running: "실행 중",
+        done: "완료",
+      },
     },
     chat: {
       thinking: "생각 중…",
@@ -65,7 +82,6 @@ export const ko = {
       planUpdated: "{{title}} 업데이트됨",
       planProgress: "{{completed}}/{{total}}",
       couldNotChangeMode: "모드를 변경할 수 없습니다",
-      attentionCompleted: "완료됨",
       attentionNeedsInput: "입력 필요",
       attentionNeedsInputDescription: "에이전트가 응답을 기다리고 있습니다.",
       attentionReview: "확인",

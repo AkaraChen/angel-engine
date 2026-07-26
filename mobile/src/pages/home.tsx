@@ -1,8 +1,12 @@
 import type { Locale } from "date-fns";
-import type { ChatSummary } from "@/platform/chat-types";
+import type {
+  ChatActivityRow,
+  ChatActivitySegment,
+} from "@/features/chat/activity-model";
 
 import { ChatCircle, GitBranch, Plus, PushPin } from "@phosphor-icons/react";
 import { formatDistanceToNow } from "date-fns";
+import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link } from "wouter";
 
@@ -18,26 +22,87 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
 import { AgentRuntimeIcon } from "@/features/agents/agent-runtime-icon";
+import {
+  buildChatActivityRows,
+  CHAT_ACTIVITY_SEGMENTS,
+  countChatActivityRows,
+  filterChatActivityRows,
+} from "@/features/chat/activity-model";
+import { ChatActivityBadge } from "@/features/chat/chat-activity-badge";
 import { CreateChatDrawer } from "@/features/chat/create-chat-drawer";
-import { ChatRunAttentionBadge } from "@/features/chat/run-attention-badge";
-import { useChatAttention } from "@/features/chat/use-attention";
+import { useChatActivityList } from "@/features/chat/use-activity";
 import { useChatList } from "@/features/chat/use-chats";
 import { useDateFnsLocale } from "@/i18n/date-locale";
 import { agentLabel } from "@/platform/agent-catalog";
+import { cn } from "@/lib/utils";
+
+const EMPTY_LIST: never[] = [];
+
+const SEGMENT_LABEL_KEYS = {
+  all: "home.segments.all",
+  attention: "home.segments.attention",
+  running: "home.segments.running",
+  done: "home.segments.done",
+} as const satisfies Record<ChatActivitySegment, string>;
 
 /**
  * Home renders the mobile chat list backed by the daemon API. It mirrors the
  * desktop chat sidebar (runtime icon, title, project + worktree) adapted to
- * full-width touch rows, and hosts the New chat composer.
+ * full-width touch rows, doubles as the parallel-agent overview by floating
+ * chats with daemon activity to the top, and hosts the New chat composer.
  */
 export function HomePage() {
   const { t } = useTranslation();
   const chatsQuery = useChatList();
+  const activityQuery = useChatActivityList();
+  const [segment, setSegment] = useState<ChatActivitySegment>("all");
+
+  const chats = chatsQuery.data ?? EMPTY_LIST;
+  const rows = useMemo(
+    () =>
+      buildChatActivityRows({
+        activities: activityQuery.data ?? EMPTY_LIST,
+        chats,
+      }),
+    [activityQuery.data, chats],
+  );
+  const counts = useMemo(() => countChatActivityRows(rows), [rows]);
+  const visibleRows = useMemo(
+    () => filterChatActivityRows(rows, segment),
+    [rows, segment],
+  );
 
   return (
-    <div className="relative h-full min-w-0 overflow-hidden">
+    <div className="relative flex h-full min-w-0 flex-col overflow-hidden">
+      {chatsQuery.isSuccess && chatsQuery.data.length > 0 ? (
+        <div
+          aria-label={t("home.filterSegments")}
+          className="flex shrink-0 gap-1 overflow-x-auto px-4 py-2"
+          role="group"
+        >
+          {CHAT_ACTIVITY_SEGMENTS.map((option) => (
+            <button
+              aria-pressed={segment === option}
+              className={cn(
+                `
+                  flex h-8 shrink-0 items-center gap-1.5 rounded-full px-3
+                  text-xs font-medium text-muted-foreground
+                `,
+                segment === option && "bg-accent text-accent-foreground",
+              )}
+              key={option}
+              onClick={() => setSegment(option)}
+              type="button"
+            >
+              <span>{t(SEGMENT_LABEL_KEYS[option])}</span>
+              <span className="tabular-nums opacity-70">{counts[option]}</span>
+            </button>
+          ))}
+        </div>
+      ) : null}
+
       <ScrollArea
-        className="h-full min-w-0 max-w-full"
+        className="min-h-0 flex-1 min-w-0 max-w-full"
         viewportClassName="[&>div]:block! [&>div]:w-full! [&>div]:min-w-0!"
       >
         {chatsQuery.isPending ? (
@@ -46,10 +111,12 @@ export function HomePage() {
           <ErrorState onRetry={() => void chatsQuery.refetch()} />
         ) : chatsQuery.data.length === 0 ? (
           <EmptyState />
+        ) : visibleRows.length === 0 ? (
+          <SegmentEmptyState />
         ) : (
           <ul className="flex w-full min-w-0 max-w-full flex-col overflow-hidden pb-24">
-            {chatsQuery.data.map((chat) => (
-              <ChatListItem key={chat.id} chat={chat} />
+            {visibleRows.map((row) => (
+              <ChatListItem key={row.chat.id} row={row} />
             ))}
           </ul>
         )}
@@ -71,9 +138,9 @@ export function HomePage() {
   );
 }
 
-function ChatListItem({ chat }: { chat: ChatSummary }) {
+function ChatListItem({ row }: { row: ChatActivityRow }) {
   const locale = useDateFnsLocale();
-  const attention = useChatAttention(chat.id);
+  const { activity, chat } = row;
   const subtitle = [chat.projectName, chat.worktreeBranch].filter(Boolean);
   return (
     <li className="w-full min-w-0 max-w-full border-b border-border/60 last:border-b-0">
@@ -110,10 +177,16 @@ function ChatListItem({ chat }: { chat: ChatSummary }) {
               {formatUpdatedAt(chat.updatedAt, locale)}
             </span>
           </span>
-          {attention !== null ? (
-            <ChatRunAttentionBadge status={attention.status} />
-          ) : subtitle.length > 0 ? (
+          {activity !== null || subtitle.length > 0 ? (
             <span className="flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground">
+              {activity !== null ? (
+                <ChatActivityBadge status={activity.status} />
+              ) : null}
+              {activity !== null && subtitle.length > 0 ? (
+                <span aria-hidden className="shrink-0">
+                  ·
+                </span>
+              ) : null}
               {chat.projectName !== null ? (
                 <span className="truncate">{chat.projectName}</span>
               ) : null}
@@ -181,6 +254,15 @@ function EmptyState() {
         </CreateChatDrawer>
       </EmptyContent>
     </Empty>
+  );
+}
+
+function SegmentEmptyState() {
+  const { t } = useTranslation();
+  return (
+    <p className="px-6 py-16 text-center text-sm text-muted-foreground">
+      {t("home.segmentEmpty")}
+    </p>
   );
 }
 

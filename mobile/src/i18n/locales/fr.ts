@@ -47,6 +47,23 @@ export const fr = {
       emptyDescription:
         "Démarrez une nouvelle session d'agent pour la voir apparaître ici.",
       errorTitle: "Impossible de charger les discussions",
+      filterSegments: "Filtrer les discussions",
+      segmentEmpty: "Rien ici pour le moment.",
+      segments: {
+        all: "Tout",
+        attention: "Votre action",
+        running: "En cours",
+        done: "Terminé",
+      },
+    },
+    activity: {
+      status: {
+        waitingForYou: "En attente de vous",
+        failed: "Échec",
+        stuck: "Bloqué",
+        running: "En cours",
+        done: "Terminé",
+      },
     },
     chat: {
       thinking: "Réflexion…",
@@ -66,7 +83,6 @@ export const fr = {
       planUpdated: "{{title}} mis à jour",
       planProgress: "{{completed}}/{{total}}",
       couldNotChangeMode: "Impossible de changer de mode",
-      attentionCompleted: "Terminé",
       attentionNeedsInput: "Saisie requise",
       attentionNeedsInputDescription: "L’agent attend votre réponse.",
       attentionReview: "Voir",

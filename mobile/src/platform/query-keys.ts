@@ -1,6 +1,7 @@
 export const queryKeys = {
-  attention: {
-    list: ["chat-attention", "list"] as const,
+  activity: {
+    all: ["chat-activity"] as const,
+    list: ["chat-activity", "list"] as const,
   },
   daemon: {
     health: ["daemon", "health"] as const,
