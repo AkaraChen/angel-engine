@@ -264,10 +264,15 @@ export const ko = {
         portDescription:
           "수신할 TCP 포트입니다. 0을 사용하면 자동으로 선택합니다.",
         portTitle: "수신 포트",
+        qrDialogDescription:
+          "휴대폰 카메라로 스캔하세요. 같은 네트워크에 연결되어 있어야 하며, 페어링 비밀번호를 입력해야 합니다.",
+        qrDialogTitle: "휴대폰에서 열기",
+        qrShow: "QR 코드 보기",
         urlDisabled:
           "모바일 보기를 켜면 휴대폰에서 열 수 있는 링크가 표시됩니다.",
         urlNeedsPassword:
           "페어링 비밀번호를 설정하면 모바일 접속을 사용할 수 있습니다.",
+        urlOpen: "브라우저에서 열기",
         urlPending: "서버를 시작하는 중…",
         urlTitle: "모바일 URL",
       },

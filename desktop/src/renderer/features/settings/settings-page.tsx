@@ -30,10 +30,8 @@ import {
   SettingsSelect,
 } from "@/features/settings/settings-controls";
 import { useSettingsStore } from "@/features/settings/settings-store";
-import {
-  defaultSettingsTab,
-  findSettingsTab,
-} from "@/features/settings/settings-tabs";
+import { findSettingsTab } from "@/features/settings/settings-tabs";
+import { useSettingsTab } from "@/features/settings/use-settings-tab";
 import { useThemeSettings } from "@/features/settings/use-theme-settings";
 import { languageOptions } from "@/i18n";
 import { queryKeys } from "@/platform/query-keys";
@@ -68,7 +66,7 @@ export function SettingsPage({
 }) {
   const { t } = useTranslation();
   const tabPanelId = useId();
-  const [activeTab, setActiveTab] = useState<SettingsTab>(defaultSettingsTab);
+  const [activeTab, setActiveTab] = useSettingsTab();
   const scrollRef = useRef<HTMLElement | null>(null);
   const [pageScroll, setPageScroll] = useState({
     condensed: false,
@@ -78,11 +76,14 @@ export function SettingsPage({
   const activeTabDefinition = findSettingsTab(activeTab);
   const activeTabLabel = t(activeTabDefinition.labelKey);
 
-  const selectTab = useCallback((tab: SettingsTab) => {
-    setActiveTab(tab);
-    scrollRef.current?.scrollTo({ top: 0 });
-    setPageScroll({ condensed: false, scrolled: false });
-  }, []);
+  const selectTab = useCallback(
+    (tab: SettingsTab) => {
+      setActiveTab(tab);
+      scrollRef.current?.scrollTo({ top: 0 });
+      setPageScroll({ condensed: false, scrolled: false });
+    },
+    [setActiveTab],
+  );
 
   const handleScroll = useCallback((event: UIEvent<HTMLElement>) => {
     const { scrollTop } = event.currentTarget;

@@ -259,8 +259,13 @@ export const zhCN = {
         passwordTitle: "配对密码",
         portDescription: "守护进程监听的 TCP 端口。输入 0 可自动选择。",
         portTitle: "监听端口",
+        qrDialogDescription:
+          "用手机相机扫描。手机需要连接同一网络，并需要输入配对密码。",
+        qrDialogTitle: "在手机上打开",
+        qrShow: "显示二维码",
         urlDisabled: "开启移动端访问后即可获得可在手机上打开的链接。",
         urlNeedsPassword: "设置配对密码后即可启用移动端访问。",
+        urlOpen: "在浏览器中打开",
         urlPending: "正在启动服务器…",
         urlTitle: "移动端网址",
       },

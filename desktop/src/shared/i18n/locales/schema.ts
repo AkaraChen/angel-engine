@@ -286,8 +286,12 @@ export interface LocaleResourceTranslationSettingsMobile {
   passwordTitle: string;
   portDescription: string;
   portTitle: string;
+  qrDialogDescription: string;
+  qrDialogTitle: string;
+  qrShow: string;
   urlDisabled: string;
   urlNeedsPassword: string;
+  urlOpen: string;
   urlPending: string;
   urlTitle: string;
 }

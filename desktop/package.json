@@ -31,6 +31,7 @@
     "@angel-engine/client-napi": "workspace:*",
     "@angel-engine/daemon": "workspace:*",
     "@angel-engine/daemon-api": "workspace:*",
+    "@angel-engine/daemon-client": "workspace:*",
     "@angel-engine/js-client": "workspace:*",
     "@angel-engine/pi-client": "workspace:*",
     "@anthropic-ai/claude-agent-sdk": "0.3.198",
@@ -73,6 +74,7 @@
     "clsx": "^2.1.1",
     "cmdk": "^1.1.1",
     "drizzle-orm": "^0.45.2",
+    "effect": "3.22.0",
     "electron-log": "^5.4.4",
     "electron-squirrel-startup": "^1.0.1",
     "electron-updater": "^6.8.9",
@@ -92,6 +94,7 @@
     "react-dom": "^19.2.7",
     "react-grab": "^0.1.48",
     "react-i18next": "^17.0.8",
+    "react-qr-code": "^2.2.0",
     "shadcn": "^4.13.0",
     "streamdown": "^2.5.0",
     "tailwind-merge": "^3.6.0",
@@ -102,9 +105,7 @@
     "wouter": "^3.10.0",
     "xstate": "^5.32.4",
     "zod": "^4.4.3",
-    "zustand": "^5.0.14",
-    "effect": "3.22.0",
-    "@angel-engine/daemon-client": "workspace:*"
+    "zustand": "^5.0.14"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.5.3",

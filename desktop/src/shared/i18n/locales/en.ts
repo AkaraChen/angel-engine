@@ -263,9 +263,14 @@ export const en = {
         portDescription:
           "TCP port to listen on. Use 0 to choose automatically.",
         portTitle: "Listen port",
+        qrDialogDescription:
+          "Scan with your phone's camera. It must be on the same network, and you will be asked for the pairing password.",
+        qrDialogTitle: "Open on your phone",
+        qrShow: "Show QR code",
         urlDisabled:
           "Turn on the mobile view to get a link you can open on your phone.",
         urlNeedsPassword: "Set a pairing password to enable mobile access.",
+        urlOpen: "Open in your browser",
         urlPending: "Starting the server…",
         urlTitle: "Mobile URL",
       },
