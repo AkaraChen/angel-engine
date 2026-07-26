@@ -9,7 +9,7 @@ import type {
 import type { ChatStreamControls } from "./runtime";
 
 import { describe, expect, it, vi } from "vitest";
-import { ChatRunRegistry } from "./run-registry";
+import { CHAT_RUN_ID_RETENTION_LIMIT, ChatRunRegistry } from "./run-registry";
 
 const chat: Chat = {
   archived: false,
@@ -137,6 +137,9 @@ describe("ChatRunRegistry", () => {
     expect(run.signal().aborted).toBe(true);
     run.reject(new Error("cancelled"));
     await vi.waitFor(() => expect(registry.active(chat.id).run).toBeNull());
+    expect(() => registry.reserve("run-1", input)).toThrow(
+      "Run id has already been used",
+    );
   });
 
   it("removes a stopped reservation before execution starts", () => {
@@ -148,6 +151,9 @@ describe("ChatRunRegistry", () => {
 
     expect(run.execute).not.toHaveBeenCalled();
     expect(registry.active(chat.id).run).toBeNull();
+    expect(() => registry.reserve("run-1", input)).toThrow(
+      "Run id has already been used",
+    );
     expect(() => registry.reserve("run-2", input)).not.toThrow();
     registry.stop("run-2");
   });
@@ -177,6 +183,23 @@ describe("ChatRunRegistry", () => {
     expect(() =>
       registry.start("run-1", { chatId: "chat-2", text: "again" }),
     ).toThrow("Run id has already been used");
+  });
+
+  it("bounds retained run ids after stopped reservations", () => {
+    const run = deferredRun();
+    const registry = new ChatRunRegistry({ execute: run.execute });
+
+    for (let index = 0; index <= CHAT_RUN_ID_RETENTION_LIMIT; index += 1) {
+      const runId = `run-${index}`;
+      registry.reserve(runId, input);
+      registry.stop(runId);
+    }
+
+    expect(() => registry.reserve("run-0", input)).not.toThrow();
+    expect(() =>
+      registry.reserve("run-1", { ...input, chatId: "chat-2" }),
+    ).toThrow("Run id has already been used");
+    registry.stop("run-0");
   });
 
   it("treats a tool action awaiting a decision as pending input", async () => {

@@ -130,7 +130,9 @@ export function registerApi(
   void runDaemonApi(
     runtime,
     Effect.flatMap(ProcessRegistryService, (registry) =>
-      registry.observe((entries) => activity.replaceProcessEntries(entries)),
+      registry.observeChat((entries) =>
+        activity.replaceProcessEntries(entries),
+      ),
     ),
   ).catch(() => undefined);
 

@@ -12,6 +12,7 @@ export class ChatProcessRegistry {
   readonly #sessions: ReadonlyMap<string, SessionProcess>;
   readonly #replaceEntries: (entries: ProcessRegistryEntry[]) => Promise<void>;
   readonly #lookupChat: (chatId: string) => Promise<Chat>;
+  #refreshQueue = Promise.resolve();
   readonly #subscriptions = new Map<
     string,
     { session: SessionProcess; unsubscribe: () => void }
@@ -27,7 +28,13 @@ export class ChatProcessRegistry {
     this.#lookupChat = options.lookupChat;
   }
 
-  async refresh(): Promise<void> {
+  refresh(): Promise<void> {
+    const refresh = this.#refreshQueue.then(() => this.#refresh());
+    this.#refreshQueue = refresh.catch(() => undefined);
+    return refresh;
+  }
+
+  async #refresh(): Promise<void> {
     this.#refreshSubscriptions();
     const entries: ProcessRegistryEntry[] = [];
     for (const [chatId, session] of this.#sessions) {

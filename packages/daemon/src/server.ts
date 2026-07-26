@@ -221,7 +221,7 @@ export async function createDaemon(options: DaemonOptions): Promise<Daemon> {
       Effect.gen(function* () {
         const entries = yield* parseRegistryBody(body);
         const registry = yield* ProcessRegistryService;
-        yield* registry.replace(entries);
+        yield* registry.replaceExternal(entries);
       }),
     );
     return context.json({ ok: true });

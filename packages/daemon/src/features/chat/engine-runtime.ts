@@ -114,7 +114,9 @@ export class ChatEngine extends Effect.Service<ChatEngine>()(
       const chatProcessRegistry = new ChatProcessRegistry({
         lookupChat: (chatId) => toPromise(requireChat(chatId)),
         replaceEntries: (entries) =>
-          Runtime.runPromise(runtime)(processRegistryService.replace(entries)),
+          Runtime.runPromise(runtime)(
+            processRegistryService.replaceChat(entries),
+          ),
         sessions: chatSessions,
       });
       const refreshProcessRegistry = () => {

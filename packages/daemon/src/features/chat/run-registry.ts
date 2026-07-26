@@ -65,6 +65,13 @@ interface ActiveRun {
 }
 
 /**
+ * Bounds replay protection for client-generated run ids. Active ids live in
+ * the registry maps; recently retired ids prevent retries from colliding with
+ * terminal markers without growing for the daemon's entire lifetime.
+ */
+export const CHAT_RUN_ID_RETENTION_LIMIT = 4_096;
+
+/**
  * Process-local daemon-owned run state.
  *
  * It intentionally retains only a materialized snapshot, not an event journal.
@@ -75,7 +82,7 @@ export class ChatRunRegistry {
   readonly #activeById = new Map<string, ActiveRun>();
   readonly #execute: ChatRunRegistryOptions["execute"];
   readonly #onEvent?: ChatRunRegistryOptions["onEvent"];
-  readonly #usedRunIds = new Set<string>();
+  readonly #retiredRunIds = new Set<string>();
 
   constructor(options: ChatRunRegistryOptions) {
     this.#execute = options.execute;
@@ -95,7 +102,7 @@ export class ChatRunRegistry {
     if (this.#activeById.has(runId)) {
       throw DaemonError.chatRunConflict("Run id is already active.");
     }
-    if (this.#usedRunIds.has(runId)) {
+    if (this.#retiredRunIds.has(runId)) {
       throw DaemonError.chatRunConflict("Run id has already been used.");
     }
     if (this.#activeByChat.has(input.chatId)) {
@@ -140,7 +147,6 @@ export class ChatRunRegistry {
         },
       },
     };
-    this.#usedRunIds.add(runId);
     this.#activeById.set(runId, run);
     this.#activeByChat.set(input.chatId, run);
     return cloneSnapshot(run.snapshot);
@@ -315,12 +321,20 @@ export class ChatRunRegistry {
     if (this.#activeByChat.get(run.snapshot.chatId) === run) {
       this.#activeByChat.delete(run.snapshot.chatId);
     }
+    this.#retainRunId(run.snapshot.runId);
     for (const observer of run.observers) {
       observer.queue.then(
         () => this.#detach(run, observer),
         () => this.#detach(run, observer),
       );
     }
+  }
+
+  #retainRunId(runId: string): void {
+    this.#retiredRunIds.add(runId);
+    if (this.#retiredRunIds.size <= CHAT_RUN_ID_RETENTION_LIMIT) return;
+    const oldestRunId = this.#retiredRunIds.values().next().value;
+    if (oldestRunId !== undefined) this.#retiredRunIds.delete(oldestRunId);
   }
 
   #require(runId: string): ActiveRun {
