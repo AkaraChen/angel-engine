@@ -265,7 +265,10 @@ export class ChatEngine extends Effect.Service<ChatEngine>()(
           return prewarm;
         });
 
-      const prepareChatForSend = (input: ChatSendInput) =>
+      const prepareChatForSend = (
+        input: ChatSendInput,
+        abortSignal?: AbortSignal,
+      ) =>
         Effect.gen(function* () {
           if (is.nonEmptyString(input.chatId)) {
             const chat = yield* requireChat(input.chatId);
@@ -295,7 +298,7 @@ export class ChatEngine extends Effect.Service<ChatEngine>()(
           }
 
           const chat = yield* createChat({
-            cwd: yield* cwdForNewChat(input),
+            cwd: yield* cwdForNewChat(input, abortSignal),
             projectId: input.projectId,
             runtime: input.runtime,
           });
@@ -318,7 +321,7 @@ export class ChatEngine extends Effect.Service<ChatEngine>()(
             return yield* Effect.fail(DaemonError.chatInputRequired());
           }
 
-          const preparedChat = yield* prepareChatForSend(input);
+          const preparedChat = yield* prepareChatForSend(input, abortSignal);
           const { chat, isNewChat, session } = preparedChat;
           if (isNewChat) {
             onEvent?.({ chat, type: "chat" });
@@ -390,7 +393,10 @@ export class ChatEngine extends Effect.Service<ChatEngine>()(
 
       return {
         closeChatSession,
-        createChatFromInput: (input: ChatCreateInput) =>
+        createChatFromInput: (
+          input: ChatCreateInput,
+          abortSignal?: AbortSignal,
+        ) =>
           Effect.gen(function* () {
             const prewarm = is.nonEmptyString(input.prewarmId)
               ? yield* takeChatPrewarm(input.prewarmId, input)
@@ -413,7 +419,7 @@ export class ChatEngine extends Effect.Service<ChatEngine>()(
             // route. It still fails when `projectId` is missing.
             return yield* createChat({
               ...input,
-              cwd: yield* cwdForNewChat(input),
+              cwd: yield* cwdForNewChat(input, abortSignal),
             });
           }),
         inspectChatRuntimeConfig: (input: ChatRuntimeConfigInput) =>

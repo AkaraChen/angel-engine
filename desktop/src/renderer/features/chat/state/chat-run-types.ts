@@ -105,6 +105,7 @@ export interface StartRunOptions {
   projectId?: string;
   reasoningEffort?: string;
   runtime?: string;
+  worktreeSetupApproval?: string;
 }
 
 export interface StartRunInput {

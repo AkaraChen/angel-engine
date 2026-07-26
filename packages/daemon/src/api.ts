@@ -34,6 +34,7 @@ import {
 import { githubResolveUrlInputSchema } from "@angel-engine/daemon-api/github";
 import {
   createProjectInputSchema,
+  managedWorktreeDeleteInputSchema,
   updateProjectConfigInputSchema,
   updateProjectInputSchema,
 } from "@angel-engine/daemon-api/projects";
@@ -73,9 +74,13 @@ import {
 } from "./features/projects/git";
 import { projectGitStatus } from "./features/projects/git";
 import {
+  deleteManagedWorktrees,
+  scanManagedWorktrees,
+} from "./features/projects/managed-worktrees";
+import {
   readProjectConfig,
   updateProjectConfig,
-} from "./features/projects/config";
+} from "./features/projects/settings";
 import { searchProjectFiles } from "./features/projects/file-search";
 import {
   createProject,
@@ -149,7 +154,9 @@ export function registerApi(
     const input = chatCreateInputSchema(await context.req.json());
     if (input instanceof arkType.errors)
       throw DaemonError.invalidRequest("Chat input is required.");
-    const chat = await run(engine((e) => e.createChatFromInput(input)));
+    const chat = await run(
+      engine((e) => e.createChatFromInput(input, context.req.raw.signal)),
+    );
     publishChatMetadata(publisher, [chat.id]);
     return context.json(chat);
   });
@@ -464,6 +471,34 @@ export function registerApi(
       ),
     ),
   );
+
+  app.get("/api/worktrees/managed", async (context) =>
+    context.json(
+      await run(
+        scanManagedWorktrees({
+          eligibleOnly: context.req.query("eligibleOnly") === "true",
+        }),
+      ),
+    ),
+  );
+  app.post("/api/worktrees/managed/delete", async (context) => {
+    const input = managedWorktreeDeleteInputSchema(await context.req.json());
+    if (input instanceof arkType.errors)
+      throw DaemonError.invalidRequest("Worktree paths are required.");
+    const result = await run(
+      Effect.gen(function* () {
+        const chatEngine = yield* ChatEngine;
+        return yield* deleteManagedWorktrees(input, (chatId) =>
+          chatEngine.closeChatSession(chatId),
+        );
+      }),
+    );
+    for (const chatId of result.deletedChatIds) {
+      publishChatAttention(publisher, chatId, attention.clearChat(chatId));
+    }
+    publishChatMetadata(publisher, result.deletedChatIds);
+    return context.json(result);
+  });
 
   app.get("/api/workspace/file-tree", async (context) =>
     context.json(

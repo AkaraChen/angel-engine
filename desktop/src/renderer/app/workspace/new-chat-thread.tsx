@@ -11,6 +11,7 @@ import type {
   ChatRunOrigin,
   ChatUpdateHandler,
 } from "./workspace-thread-types";
+import type { ChatComposerBeforeSubmitResult } from "@/features/chat/components/composer/chat-composer";
 import type { ChatOptionsContextValue } from "@/features/chat/runtime/chat-options-context";
 import is from "@sindresorhus/is";
 import { useLayoutEffect, useMemo } from "react";
@@ -36,7 +37,9 @@ interface NewChatThreadProps {
   onChatCreated: ChatUpdateHandler;
   onChatMessagesUpdated: ChatMessagesUpdateHandler;
   onChatUpdated: ChatUpdateHandler;
-  onBeforeSubmit?: () => boolean | Promise<boolean>;
+  onBeforeSubmit?: () =>
+    | ChatComposerBeforeSubmitResult
+    | Promise<ChatComposerBeforeSubmitResult>;
   onCreateProject: () => Project | undefined | Promise<Project | undefined>;
   onProjectChange: (projectId: string | null) => void;
   permissionMode?: string;

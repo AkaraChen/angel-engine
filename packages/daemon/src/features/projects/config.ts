@@ -1,149 +1,291 @@
-import type {
-  ProjectConfigInput,
-  ProjectConfigResult,
-  UpdateProjectConfigInput,
-} from "@angel-engine/daemon-api/projects";
-import type { Db } from "../../platform/db";
-import fs from "node:fs";
+import { spawn, type ChildProcess } from "node:child_process";
+import { createHash } from "node:crypto";
+import fs from "node:fs/promises";
 import path from "node:path";
 
-import { PROJECT_CONFIG_FILE_NAME } from "@angel-engine/daemon-api/projects";
-import is from "@sindresorhus/is";
-import { Effect } from "effect";
+export const PROJECT_CONFIG_FILE = "2code.json";
+const SETUP_ERROR_TAIL_LENGTH = 4096;
+const SETUP_SCRIPT_TIMEOUT_MS = 5 * 60 * 1000;
+const SETUP_TERMINATION_GRACE_MS = 1000;
 
-import { DaemonError } from "../../platform/errors";
-import { projectGitStatus } from "./git";
-
-const SETUP_SCRIPT_KEY = "setup_script";
-
-/**
- * The parsed `2code.json` object. Unknown keys are preserved verbatim on save,
- * so the shape stays open at this boundary and is narrowed immediately below.
- */
-type ProjectConfigFile = Record<string, unknown>;
-
-export function readProjectConfig(
-  input: ProjectConfigInput,
-): Effect.Effect<ProjectConfigResult, DaemonError, Db> {
-  return Effect.gen(function* () {
-    const configPath = yield* resolveConfigPath(input.projectId);
-    const file = yield* readConfigFile(configPath);
-
-    return {
-      configPath,
-      exists: file !== null,
-      projectId: input.projectId,
-      setupScript:
-        file === null ? [] : yield* readSetupScript(file, configPath),
-    };
-  });
+export interface ProjectSetupConfig {
+  digest: string;
+  scripts: string[];
 }
 
-export function updateProjectConfig(
-  input: UpdateProjectConfigInput,
-): Effect.Effect<ProjectConfigResult, DaemonError, Db> {
-  return Effect.gen(function* () {
-    const configPath = yield* resolveConfigPath(input.projectId);
-    // Read before write so a corrupt file fails loudly instead of being
-    // silently replaced, and so unknown keys survive the merge.
-    const file = yield* readConfigFile(configPath);
-    if (file !== null) yield* readSetupScript(file, configPath);
+export interface ProjectSetupExecutionOptions {
+  killGraceMs?: number;
+  signal?: AbortSignal;
+  timeoutMs?: number;
+}
 
-    const setupScript = normalizeSetupScript(input.setupScript);
-    const nextFile: ProjectConfigFile = {
-      ...(file ?? {}),
-      [SETUP_SCRIPT_KEY]: setupScript,
-    };
+export function projectConfigPath(projectRoot: string) {
+  return path.join(projectRoot, PROJECT_CONFIG_FILE);
+}
 
-    yield* Effect.try({
-      catch: (cause) => DaemonError.projectConfigWriteFailed(cause),
-      try: () =>
-        fs.writeFileSync(
-          configPath,
-          `${JSON.stringify(nextFile, null, 2)}\n`,
-          "utf8",
-        ),
-    });
+export async function loadProjectSetupConfig(
+  projectRoot: string,
+): Promise<ProjectSetupConfig | undefined> {
+  const file = await readProjectConfigFile(projectRoot);
+  if (file === undefined) return undefined;
 
-    return {
-      configPath,
-      exists: true,
-      projectId: input.projectId,
-      setupScript,
-    };
-  });
+  return {
+    digest: createHash("sha256").update(file.content).digest("hex"),
+    scripts: readSetupScript(file.config),
+  };
 }
 
 /**
- * Setup scripts are stored one command per entry. Blank lines the editor UI
- * produces are dropped rather than persisted as no-op commands.
+ * Replaces `setup_script` and leaves every other key in the file untouched, so
+ * hand-written config the app does not model survives an edit from the UI.
+ * Blank commands are dropped rather than persisted as no-op steps.
  */
-function normalizeSetupScript(setupScript: string[]): string[] {
-  return setupScript
+export async function saveProjectSetupScript(
+  projectRoot: string,
+  setupScript: string[],
+): Promise<string[]> {
+  // Read first: a file we cannot parse must fail loudly instead of being
+  // silently replaced with a fresh one.
+  const file = await readProjectConfigFile(projectRoot);
+  if (file !== undefined) readSetupScript(file.config);
+
+  const scripts = setupScript
     .map((command) => command.trim())
     .filter((command) => command.length > 0);
+  const config = { ...(file?.config ?? {}), setup_script: scripts };
+
+  await fs.writeFile(
+    projectConfigPath(projectRoot),
+    `${JSON.stringify(config, null, 2)}\n`,
+    "utf8",
+  );
+
+  return scripts;
 }
 
-function resolveConfigPath(
-  projectId: string,
-): Effect.Effect<string, DaemonError, Db> {
-  return Effect.gen(function* () {
-    const status = yield* projectGitStatus({ projectId });
-    const root = is.nonEmptyString(status.root) ? status.root : status.path;
-    return path.join(root, PROJECT_CONFIG_FILE_NAME);
-  });
-}
+async function readProjectConfigFile(projectRoot: string) {
+  let content: string;
 
-function readConfigFile(
-  configPath: string,
-): Effect.Effect<ProjectConfigFile | null, DaemonError> {
-  return Effect.gen(function* () {
-    if (!fs.existsSync(configPath)) return null;
-
-    const raw = yield* Effect.try({
-      catch: (cause) =>
-        DaemonError.projectConfigInvalid(
-          `Could not read ${PROJECT_CONFIG_FILE_NAME}: ${messageOf(cause)}`,
-        ),
-      try: () => fs.readFileSync(configPath, "utf8"),
-    });
-
-    const parsed = yield* Effect.try({
-      catch: (cause) =>
-        DaemonError.projectConfigInvalid(
-          `${PROJECT_CONFIG_FILE_NAME} is not valid JSON: ${messageOf(cause)}`,
-        ),
-      try: (): unknown => JSON.parse(raw),
-    });
-
-    if (!is.plainObject(parsed)) {
-      return yield* Effect.fail(
-        DaemonError.projectConfigInvalid(
-          `${PROJECT_CONFIG_FILE_NAME} must contain a JSON object.`,
-        ),
-      );
-    }
-
-    return parsed;
-  });
-}
-
-function readSetupScript(
-  file: ProjectConfigFile,
-  configPath: string,
-): Effect.Effect<string[], DaemonError> {
-  const value = file[SETUP_SCRIPT_KEY];
-  if (value === undefined) return Effect.succeed([]);
-  if (!is.array(value, is.string)) {
-    return Effect.fail(
-      DaemonError.projectConfigInvalid(
-        `${SETUP_SCRIPT_KEY} in ${configPath} must be an array of strings.`,
-      ),
+  try {
+    content = await fs.readFile(projectConfigPath(projectRoot), "utf8");
+  } catch (cause) {
+    if (errorCode(cause) === "ENOENT") return undefined;
+    throw new Error(
+      `Could not read ${PROJECT_CONFIG_FILE}: ${errorMessage(cause)}`,
+      { cause },
     );
   }
-  return Effect.succeed(value);
+
+  let config: unknown;
+  try {
+    config = JSON.parse(content) as unknown;
+  } catch (cause) {
+    throw new Error(
+      `Could not parse ${PROJECT_CONFIG_FILE}: ${errorMessage(cause)}`,
+      { cause },
+    );
+  }
+
+  if (!isRecord(config)) {
+    throw new Error(`${PROJECT_CONFIG_FILE} must contain a JSON object.`);
+  }
+
+  return { config, content };
 }
 
-function messageOf(cause: unknown) {
-  return cause instanceof Error ? cause.message : String(cause);
+function readSetupScript(config: Record<string, unknown>): string[] {
+  const scripts = config.setup_script;
+  if (scripts === undefined) return [];
+  if (
+    !Array.isArray(scripts) ||
+    !scripts.every((script) => typeof script === "string")
+  ) {
+    throw new Error(
+      `${PROJECT_CONFIG_FILE} setup_script must be an array of strings.`,
+    );
+  }
+  return scripts;
+}
+
+export async function executeProjectSetupScripts(
+  scripts: string[],
+  cwd: string,
+  options: ProjectSetupExecutionOptions = {},
+) {
+  for (const script of scripts) {
+    try {
+      await executeSetupScript(script, cwd, options);
+    } catch (cause) {
+      throw new Error(
+        `${PROJECT_CONFIG_FILE} setup_script failed (${tail(script)}): ${tail(errorMessage(cause))}`,
+        { cause },
+      );
+    }
+  }
+}
+
+async function executeSetupScript(
+  script: string,
+  cwd: string,
+  options: ProjectSetupExecutionOptions,
+) {
+  if (options.signal?.aborted) {
+    throw new Error("Setup was cancelled.");
+  }
+
+  const [command, args] = scriptCommand(script);
+  const child = spawn(command, args, {
+    cwd,
+    detached: process.platform !== "win32",
+    env: setupEnvironment(),
+    stdio: ["ignore", "pipe", "pipe"],
+    windowsHide: true,
+  });
+
+  let stdoutTail = "";
+  let stderrTail = "";
+  child.stdout?.on("data", (chunk: Buffer | string) => {
+    stdoutTail = appendTail(stdoutTail, chunk);
+  });
+  child.stderr?.on("data", (chunk: Buffer | string) => {
+    stderrTail = appendTail(stderrTail, chunk);
+  });
+
+  await new Promise<void>((resolve, reject) => {
+    let aborted = false;
+    let spawnError: Error | undefined;
+    let termination: Promise<void> | undefined;
+    let timedOut = false;
+    const timeoutMs = options.timeoutMs ?? SETUP_SCRIPT_TIMEOUT_MS;
+    const killGraceMs = options.killGraceMs ?? SETUP_TERMINATION_GRACE_MS;
+
+    const terminate = () => {
+      termination ??= terminateProcessTree(child, killGraceMs);
+    };
+    const onAbort = () => {
+      aborted = true;
+      terminate();
+    };
+    const timeout = setTimeout(() => {
+      timedOut = true;
+      terminate();
+    }, timeoutMs);
+
+    options.signal?.addEventListener("abort", onAbort, { once: true });
+    child.once("error", (cause) => {
+      spawnError = cause;
+    });
+    child.once("close", (code, signal) => {
+      clearTimeout(timeout);
+      options.signal?.removeEventListener("abort", onAbort);
+      Promise.resolve(termination).then(() => {
+        if (spawnError) {
+          reject(spawnError);
+        } else if (aborted) {
+          reject(new Error("Setup was cancelled."));
+        } else if (timedOut) {
+          reject(new Error(`Setup timed out after ${timeoutMs}ms.`));
+        } else if (code !== 0) {
+          reject(
+            new Error(
+              [
+                `Command exited with code ${code ?? "unknown"}`,
+                signal ? `signal ${signal}` : "",
+                stderrTail || stdoutTail,
+              ]
+                .filter(Boolean)
+                .join(": "),
+            ),
+          );
+        } else {
+          resolve();
+        }
+      }, reject);
+    });
+  });
+}
+
+function setupEnvironment() {
+  return Object.fromEntries(
+    Object.entries(process.env).filter(
+      ([key]) => !key.startsWith("ANGEL_") && !key.startsWith("ELECTRON_"),
+    ),
+  );
+}
+
+async function terminateProcessTree(child: ChildProcess, graceMs: number) {
+  if (child.pid === undefined) return;
+
+  if (process.platform === "win32") {
+    await runTaskkill(child.pid);
+    return;
+  }
+
+  killProcessGroup(child.pid, "SIGTERM");
+  await delay(graceMs);
+  killProcessGroup(child.pid, "SIGKILL");
+}
+
+async function runTaskkill(pid: number) {
+  await new Promise<void>((resolve) => {
+    const killer = spawn("taskkill.exe", ["/pid", String(pid), "/t", "/f"], {
+      stdio: "ignore",
+      windowsHide: true,
+    });
+    killer.once("error", () => resolve());
+    killer.once("close", () => resolve());
+  });
+}
+
+function killProcessGroup(pid: number, signal: NodeJS.Signals) {
+  try {
+    process.kill(-pid, signal);
+  } catch (cause) {
+    if (errorCode(cause) !== "ESRCH") throw cause;
+  }
+}
+
+function delay(ms: number) {
+  return new Promise<void>((resolve) => setTimeout(resolve, ms));
+}
+
+function appendTail(current: string, chunk: Buffer | string) {
+  return tail(current + chunk.toString());
+}
+
+function scriptCommand(script: string): [string, string[]] {
+  return process.platform === "win32"
+    ? [
+        "powershell.exe",
+        ["-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", script],
+      ]
+    : ["sh", ["-c", script]];
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function errorCode(cause: unknown) {
+  if (
+    typeof cause === "object" &&
+    cause !== null &&
+    "code" in cause &&
+    typeof cause.code === "string"
+  ) {
+    return cause.code;
+  }
+  return undefined;
+}
+
+function errorMessage(cause: unknown) {
+  return cause instanceof Error && cause.message.length > 0
+    ? cause.message
+    : "Unknown error.";
+}
+
+function tail(value: string) {
+  return value.length <= SETUP_ERROR_TAIL_LENGTH
+    ? value
+    : value.slice(-SETUP_ERROR_TAIL_LENGTH);
 }

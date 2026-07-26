@@ -85,6 +85,13 @@ export const ja = {
       worktreeDirtyTitle: "dirty リポジトリから worktree を作成しますか？",
       worktreeNotGitRepository:
         "このプロジェクトは Git リポジトリとして利用できません。",
+      worktreeSetupCommands: "2code.json のコマンド",
+      worktreeSetupContinue: "実行して worktree を作成",
+      worktreeSetupDescription:
+        "これらのシェルコマンドはローカルユーザーとして実行され、ファイル、認証情報、ネットワークにアクセスできます。許可する前に確認してください。",
+      worktreeSetupDirtyWarning:
+        "このリポジトリには未コミットの変更もあります。worktree は現在の HEAD から作成されます。",
+      worktreeSetupTitle: "worktree のセットアップコマンドを実行しますか？",
     },
     sidebar: {
       addProject: "プロジェクトを追加",

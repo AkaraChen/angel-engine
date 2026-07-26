@@ -28,6 +28,7 @@ export const WorktreeDirtyDialog: FC<WorktreeDirtyDialogProps> = ({
 }) => {
   const { t } = useTranslation();
   const projectPath = state?.status.path;
+  const setup = state?.status.worktreeSetup;
 
   return (
     <Dialog
@@ -38,9 +39,19 @@ export const WorktreeDirtyDialog: FC<WorktreeDirtyDialogProps> = ({
     >
       <DialogContent showCloseButton={false}>
         <DialogHeader>
-          <DialogTitle>{t("workspace.worktreeDirtyTitle")}</DialogTitle>
+          <DialogTitle>
+            {t(
+              setup
+                ? "workspace.worktreeSetupTitle"
+                : "workspace.worktreeDirtyTitle",
+            )}
+          </DialogTitle>
           <DialogDescription>
-            {t("workspace.worktreeDirtyDescription")}
+            {t(
+              setup
+                ? "workspace.worktreeSetupDescription"
+                : "workspace.worktreeDirtyDescription",
+            )}
           </DialogDescription>
         </DialogHeader>
         {is.nonEmptyString(projectPath) ? (
@@ -54,15 +65,36 @@ export const WorktreeDirtyDialog: FC<WorktreeDirtyDialogProps> = ({
             <span className="block truncate">{projectPath}</span>
           </div>
         ) : null}
-        <label className="flex items-center gap-2 text-sm text-foreground">
-          <input
-            checked={checked}
-            className="size-4 accent-primary"
-            onChange={(event) => onCheckedChange(event.currentTarget.checked)}
-            type="checkbox"
-          />
-          <span>{t("workspace.worktreeDirtyRemember")}</span>
-        </label>
+        {setup ? (
+          <div className="min-w-0 space-y-1.5">
+            <div className="text-xs font-medium text-foreground">
+              {t("workspace.worktreeSetupCommands")}
+            </div>
+            <pre
+              className="
+                max-h-40 overflow-auto rounded-md border bg-muted/35 p-3
+                text-xs whitespace-pre-wrap text-foreground
+              "
+            >
+              {setup.commands.join("\n")}
+            </pre>
+            {state?.status.isDirty ? (
+              <p className="text-xs text-muted-foreground">
+                {t("workspace.worktreeSetupDirtyWarning")}
+              </p>
+            ) : null}
+          </div>
+        ) : (
+          <label className="flex items-center gap-2 text-sm text-foreground">
+            <input
+              checked={checked}
+              className="size-4 accent-primary"
+              onChange={(event) => onCheckedChange(event.currentTarget.checked)}
+              type="checkbox"
+            />
+            <span>{t("workspace.worktreeDirtyRemember")}</span>
+          </label>
+        )}
         <DialogFooter>
           <Button
             onClick={() => onClose(false)}
@@ -72,7 +104,11 @@ export const WorktreeDirtyDialog: FC<WorktreeDirtyDialogProps> = ({
             {t("common.cancel")}
           </Button>
           <Button onClick={() => onClose(true)} type="button">
-            {t("workspace.worktreeDirtyContinue")}
+            {t(
+              setup
+                ? "workspace.worktreeSetupContinue"
+                : "workspace.worktreeDirtyContinue",
+            )}
           </Button>
         </DialogFooter>
       </DialogContent>

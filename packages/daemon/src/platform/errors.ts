@@ -300,12 +300,36 @@ export class DaemonError extends Data.TaggedError(
     });
   }
 
+  static worktreeNotManaged(worktreePath: string) {
+    return new DaemonError({
+      code: "worktree-not-managed",
+      message: `${worktreePath} is not an app-managed git worktree.`,
+      status: 400,
+    });
+  }
+
+  static worktreeHasActiveChats(worktreePath: string) {
+    return new DaemonError({
+      code: "worktree-has-active-chats",
+      message: `${worktreePath} still has active chats.`,
+      status: 409,
+    });
+  }
+
   static worktreeRemoveFailed(cause: unknown) {
     return new DaemonError({
       cause,
       code: "worktree-remove-failed",
       message: gitMessageFromCause(cause, "Could not remove git worktree."),
       status: 500,
+    });
+  }
+
+  static worktreeSetupApprovalRequired() {
+    return new DaemonError({
+      code: "worktree-setup-approval-required",
+      message: "Worktree setup requires approval for the current 2code.json.",
+      status: 409,
     });
   }
 

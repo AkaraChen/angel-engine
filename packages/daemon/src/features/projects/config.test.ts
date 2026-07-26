@@ -1,216 +1,169 @@
-import type { Db } from "../../platform/db";
-import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-import { Cause, Effect, Exit } from "effect";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
-const mocks = vi.hoisted(() => ({
-  root: "",
-}));
+import { executeProjectSetupScripts, loadProjectSetupConfig } from "./config";
 
-vi.mock("./git", () => ({
-  projectGitStatus: () =>
-    Effect.succeed({
-      isDirty: false,
-      isGitRepository: true,
-      path: mocks.root,
-      projectId: "project-1",
-      root: mocks.root,
-    }),
-}));
+describe("2code project config", () => {
+  let projectRoot: string;
 
-import { readProjectConfig, updateProjectConfig } from "./config";
-
-const tempRoots: string[] = [];
-
-async function makeProjectRoot() {
-  const directory = await mkdtemp(path.join(os.tmpdir(), "project-config-"));
-  tempRoots.push(directory);
-  mocks.root = directory;
-  return directory;
-}
-
-function configPathOf(root: string) {
-  return path.join(root, "2code.json");
-}
-
-/**
- * `projectGitStatus` is mocked away, so nothing in these effects touches the
- * database and the `Db` requirement can be dropped before running them.
- */
-async function run<A, E>(effect: Effect.Effect<A, E, Db>) {
-  const exit = await Effect.runPromiseExit(
-    effect as unknown as Effect.Effect<A, E, never>,
-  );
-  if (Exit.isSuccess(exit)) return exit.value;
-  throw Cause.squash(exit.cause);
-}
-
-function readConfig(projectId = "project-1") {
-  return run(readProjectConfig({ projectId }));
-}
-
-beforeEach(() => {
-  mocks.root = "";
-});
-
-afterEach(async () => {
-  await Promise.all(
-    tempRoots
-      .splice(0)
-      .map(async (directory) =>
-        rm(directory, { force: true, recursive: true }),
-      ),
-  );
-});
-
-describe("readProjectConfig", () => {
-  it("reports an empty setup script when no config file exists", async () => {
-    const root = await makeProjectRoot();
-
-    const config = await readConfig();
-
-    expect(config).toEqual({
-      configPath: configPathOf(root),
-      exists: false,
-      projectId: "project-1",
-      setupScript: [],
-    });
+  beforeEach(async () => {
+    projectRoot = await fs.mkdtemp(path.join(os.tmpdir(), "angel-2code-"));
   });
 
-  it("reads the setup script from an existing config file", async () => {
-    const root = await makeProjectRoot();
-    await writeFile(
-      configPathOf(root),
-      JSON.stringify({ setup_script: ["bun install", "bun run build"] }),
-      "utf8",
-    );
-
-    const config = await readConfig();
-
-    expect(config.exists).toBe(true);
-    expect(config.setupScript).toEqual(["bun install", "bun run build"]);
+  afterEach(async () => {
+    await fs.rm(projectRoot, { force: true, recursive: true });
   });
 
-  it("treats a missing setup_script key as an empty setup script", async () => {
-    const root = await makeProjectRoot();
-    await writeFile(
-      configPathOf(root),
-      JSON.stringify({ terminal_templates: [] }),
-      "utf8",
-    );
-
-    const config = await readConfig();
-
-    expect(config.exists).toBe(true);
-    expect(config.setupScript).toEqual([]);
+  it("returns no setup config when 2code.json is missing", async () => {
+    await expect(loadProjectSetupConfig(projectRoot)).resolves.toBeUndefined();
   });
 
-  it("fails on invalid JSON instead of reporting empty settings", async () => {
-    const root = await makeProjectRoot();
-    await writeFile(configPathOf(root), "{ not json", "utf8");
-
-    await expect(readConfig()).rejects.toMatchObject({
-      code: "project-config-invalid",
-    });
-  });
-
-  it("fails when setup_script is not an array of strings", async () => {
-    const root = await makeProjectRoot();
-    await writeFile(
-      configPathOf(root),
-      JSON.stringify({ setup_script: "bun install" }),
-      "utf8",
-    );
-
-    await expect(readConfig()).rejects.toMatchObject({
-      code: "project-config-invalid",
-    });
-  });
-});
-
-describe("updateProjectConfig", () => {
-  it("creates the config file when it does not exist", async () => {
-    const root = await makeProjectRoot();
-
-    const result = await run(
-      updateProjectConfig({
-        projectId: "project-1",
-        setupScript: ["bun install"],
-      }),
-    );
-
-    expect(result.exists).toBe(true);
-    await expect(
-      readFile(configPathOf(root), "utf8").then(
-        (raw) => JSON.parse(raw) as unknown,
-      ),
-    ).resolves.toEqual({ setup_script: ["bun install"] });
-  });
-
-  it("preserves unknown keys when updating the setup script", async () => {
-    const root = await makeProjectRoot();
-    await writeFile(
-      configPathOf(root),
+  it("reads setup_script, hashes the config, and ignores other fields", async () => {
+    await fs.writeFile(
+      path.join(projectRoot, "2code.json"),
       JSON.stringify({
-        setup_script: ["old"],
-        teardown_script: ["docker compose down"],
-        terminal_templates: [{ commands: ["bun start"], name: "Start" }],
-      }),
-      "utf8",
-    );
-
-    await run(
-      updateProjectConfig({
-        projectId: "project-1",
-        setupScript: ["bun install"],
+        setup_script: ["echo first", "echo second"],
+        teardown_script: ["echo teardown"],
+        terminal_templates: [{ commands: ["bun dev"], name: "Start" }],
       }),
     );
 
-    await expect(
-      readFile(configPathOf(root), "utf8").then(
-        (raw) => JSON.parse(raw) as unknown,
-      ),
-    ).resolves.toEqual({
-      setup_script: ["bun install"],
-      teardown_script: ["docker compose down"],
-      terminal_templates: [{ commands: ["bun start"], name: "Start" }],
+    await expect(loadProjectSetupConfig(projectRoot)).resolves.toEqual({
+      digest: expect.stringMatching(/^[a-f0-9]{64}$/),
+      scripts: ["echo first", "echo second"],
     });
   });
 
-  it("trims commands and drops blank entries", async () => {
-    const root = await makeProjectRoot();
+  it("defaults a missing setup_script to an empty list", async () => {
+    await fs.writeFile(path.join(projectRoot, "2code.json"), "{}");
 
-    const result = await run(
-      updateProjectConfig({
-        projectId: "project-1",
-        setupScript: ["  bun install  ", "", "   ", "bun run build"],
-      }),
-    );
-
-    expect(result.setupScript).toEqual(["bun install", "bun run build"]);
-    await expect(
-      readFile(configPathOf(root), "utf8").then(
-        (raw) => JSON.parse(raw) as unknown,
-      ),
-    ).resolves.toEqual({ setup_script: ["bun install", "bun run build"] });
+    await expect(loadProjectSetupConfig(projectRoot)).resolves.toEqual({
+      digest: expect.stringMatching(/^[a-f0-9]{64}$/),
+      scripts: [],
+    });
   });
 
-  it("refuses to overwrite a config file that is not valid JSON", async () => {
-    const root = await makeProjectRoot();
-    await writeFile(configPathOf(root), "{ not json", "utf8");
+  it.each([
+    ["invalid JSON", "not json"],
+    ["a non-object config", "[]"],
+    ["a non-string setup command", '{"setup_script":[42]}'],
+  ])("rejects %s", async (_label, content) => {
+    await fs.writeFile(path.join(projectRoot, "2code.json"), content);
+
+    await expect(loadProjectSetupConfig(projectRoot)).rejects.toThrow(
+      "2code.json",
+    );
+  });
+
+  it("executes setup scripts sequentially in the worktree", async () => {
+    await executeProjectSetupScripts(
+      ["echo first > order.txt", "echo second >> order.txt"],
+      projectRoot,
+    );
 
     await expect(
-      run(
-        updateProjectConfig({
-          projectId: "project-1",
-          setupScript: ["bun install"],
-        }),
+      fs.readFile(path.join(projectRoot, "order.txt"), "utf8"),
+    ).resolves.toMatch(/first\s+second/);
+  });
+
+  it("stops after the first failed setup script", async () => {
+    await expect(
+      executeProjectSetupScripts(
+        ["exit 7", "echo unexpected > marker.txt"],
+        projectRoot,
       ),
-    ).rejects.toMatchObject({ code: "project-config-invalid" });
-    await expect(readFile(configPathOf(root), "utf8")).resolves.toBe(
-      "{ not json",
+    ).rejects.toThrow("setup_script failed");
+    await expect(
+      fs.access(path.join(projectRoot, "marker.txt")),
+    ).rejects.toThrow();
+  });
+
+  it("allows successful scripts to produce more than 1 MiB of output", async () => {
+    await fs.writeFile(
+      path.join(projectRoot, "large-output.cjs"),
+      'process.stdout.write("x".repeat(1_200_000));\n',
     );
+
+    await expect(
+      executeProjectSetupScripts(["node large-output.cjs"], projectRoot),
+    ).resolves.toBeUndefined();
+  });
+
+  it("does not expose daemon-internal environment variables", async () => {
+    await fs.writeFile(
+      path.join(projectRoot, "read-secret.cjs"),
+      [
+        'const fs = require("node:fs");',
+        'fs.writeFileSync("secret.txt", process.env.ANGEL_MOBILE_PASSWORD ?? "missing");',
+      ].join("\n"),
+    );
+    const previousSecret = process.env.ANGEL_MOBILE_PASSWORD;
+    process.env.ANGEL_MOBILE_PASSWORD = "daemon-secret";
+
+    try {
+      await executeProjectSetupScripts(["node read-secret.cjs"], projectRoot);
+    } finally {
+      if (previousSecret === undefined) {
+        delete process.env.ANGEL_MOBILE_PASSWORD;
+      } else {
+        process.env.ANGEL_MOBILE_PASSWORD = previousSecret;
+      }
+    }
+
+    await expect(
+      fs.readFile(path.join(projectRoot, "secret.txt"), "utf8"),
+    ).resolves.toBe("missing");
+  });
+
+  it("terminates setup descendants on timeout", async () => {
+    const marker = path.join(projectRoot, "descendant.marker");
+    await fs.writeFile(
+      path.join(projectRoot, "timeout-parent.cjs"),
+      [
+        'const { spawn } = require("node:child_process");',
+        "spawn(process.execPath, [",
+        '  "-e",',
+        `  ${JSON.stringify(`setTimeout(() => require("node:fs").writeFileSync(${JSON.stringify(marker)}, "alive"), 500);`)},`,
+        '], { stdio: "ignore" });',
+        "setInterval(() => undefined, 1_000);",
+      ].join("\n"),
+    );
+
+    await expect(
+      executeProjectSetupScripts(["node timeout-parent.cjs"], projectRoot, {
+        killGraceMs: 50,
+        timeoutMs: 100,
+      }),
+    ).rejects.toThrow("timed out");
+    await new Promise((resolve) => setTimeout(resolve, 700));
+    await expect(fs.access(marker)).rejects.toThrow();
+  });
+
+  it("terminates setup descendants when cancelled", async () => {
+    const marker = path.join(projectRoot, "cancelled-descendant.marker");
+    await fs.writeFile(
+      path.join(projectRoot, "cancel-parent.cjs"),
+      [
+        'const { spawn } = require("node:child_process");',
+        "spawn(process.execPath, [",
+        '  "-e",',
+        `  ${JSON.stringify(`setTimeout(() => require("node:fs").writeFileSync(${JSON.stringify(marker)}, "alive"), 500);`)},`,
+        '], { stdio: "ignore" });',
+        "setInterval(() => undefined, 1_000);",
+      ].join("\n"),
+    );
+    const controller = new AbortController();
+    setTimeout(() => controller.abort(), 100);
+
+    await expect(
+      executeProjectSetupScripts(["node cancel-parent.cjs"], projectRoot, {
+        killGraceMs: 50,
+        signal: controller.signal,
+      }),
+    ).rejects.toThrow("cancelled");
+    await new Promise((resolve) => setTimeout(resolve, 700));
+    await expect(fs.access(marker)).rejects.toThrow();
   });
 });

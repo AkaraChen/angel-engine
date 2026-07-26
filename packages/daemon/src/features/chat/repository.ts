@@ -18,6 +18,7 @@ import { chats } from "../../db/schema";
 import { type Db, withDatabase } from "../../platform/db";
 import { DaemonError } from "../../platform/errors";
 import { getCustomAgent } from "../agents/repository";
+import { withManagedWorktreeLock } from "../projects/managed-worktree-lock";
 
 const DEFAULT_CHAT_TITLE = "New chat";
 
@@ -59,32 +60,38 @@ export function getChat(
   });
 }
 
+/**
+ * Takes the managed-worktree lock: a chat claiming a worktree cwd must not
+ * land between a worktree deletion's eligibility check and its `rm`.
+ */
 export function createChat(
   input: CreateChatRecordInput,
 ): Effect.Effect<Chat, DaemonError, Db> {
-  return Effect.gen(function* () {
-    const now = new Date().toISOString();
-    const cwd = yield* normalizeOptionalDirectory(input.cwd);
-    const runtime = yield* normalizeChatRuntime(input.runtime);
-    return yield* withDatabase((database) =>
-      database
-        .insert(chats)
-        .values({
-          createdAt: now,
-          cwd,
-          id: randomUUID(),
-          projectId: normalizeOptionalString(input.projectId),
-          remoteThreadId: null,
-          runtime,
-          title: normalizeTitle(input.title),
-          updatedAt: now,
-          archived: false,
-          pinned: false,
-        })
-        .returning()
-        .get(),
-    );
-  });
+  return withManagedWorktreeLock(
+    Effect.gen(function* () {
+      const now = new Date().toISOString();
+      const cwd = yield* normalizeOptionalDirectory(input.cwd);
+      const runtime = yield* normalizeChatRuntime(input.runtime);
+      return yield* withDatabase((database) =>
+        database
+          .insert(chats)
+          .values({
+            createdAt: now,
+            cwd,
+            id: randomUUID(),
+            projectId: normalizeOptionalString(input.projectId),
+            remoteThreadId: null,
+            runtime,
+            title: normalizeTitle(input.title),
+            updatedAt: now,
+            archived: false,
+            pinned: false,
+          })
+          .returning()
+          .get(),
+      );
+    }),
+  );
 }
 
 export function deleteChat(id: string): Effect.Effect<Chat, DaemonError, Db> {
@@ -111,17 +118,23 @@ export function archiveChat(id: string) {
   return updateChat(id, { archived: true });
 }
 
+/**
+ * Takes the managed-worktree lock: restoring an archived chat makes its
+ * worktree ineligible, so it must not interleave with a worktree deletion.
+ */
 export function restoreArchivedChats(
   ids: string[],
 ): Effect.Effect<Chat[], DaemonError, Db> {
-  return Effect.gen(function* () {
-    const restoredChats: Chat[] = [];
-    for (const id of yield* uniqueChatIds(ids)) {
-      yield* requireArchivedChat(id);
-      restoredChats.push(yield* updateChat(id, { archived: false }));
-    }
-    return restoredChats;
-  });
+  return withManagedWorktreeLock(
+    Effect.gen(function* () {
+      const restoredChats: Chat[] = [];
+      for (const id of yield* uniqueChatIds(ids)) {
+        yield* requireArchivedChat(id);
+        restoredChats.push(yield* updateChat(id, { archived: false }));
+      }
+      return restoredChats;
+    }),
+  );
 }
 
 export function deleteArchivedChats(

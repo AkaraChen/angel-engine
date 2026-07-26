@@ -84,6 +84,13 @@ export const zhCN = {
       worktreeDirtyRemember: "以后不再提醒",
       worktreeDirtyTitle: "要从未提交的仓库创建 worktree 吗？",
       worktreeNotGitRepository: "这个项目当前不是可用的 Git 仓库。",
+      worktreeSetupCommands: "2code.json 中的命令",
+      worktreeSetupContinue: "运行并创建 worktree",
+      worktreeSetupDescription:
+        "这些 shell 命令会以你的本地用户身份运行，并可访问文件、凭据和网络。请确认内容后再允许执行。",
+      worktreeSetupDirtyWarning:
+        "这个仓库还有未提交更改；worktree 仍会从当前 HEAD 创建。",
+      worktreeSetupTitle: "运行 worktree 初始化命令？",
     },
     sidebar: {
       addProject: "添加项目",
