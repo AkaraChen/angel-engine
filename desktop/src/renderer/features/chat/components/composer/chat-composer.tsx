@@ -32,7 +32,10 @@ export interface ChatComposerSubmission {
   mentionedFiles: ComposerMentionedFile[];
   selectedSkills: ComposerMentionedSkill[];
   text: string;
+  worktreeSetupApproval?: string;
 }
+
+export type ChatComposerBeforeSubmitResult = boolean | string;
 
 export interface ChatComposerProps {
   allowAttachments?: boolean;
@@ -44,7 +47,9 @@ export interface ChatComposerProps {
   headerClassName?: string;
   headerLeading?: ReactNode;
   inputGroupClassName?: string;
-  onBeforeSubmit?: () => boolean | Promise<boolean>;
+  onBeforeSubmit?: () =>
+    | ChatComposerBeforeSubmitResult
+    | Promise<ChatComposerBeforeSubmitResult>;
   onCancel?: () => void;
   rows?: number;
   send: (submission: ChatComposerSubmission) => Promise<void>;
@@ -86,7 +91,8 @@ export function ChatComposer({
         selectedSkills.length > 0 ||
         githubAttachments.length > 0;
       if (!hasMessage) return;
-      if (onBeforeSubmit && !(await onBeforeSubmit())) return;
+      const beforeSubmitResult = onBeforeSubmit ? await onBeforeSubmit() : true;
+      if (beforeSubmitResult === false) return;
 
       // Capture the submission, then clear right away: awaiting the whole
       // turn first would run reset() against an editor that may have been
@@ -101,6 +107,10 @@ export function ChatComposer({
           appendPasteSourceUrls(message.text, pasteSourceUrls),
           githubSnapshot,
         ),
+        worktreeSetupApproval:
+          typeof beforeSubmitResult === "string"
+            ? beforeSubmitResult
+            : undefined,
       };
       reset();
       await send(submission);

@@ -30,10 +30,14 @@ export function cwdForChat(
  * materializes its worktree the same way whichever route created it.
  */
 export type ChatCwdResolutionInput = ChatCreationLocationInput &
-  ChatCwdInput & { projectId?: string | null };
+  ChatCwdInput & {
+    projectId?: string | null;
+    worktreeSetupApproval?: string;
+  };
 
 export function cwdForNewChat(
   input: ChatCwdResolutionInput,
+  signal?: AbortSignal,
 ): Effect.Effect<string, DaemonError, Db> {
   return Effect.gen(function* () {
     if (is.nonEmptyString(input.cwd)) return input.cwd;
@@ -42,9 +46,13 @@ export function cwdForNewChat(
       if (!is.nonEmptyString(input.projectId)) {
         return yield* Effect.fail(DaemonError.projectRequiredForWorktree());
       }
-      const worktree = yield* createProjectWorktree({
-        projectId: input.projectId,
-      });
+      const worktree = yield* createProjectWorktree(
+        {
+          projectId: input.projectId,
+          setupApproval: input.worktreeSetupApproval,
+        },
+        signal,
+      );
       return worktree.cwd;
     }
 

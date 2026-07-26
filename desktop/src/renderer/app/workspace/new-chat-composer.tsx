@@ -6,7 +6,10 @@ import type {
 } from "@angel-engine/daemon-api/chat";
 import type { Project } from "@angel-engine/daemon-api/projects";
 import type { ReactNode } from "react";
-import type { ChatComposerSubmission } from "@/features/chat/components/composer/chat-composer";
+import type {
+  ChatComposerBeforeSubmitResult,
+  ChatComposerSubmission,
+} from "@/features/chat/components/composer/chat-composer";
 import { ArrowUp, StopCircle as CircleStop } from "@phosphor-icons/react";
 import is from "@sindresorhus/is";
 import { useCallback } from "react";
@@ -72,7 +75,9 @@ interface NewChatComposerProps {
   cwd?: string;
   model?: string;
   mode?: string;
-  onBeforeSubmit?: () => boolean | Promise<boolean>;
+  onBeforeSubmit?: () =>
+    | ChatComposerBeforeSubmitResult
+    | Promise<ChatComposerBeforeSubmitResult>;
   onChatCreated?: (chat: Chat) => void;
   onChatMessagesUpdated?: (
     chatId: string,
@@ -150,6 +155,7 @@ export function NewChatComposer({
       mentionedFiles,
       selectedSkills,
       text,
+      worktreeSetupApproval,
     }: ChatComposerSubmission) => {
       await sendChatMessage.sendPromptMessage({
         attachments: files,
@@ -157,6 +163,7 @@ export function NewChatComposer({
         selectedSkills,
         t,
         text,
+        worktreeSetupApproval,
       });
     },
     [sendChatMessage, t],

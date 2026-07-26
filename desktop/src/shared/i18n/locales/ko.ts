@@ -85,6 +85,13 @@ export const ko = {
       worktreeDirtyTitle: "dirty 저장소에서 worktree를 만들까요?",
       worktreeNotGitRepository:
         "이 프로젝트는 더 이상 Git 저장소로 사용할 수 없습니다.",
+      worktreeSetupCommands: "2code.json의 명령",
+      worktreeSetupContinue: "실행하고 worktree 만들기",
+      worktreeSetupDescription:
+        "이 셸 명령은 로컬 사용자 권한으로 실행되며 파일, 자격 증명, 네트워크에 접근할 수 있습니다. 허용하기 전에 검토하세요.",
+      worktreeSetupDirtyWarning:
+        "이 저장소에는 커밋되지 않은 변경 사항도 있습니다. worktree는 현재 HEAD에서 생성됩니다.",
+      worktreeSetupTitle: "worktree 설정 명령을 실행할까요?",
     },
     sidebar: {
       addProject: "프로젝트 추가",

@@ -7,6 +7,11 @@ export interface ProjectGitStatusInput {
   projectId: string;
 }
 
+export interface ProjectWorktreeSetup {
+  commands: string[];
+  digest: string;
+}
+
 export interface ProjectGitStatusResult {
   branch?: string;
   isDirty: boolean;
@@ -14,10 +19,12 @@ export interface ProjectGitStatusResult {
   path: string;
   projectId: string;
   root?: string;
+  worktreeSetup?: ProjectWorktreeSetup;
 }
 
 export interface ProjectWorktreeCreateInput {
   projectId: string;
+  setupApproval?: string;
 }
 
 export interface ProjectWorktreeCreateResult {

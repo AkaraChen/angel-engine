@@ -78,6 +78,7 @@ export type DaemonErrorCode =
   | "session-failed"
   | "worktree-create-failed"
   | "worktree-remove-failed"
+  | "worktree-setup-approval-required"
   | "workspace-commit-input-invalid"
   | "workspace-not-git-repository"
   | "workspace-path-invalid";

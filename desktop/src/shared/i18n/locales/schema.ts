@@ -82,6 +82,11 @@ export interface LocaleResourceTranslationWorkspace {
   worktreeDirtyRemember: string;
   worktreeDirtyTitle: string;
   worktreeNotGitRepository: string;
+  worktreeSetupCommands: string;
+  worktreeSetupContinue: string;
+  worktreeSetupDescription: string;
+  worktreeSetupDirtyWarning: string;
+  worktreeSetupTitle: string;
 }
 
 export interface LocaleResourceTranslationSidebarDateGroups {

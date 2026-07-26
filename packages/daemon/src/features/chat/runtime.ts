@@ -37,6 +37,7 @@ export interface ChatRuntime {
   closeChatSession: (chatId?: string) => Effect.Effect<void>;
   createChatFromInput: (
     input: ChatCreateInput,
+    abortSignal?: AbortSignal,
   ) => Effect.Effect<Chat, DaemonError, Db>;
   inspectChatRuntimeConfig: (
     input: ChatRuntimeConfigInput,
