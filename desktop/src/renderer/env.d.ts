@@ -2,6 +2,7 @@ import type { DaemonApi } from "@shared/daemon";
 import type {
   DesktopConfirmDeleteArchivedChatsInput,
   DesktopConfirmDeleteCustomAgentInput,
+  DesktopConfirmDeleteManagedWorktreesInput,
   DesktopConfirmSaveWorkspaceFileChangesInput,
   DesktopConfirmSaveWorkspaceFileChangesResult,
   DesktopOpenChatFromNotificationEvent,
@@ -52,6 +53,9 @@ declare global {
       ) => Promise<boolean>;
       confirmDeleteCustomAgent: (
         input: DesktopConfirmDeleteCustomAgentInput,
+      ) => Promise<boolean>;
+      confirmDeleteManagedWorktrees: (
+        input: DesktopConfirmDeleteManagedWorktreesInput,
       ) => Promise<boolean>;
       confirmSaveWorkspaceFileChanges: (
         input: DesktopConfirmSaveWorkspaceFileChangesInput,

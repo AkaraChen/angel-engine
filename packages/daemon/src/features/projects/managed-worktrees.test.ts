@@ -1,4 +1,5 @@
 import type { Chat } from "@angel-engine/daemon-api/chat";
+import type { ManagedWorktreeDeleteInput } from "@angel-engine/daemon-api/projects";
 
 import os from "node:os";
 import path from "node:path";
@@ -156,7 +157,10 @@ describe("deleteManagedWorktrees", () => {
 
     const result = await runEffect(
       deleteManagedWorktrees(
-        { paths: [alphaPath] },
+        confirmedDeletion({
+          chatIds: ["chat-1", "chat-2"],
+          path: alphaPath,
+        }),
         closeChatSession,
         dependencies,
       ),
@@ -184,7 +188,11 @@ describe("deleteManagedWorktrees", () => {
 
     const result = await runEffect(
       deleteManagedWorktrees(
-        { paths: [alphaPath] },
+        confirmedDeletion({
+          chatIds: ["chat-1"],
+          existsOnDisk: false,
+          path: alphaPath,
+        }),
         closeChatSession,
         dependencies,
       ),
@@ -207,7 +215,7 @@ describe("deleteManagedWorktrees", () => {
     await expect(
       runEffect(
         deleteManagedWorktrees(
-          { paths: [alphaPath] },
+          confirmedDeletion({ chatIds: ["chat-1"], path: alphaPath }),
           closeChatSession,
           dependencies,
         ),
@@ -227,7 +235,7 @@ describe("deleteManagedWorktrees", () => {
       await expect(
         runEffect(
           deleteManagedWorktrees(
-            { paths: [candidate] },
+            confirmedDeletion({ chatIds: [], path: candidate }),
             closeChatSession,
             dependencies,
           ),
@@ -240,7 +248,7 @@ describe("deleteManagedWorktrees", () => {
     await expect(
       runEffect(
         deleteManagedWorktrees(
-          { paths: [] },
+          confirmedDeletion(),
           closeChatSession,
           fakeDependencies({ chats: [] }),
         ),
@@ -250,17 +258,20 @@ describe("deleteManagedWorktrees", () => {
 });
 
 describe("deleteManagedWorktrees ownership re-resolution", () => {
-  it("deletes the chats the path owns now, not the ones a stale scan saw", async () => {
+  it("rejects when an archived chat appears after confirmation", async () => {
     const state = { chats: [] as Chat[], onDisk: [alphaPath] };
+    const closed: string[] = [];
+    const deleted: string[] = [];
+    const removed: string[] = [];
     const dependencies = fakeDependencies({
       chats: [],
-      deleteChats: (chatIds) =>
-        Effect.sync(() => {
-          state.chats = state.chats.filter(
-            (target) => !chatIds.includes(target.id),
-          );
-        }),
+      deleteChats: (chatIds) => Effect.sync(() => deleted.push(...chatIds)),
       onDisk: [alphaPath],
+      removeWorktree: (worktreePath) =>
+        Effect.sync(() => {
+          removed.push(worktreePath);
+          return worktreePath;
+        }),
       state,
     });
 
@@ -271,16 +282,57 @@ describe("deleteManagedWorktrees ownership re-resolution", () => {
     // A chat is archived onto the same path between the scan and the delete.
     state.chats.push(chat({ archived: true, cwd: alphaPath, id: "late" }));
 
-    const result = await runEffect(
-      deleteManagedWorktrees(
-        { paths: [alphaPath] },
-        closeChatSession,
-        dependencies,
+    await expect(
+      runEffect(
+        deleteManagedWorktrees(
+          confirmedDeletion({ chatIds: ["scanned"], path: alphaPath }),
+          (chatId) => Effect.sync(() => closed.push(chatId)),
+          dependencies,
+        ),
       ),
-    );
+    ).rejects.toMatchObject({ code: "worktree-changed" });
+    expect(closed).toEqual([]);
+    expect(deleted).toEqual([]);
+    expect(removed).toEqual([]);
+    expect(state.chats.map((target) => target.id)).toEqual(["scanned", "late"]);
+  });
 
-    expect(result.deletedChatIds).toEqual(["scanned", "late"]);
-    expect(state.chats).toEqual([]);
+  it("rejects when the confirmed disk state changes", async () => {
+    const state = {
+      chats: [chat({ archived: true, cwd: alphaPath, id: "chat-1" })],
+      onDisk: [alphaPath],
+    };
+    const closed: string[] = [];
+    const deleted: string[] = [];
+    const removed: string[] = [];
+    const dependencies = fakeDependencies({
+      ...state,
+      deleteChats: (chatIds) => Effect.sync(() => deleted.push(...chatIds)),
+      onDisk: state.onDisk,
+      removeWorktree: (worktreePath) =>
+        Effect.sync(() => {
+          removed.push(worktreePath);
+          return worktreePath;
+        }),
+      state,
+    });
+
+    const scanned = await runEffect(scanManagedWorktrees({}, dependencies));
+    expect(scanned[0]?.existsOnDisk).toBe(true);
+    state.onDisk = [];
+
+    await expect(
+      runEffect(
+        deleteManagedWorktrees(
+          confirmedDeletion({ chatIds: ["chat-1"], path: alphaPath }),
+          (chatId) => Effect.sync(() => closed.push(chatId)),
+          dependencies,
+        ),
+      ),
+    ).rejects.toMatchObject({ code: "worktree-changed" });
+    expect(closed).toEqual([]);
+    expect(deleted).toEqual([]);
+    expect(removed).toEqual([]);
   });
 
   it("blocks the delete when a chat went active after the scan", async () => {
@@ -310,7 +362,7 @@ describe("deleteManagedWorktrees ownership re-resolution", () => {
     await expect(
       runEffect(
         deleteManagedWorktrees(
-          { paths: [alphaPath] },
+          confirmedDeletion({ chatIds: ["archived"], path: alphaPath }),
           closeChatSession,
           dependencies,
         ),
@@ -333,7 +385,10 @@ describe("deleteManagedWorktrees ownership re-resolution", () => {
     await expect(
       runEffect(
         deleteManagedWorktrees(
-          { paths: [alphaPath, betaPath] },
+          confirmedDeletion(
+            { chatIds: ["chat-1"], path: alphaPath },
+            { chatIds: ["chat-2"], path: betaPath },
+          ),
           closeChatSession,
           dependencies,
         ),
@@ -360,7 +415,10 @@ describe("deleteManagedWorktrees partial failures", () => {
 
     const result = await runEffect(
       deleteManagedWorktrees(
-        { paths: [alphaPath, betaPath] },
+        confirmedDeletion(
+          { chatIds: ["chat-1"], path: alphaPath },
+          { chatIds: ["chat-2"], path: betaPath },
+        ),
         closeChatSession,
         dependencies,
       ),
@@ -392,7 +450,10 @@ describe("deleteManagedWorktrees partial failures", () => {
 
     const result = await runEffect(
       deleteManagedWorktrees(
-        { paths: [alphaPath, betaPath] },
+        confirmedDeletion(
+          { chatIds: ["chat-1"], path: alphaPath },
+          { chatIds: ["chat-2"], path: betaPath },
+        ),
         closeChatSession,
         dependencies,
       ),
@@ -418,6 +479,24 @@ function chat(overrides: Partial<Chat> & Pick<Chat, "id">): Chat {
     title: "Test",
     updatedAt: "2026-07-13T00:00:00.000Z",
     ...overrides,
+  };
+}
+
+function confirmedDeletion(
+  ...targets: {
+    chatIds: string[];
+    existsOnDisk?: boolean;
+    path: string;
+  }[]
+): ManagedWorktreeDeleteInput {
+  return {
+    targets: targets.map(
+      ({ chatIds, existsOnDisk = true, path: worktreePath }) => ({
+        expectedChatIds: chatIds,
+        expectedExistsOnDisk: existsOnDisk,
+        path: worktreePath,
+      }),
+    ),
   };
 }
 

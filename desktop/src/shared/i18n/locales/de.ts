@@ -173,11 +173,28 @@ export const de = {
         filterProject: "Projekt",
         filterTime: "Zeit",
         noProject: "Kein Projekt",
+        removableWorktrees: {
+          confirmDeleteDetail:
+            "Dadurch werden {{chatCount}} archivierte Sitzung(en) dauerhaft gelöscht und {{managedWorktreeCount}} Worktree-Verzeichnis(se) entfernt. Dies kann nicht rückgängig gemacht werden.",
+          confirmDeleteTitle: "Entfernbare Worktrees löschen?",
+          deleteFailed: "Worktree konnte nicht entfernt werden",
+          deletedToast:
+            "{{worktreeCount}} Worktree(s) · {{chatCount}} archivierte Sitzung(en) gelöscht",
+          empty: "Keine entfernbaren Worktrees",
+          missingOnDisk: "Nicht auf der Festplatte",
+          partialFailure:
+            "{{count}} Worktree(s) konnten nicht entfernt werden.",
+          scanAgain: "Erneut scannen",
+          sessionCount_one: "{{count}} archivierte Sitzung(en)",
+          sessionCount_other: "{{count}} archivierte Sitzung(en)",
+          title: "Entfernbare Worktrees",
+        },
         restore: "Wiederherstellen",
         restoredToast: "{{count}} archivierte Sitzung(en) wiederhergestellt",
         restoreSelected: "Auswahl wiederherstellen",
         selectAll: "Alle auswählen",
         selectedCount: "{{count}} ausgewählt",
+        sessionsTitle: "Archivierte Sitzungen",
         timeAll: "Alle",
         timeLast7Days: "Letzte 7 Tage",
         timeLast30Days: "Letzte 30 Tage",

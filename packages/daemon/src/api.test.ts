@@ -247,7 +247,15 @@ describe("managed worktrees", () => {
     registerApi(app, fakeDaemonRuntime(), { publish: vi.fn() });
 
     const response = await app.request("/api/worktrees/managed/delete", {
-      body: JSON.stringify({ paths: ["/tmp/not-managed"] }),
+      body: JSON.stringify({
+        targets: [
+          {
+            expectedChatIds: [],
+            expectedExistsOnDisk: false,
+            path: "/tmp/not-managed",
+          },
+        ],
+      }),
       headers: { "content-type": "application/json" },
       method: "POST",
     });

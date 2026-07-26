@@ -366,7 +366,7 @@ export async function invalidateChatQueries(queryClient: QueryClient) {
   });
 }
 
-async function refetchArchivedChatQueries(queryClient: QueryClient) {
+export async function refetchArchivedChatQueries(queryClient: QueryClient) {
   await queryClient.refetchQueries({
     queryKey: queryKeys.chats.archived(),
     type: "active",

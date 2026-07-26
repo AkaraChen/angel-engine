@@ -484,7 +484,9 @@ export function registerApi(
   app.post("/api/worktrees/managed/delete", async (context) => {
     const input = managedWorktreeDeleteInputSchema(await context.req.json());
     if (input instanceof arkType.errors)
-      throw DaemonError.invalidRequest("Worktree paths are required.");
+      throw DaemonError.invalidRequest(
+        "Worktree deletion confirmation is required.",
+      );
     const result = await run(
       Effect.gen(function* () {
         const chatEngine = yield* ChatEngine;
