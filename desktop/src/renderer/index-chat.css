@@ -213,32 +213,32 @@
     pointer-events: none;
   }
 
-  /* Two segments share one left-to-right sweep, half a cycle apart, so the
-     trailing segment is still leaving on the right while the next one is
-     already entering on the left. */
-  .workspace-streaming-line::before,
+  /* One band wrapping a circular track: the layer is two track widths wide and
+     carries a gradient that repeats every track width, so sliding it right by
+     exactly one period is seamless — the part of the band leaving on the right
+     is the same ink reappearing on the left. A rigid segment cannot do this;
+     spacing it close enough to hand off at the edge also doubles it up
+     mid-track. */
   .workspace-streaming-line::after {
     animation: workspace-streaming-sweep 2.6s linear infinite;
-    background: var(--primary);
-    border-radius: 9999px;
+    /* Stops are in layer percent, so double them for track percent: a 42%-wide
+       band (matching the old segment) with 2% soft ends, then a 58% gap. */
+    background: repeating-linear-gradient(
+      to right,
+      transparent 0,
+      var(--primary) 1% 20%,
+      transparent 21% 50%
+    );
     bottom: 0;
     content: "";
     left: 0;
     position: absolute;
     top: 0;
-    transform: translateX(-100%);
-    width: 42%;
-  }
-
-  .workspace-streaming-line::before {
-    animation-delay: -1.3s;
+    transform: translateX(-50%);
+    width: 200%;
   }
 
   @media (prefers-reduced-motion: reduce) {
-    .workspace-streaming-line::before {
-      content: none;
-    }
-
     .workspace-streaming-line::after {
       animation: none;
       background: color-mix(in oklch, var(--primary) 35%, transparent);
@@ -374,14 +374,14 @@
   color: color-mix(in oklch, var(--primary-foreground) 72%, transparent);
 }
 
-/* -100% starts the segment just off the left edge; 238% is 100% of the track
-   width for a segment that is 42% as wide, so it ends just off the right. */
+/* 50% of the 200%-wide layer is exactly one gradient period (one track width),
+   so this shifts the band right by one full track and loops without a seam. */
 @keyframes workspace-streaming-sweep {
   from {
-    transform: translateX(-100%);
+    transform: translateX(-50%);
   }
   to {
-    transform: translateX(238%);
+    transform: translateX(0);
   }
 }
 
