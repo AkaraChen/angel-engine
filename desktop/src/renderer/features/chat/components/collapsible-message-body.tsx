@@ -1,6 +1,6 @@
 import { CaretDown } from "@phosphor-icons/react";
 import type { ReactNode } from "react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useLayoutEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { cn } from "@/platform/utils";
@@ -30,8 +30,10 @@ export function CollapsibleMessageBody({
   const contentRef = useRef<HTMLDivElement>(null);
 
   // The measured element is never clamped itself, so its scroll height is the
-  // full content height even while the wrapper is collapsed.
-  useEffect(() => {
+  // full content height even while the wrapper is collapsed. Measure in a
+  // layout effect so a tall message is clamped before the first paint instead
+  // of flashing at full height and shifting the thread's scroll position.
+  useLayoutEffect(() => {
     const content = contentRef.current;
     if (!content) return;
 
@@ -57,6 +59,7 @@ export function CollapsibleMessageBody({
     <div className={cn("flex min-w-0 flex-col", className)}>
       <div
         className={cn("relative min-w-0", isCollapsed && "overflow-hidden")}
+        data-collapsed={isCollapsed}
         style={
           isCollapsed
             ? { maxHeight: `${collapsedMessageBodyMaxHeight}px` }
