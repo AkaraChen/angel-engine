@@ -2,6 +2,13 @@ use super::*;
 
 use crate::types::process::{ListeningPortInfo, SubprocessInfo};
 
+#[napi(js_name = "isProcessRunning")]
+pub fn is_process_running(pid: u32) -> bool {
+    trace_napi_value("isProcessRunning", format!("pid={pid}"), || {
+        engine_process_is_running(pid)
+    })
+}
+
 #[napi(js_name = "listSubprocesses")]
 pub fn list_subprocesses(root_pid: u32) -> Result<Vec<SubprocessInfo>> {
     trace_napi_sync_result("listSubprocesses", format!("root_pid={root_pid}"), || {

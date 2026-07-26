@@ -31,7 +31,7 @@ const result: ChatSendResult = {
   text: "done",
 };
 
-describe("daemon chat streams", () => {
+describe("daemon chat runs", () => {
   it("starts a daemon-owned run with a snapshot-first observer stream", async () => {
     const publish = vi.fn();
     const app = new Hono();
@@ -52,6 +52,10 @@ describe("daemon chat streams", () => {
     expect(body).toContain('"sequence":3');
     expect(body).toContain('"type":"result"');
     expect(body).toContain('"type":"done"');
+    expect(publish).toHaveBeenCalledWith({
+      chatIds: ["chat-1"],
+      type: "chat-activity-changed",
+    });
     expect(publish).toHaveBeenCalledWith({
       chatIds: ["chat-1"],
       type: "chat-attention-changed",
@@ -76,7 +80,7 @@ describe("daemon chat streams", () => {
       attentions: [
         {
           chatId: chat.id,
-          id: "run-attention:completed",
+          id: "run-attention:done",
           status: "completed",
           updatedAt: expect.any(String),
         },
@@ -95,11 +99,11 @@ describe("daemon chat streams", () => {
     await expect(
       (await app.request("/api/chat-attention")).json(),
     ).resolves.toMatchObject({
-      attentions: [{ id: "run-attention:completed" }],
+      attentions: [{ id: "run-attention:done" }],
     });
 
     const read = await app.request(`/api/chats/${chat.id}/attention/read`, {
-      body: JSON.stringify({ attentionId: "run-attention:completed" }),
+      body: JSON.stringify({ attentionId: "run-attention:done" }),
       headers: { "content-type": "application/json" },
       method: "POST",
     });
@@ -107,6 +111,81 @@ describe("daemon chat streams", () => {
     await expect(
       (await app.request("/api/chat-attention")).json(),
     ).resolves.toEqual({ attentions: [] });
+    await expect(
+      (await app.request("/api/chat-activity")).json(),
+    ).resolves.toEqual({ items: [] });
+  });
+
+  it("keeps late-success input resolvable through the run API", async () => {
+    const resolveElicitation = vi.fn().mockResolvedValue(undefined);
+    const app = new Hono();
+    registerApi(
+      app,
+      fakeDaemonRuntime({
+        streamChat: (_input, onEvent, _signal, controls) =>
+          Effect.sync(() => {
+            controls?.setResolveElicitation?.(resolveElicitation);
+            onEvent?.({
+              elicitation: {
+                body: "Continue?",
+                id: "elic-1",
+                kind: "approval",
+                phase: "open",
+                title: "Permission",
+              },
+              type: "elicitation",
+            });
+            return result;
+          }),
+      }),
+      { publish: vi.fn() },
+    );
+
+    const response = await app.request("/api/chat-runs/run-late-success", {
+      body: JSON.stringify({ chatId: chat.id, text: "hello" }),
+      headers: { "content-type": "application/json" },
+      method: "POST",
+    });
+    const body = response.text();
+    await vi.waitFor(async () => {
+      await expect(
+        (await app.request("/api/chat-activity")).json(),
+      ).resolves.toMatchObject({
+        items: [
+          {
+            attentionId: "run-late-success:input:elic-1",
+            status: "waiting_for_you",
+          },
+        ],
+      });
+    });
+
+    const resolved = await app.request(
+      "/api/chat-runs/run-late-success/elicitation",
+      {
+        body: JSON.stringify({
+          elicitationId: "elic-1",
+          response: { type: "allow" },
+        }),
+        headers: { "content-type": "application/json" },
+        method: "POST",
+      },
+    );
+
+    expect(resolved.status).toBe(200);
+    await expect(resolved.json()).resolves.toEqual({ resolved: true });
+    expect(resolveElicitation).toHaveBeenCalledWith("elic-1", {
+      type: "allow",
+    });
+    expect(await body).toContain('"type":"done"');
+    await expect(
+      (await app.request("/api/chat-activity")).json(),
+    ).resolves.toMatchObject({
+      items: [{ runId: "run-late-success", status: "done" }],
+    });
+    await expect(
+      (await app.request(`/api/chats/${chat.id}/active-run`)).json(),
+    ).resolves.toEqual({ run: null });
   });
 
   it("keeps a run active until explicit stop aborts its provider", async () => {
@@ -151,6 +230,11 @@ describe("daemon chat streams", () => {
     expect(await active.json()).toMatchObject({
       run: { chatId: "chat-1", runId: "run-1", status: "running" },
     });
+    await expect(
+      (await app.request("/api/chat-activity")).json(),
+    ).resolves.toMatchObject({
+      items: [{ chatId: "chat-1", runId: "run-1", status: "running" }],
+    });
     expect(providerSignal?.aborted).toBe(false);
 
     const stopped = await app.request("/api/chat-runs/run-1", {
@@ -159,6 +243,9 @@ describe("daemon chat streams", () => {
     expect(stopped.status).toBe(200);
     expect(providerSignal?.aborted).toBe(true);
     expect(await bodyPromise).toContain('"type":"done"');
+    await expect(
+      (await app.request("/api/chat-activity")).json(),
+    ).resolves.toEqual({ items: [] });
     await vi.waitFor(async () => {
       const after = await app.request("/api/chats/chat-1/active-run");
       expect(await after.json()).toEqual({ run: null });

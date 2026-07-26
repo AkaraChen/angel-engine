@@ -1,7 +1,7 @@
 use std::collections::{HashMap, HashSet};
 
 use listeners::{Protocol, SocketState};
-use sysinfo::{Pid, ProcessRefreshKind, ProcessesToUpdate, System, UpdateKind};
+use sysinfo::{Pid, ProcessRefreshKind, ProcessStatus, ProcessesToUpdate, System, UpdateKind};
 
 use crate::{ClientError, ClientResult};
 
@@ -18,6 +18,18 @@ pub struct ListeningPortInfo {
     pub pid: u32,
     pub port: u16,
     pub address: String,
+}
+
+pub fn process_is_running(pid: u32) -> bool {
+    let pid = Pid::from_u32(pid);
+    let mut system = System::new();
+    system.refresh_processes(ProcessesToUpdate::Some(&[pid]), true);
+    system.process(pid).is_some_and(|process| {
+        !matches!(
+            process.status(),
+            ProcessStatus::Dead | ProcessStatus::Zombie
+        )
+    })
 }
 
 pub fn list_subprocesses(root_pid: u32) -> ClientResult<Vec<SubprocessInfo>> {
@@ -117,6 +129,19 @@ mod tests {
         let _ = child.kill();
         let _ = child.wait();
         assert!(subprocesses.iter().any(|process| process.pid == child_pid));
+    }
+
+    #[test]
+    fn reports_process_liveness() {
+        assert!(process_is_running(std::process::id()));
+
+        let mut child = child_sleep();
+        let child_pid = child.id();
+        assert!(process_is_running(child_pid));
+
+        child.kill().unwrap();
+        child.wait().unwrap();
+        assert!(!process_is_running(child_pid));
     }
 
     #[test]

@@ -15,7 +15,7 @@ use angel_engine_client::{
     StartConversationRequest as EngineStartConversationRequest, ThreadEvent as EngineThreadEvent,
     create_runtime_options as engine_create_runtime_options,
     list_listening_ports as engine_list_listening_ports,
-    list_subprocesses as engine_list_subprocesses,
+    list_subprocesses as engine_list_subprocesses, process_is_running as engine_process_is_running,
 };
 use garde::Validate;
 use napi::ScopedTask;

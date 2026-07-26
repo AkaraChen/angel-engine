@@ -1,6 +1,6 @@
 import type { Chat } from "@angel-engine/daemon-api/chat";
 import type { ProcessRegistryEntry } from "@angel-engine/daemon-api/daemon";
-import type { DesktopChatSession } from "./chat-session-factory";
+import type { SessionProcess } from "@angel-engine/js-client";
 
 /**
  * Mirrors live chat sessions into the process registry. Lives in the
@@ -9,25 +9,32 @@ import type { DesktopChatSession } from "./chat-session-factory";
  * constructor bridges.
  */
 export class ChatProcessRegistry {
-  readonly #sessions: Map<string, DesktopChatSession>;
+  readonly #sessions: ReadonlyMap<string, SessionProcess>;
   readonly #replaceEntries: (entries: ProcessRegistryEntry[]) => Promise<void>;
   readonly #lookupChat: (chatId: string) => Promise<Chat>;
+  #refreshQueue = Promise.resolve();
   readonly #subscriptions = new Map<
     string,
-    { session: DesktopChatSession; unsubscribe: () => void }
+    { session: SessionProcess; unsubscribe: () => void }
   >();
 
   constructor(options: {
     lookupChat: (chatId: string) => Promise<Chat>;
     replaceEntries: (entries: ProcessRegistryEntry[]) => Promise<void>;
-    sessions: Map<string, DesktopChatSession>;
+    sessions: ReadonlyMap<string, SessionProcess>;
   }) {
     this.#sessions = options.sessions;
     this.#replaceEntries = options.replaceEntries;
     this.#lookupChat = options.lookupChat;
   }
 
-  async refresh(): Promise<void> {
+  refresh(): Promise<void> {
+    const refresh = this.#refreshQueue.then(() => this.#refresh());
+    this.#refreshQueue = refresh.catch(() => undefined);
+    return refresh;
+  }
+
+  async #refresh(): Promise<void> {
     this.#refreshSubscriptions();
     const entries: ProcessRegistryEntry[] = [];
     for (const [chatId, session] of this.#sessions) {

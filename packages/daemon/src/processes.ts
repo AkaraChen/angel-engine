@@ -11,16 +11,43 @@ import { Effect } from "effect";
 
 import { DaemonError } from "./platform/errors";
 
-class ProcessRegistry {
-  readonly #entries = new Map<string, ProcessRegistryEntry>();
+export class ProcessRegistry {
+  readonly #chatEntries = new Map<string, ProcessRegistryEntry>();
+  readonly #chatListeners = new Set<
+    (entries: readonly ProcessRegistryEntry[]) => void
+  >();
+  readonly #externalEntries = new Map<string, ProcessRegistryEntry>();
 
-  replace(entries: ProcessRegistryEntry[]) {
-    this.#entries.clear();
-    for (const entry of entries) this.#entries.set(entry.id, entry);
+  replaceChat(entries: ProcessRegistryEntry[]) {
+    replaceEntries(this.#chatEntries, entries);
+    const current = this.chatEntries();
+    for (const listener of this.#chatListeners) listener(current);
+  }
+
+  replaceExternal(entries: ProcessRegistryEntry[]) {
+    replaceEntries(this.#externalEntries, entries);
+  }
+
+  entries(): ProcessRegistryEntry[] {
+    const entries = new Map(this.#externalEntries);
+    for (const [id, entry] of this.#chatEntries) entries.set(id, entry);
+    return cloneEntries(entries.values());
+  }
+
+  chatEntries(): ProcessRegistryEntry[] {
+    return cloneEntries(this.#chatEntries.values());
+  }
+
+  observeChat(listener: (entries: readonly ProcessRegistryEntry[]) => void) {
+    this.#chatListeners.add(listener);
+    listener(this.chatEntries());
+    return () => {
+      this.#chatListeners.delete(listener);
+    };
   }
 
   snapshot(): ProcessRegistrySnapshotEntry[] {
-    return [...this.#entries.values()].map((entry) => {
+    return this.entries().map((entry) => {
       const processes = listSubprocesses(entry.rootPid);
       const ports = listListeningPorts([
         entry.rootPid,
@@ -37,7 +64,7 @@ class ProcessRegistry {
   }
 
   #containsCurrentProcess(pid: number) {
-    for (const entry of this.#entries.values()) {
+    for (const entry of this.entries()) {
       if (entry.rootPid === pid) return true;
       if (
         listSubprocesses(entry.rootPid).some((process) => process.pid === pid)
@@ -49,7 +76,10 @@ class ProcessRegistry {
   }
 }
 
-/** Tracks external process trees advertised by the desktop and live sessions. */
+/**
+ * Tracks external process trees and live chat sessions as independent owners.
+ * Reads merge both sources; ChatActivity observes only the chat-owned map.
+ */
 export class ProcessRegistryService extends Effect.Service<ProcessRegistryService>()(
   "daemon/ProcessRegistryService",
   {
@@ -61,8 +91,13 @@ export class ProcessRegistryService extends Effect.Service<ProcessRegistryServic
             catch: (cause) => DaemonError.internal(cause),
             try: () => registry.kill(pid, force),
           }),
-        replace: (entries: ProcessRegistryEntry[]) =>
-          Effect.sync(() => registry.replace(entries)),
+        replaceChat: (entries: ProcessRegistryEntry[]) =>
+          Effect.sync(() => registry.replaceChat(entries)),
+        replaceExternal: (entries: ProcessRegistryEntry[]) =>
+          Effect.sync(() => registry.replaceExternal(entries)),
+        observeChat: (
+          listener: (entries: readonly ProcessRegistryEntry[]) => void,
+        ) => Effect.sync(() => registry.observeChat(listener)),
         snapshot: () =>
           Effect.try({
             catch: (cause) => DaemonError.internal(cause),
@@ -72,6 +107,20 @@ export class ProcessRegistryService extends Effect.Service<ProcessRegistryServic
     },
   },
 ) {}
+
+function replaceEntries(
+  target: Map<string, ProcessRegistryEntry>,
+  entries: readonly ProcessRegistryEntry[],
+) {
+  target.clear();
+  for (const entry of entries) target.set(entry.id, { ...entry });
+}
+
+function cloneEntries(
+  entries: Iterable<ProcessRegistryEntry>,
+): ProcessRegistryEntry[] {
+  return [...entries].map((entry) => ({ ...entry }));
+}
 
 export function parseRegistryBody(
   value: unknown,

@@ -3,6 +3,7 @@ import { isDaemonGlobalEvent } from "./events";
 import { describe, expect, it } from "vitest";
 
 const validEvents: DaemonGlobalEvent[] = [
+  { chatIds: ["chat-1"], type: "chat-activity-changed" },
   { chatIds: ["chat-1"], type: "chat-attention-changed" },
   { chatIds: ["chat-1"], type: "chat-metadata-changed" },
 ];

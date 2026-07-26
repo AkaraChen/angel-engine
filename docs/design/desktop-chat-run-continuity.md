@@ -28,8 +28,8 @@ This section records the pre-migration behavior. None of it is current. The
 `desktop-agent-adapter.ts` and `api/chat-stream.ts` (Stage 2, KIT-207). The
 other files named below still exist but no longer work this way:
 `chat-run-stream.ts` and `chat-run-registry.ts` now drive `daemon.chatRuns.*`
-and key slots by real chat id, and `main/daemon/events.ts` now handles only
-`chat-attention-changed`.
+and key slots by real chat id, and `main/daemon/events.ts` now handles only the
+legacy Desktop notification signal, `chat-attention-changed`.
 
 `desktop/src/renderer/features/chat/api/desktop-agent-adapter.ts` opened
 `POST /api/chat-streams?streamId=...` through a raw
@@ -48,10 +48,12 @@ Both were migration debt, not desired behavior.
 
 ## Locked Decisions
 
-### 1. Notifications are a pull model on `chat-attention-changed`
+### 1. Legacy Desktop notifications pull on `chat-attention-changed`
 
-No new run-level global WebSocket event is added. `chat-attention-changed` is
-the only signal.
+Desktop OS notifications continue to use `chat-attention-changed`. Fleet
+consumers use the canonical five-state projection at `GET /api/chat-activity`
+and invalidate it on `chat-activity-changed`; neither signal carries run
+payloads.
 
 **The event is a hint, not a verdict.** It carries `chatIds` and nothing else
 (`packages/daemon-api/src/events.ts`), and the daemon publishes it on *every*
@@ -59,10 +61,12 @@ attention transition — including clears: run start, acknowledge, elicitation
 resolve, chat archive/delete (`packages/daemon/src/api.ts`). So the event says
 "attention for this chat changed", never "this chat completed".
 
-`GET /api/chat-attention` is the authoritative status read. The store in
-`packages/daemon/src/features/chat/attention.ts` is the tombstone that survives
-the run leaving the registry, and its `status` is a closed union of
-`needsInput | completed`.
+`GET /api/chat-activity` is the authoritative run-state read. The store in
+`packages/daemon/src/features/chat/activity.ts` keeps active state and terminal
+tombstones. `GET /api/chat-attention` is a compatibility view derived from the
+same store: `waiting_for_you` becomes `needsInput`, `done` becomes `completed`,
+and `running`, `stuck`, and `failed` are omitted so legacy clients never
+misreport a failure as success.
 
 Required sequence on `chat-attention-changed`:
 
@@ -79,7 +83,7 @@ Required sequence on `chat-attention-changed`:
    is a title-only notification. Adding a global `completed` event to carry the
    text is explicitly forbidden.
 5. Dedupe on `attention.id` (`<runId>:input:<elicitationId>`,
-   `<runId>:completed`), not on chat id. Notify once per id.
+   `<runId>:done`), not on chat id. Notify once per id.
 
 Deriving completion from `active-run === null` is specifically wrong on two
 paths: acknowledging a completed marker publishes the same event and would
@@ -287,9 +291,9 @@ anticipate had to change with it:
   synthesized its own elicitation from those tool events, so moving
   notifications onto attention would have dropped every permission
   notification. `ChatRunRegistry.materialize` now raises `needsInput` with a
-  synthesized `pendingElicitation` for them, and `ChatAttentionStore.apply`
-  records and clears the matching attention. Mobile gains the same pending
-  input from its snapshot.
+  synthesized `pendingElicitation` for them, and `ChatActivityStore.apply`
+  records and clears the matching activity. The legacy attention view and
+  Mobile gain the same pending input from that projection.
 
 ## Acceptance for Stage 2
 

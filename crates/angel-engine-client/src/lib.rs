@@ -38,7 +38,7 @@ pub use event::{
 };
 pub use process::AngelClient;
 pub use process_manager::{
-    ListeningPortInfo, SubprocessInfo, list_listening_ports, list_subprocesses,
+    ListeningPortInfo, SubprocessInfo, list_listening_ports, list_subprocesses, process_is_running,
 };
 pub use runtime::{AgentRuntime, RuntimeOptions, RuntimeOptionsOverrides, create_runtime_options};
 pub use session::{
