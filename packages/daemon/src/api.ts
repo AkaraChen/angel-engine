@@ -37,6 +37,7 @@ import {
 import { githubResolveUrlInputSchema } from "@angel-engine/daemon-api/github";
 import {
   createProjectInputSchema,
+  managedWorktreeDeleteInputSchema,
   updateProjectInputSchema,
 } from "@angel-engine/daemon-api/projects";
 import {
@@ -74,6 +75,11 @@ import {
   removeManagedWorktree,
 } from "./features/projects/git";
 import { projectGitStatus } from "./features/projects/git";
+import {
+  executeManagedWorktreeDeletion,
+  planManagedWorktreeDeletion,
+  scanManagedWorktrees,
+} from "./features/projects/managed-worktrees";
 import { searchProjectFiles } from "./features/projects/file-search";
 import {
   createProject,
@@ -456,6 +462,38 @@ export function registerApi(
       ),
     ),
   );
+
+  app.get("/api/worktrees/managed", async (context) =>
+    context.json(
+      await run(
+        scanManagedWorktrees({
+          eligibleOnly: context.req.query("eligibleOnly") === "true",
+        }),
+      ),
+    ),
+  );
+  app.post("/api/worktrees/managed/delete", async (context) => {
+    const input = managedWorktreeDeleteInputSchema(await context.req.json());
+    if (input instanceof arkType.errors)
+      throw DaemonError.invalidRequest("Worktree paths are required.");
+    const result = await run(
+      Effect.gen(function* () {
+        const targets = yield* planManagedWorktreeDeletion(input);
+        const chatEngine = yield* ChatEngine;
+        for (const target of targets) {
+          for (const chatId of target.chatIds) {
+            yield* chatEngine.closeChatSession(chatId);
+          }
+        }
+        return yield* executeManagedWorktreeDeletion(targets);
+      }),
+    );
+    for (const chatId of result.deletedChatIds) {
+      publishChatAttention(publisher, chatId, attention.clearChat(chatId));
+    }
+    publishChatMetadata(publisher, result.deletedChatIds);
+    return context.json(result);
+  });
 
   app.get("/api/workspace/file-tree", async (context) =>
     context.json(

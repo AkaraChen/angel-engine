@@ -59,6 +59,10 @@ import type {
 } from "@angel-engine/daemon-api/github";
 import type {
   CreateProjectInput,
+  ManagedWorktreeDeleteInput,
+  ManagedWorktreeDeleteResult,
+  ManagedWorktreeScanInput,
+  ManagedWorktreeSummary,
   Project,
   ProjectGitStatusInput,
   ProjectGitStatusResult,
@@ -473,6 +477,17 @@ export function createDaemonClient(options: DaemonClientOptions) {
         request<Project>(
           `/api/projects/${encodeURIComponent(input.id)}`,
           json("PATCH", { path: input.path }),
+        ),
+    },
+    worktrees: {
+      deleteManaged: (input: ManagedWorktreeDeleteInput) =>
+        request<ManagedWorktreeDeleteResult>(
+          "/api/worktrees/managed/delete",
+          json("POST", input),
+        ),
+      listManaged: (input: ManagedWorktreeScanInput = {}) =>
+        request<ManagedWorktreeSummary[]>(
+          `/api/worktrees/managed?${query(input)}`,
         ),
     },
     workspaceTools: {

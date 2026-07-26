@@ -78,6 +78,8 @@ export type DaemonErrorCode =
   | "project-required-for-worktree"
   | "session-failed"
   | "worktree-create-failed"
+  | "worktree-has-active-chats"
+  | "worktree-not-managed"
   | "worktree-remove-failed"
   | "workspace-commit-input-invalid"
   | "workspace-not-git-repository"
