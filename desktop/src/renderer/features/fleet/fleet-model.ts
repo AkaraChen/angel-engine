@@ -37,6 +37,8 @@ export interface FleetRow {
   runId: string;
   runtime: string;
   status: ChatActivityStatus;
+  /** Set while the row still holds an unread `done`/`failed` marker. */
+  terminalAttentionId?: string;
   title: string;
   updatedAt: string;
   /** Set when the chat runs in a worktree other than the project root. */
@@ -77,6 +79,18 @@ const STATUS_GROUP: Record<ChatActivityStatus, FleetGroup> = {
 
 function fleetGroupForStatus(status: ChatActivityStatus): FleetGroup {
   return STATUS_GROUP[status];
+}
+
+/**
+ * The marker an opened row can acknowledge. Only a terminal run leaves one
+ * behind: a running or waiting row disappears on its own once the run moves on.
+ */
+export function terminalAttentionId(
+  activity: ChatActivity,
+): string | undefined {
+  return activity.status === "done" || activity.status === "failed"
+    ? activity.attentionId
+    : undefined;
 }
 
 /**
@@ -122,6 +136,7 @@ export function buildFleetRows({
       runId: activity.runId,
       runtime: chat.runtime,
       status: activity.status,
+      terminalAttentionId: terminalAttentionId(activity),
       title: chat.title,
       updatedAt: activity.updatedAt,
       worktreeName: is.nonEmptyString(worktreeCwd)

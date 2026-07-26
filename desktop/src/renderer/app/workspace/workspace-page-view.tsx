@@ -334,6 +334,10 @@ export const WorkspacePageView: FC<WorkspacePageViewProps> = ({
               {fleetActive ? (
                 <FleetPage
                   chats={chats}
+                  isMetadataError={chatsQuery.isError || projectsQuery.isError}
+                  isMetadataPending={
+                    chatsQuery.isPending || projectsQuery.isPending
+                  }
                   onOpenChat={openChatFromFleet}
                   projects={projects}
                 />

@@ -59,9 +59,15 @@ export function DaemonEventSync() {
         if (isDaemonGlobalEvent(candidate)) handleEvent(candidate);
       });
       next.addEventListener("open", () => {
-        // The socket may have been down across daemon-side changes; resync.
+        // The socket may have been down across daemon-side changes; resync both
+        // sides of the join. Activity alone is not enough: a chat created while
+        // the socket was down has no local metadata, and every consumer that
+        // joins the two would silently drop its rows.
         void queryClient.invalidateQueries({
           queryKey: queryKeys.chatActivity.all(),
+        });
+        void queryClient.invalidateQueries({
+          queryKey: queryKeys.chats.list(),
         });
       });
       next.addEventListener("close", () => {

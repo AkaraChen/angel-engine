@@ -140,6 +140,27 @@ describe("buildFleetRows", () => {
     expect(rows[0].failureMessage).toBe("runtime exited");
   });
 
+  it("exposes a terminal marker only for runs that ended", () => {
+    const rows = buildFleetRows({
+      activities: [
+        done("done", "2026-01-01T00:04:00.000Z"),
+        failed("failed", "2026-01-01T00:03:00.000Z"),
+        waiting("waiting", "2026-01-01T00:02:00.000Z"),
+        running("running", "2026-01-01T00:01:00.000Z"),
+      ],
+      chats: ["done", "failed", "waiting", "running"].map((id) => chat({ id })),
+      projects: [],
+    });
+    const markers = new Map(
+      rows.map((row) => [row.chatId, row.terminalAttentionId]),
+    );
+
+    expect(markers.get("done")).toBe("done-attention");
+    expect(markers.get("failed")).toBe("failed-attention");
+    expect(markers.get("waiting")).toBeUndefined();
+    expect(markers.get("running")).toBeUndefined();
+  });
+
   it("drops activity whose chat is unknown or archived", () => {
     const rows = buildFleetRows({
       activities: [
