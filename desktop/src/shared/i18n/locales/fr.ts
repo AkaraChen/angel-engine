@@ -240,6 +240,11 @@ export const fr = {
         title: "Zone dangereuse",
       },
       description: "Configurer le comportement de l’espace de travail.",
+      groups: {
+        connectivity: "Connectivité",
+        data: "Données",
+        general: "Général",
+      },
       mobile: {
         copied: "Copié",
         copy: "Copier",
@@ -266,6 +271,19 @@ export const fr = {
           "Définissez un mot de passe d’appairage pour activer l’accès mobile.",
         urlPending: "Démarrage du serveur…",
         urlTitle: "URL mobile",
+      },
+      tabDescriptions: {
+        agents:
+          "Choisissez les agents de code affichés dans le sélecteur, et leur ordre.",
+        appearance: "Thème et langue d’affichage de l’application de bureau.",
+        archived:
+          "Restaurez les sessions archivées, ou supprimez-les définitivement avec leurs worktrees.",
+        danger:
+          "Actions irréversibles affectant toutes les conversations stockées sur cet ordinateur.",
+        mobile:
+          "Diffusez l’application web mobile depuis cet ordinateur sur votre réseau local.",
+        workspace:
+          "Comportement du champ de saisie et des worktrees pendant votre travail.",
       },
       tabs: {
         agents: "Agents",

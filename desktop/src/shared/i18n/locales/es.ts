@@ -240,6 +240,11 @@ export const es = {
         title: "Zona peligrosa",
       },
       description: "Configura el comportamiento del espacio de trabajo.",
+      groups: {
+        connectivity: "Conectividad",
+        data: "Datos",
+        general: "General",
+      },
       mobile: {
         copied: "Copiado",
         copy: "Copiar",
@@ -266,6 +271,19 @@ export const es = {
           "Establece una contraseña de emparejamiento para habilitar el acceso móvil.",
         urlPending: "Iniciando el servidor…",
         urlTitle: "URL móvil",
+      },
+      tabDescriptions: {
+        agents:
+          "Elige qué agentes de código aparecen en el selector y en qué orden.",
+        appearance: "Tema e idioma de la aplicación de escritorio.",
+        archived:
+          "Restaura sesiones archivadas o elimínalas de forma permanente junto con sus worktrees.",
+        danger:
+          "Acciones irreversibles que afectan a todos los chats guardados en este equipo.",
+        mobile:
+          "Sirve la aplicación web móvil desde este equipo en tu red local.",
+        workspace:
+          "Cómo se comportan el campo de escritura y los worktrees mientras trabajas.",
       },
       tabs: {
         agents: "Agents",

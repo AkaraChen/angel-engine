@@ -137,7 +137,7 @@ function CustomAgentsSettingsGroup({
       <Reorder.Group
         as="div"
         axis="y"
-        className="divide-y divide-border"
+        className="divide-y divide-border-subtle"
         onReorder={setOrderPreview}
         values={displayedCustomAgents.map((agent) => agent.id)}
       >
@@ -188,11 +188,11 @@ function CustomAgentsSettingsGroup({
             >
               <span
                 className="
-                  flex size-9 shrink-0 items-center justify-center rounded-lg
-                  border border-border bg-background
+                  flex size-8 shrink-0 items-center justify-center rounded-lg
+                  border border-border-subtle bg-background
                 "
               >
-                <Bot className="size-5 text-muted-foreground" />
+                <Bot className="size-4 text-muted-foreground" />
               </span>
               <span className="min-w-0 flex-1">
                 <span className="block truncate text-sm font-medium">

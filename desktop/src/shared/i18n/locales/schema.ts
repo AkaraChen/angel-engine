@@ -256,6 +256,21 @@ export interface LocaleResourceTranslationSettingsTabs {
   workspace: string;
 }
 
+export interface LocaleResourceTranslationSettingsTabDescriptions {
+  agents: string;
+  appearance: string;
+  archived: string;
+  danger: string;
+  mobile: string;
+  workspace: string;
+}
+
+export interface LocaleResourceTranslationSettingsGroups {
+  connectivity: string;
+  data: string;
+  general: string;
+}
+
 export interface LocaleResourceTranslationSettingsMobile {
   copied: string;
   copy: string;
@@ -292,7 +307,9 @@ export interface LocaleResourceTranslationSettings {
   archived: LocaleResourceTranslationSettingsArchived;
   danger: LocaleResourceTranslationSettingsDanger;
   description: string;
+  groups: LocaleResourceTranslationSettingsGroups;
   mobile: LocaleResourceTranslationSettingsMobile;
+  tabDescriptions: LocaleResourceTranslationSettingsTabDescriptions;
   tabs: LocaleResourceTranslationSettingsTabs;
   title: string;
   workspace: LocaleResourceTranslationSettingsWorkspace;

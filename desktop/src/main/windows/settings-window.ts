@@ -3,7 +3,13 @@ import { BrowserWindow, screen } from "electron";
 import { createDesktopWindow } from "./factory";
 
 const settingsWindowStateFileName = "settings-window-state.json";
-const settingsWindowMinimumBounds = { height: 420, width: 560 };
+const settingsWindowMinimumBounds = { height: 520, width: 680 };
+/**
+ * Settings is a fixed-shape utility window, not a workspace: the rail is 224px
+ * and the content column caps at 42rem, so growing with the display only adds
+ * dead space. Size to the content and let the user resize from there.
+ */
+const settingsWindowPreferredBounds = { height: 660, width: 920 };
 
 let settingsWindow: BrowserWindow | null = null;
 let settingsWindowContentReady = false;
@@ -70,13 +76,13 @@ function defaultSettingsWindowBounds() {
     focusedWindow && !focusedWindow.isDestroyed()
       ? screen.getDisplayMatching(focusedWindow.getBounds())
       : screen.getDisplayNearestPoint(screen.getCursorScreenPoint());
-  const width = Math.max(
-    settingsWindowMinimumBounds.width,
-    Math.round(workArea.width * 0.82),
+  const width = Math.min(
+    settingsWindowPreferredBounds.width,
+    Math.max(settingsWindowMinimumBounds.width, workArea.width - 80),
   );
-  const height = Math.max(
-    settingsWindowMinimumBounds.height,
-    Math.round(workArea.height * 0.82),
+  const height = Math.min(
+    settingsWindowPreferredBounds.height,
+    Math.max(settingsWindowMinimumBounds.height, workArea.height - 80),
   );
 
   return {

@@ -72,7 +72,7 @@ function BuiltinAgentsSettingsGroup({
       <Reorder.Group
         as="div"
         axis="y"
-        className="divide-y divide-border"
+        className="divide-y divide-border-subtle"
         onReorder={setBuiltinAgentOrderPreview}
         values={displayedBuiltinAgentOptions.map((agent) => agent.id)}
       >
@@ -111,19 +111,19 @@ function BuiltinAgentsSettingsGroup({
             >
               <span
                 className="
-                  flex size-9 shrink-0 items-center justify-center rounded-lg
-                  border border-border bg-background
+                  flex size-8 shrink-0 items-center justify-center rounded-lg
+                  border border-border-subtle bg-background
                 "
               >
                 {is.nonEmptyString(iconUrl) ? (
                   <img
                     alt=""
-                    className="size-5 object-contain"
+                    className="size-4.5 object-contain"
                     draggable={false}
                     src={iconUrl}
                   />
                 ) : (
-                  <Bot className="size-5 text-muted-foreground" />
+                  <Bot className="size-4 text-muted-foreground" />
                 )}
               </span>
               <span className="min-w-0 flex-1">

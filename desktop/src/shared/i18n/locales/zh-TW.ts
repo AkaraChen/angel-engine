@@ -237,6 +237,11 @@ export const zhTW = {
         title: "危險區",
       },
       description: "設定桌面工作區行為。",
+      groups: {
+        connectivity: "連線",
+        data: "資料",
+        general: "一般",
+      },
       mobile: {
         copied: "已複製",
         copy: "複製",
@@ -259,6 +264,14 @@ export const zhTW = {
         urlNeedsPassword: "設定配對密碼後即可啟用行動版存取。",
         urlPending: "正在啟動伺服器…",
         urlTitle: "行動版網址",
+      },
+      tabDescriptions: {
+        agents: "選擇要在選擇器中顯示哪些編碼代理，以及它們的順序。",
+        appearance: "桌面應用程式的主題與顯示語言。",
+        archived: "還原已封存的工作階段，或連同工作樹一併永久刪除。",
+        danger: "影響本機所有聊天記錄的不可復原操作。",
+        mobile: "透過本機網路從這台電腦提供行動版網頁應用程式。",
+        workspace: "工作時輸入區與工作樹的行為方式。",
       },
       tabs: {
         agents: "Agents",

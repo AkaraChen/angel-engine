@@ -1,0 +1,412 @@
+{
+  "meta": {
+    "name": "Angel Engine Desktop",
+    "description": "Design DNA extracted from the Angel Engine Electron desktop renderer: a quiet, dense, editor-grade agent workbench built on Tailwind v4 tokens, Radix primitives, Phosphor icons, and framer-motion springs. Warm-grey neutrals with a single desaturated pine-green accent, near-flat elevation, and native macOS window chrome.",
+    "source_references": [
+      "desktop/src/renderer/index-foundation.css",
+      "desktop/src/renderer/index-chat.css",
+      "desktop/src/renderer/components/ui/button.tsx",
+      "desktop/src/renderer/components/ui/dialog.tsx",
+      "desktop/src/renderer/platform/motion.ts",
+      "desktop/src/renderer/app/workspace/workspace-header.tsx",
+      "desktop/src/renderer/features/settings/*",
+      "desktop/src/main/windows/appearance.ts"
+    ],
+    "created_at": "2026-07-26"
+  },
+
+  "design_system": {
+    "color": {
+      "palette_type": "monochromatic warm-neutral with a single analogous green accent",
+      "primary": {
+        "hex": "#1c6b48",
+        "role": "Sole brand accent. Light mode #1c6b48 / dark mode #4d9375. Used for active nav state, focus rings, primary buttons, and the `primary-soft` tint (#e7f2ec light, rgb(77 147 117 / 0.14) dark) that carries selected states without a hard fill."
+      },
+      "secondary": {
+        "hex": "#ebebea",
+        "role": "`surface-1` — the recessed neutral used for secondary buttons, muted fills, and sidebar accents. Dark: #1d1d1c. It is a neutral, not a second hue; the system deliberately has no second brand color."
+      },
+      "accent": {
+        "hex": "#e7f2ec",
+        "role": "`primary-soft` — the selected/active tint. Interaction highlights are otherwise pure alpha overlays (`overlay-hover` rgb(37 37 36 / 0.055), `overlay-active` rgb(37 37 36 / 0.085)) so they compose over any surface."
+      },
+      "neutral": {
+        "scale": [
+          "#fafafa",
+          "#f6f6f6",
+          "#ebebea",
+          "#dededd",
+          "#c8c8c7",
+          "#aaa9a7",
+          "#858482",
+          "#676664",
+          "#464543",
+          "#2c2b29",
+          "#1a1918"
+        ],
+        "usage": "A slightly warm 11-step grey ramp aliased as `green-50..950` (a naming holdover; the ramp itself is chromatically neutral). Backgrounds come off the 50/100 end, body text off #2f2f2e, and dark mode inverts to #141516 background / #e4e4e2ee foreground. Muted text is alpha-derived (#2f2f2e99, #e4e4e290) rather than a separate grey step, so it stays correct on every surface."
+      },
+      "semantic": {
+        "success": "#2f7d57 light / #6fb392 dark, with `-soft` fill and `-border` companions",
+        "warning": "#9a7b1a light / #e6cc77 dark (named `status-attention`)",
+        "error": "#ab5959 light / #cb7676 dark (`status-danger` and `destructive` are the same value)",
+        "info": "#296aa3 light / #6394bf dark"
+      },
+      "surface": {
+        "background": "#fafafa light / #141516 dark",
+        "card": "#fbfbfa light / #171819 dark",
+        "elevated": "`panel` — rgb(251 251 250 / 0.76) light, rgb(255 255 255 / 0.035) dark. A three-step recessed ramp (`surface-1/2/3`) handles inset depth; `panel` handles translucent floating chrome."
+      },
+      "contrast_strategy": "Subtle layered contrast, not high contrast. Text/background sits around 11:1 for body but every other separation — borders, hovers, cards — is deliberately low-contrast (1px borders at 6–9% alpha in dark mode). Depth is read from small tonal steps, never from heavy shadow. Every semantic color ships as a triple (solid / soft fill / border) so status can be expressed without saturated blocks."
+    },
+
+    "typography": {
+      "type_scale": {
+        "display": {
+          "size": "1.875rem (30px) — workspace new-chat title; 2rem in dense modes",
+          "weight": "600",
+          "line_height": "1.125",
+          "tracking": "-0.015em"
+        },
+        "heading_1": {
+          "size": "1.25rem (20px)",
+          "weight": "600",
+          "line_height": "1.3",
+          "tracking": "-0.015em"
+        },
+        "heading_2": {
+          "size": "1rem (16px)",
+          "weight": "600",
+          "line_height": "1 (leading-none on dialog titles)",
+          "tracking": "-0.015em"
+        },
+        "heading_3": {
+          "size": "0.8125rem–0.875rem (13–14px)",
+          "weight": "600",
+          "line_height": "1.4",
+          "tracking": "-0.01em"
+        },
+        "body": {
+          "size": "0.9375rem (15px) default, 0.875rem (14px) in work/power modes",
+          "weight": "400",
+          "line_height": "1.72 for prose, 1.47 for UI",
+          "tracking": "0"
+        },
+        "body_small": {
+          "size": "0.8125rem (13px)",
+          "weight": "400–500",
+          "line_height": "1.385",
+          "tracking": "0"
+        },
+        "caption": {
+          "size": "0.6875rem–0.75rem (11–12px)",
+          "weight": "400",
+          "line_height": "1.45",
+          "tracking": "0"
+        },
+        "overline": {
+          "size": "0.6875rem (11px)",
+          "weight": "500–600",
+          "line_height": "1",
+          "tracking": "0.04em, uppercase — used sparingly for sidebar section labels"
+        }
+      },
+      "font_families": {
+        "heading": "IBM Plex Sans Variable (aliased `--font-display`, identical to body — the system does not use a contrasting display face)",
+        "body": "IBM Plex Sans Variable → Noto Sans SC/TC/JP/KR (swapped per document language) → -apple-system → Segoe UI Variable → system-ui",
+        "mono": "System monospace stack via Tailwind defaults; code surfaces are delegated to Streamdown/Shiki"
+      },
+      "font_style_notes": "A grotesque with engineered, slightly technical letterforms — IBM Plex reads as tooling rather than marketing. Weight range is narrow (400/500/600 only); hierarchy comes from size and color, not from bold. Negative tracking (-0.015em) is applied only at 16px and above. The full Tailwind type scale is redefined one step smaller under `[data-workspace-mode=work|power]`, and the spacing unit shrinks from 0.25rem to 0.21875rem — density is a first-class, mode-switched dimension. Sidebars opt back out to a larger scale so navigation stays legible."
+    },
+
+    "spacing": {
+      "base_unit": "0.25rem (4px) default; 0.21875rem (3.5px) in work/power density modes",
+      "scale": [
+        "2px",
+        "4px",
+        "6px",
+        "8px",
+        "12px",
+        "16px",
+        "20px",
+        "24px",
+        "32px",
+        "40px"
+      ],
+      "content_density": "compact — the app is an all-day work surface, so control heights are 24/32/36/40px and list rows sit near 44–48px",
+      "section_rhythm": "Consistent 20–24px between sibling sections, 8–12px inside a section, 12–16px inside a row. There is no dramatic vertical rhythm change between sections; the page stays even and scannable rather than staged."
+    },
+
+    "layout": {
+      "grid_system": "Flexbox app shell — fixed-width left sidebar, fluid center column, optional right tool sidebar. No page grid.",
+      "max_content_width": "48rem (768px) reading column, 56rem (896px) in work/power modes; settings panes cap at 42rem",
+      "columns": "1 (single centered reading column inside each pane)",
+      "gutter": "16–32px depending on pane width",
+      "breakpoints": "Desktop-first; only the `sm:` breakpoint is used, and mostly for dialog sizing. The real responsive axis is the density mode attribute, not viewport width.",
+      "alignment_tendency": "strict left alignment inside a centered max-width column; controls right-aligned via `ml-auto`"
+    },
+
+    "shape": {
+      "border_radius": {
+        "small": "0.375rem (radius * 0.6)",
+        "medium": "0.5rem (radius * 0.8)",
+        "large": "0.625rem (--radius base; 0.5rem in work/power modes)",
+        "pill": "9999px — used only for badges and status dots, never for buttons"
+      },
+      "border_usage": "subtle 1px everywhere. Three border tokens (`border-subtle` / `border` / `border-strong`) let a surface pick its own weight. Dark mode borders are white at 9/13/20% alpha rather than solid greys, so they read as light catching an edge.",
+      "divider_style": "1px `divide-border-subtle` inside grouped list cards; sections separate by whitespace, not rules"
+    },
+
+    "elevation": {
+      "shadow_style": "layered but near-invisible — the system is deliberately flat",
+      "levels": {
+        "low": "`elevation-xs`: 0 1px 1px rgb(33 33 32 / 0.035)",
+        "medium": "`elevation-panel`: 0 1px 1px rgb(33 33 32 / 0.025), 0 4px 14px -14px rgb(33 33 32 / 0.18)",
+        "high": "`elevation-overlay`: 0 2px 8px rgb(33 33 32 / 0.05), 0 16px 40px -24px rgb(33 33 32 / 0.24)"
+      },
+      "depth_cues": "Tonal surface steps first (`surface-1/2/3`), 1px borders second, shadow last. In dark mode every elevation swaps its top shadow for an `inset 0 1px 0 rgb(255 255 255 / 0.035)` top highlight — depth is read as a lit edge, the way native macOS materials behave, rather than as a cast shadow."
+    },
+
+    "iconography": {
+      "style": "Phosphor Icons, exclusively (64 import sites, zero mixing with other sets). Product/agent marks come from @lobehub/icons-static-svg as color SVGs.",
+      "stroke_weight": "`regular` for interactive controls, `duotone` reserved for decorative and navigational icons",
+      "size_scale": "12px (icon-xs buttons), 14px (nav), 16px (default in buttons), 20px (agent avatar tiles)",
+      "preferred_set": "@phosphor-icons/react"
+    },
+
+    "motion": {
+      "easing": "cubic-bezier(0.32, 0.72, 0, 1) — exposed as `--ease-swift`; the same curve macOS uses for sheets. Spring physics for anything positional: snappy (stiffness 480 / damping 38), gentle (300/32), pop (600/28).",
+      "duration_scale": {
+        "micro": "0.12s",
+        "normal": "0.18s",
+        "macro": "0.26s"
+      },
+      "entrance_pattern": "fade + 4px rise, or fade + zoom-in from 0.97 for overlays",
+      "exit_pattern": "fade out only, at ~0.12s — exits are faster than entrances and never animate position",
+      "philosophy": "Minimal functional. Motion exists to explain continuity (a shared-layout pill sliding between nav tabs, a drag reorder settling) and never to decorate. Transitions are property-scoped — buttons animate only color, background, border, box-shadow, and transform — so nothing reflows. The one tactile flourish is a 1px `active:translate-y-px` press on buttons."
+    },
+
+    "components": {
+      "button_style": "Seven variants over a shared base: solid `default` (primary fill), `soft` (primary-soft tint — the signature quiet-emphasis variant), `outline`, `secondary`, `ghost`, `destructive` (10–20% danger tint with danger-colored text, never a solid red fill), and `link`. Radius `lg`, heights 24/32/36/40px, icon gap auto-tightens via `has-data-[icon=inline-start]` padding rules.",
+      "input_style": "32–36px, 1px `border-input`, background surface, radius md, focus expressed as a soft `ring-ring/30` rather than a color swap. Native `<select>` is used deliberately (NativeSelect) so OS dropdown behavior is preserved.",
+      "card_style": "1px `border-subtle`, radius xl, `bg-card`, `shadow-xs`, contents divided by hairlines. Grouped-list cards (iOS/macOS settings idiom) are the dominant content container.",
+      "navigation_pattern": "Persistent left rail with collapsible sidebar; secondary navigation is a vertical tablist where the active item is a spring-animated `layoutId` pill in `primary-soft`.",
+      "modal_style": "Centered Radix dialog, radius xl, `bg-popover`, `ring-1 ring-border-subtle` instead of a border, `shadow-overlay`, 180ms swift ease, zoom 0.97→1. Overlay is black/40 with only a 2px backdrop blur — enough to separate, not enough to look glassy.",
+      "list_style": "Hairline-divided rows at ~44–48px with a leading icon tile, a title/description stack, and a trailing control pinned right. Drag-to-reorder rows lift with a ring and shadow while dragging.",
+      "component_notes": "Radix UI primitives + CVA variants + Tailwind v4 `@theme inline` tokens. Everything is token-addressed — there are essentially no raw hex values in component code. Native window chrome is part of the component system: `[data-electron-drag]` marks drag regions, all interactive elements auto-opt-out via a global `-webkit-app-region: no-drag` rule, macOS runs frameless-transparent with traffic lights repositioned to (16, 18), and layouts reserve that inset explicitly."
+    }
+  },
+
+  "design_style": {
+    "aesthetic": {
+      "mood": ["calm", "focused", "technical", "warm-neutral", "unobtrusive"],
+      "visual_metaphor": "A well-lit workbench. Surfaces are paper-toned and matte; the interface recedes so the agent transcript and the code are the only things with presence.",
+      "era_influence": "Late-2020s native-app revival — macOS Sonoma/Tahoe materials crossed with the Vitesse editor-theme lineage and the Linear/Raycast school of dense, keyboard-first desktop tooling.",
+      "genre": "professional developer tool / native desktop productivity app",
+      "personality_traits": [
+        "restrained",
+        "precise",
+        "unhurried",
+        "self-effacing",
+        "meticulous"
+      ],
+      "adjectives": [
+        "quiet",
+        "dense",
+        "tactile",
+        "matte",
+        "engineered",
+        "legible"
+      ]
+    },
+    "visual_language": {
+      "complexity": "minimal",
+      "ornamentation": "none — there are no gradients on content, no decorative shapes, no illustration. The only non-functional mark in the entire system is a brand sketch stroke that draws itself in on mount.",
+      "whitespace_usage": "Tight but never cramped. Whitespace is budgeted rather than lavish; the app assumes long sessions and many rows on screen, so it spends space on line-height and row padding instead of on empty margins.",
+      "visual_weight_distribution": "Evenly distributed and low. Nothing on a screen is allowed to dominate except live content — a streaming response, a diff, a running agent.",
+      "focal_strategy": "distributed interest with state-driven focus — the eye is pulled by the single green accent, a status tint, or a motion cue (the 2px streaming line under the header), never by size or color blocking",
+      "contrast_level": "low to moderate; high only between text and its background",
+      "texture_usage": "none in light mode. Dark mode uses inset white top-highlights on elevated surfaces as a light-catching texture, and translucent `panel` fills pick up the desktop behind the window."
+    },
+    "composition": {
+      "hierarchy_method": "typographic hierarchy plus spatial isolation. Size steps are small (11 → 13 → 15 → 20px), so grouping and muted-color demotion carry most of the hierarchy.",
+      "balance_type": "asymmetric — a fixed narrow rail against a wide fluid content area, with content itself centered in a capped reading column",
+      "flow_direction": "left rail → centered content column → right-pinned controls; vertical scanning within grouped cards",
+      "grouping_strategy": "Hairline-divided cards. Related settings and list items live in one bordered container with internal dividers; unrelated groups are separated by whitespace and a small section heading.",
+      "negative_space_role": "structural separator between groups — it does the work that rules and boxes do in denser systems"
+    },
+    "imagery": {
+      "photo_treatment": "none — the app ships no photography",
+      "illustration_style": "none",
+      "graphic_elements": "Phosphor line icons, vendor agent logos in bordered square tiles, status dots, a hairline streaming progress line, drag handles",
+      "pattern_usage": "none",
+      "image_shape": "rounded squares (radius md/lg) for agent and product marks, sized 32–36px with a 1px border and background surface"
+    },
+    "interaction_feel": {
+      "feedback_style": "Immediate and quiet. Toasts carry errors and confirmations rather than inline error blocks; destructive actions route through native OS confirmation dialogs instead of in-app modals.",
+      "hover_behavior": "A ~5.5% neutral alpha wash plus a foreground-color lift. No scaling, no shadow growth, no glow.",
+      "transition_personality": "snappy — springs settle in roughly 200ms with no perceptible overshoot",
+      "loading_style": "Skeletons for structure, a hairline animated line for streaming, a small spinner for discrete actions. No full-screen loaders.",
+      "microinteraction_density": "low but deliberate — a 1px button press, a shared-layout nav pill, a copy button that swaps to a checkmark for 1.5s, a drag row that lifts on a ring"
+    },
+    "brand_voice_in_ui": {
+      "tone": "plain, declarative, engineer-to-engineer",
+      "formality": "neutral-professional; no exclamation marks, no first-person plural, no encouragement",
+      "cta_style": "direct imperative — 'Set password', 'Delete all chats', 'Scan again'",
+      "empty_state_approach": "One short factual line in muted text ('No archived sessions'), no illustration and usually no CTA",
+      "error_tone": "Factual and specific, surfaced as a toast with the underlying message preserved rather than replaced by a friendly paraphrase"
+    }
+  },
+
+  "visual_effects": {
+    "overview": {
+      "effect_intensity": "subtle-accent",
+      "performance_tier": "lightweight",
+      "fallback_strategy": "Graceful degradation via CSS feature queries — translucency is gated behind `supports-backdrop-filter:`, and every effect has a solid-color base value underneath. Nothing is required for comprehension.",
+      "primary_technology": "CSS custom properties and transitions, with framer-motion for spring/layout animation"
+    },
+    "background_effects": {
+      "type": "none",
+      "description": "Window backgrounds are flat token colors. On macOS the window itself is transparent and frameless, so the only 'background effect' is the OS compositing the desktop behind translucent `panel` surfaces.",
+      "technology": "native window chrome (Electron transparent + titleBarStyle hidden)",
+      "params": {
+        "color_palette": ["#fafafa", "#141516"],
+        "speed": "n/a",
+        "density": "n/a",
+        "opacity": "0.76 light panel / 0.035 dark panel",
+        "blend_mode": "normal"
+      }
+    },
+    "particle_systems": {
+      "enabled": false,
+      "type": "none",
+      "description": "No particle systems anywhere in the app.",
+      "technology": "none",
+      "params": {
+        "count": "0",
+        "shape": "n/a",
+        "size_range": "n/a",
+        "movement_pattern": "n/a",
+        "color_behavior": "n/a",
+        "interaction": "none",
+        "spawn_area": "n/a"
+      }
+    },
+    "3d_elements": {
+      "enabled": false,
+      "type": "none",
+      "description": "No 3D, no WebGL context is created anywhere in the renderer.",
+      "technology": "none",
+      "params": {
+        "renderer": "n/a",
+        "lighting": "n/a",
+        "camera": "n/a",
+        "materials": "n/a",
+        "geometry": "n/a",
+        "post_processing": [],
+        "interaction_model": "n/a"
+      }
+    },
+    "shader_effects": {
+      "enabled": false,
+      "type": "none",
+      "description": "No GLSL or shader-driven rendering.",
+      "technology": "none",
+      "params": {
+        "uniforms": [],
+        "vertex_manipulation": "n/a",
+        "fragment_output": "n/a",
+        "noise_type": "n/a",
+        "distortion": "n/a"
+      }
+    },
+    "scroll_effects": {
+      "parallax": {
+        "enabled": false,
+        "layers": "0",
+        "depth_range": "n/a",
+        "speed_curve": "n/a"
+      },
+      "scroll_triggered_animations": {
+        "enabled": false,
+        "trigger_points": "n/a",
+        "animation_type": "none",
+        "scrub_behavior": "n/a"
+      },
+      "scroll_morphing": {
+        "enabled": true,
+        "description": "The only scroll-linked behavior is chrome state: sticky headers gain a hairline bottom border and a blurred translucent fill once content scrolls beneath them, and `overscroll-behavior-y: none` is set globally so the window never rubber-bands like a web page. This is a native-app cue, not an animation."
+      }
+    },
+    "text_effects": {
+      "type": "none",
+      "description": "No split-letter animation, typewriter, gradient fill, or glitch treatment. Streaming assistant text simply appends; there is no per-character animation.",
+      "technology": "none",
+      "params": {
+        "split_strategy": "n/a",
+        "animation_per_unit": "n/a",
+        "stagger": "n/a",
+        "effect_style": "n/a"
+      }
+    },
+    "cursor_effects": {
+      "enabled": false,
+      "type": "none",
+      "description": "System cursor throughout. The only cursor customization is semantic: `cursor-grab` / `active:cursor-grabbing` on drag handles.",
+      "params": {
+        "shape": "system",
+        "size": "system",
+        "blend_mode": "n/a",
+        "trail": "none",
+        "interaction_zone": "n/a"
+      }
+    },
+    "image_effects": {
+      "type": "none",
+      "description": "Agent and product SVG marks render at native size inside bordered tiles with `object-contain`. No filters, hover distortion, or reveal animation.",
+      "technology": "none",
+      "params": {
+        "filter_pipeline": [],
+        "hover_transform": "none",
+        "reveal_animation": "none",
+        "distortion_type": "n/a"
+      }
+    },
+    "glassmorphism_neumorphism": {
+      "enabled": true,
+      "style": "frosted-layers (restrained, native-material rather than decorative glass)",
+      "params": {
+        "blur_radius": "2px on dialog overlays; medium blur on translucent app chrome (headers, sidebars, `panel` surfaces)",
+        "transparency": "0.76 for light `panel`, 0.035 white for dark `panel`, 0.80 for app header fills, 0.40 black for dialog scrims",
+        "border_treatment": "1px hairline at 9–13% alpha, or `ring-1 ring-border-subtle` on overlays",
+        "shadow_type": "very soft, heavily negative-spread drop shadows; in dark mode replaced by an inset top highlight",
+        "light_source_angle": "top-down (0deg) — consistent with macOS material conventions"
+      }
+    },
+    "canvas_drawings": {
+      "enabled": false,
+      "type": "none",
+      "description": "No `<canvas>` element is used by app UI. Diagram rendering inside chat is delegated to Streamdown/Mermaid, which emits SVG.",
+      "technology": "none",
+      "params": {
+        "draw_method": "n/a",
+        "animation_loop": "n/a",
+        "color_scheme": "n/a",
+        "responsiveness": "n/a",
+        "interaction": "n/a"
+      }
+    },
+    "svg_animations": {
+      "enabled": true,
+      "type": "path-draw",
+      "description": "A single branded flourish: the app's sketch stroke is authored with `pathLength=1` and animated via a `sketch-draw` keyframe that runs `stroke-dashoffset` from 1 to 0 on mount, so the mark appears to be drawn by hand once. It plays once and is never repeated.",
+      "params": {
+        "animation_method": "CSS `@keyframes` on `stroke-dashoffset`",
+        "path_morphing": "none",
+        "stroke_animation": "dashoffset draw-in, single pass, on mount only",
+        "filter_effects": "none"
+      }
+    },
+    "composite_notes": "This system's defining trait is what it refuses. There is no WebGL, no canvas, no particles, no scroll choreography, no cursor work, no gradient anywhere in the UI, and exactly one branded animation in the whole app. Everything that reads as 'polish' is native-material mimicry executed in plain CSS: translucent chrome that lets the desktop through, hairline borders at single-digit alpha, an inset top highlight standing in for a cast shadow in dark mode, and spring-driven layout continuity from framer-motion. The correct way to extend this DNA is to add restraint and precision — a tighter row, a better-aligned control, a more truthful empty state — not to add an effect. Two structural traits are easy to miss and important to preserve: density is a mode-switched dimension (the entire type and spacing scale shrinks one step under `data-workspace-mode=work|power`), and native window chrome is part of the design system (frameless transparent windows on macOS, traffic lights at (16, 18), explicit drag regions, and layouts that reserve the traffic-light inset)."
+  }
+}

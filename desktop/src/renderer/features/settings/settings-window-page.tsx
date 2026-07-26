@@ -52,7 +52,7 @@ export function SettingsWindowPage() {
   }, [deleteAllChatsMutation, queryClient, t, toast]);
 
   return (
-    <div className="flex h-svh min-h-0 overflow-auto bg-background">
+    <div className="flex h-svh min-h-0 overflow-hidden bg-background">
       <SettingsPage
         agentSettings={agentSettings}
         availableAgentOptions={availableAgentOptions}

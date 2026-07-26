@@ -124,7 +124,6 @@ export function MobileViewSettings() {
             className="w-56"
             disabled={isSaving || listenAddresses.length === 0}
             onChange={(event) => void setHost(event.currentTarget.value)}
-            selectClassName="bg-background"
             size="sm"
             value={state.host}
           >
@@ -154,7 +153,7 @@ export function MobileViewSettings() {
         after={
           <Input
             aria-label={t("settings.mobile.portTitle")}
-            className="h-8 w-40 bg-background text-sm"
+            className="h-8 w-40 text-sm"
             disabled={isSaving}
             max={65_535}
             min={0}

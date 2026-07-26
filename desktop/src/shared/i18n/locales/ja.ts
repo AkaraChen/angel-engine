@@ -240,6 +240,11 @@ export const ja = {
         title: "危険エリア",
       },
       description: "デスクトップワークスペースの動作を設定します。",
+      groups: {
+        connectivity: "接続",
+        data: "データ",
+        general: "一般",
+      },
       mobile: {
         copied: "コピーしました",
         copy: "コピー",
@@ -266,6 +271,18 @@ export const ja = {
           "ペアリングパスワードを設定するとモバイルアクセスを有効にできます。",
         urlPending: "サーバーを起動しています…",
         urlTitle: "モバイル URL",
+      },
+      tabDescriptions: {
+        agents:
+          "セレクターに表示するコーディングエージェントと、その並び順を選びます。",
+        appearance: "デスクトップアプリのテーマと表示言語です。",
+        archived:
+          "アーカイブ済みセッションを復元するか、ワークツリーごと完全に削除します。",
+        danger:
+          "このコンピューターに保存されたすべてのチャットに影響する、取り消せない操作です。",
+        mobile:
+          "ローカルネットワーク経由で、このコンピューターからモバイル版ウェブアプリを配信します。",
+        workspace: "作業中の入力欄とワークツリーの動作です。",
       },
       tabs: {
         agents: "Agents",
