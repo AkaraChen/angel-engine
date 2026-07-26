@@ -167,7 +167,7 @@ export function createProjectWorktree(
   });
 }
 
-function managedWorktreeRoot() {
+export function managedWorktreeRoot() {
   return path.join(os.homedir(), ".angel-engine", "worktrees");
 }
 

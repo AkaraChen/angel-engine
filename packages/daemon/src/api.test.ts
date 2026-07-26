@@ -227,6 +227,29 @@ describe("daemon chat streams", () => {
   });
 });
 
+describe("managed worktrees", () => {
+  it("rejects deleting a path outside the managed worktree root", async () => {
+    const app = new Hono();
+    app.onError((error, context) =>
+      error instanceof DaemonError
+        ? context.json({ code: error.code }, error.status)
+        : context.json({ code: "internal" }, 500),
+    );
+    registerApi(app, fakeDaemonRuntime(), { publish: vi.fn() });
+
+    const response = await app.request("/api/worktrees/managed/delete", {
+      body: JSON.stringify({ paths: ["/tmp/not-managed"] }),
+      headers: { "content-type": "application/json" },
+      method: "POST",
+    });
+
+    expect(response.status).toBe(400);
+    await expect(response.json()).resolves.toEqual({
+      code: "worktree-not-managed",
+    });
+  });
+});
+
 type ChatEngineValue = Omit<Effect.Effect.Success<typeof ChatEngine>, "_tag">;
 
 function fakeDaemonRuntime(
