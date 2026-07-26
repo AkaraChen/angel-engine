@@ -21,6 +21,14 @@ export function WorkspaceDraftPage({ projectId }: { projectId?: string }) {
   );
 }
 
+export function WorkspaceFleetPage() {
+  const api = useApi();
+
+  return (
+    <WorkspacePageContent api={api} currentRoutePath="/fleet" fleetActive />
+  );
+}
+
 export function WorkspaceChatPage({
   chatId,
   projectId,

@@ -11,6 +11,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { AgentCatalogProvider } from "@/features/agents/agent-catalog";
 import { SettingsWindowPage } from "@/features/settings/settings-window-page";
 import { DaemonProvider } from "@/platform/daemon";
+import { DaemonEventSync } from "@/platform/daemon-events";
 
 function AppProviders({ children }: PropsWithChildren) {
   return (
@@ -37,6 +38,7 @@ function AppProviders({ children }: PropsWithChildren) {
 export function App() {
   return (
     <AppProviders>
+      <DaemonEventSync />
       <AppRouter />
     </AppProviders>
   );

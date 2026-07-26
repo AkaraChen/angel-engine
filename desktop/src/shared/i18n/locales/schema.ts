@@ -99,6 +99,41 @@ export interface LocaleResourceTranslationSidebarDateGroups {
   yesterday: string;
 }
 
+export interface LocaleResourceTranslationFleetGroups {
+  attention: string;
+  done: string;
+  running: string;
+}
+
+export interface LocaleResourceTranslationFleetSegments {
+  all: string;
+  attention: string;
+  done: string;
+  running: string;
+}
+
+export interface LocaleResourceTranslationFleetStatus {
+  done: string;
+  failed: string;
+  running: string;
+  stuck: string;
+  waitingForYou: string;
+}
+
+export interface LocaleResourceTranslationFleet {
+  allProjects: string;
+  disconnected: string;
+  empty: string;
+  filterProject: string;
+  filterSegments: string;
+  groups: LocaleResourceTranslationFleetGroups;
+  loading: string;
+  segments: LocaleResourceTranslationFleetSegments;
+  standaloneProject: string;
+  status: LocaleResourceTranslationFleetStatus;
+  title: string;
+}
+
 export interface LocaleResourceTranslationSidebar {
   addProject: string;
   archiveChat: string;
@@ -507,6 +542,7 @@ export interface LocaleResourceTranslation {
   common: LocaleResourceTranslationCommon;
   attachment: LocaleResourceTranslationAttachment;
   workspace: LocaleResourceTranslationWorkspace;
+  fleet: LocaleResourceTranslationFleet;
   sidebar: LocaleResourceTranslationSidebar;
   settings: LocaleResourceTranslationSettings;
   updates: LocaleResourceTranslationUpdates;

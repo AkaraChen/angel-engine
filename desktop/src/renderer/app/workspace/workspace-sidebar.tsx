@@ -11,6 +11,7 @@ import {
   Chats as MessageSquare,
   ChatCircleText as MessageSquarePlus,
   GearSix as Settings,
+  SquaresFour,
 } from "@phosphor-icons/react";
 import is from "@sindresorhus/is";
 import { m } from "framer-motion";
@@ -58,6 +59,7 @@ const WORKSPACE_MODES: Array<{
 
 interface WorkspaceSidebarProps {
   chats: Chat[];
+  fleetActive: boolean;
   isChatsLoading: boolean;
   isMacOS: boolean;
   isProjectsLoading: boolean;
@@ -66,6 +68,7 @@ interface WorkspaceSidebarProps {
   onCreateProjectChat: (project: Project) => MaybeAsync;
   onCreateStandaloneChat: () => MaybeAsync;
   onOpenChat: (chat: Chat) => MaybeAsync;
+  onOpenFleet: () => MaybeAsync;
   onOpenSettings: () => MaybeAsync;
   onOpenWorktree: (
     project: Project,
@@ -213,6 +216,7 @@ export function WorkspaceFloatingSidebar(
 
 function WorkspaceSidebarContent({
   chats,
+  fleetActive,
   isChatsLoading,
   isMacOS,
   isProjectsLoading,
@@ -221,6 +225,7 @@ function WorkspaceSidebarContent({
   onCreateProjectChat,
   onCreateStandaloneChat,
   onOpenChat,
+  onOpenFleet,
   onOpenSettings,
   onOpenWorktree,
   onShowChatContextMenu,
@@ -279,6 +284,15 @@ function WorkspaceSidebarContent({
             >
               <MessageSquarePlus weight="duotone" />
               <span>{t("sidebar.newChat")}</span>
+            </WorkspaceSidebarMenuButton>
+          </AnimatedSidebarMenuItem>
+          <AnimatedSidebarMenuItem>
+            <WorkspaceSidebarMenuButton
+              isActive={fleetActive}
+              onClick={() => void onOpenFleet()}
+            >
+              <SquaresFour weight="duotone" />
+              <span>{t("fleet.title")}</span>
             </WorkspaceSidebarMenuButton>
           </AnimatedSidebarMenuItem>
         </SidebarMenu>

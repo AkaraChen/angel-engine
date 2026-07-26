@@ -12,6 +12,7 @@ import {
 } from "@/app/workspace/workspace-draft-agent-config";
 import {
   chatRoutePath,
+  fleetRoutePath,
   lastOpenedTargetPath,
   projectDraftRoutePath,
 } from "@/app/workspace/workspace-route-paths";
@@ -251,6 +252,37 @@ export function useWorkspaceNavigation(model: WorkspacePageModel) {
     [navigateToDraft],
   );
 
+  const openFleet = useCallback(() => {
+    if (location !== fleetRoutePath) navigate(fleetRoutePath);
+  }, [location, navigate]);
+
+  /**
+   * Fleet spans every project, so a row can point at a chat the current
+   * workspace mode cannot reach. Switch to the mode that owns the chat before
+   * navigating instead of dropping the user on a route its sidebar denies.
+   */
+  const openChatFromFleet = useCallback(
+    (chat: Chat) => {
+      const nextWorkspaceMode: WorkspaceMode = !is.nonEmptyString(
+        chat.projectId,
+      )
+        ? "chat"
+        : isProjectWorkspaceMode(workspaceMode)
+          ? workspaceMode
+          : "work";
+      if (nextWorkspaceMode !== workspaceMode) {
+        setWorkspaceMode(nextWorkspaceMode);
+      }
+      setPowerDraftWorktree(undefined);
+      registerChatTab(chat, nextWorkspaceMode);
+      const path = chatRoutePath(chat, {
+        includeProject: isProjectWorkspaceMode(nextWorkspaceMode),
+      });
+      if (location !== path) navigate(path);
+    },
+    [location, navigate, registerChatTab, setWorkspaceMode, workspaceMode],
+  );
+
   const openSettings = useCallback(() => {
     window.desktopWindow.openSettings();
   }, []);
@@ -268,6 +300,8 @@ export function useWorkspaceNavigation(model: WorkspacePageModel) {
     navigateToChat,
     navigateToDraft,
     openChat,
+    openChatFromFleet,
+    openFleet,
     openPowerWorktree,
     openSettings,
     registerChatTab,
