@@ -70,6 +70,11 @@ function PlanMessagePart({ plan }: { plan: ChatPlanData }) {
       ? plan.text
       : undefined;
   const hasDetails = plan.entries.length > 0 || planText !== undefined;
+  // Review plans stream as text deltas. Hold the collapsible body (markdown,
+  // path, entries, actions) until the turn finishes. Todo checklists still
+  // update live during a run.
+  const planDetailsReady = !isLastMessage || !isRunning || isTodoPlan;
+  const showDetails = hasDetails && planDetailsReady;
   const target = findPlanModeToggleTarget([
     {
       canSet: chatOptions.canSetMode,
@@ -92,7 +97,10 @@ function PlanMessagePart({ plan }: { plan: ChatPlanData }) {
     Boolean(target?.buildMode);
   const handoffAgents = chatOptions.runtimeOptions;
   const canHandoff =
-    plan.kind === "review" && hasDetails && handoffAgents.length > 0;
+    plan.kind === "review" &&
+    hasDetails &&
+    !isRunning &&
+    handoffAgents.length > 0;
 
   const handoffToAgent = (runtime: AgentRuntime) => {
     handoffPlan(runtime, buildPlanHandoffPrompt(plan, t)).catch((error) => {
@@ -150,7 +158,7 @@ function PlanMessagePart({ plan }: { plan: ChatPlanData }) {
             text-left
           `,
         )}
-        disabled={!hasDetails}
+        disabled={!showDetails}
         type="button"
       >
         <ListChecks className="size-3.5 shrink-0 text-muted-foreground" />
@@ -179,7 +187,7 @@ function PlanMessagePart({ plan }: { plan: ChatPlanData }) {
             ) : null}
           </div>
         </div>
-        {hasDetails ? (
+        {showDetails ? (
           <ChevronDown
             className={cn(
               "size-4 shrink-0 text-muted-foreground transition-transform",
@@ -188,7 +196,7 @@ function PlanMessagePart({ plan }: { plan: ChatPlanData }) {
           />
         ) : null}
       </CollapsibleTrigger>
-      {hasDetails ? (
+      {showDetails ? (
         <CollapsibleContent
           className="
             overflow-hidden
@@ -247,7 +255,7 @@ function PlanMessagePart({ plan }: { plan: ChatPlanData }) {
               </ol>
             ) : null}
             {isLastMessage && (canStartImplementation || canHandoff) ? (
-              <div className="flex justify-end gap-2 border-t border-border pt-2">
+              <div className="flex justify-end gap-2">
                 {canHandoff ? (
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
@@ -297,7 +305,7 @@ function PlanMessagePart({ plan }: { plan: ChatPlanData }) {
                     }}
                     size="sm"
                     type="button"
-                    variant="outline"
+                    variant="default"
                   >
                     {startingImplementation ? (
                       <Loader2 className="size-3.5 animate-spin" />

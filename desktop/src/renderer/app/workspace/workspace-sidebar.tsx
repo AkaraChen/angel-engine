@@ -9,7 +9,7 @@ import {
   Folder,
   Lightning,
   Chats as MessageSquare,
-  ChatCircleText as MessageSquarePlus,
+  Plus,
   GearSix as Settings,
   SquaresFour,
 } from "@phosphor-icons/react";
@@ -279,9 +279,22 @@ function WorkspaceSidebarContent({
         <SidebarMenu className="px-2 py-2.5">
           <AnimatedSidebarMenuItem>
             <WorkspaceSidebarMenuButton
+              className="
+                bg-status-success text-white
+                hover:bg-status-success/90 hover:text-white
+                focus-visible:bg-status-success/90
+                active:bg-status-success/85 active:text-white
+                dark:bg-status-success dark:text-white
+                dark:hover:bg-status-success/90
+                dark:focus-visible:bg-status-success/90
+                dark:active:bg-status-success/85
+                [&_svg]:text-white
+                data-active:bg-status-success data-active:text-white
+                data-active:[&_svg]:text-white
+              "
               onClick={() => void createChatFromNewButton()}
             >
-              <MessageSquarePlus weight="duotone" />
+              <Plus weight="bold" />
               <span>{t("sidebar.newChat")}</span>
             </WorkspaceSidebarMenuButton>
           </AnimatedSidebarMenuItem>

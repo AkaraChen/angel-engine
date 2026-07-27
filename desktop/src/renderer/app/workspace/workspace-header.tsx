@@ -79,7 +79,7 @@ export function WorkspaceHeader({
       >
         {is.nonEmptyString(breadcrumbProject) ? (
           <>
-            <span className="shrink-0 font-normal text-muted-foreground">
+            <span className="shrink-0 font-semibold text-status-success">
               {breadcrumbProject}
             </span>
             <span
