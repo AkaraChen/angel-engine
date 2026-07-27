@@ -213,18 +213,29 @@
     pointer-events: none;
   }
 
+  /* One band wrapping a circular track: the layer is two track widths wide and
+     carries a gradient that repeats every track width, so sliding it right by
+     exactly one period is seamless — the part of the band leaving on the right
+     is the same ink reappearing on the left. A rigid segment cannot do this;
+     spacing it close enough to hand off at the edge also doubles it up
+     mid-track. */
   .workspace-streaming-line::after {
-    animation: workspace-streaming-sweep 1.6s cubic-bezier(0.65, 0, 0.35, 1)
-      infinite alternate;
-    background: var(--primary);
-    border-radius: 9999px;
+    animation: workspace-streaming-sweep 2.6s linear infinite;
+    /* Stops are in layer percent, so double them for track percent: a solid
+       42%-wide band (matching the old segment) then a 58% gap. Both stops are
+       hard — the band keeps full opacity right up to each end. */
+    background: repeating-linear-gradient(
+      to right,
+      var(--primary) 0 21%,
+      transparent 21% 50%
+    );
     bottom: 0;
     content: "";
     left: 0;
     position: absolute;
     top: 0;
-    transform: translateX(0);
-    width: 42%;
+    transform: translateX(-50%);
+    width: 200%;
   }
 
   @media (prefers-reduced-motion: reduce) {
@@ -363,12 +374,14 @@
   color: color-mix(in oklch, var(--primary-foreground) 72%, transparent);
 }
 
+/* 50% of the 200%-wide layer is exactly one gradient period (one track width),
+   so this shifts the band right by one full track and loops without a seam. */
 @keyframes workspace-streaming-sweep {
   from {
-    transform: translateX(0);
+    transform: translateX(-50%);
   }
   to {
-    transform: translateX(138%);
+    transform: translateX(0);
   }
 }
 
