@@ -8,6 +8,7 @@ import type {
 
 import type { QueryClient } from "@tanstack/react-query";
 import type { ApiClient } from "@/platform/api-client";
+import is from "@sindresorhus/is";
 import { mutationOptions, queryOptions } from "@tanstack/react-query";
 import { queryKeys } from "@/platform/query-keys";
 
@@ -44,6 +45,22 @@ interface AgentSkillsQueryParams {
   projectPath?: string | null;
   runtime?: string | null;
   staleTime?: number;
+}
+
+interface GitHubItemsQueryParams {
+  api: ApiClient;
+  cwd?: string;
+  enabled?: boolean;
+  limit?: number;
+  query: string;
+  staleTime?: number;
+}
+
+interface GitHubResolveQueryParams {
+  api: ApiClient;
+  enabled?: boolean;
+  staleTime?: number;
+  url: string | null;
 }
 
 interface ChatPrewarmQueryParams {
@@ -190,6 +207,44 @@ export function agentSkillsQueryOptions({
         runtime: runtime ?? "",
       }),
     queryKey: queryKeys.agents.skills(runtime ?? null, projectPath ?? null),
+    retry: false,
+    staleTime,
+  });
+}
+
+export function githubItemsQueryOptions({
+  api,
+  cwd,
+  enabled = true,
+  limit,
+  query,
+  staleTime = 15_000,
+}: GitHubItemsQueryParams) {
+  return queryOptions({
+    enabled: enabled && is.nonEmptyString(cwd),
+    placeholderData: (previous) => previous,
+    queryFn: async () =>
+      api.github.listItems({
+        cwd: cwd ?? "",
+        limit,
+        query: is.nonEmptyString(query) ? query : undefined,
+      }),
+    queryKey: queryKeys.github.items(cwd ?? null, query),
+    retry: false,
+    staleTime,
+  });
+}
+
+export function githubResolveQueryOptions({
+  api,
+  enabled = true,
+  staleTime = 60_000,
+  url,
+}: GitHubResolveQueryParams) {
+  return queryOptions({
+    enabled: enabled && is.nonEmptyString(url),
+    queryFn: async () => api.github.resolveUrl({ url: url ?? "" }),
+    queryKey: queryKeys.github.resolve(url),
     retry: false,
     staleTime,
   });

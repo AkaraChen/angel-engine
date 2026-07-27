@@ -42,6 +42,7 @@ import {
   workspaceToolGitCommitInputSchema,
   workspaceToolWriteFileInputSchema,
 } from "@angel-engine/daemon-api/workspace-tools";
+import { listGitHubItems } from "./features/github/list";
 import { resolveGitHubUrl } from "./features/github/resolve";
 import { listAvailableAgents } from "./features/agents/availability";
 import {
@@ -408,6 +409,17 @@ export function registerApi(
       throw DaemonError.invalidRequest("GitHub URL is required.");
     return context.json(await run(resolveGitHubUrl(input)));
   });
+  app.get("/api/github/items", async (context) =>
+    context.json(
+      await run(
+        listGitHubItems({
+          cwd: requireQuery(context.req.query("cwd"), "cwd"),
+          limit: optionalNumber(context.req.query("limit")),
+          query: context.req.query("query"),
+        }),
+      ),
+    ),
+  );
 
   app.get("/api/projects", async (context) =>
     context.json(await run(listProjects())),

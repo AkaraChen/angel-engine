@@ -22,6 +22,29 @@ export interface GitHubResolvedItem {
   url: string;
 }
 
+export interface GitHubListItemsInput {
+  cwd: string;
+  limit?: number;
+  query?: string;
+}
+
+export interface GitHubListItem {
+  author: string | null;
+  isDraft?: boolean;
+  kind: GitHubItemKind;
+  number: number;
+  owner: string;
+  repo: string;
+  state: string;
+  title: string;
+  updatedAt: string;
+  url: string;
+}
+
+export interface GitHubListItemsResult {
+  items: GitHubListItem[];
+}
+
 export const githubResolveUrlInputSchema = arkType({
   "+": "ignore",
   url: "string > 0",

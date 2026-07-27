@@ -347,11 +347,11 @@ export const ko = {
       attachFiles: "파일 첨부",
       attachGitHub: "GitHub 이슈 또는 PR 첨부",
       attachGitHubConfirm: "첨부",
-      attachGitHubDescription:
-        "github.com 이슈 또는 PR URL을 붙여넣으세요. 로컬 gh CLI로 가져옵니다.",
+      attachGitHubEmpty: "이슈나 PR을 찾을 수 없습니다.",
       attachGitHubLoading: "가져오는 중…",
-      attachGitHubPlaceholder: "https://github.com/owner/repo/issues/123",
+      attachGitHubPlaceholder: "이슈 및 PR 검색…",
       attachGitHubTitle: "GitHub에서 첨부",
+      attachGitHubUpdated: "{{time}} 업데이트됨",
       attachmentErrors: {
         accept: "허용된 형식과 일치하는 파일이 없습니다.",
         fileRead: "선택한 파일을 읽을 수 없습니다.",

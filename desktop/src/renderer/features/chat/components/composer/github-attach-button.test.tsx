@@ -1,10 +1,13 @@
 // @vitest-environment jsdom
 
 import type {
+  GitHubListItemsInput,
+  GitHubListItemsResult,
   GitHubResolveUrlInput,
   GitHubResolvedItem,
 } from "@angel-engine/daemon-api/github";
 import type { FC, ReactNode } from "react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   act,
   cleanup,
@@ -18,16 +21,33 @@ import type { ComposerGitHubAttachment } from "./github-attachments";
 import { PromptGitHubAttachButton } from "./github-attach-button";
 
 type ResolveUrl = (input: GitHubResolveUrlInput) => Promise<GitHubResolvedItem>;
+type ListItems = (
+  input: GitHubListItemsInput,
+) => Promise<GitHubListItemsResult>;
 
 const mocks = vi.hoisted(() => ({
+  listItems: vi.fn<ListItems>(),
+  projectPath: undefined as string | undefined,
   resolveUrl: vi.fn<ResolveUrl>(),
 }));
 
 vi.mock("@/platform/use-api", () => ({
   useApi: () => ({
     github: {
+      listItems: mocks.listItems,
       resolveUrl: mocks.resolveUrl,
     },
+  }),
+}));
+
+vi.mock("@/features/chat/runtime/chat-environment-context", () => ({
+  useChatEnvironment: () => ({
+    availableCommands: [],
+    availableCommandsLoading: false,
+    availableSkills: [],
+    availableSkillsLoading: false,
+    isProjectChat: mocks.projectPath !== undefined,
+    projectPath: mocks.projectPath,
   }),
 }));
 
@@ -102,7 +122,48 @@ const secondIssue: GitHubResolvedItem = {
   url: "https://github.com/acme/widgets/issues/2",
 };
 
+const listResult: GitHubListItemsResult = {
+  items: [
+    {
+      author: "bob",
+      isDraft: false,
+      kind: "pullRequest",
+      number: 7,
+      owner: "acme",
+      repo: "widgets",
+      state: "OPEN",
+      title: "Add widget spinner",
+      updatedAt: "2026-07-24T10:00:00Z",
+      url: "https://github.com/acme/widgets/pull/7",
+    },
+    {
+      author: "alice",
+      kind: "issue",
+      number: 1,
+      owner: "acme",
+      repo: "widgets",
+      state: "OPEN",
+      title: "First issue",
+      updatedAt: "2026-07-20T10:00:00Z",
+      url: firstIssue.url,
+    },
+  ],
+};
+
+// cmdk observes its list container and scrolls the active item into view;
+// jsdom implements neither.
+class ResizeObserverStub {
+  disconnect() {}
+  observe() {}
+  unobserve() {}
+}
+
 beforeEach(() => {
+  globalThis.ResizeObserver = ResizeObserverStub;
+  Element.prototype.scrollIntoView = () => undefined;
+  mocks.projectPath = "/repos/widgets";
+  mocks.listItems.mockReset();
+  mocks.listItems.mockResolvedValue(listResult);
   mocks.resolveUrl.mockReset();
 });
 
@@ -111,20 +172,84 @@ afterEach(() => {
 });
 
 describe("PromptGitHubAttachButton", () => {
-  it("attaches a resolved GitHub item and closes the dialog", async () => {
+  it("lists repository items and attaches the selected one", async () => {
     mocks.resolveUrl.mockResolvedValue(firstIssue);
     const onAttached = vi.fn<(attachment: ComposerGitHubAttachment) => void>();
 
-    render(<PromptGitHubAttachButton onAttached={onAttached} />);
+    renderButton(onAttached);
     openDialog();
-    submitUrl(firstIssue.url);
 
+    const item = await screen.findByText("First issue");
+    expect(screen.getByText("Add widget spinner")).toBeDefined();
+    expect(mocks.listItems).toHaveBeenCalledWith({
+      cwd: "/repos/widgets",
+      limit: 30,
+      query: undefined,
+    });
+
+    fireEvent.click(item);
     await waitFor(() => {
       expect(onAttached).toHaveBeenCalledTimes(1);
     });
+    expect(mocks.resolveUrl).toHaveBeenCalledWith({ url: firstIssue.url });
     const attachment = onAttached.mock.lastCall?.[0];
     expect(attachment).toMatchObject(firstIssue);
     expect(attachment?.id).toMatch(/^github-issue-acme-widgets-1-/);
+    expect(screen.queryByRole("dialog")).toBeNull();
+  });
+
+  it("renders nothing without an active project", () => {
+    mocks.projectPath = undefined;
+
+    renderButton(vi.fn());
+
+    expect(screen.queryByTitle("composer.attachGitHub")).toBeNull();
+    expect(mocks.listItems).not.toHaveBeenCalled();
+  });
+
+  it("searches the repository with the debounced query", async () => {
+    const onAttached = vi.fn<(attachment: ComposerGitHubAttachment) => void>();
+
+    renderButton(onAttached);
+    openDialog();
+    await screen.findByText("First issue");
+
+    fireEvent.change(
+      screen.getByPlaceholderText("composer.attachGitHubPlaceholder"),
+      { target: { value: "spinner" } },
+    );
+
+    await waitFor(() => {
+      expect(mocks.listItems).toHaveBeenCalledWith({
+        cwd: "/repos/widgets",
+        limit: 30,
+        query: "spinner",
+      });
+    });
+  });
+
+  it("previews a pasted URL outside the list and attaches it without refetching", async () => {
+    mocks.resolveUrl.mockResolvedValue(secondIssue);
+    const onAttached = vi.fn<(attachment: ComposerGitHubAttachment) => void>();
+
+    renderButton(onAttached);
+    openDialog();
+    fireEvent.change(
+      screen.getByPlaceholderText("composer.attachGitHubPlaceholder"),
+      { target: { value: secondIssue.url } },
+    );
+
+    await screen.findByText(secondIssue.title);
+    expect(mocks.resolveUrl).toHaveBeenCalledWith({ url: secondIssue.url });
+    expect(screen.getByText(/#2 · acme\/widgets · @alice/)).toBeDefined();
+    expect(screen.queryByRole("option", { name: /Second issue/ })).toBeNull();
+
+    fireEvent.click(screen.getByText("composer.attachGitHubConfirm"));
+    await waitFor(() => {
+      expect(onAttached).toHaveBeenCalledTimes(1);
+    });
+    expect(mocks.resolveUrl).toHaveBeenCalledTimes(1);
+    expect(onAttached.mock.lastCall?.[0]).toMatchObject(secondIssue);
     expect(screen.queryByRole("dialog")).toBeNull();
   });
 
@@ -136,13 +261,13 @@ describe("PromptGitHubAttachButton", () => {
       .mockImplementationOnce(() => secondRequest.promise);
     const onAttached = vi.fn<(attachment: ComposerGitHubAttachment) => void>();
 
-    render(<PromptGitHubAttachButton onAttached={onAttached} />);
+    renderButton(onAttached);
     openDialog();
-    submitUrl(firstIssue.url);
+    fireEvent.click(await screen.findByText("First issue"));
     fireEvent.click(screen.getByRole("button", { name: "close-dialog" }));
 
     openDialog();
-    submitUrl(secondIssue.url);
+    fireEvent.click(await screen.findByText("Add widget spinner"));
 
     await act(async () => {
       firstRequest.resolve(firstIssue);
@@ -162,17 +287,22 @@ describe("PromptGitHubAttachButton", () => {
   });
 });
 
+function renderButton(
+  onAttached: (attachment: ComposerGitHubAttachment) => void,
+) {
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
+  return render(
+    <QueryClientProvider client={queryClient}>
+      <PromptGitHubAttachButton onAttached={onAttached} />
+    </QueryClientProvider>,
+  );
+}
+
 function openDialog() {
   fireEvent.click(screen.getByTitle("composer.attachGitHub"));
   expect(screen.getByRole("dialog")).toBeDefined();
-}
-
-function submitUrl(url: string) {
-  const input = screen.getByPlaceholderText("composer.attachGitHubPlaceholder");
-  fireEvent.change(input, { target: { value: url } });
-  const form = input.closest("form");
-  expect(form).not.toBeNull();
-  fireEvent.submit(form as HTMLFormElement);
 }
 
 function deferred<T>() {

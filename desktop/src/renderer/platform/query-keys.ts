@@ -21,6 +21,11 @@ export const queryKeys = {
     runtimeConfig: (runtime: string | null, cwd: string | null) =>
       ["chats", "runtime-config", runtime, cwd] as const,
   },
+  github: {
+    items: (cwd: string | null, query: string) =>
+      ["github", "items", cwd, query] as const,
+    resolve: (url: string | null) => ["github", "resolve", url] as const,
+  },
   projects: {
     all: () => ["projects"] as const,
     config: (id: string | null) => ["projects", "config", id] as const,
