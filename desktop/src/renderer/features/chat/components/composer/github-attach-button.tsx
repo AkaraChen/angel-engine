@@ -115,7 +115,7 @@ export const PromptGitHubAttachButton: FC<PromptGitHubAttachButtonProps> = ({
         type="button"
         variant="ghost"
       >
-        <GithubLogo />
+        <GithubLogo weight="duotone" />
         <span className="sr-only">{t("composer.attachGitHub")}</span>
       </Button>
       <DialogContent className="gap-4 rounded-2xl sm:max-w-md">

@@ -32,7 +32,7 @@ export function PromptAttachmentButton() {
       type="button"
       variant="ghost"
     >
-      <Paperclip />
+      <Paperclip weight="duotone" />
       <span className="sr-only">{t("composer.attachFiles")}</span>
     </Button>
   );
