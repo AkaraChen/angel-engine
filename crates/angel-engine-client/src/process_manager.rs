@@ -116,11 +116,32 @@ fn collect_descendants(
 mod tests {
     use std::net::TcpListener;
     use std::process::{Command, Stdio};
+    use std::sync::{Mutex, MutexGuard};
 
     use super::*;
 
+    /// Serializes the tests that fork a child against the test that enumerates
+    /// listening sockets.
+    ///
+    /// On Linux, socket ownership is resolved by walking every `/proc/<pid>/fd`
+    /// and keeping the *last* process seen for an inode. A freshly forked child
+    /// still holds a copy of our listening fd until it reaches `exec` and the
+    /// `CLOEXEC` flag closes it, so a scan that lands in that window attributes
+    /// our port to the child instead of to us — and the assertion below misses.
+    /// These tests run on separate threads of one process, so a shared lock is
+    /// enough to keep the two out of each other's way.
+    static PROC_SCAN: Mutex<()> = Mutex::new(());
+
+    /// A panicking test would otherwise poison the lock and cascade into
+    /// unrelated failures; the guarded data is `()`, so the state is always fine
+    /// to reuse.
+    fn proc_scan_guard() -> MutexGuard<'static, ()> {
+        PROC_SCAN.lock().unwrap_or_else(|error| error.into_inner())
+    }
+
     #[test]
     fn lists_a_child_process() {
+        let _guard = proc_scan_guard();
         let mut child = child_sleep();
         let child_pid = child.id();
 
@@ -133,6 +154,7 @@ mod tests {
 
     #[test]
     fn reports_process_liveness() {
+        let _guard = proc_scan_guard();
         assert!(process_is_running(std::process::id()));
 
         let mut child = child_sleep();
@@ -146,6 +168,7 @@ mod tests {
 
     #[test]
     fn lists_a_tcp_listener_for_the_current_process() {
+        let _guard = proc_scan_guard();
         let listener = TcpListener::bind(("127.0.0.1", 0)).unwrap();
         let port = listener.local_addr().unwrap().port();
 
