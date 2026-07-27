@@ -221,12 +221,12 @@
      mid-track. */
   .workspace-streaming-line::after {
     animation: workspace-streaming-sweep 2.6s linear infinite;
-    /* Stops are in layer percent, so double them for track percent: a 42%-wide
-       band (matching the old segment) with 2% soft ends, then a 58% gap. */
+    /* Stops are in layer percent, so double them for track percent: a solid
+       42%-wide band (matching the old segment) then a 58% gap. Both stops are
+       hard — the band keeps full opacity right up to each end. */
     background: repeating-linear-gradient(
       to right,
-      transparent 0,
-      var(--primary) 1% 20%,
+      var(--primary) 0 21%,
       transparent 21% 50%
     );
     bottom: 0;
