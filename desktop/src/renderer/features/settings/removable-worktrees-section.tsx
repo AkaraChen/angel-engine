@@ -137,14 +137,16 @@ export const RemovableWorktreesSection: FC<RemovableWorktreesSectionProps> = ({
 
   return (
     <section aria-labelledby="removable-worktrees-title" className="space-y-3">
-      <div className="flex items-center justify-between gap-4">
-        <h2
-          className="min-w-0 truncate text-sm font-medium"
-          id="removable-worktrees-title"
-        >
+      <div className="space-y-2">
+        <h2 className="text-sm font-medium" id="removable-worktrees-title">
           {t("settings.archived.removableWorktrees.title")}
         </h2>
-        <div className="flex shrink-0 items-center gap-2">
+        {/*
+          Actions sit on their own row: the settings window can be as narrow as
+          680px, and translated labels (fr/de) overflow a single title+actions
+          line long before that. Wrapping keeps every action reachable.
+        */}
+        <div className="flex flex-wrap items-center justify-end gap-2">
           {bulkMode ? (
             <Button
               disabled={
