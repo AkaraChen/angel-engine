@@ -23,6 +23,10 @@ import type {
   WorkspaceToolSurfaceSnapshotSetInput,
   WorkspaceToolSurfaceState,
 } from "../../shared/workspace-tool-surface";
+import type {
+  DesktopUpdateChannelSetInput,
+  DesktopUpdateStatus,
+} from "../../shared/update-channel";
 import { contextBridge, ipcRenderer } from "electron";
 import {
   DESKTOP_ACTIVE_CHAT_SET_CHANNEL,
@@ -36,7 +40,11 @@ import {
   DESKTOP_OPEN_CHAT_FROM_NOTIFICATION_CHANNEL,
   DESKTOP_SETTINGS_OPEN_CHANNEL,
   DESKTOP_THEME_SET_CHANNEL,
+  DESKTOP_UPDATE_CHANNEL_SET_CHANNEL,
+  DESKTOP_UPDATE_CHECK_CHANNEL,
   DESKTOP_UPDATE_DOWNLOADED_CHANNEL,
+  DESKTOP_UPDATE_STATUS_CHANGED_CHANNEL,
+  DESKTOP_UPDATE_STATUS_GET_CHANNEL,
   DESKTOP_WINDOW_CLOSE_CURRENT_CHANNEL,
   DESKTOP_WORKSPACE_TOOL_CONTEXT_SET_CHANNEL,
   DESKTOP_WORKSPACE_TOOL_INSTANCE_CLOSE_CHANNEL,
@@ -133,6 +141,20 @@ export function exposeDesktopWindowBridge() {
         ipcRenderer.removeListener(DESKTOP_UPDATE_DOWNLOADED_CHANNEL, listener);
       };
     },
+    onUpdateStatusChanged(handler: (status: DesktopUpdateStatus) => void) {
+      const listener = (_event: IpcRendererEvent, payload: unknown) => {
+        if (!isUpdateStatus(payload)) return;
+        handler(payload);
+      };
+
+      ipcRenderer.on(DESKTOP_UPDATE_STATUS_CHANGED_CHANNEL, listener);
+      return () => {
+        ipcRenderer.removeListener(
+          DESKTOP_UPDATE_STATUS_CHANGED_CHANNEL,
+          listener,
+        );
+      };
+    },
     onWorkspaceToolWindowClosed(handler: (toolId: string) => void) {
       const listener = (
         _event: IpcRendererEvent,
@@ -189,6 +211,22 @@ export function exposeDesktopWindowBridge() {
       return ipcRenderer.invoke(
         DESKTOP_INSTALL_UPDATE_CHANNEL,
       ) as Promise<unknown>;
+    },
+    async getUpdateStatus() {
+      return ipcRenderer.invoke(
+        DESKTOP_UPDATE_STATUS_GET_CHANNEL,
+      ) as Promise<DesktopUpdateStatus>;
+    },
+    async checkForUpdates() {
+      return ipcRenderer.invoke(
+        DESKTOP_UPDATE_CHECK_CHANNEL,
+      ) as Promise<DesktopUpdateStatus>;
+    },
+    async setUpdateChannel(input: DesktopUpdateChannelSetInput) {
+      return ipcRenderer.invoke(
+        DESKTOP_UPDATE_CHANNEL_SET_CHANNEL,
+        input,
+      ) as Promise<DesktopUpdateStatus>;
     },
     openSettings() {
       ipcRenderer.send(DESKTOP_SETTINGS_OPEN_CHANNEL);
@@ -262,6 +300,12 @@ function isOpenChatFromNotificationEvent(
 ): value is DesktopOpenChatFromNotificationEvent {
   if (typeof value !== "object" || value === null) return false;
   return typeof (value as { chatId?: unknown }).chatId === "string";
+}
+
+function isUpdateStatus(value: unknown): value is DesktopUpdateStatus {
+  if (typeof value !== "object" || value === null) return false;
+  const status = value as { channel?: unknown; state?: unknown };
+  return typeof status.channel === "string" && typeof status.state === "string";
 }
 
 function isUpdateDownloadedEvent(

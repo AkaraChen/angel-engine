@@ -275,6 +275,7 @@ export const zhCN = {
         archived: "恢复已归档的会话，或将其与工作树一并永久删除。",
         danger: "影响本机所有聊天记录的不可撤销操作。",
         mobile: "通过本地网络从这台电脑提供移动端网页应用。",
+        updates: "这个应用安装哪些版本，以及何时安装。",
         workspace: "工作时输入框与工作树的行为方式。",
       },
       tabs: {
@@ -283,9 +284,27 @@ export const zhCN = {
         archived: "已归档",
         danger: "高级",
         mobile: "移动端",
+        updates: "更新",
         workspace: "工作区",
       },
       title: "设置",
+      updates: {
+        betaDescription:
+          "预发布版本一发布就安装。关闭后会保持在当前版本，直到正式版追上。",
+        betaSwitchLabel: "接收 beta 版更新",
+        betaTitle: "Beta 版更新",
+        checkButton: "检查更新",
+        checkTitle: "更新",
+        currentVersionTitle: "当前版本",
+        description: "Angel Engine 会在后台从 GitHub Releases 下载更新。",
+        installButton: "重启并安装",
+        stateChecking: "正在检查更新…",
+        stateDownloaded: "版本 {{version}} 已准备好安装。",
+        stateDownloading: "正在下载版本 {{version}}…",
+        stateError: "上次检查失败：{{detail}}",
+        stateIdle: "当前通道下已是最新版本。",
+        unsupported: "自动更新目前仅在 macOS 上可用。",
+      },
       workspace: {
         dirtyPromptDescription:
           "当所选项目存在未提交更改时，创建 worktree 前先询问。",

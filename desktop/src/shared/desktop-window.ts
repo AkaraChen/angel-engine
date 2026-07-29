@@ -44,6 +44,13 @@ export interface DesktopUpdateDownloadedEvent {
 }
 
 export const DESKTOP_ACTIVE_CHAT_SET_CHANNEL = "desktop-window:active-chat:set";
+export const DESKTOP_UPDATE_CHANNEL_SET_CHANNEL =
+  "desktop-window:update:channel:set";
+export const DESKTOP_UPDATE_CHECK_CHANNEL = "desktop-window:update:check";
+export const DESKTOP_UPDATE_STATUS_CHANGED_CHANNEL =
+  "desktop-window:update:status:changed";
+export const DESKTOP_UPDATE_STATUS_GET_CHANNEL =
+  "desktop-window:update:status:get";
 export const DESKTOP_CONFIRM_DELETE_CUSTOM_AGENT_CHANNEL =
   "desktop-window:confirm-delete-custom-agent";
 export const DESKTOP_CONFIRM_DELETE_ALL_CHATS_CHANNEL =

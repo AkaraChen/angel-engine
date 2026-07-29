@@ -276,6 +276,7 @@ export const zhTW = {
         archived: "還原已封存的工作階段，或連同工作樹一併永久刪除。",
         danger: "影響本機所有聊天記錄的不可復原操作。",
         mobile: "透過本機網路從這台電腦提供行動版網頁應用程式。",
+        updates: "這個應用程式安裝哪些版本，以及何時安裝。",
         workspace: "工作時輸入區與工作樹的行為方式。",
       },
       tabs: {
@@ -284,9 +285,27 @@ export const zhTW = {
         archived: "已封存",
         danger: "進階",
         mobile: "行動版",
+        updates: "更新",
         workspace: "工作區",
       },
       title: "設定",
+      updates: {
+        betaDescription:
+          "預先發行版本一推出就安裝。關閉後會停留在目前版本，直到正式版跟上。",
+        betaSwitchLabel: "接收 beta 版更新",
+        betaTitle: "Beta 版更新",
+        checkButton: "檢查更新",
+        checkTitle: "更新",
+        currentVersionTitle: "目前版本",
+        description: "Angel Engine 會在背景從 GitHub Releases 下載更新。",
+        installButton: "重新啟動並安裝",
+        stateChecking: "正在檢查更新…",
+        stateDownloaded: "版本 {{version}} 已可安裝。",
+        stateDownloading: "正在下載版本 {{version}}…",
+        stateError: "上次檢查失敗：{{detail}}",
+        stateIdle: "目前通道下已是最新版本。",
+        unsupported: "自動更新目前僅在 macOS 上可用。",
+      },
       workspace: {
         dirtyPromptDescription:
           "當所選專案存在未提交變更時，建立 worktree 前先詢問。",

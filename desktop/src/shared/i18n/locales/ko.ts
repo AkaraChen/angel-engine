@@ -283,6 +283,7 @@ export const ko = {
         danger:
           "이 컴퓨터에 저장된 모든 채팅에 영향을 주는 되돌릴 수 없는 작업입니다.",
         mobile: "로컬 네트워크를 통해 이 컴퓨터에서 모바일 웹 앱을 제공합니다.",
+        updates: "이 앱이 어떤 릴리스를 언제 설치할지 정합니다.",
         workspace: "작업 중 입력창과 워크트리가 동작하는 방식입니다.",
       },
       tabs: {
@@ -291,9 +292,28 @@ export const ko = {
         archived: "보관됨",
         danger: "고급",
         mobile: "모바일 보기",
+        updates: "업데이트",
         workspace: "작업 공간",
       },
       title: "설정",
+      updates: {
+        betaDescription:
+          "프리릴리스가 나오는 즉시 설치합니다. 끄면 안정 버전이 따라잡을 때까지 현재 빌드에 머무릅니다.",
+        betaSwitchLabel: "베타 업데이트 받기",
+        betaTitle: "베타 업데이트",
+        checkButton: "업데이트 확인",
+        checkTitle: "업데이트",
+        currentVersionTitle: "현재 버전",
+        description:
+          "Angel Engine은 GitHub Releases에서 백그라운드로 업데이트를 내려받습니다.",
+        installButton: "다시 시작하고 설치",
+        stateChecking: "업데이트를 확인하는 중…",
+        stateDownloaded: "버전 {{version}}을(를) 설치할 준비가 되었습니다.",
+        stateDownloading: "버전 {{version}}을(를) 내려받는 중…",
+        stateError: "마지막 확인에 실패했습니다: {{detail}}",
+        stateIdle: "이 채널에서 최신 버전입니다.",
+        unsupported: "자동 업데이트는 현재 macOS에서만 지원됩니다.",
+      },
       workspace: {
         dirtyPromptDescription:
           "선택한 프로젝트에 커밋되지 않은 변경 사항이 있을 때 worktree 생성 전에 확인합니다.",

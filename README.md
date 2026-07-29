@@ -25,6 +25,15 @@ desktop app.
 Vendored submodules live under `vendor/agent-client-protocol/`,
 `vendor/openai-codex/`, and `vendor/claude-agent-sdk-typescript/`.
 
+## Download
+
+Desktop builds are published on
+[GitHub Releases](https://github.com/AkaraChen/angel-engine/releases) (macOS
+arm64 `.dmg`). Releases marked **Pre-release** are beta builds; the app only
+installs them when "Receive beta updates" is on in Settings → Updates. See
+[`desktop/docs/release-process.md`](desktop/docs/release-process.md) for the
+channel and versioning rules.
+
 ## Setup
 
 ```sh

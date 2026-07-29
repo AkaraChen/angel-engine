@@ -9,9 +9,18 @@ const packagedAppPathFile = path.join(outDir, ".prepackaged-app");
 const packageJson = JSON.parse(
   fs.readFileSync(path.join(desktopRoot, "package.json"), "utf8"),
 );
-const releaseType = packageJson.version.includes("-")
-  ? "prerelease"
-  : "release";
+const {
+  generatedUpdateChannelFileForVersion,
+  releaseArtifactNamesForVersion,
+  releaseTypeForVersion,
+  updateChannelFilesForVersion,
+  updateChannelForVersion,
+} = require("./release-channel.cjs");
+
+// Throws on a malformed version before anything is built or published.
+const version = packageJson.version;
+const releaseType = releaseTypeForVersion(version);
+const updateChannel = updateChannelForVersion(version);
 const electronBuilderBin = path.join(
   desktopRoot,
   "node_modules",
@@ -187,6 +196,7 @@ execFileSync(
     "--publish",
     publishMode,
     `--config.publish.releaseType=${releaseType}`,
+    `--config.publish.channel=${updateChannel}`,
   ],
   {
     cwd: desktopRoot,
@@ -195,16 +205,34 @@ execFileSync(
 );
 
 if (publishMode !== "never") {
-  const version = packageJson.version;
   const tag = `v${version}`;
   const builderOutDir = path.join(outDir, "builder");
-  const artifactNames = [
-    `Angel-Engine-${version}-arm64.dmg`,
-    `Angel-Engine-${version}-arm64.zip`,
-    `Angel-Engine-${version}-arm64.zip.blockmap`,
-    "latest-mac.yml",
-  ];
-  const artifactPaths = artifactNames.map((name) =>
+
+  // A stable build has to feed the beta channel too, otherwise beta users stay
+  // parked on the last pre-release. electron-builder only writes the channel
+  // file it built for, so the extra channels are copies of it.
+  const generatedChannelFileName =
+    generatedUpdateChannelFileForVersion(version);
+  const generatedChannelFile = path.join(
+    builderOutDir,
+    generatedChannelFileName,
+  );
+
+  if (!fs.existsSync(generatedChannelFile)) {
+    throw new Error(
+      `electron-builder did not write ${generatedChannelFileName} for the ${updateChannel} channel.`,
+    );
+  }
+
+  for (const channelFile of updateChannelFilesForVersion(version)) {
+    const channelFilePath = path.join(builderOutDir, channelFile);
+    if (channelFilePath === generatedChannelFile) continue;
+
+    fs.copyFileSync(generatedChannelFile, channelFilePath);
+    console.log(`Derived ${channelFile} from the built update channel file.`);
+  }
+
+  const artifactPaths = releaseArtifactNamesForVersion(version).map((name) =>
     path.join(builderOutDir, name),
   );
   const missingArtifacts = artifactPaths.filter((artifactPath) => {

@@ -253,6 +253,7 @@ export interface LocaleResourceTranslationSettingsTabs {
   archived: string;
   danger: string;
   mobile: string;
+  updates: string;
   workspace: string;
 }
 
@@ -262,7 +263,25 @@ export interface LocaleResourceTranslationSettingsTabDescriptions {
   archived: string;
   danger: string;
   mobile: string;
+  updates: string;
   workspace: string;
+}
+
+export interface LocaleResourceTranslationSettingsUpdates {
+  betaDescription: string;
+  betaSwitchLabel: string;
+  betaTitle: string;
+  checkButton: string;
+  checkTitle: string;
+  currentVersionTitle: string;
+  description: string;
+  installButton: string;
+  stateChecking: string;
+  stateDownloaded: string;
+  stateDownloading: string;
+  stateError: string;
+  stateIdle: string;
+  unsupported: string;
 }
 
 export interface LocaleResourceTranslationSettingsGroups {
@@ -316,6 +335,7 @@ export interface LocaleResourceTranslationSettings {
   tabDescriptions: LocaleResourceTranslationSettingsTabDescriptions;
   tabs: LocaleResourceTranslationSettingsTabs;
   title: string;
+  updates: LocaleResourceTranslationSettingsUpdates;
   workspace: LocaleResourceTranslationSettingsWorkspace;
 }
 

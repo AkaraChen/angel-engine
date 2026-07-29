@@ -1,7 +1,7 @@
 {
   "name": "desktop",
   "productName": "Angel Engine",
-  "version": "1.0.0-beta2",
+  "version": "1.0.1-beta.1",
   "private": true,
   "description": "Desktop shell for Angel Engine.",
   "author": {
