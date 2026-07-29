@@ -10,6 +10,10 @@ import type {
   DesktopUpdateDownloadedEvent,
   DesktopWindowCommand,
 } from "@shared/desktop-window";
+import type {
+  DesktopUpdateChannelSetInput,
+  DesktopUpdateStatus,
+} from "@shared/update-channel";
 import type { WorkspaceBrowserApi } from "@shared/workspace-browser";
 import type {
   WorkspaceToolContextSetInput,
@@ -69,6 +73,9 @@ declare global {
       onUpdateDownloaded: (
         handler: (event: DesktopUpdateDownloadedEvent) => void,
       ) => () => void;
+      onUpdateStatusChanged: (
+        handler: (status: DesktopUpdateStatus) => void,
+      ) => () => void;
       onWorkspaceToolInstanceUpdated: (
         handler: (instance: WorkspaceToolInstance) => void,
       ) => () => void;
@@ -79,6 +86,11 @@ declare global {
         handler: (state: WorkspaceToolSurfaceState) => void,
       ) => () => void;
       installUpdate: () => Promise<unknown>;
+      checkForUpdates: () => Promise<DesktopUpdateStatus>;
+      getUpdateStatus: () => Promise<DesktopUpdateStatus>;
+      setUpdateChannel: (
+        input: DesktopUpdateChannelSetInput,
+      ) => Promise<DesktopUpdateStatus>;
       getWorkspaceToolWindowInstance: (
         toolId: string,
       ) => Promise<WorkspaceToolInstance | null>;

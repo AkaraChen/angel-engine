@@ -31,6 +31,7 @@ import {
 } from "@/features/settings/settings-controls";
 import { useSettingsStore } from "@/features/settings/settings-store";
 import { findSettingsTab } from "@/features/settings/settings-tabs";
+import { UpdateSettings } from "@/features/settings/update-settings";
 import { useSettingsTab } from "@/features/settings/use-settings-tab";
 import { useThemeSettings } from "@/features/settings/use-theme-settings";
 import { languageOptions } from "@/i18n";
@@ -175,6 +176,14 @@ export function SettingsPage({
               onAgentEnabledChange={onAgentEnabledChange}
               onAgentOrderChange={onAgentOrderChange}
             />
+          </SettingsTabPanel>
+
+          <SettingsTabPanel
+            activeTab={activeTab}
+            tab="updates"
+            tabPanelId={tabPanelId}
+          >
+            <UpdateSettings />
           </SettingsTabPanel>
 
           <SettingsTabPanel

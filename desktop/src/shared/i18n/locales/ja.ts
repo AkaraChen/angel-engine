@@ -287,6 +287,7 @@ export const ja = {
           "このコンピューターに保存されたすべてのチャットに影響する、取り消せない操作です。",
         mobile:
           "ローカルネットワーク経由で、このコンピューターからモバイル版ウェブアプリを配信します。",
+        updates: "このアプリがどのリリースを、いつインストールするかです。",
         workspace: "作業中の入力欄とワークツリーの動作です。",
       },
       tabs: {
@@ -295,9 +296,29 @@ export const ja = {
         archived: "アーカイブ",
         danger: "詳細",
         mobile: "モバイル表示",
+        updates: "アップデート",
         workspace: "ワークスペース",
       },
       title: "設定",
+      updates: {
+        betaDescription:
+          "プレリリースが公開され次第インストールします。オフにすると、安定版が追いつくまで現在のビルドのままになります。",
+        betaSwitchLabel: "ベータ版のアップデートを受け取る",
+        betaTitle: "ベータ版アップデート",
+        checkButton: "アップデートを確認",
+        checkTitle: "アップデート",
+        currentVersionTitle: "現在のバージョン",
+        description:
+          "Angel Engine は GitHub Releases からバックグラウンドでアップデートをダウンロードします。",
+        installButton: "再起動してインストール",
+        stateChecking: "アップデートを確認しています…",
+        stateDownloaded:
+          "バージョン {{version}} をインストールする準備ができました。",
+        stateDownloading: "バージョン {{version}} をダウンロードしています…",
+        stateError: "前回の確認に失敗しました: {{detail}}",
+        stateIdle: "このチャンネルでは最新バージョンです。",
+        unsupported: "自動アップデートは現在 macOS でのみ利用できます。",
+      },
       workspace: {
         dirtyPromptDescription:
           "選択したプロジェクトに未コミットの変更がある場合、worktree 作成前に確認します。",

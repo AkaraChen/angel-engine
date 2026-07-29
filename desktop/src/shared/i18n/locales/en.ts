@@ -284,6 +284,7 @@ export const en = {
           "Irreversible actions that affect every chat stored on this computer.",
         mobile:
           "Serve the mobile web app from this computer over your local network.",
+        updates: "Which releases this app installs, and when.",
         workspace: "How the composer and worktrees behave while you work.",
       },
       tabs: {
@@ -292,9 +293,28 @@ export const en = {
         archived: "Archived",
         danger: "Advanced",
         mobile: "Mobile view",
+        updates: "Updates",
         workspace: "Workspace",
       },
       title: "Settings",
+      updates: {
+        betaDescription:
+          "Install pre-releases as soon as they ship. Turning this off keeps you on your current build until a stable release catches up.",
+        betaSwitchLabel: "Receive beta updates",
+        betaTitle: "Beta updates",
+        checkButton: "Check for updates",
+        checkTitle: "Updates",
+        currentVersionTitle: "Current version",
+        description:
+          "Angel Engine downloads updates from GitHub Releases in the background.",
+        installButton: "Restart and install",
+        stateChecking: "Checking for updates…",
+        stateDownloaded: "Version {{version}} is ready to install.",
+        stateDownloading: "Downloading version {{version}}…",
+        stateError: "Last check failed: {{detail}}",
+        stateIdle: "You are on the latest version for this channel.",
+        unsupported: "Automatic updates are only available on macOS.",
+      },
       workspace: {
         dirtyPromptDescription:
           "Ask before creating a worktree when the selected project has uncommitted changes.",

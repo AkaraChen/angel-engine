@@ -287,6 +287,7 @@ export const de = {
           "Unumkehrbare Aktionen, die alle auf diesem Computer gespeicherten Chats betreffen.",
         mobile:
           "Die mobile Web-App von diesem Computer im lokalen Netzwerk bereitstellen.",
+        updates: "Welche Releases diese App installiert – und wann.",
         workspace:
           "Verhalten von Eingabefeld und Worktrees während der Arbeit.",
       },
@@ -296,9 +297,28 @@ export const de = {
         archived: "Archiviert",
         danger: "Erweitert",
         mobile: "Mobile Ansicht",
+        updates: "Updates",
         workspace: "Arbeitsbereich",
       },
       title: "Einstellungen",
+      updates: {
+        betaDescription:
+          "Vorabversionen installieren, sobald sie erscheinen. Ausgeschaltet bleiben Sie auf Ihrem aktuellen Build, bis ein stabiles Release nachzieht.",
+        betaSwitchLabel: "Beta-Updates erhalten",
+        betaTitle: "Beta-Updates",
+        checkButton: "Nach Updates suchen",
+        checkTitle: "Updates",
+        currentVersionTitle: "Aktuelle Version",
+        description:
+          "Angel Engine lädt Updates im Hintergrund von GitHub Releases.",
+        installButton: "Neu starten und installieren",
+        stateChecking: "Suche nach Updates …",
+        stateDownloaded: "Version {{version}} kann installiert werden.",
+        stateDownloading: "Version {{version}} wird geladen …",
+        stateError: "Letzte Prüfung fehlgeschlagen: {{detail}}",
+        stateIdle: "Sie haben die neueste Version dieses Kanals.",
+        unsupported: "Automatische Updates gibt es derzeit nur unter macOS.",
+      },
       workspace: {
         dirtyPromptDescription:
           "Vor dem Erstellen eines Worktrees nachfragen, wenn das ausgewählte Projekt nicht übernommene Änderungen hat.",

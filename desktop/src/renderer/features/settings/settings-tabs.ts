@@ -8,12 +8,14 @@ import {
   Monitor as ComputerIcon,
   DeviceMobile as MobileIcon,
   Palette as PaletteIcon,
+  ArrowsClockwise as UpdateIcon,
 } from "@phosphor-icons/react";
 
 type SettingsTab =
   | "appearance"
   | "workspace"
   | "agents"
+  | "updates"
   | "mobile"
   | "archived"
   | "danger";
@@ -55,6 +57,13 @@ const settingsTabs: SettingsTabDefinition[] = [
     icon: Bot,
     id: "agents",
     labelKey: "settings.tabs.agents",
+  },
+  {
+    descriptionKey: "settings.tabDescriptions.updates",
+    group: "general",
+    icon: UpdateIcon,
+    id: "updates",
+    labelKey: "settings.tabs.updates",
   },
   {
     descriptionKey: "settings.tabDescriptions.mobile",
