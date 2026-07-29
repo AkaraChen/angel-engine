@@ -9,6 +9,7 @@ import {
   configureDesktopWindowAppearance,
   desktopWindowChromeOptions,
 } from "./appearance";
+import { showDesktopWindowWhenContentReady } from "./content-ready";
 import { configureDesktopWindowNotifications } from "./notifications";
 import {
   persistWindowBounds,
@@ -37,6 +38,10 @@ export function createDesktopWindow({
     ...desktopWindowChromeOptions(),
     ...savedWindowBounds(bounds),
     ...options,
+    // Every desktop window starts hidden and is revealed by the content-ready
+    // gate below; showing earlier exposes transparent macOS window chrome with
+    // nothing painted behind it.
+    show: false,
     webPreferences: {
       preload: path.join(__dirname, "preload.js"),
       ...options?.webPreferences,
@@ -44,10 +49,14 @@ export function createDesktopWindow({
   });
 
   configureDesktopWindowAppearance(window);
-  restoreWindowState(window, stateFileName);
   persistWindowBounds(window, stateFileName);
   configureExternalLinkHandling(window, rendererFilePath);
   configureDesktopWindowNotifications(window);
+  // `maximize()` shows a hidden window, so the saved maximized state is
+  // restored as part of the reveal instead of at construction time.
+  showDesktopWindowWhenContentReady(window, {
+    beforeShow: () => restoreWindowState(window, stateFileName),
+  });
 
   if (MAIN_WINDOW_VITE_DEV_SERVER_URL) {
     const url = is.nonEmptyString(hash)

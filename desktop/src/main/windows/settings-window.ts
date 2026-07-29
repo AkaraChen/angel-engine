@@ -1,5 +1,6 @@
 import { BrowserWindow, screen } from "electron";
 
+import { isDesktopWindowContentReady } from "./content-ready";
 import { createDesktopWindow } from "./factory";
 
 const settingsWindowStateFileName = "settings-window-state.json";
@@ -12,18 +13,18 @@ const settingsWindowMinimumBounds = { height: 520, width: 680 };
 const settingsWindowPreferredBounds = { height: 660, width: 920 };
 
 let settingsWindow: BrowserWindow | null = null;
-let settingsWindowContentReady = false;
 
 export function openSettingsWindow() {
   if (settingsWindow && !settingsWindow.isDestroyed()) {
-    if (settingsWindowContentReady) {
+    // While the window is still waiting for its first paint the content-ready
+    // gate owns the reveal; showing here would surface an empty window.
+    if (isDesktopWindowContentReady(settingsWindow)) {
       settingsWindow.show();
       settingsWindow.focus();
     }
     return;
   }
 
-  settingsWindowContentReady = false;
   const defaultBounds = defaultSettingsWindowBounds();
   settingsWindow = createDesktopWindow({
     bounds: {
@@ -35,38 +36,13 @@ export function openSettingsWindow() {
     options: {
       minHeight: settingsWindowMinimumBounds.height,
       minWidth: settingsWindowMinimumBounds.width,
-      show: false,
       title: "Settings",
     },
     stateFileName: settingsWindowStateFileName,
   });
 
-  const window = settingsWindow;
-  let didFinishLoad = false;
-  let readyToShow = false;
-  const showWhenReady = () => {
-    if (window.isDestroyed() || settingsWindow !== window) return;
-    if (!didFinishLoad || !readyToShow) return;
-
-    settingsWindowContentReady = true;
-    window.show();
-    window.focus();
-  };
-  const markWebContentsLoaded = () => {
-    didFinishLoad = true;
-    showWhenReady();
-  };
-
-  window.webContents.once("did-finish-load", markWebContentsLoaded);
-  window.webContents.once("did-fail-load", markWebContentsLoaded);
-  window.once("ready-to-show", () => {
-    readyToShow = true;
-    showWhenReady();
-  });
-
-  window.on("closed", () => {
+  settingsWindow.on("closed", () => {
     settingsWindow = null;
-    settingsWindowContentReady = false;
   });
 }
 

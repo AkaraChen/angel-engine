@@ -5,7 +5,9 @@ import type { PropsWithChildren } from "react";
 import { createContext, useContext, useSyncExternalStore } from "react";
 import { useTranslation } from "react-i18next";
 import { queryClient } from "@/app/query-client";
+import { AppLoadingScreen } from "@/components/app-loading-screen";
 import { setDaemonTransport } from "./daemon-transport";
+import { DesktopWindowContentReady } from "./window-content-ready";
 
 export interface DaemonClient {
   fetch: (pathname: string, init?: RequestInit) => Promise<Response>;
@@ -127,6 +129,7 @@ export function DaemonProvider({ children }: PropsWithChildren) {
           "
           role="alert"
         >
+          <DesktopWindowContentReady />
           <div
             className="
               w-full max-w-lg rounded-lg border border-status-danger-border
@@ -143,7 +146,11 @@ export function DaemonProvider({ children }: PropsWithChildren) {
             </div>
           </div>
         </div>
-      ) : client === null ? null : (
+      ) : client === null ? (
+        // The backend is still starting: show the boot screen rather than an
+        // empty window, and let it be what reveals the window.
+        <AppLoadingScreen />
+      ) : (
         children
       )}
     </DaemonClientContext.Provider>

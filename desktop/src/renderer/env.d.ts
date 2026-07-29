@@ -64,6 +64,7 @@ declare global {
       confirmSaveWorkspaceFileChanges: (
         input: DesktopConfirmSaveWorkspaceFileChangesInput,
       ) => Promise<DesktopConfirmSaveWorkspaceFileChangesResult>;
+      notifyContentReady: () => void;
       onCommand: (
         handler: (command: DesktopWindowCommand) => void,
       ) => () => void;

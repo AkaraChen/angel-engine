@@ -6,19 +6,21 @@ import { Suspense } from "react";
 
 import { queryClient } from "@/app/query-client";
 import { AppRouter } from "@/app/router";
+import { AppLoadingScreen } from "@/components/app-loading-screen";
 import { ToastProvider } from "@/components/ui/toast";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AgentCatalogProvider } from "@/features/agents/agent-catalog";
 import { SettingsWindowPage } from "@/features/settings/settings-window-page";
 import { DaemonProvider } from "@/platform/daemon";
 import { DaemonEventSync } from "@/platform/daemon-events";
+import { DesktopWindowContentReady } from "@/platform/window-content-ready";
 
 function AppProviders({ children }: PropsWithChildren) {
   return (
     <LazyMotion features={domMax}>
       <MotionConfig reducedMotion="user">
         <DaemonProvider>
-          <Suspense fallback={null}>
+          <Suspense fallback={<AppLoadingScreen />}>
             <AgentCatalogProvider>
               <div className="contents">
                 <QueryClientProvider client={queryClient}>
@@ -39,6 +41,7 @@ export function App() {
   return (
     <AppProviders>
       <DaemonEventSync />
+      <DesktopWindowContentReady />
       <AppRouter />
     </AppProviders>
   );
@@ -51,6 +54,7 @@ export function App() {
 export function SettingsApp() {
   return (
     <AppProviders>
+      <DesktopWindowContentReady />
       <SettingsWindowPage />
     </AppProviders>
   );
