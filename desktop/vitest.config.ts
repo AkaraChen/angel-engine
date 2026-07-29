@@ -9,6 +9,9 @@ export default defineConfig({
   resolve: {
     alias: {
       "@": path.resolve(rendererRoot),
+      "@assets": path.resolve(
+        fileURLToPath(new URL("./assets", import.meta.url)),
+      ),
       "@renderer": path.resolve(rendererRoot),
       "@shared": path.resolve(srcRoot, "shared"),
       "@main": path.resolve(srcRoot, "main"),

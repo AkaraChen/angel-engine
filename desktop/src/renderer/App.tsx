@@ -6,6 +6,7 @@ import { Suspense } from "react";
 
 import { queryClient } from "@/app/query-client";
 import { AppRouter } from "@/app/router";
+import { AppLoadingScreen } from "@/components/app-loading-screen";
 import { ToastProvider } from "@/components/ui/toast";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AgentCatalogProvider } from "@/features/agents/agent-catalog";
@@ -19,7 +20,7 @@ function AppProviders({ children }: PropsWithChildren) {
     <LazyMotion features={domMax}>
       <MotionConfig reducedMotion="user">
         <DaemonProvider>
-          <Suspense fallback={null}>
+          <Suspense fallback={<AppLoadingScreen />}>
             <AgentCatalogProvider>
               <div className="contents">
                 <QueryClientProvider client={queryClient}>
