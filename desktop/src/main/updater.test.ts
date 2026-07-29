@@ -127,6 +127,11 @@ vi.mock("./updater-preferences", () => ({
   writeUpdateChannelPreference: mocks.writeUpdateChannelPreference,
 }));
 
+// Auto-updates are macOS-only, and the module reads `process.platform` once at
+// import time. Pin it so the suite exercises the same path on every runner
+// instead of silently going no-op on Linux CI.
+Object.defineProperty(process, "platform", { value: "darwin" });
+
 const { configureAutoUpdates } = await import("./updater");
 
 function invokeIpc(channel: string, input?: unknown) {
