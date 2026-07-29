@@ -12,6 +12,7 @@ import { AgentCatalogProvider } from "@/features/agents/agent-catalog";
 import { SettingsWindowPage } from "@/features/settings/settings-window-page";
 import { DaemonProvider } from "@/platform/daemon";
 import { DaemonEventSync } from "@/platform/daemon-events";
+import { DesktopWindowContentReady } from "@/platform/window-content-ready";
 
 function AppProviders({ children }: PropsWithChildren) {
   return (
@@ -39,6 +40,7 @@ export function App() {
   return (
     <AppProviders>
       <DaemonEventSync />
+      <DesktopWindowContentReady />
       <AppRouter />
     </AppProviders>
   );
@@ -51,6 +53,7 @@ export function App() {
 export function SettingsApp() {
   return (
     <AppProviders>
+      <DesktopWindowContentReady />
       <SettingsWindowPage />
     </AppProviders>
   );

@@ -38,6 +38,7 @@ import {
   DESKTOP_THEME_SET_CHANNEL,
   DESKTOP_UPDATE_DOWNLOADED_CHANNEL,
   DESKTOP_WINDOW_CLOSE_CURRENT_CHANNEL,
+  DESKTOP_WINDOW_CONTENT_READY_CHANNEL,
   DESKTOP_WORKSPACE_TOOL_CONTEXT_SET_CHANNEL,
   DESKTOP_WORKSPACE_TOOL_INSTANCE_CLOSE_CHANNEL,
   DESKTOP_WORKSPACE_TOOL_INSTANCE_REGISTER_CHANNEL,
@@ -94,6 +95,9 @@ export function exposeDesktopWindowBridge() {
     },
     closeCurrent() {
       ipcRenderer.send(DESKTOP_WINDOW_CLOSE_CURRENT_CHANNEL);
+    },
+    notifyContentReady() {
+      ipcRenderer.send(DESKTOP_WINDOW_CONTENT_READY_CHANNEL);
     },
     onCommand(handler: (command: DesktopWindowCommand) => void) {
       const listener = (_event: IpcRendererEvent, payload: unknown) => {

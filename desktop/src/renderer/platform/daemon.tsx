@@ -6,6 +6,7 @@ import { createContext, useContext, useSyncExternalStore } from "react";
 import { useTranslation } from "react-i18next";
 import { queryClient } from "@/app/query-client";
 import { setDaemonTransport } from "./daemon-transport";
+import { DesktopWindowContentReady } from "./window-content-ready";
 
 export interface DaemonClient {
   fetch: (pathname: string, init?: RequestInit) => Promise<Response>;
@@ -127,6 +128,7 @@ export function DaemonProvider({ children }: PropsWithChildren) {
           "
           role="alert"
         >
+          <DesktopWindowContentReady />
           <div
             className="
               w-full max-w-lg rounded-lg border border-status-danger-border

@@ -25,6 +25,7 @@ import {
   DESKTOP_WORKSPACE_TOOL_WINDOW_GET_CHANNEL,
   DESKTOP_WORKSPACE_TOOL_WINDOW_OPEN_CHANNEL,
 } from "../../shared/desktop-window";
+import { isDesktopWindowContentReady } from "./content-ready";
 import { createDesktopWindow } from "./factory";
 
 const workspaceToolWindowStateFileName = "workspace-tool-window-state.json";
@@ -208,8 +209,11 @@ function ensureWorkspaceToolWindow(sourceWindow?: BrowserWindow) {
   const existingWindow = workspaceToolWindow;
   if (existingWindow && !existingWindow.isDestroyed()) {
     existingWindow.setTitle(workspaceToolWindowTitle());
-    existingWindow.show();
-    existingWindow.focus();
+    // Until its first paint the content-ready gate owns the reveal.
+    if (isDesktopWindowContentReady(existingWindow)) {
+      existingWindow.show();
+      existingWindow.focus();
+    }
     return existingWindow;
   }
 
@@ -225,7 +229,6 @@ function ensureWorkspaceToolWindow(sourceWindow?: BrowserWindow) {
       height: defaultBounds.height,
       minHeight: workspaceToolWindowMinimumBounds.height,
       minWidth: workspaceToolWindowMinimumBounds.width,
-      show: true,
       title: workspaceToolWindowTitle(),
       width: defaultBounds.width,
     },

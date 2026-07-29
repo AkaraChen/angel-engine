@@ -55,6 +55,8 @@ export const DESKTOP_CONFIRM_DELETE_MANAGED_WORKTREES_CHANNEL =
 export const DESKTOP_CONFIRM_SAVE_WORKSPACE_FILE_CHANGES_CHANNEL =
   "desktop-window:confirm-save-workspace-file-changes";
 export const DESKTOP_COMMAND_CHANNEL = "desktop-window:command";
+export const DESKTOP_WINDOW_CONTENT_READY_CHANNEL =
+  "desktop-window:content-ready";
 export const DESKTOP_INSTALL_UPDATE_CHANNEL = "desktop-window:update:install";
 export const DESKTOP_OPEN_CHAT_FROM_NOTIFICATION_CHANNEL =
   "desktop-window:notification:open-chat";
