@@ -61,7 +61,13 @@ gh release view v<version> --repo AkaraChen/angel-engine \
   four hours.
 - `allowDowngrade` stays off. Turning beta off leaves the user on their current
   build until a stable release passes it; rolling a newer database back onto an
-  older app is not safe.
+  older app is not safe. **Assigning `autoUpdater.channel` re-enables
+  `allowDowngrade`** (electron-updater's setter does it unconditionally), so
+  `allowDowngrade = false` must always be set *after* the channel — that is why
+  both live together in `applyChannel()`.
+- Switching channels cancels any download in flight and ignores results from the
+  channel the user just left, so a half-downloaded beta can never be offered for
+  install after beta is turned off.
 
 ## Known limits
 

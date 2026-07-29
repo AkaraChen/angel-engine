@@ -1,4 +1,4 @@
-import type { UpdateInfo } from "electron-updater";
+import type { UpdateCheckResult, UpdateInfo } from "electron-updater";
 import type { DesktopUpdateDownloadedEvent } from "../shared/desktop-window";
 import type {
   DesktopUpdateChannel,
@@ -8,7 +8,7 @@ import type {
 
 import { app, BrowserWindow, dialog, ipcMain } from "electron";
 import log from "electron-log/main";
-import { autoUpdater } from "electron-updater";
+import { autoUpdater, CancellationToken } from "electron-updater";
 
 import {
   DESKTOP_UPDATE_CHANNEL_SET_CHANNEL,
@@ -42,6 +42,15 @@ let lastCheckedAt: number | undefined;
 let lastCheckStartedAt: number | undefined;
 let userInitiatedCheck = false;
 let didRegisterIpc = false;
+/**
+ * Bumped whenever the channel changes. Work started under an older generation
+ * belongs to the previous channel and must not reach the user.
+ */
+let generation = 0;
+let checkInFlight: Promise<unknown> | undefined;
+let recheckQueued = false;
+let downloadGeneration = 0;
+let downloadCancellation: CancellationToken | undefined;
 
 export function configureAutoUpdates() {
   log.initialize();
@@ -51,37 +60,25 @@ export function configureAutoUpdates() {
   autoUpdater.logger = log;
   autoUpdater.autoDownload = false;
   autoUpdater.autoInstallOnAppQuit = false;
-  // Turning beta off leaves the user on their current build until stable
-  // catches up. Rolling a newer database back onto an older app is not safe.
-  autoUpdater.allowDowngrade = false;
   autoUpdater.setFeedURL({
     provider: "github",
     ...updateRepository,
   });
   applyChannel(channel);
 
-  autoUpdater.on("checking-for-update", () => {
-    setState("checking");
-  });
-  autoUpdater.on("update-not-available", () => {
-    lastCheckedAt = Date.now();
-    availableVersion = undefined;
-    setState("idle");
-    void showUpToDateMessage();
-  });
-  autoUpdater.on("update-available", (info: UpdateInfo) => {
-    lastCheckedAt = Date.now();
-    availableVersion = info.version;
-    setState("downloading");
-    autoUpdater.downloadUpdate().catch((error: unknown) => {
-      handleUpdateError(error);
-    });
-  });
+  // Checks and downloads are driven by their promises, not by the matching
+  // events, so every result stays bound to the generation that started it.
+  // `error` is not listened to for the same reason: electron-updater emits it
+  // *and* rejects, which would report the same failure twice.
   autoUpdater.on("update-downloaded", (info) => {
+    if (downloadGeneration !== generation) {
+      log.info(
+        `Discarding ${info.version}: downloaded on a superseded update channel.`,
+      );
+      return;
+    }
+
     notifyUpdateDownloaded(info);
-  });
-  autoUpdater.on("error", (error) => {
-    handleUpdateError(error);
   });
 
   registerUpdaterIpc();
@@ -176,8 +173,14 @@ function setUpdateChannel(next: DesktopUpdateChannel) {
   if (next === channel) return;
 
   channel = next;
+  generation += 1;
   writeUpdateChannelPreference(next);
   applyChannel(next);
+
+  // A download in flight is fetching the other channel's build. Stop it, or it
+  // would finish and offer itself for install under the new channel.
+  downloadCancellation?.cancel();
+  downloadCancellation = undefined;
 
   // Anything staged belongs to the old channel, and the throttle must not hold
   // back the first check on the new one.
@@ -193,14 +196,77 @@ function setUpdateChannel(next: DesktopUpdateChannel) {
 function applyChannel(next: DesktopUpdateChannel) {
   autoUpdater.channel = feedChannelForUpdateChannel(next);
   autoUpdater.allowPrerelease = next === "beta";
+  // electron-updater's `channel` setter force-enables `allowDowngrade`, so this
+  // has to come after it — every time, not just at startup. Turning beta off
+  // leaves the user on their current build until stable catches up; rolling a
+  // newer database back onto an older app is not safe.
+  autoUpdater.allowDowngrade = false;
 }
 
 function startCheck() {
+  if (checkInFlight) {
+    // electron-updater hands back the in-flight promise, which still resolves
+    // against the channel that check started on. Queue a fresh one instead.
+    recheckQueued = true;
+    return;
+  }
+
+  const checkGeneration = generation;
   lastCheckStartedAt = Date.now();
   setState("checking");
-  autoUpdater.checkForUpdates().catch((error: unknown) => {
-    handleUpdateError(error);
-  });
+
+  checkInFlight = autoUpdater
+    .checkForUpdates()
+    .then(async (result) => {
+      await handleCheckResult(result, checkGeneration);
+    })
+    .catch((error: unknown) => {
+      handleUpdateError(error, checkGeneration);
+    })
+    .finally(() => {
+      checkInFlight = undefined;
+      if (!recheckQueued) return;
+
+      recheckQueued = false;
+      startCheck();
+    });
+}
+
+async function handleCheckResult(
+  result: UpdateCheckResult | null,
+  checkGeneration: number,
+) {
+  if (checkGeneration !== generation) {
+    log.info("Discarding update check result from a superseded channel.");
+    return;
+  }
+
+  lastCheckedAt = Date.now();
+
+  const version = result?.updateInfo.version;
+  if (result === null || version === undefined || !result.isUpdateAvailable) {
+    availableVersion = undefined;
+    setState("idle");
+    await showUpToDateMessage();
+    return;
+  }
+
+  availableVersion = version;
+  setState("downloading");
+
+  const cancellation = new CancellationToken();
+  downloadCancellation = cancellation;
+  downloadGeneration = checkGeneration;
+
+  try {
+    await autoUpdater.downloadUpdate(cancellation);
+  } catch (error: unknown) {
+    handleUpdateError(error, checkGeneration);
+  } finally {
+    if (downloadCancellation === cancellation) {
+      downloadCancellation = undefined;
+    }
+  }
 }
 
 function registerUpdaterIpc() {
@@ -235,7 +301,14 @@ function readChannelInput(input: unknown) {
   return parseUpdateChannel((input as { channel?: unknown }).channel);
 }
 
-function handleUpdateError(error: unknown) {
+function handleUpdateError(error: unknown, checkGeneration: number) {
+  if (checkGeneration !== generation) {
+    // Cancelled by a channel switch, or a failure that belongs to the channel
+    // the user just left. Either way it is not worth reporting.
+    log.info("Ignoring update failure from a superseded channel.", error);
+    return;
+  }
+
   const detail =
     error instanceof Error
       ? error.message
