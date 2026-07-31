@@ -42,7 +42,7 @@ export function WorkspaceHeader({
   return (
     <header
       className="
-        relative flex h-12 shrink-0 items-center gap-3 bg-background/80 px-4
+        relative flex h-12 shrink-0 items-center gap-3 bg-background px-4
       "
       data-electron-drag
       data-workspace-mode="chat"
