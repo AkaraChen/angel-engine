@@ -60,6 +60,9 @@ const UserMessageRichText: FC<UserMessageRichTextProps> = ({ text }) => {
     [extensions, text],
   );
 
+  // Composer uses bg-muted on code; inside the primary user bubble that becomes
+  // near-black on near-black in dark mode. Tint from the bubble foreground
+  // instead (same approach as skill mentions).
   return (
     <EditorContent
       className={cn(
@@ -70,6 +73,10 @@ const UserMessageRichText: FC<UserMessageRichTextProps> = ({ text }) => {
           [&_.tiptap]:overflow-visible!
           [&_[data-type=mention]]:text-primary-foreground!
           [&_[data-mention-kind=skill]]:bg-primary-foreground/12!
+          [&_.tiptap_code]:bg-primary-foreground/14!
+          [&_.tiptap_code]:text-primary-foreground!
+          [&_.tiptap_pre]:bg-primary-foreground/10!
+          [&_.tiptap_pre_code]:bg-transparent!
         `,
       )}
       editor={editor}
