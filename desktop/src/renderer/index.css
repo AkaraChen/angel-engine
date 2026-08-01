@@ -4,8 +4,10 @@
 @import "shadcn/tailwind.css";
 @import "katex/dist/katex.min.css";
 @import "streamdown/styles.css";
-@import "@fontsource-variable/ibm-plex-sans/wght.css";
-@import "@fontsource-variable/ibm-plex-sans/wght-italic.css";
+@import "@fontsource-variable/dm-sans/wght.css";
+@import "@fontsource-variable/dm-sans/wght-italic.css";
+@import "@fontsource-variable/jetbrains-mono/wght.css";
+@import "@fontsource-variable/jetbrains-mono/wght-italic.css";
 @import "@fontsource-variable/playwrite-de-la/wght.css";
 @import "@fontsource/noto-sans-sc/chinese-simplified-400.css";
 @import "@fontsource/noto-sans-sc/chinese-simplified-500.css";
