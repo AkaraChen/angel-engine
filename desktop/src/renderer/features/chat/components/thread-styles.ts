@@ -5,12 +5,17 @@ export const messageActionFooterClass =
   "flex h-7 max-w-full shrink-0 flex-nowrap items-center gap-1 overflow-hidden";
 
 /**
- * Tool calls: a recessed surface behind the message, held by a hairline. No
- * backdrop-filter — a long thread stacks hundreds of these and every blur layer
- * is paid again on each scroll frame.
+ * Tool calls: a recessed surface behind the message, held by a hairline. Uses
+ * `--border` rather than `--border-subtle` because the fill here is
+ * `--surface-1`, and subtle-on-surface-1 differs by ~5/255 — an edge that never
+ * actually draws. Every tool card carries this same neutral hairline whatever
+ * its phase; status lives in the icon and the phase label, never the frame.
+ *
+ * No backdrop-filter — a long thread stacks hundreds of these and every blur
+ * layer is paid again on each scroll frame.
  */
 export const toolCardClass =
-  "w-full overflow-hidden rounded-lg border border-border-subtle bg-surface-1 text-xs";
+  "w-full overflow-hidden rounded-lg border border-border bg-surface-1 text-xs";
 
 /**
  * Plans and other inspector cards: the one transcript surface that lifts onto

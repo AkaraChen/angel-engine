@@ -80,14 +80,7 @@ function GenericToolActionMessagePart({
 
   return (
     <Collapsible
-      className={cn(
-        toolCallCardClassName,
-        // Status colors the border and the icon only. Washing the whole card in
-        // red or amber would make a routine failed grep shout louder than the
-        // approval prompt that actually blocks the user.
-        isFailed && "border-status-danger-border",
-        isAwaitingApproval && "border-status-attention-border",
-      )}
+      className={toolCallCardClassName}
       onOpenChange={setManualOpen}
       open={open}
     >
