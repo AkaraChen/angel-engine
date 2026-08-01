@@ -187,7 +187,7 @@ export const fr = {
       loadingChats: "Chargement des discussions",
       loadingProjects: "Chargement des projets",
       modeChat: "Chat",
-      modePower: "Mega",
+      modePower: "Power",
       modeSwitcher: "Mode d'espace de travail",
       modeWork: "Travail",
       needsInput: "Saisie requise",

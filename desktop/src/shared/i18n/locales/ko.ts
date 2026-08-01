@@ -186,7 +186,7 @@ export const ko = {
       loadingChats: "채팅 로드 중",
       loadingProjects: "프로젝트 로드 중",
       modeChat: "채팅",
-      modePower: "Mega",
+      modePower: "Power",
       modeSwitcher: "워크스페이스 모드",
       modeWork: "작업",
       needsInput: "입력 필요",
