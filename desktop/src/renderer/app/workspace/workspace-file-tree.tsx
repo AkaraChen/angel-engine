@@ -25,16 +25,50 @@ export const workspaceFileIconResolver = createFileTreeIconResolver({
 });
 const workspaceFileTreeIconSpriteSheet = getBuiltInSpriteSheet("complete");
 
+/**
+ * The `@pierre/trees` component renders into a shadow root, so its own custom
+ * properties are the only styling surface. Every value here maps a vendor
+ * variable onto a design token — nothing invents a colour, and nothing
+ * loosens the compact metrics the power mode depends on.
+ *
+ * The git lane keeps the vendor's letter glyph (M/A/D/U); only its colours are
+ * ours. The shadow DOM does not expose a hook to swap that glyph for a dot.
+ */
 export const treeHostStyle: WorkspaceToolCssVariableStyle = {
-  "--trees-bg-muted-override": "var(--secondary)",
+  "--trees-accent-override": "var(--primary)",
+  "--trees-bg-muted-override": "var(--overlay-hover)",
   "--trees-bg-override": "var(--background)",
+  "--trees-border-color-override": "var(--border-subtle)",
+  "--trees-border-radius-override": "var(--radius-sm)",
+  "--trees-fg-muted-override": "var(--muted-foreground)",
+  "--trees-fg-override": "var(--foreground)",
+  "--trees-focus-ring-color-override": "var(--ring)",
+  "--trees-font-family-override": "var(--font-sans)",
   "--trees-gap-override": "6px",
+  "--trees-git-added-color-override": "var(--status-success)",
+  "--trees-git-deleted-color-override": "var(--status-danger)",
+  "--trees-git-ignored-color-override": "var(--muted-foreground)",
+  "--trees-git-modified-color-override": "var(--status-attention)",
+  "--trees-git-renamed-color-override": "var(--status-info)",
+  "--trees-git-untracked-color-override": "var(--status-success)",
+  "--trees-indent-guide-bg-override": "var(--border-subtle)",
   "--trees-input-bg-override": "var(--muted)",
   "--trees-item-margin-x-override": "0px",
   "--trees-item-padding-x-override": "6px",
   "--trees-item-row-gap-override": "4px",
   "--trees-level-gap-override": "8px",
   "--trees-padding-inline-override": "8px",
+  "--trees-scrollbar-thumb-override": "var(--border-strong)",
+  "--trees-search-bg-override": "var(--surface-1)",
+  "--trees-selected-bg-override": "var(--primary-soft)",
+  "--trees-selected-fg-override": "var(--primary-soft-foreground)",
+  "--trees-selected-focused-border-color-override": "var(--primary)",
+  "--trees-status-added-override": "var(--status-success)",
+  "--trees-status-deleted-override": "var(--status-danger)",
+  "--trees-status-ignored-override": "var(--muted-foreground)",
+  "--trees-status-modified-override": "var(--status-attention)",
+  "--trees-status-renamed-override": "var(--status-info)",
+  "--trees-status-untracked-override": "var(--status-success)",
   height: "100%",
   minHeight: 0,
 };

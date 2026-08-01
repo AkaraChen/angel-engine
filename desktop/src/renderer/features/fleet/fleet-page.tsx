@@ -1,6 +1,7 @@
 import type {
   Chat,
   ChatActivity,
+  ChatActivityReason,
   ChatActivityStatus,
 } from "@angel-engine/daemon-api/chat";
 import type { Project } from "@angel-engine/daemon-api/projects";
@@ -11,11 +12,25 @@ import type {
   FleetSegment,
 } from "@/features/fleet/fleet-model";
 
-import { Robot as Bot } from "@phosphor-icons/react";
+import {
+  Robot as Bot,
+  MagnifyingGlass as SearchIcon,
+} from "@phosphor-icons/react";
 import is from "@sindresorhus/is";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { Button } from "@/components/ui/button";
+import {
+  InputGroup,
+  InputGroupAddon,
+  InputGroupInput,
+} from "@/components/ui/input-group";
+import {
+  NativeSelect,
+  NativeSelectOption,
+} from "@/components/ui/native-select";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   agentRuntimeIconSvg,
   agentRuntimeLabel,
@@ -32,10 +47,6 @@ import {
   resolveFleetProjectFilter,
   terminalAttentionId,
 } from "@/features/fleet/fleet-model";
-import {
-  NativeSelect,
-  NativeSelectOption,
-} from "@/components/ui/native-select";
 import { getApiClient } from "@/platform/api-client";
 import { formatDateTime, formatRelativeTime } from "@/platform/format-time";
 import { queryKeys } from "@/platform/query-keys";
@@ -43,11 +54,21 @@ import { cn } from "@/platform/utils";
 
 const EMPTY_ACTIVITIES: never[] = [];
 
+/** Enough rows to read as a list while loading, without faking a full page. */
+const SKELETON_ROW_COUNT = 5;
+
 const SEGMENT_LABEL_KEYS: Record<FleetSegment, string> = {
   all: "fleet.segments.all",
   attention: "fleet.segments.attention",
   running: "fleet.segments.running",
   done: "fleet.segments.done",
+};
+
+const SEGMENT_EMPTY_KEYS: Record<FleetSegment, string> = {
+  all: "fleet.emptySegments.all",
+  attention: "fleet.emptySegments.attention",
+  running: "fleet.emptySegments.running",
+  done: "fleet.emptySegments.done",
 };
 
 const GROUP_LABEL_KEYS: Record<FleetGroup, string> = {
@@ -64,16 +85,31 @@ const STATUS_LABEL_KEYS: Record<ChatActivityStatus, string> = {
   done: "fleet.status.done",
 };
 
+const REASON_LABEL_KEYS: Record<ChatActivityReason, string> = {
+  approval: "fleet.reasons.approval",
+  question: "fleet.reasons.question",
+  process_exited: "fleet.reasons.processExited",
+  runtime_error: "fleet.reasons.runtimeError",
+};
+
 /**
- * Status is never colour-only: the text label carries the meaning and the tone
- * is a redundant cue.
+ * Status is never colour-only: the dot carries the tone, the label next to it
+ * carries the meaning.
  */
 const STATUS_TONE: Record<ChatActivityStatus, string> = {
   waiting_for_you: "text-status-attention",
   failed: "text-status-danger",
   stuck: "text-status-danger",
   running: "text-foreground",
-  done: "text-status-success",
+  done: "text-muted-foreground",
+};
+
+const STATUS_DOT_TONE: Record<ChatActivityStatus, string> = {
+  waiting_for_you: "bg-status-attention",
+  failed: "bg-status-danger",
+  stuck: "bg-status-danger",
+  running: "bg-status-success",
+  done: "bg-muted-foreground",
 };
 
 interface FleetPageProps {
@@ -81,6 +117,7 @@ interface FleetPageProps {
   /** Chats/projects failed to load; their rows would be missing, not absent. */
   isMetadataError: boolean;
   isMetadataPending: boolean;
+  onNewChat: () => void;
   onOpenChat: (chat: Chat) => void;
   projects: Project[];
 }
@@ -89,6 +126,7 @@ export function FleetPage({
   chats,
   isMetadataError,
   isMetadataPending,
+  onNewChat,
   onOpenChat,
   projects,
 }: FleetPageProps): ReactElement {
@@ -96,6 +134,7 @@ export function FleetPage({
   const api = getApiClient();
   const queryClient = useQueryClient();
   const [segment, setSegment] = useState<FleetSegment>("all");
+  const [search, setSearch] = useState("");
   const [requestedProjectFilter, setRequestedProjectFilter] = useState(
     FLEET_PROJECT_FILTER_ALL,
   );
@@ -163,29 +202,39 @@ export function FleetPage({
     requestedProjectFilter,
     projectOptions,
   );
-  const projectRows = useMemo(
-    () => filterFleetRows(rows, { projectFilter, segment: "all" }),
-    [projectFilter, rows],
+  /**
+   * Counts follow the project filter and the search, but never the segment —
+   * a badge that changed when you pressed it would be unreadable.
+   */
+  const scopedRows = useMemo(
+    () => filterFleetRows(rows, { projectFilter, search, segment: "all" }),
+    [projectFilter, rows, search],
   );
-  const counts = useMemo(() => countFleetRows(projectRows), [projectRows]);
+  const counts = useMemo(() => countFleetRows(scopedRows), [scopedRows]);
   const sections = useMemo(
     () =>
-      groupFleetRows(filterFleetRows(projectRows, { projectFilter, segment })),
-    [projectFilter, projectRows, segment],
+      groupFleetRows(
+        filterFleetRows(scopedRows, { projectFilter, search, segment }),
+      ),
+    [projectFilter, scopedRows, search, segment],
   );
+
+  const isPending = activityQuery.isPending || isMetadataPending;
+  const isError = activityQuery.isError || isMetadataError;
+  const hasSearch = search.trim() !== "";
 
   return (
     <div className="min-h-0 flex-1 overflow-y-auto">
-      <div className="mx-auto w-full max-w-3xl px-8 py-10">
-        <header className="flex flex-wrap items-center gap-3">
-          <h2 className="mr-auto text-2xl font-semibold text-foreground">
-            {t("fleet.title")}
-          </h2>
+      <div className="mx-auto w-full max-w-4xl px-8 py-10">
+        <h2 className="pl-6 text-2xl font-semibold text-foreground">
+          {t("fleet.title")}
+        </h2>
+
+        <div className="mt-5 flex flex-wrap items-center gap-2 pl-6">
           <div
             aria-label={t("fleet.filterSegments")}
             className="
-              flex items-center gap-0.5 rounded-md bg-black/5.5 p-0.5
-              dark:bg-white/5.5
+              flex items-center gap-0.5 rounded-full bg-surface-1 p-0.5
             "
             role="group"
           >
@@ -194,28 +243,48 @@ export function FleetPage({
                 aria-pressed={segment === option}
                 className={cn(
                   `
-                    flex h-7 items-center gap-1.5 rounded-[5px] px-2.5 text-xs
-                    font-medium text-muted-foreground outline-none
+                    flex h-7 items-center gap-1.5 rounded-full px-3 text-xs
+                    font-medium transition-colors duration-120 ease-standard
+                    outline-none
                     focus-visible:ring-2 focus-visible:ring-ring/50
+                    motion-reduce:transition-none
                   `,
                   segment === option
-                    ? `
-                      bg-white/70 text-foreground shadow-xs
-                      dark:bg-white/[0.14]
-                    `
-                    : "hover:text-foreground",
+                    ? "bg-card text-foreground shadow-xs"
+                    : `
+                      text-muted-foreground
+                      hover:text-foreground
+                    `,
                 )}
                 key={option}
                 onClick={() => setSegment(option)}
                 type="button"
               >
                 <span>{t(SEGMENT_LABEL_KEYS[option])}</span>
-                <span className="tabular-nums opacity-70">
+                <span className="tabular-nums text-muted-foreground">
                   {counts[option]}
                 </span>
               </button>
             ))}
           </div>
+
+          <InputGroup className="h-8 w-auto min-w-40 flex-1" variant="search">
+            <InputGroupAddon align="inline-start">
+              <SearchIcon
+                aria-hidden="true"
+                className="size-4 shrink-0"
+                weight="regular"
+              />
+            </InputGroupAddon>
+            <InputGroupInput
+              aria-label={t("fleet.search")}
+              onChange={(event) => setSearch(event.currentTarget.value)}
+              placeholder={t("fleet.search")}
+              type="search"
+              value={search}
+            />
+          </InputGroup>
+
           {projectOptions.length > 1 ? (
             <NativeSelect
               aria-label={t("fleet.filterProject")}
@@ -232,31 +301,34 @@ export function FleetPage({
               ))}
             </NativeSelect>
           ) : null}
-        </header>
+        </div>
 
-        {activityQuery.isPending || isMetadataPending ? (
-          <FleetNotice text={t("fleet.loading")} />
-        ) : activityQuery.isError || isMetadataError ? (
+        {isPending ? (
+          <FleetSkeletonList />
+        ) : isError ? (
           <FleetNotice text={t("fleet.disconnected")} />
         ) : sections.length === 0 ? (
-          <FleetNotice text={t("fleet.empty")} />
+          <FleetEmptyState
+            onNewChat={onNewChat}
+            text={
+              hasSearch ? t("fleet.noMatches") : t(SEGMENT_EMPTY_KEYS[segment])
+            }
+          />
         ) : (
           sections.map((section) => (
-            <section key={section.group}>
+            <section className="mt-8" key={section.group}>
+              {/* `pl-6` matches the row's, so the heading and the runtime
+                  icons below it share one left edge. */}
               <h3
                 className="
-                  mt-8 pl-1 text-xs font-medium tracking-wide
-                  text-muted-foreground
+                  flex items-center gap-2 pr-3 pl-6 font-mono text-[0.6875rem]
+                  tracking-wide text-muted-foreground uppercase
                 "
               >
                 {t(GROUP_LABEL_KEYS[section.group])}
+                <span className="tabular-nums">{section.rows.length}</span>
               </h3>
-              <div
-                className="
-                  mt-2 space-y-px overflow-hidden rounded-xl border
-                  border-border-subtle bg-card p-1.5 shadow-xs
-                "
-              >
+              <div className="mt-1.5 flex flex-col">
                 {section.rows.map((row) => (
                   <FleetRowButton key={row.chatId} onOpen={openRow} row={row} />
                 ))}
@@ -277,45 +349,66 @@ function FleetRowButton({
   row: FleetRow;
 }): ReactElement {
   const { t } = useTranslation();
-  const meta = [row.projectName, row.worktreeName].filter((value) =>
-    is.nonEmptyString(value),
-  );
+  const location = [row.projectName, row.worktreeName]
+    .filter((value) => is.nonEmptyString(value))
+    .join(" / ");
+  // The daemon only ever gives one line of detail per run, so the summary is
+  // the failure text when there is one and the reason otherwise.
+  const detail = is.nonEmptyString(row.failureMessage)
+    ? row.failureMessage
+    : row.reason === undefined
+      ? undefined
+      : t(REASON_LABEL_KEYS[row.reason]);
 
   return (
     <button
       className="
-        flex w-full min-w-0 items-center gap-3 rounded-lg px-3 py-2 text-left
+        group relative flex w-full min-w-0 items-center gap-2.5 rounded-lg py-2
+        pr-3 pl-6 text-left transition-colors duration-120 ease-standard
         outline-none
-        hover:bg-muted/50
+        hover:bg-overlay-hover
         focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:ring-inset
+        motion-reduce:transition-none
       "
       onClick={() => onOpen(row)}
       title={row.failureMessage ?? row.title}
       type="button"
     >
+      {/* The dot hangs in the gutter rather than taking a column, so the
+          runtime icon can start on the same edge as the group heading. */}
+      <FleetStatusDot status={row.status} />
       <FleetRuntimeIcon runtime={row.runtime} />
-      <span className="min-w-0 flex-1 truncate text-sm text-foreground">
+      <span className="min-w-0 flex-1 truncate text-sm font-medium text-foreground">
         {row.title}
       </span>
-      {meta.length > 0 ? (
-        <span className="hidden min-w-0 shrink truncate text-xs text-muted-foreground md:block">
-          {meta.join(" · ")}
-        </span>
-      ) : null}
-      <span
-        className={cn(
-          "shrink-0 text-xs font-medium whitespace-nowrap",
-          STATUS_TONE[row.status],
-        )}
-      >
-        {t(STATUS_LABEL_KEYS[row.status])}
-      </span>
-      {/* Relative times vary in width across locales, so the column is sized
-          to hold the longest of them rather than wrapping onto a second line. */}
+      {/* Location, summary and time are fixed-width columns so the list reads
+          down as well as across; an empty cell still holds its slot. */}
       <span
         className="
-          w-28 shrink-0 truncate text-right text-xs whitespace-nowrap
+          hidden w-40 shrink-0 truncate font-mono text-[11px]
           text-muted-foreground
+          md:block
+        "
+      >
+        {location}
+      </span>
+      {/* The status word always renders: the dot's colour is a redundant cue,
+          never the only one. */}
+      <span className="block w-52 shrink-0 truncate text-xs">
+        <span className={STATUS_TONE[row.status]}>
+          {t(STATUS_LABEL_KEYS[row.status])}
+        </span>
+        {is.nonEmptyString(detail) ? (
+          <span className="text-muted-foreground"> · {detail}</span>
+        ) : null}
+      </span>
+      {/* Relative times vary in width across locales, so the column is sized to
+          hold the longest of them; `tabular-nums` keeps it from twitching as
+          the numbers tick over. */}
+      <span
+        className="
+          w-24 shrink-0 truncate text-right font-mono text-[11px] tabular-nums
+          whitespace-nowrap text-muted-foreground
         "
         title={formatDateTime(row.updatedAt)}
       >
@@ -325,12 +418,84 @@ function FleetRowButton({
   );
 }
 
+function FleetStatusDot({
+  status,
+}: {
+  status: ChatActivityStatus;
+}): ReactElement {
+  return (
+    <span
+      aria-hidden="true"
+      className={cn(
+        "absolute top-1/2 left-1.5 size-1.5 -translate-y-1/2 rounded-full",
+        STATUS_DOT_TONE[status],
+        status === "running"
+          ? `
+            animate-[skeleton-breathe_1.6s_ease-in-out_infinite]
+            motion-reduce:animate-none
+          `
+          : undefined,
+      )}
+    />
+  );
+}
+
+function FleetEmptyState({
+  onNewChat,
+  text,
+}: {
+  onNewChat: () => void;
+  text: string;
+}): ReactElement {
+  const { t } = useTranslation();
+
+  return (
+    <div
+      className="
+        dot-grid mt-8 flex flex-col items-center gap-4 rounded-xl border
+        border-border-subtle px-6 py-16 text-center
+      "
+    >
+      <p className="text-sm text-muted-foreground">{text}</p>
+      <Button onClick={onNewChat} size="sm" variant="outline">
+        {t("workspace.newChat")}
+      </Button>
+    </div>
+  );
+}
+
+function FleetSkeletonList(): ReactElement {
+  const { t } = useTranslation();
+
+  return (
+    <div
+      aria-label={t("fleet.loading")}
+      className="mt-8 flex flex-col"
+      role="status"
+    >
+      {Array.from({ length: SKELETON_ROW_COUNT }, (_unused, index) => (
+        <div
+          className="relative flex w-full items-center gap-2.5 py-2 pr-3 pl-6"
+          key={index}
+        >
+          <Skeleton className="absolute top-1/2 left-1.5 size-1.5 -translate-y-1/2 rounded-full" />
+          <Skeleton className="size-4 shrink-0 rounded" />
+          <Skeleton className="h-3.5 flex-1" />
+          <Skeleton className="hidden h-3 w-40 shrink-0 md:block" />
+          <Skeleton className="h-3 w-52 shrink-0" />
+          <Skeleton className="h-3 w-24 shrink-0" />
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function FleetNotice({ text }: { text: string }): ReactElement {
   return (
     <div
       className="
-        mt-8 rounded-xl bg-surface-1/50 px-6 py-16 text-center text-sm
-        text-muted-foreground
+        mt-8 rounded-xl border border-border-subtle px-6 py-16 text-center
+        text-sm text-muted-foreground
       "
     >
       {text}
@@ -350,15 +515,15 @@ function FleetRuntimeIcon({ runtime }: { runtime: string }): ReactElement {
         <span
           aria-hidden="true"
           className="
-            flex size-3 items-center justify-center text-muted-foreground
-            [&_svg]:block [&_svg]:size-3 [&_svg]:shrink-0
+            flex size-3.5 items-center justify-center text-muted-foreground
+            [&_svg]:block [&_svg]:size-3.5 [&_svg]:shrink-0
           "
           // oxlint-disable-next-line react/no-danger -- Static bundled runtime icons need inline SVG to inherit local icon styling.
           // eslint-disable-next-line react/dom-no-dangerously-set-innerhtml -- Static bundled runtime icons need inline SVG to inherit local icon styling.
           dangerouslySetInnerHTML={{ __html: runtimeIconSvg }}
         />
       ) : (
-        <Bot className="size-3 text-muted-foreground" />
+        <Bot className="size-3.5 text-muted-foreground" weight="regular" />
       )}
     </span>
   );

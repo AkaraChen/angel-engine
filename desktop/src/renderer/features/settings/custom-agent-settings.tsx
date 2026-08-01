@@ -28,7 +28,6 @@ import {
   ReorderableAgentRow,
   SettingsGroup,
 } from "@/features/settings/settings-controls";
-import { cn } from "@/platform/utils";
 
 interface CustomAgentFormState {
   args: string;
@@ -171,7 +170,7 @@ function CustomAgentsSettingsGroup({
                     onClick={() => void deleteAgent(agent)}
                     size="icon-xs"
                     type="button"
-                    variant="ghost"
+                    variant="destructive"
                   >
                     <Trash2 />
                   </Button>
@@ -199,9 +198,10 @@ function CustomAgentsSettingsGroup({
                   {agent.label}
                 </span>
                 <span
-                  className={cn(
-                    "mt-0.5 block truncate text-xs text-muted-foreground",
-                  )}
+                  className="
+                    mt-0.5 block truncate font-mono text-[0.6875rem]
+                    text-muted-foreground
+                  "
                 >
                   {[agent.command, ...agent.args].join(" ")}
                 </span>
@@ -227,7 +227,7 @@ function CustomAgentsSettingsGroup({
           }}
         />
       ) : (
-        <article className="flex items-center justify-between gap-3 px-4 py-3">
+        <article className="flex items-center justify-between gap-3 px-5 py-3.5">
           <span className="text-sm text-muted-foreground">
             Custom ACP agents store environment variables locally in plain text.
           </span>
@@ -305,7 +305,7 @@ function CustomAgentForm({
   ]);
 
   return (
-    <article className="space-y-3 px-4 py-3">
+    <article className="space-y-3.5 px-5 py-4">
       <div className="grid grid-cols-2 gap-3">
         <label
           className="space-y-1.5 text-xs font-medium text-muted-foreground"
@@ -330,6 +330,7 @@ function CustomAgentForm({
         >
           Command
           <Input
+            className="font-mono text-sm"
             id={`${formId}-command`}
             onChange={(event) =>
               dispatchForm({
@@ -349,7 +350,7 @@ function CustomAgentForm({
       >
         Args
         <Textarea
-          className="min-h-20 text-sm"
+          className="min-h-20 font-mono text-sm"
           id={`${formId}-args`}
           onChange={(event) =>
             dispatchForm({
@@ -368,7 +369,7 @@ function CustomAgentForm({
       >
         Environment
         <Textarea
-          className="min-h-20 text-sm"
+          className="min-h-20 font-mono text-sm"
           id={`${formId}-environment`}
           onChange={(event) =>
             dispatchForm({

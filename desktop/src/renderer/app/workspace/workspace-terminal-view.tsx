@@ -1,56 +1,11 @@
 import type { TerminalSessionController } from "@angel-engine/daemon-api/terminal";
-import type { ITheme } from "@xterm/xterm";
 
 import { FitAddon } from "@xterm/addon-fit";
 import { Terminal } from "@xterm/xterm";
 import { useCallback, useRef } from "react";
+import { resolveWorkspaceTerminalTheme } from "@/app/workspace/workspace-terminal-theme";
 import { terminalClient } from "@/platform/terminal-client";
 import "@xterm/xterm/css/xterm.css";
-
-const vitesseTerminalThemes = {
-  dark: {
-    black: "#393a34",
-    blue: "#6394bf",
-    brightBlack: "#777777",
-    brightBlue: "#6394bf",
-    brightCyan: "#5eaab5",
-    brightGreen: "#d5d5d3",
-    brightMagenta: "#d9739f",
-    brightRed: "#cb7676",
-    brightWhite: "#ffffff",
-    brightYellow: "#e6cc77",
-    cursor: "#d5d5d3",
-    cyan: "#5eaab5",
-    foreground: "#dbd7caee",
-    green: "#bfbfbd",
-    magenta: "#d9739f",
-    red: "#cb7676",
-    selectionBackground: "#d5d5d338",
-    white: "#dbd7ca",
-    yellow: "#e6cc77",
-  },
-  light: {
-    black: "#121212",
-    blue: "#296aa3",
-    brightBlack: "#aaaaaa",
-    brightBlue: "#296aa3",
-    brightCyan: "#2993a3",
-    brightGreen: "#9b9a96",
-    brightMagenta: "#a13865",
-    brightRed: "#ab5959",
-    brightWhite: "#dddddd",
-    brightYellow: "#bda437",
-    cursor: "#8f8e8a",
-    cyan: "#2993a3",
-    foreground: "#393a34",
-    green: "#8f8e8a",
-    magenta: "#a13865",
-    red: "#ab5959",
-    selectionBackground: "#8f8e8a24",
-    white: "#dbd7ca",
-    yellow: "#bda437",
-  },
-} satisfies Record<"dark" | "light", ITheme>;
 
 interface WorkspaceTerminalInstance {
   animationFrame: number;
@@ -86,9 +41,9 @@ export function WorkspaceTerminalView({
         allowProposedApi: false,
         convertEol: true,
         cursorBlink: true,
-        fontFamily:
-          'ui-monospace, SFMono-Regular, "SF Mono", Menlo, Monaco, Consolas, monospace',
+        fontFamily: getWorkspaceTerminalFontFamily(),
         fontSize: 12,
+        lineHeight: 1.4,
         scrollback: 5000,
         theme: getWorkspaceTerminalTheme(),
       });
@@ -160,7 +115,14 @@ export function WorkspaceTerminalView({
     [root, sessionId],
   );
 
-  return <div className="h-full min-h-0 overflow-hidden" ref={setContainer} />;
+  // The terminal ground is `--card`, not the page, and it runs edge to edge:
+  // the padding is inside the scroll surface so nothing frames it.
+  return (
+    <div
+      className="h-full min-h-0 overflow-hidden bg-card px-2 py-1.5"
+      ref={setContainer}
+    />
+  );
 }
 
 function disposeWorkspaceTerminalInstance(
@@ -179,19 +141,16 @@ function disposeWorkspaceTerminalInstance(
 }
 
 function getWorkspaceTerminalTheme() {
-  return {
-    ...(document.documentElement.classList.contains("dark")
-      ? vitesseTerminalThemes.dark
-      : vitesseTerminalThemes.light),
-    background: getWorkspaceBackgroundColor(),
-  };
+  return resolveWorkspaceTerminalTheme(
+    document.documentElement.classList.contains("dark"),
+  );
 }
 
-function getWorkspaceBackgroundColor() {
+function getWorkspaceTerminalFontFamily() {
   return (
     getComputedStyle(document.documentElement)
-      .getPropertyValue("--background")
-      .trim() || "transparent"
+      .getPropertyValue("--app-font-mono")
+      .trim() || "ui-monospace, SFMono-Regular, monospace"
   );
 }
 

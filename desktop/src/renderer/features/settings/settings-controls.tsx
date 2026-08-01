@@ -18,9 +18,26 @@ import { Switch } from "@/components/ui/switch";
 import { cn } from "@/platform/utils";
 
 /**
- * Grouped-list card: an optional heading block above a hairline-divided
- * container. `tone="danger"` swaps the card chrome for the danger triple
- * (soft border + danger heading) instead of a saturated block.
+ * Danger affordance for actions that still have a confirmation step in front
+ * of them (reset password, delete a worktree, wipe every chat). Those read as
+ * an outline in danger ink; the saturated fill is reserved for the final
+ * button inside the confirmation dialog itself.
+ */
+const dangerActionClassName = "border-status-danger-border";
+
+/**
+ * Section label: mono / uppercase / hairline tracking, sitting *outside* the
+ * card so the card itself stays a clean white plate. Same treatment as the
+ * sidebar and menu group labels.
+ */
+const sectionLabelClassName = `
+  font-mono text-[0.6875rem] font-medium tracking-wide uppercase
+`;
+
+/**
+ * Grouped-list card: an optional label block above a hairline-divided white
+ * plate. `tone="danger"` swaps the card chrome for the danger triple (soft
+ * border + danger label) instead of a saturated block.
  */
 function SettingsGroup({
   children,
@@ -38,12 +55,14 @@ function SettingsGroup({
   return (
     <section className="space-y-2.5">
       {hasHeader ? (
-        <div className="space-y-1 px-0.5">
+        <div className="space-y-1.5 px-0.5">
           {is.nonEmptyString(title) ? (
             <h3
               className={cn(
-                "font-display text-sm font-semibold tracking-[-0.01em]",
-                tone === "danger" && "text-destructive",
+                sectionLabelClassName,
+                tone === "danger"
+                  ? "text-status-danger"
+                  : "text-muted-foreground",
               )}
             >
               {title}
@@ -97,7 +116,7 @@ function SettingsRow({
   return (
     <article
       className={cn(
-        "flex min-h-12 gap-3.5 px-4 py-3",
+        "flex min-h-13 gap-4 px-5 py-3.5",
         align === "start" ? "items-start" : "items-center",
         muted && "text-muted-foreground",
       )}
@@ -221,7 +240,7 @@ function ReorderableAgentRow({
     <Reorder.Item
       as="article"
       className={cn(
-        "flex min-h-12 items-center gap-3 bg-card px-4 py-2.5",
+        "flex min-h-13 items-center gap-3 bg-card px-5 py-3",
         dragging &&
           "relative z-10 rounded-lg shadow-popover ring-1 ring-border-strong",
         muted && "text-muted-foreground",
@@ -274,7 +293,9 @@ function AgentEnabledSwitch({
 
 export {
   AgentEnabledSwitch,
+  dangerActionClassName,
   ReorderableAgentRow,
+  sectionLabelClassName,
   SettingsGroup,
   SettingsRow,
   SettingsSelect,

@@ -130,19 +130,16 @@ export const WorkspaceProcessesView: FC<WorkspaceProcessesViewProps> = ({
 
   if (layout === "split") {
     return (
-      <div className="h-full min-h-0 space-y-4 overflow-auto p-4">
+      <div className="h-full min-h-0 overflow-auto">
         {processes.length > 0 ? (
           <ProcessCard title="Subprocesses">
             <table className="w-full table-fixed text-xs">
               <thead>
-                <tr
-                  className="
-                    border-b border-border-subtle text-left
-                    text-muted-foreground
-                  "
-                >
+                <tr className="bg-surface-1 text-left text-muted-foreground">
                   <ProcessHeaderCell className="w-44">Name</ProcessHeaderCell>
-                  <ProcessHeaderCell className="w-20">PID</ProcessHeaderCell>
+                  <ProcessHeaderCell className="w-20 text-right">
+                    PID
+                  </ProcessHeaderCell>
                   <ProcessHeaderCell>Command</ProcessHeaderCell>
                   <ProcessHeaderCell className="w-20">
                     <span className="sr-only">Actions</span>
@@ -160,9 +157,16 @@ export const WorkspaceProcessesView: FC<WorkspaceProcessesViewProps> = ({
                     key={process.key}
                   >
                     <ProcessCell className="font-medium text-foreground">
-                      {process.name}
+                      <span className="flex min-w-0 items-center gap-1.5">
+                        <ProcessRunningDot />
+                        <span className="truncate">{process.name}</span>
+                      </span>
                     </ProcessCell>
-                    <ProcessCell className="font-mono text-muted-foreground">
+                    <ProcessCell
+                      className="
+                        text-right font-mono text-muted-foreground tabular-nums
+                      "
+                    >
                       {process.pid}
                     </ProcessCell>
                     <ProcessCell
@@ -173,8 +177,13 @@ export const WorkspaceProcessesView: FC<WorkspaceProcessesViewProps> = ({
                     </ProcessCell>
                     <td className="px-2 py-1 text-right">
                       <Button
+                        className="
+                          border-status-danger/40 text-status-danger
+                          hover:bg-status-danger-soft
+                          hover:text-status-danger
+                        "
                         size="xs"
-                        variant="destructive"
+                        variant="ghost"
                         onClick={() => kill(process.pid, process.name)}
                       >
                         Kill
@@ -190,13 +199,10 @@ export const WorkspaceProcessesView: FC<WorkspaceProcessesViewProps> = ({
           <ProcessCard title="Listening ports">
             <table className="w-full table-fixed text-xs">
               <thead>
-                <tr
-                  className="
-                    border-b border-border-subtle text-left
-                    text-muted-foreground
-                  "
-                >
-                  <ProcessHeaderCell className="w-20">Port</ProcessHeaderCell>
+                <tr className="bg-surface-1 text-left text-muted-foreground">
+                  <ProcessHeaderCell className="w-20 text-right">
+                    Port
+                  </ProcessHeaderCell>
                   <ProcessHeaderCell className="w-32">
                     Service
                   </ProcessHeaderCell>
@@ -219,17 +225,25 @@ export const WorkspaceProcessesView: FC<WorkspaceProcessesViewProps> = ({
                     "
                     key={port.key}
                   >
-                    <ProcessCell className="font-medium text-foreground">
+                    <ProcessCell
+                      className="
+                        text-right font-mono font-medium text-foreground
+                        tabular-nums
+                      "
+                    >
                       {port.port}
                     </ProcessCell>
                     <ProcessCell className="text-muted-foreground">
                       {port.service ?? "—"}
                     </ProcessCell>
-                    <ProcessCell className="font-mono text-muted-foreground">
+                    <ProcessCell className="font-mono text-muted-foreground tabular-nums">
                       {port.address}:{port.port}
                     </ProcessCell>
                     <ProcessCell className="text-muted-foreground">
-                      {port.processName} ({port.pid})
+                      {port.processName}{" "}
+                      <span className="font-mono tabular-nums">
+                        ({port.pid})
+                      </span>
                     </ProcessCell>
                     <td className="px-2 py-1 text-right">
                       <Button
@@ -265,8 +279,8 @@ export const WorkspaceProcessesView: FC<WorkspaceProcessesViewProps> = ({
                 <Button
                   aria-label={`Kill ${process.name}`}
                   className="
-                    text-destructive
-                    hover:text-destructive
+                    border-status-danger/40 text-status-danger
+                    hover:bg-status-danger-soft hover:text-status-danger
                   "
                   size="icon-sm"
                   title={`Kill ${process.name}`}
@@ -311,16 +325,18 @@ const ProcessCard: FC<{ children: ReactNode; title: string }> = ({
   children,
   title,
 }) => (
+  // Tool panels are flush: a hairline between sections, no card frame and no
+  // shadow. Density beats decoration on this surface.
   <section
     className="
-      min-w-0 overflow-hidden rounded-lg border border-border-subtle bg-card
-      shadow-xs
+      min-w-0 overflow-hidden border-b border-border-subtle
+      last:border-b-0
     "
   >
     <h2
       className="
-        border-b border-border-subtle px-3 py-2 text-xs font-medium
-        tracking-wide text-muted-foreground
+        border-b border-border-subtle px-3 py-1.5 font-mono text-[10px]
+        font-medium tracking-wide uppercase text-muted-foreground
       "
     >
       {title}
@@ -332,7 +348,30 @@ const ProcessCard: FC<{ children: ReactNode; title: string }> = ({
 const ProcessHeaderCell: FC<{ children: ReactNode; className?: string }> = ({
   children,
   className,
-}) => <th className={cn("px-3 py-2 font-medium", className)}>{children}</th>;
+}) => (
+  <th
+    className={cn(
+      `
+        px-3 py-1.5 font-mono text-[10px] font-medium tracking-wide uppercase
+      `,
+      className,
+    )}
+  >
+    {children}
+  </th>
+);
+
+/**
+ * Everything the registry reports is live by definition — it lists running
+ * subprocesses — so the dot is a steady `--status-success`. There is no exit
+ * code on this surface to turn it red.
+ */
+const ProcessRunningDot: FC = () => (
+  <span
+    aria-hidden="true"
+    className="size-1.5 shrink-0 rounded-full bg-status-success"
+  />
+);
 
 const ProcessCell: FC<{
   children: ReactNode;
@@ -353,7 +392,8 @@ const ProcessSection: FC<{ children: ReactNode; title: string }> = ({
   <section className="shrink-0 p-3">
     <h2
       className="
-        mb-2 pl-2 text-xs font-medium tracking-wide text-muted-foreground
+        mb-2 pl-2 font-mono text-[10px] font-medium tracking-wide uppercase
+        text-muted-foreground
       "
     >
       {title}
@@ -376,6 +416,7 @@ const ProcessRow: FC<{
   >
     <div className="min-w-0 flex-1">
       <div className="flex items-center gap-1.5 text-xs font-medium">
+        <ProcessRunningDot />
         <span className="truncate">{name}</span>
         {service === undefined ? null : (
           <Tooltip>
@@ -396,7 +437,11 @@ const ProcessRow: FC<{
           </Tooltip>
         )}
       </div>
-      <div className="truncate font-mono text-[10px] text-muted-foreground">
+      <div
+        className="
+          truncate pl-3 font-mono text-[10px] text-muted-foreground tabular-nums
+        "
+      >
         {detail}
       </div>
     </div>

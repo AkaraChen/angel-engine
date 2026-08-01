@@ -56,7 +56,7 @@ export function WorkspaceToolSidebarHeader({
     >
       <WorkspaceToolContextLabel api={api} root={root} />
       <WorkspaceToolHeaderButton
-        icon={<WindowIcon weight="duotone" />}
+        icon={<WindowIcon weight="regular" />}
         label="Open in window"
         onClick={() => onRequestHost("window")}
       />
@@ -98,10 +98,11 @@ function WorkspaceToolContextLabel({
   return (
     <div
       className="
-        flex min-w-0 flex-1 items-center gap-1.5 text-xs font-medium
+        flex min-w-0 flex-1 items-center gap-1.5 font-mono text-xs font-medium
         text-muted-foreground
       "
     >
+      {/* Decorative, not clickable -- the one place duotone is right here. */}
       <LabelIcon
         aria-hidden="true"
         className="size-3.5 shrink-0"

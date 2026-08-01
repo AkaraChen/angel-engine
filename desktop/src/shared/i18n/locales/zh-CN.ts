@@ -95,7 +95,12 @@ export const zhCN = {
     fleet: {
       allProjects: "全部项目",
       disconnected: "无法连接后端。",
-      empty: "当前没有活动的 Agent。",
+      emptySegments: {
+        all: "当前没有活动的 Agent。",
+        attention: "当前没有需要你处理的会话。",
+        done: "还没有已完成的会话。",
+        running: "当前没有运行中的 Agent。",
+      },
       filterProject: "按项目筛选",
       filterSegments: "筛选舰队",
       groups: {
@@ -104,6 +109,14 @@ export const zhCN = {
         running: "运行中",
       },
       loading: "正在加载动态",
+      noMatches: "没有匹配的会话。",
+      reasons: {
+        approval: "等待授权",
+        processExited: "进程已退出",
+        question: "提出了问题",
+        runtimeError: "运行时错误",
+      },
+      search: "搜索会话",
       segments: {
         all: "全部",
         attention: "需要我",

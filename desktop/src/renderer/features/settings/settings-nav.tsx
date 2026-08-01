@@ -4,6 +4,7 @@ import type { SettingsTab } from "@/features/settings/settings-tabs";
 import { useCallback } from "react";
 import { useTranslation } from "react-i18next";
 
+import { sectionLabelClassName } from "@/features/settings/settings-controls";
 import {
   settingsTabGroups,
   settingsTabs,
@@ -68,9 +69,8 @@ export function SettingsNav({
   return (
     <aside
       className="
-        flex w-56 shrink-0 flex-col overflow-y-auto border-r border-sidebar-border
-        bg-sidebar/70 px-2.5 pb-4
-        supports-backdrop-filter:backdrop-blur-xl
+        flex w-56 shrink-0 flex-col overflow-y-auto border-r border-border-subtle
+        bg-sidebar px-2.5 pb-4
       "
       data-electron-drag
       style={{ paddingTop: isMacOS ? 44 : 16 }}
@@ -94,10 +94,10 @@ export function SettingsNav({
           <div className="flex flex-col gap-0.5" key={group}>
             <span
               aria-hidden="true"
-              className="
-                px-2 pb-1 text-[11px] font-medium tracking-[0.05em] uppercase
-                text-muted-foreground/80
-              "
+              className={cn(
+                "px-2 pb-1 text-muted-foreground",
+                sectionLabelClassName,
+              )}
             >
               {t(labelKey)}
             </span>
@@ -111,9 +111,11 @@ export function SettingsNav({
                   aria-selected={isActive}
                   className={cn(
                     `
-                      flex h-8 items-center gap-2.5 rounded-lg px-2 text-left
-                      text-sm font-medium outline-none
+                      flex h-8 items-center gap-2.5 rounded-md px-2 text-left
+                      text-sm font-medium transition-colors duration-120
+                      ease-standard outline-none
                       focus-visible:ring-2 focus-visible:ring-ring/40
+                      motion-reduce:transition-none
                     `,
                     isActive
                       ? "bg-primary-soft text-primary-soft-foreground"
@@ -131,7 +133,9 @@ export function SettingsNav({
                   tabIndex={isActive ? 0 : -1}
                   type="button"
                 >
-                  <TabIcon className="size-4 shrink-0" weight="duotone" />
+                  {/* Tabs are interactive, so they take the regular weight;
+                      duotone is reserved for decorative marks. */}
+                  <TabIcon className="size-4 shrink-0" weight="regular" />
                   <span className="truncate">{t(tab.labelKey)}</span>
                 </button>
               );

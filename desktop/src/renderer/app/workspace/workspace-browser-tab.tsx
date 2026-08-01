@@ -8,7 +8,10 @@ import type { FormEvent } from "react";
 import {
   ArrowLeft,
   ArrowRight,
+  Globe,
+  LockSimple,
   ArrowClockwise as Refresh,
+  WarningCircle,
 } from "@phosphor-icons/react";
 import { useCallback, useEffect, useState } from "react";
 
@@ -19,6 +22,19 @@ import {
 import { WorkspaceBrowserNativeView } from "@/app/workspace/workspace-browser-view";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+
+/**
+ * Stands in for a favicon: the leading glyph says what kind of origin this is
+ * rather than which site it is. Local dev servers -- the overwhelmingly common
+ * case here -- are http and would otherwise wear a permanent warning.
+ */
+function workspaceBrowserSiteIcon(url: string) {
+  const protocol = URL.parse(url)?.protocol;
+  if (protocol === "https:" || protocol === undefined) {
+    return LockSimple;
+  }
+  return protocol === "http:" ? Globe : WarningCircle;
+}
 
 export function WorkspaceBrowserTabContent({
   active,
@@ -162,12 +178,14 @@ export function WorkspaceBrowserTabContent({
       });
   }, [handleStateChange, tab.browserViewId, tab.id]);
 
+  const SiteIcon = workspaceBrowserSiteIcon(tab.url);
+
   return (
     <div className="flex h-full min-h-0 flex-col">
       <form
         className="
-          flex h-9 shrink-0 items-center gap-1 border-b border-border-subtle
-          px-2
+          relative flex h-9 shrink-0 items-center gap-1 border-b
+          border-border-subtle px-2
         "
         onSubmit={handleSubmit}
       >
@@ -195,32 +213,66 @@ export function WorkspaceBrowserTabContent({
         >
           <ArrowRight />
         </Button>
-        <Button
-          aria-label="Reload"
-          className="active:bg-overlay-active"
-          disabled={!browserState.ready}
-          onClick={reload}
-          size="icon-xs"
-          title="Reload"
-          type="button"
-          variant="ghost"
+        {/*
+          The address bar is one of the three places the DNA capsule survives
+          into app context -- it is a search field in everything but name.
+        */}
+        <div
+          className="
+            group/address relative flex h-7 min-w-0 flex-1 items-center
+            rounded-full border border-input bg-surface-1
+            transition-[border-color,box-shadow] duration-150 ease-standard
+            focus-within:border-primary focus-within:ring-2
+            focus-within:ring-ring/45
+            motion-reduce:transition-none
+          "
         >
-          <Refresh />
-        </Button>
-        <Input
-          aria-label="URL"
-          className="h-7 rounded-md px-2 text-xs select-text"
-          onChange={(event) => updateDraftUrl(event.currentTarget.value)}
-          onFocus={(event) => event.currentTarget.select()}
-          onKeyDown={(event) => {
-            if (event.key === "Escape") {
-              event.preventDefault();
-              updateDraftUrl(tab.url);
-              event.currentTarget.blur();
-            }
-          }}
-          value={tab.draftUrl}
-        />
+          <SiteIcon
+            aria-hidden="true"
+            className="ml-2.5 size-3.5 shrink-0 text-muted-foreground"
+            weight="regular"
+          />
+          <Input
+            aria-label="URL"
+            className="
+              h-7 rounded-full border-transparent bg-transparent px-2 font-mono
+              text-xs select-text
+              focus-visible:border-transparent focus-visible:ring-0
+            "
+            onChange={(event) => updateDraftUrl(event.currentTarget.value)}
+            onFocus={(event) => event.currentTarget.select()}
+            onKeyDown={(event) => {
+              if (event.key === "Escape") {
+                event.preventDefault();
+                updateDraftUrl(tab.url);
+                event.currentTarget.blur();
+              }
+            }}
+            value={tab.draftUrl}
+          />
+          <Button
+            aria-label="Reload"
+            className="
+              mr-0.5 shrink-0 rounded-full
+              active:bg-overlay-active
+            "
+            disabled={!browserState.ready}
+            onClick={reload}
+            size="icon-xs"
+            title="Reload"
+            type="button"
+            variant="ghost"
+          >
+            <Refresh />
+          </Button>
+        </div>
+        {browserState.ready ? null : (
+          // No animated gradient: the rail is either there or it is not.
+          <span
+            aria-hidden="true"
+            className="absolute inset-x-0 top-0 h-0.5 bg-primary"
+          />
+        )}
       </form>
       <WorkspaceBrowserNativeView
         active={active}

@@ -11,6 +11,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { queryKeys } from "@/platform/query-keys";
+import { cn } from "@/platform/utils";
+
+const commitSummaryLimit = 50;
 
 export function useWorkspaceGitPanelState(api: ApiClient, root: string) {
   const queryClient = useQueryClient();
@@ -110,6 +113,8 @@ export function WorkspaceGitCommitComposer({
   const disabled =
     pending || selectedCount === 0 || summary.trim().length === 0;
   const target = is.nonEmptyString(branch) ? branch : "HEAD";
+  const summaryLength = summary.trim().length;
+  const summaryOverLimit = summaryLength > commitSummaryLimit;
 
   return (
     <form
@@ -117,16 +122,39 @@ export function WorkspaceGitCommitComposer({
       onSubmit={onSubmit}
     >
       <div className="space-y-1.5">
-        <Input
-          className="
-            h-6 rounded-md bg-surface-1 px-2 py-0.5 text-xs select-text
-          "
-          placeholder="Summary"
-          value={summary}
-          onChange={(event) => onSummaryChange(event.currentTarget.value)}
-        />
+        <div className="relative">
+          <Input
+            className="
+              h-6 rounded-md bg-surface-1 py-0.5 pr-9 pl-2 font-mono text-xs
+              select-text
+            "
+            placeholder="Summary"
+            value={summary}
+            onChange={(event) => onSummaryChange(event.currentTarget.value)}
+          />
+          {summaryLength === 0 ? null : (
+            <span
+              aria-hidden="true"
+              className={cn(
+                `
+                  pointer-events-none absolute inset-y-0 right-2 flex
+                  items-center font-mono text-[10px] tabular-nums
+                `,
+                summaryOverLimit
+                  ? "text-status-attention"
+                  : "text-muted-foreground",
+              )}
+              // The 50-character first line is a git convention, not a limit:
+              // the counter nudges, it never blocks the commit.
+            >
+              {summaryLength}/{commitSummaryLimit}
+            </span>
+          )}
+        </div>
         <Textarea
-          className="min-h-12 rounded-md bg-surface-1 p-1.5 text-xs select-text"
+          className="
+            min-h-12 rounded-md bg-surface-1 p-1.5 font-mono text-xs select-text
+          "
           placeholder="Description"
           value={description}
           onChange={(event) => onDescriptionChange(event.currentTarget.value)}
@@ -138,11 +166,20 @@ export function WorkspaceGitCommitComposer({
         ) : null}
         <div className="flex items-center gap-1.5">
           <div className="min-w-0 flex-1 truncate text-xs text-muted-foreground">
-            {selectedCount.toLocaleString()} of {totalCount.toLocaleString()}{" "}
+            <span className="tabular-nums">
+              {selectedCount.toLocaleString()} of {totalCount.toLocaleString()}
+            </span>{" "}
             files selected
           </div>
+          {/* The only primary CTA in the whole tool-panel surface. */}
           <Button disabled={disabled} size="xs" type="submit">
-            {pending ? "Committing" : `Commit to ${target}`}
+            {pending ? (
+              "Committing"
+            ) : (
+              <>
+                Commit to <span className="font-mono">{target}</span>
+              </>
+            )}
           </Button>
         </div>
       </div>

@@ -60,13 +60,11 @@ export function WorkspaceToolContent({ root }: { root: string }) {
       return <WorkspaceGitDiffTool tab={activeDynamicTab} />;
     case "terminal":
       return (
-        <div className="h-full min-h-0 overflow-hidden p-2">
-          <WorkspaceTerminalView
-            focusOnMount
-            root={activeDynamicTab.root}
-            sessionId={activeDynamicTab.sessionId}
-          />
-        </div>
+        <WorkspaceTerminalView
+          focusOnMount
+          root={activeDynamicTab.root}
+          sessionId={activeDynamicTab.sessionId}
+        />
       );
   }
 }
