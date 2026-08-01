@@ -48,7 +48,7 @@ export function MobileUrlQrDialog({
           <div className="rounded-xl bg-white p-4 ring-1 ring-border-subtle">
             <QRCode
               bgColor="#ffffff"
-              fgColor="#141516"
+              fgColor="#1a1a1a"
               level="M"
               size={184}
               title={url}

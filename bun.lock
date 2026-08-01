@@ -41,7 +41,7 @@
     },
     "desktop": {
       "name": "desktop",
-      "version": "0.0.4-beta32",
+      "version": "1.0.1-beta.3",
       "dependencies": {
         "@angel-engine/claude-client": "workspace:*",
         "@angel-engine/client-napi": "workspace:*",
@@ -56,7 +56,8 @@
         "@assistant-ui/react-streamdown": "^0.3.5",
         "@chenglou/pretext": "^0.0.8",
         "@egoist/tipc": "^0.3.2",
-        "@fontsource-variable/ibm-plex-sans": "^5.2.8",
+        "@fontsource-variable/dm-sans": "^5.3.0",
+        "@fontsource-variable/jetbrains-mono": "^5.3.0",
         "@fontsource-variable/playwrite-de-la": "^5.2.7",
         "@fontsource/noto-sans-jp": "^5.2.9",
         "@fontsource/noto-sans-kr": "^5.2.9",
@@ -771,9 +772,13 @@
 
     "@floating-ui/utils": ["@floating-ui/utils@0.2.12", "", {}, "sha512-HpCo8tmWzLVad5s2d19EhAz5zqrrQ6s69qd6moPMQvkOuSwDT1YgRfWSVuc4ennqrgv3OHppiOGMQ7oC13yIww=="],
 
+    "@fontsource-variable/dm-sans": ["@fontsource-variable/dm-sans@5.3.0", "", {}, "sha512-BpUG5bqePiDFMBM4ZtLSlPdAIOM990uB1dlXzIf4aw21yQR7BmykedLXXXMqGWsR18aMLOsbWccwJNh3ztTQaA=="],
+
     "@fontsource-variable/geist": ["@fontsource-variable/geist@5.2.9", "", {}, "sha512-TP+QSBG3wxKGPE33CbMy/L0Nu3qvJ6Fy81Yc4LnQ95xH+i+cfEp8fyU8/kfV14YwszxIFPhnoMTbjL71waVpyQ=="],
 
     "@fontsource-variable/ibm-plex-sans": ["@fontsource-variable/ibm-plex-sans@5.2.8", "", {}, "sha512-n5PF2iFa0CZT0QYTPzxvZ39opC9LnU0zdoRccoADbs+Dtsd+lbXOZF7RNuIPHcQX1dKjF63sxnRImQIB5eD0Ag=="],
+
+    "@fontsource-variable/jetbrains-mono": ["@fontsource-variable/jetbrains-mono@5.3.0", "", {}, "sha512-F32xpS2NsGYoQi2ADSkKTgpJj7ozajsGgDJ8woTnqjmIB+dxDIqImjl4pXZVEExu8UFZ2ndhmX18EBS/hdz3Lw=="],
 
     "@fontsource-variable/playwrite-de-la": ["@fontsource-variable/playwrite-de-la@5.2.7", "", {}, "sha512-7WkyJ2iEMrWNNqHOs8lCcrllYV/jmuD/QOLirpfEGZRxIwDKwwZs7Cy5p/iKnzTEyOZ9xjPapq8fnKNBkca3Qw=="],
 

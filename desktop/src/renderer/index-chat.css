@@ -271,7 +271,7 @@
    and utilities are cascaded after @layer components — unlayered author rules
    are the only way to reliably restyle them without !important. */
 .chat-markdown [data-streamdown="code-block"] {
-  background-color: #ffffff;
+  background-color: var(--card);
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-lg);
   box-shadow: var(--elevation-xs);

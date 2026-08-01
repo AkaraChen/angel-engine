@@ -9,18 +9,32 @@
 @theme inline {
   --font-sans: var(--app-font-family-sans);
   --font-display: var(--app-font-display);
+  --font-mono: var(--app-font-mono);
   --ease-swift: cubic-bezier(0.32, 0.72, 0, 1);
-  --color-green-50: var(--green-50);
-  --color-green-100: var(--green-100);
-  --color-green-200: var(--green-200);
-  --color-green-300: var(--green-300);
-  --color-green-400: var(--green-400);
-  --color-green-500: var(--green-500);
-  --color-green-600: var(--green-600);
-  --color-green-700: var(--green-700);
-  --color-green-800: var(--green-800);
-  --color-green-900: var(--green-900);
-  --color-green-950: var(--green-950);
+  --ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
+  --color-ink-50: var(--ink-50);
+  --color-ink-100: var(--ink-100);
+  --color-ink-200: var(--ink-200);
+  --color-ink-300: var(--ink-300);
+  --color-ink-400: var(--ink-400);
+  --color-ink-500: var(--ink-500);
+  --color-ink-600: var(--ink-600);
+  --color-ink-700: var(--ink-700);
+  --color-ink-800: var(--ink-800);
+  --color-ink-900: var(--ink-900);
+  --color-ink-950: var(--ink-950);
+  --color-azure-50: var(--azure-50);
+  --color-azure-100: var(--azure-100);
+  --color-azure-200: var(--azure-200);
+  --color-azure-300: var(--azure-300);
+  --color-azure-400: var(--azure-400);
+  --color-azure-500: var(--azure-500);
+  --color-azure-600: var(--azure-600);
+  --color-azure-700: var(--azure-700);
+  --color-azure-800: var(--azure-800);
+  --color-azure-900: var(--azure-900);
+  --color-azure-950: var(--azure-950);
+  --color-presence: var(--presence);
   --color-surface-1: var(--surface-1);
   --color-surface-2: var(--surface-2);
   --color-surface-3: var(--surface-3);
@@ -92,7 +106,7 @@
 
 :root {
   color-scheme: light;
-  --app-font-latin: "IBM Plex Sans Variable";
+  --app-font-latin: "DM Sans Variable";
   --app-font-cjk: "Noto Sans SC";
   --app-font-cjk-fallback: "Noto Sans TC", "Noto Sans JP", "Noto Sans KR";
   --app-font-family-sans:
@@ -100,82 +114,100 @@
     -apple-system, BlinkMacSystemFont, "Segoe UI Variable", "Segoe UI",
     ui-sans-serif, system-ui, sans-serif;
   --app-font-display: var(--app-font-family-sans);
-  --radius: 0.625rem;
-  --green-50: #fafafa;
-  --green-100: #f6f6f6;
-  --green-200: #ebebea;
-  --green-300: #dededd;
-  --green-400: #c8c8c7;
-  --green-500: #aaa9a7;
-  --green-600: #858482;
-  --green-700: #676664;
-  --green-800: #464543;
-  --green-900: #2c2b29;
-  --green-950: #1a1918;
-  --background: #fafafa;
-  --foreground: #2f2f2e;
-  --card: #fbfbfa;
-  --card-foreground: #2f2f2e;
-  --popover: #fbfbfa;
-  --popover-foreground: #2f2f2e;
-  --primary: #1c6b48;
+  --app-font-mono:
+    "JetBrains Mono Variable", ui-monospace, SFMono-Regular, "SF Mono", Menlo,
+    Consolas, monospace;
+  --radius: 0.5rem;
+  /* Neutral ramp. Named `ink` because these are warm greys, not brand colors;
+     the accent ramp lives in `--azure-*`. */
+  --ink-50: #fafaf9;
+  --ink-100: #f5f5f4;
+  --ink-200: #e7e5e4;
+  --ink-300: #d6d3d1;
+  --ink-400: #a6a09b;
+  --ink-500: #79716b;
+  --ink-600: #57534d;
+  --ink-700: #44403b;
+  --ink-800: #292524;
+  --ink-900: #1c1917;
+  --ink-950: #0c0a09;
+  --azure-50: #eef6ff;
+  --azure-100: #d9eaff;
+  --azure-200: #bcdbff;
+  --azure-300: #8ec6ff;
+  --azure-400: #59a5ff;
+  --azure-500: #3784ff;
+  --azure-600: #1b60f5;
+  --azure-700: #144be1;
+  --azure-800: #173db6;
+  --azure-900: #19388f;
+  --azure-950: #142357;
+  --background: #fbf9f4;
+  --foreground: #1a1a1a;
+  --card: #ffffff;
+  --card-foreground: #1a1a1a;
+  --popover: #ffffff;
+  --popover-foreground: #1a1a1a;
+  --primary: #3784ff;
   --primary-foreground: #ffffff;
-  --primary-hover: #175c3e;
-  --primary-active: #134f35;
-  --primary-soft: #e7f2ec;
-  --primary-soft-foreground: #14533a;
+  --primary-hover: #1b60f5;
+  --primary-active: #144be1;
+  --primary-soft: #d5e5ff;
+  --primary-soft-foreground: #29325c;
   --secondary: var(--surface-1);
-  --secondary-foreground: #2f2f2e;
+  --secondary-foreground: #1a1a1a;
   --muted: var(--surface-1);
-  --muted-foreground: #2f2f2e99;
+  /* Spec value is #71717a, which lands at 4.18:1 on the cream paper ground.
+     Darkened onto the warm neutral ramp to clear WCAG AA (5.5:1). */
+  --muted-foreground: #6b645d;
   --accent: var(--surface-1);
-  --accent-foreground: #1c6b48;
-  --destructive: #ab5959;
+  --accent-foreground: #1b60f5;
+  --destructive: #fb2c36;
   --destructive-foreground: #ffffff;
-  --surface-1: #ebebea;
-  --surface-2: #e2e2e1;
-  --surface-3: #d6d6d5;
-  --panel: rgb(251 251 250 / 0.76);
-  --overlay-hover: rgb(37 37 36 / 0.055);
-  --overlay-active: rgb(37 37 36 / 0.085);
-  --border: #d0d0ce;
-  --border-subtle: #dededc;
-  --border-strong: #bfbfbd;
-  --input: #d0d0ce;
-  --ring: #1c6b48;
-  --status-success: #2f7d57;
-  --status-success-soft: #e7f2ec;
-  --status-success-border: #c7e2d3;
+  --presence: #7c6df0;
+  --surface-1: #f4f1ea;
+  --surface-2: #ece8df;
+  --surface-3: #e2ded3;
+  --panel: rgb(255 255 255 / 0.76);
+  --overlay-hover: rgb(41 37 36 / 0.055);
+  --overlay-active: rgb(41 37 36 / 0.085);
+  --border: #e4e3e0;
+  --border-subtle: #edece8;
+  --border-strong: #d4d4d0;
+  --input: #e4e3e0;
+  --ring: #3784ff;
+  --dot-grid: #c4c8cc;
+  --status-success: #009767;
+  --status-success-soft: #e6f6f0;
+  --status-success-border: #c2e7da;
   --status-attention: #9a7b1a;
-  --status-attention-soft: #f7f1dd;
-  --status-attention-border: #ebdcac;
-  --status-danger: #ab5959;
-  --status-danger-soft: #f7ebeb;
-  --status-danger-border: #ecd2d2;
-  --status-info: #296aa3;
-  --status-info-soft: #e9f1f7;
-  --status-info-border: #cfe0ee;
-  --elevation-xs: 0 1px 1px rgb(33 33 32 / 0.035);
+  --status-attention-soft: #ffefd9;
+  --status-attention-border: #fcdfb6;
+  --status-danger: #fb2c36;
+  --status-danger-soft: #fdecec;
+  --status-danger-border: #f7cfd1;
+  --status-info: #1b60f5;
+  --status-info-soft: #eef6ff;
+  --status-info-border: #d9eaff;
+  --elevation-xs: 0 1px 2px rgb(15 23 42 / 0.05);
   --elevation-panel:
-    0 1px 1px rgb(33 33 32 / 0.025), 0 4px 14px -14px rgb(33 33 32 / 0.18);
-  --elevation-popover:
-    0 1px 3px rgb(33 33 32 / 0.04), 0 8px 20px -16px rgb(33 33 32 / 0.2);
-  --elevation-overlay:
-    0 2px 8px rgb(33 33 32 / 0.05), 0 16px 40px -24px rgb(33 33 32 / 0.24);
-  --chart-1: #1e754f;
-  --chart-2: #296aa3;
-  --chart-3: #a65e2b;
-  --chart-4: #a13865;
-  --chart-5: #bda437;
-  --sidebar: #f6f6f6;
-  --sidebar-foreground: #4a4a48;
-  --sidebar-primary: #f6f6f6;
-  --sidebar-primary-foreground: #2f2f2e;
-  --sidebar-accent: var(--surface-1);
-  --sidebar-accent-foreground: #2f2f2e;
+    0 1px 2px rgb(15 23 42 / 0.04), 0 2px 6px -2px rgb(15 23 42 / 0.06);
+  --elevation-popover: 0 18px 48px -24px rgb(35 31 32 / 0.18);
+  --elevation-overlay: 0 0 48px -16px rgb(35 31 32 / 0.18);
+  --chart-1: #3784ff;
+  --chart-2: #7c6df0;
+  --chart-3: #009767;
+  --chart-4: #9a7b1a;
+  --chart-5: #fb2c36;
+  --sidebar: #f4f1ea;
+  --sidebar-foreground: #52504b;
+  --sidebar-primary: #f4f1ea;
+  --sidebar-primary-foreground: #1a1a1a;
+  --sidebar-accent: var(--surface-2);
+  --sidebar-accent-foreground: #1a1a1a;
   --sidebar-border: var(--border-subtle);
-  --sidebar-ring: #1c6b48;
-  --macos-sidebar-background: #ebebea;
+  --sidebar-ring: #3784ff;
+  --macos-sidebar-background: #f4f1ea;
   --workspace-new-chat-description-size: 0.875rem;
   --workspace-new-chat-title-size: 1.875rem;
   --workspace-composer-line-height: 1.5rem;
@@ -261,70 +293,74 @@
 
 .dark {
   color-scheme: dark;
-  --background: #141516;
-  --foreground: #e4e4e2ee;
-  --card: #171819;
-  --card-foreground: #e4e4e2ee;
-  --popover: #171819;
-  --popover-foreground: #e4e4e2ee;
-  --primary: #4d9375;
-  --primary-foreground: #141516;
-  --primary-hover: #5aa385;
-  --primary-active: #427f65;
-  --primary-soft: rgb(77 147 117 / 0.14);
-  --primary-soft-foreground: #8fc4ab;
+  --background: #0c0c0c;
+  --foreground: #f0f0ee;
+  --card: #171717;
+  --card-foreground: #f0f0ee;
+  --popover: #171717;
+  --popover-foreground: #f0f0ee;
+  --primary: #69a3ff;
+  --primary-foreground: #0c0c0c;
+  --primary-hover: #93c5fd;
+  --primary-active: #59a5ff;
+  --primary-soft: rgb(105 163 255 / 0.14);
+  --primary-soft-foreground: #bcdbff;
   --secondary: var(--surface-1);
-  --secondary-foreground: #e4e4e2ee;
+  --secondary-foreground: #f0f0ee;
   --muted: var(--surface-1);
-  --muted-foreground: #e4e4e290;
+  /* 5.9:1 on #0c0c0c — clears AA. */
+  --muted-foreground: #f0f0ee90;
   --accent: var(--surface-1);
-  --accent-foreground: #e4e4e2ee;
-  --destructive: #cb7676;
-  --destructive-foreground: #141516;
-  --surface-1: #1d1d1c;
-  --surface-2: #252524;
-  --surface-3: #2f2f2d;
+  --accent-foreground: #f0f0ee;
+  --destructive: #ff6467;
+  --destructive-foreground: #0c0c0c;
+  --presence: #a99cff;
+  --surface-1: #141414;
+  --surface-2: #1c1c1c;
+  --surface-3: #242424;
   --panel: rgb(255 255 255 / 0.035);
   --overlay-hover: rgb(235 235 234 / 0.07);
   --overlay-active: rgb(235 235 234 / 0.1);
-  --border: rgb(255 255 255 / 0.13);
-  --border-subtle: rgb(255 255 255 / 0.09);
-  --border-strong: rgb(255 255 255 / 0.2);
-  --input: rgb(255 255 255 / 0.13);
-  --ring: #4d9375;
-  --status-success: #6fb392;
-  --status-success-soft: rgb(111 179 146 / 0.12);
-  --status-success-border: rgb(111 179 146 / 0.28);
-  --status-attention: #e6cc77;
-  --status-attention-soft: rgb(230 204 119 / 0.12);
-  --status-attention-border: rgb(230 204 119 / 0.28);
-  --status-danger: #cb7676;
-  --status-danger-soft: rgb(203 118 118 / 0.12);
-  --status-danger-border: rgb(203 118 118 / 0.28);
-  --status-info: #6394bf;
-  --status-info-soft: rgb(99 148 191 / 0.12);
-  --status-info-border: rgb(99 148 191 / 0.28);
-  --elevation-xs: 0 1px 1px rgb(0 0 0 / 0.22);
+  --border: #1e1e1e;
+  --border-subtle: #191919;
+  --border-strong: #2b2b2b;
+  --input: #1e1e1e;
+  --ring: #69a3ff;
+  --dot-grid: #2b2b2b;
+  --status-success: #00d294;
+  --status-success-soft: rgb(0 210 148 / 0.12);
+  --status-success-border: rgb(0 210 148 / 0.28);
+  --status-attention: #f0b100;
+  --status-attention-soft: rgb(240 177 0 / 0.12);
+  --status-attention-border: rgb(240 177 0 / 0.28);
+  --status-danger: #ff6467;
+  --status-danger-soft: rgb(255 100 103 / 0.12);
+  --status-danger-border: rgb(255 100 103 / 0.28);
+  --status-info: #69a3ff;
+  --status-info-soft: rgb(105 163 255 / 0.12);
+  --status-info-border: rgb(105 163 255 / 0.28);
+  --elevation-xs: 0 1px 2px rgb(0 0 0 / 0.4);
   --elevation-panel:
-    inset 0 1px 0 rgb(255 255 255 / 0.035), 0 4px 16px -16px rgb(0 0 0 / 0.45);
+    inset 0 1px 0 rgb(255 255 255 / 0.035), 0 1px 2px rgb(0 0 0 / 0.32),
+    0 2px 6px -2px rgb(0 0 0 / 0.4);
   --elevation-popover:
-    inset 0 1px 0 rgb(255 255 255 / 0.04), 0 8px 24px -18px rgb(0 0 0 / 0.5);
+    inset 0 1px 0 rgb(255 255 255 / 0.04), 0 18px 48px -24px rgb(0 0 0 / 0.72);
   --elevation-overlay:
-    inset 0 1px 0 rgb(255 255 255 / 0.04), 0 16px 44px -26px rgb(0 0 0 / 0.55);
-  --chart-1: #4d9375;
-  --chart-2: #6394bf;
-  --chart-3: #d4976c;
-  --chart-4: #d9739f;
-  --chart-5: #e6cc77;
-  --sidebar: #141516;
+    inset 0 1px 0 rgb(255 255 255 / 0.04), 0 0 48px -16px rgb(0 0 0 / 0.72);
+  --chart-1: #69a3ff;
+  --chart-2: #a99cff;
+  --chart-3: #00d294;
+  --chart-4: #f0b100;
+  --chart-5: #ff6467;
+  --sidebar: #0c0c0c;
   --sidebar-foreground: #c9c9c6;
-  --sidebar-primary: #141516;
-  --sidebar-primary-foreground: #e4e4e2ee;
-  --sidebar-accent: var(--surface-1);
-  --sidebar-accent-foreground: #e4e4e2ee;
+  --sidebar-primary: #0c0c0c;
+  --sidebar-primary-foreground: #f0f0ee;
+  --sidebar-accent: var(--surface-2);
+  --sidebar-accent-foreground: #f0f0ee;
   --sidebar-border: var(--border-subtle);
-  --sidebar-ring: #4d9375;
-  --macos-sidebar-background: #151719;
+  --sidebar-ring: #69a3ff;
+  --macos-sidebar-background: #0c0c0c;
 }
 
 /* File-tree icon palette for the third-party FileTree component (vendor
@@ -334,7 +370,7 @@
   --trees-icon-blue: light-dark(#296aa3, #6394bf);
   --trees-icon-cyan: light-dark(#2993a3, #5eaab5);
   --trees-icon-gray: light-dark(#6a737d, #959da5);
-  --trees-icon-green: light-dark(#1e754f, #4d9375);
+  --trees-icon-green: light-dark(#009767, #00d294);
   --trees-icon-indigo: light-dark(#5a6aa6, #6872ab);
   --trees-icon-mauve: light-dark(#b05a78, #db889a);
   --trees-icon-orange: light-dark(#a65e2b, #d4976c);
@@ -352,13 +388,14 @@
   }
 
   ::selection {
-    background-color: rgb(143 142 138 / 0.2);
+    background-color: rgb(55 132 255 / 0.18);
   }
 
   .dark ::selection {
-    background-color: rgb(213 213 211 / 0.24);
+    background-color: rgb(105 163 255 / 0.24);
   }
 
+  /* eric-design references/normalize.css */
   html,
   body {
     overscroll-behavior-y: none;
@@ -377,6 +414,18 @@
     margin: 0;
     overflow: hidden;
     font-family: var(--app-font-family-sans);
+    /* Metrics, counts and durations are everywhere in this app; lining figures
+       keep them from jittering as they stream in. */
+    font-variant-numeric: tabular-nums;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    letter-spacing: -0.025em;
   }
 
   button,
@@ -399,6 +448,30 @@
   textarea,
   [role="button"] {
     -webkit-app-region: no-drag;
+  }
+}
+
+/* Paper texture for empty states and other open surfaces. Never lay this
+   behind dense content — Stage 2/3 pick the surfaces that get it. */
+@utility dot-grid {
+  background-image: radial-gradient(
+    circle at 1px 1px,
+    var(--dot-grid) 1px,
+    transparent 0
+  );
+  background-size: 16px 16px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-delay: -1ms !important;
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-delay: 0s !important;
+    transition-duration: 1ms !important;
   }
 }
 
