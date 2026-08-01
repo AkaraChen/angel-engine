@@ -252,10 +252,12 @@ export const zhTW = {
             "將徹底刪除 {{chatCount}} 個已封存工作階段，並移除 {{managedWorktreeCount}} 個 worktree 目錄。此操作無法復原。",
           confirmDeleteTitle: "要刪除可清理的 worktree 嗎？",
           deleteFailed: "無法刪除 worktree",
+          deleteWorktree: "徹底刪除 {{projectName}} 的 worktree {{identifier}}",
           deletedToast:
             "已刪除 {{worktreeCount}} 個 worktree · {{chatCount}} 個已封存工作階段",
           empty: "沒有可清理的 worktree",
           missingOnDisk: "磁碟上已不存在",
+          noSessions: "孤立 worktree · 無已封存工作階段",
           partialFailure: "{{count}} 個 worktree 刪除失敗。",
           scanAgain: "重新掃描",
           sessionCount_one: "{{count}} 個已封存工作階段",

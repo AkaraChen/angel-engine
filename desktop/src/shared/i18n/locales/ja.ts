@@ -254,10 +254,13 @@ export const ja = {
             "アーカイブ済みセッション {{chatCount}} 件を完全に削除し、worktree ディレクトリ {{managedWorktreeCount}} 件を削除します。この操作は元に戻せません。",
           confirmDeleteTitle: "削除可能な worktree を削除しますか？",
           deleteFailed: "worktree を削除できませんでした",
+          deleteWorktree:
+            "{{projectName}} の worktree {{identifier}} を完全に削除",
           deletedToast:
             "worktree {{worktreeCount}} 件 · アーカイブ済みセッション {{chatCount}} 件を削除しました",
           empty: "削除可能な worktree はありません",
           missingOnDisk: "ディスク上に存在しません",
+          noSessions: "孤立した worktree · アーカイブ済みセッションなし",
           partialFailure: "{{count}} 件の worktree を削除できませんでした。",
           scanAgain: "再スキャン",
           sessionCount_one: "アーカイブ済みセッション {{count}} 件",
