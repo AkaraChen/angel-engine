@@ -366,7 +366,8 @@ export const zhCN = {
         stateDownloaded: "版本 {{version}} 已准备好安装。",
         stateDownloading: "正在下载版本 {{version}}…",
         stateError: "上次检查失败：{{detail}}",
-        stateIdle: "当前通道下已是最新版本。",
+        stateIdle: "当前通道下已是最新版本。上次检查：{{time}}。",
+        stateUnchecked: "尚未检查更新。",
         unsupported: "自动更新目前仅在 macOS 上可用。",
       },
       workspace: {

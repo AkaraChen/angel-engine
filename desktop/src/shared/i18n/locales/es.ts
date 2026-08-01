@@ -380,7 +380,9 @@ export const es = {
         stateDownloaded: "La versión {{version}} está lista para instalarse.",
         stateDownloading: "Descargando la versión {{version}}…",
         stateError: "La última comprobación falló: {{detail}}",
-        stateIdle: "Tienes la última versión de este canal.",
+        stateIdle:
+          "Tienes la última versión de este canal. Última comprobación: {{time}}.",
+        stateUnchecked: "Aún no se han buscado actualizaciones.",
         unsupported:
           "Las actualizaciones automáticas solo están disponibles en macOS.",
       },

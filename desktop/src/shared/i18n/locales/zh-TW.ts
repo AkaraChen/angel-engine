@@ -366,7 +366,8 @@ export const zhTW = {
         stateDownloaded: "版本 {{version}} 已可安裝。",
         stateDownloading: "正在下載版本 {{version}}…",
         stateError: "上次檢查失敗：{{detail}}",
-        stateIdle: "目前通道下已是最新版本。",
+        stateIdle: "目前通道下已是最新版本。上次檢查：{{time}}。",
+        stateUnchecked: "尚未檢查更新。",
         unsupported: "自動更新目前僅在 macOS 上可用。",
       },
       workspace: {

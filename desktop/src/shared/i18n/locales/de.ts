@@ -380,7 +380,9 @@ export const de = {
         stateDownloaded: "Version {{version}} kann installiert werden.",
         stateDownloading: "Version {{version}} wird geladen …",
         stateError: "Letzte Prüfung fehlgeschlagen: {{detail}}",
-        stateIdle: "Sie haben die neueste Version dieses Kanals.",
+        stateIdle:
+          "Sie haben die neueste Version dieses Kanals. Zuletzt geprüft: {{time}}.",
+        stateUnchecked: "Es wurde noch nicht nach Updates gesucht.",
         unsupported: "Automatische Updates gibt es derzeit nur unter macOS.",
       },
       workspace: {

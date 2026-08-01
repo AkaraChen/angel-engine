@@ -340,6 +340,7 @@ export interface LocaleResourceTranslationSettingsUpdates {
   stateDownloading: string;
   stateError: string;
   stateIdle: string;
+  stateUnchecked: string;
   unsupported: string;
 }
 
