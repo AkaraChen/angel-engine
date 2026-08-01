@@ -109,8 +109,9 @@ export function WorkspaceToolTabRail({
     >
       <div
         className="
-          mb-1 flex h-6 shrink-0 items-center pl-2 text-xs font-medium
-          tracking-wide text-muted-foreground
+          mb-1 flex h-6 shrink-0 items-center pl-2 font-mono
+          [font-size:var(--workspace-sidebar-label-text-size)] font-medium
+          tracking-wide text-muted-foreground uppercase
         "
         role="presentation"
       >
@@ -125,7 +126,12 @@ export function WorkspaceToolTabRail({
         "
         role="presentation"
       >
-        <span className="text-xs font-medium tracking-wide text-muted-foreground">
+        <span
+          className="
+            font-mono [font-size:var(--workspace-sidebar-label-text-size)]
+            font-medium tracking-wide text-muted-foreground uppercase
+          "
+        >
           Tabs
         </span>
         <WorkspaceToolNewTabMenu variant="section" />
@@ -210,15 +216,13 @@ function WorkspaceToolTabButton({
       <div
         className={cn(
           `
-            group flex shrink-0 items-center overflow-hidden
-            text-muted-foreground
+            group relative flex shrink-0 items-center overflow-hidden
+            rounded-md text-muted-foreground transition-colors duration-[120ms]
+            motion-reduce:transition-none
           `,
-          horizontal ? "h-6 rounded-sm" : "h-8 min-w-0 rounded-md text-xs",
+          horizontal ? "h-6" : "h-8 min-w-0 text-xs",
           active
-            ? cn(
-                "text-foreground shadow-xs",
-                horizontal ? "bg-card" : "bg-background",
-              )
+            ? cn("text-foreground", horizontal ? "bg-card" : "bg-background")
             : `
               hover:bg-overlay-hover hover:text-foreground
               active:bg-overlay-active
@@ -226,6 +230,19 @@ function WorkspaceToolTabButton({
         )}
         role="presentation"
       >
+        {/* Same 2px bottom indicator the chat tabs use; the vertical rail puts
+            it on the leading edge because it has no bottom edge to sit on. */}
+        {active ? (
+          <span
+            aria-hidden="true"
+            className={cn(
+              "pointer-events-none absolute rounded-full bg-primary",
+              horizontal
+                ? "inset-x-1 bottom-0 h-0.5"
+                : "inset-y-1 left-0 w-0.5",
+            )}
+          />
+        ) : null}
         <button
           aria-controls="workspace-tool-panel"
           aria-selected={active}
@@ -258,7 +275,6 @@ function WorkspaceToolTabButton({
         >
           <Icon
             className={cn("shrink-0", horizontal ? "size-4" : "size-3.5")}
-            weight="duotone"
           />
           {horizontal ? null : <span className="truncate">{tab.title}</span>}
         </button>
@@ -295,16 +311,16 @@ function WorkspaceToolNewTabMenu({
           type="button"
           variant="ghost"
         >
-          <Add className="size-3.5" weight="regular" />
+          <Add className="size-3.5" />
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start" variant="native">
         <DropdownMenuItem onSelect={addTerminalTab}>
-          <TerminalIcon className="size-3.5" weight="duotone" />
+          <TerminalIcon className="size-3.5" />
           <span>Terminal</span>
         </DropdownMenuItem>
         <DropdownMenuItem onSelect={addBrowserTab}>
-          <Browser className="size-3.5" weight="duotone" />
+          <Browser className="size-3.5" />
           <span>Browser</span>
         </DropdownMenuItem>
       </DropdownMenuContent>

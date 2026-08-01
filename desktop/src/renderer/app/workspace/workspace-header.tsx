@@ -9,6 +9,7 @@ import { useTranslation } from "react-i18next";
 import { WorkspaceSidebarControlTarget } from "@/app/workspace/workspace-sidebar-control";
 import { WorkspaceToolHeaderButton } from "@/app/workspace/workspace-tool-surface-header";
 import { useSidebar } from "@/components/ui/sidebar";
+import { cn } from "@/platform/utils";
 
 interface WorkspaceHeaderProps {
   attention?: ChatAttentionState;
@@ -42,7 +43,8 @@ export function WorkspaceHeader({
   return (
     <header
       className="
-        relative flex h-12 shrink-0 items-center gap-3 bg-background px-4
+        relative flex h-12 shrink-0 items-center gap-3 border-b
+        border-border-subtle bg-background px-4
       "
       data-electron-drag
       data-workspace-mode="chat"
@@ -59,7 +61,7 @@ export function WorkspaceHeader({
       <h1
         className="
           flex min-w-0 flex-1 items-baseline gap-1.5 truncate text-sm
-          font-medium transition-[margin] duration-200 ease-linear
+          font-medium transition-[margin] duration-200 ease-standard
         "
         data-electron-no-drag={onShowContextMenu ? true : undefined}
         onContextMenu={
@@ -79,18 +81,25 @@ export function WorkspaceHeader({
       >
         {is.nonEmptyString(breadcrumbProject) ? (
           <>
-            <span className="shrink-0 font-semibold text-status-success">
+            <span className="shrink-0 font-medium text-foreground">
               {breadcrumbProject}
             </span>
             <span
               aria-hidden="true"
-              className="shrink-0 font-normal text-muted-foreground/60"
+              className="shrink-0 font-normal text-muted-foreground"
             >
               ›
             </span>
           </>
         ) : null}
-        <span className="truncate">{title}</span>
+        <span
+          className={cn(
+            "truncate",
+            is.nonEmptyString(breadcrumbProject) && "text-muted-foreground",
+          )}
+        >
+          {title}
+        </span>
       </h1>
       {showAttention ? (
         <span
@@ -98,23 +107,18 @@ export function WorkspaceHeader({
           className="flex shrink-0 items-center gap-1"
           title={t("workspace.backgroundChatStatus")}
         >
+          {/* Status dots carry no glow ring — the hue alone is the signal. */}
           {attention?.needsInput ? (
             <span
               aria-label={t("workspace.backgroundChatNeedsInput")}
-              className="
-                size-2 rounded-full bg-status-attention
-                shadow-[0_0_0_1px_var(--status-attention-border),0_0_0_4px_var(--status-attention-soft)]
-              "
+              className="size-2 rounded-full bg-status-attention"
               role="img"
             />
           ) : null}
           {attention?.completed ? (
             <span
               aria-label={t("workspace.backgroundChatCompleted")}
-              className="
-                size-2 rounded-full bg-status-success
-                shadow-[0_0_0_1px_var(--status-success-border)]
-              "
+              className="size-2 rounded-full bg-status-success"
               role="img"
             />
           ) : null}
@@ -124,9 +128,9 @@ export function WorkspaceHeader({
         <WorkspaceToolHeaderButton
           icon={
             rightSidebarOpen ? (
-              <SidebarFold className="scale-x-[-1]" weight="duotone" />
+              <SidebarFold className="scale-x-[-1]" />
             ) : (
-              <SidebarUnfold className="scale-x-[-1]" weight="duotone" />
+              <SidebarUnfold className="scale-x-[-1]" />
             )
           }
           label={rightSidebarToggleLabel}

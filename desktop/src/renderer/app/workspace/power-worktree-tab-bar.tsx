@@ -1,6 +1,7 @@
 import type { Chat } from "@angel-engine/daemon-api/chat";
 import type { ReactElement } from "react";
 
+import { GitBranch } from "@phosphor-icons/react";
 import { useTranslation } from "react-i18next";
 import { ChatTabBar } from "@/features/chat/components/chat-tab-bar";
 
@@ -37,6 +38,7 @@ export function PowerWorktreeTabBar({
       chats={chats}
       draftTabActive={draftTabActive}
       historyTabActive={homeTabActive}
+      historyTabIcon={GitBranch}
       historyTabLabel={t("sidebar.powerWorktreeHome")}
       onCloseChat={onCloseChat}
       onCloseDraftTab={onCloseDraftTab}

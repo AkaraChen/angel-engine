@@ -12,20 +12,16 @@ export function ChatRunningPulse({
   const isRunning = useChatRunIsRunning(chatId);
   if (!isRunning) return null;
 
+  // Running is signalled by a breathing dot rather than a radiating halo: the
+  // DNA translation keeps glows out of app surfaces.
   return (
-    <i aria-hidden className="relative flex size-2 shrink-0 rounded-full">
-      <i
-        className="
-          absolute inline-flex size-full animate-ping rounded-full
-          bg-emerald-400 opacity-60
-        "
-      />
-      <i
-        className="
-          relative inline-flex size-2 rounded-full bg-emerald-500
-          shadow-[0_0_0_1px_rgba(16,185,129,0.35)]
-        "
-      />
-    </i>
+    <i
+      aria-hidden
+      className="
+        flex size-1.5 shrink-0 rounded-full bg-status-success
+        animate-[skeleton-breathe_1.4s_ease-in-out_infinite]
+        motion-reduce:animate-none
+      "
+    />
   );
 }

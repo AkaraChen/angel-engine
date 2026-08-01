@@ -1,6 +1,13 @@
 import type { Chat } from "@angel-engine/daemon-api/chat";
-import type { ReactElement } from "react";
-import { Robot as Bot, House, Plus, X } from "@phosphor-icons/react";
+import type { Icon } from "@phosphor-icons/react";
+import type { ReactElement, ReactNode } from "react";
+import {
+  Robot as Bot,
+  House,
+  NotePencil,
+  Plus,
+  X,
+} from "@phosphor-icons/react";
 import is from "@sindresorhus/is";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
@@ -23,6 +30,7 @@ interface ChatTabBarProps {
   onOpenHistory?: () => MaybeAsync;
   onNewChat: () => MaybeAsync;
   onOpenChat: (chat: Chat) => MaybeAsync;
+  historyTabIcon?: Icon;
   historyTabLabel?: string;
   historyTabActive?: boolean;
 }
@@ -32,6 +40,7 @@ export function ChatTabBar({
   chats,
   draftTabActive = false,
   historyTabActive = false,
+  historyTabIcon,
   historyTabLabel,
   onCloseChat,
   onCloseDraftTab,
@@ -42,11 +51,7 @@ export function ChatTabBar({
   const { t } = useTranslation();
 
   return (
-    <div
-      className="
-        flex h-10 shrink-0 items-center bg-background/60 px-2.5
-      "
-    >
+    <div className="flex h-10 shrink-0 items-center bg-background px-2.5">
       <div
         className="
           flex min-w-0 items-center gap-px overflow-x-auto rounded-md
@@ -56,8 +61,9 @@ export function ChatTabBar({
         data-slot="chat-tab-bar"
         role="tablist"
       >
-        {historyTabLabel && onOpenHistory ? (
+        {is.nonEmptyString(historyTabLabel) && onOpenHistory ? (
           <HistoryTab
+            icon={historyTabIcon}
             isActive={historyTabActive}
             label={historyTabLabel}
             onOpen={onOpenHistory}
@@ -79,7 +85,7 @@ export function ChatTabBar({
         ) : (
           <Button
             aria-label={t("workspace.newChat")}
-            className="size-7 shrink-0 rounded-sm text-muted-foreground"
+            className="size-7 shrink-0 rounded-md text-muted-foreground"
             onClick={() => void onNewChat()}
             size="icon-sm"
             title={t("workspace.newChat")}
@@ -94,39 +100,119 @@ export function ChatTabBar({
   );
 }
 
-function HistoryTab({
-  isActive,
-  label,
-  onOpen,
+/**
+ * Shared tab chrome. Selection reads as a raised `--card` chip plus a 2px
+ * `--primary` bar along the bottom edge — the app's one tab indicator
+ * direction.
+ */
+function TabShell({
+  active,
+  children,
+  className,
+  onClick,
+  title,
 }: {
-  isActive: boolean;
-  label: string;
-  onOpen: () => MaybeAsync;
+  active: boolean;
+  children: ReactNode;
+  className?: string;
+  onClick?: () => void;
+  title?: string;
 }): ReactElement {
   return (
-    <button
-      aria-selected={isActive}
+    <div
+      aria-selected={active}
       className={cn(
         `
-          flex h-7 max-w-60 min-w-0 shrink-0 items-center gap-2 rounded-sm
-          px-3 text-sm transition-colors
+          group/chat-tab relative flex h-7 max-w-60 min-w-0 shrink-0
+          items-center gap-2 overflow-hidden rounded-md text-sm
+          transition-colors duration-[120ms]
+          motion-reduce:transition-none
         `,
-        isActive
-          ? "bg-card text-foreground shadow-xs"
+        active
+          ? "bg-card text-foreground"
           : `
             text-muted-foreground
             hover:bg-overlay-hover hover:text-foreground
             active:bg-overlay-active
           `,
+        className,
       )}
-      onClick={() => void onOpen()}
+      onClick={onClick}
       role="tab"
-      title={label}
-      type="button"
+      title={title}
     >
-      <House className="size-4 shrink-0" weight="duotone" />
-      <span className="max-w-40 min-w-0 truncate text-left">{label}</span>
-    </button>
+      {children}
+      {active ? (
+        <span
+          aria-hidden="true"
+          className="
+            pointer-events-none absolute inset-x-2 bottom-0 h-0.5 rounded-full
+            bg-primary
+          "
+        />
+      ) : null}
+    </div>
+  );
+}
+
+function TabCloseButton({
+  alwaysVisible,
+  onClose,
+}: {
+  alwaysVisible: boolean;
+  onClose: () => void;
+}): ReactElement {
+  const { t } = useTranslation();
+
+  return (
+    <Button
+      aria-label={t("workspace.closeTab")}
+      className={cn(
+        "size-6 shrink-0 rounded-sm opacity-0 transition-opacity",
+        `
+          group-focus-within/chat-tab:opacity-100
+          group-hover/chat-tab:opacity-100
+        `,
+        alwaysVisible && "opacity-100",
+      )}
+      onClick={(event) => {
+        event.stopPropagation();
+        onClose();
+      }}
+      size="icon-xs"
+      title={t("workspace.closeTab")}
+      type="button"
+      variant="ghost"
+    >
+      <X className="size-3.5" />
+    </Button>
+  );
+}
+
+function HistoryTab({
+  icon,
+  isActive,
+  label,
+  onOpen,
+}: {
+  icon?: Icon;
+  isActive: boolean;
+  label: string;
+  onOpen: () => MaybeAsync;
+}): ReactElement {
+  const TabIcon = icon ?? House;
+
+  return (
+    <TabShell active={isActive} title={label}>
+      <button
+        className="flex h-full min-w-0 flex-1 items-center gap-2 px-3 outline-hidden"
+        onClick={() => void onOpen()}
+        type="button"
+      >
+        <TabIcon className="size-4 shrink-0" />
+        <span className="max-w-40 min-w-0 truncate text-left">{label}</span>
+      </button>
+    </TabShell>
   );
 }
 
@@ -134,31 +220,15 @@ function DraftTab({ onClose }: { onClose?: () => MaybeAsync }): ReactElement {
   const { t } = useTranslation();
 
   return (
-    <div
-      aria-selected
-      className="
-        group/chat-tab flex h-7 max-w-60 min-w-0 shrink-0 items-center gap-2
-        rounded-sm bg-card pr-1 pl-3 text-sm text-foreground shadow-xs
-      "
-      role="tab"
-    >
+    <TabShell active className="pr-1 pl-3">
+      <NotePencil className="size-4 shrink-0" />
       <span className="max-w-40 min-w-0 flex-1 truncate text-left">
         {t("workspace.newChat")}
       </span>
       {onClose ? (
-        <Button
-          aria-label={t("workspace.closeTab")}
-          className="size-6 shrink-0"
-          onClick={() => void onClose()}
-          size="icon-xs"
-          title={t("workspace.closeTab")}
-          type="button"
-          variant="ghost"
-        >
-          <X className="size-3.5" />
-        </Button>
+        <TabCloseButton alwaysVisible onClose={() => void onClose()} />
       ) : null}
-    </div>
+    </TabShell>
   );
 }
 
@@ -178,23 +248,7 @@ function ChatTab({
   const title = chat.title === "New chat" ? t("workspace.newChat") : chat.title;
 
   return (
-    <div
-      className={cn(
-        `
-          group/chat-tab flex h-7 max-w-60 min-w-0 shrink-0 items-center gap-2
-          rounded-sm pr-1 pl-3 text-sm transition-colors
-        `,
-        isActive
-          ? "bg-card text-foreground shadow-xs"
-          : `
-            text-muted-foreground
-            hover:bg-overlay-hover hover:text-foreground
-            active:bg-overlay-active
-          `,
-      )}
-      role="tab"
-      aria-selected={isActive}
-    >
+    <TabShell active={isActive} className="pr-1 pl-3">
       <button
         className="flex min-w-0 flex-1 items-center gap-2 outline-hidden"
         onClick={onOpen}
@@ -208,41 +262,21 @@ function ChatTab({
         {attention.needsInput ? (
           <span
             aria-label={t("sidebar.needsInput")}
-            className="size-1.5 shrink-0 rounded-full bg-amber-400"
+            className="size-1.5 shrink-0 rounded-full bg-status-attention"
             role="img"
           />
         ) : null}
         {attention.completed ? (
           <span
             aria-label={t("sidebar.completed")}
-            className="size-1.5 shrink-0 rounded-full bg-emerald-500"
+            className="size-1.5 shrink-0 rounded-full bg-status-success"
             role="img"
           />
         ) : null}
         <ChatRunningPulse chatId={chat.id} />
       </button>
-      <Button
-        aria-label={t("workspace.closeTab")}
-        className={cn(
-          "size-6 shrink-0 opacity-0 transition-opacity",
-          `
-            group-focus-within/chat-tab:opacity-100
-            group-hover/chat-tab:opacity-100
-          `,
-          isActive && "opacity-100",
-        )}
-        onClick={(event) => {
-          event.stopPropagation();
-          onClose();
-        }}
-        size="icon-xs"
-        title={t("workspace.closeTab")}
-        type="button"
-        variant="ghost"
-      >
-        <X className="size-3.5" />
-      </Button>
-    </div>
+      <TabCloseButton alwaysVisible={isActive} onClose={onClose} />
+    </TabShell>
   );
 }
 
@@ -259,7 +293,7 @@ function AgentIcon({ runtime }: { runtime?: string | null }): ReactElement {
         <span
           aria-hidden="true"
           className="
-            flex size-3.5 items-center justify-center text-muted-foreground
+            flex size-3.5 items-center justify-center
             [&_svg]:block [&_svg]:size-3.5 [&_svg]:shrink-0
           "
           // oxlint-disable-next-line react/no-danger -- Static bundled runtime icons need inline SVG to inherit local icon styling.
@@ -267,7 +301,7 @@ function AgentIcon({ runtime }: { runtime?: string | null }): ReactElement {
           dangerouslySetInnerHTML={{ __html: runtimeIconSvg }}
         />
       ) : (
-        <Bot className="size-3.5 text-muted-foreground" />
+        <Bot className="size-3.5" />
       )}
     </span>
   );

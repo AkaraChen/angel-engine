@@ -6,6 +6,7 @@ import {
   SpinnerGap as Loader2,
   Chats as MessageSquare,
 } from "@phosphor-icons/react";
+import is from "@sindresorhus/is";
 import { AnimatePresence, m } from "framer-motion";
 import { useMemo } from "react";
 
@@ -23,6 +24,7 @@ import {
   WorkspaceSidebarMenuButton,
 } from "@/components/workspace-sidebar-primitives";
 import { ChatSidebarItem } from "@/features/chat/components/chat-sidebar-item";
+import { formatRelativeTime } from "@/platform/format-time";
 
 type MaybeAsync = void | Promise<void>;
 
@@ -94,11 +96,14 @@ export function SimpleChatSidebarSection({
             <div
               className="
                 flex min-h-44 flex-col items-center justify-center gap-3 px-4
-                py-8 text-center text-sidebar-foreground/70
+                py-8 text-center text-muted-foreground
               "
               key="chats-empty"
             >
-              <MessageSquare className="size-6 text-sidebar-foreground/45" />
+              <MessageSquare
+                className="size-6 text-muted-foreground/70"
+                weight="duotone"
+              />
               <span className="text-xs font-medium">
                 {t("sidebar.noChats")}
               </span>
@@ -116,8 +121,7 @@ export function SimpleChatSidebarSection({
                       asChild
                       className="
                         h-7 cursor-default pr-1.5
-                        hover:bg-black/[0.035]
-                        dark:hover:bg-white/5.5
+                        hover:bg-overlay-hover
                       "
                     >
                       <button
@@ -164,6 +168,8 @@ export function SimpleChatSidebarSection({
                                   }
                                   pinned={chat.pinned}
                                   runtime={chat.runtime}
+                                  subtitle={chatLocationName(chat.cwd)}
+                                  timestamp={formatRelativeTime(chat.updatedAt)}
                                   title={displayChatTitle(chat.title, t)}
                                   tooltip={
                                     chat.cwd ?? displayChatTitle(chat.title, t)
@@ -246,4 +252,11 @@ function displayChatTitle(
   t: (key: string, options?: Record<string, unknown>) => string,
 ) {
   return title === "New chat" ? t("workspace.newChat") : title;
+}
+
+/** Last path segment of a chat's working directory, for the mono meta line. */
+function chatLocationName(cwd: string | null): string | undefined {
+  if (!is.nonEmptyString(cwd)) return undefined;
+  const segments = cwd.split(/[\\/]/).filter(Boolean);
+  return segments.at(-1) ?? cwd;
 }

@@ -120,15 +120,18 @@ export function WorkspaceRightSidebar({
     <aside
       aria-hidden={!open}
       inert={!open ? true : undefined}
+      // Same visual language as the left sidebar: one hairline where it meets
+      // the content area, and no other border or shadow inside it.
       className={cn(
         `
           relative h-svh min-h-0 max-h-svh shrink-0 overflow-hidden
           bg-background
         `,
+        open && "border-l border-border-subtle",
         resizing
           ? "transition-none"
           : `
-            transition-[width] duration-200 ease-swift
+            transition-[width] duration-200 ease-standard
             motion-reduce:transition-none
           `,
       )}
@@ -140,21 +143,14 @@ export function WorkspaceRightSidebar({
           root={root}
           trailingActions={
             <WorkspaceToolHeaderButton
-              icon={<SidebarFold className="scale-x-[-1]" weight="duotone" />}
+              icon={<SidebarFold className="scale-x-[-1]" />}
               label="Hide workspace tools"
               onClick={onClose}
             />
           }
           onRequestHost={onRequestHost}
         />
-        <div
-          className="
-            relative mx-2 mt-1 mb-2 min-h-0 flex-1 rounded-xl border
-            border-border-subtle/60 bg-card
-            shadow-[0_0_20px_-10px_rgba(33,33,32,0.18)]
-            dark:shadow-[0_0_22px_-10px_rgba(0,0,0,0.4)]
-          "
-        >
+        <div className="relative min-h-0 flex-1">
           <div
             aria-label="Resize tool sidebar"
             aria-orientation="vertical"
@@ -176,7 +172,7 @@ export function WorkspaceRightSidebar({
             onPointerMove={handleResizePointerMove}
             onPointerUp={handleResizePointerEnd}
           />
-          <div className="flex h-full min-h-0 overflow-hidden rounded-[inherit]">
+          <div className="flex h-full min-h-0 overflow-hidden">
             <WorkspaceToolSurface
               active={active && open}
               api={api}

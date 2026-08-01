@@ -91,10 +91,13 @@ export function WorkspaceSidebar({
   const workspaceMode = useWorkspaceUiStore((state) => state.workspaceMode);
 
   return (
+    // The sidebar sits on the paper ground one shade below the content area and
+    // is separated from it by the app's single vertical hairline — no shadow,
+    // no floating inset gap.
     <Sidebar
-      className="select-none"
+      className="bg-sidebar select-none"
       data-workspace-mode={workspaceMode}
-      variant="inset"
+      variant="sidebar"
     >
       <WorkspaceSidebarContent {...props} />
     </Sidebar>
@@ -197,9 +200,11 @@ export function WorkspaceFloatingSidebar(
         transition={FLOATING_SIDEBAR_TRANSITION}
       >
         <div
+          // The peeked sidebar really is an overlay, so it is the one place in
+          // the shell that earns a shadow.
           className="
-            flex size-full flex-col rounded-lg bg-(--macos-sidebar-background)
-            shadow-xl ring-1 ring-sidebar-border
+            flex size-full flex-col rounded-lg bg-sidebar shadow-overlay ring-1
+            ring-border-subtle
           "
           data-sidebar="sidebar"
           data-slot="sidebar"
@@ -278,23 +283,21 @@ function WorkspaceSidebarContent({
       <SidebarContent className="gap-0 pb-1">
         <SidebarMenu className="px-2 py-2.5">
           <AnimatedSidebarMenuItem>
+            {/* The sidebar's one primary CTA, so it takes the DNA capsule. */}
             <WorkspaceSidebarMenuButton
               className="
-                bg-status-success text-white
-                hover:bg-status-success/90 hover:text-white
-                focus-visible:bg-status-success/90
-                active:bg-status-success/85 active:text-white
-                dark:bg-status-success dark:text-white
-                dark:hover:bg-status-success/90
-                dark:focus-visible:bg-status-success/90
-                dark:active:bg-status-success/85
-                [&_svg]:text-white
-                data-active:bg-status-success data-active:text-white
-                data-active:[&_svg]:text-white
+                rounded-full bg-primary text-primary-foreground
+                hover:bg-primary-hover hover:text-primary-foreground
+                focus-visible:bg-primary-hover
+                active:scale-[0.98] active:bg-primary-active
+                active:text-primary-foreground
+                [&_svg]:text-primary-foreground
+                data-active:bg-primary data-active:text-primary-foreground
+                data-active:[&_svg]:text-primary-foreground
               "
               onClick={() => void createChatFromNewButton()}
             >
-              <Plus weight="bold" />
+              <Plus />
               <span>{t("sidebar.newChat")}</span>
             </WorkspaceSidebarMenuButton>
           </AnimatedSidebarMenuItem>
@@ -303,7 +306,7 @@ function WorkspaceSidebarContent({
               isActive={fleetActive}
               onClick={() => void onOpenFleet()}
             >
-              <SquaresFour weight="duotone" />
+              <SquaresFour />
               <span>{t("fleet.title")}</span>
             </WorkspaceSidebarMenuButton>
           </AnimatedSidebarMenuItem>
@@ -353,7 +356,7 @@ function WorkspaceSidebarContent({
         <SidebarMenu>
           <AnimatedSidebarMenuItem>
             <WorkspaceSidebarMenuButton onClick={() => void onOpenSettings()}>
-              <Settings weight="duotone" />
+              <Settings />
               <span>{t("sidebar.settings")}</span>
             </WorkspaceSidebarMenuButton>
           </AnimatedSidebarMenuItem>
@@ -382,9 +385,8 @@ function WorkspaceModeControl({
       <div
         aria-label={t("sidebar.modeSwitcher")}
         className="
-          grid grid-cols-3 gap-0.5 rounded-md bg-black/5.5 p-0.5
-          shadow-[inset_0_0_0_1px_rgba(0,0,0,0.06)]
-          dark:bg-white/5.5 dark:shadow-[inset_0_0_0_1px_rgba(255,255,255,0.07)]
+          grid grid-cols-3 gap-0.5 rounded-md bg-surface-2 p-0.5 ring-1
+          ring-border-subtle ring-inset
         "
         role="group"
       >
@@ -400,18 +402,19 @@ function WorkspaceModeControl({
               className={cn(
                 `
                   relative flex h-7 min-w-0 items-center justify-center gap-1.5
-                  rounded-[5px] px-2
+                  rounded-sm px-2
                   [font-size:var(--workspace-sidebar-label-text-size)]
-                  font-medium text-sidebar-foreground/58 outline-hidden
-                  focus-visible:text-sidebar-foreground
+                  font-medium text-muted-foreground outline-hidden
+                  transition-colors duration-[120ms]
+                  focus-visible:ring-2 focus-visible:ring-ring
+                  focus-visible:ring-inset
+                  motion-reduce:transition-none
                 `,
                 isActive
-                  ? "text-sidebar-foreground"
+                  ? "text-foreground"
                   : `
-                    hover:bg-white/25 hover:text-sidebar-foreground/78
-                    focus-visible:bg-white/40
-                    dark:hover:bg-white/5.5
-                    dark:focus-visible:bg-white/10
+                    hover:bg-overlay-hover hover:text-foreground
+                    active:bg-overlay-active
                   `,
               )}
               key={option.value}
@@ -422,15 +425,10 @@ function WorkspaceModeControl({
               {isActive ? (
                 <span
                   aria-hidden="true"
-                  className="
-                    absolute inset-0 rounded-[5px] bg-white/58
-                    shadow-[0_1px_2px_rgba(0,0,0,0.08)]
-                    dark:bg-white/[0.14]
-                    dark:shadow-[inset_0_0_0_1px_rgba(255,255,255,0.06)]
-                  "
+                  className="absolute inset-0 rounded-sm bg-card shadow-xs"
                 />
               ) : null}
-              <Icon className="relative size-4 shrink-0" weight="duotone" />
+              <Icon className="relative size-4 shrink-0" />
               <span className="relative min-w-0 truncate">{label}</span>
             </button>
           );
