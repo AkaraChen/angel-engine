@@ -10,7 +10,15 @@ function Spinner({ className, ...props }: ComponentProps<typeof Loader2Icon>) {
     <Loader2Icon
       role="status"
       aria-label={t("common.loading")}
-      className={cn("size-4 animate-spin", className)}
+      // Azure stroke standalone, but inside a button it has to inherit the
+      // button's own foreground or it disappears against a filled CTA.
+      className={cn(
+        `
+          size-4 animate-spin text-primary
+          in-data-[slot=button]:text-current
+        `,
+        className,
+      )}
       {...props}
     />
   );

@@ -31,16 +31,20 @@ function NativeSelect({
         data-size={size}
         className={cn(
           `
-            h-9 w-full min-w-0 appearance-none rounded-lg border
-            border-transparent bg-input/50 py-1 pr-8 pl-3 text-sm
-            transition-[color,box-shadow,background-color] outline-none
-            select-none
+            h-9 w-full min-w-0 appearance-none rounded-md border border-input
+            bg-card py-1 pr-8 pl-3
+            dark:bg-surface-1 text-sm
+            transition-[color,box-shadow,background-color,border-color]
+            duration-150 ease-standard outline-none select-none
             selection:bg-primary selection:text-primary-foreground
-          placeholder:text-muted-foreground
-          disabled:pointer-events-none disabled:cursor-not-allowed
+            placeholder:text-muted-foreground
+            focus-visible:border-primary focus-visible:ring-2
+            focus-visible:ring-ring/45
+            disabled:pointer-events-none disabled:cursor-not-allowed
             aria-invalid:border-destructive aria-invalid:ring-3
             aria-invalid:ring-destructive/20
             data-[size=sm]:h-8
+            motion-reduce:transition-none
             dark:aria-invalid:border-destructive/50
             dark:aria-invalid:ring-destructive/40
           `,

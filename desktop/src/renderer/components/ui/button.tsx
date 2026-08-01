@@ -5,19 +5,31 @@ import * as React from "react";
 
 import { cn } from "@/platform/utils";
 
+/**
+ * Every button is the same `radius-md` rectangle. The openknowledge DNA is a
+ * landing-page language that capsules everything, but in app context a mix of
+ * shapes just reads as inconsistency -- an outline Cancel next to a pill Save
+ * looks broken. Prominence is carried by fill and colour alone.
+ *
+ * The DNA capsule survives only where it is a shape with its own meaning:
+ * search fields (see `input-group`) and the switch track.
+ */
 const buttonVariants = cva(
   `
-    group/button inline-flex shrink-0 items-center justify-center rounded-lg
+    group/button inline-flex shrink-0 items-center justify-center rounded-md
     border border-transparent bg-clip-padding text-sm font-medium
     whitespace-nowrap
     transition-[color,background-color,border-color,box-shadow,transform]
-    outline-none select-none
-    active:not-aria-[haspopup]:translate-y-px
+    duration-120 ease-standard outline-none select-none
+    active:scale-[0.98]
     disabled:pointer-events-none disabled:opacity-50
+    focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2
+    focus-visible:ring-offset-background
     aria-invalid:border-destructive aria-invalid:ring-3
     aria-invalid:ring-destructive/20
     dark:aria-invalid:border-destructive/50
     dark:aria-invalid:ring-destructive/40
+    motion-reduce:transition-none motion-reduce:active:scale-100
     [&_svg]:pointer-events-none [&_svg]:shrink-0
     [&_svg:not([class*='size-'])]:size-4
   `,
@@ -38,30 +50,32 @@ const buttonVariants = cva(
         `,
         outline: `
           border-border bg-background
-          hover:bg-muted hover:text-foreground
-          aria-expanded:bg-muted aria-expanded:text-foreground
+          hover:bg-overlay-hover hover:text-foreground
+          active:bg-overlay-active
+          aria-expanded:bg-overlay-hover aria-expanded:text-foreground
           dark:bg-transparent
-          dark:hover:bg-input/30
         `,
         secondary: `
           bg-secondary text-secondary-foreground
-          hover:bg-secondary/80
-          aria-expanded:bg-secondary aria-expanded:text-secondary-foreground
+          hover:bg-surface-2
+          active:bg-surface-3
+          aria-expanded:bg-surface-2 aria-expanded:text-secondary-foreground
         `,
         ghost: `
-          hover:bg-muted hover:text-foreground
-          aria-expanded:bg-muted aria-expanded:text-foreground
-          dark:hover:bg-muted/50
+          hover:bg-overlay-hover hover:text-foreground
+          active:bg-overlay-active
+          aria-expanded:bg-overlay-hover aria-expanded:text-foreground
         `,
         destructive: `
-          bg-destructive/10 text-destructive
-          hover:bg-destructive/20
-          dark:bg-destructive/20
-          dark:hover:bg-destructive/30
+          text-status-danger
+          hover:bg-status-danger-soft
+          active:bg-status-danger/15
+          dark:active:bg-status-danger/20
         `,
         link: `
           text-primary underline-offset-4
           hover:underline
+          active:scale-100
         `,
       },
       size: {

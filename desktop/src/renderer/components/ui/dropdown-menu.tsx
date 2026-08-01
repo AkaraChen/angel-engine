@@ -64,7 +64,7 @@ function DropdownMenuContent({
             w-(--radix-dropdown-menu-trigger-width) min-w-44
             origin-(--radix-dropdown-menu-content-transform-origin)
             overflow-x-hidden overflow-y-auto p-1.5 text-popover-foreground
-            duration-150 ease-[cubic-bezier(0.16,1,0.3,1)]
+            duration-150 ease-standard
             data-[side=bottom]:slide-in-from-top-1
             data-[side=left]:slide-in-from-right-1
             data-[side=right]:slide-in-from-left-1
@@ -73,6 +73,7 @@ function DropdownMenuContent({
             data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95
             data-closed:animate-out data-closed:duration-100
             data-closed:fade-out-0 data-closed:zoom-out-95
+            motion-reduce:transition-none motion-reduce:animate-none
           `,
           dropdownMenuContentVariants[variant],
           className,
@@ -108,7 +109,7 @@ function DropdownMenuItem({
       className={cn(
         `
           group/dropdown-menu-item relative flex min-h-8 cursor-default
-          items-center gap-2 rounded-md px-2.5 py-1.5 text-[13px] font-normal
+          items-center gap-2 rounded-sm px-2.5 py-1.5 text-[13px] font-normal
           outline-hidden select-none
           focus:bg-overlay-hover focus:text-foreground
           not-data-[variant=destructive]:focus:**:text-foreground
@@ -144,10 +145,12 @@ function DropdownMenuCheckboxItem({
       data-inset={inset}
       className={cn(
         `
-          relative flex min-h-8 cursor-default items-center gap-2 rounded-md
+          relative flex min-h-8 cursor-default items-center gap-2 rounded-sm
           py-1.5 pr-8 pl-2.5 text-[13px] font-normal outline-hidden select-none
           focus:bg-overlay-hover focus:text-foreground
           focus:**:text-foreground
+          data-[state=checked]:bg-primary-soft
+          data-[state=checked]:text-primary-soft-foreground
           data-inset:pl-8
           data-disabled:pointer-events-none data-disabled:opacity-50
           [&_svg]:pointer-events-none [&_svg]:shrink-0
@@ -198,10 +201,12 @@ function DropdownMenuRadioItem({
       data-inset={inset}
       className={cn(
         `
-          relative flex min-h-8 cursor-default items-center gap-2 rounded-md
+          relative flex min-h-8 cursor-default items-center gap-2 rounded-sm
           py-1.5 pr-8 pl-2.5 text-[13px] font-normal outline-hidden select-none
           focus:bg-overlay-hover focus:text-foreground
           focus:**:text-foreground
+          data-[state=checked]:bg-primary-soft
+          data-[state=checked]:text-primary-soft-foreground
           data-inset:pl-8
           data-disabled:pointer-events-none data-disabled:opacity-50
           [&_svg]:pointer-events-none [&_svg]:shrink-0
@@ -239,7 +244,8 @@ function DropdownMenuLabel({
       data-inset={inset}
       className={cn(
         `
-          px-2.5 py-1.5 text-[11px] font-medium text-muted-foreground
+          px-2.5 py-1.5 font-mono text-[0.6875rem] font-medium tracking-wide
+          text-muted-foreground uppercase
           data-inset:pl-8
         `,
         className,
@@ -256,7 +262,7 @@ function DropdownMenuSeparator({
   return (
     <DropdownMenuPrimitive.Separator
       data-slot="dropdown-menu-separator"
-      className={cn("-mx-1 my-1 h-px bg-foreground/10", className)}
+      className={cn("-mx-1 my-1 h-px bg-border-subtle", className)}
       {...props}
     />
   );
@@ -301,7 +307,7 @@ function DropdownMenuSubTrigger({
       data-inset={inset}
       className={cn(
         `
-          flex min-h-8 cursor-default items-center gap-2 rounded-md px-2.5
+          flex min-h-8 cursor-default items-center gap-2 rounded-sm px-2.5
           py-1.5 text-[13px] font-normal outline-hidden select-none
           focus:bg-overlay-hover focus:text-foreground
           not-data-[variant=destructive]:focus:**:text-foreground
@@ -338,7 +344,7 @@ function DropdownMenuSubContent({
             z-50 min-w-40
             origin-(--radix-dropdown-menu-content-transform-origin)
             overflow-x-hidden overflow-y-auto p-1.5 text-popover-foreground
-            duration-150 ease-[cubic-bezier(0.16,1,0.3,1)]
+            duration-150 ease-standard
             data-[side=bottom]:slide-in-from-top-1
             data-[side=left]:slide-in-from-right-1
             data-[side=right]:slide-in-from-left-1
@@ -346,6 +352,7 @@ function DropdownMenuSubContent({
             data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95
             data-closed:animate-out data-closed:duration-100
             data-closed:fade-out-0 data-closed:zoom-out-95
+            motion-reduce:transition-none motion-reduce:animate-none
           `,
           dropdownMenuContentVariants[variant],
           className,

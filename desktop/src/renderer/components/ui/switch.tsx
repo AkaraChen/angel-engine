@@ -14,9 +14,12 @@ function Switch({
         `
           peer inline-flex h-5 w-9 shrink-0 cursor-pointer items-center
           rounded-full border border-transparent bg-foreground/18
-          transition-colors outline-none
+          transition-colors duration-120 ease-standard outline-none
+          focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2
+          focus-visible:ring-offset-background
           disabled:cursor-not-allowed disabled:opacity-60
           data-[state=checked]:bg-primary
+          motion-reduce:transition-none
         `,
         className,
       )}
@@ -29,6 +32,7 @@ function Switch({
           bg-background shadow-sm transition-transform duration-260
           [transition-timing-function:cubic-bezier(0.34,1.3,0.64,1)]
           data-[state=checked]:translate-x-4
+          motion-reduce:transition-none
         "
       />
     </SwitchPrimitive.Root>

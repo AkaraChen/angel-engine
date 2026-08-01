@@ -37,7 +37,7 @@ function SheetOverlay({
       data-slot="sheet-overlay"
       className={cn(
         `
-          fixed inset-0 z-50 bg-black/40 duration-100
+          fixed inset-0 z-50 bg-ink-950/40 duration-100
           supports-backdrop-filter:backdrop-blur-[2px]
           data-open:animate-in data-open:fade-in-0
           data-closed:animate-out data-closed:fade-out-0
@@ -69,9 +69,9 @@ function SheetContent({
         data-side={side}
         className={cn(
           `
-            fixed z-50 flex flex-col bg-popover bg-clip-padding text-sm
-            text-popover-foreground shadow-overlay transition duration-200
-            ease-swift
+            fixed z-50 flex flex-col border-border-subtle bg-card
+            bg-clip-padding text-sm text-card-foreground shadow-overlay
+            transition duration-200 ease-standard
             data-[side=bottom]:inset-x-0 data-[side=bottom]:bottom-0
             data-[side=bottom]:h-auto data-[side=bottom]:border-t
             data-[side=left]:inset-y-0 data-[side=left]:left-0
@@ -94,6 +94,7 @@ function SheetContent({
             data-[side=left]:data-closed:slide-out-to-left-10
             data-[side=right]:data-closed:slide-out-to-right-10
             data-[side=top]:data-closed:slide-out-to-top-10
+            motion-reduce:transition-none motion-reduce:animate-none
           `,
           className,
         )}
@@ -104,7 +105,7 @@ function SheetContent({
           <SheetPrimitive.Close data-slot="sheet-close" asChild>
             <Button
               variant="ghost"
-              className="absolute top-4 right-4 bg-secondary"
+              className="absolute top-4 right-4 text-muted-foreground"
               size="icon-sm"
             >
               <XIcon />

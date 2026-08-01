@@ -76,22 +76,23 @@ function CommandInput({
   ...props
 }: React.ComponentProps<typeof CommandPrimitive.Input>) {
   return (
-    <div data-slot="command-input-wrapper" className="p-1 pb-0">
-      <InputGroup className="h-9 bg-input/50">
+    <div data-slot="command-input-wrapper" className="p-1.5 pb-0">
+      <InputGroup className="h-9" variant="search">
+        <InputGroupAddon align="inline-start">
+          <SearchIcon className="size-4 shrink-0" weight="regular" />
+        </InputGroupAddon>
         <CommandPrimitive.Input
           data-slot="command-input"
           className={cn(
             `
-              w-full text-sm outline-hidden
+              w-full bg-transparent text-sm outline-hidden
+              placeholder:text-muted-foreground
               disabled:cursor-not-allowed disabled:opacity-50
             `,
             className,
           )}
           {...props}
         />
-        <InputGroupAddon>
-          <SearchIcon className="size-4 shrink-0 opacity-50" />
-        </InputGroupAddon>
       </InputGroup>
     </div>
   );
@@ -140,9 +141,12 @@ function CommandGroup({
         `
           overflow-hidden p-1.5 text-foreground
           **:[[cmdk-group-heading]]:px-3 **:[[cmdk-group-heading]]:py-2
-          **:[[cmdk-group-heading]]:text-xs
+          **:[[cmdk-group-heading]]:font-mono
+          **:[[cmdk-group-heading]]:text-[0.6875rem]
           **:[[cmdk-group-heading]]:font-medium
+          **:[[cmdk-group-heading]]:tracking-wide
           **:[[cmdk-group-heading]]:text-muted-foreground
+          **:[[cmdk-group-heading]]:uppercase
         `,
         className,
       )}
@@ -158,7 +162,7 @@ function CommandSeparator({
   return (
     <CommandPrimitive.Separator
       data-slot="command-separator"
-      className={cn("my-1.5 h-px bg-border/50", className)}
+      className={cn("my-1.5 h-px bg-border-subtle", className)}
       {...props}
     />
   );
@@ -175,14 +179,16 @@ function CommandItem({
       className={cn(
         `
           group/command-item relative flex cursor-default items-center gap-2
-          rounded-md px-3 py-2 text-sm font-medium outline-hidden select-none
-          in-data-[slot=dialog-content]:rounded-md
+          rounded-sm px-3 py-2 text-sm font-medium outline-hidden select-none
+          in-data-[slot=dialog-content]:rounded-sm
           data-[disabled=true]:pointer-events-none
           data-[disabled=true]:opacity-50
-          data-selected:bg-muted data-selected:text-foreground
+          data-selected:bg-overlay-hover data-selected:text-foreground
           [&_svg]:pointer-events-none [&_svg]:shrink-0
           [&_svg:not([class*='size-'])]:size-4
           data-selected:*:[svg]:text-foreground
+          data-[checked=true]:bg-primary-soft
+          data-[checked=true]:text-primary-soft-foreground
         `,
         className,
       )}

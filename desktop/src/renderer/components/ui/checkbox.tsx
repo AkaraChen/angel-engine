@@ -13,12 +13,17 @@ function Checkbox({
       data-slot="checkbox"
       className={cn(
         `
-          peer inline-flex size-4 shrink-0 items-center justify-center
-          rounded-[4px] border border-input bg-background text-primary-foreground
-          shadow-xs transition-[color,background-color,border-color,box-shadow]
-          outline-none
+          peer inline-flex size-4 shrink-0 items-center justify-center rounded-sm
+          border border-input bg-background text-primary-foreground shadow-xs
+          transition-[color,background-color,border-color,box-shadow]
+          duration-120 ease-standard outline-none
+          focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2
+          focus-visible:ring-offset-background
           disabled:cursor-not-allowed disabled:opacity-50
           data-[state=checked]:border-primary data-[state=checked]:bg-primary
+          data-[state=indeterminate]:border-primary
+          data-[state=indeterminate]:bg-primary
+          motion-reduce:transition-none
         `,
         className,
       )}

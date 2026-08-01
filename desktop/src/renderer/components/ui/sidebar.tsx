@@ -283,6 +283,7 @@ function Sidebar({
               group-data-[collapsible=icon]:w-[calc(var(--sidebar-width-icon)+(--spacing(4))+2px)]
             `
             : `
+              border-border-subtle
               group-data-[collapsible=icon]:w-(--sidebar-width-icon)
               group-data-[side=left]:border-r
               group-data-[side=right]:border-l
@@ -297,7 +298,6 @@ function Sidebar({
           className="
             flex size-full flex-col backdrop-blur-2xl
             group-data-[variant=floating]:rounded-lg
-            group-data-[variant=floating]:shadow-sm
             group-data-[variant=floating]:ring-1
             group-data-[variant=floating]:ring-sidebar-border
           "
@@ -403,7 +403,11 @@ function SidebarInput({
     <Input
       data-slot="sidebar-input"
       data-sidebar="input"
-      className={cn("h-[2rem] w-full bg-input/50 shadow-none", className)}
+      // Sidebar filtering is a search field, so it keeps the DNA capsule.
+      className={cn(
+        "h-[2rem] w-full rounded-full bg-card shadow-none",
+        className,
+      )}
       {...props}
     />
   );
@@ -493,13 +497,13 @@ function SidebarGroupLabel({
       data-sidebar="group-label"
       className={cn(
         `
-          flex h-[1.75rem] shrink-0 items-center rounded-md px-2.5
+          flex h-[1.75rem] shrink-0 items-center rounded-md px-2.5 font-mono
           [font-size:var(--workspace-sidebar-label-text-size)] font-medium
-          tracking-normal text-sidebar-foreground/55 uppercase outline-hidden
+          tracking-wide text-muted-foreground uppercase outline-hidden
           transition-[margin,opacity] duration-200 ease-linear
           group-data-[collapsible=icon]:-mt-[1.75rem]
           group-data-[collapsible=icon]:opacity-0
-          focus-visible:bg-sidebar-accent/55
+          focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset
           [&>svg]:size-[1rem] [&>svg]:shrink-0
         `,
         className,
@@ -527,8 +531,8 @@ function SidebarGroupAction({
           outline-hidden transition-[background-color,color,opacity]
           group-data-[collapsible=icon]:hidden
           after:absolute after:-inset-2
-          hover:bg-sidebar-accent/70 hover:text-sidebar-foreground
-          focus-visible:bg-sidebar-accent
+          hover:bg-overlay-hover hover:text-sidebar-foreground
+          focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset
           md:after:hidden
           [&>svg]:size-[1rem] [&>svg]:shrink-0
         `,
@@ -582,18 +586,16 @@ const sidebarMenuButtonVariants = cva(
     transition-[width,height,padding,background-color,color]
     group-has-data-[sidebar=menu-action]/menu-item:pr-8
     group-data-[collapsible=icon]:size-[2rem]! group-data-[collapsible=icon]:p-2!
-    hover:bg-black/[0.045] hover:text-sidebar-foreground
-    focus-visible:bg-black/[0.06]
-    active:bg-black/[0.065] active:text-sidebar-foreground
-    dark:hover:bg-white/[0.07] dark:focus-visible:bg-white/[0.09]
-    dark:active:bg-white/[0.11]
+    hover:bg-overlay-hover hover:text-sidebar-foreground
+    focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset
+    active:bg-overlay-active active:text-sidebar-foreground
     disabled:pointer-events-none disabled:opacity-50
     aria-disabled:pointer-events-none aria-disabled:opacity-50
-    data-open:hover:bg-black/[0.055] data-open:hover:text-sidebar-foreground
-    data-active:bg-black/[0.065] data-active:text-sidebar-foreground
-    dark:data-open:hover:bg-white/[0.09] dark:data-active:bg-white/[0.11]
+    data-open:hover:bg-overlay-hover data-open:hover:text-sidebar-foreground
+    data-active:bg-primary-soft data-active:text-primary-soft-foreground
+    motion-reduce:transition-none
     [&_svg]:size-[1rem] [&_svg]:shrink-0 [&_svg]:text-sidebar-foreground/68
-    data-active:[&_svg]:text-sidebar-foreground/90
+    data-active:[&_svg]:text-primary-soft-foreground
     [&>span:last-child]:truncate
   `,
   {
@@ -601,9 +603,8 @@ const sidebarMenuButtonVariants = cva(
       variant: {
         default: "",
         outline: `
-          bg-background/70 shadow-[0_0_0_1px_hsl(var(--sidebar-border))]
-          hover:bg-black/[0.045] hover:text-sidebar-foreground
-          dark:hover:bg-white/[0.07]
+          bg-background/70 ring-1 ring-sidebar-border
+          hover:bg-overlay-hover hover:text-sidebar-foreground
         `,
       },
       size: {
@@ -698,9 +699,8 @@ function SidebarMenuAction({
           peer-data-[size=lg]/menu-button:top-2.5
           peer-data-[size=sm]/menu-button:top-1
           after:absolute after:-inset-2
-          hover:bg-black/[0.055] hover:text-sidebar-foreground
-          focus-visible:bg-black/[0.07]
-          dark:hover:bg-white/[0.08] dark:focus-visible:bg-white/[0.1]
+          hover:bg-overlay-hover hover:text-sidebar-foreground
+          focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset
           md:after:hidden
           [&>svg]:size-[0.875rem] [&>svg]:shrink-0
         `,
@@ -844,19 +844,17 @@ function SidebarMenuSubButton({
           overflow-hidden rounded-md text-left text-sidebar-foreground
           outline-hidden
           group-data-[collapsible=icon]:hidden
-          hover:bg-black/[0.045] hover:text-sidebar-foreground
-          focus-visible:bg-black/[0.06]
-          active:bg-black/[0.065] active:text-sidebar-foreground
-          dark:hover:bg-white/[0.07] dark:focus-visible:bg-white/[0.09]
-          dark:active:bg-white/[0.11]
+          hover:bg-overlay-hover hover:text-sidebar-foreground
+          focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset
+          active:bg-overlay-active active:text-sidebar-foreground
           disabled:pointer-events-none disabled:opacity-50
           aria-disabled:pointer-events-none aria-disabled:opacity-50
           data-[size=md]:text-sm
           data-[size=sm]:text-xs
-          data-active:bg-black/[0.065] data-active:text-sidebar-foreground
-          dark:data-active:bg-white/[0.11]
+          data-active:bg-primary-soft data-active:text-primary-soft-foreground
           [&>span:last-child]:truncate
           [&>svg]:size-[1rem] [&>svg]:shrink-0 [&>svg]:text-sidebar-foreground/70
+          data-active:[&>svg]:text-primary-soft-foreground
         `,
         className,
       )}
