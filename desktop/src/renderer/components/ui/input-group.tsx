@@ -9,24 +9,61 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/platform/utils";
 
-function InputGroup({ className, ...props }: React.ComponentProps<"div">) {
+/**
+ * `search` is the one place the DNA capsule survives into app context: command
+ * palette, sidebar filters and fleet search all read as a pill with a leading
+ * `MagnifyingGlass` addon. Every other input group stays rectangular.
+ */
+const inputGroupVariants = cva(
+  `
+    group/input-group relative flex h-9 w-full min-w-0 items-center
+    border border-input bg-input/50
+    transition-[color,box-shadow,background-color,border-color] duration-150
+    ease-standard outline-none
+    focus-within:border-primary focus-within:ring-2 focus-within:ring-ring/45
+    in-data-[slot=combobox-content]:focus-within:border-inherit
+    in-data-[slot=combobox-content]:focus-within:ring-0
+    has-[[data-slot][aria-invalid=true]]:border-destructive
+    has-[[data-slot][aria-invalid=true]]:ring-3
+    has-[[data-slot][aria-invalid=true]]:ring-destructive/20
+    motion-reduce:transition-none
+  `,
+  {
+    variants: {
+      variant: {
+        default: `
+          rounded-md
+          has-data-[align=block-end]:rounded-md
+          has-data-[align=block-start]:rounded-md
+          has-[textarea]:rounded-md
+        `,
+        search: `
+          rounded-full
+          has-data-[align=block-end]:rounded-2xl
+          has-data-[align=block-start]:rounded-2xl
+          has-[textarea]:rounded-2xl
+        `,
+      },
+    },
+    defaultVariants: {
+      variant: "default",
+    },
+  },
+);
+
+function InputGroup({
+  className,
+  variant = "default",
+  ...props
+}: React.ComponentProps<"div"> & VariantProps<typeof inputGroupVariants>) {
   return (
     <div
       data-slot="input-group"
+      data-variant={variant}
       role="group"
       className={cn(
+        inputGroupVariants({ variant }),
         `
-          group/input-group relative flex h-9 w-full min-w-0 items-center
-          rounded-lg border border-transparent bg-input/50
-          transition-[color,box-shadow,background-color] outline-none
-          in-data-[slot=combobox-content]:focus-within:border-inherit
-          in-data-[slot=combobox-content]:focus-within:ring-0
-          has-data-[align=block-end]:rounded-lg
-          has-data-[align=block-start]:rounded-lg
-          has-[[data-slot][aria-invalid=true]]:border-destructive
-          has-[[data-slot][aria-invalid=true]]:ring-3
-          has-[[data-slot][aria-invalid=true]]:ring-destructive/20
-          has-[textarea]:rounded-lg
           has-[>[data-align=block-end]]:h-auto
           has-[>[data-align=block-end]]:flex-col
           has-[>[data-align=block-start]]:h-auto
@@ -108,7 +145,10 @@ function InputGroupAddon({
 }
 
 const inputGroupButtonVariants = cva(
-  "flex items-center gap-2 rounded-lg text-sm shadow-none",
+  `
+    flex items-center gap-2 rounded-md text-sm shadow-none
+    group-data-[variant=search]/input-group:rounded-full
+  `,
   {
     variants: {
       size: {

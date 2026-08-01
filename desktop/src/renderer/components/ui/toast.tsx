@@ -1,4 +1,11 @@
-import { X as XIcon } from "@phosphor-icons/react";
+import type { IconProps } from "@phosphor-icons/react";
+import {
+  CheckCircle as CheckCircleIcon,
+  Info as InfoIcon,
+  Warning as WarningIcon,
+  WarningCircle as WarningCircleIcon,
+  X as XIcon,
+} from "@phosphor-icons/react";
 import { Toast as ToastPrimitive } from "radix-ui";
 import * as React from "react";
 import { useTranslation } from "react-i18next";
@@ -6,7 +13,32 @@ import { useTranslation } from "react-i18next";
 import { cn } from "@/platform/utils";
 import { Button } from "./button";
 
-type ToastVariant = "default" | "destructive";
+type ToastVariant = "default" | "success" | "attention" | "destructive";
+
+/**
+ * Status toasts get a soft tint plus a matching hairline and a solid icon --
+ * never a fully saturated block, which would out-shout the paper background.
+ */
+const toastVariantClasses: Record<ToastVariant, string> = {
+  attention: "border-status-attention-border bg-status-attention-soft",
+  default: "",
+  destructive: "border-status-danger-border bg-status-danger-soft",
+  success: "border-status-success-border bg-status-success-soft",
+};
+
+const toastIconClasses: Record<ToastVariant, string> = {
+  attention: "text-status-attention",
+  default: "text-primary",
+  destructive: "text-status-danger",
+  success: "text-status-success",
+};
+
+const toastIcons: Record<ToastVariant, React.ComponentType<IconProps>> = {
+  attention: WarningIcon,
+  default: InfoIcon,
+  destructive: WarningCircleIcon,
+  success: CheckCircleIcon,
+};
 
 interface ToastMessage {
   action?: ToastAction;
@@ -66,72 +98,82 @@ function ToastProvider({ children }: { children: React.ReactNode }) {
     <ToastContext.Provider value={toast}>
       <ToastPrimitive.Provider duration={4500} swipeDirection="right">
         {children}
-        {toasts.map((toast) => (
-          <ToastPrimitive.Root
-            className={cn(
-              `
+        {toasts.map((toast) => {
+          const variant = toast.variant ?? "default";
+          const ToastIcon = toastIcons[variant];
+
+          return (
+            <ToastPrimitive.Root
+              className={cn(
+                `
                 relative grid w-full max-w-sm gap-1 overflow-hidden rounded-xl
-                border border-border-subtle bg-popover p-3
-                text-popover-foreground shadow-popover
-                before:absolute before:inset-y-0 before:left-0 before:w-[3px]
-                before:bg-primary/60
+                border border-border-subtle bg-card p-3 text-card-foreground
+                shadow-popover
                 data-open:animate-in data-open:fade-in-0
                 data-open:slide-in-from-right-4
                 data-closed:animate-out data-closed:fade-out-0
                 data-closed:slide-out-to-right-4
+                motion-reduce:animate-none
               `,
-              toast.variant === "destructive" &&
-                `
-                  border-status-danger-border text-status-danger
-                  before:bg-status-danger
-                `,
-            )}
-            key={toast.id}
-            onOpenChange={(open) => {
-              if (!open) dismiss(toast.id);
-            }}
-          >
-            <div className="flex items-start gap-3">
-              <div className="min-w-0 flex-1">
-                <ToastPrimitive.Title className="text-sm font-medium">
-                  {toast.title}
-                </ToastPrimitive.Title>
-                {toast.description ? (
-                  <ToastPrimitive.Description
-                    className="
+                toastVariantClasses[variant],
+              )}
+              key={toast.id}
+              onOpenChange={(open) => {
+                if (!open) dismiss(toast.id);
+              }}
+            >
+              <div className="flex items-start gap-3">
+                <ToastIcon
+                  aria-hidden="true"
+                  className={cn(
+                    "mt-0.5 size-4 shrink-0",
+                    toastIconClasses[variant],
+                  )}
+                  weight="regular"
+                />
+                <div className="min-w-0 flex-1">
+                  <ToastPrimitive.Title className="text-sm font-medium">
+                    {toast.title}
+                  </ToastPrimitive.Title>
+                  {toast.description ? (
+                    <ToastPrimitive.Description
+                      className="
                     mt-1 text-xs text-muted-foreground
                   "
-                  >
-                    {toast.description}
-                  </ToastPrimitive.Description>
-                ) : null}
-                {toast.action ? (
-                  <div className="mt-3">
-                    <Button
-                      onClick={() => {
-                        toast.action?.onClick();
-                        dismiss(toast.id);
-                      }}
-                      size="sm"
                     >
-                      {toast.action.label}
-                    </Button>
-                  </div>
-                ) : null}
-              </div>
-              <ToastPrimitive.Close
-                className="
+                      {toast.description}
+                    </ToastPrimitive.Description>
+                  ) : null}
+                  {toast.action ? (
+                    <div className="mt-3">
+                      <Button
+                        onClick={() => {
+                          toast.action?.onClick();
+                          dismiss(toast.id);
+                        }}
+                        size="sm"
+                      >
+                        {toast.action.label}
+                      </Button>
+                    </div>
+                  ) : null}
+                </div>
+                <ToastPrimitive.Close
+                  className="
                   inline-flex size-6 shrink-0 items-center justify-center
-                  rounded-md text-muted-foreground
-                  hover:bg-muted hover:text-foreground
+                  rounded-md text-muted-foreground outline-none
+                  hover:bg-overlay-hover hover:text-foreground
+                  focus-visible:ring-2 focus-visible:ring-ring
+                  focus-visible:ring-offset-2 focus-visible:ring-offset-card
                 "
-              >
-                <XIcon className="size-3.5" />
-                <span className="sr-only">{t("common.close")}</span>
-              </ToastPrimitive.Close>
-            </div>
-          </ToastPrimitive.Root>
-        ))}
+                >
+                  <XIcon className="size-3.5" />
+                  <span className="sr-only">{t("common.close")}</span>
+                </ToastPrimitive.Close>
+              </div>
+            </ToastPrimitive.Root>
+          );
+        })}
         <ToastPrimitive.Viewport
           className="
             fixed right-4 bottom-4 z-50 flex w-[calc(100vw-2rem)] max-w-sm

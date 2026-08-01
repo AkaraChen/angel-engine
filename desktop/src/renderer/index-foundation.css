@@ -35,6 +35,8 @@
   --color-azure-900: var(--azure-900);
   --color-azure-950: var(--azure-950);
   --color-presence: var(--presence);
+  --color-tooltip: var(--tooltip);
+  --color-tooltip-foreground: var(--tooltip-foreground);
   --color-surface-1: var(--surface-1);
   --color-surface-2: var(--surface-2);
   --color-surface-3: var(--surface-3);
@@ -177,6 +179,11 @@
   --input: #e4e3e0;
   --ring: #3784ff;
   --dot-grid: #c4c8cc;
+  /* Tooltips invert against the page. In dark that inversion would put a dark
+     chip on a dark ground, so the dark theme raises it to a lifted surface
+     instead of flipping it. */
+  --tooltip: var(--ink-900);
+  --tooltip-foreground: #fbf9f4;
   --status-success: #009767;
   --status-success-soft: #e6f6f0;
   --status-success-border: #c2e7da;
@@ -293,6 +300,8 @@
 
 .dark {
   color-scheme: dark;
+  --tooltip: #2e2e2e;
+  --tooltip-foreground: #f0f0ee;
   --background: #0c0c0c;
   --foreground: #f0f0ee;
   --card: #171717;
@@ -472,6 +481,18 @@
     scroll-behavior: auto !important;
     transition-delay: 0s !important;
     transition-duration: 1ms !important;
+  }
+}
+
+/* Skeletons breathe rather than sweep: a moving highlight reads as landing-page
+   polish, which the DNA translation keeps out of app surfaces. */
+@keyframes skeleton-breathe {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.55;
   }
 }
 

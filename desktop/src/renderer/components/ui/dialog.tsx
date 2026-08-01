@@ -1,4 +1,5 @@
 import { X as XIcon } from "@phosphor-icons/react";
+import is from "@sindresorhus/is";
 import { Dialog as DialogPrimitive } from "radix-ui";
 import * as React from "react";
 
@@ -39,7 +40,7 @@ function DialogOverlay({
       data-slot="dialog-overlay"
       className={cn(
         `
-          fixed inset-0 isolate z-50 bg-black/40 duration-100
+          fixed inset-0 isolate z-50 bg-ink-950/40 duration-100
           supports-backdrop-filter:backdrop-blur-[2px]
           data-open:animate-in data-open:fade-in-0
           data-closed:animate-out data-closed:fade-out-0
@@ -69,13 +70,15 @@ function DialogContent({
         className={cn(
           `
             fixed top-1/2 left-1/2 z-50 grid w-full max-w-[calc(100%-2rem)]
-            -translate-1/2 gap-6 rounded-xl bg-popover p-6 text-sm
-            text-popover-foreground shadow-overlay ring-1 ring-border-subtle
-            duration-180 ease-swift outline-none
+            -translate-1/2 gap-6 rounded-xl bg-card p-6 text-sm
+            text-card-foreground shadow-overlay ring-1 ring-border-subtle
+            duration-200 ease-standard outline-none
             sm:max-w-md
-            data-open:animate-in data-open:fade-in-0 data-open:zoom-in-[0.97]
+            data-open:animate-in data-open:fade-in-0
+            data-open:slide-in-from-top-1
             data-closed:animate-out data-closed:fade-out-0
-            data-closed:zoom-out-[0.97] data-closed:duration-120
+            data-closed:slide-out-to-top-1 data-closed:duration-120
+            motion-reduce:transition-none motion-reduce:animate-none
           `,
           className,
         )}
@@ -99,13 +102,47 @@ function DialogContent({
   );
 }
 
-function DialogHeader({ className, ...props }: React.ComponentProps<"div">) {
+/**
+ * `icon` renders a Phosphor glyph in the dialog's top-left corner, aligned to
+ * the title's cap height rather than the header box, so a two-line description
+ * does not drag it off the baseline.
+ */
+function DialogHeader({
+  className,
+  children,
+  icon,
+  ...props
+}: React.ComponentProps<"div"> & { icon?: React.ReactNode }) {
+  if (is.falsy(icon)) {
+    return (
+      <div
+        data-slot="dialog-header"
+        className={cn("flex flex-col gap-1.5", className)}
+        {...props}
+      >
+        {children}
+      </div>
+    );
+  }
+
   return (
     <div
       data-slot="dialog-header"
-      className={cn("flex flex-col gap-1.5", className)}
+      className={cn("flex items-start gap-3", className)}
       {...props}
-    />
+    >
+      <span
+        aria-hidden="true"
+        data-slot="dialog-header-icon"
+        className="
+          flex h-4 shrink-0 items-center text-muted-foreground
+          [&_svg:not([class*='size-'])]:size-4
+        "
+      >
+        {icon}
+      </span>
+      <div className="flex min-w-0 flex-col gap-1.5">{children}</div>
+    </div>
   );
 }
 

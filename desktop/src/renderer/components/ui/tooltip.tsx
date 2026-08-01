@@ -45,7 +45,8 @@ function TooltipContent({
           `
             z-50 inline-flex w-fit max-w-xs
             origin-(--radix-tooltip-content-transform-origin) items-center
-            gap-1.5 rounded-lg bg-foreground px-3 py-1.5 text-xs text-background
+            gap-1.5 rounded-md bg-tooltip px-2.5 py-1 text-xs
+            text-tooltip-foreground
             has-data-[slot=kbd]:pr-1.5
             data-[side=bottom]:slide-in-from-top-2
             data-[side=left]:slide-in-from-right-2
@@ -65,12 +66,14 @@ function TooltipContent({
         {...props}
       >
         {children}
+        {/* Kept deliberately small — the DNA wants the tooltip to read as a
+            chip, not as a speech bubble. */}
         <TooltipPrimitive.Arrow
           className="
-            z-50 size-2.5 translate-y-[calc(-50%-2px)] rotate-45 rounded-[2px]
-            bg-foreground fill-foreground
-            data-[side=left]:translate-x-[-1.5px]
-            data-[side=right]:translate-x-[1.5px]
+            z-50 size-1.5 translate-y-[calc(-50%-1px)] rotate-45 rounded-[1px]
+            bg-tooltip fill-tooltip
+            data-[side=left]:translate-x-[-1px]
+            data-[side=right]:translate-x-[1px]
           "
         />
       </TooltipPrimitive.Content>
