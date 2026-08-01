@@ -150,9 +150,7 @@ function ToolStatusIcon({
   if (failed)
     return <WarningCircle className="size-4 shrink-0 text-destructive" />;
   if (running)
-    return (
-      <SpinnerGap className="size-4 shrink-0 animate-spin text-primary/75" />
-    );
+    return <SpinnerGap className="size-4 shrink-0 animate-spin text-primary" />;
   return <Check className="size-4 shrink-0 text-muted-foreground/75" />;
 }
 

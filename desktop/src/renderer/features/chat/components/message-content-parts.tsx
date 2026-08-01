@@ -72,7 +72,7 @@ const UserMessageRichText: FC<UserMessageRichTextProps> = ({ text }) => {
           select-text
           [&_.tiptap]:max-h-none! [&_.tiptap]:min-h-0!
           [&_.tiptap]:overflow-visible!
-          [&_[data-type=mention]]:text-primary!
+          [&_[data-type=mention]]:text-primary-strong!
           [&_[data-mention-kind=skill]]:bg-card!
           [&_.tiptap_code]:bg-card! [&_.tiptap_code]:text-foreground!
           [&_.tiptap_pre]:bg-card! [&_.tiptap_pre]:text-foreground!

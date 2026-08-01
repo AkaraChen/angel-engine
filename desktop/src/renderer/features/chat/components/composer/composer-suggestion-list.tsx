@@ -140,7 +140,7 @@ function SuggestionItem({
         </>
       ) : item.kind === "skill" ? (
         <>
-          <span className="max-w-[45%] truncate font-mono text-xs text-primary">
+          <span className="max-w-[45%] truncate font-mono text-xs text-primary-strong">
             {"$"}
             {item.skill.name}
           </span>
@@ -150,7 +150,7 @@ function SuggestionItem({
         </>
       ) : (
         <>
-          <span className="max-w-[45%] truncate font-mono text-xs text-primary">
+          <span className="max-w-[45%] truncate font-mono text-xs text-primary-strong">
             /{item.command.name}
           </span>
           <span className="min-w-0 flex-1 truncate text-muted-foreground">

@@ -36,10 +36,14 @@ const buttonVariants = cva(
   {
     variants: {
       variant: {
+        /* The fill is `--primary-strong`, not `--primary`: a 14px medium label
+           is small text by WCAG, so white on the lighter azure would sit at
+           3.56:1. One step down the ramp buys 5.2:1 without leaving the DNA's
+           azure. */
         default: `
-          bg-primary text-primary-foreground
-          hover:bg-primary-hover
-          active:bg-primary-active
+          bg-primary-strong text-primary-foreground
+          hover:bg-primary-strong-hover
+          active:bg-primary-strong-active
         `,
         soft: `
           bg-primary-soft text-primary-soft-foreground
@@ -73,7 +77,7 @@ const buttonVariants = cva(
           dark:active:bg-status-danger/20
         `,
         link: `
-          text-primary underline-offset-4
+          text-primary-strong underline-offset-4
           hover:underline
           active:scale-100
         `,

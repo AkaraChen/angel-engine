@@ -89,9 +89,7 @@ function GroupStatusIcon({
   failed: boolean;
 }) {
   if (active)
-    return (
-      <SpinnerGap className="size-4 shrink-0 animate-spin text-primary/75" />
-    );
+    return <SpinnerGap className="size-4 shrink-0 animate-spin text-primary" />;
   if (failed)
     return <WarningCircle className="size-4 shrink-0 text-destructive" />;
   return <Wrench className="size-4 shrink-0" />;

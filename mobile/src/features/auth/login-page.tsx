@@ -58,7 +58,7 @@ export function LoginPage() {
           <span
             className="
               flex size-12 items-center justify-center rounded-2xl
-              bg-primary-soft text-primary
+              bg-primary-soft text-primary-strong
             "
           >
             <LockKey className="size-6" weight="duotone" />

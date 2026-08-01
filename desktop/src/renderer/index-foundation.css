@@ -47,6 +47,9 @@
   --color-border-strong: var(--border-strong);
   --color-primary-hover: var(--primary-hover);
   --color-primary-active: var(--primary-active);
+  --color-primary-strong: var(--primary-strong);
+  --color-primary-strong-hover: var(--primary-strong-hover);
+  --color-primary-strong-active: var(--primary-strong-active);
   --color-primary-soft: var(--primary-soft);
   --color-primary-soft-foreground: var(--primary-soft-foreground);
   --color-status-success: var(--status-success);
@@ -154,6 +157,16 @@
   --primary-foreground: #ffffff;
   --primary-hover: #1b60f5;
   --primary-active: #144be1;
+  /* `--primary` is a 3.56:1 blue on white: correct for the non-text jobs WCAG
+     scores at 3:1 (icons, borders, indicators, focus rings, fills) and wrong
+     for anything paired with text. `--primary-strong` is one step down the
+     azure ramp and is the accent to reach for whenever text is involved --
+     blue text on a light ground (5.2:1 on card) and white text on a blue fill
+     (5.2:1 as well). In dark both roles land on the same value, so the dark
+     theme is unchanged. */
+  --primary-strong: #1b60f5;
+  --primary-strong-hover: #144be1;
+  --primary-strong-active: #173db6;
   --primary-soft: #d5e5ff;
   --primary-soft-foreground: #29325c;
   --secondary: var(--surface-1);
@@ -316,6 +329,11 @@
   --primary-foreground: #0c0c0c;
   --primary-hover: #93c5fd;
   --primary-active: #59a5ff;
+  /* 7.72:1 on the dark ground already, so the strong role is the same colour
+     as the plain one and nothing shifts in dark. */
+  --primary-strong: #69a3ff;
+  --primary-strong-hover: #93c5fd;
+  --primary-strong-active: #59a5ff;
   --primary-soft: rgb(105 163 255 / 0.14);
   --primary-soft-foreground: #bcdbff;
   --secondary: var(--surface-1);
