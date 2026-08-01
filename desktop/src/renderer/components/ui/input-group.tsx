@@ -17,7 +17,8 @@ import { cn } from "@/platform/utils";
 const inputGroupVariants = cva(
   `
     group/input-group relative flex h-9 w-full min-w-0 items-center
-    border border-input bg-input/50
+    border border-input bg-card
+    dark:bg-surface-1
     transition-[color,box-shadow,background-color,border-color] duration-150
     ease-standard outline-none
     focus-within:border-primary focus-within:ring-2 focus-within:ring-ring/45

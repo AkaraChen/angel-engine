@@ -89,7 +89,7 @@ function DialogContent({
           <DialogPrimitive.Close data-slot="dialog-close" asChild>
             <Button
               variant="ghost"
-              className="absolute top-4 right-4 bg-secondary"
+              className="absolute top-4 right-4 text-muted-foreground"
               size="icon-sm"
             >
               <XIcon />

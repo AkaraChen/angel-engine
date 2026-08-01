@@ -405,7 +405,7 @@ function SidebarInput({
       data-sidebar="input"
       // Sidebar filtering is a search field, so it keeps the DNA capsule.
       className={cn(
-        "h-[2rem] w-full rounded-full bg-input/50 shadow-none",
+        "h-[2rem] w-full rounded-full bg-card shadow-none",
         className,
       )}
       {...props}

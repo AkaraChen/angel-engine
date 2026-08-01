@@ -8,8 +8,13 @@ import { cn } from "@/platform/utils";
 /**
  * The openknowledge DNA is a landing-page language where every control is a
  * capsule. In app context that would dissolve dense toolbar grids, so the
- * capsule is reserved for the primary CTA (`default`); every other variant
- * keeps a `radius-md` rectangle and a flat hover that never lifts.
+ * capsule lives on one opt-in variant: `cta`, for a genuine hero call to
+ * action (empty states, onboarding, the one button a screen is about).
+ *
+ * Every other variant -- including `default`, which is just "filled primary"
+ * and shows up in toolbars and dialog footers -- stays a `radius-md`
+ * rectangle. Mixing the two in one action row is what makes a Cancel/Save
+ * pair look broken, so shape is a property of intent, not of colour.
  */
 const buttonVariants = cva(
   `
@@ -35,11 +40,16 @@ const buttonVariants = cva(
   {
     variants: {
       variant: {
-        default: `
+        cta: `
           rounded-full bg-primary leading-[115%] tracking-[-0.64px]
           text-primary-foreground duration-150
           hover:-translate-y-0.5 hover:bg-primary-hover hover:shadow-panel
           active:translate-y-0 active:bg-primary-active active:shadow-none
+        `,
+        default: `
+          rounded-md bg-primary text-primary-foreground duration-120
+          hover:bg-primary-hover
+          active:bg-primary-active
         `,
         soft: `
           rounded-md bg-primary-soft text-primary-soft-foreground duration-120
@@ -68,11 +78,10 @@ const buttonVariants = cva(
           aria-expanded:bg-overlay-hover aria-expanded:text-foreground
         `,
         destructive: `
-          rounded-md bg-status-danger-soft text-status-danger duration-120
-          hover:bg-status-danger/15
-          active:bg-status-danger/20
-          dark:hover:bg-status-danger/20
-          dark:active:bg-status-danger/25
+          rounded-md text-status-danger duration-120
+          hover:bg-status-danger-soft
+          active:bg-status-danger/15
+          dark:active:bg-status-danger/20
         `,
         link: `
           rounded-md text-primary underline-offset-4 duration-120
@@ -114,10 +123,10 @@ const buttonVariants = cva(
     compoundVariants: [
       // A capsule needs horizontal room for its own curve, so the pill CTA runs
       // slightly wider than the rectangular variants at every text size.
-      { variant: "default", size: "xs", className: "px-3" },
-      { variant: "default", size: "sm", className: "px-3.5" },
-      { variant: "default", size: "default", className: "px-4" },
-      { variant: "default", size: "lg", className: "px-5" },
+      { variant: "cta", size: "xs", className: "px-3" },
+      { variant: "cta", size: "sm", className: "px-3.5" },
+      { variant: "cta", size: "default", className: "px-4" },
+      { variant: "cta", size: "lg", className: "px-5" },
     ],
     defaultVariants: {
       variant: "default",

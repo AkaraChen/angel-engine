@@ -32,7 +32,8 @@ function NativeSelect({
         className={cn(
           `
             h-9 w-full min-w-0 appearance-none rounded-md border border-input
-            bg-input/50 py-1 pr-8 pl-3 text-sm
+            bg-card py-1 pr-8 pl-3
+            dark:bg-surface-1 text-sm
             transition-[color,box-shadow,background-color,border-color]
             duration-150 ease-standard outline-none select-none
             selection:bg-primary selection:text-primary-foreground
