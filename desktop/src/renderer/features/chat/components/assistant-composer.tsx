@@ -28,7 +28,6 @@ import {
   PromptAttachmentButton,
 } from "@/features/chat/components/composer/composer-menus";
 import { PromptGitHubAttachButton } from "@/features/chat/components/composer/github-attach-button";
-import { PlanModeToggleButton } from "@/features/chat/components/composer/composer-plan-mode";
 import { useComposerEditor } from "@/features/chat/components/composer/use-composer-editor";
 import { iconButtonClass } from "@/features/chat/components/thread-styles";
 import { useChatOptions } from "@/features/chat/runtime/chat-options-context";
@@ -170,7 +169,6 @@ function AssistantComposerFooter({
         />
       </PromptInputTools>
       <div className="flex min-w-0 items-center gap-2">
-        <PlanModeToggleButton disabled={isRunning} options={chatOptions} />
         <ComposerOptionSelect
           className="hidden max-w-28"
           disabled={
