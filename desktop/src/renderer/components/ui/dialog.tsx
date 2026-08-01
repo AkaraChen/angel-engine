@@ -103,9 +103,10 @@ function DialogContent({
 }
 
 /**
- * `icon` renders a Phosphor glyph in the dialog's top-left corner, aligned to
- * the title's cap height rather than the header box, so a two-line description
- * does not drag it off the baseline.
+ * `icon` puts a Phosphor glyph on the title's own line, with the description
+ * dropping to a full-width row beneath both. A two-column grid does the work
+ * instead of nesting, so the description never gets indented into a narrow
+ * column and the icon stays centred on the title regardless of its length.
  */
 function DialogHeader({
   className,
@@ -128,12 +129,21 @@ function DialogHeader({
   return (
     <div
       data-slot="dialog-header"
-      className={cn("flex items-start gap-3", className)}
+      className={cn(
+        `
+          grid grid-cols-[auto_minmax(0,1fr)] items-start gap-x-2 gap-y-1.5
+          [&>[data-slot=dialog-description]]:col-span-2
+        `,
+        className,
+      )}
       {...props}
     >
       <span
         aria-hidden="true"
         data-slot="dialog-header-icon"
+        // h-4 matches DialogTitle's first line box (text-base + leading-none),
+        // so a title that wraps keeps the icon pinned to line one instead of
+        // drifting to the middle of the block.
         className="
           flex h-4 shrink-0 items-center text-muted-foreground
           [&_svg:not([class*='size-'])]:size-4
@@ -141,7 +151,7 @@ function DialogHeader({
       >
         {icon}
       </span>
-      <div className="flex min-w-0 flex-col gap-1.5">{children}</div>
+      {children}
     </div>
   );
 }
