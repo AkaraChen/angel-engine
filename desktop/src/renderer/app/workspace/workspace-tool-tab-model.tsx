@@ -128,27 +128,34 @@ export interface WorkspaceToolTabItem {
   title: string;
 }
 
+export interface WorkspaceToolPinnedTabLabels {
+  files: string;
+  gitChanges: string;
+  processes: string;
+}
+
 export function workspaceToolTabItems(
   dynamicTabs: WorkspaceToolSurfaceDynamicTab[],
+  labels: WorkspaceToolPinnedTabLabels,
 ): WorkspaceToolTabItem[] {
   return [
     {
       icon: Folder,
       id: workspaceToolFilesTabId,
       pinned: true,
-      title: "Files",
+      title: labels.files,
     },
     {
       icon: GitBranch,
       id: workspaceToolGitTabId,
       pinned: true,
-      title: "Git changes",
+      title: labels.gitChanges,
     },
     {
       icon: Cpu,
       id: workspaceToolProcessesTabId,
       pinned: true,
-      title: "Processes",
+      title: labels.processes,
     },
     ...dynamicTabs.map((tab) => ({
       dynamicTab: tab,

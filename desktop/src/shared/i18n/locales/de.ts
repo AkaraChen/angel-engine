@@ -78,6 +78,40 @@ export const de = {
       statsBranch: "Branch",
       statsChanges: "Änderungen",
       statsLastActive: "Zuletzt aktiv",
+      tools: {
+        commit: {
+          committing: "Commit läuft…",
+          commitTo: "Commit nach {{target}}",
+          descriptionPlaceholder: "Beschreibung",
+          filesSelected: "{{selected}} von {{total}} Dateien ausgewählt",
+          summaryPlaceholder: "Zusammenfassung",
+        },
+        dockInSidebar: "In Seitenleiste andocken",
+        empty: {
+          fileTreeUnavailable: "Dateibaum nicht verfügbar",
+          fileUnavailable: "Datei nicht verfügbar",
+          gitUnavailable: "Git nicht verfügbar",
+          noChanges: "Keine Änderungen",
+          noDiffForFile: "Kein Diff für Datei",
+          noProcesses: "Keine Agent-Unterprozesse aktiv",
+          noWorkspace: "Kein Workspace für diesen Chat",
+          notGitRepository: "Kein Git-Repository",
+          processesUnavailable: "Prozesse nicht verfügbar",
+        },
+        listeningPorts: "Lauschende Ports",
+        resizeFileTree: "Dateibaumbreite anpassen",
+        resizeGitList: "Breite der Änderungsliste anpassen",
+        subprocesses: "Unterprozesse",
+        tabs: {
+          files: "Dateien",
+          gitChanges: "Git-Änderungen",
+          newTab: "Neuer Tab",
+          processes: "Prozesse",
+          tabs: "Tabs",
+          tools: "Werkzeuge",
+          workspaceTabs: "Workspace-Tabs",
+        },
+      },
       worktreeDirtyContinue: "Fortfahren",
       worktreeDirtyDescription:
         "Das ausgewählte Projekt hat nicht übernommene Änderungen. Der neue Worktree wird aus dem aktuellen HEAD erstellt und enthält diese Änderungen nicht.",
@@ -243,6 +277,23 @@ export const de = {
         timeToday: "Heute",
         worktree: "worktree",
       },
+      customAgents: {
+        addAgent: "Agent hinzufügen",
+        deleteAgent: "{{label}} löschen",
+        editAgent: "{{label}} bearbeiten",
+        enableAgent: "{{label}} aktivieren",
+        form: {
+          args: "Argumente",
+          autoAuthenticate: "Automatisch authentifizieren",
+          command: "Befehl",
+          environment: "Umgebung",
+          name: "Name",
+          requiresAuth: "Authentifizierung erforderlich",
+        },
+        plainTextNotice:
+          "Benutzerdefinierte ACP-Agents speichern Umgebungsvariablen lokal im Klartext.",
+        title: "Benutzerdefinierte Agents",
+      },
       danger: {
         confirmDeleteAll:
           "Alle Chats löschen? Diese Aktion kann nicht rückgängig gemacht werden.",
@@ -369,6 +420,8 @@ export const de = {
           "Verweisen Sie auf eine Datei, einen Fehler, ein Verhalten oder einen Arbeitsbereich, der korrigiert oder getestet werden soll.",
         recentEmpty:
           "Noch nichts hier — wählen Sie ein Projekt und starten Sie Ihre erste Sitzung.",
+        recentShowAll: "Alle {{count}} Chats anzeigen",
+        recentShowLess: "Weniger anzeigen",
         recentTitle: "Zuletzt",
         suggestionClarify: "Hilf mir, eine komplexe Frage zu durchdenken",
         suggestionExplore: "Erkläre den Aufbau dieser Codebasis",

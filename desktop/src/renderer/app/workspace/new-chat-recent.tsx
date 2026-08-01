@@ -4,7 +4,7 @@ import type { ReactElement } from "react";
 
 import { Robot as Bot } from "@phosphor-icons/react";
 import is from "@sindresorhus/is";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   displayChatTitle,
@@ -32,20 +32,24 @@ export function NewChatRecentSection({
   projects: Project[];
 }): ReactElement {
   const { t } = useTranslation();
+  const [expanded, setExpanded] = useState(false);
   const projectPaths = useMemo(
     () => new Map(projects.map((project) => [project.id, project.path])),
     [projects],
   );
-  const recentChats = useMemo(
+  const allRecentChats = useMemo(
     () =>
       chats
         .filter((chat) => !chat.archived)
         .toSorted((left, right) =>
           right.updatedAt.localeCompare(left.updatedAt),
-        )
-        .slice(0, RECENT_CHAT_LIMIT),
+        ),
     [chats],
   );
+  const recentChats = expanded
+    ? allRecentChats
+    : allRecentChats.slice(0, RECENT_CHAT_LIMIT);
+  const hiddenCount = allRecentChats.length - RECENT_CHAT_LIMIT;
 
   return (
     <section className="mt-10 w-full">
@@ -71,21 +75,39 @@ export function NewChatRecentSection({
           </Button>
         </div>
       ) : (
-        <ul className="flex flex-col gap-1.5">
-          {recentChats.map((chat) => (
-            <li key={chat.id}>
-              <RecentChatCard
-                chat={chat}
-                onOpen={() => onOpenChat(chat)}
-                projectPath={
-                  is.nonEmptyString(chat.projectId)
-                    ? projectPaths.get(chat.projectId)
-                    : undefined
-                }
-              />
-            </li>
-          ))}
-        </ul>
+        <>
+          <ul className="flex flex-col gap-1.5">
+            {recentChats.map((chat) => (
+              <li key={chat.id}>
+                <RecentChatCard
+                  chat={chat}
+                  onOpen={() => onOpenChat(chat)}
+                  projectPath={
+                    is.nonEmptyString(chat.projectId)
+                      ? projectPaths.get(chat.projectId)
+                      : undefined
+                  }
+                />
+              </li>
+            ))}
+          </ul>
+          {hiddenCount > 0 ? (
+            <div className="mt-2 flex justify-center">
+              <Button
+                onClick={() => setExpanded((current) => !current)}
+                size="sm"
+                type="button"
+                variant="ghost"
+              >
+                {expanded
+                  ? t("thread.empty.recentShowLess")
+                  : t("thread.empty.recentShowAll", {
+                      count: allRecentChats.length,
+                    })}
+              </Button>
+            </div>
+          ) : null}
+        </>
       )}
     </section>
   );

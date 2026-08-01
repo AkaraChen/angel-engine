@@ -131,7 +131,11 @@ impl DisplayToolAction {
             phase: action.phase.clone(),
             title: action.title.clone(),
             input_summary: action.input.summary.clone(),
-            raw_input: action.input.raw.clone(),
+            raw_input: action
+                .input
+                .display
+                .clone()
+                .or_else(|| action.input.raw.clone()),
             output_text: action_output_text(&output),
             output,
             error: action.error.clone(),

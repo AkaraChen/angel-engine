@@ -66,6 +66,10 @@ function parseToolArgs(value?: string | null): ChatJsonObject {
   if (!is.string(value)) {
     throw new Error("Tool action raw input is missing.");
   }
+  // ACP adapters normalize "no tool input" to an empty display string.
+  if (value.length === 0) {
+    return {};
+  }
   const parsed = JSON.parse(value);
   if (!is.plainObject(parsed)) {
     throw new Error("Tool action raw input must be a JSON object.");

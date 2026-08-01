@@ -78,6 +78,40 @@ export const ja = {
       statsBranch: "ブランチ",
       statsChanges: "変更",
       statsLastActive: "最終アクティブ",
+      tools: {
+        commit: {
+          committing: "コミット中…",
+          commitTo: "{{target}} にコミット",
+          descriptionPlaceholder: "説明",
+          filesSelected: "{{total}} 件中 {{selected}} 件を選択",
+          summaryPlaceholder: "概要",
+        },
+        dockInSidebar: "サイドバーにドック",
+        empty: {
+          fileTreeUnavailable: "ファイルツリーを利用できません",
+          fileUnavailable: "ファイルを利用できません",
+          gitUnavailable: "Git を利用できません",
+          noChanges: "変更はありません",
+          noDiffForFile: "このファイルに差分はありません",
+          noProcesses: "実行中のエージェントサブプロセスはありません",
+          noWorkspace: "このチャットにはワークスペースがありません",
+          notGitRepository: "Git リポジトリではありません",
+          processesUnavailable: "プロセス情報を利用できません",
+        },
+        listeningPorts: "リスニングポート",
+        resizeFileTree: "ファイルツリーの幅を調整",
+        resizeGitList: "変更リストの幅を調整",
+        subprocesses: "サブプロセス",
+        tabs: {
+          files: "ファイル",
+          gitChanges: "Git の変更",
+          newTab: "新しいタブ",
+          processes: "プロセス",
+          tabs: "タブ",
+          tools: "ツール",
+          workspaceTabs: "ワークスペースタブ",
+        },
+      },
       worktreeDirtyContinue: "続行",
       worktreeDirtyDescription:
         "選択したプロジェクトには未コミットの変更があります。新しい worktree は現在の HEAD から作成されるため、それらの変更は含まれません。",
@@ -243,6 +277,23 @@ export const ja = {
         timeToday: "今日",
         worktree: "worktree",
       },
+      customAgents: {
+        addAgent: "エージェントを追加",
+        deleteAgent: "{{label}} を削除",
+        editAgent: "{{label}} を編集",
+        enableAgent: "{{label}} を有効化",
+        form: {
+          args: "引数",
+          autoAuthenticate: "自動で認証する",
+          command: "コマンド",
+          environment: "環境変数",
+          name: "名前",
+          requiresAuth: "認証が必要",
+        },
+        plainTextNotice:
+          "カスタム ACP エージェントの環境変数はこのパソコンにプレーンテキストで保存されます。",
+        title: "カスタムエージェント",
+      },
       danger: {
         confirmDeleteAll:
           "すべてのチャットを削除しますか？この操作は元に戻せません。",
@@ -370,6 +421,8 @@ export const ja = {
           "修正またはテストするファイル、バグ、挙動、ワークスペース範囲を指定してください。",
         recentEmpty:
           "まだ何もありません。プロジェクトを選んで最初のセッションを始めましょう。",
+        recentShowAll: "すべての会話を表示（{{count}}）",
+        recentShowLess: "折りたたむ",
         recentTitle: "最近",
         suggestionClarify: "複雑な問題を整理して考えるのを手伝って",
         suggestionExplore: "このコードベースの構成を説明して",

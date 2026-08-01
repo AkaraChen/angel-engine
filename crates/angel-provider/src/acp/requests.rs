@@ -133,6 +133,7 @@ impl AcpAdapter {
             action.input = ActionInput {
                 summary: elicitation.options.body.clone(),
                 raw: Some(params.to_string()),
+                display: None,
             };
             output.events.push(EngineEvent::ActionObserved {
                 conversation_id: conversation_id.clone(),
@@ -228,6 +229,7 @@ impl AcpAdapter {
             action.input = ActionInput {
                 summary: elicitation.options.body.clone(),
                 raw: Some(params.to_string()),
+                display: None,
             };
             output.events.push(EngineEvent::ActionObserved {
                 conversation_id: conversation_id.clone(),

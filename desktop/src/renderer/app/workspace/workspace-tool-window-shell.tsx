@@ -1,5 +1,6 @@
 import { SidebarSimple as DockIcon } from "@phosphor-icons/react";
 import is from "@sindresorhus/is";
+import { useTranslation } from "react-i18next";
 
 import { WorkspaceToolContent } from "@/app/workspace/workspace-tool-content";
 import { WorkspaceToolEmpty } from "@/app/workspace/workspace-tool-layout";
@@ -15,6 +16,7 @@ export function WorkspaceToolWindowShell({
   trafficLightInset: boolean;
 }) {
   const { activeTabId, requestSurfaceHost } = useWorkspaceToolSurface();
+  const { t } = useTranslation();
 
   return (
     <div className="flex min-h-0 flex-1 overflow-hidden">
@@ -42,7 +44,7 @@ export function WorkspaceToolWindowShell({
         >
           <WorkspaceToolHeaderButton
             icon={<DockIcon weight="regular" />}
-            label="Dock in sidebar"
+            label={t("workspace.tools.dockInSidebar")}
             onClick={() => {
               void requestSurfaceHost("sidebar");
             }}
@@ -58,7 +60,7 @@ export function WorkspaceToolWindowShell({
         {is.nonEmptyString(root) ? (
           <WorkspaceToolContent root={root} />
         ) : (
-          <WorkspaceToolEmpty title="No workspace for this chat" />
+          <WorkspaceToolEmpty title={t("workspace.tools.empty.noWorkspace")} />
         )}
       </main>
     </div>

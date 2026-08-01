@@ -78,6 +78,40 @@ export const es = {
       statsBranch: "Rama",
       statsChanges: "Cambios",
       statsLastActive: "Última actividad",
+      tools: {
+        commit: {
+          committing: "Confirmando…",
+          commitTo: "Confirmar en {{target}}",
+          descriptionPlaceholder: "Descripción",
+          filesSelected: "{{selected}} de {{total}} archivos seleccionados",
+          summaryPlaceholder: "Resumen",
+        },
+        dockInSidebar: "Acoplar a la barra lateral",
+        empty: {
+          fileTreeUnavailable: "Árbol de archivos no disponible",
+          fileUnavailable: "Archivo no disponible",
+          gitUnavailable: "Git no disponible",
+          noChanges: "Sin cambios",
+          noDiffForFile: "No hay diff para el archivo",
+          noProcesses: "No hay subprocesos de agente en ejecución",
+          noWorkspace: "No hay espacio de trabajo para este chat",
+          notGitRepository: "No es un repositorio Git",
+          processesUnavailable: "Procesos no disponibles",
+        },
+        listeningPorts: "Puertos en escucha",
+        resizeFileTree: "Redimensionar el árbol de archivos",
+        resizeGitList: "Redimensionar la lista de cambios",
+        subprocesses: "Subprocesos",
+        tabs: {
+          files: "Archivos",
+          gitChanges: "Cambios de Git",
+          newTab: "Nueva pestaña",
+          processes: "Procesos",
+          tabs: "Pestañas",
+          tools: "Herramientas",
+          workspaceTabs: "Pestañas del espacio de trabajo",
+        },
+      },
       worktreeDirtyContinue: "Continuar",
       worktreeDirtyDescription:
         "El proyecto seleccionado tiene cambios sin confirmar. El nuevo worktree se creará desde el HEAD actual, por lo que esos cambios no se incluirán.",
@@ -243,6 +277,23 @@ export const es = {
         timeToday: "Hoy",
         worktree: "worktree",
       },
+      customAgents: {
+        addAgent: "Añadir agente",
+        deleteAgent: "Eliminar {{label}}",
+        editAgent: "Editar {{label}}",
+        enableAgent: "Activar {{label}}",
+        form: {
+          args: "Argumentos",
+          autoAuthenticate: "Autenticación automática",
+          command: "Comando",
+          environment: "Entorno",
+          name: "Nombre",
+          requiresAuth: "Requiere autenticación",
+        },
+        plainTextNotice:
+          "Los agentes ACP personalizados guardan las variables de entorno localmente en texto plano.",
+        title: "Agentes personalizados",
+      },
       danger: {
         confirmDeleteAll:
           "¿Eliminar todos los chats? Esta acción no se puede deshacer.",
@@ -371,6 +422,8 @@ export const es = {
           "Señala un archivo, error, comportamiento o parte del espacio de trabajo para corregir o probar.",
         recentEmpty:
           "Aquí no hay nada todavía: elige un proyecto y empieza tu primera sesión.",
+        recentShowAll: "Ver los {{count}} chats",
+        recentShowLess: "Ver menos",
         recentTitle: "Recientes",
         suggestionClarify: "Ayúdame a pensar una cuestión compleja",
         suggestionExplore: "Explica cómo está estructurado este código",

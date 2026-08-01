@@ -46,59 +46,65 @@ function PermissionApprovalActions({
   };
 
   return (
-    <div className={cn("flex flex-wrap justify-end gap-2", className)}>
-      {/* Approve is the pill CTA; refuse is a solid secondary so it stays a
-          real choice rather than a link; the standing "allow for session"
-          grant is ghost, because it should be the quietest of the three. */}
-      <Button
-        disabled={disabled}
-        onClick={() => onResume({ type: "deny" })}
-        size="xs"
-        type="button"
-        variant="secondary"
-      >
-        {t("common.deny")}
-      </Button>
-      <Button
-        disabled={disabled}
-        onClick={() => onResume({ type: "cancel" })}
-        size="xs"
-        type="button"
-        variant="ghost"
-      >
-        {t("common.cancel")}
-      </Button>
-      <Button
-        disabled={disabled}
-        onClick={() => {
-          enablePermissionBypass(ALLOW_SESSION_PERMISSION_RESPONSE);
-          onResume(ALLOW_SESSION_PERMISSION_RESPONSE);
-        }}
-        size="xs"
-        type="button"
-        variant="ghost"
-      >
-        {t("common.allowSession")}
-      </Button>
-      <Button
-        disabled={disabled}
-        onClick={() => onResume({ type: "allow" })}
-        size="xs"
-        type="button"
-      >
-        {t("common.allow")}
-      </Button>
-      {allowBypass ? (
+    <div className={cn("flex flex-wrap items-center gap-2", className)}>
+      {/* Destructive and dismissive actions sit on the far left so the red
+          bypass never neighbours the primary CTA; approvals cluster on the
+          right with 允许 (allow) as the last, loudest pill. Ghost styling for
+          bypass keeps it discoverable without shouting. */}
+      <div className="flex flex-1 flex-wrap items-center gap-2">
+        {allowBypass ? (
+          <Button
+            className="text-status-danger hover:bg-status-danger-soft"
+            disabled={disabled || permissionBypassEnabled}
+            onClick={bypassPermission}
+            size="xs"
+            type="button"
+            variant="ghost"
+          >
+            {t("common.bypassPermission")}
+          </Button>
+        ) : null}
         <Button
-          disabled={disabled || permissionBypassEnabled}
-          onClick={bypassPermission}
+          disabled={disabled}
+          onClick={() => onResume({ type: "cancel" })}
           size="xs"
           type="button"
-          variant="destructive"
+          variant="ghost"
         >
-          {t("common.bypassPermission")}
+          {t("common.cancel")}
         </Button>
-      ) : null}
+      </div>
+      <div className="flex flex-wrap items-center gap-2">
+        <Button
+          disabled={disabled}
+          onClick={() => onResume({ type: "deny" })}
+          size="xs"
+          type="button"
+          variant="secondary"
+        >
+          {t("common.deny")}
+        </Button>
+        <Button
+          disabled={disabled}
+          onClick={() => {
+            enablePermissionBypass(ALLOW_SESSION_PERMISSION_RESPONSE);
+            onResume(ALLOW_SESSION_PERMISSION_RESPONSE);
+          }}
+          size="xs"
+          type="button"
+          variant="ghost"
+        >
+          {t("common.allowSession")}
+        </Button>
+        <Button
+          disabled={disabled}
+          onClick={() => onResume({ type: "allow" })}
+          size="xs"
+          type="button"
+        >
+          {t("common.allow")}
+        </Button>
+      </div>
     </div>
   );
 }

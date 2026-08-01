@@ -248,6 +248,13 @@ fn acp_tool_input(update: &Value) -> ActionInput {
     ActionInput {
         summary: tool_title(update),
         raw: Some(json_string(update)),
+        // The full session update is kept in `raw` for signature matching,
+        // but only the ACP `rawInput` field is the tool's actual input; when
+        // the runtime omits it there is no input worth displaying at all.
+        display: Some(match update.get("rawInput") {
+            Some(raw_input) => json_string(raw_input),
+            None => String::new(),
+        }),
     }
 }
 

@@ -78,6 +78,40 @@ export const ko = {
       statsBranch: "브랜치",
       statsChanges: "변경 사항",
       statsLastActive: "마지막 활동",
+      tools: {
+        commit: {
+          committing: "커밋 중…",
+          commitTo: "{{target}}에 커밋",
+          descriptionPlaceholder: "설명",
+          filesSelected: "{{total}}개 중 {{selected}}개 선택됨",
+          summaryPlaceholder: "요약",
+        },
+        dockInSidebar: "사이드바에 고정",
+        empty: {
+          fileTreeUnavailable: "파일 트리를 사용할 수 없습니다",
+          fileUnavailable: "파일을 사용할 수 없습니다",
+          gitUnavailable: "Git을 사용할 수 없습니다",
+          noChanges: "변경 사항 없음",
+          noDiffForFile: "해당 파일에 차이가 없습니다",
+          noProcesses: "실행 중인 에이전트 하위 프로세스가 없습니다",
+          noWorkspace: "이 채팅에는 워크스페이스가 없습니다",
+          notGitRepository: "Git 저장소가 아닙니다",
+          processesUnavailable: "프로세스 정보를 사용할 수 없습니다",
+        },
+        listeningPorts: "수신 대기 포트",
+        resizeFileTree: "파일 트리 너비 조정",
+        resizeGitList: "변경 목록 너비 조정",
+        subprocesses: "하위 프로세스",
+        tabs: {
+          files: "파일",
+          gitChanges: "Git 변경",
+          newTab: "새 탭",
+          processes: "프로세스",
+          tabs: "탭",
+          tools: "도구",
+          workspaceTabs: "워크스페이스 탭",
+        },
+      },
       worktreeDirtyContinue: "계속",
       worktreeDirtyDescription:
         "선택한 프로젝트에 커밋되지 않은 변경 사항이 있습니다. 새 worktree는 현재 HEAD에서 생성되므로 해당 변경 사항은 포함되지 않습니다.",
@@ -242,6 +276,23 @@ export const ko = {
         timeToday: "오늘",
         worktree: "worktree",
       },
+      customAgents: {
+        addAgent: "에이전트 추가",
+        deleteAgent: "{{label}} 삭제",
+        editAgent: "{{label}} 편집",
+        enableAgent: "{{label}} 활성화",
+        form: {
+          args: "인수",
+          autoAuthenticate: "자동 인증",
+          command: "명령",
+          environment: "환경 변수",
+          name: "이름",
+          requiresAuth: "인증 필요",
+        },
+        plainTextNotice:
+          "사용자 지정 ACP 에이전트의 환경 변수는 이 컴퓨터에 일반 텍스트로 저장됩니다.",
+        title: "사용자 지정 에이전트",
+      },
       danger: {
         confirmDeleteAll:
           "모든 채팅을 삭제할까요? 이 작업은 되돌릴 수 없습니다.",
@@ -363,6 +414,8 @@ export const ko = {
           "수정하거나 테스트할 파일, 버그, 동작 또는 워크스페이스 범위를 지정하세요.",
         recentEmpty:
           "아직 아무것도 없습니다. 프로젝트를 선택하고 첫 세션을 시작하세요.",
+        recentShowAll: "채팅 {{count}}개 모두 보기",
+        recentShowLess: "접기",
         recentTitle: "최근",
         suggestionClarify: "복잡한 문제를 정리해서 생각할 수 있게 도와줘",
         suggestionExplore: "이 코드베이스의 구조를 설명해 줘",

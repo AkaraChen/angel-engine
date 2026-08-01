@@ -88,16 +88,6 @@ export function UpdateSettings() {
             <span className="text-sm leading-snug font-medium">
               {t("settings.updates.betaTitle")}
             </span>
-            <span
-              aria-hidden="true"
-              className="
-                shrink-0 rounded-full bg-status-attention-soft px-2 py-0.5
-                font-mono text-[0.625rem] font-medium tracking-wide
-                text-status-attention uppercase
-              "
-            >
-              Beta
-            </span>
           </span>
           <span
             className="

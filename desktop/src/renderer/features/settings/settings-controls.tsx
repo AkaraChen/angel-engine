@@ -28,10 +28,12 @@ const dangerActionClassName = "border-status-danger-border";
 /**
  * Section label: mono / uppercase / hairline tracking, sitting *outside* the
  * card so the card itself stays a clean white plate. Same treatment as the
- * sidebar and menu group labels.
+ * sidebar and menu group labels. `settings-section-label` is the CJK carve-out
+ * for the uppercase (see index-foundation.css).
  */
 const sectionLabelClassName = `
-  font-mono text-[0.6875rem] font-medium tracking-wide uppercase
+  settings-section-label font-mono text-[0.6875rem] font-medium tracking-wide
+  uppercase
 `;
 
 /**

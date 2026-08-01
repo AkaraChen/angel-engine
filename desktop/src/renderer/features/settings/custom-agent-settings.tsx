@@ -18,6 +18,7 @@ import {
 } from "@phosphor-icons/react";
 import { Reorder } from "framer-motion";
 import { useCallback, useId, useReducer, useState } from "react";
+import { useTranslation } from "react-i18next";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -101,6 +102,7 @@ function CustomAgentsSettingsGroup({
   ) => Promise<{ chatCount: number }>;
   onUpdateCustomAgent: (input: UpdateCustomAgentInput) => Promise<CustomAgent>;
 }) {
+  const { t } = useTranslation();
   const [editingAgent, setEditingAgent] = useState<CustomAgent | null>(null);
   const [creating, setCreating] = useState(false);
   const deleteAgent = useCallback(
@@ -132,7 +134,7 @@ function CustomAgentsSettingsGroup({
     : customAgents;
 
   return (
-    <SettingsGroup title="Custom Agents">
+    <SettingsGroup title={t("settings.customAgents.title")}>
       <Reorder.Group
         as="div"
         axis="y"
@@ -151,13 +153,17 @@ function CustomAgentsSettingsGroup({
                   <AgentEnabledSwitch
                     checked={enabled}
                     disabled={isOnlyEnabled}
-                    label={`Enable ${agent.label}`}
+                    label={t("settings.customAgents.enableAgent", {
+                      label: agent.label,
+                    })}
                     onCheckedChange={(checked) =>
                       onAgentEnabledChange(agent.id, checked)
                     }
                   />
                   <Button
-                    aria-label={`Edit ${agent.label}`}
+                    aria-label={t("settings.customAgents.editAgent", {
+                      label: agent.label,
+                    })}
                     onClick={() => setEditingAgent(agent)}
                     size="icon-xs"
                     type="button"
@@ -166,7 +172,9 @@ function CustomAgentsSettingsGroup({
                     <Pencil />
                   </Button>
                   <Button
-                    aria-label={`Delete ${agent.label}`}
+                    aria-label={t("settings.customAgents.deleteAgent", {
+                      label: agent.label,
+                    })}
                     onClick={() => void deleteAgent(agent)}
                     size="icon-xs"
                     type="button"
@@ -229,7 +237,7 @@ function CustomAgentsSettingsGroup({
       ) : (
         <article className="flex items-center justify-between gap-3 px-5 py-3.5">
           <span className="text-sm text-muted-foreground">
-            Custom ACP agents store environment variables locally in plain text.
+            {t("settings.customAgents.plainTextNotice")}
           </span>
           <Button
             onClick={() => setCreating(true)}
@@ -238,7 +246,7 @@ function CustomAgentsSettingsGroup({
             variant="outline"
           >
             <Plus />
-            Add Agent
+            {t("settings.customAgents.addAgent")}
           </Button>
         </article>
       )}
@@ -257,6 +265,7 @@ function CustomAgentForm({
   onCreate: (input: CreateCustomAgentInput) => Promise<void>;
   onUpdate: (input: UpdateCustomAgentInput) => Promise<void>;
 }) {
+  const { t } = useTranslation();
   const formId = useId();
   const [formState, dispatchForm] = useReducer(
     customAgentFormReducer,
@@ -311,7 +320,7 @@ function CustomAgentForm({
           className="space-y-1.5 text-xs font-medium text-muted-foreground"
           htmlFor={`${formId}-name`}
         >
-          Name
+          {t("settings.customAgents.form.name")}
           <Input
             id={`${formId}-name`}
             onChange={(event) =>
@@ -328,7 +337,7 @@ function CustomAgentForm({
           className="space-y-1.5 text-xs font-medium text-muted-foreground"
           htmlFor={`${formId}-command`}
         >
-          Command
+          {t("settings.customAgents.form.command")}
           <Input
             className="font-mono text-sm"
             id={`${formId}-command`}
@@ -348,7 +357,7 @@ function CustomAgentForm({
         className="block space-y-1.5 text-xs font-medium text-muted-foreground"
         htmlFor={`${formId}-args`}
       >
-        Args
+        {t("settings.customAgents.form.args")}
         <Textarea
           className="min-h-20 font-mono text-sm"
           id={`${formId}-args`}
@@ -367,7 +376,7 @@ function CustomAgentForm({
         className="block space-y-1.5 text-xs font-medium text-muted-foreground"
         htmlFor={`${formId}-environment`}
       >
-        Environment
+        {t("settings.customAgents.form.environment")}
         <Textarea
           className="min-h-20 font-mono text-sm"
           id={`${formId}-environment`}
@@ -398,7 +407,7 @@ function CustomAgentForm({
               })
             }
           />
-          Requires authentication
+          {t("settings.customAgents.form.requiresAuth")}
         </label>
         <label
           className="flex items-center gap-2 text-sm"
@@ -415,7 +424,7 @@ function CustomAgentForm({
               })
             }
           />
-          Auto authenticate
+          {t("settings.customAgents.form.autoAuthenticate")}
         </label>
       </div>
       <div className="flex justify-end gap-2">
@@ -427,7 +436,7 @@ function CustomAgentForm({
           variant="ghost"
         >
           <X />
-          Cancel
+          {t("common.cancel")}
         </Button>
         <Button
           disabled={!canSave || saving}
@@ -436,7 +445,7 @@ function CustomAgentForm({
           type="button"
         >
           <Save />
-          Save
+          {t("common.save")}
         </Button>
       </div>
     </article>

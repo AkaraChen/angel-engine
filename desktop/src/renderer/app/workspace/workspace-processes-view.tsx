@@ -3,6 +3,7 @@ import type { WorkspaceToolPanelLayout } from "@/app/workspace/workspace-files-p
 
 import { ArrowSquareOut, Cpu, Stop } from "@phosphor-icons/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
 import { WorkspaceToolEmpty } from "@/app/workspace/workspace-tool-layout";
 import { Button } from "@/components/ui/button";
 import {
@@ -59,6 +60,7 @@ export const WorkspaceProcessesView: FC<WorkspaceProcessesViewProps> = ({
   layout,
   onOpenBrowser,
 }) => {
+  const { t } = useTranslation();
   const client = useDaemonClient();
   const chatId = useWorkspaceToolStore((state) => state.context.chatId);
   const queryClient = useQueryClient();
@@ -72,14 +74,16 @@ export const WorkspaceProcessesView: FC<WorkspaceProcessesViewProps> = ({
   );
 
   if (client === null) {
-    return <WorkspaceToolEmpty icon={Cpu} title="Backend unavailable" />;
+    return (
+      <WorkspaceToolEmpty icon={Cpu} title={t("common.backendUnavailable")} />
+    );
   }
   if (registryQuery.isError) {
     return (
       <WorkspaceToolEmpty
         detail={registryQuery.error.message}
         icon={Cpu}
-        title="Processes unavailable"
+        title={t("workspace.tools.empty.processesUnavailable")}
       />
     );
   }
@@ -116,7 +120,7 @@ export const WorkspaceProcessesView: FC<WorkspaceProcessesViewProps> = ({
       <WorkspaceToolEmpty
         detail="Processes the agent starts will show up here."
         icon={Cpu}
-        title="No agent subprocesses running"
+        title={t("workspace.tools.empty.noProcesses")}
       />
     );
   }
@@ -132,7 +136,7 @@ export const WorkspaceProcessesView: FC<WorkspaceProcessesViewProps> = ({
     return (
       <div className="h-full min-h-0 overflow-auto">
         {processes.length > 0 ? (
-          <ProcessCard title="Subprocesses">
+          <ProcessCard title={t("workspace.tools.subprocesses")}>
             <table className="w-full table-fixed text-xs">
               <thead>
                 <tr className="bg-surface-1 text-left text-muted-foreground">
@@ -196,7 +200,7 @@ export const WorkspaceProcessesView: FC<WorkspaceProcessesViewProps> = ({
           </ProcessCard>
         ) : null}
         {ports.length > 0 ? (
-          <ProcessCard title="Listening ports">
+          <ProcessCard title={t("workspace.tools.listeningPorts")}>
             <table className="w-full table-fixed text-xs">
               <thead>
                 <tr className="bg-surface-1 text-left text-muted-foreground">
@@ -269,7 +273,7 @@ export const WorkspaceProcessesView: FC<WorkspaceProcessesViewProps> = ({
   return (
     <div className="flex h-full min-h-0 flex-col overflow-auto">
       {processes.length > 0 ? (
-        <ProcessSection title="Subprocesses">
+        <ProcessSection title={t("workspace.tools.subprocesses")}>
           {processes.map((process) => (
             <ProcessRow
               detail={`${process.pid} · ${process.command}`}
@@ -295,7 +299,7 @@ export const WorkspaceProcessesView: FC<WorkspaceProcessesViewProps> = ({
         </ProcessSection>
       ) : null}
       {ports.length > 0 ? (
-        <ProcessSection title="Listening ports">
+        <ProcessSection title={t("workspace.tools.listeningPorts")}>
           {ports.map((port) => (
             <ProcessRow
               detail={`${port.address}:${port.port} — ${port.processName} (${port.pid})`}

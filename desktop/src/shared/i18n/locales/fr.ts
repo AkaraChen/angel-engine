@@ -79,6 +79,40 @@ export const fr = {
       statsBranch: "Branche",
       statsChanges: "Modifications",
       statsLastActive: "Dernière activité",
+      tools: {
+        commit: {
+          committing: "Commit en cours…",
+          commitTo: "Commiter vers {{target}}",
+          descriptionPlaceholder: "Description",
+          filesSelected: "{{selected}} sur {{total}} fichiers sélectionnés",
+          summaryPlaceholder: "Résumé",
+        },
+        dockInSidebar: "Ancrer dans la barre latérale",
+        empty: {
+          fileTreeUnavailable: "Arborescence indisponible",
+          fileUnavailable: "Fichier indisponible",
+          gitUnavailable: "Git indisponible",
+          noChanges: "Aucune modification",
+          noDiffForFile: "Aucun diff pour ce fichier",
+          noProcesses: "Aucun sous-processus d’agent en cours",
+          noWorkspace: "Aucun espace de travail pour cette conversation",
+          notGitRepository: "Pas un dépôt Git",
+          processesUnavailable: "Processus indisponibles",
+        },
+        listeningPorts: "Ports en écoute",
+        resizeFileTree: "Redimensionner l’arborescence",
+        resizeGitList: "Redimensionner la liste des changements",
+        subprocesses: "Sous-processus",
+        tabs: {
+          files: "Fichiers",
+          gitChanges: "Changements Git",
+          newTab: "Nouvel onglet",
+          processes: "Processus",
+          tabs: "Onglets",
+          tools: "Outils",
+          workspaceTabs: "Onglets de l’espace de travail",
+        },
+      },
       worktreeDirtyContinue: "Continuer",
       worktreeDirtyDescription:
         "Le projet sélectionné a des modifications non validées. Le nouveau worktree sera créé depuis le HEAD actuel, donc ces modifications ne seront pas incluses.",
@@ -243,6 +277,23 @@ export const fr = {
         timeToday: "Aujourd'hui",
         worktree: "worktree",
       },
+      customAgents: {
+        addAgent: "Ajouter un agent",
+        deleteAgent: "Supprimer {{label}}",
+        editAgent: "Modifier {{label}}",
+        enableAgent: "Activer {{label}}",
+        form: {
+          args: "Arguments",
+          autoAuthenticate: "Authentification automatique",
+          command: "Commande",
+          environment: "Environnement",
+          name: "Nom",
+          requiresAuth: "Authentification requise",
+        },
+        plainTextNotice:
+          "Les agents ACP personnalisés stockent les variables d’environnement localement en texte clair.",
+        title: "Agents personnalisés",
+      },
       danger: {
         confirmDeleteAll:
           "Supprimer toutes les discussions ? Cette action est irréversible.",
@@ -372,6 +423,8 @@ export const fr = {
           "Indiquez un fichier, un bug, un comportement ou une zone de travail à corriger ou tester.",
         recentEmpty:
           "Rien ici pour l’instant — choisissez un projet et lancez votre première session.",
+        recentShowAll: "Afficher les {{count}} conversations",
+        recentShowLess: "Réduire",
         recentTitle: "Récents",
         suggestionClarify: "Aide-moi à réfléchir à une question complexe",
         suggestionExplore: "Explique la structure de ce code",

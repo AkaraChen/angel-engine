@@ -12,12 +12,19 @@ import {
   Copy,
   Pencil,
 } from "@phosphor-icons/react";
+import type { ReactNode } from "react";
+
 import { useCallback } from "react";
 import { useTranslation } from "react-i18next";
 
 import { useWorkspaceUiStore } from "@/app/workspace/workspace-ui-store";
 import { Reasoning, ReasoningGroup } from "@/components/assistant-ui/reasoning";
 import { ToolGroup } from "@/components/assistant-ui/tool-group";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { Button } from "@/components/ui/button";
 import { CollapsibleMessageBody } from "@/features/chat/components/collapsible-message-body";
 import { ChatComposer } from "@/features/chat/components/composer/chat-composer";
@@ -39,6 +46,23 @@ import {
 } from "@/features/chat/components/thread-styles";
 import { ToolActionMessagePart } from "@/features/chat/components/tool-action-message";
 import { cn } from "@/platform/utils";
+
+/** Icon-only action buttons need a visible label on hover: the sr-only text
+    alone leaves sighted users guessing what the lone copy/pencil icon does. */
+function ActionTooltip({
+  children,
+  label,
+}: {
+  children: ReactNode;
+  label: string;
+}) {
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>{children}</TooltipTrigger>
+      <TooltipContent>{label}</TooltipContent>
+    </Tooltip>
+  );
+}
 
 const messageColumnClassName = workspaceContentColumnClass;
 const userMessageColumnClassName =
@@ -95,27 +119,31 @@ export function UserMessage() {
             "
             hideWhenRunning
           >
-            <ActionBarPrimitive.Edit className={iconButtonClass}>
-              <Pencil className="size-3.5" />
-              <span className="sr-only">{t("common.edit")}</span>
-            </ActionBarPrimitive.Edit>
-            <ActionBarPrimitive.Copy
-              className={cn(iconButtonClass, "group/copy")}
-            >
-              <Copy
-                className="
-                  size-3.5
-                  group-data-copied/copy:hidden
-                "
-              />
-              <Check
-                className="
-                  hidden size-3.5
-                  group-data-copied/copy:block
-                "
-              />
-              <span className="sr-only">{t("common.copy")}</span>
-            </ActionBarPrimitive.Copy>
+            <ActionTooltip label={t("common.edit")}>
+              <ActionBarPrimitive.Edit className={iconButtonClass}>
+                <Pencil className="size-3.5" />
+                <span className="sr-only">{t("common.edit")}</span>
+              </ActionBarPrimitive.Edit>
+            </ActionTooltip>
+            <ActionTooltip label={t("common.copy")}>
+              <ActionBarPrimitive.Copy
+                className={cn(iconButtonClass, "group/copy")}
+              >
+                <Copy
+                  className="
+                    size-3.5
+                    group-data-copied/copy:hidden
+                  "
+                />
+                <Check
+                  className="
+                    hidden size-3.5
+                    group-data-copied/copy:block
+                  "
+                />
+                <span className="sr-only">{t("common.copy")}</span>
+              </ActionBarPrimitive.Copy>
+            </ActionTooltip>
           </ActionBarPrimitive.Root>
         </div>
       </div>
@@ -210,23 +238,25 @@ export function AssistantMessage() {
             "
             hideWhenRunning
           >
-            <ActionBarPrimitive.Copy
-              className={cn(iconButtonClass, "group/copy")}
-            >
-              <Copy
-                className="
-                  size-3.5
-                  group-data-copied/copy:hidden
-                "
-              />
-              <Check
-                className="
-                  hidden size-3.5
-                  group-data-copied/copy:block
-                "
-              />
-              <span className="sr-only">{t("common.copy")}</span>
-            </ActionBarPrimitive.Copy>
+            <ActionTooltip label={t("common.copy")}>
+              <ActionBarPrimitive.Copy
+                className={cn(iconButtonClass, "group/copy")}
+              >
+                <Copy
+                  className="
+                    size-3.5
+                    group-data-copied/copy:hidden
+                  "
+                />
+                <Check
+                  className="
+                    hidden size-3.5
+                    group-data-copied/copy:block
+                  "
+                />
+                <span className="sr-only">{t("common.copy")}</span>
+              </ActionBarPrimitive.Copy>
+            </ActionTooltip>
           </ActionBarPrimitive.Root>
         </div>
       </div>

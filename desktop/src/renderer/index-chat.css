@@ -102,6 +102,16 @@
     word-break: normal;
   }
 
+  /* A fenced block with no content (model output trailing ```, or a block
+     still opening mid-stream) must not render as an empty bordered card. */
+  .chat-markdown
+  [data-streamdown="code-block"]:has(
+    [data-streamdown="code-block-body"] pre:empty,
+    [data-streamdown="code-block-body"] pre > code:empty
+  ) {
+    display: none;
+  }
+
   .chat-markdown strong {
     color: var(--foreground);
     font-weight: 600;

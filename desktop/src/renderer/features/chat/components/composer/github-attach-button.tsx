@@ -35,6 +35,7 @@ import {
 } from "@/features/chat/api/queries";
 import type { ComposerGitHubAttachment } from "@/features/chat/components/composer/github-attachments";
 import { useChatEnvironment } from "@/features/chat/runtime/chat-environment-context";
+import { appLocale } from "@/platform/format-time";
 import { useApi } from "@/platform/use-api";
 import { cn } from "@/platform/utils";
 
@@ -369,7 +370,7 @@ function formatRelativeTime(value: string) {
   if (!Number.isFinite(timestamp)) return value;
 
   const elapsedSeconds = Math.round((timestamp - Date.now()) / 1000);
-  const formatter = new Intl.RelativeTimeFormat(undefined, {
+  const formatter = new Intl.RelativeTimeFormat(appLocale(), {
     numeric: "auto",
   });
   const units = [

@@ -243,7 +243,11 @@ impl From<&ActionState> for ActionSnapshot {
             phase: action_phase_label(&action.phase),
             title: action.title.clone(),
             input_summary: action.input.summary.clone(),
-            raw_input: action.input.raw.clone(),
+            raw_input: action
+                .input
+                .display
+                .clone()
+                .or_else(|| action.input.raw.clone()),
             output_text: action_output_text(&output),
             output,
             error: action.error.as_ref().map(ErrorSnapshot::from),

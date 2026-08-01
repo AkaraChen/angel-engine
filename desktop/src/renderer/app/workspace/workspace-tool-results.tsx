@@ -7,6 +7,7 @@ import type { WorkspaceToolSurfaceDynamicTab } from "@shared/workspace-tool-surf
 import { FileText, GitBranch } from "@phosphor-icons/react";
 import is from "@sindresorhus/is";
 import { useQuery } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
 
 import {
   formatBytes,
@@ -28,6 +29,7 @@ export function WorkspaceFilePreview({
   tab: Extract<WorkspaceToolSurfaceDynamicTab, { kind: "file-preview" }>;
 }) {
   const { api } = useWorkspaceToolSurface();
+  const { t } = useTranslation();
   const fileQuery = useQuery({
     queryFn: async () =>
       api.workspaceTools.readFile({
@@ -48,7 +50,7 @@ export function WorkspaceFilePreview({
       <WorkspaceToolEmpty
         detail={getErrorMessage(fileQuery.error)}
         icon={FileText}
-        title="File unavailable"
+        title={t("workspace.tools.empty.fileUnavailable")}
       />
     );
   }
@@ -62,6 +64,7 @@ export function WorkspaceGitDiffTool({
   tab: Extract<WorkspaceToolSurfaceDynamicTab, { kind: "git-diff" }>;
 }) {
   const { api } = useWorkspaceToolSurface();
+  const { t } = useTranslation();
   const gitQuery = useQuery({
     queryFn: async () => api.workspaceTools.gitDiff({ root: tab.root }),
     queryKey: queryKeys.workspaceTools.gitDiff(tab.root),
@@ -78,7 +81,7 @@ export function WorkspaceGitDiffTool({
       <WorkspaceToolEmpty
         detail={getErrorMessage(gitQuery.error)}
         icon={GitBranch}
-        title="Git unavailable"
+        title={t("workspace.tools.empty.gitUnavailable")}
       />
     );
   }
@@ -141,8 +144,14 @@ function WorkspaceGitDiffResultView({
   data?: WorkspaceGitDiffResult;
   pathFilter?: string;
 }) {
+  const { t } = useTranslation();
   if (!data?.isGitRepository) {
-    return <WorkspaceToolEmpty icon={GitBranch} title="Not a Git repository" />;
+    return (
+      <WorkspaceToolEmpty
+        icon={GitBranch}
+        title={t("workspace.tools.empty.notGitRepository")}
+      />
+    );
   }
 
   const patchList = buildWorkspaceToolPatchList(
@@ -175,7 +184,9 @@ function WorkspaceGitDiffResultView({
           detail={pathFilter}
           icon={GitBranch}
           title={
-            is.nonEmptyString(pathFilter) ? "No diff for file" : "No changes"
+            is.nonEmptyString(pathFilter)
+              ? t("workspace.tools.empty.noDiffForFile")
+              : t("workspace.tools.empty.noChanges")
           }
         />
       )}

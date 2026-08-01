@@ -8,6 +8,7 @@ import {
   TerminalWindow as TerminalIcon,
 } from "@phosphor-icons/react";
 import { Fragment, useCallback, useEffect, useRef } from "react";
+import { useTranslation } from "react-i18next";
 
 import { useWorkspaceToolSurface } from "@/app/workspace/workspace-tool-surface-model";
 import { useWorkspaceToolTabKeyboard } from "@/app/workspace/workspace-tool-tab-model";
@@ -29,6 +30,7 @@ export function WorkspaceToolTabRail({
 }) {
   const { activeTabId, closeDynamicTab, selectTab, tabItems } =
     useWorkspaceToolSurface();
+  const { t } = useTranslation();
   const railRef = useRef<HTMLDivElement>(null);
   const closeTab = useCallback(
     (tab: WorkspaceToolTabItem) => {
@@ -81,7 +83,7 @@ export function WorkspaceToolTabRail({
         ref={railRef}
       >
         <div
-          aria-label="Workspace tabs"
+          aria-label={t("workspace.tools.tabs.workspaceTabs")}
           className="
             flex min-w-0 items-center gap-px overflow-x-auto rounded-md
             bg-surface-1 p-0.5
@@ -101,7 +103,7 @@ export function WorkspaceToolTabRail({
 
   return (
     <div
-      aria-label="Workspace tabs"
+      aria-label={t("workspace.tools.tabs.workspaceTabs")}
       aria-orientation="vertical"
       className="flex min-h-0 flex-1 flex-col overflow-y-auto p-2"
       ref={railRef}
@@ -114,7 +116,7 @@ export function WorkspaceToolTabRail({
         "
         role="presentation"
       >
-        Tools
+        {t("workspace.tools.tabs.tools")}
       </div>
       <div className="flex flex-col gap-0.5" role="presentation">
         {pinnedTabs.map((tab) => renderTab(tab, tabItems.indexOf(tab)))}
@@ -131,7 +133,7 @@ export function WorkspaceToolTabRail({
             text-muted-foreground
           "
         >
-          Tabs
+          {t("workspace.tools.tabs.tabs")}
         </span>
         <WorkspaceToolNewTabMenu variant="section" />
       </div>
@@ -288,12 +290,13 @@ function WorkspaceToolNewTabMenu({
   variant?: "section" | "strip";
 }) {
   const { addBrowserTab, addTerminalTab } = useWorkspaceToolSurface();
+  const { t } = useTranslation();
 
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button
-          aria-label="New tab"
+          aria-label={t("workspace.tools.tabs.newTab")}
           className={cn(
             `
               text-muted-foreground
@@ -305,7 +308,7 @@ function WorkspaceToolNewTabMenu({
               : "size-7 shrink-0 rounded-md",
           )}
           size="icon-xs"
-          title="New tab"
+          title={t("workspace.tools.tabs.newTab")}
           type="button"
           variant="ghost"
         >

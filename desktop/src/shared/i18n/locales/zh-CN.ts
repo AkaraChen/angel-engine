@@ -78,6 +78,40 @@ export const zhCN = {
       statsBranch: "分支",
       statsChanges: "更改",
       statsLastActive: "最近活动",
+      tools: {
+        commit: {
+          committing: "提交中…",
+          commitTo: "提交到 {{target}}",
+          descriptionPlaceholder: "描述",
+          filesSelected: "已选 {{selected}}/{{total}} 个文件",
+          summaryPlaceholder: "摘要",
+        },
+        dockInSidebar: "停靠到侧栏",
+        empty: {
+          fileTreeUnavailable: "文件树不可用",
+          fileUnavailable: "文件不可用",
+          gitUnavailable: "Git 不可用",
+          noChanges: "没有更改",
+          noDiffForFile: "该文件没有差异",
+          noProcesses: "没有运行中的 Agent 子进程",
+          noWorkspace: "此聊天没有工作区",
+          notGitRepository: "不是 Git 仓库",
+          processesUnavailable: "进程信息不可用",
+        },
+        listeningPorts: "监听端口",
+        resizeFileTree: "调整文件树宽度",
+        resizeGitList: "调整更改列表宽度",
+        subprocesses: "子进程",
+        tabs: {
+          files: "文件",
+          gitChanges: "Git 更改",
+          newTab: "新建标签页",
+          processes: "进程",
+          tabs: "标签页",
+          tools: "工具",
+          workspaceTabs: "工作区标签页",
+        },
+      },
       worktreeDirtyContinue: "继续",
       worktreeDirtyDescription:
         "当前项目有未提交更改。新的 worktree 会从当前 HEAD 创建，不会包含这些未提交内容。",
@@ -241,6 +275,23 @@ export const zhCN = {
         timeToday: "今天",
         worktree: "worktree",
       },
+      customAgents: {
+        addAgent: "添加 Agent",
+        deleteAgent: "删除 {{label}}",
+        editAgent: "编辑 {{label}}",
+        enableAgent: "启用 {{label}}",
+        form: {
+          args: "参数",
+          autoAuthenticate: "自动认证",
+          command: "命令",
+          environment: "环境变量",
+          name: "名称",
+          requiresAuth: "需要认证",
+        },
+        plainTextNotice:
+          "自定义 ACP Agent 的环境变量将以纯文本形式保存在本机。",
+        title: "自定义 Agent",
+      },
       danger: {
         confirmDeleteAll: "确定要删除所有聊天吗？此操作无法撤销。",
         deleting: "正在删除",
@@ -321,8 +372,8 @@ export const zhCN = {
       workspace: {
         dirtyPromptDescription:
           "当所选项目存在未提交更改时，创建 worktree 前先询问。",
-        dirtyPromptSwitchLabel: "从 dirty 仓库创建 worktree 前提醒",
-        dirtyPromptTitle: "Dirty 仓库提醒",
+        dirtyPromptSwitchLabel: "仓库存在未提交更改时，创建 worktree 前先提醒",
+        dirtyPromptTitle: "未提交更改提醒",
         sendWithModEnterDescription:
           "开启后，Enter 换行，{{shortcut}} 发送消息。",
         sendWithModEnterSwitchLabel: "使用 {{shortcut}} 发送消息",
@@ -350,6 +401,8 @@ export const zhCN = {
       empty: {
         description: "指定文件、缺陷、行为或工作区范围，让它修复或测试。",
         recentEmpty: "这里还是空的 —— 选一个项目，开始第一次会话。",
+        recentShowAll: "查看全部 {{count}} 个会话",
+        recentShowLess: "收起",
         recentTitle: "最近",
         suggestionClarify: "帮我理清一个复杂问题",
         suggestionExplore: "讲解这个代码库的结构",
