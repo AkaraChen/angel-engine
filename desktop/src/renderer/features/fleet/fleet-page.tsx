@@ -226,11 +226,11 @@ export function FleetPage({
   return (
     <div className="min-h-0 flex-1 overflow-y-auto">
       <div className="mx-auto w-full max-w-4xl px-8 py-10">
-        <h2 className="text-2xl font-semibold text-foreground">
+        <h2 className="pl-6 text-2xl font-semibold text-foreground">
           {t("fleet.title")}
         </h2>
 
-        <div className="mt-5 flex flex-wrap items-center gap-2">
+        <div className="mt-5 flex flex-wrap items-center gap-2 pl-6">
           <div
             aria-label={t("fleet.filterSegments")}
             className="
