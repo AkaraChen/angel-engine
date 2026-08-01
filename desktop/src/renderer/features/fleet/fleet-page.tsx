@@ -317,9 +317,11 @@ export function FleetPage({
         ) : (
           sections.map((section) => (
             <section className="mt-8" key={section.group}>
+              {/* `pl-6` matches the row's, so the heading and the runtime
+                  icons below it share one left edge. */}
               <h3
                 className="
-                  flex items-center gap-2 px-3 font-mono text-[0.6875rem]
+                  flex items-center gap-2 pr-3 pl-6 font-mono text-[0.6875rem]
                   tracking-wide text-muted-foreground uppercase
                 "
               >
@@ -361,8 +363,8 @@ function FleetRowButton({
   return (
     <button
       className="
-        group flex w-full min-w-0 items-center gap-2.5 rounded-lg py-2 pr-3
-        pl-1.5 text-left transition-colors duration-120 ease-standard
+        group relative flex w-full min-w-0 items-center gap-2.5 rounded-lg py-2
+        pr-3 pl-6 text-left transition-colors duration-120 ease-standard
         outline-none
         hover:bg-overlay-hover
         focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:ring-inset
@@ -372,15 +374,8 @@ function FleetRowButton({
       title={row.failureMessage ?? row.title}
       type="button"
     >
-      {/* The attention bar is the page's only emphasis device, so it stays out
-          of every other group; the slot is kept so columns never shift. */}
-      <span
-        aria-hidden="true"
-        className={cn(
-          "h-6 w-0.5 shrink-0 rounded-full",
-          row.group === "attention" ? "bg-status-attention" : "bg-transparent",
-        )}
-      />
+      {/* The dot hangs in the gutter rather than taking a column, so the
+          runtime icon can start on the same edge as the group heading. */}
       <FleetStatusDot status={row.status} />
       <FleetRuntimeIcon runtime={row.runtime} />
       <span className="min-w-0 flex-1 truncate text-sm font-medium text-foreground">
@@ -432,7 +427,7 @@ function FleetStatusDot({
     <span
       aria-hidden="true"
       className={cn(
-        "size-1.5 shrink-0 rounded-full",
+        "absolute top-1/2 left-1.5 size-1.5 -translate-y-1/2 rounded-full",
         STATUS_DOT_TONE[status],
         status === "running"
           ? `
@@ -480,12 +475,11 @@ function FleetSkeletonList(): ReactElement {
     >
       {Array.from({ length: SKELETON_ROW_COUNT }, (_unused, index) => (
         <div
-          className="flex w-full items-center gap-2.5 py-2 pr-3 pl-1.5"
+          className="relative flex w-full items-center gap-2.5 py-2 pr-3 pl-6"
           key={index}
         >
-          <span className="w-0.5 shrink-0" />
-          <Skeleton className="size-1.5 rounded-full" />
-          <Skeleton className="size-4 rounded" />
+          <Skeleton className="absolute top-1/2 left-1.5 size-1.5 -translate-y-1/2 rounded-full" />
+          <Skeleton className="size-4 shrink-0 rounded" />
           <Skeleton className="h-3.5 flex-1" />
           <Skeleton className="hidden h-3 w-40 shrink-0 md:block" />
           <Skeleton className="h-3 w-52 shrink-0" />
