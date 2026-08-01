@@ -15,14 +15,16 @@ export function SettingsSection({
 }: PropsWithChildren<SettingsSectionProps>) {
   return (
     <section className="flex flex-col gap-2">
-      <h2 className="px-1 text-xs font-medium tracking-wide text-muted-foreground uppercase">
+      {/* Group labels are the one place the DNA's mono voice belongs in this
+          app: a section label, not eyebrow copy (KIT-479 §0). */}
+      <h2 className="px-1 font-mono text-xs font-medium tracking-wide text-muted-foreground uppercase">
         {title}
       </h2>
-      <div className="divide-y divide-border rounded-xl border border-border bg-card">
+      <div className="divide-y divide-border-subtle rounded-xl border border-border-subtle bg-card shadow-xs">
         {children}
       </div>
       {description != null ? (
-        <p className="px-1 text-xs text-muted-foreground">{description}</p>
+        <p className="px-1 text-sm text-muted-foreground">{description}</p>
       ) : null}
     </section>
   );
@@ -40,11 +42,11 @@ interface SettingsRowProps {
  */
 export function SettingsRow({ title, description, control }: SettingsRowProps) {
   return (
-    <div className="flex flex-col gap-2 p-4">
+    <div className="flex min-h-touch flex-col justify-center gap-2 p-4">
       <div className="flex flex-col gap-0.5">
         <span className="text-sm font-medium">{title}</span>
         {description != null ? (
-          <span className="text-xs text-muted-foreground">{description}</span>
+          <span className="text-sm text-muted-foreground">{description}</span>
         ) : null}
       </div>
       {control}

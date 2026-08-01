@@ -20,11 +20,11 @@ const STATUS_LABEL_KEYS = {
 
 /** Status is never colour-only: the text carries it and the tone is redundant. */
 const STATUS_TONE: Record<ChatActivityStatus, string> = {
-  waiting_for_you: "text-amber-600 dark:text-amber-400",
-  failed: "text-destructive",
-  stuck: "text-destructive",
+  waiting_for_you: "text-status-attention",
+  failed: "text-status-danger",
+  stuck: "text-status-danger",
   running: "text-foreground",
-  done: "text-emerald-600 dark:text-emerald-400",
+  done: "text-status-success",
 };
 
 const STATUS_ICON: Record<

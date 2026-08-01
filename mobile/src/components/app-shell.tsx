@@ -15,6 +15,7 @@ import {
 import { ChatActivityBadge } from "@/features/chat/chat-activity-badge";
 import { useChatActivity } from "@/features/chat/use-activity";
 import { WorkspacePanel } from "@/features/workspace/workspace-panel";
+import { cn } from "@/lib/utils";
 import { useDaemonClient } from "@/platform/daemon-provider";
 import { queryKeys } from "@/platform/query-keys";
 
@@ -58,26 +59,37 @@ export function AppShell({ children }: PropsWithChildren) {
     <SidebarProvider>
       <AppSidebar />
       <SidebarInset className="h-svh min-h-0">
+        {/* The status bar sits above the header on a `viewport-fit=cover`
+            page, so the safe-area inset is padding on the header rather than a
+            spacer: the header ground extends under the notch. */}
         <header
           className="
-          flex h-12 shrink-0 items-center gap-2 px-2
-        "
+            flex shrink-0 items-center gap-1 px-2 pt-[env(safe-area-inset-top)]
+          "
         >
           {isChat ? (
             <Button
               aria-label={t("shell.backToChats")}
               asChild
+              className="size-11"
               size="icon"
               variant="ghost"
             >
               <Link href="/">
-                <ArrowLeft size={18} />
+                <ArrowLeft size={20} />
               </Link>
             </Button>
           ) : (
-            <SidebarTrigger />
+            <SidebarTrigger className="size-11" />
           )}
-          <h1 className="min-w-0 flex-1 truncate font-heading text-base font-semibold">
+          <h1
+            className={cn(
+              "my-2 min-w-0 flex-1 truncate font-heading tracking-tight",
+              // The chat title shares its row with the activity badge and the
+              // workspace trigger; only the list header gets the full scale.
+              isChat ? "text-base font-medium" : "text-xl font-medium",
+            )}
+          >
             {title}
           </h1>
           {isChat && activity?.status === "waiting_for_you" ? (

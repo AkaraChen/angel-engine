@@ -3,99 +3,295 @@
 @import "shadcn/tailwind.css";
 @import "./typeset.css";
 @import "streamdown/styles.css";
-@import "@fontsource-variable/ibm-plex-sans/wght.css";
-@import "@fontsource-variable/ibm-plex-sans/wght-italic.css";
-@import "@fontsource-variable/geist/wght.css";
-@import "@fontsource-variable/ibm-plex-sans";
-@import "@fontsource-variable/geist";
+@import "@fontsource-variable/dm-sans/wght.css";
+@import "@fontsource-variable/dm-sans/wght-italic.css";
+@import "@fontsource-variable/jetbrains-mono/wght.css";
+@import "@fontsource-variable/jetbrains-mono/wght-italic.css";
+@import "@fontsource/noto-sans-sc/chinese-simplified-400.css";
+@import "@fontsource/noto-sans-sc/chinese-simplified-500.css";
+@import "@fontsource/noto-sans-sc/chinese-simplified-600.css";
+@import "@fontsource/noto-sans-sc/chinese-simplified-700.css";
+@import "@fontsource/noto-sans-tc/chinese-traditional-400.css";
+@import "@fontsource/noto-sans-tc/chinese-traditional-500.css";
+@import "@fontsource/noto-sans-tc/chinese-traditional-600.css";
+@import "@fontsource/noto-sans-tc/chinese-traditional-700.css";
+@import "@fontsource/noto-sans-jp/japanese-400.css";
+@import "@fontsource/noto-sans-jp/japanese-500.css";
+@import "@fontsource/noto-sans-jp/japanese-600.css";
+@import "@fontsource/noto-sans-jp/japanese-700.css";
+@import "@fontsource/noto-sans-kr/korean-400.css";
+@import "@fontsource/noto-sans-kr/korean-500.css";
+@import "@fontsource/noto-sans-kr/korean-600.css";
+@import "@fontsource/noto-sans-kr/korean-700.css";
 
 @custom-variant dark (&:is(.dark *));
 
+/*
+ * openknowledge DNA token layer (KIT-479 §1–§5).
+ *
+ * The values here are copied from `desktop/src/renderer/index-foundation.css`
+ * on purpose: the two apps build independently and share no package, so the
+ * copy is the contract. When a token changes on the desktop it has to be
+ * changed here too — that is cheaper than wiring a shared build for one file.
+ *
+ * What is deliberately NOT copied is density. The desktop ships a compact
+ * `[data-workspace-mode]` type ladder for pointer input; touch gets Tailwind's
+ * default scale plus the 44px minimum hit target below.
+ */
 :root {
-  color-scheme: light dark;
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --radius: 0.625rem;
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+  color-scheme: light;
+  --app-font-latin: "DM Sans Variable";
+  --app-font-cjk: "Noto Sans SC";
+  --app-font-cjk-fallback: "Noto Sans TC", "Noto Sans JP", "Noto Sans KR";
+  --app-font-family-sans:
+    var(--app-font-latin), var(--app-font-cjk), var(--app-font-cjk-fallback),
+    -apple-system, BlinkMacSystemFont, "Segoe UI Variable", "Segoe UI",
+    ui-sans-serif, system-ui, sans-serif;
+  --app-font-mono:
+    "JetBrains Mono Variable", ui-monospace, SFMono-Regular, "SF Mono", Menlo,
+    Consolas, monospace;
+  --radius: 0.5rem;
+  /* Smallest comfortable touch target. The desktop equivalent is 28px; every
+     tappable surface in this app sizes off this instead. */
+  --touch-target: 2.75rem;
+  /* Neutral ramp. Named `ink` because these are warm greys, not brand colors;
+     the accent ramp lives in `--azure-*`. */
+  --ink-50: #fafaf9;
+  --ink-100: #f5f5f4;
+  --ink-200: #e7e5e4;
+  --ink-300: #d6d3d1;
+  --ink-400: #a6a09b;
+  --ink-500: #79716b;
+  --ink-600: #57534d;
+  --ink-700: #44403b;
+  --ink-800: #292524;
+  --ink-900: #1c1917;
+  --ink-950: #0c0a09;
+  --azure-50: #eef6ff;
+  --azure-100: #d9eaff;
+  --azure-200: #bcdbff;
+  --azure-300: #8ec6ff;
+  --azure-400: #59a5ff;
+  --azure-500: #3784ff;
+  --azure-600: #1b60f5;
+  --azure-700: #144be1;
+  --azure-800: #173db6;
+  --azure-900: #19388f;
+  --azure-950: #142357;
+  --background: #fbf9f4;
+  --foreground: #1a1a1a;
+  --card: #ffffff;
+  --card-foreground: #1a1a1a;
+  --popover: #ffffff;
+  --popover-foreground: #1a1a1a;
+  --primary: #3784ff;
+  --primary-foreground: #ffffff;
+  --primary-hover: #1b60f5;
+  --primary-active: #144be1;
+  --primary-soft: #d5e5ff;
+  --primary-soft-foreground: #29325c;
+  --secondary: var(--surface-1);
+  --secondary-foreground: #1a1a1a;
+  --muted: var(--surface-1);
+  /* Spec value is #71717a, which lands at 4.18:1 on the cream paper ground.
+     Darkened onto the warm neutral ramp to clear WCAG AA (5.5:1). */
+  --muted-foreground: #6b645d;
+  --accent: var(--surface-1);
+  --accent-foreground: #1b60f5;
+  --destructive: #fb2c36;
+  --destructive-foreground: #ffffff;
+  --presence: #7c6df0;
+  --surface-1: #f4f1ea;
+  --surface-2: #ece8df;
+  --surface-3: #e2ded3;
+  --panel: rgb(255 255 255 / 0.76);
+  --overlay-hover: rgb(41 37 36 / 0.055);
+  --overlay-active: rgb(41 37 36 / 0.085);
+  --border: #e4e3e0;
+  --border-subtle: #edece8;
+  --border-strong: #d4d4d0;
+  --input: #e4e3e0;
+  --ring: #3784ff;
+  --dot-grid: #c4c8cc;
+  --status-success: #009767;
+  --status-success-soft: #e6f6f0;
+  --status-success-border: #c2e7da;
+  --status-attention: #9a7b1a;
+  --status-attention-soft: #ffefd9;
+  --status-attention-border: #fcdfb6;
+  --status-danger: #fb2c36;
+  --status-danger-soft: #fdecec;
+  --status-danger-border: #f7cfd1;
+  --status-info: #1b60f5;
+  --status-info-soft: #eef6ff;
+  --status-info-border: #d9eaff;
+  --elevation-xs: 0 1px 2px rgb(15 23 42 / 0.05);
+  --elevation-panel:
+    0 1px 2px rgb(15 23 42 / 0.04), 0 2px 6px -2px rgb(15 23 42 / 0.06);
+  --elevation-popover: 0 18px 48px -24px rgb(35 31 32 / 0.18);
+  --elevation-overlay: 0 0 48px -16px rgb(35 31 32 / 0.18);
+  --chart-1: #3784ff;
+  --chart-2: #7c6df0;
+  --chart-3: #009767;
+  --chart-4: #9a7b1a;
+  --chart-5: #fb2c36;
+  --sidebar: #f4f1ea;
+  --sidebar-foreground: #52504b;
+  --sidebar-primary: #f4f1ea;
+  --sidebar-primary-foreground: #1a1a1a;
+  --sidebar-accent: var(--surface-2);
+  --sidebar-accent-foreground: #1a1a1a;
+  --sidebar-border: var(--border-subtle);
+  --sidebar-ring: #3784ff;
 }
 
-html,
-body,
-#root {
-  height: 100%;
+:root[lang="zh-Hant"],
+:root:lang(zh-Hant),
+:root:lang(zh-TW) {
+  --app-font-cjk: "Noto Sans TC";
+  --app-font-cjk-fallback: "Noto Sans SC", "Noto Sans JP", "Noto Sans KR";
 }
 
-body {
-  margin: 0;
-  overscroll-behavior: none;
-  -webkit-tap-highlight-color: transparent;
+:root:lang(ja) {
+  --app-font-cjk: "Noto Sans JP";
+  --app-font-cjk-fallback: "Noto Sans SC", "Noto Sans TC", "Noto Sans KR";
+}
+
+:root:lang(ko) {
+  --app-font-cjk: "Noto Sans KR";
+  --app-font-cjk-fallback: "Noto Sans SC", "Noto Sans TC", "Noto Sans JP";
 }
 
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
+  color-scheme: dark;
+  --background: #0c0c0c;
+  --foreground: #f0f0ee;
+  --card: #171717;
+  --card-foreground: #f0f0ee;
+  --popover: #171717;
+  --popover-foreground: #f0f0ee;
+  --primary: #69a3ff;
+  --primary-foreground: #0c0c0c;
+  --primary-hover: #93c5fd;
+  --primary-active: #59a5ff;
+  --primary-soft: rgb(105 163 255 / 0.14);
+  --primary-soft-foreground: #bcdbff;
+  --secondary: var(--surface-1);
+  --secondary-foreground: #f0f0ee;
+  --muted: var(--surface-1);
+  /* 5.9:1 on #0c0c0c — clears AA. */
+  --muted-foreground: #f0f0ee90;
+  --accent: var(--surface-1);
+  --accent-foreground: #f0f0ee;
+  --destructive: #ff6467;
+  --destructive-foreground: #0c0c0c;
+  --presence: #a99cff;
+  --surface-1: #141414;
+  --surface-2: #1c1c1c;
+  --surface-3: #242424;
+  --panel: rgb(255 255 255 / 0.035);
+  --overlay-hover: rgb(235 235 234 / 0.07);
+  --overlay-active: rgb(235 235 234 / 0.1);
+  --border: #1e1e1e;
+  --border-subtle: #191919;
+  --border-strong: #2b2b2b;
+  --input: #1e1e1e;
+  --ring: #69a3ff;
+  --dot-grid: #2b2b2b;
+  --status-success: #00d294;
+  --status-success-soft: rgb(0 210 148 / 0.12);
+  --status-success-border: rgb(0 210 148 / 0.28);
+  --status-attention: #f0b100;
+  --status-attention-soft: rgb(240 177 0 / 0.12);
+  --status-attention-border: rgb(240 177 0 / 0.28);
+  --status-danger: #ff6467;
+  --status-danger-soft: rgb(255 100 103 / 0.12);
+  --status-danger-border: rgb(255 100 103 / 0.28);
+  --status-info: #69a3ff;
+  --status-info-soft: rgb(105 163 255 / 0.12);
+  --status-info-border: rgb(105 163 255 / 0.28);
+  --elevation-xs: 0 1px 2px rgb(0 0 0 / 0.4);
+  --elevation-panel:
+    inset 0 1px 0 rgb(255 255 255 / 0.035), 0 1px 2px rgb(0 0 0 / 0.32),
+    0 2px 6px -2px rgb(0 0 0 / 0.4);
+  --elevation-popover:
+    inset 0 1px 0 rgb(255 255 255 / 0.04), 0 18px 48px -24px rgb(0 0 0 / 0.72);
+  --elevation-overlay:
+    inset 0 1px 0 rgb(255 255 255 / 0.04), 0 0 48px -16px rgb(0 0 0 / 0.72);
+  --chart-1: #69a3ff;
+  --chart-2: #a99cff;
+  --chart-3: #00d294;
+  --chart-4: #f0b100;
+  --chart-5: #ff6467;
+  --sidebar: #0c0c0c;
+  --sidebar-foreground: #c9c9c6;
+  --sidebar-primary: #0c0c0c;
+  --sidebar-primary-foreground: #f0f0ee;
+  --sidebar-accent: var(--surface-2);
+  --sidebar-accent-foreground: #f0f0ee;
+  --sidebar-border: var(--border-subtle);
+  --sidebar-ring: #69a3ff;
 }
 
 @theme inline {
-  --font-sans: "IBM Plex Sans Variable", sans-serif;
-  --font-heading: "Geist Variable", sans-serif;
+  --font-sans: var(--app-font-family-sans);
+  /* Headings sit in the same family as body text; the DNA separates them by
+     weight and tracking, not by a second typeface. */
+  --font-heading: var(--app-font-family-sans);
+  --font-mono: var(--app-font-mono);
+  --ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
+  --spacing-touch: var(--touch-target);
+  --color-ink-50: var(--ink-50);
+  --color-ink-100: var(--ink-100);
+  --color-ink-200: var(--ink-200);
+  --color-ink-300: var(--ink-300);
+  --color-ink-400: var(--ink-400);
+  --color-ink-500: var(--ink-500);
+  --color-ink-600: var(--ink-600);
+  --color-ink-700: var(--ink-700);
+  --color-ink-800: var(--ink-800);
+  --color-ink-900: var(--ink-900);
+  --color-ink-950: var(--ink-950);
+  --color-azure-50: var(--azure-50);
+  --color-azure-100: var(--azure-100);
+  --color-azure-200: var(--azure-200);
+  --color-azure-300: var(--azure-300);
+  --color-azure-400: var(--azure-400);
+  --color-azure-500: var(--azure-500);
+  --color-azure-600: var(--azure-600);
+  --color-azure-700: var(--azure-700);
+  --color-azure-800: var(--azure-800);
+  --color-azure-900: var(--azure-900);
+  --color-azure-950: var(--azure-950);
+  --color-presence: var(--presence);
+  --color-surface-1: var(--surface-1);
+  --color-surface-2: var(--surface-2);
+  --color-surface-3: var(--surface-3);
+  --color-panel: var(--panel);
+  --color-overlay-hover: var(--overlay-hover);
+  --color-overlay-active: var(--overlay-active);
+  --color-border-subtle: var(--border-subtle);
+  --color-border-strong: var(--border-strong);
+  --color-primary-hover: var(--primary-hover);
+  --color-primary-active: var(--primary-active);
+  --color-primary-soft: var(--primary-soft);
+  --color-primary-soft-foreground: var(--primary-soft-foreground);
+  --color-status-success: var(--status-success);
+  --color-status-success-soft: var(--status-success-soft);
+  --color-status-success-border: var(--status-success-border);
+  --color-status-attention: var(--status-attention);
+  --color-status-attention-soft: var(--status-attention-soft);
+  --color-status-attention-border: var(--status-attention-border);
+  --color-status-danger: var(--status-danger);
+  --color-status-danger-soft: var(--status-danger-soft);
+  --color-status-danger-border: var(--status-danger-border);
+  --color-status-info: var(--status-info);
+  --color-status-info-soft: var(--status-info-soft);
+  --color-status-info-border: var(--status-info-border);
+  --shadow-xs: var(--elevation-xs);
+  --shadow-panel: var(--elevation-panel);
+  --shadow-popover: var(--elevation-popover);
+  --shadow-overlay: var(--elevation-overlay);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -136,14 +332,86 @@ body {
   --radius-4xl: calc(var(--radius) * 2.6);
 }
 
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  overscroll-behavior: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;
   }
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground antialiased;
+    /* Counts, durations and relative timestamps stream in constantly; lining
+       figures keep them from jittering. */
+    font-variant-numeric: tabular-nums;
   }
   html {
     @apply font-sans;
+  }
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    letter-spacing: -0.025em;
+  }
+  button,
+  input,
+  select,
+  textarea {
+    font-family: inherit;
+  }
+  ::selection {
+    background-color: rgb(55 132 255 / 0.18);
+  }
+  .dark ::selection {
+    background-color: rgb(105 163 255 / 0.24);
+  }
+}
+
+/* Paper texture for empty states and other open surfaces. Never lay this
+   behind dense content. */
+@utility dot-grid {
+  background-image: radial-gradient(
+    circle at 1px 1px,
+    var(--dot-grid) 1px,
+    transparent 0
+  );
+  background-size: 16px 16px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-delay: -1ms !important;
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-delay: 0s !important;
+    transition-duration: 1ms !important;
+  }
+}
+
+/* The brand sketch stroke draws itself in on mount. The offset is in the
+   stroke's own viewBox units (the path measures ~116 of them, so 120 covers
+   it); a `pathLength`-normalized dash array is not reliably honoured here and
+   left the stroke as a single dot. */
+@keyframes sketch-draw {
+  from {
+    stroke-dashoffset: 120;
+  }
+  to {
+    stroke-dashoffset: 0;
   }
 }
