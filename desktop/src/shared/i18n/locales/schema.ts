@@ -105,6 +105,20 @@ export interface LocaleResourceTranslationFleetGroups {
   running: string;
 }
 
+export interface LocaleResourceTranslationFleetEmptySegments {
+  all: string;
+  attention: string;
+  done: string;
+  running: string;
+}
+
+export interface LocaleResourceTranslationFleetReasons {
+  approval: string;
+  processExited: string;
+  question: string;
+  runtimeError: string;
+}
+
 export interface LocaleResourceTranslationFleetSegments {
   all: string;
   attention: string;
@@ -123,11 +137,14 @@ export interface LocaleResourceTranslationFleetStatus {
 export interface LocaleResourceTranslationFleet {
   allProjects: string;
   disconnected: string;
-  empty: string;
+  emptySegments: LocaleResourceTranslationFleetEmptySegments;
   filterProject: string;
   filterSegments: string;
   groups: LocaleResourceTranslationFleetGroups;
   loading: string;
+  noMatches: string;
+  reasons: LocaleResourceTranslationFleetReasons;
+  search: string;
   segments: LocaleResourceTranslationFleetSegments;
   standaloneProject: string;
   status: LocaleResourceTranslationFleetStatus;

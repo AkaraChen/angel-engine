@@ -242,6 +242,20 @@ describe("filterFleetRows", () => {
     ).toEqual(["b"]);
   });
 
+  it("searches the title, the project and the worktree", () => {
+    const search = (query: string) =>
+      filterFleetRows(rows, {
+        projectFilter: FLEET_PROJECT_FILTER_ALL,
+        search: query,
+        segment: "all",
+      }).map((row) => row.chatId);
+
+    expect(search("chat a")).toEqual(["a"]);
+    expect(search("ANGEL-ENGINE")).toEqual(["a", "c"]);
+    expect(search("  ")).toEqual(["a", "b", "c"]);
+    expect(search("nothing")).toEqual([]);
+  });
+
   it("counts every group", () => {
     expect(countFleetRows(rows)).toEqual({
       all: 3,

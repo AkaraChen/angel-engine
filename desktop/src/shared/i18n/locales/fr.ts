@@ -97,7 +97,12 @@ export const fr = {
     fleet: {
       allProjects: "Tous les projets",
       disconnected: "Backend injoignable.",
-      empty: "Aucun agent actif.",
+      emptySegments: {
+        all: "Aucun agent actif.",
+        attention: "Rien n'attend votre action pour le moment.",
+        done: "Rien n'est encore terminé.",
+        running: "Aucun agent en cours.",
+      },
       filterProject: "Filtrer par projet",
       filterSegments: "Filtrer la flotte",
       groups: {
@@ -106,6 +111,14 @@ export const fr = {
         running: "En cours",
       },
       loading: "Chargement de l'activité",
+      noMatches: "Aucune session ne correspond à votre recherche.",
+      reasons: {
+        approval: "En attente d'approbation",
+        processExited: "Processus terminé",
+        question: "A posé une question",
+        runtimeError: "Erreur d'exécution",
+      },
+      search: "Rechercher des sessions",
       segments: {
         all: "Tout",
         attention: "Votre action",

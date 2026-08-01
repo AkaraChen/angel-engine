@@ -96,7 +96,12 @@ export const de = {
     fleet: {
       allProjects: "Alle Projekte",
       disconnected: "Backend nicht erreichbar.",
-      empty: "Keine Agenten aktiv.",
+      emptySegments: {
+        all: "Keine Agenten aktiv.",
+        attention: "Gerade braucht dich nichts.",
+        done: "Noch ist nichts fertig.",
+        running: "Es läuft gerade kein Agent.",
+      },
       filterProject: "Nach Projekt filtern",
       filterSegments: "Flotte filtern",
       groups: {
@@ -105,6 +110,14 @@ export const de = {
         running: "Läuft",
       },
       loading: "Aktivität wird geladen",
+      noMatches: "Keine Sitzung passt zu deiner Suche.",
+      reasons: {
+        approval: "Wartet auf Freigabe",
+        processExited: "Prozess beendet",
+        question: "Hat eine Frage gestellt",
+        runtimeError: "Laufzeitfehler",
+      },
+      search: "Sitzungen suchen",
       segments: {
         all: "Alle",
         attention: "Wartet auf dich",

@@ -96,7 +96,12 @@ export const ko = {
     fleet: {
       allProjects: "모든 프로젝트",
       disconnected: "백엔드에 연결할 수 없습니다.",
-      empty: "활성 에이전트가 없습니다.",
+      emptySegments: {
+        all: "활성 에이전트가 없습니다.",
+        attention: "지금 확인이 필요한 항목이 없습니다.",
+        done: "아직 완료된 항목이 없습니다.",
+        running: "실행 중인 에이전트가 없습니다.",
+      },
       filterProject: "프로젝트로 필터",
       filterSegments: "플릿 필터",
       groups: {
@@ -105,6 +110,14 @@ export const ko = {
         running: "실행 중",
       },
       loading: "활동을 불러오는 중",
+      noMatches: "검색과 일치하는 세션이 없습니다.",
+      reasons: {
+        approval: "승인 대기 중",
+        processExited: "프로세스 종료됨",
+        question: "질문함",
+        runtimeError: "런타임 오류",
+      },
+      search: "세션 검색",
       segments: {
         all: "전체",
         attention: "확인 필요",
