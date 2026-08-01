@@ -297,6 +297,7 @@ export const es = {
       danger: {
         confirmDeleteAll:
           "¿Eliminar todos los chats? Esta acción no se puede deshacer.",
+        deleteAction: "Eliminar…",
         deleting: "Eliminando",
         deleteTitle: "Eliminar todos los chats",
         description:

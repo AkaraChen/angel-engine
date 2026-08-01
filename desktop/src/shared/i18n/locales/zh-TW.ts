@@ -293,6 +293,7 @@ export const zhTW = {
       },
       danger: {
         confirmDeleteAll: "確定要刪除所有聊天嗎？此操作無法復原。",
+        deleteAction: "刪除…",
         deleting: "正在刪除",
         deleteTitle: "刪除所有聊天",
         description:

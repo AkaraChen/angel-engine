@@ -297,6 +297,7 @@ export const fr = {
       danger: {
         confirmDeleteAll:
           "Supprimer toutes les discussions ? Cette action est irréversible.",
+        deleteAction: "Supprimer…",
         deleting: "Suppression",
         deleteTitle: "Supprimer toutes les discussions",
         description:

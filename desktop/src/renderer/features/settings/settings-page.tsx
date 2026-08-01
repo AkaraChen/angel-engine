@@ -474,7 +474,7 @@ function DangerSettings({
             <Trash2 />
             {isDeletingChats
               ? t("settings.danger.deleting")
-              : t("settings.danger.deleteTitle")}
+              : t("settings.danger.deleteAction")}
           </Button>
         }
         align="start"

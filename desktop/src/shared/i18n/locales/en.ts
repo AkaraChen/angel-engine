@@ -295,6 +295,7 @@ export const en = {
       },
       danger: {
         confirmDeleteAll: "Delete all chats? This cannot be undone.",
+        deleteAction: "Delete…",
         deleting: "Deleting",
         deleteTitle: "Delete all chats",
         description:

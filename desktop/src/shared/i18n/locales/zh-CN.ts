@@ -294,6 +294,7 @@ export const zhCN = {
       },
       danger: {
         confirmDeleteAll: "确定要删除所有聊天吗？此操作无法撤销。",
+        deleteAction: "删除…",
         deleting: "正在删除",
         deleteTitle: "删除所有聊天",
         description: "从本地桌面数据库中移除所有聊天，并关闭活动聊天会话。",
