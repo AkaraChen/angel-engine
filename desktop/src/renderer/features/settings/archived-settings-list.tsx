@@ -14,6 +14,84 @@ import { getProjectDisplayName } from "@/app/workspace/workspace-display";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { NativeSelect } from "@/components/ui/native-select";
+import { dangerActionClassName } from "@/features/settings/settings-controls";
+import { cn } from "@/platform/utils";
+
+/**
+ * List plate shared by the archived-chat and removable-worktree lists. Same
+ * shape as a Fleet section: a hairline card that insets its rows so each row
+ * can carry its own rounded hover surface instead of a divider grid.
+ */
+export function SettingsListPlate({ children }: { children: ReactNode }) {
+  return (
+    <div
+      className="
+        space-y-px rounded-xl border border-border-subtle bg-card p-1.5
+        shadow-xs
+      "
+    >
+      {children}
+    </div>
+  );
+}
+
+/** Loading / empty / error copy occupying a whole plate. */
+export function SettingsListNotice({ children }: { children: ReactNode }) {
+  return (
+    <div className="px-3 py-6 text-sm text-muted-foreground">{children}</div>
+  );
+}
+
+/**
+ * Bulk-selection bar. It floats above the list as a capsule rather than
+ * docking into the layout, so entering bulk mode never reflows the rows the
+ * user is aiming at.
+ */
+export function SettingsBulkBar({ children }: { children: ReactNode }) {
+  return (
+    <div
+      className="
+        sticky top-14 z-10 mx-auto flex w-fit max-w-full flex-wrap items-center
+        justify-center gap-2 rounded-full border border-border-subtle
+        bg-popover px-2.5 py-1.5 shadow-popover
+      "
+    >
+      {children}
+    </div>
+  );
+}
+
+export function SettingsBulkCount({ children }: { children: ReactNode }) {
+  return (
+    <span className="px-1 text-xs tabular-nums text-muted-foreground">
+      {children}
+    </span>
+  );
+}
+
+/** Row shell: rounded hover target, `--primary-soft` when bulk-selected. */
+export function SettingsListRow({
+  children,
+  selected,
+}: {
+  children: ReactNode;
+  selected?: boolean;
+}) {
+  return (
+    <article
+      className={cn(
+        `
+          flex min-w-0 items-start gap-3 rounded-lg px-3 py-2.5 transition-colors
+          duration-120 ease-standard
+          motion-reduce:transition-none
+        `,
+        selected === true ? "bg-primary-soft" : "hover:bg-overlay-hover",
+      )}
+    >
+      {children}
+    </article>
+  );
+}
 
 export function ArchivedFilterSelect({
   children,
@@ -77,7 +155,7 @@ export function ArchivedChatRow({
     : t("settings.archived.noProject");
 
   return (
-    <article className="flex min-w-0 items-start gap-3 px-4 py-3">
+    <SettingsListRow selected={bulkMode && selected}>
       {bulkMode ? (
         <Checkbox
           aria-label={chat.title}
@@ -97,8 +175,9 @@ export function ArchivedChatRow({
           {isWorktree ? (
             <span
               className="
-                inline-flex shrink-0 items-center gap-1 rounded-sm bg-muted
-                px-1.5 py-0.5 text-[11px] text-muted-foreground
+                inline-flex shrink-0 items-center gap-1 rounded-full bg-muted
+                px-2 py-0.5 font-mono text-[0.625rem] tracking-wide
+                text-muted-foreground uppercase
               "
             >
               <GitBranch className="size-3" />
@@ -114,10 +193,14 @@ export function ArchivedChatRow({
         >
           <span>{projectName}</span>
           <span>{chat.runtime}</span>
-          <span>{formatDateTime(chat.updatedAt)}</span>
+          <span className="tabular-nums">{formatDateTime(chat.updatedAt)}</span>
         </div>
         {isWorktree && is.nonEmptyString(chat.cwd) ? (
-          <div className="mt-1 truncate text-xs text-muted-foreground/70">
+          <div
+            className="
+              mt-1 truncate font-mono text-[0.6875rem] text-muted-foreground/70
+            "
+          >
             {chat.cwd}
           </div>
         ) : null}
@@ -135,6 +218,7 @@ export function ArchivedChatRow({
             {t("settings.archived.restore")}
           </Button>
           <Button
+            className={dangerActionClassName}
             disabled={disabled}
             onClick={onDelete}
             size="sm"
@@ -146,7 +230,7 @@ export function ArchivedChatRow({
           </Button>
         </div>
       ) : null}
-    </article>
+    </SettingsListRow>
   );
 }
 

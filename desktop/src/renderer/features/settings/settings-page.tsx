@@ -25,6 +25,7 @@ import { CustomAgentsSettingsGroup } from "@/features/settings/custom-agent-sett
 import { MobileViewSettings } from "@/features/settings/mobile-view-settings";
 import { SettingsNav } from "@/features/settings/settings-nav";
 import {
+  dangerActionClassName,
   SettingsGroup,
   SettingsRow,
   SettingsSelect,
@@ -141,7 +142,7 @@ export function SettingsPage({
           )}
         >
           <header className="space-y-1.5">
-            <h2 className="font-display text-xl font-semibold tracking-[-0.015em]">
+            <h2 className="font-display text-lg font-semibold tracking-[-0.015em]">
               {activeTabLabel}
             </h2>
             <p className="text-sm text-muted-foreground">
@@ -464,6 +465,7 @@ function DangerSettings({
       <SettingsRow
         after={
           <Button
+            className={dangerActionClassName}
             disabled={isDeletingChats}
             onClick={() => void deleteAllChats()}
             type="button"

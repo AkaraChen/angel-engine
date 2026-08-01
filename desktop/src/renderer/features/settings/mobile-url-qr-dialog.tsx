@@ -1,7 +1,9 @@
-import { QrCode as QrCodeIcon } from "@phosphor-icons/react";
+import { Check, Copy, DeviceMobile } from "@phosphor-icons/react";
+import { useState } from "react";
 import QRCode from "react-qr-code";
 import { useTranslation } from "react-i18next";
 
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -25,6 +27,14 @@ export function MobileUrlQrDialog({
   url: string;
 }) {
   const { t } = useTranslation();
+  const [copied, setCopied] = useState(false);
+
+  const copyUrl = () => {
+    void navigator.clipboard.writeText(url).then(() => {
+      setCopied(true);
+      window.setTimeout(setCopied, 1500, false);
+    });
+  };
 
   return (
     <Dialog onOpenChange={onOpenChange} open={open}>
@@ -37,7 +47,7 @@ export function MobileUrlQrDialog({
               border-border-subtle bg-surface-1
             "
           >
-            <QrCodeIcon className="size-4" weight="duotone" />
+            <DeviceMobile className="size-4" weight="regular" />
           </span>
           <DialogTitle>{t("settings.mobile.qrDialogTitle")}</DialogTitle>
           <DialogDescription>
@@ -45,7 +55,11 @@ export function MobileUrlQrDialog({
           </DialogDescription>
         </DialogHeader>
         <div className="flex flex-col items-center gap-4">
-          <div className="rounded-xl bg-white p-4 ring-1 ring-border-subtle">
+          <div
+            className="
+              rounded-xl border border-border-subtle bg-white p-6 shadow-xs
+            "
+          >
             <QRCode
               bgColor="#ffffff"
               fgColor="#1a1a1a"
@@ -55,13 +69,20 @@ export function MobileUrlQrDialog({
               value={url}
             />
           </div>
-          <span
+          <Button
             className="
-              text-center text-xs wrap-break-word text-muted-foreground
+              h-auto max-w-full gap-1.5 px-2.5 py-1.5 font-mono text-xs
+              font-normal whitespace-normal text-muted-foreground
+              hover:text-foreground
             "
+            onClick={copyUrl}
+            title={t("settings.mobile.copy")}
+            type="button"
+            variant="ghost"
           >
-            {url}
-          </span>
+            {copied ? <Check /> : <Copy />}
+            <span className="min-w-0 wrap-break-word">{url}</span>
+          </Button>
         </div>
       </DialogContent>
     </Dialog>
