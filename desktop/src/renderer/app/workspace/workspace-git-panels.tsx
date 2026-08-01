@@ -112,9 +112,9 @@ export function WorkspaceGitPanel({
     : undefined;
   const changeColumn = (
     <>
-      <div className="min-h-0 flex-1 overflow-auto">
+      <div className="flex min-h-0 flex-1 flex-col overflow-auto">
         {data.warnings.length > 0 ? (
-          <WorkspaceToolBanner className="m-3" tone="attention">
+          <WorkspaceToolBanner className="m-3 shrink-0" tone="attention">
             {data.warnings.map((warning) => (
               <div key={warning}>{warning}</div>
             ))}
