@@ -111,7 +111,6 @@ export interface LocaleResourceTranslationWorkspace {
   creationLocationWorktree: string;
   newChat: string;
   newChatInProject: string;
-  newProject: string;
   noProject: string;
   projectSelect: string;
   settings: string;

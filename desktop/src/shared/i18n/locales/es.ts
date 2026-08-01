@@ -71,7 +71,6 @@ export const es = {
       creationLocationWorktree: "Worktree",
       newChat: "Nuevo chat",
       newChatInProject: "Nuevo chat en {{projectName}}",
-      newProject: "Nuevo proyecto",
       noProject: "Sin proyecto",
       projectSelect: "Proyecto",
       settings: "Configuración",
