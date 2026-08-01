@@ -334,13 +334,13 @@ export const zhTW = {
         urlTitle: "行動版網址",
       },
       tabDescriptions: {
-        agents: "選擇要在選擇器中顯示哪些編碼代理，以及它們的順序。",
+        agents: "選擇要在選擇器中顯示哪些 Agent，以及它們的順序。",
         appearance: "桌面應用程式的主題與顯示語言。",
-        archived: "還原已封存的工作階段，或連同工作樹一併永久刪除。",
+        archived: "還原已封存的工作階段，或連同 worktree 一併永久刪除。",
         danger: "影響本機所有聊天記錄的不可復原操作。",
         mobile: "透過本機網路從這台電腦提供行動版網頁應用程式。",
         updates: "這個應用程式安裝哪些版本，以及何時安裝。",
-        workspace: "工作時輸入區與工作樹的行為方式。",
+        workspace: "工作時輸入區與 worktree 的行為方式。",
       },
       tabs: {
         agents: "Agents",

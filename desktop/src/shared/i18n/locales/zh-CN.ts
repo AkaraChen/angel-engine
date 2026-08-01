@@ -334,13 +334,13 @@ export const zhCN = {
         urlTitle: "移动端网址",
       },
       tabDescriptions: {
-        agents: "选择在选择器中显示哪些编码智能体，以及它们的顺序。",
+        agents: "选择在选择器中显示哪些 Agent，以及它们的顺序。",
         appearance: "桌面应用的主题与显示语言。",
-        archived: "恢复已归档的会话，或将其与工作树一并永久删除。",
+        archived: "恢复已归档的会话，或将其与 worktree 一并永久删除。",
         danger: "影响本机所有聊天记录的不可撤销操作。",
         mobile: "通过本地网络从这台电脑提供移动端网页应用。",
         updates: "这个应用安装哪些版本，以及何时安装。",
-        workspace: "工作时输入框与工作树的行为方式。",
+        workspace: "工作时输入框与 worktree 的行为方式。",
       },
       tabs: {
         agents: "Agents",
