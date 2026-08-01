@@ -31,13 +31,17 @@ const workspaceFileTreeIconSpriteSheet = getBuiltInSpriteSheet("complete");
  * variable onto a design token — nothing invents a colour, and nothing
  * loosens the compact metrics the power mode depends on.
  *
+ * Ground the tree on `--card` (not the cream page `--background`) so it
+ * matches the tool panel body, git panel, and process inspector — all of
+ * which sit on the white card surface inside the workspace tool shell.
+ *
  * The git lane keeps the vendor's letter glyph (M/A/D/U); only its colours are
  * ours. The shadow DOM does not expose a hook to swap that glyph for a dot.
  */
 export const treeHostStyle: WorkspaceToolCssVariableStyle = {
   "--trees-accent-override": "var(--primary)",
   "--trees-bg-muted-override": "var(--overlay-hover)",
-  "--trees-bg-override": "var(--background)",
+  "--trees-bg-override": "var(--card)",
   "--trees-border-color-override": "var(--border-subtle)",
   "--trees-border-radius-override": "var(--radius-sm)",
   "--trees-fg-muted-override": "var(--muted-foreground)",
