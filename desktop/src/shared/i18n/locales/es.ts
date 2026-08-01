@@ -185,7 +185,7 @@ export const es = {
       loadingChats: "Cargando chats",
       loadingProjects: "Cargando proyectos",
       modeChat: "Chat",
-      modePower: "Mega",
+      modePower: "Power",
       modeSwitcher: "Modo de espacio de trabajo",
       modeWork: "Trabajo",
       needsInput: "Necesita entrada",

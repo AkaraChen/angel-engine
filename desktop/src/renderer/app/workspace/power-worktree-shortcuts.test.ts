@@ -12,7 +12,7 @@ const baseShortcut = {
   shiftKey: false,
 };
 
-describe("Mega Mode tab shortcuts", () => {
+describe("Power mode tab shortcuts", () => {
   it("opens or focuses the draft tab with Command T", () => {
     expect(powerWorktreeShortcutAction({ ...baseShortcut, key: "t" })).toBe(
       "open-or-focus-draft",
@@ -36,7 +36,7 @@ describe("Mega Mode tab shortcuts", () => {
     ).toBe("close-chat");
   });
 
-  it("does not close Home or handle shortcuts outside Mega Mode", () => {
+  it("does not close Home or handle shortcuts outside Power mode", () => {
     expect(powerWorktreeShortcutAction({ ...baseShortcut, key: "w" })).toBe(
       null,
     );

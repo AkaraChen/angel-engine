@@ -185,7 +185,7 @@ export const ja = {
       loadingChats: "チャットを読み込み中",
       loadingProjects: "プロジェクトを読み込み中",
       modeChat: "チャット",
-      modePower: "Mega",
+      modePower: "Power",
       modeSwitcher: "ワークスペースモード",
       modeWork: "作業",
       needsInput: "入力が必要",

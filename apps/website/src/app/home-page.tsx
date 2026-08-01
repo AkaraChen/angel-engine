@@ -223,7 +223,7 @@ export default function HomePage() {
                 <p className="section-label">ISOLATED WORKTREES</p>
                 <h2>Let every branch move at once.</h2>
                 <p>
-                  Choose Worktree directly in the Power-mode composer. Angel
+                  Choose Worktree directly in the Power mode composer. Angel
                   Engine creates an isolated checkout while your project-local
                   work stays separate.
                 </p>
@@ -231,7 +231,7 @@ export default function HomePage() {
               <Reveal className="screenshot-card" delay={0.06}>
                 <Image
                   src={worktreeActualImage}
-                  alt="Angel Engine Power-mode composer with Worktree selected"
+                  alt="Angel Engine Power mode composer with Worktree selected"
                   sizes="(max-width: 840px) calc(100vw - 40px), 52vw"
                 />
               </Reveal>
