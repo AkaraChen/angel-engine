@@ -378,21 +378,27 @@
 
 /* File-tree icon palette for the third-party FileTree component (vendor
    colors, not design tokens). light-dark() resolves via color-scheme set on
-   :root (light) and .dark (dark). */
+   :root (light) and .dark (dark).
+
+   These 13 hues stay hue-identifiable — that is the whole point of a coloured
+   file tree — but they are pulled down in chroma and warmed toward the `ink`
+   ramp so a dense tree does not fight the azure accent. `blue` in particular
+   is deliberately slate rather than azure: at full saturation it reads as a
+   selected row. */
 :root {
-  --trees-icon-blue: light-dark(#296aa3, #6394bf);
-  --trees-icon-cyan: light-dark(#2993a3, #5eaab5);
-  --trees-icon-gray: light-dark(#6a737d, #959da5);
-  --trees-icon-green: light-dark(#009767, #00d294);
-  --trees-icon-indigo: light-dark(#5a6aa6, #6872ab);
-  --trees-icon-mauve: light-dark(#b05a78, #db889a);
-  --trees-icon-orange: light-dark(#a65e2b, #d4976c);
-  --trees-icon-pink: light-dark(#a13865, #d9739f);
-  --trees-icon-purple: light-dark(#6f42c1, #b392f0);
-  --trees-icon-red: light-dark(#ab5959, #cb7676);
-  --trees-icon-teal: light-dark(#2e808f, #5d99a9);
-  --trees-icon-vermilion: light-dark(#ab5e3f, #c4704f);
-  --trees-icon-yellow: light-dark(#bda437, #e6cc77);
+  --trees-icon-blue: light-dark(#4a6f96, #7c9fbf);
+  --trees-icon-cyan: light-dark(#3b8794, #6aa5ae);
+  --trees-icon-gray: light-dark(#6f6a64, #9a948c);
+  --trees-icon-green: light-dark(#2f7f60, #4fb894);
+  --trees-icon-indigo: light-dark(#61688f, #8f95b8);
+  --trees-icon-mauve: light-dark(#96637b, #c48ea0);
+  --trees-icon-orange: light-dark(#97663d, #c2926e);
+  --trees-icon-pink: light-dark(#94486a, #c67d9d);
+  --trees-icon-purple: light-dark(#6d5b9e, #a794cf);
+  --trees-icon-red: light-dark(#9c5a54, #c58179);
+  --trees-icon-teal: light-dark(#3a7c85, #6fa3ab);
+  --trees-icon-vermilion: light-dark(#9c6247, #bd8465);
+  --trees-icon-yellow: light-dark(#9a8433, #cfb96b);
 }
 
 @layer base {

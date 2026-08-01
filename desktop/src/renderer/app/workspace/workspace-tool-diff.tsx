@@ -42,16 +42,39 @@ const diffMetrics = {
   paddingBottom: 0,
 } as const;
 
+/**
+ * `@pierre/diffs` renders into a shadow root, so its custom properties are the
+ * only styling surface. Added/removed line grounds are pinned to the
+ * `--status-*-soft` tokens instead of the vendor's own colour mix: the vendor
+ * blends the status hue into the page at 12-20%, which on a 1000-line diff
+ * turns the whole screen into two washes of colour. The soft tokens sit under
+ * 12%, so the bars and the line-number colours carry the signal and the code
+ * stays readable.
+ */
 const diffHostStyle: WorkspaceToolCssVariableStyle = {
   // Zeroes the shadow-DOM [data-code] padding-block (vendor fallback 8px);
   // custom properties are the supported way through the shadow root.
   "--diffs-gap-block": "0px",
+  "--diffs-addition-color-override": "var(--status-success)",
+  "--diffs-bg-addition-number-override": "var(--status-success-soft)",
+  "--diffs-bg-addition-override": "var(--status-success-soft)",
   "--diffs-bg-buffer-override": "var(--muted)",
   "--diffs-bg-context-gutter-override": "var(--background)",
   "--diffs-bg-context-override": "var(--background)",
-  "--diffs-bg-separator-override": "var(--border)",
+  "--diffs-bg-deletion-number-override": "var(--status-danger-soft)",
+  "--diffs-bg-deletion-override": "var(--status-danger-soft)",
+  "--diffs-bg-hover-override": "var(--overlay-hover)",
+  "--diffs-bg-separator-override": "var(--border-subtle)",
   "--diffs-dark": "var(--foreground)",
   "--diffs-dark-bg": "var(--background)",
+  "--diffs-deletion-color-override": "var(--status-danger)",
+  "--diffs-fg-number-addition-override": "var(--status-success)",
+  "--diffs-fg-number-deletion-override": "var(--status-danger)",
+  "--diffs-fg-number-override": "var(--muted-foreground)",
+  "--diffs-font-family": "var(--font-mono)",
+  // Lining figures keep the gutter from jittering as line counts cross a
+  // digit boundary.
+  "--diffs-font-features": '"tnum" 1, "calt" 0',
   "--diffs-light": "var(--foreground)",
   "--diffs-light-bg": "var(--background)",
 } as const;
@@ -93,7 +116,7 @@ export function WorkspaceToolPatchFileDiffContent({
           {file.diffs.length > 1 ? (
             <div
               className="
-                border-b border-border-subtle px-2.5 py-1 text-[11px]
+                border-b border-border-subtle px-2.5 py-1 font-mono text-[11px]
                 font-medium text-muted-foreground
               "
             >
@@ -124,7 +147,11 @@ export function WorkspaceToolPatchFileLineStats({
   }
 
   return (
-    <span className="flex shrink-0 items-center gap-2 text-[11px] tabular-nums">
+    <span
+      className="
+        flex shrink-0 items-center gap-2 font-mono text-[11px] tabular-nums
+      "
+    >
       {lineChanges.additions > 0 ? (
         <span className="font-medium text-status-success">
           +{lineChanges.additions.toLocaleString()}
@@ -132,7 +159,7 @@ export function WorkspaceToolPatchFileLineStats({
       ) : null}
       {lineChanges.deletions > 0 ? (
         <span className="font-medium text-status-danger">
-          -{lineChanges.deletions.toLocaleString()}
+          −{lineChanges.deletions.toLocaleString()}
         </span>
       ) : null}
     </span>

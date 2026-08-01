@@ -31,6 +31,7 @@ import { workspaceToolRootName } from "@/app/workspace/workspace-file-display";
 import { getApiClient } from "@/platform/api-client";
 import { formatDateTime, formatRelativeTime } from "@/platform/format-time";
 import { queryKeys } from "@/platform/query-keys";
+import { cn } from "@/platform/utils";
 
 interface PowerWorktreeHistoryPageProps {
   chats: Chat[];
@@ -111,6 +112,7 @@ export function PowerWorktreeHistoryPage({
           />
           <PowerWorktreeStat
             label={t("workspace.statsBranch")}
+            mono
             title={gitStats?.branch}
             value={gitStats?.branch ?? "—"}
           />
@@ -125,13 +127,21 @@ export function PowerWorktreeHistoryPage({
                 <span className="flex items-baseline gap-2 tabular-nums">
                   <span>{gitStats.changedFiles.toLocaleString()}</span>
                   {gitStats.additions > 0 ? (
-                    <span className="text-xs font-medium text-status-success">
+                    <span
+                      className="
+                        font-mono text-xs font-medium text-status-success
+                      "
+                    >
                       +{gitStats.additions.toLocaleString()}
                     </span>
                   ) : null}
                   {gitStats.deletions > 0 ? (
-                    <span className="text-xs font-medium text-status-danger">
-                      -{gitStats.deletions.toLocaleString()}
+                    <span
+                      className="
+                        font-mono text-xs font-medium text-status-danger
+                      "
+                    >
+                      −{gitStats.deletions.toLocaleString()}
                     </span>
                   ) : null}
                 </span>
@@ -297,10 +307,12 @@ function usePowerWorktreeGitStats(
 
 function PowerWorktreeStat({
   label,
+  mono = false,
   title,
   value,
 }: {
   label: string;
+  mono?: boolean;
   title?: string;
   value: ReactElement | string;
 }): ReactElement {
@@ -308,9 +320,11 @@ function PowerWorktreeStat({
     <div className="min-w-0 rounded-lg bg-surface-1/50 px-3 py-2">
       <dt className="truncate text-xs text-muted-foreground">{label}</dt>
       <dd
-        className="
-          mt-0.5 truncate text-sm font-medium text-foreground tabular-nums
-        "
+        className={cn(
+          "mt-0.5 truncate text-sm font-medium text-foreground tabular-nums",
+          // Branch names are mono everywhere in the power surfaces.
+          mono && "font-mono",
+        )}
         title={title}
       >
         {value}

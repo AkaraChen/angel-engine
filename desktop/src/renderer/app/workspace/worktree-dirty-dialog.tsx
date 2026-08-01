@@ -57,7 +57,7 @@ export const WorktreeDirtyDialog: FC<WorktreeDirtyDialogProps> = ({
         {is.nonEmptyString(projectPath) ? (
           <div
             className="
-              min-w-0 rounded-md border bg-muted/35 px-3 py-2 text-xs
+              min-w-0 rounded-md border bg-muted/35 px-3 py-2 font-mono text-xs
               text-muted-foreground
             "
             title={projectPath}
@@ -73,7 +73,7 @@ export const WorktreeDirtyDialog: FC<WorktreeDirtyDialogProps> = ({
             <pre
               className="
                 max-h-40 overflow-auto rounded-md border bg-muted/35 p-3
-                text-xs whitespace-pre-wrap text-foreground
+                font-mono text-xs whitespace-pre-wrap text-foreground select-text
               "
             >
               {setup.commands.join("\n")}

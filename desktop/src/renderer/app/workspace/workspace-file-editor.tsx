@@ -133,7 +133,7 @@ export function WorkspaceWindowFileEditor({
   const activeState = fileStates[activePath] ?? { status: "loading" };
 
   return (
-    <div className="flex h-full min-h-0 flex-col bg-background">
+    <div className="flex h-full min-h-0 flex-col bg-card">
       <WorkspaceWindowFileTabBar
         activePath={activePath}
         fileStates={fileStates}
@@ -142,7 +142,7 @@ export function WorkspaceWindowFileEditor({
         onSelect={onSelect}
       />
       {activeState.status === "loading" ? (
-        <div className="min-h-0 flex-1 bg-background" />
+        <div className="min-h-0 flex-1 bg-card" />
       ) : activeState.status === "error" ? (
         <WorkspaceToolEmpty
           detail={activeState.message}
@@ -154,7 +154,7 @@ export function WorkspaceWindowFileEditor({
           title={activeState.result.path}
         />
       ) : (
-        <Suspense fallback={<div className="min-h-0 flex-1 bg-background" />}>
+        <Suspense fallback={<div className="min-h-0 flex-1 bg-card" />}>
           <WorkspaceMonacoEditor
             className="min-h-0 flex-1"
             defaultLanguage={getWorkspaceMonacoLanguageFromFileTree(activePath)}
@@ -236,7 +236,9 @@ function WorkspaceWindowFileTabBar({
                   border-r border-border-subtle px-3 text-muted-foreground
                 `,
                 active
-                  ? "bg-background text-foreground"
+                  ? // Matches the Monaco ground so the active tab reads as
+                    // the same sheet of paper as the code under it.
+                    "bg-card text-foreground"
                   : `
                     hover:bg-overlay-hover hover:text-foreground
                     active:bg-overlay-active

@@ -1,5 +1,6 @@
 import type { WorkspaceToolPatchFile } from "@/app/workspace/workspace-tool-patch-model";
 
+import { CaretRight } from "@phosphor-icons/react";
 import { useState } from "react";
 import {
   WorkspaceToolPatchFileDiffContent,
@@ -115,6 +116,28 @@ export function WorkspaceToolPatchFileRows({
   );
 }
 
+/**
+ * Paths are mono everywhere in the tool panels. The directory prefix is
+ * dimmed so a column of deeply nested files still scans by basename without
+ * needing to truncate from the left.
+ */
+export function WorkspaceToolPatchFileName({ name }: { name: string }) {
+  const separatorIndex = name.lastIndexOf("/");
+  const directory =
+    separatorIndex === -1 ? "" : name.slice(0, separatorIndex + 1);
+  const baseName =
+    separatorIndex === -1 ? name : name.slice(separatorIndex + 1);
+
+  return (
+    <span className="min-w-0 flex-1 truncate font-mono" title={name}>
+      {directory === "" ? null : (
+        <span className="text-muted-foreground">{directory}</span>
+      )}
+      <span className="font-medium text-foreground">{baseName}</span>
+    </span>
+  );
+}
+
 function WorkspaceToolPatchFileCheckbox({
   file,
   fileName,
@@ -186,12 +209,7 @@ function WorkspaceToolPatchFileItem({
             type="button"
             onClick={() => onActivate?.(file)}
           >
-            <span
-              className="min-w-0 flex-1 truncate font-medium text-foreground"
-              title={fileName}
-            >
-              {fileName}
-            </span>
+            <WorkspaceToolPatchFileName name={fileName} />
           </button>
           <WorkspaceToolPatchFileLineStats lineChanges={lineChanges} />
         </div>
@@ -225,18 +243,24 @@ function WorkspaceToolPatchFileItem({
         )}
         <CollapsibleTrigger
           className="
-            flex min-w-0 flex-1 items-center gap-2 text-left outline-none
+            group/trigger flex min-w-0 flex-1 items-center gap-1.5 text-left
+            outline-none
             focus-visible:ring-2 focus-visible:ring-ring/50
             focus-visible:ring-inset
           "
           type="button"
         >
-          <span
-            className="min-w-0 flex-1 truncate font-medium text-foreground"
-            title={fileName}
-          >
-            {fileName}
-          </span>
+          <CaretRight
+            aria-hidden="true"
+            className="
+              size-3 shrink-0 text-muted-foreground transition-transform
+              duration-150 ease-standard
+              group-data-[state=open]/trigger:rotate-90
+              motion-reduce:transition-none
+            "
+            weight="regular"
+          />
+          <WorkspaceToolPatchFileName name={fileName} />
         </CollapsibleTrigger>
         <WorkspaceToolPatchFileLineStats lineChanges={lineChanges} />
       </div>

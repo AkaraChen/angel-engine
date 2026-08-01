@@ -109,8 +109,8 @@ export function WorkspaceToolTabRail({
     >
       <div
         className="
-          mb-1 flex h-6 shrink-0 items-center pl-2 text-xs font-medium
-          tracking-wide text-muted-foreground
+          mb-1 flex h-6 shrink-0 items-center pl-2 font-mono text-[10px]
+          font-medium tracking-wide uppercase text-muted-foreground
         "
         role="presentation"
       >
@@ -125,7 +125,12 @@ export function WorkspaceToolTabRail({
         "
         role="presentation"
       >
-        <span className="text-xs font-medium tracking-wide text-muted-foreground">
+        <span
+          className="
+            font-mono text-[10px] font-medium tracking-wide uppercase
+            text-muted-foreground
+          "
+        >
           Tabs
         </span>
         <WorkspaceToolNewTabMenu variant="section" />
@@ -210,14 +215,23 @@ function WorkspaceToolTabButton({
       <div
         className={cn(
           `
-            group flex shrink-0 items-center overflow-hidden
+            group relative flex shrink-0 items-center overflow-hidden
             text-muted-foreground
           `,
           horizontal ? "h-6 rounded-sm" : "h-8 min-w-0 rounded-md text-xs",
           active
             ? cn(
-                "text-foreground shadow-xs",
-                horizontal ? "bg-card" : "bg-background",
+                "text-foreground",
+                horizontal
+                  ? "bg-card shadow-xs"
+                  : // The window rail marks the current tool with a --primary
+                    // indicator rather than a lifted chip: it is a rail, not a
+                    // row of buttons.
+                    `
+                      bg-background
+                      before:absolute before:inset-y-1 before:left-0
+                      before:w-0.5 before:rounded-full before:bg-primary
+                    `,
               )
             : `
               hover:bg-overlay-hover hover:text-foreground
@@ -258,7 +272,7 @@ function WorkspaceToolTabButton({
         >
           <Icon
             className={cn("shrink-0", horizontal ? "size-4" : "size-3.5")}
-            weight="duotone"
+            weight="regular"
           />
           {horizontal ? null : <span className="truncate">{tab.title}</span>}
         </button>
@@ -300,11 +314,11 @@ function WorkspaceToolNewTabMenu({
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start" variant="native">
         <DropdownMenuItem onSelect={addTerminalTab}>
-          <TerminalIcon className="size-3.5" weight="duotone" />
+          <TerminalIcon className="size-3.5" weight="regular" />
           <span>Terminal</span>
         </DropdownMenuItem>
         <DropdownMenuItem onSelect={addBrowserTab}>
-          <Browser className="size-3.5" weight="duotone" />
+          <Browser className="size-3.5" weight="regular" />
           <span>Browser</span>
         </DropdownMenuItem>
       </DropdownMenuContent>
