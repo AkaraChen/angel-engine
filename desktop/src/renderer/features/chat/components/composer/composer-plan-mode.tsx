@@ -1,15 +1,15 @@
 import type { ChatOptionsContextValue } from "@/features/chat/runtime/chat-options-context";
-import { Hammer, ListChecks } from "@phosphor-icons/react";
+import { ListChecks } from "@phosphor-icons/react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast";
 import { findPlanModeToggleTarget } from "@/features/chat/runtime/mode-options";
 
-export interface PlanModeToggleButtonProps {
+export type PlanModeToggleButtonProps = {
   disabled?: boolean;
   options: ChatOptionsContextValue;
-}
+};
 
 export function PlanModeToggleButton({
   disabled,
@@ -34,7 +34,6 @@ export function PlanModeToggleButton({
   ]);
   const unavailable =
     disabled || pending || options.configLoading || !target?.targetMode;
-  const label = target?.isPlanMode ? t("composer.plan") : t("common.build");
   const title = target?.isPlanMode
     ? t("composer.switchToBuild", {
         defaultValue: "Switch to build mode",
@@ -42,13 +41,13 @@ export function PlanModeToggleButton({
     : t("composer.switchToPlan", {
         defaultValue: "Switch to plan mode",
       });
-  const Icon = target?.isPlanMode ? ListChecks : Hammer;
 
   return (
     <Button
+      aria-label={title}
       aria-pressed={Boolean(target?.isPlanMode)}
       className="
-        h-8 gap-1.5 rounded-md px-2 text-xs
+        h-8 gap-1.5 rounded-full px-2 text-xs
         focus-visible:ring-0!
       "
       disabled={unavailable}
@@ -72,10 +71,10 @@ export function PlanModeToggleButton({
       }}
       title={title}
       type="button"
-      variant="ghost"
+      variant={target?.isPlanMode ? "secondary" : "ghost"}
     >
-      <Icon className="size-3.5" weight="duotone" />
-      <span>{label}</span>
+      <ListChecks className="size-3.5" weight="duotone" />
+      <span>{t("composer.plan")}</span>
     </Button>
   );
 }
