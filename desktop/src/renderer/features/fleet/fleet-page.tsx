@@ -222,6 +222,9 @@ export function FleetPage({
   const isPending = activityQuery.isPending || isMetadataPending;
   const isError = activityQuery.isError || isMetadataError;
   const hasSearch = search.trim() !== "";
+  // Filtering an empty set is noise — only show the toolbar once there is
+  // something to segment, search, or project-filter.
+  const showToolbar = rows.length > 0;
 
   return (
     <div className="min-h-0 flex-1 overflow-y-auto">
@@ -230,78 +233,80 @@ export function FleetPage({
           {t("fleet.title")}
         </h2>
 
-        <div className="mt-5 flex flex-wrap items-center gap-2 pl-6">
-          <div
-            aria-label={t("fleet.filterSegments")}
-            className="
-              flex items-center gap-0.5 rounded-full bg-surface-1 p-0.5
-            "
-            role="group"
-          >
-            {FLEET_SEGMENTS.map((option) => (
-              <button
-                aria-pressed={segment === option}
-                className={cn(
-                  `
-                    flex h-7 items-center gap-1.5 rounded-full px-3 text-xs
-                    font-medium transition-colors duration-120 ease-standard
-                    outline-none
-                    focus-visible:ring-2 focus-visible:ring-ring/50
-                    motion-reduce:transition-none
-                  `,
-                  segment === option
-                    ? "bg-card text-foreground shadow-xs"
-                    : `
-                      text-muted-foreground
-                      hover:text-foreground
-                    `,
-                )}
-                key={option}
-                onClick={() => setSegment(option)}
-                type="button"
-              >
-                <span>{t(SEGMENT_LABEL_KEYS[option])}</span>
-                <span className="tabular-nums text-muted-foreground">
-                  {counts[option]}
-                </span>
-              </button>
-            ))}
-          </div>
-
-          <InputGroup className="h-8 w-auto min-w-40 flex-1" variant="search">
-            <InputGroupAddon align="inline-start">
-              <SearchIcon
-                aria-hidden="true"
-                className="size-4 shrink-0"
-                weight="regular"
-              />
-            </InputGroupAddon>
-            <InputGroupInput
-              aria-label={t("fleet.search")}
-              onChange={(event) => setSearch(event.currentTarget.value)}
-              placeholder={t("fleet.search")}
-              type="search"
-              value={search}
-            />
-          </InputGroup>
-
-          {projectOptions.length > 1 ? (
-            <NativeSelect
-              aria-label={t("fleet.filterProject")}
-              onChange={(event) =>
-                setRequestedProjectFilter(event.currentTarget.value)
-              }
-              size="sm"
-              value={projectFilter}
+        {showToolbar ? (
+          <div className="mt-5 flex flex-wrap items-center gap-2 pl-6">
+            <div
+              aria-label={t("fleet.filterSegments")}
+              className="
+                flex items-center gap-0.5 rounded-full bg-surface-1 p-0.5
+              "
+              role="group"
             >
-              {projectOptions.map((option) => (
-                <NativeSelectOption key={option.value} value={option.value}>
-                  {option.label}
-                </NativeSelectOption>
+              {FLEET_SEGMENTS.map((option) => (
+                <button
+                  aria-pressed={segment === option}
+                  className={cn(
+                    `
+                      flex h-7 items-center gap-1.5 rounded-full px-3 text-xs
+                      font-medium transition-colors duration-120 ease-standard
+                      outline-none
+                      focus-visible:ring-2 focus-visible:ring-ring/50
+                      motion-reduce:transition-none
+                    `,
+                    segment === option
+                      ? "bg-card text-foreground shadow-xs"
+                      : `
+                        text-muted-foreground
+                        hover:text-foreground
+                      `,
+                  )}
+                  key={option}
+                  onClick={() => setSegment(option)}
+                  type="button"
+                >
+                  <span>{t(SEGMENT_LABEL_KEYS[option])}</span>
+                  <span className="tabular-nums text-muted-foreground">
+                    {counts[option]}
+                  </span>
+                </button>
               ))}
-            </NativeSelect>
-          ) : null}
-        </div>
+            </div>
+
+            <InputGroup className="h-8 w-auto min-w-40 flex-1" variant="search">
+              <InputGroupAddon align="inline-start">
+                <SearchIcon
+                  aria-hidden="true"
+                  className="size-4 shrink-0"
+                  weight="regular"
+                />
+              </InputGroupAddon>
+              <InputGroupInput
+                aria-label={t("fleet.search")}
+                onChange={(event) => setSearch(event.currentTarget.value)}
+                placeholder={t("fleet.search")}
+                type="search"
+                value={search}
+              />
+            </InputGroup>
+
+            {projectOptions.length > 1 ? (
+              <NativeSelect
+                aria-label={t("fleet.filterProject")}
+                onChange={(event) =>
+                  setRequestedProjectFilter(event.currentTarget.value)
+                }
+                size="sm"
+                value={projectFilter}
+              >
+                {projectOptions.map((option) => (
+                  <NativeSelectOption key={option.value} value={option.value}>
+                    {option.label}
+                  </NativeSelectOption>
+                ))}
+              </NativeSelect>
+            ) : null}
+          </div>
+        ) : null}
 
         {isPending ? (
           <FleetSkeletonList />

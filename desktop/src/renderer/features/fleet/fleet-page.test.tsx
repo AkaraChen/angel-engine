@@ -155,6 +155,28 @@ describe("fleetPage", () => {
     expect(onNewChat).toHaveBeenCalledTimes(1);
   });
 
+  it("hides filter and search when the fleet has no rows", async () => {
+    listActivity.mockResolvedValue({ items: [] });
+    renderFleet({ chats: [] });
+
+    expect(await screen.findByText("fleet.emptySegments.all")).toBeDefined();
+    expect(screen.queryByRole("group", { name: "fleet.filterSegments" })).toBeNull();
+    expect(screen.queryByRole("searchbox", { name: "fleet.search" })).toBeNull();
+  });
+
+  it("keeps filter and search when rows exist", async () => {
+    listActivity.mockResolvedValue({ items: [DONE_ACTIVITY] });
+    renderFleet();
+
+    expect(
+      await screen.findByRole("button", { name: /Done chat/ }),
+    ).toBeDefined();
+    expect(
+      screen.getByRole("group", { name: "fleet.filterSegments" }),
+    ).toBeDefined();
+    expect(screen.getByRole("searchbox", { name: "fleet.search" })).toBeDefined();
+  });
+
   it("narrows the list to the search query", async () => {
     listActivity.mockResolvedValue({
       items: [
