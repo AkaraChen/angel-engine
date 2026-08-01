@@ -252,10 +252,13 @@ export const en = {
             "Archived sessions permanently deleted: {{chatCount}}. Worktree directories removed: {{managedWorktreeCount}}. This cannot be undone.",
           confirmDeleteTitle: "Delete removable worktrees?",
           deleteFailed: "Could not remove worktree",
+          deleteWorktree:
+            "Delete {{projectName}} worktree {{identifier}} permanently",
           deletedToast:
             "Worktrees removed: {{worktreeCount}} · Archived sessions deleted: {{chatCount}}",
           empty: "No worktrees are ready to remove",
           missingOnDisk: "Missing on disk",
+          noSessions: "Orphaned worktree · no archived sessions",
           partialFailure: "Failed worktree removals: {{count}}.",
           scanAgain: "Scan again",
           sessionCount_one: "{{count}} archived session",

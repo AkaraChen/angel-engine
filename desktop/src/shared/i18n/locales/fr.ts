@@ -253,10 +253,13 @@ export const fr = {
             "Cela supprimera définitivement {{chatCount}} session(s) archivée(s) et {{managedWorktreeCount}} répertoire(s) worktree. Cette action est irréversible.",
           confirmDeleteTitle: "Supprimer les worktrees supprimables ?",
           deleteFailed: "Impossible de supprimer le worktree",
+          deleteWorktree:
+            "Supprimer définitivement le worktree {{identifier}} de {{projectName}}",
           deletedToast:
             "{{worktreeCount}} worktree(s) supprimé(s) · {{chatCount}} session(s) archivée(s) supprimée(s)",
           empty: "Aucun worktree à supprimer",
           missingOnDisk: "Absent du disque",
+          noSessions: "Worktree orphelin · aucune session archivée",
           partialFailure: "Échec de suppression de {{count}} worktree(s).",
           scanAgain: "Analyser à nouveau",
           sessionCount_one: "{{count}} session(s) archivée(s)",

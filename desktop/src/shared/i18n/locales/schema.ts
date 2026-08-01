@@ -233,9 +233,11 @@ export interface LocaleResourceTranslationSettingsArchivedRemovableWorktrees {
   confirmDeleteDetail: string;
   confirmDeleteTitle: string;
   deleteFailed: string;
+  deleteWorktree: string;
   deletedToast: string;
   empty: string;
   missingOnDisk: string;
+  noSessions: string;
   partialFailure: string;
   scanAgain: string;
   sessionCount_one: string;

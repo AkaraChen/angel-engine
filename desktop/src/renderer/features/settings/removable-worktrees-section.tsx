@@ -34,6 +34,7 @@ import {
   dangerActionClassName,
   sectionLabelClassName,
 } from "@/features/settings/settings-controls";
+import { splitWorktreePath } from "@/features/settings/removable-worktree-path";
 import { useApi } from "@/platform/use-api";
 import { cn } from "@/platform/utils";
 
@@ -304,6 +305,8 @@ const RemovableWorktreeRow: FC<RemovableWorktreeRowProps> = ({
   const projectName = project
     ? getProjectDisplayName(project.path)
     : worktree.projectSlug;
+  const { directory, identifier } = splitWorktreePath(worktree.path);
+  const worktreeLabel = `${projectName} · ${identifier}`;
 
   return (
     <SettingsListRow selected={bulkMode && selected}>
@@ -320,8 +323,11 @@ const RemovableWorktreeRow: FC<RemovableWorktreeRowProps> = ({
       )}
       <div className="min-w-0 flex-1">
         <div className="flex min-w-0 items-center gap-2">
-          <span className="min-w-0 truncate text-sm font-medium">
-            {projectName}
+          <span
+            className="min-w-0 truncate text-sm font-medium"
+            title={worktreeLabel}
+          >
+            {worktreeLabel}
           </span>
           {!worktree.existsOnDisk ? (
             <span
@@ -340,19 +346,26 @@ const RemovableWorktreeRow: FC<RemovableWorktreeRowProps> = ({
           className="mt-1 flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground"
           title={worktree.path}
         >
-          <span className="min-w-0 truncate font-mono text-[0.6875rem]">
-            {worktree.path}
+          <span className="flex min-w-0 overflow-hidden font-mono text-[0.6875rem]">
+            <span className="truncate">{directory}</span>
+            <span className="shrink-0">{identifier}</span>
           </span>
           <span className="shrink-0">·</span>
           <span className="shrink-0 tabular-nums">
-            {t("settings.archived.removableWorktrees.sessionCount", {
-              count: worktree.archivedChatCount,
-            })}
+            {worktree.archivedChatCount === 0
+              ? t("settings.archived.removableWorktrees.noSessions")
+              : t("settings.archived.removableWorktrees.sessionCount", {
+                  count: worktree.archivedChatCount,
+                })}
           </span>
         </div>
       </div>
       {!bulkMode ? (
         <Button
+          aria-label={t("settings.archived.removableWorktrees.deleteWorktree", {
+            identifier,
+            projectName,
+          })}
           className={dangerActionClassName}
           disabled={disabled}
           onClick={onDelete}
