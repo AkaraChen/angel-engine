@@ -72,7 +72,6 @@ export const fr = {
       creationLocationWorktree: "Worktree",
       newChat: "Nouvelle discussion",
       newChatInProject: "Nouvelle discussion dans {{projectName}}",
-      newProject: "Nouveau projet",
       noProject: "Aucun projet",
       projectSelect: "Projet",
       settings: "Paramètres",

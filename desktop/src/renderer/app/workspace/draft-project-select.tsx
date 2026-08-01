@@ -94,7 +94,7 @@ export function DraftProjectSelect({
           {t("workspace.noProject")}
         </NativeSelectOption>
         <NativeSelectOption value={String(NEW_PROJECT_SELECT_VALUE)}>
-          {t("workspace.newProject")}
+          {t("sidebar.addProject")}
         </NativeSelectOption>
         {projects.map((project) => {
           const projectName = getProjectDisplayName(project.path);

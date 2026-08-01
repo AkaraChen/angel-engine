@@ -71,7 +71,7 @@ export function NewChatRecentSection({
             {t("thread.empty.recentEmpty")}
           </p>
           <Button onClick={onCreateProject} size="sm" variant="outline">
-            {t("workspace.newProject")}
+            {t("sidebar.addProject")}
           </Button>
         </div>
       ) : (

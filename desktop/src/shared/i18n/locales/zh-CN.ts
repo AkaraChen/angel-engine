@@ -71,7 +71,6 @@ export const zhCN = {
       creationLocationWorktree: "Worktree",
       newChat: "新聊天",
       newChatInProject: "{{projectName}} 中的新聊天",
-      newProject: "新建项目",
       noProject: "无项目",
       projectSelect: "项目",
       settings: "设置",
