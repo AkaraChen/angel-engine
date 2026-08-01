@@ -71,6 +71,11 @@ export function HomePage() {
   // The last snapshot is dropped with it: it would otherwise keep badging rows
   // and filtering the list by a state nobody can still verify.
   const activityUnavailable = activityQuery.isError;
+  // When the chat list itself failed, activity almost certainly failed for the
+  // same reason (daemon offline). One full-page error + one retry is enough;
+  // stacking the activity banner on top just duplicates Try again.
+  const chatsUnavailable = chatsQuery.isError;
+  const showActivityError = activityUnavailable && !chatsUnavailable;
   const activities = activityUnavailable
     ? EMPTY_LIST
     : (activityQuery.data ?? EMPTY_LIST);
@@ -88,9 +93,23 @@ export function HomePage() {
     [effectiveSegment, rows],
   );
 
+  function retryChats() {
+    void chatsQuery.refetch();
+    // Activity failed with the same outage; recover both from the single
+    // offline retry so the user does not need a second Try again.
+    void activityQuery.refetch();
+  }
+
+  const newChatButtonClassName = `
+    absolute bottom-[max(1rem,env(safe-area-inset-bottom))] left-1/2
+    h-12 -translate-x-1/2 gap-2 rounded-full px-5 text-sm font-medium
+    shadow-panel transition-transform duration-150
+    active:scale-[0.98]
+  `;
+
   return (
     <div className="relative flex h-full min-w-0 flex-col overflow-hidden">
-      {activityUnavailable ? (
+      {showActivityError ? (
         <ActivityErrorNotice onRetry={() => void activityQuery.refetch()} />
       ) : null}
       {!activityUnavailable &&
@@ -131,8 +150,8 @@ export function HomePage() {
       >
         {chatsQuery.isPending || activityQuery.isPending ? (
           <ChatListSkeleton />
-        ) : chatsQuery.isError ? (
-          <ErrorState onRetry={() => void chatsQuery.refetch()} />
+        ) : chatsUnavailable ? (
+          <ErrorState onRetry={retryChats} />
         ) : chatsQuery.data.length === 0 ? (
           <EmptyState />
         ) : visibleRows.length === 0 ? (
@@ -153,20 +172,26 @@ export function HomePage() {
 
       {/* The primary action floats over the list rather than sitting at the end
           of it: on a long transcript list it would otherwise be unreachable
-          without scrolling to the bottom. */}
-      <CreateChatDrawer>
+          without scrolling to the bottom. While the daemon cannot serve chats,
+          the button stays visible but disabled so it does not look available. */}
+      {chatsUnavailable ? (
         <Button
-          className="
-            absolute bottom-[max(1rem,env(safe-area-inset-bottom))] left-1/2
-            h-12 -translate-x-1/2 gap-2 rounded-full px-5 text-sm font-medium
-            shadow-panel transition-transform duration-150
-            active:scale-[0.98]
-          "
+          aria-label={`${t("common.newChat")}. ${t("common.daemonOfflineHint")}`}
+          className={newChatButtonClassName}
+          disabled
+          title={t("common.daemonOfflineHint")}
         >
           <Plus size={18} weight="bold" />
           {t("common.newChat")}
         </Button>
-      </CreateChatDrawer>
+      ) : (
+        <CreateChatDrawer>
+          <Button className={newChatButtonClassName}>
+            <Plus size={18} weight="bold" />
+            {t("common.newChat")}
+          </Button>
+        </CreateChatDrawer>
+      )}
     </div>
   );
 }
