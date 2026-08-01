@@ -355,6 +355,9 @@ export const ja = {
       empty: {
         description:
           "修正またはテストするファイル、バグ、挙動、ワークスペース範囲を指定してください。",
+        recentEmpty:
+          "まだ何もありません。プロジェクトを選んで最初のセッションを始めましょう。",
+        recentTitle: "最近",
         suggestionClarify: "複雑な問題を整理して考えるのを手伝って",
         suggestionExplore: "このコードベースの構成を説明して",
         suggestionFix: "エラーメッセージからバグを特定して",

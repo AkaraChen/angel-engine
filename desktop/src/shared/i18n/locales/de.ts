@@ -354,6 +354,9 @@ export const de = {
       empty: {
         description:
           "Verweisen Sie auf eine Datei, einen Fehler, ein Verhalten oder einen Arbeitsbereich, der korrigiert oder getestet werden soll.",
+        recentEmpty:
+          "Noch nichts hier — wählen Sie ein Projekt und starten Sie Ihre erste Sitzung.",
+        recentTitle: "Zuletzt",
         suggestionClarify: "Hilf mir, eine komplexe Frage zu durchdenken",
         suggestionExplore: "Erkläre den Aufbau dieser Codebasis",
         suggestionFix: "Finde einen Fehler anhand einer Fehlermeldung",

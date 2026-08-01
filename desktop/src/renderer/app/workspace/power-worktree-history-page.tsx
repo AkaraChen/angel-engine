@@ -12,6 +12,7 @@ import is from "@sindresorhus/is";
 import { useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
+import { displayChatTitle } from "@/app/workspace/workspace-display";
 import {
   buildWorkspaceToolPatchList,
   getWorkspaceToolPatchFileLineChanges,
@@ -343,11 +344,4 @@ function AgentIcon({ runtime }: { runtime?: string | null }): ReactElement {
       )}
     </span>
   );
-}
-
-function displayChatTitle(
-  title: string,
-  t: (key: string, options?: Record<string, unknown>) => string,
-) {
-  return title === "New chat" ? t("workspace.newChat") : title;
 }

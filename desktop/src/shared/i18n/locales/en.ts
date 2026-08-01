@@ -351,6 +351,9 @@ export const en = {
       empty: {
         description:
           "Point to a file, bug, behavior, or workspace slice to patch or test.",
+        recentEmpty:
+          "Nothing here yet — pick a project and start your first session.",
+        recentTitle: "Recent",
         suggestionClarify: "Help me think through a complex question",
         suggestionExplore: "Explain how this codebase is structured",
         suggestionFix: "Track down a bug from an error message",

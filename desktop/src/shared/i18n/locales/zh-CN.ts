@@ -336,6 +336,8 @@ export const zhCN = {
     thread: {
       empty: {
         description: "指定文件、缺陷、行为或工作区范围，让它修复或测试。",
+        recentEmpty: "这里还是空的 —— 选一个项目，开始第一次会话。",
+        recentTitle: "最近",
         suggestionClarify: "帮我理清一个复杂问题",
         suggestionExplore: "讲解这个代码库的结构",
         suggestionFix: "根据报错信息定位一个缺陷",

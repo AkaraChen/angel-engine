@@ -356,6 +356,9 @@ export const es = {
       empty: {
         description:
           "Señala un archivo, error, comportamiento o parte del espacio de trabajo para corregir o probar.",
+        recentEmpty:
+          "Aquí no hay nada todavía: elige un proyecto y empieza tu primera sesión.",
+        recentTitle: "Recientes",
         suggestionClarify: "Ayúdame a pensar una cuestión compleja",
         suggestionExplore: "Explica cómo está estructurado este código",
         suggestionFix: "Localiza un error a partir de un mensaje de error",

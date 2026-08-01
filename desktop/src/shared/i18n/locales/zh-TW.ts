@@ -338,6 +338,8 @@ export const zhTW = {
     thread: {
       empty: {
         description: "指定檔案、錯誤、行為或工作區範圍，讓它修補或測試。",
+        recentEmpty: "這裡還是空的 —— 選一個專案，開始第一次工作階段。",
+        recentTitle: "最近",
         suggestionClarify: "幫我理清一個複雜問題",
         suggestionExplore: "講解這個程式碼庫的結構",
         suggestionFix: "根據錯誤訊息定位一個缺陷",

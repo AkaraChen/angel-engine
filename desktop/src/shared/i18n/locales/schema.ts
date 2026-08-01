@@ -359,6 +359,8 @@ export interface LocaleResourceTranslationUpdates {
 
 export interface LocaleResourceTranslationThreadEmpty {
   description: string;
+  recentEmpty: string;
+  recentTitle: string;
   suggestionClarify: string;
   suggestionExplore: string;
   suggestionFix: string;
