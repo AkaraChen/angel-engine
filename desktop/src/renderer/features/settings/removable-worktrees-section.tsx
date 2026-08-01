@@ -23,7 +23,19 @@ import {
   deleteManagedWorktreesMutationOptions,
   managedWorktreeListQueryOptions,
 } from "@/features/settings/api/managed-worktrees";
+import {
+  SettingsBulkBar,
+  SettingsBulkCount,
+  SettingsListNotice,
+  SettingsListPlate,
+  SettingsListRow,
+} from "@/features/settings/archived-settings-list";
+import {
+  dangerActionClassName,
+  sectionLabelClassName,
+} from "@/features/settings/settings-controls";
 import { useApi } from "@/platform/use-api";
+import { cn } from "@/platform/utils";
 
 const EMPTY_WORKTREES: ManagedWorktreeSummary[] = [];
 
@@ -138,7 +150,10 @@ export const RemovableWorktreesSection: FC<RemovableWorktreesSectionProps> = ({
   return (
     <section aria-labelledby="removable-worktrees-title" className="space-y-3">
       <div className="space-y-2">
-        <h2 className="text-sm font-medium" id="removable-worktrees-title">
+        <h2
+          className={cn(sectionLabelClassName, "px-0.5 text-muted-foreground")}
+          id="removable-worktrees-title"
+        >
           {t("settings.archived.removableWorktrees.title")}
         </h2>
         {/*
@@ -147,21 +162,6 @@ export const RemovableWorktreesSection: FC<RemovableWorktreesSectionProps> = ({
           line long before that. Wrapping keeps every action reachable.
         */}
         <div className="flex flex-wrap items-center justify-end gap-2">
-          {bulkMode ? (
-            <Button
-              disabled={
-                deleteWorktreesMutation.isPending ||
-                selectedWorktrees.length === 0
-              }
-              onClick={() => void deleteWorktrees(selectedWorktrees)}
-              size="sm"
-              type="button"
-              variant="destructive"
-            >
-              <Trash />
-              {t("settings.archived.deleteSelected")}
-            </Button>
-          ) : null}
           <Button
             disabled={worktrees.length === 0 && !bulkMode}
             onClick={toggleBulkMode}
@@ -188,24 +188,19 @@ export const RemovableWorktreesSection: FC<RemovableWorktreesSectionProps> = ({
       </div>
 
       {bulkMode ? (
-        <div
-          className="
-            flex items-center justify-between gap-3 text-xs
-            text-muted-foreground
-          "
-        >
-          <div>
+        <SettingsBulkBar>
+          <SettingsBulkCount>
             {t("settings.archived.selectedCount", {
               count: selectedWorktrees.length,
             })}
-          </div>
+          </SettingsBulkCount>
           <Button
-            className="h-7 px-2 text-xs"
+            className="rounded-full"
             disabled={
               deleteWorktreesMutation.isPending || worktrees.length === 0
             }
             onClick={toggleAll}
-            size="sm"
+            size="xs"
             type="button"
             variant="ghost"
           >
@@ -214,18 +209,30 @@ export const RemovableWorktreesSection: FC<RemovableWorktreesSectionProps> = ({
               ? t("settings.archived.clearSelection")
               : t("settings.archived.selectAll")}
           </Button>
-        </div>
+          <Button
+            className={cn("rounded-full", dangerActionClassName)}
+            disabled={
+              deleteWorktreesMutation.isPending ||
+              selectedWorktrees.length === 0
+            }
+            onClick={() => void deleteWorktrees(selectedWorktrees)}
+            size="xs"
+            type="button"
+            variant="destructive"
+          >
+            <Trash />
+            {t("settings.archived.deleteSelected")}
+          </Button>
+        </SettingsBulkBar>
       ) : null}
 
-      <div className="overflow-hidden rounded-lg border bg-card">
+      <SettingsListPlate>
         {worktreesQuery.isPending ? (
-          <div className="px-4 py-6 text-sm text-muted-foreground">
-            {t("common.loading")}
-          </div>
+          <SettingsListNotice>{t("common.loading")}</SettingsListNotice>
         ) : worktreesQuery.isError ? (
-          <div className="flex items-start justify-between gap-4 px-4 py-6">
+          <div className="flex items-start justify-between gap-4 px-3 py-6">
             <div className="min-w-0 space-y-1">
-              <div className="text-sm font-medium text-destructive">
+              <div className="text-sm font-medium text-status-danger">
                 {t("common.failed")}
               </div>
               <div className="text-xs wrap-break-word text-muted-foreground">
@@ -244,11 +251,11 @@ export const RemovableWorktreesSection: FC<RemovableWorktreesSectionProps> = ({
             </Button>
           </div>
         ) : worktrees.length === 0 ? (
-          <div className="px-4 py-6 text-sm text-muted-foreground">
+          <SettingsListNotice>
             {t("settings.archived.removableWorktrees.empty")}
-          </div>
+          </SettingsListNotice>
         ) : (
-          <div className="divide-y divide-border">
+          <>
             {worktrees.map((worktree) => (
               <RemovableWorktreeRow
                 bulkMode={bulkMode}
@@ -267,9 +274,9 @@ export const RemovableWorktreesSection: FC<RemovableWorktreesSectionProps> = ({
                 worktree={worktree}
               />
             ))}
-          </div>
+          </>
         )}
-      </div>
+      </SettingsListPlate>
     </section>
   );
 };
@@ -299,7 +306,7 @@ const RemovableWorktreeRow: FC<RemovableWorktreeRowProps> = ({
     : worktree.projectSlug;
 
   return (
-    <article className="flex min-w-0 items-start gap-3 px-4 py-3">
+    <SettingsListRow selected={bulkMode && selected}>
       {bulkMode ? (
         <Checkbox
           aria-label={worktree.path}
@@ -319,8 +326,9 @@ const RemovableWorktreeRow: FC<RemovableWorktreeRowProps> = ({
           {!worktree.existsOnDisk ? (
             <span
               className="
-                inline-flex shrink-0 items-center gap-1 rounded-sm bg-muted
-                px-1.5 py-0.5 text-[11px] text-muted-foreground
+                inline-flex shrink-0 items-center gap-1 rounded-full
+                bg-status-attention-soft px-2 py-0.5 font-mono text-[0.625rem]
+                tracking-wide text-status-attention uppercase
               "
             >
               <WarningCircle className="size-3" />
@@ -329,12 +337,14 @@ const RemovableWorktreeRow: FC<RemovableWorktreeRowProps> = ({
           ) : null}
         </div>
         <div
-          className="mt-0.5 flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground"
+          className="mt-1 flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground"
           title={worktree.path}
         >
-          <span className="min-w-0 truncate">{worktree.path}</span>
+          <span className="min-w-0 truncate font-mono text-[0.6875rem]">
+            {worktree.path}
+          </span>
           <span className="shrink-0">·</span>
-          <span className="shrink-0">
+          <span className="shrink-0 tabular-nums">
             {t("settings.archived.removableWorktrees.sessionCount", {
               count: worktree.archivedChatCount,
             })}
@@ -343,6 +353,7 @@ const RemovableWorktreeRow: FC<RemovableWorktreeRowProps> = ({
       </div>
       {!bulkMode ? (
         <Button
+          className={dangerActionClassName}
           disabled={disabled}
           onClick={onDelete}
           size="sm"
@@ -353,6 +364,6 @@ const RemovableWorktreeRow: FC<RemovableWorktreeRowProps> = ({
           {t("settings.archived.deletePermanently")}
         </Button>
       ) : null}
-    </article>
+    </SettingsListRow>
   );
 };

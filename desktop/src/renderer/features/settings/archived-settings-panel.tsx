@@ -25,8 +25,13 @@ import {
   subscribeToChatMetadataEvents,
 } from "@/features/chat/chat-metadata-events";
 import { projectListQueryOptions } from "@/features/projects/api/queries";
+import {
+  dangerActionClassName,
+  sectionLabelClassName,
+} from "@/features/settings/settings-controls";
 import { queryKeys } from "@/platform/query-keys";
 import { useApi } from "@/platform/use-api";
+import { cn } from "@/platform/utils";
 
 import {
   chatMatchesProjectFilter,
@@ -37,6 +42,10 @@ import {
 import {
   ArchivedChatRow,
   ArchivedFilterSelect,
+  SettingsBulkBar,
+  SettingsBulkCount,
+  SettingsListNotice,
+  SettingsListPlate,
 } from "./archived-settings-list";
 import { invalidateManagedWorktreeQueries } from "./api/managed-worktrees";
 import { RemovableWorktreesSection } from "./removable-worktrees-section";
@@ -196,7 +205,10 @@ export function ArchivedSettingsPanel() {
       <RemovableWorktreesSection projectsById={projectsById} />
 
       <section aria-labelledby="archived-sessions-title" className="space-y-3">
-        <h2 className="text-sm font-medium" id="archived-sessions-title">
+        <h2
+          className={cn(sectionLabelClassName, "px-0.5 text-muted-foreground")}
+          id="archived-sessions-title"
+        >
           {t("settings.archived.sessionsTitle")}
         </h2>
 
@@ -230,30 +242,6 @@ export function ArchivedSettingsPanel() {
             ))}
           </ArchivedFilterSelect>
           <div className="ml-auto flex items-center gap-2">
-            {bulkMode ? (
-              <>
-                <Button
-                  disabled={busy || selectedChats.length === 0}
-                  onClick={() => void restoreChats(selectedChats)}
-                  size="sm"
-                  type="button"
-                  variant="outline"
-                >
-                  <Restore />
-                  {t("settings.archived.restoreSelected")}
-                </Button>
-                <Button
-                  disabled={busy || selectedChats.length === 0}
-                  onClick={() => void deleteChats(selectedChats)}
-                  size="sm"
-                  type="button"
-                  variant="destructive"
-                >
-                  <Trash2 />
-                  {t("settings.archived.deleteSelected")}
-                </Button>
-              </>
-            ) : null}
             <Button
               onClick={toggleBulkMode}
               size="sm"
@@ -269,22 +257,17 @@ export function ArchivedSettingsPanel() {
         </div>
 
         {bulkMode ? (
-          <div
-            className="
-            flex items-center justify-between gap-3 text-xs
-            text-muted-foreground
-          "
-          >
-            <div>
+          <SettingsBulkBar>
+            <SettingsBulkCount>
               {t("settings.archived.selectedCount", {
                 count: selectedChats.length,
               })}
-            </div>
+            </SettingsBulkCount>
             <Button
-              className="h-7 px-2 text-xs"
+              className="rounded-full"
               disabled={busy || filteredChats.length === 0}
               onClick={toggleAllVisible}
-              size="sm"
+              size="xs"
               type="button"
               variant="ghost"
             >
@@ -293,18 +276,38 @@ export function ArchivedSettingsPanel() {
                 ? t("settings.archived.clearSelection")
                 : t("settings.archived.selectAll")}
             </Button>
-          </div>
+            <Button
+              className="rounded-full"
+              disabled={busy || selectedChats.length === 0}
+              onClick={() => void restoreChats(selectedChats)}
+              size="xs"
+              type="button"
+              variant="outline"
+            >
+              <Restore />
+              {t("settings.archived.restoreSelected")}
+            </Button>
+            <Button
+              className={cn("rounded-full", dangerActionClassName)}
+              disabled={busy || selectedChats.length === 0}
+              onClick={() => void deleteChats(selectedChats)}
+              size="xs"
+              type="button"
+              variant="destructive"
+            >
+              <Trash2 />
+              {t("settings.archived.deleteSelected")}
+            </Button>
+          </SettingsBulkBar>
         ) : null}
 
-        <div className="overflow-hidden rounded-lg border bg-card">
+        <SettingsListPlate>
           {archivedChatsQuery.isPending ? (
-            <div className="px-4 py-6 text-sm text-muted-foreground">
-              {t("common.loading")}
-            </div>
+            <SettingsListNotice>{t("common.loading")}</SettingsListNotice>
           ) : archivedChatsQuery.isError ? (
-            <div className="flex items-start justify-between gap-4 px-4 py-6">
+            <div className="flex items-start justify-between gap-4 px-3 py-6">
               <div className="min-w-0 space-y-1">
-                <div className="text-sm font-medium text-destructive">
+                <div className="text-sm font-medium text-status-danger">
                   {t("common.failed")}
                 </div>
                 <div className="text-xs wrap-break-word text-muted-foreground">
@@ -323,11 +326,11 @@ export function ArchivedSettingsPanel() {
               </Button>
             </div>
           ) : filteredChats.length === 0 ? (
-            <div className="px-4 py-6 text-sm text-muted-foreground">
+            <SettingsListNotice>
               {t("settings.archived.empty")}
-            </div>
+            </SettingsListNotice>
           ) : (
-            <div className="divide-y divide-border">
+            <>
               {filteredChats.map((chat) => (
                 <ArchivedChatRow
                   bulkMode={bulkMode}
@@ -347,9 +350,9 @@ export function ArchivedSettingsPanel() {
                   }
                 />
               ))}
-            </div>
+            </>
           )}
-        </div>
+        </SettingsListPlate>
       </section>
     </div>
   );

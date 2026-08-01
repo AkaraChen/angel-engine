@@ -12,6 +12,7 @@ import { Switch } from "@/components/ui/switch";
 import { MobileUrlQrDialog } from "@/features/settings/mobile-url-qr-dialog";
 import { ResetMobilePasswordDialog } from "@/features/settings/reset-mobile-password-dialog";
 import {
+  dangerActionClassName,
   SettingsGroup,
   SettingsRow,
 } from "@/features/settings/settings-controls";
@@ -109,11 +110,12 @@ export function MobileViewSettings() {
       <SettingsRow
         after={
           <Button
+            className={state.hasPassword ? dangerActionClassName : undefined}
             disabled={isSaving}
             onClick={openPasswordDialog}
             size="sm"
             type="button"
-            variant="outline"
+            variant={state.hasPassword ? "destructive" : "outline"}
           >
             {state.hasPassword
               ? t("settings.mobile.passwordReset")
@@ -159,7 +161,7 @@ export function MobileViewSettings() {
         after={
           <Input
             aria-label={t("settings.mobile.portTitle")}
-            className="h-8 w-40 text-sm"
+            className="h-8 w-40 font-mono text-sm tabular-nums"
             disabled={isSaving}
             max={65_535}
             min={0}
@@ -208,7 +210,7 @@ export function MobileViewSettings() {
           shareUrl !== null ? (
             <a
               className="
-                text-primary underline-offset-4
+                font-mono text-primary underline-offset-4
                 hover:underline
               "
               href={shareUrl}
