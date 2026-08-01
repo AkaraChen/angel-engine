@@ -296,6 +296,7 @@ export const de = {
       danger: {
         confirmDeleteAll:
           "Alle Chats löschen? Diese Aktion kann nicht rückgängig gemacht werden.",
+        deleteAction: "Löschen…",
         deleting: "Wird gelöscht",
         deleteTitle: "Alle Chats löschen",
         description:

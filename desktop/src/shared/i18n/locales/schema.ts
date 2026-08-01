@@ -299,6 +299,7 @@ export interface LocaleResourceTranslationSettingsAppearance {
 
 export interface LocaleResourceTranslationSettingsDanger {
   confirmDeleteAll: string;
+  deleteAction: string;
   deleting: string;
   deleteTitle: string;
   description: string;

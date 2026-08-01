@@ -295,6 +295,7 @@ export const ko = {
       danger: {
         confirmDeleteAll:
           "모든 채팅을 삭제할까요? 이 작업은 되돌릴 수 없습니다.",
+        deleteAction: "삭제…",
         deleting: "삭제 중",
         deleteTitle: "모든 채팅 삭제",
         description:

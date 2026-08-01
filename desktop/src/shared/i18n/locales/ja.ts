@@ -296,6 +296,7 @@ export const ja = {
       danger: {
         confirmDeleteAll:
           "すべてのチャットを削除しますか？この操作は元に戻せません。",
+        deleteAction: "削除…",
         deleting: "削除中",
         deleteTitle: "すべてのチャットを削除",
         description:
