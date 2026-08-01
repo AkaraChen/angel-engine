@@ -375,7 +375,8 @@ export const ko = {
         stateDownloaded: "버전 {{version}}을(를) 설치할 준비가 되었습니다.",
         stateDownloading: "버전 {{version}}을(를) 내려받는 중…",
         stateError: "마지막 확인에 실패했습니다: {{detail}}",
-        stateIdle: "이 채널에서 최신 버전입니다.",
+        stateIdle: "이 채널에서 최신 버전입니다. 마지막 확인: {{time}}.",
+        stateUnchecked: "아직 업데이트를 확인하지 않았습니다.",
         unsupported: "자동 업데이트는 현재 macOS에서만 지원됩니다.",
       },
       workspace: {

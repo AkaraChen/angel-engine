@@ -4,6 +4,7 @@ import type { ComponentType } from "react";
 import {
   CheckCircle,
   CircleNotch,
+  Clock,
   DownloadSimple,
   Info,
   WarningCircle,
@@ -17,9 +18,16 @@ import {
   SettingsRow,
 } from "@/features/settings/settings-controls";
 import { useUpdateStatus } from "@/features/settings/use-update-status";
+import { formatDateTime } from "@/platform/format-time";
 import { cn } from "@/platform/utils";
 
-type UpdateTone = "attention" | "danger" | "info" | "primary" | "success";
+type UpdateTone =
+  | "attention"
+  | "danger"
+  | "info"
+  | "neutral"
+  | "primary"
+  | "success";
 
 /**
  * The update state is the one thing on this pane a user actually scans for, so
@@ -35,6 +43,7 @@ const updateToneClassName: Record<UpdateTone, string> = {
   danger:
     "border-status-danger-border bg-status-danger-soft text-status-danger",
   info: "border-status-info-border bg-status-info-soft text-status-info",
+  neutral: "border-border bg-muted/50 text-muted-foreground",
   primary: "border-primary/25 bg-primary-soft text-primary-soft-foreground",
   success: `
     border-status-success-border bg-status-success-soft text-status-success
@@ -48,6 +57,7 @@ const updateToneIcon: Record<
   attention: Info,
   danger: WarningCircle,
   info: CircleNotch,
+  neutral: Clock,
   primary: DownloadSimple,
   success: CheckCircle,
 };
@@ -159,7 +169,7 @@ function updateTone(status: DesktopUpdateStatus): UpdateTone {
     case "error":
       return "danger";
     case "idle":
-      return "success";
+      return status.lastCheckedAt === undefined ? "neutral" : "success";
   }
 }
 
@@ -185,6 +195,10 @@ function updateStateDescription(
         detail: status.errorMessage ?? "",
       });
     case "idle":
-      return t("settings.updates.stateIdle");
+      return status.lastCheckedAt === undefined
+        ? t("settings.updates.stateUnchecked")
+        : t("settings.updates.stateIdle", {
+            time: formatDateTime(new Date(status.lastCheckedAt).toISOString()),
+          });
   }
 }

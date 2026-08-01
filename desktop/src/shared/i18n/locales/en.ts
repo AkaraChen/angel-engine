@@ -376,7 +376,9 @@ export const en = {
         stateDownloaded: "Version {{version}} is ready to install.",
         stateDownloading: "Downloading version {{version}}…",
         stateError: "Last check failed: {{detail}}",
-        stateIdle: "You are on the latest version for this channel.",
+        stateIdle:
+          "You are on the latest version for this channel. Last checked: {{time}}.",
+        stateUnchecked: "Updates have not been checked yet.",
         unsupported: "Automatic updates are only available on macOS.",
       },
       workspace: {

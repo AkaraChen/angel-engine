@@ -380,7 +380,9 @@ export const ja = {
           "バージョン {{version}} をインストールする準備ができました。",
         stateDownloading: "バージョン {{version}} をダウンロードしています…",
         stateError: "前回の確認に失敗しました: {{detail}}",
-        stateIdle: "このチャンネルでは最新バージョンです。",
+        stateIdle:
+          "このチャンネルでは最新バージョンです。前回の確認: {{time}}。",
+        stateUnchecked: "アップデートはまだ確認されていません。",
         unsupported: "自動アップデートは現在 macOS でのみ利用できます。",
       },
       workspace: {

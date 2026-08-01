@@ -380,7 +380,9 @@ export const fr = {
         stateDownloaded: "La version {{version}} est prête à être installée.",
         stateDownloading: "Téléchargement de la version {{version}}…",
         stateError: "La dernière vérification a échoué : {{detail}}",
-        stateIdle: "Vous disposez de la dernière version de ce canal.",
+        stateIdle:
+          "Vous disposez de la dernière version de ce canal. Dernière vérification : {{time}}.",
+        stateUnchecked: "Les mises à jour n'ont pas encore été vérifiées.",
         unsupported:
           "Les mises à jour automatiques ne sont disponibles que sur macOS.",
       },
