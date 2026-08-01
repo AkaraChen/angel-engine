@@ -665,6 +665,54 @@ export interface LocaleResourceTranslationPromptInput {
   uploadFiles: string;
 }
 
+export interface LocaleResourceTranslationRuntimeValuesMode {
+  acceptEdits: string;
+  agent: string;
+  architect: string;
+  ask: string;
+  build: string;
+  bypassPermissions: string;
+  chat: string;
+  code: string;
+  default: string;
+  edit: string;
+  plan: string;
+  yolo: string;
+}
+
+export interface LocaleResourceTranslationRuntimeValuesPermissionMode {
+  acceptEdits: string;
+  allowAll: string;
+  always: string;
+  auto: string;
+  autoEdit: string;
+  bypassPermissions: string;
+  default: string;
+  dontAsk: string;
+  never: string;
+  onFailure: string;
+  onRequest: string;
+  plan: string;
+  readOnly: string;
+  untrusted: string;
+  yolo: string;
+}
+
+export interface LocaleResourceTranslationRuntimeValuesReasoningEffort {
+  high: string;
+  low: string;
+  medium: string;
+  minimal: string;
+  none: string;
+  xhigh: string;
+}
+
+export interface LocaleResourceTranslationRuntimeValues {
+  mode: LocaleResourceTranslationRuntimeValuesMode;
+  permissionMode: LocaleResourceTranslationRuntimeValuesPermissionMode;
+  reasoningEffort: LocaleResourceTranslationRuntimeValuesReasoningEffort;
+}
+
 export interface LocaleResourceTranslation {
   app: LocaleResourceTranslationApp;
   common: LocaleResourceTranslationCommon;
@@ -684,6 +732,7 @@ export interface LocaleResourceTranslation {
   projects: LocaleResourceTranslationProjects;
   ui: LocaleResourceTranslationUi;
   promptInput: LocaleResourceTranslationPromptInput;
+  runtimeValues: LocaleResourceTranslationRuntimeValues;
 }
 
 export interface LocaleResource {
