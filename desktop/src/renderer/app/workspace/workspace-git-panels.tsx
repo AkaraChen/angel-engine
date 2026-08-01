@@ -23,7 +23,10 @@ import {
   workspaceToolGitListWidthStorageKey,
   WorkspaceToolPanelSplitter,
 } from "@/app/workspace/workspace-tool-layout";
-import { WorkspaceToolPatchFileList } from "@/app/workspace/workspace-tool-patch-list";
+import {
+  WorkspaceToolPatchFileList,
+  WorkspaceToolPatchFileName,
+} from "@/app/workspace/workspace-tool-patch-list";
 import {
   buildWorkspaceToolPatchList,
   formatWorkspaceToolPatchFileName,
@@ -181,13 +184,11 @@ function WorkspaceGitDiffViewer({ file }: { file?: WorkspaceToolPatchFile }) {
     <div className="flex h-full min-h-0 flex-col bg-background">
       <div
         className="
-          flex h-9 shrink-0 items-center gap-2 border-b border-border-subtle
+          flex h-8 shrink-0 items-center gap-2 border-b border-border-subtle
           px-3 text-xs
         "
       >
-        <span className="min-w-0 flex-1 truncate font-medium" title={fileName}>
-          {fileName}
-        </span>
+        <WorkspaceToolPatchFileName name={fileName} />
         <WorkspaceToolPatchFileLineStats lineChanges={lineChanges} />
       </div>
       <div className="min-h-0 flex-1 overflow-auto">

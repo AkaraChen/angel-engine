@@ -111,19 +111,21 @@ function WorkspaceFileReadResultView({
     <div className="flex h-full min-h-0 flex-col">
       <div
         className="
-          flex h-9 shrink-0 items-center gap-2 border-b border-border-subtle
-          px-3 text-xs text-muted-foreground
+          flex h-8 shrink-0 items-center gap-2 border-b border-border-subtle
+          px-3 font-mono text-xs text-muted-foreground
         "
       >
         <span className="min-w-0 flex-1 truncate" title={result.path}>
           {result.path}
         </span>
-        <span>{formatBytes(result.size)}</span>
+        <span className="shrink-0 tabular-nums">
+          {formatBytes(result.size)}
+        </span>
       </div>
       <pre
         className="
-          min-h-0 flex-1 overflow-auto p-4 font-mono text-xs/5 whitespace-pre
-          text-foreground select-text
+          min-h-0 flex-1 overflow-auto bg-card p-4 font-mono text-xs/5
+          whitespace-pre text-foreground select-text
         "
       >
         {result.content}

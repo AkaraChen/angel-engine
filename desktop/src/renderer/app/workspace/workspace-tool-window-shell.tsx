@@ -20,13 +20,19 @@ export function WorkspaceToolWindowShell({
     <div className="flex min-h-0 flex-1 overflow-hidden">
       <aside
         className="
-          flex w-56 shrink-0 flex-col border-r border-border-subtle
-          bg-surface-1
+          flex w-56 shrink-0 flex-col border-r border-border-subtle bg-sidebar
         "
       >
+        {/*
+          The whole rail is draggable, not just the traffic-light strip: on a
+          tool window there is no title bar to grab, and the rail is the only
+          area with no dense content to hit by accident.
+        */}
         {trafficLightInset ? (
           <div className="h-12 shrink-0" data-electron-drag />
-        ) : null}
+        ) : (
+          <div className="h-2 shrink-0" data-electron-drag />
+        )}
         <WorkspaceToolTabRail orientation="vertical" />
         <div
           className="
@@ -35,7 +41,7 @@ export function WorkspaceToolWindowShell({
           "
         >
           <WorkspaceToolHeaderButton
-            icon={<DockIcon weight="duotone" />}
+            icon={<DockIcon weight="regular" />}
             label="Dock in sidebar"
             onClick={() => {
               void requestSurfaceHost("sidebar");
