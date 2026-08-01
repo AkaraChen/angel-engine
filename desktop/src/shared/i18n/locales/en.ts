@@ -96,7 +96,12 @@ export const en = {
     fleet: {
       allProjects: "All projects",
       disconnected: "Cannot reach the backend.",
-      empty: "No agents are active.",
+      emptySegments: {
+        all: "No agents are active.",
+        attention: "Nothing needs you right now.",
+        done: "Nothing has finished yet.",
+        running: "No agents are running.",
+      },
       filterProject: "Filter by project",
       filterSegments: "Filter fleet",
       groups: {
@@ -105,6 +110,14 @@ export const en = {
         running: "Running",
       },
       loading: "Loading activity",
+      noMatches: "No sessions match your search.",
+      reasons: {
+        approval: "Waiting on approval",
+        processExited: "Process exited",
+        question: "Asked a question",
+        runtimeError: "Runtime error",
+      },
+      search: "Search sessions",
       segments: {
         all: "All",
         attention: "Needs you",

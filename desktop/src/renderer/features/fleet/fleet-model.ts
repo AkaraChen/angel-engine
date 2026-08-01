@@ -1,6 +1,7 @@
 import type {
   Chat,
   ChatActivity,
+  ChatActivityReason,
   ChatActivityStatus,
 } from "@angel-engine/daemon-api/chat";
 import type { Project } from "@angel-engine/daemon-api/projects";
@@ -34,6 +35,8 @@ export interface FleetRow {
   failureMessage?: string;
   projectId?: string;
   projectName?: string;
+  /** Why the run reached this status; absent for plain `running`/`done`. */
+  reason?: ChatActivityReason;
   runId: string;
   runtime: string;
   status: ChatActivityStatus;
@@ -133,6 +136,7 @@ export function buildFleetRows({
       projectId: project?.id,
       projectName:
         project === undefined ? undefined : getProjectDisplayName(project.path),
+      reason: "reason" in activity ? activity.reason : undefined,
       runId: activity.runId,
       runtime: chat.runtime,
       status: activity.status,
@@ -159,12 +163,30 @@ function compareFleetRows(left: FleetRow, right: FleetRow): number {
 
 export function filterFleetRows(
   rows: FleetRow[],
-  { projectFilter, segment }: { projectFilter: string; segment: FleetSegment },
+  {
+    projectFilter,
+    search = "",
+    segment,
+  }: { projectFilter: string; search?: string; segment: FleetSegment },
 ): FleetRow[] {
+  const query = search.trim().toLocaleLowerCase();
   return rows.filter(
     (row) =>
       (segment === "all" || row.group === segment) &&
-      matchesProjectFilter(row, projectFilter),
+      matchesProjectFilter(row, projectFilter) &&
+      matchesSearch(row, query),
+  );
+}
+
+/**
+ * Searches the fields the row actually shows — title, project and worktree —
+ * so a hit is always visible in the row it filtered to.
+ */
+function matchesSearch(row: FleetRow, query: string): boolean {
+  if (query === "") return true;
+  return [row.title, row.projectName, row.worktreeName].some(
+    (value) =>
+      is.nonEmptyString(value) && value.toLocaleLowerCase().includes(query),
   );
 }
 

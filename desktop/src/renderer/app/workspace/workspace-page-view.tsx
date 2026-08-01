@@ -338,6 +338,7 @@ export const WorkspacePageView: FC<WorkspacePageViewProps> = ({
                   isMetadataPending={
                     chatsQuery.isPending || projectsQuery.isPending
                   }
+                  onNewChat={openDraftTabFromTabBar}
                   onOpenChat={openChatFromFleet}
                   projects={projects}
                 />

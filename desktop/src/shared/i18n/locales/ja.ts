@@ -96,7 +96,12 @@ export const ja = {
     fleet: {
       allProjects: "すべてのプロジェクト",
       disconnected: "バックエンドに接続できません。",
-      empty: "稼働中のエージェントはありません。",
+      emptySegments: {
+        all: "稼働中のエージェントはありません。",
+        attention: "今は対応が必要なものはありません。",
+        done: "まだ完了したものはありません。",
+        running: "実行中のエージェントはありません。",
+      },
       filterProject: "プロジェクトで絞り込む",
       filterSegments: "フリートを絞り込む",
       groups: {
@@ -105,6 +110,14 @@ export const ja = {
         running: "実行中",
       },
       loading: "アクティビティを読み込み中",
+      noMatches: "検索条件に一致するセッションはありません。",
+      reasons: {
+        approval: "承認待ち",
+        processExited: "プロセスが終了",
+        question: "質問があります",
+        runtimeError: "ランタイムエラー",
+      },
+      search: "セッションを検索",
       segments: {
         all: "すべて",
         attention: "対応が必要",

@@ -96,7 +96,12 @@ export const es = {
     fleet: {
       allProjects: "Todos los proyectos",
       disconnected: "No se puede conectar con el backend.",
-      empty: "No hay agentes activos.",
+      emptySegments: {
+        all: "No hay agentes activos.",
+        attention: "Ahora mismo nada necesita tu atención.",
+        done: "Todavía no ha terminado nada.",
+        running: "No hay agentes en curso.",
+      },
       filterProject: "Filtrar por proyecto",
       filterSegments: "Filtrar la flota",
       groups: {
@@ -105,6 +110,14 @@ export const es = {
         running: "En curso",
       },
       loading: "Cargando actividad",
+      noMatches: "Ninguna sesión coincide con tu búsqueda.",
+      reasons: {
+        approval: "Esperando aprobación",
+        processExited: "El proceso terminó",
+        question: "Hizo una pregunta",
+        runtimeError: "Error de ejecución",
+      },
+      search: "Buscar sesiones",
       segments: {
         all: "Todo",
         attention: "Te necesita",

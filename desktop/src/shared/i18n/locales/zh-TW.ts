@@ -95,7 +95,12 @@ export const zhTW = {
     fleet: {
       allProjects: "全部專案",
       disconnected: "無法連線後端。",
-      empty: "目前沒有進行中的 Agent。",
+      emptySegments: {
+        all: "目前沒有進行中的 Agent。",
+        attention: "目前沒有需要你處理的工作階段。",
+        done: "還沒有已完成的工作階段。",
+        running: "目前沒有執行中的 Agent。",
+      },
       filterProject: "依專案篩選",
       filterSegments: "篩選艦隊",
       groups: {
@@ -104,6 +109,14 @@ export const zhTW = {
         running: "執行中",
       },
       loading: "正在載入動態",
+      noMatches: "沒有符合的工作階段。",
+      reasons: {
+        approval: "等待授權",
+        processExited: "處理程序已結束",
+        question: "提出了問題",
+        runtimeError: "執行階段錯誤",
+      },
+      search: "搜尋工作階段",
       segments: {
         all: "全部",
         attention: "需要我",

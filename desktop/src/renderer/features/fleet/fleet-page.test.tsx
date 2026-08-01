@@ -59,19 +59,21 @@ function renderFleet(overrides: Partial<Parameters<typeof FleetPage>[0]> = {}) {
     defaultOptions: { queries: { retry: false } },
   });
   const onOpenChat = vi.fn();
+  const onNewChat = vi.fn();
   const result = render(
     <QueryClientProvider client={queryClient}>
       <FleetPage
         chats={[chat("chat-1", "Done chat")]}
         isMetadataError={false}
         isMetadataPending={false}
+        onNewChat={onNewChat}
         onOpenChat={onOpenChat}
         projects={[]}
         {...overrides}
       />
     </QueryClientProvider>,
   );
-  return { onOpenChat, queryClient, ...result };
+  return { onNewChat, onOpenChat, queryClient, ...result };
 }
 
 afterEach(() => {
@@ -130,14 +132,71 @@ describe("fleetPage", () => {
     renderFleet({ chats: [], isMetadataError: true });
 
     expect(await screen.findByText("fleet.disconnected")).toBeDefined();
-    expect(screen.queryByText("fleet.empty")).toBeNull();
+    expect(screen.queryByText("fleet.emptySegments.all")).toBeNull();
   });
 
   it("waits for chat metadata before calling the fleet empty", async () => {
     listActivity.mockResolvedValue({ items: [] });
     renderFleet({ chats: [], isMetadataPending: true });
 
-    expect(await screen.findByText("fleet.loading")).toBeDefined();
-    expect(screen.queryByText("fleet.empty")).toBeNull();
+    expect(
+      await screen.findByRole("status", { name: "fleet.loading" }),
+    ).toBeDefined();
+    expect(screen.queryByText("fleet.emptySegments.all")).toBeNull();
+  });
+
+  it("offers a way out of the empty segment it landed on", async () => {
+    listActivity.mockResolvedValue({ items: [] });
+    const { onNewChat } = renderFleet({ chats: [] });
+
+    expect(await screen.findByText("fleet.emptySegments.all")).toBeDefined();
+    fireEvent.click(screen.getByRole("button", { name: "workspace.newChat" }));
+
+    expect(onNewChat).toHaveBeenCalledTimes(1);
+  });
+
+  it("narrows the list to the search query", async () => {
+    listActivity.mockResolvedValue({
+      items: [
+        DONE_ACTIVITY,
+        {
+          attentionId: "run-2:done",
+          chatId: "chat-2",
+          runId: "run-2",
+          status: "done",
+          updatedAt: "2026-01-01T02:00:00.000Z",
+        },
+      ],
+    });
+    renderFleet({
+      chats: [chat("chat-1", "Done chat"), chat("chat-2", "Other work")],
+    });
+
+    expect(
+      await screen.findByRole("button", { name: /Done chat/ }),
+    ).toBeDefined();
+
+    fireEvent.change(screen.getByRole("searchbox", { name: "fleet.search" }), {
+      target: { value: "other" },
+    });
+
+    expect(screen.queryByRole("button", { name: /Done chat/ })).toBeNull();
+    expect(screen.getByRole("button", { name: /Other work/ })).toBeDefined();
+  });
+
+  it("tells the user the search came up empty rather than the fleet", async () => {
+    listActivity.mockResolvedValue({ items: [DONE_ACTIVITY] });
+    renderFleet();
+
+    expect(
+      await screen.findByRole("button", { name: /Done chat/ }),
+    ).toBeDefined();
+
+    fireEvent.change(screen.getByRole("searchbox", { name: "fleet.search" }), {
+      target: { value: "nothing matches this" },
+    });
+
+    expect(screen.getByText("fleet.noMatches")).toBeDefined();
+    expect(screen.queryByText("fleet.emptySegments.all")).toBeNull();
   });
 });
