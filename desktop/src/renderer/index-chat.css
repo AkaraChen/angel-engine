@@ -25,14 +25,18 @@
   /* Links carry the accent at rest and only earn an underline on hover, so a
      paragraph dense with references does not read as a striped block. */
   .chat-markdown a {
-    color: var(--primary);
+    color: var(--primary-strong);
     text-decoration: none;
     text-underline-offset: 2px;
   }
 
   .chat-markdown a:hover {
     text-decoration: underline;
-    text-decoration-color: color-mix(in oklch, var(--primary) 70%, transparent);
+    text-decoration-color: color-mix(
+      in oklch,
+      var(--primary-strong) 70%,
+      transparent
+    );
   }
 
   /* A plain hairline rule, not a rounded tinted callout card. */

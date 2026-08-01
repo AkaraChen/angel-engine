@@ -208,7 +208,7 @@ export function MobileViewSettings() {
           shareUrl !== null ? (
             <a
               className="
-                text-primary underline-offset-4
+                text-primary-strong underline-offset-4
                 hover:underline
               "
               href={shareUrl}

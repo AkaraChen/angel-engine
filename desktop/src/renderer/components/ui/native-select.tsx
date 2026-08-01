@@ -36,7 +36,7 @@ function NativeSelect({
             dark:bg-surface-1 text-sm
             transition-[color,box-shadow,background-color,border-color]
             duration-150 ease-standard outline-none select-none
-            selection:bg-primary selection:text-primary-foreground
+            selection:bg-primary-strong selection:text-primary-foreground
             placeholder:text-muted-foreground
             focus-visible:border-primary focus-visible:ring-2
             focus-visible:ring-ring/45

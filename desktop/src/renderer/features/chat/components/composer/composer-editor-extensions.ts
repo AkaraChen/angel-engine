@@ -395,12 +395,12 @@ function mentionPrefix(kind: unknown) {
 
 function mentionClass(kind: unknown) {
   if (kind === "file") {
-    return "inline-flex items-center gap-1 font-mono text-primary decoration-clone";
+    return "inline-flex items-center gap-1 font-mono text-primary-strong decoration-clone";
   }
   if (kind === "command") {
-    return "font-mono text-primary decoration-clone";
+    return "font-mono text-primary-strong decoration-clone";
   }
-  return "rounded-sm bg-primary/10 px-1 py-0.5 text-primary decoration-clone";
+  return "rounded-sm bg-primary/10 px-1 py-0.5 text-primary-strong decoration-clone";
 }
 
 function mentionTooltip(kind: unknown, description: unknown) {

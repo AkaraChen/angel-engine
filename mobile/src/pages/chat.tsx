@@ -417,7 +417,7 @@ function ErrorState({ onRetry }: { onRetry: () => void }) {
       <button
         className="
           inline-flex h-11 items-center rounded-full px-4 text-sm font-medium
-          text-primary underline underline-offset-4
+          text-primary-strong underline underline-offset-4
         "
         onClick={onRetry}
         type="button"
