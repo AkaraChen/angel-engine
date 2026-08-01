@@ -45,36 +45,6 @@
     padding-left: calc(var(--spacing) * 3.5);
   }
 
-  /* Heading levels separate by weight, not by size: nothing in a message body
-     grows past text-lg, so a long answer keeps one reading rhythm. */
-  .chat-markdown h1,
-  .chat-markdown h2,
-  .chat-markdown h3 {
-    font-family: var(--app-font-display);
-    letter-spacing: -0.015em;
-  }
-
-  .chat-markdown h1 {
-    font-size: 1.0625em;
-    font-weight: 600;
-    line-height: 1.4;
-    margin-block: calc(var(--spacing) * 1) calc(var(--spacing) * 3);
-  }
-
-  .chat-markdown h2 {
-    font-size: 1em;
-    font-weight: 600;
-    line-height: 1.45;
-    margin-block: calc(var(--spacing) * 6) calc(var(--spacing) * 2);
-  }
-
-  .chat-markdown h3 {
-    font-size: 1em;
-    font-weight: 500;
-    line-height: 1.5;
-    margin-block: calc(var(--spacing) * 4) calc(var(--spacing) * 1.5);
-  }
-
   .chat-markdown hr {
     border-color: var(--border);
     margin-block: calc(var(--spacing) * 5);
@@ -133,16 +103,6 @@
     font-weight: 600;
   }
 
-  .chat-markdown table {
-    border: 1px solid var(--border-subtle);
-    border-collapse: separate;
-    border-radius: var(--radius-lg);
-    border-spacing: 0;
-    margin-block: calc(var(--spacing) * 4);
-    overflow: hidden;
-    width: 100%;
-  }
-
   .chat-markdown td,
   .chat-markdown th {
     border-bottom: 1px solid var(--border-subtle);
@@ -161,12 +121,6 @@
        columns from jittering as a table streams in row by row. */
     font-variant-numeric: tabular-nums;
     vertical-align: top;
-  }
-
-  .chat-markdown th {
-    background-color: var(--surface-1);
-    font-weight: 500;
-    text-align: left;
   }
 
   .chat-markdown [data-streamdown="inline-code"] {
@@ -277,10 +231,90 @@
   }
 }
 
-/* Chat markdown code blocks. Deliberately unlayered: streamdown bakes its own
-   Tailwind utility classes (bg-sidebar, p-2, border, …) into these elements,
-   and utilities are cascaded after @layer components — unlayered author rules
-   are the only way to reliably restyle them without !important. */
+/* Everything from here down is deliberately unlayered: streamdown bakes its own
+   Tailwind utility classes (text-2xl, font-semibold, bg-sidebar, p-2, border, …)
+   into these elements, and utilities cascade after @layer components — unlayered
+   author rules are the only way to reliably restyle them without !important.
+   Anything that has to beat a baked utility belongs in this section, not in the
+   @layer components block above. */
+
+/* Heading levels separate by weight, not by size: nothing in a message body
+   grows past text-lg, so a long answer keeps one reading rhythm. Streamdown
+   ships text-2xl/text-xl on these, which is what makes the unlayered placement
+   load-bearing rather than stylistic. */
+.chat-markdown h1,
+.chat-markdown h2,
+.chat-markdown h3 {
+  font-family: var(--app-font-display);
+  letter-spacing: -0.015em;
+}
+
+.chat-markdown h1 {
+  font-size: 1.0625em;
+  font-weight: 600;
+  line-height: 1.4;
+  margin-block: calc(var(--spacing) * 1) calc(var(--spacing) * 3);
+}
+
+.chat-markdown h2 {
+  font-size: 1em;
+  font-weight: 600;
+  line-height: 1.45;
+  margin-block: calc(var(--spacing) * 6) calc(var(--spacing) * 2);
+}
+
+.chat-markdown h3 {
+  font-size: 1em;
+  font-weight: 500;
+  line-height: 1.5;
+  margin-block: calc(var(--spacing) * 4) calc(var(--spacing) * 1.5);
+}
+
+/* Streamdown nests the table in two framed containers (an outer shell holding
+   the copy/download controls, and an inner scroll box), each with its own
+   border. Stacked with a border on the table itself that reads as three nested
+   boxes, so the outer shell goes flat and the scroll box keeps the one
+   hairline. */
+.chat-markdown [data-streamdown="table-wrapper"] {
+  background-color: transparent;
+  border: 0;
+  padding: 0;
+}
+
+/* Control row first, scroll box second. The controls fade in on hover like the
+   code-block ones instead of holding an empty band above every table. */
+.chat-markdown [data-streamdown="table-wrapper"] > div:first-child {
+  opacity: 0;
+  transition: opacity 150ms var(--ease-standard);
+}
+
+.chat-markdown [data-streamdown="table-wrapper"]:hover > div:first-child,
+.chat-markdown
+  [data-streamdown="table-wrapper"]
+  > div:first-child:focus-within {
+  opacity: 1;
+}
+
+.chat-markdown [data-streamdown="table-wrapper"] > div:last-child {
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+}
+
+.chat-markdown table {
+  border: 0;
+  border-collapse: collapse;
+  margin: 0;
+  width: 100%;
+}
+
+.chat-markdown th {
+  background-color: var(--surface-1);
+  font-size: 1em;
+  font-weight: 500;
+  text-align: left;
+}
+
+/* Chat markdown code blocks. */
 .chat-markdown [data-streamdown="code-block"] {
   background-color: var(--surface-1);
   border: 1px solid var(--border-subtle);
@@ -328,6 +362,21 @@
 
 .chat-markdown [data-streamdown="code-block-body"] code > span {
   display: block;
+}
+
+/* Streamdown wraps the code actions in a sticky row it pulls over the header
+   with a negative margin, but that utility never lands in the generated CSS
+   here, so the row claims a full 32px band between the header and the first
+   line of code. Take it out of flow explicitly and park it in the header. */
+.chat-markdown [data-streamdown="code-block"]
+  > div:has(> [data-streamdown="code-block-actions"]) {
+  align-items: center;
+  display: flex;
+  height: calc(var(--spacing) * 8);
+  margin: 0;
+  position: absolute;
+  right: 0;
+  top: 0;
 }
 
 /* The copy affordance stays out of the reading surface until the block is
