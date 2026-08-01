@@ -300,7 +300,7 @@ describe("homePage", () => {
     expect(await screen.findByText("the runtime exited")).toBeDefined();
   });
 
-  it("shows the error state when the daemon is unreachable", async () => {
+  it("shows a single offline state when the daemon is unreachable", async () => {
     vi.stubGlobal(
       "fetch",
       vi.fn(async () => Promise.reject(new Error("no daemon"))),
@@ -309,5 +309,19 @@ describe("homePage", () => {
     renderHome();
 
     expect(await screen.findByText("Couldn't load chats")).toBeDefined();
+    expect(
+      screen.getByText("The daemon may be offline or unreachable."),
+    ).toBeDefined();
+    // Same outage used to stack an activity banner + a second Try again.
+    expect(screen.queryByText("Couldn't load activity")).toBeNull();
+    expect(screen.getAllByRole("button", { name: "Try again" })).toHaveLength(
+      1,
+    );
+    // New chat stays visible but disabled so it does not look actionable.
+    const newChat = screen.getByRole("button", { name: /New chat/ });
+    expect(newChat).toHaveProperty("disabled", true);
+    expect(newChat.getAttribute("title")).toBe(
+      "The daemon may be offline or unreachable.",
+    );
   });
 });
