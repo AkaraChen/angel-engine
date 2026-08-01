@@ -10,7 +10,10 @@ import {
 } from "@phosphor-icons/react";
 import is from "@sindresorhus/is";
 import { useTranslation } from "react-i18next";
-import { getProjectDisplayName } from "@/app/workspace/workspace-display";
+import {
+  displayChatTitle,
+  getProjectDisplayName,
+} from "@/app/workspace/workspace-display";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { NativeSelect } from "@/components/ui/native-select";
@@ -154,12 +157,13 @@ export function ArchivedChatRow({
   const projectName = project
     ? getProjectDisplayName(project.path)
     : t("settings.archived.noProject");
+  const title = displayChatTitle(chat.title, t);
 
   return (
     <SettingsListRow selected={bulkMode && selected}>
       {bulkMode ? (
         <Checkbox
-          aria-label={chat.title}
+          aria-label={title}
           checked={selected}
           className="mt-0.5"
           disabled={disabled}
@@ -170,9 +174,7 @@ export function ArchivedChatRow({
       )}
       <div className="min-w-0 flex-1">
         <div className="flex min-w-0 items-center gap-2">
-          <span className="min-w-0 truncate text-sm font-medium">
-            {chat.title}
-          </span>
+          <span className="min-w-0 truncate text-sm font-medium">{title}</span>
           {isWorktree ? (
             <span
               className="

@@ -8,6 +8,7 @@ import {
   agentRuntimeIconSvg,
   agentRuntimeLabel,
 } from "@/features/agents/agent-runtime-icons";
+import { displayChatTitle } from "@/app/workspace/workspace-display";
 import { ChatRunningPulse } from "@/features/chat/components/chat-running-pulse";
 import { useChatAttention } from "@/features/chat/state/chat-run-store";
 import { cn } from "@/platform/utils";
@@ -175,7 +176,7 @@ function ChatTab({
 }): ReactElement {
   const { t } = useTranslation();
   const attention = useChatAttention(chat.id);
-  const title = chat.title === "New chat" ? t("workspace.newChat") : chat.title;
+  const title = displayChatTitle(chat.title, t);
 
   return (
     <div

@@ -10,6 +10,7 @@ import { AnimatePresence, m } from "framer-motion";
 import { useMemo } from "react";
 
 import { useTranslation } from "react-i18next";
+import { displayChatTitle } from "@/app/workspace/workspace-display";
 import { useWorkspaceUiStore } from "@/app/workspace/workspace-ui-store";
 import {
   SidebarGroup,
@@ -239,11 +240,4 @@ function startOfLocalDay(date: Date): number {
     date.getMonth(),
     date.getDate(),
   ).getTime();
-}
-
-function displayChatTitle(
-  title: string,
-  t: (key: string, options?: Record<string, unknown>) => string,
-) {
-  return title === "New chat" ? t("workspace.newChat") : title;
 }

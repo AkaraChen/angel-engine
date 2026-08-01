@@ -31,9 +31,17 @@ export function getProjectDisplayName(projectPath: string) {
   return parts[parts.length - 1] ?? projectPath;
 }
 
+/**
+ * Default chat titles are stored as the English sentinel `"New chat"` (or empty
+ * for unnamed). Localize at display time so every surface stays consistent.
+ */
 export function displayChatTitle(
   title: string,
   t: (key: string, options?: Record<string, unknown>) => string,
 ) {
-  return title === "New chat" ? t("workspace.newChat") : title;
+  const trimmed = title.trim();
+  if (trimmed.length === 0 || trimmed === "New chat") {
+    return t("workspace.newChat");
+  }
+  return title;
 }
