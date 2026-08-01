@@ -1,11 +1,13 @@
 import type { AgentValueOption } from "@angel-engine/daemon-api/agents";
 import type { ChatRuntimeConfigOption } from "@angel-engine/daemon-api/chat";
+import type { RuntimeValueLabeler } from "@/app/workspace/runtime-value-labels";
 
 const NO_CONFIG_OVERRIDE_VALUE = "__angel_no_override__";
 
 export function runtimeConfigOptionsToAgentOptions(
   options: ChatRuntimeConfigOption[] | undefined,
   defaultLabel: string,
+  localizeValue: RuntimeValueLabeler,
 ): AgentValueOption[] {
   const defaultOption: AgentValueOption = {
     label: defaultLabel,
@@ -18,7 +20,7 @@ export function runtimeConfigOptionsToAgentOptions(
     return [
       {
         description: option.description ?? undefined,
-        label: option.label,
+        label: localizeValue(value, option.label),
         value,
       },
     ];
@@ -41,6 +43,7 @@ export function ensureConfigOption(
   value: string | null | undefined,
   defaultLabel: string,
   configDefaultLabel: string,
+  localizeValue: RuntimeValueLabeler,
 ) {
   const normalizedValue = normalizeConfigDisplayValue(value);
   if (options.some((option) => option.value === normalizedValue)) {
@@ -52,7 +55,10 @@ export function ensureConfigOption(
       label:
         normalizedValue === NO_CONFIG_OVERRIDE_VALUE
           ? defaultLabel
-          : labelFromConfigValue(normalizedValue, configDefaultLabel),
+          : localizeValue(
+              normalizedValue,
+              labelFromConfigValue(normalizedValue, configDefaultLabel),
+            ),
       value: normalizedValue,
     },
   ];

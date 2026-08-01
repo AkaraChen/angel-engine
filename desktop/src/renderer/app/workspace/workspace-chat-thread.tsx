@@ -25,6 +25,7 @@ import {
   runtimeConfigOptionsToAgentOptions,
   selectedConfigOverride,
 } from "@/app/workspace/chat-runtime-options";
+import { useRuntimeValueLabelers } from "@/app/workspace/runtime-value-labels";
 import {
   getErrorMessage,
   getProjectDisplayName,
@@ -212,6 +213,7 @@ function ChatThreadRuntime({
   slotKey,
 }: ChatThreadRuntimeProps) {
   const { t } = useTranslation();
+  const runtimeValueLabelers = useRuntimeValueLabelers();
   const setRunMode = useChatRunStore((state) => state.setMode);
   const setRunPermissionMode = useChatRunStore(
     (state) => state.setPermissionMode,
@@ -281,37 +283,45 @@ function ChatThreadRuntime({
     runtimeConfigOptionsToAgentOptions(
       runtimeConfig?.models,
       t("common.useDefault"),
+      runtimeValueLabelers.model,
     ),
     activeModel,
     t("common.useDefault"),
     t("common.default"),
+    runtimeValueLabelers.model,
   );
   const reasoningEffortOptions = ensureConfigOption(
     runtimeConfigOptionsToAgentOptions(
       runtimeConfig?.reasoningEfforts,
       t("common.useDefault"),
+      runtimeValueLabelers.reasoningEffort,
     ),
     activeReasoningEffort,
     t("common.useDefault"),
     t("common.default"),
+    runtimeValueLabelers.reasoningEffort,
   );
   const modeOptions = ensureConfigOption(
     runtimeConfigOptionsToAgentOptions(
       runtimeConfig?.modes,
       t("common.useDefault"),
+      runtimeValueLabelers.mode,
     ),
     activeMode,
     t("common.useDefault"),
     t("common.default"),
+    runtimeValueLabelers.mode,
   );
   const permissionModeOptions = ensureConfigOption(
     runtimeConfigOptionsToAgentOptions(
       runtimeConfig?.permissionModes,
       t("common.useDefault"),
+      runtimeValueLabelers.permissionMode,
     ),
     activePermissionMode,
     t("common.useDefault"),
     t("common.default"),
+    runtimeValueLabelers.permissionMode,
   );
   const modelOptionCount = runtimeConfigOptionCount(runtimeConfig?.models);
   const reasoningEffortOptionCount = runtimeConfigOptionCount(
