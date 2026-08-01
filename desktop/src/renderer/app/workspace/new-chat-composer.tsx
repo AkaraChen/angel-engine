@@ -380,6 +380,7 @@ export function NewChatComposer({
           >
             <NewChatRecentSection
               chats={chats}
+              isProjectMode={isProjectWorkspaceMode(workspaceMode)}
               onCreateProject={() => void onCreateProject()}
               onOpenChat={onOpenChat}
               projects={projects}

@@ -22,15 +22,17 @@ const RECENT_CHAT_LIMIT = 4;
 
 export function NewChatRecentSection({
   chats,
+  isProjectMode,
   onCreateProject,
   onOpenChat,
   projects,
 }: {
   chats: Chat[];
+  isProjectMode: boolean;
   onCreateProject: () => void;
   onOpenChat: (chat: Chat) => void;
   projects: Project[];
-}): ReactElement {
+}): ReactElement | null {
   const { t } = useTranslation();
   const [expanded, setExpanded] = useState(false);
   const projectPaths = useMemo(
@@ -50,6 +52,8 @@ export function NewChatRecentSection({
     ? allRecentChats
     : allRecentChats.slice(0, RECENT_CHAT_LIMIT);
   const hiddenCount = allRecentChats.length - RECENT_CHAT_LIMIT;
+
+  if (recentChats.length === 0 && !isProjectMode) return null;
 
   return (
     <section className="mt-10 w-full">

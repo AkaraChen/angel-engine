@@ -53,6 +53,7 @@ describe("NewChatRecentSection", () => {
             updatedAt: "2026-01-07T00:00:00Z",
           }),
         ]}
+        isProjectMode
         onCreateProject={vi.fn()}
         onOpenChat={vi.fn()}
         projects={projects}
@@ -80,6 +81,7 @@ describe("NewChatRecentSection", () => {
           chat({ id: "4", title: "third", updatedAt: "2026-01-04T00:00:00Z" }),
           chat({ id: "5", title: "fourth", updatedAt: "2026-01-03T00:00:00Z" }),
         ]}
+        isProjectMode
         onCreateProject={vi.fn()}
         onOpenChat={vi.fn()}
         projects={projects}
@@ -115,6 +117,7 @@ describe("NewChatRecentSection", () => {
             updatedAt: "2026-01-01T00:00:00Z",
           }),
         ]}
+        isProjectMode
         onCreateProject={vi.fn()}
         onOpenChat={vi.fn()}
         projects={projects}
@@ -129,6 +132,7 @@ describe("NewChatRecentSection", () => {
     render(
       <NewChatRecentSection
         chats={[]}
+        isProjectMode
         onCreateProject={onCreateProject}
         onOpenChat={vi.fn()}
         projects={projects}
@@ -138,5 +142,21 @@ describe("NewChatRecentSection", () => {
     expect(screen.getByText("thread.empty.recentEmpty")).toBeTruthy();
     screen.getByRole("button").click();
     expect(onCreateProject).toHaveBeenCalledOnce();
+  });
+
+  it("hides the project empty state in chat mode", () => {
+    const { container } = render(
+      <NewChatRecentSection
+        chats={[]}
+        isProjectMode={false}
+        onCreateProject={vi.fn()}
+        onOpenChat={vi.fn()}
+        projects={projects}
+      />,
+    );
+
+    expect(container.innerHTML).toBe("");
+    expect(screen.queryByText("thread.empty.recentEmpty")).toBeNull();
+    expect(screen.queryByRole("button")).toBeNull();
   });
 });
