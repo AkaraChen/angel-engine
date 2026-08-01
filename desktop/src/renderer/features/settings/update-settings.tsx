@@ -109,9 +109,32 @@ export function UpdateSettings() {
           </span>
         </span>
       </SettingsRow>
-      <SettingsRow
-        after={
-          status.state === "downloaded" ? (
+      <SettingsRow after={null}>
+        <span
+          className="
+            flex min-w-0 flex-1 flex-wrap items-center justify-between gap-3
+          "
+        >
+          <span
+            className={cn(
+              `
+                flex min-w-56 flex-1 items-start gap-2 rounded-lg border
+                px-2.5 py-1.5 text-xs leading-[1.55]
+              `,
+              updateToneClassName[tone],
+            )}
+          >
+            <ToneIcon
+              className={cn(
+                "mt-px size-3.5 shrink-0",
+                busy && "animate-spin motion-reduce:animate-none",
+              )}
+            />
+            <span className="min-w-0 wrap-break-word">
+              {updateStateDescription(status, t)}
+            </span>
+          </span>
+          {status.state === "downloaded" ? (
             <Button
               onClick={() => void window.desktopWindow.installUpdate()}
               type="button"
@@ -127,33 +150,7 @@ export function UpdateSettings() {
             >
               {t("settings.updates.checkButton")}
             </Button>
-          )
-        }
-        align="start"
-      >
-        <span className="min-w-0 flex-1">
-          <span className="block text-sm leading-snug font-medium">
-            {t("settings.updates.checkTitle")}
-          </span>
-          <span
-            className={cn(
-              `
-                mt-2 flex items-start gap-2 rounded-lg border px-2.5 py-1.5
-                text-xs leading-[1.55]
-              `,
-              updateToneClassName[tone],
-            )}
-          >
-            <ToneIcon
-              className={cn(
-                "mt-px size-3.5 shrink-0",
-                busy && "animate-spin motion-reduce:animate-none",
-              )}
-            />
-            <span className="min-w-0 wrap-break-word">
-              {updateStateDescription(status, t)}
-            </span>
-          </span>
+          )}
         </span>
       </SettingsRow>
     </SettingsGroup>
