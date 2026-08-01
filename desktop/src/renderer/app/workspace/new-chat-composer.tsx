@@ -49,7 +49,8 @@ import { cn } from "@/platform/utils";
  */
 const newChatInputGroupClassName = cn(
   `
-    overflow-visible rounded-2xl border-border bg-card shadow-panel
+    overflow-visible rounded-2xl border-(--workspace-composer-border) bg-card
+    shadow-panel
     transition-[border-color,box-shadow,background-color] duration-150
     ease-standard
     has-[textarea]:rounded-2xl

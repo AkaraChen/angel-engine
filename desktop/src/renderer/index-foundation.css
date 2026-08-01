@@ -233,6 +233,7 @@
      headline; the compact modes below pull it back to app scale. */
   --workspace-new-chat-title-size: 2.25rem;
   --workspace-composer-line-height: 1.5rem;
+  --workspace-composer-border: var(--border);
   --workspace-composer-min-height: 4.2rem;
   --workspace-composer-text-size: 0.9375rem;
   --workspace-content-max-width: 48rem;
@@ -355,6 +356,9 @@
   --border: #1e1e1e;
   --border-subtle: #191919;
   --border-strong: #2b2b2b;
+  /* 3.21:1 against the workspace ground, so the primary text-entry control
+     keeps a visible boundary without raising every dark-theme hairline. */
+  --workspace-composer-border: #626262;
   --input: #1e1e1e;
   --ring: #69a3ff;
   --dot-grid: #2b2b2b;
