@@ -256,5 +256,3 @@ export function ProjectSidebarSection({
     </SidebarGroup>
   );
 }
-
-

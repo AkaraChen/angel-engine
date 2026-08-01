@@ -160,8 +160,12 @@ describe("fleetPage", () => {
     renderFleet({ chats: [] });
 
     expect(await screen.findByText("fleet.emptySegments.all")).toBeDefined();
-    expect(screen.queryByRole("group", { name: "fleet.filterSegments" })).toBeNull();
-    expect(screen.queryByRole("searchbox", { name: "fleet.search" })).toBeNull();
+    expect(
+      screen.queryByRole("group", { name: "fleet.filterSegments" }),
+    ).toBeNull();
+    expect(
+      screen.queryByRole("searchbox", { name: "fleet.search" }),
+    ).toBeNull();
   });
 
   it("keeps filter and search when rows exist", async () => {
@@ -174,7 +178,9 @@ describe("fleetPage", () => {
     expect(
       screen.getByRole("group", { name: "fleet.filterSegments" }),
     ).toBeDefined();
-    expect(screen.getByRole("searchbox", { name: "fleet.search" })).toBeDefined();
+    expect(
+      screen.getByRole("searchbox", { name: "fleet.search" }),
+    ).toBeDefined();
   });
 
   it("narrows the list to the search query", async () => {
