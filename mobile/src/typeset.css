@@ -57,6 +57,7 @@
       color: var(--color-foreground, currentColor);
       font-family: var(--typeset-font-heading);
       font-weight: 600;
+      letter-spacing: -0.025em;
       margin-block-end: 0;
     }
     &:where(h1) {
@@ -491,12 +492,13 @@
 
 @layer components {
   .typeset-chat {
-    --typeset-size: 0.875em;
-    --typeset-leading: 1.6;
+    --typeset-leading: 1.72;
     --typeset-flow: 0.75em;
-    --typeset-font-mono:
-      ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono",
-      monospace;
+    /* The base `.typeset` scales body copy up by 1.125 below 48rem, which is
+       right for a full-width article and wrong inside a chat bubble: it would
+       push the transcript past the `text-sm` the bubble is sized for. Message
+       prose renders at exactly the bubble's own size instead. */
+    font-size: 1em;
   }
 
   /* Hide the bare Streamdown code-block language header inside chat bubbles.

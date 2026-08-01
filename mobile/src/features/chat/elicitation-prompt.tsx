@@ -20,6 +20,16 @@ interface ElicitationPromptProps {
   onRespond: (response: ChatElicitationResponse) => void;
 }
 
+/**
+ * Approval controls stack into a column on a phone. At 375px the four
+ * permission buttons never fit on one line, and wrapping them was what let the
+ * last button hang past the transcript's edge (fab6e3c) once a label grew — a
+ * column has no horizontal overflow to give away. They go back to a row from
+ * `sm` up, where the card is wide enough for it.
+ */
+const ACTION_ROW = "flex flex-col gap-2 sm:flex-row sm:flex-wrap";
+const ACTION_BUTTON = "h-11 w-full min-w-0 sm:w-auto";
+
 function formatKind(
   kind: DaemonElicitation["kind"],
   t: TFunction<"translation", undefined>,
@@ -50,7 +60,12 @@ export function ElicitationPrompt({
   onRespond,
 }: ElicitationPromptProps) {
   return (
-    <div className="w-full max-w-[calc(100vw_-_2rem)] min-w-0 overflow-hidden rounded-xl bg-card p-3">
+    <div
+      className="
+        w-full max-w-[calc(100vw_-_2rem)] min-w-0 overflow-hidden rounded-xl
+        border border-border-subtle bg-card p-3 shadow-xs
+      "
+    >
       <ElicitationHeader elicitation={elicitation} />
 
       {elicitation.body !== null && elicitation.body !== undefined ? (
@@ -58,7 +73,7 @@ export function ElicitationPrompt({
         // break opportunities, so `pre-wrap` alone would run them off screen.
         <p
           className="
-            mt-1 max-h-48 overflow-y-auto text-sm wrap-anywhere
+            mt-1 max-h-48 overflow-y-auto font-mono text-xs wrap-anywhere
             whitespace-pre-wrap text-muted-foreground
           "
         >
@@ -122,27 +137,30 @@ function PermissionActions({
 }) {
   const { t } = useTranslation();
   return (
-    <div className="flex flex-wrap gap-2">
-      <Button onClick={() => onRespond({ type: "allow" })} size="sm">
+    <div className={ACTION_ROW}>
+      <Button
+        className={ACTION_BUTTON}
+        onClick={() => onRespond({ type: "allow" })}
+      >
         {t("elicitation.allow")}
       </Button>
       <Button
+        className={ACTION_BUTTON}
         onClick={() => onRespond({ type: "allowForSession" })}
-        size="sm"
         variant="outline"
       >
         {t("elicitation.allowForSession")}
       </Button>
       <Button
+        className={ACTION_BUTTON}
         onClick={() => onRespond({ type: "deny" })}
-        size="sm"
         variant="outline"
       >
         {t("elicitation.deny")}
       </Button>
       <Button
+        className={ACTION_BUTTON}
         onClick={() => onRespond({ type: "cancel" })}
-        size="sm"
         variant="ghost"
       >
         {t("common.cancel")}
@@ -186,15 +204,19 @@ function QuestionForm({
           value={answers[question.id]}
         />
       ))}
-      <div className="flex flex-wrap justify-end gap-2">
+      <div className={cn(ACTION_ROW, "sm:justify-end")}>
         <Button
+          className={ACTION_BUTTON}
           onClick={() => onRespond({ type: "cancel" })}
-          size="sm"
           variant="ghost"
         >
           {t("common.cancel")}
         </Button>
-        <Button disabled={!canSubmit} onClick={submit} size="sm">
+        <Button
+          className={ACTION_BUTTON}
+          disabled={!canSubmit}
+          onClick={submit}
+        >
           {t("elicitation.submit")}
         </Button>
       </div>
@@ -243,9 +265,9 @@ function QuestionInput({
             <button
               aria-pressed={selectedOptionLabel === option.label}
               className={cn(
-                "w-full min-w-0 rounded-md border border-border bg-background px-3 py-2 text-left text-sm wrap-anywhere transition-colors hover:bg-accent",
+                "w-full min-w-0 rounded-lg border border-border bg-background px-3 py-2.5 text-left text-sm wrap-anywhere transition-colors duration-150 hover:bg-accent",
                 selectedOptionLabel === option.label &&
-                  "border-primary/35 bg-primary/10",
+                  "border-primary/35 bg-primary-soft",
               )}
               key={option.label}
               onClick={() => {
@@ -267,8 +289,8 @@ function QuestionInput({
             <button
               aria-pressed={selectedOther}
               className={cn(
-                "w-full min-w-0 rounded-md border border-border bg-background px-3 py-2 text-left text-sm wrap-anywhere transition-colors hover:bg-accent",
-                selectedOther && "border-primary/35 bg-primary/10",
+                "w-full min-w-0 rounded-lg border border-border bg-background px-3 py-2.5 text-left text-sm wrap-anywhere transition-colors duration-150 hover:bg-accent",
+                selectedOther && "border-primary/35 bg-primary-soft",
               )}
               onClick={() => {
                 setSelection({ type: "other" });
@@ -328,15 +350,19 @@ function TextAnswerForm({
         onChange={(event) => setValue(event.target.value)}
         value={value}
       />
-      <div className="flex flex-wrap justify-end gap-2">
+      <div className={cn(ACTION_ROW, "sm:justify-end")}>
         <Button
+          className={ACTION_BUTTON}
           onClick={() => onRespond({ type: "cancel" })}
-          size="sm"
           variant="ghost"
         >
           {t("common.cancel")}
         </Button>
-        <Button disabled={!canSubmit} onClick={submit} size="sm">
+        <Button
+          className={ACTION_BUTTON}
+          disabled={!canSubmit}
+          onClick={submit}
+        >
           {t("elicitation.submit")}
         </Button>
       </div>
@@ -351,23 +377,23 @@ function DynamicToolActions({
 }) {
   const { t } = useTranslation();
   return (
-    <div className="flex flex-wrap gap-2">
+    <div className={ACTION_ROW}>
       <Button
+        className={ACTION_BUTTON}
         onClick={() => onRespond({ type: "dynamicToolResult", success: true })}
-        size="sm"
       >
         {t("elicitation.allow")}
       </Button>
       <Button
+        className={ACTION_BUTTON}
         onClick={() => onRespond({ type: "dynamicToolResult", success: false })}
-        size="sm"
         variant="outline"
       >
         {t("elicitation.deny")}
       </Button>
       <Button
+        className={ACTION_BUTTON}
         onClick={() => onRespond({ type: "cancel" })}
-        size="sm"
         variant="ghost"
       >
         {t("common.cancel")}
@@ -383,13 +409,16 @@ function ExternalFlowActions({
 }) {
   const { t } = useTranslation();
   return (
-    <div className="flex flex-wrap gap-2">
-      <Button onClick={() => onRespond({ type: "externalComplete" })} size="sm">
+    <div className={ACTION_ROW}>
+      <Button
+        className={ACTION_BUTTON}
+        onClick={() => onRespond({ type: "externalComplete" })}
+      >
         {t("elicitation.submit")}
       </Button>
       <Button
+        className={ACTION_BUTTON}
         onClick={() => onRespond({ type: "cancel" })}
-        size="sm"
         variant="ghost"
       >
         {t("common.cancel")}

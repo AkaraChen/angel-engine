@@ -98,7 +98,7 @@ export function HomePage() {
       chatsQuery.data.length > 0 ? (
         <div
           aria-label={t("home.filterSegments")}
-          className="flex shrink-0 gap-1 overflow-x-auto px-4 py-2"
+          className="flex shrink-0 gap-1.5 overflow-x-auto px-4 py-2"
           role="group"
         >
           {CHAT_ACTIVITY_SEGMENTS.map((option) => (
@@ -106,10 +106,13 @@ export function HomePage() {
               aria-pressed={segment === option}
               className={cn(
                 `
-                  flex h-8 shrink-0 items-center gap-1.5 rounded-full px-3
-                  text-xs font-medium text-muted-foreground
+                  flex h-11 shrink-0 items-center gap-1.5 rounded-full border
+                  border-transparent px-4 text-sm font-medium
+                  text-muted-foreground transition-colors duration-150
                 `,
-                segment === option && "bg-accent text-accent-foreground",
+                segment === option
+                  ? "bg-primary-soft text-primary-soft-foreground"
+                  : "border-border-subtle bg-card",
               )}
               key={option}
               onClick={() => setSegment(option)}
@@ -135,7 +138,12 @@ export function HomePage() {
         ) : visibleRows.length === 0 ? (
           <SegmentEmptyState />
         ) : (
-          <ul className="flex w-full min-w-0 max-w-full flex-col overflow-hidden pb-24">
+          <ul
+            className="
+              flex w-full min-w-0 max-w-full flex-col gap-2 overflow-hidden px-4
+              pt-1 pb-28
+            "
+          >
             {visibleRows.map((row) => (
               <ChatListItem key={row.chat.id} row={row} />
             ))}
@@ -143,16 +151,20 @@ export function HomePage() {
         )}
       </ScrollArea>
 
+      {/* The primary action floats over the list rather than sitting at the end
+          of it: on a long transcript list it would otherwise be unreachable
+          without scrolling to the bottom. */}
       <CreateChatDrawer>
         <Button
-          aria-label={t("common.newChat")}
           className="
-            absolute right-4 bottom-[max(1rem,env(safe-area-inset-bottom))]
-            size-14 rounded-full shadow-lg
+            absolute bottom-[max(1rem,env(safe-area-inset-bottom))] left-1/2
+            h-12 -translate-x-1/2 gap-2 rounded-full px-5 text-sm font-medium
+            shadow-panel transition-transform duration-150
+            active:scale-[0.98]
           "
-          size="icon"
         >
-          <Plus size={24} weight="bold" />
+          <Plus size={18} weight="bold" />
+          {t("common.newChat")}
         </Button>
       </CreateChatDrawer>
     </div>
@@ -165,25 +177,29 @@ function ChatListItem({ row }: { row: ChatActivityRow }) {
   const subtitle = [chat.projectName, chat.worktreeBranch].filter(Boolean);
   const failureMessage = chatActivityFailureMessage(row);
   return (
-    <li className="w-full min-w-0 max-w-full border-b border-border/60 last:border-b-0">
+    <li className="w-full min-w-0 max-w-full">
+      {/* A card per conversation rather than a full-bleed row: on a phone the
+          gap between cards is what separates one agent's run from the next,
+          and it gives the whole card a 44px-plus hit target. */}
       <Link
         className="
-          flex w-full min-w-0 max-w-full items-center gap-3 overflow-hidden px-4
-          py-3
-          active:bg-accent
+          flex min-h-touch w-full min-w-0 max-w-full items-center gap-3
+          overflow-hidden rounded-xl border border-border-subtle bg-card p-3
+          shadow-xs transition-colors duration-150
+          active:bg-overlay-active
         "
         href={`/chat/${chat.id}`}
       >
         <span
           className="
-            flex size-10 shrink-0 items-center justify-center rounded-full
-            bg-muted text-foreground
+            flex size-10 shrink-0 items-center justify-center rounded-lg
+            bg-surface-1 text-foreground
           "
           title={agentLabel(chat.runtime)}
         >
           <AgentRuntimeIcon className="size-5" runtime={chat.runtime} />
         </span>
-        <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+        <span className="flex min-w-0 flex-1 flex-col gap-1">
           <span className="flex min-w-0 items-center gap-1.5">
             {chat.pinned ? (
               <PushPin
@@ -192,10 +208,10 @@ function ChatListItem({ row }: { row: ChatActivityRow }) {
                 weight="fill"
               />
             ) : null}
-            <span className="min-w-0 flex-1 truncate font-medium">
+            <span className="min-w-0 flex-1 truncate text-sm font-medium">
               {chat.title}
             </span>
-            <span className="ml-auto shrink-0 whitespace-nowrap text-right text-xs text-muted-foreground">
+            <span className="ml-auto shrink-0 whitespace-nowrap text-right text-xs tabular-nums text-muted-foreground">
               {formatUpdatedAt(chatActivityRowTimestamp(row), locale)}
             </span>
           </span>
@@ -218,7 +234,7 @@ function ChatListItem({ row }: { row: ChatActivityRow }) {
                 </span>
               ) : null}
               {chat.worktreeBranch !== null ? (
-                <span className="flex min-w-0 shrink items-center gap-0.5">
+                <span className="flex min-w-0 shrink items-center gap-0.5 font-mono">
                   <GitBranch className="shrink-0" size={12} />
                   <span className="truncate">{chat.worktreeBranch}</span>
                 </span>
@@ -226,7 +242,7 @@ function ChatListItem({ row }: { row: ChatActivityRow }) {
             </span>
           ) : null}
           {failureMessage !== undefined ? (
-            <span className="truncate text-xs text-destructive">
+            <span className="truncate text-xs text-status-danger">
               {failureMessage}
             </span>
           ) : null}
@@ -245,14 +261,15 @@ function ActivityErrorNotice({ onRetry }: { onRetry: () => void }) {
   return (
     <div
       className="
-        flex shrink-0 items-center gap-2 border-b border-border/60 px-4 py-2
-        text-xs text-muted-foreground
+        mx-4 mt-2 flex shrink-0 items-center gap-2 rounded-lg border
+        border-status-danger-border bg-status-danger-soft px-3 py-2 text-sm
+        text-foreground
       "
       role="status"
     >
-      <WarningOctagon className="shrink-0 text-destructive" size={14} />
+      <WarningOctagon className="shrink-0 text-status-danger" size={16} />
       <span className="min-w-0 flex-1">{t("home.activityErrorTitle")}</span>
-      <Button onClick={onRetry} size="sm" variant="ghost">
+      <Button className="h-9 shrink-0 px-3" onClick={onRetry} variant="ghost">
         {t("common.tryAgain")}
       </Button>
     </div>
@@ -267,13 +284,16 @@ function formatUpdatedAt(updatedAt: string, locale: Locale): string {
 
 function ChatListSkeleton() {
   return (
-    <ul className="flex flex-col">
+    <ul className="flex flex-col gap-2 px-4 pt-1">
       {Array.from({ length: 6 }, (_, index) => (
         <li
-          className="flex items-center gap-3 border-b border-border/60 px-4 py-3"
+          className="
+            flex items-center gap-3 rounded-xl border border-border-subtle
+            bg-card p-3
+          "
           key={index}
         >
-          <Skeleton className="size-10 shrink-0 rounded-full" />
+          <Skeleton className="size-10 shrink-0 rounded-lg" />
           <div className="flex min-w-0 flex-1 flex-col gap-2">
             <Skeleton className="h-3.5 w-2/3" />
             <Skeleton className="h-3 w-1/3" />
@@ -287,17 +307,27 @@ function ChatListSkeleton() {
 function EmptyState() {
   const { t } = useTranslation();
   return (
-    <Empty className="px-6 py-16">
+    // The dot grid only ever lands on an open surface like this one — never
+    // behind the list (KIT-479 §0).
+    <Empty className="dot-grid px-6 py-16">
       <EmptyHeader>
         <EmptyMedia variant="icon">
           <ChatCircle size={28} />
         </EmptyMedia>
-        <EmptyTitle>{t("home.emptyTitle")}</EmptyTitle>
+        <EmptyTitle className="text-2xl font-light tracking-tight">
+          {t("home.emptyTitle")}
+        </EmptyTitle>
         <EmptyDescription>{t("home.emptyDescription")}</EmptyDescription>
       </EmptyHeader>
       <EmptyContent>
         <CreateChatDrawer>
-          <Button>
+          <Button
+            className="
+              h-12 gap-2 rounded-full px-5 text-sm font-medium shadow-panel
+              transition-transform duration-150
+              active:scale-[0.98]
+            "
+          >
             <Plus size={18} weight="bold" />
             {t("common.newChat")}
           </Button>
@@ -328,7 +358,11 @@ function ErrorState({ onRetry }: { onRetry: () => void }) {
         <EmptyDescription>{t("common.daemonOfflineHint")}</EmptyDescription>
       </EmptyHeader>
       <EmptyContent>
-        <Button onClick={onRetry} variant="outline">
+        <Button
+          className="h-11 rounded-full px-5"
+          onClick={onRetry}
+          variant="outline"
+        >
           {t("common.tryAgain")}
         </Button>
       </EmptyContent>

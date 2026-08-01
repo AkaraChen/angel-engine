@@ -56,6 +56,8 @@ import {
   type Conversation,
   useConversation,
 } from "@/features/chat/use-conversation";
+import { useKeyboardInset } from "@/features/chat/use-keyboard-inset";
+import { cn } from "@/lib/utils";
 
 /**
  * The mobile conversation view: a scrollable transcript rendered with the shadcn
@@ -132,14 +134,19 @@ export function ChatPage({ chatId }: { chatId: string }) {
 function AttentionBanner({ onReview }: { onReview: () => void }) {
   const { t } = useTranslation();
   return (
-    <Alert className="mx-3 mb-2 w-auto border-destructive/30 bg-destructive/5 pr-24">
-      <Warning className="text-destructive" weight="fill" />
+    <Alert
+      className="
+        mx-3 mt-2 mb-2 w-auto rounded-lg border-status-attention-border
+        bg-status-attention-soft pr-28
+      "
+    >
+      <Warning className="text-status-attention" weight="fill" />
       <AlertTitle>{t("chat.attentionNeedsInput")}</AlertTitle>
       <AlertDescription>
         {t("chat.attentionNeedsInputDescription")}
       </AlertDescription>
       <AlertAction>
-        <Button onClick={onReview} size="sm" variant="outline">
+        <Button className="h-9 px-3" onClick={onReview} variant="outline">
           {t("chat.attentionReview")}
           <ArrowDown data-icon="inline-end" />
         </Button>
@@ -155,10 +162,15 @@ function AttentionBanner({ onReview }: { onReview: () => void }) {
 function RunFailureBanner({ message }: { message: string }) {
   const { t } = useTranslation();
   return (
-    <Alert className="mx-3 mb-2 w-auto border-destructive/30 bg-destructive/5">
-      <WarningOctagon className="text-destructive" weight="fill" />
+    <Alert
+      className="
+        mx-3 mt-2 mb-2 w-auto rounded-lg border-status-danger-border
+        bg-status-danger-soft
+      "
+    >
+      <WarningOctagon className="text-status-danger" weight="fill" />
       <AlertTitle>{t("chat.runFailedTitle")}</AlertTitle>
-      <AlertDescription>{message}</AlertDescription>
+      <AlertDescription className="wrap-anywhere">{message}</AlertDescription>
     </Alert>
   );
 }
@@ -211,15 +223,32 @@ function MessageBubble({ message }: { message: ConversationMessage }) {
               ))
             : null}
           {showBubble ? (
+            // Message typography follows the desktop thread: the user speaks in
+            // a soft accent wash, the assistant has no bubble at all. The cap is
+            // 88% rather than the desktop's 80% — on a 375px screen the extra
+            // 8% is a whole word per line.
             <Bubble
               align={isUser ? "end" : "start"}
-              variant={isError ? "destructive" : isUser ? "default" : "muted"}
+              className="max-w-[88%]"
+              variant={isError ? "destructive" : isUser ? "default" : "ghost"}
             >
               <BubbleContent
-                className={renderMarkdown ? undefined : "whitespace-pre-wrap"}
+                className={cn(
+                  "text-sm",
+                  // The `default` variant paints the bubble from the wrapper
+                  // (`*:data-[slot=bubble-content]:bg-primary`), which outranks
+                  // anything set here on specificity — hence the `!`.
+                  isUser &&
+                    !isError &&
+                    "bg-primary-soft! text-primary-soft-foreground!",
+                  !renderMarkdown && "whitespace-pre-wrap",
+                )}
               >
                 {collapseBody ? (
-                  <CollapsibleMessageBody toggleClassName="text-primary-foreground">
+                  <CollapsibleMessageBody
+                    fadeClassName="from-primary-soft"
+                    toggleClassName="text-primary-soft-foreground"
+                  >
                     {body}
                   </CollapsibleMessageBody>
                 ) : isTyping ? (
@@ -256,6 +285,7 @@ function MessageBubble({ message }: { message: ConversationMessage }) {
 function Composer({ conversation }: { conversation: Conversation }) {
   const { t } = useTranslation();
   const [value, setValue] = useState("");
+  const keyboardInset = useKeyboardInset();
   const isStreaming = conversation.isStreaming;
   const canSend = value.trim().length > 0 && !isStreaming;
 
@@ -278,15 +308,24 @@ function Composer({ conversation }: { conversation: Conversation }) {
   return (
     <form
       className="
-        shrink-0 border-t border-border p-2
-        pb-[max(0.5rem,env(safe-area-inset-bottom))]
+        shrink-0 px-3 pt-2 pb-[max(0.5rem,env(safe-area-inset-bottom))]
       "
       onSubmit={submit}
+      // The keyboard overlays the layout viewport instead of shrinking it, so
+      // the safe-area padding alone would leave the composer behind it.
+      style={
+        keyboardInset > 0 ? { paddingBottom: keyboardInset + 8 } : undefined
+      }
     >
-      <InputGroup>
+      <InputGroup
+        className="
+          rounded-2xl border-border-subtle bg-card shadow-panel
+          dark:bg-card
+        "
+      >
         <InputGroupTextarea
           aria-label={t("chat.messagePlaceholder")}
-          className="max-h-40 min-h-11"
+          className="max-h-40 min-h-11 text-sm"
           onChange={(event) => setValue(event.target.value)}
           onKeyDown={onKeyDown}
           placeholder={t("chat.messagePlaceholder")}
@@ -302,21 +341,25 @@ function Composer({ conversation }: { conversation: Conversation }) {
           {isStreaming ? (
             <InputGroupButton
               aria-label={t("chat.stopAria")}
+              className="ml-auto size-11 rounded-full p-0"
               onClick={conversation.stop}
-              size="icon-sm"
               variant="secondary"
             >
-              <Square size={16} weight="fill" />
+              <Square size={18} weight="fill" />
             </InputGroupButton>
           ) : (
             <InputGroupButton
               aria-label={t("chat.sendAria")}
+              className="
+                ml-auto size-11 rounded-full p-0 transition-transform
+                duration-150
+                active:scale-[0.98]
+              "
               disabled={!canSend}
-              size="icon-sm"
               type="submit"
               variant="default"
             >
-              <ArrowUp size={16} weight="bold" />
+              <ArrowUp size={18} weight="bold" />
             </InputGroupButton>
           )}
         </InputGroupAddon>
@@ -372,7 +415,10 @@ function ErrorState({ onRetry }: { onRetry: () => void }) {
         <EmptyDescription>{t("common.daemonOfflineHint")}</EmptyDescription>
       </EmptyHeader>
       <button
-        className="text-sm font-medium text-primary underline underline-offset-4"
+        className="
+          inline-flex h-11 items-center rounded-full px-4 text-sm font-medium
+          text-primary underline underline-offset-4
+        "
         onClick={onRetry}
         type="button"
       >

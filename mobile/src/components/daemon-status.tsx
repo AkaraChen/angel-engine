@@ -17,10 +17,10 @@ export function DaemonStatus() {
       : t("daemonStatus.online", { version: data.version });
 
   const dotClass = isError
-    ? "bg-destructive"
+    ? "bg-status-danger"
     : isPending
       ? "bg-muted-foreground"
-      : "bg-green-500";
+      : "bg-status-success";
 
   return (
     <div

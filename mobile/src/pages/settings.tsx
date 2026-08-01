@@ -13,7 +13,12 @@ export function SettingsPage() {
 
   return (
     <div className="h-full overflow-y-auto">
-      <div className="mx-auto flex max-w-xl flex-col gap-6 p-4">
+      <div
+        className="
+          mx-auto flex max-w-xl flex-col gap-6 p-4
+          pb-[max(1rem,env(safe-area-inset-bottom))]
+        "
+      >
         <ProjectsSection />
         <CustomAgentsSection />
         <AppearanceSection />
