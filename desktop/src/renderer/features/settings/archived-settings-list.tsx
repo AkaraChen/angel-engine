@@ -15,6 +15,7 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { NativeSelect } from "@/components/ui/native-select";
 import { dangerActionClassName } from "@/features/settings/settings-controls";
+import { formatDateTime } from "@/platform/format-time";
 import { cn } from "@/platform/utils";
 
 /**
@@ -232,13 +233,4 @@ export function ArchivedChatRow({
       ) : null}
     </SettingsListRow>
   );
-}
-
-function formatDateTime(value: string) {
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return value;
-  return new Intl.DateTimeFormat(undefined, {
-    dateStyle: "medium",
-    timeStyle: "short",
-  }).format(date);
 }

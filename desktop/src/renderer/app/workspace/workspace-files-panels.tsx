@@ -9,6 +9,7 @@ import { FileTree } from "@pierre/trees/react";
 import is from "@sindresorhus/is";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 
 import { getErrorMessage } from "@/app/workspace/workspace-file-display";
 import { WorkspaceWindowFileEditor } from "@/app/workspace/workspace-file-editor";
@@ -58,6 +59,7 @@ function WorkspaceFileTreePane({
   root: string;
 }) {
   const { api } = useWorkspaceToolSurface();
+  const { t } = useTranslation();
   const { model, treeQuery } = useWorkspaceFileTreeModel(api, root);
   const handleFileTreeClick = useCallback(
     (event: ReactMouseEvent<HTMLDivElement>) => {
@@ -88,7 +90,7 @@ function WorkspaceFileTreePane({
       <WorkspaceToolEmpty
         detail={getErrorMessage(treeQuery.error)}
         icon={Folder}
-        title="File tree unavailable"
+        title={t("workspace.tools.empty.fileTreeUnavailable")}
       />
     );
   }
@@ -126,6 +128,7 @@ function WorkspaceCompactFilesPanel({ root }: { root: string }) {
 
 function WorkspaceSplitFilesPanel({ root }: { root: string }) {
   const { api } = useWorkspaceToolSurface();
+  const { t } = useTranslation();
   const queryClient = useQueryClient();
   const closeWindowFile = useWorkspaceToolStore(
     (state) => state.closeWindowFile,
@@ -316,7 +319,7 @@ function WorkspaceSplitFilesPanel({ root }: { root: string }) {
         <WorkspaceFileTreePane root={root} onOpenPath={openPath} />
       </div>
       <WorkspaceToolPanelSplitter
-        ariaLabel="Resize file tree"
+        ariaLabel={t("workspace.tools.resizeFileTree")}
         max={workspaceToolFileTreeWidthMax}
         min={workspaceToolFileTreeWidthMin}
         value={fileTreeWidth}

@@ -241,7 +241,7 @@ function ComposerModelEffortMenu({
         variant="native"
       >
         <DropdownMenuLabel className={composerNativeMenuLabelClassName}>
-          {t("composer.model")} /{t("composer.effort")}
+          {t("composer.model")} / {t("composer.effort")}
         </DropdownMenuLabel>
         <ComposerModelMenuSub
           disabled={modelDisabled}
@@ -347,7 +347,7 @@ function ComposerAgentSettingsMenu({
           aria-label={t("composer.agentSettings")}
           className={`
             ${composerModelMenuTriggerClassName}
-            max-w-40
+            shrink-0
           `}
           size="sm"
           title={t("composer.agentSettings")}
@@ -358,7 +358,9 @@ function ComposerAgentSettingsMenu({
             className="size-3.5 shrink-0 text-muted-foreground"
             weight="duotone"
           />
-          <span className={composerModelMenuValueClassName}>
+          {/* The label is a fixed string, not variable content: never truncate
+              it — longer sibling chips (model name) absorb tight widths. */}
+          <span className="shrink-0 text-muted-foreground">
             {t("composer.agentSettings")}
           </span>
           <ComposerModelMenuChevron />

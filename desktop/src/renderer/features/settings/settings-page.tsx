@@ -297,7 +297,7 @@ function WorkspaceSettings() {
     (state) => state.setWorktreeDirtyPromptEnabled,
   );
   const modEnterShortcut =
-    window.desktopEnvironment.platform === "darwin" ? "⌘ Enter" : "Ctrl Enter";
+    window.desktopEnvironment.platform === "darwin" ? "⌘+Enter" : "Ctrl+Enter";
 
   return (
     <SettingsGroup>

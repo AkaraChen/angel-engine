@@ -3,6 +3,7 @@ import type { ApiClient } from "@/platform/api-client";
 
 import is from "@sindresorhus/is";
 import { useEffect, useRef } from "react";
+import { useTranslation } from "react-i18next";
 
 import { WorkspaceToolContent } from "@/app/workspace/workspace-tool-content";
 import { WorkspaceToolEmpty } from "@/app/workspace/workspace-tool-layout";
@@ -43,6 +44,7 @@ export function WorkspaceToolSurface({
     root,
   });
   const storeHost = useWorkspaceToolStore((state) => state.host);
+  const { t } = useTranslation();
   const surfaceRef = useRef<HTMLElement>(null);
   const previousStoreHostRef = useRef<WorkspaceToolSurfaceHost | null>(null);
   useEffect(() => {
@@ -73,7 +75,9 @@ export function WorkspaceToolSurface({
         {host === "sidebar" ? (
           !is.nonEmptyString(model.contextKey) ||
           !is.nonEmptyString(model.root) ? (
-            <WorkspaceToolEmpty title="No workspace for this chat" />
+            <WorkspaceToolEmpty
+              title={t("workspace.tools.empty.noWorkspace")}
+            />
           ) : (
             <>
               <WorkspaceToolTabRail orientation="horizontal" />

@@ -60,6 +60,47 @@ export interface LocaleResourceTranslationAttachment {
   open: string;
 }
 
+export interface LocaleResourceTranslationWorkspaceToolsCommit {
+  committing: string;
+  commitTo: string;
+  descriptionPlaceholder: string;
+  filesSelected: string;
+  summaryPlaceholder: string;
+}
+
+export interface LocaleResourceTranslationWorkspaceToolsEmpty {
+  fileTreeUnavailable: string;
+  fileUnavailable: string;
+  gitUnavailable: string;
+  noChanges: string;
+  noDiffForFile: string;
+  noProcesses: string;
+  noWorkspace: string;
+  notGitRepository: string;
+  processesUnavailable: string;
+}
+
+export interface LocaleResourceTranslationWorkspaceToolsTabs {
+  files: string;
+  gitChanges: string;
+  newTab: string;
+  processes: string;
+  tabs: string;
+  tools: string;
+  workspaceTabs: string;
+}
+
+export interface LocaleResourceTranslationWorkspaceTools {
+  commit: LocaleResourceTranslationWorkspaceToolsCommit;
+  dockInSidebar: string;
+  empty: LocaleResourceTranslationWorkspaceToolsEmpty;
+  listeningPorts: string;
+  resizeFileTree: string;
+  resizeGitList: string;
+  subprocesses: string;
+  tabs: LocaleResourceTranslationWorkspaceToolsTabs;
+}
+
 export interface LocaleResourceTranslationWorkspace {
   backgroundChatCompleted: string;
   backgroundChatNeedsInput: string;
@@ -77,6 +118,7 @@ export interface LocaleResourceTranslationWorkspace {
   statsBranch: string;
   statsChanges: string;
   statsLastActive: string;
+  tools: LocaleResourceTranslationWorkspaceTools;
   worktreeDirtyContinue: string;
   worktreeDirtyDescription: string;
   worktreeDirtyRemember: string;
@@ -341,10 +383,30 @@ export interface LocaleResourceTranslationSettingsWorkspace {
   sendWithModEnterTitle: string;
 }
 
+export interface LocaleResourceTranslationSettingsCustomAgentsForm {
+  args: string;
+  autoAuthenticate: string;
+  command: string;
+  environment: string;
+  name: string;
+  requiresAuth: string;
+}
+
+export interface LocaleResourceTranslationSettingsCustomAgents {
+  addAgent: string;
+  deleteAgent: string;
+  editAgent: string;
+  enableAgent: string;
+  form: LocaleResourceTranslationSettingsCustomAgentsForm;
+  plainTextNotice: string;
+  title: string;
+}
+
 export interface LocaleResourceTranslationSettings {
   agents: LocaleResourceTranslationSettingsAgents;
   appearance: LocaleResourceTranslationSettingsAppearance;
   archived: LocaleResourceTranslationSettingsArchived;
+  customAgents: LocaleResourceTranslationSettingsCustomAgents;
   danger: LocaleResourceTranslationSettingsDanger;
   description: string;
   groups: LocaleResourceTranslationSettingsGroups;
@@ -377,6 +439,8 @@ export interface LocaleResourceTranslationUpdates {
 export interface LocaleResourceTranslationThreadEmpty {
   description: string;
   recentEmpty: string;
+  recentShowAll: string;
+  recentShowLess: string;
   recentTitle: string;
   suggestionClarify: string;
   suggestionExplore: string;

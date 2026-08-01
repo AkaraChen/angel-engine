@@ -4,6 +4,7 @@ import type { WorkspaceToolPatchFile } from "@/app/workspace/workspace-tool-patc
 
 import { GitBranch } from "@phosphor-icons/react";
 import { useCallback, useState } from "react";
+import { useTranslation } from "react-i18next";
 
 import { getErrorMessage } from "@/app/workspace/workspace-file-display";
 import {
@@ -42,6 +43,7 @@ export function WorkspaceGitPanel({
   root: string;
 }) {
   const { api } = useWorkspaceToolSurface();
+  const { t } = useTranslation();
   const {
     commitDescription,
     commitMutation,
@@ -70,7 +72,7 @@ export function WorkspaceGitPanel({
       <WorkspaceToolEmpty
         detail={getErrorMessage(gitQuery.error)}
         icon={GitBranch}
-        title="Git unavailable"
+        title={t("workspace.tools.empty.gitUnavailable")}
       />
     );
   }
@@ -85,7 +87,7 @@ export function WorkspaceGitPanel({
       <WorkspaceToolEmpty
         detail={root}
         icon={GitBranch}
-        title="Not a Git repository"
+        title={t("workspace.tools.empty.notGitRepository")}
       />
     );
   }
@@ -130,22 +132,24 @@ export function WorkspaceGitPanel({
           onFileSelectedChange={handleFileSelectedChange}
         />
       </div>
-      <WorkspaceGitCommitComposer
-        branch={data.branch}
-        description={commitDescription}
-        errorMessage={
-          commitMutation.isError
-            ? getErrorMessage(commitMutation.error)
-            : undefined
-        }
-        pending={commitMutation.isPending}
-        selectedCount={selectedFiles.length}
-        summary={commitSummary}
-        totalCount={patchList.files.length}
-        onDescriptionChange={setCommitDescription}
-        onSubmit={handleCommitSubmit}
-        onSummaryChange={setCommitSummary}
-      />
+      {patchList.files.length === 0 ? null : (
+        <WorkspaceGitCommitComposer
+          branch={data.branch}
+          description={commitDescription}
+          errorMessage={
+            commitMutation.isError
+              ? getErrorMessage(commitMutation.error)
+              : undefined
+          }
+          pending={commitMutation.isPending}
+          selectedCount={selectedFiles.length}
+          summary={commitSummary}
+          totalCount={patchList.files.length}
+          onDescriptionChange={setCommitDescription}
+          onSubmit={handleCommitSubmit}
+          onSummaryChange={setCommitSummary}
+        />
+      )}
     </>
   );
 
@@ -159,7 +163,7 @@ export function WorkspaceGitPanel({
         {changeColumn}
       </div>
       <WorkspaceToolPanelSplitter
-        ariaLabel="Resize Git change list"
+        ariaLabel={t("workspace.tools.resizeGitList")}
         max={workspaceToolGitListWidthMax}
         min={workspaceToolGitListWidthMin}
         value={gitListWidth}
@@ -173,8 +177,14 @@ export function WorkspaceGitPanel({
 }
 
 function WorkspaceGitDiffViewer({ file }: { file?: WorkspaceToolPatchFile }) {
+  const { t } = useTranslation();
   if (!file) {
-    return <WorkspaceToolEmpty icon={GitBranch} title="No changes" />;
+    return (
+      <WorkspaceToolEmpty
+        icon={GitBranch}
+        title={t("workspace.tools.empty.noChanges")}
+      />
+    );
   }
 
   const fileName = formatWorkspaceToolPatchFileName(file);

@@ -33,6 +33,15 @@ describe("tool utils", () => {
     });
   });
 
+  it("treats an empty raw input as no args", () => {
+    const part: ChatToolCallPart = chatToolActionToPart(
+      toolAction({ rawInput: "" }),
+    );
+
+    expect(part.args).toEqual({});
+    expect(part.argsText).toBe("");
+  });
+
   it("checks actions and classifies terminal phases", () => {
     const action: ChatToolAction = toolAction({
       error: { code: "E", message: "failed", recoverable: false },

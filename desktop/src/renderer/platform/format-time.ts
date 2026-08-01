@@ -1,7 +1,11 @@
+import { appLocale } from "@/platform/app-locale";
+
+export { appLocale };
+
 export function formatDateTime(value: string) {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return value;
-  return new Intl.DateTimeFormat(undefined, {
+  return new Intl.DateTimeFormat(appLocale(), {
     dateStyle: "medium",
     timeStyle: "short",
   }).format(date);
@@ -13,7 +17,7 @@ export function formatRelativeTime(value: string) {
 
   const elapsedSeconds = Math.round((timestamp - Date.now()) / 1000);
   const absoluteSeconds = Math.abs(elapsedSeconds);
-  const formatter = new Intl.RelativeTimeFormat(undefined, {
+  const formatter = new Intl.RelativeTimeFormat(appLocale(), {
     numeric: "auto",
   });
 

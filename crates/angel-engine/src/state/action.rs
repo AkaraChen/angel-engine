@@ -65,6 +65,10 @@ pub enum ActionPhase {
 pub struct ActionInput {
     pub summary: Option<String>,
     pub raw: Option<String>,
+    /// Display-ready rendering of the action input. Adapters set this when
+    /// `raw` carries provider envelope/wire details that must not reach the
+    /// UI; `None` falls back to displaying `raw`.
+    pub display: Option<String>,
 }
 
 #[derive(serde::Serialize, serde::Deserialize, Clone, Debug, Default, PartialEq, Eq)]

@@ -215,3 +215,92 @@ fn acp_failed_tool_update_sets_error_and_preserves_raw_output() {
         error.code == "acp.tool_call_failed" && error.message.contains("boom")
     }));
 }
+
+#[test]
+fn acp_tool_call_display_input_isolates_raw_input_field() {
+    let adapter = AcpAdapter::standard();
+    let mut engine = acp_engine(&adapter);
+    let conversation_id = insert_ready_conversation(
+        &mut engine,
+        "conv",
+        RemoteConversationId::Known("sess".to_string()),
+        adapter.capabilities(),
+    );
+    start_turn(&mut engine, conversation_id.clone(), "active");
+
+    decode_and_apply(
+        &adapter,
+        &mut engine,
+        JsonRpcMessage::notification(
+            "session/update",
+            json!({
+                "sessionId": "sess",
+                "update": {
+                    "sessionUpdate": "tool_call",
+                    "toolCallId": "bash-1",
+                    "title": "Bash",
+                    "kind": "execute",
+                    "status": "pending",
+                    "rawInput": {"command": "ls -la"}
+                }
+            }),
+        ),
+    );
+
+    let action = &engine.conversations[&conversation_id].actions[&ActionId::new("bash-1")];
+    // The full update stays in `raw` for signature matching…
+    assert!(
+        action
+            .input
+            .raw
+            .as_ref()
+            .is_some_and(|raw| raw.contains("\"sessionUpdate\""))
+    );
+    // …but only the ACP rawInput field is rendered as the tool input.
+    assert_eq!(
+        action.input.display.as_deref(),
+        Some("{\"command\":\"ls -la\"}")
+    );
+    let display = DisplayToolAction::from_action(action);
+    assert_eq!(
+        display.raw_input.as_deref(),
+        Some("{\"command\":\"ls -la\"}")
+    );
+}
+
+#[test]
+fn acp_tool_call_without_raw_input_has_empty_display_input() {
+    let adapter = AcpAdapter::standard();
+    let mut engine = acp_engine(&adapter);
+    let conversation_id = insert_ready_conversation(
+        &mut engine,
+        "conv",
+        RemoteConversationId::Known("sess".to_string()),
+        adapter.capabilities(),
+    );
+    start_turn(&mut engine, conversation_id.clone(), "active");
+
+    decode_and_apply(
+        &adapter,
+        &mut engine,
+        JsonRpcMessage::notification(
+            "session/update",
+            json!({
+                "sessionId": "sess",
+                "update": {
+                    "sessionUpdate": "tool_call",
+                    "toolCallId": "bash-2",
+                    "title": "Bash",
+                    "kind": "execute",
+                    "status": "pending",
+                    "content": [{"type": "content", "content": {"type": "text", "text": ""}}]
+                }
+            }),
+        ),
+    );
+
+    let action = &engine.conversations[&conversation_id].actions[&ActionId::new("bash-2")];
+    assert_eq!(action.input.display.as_deref(), Some(""));
+    let display = DisplayToolAction::from_action(action);
+    assert_eq!(display.raw_input.as_deref(), Some(""));
+}

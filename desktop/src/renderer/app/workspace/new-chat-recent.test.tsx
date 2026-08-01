@@ -2,7 +2,7 @@
 
 import type { Chat } from "@angel-engine/daemon-api/chat";
 import type { Project } from "@angel-engine/daemon-api/projects";
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { NewChatRecentSection } from "./new-chat-recent";
 
@@ -62,11 +62,46 @@ describe("NewChatRecentSection", () => {
     const titles = screen
       .getAllByRole("button")
       .map((button) => button.textContent);
-    expect(titles).toHaveLength(4);
+    expect(titles).toHaveLength(5);
     expect(titles[0]).toContain("newest");
     expect(titles[3]).toContain("fourth");
+    expect(titles[4]).toContain("thread.empty.recentShowAll");
     expect(titles.join(" ")).not.toContain("archived");
     expect(titles.join(" ")).not.toContain("oldest");
+  });
+
+  it("expands beyond the recent limit from the show-all toggle", () => {
+    render(
+      <NewChatRecentSection
+        chats={[
+          chat({ id: "1", title: "oldest", updatedAt: "2026-01-01T00:00:00Z" }),
+          chat({ id: "2", title: "newest", updatedAt: "2026-01-06T00:00:00Z" }),
+          chat({ id: "3", title: "second", updatedAt: "2026-01-05T00:00:00Z" }),
+          chat({ id: "4", title: "third", updatedAt: "2026-01-04T00:00:00Z" }),
+          chat({ id: "5", title: "fourth", updatedAt: "2026-01-03T00:00:00Z" }),
+        ]}
+        onCreateProject={vi.fn()}
+        onOpenChat={vi.fn()}
+        projects={projects}
+      />,
+    );
+
+    expect(screen.queryByText(/oldest/)).toBeNull();
+    const toggle = screen
+      .getAllByRole("button")
+      .find((button) =>
+        button.textContent?.includes("thread.empty.recentShowAll"),
+      );
+    expect(toggle).toBeTruthy();
+    fireEvent.click(toggle as HTMLElement);
+    expect(screen.getByText(/oldest/)).toBeTruthy();
+    expect(
+      screen
+        .getAllByRole("button")
+        .some((button) =>
+          button.textContent?.includes("thread.empty.recentShowLess"),
+        ),
+    ).toBe(true);
   });
 
   it("falls back to the project path when the chat has no cwd", () => {

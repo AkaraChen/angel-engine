@@ -499,6 +499,18 @@
   background-size: 16px 16px;
 }
 
+/* Settings section labels are uppercased by design (see sectionLabelClassName
+   in settings-controls.tsx), but in CJK UI languages the transform only
+   half-applies to embedded latin words ("可清理的 WORKTREE"); sentence case
+   reads better there. */
+.settings-section-label:where(
+  html[lang^="zh"] *,
+  html[lang^="ja"] *,
+  html[lang^="ko"] *
+) {
+  text-transform: none;
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

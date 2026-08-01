@@ -11,6 +11,7 @@ pub(crate) fn action_from_item(item: &Value, turn_id: &TurnId) -> Option<ActionS
     action.input = ActionInput {
         summary: action.title.clone(),
         raw: Some(item.to_string()),
+        display: None,
     };
     if let Some(phase) = phase_from_item(item) {
         action.phase = phase;
@@ -31,6 +32,7 @@ pub(crate) fn fallback_action(
     action.input = ActionInput {
         summary: Some(title),
         raw: Some(json!({ "id": action_id.as_str(), "kind": action.kind }).to_string()),
+        display: None,
     };
     action
 }

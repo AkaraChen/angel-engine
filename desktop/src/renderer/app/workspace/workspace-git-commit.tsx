@@ -6,6 +6,7 @@ import is from "@sindresorhus/is";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { useCallback, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { WorkspaceToolBanner } from "@/app/workspace/workspace-tool-layout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -110,6 +111,7 @@ export function WorkspaceGitCommitComposer({
   onSubmit: (event: FormEvent<HTMLFormElement>) => void;
   onSummaryChange: (value: string) => void;
 }) {
+  const { t } = useTranslation();
   const disabled =
     pending || selectedCount === 0 || summary.trim().length === 0;
   const target = is.nonEmptyString(branch) ? branch : "HEAD";
@@ -128,7 +130,7 @@ export function WorkspaceGitCommitComposer({
               h-6 rounded-md bg-surface-1 py-0.5 pr-9 pl-2 font-mono text-xs
               select-text
             "
-            placeholder="Summary"
+            placeholder={t("workspace.tools.commit.summaryPlaceholder")}
             value={summary}
             onChange={(event) => onSummaryChange(event.currentTarget.value)}
           />
@@ -155,7 +157,7 @@ export function WorkspaceGitCommitComposer({
           className="
             min-h-12 rounded-md bg-surface-1 p-1.5 font-mono text-xs select-text
           "
-          placeholder="Description"
+          placeholder={t("workspace.tools.commit.descriptionPlaceholder")}
           value={description}
           onChange={(event) => onDescriptionChange(event.currentTarget.value)}
         />
@@ -165,21 +167,23 @@ export function WorkspaceGitCommitComposer({
           </WorkspaceToolBanner>
         ) : null}
         <div className="flex items-center gap-1.5">
-          <div className="min-w-0 flex-1 truncate text-xs text-muted-foreground">
-            <span className="tabular-nums">
-              {selectedCount.toLocaleString()} of {totalCount.toLocaleString()}
-            </span>{" "}
-            files selected
+          <div
+            className="min-w-0 flex-1 truncate text-xs text-muted-foreground"
+            title={t("workspace.tools.commit.filesSelected", {
+              selected: selectedCount,
+              total: totalCount,
+            })}
+          >
+            {t("workspace.tools.commit.filesSelected", {
+              selected: selectedCount,
+              total: totalCount,
+            })}
           </div>
           {/* The only primary CTA in the whole tool-panel surface. */}
           <Button disabled={disabled} size="xs" type="submit">
-            {pending ? (
-              "Committing"
-            ) : (
-              <>
-                Commit to <span className="font-mono">{target}</span>
-              </>
-            )}
+            {pending
+              ? t("workspace.tools.commit.committing")
+              : t("workspace.tools.commit.commitTo", { target })}
           </Button>
         </div>
       </div>

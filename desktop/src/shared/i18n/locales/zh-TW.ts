@@ -78,6 +78,40 @@ export const zhTW = {
       statsBranch: "分支",
       statsChanges: "變更",
       statsLastActive: "最近活動",
+      tools: {
+        commit: {
+          committing: "提交中…",
+          commitTo: "提交到 {{target}}",
+          descriptionPlaceholder: "描述",
+          filesSelected: "已選 {{selected}}/{{total}} 個檔案",
+          summaryPlaceholder: "摘要",
+        },
+        dockInSidebar: "停靠到側欄",
+        empty: {
+          fileTreeUnavailable: "檔案樹不可用",
+          fileUnavailable: "檔案不可用",
+          gitUnavailable: "Git 不可用",
+          noChanges: "沒有變更",
+          noDiffForFile: "此檔案沒有差異",
+          noProcesses: "沒有執行中的 Agent 子處理程序",
+          noWorkspace: "此聊天沒有工作區",
+          notGitRepository: "不是 Git 儲存庫",
+          processesUnavailable: "處理程序資訊不可用",
+        },
+        listeningPorts: "監聽連接埠",
+        resizeFileTree: "調整檔案樹寬度",
+        resizeGitList: "調整變更清單寬度",
+        subprocesses: "子處理程序",
+        tabs: {
+          files: "檔案",
+          gitChanges: "Git 變更",
+          newTab: "新增分頁",
+          processes: "處理程序",
+          tabs: "分頁",
+          tools: "工具",
+          workspaceTabs: "工作區分頁",
+        },
+      },
       worktreeDirtyContinue: "繼續",
       worktreeDirtyDescription:
         "目前專案有未提交變更。新的 worktree 會從目前 HEAD 建立，不會包含這些未提交內容。",
@@ -241,6 +275,22 @@ export const zhTW = {
         timeToday: "今天",
         worktree: "worktree",
       },
+      customAgents: {
+        addAgent: "新增 Agent",
+        deleteAgent: "刪除 {{label}}",
+        editAgent: "編輯 {{label}}",
+        enableAgent: "啟用 {{label}}",
+        form: {
+          args: "參數",
+          autoAuthenticate: "自動驗證",
+          command: "指令",
+          environment: "環境變數",
+          name: "名稱",
+          requiresAuth: "需要驗證",
+        },
+        plainTextNotice: "自訂 ACP Agent 的環境變數將以純文字形式儲存在本機。",
+        title: "自訂 Agent",
+      },
       danger: {
         confirmDeleteAll: "確定要刪除所有聊天嗎？此操作無法復原。",
         deleting: "正在刪除",
@@ -322,8 +372,8 @@ export const zhTW = {
       workspace: {
         dirtyPromptDescription:
           "當所選專案存在未提交變更時，建立 worktree 前先詢問。",
-        dirtyPromptSwitchLabel: "從 dirty 倉庫建立 worktree 前提醒",
-        dirtyPromptTitle: "Dirty 倉庫提醒",
+        dirtyPromptSwitchLabel: "倉庫存在未提交變更時，建立 worktree 前先提醒",
+        dirtyPromptTitle: "未提交變更提醒",
         sendWithModEnterDescription:
           "開啟後，Enter 換行，{{shortcut}} 傳送訊息。",
         sendWithModEnterSwitchLabel: "使用 {{shortcut}} 傳送訊息",
@@ -352,6 +402,8 @@ export const zhTW = {
       empty: {
         description: "指定檔案、錯誤、行為或工作區範圍，讓它修補或測試。",
         recentEmpty: "這裡還是空的 —— 選一個專案，開始第一次工作階段。",
+        recentShowAll: "查看全部 {{count}} 個會話",
+        recentShowLess: "收起",
         recentTitle: "最近",
         suggestionClarify: "幫我理清一個複雜問題",
         suggestionExplore: "講解這個程式碼庫的結構",

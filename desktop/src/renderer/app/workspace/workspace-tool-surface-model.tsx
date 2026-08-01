@@ -18,6 +18,7 @@ import {
   useMemo,
   useRef,
 } from "react";
+import { useTranslation } from "react-i18next";
 
 import { browserTitleFromUrl } from "@/app/workspace/workspace-browser-url";
 import {
@@ -249,9 +250,15 @@ export function useWorkspaceToolSurfaceModel({
     },
     [updateSnapshot],
   );
+  const { t } = useTranslation();
   const tabItems = useMemo(
-    () => workspaceToolTabItems(snapshot.tabs),
-    [snapshot.tabs],
+    () =>
+      workspaceToolTabItems(snapshot.tabs, {
+        files: t("workspace.tools.tabs.files"),
+        gitChanges: t("workspace.tools.tabs.gitChanges"),
+        processes: t("workspace.tools.tabs.processes"),
+      }),
+    [snapshot.tabs, t],
   );
 
   return useMemo(
