@@ -156,7 +156,11 @@ function AttachmentTileBody({
         previewUrl={previewUrl}
       />
       <span className="flex min-w-0 flex-col">
-        <span className="truncate font-medium text-foreground">{name}</span>
+        {/* File names are paths as often as they are words — mono keeps the
+            extension and any truncation legible. */}
+        <span className="truncate font-mono font-medium text-foreground">
+          {name}
+        </span>
         <span className="truncate text-[11px]/4 text-muted-foreground">
           {contentType ?? typeLabel}
         </span>
@@ -192,12 +196,19 @@ function AttachmentThumb({
           src={previewUrl}
         />
       ) : hasPreviewUrl ? (
-        <ImageIcon aria-label={name} className="size-4 text-muted-foreground" />
+        // Duotone: the file-type glyph is decoration standing in for a preview,
+        // not a control, which is the project's rule for the heavier weight.
+        <ImageIcon
+          aria-label={name}
+          className="size-4 text-muted-foreground"
+          weight="duotone"
+        />
       ) : (
         (fallbackIcon ?? (
           <FileText
             aria-label={name}
             className="size-4 text-muted-foreground"
+            weight="duotone"
           />
         ))
       )}
@@ -215,8 +226,8 @@ function attachmentTileClassName({
   return cn(
     `
       inline-flex w-full min-w-0 items-center gap-2 rounded-lg border
-      border-border-subtle bg-background/70 px-2 py-1.5 text-left text-xs
-      shadow-panel backdrop-blur-xl transition-colors
+      border-border-subtle bg-surface-1 px-2 py-1.5 text-left text-xs
+      transition-colors
     `,
     `focus-visible:ring-2 focus-visible:ring-ring/25 focus-visible:outline-none`,
     removable && "pr-7",

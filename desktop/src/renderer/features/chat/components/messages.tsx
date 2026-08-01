@@ -43,8 +43,11 @@ import { cn } from "@/platform/utils";
 const messageColumnClassName = workspaceContentColumnClass;
 const userMessageColumnClassName =
   "flex w-full min-w-0 flex-col items-end gap-1.5";
+// rounded-xl, not a pill: a pill only reads right on one line, and these
+// bubbles routinely run to a paragraph. Capped at 80% so a long user turn still
+// sits visibly to the right of the full-width assistant column.
 const userMessageBubbleClassName =
-  "min-w-0 max-w-full rounded-lg rounded-br-md bg-primary px-3.5 py-2.5 text-primary-foreground shadow-[0_1px_2px_--theme(--color-primary/25%)] [font-size:var(--workspace-user-bubble-text-size)] [line-height:var(--workspace-user-bubble-line-height)]";
+  "min-w-0 max-w-[80%] rounded-xl bg-primary-soft px-3.5 py-2.5 text-primary-soft-foreground [font-size:var(--workspace-user-bubble-text-size)] [line-height:var(--workspace-user-bubble-line-height)]";
 
 export function UserMessage() {
   const { t } = useTranslation();
@@ -73,7 +76,10 @@ export function UserMessage() {
         <UserMessageAttachmentParts />
         {hasBubbleContent ? (
           <div className={userMessageBubbleClassName}>
-            <CollapsibleMessageBody toggleClassName="text-primary-foreground">
+            <CollapsibleMessageBody
+              fadeClassName="from-primary-soft"
+              toggleClassName="text-primary-soft-foreground"
+            >
               <UserMessageParts />
             </CollapsibleMessageBody>
           </div>
@@ -141,11 +147,7 @@ export function UserEditComposer() {
       className={cn(messageColumnClassName, "flex justify-end")}
       data-workspace-mode={workspaceMode}
     >
-      <div
-        className="
-          w-full rounded-lg bg-background/90 shadow-panel backdrop-blur-xl
-        "
-      >
+      <div className="w-full rounded-xl bg-card shadow-xs">
         <ChatComposer
           allowAttachments={false}
           canCancel

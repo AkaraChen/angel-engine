@@ -12,20 +12,15 @@ export function ChatRunningPulse({
   const isRunning = useChatRunIsRunning(chatId);
   if (!isRunning) return null;
 
+  // One dot that breathes in place. No ping ring and no box-shadow halo — a
+  // glowing status dot is the tell of a vibe-coded UI, and the app already
+  // signals the run in the header sweep and the composer state.
   return (
-    <i aria-hidden className="relative flex size-2 shrink-0 rounded-full">
-      <i
-        className="
-          absolute inline-flex size-full animate-ping rounded-full
-          bg-emerald-400 opacity-60
-        "
-      />
-      <i
-        className="
-          relative inline-flex size-2 rounded-full bg-emerald-500
-          shadow-[0_0_0_1px_rgba(16,185,129,0.35)]
-        "
-      />
-    </i>
+    <i
+      aria-hidden
+      className="
+        inline-flex size-2 shrink-0 animate-chat-pulse rounded-full bg-primary
+      "
+    />
   );
 }

@@ -60,9 +60,10 @@ const UserMessageRichText: FC<UserMessageRichTextProps> = ({ text }) => {
     [extensions, text],
   );
 
-  // Composer uses bg-muted on code; inside the primary user bubble that becomes
-  // near-black on near-black in dark mode. Tint from the bubble foreground
-  // instead (same approach as skill mentions).
+  // Code and mentions inside the bubble sit on the card ground rather than on a
+  // tint of the bubble. Tinting the bubble was what made dark-mode inline code
+  // unreadable in b05d59d; the card ground carries the page's own contrast, so
+  // it holds in both themes regardless of how the accent wash is tuned.
   return (
     <EditorContent
       className={cn(
@@ -71,11 +72,10 @@ const UserMessageRichText: FC<UserMessageRichTextProps> = ({ text }) => {
           select-text
           [&_.tiptap]:max-h-none! [&_.tiptap]:min-h-0!
           [&_.tiptap]:overflow-visible!
-          [&_[data-type=mention]]:text-primary-foreground!
-          [&_[data-mention-kind=skill]]:bg-primary-foreground/12!
-          [&_.tiptap_code]:bg-primary-foreground/14!
-          [&_.tiptap_code]:text-primary-foreground!
-          [&_.tiptap_pre]:bg-primary-foreground/10!
+          [&_[data-type=mention]]:text-primary!
+          [&_[data-mention-kind=skill]]:bg-card!
+          [&_.tiptap_code]:bg-card! [&_.tiptap_code]:text-foreground!
+          [&_.tiptap_pre]:bg-card! [&_.tiptap_pre]:text-foreground!
           [&_.tiptap_pre_code]:bg-transparent!
         `,
       )}
@@ -115,7 +115,7 @@ function AssistantTextMessagePart(
     <StreamdownTextPrimitive
       caret="block"
       containerClassName={assistantTextContainerClassName}
-      controls={{ code: false }}
+      controls={{ code: true }}
       linkSafety={{ enabled: false }}
       lineNumbers={false}
       mode="streaming"

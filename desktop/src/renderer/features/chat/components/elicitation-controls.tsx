@@ -47,12 +47,15 @@ function PermissionApprovalActions({
 
   return (
     <div className={cn("flex flex-wrap justify-end gap-2", className)}>
+      {/* Approve is the pill CTA; refuse is a solid secondary so it stays a
+          real choice rather than a link; the standing "allow for session"
+          grant is ghost, because it should be the quietest of the three. */}
       <Button
         disabled={disabled}
         onClick={() => onResume({ type: "deny" })}
         size="xs"
         type="button"
-        variant="ghost"
+        variant="secondary"
       >
         {t("common.deny")}
       </Button>
@@ -73,7 +76,7 @@ function PermissionApprovalActions({
         }}
         size="xs"
         type="button"
-        variant="outline"
+        variant="ghost"
       >
         {t("common.allowSession")}
       </Button>
@@ -150,7 +153,7 @@ function ElicitationQuestionInput({
               aria-pressed={selectedOptionLabel === option.label}
               className={cn(
                 `
-                  w-full rounded-md border border-border-subtle bg-background/75
+                  w-full rounded-md border border-border-subtle bg-card
                   px-3 py-2 text-left text-sm/5 transition-colors
                   hover:bg-overlay-hover
                   active:bg-overlay-active
@@ -179,7 +182,7 @@ function ElicitationQuestionInput({
               aria-pressed={selectedOther}
               className={cn(
                 `
-                  w-full rounded-md border border-border-subtle bg-background/75
+                  w-full rounded-md border border-border-subtle bg-card
                   px-3 py-2 text-left text-sm/5 transition-colors
                   hover:bg-overlay-hover
                   active:bg-overlay-active
@@ -221,7 +224,7 @@ function ElicitationFreeformAnswer({
     return (
       <input
         className="
-          h-8 w-full rounded-md border border-border-subtle bg-background/80
+          h-8 w-full rounded-md border border-border-subtle bg-card
           px-3 text-sm outline-none
           focus-visible:border-primary/40 focus-visible:ring-3
           focus-visible:ring-primary/12
@@ -238,7 +241,7 @@ function ElicitationFreeformAnswer({
     <textarea
       className="
         min-h-16 w-full resize-y rounded-md border border-border-subtle
-        bg-background/80 px-3 py-2 text-sm outline-none
+        bg-card px-3 py-2 text-sm outline-none
         focus-visible:border-primary/40 focus-visible:ring-3
         focus-visible:ring-primary/12
       "

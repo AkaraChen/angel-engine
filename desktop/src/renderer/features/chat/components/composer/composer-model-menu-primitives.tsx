@@ -52,8 +52,7 @@ export function ComposerModelMenuSearch({
   return (
     <div
       className="
-        sticky top-0 z-10 -mx-0.5 mb-1 bg-white/90 px-0.5 pb-1 backdrop-blur-xl
-        dark:bg-card/95
+        sticky top-0 z-10 -mx-0.5 mb-1 bg-popover px-0.5 pb-1
       "
       onKeyDown={(event) => event.stopPropagation()}
       onPointerDown={(event) => event.stopPropagation()}

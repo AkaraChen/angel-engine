@@ -73,7 +73,7 @@ export function CollapsibleMessageBody({
             className={cn(
               `
                 pointer-events-none absolute inset-x-0 bottom-0 h-10
-                bg-linear-to-t from-primary to-transparent
+                bg-linear-to-t from-background to-transparent
               `,
               fadeClassName,
             )}

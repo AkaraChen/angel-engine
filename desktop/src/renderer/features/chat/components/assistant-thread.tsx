@@ -29,7 +29,7 @@ export function AssistantThread({
 
   return (
     <ThreadPrimitive.Root
-      className="flex h-full min-h-0 flex-col bg-background/96"
+      className="flex h-full min-h-0 flex-col bg-background"
       data-workspace-mode={workspaceMode}
     >
       <ThreadPrimitive.Viewport
@@ -56,8 +56,7 @@ export function AssistantThread({
         <SelectionToolbarPrimitive.Root
           className="
             z-20 flex items-center gap-1 rounded-lg border border-border-subtle
-            bg-popover/95 p-1 text-popover-foreground shadow-popover
-            backdrop-blur-xl
+            bg-popover p-1 text-popover-foreground shadow-popover
           "
         >
           <SelectionToolbarPrimitive.Quote
