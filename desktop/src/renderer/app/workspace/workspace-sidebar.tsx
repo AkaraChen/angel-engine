@@ -278,19 +278,17 @@ function WorkspaceSidebarContent({
       <SidebarContent className="gap-0 pb-1">
         <SidebarMenu className="px-2 py-2.5">
           <AnimatedSidebarMenuItem>
+            {/* The sidebar's primary CTA. It reads from `--primary` rather
+                than a status colour so it follows the theme accent; green here
+                would claim "success", which starting a chat is not. */}
             <WorkspaceSidebarMenuButton
               className="
-                bg-status-success text-white
-                hover:bg-status-success/90 hover:text-white
-                focus-visible:bg-status-success/90
-                active:bg-status-success/85 active:text-white
-                dark:bg-status-success dark:text-white
-                dark:hover:bg-status-success/90
-                dark:focus-visible:bg-status-success/90
-                dark:active:bg-status-success/85
-                [&_svg]:text-white
-                data-active:bg-status-success data-active:text-white
-                data-active:[&_svg]:text-white
+                bg-primary text-primary-foreground
+                hover:bg-primary-hover hover:text-primary-foreground
+                focus-visible:bg-primary-hover
+                active:bg-primary-active active:text-primary-foreground
+                data-active:bg-primary data-active:text-primary-foreground
+                [&_svg]:text-primary-foreground!
               "
               onClick={() => void createChatFromNewButton()}
             >
