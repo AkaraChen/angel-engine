@@ -146,10 +146,7 @@ function InputGroupAddon({
 }
 
 const inputGroupButtonVariants = cva(
-  `
-    flex items-center gap-2 rounded-md text-sm shadow-none
-    group-data-[variant=search]/input-group:rounded-full
-  `,
+  "flex items-center gap-2 rounded-md text-sm shadow-none",
   {
     variants: {
       size: {

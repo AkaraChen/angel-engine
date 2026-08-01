@@ -6,23 +6,21 @@ import * as React from "react";
 import { cn } from "@/platform/utils";
 
 /**
- * The openknowledge DNA is a landing-page language where every control is a
- * capsule. In app context that would dissolve dense toolbar grids, so the
- * capsule lives on one opt-in variant: `cta`, for a genuine hero call to
- * action (empty states, onboarding, the one button a screen is about).
+ * Every button is the same `radius-md` rectangle. The openknowledge DNA is a
+ * landing-page language that capsules everything, but in app context a mix of
+ * shapes just reads as inconsistency -- an outline Cancel next to a pill Save
+ * looks broken. Prominence is carried by fill and colour alone.
  *
- * Every other variant -- including `default`, which is just "filled primary"
- * and shows up in toolbars and dialog footers -- stays a `radius-md`
- * rectangle. Mixing the two in one action row is what makes a Cancel/Save
- * pair look broken, so shape is a property of intent, not of colour.
+ * The DNA capsule survives only where it is a shape with its own meaning:
+ * search fields (see `input-group`) and the switch track.
  */
 const buttonVariants = cva(
   `
-    group/button inline-flex shrink-0 items-center justify-center
+    group/button inline-flex shrink-0 items-center justify-center rounded-md
     border border-transparent bg-clip-padding text-sm font-medium
     whitespace-nowrap
     transition-[color,background-color,border-color,box-shadow,transform]
-    ease-standard outline-none select-none
+    duration-120 ease-standard outline-none select-none
     active:scale-[0.98]
     disabled:pointer-events-none disabled:opacity-50
     focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2
@@ -31,60 +29,51 @@ const buttonVariants = cva(
     aria-invalid:ring-destructive/20
     dark:aria-invalid:border-destructive/50
     dark:aria-invalid:ring-destructive/40
-    motion-reduce:transition-none
-    motion-reduce:hover:translate-y-0
-    motion-reduce:active:scale-100
+    motion-reduce:transition-none motion-reduce:active:scale-100
     [&_svg]:pointer-events-none [&_svg]:shrink-0
     [&_svg:not([class*='size-'])]:size-4
   `,
   {
     variants: {
       variant: {
-        cta: `
-          rounded-full bg-primary leading-[115%] tracking-[-0.64px]
-          text-primary-foreground duration-150
-          hover:-translate-y-0.5 hover:bg-primary-hover hover:shadow-panel
-          active:translate-y-0 active:bg-primary-active active:shadow-none
-        `,
         default: `
-          rounded-md bg-primary text-primary-foreground duration-120
+          bg-primary text-primary-foreground
           hover:bg-primary-hover
           active:bg-primary-active
         `,
         soft: `
-          rounded-md bg-primary-soft text-primary-soft-foreground duration-120
+          bg-primary-soft text-primary-soft-foreground
           hover:bg-primary/15
           active:bg-primary/20
           dark:hover:bg-primary/20
           dark:active:bg-primary/25
         `,
         outline: `
-          rounded-md border-border bg-background duration-120
+          border-border bg-background
           hover:bg-overlay-hover hover:text-foreground
           active:bg-overlay-active
           aria-expanded:bg-overlay-hover aria-expanded:text-foreground
           dark:bg-transparent
         `,
         secondary: `
-          rounded-md bg-secondary text-secondary-foreground duration-120
+          bg-secondary text-secondary-foreground
           hover:bg-surface-2
           active:bg-surface-3
           aria-expanded:bg-surface-2 aria-expanded:text-secondary-foreground
         `,
         ghost: `
-          rounded-md duration-120
           hover:bg-overlay-hover hover:text-foreground
           active:bg-overlay-active
           aria-expanded:bg-overlay-hover aria-expanded:text-foreground
         `,
         destructive: `
-          rounded-md text-status-danger duration-120
+          text-status-danger
           hover:bg-status-danger-soft
           active:bg-status-danger/15
           dark:active:bg-status-danger/20
         `,
         link: `
-          rounded-md text-primary underline-offset-4 duration-120
+          text-primary underline-offset-4
           hover:underline
           active:scale-100
         `,
@@ -120,14 +109,6 @@ const buttonVariants = cva(
         "icon-lg": "size-10",
       },
     },
-    compoundVariants: [
-      // A capsule needs horizontal room for its own curve, so the pill CTA runs
-      // slightly wider than the rectangular variants at every text size.
-      { variant: "cta", size: "xs", className: "px-3" },
-      { variant: "cta", size: "sm", className: "px-3.5" },
-      { variant: "cta", size: "default", className: "px-4" },
-      { variant: "cta", size: "lg", className: "px-5" },
-    ],
     defaultVariants: {
       variant: "default",
       size: "default",

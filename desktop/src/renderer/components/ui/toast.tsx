@@ -16,16 +16,10 @@ import { Button } from "./button";
 type ToastVariant = "default" | "success" | "attention" | "destructive";
 
 /**
- * Status toasts get a soft tint plus a matching hairline and a solid icon --
- * never a fully saturated block, which would out-shout the paper background.
+ * Every toast keeps the same neutral card. Status is carried by the icon
+ * alone -- tinting the whole surface makes a routine notification shout as
+ * loudly as a failure.
  */
-const toastVariantClasses: Record<ToastVariant, string> = {
-  attention: "border-status-attention-border bg-status-attention-soft",
-  default: "",
-  destructive: "border-status-danger-border bg-status-danger-soft",
-  success: "border-status-success-border bg-status-success-soft",
-};
-
 const toastIconClasses: Record<ToastVariant, string> = {
   attention: "text-status-attention",
   default: "text-primary",
@@ -104,8 +98,7 @@ function ToastProvider({ children }: { children: React.ReactNode }) {
 
           return (
             <ToastPrimitive.Root
-              className={cn(
-                `
+              className="
                 relative grid w-full max-w-sm gap-1 overflow-hidden rounded-xl
                 border border-border-subtle bg-card p-3 text-card-foreground
                 shadow-popover
@@ -114,9 +107,7 @@ function ToastProvider({ children }: { children: React.ReactNode }) {
                 data-closed:animate-out data-closed:fade-out-0
                 data-closed:slide-out-to-right-4
                 motion-reduce:animate-none
-              `,
-                toastVariantClasses[variant],
-              )}
+              "
               key={toast.id}
               onOpenChange={(open) => {
                 if (!open) dismiss(toast.id);
