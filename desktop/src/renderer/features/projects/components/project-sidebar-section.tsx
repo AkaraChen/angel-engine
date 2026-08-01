@@ -12,6 +12,10 @@ import {
 import { AnimatePresence, m } from "framer-motion";
 import { useEffect, useMemo } from "react";
 import { useTranslation } from "react-i18next";
+import {
+  displayChatTitle,
+  getProjectDisplayName,
+} from "@/app/workspace/workspace-display";
 import { useWorkspaceUiStore } from "@/app/workspace/workspace-ui-store";
 import { Button } from "@/components/ui/button";
 import {
@@ -253,14 +257,4 @@ export function ProjectSidebarSection({
   );
 }
 
-function getProjectDisplayName(projectPath: string): string {
-  const parts = projectPath.split(/[\\/]/).filter(Boolean);
-  return parts[parts.length - 1] ?? projectPath;
-}
 
-function displayChatTitle(
-  title: string,
-  t: (key: string, options?: Record<string, unknown>) => string,
-) {
-  return title === "New chat" ? t("workspace.newChat") : title;
-}
