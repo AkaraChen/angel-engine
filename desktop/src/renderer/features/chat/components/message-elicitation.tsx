@@ -124,11 +124,16 @@ function ElicitationQuestionCard({
   const isPermissionRequest =
     isPermissionElicitation(elicitation) && !hasInputQuestions;
 
+  // The only component in the whole thread allowed to tint its entire card.
+  // It has earned it: an open elicitation blocks the run, so it has to break
+  // the transcript's rhythm rather than blend into it. Once answered it drops
+  // back to a plain card like everything else.
   const elicitationCardClassName = cn(
     inspectorCardClassName,
     "my-2",
     isPermissionRequest && "shadow-none",
-    awaitingInput && "border-primary/30 ring-1 ring-primary/10",
+    awaitingInput &&
+      "border-status-attention-border bg-status-attention-soft shadow-none",
   );
   const elicitationControlRowClass = isPermissionRequest
     ? "min-w-0 rounded-md transition-colors"
@@ -193,7 +198,7 @@ function ElicitationQuestionCard({
         <CircleHelp
           className={cn(
             "size-3.5 shrink-0",
-            awaitingInput ? "text-primary" : "text-muted-foreground",
+            awaitingInput ? "text-status-attention" : "text-muted-foreground",
           )}
         />
         <div className="min-w-0 flex-1">
@@ -222,7 +227,7 @@ function ElicitationQuestionCard({
           data-[state=open]:animate-collapsible-down
         "
       >
-        <div className="mt-1 space-y-3 border-t border-border px-3 py-2.5">
+        <div className="mt-1 space-y-3 border-t border-border-subtle px-3 py-2.5">
           {is.nonEmptyString(elicitation.body) ? (
             <div className="text-sm/5 whitespace-pre-wrap">
               {elicitation.body}
@@ -256,7 +261,7 @@ function ElicitationQuestionCard({
                 <textarea
                   className="
                     min-h-20 w-full resize-y rounded-md border
-                    border-border-subtle bg-background/80 px-3 py-2 text-sm
+                    border-border-subtle bg-card px-3 py-2 text-sm
                     outline-none
                     focus-visible:border-primary/40 focus-visible:ring-3
                     focus-visible:ring-primary/12

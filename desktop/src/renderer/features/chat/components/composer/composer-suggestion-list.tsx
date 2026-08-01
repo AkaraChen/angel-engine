@@ -70,9 +70,8 @@ export function ComposerSuggestionList({
   return (
     <div
       className="
-        relative z-100 w-96 rounded-lg border border-border-subtle bg-popover/96
-        p-1 text-popover-foreground shadow-[0_12px_30px_-24px_rgba(0,0,0,0.62)]
-        backdrop-blur-xl
+        relative z-100 w-96 rounded-lg border border-border-subtle bg-popover
+        p-1 text-popover-foreground shadow-popover
       "
     >
       <div className="px-2 py-1 text-[11px] font-medium text-muted-foreground">

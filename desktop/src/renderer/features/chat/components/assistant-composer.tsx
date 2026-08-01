@@ -33,8 +33,12 @@ import { useComposerEditor } from "@/features/chat/components/composer/use-compo
 import { iconButtonClass } from "@/features/chat/components/thread-styles";
 import { useChatOptions } from "@/features/chat/runtime/chat-options-context";
 
+// Same visual language as the Draft composer, one step quieter: shadow-xs
+// rather than shadow-panel, because this one is parked at the bottom of every
+// session instead of being the page's single focal object. Opaque, not glassy —
+// it sits over a scrolling transcript, which is the worst case for a blur.
 const composerInputGroupClassName =
-  "overflow-visible !rounded-xl !border !border-border-subtle !bg-background/86 !shadow-panel backdrop-blur-xl transition-[background-color] has-[textarea]:!rounded-xl has-[>[data-align=block-end]]:!rounded-xl has-[>[data-align=block-start]]:!rounded-xl has-[[data-slot=input-group-control]:focus-visible]:!ring-0 focus-within:!bg-background/94 dark:!bg-card/82 dark:focus-within:!bg-card/90 [&_button:focus-visible]:!border-transparent [&_button:focus-visible]:!ring-0 [&_button]:shadow-none";
+  "overflow-visible !rounded-xl !border !border-border-subtle !bg-card !shadow-xs transition-[border-color] has-[textarea]:!rounded-xl has-[>[data-align=block-end]]:!rounded-xl has-[>[data-align=block-start]]:!rounded-xl has-[[data-slot=input-group-control]:focus-visible]:!ring-0 focus-within:!border-primary [&_button:focus-visible]:!border-transparent [&_button:focus-visible]:!ring-0 [&_button]:shadow-none";
 const quoteTextClassName = "line-clamp-2 flex-1 text-muted-foreground";
 
 export function AssistantComposer({
@@ -185,9 +189,8 @@ function AssistantComposerFooter({
         {isRunning ? (
           <Button
             className="
-              h-8 rounded-md border-border-subtle bg-background/55 px-3 text-xs
+              h-8 rounded-md border-border-subtle px-3 text-xs
               focus-visible:ring-0!
-              dark:bg-card/60
             "
             onClick={stopRun}
             size="sm"

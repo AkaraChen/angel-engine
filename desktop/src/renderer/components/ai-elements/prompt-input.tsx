@@ -993,8 +993,7 @@ export function PromptInput({
         <InputGroup
           className={cn(
             `
-              overflow-hidden rounded-lg border-border-subtle bg-background/80
-              shadow-panel backdrop-blur-xl
+              overflow-hidden rounded-lg border-border-subtle bg-card shadow-xs
             `,
             inputGroupClassName,
           )}
@@ -1262,8 +1261,7 @@ export function PromptInputHoverCardContent({
       align={align}
       className={cn(
         `
-          rounded-lg border-border-subtle bg-popover/95 shadow-popover
-          backdrop-blur-xl
+          rounded-lg border-border-subtle bg-popover shadow-popover
         `,
         className,
       )}

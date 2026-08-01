@@ -204,7 +204,7 @@ function PlanMessagePart({ plan }: { plan: ChatPlanData }) {
             data-[state=open]:animate-collapsible-down
           "
         >
-          <div className="space-y-3 border-t border-border px-3 py-2.5">
+          <div className="space-y-3 border-t border-border-subtle px-3 py-2.5">
             {planText !== undefined ? (
               <div className="p-2">
                 <Streamdown
@@ -223,8 +223,8 @@ function PlanMessagePart({ plan }: { plan: ChatPlanData }) {
             {is.nonEmptyString(plan.path) ? (
               <div
                 className="
-                  flex min-w-0 items-center gap-2 rounded-md bg-background/70
-                  px-2 py-1.5 text-muted-foreground
+                  flex min-w-0 items-center gap-2 rounded-md bg-surface-1 px-2
+                  py-1.5 text-muted-foreground
                 "
               >
                 <FileText className="size-3.5 shrink-0" />
@@ -246,6 +246,9 @@ function PlanMessagePart({ plan }: { plan: ChatPlanData }) {
                         "min-w-0 flex-1 text-sm/5",
                         entry.status === "completed" &&
                           "text-muted-foreground line-through",
+                        // The step being worked on is the only one that should
+                        // pull the eye when a long plan streams past.
+                        entry.status === "in_progress" && "font-medium",
                       )}
                     >
                       {entry.content}
@@ -390,8 +393,8 @@ function PlanMarkerPart({
   return (
     <div
       className="
-        flex min-h-10 w-full items-center gap-2 rounded-lg bg-surface-1/50 px-3
-        py-2 text-xs shadow-panel
+        flex min-h-10 w-full items-center gap-2 rounded-lg border
+        border-border-subtle bg-surface-1 px-3 py-2 text-xs
       "
     >
       <ListChecks className="size-3.5 shrink-0 text-muted-foreground" />
@@ -419,8 +422,13 @@ function PlanEntryStatusIcon({
     case "completed":
       return <Check className="mt-0.5 size-3.5 shrink-0 text-status-success" />;
     case "in_progress":
+      // Accent, not attention: the plan is progressing normally. Amber is
+      // reserved for the approval prompts that actually want the user.
       return (
-        <CircleDot className="mt-0.5 size-3.5 shrink-0 text-status-attention" />
+        <CircleDot
+          className="mt-0.5 size-3.5 shrink-0 text-primary"
+          weight="fill"
+        />
       );
     case "pending":
       return (

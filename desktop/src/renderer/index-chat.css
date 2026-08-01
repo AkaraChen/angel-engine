@@ -22,51 +22,27 @@
     word-break: normal;
   }
 
+  /* Links carry the accent at rest and only earn an underline on hover, so a
+     paragraph dense with references does not read as a striped block. */
   .chat-markdown a {
     color: var(--primary);
-    text-decoration: underline;
-    text-decoration-color: color-mix(in oklch, var(--primary) 35%, transparent);
+    text-decoration: none;
     text-underline-offset: 2px;
   }
 
   .chat-markdown a:hover {
+    text-decoration: underline;
     text-decoration-color: color-mix(in oklch, var(--primary) 70%, transparent);
   }
 
+  /* A plain hairline rule, not a rounded tinted callout card. */
   .chat-markdown blockquote {
-    border-left: 2px solid color-mix(in oklch, var(--primary) 25%, transparent);
+    border-left: 2px solid var(--border-strong);
     color: var(--muted-foreground);
-    font-size: 14px;
-    line-height: 1.72;
+    font-size: 1em;
+    line-height: var(--workspace-message-line-height);
     margin-block: calc(var(--spacing) * 4);
     padding-left: calc(var(--spacing) * 3.5);
-  }
-
-  .chat-markdown h1,
-  .chat-markdown h2 {
-    font-family: var(--app-font-display);
-    letter-spacing: -0.015em;
-  }
-
-  .chat-markdown h1 {
-    font-size: 21px;
-    font-weight: 600;
-    line-height: 1.36;
-    margin-block: calc(var(--spacing) * 1) calc(var(--spacing) * 3);
-  }
-
-  .chat-markdown h2 {
-    font-size: 17px;
-    font-weight: 600;
-    line-height: 1.42;
-    margin-block: calc(var(--spacing) * 6) calc(var(--spacing) * 2);
-  }
-
-  .chat-markdown h3 {
-    font-size: 15px;
-    font-weight: 600;
-    line-height: 1.5;
-    margin-block: calc(var(--spacing) * 4) calc(var(--spacing) * 1.5);
   }
 
   .chat-markdown hr {
@@ -102,12 +78,15 @@
     overflow-wrap: anywhere;
   }
 
+  /* Paragraph rhythm rides the type size rather than the density remap, so the
+     0.75em gap holds its proportion in every workspace mode. */
   .chat-markdown p + p {
-    margin-top: calc(var(--spacing) * 3.5);
+    margin-top: 0.75em;
   }
 
   .chat-markdown pre {
     background-color: transparent;
+    font-family: var(--font-mono, ui-monospace, monospace);
     font-size: 12.5px;
     line-break: normal;
     line-height: 1.58;
@@ -124,37 +103,29 @@
     font-weight: 600;
   }
 
-  .chat-markdown table {
-    border-collapse: separate;
-    border-radius: var(--radius-lg);
-    border-spacing: 0;
-    margin-block: calc(var(--spacing) * 4);
-    overflow: hidden;
-    width: 100%;
-  }
-
   .chat-markdown td,
   .chat-markdown th {
-    border-bottom: 1px solid var(--border);
+    border-bottom: 1px solid var(--border-subtle);
     line-break: loose;
     overflow-wrap: anywhere;
     padding-block: calc(var(--spacing) * 2);
     padding-inline: calc(var(--spacing) * 2.5);
   }
 
-  .chat-markdown td {
-    vertical-align: top;
+  .chat-markdown tr:last-child td {
+    border-bottom: 0;
   }
 
-  .chat-markdown th {
-    background-color: var(--surface-1);
-    font-weight: 500;
-    text-align: left;
+  .chat-markdown td {
+    /* Comparison tables are mostly numbers here; lining figures keep the
+       columns from jittering as a table streams in row by row. */
+    font-variant-numeric: tabular-nums;
+    vertical-align: top;
   }
 
   .chat-markdown [data-streamdown="inline-code"] {
     background-color: var(--surface-2);
-    border-radius: 0.38rem;
+    border-radius: var(--radius-sm);
     color: color-mix(in oklch, var(--foreground) 90%, transparent);
     font-family: var(--font-mono, ui-monospace, monospace);
     font-size: 0.88em;
@@ -162,8 +133,11 @@
     padding-inline: 0.32em;
   }
 
+  /* The user bubble is a soft accent wash, not a filled accent block, so its
+     body text is the readable soft foreground rather than the on-primary
+     white. */
   .chat-markdown-user {
-    color: var(--primary-foreground);
+    color: var(--primary-soft-foreground);
     font-size: var(--workspace-user-bubble-text-size);
     line-height: var(--workspace-user-bubble-line-height);
   }
@@ -172,21 +146,13 @@
   .chat-markdown-user blockquote,
   .chat-markdown-user li::marker,
   .chat-markdown-user strong {
-    color: var(--primary-foreground);
-  }
-
-  .chat-markdown-user a {
-    text-decoration-color: color-mix(
-      in oklch,
-      var(--primary-foreground) 45%,
-      transparent
-    );
+    color: var(--primary-soft-foreground);
   }
 
   .chat-markdown-user a:hover {
     text-decoration-color: color-mix(
       in oklch,
-      var(--primary-foreground) 80%,
+      var(--primary-soft-foreground) 70%,
       transparent
     );
   }
@@ -194,18 +160,17 @@
   .chat-markdown-user blockquote {
     border-left-color: color-mix(
       in oklch,
-      var(--primary-foreground) 35%,
+      var(--primary-soft-foreground) 35%,
       transparent
     );
   }
 
+  /* Regression guard for b05d59d: inline code inside the bubble sits on the
+     card ground with normal foreground ink, so its contrast is the page's
+     contrast in both themes instead of a tint-on-tint that collapses in dark. */
   .chat-markdown-user [data-streamdown="inline-code"] {
-    background-color: color-mix(
-      in oklch,
-      var(--primary-foreground) 14%,
-      transparent
-    );
-    color: var(--primary-foreground);
+    background-color: var(--card);
+    color: var(--foreground);
   }
 
   .workspace-streaming-line {
@@ -266,37 +231,109 @@
   }
 }
 
-/* Chat markdown code blocks. Deliberately unlayered: streamdown bakes its own
-   Tailwind utility classes (bg-sidebar, p-2, border, …) into these elements,
-   and utilities are cascaded after @layer components — unlayered author rules
-   are the only way to reliably restyle them without !important. */
-.chat-markdown [data-streamdown="code-block"] {
-  background-color: var(--card);
+/* Everything from here down is deliberately unlayered: streamdown bakes its own
+   Tailwind utility classes (text-2xl, font-semibold, bg-sidebar, p-2, border, …)
+   into these elements, and utilities cascade after @layer components — unlayered
+   author rules are the only way to reliably restyle them without !important.
+   Anything that has to beat a baked utility belongs in this section, not in the
+   @layer components block above. */
+
+/* Heading levels separate by weight, not by size: nothing in a message body
+   grows past text-lg, so a long answer keeps one reading rhythm. Streamdown
+   ships text-2xl/text-xl on these, which is what makes the unlayered placement
+   load-bearing rather than stylistic. */
+.chat-markdown h1,
+.chat-markdown h2,
+.chat-markdown h3 {
+  font-family: var(--app-font-display);
+  letter-spacing: -0.015em;
+}
+
+.chat-markdown h1 {
+  font-size: 1.0625em;
+  font-weight: 600;
+  line-height: 1.4;
+  margin-block: calc(var(--spacing) * 1) calc(var(--spacing) * 3);
+}
+
+.chat-markdown h2 {
+  font-size: 1em;
+  font-weight: 600;
+  line-height: 1.45;
+  margin-block: calc(var(--spacing) * 6) calc(var(--spacing) * 2);
+}
+
+.chat-markdown h3 {
+  font-size: 1em;
+  font-weight: 500;
+  line-height: 1.5;
+  margin-block: calc(var(--spacing) * 4) calc(var(--spacing) * 1.5);
+}
+
+/* Streamdown nests the table in two framed containers (an outer shell holding
+   the copy/download controls, and an inner scroll box), each with its own
+   border. Stacked with a border on the table itself that reads as three nested
+   boxes, so the outer shell goes flat and the scroll box keeps the one
+   hairline. */
+.chat-markdown [data-streamdown="table-wrapper"] {
+  background-color: transparent;
+  border: 0;
+  padding: 0;
+}
+
+/* Control row first, scroll box second. The controls fade in on hover like the
+   code-block ones instead of holding an empty band above every table. */
+.chat-markdown [data-streamdown="table-wrapper"] > div:first-child {
+  opacity: 0;
+  transition: opacity 150ms var(--ease-standard);
+}
+
+.chat-markdown [data-streamdown="table-wrapper"]:hover > div:first-child,
+.chat-markdown
+  [data-streamdown="table-wrapper"]
+  > div:first-child:focus-within {
+  opacity: 1;
+}
+
+.chat-markdown [data-streamdown="table-wrapper"] > div:last-child {
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-lg);
-  box-shadow: var(--elevation-xs);
+}
+
+.chat-markdown table {
+  border: 0;
+  border-collapse: collapse;
+  margin: 0;
+  width: 100%;
+}
+
+.chat-markdown th {
+  background-color: var(--surface-1);
+  font-size: 1em;
+  font-weight: 500;
+  text-align: left;
+}
+
+/* Chat markdown code blocks. */
+.chat-markdown [data-streamdown="code-block"] {
+  background-color: var(--surface-1);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
   gap: 0;
   margin-block: calc(var(--spacing) * 4);
   overflow: hidden;
   padding: 0;
-}
-
-.dark .chat-markdown [data-streamdown="code-block"] {
-  background-color: var(--surface-1);
+  position: relative;
 }
 
 .chat-markdown [data-streamdown="code-block-header"] {
-  background-color: color-mix(in oklch, var(--surface-1) 55%, transparent);
+  background-color: transparent;
   border-bottom: 1px solid var(--border-subtle);
   color: var(--muted-foreground);
   font-size: 11px;
   font-weight: 500;
   height: calc(var(--spacing) * 8);
   padding-inline: calc(var(--spacing) * 3);
-}
-
-.dark .chat-markdown [data-streamdown="code-block-header"] {
-  background-color: color-mix(in oklch, var(--surface-2) 55%, transparent);
 }
 
 .chat-markdown [data-streamdown="code-block-header"] > span {
@@ -327,51 +364,54 @@
   display: block;
 }
 
+/* Streamdown wraps the code actions in a sticky row it pulls over the header
+   with a negative margin, but that utility never lands in the generated CSS
+   here, so the row claims a full 32px band between the header and the first
+   line of code. Take it out of flow explicitly and park it in the header. */
+.chat-markdown [data-streamdown="code-block"]
+  > div:has(> [data-streamdown="code-block-actions"]) {
+  align-items: center;
+  display: flex;
+  height: calc(var(--spacing) * 8);
+  margin: 0;
+  position: absolute;
+  right: 0;
+  top: 0;
+}
+
+/* The copy affordance stays out of the reading surface until the block is
+   hovered or the button itself is focused. Opacity only — no backdrop-filter:
+   a long thread can hold dozens of code blocks and each blur layer is a
+   compositing cost on every scroll frame. */
 .chat-markdown [data-streamdown="code-block-actions"] {
-  backdrop-filter: blur(12px);
-  background-color: color-mix(in oklch, var(--background) 85%, transparent);
+  background-color: var(--surface-2);
   border: 1px solid var(--border-subtle);
-  border-radius: calc(infinity * 1px);
-  box-shadow: var(--elevation-xs);
+  border-radius: var(--radius-md);
   margin-right: calc(var(--spacing) * 1);
+  opacity: 0;
   padding-block: calc(var(--spacing) * 0.5);
   padding-inline: calc(var(--spacing) * 1);
+  transition: opacity 150ms var(--ease-standard);
 }
 
+.chat-markdown
+  [data-streamdown="code-block"]:hover
+  [data-streamdown="code-block-actions"],
+.chat-markdown [data-streamdown="code-block-actions"]:focus-within {
+  opacity: 1;
+}
+
+/* Code inside the user bubble reads on the card ground for the same reason
+   inline code does — the bubble tint is not a reliable contrast base. */
 .chat-markdown-user [data-streamdown="code-block"] {
-  background-color: color-mix(
-    in oklch,
-    var(--primary-foreground) 10%,
-    transparent
-  );
-  border-color: color-mix(in oklch, var(--primary-foreground) 22%, transparent);
-  box-shadow: none;
-}
-
-.dark .chat-markdown-user [data-streamdown="code-block"] {
-  background-color: color-mix(
-    in oklch,
-    var(--primary-foreground) 10%,
-    transparent
-  );
+  background-color: var(--card);
+  border-color: var(--border-subtle);
+  color: var(--foreground);
 }
 
 .chat-markdown-user [data-streamdown="code-block-header"] {
-  background-color: color-mix(
-    in oklch,
-    var(--primary-foreground) 8%,
-    transparent
-  );
-  border-bottom-color: color-mix(
-    in oklch,
-    var(--primary-foreground) 18%,
-    transparent
-  );
-  color: var(--primary-foreground);
-}
-
-.chat-markdown-user [data-streamdown="code-block-header"] > span {
-  color: color-mix(in oklch, var(--primary-foreground) 72%, transparent);
+  border-bottom-color: var(--border-subtle);
+  color: var(--muted-foreground);
 }
 
 /* 50% of the 200%-wide layer is exactly one gradient period (one track width),
@@ -383,6 +423,22 @@
   to {
     transform: translateX(0);
   }
+}
+
+/* The running indicator: opacity only, so it costs one composited property and
+   never paints a halo. */
+@keyframes chat-pulse {
+  0%,
+  100% {
+    opacity: 0.4;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+@utility animate-chat-pulse {
+  animation: chat-pulse 1.6s var(--ease-standard) infinite;
 }
 
 @keyframes chat-restore-signature-pulse {

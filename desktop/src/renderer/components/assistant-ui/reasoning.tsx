@@ -27,9 +27,9 @@ const reasoningVariants = cva("aui-reasoning-root mb-3 w-full", {
   variants: {
     variant: {
       ghost: "",
-      muted: "rounded-lg bg-muted/30 px-3 py-2",
+      muted: "rounded-lg bg-surface-1 px-3 py-2",
       outline: `
-        rounded-lg border border-border-subtle bg-surface-1/50 px-3 py-2
+        rounded-lg border border-border-subtle bg-surface-1 px-3 py-2
       `,
     },
   },
@@ -190,7 +190,7 @@ function ReasoningText({
       className={cn(
         `
           aui-reasoning-text max-h-64 overflow-y-auto border-l-2
-          border-primary/20 py-2 pl-3 text-xs/5
+          border-border-strong py-2 pl-3 text-xs/5
         `,
         "whitespace-pre-wrap",
         className,
