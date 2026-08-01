@@ -394,6 +394,7 @@ export const WorkspacePageView: FC<WorkspacePageViewProps> = ({
               ) : (
                 <NewChatThread
                   chatOptions={chatOptions}
+                  chats={chats}
                   creationLocation={draftCreationLocation}
                   cwd={pinnedDraftCwd}
                   creationLocationAccessory={
@@ -413,6 +414,7 @@ export const WorkspacePageView: FC<WorkspacePageViewProps> = ({
                   onChatMessagesUpdated={setChatMessagesInCache}
                   onChatUpdated={updateChatFromRun}
                   onCreateProject={createProjectFromPicker}
+                  onOpenChat={openChat}
                   onProjectChange={selectDraftProject}
                   permissionMode={permissionModeOverride}
                   prewarmId={

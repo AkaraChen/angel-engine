@@ -31,7 +31,7 @@ export function getProjectDisplayName(projectPath: string) {
   return parts[parts.length - 1] ?? projectPath;
 }
 
-function displayChatTitle(
+export function displayChatTitle(
   title: string,
   t: (key: string, options?: Record<string, unknown>) => string,
 ) {

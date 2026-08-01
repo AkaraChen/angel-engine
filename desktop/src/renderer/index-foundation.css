@@ -215,8 +215,10 @@
   --sidebar-border: var(--border-subtle);
   --sidebar-ring: #3784ff;
   --macos-sidebar-background: #f4f1ea;
-  --workspace-new-chat-description-size: 0.875rem;
-  --workspace-new-chat-title-size: 1.875rem;
+  --workspace-new-chat-description-size: 0.9375rem;
+  /* The draft screen is the one app surface that carries a landing-scale
+     headline; the compact modes below pull it back to app scale. */
+  --workspace-new-chat-title-size: 2.25rem;
   --workspace-composer-line-height: 1.5rem;
   --workspace-composer-min-height: 4.2rem;
   --workspace-composer-text-size: 0.9375rem;
@@ -258,6 +260,8 @@
   --text-8xl--line-height: 1;
   --text-9xl: 7rem;
   --text-9xl--line-height: 1;
+  --workspace-new-chat-description-size: 0.8125rem;
+  --workspace-new-chat-title-size: 1.75rem;
   --workspace-composer-line-height: 1.375rem;
   --workspace-composer-min-height: 3.65rem;
   --workspace-composer-text-size: 0.875rem;

@@ -348,6 +348,9 @@ export const ko = {
       empty: {
         description:
           "수정하거나 테스트할 파일, 버그, 동작 또는 워크스페이스 범위를 지정하세요.",
+        recentEmpty:
+          "아직 아무것도 없습니다. 프로젝트를 선택하고 첫 세션을 시작하세요.",
+        recentTitle: "최근",
         suggestionClarify: "복잡한 문제를 정리해서 생각할 수 있게 도와줘",
         suggestionExplore: "이 코드베이스의 구조를 설명해 줘",
         suggestionFix: "오류 메시지로 버그를 찾아 줘",

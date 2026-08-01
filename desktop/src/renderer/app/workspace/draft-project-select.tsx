@@ -2,7 +2,7 @@ import type { ChatCreationLocation } from "@angel-engine/daemon-api/chat";
 import type { Project } from "@angel-engine/daemon-api/projects";
 import type { ChangeEvent } from "react";
 
-import { Folder, GitBranch } from "@phosphor-icons/react";
+import { FolderOpen, GitBranch } from "@phosphor-icons/react";
 import { useTranslation } from "react-i18next";
 import { getProjectDisplayName } from "@/app/workspace/workspace-display";
 import {
@@ -23,6 +23,12 @@ const projectControlVariants = {
     "h-8 max-w-[18rem] rounded-md border border-foreground/[0.08] bg-background/88 py-0 pr-8 pl-8 text-xs shadow-[0_8px_18px_-18px_rgba(0,0,0,0.55)] backdrop-blur-xl dark:border-white/[0.09] dark:bg-card/86 dark:shadow-[0_10px_20px_-20px_rgba(0,0,0,0.72)]",
   ghost:
     "h-8 max-w-[18rem] rounded-md border-transparent bg-transparent py-0 pr-6 pl-7 text-xs hover:bg-foreground/[0.04] dark:hover:bg-white/[0.04]",
+  /**
+   * Draft-screen capsule. The DNA only lets `rounded-full` into app context for
+   * chips, so this variant is scoped to the composer toolbar rather than being
+   * folded into `native-select` itself.
+   */
+  chip: "h-8 max-w-[16rem] rounded-full border border-border-subtle bg-card py-0 pr-7 pl-7 text-xs hover:bg-overlay-hover dark:bg-surface-1",
 };
 
 export function DraftProjectSelect({
@@ -59,12 +65,12 @@ export function DraftProjectSelect({
 
   return (
     <div className="relative w-fit max-w-[18rem]">
-      <Folder
+      <FolderOpen
         className="
           pointer-events-none absolute top-1/2 left-2.5 z-10 size-3.5
-          -translate-y-1/2 text-muted-foreground/85
+          -translate-y-1/2 text-muted-foreground
         "
-        weight="duotone"
+        weight="regular"
       />
       <NativeSelect
         aria-label={t("workspace.projectSelect")}
@@ -124,9 +130,9 @@ export function DraftCreationLocationSelect({
       <GitBranch
         className="
           pointer-events-none absolute top-1/2 left-2.5 z-10 size-3.5
-          -translate-y-1/2 text-muted-foreground/85
+          -translate-y-1/2 text-muted-foreground
         "
-        weight="duotone"
+        weight="regular"
       />
       <NativeSelect
         aria-label={t("workspace.creationLocationSelect")}

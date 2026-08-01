@@ -29,6 +29,8 @@ const EMPTY_AVAILABLE_COMMANDS: NonNullable<
 
 interface NewChatThreadProps {
   chatOptions: ChatOptionsContextValue;
+  /** Recent chats surfaced under the composer, not thread state. */
+  chats: Chat[];
   creationLocation?: ChatCreationLocation;
   creationLocationAccessory?: ReactNode;
   cwd?: string;
@@ -41,6 +43,7 @@ interface NewChatThreadProps {
     | ChatComposerBeforeSubmitResult
     | Promise<ChatComposerBeforeSubmitResult>;
   onCreateProject: () => Project | undefined | Promise<Project | undefined>;
+  onOpenChat: (chat: Chat) => void;
   onProjectChange: (projectId: string | null) => void;
   permissionMode?: string;
   prewarmId?: string;
@@ -57,6 +60,7 @@ interface NewChatThreadProps {
 
 export function NewChatThread({
   chatOptions,
+  chats,
   creationLocation,
   creationLocationAccessory,
   cwd,
@@ -67,6 +71,7 @@ export function NewChatThread({
   onChatUpdated,
   onBeforeSubmit,
   onCreateProject,
+  onOpenChat,
   onProjectChange,
   permissionMode,
   prewarmId,
@@ -129,6 +134,7 @@ export function NewChatThread({
       <ChatEnvironmentProvider value={chatEnvironment}>
         <ChatRuntimeActionsProvider slotKey={slotKey}>
           <NewChatComposer
+            chats={chats}
             creationLocation={creationLocation}
             creationLocationAccessory={creationLocationAccessory}
             cwd={cwd}
@@ -139,6 +145,7 @@ export function NewChatThread({
             onChatMessagesUpdated={onChatMessagesUpdated}
             onChatUpdated={handleChatUpdated}
             onCreateProject={onCreateProject}
+            onOpenChat={onOpenChat}
             onProjectChange={onProjectChange}
             permissionMode={permissionMode}
             prewarmId={prewarmId}

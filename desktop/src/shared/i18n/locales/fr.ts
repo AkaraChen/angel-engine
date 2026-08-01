@@ -357,6 +357,9 @@ export const fr = {
       empty: {
         description:
           "Indiquez un fichier, un bug, un comportement ou une zone de travail à corriger ou tester.",
+        recentEmpty:
+          "Rien ici pour l’instant — choisissez un projet et lancez votre première session.",
+        recentTitle: "Récents",
         suggestionClarify: "Aide-moi à réfléchir à une question complexe",
         suggestionExplore: "Explique la structure de ce code",
         suggestionFix: "Retrouve un bug à partir d'un message d'erreur",
