@@ -1,6 +1,4 @@
-use self::content::{
-    codex_content_delta, codex_content_text, codex_reasoning_text, content_delta_is_empty,
-};
+use self::content::{codex_content_delta, codex_reasoning_text, content_delta_is_empty};
 use self::tools::{
     codex_history_replay_item, codex_history_replay_plan_item, codex_history_replay_tool_action,
     codex_history_replay_tool_item, codex_history_replay_tool_item_type,
@@ -139,11 +137,20 @@ fn codex_rollout_history_entry(
 }
 
 fn codex_replay_is_internal_user_message(item: &Value) -> bool {
-    // Codex bundles context into user-role messages, sometimes as several
-    // content parts in one message (e.g. `<recommended_plugins>` followed by
-    // `<environment_context>`). The message is internal only when every text
-    // part is an internal block; a single user-authored part keeps the whole
-    // message visible.
+    // Codex may bundle arbitrary agent-provided context into the same user-role
+    // message as `<environment_context>`. The closing tag identifies the whole
+    // message as internal regardless of its other content parts.
+    if item
+        .get("content")
+        .and_then(Value::as_array)
+        .into_iter()
+        .flatten()
+        .filter_map(|part| part.get("text").and_then(Value::as_str))
+        .any(|text| text.contains("</environment_context>"))
+    {
+        return true;
+    }
+
     let mut saw_text = false;
     for part in item
         .get("content")
@@ -163,18 +170,7 @@ fn codex_replay_is_internal_user_message(item: &Value) -> bool {
 }
 
 fn codex_replay_is_internal_user_text(text: &str) -> bool {
-    codex_replay_is_environment_context_text(text)
-        || codex_replay_is_agents_instructions_text(text)
-        || codex_replay_is_turn_aborted_text(text)
-        || codex_replay_is_recommended_plugins_text(text)
-}
-
-fn codex_replay_is_recommended_plugins_text(text: &str) -> bool {
-    text.starts_with("<recommended_plugins>") && text.ends_with("</recommended_plugins>")
-}
-
-fn codex_replay_is_environment_context_text(text: &str) -> bool {
-    text.starts_with("<environment_context>") && text.ends_with("</environment_context>")
+    codex_replay_is_agents_instructions_text(text) || codex_replay_is_turn_aborted_text(text)
 }
 
 fn codex_replay_is_agents_instructions_text(text: &str) -> bool {
