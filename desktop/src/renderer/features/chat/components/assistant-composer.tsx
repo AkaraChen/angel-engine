@@ -38,7 +38,7 @@ import { useChatOptions } from "@/features/chat/runtime/chat-options-context";
 // session instead of being the page's single focal object. Opaque, not glassy —
 // it sits over a scrolling transcript, which is the worst case for a blur.
 const composerInputGroupClassName =
-  "overflow-visible !rounded-xl !border !border-border-subtle !bg-card !shadow-xs transition-[border-color] has-[textarea]:!rounded-xl has-[>[data-align=block-end]]:!rounded-xl has-[>[data-align=block-start]]:!rounded-xl has-[[data-slot=input-group-control]:focus-visible]:!ring-0 focus-within:!border-primary [&_button:focus-visible]:!border-transparent [&_button:focus-visible]:!ring-0 [&_button]:shadow-none";
+  "overflow-visible !rounded-xl !border !border-(--workspace-composer-border) !bg-card !shadow-xs transition-[border-color] has-[textarea]:!rounded-xl has-[>[data-align=block-end]]:!rounded-xl has-[>[data-align=block-start]]:!rounded-xl has-[[data-slot=input-group-control]:focus-visible]:!ring-0 focus-within:!border-primary [&_button:focus-visible]:!border-transparent [&_button:focus-visible]:!ring-0 [&_button]:shadow-none";
 const quoteTextClassName = "line-clamp-2 flex-1 text-muted-foreground";
 
 export function AssistantComposer({
