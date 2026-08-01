@@ -12,9 +12,10 @@ import geminiIcon from "../../public/icons/gemini.svg";
 import githubCopilotIcon from "../../public/icons/github-copilot.svg";
 import kimiIcon from "../../public/icons/kimi.svg";
 import qoderIcon from "../../public/icons/qoder-color.svg";
-import projectChatImage from "../../public/project-chat.png";
+import fleetActualImage from "../../public/fleet-actual.png";
 import richChatImage from "../../public/rich-chat-ui.png";
 import screenshotImage from "../../public/screenshot.png";
+import worktreeActualImage from "../../public/worktree-actual.png";
 
 const repoUrl = "https://github.com/AkaraChen/angel-engine";
 const releasesUrl = `${repoUrl}/releases/latest`;
@@ -30,10 +31,16 @@ const Reveal: FC<RevealProps> = ({ children, className, delay = 0 }) => {
 
   return (
     <m.div
+      data-reveal
       className={className}
-      initial={reduceMotion ? false : { opacity: 0, y: 7 }}
-      whileInView={reduceMotion ? undefined : { opacity: 1, y: 0 }}
-      transition={{ duration: 0.42, delay, ease: [0.22, 1, 0.36, 1] }}
+      animate={reduceMotion ? { opacity: 1, y: 0 } : undefined}
+      initial={{ opacity: 0, y: 7 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      transition={{
+        duration: reduceMotion ? 0 : 0.42,
+        delay: reduceMotion ? 0 : delay,
+        ease: [0.22, 1, 0.36, 1],
+      }}
       viewport={{ once: true, amount: 0.16 }}
     >
       {children}
@@ -98,76 +105,6 @@ const ProductWindow: FC<ProductWindowProps> = ({ alt, image, priority }) => (
     />
   </div>
 );
-
-function FleetDemo() {
-  return (
-    <div
-      className="fleet-demo"
-      aria-label="Three agent sessions running in parallel"
-    >
-      <div className="fleet-toolbar">
-        <div>
-          <span className="online-dot" />
-          Fleet
-        </div>
-        <span>3 sessions</span>
-      </div>
-      <div className="fleet-grid">
-        <article>
-          <span className="runtime-avatar">CX</span>
-          <div>
-            <b>Refine workspace search</b>
-            <p>agent/codex/search</p>
-          </div>
-          <span className="status running">Running</span>
-        </article>
-        <article>
-          <span className="runtime-avatar violet">CL</span>
-          <div>
-            <b>Review onboarding copy</b>
-            <p>agent/claude/onboarding</p>
-          </div>
-          <span className="status waiting">Waiting</span>
-        </article>
-        <article>
-          <span className="runtime-avatar green">GM</span>
-          <div>
-            <b>Verify release build</b>
-            <p>agent/gemini/release</p>
-          </div>
-          <span className="status done">Done</span>
-        </article>
-      </div>
-    </div>
-  );
-}
-
-function BranchMap() {
-  return (
-    <div className="branch-map" aria-label="Parallel worktree branch diagram">
-      <span className="branch-line trunk" />
-      <span className="branch-line top" />
-      <span className="branch-line middle" />
-      <span className="branch-line bottom" />
-      <div className="branch-node main">
-        <i />
-        main
-      </div>
-      <div className="branch-node one">
-        <i />
-        agent/codex
-      </div>
-      <div className="branch-node two">
-        <i />
-        agent/claude
-      </div>
-      <div className="branch-node three">
-        <i />
-        agent/gemini
-      </div>
-    </div>
-  );
-}
 
 function Hexagon({ flip = false }: { flip?: boolean }) {
   return (
@@ -271,7 +208,12 @@ export default function HomePage() {
               </Reveal>
               <Reveal className="mesh-stage" delay={0.06}>
                 <div className="glass-panel">
-                  <FleetDemo />
+                  <Image
+                    className="actual-product-shot"
+                    src={fleetActualImage}
+                    alt="Angel Engine Fleet with status filters and a project selector"
+                    sizes="(max-width: 840px) calc(100vw - 60px), 1080px"
+                  />
                 </div>
               </Reveal>
             </section>
@@ -281,15 +223,15 @@ export default function HomePage() {
                 <p className="section-label">ISOLATED WORKTREES</p>
                 <h2>Let every branch move at once.</h2>
                 <p>
-                  Each agent works in its own checkout. Your main branch stays
-                  clean while ideas, fixes, and reviews progress independently.
+                  Choose Worktree directly in the Power-mode composer. Angel
+                  Engine creates an isolated checkout while your project-local
+                  work stays separate.
                 </p>
-                <BranchMap />
               </Reveal>
               <Reveal className="screenshot-card" delay={0.06}>
                 <Image
-                  src={projectChatImage}
-                  alt="Project conversations organized in Angel Engine"
+                  src={worktreeActualImage}
+                  alt="Angel Engine Power-mode composer with Worktree selected"
                   sizes="(max-width: 840px) calc(100vw - 40px), 52vw"
                 />
               </Reveal>

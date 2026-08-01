@@ -48,112 +48,14 @@
   box-shadow: var(--shadow-glass);
   backdrop-filter: blur(20px);
 }
-.fleet-demo {
-  overflow: hidden;
-  border: 1px solid rgb(255 255 255 / 64%);
-  border-radius: 16px;
-  background: rgb(255 255 255 / 82%);
-  box-shadow: var(--shadow-panel);
-}
-.fleet-toolbar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  min-height: 60px;
-  padding: 0 22px;
-  border-bottom: 1px solid var(--border);
-  font-size: 13px;
-  font-weight: 600;
-}
-.fleet-toolbar > div {
-  display: flex;
-  align-items: center;
-  gap: 9px;
-}
-.fleet-toolbar > span {
-  color: var(--muted-foreground);
-  font-family: var(--font-mono);
-  font-size: 10px;
-  font-weight: 400;
-}
-.online-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: var(--success);
-  box-shadow: 0 0 0 4px rgb(0 151 103 / 12%);
-}
-.fleet-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-}
-.fleet-grid article {
-  display: grid;
-  grid-template-columns: auto 1fr;
-  gap: 14px;
-  min-width: 0;
-  padding: 30px 24px 26px;
-  border-right: 1px solid var(--border);
-}
-.fleet-grid article:last-child {
-  border-right: 0;
-}
-.runtime-avatar {
-  display: grid;
-  width: 38px;
-  height: 38px;
-  place-items: center;
-  border-radius: 12px;
-  background: var(--primary-soft);
-  color: var(--primary-soft-foreground);
-  font-family: var(--font-mono);
-  font-size: 10px;
-}
-.runtime-avatar.violet {
-  background: rgb(124 109 240 / 14%);
-  color: #584bc1;
-}
-.runtime-avatar.green {
-  background: rgb(0 151 103 / 12%);
-  color: #007e56;
-}
-.fleet-grid b {
+.actual-product-shot {
   display: block;
-  overflow: hidden;
-  font-size: 13px;
-  font-weight: 600;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.fleet-grid p {
-  overflow: hidden;
-  margin: 8px 0 0;
-  color: var(--muted-foreground);
-  font-family: var(--font-mono);
-  font-size: 9px;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.status {
-  grid-column: 2;
-  justify-self: start;
-  margin-top: 24px;
-  padding: 5px 9px;
-  border-radius: 999px;
-  font-family: var(--font-mono);
-  font-size: 9px;
-}
-.status.running {
-  background: var(--primary-soft);
-  color: var(--primary-hover);
-}
-.status.waiting {
-  background: #ffefd9;
-  color: #8b6816;
-}
-.status.done {
-  background: #e6f6f0;
-  color: #007e56;
+  width: 100%;
+  height: auto;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: var(--card);
+  box-shadow: var(--shadow-panel);
 }
 
 .split-section {
@@ -161,81 +63,6 @@
   grid-template-columns: 0.78fr 1.22fr;
   align-items: center;
   gap: clamp(64px, 8vw, 112px);
-}
-.branch-map {
-  position: relative;
-  width: 360px;
-  height: 190px;
-  margin-top: 46px;
-  font-family: var(--font-mono);
-  font-size: 10px;
-}
-.branch-line {
-  position: absolute;
-  display: block;
-  background: var(--border-strong);
-}
-.branch-line.trunk {
-  top: 27px;
-  left: 14px;
-  width: 1px;
-  height: 135px;
-}
-.branch-line.top,
-.branch-line.middle,
-.branch-line.bottom {
-  left: 14px;
-  width: 62px;
-  height: 1px;
-}
-.branch-line.top {
-  top: 74px;
-}
-.branch-line.middle {
-  top: 118px;
-}
-.branch-line.bottom {
-  top: 162px;
-}
-.branch-node {
-  position: absolute;
-  display: flex;
-  align-items: center;
-  gap: 9px;
-  padding: 7px 11px;
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  background: var(--card);
-  box-shadow: 0 1px 2px rgb(15 23 42 / 5%);
-}
-.branch-node i {
-  display: block;
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: var(--primary);
-}
-.branch-node.main {
-  top: 12px;
-  left: 0;
-}
-.branch-node.one {
-  top: 58px;
-  left: 62px;
-}
-.branch-node.two {
-  top: 102px;
-  left: 62px;
-}
-.branch-node.three {
-  top: 146px;
-  left: 62px;
-}
-.branch-node.two i {
-  background: var(--presence);
-}
-.branch-node.three i {
-  background: var(--success);
 }
 .screenshot-card {
   overflow: hidden;
@@ -349,22 +176,9 @@
     padding: 9px;
     border-radius: 19px;
   }
-  .fleet-grid {
-    grid-template-columns: 1fr;
-  }
-  .fleet-grid article {
-    border-right: 0;
-    border-bottom: 1px solid var(--border);
-  }
-  .fleet-grid article:last-child {
-    border-bottom: 0;
-  }
   .split-section {
     grid-template-columns: 1fr;
     gap: 44px;
-  }
-  .branch-map {
-    max-width: 100%;
   }
   .screenshot-card {
     transform: none;
@@ -412,13 +226,6 @@
   .section-heading > p:last-child,
   .cta-copy > p {
     font-size: 15px;
-  }
-  .fleet-grid article {
-    padding: 24px 18px;
-  }
-  .branch-map {
-    transform: scale(0.9);
-    transform-origin: left top;
   }
   .paper-grid {
     grid-template-columns: 1fr;
