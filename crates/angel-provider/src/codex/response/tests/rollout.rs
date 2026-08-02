@@ -53,10 +53,10 @@ fn rollout_history_drops_event_user_message_without_response_item() {
 }
 
 #[test]
-fn rollout_history_filters_recommended_plugins_context_message() {
+fn rollout_history_filters_any_message_with_environment_context() {
     let conversation_id = ConversationId::new("conv");
     let mut output = TransportOutput::default();
-    let content = r##"{"timestamp":"2026-07-18T08:16:41.843Z","type":"response_item","payload":{"type":"message","role":"user","content":[{"type":"input_text","text":"<recommended_plugins>\nHere is a list of plugins that are available but not installed.\n\n- Box (box@openai-curated-remote)\n</recommended_plugins>"},{"type":"input_text","text":"<environment_context>\n  <cwd>/Users/akrc</cwd>\n</environment_context>"}]}}
+    let content = r##"{"timestamp":"2026-07-18T08:16:41.843Z","type":"response_item","payload":{"type":"message","role":"user","content":[{"type":"input_text","text":"arbitrary agent-provided context"},{"type":"input_text","text":"<environment_context>\n  <cwd>/Users/akrc</cwd>\n</environment_context>"},{"type":"input_text","text":"text that would otherwise look user-authored"}]}}
 {"timestamp":"2026-07-18T08:16:41.900Z","type":"response_item","payload":{"type":"message","role":"user","content":[{"type":"input_text","text":"<recommended_plugins>\nHere is a list of plugins that are available but not installed.\n</recommended_plugins>"}]}}
 {"timestamp":"2026-07-18T08:16:42.000Z","type":"response_item","payload":{"type":"message","role":"user","content":[{"type":"input_text","text":"Reply with one code block."}]}}
 {"timestamp":"2026-07-18T08:16:50.000Z","type":"response_item","payload":{"type":"message","role":"assistant","content":[{"type":"output_text","text":"```python\nx = 1\n```"}]}}"##;
@@ -73,11 +73,16 @@ fn rollout_history_filters_recommended_plugins_context_message() {
         .collect::<Vec<_>>();
 
     assert!(has_local_history);
-    assert_eq!(replay.len(), 2);
+    assert_eq!(replay.len(), 3);
     assert_eq!(replay[0].role, HistoryRole::User);
     assert!(matches!(
         &replay[0].content,
+        ContentDelta::Text(text) if text.starts_with("<recommended_plugins>")
+    ));
+    assert_eq!(replay[1].role, HistoryRole::User);
+    assert!(matches!(
+        &replay[1].content,
         ContentDelta::Text(text) if text == "Reply with one code block."
     ));
-    assert_eq!(replay[1].role, HistoryRole::Assistant);
+    assert_eq!(replay[2].role, HistoryRole::Assistant);
 }

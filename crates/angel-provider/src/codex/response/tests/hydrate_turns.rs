@@ -363,7 +363,7 @@ fn thread_resume_drops_codex_internal_agents_instructions() {
 }
 
 #[test]
-fn thread_resume_drops_codex_recommended_plugins_message() {
+fn thread_resume_drops_any_message_with_environment_context() {
     let adapter = CodexAdapter::app_server();
     let mut engine = AngelEngine::with_available_runtime(
         angel_engine::ProtocolFlavor::CodexAppServer,
@@ -400,7 +400,7 @@ fn thread_resume_drops_codex_recommended_plugins_message() {
                                         "content": [
                                             {
                                                 "type": "input_text",
-                                                "text": "<recommended_plugins>\nHere is a list of plugins that are available but not installed.\n\n- Box (box@openai-curated-remote)\n</recommended_plugins>"
+                                                "text": "arbitrary agent-provided context"
                                             },
                                             {
                                                 "type": "input_text",
