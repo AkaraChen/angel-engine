@@ -44,8 +44,8 @@ import {
 import { ChatEvents } from "./chat-events";
 import { ChatProcessRegistry } from "./process-registry";
 import {
+  beginChatSend,
   createChat,
-  renameChatFromPrompt,
   requireChat,
   setChatRemoteThreadId,
   setChatRuntime as setChatRuntimeRecord,
@@ -326,10 +326,19 @@ export class ChatEngine extends Effect.Service<ChatEngine>()(
           }
 
           const preparedChat = yield* prepareChatForSend(input, abortSignal);
-          const { chat, isNewChat, session } = preparedChat;
+          const { isNewChat, session } = preparedChat;
+          // Persist and publish the send's own metadata before the turn starts.
+          // The prompt title and the `updatedAt` that orders the chat list are
+          // both known now, so the sidebar row settles into its real title and
+          // position as the message goes out — on this device and, through the
+          // metadata hint, on every other one — instead of after the first turn
+          // finishes minutes later.
+          const chat = yield* beginChatSend(preparedChat.chat.id, input.text);
+          refreshProcessRegistry();
           if (isNewChat) {
             onEvent?.({ chat, type: "chat" });
           }
+          chatEvents.metadataChanged([chat.id]);
 
           const cwd = yield* cwdForChat(chat, input.projectId);
           const result = yield* session
@@ -351,18 +360,14 @@ export class ChatEngine extends Effect.Service<ChatEngine>()(
             })
             .pipe(Effect.mapError(sessionFailure));
 
-          if (is.nonEmptyString(input.text)) {
-            yield* renameChatFromPrompt(chat.id, input.text);
-            refreshProcessRegistry();
-          }
           const projected = projectTurnRunResult(result);
           const finalChat = yield* is.nonEmptyString(projected.remoteThreadId)
             ? setChatRemoteThreadId(chat.id, projected.remoteThreadId)
             : touchChat(chat.id);
           const content = projected.content;
-          // Every send retitles (first prompt) and/or bumps `updatedAt`, which
-          // reorders every client's chat list. Without this, a send from one
-          // device leaves the other showing a stale title and sort position.
+          // The settle bumps `updatedAt` again, and the remote thread id is only
+          // knowable now — it is what locks the chat's agent. Republish so the
+          // other devices pick up both.
           chatEvents.metadataChanged([finalChat.id]);
 
           return {

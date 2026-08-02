@@ -189,16 +189,27 @@ export function setChatRuntime(
   });
 }
 
-export function renameChatFromPrompt(
+/**
+ * Persists everything a send already knows before its turn runs: the prompt
+ * title for a chat still carrying the default one, and the `updatedAt` that
+ * orders every client's chat list.
+ *
+ * This is deliberately not deferred to the turn's result. A first turn can run
+ * for minutes, and until it settles the row would keep the default title and a
+ * stale sort position on every surface — the desktop sidebar and the phone
+ * both read the list, not the run stream.
+ */
+export function beginChatSend(
   id: string,
   prompt: string,
 ): Effect.Effect<Chat, DaemonError, Db> {
   return Effect.gen(function* () {
     const chat = yield* requireChat(id);
-    if (chat.title !== DEFAULT_CHAT_TITLE) return chat;
+    const renames =
+      chat.title === DEFAULT_CHAT_TITLE && is.nonEmptyString(prompt);
 
     return yield* updateChat(id, {
-      title: titleFromPrompt(prompt),
+      title: renames ? titleFromPrompt(prompt) : chat.title,
       updatedAt: new Date().toISOString(),
     });
   });
@@ -368,7 +379,7 @@ function normalizeOptionalDirectory(
 }
 
 function titleFromPrompt(prompt: string) {
-  const title = prompt.replace(/\s+/g, " ");
+  const title = prompt.replace(/\s+/g, " ").trim();
   if (!title) return DEFAULT_CHAT_TITLE;
   return title.length > 48 ? `${title.slice(0, 47)}...` : title;
 }
