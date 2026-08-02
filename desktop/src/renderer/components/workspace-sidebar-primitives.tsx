@@ -78,14 +78,18 @@ export function WorkspaceSidebarMenuButton({
   type = "button",
   ...props
 }: WorkspaceSidebarMenuButtonProps): ReactElement {
+  // Pass className into SidebarMenuButton so `cn`/twMerge can drop conflicting
+  // base hover text colours (e.g. hover:text-sidebar-foreground) when a CTA
+  // supplies its own. Putting the override only on the asChild child lets
+  // Radix Slot concatenate both class lists without merge, so base hover
+  // styles can win in CSS order and turn primary-button text black on hover.
   return (
-    <SidebarMenuButton asChild isActive={isActive}>
-      <m.button
-        className={cn("relative", className)}
-        transition={sidebarMotion}
-        type={type}
-        {...props}
-      >
+    <SidebarMenuButton
+      asChild
+      className={cn("relative", className)}
+      isActive={isActive}
+    >
+      <m.button transition={sidebarMotion} type={type} {...props}>
         {children}
       </m.button>
     </SidebarMenuButton>
