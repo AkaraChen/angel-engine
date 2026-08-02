@@ -46,7 +46,6 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { Spinner } from "@/components/ui/spinner";
 import { CollapsibleMessageBody } from "@/features/chat/collapsible-message-body";
-import { ComposerPlanMode } from "@/features/chat/composer-plan-mode";
 import { ElicitationPrompt } from "@/features/chat/elicitation-prompt";
 import { MarkdownMessage } from "@/features/chat/markdown-message";
 import { PlanMessage } from "@/features/chat/plan-message";
@@ -331,17 +330,11 @@ function Composer({ conversation }: { conversation: Conversation }) {
           placeholder={t("chat.messagePlaceholder")}
           value={value}
         />
-        <InputGroupAddon align="block-end" className="justify-between gap-2">
-          <ComposerPlanMode
-            config={conversation.runtimeConfig}
-            disabled={isStreaming || conversation.isModePending}
-            onSetMode={conversation.setMode}
-            onSetPermissionMode={conversation.setPermissionMode}
-          />
+        <InputGroupAddon align="block-end" className="justify-end gap-2">
           {isStreaming ? (
             <InputGroupButton
               aria-label={t("chat.stopAria")}
-              className="ml-auto size-11 rounded-full p-0"
+              className="size-11 rounded-full p-0"
               onClick={conversation.stop}
               variant="secondary"
             >
@@ -351,8 +344,7 @@ function Composer({ conversation }: { conversation: Conversation }) {
             <InputGroupButton
               aria-label={t("chat.sendAria")}
               className="
-                ml-auto size-11 rounded-full p-0 transition-transform
-                duration-150
+                size-11 rounded-full p-0 transition-transform duration-150
                 active:scale-[0.98]
               "
               disabled={!canSend}

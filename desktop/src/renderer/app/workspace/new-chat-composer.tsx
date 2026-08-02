@@ -32,7 +32,6 @@ import {
   PromptAttachmentButton,
 } from "@/features/chat/components/composer/composer-menus";
 import { PromptGitHubAttachButton } from "@/features/chat/components/composer/github-attach-button";
-import { PlanModeToggleButton } from "@/features/chat/components/composer/composer-plan-mode";
 import { useComposerEditor } from "@/features/chat/components/composer/use-composer-editor";
 import { SketchUnderline } from "@/features/chat/components/sketch-underline";
 import { useChatOptions } from "@/features/chat/runtime/chat-options-context";
@@ -426,7 +425,6 @@ function NewChatComposerFooter({
         <ComposerModelMenu disabled={isRunning} options={chatOptions} />
       </PromptInputTools>
       <div className="flex min-w-0 flex-1 items-center justify-end gap-1.5">
-        <PlanModeToggleButton disabled={isRunning} options={chatOptions} />
         {isRunning ? (
           <Button
             className="px-3"
