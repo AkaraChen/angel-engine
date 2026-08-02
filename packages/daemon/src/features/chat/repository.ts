@@ -8,7 +8,7 @@ import fs from "node:fs";
 import path from "node:path";
 
 import is from "@sindresorhus/is";
-import { desc, eq } from "drizzle-orm";
+import { and, desc, eq } from "drizzle-orm";
 import { Effect } from "effect";
 import {
   isAgentRuntime,
@@ -189,18 +189,37 @@ export function setChatRuntime(
   });
 }
 
-export function renameChatFromPrompt(
+/**
+ * Persists everything a send already knows before its turn runs: the prompt
+ * title for a chat still carrying the default one, and the `updatedAt` that
+ * orders every client's chat list.
+ *
+ * This is deliberately not deferred to the turn's result. A first turn can run
+ * for minutes, and until it settles the row would keep the default title and a
+ * stale sort position on every surface — the desktop sidebar and the phone
+ * both read the list, not the run stream.
+ */
+export function beginChatSend(
   id: string,
   prompt: string,
 ): Effect.Effect<Chat, DaemonError, Db> {
   return Effect.gen(function* () {
-    const chat = yield* requireChat(id);
-    if (chat.title !== DEFAULT_CHAT_TITLE) return chat;
+    const chatId = yield* requireChatId(id);
 
-    return yield* updateChat(id, {
-      title: titleFromPrompt(prompt),
-      updatedAt: new Date().toISOString(),
-    });
+    // The rename is a conditional write rather than a read-then-write: a manual
+    // `PATCH /api/chats/:id` racing this send must win, and a read of the old
+    // title would otherwise overwrite the name the user just chose.
+    if (is.nonEmptyString(prompt)) {
+      yield* withDatabase((database) =>
+        database
+          .update(chats)
+          .set({ title: titleFromPrompt(prompt) })
+          .where(and(eq(chats.id, chatId), eq(chats.title, DEFAULT_CHAT_TITLE)))
+          .run(),
+      );
+    }
+
+    return yield* touchChat(chatId);
   });
 }
 
@@ -368,7 +387,7 @@ function normalizeOptionalDirectory(
 }
 
 function titleFromPrompt(prompt: string) {
-  const title = prompt.replace(/\s+/g, " ");
+  const title = prompt.replace(/\s+/g, " ").trim();
   if (!title) return DEFAULT_CHAT_TITLE;
   return title.length > 48 ? `${title.slice(0, 47)}...` : title;
 }
