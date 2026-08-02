@@ -8,7 +8,7 @@ import fs from "node:fs";
 import path from "node:path";
 
 import is from "@sindresorhus/is";
-import { desc, eq } from "drizzle-orm";
+import { and, desc, eq } from "drizzle-orm";
 import { Effect } from "effect";
 import {
   isAgentRuntime,
@@ -204,14 +204,22 @@ export function beginChatSend(
   prompt: string,
 ): Effect.Effect<Chat, DaemonError, Db> {
   return Effect.gen(function* () {
-    const chat = yield* requireChat(id);
-    const renames =
-      chat.title === DEFAULT_CHAT_TITLE && is.nonEmptyString(prompt);
+    const chatId = yield* requireChatId(id);
 
-    return yield* updateChat(id, {
-      title: renames ? titleFromPrompt(prompt) : chat.title,
-      updatedAt: new Date().toISOString(),
-    });
+    // The rename is a conditional write rather than a read-then-write: a manual
+    // `PATCH /api/chats/:id` racing this send must win, and a read of the old
+    // title would otherwise overwrite the name the user just chose.
+    if (is.nonEmptyString(prompt)) {
+      yield* withDatabase((database) =>
+        database
+          .update(chats)
+          .set({ title: titleFromPrompt(prompt) })
+          .where(and(eq(chats.id, chatId), eq(chats.title, DEFAULT_CHAT_TITLE)))
+          .run(),
+      );
+    }
+
+    return yield* touchChat(chatId);
   });
 }
 

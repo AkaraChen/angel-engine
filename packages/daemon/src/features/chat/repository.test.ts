@@ -3,13 +3,14 @@ import type { AppDatabase } from "../../platform/db";
 import type { DaemonError } from "../../platform/errors";
 
 import { createClient } from "@libsql/client";
+import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/libsql";
 import { Cause, Effect, Exit, Layer } from "effect";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { chats, customAgents, projects } from "../../db/schema";
 import { Db } from "../../platform/db";
-import { beginChatSend, normalizeChatRuntime } from "./repository";
+import { beginChatSend, normalizeChatRuntime, renameChat } from "./repository";
 
 afterEach(() => {
   vi.unstubAllEnvs();
@@ -120,7 +121,7 @@ describe("beginChatSend", () => {
     expect(chat.title).toBe(`${"x".repeat(47)}...`);
   });
 
-  it("keeps a title the chat already earned", async () => {
+  it("never writes over a title the chat already earned", async () => {
     const database = await memoryDatabase();
     await seedChat(database, { title: "Named by hand" });
 
@@ -130,6 +131,7 @@ describe("beginChatSend", () => {
     );
 
     expect(chat.title).toBe("Named by hand");
+    await expect(storedTitle(database)).resolves.toBe("Named by hand");
   });
 
   it("keeps the default title when the send carries attachments only", async () => {
@@ -139,6 +141,21 @@ describe("beginChatSend", () => {
     const chat = await runWithDatabase(database, beginChatSend("chat-1", ""));
 
     expect(chat.title).toBe("New chat");
+  });
+
+  it("lets a manual rename racing the send win", async () => {
+    const database = await memoryDatabase();
+    await seedChat(database, { title: "New chat" });
+
+    // A read-then-write of the title loses this: whichever order the two land
+    // in, the send would stamp the default title it read back over the name the
+    // user chose. The manual rename has to win from both sides.
+    await Promise.all([
+      runWithDatabase(database, beginChatSend("chat-1", "the first prompt")),
+      runWithDatabase(database, renameChat("chat-1", "Named by hand")),
+    ]);
+
+    await expect(storedTitle(database)).resolves.toBe("Named by hand");
   });
 
   it("bumps updatedAt so the chat list reorders before the turn runs", async () => {
@@ -195,6 +212,15 @@ async function seedChat(
     title: overrides.title,
     updatedAt: timestamp,
   });
+}
+
+async function storedTitle(database: AppDatabase): Promise<string | undefined> {
+  const row = await database
+    .select()
+    .from(chats)
+    .where(eq(chats.id, "chat-1"))
+    .get();
+  return row?.title;
 }
 
 async function runWithDatabase<A>(
