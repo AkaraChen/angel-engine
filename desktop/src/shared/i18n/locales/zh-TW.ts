@@ -184,7 +184,7 @@ export const zhTW = {
       loadingChats: "正在載入聊天",
       loadingProjects: "正在載入專案",
       modeChat: "聊天",
-      modePower: "Power",
+      modePower: "強力",
       modeSwitcher: "工作區模式",
       modeWork: "工作",
       needsInput: "需要輸入",
