@@ -54,9 +54,12 @@ export function WorkspaceToolPatchFileList({
     onFileSelectedChange !== undefined && selectedFileKeys !== undefined
       ? { onFileSelectedChange, selectedFileKeys }
       : undefined;
+  const empty = patchList.files.length === 0 && patchList.errors.length === 0;
 
   return (
-    <section className="space-y-2">
+    <section
+      className={cn(empty ? "flex min-h-0 flex-1 flex-col" : "space-y-2")}
+    >
       {patchList.errors.map((error) => (
         <WorkspaceToolBanner key={error} tone="danger">
           {error}
@@ -72,7 +75,12 @@ export function WorkspaceToolPatchFileList({
           onFileActivate={onFileActivate}
         />
       ) : patchList.errors.length === 0 ? (
-        <div className="px-3 py-6 text-center text-sm text-muted-foreground">
+        <div
+          className="
+            flex flex-1 items-center justify-center px-3 py-6 text-center
+            text-sm text-muted-foreground
+          "
+        >
           No changes
         </div>
       ) : null}
