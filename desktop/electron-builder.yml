@@ -24,9 +24,19 @@ mac:
 dmg:
   sign: true
   writeUpdateInfo: false
+# monorepo package.json name is "desktop"; do not let that leak into
+# Linux package metadata, desktop entry basenames, or the binary name.
+# Forge already emits an `angel-engine` binary in the prepackaged dir.
 linux:
   category: Development
   icon: assets/icon.png
+  executableName: angel-engine
+  # Keep .desktop basename / StartupWMClass aligned with package.json desktopName.
+  syncDesktopName: true
+  desktop:
+    entry:
+      Name: Angel Engine
+      GenericName: Angel Engine
   target:
     - target: AppImage
       arch:
@@ -34,7 +44,12 @@ linux:
     - target: deb
       arch:
         - x64
+deb:
+  # Debian Package: field + /opt|/usr install path base. Defaults to
+  # package.json "name" ("desktop") unless overridden.
+  packageName: angel-engine
 win:
+  executableName: Angel Engine
   icon: assets/icon.png
   target:
     - target: nsis
