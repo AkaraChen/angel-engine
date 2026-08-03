@@ -224,16 +224,7 @@ function WorkspaceToolTabButton({
           active
             ? cn(
                 "text-foreground",
-                horizontal
-                  ? "bg-card shadow-xs"
-                  : // The window rail marks the current tool with a --primary
-                    // indicator rather than a lifted chip: it is a rail, not a
-                    // row of buttons.
-                    `
-                      bg-background
-                      before:absolute before:inset-y-1 before:left-0
-                      before:w-0.5 before:rounded-full before:bg-primary
-                    `,
+                horizontal ? "bg-card shadow-xs" : "bg-background",
               )
             : `
               hover:bg-overlay-hover hover:text-foreground
