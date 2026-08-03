@@ -182,7 +182,7 @@ export const WorkspaceProcessesView: FC<WorkspaceProcessesViewProps> = ({
                     <td className="px-2 py-1 text-right">
                       <Button
                         className="
-                          border-status-danger/40 text-status-danger
+                          text-status-danger
                           hover:bg-status-danger-soft
                           hover:text-status-danger
                         "
@@ -283,7 +283,7 @@ export const WorkspaceProcessesView: FC<WorkspaceProcessesViewProps> = ({
                 <Button
                   aria-label={`Kill ${process.name}`}
                   className="
-                    border-status-danger/40 text-status-danger
+                    text-status-danger
                     hover:bg-status-danger-soft hover:text-status-danger
                   "
                   size="icon-sm"
