@@ -19,14 +19,14 @@ describe("resolveWorkspaceTerminalTheme", () => {
 
   it("grounds each scheme on its own background", () => {
     expect(workspaceTerminalThemes.light.background).toBe("#ffffff");
-    expect(workspaceTerminalThemes.dark.background).toBe("#0c0c0c");
+    expect(workspaceTerminalThemes.dark.background).toBe("#0c0d0b");
   });
 
   it("draws the cursor and selection from the primary ramp", () => {
-    expect(workspaceTerminalThemes.light.cursor).toBe("#3784ff");
-    expect(workspaceTerminalThemes.light.selectionBackground).toBe("#d5e5ff");
-    expect(workspaceTerminalThemes.dark.cursor).toBe("#69a3ff");
-    expect(workspaceTerminalThemes.dark.selectionBackground).toBe("#69a3ff24");
+    expect(workspaceTerminalThemes.light.cursor).toBe("#59802c");
+    expect(workspaceTerminalThemes.light.selectionBackground).toBe("#dcecc2");
+    expect(workspaceTerminalThemes.dark.cursor).toBe("#8dbb56");
+    expect(workspaceTerminalThemes.dark.selectionBackground).toBe("#8dbb5624");
   });
 
   it("keeps the ANSI ramp off the raw hardware primaries", () => {

@@ -7,7 +7,7 @@ import type { ITheme } from "@xterm/xterm";
  *
  * The ANSI 16 are derived from the azure ramp, the warm `ink` ramp and the
  * `--status-*` trio rather than the default hardware primaries: raw #00ff00 /
- * #ff0000 on a cream or near-black ground is the single loudest thing in the
+ * #ff0000 on a pale-green or near-black ground is the single loudest thing in the
  * whole app, and a terminal a coding agent writes to constantly cannot be the
  * loudest thing.
  *
@@ -17,7 +17,7 @@ import type { ITheme } from "@xterm/xterm";
  */
 export const workspaceTerminalThemes = {
   dark: {
-    background: "#0c0c0c",
+    background: "#0c0d0b",
     black: "#292524",
     blue: "#59a5ff",
     brightBlack: "#57534d",
@@ -28,20 +28,20 @@ export const workspaceTerminalThemes = {
     brightRed: "#ff9092",
     brightWhite: "#fafaf9",
     brightYellow: "#f5c842",
-    cursor: "#69a3ff",
-    cursorAccent: "#0c0c0c",
+    cursor: "#8dbb56",
+    cursorAccent: "#0c0d0b",
     cyan: "#5d99a9",
-    foreground: "#f0f0ee",
+    foreground: "#eef0ea",
     green: "#00d294",
     magenta: "#a99cff",
     red: "#ff6467",
-    selectionBackground: "#69a3ff24",
-    selectionForeground: "#f0f0ee",
+    selectionBackground: "#8dbb5624",
+    selectionForeground: "#eef0ea",
     white: "#d6d3d1",
     yellow: "#f0b100",
   },
   light: {
-    // --card, so the terminal lifts off the cream page the same way the
+    // --card, so the terminal lifts off the paper page the same way the
     // editor does.
     background: "#ffffff",
     black: "#1c1917",
@@ -52,17 +52,17 @@ export const workspaceTerminalThemes = {
     brightGreen: "#00b37c",
     brightMagenta: "#96637b",
     brightRed: "#e0333c",
-    brightWhite: "#1a1a1a",
+    brightWhite: "#1a1c17",
     brightYellow: "#b8961f",
-    cursor: "#3784ff",
+    cursor: "#59802c",
     cursorAccent: "#ffffff",
     cyan: "#2e646c",
-    foreground: "#1a1a1a",
+    foreground: "#1a1c17",
     green: "#009767",
     magenta: "#7c6df0",
     red: "#c9262f",
-    selectionBackground: "#d5e5ff",
-    selectionForeground: "#1a1a1a",
+    selectionBackground: "#dcecc2",
+    selectionForeground: "#1a1c17",
     white: "#57534d",
     yellow: "#9a7b1a",
   },

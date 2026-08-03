@@ -62,7 +62,7 @@ export function MobileUrlQrDialog({
           >
             <QRCode
               bgColor="#ffffff"
-              fgColor="#1a1a1a"
+              fgColor="#1a1c17"
               level="M"
               size={184}
               title={url}

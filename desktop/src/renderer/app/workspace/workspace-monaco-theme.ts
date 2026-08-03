@@ -12,6 +12,12 @@ import type { editor } from "monaco-editor";
  * palette already uses, and everything structural (variables, punctuation)
  * sits on the neutral ramp so a screen of code reads as mostly ink with a few
  * blue anchors.
+ *
+ * The syntax ramp is the one place the app still leads with blue. The UI
+ * accent moved to `--grass-*`, but a code screen needs its keyword hue to sit
+ * far from the warm vermilion numbers already carry, so `--azure-*` stays here
+ * (and in `--status-info-*`) rather than following the chrome. Editor chrome
+ * inside this file — cursor, selection, bracket match — does follow the accent.
  */
 export const workspaceMonacoThemeLight = "angel-light";
 export const workspaceMonacoThemeDark = "angel-dark";
@@ -65,17 +71,17 @@ const lightRules: editor.ITokenThemeRule[] = [
   { token: "delimiter", foreground: "79716b" },
   { token: "delimiter.bracket", foreground: "79716b" },
   // --muted-foreground.
-  { token: "comment", foreground: "6b645d", fontStyle: "italic" },
-  { token: "string.comment", foreground: "6b645d", fontStyle: "italic" },
+  { token: "comment", foreground: "656b5c", fontStyle: "italic" },
+  { token: "string.comment", foreground: "656b5c", fontStyle: "italic" },
   { token: "markup.heading", foreground: "1b60f5", fontStyle: "bold" },
-  { token: "markup.quote", foreground: "6b645d", fontStyle: "italic" },
+  { token: "markup.quote", foreground: "656b5c", fontStyle: "italic" },
   { token: "markup.raw", foreground: "009767" },
   { token: "markup.italic", fontStyle: "italic" },
   { token: "markup.bold", fontStyle: "bold" },
 ];
 
 const darkRules: editor.ITokenThemeRule[] = [
-  // Dark --primary.
+  // Dark azure keyword blue (the old dark --primary value).
   { token: "keyword", foreground: "69a3ff" },
   { token: "keyword.operator", foreground: "69a3ff" },
   { token: "storage", foreground: "69a3ff" },
@@ -120,11 +126,11 @@ const darkRules: editor.ITokenThemeRule[] = [
   { token: "operator", foreground: "a6a09b" },
   { token: "delimiter", foreground: "a6a09b" },
   { token: "delimiter.bracket", foreground: "a6a09b" },
-  // Dark --muted-foreground (#f0f0ee at 56%), flattened onto #0c0c0c.
-  { token: "comment", foreground: "8e8e8d", fontStyle: "italic" },
-  { token: "string.comment", foreground: "8e8e8d", fontStyle: "italic" },
+  // Dark --muted-foreground (#eef0ea at 56%), flattened onto #0c0d0b.
+  { token: "comment", foreground: "8b8c88", fontStyle: "italic" },
+  { token: "string.comment", foreground: "8b8c88", fontStyle: "italic" },
   { token: "markup.heading", foreground: "69a3ff", fontStyle: "bold" },
-  { token: "markup.quote", foreground: "8e8e8d", fontStyle: "italic" },
+  { token: "markup.quote", foreground: "8b8c88", fontStyle: "italic" },
   { token: "markup.raw", foreground: "00d294" },
   { token: "markup.italic", fontStyle: "italic" },
   { token: "markup.bold", fontStyle: "bold" },
@@ -134,35 +140,35 @@ const lightTheme: editor.IStandaloneThemeData = {
   base: "vs",
   inherit: true,
   colors: {
-    // --card: one step brighter than the cream page, so the edit surface lifts.
+    // --card: one step brighter than the paper page, so the edit surface lifts.
     "editor.background": "#ffffff",
-    "editor.foreground": "#1a1a1a",
-    "editorCursor.foreground": "#3784ff",
-    "editorLineNumber.foreground": "#6b645d80",
-    "editorLineNumber.activeForeground": "#1a1a1a",
+    "editor.foreground": "#1a1c17",
+    "editorCursor.foreground": "#59802c",
+    "editorLineNumber.foreground": "#656b5c80",
+    "editorLineNumber.activeForeground": "#1a1c17",
     // --overlay-hover.
-    "editor.lineHighlightBackground": "#2925240e",
+    "editor.lineHighlightBackground": "#262c200e",
     "editor.lineHighlightBorder": "#00000000",
     // --primary-soft.
-    "editor.selectionBackground": "#d5e5ff",
-    "editor.inactiveSelectionBackground": "#d5e5ff80",
-    "editor.selectionHighlightBackground": "#d5e5ff80",
-    "editor.wordHighlightBackground": "#d5e5ff66",
-    "editor.wordHighlightStrongBackground": "#d5e5ff",
-    "editor.foldBackground": "#d5e5ff4d",
-    "editorBracketMatch.background": "#d5e5ff",
+    "editor.selectionBackground": "#dcecc2",
+    "editor.inactiveSelectionBackground": "#dcecc280",
+    "editor.selectionHighlightBackground": "#dcecc280",
+    "editor.wordHighlightBackground": "#dcecc266",
+    "editor.wordHighlightStrongBackground": "#dcecc2",
+    "editor.foldBackground": "#dcecc24d",
+    "editorBracketMatch.background": "#dcecc2",
     "editorBracketMatch.border": "#00000000",
     // --border-subtle / --border-strong: guides are barely there on purpose.
-    "editorIndentGuide.background": "#edece8",
-    "editorIndentGuide.activeBackground": "#d4d4d0",
-    "editorWhitespace.foreground": "#edece8",
+    "editorIndentGuide.background": "#ebeee4",
+    "editorIndentGuide.activeBackground": "#d2d7c7",
+    "editorWhitespace.foreground": "#ebeee4",
     // --status-attention-soft.
     "editor.findMatchBackground": "#fcdfb6",
     "editor.findMatchHighlightBackground": "#ffefd9",
     "editorWidget.background": "#ffffff",
-    "editorWidget.border": "#e4e3e0",
+    "editorWidget.border": "#e2e6da",
     "editorStickyScroll.background": "#ffffff",
-    "editorStickyScrollHover.background": "#2925240e",
+    "editorStickyScrollHover.background": "#262c200e",
     "editorGutter.background": "#ffffff",
   },
   rules: lightRules,
@@ -172,33 +178,33 @@ const darkTheme: editor.IStandaloneThemeData = {
   base: "vs-dark",
   inherit: true,
   colors: {
-    "editor.background": "#0c0c0c",
-    "editor.foreground": "#f0f0ee",
-    "editorCursor.foreground": "#69a3ff",
-    "editorLineNumber.foreground": "#f0f0ee50",
-    "editorLineNumber.activeForeground": "#f0f0ee",
+    "editor.background": "#0c0d0b",
+    "editor.foreground": "#eef0ea",
+    "editorCursor.foreground": "#8dbb56",
+    "editorLineNumber.foreground": "#eef0ea50",
+    "editorLineNumber.activeForeground": "#eef0ea",
     // --overlay-hover.
-    "editor.lineHighlightBackground": "#ebebea12",
+    "editor.lineHighlightBackground": "#e9ece412",
     "editor.lineHighlightBorder": "#00000000",
     // --primary-soft.
-    "editor.selectionBackground": "#69a3ff24",
-    "editor.inactiveSelectionBackground": "#69a3ff14",
-    "editor.selectionHighlightBackground": "#69a3ff14",
-    "editor.wordHighlightBackground": "#69a3ff14",
-    "editor.wordHighlightStrongBackground": "#69a3ff24",
-    "editor.foldBackground": "#69a3ff14",
-    "editorBracketMatch.background": "#69a3ff28",
+    "editor.selectionBackground": "#8dbb5624",
+    "editor.inactiveSelectionBackground": "#8dbb5614",
+    "editor.selectionHighlightBackground": "#8dbb5614",
+    "editor.wordHighlightBackground": "#8dbb5614",
+    "editor.wordHighlightStrongBackground": "#8dbb5624",
+    "editor.foldBackground": "#8dbb5614",
+    "editorBracketMatch.background": "#8dbb5628",
     "editorBracketMatch.border": "#00000000",
-    "editorIndentGuide.background": "#191919",
-    "editorIndentGuide.activeBackground": "#2b2b2b",
-    "editorWhitespace.foreground": "#191919",
+    "editorIndentGuide.background": "#181b16",
+    "editorIndentGuide.activeBackground": "#2a2e26",
+    "editorWhitespace.foreground": "#181b16",
     "editor.findMatchBackground": "#f0b10038",
     "editor.findMatchHighlightBackground": "#f0b10024",
-    "editorWidget.background": "#171717",
-    "editorWidget.border": "#1e1e1e",
-    "editorStickyScroll.background": "#0c0c0c",
-    "editorStickyScrollHover.background": "#ebebea12",
-    "editorGutter.background": "#0c0c0c",
+    "editorWidget.background": "#161814",
+    "editorWidget.border": "#1d201b",
+    "editorStickyScroll.background": "#0c0d0b",
+    "editorStickyScrollHover.background": "#e9ece412",
+    "editorGutter.background": "#0c0d0b",
   },
   rules: darkRules,
 };
