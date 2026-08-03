@@ -224,6 +224,10 @@ const config: ForgeConfig = {
   },
   packagerConfig: {
     appBundleId: "com.akrc.angel-engine",
+    // Space-free binary name so Linux deb postinst / update-alternatives and
+    // electron-builder linux.executableName all point at the same path.
+    // The .app / product display name still comes from package.json productName.
+    executableName: "angel-engine",
     asar: {
       unpack: "**/node_modules/node-pty/**/spawn-helper",
     },

@@ -144,26 +144,85 @@ if (!appPath) {
 
 console.log(`Using prepackaged app: ${path.relative(desktopRoot, appPath)}`);
 
+/**
+ * electron-builder postinst/desktop entries look for linux.executableName
+ * (angel-engine). Forge may still emit productName ("Angel Engine") depending
+ * on packager version/options — normalize before packaging installers.
+ * @param {string} packageDir
+ * @param {string} expectedName
+ */
+function ensureExecutableFileName(packageDir, expectedName) {
+  const expectedPath = path.join(packageDir, expectedName);
+  if (fs.existsSync(expectedPath)) {
+    return;
+  }
+
+  const productName = packageJson.productName;
+  const candidates = [
+    productName,
+    productName.replaceAll(" ", "-"),
+    productName.replaceAll(" ", ""),
+    packageJson.name,
+  ];
+
+  for (const candidate of candidates) {
+    if (!candidate || candidate === expectedName) {
+      continue;
+    }
+    const candidatePath = path.join(packageDir, candidate);
+    if (!fs.existsSync(candidatePath) || !fs.statSync(candidatePath).isFile()) {
+      continue;
+    }
+    fs.renameSync(candidatePath, expectedPath);
+    console.log(
+      `Renamed prepackaged executable ${JSON.stringify(
+        candidate,
+      )} -> ${JSON.stringify(expectedName)}`,
+    );
+    return;
+  }
+
+  throw new Error(
+    `Prepackaged executable ${JSON.stringify(
+      expectedName,
+    )} not found under ${path.relative(desktopRoot, packageDir)} (also tried ${candidates
+      .map((name) => JSON.stringify(name))
+      .join(", ")})`,
+  );
+}
+
+const executableName = "angel-engine";
+if (process.platform === "linux") {
+  ensureExecutableFileName(appPath, executableName);
+} else if (process.platform === "win32") {
+  ensureExecutableFileName(appPath, `${executableName}.exe`);
+}
+
 const platformArgs = electronBuilderPlatformArgs(process.platform);
 // Always build installers locally; GitHub upload is handled below so multi-OS
 // matrix jobs can publish without racing electron-builder's release create.
-execFileSync(
-  process.execPath,
-  [
-    electronBuilderCli,
-    "--prepackaged",
-    appPath,
-    ...platformArgs,
-    "--publish",
-    "never",
-    `--config.publish.releaseType=${releaseType}`,
-    `--config.publish.channel=${updateChannel}`,
-  ],
-  {
-    cwd: desktopRoot,
-    stdio: "inherit",
-  },
-);
+//
+// On Linux, override productName so fpm installs to /opt/angel-engine instead
+// of "/opt/Angel Engine" (spaces break update-alternatives candidates if the
+// binary name also drifts). Menu label stays "Angel Engine" via desktop.entry.
+const electronBuilderArgs = [
+  electronBuilderCli,
+  "--prepackaged",
+  appPath,
+  ...platformArgs,
+  "--publish",
+  "never",
+  `--config.publish.releaseType=${releaseType}`,
+  `--config.publish.channel=${updateChannel}`,
+];
+if (process.platform === "linux") {
+  electronBuilderArgs.push("--config.productName=angel-engine");
+}
+
+execFileSync(process.execPath, electronBuilderArgs, {
+  cwd: desktopRoot,
+  stdio: "inherit",
+});
 
 if (publishMode !== "never") {
   const tag = `v${version}`;
