@@ -24,6 +24,25 @@ mac:
 dmg:
   sign: true
   writeUpdateInfo: false
+linux:
+  category: Development
+  icon: assets/icon.png
+  target:
+    - target: AppImage
+      arch:
+        - x64
+    - target: deb
+      arch:
+        - x64
+win:
+  icon: assets/icon.png
+  target:
+    - target: nsis
+      arch:
+        - x64
+nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: true
 publish:
   provider: github
   owner: AkaraChen

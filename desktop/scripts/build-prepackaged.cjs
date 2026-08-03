@@ -10,12 +10,14 @@ const packageJson = JSON.parse(
   fs.readFileSync(path.join(desktopRoot, "package.json"), "utf8"),
 );
 const {
+  electronBuilderPlatformArgs,
   generatedUpdateChannelFileForVersion,
   releaseArtifactNamesForVersion,
   releaseTypeForVersion,
   updateChannelFilesForVersion,
   updateChannelForVersion,
 } = require("./release-channel.cjs");
+const { selectPackagedApp } = require("./packaged-app.cjs");
 
 // Throws on a malformed version before anything is built or published.
 const version = packageJson.version;
@@ -35,36 +37,13 @@ const waitMs = Number(
   process.env.ANGEL_ENGINE_PREPACKAGED_APP_WAIT_MS ?? 600000,
 );
 const pollMs = 5000;
+const githubRepo = "AkaraChen/angel-engine";
 
 if (
   !publishMode ||
   !["always", "never", "onTag", "onTagOrDraft"].includes(publishMode)
 ) {
   throw new Error(`Unsupported publish mode: ${publishMode}`);
-}
-
-function findAppBundles(dir) {
-  if (!fs.existsSync(dir)) {
-    return [];
-  }
-
-  const apps = [];
-  const entries = fs.readdirSync(dir, { withFileTypes: true });
-
-  for (const entry of entries) {
-    const entryPath = path.join(dir, entry.name);
-
-    if (entry.isDirectory() && entry.name.endsWith(".app")) {
-      apps.push(entryPath);
-      continue;
-    }
-
-    if (entry.isDirectory()) {
-      apps.push(...findAppBundles(entryPath));
-    }
-  }
-
-  return apps;
 }
 
 function sleep(ms) {
@@ -98,58 +77,40 @@ function printOutTree() {
   }
 
   console.error("Forge output tree:");
-  execFileSync("find", [outDir, "-maxdepth", "3", "-print"], {
-    cwd: desktopRoot,
-    stdio: "inherit",
+  try {
+    execFileSync("find", [outDir, "-maxdepth", "3", "-print"], {
+      cwd: desktopRoot,
+      stdio: "inherit",
+    });
+  } catch {
+    for (const entry of fs.readdirSync(outDir, { recursive: true })) {
+      console.error(path.join(outDir, entry.toString()));
+    }
+  }
+}
+
+function selectCurrentPackage() {
+  return selectPackagedApp(outDir, {
+    desktopRoot,
+    packagedAppPathFile,
+    platform: process.platform,
+    arch: process.arch,
   });
 }
 
-const preferredAppPath = path.join(
-  outDir,
-  "Angel Engine-darwin-arm64",
-  "Angel Engine.app",
-);
-
-function readPackagedAppPath() {
-  if (!fs.existsSync(packagedAppPathFile)) {
-    return undefined;
-  }
-
-  const appPath = fs.readFileSync(packagedAppPathFile, "utf8").trim();
-
-  if (!appPath) {
-    return undefined;
-  }
-
-  return path.resolve(desktopRoot, appPath);
-}
-
-function selectAppBundle() {
-  const appBundles = findAppBundles(outDir);
-  const packagedAppPath = readPackagedAppPath();
-  const appPath =
-    packagedAppPath && fs.existsSync(packagedAppPath)
-      ? packagedAppPath
-      : appBundles.includes(preferredAppPath)
-        ? preferredAppPath
-        : appBundles[0];
-
-  return { appBundles, appPath };
-}
-
-function waitForAppBundle() {
+function waitForAppPackage() {
   const deadline = Date.now() + waitMs;
   let lastSize = -1;
   let lastAppPath;
 
   while (Date.now() <= deadline) {
-    const { appBundles, appPath } = selectAppBundle();
+    const { appPath } = selectCurrentPackage();
 
     if (appPath) {
       const size = directorySize(appPath);
 
       if (appPath === lastAppPath && size > 0 && size === lastSize) {
-        return { appBundles, appPath };
+        return appPath;
       }
 
       lastAppPath = appPath;
@@ -169,32 +130,31 @@ function waitForAppBundle() {
     sleep(pollMs);
   }
 
-  return selectAppBundle();
+  return selectCurrentPackage().appPath;
 }
 
-const { appBundles, appPath } = waitForAppBundle();
+const appPath = waitForAppPackage();
 
 if (!appPath) {
   printOutTree();
-  throw new Error("No packaged .app bundle found under desktop/out.");
-}
-
-if (appBundles.length > 1) {
-  console.warn(`Found multiple app bundles, using: ${appPath}`);
+  throw new Error(
+    `No packaged app found under desktop/out for ${process.platform}/${process.arch}.`,
+  );
 }
 
 console.log(`Using prepackaged app: ${path.relative(desktopRoot, appPath)}`);
 
+const platformArgs = electronBuilderPlatformArgs(process.platform);
+// Always build installers locally; GitHub upload is handled below so multi-OS
+// matrix jobs can publish without racing electron-builder's release create.
 execFileSync(
   electronBuilderBin,
   [
     "--prepackaged",
     appPath,
-    "--mac",
-    "dmg",
-    "zip",
+    ...platformArgs,
     "--publish",
-    publishMode,
+    "never",
     `--config.publish.releaseType=${releaseType}`,
     `--config.publish.channel=${updateChannel}`,
   ],
@@ -211,8 +171,10 @@ if (publishMode !== "never") {
   // A stable build has to feed the beta channel too, otherwise beta users stay
   // parked on the last pre-release. electron-builder only writes the channel
   // file it built for, so the extra channels are copies of it.
-  const generatedChannelFileName =
-    generatedUpdateChannelFileForVersion(version);
+  const generatedChannelFileName = generatedUpdateChannelFileForVersion(
+    version,
+    process.platform,
+  );
   const generatedChannelFile = path.join(
     builderOutDir,
     generatedChannelFileName,
@@ -224,7 +186,10 @@ if (publishMode !== "never") {
     );
   }
 
-  for (const channelFile of updateChannelFilesForVersion(version)) {
+  for (const channelFile of updateChannelFilesForVersion(
+    version,
+    process.platform,
+  )) {
     const channelFilePath = path.join(builderOutDir, channelFile);
     if (channelFilePath === generatedChannelFile) continue;
 
@@ -232,7 +197,11 @@ if (publishMode !== "never") {
     console.log(`Derived ${channelFile} from the built update channel file.`);
   }
 
-  const artifactPaths = releaseArtifactNamesForVersion(version).map((name) =>
+  const artifactNames = releaseArtifactNamesForVersion(version, {
+    platform: process.platform,
+    arch: process.arch,
+  });
+  const artifactPaths = artifactNames.map((name) =>
     path.join(builderOutDir, name),
   );
   const missingArtifacts = artifactPaths.filter((artifactPath) => {
@@ -247,6 +216,42 @@ if (publishMode !== "never") {
     );
   }
 
+  // Concurrent matrix jobs may race on create; the loser is fine if the
+  // release already exists. Upload is clobber-safe and per-asset.
+  try {
+    execFileSync("gh", ["release", "view", tag, "--repo", githubRepo], {
+      cwd: desktopRoot,
+      stdio: "pipe",
+    });
+  } catch {
+    const createArgs = [
+      "release",
+      "create",
+      tag,
+      "--repo",
+      githubRepo,
+      "--title",
+      `Angel Engine ${version}`,
+      "--notes",
+      `Desktop release ${version}`,
+    ];
+    if (releaseType === "prerelease") {
+      createArgs.push("--prerelease");
+    }
+    try {
+      execFileSync("gh", createArgs, {
+        cwd: desktopRoot,
+        stdio: "inherit",
+      });
+    } catch (error) {
+      // Another matrix job likely created the release first.
+      console.warn(
+        `Could not create GitHub release ${tag}; assuming it already exists.`,
+      );
+      console.warn(error instanceof Error ? error.message : error);
+    }
+  }
+
   execFileSync(
     "gh",
     [
@@ -255,7 +260,7 @@ if (publishMode !== "never") {
       tag,
       ...artifactPaths,
       "--repo",
-      "AkaraChen/angel-engine",
+      githubRepo,
       "--clobber",
     ],
     {

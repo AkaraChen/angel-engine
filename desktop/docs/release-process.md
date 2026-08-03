@@ -4,14 +4,16 @@ Angel Engine ships from GitHub Releases on two update channels that share one
 repository. Downloading a build by hand from the Releases page works the same
 way it always has; the channels only decide what the in-app updater installs.
 
-| Channel  | Version         | GitHub Release | Update files                     | Who gets it                       |
+| Channel  | Version         | GitHub Release | Update files (mac)               | Who gets it                       |
 | -------- | --------------- | -------------- | -------------------------------- | --------------------------------- |
 | `stable` | `1.2.3`         | Latest release | `latest-mac.yml`, `beta-mac.yml` | Everyone                          |
 | `beta`   | `1.2.3-beta.4`  | Pre-release    | `beta-mac.yml`                   | Only "Receive beta updates" users |
 
-A stable release writes the beta channel file too, so beta users roll forward
-onto stable instead of getting stranded on the last pre-release. A beta release
-never writes `latest-mac.yml`, which is what keeps stable users off
+Linux and Windows use the same channel rules with platform-native file names
+(`latest-linux.yml` / `beta-linux.yml`, and `latest.yml` / `beta.yml` on
+Windows). A stable release writes the beta channel file too, so beta users roll
+forward onto stable instead of getting stranded on the last pre-release. A beta
+release never writes `latest-*.yml`, which is what keeps stable users off
 pre-releases — the isolation lives in the published files, not in client-side
 version sniffing.
 
@@ -34,17 +36,44 @@ over the old `1.0.0-beta2` tag.
 
 1. Bump `desktop/package.json` to the target version and commit it.
 2. Push tag `v<version>` (or run the **Desktop Release** workflow with the
-   version as input). The workflow builds on macOS, signs, notarizes, and
-   publishes.
-3. `bun run --filter desktop publish` derives everything else: the GitHub
-   release type (`release` / `prerelease`), the electron-builder publish
-   channel, and the list of artifacts to attach.
+   version as input). The workflow builds on **Linux, Windows, and macOS** in
+   parallel, runs desktop unit tests, packages installers, and uploads platform
+   assets to the same GitHub Release (mac may also sign and notarize when
+   secrets are configured).
+3. `bun run --filter desktop publish` on each runner derives everything else:
+   the GitHub release type (`release` / `prerelease`), the electron-builder
+   channel, and the list of artifacts to attach for that OS.
+
+### Multi-platform beta iteration
+
+To re-exercise the three-platform pipeline:
+
+```sh
+# from a clean tree with the multi-platform packaging changes committed
+pnpm --dir desktop version 1.2.3-beta.N --no-git-tag-version   # or npm version
+git add desktop/package.json
+git commit -m "chore(desktop): release 1.2.3-beta.N"
+git tag v1.2.3-beta.N
+git push && git push origin v1.2.3-beta.N
+```
+
+If the tag trigger does not start the workflow:
+
+```sh
+gh workflow run desktop-release.yml --repo AkaraChen/angel-engine --ref master -f version=1.2.3-beta.N
+```
 
 ## Verifying a release
 
-- A stable release must have both `latest-mac.yml` and `beta-mac.yml` attached.
-- A beta release must have `beta-mac.yml` and **no** `latest-mac.yml`.
+- A stable release must have both `latest-mac.yml` and `beta-mac.yml` (and the
+  linux/win equivalents when those platforms published).
+- A beta release must have `beta-mac.yml` (plus `beta-linux.yml` / `beta.yml`
+  when published) and **no** `latest-*.yml` for that platform.
 - The GitHub release is marked "Pre-release" for beta versions only.
+- Expect platform installers such as:
+  - macOS: `Angel-Engine-<version>-arm64.dmg`, `.zip`
+  - Linux: `Angel-Engine-<version>-x86_64.AppImage`, `Angel-Engine-<version>-amd64.deb`
+  - Windows: `Angel-Engine-<version>-x64.exe`
 
 ```sh
 gh release view v<version> --repo AkaraChen/angel-engine \
@@ -71,5 +100,8 @@ gh release view v<version> --repo AkaraChen/angel-engine \
 
 ## Known limits
 
-- Automatic updates are macOS-only (`process.platform === "darwin"`), and CI
-  only builds macOS arm64. Other platforms have no release artifacts today.
+- Automatic updates are still macOS-only (`process.platform === "darwin"`).
+  Linux and Windows get installable release artifacts; in-app auto-update for
+  those platforms is not enabled yet.
+- CI packages the runner's native arch (macOS arm64, Linux x64, Windows x64).
+  Cross-building every arch from one host is not required.
