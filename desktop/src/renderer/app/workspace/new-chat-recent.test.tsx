@@ -37,20 +37,52 @@ const projects: Project[] = [
 afterEach(cleanup);
 
 describe("NewChatRecentSection", () => {
-  it("lists the four most recent unarchived chats, newest first", () => {
+  it("lists the four most recent unarchived project chats, newest first", () => {
     render(
       <NewChatRecentSection
         chats={[
-          chat({ id: "1", title: "oldest", updatedAt: "2026-01-01T00:00:00Z" }),
-          chat({ id: "2", title: "newest", updatedAt: "2026-01-06T00:00:00Z" }),
-          chat({ id: "3", title: "second", updatedAt: "2026-01-05T00:00:00Z" }),
-          chat({ id: "4", title: "third", updatedAt: "2026-01-04T00:00:00Z" }),
-          chat({ id: "5", title: "fourth", updatedAt: "2026-01-03T00:00:00Z" }),
+          chat({
+            id: "1",
+            projectId: "project-1",
+            title: "oldest",
+            updatedAt: "2026-01-01T00:00:00Z",
+          }),
+          chat({
+            id: "2",
+            projectId: "project-1",
+            title: "newest",
+            updatedAt: "2026-01-06T00:00:00Z",
+          }),
+          chat({
+            id: "3",
+            projectId: "project-1",
+            title: "second",
+            updatedAt: "2026-01-05T00:00:00Z",
+          }),
+          chat({
+            id: "4",
+            projectId: "project-1",
+            title: "third",
+            updatedAt: "2026-01-04T00:00:00Z",
+          }),
+          chat({
+            id: "5",
+            projectId: "project-1",
+            title: "fourth",
+            updatedAt: "2026-01-03T00:00:00Z",
+          }),
           chat({
             archived: true,
             id: "6",
+            projectId: "project-1",
             title: "archived",
             updatedAt: "2026-01-07T00:00:00Z",
+          }),
+          chat({
+            id: "7",
+            projectId: null,
+            title: "standalone-newest",
+            updatedAt: "2026-01-08T00:00:00Z",
           }),
         ]}
         isProjectMode
@@ -69,17 +101,82 @@ describe("NewChatRecentSection", () => {
     expect(titles[4]).toContain("thread.empty.recentShowAll");
     expect(titles.join(" ")).not.toContain("archived");
     expect(titles.join(" ")).not.toContain("oldest");
+    expect(titles.join(" ")).not.toContain("standalone-newest");
+  });
+
+  it("lists only standalone chats in chat mode", () => {
+    render(
+      <NewChatRecentSection
+        chats={[
+          chat({
+            id: "1",
+            projectId: null,
+            title: "solo-old",
+            updatedAt: "2026-01-01T00:00:00Z",
+          }),
+          chat({
+            id: "2",
+            projectId: null,
+            title: "solo-new",
+            updatedAt: "2026-01-06T00:00:00Z",
+          }),
+          chat({
+            id: "3",
+            projectId: "project-1",
+            title: "project-chat",
+            updatedAt: "2026-01-07T00:00:00Z",
+          }),
+        ]}
+        isProjectMode={false}
+        onCreateProject={vi.fn()}
+        onOpenChat={vi.fn()}
+        projects={projects}
+      />,
+    );
+
+    const titles = screen
+      .getAllByRole("button")
+      .map((button) => button.textContent)
+      .join(" ");
+    expect(titles).toContain("solo-new");
+    expect(titles).toContain("solo-old");
+    expect(titles).not.toContain("project-chat");
   });
 
   it("expands beyond the recent limit from the show-all toggle", () => {
     render(
       <NewChatRecentSection
         chats={[
-          chat({ id: "1", title: "oldest", updatedAt: "2026-01-01T00:00:00Z" }),
-          chat({ id: "2", title: "newest", updatedAt: "2026-01-06T00:00:00Z" }),
-          chat({ id: "3", title: "second", updatedAt: "2026-01-05T00:00:00Z" }),
-          chat({ id: "4", title: "third", updatedAt: "2026-01-04T00:00:00Z" }),
-          chat({ id: "5", title: "fourth", updatedAt: "2026-01-03T00:00:00Z" }),
+          chat({
+            id: "1",
+            projectId: "project-1",
+            title: "oldest",
+            updatedAt: "2026-01-01T00:00:00Z",
+          }),
+          chat({
+            id: "2",
+            projectId: "project-1",
+            title: "newest",
+            updatedAt: "2026-01-06T00:00:00Z",
+          }),
+          chat({
+            id: "3",
+            projectId: "project-1",
+            title: "second",
+            updatedAt: "2026-01-05T00:00:00Z",
+          }),
+          chat({
+            id: "4",
+            projectId: "project-1",
+            title: "third",
+            updatedAt: "2026-01-04T00:00:00Z",
+          }),
+          chat({
+            id: "5",
+            projectId: "project-1",
+            title: "fourth",
+            updatedAt: "2026-01-03T00:00:00Z",
+          }),
         ]}
         isProjectMode
         onCreateProject={vi.fn()}

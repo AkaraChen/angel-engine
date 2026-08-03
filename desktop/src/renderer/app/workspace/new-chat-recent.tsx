@@ -42,11 +42,17 @@ export function NewChatRecentSection({
   const allRecentChats = useMemo(
     () =>
       chats
-        .filter((chat) => !chat.archived)
+        .filter((chat) => {
+          if (chat.archived) return false;
+          // Chat mode only resumes standalone threads; project modes only
+          // resume project-bound ones so the list matches the surface.
+          const isProjectChat = is.nonEmptyString(chat.projectId);
+          return isProjectMode ? isProjectChat : !isProjectChat;
+        })
         .toSorted((left, right) =>
           right.updatedAt.localeCompare(left.updatedAt),
         ),
-    [chats],
+    [chats, isProjectMode],
   );
   const recentChats = expanded
     ? allRecentChats
