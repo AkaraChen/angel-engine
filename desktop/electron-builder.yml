@@ -34,7 +34,8 @@ dmg:
 # the human-facing label.
 linux:
   category: Development
-  icon: assets/icon.png
+  # Multi-size set (from assets/icon.iconset) so drawers/DEs find a usable icon.
+  icon: assets/linux-icons
   executableName: angel-engine
   # Keep .desktop basename / StartupWMClass aligned with package.json desktopName.
   syncDesktopName: true
@@ -42,6 +43,7 @@ linux:
     entry:
       Name: Angel Engine
       GenericName: Angel Engine
+      Categories: Development;Utility;
   target:
     - target: AppImage
       arch:
@@ -52,6 +54,9 @@ linux:
 deb:
   # Debian Package: field. Defaults to package.json "name" ("desktop").
   packageName: angel-engine
+  # Custom after-install: default electron-builder template + chmod/icon cache fixes.
+  afterInstall: build/linux/after-install.tpl
+
 win:
   executableName: angel-engine
   icon: assets/icon.png

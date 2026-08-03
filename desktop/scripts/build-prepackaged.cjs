@@ -191,9 +191,29 @@ function ensureExecutableFileName(packageDir, expectedName) {
   );
 }
 
+/**
+ * Forge can emit package trees as mode 0700. Deb preserves those modes, so
+ * after install only root can traverse /opt/<app> and normal users cannot run
+ * the binary (or see a working /usr/bin wrapper that points into it).
+ * @param {string} packageDir
+ */
+function ensureWorldAccessible(packageDir) {
+  execFileSync("chmod", ["-R", "a+rX", packageDir], {
+    cwd: desktopRoot,
+    stdio: "inherit",
+  });
+  console.log(
+    `Ensured world-accessible modes under ${path.relative(
+      desktopRoot,
+      packageDir,
+    )}`,
+  );
+}
+
 const executableName = "angel-engine";
 if (process.platform === "linux") {
   ensureExecutableFileName(appPath, executableName);
+  ensureWorldAccessible(appPath);
 } else if (process.platform === "win32") {
   ensureExecutableFileName(appPath, `${executableName}.exe`);
 }
