@@ -23,12 +23,12 @@ const { selectPackagedApp } = require("./packaged-app.cjs");
 const version = packageJson.version;
 const releaseType = releaseTypeForVersion(version);
 const updateChannel = updateChannelForVersion(version);
-const electronBuilderBin = path.join(
-  desktopRoot,
-  "node_modules",
-  ".bin",
-  process.platform === "win32" ? "electron-builder.cmd" : "electron-builder",
-);
+// Resolve the JS CLI entry (not the .bin shim). On Windows, spawnSync of a
+// `.cmd` wrapper fails with EINVAL unless shell:true; running the entry with
+// node works on all platforms.
+const electronBuilderCli = require.resolve("electron-builder/cli.js", {
+  paths: [desktopRoot],
+});
 
 const publishIndex = process.argv.indexOf("--publish");
 const publishMode =
@@ -148,8 +148,9 @@ const platformArgs = electronBuilderPlatformArgs(process.platform);
 // Always build installers locally; GitHub upload is handled below so multi-OS
 // matrix jobs can publish without racing electron-builder's release create.
 execFileSync(
-  electronBuilderBin,
+  process.execPath,
   [
+    electronBuilderCli,
     "--prepackaged",
     appPath,
     ...platformArgs,
