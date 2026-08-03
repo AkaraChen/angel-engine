@@ -82,7 +82,9 @@ jobs:
           fi
 
       - name: Run desktop unit tests
-        run: bun run --filter desktop test
+        # Use turbo so ^build deps (daemon-api, client-napi, …) are built first.
+        # `bun run --filter desktop test` skips that graph and fails on fresh CI.
+        run: bun run turbo run test --filter desktop
 
       - name: Import macOS signing certificate
         if: runner.os == 'macOS'
