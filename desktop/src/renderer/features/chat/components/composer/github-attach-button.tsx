@@ -59,7 +59,7 @@ export const PromptGitHubAttachButton: FC<PromptGitHubAttachButtonProps> = ({
   const [search, setSearch] = useState("");
   const [attachError, setAttachError] = useState<string | null>(null);
   const [pendingUrl, setPendingUrl] = useState<string | null>(null);
-  const [remoteErrorsVisible, setRemoteErrorsVisible] = useState(false);
+  const [errorsVisible, setErrorsVisible] = useState(false);
   const debouncedSearch = useDebouncedValue(search, SEARCH_DEBOUNCE_MS);
   const activeRequestId = useRef(0);
 
@@ -100,7 +100,7 @@ export const PromptGitHubAttachButton: FC<PromptGitHubAttachButtonProps> = ({
     setSearch("");
     setAttachError(null);
     setPendingUrl(null);
-    setRemoteErrorsVisible(false);
+    setErrorsVisible(false);
   };
 
   const attachResolved = (resolved: ResolvedTaskLink) => {
@@ -137,7 +137,8 @@ export const PromptGitHubAttachButton: FC<PromptGitHubAttachButtonProps> = ({
   const needsLinearAuth =
     queryError instanceof DaemonRequestError &&
     queryError.code === "linear-token-missing";
-  const visibleQueryError = remoteErrorsVisible ? queryError : null;
+  const visibleQueryError = errorsVisible ? queryError : null;
+  const localHintIsError = errorsVisible && localHint !== null;
   const errorMessage =
     attachError ??
     (visibleQueryError === null || needsLinearAuth
@@ -185,13 +186,13 @@ export const PromptGitHubAttachButton: FC<PromptGitHubAttachButtonProps> = ({
           <CommandInput
             autoFocus
             className="px-2"
-            onBlur={() => setRemoteErrorsVisible(true)}
-            onFocus={() => setRemoteErrorsVisible(false)}
+            onBlur={() => setErrorsVisible(true)}
+            onFocus={() => setErrorsVisible(false)}
             onKeyDown={(event) => {
-              if (event.key === "Enter") setRemoteErrorsVisible(true);
+              if (event.key === "Enter") setErrorsVisible(true);
             }}
             onValueChange={(value) => {
-              setRemoteErrorsVisible(false);
+              setErrorsVisible(false);
               setSearch(value);
             }}
             placeholder={t("composer.fromLinkPlaceholder")}
@@ -206,7 +207,13 @@ export const PromptGitHubAttachButton: FC<PromptGitHubAttachButtonProps> = ({
             />
           )}
           {localHint === null ? null : (
-            <p className="px-4 pt-3 text-xs text-muted-foreground">
+            <p
+              className={cn(
+                "px-4 pt-3 text-xs",
+                localHintIsError ? "text-destructive" : "text-muted-foreground",
+              )}
+              role={localHintIsError ? "alert" : undefined}
+            >
               {localHint}
             </p>
           )}
@@ -274,7 +281,8 @@ function taskLinkLocalHint(
   t: (key: string) => string,
 ): string | null {
   const value = raw.trim();
-  if (value.length === 0 || !/^https?:\/\//i.test(value)) return null;
+  if (value.length === 0) return null;
+  if (!/^https?:\/\//i.test(value)) return t("composer.taskLinkHintSupported");
   let url: URL;
   try {
     url = new URL(value);

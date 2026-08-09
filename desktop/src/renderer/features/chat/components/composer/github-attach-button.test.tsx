@@ -67,6 +67,8 @@ vi.mock("react-i18next", () => ({
             "Paste a GitHub or Linear issue link, or search GitHub",
           "composer.taskLinkHintGitHubPath":
             "This is a GitHub link, but it is not an issue or pull request.",
+          "composer.taskLinkHintSupported":
+            "Supported links: GitHub issues, GitHub pull requests, and Linear issues.",
           "composer.taskLinkStateOpen": "Open",
         }[key] ?? key
       );
@@ -373,12 +375,39 @@ describe("PromptGitHubAttachButton", () => {
       { target: { value: "https://github.com/acme/widgets/commits/main" } },
     );
 
-    expect(
-      await screen.findByText(
-        "This is a GitHub link, but it is not an issue or pull request.",
-      ),
-    ).toBeDefined();
+    const input = screen.getByPlaceholderText(
+      "Paste a GitHub or Linear issue link, or search GitHub",
+    );
+    const hint = await screen.findByText(
+      "This is a GitHub link, but it is not an issue or pull request.",
+    );
+    expect(hint.className).toContain("text-muted-foreground");
+    expect(hint.getAttribute("role")).toBeNull();
+
+    fireEvent.blur(input);
+    expect(hint.className).toContain("text-destructive");
+    expect(hint.getAttribute("role")).toBe("alert");
+    expect(screen.queryByRole("button", { name: "common.retry" })).toBeNull();
     expect(mocks.resolveUrl).not.toHaveBeenCalled();
+  });
+
+  it("explains supported links and promotes plain text on Enter", async () => {
+    renderButton(vi.fn());
+    openDialog();
+    const input = screen.getByPlaceholderText(
+      "Paste a GitHub or Linear issue link, or search GitHub",
+    );
+    fireEvent.change(input, { target: { value: "foo" } });
+
+    const hint = await screen.findByText(
+      "Supported links: GitHub issues, GitHub pull requests, and Linear issues.",
+    );
+    expect(hint.className).toContain("text-muted-foreground");
+
+    fireEvent.keyDown(input, { key: "Enter" });
+    expect(hint.className).toContain("text-destructive");
+    expect(hint.getAttribute("role")).toBe("alert");
+    expect(screen.queryByRole("button", { name: "common.retry" })).toBeNull();
   });
 
   it("ignores a stale response after the dialog is closed and reopened", async () => {

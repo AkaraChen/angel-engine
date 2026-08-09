@@ -352,6 +352,8 @@ export function failInterruptedWorktreeCreationJobs() {
       .update(worktreeCreationJobs)
       .set({
         error: "Worktree creation was interrupted. Retry or cancel it.",
+        errorCode: null,
+        relatedChatId: null,
         status: "failed",
       })
       .where(eq(worktreeCreationJobs.status, "creating"))
@@ -363,8 +365,10 @@ function jobValues(job: PersistedWorktreeCreationJob) {
   return {
     chatId: job.chatId,
     error: job.state.error ?? null,
+    errorCode: job.state.errorCode ?? null,
     jobId: job.state.jobId,
     progress: job.state.progress,
+    relatedChatId: job.state.relatedChatId ?? null,
     setupApproval: job.setupApproval ?? null,
     worktreeRef: job.worktreeRef ?? null,
     stage: job.state.stage,
@@ -381,8 +385,10 @@ function persistedWorktreeCreationJob(
     worktreeRef: row.worktreeRef ?? undefined,
     state: {
       error: row.error ?? undefined,
+      errorCode: row.errorCode ?? undefined,
       jobId: row.jobId,
       progress: row.progress,
+      relatedChatId: row.relatedChatId ?? undefined,
       stage: row.stage as WorktreeCreationState["stage"],
       status: row.status as WorktreeCreationState["status"],
     },
