@@ -59,6 +59,10 @@ import type {
 import type {
   GitHubListItemsInput,
   GitHubListItemsResult,
+  GitHubPrChecksFixPromptInput,
+  GitHubPrChecksFixPromptResult,
+  GitHubPrChecksInput,
+  GitHubPrChecksResult,
   GitHubResolveUrlInput,
   GitHubResolvedItem,
 } from "@angel-engine/daemon-api/github";
@@ -422,6 +426,13 @@ export function createDaemonClient(options: DaemonClientOptions) {
     github: {
       listItems: (input: GitHubListItemsInput) =>
         request<GitHubListItemsResult>(`/api/github/items?${query(input)}`),
+      listPrChecks: (input: GitHubPrChecksInput) =>
+        request<GitHubPrChecksResult>(`/api/github/pr-checks?${query(input)}`),
+      prChecksFixPrompt: (input: GitHubPrChecksFixPromptInput) =>
+        request<GitHubPrChecksFixPromptResult>(
+          "/api/github/pr-checks/fix-prompt",
+          json("POST", input),
+        ),
       resolveUrl: (input: GitHubResolveUrlInput) =>
         request<GitHubResolvedItem>("/api/github/resolve", json("POST", input)),
     },

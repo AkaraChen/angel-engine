@@ -6,6 +6,7 @@ import type { KeyboardEvent as ReactKeyboardEvent } from "react";
 
 import {
   Globe as Browser,
+  CheckCircle,
   Cpu,
   FileText,
   Folder,
@@ -15,6 +16,7 @@ import {
 import { useCallback, useRef } from "react";
 
 import {
+  workspaceToolChecksTabId,
   workspaceToolFilesTabId,
   workspaceToolGitTabId,
   workspaceToolProcessesTabId,
@@ -129,6 +131,7 @@ export interface WorkspaceToolTabItem {
 }
 
 export interface WorkspaceToolPinnedTabLabels {
+  checks: string;
   files: string;
   gitChanges: string;
   processes: string;
@@ -152,6 +155,12 @@ export function workspaceToolTabItems(
       title: labels.gitChanges,
     },
     {
+      icon: CheckCircle,
+      id: workspaceToolChecksTabId,
+      pinned: true,
+      title: labels.checks,
+    },
+    {
       icon: Cpu,
       id: workspaceToolProcessesTabId,
       pinned: true,
@@ -173,6 +182,7 @@ export function visibleActiveWorkspaceToolTabId(
   if (
     snapshot.activeTabId === workspaceToolFilesTabId ||
     snapshot.activeTabId === workspaceToolGitTabId ||
+    snapshot.activeTabId === workspaceToolChecksTabId ||
     snapshot.activeTabId === workspaceToolProcessesTabId ||
     snapshot.tabs.some((tab) => tab.id === snapshot.activeTabId)
   ) {

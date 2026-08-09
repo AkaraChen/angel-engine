@@ -93,18 +93,23 @@ export interface LocaleResourceTranslationWorkspaceToolsGit {
 }
 
 export interface LocaleResourceTranslationWorkspaceToolsEmpty {
+  checksUnavailable: string;
   fileTreeUnavailable: string;
   fileUnavailable: string;
   gitUnavailable: string;
   noChanges: string;
+  noChecks: string;
   noDiffForFile: string;
   noProcesses: string;
+  noPullRequest: string;
+  noPullRequestDetail: string;
   noWorkspace: string;
   notGitRepository: string;
   processesUnavailable: string;
 }
 
 export interface LocaleResourceTranslationWorkspaceToolsTabs {
+  checks: string;
   files: string;
   gitChanges: string;
   newTab: string;
@@ -114,7 +119,21 @@ export interface LocaleResourceTranslationWorkspaceToolsTabs {
   workspaceTabs: string;
 }
 
+export interface LocaleResourceTranslationWorkspaceToolsChecks {
+  fixFailures: string;
+  fixNeedsChat: string;
+  fixStarted: string;
+  fixing: string;
+  openCheck: string;
+  openPullRequest: string;
+  refresh: string;
+  summaryFail: string;
+  summaryPass: string;
+  summaryPending: string;
+}
+
 export interface LocaleResourceTranslationWorkspaceTools {
+  checks: LocaleResourceTranslationWorkspaceToolsChecks;
   commit: LocaleResourceTranslationWorkspaceToolsCommit;
   dockInSidebar: string;
   empty: LocaleResourceTranslationWorkspaceToolsEmpty;

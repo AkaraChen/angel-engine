@@ -78,6 +78,18 @@ export const zhTW = {
       statsChanges: "變更",
       statsLastActive: "最近活動",
       tools: {
+        checks: {
+          fixFailures: "修復失敗",
+          fixNeedsChat: "開啟聊天以傳送修復回合。",
+          fixStarted: "已啟動修復回合（含截斷後的失敗日誌摘要）。",
+          fixing: "正在啟動修復…",
+          openCheck: "開啟檢查詳情",
+          openPullRequest: "開啟 Pull Request",
+          refresh: "重新整理檢查",
+          summaryFail: "{{count}} 失敗",
+          summaryPass: "{{count}} 通過",
+          summaryPending: "{{count}} 進行中",
+        },
         commit: {
           committing: "提交中…",
           commitTo: "提交到 {{target}}",
@@ -87,12 +99,16 @@ export const zhTW = {
         },
         dockInSidebar: "停靠到側欄",
         empty: {
+          checksUnavailable: "檢查不可用",
           fileTreeUnavailable: "檔案樹不可用",
           fileUnavailable: "檔案不可用",
           gitUnavailable: "Git 不可用",
           noChanges: "沒有變更",
+          noChecks: "此 Pull Request 沒有回報檢查",
           noDiffForFile: "此檔案沒有差異",
           noProcesses: "沒有執行中的 Agent 子處理程序",
+          noPullRequest: "目前分支沒有 Pull Request",
+          noPullRequestDetail: "在目前分支開啟或綁定 PR 後即可載入 CI 檢查。",
           noWorkspace: "此聊天沒有工作區",
           notGitRepository: "不是 Git 儲存庫",
           processesUnavailable: "處理程序資訊不可用",
@@ -123,6 +139,7 @@ export const zhTW = {
         resizeGitList: "調整變更清單寬度",
         subprocesses: "子處理程序",
         tabs: {
+          checks: "檢查",
           files: "檔案",
           gitChanges: "Git 變更",
           newTab: "新增分頁",

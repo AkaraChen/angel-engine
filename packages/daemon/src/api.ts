@@ -33,7 +33,10 @@ import {
   chatSetRuntimeInputSchema,
   normalizeChatAttachmentsInput,
 } from "@angel-engine/daemon-api/chat";
-import { githubResolveUrlInputSchema } from "@angel-engine/daemon-api/github";
+import {
+  githubPrChecksFixPromptInputSchema,
+  githubResolveUrlInputSchema,
+} from "@angel-engine/daemon-api/github";
 import {
   createProjectInputSchema,
   managedWorktreeDeleteInputSchema,
@@ -45,6 +48,10 @@ import {
   workspaceToolGitPushInputSchema,
   workspaceToolWriteFileInputSchema,
 } from "@angel-engine/daemon-api/workspace-tools";
+import {
+  buildGitHubPrChecksFixPrompt,
+  listGitHubPrChecks,
+} from "./features/github/checks";
 import { listGitHubItems } from "./features/github/list";
 import { resolveGitHubUrl } from "./features/github/resolve";
 import { listAvailableAgents } from "./features/agents/availability";
@@ -509,6 +516,22 @@ export function registerApi(
       ),
     ),
   );
+  app.get("/api/github/pr-checks", async (context) =>
+    context.json(
+      await run(
+        listGitHubPrChecks({
+          cwd: requireQuery(context.req.query("cwd"), "cwd"),
+        }),
+      ),
+    ),
+  );
+  app.post("/api/github/pr-checks/fix-prompt", async (context) => {
+    const input = githubPrChecksFixPromptInputSchema(await context.req.json());
+    if (input instanceof arkType.errors) {
+      throw DaemonError.invalidRequest("GitHub checks fix input is invalid.");
+    }
+    return context.json(await run(buildGitHubPrChecksFixPrompt(input)));
+  });
 
   app.get("/api/projects", async (context) =>
     context.json(await run(listProjects())),

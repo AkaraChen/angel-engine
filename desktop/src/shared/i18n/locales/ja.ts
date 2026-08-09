@@ -78,6 +78,19 @@ export const ja = {
       statsChanges: "変更",
       statsLastActive: "最終アクティブ",
       tools: {
+        checks: {
+          fixFailures: "失敗を修正",
+          fixNeedsChat: "修正ターンを送るにはチャットを開いてください。",
+          fixStarted:
+            "切り詰められた失敗ログ要約付きで修正ターンを開始しました。",
+          fixing: "修正を開始中…",
+          openCheck: "チェック詳細を開く",
+          openPullRequest: "プルリクエストを開く",
+          refresh: "チェックを更新",
+          summaryFail: "{{count}} 失敗",
+          summaryPass: "{{count}} 成功",
+          summaryPending: "{{count}} 実行中",
+        },
         commit: {
           committing: "コミット中…",
           commitTo: "{{target}} にコミット",
@@ -87,12 +100,17 @@ export const ja = {
         },
         dockInSidebar: "サイドバーにドック",
         empty: {
+          checksUnavailable: "チェックを利用できません",
           fileTreeUnavailable: "ファイルツリーを利用できません",
           fileUnavailable: "ファイルを利用できません",
           gitUnavailable: "Git を利用できません",
           noChanges: "変更はありません",
+          noChecks: "このプルリクエストに報告されたチェックはありません",
           noDiffForFile: "このファイルに差分はありません",
           noProcesses: "実行中のエージェントサブプロセスはありません",
+          noPullRequest: "このブランチにはプルリクエストがありません",
+          noPullRequestDetail:
+            "現在のブランチで PR を開くか紐付けると CI チェックを読み込みます。",
           noWorkspace: "このチャットにはワークスペースがありません",
           notGitRepository: "Git リポジトリではありません",
           processesUnavailable: "プロセス情報を利用できません",
@@ -124,6 +142,7 @@ export const ja = {
         resizeGitList: "変更リストの幅を調整",
         subprocesses: "サブプロセス",
         tabs: {
+          checks: "チェック",
           files: "ファイル",
           gitChanges: "Git の変更",
           newTab: "新しいタブ",
