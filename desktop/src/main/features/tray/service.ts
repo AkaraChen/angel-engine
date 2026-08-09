@@ -64,9 +64,11 @@ export function scheduleTrayRefresh() {
   refreshTimer = setTimeout(() => {
     refreshTimer = undefined;
     refreshQueue = refreshQueue
-      .then(() => refreshTray().catch((error: unknown) => {
-        log.warn("Could not refresh the menu bar tray.", error);
-      }))
+      .then(() =>
+        refreshTray().catch((error: unknown) => {
+          log.warn("Could not refresh the menu bar tray.", error);
+        }),
+      )
       .then(() => undefined);
   }, 120);
 }
@@ -141,7 +143,9 @@ async function refreshTray() {
 
   const selected = selectTrayActivities(activities);
   const sessions = sortTraySessions(await resolveSessionItems(selected));
-  tray.setContextMenu(Menu.buildFromTemplate(buildMenuTemplate(sessions, needsYou)));
+  tray.setContextMenu(
+    Menu.buildFromTemplate(buildMenuTemplate(sessions, needsYou)),
+  );
 }
 
 async function resolveSessionItems(
@@ -280,11 +284,12 @@ function trayIconCandidates() {
     path.join("assets", "linux-icons", "32x32.png"),
     path.join("assets", "icon.png"),
   ];
+  const appPath = app.getAppPath();
   const roots = [
-    app.getAppPath(),
-    path.resolve(app.getAppPath(), ".."),
-    path.resolve(app.getAppPath(), "..", ".."),
+    appPath,
+    path.resolve(appPath, ".."),
+    path.resolve(appPath, "..", ".."),
     process.resourcesPath,
-  ];
+  ].filter((root): root is string => is.nonEmptyString(root));
   return roots.flatMap((root) => names.map((name) => path.join(root, name)));
 }

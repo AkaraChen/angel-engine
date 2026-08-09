@@ -106,7 +106,11 @@ describe("selectTrayActivities", () => {
 
   it("caps the menu list", () => {
     const activities = Array.from({ length: 20 }, (_, index) =>
-      activity(`chat-${index}`, "running", `2026-01-01T00:00:${String(index).padStart(2, "0")}.000Z`),
+      activity(
+        `chat-${index}`,
+        "running",
+        `2026-01-01T00:00:${String(index).padStart(2, "0")}.000Z`,
+      ),
     );
 
     expect(selectTrayActivities(activities, 5)).toHaveLength(5);

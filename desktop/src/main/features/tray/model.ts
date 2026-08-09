@@ -47,8 +47,7 @@ export function selectTrayActivities(
 ): ChatActivity[] {
   return [...activities]
     .sort((left, right) => {
-      const byStatus =
-        STATUS_ORDER[left.status] - STATUS_ORDER[right.status];
+      const byStatus = STATUS_ORDER[left.status] - STATUS_ORDER[right.status];
       if (byStatus !== 0) return byStatus;
       return right.updatedAt.localeCompare(left.updatedAt);
     })

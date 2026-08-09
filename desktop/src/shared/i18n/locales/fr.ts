@@ -433,7 +433,8 @@ export const fr = {
         sendWithModEnterTitle: "Envoyer avec {{shortcut}}",
         trayEnabledDescription:
           "Affiche dans la barre de menus le nombre de sessions qui vous attendent et une liste pour les ouvrir sans chercher dans l'app.",
-        trayEnabledSwitchLabel: "Afficher le résumé de flotte dans la barre de menus",
+        trayEnabledSwitchLabel:
+          "Afficher le résumé de flotte dans la barre de menus",
         trayEnabledTitle: "Résumé de flotte dans la barre de menus",
       },
     },

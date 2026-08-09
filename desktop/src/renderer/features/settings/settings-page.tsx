@@ -315,7 +315,8 @@ function WorkspaceSettings() {
   const setWorktreeDirtyPromptEnabled = useSettingsStore(
     (state) => state.setWorktreeDirtyPromptEnabled,
   );
-  const { enabled: trayEnabled, setEnabled: setTrayEnabled } = useTraySettings();
+  const { enabled: trayEnabled, setEnabled: setTrayEnabled } =
+    useTraySettings();
   const modEnterShortcut =
     window.desktopEnvironment.platform === "darwin" ? "⌘+Enter" : "Ctrl+Enter";
 
