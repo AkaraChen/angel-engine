@@ -311,7 +311,8 @@ function CheckStatusIcon({ bucket }: { bucket: GitHubCheckBucket }) {
           weight="bold"
         />
       );
-    default:
+    case "cancel":
+    case "skipping":
       return (
         <WarningCircle
           className="mt-0.5 size-4 shrink-0 text-muted-foreground"
