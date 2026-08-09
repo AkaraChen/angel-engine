@@ -605,9 +605,13 @@ export const ja = {
       agentFinishedNoOutput: "Agent はテキスト出力なしで完了しました。",
       agentWaiting: "Agent は応答を待っています。",
       chatActionFailed: "チャット操作に失敗しました",
+      chatArchived: "チャットをアーカイブしました",
+      chatArchivedDescription:
+        "5 秒以内に元に戻すか、{{shortcut}} を押してください。",
       permissionRequired: "権限が必要です",
       projectActionFailed: "プロジェクト操作に失敗しました",
       installUpdate: "再起動してインストール",
+      undo: "元に戻す",
       updateReady: "更新の準備ができました",
       updateReadyDescription: "{{version}} のダウンロードが完了しました。",
     },

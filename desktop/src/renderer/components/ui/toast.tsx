@@ -36,6 +36,7 @@ const toastIcons: Record<ToastVariant, React.ComponentType<IconProps>> = {
 
 interface ToastMessage {
   action?: ToastAction;
+  duration?: number;
   id: string;
   title: string;
   description?: string;
@@ -49,27 +50,35 @@ interface ToastAction {
 
 type ToastInput = Omit<ToastMessage, "id">;
 
-const ToastContext = React.createContext<((toast: ToastInput) => void) | null>(
-  null,
-);
+/** Returns a dismiss function for the created toast. */
+type ToastFn = (toast: ToastInput) => () => void;
+
+const DEFAULT_TOAST_DURATION_MS = 4500;
+
+const ToastContext = React.createContext<ToastFn | null>(null);
 
 function ToastProvider({ children }: { children: React.ReactNode }) {
   const { t } = useTranslation();
   const [toasts, setToasts] = React.useState<ToastMessage[]>([]);
 
-  const toast = React.useCallback((input: ToastInput) => {
-    setToasts((current) => [
-      ...current,
-      {
-        ...input,
-        id: crypto.randomUUID(),
-      },
-    ]);
-  }, []);
-
   const dismiss = React.useCallback((id: string) => {
     setToasts((current) => current.filter((toast) => toast.id !== id));
   }, []);
+
+  const toast = React.useCallback(
+    (input: ToastInput) => {
+      const id = crypto.randomUUID();
+      setToasts((current) => [
+        ...current,
+        {
+          ...input,
+          id,
+        },
+      ]);
+      return () => dismiss(id);
+    },
+    [dismiss],
+  );
 
   React.useEffect(() => {
     return window.desktopWindow.onUpdateDownloaded((event) => {
@@ -90,7 +99,10 @@ function ToastProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <ToastContext.Provider value={toast}>
-      <ToastPrimitive.Provider duration={4500} swipeDirection="right">
+      <ToastPrimitive.Provider
+        duration={DEFAULT_TOAST_DURATION_MS}
+        swipeDirection="right"
+      >
         {children}
         {toasts.map((toast) => {
           const variant = toast.variant ?? "default";
@@ -108,6 +120,7 @@ function ToastProvider({ children }: { children: React.ReactNode }) {
                 data-closed:slide-out-to-right-4
                 motion-reduce:animate-none
               "
+              duration={toast.duration ?? DEFAULT_TOAST_DURATION_MS}
               key={toast.id}
               onOpenChange={(open) => {
                 if (!open) dismiss(toast.id);

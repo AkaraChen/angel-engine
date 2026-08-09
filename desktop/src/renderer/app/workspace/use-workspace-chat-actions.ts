@@ -17,7 +17,7 @@ import {
 } from "@angel-engine/daemon-api/agents";
 import is from "@sindresorhus/is";
 import { useMutation } from "@tanstack/react-query";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { getErrorMessage } from "@/app/workspace/workspace-display";
 import {
   agentRuntimePreferenceFromExplicitOverrides,
@@ -47,6 +47,13 @@ import {
   clearChatTabs,
   removeChatFromTabGroups,
 } from "@/features/chat/state/chat-tab-store";
+import {
+  CHAT_ARCHIVE_UNDO_MS,
+  createPendingChatArchiveQueue,
+  isRestorePendingArchiveShortcut,
+  restorePendingArchiveShortcutLabel,
+  type PendingChatArchiveQueue,
+} from "@/features/chat/state/pending-chat-archive";
 import {
   createProjectMutationOptions,
   projectContextMenuMutationOptions,
@@ -83,6 +90,7 @@ export function useWorkspaceChatActions({
   const {
     api,
     chats,
+    isMacOS,
     modeOverride,
     modelOverride,
     navigate,
@@ -100,6 +108,15 @@ export function useWorkspaceChatActions({
     updateAgentSettings,
   } = model;
   const { navigateToChat, navigateToDraft } = navigation;
+  const commitPendingArchiveRef = useRef<(chat: Chat) => void>(() => {});
+  const pendingArchiveQueueRef = useRef<PendingChatArchiveQueue | null>(null);
+  if (!pendingArchiveQueueRef.current) {
+    pendingArchiveQueueRef.current = createPendingChatArchiveQueue({
+      onCommit: (chat) => {
+        commitPendingArchiveRef.current(chat);
+      },
+    });
+  }
   const [renameChatId, setRenameChatId] = useState<string | null>(null);
   const renameTargetChat = is.nonEmptyString(renameChatId)
     ? (chats.find((chat) => chat.id === renameChatId) ?? null)
@@ -402,27 +419,89 @@ export function useWorkspaceChatActions({
     [setChatRuntime, t, toast],
   );
 
-  const archiveChat = useCallback(
-    async (chat: Chat) => {
-      try {
-        const archivedChat = await archiveChatMutation.mutateAsync(chat);
-        removeChatFromTabGroups(archivedChat.id);
-        broadcastChatsChanged();
-        if (selectedChatId === archivedChat.id) {
-          navigateToDraft(archivedChat.projectId ?? undefined, {
-            replace: true,
+  const restorePendingArchive = useCallback(
+    (restored: { chat: Chat; wasSelected: boolean } | null) => {
+      if (!restored) return false;
+      setChatInCache(restored.chat);
+      if (restored.wasSelected) {
+        navigateToChat(restored.chat);
+      }
+      return true;
+    },
+    [navigateToChat, setChatInCache],
+  );
+
+  useEffect(() => {
+    commitPendingArchiveRef.current = (chat) => {
+      void (async () => {
+        try {
+          await archiveChatMutation.mutateAsync(chat);
+          broadcastChatsChanged();
+        } catch (error) {
+          setChatInCache(chat);
+          toast({
+            description: getErrorMessage(error),
+            title: t("notifications.chatActionFailed"),
+            variant: "destructive",
           });
         }
-      } catch (error) {
-        toast({
-          description: getErrorMessage(error),
-          title: t("notifications.chatActionFailed"),
-          variant: "destructive",
-        });
+      })();
+    };
+  }, [archiveChatMutation, setChatInCache, t, toast]);
+
+  const archiveChat = useCallback(
+    (chat: Chat) => {
+      const queue = pendingArchiveQueueRef.current;
+      if (!queue) return;
+
+      const wasSelected = selectedChatId === chat.id;
+      queryClient.setQueryData<Chat[]>(queryKeys.chats.list(), (current = []) =>
+        current.filter((item) => item.id !== chat.id),
+      );
+      removeChatFromTabGroups(chat.id);
+      if (wasSelected) {
+        navigateToDraft(chat.projectId ?? undefined, { replace: true });
       }
+
+      const dismissToast = toast({
+        action: {
+          label: t("notifications.undo"),
+          onClick: () => {
+            restorePendingArchive(queue.undo(chat.id));
+          },
+        },
+        description: t("notifications.chatArchivedDescription", {
+          shortcut: restorePendingArchiveShortcutLabel(isMacOS),
+        }),
+        duration: CHAT_ARCHIVE_UNDO_MS,
+        title: t("notifications.chatArchived"),
+      });
+
+      queue.schedule(chat, wasSelected, { dismissToast });
     },
-    [archiveChatMutation, navigateToDraft, selectedChatId, t, toast],
+    [
+      isMacOS,
+      navigateToDraft,
+      queryClient,
+      restorePendingArchive,
+      selectedChatId,
+      t,
+      toast,
+    ],
   );
+
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (!isRestorePendingArchiveShortcut(event)) return;
+      const queue = pendingArchiveQueueRef.current;
+      if (!queue?.hasPending()) return;
+      event.preventDefault();
+      restorePendingArchive(queue.undoLatest());
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [restorePendingArchive]);
   const deleteAllChats = useCallback(async () => {
     try {
       const result = await deleteAllChatsMutation.mutateAsync();

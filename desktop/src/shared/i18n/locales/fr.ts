@@ -607,9 +607,13 @@ export const fr = {
       agentFinishedNoOutput: "L’agent a terminé sans sortie textuelle.",
       agentWaiting: "L’agent attend une réponse.",
       chatActionFailed: "L’action de discussion a échoué",
+      chatArchived: "Discussion archivée",
+      chatArchivedDescription:
+        "Annuler dans les 5 secondes, ou appuyez sur {{shortcut}}.",
       permissionRequired: "Autorisation requise",
       projectActionFailed: "L’action de projet a échoué",
       installUpdate: "Redémarrer et installer",
+      undo: "Annuler",
       updateReady: "Mise à jour prête",
       updateReadyDescription: "{{version}} a été téléchargée.",
     },

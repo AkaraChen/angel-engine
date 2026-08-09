@@ -640,9 +640,12 @@ export interface LocaleResourceTranslationNotifications {
   agentFinishedNoOutput: string;
   agentWaiting: string;
   chatActionFailed: string;
+  chatArchived: string;
+  chatArchivedDescription: string;
   permissionRequired: string;
   projectActionFailed: string;
   installUpdate: string;
+  undo: string;
   updateReady: string;
   updateReadyDescription: string;
 }
