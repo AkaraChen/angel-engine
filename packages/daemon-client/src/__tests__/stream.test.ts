@@ -198,6 +198,53 @@ describe("chatRuns", () => {
   });
 });
 
+describe("projects.clone", () => {
+  it("streams progress through the terminal clone event", async () => {
+    const events = [
+      {
+        detail: null,
+        percent: 0,
+        stage: "cloning",
+        targetPath: "/tmp/repo",
+        type: "progress",
+      },
+      {
+        project: { id: "project-1", path: "/tmp/repo" },
+        reusedExistingCheckout: false,
+        type: "completed",
+      },
+    ] as const;
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(sseResponse(events)));
+    const client = createDaemonClient({ baseUrl: "", token: null });
+
+    await expect(
+      collect(client.projects.clone({ url: "owner/repo" })),
+    ).resolves.toEqual(events);
+  });
+
+  it("rejects a clone stream that closes before a terminal event", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(
+        sseResponse([
+          {
+            detail: null,
+            percent: 10,
+            stage: "cloning",
+            targetPath: "/tmp/repo",
+            type: "progress",
+          },
+        ]),
+      ),
+    );
+    const client = createDaemonClient({ baseUrl: "", token: null });
+
+    await expect(
+      collect(client.projects.clone({ url: "owner/repo" })),
+    ).rejects.toThrow(/without a terminal event/);
+  });
+});
+
 describe("chat metadata + history", () => {
   it("loads a chat transcript via POST /api/chats/:id/load", async () => {
     const result = { chat: { id: "c1", title: "Fix bug" }, messages: [] };
