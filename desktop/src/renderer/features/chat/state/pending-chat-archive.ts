@@ -35,7 +35,7 @@ export function createPendingChatArchiveQueue({
   scheduler = createTimeoutScheduler(),
 }: {
   delayMs?: number;
-  onCommit: (chat: Chat) => void;
+  onCommit: (pending: PendingChatArchive) => void;
   scheduler?: PendingChatArchiveScheduler;
 }) {
   const stack: StackEntry[] = [];
@@ -58,6 +58,10 @@ export function createPendingChatArchiveQueue({
       return stack.length > 0;
     },
 
+    isPending(chatId: string) {
+      return stack.some((entry) => entry.chat.id === chatId);
+    },
+
     schedule(
       chat: Chat,
       wasSelected: boolean,
@@ -69,7 +73,7 @@ export function createPendingChatArchiveQueue({
 
       const handle = scheduler.schedule(() => {
         removeById(chat.id);
-        onCommit(chat);
+        onCommit({ chat, wasSelected });
       }, delayMs);
 
       stack.push({
@@ -103,16 +107,23 @@ export type PendingChatArchiveQueue = ReturnType<
 >;
 
 /** Cmd/Ctrl+Shift+T restores the most recently pending archive. */
-export function isRestorePendingArchiveShortcut(event: {
-  altKey: boolean;
-  ctrlKey: boolean;
-  key: string;
-  metaKey: boolean;
-  repeat: boolean;
-  shiftKey: boolean;
-}): boolean {
+export function isRestorePendingArchiveShortcut(
+  event: {
+    altKey: boolean;
+    ctrlKey: boolean;
+    key: string;
+    metaKey: boolean;
+    repeat: boolean;
+    shiftKey: boolean;
+  },
+  isMacOS: boolean,
+): boolean {
   if (event.repeat || event.altKey || !event.shiftKey) return false;
-  if (!(event.metaKey || event.ctrlKey)) return false;
+  if (
+    isMacOS ? !event.metaKey || event.ctrlKey : !event.ctrlKey || event.metaKey
+  ) {
+    return false;
+  }
   return event.key.toLowerCase() === "t";
 }
 

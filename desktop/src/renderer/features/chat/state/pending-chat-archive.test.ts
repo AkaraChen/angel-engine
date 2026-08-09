@@ -40,7 +40,7 @@ function createFakeScheduler() {
 
   return {
     flush(delayMs = CHAT_ARCHIVE_UNDO_MS) {
-      for (const [id, timer] of [...timers.entries()]) {
+      for (const [id, timer] of timers.entries()) {
         if (timer.delayMs <= delayMs) {
           timers.delete(id);
           timer.callback();
@@ -64,7 +64,7 @@ describe("pending chat archive queue", () => {
     const fake = createFakeScheduler();
     const queue = createPendingChatArchiveQueue({
       onCommit: (item) => {
-        commits.push(item.id);
+        commits.push(item.chat.id);
       },
       scheduler: fake.scheduler,
     });
@@ -72,10 +72,13 @@ describe("pending chat archive queue", () => {
     queue.schedule(chat("a"), true);
     expect(commits).toEqual([]);
     expect(queue.hasPending()).toBe(true);
+    expect(queue.isPending("a")).toBe(true);
+    expect(queue.isPending("b")).toBe(false);
 
     fake.flush();
     expect(commits).toEqual(["a"]);
     expect(queue.hasPending()).toBe(false);
+    expect(queue.isPending("a")).toBe(false);
   });
 
   it("undo cancels commit and returns the chat", () => {
@@ -84,7 +87,7 @@ describe("pending chat archive queue", () => {
     const fake = createFakeScheduler();
     const queue = createPendingChatArchiveQueue({
       onCommit: (item) => {
-        commits.push(item.id);
+        commits.push(item.chat.id);
       },
       scheduler: fake.scheduler,
     });
@@ -119,7 +122,7 @@ describe("pending chat archive queue", () => {
     const fake = createFakeScheduler();
     const queue = createPendingChatArchiveQueue({
       onCommit: (item) => {
-        commits.push(item.id);
+        commits.push(item.chat.id);
       },
       scheduler: fake.scheduler,
     });
@@ -146,34 +149,49 @@ describe("restore pending archive shortcut", () => {
   };
 
   it("matches Cmd/Ctrl+Shift+T", () => {
-    expect(isRestorePendingArchiveShortcut(base)).toBe(true);
+    expect(isRestorePendingArchiveShortcut(base, true)).toBe(true);
     expect(
-      isRestorePendingArchiveShortcut({
-        ...base,
-        ctrlKey: true,
-        metaKey: false,
-      }),
+      isRestorePendingArchiveShortcut(
+        {
+          ...base,
+          ctrlKey: true,
+          metaKey: false,
+        },
+        false,
+      ),
     ).toBe(true);
-    expect(isRestorePendingArchiveShortcut({ ...base, key: "T" })).toBe(true);
+    expect(isRestorePendingArchiveShortcut({ ...base, key: "T" }, true)).toBe(
+      true,
+    );
   });
 
   it("ignores incomplete or repeated chords", () => {
-    expect(isRestorePendingArchiveShortcut({ ...base, shiftKey: false })).toBe(
-      false,
-    );
     expect(
-      isRestorePendingArchiveShortcut({
-        ...base,
-        ctrlKey: false,
-        metaKey: false,
-      }),
+      isRestorePendingArchiveShortcut({ ...base, shiftKey: false }, true),
     ).toBe(false);
-    expect(isRestorePendingArchiveShortcut({ ...base, altKey: true })).toBe(
-      false,
-    );
-    expect(isRestorePendingArchiveShortcut({ ...base, repeat: true })).toBe(
-      false,
-    );
+    expect(
+      isRestorePendingArchiveShortcut(
+        {
+          ...base,
+          ctrlKey: false,
+          metaKey: false,
+        },
+        true,
+      ),
+    ).toBe(false);
+    expect(
+      isRestorePendingArchiveShortcut({ ...base, altKey: true }, true),
+    ).toBe(false);
+    expect(
+      isRestorePendingArchiveShortcut({ ...base, repeat: true }, true),
+    ).toBe(false);
+    expect(
+      isRestorePendingArchiveShortcut(
+        { ...base, ctrlKey: true, metaKey: false },
+        true,
+      ),
+    ).toBe(false);
+    expect(isRestorePendingArchiveShortcut(base, false)).toBe(false);
   });
 
   it("labels the shortcut for macOS and other platforms", () => {

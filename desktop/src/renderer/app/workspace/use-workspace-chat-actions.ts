@@ -52,6 +52,7 @@ import {
   createPendingChatArchiveQueue,
   isRestorePendingArchiveShortcut,
   restorePendingArchiveShortcutLabel,
+  type PendingChatArchive,
   type PendingChatArchiveQueue,
 } from "@/features/chat/state/pending-chat-archive";
 import {
@@ -108,12 +109,14 @@ export function useWorkspaceChatActions({
     updateAgentSettings,
   } = model;
   const { navigateToChat, navigateToDraft } = navigation;
-  const commitPendingArchiveRef = useRef<(chat: Chat) => void>(() => {});
+  const commitPendingArchiveRef = useRef<(pending: PendingChatArchive) => void>(
+    () => {},
+  );
   const pendingArchiveQueueRef = useRef<PendingChatArchiveQueue | null>(null);
   if (!pendingArchiveQueueRef.current) {
     pendingArchiveQueueRef.current = createPendingChatArchiveQueue({
-      onCommit: (chat) => {
-        commitPendingArchiveRef.current(chat);
+      onCommit: (pending) => {
+        commitPendingArchiveRef.current(pending);
       },
     });
   }
@@ -134,8 +137,12 @@ export function useWorkspaceChatActions({
       messages?: ChatHistoryMessage[],
       config?: ChatRuntimeConfig,
     ) => {
-      queryClient.setQueryData<Chat[]>(queryKeys.chats.list(), (current = []) =>
-        upsertChatInList(current, chat),
+      queryClient.setQueryData<Chat[]>(
+        queryKeys.chats.list(),
+        (current = []) =>
+          pendingArchiveQueueRef.current?.isPending(chat.id)
+            ? current.filter((item) => item.id !== chat.id)
+            : upsertChatInList(current, chat),
       );
       queryClient.setQueryData<ChatLoadResult | undefined>(
         queryKeys.chats.detail(chat.id),
@@ -270,7 +277,15 @@ export function useWorkspaceChatActions({
         if (event.type === "delete-all") {
           applyAllChatsDeleted();
         } else {
-          void invalidateChatQueries(queryClient);
+          void invalidateChatQueries(queryClient).then(() => {
+            const queue = pendingArchiveQueueRef.current;
+            if (!queue?.hasPending()) return;
+            queryClient.setQueryData<Chat[]>(
+              queryKeys.chats.list(),
+              (current = []) =>
+                current.filter((chat) => !queue.isPending(chat.id)),
+            );
+          });
         }
       }),
     [applyAllChatsDeleted, queryClient],
@@ -432,13 +447,14 @@ export function useWorkspaceChatActions({
   );
 
   useEffect(() => {
-    commitPendingArchiveRef.current = (chat) => {
+    commitPendingArchiveRef.current = (pending) => {
       void (async () => {
         try {
-          await archiveChatMutation.mutateAsync(chat);
+          await archiveChatMutation.mutateAsync(pending.chat);
+          removeChatFromTabGroups(pending.chat.id);
           broadcastChatsChanged();
         } catch (error) {
-          setChatInCache(chat);
+          restorePendingArchive(pending);
           toast({
             description: getErrorMessage(error),
             title: t("notifications.chatActionFailed"),
@@ -447,18 +463,21 @@ export function useWorkspaceChatActions({
         }
       })();
     };
-  }, [archiveChatMutation, setChatInCache, t, toast]);
+  }, [archiveChatMutation, restorePendingArchive, t, toast]);
 
   const archiveChat = useCallback(
-    (chat: Chat) => {
+    async (chat: Chat) => {
       const queue = pendingArchiveQueueRef.current;
       if (!queue) return;
 
+      await queryClient.cancelQueries({
+        exact: true,
+        queryKey: queryKeys.chats.list(),
+      });
       const wasSelected = selectedChatId === chat.id;
       queryClient.setQueryData<Chat[]>(queryKeys.chats.list(), (current = []) =>
         current.filter((item) => item.id !== chat.id),
       );
-      removeChatFromTabGroups(chat.id);
       if (wasSelected) {
         navigateToDraft(chat.projectId ?? undefined, { replace: true });
       }
@@ -492,7 +511,12 @@ export function useWorkspaceChatActions({
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (!isRestorePendingArchiveShortcut(event)) return;
+      if (
+        event.defaultPrevented ||
+        !isRestorePendingArchiveShortcut(event, isMacOS)
+      ) {
+        return;
+      }
       const queue = pendingArchiveQueueRef.current;
       if (!queue?.hasPending()) return;
       event.preventDefault();
@@ -501,7 +525,7 @@ export function useWorkspaceChatActions({
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [restorePendingArchive]);
+  }, [isMacOS, restorePendingArchive]);
   const deleteAllChats = useCallback(async () => {
     try {
       const result = await deleteAllChatsMutation.mutateAsync();
