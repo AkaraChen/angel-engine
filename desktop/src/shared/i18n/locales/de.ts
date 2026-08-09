@@ -189,6 +189,11 @@ export const de = {
         waitingForYou: "Wartet auf dich",
       },
       title: "Flotte",
+      viewMode: "Flottenansicht",
+      views: {
+        board: "Boardansicht",
+        list: "Listenansicht",
+      },
     },
     sidebar: {
       addProject: "Projekt hinzufügen",

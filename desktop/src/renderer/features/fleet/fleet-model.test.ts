@@ -5,13 +5,17 @@ import { describe, expect, it } from "vitest";
 
 import {
   buildFleetRows,
+  bucketFleetRows,
   countFleetRows,
   filterFleetRows,
   FLEET_PROJECT_FILTER_ALL,
   FLEET_PROJECT_FILTER_STANDALONE,
+  FLEET_VIEW_STORAGE_KEY,
   fleetProjectOptions,
   groupFleetRows,
+  readFleetViewPreference,
   resolveFleetProjectFilter,
+  writeFleetViewPreference,
 } from "./fleet-model";
 
 const PROJECT: Project = {
@@ -276,6 +280,49 @@ describe("filterFleetRows", () => {
         (section) => section.group,
       ),
     ).toEqual(["done"]);
+  });
+
+  it("keeps all board buckets in priority order, including empty ones", () => {
+    const buckets = bucketFleetRows(
+      rows.filter((row) => row.group !== "running"),
+    );
+
+    expect(buckets.map((bucket) => bucket.group)).toEqual([
+      "attention",
+      "running",
+      "done",
+    ]);
+    expect(
+      buckets.map((bucket) => bucket.rows.map((row) => row.chatId)),
+    ).toEqual([["a"], [], ["c"]]);
+  });
+});
+
+describe("fleet view preference", () => {
+  it("defaults invalid or unavailable storage to the list", () => {
+    expect(readFleetViewPreference({ getItem: () => "unexpected" })).toBe(
+      "list",
+    );
+    expect(
+      readFleetViewPreference({
+        getItem: () => {
+          throw new Error("storage unavailable");
+        },
+      }),
+    ).toBe("list");
+  });
+
+  it("round-trips the board preference through the versioned key", () => {
+    const values = new Map<string, string>();
+    const storage = {
+      getItem: (key: string) => values.get(key) ?? null,
+      setItem: (key: string, value: string) => values.set(key, value),
+    };
+
+    writeFleetViewPreference("board", storage);
+
+    expect(values.get(FLEET_VIEW_STORAGE_KEY)).toBe("board");
+    expect(readFleetViewPreference(storage)).toBe("board");
   });
 });
 

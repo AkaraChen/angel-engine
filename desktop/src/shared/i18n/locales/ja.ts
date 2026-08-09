@@ -188,6 +188,11 @@ export const ja = {
         waitingForYou: "あなたの入力待ち",
       },
       title: "フリート",
+      viewMode: "フリート表示",
+      views: {
+        board: "ボード表示",
+        list: "リスト表示",
+      },
     },
     sidebar: {
       addProject: "プロジェクトを追加",

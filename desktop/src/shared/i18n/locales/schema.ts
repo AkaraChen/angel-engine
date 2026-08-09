@@ -200,6 +200,11 @@ export interface LocaleResourceTranslationFleetStatus {
   waitingForYou: string;
 }
 
+export interface LocaleResourceTranslationFleetViews {
+  board: string;
+  list: string;
+}
+
 export interface LocaleResourceTranslationFleet {
   allProjects: string;
   disconnected: string;
@@ -215,6 +220,8 @@ export interface LocaleResourceTranslationFleet {
   standaloneProject: string;
   status: LocaleResourceTranslationFleetStatus;
   title: string;
+  viewMode: string;
+  views: LocaleResourceTranslationFleetViews;
 }
 
 export interface LocaleResourceTranslationSidebar {

@@ -188,6 +188,11 @@ export const es = {
         waitingForYou: "Esperándote",
       },
       title: "Flota",
+      viewMode: "Vista de la flota",
+      views: {
+        board: "Vista de tablero",
+        list: "Vista de lista",
+      },
     },
     sidebar: {
       addProject: "Agregar proyecto",

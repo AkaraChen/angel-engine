@@ -3,12 +3,19 @@
 import type { Chat, ChatActivity } from "@angel-engine/daemon-api/chat";
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  within,
+} from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { queryKeys } from "@/platform/query-keys";
 
 import { FleetPage } from "./fleet-page";
+import { FLEET_VIEW_STORAGE_KEY } from "./fleet-model";
 
 const listActivity = vi.fn<() => Promise<{ items: ChatActivity[] }>>();
 const readActivity =
@@ -30,6 +37,26 @@ vi.mock("@/platform/api-client", () => ({
 vi.mock("react-i18next", () => ({
   useTranslation: () => ({ t: (key: string) => key }),
 }));
+
+const localStorageValues = new Map<string, string>();
+const localStorage: Storage = {
+  clear: () => localStorageValues.clear(),
+  getItem: (key) => localStorageValues.get(key) ?? null,
+  key: (index) => [...localStorageValues.keys()][index] ?? null,
+  get length() {
+    return localStorageValues.size;
+  },
+  removeItem: (key) => {
+    localStorageValues.delete(key);
+  },
+  setItem: (key, value) => {
+    localStorageValues.set(key, value);
+  },
+};
+Object.defineProperty(window, "localStorage", {
+  configurable: true,
+  value: localStorage,
+});
 
 function chat(id: string, title: string): Chat {
   return {
@@ -78,6 +105,7 @@ function renderFleet(overrides: Partial<Parameters<typeof FleetPage>[0]> = {}) {
 
 afterEach(() => {
   cleanup();
+  window.localStorage.clear();
   vi.clearAllMocks();
 });
 
@@ -181,6 +209,108 @@ describe("fleetPage", () => {
     expect(
       screen.getByRole("searchbox", { name: "fleet.search" }),
     ).toBeDefined();
+  });
+
+  it("switches to a three-column read-only board and preserves the list segment", async () => {
+    listActivity.mockResolvedValue({
+      items: [
+        DONE_ACTIVITY,
+        {
+          attentionId: "run-2:waiting",
+          chatId: "chat-2",
+          reason: "question",
+          runId: "run-2",
+          status: "waiting_for_you",
+          updatedAt: "2026-01-01T02:00:00.000Z",
+        },
+      ],
+    });
+    renderFleet({
+      chats: [chat("chat-1", "Done chat"), chat("chat-2", "Needs you chat")],
+    });
+
+    const listToggle = await screen.findByRole("button", {
+      name: "fleet.views.list",
+    });
+    expect(listToggle.getAttribute("aria-pressed")).toBe("true");
+    fireEvent.click(
+      screen.getByRole("button", { name: /fleet.segments.attention/ }),
+    );
+    fireEvent.click(screen.getByRole("button", { name: "fleet.views.board" }));
+
+    expect(
+      screen.queryByRole("group", { name: "fleet.filterSegments" }),
+    ).toBeNull();
+    const board = screen.getByRole("region", { name: "fleet.views.board" });
+    expect(board.className).toContain("overflow-x-auto");
+    expect(board.firstElementChild?.className).toContain("min-w-[53rem]");
+    expect(within(board).getAllByRole("heading")).toHaveLength(3);
+    expect(
+      within(board).getByText("fleet.emptySegments.running"),
+    ).toBeDefined();
+    expect(
+      within(board).getByRole("button", { name: /Done chat/ }),
+    ).toBeDefined();
+    expect(
+      within(board).getByRole("button", { name: /Needs you chat/ }),
+    ).toBeDefined();
+    expect(window.localStorage.getItem(FLEET_VIEW_STORAGE_KEY)).toBe("board");
+
+    fireEvent.click(listToggle);
+
+    expect(
+      screen
+        .getByRole("button", { name: /fleet.segments.attention/ })
+        .getAttribute("aria-pressed"),
+    ).toBe("true");
+    expect(screen.queryByRole("button", { name: /Done chat/ })).toBeNull();
+  });
+
+  it("restores board preference and keeps cards keyboard-focusable in column order", async () => {
+    window.localStorage.setItem(FLEET_VIEW_STORAGE_KEY, "board");
+    listActivity.mockResolvedValue({
+      items: [
+        DONE_ACTIVITY,
+        {
+          chatId: "chat-2",
+          runId: "run-2",
+          status: "running",
+          updatedAt: "2026-01-01T02:00:00.000Z",
+        },
+        {
+          attentionId: "run-3:waiting",
+          chatId: "chat-3",
+          reason: "approval",
+          runId: "run-3",
+          status: "waiting_for_you",
+          updatedAt: "2026-01-01T03:00:00.000Z",
+        },
+      ],
+    });
+    renderFleet({
+      chats: [
+        chat("chat-1", "Done chat"),
+        chat("chat-2", "Running chat"),
+        chat("chat-3", "Needs you chat"),
+      ],
+    });
+
+    const board = await screen.findByRole("region", {
+      name: "fleet.views.board",
+    });
+    const cards = within(board).getAllByRole("button");
+
+    expect(cards.map((card) => card.textContent)).toEqual([
+      expect.stringContaining("Needs you chat"),
+      expect.stringContaining("Running chat"),
+      expect.stringContaining("Done chat"),
+    ]);
+    expect(cards.every((card) => card.tabIndex === 0)).toBe(true);
+    expect(
+      screen
+        .getByRole("button", { name: "fleet.views.board" })
+        .getAttribute("aria-pressed"),
+    ).toBe("true");
   });
 
   it("narrows the list to the search query", async () => {
