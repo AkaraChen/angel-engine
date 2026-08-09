@@ -6,7 +6,10 @@ import { useCallback, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { resolveWorkspaceTerminalTheme } from "@/app/workspace/workspace-terminal-theme";
 import { Button } from "@/components/ui/button";
-import { publishTerminalSelectionInsert } from "@/features/chat/components/composer/terminal-selection-to-composer";
+import {
+  hasTerminalSelection,
+  publishTerminalSelectionInsert,
+} from "@/features/chat/components/composer/terminal-selection-to-composer";
 import { terminalClient } from "@/platform/terminal-client";
 import "@xterm/xterm/css/xterm.css";
 
@@ -126,9 +129,13 @@ export function WorkspaceTerminalView({
     [root, sessionId],
   );
 
+  const hasSelection = hasTerminalSelection(selection);
   const addSelectionToChat = useCallback(() => {
-    if (selection.length === 0) return;
-    publishTerminalSelectionInsert({ cwd: root, selection });
+    // Prefer the live xterm selection so a stale React snapshot cannot send an
+    // empty or outdated range after the last selection-change event.
+    const liveSelection =
+      instanceRef.current?.terminal.getSelection() ?? selection;
+    publishTerminalSelectionInsert({ cwd: root, selection: liveSelection });
   }, [root, selection]);
 
   // The terminal ground is `--card`, not the page, and it runs edge to edge:
@@ -138,7 +145,7 @@ export function WorkspaceTerminalView({
       <div className="h-full px-2 py-1.5" ref={setContainer} />
       <Button
         className="absolute top-2 right-3 z-10 shadow-sm"
-        disabled={selection.length === 0}
+        disabled={!hasSelection}
         onClick={addSelectionToChat}
         onMouseDown={(event) => event.preventDefault()}
         size="xs"

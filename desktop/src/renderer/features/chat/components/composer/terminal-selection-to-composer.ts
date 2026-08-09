@@ -18,35 +18,55 @@ type TerminalSelectionInsertHandler = (markdown: string) => void;
 
 const localHandlers = new Set<TerminalSelectionInsertHandler>();
 const broadcastChannel = createBroadcastChannel();
+let pendingMarkdown: string | null = null;
 
 broadcastChannel?.addEventListener(
   "message",
   (event: MessageEvent<unknown>) => {
     const message = readTerminalSelectionInsertMessage(event.data);
     if (message === null || message.senderId === senderId) return;
-    notifyLocalHandlers(message);
+    deliverTerminalSelectionMarkdown(message.markdown);
   },
 );
 
 export function publishTerminalSelectionInsert(
   insertion: TerminalSelectionInsert,
 ) {
+  if (!hasTerminalSelection(insertion.selection)) return false;
+
+  const markdown = formatTerminalSelectionForComposer(insertion);
   const message: TerminalSelectionInsertMessage = {
     id: crypto.randomUUID(),
-    markdown: formatTerminalSelectionForComposer(insertion),
+    markdown,
     senderId,
   };
-  notifyLocalHandlers(message);
+  deliverTerminalSelectionMarkdown(markdown);
   broadcastChannel?.postMessage(message);
+  return true;
 }
 
 export function subscribeToTerminalSelectionInserts(
   handler: TerminalSelectionInsertHandler,
 ) {
   localHandlers.add(handler);
+  if (pendingMarkdown !== null) {
+    const markdown = pendingMarkdown;
+    handler(markdown);
+    // React Strict Mode remounts effects in the same turn. Keep the pending
+    // insert until after that recycle so the second mount still receives it.
+    queueMicrotask(() => {
+      if (pendingMarkdown === markdown) {
+        pendingMarkdown = null;
+      }
+    });
+  }
   return () => {
     localHandlers.delete(handler);
   };
+}
+
+export function hasTerminalSelection(selection: string) {
+  return selection.trim().length > 0;
 }
 
 export function formatTerminalSelectionForComposer({
@@ -68,6 +88,16 @@ export function appendComposerMarkdown(current: string, insertion: string) {
   return existing.length === 0 ? insertion : `${existing}\n\n${insertion}`;
 }
 
+function deliverTerminalSelectionMarkdown(markdown: string) {
+  if (localHandlers.size === 0) {
+    pendingMarkdown = markdown;
+    return;
+  }
+
+  pendingMarkdown = null;
+  for (const handler of localHandlers) handler(markdown);
+}
+
 function truncateTerminalSelection(selection: string) {
   if (selection.length <= terminalSelectionCharacterLimit) {
     return { text: selection, truncated: false };
@@ -87,10 +117,6 @@ function markdownFenceFor(content: string) {
     ...Array.from(content.matchAll(/`+/g), (match) => match[0].length),
   );
   return "`".repeat(Math.max(3, longestFence + 1));
-}
-
-function notifyLocalHandlers(message: TerminalSelectionInsertMessage) {
-  for (const handler of localHandlers) handler(message.markdown);
 }
 
 function readTerminalSelectionInsertMessage(
