@@ -1,5 +1,6 @@
 import type { FormEvent } from "react";
 import type { WorkspaceToolPatchFile } from "@/app/workspace/workspace-tool-patch-model";
+import type { WorkspaceGitDiffBaseKind } from "@angel-engine/daemon-api/workspace-tools";
 
 import type { ApiClient } from "@/platform/api-client";
 import is from "@sindresorhus/is";
@@ -16,7 +17,12 @@ import { cn } from "@/platform/utils";
 
 const commitSummaryLimit = 50;
 
-export function useWorkspaceGitPanelState(api: ApiClient, root: string) {
+export function useWorkspaceGitPanelState(
+  api: ApiClient,
+  root: string,
+  chatId: string | null,
+  baseKind: WorkspaceGitDiffBaseKind,
+) {
   const queryClient = useQueryClient();
   const [commitDescription, setCommitDescription] = useState("");
   const [commitSummary, setCommitSummary] = useState("");
@@ -35,7 +41,7 @@ export function useWorkspaceGitPanelState(api: ApiClient, root: string) {
       setCommitSummary("");
       setSelectedFileKeys({});
       void queryClient.invalidateQueries({
-        queryKey: queryKeys.workspaceTools.gitDiff(root),
+        queryKey: queryKeys.workspaceTools.gitDiffRoot(root),
       });
       void queryClient.invalidateQueries({
         queryKey: queryKeys.workspaceTools.fileTree(root),
@@ -43,8 +49,13 @@ export function useWorkspaceGitPanelState(api: ApiClient, root: string) {
     },
   });
   const gitQuery = useQuery({
-    queryFn: async () => api.workspaceTools.gitDiff({ root }),
-    queryKey: queryKeys.workspaceTools.gitDiff(root),
+    queryFn: async () =>
+      api.workspaceTools.gitDiff({
+        baseKind,
+        chatId: chatId ?? undefined,
+        root,
+      }),
+    queryKey: queryKeys.workspaceTools.gitDiff(root, baseKind, null, chatId),
     retry: false,
     staleTime: 5_000,
   });

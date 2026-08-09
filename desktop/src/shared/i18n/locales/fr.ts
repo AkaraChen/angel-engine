@@ -136,6 +136,27 @@ export const fr = {
           filesSelected: "{{selected}} sur {{total}} fichiers sélectionnés",
           summaryPlaceholder: "Résumé",
         },
+        diffBase: {
+          branch: "Par rapport à la branche par défaut",
+          fallback: {
+            anchorMissing:
+              "La base {{sha}} de {{base}} n’existe plus. {{fallback}} est affiché temporairement.",
+            anchorUnavailable:
+              "{{base}} n’est pas disponible pour ce chat. {{fallback}} est affiché temporairement.",
+            defaultBranchUnavailable:
+              "La branche par défaut n’a pas pu être déterminée. {{fallback}} est affiché temporairement.",
+            gitRefUnavailable:
+              "La référence Git {{ref}} n’est pas disponible. {{fallback}} est affiché temporairement.",
+            noMergeBase:
+              "Il n’existe aucune base de fusion entre {{ref}} et HEAD. {{fallback}} est affiché temporairement.",
+            notRepository: "Cet espace de travail n’est pas un dépôt Git.",
+          },
+          label: "Base du diff",
+          session: "Depuis le début de la session",
+          turn: "Depuis le tour précédent",
+          unstaged: "Non indexés uniquement",
+          worktree: "Modifications non validées",
+        },
         dockInSidebar: "Ancrer dans la barre latérale",
         empty: {
           fileTreeUnavailable: "Arborescence indisponible",
