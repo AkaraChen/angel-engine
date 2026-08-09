@@ -216,6 +216,10 @@ export const en = {
         title: "Agents",
       },
       appearance: {
+        keybindingHintsDescription:
+          "Show keyboard shortcuts in tooltips and controls. Turning this off does not disable the shortcuts.",
+        keybindingHintsSwitchLabel: "Show keyboard shortcut hints",
+        keybindingHintsTitle: "Keyboard shortcut hints",
         language: "Language",
         languageOptions: {
           en: "English",

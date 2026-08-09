@@ -218,6 +218,10 @@ export const ja = {
         title: "Agents",
       },
       appearance: {
+        keybindingHintsDescription:
+          "ツールチップとコントロールにキーボードショートカットを表示します。非表示にしてもショートカットは有効です。",
+        keybindingHintsSwitchLabel: "キーボードショートカットのヒントを表示",
+        keybindingHintsTitle: "キーボードショートカットのヒント",
         language: "言語",
         languageOptions: {
           en: "English",

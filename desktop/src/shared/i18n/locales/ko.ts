@@ -217,6 +217,10 @@ export const ko = {
         title: "Agents",
       },
       appearance: {
+        keybindingHintsDescription:
+          "도구 설명과 컨트롤에 키보드 단축키를 표시합니다. 이 옵션을 꺼도 단축키는 계속 작동합니다.",
+        keybindingHintsSwitchLabel: "키보드 단축키 힌트 표시",
+        keybindingHintsTitle: "키보드 단축키 힌트",
         language: "언어",
         languageOptions: {
           en: "English",

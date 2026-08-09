@@ -216,6 +216,10 @@ export const zhCN = {
         title: "Agents",
       },
       appearance: {
+        keybindingHintsDescription:
+          "在工具提示和控件中显示快捷键。关闭后快捷键仍然生效。",
+        keybindingHintsSwitchLabel: "显示快捷键提示",
+        keybindingHintsTitle: "快捷键提示",
         language: "语言",
         languageOptions: {
           en: "English",

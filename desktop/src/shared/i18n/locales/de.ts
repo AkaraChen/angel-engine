@@ -217,6 +217,10 @@ export const de = {
         title: "Agents",
       },
       appearance: {
+        keybindingHintsDescription:
+          "Zeigt Tastenkürzel in Tooltips und Steuerelementen. Das Ausblenden deaktiviert die Tastenkürzel nicht.",
+        keybindingHintsSwitchLabel: "Tastenkürzel-Hinweise anzeigen",
+        keybindingHintsTitle: "Tastenkürzel-Hinweise",
         language: "Sprache",
         languageOptions: {
           en: "English",
