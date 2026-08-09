@@ -38,6 +38,8 @@ import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { ImportSessionDialog } from "@/features/chat/components/import-session-dialog";
 import { RenameChatDialog } from "@/features/chat/components/rename-chat-dialog";
 import { FleetPage } from "@/features/fleet/fleet-page";
+import { CloneProgressDialog } from "@/features/projects/components/clone-progress-dialog";
+import { CloneRepositoryDialog } from "@/features/projects/components/clone-repository-dialog";
 import { ProjectSettingsDialog } from "@/features/projects/components/project-settings-dialog";
 import { queryKeys } from "@/platform/query-keys";
 
@@ -67,6 +69,18 @@ export const WorkspacePageView: FC<WorkspacePageViewProps> = ({
   }, []);
   const closeImportSession = useCallback(() => {
     setImportSessionOpen(false);
+  }, []);
+  const [cloneDialogOpen, setCloneDialogOpen] = useState(false);
+  const [cloneUrl, setCloneUrl] = useState<string | null>(null);
+  const openCloneDialog = useCallback(() => {
+    setCloneDialogOpen(true);
+  }, []);
+  const startClone = useCallback((url: string) => {
+    setCloneDialogOpen(false);
+    setCloneUrl(url);
+  }, []);
+  const closeCloneProgress = useCallback(() => {
+    setCloneUrl(null);
   }, []);
 
   const {
@@ -256,6 +270,7 @@ export const WorkspacePageView: FC<WorkspacePageViewProps> = ({
           isMacOS={isMacOS}
           isProjectsLoading={projectsQuery.isPending}
           onArchiveChat={archiveChat}
+          onCloneRepository={openCloneDialog}
           onCreateProject={() => void createProjectFromPicker()}
           onCreateProjectChat={createChatForProject}
           onCreateStandaloneChat={createChatForSelection}
@@ -280,6 +295,7 @@ export const WorkspacePageView: FC<WorkspacePageViewProps> = ({
           isMacOS={isMacOS}
           isProjectsLoading={projectsQuery.isPending}
           onArchiveChat={archiveChat}
+          onCloneRepository={openCloneDialog}
           onCreateProject={() => void createProjectFromPicker()}
           onCreateProjectChat={createChatForProject}
           onCreateStandaloneChat={createChatForSelection}
@@ -320,6 +336,19 @@ export const WorkspacePageView: FC<WorkspacePageViewProps> = ({
         <ProjectSettingsDialog
           onClose={closeProjectSettingsDialog}
           project={settingsTargetProject}
+        />
+        <CloneRepositoryDialog
+          onClone={startClone}
+          onOpenChange={setCloneDialogOpen}
+          open={cloneDialogOpen}
+        />
+        <CloneProgressDialog
+          onClose={closeCloneProgress}
+          onOpenProject={(project) => {
+            closeCloneProgress();
+            createChatForProject(project);
+          }}
+          url={cloneUrl}
         />
         <WorktreeDirtyDialog
           checked={rememberWorktreeDirtyChoice}

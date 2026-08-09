@@ -59,11 +59,16 @@ import type {
 import type {
   GitHubListItemsInput,
   GitHubListItemsResult,
+  GitHubListRepositoriesInput,
+  GitHubListRepositoriesResult,
+  GitHubRepositoryOwnersResult,
   GitHubResolveUrlInput,
   GitHubResolvedItem,
 } from "@angel-engine/daemon-api/github";
 import type {
   CreateProjectInput,
+  ProjectCloneEvent,
+  ProjectCloneInput,
   ManagedWorktreeDeleteInput,
   ManagedWorktreeDeleteResult,
   ManagedWorktreeScanInput,
@@ -76,6 +81,7 @@ import type {
   UpdateProjectConfigInput,
   UpdateProjectInput,
 } from "@angel-engine/daemon-api/projects";
+import { isProjectCloneEvent } from "@angel-engine/daemon-api/projects";
 import type {
   WorkspaceFileReadResult,
   WorkspaceFileTreeResult,
@@ -220,6 +226,38 @@ export function createDaemonClient(options: DaemonClientOptions) {
         `Daemon returned a chat run stream without a snapshot for ${path}.`,
         response.status,
       );
+    }
+  }
+
+  async function* streamCloneEvents(
+    path: string,
+    init: RequestInit,
+  ): AsyncIterable<ProjectCloneEvent> {
+    const headers = new Headers(init.headers);
+    headers.set("accept", "text/event-stream");
+    const response = await send(path, { ...init, headers });
+    if (!response.ok) {
+      throw DaemonRequestError.http(
+        response.status,
+        undefined,
+        `Daemon request failed: ${init.method ?? "GET"} ${path}`,
+      );
+    }
+    if (response.body === null) {
+      throw DaemonRequestError.invalidResponse(
+        `Daemon returned an empty stream for ${path}.`,
+        response.status,
+      );
+    }
+
+    for await (const message of readSseEvents(response.body)) {
+      if (!isProjectCloneEvent(message)) {
+        throw DaemonRequestError.invalidResponse(
+          `Daemon returned an invalid clone event for ${path}.`,
+          response.status,
+        );
+      }
+      yield message;
     }
   }
 
@@ -410,6 +448,12 @@ export function createDaemonClient(options: DaemonClientOptions) {
     github: {
       listItems: (input: GitHubListItemsInput) =>
         request<GitHubListItemsResult>(`/api/github/items?${query(input)}`),
+      listRepositories: (input: GitHubListRepositoriesInput) =>
+        request<GitHubListRepositoriesResult>(
+          `/api/github/repos?${query(input)}`,
+        ),
+      listRepositoryOwners: () =>
+        request<GitHubRepositoryOwnersResult>("/api/github/repo-owners"),
       resolveUrl: (input: GitHubResolveUrlInput) =>
         request<GitHubResolvedItem>("/api/github/resolve", json("POST", input)),
     },
@@ -434,6 +478,11 @@ export function createDaemonClient(options: DaemonClientOptions) {
         ),
     },
     projects: {
+      clone: (input: ProjectCloneInput, signal?: AbortSignal) =>
+        streamCloneEvents("/api/projects/clone", {
+          ...json("POST", input),
+          signal,
+        }),
       config: (input: ProjectConfigInput) =>
         request<ProjectConfigResult>(
           `/api/projects/${encodeURIComponent(input.projectId)}/config`,

@@ -4,7 +4,6 @@ import type { ReactElement } from "react";
 import {
   CaretDown as ChevronDown,
   Folder,
-  FolderPlus,
   SpinnerGap as Loader2,
   Plus,
 } from "@phosphor-icons/react";
@@ -17,7 +16,6 @@ import {
   getProjectDisplayName,
 } from "@/app/workspace/workspace-display";
 import { useWorkspaceUiStore } from "@/app/workspace/workspace-ui-store";
-import { Button } from "@/components/ui/button";
 import {
   SidebarGroup,
   SidebarGroupContent,
@@ -31,12 +29,14 @@ import {
   WorkspaceSidebarMenuButton,
 } from "@/components/workspace-sidebar-primitives";
 import { ChatSidebarItem } from "@/features/chat/components/chat-sidebar-item";
+import { AddProjectMenu } from "@/features/projects/components/add-project-menu";
 
 type MaybeAsync = void | Promise<void>;
 
 interface ProjectSidebarSectionProps {
   isLoading: boolean;
   onArchiveChat: (chat: Chat) => MaybeAsync;
+  onCloneRepository: () => MaybeAsync;
   onCreateProject: () => MaybeAsync;
   onCreateProjectChat: (project: Project) => MaybeAsync;
   onOpenChat: (chat: Chat) => MaybeAsync;
@@ -50,6 +50,7 @@ interface ProjectSidebarSectionProps {
 export function ProjectSidebarSection({
   isLoading,
   onArchiveChat,
+  onCloneRepository,
   onCreateProject,
   onCreateProjectChat,
   onOpenChat,
@@ -93,27 +94,10 @@ export function ProjectSidebarSection({
   return (
     <SidebarGroup className="py-1">
       <SidebarSectionHeader label={t("sidebar.projects")}>
-        <Button
-          asChild
-          className="
-            size-7
-            [&_svg:not([class*='size-'])]:size-4
-          "
-          size="icon-xs"
-          title={t("sidebar.addProject")}
-          variant="ghost"
-        >
-          <m.button
-            onClick={() => void onCreateProject()}
-            title={t("sidebar.addProject")}
-            transition={sidebarMotion}
-            type="button"
-            whileTap={{ scale: 0.96 }}
-          >
-            <FolderPlus />
-            <span className="sr-only">{t("sidebar.addProject")}</span>
-          </m.button>
-        </Button>
+        <AddProjectMenu
+          onChooseFolder={() => void onCreateProject()}
+          onCloneRepository={() => void onCloneRepository()}
+        />
       </SidebarSectionHeader>
       <SidebarGroupContent>
         <SidebarMenu>

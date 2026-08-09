@@ -5,6 +5,7 @@ import type {
   ChatSendInput,
   ChatStreamElicitationResolveInput,
 } from "@angel-engine/daemon-api/chat";
+import type { ProjectCloneEvent } from "@angel-engine/daemon-api/projects";
 import type { Context, Hono } from "hono";
 import type { ChatEventsApi } from "./features/chat/chat-events";
 import type { Db } from "./platform/db";
@@ -37,6 +38,7 @@ import { githubResolveUrlInputSchema } from "@angel-engine/daemon-api/github";
 import {
   createProjectInputSchema,
   managedWorktreeDeleteInputSchema,
+  projectCloneInputSchema,
   updateProjectConfigInputSchema,
   updateProjectInputSchema,
 } from "@angel-engine/daemon-api/projects";
@@ -45,6 +47,10 @@ import {
   workspaceToolWriteFileInputSchema,
 } from "@angel-engine/daemon-api/workspace-tools";
 import { listGitHubItems } from "./features/github/list";
+import {
+  listGitHubRepositories,
+  listGitHubRepositoryOwners,
+} from "./features/github/repos";
 import { resolveGitHubUrl } from "./features/github/resolve";
 import { listAvailableAgents } from "./features/agents/availability";
 import {
@@ -84,6 +90,7 @@ import {
   readProjectConfig,
   updateProjectConfig,
 } from "./features/projects/settings";
+import { cloneProject } from "./features/projects/clone";
 import { searchProjectFiles } from "./features/projects/file-search";
 import {
   createProject,
@@ -444,9 +451,55 @@ export function registerApi(
     ),
   );
 
+  app.get("/api/github/repo-owners", async (context) =>
+    context.json(await run(listGitHubRepositoryOwners())),
+  );
+  app.get("/api/github/repos", async (context) =>
+    context.json(
+      await run(
+        listGitHubRepositories({
+          limit: optionalNumber(context.req.query("limit")),
+          owner: requireQuery(context.req.query("owner"), "owner"),
+        }),
+      ),
+    ),
+  );
+
   app.get("/api/projects", async (context) =>
     context.json(await run(listProjects())),
   );
+  app.post("/api/projects/clone", async (context) => {
+    const input = projectCloneInputSchema(await context.req.json());
+    if (input instanceof arkType.errors)
+      throw DaemonError.invalidRequest("Repository URL is required.");
+    return streamSSE(context, async (stream) => {
+      // Progress arrives synchronously from the git process; chain the writes
+      // so no frame is dropped or reordered while an earlier one is in flight.
+      let writes = Promise.resolve();
+      const emit = (event: ProjectCloneEvent) => {
+        writes = writes.then(async () => {
+          await stream.writeSSE({
+            data: JSON.stringify(event),
+            event: event.type,
+          });
+        });
+      };
+
+      try {
+        const result = await run(cloneProject(input, emit));
+        emit({
+          project: result.project,
+          reusedExistingCheckout: result.reusedExistingCheckout,
+          type: "completed",
+        });
+      } catch (cause) {
+        const error =
+          cause instanceof DaemonError ? cause : DaemonError.internal(cause);
+        emit({ code: error.code, message: error.message, type: "failed" });
+      }
+      await writes;
+    });
+  });
   app.get("/api/projects/files/search", async (context) =>
     context.json(
       await run(

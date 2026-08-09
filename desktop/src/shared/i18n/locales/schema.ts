@@ -647,6 +647,41 @@ export interface LocaleResourceTranslationNotifications {
   updateReadyDescription: string;
 }
 
+export interface LocaleResourceTranslationProjectImport {
+  addFromFolder: string;
+  addFromGit: string;
+  archivedBadge: string;
+  clone: string;
+  cloneTo: string;
+  description: string;
+  failedTitle: string;
+  forkBadge: string;
+  loadingOwners: string;
+  loadingRepositories: string;
+  noMatches: string;
+  noOwners: string;
+  noRepositories: string;
+  openProject: string;
+  owners: string;
+  ownersFailed: string;
+  privateBadge: string;
+  progressTitle: string;
+  repositoriesFailed: string;
+  retry: string;
+  reusedExisting: string;
+  searchPlaceholder: string;
+  stageCloning: string;
+  stageCompleted: string;
+  stagePreparing: string;
+  stageRegistering: string;
+  tabGitHub: string;
+  tabUrl: string;
+  title: string;
+  urlHint: string;
+  urlLabel: string;
+  urlPlaceholder: string;
+}
+
 export interface LocaleResourceTranslationProjects {
   chooseFolder: string;
   openInFinder: string;
@@ -745,6 +780,7 @@ export interface LocaleResourceTranslation {
   dialog: LocaleResourceTranslationDialog;
   notifications: LocaleResourceTranslationNotifications;
   pathLauncher: LocaleResourceTranslationPathLauncher;
+  projectImport: LocaleResourceTranslationProjectImport;
   projects: LocaleResourceTranslationProjects;
   ui: LocaleResourceTranslationUi;
   promptInput: LocaleResourceTranslationPromptInput;
