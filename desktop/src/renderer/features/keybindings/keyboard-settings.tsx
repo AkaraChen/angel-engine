@@ -40,6 +40,7 @@ export function KeyboardSettings() {
   const {
     userEntries,
     saveUserBindings,
+    resetAllUserBindings,
     keymap,
     platform,
     fatal,
@@ -252,7 +253,8 @@ export function KeyboardSettings() {
           variant="outline"
           onClick={() => {
             if (window.confirm(t("settings.keyboard.resetAllConfirm"))) {
-              void persist([]);
+              // Main-process reset: backup + empty file (KIT-797 §6).
+              void resetAllUserBindings();
             }
           }}
         >

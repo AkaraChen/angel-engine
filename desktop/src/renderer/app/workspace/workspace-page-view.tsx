@@ -20,6 +20,7 @@ import {
 } from "@/app/workspace/workspace-chat-thread";
 import { draftAgentConfigFromExplicitOverrides } from "@/app/workspace/workspace-draft-agent-config";
 import { WorkspaceHeader } from "@/app/workspace/workspace-header";
+import { WorkspaceKeymapBindings } from "@/app/workspace/workspace-keymap-bindings";
 import { WorkspaceNativeCommandHandler } from "@/app/workspace/workspace-native-command-handler";
 import { resolveWorkspacePathLauncherTarget } from "@/app/workspace/workspace-path-launcher";
 import { WorkspaceRightSidebar } from "@/app/workspace/workspace-right-sidebar";
@@ -327,6 +328,15 @@ export const WorkspacePageView: FC<WorkspacePageViewProps> = ({
         <WorkspaceNativeCommandHandler
           onCreateStandaloneChat={createChatForSelection}
           onOpenSettings={openSettings}
+        />
+        <WorkspaceKeymapBindings
+          hasClosableTab={powerTabs.hasClosableTab}
+          hasMultipleTabs={powerTabs.hasMultipleTabs}
+          onCloseTab={powerTabs.closeActiveTab}
+          onCreateStandaloneChat={createChatForSelection}
+          onNewTab={powerTabs.openOrFocusDraftTab}
+          onOpenSettings={openSettings}
+          powerModeActive={powerTabs.powerModeActive}
         />
         <WorkspaceCommandPalette
           chats={chats}

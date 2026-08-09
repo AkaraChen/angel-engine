@@ -166,7 +166,7 @@ export function isKnownCommandId(id: string): id is CommandId {
   return descriptorById.has(id);
 }
 
-export function stripUnbindPrefix(command: CommandId | `-${CommandId}`): {
+export function stripUnbindPrefix(command: string): {
   unbind: boolean;
   id: CommandId;
 } {

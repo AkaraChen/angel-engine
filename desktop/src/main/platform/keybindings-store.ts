@@ -20,6 +20,17 @@ import { writeFileAtomic } from "./atomic-write";
 
 export { KEYMAP_USER_BINDINGS_CHANGED_CHANNEL };
 
+function syncApplicationMenu() {
+  // Lazy import avoids circular init with application-menu ↔ keybindings-store.
+  void import("./application-menu")
+    .then((mod) => {
+      mod.rebuildApplicationMenu();
+    })
+    .catch(() => {
+      // Menu may not be configured yet during early boot / tests.
+    });
+}
+
 export interface KeybindingsLoadState {
   file: KeybindingsFile;
   warnings: LoadWarning[];
@@ -116,6 +127,7 @@ export async function setKeybindingsFile(
     path: filePath,
   };
   broadcast(cached);
+  syncApplicationMenu();
   return cached;
 }
 
@@ -176,6 +188,7 @@ export function startKeybindingsWatcher() {
           }
           const state = loadKeybindingsFromDisk();
           broadcast(state);
+          syncApplicationMenu();
         } catch (error: unknown) {
           log.warn("keybindings hot-reload failed", error);
         }

@@ -3,8 +3,7 @@ import type { WorkspaceNavigation } from "@/app/workspace/use-workspace-navigati
 import type { WorkspacePageModel } from "@/app/workspace/use-workspace-page-model";
 
 import is from "@sindresorhus/is";
-import { useCallback, useEffect, useMemo } from "react";
-import { powerWorktreeShortcutAction } from "@/app/workspace/power-worktree-shortcuts";
+import { useCallback, useMemo } from "react";
 import {
   openChatTab,
   setPowerActiveWorktree,
@@ -192,54 +191,32 @@ export function usePowerWorktreeTabs(
     });
   }, [openDraftTabFromTabBar, powerDraftTabActive]);
 
-  useEffect(() => {
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.defaultPrevented) return;
+  // Tab shortcuts are owned by the central keymap (workspace.newTab / closeTab / …).
 
-      const action = powerWorktreeShortcutAction({
-        altKey: event.altKey,
-        ctrlKey: event.ctrlKey,
-        draftTabActive: powerDraftTabActive,
-        hasActiveChat: selectedChat !== undefined,
-        key: event.key,
-        metaKey: event.metaKey,
-        powerModeActive,
-        repeat: event.repeat,
-        shiftKey: event.shiftKey,
-      });
-      if (action === null) return;
-
-      event.preventDefault();
-      if (action === "close-draft") {
-        closeDraftTab();
-      } else if (action === "close-chat" && selectedChat !== undefined) {
-        closeChatTab(selectedChat);
-      } else if (action === "open-or-focus-draft") {
-        openOrFocusDraftTab();
-      }
-    };
-
-    window.addEventListener("keydown", handleKeyDown);
-    return () => {
-      window.removeEventListener("keydown", handleKeyDown);
-    };
-  }, [
-    closeChatTab,
-    closeDraftTab,
-    openOrFocusDraftTab,
-    powerDraftTabActive,
-    powerModeActive,
-    selectedChat,
-  ]);
+  const closeActiveTab = useCallback(() => {
+    if (powerDraftTabActive) {
+      closeDraftTab();
+      return;
+    }
+    if (selectedChat !== undefined) {
+      closeChatTab(selectedChat);
+    }
+  }, [closeChatTab, closeDraftTab, powerDraftTabActive, selectedChat]);
 
   return {
     chatTabChats,
+    closeActiveTab,
     closeChatTab,
     closeDraftTab,
+    hasClosableTab: powerDraftTabActive || selectedChat !== undefined,
+    hasMultipleTabs: chatTabChats.length > 1 || powerDraftTabActive,
     openDraftTabFromTabBar,
+    openOrFocusDraftTab,
     openPowerHistoryChatTab,
     openSelectedPowerWorktreeHome,
+    powerDraftTabActive,
     powerHomeTabContext,
+    powerModeActive,
   };
 }
 

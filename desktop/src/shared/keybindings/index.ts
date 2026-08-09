@@ -10,3 +10,5 @@ export * from "./user-delta";
 export * from "./conflicts";
 export * from "./migrate-user-file";
 export * from "./channels";
+export * from "./active-scopes";
+export * from "./electron-accelerator";

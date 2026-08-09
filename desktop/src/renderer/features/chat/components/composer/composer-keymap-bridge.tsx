@@ -50,7 +50,7 @@ export function ComposerKeymapBridge({
   useContextKey("chat.composerEmpty", isEmpty);
   useContextKey("chat.composerNotEmpty", !isEmpty);
   useContextKey("chat.submitDisabled", blockSubmit);
-  useContextKey("chat.running", canCancel);
+  // chat.running is owned by the chat panel (run store), not the composer.
   useContextKey("chat.suggestionOpen", suggestionOpen);
 
   useCommand(COMMAND_IDS.chatSend, () => {

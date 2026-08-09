@@ -156,6 +156,31 @@ describe("user-delta revision A", () => {
     const next = removeEffectiveBinding([], effective);
     expect(next).toEqual([{ key: "mod+k", command: "-palette.open" }]);
   });
+
+  it("keeps owner on effective list after user rebind", () => {
+    const defaults = createDefaultKeybindingRules();
+    const userEntries = [
+      {
+        key: "enter",
+        command: "-chat.send",
+        when: "focus.panel == 'chat.composer' && !chat.suggestionOpen",
+      },
+      {
+        key: "ctrl+enter",
+        command: "chat.send",
+        when: "focus.panel == 'chat.composer' && !chat.suggestionOpen",
+      },
+    ];
+    const effective = listEffectiveBindings({
+      defaultRules: defaults,
+      userEntries,
+      platform: "win",
+      commandId: COMMAND_IDS.chatSend,
+    });
+    const rebound = effective.find((binding) => binding.key === "ctrl+enter");
+    expect(rebound?.owner).toBe("chat.composer");
+    expect(rebound?.source).toBe("user");
+  });
 });
 
 describe("findConflicts", () => {

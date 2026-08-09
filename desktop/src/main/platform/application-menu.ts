@@ -1,21 +1,59 @@
 import type { MenuItemConstructorOptions } from "electron";
 import type { DesktopWindowCommand } from "../../shared/desktop-window";
+import type { KeymapPlatform } from "../../shared/keybindings";
 
 import { app, BrowserWindow, Menu } from "electron";
 import { DESKTOP_COMMAND_CHANNEL } from "../../shared/desktop-window";
+import {
+  COMMAND_IDS,
+  createDefaultKeybindingRules,
+  detectKeymapPlatform,
+  mergeKeybindingLayers,
+  toElectronAccelerator,
+} from "../../shared/keybindings";
 import { checkForUpdatesFromMenu } from "../updater";
 import { translate } from "./i18n";
+import { getKeybindingsState } from "./keybindings-store";
 
 const isMacOS = process.platform === "darwin";
+
+let openSettingsWindowRef: (() => void) | null = null;
 
 export function configureApplicationMenu({
   openSettingsWindow,
 }: {
   openSettingsWindow: () => void;
 }) {
+  openSettingsWindowRef = openSettingsWindow;
+  rebuildApplicationMenu();
+}
+
+/** Rebuild menu so accelerators mirror current keymap (KIT-796). */
+export function rebuildApplicationMenu() {
+  if (!openSettingsWindowRef) return;
+  const openSettingsWindow = openSettingsWindowRef;
   Menu.setApplicationMenu(
     Menu.buildFromTemplate(menuTemplate({ openSettingsWindow })),
   );
+}
+
+function platform(): KeymapPlatform {
+  return detectKeymapPlatform(process.platform);
+}
+
+function acceleratorFor(commandId: string): string | undefined {
+  const state = getKeybindingsState();
+  const { rules } = mergeKeybindingLayers({
+    defaultRules: createDefaultKeybindingRules(),
+    userEntries: state.file.bindings,
+    platform: platform(),
+  });
+  const match = rules.find(
+    (rule) =>
+      rule.command === commandId && !rule.command.startsWith("-") && !rule.when,
+  );
+  if (!match) return undefined;
+  return toElectronAccelerator(match.key, platform());
 }
 
 function menuTemplate({
@@ -23,6 +61,13 @@ function menuTemplate({
 }: {
   openSettingsWindow: () => void;
 }): MenuItemConstructorOptions[] {
+  const settingsAccel =
+    acceleratorFor(COMMAND_IDS.settingsOpen) ??
+    (isMacOS ? "CmdOrCtrl+," : "Ctrl+,");
+  const newChatAccel = acceleratorFor(COMMAND_IDS.chatNew) ?? "CmdOrCtrl+N";
+  const sidebarAccel =
+    acceleratorFor(COMMAND_IDS.workspaceToggleSidebar) ?? "CmdOrCtrl+B";
+
   return [
     ...(isMacOS
       ? [
@@ -35,7 +80,7 @@ function menuTemplate({
               settingsItem(
                 openSettingsWindow,
                 translate("workspace.settings"),
-                "CmdOrCtrl+,",
+                settingsAccel,
               ),
               { type: "separator" },
               { role: "services" },
@@ -52,14 +97,14 @@ function menuTemplate({
     {
       label: translate("common.file"),
       submenu: [
-        commandItem("new-chat", translate("workspace.newChat"), "CmdOrCtrl+N"),
+        commandItem("new-chat", translate("workspace.newChat"), newChatAccel),
         ...(!isMacOS
           ? [
               { type: "separator" } satisfies MenuItemConstructorOptions,
               settingsItem(
                 openSettingsWindow,
                 translate("workspace.settings"),
-                "Ctrl+,",
+                settingsAccel,
               ),
               { type: "separator" } satisfies MenuItemConstructorOptions,
               { role: "quit" } satisfies MenuItemConstructorOptions,
@@ -87,7 +132,7 @@ function menuTemplate({
         commandItem(
           "toggle-sidebar",
           translate("sidebar.toggleSidebar"),
-          "CmdOrCtrl+B",
+          sidebarAccel,
         ),
         { type: "separator" },
         { role: "reload" },
@@ -140,10 +185,10 @@ function settingsItem(
 function commandItem(
   command: DesktopWindowCommand,
   label: string,
-  accelerator: string,
+  accelerator: string | undefined,
 ): MenuItemConstructorOptions {
   return {
-    accelerator,
+    ...(accelerator ? { accelerator } : {}),
     click: () => {
       sendCommand(command);
     },

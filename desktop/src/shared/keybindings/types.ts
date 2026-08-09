@@ -1,6 +1,14 @@
 /** Desktop-only keymap types (KIT-796 / KIT-797). Not part of engine wire. */
 
+/** Stable command id string (e.g. `palette.open`). */
 export type CommandId = string;
+
+/**
+ * Binding target: a positive command id, or a leading "-" unbind form.
+ * Kept as plain string so lint does not flag redundant `` `-${string}` `` unions
+ * against `CommandId` (= string).
+ */
+export type BindingCommandRef = string;
 
 export type KeymapPlatform = "mac" | "win" | "linux";
 
@@ -41,7 +49,7 @@ export type WhenExpr = string;
 
 export interface KeybindingRule {
   key: string;
-  command: CommandId | `-${CommandId}`;
+  command: BindingCommandRef;
   when?: WhenExpr;
   args?: unknown;
   platform?: KeymapPlatform[];
@@ -65,7 +73,7 @@ export interface CommandDescriptor {
 
 export interface KeybindingUserEntry {
   key?: string;
-  command: CommandId | `-${CommandId}`;
+  command: BindingCommandRef;
   when?: string;
   args?: unknown;
 }
@@ -83,7 +91,7 @@ export interface LoadWarning {
 
 export type LoadFatal =
   | { kind: "parse-error"; message: string }
-  | { kind: "unsupported-version"; version: unknown };
+  | { kind: "unsupported-version"; version: number | string };
 
 export interface ConflictRuleRef {
   command: CommandId;

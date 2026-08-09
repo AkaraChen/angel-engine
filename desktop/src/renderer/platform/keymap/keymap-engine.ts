@@ -1,22 +1,23 @@
-import type {
-  CommandId,
-  Conflict,
-  ContextKeyValues,
-  KeybindingRule,
-  KeymapPlatform,
-  LoadWarning,
-  ParsedSegment,
-  ScopeName,
-} from "@shared/keybindings";
 import {
   evaluateWhen,
   findConflicts,
   getCommandDescriptor,
   parseBinding,
+  resolveActiveKeymapFocus,
+  scopeIsActive,
   segmentHasModifier,
   segmentsEqual,
   stringifyBinding,
   whenSpecificity,
+  type ActiveKeymapFocus,
+  type CommandId,
+  type Conflict,
+  type ContextKeyValues,
+  type KeybindingRule,
+  type KeymapPlatform,
+  type LoadWarning,
+  type ParsedSegment,
+  type ScopeName,
 } from "@shared/keybindings";
 import { commandRegistry } from "./registry";
 import {
@@ -31,7 +32,8 @@ export type DispatchResult =
       kind: "chord-cancelled";
       reason: "timeout" | "escape" | "blur" | "unmatched";
     }
-  | { kind: "executed"; command: CommandId };
+  | { kind: "executed"; command: CommandId }
+  | { kind: "claimed"; command: CommandId };
 
 export interface LoadedKeymap {
   rules: KeybindingRule[];
@@ -93,46 +95,22 @@ export function loadKeymap(options: {
 export interface KeymapDispatchState {
   chordPending: ParsedSegment | null;
   recording: boolean;
+  chordTimer?: ReturnType<typeof setTimeout>;
 }
 
-export async function dispatchKeyEvent(options: {
-  event: ResolveKeyboardEvent & {
-    preventDefault: () => void;
-    stopPropagation: () => void;
-  };
+export function matchKeybindingRules(options: {
+  event: ResolveKeyboardEvent;
   keymap: LoadedKeymap;
   context: ContextKeyValues;
-  captureZoneId?: string | null;
-  focusEditable: boolean;
+  focus: ActiveKeymapFocus;
   state: KeymapDispatchState;
-  onChordTimeout: () => void;
-}): Promise<DispatchResult> {
-  const { event, keymap, context, captureZoneId, focusEditable, state } =
-    options;
+}): KeybindingRule[] {
+  const { event, keymap, context, focus, state } = options;
 
-  if (state.recording) {
-    return { kind: "ignored" };
-  }
-
-  if (event.repeat) {
-    // Only allow if some matching rule is repeatable — checked later; default drop.
-  }
+  if (state.recording) return [];
 
   const candidates = resolveCandidates(event, keymap.platform);
-  if (candidates.length === 0) {
-    return { kind: "ignored" };
-  }
-
-  if (state.chordPending) {
-    for (const candidate of candidates) {
-      if (candidate.key === "escape" && !segmentHasModifier(candidate)) {
-        state.chordPending = null;
-        event.preventDefault();
-        event.stopPropagation();
-        return { kind: "chord-cancelled", reason: "escape" };
-      }
-    }
-  }
+  if (candidates.length === 0) return [];
 
   const matchingRules: KeybindingRule[] = [];
 
@@ -153,7 +131,6 @@ export async function dispatchKeyEvent(options: {
       } else {
         if (parsed.value.segments.length === 2) {
           if (segmentsEqual(parsed.value.segments[0]!, candidate)) {
-            // chord prefix — handled after full scan
             matchingRules.push(rule);
             continue;
           }
@@ -164,25 +141,26 @@ export async function dispatchKeyEvent(options: {
 
       if (rule.when && !evaluateWhen(rule.when, context)) continue;
 
+      const descriptor = getCommandDescriptor(rule.command as CommandId);
+      const scope = descriptor?.handlerScope ?? "app";
+      if (!scopeIsActive(scope, focus.scopes)) continue;
+
       const hasMod = segmentHasModifier(parsed.value.segments[0]!);
       const editableBehavior =
         rule.editableBehavior ?? (hasMod ? "allow" : "suppress");
 
-      if (focusEditable && !hasMod) {
+      if (focus.focusEditable && !hasMod) {
         if (editableBehavior !== "allow") continue;
-        if (!rule.owner || rule.owner !== captureZoneId) continue;
+        if (!rule.owner || rule.owner !== focus.captureZoneId) continue;
       }
-      if (focusEditable && hasMod && editableBehavior === "suppress") {
+      if (focus.focusEditable && hasMod && editableBehavior === "suppress") {
         continue;
       }
 
-      if (captureZoneId) {
-        const scope =
-          getCommandDescriptor(rule.command as CommandId)?.handlerScope ??
-          "app";
-        // E3: app/window always; deeper scopes only when owner matches capture zone.
+      // E3: inside a capture zone, deeper scopes only when owner matches.
+      if (focus.captureZoneId) {
         if (scope !== "app" && scope !== "window") {
-          if (rule.owner !== captureZoneId) continue;
+          if (rule.owner !== focus.captureZoneId) continue;
         }
       }
 
@@ -191,19 +169,76 @@ export async function dispatchKeyEvent(options: {
       matchingRules.push(rule);
     }
 
-    // Prefer first candidate that produced matches
     if (matchingRules.length > 0) break;
   }
+
+  return matchingRules;
+}
+
+/**
+ * Synchronous dispatch: claim + preventDefault happen before any async handler work.
+ * Handlers still run (async OK) after the browser default is cancelled.
+ */
+export function dispatchKeyEvent(options: {
+  event: ResolveKeyboardEvent & {
+    preventDefault: () => void;
+    stopPropagation: () => void;
+    target?: EventTarget | null;
+  };
+  keymap: LoadedKeymap;
+  context: ContextKeyValues;
+  state: KeymapDispatchState;
+  onChordTimeout?: () => void;
+  /** Optional pre-resolved focus (tests); otherwise resolved from event.target. */
+  focus?: ActiveKeymapFocus;
+}): DispatchResult {
+  const { event, keymap, context, state } = options;
+
+  if (state.recording) {
+    return { kind: "ignored" };
+  }
+
+  const focus =
+    options.focus ??
+    resolveActiveKeymapFocus(
+      event.target ??
+        (typeof document !== "undefined" ? document.activeElement : null),
+    );
+
+  const candidates = resolveCandidates(event, keymap.platform);
+  if (candidates.length === 0) {
+    return { kind: "ignored" };
+  }
+
+  if (state.chordPending) {
+    for (const candidate of candidates) {
+      if (candidate.key === "escape" && !segmentHasModifier(candidate)) {
+        state.chordPending = null;
+        if (state.chordTimer) clearTimeout(state.chordTimer);
+        event.preventDefault();
+        event.stopPropagation();
+        return { kind: "chord-cancelled", reason: "escape" };
+      }
+    }
+  }
+
+  const matchingRules = matchKeybindingRules({
+    event,
+    keymap,
+    context,
+    focus,
+    state,
+  });
 
   if (matchingRules.length === 0) {
     if (state.chordPending) {
       state.chordPending = null;
+      if (state.chordTimer) clearTimeout(state.chordTimer);
       return { kind: "chord-cancelled", reason: "unmatched" };
     }
     return { kind: "ignored" };
   }
 
-  // Chord start: if best matches are two-segment with matching prefix only
   if (!state.chordPending) {
     const chordStarts = matchingRules.filter((rule) => {
       const parsed = parseBinding(rule.key, keymap.platform);
@@ -220,11 +255,10 @@ export async function dispatchKeyEvent(options: {
         state.chordPending = first.value.segments[0]!;
         event.preventDefault();
         event.stopPropagation();
-        window.setTimeout(() => {
-          if (state.chordPending) {
-            state.chordPending = null;
-            options.onChordTimeout();
-          }
+        if (state.chordTimer) clearTimeout(state.chordTimer);
+        state.chordTimer = setTimeout(() => {
+          state.chordPending = null;
+          options.onChordTimeout?.();
         }, 5000);
         return {
           kind: "chord-pending",
@@ -245,15 +279,18 @@ export async function dispatchKeyEvent(options: {
 
   for (const rule of executable) {
     const id = rule.command as CommandId;
-    if (!commandRegistry.hasHandler(id)) {
+    if (!commandRegistry.isExecutable(id, context)) {
       continue;
     }
-    const ok = await commandRegistry.execute(id, rule.args, context);
-    if (ok) {
-      state.chordPending = null;
-      event.preventDefault();
-      event.stopPropagation();
-      return { kind: "executed", command: id };
+    // Sync claim: cancel browser defaults before any async handler work.
+    event.preventDefault();
+    event.stopPropagation();
+    state.chordPending = null;
+    if (state.chordTimer) clearTimeout(state.chordTimer);
+
+    const claimed = commandRegistry.claimAndExecute(id, rule.args, context);
+    if (claimed) {
+      return { kind: "claimed", command: id };
     }
   }
 

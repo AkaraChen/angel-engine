@@ -1,8 +1,8 @@
-import type { KeymapPlatform } from "@shared/keybindings";
 import {
   formatBinding,
   parseBinding,
   stringifyBinding,
+  type KeymapPlatform,
   type ParsedSegment,
 } from "@shared/keybindings";
 import { useEffect, useState } from "react";

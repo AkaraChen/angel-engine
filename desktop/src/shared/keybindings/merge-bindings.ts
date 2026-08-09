@@ -1,5 +1,6 @@
 import type {
   EffectiveBinding,
+  EditableBehavior,
   KeybindingRule,
   KeybindingUserEntry,
   KeymapPlatform,
@@ -36,6 +37,31 @@ function normalizeUserKey(
 }
 
 /**
+ * User config never stores owner / editableBehavior (KIT-797).
+ * Re-inject from the default layer for the same command (+ matching when when possible)
+ * so capture-zone and E1/E2 rules still work after rebind.
+ */
+export function inheritRuleMeta(
+  commandId: string,
+  when: string | undefined,
+  defaultRules: readonly KeybindingRule[],
+): { owner?: string; editableBehavior?: EditableBehavior } {
+  const sameCommand = defaultRules.filter(
+    (rule) =>
+      rule.command === commandId && !String(rule.command).startsWith("-"),
+  );
+  const sameWhen = sameCommand.find(
+    (rule) => whenKey(rule.when) === whenKey(when),
+  );
+  const template = sameWhen ?? sameCommand[0];
+  if (!template) return {};
+  return {
+    owner: template.owner,
+    editableBehavior: template.editableBehavior,
+  };
+}
+
+/**
  * Merge default rules with ordered user entries (KIT-797 §1.3).
  * User positives append; unbinds remove matching default (and prior user) rules.
  */
@@ -47,7 +73,7 @@ export function mergeKeybindingLayers(options: {
   const { defaultRules, userEntries, platform } = options;
   const warnings: LoadWarning[] = [];
 
-  let rules: KeybindingRule[] = defaultRules
+  const platformDefaults: KeybindingRule[] = defaultRules
     .filter((rule) => !rule.platform || rule.platform.includes(platform))
     .map((rule) => {
       const parsed = parseBinding(rule.key, platform);
@@ -56,6 +82,8 @@ export function mergeKeybindingLayers(options: {
         : rule.key;
       return { ...rule, key, source: "default" as const };
     });
+
+  let rules: KeybindingRule[] = [...platformDefaults];
 
   userEntries.forEach((entry, entryIndex) => {
     const { unbind, id } = stripUnbindPrefix(entry.command);
@@ -109,12 +137,16 @@ export function mergeKeybindingLayers(options: {
       return;
     }
 
+    const meta = inheritRuleMeta(commandId, entry.when, platformDefaults);
+
     rules.push({
       key,
       command: commandId,
       when: entry.when,
       args: entry.args,
       source: "user",
+      owner: meta.owner,
+      editableBehavior: meta.editableBehavior,
     });
   });
 

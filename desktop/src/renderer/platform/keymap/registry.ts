@@ -1,6 +1,9 @@
-import type { CommandDescriptor, CommandId } from "@shared/keybindings";
+import type {
+  CommandDescriptor,
+  CommandId,
+  ContextKeyValues,
+} from "@shared/keybindings";
 import { COMMAND_DESCRIPTORS, evaluateWhen } from "@shared/keybindings";
-import type { ContextKeyValues } from "@shared/keybindings";
 
 export type CommandHandler = (
   args?: unknown,
@@ -47,20 +50,41 @@ class CommandRegistryImpl {
     return this.handlers.has(id);
   }
 
-  async execute(
-    id: CommandId,
-    args: unknown | undefined,
-    context: ContextKeyValues,
-  ): Promise<boolean> {
+  /**
+   * Synchronous availability check (when + handler present) without running the handler.
+   */
+  isExecutable(id: CommandId, context: ContextKeyValues): boolean {
     const descriptor = this.descriptors.get(id);
     if (!descriptor || descriptor.deprecatedBy) return false;
     if (descriptor.when && !evaluateWhen(descriptor.when, context)) {
       return false;
     }
+    return this.handlers.has(id);
+  }
+
+  async execute(
+    id: CommandId,
+    args: unknown,
+    context: ContextKeyValues,
+  ): Promise<boolean> {
+    if (!this.isExecutable(id, context)) return false;
     const handler = this.handlers.get(id);
     if (!handler) return false;
     const result = await handler(args);
     return result !== false;
+  }
+
+  /** Fire-and-forget after sync claim; returns false if not executable. */
+  claimAndExecute(
+    id: CommandId,
+    args: unknown,
+    context: ContextKeyValues,
+  ): boolean {
+    if (!this.isExecutable(id, context)) return false;
+    const handler = this.handlers.get(id);
+    if (!handler) return false;
+    void Promise.resolve(handler(args));
+    return true;
   }
 }
 

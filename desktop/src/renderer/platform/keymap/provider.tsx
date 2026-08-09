@@ -41,9 +41,11 @@ interface KeymapContextValue {
   platform: ReturnType<typeof detectKeymapPlatform>;
   contextKeys: ContextKeyValues;
   setContextKeys: (patch: ContextKeyValues) => void;
+  clearContextKeys: (keys: readonly string[]) => void;
   setRecording: (recording: boolean) => void;
   refreshUserBindings: () => Promise<void>;
   saveUserBindings: (file: KeybindingsFile) => Promise<void>;
+  resetAllUserBindings: () => Promise<void>;
   getBindingLabel: (commandId: CommandId) => string | undefined;
   registerCommand: (id: CommandId, handler: CommandHandler) => () => void;
 }
@@ -56,19 +58,6 @@ function readPlatform() {
   } catch {
     return detectKeymapPlatform("linux");
   }
-}
-
-function isEditableElement(target: EventTarget | null): boolean {
-  if (!(target instanceof HTMLElement)) return false;
-  if (target.isContentEditable) return true;
-  const tag = target.tagName;
-  return tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT";
-}
-
-function findCaptureZoneId(target: EventTarget | null): string | null {
-  if (!(target instanceof Element)) return null;
-  const el = target.closest("[data-keymap-capture]");
-  return el?.getAttribute("data-keymap-capture") ?? null;
 }
 
 export function KeymapProvider({ children }: { children: ReactNode }) {
@@ -126,6 +115,13 @@ export function KeymapProvider({ children }: { children: ReactNode }) {
     setFatal(state.fatal);
   }, []);
 
+  const resetAllUserBindings = useCallback(async () => {
+    const state = await ipc.keymapResetAll();
+    setUserEntries(state.file.bindings);
+    setWarnings(state.warnings);
+    setFatal(state.fatal);
+  }, []);
+
   useEffect(() => {
     void refreshUserBindings();
   }, [refreshUserBindings]);
@@ -141,12 +137,11 @@ export function KeymapProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
-      void dispatchKeyEvent({
+      // Synchronous dispatch so preventDefault runs in the same turn.
+      dispatchKeyEvent({
         event,
         keymap,
         context: contextRef.current,
-        captureZoneId: findCaptureZoneId(event.target),
-        focusEditable: isEditableElement(event.target),
         state: dispatchState.current,
         onChordTimeout: () => {
           dispatchState.current.chordPending = null;
@@ -165,6 +160,20 @@ export function KeymapProvider({ children }: { children: ReactNode }) {
       for (const [key, value] of Object.entries(patch)) {
         if (current[key] !== value) {
           next[key] = value;
+          changed = true;
+        }
+      }
+      return changed ? next : current;
+    });
+  }, []);
+
+  const clearContextKeys = useCallback((keys: readonly string[]) => {
+    setContextKeysState((current) => {
+      let changed = false;
+      const next = { ...current };
+      for (const key of keys) {
+        if (key in next && next[key] !== undefined) {
+          delete next[key];
           changed = true;
         }
       }
@@ -201,9 +210,11 @@ export function KeymapProvider({ children }: { children: ReactNode }) {
       platform,
       contextKeys,
       setContextKeys,
+      clearContextKeys,
       setRecording,
       refreshUserBindings,
       saveUserBindings,
+      resetAllUserBindings,
       getBindingLabel,
       registerCommand,
     }),
@@ -215,9 +226,11 @@ export function KeymapProvider({ children }: { children: ReactNode }) {
       platform,
       contextKeys,
       setContextKeys,
+      clearContextKeys,
       setRecording,
       refreshUserBindings,
       saveUserBindings,
+      resetAllUserBindings,
       getBindingLabel,
       registerCommand,
     ],
@@ -248,14 +261,25 @@ export function useCommand(
   }, [id, registerCommand, ...deps]);
 }
 
+/**
+ * Publish a context key while mounted; clear on unmount / value change ownership.
+ * Only clears if the stored value still equals what this hook last published.
+ */
 export function useContextKey(
   key: string,
   value: string | boolean | undefined,
 ) {
-  const { setContextKeys } = useKeymap();
+  const { setContextKeys, clearContextKeys } = useKeymap();
+  const lastValue = useRef(value);
+
   useEffect(() => {
+    lastValue.current = value;
     setContextKeys({ [key]: value });
-  }, [key, value, setContextKeys]);
+    return () => {
+      // Clear only our key slot; concurrent owners re-publish on their turn.
+      clearContextKeys([key]);
+    };
+  }, [key, value, setContextKeys, clearContextKeys]);
 }
 
 export function useKeybindingLabel(id: CommandId): string | undefined {

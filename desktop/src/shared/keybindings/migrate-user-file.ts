@@ -45,10 +45,17 @@ export function migrateUserBindings(file: unknown): {
       message: "version missing; treated as 1",
     });
   } else if (record.version !== 1) {
+    const rawVersion = record.version;
+    const version: number | string =
+      typeof rawVersion === "number"
+        ? rawVersion
+        : typeof rawVersion === "string"
+          ? rawVersion
+          : "unknown";
     return {
       entries: [],
       warnings,
-      fatal: { kind: "unsupported-version", version: record.version },
+      fatal: { kind: "unsupported-version", version },
       file: emptyKeybindingsFile(),
     };
   }

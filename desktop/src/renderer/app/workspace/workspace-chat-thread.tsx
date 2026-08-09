@@ -48,6 +48,7 @@ import {
   useChatRunStore,
 } from "@/features/chat/state/chat-run-store";
 import i18n from "@/i18n";
+import { KeymapScope, useContextKey } from "@/platform/keymap/provider";
 
 interface ActiveChatThreadProps {
   draftAgentConfig: DraftAgentConfig;
@@ -390,30 +391,34 @@ function ChatThreadRuntime({
     ],
   );
 
+  useContextKey("chat.running", isRunning);
+
   return (
-    <ChatOptionsProvider value={chatOptions}>
-      <AppRuntimeProvider
-        chatId={selectedChat.id}
-        cwd={selectedChat.cwd ?? undefined}
-        historyMessages={historyMessages}
-        historyRevision={historyRevision}
-        key={chatRuntimeProviderKey(selectedChat.id, chatRuntime, keySuffix)}
-        model={modelOverride}
-        mode={undefined}
-        onChatCreated={onChatCreated}
-        onChatMessagesUpdated={onChatMessagesUpdated}
-        onChatUpdated={onChatUpdated}
-        projectId={projectContext.id ?? selectedChat.projectId ?? null}
-        projectPath={projectContext.path ?? undefined}
-        permissionMode={undefined}
-        reasoningEffort={reasoningEffortOverride}
-        runtime={chatRuntime}
-        runtimeConfig={runtimeConfig}
-        slotKey={slotKey}
-      >
-        <AssistantThread projectName={projectContext.name} />
-      </AppRuntimeProvider>
-    </ChatOptionsProvider>
+    <KeymapScope scope="panel" id="chat.panel">
+      <ChatOptionsProvider value={chatOptions}>
+        <AppRuntimeProvider
+          chatId={selectedChat.id}
+          cwd={selectedChat.cwd ?? undefined}
+          historyMessages={historyMessages}
+          historyRevision={historyRevision}
+          key={chatRuntimeProviderKey(selectedChat.id, chatRuntime, keySuffix)}
+          model={modelOverride}
+          mode={undefined}
+          onChatCreated={onChatCreated}
+          onChatMessagesUpdated={onChatMessagesUpdated}
+          onChatUpdated={onChatUpdated}
+          projectId={projectContext.id ?? selectedChat.projectId ?? null}
+          projectPath={projectContext.path ?? undefined}
+          permissionMode={undefined}
+          reasoningEffort={reasoningEffortOverride}
+          runtime={chatRuntime}
+          runtimeConfig={runtimeConfig}
+          slotKey={slotKey}
+        >
+          <AssistantThread projectName={projectContext.name} />
+        </AppRuntimeProvider>
+      </ChatOptionsProvider>
+    </KeymapScope>
   );
 }
 
