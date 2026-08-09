@@ -29,17 +29,15 @@ const REPO_FIELDS = [
 
 const viewerSchema = arkType({
   "+": "ignore",
-  avatar_url: "string",
   login: "string > 0",
 });
 const organizationsSchema = arkType({
   "+": "ignore",
-  avatar_url: "string",
   login: "string > 0",
 }).array();
 const repositoriesSchema = arkType({
   "+": "ignore",
-  defaultBranchRef: arkType({ "+": "ignore", name: "string > 0" }).or("null"),
+  defaultBranchRef: arkType({ "+": "ignore", "name?": "string" }).or("null"),
   description: arkType("string").or("null"),
   isArchived: "boolean",
   isFork: "boolean",
@@ -77,14 +75,9 @@ export function listGitHubRepositoryOwners(
     ).pipe(Effect.orElseSucceed(() => []));
 
     const owners: GitHubRepositoryOwner[] = [
-      {
-        avatarUrl: nonEmpty(viewer.avatar_url),
-        kind: "user",
-        login: viewer.login,
-      },
+      { kind: "user", login: viewer.login },
       ...organizations.map(
         (organization): GitHubRepositoryOwner => ({
-          avatarUrl: nonEmpty(organization.avatar_url),
           kind: "organization",
           login: organization.login,
         }),
@@ -120,7 +113,7 @@ export function listGitHubRepositories(
 
     const repositories = entries.map(
       (entry): GitHubRepository => ({
-        defaultBranch: entry.defaultBranchRef?.name ?? null,
+        defaultBranch: nonEmpty(entry.defaultBranchRef?.name ?? null),
         description: nonEmpty(entry.description),
         isArchived: entry.isArchived,
         isFork: entry.isFork,

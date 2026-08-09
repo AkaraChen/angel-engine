@@ -134,11 +134,7 @@ export function CloneProgressDialog({
     >
       <DialogContent className="gap-4 rounded-2xl" showCloseButton={isSettled}>
         <DialogHeader>
-          <DialogTitle>
-            {error === null
-              ? t("projectImport.progressTitle")
-              : t("projectImport.failedTitle")}
-          </DialogTitle>
+          <DialogTitle>{t(titleKey(error, outcome))}</DialogTitle>
           <DialogDescription className="break-all">
             {is.nonEmptyString(progress?.targetPath)
               ? t("projectImport.cloneTo", { path: progress.targetPath })
@@ -255,6 +251,13 @@ function StageRow({
       ) : null}
     </li>
   );
+}
+
+/** The heading tracks the run: in flight, finished, or failed. */
+function titleKey(error: string | null, outcome: CloneOutcome | null): string {
+  if (error !== null) return "projectImport.failedTitle";
+  if (outcome !== null) return "projectImport.readyTitle";
+  return "projectImport.progressTitle";
 }
 
 function overallPercent(

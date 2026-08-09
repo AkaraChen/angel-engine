@@ -601,6 +601,7 @@ export const zhCN = {
       openProject: "打开项目",
       owners: "账户",
       ownersFailed: "无法加载 GitHub 账户",
+      readyTitle: "仓库已就绪",
       privateBadge: "私有",
       progressTitle: "正在克隆仓库",
       repositoriesFailed: "无法加载仓库",

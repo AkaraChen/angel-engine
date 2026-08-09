@@ -648,6 +648,7 @@ export interface LocaleResourceTranslationNotifications {
 }
 
 export interface LocaleResourceTranslationProjectImport {
+  readyTitle: string;
   addFromFolder: string;
   addFromGit: string;
   archivedBadge: string;

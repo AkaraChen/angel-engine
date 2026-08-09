@@ -602,6 +602,7 @@ export const zhTW = {
       openProject: "開啟專案",
       owners: "帳戶",
       ownersFailed: "無法載入 GitHub 帳戶",
+      readyTitle: "儲存庫已就緒",
       privateBadge: "私人",
       progressTitle: "正在複製儲存庫",
       repositoriesFailed: "無法載入儲存庫",

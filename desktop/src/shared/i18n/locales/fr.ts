@@ -630,6 +630,7 @@ export const fr = {
       openProject: "Ouvrir le projet",
       owners: "Comptes",
       ownersFailed: "Impossible de charger les comptes GitHub",
+      readyTitle: "Dépôt prêt",
       privateBadge: "Privé",
       progressTitle: "Clonage du dépôt",
       repositoriesFailed: "Impossible de charger les dépôts",

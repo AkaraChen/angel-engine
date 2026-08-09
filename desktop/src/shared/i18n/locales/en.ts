@@ -623,6 +623,7 @@ export const en = {
       openProject: "Open project",
       owners: "Accounts",
       ownersFailed: "Could not load GitHub accounts",
+      readyTitle: "Repository ready",
       privateBadge: "Private",
       progressTitle: "Cloning repository",
       repositoriesFailed: "Could not load repositories",

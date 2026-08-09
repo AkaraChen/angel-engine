@@ -4,11 +4,8 @@ import { describe, expect, it } from "vitest";
 import { DaemonError } from "../../platform/errors";
 import { listGitHubRepositories, listGitHubRepositoryOwners } from "./repos";
 
-const viewer = { avatar_url: "https://avatars/u", login: "octocat" };
-const organizations = [
-  { avatar_url: "https://avatars/acme", login: "acme" },
-  { avatar_url: "", login: "globex" },
-];
+const viewer = { login: "octocat" };
+const organizations = [{ login: "acme" }, { login: "globex" }];
 const repositories = [
   {
     defaultBranchRef: { name: "main" },
@@ -23,7 +20,7 @@ const repositories = [
     url: "https://github.com/acme/widgets",
   },
   {
-    defaultBranchRef: null,
+    defaultBranchRef: { name: "" },
     description: null,
     isArchived: true,
     isFork: true,
@@ -57,13 +54,9 @@ describe("listGitHubRepositoryOwners", () => {
     );
 
     expect(result.owners).toEqual([
-      { avatarUrl: "https://avatars/u", kind: "user", login: "octocat" },
-      {
-        avatarUrl: "https://avatars/acme",
-        kind: "organization",
-        login: "acme",
-      },
-      { avatarUrl: null, kind: "organization", login: "globex" },
+      { kind: "user", login: "octocat" },
+      { kind: "organization", login: "acme" },
+      { kind: "organization", login: "globex" },
     ]);
   });
 

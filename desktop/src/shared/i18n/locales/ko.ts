@@ -617,6 +617,7 @@ export const ko = {
       openProject: "프로젝트 열기",
       owners: "계정",
       ownersFailed: "GitHub 계정을 불러오지 못했습니다",
+      readyTitle: "저장소 준비 완료",
       privateBadge: "비공개",
       progressTitle: "저장소 클론 중",
       repositoriesFailed: "저장소를 불러오지 못했습니다",

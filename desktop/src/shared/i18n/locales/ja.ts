@@ -628,6 +628,7 @@ export const ja = {
       openProject: "プロジェクトを開く",
       owners: "アカウント",
       ownersFailed: "GitHub アカウントを読み込めませんでした",
+      readyTitle: "リポジトリの準備が完了しました",
       privateBadge: "プライベート",
       progressTitle: "リポジトリをクローン中",
       repositoriesFailed: "リポジトリを読み込めませんでした",

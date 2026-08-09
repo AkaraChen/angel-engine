@@ -631,6 +631,7 @@ export const de = {
       openProject: "Projekt öffnen",
       owners: "Konten",
       ownersFailed: "GitHub-Konten konnten nicht geladen werden",
+      readyTitle: "Repository bereit",
       privateBadge: "Privat",
       progressTitle: "Repository wird geklont",
       repositoriesFailed: "Repositories konnten nicht geladen werden",

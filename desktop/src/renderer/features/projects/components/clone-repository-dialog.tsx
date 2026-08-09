@@ -207,7 +207,7 @@ function GitHubRepositoryBrowser({
             onClick={() => setSelectedOwner(owner.login)}
             type="button"
           >
-            <OwnerAvatar avatarUrl={owner.avatarUrl} login={owner.login} />
+            <OwnerAvatar login={owner.login} />
             <span className="min-w-0 truncate">{owner.login}</span>
           </button>
         ))}
@@ -344,28 +344,22 @@ function RepositoryList({
   );
 }
 
-function OwnerAvatar({
-  avatarUrl,
-  login,
-}: {
-  avatarUrl: string | null;
-  login: string;
-}) {
-  if (!is.nonEmptyString(avatarUrl)) {
-    return (
-      <span
-        aria-hidden="true"
-        className="
-          flex size-5 shrink-0 items-center justify-center rounded-full
-          bg-surface-2 text-[10px] uppercase
-        "
-      >
-        {login.slice(0, 1)}
-      </span>
-    );
-  }
+/**
+ * A monogram, not the account's GitHub avatar: the renderer's CSP allows no
+ * remote images, so an `<img>` pointing at avatars.githubusercontent.com only
+ * ever renders as a broken-image glyph.
+ */
+function OwnerAvatar({ login }: { login: string }) {
   return (
-    <img alt="" className="size-5 shrink-0 rounded-full" src={avatarUrl} />
+    <span
+      aria-hidden="true"
+      className="
+        flex size-5 shrink-0 items-center justify-center rounded-full
+        bg-surface-2 text-[10px] uppercase
+      "
+    >
+      {login.slice(0, 1)}
+    </span>
   );
 }
 

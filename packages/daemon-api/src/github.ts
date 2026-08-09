@@ -52,7 +52,6 @@ export const githubResolveUrlInputSchema = arkType({
 
 /** An account whose repositories the authenticated user can clone. */
 export interface GitHubRepositoryOwner {
-  avatarUrl: string | null;
   kind: GitHubRepositoryOwnerKind;
   login: string;
 }

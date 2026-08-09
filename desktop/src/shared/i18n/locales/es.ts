@@ -628,6 +628,7 @@ export const es = {
       openProject: "Abrir proyecto",
       owners: "Cuentas",
       ownersFailed: "No se pudieron cargar las cuentas de GitHub",
+      readyTitle: "Repositorio listo",
       privateBadge: "Privado",
       progressTitle: "Clonando repositorio",
       repositoriesFailed: "No se pudieron cargar los repositorios",
