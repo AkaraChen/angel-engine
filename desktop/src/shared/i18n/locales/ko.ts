@@ -597,9 +597,13 @@ export const ko = {
       agentFinishedNoOutput: "Agent가 텍스트 출력 없이 완료되었습니다.",
       agentWaiting: "Agent가 응답을 기다리고 있습니다.",
       chatActionFailed: "채팅 작업 실패",
+      chatArchived: "채팅이 보관됨",
+      chatArchivedDescription:
+        "5초 안에 실행 취소하거나 {{shortcut}}을 누르세요.",
       permissionRequired: "권한 필요",
       projectActionFailed: "프로젝트 작업 실패",
       installUpdate: "다시 시작하여 설치",
+      undo: "실행 취소",
       updateReady: "업데이트 준비됨",
       updateReadyDescription: "{{version}} 다운로드가 완료되었습니다.",
     },

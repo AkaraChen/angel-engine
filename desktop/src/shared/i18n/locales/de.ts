@@ -610,9 +610,13 @@ export const de = {
       agentFinishedNoOutput: "Der Agent wurde ohne Textausgabe beendet.",
       agentWaiting: "Der Agent wartet auf eine Antwort.",
       chatActionFailed: "Chat-Aktion fehlgeschlagen",
+      chatArchived: "Chat archiviert",
+      chatArchivedDescription:
+        "Innerhalb von 5 Sekunden rückgängig machen oder {{shortcut}} drücken.",
       permissionRequired: "Berechtigung erforderlich",
       projectActionFailed: "Projektaktion fehlgeschlagen",
       installUpdate: "Neu starten und installieren",
+      undo: "Rückgängig",
       updateReady: "Update bereit",
       updateReadyDescription: "{{version}} wurde heruntergeladen.",
     },
