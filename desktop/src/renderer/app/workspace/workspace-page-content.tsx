@@ -14,6 +14,7 @@ interface WorkspacePageContentProps {
   currentRoutePath: string;
   draftProjectId?: string;
   fleetActive?: boolean;
+  pullRequestsActive?: boolean;
   routeProjectId?: string;
   selectedChatId?: string;
 }
@@ -23,6 +24,7 @@ export function WorkspacePageContent({
   currentRoutePath,
   draftProjectId,
   fleetActive = false,
+  pullRequestsActive = false,
   routeProjectId,
   selectedChatId,
 }: WorkspacePageContentProps) {
@@ -30,6 +32,7 @@ export function WorkspacePageContent({
     api,
     draftProjectId,
     fleetActive,
+    pullRequestsActive,
     routeProjectId,
     selectedChatId,
   });
@@ -69,6 +72,7 @@ export function WorkspacePageContent({
       model={model}
       navigation={navigation}
       powerTabs={powerTabs}
+      pullRequestsActive={pullRequestsActive}
     />
   );
 }

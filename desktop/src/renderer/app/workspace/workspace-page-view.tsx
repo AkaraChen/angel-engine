@@ -40,6 +40,7 @@ import { RenameChatDialog } from "@/features/chat/components/rename-chat-dialog"
 import { WorkspaceCommandPalette } from "@/features/command-palette/workspace-command-palette";
 import { FleetPage } from "@/features/fleet/fleet-page";
 import { ProjectSettingsDialog } from "@/features/projects/components/project-settings-dialog";
+import { PullRequestsPage } from "@/features/pull-requests/pull-requests-page";
 import { queryKeys } from "@/platform/query-keys";
 
 interface WorkspacePageViewProps {
@@ -50,6 +51,7 @@ interface WorkspacePageViewProps {
   model: WorkspacePageModel;
   navigation: WorkspaceNavigation;
   powerTabs: PowerWorktreeTabs;
+  pullRequestsActive: boolean;
 }
 
 export const WorkspacePageView: FC<WorkspacePageViewProps> = ({
@@ -60,6 +62,7 @@ export const WorkspacePageView: FC<WorkspacePageViewProps> = ({
   model,
   navigation,
   powerTabs,
+  pullRequestsActive,
 }) => {
   const queryClient = useQueryClient();
   const [importSessionOpen, setImportSessionOpen] = useState(false);
@@ -156,9 +159,14 @@ export const WorkspacePageView: FC<WorkspacePageViewProps> = ({
     openChatFromFleet,
     openFleet,
     openPowerWorktree,
+    openPullRequests,
     openSettings,
     selectDraftProject,
   } = navigation;
+  const pullRequestsProject =
+    pullRequestsActive && is.nonEmptyString(selectedProjectId)
+      ? projects.find((project) => project.id === selectedProjectId)
+      : undefined;
   const handleImportedSession = useCallback(
     async (chatId: string) => {
       await queryClient.invalidateQueries({ queryKey: queryKeys.chats.list() });
@@ -285,6 +293,7 @@ export const WorkspacePageView: FC<WorkspacePageViewProps> = ({
           onImportSession={openImportSession}
           onOpenChat={openChat}
           onOpenFleet={openFleet}
+          onOpenPullRequests={openPullRequests}
           onOpenSettings={openSettings}
           onOpenWorktree={openPowerWorktree}
           onRetryWorktreeCreation={retryWorktreeCreation}
@@ -294,6 +303,7 @@ export const WorkspacePageView: FC<WorkspacePageViewProps> = ({
           onWorkspaceModeChange={changeWorkspaceMode}
           projectChatsByProjectId={projectChatsByProjectId}
           projects={projects}
+          pullRequestsActive={pullRequestsActive}
           selectedChatId={selectedChatId}
           selectedProjectId={selectedProjectId}
         />
@@ -311,6 +321,7 @@ export const WorkspacePageView: FC<WorkspacePageViewProps> = ({
           onImportSession={openImportSession}
           onOpenChat={openChat}
           onOpenFleet={openFleet}
+          onOpenPullRequests={openPullRequests}
           onOpenSettings={openSettings}
           onOpenWorktree={openPowerWorktree}
           onRetryWorktreeCreation={retryWorktreeCreation}
@@ -320,6 +331,7 @@ export const WorkspacePageView: FC<WorkspacePageViewProps> = ({
           onWorkspaceModeChange={changeWorkspaceMode}
           projectChatsByProjectId={projectChatsByProjectId}
           projects={projects}
+          pullRequestsActive={pullRequestsActive}
           selectedChatId={selectedChatId}
           selectedProjectId={selectedProjectId}
         />
@@ -377,7 +389,13 @@ export const WorkspacePageView: FC<WorkspacePageViewProps> = ({
               (rightSidebarOpen || workspaceToolHost !== "sidebar")
             }
             rightSidebarToggleLabel={workspaceToolsToggleLabel}
-            title={fleetActive ? t("fleet.title") : workspaceTitle}
+            title={
+              pullRequestsActive
+                ? t("pullRequests.title")
+                : fleetActive
+                  ? t("fleet.title")
+                  : workspaceTitle
+            }
             onShowContextMenu={
               currentLauncherTarget === undefined
                 ? undefined
@@ -408,7 +426,12 @@ export const WorkspacePageView: FC<WorkspacePageViewProps> = ({
               className="flex min-h-0 min-w-0 flex-1 flex-col"
               data-workspace-mode={workspaceMode}
             >
-              {fleetActive ? (
+              {pullRequestsActive && pullRequestsProject ? (
+                <PullRequestsPage
+                  onOpenChat={openChat}
+                  project={pullRequestsProject}
+                />
+              ) : fleetActive ? (
                 <FleetPage
                   chats={chats}
                   isMetadataError={chatsQuery.isError || projectsQuery.isError}
