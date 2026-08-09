@@ -9,6 +9,7 @@ import type {
   ChatPrewarmInput,
   ChatRuntimeConfig,
   ChatRuntimeConfigInput,
+  ChatRunStartInput,
   ChatSendInput,
   ChatSendResult,
   ChatSetModeInput,
@@ -56,17 +57,24 @@ import {
 import { ChatProcessRegistry } from "./process-registry";
 import {
   createProjectWorktree,
+  managedWorktreePath,
   removeCreatedProjectWorktree,
 } from "../projects/git";
+import { readProjectLifecycleSnapshot } from "../projects/lifecycle";
+import { getProject } from "../projects/repository";
+import { projectSetupLifecycle } from "../projects/setup-lifecycle";
 import {
   beginChatSend,
   createChat,
+  createQueuedChatRun,
   createWorktreeCreationJob,
   deleteChat,
+  deleteQueuedChatRun,
   deleteWorktreeCreationJob,
   failInterruptedWorktreeCreationJobs,
   getWorktreeCreationJob,
   listWorktreeCreationJobs,
+  listQueuedChatRuns,
   requireChat,
   setChatRemoteThreadId,
   setChatCwd,
@@ -815,6 +823,38 @@ export class ChatEngine extends Effect.Service<ChatEngine>()(
             yield* trySession(() => prewarm.promise);
             return yield* chatPrewarmResult(prewarm);
           }),
+        queueChatRun: (runId: string, input: ChatRunStartInput) =>
+          Effect.gen(function* () {
+            const creationJob = yield* getWorktreeCreationJob(input.chatId);
+            if (creationJob === null) {
+              const chat = yield* requireChat(input.chatId);
+              const worktreePath = managedWorktreePath(chat.cwd);
+              if (worktreePath === undefined) return false;
+              const snapshot = yield* Effect.tryPromise({
+                catch: (cause) => DaemonError.internal(cause),
+                try: () => readProjectLifecycleSnapshot(worktreePath),
+              });
+              const lifecycleView = yield* Effect.tryPromise({
+                catch: (cause) => DaemonError.internal(cause),
+                try: () => projectSetupLifecycle.view(worktreePath),
+              });
+              if (
+                !lifecycleView.running &&
+                snapshot.setup.status !== "running" &&
+                snapshot.setup.status !== "failed"
+              ) {
+                return false;
+              }
+            }
+            yield* createQueuedChatRun({
+              createdAt: new Date().toISOString(),
+              input,
+              runId,
+            });
+            return true;
+          }),
+        claimQueuedChatRun: (runId: string) => deleteQueuedChatRun(runId),
+        restoreQueuedChatRuns: () => listQueuedChatRuns(),
         retryWorktreeCreation: (chatId: string, setupApproval?: string) =>
           Effect.gen(function* () {
             const persisted = yield* getWorktreeCreationJob(chatId);
@@ -917,6 +957,38 @@ export class ChatEngine extends Effect.Service<ChatEngine>()(
             chatSessions.delete(chat.id);
             refreshProcessRegistry();
             return yield* setChatRuntimeRecord(chat.id, input.runtime);
+          }),
+        waitForChatSetup: (chatId: string, signal?: AbortSignal) =>
+          Effect.gen(function* () {
+            yield* waitForWorktreeCreation(chatId);
+            const chat = yield* requireChat(chatId);
+            const worktreePath = managedWorktreePath(chat.cwd);
+            if (
+              worktreePath === undefined ||
+              !is.nonEmptyString(chat.projectId)
+            ) {
+              return;
+            }
+            const project = yield* getProject(chat.projectId);
+            if (project === null) {
+              return yield* Effect.fail(DaemonError.projectNotFound());
+            }
+            const snapshot = yield* Effect.tryPromise({
+              catch: (cause) => DaemonError.internal(cause),
+              try: () => readProjectLifecycleSnapshot(worktreePath),
+            });
+            if (snapshot.approvedDigest !== undefined) {
+              projectSetupLifecycle.restore({
+                approvedDigest: snapshot.approvedDigest,
+                projectRoot: project.path,
+                worktreePath,
+              });
+            }
+            yield* Effect.tryPromise({
+              catch: (cause) => DaemonError.worktreeCreateFailed(cause),
+              try: () =>
+                projectSetupLifecycle.waitUntilReady(worktreePath, signal),
+            });
           }),
         streamChat,
       };

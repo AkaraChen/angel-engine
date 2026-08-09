@@ -76,8 +76,14 @@ export const fr = {
       projectSelect: "Projet",
       settings: "Paramètres",
       setup: {
+        approvalUnavailable:
+          "Vérifiez et approuvez le script de configuration actuel avant de réessayer.",
         continueAnyway: "Continuer quand même",
         discard: "Supprimer l’espace de travail",
+        discardConfirm: "Supprimer l’espace de travail",
+        discardConfirmDescription:
+          "Cette action supprime définitivement ce chat, son worktree et sa branche. Elle est irréversible.",
+        discardConfirmTitle: "Supprimer cet espace de travail ?",
         failedStep:
           "Échec de l’étape {{step}} sur {{total}} ({{exitCode}}) : {{command}}",
         failedTitle: "Échec de la configuration de l’espace de travail",

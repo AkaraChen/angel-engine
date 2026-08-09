@@ -12,15 +12,19 @@ import {
   chats,
   customAgents,
   projects,
+  queuedChatRuns,
   worktreeCreationJobs,
 } from "../../db/schema";
 import { Db } from "../../platform/db";
 import {
   beginChatSend,
+  createQueuedChatRun,
   createWorktreeCreationJob,
+  deleteQueuedChatRun,
   deleteWorktreeCreationJob,
   failInterruptedWorktreeCreationJobs,
   getWorktreeCreationJob,
+  listQueuedChatRuns,
   normalizeChatRuntime,
   renameChat,
 } from "./repository";
@@ -224,6 +228,38 @@ describe("worktree creation jobs", () => {
   });
 });
 
+describe("queued chat runs", () => {
+  it("persists the first input until the recovered run claims it", async () => {
+    const database = await memoryDatabase();
+    await seedChat(database, { title: "New chat" });
+    const input = { chatId: "chat-1", text: "send after setup" };
+
+    await runWithDatabase(
+      database,
+      createQueuedChatRun({
+        createdAt: "2026-08-10T00:00:00.000Z",
+        input,
+        runId: "run-1",
+      }),
+    );
+
+    await expect(
+      runWithDatabase(database, listQueuedChatRuns()),
+    ).resolves.toEqual([
+      {
+        createdAt: "2026-08-10T00:00:00.000Z",
+        input,
+        runId: "run-1",
+      },
+    ]);
+
+    await runWithDatabase(database, deleteQueuedChatRun("run-1"));
+    await expect(
+      runWithDatabase(database, listQueuedChatRuns()),
+    ).resolves.toEqual([]);
+  });
+});
+
 async function memoryDatabase(): Promise<AppDatabase> {
   const client = createClient({ url: ":memory:" });
   await client.execute(`
@@ -252,8 +288,23 @@ async function memoryDatabase(): Promise<AppDatabase> {
       FOREIGN KEY (chat_id) REFERENCES chats(id) ON DELETE CASCADE
     )
   `);
+  await client.execute(`
+    CREATE TABLE queued_chat_runs (
+      run_id TEXT PRIMARY KEY,
+      chat_id TEXT NOT NULL UNIQUE,
+      created_at TEXT NOT NULL,
+      input TEXT NOT NULL,
+      FOREIGN KEY (chat_id) REFERENCES chats(id) ON DELETE CASCADE
+    )
+  `);
   return drizzle(client, {
-    schema: { chats, customAgents, projects, worktreeCreationJobs },
+    schema: {
+      chats,
+      customAgents,
+      projects,
+      queuedChatRuns,
+      worktreeCreationJobs,
+    },
   }) as AppDatabase;
 }
 

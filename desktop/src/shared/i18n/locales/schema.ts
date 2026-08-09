@@ -128,8 +128,12 @@ export interface LocaleResourceTranslationWorkspaceTools {
 }
 
 export interface LocaleResourceTranslationWorkspaceSetup {
+  approvalUnavailable: string;
   continueAnyway: string;
   discard: string;
+  discardConfirm: string;
+  discardConfirmDescription: string;
+  discardConfirmTitle: string;
   failedStep: string;
   failedTitle: string;
   noLog: string;

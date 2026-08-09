@@ -37,14 +37,26 @@ describe("project setup lifecycle coordinator", () => {
     );
   });
 
-  it("C3 retries in the same workspace and releases the queued work", async () => {
-    await start(["test -f retry.ok || (touch retry.ok; exit 7)"]);
+  it("C3 reapproves a changed digest and retries in the same workspace", async () => {
+    await start(["exit 7"]);
     await waitForStatus("failed");
     const queued = coordinator.waitUntilReady(worktreePath);
+    await fs.writeFile(
+      path.join(projectRoot, "2code.json"),
+      JSON.stringify({ setup_script: ["echo fixed > retry.ok"] }),
+    );
+    const changed = await loadProjectLifecycleConfig(projectRoot);
+    if (changed === undefined) throw new Error("Expected changed config.");
 
-    coordinator.retry(worktreePath);
+    coordinator.retry(worktreePath, {
+      approvedDigest: changed.digest,
+      projectRoot,
+    });
 
     await queued;
+    await expect(
+      fs.readFile(path.join(worktreePath, "retry.ok"), "utf8"),
+    ).resolves.toContain("fixed");
     expect((await coordinator.view(worktreePath)).snapshot.setup.status).toBe(
       "ready",
     );

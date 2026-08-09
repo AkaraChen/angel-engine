@@ -74,6 +74,7 @@ import type {
   ProjectGitStatusInput,
   ProjectGitStatusResult,
   ProjectSetupLifecycleView,
+  ProjectSetupRetryInput,
   UpdateProjectConfigInput,
   UpdateProjectInput,
 } from "@angel-engine/daemon-api/projects";
@@ -389,10 +390,10 @@ export function createDaemonClient(options: DaemonClientOptions) {
           `/api/chats/${encodeURIComponent(id)}/setup/discard`,
           { method: "POST" },
         ),
-      retrySetup: (id: string) =>
+      retrySetup: (id: string, input: ProjectSetupRetryInput) =>
         request<ProjectSetupLifecycleView>(
           `/api/chats/${encodeURIComponent(id)}/setup/retry`,
-          { method: "POST" },
+          json("POST", input),
         ),
       inspectConfig: (input: ChatRuntimeConfigInput = {}) =>
         request<ChatRuntimeConfig>(

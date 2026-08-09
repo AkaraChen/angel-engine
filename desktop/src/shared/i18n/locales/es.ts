@@ -75,8 +75,14 @@ export const es = {
       projectSelect: "Proyecto",
       settings: "Configuración",
       setup: {
+        approvalUnavailable:
+          "Revisa y aprueba el script de configuración actual antes de reintentarlo.",
         continueAnyway: "Continuar de todos modos",
         discard: "Descartar espacio de trabajo",
+        discardConfirm: "Descartar espacio de trabajo",
+        discardConfirmDescription:
+          "Esto elimina permanentemente este chat, su worktree y su rama. Esta acción no se puede deshacer.",
+        discardConfirmTitle: "¿Descartar este espacio de trabajo?",
         failedStep:
           "Falló el paso {{step}} de {{total}} ({{exitCode}}): {{command}}",
         failedTitle: "Falló la configuración del espacio de trabajo",

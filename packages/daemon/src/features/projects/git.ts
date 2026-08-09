@@ -91,7 +91,6 @@ export function createProjectWorktree(
     progress: number,
   ) => void,
 ): Effect.Effect<ProjectWorktreeCreateResult, DaemonError, Db> {
-  void signal;
   return Effect.gen(function* () {
     const status = yield* projectGitStatus(input);
     if (!status.isGitRepository || !is.nonEmptyString(status.root)) {
@@ -164,6 +163,14 @@ export function createProjectWorktree(
       );
       if (created !== undefined) {
         onProgress?.("setup", 75);
+        if (signal?.aborted) {
+          yield* Effect.promise(() =>
+            discardCreatedWorktree(root, created.cwd, created.branch),
+          );
+          return yield* Effect.fail(
+            DaemonError.worktreeCreateFailed(signal.reason),
+          );
+        }
         if (setup) {
           yield* Effect.sync(() =>
             projectSetupLifecycle.start({

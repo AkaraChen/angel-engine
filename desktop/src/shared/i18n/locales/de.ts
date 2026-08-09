@@ -75,8 +75,14 @@ export const de = {
       projectSelect: "Projekt",
       settings: "Einstellungen",
       setup: {
+        approvalUnavailable:
+          "Prüfe und genehmige das aktuelle Einrichtungsskript vor dem erneuten Versuch.",
         continueAnyway: "Trotzdem fortfahren",
         discard: "Arbeitsbereich verwerfen",
+        discardConfirm: "Arbeitsbereich verwerfen",
+        discardConfirmDescription:
+          "Dadurch werden dieser Chat, sein Worktree und sein Branch dauerhaft gelöscht. Dies kann nicht rückgängig gemacht werden.",
+        discardConfirmTitle: "Diesen Arbeitsbereich verwerfen?",
         failedStep:
           "Schritt {{step}} von {{total}} fehlgeschlagen ({{exitCode}}): {{command}}",
         failedTitle: "Einrichtung des Arbeitsbereichs fehlgeschlagen",

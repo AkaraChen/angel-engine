@@ -25,7 +25,7 @@ export function setupLifecycleMutationOptions(input: {
   queryClient: QueryClient;
 }) {
   return {
-    mutationFn: async () => {
+    mutationFn: async (variables?: { setupApproval?: string }) => {
       switch (input.action) {
         case "cancel":
           return input.api.chats.cancelSetup(input.chatId);
@@ -34,7 +34,12 @@ export function setupLifecycleMutationOptions(input: {
         case "discard":
           return input.api.chats.discardSetup(input.chatId);
         case "retry":
-          return input.api.chats.retrySetup(input.chatId);
+          if (variables?.setupApproval === undefined) {
+            throw new Error("Setup approval is required.");
+          }
+          return input.api.chats.retrySetup(input.chatId, {
+            setupApproval: variables.setupApproval,
+          });
       }
     },
     onSuccess: async () => {

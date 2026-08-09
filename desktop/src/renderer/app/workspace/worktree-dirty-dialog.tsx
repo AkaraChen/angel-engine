@@ -17,6 +17,7 @@ interface WorktreeDirtyDialogProps {
   checked: boolean;
   onCheckedChange: (checked: boolean) => void;
   onClose: (confirmed: boolean) => void;
+  confirmLabel?: string;
   state: WorktreeDirtyPromptState | null;
 }
 
@@ -24,6 +25,7 @@ export const WorktreeDirtyDialog: FC<WorktreeDirtyDialogProps> = ({
   checked,
   onCheckedChange,
   onClose,
+  confirmLabel,
   state,
 }) => {
   const { t } = useTranslation();
@@ -104,11 +106,12 @@ export const WorktreeDirtyDialog: FC<WorktreeDirtyDialogProps> = ({
             {t("common.cancel")}
           </Button>
           <Button onClick={() => onClose(true)} type="button">
-            {t(
-              setup
-                ? "workspace.worktreeSetupContinue"
-                : "workspace.worktreeDirtyContinue",
-            )}
+            {confirmLabel ??
+              t(
+                setup
+                  ? "workspace.worktreeSetupContinue"
+                  : "workspace.worktreeDirtyContinue",
+              )}
           </Button>
         </DialogFooter>
       </DialogContent>

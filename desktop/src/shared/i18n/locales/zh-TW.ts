@@ -75,8 +75,13 @@ export const zhTW = {
       projectSelect: "專案",
       settings: "設定",
       setup: {
+        approvalUnavailable: "重試前請檢查並核准目前的設定指令碼。",
         continueAnyway: "仍然繼續",
         discard: "捨棄工作區",
+        discardConfirm: "捨棄工作區",
+        discardConfirmDescription:
+          "這會永久刪除此聊天、worktree 和分支，且無法復原。",
+        discardConfirmTitle: "捨棄此工作區？",
         failedStep: "第 {{step}}/{{total}} 步失敗（{{exitCode}}）：{{command}}",
         failedTitle: "工作區設定失敗",
         noLog: "尚無設定輸出。",

@@ -1,4 +1,8 @@
-import type { Chat, ChatSendResult } from "@angel-engine/daemon-api/chat";
+import type {
+  Chat,
+  ChatSendInput,
+  ChatSendResult,
+} from "@angel-engine/daemon-api/chat";
 import type { DaemonGlobalEvent } from "@angel-engine/daemon-api";
 import type { DaemonRuntime } from "./platform/runtime";
 
@@ -34,6 +38,64 @@ const result: ChatSendResult = {
 };
 
 describe("daemon chat runs", () => {
+  it.each([
+    "running",
+    "failed",
+  ] as const)("restores a queued first input exactly once after a daemon restart during setup %s", async (setupStatus) => {
+    let currentSetupStatus: "failed" | "ready" | "running" = setupStatus;
+    let releaseSetup!: () => void;
+    const setupGate = new Promise<void>((resolve) => {
+      releaseSetup = resolve;
+    });
+    const claimQueuedChatRun = vi.fn((_runId: string) =>
+      Effect.succeed(undefined as never),
+    );
+    let streamedInput: ChatSendInput | undefined;
+    const streamChat = vi.fn((input: ChatSendInput) => {
+      streamedInput = input;
+      return Effect.succeed(result);
+    });
+    const waitForChatSetup = vi.fn((_chatId: string, _signal?: AbortSignal) =>
+      Effect.promise(async () => {
+        expect(currentSetupStatus).toBe(setupStatus);
+        await setupGate;
+        expect(currentSetupStatus).toBe("ready");
+        return undefined;
+      }),
+    );
+    const app = new Hono();
+    registerApi(
+      app,
+      fakeDaemonRuntime({
+        claimQueuedChatRun,
+        restoreQueuedChatRuns: () =>
+          Effect.succeed([
+            {
+              createdAt: "2026-08-10T00:00:00.000Z",
+              input: { chatId: chat.id, text: "queued input" },
+              runId: "run-restored",
+            },
+          ]),
+        streamChat,
+        waitForChatSetup,
+      }),
+      createChatEvents({ publish: vi.fn() }),
+    );
+
+    await vi.waitFor(() => expect(waitForChatSetup).toHaveBeenCalledOnce());
+    expect(streamChat).not.toHaveBeenCalled();
+
+    currentSetupStatus = "ready";
+    releaseSetup();
+
+    await vi.waitFor(() => expect(streamChat).toHaveBeenCalledOnce());
+    expect(claimQueuedChatRun).toHaveBeenCalledOnce();
+    expect(streamedInput).toMatchObject({
+      chatId: chat.id,
+      text: "queued input",
+    });
+  });
+
   it("starts a daemon-owned run with a snapshot-first observer stream", async () => {
     const publish = vi.fn();
     const app = new Hono();
@@ -519,6 +581,7 @@ function fakeDaemonRuntime(
   const engine: ChatEngineValue = {
     cancelWorktreeCreation: unsupported,
     cancelWorktreeCreationForDelete: () => Effect.void,
+    claimQueuedChatRun: () => Effect.succeed(undefined as never),
     closeChatSession: () => Effect.void,
     createChatFromInput: unsupported,
     decorateChats: (chats) => Effect.succeed(chats),
@@ -528,6 +591,8 @@ function fakeDaemonRuntime(
     listImportableSessions: unsupported,
     loadChatSession: unsupported,
     prewarmChat: unsupported,
+    queueChatRun: () => Effect.succeed(false),
+    restoreQueuedChatRuns: () => Effect.succeed([]),
     retryWorktreeCreation: unsupported,
     sendChat: unsupported,
     setChatMode: unsupported,
@@ -538,6 +603,7 @@ function fakeDaemonRuntime(
         onEvent?.({ part: "text", text: "hello", type: "delta" });
         return result;
       }),
+    waitForChatSetup: () => Effect.succeed(undefined),
     ...overrides,
   };
 

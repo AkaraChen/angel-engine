@@ -42,7 +42,12 @@ describe("project worktree setup", () => {
       os.homedir(),
       ".angel-engine",
       "worktrees",
-      path.basename(projectRoot),
+      path
+        .basename(projectRoot)
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-+|-+$/g, "")
+        .slice(0, 48),
     );
     await git(projectRoot, ["init"]);
     await fs.writeFile(path.join(projectRoot, "README.md"), "test\n");

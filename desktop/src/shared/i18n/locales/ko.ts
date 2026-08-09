@@ -75,8 +75,14 @@ export const ko = {
       projectSelect: "프로젝트",
       settings: "설정",
       setup: {
+        approvalUnavailable:
+          "다시 시도하기 전에 현재 설정 스크립트를 검토하고 승인하세요.",
         continueAnyway: "그래도 계속",
         discard: "작업 공간 삭제",
+        discardConfirm: "작업 공간 삭제",
+        discardConfirmDescription:
+          "이 채팅과 worktree, 브랜치를 영구적으로 삭제합니다. 이 작업은 되돌릴 수 없습니다.",
+        discardConfirmTitle: "이 작업 공간을 삭제할까요?",
         failedStep:
           "{{total}}단계 중 {{step}}단계 실패 ({{exitCode}}): {{command}}",
         failedTitle: "작업 공간 설정 실패",

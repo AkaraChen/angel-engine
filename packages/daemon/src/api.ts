@@ -37,6 +37,7 @@ import { githubResolveUrlInputSchema } from "@angel-engine/daemon-api/github";
 import {
   createProjectInputSchema,
   managedWorktreeDeleteInputSchema,
+  projectSetupRetryInputSchema,
   updateProjectConfigInputSchema,
   updateProjectInputSchema,
 } from "@angel-engine/daemon-api/projects";
@@ -126,23 +127,9 @@ export function registerApi(
     ) => Effect.Effect<A, DaemonError, Db>,
   ) => Effect.flatMap(ChatEngine, use);
   const chatRuns = new ChatRunRegistry({
-    execute: async (input, onEvent, signal, controls) => {
-      const chat = await run(getChat(input.chatId));
-      const worktreePath = managedWorktreePath(chat?.cwd);
-      if (worktreePath !== undefined) {
-        if (chat?.projectId !== null && chat?.projectId !== undefined) {
-          const project = await run(getProject(chat.projectId));
-          const snapshot = await readProjectLifecycleSnapshot(worktreePath);
-          if (project !== null && snapshot.approvedDigest !== undefined) {
-            projectSetupLifecycle.restore({
-              approvedDigest: snapshot.approvedDigest,
-              projectRoot: project.path,
-              worktreePath,
-            });
-          }
-        }
-        await projectSetupLifecycle.waitUntilReady(worktreePath, signal);
-      }
+    execute: async (input, onEvent, signal, controls, runId) => {
+      await run(engine((e) => e.waitForChatSetup(input.chatId, signal)));
+      await run(engine((e) => e.claimQueuedChatRun(runId)));
       return run(engine((e) => e.streamChat(input, onEvent, signal, controls)));
     },
     isRunIdRetained: (chatId, runId) => activity.hasRun(chatId, runId),
@@ -156,6 +143,17 @@ export function registerApi(
       }
     },
   });
+  const queuedRunRecovery = run(
+    engine((chatEngine) => chatEngine.restoreQueuedChatRuns()),
+  ).then((queuedRuns) => {
+    for (const queued of queuedRuns) {
+      if (chatRuns.active(queued.input.chatId).run !== null) continue;
+      chatRuns.start(queued.runId, queued.input);
+      activity.start(queued.input.chatId, queued.runId);
+      chatEvents.conversationChanged([queued.input.chatId]);
+    }
+  });
+  void queuedRunRecovery.catch(() => undefined);
   void runDaemonApi(
     runtime,
     Effect.flatMap(ProcessRegistryService, (registry) =>
@@ -195,7 +193,18 @@ export function registerApi(
   });
   app.post("/api/chats/:id/setup/retry", async (context) => {
     const chat = await requireSetupChat(context.req.param("id"));
-    projectSetupLifecycle.retry(chat.worktreePath);
+    const input = projectSetupRetryInputSchema(await context.req.json());
+    if (input instanceof arkType.errors) {
+      throw DaemonError.invalidRequest("Setup approval is required.");
+    }
+    const status = await run(projectGitStatus({ projectId: chat.project.id }));
+    if (status.worktreeSetup?.digest !== input.setupApproval) {
+      throw DaemonError.worktreeSetupApprovalRequired();
+    }
+    projectSetupLifecycle.retry(chat.worktreePath, {
+      approvedDigest: input.setupApproval,
+      projectRoot: chat.project.path,
+    });
     return context.json(await projectSetupLifecycle.view(chat.worktreePath));
   });
   app.post("/api/chats/:id/setup/continue", async (context) => {
@@ -759,7 +768,14 @@ export function registerApi(
   app.post("/api/chat-runs/:runId", async (context) => {
     const runId = requirePath(context.req.param("runId"), "runId");
     const input = parseRunStartInput(await context.req.json());
+    await queuedRunRecovery;
     chatRuns.reserve(runId, input);
+    try {
+      await run(engine((chatEngine) => chatEngine.queueChatRun(runId, input)));
+    } catch (error) {
+      chatRuns.stop(runId);
+      throw error;
+    }
     activity.start(input.chatId, runId);
     // Other devices with this chat open are not attached to anything yet: they
     // probed `active-run` when they mounted and found nothing. Tell them a run
@@ -777,11 +793,12 @@ export function registerApi(
     chatRuns.snapshot(runId);
     return observeChatRun(context, chatRuns, runId, false);
   });
-  app.delete("/api/chat-runs/:runId", (context) => {
+  app.delete("/api/chat-runs/:runId", async (context) => {
     const runId = requirePath(context.req.param("runId"), "runId");
     const snapshot = chatRuns.snapshot(runId);
     activity.cancel(snapshot.chatId, runId);
     chatRuns.stop(runId);
+    await run(engine((chatEngine) => chatEngine.claimQueuedChatRun(runId)));
     chatEvents.conversationChanged([snapshot.chatId]);
     return context.json({ ok: true });
   });

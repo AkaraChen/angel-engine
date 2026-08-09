@@ -75,8 +75,14 @@ export const ja = {
       projectSelect: "プロジェクト",
       settings: "設定",
       setup: {
+        approvalUnavailable:
+          "再試行する前に、現在のセットアップスクリプトを確認して承認してください。",
         continueAnyway: "このまま続行",
         discard: "ワークスペースを破棄",
+        discardConfirm: "ワークスペースを破棄",
+        discardConfirmDescription:
+          "このチャット、worktree、ブランチを完全に削除します。この操作は元に戻せません。",
+        discardConfirmTitle: "このワークスペースを破棄しますか？",
         failedStep:
           "ステップ {{step}}/{{total}} が失敗しました ({{exitCode}}): {{command}}",
         failedTitle: "ワークスペースのセットアップに失敗しました",

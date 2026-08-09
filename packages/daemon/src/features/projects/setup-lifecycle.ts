@@ -62,10 +62,15 @@ export class ProjectSetupLifecycleCoordinator {
     });
   }
 
-  retry(worktreePath: string): void {
+  retry(
+    worktreePath: string,
+    approval: { approvedDigest: string; projectRoot: string },
+  ): void {
     const key = path.resolve(worktreePath);
     const registration = this.#require(key);
     if (registration.running !== undefined) return;
+    registration.approvedDigest = approval.approvedDigest;
+    registration.projectRoot = approval.projectRoot;
     registration.continued = false;
     registration.discarded = false;
     this.#launch(key, registration);

@@ -75,8 +75,13 @@ export const zhCN = {
       projectSelect: "项目",
       settings: "设置",
       setup: {
+        approvalUnavailable: "重试前请检查并批准当前设置脚本。",
         continueAnyway: "仍然继续",
         discard: "丢弃工作区",
+        discardConfirm: "丢弃工作区",
+        discardConfirmDescription:
+          "这会永久删除此聊天、worktree 和分支，且无法撤销。",
+        discardConfirmTitle: "丢弃此工作区？",
         failedStep: "第 {{step}}/{{total}} 步失败（{{exitCode}}）：{{command}}",
         failedTitle: "工作区设置失败",
         noLog: "暂无设置输出。",

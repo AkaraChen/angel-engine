@@ -423,6 +423,7 @@ function ChatThreadRuntime({
             chatId={selectedChat.id}
             enabled={projectContext.isWorktree === true}
             onDiscarded={() => onSetupDiscarded(projectContext.id)}
+            projectId={projectContext.id ?? selectedChat.projectId ?? ""}
           />
           <div className="min-h-0 flex-1">
             <AssistantThread projectName={projectContext.name} />

@@ -75,8 +75,14 @@ export const en = {
       projectSelect: "Project",
       settings: "Settings",
       setup: {
+        approvalUnavailable:
+          "Review and approve the current setup script before retrying.",
         continueAnyway: "Continue anyway",
         discard: "Discard workspace",
+        discardConfirm: "Discard workspace",
+        discardConfirmDescription:
+          "This permanently deletes this chat, its worktree, and its branch. This action cannot be undone.",
+        discardConfirmTitle: "Discard this workspace?",
         failedStep:
           "Step {{step}} of {{total}} failed ({{exitCode}}): {{command}}",
         failedTitle: "Workspace setup failed",

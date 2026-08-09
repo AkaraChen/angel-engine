@@ -1,4 +1,5 @@
 import type { FC, ReactNode } from "react";
+import type { ProjectGitStatusResult } from "@angel-engine/daemon-api/projects";
 
 import {
   CheckCircle,
@@ -7,10 +8,19 @@ import {
   WarningCircle,
 } from "@phosphor-icons/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { getErrorMessage } from "@/app/workspace/workspace-display";
+import { WorktreeDirtyDialog } from "@/app/workspace/worktree-dirty-dialog";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Spinner } from "@/components/ui/spinner";
 import {
   setupLifecycleMutationOptions,
@@ -22,17 +32,24 @@ interface SetupLifecycleBannerProps {
   chatId: string;
   enabled: boolean;
   onDiscarded: () => void;
+  projectId: string;
 }
 
 export const SetupLifecycleBanner: FC<SetupLifecycleBannerProps> = ({
   chatId,
   enabled,
   onDiscarded,
+  projectId,
 }) => {
   const api = useApi();
   const queryClient = useQueryClient();
   const { t } = useTranslation();
   const [paneOpen, setPaneOpen] = useState(false);
+  const [readyDismissed, setReadyDismissed] = useState(false);
+  const [discardConfirmationOpen, setDiscardConfirmationOpen] = useState(false);
+  const [retryApproval, setRetryApproval] =
+    useState<ProjectGitStatusResult | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
   const lifecycle = useQuery(
     setupLifecycleQueryOptions({ api, chatId, enabled }),
   );
@@ -72,6 +89,39 @@ export const SetupLifecycleBanner: FC<SetupLifecycleBannerProps> = ({
       onDiscarded();
     },
   });
+  const setupStatus = lifecycle.data?.snapshot.setup.status;
+  useEffect(() => {
+    if (setupStatus !== "ready") {
+      setReadyDismissed(false);
+      return;
+    }
+    const timeout = window.setTimeout(() => setReadyDismissed(true), 3_000);
+    return () => window.clearTimeout(timeout);
+  }, [setupStatus]);
+
+  const requestRetry = async () => {
+    setActionError(null);
+    try {
+      const status = await api.projects.gitStatus({ projectId });
+      if (status.worktreeSetup === undefined) {
+        setActionError(t("workspace.setup.approvalUnavailable"));
+        return;
+      }
+      setRetryApproval(status);
+    } catch (error) {
+      setActionError(getErrorMessage(error));
+    }
+  };
+  const closeRetryApproval = (confirmed: boolean) => {
+    const digest = retryApproval?.worktreeSetup?.digest;
+    setRetryApproval(null);
+    if (confirmed && digest !== undefined) {
+      retry.mutate(
+        { setupApproval: digest },
+        { onError: (error) => setActionError(getErrorMessage(error)) },
+      );
+    }
+  };
 
   if (!enabled || lifecycle.isPending) return null;
   if (lifecycle.isError) {
@@ -91,6 +141,28 @@ export const SetupLifecycleBanner: FC<SetupLifecycleBannerProps> = ({
     continueSetup.isPending ||
     cancel.isPending ||
     discard.isPending;
+
+  const logControl = (
+    <>
+      <Button
+        className="mt-1 h-7 px-2 text-xs"
+        size="sm"
+        variant="ghost"
+        onClick={() => setPaneOpen((current) => !current)}
+      >
+        {paneOpen ? <CaretUp /> : <CaretDown />}
+        {t("workspace.setup.viewLog")}
+      </Button>
+      {paneOpen ? (
+        <pre
+          className="mt-1 max-h-48 overflow-auto rounded-lg bg-muted p-3 text-xs whitespace-pre-wrap"
+          data-testid="lifecycle-pane"
+        >
+          {view.log || t("workspace.setup.noLog")}
+        </pre>
+      ) : null}
+    </>
+  );
 
   return (
     <div className="shrink-0 border-b border-border-subtle bg-background px-4 py-2 sm:px-7">
@@ -120,7 +192,7 @@ export const SetupLifecycleBanner: FC<SetupLifecycleBannerProps> = ({
                     data-testid="lifecycle-retry"
                     disabled={pending}
                     size="sm"
-                    onClick={() => retry.mutate()}
+                    onClick={() => void requestRetry()}
                   >
                     {t("workspace.setup.retry")}
                   </Button>
@@ -129,7 +201,7 @@ export const SetupLifecycleBanner: FC<SetupLifecycleBannerProps> = ({
                     disabled={pending}
                     size="sm"
                     variant="outline"
-                    onClick={() => continueSetup.mutate()}
+                    onClick={() => continueSetup.mutate(undefined)}
                   >
                     {t("workspace.setup.continueAnyway")}
                   </Button>
@@ -138,15 +210,20 @@ export const SetupLifecycleBanner: FC<SetupLifecycleBannerProps> = ({
                     disabled={pending}
                     size="sm"
                     variant="ghost"
-                    onClick={() => discard.mutate()}
+                    onClick={() => setDiscardConfirmationOpen(true)}
                   >
                     {t("workspace.setup.discard")}
                   </Button>
                 </div>
+                {actionError !== null || retry.error !== null ? (
+                  <div className="mt-2 text-xs text-status-danger">
+                    {actionError ?? getErrorMessage(retry.error)}
+                  </div>
+                ) : null}
               </div>
             </div>
           </div>
-        ) : (
+        ) : setup.status !== "ready" || !readyDismissed ? (
           <LifecycleShell>
             {setup.status === "ready" ? (
               <CheckCircle className="size-4 shrink-0 text-status-success" />
@@ -177,31 +254,56 @@ export const SetupLifecycleBanner: FC<SetupLifecycleBannerProps> = ({
                 disabled={pending}
                 size="sm"
                 variant="ghost"
-                onClick={() => cancel.mutate()}
+                onClick={() => cancel.mutate(undefined)}
               >
                 {t("common.cancel")}
               </Button>
             ) : null}
           </LifecycleShell>
-        )}
-        <Button
-          className="mt-1 h-7 px-2 text-xs"
-          size="sm"
-          variant="ghost"
-          onClick={() => setPaneOpen((current) => !current)}
-        >
-          {paneOpen ? <CaretUp /> : <CaretDown />}
-          {t("workspace.setup.viewLog")}
-        </Button>
-        {paneOpen ? (
-          <pre
-            className="mt-1 max-h-48 overflow-auto rounded-lg bg-muted p-3 text-xs whitespace-pre-wrap"
-            data-testid="lifecycle-pane"
-          >
-            {view.log || t("workspace.setup.noLog")}
-          </pre>
         ) : null}
+        {logControl}
       </div>
+      <WorktreeDirtyDialog
+        checked={false}
+        confirmLabel={t("workspace.setup.retry")}
+        state={
+          retryApproval === null
+            ? null
+            : { resolve: () => undefined, status: retryApproval }
+        }
+        onCheckedChange={() => undefined}
+        onClose={closeRetryApproval}
+      />
+      <Dialog
+        open={discardConfirmationOpen}
+        onOpenChange={setDiscardConfirmationOpen}
+      >
+        <DialogContent showCloseButton={false}>
+          <DialogHeader>
+            <DialogTitle>
+              {t("workspace.setup.discardConfirmTitle")}
+            </DialogTitle>
+            <DialogDescription>
+              {t("workspace.setup.discardConfirmDescription")}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setDiscardConfirmationOpen(false)}
+            >
+              {t("common.cancel")}
+            </Button>
+            <Button
+              disabled={discard.isPending}
+              variant="destructive"
+              onClick={() => discard.mutate(undefined)}
+            >
+              {t("workspace.setup.discardConfirm")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

@@ -5,8 +5,10 @@ import type {
 import type {
   Chat,
   ChatCreateInput,
+  ChatRunStartInput,
   WorktreeCreationState,
 } from "@angel-engine/daemon-api/chat";
+import { isChatRunStartInput } from "@angel-engine/daemon-api/chat";
 import { randomUUID } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
@@ -18,7 +20,7 @@ import {
   isAgentRuntime,
   isCustomAgentRuntime,
 } from "@angel-engine/daemon-api/agents";
-import { chats, worktreeCreationJobs } from "../../db/schema";
+import { chats, queuedChatRuns, worktreeCreationJobs } from "../../db/schema";
 import { type Db, withDatabase } from "../../platform/db";
 import { DaemonError } from "../../platform/errors";
 import { getCustomAgent } from "../agents/repository";
@@ -117,6 +119,53 @@ export function deleteAllChats(): Effect.Effect<number, DaemonError, Db> {
     yield* withDatabase((database) => database.delete(chats).run());
     return existingChats.length;
   });
+}
+
+export interface PersistedQueuedChatRun {
+  createdAt: string;
+  input: ChatRunStartInput;
+  runId: string;
+}
+
+export function createQueuedChatRun(run: PersistedQueuedChatRun) {
+  return withDatabase((database) =>
+    database
+      .insert(queuedChatRuns)
+      .values({
+        chatId: run.input.chatId,
+        createdAt: run.createdAt,
+        input: JSON.stringify(run.input),
+        runId: run.runId,
+      })
+      .run(),
+  );
+}
+
+export function deleteQueuedChatRun(runId: string) {
+  return withDatabase((database) =>
+    database
+      .delete(queuedChatRuns)
+      .where(eq(queuedChatRuns.runId, runId))
+      .run(),
+  );
+}
+
+export function listQueuedChatRuns() {
+  return withDatabase((database) =>
+    database
+      .select()
+      .from(queuedChatRuns)
+      .orderBy(queuedChatRuns.createdAt)
+      .all()
+      .then((rows) =>
+        rows.flatMap((row) => {
+          const input: unknown = JSON.parse(row.input);
+          return isChatRunStartInput(input)
+            ? [{ createdAt: row.createdAt, input, runId: row.runId }]
+            : [];
+        }),
+      ),
+  );
 }
 
 export interface PersistedWorktreeCreationJob {
