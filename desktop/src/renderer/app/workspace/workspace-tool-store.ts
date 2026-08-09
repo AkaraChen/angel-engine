@@ -87,6 +87,7 @@ interface WorkspaceToolState {
 export const workspaceToolFilesTabId = "files";
 export const workspaceToolGitTabId = "git";
 export const workspaceToolChecksTabId = "checks";
+export const workspaceToolPullRequestTabId = "pr";
 export const workspaceToolProcessesTabId = "processes";
 
 export const useWorkspaceToolStore = create<WorkspaceToolState>()(

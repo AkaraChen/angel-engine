@@ -282,6 +282,26 @@ export class DaemonError extends Data.TaggedError(
     });
   }
 
+  static githubPermissionDenied(
+    message = "You do not have permission to merge this pull request.",
+  ) {
+    return new DaemonError({
+      code: "github-permission-denied",
+      message,
+      status: 403,
+    });
+  }
+
+  static githubMergeConflict(
+    message = "The pull request can no longer be merged. Refresh its status and try again.",
+  ) {
+    return new DaemonError({
+      code: "github-merge-conflict",
+      message,
+      status: 409,
+    });
+  }
+
   static githubFetchFailed(cause: unknown, fallback = "GitHub fetch failed.") {
     return new DaemonError({
       cause,

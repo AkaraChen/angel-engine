@@ -114,6 +114,7 @@ export interface LocaleResourceTranslationWorkspaceToolsTabs {
   gitChanges: string;
   newTab: string;
   processes: string;
+  pullRequest: string;
   tabs: string;
   tools: string;
   workspaceTabs: string;
@@ -162,6 +163,7 @@ export interface LocaleResourceTranslationWorkspaceTools {
   dockInSidebar: string;
   empty: LocaleResourceTranslationWorkspaceToolsEmpty;
   git: LocaleResourceTranslationWorkspaceToolsGit;
+  pullRequest: LocaleResourceTranslationWorkspaceToolsPullRequest;
   listeningPorts: string;
   resizeFileTree: string;
   resizeGitList: string;
@@ -203,6 +205,63 @@ export interface LocaleResourceTranslationWorkspaceTranscriptDensity {
   menuLabel: string;
   options: LocaleResourceTranslationWorkspaceTranscriptDensityOptions;
   title: string;
+}
+
+export interface LocaleResourceTranslationWorkspaceToolsPullRequest {
+  archive: string;
+  archiveDetail: string;
+  archiveFailed: string;
+  archiveConfirmDetail: string;
+  archiveConfirmDirtyDetail: string;
+  archiveConfirmTitle: string;
+  archiveUnavailable: string;
+  blocked: string;
+  blockers: {
+    behindBase: string;
+    changesRequested: string;
+    checksFailed: string;
+    checksPending: string;
+    conflict: string;
+    draft: string;
+    permissionDenied: string;
+    repositoryPolicy: string;
+    reviewRequired: string;
+    unresolvedThreads: string;
+  };
+  checking: string;
+  checkingMergeability: string;
+  continue: string;
+  deleteBranch: string;
+  errors: {
+    cliMissing: string;
+    cliMissingDetail: string;
+    fetch: string;
+    fetchDetail: string;
+    permission: string;
+    permissionDetail: string;
+    unauthenticated: string;
+    unauthenticatedDetail: string;
+  };
+  generalComment: string;
+  merge: string;
+  mergeChanged: string;
+  mergeFailed: string;
+  merged: string;
+  mergedDetail: string;
+  mergedMethod: string;
+  merging: string;
+  method: string;
+  methodDisabled: string;
+  methods: { merge: string; rebase: string; squash: string };
+  noOpen: string;
+  noOpenDetail: string;
+  open: string;
+  optionalChecksFailed: string;
+  ready: string;
+  refresh: string;
+  resolve: string;
+  title: string;
+  unresolvedTitle: string;
 }
 
 export interface LocaleResourceTranslationWorkspace {

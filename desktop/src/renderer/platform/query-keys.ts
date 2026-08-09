@@ -29,6 +29,8 @@ export const queryKeys = {
     prChecks: (cwd: string | null) => ["github", "pr-checks", cwd] as const,
     pullRequestDetail: (cwd: string | null, number: number | null) =>
       ["github", "pull-request", cwd, number] as const,
+    pullRequest: (cwd: string | null) =>
+      ["github", "pull-request-status", cwd] as const,
     pullRequestTemplate: (cwd: string | null) =>
       ["github", "pull-request-template", cwd] as const,
     pullRequests: (cwd: string | null, state: string, query: string) =>

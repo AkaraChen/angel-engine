@@ -11,7 +11,7 @@ const GH_TIMEOUT_MS = 30_000;
 
 export type GhRunner = (
   args: string[],
-  options?: { cwd?: string },
+  options?: { cwd?: string; timeoutMs?: number },
 ) => Promise<{
   stderr: string;
   stdout: string;
@@ -23,7 +23,7 @@ export async function findGhPath(): Promise<string | null> {
 
 export async function runGhCli(
   args: string[],
-  options: { cwd?: string } = {},
+  options: { cwd?: string; timeoutMs?: number } = {},
 ): Promise<{ stderr: string; stdout: string }> {
   const result = await execFileAsync("gh", args, {
     cwd: options.cwd,
@@ -36,7 +36,7 @@ export async function runGhCli(
       NO_COLOR: "1",
     },
     maxBuffer: GH_OUTPUT_MAX_BUFFER,
-    timeout: GH_TIMEOUT_MS,
+    timeout: options.timeoutMs ?? GH_TIMEOUT_MS,
   });
   return {
     stderr: result.stderr.toString(),
@@ -72,6 +72,23 @@ export async function runGhCliCapturingExit(
 
 export function mapGhFailure(cause: unknown): DaemonError {
   const message = stderrOrMessage(cause).toLowerCase();
+  if (
+    message.includes("resource not accessible") ||
+    message.includes("must have push access") ||
+    message.includes("permission denied") ||
+    message.includes("http 403") ||
+    message.includes("status 403")
+  ) {
+    return DaemonError.githubPermissionDenied();
+  }
+  if (
+    message.includes("not mergeable") ||
+    message.includes("merge conflict") ||
+    message.includes("head branch was modified") ||
+    message.includes("base branch policy prohibits")
+  ) {
+    return DaemonError.githubMergeConflict();
+  }
   if (
     message.includes("not logged into") ||
     message.includes("to re-authenticate") ||

@@ -1,5 +1,6 @@
 import type { LocaleResource } from "./schema";
 import { scheduleTranslation } from "./schedule";
+import { pullRequestEn } from "./pull-request";
 
 export const ko = {
   translation: {
@@ -218,6 +219,7 @@ export const ko = {
           },
           pushing: "푸시 중",
         },
+        pullRequest: pullRequestEn,
         listeningPorts: "수신 대기 포트",
         resizeFileTree: "파일 트리 너비 조정",
         resizeGitList: "변경 목록 너비 조정",
@@ -228,6 +230,7 @@ export const ko = {
           gitChanges: "Git 변경",
           newTab: "새 탭",
           processes: "프로세스",
+          pullRequest: "풀 리퀘스트",
           tabs: "탭",
           tools: "도구",
           workspaceTabs: "워크스페이스 탭",

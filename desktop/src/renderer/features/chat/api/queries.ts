@@ -103,6 +103,15 @@ interface ArchiveChatMutationParams {
   queryClient: QueryClient;
 }
 
+interface ArchiveWorkspaceMutationParams {
+  api: ApiClient;
+  onSuccess?: (
+    data: Awaited<ReturnType<ApiClient["chats"]["archiveWorkspace"]>>,
+    chat: Chat,
+  ) => Promise<void> | void;
+  queryClient: QueryClient;
+}
+
 interface ArchivedChatIdsMutationParams {
   api: ApiClient;
   onSuccess?: (
@@ -383,6 +392,26 @@ export function archiveChatMutationOptions({
       queryClient.setQueryData<ChatLoadResult | undefined>(
         queryKeys.chats.detail(data.id),
         (current) => (current ? { ...current, chat: data } : current),
+      );
+      await onSuccess?.(data, variables);
+    },
+  });
+}
+
+export function archiveWorkspaceMutationOptions({
+  api,
+  onSuccess,
+  queryClient,
+}: ArchiveWorkspaceMutationParams) {
+  return mutationOptions({
+    mutationFn: async (chat: Chat) => api.chats.archiveWorkspace(chat.id),
+    onSuccess: async (data, variables) => {
+      queryClient.setQueryData<Chat[]>(queryKeys.chats.list(), (current = []) =>
+        current.filter((chat) => chat.id !== data.chat.id),
+      );
+      queryClient.setQueryData<ChatLoadResult | undefined>(
+        queryKeys.chats.detail(data.chat.id),
+        (current) => (current ? { ...current, chat: data.chat } : current),
       );
       await onSuccess?.(data, variables);
     },

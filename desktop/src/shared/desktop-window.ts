@@ -29,6 +29,11 @@ export interface DesktopConfirmDeleteManagedWorktreesInput {
   managedWorktreeCount: number;
 }
 
+export interface DesktopConfirmArchiveWorkspaceInput {
+  hasUncommittedChanges: boolean;
+  path: string;
+}
+
 export interface DesktopConfirmSaveWorkspaceFileChangesInput {
   path: string;
 }
@@ -59,6 +64,8 @@ export const DESKTOP_CONFIRM_DELETE_ARCHIVED_CHATS_CHANNEL =
   "desktop-window:confirm-delete-archived-chats";
 export const DESKTOP_CONFIRM_DELETE_MANAGED_WORKTREES_CHANNEL =
   "desktop-window:confirm-delete-managed-worktrees";
+export const DESKTOP_CONFIRM_ARCHIVE_WORKSPACE_CHANNEL =
+  "desktop-window:confirm-archive-workspace";
 export const DESKTOP_CONFIRM_SAVE_WORKSPACE_FILE_CHANGES_CHANNEL =
   "desktop-window:confirm-save-workspace-file-changes";
 export const DESKTOP_COMMAND_CHANNEL = "desktop-window:command";

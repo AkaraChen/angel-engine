@@ -1,6 +1,7 @@
 import type { IpcRendererEvent } from "electron";
 import type {
   DesktopConfirmDeleteArchivedChatsInput,
+  DesktopConfirmArchiveWorkspaceInput,
   DesktopConfirmDeleteCustomAgentInput,
   DesktopConfirmDeleteManagedWorktreesInput,
   DesktopConfirmSaveWorkspaceFileChangesInput,
@@ -36,6 +37,7 @@ import { contextBridge, ipcRenderer } from "electron";
 import { KEYMAP_USER_BINDINGS_CHANGED_CHANNEL } from "../../shared/keybindings/channels";
 import {
   DESKTOP_ACTIVE_CHAT_SET_CHANNEL,
+  DESKTOP_CONFIRM_ARCHIVE_WORKSPACE_CHANNEL,
   DESKTOP_COMMAND_CHANNEL,
   DESKTOP_CONFIRM_DELETE_ALL_CHATS_CHANNEL,
   DESKTOP_CONFIRM_DELETE_ARCHIVED_CHATS_CHANNEL,
@@ -77,6 +79,12 @@ import { isDesktopNotificationHistory } from "../../shared/notification-preferen
 
 export function exposeDesktopWindowBridge() {
   contextBridge.exposeInMainWorld("desktopWindow", {
+    async confirmArchiveWorkspace(input: DesktopConfirmArchiveWorkspaceInput) {
+      return ipcRenderer.invoke(
+        DESKTOP_CONFIRM_ARCHIVE_WORKSPACE_CHANNEL,
+        input,
+      ) as Promise<boolean>;
+    },
     async confirmDeleteAllChats() {
       return ipcRenderer.invoke(
         DESKTOP_CONFIRM_DELETE_ALL_CHATS_CHANNEL,

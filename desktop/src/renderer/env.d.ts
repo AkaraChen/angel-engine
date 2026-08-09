@@ -1,5 +1,6 @@
 import type { DaemonApi } from "@shared/daemon";
 import type {
+  DesktopConfirmArchiveWorkspaceInput,
   DesktopConfirmDeleteArchivedChatsInput,
   DesktopConfirmDeleteCustomAgentInput,
   DesktopConfirmDeleteManagedWorktreesInput,
@@ -56,6 +57,9 @@ declare global {
     };
     desktopWindow: {
       closeCurrent: () => void;
+      confirmArchiveWorkspace: (
+        input: DesktopConfirmArchiveWorkspaceInput,
+      ) => Promise<boolean>;
       confirmDeleteAllChats: () => Promise<boolean>;
       confirmDeleteArchivedChats: (
         input: DesktopConfirmDeleteArchivedChatsInput,

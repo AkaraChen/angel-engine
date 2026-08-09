@@ -1,6 +1,7 @@
 import type { BrowserWindowConstructorOptions } from "electron";
 
 import type {
+  DesktopConfirmArchiveWorkspaceInput,
   DesktopConfirmDeleteArchivedChatsInput,
   DesktopConfirmDeleteCustomAgentInput,
   DesktopConfirmDeleteManagedWorktreesInput,
@@ -11,6 +12,7 @@ import type {
 import { type } from "arktype";
 import { BrowserWindow, dialog, ipcMain, nativeTheme } from "electron";
 import {
+  DESKTOP_CONFIRM_ARCHIVE_WORKSPACE_CHANNEL,
   DESKTOP_CONFIRM_DELETE_ALL_CHATS_CHANNEL,
   DESKTOP_CONFIRM_DELETE_ARCHIVED_CHATS_CHANNEL,
   DESKTOP_CONFIRM_DELETE_CUSTOM_AGENT_CHANNEL,
@@ -90,6 +92,37 @@ export function registerDesktopWindowAppearanceIpc() {
 
     return result.response === 1;
   });
+
+  ipcMain.handle(
+    DESKTOP_CONFIRM_ARCHIVE_WORKSPACE_CHANNEL,
+    async (event, input: unknown) => {
+      const value = readConfirmArchiveWorkspaceInput(input);
+      if (!value) return false;
+      const options = {
+        buttons: [
+          translate("common.cancel"),
+          translate("workspace.tools.pullRequest.archive"),
+        ],
+        cancelId: 0,
+        defaultId: 0,
+        detail: value.hasUncommittedChanges
+          ? translate("workspace.tools.pullRequest.archiveConfirmDirtyDetail", {
+              path: value.path,
+            })
+          : translate("workspace.tools.pullRequest.archiveConfirmDetail", {
+              path: value.path,
+            }),
+        message: translate("workspace.tools.pullRequest.archiveConfirmTitle"),
+        noLink: true,
+        type: "warning" as const,
+      };
+      const parentWindow = BrowserWindow.fromWebContents(event.sender);
+      const result = parentWindow
+        ? await dialog.showMessageBox(parentWindow, options)
+        : await dialog.showMessageBox(options);
+      return result.response === 1;
+    },
+  );
 
   ipcMain.handle(
     DESKTOP_CONFIRM_DELETE_ARCHIVED_CHATS_CHANNEL,
@@ -232,6 +265,24 @@ function readThemeMode(input: unknown): DesktopThemeMode | null {
   const value = themeModeInput(input);
   if (value instanceof type.errors) return null;
   return value.mode ?? null;
+}
+
+function readConfirmArchiveWorkspaceInput(
+  input: unknown,
+): DesktopConfirmArchiveWorkspaceInput | null {
+  if (typeof input !== "object" || input === null) return null;
+  const value = input as Partial<DesktopConfirmArchiveWorkspaceInput>;
+  if (
+    typeof value.hasUncommittedChanges !== "boolean" ||
+    typeof value.path !== "string" ||
+    !value.path.trim()
+  ) {
+    return null;
+  }
+  return {
+    hasUncommittedChanges: value.hasUncommittedChanges,
+    path: value.path,
+  };
 }
 
 function readConfirmDeleteArchivedChatsInput(

@@ -1,5 +1,6 @@
 import type { LocaleResource } from "./schema";
 import { scheduleTranslation } from "./schedule";
+import { pullRequestEn } from "./pull-request";
 
 export const fr = {
   translation: {
@@ -223,6 +224,7 @@ export const fr = {
           },
           pushing: "Envoi en cours",
         },
+        pullRequest: pullRequestEn,
         listeningPorts: "Ports en écoute",
         resizeFileTree: "Redimensionner l’arborescence",
         resizeGitList: "Redimensionner la liste des changements",
@@ -233,6 +235,7 @@ export const fr = {
           gitChanges: "Changements Git",
           newTab: "Nouvel onglet",
           processes: "Processus",
+          pullRequest: "Pull request",
           tabs: "Onglets",
           tools: "Outils",
           workspaceTabs: "Onglets de l’espace de travail",

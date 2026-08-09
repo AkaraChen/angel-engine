@@ -41,7 +41,9 @@ import {
   githubCreatePullRequestInputSchema,
   githubCreateWorkspaceFromPullRequestInputSchema,
   githubListPullRequestsInputSchema,
+  githubMergeInputSchema,
   githubPullRequestTemplateInputSchema,
+  githubResolveThreadInputSchema,
   githubViewPullRequestInputSchema,
 } from "@angel-engine/daemon-api/github";
 import {
@@ -75,6 +77,11 @@ import {
 } from "./features/github/repos";
 import { resolveGitHubUrl } from "./features/github/resolve";
 import { createWorkspaceFromPullRequest } from "./features/github/workspace-from-pr";
+import {
+  getGitHubPullRequestStatus,
+  mergeGitHubPullRequest,
+  resolveGitHubReviewThread,
+} from "./features/github/pull-request";
 import { listAvailableAgents } from "./features/agents/availability";
 import {
   createCustomAgent,
@@ -389,6 +396,29 @@ export function registerApi(
     activity.clearChat(chat.id);
     chatEvents.metadataChanged([chat.id]);
     return context.json(chat);
+  });
+  app.post("/api/chats/:id/archive-workspace", async (context) => {
+    const result = await run(
+      Effect.gen(function* () {
+        const chat = yield* requireChat(context.req.param("id"));
+        const archived = yield* archiveChat(chat.id);
+        const worktree = managedWorktreePath(chat.cwd);
+        if (worktree === undefined) {
+          return { chat: archived, removedWorktree: null };
+        }
+        const activeChats = yield* listChats();
+        const worktreeStillActive = activeChats.some(
+          (candidate) => managedWorktreePath(candidate.cwd) === worktree,
+        );
+        const removedWorktree = worktreeStillActive
+          ? undefined
+          : yield* removeManagedWorktree(worktree);
+        return { chat: archived, removedWorktree: removedWorktree ?? null };
+      }),
+    );
+    activity.clearChat(result.chat.id);
+    chatEvents.metadataChanged([result.chat.id]);
+    return context.json(result);
   });
   app.post("/api/chats/:id/load", async (context) =>
     context.json(
@@ -736,6 +766,28 @@ export function registerApi(
       throw DaemonError.invalidRequest("GitHub checks fix input is invalid.");
     }
     return context.json(await run(buildGitHubPrChecksFixPrompt(input)));
+  });
+  app.get("/api/github/pull-request", async (context) =>
+    context.json(
+      await run(
+        getGitHubPullRequestStatus({
+          cwd: requireQuery(context.req.query("cwd"), "cwd"),
+          number: optionalNumber(context.req.query("number")),
+        }),
+      ),
+    ),
+  );
+  app.post("/api/github/pull-request/merge", async (context) => {
+    const input = githubMergeInputSchema(await context.req.json());
+    if (input instanceof arkType.errors)
+      throw DaemonError.invalidRequest("Pull request merge input is invalid.");
+    return context.json(await run(mergeGitHubPullRequest(input)));
+  });
+  app.post("/api/github/pull-request/resolve-thread", async (context) => {
+    const input = githubResolveThreadInputSchema(await context.req.json());
+    if (input instanceof arkType.errors)
+      throw DaemonError.invalidRequest("Review thread input is invalid.");
+    return context.json(await run(resolveGitHubReviewThread(input)));
   });
 
   app.get("/api/projects", async (context) =>
