@@ -605,8 +605,12 @@ export const zhCN = {
       openInSystemTerminal: "在系统终端中打开",
     },
     ui: {
-      commandDescription: "搜索要运行的命令...",
+      commandActions: "操作",
+      commandDescription: "搜索命令和会话标题...",
+      commandNewWorkspace: "新建工作区",
+      commandNoResults: "没有匹配的命令或会话。",
       commandPalette: "命令面板",
+      commandSessions: "会话",
     },
     promptInput: {
       addPhotosOrFiles: "添加图片或文件",

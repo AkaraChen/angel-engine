@@ -632,8 +632,12 @@ export const ja = {
       openInSystemTerminal: "システムターミナルで開く",
     },
     ui: {
-      commandDescription: "実行するコマンドを検索...",
+      commandActions: "アクション",
+      commandDescription: "コマンドとセッション名を検索...",
+      commandNewWorkspace: "新しいワークスペース",
+      commandNoResults: "一致するコマンドまたはセッションがありません。",
       commandPalette: "コマンドパレット",
+      commandSessions: "セッション",
     },
     promptInput: {
       addPhotosOrFiles: "写真またはファイルを追加",

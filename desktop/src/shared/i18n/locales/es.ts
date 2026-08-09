@@ -632,8 +632,12 @@ export const es = {
       openInSystemTerminal: "Abrir en la terminal del sistema",
     },
     ui: {
-      commandDescription: "Buscar un comando para ejecutar...",
+      commandActions: "Acciones",
+      commandDescription: "Buscar comandos y títulos de sesiones...",
+      commandNewWorkspace: "Nuevo espacio de trabajo",
+      commandNoResults: "No hay comandos ni sesiones coincidentes.",
       commandPalette: "Paleta de comandos",
+      commandSessions: "Sesiones",
     },
     promptInput: {
       addPhotosOrFiles: "Agregar fotos o archivos",

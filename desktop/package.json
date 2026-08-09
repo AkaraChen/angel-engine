@@ -83,6 +83,7 @@
     "electron-updater": "^6.8.9",
     "fix-path": "^5.0.0",
     "framer-motion": "^12.42.2",
+    "fuse.js": "^7.5.0",
     "i18next": "^26.3.4",
     "katex": "^0.17.0",
     "libsql": "0.5.29",

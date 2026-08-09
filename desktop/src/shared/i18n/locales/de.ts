@@ -635,8 +635,12 @@ export const de = {
       openInSystemTerminal: "Im Systemterminal öffnen",
     },
     ui: {
-      commandDescription: "Nach einem auszuführenden Befehl suchen...",
+      commandActions: "Aktionen",
+      commandDescription: "Befehle und Sitzungstitel durchsuchen...",
+      commandNewWorkspace: "Neuer Arbeitsbereich",
+      commandNoResults: "Keine passenden Befehle oder Sitzungen.",
       commandPalette: "Befehlspalette",
+      commandSessions: "Sitzungen",
     },
     promptInput: {
       addPhotosOrFiles: "Fotos oder Dateien hinzufügen",
