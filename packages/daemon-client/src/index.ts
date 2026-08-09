@@ -535,7 +535,11 @@ export function createDaemonClient(options: DaemonClientOptions) {
       updateConfig: (input: UpdateProjectConfigInput) =>
         request<ProjectConfigResult>(
           `/api/projects/${encodeURIComponent(input.projectId)}/config`,
-          json("PUT", { setupScript: input.setupScript }),
+          json("PUT", {
+            runScript: input.runScript,
+            setupScript: input.setupScript,
+            teardownScript: input.teardownScript,
+          }),
         ),
     },
     worktrees: {

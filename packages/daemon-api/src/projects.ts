@@ -34,14 +34,75 @@ export interface ProjectWorktreeCreateResult {
   root: string;
 }
 
+export type ProjectLifecycleKind = "run" | "setup" | "teardown";
+
+export type ProjectLifecycleFailureReason =
+  | "cancelled"
+  | "daemon_restart"
+  | "exit"
+  | "signal"
+  | "spawn"
+  | "timeout";
+
+export interface ProjectLifecycleFailure {
+  exitCode: number | null;
+  message: string;
+  reason: ProjectLifecycleFailureReason;
+  signal: string | null;
+}
+
+export type ProjectSetupLifecycleState =
+  | { status: "idle" }
+  | { command: string; step: number; stepCount: number; status: "running" }
+  | {
+      command: string;
+      failure: ProjectLifecycleFailure;
+      step: number;
+      stepCount: number;
+      status: "failed";
+    }
+  | { completedAt: string; status: "ready" };
+
+export type ProjectRunLifecycleState =
+  | { status: "stopped" }
+  | { port: number; status: "starting" }
+  | { pid: number; port: number; status: "running"; url?: string }
+  | { exitCode: number | null; signal: string | null; status: "exited" }
+  | { failure: ProjectLifecycleFailure; status: "failed" };
+
+export type ProjectTeardownLifecycleState =
+  | { status: "idle" }
+  | { command: string; step: number; stepCount: number; status: "running" }
+  | {
+      command: string;
+      failure: ProjectLifecycleFailure;
+      step: number;
+      stepCount: number;
+      status: "failed";
+    }
+  | { completedAt: string; status: "done" };
+
+export interface ProjectLifecycleSnapshot {
+  approvedDigest?: string;
+  run: ProjectRunLifecycleState;
+  setup: ProjectSetupLifecycleState;
+  teardown: ProjectTeardownLifecycleState;
+  updatedAt: string;
+  version: 1;
+}
+
 /**
  * Per-project settings persisted in the repository's `2code.json`. The file is
  * the single source of truth; the daemon never mirrors these values into its
  * database.
  */
 export interface ProjectConfig {
+  /** Long-running command used to start the workspace development server. */
+  runScript: string;
   /** Commands run in a freshly created worktree, in order. */
   setupScript: string[];
+  /** Commands run before an app-managed worktree is removed, in order. */
+  teardownScript: string[];
 }
 
 export interface ProjectConfigResult extends ProjectConfig {
@@ -203,7 +264,9 @@ export const managedWorktreeDeleteInputSchema = arkType({
 export const updateProjectConfigInputSchema = arkType({
   "+": "ignore",
   projectId: "string > 0",
+  runScript: "string",
   setupScript: "string[]",
+  teardownScript: "string[]",
 });
 
 export const updateProjectInputSchema = arkType({

@@ -15,7 +15,8 @@ import is from "@sindresorhus/is";
 import { Effect } from "effect";
 
 import { DaemonError } from "../../platform/errors";
-import { executeProjectSetupScripts, loadProjectSetupConfig } from "./config";
+import { loadProjectLifecycleConfig } from "./config";
+import { executeProjectLifecycle } from "./lifecycle";
 import { getProject } from "./repository";
 
 const execFileAsync = promisify(execFile);
@@ -66,15 +67,15 @@ export function projectGitStatus(
 
     const setupConfig = yield* Effect.tryPromise({
       catch: (cause) => DaemonError.worktreeCreateFailed(cause),
-      try: () => loadProjectSetupConfig(root),
+      try: () => loadProjectLifecycleConfig(root),
     });
 
     return {
       ...gitStatus,
       worktreeSetup:
-        setupConfig && setupConfig.scripts.length > 0
+        setupConfig && setupConfig.setupScript.length > 0
           ? {
-              commands: setupConfig.scripts,
+              commands: setupConfig.setupScript,
               digest: setupConfig.digest,
             }
           : undefined,
@@ -142,7 +143,7 @@ export function createProjectWorktree(
         Effect.catchAll((cause) =>
           Effect.gen(function* () {
             yield* Effect.promise(() =>
-              rollbackCreatedWorktree(root, cwd, branch).catch(() => {
+              discardCreatedWorktree(root, cwd, branch).catch(() => {
                 fs.rmSync(cwd, { force: true, recursive: true });
               }),
             );
@@ -165,19 +166,17 @@ export function createProjectWorktree(
         yield* Effect.tryPromise({
           catch: (cause) => DaemonError.worktreeCreateFailed(cause),
           try: async () => {
+            if (!setup) return;
             try {
-              await executeProjectSetupScripts(
-                setup?.commands ?? [],
-                created.cwd,
-                { signal },
-              );
+              await executeProjectLifecycle("setup", {
+                approvedDigest: setup.digest,
+                projectRoot: root,
+                signal,
+                worktreePath: created.cwd,
+              });
             } catch (setupCause) {
               try {
-                await rollbackCreatedWorktree(
-                  root,
-                  created.cwd,
-                  created.branch,
-                );
+                await discardCreatedWorktree(root, created.cwd, created.branch);
               } catch (cleanupCause) {
                 throw new AggregateError(
                   [setupCause, cleanupCause],
@@ -251,7 +250,7 @@ export function removeCreatedProjectWorktree(
   return Effect.tryPromise({
     catch: (cause) => DaemonError.worktreeRemoveFailed(cause),
     try: () =>
-      rollbackCreatedWorktree(worktree.root, worktree.cwd, worktree.branch),
+      discardCreatedWorktree(worktree.root, worktree.cwd, worktree.branch),
   });
 }
 
@@ -304,7 +303,8 @@ function removeGitWorktree(
   });
 }
 
-async function rollbackCreatedWorktree(
+/** Explicit destructive path used by the future Discard workspace action. */
+export async function discardCreatedWorktree(
   root: string,
   cwd: string,
   branch: string,
