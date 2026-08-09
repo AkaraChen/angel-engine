@@ -24,7 +24,10 @@ import {
   WorkspaceToolEmpty,
 } from "@/app/workspace/workspace-tool-layout";
 import { WorkspaceToolPatchFileRows } from "@/app/workspace/workspace-tool-patch-list";
-import { buildWorkspaceToolPatchList } from "@/app/workspace/workspace-tool-patch-model";
+import {
+  buildWorkspaceGitDiffPatchList,
+  getWorkspaceGitNumstatTotal,
+} from "@/app/workspace/workspace-tool-patch-model";
 import { useWorkspaceToolSurface } from "@/app/workspace/workspace-tool-surface-model";
 import { useWorkspaceGitBasePreference } from "@/app/workspace/use-workspace-git-base-preference";
 import { queryKeys } from "@/platform/query-keys";
@@ -179,14 +182,14 @@ function WorkspaceGitDiffResultView({
     );
   }
 
-  const patchList = buildWorkspaceToolPatchList(
-    "",
-    data.patch,
-    data.skippedFiles,
-  );
+  const patchList = buildWorkspaceGitDiffPatchList(data);
   const files = is.nonEmptyString(pathFilter)
     ? patchList.files.filter((file) => file.name === pathFilter)
     : patchList.files;
+  const totalLineChanges = getWorkspaceGitNumstatTotal(
+    data.numstat,
+    is.nonEmptyString(pathFilter) ? new Set([pathFilter]) : undefined,
+  );
 
   return (
     <div className="h-full min-h-0 overflow-auto p-3">
@@ -194,6 +197,12 @@ function WorkspaceGitDiffResultView({
         <WorkspaceGitBaseSelect
           bases={data.availableBases}
           resolvedBase={data.resolvedBase}
+          summary={
+            <span className="min-w-0 truncate text-xs text-muted-foreground tabular-nums">
+              {t("workspace.tools.diffBase.fileCount", { count: files.length })}
+              {` · +${totalLineChanges.additions} −${totalLineChanges.deletions}`}
+            </span>
+          }
           value={baseKind}
           onChange={onBaseKindChange}
         />

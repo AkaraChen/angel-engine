@@ -149,6 +149,7 @@ export const ko = {
               "{{ref}}과(와) HEAD의 병합 기준점이 없습니다. 임시로 {{fallback}}을(를) 표시합니다.",
             notRepository: "이 작업 공간은 Git 저장소가 아닙니다.",
           },
+          fileCount: "파일 {{count}}개",
           label: "Diff 기준",
           session: "세션 시작 이후",
           turn: "이전 턴 이후",

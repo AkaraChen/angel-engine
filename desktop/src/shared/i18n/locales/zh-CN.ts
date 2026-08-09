@@ -146,6 +146,7 @@ export const zhCN = {
             noMergeBase: "{{ref}} 与 HEAD 没有合并基点，暂时显示{{fallback}}。",
             notRepository: "此工作区不是 Git 仓库。",
           },
+          fileCount: "{{count}} 个文件",
           label: "差异基线",
           session: "自会话开始",
           turn: "自上一轮开始",

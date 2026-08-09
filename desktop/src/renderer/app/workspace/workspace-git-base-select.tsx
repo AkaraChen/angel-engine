@@ -7,12 +7,15 @@ import type {
 import type { TFunction } from "i18next";
 import type { ChangeEvent, FC, ReactNode } from "react";
 
+import { Copy } from "@phosphor-icons/react";
+import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
 
 import {
   NativeSelect,
   NativeSelectOption,
 } from "@/components/ui/native-select";
+import { Button } from "@/components/ui/button";
 
 type WorkspaceGitBaseSelectProps = {
   bases: WorkspaceGitDiffBaseOption[];
@@ -33,6 +36,30 @@ export const WorkspaceGitBaseSelect: FC<WorkspaceGitBaseSelectProps> = ({
   const handleChange = (event: ChangeEvent<HTMLSelectElement>) => {
     onChange(event.currentTarget.value as WorkspaceGitDiffBaseKind);
   };
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== "[" && event.key !== "]") return;
+      const target = event.target;
+      if (
+        target instanceof HTMLInputElement ||
+        target instanceof HTMLTextAreaElement ||
+        target instanceof HTMLSelectElement ||
+        (target instanceof HTMLElement && target.isContentEditable)
+      ) {
+        return;
+      }
+      const next = nextAvailableWorkspaceGitBase(
+        bases,
+        value,
+        event.key === "]" ? 1 : -1,
+      );
+      if (next === value) return;
+      event.preventDefault();
+      onChange(next);
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [bases, onChange, value]);
   return (
     <div
       className="grid w-full min-w-0 grid-cols-[auto_minmax(0,1fr)] items-center gap-x-2 gap-y-1"
@@ -65,8 +92,10 @@ export const WorkspaceGitBaseSelect: FC<WorkspaceGitBaseSelectProps> = ({
           data-slot="workspace-git-base-details"
         >
           {resolvedBase.shortSha ? (
-            <span
-              className="shrink-0 font-mono text-xs text-muted-foreground tabular-nums"
+            <Button
+              aria-label={`${t("common.copy")} ${resolvedBase.shortSha}`}
+              className="h-7 gap-1 px-1.5 font-mono text-xs tabular-nums"
+              size="sm"
               title={[
                 resolvedBase.fullSha,
                 resolvedBase.subject,
@@ -74,9 +103,17 @@ export const WorkspaceGitBaseSelect: FC<WorkspaceGitBaseSelectProps> = ({
               ]
                 .filter(Boolean)
                 .join("\n")}
+              type="button"
+              variant="ghost"
+              onClick={() => {
+                if (resolvedBase.fullSha) {
+                  void navigator.clipboard.writeText(resolvedBase.fullSha);
+                }
+              }}
             >
+              <Copy aria-hidden="true" className="size-3" />
               {resolvedBase.shortSha}
-            </span>
+            </Button>
           ) : (
             <span />
           )}
@@ -131,4 +168,18 @@ export function formatWorkspaceGitDiffUnavailableReason({
     case "not-a-repository":
       return t("workspace.tools.diffBase.fallback.notRepository");
   }
+}
+
+export function nextAvailableWorkspaceGitBase(
+  bases: WorkspaceGitDiffBaseOption[],
+  current: WorkspaceGitDiffBaseKind,
+  direction: -1 | 1,
+): WorkspaceGitDiffBaseKind {
+  const available = bases.filter((base) => base.available);
+  if (available.length === 0) return current;
+  const currentIndex = available.findIndex((base) => base.kind === current);
+  const startIndex = currentIndex < 0 ? 0 : currentIndex;
+  const nextIndex =
+    (startIndex + direction + available.length) % available.length;
+  return available[nextIndex]?.kind ?? current;
 }

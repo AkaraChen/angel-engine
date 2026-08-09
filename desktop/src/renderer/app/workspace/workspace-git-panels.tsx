@@ -34,8 +34,9 @@ import {
   WorkspaceToolPatchFileName,
 } from "@/app/workspace/workspace-tool-patch-list";
 import {
-  buildWorkspaceToolPatchList,
+  buildWorkspaceGitDiffPatchList,
   formatWorkspaceToolPatchFileName,
+  getWorkspaceGitNumstatTotal,
   getWorkspaceToolPatchFileLineChanges,
 } from "@/app/workspace/workspace-tool-patch-model";
 import { useWorkspaceToolSurface } from "@/app/workspace/workspace-tool-surface-model";
@@ -100,14 +101,11 @@ export function WorkspaceGitPanel({
     );
   }
 
-  const patchList = buildWorkspaceToolPatchList(
-    "",
-    data.patch,
-    data.skippedFiles,
-  );
+  const patchList = buildWorkspaceGitDiffPatchList(data);
   const selectedFiles = patchList.files.filter(
     (file) => selectedFileKeys[file.key] ?? true,
   );
+  const totalLineChanges = getWorkspaceGitNumstatTotal(data.numstat);
   const selectedPaths = selectedFiles.map((file) => file.name);
   const handleCommitSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -137,6 +135,14 @@ export function WorkspaceGitPanel({
           <WorkspaceGitBaseSelect
             bases={data.availableBases}
             resolvedBase={data.resolvedBase}
+            summary={
+              <span className="min-w-0 truncate text-xs text-muted-foreground tabular-nums">
+                {t("workspace.tools.diffBase.fileCount", {
+                  count: patchList.files.length,
+                })}
+                {` · +${totalLineChanges.additions} −${totalLineChanges.deletions}`}
+              </span>
+            }
             value={baseKind}
             onChange={setBaseKind}
           />
