@@ -47,11 +47,19 @@ async function makeGitWorkspace() {
 
 async function runWorkspaceGitDiff(
   root: string,
-  baseKind?: "branch" | "unstaged" | "worktree",
+  baseKind?: "branch" | "session" | "turn" | "unstaged" | "worktree",
   baseRef?: string,
+  chatId?: string,
+  anchorSha?: string,
 ) {
   const exit = await Effect.runPromiseExit(
-    workspaceGitDiff({ baseKind, baseRef, root }),
+    workspaceGitDiff(
+      { baseKind, baseRef, chatId, root },
+      (_requestedChatId, kind) =>
+        Effect.succeed(
+          anchorSha ? { ref: `${kind}-anchor`, sha: anchorSha } : undefined,
+        ),
+    ),
   );
   if (Exit.isSuccess(exit)) return exit.value;
   throw Cause.squash(exit.cause);
@@ -257,6 +265,54 @@ describe("workspaceGitDiff", () => {
         ref: "missing-ref",
       });
       expect(result.patch).toContain("+changed");
+    },
+    gitTestTimeoutMs,
+  );
+
+  it(
+    "resolves a persisted session anchor without exposing Git refs to callers",
+    async () => {
+      const root = await makeGitWorkspace();
+      const sessionSha = await git(root, "rev-parse", "HEAD");
+      await writeFile(path.join(root, "after-session.txt"), "later\n");
+      await git(root, "add", "after-session.txt");
+      await git(root, "commit", "-m", "after session started");
+
+      const result = await runWorkspaceGitDiff(
+        root,
+        "session",
+        undefined,
+        "chat-1",
+        sessionSha,
+      );
+
+      expect(result.resolvedBase.kind).toBe("session");
+      expect(result.resolvedBase.fullSha).toBe(sessionSha);
+      expect(result.patch).toContain("b/after-session.txt");
+    },
+    gitTestTimeoutMs,
+  );
+
+  it(
+    "returns a structured reason when a persisted turn anchor is missing",
+    async () => {
+      const root = await makeGitWorkspace();
+
+      const result = await runWorkspaceGitDiff(
+        root,
+        "turn",
+        undefined,
+        "chat-1",
+        "0123456789abcdef",
+      );
+
+      expect(result.requestedBaseKind).toBe("turn");
+      expect(result.resolvedBase.kind).toBe("worktree");
+      expect(result.resolvedBase.unavailableReason).toEqual({
+        anchorKind: "turn",
+        code: "anchor-missing",
+        shortSha: "0123456",
+      });
     },
     gitTestTimeoutMs,
   );
