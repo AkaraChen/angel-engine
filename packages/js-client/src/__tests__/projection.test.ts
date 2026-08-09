@@ -7,13 +7,25 @@ import type {
   TurnRunResult,
 } from "@angel-engine/client-napi";
 import { TurnRunEventType } from "@angel-engine/client-napi";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import {
   conversationMessages,
   projectTurnRunEvent,
   projectTurnRunResult,
   runtimeConfigFromConversationSnapshot,
 } from "../projection";
+
+vi.mock("@angel-engine/client-napi", () => ({
+  TurnRunEventType: {
+    ActionObserved: "action_observed",
+    ActionOutputDelta: "action_output_delta",
+    ActionUpdated: "action_updated",
+    Delta: "delta",
+    Elicitation: "elicitation",
+    PlanUpdated: "plan_updated",
+    Result: "result",
+  },
+}));
 
 function conversationSnapshot(
   overrides: Partial<ConversationSnapshot> = {},
