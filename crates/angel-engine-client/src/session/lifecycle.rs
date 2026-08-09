@@ -3,7 +3,8 @@ use std::time::Duration;
 use crate::error::{ClientError, ClientResult};
 use crate::event::ClientUpdate;
 use crate::{
-    AngelClient, ClientProtocol, ConversationSnapshot, ResumeConversationRequest, RuntimeOptions,
+    AngelClient, ClientProtocol, ConversationSnapshot, ListImportableSessionsRequest,
+    ListImportableSessionsResult, ResumeConversationRequest, RuntimeOptions,
     RuntimeOptionsOverrides, StartConversationRequest, ThreadEvent, create_runtime_options,
 };
 
@@ -54,6 +55,19 @@ impl AngelSession {
         self.ensure_started(true, request.cwd, None)?;
         self.thread_state()
             .ok_or_else(|| invalid_input("Runtime did not return a conversation snapshot."))
+    }
+
+    /// Initialize the runtime (if needed) and list importable remote sessions
+    /// for the given cwd without starting a new conversation.
+    pub fn list_importable_sessions(
+        &mut self,
+        request: ListImportableSessionsRequest,
+    ) -> ClientResult<ListImportableSessionsResult> {
+        if self.conversation_id.is_none() {
+            let initialize_update = self.client.initialize()?;
+            check_update_fault(&initialize_update)?;
+        }
+        self.client.list_importable_sessions(request)
     }
 
     pub fn set_mode(&mut self, request: SetModeRequest) -> ClientResult<ConversationSnapshot> {

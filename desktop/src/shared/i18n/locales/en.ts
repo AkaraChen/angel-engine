@@ -189,6 +189,7 @@ export const en = {
       modeSwitcher: "Workspace mode",
       modeWork: "Work",
       needsInput: "Needs input",
+      importSession: "Import session",
       newChat: "New chat",
       newChatInProject: "New chat in {{projectName}}",
       noChats: "No chats",
@@ -567,6 +568,20 @@ export const en = {
     },
     dialog: {
       chatName: "Chat name",
+      importSession: {
+        cwdLabel: "Directory: {{cwd}}",
+        description:
+          "Search provider sessions for the selected agent and open one in Angel Engine.",
+        empty: "No importable sessions found for this agent and directory.",
+        importAction: "Import and open",
+        importFailed: "Could not import session",
+        importing: "Importing…",
+        runtimeLabel: "Agent: {{runtime}}",
+        runtimeRequired: "Select an agent before importing a session.",
+        searchFailed: "Could not search sessions",
+        searching: "Searching sessions…",
+        title: "Import session",
+      },
       renameChat: "Rename chat",
     },
     notifications: {

@@ -12,6 +12,7 @@ mod config;
 mod core;
 mod error;
 mod event;
+mod importable;
 mod process;
 mod process_manager;
 mod runtime;
@@ -29,12 +30,17 @@ pub use config::{
 };
 pub use core::{
     ClientAnswer, ClientCommandResult, ClientInput, DiscoveryRequest, ElicitationResponse,
-    ForkConversationRequest, ResumeConversationRequest,
+    ForkConversationRequest, ImportableSession, ListImportableSessionsRequest,
+    ListImportableSessionsResult, ResumeConversationRequest,
 };
 pub use error::{ClientError, ClientResult};
 pub use event::{
     ClientEvent, ClientLog, ClientLogKind, ClientStreamDelta, ClientUpdate, JsonRpcOutbound,
     RuntimeAuthMethod,
+};
+pub use importable::{
+    importable_session_from_conversation, importable_sessions_from_conversations,
+    list_importable_sessions_result,
 };
 pub use process::AngelClient;
 pub use process_manager::{

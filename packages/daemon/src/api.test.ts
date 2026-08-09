@@ -392,6 +392,86 @@ describe("daemon chat runs", () => {
       expect.any(AbortSignal),
     );
   });
+
+  it("forwards list-importable-sessions and import/open to the chat engine", async () => {
+    const listImportableSessions = vi.fn(() =>
+      Effect.succeed({
+        nextCursor: null,
+        sessions: [
+          {
+            cwd: "/repo",
+            remoteId: "remote-1",
+            title: "Imported",
+            updatedAt: "2026-01-01T00:00:00.000Z",
+          },
+        ],
+        unsupportedReason: null,
+      }),
+    );
+    const importedChat = {
+      ...chat,
+      remoteThreadId: "remote-1",
+      title: "Imported",
+    };
+    const importChat = vi.fn(() =>
+      Effect.succeed({
+        chat: importedChat,
+        config: {
+          modes: [],
+          models: [],
+          permissionModes: [],
+          reasoningEfforts: [],
+        },
+        messages: [],
+      }),
+    );
+    const publish = vi.fn();
+    const app = new Hono();
+    registerApi(
+      app,
+      fakeDaemonRuntime({ importChat, listImportableSessions }),
+      createChatEvents({ publish }),
+    );
+
+    const listed = await app.request("/api/sessions/importable", {
+      body: JSON.stringify({ cwd: "/repo", runtime: "codex" }),
+      headers: { "content-type": "application/json" },
+      method: "POST",
+    });
+    expect(listed.status).toBe(200);
+    await expect(listed.json()).resolves.toMatchObject({
+      sessions: [{ remoteId: "remote-1" }],
+    });
+    expect(listImportableSessions).toHaveBeenCalledWith({
+      cwd: "/repo",
+      runtime: "codex",
+    });
+
+    const imported = await app.request("/api/sessions/import", {
+      body: JSON.stringify({
+        cwd: "/repo",
+        remoteThreadId: "remote-1",
+        runtime: "codex",
+        title: "Imported",
+      }),
+      headers: { "content-type": "application/json" },
+      method: "POST",
+    });
+    expect(imported.status).toBe(200);
+    await expect(imported.json()).resolves.toMatchObject({
+      chat: { remoteThreadId: "remote-1" },
+    });
+    expect(importChat).toHaveBeenCalledWith(
+      expect.objectContaining({
+        remoteThreadId: "remote-1",
+        runtime: "codex",
+      }),
+      expect.any(AbortSignal),
+    );
+    expect(publish).toHaveBeenCalledWith(
+      expect.objectContaining({ type: "chat-metadata-changed" }),
+    );
+  });
 });
 
 describe("managed worktrees", () => {
@@ -439,7 +519,9 @@ function fakeDaemonRuntime(
   const engine: ChatEngineValue = {
     closeChatSession: () => Effect.void,
     createChatFromInput: unsupported,
+    importChat: unsupported,
     inspectChatRuntimeConfig: unsupported,
+    listImportableSessions: unsupported,
     loadChatSession: unsupported,
     prewarmChat: unsupported,
     sendChat: unsupported,

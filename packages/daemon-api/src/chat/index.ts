@@ -102,7 +102,40 @@ export type ChatCreateInput = JsChatCreateInput &
   ChatCreationLocationInput &
   ChatCwdInput &
   ChatPrewarmIdInput &
-  WorktreeSetupApprovalInput;
+  WorktreeSetupApprovalInput & {
+    remoteThreadId?: string;
+  };
+
+/** A remote provider session that can be imported into Angel Engine. */
+export interface ImportableSession {
+  cwd?: string | null;
+  remoteId: string;
+  title?: string | null;
+  updatedAt?: string | null;
+}
+
+export interface ListImportableSessionsInput {
+  cursor?: string;
+  cwd?: string;
+  projectId?: string;
+  runtime: string;
+}
+
+export interface ListImportableSessionsResult {
+  nextCursor?: string | null;
+  sessions: ImportableSession[];
+  unsupportedReason?: string | null;
+}
+
+export interface ImportChatInput {
+  cwd?: string;
+  projectId?: string;
+  remoteThreadId: string;
+  runtime: string;
+  title?: string;
+}
+
+export type ImportChatResult = ChatLoadResult;
 export type ChatRuntimeConfigInput = JsChatRuntimeConfigInput;
 export type ChatRuntimeConfigOption = JsChatRuntimeConfigOption;
 export type ChatAgentState = JsChatAgentState;
@@ -538,9 +571,27 @@ export const chatCreateInputSchema = arkType({
   "prewarmId?": "string > 0 | undefined",
   "projectId?": "string > 0 | undefined",
   "reasoningEffort?": "string > 0 | undefined",
+  "remoteThreadId?": "string > 0 | undefined",
   "runtime?": "string > 0 | undefined",
   "title?": "string > 0 | undefined",
   "worktreeSetupApproval?": "string > 0 | undefined",
+});
+
+export const listImportableSessionsInputSchema = arkType({
+  "+": "ignore",
+  "cursor?": "string > 0 | undefined",
+  "cwd?": "string > 0 | undefined",
+  "projectId?": "string > 0 | undefined",
+  runtime: "string > 0",
+});
+
+export const importChatInputSchema = arkType({
+  "+": "ignore",
+  "cwd?": "string > 0 | undefined",
+  "projectId?": "string > 0 | undefined",
+  remoteThreadId: "string > 0",
+  runtime: "string > 0",
+  "title?": "string > 0 | undefined",
 });
 
 export const chatPrewarmInputSchema = arkType({

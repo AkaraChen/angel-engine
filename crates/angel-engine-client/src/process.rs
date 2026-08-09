@@ -14,12 +14,16 @@ use crate::config::{ClientOptions, ClientProtocol, StartConversationRequest};
 use crate::core::{AngelClientCore, process_log};
 use crate::error::{ClientError, ClientResult};
 use crate::event::{ClientLogKind, ClientUpdate};
+use crate::importable::list_importable_sessions_result;
 use crate::settings::{
     AvailableModeSettingSnapshot, AvailablePermissionModeSettingSnapshot, ModelListSettingSnapshot,
     ReasoningLevelSettingSnapshot, ThreadSettingsSnapshot,
 };
 use crate::snapshot::{RuntimeSnapshot, TurnSnapshot};
-use crate::{ClientCommandResult, ElicitationSnapshot, ResumeConversationRequest, ThreadEvent};
+use crate::{
+    ClientCommandResult, DiscoveryRequest, ElicitationSnapshot, ListImportableSessionsRequest,
+    ListImportableSessionsResult, ResumeConversationRequest, ThreadEvent,
+};
 
 pub struct AngelClient {
     child: Child,
@@ -121,6 +125,51 @@ impl AngelClient {
     ) -> ClientResult<ClientCommandResult> {
         let result = self.core.resume_conversation(request)?;
         self.finish_conversation_command(result)
+    }
+
+    pub fn discover_conversations(
+        &mut self,
+        request: DiscoveryRequest,
+    ) -> ClientResult<ClientCommandResult> {
+        let result = self.core.discover_conversations(request)?;
+        self.finish_discovery_command(result)
+    }
+
+    /// List remote sessions the runtime can import for the given cwd scope.
+    ///
+    /// Requires an initialized runtime. Returns an empty list with
+    /// `unsupported_reason` when the agent does not advertise list capability.
+    pub fn list_importable_sessions(
+        &mut self,
+        request: ListImportableSessionsRequest,
+    ) -> ClientResult<ListImportableSessionsResult> {
+        let discover = match self.discover_conversations(DiscoveryRequest {
+            cwd: request.cwd,
+            additional_directories: request.additional_directories,
+            cursor: request.cursor,
+        }) {
+            Ok(result) => result,
+            Err(ClientError::Engine(angel_engine::EngineError::CapabilityUnsupported {
+                capability,
+            })) => {
+                return Ok(ListImportableSessionsResult {
+                    sessions: Vec::new(),
+                    next_cursor: None,
+                    unsupported_reason: Some(format!(
+                        "Runtime does not support conversation listing ({capability})."
+                    )),
+                });
+            }
+            Err(error) => return Err(error),
+        };
+
+        let next_cursor = self.core.discovery_next_cursor();
+        let _ = discover;
+        Ok(list_importable_sessions_result(
+            &self.snapshot().conversations,
+            next_cursor,
+            None,
+        ))
     }
 
     pub fn read_conversation(
@@ -397,6 +446,42 @@ impl AngelClient {
             self.hydrate_runtime_model_catalog(&conversation_id)?;
         }
         Ok(result)
+    }
+
+    fn finish_discovery_command(
+        &mut self,
+        result: ClientCommandResult,
+    ) -> ClientResult<ClientCommandResult> {
+        let mut result = self.flush_command_result(result)?;
+        if let Some(request_id) = result.request_id.clone() {
+            result
+                .update
+                .merge(self.wait_for_request_completed(&request_id)?);
+            result.update.merge(self.drain(Duration::from_millis(150))?);
+        }
+        Ok(result)
+    }
+
+    fn wait_for_request_completed(&mut self, request_id: &str) -> ClientResult<ClientUpdate> {
+        let mut update = ClientUpdate::default();
+        if update
+            .completed_request_ids
+            .iter()
+            .any(|completed| completed == request_id)
+        {
+            return Ok(update);
+        }
+        loop {
+            let next = self.next_update(None)?.ok_or(ClientError::ChannelClosed)?;
+            let completed = next
+                .completed_request_ids
+                .iter()
+                .any(|completed| completed == request_id);
+            update.merge(next);
+            if completed {
+                return Ok(update);
+            }
+        }
     }
 
     fn flush_command_result(

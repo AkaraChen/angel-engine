@@ -24,6 +24,7 @@ const DEFAULT_CHAT_TITLE = "New chat";
 
 type CreateChatRecordInput = ChatCreateInput & {
   cwd: string;
+  remoteThreadId?: string | null;
 };
 
 export function listChats() {
@@ -80,7 +81,7 @@ export function createChat(
             cwd,
             id: randomUUID(),
             projectId: normalizeOptionalString(input.projectId),
-            remoteThreadId: null,
+            remoteThreadId: normalizeOptionalString(input.remoteThreadId),
             runtime,
             title: normalizeTitle(input.title),
             updatedAt: now,

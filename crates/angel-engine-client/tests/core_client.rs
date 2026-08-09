@@ -1,3 +1,5 @@
+#[path = "core_client/discovery.rs"]
+mod discovery;
 #[path = "core_client/helpers.rs"]
 mod helpers;
 #[path = "core_client/history.rs"]

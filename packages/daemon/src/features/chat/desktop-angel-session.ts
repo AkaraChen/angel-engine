@@ -3,6 +3,8 @@ import type {
   ElicitationResponse,
   HydrateRequest,
   InspectRequest,
+  ListImportableSessionsRequest,
+  ListImportableSessionsResult,
   RuntimeOptions,
   SendTextRequest,
   SetModeRequest,
@@ -103,6 +105,14 @@ export class DesktopAngelSession implements SessionProcess {
   ): Effect.Effect<ConversationSnapshot, AgentSessionError> {
     const request: InspectRequest = typeof cwd === "string" ? { cwd } : cwd;
     return this.runOperation(async () => this.session.inspect(request));
+  }
+
+  listImportableSessions(
+    request: ListImportableSessionsRequest = {},
+  ): Effect.Effect<ListImportableSessionsResult, AgentSessionError> {
+    return this.runOperation(async () =>
+      this.session.listImportableSessions(request),
+    );
   }
 
   setMode(

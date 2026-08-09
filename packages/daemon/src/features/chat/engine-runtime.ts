@@ -3,6 +3,9 @@ import type {
   Chat,
   ChatCreateInput,
   ChatCreationLocation,
+  ImportChatInput,
+  ListImportableSessionsInput,
+  ListImportableSessionsResult,
   ChatPrewarmInput,
   ChatRuntimeConfig,
   ChatRuntimeConfigInput,
@@ -42,6 +45,12 @@ import {
   getOrCreateChatSession,
 } from "./chat-session-factory";
 import { ChatEvents } from "./chat-events";
+import {
+  emptyImportableResult,
+  listClaudeLocalSessions,
+  listPiLocalSessions,
+  mapNativeImportableResult,
+} from "./importable-sessions";
 import { ChatProcessRegistry } from "./process-registry";
 import {
   beginChatSend,
@@ -51,6 +60,7 @@ import {
   setChatRuntime as setChatRuntimeRecord,
   touchChat,
 } from "./repository";
+import { DesktopAngelSession } from "./desktop-angel-session";
 
 export { cwdForNewChat };
 
@@ -404,6 +414,90 @@ export class ChatEngine extends Effect.Service<ChatEngine>()(
           closeAllSessions();
         });
 
+      // List strategies:
+      // - Claude / Pi: documented local session stores + existing hydrate/resume
+      // - Codex / ACP DesktopAngelSession: protocol thread/list or session/list
+      // - Anything else without either path: explicit unsupported (no invented layouts)
+      const listImportableSessions = (
+        input: ListImportableSessionsInput,
+      ): Effect.Effect<ListImportableSessionsResult, DaemonError, Db> =>
+        Effect.gen(function* () {
+          const cwd = is.nonEmptyString(input.cwd)
+            ? input.cwd
+            : yield* cwdForProjectOrStandalone(input.projectId);
+
+          if (input.runtime === "claude") {
+            return {
+              nextCursor: null,
+              sessions: listClaudeLocalSessions(cwd),
+              unsupportedReason: null,
+            };
+          }
+          if (input.runtime === "pi") {
+            return {
+              nextCursor: null,
+              sessions: listPiLocalSessions(cwd),
+              unsupportedReason: null,
+            };
+          }
+
+          const session = yield* createChatSession(input.runtime);
+          if (!(session instanceof DesktopAngelSession)) {
+            return emptyImportableResult(
+              `Runtime ${input.runtime} does not support session import listing.`,
+            );
+          }
+          return yield* session
+            .listImportableSessions({
+              cwd,
+              cursor: input.cursor,
+            })
+            .pipe(
+              Effect.map(mapNativeImportableResult),
+              Effect.mapError(sessionFailure),
+              Effect.ensuring(Effect.sync(() => session.close())),
+            );
+        });
+
+      const importChat = (input: ImportChatInput, abortSignal?: AbortSignal) =>
+        Effect.gen(function* () {
+          if (!is.nonEmptyString(input.remoteThreadId)) {
+            return yield* Effect.fail(
+              DaemonError.invalidRequest("Remote session id is required."),
+            );
+          }
+          const cwd = is.nonEmptyString(input.cwd)
+            ? input.cwd
+            : yield* cwdForNewChat(
+                {
+                  projectId: input.projectId,
+                },
+                abortSignal,
+              );
+          // Bind the remote session id first so open failures still leave a
+          // chat row that can be retried via load without inventing ids.
+          const chat = yield* createChat({
+            cwd,
+            projectId: input.projectId,
+            remoteThreadId: input.remoteThreadId,
+            runtime: input.runtime,
+            title: input.title,
+          });
+          const chatSession = yield* getChatSession(chat);
+          const snapshot = yield* chatSession
+            .hydrate({
+              cwd,
+              remoteId: input.remoteThreadId,
+            })
+            .pipe(Effect.mapError(sessionFailure));
+          const updatedChat = yield* persistRemoteThreadId(chat, snapshot);
+          return {
+            chat: updatedChat,
+            config: runtimeConfigFromConversationSnapshot(snapshot),
+            messages: conversationMessages(snapshot),
+          };
+        });
+
       return {
         closeChatSession,
         createChatFromInput: (
@@ -435,6 +529,7 @@ export class ChatEngine extends Effect.Service<ChatEngine>()(
               cwd: yield* cwdForNewChat(input, abortSignal),
             });
           }),
+        importChat,
         inspectChatRuntimeConfig: (input: ChatRuntimeConfigInput) =>
           Effect.gen(function* () {
             const session = yield* createChatSession(input.runtime);
@@ -446,6 +541,7 @@ export class ChatEngine extends Effect.Service<ChatEngine>()(
                 Effect.ensuring(Effect.sync(() => session.close())),
               );
           }),
+        listImportableSessions,
         loadChatSession: (chatId: string) =>
           Effect.gen(function* () {
             const chat = yield* requireChat(chatId);

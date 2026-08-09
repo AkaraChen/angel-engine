@@ -206,6 +206,7 @@ export interface LocaleResourceTranslationSidebar {
   modeSwitcher: string;
   modeWork: string;
   needsInput: string;
+  importSession: string;
   newChat: string;
   newChatInProject: string;
   noChats: string;
@@ -605,7 +606,22 @@ export interface LocaleResourceTranslationMessages {
 
 export interface LocaleResourceTranslationDialog {
   chatName: string;
+  importSession: LocaleResourceTranslationDialogImportSession;
   renameChat: string;
+}
+
+export interface LocaleResourceTranslationDialogImportSession {
+  cwdLabel: string;
+  description: string;
+  empty: string;
+  importAction: string;
+  importFailed: string;
+  importing: string;
+  runtimeLabel: string;
+  runtimeRequired: string;
+  searchFailed: string;
+  searching: string;
+  title: string;
 }
 
 export interface LocaleResourceTranslationNotifications {
