@@ -10,6 +10,19 @@ export const createPullRequestAction = {
   shortcut: "CommandOrControl+Shift+P",
 } as const;
 
+export function openExistingPullRequest({
+  close,
+  openBrowser,
+  url,
+}: {
+  close?: () => void;
+  openBrowser: (url: string) => void;
+  url: string;
+}) {
+  close?.();
+  openBrowser(url);
+}
+
 export function useCreatePullRequestAction(handler: () => void) {
   useEffect(() => {
     window.addEventListener(createPullRequestEvent, handler);

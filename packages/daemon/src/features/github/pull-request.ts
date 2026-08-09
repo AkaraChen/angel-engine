@@ -104,7 +104,7 @@ export function pullRequestPreflight(
       yield* git(runGit, root, ["rev-list", "--count", `${baseRef}..${head}`]),
     );
     const availableBaseBranches = yield* Effect.promise(() =>
-      remoteBranches(runGit, root, base),
+      remoteBranches(runGit, root, base, head),
     );
     const existing = yield* findExistingPullRequest(runGh, root, head).pipe(
       Effect.flatMap((record) => persistRecord(record, deps)),
@@ -392,10 +392,15 @@ function createWithBodyFile(
   });
 }
 
-async function remoteBranches(runGit: GitRunner, root: string, base: string) {
+async function remoteBranches(
+  runGit: GitRunner,
+  root: string,
+  base: string,
+  head: string,
+) {
   try {
     const output = await runGit(
-      ["for-each-ref", "--format=%(refname:short)", "refs/remotes/origin"],
+      ["for-each-ref", "--format=%(refname:short)", "refs/remotes/origin/*"],
       { cwd: root },
     );
     return Array.from(
@@ -404,12 +409,32 @@ async function remoteBranches(runGit: GitRunner, root: string, base: string) {
         ...output.stdout
           .split("\n")
           .map((branch) => branch.trim().replace(/^origin\//, ""))
-          .filter((branch) => branch.length > 0 && branch !== "HEAD"),
+          .filter(
+            (branch) =>
+              branch.length > 0 &&
+              branch !== "HEAD" &&
+              branch !== "origin" &&
+              branch !== head,
+          ),
       ]),
-    );
+    ).filter((branch) => branch !== head);
   } catch {
-    return [base];
+    return base === head ? [] : [base];
   }
+}
+
+export function pullRequestTitleFromBranch(
+  head: string,
+  fallbackSubject?: string,
+) {
+  const title = head
+    .replace(/^angel\//, "")
+    .replace(/^agent\//, "")
+    .replace(/[-_/]+/g, " ")
+    .trim();
+  return /^(?:pr\s+)?\d+$/i.test(title) && is.nonEmptyString(fallbackSubject)
+    ? fallbackSubject
+    : title || fallbackSubject || head;
 }
 
 function buildPrefill(
@@ -437,7 +462,7 @@ function buildPrefill(
       const title =
         commits.length === 1
           ? (commits[0]?.subject ?? head)
-          : head.replace(/^angel\//, "").replaceAll("-", " ");
+          : pullRequestTitleFromBranch(head, commits[0]?.subject);
       const stat = await runGit(["diff", "--shortstat", `${base}..${head}`], {
         cwd: root,
       });

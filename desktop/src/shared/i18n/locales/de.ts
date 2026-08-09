@@ -202,6 +202,7 @@ export const de = {
           description:
             "Prüfe Branches und Beschreibung vor der Veröffentlichung.",
           existing: "Pull Request #{{number}} existiert bereits",
+          noCommits: "Zwischen Basis- und Head-Branch gibt es keine Commits.",
           openInApp: "In der App öffnen",
           pushedRetry:
             "Branch gepusht. Erstellung des Pull Requests erneut versuchen.",
@@ -210,7 +211,8 @@ export const de = {
           title: "Pull Request erstellen",
           titlePlaceholder: "Pull-Request-Titel",
           view: "Pull Request #{{number}} anzeigen",
-          willPush: "{{count}} Commits werden nach origin/{{head}} gepusht",
+          willPushMany: "{{count}} Commits werden nach origin/{{head}} gepusht",
+          willPushOne: "1 Commit wird nach origin/{{head}} gepusht",
         },
         dockInSidebar: "In Seitenleiste andocken",
         empty: {

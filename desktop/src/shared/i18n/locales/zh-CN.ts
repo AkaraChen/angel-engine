@@ -196,6 +196,7 @@ export const zhCN = {
           creating: "正在创建拉取请求…",
           description: "发布前请确认分支与描述。",
           existing: "拉取请求 #{{number}} 已存在",
+          noCommits: "基础分支与当前分支之间没有提交。",
           openInApp: "在应用内打开",
           pushedRetry: "分支已推送。请重试创建拉取请求。",
           pushing: "正在推送分支…",
@@ -203,7 +204,8 @@ export const zhCN = {
           title: "创建拉取请求",
           titlePlaceholder: "拉取请求标题",
           view: "查看拉取请求 #{{number}}",
-          willPush: "将推送 {{count}} 个提交到 origin/{{head}}",
+          willPushMany: "将推送 {{count}} 个提交到 origin/{{head}}",
+          willPushOne: "将推送 1 个提交到 origin/{{head}}",
         },
         dockInSidebar: "停靠到侧栏",
         empty: {

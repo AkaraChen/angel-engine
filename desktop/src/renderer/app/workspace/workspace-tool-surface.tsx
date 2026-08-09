@@ -83,7 +83,12 @@ export function WorkspaceToolSurface({
   return (
     <WorkspaceToolSurfaceProvider model={model}>
       {active && is.nonEmptyString(model.root) ? (
-        <WorkspaceCreatePullRequestController api={api} root={model.root} />
+        <WorkspaceCreatePullRequestController
+          api={api}
+          contextKey={model.contextKey}
+          key={model.root}
+          root={model.root}
+        />
       ) : null}
       <section
         className="

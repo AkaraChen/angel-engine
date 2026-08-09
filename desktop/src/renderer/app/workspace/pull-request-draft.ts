@@ -5,6 +5,21 @@ export interface PullRequestEditableFields {
   titleDirty: boolean;
 }
 
+export interface PullRequestDialogState {
+  base: string;
+  body: string;
+  draft: boolean;
+  open: boolean;
+  root: string;
+  title: string;
+}
+
+export function resetPullRequestDialogState(
+  root: string,
+): PullRequestDialogState {
+  return { base: "", body: "", draft: false, open: false, root, title: "" };
+}
+
 export function applyPullRequestPrefill(
   current: PullRequestEditableFields,
   prefill: { body: string; title: string },

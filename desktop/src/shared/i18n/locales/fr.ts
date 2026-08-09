@@ -203,6 +203,7 @@ export const fr = {
           description:
             "Vérifiez les branches et la description avant publication.",
           existing: "La pull request #{{number}} existe déjà",
+          noCommits: "Aucun commit entre les branches de base et de tête.",
           openInApp: "Ouvrir dans l’application",
           pushedRetry: "Branche poussée. Réessayez de créer la pull request.",
           pushing: "Envoi de la branche…",
@@ -210,7 +211,8 @@ export const fr = {
           title: "Créer une pull request",
           titlePlaceholder: "Titre de la pull request",
           view: "Voir la pull request #{{number}}",
-          willPush: "{{count}} commits seront envoyés vers origin/{{head}}",
+          willPushMany: "{{count}} commits seront envoyés vers origin/{{head}}",
+          willPushOne: "1 commit sera envoyé vers origin/{{head}}",
         },
         dockInSidebar: "Ancrer dans la barre latérale",
         empty: {

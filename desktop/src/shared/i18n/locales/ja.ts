@@ -202,6 +202,8 @@ export const ja = {
           creating: "プルリクエストを作成中…",
           description: "公開前にブランチと説明を確認してください。",
           existing: "プルリクエスト #{{number}} は既に存在します",
+          noCommits:
+            "ベースブランチとヘッドブランチの間にコミットがありません。",
           openInApp: "アプリで開く",
           pushedRetry: "ブランチをプッシュしました。作成を再試行してください。",
           pushing: "ブランチをプッシュ中…",
@@ -209,7 +211,8 @@ export const ja = {
           title: "プルリクエストを作成",
           titlePlaceholder: "プルリクエストのタイトル",
           view: "プルリクエスト #{{number}} を表示",
-          willPush: "{{count}} コミットを origin/{{head}} にプッシュします",
+          willPushMany: "{{count}} コミットを origin/{{head}} にプッシュします",
+          willPushOne: "1 コミットを origin/{{head}} にプッシュします",
         },
         dockInSidebar: "サイドバーにドック",
         empty: {

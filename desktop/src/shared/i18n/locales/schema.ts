@@ -130,6 +130,7 @@ export interface LocaleResourceTranslationWorkspaceToolsCreatePullRequest {
   creating: string;
   description: string;
   existing: string;
+  noCommits: string;
   openInApp: string;
   pushedRetry: string;
   pushing: string;
@@ -137,7 +138,8 @@ export interface LocaleResourceTranslationWorkspaceToolsCreatePullRequest {
   title: string;
   titlePlaceholder: string;
   view: string;
-  willPush: string;
+  willPushMany: string;
+  willPushOne: string;
 }
 
 export interface LocaleResourceTranslationWorkspaceToolsEmpty {

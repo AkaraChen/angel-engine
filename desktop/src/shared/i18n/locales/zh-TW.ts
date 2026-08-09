@@ -196,6 +196,7 @@ export const zhTW = {
           creating: "正在建立拉取請求…",
           description: "發佈前請確認分支與描述。",
           existing: "拉取請求 #{{number}} 已存在",
+          noCommits: "基礎分支與目前分支之間沒有提交。",
           openInApp: "在應用程式內開啟",
           pushedRetry: "分支已推送。請重試建立拉取請求。",
           pushing: "正在推送分支…",
@@ -203,7 +204,8 @@ export const zhTW = {
           title: "建立拉取請求",
           titlePlaceholder: "拉取請求標題",
           view: "檢視拉取請求 #{{number}}",
-          willPush: "將推送 {{count}} 個提交到 origin/{{head}}",
+          willPushMany: "將推送 {{count}} 個提交到 origin/{{head}}",
+          willPushOne: "將推送 1 個提交到 origin/{{head}}",
         },
         dockInSidebar: "停靠到側欄",
         empty: {

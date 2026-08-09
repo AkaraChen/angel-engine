@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 
-import { applyPullRequestPrefill } from "./pull-request-draft";
+import {
+  applyPullRequestPrefill,
+  resetPullRequestDialogState,
+} from "./pull-request-draft";
 
 describe("applyPullRequestPrefill", () => {
   it("preserves dirty fields when the base branch changes", () => {
@@ -34,5 +37,18 @@ describe("applyPullRequestPrefill", () => {
         { body: "New body", title: "New title" },
       ),
     ).toMatchObject({ body: "New body", title: "User title" });
+  });
+});
+
+describe("resetPullRequestDialogState", () => {
+  it("clears every workspace-scoped field when the root changes", () => {
+    expect(resetPullRequestDialogState("/repos/second")).toEqual({
+      base: "",
+      body: "",
+      draft: false,
+      open: false,
+      root: "/repos/second",
+      title: "",
+    });
   });
 });

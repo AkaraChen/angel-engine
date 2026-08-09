@@ -200,6 +200,7 @@ export const en = {
           creating: "Creating pull request…",
           description: "Review the branches and description before publishing.",
           existing: "Pull request #{{number}} already exists",
+          noCommits: "No commits between the base and head branches.",
           openInApp: "Open in app",
           pushedRetry: "Branch pushed. Retry creating the pull request.",
           pushing: "Pushing branch…",
@@ -207,7 +208,8 @@ export const en = {
           title: "Create pull request",
           titlePlaceholder: "Pull request title",
           view: "View pull request #{{number}}",
-          willPush: "Will push {{count}} commits to origin/{{head}}",
+          willPushMany: "Will push {{count}} commits to origin/{{head}}",
+          willPushOne: "Will push 1 commit to origin/{{head}}",
         },
         dockInSidebar: "Dock in sidebar",
         empty: {

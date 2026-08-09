@@ -201,6 +201,7 @@ export const es = {
           creating: "Creando pull request…",
           description: "Revisa las ramas y la descripción antes de publicar.",
           existing: "El pull request #{{number}} ya existe",
+          noCommits: "No hay commits entre las ramas base y principal.",
           openInApp: "Abrir en la aplicación",
           pushedRetry: "Rama enviada. Vuelve a intentar crear el pull request.",
           pushing: "Enviando rama…",
@@ -208,7 +209,8 @@ export const es = {
           title: "Crear pull request",
           titlePlaceholder: "Título del pull request",
           view: "Ver pull request #{{number}}",
-          willPush: "Se enviarán {{count}} commits a origin/{{head}}",
+          willPushMany: "Se enviarán {{count}} commits a origin/{{head}}",
+          willPushOne: "Se enviará 1 commit a origin/{{head}}",
         },
         dockInSidebar: "Acoplar a la barra lateral",
         empty: {

@@ -199,6 +199,7 @@ export const ko = {
           creating: "풀 리퀘스트 만드는 중…",
           description: "게시하기 전에 브랜치와 설명을 확인하세요.",
           existing: "풀 리퀘스트 #{{number}}이 이미 있습니다",
+          noCommits: "기본 브랜치와 헤드 브랜치 사이에 커밋이 없습니다.",
           openInApp: "앱에서 열기",
           pushedRetry:
             "브랜치를 푸시했습니다. 풀 리퀘스트 생성을 다시 시도하세요.",
@@ -207,7 +208,8 @@ export const ko = {
           title: "풀 리퀘스트 만들기",
           titlePlaceholder: "풀 리퀘스트 제목",
           view: "풀 리퀘스트 #{{number}} 보기",
-          willPush: "{{count}}개 커밋을 origin/{{head}}에 푸시합니다",
+          willPushMany: "{{count}}개 커밋을 origin/{{head}}에 푸시합니다",
+          willPushOne: "커밋 1개를 origin/{{head}}에 푸시합니다",
         },
         dockInSidebar: "사이드바에 고정",
         empty: {
