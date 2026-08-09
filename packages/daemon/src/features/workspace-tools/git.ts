@@ -13,6 +13,7 @@ import { fromTreePath, normalizeGitPath } from "./paths";
 const execFileAsync = promisify(execFile);
 
 const GIT_OUTPUT_MAX_BUFFER = 12 * 1024 * 1024;
+const GIT_NETWORK_TIMEOUT_MS = 120_000;
 const MAX_UNTRACKED_PATCH_BYTES = 512 * 1024;
 const MAX_TOTAL_UNTRACKED_PATCH_BYTES = 2 * 1024 * 1024;
 
@@ -31,6 +32,7 @@ export function parseGitStatusOutput(output: string) {
 
     const status = statusFromPorcelain(x, y);
     entries.push({
+      conflicted: isConflictPorcelain(x, y),
       path: normalizeGitPath(rawPath),
       staged: x !== " " && x !== "?" && x !== "!",
       status,
@@ -43,6 +45,15 @@ export function parseGitStatusOutput(output: string) {
   }
 
   return entries;
+}
+
+/**
+ * Porcelain v1 unmerged states: either side is `U`, or both sides carry the
+ * same `A`/`D` letter. Everything else is a normal staged/unstaged change.
+ */
+function isConflictPorcelain(x: string, y: string) {
+  if (x === "U" || y === "U") return true;
+  return x === y && (x === "A" || x === "D");
 }
 
 function statusFromPorcelain(x: string, y: string): WorkspaceToolGitStatus {
@@ -156,11 +167,44 @@ export function isProbablyBinary(buffer: Buffer) {
   return buffer.includes(0);
 }
 
-export async function gitOutput(cwd: string, args: string[]) {
+export async function gitOutput(
+  cwd: string,
+  args: string[],
+  options: { network?: boolean } = {},
+) {
   const result = await execFileAsync("git", ["-C", cwd, ...args], {
+    env: options.network ? nonInteractiveGitEnv() : process.env,
     maxBuffer: GIT_OUTPUT_MAX_BUFFER,
+    timeout: options.network ? GIT_NETWORK_TIMEOUT_MS : undefined,
   });
   return result.stdout.trim();
+}
+
+/**
+ * A push that reaches a credential prompt would hang the daemon forever with
+ * nowhere to type. Fail fast instead so the UI can report an auth problem.
+ */
+function nonInteractiveGitEnv(): NodeJS.ProcessEnv {
+  return {
+    ...process.env,
+    GIT_ASKPASS: "",
+    GIT_TERMINAL_PROMPT: "0",
+    SSH_ASKPASS: "",
+    SSH_ASKPASS_REQUIRE: "never",
+  };
+}
+
+/** Parses `git rev-list --left-right --count HEAD...@{upstream}` output. */
+export function parseAheadBehindCounts(output: string) {
+  const [ahead, behind] = output
+    .split(/\s+/)
+    .filter(Boolean)
+    .map((value) => Number.parseInt(value, 10));
+
+  return {
+    ahead: Number.isInteger(ahead) ? Number(ahead) : 0,
+    behind: Number.isInteger(behind) ? Number(behind) : 0,
+  };
 }
 
 export function joinPatches(...patches: string[]) {

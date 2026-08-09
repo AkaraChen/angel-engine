@@ -20,20 +20,31 @@ export type WorkspaceGitStatus =
 
 /** Mirrors `WorkspaceToolGitStatusEntry`. */
 export interface WorkspaceGitStatusEntry {
+  conflicted: boolean;
   path: string;
   staged: boolean;
   status: WorkspaceGitStatus;
   unstaged: boolean;
 }
 
+/** Mirrors `WorkspaceGitBranchStatus`. */
+export interface WorkspaceGitBranchStatus {
+  ahead: number;
+  behind: number;
+  branch?: string;
+  detached: boolean;
+  upstream?: string;
+}
+
 /**
  * Result of `GET /api/workspace/git-diff?root=…`. Narrowed projection of
- * `WorkspaceGitDiffResult`: the mobile panel renders the branch, repo flag, and
- * the status list, and drops the staged/unstaged patch bodies (too heavy for a
- * small-screen summary).
+ * `WorkspaceGitDiffResult`: the mobile panel renders the branch position, repo
+ * flag, and the status list, and drops the staged/unstaged patch bodies (too
+ * heavy for a small-screen summary).
  */
 export interface WorkspaceGitDiffResult {
-  branch?: string;
+  branchStatus: WorkspaceGitBranchStatus;
+  conflictedPaths: string[];
   isGitRepository: boolean;
   root: string;
   stagedPatch: string;

@@ -3,8 +3,10 @@ import type {
   WorkspaceFileReadResult,
   WorkspaceFileTreeResult,
   WorkspaceFileWriteResult,
+  WorkspaceGitBranchStatus,
   WorkspaceGitDiffResult,
   WorkspaceToolGitCommitResult,
+  WorkspaceToolGitPushResult,
   WorkspaceToolGitStatusEntry,
 } from "@angel-engine/daemon-api/workspace-tools";
 
@@ -19,6 +21,7 @@ import {
   higherPriorityStatus,
   isProbablyBinary,
   joinPatches,
+  parseAheadBehindCounts,
   parseGitStatusOutput,
 } from "./git";
 import {
@@ -77,6 +80,8 @@ export function workspaceGitDiff(
     const gitRoot = yield* gitRootFor(root);
     if (!is.nonEmptyString(gitRoot)) {
       return {
+        branchStatus: { ahead: 0, behind: 0, detached: false },
+        conflictedPaths: [],
         isGitRepository: false,
         root,
         skippedFiles: [],
@@ -87,12 +92,10 @@ export function workspaceGitDiff(
       };
     }
 
-    const [branch, status, stagedPatch, unstagedTrackedPatch] =
+    const [branchStatus, status, stagedPatch, unstagedTrackedPatch] =
       yield* Effect.all(
         [
-          workspaceGitOutput(gitRoot, ["branch", "--show-current"]).pipe(
-            Effect.orElseSucceed(() => ""),
-          ),
+          gitBranchStatus(gitRoot),
           gitStatusEntries({ gitRoot, root }),
           workspaceGitOutput(gitRoot, [
             "diff",
@@ -122,7 +125,10 @@ export function workspaceGitDiff(
     );
 
     return {
-      branch: branch || undefined,
+      branchStatus,
+      conflictedPaths: status
+        .filter((entry) => entry.conflicted)
+        .map((entry) => entry.path),
       isGitRepository: true,
       root,
       skippedFiles: untrackedResult.skippedFiles,
@@ -130,6 +136,117 @@ export function workspaceGitDiff(
       status,
       unstagedPatch,
       warnings: untrackedResult.warnings,
+    };
+  });
+}
+
+export function workspaceGitPush({
+  root: rootInput,
+}: {
+  root: string;
+}): Effect.Effect<WorkspaceToolGitPushResult, DaemonError> {
+  return Effect.gen(function* () {
+    const root = yield* resolveWorkspaceRoot(rootInput);
+    const gitRoot = yield* gitRootFor(root);
+    if (!is.nonEmptyString(gitRoot)) {
+      return yield* Effect.fail(DaemonError.workspaceNotGitRepository());
+    }
+
+    const branchStatus = yield* gitBranchStatus(gitRoot);
+    const branch = branchStatus.branch;
+    if (branchStatus.detached || !is.nonEmptyString(branch)) {
+      return yield* Effect.fail(DaemonError.workspaceGitDetachedHead());
+    }
+
+    // With an upstream, `git push` already knows where to go; without one the
+    // first push has to name the remote and record the tracking branch.
+    const remote = is.nonEmptyString(branchStatus.upstream)
+      ? upstreamRemote(branchStatus.upstream)
+      : yield* defaultPushRemote(gitRoot);
+    const pushArgs = is.nonEmptyString(branchStatus.upstream)
+      ? ["push"]
+      : ["push", "--set-upstream", remote, branch];
+
+    yield* Effect.tryPromise({
+      catch: (cause) => DaemonError.workspaceGitPushFailed(cause),
+      try: () => gitOutput(gitRoot, pushArgs, { network: true }),
+    });
+
+    return {
+      branchStatus: yield* gitBranchStatus(gitRoot),
+      remote,
+      root,
+    };
+  });
+}
+
+function upstreamRemote(upstream: string) {
+  const [remote] = upstream.split("/");
+  return is.nonEmptyString(remote) ? remote : "origin";
+}
+
+function defaultPushRemote(
+  gitRoot: string,
+): Effect.Effect<string, DaemonError> {
+  return Effect.gen(function* () {
+    const output = yield* workspaceGitOutput(gitRoot, ["remote"]).pipe(
+      Effect.orElseSucceed(() => ""),
+    );
+    const remotes = output
+      .split("\n")
+      .map((line) => line.trim())
+      .filter((line) => line.length > 0);
+    const first = remotes.at(0);
+    if (first === undefined) {
+      return yield* Effect.fail(DaemonError.workspaceGitNoRemote());
+    }
+    return remotes.includes("origin") ? "origin" : first;
+  });
+}
+
+function gitBranchStatus(
+  gitRoot: string,
+): Effect.Effect<WorkspaceGitBranchStatus, never> {
+  return Effect.gen(function* () {
+    const [branch, head] = yield* Effect.all(
+      [
+        workspaceGitOutput(gitRoot, ["branch", "--show-current"]).pipe(
+          Effect.orElseSucceed(() => ""),
+        ),
+        // Reports the literal "HEAD" while detached, and fails on an unborn
+        // branch -- which is a fresh repository, not a detached checkout.
+        workspaceGitOutput(gitRoot, ["rev-parse", "--abbrev-ref", "HEAD"]).pipe(
+          Effect.orElseSucceed(() => ""),
+        ),
+      ],
+      { concurrency: "unbounded" },
+    );
+    if (!is.nonEmptyString(branch)) {
+      return { ahead: 0, behind: 0, detached: head === "HEAD" };
+    }
+
+    const upstream = yield* workspaceGitOutput(gitRoot, [
+      "rev-parse",
+      "--abbrev-ref",
+      "--symbolic-full-name",
+      "@{upstream}",
+    ]).pipe(Effect.orElseSucceed(() => ""));
+    if (!is.nonEmptyString(upstream)) {
+      return { ahead: 0, behind: 0, branch, detached: false };
+    }
+
+    const counts = yield* workspaceGitOutput(gitRoot, [
+      "rev-list",
+      "--left-right",
+      "--count",
+      "HEAD...@{upstream}",
+    ]).pipe(Effect.orElseSucceed(() => ""));
+
+    return {
+      ...parseAheadBehindCounts(counts),
+      branch,
+      detached: false,
+      upstream,
     };
   });
 }
@@ -464,6 +581,7 @@ function gitStatusEntries({
       }
 
       byPath.set(treePath, {
+        conflicted: current.conflicted || entry.conflicted,
         path: treePath,
         staged: current.staged || entry.staged,
         status: higherPriorityStatus(current.status, entry.status),

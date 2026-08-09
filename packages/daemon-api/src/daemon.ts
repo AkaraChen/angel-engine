@@ -85,6 +85,11 @@ export type DaemonErrorCode =
   | "worktree-remove-failed"
   | "worktree-setup-approval-required"
   | "workspace-commit-input-invalid"
+  | "workspace-git-auth-failed"
+  | "workspace-git-detached-head"
+  | "workspace-git-network-failed"
+  | "workspace-git-no-remote"
+  | "workspace-git-push-rejected"
   | "workspace-not-git-repository"
   | "workspace-path-invalid";
 
