@@ -85,6 +85,7 @@ export type DaemonErrorCode =
   | "project-required-for-worktree"
   | "session-failed"
   | "worktree-create-failed"
+  | "worktree-branch-conflict"
   | "worktree-branch-in-use"
   | "worktree-changed"
   | "worktree-has-active-chats"

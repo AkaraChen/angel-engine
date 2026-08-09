@@ -19,9 +19,13 @@ import { projectSetupLifecycle } from "./setup-lifecycle";
 
 const execFileAsync = promisify(execFile);
 const getProjectMock = vi.hoisted(() => vi.fn());
+const findActiveChatByCwdMock = vi.hoisted(() => vi.fn());
 
 vi.mock("./repository", () => ({
   getProject: (id: string) => getProjectMock(id),
+}));
+vi.mock("../chat/repository", () => ({
+  findActiveChatByCwd: (cwd: string) => findActiveChatByCwdMock(cwd),
 }));
 
 const testDbLayer = Layer.succeed(
@@ -31,6 +35,7 @@ const testDbLayer = Layer.succeed(
 
 describe("project worktree setup", () => {
   let projectRoot: string;
+  let remoteRoot: string | undefined;
   let worktreeParent: string;
   let createdWorktree:
     | { branch: string; createdBranch: boolean; cwd: string }
@@ -66,6 +71,7 @@ describe("project worktree setup", () => {
     getProjectMock.mockReturnValue(
       Effect.succeed({ id: "project-1", path: projectRoot }),
     );
+    findActiveChatByCwdMock.mockReturnValue(Effect.succeed(undefined));
   });
 
   afterEach(async () => {
@@ -77,7 +83,12 @@ describe("project worktree setup", () => {
     }
     await fs.rm(worktreeParent, { force: true, recursive: true });
     await fs.rm(projectRoot, { force: true, recursive: true });
+    if (remoteRoot !== undefined) {
+      await fs.rm(remoteRoot, { force: true, recursive: true });
+      remoteRoot = undefined;
+    }
     getProjectMock.mockReset();
+    findActiveChatByCwdMock.mockReset();
   });
 
   it("C1 returns immediately and completes setup in the background", async () => {
@@ -107,17 +118,82 @@ describe("project worktree setup", () => {
     expect(createdWorktree.createdBranch).toBe(false);
   });
 
+  it("fast-forwards a stale local branch to the fetched pull request head", async () => {
+    await configureOrigin();
+    const baseBranch = await git(projectRoot, ["branch", "--show-current"]);
+    const baseCommit = await git(projectRoot, ["rev-parse", "HEAD"]);
+    await git(projectRoot, ["checkout", "-b", "pr-source"]);
+    await fs.writeFile(path.join(projectRoot, "pr.txt"), "remote head\n");
+    await git(projectRoot, ["add", "pr.txt"]);
+    await commit(projectRoot, "pull request head");
+    const pullRequestHead = await git(projectRoot, ["rev-parse", "HEAD"]);
+    await git(projectRoot, ["push", "origin", "HEAD:refs/pull/7/head"]);
+    await git(projectRoot, ["checkout", baseBranch]);
+    await git(projectRoot, ["branch", "-D", "pr-source"]);
+    await git(projectRoot, ["branch", "feature/pr-head", baseCommit]);
+
+    createdWorktree = await Effect.runPromise(
+      createProjectWorktree({
+        projectId: "project-1",
+        ref: {
+          remoteRef: "pull/7/head",
+          type: "existingBranch",
+          value: "feature/pr-head",
+        },
+      }).pipe(Effect.provide(testDbLayer)),
+    );
+
+    await expect(git(createdWorktree.cwd, ["rev-parse", "HEAD"])).resolves.toBe(
+      pullRequestHead,
+    );
+    expect(createdWorktree.createdBranch).toBe(false);
+  });
+
+  it("rejects a divergent local branch instead of using the wrong commit", async () => {
+    await configureOrigin();
+    const baseBranch = await git(projectRoot, ["branch", "--show-current"]);
+    await git(projectRoot, ["checkout", "-b", "pr-source"]);
+    await fs.writeFile(path.join(projectRoot, "remote.txt"), "remote\n");
+    await git(projectRoot, ["add", "remote.txt"]);
+    await commit(projectRoot, "remote change");
+    await git(projectRoot, ["push", "origin", "HEAD:refs/pull/8/head"]);
+    await git(projectRoot, ["checkout", baseBranch]);
+    await git(projectRoot, ["checkout", "-b", "feature/diverged"]);
+    await fs.writeFile(path.join(projectRoot, "local.txt"), "local\n");
+    await git(projectRoot, ["add", "local.txt"]);
+    await commit(projectRoot, "local change");
+    await git(projectRoot, ["checkout", baseBranch]);
+
+    const error = await Effect.runPromise(
+      createProjectWorktree({
+        projectId: "project-1",
+        ref: {
+          remoteRef: "pull/8/head",
+          type: "existingBranch",
+          value: "feature/diverged",
+        },
+      }).pipe(Effect.provide(testDbLayer), Effect.flip),
+    );
+    expect(error).toMatchObject({ code: "worktree-branch-conflict" });
+    await expect(directoryEntriesOrEmpty(worktreeParent)).resolves.toEqual([]);
+  });
+
   it("rejects a pull request branch already used by another worktree", async () => {
     const currentBranch = await git(projectRoot, ["branch", "--show-current"]);
+    findActiveChatByCwdMock.mockReturnValue(
+      Effect.succeed({ id: "chat-using-branch" }),
+    );
 
-    await expect(
-      Effect.runPromise(
-        createProjectWorktree({
-          projectId: "project-1",
-          ref: { type: "existingBranch", value: currentBranch },
-        }).pipe(Effect.provide(testDbLayer)),
-      ),
-    ).rejects.toThrow("already checked out in another worktree");
+    const error = await Effect.runPromise(
+      createProjectWorktree({
+        projectId: "project-1",
+        ref: { type: "existingBranch", value: currentBranch },
+      }).pipe(Effect.provide(testDbLayer), Effect.flip),
+    );
+    expect(error).toMatchObject({
+      code: "worktree-branch-in-use",
+      relatedChatId: "chat-using-branch",
+    });
   });
 
   it("C2 keeps a failed setup worktree reachable", async () => {
@@ -265,7 +341,28 @@ describe("project worktree setup", () => {
       "add setup",
     ]);
   }
+
+  async function configureOrigin() {
+    remoteRoot = await fs.mkdtemp(
+      path.join(os.tmpdir(), "angel-worktree-remote-"),
+    );
+    await git(remoteRoot, ["init", "--bare"]);
+    await git(projectRoot, ["remote", "add", "origin", remoteRoot]);
+    await git(projectRoot, ["push", "-u", "origin", "HEAD"]);
+  }
 });
+
+async function commit(cwd: string, message: string) {
+  await git(cwd, [
+    "-c",
+    "user.name=Angel Test",
+    "-c",
+    "user.email=angel@example.com",
+    "commit",
+    "-m",
+    message,
+  ]);
+}
 
 async function git(cwd: string, args: string[]) {
   const result = await execFileAsync("git", ["-C", cwd, ...args]);

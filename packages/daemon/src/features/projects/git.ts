@@ -15,6 +15,7 @@ import is from "@sindresorhus/is";
 import { Effect } from "effect";
 
 import { DaemonError } from "../../platform/errors";
+import { findActiveChatByCwd } from "../chat/repository";
 import { loadProjectLifecycleConfig } from "./config";
 import { getProject } from "./repository";
 import { projectSetupLifecycle } from "./setup-lifecycle";
@@ -152,13 +153,11 @@ export function createProjectWorktree(
         "list",
         "--porcelain",
       ]);
-      if (
-        worktreeList
-          .split(/\r?\n/)
-          .some((line) => line === `branch refs/heads/${input.ref?.value}`)
-      ) {
+      const occupiedPath = worktreePathForBranch(worktreeList, input.ref.value);
+      if (occupiedPath !== undefined) {
+        const relatedChat = yield* findActiveChatByCwd(occupiedPath);
         return yield* Effect.fail(
-          DaemonError.worktreeBranchInUse(input.ref.value),
+          DaemonError.worktreeBranchInUse(input.ref.value, relatedChat?.id),
         );
       }
     }
@@ -185,36 +184,15 @@ export function createProjectWorktree(
           : attempt === 0
             ? fixedBranch
             : `${fixedBranch}-${suffix}`;
-      const localBranchExists = existingBranch
-        ? yield* hasLocalBranch(root, branch)
-        : false;
-      const createdBranch = !existingBranch || !localBranchExists;
       const remoteRef = existingBranch ? input.ref.remoteRef : undefined;
-      if (
-        existingBranch &&
-        !localBranchExists &&
-        is.nonEmptyString(remoteRef)
-      ) {
-        yield* Effect.tryPromise({
-          catch: (cause) => DaemonError.worktreeCreateFailed(cause),
-          try: () =>
-            execFileAsync(
-              "git",
-              [
-                "-C",
-                root,
-                "fetch",
-                "origin",
-                `${remoteRef}:refs/heads/${branch}`,
-              ],
-              {
-                maxBuffer: GIT_OUTPUT_MAX_BUFFER,
-                signal,
-                timeout: GIT_OPERATION_TIMEOUT_MS,
-              },
-            ),
-        });
-      }
+      const branchPlan = existingBranch
+        ? yield* prepareExistingBranch(root, branch, remoteRef, signal)
+        : {
+            createdBranch: true,
+            expectedHead: undefined,
+            localBranchExists: false,
+          };
+      const { createdBranch, localBranchExists } = branchPlan;
       const addArgs = existingBranch
         ? localBranchExists || is.nonEmptyString(remoteRef)
           ? ["worktree", "add", cwd, branch]
@@ -261,6 +239,26 @@ export function createProjectWorktree(
         ),
       );
       if (created !== undefined) {
+        if (branchPlan.expectedHead !== undefined) {
+          const actualHead = yield* gitOutput(created.cwd, [
+            "rev-parse",
+            "--verify",
+            "HEAD^{commit}",
+          ]);
+          if (actualHead !== branchPlan.expectedHead) {
+            yield* Effect.promise(() =>
+              discardCreatedWorktree(
+                root,
+                created.cwd,
+                created.branch,
+                created.createdBranch,
+              ),
+            );
+            return yield* Effect.fail(
+              DaemonError.worktreeBranchConflict(branch),
+            );
+          }
+        }
         onProgress?.("setup", 75);
         if (signal?.aborted) {
           yield* Effect.promise(() =>
@@ -517,6 +515,152 @@ function hasLocalBranch(root: string, branch: string) {
       return result !== undefined;
     },
   });
+}
+
+function prepareExistingBranch(
+  root: string,
+  branch: string,
+  remoteRef: string | undefined,
+  signal?: AbortSignal,
+) {
+  return Effect.gen(function* () {
+    const localBranchExists = yield* hasLocalBranch(root, branch);
+    if (!is.nonEmptyString(remoteRef)) {
+      return {
+        createdBranch: !localBranchExists,
+        expectedHead: undefined,
+        localBranchExists,
+      };
+    }
+
+    const qualifiedRemoteRef = remoteRef.startsWith("refs/")
+      ? remoteRef
+      : `refs/${remoteRef}`;
+    yield* validateRemoteRef(root, qualifiedRemoteRef);
+    const remoteHead = yield* fetchRemoteCommit(
+      root,
+      qualifiedRemoteRef,
+      signal,
+    );
+
+    if (!localBranchExists) {
+      yield* gitOutput(root, ["branch", branch, remoteHead]);
+      return {
+        createdBranch: true,
+        expectedHead: remoteHead,
+        localBranchExists: false,
+      };
+    }
+
+    const localHead = yield* gitOutput(root, [
+      "rev-parse",
+      "--verify",
+      `refs/heads/${branch}^{commit}`,
+    ]);
+    if (localHead !== remoteHead) {
+      const canFastForward = yield* isAncestor(root, localHead, remoteHead);
+      if (!canFastForward) {
+        return yield* Effect.fail(DaemonError.worktreeBranchConflict(branch));
+      }
+      yield* gitOutput(root, ["branch", "-f", branch, remoteHead]);
+    }
+
+    return {
+      createdBranch: false,
+      expectedHead: remoteHead,
+      localBranchExists: true,
+    };
+  });
+}
+
+function fetchRemoteCommit(
+  root: string,
+  remoteRef: string,
+  signal?: AbortSignal,
+) {
+  return Effect.tryPromise({
+    catch: (cause) => DaemonError.worktreeCreateFailed(cause),
+    try: async () => {
+      const temporaryRef = `refs/angel/pr-heads/${randomUUID()}`;
+      await execFileAsync(
+        "git",
+        [
+          "-C",
+          root,
+          "fetch",
+          "--no-tags",
+          "origin",
+          `${remoteRef}:${temporaryRef}`,
+        ],
+        {
+          maxBuffer: GIT_OUTPUT_MAX_BUFFER,
+          signal,
+          timeout: GIT_OPERATION_TIMEOUT_MS,
+        },
+      );
+      try {
+        return await gitOutputAsync(root, [
+          "rev-parse",
+          "--verify",
+          `${temporaryRef}^{commit}`,
+        ]);
+      } finally {
+        await execFileAsync(
+          "git",
+          ["-C", root, "update-ref", "-d", temporaryRef],
+          {
+            maxBuffer: GIT_OUTPUT_MAX_BUFFER,
+          },
+        );
+      }
+    },
+  });
+}
+
+function validateRemoteRef(root: string, remoteRef: string) {
+  return Effect.tryPromise({
+    catch: () => DaemonError.invalidRequest("Pull request ref is invalid."),
+    try: () =>
+      execFileAsync("git", ["-C", root, "check-ref-format", remoteRef]),
+  });
+}
+
+function isAncestor(root: string, ancestor: string, descendant: string) {
+  return Effect.tryPromise({
+    catch: (cause) => DaemonError.gitFailed(cause),
+    try: async () => {
+      try {
+        await execFileAsync(
+          "git",
+          ["-C", root, "merge-base", "--is-ancestor", ancestor, descendant],
+          { maxBuffer: GIT_OUTPUT_MAX_BUFFER },
+        );
+        return true;
+      } catch (cause) {
+        if (
+          typeof cause === "object" &&
+          cause !== null &&
+          "code" in cause &&
+          cause.code === 1
+        ) {
+          return false;
+        }
+        throw cause;
+      }
+    },
+  });
+}
+
+function worktreePathForBranch(worktreeList: string, branch: string) {
+  let currentPath: string | undefined;
+  for (const line of worktreeList.split(/\r?\n/)) {
+    if (line.startsWith("worktree ")) {
+      currentPath = line.slice("worktree ".length);
+    } else if (line === `branch refs/heads/${branch}`) {
+      return currentPath;
+    }
+  }
+  return undefined;
 }
 
 function nonEmpty(value: string) {

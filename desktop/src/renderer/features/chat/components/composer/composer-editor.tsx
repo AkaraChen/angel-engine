@@ -208,7 +208,7 @@ function ComposerEditorHeader({
             removeLabel={t("composer.removeAttachment", { name })}
             typeLabel={
               item.provider === "linear"
-                ? "Linear issue"
+                ? t("composer.linearIssue")
                 : item.kind === "issue"
                   ? t("composer.githubIssue")
                   : t("composer.githubPullRequest")

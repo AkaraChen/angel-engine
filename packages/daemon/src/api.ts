@@ -159,6 +159,7 @@ export function registerApi(
   app: Hono,
   runtime: DaemonRuntime,
   chatEvents: ChatEventsApi,
+  options: { internalBridgeSecret?: string } = {},
 ) {
   const activity = new ChatActivityStore({
     onChange: (chatId) => chatEvents.activityChanged(chatId),
@@ -651,7 +652,7 @@ export function registerApi(
     return context.json(await run(resolveTaskLink(input)));
   });
   app.put("/api/internal/secrets/linear", async (context) => {
-    const expectedMainSecret = process.env.ANGEL_MAIN_BRIDGE_SECRET;
+    const expectedMainSecret = options.internalBridgeSecret;
     if (
       expectedMainSecret === undefined ||
       expectedMainSecret.length === 0 ||

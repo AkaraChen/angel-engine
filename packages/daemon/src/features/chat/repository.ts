@@ -55,6 +55,17 @@ export function listArchivedChats() {
   );
 }
 
+export function findActiveChatByCwd(cwd: string) {
+  return withDatabase((database) =>
+    database
+      .select()
+      .from(chats)
+      .where(and(eq(chats.archived, false), eq(chats.cwd, cwd)))
+      .limit(1)
+      .get(),
+  );
+}
+
 export function getChat(
   id: string,
 ): Effect.Effect<Chat | null, DaemonError, Db> {

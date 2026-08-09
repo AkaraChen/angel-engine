@@ -63,6 +63,7 @@ export const es = {
       proposed: "Propuesto",
       question: "Pregunta",
       reload: "Recargar",
+      retry: "Reintentar",
       running: "En ejecución",
       save: "Guardar",
       saving: "Guardando",
@@ -378,6 +379,7 @@ export const es = {
       noChats: "No hay chats",
       noProjects: "Aún no hay proyectos",
       noStandaloneChats: "No hay chats independientes",
+      openBranchChat: "Abrir el chat que usa esta rama",
       projects: "Proyectos",
       powerWorktreeHome: "Inicio",
       powerWorktreeHistoricalChat: "Historial de chats",
@@ -533,6 +535,21 @@ export const es = {
         sourceUser: "User",
         sourceUserOverride: "User · overridden",
         warningsCount: "{{count}} warning(s) while loading keybindings",
+      },
+      linear: {
+        apiConnection: "Conexión API",
+        connect: "Conectar",
+        connected: "Conectado",
+        connectFailed: "No se pudo conectar Linear.",
+        description:
+          "El token se cifra en el proceso principal y nunca vuelve a exponerse al renderer.",
+        disconnect: "Desconectar",
+        disconnectFailed: "No se pudo desconectar Linear.",
+        notConnected: "Sin conexión",
+        replaceToken: "Reemplazar token",
+        title: "Linear",
+        tokenLabel: "Token de API de Linear",
+        tokenPlaceholder: "lin_api_…",
       },
       mobile: {
         copied: "Copiado",
@@ -755,6 +772,9 @@ export const es = {
       fileTypeBlocked: "Tipo de archivo bloqueado",
       fileTooLarge: "El archivo es demasiado grande",
       files: "Archivos",
+      fromLink: "Desde un enlace",
+      fromLinkPlaceholder:
+        "Pega un enlace de issue de GitHub o Linear, o busca en GitHub",
       githubErrors: {
         cliMissing: "GitHub CLI (gh) no está instalada o no está en el PATH.",
         cliUnauthenticated:
@@ -765,6 +785,10 @@ export const es = {
       },
       githubIssue: "Issue",
       githubPullRequest: "Pull request",
+      linearConnectAction: "Conectar Linear",
+      linearConnectDescription: "Conecta Linear antes de resolver este issue.",
+      linearIssue: "Issue de Linear",
+      linearItemMeta: "{{identifier}} · Linear · {{state}}",
       loadingCommands: "Cargando comandos",
       loadingSkills: "Cargando habilidades",
       loadingValue: "Cargando...",
@@ -794,6 +818,24 @@ export const es = {
       skills: "Habilidades",
       switchToBuild: "Cambiar a modo ejecución",
       switchToPlan: "Cambiar a modo plan",
+      taskLinkErrors: {
+        linearFetchFailed: "No se pudo obtener ese issue de Linear.",
+        linearNotFound: "No se encontró el issue de Linear.",
+        linearUnauthorized: "Linear rechazó el token de API configurado.",
+        prForkUnsupported:
+          "Las pull requests de forks todavía no son compatibles.",
+        unsupported: "Ese enlace de tarea no es compatible.",
+      },
+      taskLinkHintComplete:
+        "Pega un enlace completo a un issue de GitHub, una pull request o un issue de Linear.",
+      taskLinkHintGitHubPath:
+        "Es un enlace de GitHub, pero no es un issue ni una pull request.",
+      taskLinkHintLinearPath: "Es un enlace de Linear, pero no es un issue.",
+      taskLinkHintSupported:
+        "Se admiten enlaces de issues de GitHub, pull requests de GitHub e issues de Linear.",
+      taskLinkStateClosed: "Cerrado",
+      taskLinkStateMerged: "Fusionado",
+      taskLinkStateOpen: "Abierto",
       toasts: {
         couldNotChangeMode: "No se pudo cambiar el modo",
         couldNotReadFile: "No se pudo leer el archivo",

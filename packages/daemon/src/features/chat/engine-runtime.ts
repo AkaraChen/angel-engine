@@ -248,6 +248,9 @@ export class ChatEngine extends Effect.Service<ChatEngine>()(
             job.state = {
               ...job.state,
               error: worktreeCreationErrorMessage(error),
+              errorCode: error instanceof DaemonError ? error.code : undefined,
+              relatedChatId:
+                error instanceof DaemonError ? error.relatedChatId : undefined,
               status: "failed",
             };
             await toPromise(persistWorktreeJob(job)).catch(() => undefined);

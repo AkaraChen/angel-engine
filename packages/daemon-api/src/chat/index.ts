@@ -24,6 +24,7 @@ import type {
   ChatToolActionPhase as JsChatToolActionPhase,
   ChatToolCallPart as JsChatToolCallPart,
 } from "@angel-engine/js-client";
+import type { DaemonErrorCode } from "../daemon";
 import { type as arkType } from "arktype";
 import { normalizeChatAttachmentsInput } from "@angel-engine/js-client/utils/attachments";
 import {
@@ -101,8 +102,10 @@ export type WorktreeCreationStatus = "creating" | "failed";
 
 export interface WorktreeCreationState {
   error?: string;
+  errorCode?: DaemonErrorCode;
   jobId: string;
   progress: number;
+  relatedChatId?: string;
   stage: WorktreeCreationStage;
   status: WorktreeCreationStatus;
 }

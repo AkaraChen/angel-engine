@@ -400,6 +400,7 @@ function WorkspaceSettings() {
 }
 
 function LinearConnectionSettings() {
+  const { t } = useTranslation();
   const [hasToken, setHasToken] = useState(false);
   const [token, setToken] = useState("");
   const [pending, setPending] = useState(false);
@@ -416,10 +417,8 @@ function LinearConnectionSettings() {
       const result = await ipc.appLinearTokenSet({ token });
       setHasToken(result.hasToken);
       setToken("");
-    } catch (cause) {
-      setError(
-        cause instanceof Error ? cause.message : "Could not connect Linear.",
-      );
+    } catch {
+      setError(t("settings.linear.connectFailed"));
     } finally {
       setPending(false);
     }
@@ -432,10 +431,8 @@ function LinearConnectionSettings() {
       const result = await ipc.appLinearTokenClear();
       setHasToken(result.hasToken);
       setToken("");
-    } catch (cause) {
-      setError(
-        cause instanceof Error ? cause.message : "Could not disconnect Linear.",
-      );
+    } catch {
+      setError(t("settings.linear.disconnectFailed"));
     } finally {
       setPending(false);
     }
@@ -443,8 +440,8 @@ function LinearConnectionSettings() {
 
   return (
     <SettingsGroup
-      description="The token is encrypted by the desktop main process and is never exposed back to the renderer."
-      title="Linear"
+      description={t("settings.linear.description")}
+      title={t("settings.linear.title")}
     >
       <SettingsRow
         after={
@@ -454,12 +451,16 @@ function LinearConnectionSettings() {
               onClick={() => void clear()}
               variant="outline"
             >
-              Disconnect
+              {t("settings.linear.disconnect")}
             </Button>
           ) : null
         }
-        description={hasToken ? "Connected" : "Not connected"}
-        title="API connection"
+        description={
+          hasToken
+            ? t("settings.linear.connected")
+            : t("settings.linear.notConnected")
+        }
+        title={t("settings.linear.apiConnection")}
       />
       <SettingsRow
         after={
@@ -467,17 +468,19 @@ function LinearConnectionSettings() {
             disabled={pending || token.trim().length === 0}
             onClick={() => void save()}
           >
-            {hasToken ? "Replace token" : "Connect"}
+            {hasToken
+              ? t("settings.linear.replaceToken")
+              : t("settings.linear.connect")}
           </Button>
         }
         align="start"
       >
         <span className="min-w-0 flex-1 space-y-2">
           <Input
-            aria-label="Linear API token"
+            aria-label={t("settings.linear.tokenLabel")}
             autoComplete="off"
             onChange={(event) => setToken(event.target.value)}
-            placeholder="lin_api_…"
+            placeholder={t("settings.linear.tokenPlaceholder")}
             type="password"
             value={token}
           />

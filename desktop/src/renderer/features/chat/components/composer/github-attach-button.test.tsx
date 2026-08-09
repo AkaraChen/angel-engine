@@ -56,7 +56,21 @@ vi.mock("@/features/chat/runtime/chat-environment-context", () => ({
 
 vi.mock("react-i18next", () => ({
   useTranslation: () => ({
-    t: (key: string) => key,
+    t: (key: string, options?: Record<string, string>) => {
+      if (key === "composer.linearItemMeta") {
+        return `${options?.identifier} · Linear · ${options?.state}`;
+      }
+      return (
+        {
+          "composer.fromLink": "From link",
+          "composer.fromLinkPlaceholder":
+            "Paste a GitHub or Linear issue link, or search GitHub",
+          "composer.taskLinkHintGitHubPath":
+            "This is a GitHub link, but it is not an issue or pull request.",
+          "composer.taskLinkStateOpen": "Open",
+        }[key] ?? key
+      );
+    },
   }),
 }));
 
@@ -126,6 +140,17 @@ const secondIssue: GitHubResolvedItem = {
   url: "https://github.com/acme/widgets/issues/2",
 };
 const secondTaskLink = { ...secondIssue, provider: "github" } as const;
+const draftPullRequest = {
+  ...firstIssue,
+  baseRefName: "main",
+  contextText: "GitHub Pull Request #7 — Draft spinner",
+  headRefName: "feature/spinner",
+  isDraft: true,
+  kind: "pullRequest",
+  number: 7,
+  title: "Draft spinner",
+  url: "https://github.com/acme/widgets/pull/7",
+} as const satisfies GitHubResolvedItem;
 const linearIssue: ResolvedTaskLink = {
   body: "Linear body",
   contextText: "Linear Issue ENG-42 — Repair widget",
@@ -265,7 +290,9 @@ describe("PromptGitHubAttachButton", () => {
 
     await screen.findByText(secondIssue.title);
     expect(mocks.resolveUrl).toHaveBeenCalledWith({ url: secondIssue.url });
-    expect(screen.getByText(/#2 · acme\/widgets · @alice/)).toBeDefined();
+    expect(
+      screen.getByText(/#2 · acme\/widgets · Open · @alice/),
+    ).toBeDefined();
     expect(screen.queryByRole("option", { name: /Second issue/ })).toBeNull();
 
     fireEvent.click(screen.getByText("composer.attachGitHubConfirm"));
@@ -275,6 +302,44 @@ describe("PromptGitHubAttachButton", () => {
     expect(mocks.resolveUrl).toHaveBeenCalledTimes(1);
     expect(onAttached.mock.lastCall?.[0]).toMatchObject(secondIssue);
     expect(screen.queryByRole("dialog")).toBeNull();
+  });
+
+  it("shows pull request state and draft metadata in the preview", async () => {
+    mocks.resolveUrl.mockResolvedValue({
+      ...draftPullRequest,
+      provider: "github",
+    });
+
+    renderButton(vi.fn());
+    openDialog();
+    fireEvent.change(
+      screen.getByPlaceholderText(
+        "Paste a GitHub or Linear issue link, or search GitHub",
+      ),
+      { target: { value: draftPullRequest.url } },
+    );
+
+    await screen.findByText(draftPullRequest.title);
+    expect(
+      screen.getByText(/#7 · acme\/widgets · Open · common\.draft/),
+    ).toBeDefined();
+  });
+
+  it("does not flash a remote error while the user is still typing", async () => {
+    mocks.resolveUrl.mockRejectedValue(new Error("remote permission failed"));
+
+    renderButton(vi.fn());
+    openDialog();
+    const input = screen.getByPlaceholderText(
+      "Paste a GitHub or Linear issue link, or search GitHub",
+    );
+    fireEvent.change(input, { target: { value: secondIssue.url } });
+
+    await waitFor(() => expect(mocks.resolveUrl).toHaveBeenCalledOnce());
+    expect(screen.queryByText("remote permission failed")).toBeNull();
+
+    fireEvent.blur(input);
+    expect(await screen.findByText("remote permission failed")).toBeDefined();
   });
 
   it("resolves and attaches a pasted Linear issue", async () => {
