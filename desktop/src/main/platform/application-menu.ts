@@ -1,15 +1,12 @@
 import type { MenuItemConstructorOptions } from "electron";
 import type { DesktopWindowCommand } from "../../shared/desktop-window";
-import type { KeymapPlatform } from "../../shared/keybindings";
 
 import { app, BrowserWindow, Menu } from "electron";
 import { DESKTOP_COMMAND_CHANNEL } from "../../shared/desktop-window";
 import {
   COMMAND_IDS,
-  createDefaultKeybindingRules,
+  acceleratorForCommand,
   detectKeymapPlatform,
-  mergeKeybindingLayers,
-  toElectronAccelerator,
 } from "../../shared/keybindings";
 import { checkForUpdatesFromMenu } from "../updater";
 import { translate } from "./i18n";
@@ -37,23 +34,12 @@ export function rebuildApplicationMenu() {
   );
 }
 
-function platform(): KeymapPlatform {
-  return detectKeymapPlatform(process.platform);
-}
-
 function acceleratorFor(commandId: string): string | undefined {
   const state = getKeybindingsState();
-  const { rules } = mergeKeybindingLayers({
-    defaultRules: createDefaultKeybindingRules(),
+  return acceleratorForCommand(commandId, {
     userEntries: state.file.bindings,
-    platform: platform(),
+    platform: detectKeymapPlatform(process.platform),
   });
-  const match = rules.find(
-    (rule) =>
-      rule.command === commandId && !rule.command.startsWith("-") && !rule.when,
-  );
-  if (!match) return undefined;
-  return toElectronAccelerator(match.key, platform());
 }
 
 function menuTemplate({
@@ -61,12 +47,10 @@ function menuTemplate({
 }: {
   openSettingsWindow: () => void;
 }): MenuItemConstructorOptions[] {
-  const settingsAccel =
-    acceleratorFor(COMMAND_IDS.settingsOpen) ??
-    (isMacOS ? "CmdOrCtrl+," : "Ctrl+,");
-  const newChatAccel = acceleratorFor(COMMAND_IDS.chatNew) ?? "CmdOrCtrl+N";
-  const sidebarAccel =
-    acceleratorFor(COMMAND_IDS.workspaceToggleSidebar) ?? "CmdOrCtrl+B";
+  // No hard-coded fallback: unbind / chord-only must clear the menu shortcut.
+  const settingsAccel = acceleratorFor(COMMAND_IDS.settingsOpen);
+  const newChatAccel = acceleratorFor(COMMAND_IDS.chatNew);
+  const sidebarAccel = acceleratorFor(COMMAND_IDS.workspaceToggleSidebar);
 
   return [
     ...(isMacOS
@@ -173,10 +157,10 @@ function menuTemplate({
 function settingsItem(
   openSettingsWindow: () => void,
   label: string,
-  accelerator: string,
+  accelerator: string | undefined,
 ): MenuItemConstructorOptions {
   return {
-    accelerator,
+    ...(accelerator ? { accelerator } : {}),
     click: openSettingsWindow,
     label,
   };

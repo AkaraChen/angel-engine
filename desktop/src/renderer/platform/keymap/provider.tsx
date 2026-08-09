@@ -33,6 +33,8 @@ import {
 } from "./keymap-engine";
 import { commandRegistry, type CommandHandler } from "./registry";
 
+type ContextKeyOwner = symbol;
+
 interface KeymapContextValue {
   keymap: LoadedKeymap;
   userEntries: KeybindingUserEntry[];
@@ -40,8 +42,12 @@ interface KeymapContextValue {
   fatal?: LoadFatal;
   platform: ReturnType<typeof detectKeymapPlatform>;
   contextKeys: ContextKeyValues;
-  setContextKeys: (patch: ContextKeyValues) => void;
-  clearContextKeys: (keys: readonly string[]) => void;
+  publishContextKey: (
+    key: string,
+    value: string | boolean | undefined,
+    owner: ContextKeyOwner,
+  ) => void;
+  clearContextKeyIfOwner: (key: string, owner: ContextKeyOwner) => void;
   setRecording: (recording: boolean) => void;
   refreshUserBindings: () => Promise<void>;
   saveUserBindings: (file: KeybindingsFile) => Promise<void>;
@@ -71,6 +77,8 @@ export function KeymapProvider({ children }: { children: ReactNode }) {
   });
   const contextRef = useRef(contextKeys);
   contextRef.current = contextKeys;
+  /** Last publisher per context key — only that owner may clear on unmount. */
+  const contextOwnersRef = useRef(new Map<string, ContextKeyOwner>());
 
   const dispatchState = useRef<KeymapDispatchState>({
     chordPending: null,
@@ -153,33 +161,34 @@ export function KeymapProvider({ children }: { children: ReactNode }) {
     return () => window.removeEventListener("keydown", onKeyDown, true);
   }, [keymap]);
 
-  const setContextKeys = useCallback((patch: ContextKeyValues) => {
-    setContextKeysState((current) => {
-      let changed = false;
-      const next = { ...current };
-      for (const [key, value] of Object.entries(patch)) {
-        if (current[key] !== value) {
-          next[key] = value;
-          changed = true;
-        }
-      }
-      return changed ? next : current;
-    });
-  }, []);
+  const publishContextKey = useCallback(
+    (
+      key: string,
+      value: string | boolean | undefined,
+      owner: ContextKeyOwner,
+    ) => {
+      contextOwnersRef.current.set(key, owner);
+      setContextKeysState((current) => {
+        if (current[key] === value) return current;
+        return { ...current, [key]: value };
+      });
+    },
+    [],
+  );
 
-  const clearContextKeys = useCallback((keys: readonly string[]) => {
-    setContextKeysState((current) => {
-      let changed = false;
-      const next = { ...current };
-      for (const key of keys) {
-        if (key in next && next[key] !== undefined) {
-          delete next[key];
-          changed = true;
-        }
-      }
-      return changed ? next : current;
-    });
-  }, []);
+  const clearContextKeyIfOwner = useCallback(
+    (key: string, owner: ContextKeyOwner) => {
+      if (contextOwnersRef.current.get(key) !== owner) return;
+      contextOwnersRef.current.delete(key);
+      setContextKeysState((current) => {
+        if (!(key in current) || current[key] === undefined) return current;
+        const next = { ...current };
+        delete next[key];
+        return next;
+      });
+    },
+    [],
+  );
 
   const setRecording = useCallback((recording: boolean) => {
     dispatchState.current.recording = recording;
@@ -209,8 +218,8 @@ export function KeymapProvider({ children }: { children: ReactNode }) {
       fatal,
       platform,
       contextKeys,
-      setContextKeys,
-      clearContextKeys,
+      publishContextKey,
+      clearContextKeyIfOwner,
       setRecording,
       refreshUserBindings,
       saveUserBindings,
@@ -225,8 +234,8 @@ export function KeymapProvider({ children }: { children: ReactNode }) {
       fatal,
       platform,
       contextKeys,
-      setContextKeys,
-      clearContextKeys,
+      publishContextKey,
+      clearContextKeyIfOwner,
       setRecording,
       refreshUserBindings,
       saveUserBindings,
@@ -262,24 +271,27 @@ export function useCommand(
 }
 
 /**
- * Publish a context key while mounted; clear on unmount / value change ownership.
- * Only clears if the stored value still equals what this hook last published.
+ * Publish a context key while mounted. Cleanup only clears the key when this
+ * hook instance is still the registered owner (token), so concurrent publishers
+ * of the same key do not wipe each other on unmount.
  */
 export function useContextKey(
   key: string,
   value: string | boolean | undefined,
 ) {
-  const { setContextKeys, clearContextKeys } = useKeymap();
-  const lastValue = useRef(value);
+  const { publishContextKey, clearContextKeyIfOwner } = useKeymap();
+  const ownerRef = useRef<ContextKeyOwner | null>(null);
+  if (ownerRef.current === null) {
+    ownerRef.current = Symbol(`context:${key}`);
+  }
 
   useEffect(() => {
-    lastValue.current = value;
-    setContextKeys({ [key]: value });
+    const owner = ownerRef.current!;
+    publishContextKey(key, value, owner);
     return () => {
-      // Clear only our key slot; concurrent owners re-publish on their turn.
-      clearContextKeys([key]);
+      clearContextKeyIfOwner(key, owner);
     };
-  }, [key, value, setContextKeys, clearContextKeys]);
+  }, [key, value, publishContextKey, clearContextKeyIfOwner]);
 }
 
 export function useKeybindingLabel(id: CommandId): string | undefined {

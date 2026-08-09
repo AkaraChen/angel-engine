@@ -1,16 +1,14 @@
 /** @vitest-environment jsdom */
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 
+import { resolveActiveKeymapFocus } from "./active-scopes";
 import { COMMAND_IDS } from "./commands";
 import { createDefaultKeybindingRules } from "./default-bindings";
-import { mergeKeybindingLayers, inheritRuleMeta } from "./merge-bindings";
-import { resolveActiveKeymapFocus } from "./active-scopes";
+import { inheritRuleMeta, mergeKeybindingLayers } from "./merge-bindings";
 import type { ContextKeyValues } from "./types";
-
-// Import engine pieces via relative paths that match desktop test roots
 import {
-  loadKeymap,
   dispatchKeyEvent,
+  loadKeymap,
 } from "../../renderer/platform/keymap/keymap-engine";
 import { commandRegistry } from "../../renderer/platform/keymap/registry";
 
@@ -46,6 +44,19 @@ function makeKeyEvent(partial: {
     },
   };
   return { event, prevented, stopped };
+}
+
+function emptyFocus(
+  overrides: Partial<ReturnType<typeof resolveActiveKeymapFocus>> = {},
+) {
+  return {
+    scopes: new Set(["app", "window"] as const),
+    scopeIds: new Map(),
+    captureZoneId: null,
+    nearestScopeId: null,
+    focusEditable: false,
+    ...overrides,
+  };
 }
 
 describe("user rebind preserves owner/editableBehavior", () => {
@@ -92,15 +103,11 @@ describe("user rebind preserves owner/editableBehavior", () => {
 describe("dispatchKeyEvent sync preventDefault + user rebind", () => {
   const disposables: Array<() => void> = [];
 
-  beforeEach(() => {
-    // clean handlers between tests by re-registering
-  });
-
   afterEach(() => {
     while (disposables.length > 0) disposables.pop()?.();
   });
 
-  it("claims palette.open and cancels default before handler completes", () => {
+  it("claims palette.open and cancels default before handler returns", () => {
     const defaults = createDefaultKeybindingRules();
     const { rules } = mergeKeybindingLayers({
       defaultRules: defaults,
@@ -128,12 +135,7 @@ describe("dispatchKeyEvent sync preventDefault + user rebind", () => {
       keymap,
       context: {},
       state: { chordPending: null, recording: false },
-      focus: {
-        scopes: new Set(["app", "window"]),
-        captureZoneId: null,
-        nearestScopeId: null,
-        focusEditable: false,
-      },
+      focus: emptyFocus(),
     });
 
     expect(result.kind).toBe("claimed");
@@ -188,17 +190,73 @@ describe("dispatchKeyEvent sync preventDefault + user rebind", () => {
       keymap,
       context,
       state: { chordPending: null, recording: false },
-      focus: {
+      focus: emptyFocus({
         scopes: new Set(["app", "window", "panel", "editable"]),
+        scopeIds: new Map([
+          ["panel", new Set(["chat.panel"])],
+          ["editable", new Set(["chat.composer"])],
+        ]),
         captureZoneId: "chat.composer",
         nearestScopeId: "chat.composer",
         focusEditable: true,
-      },
+      }),
     });
 
     expect(result).toEqual({ kind: "claimed", command: COMMAND_IDS.chatSend });
     expect(prevented.value).toBe(true);
     expect(sent).toBe(true);
+  });
+
+  it("falls through when handler returns false (E4)", () => {
+    const defaults = createDefaultKeybindingRules();
+    // Two commands on same key via user layer
+    const { rules } = mergeKeybindingLayers({
+      defaultRules: defaults,
+      userEntries: [
+        { key: "mod+k", command: "-palette.open" },
+        { key: "mod+k", command: "chat.new" },
+        { key: "mod+k", command: "palette.open" },
+      ],
+      platform: "mac",
+    });
+    const keymap = loadKeymap({ rules, platform: "mac" });
+
+    let chatNewCalled = false;
+    let paletteCalled = false;
+    disposables.push(
+      commandRegistry.register(COMMAND_IDS.chatNew, () => {
+        chatNewCalled = true;
+        return false;
+      }),
+    );
+    disposables.push(
+      commandRegistry.register(COMMAND_IDS.paletteOpen, () => {
+        paletteCalled = true;
+        return true;
+      }),
+    );
+
+    const { event, prevented } = makeKeyEvent({
+      key: "k",
+      code: "KeyK",
+      metaKey: true,
+    });
+
+    const result = dispatchKeyEvent({
+      event,
+      keymap,
+      context: {},
+      state: { chordPending: null, recording: false },
+      focus: emptyFocus(),
+    });
+
+    expect(chatNewCalled).toBe(true);
+    expect(paletteCalled).toBe(true);
+    expect(result).toEqual({
+      kind: "claimed",
+      command: COMMAND_IDS.paletteOpen,
+    });
+    expect(prevented.value).toBe(true);
   });
 
   it("does not fire panel interrupt when panel scope is inactive", () => {
@@ -228,13 +286,7 @@ describe("dispatchKeyEvent sync preventDefault + user rebind", () => {
       keymap,
       context: { "chat.running": true },
       state: { chordPending: null, recording: false },
-      // No panel scope — e.g. focus on fleet sidebar outside chat
-      focus: {
-        scopes: new Set(["app", "window"]),
-        captureZoneId: null,
-        nearestScopeId: null,
-        focusEditable: false,
-      },
+      focus: emptyFocus(),
     });
 
     expect(result.kind).toBe("ignored");
@@ -242,7 +294,7 @@ describe("dispatchKeyEvent sync preventDefault + user rebind", () => {
     expect(interrupted).toBe(false);
   });
 
-  it("fires panel interrupt when panel scope is active and not in composer capture", () => {
+  it("does not interrupt when focus is in another panel", () => {
     const defaults = createDefaultKeybindingRules();
     const { rules } = mergeKeybindingLayers({
       defaultRules: defaults,
@@ -269,12 +321,51 @@ describe("dispatchKeyEvent sync preventDefault + user rebind", () => {
       keymap,
       context: { "chat.running": true },
       state: { chordPending: null, recording: false },
-      focus: {
+      focus: emptyFocus({
         scopes: new Set(["app", "window", "panel"]),
-        captureZoneId: null,
+        // Different panel id — must not match owner chat.panel
+        scopeIds: new Map([["panel", new Set(["files.panel"])]]),
+        nearestScopeId: "files.panel",
+      }),
+    });
+
+    expect(result.kind).toBe("ignored");
+    expect(prevented.value).toBe(false);
+    expect(interrupted).toBe(false);
+  });
+
+  it("fires panel interrupt when chat.panel scope id is active", () => {
+    const defaults = createDefaultKeybindingRules();
+    const { rules } = mergeKeybindingLayers({
+      defaultRules: defaults,
+      userEntries: [],
+      platform: "mac",
+    });
+    const keymap = loadKeymap({ rules, platform: "mac" });
+
+    let interrupted = false;
+    disposables.push(
+      commandRegistry.register(COMMAND_IDS.chatInterrupt, () => {
+        interrupted = true;
+        return true;
+      }),
+    );
+
+    const { event, prevented } = makeKeyEvent({
+      key: "Escape",
+      code: "Escape",
+    });
+
+    const result = dispatchKeyEvent({
+      event,
+      keymap,
+      context: { "chat.running": true },
+      state: { chordPending: null, recording: false },
+      focus: emptyFocus({
+        scopes: new Set(["app", "window", "panel"]),
+        scopeIds: new Map([["panel", new Set(["chat.panel"])]]),
         nearestScopeId: "chat.panel",
-        focusEditable: false,
-      },
+      }),
     });
 
     expect(result).toEqual({
@@ -287,7 +378,7 @@ describe("dispatchKeyEvent sync preventDefault + user rebind", () => {
 });
 
 describe("resolveActiveKeymapFocus", () => {
-  it("collects scope chain and capture zone from DOM", () => {
+  it("collects scope chain, ids, and capture zone from DOM", () => {
     const root = document.createElement("div");
     root.setAttribute("data-keymap-scope", "view");
     root.setAttribute("data-keymap-scope-id", "workspace");
@@ -313,6 +404,8 @@ describe("resolveActiveKeymapFocus", () => {
     expect(focus.scopes.has("view")).toBe(true);
     expect(focus.scopes.has("panel")).toBe(true);
     expect(focus.scopes.has("editable")).toBe(true);
+    expect(focus.scopeIds.get("panel")?.has("chat.panel")).toBe(true);
+    expect(focus.scopeIds.get("view")?.has("workspace")).toBe(true);
     expect(focus.focusEditable).toBe(true);
 
     root.remove();

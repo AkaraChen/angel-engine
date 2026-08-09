@@ -4,6 +4,7 @@ import {
   getCommandDescriptor,
   parseBinding,
   resolveActiveKeymapFocus,
+  ruleOwnerMatchesFocus,
   scopeIsActive,
   segmentHasModifier,
   segmentsEqual,
@@ -144,6 +145,8 @@ export function matchKeybindingRules(options: {
       const descriptor = getCommandDescriptor(rule.command as CommandId);
       const scope = descriptor?.handlerScope ?? "app";
       if (!scopeIsActive(scope, focus.scopes)) continue;
+      // Owner / scope-id gate (panel interrupt only in its own panel, etc.)
+      if (!ruleOwnerMatchesFocus(scope, rule.owner, focus)) continue;
 
       const hasMod = segmentHasModifier(parsed.value.segments[0]!);
       const editableBehavior =
@@ -155,13 +158,6 @@ export function matchKeybindingRules(options: {
       }
       if (focus.focusEditable && hasMod && editableBehavior === "suppress") {
         continue;
-      }
-
-      // E3: inside a capture zone, deeper scopes only when owner matches.
-      if (focus.captureZoneId) {
-        if (scope !== "app" && scope !== "window") {
-          if (rule.owner !== focus.captureZoneId) continue;
-        }
       }
 
       if (event.repeat && !rule.repeatable) continue;
@@ -279,19 +275,18 @@ export function dispatchKeyEvent(options: {
 
   for (const rule of executable) {
     const id = rule.command as CommandId;
-    if (!commandRegistry.isExecutable(id, context)) {
+    // E4: only preventDefault after a handler accepts. Sync `false` falls
+    // through to the next matching rule without consuming the event.
+    const outcome = commandRegistry.tryExecute(id, rule.args, context);
+    if (outcome === "missing" || outcome === "declined") {
       continue;
     }
-    // Sync claim: cancel browser defaults before any async handler work.
+
     event.preventDefault();
     event.stopPropagation();
     state.chordPending = null;
     if (state.chordTimer) clearTimeout(state.chordTimer);
-
-    const claimed = commandRegistry.claimAndExecute(id, rule.args, context);
-    if (claimed) {
-      return { kind: "claimed", command: id };
-    }
+    return { kind: "claimed", command: id };
   }
 
   return { kind: "ignored" };

@@ -9,6 +9,8 @@ export type CommandHandler = (
   args?: unknown,
 ) => boolean | void | Promise<boolean | void>;
 
+export type ExecuteOutcome = "accepted" | "declined" | "missing";
+
 type Disposable = () => void;
 
 class CommandRegistryImpl {
@@ -67,25 +69,59 @@ class CommandRegistryImpl {
     args: unknown,
     context: ContextKeyValues,
   ): Promise<boolean> {
-    if (!this.isExecutable(id, context)) return false;
-    const handler = this.handlers.get(id);
-    if (!handler) return false;
-    const result = await handler(args);
-    return result !== false;
+    const outcome = this.tryExecute(id, args, context);
+    return outcome === "accepted";
   }
 
-  /** Fire-and-forget after sync claim; returns false if not executable. */
-  claimAndExecute(
+  /**
+   * Run a handler and report whether it consumed the event (KIT-796 E4).
+   *
+   * - Sync `false` → declined (caller may try the next rule; no preventDefault yet).
+   * - Sync true/void → accepted.
+   * - Async (Promise) → accepted optimistically; rejections are logged, not rethrown.
+   *   Async handlers that need to decline must decide synchronously first.
+   */
+  tryExecute(
     id: CommandId,
     args: unknown,
     context: ContextKeyValues,
-  ): boolean {
-    if (!this.isExecutable(id, context)) return false;
+  ): ExecuteOutcome {
+    if (!this.isExecutable(id, context)) return "missing";
     const handler = this.handlers.get(id);
-    if (!handler) return false;
-    void Promise.resolve(handler(args));
-    return true;
+    if (!handler) return "missing";
+
+    try {
+      const result = handler(args);
+      if (isThenable(result)) {
+        void Promise.resolve(result).then(
+          (value) => {
+            if (value === false) {
+              console.warn(
+                `[keymap] async handler for ${id} returned false after claim; prefer sync decline`,
+              );
+            }
+          },
+          (error: unknown) => {
+            console.warn(`[keymap] handler for ${id} rejected`, error);
+          },
+        );
+        return "accepted";
+      }
+      return result === false ? "declined" : "accepted";
+    } catch (error: unknown) {
+      console.warn(`[keymap] handler for ${id} threw`, error);
+      return "declined";
+    }
   }
+}
+
+function isThenable(value: unknown): value is PromiseLike<unknown> {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    "then" in value &&
+    typeof (value as { then: unknown }).then === "function"
+  );
 }
 
 export const commandRegistry = new CommandRegistryImpl();

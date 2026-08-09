@@ -12,3 +12,4 @@ export * from "./migrate-user-file";
 export * from "./channels";
 export * from "./active-scopes";
 export * from "./electron-accelerator";
+export * from "./menu-accelerators";
