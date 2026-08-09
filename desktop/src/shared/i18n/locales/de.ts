@@ -426,6 +426,10 @@ export const de = {
           "Vor dem Erstellen eines Worktrees nachfragen, wenn das ausgewählte Projekt nicht übernommene Änderungen hat.",
         dirtyPromptSwitchLabel: "Vor Worktrees aus dirty Repositories warnen",
         dirtyPromptTitle: "Dirty-Repository-Warnung",
+        osNotificationsDescription:
+          "Systembanner anzeigen, wenn ein Hintergrund-Chat fertig ist, fehlschlägt oder dich braucht. Der In-App-Verlauf bleibt verfügbar.",
+        osNotificationsSwitchLabel: "OS-Benachrichtigungen anzeigen",
+        osNotificationsTitle: "OS-Benachrichtigungen",
         sendWithModEnterDescription:
           "Wenn aktiviert, fügt Enter eine neue Zeile ein und {{shortcut}} sendet.",
         sendWithModEnterSwitchLabel: "Nachrichten mit {{shortcut}} senden",
@@ -623,6 +627,13 @@ export const de = {
       renameChat: "Chat umbenennen",
     },
     notifications: {
+      agentFailedNoDetail: "Der Agent wurde mit einem Fehler beendet.",
+      centerClear: "Alle löschen",
+      centerEmpty: "Noch keine Benachrichtigungen",
+      centerOpenChat: "Chat öffnen",
+      centerTitle: "Benachrichtigungen",
+      centerUnread: "{{count}} ungelesen",
+      failed: "{{chatTitle}} fehlgeschlagen",
       chatsDeleted: "Chats gelöscht",
       chatsDeletedDescription_one: "{{count}} Chat gelöscht.",
       chatsDeletedDescription_other: "{{count}} Chats gelöscht.",

@@ -427,6 +427,10 @@ export const es = {
         dirtyPromptSwitchLabel:
           "Avisar antes de crear worktrees desde repositorios dirty",
         dirtyPromptTitle: "Aviso de repositorio dirty",
+        osNotificationsDescription:
+          "Muestra avisos del sistema cuando un chat en segundo plano termina, falla o te necesita. El historial en la app sigue disponible.",
+        osNotificationsSwitchLabel: "Mostrar notificaciones del SO",
+        osNotificationsTitle: "Notificaciones del SO",
         sendWithModEnterDescription:
           "Al activarlo, Enter inserta una línea nueva y {{shortcut}} envía.",
         sendWithModEnterSwitchLabel: "Enviar mensajes con {{shortcut}}",
@@ -620,6 +624,13 @@ export const es = {
       renameChat: "Renombrar chat",
     },
     notifications: {
+      agentFailedNoDetail: "El Agent se detuvo con un error.",
+      centerClear: "Borrar todo",
+      centerEmpty: "Aún no hay notificaciones",
+      centerOpenChat: "Abrir chat",
+      centerTitle: "Notificaciones",
+      centerUnread: "{{count}} sin leer",
+      failed: "{{chatTitle}} falló",
       chatsDeleted: "Chats eliminados",
       chatsDeletedDescription_one: "Se eliminó {{count}} chat.",
       chatsDeletedDescription_other: "Se eliminaron {{count}} chats.",

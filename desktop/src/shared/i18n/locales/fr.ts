@@ -427,6 +427,10 @@ export const fr = {
         dirtyPromptSwitchLabel:
           "Avertir avant de créer des worktrees depuis des dépôts dirty",
         dirtyPromptTitle: "Avertissement de dépôt dirty",
+        osNotificationsDescription:
+          "Affiche des bannières système quand un chat en arrière-plan se termine, échoue ou a besoin de vous. L’historique in-app reste disponible.",
+        osNotificationsSwitchLabel: "Afficher les notifications OS",
+        osNotificationsTitle: "Notifications OS",
         sendWithModEnterDescription:
           "Si activé, Entrée insère une nouvelle ligne et {{shortcut}} envoie.",
         sendWithModEnterSwitchLabel: "Envoyer les messages avec {{shortcut}}",
@@ -622,6 +626,13 @@ export const fr = {
       renameChat: "Renommer la discussion",
     },
     notifications: {
+      agentFailedNoDetail: "L’agent s’est arrêté avec une erreur.",
+      centerClear: "Tout effacer",
+      centerEmpty: "Aucune notification",
+      centerOpenChat: "Ouvrir le chat",
+      centerTitle: "Notifications",
+      centerUnread: "{{count}} non lues",
+      failed: "{{chatTitle}} a échoué",
       chatsDeleted: "Discussions supprimées",
       chatsDeletedDescription_one: "{{count}} discussion supprimée.",
       chatsDeletedDescription_other: "{{count}} discussions supprimées.",

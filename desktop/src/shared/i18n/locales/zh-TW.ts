@@ -408,6 +408,10 @@ export const zhTW = {
           "當所選專案存在未提交變更時，建立 worktree 前先詢問。",
         dirtyPromptSwitchLabel: "倉庫存在未提交變更時，建立 worktree 前先提醒",
         dirtyPromptTitle: "未提交變更提醒",
+        osNotificationsDescription:
+          "在背景工作階段完成、失敗或需要你處理時顯示系統通知。關閉後仍可在應用內查看歷史。",
+        osNotificationsSwitchLabel: "顯示系統通知",
+        osNotificationsTitle: "系統通知",
         sendWithModEnterDescription:
           "開啟後，Enter 換行，{{shortcut}} 傳送訊息。",
         sendWithModEnterSwitchLabel: "使用 {{shortcut}} 傳送訊息",
@@ -593,6 +597,13 @@ export const zhTW = {
       renameChat: "重新命名聊天",
     },
     notifications: {
+      agentFailedNoDetail: "Agent 因錯誤停止。",
+      centerClear: "全部清除",
+      centerEmpty: "尚無通知",
+      centerOpenChat: "開啟對話",
+      centerTitle: "通知中心",
+      centerUnread: "{{count}} 則未讀",
+      failed: "{{chatTitle}} 失敗",
       chatsDeleted: "聊天已刪除",
       chatsDeletedDescription_one: "已刪除 {{count}} 個聊天。",
       chatsDeletedDescription_other: "已刪除 {{count}} 個聊天。",

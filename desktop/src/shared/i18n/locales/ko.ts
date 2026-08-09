@@ -417,6 +417,10 @@ export const ko = {
           "선택한 프로젝트에 커밋되지 않은 변경 사항이 있을 때 worktree 생성 전에 확인합니다.",
         dirtyPromptSwitchLabel: "dirty 저장소에서 worktree를 만들기 전에 경고",
         dirtyPromptTitle: "dirty 저장소 경고",
+        osNotificationsDescription:
+          "백그라운드 채팅이 완료·실패하거나 입력이 필요할 때 OS 알림을 표시합니다. 꺼도 앱 내 기록은 유지됩니다.",
+        osNotificationsSwitchLabel: "OS 알림 표시",
+        osNotificationsTitle: "OS 알림",
         sendWithModEnterDescription:
           "활성화하면 Enter로 줄을 바꾸고 {{shortcut}}로 전송합니다.",
         sendWithModEnterSwitchLabel: "{{shortcut}}로 메시지 전송",
@@ -608,6 +612,13 @@ export const ko = {
       renameChat: "채팅 이름 변경",
     },
     notifications: {
+      agentFailedNoDetail: "Agent가 오류로 중지되었습니다.",
+      centerClear: "모두 지우기",
+      centerEmpty: "알림이 없습니다",
+      centerOpenChat: "채팅 열기",
+      centerTitle: "알림",
+      centerUnread: "읽지 않음 {{count}}",
+      failed: "{{chatTitle}} 실패",
       chatsDeleted: "채팅이 삭제됨",
       chatsDeletedDescription_one: "채팅 {{count}}개를 삭제했습니다.",
       chatsDeletedDescription_other: "채팅 {{count}}개를 삭제했습니다.",

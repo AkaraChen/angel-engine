@@ -333,7 +333,7 @@ export interface ChatActivityListResult {
 export interface ChatAttention {
   chatId: string;
   id: string;
-  status: "completed" | "needsInput";
+  status: "completed" | "failed" | "needsInput";
   updatedAt: string;
 }
 

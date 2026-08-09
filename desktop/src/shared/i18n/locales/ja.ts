@@ -426,6 +426,10 @@ export const ja = {
         dirtyPromptSwitchLabel:
           "dirty リポジトリから worktree を作成する前に警告する",
         dirtyPromptTitle: "dirty リポジトリ警告",
+        osNotificationsDescription:
+          "バックグラウンドのチャットが完了・失敗・入力待ちのときに OS 通知を表示します。オフでもアプリ内履歴は残ります。",
+        osNotificationsSwitchLabel: "OS 通知を表示",
+        osNotificationsTitle: "OS 通知",
         sendWithModEnterDescription:
           "有効にすると、Enter で改行し、{{shortcut}} で送信します。",
         sendWithModEnterSwitchLabel: "{{shortcut}} でメッセージを送信",
@@ -620,6 +624,13 @@ export const ja = {
       renameChat: "チャット名を変更",
     },
     notifications: {
+      agentFailedNoDetail: "Agent がエラーで停止しました。",
+      centerClear: "すべてクリア",
+      centerEmpty: "通知はまだありません",
+      centerOpenChat: "チャットを開く",
+      centerTitle: "通知",
+      centerUnread: "未読 {{count}} 件",
+      failed: "{{chatTitle}} が失敗しました",
       chatsDeleted: "チャットを削除しました",
       chatsDeletedDescription_one: "{{count}} 件のチャットを削除しました。",
       chatsDeletedDescription_other: "{{count}} 件のチャットを削除しました。",
