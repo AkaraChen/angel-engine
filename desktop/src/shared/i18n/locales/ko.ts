@@ -200,12 +200,15 @@ export const ko = {
       powerWorktreeHome: "홈",
       powerWorktreeHistoricalChat: "채팅 기록",
       refreshProjects: "프로젝트 새로고침",
+      retryWorktreeCreation: "Worktree 생성 다시 시도",
       settings: "설정",
       toggleChats: "채팅 전환",
       mobileDescription: "모바일 사이드바를 표시합니다.",
       title: "사이드바",
       toggleSidebar: "사이드바 전환",
       worktreeMain: "메인",
+      worktreeCreating: "Worktree 만드는 중… {{progress}}%",
+      worktreeCreationFailed: "Worktree 생성 실패",
     },
     settings: {
       agents: {

@@ -163,6 +163,13 @@ export function touchChat(id: string) {
   return updateChat(id, { updatedAt: new Date().toISOString() });
 }
 
+export function setChatCwd(id: string, cwd: string) {
+  return updateChat(id, {
+    cwd,
+    updatedAt: new Date().toISOString(),
+  });
+}
+
 export function setChatRemoteThreadId(
   id: string,
   remoteThreadId: string | null,
@@ -264,6 +271,7 @@ function updateChat(
     Pick<
       Chat,
       | "archived"
+      | "cwd"
       | "pinned"
       | "remoteThreadId"
       | "runtime"

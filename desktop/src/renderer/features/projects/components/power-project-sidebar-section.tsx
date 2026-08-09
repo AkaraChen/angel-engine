@@ -10,6 +10,8 @@ import {
   GitBranch,
   SpinnerGap as Loader2,
   Plus,
+  ArrowClockwise,
+  X,
 } from "@phosphor-icons/react";
 import { AnimatePresence, m } from "framer-motion";
 import { useEffect, useMemo } from "react";
@@ -36,10 +38,12 @@ interface PowerProjectSidebarSectionProps {
   isLoading: boolean;
   onCreateProject: () => MaybeAsync;
   onCreateProjectChat: (project: Project) => MaybeAsync;
+  onCancelWorktreeCreation: (chat: Chat) => MaybeAsync;
   onOpenWorktree: (
     project: Project,
     worktreeGroup: ProjectWorktreeChatGroup,
   ) => MaybeAsync;
+  onRetryWorktreeCreation: (chat: Chat) => MaybeAsync;
   onShowProjectContextMenu: (project: Project) => MaybeAsync;
   onShowWorktreeContextMenu: (
     project: Project,
@@ -53,7 +57,9 @@ export function PowerProjectSidebarSection({
   isLoading,
   onCreateProject,
   onCreateProjectChat,
+  onCancelWorktreeCreation,
   onOpenWorktree,
+  onRetryWorktreeCreation,
   onShowProjectContextMenu,
   onShowWorktreeContextMenu,
   projectChatsByProjectId,
@@ -140,8 +146,13 @@ export function PowerProjectSidebarSection({
               const projectDisplayName = getProjectDisplayName(project.path);
               const projectChats =
                 projectChatsByProjectId.get(project.id) ?? [];
+              const worktreeCreationChats = projectChats.filter(
+                (chat) => chat.worktreeCreation !== undefined,
+              );
               const worktreeGroups = groupProjectChatsByWorktree(
-                projectChats,
+                projectChats.filter(
+                  (chat) => chat.worktreeCreation === undefined,
+                ),
                 project,
                 t("sidebar.worktreeMain"),
               ).filter((group) => group.isMain || group.chats.length > 0);
@@ -225,6 +236,59 @@ export function PowerProjectSidebarSection({
                         transition={sidebarMotion}
                       >
                         <SidebarMenu>
+                          {worktreeCreationChats.map((chat) => {
+                            const creation = chat.worktreeCreation;
+                            if (!creation) return null;
+                            const failed = creation.status === "failed";
+                            return (
+                              <AnimatedSidebarMenuItem key={chat.id}>
+                                <div
+                                  className="flex h-7 items-center gap-1.5 pr-1 pl-6 text-[11px]"
+                                  title={creation.error}
+                                >
+                                  {failed ? (
+                                    <GitBranch className="size-3 shrink-0 text-destructive" />
+                                  ) : (
+                                    <Loader2 className="size-3 shrink-0 animate-spin" />
+                                  )}
+                                  <span className="min-w-0 flex-1 truncate text-sidebar-foreground/65">
+                                    {failed
+                                      ? t("sidebar.worktreeCreationFailed")
+                                      : t("sidebar.worktreeCreating", {
+                                          progress: creation.progress,
+                                        })}
+                                  </span>
+                                  {failed ? (
+                                    <button
+                                      aria-label={t(
+                                        "sidebar.retryWorktreeCreation",
+                                      )}
+                                      className="rounded p-1 hover:bg-sidebar-accent"
+                                      onClick={() =>
+                                        void onRetryWorktreeCreation(chat)
+                                      }
+                                      title={t("sidebar.retryWorktreeCreation")}
+                                      type="button"
+                                    >
+                                      <ArrowClockwise className="size-3" />
+                                    </button>
+                                  ) : (
+                                    <button
+                                      aria-label={t("common.cancel")}
+                                      className="rounded p-1 hover:bg-sidebar-accent"
+                                      onClick={() =>
+                                        void onCancelWorktreeCreation(chat)
+                                      }
+                                      title={t("common.cancel")}
+                                      type="button"
+                                    >
+                                      <X className="size-3" />
+                                    </button>
+                                  )}
+                                </div>
+                              </AnimatedSidebarMenuItem>
+                            );
+                          })}
                           {worktreeGroups.map((group) => (
                             <AnimatedSidebarMenuItem key={group.key}>
                               <button

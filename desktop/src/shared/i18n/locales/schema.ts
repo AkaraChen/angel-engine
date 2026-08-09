@@ -216,12 +216,15 @@ export interface LocaleResourceTranslationSidebar {
   powerWorktreeHome: string;
   powerWorktreeHistoricalChat: string;
   refreshProjects: string;
+  retryWorktreeCreation: string;
   settings: string;
   toggleChats: string;
   mobileDescription: string;
   title: string;
   toggleSidebar: string;
   worktreeMain: string;
+  worktreeCreating: string;
+  worktreeCreationFailed: string;
 }
 
 export interface LocaleResourceTranslationSettingsAgents {

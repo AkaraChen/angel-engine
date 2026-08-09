@@ -156,9 +156,10 @@ export function registerApi(
     return context.json({ read });
   });
 
-  app.get("/api/chats", async (context) =>
-    context.json(await run(listChats())),
-  );
+  app.get("/api/chats", async (context) => {
+    const chats = await run(listChats());
+    return context.json(await run(engine((e) => e.decorateChats(chats))));
+  });
   app.get("/api/chats/archived", async (context) =>
     context.json(await run(listArchivedChats())),
   );
@@ -172,6 +173,18 @@ export function registerApi(
     const chat = await run(
       engine((e) => e.createChatFromInput(input, context.req.raw.signal)),
     );
+    chatEvents.metadataChanged([chat.id]);
+    return context.json(chat);
+  });
+  app.delete("/api/chats/:id/worktree-creation", async (context) => {
+    const chatId = requirePath(context.req.param("id"), "chatId");
+    const chat = await run(engine((e) => e.cancelWorktreeCreation(chatId)));
+    chatEvents.metadataChanged([chat.id]);
+    return context.json(chat);
+  });
+  app.post("/api/chats/:id/worktree-creation/retry", async (context) => {
+    const chatId = requirePath(context.req.param("id"), "chatId");
+    const chat = await run(engine((e) => e.retryWorktreeCreation(chatId)));
     chatEvents.metadataChanged([chat.id]);
     return context.json(chat);
   });

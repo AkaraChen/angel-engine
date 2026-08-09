@@ -39,6 +39,13 @@ export interface ChatRuntime {
     input: ChatCreateInput,
     abortSignal?: AbortSignal,
   ) => Effect.Effect<Chat, DaemonError, Db>;
+  cancelWorktreeCreation: (
+    chatId: string,
+  ) => Effect.Effect<Chat, DaemonError, Db>;
+  decorateChats: (chats: Chat[]) => Effect.Effect<Chat[]>;
+  retryWorktreeCreation: (
+    chatId: string,
+  ) => Effect.Effect<Chat, DaemonError, Db>;
   inspectChatRuntimeConfig: (
     input: ChatRuntimeConfigInput,
   ) => Effect.Effect<ChatRuntimeConfig, DaemonError, Db>;

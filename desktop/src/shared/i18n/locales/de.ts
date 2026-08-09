@@ -200,12 +200,15 @@ export const de = {
       powerWorktreeHome: "Home",
       powerWorktreeHistoricalChat: "Historical Chat",
       refreshProjects: "Projekte aktualisieren",
+      retryWorktreeCreation: "Worktree-Erstellung wiederholen",
       settings: "Einstellungen",
       toggleChats: "Chats ein-/ausblenden",
       mobileDescription: "Zeigt die mobile Seitenleiste an.",
       title: "Seitenleiste",
       toggleSidebar: "Seitenleiste ein-/ausblenden",
       worktreeMain: "Haupt",
+      worktreeCreating: "Worktree wird erstellt… {{progress}} %",
+      worktreeCreationFailed: "Worktree-Erstellung fehlgeschlagen",
     },
     settings: {
       agents: {
