@@ -108,15 +108,27 @@ export interface WorktreeCreationState {
 }
 
 export type Chat = JsChat & {
+  sourceLink?: ChatSourceLink | null;
   /** Present while an app-managed worktree is being created or needs retry. */
   worktreeCreation?: WorktreeCreationState;
 };
+export interface ChatSourceLink {
+  kind: "issue" | "pullRequest";
+  provider: "github" | "linear";
+  url: string;
+}
 export type ChatCreateInput = JsChatCreateInput &
   ChatCreationLocationInput &
   ChatCwdInput &
   ChatPrewarmIdInput &
   WorktreeSetupApprovalInput & {
     remoteThreadId?: string;
+    sourceLink?: ChatSourceLink;
+    worktreeRef?: {
+      remoteRef?: string;
+      type: "existingBranch" | "newBranchFrom";
+      value: string;
+    };
   };
 
 /** A remote provider session that can be imported into Angel Engine. */
@@ -599,8 +611,18 @@ export const chatCreateInputSchema = arkType({
   "reasoningEffort?": "string > 0 | undefined",
   "remoteThreadId?": "string > 0 | undefined",
   "runtime?": "string > 0 | undefined",
+  "sourceLink?": {
+    kind: "'issue' | 'pullRequest'",
+    provider: "'github' | 'linear'",
+    url: "string > 0",
+  },
   "title?": "string > 0 | undefined",
   "worktreeSetupApproval?": "string > 0 | undefined",
+  "worktreeRef?": {
+    "remoteRef?": "string > 0",
+    type: "'existingBranch' | 'newBranchFrom'",
+    value: "string > 0",
+  },
 });
 
 export const listImportableSessionsInputSchema = arkType({

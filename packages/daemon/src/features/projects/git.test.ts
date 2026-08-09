@@ -32,7 +32,9 @@ const testDbLayer = Layer.succeed(
 describe("project worktree setup", () => {
   let projectRoot: string;
   let worktreeParent: string;
-  let createdWorktree: { branch: string; cwd: string } | undefined;
+  let createdWorktree:
+    | { branch: string; createdBranch: boolean; cwd: string }
+    | undefined;
 
   beforeEach(async () => {
     projectRoot = await fs.mkdtemp(
@@ -88,6 +90,35 @@ describe("project worktree setup", () => {
       fs.readFile(path.join(createdWorktree.cwd, "setup.marker"), "utf8"),
     ).resolves.toContain("ready");
   }, 15_000);
+
+  it("checks out an existing pull request head branch", async () => {
+    await git(projectRoot, ["branch", "feature/pr-head"]);
+
+    createdWorktree = await Effect.runPromise(
+      createProjectWorktree({
+        projectId: "project-1",
+        ref: { type: "existingBranch", value: "feature/pr-head" },
+      }).pipe(Effect.provide(testDbLayer)),
+    );
+
+    await expect(
+      git(createdWorktree.cwd, ["branch", "--show-current"]),
+    ).resolves.toBe("feature/pr-head");
+    expect(createdWorktree.createdBranch).toBe(false);
+  });
+
+  it("rejects a pull request branch already used by another worktree", async () => {
+    const currentBranch = await git(projectRoot, ["branch", "--show-current"]);
+
+    await expect(
+      Effect.runPromise(
+        createProjectWorktree({
+          projectId: "project-1",
+          ref: { type: "existingBranch", value: currentBranch },
+        }).pipe(Effect.provide(testDbLayer)),
+      ),
+    ).rejects.toThrow("already checked out in another worktree");
+  });
 
   it("C2 keeps a failed setup worktree reachable", async () => {
     await writeConfig(["exit 7"]);

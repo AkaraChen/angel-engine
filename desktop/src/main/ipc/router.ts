@@ -7,6 +7,7 @@ import { Effect } from "effect";
 import {
   getMobileHostingState,
   setMobileHostingConfig,
+  fetchDaemonInternal,
 } from "../daemon/supervisor";
 import { listMobileHostingListenAddresses } from "../daemon/mobile-hosting";
 import { chatPlatformIpcRouter } from "../features/chat/ipc";
@@ -20,10 +21,36 @@ import { setMainLanguage } from "../platform/i18n";
 import { scheduleTrayRefresh } from "../features/tray/service";
 import { readClipboardSourceUrl } from "./clipboard-source";
 import { fetchUrlPreview } from "./url-preview";
+import {
+  clearLinearToken,
+  hasLinearToken,
+  setLinearToken,
+} from "../features/secrets/linear-token";
 
 const t = tipc.create();
 
 const appIpcRouter = {
+  appLinearTokenClear: t.procedure.action(async () =>
+    Effect.runPromise(
+      Effect.tryPromise({
+        catch: (cause) => MainIpcError.operationFailed(cause),
+        try: () => clearLinearToken(fetchDaemonInternal),
+      }),
+    ),
+  ),
+  appLinearTokenHas: t.procedure.action(async () =>
+    Effect.runPromise(Effect.sync(() => ({ hasToken: hasLinearToken() }))),
+  ),
+  appLinearTokenSet: t.procedure
+    .input<{ token: string }>()
+    .action(async ({ input }) =>
+      Effect.runPromise(
+        Effect.tryPromise({
+          catch: (cause) => MainIpcError.operationFailed(cause),
+          try: () => setLinearToken(input.token, fetchDaemonInternal),
+        }),
+      ),
+    ),
   appFetchUrlPreview: t.procedure
     .input<{ url: string }>()
     .action(async ({ input }) =>

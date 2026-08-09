@@ -391,6 +391,7 @@ async function memoryDatabase(): Promise<AppDatabase> {
       cwd TEXT,
       runtime TEXT NOT NULL,
       remote_thread_id TEXT,
+      source_link TEXT,
       created_at TEXT NOT NULL,
       updated_at TEXT NOT NULL,
       archived INTEGER NOT NULL DEFAULT 0,
@@ -415,6 +416,7 @@ async function memoryDatabase(): Promise<AppDatabase> {
       job_id TEXT NOT NULL,
       progress INTEGER NOT NULL,
       setup_approval TEXT,
+      worktree_ref TEXT,
       stage TEXT NOT NULL,
       status TEXT NOT NULL,
       FOREIGN KEY (chat_id) REFERENCES chats(id) ON DELETE CASCADE

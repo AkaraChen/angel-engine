@@ -3,9 +3,12 @@
 import type {
   GitHubListItemsInput,
   GitHubListItemsResult,
-  GitHubResolveUrlInput,
   GitHubResolvedItem,
 } from "@angel-engine/daemon-api/github";
+import type {
+  ResolvedTaskLink,
+  TaskLinkResolveInput,
+} from "@angel-engine/daemon-api/links";
 import type { FC, ReactNode } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
@@ -20,7 +23,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ComposerGitHubAttachment } from "./github-attachments";
 import { PromptGitHubAttachButton } from "./github-attach-button";
 
-type ResolveUrl = (input: GitHubResolveUrlInput) => Promise<GitHubResolvedItem>;
+type ResolveUrl = (input: TaskLinkResolveInput) => Promise<ResolvedTaskLink>;
 type ListItems = (
   input: GitHubListItemsInput,
 ) => Promise<GitHubListItemsResult>;
@@ -35,8 +38,8 @@ vi.mock("@/platform/use-api", () => ({
   useApi: () => ({
     github: {
       listItems: mocks.listItems,
-      resolveUrl: mocks.resolveUrl,
     },
+    links: { resolve: mocks.resolveUrl },
   }),
 }));
 
@@ -112,6 +115,7 @@ const firstIssue: GitHubResolvedItem = {
   title: "First issue",
   url: "https://github.com/acme/widgets/issues/1",
 };
+const firstTaskLink = { ...firstIssue, provider: "github" } as const;
 
 const secondIssue: GitHubResolvedItem = {
   ...firstIssue,
@@ -120,6 +124,18 @@ const secondIssue: GitHubResolvedItem = {
   number: 2,
   title: "Second issue",
   url: "https://github.com/acme/widgets/issues/2",
+};
+const secondTaskLink = { ...secondIssue, provider: "github" } as const;
+const linearIssue: ResolvedTaskLink = {
+  body: "Linear body",
+  contextText: "Linear Issue ENG-42 — Repair widget",
+  identifier: "ENG-42",
+  kind: "issue",
+  provider: "linear",
+  state: "In Progress",
+  team: "ENG",
+  title: "Repair widget",
+  url: "https://linear.app/acme/issue/ENG-42/repair-widget",
 };
 
 const listResult: GitHubListItemsResult = {
@@ -165,6 +181,10 @@ beforeEach(() => {
   mocks.listItems.mockReset();
   mocks.listItems.mockResolvedValue(listResult);
   mocks.resolveUrl.mockReset();
+  Object.defineProperty(window, "localStorage", {
+    configurable: true,
+    value: { getItem: () => null },
+  });
 });
 
 afterEach(() => {
@@ -173,7 +193,7 @@ afterEach(() => {
 
 describe("PromptGitHubAttachButton", () => {
   it("lists repository items and attaches the selected one", async () => {
-    mocks.resolveUrl.mockResolvedValue(firstIssue);
+    mocks.resolveUrl.mockResolvedValue(firstTaskLink);
     const onAttached = vi.fn<(attachment: ComposerGitHubAttachment) => void>();
 
     renderButton(onAttached);
@@ -194,7 +214,7 @@ describe("PromptGitHubAttachButton", () => {
     expect(mocks.resolveUrl).toHaveBeenCalledWith({ url: firstIssue.url });
     const attachment = onAttached.mock.lastCall?.[0];
     expect(attachment).toMatchObject(firstIssue);
-    expect(attachment?.id).toMatch(/^github-issue-acme-widgets-1-/);
+    expect(attachment?.id).toMatch(/^task-link-github-issue-/);
     expect(screen.queryByRole("dialog")).toBeNull();
   });
 
@@ -203,7 +223,7 @@ describe("PromptGitHubAttachButton", () => {
 
     renderButton(vi.fn());
 
-    expect(screen.queryByTitle("composer.attachGitHub")).toBeNull();
+    expect(screen.queryByTitle("From link")).toBeNull();
     expect(mocks.listItems).not.toHaveBeenCalled();
   });
 
@@ -215,7 +235,9 @@ describe("PromptGitHubAttachButton", () => {
     await screen.findByText("First issue");
 
     fireEvent.change(
-      screen.getByPlaceholderText("composer.attachGitHubPlaceholder"),
+      screen.getByPlaceholderText(
+        "Paste a GitHub or Linear issue link, or search GitHub",
+      ),
       { target: { value: "spinner" } },
     );
 
@@ -229,13 +251,15 @@ describe("PromptGitHubAttachButton", () => {
   });
 
   it("previews a pasted URL outside the list and attaches it without refetching", async () => {
-    mocks.resolveUrl.mockResolvedValue(secondIssue);
+    mocks.resolveUrl.mockResolvedValue(secondTaskLink);
     const onAttached = vi.fn<(attachment: ComposerGitHubAttachment) => void>();
 
     renderButton(onAttached);
     openDialog();
     fireEvent.change(
-      screen.getByPlaceholderText("composer.attachGitHubPlaceholder"),
+      screen.getByPlaceholderText(
+        "Paste a GitHub or Linear issue link, or search GitHub",
+      ),
       { target: { value: secondIssue.url } },
     );
 
@@ -253,9 +277,48 @@ describe("PromptGitHubAttachButton", () => {
     expect(screen.queryByRole("dialog")).toBeNull();
   });
 
+  it("resolves and attaches a pasted Linear issue", async () => {
+    mocks.resolveUrl.mockResolvedValue(linearIssue);
+    const onAttached = vi.fn<(attachment: ComposerGitHubAttachment) => void>();
+
+    renderButton(onAttached);
+    openDialog();
+    fireEvent.change(
+      screen.getByPlaceholderText(
+        "Paste a GitHub or Linear issue link, or search GitHub",
+      ),
+      { target: { value: linearIssue.url } },
+    );
+
+    await screen.findByText(linearIssue.title);
+    expect(screen.getByText(/ENG-42 · Linear · In Progress/)).toBeDefined();
+    fireEvent.click(screen.getByText("composer.attachGitHubConfirm"));
+
+    await waitFor(() => expect(onAttached).toHaveBeenCalledOnce());
+    expect(onAttached.mock.lastCall?.[0]).toMatchObject(linearIssue);
+  });
+
+  it("distinguishes a supported host with an unsupported path", async () => {
+    renderButton(vi.fn());
+    openDialog();
+    fireEvent.change(
+      screen.getByPlaceholderText(
+        "Paste a GitHub or Linear issue link, or search GitHub",
+      ),
+      { target: { value: "https://github.com/acme/widgets/commits/main" } },
+    );
+
+    expect(
+      await screen.findByText(
+        "This is a GitHub link, but it is not an issue or pull request.",
+      ),
+    ).toBeDefined();
+    expect(mocks.resolveUrl).not.toHaveBeenCalled();
+  });
+
   it("ignores a stale response after the dialog is closed and reopened", async () => {
-    const firstRequest = deferred<GitHubResolvedItem>();
-    const secondRequest = deferred<GitHubResolvedItem>();
+    const firstRequest = deferred<ResolvedTaskLink>();
+    const secondRequest = deferred<ResolvedTaskLink>();
     mocks.resolveUrl
       .mockImplementationOnce(() => firstRequest.promise)
       .mockImplementationOnce(() => secondRequest.promise);
@@ -270,19 +333,19 @@ describe("PromptGitHubAttachButton", () => {
     fireEvent.click(await screen.findByText("Add widget spinner"));
 
     await act(async () => {
-      firstRequest.resolve(firstIssue);
+      firstRequest.resolve(firstTaskLink);
       await firstRequest.promise;
     });
     expect(onAttached).not.toHaveBeenCalled();
     expect(screen.getByRole("dialog")).toBeDefined();
 
     await act(async () => {
-      secondRequest.resolve(secondIssue);
+      secondRequest.resolve(secondTaskLink);
       await secondRequest.promise;
     });
     const attachment = onAttached.mock.lastCall?.[0];
     expect(attachment).toMatchObject(secondIssue);
-    expect(attachment?.id).toMatch(/^github-issue-acme-widgets-2-/);
+    expect(attachment?.id).toMatch(/^task-link-github-issue-/);
     expect(screen.queryByRole("dialog")).toBeNull();
   });
 });
@@ -301,7 +364,7 @@ function renderButton(
 }
 
 function openDialog() {
-  fireEvent.click(screen.getByTitle("composer.attachGitHub"));
+  fireEvent.click(screen.getByTitle("From link"));
   expect(screen.getByRole("dialog")).toBeDefined();
 }
 

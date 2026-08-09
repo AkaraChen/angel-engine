@@ -207,9 +207,11 @@ function ComposerEditorHeader({
             previewText={item.contextText}
             removeLabel={t("composer.removeAttachment", { name })}
             typeLabel={
-              item.kind === "issue"
-                ? t("composer.githubIssue")
-                : t("composer.githubPullRequest")
+              item.provider === "linear"
+                ? "Linear issue"
+                : item.kind === "issue"
+                  ? t("composer.githubIssue")
+                  : t("composer.githubPullRequest")
             }
           />
         );

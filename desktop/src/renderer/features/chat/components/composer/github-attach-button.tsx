@@ -1,8 +1,6 @@
 import type { DaemonErrorCode } from "@angel-engine/daemon-api/daemon";
-import type {
-  GitHubItemKind,
-  GitHubResolvedItem,
-} from "@angel-engine/daemon-api/github";
+import type { GitHubItemKind } from "@angel-engine/daemon-api/github";
+import type { ResolvedTaskLink } from "@angel-engine/daemon-api/links";
 import type { FC } from "react";
 import { DaemonRequestError } from "@angel-engine/daemon-client";
 import {
@@ -31,7 +29,7 @@ import {
 } from "@/components/ui/dialog";
 import {
   githubItemsQueryOptions,
-  githubResolveQueryOptions,
+  taskLinkResolveQueryOptions,
 } from "@/features/chat/api/queries";
 import type { ComposerGitHubAttachment } from "@/features/chat/components/composer/github-attachments";
 import { useChatEnvironment } from "@/features/chat/runtime/chat-environment-context";
@@ -46,8 +44,8 @@ type PromptGitHubAttachButtonProps = {
 
 const SEARCH_DEBOUNCE_MS = 250;
 const ITEM_LIMIT = 30;
-const GITHUB_ITEM_URL_PATTERN =
-  /^https:\/\/(?:www\.)?github\.com\/[^/\s]+\/[^/\s]+\/(?:issues|pull)\/\d+/;
+const TASK_LINK_URL_PATTERN =
+  /^https:\/\/(?:(?:www\.)?github\.com\/[^/\s]+\/[^/\s]+\/(?:issues|pull)\/\d+|linear\.app\/[^/\s]+\/issue\/[A-Za-z][A-Za-z0-9]*-\d+(?:\/[^\s]*)?)/;
 
 export const PromptGitHubAttachButton: FC<PromptGitHubAttachButtonProps> = ({
   disabled = false,
@@ -71,20 +69,23 @@ export const PromptGitHubAttachButton: FC<PromptGitHubAttachButtonProps> = ({
     [],
   );
 
-  const directUrl = GITHUB_ITEM_URL_PATTERN.test(debouncedSearch.trim())
+  const directUrl = TASK_LINK_URL_PATTERN.test(debouncedSearch.trim())
     ? debouncedSearch.trim()
     : null;
+  const localHint =
+    directUrl === null ? taskLinkLocalHint(debouncedSearch) : null;
+  const isUrlLike = /^https?:\/\//i.test(debouncedSearch.trim());
   const itemsQuery = useQuery(
     githubItemsQueryOptions({
       api,
       cwd,
-      enabled: open,
+      enabled: open && !isUrlLike,
       limit: ITEM_LIMIT,
       query: directUrl === null ? debouncedSearch : "",
     }),
   );
   const directItemQuery = useQuery(
-    githubResolveQueryOptions({ api, enabled: open, url: directUrl }),
+    taskLinkResolveQueryOptions({ api, enabled: open, url: directUrl }),
   );
 
   const handleOpenChange = (next: boolean) => {
@@ -100,10 +101,10 @@ export const PromptGitHubAttachButton: FC<PromptGitHubAttachButtonProps> = ({
     setPendingUrl(null);
   };
 
-  const attachResolved = (resolved: GitHubResolvedItem) => {
+  const attachResolved = (resolved: ResolvedTaskLink) => {
     onAttached({
       ...resolved,
-      id: `github-${resolved.kind}-${resolved.owner}-${resolved.repo}-${resolved.number}-${crypto.randomUUID()}`,
+      id: `task-link-${resolved.provider}-${resolved.kind}-${crypto.randomUUID()}`,
     });
     handleOpenChange(false);
   };
@@ -116,7 +117,7 @@ export const PromptGitHubAttachButton: FC<PromptGitHubAttachButtonProps> = ({
     setPendingUrl(url);
     setAttachError(null);
     try {
-      const resolved = await api.github.resolveUrl({ url });
+      const resolved = await api.links.resolve({ url });
       if (activeRequestId.current !== requestId) return;
 
       attachResolved(resolved);
@@ -130,9 +131,14 @@ export const PromptGitHubAttachButton: FC<PromptGitHubAttachButtonProps> = ({
 
   const items = itemsQuery.data?.items ?? [];
   const queryError = itemsQuery.error ?? directItemQuery.error;
+  const needsLinearAuth =
+    queryError instanceof DaemonRequestError &&
+    queryError.code === "linear-token-missing";
   const errorMessage =
     attachError ??
-    (queryError === null ? null : githubErrorMessage(queryError, t));
+    (queryError === null || needsLinearAuth
+      ? null
+      : githubErrorMessage(queryError, t));
   const directItem =
     directUrl === null || directItemQuery.data?.url !== directUrl
       ? null
@@ -143,6 +149,7 @@ export const PromptGitHubAttachButton: FC<PromptGitHubAttachButtonProps> = ({
     !itemsQuery.isFetching &&
     items.length === 0 &&
     directUrl === null &&
+    localHint === null &&
     !is.nonEmptyString(errorMessage);
 
   // The picker needs a repository to browse, so the composer hides the button
@@ -156,26 +163,26 @@ export const PromptGitHubAttachButton: FC<PromptGitHubAttachButtonProps> = ({
         disabled={disabled}
         onClick={() => handleOpenChange(true)}
         size="icon-sm"
-        title={t("composer.attachGitHub")}
+        title="From link"
         type="button"
         variant="ghost"
       >
         <GithubLogo weight="duotone" />
-        <span className="sr-only">{t("composer.attachGitHub")}</span>
+        <span className="sr-only">From link</span>
       </Button>
       <DialogContent
         aria-describedby={undefined}
         className="gap-3 overflow-hidden rounded-2xl p-0 sm:max-w-lg"
       >
         <DialogHeader className="px-4 pt-4">
-          <DialogTitle>{t("composer.attachGitHubTitle")}</DialogTitle>
+          <DialogTitle>From link</DialogTitle>
         </DialogHeader>
         <Command className="bg-transparent" shouldFilter={false}>
           <CommandInput
             autoFocus
             className="px-2"
             onValueChange={setSearch}
-            placeholder={t("composer.attachGitHubPlaceholder")}
+            placeholder="Paste a GitHub or Linear issue link, or search GitHub"
             value={search}
           />
           {directUrl === null ? null : (
@@ -186,11 +193,44 @@ export const PromptGitHubAttachButton: FC<PromptGitHubAttachButtonProps> = ({
               url={directUrl}
             />
           )}
+          {localHint === null ? null : (
+            <p className="px-4 pt-3 text-xs text-muted-foreground">
+              {localHint}
+            </p>
+          )}
+          {needsLinearAuth ? (
+            <div className="mx-2 mt-2 flex items-center gap-3 rounded-lg border border-border-subtle bg-muted/40 px-3 py-2">
+              <span className="min-w-0 flex-1 text-sm text-muted-foreground">
+                Connect Linear before resolving this issue.
+              </span>
+              <Button
+                onClick={() => window.desktopWindow.openSettings()}
+                size="sm"
+                type="button"
+              >
+                Connect Linear
+              </Button>
+            </div>
+          ) : null}
           <CommandList className="max-h-80 px-1 pt-2 pb-2">
             {is.nonEmptyString(errorMessage) ? (
-              <p className="px-3 py-6 text-center text-sm text-destructive">
-                {errorMessage}
-              </p>
+              <div className="flex flex-col items-center gap-2 px-3 py-6 text-center text-sm text-destructive">
+                <p>{errorMessage}</p>
+                {queryError === null ? null : (
+                  <Button
+                    onClick={() =>
+                      void (directUrl === null
+                        ? itemsQuery.refetch()
+                        : directItemQuery.refetch())
+                    }
+                    size="sm"
+                    type="button"
+                    variant="outline"
+                  >
+                    Retry
+                  </Button>
+                )}
+              </div>
             ) : null}
             {showLoading && !is.nonEmptyString(errorMessage) ? (
               <p className="px-3 py-6 text-center text-sm text-muted-foreground">
@@ -217,6 +257,25 @@ export const PromptGitHubAttachButton: FC<PromptGitHubAttachButtonProps> = ({
   );
 };
 
+function taskLinkLocalHint(raw: string): string | null {
+  const value = raw.trim();
+  if (value.length === 0 || !/^https?:\/\//i.test(value)) return null;
+  let url: URL;
+  try {
+    url = new URL(value);
+  } catch {
+    return "Paste a complete GitHub issue, pull request, or Linear issue link.";
+  }
+  const host = url.hostname.toLowerCase();
+  if (host === "github.com" || host === "www.github.com") {
+    return "This is a GitHub link, but it is not an issue or pull request.";
+  }
+  if (host === "linear.app") {
+    return "This is a Linear link, but it is not an issue.";
+  }
+  return "Supported links: GitHub issues, GitHub pull requests, and Linear issues.";
+}
+
 type GitHubRowItem = {
   author: string | null;
   isDraft?: boolean;
@@ -239,9 +298,9 @@ function PastedUrlPreview({
   onAttach,
   url,
 }: {
-  item: GitHubResolvedItem | null;
+  item: ResolvedTaskLink | null;
   loading: boolean;
-  onAttach: (item: GitHubResolvedItem) => void;
+  onAttach: (item: ResolvedTaskLink) => void;
   url: string;
 }) {
   const { t } = useTranslation();
@@ -262,11 +321,20 @@ function PastedUrlPreview({
 
   return (
     <div className={previewCardClassName}>
-      <GitHubItemIcon className="size-4 shrink-0" item={item} />
+      {item.provider === "github" ? (
+        <GitHubItemIcon className="size-4 shrink-0" item={item} />
+      ) : (
+        <RecordIcon
+          className="size-4 shrink-0 text-violet-500"
+          weight="duotone"
+        />
+      )}
       <div className="flex min-w-0 flex-1 flex-col gap-0.5">
         <span className="truncate text-sm font-medium">{item.title}</span>
         <span className="truncate text-xs text-muted-foreground">
-          {gitHubItemMeta(item, t)}
+          {item.provider === "github"
+            ? gitHubItemMeta(item, t)
+            : `${item.identifier} · Linear · ${item.state}`}
         </span>
       </div>
       <Button

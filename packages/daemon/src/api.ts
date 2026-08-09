@@ -42,9 +42,12 @@ import {
   githubCreatePullRequestInputSchema,
   githubCreateWorkspaceFromPullRequestInputSchema,
   githubListPullRequestsInputSchema,
+  githubPrChecksFixPromptInputSchema,
   githubPullRequestTemplateInputSchema,
+  githubResolveUrlInputSchema,
   githubViewPullRequestInputSchema,
 } from "@angel-engine/daemon-api/github";
+import { taskLinkResolveInputSchema } from "@angel-engine/daemon-api/links";
 import {
   createProjectInputSchema,
   managedWorktreeDeleteInputSchema,
@@ -81,6 +84,8 @@ import {
 import { resolveGitHubUrl } from "./features/github/resolve";
 import { fetchGitHubReviewThreads } from "./features/github/review-threads";
 import { createWorkspaceFromPullRequest } from "./features/github/workspace-from-pr";
+import { resolveTaskLink } from "./features/links/resolve";
+import { setLinearToken } from "./features/links/secrets";
 import { listAvailableAgents } from "./features/agents/availability";
 import {
   createCustomAgent,
@@ -638,6 +643,29 @@ export function registerApi(
     if (input instanceof arkType.errors)
       throw DaemonError.invalidRequest("GitHub URL is required.");
     return context.json(await run(resolveGitHubUrl(input)));
+  });
+  app.post("/api/links/resolve", async (context) => {
+    const input = taskLinkResolveInputSchema(await context.req.json());
+    if (input instanceof arkType.errors)
+      throw DaemonError.invalidRequest("Task link URL is required.");
+    return context.json(await run(resolveTaskLink(input)));
+  });
+  app.put("/api/internal/secrets/linear", async (context) => {
+    const expectedMainSecret = process.env.ANGEL_MAIN_BRIDGE_SECRET;
+    if (
+      expectedMainSecret === undefined ||
+      expectedMainSecret.length === 0 ||
+      context.req.header("x-angel-main-secret") !== expectedMainSecret
+    ) {
+      throw DaemonError.invalidRequest(
+        "Internal main-process request required.",
+      );
+    }
+    const input = arkType({ "token?": "string" })(await context.req.json());
+    if (input instanceof arkType.errors)
+      throw DaemonError.invalidRequest("Linear secret update is invalid.");
+    setLinearToken(input.token);
+    return context.json({ hasToken: input.token !== undefined });
   });
   app.get("/api/github/items", async (context) =>
     context.json(

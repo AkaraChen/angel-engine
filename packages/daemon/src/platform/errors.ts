@@ -291,6 +291,63 @@ export class DaemonError extends Data.TaggedError(
     });
   }
 
+  static linkUnsupported() {
+    return new DaemonError({
+      code: "link-unsupported",
+      message: "Use a GitHub issue, GitHub pull request, or Linear issue link.",
+      status: 400,
+    });
+  }
+
+  static linearTokenMissing() {
+    return new DaemonError({
+      code: "linear-token-missing",
+      message: "Connect Linear in Settings before resolving this issue.",
+      status: 400,
+    });
+  }
+
+  static linearUnauthorized() {
+    return new DaemonError({
+      code: "linear-unauthorized",
+      message: "Linear rejected the configured API token.",
+      status: 403,
+    });
+  }
+
+  static linearItemNotFound() {
+    return new DaemonError({
+      code: "linear-item-not-found",
+      message: "Linear issue was not found or is not visible to this token.",
+      status: 404,
+    });
+  }
+
+  static linearFetchFailed(cause: unknown) {
+    return new DaemonError({
+      cause,
+      code: "linear-fetch-failed",
+      message: messageFromCause(cause, "Linear fetch failed."),
+      status: 500,
+    });
+  }
+
+  static prFromForkUnsupported() {
+    return new DaemonError({
+      code: "pr-from-fork-unsupported",
+      message: "Pull requests from forks are not supported yet.",
+      status: 400,
+    });
+  }
+
+  static worktreeBranchInUse(branch: string) {
+    return new DaemonError({
+      code: "worktree-branch-in-use",
+      message: `Branch ${branch} is already checked out in another worktree.`,
+      status: 409,
+    });
+  }
+
   static worktreeCreateFailed(cause: unknown) {
     return new DaemonError({
       cause,

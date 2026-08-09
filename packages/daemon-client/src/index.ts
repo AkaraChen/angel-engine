@@ -86,6 +86,10 @@ import type {
   GitHubViewPullRequestInput,
 } from "@angel-engine/daemon-api/github";
 import type {
+  ResolvedTaskLink,
+  TaskLinkResolveInput,
+} from "@angel-engine/daemon-api/links";
+import type {
   CreateProjectInput,
   ProjectCloneEvent,
   ProjectCloneInput,
@@ -592,6 +596,10 @@ export function createDaemonClient(options: DaemonClientOptions) {
         request<GitHubPullRequestDetail>(
           `/api/github/pull-requests/${encodeURIComponent(String(input.number))}?${query({ cwd: input.cwd })}`,
         ),
+    },
+    links: {
+      resolve: (input: TaskLinkResolveInput) =>
+        request<ResolvedTaskLink>("/api/links/resolve", json("POST", input)),
     },
     health: () => request<DaemonHealth>("/api/health"),
     events: {

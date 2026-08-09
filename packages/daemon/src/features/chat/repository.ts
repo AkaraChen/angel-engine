@@ -88,6 +88,7 @@ export function createChat(
             id: randomUUID(),
             projectId: normalizeOptionalString(input.projectId),
             remoteThreadId: normalizeOptionalString(input.remoteThreadId),
+            sourceLink: input.sourceLink,
             runtime,
             title: normalizeTitle(input.title),
             updatedAt: now,
@@ -283,6 +284,7 @@ export function getAmbiguousQueuedChatRun(chatId: string) {
 export interface PersistedWorktreeCreationJob {
   chatId: string;
   setupApproval?: string;
+  worktreeRef?: ChatCreateInput["worktreeRef"];
   state: WorktreeCreationState;
 }
 
@@ -353,6 +355,7 @@ function jobValues(job: PersistedWorktreeCreationJob) {
     jobId: job.state.jobId,
     progress: job.state.progress,
     setupApproval: job.setupApproval ?? null,
+    worktreeRef: job.worktreeRef ?? null,
     stage: job.state.stage,
     status: job.state.status,
   };
@@ -364,6 +367,7 @@ function persistedWorktreeCreationJob(
   return {
     chatId: row.chatId,
     setupApproval: row.setupApproval ?? undefined,
+    worktreeRef: row.worktreeRef ?? undefined,
     state: {
       error: row.error ?? undefined,
       jobId: row.jobId,

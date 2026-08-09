@@ -256,6 +256,8 @@ async function createChatForRun(input: StartRunOptions): Promise<Chat> {
     reasoningEffort: input.reasoningEffort,
     runtime: input.runtime,
     title: input.title,
+    sourceLink: input.sourceLink,
+    worktreeRef: input.worktreeRef,
     worktreeSetupApproval: input.worktreeSetupApproval,
   });
 }
