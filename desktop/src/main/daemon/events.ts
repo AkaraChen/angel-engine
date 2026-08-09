@@ -1,5 +1,6 @@
 import type { DaemonGlobalEvent } from "@angel-engine/daemon-api";
 import type {
+  ChatActivity,
   ChatAttention,
   ChatHistoryMessage,
 } from "@angel-engine/daemon-api/chat";
@@ -118,11 +119,13 @@ async function notifyAttention(attention: ChatAttention) {
     ]);
     if (chat === null) return;
     const activity = items.find(
-      (item) => item.status === "failed" && item.attentionId === attention.id,
+      (
+        item: ChatActivity,
+      ): item is Extract<ChatActivity, { status: "failed" }> =>
+        item.status === "failed" && item.attentionId === attention.id,
     );
     const body =
-      activity?.status === "failed" &&
-      is.nonEmptyString(activity.failure.message)
+      activity !== undefined && is.nonEmptyString(activity.failure.message)
         ? activity.failure.message
         : "";
     notifyChatFailed({
