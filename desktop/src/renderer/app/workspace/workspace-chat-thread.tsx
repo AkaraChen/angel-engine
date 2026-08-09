@@ -52,6 +52,7 @@ import i18n from "@/i18n";
 interface ActiveChatThreadProps {
   draftAgentConfig: DraftAgentConfig;
   onChatCreated: (chat: Chat) => void;
+  onForkChatCreated: (chat: Chat) => void;
   onChatMessagesUpdated: ChatMessagesUpdateHandler;
   onChatUpdated: ChatUpdateHandler;
   projects: Project[];
@@ -96,6 +97,7 @@ interface ChatProjectContext {
 export function ActiveChatThread({
   draftAgentConfig,
   onChatCreated,
+  onForkChatCreated,
   onChatMessagesUpdated,
   onChatUpdated,
   projects,
@@ -116,6 +118,7 @@ export function ActiveChatThread({
       historyRevision={0}
       keySuffix="active"
       onChatCreated={onChatCreated}
+      onForkChatCreated={onForkChatCreated}
       onChatMessagesUpdated={onChatMessagesUpdated}
       onChatUpdated={onChatUpdated}
       projects={projects}
@@ -137,6 +140,7 @@ export function RestoredChatThread({
   draftAgentConfig,
   includeProjectInRoute,
   onChatCreated,
+  onForkChatCreated,
   onChatMessagesUpdated,
   onChatUpdated,
   projects,
@@ -178,6 +182,7 @@ export function RestoredChatThread({
       historyMessages={chatLoadData.messages}
       historyRevision={chatLoadQuery.dataUpdatedAt}
       onChatCreated={onChatCreated}
+      onForkChatCreated={onForkChatCreated}
       onChatMessagesUpdated={onChatMessagesUpdated}
       onChatUpdated={onChatUpdated}
       projects={projects}
@@ -200,6 +205,7 @@ function ChatThreadRuntime({
   historyRevision,
   keySuffix,
   onChatCreated,
+  onForkChatCreated,
   onChatMessagesUpdated,
   onChatUpdated,
   projects,
@@ -401,6 +407,7 @@ function ChatThreadRuntime({
         model={modelOverride}
         mode={undefined}
         onChatCreated={onChatCreated}
+        onForkChatCreated={onForkChatCreated}
         onChatMessagesUpdated={onChatMessagesUpdated}
         onChatUpdated={onChatUpdated}
         projectId={projectContext.id ?? selectedChat.projectId ?? null}

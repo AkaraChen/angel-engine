@@ -524,6 +524,7 @@ export const zhCN = {
         userInput: "问题",
       },
       exportMarkdown: "导出 Markdown",
+      forkSession: "从此处分叉会话",
       handoff: "移交",
       handoffMenuLabel: "交给…实现",
       handoffPromptIntro: "请实现以下计划。",
@@ -532,6 +533,7 @@ export const zhCN = {
       response: "响应",
       startImplementation: "开始执行",
       toasts: {
+        couldNotForkSession: "无法分叉会话",
         couldNotHandoffPlan: "无法移交计划",
         couldNotStartImplementation: "无法开始执行",
       },

@@ -405,6 +405,10 @@ export const WorkspacePageView: FC<WorkspacePageViewProps> = ({
                   <ActiveChatThread
                     draftAgentConfig={selectedChatAgentConfig}
                     onChatCreated={updateChatFromRun}
+                    onForkChatCreated={(chat) => {
+                      updateChatFromRun(chat);
+                      openChat(chat);
+                    }}
                     onChatMessagesUpdated={setChatMessagesInCache}
                     onChatUpdated={updateChatFromRun}
                     projects={projects}
@@ -424,6 +428,10 @@ export const WorkspacePageView: FC<WorkspacePageViewProps> = ({
                         draftAgentConfig={selectedChatAgentConfig}
                         includeProjectInRoute={isProjectMode}
                         onChatCreated={updateChatFromRun}
+                        onForkChatCreated={(chat) => {
+                          updateChatFromRun(chat);
+                          openChat(chat);
+                        }}
                         onChatMessagesUpdated={setChatMessagesInCache}
                         onChatUpdated={updateChatFromRun}
                         projects={projects}

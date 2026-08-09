@@ -553,6 +553,7 @@ export const fr = {
         userInput: "Question",
       },
       exportMarkdown: "Exporter en Markdown",
+      forkSession: "Créer une branche de session ici",
       handoff: "Transférer",
       handoffMenuLabel: "Implémenter avec…",
       handoffPromptIntro: "Implémente le plan suivant.",
@@ -561,6 +562,7 @@ export const fr = {
       response: "Réponse",
       startImplementation: "Démarrer l’exécution",
       toasts: {
+        couldNotForkSession: "Impossible de créer la branche de session",
         couldNotHandoffPlan: "Impossible de transférer le plan",
         couldNotStartImplementation: "Impossible de démarrer l’exécution",
       },

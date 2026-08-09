@@ -546,6 +546,7 @@ export const en = {
         userInput: "Question",
       },
       exportMarkdown: "Export Markdown",
+      forkSession: "Fork session",
       handoff: "Hand off",
       handoffMenuLabel: "Implement with…",
       handoffPromptIntro: "Implement the following plan.",
@@ -554,6 +555,7 @@ export const en = {
       response: "Response",
       startImplementation: "Start implementation",
       toasts: {
+        couldNotForkSession: "Could not fork session",
         couldNotHandoffPlan: "Could not hand off plan",
         couldNotStartImplementation: "Could not start implementation",
       },

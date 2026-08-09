@@ -9,11 +9,13 @@ import {
 
 interface ChatRuntimeActionsProviderProps {
   children: ReactNode;
+  forkSession?: (messageId: string) => Promise<void>;
   slotKey: string;
 }
 
 export function ChatRuntimeActionsProvider({
   children,
+  forkSession,
   slotKey,
 }: ChatRuntimeActionsProviderProps) {
   const resolveElicitationForSlot = useChatRunStore(
@@ -32,6 +34,7 @@ export function ChatRuntimeActionsProvider({
       enablePermissionBypass(response) {
         enablePermissionBypassForSlot(slotKey, response);
       },
+      forkSession,
       permissionBypassEnabled,
       resolveElicitation(elicitationId, response, localToolCallId) {
         resolveElicitationForSlot(
@@ -50,6 +53,7 @@ export function ChatRuntimeActionsProvider({
     }),
     [
       enablePermissionBypassForSlot,
+      forkSession,
       permissionBypassEnabled,
       resolveElicitationForSlot,
       setModeForSlot,
