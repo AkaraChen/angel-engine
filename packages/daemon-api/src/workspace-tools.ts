@@ -32,6 +32,13 @@ export const workspaceToolWriteFileInputSchema = arkType({
   root: "string > 0",
 });
 
+export type WorkspaceToolGitPushInput = WorkspaceToolRootInput;
+
+export const workspaceToolGitPushInputSchema = arkType({
+  "+": "ignore",
+  root: "string > 0",
+});
+
 export interface WorkspaceToolGitCommitResult {
   commitHash: string;
   root: string;
@@ -46,10 +53,25 @@ export type WorkspaceToolGitStatus =
   | "untracked";
 
 export interface WorkspaceToolGitStatusEntry {
+  conflicted: boolean;
   path: string;
   staged: boolean;
   status: WorkspaceToolGitStatus;
   unstaged: boolean;
+}
+
+/**
+ * Branch position relative to its upstream. `ahead`/`behind` are 0 whenever
+ * there is no upstream to compare against, so the UI never has to guess.
+ */
+export interface WorkspaceGitBranchStatus {
+  ahead: number;
+  behind: number;
+  branch?: string;
+  detached: boolean;
+  /** The symbolic branch exists, but HEAD has no commit yet. */
+  unborn: boolean;
+  upstream?: string;
 }
 
 export interface WorkspaceFileTreeResult {
@@ -88,7 +110,8 @@ export interface WorkspaceGitSkippedFile {
 }
 
 export interface WorkspaceGitDiffResult {
-  branch?: string;
+  branchStatus: WorkspaceGitBranchStatus;
+  conflictedPaths: string[];
   isGitRepository: boolean;
   root: string;
   skippedFiles: WorkspaceGitSkippedFile[];
@@ -96,5 +119,11 @@ export interface WorkspaceGitDiffResult {
   status: WorkspaceToolGitStatusEntry[];
   unstagedPatch: string;
   warnings: string[];
+}
+
+export interface WorkspaceToolGitPushResult {
+  branchStatus: WorkspaceGitBranchStatus;
+  remote: string;
+  root: string;
 }
 import { type as arkType } from "arktype";

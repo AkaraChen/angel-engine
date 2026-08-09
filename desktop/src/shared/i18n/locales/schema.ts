@@ -68,6 +68,30 @@ export interface LocaleResourceTranslationWorkspaceToolsCommit {
   summaryPlaceholder: string;
 }
 
+export interface LocaleResourceTranslationWorkspaceToolsGitPushHint {
+  auth: string;
+  detached: string;
+  network: string;
+  noCommits: string;
+  noRemote: string;
+  rejected: string;
+}
+
+export interface LocaleResourceTranslationWorkspaceToolsGit {
+  ahead: string;
+  behind: string;
+  clean: string;
+  conflicts: string;
+  detached: string;
+  dirty: string;
+  noCommits: string;
+  noUpstream: string;
+  publish: string;
+  push: string;
+  pushHint: LocaleResourceTranslationWorkspaceToolsGitPushHint;
+  pushing: string;
+}
+
 export interface LocaleResourceTranslationWorkspaceToolsEmpty {
   fileTreeUnavailable: string;
   fileUnavailable: string;
@@ -117,6 +141,7 @@ export interface LocaleResourceTranslationWorkspaceTools {
   commit: LocaleResourceTranslationWorkspaceToolsCommit;
   dockInSidebar: string;
   empty: LocaleResourceTranslationWorkspaceToolsEmpty;
+  git: LocaleResourceTranslationWorkspaceToolsGit;
   listeningPorts: string;
   resizeFileTree: string;
   resizeGitList: string;

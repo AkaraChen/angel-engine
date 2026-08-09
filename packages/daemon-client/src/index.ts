@@ -83,6 +83,8 @@ import type {
   WorkspaceGitDiffResult,
   WorkspaceToolGitCommitInput,
   WorkspaceToolGitCommitResult,
+  WorkspaceToolGitPushInput,
+  WorkspaceToolGitPushResult,
   WorkspaceToolReadFileInput,
   WorkspaceToolRootInput,
   WorkspaceToolWriteFileInput,
@@ -500,6 +502,11 @@ export function createDaemonClient(options: DaemonClientOptions) {
       gitDiff: (input: WorkspaceToolRootInput) =>
         request<WorkspaceGitDiffResult>(
           `/api/workspace/git-diff?${query(input)}`,
+        ),
+      gitPush: (input: WorkspaceToolGitPushInput) =>
+        request<WorkspaceToolGitPushResult>(
+          "/api/workspace/git-push",
+          json("POST", input),
         ),
       readFile: (input: WorkspaceToolReadFileInput) =>
         request<WorkspaceFileReadResult>(`/api/workspace/file?${query(input)}`),

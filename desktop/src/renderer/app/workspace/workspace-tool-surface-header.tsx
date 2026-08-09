@@ -83,7 +83,8 @@ function WorkspaceToolContextLabel({
     },
     queryKey: queryKeys.workspaceTools.gitDiff(hasRoot ? root : ""),
     retry: false,
-    select: (data) => (data.isGitRepository ? data.branch : undefined),
+    select: (data) =>
+      data.isGitRepository ? data.branchStatus.branch : undefined,
     staleTime: 5_000,
   });
   const branch = branchQuery.data;
