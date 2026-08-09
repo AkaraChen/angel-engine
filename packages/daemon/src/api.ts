@@ -129,8 +129,23 @@ export function registerApi(
   const chatRuns = new ChatRunRegistry({
     execute: async (input, onEvent, signal, controls, runId) => {
       await run(engine((e) => e.waitForChatSetup(input.chatId, signal)));
-      await run(engine((e) => e.claimQueuedChatRun(runId)));
-      return run(engine((e) => e.streamChat(input, onEvent, signal, controls)));
+      const claim = await run(
+        engine((e) => e.beginQueuedChatRunDispatch(runId)),
+      );
+      if (claim === "dispatching") {
+        throw DaemonError.invalidRequest(
+          "Queued chat run dispatch was interrupted; cancel it before retrying.",
+        );
+      }
+      try {
+        return await run(
+          engine((e) => e.streamChat(input, onEvent, signal, controls)),
+        );
+      } finally {
+        if (claim === "claimed") {
+          await run(engine((e) => e.completeQueuedChatRun(runId)));
+        }
+      }
     },
     isRunIdRetained: (chatId, runId) => activity.hasRun(chatId, runId),
     onEvent: ({ chatId, event, runId }) => {
@@ -795,10 +810,21 @@ export function registerApi(
   });
   app.delete("/api/chat-runs/:runId", async (context) => {
     const runId = requirePath(context.req.param("runId"), "runId");
-    const snapshot = chatRuns.snapshot(runId);
+    let snapshot;
+    try {
+      snapshot = chatRuns.snapshot(runId);
+    } catch (error) {
+      const cancelled = await run(
+        engine((chatEngine) => chatEngine.cancelQueuedChatRun(runId)),
+      );
+      if (cancelled === null) throw error;
+      activity.clearChat(cancelled.chatId);
+      chatEvents.conversationChanged([cancelled.chatId]);
+      return context.json({ ok: true });
+    }
     activity.cancel(snapshot.chatId, runId);
     chatRuns.stop(runId);
-    await run(engine((chatEngine) => chatEngine.claimQueuedChatRun(runId)));
+    await run(engine((chatEngine) => chatEngine.cancelQueuedChatRun(runId)));
     chatEvents.conversationChanged([snapshot.chatId]);
     return context.json({ ok: true });
   });

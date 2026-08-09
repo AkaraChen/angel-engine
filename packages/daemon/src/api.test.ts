@@ -47,7 +47,10 @@ describe("daemon chat runs", () => {
     const setupGate = new Promise<void>((resolve) => {
       releaseSetup = resolve;
     });
-    const claimQueuedChatRun = vi.fn((_runId: string) =>
+    const beginQueuedChatRunDispatch = vi.fn((_runId: string) =>
+      Effect.succeed("claimed" as const),
+    );
+    const completeQueuedChatRun = vi.fn((_runId: string) =>
       Effect.succeed(undefined as never),
     );
     let streamedInput: ChatSendInput | undefined;
@@ -67,13 +70,15 @@ describe("daemon chat runs", () => {
     registerApi(
       app,
       fakeDaemonRuntime({
-        claimQueuedChatRun,
+        beginQueuedChatRunDispatch,
+        completeQueuedChatRun,
         restoreQueuedChatRuns: () =>
           Effect.succeed([
             {
               createdAt: "2026-08-10T00:00:00.000Z",
               input: { chatId: chat.id, text: "queued input" },
               runId: "run-restored",
+              state: "queued" as const,
             },
           ]),
         streamChat,
@@ -89,10 +94,67 @@ describe("daemon chat runs", () => {
     releaseSetup();
 
     await vi.waitFor(() => expect(streamChat).toHaveBeenCalledOnce());
-    expect(claimQueuedChatRun).toHaveBeenCalledOnce();
+    expect(beginQueuedChatRunDispatch).toHaveBeenCalledOnce();
+    expect(completeQueuedChatRun).toHaveBeenCalledOnce();
     expect(streamedInput).toMatchObject({
       chatId: chat.id,
       text: "queued input",
+    });
+  });
+
+  it("sends the original queued input once after worktree creation retry succeeds", async () => {
+    let creationState: "failed" | "ready" = "failed";
+    let releaseRetry!: () => void;
+    const retryGate = new Promise<void>((resolve) => {
+      releaseRetry = resolve;
+    });
+    const streamChat = vi.fn((_input: ChatSendInput) => Effect.succeed(result));
+    const waitForChatSetup = vi.fn(() =>
+      Effect.promise(async () => {
+        expect(creationState).toBe("failed");
+        await retryGate;
+        expect(creationState).toBe("ready");
+        return undefined;
+      }),
+    );
+    const app = new Hono();
+    registerApi(
+      app,
+      fakeDaemonRuntime({
+        beginQueuedChatRunDispatch: () => Effect.succeed("claimed" as const),
+        completeQueuedChatRun: () => Effect.succeed(undefined as never),
+        queueChatRun: () => Effect.succeed(true),
+        retryWorktreeCreation: () => {
+          creationState = "ready";
+          releaseRetry();
+          return Effect.succeed(chat);
+        },
+        streamChat,
+        waitForChatSetup,
+      }),
+      createChatEvents({ publish: vi.fn() }),
+    );
+
+    const response = await app.request("/api/chat-runs/run-retry", {
+      body: JSON.stringify({ chatId: chat.id, text: "original input" }),
+      headers: { "content-type": "application/json" },
+      method: "POST",
+    });
+    const body = response.text();
+    await vi.waitFor(() => expect(waitForChatSetup).toHaveBeenCalledOnce());
+    expect(streamChat).not.toHaveBeenCalled();
+
+    const retried = await app.request(
+      `/api/chats/${chat.id}/worktree-creation/retry`,
+      { method: "POST" },
+    );
+
+    expect(retried.status).toBe(200);
+    await expect(body).resolves.toContain('"type":"done"');
+    expect(streamChat).toHaveBeenCalledOnce();
+    expect(streamChat.mock.calls[0]?.[0]).toMatchObject({
+      chatId: chat.id,
+      text: "original input",
     });
   });
 
@@ -579,10 +641,12 @@ function fakeDaemonRuntime(
   const unsupported = () =>
     Effect.die(DaemonError.internal(new Error("Not used in this test.")));
   const engine: ChatEngineValue = {
+    beginQueuedChatRunDispatch: () => Effect.succeed("not_queued" as const),
     cancelWorktreeCreation: unsupported,
     cancelWorktreeCreationForDelete: () => Effect.void,
-    claimQueuedChatRun: () => Effect.succeed(undefined as never),
+    cancelQueuedChatRun: () => Effect.succeed(null),
     closeChatSession: () => Effect.void,
+    completeQueuedChatRun: () => Effect.succeed(undefined as never),
     createChatFromInput: unsupported,
     decorateChats: (chats) => Effect.succeed(chats),
     finishChatDeletion: () => Effect.void,

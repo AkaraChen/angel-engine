@@ -14,7 +14,7 @@ import fs from "node:fs";
 import path from "node:path";
 
 import is from "@sindresorhus/is";
-import { and, desc, eq } from "drizzle-orm";
+import { and, desc, eq, inArray } from "drizzle-orm";
 import { Effect } from "effect";
 import {
   isAgentRuntime,
@@ -125,7 +125,14 @@ export interface PersistedQueuedChatRun {
   createdAt: string;
   input: ChatRunStartInput;
   runId: string;
+  state: QueuedChatRunState;
 }
+
+export type QueuedChatRunState = "dispatching" | "queued";
+export type QueuedChatRunDispatchClaim =
+  | "claimed"
+  | "dispatching"
+  | "not_queued";
 
 export function createQueuedChatRun(run: PersistedQueuedChatRun) {
   return withDatabase((database) =>
@@ -136,35 +143,113 @@ export function createQueuedChatRun(run: PersistedQueuedChatRun) {
         createdAt: run.createdAt,
         input: JSON.stringify(run.input),
         runId: run.runId,
+        state: run.state,
       })
       .run(),
   );
 }
 
-export function deleteQueuedChatRun(runId: string) {
+export function beginQueuedChatRunDispatch(runId: string) {
+  return withDatabase(async (database) => {
+    const result = await database
+      .update(queuedChatRuns)
+      .set({ state: "dispatching" })
+      .where(
+        and(
+          eq(queuedChatRuns.runId, runId),
+          eq(queuedChatRuns.state, "queued"),
+        ),
+      )
+      .run();
+    if (result.rowsAffected === 1) return "claimed" as const;
+    const row = await database
+      .select({ state: queuedChatRuns.state })
+      .from(queuedChatRuns)
+      .where(eq(queuedChatRuns.runId, runId))
+      .limit(1)
+      .get();
+    return row?.state === "dispatching"
+      ? ("dispatching" as const)
+      : ("not_queued" as const);
+  });
+}
+
+export function completeQueuedChatRun(runId: string) {
   return withDatabase((database) =>
     database
       .delete(queuedChatRuns)
-      .where(eq(queuedChatRuns.runId, runId))
+      .where(
+        and(
+          eq(queuedChatRuns.runId, runId),
+          eq(queuedChatRuns.state, "dispatching"),
+        ),
+      )
       .run(),
   );
 }
 
-export function listQueuedChatRuns() {
+export function cancelQueuedChatRun(runId: string) {
   return withDatabase((database) =>
     database
-      .select()
-      .from(queuedChatRuns)
-      .orderBy(queuedChatRuns.createdAt)
-      .all()
-      .then((rows) =>
-        rows.flatMap((row) => {
-          const input: unknown = JSON.parse(row.input);
-          return isChatRunStartInput(input)
-            ? [{ createdAt: row.createdAt, input, runId: row.runId }]
-            : [];
-        }),
-      ),
+      .delete(queuedChatRuns)
+      .where(eq(queuedChatRuns.runId, runId))
+      .returning({ chatId: queuedChatRuns.chatId })
+      .get()
+      .then((row) => row ?? null),
+  );
+}
+
+export function listQueuedChatRuns() {
+  return Effect.gen(function* () {
+    const rows = yield* withDatabase((database) =>
+      database
+        .select()
+        .from(queuedChatRuns)
+        .orderBy(queuedChatRuns.createdAt)
+        .all(),
+    );
+    const invalidRunIds: string[] = [];
+    const valid: PersistedQueuedChatRun[] = [];
+    for (const row of rows) {
+      try {
+        const input: unknown = JSON.parse(row.input);
+        if (
+          !isChatRunStartInput(input) ||
+          (row.state !== "queued" && row.state !== "dispatching")
+        ) {
+          invalidRunIds.push(row.runId);
+          continue;
+        }
+        valid.push({
+          createdAt: row.createdAt,
+          input,
+          runId: row.runId,
+          state: row.state,
+        });
+      } catch {
+        invalidRunIds.push(row.runId);
+      }
+    }
+    if (invalidRunIds.length > 0) {
+      yield* withDatabase((database) =>
+        database
+          .delete(queuedChatRuns)
+          .where(inArray(queuedChatRuns.runId, invalidRunIds))
+          .run(),
+      );
+    }
+    return valid;
+  });
+}
+
+/**
+ * Only never-dispatched rows are safe for automatic recovery. A dispatching
+ * row is durable evidence of an ambiguous provider boundary and must remain
+ * stored until an explicit cancel/retry decision, never auto-send again.
+ */
+export function listRecoverableQueuedChatRuns() {
+  return listQueuedChatRuns().pipe(
+    Effect.map((runs) => runs.filter((run) => run.state === "queued")),
   );
 }
 

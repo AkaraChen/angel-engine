@@ -17,13 +17,16 @@ import {
 } from "../../db/schema";
 import { Db } from "../../platform/db";
 import {
+  beginQueuedChatRunDispatch,
   beginChatSend,
+  cancelQueuedChatRun,
+  completeQueuedChatRun,
   createQueuedChatRun,
   createWorktreeCreationJob,
-  deleteQueuedChatRun,
   deleteWorktreeCreationJob,
   failInterruptedWorktreeCreationJobs,
   getWorktreeCreationJob,
+  listRecoverableQueuedChatRuns,
   listQueuedChatRuns,
   normalizeChatRuntime,
   renameChat,
@@ -229,7 +232,7 @@ describe("worktree creation jobs", () => {
 });
 
 describe("queued chat runs", () => {
-  it("persists the first input until the recovered run claims it", async () => {
+  it("keeps a claimed input durable across the provider-start crash window", async () => {
     const database = await memoryDatabase();
     await seedChat(database, { title: "New chat" });
     const input = { chatId: "chat-1", text: "send after setup" };
@@ -240,8 +243,13 @@ describe("queued chat runs", () => {
         createdAt: "2026-08-10T00:00:00.000Z",
         input,
         runId: "run-1",
+        state: "queued",
       }),
     );
+
+    await expect(
+      runWithDatabase(database, beginQueuedChatRunDispatch("run-1")),
+    ).resolves.toBe("claimed");
 
     await expect(
       runWithDatabase(database, listQueuedChatRuns()),
@@ -250,13 +258,83 @@ describe("queued chat runs", () => {
         createdAt: "2026-08-10T00:00:00.000Z",
         input,
         runId: "run-1",
+        state: "dispatching",
       },
     ]);
 
-    await runWithDatabase(database, deleteQueuedChatRun("run-1"));
+    // A daemon restart may not know whether the provider started. The durable
+    // dispatching row is retained, but only queued rows are auto-dispatched.
+    await expect(
+      runWithDatabase(database, beginQueuedChatRunDispatch("run-1")),
+    ).resolves.toBe("dispatching");
+    await expect(
+      runWithDatabase(database, listRecoverableQueuedChatRuns()),
+    ).resolves.toEqual([]);
+    await expect(
+      runWithDatabase(database, listQueuedChatRuns()),
+    ).resolves.toHaveLength(1);
+
+    await runWithDatabase(database, cancelQueuedChatRun("run-1"));
     await expect(
       runWithDatabase(database, listQueuedChatRuns()),
     ).resolves.toEqual([]);
+  });
+
+  it("removes a dispatching row only after provider completion", async () => {
+    const database = await memoryDatabase();
+    await seedChat(database, { title: "New chat" });
+    await runWithDatabase(
+      database,
+      createQueuedChatRun({
+        createdAt: "2026-08-10T00:00:00.000Z",
+        input: { chatId: "chat-1", text: "send after setup" },
+        runId: "run-1",
+        state: "queued",
+      }),
+    );
+    await runWithDatabase(database, beginQueuedChatRunDispatch("run-1"));
+
+    await runWithDatabase(database, completeQueuedChatRun("run-1"));
+
+    await expect(
+      runWithDatabase(database, listQueuedChatRuns()),
+    ).resolves.toEqual([]);
+  });
+
+  it("deletes a corrupt row without blocking recovery of valid inputs", async () => {
+    const database = await memoryDatabase();
+    await seedChat(database, { id: "chat-corrupt", title: "Corrupt" });
+    await seedChat(database, { id: "chat-valid", title: "Valid" });
+    await database.insert(queuedChatRuns).values([
+      {
+        chatId: "chat-corrupt",
+        createdAt: "2026-08-10T00:00:00.000Z",
+        input: "{not-json",
+        runId: "run-corrupt",
+        state: "queued",
+      },
+      {
+        chatId: "chat-valid",
+        createdAt: "2026-08-10T00:00:01.000Z",
+        input: JSON.stringify({ chatId: "chat-valid", text: "recover me" }),
+        runId: "run-valid",
+        state: "queued",
+      },
+    ]);
+
+    await expect(
+      runWithDatabase(database, listRecoverableQueuedChatRuns()),
+    ).resolves.toEqual([
+      {
+        createdAt: "2026-08-10T00:00:01.000Z",
+        input: { chatId: "chat-valid", text: "recover me" },
+        runId: "run-valid",
+        state: "queued",
+      },
+    ]);
+    await expect(
+      database.select().from(queuedChatRuns).all(),
+    ).resolves.toHaveLength(1);
   });
 });
 
@@ -294,6 +372,7 @@ async function memoryDatabase(): Promise<AppDatabase> {
       chat_id TEXT NOT NULL UNIQUE,
       created_at TEXT NOT NULL,
       input TEXT NOT NULL,
+      state TEXT NOT NULL DEFAULT 'queued',
       FOREIGN KEY (chat_id) REFERENCES chats(id) ON DELETE CASCADE
     )
   `);
@@ -310,14 +389,14 @@ async function memoryDatabase(): Promise<AppDatabase> {
 
 async function seedChat(
   database: AppDatabase,
-  overrides: { title: string; updatedAt?: string },
+  overrides: { id?: string; title: string; updatedAt?: string },
 ): Promise<void> {
   const timestamp = overrides.updatedAt ?? "2026-01-01T00:00:00.000Z";
   await database.insert(chats).values({
     archived: false,
     createdAt: timestamp,
     cwd: null,
-    id: "chat-1",
+    id: overrides.id ?? "chat-1",
     pinned: false,
     projectId: null,
     remoteThreadId: null,

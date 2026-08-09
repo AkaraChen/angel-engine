@@ -63,6 +63,9 @@ export const queuedChatRuns = sqliteTable(
       .references(() => chats.id, { onDelete: "cascade" }),
     createdAt: text("created_at").notNull(),
     input: text("input").notNull(),
+    state: text("state", { enum: ["dispatching", "queued"] })
+      .notNull()
+      .default("queued"),
   },
   (table) => [index("queued_chat_runs_chat_id_idx").on(table.chatId)],
 );
