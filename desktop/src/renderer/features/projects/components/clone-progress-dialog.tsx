@@ -229,20 +229,21 @@ function StageRow({
         active || done ? "text-foreground" : "text-muted-foreground",
       )}
     >
-      {done ? (
-        <CheckCircle
-          className="size-4 shrink-0 text-status-success"
-          weight="fill"
-        />
-      ) : (
-        <span
-          aria-hidden="true"
-          className={cn(
-            "size-2 shrink-0 rounded-full",
-            active ? "animate-pulse bg-primary" : "bg-border",
-          )}
-        />
-      )}
+      <span
+        aria-hidden="true"
+        className="flex size-4 shrink-0 items-center justify-center"
+      >
+        {done ? (
+          <CheckCircle className="size-4 text-status-success" weight="fill" />
+        ) : (
+          <span
+            className={cn(
+              "size-2 rounded-full",
+              active ? "animate-pulse bg-primary" : "bg-border",
+            )}
+          />
+        )}
+      </span>
       <span>{label}</span>
       {is.nonEmptyString(detail) ? (
         <span className="min-w-0 truncate text-xs text-muted-foreground">

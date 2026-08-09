@@ -344,12 +344,9 @@ function RepositoryList({
   );
 }
 
-/**
- * A monogram, not the account's GitHub avatar: the renderer's CSP allows no
- * remote images, so an `<img>` pointing at avatars.githubusercontent.com only
- * ever renders as a broken-image glyph.
- */
 function OwnerAvatar({ login }: { login: string }) {
+  const [imageFailed, setImageFailed] = useState(false);
+
   return (
     <span
       aria-hidden="true"
@@ -358,7 +355,18 @@ function OwnerAvatar({ login }: { login: string }) {
         bg-surface-2 text-[10px] uppercase
       "
     >
-      {login.slice(0, 1)}
+      {imageFailed ? (
+        login.slice(0, 1)
+      ) : (
+        <img
+          alt=""
+          className="size-5 rounded-full object-cover"
+          draggable={false}
+          onError={() => setImageFailed(true)}
+          referrerPolicy="no-referrer"
+          src={`https://github.com/${login}.png?size=40`}
+        />
+      )}
     </span>
   );
 }
