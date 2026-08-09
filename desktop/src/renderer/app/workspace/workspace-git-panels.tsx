@@ -11,6 +11,7 @@ import {
   useWorkspaceGitPanelState,
   WorkspaceGitCommitComposer,
 } from "@/app/workspace/workspace-git-commit";
+import { WorkspaceDiffCommentPanel } from "@/app/workspace/workspace-diff-comment-panel";
 import {
   WorkspaceToolPatchFileDiffContent,
   WorkspaceToolPatchFileLineStats,
@@ -154,7 +155,14 @@ export function WorkspaceGitPanel({
   );
 
   if (!split) {
-    return <div className="flex h-full min-h-0 flex-col">{changeColumn}</div>;
+    return (
+      <div className="flex h-full min-h-0 flex-col">
+        <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+          {changeColumn}
+        </div>
+        <WorkspaceDiffCommentPanel root={root} />
+      </div>
+    );
   }
 
   return (
@@ -169,8 +177,9 @@ export function WorkspaceGitPanel({
         value={gitListWidth}
         onChange={updateGitListWidth}
       />
-      <div className="min-w-0 flex-1 overflow-hidden">
+      <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
         <WorkspaceGitDiffViewer file={activeFile} />
+        <WorkspaceDiffCommentPanel root={root} />
       </div>
     </div>
   );

@@ -78,6 +78,25 @@ export const zhCN = {
       statsChanges: "更改",
       statsLastActive: "最近活动",
       tools: {
+        comments: {
+          delete: "删除",
+          lineComment: "第 {{line}} 行",
+          needsBody: "填写批注后才会发送",
+          placeholder: "给 Agent 的批注…",
+          reopen: "重新打开",
+          resolve: "标记已解决",
+          select: "包含在发送中",
+          sending: "发送中…",
+          sendToAgent: "发送 {{count}} 条给 Agent",
+          sideNew: "新",
+          sideOld: "旧",
+          status: {
+            open: "待发送",
+            pending: "已发送",
+            resolved: "已解决",
+          },
+          title: "{{count}} 条批注",
+        },
         commit: {
           committing: "提交中…",
           commitTo: "提交到 {{target}}",

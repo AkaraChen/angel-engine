@@ -78,6 +78,25 @@ export const en = {
       statsChanges: "Changes",
       statsLastActive: "Last active",
       tools: {
+        comments: {
+          delete: "Delete",
+          lineComment: "Line {{line}}",
+          needsBody: "Add a note to include this comment",
+          placeholder: "Review note for the agent…",
+          reopen: "Reopen",
+          resolve: "Resolve",
+          select: "Include in send",
+          sending: "Sending…",
+          sendToAgent: "Send {{count}} to agent",
+          sideNew: "new",
+          sideOld: "old",
+          status: {
+            open: "Open",
+            pending: "Pending",
+            resolved: "Resolved",
+          },
+          title: "{{count}} review comments",
+        },
         commit: {
           committing: "Committing",
           commitTo: "Commit to {{target}}",

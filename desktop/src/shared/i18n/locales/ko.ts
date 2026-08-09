@@ -78,6 +78,25 @@ export const ko = {
       statsChanges: "변경 사항",
       statsLastActive: "마지막 활동",
       tools: {
+        comments: {
+          delete: "삭제",
+          lineComment: "{{line}}행",
+          needsBody: "이 댓글을 보내려면 메모를 입력하세요",
+          placeholder: "에이전트용 리뷰 메모…",
+          reopen: "다시 열기",
+          resolve: "해결됨",
+          select: "전송에 포함",
+          sending: "전송 중…",
+          sendToAgent: "에이전트에 {{count}}개 전송",
+          sideNew: "새",
+          sideOld: "이전",
+          status: {
+            open: "열림",
+            pending: "대기 중",
+            resolved: "해결됨",
+          },
+          title: "리뷰 댓글 {{count}}개",
+        },
         commit: {
           committing: "커밋 중…",
           commitTo: "{{target}}에 커밋",

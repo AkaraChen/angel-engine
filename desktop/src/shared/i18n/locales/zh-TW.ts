@@ -78,6 +78,25 @@ export const zhTW = {
       statsChanges: "變更",
       statsLastActive: "最近活動",
       tools: {
+        comments: {
+          delete: "刪除",
+          lineComment: "第 {{line}} 行",
+          needsBody: "填寫批註後才會傳送",
+          placeholder: "給 Agent 的批註…",
+          reopen: "重新開啟",
+          resolve: "標記已解決",
+          select: "包含在傳送中",
+          sending: "傳送中…",
+          sendToAgent: "傳送 {{count}} 則給 Agent",
+          sideNew: "新",
+          sideOld: "舊",
+          status: {
+            open: "待傳送",
+            pending: "已傳送",
+            resolved: "已解決",
+          },
+          title: "{{count}} 則批註",
+        },
         commit: {
           committing: "提交中…",
           commitTo: "提交到 {{target}}",

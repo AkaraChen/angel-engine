@@ -78,6 +78,25 @@ export const ja = {
       statsChanges: "変更",
       statsLastActive: "最終アクティブ",
       tools: {
+        comments: {
+          delete: "削除",
+          lineComment: "{{line}} 行目",
+          needsBody: "送信するにはメモを入力してください",
+          placeholder: "エージェントへのレビューメモ…",
+          reopen: "再開",
+          resolve: "解決済み",
+          select: "送信に含める",
+          sending: "送信中…",
+          sendToAgent: "{{count}} 件をエージェントへ送信",
+          sideNew: "新",
+          sideOld: "旧",
+          status: {
+            open: "未送信",
+            pending: "送信済み",
+            resolved: "解決済み",
+          },
+          title: "レビューコメント {{count}} 件",
+        },
         commit: {
           committing: "コミット中…",
           commitTo: "{{target}} にコミット",
