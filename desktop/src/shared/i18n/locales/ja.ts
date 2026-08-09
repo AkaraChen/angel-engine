@@ -189,6 +189,8 @@ export const ja = {
       modeSwitcher: "ワークスペースモード",
       modeWork: "作業",
       needsInput: "入力が必要",
+
+      importSession: "セッションをインポート",
       newChat: "新しいチャット",
       newChatInProject: "{{projectName}} の新しいチャット",
       noChats: "チャットはありません",
@@ -569,6 +571,22 @@ export const ja = {
     },
     dialog: {
       chatName: "チャット名",
+      importSession: {
+        cwdLabel: "ディレクトリ: {{cwd}}",
+        description:
+          "選択したエージェントのセッションを検索し、Angel Engine で開きます。",
+        empty:
+          "このエージェントとディレクトリにインポート可能なセッションはありません。",
+        importAction: "インポートして開く",
+        importFailed: "セッションをインポートできませんでした",
+        importing: "インポート中…",
+        runtimeLabel: "エージェント: {{runtime}}",
+        runtimeRequired:
+          "セッションをインポートする前にエージェントを選択してください。",
+        searchFailed: "セッションを検索できませんでした",
+        searching: "セッションを検索中…",
+        title: "セッションをインポート",
+      },
       renameChat: "チャット名を変更",
     },
     notifications: {

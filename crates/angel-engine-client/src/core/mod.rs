@@ -10,7 +10,8 @@ mod types;
 
 pub use types::{
     ClientAnswer, ClientCommandResult, ClientInput, DiscoveryRequest, ElicitationResponse,
-    ForkConversationRequest, ResumeConversationRequest,
+    ForkConversationRequest, ImportableSession, ListImportableSessionsRequest,
+    ListImportableSessionsResult, ResumeConversationRequest,
 };
 
 pub(crate) use transport::process_log;

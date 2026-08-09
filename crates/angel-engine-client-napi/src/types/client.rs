@@ -97,6 +97,28 @@ pub struct DiscoveryRequest {
 }
 
 #[napi(object)]
+pub struct ImportableSession {
+    pub remote_id: String,
+    pub title: Option<String>,
+    pub cwd: Option<String>,
+    pub updated_at: Option<String>,
+}
+
+#[napi(object)]
+pub struct ListImportableSessionsRequest {
+    pub cwd: Option<String>,
+    pub additional_directories: Option<Vec<String>>,
+    pub cursor: Option<String>,
+}
+
+#[napi(object)]
+pub struct ListImportableSessionsResult {
+    pub sessions: Vec<ImportableSession>,
+    pub next_cursor: Option<String>,
+    pub unsupported_reason: Option<String>,
+}
+
+#[napi(object)]
 pub struct ClientCommandResult {
     pub conversation_id: Option<String>,
     pub turn_id: Option<String>,

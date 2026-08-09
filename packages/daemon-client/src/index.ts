@@ -21,6 +21,10 @@ import type {
   ChatAvailableSkill,
   ChatCreateInput,
   ChatLoadResult,
+  ImportChatInput,
+  ImportChatResult,
+  ListImportableSessionsInput,
+  ListImportableSessionsResult,
   ChatPrewarmInput,
   ChatPrewarmResult,
   ChatRenameInput,
@@ -364,6 +368,13 @@ export function createDaemonClient(options: DaemonClientOptions) {
           json("POST", input),
         ),
       list: () => request<Chat[]>("/api/chats"),
+      listImportableSessions: (input: ListImportableSessionsInput) =>
+        request<ListImportableSessionsResult>(
+          "/api/sessions/importable",
+          json("POST", input),
+        ),
+      importSession: (input: ImportChatInput) =>
+        request<ImportChatResult>("/api/sessions/import", json("POST", input)),
       load: (id: string) =>
         request<ChatLoadResult>(`/api/chats/${encodeURIComponent(id)}/load`, {
           method: "POST",

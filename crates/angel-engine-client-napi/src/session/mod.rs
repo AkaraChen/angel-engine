@@ -83,6 +83,31 @@ impl AngelSession {
     }
 
     #[napi(
+        js_name = "listImportableSessions",
+        ts_args_type = "request?: ListImportableSessionsRequest",
+        ts_return_type = "Promise<ListImportableSessionsResult>"
+    )]
+    pub fn list_importable_sessions(
+        &self,
+        request: Option<serde_json::Value>,
+    ) -> Result<AsyncTask<SessionJsonTask>> {
+        let request = match optional_json::<EngineListImportableSessionsRequest>(request)? {
+            Some(request) => request,
+            None => EngineListImportableSessionsRequest::default(),
+        };
+        Ok(self.task(
+            "AngelSession.listImportableSessions",
+            format!(
+                "cwd={} cursor={} additional_directories={}",
+                request.cwd.as_deref().unwrap_or("<none>"),
+                request.cursor.as_deref().unwrap_or("<none>"),
+                request.additional_directories.len()
+            ),
+            move |session| session.list_importable_sessions(request),
+        ))
+    }
+
+    #[napi(
         js_name = "setMode",
         ts_args_type = "request: SetModeRequest",
         ts_return_type = "Promise<ConversationSnapshot>"

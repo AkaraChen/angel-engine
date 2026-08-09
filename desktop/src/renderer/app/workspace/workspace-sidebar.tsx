@@ -10,6 +10,7 @@ import {
   Lightning,
   Chats as MessageSquare,
   Plus,
+  DownloadSimple,
   GearSix as Settings,
   SquaresFour,
 } from "@phosphor-icons/react";
@@ -65,6 +66,7 @@ interface WorkspaceSidebarProps {
   onCreateProject: () => MaybeAsync;
   onCreateProjectChat: (project: Project) => MaybeAsync;
   onCreateStandaloneChat: () => MaybeAsync;
+  onImportSession: () => MaybeAsync;
   onOpenChat: (chat: Chat) => MaybeAsync;
   onOpenFleet: () => MaybeAsync;
   onOpenSettings: () => MaybeAsync;
@@ -222,6 +224,7 @@ function WorkspaceSidebarContent({
   onCreateProject,
   onCreateProjectChat,
   onCreateStandaloneChat,
+  onImportSession,
   onOpenChat,
   onOpenFleet,
   onOpenSettings,
@@ -295,6 +298,12 @@ function WorkspaceSidebarContent({
             >
               <Plus weight="bold" />
               <span>{t("sidebar.newChat")}</span>
+            </WorkspaceSidebarMenuButton>
+          </AnimatedSidebarMenuItem>
+          <AnimatedSidebarMenuItem>
+            <WorkspaceSidebarMenuButton onClick={() => void onImportSession()}>
+              <DownloadSimple weight="duotone" />
+              <span>{t("sidebar.importSession")}</span>
             </WorkspaceSidebarMenuButton>
           </AnimatedSidebarMenuItem>
           <AnimatedSidebarMenuItem>

@@ -188,6 +188,8 @@ export const zhCN = {
       modeSwitcher: "工作区模式",
       modeWork: "工作",
       needsInput: "需要输入",
+
+      importSession: "导入会话",
       newChat: "新聊天",
       newChatInProject: "{{projectName}} 中的新聊天",
       noChats: "没有聊天",
@@ -544,6 +546,20 @@ export const zhCN = {
     },
     dialog: {
       chatName: "聊天名称",
+      importSession: {
+        cwdLabel: "目录：{{cwd}}",
+        description:
+          "搜索所选智能体在当前目录下的会话，并在 Angel Engine 中打开。",
+        empty: "此智能体和目录下没有可导入的会话。",
+        importAction: "导入并打开",
+        importFailed: "无法导入会话",
+        importing: "正在导入…",
+        runtimeLabel: "智能体：{{runtime}}",
+        runtimeRequired: "导入会话前请先选择智能体。",
+        searchFailed: "无法搜索会话",
+        searching: "正在搜索会话…",
+        title: "导入会话",
+      },
       renameChat: "重命名聊天",
     },
     notifications: {

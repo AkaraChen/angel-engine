@@ -60,6 +60,10 @@ where
         self.engine.selected.as_ref().map(ToString::to_string)
     }
 
+    pub fn discovery_next_cursor(&self) -> Option<String> {
+        self.engine.discovery.next_cursor.clone()
+    }
+
     pub fn receive_json_line(&mut self, line: &str) -> ClientResult<ClientUpdate> {
         let value = serde_json::from_str(line)?;
         self.receive_json_value(value)

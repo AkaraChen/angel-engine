@@ -23,6 +23,7 @@
     "dev": "tsx src/main.ts --data-dir .data --print-handshake",
     "lint": "oxlint --type-aware src",
     "test": "vitest run",
+    "test:import-restore-smoke": "bun scripts/import-restore-smoke.mts",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

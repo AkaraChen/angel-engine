@@ -3,7 +3,8 @@ use std::time::Duration;
 use crate::error::{ClientError, ClientResult};
 use crate::event::ClientUpdate;
 use crate::{
-    AngelClient, ClientProtocol, ConversationSnapshot, ResumeConversationRequest, RuntimeOptions,
+    AngelClient, ClientProtocol, ConversationSnapshot, ListImportableSessionsRequest,
+    ListImportableSessionsResult, ResumeConversationRequest, RuntimeOptions,
     RuntimeOptionsOverrides, StartConversationRequest, ThreadEvent, create_runtime_options,
 };
 
@@ -21,6 +22,7 @@ impl AngelSession {
             options,
             conversation_id: None,
             active_turn: None,
+            runtime_initialized: false,
         })
     }
 
@@ -54,6 +56,16 @@ impl AngelSession {
         self.ensure_started(true, request.cwd, None)?;
         self.thread_state()
             .ok_or_else(|| invalid_input("Runtime did not return a conversation snapshot."))
+    }
+
+    /// Initialize the runtime (if needed) and list importable remote sessions
+    /// for the given cwd without starting a new conversation.
+    pub fn list_importable_sessions(
+        &mut self,
+        request: ListImportableSessionsRequest,
+    ) -> ClientResult<ListImportableSessionsResult> {
+        self.ensure_runtime_initialized()?;
+        self.client.list_importable_sessions(request)
     }
 
     pub fn set_mode(&mut self, request: SetModeRequest) -> ClientResult<ConversationSnapshot> {
@@ -124,8 +136,7 @@ impl AngelSession {
             return Ok(());
         }
 
-        let initialize_update = self.client.initialize()?;
-        check_update_fault(&initialize_update)?;
+        self.ensure_runtime_initialized()?;
         let should_read_history = remote_id.is_some()
             && matches!(self.options.client.protocol, ClientProtocol::CodexAppServer);
         let result = if let Some(remote_id) = remote_id {
@@ -153,6 +164,16 @@ impl AngelSession {
             let result = self.client.read_conversation(conversation_id)?;
             check_update_fault(&result.update)?;
         }
+        Ok(())
+    }
+
+    fn ensure_runtime_initialized(&mut self) -> ClientResult<()> {
+        if self.runtime_initialized {
+            return Ok(());
+        }
+        let initialize_update = self.client.initialize()?;
+        check_update_fault(&initialize_update)?;
+        self.runtime_initialized = true;
         Ok(())
     }
 

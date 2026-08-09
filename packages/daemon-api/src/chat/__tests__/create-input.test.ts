@@ -50,6 +50,21 @@ describe("chat create input", () => {
     expect(chatCreateInputSchema({ cwd: "" })).toBeInstanceOf(arkType.errors);
   });
 
+  it("carries remoteThreadId so import can bind a remote session", () => {
+    const input = chatCreateInputSchema({
+      remoteThreadId: "remote-1",
+      runtime: "codex",
+    });
+    expect(input).not.toBeInstanceOf(arkType.errors);
+    expect(input).toMatchObject({ remoteThreadId: "remote-1" });
+  });
+
+  it("rejects an empty remoteThreadId instead of silently dropping it", () => {
+    expect(chatCreateInputSchema({ remoteThreadId: "" })).toBeInstanceOf(
+      arkType.errors,
+    );
+  });
+
   it("keeps prewarm off run start input", () => {
     const runStartHasNoPrewarm: RunStartHasNoPrewarm = true;
 

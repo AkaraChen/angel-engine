@@ -189,6 +189,8 @@ export const ko = {
       modeSwitcher: "워크스페이스 모드",
       modeWork: "작업",
       needsInput: "입력 필요",
+
+      importSession: "세션 가져오기",
       newChat: "새 채팅",
       newChatInProject: "{{projectName}}의 새 채팅",
       noChats: "채팅이 없습니다",
@@ -561,6 +563,19 @@ export const ko = {
     },
     dialog: {
       chatName: "채팅 이름",
+      importSession: {
+        cwdLabel: "디렉터리: {{cwd}}",
+        description: "선택한 에이전트의 세션을 검색해 Angel Engine에서 엽니다.",
+        empty: "이 에이전트와 디렉터리에 가져올 세션이 없습니다.",
+        importAction: "가져와 열기",
+        importFailed: "세션을 가져올 수 없습니다",
+        importing: "가져오는 중…",
+        runtimeLabel: "에이전트: {{runtime}}",
+        runtimeRequired: "세션을 가져오기 전에 에이전트를 선택하세요.",
+        searchFailed: "세션을 검색할 수 없습니다",
+        searching: "세션 검색 중…",
+        title: "세션 가져오기",
+      },
       renameChat: "채팅 이름 변경",
     },
     notifications: {

@@ -6,7 +6,8 @@ import type { WorkspacePageModel } from "@/app/workspace/use-workspace-page-mode
 import type { WorktreeDraftGuard } from "@/app/workspace/use-worktree-draft-guard";
 
 import is from "@sindresorhus/is";
-import { Suspense } from "react";
+import { Suspense, useCallback, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { ChatRestoreLoading } from "@/app/workspace/chat-restore-loading";
 import { DraftCreationLocationSelect } from "@/app/workspace/draft-project-select";
 import { NewChatThread } from "@/app/workspace/new-chat-thread";
@@ -34,9 +35,11 @@ import { WorkspaceToolContextBridge } from "@/app/workspace/workspace-tool-host"
 import { useWorkspaceToolStore } from "@/app/workspace/workspace-tool-store";
 import { WorktreeDirtyDialog } from "@/app/workspace/worktree-dirty-dialog";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
+import { ImportSessionDialog } from "@/features/chat/components/import-session-dialog";
 import { RenameChatDialog } from "@/features/chat/components/rename-chat-dialog";
 import { FleetPage } from "@/features/fleet/fleet-page";
 import { ProjectSettingsDialog } from "@/features/projects/components/project-settings-dialog";
+import { queryKeys } from "@/platform/query-keys";
 
 interface WorkspacePageViewProps {
   chatActions: WorkspaceChatActions;
@@ -57,6 +60,15 @@ export const WorkspacePageView: FC<WorkspacePageViewProps> = ({
   navigation,
   powerTabs,
 }) => {
+  const queryClient = useQueryClient();
+  const [importSessionOpen, setImportSessionOpen] = useState(false);
+  const openImportSession = useCallback(() => {
+    setImportSessionOpen(true);
+  }, []);
+  const closeImportSession = useCallback(() => {
+    setImportSessionOpen(false);
+  }, []);
+
   const {
     activePowerWorktreeProject,
     activeRuntime,
@@ -137,6 +149,7 @@ export const WorkspacePageView: FC<WorkspacePageViewProps> = ({
     changeWorkspaceMode,
     createChatForProject,
     createChatForSelection,
+    navigateToChat,
     openChat,
     openChatFromFleet,
     openFleet,
@@ -144,6 +157,27 @@ export const WorkspacePageView: FC<WorkspacePageViewProps> = ({
     openSettings,
     selectDraftProject,
   } = navigation;
+  const handleImportedSession = useCallback(
+    async (chatId: string) => {
+      await queryClient.invalidateQueries({ queryKey: queryKeys.chats.list() });
+      const chats = await queryClient.fetchQuery({
+        queryFn: async () => api.chats.list(),
+        queryKey: queryKeys.chats.list(),
+      });
+      const chat = chats.find((entry) => entry.id === chatId);
+      if (chat) {
+        navigateToChat(chat);
+      }
+    },
+    [api, navigateToChat, queryClient],
+  );
+  const importCwd =
+    selectedChat?.cwd ??
+    pinnedDraftCwd ??
+    powerDraftContext?.cwd ??
+    powerHomePageContext?.cwd ??
+    draftProject.path ??
+    null;
   const {
     closeWorktreeDirtyPrompt,
     ensureDraftChatCanSubmit,
@@ -225,6 +259,7 @@ export const WorkspacePageView: FC<WorkspacePageViewProps> = ({
           onCreateProject={() => void createProjectFromPicker()}
           onCreateProjectChat={createChatForProject}
           onCreateStandaloneChat={createChatForSelection}
+          onImportSession={openImportSession}
           onOpenChat={openChat}
           onOpenFleet={openFleet}
           onOpenSettings={openSettings}
@@ -248,6 +283,7 @@ export const WorkspacePageView: FC<WorkspacePageViewProps> = ({
           onCreateProject={() => void createProjectFromPicker()}
           onCreateProjectChat={createChatForProject}
           onCreateStandaloneChat={createChatForSelection}
+          onImportSession={openImportSession}
           onOpenChat={openChat}
           onOpenFleet={openFleet}
           onOpenSettings={openSettings}
@@ -271,6 +307,15 @@ export const WorkspacePageView: FC<WorkspacePageViewProps> = ({
           isSaving={renameChatPending}
           onClose={closeRenameChatDialog}
           onRename={renameChat}
+        />
+        <ImportSessionDialog
+          api={api}
+          cwd={importCwd}
+          onClose={closeImportSession}
+          onImported={handleImportedSession}
+          open={importSessionOpen}
+          projectId={selectedProjectId ?? draftProject.id ?? null}
+          runtime={activeRuntime}
         />
         <ProjectSettingsDialog
           onClose={closeProjectSettingsDialog}

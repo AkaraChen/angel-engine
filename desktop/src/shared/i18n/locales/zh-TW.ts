@@ -188,6 +188,8 @@ export const zhTW = {
       modeSwitcher: "工作區模式",
       modeWork: "工作",
       needsInput: "需要輸入",
+
+      importSession: "匯入工作階段",
       newChat: "新聊天",
       newChatInProject: "{{projectName}} 中的新聊天",
       noChats: "沒有聊天",
@@ -545,6 +547,20 @@ export const zhTW = {
     },
     dialog: {
       chatName: "聊天名稱",
+      importSession: {
+        cwdLabel: "目錄：{{cwd}}",
+        description:
+          "搜尋所選代理在目前目錄下的工作階段，並在 Angel Engine 中開啟。",
+        empty: "此代理和目錄下沒有可匯入的工作階段。",
+        importAction: "匯入並開啟",
+        importFailed: "無法匯入工作階段",
+        importing: "正在匯入…",
+        runtimeLabel: "代理：{{runtime}}",
+        runtimeRequired: "匯入工作階段前請先選擇代理。",
+        searchFailed: "無法搜尋工作階段",
+        searching: "正在搜尋工作階段…",
+        title: "匯入工作階段",
+      },
       renameChat: "重新命名聊天",
     },
     notifications: {

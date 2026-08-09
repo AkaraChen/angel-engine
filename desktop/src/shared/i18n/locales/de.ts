@@ -189,6 +189,8 @@ export const de = {
       modeSwitcher: "Arbeitsbereichsmodus",
       modeWork: "Arbeit",
       needsInput: "Eingabe erforderlich",
+
+      importSession: "Sitzung importieren",
       newChat: "Neuer Chat",
       newChatInProject: "Neuer Chat in {{projectName}}",
       noChats: "Keine Chats",
@@ -571,6 +573,22 @@ export const de = {
     },
     dialog: {
       chatName: "Chatname",
+      importSession: {
+        cwdLabel: "Verzeichnis: {{cwd}}",
+        description:
+          "Anbietersitzungen für den gewählten Agenten suchen und in Angel Engine öffnen.",
+        empty:
+          "Keine importierbaren Sitzungen für diesen Agenten und dieses Verzeichnis.",
+        importAction: "Importieren und öffnen",
+        importFailed: "Sitzung konnte nicht importiert werden",
+        importing: "Wird importiert…",
+        runtimeLabel: "Agent: {{runtime}}",
+        runtimeRequired:
+          "Wählen Sie einen Agenten, bevor Sie eine Sitzung importieren.",
+        searchFailed: "Sitzungen konnten nicht gesucht werden",
+        searching: "Sitzungen werden gesucht…",
+        title: "Sitzung importieren",
+      },
       renameChat: "Chat umbenennen",
     },
     notifications: {

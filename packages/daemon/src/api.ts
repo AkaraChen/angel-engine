@@ -22,9 +22,11 @@ import {
   chatCreateInputSchema,
   chatPrewarmInputSchema,
   chatRuntimeConfigInputSchema,
+  importChatInputSchema,
   isChatAttentionReadInput,
   isChatElicitationResponse,
   isChatRunStartInput,
+  listImportableSessionsInputSchema,
   chatSendInputSchema,
   chatSetModeInputSchema,
   chatSetPermissionModeInputSchema,
@@ -172,6 +174,27 @@ export function registerApi(
     );
     chatEvents.metadataChanged([chat.id]);
     return context.json(chat);
+  });
+  app.post("/api/sessions/importable", async (context) => {
+    const input = listImportableSessionsInputSchema(await context.req.json());
+    if (input instanceof arkType.errors)
+      throw DaemonError.invalidRequest(
+        "Importable session list input is required.",
+      );
+    return context.json(
+      await run(engine((e) => e.listImportableSessions(input))),
+    );
+  });
+  app.post("/api/sessions/import", async (context) => {
+    const input = importChatInputSchema(await context.req.json());
+    if (input instanceof arkType.errors)
+      throw DaemonError.invalidRequest("Import chat input is required.");
+    const result = await run(
+      engine((e) => e.importChat(input, context.req.raw.signal)),
+    );
+    chatEvents.metadataChanged([result.chat.id]);
+    chatEvents.conversationChanged([result.chat.id]);
+    return context.json(result);
   });
   app.patch("/api/chats/:id", async (context) => {
     const body = await context.req.json<{ pinned?: boolean; title?: string }>();

@@ -106,6 +106,56 @@ impl AngelClient {
         ))
     }
 
+    #[napi(
+        js_name = "discoverThreads",
+        ts_args_type = "request?: DiscoveryRequest",
+        ts_return_type = "Promise<ClientCommandResult>"
+    )]
+    pub fn discover_threads(
+        &self,
+        request: Option<serde_json::Value>,
+    ) -> Result<AsyncTask<ClientJsonTask>> {
+        let request = match optional_json::<EngineDiscoveryRequest>(request)? {
+            Some(request) => request,
+            None => EngineDiscoveryRequest::default(),
+        };
+        Ok(self.task(
+            "AngelClient.discoverThreads",
+            format!(
+                "cwd={} cursor={} additional_directories={}",
+                request.cwd.as_deref().unwrap_or("<none>"),
+                request.cursor.as_deref().unwrap_or("<none>"),
+                request.additional_directories.len()
+            ),
+            move |client| client.discover_conversations(request),
+        ))
+    }
+
+    #[napi(
+        js_name = "listImportableSessions",
+        ts_args_type = "request?: ListImportableSessionsRequest",
+        ts_return_type = "Promise<ListImportableSessionsResult>"
+    )]
+    pub fn list_importable_sessions(
+        &self,
+        request: Option<serde_json::Value>,
+    ) -> Result<AsyncTask<ClientJsonTask>> {
+        let request = match optional_json::<EngineListImportableSessionsRequest>(request)? {
+            Some(request) => request,
+            None => EngineListImportableSessionsRequest::default(),
+        };
+        Ok(self.task(
+            "AngelClient.listImportableSessions",
+            format!(
+                "cwd={} cursor={} additional_directories={}",
+                request.cwd.as_deref().unwrap_or("<none>"),
+                request.cursor.as_deref().unwrap_or("<none>"),
+                request.additional_directories.len()
+            ),
+            move |client| client.list_importable_sessions(request),
+        ))
+    }
+
     #[napi(js_name = "sendText", ts_return_type = "ClientCommandResult")]
     pub fn send_text(&self, conversation_id: String, text: String) -> Result<serde_json::Value> {
         self.with_client_json(
