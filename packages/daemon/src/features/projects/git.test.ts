@@ -93,6 +93,35 @@ describe("project worktree setup", () => {
     ).resolves.toBe("");
   });
 
+  it("reports phases and removes the worktree when creation is cancelled", async () => {
+    await writeConfig(["echo should-not-run"]);
+    const status = await getGitStatus();
+    const controller = new AbortController();
+    const progress: string[] = [];
+
+    await expect(
+      Effect.runPromise(
+        createProjectWorktree(
+          {
+            projectId: "project-1",
+            setupApproval: status.worktreeSetup?.digest,
+          },
+          controller.signal,
+          (stage, percent) => {
+            progress.push(`${stage}:${percent}`);
+            if (stage === "setup") controller.abort();
+          },
+        ).pipe(Effect.provide(testDbLayer)),
+      ),
+    ).rejects.toThrow();
+
+    expect(progress).toEqual(["fetching:10", "worktree:45", "setup:75"]);
+    await expect(directoryEntriesOrEmpty(worktreeParent)).resolves.toEqual([]);
+    await expect(
+      git(projectRoot, ["branch", "--list", "angel/*"]),
+    ).resolves.toBe("");
+  });
+
   it("requires approval for the exact 2code.json contents", async () => {
     await writeConfig(["echo ready"]);
 

@@ -199,12 +199,15 @@ export const zhCN = {
       powerWorktreeHome: "主页",
       powerWorktreeHistoricalChat: "历史聊天",
       refreshProjects: "刷新项目",
+      retryWorktreeCreation: "重试创建 worktree",
       settings: "设置",
       toggleChats: "折叠或展开聊天",
       mobileDescription: "显示移动端侧边栏。",
       title: "侧边栏",
       toggleSidebar: "折叠或展开侧边栏",
       worktreeMain: "主目录",
+      worktreeCreating: "正在创建 worktree… {{progress}}%",
+      worktreeCreationFailed: "Worktree 创建失败",
     },
     settings: {
       agents: {

@@ -200,12 +200,15 @@ export const ja = {
       powerWorktreeHome: "ホーム",
       powerWorktreeHistoricalChat: "チャット履歴",
       refreshProjects: "プロジェクトを更新",
+      retryWorktreeCreation: "Worktree の作成を再試行",
       settings: "設定",
       toggleChats: "チャットを切り替え",
       mobileDescription: "モバイルサイドバーを表示します。",
       title: "サイドバー",
       toggleSidebar: "サイドバーを切り替え",
       worktreeMain: "メイン",
+      worktreeCreating: "Worktree を作成中… {{progress}}%",
+      worktreeCreationFailed: "Worktree の作成に失敗しました",
     },
     settings: {
       agents: {

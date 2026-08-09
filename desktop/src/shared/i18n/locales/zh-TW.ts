@@ -199,12 +199,15 @@ export const zhTW = {
       powerWorktreeHome: "首頁",
       powerWorktreeHistoricalChat: "歷史聊天",
       refreshProjects: "重新整理專案",
+      retryWorktreeCreation: "重試建立 worktree",
       settings: "設定",
       toggleChats: "切換聊天",
       mobileDescription: "顯示行動版側邊欄。",
       title: "側邊欄",
       toggleSidebar: "切換側邊欄",
       worktreeMain: "主目錄",
+      worktreeCreating: "正在建立 worktree… {{progress}}%",
+      worktreeCreationFailed: "Worktree 建立失敗",
     },
     settings: {
       agents: {

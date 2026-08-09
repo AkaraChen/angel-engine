@@ -3,5 +3,5 @@ import { defineConfig } from "drizzle-kit";
 export default defineConfig({
   dialect: "sqlite",
   out: "./drizzle",
-  schema: "./src/main/db/schema.ts",
+  schema: "../packages/daemon/src/db/schema.ts",
 });

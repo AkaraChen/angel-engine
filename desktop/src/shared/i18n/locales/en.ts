@@ -199,12 +199,15 @@ export const en = {
       powerWorktreeHome: "Home",
       powerWorktreeHistoricalChat: "Historical Chat",
       refreshProjects: "Refresh projects",
+      retryWorktreeCreation: "Retry worktree creation",
       settings: "Settings",
       toggleChats: "Toggle chats",
       mobileDescription: "Displays the mobile sidebar.",
       title: "Sidebar",
       toggleSidebar: "Toggle sidebar",
       worktreeMain: "Main",
+      worktreeCreating: "Creating worktree… {{progress}}%",
+      worktreeCreationFailed: "Worktree creation failed",
     },
     settings: {
       agents: {

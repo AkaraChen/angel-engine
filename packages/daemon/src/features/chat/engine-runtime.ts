@@ -15,6 +15,7 @@ import type {
   ChatSetPermissionModeInput,
   ChatSetRuntimeInput,
   ChatStreamEvent,
+  WorktreeCreationState,
 } from "@angel-engine/daemon-api/chat";
 import type { Db } from "../../platform/db";
 import type { DesktopChatSession } from "./chat-session-factory";
@@ -29,6 +30,7 @@ import {
   runtimeConfigFromConversationSnapshot,
 } from "@angel-engine/js-client/projection";
 import is from "@sindresorhus/is";
+import { randomUUID } from "node:crypto";
 import { Cause, Effect, Exit, Runtime } from "effect";
 import { normalizeChatAttachmentsInput } from "@angel-engine/daemon-api/chat";
 import { ProcessRegistryService } from "../../processes";
@@ -53,12 +55,24 @@ import {
 } from "./importable-sessions";
 import { ChatProcessRegistry } from "./process-registry";
 import {
+  createProjectWorktree,
+  removeCreatedProjectWorktree,
+} from "../projects/git";
+import {
   beginChatSend,
   createChat,
+  createWorktreeCreationJob,
+  deleteChat,
+  deleteWorktreeCreationJob,
+  failInterruptedWorktreeCreationJobs,
+  getWorktreeCreationJob,
+  listWorktreeCreationJobs,
   requireChat,
   setChatRemoteThreadId,
+  setChatCwd,
   setChatRuntime as setChatRuntimeRecord,
   touchChat,
+  updateWorktreeCreationJob,
 } from "./repository";
 import { DesktopAngelSession } from "./desktop-angel-session";
 
@@ -76,6 +90,15 @@ interface ChatPrewarm {
   promise: Promise<void>;
   session: DesktopChatSession;
   snapshot?: ConversationSnapshot;
+}
+
+interface WorktreeCreationJob {
+  abortController: AbortController;
+  chatId: string;
+  projectId: string;
+  promise: Promise<void>;
+  setupApproval?: string;
+  state: WorktreeCreationState;
 }
 type ReadyChatPrewarm = ChatPrewarm & {
   config: ChatRuntimeConfig;
@@ -113,6 +136,13 @@ export class ChatEngine extends Effect.Service<ChatEngine>()(
         Promise<DesktopChatSession>
       >();
       const chatPrewarms = new Map<string, ChatPrewarm>();
+      const worktreeCreationJobs = new Map<string, WorktreeCreationJob>();
+      const worktreeCreationCancellations = new Set<string>();
+
+      // A process-local promise cannot survive a daemon restart. Persisted
+      // creating rows become explicit failures so their placeholder chats can
+      // never silently send from the project's main checkout.
+      yield* failInterruptedWorktreeCreationJobs();
 
       /** Bridge: run a daemon effect from promise/callback code, rethrowing the typed failure. */
       const toPromise = async <A>(
@@ -134,6 +164,98 @@ export class ChatEngine extends Effect.Service<ChatEngine>()(
       const refreshProcessRegistry = () => {
         void chatProcessRegistry.refresh().catch(() => undefined);
       };
+
+      const decorateChat = (chat: Chat, state?: WorktreeCreationState): Chat =>
+        state ? { ...chat, worktreeCreation: { ...state } } : chat;
+
+      const publishWorktreeJob = (job: WorktreeCreationJob) => {
+        chatEvents.metadataChanged([job.chatId]);
+      };
+
+      const persistWorktreeJob = (job: WorktreeCreationJob) =>
+        updateWorktreeCreationJob({
+          chatId: job.chatId,
+          setupApproval: job.setupApproval,
+          state: job.state,
+        });
+
+      const runWorktreeCreation = (job: WorktreeCreationJob) => {
+        job.abortController = new AbortController();
+        job.state = {
+          jobId: randomUUID(),
+          progress: 0,
+          stage: "fetching",
+          status: "creating",
+        };
+        void toPromise(persistWorktreeJob(job)).catch(() => undefined);
+        publishWorktreeJob(job);
+        job.promise = toPromise(
+          createProjectWorktree(
+            {
+              projectId: job.projectId,
+              setupApproval: job.setupApproval,
+            },
+            job.abortController.signal,
+            (stage, progress) => {
+              job.state = { ...job.state, progress, stage };
+              void toPromise(persistWorktreeJob(job)).catch(() => undefined);
+              publishWorktreeJob(job);
+            },
+          ).pipe(
+            Effect.flatMap((worktree) =>
+              setChatCwd(job.chatId, worktree.cwd).pipe(
+                Effect.catchAll((error) =>
+                  removeCreatedProjectWorktree(worktree).pipe(
+                    Effect.zipRight(Effect.fail(error)),
+                  ),
+                ),
+              ),
+            ),
+            Effect.asVoid,
+          ),
+        )
+          .then(async () => {
+            worktreeCreationJobs.delete(job.chatId);
+            await toPromise(deleteWorktreeCreationJob(job.chatId));
+            publishWorktreeJob(job);
+          })
+          .catch(async (error: unknown) => {
+            job.state = {
+              ...job.state,
+              error: worktreeCreationErrorMessage(error),
+              status: "failed",
+            };
+            await toPromise(persistWorktreeJob(job)).catch(() => undefined);
+            publishWorktreeJob(job);
+            throw error;
+          });
+        // A job is allowed to finish without a run observer (for example when
+        // the renderer closes). Keep the rejection handled while preserving it
+        // for `waitForWorktreeCreation`.
+        void job.promise.catch(() => undefined);
+      };
+
+      const waitForWorktreeCreation = (chatId: string) =>
+        Effect.tryPromise({
+          catch: (cause) =>
+            cause instanceof DaemonError
+              ? cause
+              : DaemonError.worktreeCreateFailed(cause),
+          try: async () => {
+            const job = worktreeCreationJobs.get(chatId);
+            if (!job) {
+              const persisted = await toPromise(getWorktreeCreationJob(chatId));
+              if (persisted) {
+                throw DaemonError.worktreeCreateFailed(persisted.state.error);
+              }
+              return;
+            }
+            if (job.state.status === "failed") {
+              throw DaemonError.worktreeCreateFailed(job.state.error);
+            }
+            await job.promise;
+          },
+        });
 
       /** Wraps a native-session promise, preserving typed daemon failures. */
       const trySession = <A>(run: () => Promise<A>) =>
@@ -285,6 +407,7 @@ export class ChatEngine extends Effect.Service<ChatEngine>()(
       ) =>
         Effect.gen(function* () {
           if (is.nonEmptyString(input.chatId)) {
+            yield* waitForWorktreeCreation(input.chatId);
             const chat = yield* requireChat(input.chatId);
             return {
               chat,
@@ -393,6 +516,9 @@ export class ChatEngine extends Effect.Service<ChatEngine>()(
         });
 
       const closeAllSessions = () => {
+        for (const job of worktreeCreationJobs.values()) {
+          job.abortController.abort();
+        }
         for (const session of chatSessions.values()) {
           session.close();
         }
@@ -520,6 +646,37 @@ export class ChatEngine extends Effect.Service<ChatEngine>()(
         });
 
       return {
+        cancelWorktreeCreation: (chatId: string) =>
+          Effect.gen(function* () {
+            worktreeCreationCancellations.add(chatId);
+            yield* getWorktreeCreationJob(chatId);
+            const job = worktreeCreationJobs.get(chatId);
+            if (job) {
+              job.abortController.abort();
+              yield* Effect.promise(() => job.promise.catch(() => undefined));
+            }
+            worktreeCreationJobs.delete(chatId);
+            yield* deleteWorktreeCreationJob(chatId);
+            const chat = yield* deleteChat(chatId);
+            chatEvents.metadataChanged([chatId]);
+            return chat;
+          }).pipe(
+            Effect.ensuring(
+              Effect.sync(() => worktreeCreationCancellations.delete(chatId)),
+            ),
+          ),
+        cancelWorktreeCreationForDelete: (chatId: string) =>
+          Effect.gen(function* () {
+            worktreeCreationCancellations.add(chatId);
+            yield* getWorktreeCreationJob(chatId);
+            const job = worktreeCreationJobs.get(chatId);
+            if (job) {
+              job.abortController.abort();
+              yield* Effect.promise(() => job.promise.catch(() => undefined));
+              worktreeCreationJobs.delete(chatId);
+            }
+            yield* deleteWorktreeCreationJob(chatId);
+          }),
         closeChatSession,
         createChatFromInput: (
           input: ChatCreateInput,
@@ -542,13 +699,57 @@ export class ChatEngine extends Effect.Service<ChatEngine>()(
               );
             }
 
-            // Worktree chats resolve here too: `cwdForNewChat` creates the
-            // project worktree, so creation no longer depends on the send
-            // route. It still fails when `projectId` is missing.
+            if (input.creationLocation === "worktree") {
+              if (!is.nonEmptyString(input.projectId)) {
+                return yield* Effect.fail(
+                  DaemonError.projectRequiredForWorktree(),
+                );
+              }
+              const chat = yield* createChat({
+                ...input,
+                cwd: yield* cwdForProjectOrStandalone(input.projectId),
+              });
+              const job: WorktreeCreationJob = {
+                abortController: new AbortController(),
+                chatId: chat.id,
+                projectId: input.projectId,
+                promise: Promise.resolve(),
+                setupApproval: input.worktreeSetupApproval,
+                state: {
+                  jobId: randomUUID(),
+                  progress: 0,
+                  stage: "fetching",
+                  status: "creating",
+                },
+              };
+              yield* createWorktreeCreationJob({
+                chatId: job.chatId,
+                setupApproval: job.setupApproval,
+                state: job.state,
+              });
+              worktreeCreationJobs.set(chat.id, job);
+              runWorktreeCreation(job);
+              return decorateChat(chat, job.state);
+            }
+
             return yield* createChat({
               ...input,
               cwd: yield* cwdForNewChat(input, abortSignal),
             });
+          }),
+        decorateChats: (chats: Chat[]) =>
+          Effect.gen(function* () {
+            const states = new Map(
+              (yield* listWorktreeCreationJobs()).map((job) => [
+                job.chatId,
+                job.state,
+              ]),
+            );
+            return chats.map((chat) => decorateChat(chat, states.get(chat.id)));
+          }),
+        finishChatDeletion: (chatId: string) =>
+          Effect.sync(() => {
+            worktreeCreationCancellations.delete(chatId);
           }),
         importChat,
         inspectChatRuntimeConfig: (input: ChatRuntimeConfigInput) =>
@@ -613,6 +814,54 @@ export class ChatEngine extends Effect.Service<ChatEngine>()(
             trimChatPrewarms();
             yield* trySession(() => prewarm.promise);
             return yield* chatPrewarmResult(prewarm);
+          }),
+        retryWorktreeCreation: (chatId: string, setupApproval?: string) =>
+          Effect.gen(function* () {
+            const persisted = yield* getWorktreeCreationJob(chatId);
+            if (!persisted || persisted.state.status !== "failed") {
+              return yield* Effect.fail(
+                DaemonError.invalidRequest(
+                  "Worktree creation is not waiting for retry.",
+                ),
+              );
+            }
+            if (
+              worktreeCreationJobs.has(chatId) ||
+              worktreeCreationCancellations.has(chatId)
+            ) {
+              return yield* Effect.fail(
+                DaemonError.invalidRequest(
+                  "Worktree creation is already running.",
+                ),
+              );
+            }
+            const chat = yield* requireChat(chatId);
+            if (!is.nonEmptyString(chat.projectId)) {
+              return yield* Effect.fail(
+                DaemonError.projectRequiredForWorktree(),
+              );
+            }
+            const job: WorktreeCreationJob = {
+              abortController: new AbortController(),
+              chatId,
+              projectId: chat.projectId,
+              promise: Promise.resolve(),
+              setupApproval,
+              state: persisted.state,
+            };
+            if (
+              worktreeCreationJobs.has(chatId) ||
+              worktreeCreationCancellations.has(chatId)
+            ) {
+              return yield* Effect.fail(
+                DaemonError.invalidRequest(
+                  "Worktree creation is already running or being cancelled.",
+                ),
+              );
+            }
+            worktreeCreationJobs.set(chatId, job);
+            runWorktreeCreation(job);
+            return decorateChat(chat, job.state);
           }),
         sendChat: (input: ChatSendInput) => streamChat(input),
         setChatMode: (input: ChatSetModeInput) =>
@@ -703,4 +952,11 @@ export function chatPrewarmMatches(
 
 function isReadyChatPrewarm(prewarm: ChatPrewarm): prewarm is ReadyChatPrewarm {
   return Boolean(prewarm.config && prewarm.snapshot);
+}
+
+function worktreeCreationErrorMessage(error: unknown): string {
+  if (error instanceof Error && is.nonEmptyString(error.message)) {
+    return error.message;
+  }
+  return "Could not create git worktree.";
 }

@@ -201,12 +201,15 @@ export const fr = {
       powerWorktreeHome: "Accueil",
       powerWorktreeHistoricalChat: "Historique des discussions",
       refreshProjects: "Actualiser les projets",
+      retryWorktreeCreation: "Réessayer la création du worktree",
       settings: "Paramètres",
       toggleChats: "Afficher ou masquer les discussions",
       mobileDescription: "Affiche la barre latérale mobile.",
       title: "Barre latérale",
       toggleSidebar: "Afficher ou masquer la barre latérale",
       worktreeMain: "Principal",
+      worktreeCreating: "Création du worktree… {{progress}} %",
+      worktreeCreationFailed: "Échec de la création du worktree",
     },
     settings: {
       agents: {
