@@ -74,6 +74,20 @@ export const es = {
       noProject: "Sin proyecto",
       projectSelect: "Proyecto",
       settings: "Configuración",
+      setup: {
+        continueAnyway: "Continuar de todos modos",
+        discard: "Descartar espacio de trabajo",
+        failedStep:
+          "Falló el paso {{step}} de {{total}} ({{exitCode}}): {{command}}",
+        failedTitle: "Falló la configuración del espacio de trabajo",
+        noLog: "Aún no hay salida de configuración.",
+        ready: "Espacio de trabajo listo",
+        retry: "Reintentar configuración",
+        running:
+          "Configurando el espacio de trabajo… El primer mensaje se enviará automáticamente al terminar.",
+        runningStep: "Paso {{step}} de {{total}}: {{command}}",
+        viewLog: "Ver registro de configuración",
+      },
       statsBranch: "Rama",
       statsChanges: "Cambios",
       statsLastActive: "Última actividad",

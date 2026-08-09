@@ -42,6 +42,8 @@ export const queryKeys = {
   },
   worktrees: {
     all: () => ["worktrees"] as const,
+    lifecycle: (chatId: string | null) =>
+      ["worktrees", "lifecycle", chatId] as const,
     managedEligible: () => ["worktrees", "managed", "eligible"] as const,
   },
   workspaceTools: {

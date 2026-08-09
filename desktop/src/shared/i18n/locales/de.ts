@@ -74,6 +74,20 @@ export const de = {
       noProject: "Kein Projekt",
       projectSelect: "Projekt",
       settings: "Einstellungen",
+      setup: {
+        continueAnyway: "Trotzdem fortfahren",
+        discard: "Arbeitsbereich verwerfen",
+        failedStep:
+          "Schritt {{step}} von {{total}} fehlgeschlagen ({{exitCode}}): {{command}}",
+        failedTitle: "Einrichtung des Arbeitsbereichs fehlgeschlagen",
+        noLog: "Noch keine Einrichtungsausgabe.",
+        ready: "Arbeitsbereich bereit",
+        retry: "Einrichtung wiederholen",
+        running:
+          "Arbeitsbereich wird eingerichtet… Die erste Nachricht wird danach automatisch gesendet.",
+        runningStep: "Schritt {{step}} von {{total}}: {{command}}",
+        viewLog: "Einrichtungsprotokoll anzeigen",
+      },
       statsBranch: "Branch",
       statsChanges: "Änderungen",
       statsLastActive: "Zuletzt aktiv",

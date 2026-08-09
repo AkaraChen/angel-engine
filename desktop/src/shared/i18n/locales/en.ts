@@ -74,6 +74,20 @@ export const en = {
       noProject: "No project",
       projectSelect: "Project",
       settings: "Settings",
+      setup: {
+        continueAnyway: "Continue anyway",
+        discard: "Discard workspace",
+        failedStep:
+          "Step {{step}} of {{total}} failed ({{exitCode}}): {{command}}",
+        failedTitle: "Workspace setup failed",
+        noLog: "No setup output yet.",
+        ready: "Workspace ready",
+        retry: "Retry setup",
+        running:
+          "Setting up workspace… Your first message will send automatically when it is ready.",
+        runningStep: "Step {{step}} of {{total}}: {{command}}",
+        viewLog: "View setup log",
+      },
       statsBranch: "Branch",
       statsChanges: "Changes",
       statsLastActive: "Last active",

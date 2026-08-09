@@ -74,6 +74,20 @@ export const ja = {
       noProject: "プロジェクトなし",
       projectSelect: "プロジェクト",
       settings: "設定",
+      setup: {
+        continueAnyway: "このまま続行",
+        discard: "ワークスペースを破棄",
+        failedStep:
+          "ステップ {{step}}/{{total}} が失敗しました ({{exitCode}}): {{command}}",
+        failedTitle: "ワークスペースのセットアップに失敗しました",
+        noLog: "セットアップ出力はまだありません。",
+        ready: "ワークスペースの準備ができました",
+        retry: "セットアップを再試行",
+        running:
+          "ワークスペースをセットアップ中… 完了後、最初のメッセージが自動送信されます。",
+        runningStep: "ステップ {{step}}/{{total}}: {{command}}",
+        viewLog: "セットアップログを表示",
+      },
       statsBranch: "ブランチ",
       statsChanges: "変更",
       statsLastActive: "最終アクティブ",

@@ -75,6 +75,20 @@ export const fr = {
       noProject: "Aucun projet",
       projectSelect: "Projet",
       settings: "Paramètres",
+      setup: {
+        continueAnyway: "Continuer quand même",
+        discard: "Supprimer l’espace de travail",
+        failedStep:
+          "Échec de l’étape {{step}} sur {{total}} ({{exitCode}}) : {{command}}",
+        failedTitle: "Échec de la configuration de l’espace de travail",
+        noLog: "Aucune sortie de configuration pour le moment.",
+        ready: "Espace de travail prêt",
+        retry: "Réessayer la configuration",
+        running:
+          "Configuration de l’espace de travail… Le premier message sera envoyé automatiquement ensuite.",
+        runningStep: "Étape {{step}} sur {{total}} : {{command}}",
+        viewLog: "Afficher le journal de configuration",
+      },
       statsBranch: "Branche",
       statsChanges: "Modifications",
       statsLastActive: "Dernière activité",

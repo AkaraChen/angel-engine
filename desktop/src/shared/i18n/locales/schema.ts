@@ -127,6 +127,19 @@ export interface LocaleResourceTranslationWorkspaceTools {
   tabs: LocaleResourceTranslationWorkspaceToolsTabs;
 }
 
+export interface LocaleResourceTranslationWorkspaceSetup {
+  continueAnyway: string;
+  discard: string;
+  failedStep: string;
+  failedTitle: string;
+  noLog: string;
+  ready: string;
+  retry: string;
+  running: string;
+  runningStep: string;
+  viewLog: string;
+}
+
 export interface LocaleResourceTranslationWorkspace {
   backgroundChatCompleted: string;
   backgroundChatNeedsInput: string;
@@ -140,6 +153,7 @@ export interface LocaleResourceTranslationWorkspace {
   noProject: string;
   projectSelect: string;
   settings: string;
+  setup: LocaleResourceTranslationWorkspaceSetup;
   statsBranch: string;
   statsChanges: string;
   statsLastActive: string;
