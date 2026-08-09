@@ -1,4 +1,5 @@
 import type { LocaleResource } from "./schema";
+import { scheduleTranslation } from "./schedule";
 
 export const zhCN = {
   translation: {
@@ -188,6 +189,7 @@ export const zhCN = {
       },
       title: "舰队",
     },
+    schedule: scheduleTranslation,
     sidebar: {
       addProject: "添加项目",
       archiveChat: "归档聊天",

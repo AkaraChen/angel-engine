@@ -10,6 +10,7 @@ import {
   Lightning,
   Chats as MessageSquare,
   Plus,
+  CalendarDots,
   DownloadSimple,
   GearSix as Settings,
   SquaresFour,
@@ -59,6 +60,7 @@ const WORKSPACE_MODES: Array<{
 interface WorkspaceSidebarProps {
   chats: Chat[];
   fleetActive: boolean;
+  scheduleActive: boolean;
   isChatsLoading: boolean;
   isMacOS: boolean;
   isProjectsLoading: boolean;
@@ -70,6 +72,7 @@ interface WorkspaceSidebarProps {
   onImportSession: () => MaybeAsync;
   onOpenChat: (chat: Chat) => MaybeAsync;
   onOpenFleet: () => MaybeAsync;
+  onOpenSchedule: () => MaybeAsync;
   onOpenSettings: () => MaybeAsync;
   onOpenWorktree: (
     project: Project,
@@ -219,6 +222,7 @@ export function WorkspaceFloatingSidebar(
 function WorkspaceSidebarContent({
   chats,
   fleetActive,
+  scheduleActive,
   isChatsLoading,
   isMacOS,
   isProjectsLoading,
@@ -230,6 +234,7 @@ function WorkspaceSidebarContent({
   onImportSession,
   onOpenChat,
   onOpenFleet,
+  onOpenSchedule,
   onOpenSettings,
   onOpenWorktree,
   onRetryWorktreeCreation,
@@ -252,7 +257,7 @@ function WorkspaceSidebarContent({
   );
   const createChatFromNewButton = async () => {
     const target = resolveWorkspaceNewChatTarget({
-      fleetActive,
+      fleetActive: fleetActive || scheduleActive,
       projects,
       selectedChatId,
       selectedProjectId,
@@ -302,6 +307,15 @@ function WorkspaceSidebarContent({
             >
               <Plus weight="bold" />
               <span>{t("sidebar.newChat")}</span>
+            </WorkspaceSidebarMenuButton>
+          </AnimatedSidebarMenuItem>
+          <AnimatedSidebarMenuItem>
+            <WorkspaceSidebarMenuButton
+              isActive={scheduleActive}
+              onClick={() => void onOpenSchedule()}
+            >
+              <CalendarDots weight="duotone" />
+              <span>{t("schedule.title")}</span>
             </WorkspaceSidebarMenuButton>
           </AnimatedSidebarMenuItem>
           <AnimatedSidebarMenuItem>

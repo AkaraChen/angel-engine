@@ -1,4 +1,5 @@
 import type { LocaleResource } from "./schema";
+import { scheduleTranslation } from "./schedule";
 
 export const en = {
   translation: {
@@ -190,6 +191,7 @@ export const en = {
       },
       title: "Fleet",
     },
+    schedule: scheduleTranslation,
     sidebar: {
       addProject: "Add project",
       archiveChat: "Archive chat",

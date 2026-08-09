@@ -1,4 +1,5 @@
 import type { LocaleResource } from "./schema";
+import { scheduleTranslation } from "./schedule";
 
 export const ja = {
   translation: {
@@ -190,6 +191,7 @@ export const ja = {
       },
       title: "フリート",
     },
+    schedule: scheduleTranslation,
     sidebar: {
       addProject: "プロジェクトを追加",
       archiveChat: "チャットをアーカイブ",

@@ -29,6 +29,18 @@ export function WorkspaceFleetPage() {
   );
 }
 
+export function WorkspaceSchedulePage() {
+  const api = useApi();
+
+  return (
+    <WorkspacePageContent
+      api={api}
+      currentRoutePath="/schedule"
+      scheduleActive
+    />
+  );
+}
+
 export function WorkspaceChatPage({
   chatId,
   projectId,

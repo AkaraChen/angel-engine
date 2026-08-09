@@ -218,6 +218,83 @@ export interface LocaleResourceTranslationFleet {
   title: string;
 }
 
+export interface LocaleResourceTranslationSchedule {
+  agent: string;
+  alreadyRunning: string;
+  backToList: string;
+  createAction: string;
+  createDescription: string;
+  createTitle: string;
+  currentAgent: string;
+  customCron: string;
+  deleteConfirm: string;
+  discardConfirm: string;
+  disconnected: string;
+  duration: string;
+  emptyDetail: string;
+  emptyDetailDescription: string;
+  invalidCron: string;
+  lastResult: string;
+  name: string;
+  neverRun: string;
+  newAutomation: string;
+  nextRun: string;
+  nextThreeRuns: string;
+  noProject: string;
+  noRuns: string;
+  notifyOnFailure: string;
+  pause: string;
+  paused: string;
+  project: string;
+  prompt: string;
+  recipes: {
+    ciHeartbeat: string;
+    ciHeartbeatDescription: string;
+    dependencyAudit: string;
+    dependencyAuditDescription: string;
+    nightlyTests: string;
+    nightlyTestsDescription: string;
+    title: string;
+  };
+  result: string;
+  resume: string;
+  runHistory: string;
+  runNow: string;
+  runStatus: {
+    cancelled: string;
+    failed: string;
+    missed: string;
+    running: string;
+    succeeded: string;
+  };
+  schedule: string;
+  schedulePresets: {
+    custom: string;
+    daily: string;
+    "every-30-minutes": string;
+    hourly: string;
+    weekdays: string;
+    weekly: string;
+  };
+  seconds: string;
+  sleepNotice: string;
+  startFromScratch: string;
+  started: string;
+  status: {
+    active: string;
+    failing: string;
+    paused: string;
+    running: string;
+  };
+  subtitle: string;
+  title: string;
+  trigger: string;
+  triggerType: {
+    manual: string;
+    scheduled: string;
+  };
+}
+
 export interface LocaleResourceTranslationSidebar {
   addProject: string;
   archiveChat: string;
@@ -774,6 +851,7 @@ export interface LocaleResourceTranslation {
   attachment: LocaleResourceTranslationAttachment;
   workspace: LocaleResourceTranslationWorkspace;
   fleet: LocaleResourceTranslationFleet;
+  schedule: LocaleResourceTranslationSchedule;
   sidebar: LocaleResourceTranslationSidebar;
   settings: LocaleResourceTranslationSettings;
   updates: LocaleResourceTranslationUpdates;

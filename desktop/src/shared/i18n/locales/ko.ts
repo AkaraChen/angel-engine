@@ -1,4 +1,5 @@
 import type { LocaleResource } from "./schema";
+import { scheduleTranslation } from "./schedule";
 
 export const ko = {
   translation: {
@@ -189,6 +190,7 @@ export const ko = {
       },
       title: "플릿",
     },
+    schedule: scheduleTranslation,
     sidebar: {
       addProject: "프로젝트 추가",
       archiveChat: "채팅 보관",

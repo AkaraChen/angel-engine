@@ -15,6 +15,7 @@ import {
   fleetRoutePath,
   lastOpenedTargetPath,
   projectDraftRoutePath,
+  scheduleRoutePath,
   workspaceModeForChat,
 } from "@/app/workspace/workspace-route-paths";
 import {
@@ -265,6 +266,10 @@ export function useWorkspaceNavigation(model: WorkspacePageModel) {
     if (location !== fleetRoutePath) navigate(fleetRoutePath);
   }, [location, navigate]);
 
+  const openSchedule = useCallback(() => {
+    if (location !== scheduleRoutePath) navigate(scheduleRoutePath);
+  }, [location, navigate]);
+
   /**
    * Fleet spans every project, so a row can point at a chat the current
    * workspace mode cannot reach. Switch to the mode that owns the chat before
@@ -306,6 +311,7 @@ export function useWorkspaceNavigation(model: WorkspacePageModel) {
     openChat,
     openChatFromFleet,
     openFleet,
+    openSchedule,
     openPowerWorktree,
     openSettings,
     registerChatTab,

@@ -6,6 +6,7 @@ import {
   WorkspaceChatPage,
   WorkspaceDraftPage,
   WorkspaceFleetPage,
+  WorkspaceSchedulePage,
 } from "@/app/workspace/workspace-page";
 import { WorkspaceToolWindowPage } from "@/app/workspace/workspace-tool-host";
 
@@ -18,6 +19,9 @@ export function AppRouter() {
         </Route>
         <Route path="/fleet">
           <WorkspaceFleetPage />
+        </Route>
+        <Route path="/schedule">
+          <WorkspaceSchedulePage />
         </Route>
         <Route path="/workspace-tools">
           <WorkspaceToolWindowPage />
