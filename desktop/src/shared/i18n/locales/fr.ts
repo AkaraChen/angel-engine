@@ -79,6 +79,7 @@ export const fr = {
       statsChanges: "Modifications",
       statsLastActive: "Dernière activité",
       tools: {
+        addToChat: "Ajouter au chat",
         comments: {
           delete: "Supprimer",
           lineComment: "Ligne {{line}}",

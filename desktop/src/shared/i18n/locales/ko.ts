@@ -78,6 +78,7 @@ export const ko = {
       statsChanges: "변경 사항",
       statsLastActive: "마지막 활동",
       tools: {
+        addToChat: "채팅에 추가",
         comments: {
           delete: "삭제",
           lineComment: "{{line}}행",

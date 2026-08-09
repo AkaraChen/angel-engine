@@ -78,6 +78,7 @@ export const zhTW = {
       statsChanges: "變更",
       statsLastActive: "最近活動",
       tools: {
+        addToChat: "加入聊天",
         comments: {
           delete: "刪除",
           lineComment: "第 {{line}} 行",

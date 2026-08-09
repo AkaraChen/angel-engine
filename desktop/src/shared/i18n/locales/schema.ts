@@ -137,6 +137,7 @@ export interface LocaleResourceTranslationWorkspaceToolsComments {
 }
 
 export interface LocaleResourceTranslationWorkspaceTools {
+  addToChat: string;
   comments: LocaleResourceTranslationWorkspaceToolsComments;
   commit: LocaleResourceTranslationWorkspaceToolsCommit;
   dockInSidebar: string;

@@ -78,6 +78,7 @@ export const zhCN = {
       statsChanges: "更改",
       statsLastActive: "最近活动",
       tools: {
+        addToChat: "添加到聊天",
         comments: {
           delete: "删除",
           lineComment: "第 {{line}} 行",
