@@ -24,6 +24,9 @@ pub struct AngelSession {
     options: RuntimeOptions,
     conversation_id: Option<String>,
     active_turn: Option<ActiveTurn>,
+    /// Tracks whether initialize already completed for this process, so list
+    /// and other pre-conversation calls do not re-handshake.
+    runtime_initialized: bool,
 }
 
 impl AngelSession {

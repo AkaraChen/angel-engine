@@ -13,8 +13,9 @@ const CREATE_NO_WINDOW: u32 = 0x08000000;
 use crate::config::{ClientOptions, ClientProtocol, StartConversationRequest};
 use crate::core::{AngelClientCore, process_log};
 use crate::error::{ClientError, ClientResult};
+use crate::event::ClientEvent;
 use crate::event::{ClientLogKind, ClientUpdate};
-use crate::importable::list_importable_sessions_result;
+use crate::importable::importable_session_from_conversation;
 use crate::settings::{
     AvailableModeSettingSnapshot, AvailablePermissionModeSettingSnapshot, ModelListSettingSnapshot,
     ReasoningLevelSettingSnapshot, ThreadSettingsSnapshot,
@@ -139,6 +140,8 @@ impl AngelClient {
     ///
     /// Requires an initialized runtime. Returns an empty list with
     /// `unsupported_reason` when the agent does not advertise list capability.
+    /// Only sessions discovered by this request are returned (not prior pages
+    /// or previous cwd listings still held in the client snapshot).
     pub fn list_importable_sessions(
         &mut self,
         request: ListImportableSessionsRequest,
@@ -163,13 +166,36 @@ impl AngelClient {
             Err(error) => return Err(error),
         };
 
-        let next_cursor = self.core.discovery_next_cursor();
-        let _ = discover;
-        Ok(list_importable_sessions_result(
-            &self.snapshot().conversations,
-            next_cursor,
-            None,
-        ))
+        // Surface runtime faults / JSON-RPC errors from the list response.
+        for event in &discover.update.events {
+            if let ClientEvent::RuntimeFaulted { code, message } = event {
+                return Err(ClientError::RuntimeFaulted {
+                    code: code.clone(),
+                    message: message.clone(),
+                });
+            }
+        }
+
+        let mut sessions = Vec::new();
+        let mut seen = std::collections::HashSet::new();
+        for event in &discover.update.events {
+            let ClientEvent::ConversationDiscovered { conversation } = event else {
+                continue;
+            };
+            let Some(session) = importable_session_from_conversation(conversation) else {
+                continue;
+            };
+            if !seen.insert(session.remote_id.clone()) {
+                continue;
+            }
+            sessions.push(session);
+        }
+
+        Ok(ListImportableSessionsResult {
+            sessions,
+            next_cursor: self.core.discovery_next_cursor(),
+            unsupported_reason: None,
+        })
     }
 
     pub fn read_conversation(

@@ -22,6 +22,7 @@ impl AngelSession {
             options,
             conversation_id: None,
             active_turn: None,
+            runtime_initialized: false,
         })
     }
 
@@ -63,10 +64,7 @@ impl AngelSession {
         &mut self,
         request: ListImportableSessionsRequest,
     ) -> ClientResult<ListImportableSessionsResult> {
-        if self.conversation_id.is_none() {
-            let initialize_update = self.client.initialize()?;
-            check_update_fault(&initialize_update)?;
-        }
+        self.ensure_runtime_initialized()?;
         self.client.list_importable_sessions(request)
     }
 
@@ -138,8 +136,7 @@ impl AngelSession {
             return Ok(());
         }
 
-        let initialize_update = self.client.initialize()?;
-        check_update_fault(&initialize_update)?;
+        self.ensure_runtime_initialized()?;
         let should_read_history = remote_id.is_some()
             && matches!(self.options.client.protocol, ClientProtocol::CodexAppServer);
         let result = if let Some(remote_id) = remote_id {
@@ -167,6 +164,16 @@ impl AngelSession {
             let result = self.client.read_conversation(conversation_id)?;
             check_update_fault(&result.update)?;
         }
+        Ok(())
+    }
+
+    fn ensure_runtime_initialized(&mut self) -> ClientResult<()> {
+        if self.runtime_initialized {
+            return Ok(());
+        }
+        let initialize_update = self.client.initialize()?;
+        check_update_fault(&initialize_update)?;
+        self.runtime_initialized = true;
         Ok(())
     }
 

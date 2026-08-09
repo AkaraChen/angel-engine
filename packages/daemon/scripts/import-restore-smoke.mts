@@ -11,11 +11,19 @@
  *
  * Drives shipped list helpers + session hydrate (not a re-implementation).
  */
-import { ClaudeCodeSession } from "@angel-engine/claude-client";
+import {
+  ClaudeCodeSession,
+  encodeClaudeProjectDir,
+  listImportableClaudeSessions,
+} from "@angel-engine/claude-client";
 import {
   createRuntimeOptions,
   type ConversationSnapshot,
 } from "@angel-engine/client-napi";
+import {
+  encodePiSessionDir,
+  listImportablePiSessions,
+} from "@angel-engine/pi-client";
 import { Effect } from "effect";
 import { spawnSync } from "node:child_process";
 import fs from "node:fs";
@@ -23,13 +31,7 @@ import os from "node:os";
 import path from "node:path";
 import which from "which";
 import { DesktopAngelSession } from "../src/features/chat/desktop-angel-session.ts";
-import {
-  encodeClaudeProjectDir,
-  encodePiSessionDir,
-  listClaudeLocalSessions,
-  listPiLocalSessions,
-  mapNativeImportableResult,
-} from "../src/features/chat/importable-sessions.ts";
+import { mapNativeImportableResult } from "../src/features/chat/importable-sessions.ts";
 
 const CATALOG = [
   "codex",
@@ -75,8 +77,7 @@ interface RuntimeResult {
 }
 
 const scratch =
-  process.argv[2] ??
-  path.join(os.tmpdir(), "angel-import-restore-smoke");
+  process.argv[2] ?? path.join(os.tmpdir(), "angel-import-restore-smoke");
 const cwd = process.env.ANGEL_IMPORT_CWD
   ? path.resolve(process.env.ANGEL_IMPORT_CWD)
   : process.cwd();
@@ -133,14 +134,14 @@ async function listSessions(
   if (runtime === "claude") {
     return {
       nextCursor: null,
-      sessions: listClaudeLocalSessions(listCwd),
+      sessions: listImportableClaudeSessions(listCwd),
       unsupportedReason: null,
     };
   }
   if (runtime === "pi") {
     return {
       nextCursor: null,
-      sessions: listPiLocalSessions(listCwd),
+      sessions: listImportablePiSessions(listCwd),
       unsupportedReason: null,
     };
   }
@@ -195,9 +196,7 @@ async function hydrateSession(
     }),
   );
   try {
-    return await Effect.runPromise(
-      session.hydrate({ cwd: listCwd, remoteId }),
-    );
+    return await Effect.runPromise(session.hydrate({ cwd: listCwd, remoteId }));
   } finally {
     session.close();
   }
@@ -244,10 +243,7 @@ function seedClaudeSession(listCwd: string, logFile: string): string | null {
     },
   );
   const combined = `${result.stdout ?? ""}\n${result.stderr ?? ""}`;
-  logLine(
-    logFile,
-    `seed exit=${result.status} out=${combined.slice(0, 800)}`,
-  );
+  logLine(logFile, `seed exit=${result.status} out=${combined.slice(0, 800)}`);
 
   // Prefer session_id from JSON output when present.
   const jsonId = combined.match(/"session_id"\s*:\s*"([0-9a-f-]{36})"/i);
@@ -345,7 +341,10 @@ async function seedProtocolSession(
       },
     );
     const combined = `${result.stdout ?? ""}\n${result.stderr ?? ""}`;
-    logLine(logFile, `seed exit=${result.status} out=${combined.slice(0, 600)}`);
+    logLine(
+      logFile,
+      `seed exit=${result.status} out=${combined.slice(0, 600)}`,
+    );
     const match = combined.match(/session id:\s*([0-9a-f-]{20,})/i);
     if (match?.[1]) {
       logLine(logFile, `seed parsed session id=${match[1]}`);
@@ -356,16 +355,15 @@ async function seedProtocolSession(
 
   if (runtime === "opencode") {
     logLine(logFile, "seed: opencode run short prompt");
-    const result = spawnSync(
-      binary,
-      ["run", "Reply with exactly: smoke-ok"],
-      {
-        cwd: listCwd,
-        encoding: "utf8",
-        timeout: 120_000,
-      },
+    const result = spawnSync(binary, ["run", "Reply with exactly: smoke-ok"], {
+      cwd: listCwd,
+      encoding: "utf8",
+      timeout: 120_000,
+    });
+    logLine(
+      logFile,
+      `seed exit=${result.status} out=${(result.stdout ?? "").slice(0, 200)}`,
     );
-    logLine(logFile, `seed exit=${result.status} out=${(result.stdout ?? "").slice(0, 200)}`);
     return null;
   }
 
@@ -424,7 +422,10 @@ async function seedProtocolSession(
   return null;
 }
 
-async function runRuntime(runtime: RuntimeId, probe: ProbeRow): Promise<RuntimeResult> {
+async function runRuntime(
+  runtime: RuntimeId,
+  probe: ProbeRow,
+): Promise<RuntimeResult> {
   const logFile = path.join(scratch, `import-restore-${runtime}.log`);
   fs.writeFileSync(logFile, "", "utf8");
   logLine(logFile, `runtime=${runtime}`);
@@ -463,7 +464,10 @@ async function runRuntime(runtime: RuntimeId, probe: ProbeRow): Promise<RuntimeR
         /^[0-9a-f-]{36}$/i.test(session.remoteId),
       );
       if (uuidSessions.length === 0) {
-        logLine(logFile, "claude: no real UUID sessions — seeding via claude -p");
+        logLine(
+          logFile,
+          "claude: no real UUID sessions — seeding via claude -p",
+        );
         seededRemoteId = seedClaudeSession(cwd, logFile);
         listed = await listSessions(runtime, cwd);
         logLine(logFile, `re-list: count=${listed.sessions.length}`);
@@ -523,7 +527,10 @@ async function runRuntime(runtime: RuntimeId, probe: ProbeRow): Promise<RuntimeR
     }
 
     if (listed.unsupportedReason) {
-      logLine(logFile, `RESULT: list unsupported — ${listed.unsupportedReason}`);
+      logLine(
+        logFile,
+        `RESULT: list unsupported — ${listed.unsupportedReason}`,
+      );
       return {
         hydrateOk: false,
         importOk: false,

@@ -45,10 +45,10 @@ import {
   getOrCreateChatSession,
 } from "./chat-session-factory";
 import { ChatEvents } from "./chat-events";
+import { listImportableClaudeSessions } from "@angel-engine/claude-client";
+import { listImportablePiSessions } from "@angel-engine/pi-client";
 import {
   emptyImportableResult,
-  listClaudeLocalSessions,
-  listPiLocalSessions,
   mapNativeImportableResult,
 } from "./importable-sessions";
 import { ChatProcessRegistry } from "./process-registry";
@@ -429,14 +429,14 @@ export class ChatEngine extends Effect.Service<ChatEngine>()(
           if (input.runtime === "claude") {
             return {
               nextCursor: null,
-              sessions: listClaudeLocalSessions(cwd),
+              sessions: listImportableClaudeSessions(cwd),
               unsupportedReason: null,
             };
           }
           if (input.runtime === "pi") {
             return {
               nextCursor: null,
-              sessions: listPiLocalSessions(cwd),
+              sessions: listImportablePiSessions(cwd),
               unsupportedReason: null,
             };
           }
@@ -483,18 +483,39 @@ export class ChatEngine extends Effect.Service<ChatEngine>()(
             runtime: input.runtime,
             title: input.title,
           });
+          // Publish metadata immediately so other surfaces see the bound chat
+          // even if hydrate fails below.
+          chatEvents.metadataChanged([chat.id]);
+
           const chatSession = yield* getChatSession(chat);
-          const snapshot = yield* chatSession
+          const hydrateResult = yield* chatSession
             .hydrate({
               cwd,
               remoteId: input.remoteThreadId,
             })
-            .pipe(Effect.mapError(sessionFailure));
-          const updatedChat = yield* persistRemoteThreadId(chat, snapshot);
+            .pipe(
+              Effect.map((snapshot) => ({ ok: true as const, snapshot })),
+              Effect.catchAll((error) =>
+                Effect.succeed({ ok: false as const, error }),
+              ),
+            );
+
+          if (!hydrateResult.ok) {
+            // Chat row remains with remoteThreadId; caller can retry load.
+            return yield* Effect.fail(sessionFailure(hydrateResult.error));
+          }
+
+          const updatedChat = yield* persistRemoteThreadId(
+            chat,
+            hydrateResult.snapshot,
+          );
+          chatEvents.conversationChanged([updatedChat.id]);
           return {
             chat: updatedChat,
-            config: runtimeConfigFromConversationSnapshot(snapshot),
-            messages: conversationMessages(snapshot),
+            config: runtimeConfigFromConversationSnapshot(
+              hydrateResult.snapshot,
+            ),
+            messages: conversationMessages(hydrateResult.snapshot),
           };
         });
 

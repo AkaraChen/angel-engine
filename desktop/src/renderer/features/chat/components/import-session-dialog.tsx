@@ -103,6 +103,7 @@ export function ImportSessionDialog({
     if (!is.nonEmptyString(runtime) || importingId) return;
     setImportingId(session.remoteId);
     setError(null);
+    let importedChatId: string | null = null;
     try {
       const imported = await importSessionAndOpen(api, {
         cwd: session.cwd ?? cwd ?? undefined,
@@ -111,16 +112,25 @@ export function ImportSessionDialog({
         runtime,
         title: session.title ?? undefined,
       });
-      await onImported(imported.chat.id);
-      onClose();
+      importedChatId = imported.chat.id;
     } catch (cause) {
       setError(
         cause instanceof Error
           ? cause.message
           : t("dialog.importSession.importFailed"),
       );
-    } finally {
       setImportingId(null);
+      return;
+    }
+
+    // Import already succeeded — close before navigation so a navigation
+    // failure cannot be mistaken for a failed import / invite a duplicate.
+    onClose();
+    setImportingId(null);
+    try {
+      await onImported(importedChatId);
+    } catch {
+      // Navigation/refetch failures are non-fatal for the import itself.
     }
   };
 
