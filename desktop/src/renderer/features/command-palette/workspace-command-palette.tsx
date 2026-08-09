@@ -19,6 +19,7 @@ import {
   CommandList,
 } from "@/components/ui/command";
 import { displayChatTitle } from "@/app/workspace/workspace-display";
+import { isCommandPaletteShortcut } from "@/features/command-palette/command-palette-shortcut";
 import { createTitleSearch } from "@/features/command-palette/title-search";
 
 const MAX_PALETTE_ITEMS = 20;
@@ -83,8 +84,7 @@ export const WorkspaceCommandPalette: FC<WorkspaceCommandPaletteProps> = ({
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       if (
-        event.key.toLowerCase() !== "k" ||
-        (!event.metaKey && !event.ctrlKey)
+        !isCommandPaletteShortcut(event, window.desktopEnvironment.platform)
       ) {
         return;
       }

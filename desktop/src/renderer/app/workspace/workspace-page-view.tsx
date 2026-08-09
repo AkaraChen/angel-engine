@@ -150,6 +150,7 @@ export const WorkspacePageView: FC<WorkspacePageViewProps> = ({
     changeWorkspaceMode,
     createChatForProject,
     createChatForSelection,
+    createStandaloneWorkspace,
     navigateToChat,
     openChat,
     openChatFromFleet,
@@ -157,7 +158,6 @@ export const WorkspacePageView: FC<WorkspacePageViewProps> = ({
     openPowerWorktree,
     openSettings,
     selectDraftProject,
-    startNewDraftSession,
   } = navigation;
   const handleImportedSession = useCallback(
     async (chatId: string) => {
@@ -306,7 +306,7 @@ export const WorkspacePageView: FC<WorkspacePageViewProps> = ({
         />
         <WorkspaceCommandPalette
           chats={chats}
-          onNewWorkspace={startNewDraftSession}
+          onNewWorkspace={createStandaloneWorkspace}
           onOpenSession={openChatFromFleet}
           onOpenSettings={openSettings}
         />

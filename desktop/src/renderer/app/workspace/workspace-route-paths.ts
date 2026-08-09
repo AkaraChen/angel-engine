@@ -39,6 +39,14 @@ export function isChatOpenableInWorkspaceMode(
   return isProjectWorkspaceMode(workspaceMode) ? isProjectChat : !isProjectChat;
 }
 
+export function workspaceModeForChat(
+  chat: Chat,
+  currentMode: WorkspaceMode,
+): WorkspaceMode {
+  if (!is.nonEmptyString(chat.projectId)) return "chat";
+  return isProjectWorkspaceMode(currentMode) ? currentMode : "work";
+}
+
 export function lastOpenedTargetPath({
   chats,
   target,

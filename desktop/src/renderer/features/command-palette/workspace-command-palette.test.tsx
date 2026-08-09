@@ -3,7 +3,15 @@
 import type { Chat } from "@angel-engine/daemon-api/chat";
 
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
-import { afterAll, afterEach, describe, expect, it, vi } from "vitest";
+import {
+  afterAll,
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+} from "vitest";
 
 import { WorkspaceCommandPalette } from "./workspace-command-palette";
 
@@ -26,6 +34,18 @@ Object.defineProperty(globalThis, "ResizeObserver", {
   value: TestResizeObserver,
   writable: true,
 });
+const originalDesktopEnvironment = Object.getOwnPropertyDescriptor(
+  window,
+  "desktopEnvironment",
+);
+Object.defineProperty(window, "desktopEnvironment", {
+  configurable: true,
+  value: {
+    getPathForFile: () => null,
+    platform: "win32",
+  },
+  writable: true,
+});
 const originalScrollIntoView = Object.getOwnPropertyDescriptor(
   Element.prototype,
   "scrollIntoView",
@@ -45,12 +65,24 @@ const chat: Chat = {
   updatedAt: "2026-08-09T00:00:00.000Z",
 };
 
+beforeEach(() => {
+  window.desktopEnvironment.platform = "win32";
+});
 afterEach(cleanup);
 afterAll(() => {
   if (originalResizeObserver !== undefined) {
     Object.defineProperty(globalThis, "ResizeObserver", originalResizeObserver);
   } else {
     Reflect.deleteProperty(globalThis, "ResizeObserver");
+  }
+  if (originalDesktopEnvironment !== undefined) {
+    Object.defineProperty(
+      window,
+      "desktopEnvironment",
+      originalDesktopEnvironment,
+    );
+  } else {
+    Reflect.deleteProperty(window, "desktopEnvironment");
   }
   if (originalScrollIntoView !== undefined) {
     Object.defineProperty(
@@ -98,6 +130,7 @@ describe("WorkspaceCommandPalette", () => {
       />,
     );
 
+    window.desktopEnvironment.platform = "darwin";
     fireEvent.keyDown(window, { key: "k", metaKey: true });
     fireEvent.click(screen.getByText("ui.commandNewWorkspace"));
 
