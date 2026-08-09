@@ -68,6 +68,14 @@ declare global {
       onCommand: (
         handler: (command: DesktopWindowCommand) => void,
       ) => () => void;
+      onKeymapUserBindingsChanged: (
+        handler: (state: {
+          file: { version: 1; bindings: unknown[] };
+          warnings: unknown[];
+          fatal?: unknown;
+          path: string;
+        }) => void,
+      ) => () => void;
       onOpenChatFromNotification: (
         handler: (event: DesktopOpenChatFromNotificationEvent) => void,
       ) => () => void;
