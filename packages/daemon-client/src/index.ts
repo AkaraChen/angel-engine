@@ -250,6 +250,7 @@ export function createDaemonClient(options: DaemonClientOptions) {
       );
     }
 
+    let terminalEventReceived = false;
     for await (const message of readSseEvents(response.body)) {
       if (!isProjectCloneEvent(message)) {
         throw DaemonRequestError.invalidResponse(
@@ -257,7 +258,17 @@ export function createDaemonClient(options: DaemonClientOptions) {
           response.status,
         );
       }
+      terminalEventReceived =
+        terminalEventReceived ||
+        message.type === "completed" ||
+        message.type === "failed";
       yield message;
+    }
+    if (!terminalEventReceived) {
+      throw DaemonRequestError.invalidResponse(
+        `Daemon clone stream ended without a terminal event for ${path}.`,
+        response.status,
+      );
     }
   }
 

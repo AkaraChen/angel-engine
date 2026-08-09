@@ -30,7 +30,13 @@ interface CloneSource {
   cloneUrl: string;
   /** github.com `owner/repo`, set only when gh can clone it with its own auth. */
   gitHubSlug: string | null;
-  owner: string | null;
+  namespace: string[];
+  repo: string;
+}
+
+interface RemoteLocation {
+  host: string;
+  namespace: string[];
   repo: string;
 }
 
@@ -50,14 +56,18 @@ export function projectCloneRoot(): string {
 export function cloneProject(
   input: ProjectCloneInput,
   onProgress: (event: ProjectCloneProgressEvent) => void,
+  signal?: AbortSignal,
 ): Effect.Effect<ProjectCloneResult, DaemonError, Db> {
   return Effect.gen(function* () {
+    yield* rejectIfAborted(signal);
     const source = yield* parseCloneSource(input.url);
-    const targetPath = path.join(
-      projectCloneRoot(),
-      source.owner ?? "",
+    const cloneRoot = projectCloneRoot();
+    const targetPath = path.resolve(
+      cloneRoot,
+      ...source.namespace,
       source.repo,
     );
+    yield* assertManagedTarget(cloneRoot, targetPath);
     const emit = (
       event: Omit<ProjectCloneProgressEvent, "targetPath" | "type">,
     ) => {
@@ -65,23 +75,41 @@ export function cloneProject(
     };
 
     emit({ detail: source.cloneUrl, percent: 0, stage: "preparing" });
-    const existing = yield* inspectTarget(targetPath, source.cloneUrl);
+    const existing = yield* inspectTarget(targetPath, source.cloneUrl, signal);
     emit({ detail: null, percent: 100, stage: "preparing" });
 
     if (!existing.reusable) {
       emit({ detail: null, percent: 0, stage: "cloning" });
-      yield* runClone(source, targetPath, (detail, percent) => {
-        emit({ detail, percent, stage: "cloning" });
-      });
+      yield* runClone(
+        source,
+        cloneRoot,
+        targetPath,
+        signal,
+        (detail, percent) => {
+          emit({ detail, percent, stage: "cloning" });
+        },
+      );
     }
     emit({ detail: null, percent: 100, stage: "cloning" });
 
+    yield* rejectIfAborted(signal);
     emit({ detail: null, percent: 0, stage: "registering" });
     const project = yield* registerProject(targetPath);
     emit({ detail: null, percent: 100, stage: "registering" });
     emit({ detail: null, percent: 100, stage: "completed" });
 
     return { project, reusedExistingCheckout: existing.reusable };
+  });
+}
+
+function rejectIfAborted(
+  signal: AbortSignal | undefined,
+): Effect.Effect<void, DaemonError> {
+  return Effect.try({
+    catch: (cause) => DaemonError.gitFailed(cause, "Clone was cancelled."),
+    try: () => {
+      signal?.throwIfAborted();
+    },
   });
 }
 
@@ -95,11 +123,17 @@ function parseCloneSource(
 
   if (OWNER_REPO_SHORTHAND.test(url)) {
     const [owner, repo] = url.split("/");
+    const normalizedRepo = stripGitSuffix(repo);
+    if (!isSafePathSegment(owner) || !isSafePathSegment(normalizedRepo)) {
+      return Effect.fail(
+        DaemonError.invalidRequest("Repository owner or name is invalid."),
+      );
+    }
     return Effect.succeed({
-      cloneUrl: `https://github.com/${owner}/${stripGitSuffix(repo)}.git`,
-      gitHubSlug: `${owner}/${stripGitSuffix(repo)}`,
-      owner,
-      repo: stripGitSuffix(repo),
+      cloneUrl: `https://github.com/${owner}/${normalizedRepo}.git`,
+      gitHubSlug: `${owner}/${normalizedRepo}`,
+      namespace: [owner],
+      repo: normalizedRepo,
     });
   }
 
@@ -116,17 +150,15 @@ function parseCloneSource(
   return Effect.succeed({
     cloneUrl: url,
     gitHubSlug:
-      isGitHub && is.nonEmptyString(location.owner)
-        ? `${location.owner}/${location.repo}`
+      isGitHub && location.namespace.length === 1
+        ? `${location.namespace[0]}/${location.repo}`
         : null,
-    owner: location.owner,
+    namespace: location.namespace,
     repo: location.repo,
   });
 }
 
-function parseRemoteLocation(
-  url: string,
-): { host: string; owner: string | null; repo: string } | null {
+function parseRemoteLocation(url: string): RemoteLocation | null {
   // `git@host:owner/repo.git` is not a URL the WHATWG parser accepts.
   const scpMatch = /^[\w.-]+@([\w.-]+):(.+)$/.exec(url);
   const [host, pathname] = scpMatch
@@ -134,14 +166,21 @@ function parseRemoteLocation(
     : parseStandardUrl(url);
   if (!is.nonEmptyString(host) || !is.nonEmptyString(pathname)) return null;
 
-  const segments = pathname.split("/").filter((segment) => segment.length > 0);
-  const repo = segments.at(-1);
-  if (!is.nonEmptyString(repo)) return null;
+  const segments = decodePathSegments(pathname);
+  const rawRepo = segments?.at(-1);
+  if (!is.nonEmptyString(rawRepo)) return null;
+  const repo = stripGitSuffix(rawRepo);
+  const namespace = segments?.slice(0, -1) ?? [];
+  if (
+    !isSafePathSegment(repo) ||
+    !namespace.every((segment) => isSafePathSegment(segment))
+  )
+    return null;
 
   return {
-    host,
-    owner: segments.length > 1 ? (segments.at(-2) ?? null) : null,
-    repo: stripGitSuffix(repo),
+    host: host.toLowerCase(),
+    namespace,
+    repo,
   };
 }
 
@@ -152,7 +191,7 @@ function parseStandardUrl(url: string): [string | null, string | null] {
       return [null, null];
     // `file:` URLs carry no host; they still name one unambiguous local remote.
     return [
-      parsed.protocol === "file:" ? "localhost" : parsed.hostname,
+      parsed.protocol === "file:" ? "localhost" : parsed.host,
       parsed.pathname,
     ];
   } catch {
@@ -164,6 +203,63 @@ function stripGitSuffix(value: string): string {
   return value.endsWith(".git") ? value.slice(0, -4) : value;
 }
 
+function decodePathSegments(pathname: string): string[] | null {
+  try {
+    return pathname
+      .split("/")
+      .filter((segment) => segment.length > 0)
+      .map((segment) => decodeURIComponent(segment));
+  } catch {
+    return null;
+  }
+}
+
+function isSafePathSegment(value: string): boolean {
+  return (
+    is.nonEmptyString(value) &&
+    value !== "." &&
+    value !== ".." &&
+    !value.includes("/") &&
+    !value.includes("\\") &&
+    !value.includes("\0")
+  );
+}
+
+function assertManagedTarget(
+  cloneRoot: string,
+  targetPath: string,
+): Effect.Effect<void, DaemonError> {
+  return Effect.try({
+    catch: () =>
+      DaemonError.projectPathInvalid(
+        "The repository destination is outside or redirects outside the managed clone directory.",
+      ),
+    try: () => {
+      const root = path.resolve(cloneRoot);
+      const relative = path.relative(root, targetPath);
+      if (
+        relative.length === 0 ||
+        relative === ".." ||
+        relative.startsWith(`..${path.sep}`) ||
+        path.isAbsolute(relative)
+      ) {
+        throw new Error("Clone target escaped the managed root.");
+      }
+
+      let current = root;
+      for (const segment of relative.split(path.sep)) {
+        if (fs.existsSync(current) && fs.lstatSync(current).isSymbolicLink()) {
+          throw new Error(`${current} is a symbolic link.`);
+        }
+        current = path.join(current, segment);
+      }
+      if (fs.existsSync(current) && fs.lstatSync(current).isSymbolicLink()) {
+        throw new Error(`${current} is a symbolic link.`);
+      }
+    },
+  });
+}
+
 /**
  * Decide whether the destination can be cloned into, adopted, or neither.
  * Adopting requires an existing checkout whose `origin` is the same remote.
@@ -171,6 +267,7 @@ function stripGitSuffix(value: string): string {
 function inspectTarget(
   targetPath: string,
   cloneUrl: string,
+  signal: AbortSignal | undefined,
 ): Effect.Effect<{ reusable: boolean }, DaemonError> {
   return Effect.gen(function* () {
     if (!fs.existsSync(targetPath)) return { reusable: false };
@@ -185,22 +282,38 @@ function inspectTarget(
 
     if (fs.readdirSync(targetPath).length === 0) return { reusable: false };
 
-    const origin = yield* Effect.tryPromise({
+    const checkout = yield* Effect.tryPromise({
       catch: () => DaemonError.projectPathInvalid(occupiedMessage(targetPath)),
       try: async () => {
-        const result = await execFileAsync(
-          "git",
-          ["remote", "get-url", "origin"],
-          { cwd: targetPath, timeout: GIT_REMOTE_TIMEOUT_MS },
-        );
-        return result.stdout.toString().trim();
+        const [topLevel, origin] = await Promise.all([
+          execFileAsync("git", ["rev-parse", "--show-toplevel"], {
+            cwd: targetPath,
+            signal,
+            timeout: GIT_REMOTE_TIMEOUT_MS,
+          }),
+          execFileAsync("git", ["remote", "get-url", "origin"], {
+            cwd: targetPath,
+            signal,
+            timeout: GIT_REMOTE_TIMEOUT_MS,
+          }),
+        ]);
+        return {
+          origin: origin.stdout.toString().trim(),
+          topLevel: topLevel.stdout.toString().trim(),
+        };
       },
     });
 
-    if (!sameRemote(origin, cloneUrl)) {
+    if (fs.realpathSync(checkout.topLevel) !== fs.realpathSync(targetPath)) {
+      return yield* Effect.fail(
+        DaemonError.projectPathInvalid(occupiedMessage(targetPath)),
+      );
+    }
+
+    if (!sameRemote(checkout.origin, cloneUrl)) {
       return yield* Effect.fail(
         DaemonError.projectPathInvalid(
-          `${targetPath} already holds a checkout of ${origin}.`,
+          `${targetPath} already holds a checkout of ${checkout.origin}.`,
         ),
       );
     }
@@ -217,14 +330,19 @@ function sameRemote(left: string, right: string): boolean {
   const normalize = (value: string) => {
     const location = parseRemoteLocation(value);
     if (location === null) return value.toLowerCase();
-    return `${location.host}/${location.owner ?? ""}/${location.repo}`.toLowerCase();
+    const remotePath = [...location.namespace, location.repo].join("/");
+    return `${location.host}/${
+      location.host === "github.com" ? remotePath.toLowerCase() : remotePath
+    }`;
   };
   return normalize(left) === normalize(right);
 }
 
 function runClone(
   source: CloneSource,
+  cloneRoot: string,
   targetPath: string,
+  signal: AbortSignal | undefined,
   onProgress: (detail: string, percent: number | null) => void,
 ): Effect.Effect<void, DaemonError> {
   return Effect.gen(function* () {
@@ -235,6 +353,7 @@ function runClone(
         })
       : null;
 
+    yield* assertManagedTarget(cloneRoot, targetPath);
     fs.mkdirSync(path.dirname(targetPath), { recursive: true });
 
     // `gh repo clone` reuses the CLI's credentials, which is the only way a
@@ -260,7 +379,7 @@ function runClone(
     yield* Effect.tryPromise({
       catch: (cause) =>
         DaemonError.gitFailed(cause, "Could not clone the repository."),
-      try: () => spawnClone(command, [...args], onProgress),
+      try: () => spawnClone(command, [...args], signal, onProgress),
     });
   });
 }
@@ -268,6 +387,7 @@ function runClone(
 function spawnClone(
   command: string,
   args: string[],
+  signal: AbortSignal | undefined,
   onProgress: (detail: string, percent: number | null) => void,
 ): Promise<void> {
   return new Promise((resolve, reject) => {
@@ -279,6 +399,7 @@ function spawnClone(
         GIT_TERMINAL_PROMPT: "0",
         NO_COLOR: "1",
       },
+      signal,
       stdio: ["ignore", "pipe", "pipe"],
     });
 

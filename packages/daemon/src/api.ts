@@ -486,7 +486,9 @@ export function registerApi(
       };
 
       try {
-        const result = await run(cloneProject(input, emit));
+        const result = await run(
+          cloneProject(input, emit, context.req.raw.signal),
+        );
         emit({
           project: result.project,
           reusedExistingCheckout: result.reusedExistingCheckout,
