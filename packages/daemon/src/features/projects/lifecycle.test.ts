@@ -7,6 +7,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { loadProjectLifecycleConfig } from "./config";
 import {
+  type LifecycleProcessAdapter,
+  type LifecycleProcessSession,
   ProjectLifecycleConflictError,
   ProjectLifecycleExecutionError,
   ProjectLifecycleRuntime,
@@ -135,6 +137,75 @@ describe("project lifecycle runtime", () => {
     await new Promise((resolve) => setTimeout(resolve, 700));
 
     await expect(fs.access(marker)).rejects.toThrow();
+    await expect(runtime.snapshot(root)).resolves.toMatchObject({
+      run: { status: "stopped" },
+    });
+  });
+
+  it("stops and awaits a run while its process session is still starting", async () => {
+    const adapter = new PendingProcessAdapter();
+    runtime = new ProjectLifecycleRuntime({
+      runProcessAdapter: adapter,
+      storageRoot,
+    });
+    const digest = await writeConfig({ run_script: "dev-server" });
+    const startResult = runtime
+      .startRun({ ...lifecycleOptions(digest), port: 43128 })
+      .catch((cause: unknown) => cause);
+
+    await adapter.entered.promise;
+    await expect(runtime.snapshot(root)).resolves.toMatchObject({
+      run: { port: 43128, status: "starting" },
+    });
+    let stopSettled = false;
+    const stopping = runtime.stopRun(root).then((snapshot) => {
+      stopSettled = true;
+      return snapshot;
+    });
+    await adapter.cancellationObserved.promise;
+    await Promise.resolve();
+    expect(stopSettled).toBe(false);
+    adapter.releaseCancellation.resolve();
+    await stopping;
+
+    await expect(startResult).resolves.toMatchObject({
+      failure: { reason: "cancelled" },
+    });
+    expect(adapter.cancelled).toBe(true);
+    await expect(runtime.snapshot(root)).resolves.toMatchObject({
+      run: { status: "stopped" },
+    });
+  });
+
+  it("shuts down and awaits a run while its process session is still starting", async () => {
+    const adapter = new PendingProcessAdapter();
+    runtime = new ProjectLifecycleRuntime({
+      runProcessAdapter: adapter,
+      storageRoot,
+    });
+    const digest = await writeConfig({ run_script: "dev-server" });
+    const startResult = runtime
+      .startRun({ ...lifecycleOptions(digest), port: 43129 })
+      .catch((cause: unknown) => cause);
+
+    await adapter.entered.promise;
+    await expect(runtime.snapshot(root)).resolves.toMatchObject({
+      run: { port: 43129, status: "starting" },
+    });
+    let shutdownSettled = false;
+    const shutdown = runtime.shutdown().then(() => {
+      shutdownSettled = true;
+    });
+    await adapter.cancellationObserved.promise;
+    await Promise.resolve();
+    expect(shutdownSettled).toBe(false);
+    adapter.releaseCancellation.resolve();
+    await shutdown;
+
+    await expect(startResult).resolves.toMatchObject({
+      failure: { reason: "cancelled" },
+    });
+    expect(adapter.cancelled).toBe(true);
     await expect(runtime.snapshot(root)).resolves.toMatchObject({
       run: { status: "stopped" },
     });
@@ -349,4 +420,36 @@ async function waitFor<T>(
 
 async function readJson(file: string): Promise<unknown> {
   return JSON.parse(await fs.readFile(file, "utf8")) as unknown;
+}
+
+class PendingProcessAdapter implements LifecycleProcessAdapter {
+  cancelled = false;
+  readonly cancellationObserved = testDeferred<void>();
+  readonly entered = testDeferred<void>();
+  readonly releaseCancellation = testDeferred<void>();
+
+  async start(
+    options: Parameters<LifecycleProcessAdapter["start"]>[0],
+  ): Promise<LifecycleProcessSession> {
+    this.entered.resolve();
+    await new Promise<void>((resolve) => {
+      const cancel = () => {
+        this.cancelled = true;
+        this.cancellationObserved.resolve();
+        resolve();
+      };
+      options.signal?.addEventListener("abort", cancel, { once: true });
+      if (options.signal?.aborted) cancel();
+    });
+    await this.releaseCancellation.promise;
+    throw new Error("pending process session cancelled");
+  }
+}
+
+function testDeferred<Value>() {
+  let resolve!: (value: Value) => void;
+  const promise = new Promise<Value>((settle) => {
+    resolve = settle;
+  });
+  return { promise, resolve };
 }
