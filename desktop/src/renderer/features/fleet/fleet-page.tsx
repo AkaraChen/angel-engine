@@ -236,6 +236,7 @@ export function FleetPage({
   const showToolbar = rows.length > 0;
   const isEmpty =
     view === "board" ? scopedRows.length === 0 : listSections.length === 0;
+  const isWideBoard = view === "board" && !isPending && !isError && !isEmpty;
 
   const selectView = (nextView: FleetView) => {
     writeFleetViewPreference(nextView);
@@ -247,7 +248,7 @@ export function FleetPage({
       <div
         className={cn(
           "mx-auto w-full px-8 py-10",
-          view === "board" ? "max-w-[88rem]" : "max-w-4xl",
+          isWideBoard ? "max-w-[88rem]" : "max-w-4xl",
         )}
       >
         <h2 className="pl-6 text-2xl font-semibold text-foreground">
@@ -295,7 +296,13 @@ export function FleetPage({
               </div>
             ) : null}
 
-            <InputGroup className="h-8 w-auto min-w-40 flex-1" variant="search">
+            <InputGroup
+              className={cn(
+                "h-8 w-auto min-w-40 flex-1",
+                view === "board" ? "max-w-xs" : undefined,
+              )}
+              variant="search"
+            >
               <InputGroupAddon align="inline-start">
                 <SearchIcon
                   aria-hidden="true"
@@ -456,7 +463,10 @@ function FleetBoard({
           return (
             <section
               aria-labelledby={headingId}
-              className="min-w-64 rounded-xl bg-surface-1 p-2"
+              className="
+                min-w-64 rounded-xl border border-transparent bg-surface-1 p-2
+                dark:border-border-subtle
+              "
               key={column.group}
             >
               <h3
@@ -512,7 +522,7 @@ function FleetBoardCard({
   return (
     <button
       className="
-        group relative flex min-h-36 w-full min-w-0 flex-col rounded-lg border
+        group relative flex min-h-28 w-full min-w-0 flex-col rounded-lg border
         border-border-subtle bg-card p-4 pl-6 text-left shadow-xs
         transition-colors duration-120 ease-standard outline-none
         hover:bg-overlay-hover
@@ -528,22 +538,12 @@ function FleetBoardCard({
         status={row.status}
       />
       <span className="flex w-full min-w-0 items-center gap-2">
-        <FleetRuntimeIcon runtime={row.runtime} />
-        <span
-          className="min-w-0 flex-1 truncate text-sm font-medium text-foreground"
-          title={row.title}
-        >
+        <FleetRuntimeIcon runtime={row.runtime} withTitle={false} />
+        <span className="min-w-0 flex-1 truncate text-sm font-medium text-foreground">
           {row.title}
         </span>
       </span>
-      <span
-        className="mt-3 block w-full truncate text-xs"
-        title={
-          is.nonEmptyString(detail)
-            ? `${t(STATUS_LABEL_KEYS[row.status])} · ${detail}`
-            : t(STATUS_LABEL_KEYS[row.status])
-        }
-      >
+      <span className="mt-3 block w-full truncate text-xs">
         <span className={STATUS_TONE[row.status]}>
           {t(STATUS_LABEL_KEYS[row.status])}
         </span>
@@ -551,18 +551,19 @@ function FleetBoardCard({
           <span className="text-muted-foreground"> · {detail}</span>
         ) : null}
       </span>
-      <span
-        className="mt-2 block w-full truncate font-mono text-[11px] text-muted-foreground"
-        title={location}
-      >
-        {location}
-      </span>
+      {is.nonEmptyString(location) ? (
+        <span
+          className="mt-2 block w-full truncate font-mono text-[11px] text-muted-foreground"
+          data-slot="fleet-card-location"
+        >
+          {location}
+        </span>
+      ) : null}
       <span
         className="
           mt-auto self-end pt-4 font-mono text-[11px] tabular-nums
           whitespace-nowrap text-muted-foreground
         "
-        title={formatDateTime(row.updatedAt)}
       >
         {formatRelativeTime(row.updatedAt)}
       </span>
@@ -737,7 +738,7 @@ function FleetSkeletonBoard(): ReactElement {
             <Skeleton className="m-2 h-3 w-20" />
             <div className="mt-3 flex flex-col gap-2">
               {Array.from({ length: cardCount }, (_unused, cardIndex) => (
-                <Skeleton className="h-36 w-full rounded-lg" key={cardIndex} />
+                <Skeleton className="h-28 w-full rounded-lg" key={cardIndex} />
               ))}
             </div>
           </div>
@@ -760,13 +761,19 @@ function FleetNotice({ text }: { text: string }): ReactElement {
   );
 }
 
-function FleetRuntimeIcon({ runtime }: { runtime: string }): ReactElement {
+function FleetRuntimeIcon({
+  runtime,
+  withTitle = true,
+}: {
+  runtime: string;
+  withTitle?: boolean;
+}): ReactElement {
   const runtimeIconSvg = agentRuntimeIconSvg(runtime);
 
   return (
     <span
       className="flex size-4 shrink-0 items-center justify-center"
-      title={agentRuntimeLabel(runtime)}
+      title={withTitle ? agentRuntimeLabel(runtime) : undefined}
     >
       {is.nonEmptyString(runtimeIconSvg) ? (
         <span

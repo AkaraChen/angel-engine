@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 
 import type { Chat, ChatActivity } from "@angel-engine/daemon-api/chat";
+import type { Project } from "@angel-engine/daemon-api/projects";
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
@@ -58,7 +59,7 @@ Object.defineProperty(window, "localStorage", {
   value: localStorage,
 });
 
-function chat(id: string, title: string): Chat {
+function chat(id: string, title: string, overrides: Partial<Chat> = {}): Chat {
   return {
     archived: false,
     createdAt: "2026-01-01T00:00:00.000Z",
@@ -70,8 +71,17 @@ function chat(id: string, title: string): Chat {
     runtime: "claude",
     title,
     updatedAt: "2026-01-01T00:00:00.000Z",
+    ...overrides,
   } as Chat;
 }
+
+const PROJECT: Project = {
+  createdAt: "2026-01-01T00:00:00.000Z",
+  id: "project-1",
+  name: "Angel",
+  path: "/code/angel-engine",
+  updatedAt: "2026-01-01T00:00:00.000Z",
+} as Project;
 
 const DONE_ACTIVITY: ChatActivity = {
   attentionId: "run-1:done",
@@ -163,6 +173,25 @@ describe("fleetPage", () => {
     expect(screen.queryByText("fleet.emptySegments.all")).toBeNull();
   });
 
+  it.each([
+    { isMetadataError: false, text: "fleet.emptySegments.all" },
+    { isMetadataError: true, text: "fleet.disconnected" },
+  ])("keeps the board $text state at list width", async (state) => {
+    window.localStorage.setItem(FLEET_VIEW_STORAGE_KEY, "board");
+    listActivity.mockResolvedValue({ items: [] });
+    renderFleet({
+      chats: [],
+      isMetadataError: state.isMetadataError,
+    });
+
+    expect(await screen.findByText(state.text)).toBeDefined();
+    const page = screen.getByRole("heading", {
+      name: "fleet.title",
+    }).parentElement;
+    expect(page?.className).toContain("max-w-4xl");
+    expect(page?.className).not.toContain("max-w-[88rem]");
+  });
+
   it("waits for chat metadata before calling the fleet empty", async () => {
     listActivity.mockResolvedValue({ items: [] });
     renderFleet({ chats: [], isMetadataPending: true });
@@ -226,7 +255,11 @@ describe("fleetPage", () => {
       ],
     });
     renderFleet({
-      chats: [chat("chat-1", "Done chat"), chat("chat-2", "Needs you chat")],
+      chats: [
+        chat("chat-1", "Done chat"),
+        chat("chat-2", "Needs you chat", { projectId: PROJECT.id }),
+      ],
+      projects: [PROJECT],
     });
 
     const listToggle = await screen.findByRole("button", {
@@ -242,18 +275,40 @@ describe("fleetPage", () => {
       screen.queryByRole("group", { name: "fleet.filterSegments" }),
     ).toBeNull();
     const board = screen.getByRole("region", { name: "fleet.views.board" });
+    const page = screen.getByRole("heading", {
+      name: "fleet.title",
+    }).parentElement;
+    expect(page?.className).toContain("max-w-[88rem]");
+    const searchGroup = screen
+      .getByRole("searchbox", { name: "fleet.search" })
+      .closest('[data-slot="input-group"]');
+    expect(searchGroup?.className).toContain("max-w-xs");
     expect(board.className).toContain("overflow-x-auto");
     expect(board.firstElementChild?.className).toContain("min-w-[53rem]");
     expect(within(board).getAllByRole("heading")).toHaveLength(3);
     expect(
       within(board).getByText("fleet.emptySegments.running"),
     ).toBeDefined();
+    const doneCard = within(board).getByRole("button", { name: /Done chat/ });
+    const needsYouCard = within(board).getByRole("button", {
+      name: /Needs you chat/,
+    });
+    expect(doneCard.className).toContain("min-h-28");
+    expect(doneCard.className).not.toContain("min-h-36");
+    expect(doneCard.className).toContain("border-border-subtle");
+    expect(doneCard.lastElementChild?.className).toContain("mt-auto");
+    expect(doneCard.getAttribute("title")).toBe("Done chat");
+    expect(doneCard.querySelectorAll("[title]")).toHaveLength(0);
     expect(
-      within(board).getByRole("button", { name: /Done chat/ }),
-    ).toBeDefined();
+      doneCard.querySelector('[data-slot="fleet-card-location"]'),
+    ).toBeNull();
     expect(
-      within(board).getByRole("button", { name: /Needs you chat/ }),
-    ).toBeDefined();
+      needsYouCard.querySelector('[data-slot="fleet-card-location"]')
+        ?.textContent,
+    ).toBe("angel-engine");
+    expect(doneCard.closest("section")?.className).toContain(
+      "dark:border-border-subtle",
+    );
     expect(window.localStorage.getItem(FLEET_VIEW_STORAGE_KEY)).toBe("board");
 
     fireEvent.click(listToggle);
