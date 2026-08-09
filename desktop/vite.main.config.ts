@@ -11,6 +11,8 @@ export default defineConfig({
         /^@earendil-works\/pi-/,
         "electron",
         "node-pty",
+        "ccusage",
+        /^@ccusage\//,
       ],
       output: {
         entryFileNames: "main.js",

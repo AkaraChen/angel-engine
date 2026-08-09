@@ -1,0 +1,52 @@
+{
+  "name": "@angel-engine/usage-collector",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./correlate": {
+      "types": "./dist/correlate.d.ts",
+      "import": "./dist/correlate.js"
+    },
+    "./types": {
+      "types": "./dist/types.d.ts",
+      "import": "./dist/types.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsup && tsc -p tsconfig.build.json",
+    "build:debug": "tsup && tsc -p tsconfig.build.json",
+    "lint": "oxlint --type-aware src",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "ccusage": "20.0.19",
+    "zod": "^4.4.3"
+  },
+  "optionalDependencies": {
+    "@ccusage/ccusage-darwin-arm64": "20.0.19",
+    "@ccusage/ccusage-darwin-x64": "20.0.19",
+    "@ccusage/ccusage-linux-arm64": "20.0.19",
+    "@ccusage/ccusage-linux-x64": "20.0.19",
+    "@ccusage/ccusage-win32-arm64": "20.0.19",
+    "@ccusage/ccusage-win32-x64": "20.0.19"
+  },
+  "devDependencies": {
+    "@types/node": "^24.10.1",
+    "oxlint": "^1.73.0",
+    "oxlint-tsgolint": "^0.24.0",
+    "tsup": "^8.5.1",
+    "typescript": "^7.0.2",
+    "vitest": "^4.1.9"
+  }
+}

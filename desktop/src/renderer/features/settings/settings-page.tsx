@@ -34,6 +34,7 @@ import {
 import { useSettingsStore } from "@/features/settings/settings-store";
 import { findSettingsTab } from "@/features/settings/settings-tabs";
 import { UpdateSettings } from "@/features/settings/update-settings";
+import { UsageSettings } from "@/features/usage/usage-settings";
 import { useSettingsTab } from "@/features/settings/use-settings-tab";
 import { useThemeSettings } from "@/features/settings/use-theme-settings";
 import { languageOptions } from "@/i18n";
@@ -186,6 +187,14 @@ export function SettingsPage({
             tabPanelId={tabPanelId}
           >
             <UpdateSettings />
+          </SettingsTabPanel>
+
+          <SettingsTabPanel
+            activeTab={activeTab}
+            tab="usage"
+            tabPanelId={tabPanelId}
+          >
+            <UsageSettings />
           </SettingsTabPanel>
 
           <SettingsTabPanel

@@ -9,6 +9,8 @@ export const TIPC_CHANNELS = [
   "pathLauncherShowContextMenu",
   "projectsChooseDirectory",
   "projectsShowContextMenu",
+  "usageGetSnapshot",
+  "usageRefresh",
 ] as const;
 
 export type TipcChannel = (typeof TIPC_CHANNELS)[number];

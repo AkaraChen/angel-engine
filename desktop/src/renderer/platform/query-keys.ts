@@ -40,6 +40,9 @@ export const queryKeys = {
     all: () => ["url-previews"] as const,
     detail: (url: string) => ["url-previews", "detail", url] as const,
   },
+  usage: {
+    snapshot: () => ["usage", "snapshot"] as const,
+  },
   worktrees: {
     all: () => ["worktrees"] as const,
     managedEligible: () => ["worktrees", "managed", "eligible"] as const,

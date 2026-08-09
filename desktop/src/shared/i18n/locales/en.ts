@@ -383,6 +383,7 @@ export const en = {
         mobile:
           "Serve the mobile web app from this computer over your local network.",
         updates: "Which releases this app installs, and when.",
+        usage: "Estimated local token and cost activity from ccusage.",
         workspace: "How the composer and worktrees behave while you work.",
       },
       tabs: {
@@ -392,6 +393,7 @@ export const en = {
         danger: "Advanced",
         mobile: "Mobile view",
         updates: "Updates",
+        usage: "Usage",
         workspace: "Workspace",
       },
       title: "Settings",
@@ -426,6 +428,32 @@ export const en = {
         sendWithModEnterSwitchLabel: "Use {{shortcut}} to send messages",
         sendWithModEnterTitle: "Send messages with {{shortcut}}",
       },
+    },
+    usage: {
+      activeBlock: "Active billing block",
+      burnRate: "Current rate",
+      byAgent: "By agent",
+      collecting: "Collecting local usage…",
+      contextNearLimit: "Context is near its limit. Consider a new chat.",
+      contextUsed: "Context used",
+      month: "This month",
+      noData: "No local usage records",
+      projected: "Projected at the current rate",
+      refresh: "Refresh",
+      source: "Data source",
+      sourceDescription:
+        "Estimated from local agent logs. Unsupported providers: {{agents}}.",
+      today: "Today",
+      tokens: "tokens",
+      unavailable: "Usage unavailable",
+      unavailableReasons: {
+        "binary-missing":
+          "Usage unavailable: packaged ccusage binary is missing.",
+        "exec-failed": "Usage unavailable: ccusage failed.",
+        "schema-mismatch": "Usage unavailable: ccusage output changed.",
+        timeout: "Usage unavailable: collection timed out.",
+      },
+      week: "This week",
     },
     updates: {
       checkFailed: "Could not check for updates",

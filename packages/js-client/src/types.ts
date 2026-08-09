@@ -106,6 +106,16 @@ export interface ChatRuntimeConfig {
   models: ChatRuntimeConfigOption[];
   permissionModes: ChatRuntimeConfigOption[];
   reasoningEfforts: ChatRuntimeConfigOption[];
+  usage?: ChatSessionUsage;
+}
+
+export interface ChatSessionUsage {
+  cost?: {
+    amount: string;
+    currency: string;
+  };
+  size: number;
+  used: number;
 }
 
 export type ChatJsonValue =

@@ -178,6 +178,18 @@ export function runtimeConfigFromConversationSnapshot(
       label: effort.label,
       value: effort.value,
     })),
+    usage: snapshot.usage
+      ? {
+          cost: snapshot.usage.cost
+            ? {
+                amount: snapshot.usage.cost.amount,
+                currency: snapshot.usage.cost.currency,
+              }
+            : undefined,
+          size: snapshot.usage.size,
+          used: snapshot.usage.used,
+        }
+      : undefined,
   };
 }
 

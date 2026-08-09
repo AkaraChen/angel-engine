@@ -13,6 +13,7 @@ const nativeRuntimeModules = [
   "@neon-rs/load",
   "detect-libc",
   "node-pty",
+  "ccusage",
 ];
 const nativeRuntimeModuleParents = new Map([
   ["libsql", "@libsql/client"],
@@ -30,6 +31,25 @@ const optionalLibsqlNativeModules = [
   "@libsql/linux-x64-musl",
   "@libsql/win32-x64-msvc",
 ];
+const optionalCcusageNativeModules = [
+  "@ccusage/ccusage-darwin-arm64",
+  "@ccusage/ccusage-darwin-x64",
+  "@ccusage/ccusage-linux-arm64",
+  "@ccusage/ccusage-linux-x64",
+  "@ccusage/ccusage-win32-arm64",
+  "@ccusage/ccusage-win32-x64",
+];
+const ccusageNativePackageByTarget = new Map([
+  ["darwin-arm64", "@ccusage/ccusage-darwin-arm64"],
+  ["darwin-x64", "@ccusage/ccusage-darwin-x64"],
+  ["linux-arm64", "@ccusage/ccusage-linux-arm64"],
+  ["linux-x64", "@ccusage/ccusage-linux-x64"],
+  ["win32-arm64", "@ccusage/ccusage-win32-arm64"],
+  ["win32-x64", "@ccusage/ccusage-win32-x64"],
+]);
+for (const moduleName of optionalCcusageNativeModules) {
+  nativeRuntimeModuleParents.set(moduleName, "ccusage");
+}
 for (const moduleName of optionalLibsqlNativeModules) {
   nativeRuntimeModuleParents.set(moduleName, "libsql");
 }
@@ -37,6 +57,11 @@ for (const moduleName of optionalLibsqlNativeModules) {
 const projectRoot = __dirname;
 const workspaceRoot = path.resolve(projectRoot, "..");
 const daemonRoot = path.join(workspaceRoot, "packages", "daemon");
+const usageCollectorRoot = path.join(
+  workspaceRoot,
+  "packages",
+  "usage-collector",
+);
 const workspaceRequire = createRequire(
   path.join(workspaceRoot, "package.json"),
 );
@@ -130,13 +155,23 @@ function copyMobileBundle(buildPath: string) {
 }
 
 function resolveRuntimeModulePackageJson(moduleName: string): string {
-  const paths = [projectRoot, daemonRoot, workspaceRoot];
+  const paths = [projectRoot, daemonRoot, usageCollectorRoot, workspaceRoot];
   const parentModuleName = nativeRuntimeModuleParents.get(moduleName);
 
   if (is.nonEmptyString(parentModuleName)) {
     paths.unshift(
       path.dirname(resolveRuntimeModulePackageJson(parentModuleName)),
     );
+  }
+
+  for (const searchPath of paths) {
+    try {
+      return createRequire(path.join(searchPath, "package.json")).resolve(
+        `${moduleName}/package.json`,
+      );
+    } catch {
+      // Some packages hide package.json behind exports; resolve their entry below.
+    }
   }
 
   let currentPath = path.dirname(
@@ -184,6 +219,13 @@ function copyNativeRuntimeDependencies(buildPath: string) {
       // Bun only installs the libSQL binary package for the current platform.
     }
   }
+  for (const moduleName of optionalCcusageNativeModules) {
+    try {
+      copyRuntimeModule(buildPath, moduleName);
+    } catch {
+      // Bun only installs the ccusage binary package for the current platform.
+    }
+  }
 
   const clientNapiSource = path.resolve(
     projectRoot,
@@ -214,12 +256,35 @@ function copyNativeRuntimeDependencies(buildPath: string) {
   }
 }
 
+function verifyCopiedCcusageBinary(buildPath: string) {
+  const packageName = ccusageNativePackageByTarget.get(
+    `${process.platform}-${process.arch}`,
+  );
+  if (!packageName) {
+    throw new Error(
+      `ccusage does not publish a binary for ${process.platform}-${process.arch}.`,
+    );
+  }
+  const binaryPath = path.join(
+    buildPath,
+    "node_modules",
+    packageName,
+    "bin",
+    process.platform === "win32" ? "ccusage.exe" : "ccusage",
+  );
+  fs.accessSync(
+    binaryPath,
+    process.platform === "win32" ? fs.constants.F_OK : fs.constants.X_OK,
+  );
+}
+
 const config: ForgeConfig = {
   hooks: {
     packageAfterCopy: async (_config, buildPath) => {
       copyRuntimePath(buildPath, "drizzle");
       copyMobileBundle(buildPath);
       copyNativeRuntimeDependencies(buildPath);
+      verifyCopiedCcusageBinary(buildPath);
     },
   },
   packagerConfig: {
@@ -229,7 +294,8 @@ const config: ForgeConfig = {
     // The .app / product display name still comes from package.json productName.
     executableName: "angel-engine",
     asar: {
-      unpack: "**/node_modules/node-pty/**/spawn-helper",
+      unpack:
+        "{**/node_modules/node-pty/**/spawn-helper,**/node_modules/@ccusage/**/bin/**}",
     },
     extraResource: [path.join(projectRoot, "build", "app-update.yml")],
     icon: appIconPath,

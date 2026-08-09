@@ -9,6 +9,7 @@ import { useTranslation } from "react-i18next";
 import { WorkspaceSidebarControlTarget } from "@/app/workspace/workspace-sidebar-control";
 import { WorkspaceToolHeaderButton } from "@/app/workspace/workspace-tool-surface-header";
 import { useSidebar } from "@/components/ui/sidebar";
+import { UsageChip } from "@/features/usage/usage-chip";
 
 interface WorkspaceHeaderProps {
   attention?: ChatAttentionState;
@@ -120,6 +121,7 @@ export function WorkspaceHeader({
           ) : null}
         </span>
       ) : null}
+      <UsageChip />
       {onToggleRightSidebar ? (
         <WorkspaceToolHeaderButton
           icon={

@@ -411,7 +411,10 @@ function ChatThreadRuntime({
         runtimeConfig={runtimeConfig}
         slotKey={slotKey}
       >
-        <AssistantThread projectName={projectContext.name} />
+        <AssistantThread
+          projectName={projectContext.name}
+          usage={runtimeConfig?.usage}
+        />
       </AppRuntimeProvider>
     </ChatOptionsProvider>
   );

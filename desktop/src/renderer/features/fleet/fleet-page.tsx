@@ -6,6 +6,7 @@ import type {
 } from "@angel-engine/daemon-api/chat";
 import type { Project } from "@angel-engine/daemon-api/projects";
 import type { ReactElement } from "react";
+import type { UsageAvailability } from "@angel-engine/usage-collector/types";
 import type {
   FleetGroup,
   FleetRow,
@@ -19,6 +20,7 @@ import {
 import is from "@sindresorhus/is";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useMemo, useState } from "react";
+import { providerUsageAvailability } from "@angel-engine/usage-collector/correlate";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import {
@@ -51,6 +53,8 @@ import { getApiClient } from "@/platform/api-client";
 import { formatDateTime, formatRelativeTime } from "@/platform/format-time";
 import { queryKeys } from "@/platform/query-keys";
 import { cn } from "@/platform/utils";
+import { usageSnapshotQueryOptions } from "@/features/usage/api/queries";
+import { formatEstimatedCost } from "@/features/usage/format";
 
 const EMPTY_ACTIVITIES: never[] = [];
 
@@ -139,6 +143,7 @@ export function FleetPage({
     FLEET_PROJECT_FILTER_ALL,
   );
   const activityQuery = useQuery({ ...chatActivityListQueryOptions({ api }) });
+  const usageQuery = useQuery(usageSnapshotQueryOptions());
   const activities = activityQuery.data ?? EMPTY_ACTIVITIES;
 
   /**
@@ -335,7 +340,12 @@ export function FleetPage({
               </h3>
               <div className="mt-1.5 flex flex-col">
                 {section.rows.map((row) => (
-                  <FleetRowButton key={row.chatId} onOpen={openRow} row={row} />
+                  <FleetRowButton
+                    key={row.chatId}
+                    onOpen={openRow}
+                    row={row}
+                    usage={usageQuery.data}
+                  />
                 ))}
               </div>
             </section>
@@ -349,9 +359,11 @@ export function FleetPage({
 function FleetRowButton({
   onOpen,
   row,
+  usage,
 }: {
   onOpen: (row: FleetRow) => void;
   row: FleetRow;
+  usage?: UsageAvailability;
 }): ReactElement {
   const { t } = useTranslation();
   const location = [row.projectName, row.worktreeName]
@@ -364,6 +376,13 @@ function FleetRowButton({
     : row.reason === undefined
       ? undefined
       : t(REASON_LABEL_KEYS[row.reason]);
+  const providerUsage = usage
+    ? providerUsageAvailability(usage, row.runtime, row.chat.remoteThreadId)
+    : undefined;
+  const sessionCost =
+    providerUsage?.kind === "ok" && providerUsage.session
+      ? formatEstimatedCost(providerUsage.session.totalCost)
+      : undefined;
 
   return (
     <button
@@ -406,6 +425,9 @@ function FleetRowButton({
         {is.nonEmptyString(detail) ? (
           <span className="text-muted-foreground"> · {detail}</span>
         ) : null}
+      </span>
+      <span className="hidden w-16 shrink-0 text-right font-mono text-[11px] tabular-nums text-muted-foreground lg:block">
+        {sessionCost}
       </span>
       {/* Relative times vary in width across locales, so the column is sized to
           hold the longest of them; `tabular-nums` keeps it from twitching as

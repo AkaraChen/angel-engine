@@ -12,6 +12,7 @@ import { listMobileHostingListenAddresses } from "../daemon/mobile-hosting";
 import { chatPlatformIpcRouter } from "../features/chat/ipc";
 import { pathLauncherPlatformIpcRouter } from "../features/path-launcher/ipc";
 import { projectPlatformIpcRouter } from "../features/projects/ipc";
+import { usagePlatformIpcRouter } from "../features/usage/ipc";
 import { MainIpcError } from "../platform/errors";
 import { setMainLanguage } from "../platform/i18n";
 import { readClipboardSourceUrl } from "./clipboard-source";
@@ -103,6 +104,7 @@ export function createAppRouter() {
     ...chatPlatformIpcRouter,
     ...pathLauncherPlatformIpcRouter,
     ...projectPlatformIpcRouter,
+    ...usagePlatformIpcRouter,
   };
 }
 

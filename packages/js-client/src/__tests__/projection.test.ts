@@ -113,6 +113,23 @@ function planSnapshot(
 }
 
 describe("projection", () => {
+  it("projects protocol-neutral session usage", () => {
+    const config = runtimeConfigFromConversationSnapshot(
+      conversationSnapshot({
+        usage: {
+          cost: { amount: "1.25", currency: "USD" },
+          size: 200_000,
+          used: 140_000,
+        },
+      }),
+    );
+
+    expect(config.usage).toEqual({
+      cost: { amount: "1.25", currency: "USD" },
+      size: 200_000,
+      used: 140_000,
+    });
+  });
   it("projects snapshots into standard chat messages and runtime config", () => {
     const snapshot = conversationSnapshot({
       skills: {
