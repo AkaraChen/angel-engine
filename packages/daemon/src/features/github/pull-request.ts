@@ -237,7 +237,7 @@ export function getGitHubPullRequestStatus(
             ],
             { concurrency: "unbounded" },
           )
-        : ([0, new Set<string>(), []] as const);
+        : [0, new Set<string>(), [] as GitHubReviewThread[]];
     const allowedMergeMethods = allowedMethods(repository);
 
     return {
