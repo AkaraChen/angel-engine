@@ -627,8 +627,12 @@ export const en = {
       openInSystemTerminal: "Open in System Terminal",
     },
     ui: {
-      commandDescription: "Search for a command to run...",
+      commandActions: "Actions",
+      commandDescription: "Search commands and session titles...",
+      commandNewWorkspace: "New workspace",
+      commandNoResults: "No matching commands or sessions.",
       commandPalette: "Command Palette",
+      commandSessions: "Sessions",
     },
     promptInput: {
       addPhotosOrFiles: "Add photos or files",

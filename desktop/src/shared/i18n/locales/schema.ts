@@ -670,8 +670,12 @@ export interface LocaleResourceTranslationPathLauncher {
 }
 
 export interface LocaleResourceTranslationUi {
+  commandActions: string;
   commandDescription: string;
+  commandNewWorkspace: string;
+  commandNoResults: string;
   commandPalette: string;
+  commandSessions: string;
 }
 
 export interface LocaleResourceTranslationPromptInput {

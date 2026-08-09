@@ -621,8 +621,12 @@ export const ko = {
       openInSystemTerminal: "시스템 터미널에서 열기",
     },
     ui: {
-      commandDescription: "실행할 명령 검색...",
+      commandActions: "작업",
+      commandDescription: "명령 및 세션 제목 검색...",
+      commandNewWorkspace: "새 작업 공간",
+      commandNoResults: "일치하는 명령이나 세션이 없습니다.",
       commandPalette: "명령 팔레트",
+      commandSessions: "세션",
     },
     promptInput: {
       addPhotosOrFiles: "사진 또는 파일 추가",

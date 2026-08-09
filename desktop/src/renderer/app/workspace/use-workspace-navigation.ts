@@ -15,6 +15,7 @@ import {
   fleetRoutePath,
   lastOpenedTargetPath,
   projectDraftRoutePath,
+  workspaceModeForChat,
 } from "@/app/workspace/workspace-route-paths";
 import {
   draftAgentConfigKey,
@@ -242,6 +243,14 @@ export function useWorkspaceNavigation(model: WorkspacePageModel) {
     startNewDraftSession();
   }, [isDraftPage, startNewDraftSession]);
 
+  const createStandaloneWorkspace = useCallback(() => {
+    setPowerDraftWorktree(undefined);
+    setPowerActiveWorktree(undefined);
+    setPowerWorktreeView(null);
+    if (workspaceMode !== "chat") setWorkspaceMode("chat");
+    startNewDraftSession();
+  }, [setWorkspaceMode, startNewDraftSession, workspaceMode]);
+
   const selectDraftProject = useCallback(
     (projectId: string | null) => {
       setPowerDraftWorktree(undefined);
@@ -263,13 +272,7 @@ export function useWorkspaceNavigation(model: WorkspacePageModel) {
    */
   const openChatFromFleet = useCallback(
     (chat: Chat) => {
-      const nextWorkspaceMode: WorkspaceMode = !is.nonEmptyString(
-        chat.projectId,
-      )
-        ? "chat"
-        : isProjectWorkspaceMode(workspaceMode)
-          ? workspaceMode
-          : "work";
+      const nextWorkspaceMode = workspaceModeForChat(chat, workspaceMode);
       if (nextWorkspaceMode !== workspaceMode) {
         setWorkspaceMode(nextWorkspaceMode);
       }
@@ -297,6 +300,7 @@ export function useWorkspaceNavigation(model: WorkspacePageModel) {
     changeWorkspaceMode,
     createChatForProject,
     createChatForSelection,
+    createStandaloneWorkspace,
     navigateToChat,
     navigateToDraft,
     openChat,

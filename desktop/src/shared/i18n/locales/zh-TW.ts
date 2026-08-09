@@ -606,8 +606,12 @@ export const zhTW = {
       openInSystemTerminal: "在系統終端機中開啟",
     },
     ui: {
-      commandDescription: "搜尋要執行的命令...",
+      commandActions: "操作",
+      commandDescription: "搜尋命令和工作階段標題...",
+      commandNewWorkspace: "新增工作區",
+      commandNoResults: "沒有相符的命令或工作階段。",
       commandPalette: "命令面板",
+      commandSessions: "工作階段",
     },
     promptInput: {
       addPhotosOrFiles: "新增圖片或檔案",

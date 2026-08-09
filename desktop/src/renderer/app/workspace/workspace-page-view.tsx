@@ -37,6 +37,7 @@ import { WorktreeDirtyDialog } from "@/app/workspace/worktree-dirty-dialog";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { ImportSessionDialog } from "@/features/chat/components/import-session-dialog";
 import { RenameChatDialog } from "@/features/chat/components/rename-chat-dialog";
+import { WorkspaceCommandPalette } from "@/features/command-palette/workspace-command-palette";
 import { FleetPage } from "@/features/fleet/fleet-page";
 import { ProjectSettingsDialog } from "@/features/projects/components/project-settings-dialog";
 import { queryKeys } from "@/platform/query-keys";
@@ -149,6 +150,7 @@ export const WorkspacePageView: FC<WorkspacePageViewProps> = ({
     changeWorkspaceMode,
     createChatForProject,
     createChatForSelection,
+    createStandaloneWorkspace,
     navigateToChat,
     openChat,
     openChatFromFleet,
@@ -300,6 +302,12 @@ export const WorkspacePageView: FC<WorkspacePageViewProps> = ({
         <WorkspaceSidebarControl />
         <WorkspaceNativeCommandHandler
           onCreateStandaloneChat={createChatForSelection}
+          onOpenSettings={openSettings}
+        />
+        <WorkspaceCommandPalette
+          chats={chats}
+          onNewWorkspace={createStandaloneWorkspace}
+          onOpenSession={openChatFromFleet}
           onOpenSettings={openSettings}
         />
         <RenameChatDialog
