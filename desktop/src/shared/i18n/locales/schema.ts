@@ -68,6 +68,30 @@ export interface LocaleResourceTranslationWorkspaceToolsCommit {
   summaryPlaceholder: string;
 }
 
+export interface LocaleResourceTranslationWorkspaceToolsGitPushHint {
+  auth: string;
+  detached: string;
+  network: string;
+  noCommits: string;
+  noRemote: string;
+  rejected: string;
+}
+
+export interface LocaleResourceTranslationWorkspaceToolsGit {
+  ahead: string;
+  behind: string;
+  clean: string;
+  conflicts: string;
+  detached: string;
+  dirty: string;
+  noCommits: string;
+  noUpstream: string;
+  publish: string;
+  push: string;
+  pushHint: LocaleResourceTranslationWorkspaceToolsGitPushHint;
+  pushing: string;
+}
+
 export interface LocaleResourceTranslationWorkspaceToolsEmpty {
   fileTreeUnavailable: string;
   fileUnavailable: string;
@@ -91,9 +115,11 @@ export interface LocaleResourceTranslationWorkspaceToolsTabs {
 }
 
 export interface LocaleResourceTranslationWorkspaceTools {
+  addToChat: string;
   commit: LocaleResourceTranslationWorkspaceToolsCommit;
   dockInSidebar: string;
   empty: LocaleResourceTranslationWorkspaceToolsEmpty;
+  git: LocaleResourceTranslationWorkspaceToolsGit;
   listeningPorts: string;
   resizeFileTree: string;
   resizeGitList: string;
@@ -216,12 +242,15 @@ export interface LocaleResourceTranslationSidebar {
   powerWorktreeHome: string;
   powerWorktreeHistoricalChat: string;
   refreshProjects: string;
+  retryWorktreeCreation: string;
   settings: string;
   toggleChats: string;
   mobileDescription: string;
   title: string;
   toggleSidebar: string;
   worktreeMain: string;
+  worktreeCreating: string;
+  worktreeCreationFailed: string;
 }
 
 export interface LocaleResourceTranslationSettingsAgents {
@@ -294,6 +323,9 @@ export interface LocaleResourceTranslationSettingsAppearanceThemeOptions {
 }
 
 export interface LocaleResourceTranslationSettingsAppearance {
+  keybindingHintsDescription: string;
+  keybindingHintsSwitchLabel: string;
+  keybindingHintsTitle: string;
   language: string;
   languageOptions: LocaleResourceTranslationSettingsAppearanceLanguageOptions;
   theme: string;
@@ -637,6 +669,8 @@ export interface LocaleResourceTranslationNotifications {
   centerTitle: string;
   centerUnread: string;
   chatActionFailed: string;
+  chatArchived: string;
+  chatArchivedDescription: string;
   chatsDeleted: string;
   chatsDeletedDescription_one: string;
   chatsDeletedDescription_other: string;
@@ -653,6 +687,7 @@ export interface LocaleResourceTranslationNotifications {
   needsInput: string;
   permissionRequired: string;
   projectActionFailed: string;
+  undo: string;
   updateReady: string;
   updateReadyDescription: string;
 }

@@ -78,6 +78,7 @@ export const ko = {
       statsChanges: "변경 사항",
       statsLastActive: "마지막 활동",
       tools: {
+        addToChat: "채팅에 추가",
         commit: {
           committing: "커밋 중…",
           commitTo: "{{target}}에 커밋",
@@ -96,6 +97,27 @@ export const ko = {
           noWorkspace: "이 채팅에는 워크스페이스가 없습니다",
           notGitRepository: "Git 저장소가 아닙니다",
           processesUnavailable: "프로세스 정보를 사용할 수 없습니다",
+        },
+        git: {
+          ahead: "{{value}}개 앞섬",
+          behind: "{{value}}개 뒤처짐",
+          clean: "변경 없음",
+          conflicts: "충돌이 있는 파일 {{value}}개",
+          detached: "분리된 HEAD",
+          dirty: "{{value}}개 변경됨",
+          noCommits: "커밋 없음",
+          noUpstream: "업스트림 없음",
+          publish: "브랜치 게시",
+          push: "푸시",
+          pushHint: {
+            auth: "이 원격의 Git 자격 증명 또는 SSH 키를 확인하세요.",
+            detached: "푸시하기 전에 브랜치를 체크아웃하세요.",
+            network: "네트워크 연결을 확인한 뒤 다시 시도하세요.",
+            noCommits: "이 브랜치를 게시하기 전에 커밋을 만드세요.",
+            noRemote: "푸시하기 전에 원격을 추가하세요.",
+            rejected: "원격에 없는 커밋이 있습니다. 풀한 뒤 다시 푸시하세요.",
+          },
+          pushing: "푸시 중",
         },
         listeningPorts: "수신 대기 포트",
         resizeFileTree: "파일 트리 너비 조정",
@@ -200,12 +222,15 @@ export const ko = {
       powerWorktreeHome: "홈",
       powerWorktreeHistoricalChat: "채팅 기록",
       refreshProjects: "프로젝트 새로고침",
+      retryWorktreeCreation: "Worktree 생성 다시 시도",
       settings: "설정",
       toggleChats: "채팅 전환",
       mobileDescription: "모바일 사이드바를 표시합니다.",
       title: "사이드바",
       toggleSidebar: "사이드바 전환",
       worktreeMain: "메인",
+      worktreeCreating: "Worktree 만드는 중… {{progress}}%",
+      worktreeCreationFailed: "Worktree 생성 실패",
     },
     settings: {
       agents: {
@@ -214,6 +239,10 @@ export const ko = {
         title: "Agents",
       },
       appearance: {
+        keybindingHintsDescription:
+          "도구 설명과 컨트롤에 키보드 단축키를 표시합니다. 이 옵션을 꺼도 단축키는 계속 작동합니다.",
+        keybindingHintsSwitchLabel: "키보드 단축키 힌트 표시",
+        keybindingHintsTitle: "키보드 단축키 힌트",
         language: "언어",
         languageOptions: {
           en: "English",
@@ -605,9 +634,13 @@ export const ko = {
       agentFinishedNoOutput: "Agent가 텍스트 출력 없이 완료되었습니다.",
       agentWaiting: "Agent가 응답을 기다리고 있습니다.",
       chatActionFailed: "채팅 작업 실패",
+      chatArchived: "채팅이 보관됨",
+      chatArchivedDescription:
+        "5초 안에 실행 취소하거나 {{shortcut}}을 누르세요.",
       permissionRequired: "권한 필요",
       projectActionFailed: "프로젝트 작업 실패",
       installUpdate: "다시 시작하여 설치",
+      undo: "실행 취소",
       updateReady: "업데이트 준비됨",
       updateReadyDescription: "{{version}} 다운로드가 완료되었습니다.",
     },

@@ -231,10 +231,10 @@ export function useWorkspacePageModel({
     projectRoot:
       is.nonEmptyString(selectedChat?.projectId) &&
       is.nonEmptyString(selectedChatId)
-        ? (selectedChat.cwd ?? projectWorkspaceToolRoot)
-        : projectWorkspaceToolRoot,
+        ? (selectedChat.cwd ?? projectWorkspaceToolRoot ?? undefined)
+        : (projectWorkspaceToolRoot ?? undefined),
     selectedChatId,
-    selectedChatProjectId: selectedChat?.projectId,
+    selectedChatProjectId: selectedChat?.projectId ?? undefined,
     workspaceMode,
   });
   const workspaceToolContextKey = workspaceToolContext?.contextKey;

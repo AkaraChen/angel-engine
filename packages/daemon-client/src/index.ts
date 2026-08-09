@@ -83,6 +83,8 @@ import type {
   WorkspaceGitDiffResult,
   WorkspaceToolGitCommitInput,
   WorkspaceToolGitCommitResult,
+  WorkspaceToolGitPushInput,
+  WorkspaceToolGitPushResult,
   WorkspaceToolReadFileInput,
   WorkspaceToolRootInput,
   WorkspaceToolWriteFileInput,
@@ -351,6 +353,11 @@ export function createDaemonClient(options: DaemonClientOptions) {
         request<Chat[]>("/api/chats/archived/restore", json("POST", input)),
       create: (input: ChatCreateInput = {}) =>
         request<Chat>("/api/chats", json("POST", input)),
+      cancelWorktreeCreation: (id: string) =>
+        request<Chat>(
+          `/api/chats/${encodeURIComponent(id)}/worktree-creation`,
+          { method: "DELETE" },
+        ),
       delete: (id: string) =>
         request<{ ok: boolean }>(`/api/chats/${encodeURIComponent(id)}`, {
           method: "DELETE",
@@ -381,6 +388,11 @@ export function createDaemonClient(options: DaemonClientOptions) {
         }),
       prewarm: (input: ChatPrewarmInput = {}) =>
         request<ChatPrewarmResult>("/api/chats/prewarm", json("POST", input)),
+      retryWorktreeCreation: (id: string, worktreeSetupApproval?: string) =>
+        request<Chat>(
+          `/api/chats/${encodeURIComponent(id)}/worktree-creation/retry`,
+          json("POST", { worktreeSetupApproval }),
+        ),
       rename: (input: ChatRenameInput) =>
         request<Chat>(
           `/api/chats/${encodeURIComponent(input.chatId)}`,
@@ -490,6 +502,11 @@ export function createDaemonClient(options: DaemonClientOptions) {
       gitDiff: (input: WorkspaceToolRootInput) =>
         request<WorkspaceGitDiffResult>(
           `/api/workspace/git-diff?${query(input)}`,
+        ),
+      gitPush: (input: WorkspaceToolGitPushInput) =>
+        request<WorkspaceToolGitPushResult>(
+          "/api/workspace/git-push",
+          json("POST", input),
         ),
       readFile: (input: WorkspaceToolReadFileInput) =>
         request<WorkspaceFileReadResult>(`/api/workspace/file?${query(input)}`),

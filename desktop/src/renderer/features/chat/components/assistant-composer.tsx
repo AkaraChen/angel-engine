@@ -29,6 +29,7 @@ import {
 } from "@/features/chat/components/composer/composer-menus";
 import { PromptGitHubAttachButton } from "@/features/chat/components/composer/github-attach-button";
 import { useComposerEditor } from "@/features/chat/components/composer/use-composer-editor";
+import { useTerminalSelectionInsert } from "@/features/chat/components/composer/use-terminal-selection-insert";
 import { iconButtonClass } from "@/features/chat/components/thread-styles";
 import { useChatOptions } from "@/features/chat/runtime/chat-options-context";
 
@@ -52,6 +53,7 @@ export function AssistantComposer({
   const isRunning = useAuiState((state) => state.thread.isRunning);
   const hasQuote = useAuiState((state) => Boolean(state.composer.quote));
   const editor = useComposerEditor();
+  useTerminalSelectionInsert(editor);
   const { isEmpty } = editor;
 
   const send = useCallback(

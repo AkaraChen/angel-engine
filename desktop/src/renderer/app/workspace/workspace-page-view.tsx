@@ -182,6 +182,7 @@ export const WorkspacePageView: FC<WorkspacePageViewProps> = ({
     null;
   const {
     closeWorktreeDirtyPrompt,
+    confirmProjectWorktreeCreation,
     ensureDraftChatCanSubmit,
     rememberWorktreeDirtyChoice,
     setDraftCreationLocation,
@@ -242,6 +243,25 @@ export const WorkspacePageView: FC<WorkspacePageViewProps> = ({
       projectId: project.id,
     });
   };
+  const cancelWorktreeCreation = async (chat: (typeof chats)[number]) => {
+    await api.chats.cancelWorktreeCreation(chat.id);
+    await queryClient.invalidateQueries({ queryKey: queryKeys.chats.list() });
+    if (selectedChatId === chat.id) {
+      navigation.navigateToDraft(chat.projectId ?? undefined, {
+        replace: true,
+      });
+    }
+  };
+  const retryWorktreeCreation = async (chat: (typeof chats)[number]) => {
+    if (!is.nonEmptyString(chat.projectId)) return;
+    const approval = await confirmProjectWorktreeCreation(chat.projectId);
+    if (!approval) return;
+    await api.chats.retryWorktreeCreation(
+      chat.id,
+      typeof approval === "string" ? approval : undefined,
+    );
+    await queryClient.invalidateQueries({ queryKey: queryKeys.chats.list() });
+  };
 
   return (
     <SidebarProvider
@@ -258,6 +278,7 @@ export const WorkspacePageView: FC<WorkspacePageViewProps> = ({
           isMacOS={isMacOS}
           isProjectsLoading={projectsQuery.isPending}
           onArchiveChat={archiveChat}
+          onCancelWorktreeCreation={cancelWorktreeCreation}
           onCreateProject={() => void createProjectFromPicker()}
           onCreateProjectChat={createChatForProject}
           onCreateStandaloneChat={createChatForSelection}
@@ -266,6 +287,7 @@ export const WorkspacePageView: FC<WorkspacePageViewProps> = ({
           onOpenFleet={openFleet}
           onOpenSettings={openSettings}
           onOpenWorktree={openPowerWorktree}
+          onRetryWorktreeCreation={retryWorktreeCreation}
           onShowChatContextMenu={showChatContextMenu}
           onShowProjectContextMenu={showProjectContextMenu}
           onShowWorktreeContextMenu={showWorktreeContextMenu}
@@ -282,6 +304,7 @@ export const WorkspacePageView: FC<WorkspacePageViewProps> = ({
           isMacOS={isMacOS}
           isProjectsLoading={projectsQuery.isPending}
           onArchiveChat={archiveChat}
+          onCancelWorktreeCreation={cancelWorktreeCreation}
           onCreateProject={() => void createProjectFromPicker()}
           onCreateProjectChat={createChatForProject}
           onCreateStandaloneChat={createChatForSelection}
@@ -290,6 +313,7 @@ export const WorkspacePageView: FC<WorkspacePageViewProps> = ({
           onOpenFleet={openFleet}
           onOpenSettings={openSettings}
           onOpenWorktree={openPowerWorktree}
+          onRetryWorktreeCreation={retryWorktreeCreation}
           onShowChatContextMenu={showChatContextMenu}
           onShowProjectContextMenu={showProjectContextMenu}
           onShowWorktreeContextMenu={showWorktreeContextMenu}

@@ -78,6 +78,7 @@ export const en = {
       statsChanges: "Changes",
       statsLastActive: "Last active",
       tools: {
+        addToChat: "Add to chat",
         commit: {
           committing: "Committing",
           commitTo: "Commit to {{target}}",
@@ -96,6 +97,28 @@ export const en = {
           noWorkspace: "No workspace for this chat",
           notGitRepository: "Not a Git repository",
           processesUnavailable: "Processes unavailable",
+        },
+        git: {
+          ahead: "{{value}} ahead",
+          behind: "{{value}} behind",
+          clean: "No changes",
+          conflicts: "{{value}} files with conflicts",
+          detached: "Detached HEAD",
+          dirty: "{{value}} changed",
+          noCommits: "No commits yet",
+          noUpstream: "No upstream",
+          publish: "Publish branch",
+          push: "Push",
+          pushHint: {
+            auth: "Check the Git credentials or SSH key for this remote.",
+            detached: "Check out a branch before pushing.",
+            network: "Check the network connection and try again.",
+            noCommits: "Create a commit before publishing this branch.",
+            noRemote: "Add a remote before pushing.",
+            rejected:
+              "The remote has commits you do not. Pull, then push again.",
+          },
+          pushing: "Pushing",
         },
         listeningPorts: "Listening ports",
         resizeFileTree: "Resize file tree",
@@ -199,12 +222,15 @@ export const en = {
       powerWorktreeHome: "Home",
       powerWorktreeHistoricalChat: "Historical Chat",
       refreshProjects: "Refresh projects",
+      retryWorktreeCreation: "Retry worktree creation",
       settings: "Settings",
       toggleChats: "Toggle chats",
       mobileDescription: "Displays the mobile sidebar.",
       title: "Sidebar",
       toggleSidebar: "Toggle sidebar",
       worktreeMain: "Main",
+      worktreeCreating: "Creating worktree… {{progress}}%",
+      worktreeCreationFailed: "Worktree creation failed",
     },
     settings: {
       agents: {
@@ -213,6 +239,10 @@ export const en = {
         title: "Agents",
       },
       appearance: {
+        keybindingHintsDescription:
+          "Show keyboard shortcuts in tooltips and controls. Turning this off does not disable the shortcuts.",
+        keybindingHintsSwitchLabel: "Show keyboard shortcut hints",
+        keybindingHintsTitle: "Keyboard shortcut hints",
         language: "Language",
         languageOptions: {
           en: "English",
@@ -598,6 +628,8 @@ export const en = {
       centerTitle: "Notifications",
       centerUnread: "{{count}} unread",
       chatActionFailed: "Chat action failed",
+      chatArchived: "Chat archived",
+      chatArchivedDescription: "Undo within 5 seconds, or press {{shortcut}}.",
       chatsDeleted: "Chats deleted",
       chatsDeletedDescription_one: "Deleted {{count}} chat.",
       chatsDeletedDescription_other: "Deleted {{count}} chats.",
@@ -614,6 +646,7 @@ export const en = {
       needsInput: "{{chatTitle}} needs input",
       permissionRequired: "Permission required",
       projectActionFailed: "Project action failed",
+      undo: "Undo",
       updateReady: "Update ready",
       updateReadyDescription: "{{version}} has been downloaded.",
     },

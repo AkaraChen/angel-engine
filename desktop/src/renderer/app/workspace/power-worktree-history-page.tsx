@@ -294,7 +294,7 @@ function usePowerWorktreeGitStats(
 
       return {
         additions,
-        branch: data.branch,
+        branch: data.branchStatus.branch,
         changedFiles: patchList.files.length,
         deletions,
       };

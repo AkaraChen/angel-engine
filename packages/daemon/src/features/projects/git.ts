@@ -20,6 +20,7 @@ import { getProject } from "./repository";
 
 const execFileAsync = promisify(execFile);
 const GIT_OUTPUT_MAX_BUFFER = 1024 * 1024;
+const GIT_OPERATION_TIMEOUT_MS = 5 * 60 * 1000;
 const WORKTREE_BRANCH_PREFIX = "angel";
 
 export function projectGitStatus(
@@ -84,6 +85,10 @@ export function projectGitStatus(
 export function createProjectWorktree(
   input: ProjectWorktreeCreateInput,
   signal?: AbortSignal,
+  onProgress?: (
+    stage: "fetching" | "worktree" | "setup",
+    progress: number,
+  ) => void,
 ): Effect.Effect<ProjectWorktreeCreateResult, DaemonError, Db> {
   return Effect.gen(function* () {
     const status = yield* projectGitStatus(input);
@@ -95,6 +100,18 @@ export function createProjectWorktree(
     if (setup && input.setupApproval !== setup.digest) {
       return yield* Effect.fail(DaemonError.worktreeSetupApprovalRequired());
     }
+
+    onProgress?.("fetching", 10);
+    yield* Effect.tryPromise({
+      catch: (cause) => DaemonError.worktreeCreateFailed(cause),
+      try: () =>
+        execFileAsync("git", ["-C", root, "fetch", "--prune"], {
+          maxBuffer: GIT_OUTPUT_MAX_BUFFER,
+          signal,
+          timeout: GIT_OPERATION_TIMEOUT_MS,
+        }),
+    });
+    onProgress?.("worktree", 45);
 
     const projectSlug = projectSlugFromPath(status.path);
     const parent = path.join(managedWorktreeRoot(), projectSlug);
@@ -114,15 +131,26 @@ export function createProjectWorktree(
           execFileAsync(
             "git",
             ["-C", root, "worktree", "add", "-b", branch, cwd, "HEAD"],
-            { maxBuffer: GIT_OUTPUT_MAX_BUFFER },
+            {
+              maxBuffer: GIT_OUTPUT_MAX_BUFFER,
+              signal,
+              timeout: GIT_OPERATION_TIMEOUT_MS,
+            },
           ),
       }).pipe(
         Effect.as({ branch, cwd, projectId: input.projectId, root }),
         Effect.catchAll((cause) =>
           Effect.gen(function* () {
-            yield* Effect.sync(() =>
-              fs.rmSync(cwd, { force: true, recursive: true }),
+            yield* Effect.promise(() =>
+              rollbackCreatedWorktree(root, cwd, branch).catch(() => {
+                fs.rmSync(cwd, { force: true, recursive: true });
+              }),
             );
+            if (signal?.aborted) {
+              return yield* Effect.fail(
+                DaemonError.worktreeCreateFailed(cause),
+              );
+            }
             if (attempt === 4) {
               return yield* Effect.fail(
                 DaemonError.worktreeCreateFailed(cause),
@@ -133,6 +161,7 @@ export function createProjectWorktree(
         ),
       );
       if (created !== undefined) {
+        onProgress?.("setup", 75);
         yield* Effect.tryPromise({
           catch: (cause) => DaemonError.worktreeCreateFailed(cause),
           try: async () => {
@@ -159,6 +188,7 @@ export function createProjectWorktree(
             }
           },
         });
+        onProgress?.("setup", 100);
         return created;
       }
     }
@@ -211,6 +241,17 @@ export function removeManagedWorktree(
     }
 
     return worktreePath;
+  });
+}
+
+/** Rolls back a worktree that was created but could not be attached to its chat. */
+export function removeCreatedProjectWorktree(
+  worktree: ProjectWorktreeCreateResult,
+): Effect.Effect<void, DaemonError> {
+  return Effect.tryPromise({
+    catch: (cause) => DaemonError.worktreeRemoveFailed(cause),
+    try: () =>
+      rollbackCreatedWorktree(worktree.root, worktree.cwd, worktree.branch),
   });
 }
 

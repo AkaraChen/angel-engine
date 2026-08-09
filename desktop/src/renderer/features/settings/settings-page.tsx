@@ -26,6 +26,7 @@ import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { useAgentCatalog } from "@/features/agents/agent-catalog-context";
+import { useKeybindingHintsStore } from "@/features/keybindings/keybinding-hints-store";
 import { ArchivedSettingsPanel } from "@/features/settings/archived-settings-panel";
 import { BuiltinAgentsSettingsGroup } from "@/features/settings/builtin-agent-settings";
 import { CustomAgentsSettingsGroup } from "@/features/settings/custom-agent-settings";
@@ -254,7 +255,13 @@ function SettingsTabPanel({
 function AppearanceSettings() {
   const { t } = useTranslation();
   const [themeMode, setThemeMode] = useThemeSettings();
+  const keybindingHintsEnabled = useKeybindingHintsStore(
+    (state) => state.enabled,
+  );
   const language = useSettingsStore((state) => state.language);
+  const setKeybindingHintsEnabled = useKeybindingHintsStore(
+    (state) => state.setEnabled,
+  );
   const setLanguage = useSettingsStore((state) => state.setLanguage);
 
   return (
@@ -286,6 +293,17 @@ function AppearanceSettings() {
           />
         }
         title={t("settings.appearance.language")}
+      />
+      <SettingsRow
+        after={
+          <Switch
+            aria-label={t("settings.appearance.keybindingHintsSwitchLabel")}
+            checked={keybindingHintsEnabled}
+            onCheckedChange={setKeybindingHintsEnabled}
+          />
+        }
+        description={t("settings.appearance.keybindingHintsDescription")}
+        title={t("settings.appearance.keybindingHintsTitle")}
       />
     </SettingsGroup>
   );

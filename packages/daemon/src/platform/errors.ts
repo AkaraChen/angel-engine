@@ -365,6 +365,64 @@ export class DaemonError extends Data.TaggedError(
     });
   }
 
+  static workspaceGitDetachedHead() {
+    return new DaemonError({
+      code: "workspace-git-detached-head",
+      message: "Checkout a branch before pushing; HEAD is detached.",
+      status: 409,
+    });
+  }
+
+  static workspaceGitNoRemote() {
+    return new DaemonError({
+      code: "workspace-git-no-remote",
+      message: "The repository has no remote to push to.",
+      status: 409,
+    });
+  }
+
+  static workspaceGitNoCommits() {
+    return new DaemonError({
+      code: "workspace-git-no-commits",
+      message: "Create a commit before publishing this branch.",
+      status: 409,
+    });
+  }
+
+  /**
+   * A failed `git push` is the one git failure users must act on themselves, so
+   * the transport hands back an actionable code instead of a generic
+   * `git-failed` with stderr the UI can only print verbatim.
+   */
+  static workspaceGitPushFailed(cause: unknown) {
+    const message = gitMessageFromCause(cause, "Git push failed.");
+    if (isGitAuthFailure(message)) {
+      return new DaemonError({
+        cause,
+        code: "workspace-git-auth-failed",
+        message,
+        status: 403,
+      });
+    }
+    if (isGitNetworkFailure(message)) {
+      return new DaemonError({
+        cause,
+        code: "workspace-git-network-failed",
+        message,
+        status: 500,
+      });
+    }
+    if (isGitPushRejected(message)) {
+      return new DaemonError({
+        cause,
+        code: "workspace-git-push-rejected",
+        message,
+        status: 409,
+      });
+    }
+    return DaemonError.gitFailed(cause, "Git push failed.");
+  }
+
   static processNotRegistered() {
     return new DaemonError({
       code: "process-not-registered",
@@ -391,6 +449,48 @@ function messageFromCause(cause: unknown, fallback: string) {
   return cause instanceof Error && cause.message.length > 0
     ? cause.message
     : fallback;
+}
+
+const gitAuthFailurePatterns = [
+  /authentication failed/i,
+  /could not read (?:username|password)/i,
+  /invalid username or password/i,
+  /permission denied/i,
+  /support for password authentication was removed/i,
+  /terminal prompts disabled/i,
+  /\bpublickey\b/i,
+  /remote: (?:forbidden|unauthorized)/i,
+  /\b(?:401|403)\b/,
+];
+
+const gitNetworkFailurePatterns = [
+  /could not resolve (?:host|hostname|proxy)/i,
+  /connection (?:refused|reset|timed out)/i,
+  /couldn't connect to server/i,
+  /failed to connect to/i,
+  /network is unreachable/i,
+  /operation timed out/i,
+  /ssl (?:certificate problem|connect error)/i,
+  /unable to access '/i,
+];
+
+const gitPushRejectedPatterns = [
+  /\[rejected\]/i,
+  /non-fast-forward/i,
+  /updates were rejected/i,
+  /fetch first/i,
+];
+
+function isGitAuthFailure(message: string) {
+  return gitAuthFailurePatterns.some((pattern) => pattern.test(message));
+}
+
+function isGitNetworkFailure(message: string) {
+  return gitNetworkFailurePatterns.some((pattern) => pattern.test(message));
+}
+
+function isGitPushRejected(message: string) {
+  return gitPushRejectedPatterns.some((pattern) => pattern.test(message));
 }
 
 function gitMessageFromCause(cause: unknown, fallback: string) {

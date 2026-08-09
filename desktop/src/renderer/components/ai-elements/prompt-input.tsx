@@ -63,6 +63,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { KeybindingHint } from "@/features/keybindings/components/keybinding-hint";
 import { cn } from "@/platform/utils";
 
 // ============================================================================
@@ -1120,9 +1121,7 @@ export function PromptInputButton({
       <TooltipTrigger asChild>{button}</TooltipTrigger>
       <TooltipContent side={side}>
         {tooltipContent}
-        {shortcut && (
-          <span className="ml-2 text-muted-foreground">{shortcut}</span>
-        )}
+        <KeybindingHint binding={shortcut} />
       </TooltipContent>
     </Tooltip>
   );
