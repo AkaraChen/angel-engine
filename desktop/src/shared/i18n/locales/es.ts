@@ -126,6 +126,23 @@ export const es = {
       statsBranch: "Rama",
       statsChanges: "Cambios",
       statsLastActive: "Última actividad",
+      transcriptDensity: {
+        descriptions: {
+          compact:
+            "Pliega el detalle de herramientas; expande una fila si hace falta.",
+          debug:
+            "Mantiene abiertos el detalle de herramientas y el razonamiento.",
+          normal:
+            "Expande herramientas automáticamente si no hay texto después.",
+        },
+        menuLabel: "Densidad de la transcripción: {{density}}",
+        options: {
+          compact: "Compacta",
+          debug: "Depuración",
+          normal: "Normal",
+        },
+        title: "Densidad de la transcripción",
+      },
       tools: {
         addToChat: "Añadir al chat",
         commit: {
@@ -342,6 +359,15 @@ export const es = {
           light: "Claro",
           system: "Sistema",
         },
+        transcriptDensityDescription:
+          "Cuánto detalle de herramientas muestra la transcripción por defecto en el modo de espacio de trabajo actual. Chat empieza en Compacta; Work y Power en Normal.",
+        transcriptDensityLabel: "Densidad de la transcripción",
+        transcriptDensityOptions: {
+          compact: "Compacta",
+          debug: "Depuración",
+          normal: "Normal",
+        },
+        transcriptDensityTitle: "Densidad de la transcripción",
       },
       archived: {
         allProjects: "Todos los proyectos",

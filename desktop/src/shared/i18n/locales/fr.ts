@@ -127,6 +127,21 @@ export const fr = {
       statsBranch: "Branche",
       statsChanges: "Modifications",
       statsLastActive: "Dernière activité",
+      transcriptDensity: {
+        descriptions: {
+          compact:
+            "Replie le détail des outils ; développez une ligne au besoin.",
+          debug: "Garde le détail des outils et du raisonnement ouvert.",
+          normal: "Développe automatiquement les outils s’il n’y a rien après.",
+        },
+        menuLabel: "Densité de la transcription : {{density}}",
+        options: {
+          compact: "Compact",
+          debug: "Débogage",
+          normal: "Normal",
+        },
+        title: "Densité de la transcription",
+      },
       tools: {
         addToChat: "Ajouter au chat",
         commit: {
@@ -343,6 +358,15 @@ export const fr = {
           light: "Clair",
           system: "Système",
         },
+        transcriptDensityDescription:
+          "Combien de détail d’outil la transcription affiche par défaut dans le mode d’espace de travail actuel. Chat commence en Compact ; Work et Power en Normal.",
+        transcriptDensityLabel: "Densité de la transcription",
+        transcriptDensityOptions: {
+          compact: "Compact",
+          debug: "Débogage",
+          normal: "Normal",
+        },
+        transcriptDensityTitle: "Densité de la transcription",
       },
       archived: {
         allProjects: "Tous les projets",

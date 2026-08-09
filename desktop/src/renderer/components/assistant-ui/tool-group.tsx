@@ -21,11 +21,14 @@ import { cva } from "class-variance-authority";
 import { memo, useCallback, useRef, useState } from "react";
 
 import { useTranslation } from "react-i18next";
+import { useWorkspaceUiStore } from "@/app/workspace/workspace-ui-store";
 import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
+import { defaultToolDetailsOpen } from "@/features/chat/transcript-density";
+import { useTranscriptDensityStore } from "@/features/chat/transcript-density-store";
 import { cn } from "@/platform/utils";
 
 const ANIMATION_DURATION = 200;
@@ -191,6 +194,10 @@ const ToolGroupImpl: FC<
   PropsWithChildren<{ endIndex: number; startIndex: number }>
 > = ({ children, endIndex, startIndex }) => {
   const { t } = useTranslation();
+  const workspaceMode = useWorkspaceUiStore((state) => state.workspaceMode);
+  const density = useTranscriptDensityStore((state) =>
+    state.densityFor(workspaceMode),
+  );
   const active = useAuiState((state) =>
     hasActiveToolGroupPart(state.message.parts, startIndex, endIndex),
   );
@@ -201,7 +208,7 @@ const ToolGroupImpl: FC<
     hasTextContentAfterIndex(state.message.parts, endIndex),
   );
   const [manualOpen, setManualOpen] = useState<boolean | undefined>();
-  const open = manualOpen ?? !hasTextAfterGroup;
+  const open = manualOpen ?? defaultToolDetailsOpen(density, hasTextAfterGroup);
 
   return (
     <ToolGroupRoot onOpenChange={setManualOpen} open={open}>

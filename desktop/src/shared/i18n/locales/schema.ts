@@ -150,6 +150,19 @@ export interface LocaleResourceTranslationWorkspaceAmbiguousSend {
   title: string;
 }
 
+export interface LocaleResourceTranslationWorkspaceTranscriptDensityOptions {
+  compact: string;
+  debug: string;
+  normal: string;
+}
+
+export interface LocaleResourceTranslationWorkspaceTranscriptDensity {
+  descriptions: LocaleResourceTranslationWorkspaceTranscriptDensityOptions;
+  menuLabel: string;
+  options: LocaleResourceTranslationWorkspaceTranscriptDensityOptions;
+  title: string;
+}
+
 export interface LocaleResourceTranslationWorkspace {
   ambiguousSend: LocaleResourceTranslationWorkspaceAmbiguousSend;
   backgroundChatCompleted: string;
@@ -169,6 +182,7 @@ export interface LocaleResourceTranslationWorkspace {
   statsChanges: string;
   statsLastActive: string;
   tools: LocaleResourceTranslationWorkspaceTools;
+  transcriptDensity: LocaleResourceTranslationWorkspaceTranscriptDensity;
   worktreeDirtyContinue: string;
   worktreeDirtyDescription: string;
   worktreeDirtyRemember: string;
@@ -382,6 +396,12 @@ export interface LocaleResourceTranslationSettingsAppearanceThemeOptions {
   system: string;
 }
 
+export interface LocaleResourceTranslationSettingsAppearanceTranscriptDensityOptions {
+  compact: string;
+  debug: string;
+  normal: string;
+}
+
 export interface LocaleResourceTranslationSettingsAppearance {
   keybindingHintsDescription: string;
   keybindingHintsSwitchLabel: string;
@@ -390,6 +410,10 @@ export interface LocaleResourceTranslationSettingsAppearance {
   languageOptions: LocaleResourceTranslationSettingsAppearanceLanguageOptions;
   theme: string;
   themeOptions: LocaleResourceTranslationSettingsAppearanceThemeOptions;
+  transcriptDensityDescription: string;
+  transcriptDensityLabel: string;
+  transcriptDensityOptions: LocaleResourceTranslationSettingsAppearanceTranscriptDensityOptions;
+  transcriptDensityTitle: string;
 }
 
 export interface LocaleResourceTranslationSettingsDanger {
