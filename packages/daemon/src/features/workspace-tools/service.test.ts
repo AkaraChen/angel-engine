@@ -19,7 +19,10 @@ import {
   parseGitStatusOutput,
 } from "./git";
 import {
+  workspaceGitBranches,
+  workspaceGitCheckout,
   workspaceGitDiff,
+  workspaceGitLog,
   workspaceGitPush,
   workspaceWriteFile,
 } from "./service";
@@ -335,6 +338,48 @@ describe("workspaceGitPush", () => {
       );
 
       expect(error.code).toBe("workspace-git-push-rejected");
+    },
+    gitTestTimeoutMs,
+  );
+});
+
+describe("workspace git panel branches and history", () => {
+  it(
+    "lists local branches and checks out another branch",
+    async () => {
+      const workspace = await makeTempDir();
+      await gitOutput(workspace, ["init", "--initial-branch=main"]);
+      await configureGitIdentity(workspace);
+      await commitFile(workspace, "a.txt", "a");
+      await gitOutput(workspace, ["branch", "feature/panel"]);
+
+      const listed = await runEffect(workspaceGitBranches(workspace));
+      expect(listed.isGitRepository).toBe(true);
+      expect(listed.branchStatus.branch).toBe("main");
+      expect(listed.branches.map((branch) => branch.name)).toEqual(
+        expect.arrayContaining(["main", "feature/panel"]),
+      );
+
+      const checkout = await runEffect(
+        workspaceGitCheckout({ branch: "feature/panel", root: workspace }),
+      );
+      expect(checkout.branchStatus.branch).toBe("feature/panel");
+    },
+    gitTestTimeoutMs,
+  );
+
+  it(
+    "returns commit history",
+    async () => {
+      const workspace = await makeTempDir();
+      await gitOutput(workspace, ["init", "--initial-branch=main"]);
+      await configureGitIdentity(workspace);
+      await commitFile(workspace, "a.txt", "a");
+
+      const log = await runEffect(workspaceGitLog(workspace, 10));
+      expect(log.isGitRepository).toBe(true);
+      expect(log.commits.length).toBeGreaterThan(0);
+      expect(log.commits[0]?.subject).toContain("add a.txt");
     },
     gitTestTimeoutMs,
   );

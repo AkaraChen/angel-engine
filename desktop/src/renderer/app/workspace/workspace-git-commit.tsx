@@ -48,13 +48,32 @@ export function useWorkspaceGitPanelState(api: ApiClient, root: string) {
     retry: false,
     staleTime: 5_000,
   });
+  const invalidateGit = useCallback(() => {
+    void queryClient.invalidateQueries({
+      queryKey: queryKeys.workspaceTools.gitDiff(root),
+    });
+    void queryClient.invalidateQueries({
+      queryKey: queryKeys.workspaceTools.gitBranches(root),
+    });
+    void queryClient.invalidateQueries({
+      queryKey: queryKeys.workspaceTools.gitLog(root),
+    });
+    void queryClient.invalidateQueries({
+      queryKey: queryKeys.workspaceTools.fileTree(root),
+    });
+  }, [queryClient, root]);
   const pushMutation = useMutation({
     mutationFn: async () => api.workspaceTools.gitPush({ root }),
-    onSuccess: () => {
-      void queryClient.invalidateQueries({
-        queryKey: queryKeys.workspaceTools.gitDiff(root),
-      });
-    },
+    onSuccess: invalidateGit,
+  });
+  const pullMutation = useMutation({
+    mutationFn: async () => api.workspaceTools.gitPull({ root }),
+    onSuccess: invalidateGit,
+  });
+  const checkoutMutation = useMutation({
+    mutationFn: async (branch: string) =>
+      api.workspaceTools.gitCheckout({ branch, root }),
+    onSuccess: invalidateGit,
   });
   const handleFileSelectedChange = useCallback(
     (file: WorkspaceToolPatchFile, selected: boolean) => {
@@ -84,12 +103,14 @@ export function useWorkspaceGitPanelState(api: ApiClient, root: string) {
   );
 
   return {
+    checkoutMutation,
     commitDescription,
     commitMutation,
     commitSelectedPaths,
     commitSummary,
     gitQuery,
     handleFileSelectedChange,
+    pullMutation,
     pushMutation,
     selectedFileKeys,
     setCommitDescription,

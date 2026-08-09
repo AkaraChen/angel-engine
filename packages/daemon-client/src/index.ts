@@ -80,9 +80,17 @@ import type {
   WorkspaceFileReadResult,
   WorkspaceFileTreeResult,
   WorkspaceFileWriteResult,
+  WorkspaceGitBranchesResult,
+  WorkspaceGitCheckoutInput,
+  WorkspaceGitCheckoutResult,
+  WorkspaceGitCommitShowInput,
+  WorkspaceGitCommitShowResult,
   WorkspaceGitDiffResult,
+  WorkspaceGitLogResult,
   WorkspaceToolGitCommitInput,
   WorkspaceToolGitCommitResult,
+  WorkspaceToolGitPullInput,
+  WorkspaceToolGitPullResult,
   WorkspaceToolGitPushInput,
   WorkspaceToolGitPushResult,
   WorkspaceToolReadFileInput,
@@ -494,14 +502,36 @@ export function createDaemonClient(options: DaemonClientOptions) {
         request<WorkspaceFileTreeResult>(
           `/api/workspace/file-tree?${query(input)}`,
         ),
+      gitBranches: (input: WorkspaceToolRootInput) =>
+        request<WorkspaceGitBranchesResult>(
+          `/api/workspace/git-branches?${query(input)}`,
+        ),
+      gitCheckout: (input: WorkspaceGitCheckoutInput) =>
+        request<WorkspaceGitCheckoutResult>(
+          "/api/workspace/git-checkout",
+          json("POST", input),
+        ),
       gitCommit: (input: WorkspaceToolGitCommitInput) =>
         request<WorkspaceToolGitCommitResult>(
           "/api/workspace/git-commit",
           json("POST", input),
         ),
+      gitCommitShow: (input: WorkspaceGitCommitShowInput) =>
+        request<WorkspaceGitCommitShowResult>(
+          `/api/workspace/git-commit-show?${query(input)}`,
+        ),
       gitDiff: (input: WorkspaceToolRootInput) =>
         request<WorkspaceGitDiffResult>(
           `/api/workspace/git-diff?${query(input)}`,
+        ),
+      gitLog: (input: WorkspaceToolRootInput & { limit?: number }) =>
+        request<WorkspaceGitLogResult>(
+          `/api/workspace/git-log?${query(input)}`,
+        ),
+      gitPull: (input: WorkspaceToolGitPullInput) =>
+        request<WorkspaceToolGitPullResult>(
+          "/api/workspace/git-pull",
+          json("POST", input),
         ),
       gitPush: (input: WorkspaceToolGitPushInput) =>
         request<WorkspaceToolGitPushResult>(

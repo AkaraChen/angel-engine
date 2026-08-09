@@ -3,9 +3,16 @@ import type {
   WorkspaceFileReadResult,
   WorkspaceFileTreeResult,
   WorkspaceFileWriteResult,
+  WorkspaceGitBranch,
+  WorkspaceGitBranchesResult,
   WorkspaceGitBranchStatus,
+  WorkspaceGitCheckoutResult,
+  WorkspaceGitCommitShowResult,
   WorkspaceGitDiffResult,
+  WorkspaceGitLogCommit,
+  WorkspaceGitLogResult,
   WorkspaceToolGitCommitResult,
+  WorkspaceToolGitPullResult,
   WorkspaceToolGitPushResult,
   WorkspaceToolGitStatusEntry,
 } from "@angel-engine/daemon-api/workspace-tools";
@@ -186,6 +193,248 @@ export function workspaceGitPush({
       root,
     };
   });
+}
+
+export function workspaceGitPull({
+  root: rootInput,
+}: {
+  root: string;
+}): Effect.Effect<WorkspaceToolGitPullResult, DaemonError> {
+  return Effect.gen(function* () {
+    const root = yield* resolveWorkspaceRoot(rootInput);
+    const gitRoot = yield* gitRootFor(root);
+    if (!is.nonEmptyString(gitRoot)) {
+      return yield* Effect.fail(DaemonError.workspaceNotGitRepository());
+    }
+
+    const branchStatus = yield* gitBranchStatus(gitRoot);
+    if (branchStatus.unborn) {
+      return yield* Effect.fail(DaemonError.workspaceGitNoCommits());
+    }
+    if (branchStatus.detached || !is.nonEmptyString(branchStatus.branch)) {
+      return yield* Effect.fail(DaemonError.workspaceGitDetachedHead());
+    }
+    if (!is.nonEmptyString(branchStatus.upstream)) {
+      return yield* Effect.fail(DaemonError.workspaceGitNoRemote());
+    }
+
+    const remote = upstreamRemote(branchStatus.upstream);
+    yield* Effect.tryPromise({
+      catch: (cause) => DaemonError.workspaceGitPullFailed(cause),
+      try: () => gitOutput(gitRoot, ["pull", "--ff-only"], { network: true }),
+    });
+
+    return {
+      branchStatus: yield* gitBranchStatus(gitRoot),
+      remote,
+      root,
+    };
+  });
+}
+
+export function workspaceGitBranches(
+  rootInput: string,
+): Effect.Effect<WorkspaceGitBranchesResult, DaemonError> {
+  return Effect.gen(function* () {
+    const root = yield* resolveWorkspaceRoot(rootInput);
+    const gitRoot = yield* gitRootFor(root);
+    if (!is.nonEmptyString(gitRoot)) {
+      return {
+        branchStatus: {
+          ahead: 0,
+          behind: 0,
+          detached: false,
+          unborn: false,
+        },
+        branches: [],
+        isGitRepository: false,
+        root,
+      };
+    }
+
+    const [branchStatus, branchList] = yield* Effect.all(
+      [
+        gitBranchStatus(gitRoot),
+        workspaceGitOutput(gitRoot, [
+          "for-each-ref",
+          "--format=%(refname:short)%00%(HEAD)%00%(refname)",
+          "refs/heads",
+          "refs/remotes",
+        ]).pipe(Effect.orElseSucceed(() => "")),
+      ],
+      { concurrency: "unbounded" },
+    );
+
+    return {
+      branchStatus,
+      branches: parseGitBranchList(branchList),
+      isGitRepository: true,
+      root,
+    };
+  });
+}
+
+export function workspaceGitCheckout({
+  branch,
+  root: rootInput,
+}: {
+  branch: string;
+  root: string;
+}): Effect.Effect<WorkspaceGitCheckoutResult, DaemonError> {
+  return Effect.gen(function* () {
+    const root = yield* resolveWorkspaceRoot(rootInput);
+    const gitRoot = yield* gitRootFor(root);
+    if (!is.nonEmptyString(gitRoot)) {
+      return yield* Effect.fail(DaemonError.workspaceNotGitRepository());
+    }
+
+    const target = branch.trim();
+    if (
+      !is.nonEmptyString(target) ||
+      target.includes("..") ||
+      target.startsWith("-")
+    ) {
+      return yield* Effect.fail(
+        DaemonError.workspaceCommitInputInvalid("Branch name is invalid."),
+      );
+    }
+
+    yield* workspaceGitOutput(gitRoot, ["checkout", target]);
+    return {
+      branchStatus: yield* gitBranchStatus(gitRoot),
+      root,
+    };
+  });
+}
+
+export function workspaceGitLog(
+  rootInput: string,
+  limit = 100,
+): Effect.Effect<WorkspaceGitLogResult, DaemonError> {
+  return Effect.gen(function* () {
+    const root = yield* resolveWorkspaceRoot(rootInput);
+    const gitRoot = yield* gitRootFor(root);
+    if (!is.nonEmptyString(gitRoot)) {
+      return {
+        commits: [],
+        isGitRepository: false,
+        root,
+      };
+    }
+
+    const safeLimit = Math.min(Math.max(Math.trunc(limit) || 100, 1), 500);
+    const output = yield* workspaceGitOutput(gitRoot, [
+      "log",
+      `-n${safeLimit}`,
+      "--format=%H%x00%h%x00%s%x00%an%x00%aI",
+    ]).pipe(Effect.orElseSucceed(() => ""));
+
+    return {
+      commits: parseGitLog(output),
+      isGitRepository: true,
+      root,
+    };
+  });
+}
+
+export function workspaceGitCommitShow({
+  hash,
+  root: rootInput,
+}: {
+  hash: string;
+  root: string;
+}): Effect.Effect<WorkspaceGitCommitShowResult, DaemonError> {
+  return Effect.gen(function* () {
+    const root = yield* resolveWorkspaceRoot(rootInput);
+    const gitRoot = yield* gitRootFor(root);
+    if (!is.nonEmptyString(gitRoot)) {
+      return yield* Effect.fail(DaemonError.workspaceNotGitRepository());
+    }
+
+    const target = hash.trim();
+    if (!is.nonEmptyString(target) || !/^[0-9a-fA-F]{4,40}$/.test(target)) {
+      return yield* Effect.fail(
+        DaemonError.workspaceCommitInputInvalid("Commit hash is invalid."),
+      );
+    }
+
+    const [subject, patch] = yield* Effect.all(
+      [
+        workspaceGitOutput(gitRoot, [
+          "show",
+          "--no-patch",
+          "--format=%s",
+          target,
+        ]).pipe(Effect.orElseSucceed(() => "")),
+        workspaceGitOutput(gitRoot, [
+          "show",
+          "--patch",
+          "--find-renames",
+          "--no-ext-diff",
+          "--no-color",
+          "--format=",
+          target,
+        ]),
+      ],
+      { concurrency: "unbounded" },
+    );
+
+    return {
+      hash: target,
+      patch,
+      root,
+      subject: subject || undefined,
+    };
+  });
+}
+
+function parseGitBranchList(output: string): WorkspaceGitBranch[] {
+  const branches: WorkspaceGitBranch[] = [];
+  const seen = new Set<string>();
+
+  for (const line of output.split("\n")) {
+    if (!line) continue;
+    const [name, headMarker, refname] = line.split("\0");
+    if (!is.nonEmptyString(name) || !is.nonEmptyString(refname)) continue;
+    if (name === "HEAD" || name.endsWith("/HEAD")) continue;
+    if (seen.has(name)) continue;
+    seen.add(name);
+    branches.push({
+      current: headMarker === "*",
+      isRemote: refname.startsWith("refs/remotes/"),
+      name,
+    });
+  }
+
+  return branches.sort((left, right) => {
+    if (left.current !== right.current) return left.current ? -1 : 1;
+    if (left.isRemote !== right.isRemote) return left.isRemote ? 1 : -1;
+    return left.name.localeCompare(right.name);
+  });
+}
+
+function parseGitLog(output: string): WorkspaceGitLogCommit[] {
+  const commits: WorkspaceGitLogCommit[] = [];
+  for (const line of output.split("\n")) {
+    if (!line) continue;
+    const [hash, shortHash, subject, authorName, committedAt] =
+      line.split("\0");
+    if (
+      !is.nonEmptyString(hash) ||
+      !is.nonEmptyString(shortHash) ||
+      !is.nonEmptyString(subject)
+    ) {
+      continue;
+    }
+    commits.push({
+      authorName: authorName || "Unknown",
+      committedAt: committedAt || "",
+      hash,
+      shortHash,
+      subject,
+    });
+  }
+  return commits;
 }
 
 function upstreamRemote(upstream: string) {

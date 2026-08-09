@@ -232,22 +232,30 @@
 
 ## Workspace Git
 
-覆盖：git status/diff、sidebar compact diff、window diff、commit composer、commit IPC。
+覆盖：git status/diff、sidebar compact diff、window diff、commit composer、commit/push IPC、window branch/pull/history。
 
 1. 在有改动的 project root 打开 Git。
 2. sidebar mode 期望：
    - 外层没有额外 card padding/border。
+   - 顶部仍是 branch status + Push/Publish 状态条（与 #224 一致）。
    - 文件列表紧凑，文件之间用分割线区隔。
    - diff 默认折叠，展开后在原地渲染。
    - 文件行显示 checkbox、文件名、绿色 `+N` 和红色 `-N`，不显示 `unstaged` 文案。
-3. window mode 期望：
-   - 左侧是文件列表和 small size commit composer。
-   - 点击文件名不展开列表项，而是在右侧显示该文件 diff。
+   - **不**显示 Changes/History 分段，也没有 branch 下拉切换。
+3. window mode 期望（高度类似 GitHub Desktop）：
+   - 顶部 toolbar：Current Branch 下拉、Pull、Push/Publish。
+   - 左侧 Changes / History 分段。
+   - Changes：文件列表 + small size commit composer；点击文件在右侧显示 diff。
+   - History：commit 列表；选中后右侧显示该 commit 的文件与 diff。
    - diff tab 不支持多开；切换文件复用同一个右侧 diff viewer。
 4. 勾选/取消勾选部分文件。
 5. 期望 composer 的 selected file count 实时更新，commit 只包含选中文件。
 6. 输入 commit message 并提交。
 7. 期望成功后 git status 刷新；失败时错误显示在 composer 附近，不丢失 message。
+8. window mode 切换 branch / Pull / Push：
+   - branch 下拉只列本地分支，切换后 status/history 刷新。
+   - behind=0 时 Pull 禁用；ahead=0 且已有 upstream 时 Push 禁用。
+   - 失败错误显示在 toolbar 下方。
 
 ## Settings
 

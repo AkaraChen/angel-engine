@@ -126,4 +126,77 @@ export interface WorkspaceToolGitPushResult {
   remote: string;
   root: string;
 }
+
+export type WorkspaceToolGitPullInput = WorkspaceToolRootInput;
+
+export const workspaceToolGitPullInputSchema = arkType({
+  "+": "ignore",
+  root: "string > 0",
+});
+
+export interface WorkspaceToolGitPullResult {
+  branchStatus: WorkspaceGitBranchStatus;
+  remote: string;
+  root: string;
+}
+
+export interface WorkspaceGitBranch {
+  current: boolean;
+  isRemote: boolean;
+  name: string;
+}
+
+export interface WorkspaceGitBranchesResult {
+  branchStatus: WorkspaceGitBranchStatus;
+  branches: WorkspaceGitBranch[];
+  isGitRepository: boolean;
+  root: string;
+}
+
+export interface WorkspaceGitCheckoutInput extends WorkspaceToolRootInput {
+  branch: string;
+}
+
+export const workspaceToolGitCheckoutInputSchema = arkType({
+  "+": "ignore",
+  branch: "string > 0",
+  root: "string > 0",
+});
+
+export interface WorkspaceGitCheckoutResult {
+  branchStatus: WorkspaceGitBranchStatus;
+  root: string;
+}
+
+export interface WorkspaceGitLogCommit {
+  authorName: string;
+  committedAt: string;
+  hash: string;
+  shortHash: string;
+  subject: string;
+}
+
+export interface WorkspaceGitLogResult {
+  commits: WorkspaceGitLogCommit[];
+  isGitRepository: boolean;
+  root: string;
+}
+
+export interface WorkspaceGitCommitShowInput extends WorkspaceToolRootInput {
+  hash: string;
+}
+
+export const workspaceToolGitCommitShowInputSchema = arkType({
+  "+": "ignore",
+  hash: "string > 0",
+  root: "string > 0",
+});
+
+export interface WorkspaceGitCommitShowResult {
+  hash: string;
+  patch: string;
+  root: string;
+  subject?: string;
+}
+
 import { type as arkType } from "arktype";

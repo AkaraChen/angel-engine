@@ -80,16 +80,26 @@ export interface LocaleResourceTranslationWorkspaceToolsGitPushHint {
 export interface LocaleResourceTranslationWorkspaceToolsGit {
   ahead: string;
   behind: string;
+  changes: string;
   clean: string;
   conflicts: string;
+  currentBranch: string;
   detached: string;
   dirty: string;
+  history: string;
+  noBranches: string;
   noCommits: string;
+  noHistory: string;
   noUpstream: string;
   publish: string;
+  pull: string;
+  pullCount: string;
+  pulling: string;
   push: string;
+  pushCount: string;
   pushHint: LocaleResourceTranslationWorkspaceToolsGitPushHint;
   pushing: string;
+  viewTabs: string;
 }
 
 export interface LocaleResourceTranslationWorkspaceToolsEmpty {
