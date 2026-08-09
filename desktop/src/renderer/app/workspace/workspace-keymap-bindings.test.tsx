@@ -53,8 +53,8 @@ describe("WorkspaceKeymapBindings", () => {
   });
 
   it("wires next/previous tab handlers when provided", () => {
-    const onNextTab = vi.fn();
-    const onPreviousTab = vi.fn();
+    const onNextTab = vi.fn(() => true);
+    const onPreviousTab = vi.fn(() => true);
     render(
       <WorkspaceKeymapBindings
         hasMultipleTabs
@@ -72,5 +72,17 @@ describe("WorkspaceKeymapBindings", () => {
     expect(onNextTab).toHaveBeenCalledTimes(1);
     expect(registered.get("workspace.previousTab")?.()).toBe(true);
     expect(onPreviousTab).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not register a files.save placeholder handler", () => {
+    render(
+      <WorkspaceKeymapBindings
+        onCreateStandaloneChat={vi.fn()}
+        onOpenSettings={vi.fn()}
+      >
+        <span />
+      </WorkspaceKeymapBindings>,
+    );
+    expect(registered.has("files.save")).toBe(false);
   });
 });

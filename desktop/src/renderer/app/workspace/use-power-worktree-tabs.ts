@@ -15,6 +15,11 @@ import {
   chatWorktreeCwd,
   chatWorktreeGroupKey,
 } from "@/features/chat/worktree-grouping";
+import {
+  buildPowerTabTargets,
+  currentPowerTabIndex,
+  cyclePowerTabIndex,
+} from "@/app/workspace/power-tab-targets";
 
 const EMPTY_CHATS: Chat[] = [];
 
@@ -203,45 +208,29 @@ export function usePowerWorktreeTabs(
     }
   }, [closeChatTab, closeDraftTab, powerDraftTabActive, selectedChat]);
 
-  type TabTarget =
-    | { kind: "home" }
-    | { kind: "draft" }
-    | { kind: "chat"; chat: Chat };
+  const tabTargets = useMemo(
+    () =>
+      buildPowerTabTargets({
+        powerModeActive,
+        hasHomeTab: powerHomeTabContext !== undefined,
+        draftTabActive: powerDraftTabActive,
+        chats: chatTabChats,
+      }),
+    [chatTabChats, powerDraftTabActive, powerHomeTabContext, powerModeActive],
+  );
 
-  const tabTargets = useMemo((): TabTarget[] => {
-    if (!powerModeActive) return [];
-    const targets: TabTarget[] = [];
-    if (powerHomeTabContext !== undefined) {
-      targets.push({ kind: "home" });
-    }
-    for (const chat of chatTabChats) {
-      targets.push({ kind: "chat", chat });
-    }
-    // Draft is always a navigable slot in power mode (open or focus).
-    targets.push({ kind: "draft" });
-    return targets;
-  }, [chatTabChats, powerHomeTabContext, powerModeActive]);
-
-  const currentTabIndex = useMemo(() => {
-    if (tabTargets.length === 0) return -1;
-    if (powerDraftTabActive) {
-      return tabTargets.findIndex((target) => target.kind === "draft");
-    }
-    if (powerHomePageContext !== undefined && selectedChat === undefined) {
-      return tabTargets.findIndex((target) => target.kind === "home");
-    }
-    if (selectedChat !== undefined) {
-      const idx = tabTargets.findIndex(
-        (target) =>
-          target.kind === "chat" && target.chat.id === selectedChat.id,
-      );
-      if (idx >= 0) return idx;
-    }
-    return 0;
-  }, [powerDraftTabActive, powerHomePageContext, selectedChat, tabTargets]);
+  const currentTabIndex = useMemo(
+    () =>
+      currentPowerTabIndex(tabTargets, {
+        draftTabActive: powerDraftTabActive,
+        homePageActive: powerHomePageContext !== undefined,
+        selectedChatId: selectedChat?.id,
+      }),
+    [powerDraftTabActive, powerHomePageContext, selectedChat?.id, tabTargets],
+  );
 
   const activateTabTarget = useCallback(
-    (target: TabTarget) => {
+    (target: (typeof tabTargets)[number]) => {
       if (target.kind === "home") {
         openSelectedPowerWorktreeHome();
         return;
@@ -260,22 +249,24 @@ export function usePowerWorktreeTabs(
   );
 
   const goToNextTab = useCallback(() => {
-    if (tabTargets.length < 2 || currentTabIndex < 0) return;
-    const next = tabTargets[(currentTabIndex + 1) % tabTargets.length]!;
-    activateTabTarget(next);
+    const nextIndex = cyclePowerTabIndex(tabTargets.length, currentTabIndex, 1);
+    if (nextIndex === null) return false;
+    activateTabTarget(tabTargets[nextIndex]!);
+    return true;
   }, [activateTabTarget, currentTabIndex, tabTargets]);
 
   const goToPreviousTab = useCallback(() => {
-    if (tabTargets.length < 2 || currentTabIndex < 0) return;
-    const prev =
-      tabTargets[
-        (currentTabIndex - 1 + tabTargets.length) % tabTargets.length
-      ]!;
-    activateTabTarget(prev);
+    const prevIndex = cyclePowerTabIndex(
+      tabTargets.length,
+      currentTabIndex,
+      -1,
+    );
+    if (prevIndex === null) return false;
+    activateTabTarget(tabTargets[prevIndex]!);
+    return true;
   }, [activateTabTarget, currentTabIndex, tabTargets]);
 
-  const hasMultipleTabs =
-    tabTargets.length > 1 || chatTabChats.length > 1 || powerDraftTabActive;
+  const hasMultipleTabs = tabTargets.length > 1;
 
   return {
     chatTabChats,

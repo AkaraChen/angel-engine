@@ -77,8 +77,16 @@ export function KeymapProvider({ children }: { children: ReactNode }) {
   });
   const contextRef = useRef(contextKeys);
   contextRef.current = contextKeys;
-  /** Last publisher per context key — only that owner may clear on unmount. */
-  const contextOwnersRef = useRef(new Map<string, ContextKeyOwner>());
+  /**
+   * Per-key stack of {owner, value}. Publish pushes/updates; clear pops and
+   * restores the previous entry so nested owners unmount correctly.
+   */
+  const contextStacksRef = useRef(
+    new Map<
+      string,
+      Array<{ owner: ContextKeyOwner; value: string | boolean | undefined }>
+    >(),
+  );
 
   const dispatchState = useRef<KeymapDispatchState>({
     chordPending: null,
@@ -167,10 +175,18 @@ export function KeymapProvider({ children }: { children: ReactNode }) {
       value: string | boolean | undefined,
       owner: ContextKeyOwner,
     ) => {
-      contextOwnersRef.current.set(key, owner);
+      const stack = contextStacksRef.current.get(key) ?? [];
+      const existing = stack.findIndex((entry) => entry.owner === owner);
+      if (existing >= 0) {
+        stack[existing] = { owner, value };
+      } else {
+        stack.push({ owner, value });
+      }
+      contextStacksRef.current.set(key, stack);
+      const top = stack[stack.length - 1]!;
       setContextKeysState((current) => {
-        if (current[key] === value) return current;
-        return { ...current, [key]: value };
+        if (current[key] === top.value) return current;
+        return { ...current, [key]: top.value };
       });
     },
     [],
@@ -178,13 +194,26 @@ export function KeymapProvider({ children }: { children: ReactNode }) {
 
   const clearContextKeyIfOwner = useCallback(
     (key: string, owner: ContextKeyOwner) => {
-      if (contextOwnersRef.current.get(key) !== owner) return;
-      contextOwnersRef.current.delete(key);
+      const stack = contextStacksRef.current.get(key);
+      if (!stack) return;
+      const index = stack.findIndex((entry) => entry.owner === owner);
+      if (index < 0) return;
+      stack.splice(index, 1);
+      if (stack.length === 0) {
+        contextStacksRef.current.delete(key);
+        setContextKeysState((current) => {
+          if (!(key in current)) return current;
+          const next = { ...current };
+          delete next[key];
+          return next;
+        });
+        return;
+      }
+      contextStacksRef.current.set(key, stack);
+      const top = stack[stack.length - 1]!;
       setContextKeysState((current) => {
-        if (!(key in current) || current[key] === undefined) return current;
-        const next = { ...current };
-        delete next[key];
-        return next;
+        if (current[key] === top.value) return current;
+        return { ...current, [key]: top.value };
       });
     },
     [],

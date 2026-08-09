@@ -45,4 +45,28 @@ describe("acceleratorForCommand", () => {
       }),
     ).toBe("Ctrl+Shift+B");
   });
+
+  it("returns undefined when only when-gated bindings remain", () => {
+    // chat.send defaults are all when-gated; menu must not register them globally.
+    expect(
+      acceleratorForCommand(COMMAND_IDS.chatSend, {
+        userEntries: [],
+        platform: "mac",
+      }),
+    ).toBeUndefined();
+
+    expect(
+      acceleratorForCommand(COMMAND_IDS.chatNew, {
+        userEntries: [
+          { command: "-chat.new" },
+          {
+            key: "mod+n",
+            command: "chat.new",
+            when: "view.id == 'workspace'",
+          },
+        ],
+        platform: "mac",
+      }),
+    ).toBeUndefined();
+  });
 });

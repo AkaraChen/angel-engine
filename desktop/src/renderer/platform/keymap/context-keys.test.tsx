@@ -1,7 +1,6 @@
 /** @vitest-environment jsdom */
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { useState } from "react";
 
 vi.mock("@/features/settings/settings-store", () => ({
   useSettingsStore: (
@@ -74,10 +73,9 @@ function Harness({
 
 afterEach(cleanup);
 
-describe("useContextKey ownership", () => {
+describe("useContextKey ownership stack", () => {
   it("does not clear a key when an older owner unmounts after a newer one published", async () => {
     const { rerender } = render(<Harness showFirst showSecond={false} />);
-    // Allow provider effects to settle
     await Promise.resolve();
     expect(screen.getByTestId("reader").textContent).toBe("true");
 
@@ -89,5 +87,20 @@ describe("useContextKey ownership", () => {
     rerender(<Harness showFirst={false} showSecond />);
     await Promise.resolve();
     expect(screen.getByTestId("reader").textContent).toBe("false");
+  });
+
+  it("restores the previous owner value when the newer owner unmounts first", async () => {
+    const { rerender } = render(<Harness showFirst showSecond={false} />);
+    await Promise.resolve();
+    expect(screen.getByTestId("reader").textContent).toBe("true");
+
+    rerender(<Harness showFirst showSecond />);
+    await Promise.resolve();
+    expect(screen.getByTestId("reader").textContent).toBe("false");
+
+    // Unmount second (newer) owner — first should be restored
+    rerender(<Harness showFirst showSecond={false} />);
+    await Promise.resolve();
+    expect(screen.getByTestId("reader").textContent).toBe("true");
   });
 });

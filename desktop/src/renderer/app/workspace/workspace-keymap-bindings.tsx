@@ -1,5 +1,5 @@
 import { COMMAND_IDS } from "@shared/keybindings";
-import type { FC } from "react";
+import type { FC, ReactNode } from "react";
 
 import { useSidebar } from "@/components/ui/sidebar";
 import {
@@ -11,6 +11,10 @@ import {
 /**
  * Registers workspace-level command handlers for the central keymap
  * (KIT-796 first-ship command set).
+ *
+ * `files.save` is intentionally NOT registered here — only
+ * `WorkspaceSplitFilesPanel` owns that handler so a placeholder cannot
+ * shadow the real save path.
  */
 export const WorkspaceKeymapBindings: FC<{
   onCreateStandaloneChat: () => void;
@@ -20,11 +24,9 @@ export const WorkspaceKeymapBindings: FC<{
   hasMultipleTabs?: boolean;
   onNewTab?: () => void;
   onCloseTab?: () => void;
-  onNextTab?: () => void;
-  onPreviousTab?: () => void;
-  filesActiveDirty?: boolean;
-  onSaveFile?: () => void;
-  children?: React.ReactNode;
+  onNextTab?: () => boolean | void;
+  onPreviousTab?: () => boolean | void;
+  children?: ReactNode;
 }> = ({
   onCreateStandaloneChat,
   onOpenSettings,
@@ -35,8 +37,6 @@ export const WorkspaceKeymapBindings: FC<{
   onCloseTab,
   onNextTab,
   onPreviousTab,
-  filesActiveDirty = false,
-  onSaveFile,
   children,
 }) => {
   const { toggleSidebar } = useSidebar();
@@ -45,7 +45,6 @@ export const WorkspaceKeymapBindings: FC<{
   useContextKey("workspace.powerMode", powerModeActive);
   useContextKey("workspace.hasClosableTab", hasClosableTab);
   useContextKey("workspace.hasMultipleTabs", hasMultipleTabs);
-  useContextKey("files.activeDirty", filesActiveDirty);
 
   useCommand(COMMAND_IDS.workspaceToggleSidebar, () => {
     toggleSidebar();
@@ -76,21 +75,16 @@ export const WorkspaceKeymapBindings: FC<{
 
   useCommand(COMMAND_IDS.workspaceNextTab, () => {
     if (!hasMultipleTabs || !onNextTab) return false;
-    onNextTab();
-    return true;
+    // goToNextTab returns false when there is nothing to switch to.
+    const result = onNextTab();
+    return result === false ? false : true;
   }, [hasMultipleTabs, onNextTab]);
 
   useCommand(COMMAND_IDS.workspacePreviousTab, () => {
     if (!hasMultipleTabs || !onPreviousTab) return false;
-    onPreviousTab();
-    return true;
+    const result = onPreviousTab();
+    return result === false ? false : true;
   }, [hasMultipleTabs, onPreviousTab]);
-
-  useCommand(COMMAND_IDS.filesSave, () => {
-    if (!filesActiveDirty || !onSaveFile) return false;
-    onSaveFile();
-    return true;
-  }, [filesActiveDirty, onSaveFile]);
 
   useCommand(COMMAND_IDS.chatFocusComposer, () => {
     const el = document.querySelector<HTMLElement>(

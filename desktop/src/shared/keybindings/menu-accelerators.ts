@@ -9,9 +9,11 @@ import { mergeKeybindingLayers } from "./merge-bindings";
 
 /**
  * Resolve the Electron accelerator for an invocable-from-main command from the
- * merged keymap only. Returns undefined when the command has no single-segment
- * binding (unbound, chord-only, or missing) — callers must not fall back to a
- * hard-coded default, or unbind would be ignored.
+ * merged keymap only.
+ *
+ * Only **when-less** single-segment bindings are eligible — the menu cannot
+ * evaluate focus/context `when` expressions, so a conditional binding must not
+ * become a global accelerator. Unbound / chord-only / when-only → undefined.
  */
 export function acceleratorForCommand(
   commandId: string,
@@ -27,12 +29,10 @@ export function acceleratorForCommand(
     platform: options.platform,
   });
 
-  // Prefer a when-less binding (menu cannot evaluate focus-dependent when).
-  const candidates = rules.filter(
-    (rule) => rule.command === commandId && !rule.command.startsWith("-"),
+  const unconditional = rules.find(
+    (rule) =>
+      rule.command === commandId && !rule.command.startsWith("-") && !rule.when,
   );
-  const match =
-    candidates.find((rule) => !rule.when) ?? candidates[0] ?? undefined;
-  if (!match) return undefined;
-  return toElectronAccelerator(match.key, options.platform);
+  if (!unconditional) return undefined;
+  return toElectronAccelerator(unconditional.key, options.platform);
 }
