@@ -6,8 +6,10 @@ import type {
 import type { DaemonInfo } from "@angel-engine/daemon-api/daemon";
 
 import { chatPartsText } from "@angel-engine/daemon-api/chat";
+import is from "@sindresorhus/is";
 import { BrowserWindow } from "electron";
 import {
+  notifyChatFailed,
   notifyChatNeedsInput,
   notifyChatTurnCompleted,
 } from "../windows/notifications";
@@ -19,8 +21,9 @@ let unsubscribe: (() => void) | undefined;
 
 /**
  * Attention ids already turned into a notification. The id is
- * `<runId>:input:<elicitationId>` or `<runId>:completed`, so it survives the
- * run leaving the daemon registry and dedupes per event rather than per chat.
+ * `<runId>:input:<elicitationId>`, `<runId>:done`, or `<runId>:failed`, so it
+ * survives the run leaving the daemon registry and dedupes per event rather
+ * than per chat.
  */
 const notified = new Set<string>();
 
@@ -100,8 +103,32 @@ async function notifyAttention(attention: ChatAttention) {
     const chat = await daemonClient.chats.get(attention.chatId);
     if (chat === null) return;
     notifyChatNeedsInput({
+      attentionId: attention.id,
       chat,
       elicitation: run.pendingElicitation,
+      window: notificationWindow(),
+    });
+    return;
+  }
+
+  if (attention.status === "failed") {
+    const [{ items }, chat] = await Promise.all([
+      daemonClient.activity.list(),
+      daemonClient.chats.get(attention.chatId),
+    ]);
+    if (chat === null) return;
+    const activity = items.find(
+      (item) => item.status === "failed" && item.attentionId === attention.id,
+    );
+    const body =
+      activity?.status === "failed" &&
+      is.nonEmptyString(activity.failure.message)
+        ? activity.failure.message
+        : "";
+    notifyChatFailed({
+      attentionId: attention.id,
+      body,
+      chat,
       window: notificationWindow(),
     });
     return;
@@ -111,6 +138,7 @@ async function notifyAttention(attention: ChatAttention) {
   // body comes from the chat's canonical history instead.
   const loaded = await daemonClient.chats.load(attention.chatId);
   notifyChatTurnCompleted({
+    attentionId: attention.id,
     body: lastAssistantText(loaded.messages),
     chat: loaded.chat,
     window: notificationWindow(),

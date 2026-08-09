@@ -382,6 +382,9 @@ export interface LocaleResourceTranslationSettingsWorkspace {
   dirtyPromptDescription: string;
   dirtyPromptSwitchLabel: string;
   dirtyPromptTitle: string;
+  osNotificationsDescription: string;
+  osNotificationsSwitchLabel: string;
+  osNotificationsTitle: string;
   sendWithModEnterDescription: string;
   sendWithModEnterSwitchLabel: string;
   sendWithModEnterTitle: string;
@@ -625,6 +628,15 @@ export interface LocaleResourceTranslationDialogImportSession {
 }
 
 export interface LocaleResourceTranslationNotifications {
+  agentFailedNoDetail: string;
+  agentFinishedNoOutput: string;
+  agentWaiting: string;
+  centerClear: string;
+  centerEmpty: string;
+  centerOpenChat: string;
+  centerTitle: string;
+  centerUnread: string;
+  chatActionFailed: string;
   chatsDeleted: string;
   chatsDeletedDescription_one: string;
   chatsDeletedDescription_other: string;
@@ -634,15 +646,13 @@ export interface LocaleResourceTranslationNotifications {
   couldNotDeleteChats: string;
   couldNotLoadProjects: string;
   couldNotRenameChat: string;
+  failed: string;
   finished: string;
+  installUpdate: string;
   needsAttention: string;
   needsInput: string;
-  agentFinishedNoOutput: string;
-  agentWaiting: string;
-  chatActionFailed: string;
   permissionRequired: string;
   projectActionFailed: string;
-  installUpdate: string;
   updateReady: string;
   updateReadyDescription: string;
 }

@@ -14,7 +14,14 @@ import {
 import { Trash as Trash2 } from "@phosphor-icons/react";
 
 import { useQueryClient } from "@tanstack/react-query";
-import { useCallback, useId, useMemo, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useId,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
@@ -329,7 +336,46 @@ function WorkspaceSettings() {
         description={t("settings.workspace.dirtyPromptDescription")}
         title={t("settings.workspace.dirtyPromptTitle")}
       />
+      <OsNotificationSettings />
     </SettingsGroup>
+  );
+}
+
+function OsNotificationSettings() {
+  const { t } = useTranslation();
+  const [osEnabled, setOsEnabled] = useState(true);
+  const [ready, setReady] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    void window.desktopWindow.getNotificationPreferences().then((prefs) => {
+      if (cancelled) return;
+      setOsEnabled(prefs.osEnabled);
+      setReady(true);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  return (
+    <SettingsRow
+      after={
+        <Switch
+          aria-label={t("settings.workspace.osNotificationsSwitchLabel")}
+          checked={osEnabled}
+          disabled={!ready}
+          onCheckedChange={(checked) => {
+            setOsEnabled(checked);
+            void window.desktopWindow.setNotificationPreferences({
+              osEnabled: checked,
+            });
+          }}
+        />
+      }
+      description={t("settings.workspace.osNotificationsDescription")}
+      title={t("settings.workspace.osNotificationsTitle")}
+    />
   );
 }
 
