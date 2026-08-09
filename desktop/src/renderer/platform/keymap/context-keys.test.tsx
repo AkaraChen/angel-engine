@@ -45,17 +45,25 @@ Object.defineProperty(window, "desktopEnvironment", {
 
 import { KeymapProvider, useContextKey, useKeymap } from "./provider";
 
-function Publisher({ name, value }: { name: string; value: boolean }) {
-  useContextKey("chat.running", value);
+function Publisher({
+  name,
+  contextKey,
+  value,
+}: {
+  name: string;
+  contextKey: string;
+  value: string | boolean;
+}) {
+  useContextKey(contextKey, value);
   return <span data-testid={`publisher-${name}`}>{String(value)}</span>;
 }
 
-function Reader() {
-  const value = useKeymap().contextKeys["chat.running"];
+function Reader({ contextKey }: { contextKey: string }) {
+  const value = useKeymap().contextKeys[contextKey];
   return <span data-testid="reader">{String(value)}</span>;
 }
 
-function Harness({
+function BoolHarness({
   showFirst,
   showSecond,
 }: {
@@ -64,9 +72,37 @@ function Harness({
 }) {
   return (
     <KeymapProvider>
-      {showFirst ? <Publisher name="first" value={true} /> : null}
-      {showSecond ? <Publisher name="second" value={false} /> : null}
-      <Reader />
+      {showFirst ? (
+        <Publisher name="first" contextKey="chat.running" value={true} />
+      ) : null}
+      {showSecond ? (
+        <Publisher name="second" contextKey="chat.running" value={false} />
+      ) : null}
+      <Reader contextKey="chat.running" />
+    </KeymapProvider>
+  );
+}
+
+function StringHarness({
+  showFirst,
+  showSecond,
+  firstValue,
+  secondValue,
+}: {
+  showFirst: boolean;
+  showSecond: boolean;
+  firstValue: string;
+  secondValue: string;
+}) {
+  return (
+    <KeymapProvider>
+      {showFirst ? (
+        <Publisher name="first" contextKey="test.layer" value={firstValue} />
+      ) : null}
+      {showSecond ? (
+        <Publisher name="second" contextKey="test.layer" value={secondValue} />
+      ) : null}
+      <Reader contextKey="test.layer" />
     </KeymapProvider>
   );
 }
@@ -75,32 +111,69 @@ afterEach(cleanup);
 
 describe("useContextKey ownership stack", () => {
   it("does not clear a key when an older owner unmounts after a newer one published", async () => {
-    const { rerender } = render(<Harness showFirst showSecond={false} />);
+    const { rerender } = render(<BoolHarness showFirst showSecond={false} />);
     await Promise.resolve();
     expect(screen.getByTestId("reader").textContent).toBe("true");
 
-    rerender(<Harness showFirst showSecond />);
+    rerender(<BoolHarness showFirst showSecond />);
     await Promise.resolve();
     expect(screen.getByTestId("reader").textContent).toBe("false");
 
-    // Unmount first publisher only — second remains owner
-    rerender(<Harness showFirst={false} showSecond />);
+    rerender(<BoolHarness showFirst={false} showSecond />);
     await Promise.resolve();
     expect(screen.getByTestId("reader").textContent).toBe("false");
   });
 
   it("restores the previous owner value when the newer owner unmounts first", async () => {
-    const { rerender } = render(<Harness showFirst showSecond={false} />);
+    const { rerender } = render(<BoolHarness showFirst showSecond={false} />);
     await Promise.resolve();
     expect(screen.getByTestId("reader").textContent).toBe("true");
 
-    rerender(<Harness showFirst showSecond />);
+    rerender(<BoolHarness showFirst showSecond />);
     await Promise.resolve();
     expect(screen.getByTestId("reader").textContent).toBe("false");
 
-    // Unmount second (newer) owner — first should be restored
-    rerender(<Harness showFirst showSecond={false} />);
+    rerender(<BoolHarness showFirst showSecond={false} />);
     await Promise.resolve();
     expect(screen.getByTestId("reader").textContent).toBe("true");
+  });
+
+  it("does not reorder the stack when a buried owner updates its value", async () => {
+    // A(a1) → B(b) → A value→a2 still B → B unmount restores a2
+    const { rerender } = render(
+      <StringHarness
+        showFirst
+        showSecond={false}
+        firstValue="a1"
+        secondValue="b"
+      />,
+    );
+    await Promise.resolve();
+    expect(screen.getByTestId("reader").textContent).toBe("a1");
+
+    rerender(
+      <StringHarness showFirst showSecond firstValue="a1" secondValue="b" />,
+    );
+    await Promise.resolve();
+    expect(screen.getByTestId("reader").textContent).toBe("b");
+
+    // Buried A updates — must stay under B (reader still b, not a2).
+    rerender(
+      <StringHarness showFirst showSecond firstValue="a2" secondValue="b" />,
+    );
+    await Promise.resolve();
+    expect(screen.getByTestId("reader").textContent).toBe("b");
+
+    // B unmounts — restore A's *new* value a2 (not stale a1).
+    rerender(
+      <StringHarness
+        showFirst
+        showSecond={false}
+        firstValue="a2"
+        secondValue="b"
+      />,
+    );
+    await Promise.resolve();
+    expect(screen.getByTestId("reader").textContent).toBe("a2");
   });
 });

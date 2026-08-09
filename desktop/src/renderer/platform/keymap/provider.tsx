@@ -300,9 +300,12 @@ export function useCommand(
 }
 
 /**
- * Publish a context key while mounted. Cleanup only clears the key when this
- * hook instance is still the registered owner (token), so concurrent publishers
- * of the same key do not wipe each other on unmount.
+ * Publish a context key while mounted.
+ *
+ * Owner mount/unmount is decoupled from value updates:
+ * - One effect registers the owner on mount and pops it on unmount only.
+ * - A separate effect updates the owner's value in place when `value` changes,
+ *   without reordering the stack (so a buried owner cannot leapfrog the top).
  */
 export function useContextKey(
   key: string,
@@ -313,14 +316,23 @@ export function useContextKey(
   if (ownerRef.current === null) {
     ownerRef.current = Symbol(`context:${key}`);
   }
+  const valueRef = useRef(value);
+  valueRef.current = value;
 
+  // Mount / unmount only — must not depend on `value`.
   useEffect(() => {
     const owner = ownerRef.current!;
-    publishContextKey(key, value, owner);
+    publishContextKey(key, valueRef.current, owner);
     return () => {
       clearContextKeyIfOwner(key, owner);
     };
-  }, [key, value, publishContextKey, clearContextKeyIfOwner]);
+  }, [key, publishContextKey, clearContextKeyIfOwner]);
+
+  // In-place value publish; existing owner keeps its stack position.
+  useEffect(() => {
+    const owner = ownerRef.current!;
+    publishContextKey(key, value, owner);
+  }, [key, value, publishContextKey]);
 }
 
 export function useKeybindingLabel(id: CommandId): string | undefined {
