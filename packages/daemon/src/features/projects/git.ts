@@ -143,7 +143,7 @@ export function createProjectWorktree(
         Effect.catchAll((cause) =>
           Effect.gen(function* () {
             yield* Effect.promise(() =>
-              rollbackCreatedWorktree(root, cwd, branch).catch(() => {
+              discardCreatedWorktree(root, cwd, branch).catch(() => {
                 fs.rmSync(cwd, { force: true, recursive: true });
               }),
             );
@@ -250,7 +250,7 @@ export function removeCreatedProjectWorktree(
   return Effect.tryPromise({
     catch: (cause) => DaemonError.worktreeRemoveFailed(cause),
     try: () =>
-      rollbackCreatedWorktree(worktree.root, worktree.cwd, worktree.branch),
+      discardCreatedWorktree(worktree.root, worktree.cwd, worktree.branch),
   });
 }
 

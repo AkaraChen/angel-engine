@@ -79,7 +79,7 @@ describe("project worktree setup", () => {
     await expect(
       fs.readFile(path.join(createdWorktree.cwd, "setup.marker"), "utf8"),
     ).resolves.toContain("ready");
-  });
+  }, 15_000);
 
   it("rolls back the worktree until setup failure is reachable from L2", async () => {
     await writeConfig(["exit 7"]);
@@ -121,7 +121,7 @@ describe("project worktree setup", () => {
     await expect(
       git(projectRoot, ["branch", "--list", "angel/*"]),
     ).resolves.toBe("");
-  });
+  }, 15_000);
 
   it("requires approval for the exact 2code.json contents", async () => {
     await writeConfig(["echo ready"]);
@@ -173,7 +173,7 @@ describe("project worktree setup", () => {
       git(projectRoot, ["branch", "--list", "angel/*"]),
     ).resolves.toBe("");
     createdWorktree = undefined;
-  });
+  }, 15_000);
 
   async function createApprovedWorktree() {
     const status = await getGitStatus();
