@@ -23,8 +23,25 @@ export interface ProjectGitStatusResult {
 }
 
 export interface ProjectWorktreeCreateInput {
+  /**
+   * Local branch name for the new worktree. When omitted, an `angel/*`
+   * branch is generated. Required with `startPoint` when reusing a PR head.
+   */
+  branchName?: string;
   projectId: string;
   setupApproval?: string;
+  /**
+   * Git ref to check out (commit-ish or remote tracking ref). Defaults to HEAD.
+   */
+  startPoint?: string;
+  /**
+   * Optional fetch before creating the worktree. Used for PR heads:
+   * `git fetch <remote> <refspec>`.
+   */
+  startPointFetch?: {
+    refspec: string;
+    remote: string;
+  };
 }
 
 export interface ProjectWorktreeCreateResult {

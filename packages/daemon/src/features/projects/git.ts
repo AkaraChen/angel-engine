@@ -102,15 +102,38 @@ export function createProjectWorktree(
     }
 
     onProgress?.("fetching", 10);
-    yield* Effect.tryPromise({
-      catch: (cause) => DaemonError.worktreeCreateFailed(cause),
-      try: () =>
-        execFileAsync("git", ["-C", root, "fetch", "--prune"], {
-          maxBuffer: GIT_OUTPUT_MAX_BUFFER,
-          signal,
-          timeout: GIT_OPERATION_TIMEOUT_MS,
-        }),
-    });
+    const startPointFetch = input.startPointFetch;
+    if (startPointFetch) {
+      yield* Effect.tryPromise({
+        catch: (cause) => DaemonError.worktreeCreateFailed(cause),
+        try: () =>
+          execFileAsync(
+            "git",
+            [
+              "-C",
+              root,
+              "fetch",
+              startPointFetch.remote,
+              startPointFetch.refspec,
+            ],
+            {
+              maxBuffer: GIT_OUTPUT_MAX_BUFFER,
+              signal,
+              timeout: GIT_OPERATION_TIMEOUT_MS,
+            },
+          ),
+      });
+    } else {
+      yield* Effect.tryPromise({
+        catch: (cause) => DaemonError.worktreeCreateFailed(cause),
+        try: () =>
+          execFileAsync("git", ["-C", root, "fetch", "--prune"], {
+            maxBuffer: GIT_OUTPUT_MAX_BUFFER,
+            signal,
+            timeout: GIT_OPERATION_TIMEOUT_MS,
+          }),
+      });
+    }
     onProgress?.("worktree", 45);
 
     const projectSlug = projectSlugFromPath(status.path);
@@ -120,17 +143,29 @@ export function createProjectWorktree(
       try: () => fs.mkdirSync(parent, { recursive: true }),
     });
 
+    const fixedBranch = is.nonEmptyString(input.branchName)
+      ? input.branchName.trim()
+      : undefined;
+    const startPoint = is.nonEmptyString(input.startPoint)
+      ? input.startPoint.trim()
+      : "HEAD";
+
     for (let attempt = 0; attempt < 5; attempt += 1) {
       const suffix = randomUUID().replaceAll("-", "").slice(0, 8);
       const cwd = path.join(parent, suffix);
-      const branch = `${WORKTREE_BRANCH_PREFIX}/${projectSlug}-${suffix}`;
+      const branch =
+        fixedBranch === undefined
+          ? `${WORKTREE_BRANCH_PREFIX}/${projectSlug}-${suffix}`
+          : attempt === 0
+            ? fixedBranch
+            : `${fixedBranch}-${suffix}`;
 
       const created = yield* Effect.tryPromise({
         catch: (cause) => cause,
         try: () =>
           execFileAsync(
             "git",
-            ["-C", root, "worktree", "add", "-b", branch, cwd, "HEAD"],
+            ["-C", root, "worktree", "add", "-b", branch, cwd, startPoint],
             {
               maxBuffer: GIT_OUTPUT_MAX_BUFFER,
               signal,

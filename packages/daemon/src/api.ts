@@ -33,7 +33,15 @@ import {
   chatSetRuntimeInputSchema,
   normalizeChatAttachmentsInput,
 } from "@angel-engine/daemon-api/chat";
-import { githubResolveUrlInputSchema } from "@angel-engine/daemon-api/github";
+import {
+  githubAddPullRequestCommentInputSchema,
+  githubCreatePullRequestInputSchema,
+  githubCreateWorkspaceFromPullRequestInputSchema,
+  githubListPullRequestsInputSchema,
+  githubPullRequestTemplateInputSchema,
+  githubResolveUrlInputSchema,
+  githubViewPullRequestInputSchema,
+} from "@angel-engine/daemon-api/github";
 import {
   createProjectInputSchema,
   managedWorktreeDeleteInputSchema,
@@ -46,7 +54,15 @@ import {
   workspaceToolWriteFileInputSchema,
 } from "@angel-engine/daemon-api/workspace-tools";
 import { listGitHubItems } from "./features/github/list";
+import { discoverPullRequestTemplates } from "./features/github/pr-template";
+import {
+  addPullRequestComment,
+  createPullRequest,
+  listPullRequests,
+  viewPullRequest,
+} from "./features/github/pull-requests";
 import { resolveGitHubUrl } from "./features/github/resolve";
+import { createWorkspaceFromPullRequest } from "./features/github/workspace-from-pr";
 import { listAvailableAgents } from "./features/agents/availability";
 import {
   createCustomAgent,
@@ -509,6 +525,75 @@ export function registerApi(
       ),
     ),
   );
+  app.get("/api/github/pull-request-template", async (context) => {
+    const input = githubPullRequestTemplateInputSchema({
+      cwd: requireQuery(context.req.query("cwd"), "cwd"),
+    });
+    if (input instanceof arkType.errors)
+      throw DaemonError.invalidRequest("Repository path is required.");
+    return context.json(await run(discoverPullRequestTemplates(input)));
+  });
+  app.get("/api/github/pull-requests", async (context) => {
+    const stateRaw = context.req.query("state");
+    const state =
+      stateRaw === "open" ||
+      stateRaw === "closed" ||
+      stateRaw === "merged" ||
+      stateRaw === "all"
+        ? stateRaw
+        : undefined;
+    const input = githubListPullRequestsInputSchema({
+      cwd: requireQuery(context.req.query("cwd"), "cwd"),
+      limit: optionalNumber(context.req.query("limit")),
+      query: context.req.query("query"),
+      state,
+    });
+    if (input instanceof arkType.errors)
+      throw DaemonError.invalidRequest("Invalid pull request list query.");
+    return context.json(await run(listPullRequests(input)));
+  });
+  app.post("/api/github/pull-requests/workspace", async (context) => {
+    const input = githubCreateWorkspaceFromPullRequestInputSchema(
+      await context.req.json(),
+    );
+    if (input instanceof arkType.errors)
+      throw DaemonError.invalidRequest(
+        "Create workspace from pull request input is invalid.",
+      );
+    const result = await run(
+      createWorkspaceFromPullRequest(input, {}, context.req.raw.signal),
+    );
+    chatEvents.metadataChanged([result.chatId]);
+    return context.json(result);
+  });
+  app.post("/api/github/pull-requests", async (context) => {
+    const input = githubCreatePullRequestInputSchema(await context.req.json());
+    if (input instanceof arkType.errors)
+      throw DaemonError.invalidRequest("Pull request create input is invalid.");
+    return context.json(await run(createPullRequest(input)));
+  });
+  app.get("/api/github/pull-requests/:number", async (context) => {
+    const number = Number(context.req.param("number"));
+    const input = githubViewPullRequestInputSchema({
+      cwd: requireQuery(context.req.query("cwd"), "cwd"),
+      number,
+    });
+    if (input instanceof arkType.errors)
+      throw DaemonError.invalidRequest("Invalid pull request view query.");
+    return context.json(await run(viewPullRequest(input)));
+  });
+  app.post("/api/github/pull-requests/:number/comments", async (context) => {
+    const number = Number(context.req.param("number"));
+    const body = (await context.req.json()) as { body?: string; cwd?: string };
+    const input = githubAddPullRequestCommentInputSchema({
+      body: body.body,
+      cwd: body.cwd,
+      number,
+    });
+    if (input instanceof arkType.errors)
+      throw DaemonError.invalidRequest("Comment body is required.");
+    return context.json(await run(addPullRequestComment(input)));
+  });
 
   app.get("/api/projects", async (context) =>
     context.json(await run(listProjects())),
