@@ -751,6 +751,27 @@ export const ko = {
         title: "세션 가져오기",
       },
       renameChat: "채팅 이름 변경",
+      sessionHandoff: {
+        contextPackLabel: "컨텍스트 팩",
+        description:
+          "같은 워크스페이스에서 새 세션을 시작하고 이 채팅 요약을 넘깁니다. 원본 세션은 목록에서 계속 볼 수 있습니다.",
+        dirtyDescription:
+          "워크스페이스에 커밋되지 않은 변경이 있습니다{{branch}}. 새 세션에도 그대로 있습니다.",
+        dirtyTitle: "더러운 작업 트리",
+        keyFilesCount: "참조된 핵심 파일 {{count}}개",
+        loadFailed: "핸드오프용 채팅 기록을 불러오지 못했습니다.",
+        loadingContext: "컨텍스트 팩 생성 중…",
+        notesLabel: "다음 세션용 메모",
+        notesPlaceholder: "선택: 다음 에이전트가 이어서 할 일",
+        otherAgentsSection: "다른 에이전트로 핸드오프",
+        sameAgentHint: "같은 harness · 새 세션 · 같은 워크스페이스",
+        sameAgentSection: "같은 에이전트로 계속",
+        sameAgentUnavailable: "이 에이전트가 현재 에이전트 목록에 없습니다.",
+        submitFailed: "핸드오프 세션을 시작하지 못했습니다.",
+        title: "세션 핸드오프",
+        titleFrom: "핸드오프: {{title}}",
+        titleUntitled: "핸드오프 세션",
+      },
     },
     notifications: {
       agentFailedNoDetail: "Agent가 오류로 중지되었습니다.",

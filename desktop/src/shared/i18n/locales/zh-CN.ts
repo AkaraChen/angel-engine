@@ -731,6 +731,27 @@ export const zhCN = {
         title: "导入会话",
       },
       renameChat: "重命名聊天",
+      sessionHandoff: {
+        contextPackLabel: "上下文包",
+        description:
+          "在同一工作区新建会话，并带上当前聊天摘要。原会话仍可在列表中查看。",
+        dirtyDescription:
+          "工作区有未提交更改{{branch}}。新会话中仍会看到这些更改。",
+        dirtyTitle: "工作区有未提交更改",
+        keyFilesCount: "引用了 {{count}} 个关键文件",
+        loadFailed: "无法加载聊天记录以进行移交。",
+        loadingContext: "正在生成上下文包…",
+        notesLabel: "给下一会话的备注",
+        notesPlaceholder: "可选：下一会话应继续做什么？",
+        otherAgentsSection: "移交给其他 Agent",
+        sameAgentHint: "同一 harness · 新会话 · 同一工作区",
+        sameAgentSection: "用同一 Agent 继续",
+        sameAgentUnavailable: "当前 Agent 列表中没有该 Agent。",
+        submitFailed: "无法启动移交会话。",
+        title: "移交会话",
+        titleFrom: "移交：{{title}}",
+        titleUntitled: "移交会话",
+      },
     },
     notifications: {
       agentFailedNoDetail: "Agent 因错误停止。",

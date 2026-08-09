@@ -734,6 +734,27 @@ export const zhTW = {
         title: "匯入工作階段",
       },
       renameChat: "重新命名聊天",
+      sessionHandoff: {
+        contextPackLabel: "上下文包",
+        description:
+          "在同一工作區新建工作階段，並帶上目前聊天摘要。原工作階段仍可在列表中查看。",
+        dirtyDescription:
+          "工作區有未提交變更{{branch}}。新工作階段中仍會看到這些變更。",
+        dirtyTitle: "工作區有未提交變更",
+        keyFilesCount: "引用了 {{count}} 個關鍵檔案",
+        loadFailed: "無法載入聊天紀錄以進行移交。",
+        loadingContext: "正在產生上下文包…",
+        notesLabel: "給下一工作階段的備註",
+        notesPlaceholder: "可選：下一工作階段應繼續做什麼？",
+        otherAgentsSection: "移交給其他 Agent",
+        sameAgentHint: "同一 harness · 新工作階段 · 同一工作區",
+        sameAgentSection: "用同一 Agent 繼續",
+        sameAgentUnavailable: "目前 Agent 列表中沒有該 Agent。",
+        submitFailed: "無法啟動移交工作階段。",
+        title: "移交工作階段",
+        titleFrom: "移交：{{title}}",
+        titleUntitled: "移交工作階段",
+      },
     },
     notifications: {
       agentFailedNoDetail: "Agent 因錯誤停止。",

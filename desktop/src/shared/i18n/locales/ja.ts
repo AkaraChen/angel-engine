@@ -764,6 +764,28 @@ export const ja = {
         title: "セッションをインポート",
       },
       renameChat: "チャット名を変更",
+      sessionHandoff: {
+        contextPackLabel: "コンテキストパック",
+        description:
+          "同じワークスペースで新しいセッションを開始し、このチャットの要約を引き継ぎます。元のセッションは一覧から引き続き閲覧できます。",
+        dirtyDescription:
+          "ワークスペースに未コミットの変更があります{{branch}}。新しいセッションでも残ります。",
+        dirtyTitle: "dirty なワーキングツリー",
+        keyFilesCount: "参照された主要ファイル: {{count}}",
+        loadFailed: "引き継ぎ用のチャット履歴を読み込めませんでした。",
+        loadingContext: "コンテキストパックを作成中…",
+        notesLabel: "次のセッションへのメモ",
+        notesPlaceholder: "任意: 次のエージェントに続けてほしい内容",
+        otherAgentsSection: "別のエージェントに引き継ぐ",
+        sameAgentHint: "同じ harness · 新しいセッション · 同じワークスペース",
+        sameAgentSection: "同じエージェントで続ける",
+        sameAgentUnavailable:
+          "このエージェントは現在のエージェント一覧にありません。",
+        submitFailed: "引き継ぎセッションを開始できませんでした。",
+        title: "セッションを引き継ぐ",
+        titleFrom: "引き継ぎ: {{title}}",
+        titleUntitled: "引き継ぎセッション",
+      },
     },
     notifications: {
       agentFailedNoDetail: "Agent がエラーで停止しました。",
