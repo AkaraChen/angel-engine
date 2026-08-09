@@ -40,8 +40,12 @@ export interface ProjectWorktreeCreateResult {
  * database.
  */
 export interface ProjectConfig {
+  /** Long-running command used to start the workspace development server. */
+  runScript: string;
   /** Commands run in a freshly created worktree, in order. */
   setupScript: string[];
+  /** Commands run before an app-managed worktree is removed, in order. */
+  teardownScript: string[];
 }
 
 export interface ProjectConfigResult extends ProjectConfig {
@@ -150,7 +154,9 @@ export const managedWorktreeDeleteInputSchema = arkType({
 export const updateProjectConfigInputSchema = arkType({
   "+": "ignore",
   projectId: "string > 0",
+  runScript: "string",
   setupScript: "string[]",
+  teardownScript: "string[]",
 });
 
 export const updateProjectInputSchema = arkType({
