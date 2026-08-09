@@ -26,6 +26,9 @@ export const queryKeys = {
   github: {
     items: (cwd: string | null, query: string) =>
       ["github", "items", cwd, query] as const,
+    repositories: (owner: string | null) =>
+      ["github", "repositories", owner] as const,
+    repositoryOwners: () => ["github", "repository-owners"] as const,
     resolve: (url: string | null) => ["github", "resolve", url] as const,
   },
   projects: {
