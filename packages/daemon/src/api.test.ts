@@ -1,5 +1,6 @@
 import type {
   Chat,
+  ChatAmbiguousRunSnapshot,
   ChatSendInput,
   ChatSendResult,
 } from "@angel-engine/daemon-api/chat";
@@ -38,6 +39,61 @@ const result: ChatSendResult = {
 };
 
 describe("daemon chat runs", () => {
+  it("makes a restart-ambiguous send discoverable and clearable by chat", async () => {
+    let ambiguous: ChatAmbiguousRunSnapshot | null = {
+      chatId: chat.id,
+      createdAt: "2026-08-10T00:00:00.000Z",
+      runId: "run-ambiguous",
+      status: "dispatching" as const,
+    };
+    const queueChatRun = vi.fn(() => Effect.succeed(true));
+    const streamChat = vi.fn(() => Effect.succeed(result));
+    const app = new Hono();
+    registerApi(
+      app,
+      fakeDaemonRuntime({
+        ambiguousQueuedChatRun: () => Effect.succeed({ run: ambiguous }),
+        beginQueuedChatRunDispatch: () => Effect.succeed("claimed" as const),
+        cancelAmbiguousQueuedChatRun: () =>
+          Effect.sync(() => {
+            const cancelled = ambiguous ? { runId: ambiguous.runId } : null;
+            ambiguous = null;
+            return cancelled;
+          }),
+        completeQueuedChatRun: () => Effect.succeed(undefined as never),
+        queueChatRun,
+        streamChat,
+      }),
+      createChatEvents({ publish: vi.fn() }),
+    );
+
+    await expect(
+      (await app.request(`/api/chats/${chat.id}/active-run`)).json(),
+    ).resolves.toEqual({ run: null });
+    await expect(
+      (await app.request(`/api/chats/${chat.id}/ambiguous-run`)).json(),
+    ).resolves.toMatchObject({ run: { runId: "run-ambiguous" } });
+    await expect(
+      (
+        await app.request(`/api/chats/${chat.id}/ambiguous-run`, {
+          method: "DELETE",
+        })
+      ).json(),
+    ).resolves.toEqual({ cleared: true });
+    await expect(
+      (await app.request(`/api/chats/${chat.id}/ambiguous-run`)).json(),
+    ).resolves.toEqual({ run: null });
+
+    const response = await app.request("/api/chat-runs/run-replacement", {
+      body: JSON.stringify({ chatId: chat.id, text: "send again" }),
+      headers: { "content-type": "application/json" },
+      method: "POST",
+    });
+    expect(response.status).toBe(200);
+    await vi.waitFor(() => expect(streamChat).toHaveBeenCalledOnce());
+    expect(queueChatRun).toHaveBeenCalledOnce();
+  });
+
   it.each([
     "running",
     "failed",
@@ -641,7 +697,9 @@ function fakeDaemonRuntime(
   const unsupported = () =>
     Effect.die(DaemonError.internal(new Error("Not used in this test.")));
   const engine: ChatEngineValue = {
+    ambiguousQueuedChatRun: () => Effect.succeed({ run: null }),
     beginQueuedChatRunDispatch: () => Effect.succeed("not_queued" as const),
+    cancelAmbiguousQueuedChatRun: () => Effect.succeed(null),
     cancelWorktreeCreation: unsupported,
     cancelWorktreeCreationForDelete: () => Effect.void,
     cancelQueuedChatRun: () => Effect.succeed(null),

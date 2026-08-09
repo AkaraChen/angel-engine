@@ -9,6 +9,7 @@ import type {
 import type {
   Chat,
   ChatActiveRunResult,
+  ChatAmbiguousRunResult,
   ChatActivityListResult,
   ChatAttentionListResult,
   ChatAttentionReadInput,
@@ -43,6 +44,7 @@ import type {
 } from "@angel-engine/daemon-api/chat";
 import {
   isChatActiveRunResult,
+  isChatAmbiguousRunResult,
   isChatActivityListResult,
   isChatAttentionListResult,
   isChatAttentionReadResult,
@@ -239,6 +241,20 @@ export function createDaemonClient(options: DaemonClientOptions) {
     return result;
   };
 
+  const ambiguousRun = async (
+    chatId: string,
+  ): Promise<ChatAmbiguousRunResult> => {
+    const path = `/api/chats/${encodeURIComponent(chatId)}/ambiguous-run`;
+    const result = await request<unknown>(path);
+    if (!isChatAmbiguousRunResult(result)) {
+      throw DaemonRequestError.invalidResponse(
+        `Daemon returned an invalid ambiguous chat run for ${path}.`,
+        200,
+      );
+    }
+    return result;
+  };
+
   const listAttention = async (): Promise<ChatAttentionListResult> => {
     const result = await request<unknown>("/api/chat-attention");
     if (!isChatAttentionListResult(result)) {
@@ -336,6 +352,7 @@ export function createDaemonClient(options: DaemonClientOptions) {
       read: readAttention,
     },
     chats: {
+      ambiguousRun,
       archive: (id: string) =>
         request<Chat>(`/api/chats/${encodeURIComponent(id)}/archive`, {
           method: "POST",
@@ -358,6 +375,11 @@ export function createDaemonClient(options: DaemonClientOptions) {
       cancelWorktreeCreation: (id: string) =>
         request<Chat>(
           `/api/chats/${encodeURIComponent(id)}/worktree-creation`,
+          { method: "DELETE" },
+        ),
+      clearAmbiguousRun: (id: string) =>
+        request<{ cleared: boolean }>(
+          `/api/chats/${encodeURIComponent(id)}/ambiguous-run`,
           { method: "DELETE" },
         ),
       delete: (id: string) =>

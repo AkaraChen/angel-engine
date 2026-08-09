@@ -199,6 +199,22 @@ export function cancelQueuedChatRun(runId: string) {
   );
 }
 
+export function cancelAmbiguousQueuedChatRun(chatId: string) {
+  return withDatabase((database) =>
+    database
+      .delete(queuedChatRuns)
+      .where(
+        and(
+          eq(queuedChatRuns.chatId, chatId),
+          eq(queuedChatRuns.state, "dispatching"),
+        ),
+      )
+      .returning({ runId: queuedChatRuns.runId })
+      .get()
+      .then((row) => row ?? null),
+  );
+}
+
 export function listQueuedChatRuns() {
   return Effect.gen(function* () {
     const rows = yield* withDatabase((database) =>
@@ -250,6 +266,17 @@ export function listQueuedChatRuns() {
 export function listRecoverableQueuedChatRuns() {
   return listQueuedChatRuns().pipe(
     Effect.map((runs) => runs.filter((run) => run.state === "queued")),
+  );
+}
+
+export function getAmbiguousQueuedChatRun(chatId: string) {
+  return listQueuedChatRuns().pipe(
+    Effect.map(
+      (runs) =>
+        runs.find(
+          (run) => run.input.chatId === chatId && run.state === "dispatching",
+        ) ?? null,
+    ),
   );
 }
 

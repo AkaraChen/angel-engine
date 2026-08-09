@@ -62,6 +62,12 @@ export const es = {
       open: "Abrir {{name}}",
     },
     workspace: {
+      ambiguousSend: {
+        description:
+          "Angel Engine se reinició durante el envío. Para evitar un duplicado, este mensaje no se volvió a enviar automáticamente.",
+        dismiss: "Descartar envío pendiente",
+        title: "La entrega del mensaje es incierta",
+      },
       backgroundChatCompleted: "Chat en segundo plano completado",
       backgroundChatNeedsInput: "El chat en segundo plano necesita entrada",
       backgroundChatStatus: "Estado del chat en segundo plano",

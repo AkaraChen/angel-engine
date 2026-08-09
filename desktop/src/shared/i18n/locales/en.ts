@@ -62,6 +62,12 @@ export const en = {
       open: "Open {{name}}",
     },
     workspace: {
+      ambiguousSend: {
+        description:
+          "Angel Engine restarted while sending. To avoid a duplicate, this message was not sent again automatically.",
+        dismiss: "Clear pending send",
+        title: "Message delivery is uncertain",
+      },
       backgroundChatCompleted: "Background chat completed",
       backgroundChatNeedsInput: "Background chat needs input",
       backgroundChatStatus: "Background chat status",

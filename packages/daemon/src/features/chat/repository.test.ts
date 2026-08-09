@@ -19,6 +19,7 @@ import { Db } from "../../platform/db";
 import {
   beginQueuedChatRunDispatch,
   beginChatSend,
+  cancelAmbiguousQueuedChatRun,
   cancelQueuedChatRun,
   completeQueuedChatRun,
   createQueuedChatRun,
@@ -26,6 +27,7 @@ import {
   deleteWorktreeCreationJob,
   failInterruptedWorktreeCreationJobs,
   getWorktreeCreationJob,
+  getAmbiguousQueuedChatRun,
   listRecoverableQueuedChatRuns,
   listQueuedChatRuns,
   normalizeChatRuntime,
@@ -232,6 +234,46 @@ describe("worktree creation jobs", () => {
 });
 
 describe("queued chat runs", () => {
+  it("exposes and clears a restart-ambiguous send by chat before a replacement", async () => {
+    const database = await memoryDatabase();
+    await seedChat(database, { title: "New chat" });
+    await runWithDatabase(
+      database,
+      createQueuedChatRun({
+        createdAt: "2026-08-10T00:00:00.000Z",
+        input: { chatId: "chat-1", text: "possibly sent" },
+        runId: "run-ambiguous",
+        state: "dispatching",
+      }),
+    );
+
+    await expect(
+      runWithDatabase(database, getAmbiguousQueuedChatRun("chat-1")),
+    ).resolves.toMatchObject({
+      input: { chatId: "chat-1", text: "possibly sent" },
+      runId: "run-ambiguous",
+      state: "dispatching",
+    });
+    await expect(
+      runWithDatabase(database, cancelAmbiguousQueuedChatRun("chat-1")),
+    ).resolves.toEqual({ runId: "run-ambiguous" });
+    await expect(
+      runWithDatabase(database, listQueuedChatRuns()),
+    ).resolves.toEqual([]);
+
+    await expect(
+      runWithDatabase(
+        database,
+        createQueuedChatRun({
+          createdAt: "2026-08-10T00:00:01.000Z",
+          input: { chatId: "chat-1", text: "send again" },
+          runId: "run-replacement",
+          state: "queued",
+        }),
+      ),
+    ).resolves.toBeDefined();
+  });
+
   it("keeps a claimed input durable across the provider-start crash window", async () => {
     const database = await memoryDatabase();
     await seedChat(database, { title: "New chat" });

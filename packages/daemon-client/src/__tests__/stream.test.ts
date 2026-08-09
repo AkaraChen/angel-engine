@@ -132,6 +132,32 @@ describe("chatRuns", () => {
     );
   });
 
+  it("discovers and clears an ambiguous run by chat id", async () => {
+    const ambiguous = {
+      run: {
+        chatId: "chat-1",
+        createdAt: "2026-08-10T00:00:00.000Z",
+        runId: "run-ambiguous",
+        status: "dispatching",
+      },
+    };
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(jsonResponse(ambiguous))
+      .mockResolvedValueOnce(jsonResponse({ cleared: true }));
+    vi.stubGlobal("fetch", fetchMock);
+    const client = createDaemonClient({ baseUrl: "", token: null });
+
+    await expect(client.chats.ambiguousRun("chat-1")).resolves.toEqual(
+      ambiguous,
+    );
+    await expect(client.chats.clearAmbiguousRun("chat-1")).resolves.toEqual({
+      cleared: true,
+    });
+    expect(fetchMock.mock.calls[0][0]).toBe("/api/chats/chat-1/ambiguous-run");
+    expect(fetchMock.mock.calls[1][1]).toMatchObject({ method: "DELETE" });
+  });
+
   it.each([
     [
       "an event before the snapshot",

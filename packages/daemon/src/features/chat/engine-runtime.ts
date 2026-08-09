@@ -65,6 +65,7 @@ import { getProject } from "../projects/repository";
 import { projectSetupLifecycle } from "../projects/setup-lifecycle";
 import {
   beginQueuedChatRunDispatch,
+  cancelAmbiguousQueuedChatRun,
   beginChatSend,
   cancelQueuedChatRun,
   completeQueuedChatRun,
@@ -75,6 +76,7 @@ import {
   deleteWorktreeCreationJob,
   failInterruptedWorktreeCreationJobs,
   getWorktreeCreationJob,
+  getAmbiguousQueuedChatRun,
   listWorktreeCreationJobs,
   listRecoverableQueuedChatRuns,
   requireChat,
@@ -845,6 +847,14 @@ export class ChatEngine extends Effect.Service<ChatEngine>()(
           }),
         queueChatRun: (runId: string, input: ChatRunStartInput) =>
           Effect.gen(function* () {
+            const ambiguousRun = yield* getAmbiguousQueuedChatRun(input.chatId);
+            if (ambiguousRun !== null) {
+              return yield* Effect.fail(
+                DaemonError.invalidRequest(
+                  "Clear the ambiguous chat send before starting another run.",
+                ),
+              );
+            }
             const creationJob = yield* getWorktreeCreationJob(input.chatId);
             if (creationJob === null) {
               const chat = yield* requireChat(input.chatId);
@@ -875,6 +885,20 @@ export class ChatEngine extends Effect.Service<ChatEngine>()(
             return true;
           }),
         beginQueuedChatRunDispatch,
+        ambiguousQueuedChatRun: (chatId: string) =>
+          getAmbiguousQueuedChatRun(chatId).pipe(
+            Effect.map((run) => ({
+              run: run
+                ? {
+                    chatId: run.input.chatId,
+                    createdAt: run.createdAt,
+                    runId: run.runId,
+                    status: "dispatching" as const,
+                  }
+                : null,
+            })),
+          ),
+        cancelAmbiguousQueuedChatRun,
         cancelQueuedChatRun,
         completeQueuedChatRun,
         restoreQueuedChatRuns: () => listRecoverableQueuedChatRuns(),

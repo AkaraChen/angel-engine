@@ -62,6 +62,12 @@ export const de = {
       open: "{{name}} öffnen",
     },
     workspace: {
+      ambiguousSend: {
+        description:
+          "Angel Engine wurde beim Senden neu gestartet. Um ein Duplikat zu vermeiden, wurde diese Nachricht nicht automatisch erneut gesendet.",
+        dismiss: "Ausstehende Sendung löschen",
+        title: "Nachrichtenzustellung ist ungewiss",
+      },
       backgroundChatCompleted: "Hintergrundchat abgeschlossen",
       backgroundChatNeedsInput: "Hintergrundchat benötigt Eingabe",
       backgroundChatStatus: "Status des Hintergrundchats",

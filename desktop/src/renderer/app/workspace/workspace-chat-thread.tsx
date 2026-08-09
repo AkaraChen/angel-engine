@@ -38,6 +38,7 @@ import {
   chatRuntimeConfigQueryOptions,
 } from "@/features/chat/api/queries";
 import { AssistantThread } from "@/features/chat/components/assistant-thread";
+import { AmbiguousSendBanner } from "@/features/chat/components/ambiguous-send-banner";
 import { SetupLifecycleBanner } from "@/features/projects/components/setup-lifecycle-banner";
 import { workspaceContentColumnClass } from "@/features/chat/components/thread-styles";
 import { AppRuntimeProvider } from "@/features/chat/runtime/app-runtime-provider";
@@ -419,6 +420,7 @@ function ChatThreadRuntime({
         slotKey={slotKey}
       >
         <div className="flex h-full min-h-0 flex-col">
+          <AmbiguousSendBanner chatId={selectedChat.id} />
           <SetupLifecycleBanner
             chatId={selectedChat.id}
             enabled={projectContext.isWorktree === true}

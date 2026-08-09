@@ -144,7 +144,14 @@ export interface LocaleResourceTranslationWorkspaceSetup {
   viewLog: string;
 }
 
+export interface LocaleResourceTranslationWorkspaceAmbiguousSend {
+  description: string;
+  dismiss: string;
+  title: string;
+}
+
 export interface LocaleResourceTranslationWorkspace {
+  ambiguousSend: LocaleResourceTranslationWorkspaceAmbiguousSend;
   backgroundChatCompleted: string;
   backgroundChatNeedsInput: string;
   backgroundChatStatus: string;

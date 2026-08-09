@@ -62,6 +62,12 @@ export const fr = {
       open: "Ouvrir {{name}}",
     },
     workspace: {
+      ambiguousSend: {
+        description:
+          "Angel Engine a redémarré pendant l’envoi. Pour éviter un doublon, ce message n’a pas été renvoyé automatiquement.",
+        dismiss: "Effacer l’envoi en attente",
+        title: "La remise du message est incertaine",
+      },
       backgroundChatCompleted: "Discussion en arrière-plan terminée",
       backgroundChatNeedsInput:
         "La discussion en arrière-plan attend une saisie",

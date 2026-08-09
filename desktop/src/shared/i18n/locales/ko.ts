@@ -62,6 +62,12 @@ export const ko = {
       open: "{{name}} 열기",
     },
     workspace: {
+      ambiguousSend: {
+        description:
+          "전송 중 Angel Engine이 다시 시작되었습니다. 중복 전송을 피하기 위해 이 메시지는 자동으로 다시 보내지 않았습니다.",
+        dismiss: "대기 중인 전송 지우기",
+        title: "메시지 전송 여부가 불확실합니다",
+      },
       backgroundChatCompleted: "백그라운드 채팅 완료",
       backgroundChatNeedsInput: "백그라운드 채팅에 입력 필요",
       backgroundChatStatus: "백그라운드 채팅 상태",

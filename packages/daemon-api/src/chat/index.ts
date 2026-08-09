@@ -68,6 +68,7 @@ export {
   isChatAttentionReadResult,
 } from "./attention";
 export {
+  isChatAmbiguousRunResult,
   isChatActiveRunResult,
   isChatActiveRunSnapshot,
   isChatElicitationResponse,
@@ -385,6 +386,17 @@ export type ChatActiveRunSnapshot =
 
 export interface ChatActiveRunResult {
   run: ChatActiveRunSnapshot | null;
+}
+
+export interface ChatAmbiguousRunSnapshot {
+  chatId: string;
+  createdAt: string;
+  runId: string;
+  status: "dispatching";
+}
+
+export interface ChatAmbiguousRunResult {
+  run: ChatAmbiguousRunSnapshot | null;
 }
 
 export type ChatRunObserverEvent =

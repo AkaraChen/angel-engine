@@ -9,6 +9,8 @@ export const queryKeys = {
   },
   chats: {
     all: () => ["chats"] as const,
+    ambiguousRun: (id: string | null) =>
+      ["chats", "ambiguous-run", id] as const,
     archived: () => ["chats", "archived"] as const,
     detail: (id: string | null) => ["chats", "detail", id] as const,
     details: () => ["chats", "detail"] as const,

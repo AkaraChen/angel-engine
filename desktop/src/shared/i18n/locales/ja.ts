@@ -62,6 +62,12 @@ export const ja = {
       open: "{{name}} を開く",
     },
     workspace: {
+      ambiguousSend: {
+        description:
+          "送信中に Angel Engine が再起動しました。重複を避けるため、このメッセージは自動再送されていません。",
+        dismiss: "保留中の送信を消去",
+        title: "メッセージの配信状況が不明です",
+      },
       backgroundChatCompleted: "バックグラウンドチャットが完了しました",
       backgroundChatNeedsInput: "バックグラウンドチャットに入力が必要です",
       backgroundChatStatus: "バックグラウンドチャットの状態",

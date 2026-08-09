@@ -803,6 +803,36 @@ export function registerApi(
       chatRuns.active(requirePath(context.req.param("chatId"), "chatId")),
     ),
   );
+  app.get("/api/chats/:chatId/ambiguous-run", async (context) => {
+    const chatId = requirePath(context.req.param("chatId"), "chatId");
+    const ambiguous = await run(
+      engine((chatEngine) => chatEngine.ambiguousQueuedChatRun(chatId)),
+    );
+    const active = chatRuns.active(chatId).run;
+    return context.json({
+      run: active?.runId === ambiguous.run?.runId ? null : ambiguous.run,
+    });
+  });
+  app.delete("/api/chats/:chatId/ambiguous-run", async (context) => {
+    const chatId = requirePath(context.req.param("chatId"), "chatId");
+    const ambiguous = await run(
+      engine((chatEngine) => chatEngine.ambiguousQueuedChatRun(chatId)),
+    );
+    const active = chatRuns.active(chatId).run;
+    if (active?.runId === ambiguous.run?.runId) {
+      throw DaemonError.invalidRequest(
+        "An active chat run cannot be cleared as ambiguous.",
+      );
+    }
+    const cancelled = await run(
+      engine((chatEngine) => chatEngine.cancelAmbiguousQueuedChatRun(chatId)),
+    );
+    if (cancelled !== null) {
+      activity.clearChat(chatId);
+      chatEvents.conversationChanged([chatId]);
+    }
+    return context.json({ cleared: cancelled !== null });
+  });
   app.get("/api/chat-runs/:runId/events", (context) => {
     const runId = requirePath(context.req.param("runId"), "runId");
     chatRuns.snapshot(runId);

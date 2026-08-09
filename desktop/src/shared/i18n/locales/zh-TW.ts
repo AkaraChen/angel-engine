@@ -62,6 +62,12 @@ export const zhTW = {
       open: "開啟 {{name}}",
     },
     workspace: {
+      ambiguousSend: {
+        description:
+          "Angel Engine 在傳送時重新啟動。為避免重複，此訊息未自動重新傳送。",
+        dismiss: "清除待傳送訊息",
+        title: "訊息是否送達尚不確定",
+      },
       backgroundChatCompleted: "背景聊天已完成",
       backgroundChatNeedsInput: "背景聊天需要輸入",
       backgroundChatStatus: "背景聊天狀態",
