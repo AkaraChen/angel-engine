@@ -2,7 +2,11 @@ import type {
   AgentRuntime,
   CustomAgent,
 } from "@angel-engine/daemon-api/agents";
-import type { Chat, ChatCreateInput } from "@angel-engine/daemon-api/chat";
+import type {
+  Chat,
+  ChatCreateInput,
+  WorktreeCreationState,
+} from "@angel-engine/daemon-api/chat";
 import { randomUUID } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
@@ -14,7 +18,7 @@ import {
   isAgentRuntime,
   isCustomAgentRuntime,
 } from "@angel-engine/daemon-api/agents";
-import { chats } from "../../db/schema";
+import { chats, worktreeCreationJobs } from "../../db/schema";
 import { type Db, withDatabase } from "../../platform/db";
 import { DaemonError } from "../../platform/errors";
 import { getCustomAgent } from "../agents/repository";
@@ -113,6 +117,100 @@ export function deleteAllChats(): Effect.Effect<number, DaemonError, Db> {
     yield* withDatabase((database) => database.delete(chats).run());
     return existingChats.length;
   });
+}
+
+export interface PersistedWorktreeCreationJob {
+  chatId: string;
+  setupApproval?: string;
+  state: WorktreeCreationState;
+}
+
+export function createWorktreeCreationJob(job: PersistedWorktreeCreationJob) {
+  return withDatabase((database) =>
+    database.insert(worktreeCreationJobs).values(jobValues(job)).run(),
+  );
+}
+
+export function getWorktreeCreationJob(chatId: string) {
+  return withDatabase((database) =>
+    database
+      .select()
+      .from(worktreeCreationJobs)
+      .where(eq(worktreeCreationJobs.chatId, chatId))
+      .limit(1)
+      .get()
+      .then((row) => (row ? persistedWorktreeCreationJob(row) : null)),
+  );
+}
+
+export function listWorktreeCreationJobs() {
+  return withDatabase((database) =>
+    database
+      .select()
+      .from(worktreeCreationJobs)
+      .all()
+      .then((rows) => rows.map(persistedWorktreeCreationJob)),
+  );
+}
+
+export function updateWorktreeCreationJob(job: PersistedWorktreeCreationJob) {
+  return withDatabase((database) =>
+    database
+      .update(worktreeCreationJobs)
+      .set(jobValues(job))
+      .where(eq(worktreeCreationJobs.chatId, job.chatId))
+      .run(),
+  );
+}
+
+export function deleteWorktreeCreationJob(chatId: string) {
+  return withDatabase((database) =>
+    database
+      .delete(worktreeCreationJobs)
+      .where(eq(worktreeCreationJobs.chatId, chatId))
+      .run(),
+  );
+}
+
+export function failInterruptedWorktreeCreationJobs() {
+  return withDatabase((database) =>
+    database
+      .update(worktreeCreationJobs)
+      .set({
+        error: "Worktree creation was interrupted. Retry or cancel it.",
+        status: "failed",
+      })
+      .where(eq(worktreeCreationJobs.status, "creating"))
+      .run(),
+  );
+}
+
+function jobValues(job: PersistedWorktreeCreationJob) {
+  return {
+    chatId: job.chatId,
+    error: job.state.error ?? null,
+    jobId: job.state.jobId,
+    progress: job.state.progress,
+    setupApproval: job.setupApproval ?? null,
+    stage: job.state.stage,
+    status: job.state.status,
+  };
+}
+
+function persistedWorktreeCreationJob(
+  row: typeof worktreeCreationJobs.$inferSelect,
+): PersistedWorktreeCreationJob {
+  return {
+    chatId: row.chatId,
+    setupApproval: row.setupApproval ?? undefined,
+    state: {
+      error: row.error ?? undefined,
+      jobId: row.jobId,
+      progress: row.progress,
+      stage: row.stage as WorktreeCreationState["stage"],
+      status: row.status as WorktreeCreationState["status"],
+    },
+  };
 }
 
 export function archiveChat(id: string) {

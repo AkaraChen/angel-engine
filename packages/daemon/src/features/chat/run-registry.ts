@@ -204,6 +204,14 @@ export class ChatRunRegistry {
     run.abortController.abort();
   }
 
+  /** Permanently detaches a deleted chat so late provider events are ignored. */
+  discardChat(chatId: string): void {
+    const run = this.#activeByChat.get(chatId);
+    if (!run) return;
+    run.abortController.abort();
+    this.#remove(run);
+  }
+
   async resolveElicitation(
     runId: string,
     elicitationId: string,

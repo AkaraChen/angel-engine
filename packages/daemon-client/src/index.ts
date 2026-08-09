@@ -386,10 +386,10 @@ export function createDaemonClient(options: DaemonClientOptions) {
         }),
       prewarm: (input: ChatPrewarmInput = {}) =>
         request<ChatPrewarmResult>("/api/chats/prewarm", json("POST", input)),
-      retryWorktreeCreation: (id: string) =>
+      retryWorktreeCreation: (id: string, worktreeSetupApproval?: string) =>
         request<Chat>(
           `/api/chats/${encodeURIComponent(id)}/worktree-creation/retry`,
-          { method: "POST" },
+          json("POST", { worktreeSetupApproval }),
         ),
       rename: (input: ChatRenameInput) =>
         request<Chat>(

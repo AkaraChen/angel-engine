@@ -240,30 +240,33 @@ export function ProjectSidebarSection({
                                               progress: creation.progress,
                                             })}
                                       </span>
+                                      {failed && (
+                                        <button
+                                          aria-label={t(
+                                            "sidebar.retryWorktreeCreation",
+                                          )}
+                                          className="rounded p-1 hover:bg-sidebar-accent"
+                                          onClick={() =>
+                                            void onRetryWorktreeCreation(chat)
+                                          }
+                                          title={t(
+                                            "sidebar.retryWorktreeCreation",
+                                          )}
+                                          type="button"
+                                        >
+                                          <ArrowClockwise className="size-3" />
+                                        </button>
+                                      )}
                                       <button
-                                        aria-label={t(
-                                          failed
-                                            ? "sidebar.retryWorktreeCreation"
-                                            : "common.cancel",
-                                        )}
+                                        aria-label={t("common.cancel")}
                                         className="rounded p-1 hover:bg-sidebar-accent"
                                         onClick={() =>
-                                          void (failed
-                                            ? onRetryWorktreeCreation(chat)
-                                            : onCancelWorktreeCreation(chat))
+                                          void onCancelWorktreeCreation(chat)
                                         }
-                                        title={t(
-                                          failed
-                                            ? "sidebar.retryWorktreeCreation"
-                                            : "common.cancel",
-                                        )}
+                                        title={t("common.cancel")}
                                         type="button"
                                       >
-                                        {failed ? (
-                                          <ArrowClockwise className="size-3" />
-                                        ) : (
-                                          <X className="size-3" />
-                                        )}
+                                        <X className="size-3" />
                                       </button>
                                     </div>
                                   </AnimatedSidebarMenuItem>

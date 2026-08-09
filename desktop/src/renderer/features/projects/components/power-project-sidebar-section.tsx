@@ -258,7 +258,7 @@ export function PowerProjectSidebarSection({
                                           progress: creation.progress,
                                         })}
                                   </span>
-                                  {failed ? (
+                                  {failed && (
                                     <button
                                       aria-label={t(
                                         "sidebar.retryWorktreeCreation",
@@ -272,19 +272,18 @@ export function PowerProjectSidebarSection({
                                     >
                                       <ArrowClockwise className="size-3" />
                                     </button>
-                                  ) : (
-                                    <button
-                                      aria-label={t("common.cancel")}
-                                      className="rounded p-1 hover:bg-sidebar-accent"
-                                      onClick={() =>
-                                        void onCancelWorktreeCreation(chat)
-                                      }
-                                      title={t("common.cancel")}
-                                      type="button"
-                                    >
-                                      <X className="size-3" />
-                                    </button>
                                   )}
+                                  <button
+                                    aria-label={t("common.cancel")}
+                                    className="rounded p-1 hover:bg-sidebar-accent"
+                                    onClick={() =>
+                                      void onCancelWorktreeCreation(chat)
+                                    }
+                                    title={t("common.cancel")}
+                                    type="button"
+                                  >
+                                    <X className="size-3" />
+                                  </button>
                                 </div>
                               </AnimatedSidebarMenuItem>
                             );

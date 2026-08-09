@@ -244,6 +244,17 @@ export function removeManagedWorktree(
   });
 }
 
+/** Rolls back a worktree that was created but could not be attached to its chat. */
+export function removeCreatedProjectWorktree(
+  worktree: ProjectWorktreeCreateResult,
+): Effect.Effect<void, DaemonError> {
+  return Effect.tryPromise({
+    catch: (cause) => DaemonError.worktreeRemoveFailed(cause),
+    try: () =>
+      rollbackCreatedWorktree(worktree.root, worktree.cwd, worktree.branch),
+  });
+}
+
 function projectSlugFromPath(projectPath: string) {
   const slug = path
     .basename(projectPath)

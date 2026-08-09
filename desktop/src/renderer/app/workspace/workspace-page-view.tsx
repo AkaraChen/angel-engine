@@ -180,6 +180,7 @@ export const WorkspacePageView: FC<WorkspacePageViewProps> = ({
     null;
   const {
     closeWorktreeDirtyPrompt,
+    confirmProjectWorktreeCreation,
     ensureDraftChatCanSubmit,
     rememberWorktreeDirtyChoice,
     setDraftCreationLocation,
@@ -250,7 +251,13 @@ export const WorkspacePageView: FC<WorkspacePageViewProps> = ({
     }
   };
   const retryWorktreeCreation = async (chat: (typeof chats)[number]) => {
-    await api.chats.retryWorktreeCreation(chat.id);
+    if (!is.nonEmptyString(chat.projectId)) return;
+    const approval = await confirmProjectWorktreeCreation(chat.projectId);
+    if (!approval) return;
+    await api.chats.retryWorktreeCreation(
+      chat.id,
+      typeof approval === "string" ? approval : undefined,
+    );
     await queryClient.invalidateQueries({ queryKey: queryKeys.chats.list() });
   };
 

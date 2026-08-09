@@ -518,9 +518,11 @@ function fakeDaemonRuntime(
     Effect.die(DaemonError.internal(new Error("Not used in this test.")));
   const engine: ChatEngineValue = {
     cancelWorktreeCreation: unsupported,
+    cancelWorktreeCreationForDelete: () => Effect.void,
     closeChatSession: () => Effect.void,
     createChatFromInput: unsupported,
     decorateChats: (chats) => Effect.succeed(chats),
+    finishChatDeletion: () => Effect.void,
     importChat: unsupported,
     inspectChatRuntimeConfig: unsupported,
     listImportableSessions: unsupported,
