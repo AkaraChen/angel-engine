@@ -69,6 +69,8 @@ export interface WorkspaceGitBranchStatus {
   behind: number;
   branch?: string;
   detached: boolean;
+  /** The symbolic branch exists, but HEAD has no commit yet. */
+  unborn: boolean;
   upstream?: string;
 }
 

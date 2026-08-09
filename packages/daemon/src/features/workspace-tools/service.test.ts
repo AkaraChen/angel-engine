@@ -194,6 +194,7 @@ describe("workspaceGitDiff branch status", () => {
         behind: 0,
         branch: "main",
         detached: false,
+        unborn: false,
         upstream: "origin/main",
       });
       expect(result.conflictedPaths).toStrictEqual([]);
@@ -216,6 +217,28 @@ describe("workspaceGitDiff branch status", () => {
         behind: 0,
         branch: "main",
         detached: false,
+        unborn: false,
+      });
+    },
+    gitTestTimeoutMs,
+  );
+});
+
+describe("workspaceGitDiff unborn branch status", () => {
+  it(
+    "reports a branch with no commits as unborn",
+    async () => {
+      const workspace = await makeTempDir();
+      await gitOutput(workspace, ["init", "--initial-branch=main"]);
+
+      const result = await runEffect(workspaceGitDiff(workspace));
+
+      expect(result.branchStatus).toStrictEqual({
+        ahead: 0,
+        behind: 0,
+        branch: "main",
+        detached: false,
+        unborn: true,
       });
     },
     gitTestTimeoutMs,
@@ -238,11 +261,27 @@ describe("workspaceGitPush", () => {
         behind: 0,
         branch: "main",
         detached: false,
+        unborn: false,
         upstream: "origin/main",
       });
       await expect(
         gitOutput(remote, ["rev-parse", "refs/heads/main"]),
       ).resolves.toBe(await gitOutput(workspace, ["rev-parse", "HEAD"]));
+    },
+    gitTestTimeoutMs,
+  );
+
+  it(
+    "rejects publishing a branch with no commits",
+    async () => {
+      const workspace = await makeTempDir();
+      await gitOutput(workspace, ["init", "--initial-branch=main"]);
+
+      const error = await runEffectFailure(
+        workspaceGitPush({ root: workspace }),
+      );
+
+      expect(error.code).toBe("workspace-git-no-commits");
     },
     gitTestTimeoutMs,
   );

@@ -112,6 +112,7 @@ export const zhTW = {
             auth: "請檢查該遠端的 Git 憑證或 SSH 金鑰。",
             detached: "推送前請先切換到一個分支。",
             network: "請檢查網路連線後重試。",
+            noCommits: "請先建立提交，再發布該分支。",
             noRemote: "推送前請先新增遠端。",
             rejected: "遠端有你本機沒有的提交，請先拉取再推送。",
           },

@@ -112,6 +112,7 @@ export const zhCN = {
             auth: "请检查该远程仓库的 Git 凭据或 SSH 密钥。",
             detached: "推送前请先切换到一个分支。",
             network: "请检查网络连接后重试。",
+            noCommits: "请先创建提交，再发布该分支。",
             noRemote: "推送前请先添加远程仓库。",
             rejected: "远程有你本地没有的提交，请先拉取再推送。",
           },

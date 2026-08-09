@@ -113,6 +113,7 @@ export const fr = {
             auth: "Vérifiez les identifiants Git ou la clé SSH de ce dépôt distant.",
             detached: "Basculez sur une branche avant de pousser.",
             network: "Vérifiez la connexion réseau puis réessayez.",
+            noCommits: "Créez un commit avant de publier cette branche.",
             noRemote: "Ajoutez un dépôt distant avant de pousser.",
             rejected:
               "Le dépôt distant a des commits que vous n'avez pas. Faites un pull, puis poussez.",

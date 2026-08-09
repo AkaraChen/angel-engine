@@ -86,6 +86,7 @@ describe("useWorkspaceGitStatus", () => {
           behind: 0,
           branch: "main",
           detached: false,
+          unborn: false,
           upstream: "origin/main",
         },
         conflictedPaths: [],

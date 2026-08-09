@@ -381,6 +381,14 @@ export class DaemonError extends Data.TaggedError(
     });
   }
 
+  static workspaceGitNoCommits() {
+    return new DaemonError({
+      code: "workspace-git-no-commits",
+      message: "Create a commit before publishing this branch.",
+      status: 409,
+    });
+  }
+
   /**
    * A failed `git push` is the one git failure users must act on themselves, so
    * the transport hands back an actionable code instead of a generic

@@ -72,6 +72,7 @@ export interface LocaleResourceTranslationWorkspaceToolsGitPushHint {
   auth: string;
   detached: string;
   network: string;
+  noCommits: string;
   noRemote: string;
   rejected: string;
 }

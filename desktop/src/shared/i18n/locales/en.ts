@@ -112,6 +112,7 @@ export const en = {
             auth: "Check the Git credentials or SSH key for this remote.",
             detached: "Check out a branch before pushing.",
             network: "Check the network connection and try again.",
+            noCommits: "Create a commit before publishing this branch.",
             noRemote: "Add a remote before pushing.",
             rejected:
               "The remote has commits you do not. Pull, then push again.",

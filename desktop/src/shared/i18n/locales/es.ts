@@ -112,6 +112,7 @@ export const es = {
             auth: "Revisa las credenciales de Git o la clave SSH de este remoto.",
             detached: "Cambia a una rama antes de hacer push.",
             network: "Revisa la conexión de red e inténtalo de nuevo.",
+            noCommits: "Crea un commit antes de publicar esta rama.",
             noRemote: "Añade un remoto antes de hacer push.",
             rejected:
               "El remoto tiene commits que tú no. Haz pull y vuelve a hacer push.",

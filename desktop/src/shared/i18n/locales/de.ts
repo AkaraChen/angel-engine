@@ -112,6 +112,8 @@ export const de = {
             auth: "Prüfe die Git-Zugangsdaten oder den SSH-Schlüssel für dieses Remote.",
             detached: "Wechsle vor dem Push auf einen Branch.",
             network: "Prüfe die Netzwerkverbindung und versuche es erneut.",
+            noCommits:
+              "Erstelle einen Commit, bevor du diesen Branch veröffentlichst.",
             noRemote: "Füge vor dem Push ein Remote hinzu.",
             rejected:
               "Das Remote hat Commits, die du nicht hast. Erst pullen, dann pushen.",

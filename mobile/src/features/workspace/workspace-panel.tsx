@@ -103,7 +103,7 @@ function WorkspaceStatus({
   root: string;
 }) {
   const entries = data.status;
-  const { ahead, behind, branch, detached } = data.branchStatus;
+  const { ahead, behind, branch, detached, unborn } = data.branchStatus;
   const stagedCount = entries.filter((entry) => entry.staged).length;
   const unstagedCount = entries.filter(
     (entry) => entry.unstaged || entry.status === "untracked",
@@ -114,11 +114,13 @@ function WorkspaceStatus({
       <div className="space-y-2">
         <MetaRow icon={<GitBranch size={16} />} label="Branch">
           <span className="font-mono text-xs">
-            {branch !== undefined && branch.length > 0
-              ? branch
-              : detached
-                ? "detached"
-                : "no commits yet"}
+            {unborn
+              ? "no commits yet"
+              : branch !== undefined && branch.length > 0
+                ? branch
+                : detached
+                  ? "detached"
+                  : "no commits yet"}
           </span>
         </MetaRow>
         <MetaRow icon={<FolderOpen size={16} />} label="Root">

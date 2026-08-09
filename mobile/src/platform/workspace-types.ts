@@ -33,6 +33,7 @@ export interface WorkspaceGitBranchStatus {
   behind: number;
   branch?: string;
   detached: boolean;
+  unborn: boolean;
   upstream?: string;
 }
 

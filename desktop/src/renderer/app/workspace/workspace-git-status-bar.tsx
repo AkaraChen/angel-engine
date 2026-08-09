@@ -31,15 +31,18 @@ export function WorkspaceGitStatusBar({
   onPush: () => void;
 }) {
   const { t } = useTranslation();
-  const { ahead, behind, branch, detached, upstream } = branchStatus;
+  const { ahead, behind, branch, detached, unborn, upstream } = branchStatus;
   const hasBranch = is.nonEmptyString(branch);
   const hasUpstream = is.nonEmptyString(upstream);
-  const canPush = hasBranch && !detached && (!hasUpstream || ahead > 0);
-  const branchLabel = detached
-    ? t("workspace.tools.git.detached")
-    : hasBranch
-      ? branch
-      : t("workspace.tools.git.noCommits");
+  const canPush =
+    hasBranch && !detached && !unborn && (!hasUpstream || ahead > 0);
+  const branchLabel = unborn
+    ? t("workspace.tools.git.noCommits")
+    : detached
+      ? t("workspace.tools.git.detached")
+      : hasBranch
+        ? branch
+        : t("workspace.tools.git.noCommits");
 
   return (
     <div className="shrink-0 border-b border-border-subtle">
@@ -66,7 +69,7 @@ export function WorkspaceGitStatusBar({
             value={behind}
           />
         ) : null}
-        {hasBranch && !hasUpstream && !detached ? (
+        {hasBranch && !hasUpstream && !detached && !unborn ? (
           <span className="shrink-0 text-muted-foreground">
             {t("workspace.tools.git.noUpstream")}
           </span>
@@ -146,11 +149,13 @@ function WorkspaceGitPushHint({ error }: { error: unknown }) {
         ? t("workspace.tools.git.pushHint.network")
         : code === "workspace-git-push-rejected"
           ? t("workspace.tools.git.pushHint.rejected")
-          : code === "workspace-git-no-remote"
-            ? t("workspace.tools.git.pushHint.noRemote")
-            : code === "workspace-git-detached-head"
-              ? t("workspace.tools.git.pushHint.detached")
-              : undefined;
+          : code === "workspace-git-no-commits"
+            ? t("workspace.tools.git.pushHint.noCommits")
+            : code === "workspace-git-no-remote"
+              ? t("workspace.tools.git.pushHint.noRemote")
+              : code === "workspace-git-detached-head"
+                ? t("workspace.tools.git.pushHint.detached")
+                : undefined;
 
   return is.nonEmptyString(hint) ? (
     <div className="text-muted-foreground">{hint}</div>

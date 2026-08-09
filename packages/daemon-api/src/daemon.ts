@@ -88,6 +88,7 @@ export type DaemonErrorCode =
   | "workspace-git-auth-failed"
   | "workspace-git-detached-head"
   | "workspace-git-network-failed"
+  | "workspace-git-no-commits"
   | "workspace-git-no-remote"
   | "workspace-git-push-rejected"
   | "workspace-not-git-repository"

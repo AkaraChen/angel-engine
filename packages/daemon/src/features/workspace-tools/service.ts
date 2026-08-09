@@ -80,7 +80,12 @@ export function workspaceGitDiff(
     const gitRoot = yield* gitRootFor(root);
     if (!is.nonEmptyString(gitRoot)) {
       return {
-        branchStatus: { ahead: 0, behind: 0, detached: false },
+        branchStatus: {
+          ahead: 0,
+          behind: 0,
+          detached: false,
+          unborn: false,
+        },
         conflictedPaths: [],
         isGitRepository: false,
         root,
@@ -154,6 +159,9 @@ export function workspaceGitPush({
 
     const branchStatus = yield* gitBranchStatus(gitRoot);
     const branch = branchStatus.branch;
+    if (branchStatus.unborn) {
+      return yield* Effect.fail(DaemonError.workspaceGitNoCommits());
+    }
     if (branchStatus.detached || !is.nonEmptyString(branch)) {
       return yield* Effect.fail(DaemonError.workspaceGitDetachedHead());
     }
@@ -221,8 +229,17 @@ function gitBranchStatus(
       ],
       { concurrency: "unbounded" },
     );
+    const unborn = !is.nonEmptyString(head) && is.nonEmptyString(branch);
     if (!is.nonEmptyString(branch)) {
-      return { ahead: 0, behind: 0, detached: head === "HEAD" };
+      return {
+        ahead: 0,
+        behind: 0,
+        detached: head === "HEAD",
+        unborn: false,
+      };
+    }
+    if (unborn) {
+      return { ahead: 0, behind: 0, branch, detached: false, unborn: true };
     }
 
     const upstream = yield* workspaceGitOutput(gitRoot, [
@@ -232,7 +249,7 @@ function gitBranchStatus(
       "@{upstream}",
     ]).pipe(Effect.orElseSucceed(() => ""));
     if (!is.nonEmptyString(upstream)) {
-      return { ahead: 0, behind: 0, branch, detached: false };
+      return { ahead: 0, behind: 0, branch, detached: false, unborn: false };
     }
 
     const counts = yield* workspaceGitOutput(gitRoot, [
@@ -246,6 +263,7 @@ function gitBranchStatus(
       ...parseAheadBehindCounts(counts),
       branch,
       detached: false,
+      unborn: false,
       upstream,
     };
   });
