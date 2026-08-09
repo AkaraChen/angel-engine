@@ -68,6 +68,7 @@ export {
   isChatAttentionReadResult,
 } from "./attention";
 export {
+  isChatAmbiguousRunResult,
   isChatActiveRunResult,
   isChatActiveRunSnapshot,
   isChatElicitationResponse,
@@ -333,7 +334,7 @@ export interface ChatActivityListResult {
 export interface ChatAttention {
   chatId: string;
   id: string;
-  status: "completed" | "needsInput";
+  status: "completed" | "failed" | "needsInput";
   updatedAt: string;
 }
 
@@ -385,6 +386,17 @@ export type ChatActiveRunSnapshot =
 
 export interface ChatActiveRunResult {
   run: ChatActiveRunSnapshot | null;
+}
+
+export interface ChatAmbiguousRunSnapshot {
+  chatId: string;
+  createdAt: string;
+  runId: string;
+  status: "dispatching";
+}
+
+export interface ChatAmbiguousRunResult {
+  run: ChatAmbiguousRunSnapshot | null;
 }
 
 export type ChatRunObserverEvent =

@@ -51,14 +51,86 @@ export interface ProjectWorktreeCreateResult {
   root: string;
 }
 
+export type ProjectLifecycleKind = "run" | "setup" | "teardown";
+
+export type ProjectLifecycleFailureReason =
+  | "cancelled"
+  | "daemon_restart"
+  | "exit"
+  | "signal"
+  | "spawn"
+  | "timeout";
+
+export interface ProjectLifecycleFailure {
+  exitCode: number | null;
+  message: string;
+  reason: ProjectLifecycleFailureReason;
+  signal: string | null;
+}
+
+export type ProjectSetupLifecycleState =
+  | { status: "idle" }
+  | { command: string; step: number; stepCount: number; status: "running" }
+  | {
+      command: string;
+      failure: ProjectLifecycleFailure;
+      step: number;
+      stepCount: number;
+      status: "failed";
+    }
+  | { completedAt: string; status: "ready" };
+
+export type ProjectRunLifecycleState =
+  | { status: "stopped" }
+  | { port: number; status: "starting" }
+  | { pid: number; port: number; status: "running"; url?: string }
+  | { exitCode: number | null; signal: string | null; status: "exited" }
+  | { failure: ProjectLifecycleFailure; status: "failed" };
+
+export type ProjectTeardownLifecycleState =
+  | { status: "idle" }
+  | { command: string; step: number; stepCount: number; status: "running" }
+  | {
+      command: string;
+      failure: ProjectLifecycleFailure;
+      step: number;
+      stepCount: number;
+      status: "failed";
+    }
+  | { completedAt: string; status: "done" };
+
+export interface ProjectLifecycleSnapshot {
+  approvedDigest?: string;
+  run: ProjectRunLifecycleState;
+  setup: ProjectSetupLifecycleState;
+  teardown: ProjectTeardownLifecycleState;
+  updatedAt: string;
+  version: 1;
+}
+
+export interface ProjectSetupLifecycleView {
+  continued: boolean;
+  log: string;
+  running: boolean;
+  snapshot: ProjectLifecycleSnapshot;
+}
+
+export interface ProjectSetupRetryInput {
+  setupApproval: string;
+}
+
 /**
  * Per-project settings persisted in the repository's `2code.json`. The file is
  * the single source of truth; the daemon never mirrors these values into its
  * database.
  */
 export interface ProjectConfig {
+  /** Long-running command used to start the workspace development server. */
+  runScript: string;
   /** Commands run in a freshly created worktree, in order. */
   setupScript: string[];
+  /** Commands run before an app-managed worktree is removed, in order. */
+  teardownScript: string[];
 }
 
 export interface ProjectConfigResult extends ProjectConfig {
@@ -134,10 +206,63 @@ export interface UpdateProjectInput {
   path: string;
 }
 
+export interface ProjectCloneInput {
+  /** Clone source: an https/ssh git remote or a bare `owner/repo` shorthand. */
+  url: string;
+}
+
+/** Ordered phases of a clone-and-register run, as reported to the UI. */
+export type ProjectCloneStage =
+  | "cloning"
+  | "completed"
+  | "preparing"
+  | "registering";
+
+export const projectCloneStages: readonly ProjectCloneStage[] = [
+  "preparing",
+  "cloning",
+  "registering",
+  "completed",
+];
+
+export interface ProjectCloneProgressEvent {
+  /** Git's own phase line, e.g. `Receiving objects`. Null outside cloning. */
+  detail: string | null;
+  /** 0-100 within the current stage, or null when git reports no percentage. */
+  percent: number | null;
+  stage: ProjectCloneStage;
+  /** Absolute destination, known from the `preparing` stage onward. */
+  targetPath: string | null;
+  type: "progress";
+}
+
+export interface ProjectCloneCompletedEvent {
+  project: Project;
+  /** True when an existing checkout of the same remote was reused as-is. */
+  reusedExistingCheckout: boolean;
+  type: "completed";
+}
+
+export interface ProjectCloneFailedEvent {
+  code: string;
+  message: string;
+  type: "failed";
+}
+
+export type ProjectCloneEvent =
+  | ProjectCloneCompletedEvent
+  | ProjectCloneFailedEvent
+  | ProjectCloneProgressEvent;
+
 export const createProjectInputSchema = arkType({
   "+": "ignore",
   "id?": "string",
   path: "string > 0",
+});
+
+export const projectCloneInputSchema = arkType({
+  "+": "ignore",
+  url: "string > 0",
 });
 
 export const projectFileSearchInputSchema = arkType({
@@ -150,6 +275,11 @@ export const projectFileSearchInputSchema = arkType({
 export const projectGitStatusInputSchema = arkType({
   "+": "ignore",
   projectId: "string > 0",
+});
+
+export const projectSetupRetryInputSchema = arkType({
+  "+": "ignore",
+  setupApproval: "string > 0",
 });
 
 const managedWorktreeDeleteTargetSchema = arkType({
@@ -167,7 +297,9 @@ export const managedWorktreeDeleteInputSchema = arkType({
 export const updateProjectConfigInputSchema = arkType({
   "+": "ignore",
   projectId: "string > 0",
+  runScript: "string",
   setupScript: "string[]",
+  teardownScript: "string[]",
 });
 
 export const updateProjectInputSchema = arkType({
@@ -175,4 +307,37 @@ export const updateProjectInputSchema = arkType({
   id: "string > 0",
   path: "string > 0",
 });
+
+export function isProjectCloneEvent(
+  value: unknown,
+): value is ProjectCloneEvent {
+  if (!is.plainObject(value)) return false;
+  switch (value.type) {
+    case "progress":
+      return (
+        isCloneStage(value.stage) &&
+        (value.percent === null || is.number(value.percent)) &&
+        (value.detail === null || is.string(value.detail)) &&
+        (value.targetPath === null || is.string(value.targetPath))
+      );
+    case "completed":
+      return (
+        is.plainObject(value.project) &&
+        is.nonEmptyString(value.project.id) &&
+        is.nonEmptyString(value.project.path) &&
+        is.boolean(value.reusedExistingCheckout)
+      );
+    case "failed":
+      return is.nonEmptyString(value.code) && is.nonEmptyString(value.message);
+    default:
+      return false;
+  }
+}
+
+function isCloneStage(value: unknown): value is ProjectCloneStage {
+  return (
+    is.string(value) && projectCloneStages.includes(value as ProjectCloneStage)
+  );
+}
+import is from "@sindresorhus/is";
 import { type as arkType } from "arktype";

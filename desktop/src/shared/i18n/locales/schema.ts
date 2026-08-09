@@ -115,6 +115,7 @@ export interface LocaleResourceTranslationWorkspaceToolsTabs {
 }
 
 export interface LocaleResourceTranslationWorkspaceTools {
+  addToChat: string;
   commit: LocaleResourceTranslationWorkspaceToolsCommit;
   dockInSidebar: string;
   empty: LocaleResourceTranslationWorkspaceToolsEmpty;
@@ -126,7 +127,31 @@ export interface LocaleResourceTranslationWorkspaceTools {
   tabs: LocaleResourceTranslationWorkspaceToolsTabs;
 }
 
+export interface LocaleResourceTranslationWorkspaceSetup {
+  approvalUnavailable: string;
+  continueAnyway: string;
+  discard: string;
+  discardConfirm: string;
+  discardConfirmDescription: string;
+  discardConfirmTitle: string;
+  failedStep: string;
+  failedTitle: string;
+  noLog: string;
+  ready: string;
+  retry: string;
+  running: string;
+  runningStep: string;
+  viewLog: string;
+}
+
+export interface LocaleResourceTranslationWorkspaceAmbiguousSend {
+  description: string;
+  dismiss: string;
+  title: string;
+}
+
 export interface LocaleResourceTranslationWorkspace {
+  ambiguousSend: LocaleResourceTranslationWorkspaceAmbiguousSend;
   backgroundChatCompleted: string;
   backgroundChatNeedsInput: string;
   backgroundChatStatus: string;
@@ -139,6 +164,7 @@ export interface LocaleResourceTranslationWorkspace {
   noProject: string;
   projectSelect: string;
   settings: string;
+  setup: LocaleResourceTranslationWorkspaceSetup;
   statsBranch: string;
   statsChanges: string;
   statsLastActive: string;
@@ -448,6 +474,9 @@ export interface LocaleResourceTranslationSettingsWorkspace {
   dirtyPromptDescription: string;
   dirtyPromptSwitchLabel: string;
   dirtyPromptTitle: string;
+  osNotificationsDescription: string;
+  osNotificationsSwitchLabel: string;
+  osNotificationsTitle: string;
   sendWithModEnterDescription: string;
   sendWithModEnterSwitchLabel: string;
   sendWithModEnterTitle: string;
@@ -691,6 +720,17 @@ export interface LocaleResourceTranslationDialogImportSession {
 }
 
 export interface LocaleResourceTranslationNotifications {
+  agentFailedNoDetail: string;
+  agentFinishedNoOutput: string;
+  agentWaiting: string;
+  centerClear: string;
+  centerEmpty: string;
+  centerOpenChat: string;
+  centerTitle: string;
+  centerUnread: string;
+  chatActionFailed: string;
+  chatArchived: string;
+  chatArchivedDescription: string;
   chatsDeleted: string;
   chatsDeletedDescription_one: string;
   chatsDeletedDescription_other: string;
@@ -700,20 +740,52 @@ export interface LocaleResourceTranslationNotifications {
   couldNotDeleteChats: string;
   couldNotLoadProjects: string;
   couldNotRenameChat: string;
+  failed: string;
   finished: string;
+  installUpdate: string;
   needsAttention: string;
   needsInput: string;
-  agentFinishedNoOutput: string;
-  agentWaiting: string;
-  chatActionFailed: string;
-  chatArchived: string;
-  chatArchivedDescription: string;
   permissionRequired: string;
   projectActionFailed: string;
-  installUpdate: string;
   undo: string;
   updateReady: string;
   updateReadyDescription: string;
+}
+
+export interface LocaleResourceTranslationProjectImport {
+  readyTitle: string;
+  addFromFolder: string;
+  addFromGit: string;
+  archivedBadge: string;
+  clone: string;
+  cloneTo: string;
+  description: string;
+  failedTitle: string;
+  forkBadge: string;
+  loadingOwners: string;
+  loadingRepositories: string;
+  noMatches: string;
+  noOwners: string;
+  noRepositories: string;
+  openProject: string;
+  owners: string;
+  ownersFailed: string;
+  privateBadge: string;
+  progressTitle: string;
+  repositoriesFailed: string;
+  retry: string;
+  reusedExisting: string;
+  searchPlaceholder: string;
+  stageCloning: string;
+  stageCompleted: string;
+  stagePreparing: string;
+  stageRegistering: string;
+  tabGitHub: string;
+  tabUrl: string;
+  title: string;
+  urlHint: string;
+  urlLabel: string;
+  urlPlaceholder: string;
 }
 
 export interface LocaleResourceTranslationProjects {
@@ -819,6 +891,7 @@ export interface LocaleResourceTranslation {
   dialog: LocaleResourceTranslationDialog;
   notifications: LocaleResourceTranslationNotifications;
   pathLauncher: LocaleResourceTranslationPathLauncher;
+  projectImport: LocaleResourceTranslationProjectImport;
   projects: LocaleResourceTranslationProjects;
   ui: LocaleResourceTranslationUi;
   promptInput: LocaleResourceTranslationPromptInput;

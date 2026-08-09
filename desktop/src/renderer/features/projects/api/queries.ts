@@ -65,6 +65,45 @@ interface ProjectContextMenuMutationParams {
   queryClient: QueryClient;
 }
 
+export function gitHubRepositoryOwnersQueryOptions({
+  api,
+  enabled = true,
+}: {
+  api: ApiClient;
+  enabled?: boolean;
+}) {
+  return queryOptions({
+    enabled,
+    queryFn: async () => api.github.listRepositoryOwners(),
+    queryKey: queryKeys.github.repositoryOwners(),
+    retry: false,
+    // The picker is short-lived; a stale account list would silently hide an
+    // org the user just joined.
+    staleTime: 60_000,
+  });
+}
+
+export function gitHubRepositoriesQueryOptions({
+  api,
+  owner,
+}: {
+  api: ApiClient;
+  owner: string | null;
+}) {
+  return queryOptions({
+    enabled: is.nonEmptyString(owner),
+    queryFn: async () => {
+      if (!is.nonEmptyString(owner)) {
+        throw new Error("No owner selected");
+      }
+      return api.github.listRepositories({ owner });
+    },
+    queryKey: queryKeys.github.repositories(owner),
+    retry: false,
+    staleTime: 60_000,
+  });
+}
+
 export function projectListQueryOptions({
   api,
   enabled = true,
@@ -189,7 +228,7 @@ export function projectContextMenuMutationOptions({
   });
 }
 
-async function invalidateProjectQueries(queryClient: QueryClient) {
+export async function invalidateProjectQueries(queryClient: QueryClient) {
   await queryClient.invalidateQueries({
     queryKey: queryKeys.projects.all(),
     refetchType: "none",

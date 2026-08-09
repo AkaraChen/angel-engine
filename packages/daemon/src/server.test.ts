@@ -1,6 +1,6 @@
 import { mkdir, mkdtemp, readFile, stat, writeFile } from "node:fs/promises";
 import { createHash } from "node:crypto";
-import { createServer, type Server } from "node:http";
+import { createServer, request as httpRequest, type Server } from "node:http";
 import os from "node:os";
 import path from "node:path";
 import { spawn, type ChildProcess } from "node:child_process";
@@ -73,6 +73,100 @@ describe("createDaemon", () => {
     expect(response.headers.get("access-control-allow-headers")).toContain(
       "Authorization",
     );
+  });
+
+  it("rejects blocked HTTP hosts before CORS and authentication", async () => {
+    const dataDir = await mkdtemp(path.join(os.tmpdir(), "angel-daemon-"));
+    const daemon = await createDaemon({
+      blockedHostPatterns: ["^blocked\\.example(:\\d+)?$"],
+      dataDir,
+      token: "secret",
+    });
+    daemons.push(daemon);
+
+    for (const authorization of [undefined, "Bearer secret"]) {
+      const headers: Record<string, string> = {
+        host: "BLOCKED.example",
+        origin: "https://renderer.example",
+      };
+      if (authorization !== undefined) {
+        headers.authorization = authorization;
+      }
+      const response = await daemonRequest(daemon, "/api/health", { headers });
+
+      expect(response.status).toBe(403);
+      expect(response.headers["access-control-allow-origin"]).toBeUndefined();
+      expect(JSON.parse(response.body)).toEqual({
+        error: "Forbidden host.",
+      });
+    }
+  });
+
+  it("applies the blocked Host guard to pairing and non-API routes", async () => {
+    const dataDir = await mkdtemp(path.join(os.tmpdir(), "angel-daemon-"));
+    const daemon = await createDaemon({
+      blockedHostPatterns: ["^blocked\\.example$"],
+      dataDir,
+      mobilePassword: "correct horse battery staple",
+      token: "secret",
+    });
+    daemons.push(daemon);
+    const headers = {
+      "content-type": "application/json",
+      host: "blocked.example",
+    };
+
+    const pair = await daemonRequest(daemon, "/api/auth/pair", {
+      body: JSON.stringify({ password: "correct horse battery staple" }),
+      headers,
+      method: "POST",
+    });
+    expect(pair.status).toBe(403);
+    expect((await daemonRequest(daemon, "/", { headers })).status).toBe(403);
+  });
+
+  it("allows unmatched HTTP hosts when patterns are configured", async () => {
+    const dataDir = await mkdtemp(path.join(os.tmpdir(), "angel-daemon-"));
+    const daemon = await createDaemon({
+      blockedHostPatterns: ["^blocked\\.example$"],
+      dataDir,
+      token: "secret",
+    });
+    daemons.push(daemon);
+
+    const response = await daemonRequest(daemon, "/api/health", {
+      headers: {
+        authorization: "Bearer secret",
+        host: "allowed.example",
+      },
+    });
+
+    expect(response.status).toBe(200);
+  });
+
+  it("rejects blocked WebSocket hosts before token authentication", async () => {
+    const dataDir = await mkdtemp(path.join(os.tmpdir(), "angel-daemon-"));
+    const daemon = await createDaemon({
+      blockedHostPatterns: ["^blocked\\.example$"],
+      dataDir,
+      token: "secret",
+    });
+    daemons.push(daemon);
+    const socket = new WebSocket(
+      `ws://${daemon.info.host}:${daemon.info.port}/api/events`,
+      { headers: { host: "blocked.example" } },
+    );
+
+    const status = await new Promise<number>((resolve, reject) => {
+      socket.once("unexpected-response", (_request, response) => {
+        response.resume();
+        resolve(response.statusCode ?? 0);
+      });
+      socket.once("error", reject);
+      socket.once("open", () => reject(new Error("WebSocket was accepted.")));
+    });
+
+    expect(status).toBe(403);
   });
 
   it("returns the resolved available-agent catalog", async () => {
@@ -540,6 +634,48 @@ function daemonFetch(daemon: Daemon, pathname: string, init?: RequestInit) {
   return fetch(`http://${daemon.info.host}:${daemon.info.port}${pathname}`, {
     ...init,
     headers: { authorization: "Bearer secret", ...init?.headers },
+  });
+}
+
+interface DaemonRequestOptions {
+  body?: string;
+  headers?: Record<string, string>;
+  method?: string;
+}
+
+function daemonRequest(
+  daemon: Daemon,
+  pathname: string,
+  options: DaemonRequestOptions = {},
+): Promise<{
+  body: string;
+  headers: import("node:http").IncomingHttpHeaders;
+  status: number;
+}> {
+  return new Promise((resolve, reject) => {
+    const request = httpRequest(
+      {
+        headers: options.headers,
+        host: daemon.info.host,
+        method: options.method,
+        path: pathname,
+        port: daemon.info.port,
+      },
+      (response) => {
+        const chunks: Buffer[] = [];
+        response.on("data", (chunk) => chunks.push(Buffer.from(chunk)));
+        response.once("error", reject);
+        response.once("end", () => {
+          resolve({
+            body: Buffer.concat(chunks).toString("utf8"),
+            headers: response.headers,
+            status: response.statusCode ?? 0,
+          });
+        });
+      },
+    );
+    request.once("error", reject);
+    request.end(options.body);
   });
 }
 

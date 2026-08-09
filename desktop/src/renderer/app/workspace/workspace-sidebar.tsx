@@ -64,6 +64,7 @@ interface WorkspaceSidebarProps {
   isMacOS: boolean;
   isProjectsLoading: boolean;
   onArchiveChat: (chat: Chat) => MaybeAsync;
+  onCloneRepository: () => MaybeAsync;
   onCancelWorktreeCreation: (chat: Chat) => MaybeAsync;
   onCreateProject: () => MaybeAsync;
   onCreateProjectChat: (project: Project) => MaybeAsync;
@@ -226,6 +227,7 @@ function WorkspaceSidebarContent({
   isMacOS,
   isProjectsLoading,
   onArchiveChat,
+  onCloneRepository,
   onCancelWorktreeCreation,
   onCreateProject,
   onCreateProjectChat,
@@ -354,6 +356,7 @@ function WorkspaceSidebarContent({
         {workspaceMode === "power" ? (
           <PowerProjectSidebarSection
             isLoading={isProjectsLoading}
+            onCloneRepository={onCloneRepository}
             onCreateProject={onCreateProject}
             onCreateProjectChat={onCreateProjectChat}
             onCancelWorktreeCreation={onCancelWorktreeCreation}
@@ -370,6 +373,7 @@ function WorkspaceSidebarContent({
           <ProjectSidebarSection
             isLoading={isProjectsLoading}
             onArchiveChat={onArchiveChat}
+            onCloneRepository={onCloneRepository}
             onCancelWorktreeCreation={onCancelWorktreeCreation}
             onCreateProject={onCreateProject}
             onCreateProjectChat={onCreateProjectChat}

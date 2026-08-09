@@ -62,6 +62,12 @@ export const de = {
       open: "{{name}} öffnen",
     },
     workspace: {
+      ambiguousSend: {
+        description:
+          "Angel Engine wurde beim Senden neu gestartet. Um ein Duplikat zu vermeiden, wurde diese Nachricht nicht automatisch erneut gesendet.",
+        dismiss: "Ausstehende Sendung löschen",
+        title: "Nachrichtenzustellung ist ungewiss",
+      },
       backgroundChatCompleted: "Hintergrundchat abgeschlossen",
       backgroundChatNeedsInput: "Hintergrundchat benötigt Eingabe",
       backgroundChatStatus: "Status des Hintergrundchats",
@@ -74,10 +80,31 @@ export const de = {
       noProject: "Kein Projekt",
       projectSelect: "Projekt",
       settings: "Einstellungen",
+      setup: {
+        approvalUnavailable:
+          "Prüfe und genehmige das aktuelle Einrichtungsskript vor dem erneuten Versuch.",
+        continueAnyway: "Trotzdem fortfahren",
+        discard: "Arbeitsbereich verwerfen",
+        discardConfirm: "Arbeitsbereich verwerfen",
+        discardConfirmDescription:
+          "Dadurch werden dieser Chat, sein Worktree und sein Branch dauerhaft gelöscht. Dies kann nicht rückgängig gemacht werden.",
+        discardConfirmTitle: "Diesen Arbeitsbereich verwerfen?",
+        failedStep:
+          "Schritt {{step}} von {{total}} fehlgeschlagen ({{exitCode}}): {{command}}",
+        failedTitle: "Einrichtung des Arbeitsbereichs fehlgeschlagen",
+        noLog: "Noch keine Einrichtungsausgabe.",
+        ready: "Arbeitsbereich bereit",
+        retry: "Einrichtung wiederholen",
+        running:
+          "Arbeitsbereich wird eingerichtet… Die erste Nachricht wird danach automatisch gesendet.",
+        runningStep: "Schritt {{step}} von {{total}}: {{command}}",
+        viewLog: "Einrichtungsprotokoll anzeigen",
+      },
       statsBranch: "Branch",
       statsChanges: "Änderungen",
       statsLastActive: "Zuletzt aktiv",
       tools: {
+        addToChat: "Zum Chat hinzufügen",
         commit: {
           committing: "Commit läuft…",
           commitTo: "Commit nach {{target}}",
@@ -457,6 +484,10 @@ export const de = {
           "Vor dem Erstellen eines Worktrees nachfragen, wenn das ausgewählte Projekt nicht übernommene Änderungen hat.",
         dirtyPromptSwitchLabel: "Vor Worktrees aus dirty Repositories warnen",
         dirtyPromptTitle: "Dirty-Repository-Warnung",
+        osNotificationsDescription:
+          "Systembanner anzeigen, wenn ein Hintergrund-Chat fertig ist, fehlschlägt oder dich braucht. Der In-App-Verlauf bleibt verfügbar.",
+        osNotificationsSwitchLabel: "OS-Benachrichtigungen anzeigen",
+        osNotificationsTitle: "OS-Benachrichtigungen",
         sendWithModEnterDescription:
           "Wenn aktiviert, fügt Enter eine neue Zeile ein und {{shortcut}} sendet.",
         sendWithModEnterSwitchLabel: "Nachrichten mit {{shortcut}} senden",
@@ -654,6 +685,13 @@ export const de = {
       renameChat: "Chat umbenennen",
     },
     notifications: {
+      agentFailedNoDetail: "Der Agent wurde mit einem Fehler beendet.",
+      centerClear: "Alle löschen",
+      centerEmpty: "Noch keine Benachrichtigungen",
+      centerOpenChat: "Chat öffnen",
+      centerTitle: "Benachrichtigungen",
+      centerUnread: "{{count}} ungelesen",
+      failed: "{{chatTitle}} fehlgeschlagen",
       chatsDeleted: "Chats gelöscht",
       chatsDeletedDescription_one: "{{count}} Chat gelöscht.",
       chatsDeletedDescription_other: "{{count}} Chats gelöscht.",
@@ -678,6 +716,43 @@ export const de = {
       undo: "Rückgängig",
       updateReady: "Update bereit",
       updateReadyDescription: "{{version}} wurde heruntergeladen.",
+    },
+    projectImport: {
+      addFromFolder: "Aus lokalem Ordner…",
+      addFromGit: "Aus Git klonen…",
+      archivedBadge: "Archiviert",
+      clone: "Klonen",
+      cloneTo: "Klonen nach {{path}}",
+      description:
+        "Wähle ein Repository auf GitHub oder füge eine Git-URL ein.",
+      failedTitle: "Klonen fehlgeschlagen",
+      forkBadge: "Fork",
+      loadingOwners: "Konten werden geladen…",
+      loadingRepositories: "Repositories werden geladen…",
+      noMatches: "Keine Repositories passen zu „{{query}}“",
+      noOwners: "Keine GitHub-Konten verfügbar",
+      noRepositories: "Keine Repositories",
+      openProject: "Projekt öffnen",
+      owners: "Konten",
+      ownersFailed: "GitHub-Konten konnten nicht geladen werden",
+      readyTitle: "Repository bereit",
+      privateBadge: "Privat",
+      progressTitle: "Repository wird geklont",
+      repositoriesFailed: "Repositories konnten nicht geladen werden",
+      retry: "Erneut versuchen",
+      reusedExisting:
+        "Ein vorhandener Checkout an diesem Pfad wurde weiterverwendet.",
+      searchPlaceholder: "Repositories durchsuchen",
+      stageCloning: "Repository klonen",
+      stageCompleted: "Fertig",
+      stagePreparing: "Ziel vorbereiten",
+      stageRegistering: "Projekt registrieren",
+      tabGitHub: "GitHub",
+      tabUrl: "Git-URL",
+      title: "Repository klonen",
+      urlHint: "https, ssh oder owner/repo",
+      urlLabel: "Repository-URL",
+      urlPlaceholder: "https://github.com/owner/repo",
     },
     projects: {
       chooseFolder: "Projektordner auswählen",

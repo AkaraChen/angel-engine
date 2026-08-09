@@ -39,6 +39,8 @@ import { ImportSessionDialog } from "@/features/chat/components/import-session-d
 import { RenameChatDialog } from "@/features/chat/components/rename-chat-dialog";
 import { WorkspaceCommandPalette } from "@/features/command-palette/workspace-command-palette";
 import { FleetPage } from "@/features/fleet/fleet-page";
+import { CloneProgressDialog } from "@/features/projects/components/clone-progress-dialog";
+import { CloneRepositoryDialog } from "@/features/projects/components/clone-repository-dialog";
 import { ProjectSettingsDialog } from "@/features/projects/components/project-settings-dialog";
 import { PullRequestsPage } from "@/features/pull-requests/pull-requests-page";
 import { queryKeys } from "@/platform/query-keys";
@@ -71,6 +73,18 @@ export const WorkspacePageView: FC<WorkspacePageViewProps> = ({
   }, []);
   const closeImportSession = useCallback(() => {
     setImportSessionOpen(false);
+  }, []);
+  const [cloneDialogOpen, setCloneDialogOpen] = useState(false);
+  const [cloneUrl, setCloneUrl] = useState<string | null>(null);
+  const openCloneDialog = useCallback(() => {
+    setCloneDialogOpen(true);
+  }, []);
+  const startClone = useCallback((url: string) => {
+    setCloneDialogOpen(false);
+    setCloneUrl(url);
+  }, []);
+  const closeCloneProgress = useCallback(() => {
+    setCloneUrl(null);
   }, []);
 
   const {
@@ -155,6 +169,7 @@ export const WorkspacePageView: FC<WorkspacePageViewProps> = ({
     createChatForSelection,
     createStandaloneWorkspace,
     navigateToChat,
+    navigateToDraft,
     openChat,
     openChatFromFleet,
     openFleet,
@@ -286,6 +301,7 @@ export const WorkspacePageView: FC<WorkspacePageViewProps> = ({
           isMacOS={isMacOS}
           isProjectsLoading={projectsQuery.isPending}
           onArchiveChat={archiveChat}
+          onCloneRepository={openCloneDialog}
           onCancelWorktreeCreation={cancelWorktreeCreation}
           onCreateProject={() => void createProjectFromPicker()}
           onCreateProjectChat={createChatForProject}
@@ -314,6 +330,7 @@ export const WorkspacePageView: FC<WorkspacePageViewProps> = ({
           isMacOS={isMacOS}
           isProjectsLoading={projectsQuery.isPending}
           onArchiveChat={archiveChat}
+          onCloneRepository={openCloneDialog}
           onCancelWorktreeCreation={cancelWorktreeCreation}
           onCreateProject={() => void createProjectFromPicker()}
           onCreateProjectChat={createChatForProject}
@@ -364,6 +381,19 @@ export const WorkspacePageView: FC<WorkspacePageViewProps> = ({
         <ProjectSettingsDialog
           onClose={closeProjectSettingsDialog}
           project={settingsTargetProject}
+        />
+        <CloneRepositoryDialog
+          onClone={startClone}
+          onOpenChange={setCloneDialogOpen}
+          open={cloneDialogOpen}
+        />
+        <CloneProgressDialog
+          onClose={closeCloneProgress}
+          onOpenProject={(project) => {
+            closeCloneProgress();
+            createChatForProject(project);
+          }}
+          url={cloneUrl}
         />
         <WorktreeDirtyDialog
           checked={rememberWorktreeDirtyChoice}
@@ -462,6 +492,9 @@ export const WorkspacePageView: FC<WorkspacePageViewProps> = ({
                     onChatCreated={updateChatFromRun}
                     onChatMessagesUpdated={setChatMessagesInCache}
                     onChatUpdated={updateChatFromRun}
+                    onSetupDiscarded={(projectId) =>
+                      navigateToDraft(projectId, { replace: true })
+                    }
                     projects={projects}
                     routeProjectId={routeProjectId}
                     runtimeOptions={runtimeOptions}
@@ -481,6 +514,9 @@ export const WorkspacePageView: FC<WorkspacePageViewProps> = ({
                         onChatCreated={updateChatFromRun}
                         onChatMessagesUpdated={setChatMessagesInCache}
                         onChatUpdated={updateChatFromRun}
+                        onSetupDiscarded={(projectId) =>
+                          navigateToDraft(projectId, { replace: true })
+                        }
                         projects={projects}
                         routeProjectId={routeProjectId}
                         runtimeOptions={runtimeOptions}

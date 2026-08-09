@@ -210,3 +210,37 @@ export const githubCreateWorkspaceFromPullRequestInputSchema = arkType({
   "setupApproval?": "string",
   "title?": "string",
 });
+
+/** An account whose repositories the authenticated user can clone. */
+export interface GitHubRepositoryOwner {
+  kind: GitHubRepositoryOwnerKind;
+  login: string;
+}
+
+export type GitHubRepositoryOwnerKind = "organization" | "user";
+
+export interface GitHubRepositoryOwnersResult {
+  owners: GitHubRepositoryOwner[];
+}
+
+export interface GitHubListRepositoriesInput {
+  limit?: number;
+  owner: string;
+}
+
+export interface GitHubRepository {
+  defaultBranch: string | null;
+  description: string | null;
+  isArchived: boolean;
+  isFork: boolean;
+  isPrivate: boolean;
+  name: string;
+  nameWithOwner: string;
+  owner: string;
+  pushedAt: string | null;
+  url: string;
+}
+
+export interface GitHubListRepositoriesResult {
+  repositories: GitHubRepository[];
+}

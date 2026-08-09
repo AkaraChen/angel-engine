@@ -10,9 +10,12 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { Db } from "../../platform/db";
 import {
   createProjectWorktree,
+  discardManagedCreatedWorktree,
+  discardCreatedWorktree,
   projectGitStatus,
   removeManagedWorktree,
 } from "./git";
+import { projectSetupLifecycle } from "./setup-lifecycle";
 
 const execFileAsync = promisify(execFile);
 const getProjectMock = vi.hoisted(() => vi.fn());
@@ -39,7 +42,12 @@ describe("project worktree setup", () => {
       os.homedir(),
       ".angel-engine",
       "worktrees",
-      path.basename(projectRoot),
+      path
+        .basename(projectRoot)
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-+|-+$/g, "")
+        .slice(0, 48),
     );
     await git(projectRoot, ["init"]);
     await fs.writeFile(path.join(projectRoot, "README.md"), "test\n");
@@ -70,28 +78,45 @@ describe("project worktree setup", () => {
     getProjectMock.mockReset();
   });
 
-  it("runs 2code setup_script before returning the worktree", async () => {
+  it("C1 returns immediately and completes setup in the background", async () => {
     await writeConfig(["echo ready > setup.marker"]);
 
     createdWorktree = await createApprovedWorktree();
+    await projectSetupLifecycle.waitUntilReady(createdWorktree.cwd);
 
     await expect(
       fs.readFile(path.join(createdWorktree.cwd, "setup.marker"), "utf8"),
     ).resolves.toContain("ready");
-  });
+  }, 15_000);
 
-  it("rolls back the worktree and branch when setup fails", async () => {
+  it("C2 keeps a failed setup worktree reachable", async () => {
     await writeConfig(["exit 7"]);
 
-    await expect(createApprovedWorktree()).rejects.toThrow(
-      "2code.json setup_script failed",
+    createdWorktree = await createApprovedWorktree();
+    await waitForSetupStatus(createdWorktree.cwd, "failed");
+
+    await expect(directoryEntriesOrEmpty(worktreeParent)).resolves.toHaveLength(
+      1,
     );
+    await expect(
+      git(projectRoot, ["branch", "--list", "angel/*"]),
+    ).resolves.toContain(createdWorktree.branch);
+  }, 15_000);
+
+  it("C4 explicitly discards the retained directory and branch", async () => {
+    await writeConfig(["exit 7"]);
+    createdWorktree = await createApprovedWorktree();
+    await waitForSetupStatus(createdWorktree.cwd, "failed");
+
+    await projectSetupLifecycle.discard(createdWorktree.cwd);
+    await discardManagedCreatedWorktree(projectRoot, createdWorktree.cwd);
 
     await expect(directoryEntriesOrEmpty(worktreeParent)).resolves.toEqual([]);
     await expect(
-      git(projectRoot, ["branch", "--list", "angel/*"]),
+      git(projectRoot, ["branch", "--list", createdWorktree.branch]),
     ).resolves.toBe("");
-  });
+    createdWorktree = undefined;
+  }, 15_000);
 
   it("reports phases and removes the worktree when creation is cancelled", async () => {
     await writeConfig(["echo should-not-run"]);
@@ -120,7 +145,7 @@ describe("project worktree setup", () => {
     await expect(
       git(projectRoot, ["branch", "--list", "angel/*"]),
     ).resolves.toBe("");
-  });
+  }, 15_000);
 
   it("requires approval for the exact 2code.json contents", async () => {
     await writeConfig(["echo ready"]);
@@ -153,15 +178,16 @@ describe("project worktree setup", () => {
     ).resolves.toBe("");
   });
 
-  it("prunes metadata and deletes the branch after degraded rollback", async () => {
-    const removeGitFile =
-      process.platform === "win32"
-        ? "Remove-Item -Force .git; exit 7"
-        : "rm -f .git; exit 7";
-    await writeConfig([removeGitFile]);
+  it("prunes metadata and deletes the branch only on explicit discard", async () => {
+    await writeConfig(["echo ready"]);
+    createdWorktree = await createApprovedWorktree();
+    await projectSetupLifecycle.waitUntilReady(createdWorktree.cwd);
+    await fs.rm(path.join(createdWorktree.cwd, ".git"), { force: true });
 
-    await expect(createApprovedWorktree()).rejects.toThrow(
-      "2code.json setup_script failed",
+    await discardCreatedWorktree(
+      projectRoot,
+      createdWorktree.cwd,
+      createdWorktree.branch,
     );
 
     await expect(directoryEntriesOrEmpty(worktreeParent)).resolves.toEqual([]);
@@ -171,7 +197,8 @@ describe("project worktree setup", () => {
     await expect(
       git(projectRoot, ["branch", "--list", "angel/*"]),
     ).resolves.toBe("");
-  });
+    createdWorktree = undefined;
+  }, 15_000);
 
   async function createApprovedWorktree() {
     const status = await getGitStatus();
@@ -228,4 +255,13 @@ async function directoryEntriesOrEmpty(directory: string) {
     }
     throw cause;
   }
+}
+
+async function waitForSetupStatus(cwd: string, status: "failed" | "ready") {
+  for (let attempt = 0; attempt < 100; attempt += 1) {
+    const view = await projectSetupLifecycle.view(cwd);
+    if (view.snapshot.setup.status === status) return view;
+    await new Promise((resolve) => setTimeout(resolve, 10));
+  }
+  throw new Error(`Setup did not reach ${status}.`);
 }

@@ -62,6 +62,12 @@ export const fr = {
       open: "Ouvrir {{name}}",
     },
     workspace: {
+      ambiguousSend: {
+        description:
+          "Angel Engine a redémarré pendant l’envoi. Pour éviter un doublon, ce message n’a pas été renvoyé automatiquement.",
+        dismiss: "Effacer l’envoi en attente",
+        title: "La remise du message est incertaine",
+      },
       backgroundChatCompleted: "Discussion en arrière-plan terminée",
       backgroundChatNeedsInput:
         "La discussion en arrière-plan attend une saisie",
@@ -75,10 +81,31 @@ export const fr = {
       noProject: "Aucun projet",
       projectSelect: "Projet",
       settings: "Paramètres",
+      setup: {
+        approvalUnavailable:
+          "Vérifiez et approuvez le script de configuration actuel avant de réessayer.",
+        continueAnyway: "Continuer quand même",
+        discard: "Supprimer l’espace de travail",
+        discardConfirm: "Supprimer l’espace de travail",
+        discardConfirmDescription:
+          "Cette action supprime définitivement ce chat, son worktree et sa branche. Elle est irréversible.",
+        discardConfirmTitle: "Supprimer cet espace de travail ?",
+        failedStep:
+          "Échec de l’étape {{step}} sur {{total}} ({{exitCode}}) : {{command}}",
+        failedTitle: "Échec de la configuration de l’espace de travail",
+        noLog: "Aucune sortie de configuration pour le moment.",
+        ready: "Espace de travail prêt",
+        retry: "Réessayer la configuration",
+        running:
+          "Configuration de l’espace de travail… Le premier message sera envoyé automatiquement ensuite.",
+        runningStep: "Étape {{step}} sur {{total}} : {{command}}",
+        viewLog: "Afficher le journal de configuration",
+      },
       statsBranch: "Branche",
       statsChanges: "Modifications",
       statsLastActive: "Dernière activité",
       tools: {
+        addToChat: "Ajouter au chat",
         commit: {
           committing: "Commit en cours…",
           commitTo: "Commiter vers {{target}}",
@@ -458,6 +485,10 @@ export const fr = {
         dirtyPromptSwitchLabel:
           "Avertir avant de créer des worktrees depuis des dépôts dirty",
         dirtyPromptTitle: "Avertissement de dépôt dirty",
+        osNotificationsDescription:
+          "Affiche des bannières système quand un chat en arrière-plan se termine, échoue ou a besoin de vous. L’historique in-app reste disponible.",
+        osNotificationsSwitchLabel: "Afficher les notifications OS",
+        osNotificationsTitle: "Notifications OS",
         sendWithModEnterDescription:
           "Si activé, Entrée insère une nouvelle ligne et {{shortcut}} envoie.",
         sendWithModEnterSwitchLabel: "Envoyer les messages avec {{shortcut}}",
@@ -653,6 +684,13 @@ export const fr = {
       renameChat: "Renommer la discussion",
     },
     notifications: {
+      agentFailedNoDetail: "L’agent s’est arrêté avec une erreur.",
+      centerClear: "Tout effacer",
+      centerEmpty: "Aucune notification",
+      centerOpenChat: "Ouvrir le chat",
+      centerTitle: "Notifications",
+      centerUnread: "{{count}} non lues",
+      failed: "{{chatTitle}} a échoué",
       chatsDeleted: "Discussions supprimées",
       chatsDeletedDescription_one: "{{count}} discussion supprimée.",
       chatsDeletedDescription_other: "{{count}} discussions supprimées.",
@@ -677,6 +715,41 @@ export const fr = {
       undo: "Annuler",
       updateReady: "Mise à jour prête",
       updateReadyDescription: "{{version}} a été téléchargée.",
+    },
+    projectImport: {
+      addFromFolder: "Depuis un dossier local…",
+      addFromGit: "Cloner depuis Git…",
+      archivedBadge: "Archivé",
+      clone: "Cloner",
+      cloneTo: "Clonage vers {{path}}",
+      description: "Choisissez un dépôt GitHub ou collez une URL git.",
+      failedTitle: "Échec du clonage",
+      forkBadge: "Fork",
+      loadingOwners: "Chargement des comptes…",
+      loadingRepositories: "Chargement des dépôts…",
+      noMatches: "Aucun dépôt ne correspond à « {{query}} »",
+      noOwners: "Aucun compte GitHub disponible",
+      noRepositories: "Aucun dépôt",
+      openProject: "Ouvrir le projet",
+      owners: "Comptes",
+      ownersFailed: "Impossible de charger les comptes GitHub",
+      readyTitle: "Dépôt prêt",
+      privateBadge: "Privé",
+      progressTitle: "Clonage du dépôt",
+      repositoriesFailed: "Impossible de charger les dépôts",
+      retry: "Réessayer",
+      reusedExisting: "La copie existante à cet emplacement a été réutilisée.",
+      searchPlaceholder: "Rechercher des dépôts",
+      stageCloning: "Clonage du dépôt",
+      stageCompleted: "Terminé",
+      stagePreparing: "Préparation de la destination",
+      stageRegistering: "Enregistrement du projet",
+      tabGitHub: "GitHub",
+      tabUrl: "URL Git",
+      title: "Cloner un dépôt",
+      urlHint: "https, ssh ou owner/repo",
+      urlLabel: "URL du dépôt",
+      urlPlaceholder: "https://github.com/owner/repo",
     },
     projects: {
       chooseFolder: "Choisir le dossier du projet",

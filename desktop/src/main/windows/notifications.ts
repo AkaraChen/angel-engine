@@ -1,12 +1,31 @@
 import type { Chat, ChatElicitation } from "@angel-engine/daemon-api/chat";
+import type {
+  DesktopNotificationKind,
+  DesktopNotificationPreferences,
+} from "../../shared/notification-preferences";
 
 import type { DesktopOpenChatFromNotificationEvent } from "../../shared/desktop-window";
 import is from "@sindresorhus/is";
 import { app, BrowserWindow, ipcMain, Notification } from "electron";
 import {
   DESKTOP_ACTIVE_CHAT_SET_CHANNEL,
+  DESKTOP_NOTIFICATION_HISTORY_CLEAR_CHANNEL,
+  DESKTOP_NOTIFICATION_HISTORY_GET_CHANNEL,
+  DESKTOP_NOTIFICATION_HISTORY_MARK_READ_CHANNEL,
+  DESKTOP_NOTIFICATION_PREFERENCES_GET_CHANNEL,
+  DESKTOP_NOTIFICATION_PREFERENCES_SET_CHANNEL,
   DESKTOP_OPEN_CHAT_FROM_NOTIFICATION_CHANNEL,
 } from "../../shared/desktop-window";
+import {
+  clearNotificationHistory,
+  listNotificationHistory,
+  markNotificationHistoryRead,
+  recordNotificationHistoryItem,
+} from "../notification-history";
+import {
+  readNotificationPreferences,
+  writeNotificationPreferences,
+} from "../notification-preferences";
 import { translate } from "../platform/i18n";
 
 interface WindowNotificationState {
@@ -17,8 +36,14 @@ interface WindowNotificationState {
 
 const windowStates = new WeakMap<BrowserWindow, WindowNotificationState>();
 const retainedNotifications = new Set<Notification>();
+let didRegisterIpc = false;
+let preferences: DesktopNotificationPreferences | undefined;
 
 export function registerDesktopWindowIpc() {
+  if (didRegisterIpc) return;
+  didRegisterIpc = true;
+  preferences = readNotificationPreferences();
+
   ipcMain.on(DESKTOP_ACTIVE_CHAT_SET_CHANNEL, (event, chatId: unknown) => {
     const window = BrowserWindow.fromWebContents(event.sender);
     if (!window) return;
@@ -26,6 +51,50 @@ export function registerDesktopWindowIpc() {
     const state = stateForWindow(window);
     state.activeChatId = typeof chatId === "string" && chatId ? chatId : null;
   });
+
+  ipcMain.handle(DESKTOP_NOTIFICATION_PREFERENCES_GET_CHANNEL, () =>
+    getNotificationPreferences(),
+  );
+
+  ipcMain.handle(
+    DESKTOP_NOTIFICATION_PREFERENCES_SET_CHANNEL,
+    (_event, input: unknown) => setNotificationPreferences(input),
+  );
+
+  ipcMain.handle(DESKTOP_NOTIFICATION_HISTORY_GET_CHANNEL, () =>
+    listNotificationHistory(),
+  );
+
+  ipcMain.handle(DESKTOP_NOTIFICATION_HISTORY_CLEAR_CHANNEL, () =>
+    clearNotificationHistory(),
+  );
+
+  ipcMain.handle(
+    DESKTOP_NOTIFICATION_HISTORY_MARK_READ_CHANNEL,
+    (_event, input: unknown) => {
+      const ids = readHistoryIds(input);
+      return markNotificationHistoryRead(ids);
+    },
+  );
+}
+
+export function getNotificationPreferences(): DesktopNotificationPreferences {
+  return { ...currentPreferences() };
+}
+
+export function setNotificationPreferences(
+  input: unknown,
+): DesktopNotificationPreferences {
+  const osEnabled =
+    is.plainObject(input) && input.osEnabled === false ? false : true;
+  preferences = { osEnabled };
+  writeNotificationPreferences(preferences);
+  return { ...preferences };
+}
+
+function currentPreferences(): DesktopNotificationPreferences {
+  preferences ??= readNotificationPreferences();
+  return preferences;
 }
 
 export function configureDesktopWindowNotifications(window: BrowserWindow) {
@@ -41,24 +110,53 @@ export function configureDesktopWindowNotifications(window: BrowserWindow) {
 }
 
 export function notifyChatTurnCompleted(input: {
+  attentionId: string;
   body: string;
   chat: Chat;
   window?: BrowserWindow | null;
 }) {
-  showBackgroundChatNotification({
-    body: notificationBody(
-      input.body,
-      translate("notifications.agentFinishedNoOutput"),
-    ),
+  const title = translate("notifications.finished", {
+    chatTitle: notificationChatTitle(input.chat),
+  });
+  const body = notificationBody(
+    input.body,
+    translate("notifications.agentFinishedNoOutput"),
+  );
+  deliverChatNotification({
+    attentionId: input.attentionId,
+    body,
     chat: input.chat,
-    title: translate("notifications.finished", {
-      chatTitle: notificationChatTitle(input.chat),
-    }),
+    kind: "completed",
+    title,
+    window: input.window,
+  });
+}
+
+export function notifyChatFailed(input: {
+  attentionId: string;
+  body: string;
+  chat: Chat;
+  window?: BrowserWindow | null;
+}) {
+  const title = translate("notifications.failed", {
+    chatTitle: notificationChatTitle(input.chat),
+  });
+  const body = notificationBody(
+    input.body,
+    translate("notifications.agentFailedNoDetail"),
+  );
+  deliverChatNotification({
+    attentionId: input.attentionId,
+    body,
+    chat: input.chat,
+    kind: "failed",
+    title,
     window: input.window,
   });
 }
 
 export function notifyChatNeedsInput(input: {
+  attentionId: string;
   chat: Chat;
   elicitation: ChatElicitation;
   window?: BrowserWindow | null;
@@ -75,14 +173,41 @@ export function notifyChatNeedsInput(input: {
       input.elicitation.body,
       input.elicitation.title,
       input.elicitation.questions
-        ?.map((question) => question.question)
+        ?.map((question: { question?: string }) => question.question)
         .find(is.nonEmptyString),
     ].find(is.nonEmptyString) ?? translate("notifications.agentWaiting");
 
-  showBackgroundChatNotification({
+  deliverChatNotification({
+    attentionId: input.attentionId,
     body: notificationBody(body, translate("notifications.agentWaiting")),
     chat: input.chat,
+    kind: "needsInput",
     title,
+    window: input.window,
+  });
+}
+
+function deliverChatNotification(input: {
+  attentionId: string;
+  body: string;
+  chat: Chat;
+  kind: DesktopNotificationKind;
+  title: string;
+  window?: BrowserWindow | null;
+}) {
+  recordNotificationHistoryItem({
+    body: input.body,
+    chatId: input.chat.id,
+    id: input.attentionId,
+    kind: input.kind,
+    projectId: input.chat.projectId,
+    title: input.title,
+  });
+
+  showBackgroundChatNotification({
+    body: input.body,
+    chat: input.chat,
+    title: input.title,
     window: input.window,
   });
 }
@@ -93,6 +218,8 @@ function showBackgroundChatNotification(input: {
   title: string;
   window?: BrowserWindow | null;
 }) {
+  if (!currentPreferences().osEnabled) return;
+
   const window = input.window;
   if (!window || window.isDestroyed() || !isWindowBackgrounded(window)) {
     return;
@@ -178,4 +305,11 @@ function notificationBody(text: string | null | undefined, fallback: string) {
   return normalized.length > 220
     ? `${normalized.slice(0, 217).trimEnd()}...`
     : normalized;
+}
+
+function readHistoryIds(input: unknown): string[] {
+  if (!is.plainObject(input) || !Array.isArray(input.ids)) return [];
+  return input.ids.filter(
+    (id): id is string => typeof id === "string" && id.length > 0,
+  );
 }

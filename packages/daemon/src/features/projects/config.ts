@@ -1,58 +1,60 @@
-import { spawn, type ChildProcess } from "node:child_process";
 import { createHash } from "node:crypto";
 import fs from "node:fs/promises";
 import path from "node:path";
 
 export const PROJECT_CONFIG_FILE = "2code.json";
-const SETUP_ERROR_TAIL_LENGTH = 4096;
-const SETUP_SCRIPT_TIMEOUT_MS = 5 * 60 * 1000;
-const SETUP_TERMINATION_GRACE_MS = 1000;
 
-export interface ProjectSetupConfig {
+export interface ProjectLifecycleConfig {
   digest: string;
-  scripts: string[];
-}
-
-export interface ProjectSetupExecutionOptions {
-  killGraceMs?: number;
-  signal?: AbortSignal;
-  timeoutMs?: number;
+  runScript: string;
+  setupScript: string[];
+  teardownScript: string[];
 }
 
 export function projectConfigPath(projectRoot: string) {
   return path.join(projectRoot, PROJECT_CONFIG_FILE);
 }
 
-export async function loadProjectSetupConfig(
+export async function loadProjectLifecycleConfig(
   projectRoot: string,
-): Promise<ProjectSetupConfig | undefined> {
+): Promise<ProjectLifecycleConfig | undefined> {
   const file = await readProjectConfigFile(projectRoot);
   if (file === undefined) return undefined;
 
   return {
     digest: createHash("sha256").update(file.content).digest("hex"),
-    scripts: readSetupScript(file.config),
+    runScript: readRunScript(file.config),
+    setupScript: readCommandList(file.config, "setup_script"),
+    teardownScript: readCommandList(file.config, "teardown_script"),
   };
 }
 
 /**
- * Replaces `setup_script` and leaves every other key in the file untouched, so
- * hand-written config the app does not model survives an edit from the UI.
+ * Replaces the modeled lifecycle keys and leaves every other key untouched.
  * Blank commands are dropped rather than persisted as no-op steps.
  */
-export async function saveProjectSetupScript(
+export async function saveProjectLifecycleConfig(
   projectRoot: string,
-  setupScript: string[],
-): Promise<string[]> {
+  input: {
+    runScript: string;
+    setupScript: string[];
+    teardownScript: string[];
+  },
+): Promise<Omit<ProjectLifecycleConfig, "digest">> {
   // Read first: a file we cannot parse must fail loudly instead of being
   // silently replaced with a fresh one.
   const file = await readProjectConfigFile(projectRoot);
-  if (file !== undefined) readSetupScript(file.config);
+  if (file !== undefined) validateLifecycleConfig(file.config);
 
-  const scripts = setupScript
-    .map((command) => command.trim())
-    .filter((command) => command.length > 0);
-  const config = { ...(file?.config ?? {}), setup_script: scripts };
+  const setupScript = normalizeCommands(input.setupScript);
+  const teardownScript = normalizeCommands(input.teardownScript);
+  const runScript = input.runScript.trim();
+  const config = {
+    ...file?.config,
+    run_script: runScript,
+    setup_script: setupScript,
+    teardown_script: teardownScript,
+  };
 
   await fs.writeFile(
     projectConfigPath(projectRoot),
@@ -60,7 +62,7 @@ export async function saveProjectSetupScript(
     "utf8",
   );
 
-  return scripts;
+  return { runScript, setupScript, teardownScript };
 }
 
 async function readProjectConfigFile(projectRoot: string) {
@@ -93,173 +95,42 @@ async function readProjectConfigFile(projectRoot: string) {
   return { config, content };
 }
 
-function readSetupScript(config: Record<string, unknown>): string[] {
-  const scripts = config.setup_script;
+function readCommandList(
+  config: Record<string, unknown>,
+  key: "setup_script" | "teardown_script",
+): string[] {
+  const scripts = config[key];
   if (scripts === undefined) return [];
   if (
     !Array.isArray(scripts) ||
     !scripts.every((script) => typeof script === "string")
   ) {
     throw new Error(
-      `${PROJECT_CONFIG_FILE} setup_script must be an array of strings.`,
+      `${PROJECT_CONFIG_FILE} ${key} must be an array of strings.`,
     );
   }
   return scripts;
 }
 
-export async function executeProjectSetupScripts(
-  scripts: string[],
-  cwd: string,
-  options: ProjectSetupExecutionOptions = {},
-) {
-  for (const script of scripts) {
-    try {
-      await executeSetupScript(script, cwd, options);
-    } catch (cause) {
-      throw new Error(
-        `${PROJECT_CONFIG_FILE} setup_script failed (${tail(script)}): ${tail(errorMessage(cause))}`,
-        { cause },
-      );
-    }
+function readRunScript(config: Record<string, unknown>): string {
+  const script = config.run_script;
+  if (script === undefined) return "";
+  if (typeof script !== "string") {
+    throw new Error(`${PROJECT_CONFIG_FILE} run_script must be a string.`);
   }
+  return script;
 }
 
-async function executeSetupScript(
-  script: string,
-  cwd: string,
-  options: ProjectSetupExecutionOptions,
-) {
-  if (options.signal?.aborted) {
-    throw new Error("Setup was cancelled.");
-  }
-
-  const [command, args] = scriptCommand(script);
-  const child = spawn(command, args, {
-    cwd,
-    detached: process.platform !== "win32",
-    env: setupEnvironment(),
-    stdio: ["ignore", "pipe", "pipe"],
-    windowsHide: true,
-  });
-
-  let stdoutTail = "";
-  let stderrTail = "";
-  child.stdout?.on("data", (chunk: Buffer | string) => {
-    stdoutTail = appendTail(stdoutTail, chunk);
-  });
-  child.stderr?.on("data", (chunk: Buffer | string) => {
-    stderrTail = appendTail(stderrTail, chunk);
-  });
-
-  await new Promise<void>((resolve, reject) => {
-    let aborted = false;
-    let spawnError: Error | undefined;
-    let termination: Promise<void> | undefined;
-    let timedOut = false;
-    const timeoutMs = options.timeoutMs ?? SETUP_SCRIPT_TIMEOUT_MS;
-    const killGraceMs = options.killGraceMs ?? SETUP_TERMINATION_GRACE_MS;
-
-    const terminate = () => {
-      termination ??= terminateProcessTree(child, killGraceMs);
-    };
-    const onAbort = () => {
-      aborted = true;
-      terminate();
-    };
-    const timeout = setTimeout(() => {
-      timedOut = true;
-      terminate();
-    }, timeoutMs);
-
-    options.signal?.addEventListener("abort", onAbort, { once: true });
-    child.once("error", (cause) => {
-      spawnError = cause;
-    });
-    child.once("close", (code, signal) => {
-      clearTimeout(timeout);
-      options.signal?.removeEventListener("abort", onAbort);
-      Promise.resolve(termination).then(() => {
-        if (spawnError) {
-          reject(spawnError);
-        } else if (aborted) {
-          reject(new Error("Setup was cancelled."));
-        } else if (timedOut) {
-          reject(new Error(`Setup timed out after ${timeoutMs}ms.`));
-        } else if (code !== 0) {
-          reject(
-            new Error(
-              [
-                `Command exited with code ${code ?? "unknown"}`,
-                signal ? `signal ${signal}` : "",
-                stderrTail || stdoutTail,
-              ]
-                .filter(Boolean)
-                .join(": "),
-            ),
-          );
-        } else {
-          resolve();
-        }
-      }, reject);
-    });
-  });
+function validateLifecycleConfig(config: Record<string, unknown>) {
+  readCommandList(config, "setup_script");
+  readCommandList(config, "teardown_script");
+  readRunScript(config);
 }
 
-function setupEnvironment() {
-  return Object.fromEntries(
-    Object.entries(process.env).filter(
-      ([key]) => !key.startsWith("ANGEL_") && !key.startsWith("ELECTRON_"),
-    ),
-  );
-}
-
-async function terminateProcessTree(child: ChildProcess, graceMs: number) {
-  if (child.pid === undefined) return;
-
-  if (process.platform === "win32") {
-    await runTaskkill(child.pid);
-    return;
-  }
-
-  killProcessGroup(child.pid, "SIGTERM");
-  await delay(graceMs);
-  killProcessGroup(child.pid, "SIGKILL");
-}
-
-async function runTaskkill(pid: number) {
-  await new Promise<void>((resolve) => {
-    const killer = spawn("taskkill.exe", ["/pid", String(pid), "/t", "/f"], {
-      stdio: "ignore",
-      windowsHide: true,
-    });
-    killer.once("error", () => resolve());
-    killer.once("close", () => resolve());
-  });
-}
-
-function killProcessGroup(pid: number, signal: NodeJS.Signals) {
-  try {
-    process.kill(-pid, signal);
-  } catch (cause) {
-    if (errorCode(cause) !== "ESRCH") throw cause;
-  }
-}
-
-function delay(ms: number) {
-  return new Promise<void>((resolve) => setTimeout(resolve, ms));
-}
-
-function appendTail(current: string, chunk: Buffer | string) {
-  return tail(current + chunk.toString());
-}
-
-function scriptCommand(script: string): [string, string[]] {
-  return process.platform === "win32"
-    ? [
-        "powershell.exe",
-        ["-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", script],
-      ]
-    : ["sh", ["-c", script]];
+function normalizeCommands(commands: string[]) {
+  return commands
+    .map((command) => command.trim())
+    .filter((command) => command.length > 0);
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -282,10 +153,4 @@ function errorMessage(cause: unknown) {
   return cause instanceof Error && cause.message.length > 0
     ? cause.message
     : "Unknown error.";
-}
-
-function tail(value: string) {
-  return value.length <= SETUP_ERROR_TAIL_LENGTH
-    ? value
-    : value.slice(-SETUP_ERROR_TAIL_LENGTH);
 }
