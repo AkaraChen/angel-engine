@@ -26,6 +26,12 @@ export const queryKeys = {
   github: {
     items: (cwd: string | null, query: string) =>
       ["github", "items", cwd, query] as const,
+    pullRequestDetail: (cwd: string | null, number: number | null) =>
+      ["github", "pull-request", cwd, number] as const,
+    pullRequestTemplate: (cwd: string | null) =>
+      ["github", "pull-request-template", cwd] as const,
+    pullRequests: (cwd: string | null, state: string, query: string) =>
+      ["github", "pull-requests", cwd, state, query] as const,
     repositories: (owner: string | null) =>
       ["github", "repositories", owner] as const,
     repositoryOwners: () => ["github", "repository-owners"] as const,

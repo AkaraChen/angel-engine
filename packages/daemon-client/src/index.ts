@@ -59,13 +59,25 @@ import type {
   ProcessRegistrySnapshotEntry,
 } from "@angel-engine/daemon-api/daemon";
 import type {
+  GitHubAddPullRequestCommentInput,
+  GitHubAddPullRequestCommentResult,
+  GitHubCreatePullRequestInput,
+  GitHubCreatePullRequestResult,
+  GitHubCreateWorkspaceFromPullRequestInput,
+  GitHubCreateWorkspaceFromPullRequestResult,
   GitHubListItemsInput,
   GitHubListItemsResult,
+  GitHubListPullRequestsInput,
+  GitHubListPullRequestsResult,
+  GitHubPullRequestDetail,
+  GitHubPullRequestTemplateInput,
+  GitHubPullRequestTemplateResult,
   GitHubListRepositoriesInput,
   GitHubListRepositoriesResult,
   GitHubRepositoryOwnersResult,
   GitHubResolveUrlInput,
   GitHubResolvedItem,
+  GitHubViewPullRequestInput,
 } from "@angel-engine/daemon-api/github";
 import type {
   CreateProjectInput,
@@ -517,8 +529,33 @@ export function createDaemonClient(options: DaemonClientOptions) {
         ),
     },
     github: {
+      addPullRequestComment: (input: GitHubAddPullRequestCommentInput) =>
+        request<GitHubAddPullRequestCommentResult>(
+          `/api/github/pull-requests/${encodeURIComponent(String(input.number))}/comments`,
+          json("POST", { body: input.body, cwd: input.cwd }),
+        ),
+      createPullRequest: (input: GitHubCreatePullRequestInput) =>
+        request<GitHubCreatePullRequestResult>(
+          "/api/github/pull-requests",
+          json("POST", input),
+        ),
+      createWorkspaceFromPullRequest: (
+        input: GitHubCreateWorkspaceFromPullRequestInput,
+      ) =>
+        request<GitHubCreateWorkspaceFromPullRequestResult>(
+          "/api/github/pull-requests/workspace",
+          json("POST", input),
+        ),
       listItems: (input: GitHubListItemsInput) =>
         request<GitHubListItemsResult>(`/api/github/items?${query(input)}`),
+      listPullRequests: (input: GitHubListPullRequestsInput) =>
+        request<GitHubListPullRequestsResult>(
+          `/api/github/pull-requests?${query(input)}`,
+        ),
+      pullRequestTemplate: (input: GitHubPullRequestTemplateInput) =>
+        request<GitHubPullRequestTemplateResult>(
+          `/api/github/pull-request-template?${query(input)}`,
+        ),
       listRepositories: (input: GitHubListRepositoriesInput) =>
         request<GitHubListRepositoriesResult>(
           `/api/github/repos?${query(input)}`,
@@ -527,6 +564,10 @@ export function createDaemonClient(options: DaemonClientOptions) {
         request<GitHubRepositoryOwnersResult>("/api/github/repo-owners"),
       resolveUrl: (input: GitHubResolveUrlInput) =>
         request<GitHubResolvedItem>("/api/github/resolve", json("POST", input)),
+      viewPullRequest: (input: GitHubViewPullRequestInput) =>
+        request<GitHubPullRequestDetail>(
+          `/api/github/pull-requests/${encodeURIComponent(String(input.number))}?${query({ cwd: input.cwd })}`,
+        ),
     },
     health: () => request<DaemonHealth>("/api/health"),
     events: {

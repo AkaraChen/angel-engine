@@ -29,6 +29,23 @@ export function WorkspaceFleetPage() {
   );
 }
 
+export function WorkspacePullRequestsPage({
+  projectId,
+}: {
+  projectId: string;
+}) {
+  const api = useApi();
+
+  return (
+    <WorkspacePageContent
+      api={api}
+      currentRoutePath={`/project/${encodeURIComponent(projectId)}/pulls`}
+      pullRequestsActive
+      routeProjectId={projectId}
+    />
+  );
+}
+
 export function WorkspaceChatPage({
   chatId,
   projectId,
