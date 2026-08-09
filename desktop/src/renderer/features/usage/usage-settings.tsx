@@ -3,18 +3,41 @@ import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import {
+  NativeSelect,
+  NativeSelectOption,
+} from "@/components/ui/native-select";
+import { Switch } from "@/components/ui/switch";
+import {
   SettingsGroup,
   SettingsRow,
 } from "@/features/settings/settings-controls";
 import { queryKeys } from "@/platform/query-keys";
+import { CCUSAGE_SUPPORTED_AGENTS } from "@angel-engine/usage-collector/correlate";
+import { useSettingsStore } from "@/features/settings/settings-store";
 import { refreshUsageSnapshot, usageSnapshotQueryOptions } from "./api/queries";
-import { formatEstimatedCost, formatUsageTokens } from "./format";
+import {
+  formatEstimatedCost,
+  formatUsageTime,
+  formatUsageTokens,
+} from "./format";
 
-const UNSUPPORTED_AGENTS = ["acp", "cline", "cursor", "qoder"];
+const BURN_RATE_THRESHOLDS = [10, 25, 50, 100] as const;
 
 export function UsageSettings() {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
+  const burnRateThreshold = useSettingsStore(
+    (state) => state.usageBurnRateThreshold,
+  );
+  const burnRateWarningEnabled = useSettingsStore(
+    (state) => state.usageBurnRateWarningEnabled,
+  );
+  const setBurnRateThreshold = useSettingsStore(
+    (state) => state.setUsageBurnRateThreshold,
+  );
+  const setBurnRateWarningEnabled = useSettingsStore(
+    (state) => state.setUsageBurnRateWarningEnabled,
+  );
   const usageQuery = useQuery(usageSnapshotQueryOptions());
   const refresh = useMutation({
     mutationFn: refreshUsageSnapshot,
@@ -106,11 +129,48 @@ export function UsageSettings() {
               {t("usage.refresh")}
             </Button>
           }
-          description={t("usage.sourceDescription", {
-            agents: UNSUPPORTED_AGENTS.join(", "),
-          })}
+          description={`${t("usage.sourceDescription", {
+            agents: CCUSAGE_SUPPORTED_AGENTS.join(", "),
+          })} ${t("usage.lastCollected", {
+            time: formatUsageTime(report.collectedAt),
+          })}`}
           title={`ccusage ${report.ccusageVersion}`}
         />
+      </SettingsGroup>
+
+      <SettingsGroup title={t("usage.warnings")}>
+        <SettingsRow
+          after={
+            <Switch
+              aria-label={t("usage.burnRateWarning")}
+              checked={burnRateWarningEnabled}
+              onCheckedChange={setBurnRateWarningEnabled}
+            />
+          }
+          description={t("usage.burnRateWarningDescription")}
+          title={t("usage.burnRateWarning")}
+        />
+        {burnRateWarningEnabled ? (
+          <SettingsRow
+            after={
+              <NativeSelect
+                aria-label={t("usage.burnRateThreshold")}
+                onChange={(event) =>
+                  setBurnRateThreshold(Number(event.currentTarget.value))
+                }
+                size="sm"
+                value={String(burnRateThreshold)}
+              >
+                {BURN_RATE_THRESHOLDS.map((threshold) => (
+                  <NativeSelectOption key={threshold} value={String(threshold)}>
+                    ${threshold}/h
+                  </NativeSelectOption>
+                ))}
+              </NativeSelect>
+            }
+            title={t("usage.burnRateThreshold")}
+          />
+        ) : null}
       </SettingsGroup>
     </>
   );

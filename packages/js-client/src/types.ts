@@ -110,10 +110,6 @@ export interface ChatRuntimeConfig {
 }
 
 export interface ChatSessionUsage {
-  cost?: {
-    amount: string;
-    currency: string;
-  };
   size: number;
   used: number;
 }

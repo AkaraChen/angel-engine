@@ -129,7 +129,6 @@ describe("projection", () => {
     const config = runtimeConfigFromConversationSnapshot(
       conversationSnapshot({
         usage: {
-          cost: { amount: "1.25", currency: "USD" },
           size: 200_000,
           used: 140_000,
         },
@@ -137,7 +136,6 @@ describe("projection", () => {
     );
 
     expect(config.usage).toEqual({
-      cost: { amount: "1.25", currency: "USD" },
       size: 200_000,
       used: 140_000,
     });

@@ -337,6 +337,12 @@ export function FleetPage({
               >
                 {t(GROUP_LABEL_KEYS[section.group])}
                 <span className="tabular-nums">{section.rows.length}</span>
+                <span className="ml-auto hidden w-16 text-right lg:block">
+                  {t("usage.sessionCost")}
+                </span>
+                <span className="w-24 shrink-0 text-right">
+                  {t("common.updated")}
+                </span>
               </h3>
               <div className="mt-1.5 flex flex-col">
                 {section.rows.map((row) => (
@@ -426,9 +432,11 @@ function FleetRowButton({
           <span className="text-muted-foreground"> · {detail}</span>
         ) : null}
       </span>
-      <span className="hidden w-16 shrink-0 text-right font-mono text-[11px] tabular-nums text-muted-foreground lg:block">
-        {sessionCost}
-      </span>
+      {sessionCost ? (
+        <span className="hidden w-16 shrink-0 text-right font-mono text-[11px] tabular-nums text-muted-foreground lg:block">
+          {sessionCost}
+        </span>
+      ) : null}
       {/* Relative times vary in width across locales, so the column is sized to
           hold the longest of them; `tabular-nums` keeps it from twitching as
           the numbers tick over. */}

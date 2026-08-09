@@ -294,15 +294,7 @@ function isRuntimeConfigOptionArray(
 
 function isSessionUsage(value: unknown): boolean {
   if (!isBoundaryRecord(value)) return false;
-  const cost = value.cost;
-  return (
-    typeof value.used === "number" &&
-    typeof value.size === "number" &&
-    (cost === undefined ||
-      (isBoundaryRecord(cost) &&
-        typeof cost.amount === "string" &&
-        typeof cost.currency === "string"))
-  );
+  return typeof value.used === "number" && typeof value.size === "number";
 }
 
 function isRuntimeConfig(value: unknown): value is ChatRuntimeConfig {

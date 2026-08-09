@@ -39,7 +39,7 @@ export function ContextUsageBar({ usage }: { usage?: ChatSessionUsage }) {
             danger && "text-status-danger",
           )}
         >
-          {label}
+          {danger ? `${t("usage.contextNearLimit")} · ${label}` : label}
         </p>
       ) : null}
     </div>

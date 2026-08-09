@@ -372,21 +372,33 @@ export interface LocaleResourceTranslationUsageUnavailableReasons {
 
 export interface LocaleResourceTranslationUsage {
   activeBlock: string;
+  activeRuns: string;
   burnRate: string;
+  burnRateThreshold: string;
+  burnRateWarning: string;
+  burnRateWarningActive: string;
+  burnRateWarningDescription: string;
   byAgent: string;
+  cacheCreationTokens: string;
+  cacheReadTokens: string;
   collecting: string;
   contextNearLimit: string;
   contextUsed: string;
   month: string;
   noData: string;
   projected: string;
+  inputTokens: string;
+  lastCollected: string;
+  outputTokens: string;
   refresh: string;
   source: string;
   sourceDescription: string;
+  sessionCost: string;
   today: string;
   tokens: string;
   unavailable: string;
   unavailableReasons: LocaleResourceTranslationUsageUnavailableReasons;
+  warnings: string;
   week: string;
 }
 

@@ -10,7 +10,7 @@ const UUID_PATTERN =
 const CODEX_PERIOD_PATTERN =
   /(?:^|\/)(?:rollout-[^/]*-)?([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i;
 
-const SUPPORTED_AGENTS = new Set([
+export const CCUSAGE_SUPPORTED_AGENTS = [
   "amp",
   "claude",
   "codebuff",
@@ -26,7 +26,13 @@ const SUPPORTED_AGENTS = new Set([
   "opencode",
   "pi",
   "qwen",
-]);
+] as const;
+
+const SUPPORTED_AGENTS = new Set<string>(CCUSAGE_SUPPORTED_AGENTS);
+
+export function isUsageAgentSupported(agent: string): boolean {
+  return SUPPORTED_AGENTS.has(agent);
+}
 
 export function normalizedSessionId(
   agent: string,
@@ -63,7 +69,7 @@ export function providerUsageAvailability(
   remoteId?: string | null,
 ): ProviderUsageAvailability {
   if (availability.kind !== "ok") return availability;
-  if (!SUPPORTED_AGENTS.has(agent)) return { agent, kind: "unsupported" };
+  if (!isUsageAgentSupported(agent)) return { agent, kind: "unsupported" };
 
   const total = availability.report.agentTotals.find(
     (candidate) => candidate.agent === agent,

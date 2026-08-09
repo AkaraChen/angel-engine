@@ -418,6 +418,14 @@ export function useChatRunIsRunning(slotKey?: string) {
   );
 }
 
+export function useActiveChatRunCount() {
+  return useChatRunStore(
+    (state) =>
+      Object.values(state.slots).filter((slot) => slot.status === "streaming")
+        .length,
+  );
+}
+
 export function useChatRunConfig(slotKey?: string) {
   return useChatRunStore((state) =>
     is.nonEmptyString(slotKey) ? selectSlot(state, slotKey)?.config : undefined,

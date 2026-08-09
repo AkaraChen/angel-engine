@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { normalizedSessionId, providerUsageAvailability } from "./correlate.js";
+import {
+  CCUSAGE_SUPPORTED_AGENTS,
+  isUsageAgentSupported,
+  normalizedSessionId,
+  providerUsageAvailability,
+} from "./correlate.js";
 import { CCUSAGE_VERSION, type UsageAvailability } from "./types.js";
 
 describe("usage session attribution", () => {
@@ -42,5 +47,10 @@ describe("usage session attribution", () => {
       agent: "cursor",
       kind: "unsupported",
     });
+  });
+
+  it("exports the provider support source of truth", () => {
+    expect(CCUSAGE_SUPPORTED_AGENTS).toContain("codex");
+    expect(isUsageAgentSupported("custom:my-agent")).toBe(false);
   });
 });

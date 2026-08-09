@@ -1,7 +1,9 @@
 export { ccusageNativePackage, resolveCcusageBinary } from "./binary.js";
 export { UsageCollector } from "./collector.js";
 export {
+  CCUSAGE_SUPPORTED_AGENTS,
   findUsageSession,
+  isUsageAgentSupported,
   normalizedSessionId,
   providerUsageAvailability,
 } from "./correlate.js";
