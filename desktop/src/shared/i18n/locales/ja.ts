@@ -78,6 +78,7 @@ export const ja = {
       statsChanges: "変更",
       statsLastActive: "最終アクティブ",
       tools: {
+        addToChat: "チャットに追加",
         commit: {
           committing: "コミット中…",
           commitTo: "{{target}} にコミット",

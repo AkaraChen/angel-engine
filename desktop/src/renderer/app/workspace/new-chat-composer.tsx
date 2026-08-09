@@ -33,6 +33,7 @@ import {
 } from "@/features/chat/components/composer/composer-menus";
 import { PromptGitHubAttachButton } from "@/features/chat/components/composer/github-attach-button";
 import { useComposerEditor } from "@/features/chat/components/composer/use-composer-editor";
+import { useTerminalSelectionInsert } from "@/features/chat/components/composer/use-terminal-selection-insert";
 import { SketchUnderline } from "@/features/chat/components/sketch-underline";
 import { useChatOptions } from "@/features/chat/runtime/chat-options-context";
 import { useSendChatMessage } from "@/features/chat/runtime/use-send-chat-message";
@@ -183,6 +184,7 @@ export function NewChatComposer({
   });
 
   const editor = useComposerEditor();
+  useTerminalSelectionInsert(editor);
   const { isEmpty } = editor;
 
   const send = useCallback(

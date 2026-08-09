@@ -115,6 +115,7 @@ export interface LocaleResourceTranslationWorkspaceToolsTabs {
 }
 
 export interface LocaleResourceTranslationWorkspaceTools {
+  addToChat: string;
   commit: LocaleResourceTranslationWorkspaceToolsCommit;
   dockInSidebar: string;
   empty: LocaleResourceTranslationWorkspaceToolsEmpty;

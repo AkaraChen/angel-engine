@@ -78,6 +78,7 @@ export const ko = {
       statsChanges: "변경 사항",
       statsLastActive: "마지막 활동",
       tools: {
+        addToChat: "채팅에 추가",
         commit: {
           committing: "커밋 중…",
           commitTo: "{{target}}에 커밋",
