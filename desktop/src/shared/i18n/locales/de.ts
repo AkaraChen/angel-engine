@@ -430,6 +430,10 @@ export const de = {
           "Wenn aktiviert, fügt Enter eine neue Zeile ein und {{shortcut}} sendet.",
         sendWithModEnterSwitchLabel: "Nachrichten mit {{shortcut}} senden",
         sendWithModEnterTitle: "Mit {{shortcut}} senden",
+        trayEnabledDescription:
+          "Zeigt in der Menüleiste die Anzahl der Sessions, die dich brauchen, und eine Liste zum Öffnen ohne in der App zu suchen.",
+        trayEnabledSwitchLabel: "Flottenübersicht in der Menüleiste anzeigen",
+        trayEnabledTitle: "Flottenübersicht in der Menüleiste",
       },
     },
     updates: {
@@ -647,6 +651,14 @@ export const de = {
       undo: "Rückgängig",
       updateReady: "Update bereit",
       updateReadyDescription: "{{version}} wurde heruntergeladen.",
+    },
+    tray: {
+      disable: "Menüleisten-Symbol ausblenden",
+      empty: "Gerade braucht dich nichts",
+      needsYouCount: "{{count}} brauchen dich",
+      openApp: "Angel Engine öffnen",
+      tooltip: "Angel Engine",
+      tooltipNeedsYou: "Angel Engine — {{count}} brauchen dich",
     },
     projects: {
       chooseFolder: "Projektordner auswählen",

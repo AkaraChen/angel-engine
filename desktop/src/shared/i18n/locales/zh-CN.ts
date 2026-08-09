@@ -412,6 +412,10 @@ export const zhCN = {
           "开启后，Enter 换行，{{shortcut}} 发送消息。",
         sendWithModEnterSwitchLabel: "使用 {{shortcut}} 发送消息",
         sendWithModEnterTitle: "使用 {{shortcut}} 发送消息",
+        trayEnabledDescription:
+          "在菜单栏显示需要你处理的会话数量和下拉列表，无需在应用里逐个翻找。",
+        trayEnabledSwitchLabel: "显示菜单栏舰队摘要",
+        trayEnabledTitle: "菜单栏舰队摘要",
       },
     },
     updates: {
@@ -615,6 +619,14 @@ export const zhCN = {
       undo: "撤销",
       updateReady: "更新已就绪",
       updateReadyDescription: "{{version}} 已下载完成。",
+    },
+    tray: {
+      disable: "隐藏菜单栏图标",
+      empty: "当前没有需要你处理的会话",
+      needsYouCount: "{{count}} 个需要你",
+      openApp: "打开 Angel Engine",
+      tooltip: "Angel Engine",
+      tooltipNeedsYou: "Angel Engine — {{count}} 个需要你",
     },
     projects: {
       chooseFolder: "选择项目文件夹",

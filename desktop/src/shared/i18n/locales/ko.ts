@@ -421,6 +421,10 @@ export const ko = {
           "활성화하면 Enter로 줄을 바꾸고 {{shortcut}}로 전송합니다.",
         sendWithModEnterSwitchLabel: "{{shortcut}}로 메시지 전송",
         sendWithModEnterTitle: "{{shortcut}}로 전송",
+        trayEnabledDescription:
+          "메뉴 막대에 확인이 필요한 세션 수와 목록을 표시해 앱을 뒤지지 않고 열 수 있습니다.",
+        trayEnabledSwitchLabel: "메뉴 막대 함대 요약 표시",
+        trayEnabledTitle: "메뉴 막대 함대 요약",
       },
     },
     updates: {
@@ -632,6 +636,14 @@ export const ko = {
       undo: "실행 취소",
       updateReady: "업데이트 준비됨",
       updateReadyDescription: "{{version}} 다운로드가 완료되었습니다.",
+    },
+    tray: {
+      disable: "메뉴 막대 아이콘 숨기기",
+      empty: "지금 확인이 필요한 항목이 없습니다",
+      needsYouCount: "{{count}}개 확인 필요",
+      openApp: "Angel Engine 열기",
+      tooltip: "Angel Engine",
+      tooltipNeedsYou: "Angel Engine — {{count}}개 확인 필요",
     },
     projects: {
       chooseFolder: "프로젝트 폴더 선택",

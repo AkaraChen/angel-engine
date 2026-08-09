@@ -425,6 +425,10 @@ export const en = {
           "When enabled, Enter inserts a new line and {{shortcut}} sends.",
         sendWithModEnterSwitchLabel: "Use {{shortcut}} to send messages",
         sendWithModEnterTitle: "Send messages with {{shortcut}}",
+        trayEnabledDescription:
+          "Show a menu bar icon with a needs-you count and a session list you can open without hunting through the app.",
+        trayEnabledSwitchLabel: "Show menu bar fleet summary",
+        trayEnabledTitle: "Menu bar fleet summary",
       },
     },
     updates: {
@@ -638,6 +642,14 @@ export const en = {
       undo: "Undo",
       updateReady: "Update ready",
       updateReadyDescription: "{{version}} has been downloaded.",
+    },
+    tray: {
+      disable: "Hide menu bar icon",
+      empty: "Nothing needs you right now",
+      needsYouCount: "{{count}} need you",
+      openApp: "Open Angel Engine",
+      tooltip: "Angel Engine",
+      tooltipNeedsYou: "Angel Engine — {{count}} need you",
     },
     projects: {
       chooseFolder: "Choose project folder",

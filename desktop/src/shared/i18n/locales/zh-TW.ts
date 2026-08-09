@@ -412,6 +412,10 @@ export const zhTW = {
           "開啟後，Enter 換行，{{shortcut}} 傳送訊息。",
         sendWithModEnterSwitchLabel: "使用 {{shortcut}} 傳送訊息",
         sendWithModEnterTitle: "使用 {{shortcut}} 傳送訊息",
+        trayEnabledDescription:
+          "在選單列顯示需要你處理的工作階段數量與下拉清單，無需在應用程式中逐一翻找。",
+        trayEnabledSwitchLabel: "顯示選單列艦隊摘要",
+        trayEnabledTitle: "選單列艦隊摘要",
       },
     },
     updates: {
@@ -616,6 +620,14 @@ export const zhTW = {
       undo: "復原",
       updateReady: "更新已就緒",
       updateReadyDescription: "{{version}} 已下載完成。",
+    },
+    tray: {
+      disable: "隱藏選單列圖示",
+      empty: "目前沒有需要你處理的工作階段",
+      needsYouCount: "{{count}} 個需要你",
+      openApp: "開啟 Angel Engine",
+      tooltip: "Angel Engine",
+      tooltipNeedsYou: "Angel Engine — {{count}} 個需要你",
     },
     projects: {
       chooseFolder: "選擇專案資料夾",
