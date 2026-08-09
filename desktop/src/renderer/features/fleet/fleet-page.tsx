@@ -236,7 +236,7 @@ export function FleetPage({
   const showToolbar = rows.length > 0;
   const isEmpty =
     view === "board" ? scopedRows.length === 0 : listSections.length === 0;
-  const isWideBoard = view === "board" && !isPending && !isError && !isEmpty;
+  const isWideBoard = view === "board" && !isError && (isPending || !isEmpty);
 
   const selectView = (nextView: FleetView) => {
     writeFleetViewPreference(nextView);

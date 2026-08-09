@@ -192,6 +192,23 @@ describe("fleetPage", () => {
     expect(page?.className).not.toContain("max-w-[88rem]");
   });
 
+  it("keeps the pending board skeleton at board width", async () => {
+    window.localStorage.setItem(FLEET_VIEW_STORAGE_KEY, "board");
+    listActivity.mockImplementation(
+      () => new Promise<{ items: ChatActivity[] }>(() => {}),
+    );
+    renderFleet({ chats: [] });
+
+    expect(
+      await screen.findByRole("status", { name: "fleet.loading" }),
+    ).toBeDefined();
+    const page = screen.getByRole("heading", {
+      name: "fleet.title",
+    }).parentElement;
+    expect(page?.className).toContain("max-w-[88rem]");
+    expect(page?.className).not.toContain("max-w-4xl");
+  });
+
   it("waits for chat metadata before calling the fleet empty", async () => {
     listActivity.mockResolvedValue({ items: [] });
     renderFleet({ chats: [], isMetadataPending: true });
