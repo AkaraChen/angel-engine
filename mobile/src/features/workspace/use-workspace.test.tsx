@@ -81,13 +81,27 @@ describe("useWorkspaceGitStatus", () => {
     const fetchMock = vi.fn(async (url: string) => {
       expect(url).toContain("/api/workspace/git-diff?root=%2Frepo%2Fapp");
       return jsonResponse({
-        branch: "main",
+        branchStatus: {
+          ahead: 1,
+          behind: 0,
+          branch: "main",
+          detached: false,
+          unborn: false,
+          upstream: "origin/main",
+        },
+        conflictedPaths: [],
         isGitRepository: true,
         root: "/repo/app",
         stagedPatch: "",
         unstagedPatch: "",
         status: [
-          { path: "a.ts", staged: true, status: "modified", unstaged: false },
+          {
+            conflicted: false,
+            path: "a.ts",
+            staged: true,
+            status: "modified",
+            unstaged: false,
+          },
         ],
         warnings: [],
       });
@@ -97,7 +111,9 @@ describe("useWorkspaceGitStatus", () => {
       () => useWorkspaceGitStatus("/repo/app", true),
       { wrapper },
     );
-    await waitFor(() => expect(result.current.data?.branch).toBe("main"));
+    await waitFor(() =>
+      expect(result.current.data?.branchStatus.branch).toBe("main"),
+    );
     expect(result.current.data?.status).toHaveLength(1);
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });

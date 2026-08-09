@@ -42,6 +42,7 @@ import {
 } from "@angel-engine/daemon-api/projects";
 import {
   workspaceToolGitCommitInputSchema,
+  workspaceToolGitPushInputSchema,
   workspaceToolWriteFileInputSchema,
 } from "@angel-engine/daemon-api/workspace-tools";
 import { listGitHubItems } from "./features/github/list";
@@ -97,6 +98,7 @@ import {
   workspaceFileTree,
   workspaceGitCommit,
   workspaceGitDiff,
+  workspaceGitPush,
   workspaceReadFile,
   workspaceWriteFile,
 } from "./features/workspace-tools/service";
@@ -651,6 +653,12 @@ export function registerApi(
     if (input instanceof arkType.errors)
       throw DaemonError.invalidRequest("Git commit input is invalid.");
     return context.json(await run(workspaceGitCommit(input)));
+  });
+  app.post("/api/workspace/git-push", async (context) => {
+    const input = workspaceToolGitPushInputSchema(await context.req.json());
+    if (input instanceof arkType.errors)
+      throw DaemonError.invalidRequest("Git push input is invalid.");
+    return context.json(await run(workspaceGitPush(input)));
   });
   app.get("/api/workspace/file", async (context) =>
     context.json(

@@ -11,6 +11,7 @@ import {
   useWorkspaceGitPanelState,
   WorkspaceGitCommitComposer,
 } from "@/app/workspace/workspace-git-commit";
+import { WorkspaceGitStatusBar } from "@/app/workspace/workspace-git-status-bar";
 import {
   WorkspaceToolPatchFileDiffContent,
   WorkspaceToolPatchFileLineStats,
@@ -51,6 +52,7 @@ export function WorkspaceGitPanel({
     commitSummary,
     gitQuery,
     handleFileSelectedChange,
+    pushMutation,
     selectedFileKeys,
     setCommitDescription,
     setCommitSummary,
@@ -110,6 +112,18 @@ export function WorkspaceGitPanel({
     ? (patchList.files.find((file) => file.key === activeFileKey) ??
       patchList.files[0])
     : undefined;
+  const statusBar = (
+    <WorkspaceGitStatusBar
+      branchStatus={data.branchStatus}
+      conflictedPaths={data.conflictedPaths}
+      dirtyCount={
+        data.status.filter((entry) => entry.status !== "ignored").length
+      }
+      pushError={pushMutation.isError ? pushMutation.error : undefined}
+      pushPending={pushMutation.isPending}
+      onPush={() => pushMutation.mutate()}
+    />
+  );
   const changeColumn = (
     <>
       <div className="flex min-h-0 flex-1 flex-col overflow-auto">
@@ -134,7 +148,7 @@ export function WorkspaceGitPanel({
       </div>
       {patchList.files.length === 0 ? null : (
         <WorkspaceGitCommitComposer
-          branch={data.branch}
+          branch={data.branchStatus.branch}
           description={commitDescription}
           errorMessage={
             commitMutation.isError
@@ -154,23 +168,33 @@ export function WorkspaceGitPanel({
   );
 
   if (!split) {
-    return <div className="flex h-full min-h-0 flex-col">{changeColumn}</div>;
-  }
-
-  return (
-    <div className="flex h-full min-h-0 bg-background">
-      <div className="flex shrink-0 flex-col" style={{ width: gitListWidth }}>
+    return (
+      <div className="flex h-full min-h-0 flex-col">
+        {statusBar}
         {changeColumn}
       </div>
-      <WorkspaceToolPanelSplitter
-        ariaLabel={t("workspace.tools.resizeGitList")}
-        max={workspaceToolGitListWidthMax}
-        min={workspaceToolGitListWidthMin}
-        value={gitListWidth}
-        onChange={updateGitListWidth}
-      />
-      <div className="min-w-0 flex-1 overflow-hidden">
-        <WorkspaceGitDiffViewer file={activeFile} />
+    );
+  }
+
+  // Split mode keeps the status line above both columns: branch position and
+  // push are about the repository, not about the change list.
+  return (
+    <div className="flex h-full min-h-0 flex-col bg-background">
+      {statusBar}
+      <div className="flex min-h-0 flex-1">
+        <div className="flex shrink-0 flex-col" style={{ width: gitListWidth }}>
+          {changeColumn}
+        </div>
+        <WorkspaceToolPanelSplitter
+          ariaLabel={t("workspace.tools.resizeGitList")}
+          max={workspaceToolGitListWidthMax}
+          min={workspaceToolGitListWidthMin}
+          value={gitListWidth}
+          onChange={updateGitListWidth}
+        />
+        <div className="min-w-0 flex-1 overflow-hidden">
+          <WorkspaceGitDiffViewer file={activeFile} />
+        </div>
       </div>
     </div>
   );
