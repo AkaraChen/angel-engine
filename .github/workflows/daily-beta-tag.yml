@@ -1,0 +1,171 @@
+name: Daily Beta Tag
+
+# Once per day (and on manual dispatch), if the default branch has moved past the
+# latest dotted beta tag, create the next beta tag (vX.Y.Z-beta.N → N+1) and
+# dispatch Desktop Release so a build actually runs.
+#
+# Note: tag pushes authenticated with GITHUB_TOKEN do not chain-trigger other
+# workflows, so Desktop Release is invoked explicitly via workflow_dispatch.
+
+on:
+  schedule:
+    # 00:15 UTC daily — slightly off the hour to avoid the usual cron stampede.
+    - cron: "15 0 * * *"
+  workflow_dispatch:
+    inputs:
+      force:
+        description: "Create the next beta tag even when the default branch has no new commits since the latest beta tag"
+        required: false
+        type: boolean
+        default: false
+      dry_run:
+        description: "Compute the next tag and print decisions without creating or pushing anything"
+        required: false
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+  actions: write
+
+concurrency:
+  group: daily-beta-tag
+  cancel-in-progress: false
+
+jobs:
+  bump-beta-tag:
+    name: Bump beta tag when default branch changed
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout default branch (full history + tags)
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          # Need full history so rev-list counts between the latest beta tag and HEAD are accurate.
+          fetch-depth: 0
+          # Explicitly target the repo default branch (currently `master`).
+          ref: ${{ github.event.repository.default_branch }}
+
+      - name: Decide whether to bump and compute next beta tag
+        id: decide
+        env:
+          FORCE: ${{ inputs.force == true && 'true' || 'false' }}
+          DRY_RUN: ${{ inputs.dry_run == true && 'true' || 'false' }}
+        run: |
+          set -euo pipefail
+
+          default_branch="${{ github.event.repository.default_branch }}"
+          head_sha="$(git rev-parse HEAD)"
+
+          # Only the dotted prerelease form is valid for electron-updater
+          # (see desktop/scripts/release-channel.cjs). Ignore legacy tags like
+          # v1.0.0-beta2 / v0.0.4-beta32 when selecting "latest".
+          latest_tag="$(
+            git tag -l 'v[0-9]*.[0-9]*.[0-9]*-beta.[0-9]*' --sort=-v:refname | head -n 1 || true
+          )"
+
+          if [[ -z "${latest_tag}" ]]; then
+            echo "::error::No dotted beta tag matching vX.Y.Z-beta.N found. Create an initial tag (e.g. v1.0.1-beta.1) before running this workflow."
+            exit 1
+          fi
+
+          if [[ ! "${latest_tag}" =~ ^v([0-9]+\.[0-9]+\.[0-9]+-beta\.)([0-9]+)$ ]]; then
+            echo "::error::Latest beta tag '${latest_tag}' did not match vX.Y.Z-beta.N"
+            exit 1
+          fi
+
+          prefix="${BASH_REMATCH[1]}"
+          beta_num="${BASH_REMATCH[2]}"
+          next_num=$((beta_num + 1))
+          next_tag="v${prefix}${next_num}"
+          next_version="${prefix}${next_num}"
+
+          # "主分支有 change" = default-branch tip is not the same commit as the
+          # latest beta tag, i.e. there is at least one commit after that tag
+          # that is reachable from HEAD (typically merges/commits on master).
+          commits_since="$(git rev-list --count "${latest_tag}..HEAD")"
+          tag_sha="$(git rev-parse "${latest_tag}^{}")"
+          has_change="false"
+          if [[ "${commits_since}" -gt 0 ]]; then
+            has_change="true"
+          fi
+
+          should_bump="false"
+          if [[ "${has_change}" == "true" || "${FORCE}" == "true" ]]; then
+            should_bump="true"
+          fi
+
+          {
+            echo "default_branch=${default_branch}"
+            echo "head_sha=${head_sha}"
+            echo "latest_tag=${latest_tag}"
+            echo "latest_tag_sha=${tag_sha}"
+            echo "commits_since=${commits_since}"
+            echo "has_change=${has_change}"
+            echo "should_bump=${should_bump}"
+            echo "next_tag=${next_tag}"
+            echo "next_version=${next_version}"
+            echo "dry_run=${DRY_RUN}"
+          } >> "${GITHUB_OUTPUT}"
+
+          echo "Default branch: ${default_branch} @ ${head_sha}"
+          echo "Latest beta tag: ${latest_tag} @ ${tag_sha}"
+          echo "Commits on default branch since latest beta tag: ${commits_since}"
+          echo "Has change: ${has_change}"
+          echo "Force: ${FORCE}"
+          echo "Should bump: ${should_bump}"
+          echo "Next tag: ${next_tag} (version ${next_version})"
+          echo "Dry run: ${DRY_RUN}"
+
+      - name: Skip when default branch has no new commits
+        if: steps.decide.outputs.should_bump != 'true'
+        run: |
+          echo "No new commits on '${{ steps.decide.outputs.default_branch }}' since '${{ steps.decide.outputs.latest_tag }}' (commits_since=${{ steps.decide.outputs.commits_since }}). Skipping tag bump."
+
+      - name: Create and push next beta tag
+        if: steps.decide.outputs.should_bump == 'true' && steps.decide.outputs.dry_run != 'true'
+        env:
+          NEXT_TAG: ${{ steps.decide.outputs.next_tag }}
+          LATEST_TAG: ${{ steps.decide.outputs.latest_tag }}
+          HEAD_SHA: ${{ steps.decide.outputs.head_sha }}
+          COMMITS_SINCE: ${{ steps.decide.outputs.commits_since }}
+        run: |
+          set -euo pipefail
+
+          if git rev-parse -q --verify "refs/tags/${NEXT_TAG}" >/dev/null; then
+            echo "::error::Tag ${NEXT_TAG} already exists"
+            exit 1
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          # Annotated tag on the current default-branch tip.
+          git tag -a "${NEXT_TAG}" "${HEAD_SHA}" -m "chore(desktop): beta ${NEXT_TAG}
+
+          Auto-bumped from ${LATEST_TAG} (${COMMITS_SINCE} commit(s) on the default branch)."
+
+          git push origin "refs/tags/${NEXT_TAG}"
+          echo "Pushed ${NEXT_TAG} → ${HEAD_SHA}"
+
+      - name: Dispatch Desktop Release for the new beta
+        if: steps.decide.outputs.should_bump == 'true' && steps.decide.outputs.dry_run != 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NEXT_VERSION: ${{ steps.decide.outputs.next_version }}
+          DEFAULT_BRANCH: ${{ steps.decide.outputs.default_branch }}
+        run: |
+          set -euo pipefail
+          # Tag pushes with GITHUB_TOKEN do not trigger other workflows, so kick
+          # Desktop Release explicitly with the same version string (no leading v).
+          gh workflow run desktop-release.yml \
+            --repo "${{ github.repository }}" \
+            --ref "${DEFAULT_BRANCH}" \
+            -f "version=${NEXT_VERSION}"
+          echo "Dispatched Desktop Release for version ${NEXT_VERSION} on ${DEFAULT_BRANCH}"
+
+      - name: Dry-run summary
+        if: steps.decide.outputs.should_bump == 'true' && steps.decide.outputs.dry_run == 'true'
+        run: |
+          echo "Dry run: would create tag ${{ steps.decide.outputs.next_tag }} on ${{ steps.decide.outputs.head_sha }}"
+          echo "Dry run: would dispatch Desktop Release with version=${{ steps.decide.outputs.next_version }}"
