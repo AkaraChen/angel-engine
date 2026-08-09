@@ -214,6 +214,10 @@ export const es = {
         title: "Agents",
       },
       appearance: {
+        keybindingHintsDescription:
+          "Muestra los atajos de teclado en la información emergente y los controles. Ocultarlos no desactiva los atajos.",
+        keybindingHintsSwitchLabel: "Mostrar indicaciones de atajos",
+        keybindingHintsTitle: "Indicaciones de atajos de teclado",
         language: "Idioma",
         languageOptions: {
           en: "English",

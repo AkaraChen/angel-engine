@@ -215,6 +215,10 @@ export const fr = {
         title: "Agents",
       },
       appearance: {
+        keybindingHintsDescription:
+          "Affiche les raccourcis clavier dans les infobulles et les commandes. Les masquer ne désactive pas les raccourcis.",
+        keybindingHintsSwitchLabel: "Afficher les indications de raccourcis",
+        keybindingHintsTitle: "Indications de raccourcis clavier",
         language: "Langue",
         languageOptions: {
           en: "English",

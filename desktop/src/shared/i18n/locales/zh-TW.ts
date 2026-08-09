@@ -213,6 +213,10 @@ export const zhTW = {
         title: "Agents",
       },
       appearance: {
+        keybindingHintsDescription:
+          "在工具提示和控制項中顯示快速鍵。關閉後快速鍵仍然有效。",
+        keybindingHintsSwitchLabel: "顯示快速鍵提示",
+        keybindingHintsTitle: "快速鍵提示",
         language: "語言",
         languageOptions: {
           en: "English",

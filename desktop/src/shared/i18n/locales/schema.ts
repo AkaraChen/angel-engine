@@ -294,6 +294,9 @@ export interface LocaleResourceTranslationSettingsAppearanceThemeOptions {
 }
 
 export interface LocaleResourceTranslationSettingsAppearance {
+  keybindingHintsDescription: string;
+  keybindingHintsSwitchLabel: string;
+  keybindingHintsTitle: string;
   language: string;
   languageOptions: LocaleResourceTranslationSettingsAppearanceLanguageOptions;
   theme: string;
