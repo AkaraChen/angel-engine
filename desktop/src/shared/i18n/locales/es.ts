@@ -78,6 +78,7 @@ export const es = {
       statsChanges: "Cambios",
       statsLastActive: "Última actividad",
       tools: {
+        addToChat: "Añadir al chat",
         commit: {
           committing: "Confirmando…",
           commitTo: "Confirmar en {{target}}",

@@ -78,6 +78,7 @@ export const zhTW = {
       statsChanges: "變更",
       statsLastActive: "最近活動",
       tools: {
+        addToChat: "加入聊天",
         commit: {
           committing: "提交中…",
           commitTo: "提交到 {{target}}",

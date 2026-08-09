@@ -78,6 +78,7 @@ export const zhCN = {
       statsChanges: "更改",
       statsLastActive: "最近活动",
       tools: {
+        addToChat: "添加到聊天",
         commit: {
           committing: "提交中…",
           commitTo: "提交到 {{target}}",

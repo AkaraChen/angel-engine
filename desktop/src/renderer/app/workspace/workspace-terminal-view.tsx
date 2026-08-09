@@ -2,8 +2,11 @@ import type { TerminalSessionController } from "@angel-engine/daemon-api/termina
 
 import { FitAddon } from "@xterm/addon-fit";
 import { Terminal } from "@xterm/xterm";
-import { useCallback, useRef } from "react";
+import { useCallback, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { resolveWorkspaceTerminalTheme } from "@/app/workspace/workspace-terminal-theme";
+import { Button } from "@/components/ui/button";
+import { publishTerminalSelectionInsert } from "@/features/chat/components/composer/terminal-selection-to-composer";
 import { terminalClient } from "@/platform/terminal-client";
 import "@xterm/xterm/css/xterm.css";
 
@@ -12,6 +15,7 @@ interface WorkspaceTerminalInstance {
   controller: TerminalSessionController;
   dataDisposable: { dispose: () => void };
   resizeObserver: ResizeObserver;
+  selectionDisposable: { dispose: () => void };
   terminal: Terminal;
   themeObserver: MutationObserver;
 }
@@ -25,7 +29,9 @@ export function WorkspaceTerminalView({
   root: string;
   sessionId: string;
 }) {
+  const { t } = useTranslation();
   const instanceRef = useRef<WorkspaceTerminalInstance | null>(null);
+  const [selection, setSelection] = useState("");
   const focusOnMountRef = useRef(focusOnMount);
   focusOnMountRef.current = focusOnMount;
   const setContainer = useCallback(
@@ -34,6 +40,7 @@ export function WorkspaceTerminalView({
       instanceRef.current = null;
 
       if (!container) {
+        setSelection("");
         return;
       }
 
@@ -92,6 +99,9 @@ export function WorkspaceTerminalView({
         }
         controller.write(data);
       });
+      const selectionDisposable = terminal.onSelectionChange(() => {
+        setSelection(terminal.getSelection());
+      });
       const resizeObserver = new ResizeObserver(() => {
         fitTerminal(fitAddon, terminal, controller);
       });
@@ -108,6 +118,7 @@ export function WorkspaceTerminalView({
         controller,
         dataDisposable,
         resizeObserver,
+        selectionDisposable,
         terminal,
         themeObserver,
       };
@@ -115,13 +126,28 @@ export function WorkspaceTerminalView({
     [root, sessionId],
   );
 
+  const addSelectionToChat = useCallback(() => {
+    if (selection.length === 0) return;
+    publishTerminalSelectionInsert({ cwd: root, selection });
+  }, [root, selection]);
+
   // The terminal ground is `--card`, not the page, and it runs edge to edge:
   // the padding is inside the scroll surface so nothing frames it.
   return (
-    <div
-      className="h-full min-h-0 overflow-hidden bg-card px-2 py-1.5"
-      ref={setContainer}
-    />
+    <div className="relative h-full min-h-0 overflow-hidden bg-card">
+      <div className="h-full px-2 py-1.5" ref={setContainer} />
+      <Button
+        className="absolute top-2 right-3 z-10 shadow-sm"
+        disabled={selection.length === 0}
+        onClick={addSelectionToChat}
+        onMouseDown={(event) => event.preventDefault()}
+        size="xs"
+        type="button"
+        variant="secondary"
+      >
+        {t("workspace.tools.addToChat")}
+      </Button>
+    </div>
   );
 }
 
@@ -136,6 +162,7 @@ function disposeWorkspaceTerminalInstance(
   instance.themeObserver.disconnect();
   instance.resizeObserver.disconnect();
   instance.dataDisposable.dispose();
+  instance.selectionDisposable.dispose();
   instance.controller.dispose();
   instance.terminal.dispose();
 }

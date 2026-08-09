@@ -13,6 +13,7 @@ import { useCallback, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { createComposerExtensions } from "@/features/chat/components/composer/composer-editor-extensions";
 import { composerMentionsFromDocument } from "@/features/chat/components/composer/composer-editor-model";
+import { appendComposerMarkdown } from "@/features/chat/components/composer/terminal-selection-to-composer";
 import { useChatEnvironment } from "@/features/chat/runtime/chat-environment-context";
 import { useApi } from "@/platform/use-api";
 
@@ -27,6 +28,7 @@ export interface ComposerEditorInteractions {
 export interface ComposerEditorController {
   addGitHubAttachment: (attachment: ComposerGitHubAttachment) => void;
   addPasteSourceUrl: (sourceUrl: string) => void;
+  appendMarkdown: (markdown: string) => boolean;
   editor: Editor | null;
   focus: () => void;
   getMarkdown: () => string;
@@ -160,6 +162,18 @@ export function useComposerEditor({
 
   const focus = useCallback(() => editor?.commands.focus(), [editor]);
   const getMarkdown = useCallback(() => editor?.getMarkdown() ?? "", [editor]);
+  const appendMarkdown = useCallback(
+    (markdown: string) => {
+      if (editor === null || editor.isDestroyed) return false;
+      editor.commands.setContent(
+        appendComposerMarkdown(editor.getMarkdown(), markdown),
+        { contentType: "markdown" },
+      );
+      editor.commands.focus("end");
+      return true;
+    },
+    [editor],
+  );
   const reset = useCallback(() => {
     // A destroyed editor throws from its `commands` getter, so `?.` alone
     // is not enough once the composer has unmounted.
@@ -206,6 +220,7 @@ export function useComposerEditor({
   return {
     addGitHubAttachment,
     addPasteSourceUrl,
+    appendMarkdown,
     editor,
     focus,
     getMarkdown,
