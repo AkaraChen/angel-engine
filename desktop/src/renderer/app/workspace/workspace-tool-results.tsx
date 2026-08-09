@@ -8,7 +8,6 @@ import type { WorkspaceToolSurfaceDynamicTab } from "@shared/workspace-tool-surf
 import { FileText, GitBranch } from "@phosphor-icons/react";
 import is from "@sindresorhus/is";
 import { useQuery } from "@tanstack/react-query";
-import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import {
@@ -27,6 +26,7 @@ import {
 import { WorkspaceToolPatchFileRows } from "@/app/workspace/workspace-tool-patch-list";
 import { buildWorkspaceToolPatchList } from "@/app/workspace/workspace-tool-patch-model";
 import { useWorkspaceToolSurface } from "@/app/workspace/workspace-tool-surface-model";
+import { useWorkspaceGitBasePreference } from "@/app/workspace/use-workspace-git-base-preference";
 import { queryKeys } from "@/platform/query-keys";
 
 export function WorkspaceFilePreview({
@@ -71,8 +71,7 @@ export function WorkspaceGitDiffTool({
 }) {
   const { api, chatId } = useWorkspaceToolSurface();
   const { t } = useTranslation();
-  const [baseKind, setBaseKind] =
-    useState<WorkspaceGitDiffBaseKind>("worktree");
+  const { baseKind, setBaseKind } = useWorkspaceGitBasePreference(tab.root);
   const gitQuery = useQuery({
     queryFn: async () =>
       api.workspaceTools.gitDiff({
@@ -89,7 +88,6 @@ export function WorkspaceGitDiffTool({
     retry: false,
     staleTime: 5_000,
   });
-
   if (gitQuery.isLoading) {
     return null;
   }

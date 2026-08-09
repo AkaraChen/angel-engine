@@ -32,6 +32,10 @@ import type {
   WorkspaceToolSurfaceSnapshotSetInput,
   WorkspaceToolSurfaceState,
 } from "@shared/workspace-tool-surface";
+import type {
+  WorkspaceDiffBasePreference,
+  WorkspaceDiffBasePreferenceInput,
+} from "@shared/workspace-diff-preferences";
 import type * as React from "react";
 
 declare global {
@@ -121,6 +125,9 @@ declare global {
         toolId: string,
       ) => Promise<WorkspaceToolInstance | null>;
       getWorkspaceToolSurfaceState: () => Promise<WorkspaceToolSurfaceState>;
+      getWorkspaceDiffBase: (
+        root: string,
+      ) => Promise<WorkspaceDiffBasePreference | undefined>;
       openSettings: () => void;
       closeWorkspaceToolInstance: (
         input: WorkspaceToolInstanceCloseInput,
@@ -142,6 +149,9 @@ declare global {
       setWorkspaceToolSurfaceSnapshot: (
         input: WorkspaceToolSurfaceSnapshotSetInput,
       ) => void;
+      setWorkspaceDiffBase: (
+        input: WorkspaceDiffBasePreferenceInput,
+      ) => Promise<void>;
     };
     workspaceBrowser: WorkspaceBrowserApi;
     tipc: {
