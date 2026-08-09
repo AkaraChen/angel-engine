@@ -16,8 +16,8 @@ import { Effect } from "effect";
 
 import { DaemonError } from "../../platform/errors";
 import { loadProjectLifecycleConfig } from "./config";
-import { executeProjectLifecycle } from "./lifecycle";
 import { getProject } from "./repository";
+import { projectSetupLifecycle } from "./setup-lifecycle";
 
 const execFileAsync = promisify(execFile);
 const GIT_OUTPUT_MAX_BUFFER = 1024 * 1024;
@@ -163,30 +163,23 @@ export function createProjectWorktree(
       );
       if (created !== undefined) {
         onProgress?.("setup", 75);
-        yield* Effect.tryPromise({
-          catch: (cause) => DaemonError.worktreeCreateFailed(cause),
-          try: async () => {
-            if (!setup) return;
-            try {
-              await executeProjectLifecycle("setup", {
-                approvedDigest: setup.digest,
-                projectRoot: root,
-                signal,
-                worktreePath: created.cwd,
-              });
-            } catch (setupCause) {
-              try {
-                await discardCreatedWorktree(root, created.cwd, created.branch);
-              } catch (cleanupCause) {
-                throw new AggregateError(
-                  [setupCause, cleanupCause],
-                  `Worktree setup failed: ${errorMessage(setupCause)} Cleanup also failed: ${errorMessage(cleanupCause)}`,
-                );
-              }
-              throw setupCause;
-            }
-          },
-        });
+        if (signal?.aborted) {
+          yield* Effect.promise(() =>
+            discardCreatedWorktree(root, created.cwd, created.branch),
+          );
+          return yield* Effect.fail(
+            DaemonError.worktreeCreateFailed(signal.reason),
+          );
+        }
+        if (setup) {
+          yield* Effect.sync(() =>
+            projectSetupLifecycle.start({
+              approvedDigest: setup.digest,
+              projectRoot: root,
+              worktreePath: created.cwd,
+            }),
+          );
+        }
         onProgress?.("setup", 100);
         return created;
       }
@@ -194,6 +187,14 @@ export function createProjectWorktree(
 
     return yield* Effect.fail(DaemonError.worktreeCreateFailed(undefined));
   });
+}
+
+export async function discardManagedCreatedWorktree(root: string, cwd: string) {
+  const branch = await gitOutputAsync(cwd, ["branch", "--show-current"]);
+  if (!branch.startsWith(`${WORKTREE_BRANCH_PREFIX}/`)) {
+    throw new Error("Refusing to discard a worktree with an unmanaged branch.");
+  }
+  await discardCreatedWorktree(root, cwd, branch);
 }
 
 export function managedWorktreeRoot() {
@@ -390,10 +391,4 @@ async function gitOutputAsync(cwd: string, args: string[]) {
     maxBuffer: GIT_OUTPUT_MAX_BUFFER,
   });
   return result.stdout.trim();
-}
-
-function errorMessage(cause: unknown) {
-  return cause instanceof Error && cause.message.length > 0
-    ? cause.message
-    : "Unknown error.";
 }

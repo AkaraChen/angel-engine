@@ -62,6 +62,12 @@ export const es = {
       open: "Abrir {{name}}",
     },
     workspace: {
+      ambiguousSend: {
+        description:
+          "Angel Engine se reinició durante el envío. Para evitar un duplicado, este mensaje no se volvió a enviar automáticamente.",
+        dismiss: "Descartar envío pendiente",
+        title: "La entrega del mensaje es incierta",
+      },
       backgroundChatCompleted: "Chat en segundo plano completado",
       backgroundChatNeedsInput: "El chat en segundo plano necesita entrada",
       backgroundChatStatus: "Estado del chat en segundo plano",
@@ -74,6 +80,26 @@ export const es = {
       noProject: "Sin proyecto",
       projectSelect: "Proyecto",
       settings: "Configuración",
+      setup: {
+        approvalUnavailable:
+          "Revisa y aprueba el script de configuración actual antes de reintentarlo.",
+        continueAnyway: "Continuar de todos modos",
+        discard: "Descartar espacio de trabajo",
+        discardConfirm: "Descartar espacio de trabajo",
+        discardConfirmDescription:
+          "Esto elimina permanentemente este chat, su worktree y su rama. Esta acción no se puede deshacer.",
+        discardConfirmTitle: "¿Descartar este espacio de trabajo?",
+        failedStep:
+          "Falló el paso {{step}} de {{total}} ({{exitCode}}): {{command}}",
+        failedTitle: "Falló la configuración del espacio de trabajo",
+        noLog: "Aún no hay salida de configuración.",
+        ready: "Espacio de trabajo listo",
+        retry: "Reintentar configuración",
+        running:
+          "Configurando el espacio de trabajo… El primer mensaje se enviará automáticamente al terminar.",
+        runningStep: "Paso {{step}} de {{total}}: {{command}}",
+        viewLog: "Ver registro de configuración",
+      },
       statsBranch: "Rama",
       statsChanges: "Cambios",
       statsLastActive: "Última actividad",

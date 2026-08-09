@@ -166,6 +166,7 @@ export const WorkspacePageView: FC<WorkspacePageViewProps> = ({
     createChatForSelection,
     createStandaloneWorkspace,
     navigateToChat,
+    navigateToDraft,
     openChat,
     openChatFromFleet,
     openFleet,
@@ -468,6 +469,9 @@ export const WorkspacePageView: FC<WorkspacePageViewProps> = ({
                     onChatCreated={updateChatFromRun}
                     onChatMessagesUpdated={setChatMessagesInCache}
                     onChatUpdated={updateChatFromRun}
+                    onSetupDiscarded={(projectId) =>
+                      navigateToDraft(projectId, { replace: true })
+                    }
                     projects={projects}
                     routeProjectId={routeProjectId}
                     runtimeOptions={runtimeOptions}
@@ -487,6 +491,9 @@ export const WorkspacePageView: FC<WorkspacePageViewProps> = ({
                         onChatCreated={updateChatFromRun}
                         onChatMessagesUpdated={setChatMessagesInCache}
                         onChatUpdated={updateChatFromRun}
+                        onSetupDiscarded={(projectId) =>
+                          navigateToDraft(projectId, { replace: true })
+                        }
                         projects={projects}
                         routeProjectId={routeProjectId}
                         runtimeOptions={runtimeOptions}

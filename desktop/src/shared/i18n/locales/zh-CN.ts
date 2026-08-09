@@ -62,6 +62,12 @@ export const zhCN = {
       open: "打开 {{name}}",
     },
     workspace: {
+      ambiguousSend: {
+        description:
+          "Angel Engine 在发送时重启。为避免重复，此消息未自动重新发送。",
+        dismiss: "清除待发送消息",
+        title: "消息是否送达尚不确定",
+      },
       backgroundChatCompleted: "后台聊天已完成",
       backgroundChatNeedsInput: "后台聊天需要输入",
       backgroundChatStatus: "后台聊天状态",
@@ -74,6 +80,23 @@ export const zhCN = {
       noProject: "无项目",
       projectSelect: "项目",
       settings: "设置",
+      setup: {
+        approvalUnavailable: "重试前请检查并批准当前设置脚本。",
+        continueAnyway: "仍然继续",
+        discard: "丢弃工作区",
+        discardConfirm: "丢弃工作区",
+        discardConfirmDescription:
+          "这会永久删除此聊天、worktree 和分支，且无法撤销。",
+        discardConfirmTitle: "丢弃此工作区？",
+        failedStep: "第 {{step}}/{{total}} 步失败（{{exitCode}}）：{{command}}",
+        failedTitle: "工作区设置失败",
+        noLog: "暂无设置输出。",
+        ready: "工作区已就绪",
+        retry: "重试设置",
+        running: "正在设置工作区… 就绪后将自动发送第一条消息。",
+        runningStep: "第 {{step}}/{{total}} 步：{{command}}",
+        viewLog: "查看设置日志",
+      },
       statsBranch: "分支",
       statsChanges: "更改",
       statsLastActive: "最近活动",

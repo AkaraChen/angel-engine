@@ -62,6 +62,12 @@ export const en = {
       open: "Open {{name}}",
     },
     workspace: {
+      ambiguousSend: {
+        description:
+          "Angel Engine restarted while sending. To avoid a duplicate, this message was not sent again automatically.",
+        dismiss: "Clear pending send",
+        title: "Message delivery is uncertain",
+      },
       backgroundChatCompleted: "Background chat completed",
       backgroundChatNeedsInput: "Background chat needs input",
       backgroundChatStatus: "Background chat status",
@@ -74,6 +80,26 @@ export const en = {
       noProject: "No project",
       projectSelect: "Project",
       settings: "Settings",
+      setup: {
+        approvalUnavailable:
+          "Review and approve the current setup script before retrying.",
+        continueAnyway: "Continue anyway",
+        discard: "Discard workspace",
+        discardConfirm: "Discard workspace",
+        discardConfirmDescription:
+          "This permanently deletes this chat, its worktree, and its branch. This action cannot be undone.",
+        discardConfirmTitle: "Discard this workspace?",
+        failedStep:
+          "Step {{step}} of {{total}} failed ({{exitCode}}): {{command}}",
+        failedTitle: "Workspace setup failed",
+        noLog: "No setup output yet.",
+        ready: "Workspace ready",
+        retry: "Retry setup",
+        running:
+          "Setting up workspace… Your first message will send automatically when it is ready.",
+        runningStep: "Step {{step}} of {{total}}: {{command}}",
+        viewLog: "View setup log",
+      },
       statsBranch: "Branch",
       statsChanges: "Changes",
       statsLastActive: "Last active",

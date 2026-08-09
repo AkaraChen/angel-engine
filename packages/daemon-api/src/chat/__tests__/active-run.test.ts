@@ -1,6 +1,7 @@
 import type {
   ChatActiveRunResult,
   ChatActiveRunSnapshot,
+  ChatAmbiguousRunResult,
   ChatElicitationResponse,
   ChatOpenElicitation,
   ChatRunObserverEvent,
@@ -9,6 +10,7 @@ import type {
 import {
   isChatActiveRunResult,
   isChatActiveRunSnapshot,
+  isChatAmbiguousRunResult,
   isChatElicitationResponse,
   isChatRunObserverEvent,
   isChatRunStartInput,
@@ -121,6 +123,25 @@ describe("active run boundary guards", () => {
 
     expect(isChatActiveRunResult(present)).toBe(true);
     expect(isChatActiveRunResult(absent)).toBe(true);
+  });
+
+  it("accepts only typed ambiguous-run lookup results", () => {
+    const present: ChatAmbiguousRunResult = {
+      run: {
+        chatId: "chat-1",
+        createdAt: "2026-07-24T12:00:00.000Z",
+        runId: "run-1",
+        status: "dispatching",
+      },
+    };
+
+    expect(isChatAmbiguousRunResult(present)).toBe(true);
+    expect(isChatAmbiguousRunResult({ run: null })).toBe(true);
+    expect(
+      isChatAmbiguousRunResult({
+        run: { ...present.run, status: "queued" },
+      }),
+    ).toBe(false);
   });
 
   it("accepts snapshot-first observer messages", () => {

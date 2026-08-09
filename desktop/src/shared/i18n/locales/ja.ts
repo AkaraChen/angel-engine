@@ -62,6 +62,12 @@ export const ja = {
       open: "{{name}} を開く",
     },
     workspace: {
+      ambiguousSend: {
+        description:
+          "送信中に Angel Engine が再起動しました。重複を避けるため、このメッセージは自動再送されていません。",
+        dismiss: "保留中の送信を消去",
+        title: "メッセージの配信状況が不明です",
+      },
       backgroundChatCompleted: "バックグラウンドチャットが完了しました",
       backgroundChatNeedsInput: "バックグラウンドチャットに入力が必要です",
       backgroundChatStatus: "バックグラウンドチャットの状態",
@@ -74,6 +80,26 @@ export const ja = {
       noProject: "プロジェクトなし",
       projectSelect: "プロジェクト",
       settings: "設定",
+      setup: {
+        approvalUnavailable:
+          "再試行する前に、現在のセットアップスクリプトを確認して承認してください。",
+        continueAnyway: "このまま続行",
+        discard: "ワークスペースを破棄",
+        discardConfirm: "ワークスペースを破棄",
+        discardConfirmDescription:
+          "このチャット、worktree、ブランチを完全に削除します。この操作は元に戻せません。",
+        discardConfirmTitle: "このワークスペースを破棄しますか？",
+        failedStep:
+          "ステップ {{step}}/{{total}} が失敗しました ({{exitCode}}): {{command}}",
+        failedTitle: "ワークスペースのセットアップに失敗しました",
+        noLog: "セットアップ出力はまだありません。",
+        ready: "ワークスペースの準備ができました",
+        retry: "セットアップを再試行",
+        running:
+          "ワークスペースをセットアップ中… 完了後、最初のメッセージが自動送信されます。",
+        runningStep: "ステップ {{step}}/{{total}}: {{command}}",
+        viewLog: "セットアップログを表示",
+      },
       statsBranch: "ブランチ",
       statsChanges: "変更",
       statsLastActive: "最終アクティブ",

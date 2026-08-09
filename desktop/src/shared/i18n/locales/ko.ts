@@ -62,6 +62,12 @@ export const ko = {
       open: "{{name}} 열기",
     },
     workspace: {
+      ambiguousSend: {
+        description:
+          "전송 중 Angel Engine이 다시 시작되었습니다. 중복 전송을 피하기 위해 이 메시지는 자동으로 다시 보내지 않았습니다.",
+        dismiss: "대기 중인 전송 지우기",
+        title: "메시지 전송 여부가 불확실합니다",
+      },
       backgroundChatCompleted: "백그라운드 채팅 완료",
       backgroundChatNeedsInput: "백그라운드 채팅에 입력 필요",
       backgroundChatStatus: "백그라운드 채팅 상태",
@@ -74,6 +80,25 @@ export const ko = {
       noProject: "프로젝트 없음",
       projectSelect: "프로젝트",
       settings: "설정",
+      setup: {
+        approvalUnavailable:
+          "다시 시도하기 전에 현재 설정 스크립트를 검토하고 승인하세요.",
+        continueAnyway: "그래도 계속",
+        discard: "작업 공간 삭제",
+        discardConfirm: "작업 공간 삭제",
+        discardConfirmDescription:
+          "이 채팅과 worktree, 브랜치를 영구적으로 삭제합니다. 이 작업은 되돌릴 수 없습니다.",
+        discardConfirmTitle: "이 작업 공간을 삭제할까요?",
+        failedStep:
+          "{{total}}단계 중 {{step}}단계 실패 ({{exitCode}}): {{command}}",
+        failedTitle: "작업 공간 설정 실패",
+        noLog: "아직 설정 출력이 없습니다.",
+        ready: "작업 공간 준비 완료",
+        retry: "설정 다시 시도",
+        running: "작업 공간 설정 중… 준비되면 첫 메시지가 자동으로 전송됩니다.",
+        runningStep: "{{total}}단계 중 {{step}}단계: {{command}}",
+        viewLog: "설정 로그 보기",
+      },
       statsBranch: "브랜치",
       statsChanges: "변경 사항",
       statsLastActive: "마지막 활동",

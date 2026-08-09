@@ -127,7 +127,31 @@ export interface LocaleResourceTranslationWorkspaceTools {
   tabs: LocaleResourceTranslationWorkspaceToolsTabs;
 }
 
+export interface LocaleResourceTranslationWorkspaceSetup {
+  approvalUnavailable: string;
+  continueAnyway: string;
+  discard: string;
+  discardConfirm: string;
+  discardConfirmDescription: string;
+  discardConfirmTitle: string;
+  failedStep: string;
+  failedTitle: string;
+  noLog: string;
+  ready: string;
+  retry: string;
+  running: string;
+  runningStep: string;
+  viewLog: string;
+}
+
+export interface LocaleResourceTranslationWorkspaceAmbiguousSend {
+  description: string;
+  dismiss: string;
+  title: string;
+}
+
 export interface LocaleResourceTranslationWorkspace {
+  ambiguousSend: LocaleResourceTranslationWorkspaceAmbiguousSend;
   backgroundChatCompleted: string;
   backgroundChatNeedsInput: string;
   backgroundChatStatus: string;
@@ -140,6 +164,7 @@ export interface LocaleResourceTranslationWorkspace {
   noProject: string;
   projectSelect: string;
   settings: string;
+  setup: LocaleResourceTranslationWorkspaceSetup;
   statsBranch: string;
   statsChanges: string;
   statsLastActive: string;

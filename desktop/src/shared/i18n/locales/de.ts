@@ -62,6 +62,12 @@ export const de = {
       open: "{{name}} öffnen",
     },
     workspace: {
+      ambiguousSend: {
+        description:
+          "Angel Engine wurde beim Senden neu gestartet. Um ein Duplikat zu vermeiden, wurde diese Nachricht nicht automatisch erneut gesendet.",
+        dismiss: "Ausstehende Sendung löschen",
+        title: "Nachrichtenzustellung ist ungewiss",
+      },
       backgroundChatCompleted: "Hintergrundchat abgeschlossen",
       backgroundChatNeedsInput: "Hintergrundchat benötigt Eingabe",
       backgroundChatStatus: "Status des Hintergrundchats",
@@ -74,6 +80,26 @@ export const de = {
       noProject: "Kein Projekt",
       projectSelect: "Projekt",
       settings: "Einstellungen",
+      setup: {
+        approvalUnavailable:
+          "Prüfe und genehmige das aktuelle Einrichtungsskript vor dem erneuten Versuch.",
+        continueAnyway: "Trotzdem fortfahren",
+        discard: "Arbeitsbereich verwerfen",
+        discardConfirm: "Arbeitsbereich verwerfen",
+        discardConfirmDescription:
+          "Dadurch werden dieser Chat, sein Worktree und sein Branch dauerhaft gelöscht. Dies kann nicht rückgängig gemacht werden.",
+        discardConfirmTitle: "Diesen Arbeitsbereich verwerfen?",
+        failedStep:
+          "Schritt {{step}} von {{total}} fehlgeschlagen ({{exitCode}}): {{command}}",
+        failedTitle: "Einrichtung des Arbeitsbereichs fehlgeschlagen",
+        noLog: "Noch keine Einrichtungsausgabe.",
+        ready: "Arbeitsbereich bereit",
+        retry: "Einrichtung wiederholen",
+        running:
+          "Arbeitsbereich wird eingerichtet… Die erste Nachricht wird danach automatisch gesendet.",
+        runningStep: "Schritt {{step}} von {{total}}: {{command}}",
+        viewLog: "Einrichtungsprotokoll anzeigen",
+      },
       statsBranch: "Branch",
       statsChanges: "Änderungen",
       statsLastActive: "Zuletzt aktiv",

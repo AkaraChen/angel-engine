@@ -62,6 +62,12 @@ export const zhTW = {
       open: "開啟 {{name}}",
     },
     workspace: {
+      ambiguousSend: {
+        description:
+          "Angel Engine 在傳送時重新啟動。為避免重複，此訊息未自動重新傳送。",
+        dismiss: "清除待傳送訊息",
+        title: "訊息是否送達尚不確定",
+      },
       backgroundChatCompleted: "背景聊天已完成",
       backgroundChatNeedsInput: "背景聊天需要輸入",
       backgroundChatStatus: "背景聊天狀態",
@@ -74,6 +80,23 @@ export const zhTW = {
       noProject: "無專案",
       projectSelect: "專案",
       settings: "設定",
+      setup: {
+        approvalUnavailable: "重試前請檢查並核准目前的設定指令碼。",
+        continueAnyway: "仍然繼續",
+        discard: "捨棄工作區",
+        discardConfirm: "捨棄工作區",
+        discardConfirmDescription:
+          "這會永久刪除此聊天、worktree 和分支，且無法復原。",
+        discardConfirmTitle: "捨棄此工作區？",
+        failedStep: "第 {{step}}/{{total}} 步失敗（{{exitCode}}）：{{command}}",
+        failedTitle: "工作區設定失敗",
+        noLog: "尚無設定輸出。",
+        ready: "工作區已就緒",
+        retry: "重試設定",
+        running: "正在設定工作區… 就緒後將自動傳送第一則訊息。",
+        runningStep: "第 {{step}}/{{total}} 步：{{command}}",
+        viewLog: "查看設定記錄",
+      },
       statsBranch: "分支",
       statsChanges: "變更",
       statsLastActive: "最近活動",

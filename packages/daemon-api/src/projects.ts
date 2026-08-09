@@ -91,6 +91,17 @@ export interface ProjectLifecycleSnapshot {
   version: 1;
 }
 
+export interface ProjectSetupLifecycleView {
+  continued: boolean;
+  log: string;
+  running: boolean;
+  snapshot: ProjectLifecycleSnapshot;
+}
+
+export interface ProjectSetupRetryInput {
+  setupApproval: string;
+}
+
 /**
  * Per-project settings persisted in the repository's `2code.json`. The file is
  * the single source of truth; the daemon never mirrors these values into its
@@ -247,6 +258,11 @@ export const projectFileSearchInputSchema = arkType({
 export const projectGitStatusInputSchema = arkType({
   "+": "ignore",
   projectId: "string > 0",
+});
+
+export const projectSetupRetryInputSchema = arkType({
+  "+": "ignore",
+  setupApproval: "string > 0",
 });
 
 const managedWorktreeDeleteTargetSchema = arkType({
