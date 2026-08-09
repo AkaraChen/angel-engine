@@ -81,27 +81,17 @@ describe("project worktree setup", () => {
     ).resolves.toContain("ready");
   });
 
-  it("retains the worktree and branch when setup fails", async () => {
+  it("rolls back the worktree until setup failure is reachable from L2", async () => {
     await writeConfig(["exit 7"]);
 
     await expect(createApprovedWorktree()).rejects.toThrow(
       "2code.json setup_script failed",
     );
 
-    const entries = await directoryEntriesOrEmpty(worktreeParent);
-    expect(entries).toHaveLength(1);
-    const branch = await git(projectRoot, ["branch", "--list", "angel/*"]);
-    expect(branch).toContain("angel/");
-    createdWorktree = {
-      branch: branch.replace(/^\*?\s*/, ""),
-      cwd: path.join(worktreeParent, entries[0] ?? "missing"),
-    };
+    await expect(directoryEntriesOrEmpty(worktreeParent)).resolves.toEqual([]);
     await expect(
-      fs.readFile(
-        path.join(createdWorktree.cwd, ".angel", "lifecycle.json"),
-        "utf8",
-      ),
-    ).resolves.toContain('"status": "failed"');
+      git(projectRoot, ["branch", "--list", "angel/*"]),
+    ).resolves.toBe("");
   });
 
   it("reports phases and removes the worktree when creation is cancelled", async () => {

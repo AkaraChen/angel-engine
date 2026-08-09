@@ -1,47 +1,67 @@
+import { execFile } from "node:child_process";
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
+import { promisify } from "node:util";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { loadProjectLifecycleConfig } from "./config";
 import {
-  executeProjectLifecycle,
-  readProjectLifecycleLog,
-  readProjectLifecycleSnapshot,
+  ProjectLifecycleConflictError,
+  ProjectLifecycleExecutionError,
+  ProjectLifecycleRuntime,
 } from "./lifecycle";
+
+const execFileAsync = promisify(execFile);
 
 describe("project lifecycle runtime", () => {
   let root: string;
+  let storageRoot: string;
+  let runtime: ProjectLifecycleRuntime;
 
   beforeEach(async () => {
-    root = await fs.mkdtemp(path.join(os.tmpdir(), "angel-lifecycle-"));
+    root = await fs.mkdtemp(
+      path.join(os.tmpdir(), "angel-lifecycle-worktree-"),
+    );
+    storageRoot = await fs.mkdtemp(
+      path.join(os.tmpdir(), "angel-lifecycle-state-"),
+    );
+    runtime = new ProjectLifecycleRuntime({ storageRoot });
   });
 
   afterEach(async () => {
-    await fs.rm(root, { force: true, recursive: true });
+    await runtime.shutdown();
+    await Promise.all(
+      [root, storageRoot].map((directory) =>
+        fs.rm(directory, { force: true, recursive: true }),
+      ),
+    );
     vi.unstubAllEnvs();
   });
 
-  it("executes setup sequentially and persists ready state and logs", async () => {
-    const digest = await writeConfig({
-      setup_script: [
-        "echo first > order.txt",
-        "echo second >> order.txt && echo setup-log",
-      ],
-    });
+  it("stores artifacts outside an untrusted worktree and keeps git status clean", async () => {
+    const victim = path.join(storageRoot, "victim");
+    await fs.mkdir(victim);
+    await fs.symlink(victim, path.join(root, ".angel"));
+    const digest = await writeConfig({ setup_script: ["echo safe-log"] });
+    await git(["init"]);
+    await git(["add", "."]);
+    await git([
+      "-c",
+      "user.name=Angel Test",
+      "-c",
+      "user.email=angel@example.com",
+      "commit",
+      "-m",
+      "fixture",
+    ]);
 
-    await executeProjectLifecycle("setup", lifecycleOptions(digest));
+    await runtime.execute("setup", lifecycleOptions(digest));
 
-    await expect(
-      fs.readFile(path.join(root, "order.txt"), "utf8"),
-    ).resolves.toMatch(/first\s+second/);
-    await expect(readProjectLifecycleLog(root, "setup")).resolves.toContain(
-      "setup-log",
-    );
-    await expect(readProjectLifecycleSnapshot(root)).resolves.toMatchObject({
-      approvedDigest: digest,
-      setup: { status: "ready" },
-    });
+    await expect(fs.readdir(victim)).resolves.toEqual([]);
+    await expect(git(["status", "--porcelain"])).resolves.toBe("");
+    expect(runtime.artifactDirectory(root).startsWith(storageRoot)).toBe(true);
+    await expect(runtime.log(root, "setup")).resolves.toContain("safe-log");
   });
 
   it("requires reapproval when any 2code.json content changes", async () => {
@@ -52,15 +72,112 @@ describe("project lifecycle runtime", () => {
     );
 
     await expect(
-      executeProjectLifecycle("setup", lifecycleOptions(digest)),
+      runtime.execute("setup", lifecycleOptions(digest)),
     ).rejects.toThrow("approval is required again");
-    await expect(fs.access(path.join(root, "order.txt"))).rejects.toThrow();
   });
 
-  it("cleans inherited internal variables before injecting owned run variables", async () => {
+  it("serializes cross-track state updates without losing either track", async () => {
+    await writeDelayScript();
     const digest = await writeConfig({
-      run_script: "node write-env.cjs",
+      setup_script: ["node delay.cjs setup"],
+      teardown_script: ["node delay.cjs teardown"],
     });
+
+    await Promise.all([
+      runtime.execute("setup", lifecycleOptions(digest)),
+      runtime.execute("teardown", lifecycleOptions(digest)),
+    ]);
+
+    await expect(runtime.snapshot(root)).resolves.toMatchObject({
+      setup: { status: "ready" },
+      teardown: { status: "done" },
+    });
+    await expect(runtime.log(root, "setup")).resolves.toContain("setup");
+    await expect(runtime.log(root, "teardown")).resolves.toContain("teardown");
+  });
+
+  it("rejects a duplicate lifecycle on the same track", async () => {
+    await writeDelayScript();
+    const digest = await writeConfig({
+      setup_script: ["node delay.cjs setup"],
+    });
+    const first = runtime.execute("setup", lifecycleOptions(digest));
+    await waitFor(
+      () => runtime.snapshot(root),
+      (snapshot) => snapshot.setup.status === "running",
+    );
+
+    await expect(
+      runtime.execute("setup", lifecycleOptions(digest)),
+    ).rejects.toBeInstanceOf(ProjectLifecycleConflictError);
+    await first;
+  });
+
+  it("owns run handles and supports stop plus duplicate-start conflicts", async () => {
+    const marker = path.join(root, "run-descendant.marker");
+    await writeParentScript("run-parent.cjs", marker);
+    const digest = await writeConfig({ run_script: "node run-parent.cjs" });
+
+    const started = await runtime.startRun({
+      ...lifecycleOptions(digest),
+      killGraceMs: 50,
+      port: 43124,
+    });
+    expect(started.snapshot.run).toMatchObject({
+      port: 43124,
+      status: "running",
+    });
+    await expect(
+      runtime.startRun({ ...lifecycleOptions(digest), port: 43125 }),
+    ).rejects.toBeInstanceOf(ProjectLifecycleConflictError);
+
+    await runtime.stopRun(root);
+    await new Promise((resolve) => setTimeout(resolve, 700));
+
+    await expect(fs.access(marker)).rejects.toThrow();
+    await expect(runtime.snapshot(root)).resolves.toMatchObject({
+      run: { status: "stopped" },
+    });
+  });
+
+  it("shutdown terminates every registered run", async () => {
+    const secondRoot = await fs.mkdtemp(
+      path.join(os.tmpdir(), "angel-lifecycle-worktree-"),
+    );
+    try {
+      const digest = await writeConfig({ run_script: "node run-parent.cjs" });
+      await writeParentScript(
+        "run-parent.cjs",
+        path.join(root, "first.marker"),
+      );
+      await fs.copyFile(
+        path.join(root, "run-parent.cjs"),
+        path.join(secondRoot, "run-parent.cjs"),
+      );
+      await Promise.all([
+        runtime.startRun({ ...lifecycleOptions(digest), port: 43126 }),
+        runtime.startRun({
+          ...lifecycleOptions(digest),
+          port: 43127,
+          worktreePath: secondRoot,
+        }),
+      ]);
+
+      await runtime.shutdown();
+
+      await expect(runtime.snapshot(root)).resolves.toMatchObject({
+        run: { status: "stopped" },
+      });
+      await expect(runtime.snapshot(secondRoot)).resolves.toMatchObject({
+        run: { status: "stopped" },
+      });
+    } finally {
+      await fs.rm(secondRoot, { force: true, recursive: true });
+    }
+  });
+
+  it("cleans inherited internals before injecting owned run variables", async () => {
+    const digest = await writeConfig({ run_script: "node write-env.cjs" });
     await fs.writeFile(
       path.join(root, "write-env.cjs"),
       [
@@ -78,106 +195,110 @@ describe("project lifecycle runtime", () => {
     vi.stubEnv("ELECTRON_RUN_AS_NODE", "1");
     vi.stubEnv("PORT", "wrong");
 
-    await executeProjectLifecycle("run", {
-      ...lifecycleOptions(digest),
-      port: 43123,
-    });
+    await runtime.startRun({ ...lifecycleOptions(digest), port: 43123 });
+    await waitFor(
+      () => runtime.snapshot(root),
+      (snapshot) => snapshot.run.status === "exited",
+    );
 
     await expect(readJson(path.join(root, "env.json"))).resolves.toEqual({
       angelPort: "43123",
       port: "43123",
     });
-    await expect(readProjectLifecycleSnapshot(root)).resolves.toMatchObject({
-      run: { code: 0, status: "exited" },
+  });
+
+  it("persists structured exit failures", async () => {
+    const digest = await writeConfig({ setup_script: ["exit 7"] });
+
+    const error = await runtime
+      .execute("setup", lifecycleOptions(digest))
+      .catch((cause: unknown) => cause);
+
+    expect(error).toBeInstanceOf(ProjectLifecycleExecutionError);
+    expect((error as ProjectLifecycleExecutionError).failure).toEqual({
+      exitCode: 7,
+      message: expect.stringContaining("code 7"),
+      reason: "exit",
+      signal: null,
+    });
+    await expect(runtime.snapshot(root)).resolves.toMatchObject({
+      setup: {
+        failure: { exitCode: 7, reason: "exit", signal: null },
+        status: "failed",
+      },
     });
   });
 
-  it("terminates the whole process group on timeout", async () => {
-    const marker = path.join(root, "descendant.marker");
+  it("terminates descendants on timeout and persists its structured reason", async () => {
+    const marker = path.join(root, "timeout-descendant.marker");
     await writeParentScript("timeout-parent.cjs", marker);
     const digest = await writeConfig({
       setup_script: ["node timeout-parent.cjs"],
     });
 
     await expect(
-      executeProjectLifecycle("setup", {
+      runtime.execute("setup", {
         ...lifecycleOptions(digest),
         killGraceMs: 50,
         timeoutMs: 100,
       }),
-    ).rejects.toThrow("timed out");
+    ).rejects.toMatchObject({ failure: { reason: "timeout" } });
     await new Promise((resolve) => setTimeout(resolve, 700));
+
     await expect(fs.access(marker)).rejects.toThrow();
-    await expect(readProjectLifecycleSnapshot(root)).resolves.toMatchObject({
-      setup: { status: "failed" },
+    await expect(runtime.snapshot(root)).resolves.toMatchObject({
+      setup: { failure: { reason: "timeout" }, status: "failed" },
     });
   });
 
-  it("terminates the whole process group when cancelled", async () => {
-    const marker = path.join(root, "cancelled-descendant.marker");
-    await writeParentScript("cancel-parent.cjs", marker);
-    const digest = await writeConfig({
-      setup_script: ["node cancel-parent.cjs"],
-    });
-    const controller = new AbortController();
-    setTimeout(() => controller.abort(), 100);
-
-    await expect(
-      executeProjectLifecycle("setup", {
-        ...lifecycleOptions(digest),
-        killGraceMs: 50,
-        signal: controller.signal,
-      }),
-    ).rejects.toThrow("cancelled");
-    await new Promise((resolve) => setTimeout(resolve, 700));
-    await expect(fs.access(marker)).rejects.toThrow();
-  });
-
-  it("records a cancelled run as stopped after terminating descendants", async () => {
-    const marker = path.join(root, "run-descendant.marker");
-    await writeParentScript("run-parent.cjs", marker);
-    const digest = await writeConfig({ run_script: "node run-parent.cjs" });
-    const controller = new AbortController();
-    setTimeout(() => controller.abort(), 100);
-
-    await expect(
-      executeProjectLifecycle("run", {
-        ...lifecycleOptions(digest),
-        killGraceMs: 50,
-        port: 43124,
-        signal: controller.signal,
-      }),
-    ).rejects.toThrow("cancelled");
-    await new Promise((resolve) => setTimeout(resolve, 700));
-    await expect(fs.access(marker)).rejects.toThrow();
-    await expect(readProjectLifecycleSnapshot(root)).resolves.toMatchObject({
-      run: { status: "stopped" },
-    });
-  });
-
-  it("restores persisted state and log tails after a module restart", async () => {
+  it("restores valid persisted state after a runtime restart", async () => {
     const digest = await writeConfig({ setup_script: ["echo restored-log"] });
-    await executeProjectLifecycle("setup", lifecycleOptions(digest));
+    await runtime.execute("setup", lifecycleOptions(digest));
 
-    vi.resetModules();
-    const restored = await import("./lifecycle");
+    const restored = new ProjectLifecycleRuntime({ storageRoot });
 
-    await expect(
-      restored.readProjectLifecycleSnapshot(root),
-    ).resolves.toMatchObject({
+    await expect(restored.snapshot(root)).resolves.toMatchObject({
       setup: { status: "ready" },
     });
-    await expect(
-      restored.readProjectLifecycleLog(root, "setup"),
-    ).resolves.toContain("restored-log");
+    await expect(restored.log(root, "setup")).resolves.toContain(
+      "restored-log",
+    );
+  });
+
+  it.each([
+    ["malformed JSON", "not-json"],
+    ["an unsupported version", JSON.stringify({ version: 2 })],
+    [
+      "an invalid state shape",
+      JSON.stringify({
+        run: { status: "running" },
+        setup: { status: "idle" },
+        teardown: { status: "idle" },
+        updatedAt: new Date().toISOString(),
+        version: 1,
+      }),
+    ],
+  ])("quarantines %s instead of trusting the snapshot", async (_label, content) => {
+    const artifactDirectory = runtime.artifactDirectory(root);
+    await fs.mkdir(artifactDirectory, { recursive: true });
+    await fs.writeFile(path.join(artifactDirectory, "lifecycle.json"), content);
+
+    const restored = new ProjectLifecycleRuntime({ storageRoot });
+    await expect(restored.snapshot(root)).resolves.toMatchObject({
+      run: { status: "stopped" },
+      setup: { status: "idle" },
+      teardown: { status: "idle" },
+      version: 1,
+    });
+    expect(
+      (await fs.readdir(artifactDirectory)).some((file) =>
+        file.startsWith("lifecycle.json.corrupt-"),
+      ),
+    ).toBe(true);
   });
 
   function lifecycleOptions(approvedDigest: string) {
-    return {
-      approvedDigest,
-      projectRoot: root,
-      worktreePath: root,
-    };
+    return { approvedDigest, projectRoot: root, worktreePath: root };
   }
 
   async function writeConfig(config: Record<string, unknown>) {
@@ -185,6 +306,13 @@ describe("project lifecycle runtime", () => {
     const loaded = await loadProjectLifecycleConfig(root);
     if (loaded === undefined) throw new Error("Expected lifecycle config.");
     return loaded.digest;
+  }
+
+  async function writeDelayScript() {
+    await fs.writeFile(
+      path.join(root, "delay.cjs"),
+      "setTimeout(() => console.log(process.argv[2]), 150);\n",
+    );
   }
 
   async function writeParentScript(file: string, marker: string) {
@@ -200,7 +328,24 @@ describe("project lifecycle runtime", () => {
       ].join("\n"),
     );
   }
+
+  async function git(args: string[]) {
+    const result = await execFileAsync("git", ["-C", root, ...args]);
+    return result.stdout.trim();
+  }
 });
+
+async function waitFor<T>(
+  read: () => Promise<T>,
+  predicate: (value: T) => boolean,
+): Promise<T> {
+  for (let attempt = 0; attempt < 100; attempt += 1) {
+    const value = await read();
+    if (predicate(value)) return value;
+    await new Promise((resolve) => setTimeout(resolve, 10));
+  }
+  throw new Error("Timed out waiting for lifecycle state.");
+}
 
 async function readJson(file: string): Promise<unknown> {
   return JSON.parse(await fs.readFile(file, "utf8")) as unknown;

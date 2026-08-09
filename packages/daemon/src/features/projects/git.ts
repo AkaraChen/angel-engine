@@ -167,12 +167,24 @@ export function createProjectWorktree(
           catch: (cause) => DaemonError.worktreeCreateFailed(cause),
           try: async () => {
             if (!setup) return;
-            await executeProjectLifecycle("setup", {
-              approvedDigest: setup.digest,
-              projectRoot: root,
-              signal,
-              worktreePath: created.cwd,
-            });
+            try {
+              await executeProjectLifecycle("setup", {
+                approvedDigest: setup.digest,
+                projectRoot: root,
+                signal,
+                worktreePath: created.cwd,
+              });
+            } catch (setupCause) {
+              try {
+                await discardCreatedWorktree(root, created.cwd, created.branch);
+              } catch (cleanupCause) {
+                throw new AggregateError(
+                  [setupCause, cleanupCause],
+                  `Worktree setup failed: ${errorMessage(setupCause)} Cleanup also failed: ${errorMessage(cleanupCause)}`,
+                );
+              }
+              throw setupCause;
+            }
           },
         });
         onProgress?.("setup", 100);
@@ -378,4 +390,10 @@ async function gitOutputAsync(cwd: string, args: string[]) {
     maxBuffer: GIT_OUTPUT_MAX_BUFFER,
   });
   return result.stdout.trim();
+}
+
+function errorMessage(cause: unknown) {
+  return cause instanceof Error && cause.message.length > 0
+    ? cause.message
+    : "Unknown error.";
 }

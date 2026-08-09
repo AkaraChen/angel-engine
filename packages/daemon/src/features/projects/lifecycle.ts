@@ -1,51 +1,26 @@
+import type {
+  ProjectLifecycleFailure,
+  ProjectLifecycleKind,
+  ProjectLifecycleSnapshot,
+  ProjectRunLifecycleState,
+  ProjectSetupLifecycleState,
+  ProjectTeardownLifecycleState,
+} from "@angel-engine/daemon-api/projects";
 import { spawn, type ChildProcess } from "node:child_process";
+import { createHash, randomUUID } from "node:crypto";
+import { constants as fsConstants } from "node:fs";
 import fs from "node:fs/promises";
 import net from "node:net";
+import os from "node:os";
 import path from "node:path";
 
 import { loadProjectLifecycleConfig, PROJECT_CONFIG_FILE } from "./config";
 
-export type ProjectLifecycleKind = "run" | "setup" | "teardown";
-
-export type SetupLifecycleState =
-  | { status: "idle" }
-  | { command: string; step: number; stepCount: number; status: "running" }
-  | {
-      command: string;
-      error: string;
-      step: number;
-      stepCount: number;
-      status: "failed";
-    }
-  | { completedAt: string; status: "ready" };
-
-export type RunLifecycleState =
-  | { status: "stopped" }
-  | { port: number; status: "starting" }
-  | { pid: number; port: number; status: "running"; url?: string }
-  | { code: number | null; signal: NodeJS.Signals | null; status: "exited" }
-  | { error: string; status: "failed" };
-
-export type TeardownLifecycleState =
-  | { status: "idle" }
-  | { command: string; step: number; stepCount: number; status: "running" }
-  | {
-      command: string;
-      error: string;
-      step: number;
-      stepCount: number;
-      status: "failed";
-    }
-  | { completedAt: string; status: "done" };
-
-export interface ProjectLifecycleSnapshot {
-  approvedDigest?: string;
-  run: RunLifecycleState;
-  setup: SetupLifecycleState;
-  teardown: TeardownLifecycleState;
-  updatedAt: string;
-  version: 1;
-}
+export type {
+  ProjectLifecycleFailure,
+  ProjectLifecycleKind,
+  ProjectLifecycleSnapshot,
+} from "@angel-engine/daemon-api/projects";
 
 export interface ProjectLifecycleExecutionOptions {
   approvedDigest: string;
@@ -63,23 +38,437 @@ export interface ProjectLifecycleExecutionResult {
   snapshot: ProjectLifecycleSnapshot;
 }
 
+export interface ProjectRunStartResult {
+  logTail: string;
+  snapshot: ProjectLifecycleSnapshot;
+}
+
+export class ProjectLifecycleConflictError extends Error {
+  readonly kind: ProjectLifecycleKind;
+
+  constructor(kind: ProjectLifecycleKind) {
+    super(`A ${kind} lifecycle is already active for this worktree.`);
+    this.name = "ProjectLifecycleConflictError";
+    this.kind = kind;
+  }
+}
+
+export class ProjectLifecycleExecutionError extends Error {
+  readonly failure: ProjectLifecycleFailure;
+
+  constructor(
+    message: string,
+    failure: ProjectLifecycleFailure,
+    cause?: unknown,
+  ) {
+    super(message, { cause });
+    this.name = "ProjectLifecycleExecutionError";
+    this.failure = failure;
+  }
+}
+
+interface RuntimeRecord {
+  activeKinds: Set<ProjectLifecycleKind>;
+  logs: Partial<Record<ProjectLifecycleKind, string>>;
+  mutationQueue: Promise<void>;
+  runHandle?: RunHandle;
+  snapshot: ProjectLifecycleSnapshot;
+  storageDirectory: string;
+  worktreePath: string;
+}
+
+interface RunHandle {
+  controller: AbortController;
+  done: Promise<void>;
+  process: LifecycleProcess;
+}
+
+interface LifecycleProcess {
+  child: ChildProcess;
+  completion: Promise<ProcessExit>;
+  terminate: () => Promise<void>;
+}
+
+interface ProcessExit {
+  exitCode: number | null;
+  signal: NodeJS.Signals | null;
+}
+
+interface StartCommandOptions {
+  environment?: Record<string, string>;
+  killGraceMs: number;
+  onChunk: (chunk: string) => Promise<void>;
+  signal?: AbortSignal;
+  timeoutMs?: number;
+}
+
+interface ProjectLifecycleRuntimeOptions {
+  storageRoot?: string;
+}
+
 const ERROR_TAIL_LENGTH = 4096;
 const LOG_TAIL_LENGTH = 1024 * 1024;
 const SETUP_TIMEOUT_MS = 5 * 60 * 1000;
 const TEARDOWN_TIMEOUT_MS = 60 * 1000;
 const TERMINATION_GRACE_MS = 1000;
-const runtimeByWorktree = new Map<
-  string,
-  {
-    logs: Partial<Record<ProjectLifecycleKind, string>>;
-    snapshot: ProjectLifecycleSnapshot;
-  }
->();
 
-export async function executeProjectLifecycle(
-  kind: ProjectLifecycleKind,
+export class ProjectLifecycleRuntime {
+  readonly #recordPromises = new Map<string, Promise<RuntimeRecord>>();
+  readonly #storageRoot: string;
+
+  constructor(options: ProjectLifecycleRuntimeOptions = {}) {
+    this.#storageRoot = path.resolve(
+      options.storageRoot ??
+        path.join(os.homedir(), ".angel-engine", "lifecycle"),
+    );
+  }
+
+  async execute(
+    kind: "setup" | "teardown",
+    options: ProjectLifecycleExecutionOptions,
+  ): Promise<ProjectLifecycleExecutionResult> {
+    const record = await this.#record(options.worktreePath);
+    this.#claim(record, kind);
+    try {
+      const config = await approvedConfig(options);
+      const commands =
+        kind === "setup" ? config.setupScript : config.teardownScript;
+      let logTail = await this.#log(record, kind);
+
+      for (const [index, command] of commands.entries()) {
+        await this.#update(record, options, (snapshot) => {
+          snapshot.approvedDigest = config.digest;
+          snapshot[kind] = {
+            command,
+            status: "running",
+            step: index + 1,
+            stepCount: commands.length,
+          };
+        });
+
+        try {
+          const process = startCommand(command, options.worktreePath, {
+            killGraceMs: options.killGraceMs ?? TERMINATION_GRACE_MS,
+            onChunk: async (chunk) => {
+              logTail = tail(logTail + chunk, LOG_TAIL_LENGTH);
+              record.logs[kind] = logTail;
+              await this.#appendLog(record, kind, chunk);
+            },
+            signal: options.signal,
+            timeoutMs:
+              options.timeoutMs ??
+              (kind === "setup" ? SETUP_TIMEOUT_MS : TEARDOWN_TIMEOUT_MS),
+          });
+          await process.completion;
+        } catch (cause) {
+          const failure = failureFrom(cause);
+          await this.#update(record, options, (snapshot) => {
+            snapshot[kind] = {
+              command,
+              failure,
+              status: "failed",
+              step: index + 1,
+              stepCount: commands.length,
+            };
+          });
+          throw lifecycleScriptError(kind, command, failure, cause);
+        }
+      }
+
+      await this.#update(record, options, (snapshot) => {
+        snapshot.approvedDigest = config.digest;
+        if (kind === "setup") {
+          snapshot.setup = {
+            completedAt: new Date().toISOString(),
+            status: "ready",
+          };
+        } else {
+          snapshot.teardown = {
+            completedAt: new Date().toISOString(),
+            status: "done",
+          };
+        }
+      });
+      return { logTail, snapshot: cloneSnapshot(record.snapshot) };
+    } finally {
+      record.activeKinds.delete(kind);
+    }
+  }
+
+  async startRun(
+    options: ProjectLifecycleExecutionOptions,
+  ): Promise<ProjectRunStartResult> {
+    const record = await this.#record(options.worktreePath);
+    this.#claim(record, "run");
+    let startedProcess: LifecycleProcess | undefined;
+    try {
+      const config = await approvedConfig(options);
+      if (config.runScript.length === 0) {
+        await this.#update(record, options, (snapshot) => {
+          snapshot.approvedDigest = config.digest;
+          snapshot.run = { status: "stopped" };
+        });
+        record.activeKinds.delete("run");
+        return {
+          logTail: await this.#log(record, "run"),
+          snapshot: cloneSnapshot(record.snapshot),
+        };
+      }
+
+      const port = options.port ?? (await allocateWorkspacePort());
+      await this.#update(record, options, (snapshot) => {
+        snapshot.approvedDigest = config.digest;
+        snapshot.run = { port, status: "starting" };
+      });
+
+      let logTail = await this.#log(record, "run");
+      const controller = new AbortController();
+      const unlinkSignal = linkAbortSignal(options.signal, controller);
+      const process = startCommand(config.runScript, options.worktreePath, {
+        environment: {
+          ANGEL_WORKSPACE_PORT: String(port),
+          PORT: String(port),
+        },
+        killGraceMs: options.killGraceMs ?? TERMINATION_GRACE_MS,
+        onChunk: async (chunk) => {
+          logTail = tail(logTail + chunk, LOG_TAIL_LENGTH);
+          record.logs.run = logTail;
+          await this.#appendLog(record, "run", chunk);
+        },
+        signal: controller.signal,
+        timeoutMs: options.timeoutMs,
+      });
+      startedProcess = process;
+
+      if (process.child.pid === undefined) {
+        await process.terminate();
+        throw new ProjectLifecycleExecutionError(
+          "Run process did not expose a pid.",
+          failure("spawn", "Run process did not expose a pid."),
+        );
+      }
+
+      await this.#update(record, options, (snapshot) => {
+        snapshot.run = { pid: process.child.pid!, port, status: "running" };
+      });
+
+      const handle: RunHandle = {
+        controller,
+        done: Promise.resolve(),
+        process,
+      };
+      record.runHandle = handle;
+      handle.done = this.#observeRun(record, options, handle, unlinkSignal);
+      return { logTail, snapshot: cloneSnapshot(record.snapshot) };
+    } catch (cause) {
+      if (record.runHandle === undefined) {
+        await startedProcess?.terminate();
+        await startedProcess?.completion.catch(() => undefined);
+        record.activeKinds.delete("run");
+      }
+      throw cause;
+    }
+  }
+
+  async stopRun(worktreePath: string): Promise<ProjectLifecycleSnapshot> {
+    const record = await this.#record(worktreePath);
+    const handle = record.runHandle;
+    if (handle === undefined) return cloneSnapshot(record.snapshot);
+    handle.controller.abort();
+    await handle.done;
+    return cloneSnapshot(record.snapshot);
+  }
+
+  async shutdown(): Promise<void> {
+    const records = await Promise.all(this.#recordPromises.values());
+    await Promise.all(
+      records.map(async (record) => {
+        const handle = record.runHandle;
+        if (handle === undefined) return;
+        handle.controller.abort();
+        await handle.done;
+      }),
+    );
+  }
+
+  async snapshot(worktreePath: string): Promise<ProjectLifecycleSnapshot> {
+    const record = await this.#record(worktreePath);
+    await record.mutationQueue;
+    return cloneSnapshot(record.snapshot);
+  }
+
+  async log(worktreePath: string, kind: ProjectLifecycleKind): Promise<string> {
+    return this.#log(await this.#record(worktreePath), kind);
+  }
+
+  artifactDirectory(worktreePath: string): string {
+    return path.join(
+      this.#storageRoot,
+      createHash("sha256").update(path.resolve(worktreePath)).digest("hex"),
+    );
+  }
+
+  async #observeRun(
+    record: RuntimeRecord,
+    options: ProjectLifecycleExecutionOptions,
+    handle: RunHandle,
+    unlinkSignal: () => void,
+  ) {
+    try {
+      const result = await handle.process.completion;
+      await this.#update(record, options, (snapshot) => {
+        snapshot.run = {
+          exitCode: result.exitCode,
+          signal: result.signal,
+          status: "exited",
+        };
+      });
+    } catch (cause) {
+      const structured = failureFrom(cause);
+      await this.#update(record, options, (snapshot) => {
+        snapshot.run =
+          structured.reason === "cancelled"
+            ? { status: "stopped" }
+            : { failure: structured, status: "failed" };
+      });
+    } finally {
+      unlinkSignal();
+      if (record.runHandle === handle) record.runHandle = undefined;
+      record.activeKinds.delete("run");
+    }
+  }
+
+  #claim(record: RuntimeRecord, kind: ProjectLifecycleKind) {
+    if (record.activeKinds.has(kind)) {
+      throw new ProjectLifecycleConflictError(kind);
+    }
+    record.activeKinds.add(kind);
+  }
+
+  #record(worktreePath: string): Promise<RuntimeRecord> {
+    const key = path.resolve(worktreePath);
+    const existing = this.#recordPromises.get(key);
+    if (existing !== undefined) return existing;
+    const created = this.#loadRecord(key);
+    this.#recordPromises.set(key, created);
+    void created.catch(() => this.#recordPromises.delete(key));
+    return created;
+  }
+
+  async #loadRecord(worktreePath: string): Promise<RuntimeRecord> {
+    const storageDirectory = this.artifactDirectory(worktreePath);
+    await secureDirectory(this.#storageRoot);
+    await secureDirectory(storageDirectory);
+    const snapshot = await readSnapshot(storageDirectory);
+    const recovered = recoverInterruptedState(snapshot);
+    const record: RuntimeRecord = {
+      activeKinds: new Set(),
+      logs: {},
+      mutationQueue: Promise.resolve(),
+      snapshot: recovered,
+      storageDirectory,
+      worktreePath,
+    };
+    if (JSON.stringify(recovered) !== JSON.stringify(snapshot)) {
+      recovered.updatedAt = new Date().toISOString();
+      await writeSnapshot(storageDirectory, recovered);
+    }
+    return record;
+  }
+
+  #update(
+    record: RuntimeRecord,
+    options: Pick<ProjectLifecycleExecutionOptions, "onState">,
+    mutate: (snapshot: ProjectLifecycleSnapshot) => void,
+  ): Promise<ProjectLifecycleSnapshot> {
+    const operation = record.mutationQueue.then(async () => {
+      const next = cloneSnapshot(record.snapshot);
+      mutate(next);
+      next.updatedAt = new Date().toISOString();
+      await writeSnapshot(record.storageDirectory, next);
+      record.snapshot = next;
+      options.onState?.(cloneSnapshot(next));
+      return cloneSnapshot(next);
+    });
+    record.mutationQueue = operation.then(
+      () => undefined,
+      () => undefined,
+    );
+    return operation;
+  }
+
+  async #log(record: RuntimeRecord, kind: ProjectLifecycleKind) {
+    const cached = record.logs[kind];
+    if (cached !== undefined) return cached;
+    const logPath = path.join(record.storageDirectory, `${kind}.log`);
+    try {
+      await rejectSymlink(logPath);
+      const value = tail(await fs.readFile(logPath, "utf8"), LOG_TAIL_LENGTH);
+      record.logs[kind] = value;
+      return value;
+    } catch (cause) {
+      if (errorCode(cause) === "ENOENT") return "";
+      throw cause;
+    }
+  }
+
+  async #appendLog(
+    record: RuntimeRecord,
+    kind: ProjectLifecycleKind,
+    chunk: string,
+  ) {
+    const logPath = path.join(record.storageDirectory, `${kind}.log`);
+    await rejectSymlink(logPath);
+    const noFollow = fsConstants.O_NOFOLLOW ?? 0;
+    const handle = await fs.open(
+      logPath,
+      fsConstants.O_APPEND |
+        fsConstants.O_CREAT |
+        fsConstants.O_WRONLY |
+        noFollow,
+      0o600,
+    );
+    try {
+      await handle.writeFile(chunk, "utf8");
+    } finally {
+      await handle.close();
+    }
+  }
+}
+
+const defaultRuntime = new ProjectLifecycleRuntime();
+
+export function executeProjectLifecycle(
+  kind: "setup" | "teardown",
   options: ProjectLifecycleExecutionOptions,
-): Promise<ProjectLifecycleExecutionResult> {
+) {
+  return defaultRuntime.execute(kind, options);
+}
+
+export function startProjectRun(options: ProjectLifecycleExecutionOptions) {
+  return defaultRuntime.startRun(options);
+}
+
+export function stopProjectRun(worktreePath: string) {
+  return defaultRuntime.stopRun(worktreePath);
+}
+
+export function shutdownProjectRuns() {
+  return defaultRuntime.shutdown();
+}
+
+export function readProjectLifecycleSnapshot(worktreePath: string) {
+  return defaultRuntime.snapshot(worktreePath);
+}
+
+export function readProjectLifecycleLog(
+  worktreePath: string,
+  kind: ProjectLifecycleKind,
+) {
+  return defaultRuntime.log(worktreePath, kind);
+}
+
+async function approvedConfig(options: ProjectLifecycleExecutionOptions) {
   const config = await loadProjectLifecycleConfig(options.projectRoot);
   if (config === undefined) {
     throw new Error(`${PROJECT_CONFIG_FILE} does not exist.`);
@@ -89,122 +478,127 @@ export async function executeProjectLifecycle(
       `${PROJECT_CONFIG_FILE} changed after lifecycle approval; approval is required again.`,
     );
   }
-
-  const commands =
-    kind === "setup"
-      ? config.setupScript
-      : kind === "teardown"
-        ? config.teardownScript
-        : config.runScript.length > 0
-          ? [config.runScript]
-          : [];
-  const runtime = await loadRuntime(options.worktreePath);
-  runtime.snapshot.approvedDigest = config.digest;
-  let logTail = runtime.logs[kind] ?? "";
-  const port =
-    kind === "run"
-      ? (options.port ?? (await allocateWorkspacePort()))
-      : undefined;
-
-  if (kind === "run" && port !== undefined) {
-    await updateState(runtime, options, { port, status: "starting" }, kind);
-  }
-
-  for (const [index, command] of commands.entries()) {
-    await updateState(
-      runtime,
-      options,
-      runningState(kind, command, index + 1, commands.length, port),
-      kind,
-    );
-    try {
-      const result = await executeCommand(command, options.worktreePath, {
-        ...options,
-        kind,
-        onChunk: async (chunk) => {
-          logTail = tail(logTail + chunk, LOG_TAIL_LENGTH);
-          runtime.logs[kind] = logTail;
-          await appendLifecycleLog(options.worktreePath, kind, chunk);
-        },
-        onSpawn: async (pid) => {
-          if (kind !== "run" || port === undefined) return;
-          await updateState(
-            runtime,
-            options,
-            { pid, port, status: "running" },
-            kind,
-          );
-        },
-        port,
-      });
-      if (kind === "run") {
-        await updateState(
-          runtime,
-          options,
-          { code: result.code, signal: result.signal, status: "exited" },
-          kind,
-        );
-      }
-    } catch (cause) {
-      const message = errorMessage(cause);
-      await updateState(
-        runtime,
-        options,
-        failedState(kind, command, index + 1, commands.length, message),
-        kind,
-      );
-      throw new Error(
-        `${PROJECT_CONFIG_FILE} ${kind}_script failed (${tail(command, ERROR_TAIL_LENGTH)}): ${tail(message, ERROR_TAIL_LENGTH)}`,
-        { cause },
-      );
-    }
-  }
-
-  if (kind === "setup") {
-    await updateState(
-      runtime,
-      options,
-      { completedAt: new Date().toISOString(), status: "ready" },
-      kind,
-    );
-  } else if (kind === "teardown") {
-    await updateState(
-      runtime,
-      options,
-      { completedAt: new Date().toISOString(), status: "done" },
-      kind,
-    );
-  } else if (commands.length === 0) {
-    await updateState(runtime, options, { status: "stopped" }, kind);
-  }
-
-  return { logTail, snapshot: structuredClone(runtime.snapshot) };
+  return config;
 }
 
-export async function readProjectLifecycleSnapshot(
-  worktreePath: string,
-): Promise<ProjectLifecycleSnapshot> {
-  return structuredClone((await loadRuntime(worktreePath)).snapshot);
-}
-
-export async function readProjectLifecycleLog(
-  worktreePath: string,
-  kind: ProjectLifecycleKind,
-): Promise<string> {
-  const runtime = await loadRuntime(worktreePath);
-  const cached = runtime.logs[kind];
-  if (cached !== undefined) return cached;
-  try {
-    const log = tail(
-      await fs.readFile(lifecycleLogPath(worktreePath, kind), "utf8"),
-      LOG_TAIL_LENGTH,
+function startCommand(
+  script: string,
+  cwd: string,
+  options: StartCommandOptions,
+): LifecycleProcess {
+  if (options.signal?.aborted) {
+    throw new ProjectLifecycleExecutionError(
+      "Lifecycle was cancelled.",
+      failure("cancelled", "Lifecycle was cancelled."),
     );
-    runtime.logs[kind] = log;
-    return log;
-  } catch (cause) {
-    if (errorCode(cause) === "ENOENT") return "";
-    throw cause;
   }
+
+  const [command, args] = scriptCommand(script);
+  const child = spawn(command, args, {
+    cwd,
+    detached: process.platform !== "win32",
+    env: lifecycleEnvironment(options.environment),
+    stdio: ["ignore", "pipe", "pipe"],
+    windowsHide: true,
+  });
+  let outputTail = "";
+  let writeQueue = Promise.resolve();
+  const capture = (chunk: Buffer | string) => {
+    const value = chunk.toString();
+    outputTail = tail(outputTail + value, ERROR_TAIL_LENGTH);
+    writeQueue = writeQueue.then(() => options.onChunk(value));
+  };
+  child.stdout?.on("data", capture);
+  child.stderr?.on("data", capture);
+
+  let cancellationRequested = false;
+  let timeoutRequested = false;
+  let termination: Promise<void> | undefined;
+  const terminate = () => {
+    termination ??= terminateProcessTree(child, options.killGraceMs);
+    return termination;
+  };
+  const onAbort = () => {
+    cancellationRequested = true;
+    void terminate();
+  };
+  options.signal?.addEventListener("abort", onAbort, { once: true });
+  const timeout =
+    options.timeoutMs === undefined
+      ? undefined
+      : setTimeout(() => {
+          timeoutRequested = true;
+          void terminate();
+        }, options.timeoutMs);
+
+  const completion = new Promise<ProcessExit>((resolve, reject) => {
+    let spawnError: Error | undefined;
+    child.once("error", (cause) => {
+      spawnError = cause;
+    });
+    child.once("close", (exitCode, signal) => {
+      if (timeout !== undefined) clearTimeout(timeout);
+      options.signal?.removeEventListener("abort", onAbort);
+      Promise.resolve(termination)
+        .then(() => writeQueue)
+        .then(() => {
+          if (spawnError !== undefined) {
+            reject(
+              new ProjectLifecycleExecutionError(
+                spawnError.message,
+                failure("spawn", spawnError.message),
+                spawnError,
+              ),
+            );
+          } else if (cancellationRequested) {
+            reject(
+              new ProjectLifecycleExecutionError(
+                "Lifecycle was cancelled.",
+                failure(
+                  "cancelled",
+                  "Lifecycle was cancelled.",
+                  exitCode,
+                  signal,
+                ),
+              ),
+            );
+          } else if (timeoutRequested) {
+            const message = `Lifecycle timed out after ${options.timeoutMs}ms.`;
+            reject(
+              new ProjectLifecycleExecutionError(
+                message,
+                failure("timeout", message, exitCode, signal),
+              ),
+            );
+          } else if (signal !== null) {
+            const message = `Command exited from signal ${signal}.`;
+            reject(
+              new ProjectLifecycleExecutionError(
+                message,
+                failure("signal", message, exitCode, signal),
+              ),
+            );
+          } else if (exitCode !== 0) {
+            const message = [
+              `Command exited with code ${exitCode ?? "unknown"}.`,
+              outputTail,
+            ]
+              .filter(Boolean)
+              .join(" ");
+            reject(
+              new ProjectLifecycleExecutionError(
+                message,
+                failure("exit", message, exitCode, null),
+              ),
+            );
+          } else {
+            resolve({ exitCode, signal });
+          }
+        }, reject);
+    });
+  });
+  void completion.catch(() => undefined);
+  return { child, completion, terminate };
 }
 
 export function lifecycleEnvironment(
@@ -240,146 +634,6 @@ export async function allocateWorkspacePort(): Promise<number> {
   });
 }
 
-interface CommandExecutionOptions extends ProjectLifecycleExecutionOptions {
-  kind: ProjectLifecycleKind;
-  onChunk: (chunk: string) => Promise<void>;
-  onSpawn: (pid: number) => Promise<void>;
-  port?: number;
-}
-
-async function executeCommand(
-  script: string,
-  cwd: string,
-  options: CommandExecutionOptions,
-): Promise<{ code: number | null; signal: NodeJS.Signals | null }> {
-  if (options.signal?.aborted)
-    throw new Error(`${title(options.kind)} was cancelled.`);
-
-  const [command, args] = scriptCommand(script);
-  const injected: Record<string, string> =
-    options.kind === "run" && options.port !== undefined
-      ? {
-          ANGEL_WORKSPACE_PORT: String(options.port),
-          PORT: String(options.port),
-        }
-      : {};
-  const child = spawn(command, args, {
-    cwd,
-    detached: process.platform !== "win32",
-    env: lifecycleEnvironment(injected),
-    stdio: ["ignore", "pipe", "pipe"],
-    windowsHide: true,
-  });
-  let outputTail = "";
-  let writeQueue = Promise.resolve();
-  const capture = (chunk: Buffer | string) => {
-    const value = chunk.toString();
-    outputTail = tail(outputTail + value, ERROR_TAIL_LENGTH);
-    writeQueue = writeQueue.then(() => options.onChunk(value));
-  };
-  child.stdout?.on("data", capture);
-  child.stderr?.on("data", capture);
-  const completion = waitForChild(child, options, outputTailValue);
-  // State persistence can outlive a very short command. Attach a rejection
-  // handler immediately, then still await the original promise below.
-  void completion.catch(() => undefined);
-
-  if (child.pid !== undefined) {
-    try {
-      await options.onSpawn(child.pid);
-    } catch (cause) {
-      await terminateProcessTree(
-        child,
-        options.killGraceMs ?? TERMINATION_GRACE_MS,
-      );
-      await completion.catch(() => undefined);
-      throw cause;
-    }
-  }
-
-  try {
-    return await completion;
-  } finally {
-    await writeQueue;
-  }
-
-  function outputTailValue() {
-    return outputTail;
-  }
-}
-
-async function waitForChild(
-  child: ChildProcess,
-  options: CommandExecutionOptions,
-  outputTail: () => string,
-) {
-  return new Promise<{ code: number | null; signal: NodeJS.Signals | null }>(
-    (resolve, reject) => {
-      let aborted = false;
-      let spawnError: Error | undefined;
-      let termination: Promise<void> | undefined;
-      let timedOut = false;
-      const timeoutMs =
-        options.timeoutMs ??
-        (options.kind === "setup"
-          ? SETUP_TIMEOUT_MS
-          : options.kind === "teardown"
-            ? TEARDOWN_TIMEOUT_MS
-            : undefined);
-      const terminate = () => {
-        termination ??= terminateProcessTree(
-          child,
-          options.killGraceMs ?? TERMINATION_GRACE_MS,
-        );
-      };
-      const onAbort = () => {
-        aborted = true;
-        terminate();
-      };
-      const timeout =
-        timeoutMs === undefined
-          ? undefined
-          : setTimeout(() => {
-              timedOut = true;
-              terminate();
-            }, timeoutMs);
-
-      options.signal?.addEventListener("abort", onAbort, { once: true });
-      child.once("error", (cause) => {
-        spawnError = cause;
-      });
-      child.once("close", (code, signal) => {
-        if (timeout !== undefined) clearTimeout(timeout);
-        options.signal?.removeEventListener("abort", onAbort);
-        Promise.resolve(termination).then(() => {
-          if (spawnError) reject(spawnError);
-          else if (aborted)
-            reject(new Error(`${title(options.kind)} was cancelled.`));
-          else if (timedOut)
-            reject(
-              new Error(
-                `${title(options.kind)} timed out after ${timeoutMs}ms.`,
-              ),
-            );
-          else if (code !== 0)
-            reject(
-              new Error(
-                [
-                  `Command exited with code ${code ?? "unknown"}`,
-                  signal ? `signal ${signal}` : "",
-                  outputTail(),
-                ]
-                  .filter(Boolean)
-                  .join(": "),
-              ),
-            );
-          else resolve({ code, signal });
-        }, reject);
-      });
-    },
-  );
-}
-
 export async function terminateProcessTree(
   child: ChildProcess,
   graceMs: number,
@@ -394,54 +648,93 @@ export async function terminateProcessTree(
   killProcessGroup(child.pid, "SIGKILL");
 }
 
-async function updateState(
-  runtime: Awaited<ReturnType<typeof loadRuntime>>,
-  options: ProjectLifecycleExecutionOptions,
-  state: RunLifecycleState | SetupLifecycleState | TeardownLifecycleState,
-  kind: ProjectLifecycleKind,
-) {
-  Object.assign(runtime.snapshot, {
-    [kind]: state,
-    updatedAt: new Date().toISOString(),
-  });
-  await persistSnapshot(options.worktreePath, runtime.snapshot);
-  options.onState?.(structuredClone(runtime.snapshot));
+async function readSnapshot(storageDirectory: string) {
+  const statePath = path.join(storageDirectory, "lifecycle.json");
+  try {
+    await rejectSymlink(statePath);
+    const parsed = JSON.parse(await fs.readFile(statePath, "utf8")) as unknown;
+    if (isLifecycleSnapshot(parsed)) return parsed;
+    await quarantineCorruptState(statePath);
+    return initialSnapshot();
+  } catch (cause) {
+    if (errorCode(cause) === "ENOENT") return initialSnapshot();
+    if (cause instanceof SyntaxError) {
+      await quarantineCorruptState(statePath);
+      return initialSnapshot();
+    }
+    throw cause;
+  }
 }
 
-async function loadRuntime(worktreePath: string) {
-  const key = path.resolve(worktreePath);
-  const cached = runtimeByWorktree.get(key);
-  if (cached !== undefined) return cached;
-
-  let snapshot = initialSnapshot();
+async function writeSnapshot(
+  storageDirectory: string,
+  snapshot: ProjectLifecycleSnapshot,
+) {
+  const statePath = path.join(storageDirectory, "lifecycle.json");
+  await rejectSymlink(statePath);
+  const temporaryPath = path.join(
+    storageDirectory,
+    `lifecycle.${randomUUID()}.tmp`,
+  );
+  const noFollow = fsConstants.O_NOFOLLOW ?? 0;
+  const handle = await fs.open(
+    temporaryPath,
+    fsConstants.O_CREAT | fsConstants.O_EXCL | fsConstants.O_WRONLY | noFollow,
+    0o600,
+  );
   try {
-    const persisted = JSON.parse(
-      await fs.readFile(lifecycleStatePath(key), "utf8"),
-    ) as ProjectLifecycleSnapshot;
-    snapshot = recoverInterruptedState(persisted);
-    if (JSON.stringify(snapshot) !== JSON.stringify(persisted)) {
-      snapshot.updatedAt = new Date().toISOString();
-      await persistSnapshot(key, snapshot);
+    await handle.writeFile(`${JSON.stringify(snapshot, null, 2)}\n`, "utf8");
+  } finally {
+    await handle.close();
+  }
+  try {
+    await fs.rename(temporaryPath, statePath);
+  } catch (cause) {
+    await fs.rm(temporaryPath, { force: true });
+    throw cause;
+  }
+}
+
+async function secureDirectory(directory: string) {
+  await fs.mkdir(directory, { mode: 0o700, recursive: true });
+  const stat = await fs.lstat(directory);
+  if (!stat.isDirectory() || stat.isSymbolicLink()) {
+    throw new Error(
+      `Lifecycle storage is not a secure directory: ${directory}`,
+    );
+  }
+}
+
+async function rejectSymlink(file: string) {
+  try {
+    if ((await fs.lstat(file)).isSymbolicLink()) {
+      throw new Error(`Lifecycle storage refuses symbolic links: ${file}`);
     }
   } catch (cause) {
     if (errorCode(cause) !== "ENOENT") throw cause;
   }
-  const runtime: {
-    logs: Partial<Record<ProjectLifecycleKind, string>>;
-    snapshot: ProjectLifecycleSnapshot;
-  } = { logs: {}, snapshot };
-  runtimeByWorktree.set(key, runtime);
-  return runtime;
+}
+
+async function quarantineCorruptState(statePath: string) {
+  await rejectSymlink(statePath);
+  await fs.rename(
+    statePath,
+    `${statePath}.corrupt-${Date.now()}-${randomUUID()}`,
+  );
 }
 
 function recoverInterruptedState(
   snapshot: ProjectLifecycleSnapshot,
 ): ProjectLifecycleSnapshot {
-  const recovered = structuredClone(snapshot);
+  const recovered = cloneSnapshot(snapshot);
+  const restartFailure = failure(
+    "daemon_restart",
+    "Daemon stopped while the lifecycle was active.",
+  );
   if (recovered.setup.status === "running") {
     recovered.setup = {
       ...recovered.setup,
-      error: "Daemon stopped during setup.",
+      failure: restartFailure,
       status: "failed",
     };
   }
@@ -449,15 +742,12 @@ function recoverInterruptedState(
     recovered.run.status === "running" ||
     recovered.run.status === "starting"
   ) {
-    recovered.run = {
-      error: "Daemon stopped while run was active.",
-      status: "failed",
-    };
+    recovered.run = { failure: restartFailure, status: "failed" };
   }
   if (recovered.teardown.status === "running") {
     recovered.teardown = {
       ...recovered.teardown,
-      error: "Daemon stopped during teardown.",
+      failure: restartFailure,
       status: "failed",
     };
   }
@@ -474,63 +764,131 @@ function initialSnapshot(): ProjectLifecycleSnapshot {
   };
 }
 
-async function persistSnapshot(
-  worktreePath: string,
-  snapshot: ProjectLifecycleSnapshot,
-) {
-  const statePath = lifecycleStatePath(worktreePath);
-  await fs.mkdir(path.dirname(statePath), { recursive: true });
-  const temporaryPath = `${statePath}.tmp`;
-  await fs.writeFile(
-    temporaryPath,
-    `${JSON.stringify(snapshot, null, 2)}\n`,
-    "utf8",
-  );
-  await fs.rename(temporaryPath, statePath);
-}
-
-async function appendLifecycleLog(
-  worktreePath: string,
-  kind: ProjectLifecycleKind,
-  chunk: string,
-) {
-  const logPath = lifecycleLogPath(worktreePath, kind);
-  await fs.mkdir(path.dirname(logPath), { recursive: true });
-  await fs.appendFile(logPath, chunk, "utf8");
-}
-
-function lifecycleStatePath(worktreePath: string) {
-  return path.join(worktreePath, ".angel", "lifecycle.json");
-}
-
-function lifecycleLogPath(worktreePath: string, kind: ProjectLifecycleKind) {
-  return path.join(worktreePath, ".angel", "logs", `${kind}.log`);
-}
-
-function runningState(
-  kind: ProjectLifecycleKind,
-  command: string,
-  step: number,
-  stepCount: number,
-  port?: number,
-): RunLifecycleState | SetupLifecycleState | TeardownLifecycleState {
-  if (kind === "run") return { port: port ?? 0, status: "starting" };
-  return { command, status: "running", step, stepCount };
-}
-
-function failedState(
-  kind: ProjectLifecycleKind,
-  command: string,
-  step: number,
-  stepCount: number,
-  error: string,
-): RunLifecycleState | SetupLifecycleState | TeardownLifecycleState {
-  if (kind === "run") {
-    return error.endsWith("was cancelled.")
-      ? { status: "stopped" }
-      : { error, status: "failed" };
+function isLifecycleSnapshot(
+  value: unknown,
+): value is ProjectLifecycleSnapshot {
+  if (!isRecord(value) || value.version !== 1 || !isIsoDate(value.updatedAt)) {
+    return false;
   }
-  return { command, error, status: "failed", step, stepCount };
+  if (
+    value.approvedDigest !== undefined &&
+    typeof value.approvedDigest !== "string"
+  ) {
+    return false;
+  }
+  return (
+    isSetupState(value.setup) &&
+    isRunState(value.run) &&
+    isTeardownState(value.teardown)
+  );
+}
+
+function isSetupState(value: unknown): value is ProjectSetupLifecycleState {
+  if (!isRecord(value) || typeof value.status !== "string") return false;
+  if (value.status === "idle") return true;
+  if (value.status === "ready") return isIsoDate(value.completedAt);
+  return (
+    isStepState(value) &&
+    (value.status === "running" ||
+      (value.status === "failed" && isFailure(value.failure)))
+  );
+}
+
+function isTeardownState(
+  value: unknown,
+): value is ProjectTeardownLifecycleState {
+  if (!isRecord(value) || typeof value.status !== "string") return false;
+  if (value.status === "idle") return true;
+  if (value.status === "done") return isIsoDate(value.completedAt);
+  return (
+    isStepState(value) &&
+    (value.status === "running" ||
+      (value.status === "failed" && isFailure(value.failure)))
+  );
+}
+
+function isRunState(value: unknown): value is ProjectRunLifecycleState {
+  if (!isRecord(value) || typeof value.status !== "string") return false;
+  if (value.status === "stopped") return true;
+  if (value.status === "starting") return isPort(value.port);
+  if (value.status === "running") {
+    return (
+      isPort(value.port) &&
+      Number.isInteger(value.pid) &&
+      Number(value.pid) > 0 &&
+      (value.url === undefined || typeof value.url === "string")
+    );
+  }
+  if (value.status === "exited") {
+    return isNullableInteger(value.exitCode) && isNullableString(value.signal);
+  }
+  return value.status === "failed" && isFailure(value.failure);
+}
+
+function isStepState(value: Record<string, unknown>) {
+  return (
+    typeof value.command === "string" &&
+    Number.isInteger(value.step) &&
+    Number.isInteger(value.stepCount) &&
+    Number(value.step) > 0 &&
+    Number(value.stepCount) >= Number(value.step)
+  );
+}
+
+function isFailure(value: unknown): value is ProjectLifecycleFailure {
+  if (!isRecord(value)) return false;
+  return (
+    [
+      "cancelled",
+      "daemon_restart",
+      "exit",
+      "signal",
+      "spawn",
+      "timeout",
+    ].includes(String(value.reason)) &&
+    typeof value.message === "string" &&
+    isNullableInteger(value.exitCode) &&
+    isNullableString(value.signal)
+  );
+}
+
+function failure(
+  reason: ProjectLifecycleFailure["reason"],
+  message: string,
+  exitCode: number | null = null,
+  signal: NodeJS.Signals | null = null,
+): ProjectLifecycleFailure {
+  return { exitCode, message, reason, signal };
+}
+
+function failureFrom(cause: unknown): ProjectLifecycleFailure {
+  return cause instanceof ProjectLifecycleExecutionError
+    ? cause.failure
+    : failure("spawn", errorMessage(cause));
+}
+
+function lifecycleScriptError(
+  kind: "setup" | "teardown",
+  command: string,
+  structured: ProjectLifecycleFailure,
+  cause: unknown,
+) {
+  return new ProjectLifecycleExecutionError(
+    `${PROJECT_CONFIG_FILE} ${kind}_script failed (${tail(command, ERROR_TAIL_LENGTH)}): ${tail(structured.message, ERROR_TAIL_LENGTH)}`,
+    structured,
+    cause,
+  );
+}
+
+function linkAbortSignal(
+  source: AbortSignal | undefined,
+  target: AbortController,
+) {
+  if (source === undefined) return () => undefined;
+  const abort = () => target.abort();
+  if (source.aborted) abort();
+  else source.addEventListener("abort", abort, { once: true });
+  return () => source.removeEventListener("abort", abort);
 }
 
 async function runTaskkill(pid: number) {
@@ -562,6 +920,32 @@ function scriptCommand(script: string): [string, string[]] {
     : ["sh", ["-c", script]];
 }
 
+function cloneSnapshot(snapshot: ProjectLifecycleSnapshot) {
+  return structuredClone(snapshot);
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function isIsoDate(value: unknown) {
+  return typeof value === "string" && !Number.isNaN(Date.parse(value));
+}
+
+function isNullableInteger(value: unknown) {
+  return value === null || Number.isInteger(value);
+}
+
+function isNullableString(value: unknown) {
+  return value === null || typeof value === "string";
+}
+
+function isPort(value: unknown) {
+  return (
+    Number.isInteger(value) && Number(value) > 0 && Number(value) <= 65_535
+  );
+}
+
 function errorCode(cause: unknown) {
   if (
     typeof cause === "object" &&
@@ -582,8 +966,4 @@ function errorMessage(cause: unknown) {
 
 function tail(value: string, length: number) {
   return value.length <= length ? value : value.slice(-length);
-}
-
-function title(kind: ProjectLifecycleKind) {
-  return `${kind[0]?.toUpperCase()}${kind.slice(1)}`;
 }
