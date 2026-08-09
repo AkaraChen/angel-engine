@@ -73,55 +73,59 @@ export function useWorktreeDraftGuard(model: WorkspacePageModel) {
       worktreeDirtyPrompt,
     ],
   );
-  const ensureDraftChatCanSubmit = useCallback(async () => {
-    if (draftCreationLocation !== "worktree") return true;
-    if (!is.nonEmptyString(draftProject.id)) return false;
+  const confirmProjectWorktreeCreation = useCallback(
+    async (projectId: string) => {
+      try {
+        const status = await api.projects.gitStatus({
+          projectId,
+        });
+        queryClient.setQueryData(
+          queryKeys.projects.gitStatus(projectId),
+          status,
+        );
 
-    try {
-      const status = await api.projects.gitStatus({
-        projectId: draftProject.id,
-      });
-      queryClient.setQueryData(
-        queryKeys.projects.gitStatus(draftProject.id),
-        status,
-      );
+        if (!status.isGitRepository) {
+          toast({
+            description: t("workspace.worktreeNotGitRepository"),
+            title: t("notifications.projectActionFailed"),
+            variant: "destructive",
+          });
+          return false;
+        }
+        const needsDirtyConfirmation =
+          status.isDirty && worktreeDirtyPromptEnabled;
+        if (!needsDirtyConfirmation && !status.worktreeSetup) return true;
 
-      if (!status.isGitRepository) {
+        const confirmed = await confirmDirtyWorktree(status);
+        if (!confirmed) return false;
+        return status.worktreeSetup?.digest ?? true;
+      } catch (error) {
         toast({
-          description: t("workspace.worktreeNotGitRepository"),
+          description: getErrorMessage(error),
           title: t("notifications.projectActionFailed"),
           variant: "destructive",
         });
         return false;
       }
-      const needsDirtyConfirmation =
-        status.isDirty && worktreeDirtyPromptEnabled;
-      if (!needsDirtyConfirmation && !status.worktreeSetup) return true;
-
-      const confirmed = await confirmDirtyWorktree(status);
-      if (!confirmed) return false;
-      return status.worktreeSetup?.digest ?? true;
-    } catch (error) {
-      toast({
-        description: getErrorMessage(error),
-        title: t("notifications.projectActionFailed"),
-        variant: "destructive",
-      });
-      return false;
-    }
-  }, [
-    api,
-    confirmDirtyWorktree,
-    draftCreationLocation,
-    draftProject.id,
-    queryClient,
-    t,
-    toast,
-    worktreeDirtyPromptEnabled,
-  ]);
+    },
+    [
+      api,
+      confirmDirtyWorktree,
+      queryClient,
+      t,
+      toast,
+      worktreeDirtyPromptEnabled,
+    ],
+  );
+  const ensureDraftChatCanSubmit = useCallback(async () => {
+    if (draftCreationLocation !== "worktree") return true;
+    if (!is.nonEmptyString(draftProject.id)) return false;
+    return confirmProjectWorktreeCreation(draftProject.id);
+  }, [confirmProjectWorktreeCreation, draftCreationLocation, draftProject.id]);
 
   return {
     closeWorktreeDirtyPrompt,
+    confirmProjectWorktreeCreation,
     ensureDraftChatCanSubmit,
     rememberWorktreeDirtyChoice,
     setDraftCreationLocation,

@@ -37,6 +37,7 @@ import { WorktreeDirtyDialog } from "@/app/workspace/worktree-dirty-dialog";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { ImportSessionDialog } from "@/features/chat/components/import-session-dialog";
 import { RenameChatDialog } from "@/features/chat/components/rename-chat-dialog";
+import { WorkspaceCommandPalette } from "@/features/command-palette/workspace-command-palette";
 import { FleetPage } from "@/features/fleet/fleet-page";
 import { CloneProgressDialog } from "@/features/projects/components/clone-progress-dialog";
 import { CloneRepositoryDialog } from "@/features/projects/components/clone-repository-dialog";
@@ -163,6 +164,7 @@ export const WorkspacePageView: FC<WorkspacePageViewProps> = ({
     changeWorkspaceMode,
     createChatForProject,
     createChatForSelection,
+    createStandaloneWorkspace,
     navigateToChat,
     openChat,
     openChatFromFleet,
@@ -194,6 +196,7 @@ export const WorkspacePageView: FC<WorkspacePageViewProps> = ({
     null;
   const {
     closeWorktreeDirtyPrompt,
+    confirmProjectWorktreeCreation,
     ensureDraftChatCanSubmit,
     rememberWorktreeDirtyChoice,
     setDraftCreationLocation,
@@ -254,6 +257,25 @@ export const WorkspacePageView: FC<WorkspacePageViewProps> = ({
       projectId: project.id,
     });
   };
+  const cancelWorktreeCreation = async (chat: (typeof chats)[number]) => {
+    await api.chats.cancelWorktreeCreation(chat.id);
+    await queryClient.invalidateQueries({ queryKey: queryKeys.chats.list() });
+    if (selectedChatId === chat.id) {
+      navigation.navigateToDraft(chat.projectId ?? undefined, {
+        replace: true,
+      });
+    }
+  };
+  const retryWorktreeCreation = async (chat: (typeof chats)[number]) => {
+    if (!is.nonEmptyString(chat.projectId)) return;
+    const approval = await confirmProjectWorktreeCreation(chat.projectId);
+    if (!approval) return;
+    await api.chats.retryWorktreeCreation(
+      chat.id,
+      typeof approval === "string" ? approval : undefined,
+    );
+    await queryClient.invalidateQueries({ queryKey: queryKeys.chats.list() });
+  };
 
   return (
     <SidebarProvider
@@ -271,6 +293,7 @@ export const WorkspacePageView: FC<WorkspacePageViewProps> = ({
           isProjectsLoading={projectsQuery.isPending}
           onArchiveChat={archiveChat}
           onCloneRepository={openCloneDialog}
+          onCancelWorktreeCreation={cancelWorktreeCreation}
           onCreateProject={() => void createProjectFromPicker()}
           onCreateProjectChat={createChatForProject}
           onCreateStandaloneChat={createChatForSelection}
@@ -279,6 +302,7 @@ export const WorkspacePageView: FC<WorkspacePageViewProps> = ({
           onOpenFleet={openFleet}
           onOpenSettings={openSettings}
           onOpenWorktree={openPowerWorktree}
+          onRetryWorktreeCreation={retryWorktreeCreation}
           onShowChatContextMenu={showChatContextMenu}
           onShowProjectContextMenu={showProjectContextMenu}
           onShowWorktreeContextMenu={showWorktreeContextMenu}
@@ -296,6 +320,7 @@ export const WorkspacePageView: FC<WorkspacePageViewProps> = ({
           isProjectsLoading={projectsQuery.isPending}
           onArchiveChat={archiveChat}
           onCloneRepository={openCloneDialog}
+          onCancelWorktreeCreation={cancelWorktreeCreation}
           onCreateProject={() => void createProjectFromPicker()}
           onCreateProjectChat={createChatForProject}
           onCreateStandaloneChat={createChatForSelection}
@@ -304,6 +329,7 @@ export const WorkspacePageView: FC<WorkspacePageViewProps> = ({
           onOpenFleet={openFleet}
           onOpenSettings={openSettings}
           onOpenWorktree={openPowerWorktree}
+          onRetryWorktreeCreation={retryWorktreeCreation}
           onShowChatContextMenu={showChatContextMenu}
           onShowProjectContextMenu={showProjectContextMenu}
           onShowWorktreeContextMenu={showWorktreeContextMenu}
@@ -316,6 +342,12 @@ export const WorkspacePageView: FC<WorkspacePageViewProps> = ({
         <WorkspaceSidebarControl />
         <WorkspaceNativeCommandHandler
           onCreateStandaloneChat={createChatForSelection}
+          onOpenSettings={openSettings}
+        />
+        <WorkspaceCommandPalette
+          chats={chats}
+          onNewWorkspace={createStandaloneWorkspace}
+          onOpenSession={openChatFromFleet}
           onOpenSettings={openSettings}
         />
         <RenameChatDialog

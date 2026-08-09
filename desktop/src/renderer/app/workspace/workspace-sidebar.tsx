@@ -64,6 +64,7 @@ interface WorkspaceSidebarProps {
   isProjectsLoading: boolean;
   onArchiveChat: (chat: Chat) => MaybeAsync;
   onCloneRepository: () => MaybeAsync;
+  onCancelWorktreeCreation: (chat: Chat) => MaybeAsync;
   onCreateProject: () => MaybeAsync;
   onCreateProjectChat: (project: Project) => MaybeAsync;
   onCreateStandaloneChat: () => MaybeAsync;
@@ -75,6 +76,7 @@ interface WorkspaceSidebarProps {
     project: Project,
     worktreeGroup: ProjectWorktreeChatGroup,
   ) => MaybeAsync;
+  onRetryWorktreeCreation: (chat: Chat) => MaybeAsync;
   onShowChatContextMenu: (chat: Chat) => MaybeAsync;
   onShowProjectContextMenu: (project: Project) => MaybeAsync;
   onShowWorktreeContextMenu: (
@@ -223,6 +225,7 @@ function WorkspaceSidebarContent({
   isProjectsLoading,
   onArchiveChat,
   onCloneRepository,
+  onCancelWorktreeCreation,
   onCreateProject,
   onCreateProjectChat,
   onCreateStandaloneChat,
@@ -231,6 +234,7 @@ function WorkspaceSidebarContent({
   onOpenFleet,
   onOpenSettings,
   onOpenWorktree,
+  onRetryWorktreeCreation,
   onShowChatContextMenu,
   onShowProjectContextMenu,
   onShowWorktreeContextMenu,
@@ -336,7 +340,9 @@ function WorkspaceSidebarContent({
             onCloneRepository={onCloneRepository}
             onCreateProject={onCreateProject}
             onCreateProjectChat={onCreateProjectChat}
+            onCancelWorktreeCreation={onCancelWorktreeCreation}
             onOpenWorktree={onOpenWorktree}
+            onRetryWorktreeCreation={onRetryWorktreeCreation}
             onShowProjectContextMenu={onShowProjectContextMenu}
             onShowWorktreeContextMenu={onShowWorktreeContextMenu}
             projectChatsByProjectId={projectChatsByProjectId}
@@ -349,9 +355,11 @@ function WorkspaceSidebarContent({
             isLoading={isProjectsLoading}
             onArchiveChat={onArchiveChat}
             onCloneRepository={onCloneRepository}
+            onCancelWorktreeCreation={onCancelWorktreeCreation}
             onCreateProject={onCreateProject}
             onCreateProjectChat={onCreateProjectChat}
             onOpenChat={onOpenChat}
+            onRetryWorktreeCreation={onRetryWorktreeCreation}
             onShowChatContextMenu={onShowChatContextMenu}
             onShowProjectContextMenu={onShowProjectContextMenu}
             projectChatsByProjectId={projectChatsByProjectId}

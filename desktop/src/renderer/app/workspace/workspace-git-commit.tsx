@@ -48,6 +48,14 @@ export function useWorkspaceGitPanelState(api: ApiClient, root: string) {
     retry: false,
     staleTime: 5_000,
   });
+  const pushMutation = useMutation({
+    mutationFn: async () => api.workspaceTools.gitPush({ root }),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({
+        queryKey: queryKeys.workspaceTools.gitDiff(root),
+      });
+    },
+  });
   const handleFileSelectedChange = useCallback(
     (file: WorkspaceToolPatchFile, selected: boolean) => {
       setSelectedFileKeys((current) => ({
@@ -82,6 +90,7 @@ export function useWorkspaceGitPanelState(api: ApiClient, root: string) {
     commitSummary,
     gitQuery,
     handleFileSelectedChange,
+    pushMutation,
     selectedFileKeys,
     setCommitDescription,
     setCommitSummary,

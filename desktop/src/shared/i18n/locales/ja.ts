@@ -78,6 +78,7 @@ export const ja = {
       statsChanges: "変更",
       statsLastActive: "最終アクティブ",
       tools: {
+        addToChat: "チャットに追加",
         commit: {
           committing: "コミット中…",
           commitTo: "{{target}} にコミット",
@@ -96,6 +97,28 @@ export const ja = {
           noWorkspace: "このチャットにはワークスペースがありません",
           notGitRepository: "Git リポジトリではありません",
           processesUnavailable: "プロセス情報を利用できません",
+        },
+        git: {
+          ahead: "{{value}} 件先行",
+          behind: "{{value}} 件遅れ",
+          clean: "変更なし",
+          conflicts: "{{value}} 件のファイルが競合しています",
+          detached: "detached HEAD",
+          dirty: "{{value}} 件の変更",
+          noCommits: "コミットがありません",
+          noUpstream: "上流ブランチなし",
+          publish: "ブランチを公開",
+          push: "プッシュ",
+          pushHint: {
+            auth: "このリモートの Git 認証情報または SSH キーを確認してください。",
+            detached: "プッシュする前にブランチをチェックアウトしてください。",
+            network: "ネットワーク接続を確認して再試行してください。",
+            noCommits: "このブランチを公開する前にコミットを作成してください。",
+            noRemote: "プッシュする前にリモートを追加してください。",
+            rejected:
+              "リモートに未取得のコミットがあります。プルしてからプッシュしてください。",
+          },
+          pushing: "プッシュ中",
         },
         listeningPorts: "リスニングポート",
         resizeFileTree: "ファイルツリーの幅を調整",
@@ -200,12 +223,15 @@ export const ja = {
       powerWorktreeHome: "ホーム",
       powerWorktreeHistoricalChat: "チャット履歴",
       refreshProjects: "プロジェクトを更新",
+      retryWorktreeCreation: "Worktree の作成を再試行",
       settings: "設定",
       toggleChats: "チャットを切り替え",
       mobileDescription: "モバイルサイドバーを表示します。",
       title: "サイドバー",
       toggleSidebar: "サイドバーを切り替え",
       worktreeMain: "メイン",
+      worktreeCreating: "Worktree を作成中… {{progress}}%",
+      worktreeCreationFailed: "Worktree の作成に失敗しました",
     },
     settings: {
       agents: {
@@ -215,6 +241,10 @@ export const ja = {
         title: "Agents",
       },
       appearance: {
+        keybindingHintsDescription:
+          "ツールチップとコントロールにキーボードショートカットを表示します。非表示にしてもショートカットは有効です。",
+        keybindingHintsSwitchLabel: "キーボードショートカットのヒントを表示",
+        keybindingHintsTitle: "キーボードショートカットのヒント",
         language: "言語",
         languageOptions: {
           en: "English",
@@ -605,9 +635,13 @@ export const ja = {
       agentFinishedNoOutput: "Agent はテキスト出力なしで完了しました。",
       agentWaiting: "Agent は応答を待っています。",
       chatActionFailed: "チャット操作に失敗しました",
+      chatArchived: "チャットをアーカイブしました",
+      chatArchivedDescription:
+        "5 秒以内に元に戻すか、{{shortcut}} を押してください。",
       permissionRequired: "権限が必要です",
       projectActionFailed: "プロジェクト操作に失敗しました",
       installUpdate: "再起動してインストール",
+      undo: "元に戻す",
       updateReady: "更新の準備ができました",
       updateReadyDescription: "{{version}} のダウンロードが完了しました。",
     },
@@ -667,8 +701,12 @@ export const ja = {
       openInSystemTerminal: "システムターミナルで開く",
     },
     ui: {
-      commandDescription: "実行するコマンドを検索...",
+      commandActions: "アクション",
+      commandDescription: "コマンドとセッション名を検索...",
+      commandNewWorkspace: "新しいワークスペース",
+      commandNoResults: "一致するコマンドまたはセッションがありません。",
       commandPalette: "コマンドパレット",
+      commandSessions: "セッション",
     },
     promptInput: {
       addPhotosOrFiles: "写真またはファイルを追加",

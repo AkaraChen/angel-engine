@@ -41,9 +41,22 @@ export const chats = sqliteTable(
   ],
 );
 
+export const worktreeCreationJobs = sqliteTable("worktree_creation_jobs", {
+  chatId: text("chat_id")
+    .primaryKey()
+    .references(() => chats.id, { onDelete: "cascade" }),
+  error: text("error"),
+  jobId: text("job_id").notNull(),
+  progress: integer("progress").notNull(),
+  setupApproval: text("setup_approval"),
+  stage: text("stage").notNull(),
+  status: text("status").notNull(),
+});
+
 export type ProjectRow = typeof projects.$inferSelect;
 export type NewProjectRow = typeof projects.$inferInsert;
 export type CustomAgentRow = typeof customAgents.$inferSelect;
 export type NewCustomAgentRow = typeof customAgents.$inferInsert;
 export type ChatRow = typeof chats.$inferSelect;
 export type NewChatRow = typeof chats.$inferInsert;
+export type WorktreeCreationJobRow = typeof worktreeCreationJobs.$inferSelect;

@@ -79,6 +79,7 @@ export const fr = {
       statsChanges: "Modifications",
       statsLastActive: "Dernière activité",
       tools: {
+        addToChat: "Ajouter au chat",
         commit: {
           committing: "Commit en cours…",
           commitTo: "Commiter vers {{target}}",
@@ -97,6 +98,28 @@ export const fr = {
           noWorkspace: "Aucun espace de travail pour cette conversation",
           notGitRepository: "Pas un dépôt Git",
           processesUnavailable: "Processus indisponibles",
+        },
+        git: {
+          ahead: "{{value}} en avance",
+          behind: "{{value}} en retard",
+          clean: "Aucune modification",
+          conflicts: "{{value}} fichiers en conflit",
+          detached: "HEAD détaché",
+          dirty: "{{value}} modifiés",
+          noCommits: "Aucun commit",
+          noUpstream: "Aucun upstream",
+          publish: "Publier la branche",
+          push: "Push",
+          pushHint: {
+            auth: "Vérifiez les identifiants Git ou la clé SSH de ce dépôt distant.",
+            detached: "Basculez sur une branche avant de pousser.",
+            network: "Vérifiez la connexion réseau puis réessayez.",
+            noCommits: "Créez un commit avant de publier cette branche.",
+            noRemote: "Ajoutez un dépôt distant avant de pousser.",
+            rejected:
+              "Le dépôt distant a des commits que vous n'avez pas. Faites un pull, puis poussez.",
+          },
+          pushing: "Envoi en cours",
         },
         listeningPorts: "Ports en écoute",
         resizeFileTree: "Redimensionner l’arborescence",
@@ -201,12 +224,15 @@ export const fr = {
       powerWorktreeHome: "Accueil",
       powerWorktreeHistoricalChat: "Historique des discussions",
       refreshProjects: "Actualiser les projets",
+      retryWorktreeCreation: "Réessayer la création du worktree",
       settings: "Paramètres",
       toggleChats: "Afficher ou masquer les discussions",
       mobileDescription: "Affiche la barre latérale mobile.",
       title: "Barre latérale",
       toggleSidebar: "Afficher ou masquer la barre latérale",
       worktreeMain: "Principal",
+      worktreeCreating: "Création du worktree… {{progress}} %",
+      worktreeCreationFailed: "Échec de la création du worktree",
     },
     settings: {
       agents: {
@@ -215,6 +241,10 @@ export const fr = {
         title: "Agents",
       },
       appearance: {
+        keybindingHintsDescription:
+          "Affiche les raccourcis clavier dans les infobulles et les commandes. Les masquer ne désactive pas les raccourcis.",
+        keybindingHintsSwitchLabel: "Afficher les indications de raccourcis",
+        keybindingHintsTitle: "Indications de raccourcis clavier",
         language: "Langue",
         languageOptions: {
           en: "English",
@@ -607,9 +637,13 @@ export const fr = {
       agentFinishedNoOutput: "L’agent a terminé sans sortie textuelle.",
       agentWaiting: "L’agent attend une réponse.",
       chatActionFailed: "L’action de discussion a échoué",
+      chatArchived: "Discussion archivée",
+      chatArchivedDescription:
+        "Annuler dans les 5 secondes, ou appuyez sur {{shortcut}}.",
       permissionRequired: "Autorisation requise",
       projectActionFailed: "L’action de projet a échoué",
       installUpdate: "Redémarrer et installer",
+      undo: "Annuler",
       updateReady: "Mise à jour prête",
       updateReadyDescription: "{{version}} a été téléchargée.",
     },
@@ -669,8 +703,13 @@ export const fr = {
       openInSystemTerminal: "Ouvrir dans le terminal système",
     },
     ui: {
-      commandDescription: "Rechercher une commande à exécuter...",
+      commandActions: "Actions",
+      commandDescription:
+        "Rechercher des commandes et des titres de session...",
+      commandNewWorkspace: "Nouvel espace de travail",
+      commandNoResults: "Aucune commande ou session correspondante.",
       commandPalette: "Palette de commandes",
+      commandSessions: "Sessions",
     },
     promptInput: {
       addPhotosOrFiles: "Ajouter des photos ou fichiers",

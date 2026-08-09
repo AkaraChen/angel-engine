@@ -78,6 +78,7 @@ export const es = {
       statsChanges: "Cambios",
       statsLastActive: "Última actividad",
       tools: {
+        addToChat: "Añadir al chat",
         commit: {
           committing: "Confirmando…",
           commitTo: "Confirmar en {{target}}",
@@ -96,6 +97,28 @@ export const es = {
           noWorkspace: "No hay espacio de trabajo para este chat",
           notGitRepository: "No es un repositorio Git",
           processesUnavailable: "Procesos no disponibles",
+        },
+        git: {
+          ahead: "{{value}} por delante",
+          behind: "{{value}} por detrás",
+          clean: "Sin cambios",
+          conflicts: "{{value}} archivos con conflictos",
+          detached: "HEAD desacoplado",
+          dirty: "{{value}} modificados",
+          noCommits: "Aún no hay commits",
+          noUpstream: "Sin upstream",
+          publish: "Publicar rama",
+          push: "Push",
+          pushHint: {
+            auth: "Revisa las credenciales de Git o la clave SSH de este remoto.",
+            detached: "Cambia a una rama antes de hacer push.",
+            network: "Revisa la conexión de red e inténtalo de nuevo.",
+            noCommits: "Crea un commit antes de publicar esta rama.",
+            noRemote: "Añade un remoto antes de hacer push.",
+            rejected:
+              "El remoto tiene commits que tú no. Haz pull y vuelve a hacer push.",
+          },
+          pushing: "Enviando",
         },
         listeningPorts: "Puertos en escucha",
         resizeFileTree: "Redimensionar el árbol de archivos",
@@ -200,12 +223,15 @@ export const es = {
       powerWorktreeHome: "Inicio",
       powerWorktreeHistoricalChat: "Historial de chats",
       refreshProjects: "Actualizar proyectos",
+      retryWorktreeCreation: "Reintentar creación del worktree",
       settings: "Configuración",
       toggleChats: "Alternar chats",
       mobileDescription: "Muestra la barra lateral móvil.",
       title: "Barra lateral",
       toggleSidebar: "Alternar barra lateral",
       worktreeMain: "Principal",
+      worktreeCreating: "Creando worktree… {{progress}} %",
+      worktreeCreationFailed: "Error al crear el worktree",
     },
     settings: {
       agents: {
@@ -214,6 +240,10 @@ export const es = {
         title: "Agents",
       },
       appearance: {
+        keybindingHintsDescription:
+          "Muestra los atajos de teclado en la información emergente y los controles. Ocultarlos no desactiva los atajos.",
+        keybindingHintsSwitchLabel: "Mostrar indicaciones de atajos",
+        keybindingHintsTitle: "Indicaciones de atajos de teclado",
         language: "Idioma",
         languageOptions: {
           en: "English",
@@ -605,9 +635,12 @@ export const es = {
       agentFinishedNoOutput: "El Agent terminó sin salida de texto.",
       agentWaiting: "El Agent está esperando una respuesta.",
       chatActionFailed: "Falló la acción del chat",
+      chatArchived: "Chat archivado",
+      chatArchivedDescription: "Deshacer en 5 segundos, o pulsa {{shortcut}}.",
       permissionRequired: "Permiso requerido",
       projectActionFailed: "Falló la acción del proyecto",
       installUpdate: "Reiniciar e instalar",
+      undo: "Deshacer",
       updateReady: "Actualización lista",
       updateReadyDescription: "{{version}} se descargó.",
     },
@@ -667,8 +700,12 @@ export const es = {
       openInSystemTerminal: "Abrir en la terminal del sistema",
     },
     ui: {
-      commandDescription: "Buscar un comando para ejecutar...",
+      commandActions: "Acciones",
+      commandDescription: "Buscar comandos y títulos de sesiones...",
+      commandNewWorkspace: "Nuevo espacio de trabajo",
+      commandNoResults: "No hay comandos ni sesiones coincidentes.",
       commandPalette: "Paleta de comandos",
+      commandSessions: "Sesiones",
     },
     promptInput: {
       addPhotosOrFiles: "Agregar fotos o archivos",

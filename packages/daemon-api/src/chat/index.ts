@@ -60,10 +60,7 @@ export {
   parseDataUrl,
   parseImageDataUrl,
 };
-export {
-  isChatActivity,
-  isChatActivityListResult,
-} from "./activity";
+export { isChatActivity, isChatActivityListResult } from "./activity";
 export {
   isChatAttention,
   isChatAttentionListResult,
@@ -97,7 +94,21 @@ export interface WorktreeSetupApprovalInput {
   worktreeSetupApproval?: string;
 }
 
-export type Chat = JsChat;
+export type WorktreeCreationStage = "fetching" | "worktree" | "setup";
+export type WorktreeCreationStatus = "creating" | "failed";
+
+export interface WorktreeCreationState {
+  error?: string;
+  jobId: string;
+  progress: number;
+  stage: WorktreeCreationStage;
+  status: WorktreeCreationStatus;
+}
+
+export type Chat = JsChat & {
+  /** Present while an app-managed worktree is being created or needs retry. */
+  worktreeCreation?: WorktreeCreationState;
+};
 export type ChatCreateInput = JsChatCreateInput &
   ChatCreationLocationInput &
   ChatCwdInput &

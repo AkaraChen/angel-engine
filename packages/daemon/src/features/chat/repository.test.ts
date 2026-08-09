@@ -8,9 +8,22 @@ import { drizzle } from "drizzle-orm/libsql";
 import { Cause, Effect, Exit, Layer } from "effect";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { chats, customAgents, projects } from "../../db/schema";
+import {
+  chats,
+  customAgents,
+  projects,
+  worktreeCreationJobs,
+} from "../../db/schema";
 import { Db } from "../../platform/db";
-import { beginChatSend, normalizeChatRuntime, renameChat } from "./repository";
+import {
+  beginChatSend,
+  createWorktreeCreationJob,
+  deleteWorktreeCreationJob,
+  failInterruptedWorktreeCreationJobs,
+  getWorktreeCreationJob,
+  normalizeChatRuntime,
+  renameChat,
+} from "./repository";
 
 afterEach(() => {
   vi.unstubAllEnvs();
@@ -174,6 +187,43 @@ describe("beginChatSend", () => {
   });
 });
 
+describe("worktree creation jobs", () => {
+  it("turns an interrupted creating job into a retryable failure", async () => {
+    const database = await memoryDatabase();
+    await seedChat(database, { title: "New chat" });
+    await runWithDatabase(
+      database,
+      createWorktreeCreationJob({
+        chatId: "chat-1",
+        setupApproval: "old-digest",
+        state: {
+          jobId: "job-1",
+          progress: 45,
+          stage: "worktree",
+          status: "creating",
+        },
+      }),
+    );
+
+    await runWithDatabase(database, failInterruptedWorktreeCreationJobs());
+
+    await expect(
+      runWithDatabase(database, getWorktreeCreationJob("chat-1")),
+    ).resolves.toMatchObject({
+      setupApproval: "old-digest",
+      state: {
+        error: expect.stringContaining("interrupted"),
+        progress: 45,
+        status: "failed",
+      },
+    });
+    await runWithDatabase(database, deleteWorktreeCreationJob("chat-1"));
+    await expect(
+      runWithDatabase(database, getWorktreeCreationJob("chat-1")),
+    ).resolves.toBeNull();
+  });
+});
+
 async function memoryDatabase(): Promise<AppDatabase> {
   const client = createClient({ url: ":memory:" });
   await client.execute(`
@@ -190,8 +240,20 @@ async function memoryDatabase(): Promise<AppDatabase> {
       pinned INTEGER NOT NULL DEFAULT 0
     )
   `);
+  await client.execute(`
+    CREATE TABLE worktree_creation_jobs (
+      chat_id TEXT PRIMARY KEY,
+      error TEXT,
+      job_id TEXT NOT NULL,
+      progress INTEGER NOT NULL,
+      setup_approval TEXT,
+      stage TEXT NOT NULL,
+      status TEXT NOT NULL,
+      FOREIGN KEY (chat_id) REFERENCES chats(id) ON DELETE CASCADE
+    )
+  `);
   return drizzle(client, {
-    schema: { chats, customAgents, projects },
+    schema: { chats, customAgents, projects, worktreeCreationJobs },
   }) as AppDatabase;
 }
 

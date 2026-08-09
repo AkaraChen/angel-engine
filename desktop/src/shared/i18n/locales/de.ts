@@ -78,6 +78,7 @@ export const de = {
       statsChanges: "Änderungen",
       statsLastActive: "Zuletzt aktiv",
       tools: {
+        addToChat: "Zum Chat hinzufügen",
         commit: {
           committing: "Commit läuft…",
           commitTo: "Commit nach {{target}}",
@@ -96,6 +97,29 @@ export const de = {
           noWorkspace: "Kein Workspace für diesen Chat",
           notGitRepository: "Kein Git-Repository",
           processesUnavailable: "Prozesse nicht verfügbar",
+        },
+        git: {
+          ahead: "{{value}} voraus",
+          behind: "{{value}} zurück",
+          clean: "Keine Änderungen",
+          conflicts: "{{value}} Dateien mit Konflikten",
+          detached: "Losgelöster HEAD",
+          dirty: "{{value}} geändert",
+          noCommits: "Noch keine Commits",
+          noUpstream: "Kein Upstream",
+          publish: "Branch veröffentlichen",
+          push: "Push",
+          pushHint: {
+            auth: "Prüfe die Git-Zugangsdaten oder den SSH-Schlüssel für dieses Remote.",
+            detached: "Wechsle vor dem Push auf einen Branch.",
+            network: "Prüfe die Netzwerkverbindung und versuche es erneut.",
+            noCommits:
+              "Erstelle einen Commit, bevor du diesen Branch veröffentlichst.",
+            noRemote: "Füge vor dem Push ein Remote hinzu.",
+            rejected:
+              "Das Remote hat Commits, die du nicht hast. Erst pullen, dann pushen.",
+          },
+          pushing: "Wird gepusht",
         },
         listeningPorts: "Lauschende Ports",
         resizeFileTree: "Dateibaumbreite anpassen",
@@ -200,12 +224,15 @@ export const de = {
       powerWorktreeHome: "Home",
       powerWorktreeHistoricalChat: "Historical Chat",
       refreshProjects: "Projekte aktualisieren",
+      retryWorktreeCreation: "Worktree-Erstellung wiederholen",
       settings: "Einstellungen",
       toggleChats: "Chats ein-/ausblenden",
       mobileDescription: "Zeigt die mobile Seitenleiste an.",
       title: "Seitenleiste",
       toggleSidebar: "Seitenleiste ein-/ausblenden",
       worktreeMain: "Haupt",
+      worktreeCreating: "Worktree wird erstellt… {{progress}} %",
+      worktreeCreationFailed: "Worktree-Erstellung fehlgeschlagen",
     },
     settings: {
       agents: {
@@ -214,6 +241,10 @@ export const de = {
         title: "Agents",
       },
       appearance: {
+        keybindingHintsDescription:
+          "Zeigt Tastenkürzel in Tooltips und Steuerelementen. Das Ausblenden deaktiviert die Tastenkürzel nicht.",
+        keybindingHintsSwitchLabel: "Tastenkürzel-Hinweise anzeigen",
+        keybindingHintsTitle: "Tastenkürzel-Hinweise",
         language: "Sprache",
         languageOptions: {
           en: "English",
@@ -607,9 +638,13 @@ export const de = {
       agentFinishedNoOutput: "Der Agent wurde ohne Textausgabe beendet.",
       agentWaiting: "Der Agent wartet auf eine Antwort.",
       chatActionFailed: "Chat-Aktion fehlgeschlagen",
+      chatArchived: "Chat archiviert",
+      chatArchivedDescription:
+        "Innerhalb von 5 Sekunden rückgängig machen oder {{shortcut}} drücken.",
       permissionRequired: "Berechtigung erforderlich",
       projectActionFailed: "Projektaktion fehlgeschlagen",
       installUpdate: "Neu starten und installieren",
+      undo: "Rückgängig",
       updateReady: "Update bereit",
       updateReadyDescription: "{{version}} wurde heruntergeladen.",
     },
@@ -672,8 +707,12 @@ export const de = {
       openInSystemTerminal: "Im Systemterminal öffnen",
     },
     ui: {
-      commandDescription: "Nach einem auszuführenden Befehl suchen...",
+      commandActions: "Aktionen",
+      commandDescription: "Befehle und Sitzungstitel durchsuchen...",
+      commandNewWorkspace: "Neuer Arbeitsbereich",
+      commandNoResults: "Keine passenden Befehle oder Sitzungen.",
       commandPalette: "Befehlspalette",
+      commandSessions: "Sitzungen",
     },
     promptInput: {
       addPhotosOrFiles: "Fotos oder Dateien hinzufügen",
