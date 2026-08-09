@@ -31,6 +31,7 @@ import {
   WorkspaceGitCommitComposer,
 } from "@/app/workspace/workspace-git-commit";
 import { WorkspaceGitStatusBar } from "@/app/workspace/workspace-git-status-bar";
+import { WorkspaceCreatePullRequestButton } from "@/app/workspace/workspace-git-create-pr";
 import {
   formatWorkspaceGitCommitTime,
   workspaceGitRemoteFromUpstream,
@@ -230,6 +231,11 @@ export function WorkspaceGitPanel({
           onSummaryChange={setCommitSummary}
         />
       )}
+      <WorkspaceCreatePullRequestButton
+        api={api}
+        hasChanges={patchList.files.length > 0}
+        root={root}
+      />
     </>
   );
 

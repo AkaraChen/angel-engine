@@ -1,9 +1,15 @@
-import { index, integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
 import type {
   ChatSourceLink,
   WorktreeCreationState,
 } from "@angel-engine/daemon-api/chat";
 import type { ProjectWorktreeCreateInput } from "@angel-engine/daemon-api/projects";
+import {
+  index,
+  integer,
+  sqliteTable,
+  text,
+  uniqueIndex,
+} from "drizzle-orm/sqlite-core";
 
 export const projects = sqliteTable("projects", {
   id: text("id").primaryKey(),
@@ -102,6 +108,32 @@ export const queuedChatRuns = sqliteTable(
   (table) => [index("queued_chat_runs_chat_id_idx").on(table.chatId)],
 );
 
+export const pullRequests = sqliteTable(
+  "pull_requests",
+  {
+    id: text("id").primaryKey(),
+    projectId: text("project_id").references(() => projects.id, {
+      onDelete: "cascade",
+    }),
+    chatId: text("chat_id").references(() => chats.id, {
+      onDelete: "set null",
+    }),
+    root: text("root").notNull(),
+    branch: text("branch").notNull(),
+    baseBranch: text("base_branch").notNull(),
+    number: integer("number").notNull(),
+    url: text("url").notNull(),
+    title: text("title").notNull(),
+    isDraft: integer("is_draft", { mode: "boolean" }).notNull().default(false),
+    state: text("state").notNull(),
+    createdAt: text("created_at").notNull(),
+    updatedAt: text("updated_at").notNull(),
+  },
+  (table) => [
+    uniqueIndex("pull_requests_root_branch_idx").on(table.root, table.branch),
+  ],
+);
+
 export type ProjectRow = typeof projects.$inferSelect;
 export type NewProjectRow = typeof projects.$inferInsert;
 export type CustomAgentRow = typeof customAgents.$inferSelect;
@@ -111,3 +143,5 @@ export type NewChatRow = typeof chats.$inferInsert;
 export type ChatDiffAnchorRow = typeof chatDiffAnchors.$inferSelect;
 export type WorktreeCreationJobRow = typeof worktreeCreationJobs.$inferSelect;
 export type QueuedChatRunRow = typeof queuedChatRuns.$inferSelect;
+export type PullRequestRow = typeof pullRequests.$inferSelect;
+export type NewPullRequestRow = typeof pullRequests.$inferInsert;

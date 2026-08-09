@@ -499,4 +499,60 @@ export const githubFailureLogInputSchema = arkType({
   cwd: "string > 0",
   runId: "string | number",
   "repo?": "string",
+export interface PullRequestCreateInput {
+  base: string;
+  body: string;
+  draft: boolean;
+  root: string;
+  skipPush?: boolean;
+  title: string;
+}
+
+export interface PullRequestRecord {
+  baseBranch: string;
+  branch: string;
+  createdAt: string;
+  id: string;
+  isDraft: boolean;
+  number: number;
+  root: string;
+  state: string;
+  title: string;
+  updatedAt: string;
+  url: string;
+}
+
+export interface PullRequestPreflight {
+  aheadCount: number;
+  availableBaseBranches: string[];
+  base: string;
+  body: string;
+  canCreate: boolean;
+  defaultBranch: string;
+  existing: PullRequestRecord | null;
+  head: string;
+  reason?: DaemonErrorCode;
+  title: string;
+}
+
+export type PullRequestCreateResult =
+  | {
+      pushed: boolean;
+      record: PullRequestRecord;
+      status: "created" | "existing";
+    }
+  | {
+      error: { code: DaemonErrorCode; message: string };
+      pushed: boolean;
+      status: "failed";
+    };
+
+export const pullRequestCreateInputSchema = arkType({
+  "+": "ignore",
+  base: "string > 0",
+  body: "string",
+  draft: "boolean",
+  root: "string > 0",
+  "skipPush?": "boolean",
+  title: "string > 0",
 });

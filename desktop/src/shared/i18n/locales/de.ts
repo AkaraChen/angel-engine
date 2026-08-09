@@ -192,6 +192,25 @@ export const de = {
           turn: "Seit der letzten Runde",
           unstaged: "Nur nicht bereitgestellt",
           worktree: "Nicht commitete Änderungen",
+        createPullRequest: {
+          ahead: "{{count}} Commits vor {{base}}",
+          base: "Basis-Branch",
+          bodyPlaceholder: "Änderung beschreiben",
+          create: "Pull Request erstellen",
+          created: "Pull Request #{{number}} erstellt",
+          creating: "Pull Request wird erstellt…",
+          description:
+            "Prüfe Branches und Beschreibung vor der Veröffentlichung.",
+          existing: "Pull Request #{{number}} existiert bereits",
+          openInApp: "In der App öffnen",
+          pushedRetry:
+            "Branch gepusht. Erstellung des Pull Requests erneut versuchen.",
+          pushing: "Branch wird gepusht…",
+          retry: "Erneut versuchen",
+          title: "Pull Request erstellen",
+          titlePlaceholder: "Pull-Request-Titel",
+          view: "Pull Request #{{number}} anzeigen",
+          willPush: "{{count}} Commits werden nach origin/{{head}} gepusht",
         },
         dockInSidebar: "In Seitenleiste andocken",
         empty: {

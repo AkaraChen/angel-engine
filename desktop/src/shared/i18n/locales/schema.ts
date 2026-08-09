@@ -121,6 +121,25 @@ export interface LocaleResourceTranslationWorkspaceToolsDiffBase {
   worktree: string;
 }
 
+export interface LocaleResourceTranslationWorkspaceToolsCreatePullRequest {
+  ahead: string;
+  base: string;
+  bodyPlaceholder: string;
+  create: string;
+  created: string;
+  creating: string;
+  description: string;
+  existing: string;
+  openInApp: string;
+  pushedRetry: string;
+  pushing: string;
+  retry: string;
+  title: string;
+  titlePlaceholder: string;
+  view: string;
+  willPush: string;
+}
+
 export interface LocaleResourceTranslationWorkspaceToolsEmpty {
   checksUnavailable: string;
   fileTreeUnavailable: string;
@@ -252,6 +271,7 @@ export interface LocaleResourceTranslationWorkspaceTools {
   comments: LocaleResourceTranslationWorkspaceToolsComments;
   commit: LocaleResourceTranslationWorkspaceToolsCommit;
   diffBase: LocaleResourceTranslationWorkspaceToolsDiffBase;
+  createPullRequest: LocaleResourceTranslationWorkspaceToolsCreatePullRequest;
   dockInSidebar: string;
   empty: LocaleResourceTranslationWorkspaceToolsEmpty;
   git: LocaleResourceTranslationWorkspaceToolsGit;
