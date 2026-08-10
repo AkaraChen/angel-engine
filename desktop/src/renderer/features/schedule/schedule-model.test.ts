@@ -7,6 +7,7 @@ import { describe, expect, it } from "vitest";
 import {
   hasMissedRun,
   nextRunPreview,
+  presetForCron,
   sortedRuns,
   validateCron,
 } from "@/features/schedule/schedule-model";
@@ -59,6 +60,12 @@ describe("schedule model", () => {
     ]);
   });
 
+  it("recognizes persisted presets without mislabeling custom cron", () => {
+    expect(presetForCron("  */30 * * * * ")).toBe("every-30-minutes");
+    expect(presetForCron("0 9 * * *")).toBe("daily");
+    expect(presetForCron("*/5 * * * *")).toBeUndefined();
+  });
+
   it("sorts history newest first and detects missed runs", () => {
     const runs: AutomationRun[] = [
       {
@@ -75,7 +82,6 @@ describe("schedule model", () => {
       },
     ];
     const automation: Automation = {
-      agentLabel: "Current agent",
       cron: "0 9 * * *",
       enabled: true,
       id: "test",
@@ -83,7 +89,6 @@ describe("schedule model", () => {
       notifyOnFailure: true,
       prompt: "Test",
       runs,
-      scheduleLabel: "Daily",
       status: "active",
     };
 

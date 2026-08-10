@@ -234,8 +234,9 @@ export async function createDaemon(options: DaemonOptions): Promise<Daemon> {
     return context.json({ code: "internal", error: error.message }, 500);
   });
 
-  registerApi(app, runtime, chatEvents, {
+  const stopApiServices = registerApi(app, runtime, chatEvents, {
     internalBridgeSecret: options.internalBridgeSecret,
+    startAutomationScheduler: true,
   });
 
   app.put("/api/process-registry", async (context) => {
@@ -288,6 +289,7 @@ export async function createDaemon(options: DaemonOptions): Promise<Daemon> {
   });
 
   const close = async () => {
+    stopApiServices();
     if (server === undefined) return;
     const activeServer = server;
     server = undefined;
