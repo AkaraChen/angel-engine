@@ -7,7 +7,7 @@ import type { ShepherdSession } from "@angel-engine/daemon-api/shepherd";
 import { describe, expect, it } from "vitest";
 
 import { evaluateShepherdTick, progressAfterShepherdTurn } from "./evaluate";
-import { checkFingerprint } from "./fingerprints";
+import { checkFingerprint, retainCommentFingerprints } from "./fingerprints";
 
 function check(
   overrides: Partial<GitHubCheckItem> & Pick<GitHubCheckItem, "name">,
@@ -216,6 +216,19 @@ describe("evaluateShepherdTick", () => {
         prState: "OPEN",
       }),
     ).toEqual({ kind: "settle", reason: "blocked" });
+  });
+});
+
+describe("retainCommentFingerprints", () => {
+  it("drops check fingerprints and keeps comment ids after head change", () => {
+    expect(
+      retainCommentFingerprints([
+        "42:1",
+        "status:lint:1",
+        "PRRC_kwDOComment1",
+        "100:3",
+      ]),
+    ).toEqual(["PRRC_kwDOComment1"]);
   });
 });
 

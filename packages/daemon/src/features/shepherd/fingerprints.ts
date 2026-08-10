@@ -11,6 +11,22 @@ export function checkFingerprint(check: GitHubCheckItem): string {
   return `status:${check.name}:${check.attempt}`;
 }
 
+/**
+ * Check fingerprints are either `databaseId:attempt` or `status:name:attempt`.
+ * Comment fingerprints are opaque GraphQL node ids (e.g. `PRRC_…`).
+ */
+export function isCheckFingerprint(fingerprint: string): boolean {
+  if (fingerprint.startsWith("status:")) return true;
+  return /^\d+:\d+$/.test(fingerprint);
+}
+
+/** Keep only review-comment fingerprints after a head SHA change. */
+export function retainCommentFingerprints(
+  fingerprints: readonly string[],
+): string[] {
+  return fingerprints.filter((fp) => !isCheckFingerprint(fp));
+}
+
 /** Fingerprints for every comment on unresolved review threads. */
 export function commentFingerprints(
   threads: readonly GitHubReviewThread[],
