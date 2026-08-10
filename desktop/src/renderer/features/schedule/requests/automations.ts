@@ -97,7 +97,6 @@ export function deleteAutomationMutationOptions({
 
 function toRendererAutomation(automation: DaemonAutomation): Automation {
   return {
-    agentLabel: automation.runtime,
     cron: automation.cron,
     enabled: automation.enabled,
     id: automation.id,
@@ -124,7 +123,6 @@ function toRendererAutomation(automation: DaemonAutomation): Automation {
       status: run.status,
       trigger: run.trigger,
     })),
-    scheduleLabel: automation.cron,
     status: automation.status,
   };
 }

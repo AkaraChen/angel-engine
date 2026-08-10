@@ -47,6 +47,7 @@ import {
 import {
   nextRunPreview,
   PRESET_CRON,
+  presetForCron,
   sortedRuns,
   validateCron,
 } from "@/features/schedule/schedule-model";
@@ -74,10 +75,8 @@ interface SchedulePageProps {
  * The screen is deliberately spare. An automation page is not a record viewer:
  * between visits the only things that changed are "when does this run next" and
  * "did anything break", so those are the only two facts a collapsed row spends
- * pixels on. Configuration the user typed in themselves — cron expression,
- * agent, project, notification preference — is available when they open a row
- * and absent otherwise, because re-reading your own settings is not a task
- * anyone comes here to perform.
+ * pixels on. Configuration the user typed in themselves stays in the create
+ * flow; the expanded row is for actions and changing run history.
  */
 export const SchedulePage: FC<SchedulePageProps> = ({ projects }) => {
   const { t } = useTranslation();
@@ -266,7 +265,7 @@ function AutomationCard({
             {automation.name}
           </span>
           <span className="block truncate text-xs text-muted-foreground">
-            {automation.scheduleLabel}
+            {scheduleLabel(t, automation.cron)}
           </span>
         </div>
         {/* Only a broken automation gets a word. "Active" is the absence of
@@ -463,24 +462,11 @@ function CreateAutomationDialog({
     if (!canSubmit) return;
     createMutation.mutate(
       {
-        agentLabel: t("schedule.currentAgent"),
         cron: state.cron,
         name: state.name.trim(),
         notifyOnFailure: state.notifyOnFailure,
         projectId: project?.id,
-        projectName:
-          project === undefined
-            ? undefined
-            : getProjectDisplayName(project.path),
         prompt: state.prompt.trim(),
-        // A custom schedule has no plain-language name, and "Custom cron…" is
-        // the label of the menu item rather than a statement of when anything
-        // runs. The expression itself is the only honest answer, so it becomes
-        // the label instead of being printed beside a placeholder.
-        scheduleLabel:
-          state.preset === "custom"
-            ? state.cron.trim()
-            : presetLabel(t, state.preset),
       },
       {
         onSuccess: () => {
@@ -732,4 +718,9 @@ function ScheduleNotice({ text }: { text: string }) {
 
 function presetLabel(t: TFunction, preset: SchedulePreset): string {
   return t(`schedule.schedulePresets.${preset}`);
+}
+
+function scheduleLabel(t: TFunction, cron: string): string {
+  const preset = presetForCron(cron);
+  return preset === undefined ? cron.trim() : presetLabel(t, preset);
 }

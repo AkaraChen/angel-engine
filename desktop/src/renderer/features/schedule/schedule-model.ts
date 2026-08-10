@@ -25,7 +25,6 @@ export interface AutomationRun {
 }
 
 export interface Automation {
-  agentLabel: string;
   cron: string;
   enabled: boolean;
   id: string;
@@ -33,22 +32,17 @@ export interface Automation {
   nextRunAt?: string;
   notifyOnFailure: boolean;
   projectId?: string;
-  projectName?: string;
   prompt: string;
   runs: AutomationRun[];
-  scheduleLabel: string;
   status: AutomationStatus;
 }
 
 export interface CreateAutomationInput {
-  agentLabel: string;
   cron: string;
   name: string;
   notifyOnFailure: boolean;
   projectId?: string;
-  projectName?: string;
   prompt: string;
-  scheduleLabel: string;
 }
 
 export const PRESET_CRON: Record<Exclude<SchedulePreset, "custom">, string> = {
@@ -83,6 +77,17 @@ interface ParsedCron {
 
 export function validateCron(value: string): boolean {
   return parseCron(value) !== undefined;
+}
+
+export function presetForCron(
+  cron: string,
+): Exclude<SchedulePreset, "custom"> | undefined {
+  const normalized = cron.trim();
+  return (
+    Object.entries(PRESET_CRON) as Array<
+      [Exclude<SchedulePreset, "custom">, string]
+    >
+  ).find(([, expression]) => expression === normalized)?.[0];
 }
 
 export function nextRunPreview(
