@@ -373,6 +373,7 @@ export const zhTW = {
         danger: "影響本機所有聊天記錄的不可復原操作。",
         mobile: "透過本機網路從這台電腦提供行動版網頁應用程式。",
         updates: "這個應用程式安裝哪些版本，以及何時安裝。",
+        usage: "來自 ccusage 的本機 Token 與費用活動估算。",
         workspace: "工作時輸入區與 worktree 的行為方式。",
       },
       tabs: {
@@ -382,6 +383,7 @@ export const zhTW = {
         danger: "進階",
         mobile: "行動版",
         updates: "更新",
+        usage: "用量",
         workspace: "工作區",
       },
       title: "設定",

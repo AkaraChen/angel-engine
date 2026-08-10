@@ -387,6 +387,7 @@ export const es = {
         mobile:
           "Sirve la aplicación web móvil desde este equipo en tu red local.",
         updates: "Qué versiones instala esta aplicación y cuándo lo hace.",
+        usage: "Actividad local estimada de tokens y costes según ccusage.",
         workspace:
           "Cómo se comportan el campo de escritura y los worktrees mientras trabajas.",
       },
@@ -397,6 +398,7 @@ export const es = {
         danger: "Avanzado",
         mobile: "Vista móvil",
         updates: "Actualizaciones",
+        usage: "Uso",
         workspace: "Espacio de trabajo",
       },
       title: "Configuración",

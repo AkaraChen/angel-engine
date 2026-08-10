@@ -373,6 +373,7 @@ export const zhCN = {
         danger: "影响本机所有聊天记录的不可撤销操作。",
         mobile: "通过本地网络从这台电脑提供移动端网页应用。",
         updates: "这个应用安装哪些版本，以及何时安装。",
+        usage: "来自 ccusage 的本地 Token 与费用活动估算。",
         workspace: "工作时输入框与 worktree 的行为方式。",
       },
       tabs: {
@@ -382,6 +383,7 @@ export const zhCN = {
         danger: "高级",
         mobile: "移动端",
         updates: "更新",
+        usage: "用量",
         workspace: "工作区",
       },
       title: "设置",

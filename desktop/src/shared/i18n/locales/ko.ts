@@ -381,6 +381,7 @@ export const ko = {
           "이 컴퓨터에 저장된 모든 채팅에 영향을 주는 되돌릴 수 없는 작업입니다.",
         mobile: "로컬 네트워크를 통해 이 컴퓨터에서 모바일 웹 앱을 제공합니다.",
         updates: "이 앱이 어떤 릴리스를 언제 설치할지 정합니다.",
+        usage: "ccusage에서 추정한 로컬 토큰 및 비용 활동입니다.",
         workspace: "작업 중 입력창과 워크트리가 동작하는 방식입니다.",
       },
       tabs: {
@@ -390,6 +391,7 @@ export const ko = {
         danger: "고급",
         mobile: "모바일 보기",
         updates: "업데이트",
+        usage: "사용량",
         workspace: "작업 공간",
       },
       title: "설정",

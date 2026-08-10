@@ -387,6 +387,7 @@ export const ja = {
         mobile:
           "ローカルネットワーク経由で、このコンピューターからモバイル版ウェブアプリを配信します。",
         updates: "このアプリがどのリリースを、いつインストールするかです。",
+        usage: "ccusage によるローカルのトークン使用量とコストの推定です。",
         workspace: "作業中の入力欄とワークツリーの動作です。",
       },
       tabs: {
@@ -396,6 +397,7 @@ export const ja = {
         danger: "詳細",
         mobile: "モバイル表示",
         updates: "アップデート",
+        usage: "使用量",
         workspace: "ワークスペース",
       },
       title: "設定",

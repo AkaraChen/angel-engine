@@ -349,7 +349,7 @@ export interface LocaleResourceTranslationSettingsTabs {
   mobile: string;
   updates: string;
   workspace: string;
-  usage?: string;
+  usage: string;
 }
 
 export interface LocaleResourceTranslationSettingsTabDescriptions {
@@ -360,7 +360,7 @@ export interface LocaleResourceTranslationSettingsTabDescriptions {
   mobile: string;
   updates: string;
   workspace: string;
-  usage?: string;
+  usage: string;
 }
 
 export interface LocaleResourceTranslationUsageUnavailableReasons {

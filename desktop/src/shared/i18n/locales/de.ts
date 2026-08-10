@@ -388,6 +388,7 @@ export const de = {
         mobile:
           "Die mobile Web-App von diesem Computer im lokalen Netzwerk bereitstellen.",
         updates: "Welche Releases diese App installiert – und wann.",
+        usage: "Von ccusage geschätzte lokale Token- und Kostenaktivität.",
         workspace:
           "Verhalten von Eingabefeld und Worktrees während der Arbeit.",
       },
@@ -398,6 +399,7 @@ export const de = {
         danger: "Erweitert",
         mobile: "Mobile Ansicht",
         updates: "Updates",
+        usage: "Nutzung",
         workspace: "Arbeitsbereich",
       },
       title: "Einstellungen",

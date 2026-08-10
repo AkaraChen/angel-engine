@@ -387,6 +387,8 @@ export const fr = {
         mobile:
           "Diffusez l’application web mobile depuis cet ordinateur sur votre réseau local.",
         updates: "Quelles versions cette application installe, et quand.",
+        usage:
+          "Estimation par ccusage de l’activité locale des jetons et des coûts.",
         workspace:
           "Comportement du champ de saisie et des worktrees pendant votre travail.",
       },
@@ -397,6 +399,7 @@ export const fr = {
         danger: "Avancé",
         mobile: "Vue mobile",
         updates: "Mises à jour",
+        usage: "Utilisation",
         workspace: "Espace de travail",
       },
       title: "Paramètres",
