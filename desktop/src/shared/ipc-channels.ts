@@ -14,6 +14,8 @@ export const TIPC_CHANNELS = [
   "pathLauncherShowContextMenu",
   "projectsChooseDirectory",
   "projectsShowContextMenu",
+  "trayGetPreferences",
+  "traySetEnabled",
 ] as const;
 
 export type TipcChannel = (typeof TIPC_CHANNELS)[number];

@@ -50,6 +50,7 @@ import { findSettingsTab } from "@/features/settings/settings-tabs";
 import { UpdateSettings } from "@/features/settings/update-settings";
 import { useSettingsTab } from "@/features/settings/use-settings-tab";
 import { useThemeSettings } from "@/features/settings/use-theme-settings";
+import { useTraySettings } from "@/features/settings/use-tray-settings";
 import { languageOptions } from "@/i18n";
 import { queryKeys } from "@/platform/query-keys";
 import { cn } from "@/platform/utils";
@@ -360,6 +361,8 @@ function WorkspaceSettings() {
   const setWorktreeDirtyPromptEnabled = useSettingsStore(
     (state) => state.setWorktreeDirtyPromptEnabled,
   );
+  const { enabled: trayEnabled, setEnabled: setTrayEnabled } =
+    useTraySettings();
   const modEnterShortcut =
     window.desktopEnvironment.platform === "darwin" ? "⌘+Enter" : "Ctrl+Enter";
 
@@ -392,6 +395,19 @@ function WorkspaceSettings() {
         }
         description={t("settings.workspace.dirtyPromptDescription")}
         title={t("settings.workspace.dirtyPromptTitle")}
+      />
+      <SettingsRow
+        after={
+          <Switch
+            aria-label={t("settings.workspace.trayEnabledSwitchLabel")}
+            checked={trayEnabled}
+            onCheckedChange={(checked) => {
+              void setTrayEnabled(checked);
+            }}
+          />
+        }
+        description={t("settings.workspace.trayEnabledDescription")}
+        title={t("settings.workspace.trayEnabledTitle")}
       />
       <OsNotificationSettings />
     </SettingsGroup>

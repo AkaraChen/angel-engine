@@ -597,6 +597,10 @@ export const ja = {
           "有効にすると、Enter で改行し、{{shortcut}} で送信します。",
         sendWithModEnterSwitchLabel: "{{shortcut}} でメッセージを送信",
         sendWithModEnterTitle: "{{shortcut}} で送信",
+        trayEnabledDescription:
+          "メニューバーに対応が必要なセッション数と一覧を表示し、アプリ内を探さずに開けます。",
+        trayEnabledSwitchLabel: "メニューバーの艦隊サマリーを表示",
+        trayEnabledTitle: "メニューバーの艦隊サマリー",
       },
     },
     updates: {
@@ -840,6 +844,14 @@ export const ja = {
       undo: "元に戻す",
       updateReady: "更新の準備ができました",
       updateReadyDescription: "{{version}} のダウンロードが完了しました。",
+    },
+    tray: {
+      disable: "メニューバーアイコンを隠す",
+      empty: "今は対応が必要なものはありません",
+      needsYouCount: "{{count}} 件の対応が必要",
+      openApp: "Angel Engine を開く",
+      tooltip: "Angel Engine",
+      tooltipNeedsYou: "Angel Engine — {{count}} 件の対応が必要",
     },
     projectImport: {
       addFromFolder: "ローカルフォルダーから…",

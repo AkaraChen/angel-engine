@@ -9,6 +9,7 @@ import type { DaemonInfo } from "@angel-engine/daemon-api/daemon";
 import { chatPartsText } from "@angel-engine/daemon-api/chat";
 import is from "@sindresorhus/is";
 import { BrowserWindow } from "electron";
+import { scheduleTrayRefresh } from "../features/tray/service";
 import {
   notifyChatFailed,
   notifyChatNeedsInput,
@@ -46,12 +47,16 @@ function connect(info: DaemonInfo) {
     `angel-engine-token.${info.token}`,
   );
   socket = next;
+  next.addEventListener("open", () => {
+    scheduleTrayRefresh();
+  });
   next.addEventListener("message", (message) => {
     handleEvent(JSON.parse(String(message.data)) as DaemonGlobalEvent);
   });
   next.addEventListener("close", () => {
     if (socket !== next) return;
     socket = undefined;
+    scheduleTrayRefresh();
     setTimeout(() => {
       if (socket === undefined) connect(info);
     }, 1_000);
@@ -70,9 +75,18 @@ export function stopDaemonEvents() {
  * `chat-attention-changed` is a hint, not a verdict: the daemon publishes it on
  * clears too, so the authoritative status always comes from a pull. The main
  * process no longer mirrors run events of its own.
+ *
+ * `chat-activity-changed` drives the menu-bar fleet summary (badge + list).
  */
 function handleEvent(message: DaemonGlobalEvent) {
+  if (message.type === "chat-activity-changed") {
+    scheduleTrayRefresh();
+    return;
+  }
   if (message.type !== "chat-attention-changed") return;
+  // Attention and activity usually move together; refresh the tray too so
+  // needs-you counts stay live even if an activity event was coalesced away.
+  scheduleTrayRefresh();
   const chatIds = new Set(message.chatIds);
   queue = queue.then(() =>
     notifyChangedAttention(chatIds).catch((): undefined => undefined),

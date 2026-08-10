@@ -7,6 +7,7 @@ import {
   startDaemonSupervisor,
   stopDaemonSupervisor,
 } from "./daemon/supervisor";
+import { startTray, stopTray } from "./features/tray/service";
 import { registerAllIpc } from "./ipc/register";
 import { configureApplicationMenu } from "./platform/application-menu";
 import {
@@ -27,10 +28,12 @@ export async function bootstrap() {
   startKeybindingsWatcher();
   configureApplicationMenu({ openSettingsWindow });
   configureAutoUpdates();
+  startTray();
   createMainWindow();
 }
 
 export async function beforeQuit() {
+  stopTray();
   stopKeybindingsWatcher();
   stopDaemonEvents();
   await stopMobileDevServer();

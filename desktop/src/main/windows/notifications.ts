@@ -243,7 +243,18 @@ function showBackgroundChatNotification(input: {
 }
 
 function openChatFromNotification(window: BrowserWindow, chat: Chat) {
-  if (window.isDestroyed()) return;
+  openChatInMainWindow(chat, window);
+}
+
+/**
+ * Focus the desktop shell and open a chat. Used by OS notifications and the
+ * menu-bar tray so both paths share the same navigation contract.
+ */
+export function openChatInMainWindow(
+  chat: Pick<Chat, "id" | "projectId">,
+  window: BrowserWindow | null = notificationWindow(),
+) {
+  if (!window || window.isDestroyed()) return;
 
   if (window.isMinimized()) {
     window.restore();
@@ -259,6 +270,13 @@ function openChatFromNotification(window: BrowserWindow, chat: Chat) {
     projectId: chat.projectId,
   };
   window.webContents.send(DESKTOP_OPEN_CHAT_FROM_NOTIFICATION_CHANNEL, payload);
+}
+
+function notificationWindow() {
+  return (
+    BrowserWindow.getAllWindows().find((window) => !window.isDestroyed()) ??
+    null
+  );
 }
 
 function markWindowBackgrounded(window: BrowserWindow) {

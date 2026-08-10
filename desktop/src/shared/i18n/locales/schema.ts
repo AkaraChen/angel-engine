@@ -669,6 +669,18 @@ export interface LocaleResourceTranslationSettingsWorkspace {
   sendWithModEnterDescription: string;
   sendWithModEnterSwitchLabel: string;
   sendWithModEnterTitle: string;
+  trayEnabledDescription: string;
+  trayEnabledSwitchLabel: string;
+  trayEnabledTitle: string;
+}
+
+export interface LocaleResourceTranslationTray {
+  disable: string;
+  empty: string;
+  needsYouCount: string;
+  openApp: string;
+  tooltip: string;
+  tooltipNeedsYou: string;
 }
 
 export interface LocaleResourceTranslationSettingsCustomAgentsForm {
@@ -1106,6 +1118,7 @@ export interface LocaleResourceTranslation {
   pathLauncher: LocaleResourceTranslationPathLauncher;
   projectImport: LocaleResourceTranslationProjectImport;
   projects: LocaleResourceTranslationProjects;
+  tray: LocaleResourceTranslationTray;
   ui: LocaleResourceTranslationUi;
   promptInput: LocaleResourceTranslationPromptInput;
   runtimeValues: LocaleResourceTranslationRuntimeValues;

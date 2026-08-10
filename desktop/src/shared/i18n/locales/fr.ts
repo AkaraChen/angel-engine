@@ -599,6 +599,11 @@ export const fr = {
           "Si activé, Entrée insère une nouvelle ligne et {{shortcut}} envoie.",
         sendWithModEnterSwitchLabel: "Envoyer les messages avec {{shortcut}}",
         sendWithModEnterTitle: "Envoyer avec {{shortcut}}",
+        trayEnabledDescription:
+          "Affiche dans la barre de menus le nombre de sessions qui vous attendent et une liste pour les ouvrir sans chercher dans l'app.",
+        trayEnabledSwitchLabel:
+          "Afficher le résumé de flotte dans la barre de menus",
+        trayEnabledTitle: "Résumé de flotte dans la barre de menus",
       },
     },
     updates: {
@@ -843,6 +848,14 @@ export const fr = {
       undo: "Annuler",
       updateReady: "Mise à jour prête",
       updateReadyDescription: "{{version}} a été téléchargée.",
+    },
+    tray: {
+      disable: "Masquer l'icône de la barre de menus",
+      empty: "Rien ne nécessite votre attention",
+      needsYouCount: "{{count}} vous attendent",
+      openApp: "Ouvrir Angel Engine",
+      tooltip: "Angel Engine",
+      tooltipNeedsYou: "Angel Engine — {{count}} vous attendent",
     },
     projectImport: {
       addFromFolder: "Depuis un dossier local…",
