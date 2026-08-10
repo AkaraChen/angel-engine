@@ -13,6 +13,7 @@ import { AgentCatalogProvider } from "@/features/agents/agent-catalog";
 import { SettingsWindowPage } from "@/features/settings/settings-window-page";
 import { DaemonProvider } from "@/platform/daemon";
 import { DaemonEventSync } from "@/platform/daemon-events";
+import { KeymapProvider } from "@/platform/keymap/provider";
 import { DesktopWindowContentReady } from "@/platform/window-content-ready";
 
 function AppProviders({ children }: PropsWithChildren) {
@@ -24,9 +25,11 @@ function AppProviders({ children }: PropsWithChildren) {
             <AgentCatalogProvider>
               <div className="contents">
                 <QueryClientProvider client={queryClient}>
-                  <ToastProvider>
-                    <TooltipProvider>{children}</TooltipProvider>
-                  </ToastProvider>
+                  <KeymapProvider>
+                    <ToastProvider>
+                      <TooltipProvider>{children}</TooltipProvider>
+                    </ToastProvider>
+                  </KeymapProvider>
                 </QueryClientProvider>
               </div>
             </AgentCatalogProvider>

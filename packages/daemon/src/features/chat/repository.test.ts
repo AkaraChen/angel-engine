@@ -8,9 +8,31 @@ import { drizzle } from "drizzle-orm/libsql";
 import { Cause, Effect, Exit, Layer } from "effect";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { chats, customAgents, projects } from "../../db/schema";
+import {
+  chats,
+  customAgents,
+  projects,
+  queuedChatRuns,
+  worktreeCreationJobs,
+} from "../../db/schema";
 import { Db } from "../../platform/db";
-import { beginChatSend, normalizeChatRuntime, renameChat } from "./repository";
+import {
+  beginQueuedChatRunDispatch,
+  beginChatSend,
+  cancelAmbiguousQueuedChatRun,
+  cancelQueuedChatRun,
+  completeQueuedChatRun,
+  createQueuedChatRun,
+  createWorktreeCreationJob,
+  deleteWorktreeCreationJob,
+  failInterruptedWorktreeCreationJobs,
+  getWorktreeCreationJob,
+  getAmbiguousQueuedChatRun,
+  listRecoverableQueuedChatRuns,
+  listQueuedChatRuns,
+  normalizeChatRuntime,
+  renameChat,
+} from "./repository";
 
 afterEach(() => {
   vi.unstubAllEnvs();
@@ -174,6 +196,190 @@ describe("beginChatSend", () => {
   });
 });
 
+describe("worktree creation jobs", () => {
+  it("turns an interrupted creating job into a retryable failure", async () => {
+    const database = await memoryDatabase();
+    await seedChat(database, { title: "New chat" });
+    await runWithDatabase(
+      database,
+      createWorktreeCreationJob({
+        chatId: "chat-1",
+        setupApproval: "old-digest",
+        state: {
+          jobId: "job-1",
+          progress: 45,
+          stage: "worktree",
+          status: "creating",
+        },
+      }),
+    );
+
+    await runWithDatabase(database, failInterruptedWorktreeCreationJobs());
+
+    await expect(
+      runWithDatabase(database, getWorktreeCreationJob("chat-1")),
+    ).resolves.toMatchObject({
+      setupApproval: "old-digest",
+      state: {
+        error: expect.stringContaining("interrupted"),
+        progress: 45,
+        status: "failed",
+      },
+    });
+    await runWithDatabase(database, deleteWorktreeCreationJob("chat-1"));
+    await expect(
+      runWithDatabase(database, getWorktreeCreationJob("chat-1")),
+    ).resolves.toBeNull();
+  });
+});
+
+describe("queued chat runs", () => {
+  it("exposes and clears a restart-ambiguous send by chat before a replacement", async () => {
+    const database = await memoryDatabase();
+    await seedChat(database, { title: "New chat" });
+    await runWithDatabase(
+      database,
+      createQueuedChatRun({
+        createdAt: "2026-08-10T00:00:00.000Z",
+        input: { chatId: "chat-1", text: "possibly sent" },
+        runId: "run-ambiguous",
+        state: "dispatching",
+      }),
+    );
+
+    await expect(
+      runWithDatabase(database, getAmbiguousQueuedChatRun("chat-1")),
+    ).resolves.toMatchObject({
+      input: { chatId: "chat-1", text: "possibly sent" },
+      runId: "run-ambiguous",
+      state: "dispatching",
+    });
+    await expect(
+      runWithDatabase(database, cancelAmbiguousQueuedChatRun("chat-1")),
+    ).resolves.toEqual({ runId: "run-ambiguous" });
+    await expect(
+      runWithDatabase(database, listQueuedChatRuns()),
+    ).resolves.toEqual([]);
+
+    await expect(
+      runWithDatabase(
+        database,
+        createQueuedChatRun({
+          createdAt: "2026-08-10T00:00:01.000Z",
+          input: { chatId: "chat-1", text: "send again" },
+          runId: "run-replacement",
+          state: "queued",
+        }),
+      ),
+    ).resolves.toBeDefined();
+  });
+
+  it("keeps a claimed input durable across the provider-start crash window", async () => {
+    const database = await memoryDatabase();
+    await seedChat(database, { title: "New chat" });
+    const input = { chatId: "chat-1", text: "send after setup" };
+
+    await runWithDatabase(
+      database,
+      createQueuedChatRun({
+        createdAt: "2026-08-10T00:00:00.000Z",
+        input,
+        runId: "run-1",
+        state: "queued",
+      }),
+    );
+
+    await expect(
+      runWithDatabase(database, beginQueuedChatRunDispatch("run-1")),
+    ).resolves.toBe("claimed");
+
+    await expect(
+      runWithDatabase(database, listQueuedChatRuns()),
+    ).resolves.toEqual([
+      {
+        createdAt: "2026-08-10T00:00:00.000Z",
+        input,
+        runId: "run-1",
+        state: "dispatching",
+      },
+    ]);
+
+    // A daemon restart may not know whether the provider started. The durable
+    // dispatching row is retained, but only queued rows are auto-dispatched.
+    await expect(
+      runWithDatabase(database, beginQueuedChatRunDispatch("run-1")),
+    ).resolves.toBe("dispatching");
+    await expect(
+      runWithDatabase(database, listRecoverableQueuedChatRuns()),
+    ).resolves.toEqual([]);
+    await expect(
+      runWithDatabase(database, listQueuedChatRuns()),
+    ).resolves.toHaveLength(1);
+
+    await runWithDatabase(database, cancelQueuedChatRun("run-1"));
+    await expect(
+      runWithDatabase(database, listQueuedChatRuns()),
+    ).resolves.toEqual([]);
+  });
+
+  it("removes a dispatching row only after provider completion", async () => {
+    const database = await memoryDatabase();
+    await seedChat(database, { title: "New chat" });
+    await runWithDatabase(
+      database,
+      createQueuedChatRun({
+        createdAt: "2026-08-10T00:00:00.000Z",
+        input: { chatId: "chat-1", text: "send after setup" },
+        runId: "run-1",
+        state: "queued",
+      }),
+    );
+    await runWithDatabase(database, beginQueuedChatRunDispatch("run-1"));
+
+    await runWithDatabase(database, completeQueuedChatRun("run-1"));
+
+    await expect(
+      runWithDatabase(database, listQueuedChatRuns()),
+    ).resolves.toEqual([]);
+  });
+
+  it("deletes a corrupt row without blocking recovery of valid inputs", async () => {
+    const database = await memoryDatabase();
+    await seedChat(database, { id: "chat-corrupt", title: "Corrupt" });
+    await seedChat(database, { id: "chat-valid", title: "Valid" });
+    await database.insert(queuedChatRuns).values([
+      {
+        chatId: "chat-corrupt",
+        createdAt: "2026-08-10T00:00:00.000Z",
+        input: "{not-json",
+        runId: "run-corrupt",
+        state: "queued",
+      },
+      {
+        chatId: "chat-valid",
+        createdAt: "2026-08-10T00:00:01.000Z",
+        input: JSON.stringify({ chatId: "chat-valid", text: "recover me" }),
+        runId: "run-valid",
+        state: "queued",
+      },
+    ]);
+
+    await expect(
+      runWithDatabase(database, listRecoverableQueuedChatRuns()),
+    ).resolves.toEqual([
+      {
+        createdAt: "2026-08-10T00:00:01.000Z",
+        input: { chatId: "chat-valid", text: "recover me" },
+        runId: "run-valid",
+        state: "queued",
+      },
+    ]);
+    await expect(
+      database.select().from(queuedChatRuns).all(),
+    ).resolves.toHaveLength(1);
+  });
+});
+
 async function memoryDatabase(): Promise<AppDatabase> {
   const client = createClient({ url: ":memory:" });
   await client.execute(`
@@ -190,21 +396,49 @@ async function memoryDatabase(): Promise<AppDatabase> {
       pinned INTEGER NOT NULL DEFAULT 0
     )
   `);
+  await client.execute(`
+    CREATE TABLE worktree_creation_jobs (
+      chat_id TEXT PRIMARY KEY,
+      error TEXT,
+      job_id TEXT NOT NULL,
+      progress INTEGER NOT NULL,
+      setup_approval TEXT,
+      stage TEXT NOT NULL,
+      status TEXT NOT NULL,
+      FOREIGN KEY (chat_id) REFERENCES chats(id) ON DELETE CASCADE
+    )
+  `);
+  await client.execute(`
+    CREATE TABLE queued_chat_runs (
+      run_id TEXT PRIMARY KEY,
+      chat_id TEXT NOT NULL UNIQUE,
+      created_at TEXT NOT NULL,
+      input TEXT NOT NULL,
+      state TEXT NOT NULL DEFAULT 'queued',
+      FOREIGN KEY (chat_id) REFERENCES chats(id) ON DELETE CASCADE
+    )
+  `);
   return drizzle(client, {
-    schema: { chats, customAgents, projects },
+    schema: {
+      chats,
+      customAgents,
+      projects,
+      queuedChatRuns,
+      worktreeCreationJobs,
+    },
   }) as AppDatabase;
 }
 
 async function seedChat(
   database: AppDatabase,
-  overrides: { title: string; updatedAt?: string },
+  overrides: { id?: string; title: string; updatedAt?: string },
 ): Promise<void> {
   const timestamp = overrides.updatedAt ?? "2026-01-01T00:00:00.000Z";
   await database.insert(chats).values({
     archived: false,
     createdAt: timestamp,
     cwd: null,
-    id: "chat-1",
+    id: overrides.id ?? "chat-1",
     pinned: false,
     projectId: null,
     remoteThreadId: null,

@@ -83,6 +83,7 @@
     "electron-updater": "^6.8.9",
     "fix-path": "^5.0.0",
     "framer-motion": "^12.42.2",
+    "fuse.js": "^7.5.0",
     "i18next": "^26.3.4",
     "katex": "^0.17.0",
     "libsql": "0.5.29",
@@ -106,6 +107,7 @@
     "whatwg-mimetype": "^5.0.0",
     "which": "^7.0.0",
     "wouter": "^3.10.0",
+    "write-file-atomic": "^8.0.0",
     "xstate": "^5.32.4",
     "zod": "^4.4.3",
     "zustand": "^5.0.14"
@@ -132,6 +134,7 @@
     "@types/react-dom": "^19.2.3",
     "@types/whatwg-mimetype": "^5.0.0",
     "@types/which": "^3.0.4",
+    "@types/write-file-atomic": "^4.0.3",
     "@vitejs/plugin-react": "^6.0.3",
     "drizzle-kit": "^0.31.10",
     "electron": "43.0.0",

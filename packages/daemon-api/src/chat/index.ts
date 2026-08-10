@@ -60,10 +60,7 @@ export {
   parseDataUrl,
   parseImageDataUrl,
 };
-export {
-  isChatActivity,
-  isChatActivityListResult,
-} from "./activity";
+export { isChatActivity, isChatActivityListResult } from "./activity";
 export {
   isChatAttention,
   isChatAttentionListResult,
@@ -71,6 +68,7 @@ export {
   isChatAttentionReadResult,
 } from "./attention";
 export {
+  isChatAmbiguousRunResult,
   isChatActiveRunResult,
   isChatActiveRunSnapshot,
   isChatElicitationResponse,
@@ -97,7 +95,21 @@ export interface WorktreeSetupApprovalInput {
   worktreeSetupApproval?: string;
 }
 
-export type Chat = JsChat;
+export type WorktreeCreationStage = "fetching" | "worktree" | "setup";
+export type WorktreeCreationStatus = "creating" | "failed";
+
+export interface WorktreeCreationState {
+  error?: string;
+  jobId: string;
+  progress: number;
+  stage: WorktreeCreationStage;
+  status: WorktreeCreationStatus;
+}
+
+export type Chat = JsChat & {
+  /** Present while an app-managed worktree is being created or needs retry. */
+  worktreeCreation?: WorktreeCreationState;
+};
 export type ChatCreateInput = JsChatCreateInput &
   ChatCreationLocationInput &
   ChatCwdInput &
@@ -322,7 +334,7 @@ export interface ChatActivityListResult {
 export interface ChatAttention {
   chatId: string;
   id: string;
-  status: "completed" | "needsInput";
+  status: "completed" | "failed" | "needsInput";
   updatedAt: string;
 }
 
@@ -374,6 +386,17 @@ export type ChatActiveRunSnapshot =
 
 export interface ChatActiveRunResult {
   run: ChatActiveRunSnapshot | null;
+}
+
+export interface ChatAmbiguousRunSnapshot {
+  chatId: string;
+  createdAt: string;
+  runId: string;
+  status: "dispatching";
+}
+
+export interface ChatAmbiguousRunResult {
+  run: ChatAmbiguousRunSnapshot | null;
 }
 
 export type ChatRunObserverEvent =

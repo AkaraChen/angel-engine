@@ -9,6 +9,7 @@ import type {
 
 const ATTENTION_STATUSES = [
   "completed",
+  "failed",
   "needsInput",
 ] as const satisfies readonly ChatAttention["status"][];
 

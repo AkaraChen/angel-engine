@@ -16,6 +16,10 @@ export type FleetGroup = "attention" | "running" | "done";
 
 export type FleetSegment = "all" | FleetGroup;
 
+export type FleetView = "board" | "list";
+
+export const FLEET_GROUPS: FleetGroup[] = ["attention", "running", "done"];
+
 export const FLEET_SEGMENTS: FleetSegment[] = [
   "all",
   "attention",
@@ -26,6 +30,8 @@ export const FLEET_SEGMENTS: FleetSegment[] = [
 /** Sentinel project filter values; real values are project ids. */
 export const FLEET_PROJECT_FILTER_ALL = "all";
 export const FLEET_PROJECT_FILTER_STANDALONE = "standalone";
+
+export const FLEET_VIEW_STORAGE_KEY = "angel-engine.fleet-view.v1";
 
 export interface FleetRow {
   chat: Chat;
@@ -58,6 +64,11 @@ export interface FleetCounts {
 export interface FleetProjectOption {
   label: string;
   value: string;
+}
+
+export interface FleetRowGroup {
+  group: FleetGroup;
+  rows: FleetRow[];
 }
 
 /**
@@ -254,14 +265,38 @@ export function resolveFleetProjectFilter(
     : FLEET_PROJECT_FILTER_ALL;
 }
 
-export function groupFleetRows(
-  rows: FleetRow[],
-): Array<{ group: FleetGroup; rows: FleetRow[] }> {
-  const groups: FleetGroup[] = ["attention", "running", "done"];
-  return groups
-    .map((group) => ({
-      group,
-      rows: rows.filter((row) => row.group === group),
-    }))
-    .filter((section) => section.rows.length > 0);
+export function groupFleetRows(rows: FleetRow[]): FleetRowGroup[] {
+  return bucketFleetRows(rows).filter((section) => section.rows.length > 0);
+}
+
+/** Board columns are stable even when a group has no matching activity. */
+export function bucketFleetRows(rows: FleetRow[]): FleetRowGroup[] {
+  return FLEET_GROUPS.map((group) => ({
+    group,
+    rows: rows.filter((row) => row.group === group),
+  }));
+}
+
+export function readFleetViewPreference(
+  storage?: Pick<Storage, "getItem">,
+): FleetView {
+  try {
+    return (storage ?? window.localStorage).getItem(FLEET_VIEW_STORAGE_KEY) ===
+      "board"
+      ? "board"
+      : "list";
+  } catch {
+    return "list";
+  }
+}
+
+export function writeFleetViewPreference(
+  view: FleetView,
+  storage?: Pick<Storage, "setItem">,
+): void {
+  try {
+    (storage ?? window.localStorage).setItem(FLEET_VIEW_STORAGE_KEY, view);
+  } catch {
+    // A denied or full local store must not make the Fleet controls unusable.
+  }
 }

@@ -1,6 +1,9 @@
 import type { Chat } from "@angel-engine/daemon-api/chat";
 import { describe, expect, it } from "vitest";
-import { lastOpenedTargetPath } from "./workspace-route-paths";
+import {
+  lastOpenedTargetPath,
+  workspaceModeForChat,
+} from "./workspace-route-paths";
 
 function chat(input: Partial<Chat> & Pick<Chat, "id">): Chat {
   return {
@@ -80,5 +83,22 @@ describe("lastOpenedTargetPath", () => {
         workspaceMode: "chat",
       }),
     ).toBe(undefined);
+  });
+});
+
+describe("workspaceModeForChat", () => {
+  it("switches standalone sessions to chat mode", () => {
+    const standaloneChat = chat({ id: "standalone" });
+
+    expect(workspaceModeForChat(standaloneChat, "work")).toBe("chat");
+    expect(workspaceModeForChat(standaloneChat, "power")).toBe("chat");
+  });
+
+  it("opens project sessions in the current project mode", () => {
+    const projectChat = chat({ id: "project", projectId: "project-id" });
+
+    expect(workspaceModeForChat(projectChat, "power")).toBe("power");
+    expect(workspaceModeForChat(projectChat, "work")).toBe("work");
+    expect(workspaceModeForChat(projectChat, "chat")).toBe("work");
   });
 });

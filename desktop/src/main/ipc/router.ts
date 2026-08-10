@@ -10,6 +10,7 @@ import {
 } from "../daemon/supervisor";
 import { listMobileHostingListenAddresses } from "../daemon/mobile-hosting";
 import { chatPlatformIpcRouter } from "../features/chat/ipc";
+import { keybindingsPlatformIpcRouter } from "../features/keybindings/ipc";
 import { pathLauncherPlatformIpcRouter } from "../features/path-launcher/ipc";
 import { projectPlatformIpcRouter } from "../features/projects/ipc";
 import { MainIpcError } from "../platform/errors";
@@ -101,6 +102,7 @@ export function createAppRouter() {
   return {
     ...appIpcRouter,
     ...chatPlatformIpcRouter,
+    ...keybindingsPlatformIpcRouter,
     ...pathLauncherPlatformIpcRouter,
     ...projectPlatformIpcRouter,
   };

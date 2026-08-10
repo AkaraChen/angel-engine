@@ -15,6 +15,9 @@ import {
   fleetRoutePath,
   lastOpenedTargetPath,
   projectDraftRoutePath,
+  projectPullRequestsRoutePath,
+  scheduleRoutePath,
+  workspaceModeForChat,
 } from "@/app/workspace/workspace-route-paths";
 import {
   draftAgentConfigKey,
@@ -242,6 +245,14 @@ export function useWorkspaceNavigation(model: WorkspacePageModel) {
     startNewDraftSession();
   }, [isDraftPage, startNewDraftSession]);
 
+  const createStandaloneWorkspace = useCallback(() => {
+    setPowerDraftWorktree(undefined);
+    setPowerActiveWorktree(undefined);
+    setPowerWorktreeView(null);
+    if (workspaceMode !== "chat") setWorkspaceMode("chat");
+    startNewDraftSession();
+  }, [setWorkspaceMode, startNewDraftSession, workspaceMode]);
+
   const selectDraftProject = useCallback(
     (projectId: string | null) => {
       setPowerDraftWorktree(undefined);
@@ -256,6 +267,22 @@ export function useWorkspaceNavigation(model: WorkspacePageModel) {
     if (location !== fleetRoutePath) navigate(fleetRoutePath);
   }, [location, navigate]);
 
+  const openSchedule = useCallback(() => {
+    if (location !== scheduleRoutePath) navigate(scheduleRoutePath);
+  }, [location, navigate]);
+
+  const openPullRequests = useCallback(
+    (project: Project) => {
+      setPowerDraftWorktree(undefined);
+      setPowerActiveWorktree(undefined);
+      setPowerWorktreeView(null);
+      if (workspaceMode === "chat") setWorkspaceMode("work");
+      const path = projectPullRequestsRoutePath(project.id);
+      if (location !== path) navigate(path);
+    },
+    [location, navigate, setWorkspaceMode, workspaceMode],
+  );
+
   /**
    * Fleet spans every project, so a row can point at a chat the current
    * workspace mode cannot reach. Switch to the mode that owns the chat before
@@ -263,13 +290,7 @@ export function useWorkspaceNavigation(model: WorkspacePageModel) {
    */
   const openChatFromFleet = useCallback(
     (chat: Chat) => {
-      const nextWorkspaceMode: WorkspaceMode = !is.nonEmptyString(
-        chat.projectId,
-      )
-        ? "chat"
-        : isProjectWorkspaceMode(workspaceMode)
-          ? workspaceMode
-          : "work";
+      const nextWorkspaceMode = workspaceModeForChat(chat, workspaceMode);
       if (nextWorkspaceMode !== workspaceMode) {
         setWorkspaceMode(nextWorkspaceMode);
       }
@@ -297,12 +318,15 @@ export function useWorkspaceNavigation(model: WorkspacePageModel) {
     changeWorkspaceMode,
     createChatForProject,
     createChatForSelection,
+    createStandaloneWorkspace,
     navigateToChat,
     navigateToDraft,
     openChat,
     openChatFromFleet,
     openFleet,
+    openSchedule,
     openPowerWorktree,
+    openPullRequests,
     openSettings,
     registerChatTab,
     selectDraftProject,

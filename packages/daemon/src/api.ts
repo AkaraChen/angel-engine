@@ -5,6 +5,7 @@ import type {
   ChatSendInput,
   ChatStreamElicitationResolveInput,
 } from "@angel-engine/daemon-api/chat";
+import type { ProjectCloneEvent } from "@angel-engine/daemon-api/projects";
 import type { Context, Hono } from "hono";
 import type { ChatEventsApi } from "./features/chat/chat-events";
 import type { Db } from "./platform/db";
@@ -33,19 +34,42 @@ import {
   chatSetRuntimeInputSchema,
   normalizeChatAttachmentsInput,
 } from "@angel-engine/daemon-api/chat";
-import { githubResolveUrlInputSchema } from "@angel-engine/daemon-api/github";
+import {
+  githubAddPullRequestCommentInputSchema,
+  githubCreatePullRequestInputSchema,
+  githubCreateWorkspaceFromPullRequestInputSchema,
+  githubListPullRequestsInputSchema,
+  githubPullRequestTemplateInputSchema,
+  githubResolveUrlInputSchema,
+  githubViewPullRequestInputSchema,
+} from "@angel-engine/daemon-api/github";
 import {
   createProjectInputSchema,
   managedWorktreeDeleteInputSchema,
+  projectCloneInputSchema,
+  projectSetupRetryInputSchema,
   updateProjectConfigInputSchema,
   updateProjectInputSchema,
 } from "@angel-engine/daemon-api/projects";
 import {
   workspaceToolGitCommitInputSchema,
+  workspaceToolGitPushInputSchema,
   workspaceToolWriteFileInputSchema,
 } from "@angel-engine/daemon-api/workspace-tools";
 import { listGitHubItems } from "./features/github/list";
+import { discoverPullRequestTemplates } from "./features/github/pr-template";
+import {
+  addPullRequestComment,
+  createPullRequest,
+  listPullRequests,
+  viewPullRequest,
+} from "./features/github/pull-requests";
+import {
+  listGitHubRepositories,
+  listGitHubRepositoryOwners,
+} from "./features/github/repos";
 import { resolveGitHubUrl } from "./features/github/resolve";
+import { createWorkspaceFromPullRequest } from "./features/github/workspace-from-pr";
 import { listAvailableAgents } from "./features/agents/availability";
 import {
   createCustomAgent,
@@ -67,15 +91,19 @@ import {
   listArchivedChats,
   listChats,
   renameChat,
+  requireChat,
   requireArchivedChat,
   restoreArchivedChats,
   setChatPinned,
 } from "./features/chat/repository";
 import {
+  discardManagedCreatedWorktree,
   managedWorktreePath,
   removeManagedWorktree,
 } from "./features/projects/git";
 import { projectGitStatus } from "./features/projects/git";
+import { projectSetupLifecycle } from "./features/projects/setup-lifecycle";
+import { readProjectLifecycleSnapshot } from "./features/projects/lifecycle";
 import {
   deleteManagedWorktrees,
   scanManagedWorktrees,
@@ -84,6 +112,7 @@ import {
   readProjectConfig,
   updateProjectConfig,
 } from "./features/projects/settings";
+import { cloneProject } from "./features/projects/clone";
 import { searchProjectFiles } from "./features/projects/file-search";
 import {
   createProject,
@@ -96,6 +125,7 @@ import {
   workspaceFileTree,
   workspaceGitCommit,
   workspaceGitDiff,
+  workspaceGitPush,
   workspaceReadFile,
   workspaceWriteFile,
 } from "./features/workspace-tools/service";
@@ -120,8 +150,26 @@ export function registerApi(
     ) => Effect.Effect<A, DaemonError, Db>,
   ) => Effect.flatMap(ChatEngine, use);
   const chatRuns = new ChatRunRegistry({
-    execute: (input, onEvent, signal, controls) =>
-      run(engine((e) => e.streamChat(input, onEvent, signal, controls))),
+    execute: async (input, onEvent, signal, controls, runId) => {
+      await run(engine((e) => e.waitForChatSetup(input.chatId, signal)));
+      const claim = await run(
+        engine((e) => e.beginQueuedChatRunDispatch(runId)),
+      );
+      if (claim === "dispatching") {
+        throw DaemonError.invalidRequest(
+          "Queued chat run dispatch was interrupted; cancel it before retrying.",
+        );
+      }
+      try {
+        return await run(
+          engine((e) => e.streamChat(input, onEvent, signal, controls)),
+        );
+      } finally {
+        if (claim === "claimed") {
+          await run(engine((e) => e.completeQueuedChatRun(runId)));
+        }
+      }
+    },
     isRunIdRetained: (chatId, runId) => activity.hasRun(chatId, runId),
     onEvent: ({ chatId, event, runId }) => {
       activity.apply(chatId, runId, event);
@@ -133,6 +181,17 @@ export function registerApi(
       }
     },
   });
+  const queuedRunRecovery = run(
+    engine((chatEngine) => chatEngine.restoreQueuedChatRuns()),
+  ).then((queuedRuns) => {
+    for (const queued of queuedRuns) {
+      if (chatRuns.active(queued.input.chatId).run !== null) continue;
+      chatRuns.start(queued.runId, queued.input);
+      activity.start(queued.input.chatId, queued.runId);
+      chatEvents.conversationChanged([queued.input.chatId]);
+    }
+  });
+  void queuedRunRecovery.catch(() => undefined);
   void runDaemonApi(
     runtime,
     Effect.flatMap(ProcessRegistryService, (registry) =>
@@ -156,15 +215,64 @@ export function registerApi(
     return context.json({ read });
   });
 
-  app.get("/api/chats", async (context) =>
-    context.json(await run(listChats())),
-  );
+  app.get("/api/chats", async (context) => {
+    const chats = await run(listChats());
+    return context.json(await run(engine((e) => e.decorateChats(chats))));
+  });
   app.get("/api/chats/archived", async (context) =>
     context.json(await run(listArchivedChats())),
   );
   app.get("/api/chats/:id", async (context) =>
     context.json(await run(getChat(context.req.param("id")))),
   );
+  app.get("/api/chats/:id/lifecycle", async (context) => {
+    const chat = await requireSetupChat(context.req.param("id"));
+    return context.json(await projectSetupLifecycle.view(chat.worktreePath));
+  });
+  app.post("/api/chats/:id/setup/retry", async (context) => {
+    const chat = await requireSetupChat(context.req.param("id"));
+    const input = projectSetupRetryInputSchema(await context.req.json());
+    if (input instanceof arkType.errors) {
+      throw DaemonError.invalidRequest("Setup approval is required.");
+    }
+    const status = await run(projectGitStatus({ projectId: chat.project.id }));
+    if (status.worktreeSetup?.digest !== input.setupApproval) {
+      throw DaemonError.worktreeSetupApprovalRequired();
+    }
+    projectSetupLifecycle.retry(chat.worktreePath, {
+      approvedDigest: input.setupApproval,
+      projectRoot: chat.project.path,
+    });
+    return context.json(await projectSetupLifecycle.view(chat.worktreePath));
+  });
+  app.post("/api/chats/:id/setup/continue", async (context) => {
+    const chat = await requireSetupChat(context.req.param("id"));
+    projectSetupLifecycle.continue(chat.worktreePath);
+    return context.json(await projectSetupLifecycle.view(chat.worktreePath));
+  });
+  app.post("/api/chats/:id/setup/cancel", async (context) => {
+    const chat = await requireSetupChat(context.req.param("id"));
+    await projectSetupLifecycle.cancel(chat.worktreePath);
+    return context.json(await projectSetupLifecycle.view(chat.worktreePath));
+  });
+  app.post("/api/chats/:id/setup/discard", async (context) => {
+    const chat = await requireSetupChat(context.req.param("id"));
+    const activeRun = chatRuns.active(chat.chat.id).run;
+    if (activeRun !== null) chatRuns.stop(activeRun.runId);
+    await projectSetupLifecycle.discard(chat.worktreePath);
+    await discardManagedCreatedWorktree(chat.project.path, chat.worktreePath);
+    await run(
+      engine((chatEngine) =>
+        Effect.gen(function* () {
+          yield* chatEngine.closeChatSession(chat.chat.id);
+          yield* deleteChat(chat.chat.id);
+        }),
+      ),
+    );
+    activity.clearChat(chat.chat.id);
+    chatEvents.metadataChanged([chat.chat.id]);
+    return context.json({ ok: true });
+  });
   app.post("/api/chats", async (context) => {
     const input = chatCreateInputSchema(await context.req.json());
     if (input instanceof arkType.errors)
@@ -175,6 +283,48 @@ export function registerApi(
     chatEvents.metadataChanged([chat.id]);
     return context.json(chat);
   });
+  app.delete("/api/chats/:id/worktree-creation", async (context) => {
+    const chatId = requirePath(context.req.param("id"), "chatId");
+    chatRuns.discardChat(chatId);
+    const chat = await run(engine((e) => e.cancelWorktreeCreation(chatId)));
+    await run(removeWorktreesForDeletedChats([chat]));
+    activity.clearChat(chatId);
+    chatEvents.metadataChanged([chat.id]);
+    return context.json(chat);
+  });
+  app.post("/api/chats/:id/worktree-creation/retry", async (context) => {
+    const chatId = requirePath(context.req.param("id"), "chatId");
+    const body: { worktreeSetupApproval?: string } = await context.req
+      .json<{ worktreeSetupApproval?: string }>()
+      .catch(() => ({}));
+    const chat = await run(
+      engine((e) =>
+        e.retryWorktreeCreation(chatId, body.worktreeSetupApproval),
+      ),
+    );
+    chatEvents.metadataChanged([chat.id]);
+    return context.json(chat);
+  });
+
+  async function requireSetupChat(id: string) {
+    const chat = await run(getChat(id));
+    if (chat === null) throw DaemonError.chatNotFound();
+    const worktreePath = managedWorktreePath(chat.cwd);
+    if (worktreePath === undefined || chat.projectId === null) {
+      throw DaemonError.invalidRequest("Chat does not use a managed worktree.");
+    }
+    const project = await run(getProject(chat.projectId));
+    if (project === null) throw DaemonError.projectNotFound();
+    const snapshot = await readProjectLifecycleSnapshot(worktreePath);
+    if (snapshot.approvedDigest !== undefined) {
+      projectSetupLifecycle.restore({
+        approvedDigest: snapshot.approvedDigest,
+        projectRoot: project.path,
+        worktreePath,
+      });
+    }
+    return { chat, project, worktreePath };
+  }
   app.post("/api/sessions/importable", async (context) => {
     const input = listImportableSessionsInputSchema(await context.req.json());
     if (input instanceof arkType.errors)
@@ -213,13 +363,16 @@ export function registerApi(
   });
   app.delete("/api/chats/:id", async (context) => {
     const chatId = context.req.param("id");
+    chatRuns.discardChat(chatId);
     await run(
       Effect.gen(function* () {
+        const chatEngine = yield* ChatEngine;
+        yield* chatEngine.cancelWorktreeCreationForDelete(chatId);
         const chat = yield* getChat(chatId);
         if (chat !== null) yield* removeWorktreesForDeletedChats([chat]);
-        const chatEngine = yield* ChatEngine;
         yield* chatEngine.closeChatSession(chatId);
         yield* deleteChat(chatId);
+        yield* chatEngine.finishChatDeletion(chatId);
       }),
     );
     activity.clearChat(chatId);
@@ -302,13 +455,26 @@ export function registerApi(
           listArchivedChats(),
         ]);
         const allTargets = [...activeChats, ...archivedChats];
-        const removedWorktrees =
-          yield* removeWorktreesForDeletedChats(allTargets);
         const chatEngine = yield* ChatEngine;
+        for (const chat of allTargets) {
+          chatRuns.discardChat(chat.id);
+          yield* chatEngine.cancelWorktreeCreationForDelete(chat.id);
+        }
+        const [settledActiveChats, settledArchivedChats] = yield* Effect.all([
+          listChats(),
+          listArchivedChats(),
+        ]);
+        const settledTargets = [...settledActiveChats, ...settledArchivedChats];
+        const removedWorktrees =
+          yield* removeWorktreesForDeletedChats(settledTargets);
         yield* chatEngine.closeChatSession();
+        const deletedCount = yield* deleteAllChats();
+        for (const chat of settledTargets) {
+          yield* chatEngine.finishChatDeletion(chat.id);
+        }
         return {
-          deletedCount: yield* deleteAllChats(),
-          targets: allTargets,
+          deletedCount,
+          targets: settledTargets,
           worktrees: removedWorktrees,
         };
       }),
@@ -348,13 +514,25 @@ export function registerApi(
         const targets = yield* Effect.all(
           chatIds.map((id) => requireArchivedChat(id)),
         );
-        const removedWorktrees = yield* removeWorktreesForDeletedChats(targets);
         const chatEngine = yield* ChatEngine;
+        for (const chat of targets) {
+          chatRuns.discardChat(chat.id);
+          yield* chatEngine.cancelWorktreeCreationForDelete(chat.id);
+        }
+        const settledTargets = yield* Effect.all(
+          chatIds.map((id) => requireArchivedChat(id)),
+        );
+        const removedWorktrees =
+          yield* removeWorktreesForDeletedChats(settledTargets);
         for (const chat of targets) {
           yield* chatEngine.closeChatSession(chat.id);
         }
+        const deletedChats = yield* deleteArchivedChats(chatIds);
+        for (const chatId of chatIds) {
+          yield* chatEngine.finishChatDeletion(chatId);
+        }
         return {
-          deletedChats: yield* deleteArchivedChats(chatIds),
+          deletedChats,
           worktrees: removedWorktrees,
         };
       }),
@@ -401,12 +579,24 @@ export function registerApi(
   app.delete("/api/agents/custom/:id", async (context) => {
     const deletedChatIds = await run(
       Effect.gen(function* () {
-        const chatIds = yield* deleteCustomAgentWithChats(
-          context.req.param("id"),
-        );
+        const runtimeId = context.req.param("id");
+        const candidateChats = [
+          ...(yield* listChats()),
+          ...(yield* listArchivedChats()),
+        ].filter((chat) => chat.runtime === runtimeId);
         const chatEngine = yield* ChatEngine;
+        for (const chat of candidateChats) {
+          chatRuns.discardChat(chat.id);
+          yield* chatEngine.cancelWorktreeCreationForDelete(chat.id);
+        }
+        const settledChats = yield* Effect.all(
+          candidateChats.map((chat) => requireChat(chat.id)),
+        );
+        yield* removeWorktreesForDeletedChats(settledChats);
+        const chatIds = yield* deleteCustomAgentWithChats(runtimeId);
         for (const chatId of chatIds) {
           yield* chatEngine.closeChatSession(chatId);
+          yield* chatEngine.finishChatDeletion(chatId);
         }
         return chatIds;
       }),
@@ -443,10 +633,127 @@ export function registerApi(
       ),
     ),
   );
+  app.get("/api/github/pull-request-template", async (context) => {
+    const input = githubPullRequestTemplateInputSchema({
+      cwd: requireQuery(context.req.query("cwd"), "cwd"),
+    });
+    if (input instanceof arkType.errors)
+      throw DaemonError.invalidRequest("Repository path is required.");
+    return context.json(await run(discoverPullRequestTemplates(input)));
+  });
+  app.get("/api/github/pull-requests", async (context) => {
+    const stateRaw = context.req.query("state");
+    const state =
+      stateRaw === "open" ||
+      stateRaw === "closed" ||
+      stateRaw === "merged" ||
+      stateRaw === "all"
+        ? stateRaw
+        : undefined;
+    const input = githubListPullRequestsInputSchema({
+      cwd: requireQuery(context.req.query("cwd"), "cwd"),
+      limit: optionalNumber(context.req.query("limit")),
+      query: context.req.query("query"),
+      state,
+    });
+    if (input instanceof arkType.errors)
+      throw DaemonError.invalidRequest("Invalid pull request list query.");
+    return context.json(await run(listPullRequests(input)));
+  });
+  app.post("/api/github/pull-requests/workspace", async (context) => {
+    const input = githubCreateWorkspaceFromPullRequestInputSchema(
+      await context.req.json(),
+    );
+    if (input instanceof arkType.errors)
+      throw DaemonError.invalidRequest(
+        "Create workspace from pull request input is invalid.",
+      );
+    const result = await run(
+      createWorkspaceFromPullRequest(input, {}, context.req.raw.signal),
+    );
+    chatEvents.metadataChanged([result.chatId]);
+    return context.json(result);
+  });
+  app.post("/api/github/pull-requests", async (context) => {
+    const input = githubCreatePullRequestInputSchema(await context.req.json());
+    if (input instanceof arkType.errors)
+      throw DaemonError.invalidRequest("Pull request create input is invalid.");
+    return context.json(await run(createPullRequest(input)));
+  });
+  app.get("/api/github/pull-requests/:number", async (context) => {
+    const number = Number(context.req.param("number"));
+    const input = githubViewPullRequestInputSchema({
+      cwd: requireQuery(context.req.query("cwd"), "cwd"),
+      number,
+    });
+    if (input instanceof arkType.errors)
+      throw DaemonError.invalidRequest("Invalid pull request view query.");
+    return context.json(await run(viewPullRequest(input)));
+  });
+  app.post("/api/github/pull-requests/:number/comments", async (context) => {
+    const number = Number(context.req.param("number"));
+    const body = (await context.req.json()) as { body?: string; cwd?: string };
+    const input = githubAddPullRequestCommentInputSchema({
+      body: body.body,
+      cwd: body.cwd,
+      number,
+    });
+    if (input instanceof arkType.errors)
+      throw DaemonError.invalidRequest("Comment body is required.");
+    return context.json(await run(addPullRequestComment(input)));
+  });
+
+  app.get("/api/github/repo-owners", async (context) =>
+    context.json(await run(listGitHubRepositoryOwners())),
+  );
+  app.get("/api/github/repos", async (context) =>
+    context.json(
+      await run(
+        listGitHubRepositories({
+          limit: optionalNumber(context.req.query("limit")),
+          owner: requireQuery(context.req.query("owner"), "owner"),
+        }),
+      ),
+    ),
+  );
 
   app.get("/api/projects", async (context) =>
     context.json(await run(listProjects())),
   );
+  app.post("/api/projects/clone", async (context) => {
+    const input = projectCloneInputSchema(await context.req.json());
+    if (input instanceof arkType.errors)
+      throw DaemonError.invalidRequest("Repository URL is required.");
+    return streamSSE(context, async (stream) => {
+      // Progress arrives synchronously from the git process; chain the writes
+      // so no frame is dropped or reordered while an earlier one is in flight.
+      let writes = Promise.resolve();
+      const emit = (event: ProjectCloneEvent) => {
+        writes = writes.then(async () => {
+          await stream.writeSSE({
+            data: JSON.stringify(event),
+            event: event.type,
+          });
+        });
+      };
+
+      try {
+        const result = await run(
+          cloneProject(input, emit, context.req.raw.signal),
+        );
+        emit({
+          project: result.project,
+          reusedExistingCheckout: result.reusedExistingCheckout,
+          type: "completed",
+        });
+      } catch (cause) {
+        const error =
+          cause instanceof DaemonError ? cause : DaemonError.internal(cause);
+        emit({ code: error.code, message: error.message, type: "failed" });
+      }
+      await writes;
+    });
+  });
   app.get("/api/projects/files/search", async (context) =>
     context.json(
       await run(
@@ -478,7 +785,32 @@ export function registerApi(
     return context.json(await run(updateProject(input)));
   });
   app.delete("/api/projects/:id", async (context) => {
-    await run(deleteProject(context.req.param("id")));
+    const projectId = context.req.param("id");
+    const deletedChatIds = await run(
+      Effect.gen(function* () {
+        const targets = [
+          ...(yield* listChats()),
+          ...(yield* listArchivedChats()),
+        ].filter((chat) => chat.projectId === projectId);
+        const chatEngine = yield* ChatEngine;
+        for (const chat of targets) {
+          chatRuns.discardChat(chat.id);
+          yield* chatEngine.cancelWorktreeCreationForDelete(chat.id);
+          yield* chatEngine.closeChatSession(chat.id);
+        }
+        const settledTargets = yield* Effect.all(
+          targets.map((chat) => requireChat(chat.id)),
+        );
+        yield* removeWorktreesForDeletedChats(settledTargets);
+        yield* deleteProject(projectId);
+        for (const chat of settledTargets) {
+          yield* chatEngine.finishChatDeletion(chat.id);
+        }
+        return targets.map((chat) => chat.id);
+      }),
+    );
+    for (const chatId of deletedChatIds) activity.clearChat(chatId);
+    chatEvents.metadataChanged(deletedChatIds);
     return context.json({ ok: true });
   });
   app.get("/api/projects/:id/config", async (context) =>
@@ -563,6 +895,12 @@ export function registerApi(
       throw DaemonError.invalidRequest("Git commit input is invalid.");
     return context.json(await run(workspaceGitCommit(input)));
   });
+  app.post("/api/workspace/git-push", async (context) => {
+    const input = workspaceToolGitPushInputSchema(await context.req.json());
+    if (input instanceof arkType.errors)
+      throw DaemonError.invalidRequest("Git push input is invalid.");
+    return context.json(await run(workspaceGitPush(input)));
+  });
   app.get("/api/workspace/file", async (context) =>
     context.json(
       await run(
@@ -585,7 +923,14 @@ export function registerApi(
   app.post("/api/chat-runs/:runId", async (context) => {
     const runId = requirePath(context.req.param("runId"), "runId");
     const input = parseRunStartInput(await context.req.json());
+    await queuedRunRecovery;
     chatRuns.reserve(runId, input);
+    try {
+      await run(engine((chatEngine) => chatEngine.queueChatRun(runId, input)));
+    } catch (error) {
+      chatRuns.stop(runId);
+      throw error;
+    }
     activity.start(input.chatId, runId);
     // Other devices with this chat open are not attached to anything yet: they
     // probed `active-run` when they mounted and found nothing. Tell them a run
@@ -598,16 +943,58 @@ export function registerApi(
       chatRuns.active(requirePath(context.req.param("chatId"), "chatId")),
     ),
   );
+  app.get("/api/chats/:chatId/ambiguous-run", async (context) => {
+    const chatId = requirePath(context.req.param("chatId"), "chatId");
+    const ambiguous = await run(
+      engine((chatEngine) => chatEngine.ambiguousQueuedChatRun(chatId)),
+    );
+    const active = chatRuns.active(chatId).run;
+    return context.json({
+      run: active?.runId === ambiguous.run?.runId ? null : ambiguous.run,
+    });
+  });
+  app.delete("/api/chats/:chatId/ambiguous-run", async (context) => {
+    const chatId = requirePath(context.req.param("chatId"), "chatId");
+    const ambiguous = await run(
+      engine((chatEngine) => chatEngine.ambiguousQueuedChatRun(chatId)),
+    );
+    const active = chatRuns.active(chatId).run;
+    if (active?.runId === ambiguous.run?.runId) {
+      throw DaemonError.invalidRequest(
+        "An active chat run cannot be cleared as ambiguous.",
+      );
+    }
+    const cancelled = await run(
+      engine((chatEngine) => chatEngine.cancelAmbiguousQueuedChatRun(chatId)),
+    );
+    if (cancelled !== null) {
+      activity.clearChat(chatId);
+      chatEvents.conversationChanged([chatId]);
+    }
+    return context.json({ cleared: cancelled !== null });
+  });
   app.get("/api/chat-runs/:runId/events", (context) => {
     const runId = requirePath(context.req.param("runId"), "runId");
     chatRuns.snapshot(runId);
     return observeChatRun(context, chatRuns, runId, false);
   });
-  app.delete("/api/chat-runs/:runId", (context) => {
+  app.delete("/api/chat-runs/:runId", async (context) => {
     const runId = requirePath(context.req.param("runId"), "runId");
-    const snapshot = chatRuns.snapshot(runId);
+    let snapshot;
+    try {
+      snapshot = chatRuns.snapshot(runId);
+    } catch (error) {
+      const cancelled = await run(
+        engine((chatEngine) => chatEngine.cancelQueuedChatRun(runId)),
+      );
+      if (cancelled === null) throw error;
+      activity.clearChat(cancelled.chatId);
+      chatEvents.conversationChanged([cancelled.chatId]);
+      return context.json({ ok: true });
+    }
     activity.cancel(snapshot.chatId, runId);
     chatRuns.stop(runId);
+    await run(engine((chatEngine) => chatEngine.cancelQueuedChatRun(runId)));
     chatEvents.conversationChanged([snapshot.chatId]);
     return context.json({ ok: true });
   });

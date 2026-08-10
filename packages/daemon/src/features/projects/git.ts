@@ -15,11 +15,13 @@ import is from "@sindresorhus/is";
 import { Effect } from "effect";
 
 import { DaemonError } from "../../platform/errors";
-import { executeProjectSetupScripts, loadProjectSetupConfig } from "./config";
+import { loadProjectLifecycleConfig } from "./config";
 import { getProject } from "./repository";
+import { projectSetupLifecycle } from "./setup-lifecycle";
 
 const execFileAsync = promisify(execFile);
 const GIT_OUTPUT_MAX_BUFFER = 1024 * 1024;
+const GIT_OPERATION_TIMEOUT_MS = 5 * 60 * 1000;
 const WORKTREE_BRANCH_PREFIX = "angel";
 
 export function projectGitStatus(
@@ -65,15 +67,15 @@ export function projectGitStatus(
 
     const setupConfig = yield* Effect.tryPromise({
       catch: (cause) => DaemonError.worktreeCreateFailed(cause),
-      try: () => loadProjectSetupConfig(root),
+      try: () => loadProjectLifecycleConfig(root),
     });
 
     return {
       ...gitStatus,
       worktreeSetup:
-        setupConfig && setupConfig.scripts.length > 0
+        setupConfig && setupConfig.setupScript.length > 0
           ? {
-              commands: setupConfig.scripts,
+              commands: setupConfig.setupScript,
               digest: setupConfig.digest,
             }
           : undefined,
@@ -84,6 +86,10 @@ export function projectGitStatus(
 export function createProjectWorktree(
   input: ProjectWorktreeCreateInput,
   signal?: AbortSignal,
+  onProgress?: (
+    stage: "fetching" | "worktree" | "setup",
+    progress: number,
+  ) => void,
 ): Effect.Effect<ProjectWorktreeCreateResult, DaemonError, Db> {
   return Effect.gen(function* () {
     const status = yield* projectGitStatus(input);
@@ -96,6 +102,41 @@ export function createProjectWorktree(
       return yield* Effect.fail(DaemonError.worktreeSetupApprovalRequired());
     }
 
+    onProgress?.("fetching", 10);
+    const startPointFetch = input.startPointFetch;
+    if (startPointFetch) {
+      yield* Effect.tryPromise({
+        catch: (cause) => DaemonError.worktreeCreateFailed(cause),
+        try: () =>
+          execFileAsync(
+            "git",
+            [
+              "-C",
+              root,
+              "fetch",
+              startPointFetch.remote,
+              startPointFetch.refspec,
+            ],
+            {
+              maxBuffer: GIT_OUTPUT_MAX_BUFFER,
+              signal,
+              timeout: GIT_OPERATION_TIMEOUT_MS,
+            },
+          ),
+      });
+    } else {
+      yield* Effect.tryPromise({
+        catch: (cause) => DaemonError.worktreeCreateFailed(cause),
+        try: () =>
+          execFileAsync("git", ["-C", root, "fetch", "--prune"], {
+            maxBuffer: GIT_OUTPUT_MAX_BUFFER,
+            signal,
+            timeout: GIT_OPERATION_TIMEOUT_MS,
+          }),
+      });
+    }
+    onProgress?.("worktree", 45);
+
     const projectSlug = projectSlugFromPath(status.path);
     const parent = path.join(managedWorktreeRoot(), projectSlug);
     yield* Effect.try({
@@ -103,26 +144,49 @@ export function createProjectWorktree(
       try: () => fs.mkdirSync(parent, { recursive: true }),
     });
 
+    const fixedBranch = is.nonEmptyString(input.branchName)
+      ? input.branchName.trim()
+      : undefined;
+    const startPoint = is.nonEmptyString(input.startPoint)
+      ? input.startPoint.trim()
+      : "HEAD";
+
     for (let attempt = 0; attempt < 5; attempt += 1) {
       const suffix = randomUUID().replaceAll("-", "").slice(0, 8);
       const cwd = path.join(parent, suffix);
-      const branch = `${WORKTREE_BRANCH_PREFIX}/${projectSlug}-${suffix}`;
+      const branch =
+        fixedBranch === undefined
+          ? `${WORKTREE_BRANCH_PREFIX}/${projectSlug}-${suffix}`
+          : attempt === 0
+            ? fixedBranch
+            : `${fixedBranch}-${suffix}`;
 
       const created = yield* Effect.tryPromise({
         catch: (cause) => cause,
         try: () =>
           execFileAsync(
             "git",
-            ["-C", root, "worktree", "add", "-b", branch, cwd, "HEAD"],
-            { maxBuffer: GIT_OUTPUT_MAX_BUFFER },
+            ["-C", root, "worktree", "add", "-b", branch, cwd, startPoint],
+            {
+              maxBuffer: GIT_OUTPUT_MAX_BUFFER,
+              signal,
+              timeout: GIT_OPERATION_TIMEOUT_MS,
+            },
           ),
       }).pipe(
         Effect.as({ branch, cwd, projectId: input.projectId, root }),
         Effect.catchAll((cause) =>
           Effect.gen(function* () {
-            yield* Effect.sync(() =>
-              fs.rmSync(cwd, { force: true, recursive: true }),
+            yield* Effect.promise(() =>
+              discardCreatedWorktree(root, cwd, branch).catch(() => {
+                fs.rmSync(cwd, { force: true, recursive: true });
+              }),
             );
+            if (signal?.aborted) {
+              return yield* Effect.fail(
+                DaemonError.worktreeCreateFailed(cause),
+              );
+            }
             if (attempt === 4) {
               return yield* Effect.fail(
                 DaemonError.worktreeCreateFailed(cause),
@@ -133,38 +197,39 @@ export function createProjectWorktree(
         ),
       );
       if (created !== undefined) {
-        yield* Effect.tryPromise({
-          catch: (cause) => DaemonError.worktreeCreateFailed(cause),
-          try: async () => {
-            try {
-              await executeProjectSetupScripts(
-                setup?.commands ?? [],
-                created.cwd,
-                { signal },
-              );
-            } catch (setupCause) {
-              try {
-                await rollbackCreatedWorktree(
-                  root,
-                  created.cwd,
-                  created.branch,
-                );
-              } catch (cleanupCause) {
-                throw new AggregateError(
-                  [setupCause, cleanupCause],
-                  `Worktree setup failed: ${errorMessage(setupCause)} Cleanup also failed: ${errorMessage(cleanupCause)}`,
-                );
-              }
-              throw setupCause;
-            }
-          },
-        });
+        onProgress?.("setup", 75);
+        if (signal?.aborted) {
+          yield* Effect.promise(() =>
+            discardCreatedWorktree(root, created.cwd, created.branch),
+          );
+          return yield* Effect.fail(
+            DaemonError.worktreeCreateFailed(signal.reason),
+          );
+        }
+        if (setup) {
+          yield* Effect.sync(() =>
+            projectSetupLifecycle.start({
+              approvedDigest: setup.digest,
+              projectRoot: root,
+              worktreePath: created.cwd,
+            }),
+          );
+        }
+        onProgress?.("setup", 100);
         return created;
       }
     }
 
     return yield* Effect.fail(DaemonError.worktreeCreateFailed(undefined));
   });
+}
+
+export async function discardManagedCreatedWorktree(root: string, cwd: string) {
+  const branch = await gitOutputAsync(cwd, ["branch", "--show-current"]);
+  if (!branch.startsWith(`${WORKTREE_BRANCH_PREFIX}/`)) {
+    throw new Error("Refusing to discard a worktree with an unmanaged branch.");
+  }
+  await discardCreatedWorktree(root, cwd, branch);
 }
 
 export function managedWorktreeRoot() {
@@ -211,6 +276,17 @@ export function removeManagedWorktree(
     }
 
     return worktreePath;
+  });
+}
+
+/** Rolls back a worktree that was created but could not be attached to its chat. */
+export function removeCreatedProjectWorktree(
+  worktree: ProjectWorktreeCreateResult,
+): Effect.Effect<void, DaemonError> {
+  return Effect.tryPromise({
+    catch: (cause) => DaemonError.worktreeRemoveFailed(cause),
+    try: () =>
+      discardCreatedWorktree(worktree.root, worktree.cwd, worktree.branch),
   });
 }
 
@@ -263,7 +339,8 @@ function removeGitWorktree(
   });
 }
 
-async function rollbackCreatedWorktree(
+/** Explicit destructive path used by the future Discard workspace action. */
+export async function discardCreatedWorktree(
   root: string,
   cwd: string,
   branch: string,
@@ -349,10 +426,4 @@ async function gitOutputAsync(cwd: string, args: string[]) {
     maxBuffer: GIT_OUTPUT_MAX_BUFFER,
   });
   return result.stdout.trim();
-}
-
-function errorMessage(cause: unknown) {
-  return cause instanceof Error && cause.message.length > 0
-    ? cause.message
-    : "Unknown error.";
 }

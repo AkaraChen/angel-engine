@@ -7,9 +7,11 @@ import type { WorkspaceMode } from "@/app/workspace/workspace-ui-store";
 import type { ProjectWorktreeChatGroup } from "@/features/chat/worktree-grouping";
 import {
   Folder,
+  GitPullRequest,
   Lightning,
   Chats as MessageSquare,
   Plus,
+  CalendarDots,
   DownloadSimple,
   GearSix as Settings,
   SquaresFour,
@@ -59,21 +61,27 @@ const WORKSPACE_MODES: Array<{
 interface WorkspaceSidebarProps {
   chats: Chat[];
   fleetActive: boolean;
+  scheduleActive: boolean;
   isChatsLoading: boolean;
   isMacOS: boolean;
   isProjectsLoading: boolean;
   onArchiveChat: (chat: Chat) => MaybeAsync;
+  onCloneRepository: () => MaybeAsync;
+  onCancelWorktreeCreation: (chat: Chat) => MaybeAsync;
   onCreateProject: () => MaybeAsync;
   onCreateProjectChat: (project: Project) => MaybeAsync;
   onCreateStandaloneChat: () => MaybeAsync;
   onImportSession: () => MaybeAsync;
   onOpenChat: (chat: Chat) => MaybeAsync;
   onOpenFleet: () => MaybeAsync;
+  onOpenSchedule: () => MaybeAsync;
+  onOpenPullRequests: (project: Project) => MaybeAsync;
   onOpenSettings: () => MaybeAsync;
   onOpenWorktree: (
     project: Project,
     worktreeGroup: ProjectWorktreeChatGroup,
   ) => MaybeAsync;
+  onRetryWorktreeCreation: (chat: Chat) => MaybeAsync;
   onShowChatContextMenu: (chat: Chat) => MaybeAsync;
   onShowProjectContextMenu: (project: Project) => MaybeAsync;
   onShowWorktreeContextMenu: (
@@ -83,6 +91,7 @@ interface WorkspaceSidebarProps {
   onWorkspaceModeChange: (workspaceMode: WorkspaceMode) => void;
   projectChatsByProjectId: Map<string, Chat[]>;
   projects: Project[];
+  pullRequestsActive: boolean;
   selectedChatId?: string;
   selectedProjectId?: string;
 }
@@ -217,29 +226,39 @@ export function WorkspaceFloatingSidebar(
 function WorkspaceSidebarContent({
   chats,
   fleetActive,
+  scheduleActive,
   isChatsLoading,
   isMacOS,
   isProjectsLoading,
   onArchiveChat,
+  onCloneRepository,
+  onCancelWorktreeCreation,
   onCreateProject,
   onCreateProjectChat,
   onCreateStandaloneChat,
   onImportSession,
   onOpenChat,
   onOpenFleet,
+  onOpenSchedule,
+  onOpenPullRequests,
   onOpenSettings,
   onOpenWorktree,
+  onRetryWorktreeCreation,
   onShowChatContextMenu,
   onShowProjectContextMenu,
   onShowWorktreeContextMenu,
   onWorkspaceModeChange,
   projectChatsByProjectId,
   projects,
+  pullRequestsActive,
   selectedChatId,
   selectedProjectId,
 }: WorkspaceSidebarProps): ReactElement {
   const { t } = useTranslation();
   const platform = window.desktopEnvironment.platform;
+  const pullRequestsProject = is.nonEmptyString(selectedProjectId)
+    ? projects.find((project) => project.id === selectedProjectId)
+    : projects[0];
   const workspaceMode = useWorkspaceUiStore((state) => state.workspaceMode);
   const reserveNativeSidebarControlSpace =
     platform === "linux" || platform === "win32";
@@ -248,7 +267,7 @@ function WorkspaceSidebarContent({
   );
   const createChatFromNewButton = async () => {
     const target = resolveWorkspaceNewChatTarget({
-      fleetActive,
+      fleetActive: fleetActive || scheduleActive,
       projects,
       selectedChatId,
       selectedProjectId,
@@ -301,6 +320,15 @@ function WorkspaceSidebarContent({
             </WorkspaceSidebarMenuButton>
           </AnimatedSidebarMenuItem>
           <AnimatedSidebarMenuItem>
+            <WorkspaceSidebarMenuButton
+              isActive={scheduleActive}
+              onClick={() => void onOpenSchedule()}
+            >
+              <CalendarDots weight="duotone" />
+              <span>{t("schedule.title")}</span>
+            </WorkspaceSidebarMenuButton>
+          </AnimatedSidebarMenuItem>
+          <AnimatedSidebarMenuItem>
             <WorkspaceSidebarMenuButton onClick={() => void onImportSession()}>
               <DownloadSimple weight="duotone" />
               <span>{t("sidebar.importSession")}</span>
@@ -315,6 +343,17 @@ function WorkspaceSidebarContent({
               <span>{t("fleet.title")}</span>
             </WorkspaceSidebarMenuButton>
           </AnimatedSidebarMenuItem>
+          {pullRequestsProject ? (
+            <AnimatedSidebarMenuItem>
+              <WorkspaceSidebarMenuButton
+                isActive={pullRequestsActive}
+                onClick={() => void onOpenPullRequests(pullRequestsProject)}
+              >
+                <GitPullRequest weight="duotone" />
+                <span>{t("pullRequests.title")}</span>
+              </WorkspaceSidebarMenuButton>
+            </AnimatedSidebarMenuItem>
+          ) : null}
         </SidebarMenu>
 
         {workspaceMode === "chat" ? (
@@ -331,9 +370,12 @@ function WorkspaceSidebarContent({
         {workspaceMode === "power" ? (
           <PowerProjectSidebarSection
             isLoading={isProjectsLoading}
+            onCloneRepository={onCloneRepository}
             onCreateProject={onCreateProject}
             onCreateProjectChat={onCreateProjectChat}
+            onCancelWorktreeCreation={onCancelWorktreeCreation}
             onOpenWorktree={onOpenWorktree}
+            onRetryWorktreeCreation={onRetryWorktreeCreation}
             onShowProjectContextMenu={onShowProjectContextMenu}
             onShowWorktreeContextMenu={onShowWorktreeContextMenu}
             projectChatsByProjectId={projectChatsByProjectId}
@@ -345,9 +387,12 @@ function WorkspaceSidebarContent({
           <ProjectSidebarSection
             isLoading={isProjectsLoading}
             onArchiveChat={onArchiveChat}
+            onCloneRepository={onCloneRepository}
+            onCancelWorktreeCreation={onCancelWorktreeCreation}
             onCreateProject={onCreateProject}
             onCreateProjectChat={onCreateProjectChat}
             onOpenChat={onOpenChat}
+            onRetryWorktreeCreation={onRetryWorktreeCreation}
             onShowChatContextMenu={onShowChatContextMenu}
             onShowProjectContextMenu={onShowProjectContextMenu}
             projectChatsByProjectId={projectChatsByProjectId}

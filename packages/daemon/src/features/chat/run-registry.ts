@@ -41,6 +41,7 @@ interface ChatRunRegistryOptions {
     onEvent: (event: ChatStreamEvent) => void,
     signal: AbortSignal,
     controls: ChatStreamControls,
+    runId: string,
   ) => Promise<ChatSendResult>;
   isRunIdRetained?: (chatId: string, runId: string) => boolean;
   onEvent?: (event: ChatRunEvent) => void;
@@ -204,6 +205,14 @@ export class ChatRunRegistry {
     run.abortController.abort();
   }
 
+  /** Permanently detaches a deleted chat so late provider events are ignored. */
+  discardChat(chatId: string): void {
+    const run = this.#activeByChat.get(chatId);
+    if (!run) return;
+    run.abortController.abort();
+    this.#remove(run);
+  }
+
   async resolveElicitation(
     runId: string,
     elicitationId: string,
@@ -259,6 +268,7 @@ export class ChatRunRegistry {
             run.resolveElicitation = handler;
           },
         },
+        run.snapshot.runId,
       );
       run.providerCompleted = true;
       if (

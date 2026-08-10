@@ -143,6 +143,22 @@ describe("ChatRunRegistry", () => {
     );
   });
 
+  it("discards a deleted chat and ignores late provider events", async () => {
+    const run = deferredRun();
+    const onEvent = vi.fn();
+    const registry = new ChatRunRegistry({ execute: run.execute, onEvent });
+    registry.start("run-1", input);
+
+    registry.discardChat(chat.id);
+    expect(run.signal().aborted).toBe(true);
+    expect(registry.active(chat.id).run).toBeNull();
+
+    run.emit({ part: "text", text: "late", type: "delta" });
+    run.reject(new Error("cancelled"));
+    await Promise.resolve();
+    expect(onEvent).not.toHaveBeenCalled();
+  });
+
   it("removes a stopped reservation before execution starts", () => {
     const run = deferredRun();
     const registry = new ChatRunRegistry({ execute: run.execute });

@@ -18,6 +18,7 @@ export function chatRoutePath(
 }
 
 export const fleetRoutePath = "/fleet";
+export const scheduleRoutePath = "/schedule";
 
 export function chatRoutePathId(chatId: string) {
   return `/chat/${encodeURIComponent(chatId)}`;
@@ -31,12 +32,24 @@ export function projectDraftRoutePath(projectId: string) {
   return `/project/${encodeURIComponent(projectId)}`;
 }
 
+export function projectPullRequestsRoutePath(projectId: string) {
+  return `/project/${encodeURIComponent(projectId)}/pulls`;
+}
+
 export function isChatOpenableInWorkspaceMode(
   chat: Chat,
   workspaceMode: WorkspaceMode,
 ) {
   const isProjectChat = is.nonEmptyString(chat.projectId);
   return isProjectWorkspaceMode(workspaceMode) ? isProjectChat : !isProjectChat;
+}
+
+export function workspaceModeForChat(
+  chat: Chat,
+  currentMode: WorkspaceMode,
+): WorkspaceMode {
+  if (!is.nonEmptyString(chat.projectId)) return "chat";
+  return isProjectWorkspaceMode(currentMode) ? currentMode : "work";
 }
 
 export function lastOpenedTargetPath({

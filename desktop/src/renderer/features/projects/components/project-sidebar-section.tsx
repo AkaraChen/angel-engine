@@ -4,9 +4,11 @@ import type { ReactElement } from "react";
 import {
   CaretDown as ChevronDown,
   Folder,
-  FolderPlus,
+  GitBranch,
   SpinnerGap as Loader2,
   Plus,
+  ArrowClockwise,
+  X,
 } from "@phosphor-icons/react";
 
 import { AnimatePresence, m } from "framer-motion";
@@ -17,7 +19,6 @@ import {
   getProjectDisplayName,
 } from "@/app/workspace/workspace-display";
 import { useWorkspaceUiStore } from "@/app/workspace/workspace-ui-store";
-import { Button } from "@/components/ui/button";
 import {
   SidebarGroup,
   SidebarGroupContent,
@@ -31,15 +32,19 @@ import {
   WorkspaceSidebarMenuButton,
 } from "@/components/workspace-sidebar-primitives";
 import { ChatSidebarItem } from "@/features/chat/components/chat-sidebar-item";
+import { AddProjectMenu } from "@/features/projects/components/add-project-menu";
 
 type MaybeAsync = void | Promise<void>;
 
 interface ProjectSidebarSectionProps {
   isLoading: boolean;
   onArchiveChat: (chat: Chat) => MaybeAsync;
+  onCloneRepository: () => MaybeAsync;
+  onCancelWorktreeCreation: (chat: Chat) => MaybeAsync;
   onCreateProject: () => MaybeAsync;
   onCreateProjectChat: (project: Project) => MaybeAsync;
   onOpenChat: (chat: Chat) => MaybeAsync;
+  onRetryWorktreeCreation: (chat: Chat) => MaybeAsync;
   onShowChatContextMenu: (chat: Chat) => MaybeAsync;
   onShowProjectContextMenu: (project: Project) => MaybeAsync;
   projectChatsByProjectId: Map<string, Chat[]>;
@@ -50,9 +55,12 @@ interface ProjectSidebarSectionProps {
 export function ProjectSidebarSection({
   isLoading,
   onArchiveChat,
+  onCloneRepository,
+  onCancelWorktreeCreation,
   onCreateProject,
   onCreateProjectChat,
   onOpenChat,
+  onRetryWorktreeCreation,
   onShowChatContextMenu,
   onShowProjectContextMenu,
   projectChatsByProjectId,
@@ -93,27 +101,10 @@ export function ProjectSidebarSection({
   return (
     <SidebarGroup className="py-1">
       <SidebarSectionHeader label={t("sidebar.projects")}>
-        <Button
-          asChild
-          className="
-            size-7
-            [&_svg:not([class*='size-'])]:size-4
-          "
-          size="icon-xs"
-          title={t("sidebar.addProject")}
-          variant="ghost"
-        >
-          <m.button
-            onClick={() => void onCreateProject()}
-            title={t("sidebar.addProject")}
-            transition={sidebarMotion}
-            type="button"
-            whileTap={{ scale: 0.96 }}
-          >
-            <FolderPlus />
-            <span className="sr-only">{t("sidebar.addProject")}</span>
-          </m.button>
-        </Button>
+        <AddProjectMenu
+          onChooseFolder={() => void onCreateProject()}
+          onCloneRepository={() => void onCloneRepository()}
+        />
       </SidebarSectionHeader>
       <SidebarGroupContent>
         <SidebarMenu>
@@ -211,28 +202,84 @@ export function ProjectSidebarSection({
                       >
                         <SidebarMenu>
                           {hasChats ? (
-                            projectChats.map((chat) => (
-                              <AnimatedSidebarMenuItem key={chat.id}>
-                                <ChatSidebarItem
-                                  chatId={chat.id}
-                                  isActive={chat.id === selectedChatId}
-                                  nested
-                                  onArchiveChat={async () =>
-                                    onArchiveChat(chat)
-                                  }
-                                  onOpenChat={() => void onOpenChat(chat)}
-                                  onShowContextMenu={async () =>
-                                    onShowChatContextMenu(chat)
-                                  }
-                                  pinned={chat.pinned}
-                                  runtime={chat.runtime}
-                                  title={displayChatTitle(chat.title, t)}
-                                  tooltip={
-                                    chat.cwd ?? displayChatTitle(chat.title, t)
-                                  }
-                                />
-                              </AnimatedSidebarMenuItem>
-                            ))
+                            projectChats.map((chat) => {
+                              const creation = chat.worktreeCreation;
+                              if (creation) {
+                                const failed = creation.status === "failed";
+                                return (
+                                  <AnimatedSidebarMenuItem key={chat.id}>
+                                    <div
+                                      className="flex h-7 items-center gap-1.5 pr-1 pl-6 text-[11px]"
+                                      title={creation.error}
+                                    >
+                                      {failed ? (
+                                        <GitBranch className="size-3 shrink-0 text-destructive" />
+                                      ) : (
+                                        <Loader2 className="size-3 shrink-0 animate-spin" />
+                                      )}
+                                      <span className="min-w-0 flex-1 truncate text-sidebar-foreground/65">
+                                        {failed
+                                          ? t("sidebar.worktreeCreationFailed")
+                                          : t("sidebar.worktreeCreating", {
+                                              progress: creation.progress,
+                                            })}
+                                      </span>
+                                      {failed && (
+                                        <button
+                                          aria-label={t(
+                                            "sidebar.retryWorktreeCreation",
+                                          )}
+                                          className="rounded p-1 hover:bg-sidebar-accent"
+                                          onClick={() =>
+                                            void onRetryWorktreeCreation(chat)
+                                          }
+                                          title={t(
+                                            "sidebar.retryWorktreeCreation",
+                                          )}
+                                          type="button"
+                                        >
+                                          <ArrowClockwise className="size-3" />
+                                        </button>
+                                      )}
+                                      <button
+                                        aria-label={t("common.cancel")}
+                                        className="rounded p-1 hover:bg-sidebar-accent"
+                                        onClick={() =>
+                                          void onCancelWorktreeCreation(chat)
+                                        }
+                                        title={t("common.cancel")}
+                                        type="button"
+                                      >
+                                        <X className="size-3" />
+                                      </button>
+                                    </div>
+                                  </AnimatedSidebarMenuItem>
+                                );
+                              }
+                              return (
+                                <AnimatedSidebarMenuItem key={chat.id}>
+                                  <ChatSidebarItem
+                                    chatId={chat.id}
+                                    isActive={chat.id === selectedChatId}
+                                    nested
+                                    onArchiveChat={async () =>
+                                      onArchiveChat(chat)
+                                    }
+                                    onOpenChat={() => void onOpenChat(chat)}
+                                    onShowContextMenu={async () =>
+                                      onShowChatContextMenu(chat)
+                                    }
+                                    pinned={chat.pinned}
+                                    runtime={chat.runtime}
+                                    title={displayChatTitle(chat.title, t)}
+                                    tooltip={
+                                      chat.cwd ??
+                                      displayChatTitle(chat.title, t)
+                                    }
+                                  />
+                                </AnimatedSidebarMenuItem>
+                              );
+                            })
                           ) : (
                             <AnimatedSidebarMenuItem key="no-chats">
                               <WorkspaceSidebarMenuButton

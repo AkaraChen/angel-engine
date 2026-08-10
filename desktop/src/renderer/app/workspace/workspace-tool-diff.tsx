@@ -1,10 +1,15 @@
-import type { FileDiffMetadata } from "@pierre/diffs";
+import type {
+  DiffLineAnnotation,
+  FileDiffMetadata,
+  SelectedLineRange,
+} from "@pierre/diffs";
 import type { WorkspaceToolCssVariableStyle } from "@/app/workspace/workspace-tool-layout";
-
 import type {
   WorkspaceToolPatchFile,
   WorkspaceToolPatchFileLineChanges,
+  WorkspaceToolPatchSource,
 } from "@/app/workspace/workspace-tool-patch-model";
+
 import {
   DEFAULT_VIRTUAL_FILE_METRICS,
   getFiletypeFromFileName,
@@ -12,8 +17,16 @@ import {
   preloadHighlighter,
 } from "@pierre/diffs";
 import { FileDiff } from "@pierre/diffs/react";
-
+import is from "@sindresorhus/is";
 import { useQuery } from "@tanstack/react-query";
+import { useCallback, useMemo } from "react";
+import { useTranslation } from "react-i18next";
+
+import {
+  getDiffLineSnippet,
+  toPierreDiffLineAnnotations,
+} from "@/app/workspace/workspace-diff-comments";
+import { useWorkspaceDiffCommentStore } from "@/app/workspace/workspace-diff-comment-store";
 import { getErrorMessage } from "@/app/workspace/workspace-file-display";
 import { WorkspaceToolEmpty } from "@/app/workspace/workspace-tool-layout";
 import {
@@ -21,9 +34,10 @@ import {
   workspaceToolFileDiffKey,
   workspaceToolFileDiffVersion,
 } from "@/app/workspace/workspace-tool-patch-model";
+import { useWorkspaceToolSurface } from "@/app/workspace/workspace-tool-surface-model";
 import { cn } from "@/platform/utils";
 
-const diffOptions = {
+const baseDiffOptions = {
   disableFileHeader: true,
   diffIndicators: "bars",
   diffStyle: "unified",
@@ -36,6 +50,7 @@ const diffOptions = {
   },
   themeType: "system",
 } as const;
+
 const diffMetrics = {
   ...DEFAULT_VIRTUAL_FILE_METRICS,
   paddingTop: 0,
@@ -78,6 +93,10 @@ const diffHostStyle: WorkspaceToolCssVariableStyle = {
   "--diffs-light": "var(--foreground)",
   "--diffs-light-bg": "var(--background)",
 } as const;
+
+interface DiffCommentAnnotationMetadata {
+  commentId: string;
+}
 
 export function WorkspaceToolPatchFileDiffContent({
   file,
@@ -125,11 +144,13 @@ export function WorkspaceToolPatchFileDiffContent({
           ) : null}
           <WorkspaceToolFileDiff
             fileDiff={diff.fileDiff}
+            path={file.name}
             preloadKey={workspaceToolFileDiffKey(
               diff.source,
               diff.fileDiff,
               index,
             )}
+            source={diff.source}
           />
         </div>
       ))}
@@ -168,11 +189,24 @@ export function WorkspaceToolPatchFileLineStats({
 
 function WorkspaceToolFileDiff({
   fileDiff,
+  path,
   preloadKey,
+  source,
 }: {
   fileDiff: FileDiffMetadata;
+  path: string;
   preloadKey: string;
+  source: WorkspaceToolPatchSource;
 }) {
+  const { t } = useTranslation();
+  const { root } = useWorkspaceToolSurface();
+  const comments = useWorkspaceDiffCommentStore((state) => state.comments);
+  const addComment = useWorkspaceDiffCommentStore((state) => state.addComment);
+  const setBody = useWorkspaceDiffCommentStore((state) => state.setBody);
+  const deleteComment = useWorkspaceDiffCommentStore(
+    (state) => state.deleteComment,
+  );
+
   const preloadQuery = useQuery({
     queryFn: async () => preloadWorkspaceToolFileDiffHighlighter(fileDiff),
     queryKey: [
@@ -183,6 +217,118 @@ function WorkspaceToolFileDiff({
     retry: false,
     staleTime: Infinity,
   });
+
+  const lineAnnotations = useMemo(
+    () => toPierreDiffLineAnnotations(comments, path, source),
+    [comments, path, source],
+  );
+
+  const commentsById = useMemo(() => {
+    const map = new Map(
+      comments
+        .filter((comment) => comment.path === path && comment.source === source)
+        .map((comment) => [comment.id, comment] as const),
+    );
+    return map;
+  }, [comments, path, source]);
+
+  const handleGutterUtilityClick = useCallback(
+    (range: SelectedLineRange) => {
+      if (!is.nonEmptyString(root)) {
+        return;
+      }
+      const lineNumber = range.start;
+      const side = range.side === "deletions" ? "deletions" : "additions";
+      const existing = comments.find(
+        (comment) =>
+          comment.root === root &&
+          comment.path === path &&
+          comment.source === source &&
+          comment.side === side &&
+          comment.lineNumber === lineNumber &&
+          comment.status !== "resolved",
+      );
+      if (existing) {
+        return;
+      }
+      addComment({
+        lineNumber,
+        path,
+        root,
+        side,
+        snippet: getDiffLineSnippet(fileDiff, side, lineNumber),
+        source,
+      });
+    },
+    [addComment, comments, fileDiff, path, root, source],
+  );
+
+  const diffOptions = useMemo(
+    () => ({
+      ...baseDiffOptions,
+      enableGutterUtility: is.nonEmptyString(root),
+      onGutterUtilityClick: handleGutterUtilityClick,
+    }),
+    [handleGutterUtilityClick, root],
+  );
+
+  const renderAnnotation = useCallback(
+    (annotation: DiffLineAnnotation<DiffCommentAnnotationMetadata>) => {
+      const commentId = annotation.metadata?.commentId;
+      const comment = is.nonEmptyString(commentId)
+        ? commentsById.get(commentId)
+        : undefined;
+      if (!comment) {
+        return null;
+      }
+
+      return (
+        <div
+          className="
+            border-y border-border-subtle bg-card px-2.5 py-2 text-xs
+            text-foreground
+          "
+        >
+          <div className="mb-1 flex items-center gap-2 text-[11px] text-muted-foreground">
+            <span className="font-medium text-foreground">
+              {t("workspace.tools.comments.lineComment", {
+                line: comment.lineNumber,
+              })}
+            </span>
+            <button
+              className="
+                ml-auto text-muted-foreground
+                hover:text-foreground
+              "
+              type="button"
+              onClick={() => deleteComment(comment.id)}
+            >
+              {t("workspace.tools.comments.delete")}
+            </button>
+          </div>
+          {is.nonEmptyString(comment.snippet) ? (
+            <div className="mb-1 truncate font-mono text-[11px] text-muted-foreground">
+              {comment.snippet}
+            </div>
+          ) : null}
+          <textarea
+            aria-label={t("workspace.tools.comments.placeholder")}
+            className="
+              min-h-12 w-full resize-none rounded-md border border-input
+              bg-background px-2 py-1.5 font-sans text-xs text-foreground
+              outline-none
+              focus-visible:border-primary focus-visible:ring-2
+              focus-visible:ring-ring/45
+            "
+            placeholder={t("workspace.tools.comments.placeholder")}
+            value={comment.body}
+            onChange={(event) => setBody(comment.id, event.target.value)}
+          />
+        </div>
+      );
+    },
+    [commentsById, deleteComment, setBody, t],
+  );
 
   if (!preloadQuery.data && !preloadQuery.isError) {
     return null;
@@ -198,13 +344,15 @@ function WorkspaceToolFileDiff({
   }
 
   return (
-    <FileDiff
+    <FileDiff<DiffCommentAnnotationMetadata>
       className="block overflow-hidden rounded-[inherit] bg-background"
       disableWorkerPool
       fileDiff={fileDiff}
       key={preloadKey}
+      lineAnnotations={lineAnnotations}
       metrics={diffMetrics}
       options={diffOptions}
+      renderAnnotation={renderAnnotation}
       style={diffHostStyle}
     />
   );
@@ -222,7 +370,9 @@ async function preloadWorkspaceToolFileDiffHighlighter(
 
   await Promise.all(
     [...languages].map(async (language) => {
-      await preloadHighlighter(getHighlighterOptions(language, diffOptions));
+      await preloadHighlighter(
+        getHighlighterOptions(language, baseDiffOptions),
+      );
     }),
   );
 
