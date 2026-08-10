@@ -42,7 +42,7 @@ export function appendMessageToEngineMessage(
     metadata: {
       ...message.metadata,
       custom: {
-        ...(message.metadata?.custom ?? {}),
+        ...message.metadata?.custom,
         // The genuine client send moment — the only timestamp this path owns.
         canonicalCreatedAt: sentAt.toISOString(),
       },
