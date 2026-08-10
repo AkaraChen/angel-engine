@@ -1,5 +1,6 @@
 import type { LocaleResource } from "./schema";
 import { scheduleTranslation } from "./schedule";
+import { pullRequestEn } from "./pull-request";
 
 export const ja = {
   translation: {
@@ -63,6 +64,7 @@ export const ja = {
       proposed: "提案済み",
       question: "質問",
       reload: "再読み込み",
+      retry: "再試行",
       running: "実行中",
       save: "保存",
       saving: "保存中",
@@ -192,6 +194,43 @@ export const ja = {
           unstaged: "未ステージのみ",
           worktree: "未コミットの変更",
         },
+        createPullRequest: {
+          ahead: "{{base}} より {{count}} コミット先行",
+          base: "ベースブランチ",
+          bodyPlaceholder: "変更内容を説明",
+          create: "プルリクエストを作成",
+          created: "プルリクエスト #{{number}} を作成しました",
+          creating: "プルリクエストを作成中…",
+          description: "公開前にブランチと説明を確認してください。",
+          existing: "プルリクエスト #{{number}} は既に存在します",
+          noCommits:
+            "ベースブランチとヘッドブランチの間にコミットがありません。",
+          openInBrowser: "ブラウザで開く",
+          pushedRetry: "ブランチをプッシュしました。作成を再試行してください。",
+          pushing: "ブランチをプッシュ中…",
+          preview: {
+            additions: "追加",
+            body: "説明",
+            commits: "コミット",
+            copied: "コピー済み",
+            copyLink: "リンクをコピー",
+            deletions: "削除",
+            description: "ブラウザで開く前にプルリクエストを確認します。",
+            emptyBody: "説明はありません。",
+            filesChanged: "変更ファイル",
+            loadFailed: "プルリクエストの詳細を読み込めませんでした。",
+            open: "オープン",
+            title: "プルリクエスト #{{number}}",
+          },
+          retry: "再試行",
+          short: "PR を作成",
+          title: "プルリクエストを作成",
+          titlePlaceholder: "プルリクエストのタイトル",
+          view: "プルリクエスト #{{number}} を表示",
+          viewShort: "PR #{{number}}",
+          willPushMany: "{{count}} コミットを origin/{{head}} にプッシュします",
+          willPushOne: "1 コミットを origin/{{head}} にプッシュします",
+        },
         dockInSidebar: "サイドバーにドック",
         empty: {
           checksUnavailable: "チェックを利用できません",
@@ -217,6 +256,7 @@ export const ja = {
           detached: "detached HEAD",
           dirty: "{{value}} 件の変更",
           noCommits: "コミットがありません",
+          noCommitsToPropose: "提案するコミットがありません",
           noUpstream: "上流ブランチなし",
           changes: "変更",
           currentBranch: "現在のブランチ",
@@ -241,6 +281,7 @@ export const ja = {
           },
           pushing: "プッシュ中",
         },
+        pullRequest: pullRequestEn,
         listeningPorts: "リスニングポート",
         resizeFileTree: "ファイルツリーの幅を調整",
         resizeGitList: "変更リストの幅を調整",
@@ -251,6 +292,7 @@ export const ja = {
           gitChanges: "Git の変更",
           newTab: "新しいタブ",
           processes: "プロセス",
+          pullRequest: "プルリクエスト",
           tabs: "タブ",
           tools: "ツール",
           workspaceTabs: "ワークスペースタブ",
@@ -379,6 +421,7 @@ export const ja = {
       noChats: "チャットはありません",
       noProjects: "まだプロジェクトはありません",
       noStandaloneChats: "単独チャットはありません",
+      openBranchChat: "このブランチを使用中のチャットを開く",
       projects: "プロジェクト",
       powerWorktreeHome: "ホーム",
       powerWorktreeHistoricalChat: "チャット履歴",
@@ -534,6 +577,21 @@ export const ja = {
         sourceUser: "User",
         sourceUserOverride: "User · overridden",
         warningsCount: "{{count}} warning(s) while loading keybindings",
+      },
+      linear: {
+        apiConnection: "API 接続",
+        connect: "接続",
+        connected: "接続済み",
+        connectFailed: "Linear に接続できませんでした。",
+        description:
+          "トークンはデスクトップのメインプロセスで暗号化され、レンダラープロセスへ再公開されることはありません。",
+        disconnect: "切断",
+        disconnectFailed: "Linear から切断できませんでした。",
+        notConnected: "未接続",
+        replaceToken: "トークンを置換",
+        title: "Linear",
+        tokenLabel: "Linear API トークン",
+        tokenPlaceholder: "lin_api_…",
       },
       mobile: {
         copied: "コピーしました",
@@ -754,6 +812,9 @@ export const ja = {
       fileTypeBlocked: "ファイル形式がブロックされました",
       fileTooLarge: "ファイルが大きすぎます",
       files: "ファイル",
+      fromLink: "リンクから",
+      fromLinkPlaceholder:
+        "GitHub または Linear の Issue リンクを貼り付けるか、GitHub を検索",
       githubErrors: {
         cliMissing:
           "GitHub CLI (gh) がインストールされていないか PATH にありません。",
@@ -765,6 +826,11 @@ export const ja = {
       },
       githubIssue: "Issue",
       githubPullRequest: "Pull request",
+      linearConnectAction: "Linear に接続",
+      linearConnectDescription:
+        "この Issue を解決する前に Linear に接続してください。",
+      linearIssue: "Linear Issue",
+      linearItemMeta: "{{identifier}} · Linear · {{state}}",
       loadingCommands: "コマンドを読み込み中",
       loadingSkills: "スキルを読み込み中",
       loadingValue: "読み込み中...",
@@ -793,6 +859,24 @@ export const ja = {
       skills: "スキル",
       switchToBuild: "実行モードに切り替え",
       switchToPlan: "計画モードに切り替え",
+      taskLinkErrors: {
+        linearFetchFailed: "Linear Issue を取得できませんでした。",
+        linearNotFound: "Linear Issue が見つかりません。",
+        linearUnauthorized: "Linear が設定済み API トークンを拒否しました。",
+        prForkUnsupported:
+          "fork からの Pull Request はまだサポートされていません。",
+        unsupported: "このタスクリンクはサポートされていません。",
+      },
+      taskLinkHintComplete:
+        "GitHub Issue、Pull Request、または Linear Issue の完全なリンクを貼り付けてください。",
+      taskLinkHintGitHubPath:
+        "GitHub のリンクですが、Issue または Pull Request ではありません。",
+      taskLinkHintLinearPath: "Linear のリンクですが、Issue ではありません。",
+      taskLinkHintSupported:
+        "GitHub Issue、GitHub Pull Request、Linear Issue のリンクに対応しています。",
+      taskLinkStateClosed: "クローズ",
+      taskLinkStateMerged: "マージ済み",
+      taskLinkStateOpen: "オープン",
       toasts: {
         couldNotChangeMode: "モードを変更できませんでした",
         couldNotReadFile: "ファイルを読み取れませんでした",

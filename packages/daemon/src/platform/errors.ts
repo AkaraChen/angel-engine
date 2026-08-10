@@ -13,6 +13,7 @@ interface DaemonErrorProps {
   cause?: unknown;
   code: DaemonErrorCode;
   message: string;
+  relatedChatId?: string;
   status: DaemonErrorStatus;
 }
 
@@ -244,6 +245,28 @@ export class DaemonError extends Data.TaggedError(
     });
   }
 
+  static gitPushDenied(message = "No push access to this repository.") {
+    return new DaemonError({ code: "git-push-denied", message, status: 403 });
+  }
+
+  static gitPushNotFastForward(
+    message = "Remote branch has diverged. Pull and retry.",
+  ) {
+    return new DaemonError({
+      code: "git-push-not-fast-forward",
+      message,
+      status: 409,
+    });
+  }
+
+  static gitRemoteMissing(message = "Git remote origin is not configured.") {
+    return new DaemonError({
+      code: "git-remote-missing",
+      message,
+      status: 409,
+    });
+  }
+
   static githubCliMissing() {
     return new DaemonError({
       code: "github-cli-missing",
@@ -282,12 +305,126 @@ export class DaemonError extends Data.TaggedError(
     });
   }
 
+  static githubPermissionDenied(
+    message = "You do not have permission to merge this pull request.",
+  ) {
+    return new DaemonError({
+      code: "github-permission-denied",
+      message,
+      status: 403,
+    });
+  }
+
+  static githubMergeConflict(
+    message = "The pull request can no longer be merged. Refresh its status and try again.",
+  ) {
+    return new DaemonError({
+      code: "github-merge-conflict",
+      message,
+      status: 409,
+    });
+  }
+
   static githubFetchFailed(cause: unknown, fallback = "GitHub fetch failed.") {
     return new DaemonError({
       cause,
       code: "github-fetch-failed",
       message: gitMessageFromCause(cause, fallback),
       status: 500,
+    });
+  }
+
+  static githubNetworkUnavailable(
+    message = "GitHub is unavailable. Check your network and retry.",
+  ) {
+    return new DaemonError({
+      code: "github-network-unavailable",
+      message,
+      status: 500,
+    });
+  }
+
+  static linkUnsupported() {
+    return new DaemonError({
+      code: "link-unsupported",
+      message: "Use a GitHub issue, GitHub pull request, or Linear issue link.",
+      status: 400,
+    });
+  }
+
+  static linearTokenMissing() {
+    return new DaemonError({
+      code: "linear-token-missing",
+      message: "Connect Linear in Settings before resolving this issue.",
+      status: 400,
+    });
+  }
+
+  static linearUnauthorized() {
+    return new DaemonError({
+      code: "linear-unauthorized",
+      message: "Linear rejected the configured API token.",
+      status: 403,
+    });
+  }
+
+  static linearItemNotFound() {
+    return new DaemonError({
+      code: "linear-item-not-found",
+      message: "Linear issue was not found or is not visible to this token.",
+      status: 404,
+    });
+  }
+
+  static linearFetchFailed(cause: unknown) {
+    return new DaemonError({
+      cause,
+      code: "linear-fetch-failed",
+      message: messageFromCause(cause, "Linear fetch failed."),
+      status: 500,
+    });
+  }
+
+  static pullRequestAlreadyExists(
+    message = "A pull request already exists for this branch.",
+  ) {
+    return new DaemonError({
+      code: "pull-request-already-exists",
+      message,
+      status: 409,
+    });
+  }
+
+  static prFromForkUnsupported() {
+    return new DaemonError({
+      code: "pr-from-fork-unsupported",
+      message: "Pull requests from forks are not supported yet.",
+      status: 400,
+    });
+  }
+
+  static worktreeBranchConflict(branch: string) {
+    return new DaemonError({
+      code: "worktree-branch-conflict",
+      message: `Local branch ${branch} has commits that are not in the pull request head. Rename or reconcile it before retrying.`,
+      status: 409,
+    });
+  }
+
+  static pullRequestNoCommits(message = "There are no commits to merge.") {
+    return new DaemonError({
+      code: "pull-request-no-commits",
+      message,
+      status: 409,
+    });
+  }
+
+  static worktreeBranchInUse(branch: string, relatedChatId?: string) {
+    return new DaemonError({
+      code: "worktree-branch-in-use",
+      message: `Branch ${branch} is already checked out in another worktree.`,
+      relatedChatId,
+      status: 409,
     });
   }
 

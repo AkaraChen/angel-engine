@@ -1,5 +1,7 @@
 export interface DaemonOptions {
   dataDir: string;
+  /** Secret accepted only by Electron main-process bridge routes. */
+  internalBridgeSecret?: string;
   migrationsDir?: string;
   packaged?: boolean;
   host?: string;

@@ -36,6 +36,7 @@ export interface LocaleResourceTranslationCommon {
   proposed: string;
   question: string;
   reload: string;
+  retry: string;
   running: string;
   save: string;
   saving: string;
@@ -90,6 +91,7 @@ export interface LocaleResourceTranslationWorkspaceToolsGit {
   noBranches: string;
   noCommits: string;
   noHistory: string;
+  noCommitsToPropose: string;
   noUpstream: string;
   publish: string;
   pull: string;
@@ -120,6 +122,45 @@ export interface LocaleResourceTranslationWorkspaceToolsDiffBase {
   worktree: string;
 }
 
+export interface LocaleResourceTranslationWorkspaceToolsPullRequestPreview {
+  additions: string;
+  body: string;
+  commits: string;
+  copied: string;
+  copyLink: string;
+  deletions: string;
+  description: string;
+  emptyBody: string;
+  filesChanged: string;
+  loadFailed: string;
+  open: string;
+  title: string;
+}
+
+export interface LocaleResourceTranslationWorkspaceToolsCreatePullRequest {
+  ahead: string;
+  base: string;
+  bodyPlaceholder: string;
+  create: string;
+  created: string;
+  creating: string;
+  description: string;
+  existing: string;
+  noCommits: string;
+  openInBrowser: string;
+  pushedRetry: string;
+  pushing: string;
+  preview: LocaleResourceTranslationWorkspaceToolsPullRequestPreview;
+  retry: string;
+  short: string;
+  title: string;
+  titlePlaceholder: string;
+  view: string;
+  viewShort: string;
+  willPushMany: string;
+  willPushOne: string;
+}
+
 export interface LocaleResourceTranslationWorkspaceToolsEmpty {
   checksUnavailable: string;
   fileTreeUnavailable: string;
@@ -141,6 +182,7 @@ export interface LocaleResourceTranslationWorkspaceToolsTabs {
   files: string;
   gitChanges: string;
   newTab: string;
+  pullRequest: string;
   processes: string;
   tabs: string;
   tools: string;
@@ -182,16 +224,80 @@ export interface LocaleResourceTranslationWorkspaceToolsComments {
   title: string;
 }
 
+export interface LocaleResourceTranslationWorkspaceToolsPullRequest {
+  archive: string;
+  archiveDetail: string;
+  archiveFailed: string;
+  archiveConfirmDetail: string;
+  archiveConfirmDirtyDetail: string;
+  archiveConfirmTitle: string;
+  archiveUnavailable: string;
+  blocked: string;
+  blockers: {
+    behindBase_one: string;
+    behindBase_other: string;
+    changesRequested: string;
+    checksFailed_one: string;
+    checksFailed_other: string;
+    checksPending_one: string;
+    checksPending_other: string;
+    conflict: string;
+    draft: string;
+    permissionDenied: string;
+    repositoryPolicy: string;
+    reviewRequired: string;
+    unresolvedThreads_one: string;
+    unresolvedThreads_other: string;
+  };
+  checking: string;
+  checkingMergeability: string;
+  continue: string;
+  deleteBranch: string;
+  errors: {
+    cliMissing: string;
+    cliMissingDetail: string;
+    fetch: string;
+    fetchDetail: string;
+    permission: string;
+    permissionDetail: string;
+    unauthenticated: string;
+    unauthenticatedDetail: string;
+  };
+  generalComment: string;
+  merge: string;
+  mergeChanged: string;
+  mergeFailed: string;
+  merged: string;
+  mergedDetail: string;
+  mergedMethod: string;
+  merging: string;
+  method: string;
+  methodDisabled: string;
+  methods: { merge: string; rebase: string; squash: string };
+  noOpen: string;
+  noOpenDetail: string;
+  open: string;
+  optionalChecksFailed_one: string;
+  optionalChecksFailed_other: string;
+  ready: string;
+  refresh: string;
+  resolve: string;
+  title: string;
+  unresolvedTitle: string;
+}
+
 export interface LocaleResourceTranslationWorkspaceTools {
   addToChat: string;
   checks: LocaleResourceTranslationWorkspaceToolsChecks;
   comments: LocaleResourceTranslationWorkspaceToolsComments;
   commit: LocaleResourceTranslationWorkspaceToolsCommit;
   diffBase: LocaleResourceTranslationWorkspaceToolsDiffBase;
+  createPullRequest: LocaleResourceTranslationWorkspaceToolsCreatePullRequest;
   dockInSidebar: string;
   empty: LocaleResourceTranslationWorkspaceToolsEmpty;
   git: LocaleResourceTranslationWorkspaceToolsGit;
   listeningPorts: string;
+  pullRequest: LocaleResourceTranslationWorkspaceToolsPullRequest;
   resizeFileTree: string;
   resizeGitList: string;
   subprocesses: string;
@@ -453,6 +559,7 @@ export interface LocaleResourceTranslationSidebar {
   noChats: string;
   noProjects: string;
   noStandaloneChats: string;
+  openBranchChat: string;
   projects: string;
   powerWorktreeHome: string;
   powerWorktreeHistoricalChat: string;
@@ -748,6 +855,21 @@ export interface LocaleResourceTranslationTray {
   tooltipNeedsYou: string;
 }
 
+export interface LocaleResourceTranslationSettingsLinear {
+  apiConnection: string;
+  connect: string;
+  connected: string;
+  connectFailed: string;
+  description: string;
+  disconnect: string;
+  disconnectFailed: string;
+  notConnected: string;
+  replaceToken: string;
+  title: string;
+  tokenLabel: string;
+  tokenPlaceholder: string;
+}
+
 export interface LocaleResourceTranslationSettingsCustomAgentsForm {
   args: string;
   autoAuthenticate: string;
@@ -776,6 +898,7 @@ export interface LocaleResourceTranslationSettings {
   description: string;
   groups: LocaleResourceTranslationSettingsGroups;
   keyboard: LocaleResourceTranslationSettingsKeyboard;
+  linear: LocaleResourceTranslationSettingsLinear;
   mobile: LocaleResourceTranslationSettingsMobile;
   tabDescriptions: LocaleResourceTranslationSettingsTabDescriptions;
   tabs: LocaleResourceTranslationSettingsTabs;
@@ -863,6 +986,14 @@ export interface LocaleResourceTranslationComposerGitHubErrors {
   urlUnsupported: string;
 }
 
+export interface LocaleResourceTranslationComposerTaskLinkErrors {
+  linearFetchFailed: string;
+  linearNotFound: string;
+  linearUnauthorized: string;
+  prForkUnsupported: string;
+  unsupported: string;
+}
+
 export interface LocaleResourceTranslationComposer {
   agentMode: string;
   agentSettings: string;
@@ -882,9 +1013,15 @@ export interface LocaleResourceTranslationComposer {
   fileTypeBlocked: string;
   fileTooLarge: string;
   files: string;
+  fromLink: string;
+  fromLinkPlaceholder: string;
   githubErrors: LocaleResourceTranslationComposerGitHubErrors;
   githubIssue: string;
   githubPullRequest: string;
+  linearConnectAction: string;
+  linearConnectDescription: string;
+  linearIssue: string;
+  linearItemMeta: string;
   loadingCommands: string;
   loadingSkills: string;
   loadingValue: string;
@@ -909,6 +1046,14 @@ export interface LocaleResourceTranslationComposer {
   skills: string;
   switchToBuild: string;
   switchToPlan: string;
+  taskLinkErrors: LocaleResourceTranslationComposerTaskLinkErrors;
+  taskLinkHintComplete: string;
+  taskLinkHintGitHubPath: string;
+  taskLinkHintLinearPath: string;
+  taskLinkHintSupported: string;
+  taskLinkStateClosed: string;
+  taskLinkStateMerged: string;
+  taskLinkStateOpen: string;
   toasts: LocaleResourceTranslationComposerToasts;
 }
 

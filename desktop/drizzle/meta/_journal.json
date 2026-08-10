@@ -61,8 +61,22 @@
     {
       "idx": 8,
       "version": "6",
-      "when": 1786329423762,
-      "tag": "0008_new_misty_knight",
+      "when": 1786330921553,
+      "tag": "0008_fancy_masked_marvel",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "6",
+      "when": 1786332157657,
+      "tag": "0009_big_risque",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "6",
+      "when": 1786358463132,
+      "tag": "0010_chubby_satana",
       "breakpoints": true
     }
   ]

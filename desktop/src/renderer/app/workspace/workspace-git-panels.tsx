@@ -32,6 +32,10 @@ import {
 } from "@/app/workspace/workspace-git-commit";
 import { WorkspaceGitStatusBar } from "@/app/workspace/workspace-git-status-bar";
 import {
+  useWorkspaceGitPullRequestPreflight,
+  WorkspaceGitPullRequestAction,
+} from "@/app/workspace/workspace-git-create-pr";
+import {
   formatWorkspaceGitCommitTime,
   workspaceGitRemoteFromUpstream,
   type WorkspaceGitPanelView,
@@ -104,6 +108,7 @@ export function WorkspaceGitPanel({
   );
   const [panelView, setPanelView] = useState<WorkspaceGitPanelView>("changes");
   const [activeCommitHash, setActiveCommitHash] = useState<string | null>(null);
+  const pullRequestQuery = useWorkspaceGitPullRequestPreflight(api, root);
   const updateGitListWidth = useCallback((width: number) => {
     setGitListWidth(width);
     window.localStorage.setItem(
@@ -161,6 +166,14 @@ export function WorkspaceGitPanel({
       }
       pushError={pushMutation.isError ? pushMutation.error : undefined}
       pushPending={pushMutation.isPending}
+      pullRequestAction={
+        <WorkspaceGitPullRequestAction preflight={pullRequestQuery.data} />
+      }
+      statusLabel={
+        pullRequestQuery.data?.reason === "pull-request-no-commits"
+          ? t("workspace.tools.git.noCommitsToPropose")
+          : undefined
+      }
       onPush={() => pushMutation.mutate()}
     />
   );

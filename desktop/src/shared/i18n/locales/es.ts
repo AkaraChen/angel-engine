@@ -1,5 +1,6 @@
 import type { LocaleResource } from "./schema";
 import { scheduleTranslation } from "./schedule";
+import { pullRequestEn } from "./pull-request";
 
 export const es = {
   translation: {
@@ -63,6 +64,7 @@ export const es = {
       proposed: "Propuesto",
       question: "Pregunta",
       reload: "Recargar",
+      retry: "Reintentar",
       running: "En ejecución",
       save: "Guardar",
       saving: "Guardando",
@@ -191,6 +193,43 @@ export const es = {
           unstaged: "Solo sin preparar",
           worktree: "Cambios sin confirmar",
         },
+        createPullRequest: {
+          ahead: "{{count}} commits por delante de {{base}}",
+          base: "Rama base",
+          bodyPlaceholder: "Describe el cambio",
+          create: "Crear pull request",
+          created: "Pull request #{{number}} creado",
+          creating: "Creando pull request…",
+          description: "Revisa las ramas y la descripción antes de publicar.",
+          existing: "El pull request #{{number}} ya existe",
+          noCommits: "No hay commits entre las ramas base y principal.",
+          openInBrowser: "Abrir en el navegador",
+          pushedRetry: "Rama enviada. Vuelve a intentar crear el pull request.",
+          pushing: "Enviando rama…",
+          preview: {
+            additions: "Adiciones",
+            body: "Descripción",
+            commits: "Commits",
+            copied: "Copiado",
+            copyLink: "Copiar enlace",
+            deletions: "Eliminaciones",
+            description:
+              "Revisa el pull request antes de abrirlo en el navegador.",
+            emptyBody: "No se proporcionó descripción.",
+            filesChanged: "Archivos modificados",
+            loadFailed: "No se pudieron cargar los detalles del pull request.",
+            open: "Abierto",
+            title: "Pull request #{{number}}",
+          },
+          retry: "Reintentar",
+          short: "Crear PR",
+          title: "Crear pull request",
+          titlePlaceholder: "Título del pull request",
+          view: "Ver pull request #{{number}}",
+          viewShort: "PR #{{number}}",
+          willPushMany: "Se enviarán {{count}} commits a origin/{{head}}",
+          willPushOne: "Se enviará 1 commit a origin/{{head}}",
+        },
         dockInSidebar: "Acoplar a la barra lateral",
         empty: {
           checksUnavailable: "Checks no disponibles",
@@ -216,6 +255,7 @@ export const es = {
           detached: "HEAD desacoplado",
           dirty: "{{value}} modificados",
           noCommits: "Aún no hay commits",
+          noCommitsToPropose: "No hay commits que proponer",
           noUpstream: "Sin upstream",
           changes: "Cambios",
           currentBranch: "Rama actual",
@@ -240,6 +280,7 @@ export const es = {
           },
           pushing: "Enviando",
         },
+        pullRequest: pullRequestEn,
         listeningPorts: "Puertos en escucha",
         resizeFileTree: "Redimensionar el árbol de archivos",
         resizeGitList: "Redimensionar la lista de cambios",
@@ -250,6 +291,7 @@ export const es = {
           gitChanges: "Cambios de Git",
           newTab: "Nueva pestaña",
           processes: "Procesos",
+          pullRequest: "Pull request",
           tabs: "Pestañas",
           tools: "Herramientas",
           workspaceTabs: "Pestañas del espacio de trabajo",
@@ -378,6 +420,7 @@ export const es = {
       noChats: "No hay chats",
       noProjects: "Aún no hay proyectos",
       noStandaloneChats: "No hay chats independientes",
+      openBranchChat: "Abrir el chat que usa esta rama",
       projects: "Proyectos",
       powerWorktreeHome: "Inicio",
       powerWorktreeHistoricalChat: "Historial de chats",
@@ -533,6 +576,21 @@ export const es = {
         sourceUser: "User",
         sourceUserOverride: "User · overridden",
         warningsCount: "{{count}} warning(s) while loading keybindings",
+      },
+      linear: {
+        apiConnection: "Conexión API",
+        connect: "Conectar",
+        connected: "Conectado",
+        connectFailed: "No se pudo conectar Linear.",
+        description:
+          "El token se cifra en el proceso principal y nunca vuelve a exponerse al renderer.",
+        disconnect: "Desconectar",
+        disconnectFailed: "No se pudo desconectar Linear.",
+        notConnected: "Sin conexión",
+        replaceToken: "Reemplazar token",
+        title: "Linear",
+        tokenLabel: "Token de API de Linear",
+        tokenPlaceholder: "lin_api_…",
       },
       mobile: {
         copied: "Copiado",
@@ -755,6 +813,9 @@ export const es = {
       fileTypeBlocked: "Tipo de archivo bloqueado",
       fileTooLarge: "El archivo es demasiado grande",
       files: "Archivos",
+      fromLink: "Desde un enlace",
+      fromLinkPlaceholder:
+        "Pega un enlace de issue de GitHub o Linear, o busca en GitHub",
       githubErrors: {
         cliMissing: "GitHub CLI (gh) no está instalada o no está en el PATH.",
         cliUnauthenticated:
@@ -765,6 +826,10 @@ export const es = {
       },
       githubIssue: "Issue",
       githubPullRequest: "Pull request",
+      linearConnectAction: "Conectar Linear",
+      linearConnectDescription: "Conecta Linear antes de resolver este issue.",
+      linearIssue: "Issue de Linear",
+      linearItemMeta: "{{identifier}} · Linear · {{state}}",
       loadingCommands: "Cargando comandos",
       loadingSkills: "Cargando habilidades",
       loadingValue: "Cargando...",
@@ -794,6 +859,24 @@ export const es = {
       skills: "Habilidades",
       switchToBuild: "Cambiar a modo ejecución",
       switchToPlan: "Cambiar a modo plan",
+      taskLinkErrors: {
+        linearFetchFailed: "No se pudo obtener ese issue de Linear.",
+        linearNotFound: "No se encontró el issue de Linear.",
+        linearUnauthorized: "Linear rechazó el token de API configurado.",
+        prForkUnsupported:
+          "Las pull requests de forks todavía no son compatibles.",
+        unsupported: "Ese enlace de tarea no es compatible.",
+      },
+      taskLinkHintComplete:
+        "Pega un enlace completo a un issue de GitHub, una pull request o un issue de Linear.",
+      taskLinkHintGitHubPath:
+        "Es un enlace de GitHub, pero no es un issue ni una pull request.",
+      taskLinkHintLinearPath: "Es un enlace de Linear, pero no es un issue.",
+      taskLinkHintSupported:
+        "Se admiten enlaces de issues de GitHub, pull requests de GitHub e issues de Linear.",
+      taskLinkStateClosed: "Cerrado",
+      taskLinkStateMerged: "Fusionado",
+      taskLinkStateOpen: "Abierto",
       toasts: {
         couldNotChangeMode: "No se pudo cambiar el modo",
         couldNotReadFile: "No se pudo leer el archivo",

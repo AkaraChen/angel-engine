@@ -29,6 +29,8 @@ export const queryKeys = {
     prChecks: (cwd: string | null) => ["github", "pr-checks", cwd] as const,
     pullRequestDetail: (cwd: string | null, number: number | null) =>
       ["github", "pull-request", cwd, number] as const,
+    pullRequest: (cwd: string | null) =>
+      ["github", "pull-request-status", cwd] as const,
     pullRequestTemplate: (cwd: string | null) =>
       ["github", "pull-request-template", cwd] as const,
     pullRequests: (cwd: string | null, state: string, query: string) =>
@@ -37,6 +39,8 @@ export const queryKeys = {
       ["github", "repositories", owner] as const,
     repositoryOwners: () => ["github", "repository-owners"] as const,
     resolve: (url: string | null) => ["github", "resolve", url] as const,
+    pullRequestPreflight: (root: string | null, base?: string) =>
+      ["github", "pull-request", "preflight", root, base] as const,
   },
   projects: {
     all: () => ["projects"] as const,

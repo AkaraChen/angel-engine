@@ -4,6 +4,7 @@ import type {
   ChatCwdInput,
 } from "@angel-engine/daemon-api/chat";
 import type { Db } from "../../platform/db";
+import type { ProjectWorktreeCreateInput } from "@angel-engine/daemon-api/projects";
 
 import is from "@sindresorhus/is";
 import os from "node:os";
@@ -33,6 +34,7 @@ export type ChatCwdResolutionInput = ChatCreationLocationInput &
   ChatCwdInput & {
     projectId?: string | null;
     worktreeSetupApproval?: string;
+    worktreeRef?: ProjectWorktreeCreateInput["ref"];
   };
 
 export function cwdForNewChat(
@@ -50,6 +52,7 @@ export function cwdForNewChat(
         {
           projectId: input.projectId,
           setupApproval: input.worktreeSetupApproval,
+          ref: input.worktreeRef,
         },
         signal,
       );

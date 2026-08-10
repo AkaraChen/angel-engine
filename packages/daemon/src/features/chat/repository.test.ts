@@ -14,6 +14,7 @@ import {
   customAgents,
   projects,
   queuedChatRuns,
+  pullRequests,
   worktreeCreationJobs,
 } from "../../db/schema";
 import { Db } from "../../platform/db";
@@ -31,8 +32,10 @@ import {
   getAmbiguousQueuedChatRun,
   listRecoverableQueuedChatRuns,
   listQueuedChatRuns,
+  listWorktreeCreationJobs,
   normalizeChatRuntime,
   renameChat,
+  updateWorktreeCreationJob,
 } from "./repository";
 
 afterEach(() => {
@@ -198,6 +201,53 @@ describe("beginChatSend", () => {
 });
 
 describe("worktree creation jobs", () => {
+  it("restores branch-owner recovery metadata after a daemon restart", async () => {
+    const database = await memoryDatabase();
+    await seedChat(database, { title: "New chat" });
+    await runWithDatabase(
+      database,
+      createWorktreeCreationJob({
+        chatId: "chat-1",
+        state: {
+          jobId: "job-1",
+          progress: 0,
+          stage: "fetching",
+          status: "creating",
+        },
+      }),
+    );
+    await runWithDatabase(
+      database,
+      updateWorktreeCreationJob({
+        chatId: "chat-1",
+        state: {
+          error: "The branch is already checked out.",
+          errorCode: "worktree-branch-in-use",
+          jobId: "job-1",
+          progress: 40,
+          relatedChatId: "chat-owning-branch",
+          stage: "worktree",
+          status: "failed",
+        },
+      }),
+    );
+
+    // ChatEngine rebuilds its decorated chat state from this repository list
+    // after every daemon start, rather than retaining an in-memory job object.
+    await expect(
+      runWithDatabase(database, listWorktreeCreationJobs()),
+    ).resolves.toEqual([
+      expect.objectContaining({
+        chatId: "chat-1",
+        state: expect.objectContaining({
+          errorCode: "worktree-branch-in-use",
+          relatedChatId: "chat-owning-branch",
+          status: "failed",
+        }),
+      }),
+    ]);
+  });
+
   it("turns an interrupted creating job into a retryable failure", async () => {
     const database = await memoryDatabase();
     await seedChat(database, { title: "New chat" });
@@ -391,6 +441,7 @@ async function memoryDatabase(): Promise<AppDatabase> {
       cwd TEXT,
       runtime TEXT NOT NULL,
       remote_thread_id TEXT,
+      source_link TEXT,
       created_at TEXT NOT NULL,
       updated_at TEXT NOT NULL,
       archived INTEGER NOT NULL DEFAULT 0,
@@ -412,9 +463,12 @@ async function memoryDatabase(): Promise<AppDatabase> {
     CREATE TABLE worktree_creation_jobs (
       chat_id TEXT PRIMARY KEY,
       error TEXT,
+      error_code TEXT,
       job_id TEXT NOT NULL,
       progress INTEGER NOT NULL,
+      related_chat_id TEXT,
       setup_approval TEXT,
+      worktree_ref TEXT,
       stage TEXT NOT NULL,
       status TEXT NOT NULL,
       FOREIGN KEY (chat_id) REFERENCES chats(id) ON DELETE CASCADE
@@ -437,6 +491,7 @@ async function memoryDatabase(): Promise<AppDatabase> {
       customAgents,
       projects,
       queuedChatRuns,
+      pullRequests,
       worktreeCreationJobs,
     },
   }) as AppDatabase;

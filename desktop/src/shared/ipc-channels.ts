@@ -1,4 +1,7 @@
 export const TIPC_CHANNELS = [
+  "appLinearTokenClear",
+  "appLinearTokenHas",
+  "appLinearTokenSet",
   "appFetchUrlPreview",
   "appReadClipboardSourceUrl",
   "appSetLanguage",

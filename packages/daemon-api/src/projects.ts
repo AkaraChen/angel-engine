@@ -29,6 +29,11 @@ export interface ProjectWorktreeCreateInput {
    */
   branchName?: string;
   projectId: string;
+  ref?: {
+    remoteRef?: string;
+    type: "existingBranch" | "newBranchFrom";
+    value: string;
+  };
   setupApproval?: string;
   /**
    * Git ref to check out (commit-ish or remote tracking ref). Defaults to HEAD.
@@ -46,6 +51,7 @@ export interface ProjectWorktreeCreateInput {
 
 export interface ProjectWorktreeCreateResult {
   branch: string;
+  createdBranch: boolean;
   cwd: string;
   projectId: string;
   root: string;

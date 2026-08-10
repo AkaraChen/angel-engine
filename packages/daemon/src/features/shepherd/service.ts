@@ -260,6 +260,9 @@ export class ShepherdService {
   /**
    * User send yield: non-shepherd origin + active session → settled/stopped.
    * Returns true when yield happened.
+   *
+   * Swallows store failures so chat-send paths still work when the DB is not
+   * available (test harnesses, startup races).
    */
   async maybeYieldToUser(input: {
     chatId: string | undefined;
@@ -267,17 +270,21 @@ export class ShepherdService {
   }): Promise<boolean> {
     if (!is.nonEmptyString(input.chatId)) return false;
     if (!isShepherdYieldOrigin(input.origin)) return false;
-    const session = await this.#ports.getSessionByChatId(input.chatId);
-    if (
-      session === null ||
-      (session.state !== "watching" && session.state !== "queued")
-    ) {
+    try {
+      const session = await this.#ports.getSessionByChatId(input.chatId);
+      if (
+        session === null ||
+        (session.state !== "watching" && session.state !== "queued")
+      ) {
+        return false;
+      }
+      await this.#ports.settleSession(session, "stopped");
+      this.#awaitingProgress.delete(session.chatId);
+      this.#publish(session.chatId);
+      return true;
+    } catch {
       return false;
     }
-    await this.#ports.settleSession(session, "stopped");
-    this.#awaitingProgress.delete(session.chatId);
-    this.#publish(session.chatId);
-    return true;
   }
 
   /**
@@ -321,7 +328,7 @@ export class ShepherdService {
     this.#pollTimer = this.#setTimer(() => {
       this.#pollTimer = undefined;
       void this.#pollAll({ reschedule: true }).catch(() => {
-        this.#schedulePoll(ACTIVE_POLL_MS);
+        // Keep quiet; #pollAll already parks on failure.
       });
     }, delayMs);
   }
@@ -339,10 +346,12 @@ export class ShepherdService {
     }
     this.#pollRunning = true;
     let nextDelay = IDLE_POLL_MS;
+    let shouldReschedule = options.reschedule;
     try {
       const sessions = await this.#ports.listActiveSessions();
       if (sessions.length === 0) {
         // No active sessions — stop the poller until start/resume wakes it.
+        shouldReschedule = false;
         return;
       }
 
@@ -352,12 +361,19 @@ export class ShepherdService {
         if (result === "active") anyActive = true;
       }
       nextDelay = anyActive ? ACTIVE_POLL_MS : IDLE_POLL_MS;
+    } catch {
+      // Store/gh failures: park the poller instead of spinning forever.
+      shouldReschedule = false;
     } finally {
       this.#pollRunning = false;
-      if (options.reschedule) {
-        const stillActive = await this.#ports.listActiveSessions();
-        if (stillActive.length > 0) {
-          this.#schedulePoll(nextDelay);
+      if (shouldReschedule) {
+        try {
+          const stillActive = await this.#ports.listActiveSessions();
+          if (stillActive.length > 0) {
+            this.#schedulePoll(nextDelay);
+          }
+        } catch {
+          // leave poller idle until the next explicit wake
         }
       }
     }

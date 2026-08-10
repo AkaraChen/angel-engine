@@ -167,9 +167,15 @@ export function NewChatComposer({
     ? projectSuggestionKeys
     : chatSuggestionKeys;
 
+  const editor = useComposerEditor();
+  useTerminalSelectionInsert(editor);
+  const sourceAttachment = editor.githubAttachments[0];
+  const isPullRequest =
+    sourceAttachment?.provider === "github" &&
+    sourceAttachment.kind === "pullRequest";
   const sendChatMessage = useSendChatMessage(slotKey, {
     chatId: undefined,
-    creationLocation,
+    creationLocation: isPullRequest ? "worktree" : creationLocation,
     cwd,
     model,
     mode,
@@ -181,10 +187,23 @@ export function NewChatComposer({
     projectId: projectId ?? null,
     reasoningEffort,
     runtime,
+    sourceLink:
+      sourceAttachment === undefined
+        ? undefined
+        : {
+            kind: sourceAttachment.kind,
+            provider: sourceAttachment.provider,
+            url: sourceAttachment.url,
+          },
+    worktreeRef:
+      isPullRequest && is.nonEmptyString(sourceAttachment.headRefName)
+        ? {
+            remoteRef: `pull/${sourceAttachment.number}/head`,
+            type: "existingBranch",
+            value: sourceAttachment.headRefName,
+          }
+        : undefined,
   });
-
-  const editor = useComposerEditor();
-  useTerminalSelectionInsert(editor);
   const { isEmpty } = editor;
 
   const send = useCallback(

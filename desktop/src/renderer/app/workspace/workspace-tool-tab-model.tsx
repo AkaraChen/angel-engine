@@ -11,6 +11,7 @@ import {
   FileText,
   Folder,
   GitBranch,
+  GitPullRequest,
   TerminalWindow as TerminalIcon,
 } from "@phosphor-icons/react";
 import { useCallback, useRef } from "react";
@@ -19,6 +20,7 @@ import {
   workspaceToolChecksTabId,
   workspaceToolFilesTabId,
   workspaceToolGitTabId,
+  workspaceToolPullRequestTabId,
   workspaceToolProcessesTabId,
 } from "@/app/workspace/workspace-tool-store";
 
@@ -134,6 +136,7 @@ export interface WorkspaceToolPinnedTabLabels {
   checks: string;
   files: string;
   gitChanges: string;
+  pullRequest: string;
   processes: string;
 }
 
@@ -161,6 +164,12 @@ export function workspaceToolTabItems(
       title: labels.checks,
     },
     {
+      icon: GitPullRequest,
+      id: workspaceToolPullRequestTabId,
+      pinned: true,
+      title: labels.pullRequest,
+    },
+    {
       icon: Cpu,
       id: workspaceToolProcessesTabId,
       pinned: true,
@@ -183,6 +192,7 @@ export function visibleActiveWorkspaceToolTabId(
     snapshot.activeTabId === workspaceToolFilesTabId ||
     snapshot.activeTabId === workspaceToolGitTabId ||
     snapshot.activeTabId === workspaceToolChecksTabId ||
+    snapshot.activeTabId === workspaceToolPullRequestTabId ||
     snapshot.activeTabId === workspaceToolProcessesTabId ||
     snapshot.tabs.some((tab) => tab.id === snapshot.activeTabId)
   ) {

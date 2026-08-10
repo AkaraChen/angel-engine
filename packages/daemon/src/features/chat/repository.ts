@@ -55,6 +55,17 @@ export function listArchivedChats() {
   );
 }
 
+export function findActiveChatByCwd(cwd: string) {
+  return withDatabase((database) =>
+    database
+      .select()
+      .from(chats)
+      .where(and(eq(chats.archived, false), eq(chats.cwd, cwd)))
+      .limit(1)
+      .get(),
+  );
+}
+
 export function getChat(
   id: string,
 ): Effect.Effect<Chat | null, DaemonError, Db> {
@@ -88,6 +99,7 @@ export function createChat(
             id: randomUUID(),
             projectId: normalizeOptionalString(input.projectId),
             remoteThreadId: normalizeOptionalString(input.remoteThreadId),
+            sourceLink: input.sourceLink,
             runtime,
             title: normalizeTitle(input.title),
             updatedAt: now,
@@ -283,6 +295,7 @@ export function getAmbiguousQueuedChatRun(chatId: string) {
 export interface PersistedWorktreeCreationJob {
   chatId: string;
   setupApproval?: string;
+  worktreeRef?: ChatCreateInput["worktreeRef"];
   state: WorktreeCreationState;
 }
 
@@ -339,6 +352,8 @@ export function failInterruptedWorktreeCreationJobs() {
       .update(worktreeCreationJobs)
       .set({
         error: "Worktree creation was interrupted. Retry or cancel it.",
+        errorCode: null,
+        relatedChatId: null,
         status: "failed",
       })
       .where(eq(worktreeCreationJobs.status, "creating"))
@@ -350,9 +365,12 @@ function jobValues(job: PersistedWorktreeCreationJob) {
   return {
     chatId: job.chatId,
     error: job.state.error ?? null,
+    errorCode: job.state.errorCode ?? null,
     jobId: job.state.jobId,
     progress: job.state.progress,
+    relatedChatId: job.state.relatedChatId ?? null,
     setupApproval: job.setupApproval ?? null,
+    worktreeRef: job.worktreeRef ?? null,
     stage: job.state.stage,
     status: job.state.status,
   };
@@ -364,10 +382,13 @@ function persistedWorktreeCreationJob(
   return {
     chatId: row.chatId,
     setupApproval: row.setupApproval ?? undefined,
+    worktreeRef: row.worktreeRef ?? undefined,
     state: {
       error: row.error ?? undefined,
+      errorCode: row.errorCode ?? undefined,
       jobId: row.jobId,
       progress: row.progress,
+      relatedChatId: row.relatedChatId ?? undefined,
       stage: row.stage as WorktreeCreationState["stage"],
       status: row.status as WorktreeCreationState["status"],
     },

@@ -1,5 +1,5 @@
 import { execFile } from "node:child_process";
-import { promisify } from "node:util";
+import { promisify, stripVTControlCharacters } from "node:util";
 import is from "@sindresorhus/is";
 import which from "which";
 
@@ -11,38 +11,63 @@ const GH_TIMEOUT_MS = 30_000;
 
 export type GhRunner = (
   args: string[],
-  options?: { cwd?: string },
+  options?: { cwd?: string; timeoutMs?: number },
 ) => Promise<{
   stderr: string;
   stdout: string;
 }>;
 
+interface GhExecutorOptions {
+  cwd?: string;
+  env: NodeJS.ProcessEnv;
+  maxBuffer: number;
+  timeout: number;
+}
+
+export type GhExecutor = (
+  executable: string,
+  args: string[],
+  options: GhExecutorOptions,
+) => Promise<{ stderr: Buffer | string; stdout: Buffer | string }>;
+
 export async function findGhPath(): Promise<string | null> {
   return which("gh", { nothrow: true });
 }
 
-export async function runGhCli(
-  args: string[],
-  options: { cwd?: string } = {},
-): Promise<{ stderr: string; stdout: string }> {
-  const result = await execFileAsync("gh", args, {
-    cwd: options.cwd,
-    env: {
+export function createGhRunner(execute: GhExecutor): GhRunner {
+  return async (args, options = {}) => {
+    const env: NodeJS.ProcessEnv = {
       ...process.env,
       GH_NO_UPDATE_NOTIFIER: "1",
       GH_PAGER: "cat",
       GH_PROMPT_DISABLED: "1",
       GIT_TERMINAL_PROMPT: "0",
       NO_COLOR: "1",
-    },
-    maxBuffer: GH_OUTPUT_MAX_BUFFER,
-    timeout: GH_TIMEOUT_MS,
-  });
-  return {
-    stderr: result.stderr.toString(),
-    stdout: result.stdout.toString(),
+    };
+    delete env.CLICOLOR_FORCE;
+    delete env.FORCE_COLOR;
+
+    try {
+      const result = await execute("gh", args, {
+        cwd: options.cwd,
+        env,
+        maxBuffer: GH_OUTPUT_MAX_BUFFER,
+        timeout: options.timeoutMs ?? GH_TIMEOUT_MS,
+      });
+      return {
+        stderr: cleanOutput(result.stderr),
+        stdout: cleanOutput(result.stdout),
+      };
+    } catch (cause) {
+      throw cleanFailure(cause);
+    }
   };
 }
+
+const executeGhFile: GhExecutor = async (executable, args, options) =>
+  execFileAsync(executable, args, options);
+
+export const runGhCli = createGhRunner(executeGhFile);
 
 /**
  * Like `runGhCli`, but keeps stdout/stderr when the process exits non-zero.
@@ -72,6 +97,23 @@ export async function runGhCliCapturingExit(
 
 export function mapGhFailure(cause: unknown): DaemonError {
   const message = stderrOrMessage(cause).toLowerCase();
+  if (
+    message.includes("resource not accessible") ||
+    message.includes("must have push access") ||
+    message.includes("permission denied") ||
+    message.includes("http 403") ||
+    message.includes("status 403")
+  ) {
+    return DaemonError.githubPermissionDenied();
+  }
+  if (
+    message.includes("not mergeable") ||
+    message.includes("merge conflict") ||
+    message.includes("head branch was modified") ||
+    message.includes("base branch policy prohibits")
+  ) {
+    return DaemonError.githubMergeConflict();
+  }
   if (
     message.includes("not logged into") ||
     message.includes("to re-authenticate") ||
@@ -147,4 +189,33 @@ function stderrOrMessage(cause: unknown): string {
   }
   if (cause instanceof Error) return cause.message;
   return String(cause);
+}
+
+function cleanOutput(value: Buffer | string): string {
+  return stripVTControlCharacters(value.toString());
+}
+
+function cleanFailure(cause: unknown): unknown {
+  if (!is.object(cause)) return cause;
+
+  const record = cause as {
+    message?: unknown;
+    stderr?: unknown;
+    stdout?: unknown;
+  };
+  const message = is.string(record.message)
+    ? stripVTControlCharacters(record.message)
+    : "GitHub CLI command failed.";
+  const cleanCause = Object.assign(new Error(message), cause) as Error & {
+    stderr?: string;
+    stdout?: string;
+  };
+  cleanCause.message = message;
+  if (Buffer.isBuffer(record.stderr) || is.string(record.stderr)) {
+    cleanCause.stderr = cleanOutput(record.stderr);
+  }
+  if (Buffer.isBuffer(record.stdout) || is.string(record.stdout)) {
+    cleanCause.stdout = cleanOutput(record.stdout);
+  }
+  return cleanCause;
 }

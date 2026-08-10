@@ -10,6 +10,7 @@ export default defineConfig({
     "src/events.ts",
     "src/chat/index.ts",
     "src/github.ts",
+    "src/links.ts",
     "src/mime.ts",
     "src/projects.ts",
     "src/shepherd.ts",

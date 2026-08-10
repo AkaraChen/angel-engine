@@ -1,5 +1,6 @@
 import type { LocaleResource } from "./schema";
 import { scheduleTranslation } from "./schedule";
+import { pullRequestEn } from "./pull-request";
 
 export const de = {
   translation: {
@@ -63,6 +64,7 @@ export const de = {
       proposed: "Vorgeschlagen",
       question: "Frage",
       reload: "Neu laden",
+      retry: "Erneut versuchen",
       running: "Läuft",
       save: "Speichern",
       saving: "Speichern",
@@ -191,6 +193,44 @@ export const de = {
           unstaged: "Nur nicht bereitgestellt",
           worktree: "Nicht commitete Änderungen",
         },
+        createPullRequest: {
+          ahead: "{{count}} Commits vor {{base}}",
+          base: "Basis-Branch",
+          bodyPlaceholder: "Änderung beschreiben",
+          create: "Pull Request erstellen",
+          created: "Pull Request #{{number}} erstellt",
+          creating: "Pull Request wird erstellt…",
+          description:
+            "Prüfe Branches und Beschreibung vor der Veröffentlichung.",
+          existing: "Pull Request #{{number}} existiert bereits",
+          noCommits: "Zwischen Basis- und Head-Branch gibt es keine Commits.",
+          openInBrowser: "Im Browser öffnen",
+          pushedRetry:
+            "Branch gepusht. Erstellung des Pull Requests erneut versuchen.",
+          pushing: "Branch wird gepusht…",
+          preview: {
+            additions: "Hinzugefügt",
+            body: "Beschreibung",
+            commits: "Commits",
+            copied: "Kopiert",
+            copyLink: "Link kopieren",
+            deletions: "Gelöscht",
+            description: "Pull Request vor dem Öffnen im Browser prüfen.",
+            emptyBody: "Keine Beschreibung vorhanden.",
+            filesChanged: "Geänderte Dateien",
+            loadFailed: "Pull-Request-Details konnten nicht geladen werden.",
+            open: "Offen",
+            title: "Pull Request #{{number}}",
+          },
+          retry: "Erneut versuchen",
+          short: "PR erstellen",
+          title: "Pull Request erstellen",
+          titlePlaceholder: "Pull-Request-Titel",
+          view: "Pull Request #{{number}} anzeigen",
+          viewShort: "PR #{{number}}",
+          willPushMany: "{{count}} Commits werden nach origin/{{head}} gepusht",
+          willPushOne: "1 Commit wird nach origin/{{head}} gepusht",
+        },
         dockInSidebar: "In Seitenleiste andocken",
         empty: {
           checksUnavailable: "Checks nicht verfügbar",
@@ -216,6 +256,7 @@ export const de = {
           detached: "Losgelöster HEAD",
           dirty: "{{value}} geändert",
           noCommits: "Noch keine Commits",
+          noCommitsToPropose: "Keine Commits vorzuschlagen",
           noUpstream: "Kein Upstream",
           changes: "Änderungen",
           currentBranch: "Aktueller Branch",
@@ -241,6 +282,7 @@ export const de = {
           },
           pushing: "Wird gepusht",
         },
+        pullRequest: pullRequestEn,
         listeningPorts: "Lauschende Ports",
         resizeFileTree: "Dateibaumbreite anpassen",
         resizeGitList: "Breite der Änderungsliste anpassen",
@@ -251,6 +293,7 @@ export const de = {
           gitChanges: "Git-Änderungen",
           newTab: "Neuer Tab",
           processes: "Prozesse",
+          pullRequest: "Pull Request",
           tabs: "Tabs",
           tools: "Werkzeuge",
           workspaceTabs: "Workspace-Tabs",
@@ -379,6 +422,7 @@ export const de = {
       noChats: "Keine Chats",
       noProjects: "Noch keine Projekte",
       noStandaloneChats: "Keine eigenständigen Chats",
+      openBranchChat: "Chat öffnen, der diesen Branch verwendet",
       projects: "Projekte",
       powerWorktreeHome: "Home",
       powerWorktreeHistoricalChat: "Historical Chat",
@@ -534,6 +578,21 @@ export const de = {
         sourceUser: "User",
         sourceUserOverride: "User · overridden",
         warningsCount: "{{count}} warning(s) while loading keybindings",
+      },
+      linear: {
+        apiConnection: "API-Verbindung",
+        connect: "Verbinden",
+        connected: "Verbunden",
+        connectFailed: "Linear konnte nicht verbunden werden.",
+        description:
+          "Das Token wird vom Desktop-Hauptprozess verschlüsselt und niemals wieder dem Renderer offengelegt.",
+        disconnect: "Trennen",
+        disconnectFailed: "Linear konnte nicht getrennt werden.",
+        notConnected: "Nicht verbunden",
+        replaceToken: "Token ersetzen",
+        title: "Linear",
+        tokenLabel: "Linear-API-Token",
+        tokenPlaceholder: "lin_api_…",
       },
       mobile: {
         copied: "Kopiert",
@@ -756,6 +815,9 @@ export const de = {
       fileTypeBlocked: "Dateityp blockiert",
       fileTooLarge: "Datei ist zu groß",
       files: "Dateien",
+      fromLink: "Aus Link",
+      fromLinkPlaceholder:
+        "GitHub- oder Linear-Issue-Link einfügen oder GitHub durchsuchen",
       githubErrors: {
         cliMissing: "GitHub CLI (gh) ist nicht installiert oder nicht im PATH.",
         cliUnauthenticated:
@@ -767,6 +829,11 @@ export const de = {
       },
       githubIssue: "Issue",
       githubPullRequest: "Pull request",
+      linearConnectAction: "Linear verbinden",
+      linearConnectDescription:
+        "Verbinde Linear, bevor dieses Issue aufgelöst wird.",
+      linearIssue: "Linear-Issue",
+      linearItemMeta: "{{identifier}} · Linear · {{state}}",
       loadingCommands: "Befehle werden geladen",
       loadingSkills: "Skills werden geladen",
       loadingValue: "Wird geladen...",
@@ -796,6 +863,24 @@ export const de = {
       skills: "Skills",
       switchToBuild: "In Ausführungsmodus wechseln",
       switchToPlan: "In Planmodus wechseln",
+      taskLinkErrors: {
+        linearFetchFailed: "Dieses Linear-Issue konnte nicht geladen werden.",
+        linearNotFound: "Linear-Issue wurde nicht gefunden.",
+        linearUnauthorized: "Linear hat das konfigurierte API-Token abgelehnt.",
+        prForkUnsupported:
+          "Pull Requests aus Forks werden noch nicht unterstützt.",
+        unsupported: "Dieser Aufgabenlink wird nicht unterstützt.",
+      },
+      taskLinkHintComplete:
+        "Füge einen vollständigen Link zu einem GitHub-Issue, Pull Request oder Linear-Issue ein.",
+      taskLinkHintGitHubPath:
+        "Dies ist ein GitHub-Link, aber kein Issue oder Pull Request.",
+      taskLinkHintLinearPath: "Dies ist ein Linear-Link, aber kein Issue.",
+      taskLinkHintSupported:
+        "Unterstützt werden GitHub-Issues, GitHub-Pull-Requests und Linear-Issues.",
+      taskLinkStateClosed: "Geschlossen",
+      taskLinkStateMerged: "Zusammengeführt",
+      taskLinkStateOpen: "Offen",
       toasts: {
         couldNotChangeMode: "Modus konnte nicht geändert werden",
         couldNotReadFile: "Datei konnte nicht gelesen werden",

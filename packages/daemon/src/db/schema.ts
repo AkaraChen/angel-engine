@@ -1,4 +1,15 @@
-import { index, integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
+import type {
+  ChatSourceLink,
+  WorktreeCreationState,
+} from "@angel-engine/daemon-api/chat";
+import type { ProjectWorktreeCreateInput } from "@angel-engine/daemon-api/projects";
+import {
+  index,
+  integer,
+  sqliteTable,
+  text,
+  uniqueIndex,
+} from "drizzle-orm/sqlite-core";
 
 export const projects = sqliteTable("projects", {
   id: text("id").primaryKey(),
@@ -30,6 +41,7 @@ export const chats = sqliteTable(
     cwd: text("cwd"),
     runtime: text("runtime").notNull(),
     remoteThreadId: text("remote_thread_id"),
+    sourceLink: text("source_link", { mode: "json" }).$type<ChatSourceLink>(),
     createdAt: text("created_at").notNull(),
     updatedAt: text("updated_at").notNull(),
     archived: integer("archived", { mode: "boolean" }).notNull().default(false),
@@ -67,9 +79,14 @@ export const worktreeCreationJobs = sqliteTable("worktree_creation_jobs", {
     .primaryKey()
     .references(() => chats.id, { onDelete: "cascade" }),
   error: text("error"),
+  errorCode: text("error_code").$type<WorktreeCreationState["errorCode"]>(),
   jobId: text("job_id").notNull(),
   progress: integer("progress").notNull(),
+  relatedChatId: text("related_chat_id"),
   setupApproval: text("setup_approval"),
+  worktreeRef: text("worktree_ref", { mode: "json" }).$type<
+    ProjectWorktreeCreateInput["ref"]
+  >(),
   stage: text("stage").notNull(),
   status: text("status").notNull(),
 });
@@ -90,6 +107,44 @@ export const queuedChatRuns = sqliteTable(
   },
   (table) => [index("queued_chat_runs_chat_id_idx").on(table.chatId)],
 );
+
+export const pullRequests = sqliteTable(
+  "pull_requests",
+  {
+    id: text("id").primaryKey(),
+    projectId: text("project_id").references(() => projects.id, {
+      onDelete: "cascade",
+    }),
+    chatId: text("chat_id").references(() => chats.id, {
+      onDelete: "set null",
+    }),
+    root: text("root").notNull(),
+    branch: text("branch").notNull(),
+    baseBranch: text("base_branch").notNull(),
+    number: integer("number").notNull(),
+    url: text("url").notNull(),
+    title: text("title").notNull(),
+    isDraft: integer("is_draft", { mode: "boolean" }).notNull().default(false),
+    state: text("state").notNull(),
+    createdAt: text("created_at").notNull(),
+    updatedAt: text("updated_at").notNull(),
+  },
+  (table) => [
+    uniqueIndex("pull_requests_root_branch_idx").on(table.root, table.branch),
+  ],
+);
+
+export type ProjectRow = typeof projects.$inferSelect;
+export type NewProjectRow = typeof projects.$inferInsert;
+export type CustomAgentRow = typeof customAgents.$inferSelect;
+export type NewCustomAgentRow = typeof customAgents.$inferInsert;
+export type ChatRow = typeof chats.$inferSelect;
+export type NewChatRow = typeof chats.$inferInsert;
+export type ChatDiffAnchorRow = typeof chatDiffAnchors.$inferSelect;
+export type WorktreeCreationJobRow = typeof worktreeCreationJobs.$inferSelect;
+export type QueuedChatRunRow = typeof queuedChatRuns.$inferSelect;
+export type PullRequestRow = typeof pullRequests.$inferSelect;
+export type NewPullRequestRow = typeof pullRequests.$inferInsert;
 
 /** One active PR shepherd per chat (enforced by unique chatId). */
 export const shepherdSessions = sqliteTable("shepherd_sessions", {
@@ -118,13 +173,4 @@ export const shepherdSessions = sqliteTable("shepherd_sessions", {
   updatedAt: text("updated_at").notNull(),
 });
 
-export type ProjectRow = typeof projects.$inferSelect;
-export type NewProjectRow = typeof projects.$inferInsert;
-export type CustomAgentRow = typeof customAgents.$inferSelect;
-export type NewCustomAgentRow = typeof customAgents.$inferInsert;
-export type ChatRow = typeof chats.$inferSelect;
-export type NewChatRow = typeof chats.$inferInsert;
-export type ChatDiffAnchorRow = typeof chatDiffAnchors.$inferSelect;
-export type WorktreeCreationJobRow = typeof worktreeCreationJobs.$inferSelect;
-export type QueuedChatRunRow = typeof queuedChatRuns.$inferSelect;
 export type ShepherdSessionRow = typeof shepherdSessions.$inferSelect;

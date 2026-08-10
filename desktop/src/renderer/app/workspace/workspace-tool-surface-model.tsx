@@ -46,10 +46,10 @@ export interface WorkspaceToolSurfaceModel {
   active: boolean;
   activeDynamicTab?: WorkspaceToolSurfaceDynamicTab;
   activeTabId: string;
+  chatId: string | null;
   addBrowserTab: () => void;
   addTerminalTab: () => void;
   api: ApiClient;
-  chatId: string | null;
   contextKey: string | null;
   closeDynamicTab: (tab: WorkspaceToolSurfaceDynamicTab) => void;
   host: WorkspaceToolSurfaceHost;
@@ -259,6 +259,7 @@ export function useWorkspaceToolSurfaceModel({
         checks: t("workspace.tools.tabs.checks"),
         files: t("workspace.tools.tabs.files"),
         gitChanges: t("workspace.tools.tabs.gitChanges"),
+        pullRequest: t("workspace.tools.tabs.pullRequest"),
         processes: t("workspace.tools.tabs.processes"),
       }),
     [snapshot.tabs, t],

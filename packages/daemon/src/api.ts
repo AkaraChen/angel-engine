@@ -42,9 +42,13 @@ import {
   githubCreatePullRequestInputSchema,
   githubCreateWorkspaceFromPullRequestInputSchema,
   githubListPullRequestsInputSchema,
+  githubMergeInputSchema,
   githubPullRequestTemplateInputSchema,
+  githubResolveThreadInputSchema,
   githubViewPullRequestInputSchema,
+  pullRequestCreateInputSchema,
 } from "@angel-engine/daemon-api/github";
+import { taskLinkResolveInputSchema } from "@angel-engine/daemon-api/links";
 import {
   createProjectInputSchema,
   managedWorktreeDeleteInputSchema,
@@ -86,6 +90,18 @@ import {
 import { resolveGitHubUrl } from "./features/github/resolve";
 import { fetchGitHubReviewThreads } from "./features/github/review-threads";
 import { createWorkspaceFromPullRequest } from "./features/github/workspace-from-pr";
+import {
+  createPullRequest as createWorkspacePullRequest,
+  getStoredPullRequest,
+  pullRequestPreflight,
+} from "./features/github/pull-request-create";
+import {
+  getGitHubPullRequestStatus,
+  mergeGitHubPullRequest,
+  resolveGitHubReviewThread,
+} from "./features/github/pull-request";
+import { resolveTaskLink } from "./features/links/resolve";
+import { setLinearToken } from "./features/links/secrets";
 import { listAvailableAgents } from "./features/agents/availability";
 import {
   createCustomAgent,
@@ -160,6 +176,7 @@ export function registerApi(
   app: Hono,
   runtime: DaemonRuntime,
   chatEvents: ChatEventsApi,
+  options: { internalBridgeSecret?: string } = {},
 ) {
   const run = <A>(
     effect: Effect.Effect<A, DaemonError, Db | ChatEngine>,
@@ -421,6 +438,29 @@ export function registerApi(
     chatEvents.metadataChanged([chat.id]);
     return context.json(chat);
   });
+  app.post("/api/chats/:id/archive-workspace", async (context) => {
+    const result = await run(
+      Effect.gen(function* () {
+        const chat = yield* requireChat(context.req.param("id"));
+        const archived = yield* archiveChat(chat.id);
+        const worktree = managedWorktreePath(chat.cwd);
+        if (worktree === undefined) {
+          return { chat: archived, removedWorktree: null };
+        }
+        const activeChats = yield* listChats();
+        const worktreeStillActive = activeChats.some(
+          (candidate) => managedWorktreePath(candidate.cwd) === worktree,
+        );
+        const removedWorktree = worktreeStillActive
+          ? undefined
+          : yield* removeManagedWorktree(worktree);
+        return { chat: archived, removedWorktree: removedWorktree ?? null };
+      }),
+    );
+    activity.clearChat(result.chat.id);
+    chatEvents.metadataChanged([result.chat.id]);
+    return context.json(result);
+  });
   app.post("/api/chats/:id/load", async (context) =>
     context.json(
       await run(engine((e) => e.loadChatSession(context.req.param("id")))),
@@ -662,6 +702,29 @@ export function registerApi(
       throw DaemonError.invalidRequest("GitHub URL is required.");
     return context.json(await run(resolveGitHubUrl(input)));
   });
+  app.post("/api/links/resolve", async (context) => {
+    const input = taskLinkResolveInputSchema(await context.req.json());
+    if (input instanceof arkType.errors)
+      throw DaemonError.invalidRequest("Task link URL is required.");
+    return context.json(await run(resolveTaskLink(input)));
+  });
+  app.put("/api/internal/secrets/linear", async (context) => {
+    const expectedMainSecret = options.internalBridgeSecret;
+    if (
+      expectedMainSecret === undefined ||
+      expectedMainSecret.length === 0 ||
+      context.req.header("x-angel-main-secret") !== expectedMainSecret
+    ) {
+      throw DaemonError.invalidRequest(
+        "Internal main-process request required.",
+      );
+    }
+    const input = arkType({ "token?": "string" })(await context.req.json());
+    if (input instanceof arkType.errors)
+      throw DaemonError.invalidRequest("Linear secret update is invalid.");
+    setLinearToken(input.token);
+    return context.json({ hasToken: input.token !== undefined });
+  });
   app.get("/api/github/items", async (context) =>
     context.json(
       await run(
@@ -795,6 +858,48 @@ export function registerApi(
       throw DaemonError.invalidRequest("GitHub checks fix input is invalid.");
     }
     return context.json(await run(buildGitHubPrChecksFixPrompt(input)));
+  });
+  app.get("/api/github/pull-request/preflight", async (context) =>
+    context.json(
+      await run(
+        pullRequestPreflight(
+          requireQuery(context.req.query("root"), "root"),
+          context.req.query("base"),
+        ),
+      ),
+    ),
+  );
+  app.get("/api/github/pull-request", async (context) => {
+    const root = context.req.query("root");
+    if (root !== undefined) {
+      return context.json(await run(getStoredPullRequest(root)));
+    }
+    return context.json(
+      await run(
+        getGitHubPullRequestStatus({
+          cwd: requireQuery(context.req.query("cwd"), "cwd"),
+          number: optionalNumber(context.req.query("number")),
+        }),
+      ),
+    );
+  });
+  app.post("/api/github/pull-request", async (context) => {
+    const input = pullRequestCreateInputSchema(await context.req.json());
+    if (input instanceof arkType.errors)
+      throw DaemonError.invalidRequest("Pull request input is invalid.");
+    return context.json(await run(createWorkspacePullRequest(input)));
+  });
+  app.post("/api/github/pull-request/merge", async (context) => {
+    const input = githubMergeInputSchema(await context.req.json());
+    if (input instanceof arkType.errors)
+      throw DaemonError.invalidRequest("Pull request merge input is invalid.");
+    return context.json(await run(mergeGitHubPullRequest(input)));
+  });
+  app.post("/api/github/pull-request/resolve-thread", async (context) => {
+    const input = githubResolveThreadInputSchema(await context.req.json());
+    if (input instanceof arkType.errors)
+      throw DaemonError.invalidRequest("Review thread input is invalid.");
+    return context.json(await run(resolveGitHubReviewThread(input)));
   });
 
   app.post("/api/shepherd/start", async (context) => {

@@ -19,6 +19,7 @@ import type {
   ChatArchivedDeleteInput,
   ChatArchivedDeleteResult,
   ChatArchivedRestoreInput,
+  ChatArchiveWorkspaceResult,
   ChatAvailableSkill,
   ChatCreateInput,
   ChatLoadResult,
@@ -75,16 +76,30 @@ import type {
   GitHubPrChecksResult,
   GitHubListPullRequestsInput,
   GitHubListPullRequestsResult,
-  GitHubPullRequestDetail,
-  GitHubPullRequestTemplateInput,
-  GitHubPullRequestTemplateResult,
   GitHubListRepositoriesInput,
   GitHubListRepositoriesResult,
+  GitHubMergeInput,
+  GitHubMergeResult,
+  GitHubPullRequestDetail,
+  GitHubPullRequestStatus,
+  GitHubPullRequestStatusInput,
+  GitHubPullRequestTemplateInput,
+  GitHubPullRequestTemplateResult,
   GitHubRepositoryOwnersResult,
   GitHubResolveUrlInput,
+  GitHubResolveThreadInput,
+  GitHubResolveThreadResult,
   GitHubResolvedItem,
   GitHubViewPullRequestInput,
+  PullRequestCreateInput,
+  PullRequestCreateResult,
+  PullRequestPreflight,
+  PullRequestRecord,
 } from "@angel-engine/daemon-api/github";
+import type {
+  ResolvedTaskLink,
+  TaskLinkResolveInput,
+} from "@angel-engine/daemon-api/links";
 import type {
   CreateProjectInput,
   ProjectCloneEvent,
@@ -433,6 +448,11 @@ export function createDaemonClient(options: DaemonClientOptions) {
         request<Chat>(`/api/chats/${encodeURIComponent(id)}/archive`, {
           method: "POST",
         }),
+      archiveWorkspace: (id: string) =>
+        request<ChatArchiveWorkspaceResult>(
+          `/api/chats/${encodeURIComponent(id)}/archive-workspace`,
+          { method: "POST" },
+        ),
       archivedDelete: (input: ChatArchivedDeleteInput) =>
         request<ChatArchivedDeleteResult>(
           "/api/chats/archived/delete",
@@ -563,6 +583,15 @@ export function createDaemonClient(options: DaemonClientOptions) {
           "/api/github/pull-requests/workspace",
           json("POST", input),
         ),
+      createWorkspacePullRequest: (input: PullRequestCreateInput) =>
+        request<PullRequestCreateResult>(
+          "/api/github/pull-request",
+          json("POST", input),
+        ),
+      getWorkspacePullRequest: (root: string) =>
+        request<PullRequestRecord | null>(
+          `/api/github/pull-request?${query({ root })}`,
+        ),
       listItems: (input: GitHubListItemsInput) =>
         request<GitHubListItemsResult>(`/api/github/items?${query(input)}`),
       listPrChecks: (input: GitHubPrChecksInput) =>
@@ -588,10 +617,32 @@ export function createDaemonClient(options: DaemonClientOptions) {
         request<GitHubRepositoryOwnersResult>("/api/github/repo-owners"),
       resolveUrl: (input: GitHubResolveUrlInput) =>
         request<GitHubResolvedItem>("/api/github/resolve", json("POST", input)),
+      pullRequestStatus: (input: GitHubPullRequestStatusInput) =>
+        request<GitHubPullRequestStatus>(
+          `/api/github/pull-request?${query(input)}`,
+        ),
+      mergePullRequest: (input: GitHubMergeInput) =>
+        request<GitHubMergeResult>(
+          "/api/github/pull-request/merge",
+          json("POST", input),
+        ),
+      resolveReviewThread: (input: GitHubResolveThreadInput) =>
+        request<GitHubResolveThreadResult>(
+          "/api/github/pull-request/resolve-thread",
+          json("POST", input),
+        ),
+      workspacePullRequestPreflight: (root: string, base?: string) =>
+        request<PullRequestPreflight>(
+          `/api/github/pull-request/preflight?${query({ base, root })}`,
+        ),
       viewPullRequest: (input: GitHubViewPullRequestInput) =>
         request<GitHubPullRequestDetail>(
           `/api/github/pull-requests/${encodeURIComponent(String(input.number))}?${query({ cwd: input.cwd })}`,
         ),
+    },
+    links: {
+      resolve: (input: TaskLinkResolveInput) =>
+        request<ResolvedTaskLink>("/api/links/resolve", json("POST", input)),
     },
     health: () => request<DaemonHealth>("/api/health"),
     events: {

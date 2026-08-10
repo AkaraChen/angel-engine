@@ -1,4 +1,5 @@
 import { parseArgs } from "node:util";
+import { consumeDaemonBootstrapSecrets } from "./platform/bootstrap-secrets";
 import { createDaemon } from "./server";
 
 const { values } = parseArgs({
@@ -27,8 +28,11 @@ if (!Number.isInteger(port) || port < 0 || port > 65_535) {
 }
 
 async function main() {
+  const { internalBridgeSecret, mobilePassword } =
+    consumeDaemonBootstrapSecrets();
   const daemon = await createDaemon({
     dataDir: values["data-dir"] as string,
+    internalBridgeSecret,
     migrationsDir: values["migrations-dir"],
     packaged: values.packaged,
     host: values.host,
@@ -36,7 +40,7 @@ async function main() {
     mobileDir: values["mobile-dir"],
     // The password is passed via the environment, not argv, so it does not leak
     // into process listings or logs.
-    mobilePassword: process.env.ANGEL_MOBILE_PASSWORD,
+    mobilePassword,
     port,
     serveMobile: values["serve-mobile"],
     version: values.version,

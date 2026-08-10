@@ -6,7 +6,12 @@ export interface WorkspaceToolSurfaceContext {
   root?: string | null;
 }
 
-export type WorkspaceToolPinnedTabId = "files" | "git" | "checks" | "processes";
+export type WorkspaceToolPinnedTabId =
+  | "files"
+  | "git"
+  | "checks"
+  | "pr"
+  | "processes";
 
 // Pinned tab ids or dynamic tab ids; dynamic ids are runtime-generated strings.
 export type WorkspaceToolTabId = WorkspaceToolPinnedTabId | (string & {});

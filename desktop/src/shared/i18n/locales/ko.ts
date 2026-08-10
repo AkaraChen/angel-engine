@@ -1,5 +1,6 @@
 import type { LocaleResource } from "./schema";
 import { scheduleTranslation } from "./schedule";
+import { pullRequestEn } from "./pull-request";
 
 export const ko = {
   translation: {
@@ -63,6 +64,7 @@ export const ko = {
       proposed: "제안됨",
       question: "질문",
       reload: "다시 로드",
+      retry: "다시 시도",
       running: "실행 중",
       save: "저장",
       saving: "저장 중",
@@ -189,6 +191,43 @@ export const ko = {
           unstaged: "스테이지되지 않은 변경만",
           worktree: "커밋되지 않은 변경",
         },
+        createPullRequest: {
+          ahead: "{{base}}보다 {{count}}개 커밋 앞섬",
+          base: "기본 브랜치",
+          bodyPlaceholder: "변경 내용을 설명하세요",
+          create: "풀 리퀘스트 만들기",
+          created: "풀 리퀘스트 #{{number}}을 만들었습니다",
+          creating: "풀 리퀘스트 만드는 중…",
+          description: "게시하기 전에 브랜치와 설명을 확인하세요.",
+          existing: "풀 리퀘스트 #{{number}}이 이미 있습니다",
+          noCommits: "기본 브랜치와 헤드 브랜치 사이에 커밋이 없습니다.",
+          openInBrowser: "브라우저에서 열기",
+          pushedRetry:
+            "브랜치를 푸시했습니다. 풀 리퀘스트 생성을 다시 시도하세요.",
+          pushing: "브랜치 푸시 중…",
+          preview: {
+            additions: "추가",
+            body: "설명",
+            commits: "커밋",
+            copied: "복사됨",
+            copyLink: "링크 복사",
+            deletions: "삭제",
+            description: "브라우저에서 열기 전에 풀 리퀘스트를 미리 봅니다.",
+            emptyBody: "설명이 없습니다.",
+            filesChanged: "변경된 파일",
+            loadFailed: "풀 리퀘스트 세부 정보를 불러올 수 없습니다.",
+            open: "열림",
+            title: "풀 리퀘스트 #{{number}}",
+          },
+          retry: "다시 시도",
+          short: "PR 만들기",
+          title: "풀 리퀘스트 만들기",
+          titlePlaceholder: "풀 리퀘스트 제목",
+          view: "풀 리퀘스트 #{{number}} 보기",
+          viewShort: "PR #{{number}}",
+          willPushMany: "{{count}}개 커밋을 origin/{{head}}에 푸시합니다",
+          willPushOne: "커밋 1개를 origin/{{head}}에 푸시합니다",
+        },
         dockInSidebar: "사이드바에 고정",
         empty: {
           checksUnavailable: "검사를 사용할 수 없습니다",
@@ -214,6 +253,7 @@ export const ko = {
           detached: "분리된 HEAD",
           dirty: "{{value}}개 변경됨",
           noCommits: "커밋 없음",
+          noCommitsToPropose: "제안할 커밋이 없습니다",
           noUpstream: "업스트림 없음",
           changes: "변경 사항",
           currentBranch: "현재 브랜치",
@@ -237,6 +277,7 @@ export const ko = {
           },
           pushing: "푸시 중",
         },
+        pullRequest: pullRequestEn,
         listeningPorts: "수신 대기 포트",
         resizeFileTree: "파일 트리 너비 조정",
         resizeGitList: "변경 목록 너비 조정",
@@ -247,6 +288,7 @@ export const ko = {
           gitChanges: "Git 변경",
           newTab: "새 탭",
           processes: "프로세스",
+          pullRequest: "풀 리퀘스트",
           tabs: "탭",
           tools: "도구",
           workspaceTabs: "워크스페이스 탭",
@@ -375,6 +417,7 @@ export const ko = {
       noChats: "채팅이 없습니다",
       noProjects: "아직 프로젝트가 없습니다",
       noStandaloneChats: "독립 채팅이 없습니다",
+      openBranchChat: "이 브랜치를 사용 중인 채팅 열기",
       projects: "프로젝트",
       powerWorktreeHome: "홈",
       powerWorktreeHistoricalChat: "채팅 기록",
@@ -528,6 +571,21 @@ export const ko = {
         sourceUser: "User",
         sourceUserOverride: "User · overridden",
         warningsCount: "{{count}} warning(s) while loading keybindings",
+      },
+      linear: {
+        apiConnection: "API 연결",
+        connect: "연결",
+        connected: "연결됨",
+        connectFailed: "Linear에 연결할 수 없습니다.",
+        description:
+          "토큰은 데스크톱 메인 프로세스에서 암호화되며 렌더러에 다시 노출되지 않습니다.",
+        disconnect: "연결 해제",
+        disconnectFailed: "Linear 연결을 해제할 수 없습니다.",
+        notConnected: "연결되지 않음",
+        replaceToken: "토큰 교체",
+        title: "Linear",
+        tokenLabel: "Linear API 토큰",
+        tokenPlaceholder: "lin_api_…",
       },
       mobile: {
         copied: "복사됨",
@@ -742,6 +800,9 @@ export const ko = {
       fileTypeBlocked: "파일 형식 차단됨",
       fileTooLarge: "파일이 너무 큽니다",
       files: "파일",
+      fromLink: "링크에서",
+      fromLinkPlaceholder:
+        "GitHub 또는 Linear 이슈 링크를 붙여넣거나 GitHub 검색",
       githubErrors: {
         cliMissing: "GitHub CLI(gh)가 설치되지 않았거나 PATH에 없습니다.",
         cliUnauthenticated:
@@ -752,6 +813,10 @@ export const ko = {
       },
       githubIssue: "Issue",
       githubPullRequest: "Pull request",
+      linearConnectAction: "Linear 연결",
+      linearConnectDescription: "이 이슈를 확인하기 전에 Linear에 연결하세요.",
+      linearIssue: "Linear 이슈",
+      linearItemMeta: "{{identifier}} · Linear · {{state}}",
       loadingCommands: "명령 로드 중",
       loadingSkills: "스킬 로드 중",
       loadingValue: "로드 중...",
@@ -781,6 +846,23 @@ export const ko = {
       skills: "스킬",
       switchToBuild: "실행 모드로 전환",
       switchToPlan: "계획 모드로 전환",
+      taskLinkErrors: {
+        linearFetchFailed: "Linear 이슈를 가져올 수 없습니다.",
+        linearNotFound: "Linear 이슈를 찾을 수 없습니다.",
+        linearUnauthorized: "Linear가 설정된 API 토큰을 거부했습니다.",
+        prForkUnsupported: "fork에서 온 Pull Request는 아직 지원되지 않습니다.",
+        unsupported: "이 작업 링크는 지원되지 않습니다.",
+      },
+      taskLinkHintComplete:
+        "GitHub 이슈, Pull Request 또는 Linear 이슈의 전체 링크를 붙여넣으세요.",
+      taskLinkHintGitHubPath:
+        "GitHub 링크이지만 이슈나 Pull Request가 아닙니다.",
+      taskLinkHintLinearPath: "Linear 링크이지만 이슈가 아닙니다.",
+      taskLinkHintSupported:
+        "GitHub 이슈, GitHub Pull Request 및 Linear 이슈 링크를 지원합니다.",
+      taskLinkStateClosed: "닫힘",
+      taskLinkStateMerged: "병합됨",
+      taskLinkStateOpen: "열림",
       toasts: {
         couldNotChangeMode: "모드를 변경할 수 없습니다",
         couldNotReadFile: "파일을 읽을 수 없습니다",
