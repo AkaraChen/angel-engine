@@ -46,6 +46,35 @@ describe("chat session fork", () => {
       sourceChatId: "chat-1",
       version: 1,
     });
+    expect(message.attachments?.[0]?.contentType).toBe("application/json");
+    expect(message.attachments?.[0]?.name).toBe(
+      "angel-session-chat-1-message-2.json",
+    );
+    // Prompt stays short; the full history is only in the attachment payload.
+    expect(message.content).toEqual([
+      {
+        text: "Continue this conversation from the attached message history.",
+        type: "text",
+      },
+    ]);
+  });
+
+  it("sanitizes attachment filenames for path-unsafe message ids", () => {
+    const withColonId: ChatHistoryMessage[] = [
+      {
+        content: [{ text: "hello", type: "text" }],
+        id: "turn-2:assistant",
+        role: "assistant",
+      },
+    ];
+    const message = createForkSessionMessage(
+      withColonId,
+      "turn-2:assistant",
+      "chat/1",
+    );
+    expect(message.attachments?.[0]?.name).toBe(
+      "angel-session-chat-1-turn-2-assistant.json",
+    );
   });
 
   it("rejects an unknown fork node", () => {

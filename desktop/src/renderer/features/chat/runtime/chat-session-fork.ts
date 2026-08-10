@@ -9,7 +9,11 @@ export function createForkSessionMessage(
   sourceChatId: string,
 ): AppendMessage {
   const forkedMessages = messagesThrough(messages, messageId);
-  const filename = `angel-session-${sourceChatId}-${messageId}.json`;
+  // Strip characters that are illegal on Windows paths (e.g. message ids with
+  // colons) so a future runtime that materializes the attachment to disk is safe.
+  const safeMessageId = messageId.replaceAll(/[<>:"/\\|?*]/g, "-");
+  const safeSourceChatId = sourceChatId.replaceAll(/[<>:"/\\|?*]/g, "-");
+  const filename = `angel-session-${safeSourceChatId}-${safeMessageId}.json`;
   const transcript = JSON.stringify(
     {
       forkedAtMessageId: messageId,
@@ -30,13 +34,15 @@ export function createForkSessionMessage(
       },
     ],
     contentType: FORK_ATTACHMENT_MIME_TYPE,
-    id: `fork-${messageId}`,
+    id: `fork-${safeMessageId}`,
     name: filename,
     status: { type: "complete" },
     type: "file",
   };
 
   return {
+    // Real JSON attachment for the agent (EmbeddedTextResource path). The chat
+    // UI must only render this as a card — never inline-expand the payload.
     attachments: [attachment],
     content: [
       {

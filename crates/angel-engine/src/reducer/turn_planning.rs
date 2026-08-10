@@ -292,11 +292,31 @@ fn to_input_refs(input: Vec<UserInput>) -> Result<Vec<UserInputRef>, EngineError
 }
 
 fn to_input_ref(input: UserInput) -> Result<UserInputRef, EngineError> {
-    let (image, file) = input_attachment_refs(&input.kind)?;
     let reference = matches!(
         input.kind,
         UserInputKind::FileMention { .. } | UserInputKind::SkillMention { .. }
     );
+    // Text-like embeds still travel to the model as EmbeddedTextResource,
+    // but the chat UI must render them as attachment cards — never as a raw
+    // text bubble (session-fork JSON, markdown dumps, etc.). The body lives in
+    // `content`; map it onto a file ref so display skips the text path.
+    if let UserInputKind::EmbeddedTextResource { uri, mime_type } = &input.kind {
+        return Ok(UserInputRef {
+            content: input.content.clone(),
+            file: Some(UserFileInputRef {
+                data: input.content,
+                mime_type: mime_type
+                    .clone()
+                    .filter(|value| !value.trim().is_empty())
+                    .unwrap_or_else(|| "text/plain".to_string()),
+                name: file_name_from_uri(uri),
+            }),
+            image: None,
+            reference,
+        });
+    }
+
+    let (image, file) = input_attachment_refs(&input.kind)?;
     Ok(UserInputRef {
         content: input.content,
         image,
@@ -348,6 +368,45 @@ fn input_attachment_refs(
         | UserInputKind::SkillMention { .. }
         | UserInputKind::RawContentBlock(_) => (None, None),
     })
+}
+
+fn file_name_from_uri(uri: &str) -> Option<String> {
+    let raw_name = uri
+        .rsplit('/')
+        .find(|part| !part.trim().is_empty())
+        .unwrap_or(uri);
+    let name = percent_decode(raw_name).unwrap_or_else(|| raw_name.to_string());
+    (!name.trim().is_empty()).then_some(name)
+}
+
+fn percent_decode(value: &str) -> Option<String> {
+    let bytes = value.as_bytes();
+    let mut decoded = Vec::with_capacity(bytes.len());
+    let mut index = 0;
+    while index < bytes.len() {
+        if bytes[index] == b'%'
+            && index + 2 < bytes.len()
+            && let (Some(high), Some(low)) =
+                (hex_digit(bytes[index + 1]), hex_digit(bytes[index + 2]))
+        {
+            decoded.push((high << 4) | low);
+            index += 3;
+            continue;
+        }
+
+        decoded.push(bytes[index]);
+        index += 1;
+    }
+    String::from_utf8(decoded).ok()
+}
+
+fn hex_digit(byte: u8) -> Option<u8> {
+    match byte {
+        b'0'..=b'9' => Some(byte - b'0'),
+        b'a'..=b'f' => Some(byte - b'a' + 10),
+        b'A'..=b'F' => Some(byte - b'A' + 10),
+        _ => None,
+    }
 }
 
 fn is_skill_mention(input: &UserInput) -> bool {
