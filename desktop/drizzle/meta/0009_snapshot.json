@@ -53,11 +53,7 @@
       "indexes": {
         "chat_diff_anchors_chat_kind_recorded_idx": {
           "name": "chat_diff_anchors_chat_kind_recorded_idx",
-          "columns": [
-            "chat_id",
-            "kind",
-            "recorded_at"
-          ],
+          "columns": ["chat_id", "kind", "recorded_at"],
           "isUnique": false
         }
       },
@@ -66,12 +62,8 @@
           "name": "chat_diff_anchors_chat_id_chats_id_fk",
           "tableFrom": "chat_diff_anchors",
           "tableTo": "chats",
-          "columnsFrom": [
-            "chat_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["chat_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -166,16 +158,12 @@
       "indexes": {
         "chats_project_id_idx": {
           "name": "chats_project_id_idx",
-          "columns": [
-            "project_id"
-          ],
+          "columns": ["project_id"],
           "isUnique": false
         },
         "chats_updated_at_idx": {
           "name": "chats_updated_at_idx",
-          "columns": [
-            "updated_at"
-          ],
+          "columns": ["updated_at"],
           "isUnique": false
         }
       },
@@ -184,12 +172,8 @@
           "name": "chats_project_id_projects_id_fk",
           "tableFrom": "chats",
           "tableTo": "projects",
-          "columnsFrom": [
-            "project_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["project_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -294,9 +278,7 @@
       "indexes": {
         "projects_path_unique": {
           "name": "projects_path_unique",
-          "columns": [
-            "path"
-          ],
+          "columns": ["path"],
           "isUnique": true
         }
       },
@@ -404,10 +386,7 @@
       "indexes": {
         "pull_requests_root_branch_idx": {
           "name": "pull_requests_root_branch_idx",
-          "columns": [
-            "root",
-            "branch"
-          ],
+          "columns": ["root", "branch"],
           "isUnique": true
         }
       },
@@ -416,12 +395,8 @@
           "name": "pull_requests_project_id_projects_id_fk",
           "tableFrom": "pull_requests",
           "tableTo": "projects",
-          "columnsFrom": [
-            "project_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["project_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -429,12 +404,8 @@
           "name": "pull_requests_chat_id_chats_id_fk",
           "tableFrom": "pull_requests",
           "tableTo": "chats",
-          "columnsFrom": [
-            "chat_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["chat_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
@@ -486,16 +457,12 @@
       "indexes": {
         "queued_chat_runs_chat_id_unique": {
           "name": "queued_chat_runs_chat_id_unique",
-          "columns": [
-            "chat_id"
-          ],
+          "columns": ["chat_id"],
           "isUnique": true
         },
         "queued_chat_runs_chat_id_idx": {
           "name": "queued_chat_runs_chat_id_idx",
-          "columns": [
-            "chat_id"
-          ],
+          "columns": ["chat_id"],
           "isUnique": false
         }
       },
@@ -504,12 +471,8 @@
           "name": "queued_chat_runs_chat_id_chats_id_fk",
           "tableFrom": "queued_chat_runs",
           "tableTo": "chats",
-          "columnsFrom": [
-            "chat_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["chat_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -598,12 +561,8 @@
           "name": "worktree_creation_jobs_chat_id_chats_id_fk",
           "tableFrom": "worktree_creation_jobs",
           "tableTo": "chats",
-          "columnsFrom": [
-            "chat_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["chat_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }

@@ -848,14 +848,17 @@ export function registerApi(
   );
   app.get("/api/github/pull-request", async (context) => {
     const root = context.req.query("root");
-    const result =
-      root === undefined
-        ? getGitHubPullRequestStatus({
-            cwd: requireQuery(context.req.query("cwd"), "cwd"),
-            number: optionalNumber(context.req.query("number")),
-          })
-        : getStoredPullRequest(root);
-    return context.json(await run(result));
+    if (root !== undefined) {
+      return context.json(await run(getStoredPullRequest(root)));
+    }
+    return context.json(
+      await run(
+        getGitHubPullRequestStatus({
+          cwd: requireQuery(context.req.query("cwd"), "cwd"),
+          number: optionalNumber(context.req.query("number")),
+        }),
+      ),
+    );
   });
   app.post("/api/github/pull-request", async (context) => {
     const input = pullRequestCreateInputSchema(await context.req.json());

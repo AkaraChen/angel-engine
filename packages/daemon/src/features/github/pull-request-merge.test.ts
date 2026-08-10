@@ -6,7 +6,7 @@ import {
   getGitHubPullRequestStatus,
   mergeGitHubPullRequest,
   resolveGitHubReviewThread,
-} from "./pull-request";
+} from "./pull-request-merge";
 
 const pullRequestPayload = {
   author: { login: "alice" },
