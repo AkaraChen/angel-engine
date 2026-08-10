@@ -1,13 +1,9 @@
 import type { DaemonApi } from "@shared/daemon";
 import type {
-  DesktopConfirmDeleteArchivedChatsInput,
-  DesktopConfirmDeleteCustomAgentInput,
-  DesktopConfirmDeleteManagedWorktreesInput,
-  DesktopConfirmSaveWorkspaceFileChangesInput,
-  DesktopConfirmSaveWorkspaceFileChangesResult,
   DesktopOpenChatFromNotificationEvent,
   DesktopThemeSetInput,
   DesktopUpdateDownloadedEvent,
+  DesktopUpdateMessageEvent,
   DesktopWindowCommand,
 } from "@shared/desktop-window";
 import type {
@@ -56,19 +52,6 @@ declare global {
     };
     desktopWindow: {
       closeCurrent: () => void;
-      confirmDeleteAllChats: () => Promise<boolean>;
-      confirmDeleteArchivedChats: (
-        input: DesktopConfirmDeleteArchivedChatsInput,
-      ) => Promise<boolean>;
-      confirmDeleteCustomAgent: (
-        input: DesktopConfirmDeleteCustomAgentInput,
-      ) => Promise<boolean>;
-      confirmDeleteManagedWorktrees: (
-        input: DesktopConfirmDeleteManagedWorktreesInput,
-      ) => Promise<boolean>;
-      confirmSaveWorkspaceFileChanges: (
-        input: DesktopConfirmSaveWorkspaceFileChangesInput,
-      ) => Promise<DesktopConfirmSaveWorkspaceFileChangesResult>;
       notifyContentReady: () => void;
       onCommand: (
         handler: (command: DesktopWindowCommand) => void,
@@ -98,6 +81,9 @@ declare global {
       ) => Promise<DesktopNotificationPreferences>;
       onUpdateDownloaded: (
         handler: (event: DesktopUpdateDownloadedEvent) => void,
+      ) => () => void;
+      onUpdateMessage: (
+        handler: (event: DesktopUpdateMessageEvent) => void,
       ) => () => void;
       onUpdateStatusChanged: (
         handler: (status: DesktopUpdateStatus) => void,

@@ -799,6 +799,22 @@ export const fr = {
     },
     dialog: {
       chatName: "Nom de la discussion",
+      confirm: {
+        deleteCustomAgentDetail_one:
+          "Cela supprimera également {{count}} conversation associée.",
+        deleteCustomAgentDetail_other:
+          "Cela supprimera également {{count}} conversations associées.",
+        deleteCustomAgentDetailNone:
+          "Aucune conversation n'utilise cet agent personnalisé.",
+        deleteCustomAgentTitle: "Supprimer {{label}} ?",
+        discard: "Abandonner",
+        dontSave: "Ne pas enregistrer",
+        kill: "Arrêter",
+        killProcessTitle: "Arrêter {{name}} ({{pid}}) ?",
+        saveFileChangesDetail:
+          "Vos modifications seront perdues si vous ne les enregistrez pas.",
+        saveFileChangesTitle: "Enregistrer les modifications de {{path}} ?",
+      },
       importSession: {
         cwdLabel: "Répertoire : {{cwd}}",
         description:

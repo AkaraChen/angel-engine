@@ -21,6 +21,7 @@ import { useCallback, useId, useReducer, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { Button } from "@/components/ui/button";
+import { confirmAction } from "@/components/ui/confirm-dialog";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
@@ -108,16 +109,26 @@ function CustomAgentsSettingsGroup({
   const deleteAgent = useCallback(
     async (agent: CustomAgent) => {
       const impact = await onDeleteCustomAgentImpact(agent.id);
-      const confirmed = await window.desktopWindow.confirmDeleteCustomAgent({
-        chatCount: impact.chatCount,
-        label: agent.label,
+      const confirmed = await confirmAction({
+        cancelLabel: t("common.cancel"),
+        confirmLabel: t("common.delete"),
+        description:
+          impact.chatCount > 0
+            ? t("dialog.confirm.deleteCustomAgentDetail", {
+                count: impact.chatCount,
+              })
+            : t("dialog.confirm.deleteCustomAgentDetailNone"),
+        title: t("dialog.confirm.deleteCustomAgentTitle", {
+          label: agent.label,
+        }),
+        tone: "danger",
       });
       if (!confirmed) return;
 
       await onDeleteCustomAgent(agent.id);
       await onDeletedCustomAgent();
     },
-    [onDeleteCustomAgent, onDeletedCustomAgent, onDeleteCustomAgentImpact],
+    [onDeleteCustomAgent, onDeletedCustomAgent, onDeleteCustomAgentImpact, t],
   );
 
   const [orderPreview, setOrderPreview] = useState<CustomAgentRuntime[] | null>(

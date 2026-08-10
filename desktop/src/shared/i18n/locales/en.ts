@@ -789,6 +789,22 @@ export const en = {
     },
     dialog: {
       chatName: "Chat name",
+      confirm: {
+        deleteCustomAgentDetail_one:
+          "This will also delete {{count}} related chat.",
+        deleteCustomAgentDetail_other:
+          "This will also delete {{count}} related chats.",
+        deleteCustomAgentDetailNone:
+          "This custom agent is not used by any chats.",
+        deleteCustomAgentTitle: "Delete {{label}}?",
+        discard: "Discard",
+        dontSave: "Don't Save",
+        kill: "Kill",
+        killProcessTitle: "Kill {{name}} ({{pid}})?",
+        saveFileChangesDetail:
+          "Your changes will be lost if you don't save them.",
+        saveFileChangesTitle: "Save changes to {{path}}?",
+      },
       importSession: {
         cwdLabel: "Directory: {{cwd}}",
         description:

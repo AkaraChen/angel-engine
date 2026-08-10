@@ -760,6 +760,18 @@ export const zhCN = {
     },
     dialog: {
       chatName: "聊天名称",
+      confirm: {
+        deleteCustomAgentDetail_one: "这还会删除 {{count}} 个相关会话。",
+        deleteCustomAgentDetail_other: "这还会删除 {{count}} 个相关会话。",
+        deleteCustomAgentDetailNone: "没有会话使用这个自定义 Agent。",
+        deleteCustomAgentTitle: "要删除 {{label}} 吗？",
+        discard: "放弃",
+        dontSave: "不保存",
+        kill: "结束进程",
+        killProcessTitle: "要结束 {{name}}（{{pid}}）吗？",
+        saveFileChangesDetail: "如果不保存，你的更改将会丢失。",
+        saveFileChangesTitle: "要保存对 {{path}} 的更改吗？",
+      },
       importSession: {
         cwdLabel: "目录：{{cwd}}",
         description:

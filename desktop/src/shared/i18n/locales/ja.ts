@@ -793,6 +793,21 @@ export const ja = {
     },
     dialog: {
       chatName: "チャット名",
+      confirm: {
+        deleteCustomAgentDetail_one:
+          "関連するチャット {{count}} 件も削除されます。",
+        deleteCustomAgentDetail_other:
+          "関連するチャット {{count}} 件も削除されます。",
+        deleteCustomAgentDetailNone:
+          "このカスタムエージェントを使用しているチャットはありません。",
+        deleteCustomAgentTitle: "{{label}} を削除しますか？",
+        discard: "破棄",
+        dontSave: "保存しない",
+        kill: "終了",
+        killProcessTitle: "{{name}}（{{pid}}）を終了しますか？",
+        saveFileChangesDetail: "保存しないと変更内容は失われます。",
+        saveFileChangesTitle: "{{path}} の変更を保存しますか？",
+      },
       importSession: {
         cwdLabel: "ディレクトリ: {{cwd}}",
         description:

@@ -24,6 +24,7 @@ import {
 } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
+import { confirmAction } from "@/components/ui/confirm-dialog";
 import { Switch } from "@/components/ui/switch";
 import { useAgentCatalog } from "@/features/agents/agent-catalog-context";
 import { useWorkspaceUiStore } from "@/app/workspace/workspace-ui-store";
@@ -573,11 +574,17 @@ function DangerSettings({
   const { t } = useTranslation();
 
   const deleteAllChats = useCallback(async () => {
-    const confirmed = await window.desktopWindow.confirmDeleteAllChats();
+    const confirmed = await confirmAction({
+      cancelLabel: t("common.cancel"),
+      confirmLabel: t("common.delete"),
+      description: t("settings.danger.description"),
+      title: t("settings.danger.confirmDeleteAll"),
+      tone: "danger",
+    });
     if (!confirmed) return;
 
     await onDeleteAllChats();
-  }, [onDeleteAllChats]);
+  }, [onDeleteAllChats, t]);
 
   return (
     <SettingsGroup title={t("settings.danger.title")} tone="danger">

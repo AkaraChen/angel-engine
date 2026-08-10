@@ -924,9 +924,23 @@ export interface LocaleResourceTranslationMessages {
 
 export interface LocaleResourceTranslationDialog {
   chatName: string;
+  confirm: LocaleResourceTranslationDialogConfirm;
   importSession: LocaleResourceTranslationDialogImportSession;
   renameChat: string;
   sessionHandoff: LocaleResourceTranslationDialogSessionHandoff;
+}
+
+export interface LocaleResourceTranslationDialogConfirm {
+  deleteCustomAgentDetail_one: string;
+  deleteCustomAgentDetail_other: string;
+  deleteCustomAgentDetailNone: string;
+  deleteCustomAgentTitle: string;
+  discard: string;
+  dontSave: string;
+  kill: string;
+  killProcessTitle: string;
+  saveFileChangesDetail: string;
+  saveFileChangesTitle: string;
 }
 
 export interface LocaleResourceTranslationDialogImportSession {
