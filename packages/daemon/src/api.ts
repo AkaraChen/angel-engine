@@ -36,6 +36,7 @@ import {
 } from "@angel-engine/daemon-api/chat";
 import {
   githubPrChecksFixPromptInputSchema,
+  githubPrContextInputSchema,
   githubResolveUrlInputSchema,
   githubAddPullRequestCommentInputSchema,
   githubCreatePullRequestInputSchema,
@@ -61,6 +62,7 @@ import {
   buildGitHubPrChecksFixPrompt,
   listGitHubPrChecks,
 } from "./features/github/checks";
+import { fetchGitHubChecks } from "./features/github/checks-snapshot";
 import { listGitHubItems } from "./features/github/list";
 import { discoverPullRequestTemplates } from "./features/github/pr-template";
 import {
@@ -74,6 +76,7 @@ import {
   listGitHubRepositoryOwners,
 } from "./features/github/repos";
 import { resolveGitHubUrl } from "./features/github/resolve";
+import { fetchGitHubReviewThreads } from "./features/github/review-threads";
 import { createWorkspaceFromPullRequest } from "./features/github/workspace-from-pr";
 import { listAvailableAgents } from "./features/agents/availability";
 import {
@@ -647,6 +650,30 @@ export function registerApi(
       ),
     ),
   );
+  app.get("/api/github/checks", async (context) => {
+    const prNumber = Number(context.req.query("prNumber"));
+    const input = githubPrContextInputSchema({
+      cwd: requireQuery(context.req.query("cwd"), "cwd"),
+      owner: requireQuery(context.req.query("owner"), "owner"),
+      prNumber,
+      repo: requireQuery(context.req.query("repo"), "repo"),
+    });
+    if (input instanceof arkType.errors)
+      throw DaemonError.invalidRequest("Invalid GitHub checks query.");
+    return context.json(await run(fetchGitHubChecks(input)));
+  });
+  app.get("/api/github/review-threads", async (context) => {
+    const prNumber = Number(context.req.query("prNumber"));
+    const input = githubPrContextInputSchema({
+      cwd: requireQuery(context.req.query("cwd"), "cwd"),
+      owner: requireQuery(context.req.query("owner"), "owner"),
+      prNumber,
+      repo: requireQuery(context.req.query("repo"), "repo"),
+    });
+    if (input instanceof arkType.errors)
+      throw DaemonError.invalidRequest("Invalid GitHub review-threads query.");
+    return context.json(await run(fetchGitHubReviewThreads(input)));
+  });
   app.get("/api/github/pull-request-template", async (context) => {
     const input = githubPullRequestTemplateInputSchema({
       cwd: requireQuery(context.req.query("cwd"), "cwd"),
