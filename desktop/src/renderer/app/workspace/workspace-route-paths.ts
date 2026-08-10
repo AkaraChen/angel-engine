@@ -18,6 +18,7 @@ export function chatRoutePath(
 }
 
 export const fleetRoutePath = "/fleet";
+export const scheduleRoutePath = "/schedule";
 
 export function chatRoutePathId(chatId: string) {
   return `/chat/${encodeURIComponent(chatId)}`;
@@ -29,6 +30,10 @@ export function projectChatRoutePath(projectId: string, chatId: string) {
 
 export function projectDraftRoutePath(projectId: string) {
   return `/project/${encodeURIComponent(projectId)}`;
+}
+
+export function projectPullRequestsRoutePath(projectId: string) {
+  return `/project/${encodeURIComponent(projectId)}/pulls`;
 }
 
 export function isChatOpenableInWorkspaceMode(

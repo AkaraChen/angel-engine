@@ -20,6 +20,7 @@ import {
 } from "@/app/workspace/workspace-chat-thread";
 import { draftAgentConfigFromExplicitOverrides } from "@/app/workspace/workspace-draft-agent-config";
 import { WorkspaceHeader } from "@/app/workspace/workspace-header";
+import { WorkspaceKeymapBindings } from "@/app/workspace/workspace-keymap-bindings";
 import { WorkspaceNativeCommandHandler } from "@/app/workspace/workspace-native-command-handler";
 import { resolveWorkspacePathLauncherTarget } from "@/app/workspace/workspace-path-launcher";
 import { WorkspaceRightSidebar } from "@/app/workspace/workspace-right-sidebar";
@@ -37,9 +38,14 @@ import { WorktreeDirtyDialog } from "@/app/workspace/worktree-dirty-dialog";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { ImportSessionDialog } from "@/features/chat/components/import-session-dialog";
 import { RenameChatDialog } from "@/features/chat/components/rename-chat-dialog";
+import { SessionHandoffDialog } from "@/features/chat/components/session-handoff-dialog";
 import { WorkspaceCommandPalette } from "@/features/command-palette/workspace-command-palette";
 import { FleetPage } from "@/features/fleet/fleet-page";
+import { CloneProgressDialog } from "@/features/projects/components/clone-progress-dialog";
+import { CloneRepositoryDialog } from "@/features/projects/components/clone-repository-dialog";
 import { ProjectSettingsDialog } from "@/features/projects/components/project-settings-dialog";
+import { PullRequestsPage } from "@/features/pull-requests/pull-requests-page";
+import { SchedulePage } from "@/features/schedule/schedule-page";
 import { queryKeys } from "@/platform/query-keys";
 
 interface WorkspacePageViewProps {
@@ -47,9 +53,11 @@ interface WorkspacePageViewProps {
   currentRoutePath: string;
   draftGuard: WorktreeDraftGuard;
   fleetActive: boolean;
+  scheduleActive: boolean;
   model: WorkspacePageModel;
   navigation: WorkspaceNavigation;
   powerTabs: PowerWorktreeTabs;
+  pullRequestsActive: boolean;
 }
 
 export const WorkspacePageView: FC<WorkspacePageViewProps> = ({
@@ -57,9 +65,11 @@ export const WorkspacePageView: FC<WorkspacePageViewProps> = ({
   currentRoutePath,
   draftGuard,
   fleetActive,
+  scheduleActive,
   model,
   navigation,
   powerTabs,
+  pullRequestsActive,
 }) => {
   const queryClient = useQueryClient();
   const [importSessionOpen, setImportSessionOpen] = useState(false);
@@ -68,6 +78,18 @@ export const WorkspacePageView: FC<WorkspacePageViewProps> = ({
   }, []);
   const closeImportSession = useCallback(() => {
     setImportSessionOpen(false);
+  }, []);
+  const [cloneDialogOpen, setCloneDialogOpen] = useState(false);
+  const [cloneUrl, setCloneUrl] = useState<string | null>(null);
+  const openCloneDialog = useCallback(() => {
+    setCloneDialogOpen(true);
+  }, []);
+  const startClone = useCallback((url: string) => {
+    setCloneDialogOpen(false);
+    setCloneUrl(url);
+  }, []);
+  const closeCloneProgress = useCallback(() => {
+    setCloneUrl(null);
   }, []);
 
   const {
@@ -131,7 +153,9 @@ export const WorkspacePageView: FC<WorkspacePageViewProps> = ({
     archiveChat,
     closeProjectSettingsDialog,
     closeRenameChatDialog,
+    closeSessionHandoffDialog,
     createProjectFromPicker,
+    handoffTargetChat,
     renameChat,
     renameChatPending,
     renameTargetChat,
@@ -152,13 +176,20 @@ export const WorkspacePageView: FC<WorkspacePageViewProps> = ({
     createChatForSelection,
     createStandaloneWorkspace,
     navigateToChat,
+    navigateToDraft,
     openChat,
     openChatFromFleet,
     openFleet,
+    openSchedule,
     openPowerWorktree,
+    openPullRequests,
     openSettings,
     selectDraftProject,
   } = navigation;
+  const pullRequestsProject =
+    pullRequestsActive && is.nonEmptyString(selectedProjectId)
+      ? projects.find((project) => project.id === selectedProjectId)
+      : undefined;
   const handleImportedSession = useCallback(
     async (chatId: string) => {
       await queryClient.invalidateQueries({ queryKey: queryKeys.chats.list() });
@@ -270,274 +301,346 @@ export const WorkspacePageView: FC<WorkspacePageViewProps> = ({
       open={sidebarOpen}
       openMobile={sidebarOpenMobile}
     >
-      <WorkspaceSidebarControlPortalProvider>
-        <WorkspaceSidebar
-          chats={chats}
-          fleetActive={fleetActive}
-          isChatsLoading={chatsQuery.isPending}
-          isMacOS={isMacOS}
-          isProjectsLoading={projectsQuery.isPending}
-          onArchiveChat={archiveChat}
-          onCancelWorktreeCreation={cancelWorktreeCreation}
-          onCreateProject={() => void createProjectFromPicker()}
-          onCreateProjectChat={createChatForProject}
-          onCreateStandaloneChat={createChatForSelection}
-          onImportSession={openImportSession}
-          onOpenChat={openChat}
-          onOpenFleet={openFleet}
-          onOpenSettings={openSettings}
-          onOpenWorktree={openPowerWorktree}
-          onRetryWorktreeCreation={retryWorktreeCreation}
-          onShowChatContextMenu={showChatContextMenu}
-          onShowProjectContextMenu={showProjectContextMenu}
-          onShowWorktreeContextMenu={showWorktreeContextMenu}
-          onWorkspaceModeChange={changeWorkspaceMode}
-          projectChatsByProjectId={projectChatsByProjectId}
-          projects={projects}
-          selectedChatId={selectedChatId}
-          selectedProjectId={selectedProjectId}
-        />
-        <WorkspaceFloatingSidebar
-          chats={chats}
-          fleetActive={fleetActive}
-          isChatsLoading={chatsQuery.isPending}
-          isMacOS={isMacOS}
-          isProjectsLoading={projectsQuery.isPending}
-          onArchiveChat={archiveChat}
-          onCancelWorktreeCreation={cancelWorktreeCreation}
-          onCreateProject={() => void createProjectFromPicker()}
-          onCreateProjectChat={createChatForProject}
-          onCreateStandaloneChat={createChatForSelection}
-          onImportSession={openImportSession}
-          onOpenChat={openChat}
-          onOpenFleet={openFleet}
-          onOpenSettings={openSettings}
-          onOpenWorktree={openPowerWorktree}
-          onRetryWorktreeCreation={retryWorktreeCreation}
-          onShowChatContextMenu={showChatContextMenu}
-          onShowProjectContextMenu={showProjectContextMenu}
-          onShowWorktreeContextMenu={showWorktreeContextMenu}
-          onWorkspaceModeChange={changeWorkspaceMode}
-          projectChatsByProjectId={projectChatsByProjectId}
-          projects={projects}
-          selectedChatId={selectedChatId}
-          selectedProjectId={selectedProjectId}
-        />
-        <WorkspaceSidebarControl />
-        <WorkspaceNativeCommandHandler
-          onCreateStandaloneChat={createChatForSelection}
-          onOpenSettings={openSettings}
-        />
-        <WorkspaceCommandPalette
-          chats={chats}
-          onNewWorkspace={createStandaloneWorkspace}
-          onOpenSession={openChatFromFleet}
-          onOpenSettings={openSettings}
-        />
-        <RenameChatDialog
-          chat={renameTargetChat}
-          isSaving={renameChatPending}
-          onClose={closeRenameChatDialog}
-          onRename={renameChat}
-        />
-        <ImportSessionDialog
-          api={api}
-          cwd={importCwd}
-          onClose={closeImportSession}
-          onImported={handleImportedSession}
-          open={importSessionOpen}
-          projectId={selectedProjectId ?? draftProject.id ?? null}
-          runtime={activeRuntime}
-        />
-        <ProjectSettingsDialog
-          onClose={closeProjectSettingsDialog}
-          project={settingsTargetProject}
-        />
-        <WorktreeDirtyDialog
-          checked={rememberWorktreeDirtyChoice}
-          onCheckedChange={setRememberWorktreeDirtyChoice}
-          onClose={closeWorktreeDirtyPrompt}
-          state={worktreeDirtyPrompt}
-        />
-        <WorkspaceToolContextBridge
-          chatId={selectedChatId ?? null}
-          contextKey={workspaceToolContextKey ?? null}
-          root={workspaceToolRoot ?? null}
-        />
-
-        <SidebarInset className="h-svh min-w-0 max-h-svh overflow-hidden">
-          <WorkspaceHeader
-            attention={chatAttention}
-            breadcrumbProject={
-              isProjectMode && selectedChat ? selectedProjectName : undefined
-            }
-            running={selectedChatIsRunning}
-            rightSidebarOpen={
-              canShowRightSidebar &&
-              (rightSidebarOpen || workspaceToolHost !== "sidebar")
-            }
-            rightSidebarToggleLabel={workspaceToolsToggleLabel}
-            title={fleetActive ? t("fleet.title") : workspaceTitle}
-            onShowContextMenu={
-              currentLauncherTarget === undefined
-                ? undefined
-                : () => void showCurrentWorkspaceContextMenu()
-            }
-            onToggleRightSidebar={
-              canShowRightSidebar &&
-              (!rightSidebarOpen || workspaceToolHost !== "sidebar")
-                ? toggleWorkspaceTools
-                : undefined
-            }
+      <WorkspaceKeymapBindings
+        hasClosableTab={powerTabs.hasClosableTab}
+        hasMultipleTabs={powerTabs.hasMultipleTabs}
+        onCloseTab={powerTabs.closeActiveTab}
+        onCreateStandaloneChat={createChatForSelection}
+        onNewTab={powerTabs.openOrFocusDraftTab}
+        onNextTab={powerTabs.goToNextTab}
+        onOpenSettings={openSettings}
+        onPreviousTab={powerTabs.goToPreviousTab}
+        powerModeActive={powerTabs.powerModeActive}
+      >
+        <WorkspaceSidebarControlPortalProvider>
+          <WorkspaceSidebar
+            chats={chats}
+            fleetActive={fleetActive}
+            scheduleActive={scheduleActive}
+            isChatsLoading={chatsQuery.isPending}
+            isMacOS={isMacOS}
+            isProjectsLoading={projectsQuery.isPending}
+            onArchiveChat={archiveChat}
+            onCloneRepository={openCloneDialog}
+            onCancelWorktreeCreation={cancelWorktreeCreation}
+            onCreateProject={() => void createProjectFromPicker()}
+            onCreateProjectChat={createChatForProject}
+            onCreateStandaloneChat={createChatForSelection}
+            onImportSession={openImportSession}
+            onOpenChat={openChat}
+            onOpenFleet={openFleet}
+            onOpenSchedule={openSchedule}
+            onOpenPullRequests={openPullRequests}
+            onOpenSettings={openSettings}
+            onOpenWorktree={openPowerWorktree}
+            onRetryWorktreeCreation={retryWorktreeCreation}
+            onShowChatContextMenu={showChatContextMenu}
+            onShowProjectContextMenu={showProjectContextMenu}
+            onShowWorktreeContextMenu={showWorktreeContextMenu}
+            onWorkspaceModeChange={changeWorkspaceMode}
+            projectChatsByProjectId={projectChatsByProjectId}
+            projects={projects}
+            pullRequestsActive={pullRequestsActive}
+            selectedChatId={selectedChatId}
+            selectedProjectId={selectedProjectId}
           />
-          {powerModeActive && powerHomeTabContext !== undefined ? (
-            <PowerWorktreeTabBar
-              activeChatId={selectedChatId}
-              chats={chatTabChats}
-              draftTabActive={powerDraftTabActive}
-              homeTabActive={powerHomePageContext !== undefined}
-              onCloseChat={closeChatTab}
-              onCloseDraftTab={closeDraftTab}
-              onNewChat={openDraftTabFromTabBar}
-              onOpenChat={openChat}
-              onOpenHome={openSelectedPowerWorktreeHome}
+          <WorkspaceFloatingSidebar
+            chats={chats}
+            fleetActive={fleetActive}
+            scheduleActive={scheduleActive}
+            isChatsLoading={chatsQuery.isPending}
+            isMacOS={isMacOS}
+            isProjectsLoading={projectsQuery.isPending}
+            onArchiveChat={archiveChat}
+            onCloneRepository={openCloneDialog}
+            onCancelWorktreeCreation={cancelWorktreeCreation}
+            onCreateProject={() => void createProjectFromPicker()}
+            onCreateProjectChat={createChatForProject}
+            onCreateStandaloneChat={createChatForSelection}
+            onImportSession={openImportSession}
+            onOpenChat={openChat}
+            onOpenFleet={openFleet}
+            onOpenSchedule={openSchedule}
+            onOpenPullRequests={openPullRequests}
+            onOpenSettings={openSettings}
+            onOpenWorktree={openPowerWorktree}
+            onRetryWorktreeCreation={retryWorktreeCreation}
+            onShowChatContextMenu={showChatContextMenu}
+            onShowProjectContextMenu={showProjectContextMenu}
+            onShowWorktreeContextMenu={showWorktreeContextMenu}
+            onWorkspaceModeChange={changeWorkspaceMode}
+            projectChatsByProjectId={projectChatsByProjectId}
+            projects={projects}
+            pullRequestsActive={pullRequestsActive}
+            selectedChatId={selectedChatId}
+            selectedProjectId={selectedProjectId}
+          />
+          <WorkspaceSidebarControl />
+          <WorkspaceNativeCommandHandler
+            onCreateStandaloneChat={createChatForSelection}
+            onOpenSettings={openSettings}
+          />
+          <WorkspaceCommandPalette
+            chats={chats}
+            onNewWorkspace={createStandaloneWorkspace}
+            onOpenSession={openChatFromFleet}
+            onOpenSettings={openSettings}
+          />
+          <RenameChatDialog
+            chat={renameTargetChat}
+            isSaving={renameChatPending}
+            onClose={closeRenameChatDialog}
+            onRename={renameChat}
+          />
+          <SessionHandoffDialog
+            api={api}
+            chat={handoffTargetChat}
+            onClose={closeSessionHandoffDialog}
+            runtimeOptions={runtimeOptions}
+          />
+          <ImportSessionDialog
+            api={api}
+            cwd={importCwd}
+            onClose={closeImportSession}
+            onImported={handleImportedSession}
+            open={importSessionOpen}
+            projectId={selectedProjectId ?? draftProject.id ?? null}
+            runtime={activeRuntime}
+          />
+          <ProjectSettingsDialog
+            onClose={closeProjectSettingsDialog}
+            project={settingsTargetProject}
+          />
+          <CloneRepositoryDialog
+            onClone={startClone}
+            onOpenChange={setCloneDialogOpen}
+            open={cloneDialogOpen}
+          />
+          <CloneProgressDialog
+            onClose={closeCloneProgress}
+            onOpenProject={(project) => {
+              closeCloneProgress();
+              createChatForProject(project);
+            }}
+            url={cloneUrl}
+          />
+          <WorktreeDirtyDialog
+            checked={rememberWorktreeDirtyChoice}
+            onCheckedChange={setRememberWorktreeDirtyChoice}
+            onClose={closeWorktreeDirtyPrompt}
+            state={worktreeDirtyPrompt}
+          />
+          <WorkspaceToolContextBridge
+            chatId={selectedChatId ?? null}
+            contextKey={workspaceToolContextKey ?? null}
+            root={workspaceToolRoot ?? null}
+          />
+
+          <SidebarInset className="h-svh min-w-0 max-h-svh overflow-hidden">
+            <WorkspaceHeader
+              attention={chatAttention}
+              breadcrumbProject={
+                isProjectMode && selectedChat ? selectedProjectName : undefined
+              }
+              running={selectedChatIsRunning}
+              rightSidebarOpen={
+                canShowRightSidebar &&
+                (rightSidebarOpen || workspaceToolHost !== "sidebar")
+              }
+              rightSidebarToggleLabel={workspaceToolsToggleLabel}
+              title={
+                scheduleActive
+                  ? t("schedule.title")
+                  : pullRequestsActive
+                    ? t("pullRequests.title")
+                    : fleetActive
+                      ? t("fleet.title")
+                      : workspaceTitle
+              }
+              onShowContextMenu={
+                currentLauncherTarget === undefined
+                  ? undefined
+                  : () => void showCurrentWorkspaceContextMenu()
+              }
+              onToggleRightSidebar={
+                canShowRightSidebar &&
+                (!rightSidebarOpen || workspaceToolHost !== "sidebar")
+                  ? toggleWorkspaceTools
+                  : undefined
+              }
             />
-          ) : null}
-          <main className="flex min-h-0 flex-1 overflow-hidden">
-            <section
-              className="flex min-h-0 min-w-0 flex-1 flex-col"
-              data-workspace-mode={workspaceMode}
-            >
-              {fleetActive ? (
-                <FleetPage
-                  chats={chats}
-                  isMetadataError={chatsQuery.isError || projectsQuery.isError}
-                  isMetadataPending={
-                    chatsQuery.isPending || projectsQuery.isPending
-                  }
-                  onNewChat={openDraftTabFromTabBar}
-                  onOpenChat={openChatFromFleet}
-                  projects={projects}
-                />
-              ) : powerHomePageContext !== undefined ? (
-                <PowerWorktreeHistoryPage
-                  chats={chats}
-                  groupKey={powerHomePageContext.groupKey}
-                  label={t("sidebar.powerWorktreeHistoricalChat")}
-                  onArchiveChat={(chat) => void archiveChat(chat)}
-                  onNewChat={openDraftTabFromTabBar}
-                  onOpenChat={openPowerHistoryChatTab}
-                  onShowChatContextMenu={(chat) =>
-                    void showChatContextMenu(chat)
-                  }
-                  projectPath={activePowerWorktreeProject?.path}
-                />
-              ) : is.nonEmptyString(selectedChatId) ? (
-                selectedChatIsRunning && selectedChat ? (
-                  <ActiveChatThread
-                    draftAgentConfig={selectedChatAgentConfig}
+            {powerModeActive && powerHomeTabContext !== undefined ? (
+              <PowerWorktreeTabBar
+                activeChatId={selectedChatId}
+                chats={chatTabChats}
+                draftTabActive={powerDraftTabActive}
+                homeTabActive={powerHomePageContext !== undefined}
+                onCloseChat={closeChatTab}
+                onCloseDraftTab={closeDraftTab}
+                onNewChat={openDraftTabFromTabBar}
+                onOpenChat={openChat}
+                onOpenHome={openSelectedPowerWorktreeHome}
+              />
+            ) : null}
+            <main className="flex min-h-0 flex-1 overflow-hidden">
+              <section
+                className="flex min-h-0 min-w-0 flex-1 flex-col"
+                data-workspace-mode={workspaceMode}
+              >
+                {scheduleActive ? (
+                  <SchedulePage projects={projects} />
+                ) : pullRequestsActive && pullRequestsProject ? (
+                  <PullRequestsPage
+                    onOpenChat={openChat}
+                    project={pullRequestsProject}
+                  />
+                ) : fleetActive ? (
+                  <FleetPage
+                    chats={chats}
+                    isMetadataError={
+                      chatsQuery.isError || projectsQuery.isError
+                    }
+                    isMetadataPending={
+                      chatsQuery.isPending || projectsQuery.isPending
+                    }
+                    onNewChat={openDraftTabFromTabBar}
+                    onOpenChat={openChatFromFleet}
+                    projects={projects}
+                  />
+                ) : powerHomePageContext !== undefined ? (
+                  <PowerWorktreeHistoryPage
+                    chats={chats}
+                    groupKey={powerHomePageContext.groupKey}
+                    label={t("sidebar.powerWorktreeHistoricalChat")}
+                    onArchiveChat={(chat) => void archiveChat(chat)}
+                    onNewChat={openDraftTabFromTabBar}
+                    onOpenChat={openPowerHistoryChatTab}
+                    onShowChatContextMenu={(chat) =>
+                      void showChatContextMenu(chat)
+                    }
+                    projectPath={activePowerWorktreeProject?.path}
+                  />
+                ) : is.nonEmptyString(selectedChatId) ? (
+                  selectedChatIsRunning && selectedChat ? (
+                    <ActiveChatThread
+                      draftAgentConfig={selectedChatAgentConfig}
+                      onChatCreated={updateChatFromRun}
+                      onForkChatCreated={(chat) => {
+                        updateChatFromRun(chat);
+                        openChat(chat);
+                      }}
+                      onChatMessagesUpdated={setChatMessagesInCache}
+                      onChatUpdated={updateChatFromRun}
+                      onSetupDiscarded={(projectId) =>
+                        navigateToDraft(projectId, { replace: true })
+                      }
+                      projects={projects}
+                      routeProjectId={routeProjectId}
+                      runtimeOptions={runtimeOptions}
+                      selectedChat={selectedChat}
+                      setAgentModel={setAgentModel}
+                      setAgentReasoningEffort={setAgentReasoningEffort}
+                      setPersistedChatRuntime={setPersistedChatRuntime}
+                    />
+                  ) : (
+                    <ChatRestoreErrorBoundary key={selectedChatId}>
+                      <Suspense fallback={<ChatRestoreLoading />}>
+                        <RestoredChatThread
+                          api={api}
+                          currentRoutePath={currentRoutePath}
+                          draftAgentConfig={selectedChatAgentConfig}
+                          includeProjectInRoute={isProjectMode}
+                          onChatCreated={updateChatFromRun}
+                          onForkChatCreated={(chat) => {
+                            updateChatFromRun(chat);
+                            openChat(chat);
+                          }}
+                          onChatMessagesUpdated={setChatMessagesInCache}
+                          onChatUpdated={updateChatFromRun}
+                          onSetupDiscarded={(projectId) =>
+                            navigateToDraft(projectId, { replace: true })
+                          }
+                          projects={projects}
+                          routeProjectId={routeProjectId}
+                          runtimeOptions={runtimeOptions}
+                          selectedChatId={selectedChatId}
+                          setAgentModel={setAgentModel}
+                          setAgentReasoningEffort={setAgentReasoningEffort}
+                          setPersistedChatRuntime={setPersistedChatRuntime}
+                        />
+                      </Suspense>
+                    </ChatRestoreErrorBoundary>
+                  )
+                ) : (
+                  <NewChatThread
+                    chatOptions={chatOptions}
+                    chats={chats}
+                    creationLocation={draftCreationLocation}
+                    cwd={pinnedDraftCwd}
+                    creationLocationAccessory={
+                      canCreateDraftWorktree ? (
+                        <DraftCreationLocationSelect
+                          onValueChange={setDraftCreationLocation}
+                          value={draftCreationLocation}
+                          variant="ghost"
+                        />
+                      ) : undefined
+                    }
+                    key={runtimePageKey}
+                    model={modelOverride}
+                    mode={modeOverride}
+                    onBeforeSubmit={ensureDraftChatCanSubmit}
                     onChatCreated={updateChatFromRun}
                     onChatMessagesUpdated={setChatMessagesInCache}
                     onChatUpdated={updateChatFromRun}
+                    onCreateProject={createProjectFromPicker}
+                    onOpenChat={openChat}
+                    onProjectChange={selectDraftProject}
+                    permissionMode={permissionModeOverride}
+                    prewarmId={
+                      draftCreationLocation === "worktree"
+                        ? undefined
+                        : model.prewarmQuery.data?.prewarmId
+                    }
+                    projectId={draftProject.id}
+                    projectName={selectedProjectName}
+                    projectPath={draftProject.path}
                     projects={projects}
-                    routeProjectId={routeProjectId}
-                    runtimeOptions={runtimeOptions}
-                    selectedChat={selectedChat}
-                    setAgentModel={setAgentModel}
-                    setAgentReasoningEffort={setAgentReasoningEffort}
-                    setPersistedChatRuntime={setPersistedChatRuntime}
+                    reasoningEffort={reasoningEffortOverride}
+                    runOrigin={{
+                      config: draftAgentConfigFromExplicitOverrides({
+                        mode: modeOverride,
+                        model: modelOverride,
+                        permissionMode: permissionModeOverride,
+                        reasoningEffort: reasoningEffortOverride,
+                      }),
+                      isDraft: true,
+                      runtime: activeRuntime,
+                      runtimePageKey,
+                    }}
+                    runtime={activeRuntime}
+                    runtimeConfig={runtimeConfig}
+                    slotKey={runtimePageKey}
                   />
-                ) : (
-                  <ChatRestoreErrorBoundary key={selectedChatId}>
-                    <Suspense fallback={<ChatRestoreLoading />}>
-                      <RestoredChatThread
-                        api={api}
-                        currentRoutePath={currentRoutePath}
-                        draftAgentConfig={selectedChatAgentConfig}
-                        includeProjectInRoute={isProjectMode}
-                        onChatCreated={updateChatFromRun}
-                        onChatMessagesUpdated={setChatMessagesInCache}
-                        onChatUpdated={updateChatFromRun}
-                        projects={projects}
-                        routeProjectId={routeProjectId}
-                        runtimeOptions={runtimeOptions}
-                        selectedChatId={selectedChatId}
-                        setAgentModel={setAgentModel}
-                        setAgentReasoningEffort={setAgentReasoningEffort}
-                        setPersistedChatRuntime={setPersistedChatRuntime}
-                      />
-                    </Suspense>
-                  </ChatRestoreErrorBoundary>
-                )
-              ) : (
-                <NewChatThread
-                  chatOptions={chatOptions}
-                  chats={chats}
-                  creationLocation={draftCreationLocation}
-                  cwd={pinnedDraftCwd}
-                  creationLocationAccessory={
-                    canCreateDraftWorktree ? (
-                      <DraftCreationLocationSelect
-                        onValueChange={setDraftCreationLocation}
-                        value={draftCreationLocation}
-                        variant="ghost"
-                      />
-                    ) : undefined
-                  }
-                  key={runtimePageKey}
-                  model={modelOverride}
-                  mode={modeOverride}
-                  onBeforeSubmit={ensureDraftChatCanSubmit}
-                  onChatCreated={updateChatFromRun}
-                  onChatMessagesUpdated={setChatMessagesInCache}
-                  onChatUpdated={updateChatFromRun}
-                  onCreateProject={createProjectFromPicker}
-                  onOpenChat={openChat}
-                  onProjectChange={selectDraftProject}
-                  permissionMode={permissionModeOverride}
-                  prewarmId={
-                    draftCreationLocation === "worktree"
-                      ? undefined
-                      : model.prewarmQuery.data?.prewarmId
-                  }
-                  projectId={draftProject.id}
-                  projectName={selectedProjectName}
-                  projectPath={draftProject.path}
-                  projects={projects}
-                  reasoningEffort={reasoningEffortOverride}
-                  runOrigin={{
-                    config: draftAgentConfigFromExplicitOverrides({
-                      mode: modeOverride,
-                      model: modelOverride,
-                      permissionMode: permissionModeOverride,
-                      reasoningEffort: reasoningEffortOverride,
-                    }),
-                    isDraft: true,
-                    runtime: activeRuntime,
-                    runtimePageKey,
-                  }}
-                  runtime={activeRuntime}
-                  runtimeConfig={runtimeConfig}
-                  slotKey={runtimePageKey}
-                />
-              )}
-            </section>
-          </main>
-        </SidebarInset>
-        {dockedWorkspaceToolContext ? (
-          <WorkspaceRightSidebar
-            active={workspaceToolHost === "sidebar"}
-            api={api}
-            contextKey={dockedWorkspaceToolContext.contextKey}
-            open={rightSidebarOpen}
-            root={dockedWorkspaceToolContext.root}
-            width={rightSidebarWidth}
-            onClose={toggleWorkspaceTools}
-            onRequestHost={requestWorkspaceToolHost}
-            onWidthChange={setRightSidebarWidth}
-          />
-        ) : null}
-      </WorkspaceSidebarControlPortalProvider>
+                )}
+              </section>
+            </main>
+          </SidebarInset>
+          {dockedWorkspaceToolContext ? (
+            <WorkspaceRightSidebar
+              active={workspaceToolHost === "sidebar"}
+              api={api}
+              contextKey={dockedWorkspaceToolContext.contextKey}
+              open={rightSidebarOpen}
+              root={dockedWorkspaceToolContext.root}
+              width={rightSidebarWidth}
+              onClose={toggleWorkspaceTools}
+              onRequestHost={requestWorkspaceToolHost}
+              onWidthChange={setRightSidebarWidth}
+            />
+          ) : null}
+        </WorkspaceSidebarControlPortalProvider>
+      </WorkspaceKeymapBindings>
     </SidebarProvider>
   );
 };

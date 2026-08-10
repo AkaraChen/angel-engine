@@ -6,9 +6,16 @@ export const TIPC_CHANNELS = [
   "daemonMobileHostingListenAddresses",
   "daemonMobileHostingSet",
   "chatsShowContextMenu",
+  "keymapGetUserBindings",
+  "keymapSetUserBindings",
+  "keymapResetAll",
+  "keymapRestoreBackup",
+  "keymapOpenInEditor",
   "pathLauncherShowContextMenu",
   "projectsChooseDirectory",
   "projectsShowContextMenu",
+  "trayGetPreferences",
+  "traySetEnabled",
 ] as const;
 
 export type TipcChannel = (typeof TIPC_CHANNELS)[number];

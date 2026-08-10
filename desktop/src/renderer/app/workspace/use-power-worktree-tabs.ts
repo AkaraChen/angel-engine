@@ -3,8 +3,7 @@ import type { WorkspaceNavigation } from "@/app/workspace/use-workspace-navigati
 import type { WorkspacePageModel } from "@/app/workspace/use-workspace-page-model";
 
 import is from "@sindresorhus/is";
-import { useCallback, useEffect, useMemo } from "react";
-import { powerWorktreeShortcutAction } from "@/app/workspace/power-worktree-shortcuts";
+import { useCallback, useMemo } from "react";
 import {
   openChatTab,
   setPowerActiveWorktree,
@@ -16,6 +15,11 @@ import {
   chatWorktreeCwd,
   chatWorktreeGroupKey,
 } from "@/features/chat/worktree-grouping";
+import {
+  buildPowerTabTargets,
+  currentPowerTabIndex,
+  cyclePowerTabIndex,
+} from "@/app/workspace/power-tab-targets";
 
 const EMPTY_CHATS: Chat[] = [];
 
@@ -192,54 +196,94 @@ export function usePowerWorktreeTabs(
     });
   }, [openDraftTabFromTabBar, powerDraftTabActive]);
 
-  useEffect(() => {
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.defaultPrevented) return;
+  // Tab shortcuts are owned by the central keymap (workspace.newTab / closeTab / …).
 
-      const action = powerWorktreeShortcutAction({
-        altKey: event.altKey,
-        ctrlKey: event.ctrlKey,
-        draftTabActive: powerDraftTabActive,
-        hasActiveChat: selectedChat !== undefined,
-        key: event.key,
-        metaKey: event.metaKey,
+  const closeActiveTab = useCallback(() => {
+    if (powerDraftTabActive) {
+      closeDraftTab();
+      return;
+    }
+    if (selectedChat !== undefined) {
+      closeChatTab(selectedChat);
+    }
+  }, [closeChatTab, closeDraftTab, powerDraftTabActive, selectedChat]);
+
+  const tabTargets = useMemo(
+    () =>
+      buildPowerTabTargets({
         powerModeActive,
-        repeat: event.repeat,
-        shiftKey: event.shiftKey,
-      });
-      if (action === null) return;
+        hasHomeTab: powerHomeTabContext !== undefined,
+        draftTabActive: powerDraftTabActive,
+        chats: chatTabChats,
+      }),
+    [chatTabChats, powerDraftTabActive, powerHomeTabContext, powerModeActive],
+  );
 
-      event.preventDefault();
-      if (action === "close-draft") {
-        closeDraftTab();
-      } else if (action === "close-chat" && selectedChat !== undefined) {
-        closeChatTab(selectedChat);
-      } else if (action === "open-or-focus-draft") {
-        openOrFocusDraftTab();
+  const currentTabIndex = useMemo(
+    () =>
+      currentPowerTabIndex(tabTargets, {
+        draftTabActive: powerDraftTabActive,
+        homePageActive: powerHomePageContext !== undefined,
+        selectedChatId: selectedChat?.id,
+      }),
+    [powerDraftTabActive, powerHomePageContext, selectedChat?.id, tabTargets],
+  );
+
+  const activateTabTarget = useCallback(
+    (target: (typeof tabTargets)[number]) => {
+      if (target.kind === "home") {
+        openSelectedPowerWorktreeHome();
+        return;
       }
-    };
+      if (target.kind === "draft") {
+        openOrFocusDraftTab();
+        return;
+      }
+      openPowerHistoryChatTab(target.chat);
+    },
+    [
+      openOrFocusDraftTab,
+      openPowerHistoryChatTab,
+      openSelectedPowerWorktreeHome,
+    ],
+  );
 
-    window.addEventListener("keydown", handleKeyDown);
-    return () => {
-      window.removeEventListener("keydown", handleKeyDown);
-    };
-  }, [
-    closeChatTab,
-    closeDraftTab,
-    openOrFocusDraftTab,
-    powerDraftTabActive,
-    powerModeActive,
-    selectedChat,
-  ]);
+  const goToNextTab = useCallback(() => {
+    const nextIndex = cyclePowerTabIndex(tabTargets.length, currentTabIndex, 1);
+    if (nextIndex === null) return false;
+    activateTabTarget(tabTargets[nextIndex]!);
+    return true;
+  }, [activateTabTarget, currentTabIndex, tabTargets]);
+
+  const goToPreviousTab = useCallback(() => {
+    const prevIndex = cyclePowerTabIndex(
+      tabTargets.length,
+      currentTabIndex,
+      -1,
+    );
+    if (prevIndex === null) return false;
+    activateTabTarget(tabTargets[prevIndex]!);
+    return true;
+  }, [activateTabTarget, currentTabIndex, tabTargets]);
+
+  const hasMultipleTabs = tabTargets.length > 1;
 
   return {
     chatTabChats,
+    closeActiveTab,
     closeChatTab,
     closeDraftTab,
+    goToNextTab,
+    goToPreviousTab,
+    hasClosableTab: powerDraftTabActive || selectedChat !== undefined,
+    hasMultipleTabs,
     openDraftTabFromTabBar,
+    openOrFocusDraftTab,
     openPowerHistoryChatTab,
     openSelectedPowerWorktreeHome,
+    powerDraftTabActive,
     powerHomeTabContext,
+    powerModeActive,
   };
 }
 

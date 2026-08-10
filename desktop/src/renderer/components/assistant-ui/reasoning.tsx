@@ -13,11 +13,14 @@ import { cva } from "class-variance-authority";
 import { memo, useCallback, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
+import { useWorkspaceUiStore } from "@/app/workspace/workspace-ui-store";
 import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
+import { prefersReasoningOpen } from "@/features/chat/transcript-density";
+import { useTranscriptDensityStore } from "@/features/chat/transcript-density-store";
 import { cn } from "@/platform/utils";
 
 const ANIMATION_DURATION = 200;
@@ -213,6 +216,11 @@ const ReasoningGroupImpl: ReasoningGroupComponent = ({
   endIndex,
   startIndex,
 }) => {
+  const workspaceMode = useWorkspaceUiStore((state) => state.workspaceMode);
+  const density = useTranscriptDensityStore((state) =>
+    state.densityFor(workspaceMode),
+  );
+  const forceOpen = prefersReasoningOpen(density);
   const isReasoningStreaming = useAuiState((state) => {
     if (state.message.status?.type !== "running") return false;
 
@@ -223,11 +231,11 @@ const ReasoningGroupImpl: ReasoningGroupComponent = ({
   });
   const [openState, setOpenState] = useState(() => ({
     isReasoningStreaming,
-    open: isReasoningStreaming,
+    open: forceOpen || isReasoningStreaming,
   }));
 
-  let open = openState.open;
-  if (openState.isReasoningStreaming !== isReasoningStreaming) {
+  let open = forceOpen ? true : openState.open;
+  if (!forceOpen && openState.isReasoningStreaming !== isReasoningStreaming) {
     open = isReasoningStreaming;
     setOpenState({
       isReasoningStreaming,
@@ -235,9 +243,13 @@ const ReasoningGroupImpl: ReasoningGroupComponent = ({
     });
   }
 
-  const handleOpenChange = useCallback((nextOpen: boolean) => {
-    setOpenState((current) => ({ ...current, open: nextOpen }));
-  }, []);
+  const handleOpenChange = useCallback(
+    (nextOpen: boolean) => {
+      if (forceOpen) return;
+      setOpenState((current) => ({ ...current, open: nextOpen }));
+    },
+    [forceOpen],
+  );
 
   return (
     <ReasoningRoot onOpenChange={handleOpenChange} open={open}>

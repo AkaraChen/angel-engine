@@ -39,6 +39,7 @@ export const chatPlatformIpcRouter = {
                 | "cancelled"
                 | "copied"
                 | "deleted"
+                | "handoff"
                 | "pinned"
                 | "rename"
                 | "unpinned"
@@ -64,6 +65,13 @@ export const chatPlatformIpcRouter = {
                       resolve("rename");
                     },
                     label: translate("common.rename"),
+                  },
+                  {
+                    click: () => {
+                      handled = true;
+                      resolve("handoff");
+                    },
+                    label: translate("messages.handoff"),
                   },
                 ];
                 if (!app.isPackaged)

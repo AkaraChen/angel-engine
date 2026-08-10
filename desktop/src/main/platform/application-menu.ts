@@ -3,19 +3,43 @@ import type { DesktopWindowCommand } from "../../shared/desktop-window";
 
 import { app, BrowserWindow, Menu } from "electron";
 import { DESKTOP_COMMAND_CHANNEL } from "../../shared/desktop-window";
+import {
+  COMMAND_IDS,
+  acceleratorForCommand,
+  detectKeymapPlatform,
+} from "../../shared/keybindings";
 import { checkForUpdatesFromMenu } from "../updater";
 import { translate } from "./i18n";
+import { getKeybindingsState } from "./keybindings-store";
 
 const isMacOS = process.platform === "darwin";
+
+let openSettingsWindowRef: (() => void) | null = null;
 
 export function configureApplicationMenu({
   openSettingsWindow,
 }: {
   openSettingsWindow: () => void;
 }) {
+  openSettingsWindowRef = openSettingsWindow;
+  rebuildApplicationMenu();
+}
+
+/** Rebuild menu so accelerators mirror current keymap (KIT-796). */
+export function rebuildApplicationMenu() {
+  if (!openSettingsWindowRef) return;
+  const openSettingsWindow = openSettingsWindowRef;
   Menu.setApplicationMenu(
     Menu.buildFromTemplate(menuTemplate({ openSettingsWindow })),
   );
+}
+
+function acceleratorFor(commandId: string): string | undefined {
+  const state = getKeybindingsState();
+  return acceleratorForCommand(commandId, {
+    userEntries: state.file.bindings,
+    platform: detectKeymapPlatform(process.platform),
+  });
 }
 
 function menuTemplate({
@@ -23,6 +47,11 @@ function menuTemplate({
 }: {
   openSettingsWindow: () => void;
 }): MenuItemConstructorOptions[] {
+  // No hard-coded fallback: unbind / chord-only must clear the menu shortcut.
+  const settingsAccel = acceleratorFor(COMMAND_IDS.settingsOpen);
+  const newChatAccel = acceleratorFor(COMMAND_IDS.chatNew);
+  const sidebarAccel = acceleratorFor(COMMAND_IDS.workspaceToggleSidebar);
+
   return [
     ...(isMacOS
       ? [
@@ -35,7 +64,7 @@ function menuTemplate({
               settingsItem(
                 openSettingsWindow,
                 translate("workspace.settings"),
-                "CmdOrCtrl+,",
+                settingsAccel,
               ),
               { type: "separator" },
               { role: "services" },
@@ -52,14 +81,14 @@ function menuTemplate({
     {
       label: translate("common.file"),
       submenu: [
-        commandItem("new-chat", translate("workspace.newChat"), "CmdOrCtrl+N"),
+        commandItem("new-chat", translate("workspace.newChat"), newChatAccel),
         ...(!isMacOS
           ? [
               { type: "separator" } satisfies MenuItemConstructorOptions,
               settingsItem(
                 openSettingsWindow,
                 translate("workspace.settings"),
-                "Ctrl+,",
+                settingsAccel,
               ),
               { type: "separator" } satisfies MenuItemConstructorOptions,
               { role: "quit" } satisfies MenuItemConstructorOptions,
@@ -87,7 +116,7 @@ function menuTemplate({
         commandItem(
           "toggle-sidebar",
           translate("sidebar.toggleSidebar"),
-          "CmdOrCtrl+B",
+          sidebarAccel,
         ),
         { type: "separator" },
         { role: "reload" },
@@ -128,10 +157,10 @@ function menuTemplate({
 function settingsItem(
   openSettingsWindow: () => void,
   label: string,
-  accelerator: string,
+  accelerator: string | undefined,
 ): MenuItemConstructorOptions {
   return {
-    accelerator,
+    ...(accelerator ? { accelerator } : {}),
     click: openSettingsWindow,
     label,
   };
@@ -140,10 +169,10 @@ function settingsItem(
 function commandItem(
   command: DesktopWindowCommand,
   label: string,
-  accelerator: string,
+  accelerator: string | undefined,
 ): MenuItemConstructorOptions {
   return {
-    accelerator,
+    ...(accelerator ? { accelerator } : {}),
     click: () => {
       sendCommand(command);
     },

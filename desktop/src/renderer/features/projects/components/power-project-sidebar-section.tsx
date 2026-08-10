@@ -6,7 +6,6 @@ import type { ProjectWorktreeChatGroup } from "@/features/chat/worktree-grouping
 import {
   CaretDown as ChevronDown,
   Folder,
-  FolderPlus,
   GitBranch,
   SpinnerGap as Loader2,
   Plus,
@@ -17,7 +16,6 @@ import { AnimatePresence, m } from "framer-motion";
 import { useEffect, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { useWorkspaceUiStore } from "@/app/workspace/workspace-ui-store";
-import { Button } from "@/components/ui/button";
 import {
   SidebarGroup,
   SidebarGroupContent,
@@ -31,11 +29,13 @@ import {
   WorkspaceSidebarMenuButton,
 } from "@/components/workspace-sidebar-primitives";
 import { groupProjectChatsByWorktree } from "@/features/chat/worktree-grouping";
+import { AddProjectMenu } from "@/features/projects/components/add-project-menu";
 
 type MaybeAsync = void | Promise<void>;
 
 interface PowerProjectSidebarSectionProps {
   isLoading: boolean;
+  onCloneRepository: () => MaybeAsync;
   onCreateProject: () => MaybeAsync;
   onCreateProjectChat: (project: Project) => MaybeAsync;
   onCancelWorktreeCreation: (chat: Chat) => MaybeAsync;
@@ -55,6 +55,7 @@ interface PowerProjectSidebarSectionProps {
 
 export function PowerProjectSidebarSection({
   isLoading,
+  onCloneRepository,
   onCreateProject,
   onCreateProjectChat,
   onCancelWorktreeCreation,
@@ -99,27 +100,10 @@ export function PowerProjectSidebarSection({
   return (
     <SidebarGroup className="py-1">
       <SidebarSectionHeader label={t("sidebar.projects")}>
-        <Button
-          asChild
-          className="
-            size-7
-            [&_svg:not([class*='size-'])]:size-4
-          "
-          size="icon-xs"
-          title={t("sidebar.addProject")}
-          variant="ghost"
-        >
-          <m.button
-            onClick={() => void onCreateProject()}
-            title={t("sidebar.addProject")}
-            transition={sidebarMotion}
-            type="button"
-            whileTap={{ scale: 0.96 }}
-          >
-            <FolderPlus />
-            <span className="sr-only">{t("sidebar.addProject")}</span>
-          </m.button>
-        </Button>
+        <AddProjectMenu
+          onChooseFolder={() => void onCreateProject()}
+          onCloneRepository={() => void onCloneRepository()}
+        />
       </SidebarSectionHeader>
       <SidebarGroupContent>
         <SidebarMenu>

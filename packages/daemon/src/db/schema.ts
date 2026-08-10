@@ -53,6 +53,23 @@ export const worktreeCreationJobs = sqliteTable("worktree_creation_jobs", {
   status: text("status").notNull(),
 });
 
+export const queuedChatRuns = sqliteTable(
+  "queued_chat_runs",
+  {
+    runId: text("run_id").primaryKey(),
+    chatId: text("chat_id")
+      .notNull()
+      .unique()
+      .references(() => chats.id, { onDelete: "cascade" }),
+    createdAt: text("created_at").notNull(),
+    input: text("input").notNull(),
+    state: text("state", { enum: ["dispatching", "queued"] })
+      .notNull()
+      .default("queued"),
+  },
+  (table) => [index("queued_chat_runs_chat_id_idx").on(table.chatId)],
+);
+
 export type ProjectRow = typeof projects.$inferSelect;
 export type NewProjectRow = typeof projects.$inferInsert;
 export type CustomAgentRow = typeof customAgents.$inferSelect;
@@ -60,3 +77,4 @@ export type NewCustomAgentRow = typeof customAgents.$inferInsert;
 export type ChatRow = typeof chats.$inferSelect;
 export type NewChatRow = typeof chats.$inferInsert;
 export type WorktreeCreationJobRow = typeof worktreeCreationJobs.$inferSelect;
+export type QueuedChatRunRow = typeof queuedChatRuns.$inferSelect;

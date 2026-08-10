@@ -11,6 +11,11 @@ import type {
   DesktopWindowCommand,
 } from "@shared/desktop-window";
 import type {
+  DesktopNotificationHistory,
+  DesktopNotificationPreferences,
+  DesktopNotificationPreferencesSetInput,
+} from "@shared/notification-preferences";
+import type {
   DesktopUpdateChannelSetInput,
   DesktopUpdateStatus,
 } from "@shared/update-channel";
@@ -68,9 +73,29 @@ declare global {
       onCommand: (
         handler: (command: DesktopWindowCommand) => void,
       ) => () => void;
+      onKeymapUserBindingsChanged: (
+        handler: (state: {
+          file: { version: 1; bindings: unknown[] };
+          warnings: unknown[];
+          fatal?: unknown;
+          path: string;
+        }) => void,
+      ) => () => void;
       onOpenChatFromNotification: (
         handler: (event: DesktopOpenChatFromNotificationEvent) => void,
       ) => () => void;
+      onNotificationHistoryChanged: (
+        handler: (history: DesktopNotificationHistory) => void,
+      ) => () => void;
+      getNotificationHistory: () => Promise<DesktopNotificationHistory>;
+      clearNotificationHistory: () => Promise<DesktopNotificationHistory>;
+      markNotificationHistoryRead: (
+        ids: string[],
+      ) => Promise<DesktopNotificationHistory>;
+      getNotificationPreferences: () => Promise<DesktopNotificationPreferences>;
+      setNotificationPreferences: (
+        input: DesktopNotificationPreferencesSetInput,
+      ) => Promise<DesktopNotificationPreferences>;
       onUpdateDownloaded: (
         handler: (event: DesktopUpdateDownloadedEvent) => void,
       ) => () => void;
