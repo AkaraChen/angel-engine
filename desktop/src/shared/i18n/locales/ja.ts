@@ -182,6 +182,29 @@ export const ja = {
           filesSelected: "{{total}} 件中 {{selected}} 件を選択",
           summaryPlaceholder: "概要",
         },
+        diffBase: {
+          branch: "既定ブランチとの差分",
+          fallback: {
+            anchorMissing:
+              "{{base}} の基準 {{sha}} は存在しません。一時的に{{fallback}}を表示します。",
+            anchorUnavailable:
+              "このチャットでは{{base}}を利用できません。一時的に{{fallback}}を表示します。",
+            defaultBranchUnavailable:
+              "既定ブランチを解決できません。一時的に{{fallback}}を表示します。",
+            gitRefUnavailable:
+              "Git 参照 {{ref}} を利用できません。一時的に{{fallback}}を表示します。",
+            noMergeBase:
+              "{{ref}} と HEAD のマージベースがありません。一時的に{{fallback}}を表示します。",
+            notRepository:
+              "このワークスペースは Git リポジトリではありません。",
+          },
+          fileCount: "{{count}} ファイル",
+          label: "差分ベース",
+          session: "セッション開始以降",
+          turn: "前のターン以降",
+          unstaged: "未ステージのみ",
+          worktree: "未コミットの変更",
+        },
         dockInSidebar: "サイドバーにドック",
         empty: {
           checksUnavailable: "チェックを利用できません",

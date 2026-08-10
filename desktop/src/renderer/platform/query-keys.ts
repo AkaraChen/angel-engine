@@ -65,10 +65,17 @@ export const queryKeys = {
       ["workspace-tools", "git-branches", root] as const,
     gitCommitShow: (root: string | null, hash: string | null) =>
       ["workspace-tools", "git-commit-show", root, hash] as const,
-    gitDiff: (root: string | null) =>
-      ["workspace-tools", "git-diff", root] as const,
     gitLog: (root: string | null) =>
       ["workspace-tools", "git-log", root] as const,
+    gitDiffRoot: (root: string | null) =>
+      ["workspace-tools", "git-diff", root] as const,
+    gitDiff: (
+      root: string | null,
+      baseKind = "worktree",
+      baseRef: string | null = null,
+      chatId: string | null = null,
+    ) =>
+      ["workspace-tools", "git-diff", root, baseKind, baseRef, chatId] as const,
     readFile: (root: string | null, path: string | null) =>
       ["workspace-tools", "read-file", root, path] as const,
   },

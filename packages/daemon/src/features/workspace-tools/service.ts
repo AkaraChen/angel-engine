@@ -8,9 +8,12 @@ import type {
   WorkspaceGitBranchStatus,
   WorkspaceGitCheckoutResult,
   WorkspaceGitCommitShowResult,
+  WorkspaceGitDiffBaseKind,
+  WorkspaceGitDiffBaseOption,
   WorkspaceGitDiffResult,
   WorkspaceGitLogCommit,
   WorkspaceGitLogResult,
+  WorkspaceGitResolvedBase,
   WorkspaceToolGitCommitResult,
   WorkspaceToolGitPullResult,
   WorkspaceToolGitPushResult,
@@ -28,7 +31,9 @@ import {
   higherPriorityStatus,
   isProbablyBinary,
   joinPatches,
+  mergeGitNumstatEntries,
   parseAheadBehindCounts,
+  parseGitNumstatOutput,
   parseGitStatusOutput,
 } from "./git";
 import {
@@ -79,14 +84,26 @@ export function workspaceFileTree(
   });
 }
 
-export function workspaceGitDiff(
-  rootInput: string,
-): Effect.Effect<WorkspaceGitDiffResult, DaemonError> {
+export function workspaceGitDiff<R = never>(
+  input:
+    | string
+    | {
+        baseKind?: string;
+        baseRef?: string;
+        chatId?: string;
+        root: string;
+      },
+  anchorResolver: WorkspaceGitAnchorResolver<R> = (() =>
+    Effect.succeed(undefined)) as WorkspaceGitAnchorResolver<R>,
+): Effect.Effect<WorkspaceGitDiffResult, DaemonError, R> {
   return Effect.gen(function* () {
-    const root = yield* resolveWorkspaceRoot(rootInput);
+    const options = typeof input === "string" ? { root: input } : input;
+    const root = yield* resolveWorkspaceRoot(options.root);
+    const requestedBaseKind = parseWorkspaceGitDiffBaseKind(options.baseKind);
     const gitRoot = yield* gitRootFor(root);
     if (!is.nonEmptyString(gitRoot)) {
       return {
+        availableBases: unavailableBaseOptions(requestedBaseKind),
         branchStatus: {
           ahead: 0,
           behind: 0,
@@ -95,6 +112,14 @@ export function workspaceGitDiff(
         },
         conflictedPaths: [],
         isGitRepository: false,
+        numstat: [],
+        patch: "",
+        requestedBaseKind,
+        resolvedBase: {
+          available: false,
+          kind: requestedBaseKind,
+          unavailableReason: { code: "not-a-repository" },
+        },
         root,
         skippedFiles: [],
         stagedPatch: "",
@@ -104,7 +129,7 @@ export function workspaceGitDiff(
       };
     }
 
-    const [branchStatus, status, stagedPatch, unstagedTrackedPatch] =
+    const [branchStatus, status, stagedPatch, unstagedTrackedPatch, head] =
       yield* Effect.all(
         [
           gitBranchStatus(gitRoot),
@@ -124,6 +149,7 @@ export function workspaceGitDiff(
             "--no-ext-diff",
             "--no-color",
           ]),
+          resolveCommit(gitRoot, "HEAD"),
         ],
         { concurrency: "unbounded" },
       );
@@ -135,13 +161,67 @@ export function workspaceGitDiff(
       unstagedTrackedPatch,
       untrackedResult.patch,
     );
+    const worktreeBase = resolvedBase("worktree", head);
+    const unstagedBase: WorkspaceGitResolvedBase = {
+      available: true,
+      kind: "unstaged",
+      ref: "index",
+    };
+    const branchBase = yield* resolveBranchBase(gitRoot, options.baseRef);
+    const sessionBase = yield* resolveChatAnchorBase({
+      anchorResolver,
+      chatId: options.chatId,
+      gitRoot,
+      kind: "session",
+    });
+    const turnBase = yield* resolveChatAnchorBase({
+      anchorResolver,
+      chatId: options.chatId,
+      gitRoot,
+      kind: "turn",
+    });
+    const bases = [
+      worktreeBase,
+      unstagedBase,
+      branchBase,
+      sessionBase,
+      turnBase,
+    ];
+    const requestedBase = bases.find((base) => base.kind === requestedBaseKind);
+    const selectedBase = requestedBase?.available
+      ? requestedBase
+      : {
+          ...worktreeBase,
+          unavailableReason: requestedBase?.unavailableReason,
+        };
+    const basePatch = yield* patchForBase({
+      base: selectedBase,
+      gitRoot,
+      stagedPatch,
+      unstagedTrackedPatch,
+    });
+    const trackedNumstat = yield* numstatForBase({
+      base: selectedBase,
+      gitRoot,
+    });
 
     return {
+      availableBases: bases.map(
+        (base): WorkspaceGitDiffBaseOption => ({
+          ...base,
+          selected: base.kind === requestedBaseKind,
+        }),
+      ),
+      branch: branchStatus.branch,
       branchStatus,
       conflictedPaths: status
         .filter((entry) => entry.conflicted)
         .map((entry) => entry.path),
       isGitRepository: true,
+      numstat: mergeGitNumstatEntries(trackedNumstat, untrackedResult.numstat),
+      patch: joinPatches(basePatch, untrackedResult.patch),
+      requestedBaseKind,
+      resolvedBase: selectedBase,
       root,
       skippedFiles: untrackedResult.skippedFiles,
       stagedPatch,
@@ -150,6 +230,235 @@ export function workspaceGitDiff(
       warnings: untrackedResult.warnings,
     };
   });
+}
+
+export interface WorkspaceGitAnchor {
+  ref?: string;
+  sha: string;
+}
+
+export type WorkspaceGitAnchorResolver<R = never> = (
+  chatId: string,
+  kind: "session" | "turn",
+) => Effect.Effect<WorkspaceGitAnchor | undefined, DaemonError, R>;
+
+export function workspaceGitHeadSha(
+  rootInput: string,
+): Effect.Effect<string | undefined, never> {
+  return Effect.gen(function* () {
+    const root = yield* resolveWorkspaceRoot(rootInput);
+    const gitRoot = yield* gitRootFor(root);
+    if (!gitRoot) return undefined;
+    return yield* workspaceGitOutput(gitRoot, ["rev-parse", "HEAD"]);
+  }).pipe(Effect.orElseSucceed(() => undefined));
+}
+
+const workspaceGitDiffBaseKinds = new Set<WorkspaceGitDiffBaseKind>([
+  "branch",
+  "session",
+  "turn",
+  "unstaged",
+  "worktree",
+]);
+
+function parseWorkspaceGitDiffBaseKind(
+  value?: string,
+): WorkspaceGitDiffBaseKind {
+  if (!value) return "worktree";
+  if (workspaceGitDiffBaseKinds.has(value as WorkspaceGitDiffBaseKind)) {
+    return value as WorkspaceGitDiffBaseKind;
+  }
+  throw DaemonError.invalidRequest(`Unsupported Git diff base: ${value}`);
+}
+
+function unavailableBaseOptions(
+  selectedKind: WorkspaceGitDiffBaseKind,
+): WorkspaceGitDiffBaseOption[] {
+  return [...workspaceGitDiffBaseKinds].map((kind) => ({
+    available: false,
+    kind,
+    selected: kind === selectedKind,
+    unavailableReason: { code: "not-a-repository" },
+  }));
+}
+
+interface CommitDetails {
+  commitTime: string;
+  fullSha: string;
+  shortSha: string;
+  subject: string;
+}
+
+function resolveCommit(gitRoot: string, ref: string) {
+  return workspaceGitOutput(gitRoot, [
+    "show",
+    "--no-patch",
+    "--format=%H%x00%h%x00%s%x00%cI",
+    ref,
+  ]).pipe(
+    Effect.map((output): CommitDetails | undefined => {
+      const [fullSha, shortSha, subject, commitTime] = output.split("\0");
+      return fullSha && shortSha && subject !== undefined && commitTime
+        ? { commitTime, fullSha, shortSha, subject }
+        : undefined;
+    }),
+    Effect.orElseSucceed(() => undefined),
+  );
+}
+
+function resolvedBase(
+  kind: WorkspaceGitDiffBaseKind,
+  commit: CommitDetails | undefined,
+  ref?: string,
+): WorkspaceGitResolvedBase {
+  return commit
+    ? { available: true, kind, ref, ...commit }
+    : {
+        available: kind === "worktree",
+        kind,
+        ref,
+        unavailableReason:
+          kind === "worktree"
+            ? undefined
+            : { code: "git-ref-unavailable", ref: ref ?? kind },
+      };
+}
+
+function resolveBranchBase(gitRoot: string, requestedRef?: string) {
+  return Effect.gen(function* () {
+    const ref = is.nonEmptyString(requestedRef)
+      ? requestedRef
+      : yield* detectDefaultBranch(gitRoot);
+    if (!ref) {
+      return {
+        available: false,
+        kind: "branch",
+        unavailableReason: { code: "default-branch-unavailable" },
+      } satisfies WorkspaceGitResolvedBase;
+    }
+    const mergeBase = yield* workspaceGitOutput(gitRoot, [
+      "merge-base",
+      ref,
+      "HEAD",
+    ]).pipe(Effect.orElseSucceed(() => ""));
+    if (!mergeBase) {
+      return {
+        available: false,
+        kind: "branch",
+        ref,
+        unavailableReason: { code: "no-merge-base", ref },
+      } satisfies WorkspaceGitResolvedBase;
+    }
+    return resolvedBase(
+      "branch",
+      yield* resolveCommit(gitRoot, mergeBase),
+      ref,
+    );
+  });
+}
+
+function resolveChatAnchorBase<R>({
+  anchorResolver,
+  chatId,
+  gitRoot,
+  kind,
+}: {
+  anchorResolver: WorkspaceGitAnchorResolver<R>;
+  chatId?: string;
+  gitRoot: string;
+  kind: "session" | "turn";
+}): Effect.Effect<WorkspaceGitResolvedBase, DaemonError, R> {
+  return Effect.gen(function* () {
+    const unavailableReason = {
+      anchorKind: kind,
+      code: "anchor-unavailable",
+    } as const;
+    if (!is.nonEmptyString(chatId)) {
+      return { available: false, kind, unavailableReason };
+    }
+    const anchor = yield* anchorResolver(chatId, kind);
+    if (!anchor) return { available: false, kind, unavailableReason };
+    const commit = yield* resolveCommit(gitRoot, anchor.sha);
+    if (!commit) {
+      return {
+        available: false,
+        kind,
+        ref: anchor.ref,
+        unavailableReason: {
+          anchorKind: kind,
+          code: "anchor-missing",
+          shortSha: anchor.sha.slice(0, 7),
+        },
+      };
+    }
+    return resolvedBase(kind, commit, anchor.ref);
+  });
+}
+
+function detectDefaultBranch(gitRoot: string) {
+  return Effect.gen(function* () {
+    const originHead = yield* workspaceGitOutput(gitRoot, [
+      "symbolic-ref",
+      "--quiet",
+      "--short",
+      "refs/remotes/origin/HEAD",
+    ]).pipe(Effect.orElseSucceed(() => ""));
+    if (originHead) return originHead;
+    for (const ref of ["main", "master", "origin/main", "origin/master"]) {
+      const exists = yield* workspaceGitOutput(gitRoot, [
+        "rev-parse",
+        "--verify",
+        "--quiet",
+        `${ref}^{commit}`,
+      ]).pipe(Effect.orElseSucceed(() => ""));
+      if (exists) return ref;
+    }
+    return undefined;
+  });
+}
+
+function patchForBase({
+  base,
+  gitRoot,
+  stagedPatch,
+  unstagedTrackedPatch,
+}: {
+  base: WorkspaceGitResolvedBase;
+  gitRoot: string;
+  stagedPatch: string;
+  unstagedTrackedPatch: string;
+}) {
+  if (base.kind === "worktree") {
+    return Effect.succeed(joinPatches(stagedPatch, unstagedTrackedPatch));
+  }
+  if (base.kind === "unstaged") return Effect.succeed(unstagedTrackedPatch);
+  if (!base.fullSha) return Effect.succeed("");
+  return workspaceGitOutput(gitRoot, [
+    "diff",
+    "--patch",
+    "--find-renames",
+    "--no-ext-diff",
+    "--no-color",
+    base.fullSha,
+  ]);
+}
+
+function numstatForBase({
+  base,
+  gitRoot,
+}: {
+  base: WorkspaceGitResolvedBase;
+  gitRoot: string;
+}) {
+  const ref = base.kind === "unstaged" ? undefined : base.fullSha;
+  return workspaceGitOutput(gitRoot, [
+    "diff",
+    "--numstat",
+    "-z",
+    "--find-renames",
+    "--no-ext-diff",
+    ...(ref ? [ref] : []),
+  ]).pipe(Effect.map(parseGitNumstatOutput));
 }
 
 export function workspaceGitPush({
@@ -834,11 +1143,15 @@ function gitStatusEntries({
       "-z",
     ]);
     const entries = parseGitStatusOutput(output);
+    const realRoot = yield* Effect.tryPromise({
+      catch: (cause) => DaemonError.workspacePathInvalid(causeMessage(cause)),
+      try: () => fs.realpath(root),
+    });
     const byPath = new Map<string, WorkspaceToolGitStatusEntry>();
 
     for (const entry of entries) {
       const absolutePath = path.resolve(gitRoot, entry.path);
-      const treePath = absolutePathToTreePath(root, absolutePath);
+      const treePath = absolutePathToTreePath(realRoot, absolutePath);
       if (!is.nonEmptyString(treePath)) continue;
 
       const current = byPath.get(treePath);

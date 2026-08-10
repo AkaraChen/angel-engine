@@ -113,6 +113,7 @@ import type {
   WorkspaceGitCheckoutResult,
   WorkspaceGitCommitShowInput,
   WorkspaceGitCommitShowResult,
+  WorkspaceGitDiffInput,
   WorkspaceGitDiffResult,
   WorkspaceGitLogResult,
   WorkspaceToolGitCommitInput,
@@ -688,7 +689,7 @@ export function createDaemonClient(options: DaemonClientOptions) {
         request<WorkspaceGitCommitShowResult>(
           `/api/workspace/git-commit-show?${query(input)}`,
         ),
-      gitDiff: (input: WorkspaceToolRootInput) =>
+      gitDiff: (input: WorkspaceGitDiffInput) =>
         request<WorkspaceGitDiffResult>(
           `/api/workspace/git-diff?${query(input)}`,
         ),

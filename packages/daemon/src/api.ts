@@ -36,6 +36,7 @@ import {
 } from "@angel-engine/daemon-api/chat";
 import {
   githubPrChecksFixPromptInputSchema,
+  githubPrContextInputSchema,
   githubResolveUrlInputSchema,
   githubAddPullRequestCommentInputSchema,
   githubCreatePullRequestInputSchema,
@@ -64,6 +65,7 @@ import {
   buildGitHubPrChecksFixPrompt,
   listGitHubPrChecks,
 } from "./features/github/checks";
+import { fetchGitHubChecks } from "./features/github/checks-snapshot";
 import { listGitHubItems } from "./features/github/list";
 import { discoverPullRequestTemplates } from "./features/github/pr-template";
 import {
@@ -77,6 +79,7 @@ import {
   listGitHubRepositoryOwners,
 } from "./features/github/repos";
 import { resolveGitHubUrl } from "./features/github/resolve";
+import { fetchGitHubReviewThreads } from "./features/github/review-threads";
 import { createWorkspaceFromPullRequest } from "./features/github/workspace-from-pr";
 import { listAvailableAgents } from "./features/agents/availability";
 import {
@@ -129,6 +132,7 @@ import {
   listProjects,
   updateProject,
 } from "./features/projects/repository";
+import { getChatDiffAnchor } from "./features/chat/diff-anchors";
 import {
   workspaceFileTree,
   workspaceGitBranches,
@@ -655,6 +659,30 @@ export function registerApi(
       ),
     ),
   );
+  app.get("/api/github/checks", async (context) => {
+    const prNumber = Number(context.req.query("prNumber"));
+    const input = githubPrContextInputSchema({
+      cwd: requireQuery(context.req.query("cwd"), "cwd"),
+      owner: requireQuery(context.req.query("owner"), "owner"),
+      prNumber,
+      repo: requireQuery(context.req.query("repo"), "repo"),
+    });
+    if (input instanceof arkType.errors)
+      throw DaemonError.invalidRequest("Invalid GitHub checks query.");
+    return context.json(await run(fetchGitHubChecks(input)));
+  });
+  app.get("/api/github/review-threads", async (context) => {
+    const prNumber = Number(context.req.query("prNumber"));
+    const input = githubPrContextInputSchema({
+      cwd: requireQuery(context.req.query("cwd"), "cwd"),
+      owner: requireQuery(context.req.query("owner"), "owner"),
+      prNumber,
+      repo: requireQuery(context.req.query("repo"), "repo"),
+    });
+    if (input instanceof arkType.errors)
+      throw DaemonError.invalidRequest("Invalid GitHub review-threads query.");
+    return context.json(await run(fetchGitHubReviewThreads(input)));
+  });
   app.get("/api/github/pull-request-template", async (context) => {
     const input = githubPullRequestTemplateInputSchema({
       cwd: requireQuery(context.req.query("cwd"), "cwd"),
@@ -914,7 +942,22 @@ export function registerApi(
   app.get("/api/workspace/git-diff", async (context) =>
     context.json(
       await run(
-        workspaceGitDiff(requireQuery(context.req.query("root"), "root")),
+        workspaceGitDiff(
+          {
+            baseKind: context.req.query("baseKind"),
+            baseRef: context.req.query("baseRef"),
+            chatId: context.req.query("chatId"),
+            root: requireQuery(context.req.query("root"), "root"),
+          },
+          (chatId, kind) =>
+            getChatDiffAnchor(chatId, kind).pipe(
+              Effect.map((anchor) =>
+                anchor
+                  ? { ref: anchor.turnId ?? undefined, sha: anchor.sha }
+                  : undefined,
+              ),
+            ),
+        ),
       ),
     ),
   );

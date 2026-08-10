@@ -2,6 +2,19 @@ export interface WorkspaceToolRootInput {
   root: string;
 }
 
+export type WorkspaceGitDiffBaseKind =
+  | "branch"
+  | "session"
+  | "turn"
+  | "unstaged"
+  | "worktree";
+
+export interface WorkspaceGitDiffInput extends WorkspaceToolRootInput {
+  baseKind?: WorkspaceGitDiffBaseKind;
+  baseRef?: string;
+  chatId?: string;
+}
+
 export interface WorkspaceToolReadFileInput extends WorkspaceToolRootInput {
   path: string;
 }
@@ -109,10 +122,52 @@ export interface WorkspaceGitSkippedFile {
   size?: number;
 }
 
+export type WorkspaceGitDiffUnavailableReasonCode =
+  | "anchor-missing"
+  | "anchor-unavailable"
+  | "default-branch-unavailable"
+  | "git-ref-unavailable"
+  | "no-merge-base"
+  | "not-a-repository";
+
+export interface WorkspaceGitDiffUnavailableReason {
+  anchorKind?: "session" | "turn";
+  code: WorkspaceGitDiffUnavailableReasonCode;
+  ref?: string;
+  shortSha?: string;
+}
+
+export interface WorkspaceGitResolvedBase {
+  available: boolean;
+  commitTime?: string;
+  fullSha?: string;
+  kind: WorkspaceGitDiffBaseKind;
+  ref?: string;
+  shortSha?: string;
+  subject?: string;
+  unavailableReason?: WorkspaceGitDiffUnavailableReason;
+}
+
+export interface WorkspaceGitDiffBaseOption extends WorkspaceGitResolvedBase {
+  selected: boolean;
+}
+
+export interface WorkspaceGitNumstatEntry {
+  additions: number;
+  deletions: number;
+  path: string;
+}
+
 export interface WorkspaceGitDiffResult {
+  availableBases: WorkspaceGitDiffBaseOption[];
+  branch?: string;
   branchStatus: WorkspaceGitBranchStatus;
   conflictedPaths: string[];
   isGitRepository: boolean;
+  numstat: WorkspaceGitNumstatEntry[];
+  patch: string;
+  requestedBaseKind: WorkspaceGitDiffBaseKind;
+  resolvedBase: WorkspaceGitResolvedBase;
   root: string;
   skippedFiles: WorkspaceGitSkippedFile[];
   stagedPatch: string;

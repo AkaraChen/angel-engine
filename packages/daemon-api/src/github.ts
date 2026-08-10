@@ -306,3 +306,106 @@ export interface GitHubRepository {
 export interface GitHubListRepositoriesResult {
   repositories: GitHubRepository[];
 }
+
+/** Input for PR checks snapshot / review-thread fetch. */
+export interface GitHubPrContextInput {
+  cwd: string;
+  owner: string;
+  prNumber: number;
+  repo: string;
+}
+
+export type GitHubChecksInput = GitHubPrContextInput;
+export type GitHubReviewThreadsInput = GitHubPrContextInput;
+
+/**
+ * One check/status from a PR's statusCheckRollup.
+ * `checkRunId` + `attempt` form the shepherd dedupe fingerprint.
+ */
+export interface GitHubCheckItem {
+  /** GitHub Actions / Check Run numeric id as string; null for legacy StatusContext. */
+  checkRunId: string | null;
+  /**
+   * Re-run attempt number when known (parsed from details URL), else 1.
+   * Re-runs usually mint a new checkRunId, so id alone is often enough;
+   * attempt is kept for the `checkRunId:attempt` fingerprint shape.
+   */
+  attempt: number;
+  name: string;
+  /** CheckRun status (COMPLETED, IN_PROGRESS, …) or StatusContext state. */
+  status: string;
+  /** CheckRun conclusion when completed; null while pending. StatusContext: same as status. */
+  conclusion: string | null;
+  isRequired: boolean;
+  isPending: boolean;
+  detailsUrl: string | null;
+  workflowName: string | null;
+  /** Workflow run database id when available — used by failure-log fetch. */
+  workflowRunId: string | null;
+}
+
+export interface GitHubChecksSnapshot {
+  checks: GitHubCheckItem[];
+  hasPending: boolean;
+  /** True when every required check is non-pending and not failing. */
+  requiredAllGreen: boolean;
+  /** Required checks that failed (blocking). */
+  failedRequired: GitHubCheckItem[];
+  /** All failed checks (required + optional) for UI. */
+  failed: GitHubCheckItem[];
+  headOid: string | null;
+}
+
+export interface GitHubReviewThreadComment {
+  id: string;
+  author: string | null;
+  body: string;
+  path: string | null;
+  line: number | null;
+  createdAt: string;
+}
+
+export interface GitHubReviewThread {
+  id: string;
+  isResolved: boolean;
+  path: string | null;
+  line: number | null;
+  comments: GitHubReviewThreadComment[];
+}
+
+export interface GitHubReviewThreadsResult {
+  /** All threads (resolved + unresolved) for UI counts. */
+  threads: GitHubReviewThread[];
+  unresolved: GitHubReviewThread[];
+  unresolvedCount: number;
+  resolvedCount: number;
+}
+
+export interface GitHubFailureLogInput {
+  cwd: string;
+  /** Workflow run id (`gh run view <id>`). */
+  runId: string | number;
+  /** Optional explicit repo for when cwd is not a git checkout. */
+  repo?: string;
+}
+
+export interface GitHubFailureLogResult {
+  /** Trailing lines of failed-job logs (capped). */
+  lines: string[];
+  truncated: boolean;
+}
+
+export const githubPrContextInputSchema = arkType({
+  "+": "ignore",
+  cwd: "string > 0",
+  owner: "string > 0",
+  prNumber: "number",
+  repo: "string > 0",
+});
+
+export const githubFailureLogInputSchema = arkType({
+  "+": "ignore",
+  cwd: "string > 0",
+  runId: "string | number",
+  "repo?": "string",
+});

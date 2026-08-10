@@ -137,7 +137,7 @@ export async function confirmWorkspaceWindowFilesExit({
       queryKey: queryKeys.workspaceTools.fileTree(root),
     });
     void queryClient.invalidateQueries({
-      queryKey: queryKeys.workspaceTools.gitDiff(root),
+      queryKey: queryKeys.workspaceTools.gitDiffRoot(root),
     });
   }
 

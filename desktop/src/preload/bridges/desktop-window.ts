@@ -28,6 +28,10 @@ import type {
   DesktopUpdateChannelSetInput,
   DesktopUpdateStatus,
 } from "../../shared/update-channel";
+import type {
+  WorkspaceDiffBasePreference,
+  WorkspaceDiffBasePreferenceInput,
+} from "../../shared/workspace-diff-preferences";
 import { contextBridge, ipcRenderer } from "electron";
 import { KEYMAP_USER_BINDINGS_CHANGED_CHANNEL } from "../../shared/keybindings/channels";
 import {
@@ -66,6 +70,10 @@ import {
   DESKTOP_WORKSPACE_TOOL_WINDOW_OPEN_CHANNEL,
 } from "../../shared/desktop-window";
 import { isDesktopNotificationHistory } from "../../shared/notification-preferences";
+import {
+  DESKTOP_WORKSPACE_DIFF_BASE_GET_CHANNEL,
+  DESKTOP_WORKSPACE_DIFF_BASE_SET_CHANNEL,
+} from "../../shared/workspace-diff-preferences";
 
 export function exposeDesktopWindowBridge() {
   contextBridge.exposeInMainWorld("desktopWindow", {
@@ -298,6 +306,12 @@ export function exposeDesktopWindowBridge() {
         DESKTOP_WORKSPACE_TOOL_SURFACE_GET_CHANNEL,
       ) as Promise<WorkspaceToolSurfaceState>;
     },
+    async getWorkspaceDiffBase(root: string) {
+      return ipcRenderer.invoke(
+        DESKTOP_WORKSPACE_DIFF_BASE_GET_CHANNEL,
+        root,
+      ) as Promise<WorkspaceDiffBasePreference | undefined>;
+    },
     openWorkspaceToolWindow(input: WorkspaceToolWindowOpenInput) {
       ipcRenderer.send(DESKTOP_WORKSPACE_TOOL_WINDOW_OPEN_CHANNEL, input);
     },
@@ -335,6 +349,9 @@ export function exposeDesktopWindowBridge() {
         DESKTOP_WORKSPACE_TOOL_SURFACE_SNAPSHOT_SET_CHANNEL,
         input,
       );
+    },
+    setWorkspaceDiffBase(input: WorkspaceDiffBasePreferenceInput) {
+      return ipcRenderer.invoke(DESKTOP_WORKSPACE_DIFF_BASE_SET_CHANNEL, input);
     },
   });
 }

@@ -23,6 +23,10 @@ import { useTranslation } from "react-i18next";
 import { WorkspaceDiffCommentPanel } from "@/app/workspace/workspace-diff-comment-panel";
 import { getErrorMessage } from "@/app/workspace/workspace-file-display";
 import {
+  formatWorkspaceGitDiffUnavailableReason,
+  WorkspaceGitBaseSelect,
+} from "@/app/workspace/workspace-git-base-select";
+import {
   useWorkspaceGitPanelState,
   WorkspaceGitCommitComposer,
 } from "@/app/workspace/workspace-git-commit";
@@ -50,11 +54,14 @@ import {
   WorkspaceToolPatchFileName,
 } from "@/app/workspace/workspace-tool-patch-list";
 import {
+  buildWorkspaceGitDiffPatchList,
   buildWorkspaceToolPatchList,
   formatWorkspaceToolPatchFileName,
+  getWorkspaceGitNumstatTotal,
   getWorkspaceToolPatchFileLineChanges,
 } from "@/app/workspace/workspace-tool-patch-model";
 import { useWorkspaceToolSurface } from "@/app/workspace/workspace-tool-surface-model";
+import { useWorkspaceGitBasePreference } from "@/app/workspace/use-workspace-git-base-preference";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -74,8 +81,9 @@ export function WorkspaceGitPanel({
   layout: WorkspaceToolPanelLayout;
   root: string;
 }) {
-  const { api } = useWorkspaceToolSurface();
+  const { api, chatId } = useWorkspaceToolSurface();
   const { t } = useTranslation();
+  const { baseKind, setBaseKind } = useWorkspaceGitBasePreference(root);
   const {
     checkoutMutation,
     commitDescription,
@@ -89,7 +97,7 @@ export function WorkspaceGitPanel({
     selectedFileKeys,
     setCommitDescription,
     setCommitSummary,
-  } = useWorkspaceGitPanelState(api, root);
+  } = useWorkspaceGitPanelState(api, root, chatId, baseKind);
   const [activeFileKey, setActiveFileKey] = useState<string | null>(null);
   const [gitListWidth, setGitListWidth] = useState(
     initialWorkspaceToolGitListWidth,
@@ -129,14 +137,11 @@ export function WorkspaceGitPanel({
     );
   }
 
-  const patchList = buildWorkspaceToolPatchList(
-    data.stagedPatch,
-    data.unstagedPatch,
-    data.skippedFiles,
-  );
+  const patchList = buildWorkspaceGitDiffPatchList(data);
   const selectedFiles = patchList.files.filter(
     (file) => selectedFileKeys[file.key] ?? true,
   );
+  const totalLineChanges = getWorkspaceGitNumstatTotal(data.numstat);
   const selectedPaths = selectedFiles.map((file) => file.name);
   const handleCommitSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -162,6 +167,32 @@ export function WorkspaceGitPanel({
   const changeColumn = (
     <>
       <div className="flex min-h-0 flex-1 flex-col overflow-auto">
+        <div className="shrink-0 border-b border-border-subtle px-3 py-2">
+          <WorkspaceGitBaseSelect
+            bases={data.availableBases}
+            resolvedBase={data.resolvedBase}
+            summary={
+              <span className="min-w-0 truncate text-xs text-muted-foreground tabular-nums">
+                {t("workspace.tools.diffBase.fileCount", {
+                  count: patchList.files.length,
+                })}
+                {` · +${totalLineChanges.additions} −${totalLineChanges.deletions}`}
+              </span>
+            }
+            value={baseKind}
+            onChange={setBaseKind}
+          />
+        </div>
+        {data.resolvedBase.unavailableReason ? (
+          <WorkspaceToolBanner className="m-3 mb-0 shrink-0" tone="attention">
+            {formatWorkspaceGitDiffUnavailableReason({
+              fallbackKind: data.resolvedBase.kind,
+              reason: data.resolvedBase.unavailableReason,
+              requestedKind: data.requestedBaseKind,
+              t,
+            })}
+          </WorkspaceToolBanner>
+        ) : null}
         {data.warnings.length > 0 ? (
           <WorkspaceToolBanner className="m-3 shrink-0" tone="attention">
             {data.warnings.map((warning) => (
@@ -181,7 +212,7 @@ export function WorkspaceGitPanel({
           onFileSelectedChange={handleFileSelectedChange}
         />
       </div>
-      {patchList.files.length === 0 ? null : (
+      {patchList.files.length === 0 || baseKind !== "worktree" ? null : (
         <WorkspaceGitCommitComposer
           branch={data.branchStatus.branch}
           description={commitDescription}

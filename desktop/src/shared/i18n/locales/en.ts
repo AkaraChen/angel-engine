@@ -181,6 +181,28 @@ export const en = {
           filesSelected: "{{selected}} of {{total}} files selected",
           summaryPlaceholder: "Summary",
         },
+        diffBase: {
+          branch: "Relative to default branch",
+          fallback: {
+            anchorMissing:
+              "{{base}} baseline {{sha}} no longer exists. Temporarily showing {{fallback}}.",
+            anchorUnavailable:
+              "{{base}} is not available for this chat. Temporarily showing {{fallback}}.",
+            defaultBranchUnavailable:
+              "No default branch could be resolved. Temporarily showing {{fallback}}.",
+            gitRefUnavailable:
+              "Git ref {{ref}} is unavailable. Temporarily showing {{fallback}}.",
+            noMergeBase:
+              "No merge base exists for {{ref}} and HEAD. Temporarily showing {{fallback}}.",
+            notRepository: "This workspace is not a Git repository.",
+          },
+          fileCount: "{{count}} files",
+          label: "Diff base",
+          session: "Since session start",
+          turn: "Since previous turn",
+          unstaged: "Unstaged only",
+          worktree: "Uncommitted changes",
+        },
         dockInSidebar: "Dock in sidebar",
         empty: {
           checksUnavailable: "Checks unavailable",

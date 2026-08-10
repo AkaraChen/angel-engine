@@ -242,7 +242,7 @@ function WorkspaceSplitFilesPanel({ root }: { root: string }) {
           queryKey: queryKeys.workspaceTools.fileTree(root),
         });
         void queryClient.invalidateQueries({
-          queryKey: queryKeys.workspaceTools.gitDiff(root),
+          queryKey: queryKeys.workspaceTools.gitDiffRoot(root),
         });
         return true;
       } catch {

@@ -178,6 +178,27 @@ export const zhCN = {
           filesSelected: "已选 {{selected}}/{{total}} 个文件",
           summaryPlaceholder: "摘要",
         },
+        diffBase: {
+          branch: "相对默认分支",
+          fallback: {
+            anchorMissing:
+              "{{base}} 基线 {{sha}} 已不存在，暂时显示{{fallback}}。",
+            anchorUnavailable:
+              "当前会话没有可用的{{base}}，暂时显示{{fallback}}。",
+            defaultBranchUnavailable:
+              "无法解析默认分支，暂时显示{{fallback}}。",
+            gitRefUnavailable:
+              "Git 引用 {{ref}} 不可用，暂时显示{{fallback}}。",
+            noMergeBase: "{{ref}} 与 HEAD 没有合并基点，暂时显示{{fallback}}。",
+            notRepository: "此工作区不是 Git 仓库。",
+          },
+          fileCount: "{{count}} 个文件",
+          label: "差异基线",
+          session: "自会话开始",
+          turn: "自上一轮开始",
+          unstaged: "仅未暂存",
+          worktree: "未提交更改",
+        },
         dockInSidebar: "停靠到侧栏",
         empty: {
           checksUnavailable: "检查不可用",
