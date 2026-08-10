@@ -1,236 +1,345 @@
-import type {
-  PullRequestCreateInput,
-  PullRequestCreateResult,
-  PullRequestPreflight,
-  PullRequestRecord,
-} from "@angel-engine/daemon-api/github";
-
 import { execFile } from "node:child_process";
-import fs from "node:fs/promises";
-import os from "node:os";
-import path from "node:path";
 import { promisify } from "node:util";
+import type {
+  GitHubMergeInput,
+  GitHubMergeMethod,
+  GitHubMergeResult,
+  GitHubPullRequestCheck,
+  GitHubPullRequestStatus,
+  GitHubPullRequestStatusInput,
+  GitHubResolveThreadInput,
+  GitHubResolveThreadResult,
+  GitHubPullRequestReviewThread,
+} from "@angel-engine/daemon-api/github";
 import is from "@sindresorhus/is";
-import { and, eq } from "drizzle-orm";
 import { type as arkType } from "arktype";
-import { Effect } from "effect";
+import { Cause, Effect, Exit } from "effect";
 
-import { pullRequests } from "../../db/schema";
-import { type Db, withDatabase } from "../../platform/db";
 import { DaemonError } from "../../platform/errors";
 import { findGhPath, type GhRunner, mapGhFailure, runGhCli } from "./gh-cli";
 
 const execFileAsync = promisify(execFile);
+const MERGE_TIMEOUT_MS = 60_000;
+const PR_FIELDS = [
+  "author",
+  "baseRefName",
+  "headRefName",
+  "isDraft",
+  "mergeable",
+  "mergeStateStatus",
+  "mergedAt",
+  "number",
+  "reviewDecision",
+  "state",
+  "statusCheckRollup",
+  "title",
+  "url",
+].join(",");
+const REPO_FIELDS = [
+  "deleteBranchOnMerge",
+  "mergeCommitAllowed",
+  "nameWithOwner",
+  "rebaseMergeAllowed",
+  "squashMergeAllowed",
+  "viewerPermission",
+].join(",");
 
-export type GitRunner = (
-  args: string[],
-  options: { cwd: string },
-) => Promise<{ stderr: string; stdout: string }>;
+const positiveInteger = arkType("number.integer > 0");
+const nullableString = arkType("string").or("null");
+const authorSchema = arkType({
+  "+": "ignore",
+  login: "string > 0",
+}).or("null");
+const pullRequestPayloadSchema = arkType({
+  "+": "ignore",
+  author: authorSchema,
+  baseRefName: "string > 0",
+  headRefName: "string > 0",
+  isDraft: "boolean",
+  mergeable: "'CONFLICTING' | 'MERGEABLE' | 'UNKNOWN'",
+  mergeStateStatus:
+    "'BEHIND' | 'BLOCKED' | 'CLEAN' | 'DIRTY' | 'DRAFT' | 'HAS_HOOKS' | 'UNKNOWN' | 'UNSTABLE'",
+  mergedAt: nullableString,
+  number: positiveInteger,
+  reviewDecision: arkType(
+    "'' | 'APPROVED' | 'CHANGES_REQUESTED' | 'REVIEW_REQUIRED'",
+  ).or("null"),
+  state: "'CLOSED' | 'MERGED' | 'OPEN'",
+  statusCheckRollup: "unknown[]",
+  title: "string > 0",
+  url: "string > 0",
+});
+const repositoryPayloadSchema = arkType({
+  "+": "ignore",
+  deleteBranchOnMerge: "boolean",
+  mergeCommitAllowed: "boolean",
+  nameWithOwner: /^([^/]+)\/([^/]+)$/,
+  rebaseMergeAllowed: "boolean",
+  squashMergeAllowed: "boolean",
+  viewerPermission: "string",
+});
+const checkRunSchema = arkType({
+  "+": "ignore",
+  __typename: "'CheckRun'",
+  conclusion: nullableString,
+  detailsUrl: nullableString,
+  name: "string > 0",
+  status: "string > 0",
+});
+const statusContextSchema = arkType({
+  "+": "ignore",
+  __typename: "'StatusContext'",
+  context: "string > 0",
+  state: "string > 0",
+  targetUrl: nullableString,
+});
+const requiredContextsSchema = arkType("string[]");
+const reviewThreadsPayloadSchema = arkType({
+  "+": "ignore",
+  data: {
+    "+": "ignore",
+    repository: {
+      "+": "ignore",
+      pullRequest: {
+        "+": "ignore",
+        reviewThreads: {
+          "+": "ignore",
+          nodes: arkType({
+            "+": "ignore",
+            comments: {
+              "+": "ignore",
+              nodes: arkType({
+                "+": "ignore",
+                author: authorSchema,
+                body: "string",
+                line: arkType("number.integer").or("null"),
+                path: arkType("string").or("null"),
+                url: "string > 0",
+              }).array(),
+            },
+            id: "string > 0",
+            isOutdated: "boolean",
+            isResolved: "boolean",
+          }).array(),
+        },
+      },
+    },
+  },
+});
+const resolvedThreadPayloadSchema = arkType({
+  "+": "ignore",
+  data: {
+    "+": "ignore",
+    resolveReviewThread: {
+      "+": "ignore",
+      thread: {
+        "+": "ignore",
+        isResolved: "boolean",
+      },
+    },
+  },
+});
 
-interface PullRequestDependencies {
-  readFile?: (filePath: string) => Promise<string>;
+const REVIEW_THREADS_QUERY = `
+  query PullRequestReviewThreads($owner: String!, $repo: String!, $number: Int!) {
+    repository(owner: $owner, name: $repo) {
+      pullRequest(number: $number) {
+        reviewThreads(first: 100) {
+          nodes {
+            id
+            isOutdated
+            isResolved
+            comments(first: 1) {
+              nodes { author { login } body line path url }
+            }
+          }
+        }
+      }
+    }
+  }
+`;
+const RESOLVE_THREAD_MUTATION = `
+  mutation ResolveReviewThread($threadId: ID!) {
+    resolveReviewThread(input: { threadId: $threadId }) {
+      thread { isResolved }
+    }
+  }
+`;
+
+export interface PullRequestDependencies {
+  isDirty?: (cwd: string) => Promise<boolean>;
   runGh?: GhRunner;
-  runGit?: GitRunner;
-  saveRecord?: (record: PullRequestRecord) => Promise<PullRequestRecord>;
   whichGh?: () => Promise<string | null>;
 }
 
-const positiveInteger = arkType("number").narrow(
-  (value) => Number.isInteger(value) && value > 0,
-);
-const repoPayloadSchema = arkType({
-  "+": "ignore",
-  defaultBranchRef: { name: "string > 0" },
-});
-const prPayloadSchema = arkType({
-  "+": "ignore",
-  baseRefName: "string > 0",
-  createdAt: "string > 0",
-  headRefName: "string > 0",
-  isDraft: "boolean",
-  number: positiveInteger,
-  state: "string > 0",
-  title: "string > 0",
-  updatedAt: "string > 0",
-  url: "string > 0",
-});
-const prListPayloadSchema = prPayloadSchema.array();
-
-export function pullRequestPreflight(
-  root: string,
-  requestedBase?: string,
-  deps: PullRequestDependencies = {},
-): Effect.Effect<PullRequestPreflight, DaemonError, Db> {
+export function getGitHubPullRequestStatus(
+  input: GitHubPullRequestStatusInput,
+  dependencies: PullRequestDependencies = {},
+): Effect.Effect<GitHubPullRequestStatus, DaemonError> {
   return Effect.gen(function* () {
-    const { runGh, runGit } = yield* prepareRunners(deps);
-    yield* git(runGit, root, ["rev-parse", "--show-toplevel"]);
-    const head = yield* git(runGit, root, ["branch", "--show-current"]);
-    if (!is.nonEmptyString(head)) {
-      return yield* Effect.fail(
-        DaemonError.gitFailed(new Error("Detached HEAD is not supported.")),
-      );
-    }
-    const remote = yield* git(runGit, root, [
-      "remote",
-      "get-url",
-      "origin",
-    ]).pipe(Effect.mapError(() => DaemonError.gitRemoteMissing()));
-    if (!is.nonEmptyString(remote)) {
-      return yield* Effect.fail(DaemonError.gitRemoteMissing());
-    }
+    const runGh = yield* requireGh(dependencies);
+    const prArgs = ["pr", "view"];
+    if (input.number !== undefined) prArgs.push(String(input.number));
+    prArgs.push("--json", PR_FIELDS);
 
-    const repoOutput = yield* gh(runGh, root, [
-      "repo",
-      "view",
-      "--json",
-      "defaultBranchRef",
-    ]);
-    const repo = parsePayload(repoPayloadSchema, repoOutput.stdout);
-    const defaultBranch = repo.defaultBranchRef.name;
-    const base = requestedBase?.trim() || defaultBranch;
-    const baseRef = yield* git(runGit, root, [
-      "rev-parse",
-      "--verify",
-      base,
-    ]).pipe(
-      Effect.as(base),
-      Effect.orElse(() =>
-        git(runGit, root, ["rev-parse", "--verify", `origin/${base}`]).pipe(
-          Effect.as(`origin/${base}`),
-        ),
-      ),
+    const [pullRequestOutput, repositoryOutput] = yield* Effect.all(
+      [
+        gh(runGh, prArgs, input.cwd),
+        gh(runGh, ["repo", "view", "--json", REPO_FIELDS], input.cwd),
+      ],
+      { concurrency: "unbounded" },
     );
-    const aheadCount = Number(
-      yield* git(runGit, root, ["rev-list", "--count", `${baseRef}..${head}`]),
+    const pullRequest = parsePayload(
+      pullRequestPayloadSchema,
+      pullRequestOutput.stdout,
+      "pull request",
     );
-    const availableBaseBranches = yield* Effect.promise(() =>
-      remoteBranches(runGit, root, base, head),
+    const repository = parsePayload(
+      repositoryPayloadSchema,
+      repositoryOutput.stdout,
+      "repository",
     );
-    const existing = yield* findExistingPullRequest(runGh, root, head).pipe(
-      Effect.flatMap((record) => persistRecord(record, deps)),
+    const [owner, repo] = repository.nameWithOwner.split("/") as [
+      string,
+      string,
+    ];
+
+    const worktreeDirty = yield* gitWorktreeDirty(
+      input.cwd,
+      dependencies.isDirty,
     );
-    const prefill = yield* buildPrefill(
-      runGit,
-      deps.readFile,
-      root,
-      baseRef,
-      head,
-    );
+    const [behindBy, requiredContexts, unresolvedThreads] =
+      pullRequest.state === "OPEN"
+        ? yield* Effect.all(
+            [
+              getBehindBy({
+                baseRefName: pullRequest.baseRefName,
+                cwd: input.cwd,
+                headRefName: pullRequest.headRefName,
+                owner,
+                repo,
+                runGh,
+              }),
+              getRequiredContexts({
+                baseRefName: pullRequest.baseRefName,
+                cwd: input.cwd,
+                owner,
+                repo,
+                runGh,
+              }),
+              getReviewThreads({
+                cwd: input.cwd,
+                number: pullRequest.number,
+                owner,
+                repo,
+                runGh,
+              }),
+            ],
+            { concurrency: "unbounded" },
+          )
+        : [0, new Set<string>(), [] as GitHubPullRequestReviewThread[]];
+    const allowedMergeMethods = allowedMethods(repository);
 
     return {
-      aheadCount,
-      availableBaseBranches,
-      base,
-      body: prefill.body,
-      canCreate: aheadCount > 0 || existing !== null,
-      defaultBranch,
-      existing,
-      head,
-      reason:
-        aheadCount === 0 && existing === null
-          ? "pull-request-no-commits"
-          : undefined,
-      title: prefill.title,
+      allowedMergeMethods,
+      author: pullRequest.author?.login ?? null,
+      baseRefName: pullRequest.baseRefName,
+      behindBy,
+      checks: parseChecks(pullRequest.statusCheckRollup, requiredContexts),
+      defaultMergeMethod: allowedMergeMethods[0] ?? "squash",
+      deleteBranchOnMerge: repository.deleteBranchOnMerge,
+      headRefName: pullRequest.headRefName,
+      isDraft: pullRequest.isDraft,
+      mergeable: pullRequest.mergeable,
+      mergeStateStatus: pullRequest.mergeStateStatus,
+      mergedAt: pullRequest.mergedAt,
+      number: pullRequest.number,
+      reviewDecision:
+        pullRequest.reviewDecision === "" ? null : pullRequest.reviewDecision,
+      state: pullRequest.state,
+      title: pullRequest.title,
+      unresolvedThreads,
+      url: pullRequest.url,
+      viewerCanMerge: ["ADMIN", "MAINTAIN", "WRITE"].includes(
+        repository.viewerPermission,
+      ),
+      worktreeDirty,
     };
   });
 }
 
-export function createPullRequest(
-  input: PullRequestCreateInput,
-  deps: PullRequestDependencies = {},
-): Effect.Effect<PullRequestCreateResult, DaemonError, Db> {
+export function mergeGitHubPullRequest(
+  input: GitHubMergeInput,
+  dependencies: PullRequestDependencies = {},
+): Effect.Effect<GitHubMergeResult, DaemonError> {
   return Effect.gen(function* () {
-    const { runGh, runGit } = yield* prepareRunners(deps);
-    const head = yield* git(runGit, input.root, ["branch", "--show-current"]);
-    let pushed = input.skipPush === true;
-
-    if (!pushed) {
-      const pushExit = yield* Effect.either(
-        git(runGit, input.root, ["push", "-u", "origin", head]),
-      );
-      if (pushExit._tag === "Left") {
-        const error = mapPushFailure(pushExit.left);
-        return failedResult(false, error);
-      }
-      pushed = true;
-    }
-
-    const createExit = yield* Effect.either(
-      createWithBodyFile(runGh, input.root, head, input),
-    );
-    if (createExit._tag === "Left") {
-      const existing = yield* findExistingPullRequest(
-        runGh,
-        input.root,
-        head,
-      ).pipe(Effect.orElseSucceed(() => null));
-      if (existing !== null) {
-        const record = yield* persistRecord(existing, deps);
-        return { pushed, record, status: "existing" };
-      }
-      return failedResult(pushed, mapCreateFailure(createExit.left));
-    }
-
-    const record = yield* viewPullRequest(
+    const runGh = yield* requireGh(dependencies);
+    const args = ["pr", "merge", String(input.number), `--${input.method}`];
+    if (input.deleteBranch === true) args.push("--delete-branch");
+    yield* Effect.tryPromise({
+      catch: mapGhFailure,
+      try: () => runGh(args, { cwd: input.cwd, timeoutMs: MERGE_TIMEOUT_MS }),
+    });
+    const output = yield* gh(
       runGh,
-      input.root,
-      createExit.right.trim(),
-    ).pipe(Effect.flatMap((value) => persistRecord(value, deps)));
-    return { pushed, record, status: "created" };
+      ["pr", "view", String(input.number), "--json", "state,url"],
+      input.cwd,
+    );
+    const result = parsePayload(
+      arkType({
+        "+": "ignore",
+        state: "'CLOSED' | 'MERGED' | 'OPEN'",
+        url: "string > 0",
+      }),
+      output.stdout,
+      "merged pull request",
+    );
+    return { merged: result.state === "MERGED", url: result.url };
   });
 }
 
-export function getStoredPullRequest(root: string) {
+export function resolveGitHubReviewThread(
+  input: GitHubResolveThreadInput,
+  dependencies: PullRequestDependencies = {},
+): Effect.Effect<GitHubResolveThreadResult, DaemonError> {
   return Effect.gen(function* () {
-    const branch = yield* git(defaultGitRunner, root, [
-      "branch",
-      "--show-current",
-    ]);
-    return yield* withDatabase((database) =>
-      database
-        .select()
-        .from(pullRequests)
-        .where(
-          and(eq(pullRequests.root, root), eq(pullRequests.branch, branch)),
-        )
-        .limit(1)
-        .get(),
-    ).pipe(Effect.map((record) => record ?? null));
+    const runGh = yield* requireGh(dependencies);
+    const output = yield* gh(
+      runGh,
+      [
+        "api",
+        "graphql",
+        "-f",
+        `query=${RESOLVE_THREAD_MUTATION}`,
+        "-F",
+        `threadId=${input.threadId}`,
+      ],
+      input.cwd,
+    );
+    const payload = parsePayload(
+      resolvedThreadPayloadSchema,
+      output.stdout,
+      "resolved review thread",
+    );
+    return { resolved: payload.data.resolveReviewThread.thread.isResolved };
   });
 }
 
-function prepareRunners(deps: PullRequestDependencies) {
+function requireGh(dependencies: PullRequestDependencies) {
   return Effect.gen(function* () {
+    const whichGh = dependencies.whichGh ?? findGhPath;
     const ghPath = yield* Effect.tryPromise({
       catch: (cause) => DaemonError.githubFetchFailed(cause),
-      try: deps.whichGh ?? findGhPath,
+      try: whichGh,
     });
     if (!is.nonEmptyString(ghPath)) {
       return yield* Effect.fail(DaemonError.githubCliMissing());
     }
-    return {
-      runGh: deps.runGh ?? runGhCli,
-      runGit: deps.runGit ?? defaultGitRunner,
-    };
+    return dependencies.runGh ?? runGhCli;
   });
 }
 
-async function defaultGitRunner(args: string[], options: { cwd: string }) {
-  const result = await execFileAsync("git", args, {
-    cwd: options.cwd,
-    maxBuffer: 4 * 1024 * 1024,
-  });
-  return { stderr: result.stderr.toString(), stdout: result.stdout.toString() };
-}
-
-function git(runGit: GitRunner, cwd: string, args: string[]) {
-  return Effect.tryPromise({
-    catch: (cause) => DaemonError.gitFailed(cause),
-    try: () => runGit(args, { cwd }),
-  }).pipe(Effect.map((output) => output.stdout.trim()));
-}
-
-function gh(runGh: GhRunner, cwd: string, args: string[]) {
+function gh(runGh: GhRunner, args: string[], cwd: string) {
   return Effect.tryPromise({
     catch: mapGhFailure,
     try: () => runGh(args, { cwd }),
@@ -239,303 +348,242 @@ function gh(runGh: GhRunner, cwd: string, args: string[]) {
 
 function parsePayload<T>(
   schema: (value: unknown) => T | arkType.errors,
-  json: string,
+  stdout: string,
+  label: string,
 ): T {
-  let value: unknown;
+  let json: unknown;
   try {
-    value = JSON.parse(json);
+    json = JSON.parse(stdout);
   } catch (cause) {
     throw DaemonError.githubFetchFailed(
       cause,
-      "GitHub CLI returned invalid JSON.",
+      `GitHub CLI returned invalid ${label} JSON.`,
     );
   }
-  const parsed = schema(value);
-  if (parsed instanceof arkType.errors) {
+  const payload = schema(json);
+  if (payload instanceof arkType.errors) {
     throw DaemonError.githubFetchFailed(
-      new TypeError(`Unexpected GitHub CLI payload: ${parsed.summary}`),
+      new TypeError(`Unexpected ${label} payload: ${payload.summary}`),
     );
   }
-  return parsed;
+  return payload;
 }
 
-function findExistingPullRequest(runGh: GhRunner, root: string, head: string) {
-  return gh(runGh, root, [
-    "pr",
-    "list",
-    "--head",
-    head,
-    "--state",
-    "open",
-    "--limit",
-    "1",
-    "--json",
-    "number,url,title,state,isDraft,baseRefName,headRefName,createdAt,updatedAt",
-  ]).pipe(
-    Effect.map((output) => {
-      const records = parsePayload(prListPayloadSchema, output.stdout);
-      return records[0] === undefined ? null : toRecord(root, records[0]);
-    }),
-  );
+function allowedMethods(repository: {
+  mergeCommitAllowed: boolean;
+  rebaseMergeAllowed: boolean;
+  squashMergeAllowed: boolean;
+}): GitHubMergeMethod[] {
+  const methods: GitHubMergeMethod[] = [];
+  if (repository.squashMergeAllowed) methods.push("squash");
+  if (repository.mergeCommitAllowed) methods.push("merge");
+  if (repository.rebaseMergeAllowed) methods.push("rebase");
+  return methods;
 }
 
-function viewPullRequest(runGh: GhRunner, root: string, url: string) {
-  return gh(runGh, root, [
-    "pr",
-    "view",
-    url,
-    "--json",
-    "number,url,title,state,isDraft,baseRefName,headRefName,createdAt,updatedAt",
-  ]).pipe(
-    Effect.map((output) =>
-      toRecord(root, parsePayload(prPayloadSchema, output.stdout)),
-    ),
-  );
-}
-
-function toRecord(
-  root: string,
-  payload: typeof prPayloadSchema.infer,
-): PullRequestRecord {
-  return {
-    baseBranch: payload.baseRefName,
-    branch: payload.headRefName,
-    createdAt: payload.createdAt,
-    id: `${root}:${payload.headRefName}`,
-    isDraft: payload.isDraft,
-    number: payload.number,
-    root,
-    state: payload.state.toLowerCase(),
-    title: payload.title,
-    updatedAt: payload.updatedAt,
-    url: payload.url,
-  };
-}
-
-function persistRecord(
-  record: PullRequestRecord,
-  deps: PullRequestDependencies,
-): Effect.Effect<PullRequestRecord, DaemonError, Db>;
-function persistRecord(
-  record: null,
-  deps: PullRequestDependencies,
-): Effect.Effect<null, DaemonError, Db>;
-function persistRecord(
-  record: PullRequestRecord | null,
-  deps: PullRequestDependencies,
-): Effect.Effect<PullRequestRecord | null, DaemonError, Db>;
-function persistRecord(
-  record: PullRequestRecord | null,
-  deps: PullRequestDependencies,
-): Effect.Effect<PullRequestRecord | null, DaemonError, Db> {
-  if (record === null) return Effect.succeed(null);
-  if (deps.saveRecord !== undefined) {
-    return Effect.tryPromise({
-      catch: (cause) =>
-        DaemonError.databaseFailed(cause, "Could not save pull request."),
-      try: () => deps.saveRecord?.(record) ?? Promise.resolve(record),
-    });
+function parseChecks(
+  entries: unknown[],
+  requiredContexts: ReadonlySet<string>,
+): GitHubPullRequestCheck[] {
+  const checks: GitHubPullRequestCheck[] = [];
+  for (const entry of entries) {
+    const checkRun = checkRunSchema(entry);
+    if (!(checkRun instanceof arkType.errors)) {
+      checks.push({
+        name: checkRun.name,
+        required: requiredContexts.has(checkRun.name),
+        state: checkState(checkRun.status, checkRun.conclusion),
+        url: checkRun.detailsUrl,
+      });
+      continue;
+    }
+    const context = statusContextSchema(entry);
+    if (!(context instanceof arkType.errors)) {
+      checks.push({
+        name: context.context,
+        required: requiredContexts.has(context.context),
+        state: checkState(context.state, context.state),
+        url: context.targetUrl,
+      });
+    }
   }
-  return withDatabase((database) =>
-    database
-      .insert(pullRequests)
-      .values(record)
-      .onConflictDoUpdate({
-        set: {
-          baseBranch: record.baseBranch,
-          isDraft: record.isDraft,
-          number: record.number,
-          state: record.state,
-          title: record.title,
-          updatedAt: record.updatedAt,
-          url: record.url,
-        },
-        target: [pullRequests.root, pullRequests.branch],
-      })
-      .returning()
-      .get(),
-  );
+  return checks;
 }
 
-function createWithBodyFile(
-  runGh: GhRunner,
-  root: string,
-  head: string,
-  input: PullRequestCreateInput,
-) {
-  return Effect.tryPromise({
-    catch: mapGhFailure,
-    try: async () => {
-      const directory = await fs.mkdtemp(path.join(os.tmpdir(), "angel-pr-"));
-      const bodyPath = path.join(directory, "body.md");
-      try {
-        await fs.writeFile(bodyPath, input.body, "utf8");
-        const args = [
-          "pr",
-          "create",
-          "--base",
-          input.base,
-          "--head",
-          head,
-          "--title",
-          input.title.trim(),
-          "--body-file",
-          bodyPath,
-        ];
-        if (input.draft) args.push("--draft");
-        const output = await runGh(args, { cwd: root });
-        return output.stdout;
-      } finally {
-        await fs.rm(directory, { recursive: true });
+function checkState(
+  status: string,
+  conclusion: string | null,
+): GitHubPullRequestCheck["state"] {
+  const normalized = (conclusion ?? status).toUpperCase();
+  if (["COMPLETED", "SUCCESS", "NEUTRAL"].includes(normalized)) {
+    return "success";
+  }
+  if (["SKIPPED", "STALE"].includes(normalized)) return "skipped";
+  if (
+    ["FAILURE", "ACTION_REQUIRED", "CANCELLED", "ERROR", "TIMED_OUT"].includes(
+      normalized,
+    )
+  ) {
+    return "failure";
+  }
+  return "pending";
+}
+
+function getRequiredContexts({
+  baseRefName,
+  cwd,
+  owner,
+  repo,
+  runGh,
+}: {
+  baseRefName: string;
+  cwd: string;
+  owner: string;
+  repo: string;
+  runGh: GhRunner;
+}): Effect.Effect<ReadonlySet<string>, DaemonError> {
+  return Effect.gen(function* () {
+    const exit = yield* Effect.exit(
+      gh(
+        runGh,
+        [
+          "api",
+          `repos/${owner}/${repo}/branches/${encodeURIComponent(baseRefName)}/protection/required_status_checks`,
+          "--jq",
+          ".contexts",
+        ],
+        cwd,
+      ),
+    );
+    if (Exit.isFailure(exit)) {
+      const failure = Cause.failureOption(exit.cause);
+      if (
+        failure._tag === "Some" &&
+        failure.value.code !== "github-cli-unauthenticated"
+      ) {
+        return new Set<string>();
       }
-    },
+      return yield* Effect.fail(
+        failure._tag === "Some"
+          ? failure.value
+          : DaemonError.githubFetchFailed(exit.cause),
+      );
+    }
+    const contexts = parsePayload(
+      requiredContextsSchema,
+      exit.value.stdout,
+      "required checks",
+    );
+    return new Set(contexts);
   });
 }
 
-async function remoteBranches(
-  runGit: GitRunner,
-  root: string,
-  base: string,
-  head: string,
-) {
-  try {
-    const output = await runGit(
-      ["for-each-ref", "--format=%(refname:short)", "refs/remotes/origin/*"],
-      { cwd: root },
+function getBehindBy({
+  baseRefName,
+  cwd,
+  headRefName,
+  owner,
+  repo,
+  runGh,
+}: {
+  baseRefName: string;
+  cwd: string;
+  headRefName: string;
+  owner: string;
+  repo: string;
+  runGh: GhRunner;
+}): Effect.Effect<number, DaemonError> {
+  return Effect.gen(function* () {
+    const output = yield* gh(
+      runGh,
+      [
+        "api",
+        `repos/${owner}/${repo}/compare/${encodeURIComponent(baseRefName)}...${encodeURIComponent(headRefName)}`,
+        "--jq",
+        ".behind_by",
+      ],
+      cwd,
     );
-    return Array.from(
-      new Set([
-        base,
-        ...output.stdout
-          .split("\n")
-          .map((branch) => branch.trim().replace(/^origin\//, ""))
-          .filter(
-            (branch) =>
-              branch.length > 0 &&
-              branch !== "HEAD" &&
-              branch !== "origin" &&
-              branch !== head,
-          ),
-      ]),
-    ).filter((branch) => branch !== head);
-  } catch {
-    return base === head ? [] : [base];
-  }
+    const behindBy = Number.parseInt(output.stdout.trim(), 10);
+    if (!Number.isInteger(behindBy) || behindBy < 0) {
+      return yield* Effect.fail(
+        DaemonError.githubFetchFailed(
+          new TypeError("GitHub compare response did not include behind_by."),
+        ),
+      );
+    }
+    return behindBy;
+  });
 }
 
-export function pullRequestTitleFromBranch(
-  head: string,
-  fallbackSubject?: string,
-) {
-  const title = head
-    .replace(/^angel\//, "")
-    .replace(/^agent\//, "")
-    .replace(/[-_/]+/g, " ")
-    .trim();
-  return /^(?:pr\s+)?\d+$/i.test(title) && is.nonEmptyString(fallbackSubject)
-    ? fallbackSubject
-    : title || fallbackSubject || head;
+function getReviewThreads({
+  cwd,
+  number,
+  owner,
+  repo,
+  runGh,
+}: {
+  cwd: string;
+  number: number;
+  owner: string;
+  repo: string;
+  runGh: GhRunner;
+}): Effect.Effect<GitHubPullRequestReviewThread[], DaemonError> {
+  return Effect.gen(function* () {
+    const output = yield* gh(
+      runGh,
+      [
+        "api",
+        "graphql",
+        "-f",
+        `query=${REVIEW_THREADS_QUERY}`,
+        "-F",
+        `owner=${owner}`,
+        "-F",
+        `repo=${repo}`,
+        "-F",
+        `number=${number}`,
+      ],
+      cwd,
+    );
+    const payload = parsePayload(
+      reviewThreadsPayloadSchema,
+      output.stdout,
+      "review threads",
+    );
+    return payload.data.repository.pullRequest.reviewThreads.nodes.flatMap(
+      (thread) => {
+        if (thread.isResolved) return [];
+        const comment = thread.comments.nodes[0];
+        if (comment === undefined) return [];
+        return [
+          {
+            author: comment.author?.login ?? null,
+            body: comment.body,
+            id: thread.id,
+            isOutdated: thread.isOutdated,
+            line: comment.line,
+            path: comment.path,
+            url: comment.url,
+          },
+        ];
+      },
+    );
+  });
 }
 
-function buildPrefill(
-  runGit: GitRunner,
-  readFile: PullRequestDependencies["readFile"],
-  root: string,
-  base: string,
-  head: string,
-) {
+function gitWorktreeDirty(
+  cwd: string,
+  injected?: (cwd: string) => Promise<boolean>,
+): Effect.Effect<boolean, DaemonError> {
   return Effect.tryPromise({
     catch: (cause) => DaemonError.gitFailed(cause),
     try: async () => {
-      const log = await runGit(
-        ["log", "--format=%h%x09%s%x09%b%x00", `${base}..${head}`],
-        { cwd: root },
-      );
-      const commits = log.stdout
-        .split("\0")
-        .map((line) => line.trim())
-        .filter(Boolean)
-        .map((line) => {
-          const [sha = "", subject = "", ...body] = line.split("\t");
-          return { body: body.join("\t").trim(), sha, subject };
-        });
-      const title =
-        commits.length === 1
-          ? (commits[0]?.subject ?? head)
-          : pullRequestTitleFromBranch(head, commits[0]?.subject);
-      const stat = await runGit(["diff", "--shortstat", `${base}..${head}`], {
-        cwd: root,
+      if (injected !== undefined) return injected(cwd);
+      const result = await execFileAsync("git", ["status", "--porcelain"], {
+        cwd,
       });
-      const shown = commits.slice(0, 20);
-      const commitSection = [
-        "## Commits",
-        ...shown.map((commit) => `- ${commit.subject} (${commit.sha})`),
-        ...(commits.length > 20 ? [`- …and ${commits.length - 20} more`] : []),
-        "",
-        "## Files",
-        stat.stdout.trim() || "No file summary available",
-      ].join("\n");
-      let template = "";
-      try {
-        const templatePath = path.join(
-          root,
-          ".github",
-          "PULL_REQUEST_TEMPLATE.md",
-        );
-        template = readFile
-          ? await readFile(templatePath)
-          : await fs.readFile(templatePath, "utf8");
-      } catch {
-        // A repository template is optional.
-      }
-      const latestBody = commits[0]?.body ?? "";
-      return {
-        body: [template.trim(), latestBody, commitSection]
-          .filter(Boolean)
-          .join("\n\n"),
-        title,
-      };
+      return result.stdout.toString().trim().length > 0;
     },
   });
-}
-
-function failedResult(
-  pushed: boolean,
-  error: DaemonError,
-): PullRequestCreateResult {
-  return {
-    error: { code: error.code, message: error.message },
-    pushed,
-    status: "failed",
-  };
-}
-
-function mapPushFailure(error: DaemonError) {
-  const message = error.message.toLowerCase();
-  if (message.includes("non-fast-forward") || message.includes("fetch first")) {
-    return DaemonError.gitPushNotFastForward();
-  }
-  if (
-    message.includes("permission denied") ||
-    message.includes("permission to") ||
-    message.includes("403")
-  ) {
-    return DaemonError.gitPushDenied();
-  }
-  return error;
-}
-
-function mapCreateFailure(error: DaemonError) {
-  const message = error.message.toLowerCase();
-  if (
-    message.includes("could not resolve host") ||
-    message.includes("network") ||
-    message.includes("timed out")
-  ) {
-    return DaemonError.githubNetworkUnavailable();
-  }
-  if (message.includes("already exists")) {
-    return DaemonError.pullRequestAlreadyExists();
-  }
-  return error;
 }

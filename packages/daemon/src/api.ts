@@ -89,12 +89,12 @@ import {
   createPullRequest as createWorkspacePullRequest,
   getStoredPullRequest,
   pullRequestPreflight,
-} from "./features/github/pull-request";
+} from "./features/github/pull-request-create";
 import {
   getGitHubPullRequestStatus,
   mergeGitHubPullRequest,
   resolveGitHubReviewThread,
-} from "./features/github/pull-request-merge";
+} from "./features/github/pull-request";
 import { resolveTaskLink } from "./features/links/resolve";
 import { setLinearToken } from "./features/links/secrets";
 import { listAvailableAgents } from "./features/agents/availability";
