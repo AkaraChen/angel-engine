@@ -66,6 +66,8 @@ export type DaemonErrorCode =
   | "github-cli-unauthenticated"
   | "github-fetch-failed"
   | "github-item-not-found"
+  | "github-merge-conflict"
+  | "github-permission-denied"
   | "github-url-unsupported"
   | "internal"
   | "invalid-request"

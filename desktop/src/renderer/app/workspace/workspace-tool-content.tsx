@@ -3,6 +3,7 @@ import { WorkspaceChecksPanel } from "@/app/workspace/workspace-checks-panel";
 import { WorkspaceFilesPanel } from "@/app/workspace/workspace-files-panels";
 import { WorkspaceGitPanel } from "@/app/workspace/workspace-git-panels";
 import { WorkspaceProcessesView } from "@/app/workspace/workspace-processes-view";
+import { PullRequestPanel } from "@/features/pull-request/pull-request-panel";
 import { WorkspaceTerminalView } from "@/app/workspace/workspace-terminal-view";
 import { WorkspaceToolEmpty } from "@/app/workspace/workspace-tool-layout";
 import {
@@ -13,6 +14,7 @@ import {
   workspaceToolChecksTabId,
   workspaceToolFilesTabId,
   workspaceToolGitTabId,
+  workspaceToolPullRequestTabId,
   workspaceToolProcessesTabId,
 } from "@/app/workspace/workspace-tool-store";
 import { useWorkspaceToolSurface } from "@/app/workspace/workspace-tool-surface-model";
@@ -43,6 +45,9 @@ export function WorkspaceToolContent({ root }: { root: string }) {
         onOpenBrowser={openBrowserTab}
       />
     );
+  }
+  if (activeTabId === workspaceToolPullRequestTabId) {
+    return <PullRequestPanel root={root} />;
   }
   if (activeTabId === workspaceToolProcessesTabId) {
     return (

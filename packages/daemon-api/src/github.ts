@@ -218,6 +218,82 @@ export interface GitHubPrChecksFixPromptResult {
   pullRequest: GitHubPrRef;
 }
 
+export type GitHubMergeMethod = "merge" | "rebase" | "squash";
+
+export interface GitHubPullRequestStatusInput {
+  cwd: string;
+  number?: number;
+}
+
+export interface GitHubPullRequestCheck {
+  name: string;
+  required: boolean;
+  state: "failure" | "pending" | "skipped" | "success";
+  url: string | null;
+}
+
+export interface GitHubPullRequestReviewThread {
+  author: string | null;
+  body: string;
+  id: string;
+  isOutdated: boolean;
+  line: number | null;
+  path: string | null;
+  url: string;
+}
+
+export interface GitHubPullRequestStatus {
+  allowedMergeMethods: GitHubMergeMethod[];
+  author: string | null;
+  baseRefName: string;
+  behindBy: number;
+  checks: GitHubPullRequestCheck[];
+  defaultMergeMethod: GitHubMergeMethod;
+  deleteBranchOnMerge: boolean;
+  headRefName: string;
+  isDraft: boolean;
+  mergeable: "CONFLICTING" | "MERGEABLE" | "UNKNOWN";
+  mergeStateStatus:
+    | "BEHIND"
+    | "BLOCKED"
+    | "CLEAN"
+    | "DIRTY"
+    | "DRAFT"
+    | "HAS_HOOKS"
+    | "UNKNOWN"
+    | "UNSTABLE";
+  mergedAt: string | null;
+  number: number;
+  reviewDecision: "APPROVED" | "CHANGES_REQUESTED" | "REVIEW_REQUIRED" | null;
+  state: "CLOSED" | "MERGED" | "OPEN";
+  title: string;
+  unresolvedThreads: GitHubPullRequestReviewThread[];
+  url: string;
+  viewerCanMerge: boolean;
+  worktreeDirty: boolean;
+}
+
+export interface GitHubMergeInput {
+  cwd: string;
+  deleteBranch?: boolean;
+  method: GitHubMergeMethod;
+  number: number;
+}
+
+export interface GitHubMergeResult {
+  merged: boolean;
+  url: string;
+}
+
+export interface GitHubResolveThreadInput {
+  cwd: string;
+  threadId: string;
+}
+
+export interface GitHubResolveThreadResult {
+  resolved: boolean;
+}
+
 export const githubResolveUrlInputSchema = arkType({
   "+": "ignore",
   url: "string > 0",
@@ -307,6 +383,20 @@ export interface GitHubRepository {
 export interface GitHubListRepositoriesResult {
   repositories: GitHubRepository[];
 }
+
+export const githubMergeInputSchema = arkType({
+  "+": "ignore",
+  cwd: "string > 0",
+  "deleteBranch?": "boolean",
+  method: "'merge' | 'rebase' | 'squash'",
+  number: "number.integer > 0",
+});
+
+export const githubResolveThreadInputSchema = arkType({
+  "+": "ignore",
+  cwd: "string > 0",
+  threadId: "string > 0",
+});
 
 /** Input for PR checks snapshot / review-thread fetch. */
 export interface GitHubPrContextInput {

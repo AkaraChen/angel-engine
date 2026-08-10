@@ -1,5 +1,6 @@
 import type { LocaleResource } from "./schema";
 import { scheduleTranslation } from "./schedule";
+import { pullRequestEn } from "./pull-request";
 
 export const ja = {
   translation: {
@@ -242,6 +243,7 @@ export const ja = {
           },
           pushing: "プッシュ中",
         },
+        pullRequest: pullRequestEn,
         listeningPorts: "リスニングポート",
         resizeFileTree: "ファイルツリーの幅を調整",
         resizeGitList: "変更リストの幅を調整",
@@ -252,6 +254,7 @@ export const ja = {
           gitChanges: "Git の変更",
           newTab: "新しいタブ",
           processes: "プロセス",
+          pullRequest: "プルリクエスト",
           tabs: "タブ",
           tools: "ツール",
           workspaceTabs: "ワークスペースタブ",

@@ -115,6 +115,11 @@ export type Chat = JsChat & {
   /** Present while an app-managed worktree is being created or needs retry. */
   worktreeCreation?: WorktreeCreationState;
 };
+export interface ChatArchiveWorkspaceResult {
+  chat: Chat;
+  removedWorktree: string | null;
+}
+
 export interface ChatSourceLink {
   kind: "issue" | "pullRequest";
   provider: "github" | "linear";

@@ -1,5 +1,6 @@
 import type { LocaleResource } from "./schema";
 import { scheduleTranslation } from "./schedule";
+import { pullRequestZhTW } from "./pull-request";
 
 export const zhTW = {
   translation: {
@@ -234,6 +235,7 @@ export const zhTW = {
           },
           pushing: "推送中",
         },
+        pullRequest: pullRequestZhTW,
         listeningPorts: "監聽連接埠",
         resizeFileTree: "調整檔案樹寬度",
         resizeGitList: "調整變更清單寬度",
@@ -244,6 +246,7 @@ export const zhTW = {
           gitChanges: "Git 變更",
           newTab: "新增分頁",
           processes: "處理程序",
+          pullRequest: "提取要求",
           tabs: "分頁",
           tools: "工具",
           workspaceTabs: "工作區分頁",

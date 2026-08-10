@@ -1,5 +1,6 @@
 import type { LocaleResource } from "./schema";
 import { scheduleTranslation } from "./schedule";
+import { pullRequestEn } from "./pull-request";
 
 export const en = {
   translation: {
@@ -240,6 +241,7 @@ export const en = {
           },
           pushing: "Pushing",
         },
+        pullRequest: pullRequestEn,
         listeningPorts: "Listening ports",
         resizeFileTree: "Resize file tree",
         resizeGitList: "Resize Git change list",
@@ -250,6 +252,7 @@ export const en = {
           gitChanges: "Git changes",
           newTab: "New tab",
           processes: "Processes",
+          pullRequest: "Pull request",
           tabs: "Tabs",
           tools: "Tools",
           workspaceTabs: "Workspace tabs",

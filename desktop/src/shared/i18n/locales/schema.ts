@@ -142,6 +142,7 @@ export interface LocaleResourceTranslationWorkspaceToolsTabs {
   files: string;
   gitChanges: string;
   newTab: string;
+  pullRequest: string;
   processes: string;
   tabs: string;
   tools: string;
@@ -183,6 +184,68 @@ export interface LocaleResourceTranslationWorkspaceToolsComments {
   title: string;
 }
 
+export interface LocaleResourceTranslationWorkspaceToolsPullRequest {
+  archive: string;
+  archiveDetail: string;
+  archiveFailed: string;
+  archiveConfirmDetail: string;
+  archiveConfirmDirtyDetail: string;
+  archiveConfirmTitle: string;
+  archiveUnavailable: string;
+  blocked: string;
+  blockers: {
+    behindBase_one: string;
+    behindBase_other: string;
+    changesRequested: string;
+    checksFailed_one: string;
+    checksFailed_other: string;
+    checksPending_one: string;
+    checksPending_other: string;
+    conflict: string;
+    draft: string;
+    permissionDenied: string;
+    repositoryPolicy: string;
+    reviewRequired: string;
+    unresolvedThreads_one: string;
+    unresolvedThreads_other: string;
+  };
+  checking: string;
+  checkingMergeability: string;
+  continue: string;
+  deleteBranch: string;
+  errors: {
+    cliMissing: string;
+    cliMissingDetail: string;
+    fetch: string;
+    fetchDetail: string;
+    permission: string;
+    permissionDetail: string;
+    unauthenticated: string;
+    unauthenticatedDetail: string;
+  };
+  generalComment: string;
+  merge: string;
+  mergeChanged: string;
+  mergeFailed: string;
+  merged: string;
+  mergedDetail: string;
+  mergedMethod: string;
+  merging: string;
+  method: string;
+  methodDisabled: string;
+  methods: { merge: string; rebase: string; squash: string };
+  noOpen: string;
+  noOpenDetail: string;
+  open: string;
+  optionalChecksFailed_one: string;
+  optionalChecksFailed_other: string;
+  ready: string;
+  refresh: string;
+  resolve: string;
+  title: string;
+  unresolvedTitle: string;
+}
+
 export interface LocaleResourceTranslationWorkspaceTools {
   addToChat: string;
   checks: LocaleResourceTranslationWorkspaceToolsChecks;
@@ -193,6 +256,7 @@ export interface LocaleResourceTranslationWorkspaceTools {
   empty: LocaleResourceTranslationWorkspaceToolsEmpty;
   git: LocaleResourceTranslationWorkspaceToolsGit;
   listeningPorts: string;
+  pullRequest: LocaleResourceTranslationWorkspaceToolsPullRequest;
   resizeFileTree: string;
   resizeGitList: string;
   subprocesses: string;
