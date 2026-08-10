@@ -26,6 +26,7 @@ export interface ChatEventsApi {
   automationsChanged: (automationIds: string[]) => void;
   conversationChanged: (chatIds: string[]) => void;
   metadataChanged: (chatIds: string[]) => void;
+  shepherdChanged: (chatId: string) => void;
 }
 
 export class ChatEvents extends Context.Tag("daemon/ChatEvents")<
@@ -50,6 +51,9 @@ export function createChatEvents(publisher: EventPublisher): ChatEventsApi {
     metadataChanged(chatIds) {
       if (chatIds.length === 0) return;
       publisher.publish({ chatIds, type: "chat-metadata-changed" });
+    },
+    shepherdChanged(chatId) {
+      publisher.publish({ chatIds: [chatId], type: "shepherd-changed" });
     },
   };
 }

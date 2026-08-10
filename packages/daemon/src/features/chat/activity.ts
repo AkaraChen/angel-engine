@@ -61,6 +61,12 @@ export class ChatActivityStore {
     };
   }
 
+  /** Current activity for a chat, or null when the chat has no live run. */
+  get(chatId: string): ChatActivity | null {
+    const current = this.#activities.get(chatId);
+    return current ? structuredClone(current.activity) : null;
+  }
+
   attentionList(): ChatAttentionListResult {
     const attentions = [];
     for (const { activity } of this.#activities.values()) {

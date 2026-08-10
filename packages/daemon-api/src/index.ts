@@ -7,5 +7,6 @@ export * from "./github";
 export * from "./links";
 export * from "./mime";
 export * from "./projects";
+export * from "./shepherd";
 export * from "./terminal";
 export * from "./workspace-tools";
