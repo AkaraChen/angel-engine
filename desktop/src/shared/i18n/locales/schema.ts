@@ -36,6 +36,7 @@ export interface LocaleResourceTranslationCommon {
   proposed: string;
   question: string;
   reload: string;
+  retry: string;
   running: string;
   save: string;
   saving: string;
@@ -517,6 +518,7 @@ export interface LocaleResourceTranslationSidebar {
   noChats: string;
   noProjects: string;
   noStandaloneChats: string;
+  openBranchChat: string;
   projects: string;
   powerWorktreeHome: string;
   powerWorktreeHistoricalChat: string;
@@ -812,6 +814,21 @@ export interface LocaleResourceTranslationTray {
   tooltipNeedsYou: string;
 }
 
+export interface LocaleResourceTranslationSettingsLinear {
+  apiConnection: string;
+  connect: string;
+  connected: string;
+  connectFailed: string;
+  description: string;
+  disconnect: string;
+  disconnectFailed: string;
+  notConnected: string;
+  replaceToken: string;
+  title: string;
+  tokenLabel: string;
+  tokenPlaceholder: string;
+}
+
 export interface LocaleResourceTranslationSettingsCustomAgentsForm {
   args: string;
   autoAuthenticate: string;
@@ -840,6 +857,7 @@ export interface LocaleResourceTranslationSettings {
   description: string;
   groups: LocaleResourceTranslationSettingsGroups;
   keyboard: LocaleResourceTranslationSettingsKeyboard;
+  linear: LocaleResourceTranslationSettingsLinear;
   mobile: LocaleResourceTranslationSettingsMobile;
   tabDescriptions: LocaleResourceTranslationSettingsTabDescriptions;
   tabs: LocaleResourceTranslationSettingsTabs;
@@ -927,6 +945,14 @@ export interface LocaleResourceTranslationComposerGitHubErrors {
   urlUnsupported: string;
 }
 
+export interface LocaleResourceTranslationComposerTaskLinkErrors {
+  linearFetchFailed: string;
+  linearNotFound: string;
+  linearUnauthorized: string;
+  prForkUnsupported: string;
+  unsupported: string;
+}
+
 export interface LocaleResourceTranslationComposer {
   agentMode: string;
   agentSettings: string;
@@ -946,9 +972,15 @@ export interface LocaleResourceTranslationComposer {
   fileTypeBlocked: string;
   fileTooLarge: string;
   files: string;
+  fromLink: string;
+  fromLinkPlaceholder: string;
   githubErrors: LocaleResourceTranslationComposerGitHubErrors;
   githubIssue: string;
   githubPullRequest: string;
+  linearConnectAction: string;
+  linearConnectDescription: string;
+  linearIssue: string;
+  linearItemMeta: string;
   loadingCommands: string;
   loadingSkills: string;
   loadingValue: string;
@@ -973,6 +1005,14 @@ export interface LocaleResourceTranslationComposer {
   skills: string;
   switchToBuild: string;
   switchToPlan: string;
+  taskLinkErrors: LocaleResourceTranslationComposerTaskLinkErrors;
+  taskLinkHintComplete: string;
+  taskLinkHintGitHubPath: string;
+  taskLinkHintLinearPath: string;
+  taskLinkHintSupported: string;
+  taskLinkStateClosed: string;
+  taskLinkStateMerged: string;
+  taskLinkStateOpen: string;
   toasts: LocaleResourceTranslationComposerToasts;
 }
 

@@ -13,6 +13,7 @@ export interface GitHubResolvedItem {
   contextText: string;
   headRefName?: string;
   isDraft?: boolean;
+  isCrossRepository?: boolean;
   kind: GitHubItemKind;
   number: number;
   owner: string;

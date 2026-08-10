@@ -8,6 +8,7 @@ import type {
 } from "../../shared/mobile-hosting";
 
 import { readFile, rm } from "node:fs/promises";
+import { randomBytes } from "node:crypto";
 import path from "node:path";
 import is from "@sindresorhus/is";
 import { app, BrowserWindow, ipcMain, utilityProcess } from "electron";
@@ -30,11 +31,13 @@ import {
   writeMobileHostingRuntimeMarker,
 } from "./mobile-hosting";
 import { daemonStartupError } from "./startup-error";
+import { pushLinearTokenToDaemon } from "../features/secrets/linear-token";
 
 const HANDSHAKE_TIMEOUT_MS = 10_000;
 const HEALTH_CHECK_INTERVAL_MS = 2_000;
 const RESPAWN_DELAYS_MS = [250, 1_000, 3_000, 10_000] as const;
 const MAX_DAEMON_STDERR_LENGTH = 8_192;
+const MAIN_BRIDGE_SECRET = randomBytes(32).toString("base64url");
 
 interface DaemonDiagnostics {
   stderr: string;
@@ -106,8 +109,13 @@ function buildDaemonArgs(): string[] {
 // parent env is spread through.
 function buildDaemonEnv(): NodeJS.ProcessEnv | undefined {
   const config = getMobileConfig();
-  if (!mobileServingEnabled(config)) return undefined;
-  return { ...process.env, ANGEL_MOBILE_PASSWORD: config.password };
+  return {
+    ...process.env,
+    ANGEL_MAIN_BRIDGE_SECRET: MAIN_BRIDGE_SECRET,
+    ...(mobileServingEnabled(config)
+      ? { ANGEL_MOBILE_PASSWORD: config.password }
+      : {}),
+  };
 }
 
 function currentMobileState(): MobileHostingState {
@@ -183,6 +191,12 @@ export async function fetchDaemon(pathname: string, init?: RequestInit) {
   return fetch(daemonUrl(connection.info, pathname), { ...init, headers });
 }
 
+export function fetchDaemonInternal(pathname: string, init?: RequestInit) {
+  const headers = new Headers(init?.headers);
+  headers.set("x-angel-main-secret", MAIN_BRIDGE_SECRET);
+  return fetchDaemon(pathname, { ...init, headers });
+}
+
 export function registerDaemonIpc() {
   ipcMain.handle(DAEMON_INFO_CHANNEL, () => connection);
 }
@@ -192,6 +206,9 @@ export async function startDaemonSupervisor() {
   const reattached = await tryReattach();
   if (reattached !== undefined) {
     setConnection({ info: reattached, status: "available" });
+    await pushLinearTokenToDaemon(fetchDaemonInternal).catch((error) => {
+      console.warn("Could not restore Linear token in daemon memory.", error);
+    });
     scheduleHealthCheck();
     return;
   }
@@ -313,6 +330,9 @@ async function spawnDaemon() {
     respawnAttempt = 0;
     writeMobileHostingRuntimeMarker(launchConfig);
     setConnection({ info, status: "available" });
+    await pushLinearTokenToDaemon(fetchDaemonInternal).catch((error) => {
+      console.warn("Could not restore Linear token in daemon memory.", error);
+    });
     scheduleHealthCheck();
   } catch (error) {
     if (child === nextChild) {

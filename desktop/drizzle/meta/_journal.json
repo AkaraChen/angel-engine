@@ -57,6 +57,13 @@
       "when": 1786322627259,
       "tag": "0007_lonely_absorbing_man",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "6",
+      "when": 1786330921553,
+      "tag": "0008_fancy_masked_marvel",
+      "breakpoints": true
     }
   ]
 }

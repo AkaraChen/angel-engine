@@ -1,5 +1,6 @@
 import type {
   Chat,
+  ChatCreateInput,
   ChatCreationLocation,
   ChatHistoryMessage,
   ChatRuntimeConfig,
@@ -45,6 +46,8 @@ export interface SendChatMessageOptions extends SendChatMessageCallbacks {
   projectId?: string | null;
   reasoningEffort?: string;
   runtime?: string;
+  sourceLink?: ChatCreateInput["sourceLink"];
+  worktreeRef?: ChatCreateInput["worktreeRef"];
 }
 
 export interface SendPromptMessageInput {
@@ -87,6 +90,8 @@ export function useSendChatMessage(
           projectId: latestOptionsRef.current.projectId ?? undefined,
           reasoningEffort: latestOptionsRef.current.reasoningEffort,
           runtime: latestOptionsRef.current.runtime,
+          sourceLink: latestOptionsRef.current.sourceLink,
+          worktreeRef: latestOptionsRef.current.worktreeRef,
           worktreeSetupApproval,
         },
         message,

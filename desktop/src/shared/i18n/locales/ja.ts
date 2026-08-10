@@ -64,6 +64,7 @@ export const ja = {
       proposed: "提案済み",
       question: "質問",
       reload: "再読み込み",
+      retry: "再試行",
       running: "実行中",
       save: "保存",
       saving: "保存中",
@@ -382,6 +383,7 @@ export const ja = {
       noChats: "チャットはありません",
       noProjects: "まだプロジェクトはありません",
       noStandaloneChats: "単独チャットはありません",
+      openBranchChat: "このブランチを使用中のチャットを開く",
       projects: "プロジェクト",
       powerWorktreeHome: "ホーム",
       powerWorktreeHistoricalChat: "チャット履歴",
@@ -537,6 +539,21 @@ export const ja = {
         sourceUser: "User",
         sourceUserOverride: "User · overridden",
         warningsCount: "{{count}} warning(s) while loading keybindings",
+      },
+      linear: {
+        apiConnection: "API 接続",
+        connect: "接続",
+        connected: "接続済み",
+        connectFailed: "Linear に接続できませんでした。",
+        description:
+          "トークンはデスクトップのメインプロセスで暗号化され、レンダラープロセスへ再公開されることはありません。",
+        disconnect: "切断",
+        disconnectFailed: "Linear から切断できませんでした。",
+        notConnected: "未接続",
+        replaceToken: "トークンを置換",
+        title: "Linear",
+        tokenLabel: "Linear API トークン",
+        tokenPlaceholder: "lin_api_…",
       },
       mobile: {
         copied: "コピーしました",
@@ -757,6 +774,9 @@ export const ja = {
       fileTypeBlocked: "ファイル形式がブロックされました",
       fileTooLarge: "ファイルが大きすぎます",
       files: "ファイル",
+      fromLink: "リンクから",
+      fromLinkPlaceholder:
+        "GitHub または Linear の Issue リンクを貼り付けるか、GitHub を検索",
       githubErrors: {
         cliMissing:
           "GitHub CLI (gh) がインストールされていないか PATH にありません。",
@@ -768,6 +788,11 @@ export const ja = {
       },
       githubIssue: "Issue",
       githubPullRequest: "Pull request",
+      linearConnectAction: "Linear に接続",
+      linearConnectDescription:
+        "この Issue を解決する前に Linear に接続してください。",
+      linearIssue: "Linear Issue",
+      linearItemMeta: "{{identifier}} · Linear · {{state}}",
       loadingCommands: "コマンドを読み込み中",
       loadingSkills: "スキルを読み込み中",
       loadingValue: "読み込み中...",
@@ -796,6 +821,24 @@ export const ja = {
       skills: "スキル",
       switchToBuild: "実行モードに切り替え",
       switchToPlan: "計画モードに切り替え",
+      taskLinkErrors: {
+        linearFetchFailed: "Linear Issue を取得できませんでした。",
+        linearNotFound: "Linear Issue が見つかりません。",
+        linearUnauthorized: "Linear が設定済み API トークンを拒否しました。",
+        prForkUnsupported:
+          "fork からの Pull Request はまだサポートされていません。",
+        unsupported: "このタスクリンクはサポートされていません。",
+      },
+      taskLinkHintComplete:
+        "GitHub Issue、Pull Request、または Linear Issue の完全なリンクを貼り付けてください。",
+      taskLinkHintGitHubPath:
+        "GitHub のリンクですが、Issue または Pull Request ではありません。",
+      taskLinkHintLinearPath: "Linear のリンクですが、Issue ではありません。",
+      taskLinkHintSupported:
+        "GitHub Issue、GitHub Pull Request、Linear Issue のリンクに対応しています。",
+      taskLinkStateClosed: "クローズ",
+      taskLinkStateMerged: "マージ済み",
+      taskLinkStateOpen: "オープン",
       toasts: {
         couldNotChangeMode: "モードを変更できませんでした",
         couldNotReadFile: "ファイルを読み取れませんでした",
