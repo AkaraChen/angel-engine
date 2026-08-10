@@ -124,20 +124,7 @@ export const zhTW = {
       statsBranch: "分支",
       statsChanges: "變更",
       statsLastActive: "最近活動",
-      transcriptDensity: {
-        descriptions: {
-          compact: "預設摺疊工具細節，需要時可展開單條。",
-          debug: "預設展開工具與推理細節，方便排查。",
-          normal: "後面沒有正文時自動展開工具。",
-        },
-        menuLabel: "時間線密度：{{density}}",
-        options: {
-          compact: "簡潔",
-          debug: "偵錯",
-          normal: "標準",
-        },
-        title: "時間線密度",
-      },
+
       tools: {
         checks: {
           fixFailures: "修復失敗",
@@ -415,15 +402,6 @@ export const zhTW = {
           light: "淺色",
           system: "跟隨系統",
         },
-        transcriptDensityDescription:
-          "目前工作區模式下時間線預設顯示多少工具細節。Chat 預設簡潔；Work / Power 預設標準。",
-        transcriptDensityLabel: "時間線密度",
-        transcriptDensityOptions: {
-          compact: "簡潔",
-          debug: "偵錯",
-          normal: "標準",
-        },
-        transcriptDensityTitle: "時間線密度",
       },
       archived: {
         allProjects: "所有專案",

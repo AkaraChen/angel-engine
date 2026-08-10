@@ -27,12 +27,6 @@ import { Button } from "@/components/ui/button";
 import { confirmAction } from "@/components/ui/confirm-dialog";
 import { Switch } from "@/components/ui/switch";
 import { useAgentCatalog } from "@/features/agents/agent-catalog-context";
-import { useWorkspaceUiStore } from "@/app/workspace/workspace-ui-store";
-import {
-  TRANSCRIPT_DENSITY_VALUES,
-  type TranscriptDensity,
-} from "@/features/chat/transcript-density";
-import { useTranscriptDensityStore } from "@/features/chat/transcript-density-store";
 import { useKeybindingHintsStore } from "@/features/keybindings/keybinding-hints-store";
 import { KeyboardSettings } from "@/features/keybindings/keyboard-settings";
 import { ArchivedSettingsPanel } from "@/features/settings/archived-settings-panel";
@@ -280,13 +274,6 @@ function AppearanceSettings() {
     (state) => state.setEnabled,
   );
   const setLanguage = useSettingsStore((state) => state.setLanguage);
-  const workspaceMode = useWorkspaceUiStore((state) => state.workspaceMode);
-  const transcriptDensity = useTranscriptDensityStore((state) =>
-    state.densityFor(workspaceMode),
-  );
-  const setTranscriptDensity = useTranscriptDensityStore(
-    (state) => state.setDensity,
-  );
 
   return (
     <SettingsGroup>
@@ -317,23 +304,6 @@ function AppearanceSettings() {
           />
         }
         title={t("settings.appearance.language")}
-      />
-      <SettingsRow
-        after={
-          <SettingsSelect
-            label={t("settings.appearance.transcriptDensityLabel")}
-            onValueChange={(value) =>
-              setTranscriptDensity(workspaceMode, value as TranscriptDensity)
-            }
-            options={TRANSCRIPT_DENSITY_VALUES.map((value) => ({
-              label: t(`settings.appearance.transcriptDensityOptions.${value}`),
-              value,
-            }))}
-            value={transcriptDensity}
-          />
-        }
-        description={t("settings.appearance.transcriptDensityDescription")}
-        title={t("settings.appearance.transcriptDensityTitle")}
       />
       <SettingsRow
         after={
