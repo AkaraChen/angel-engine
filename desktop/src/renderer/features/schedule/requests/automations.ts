@@ -6,8 +6,8 @@ import type {
 
 import { mutationOptions, queryOptions } from "@tanstack/react-query";
 import { nanoid } from "nanoid";
+import { scheduleFixture } from "@/features/schedule/requests/fixtures";
 import { scheduleQueryKeys } from "@/features/schedule/requests/keys";
-import { scheduleFixture } from "@/features/schedule/schedule-model";
 
 export function automationListQueryOptions({
   staleTime = Number.POSITIVE_INFINITY,

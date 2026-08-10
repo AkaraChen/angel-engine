@@ -50,6 +50,7 @@ import {
 import {
   hasMissedRun,
   nextRunPreview,
+  PRESET_CRON,
   sortedRuns,
   validateCron,
 } from "@/features/schedule/schedule-model";
@@ -78,14 +79,6 @@ const RUN_LABEL_KEY: Record<AutomationRunStatus, string> = {
   succeeded: "schedule.runStatus.succeeded",
 };
 
-const PRESET_CRON: Record<Exclude<SchedulePreset, "custom">, string> = {
-  "every-30-minutes": "*/30 * * * *",
-  daily: "0 9 * * *",
-  hourly: "0 * * * *",
-  weekdays: "0 9 * * 1-5",
-  weekly: "0 9 * * 1",
-};
-
 interface SchedulePageProps {
   projects: Project[];
 }
@@ -102,6 +95,7 @@ export const SchedulePage: FC<SchedulePageProps> = ({ projects }) => {
   const selectedAutomation =
     automations.find(({ id }) => id === selectedAutomationId) ?? automations[0];
   const selectedId = selectedAutomation?.id;
+  const showRecipes = listQuery.isSuccess && automations.length === 0;
 
   const runNowMutation = useMutation(
     runAutomationNowMutationOptions({ queryClient }),
@@ -171,7 +165,7 @@ export const SchedulePage: FC<SchedulePageProps> = ({ projects }) => {
       {hasMissedRun(automations) ? (
         <div className="mx-4 mt-3 flex items-start gap-2 rounded-md border border-status-info-border bg-status-info-soft px-3 py-2 text-xs">
           <ClockCountdown
-            className="mt-0.5 shrink-0 text-status-info"
+            className="mt-0.5 size-4 shrink-0 text-status-info"
             weight="duotone"
           />
           <span>{t("schedule.sleepNotice")}</span>
@@ -179,38 +173,38 @@ export const SchedulePage: FC<SchedulePageProps> = ({ projects }) => {
       ) : null}
 
       <div className="flex min-h-0 flex-1">
-        <div
-          className={cn(
-            "min-h-0 w-full shrink-0 overflow-y-auto border-border-subtle bg-sidebar md:block md:w-72 md:border-r",
-            mobileDetailOpen ? "hidden" : "block",
-          )}
-          ref={listRef}
-        >
-          {listQuery.isPending ? (
-            <ScheduleSkeleton />
-          ) : listQuery.isError ? (
-            <ScheduleNotice text={t("schedule.disconnected")} />
-          ) : automations.length === 0 ? (
-            <ScheduleRecipes onCreate={() => setCreateOpen(true)} />
-          ) : (
-            <div className="space-y-1 p-2">
-              {automations.map((automation) => (
-                <AutomationRow
-                  automation={automation}
-                  key={automation.id}
-                  onKeyDown={moveSelection}
-                  onOpen={openAutomation}
-                  selected={automation.id === selectedId}
-                />
-              ))}
-            </div>
-          )}
-        </div>
+        {listQuery.isPending || listQuery.isError || automations.length > 0 ? (
+          <div
+            className={cn(
+              "min-h-0 w-full shrink-0 overflow-y-auto border-border-subtle bg-sidebar md:block md:w-72 md:border-r",
+              mobileDetailOpen ? "hidden" : "block",
+            )}
+            ref={listRef}
+          >
+            {listQuery.isPending ? (
+              <ScheduleSkeleton />
+            ) : listQuery.isError ? (
+              <ScheduleNotice text={t("schedule.disconnected")} />
+            ) : (
+              <div className="space-y-1 p-2">
+                {automations.map((automation) => (
+                  <AutomationRow
+                    automation={automation}
+                    key={automation.id}
+                    onKeyDown={moveSelection}
+                    onOpen={openAutomation}
+                    selected={automation.id === selectedId}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+        ) : null}
 
         <div
           className={cn(
             "min-h-0 min-w-0 flex-1 flex-col overflow-y-auto bg-background md:flex",
-            mobileDetailOpen ? "flex" : "hidden",
+            mobileDetailOpen || showRecipes ? "flex" : "hidden",
           )}
         >
           {selectedAutomation ? (
@@ -229,6 +223,8 @@ export const SchedulePage: FC<SchedulePageProps> = ({ projects }) => {
               runNowPending={runNowMutation.isPending}
               setEnabledPending={setEnabledMutation.isPending}
             />
+          ) : showRecipes ? (
+            <ScheduleRecipes onCreate={() => setCreateOpen(true)} />
           ) : (
             <div className="m-auto max-w-sm px-6 text-center">
               <CalendarDots
@@ -560,7 +556,7 @@ function CreateAutomationDialog({
     state.name.trim().length > 0 && state.prompt.trim().length > 0 && cronValid;
   const project = projects.find(({ id }) => id === state.projectId);
   const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-  const preview = nextRunPreview(state.preset);
+  const preview = nextRunPreview(state.preset, new Date(), state.cron);
   const isDirty =
     state.name.length > 0 ||
     state.prompt.length > 0 ||
@@ -668,8 +664,10 @@ function CreateAutomationDialog({
           ) : null}
           <div
             className={cn(
-              "rounded-md bg-surface-2 px-3 py-2 text-xs text-muted-foreground",
-              !cronValid && "text-status-danger",
+              "rounded-md px-3 py-2 text-xs",
+              cronValid
+                ? "bg-surface-2 text-muted-foreground"
+                : "border border-status-danger-border bg-status-danger-soft text-status-danger",
             )}
           >
             {cronValid ? (
@@ -781,13 +779,21 @@ function Field({ children, label }: { children: ReactNode; label: string }) {
 function ScheduleRecipes({ onCreate }: { onCreate: () => void }) {
   const { t } = useTranslation();
   return (
-    <div className="p-3">
-      <p className="mb-3 text-sm font-medium">{t("schedule.recipes.title")}</p>
-      <div className="grid gap-2">
+    <div className="m-auto w-full max-w-3xl p-6">
+      <div className="mb-5 text-center">
+        <CalendarDots
+          className="mx-auto mb-2 size-8 text-muted-foreground"
+          weight="duotone"
+        />
+        <p className="font-display text-base font-semibold">
+          {t("schedule.recipes.title")}
+        </p>
+      </div>
+      <div className="grid gap-3 sm:grid-cols-3">
         {(["dependencyAudit", "ciHeartbeat", "nightlyTests"] as const).map(
           (recipe) => (
             <button
-              className="rounded-lg border border-border-subtle bg-surface-1 p-3 text-left hover:bg-overlay-hover"
+              className="rounded-lg border border-border bg-card p-4 text-left hover:bg-overlay-hover"
               key={recipe}
               onClick={onCreate}
               type="button"
@@ -802,7 +808,7 @@ function ScheduleRecipes({ onCreate }: { onCreate: () => void }) {
           ),
         )}
       </div>
-      <Button className="mt-2 w-full" variant="ghost" onClick={onCreate}>
+      <Button className="mx-auto mt-3 flex" variant="ghost" onClick={onCreate}>
         {t("schedule.startFromScratch")}
       </Button>
     </div>
