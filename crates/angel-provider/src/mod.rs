@@ -7,7 +7,6 @@ pub mod acp;
 pub mod cline;
 pub mod codex;
 pub mod copilot;
-#[cfg(feature = "cursor-history")]
 pub mod cursor;
 pub mod gemini;
 pub mod kimi;

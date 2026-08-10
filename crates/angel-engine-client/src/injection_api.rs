@@ -117,6 +117,21 @@ mod tests {
     }
 
     #[test]
+    fn cursor_protocol_reports_mcp_inject_supported_without_history_feature() {
+        let options = ClientOptions::builder().cursor("agent").build();
+        assert!(can_inject_mcp(&options));
+        assert_eq!(
+            mcp_injection_capability(&options),
+            CapabilitySupport::Supported
+        );
+        ensure_mcp_injection_for_options(&ClientOptions {
+            mcp_injection: sample_injection(),
+            ..options
+        })
+        .expect("cursor ACP accepts inject independently of local history");
+    }
+
+    #[test]
     fn inject_mcp_into_options_writes_when_supported() {
         let mut options = ClientOptions::builder()
             .acp("opencode")

@@ -485,6 +485,8 @@ Status: implemented on the protocol-neutral + client + ACP path.
 | Custom / unknown | **Unknown** until an explicit adapter is provided |
 
 Empty `McpInjectionConfig` is always a no-op and never errors.
+Cursor's ACP adapter and Skill/MCP capabilities are always available; the
+`cursor-history` Cargo feature gates only local SQLite history hydration.
 
 ### 12.3 Client API (`angel-engine-client`)
 

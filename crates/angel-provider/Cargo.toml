@@ -7,7 +7,7 @@ edition = "2024"
 path = "src/mod.rs"
 
 [features]
-cursor-history = []
+cursor-history = ["dep:rusqlite"]
 
 [dependencies]
 angel-engine = { path = "../angel-engine" }
@@ -16,6 +16,7 @@ serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 strum = { version = "0.28", features = ["derive"] }
 percent-encoding = "2.3.2"
+rusqlite = { version = "0.38", features = ["bundled"], optional = true }
 
 [build-dependencies]
 prettyplease = "0.2"
