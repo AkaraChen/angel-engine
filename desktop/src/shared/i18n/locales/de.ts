@@ -182,6 +182,27 @@ export const de = {
           filesSelected: "{{selected}} von {{total}} Dateien ausgewählt",
           summaryPlaceholder: "Zusammenfassung",
         },
+        diffBase: {
+          branch: "Relativ zum Standardbranch",
+          fallback: {
+            anchorMissing:
+              "Die Basis {{sha}} für {{base}} existiert nicht mehr. Vorübergehend wird {{fallback}} angezeigt.",
+            anchorUnavailable:
+              "{{base}} ist für diesen Chat nicht verfügbar. Vorübergehend wird {{fallback}} angezeigt.",
+            defaultBranchUnavailable:
+              "Der Standardbranch konnte nicht ermittelt werden. Vorübergehend wird {{fallback}} angezeigt.",
+            gitRefUnavailable:
+              "Die Git-Referenz {{ref}} ist nicht verfügbar. Vorübergehend wird {{fallback}} angezeigt.",
+            noMergeBase:
+              "Für {{ref}} und HEAD gibt es keine Merge-Basis. Vorübergehend wird {{fallback}} angezeigt.",
+            notRepository: "Dieser Workspace ist kein Git-Repository.",
+          },
+          label: "Diff-Basis",
+          session: "Seit Sitzungsbeginn",
+          turn: "Seit der letzten Runde",
+          unstaged: "Nur nicht bereitgestellt",
+          worktree: "Nicht commitete Änderungen",
+        },
         dockInSidebar: "In Seitenleiste andocken",
         empty: {
           checksUnavailable: "Checks nicht verfügbar",

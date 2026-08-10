@@ -178,6 +178,26 @@ export const zhTW = {
           filesSelected: "已選 {{selected}}/{{total}} 個檔案",
           summaryPlaceholder: "摘要",
         },
+        diffBase: {
+          branch: "相對預設分支",
+          fallback: {
+            anchorMissing:
+              "{{base}} 基準 {{sha}} 已不存在，暫時顯示{{fallback}}。",
+            anchorUnavailable:
+              "目前工作階段沒有可用的{{base}}，暫時顯示{{fallback}}。",
+            defaultBranchUnavailable:
+              "無法解析預設分支，暫時顯示{{fallback}}。",
+            gitRefUnavailable:
+              "Git 參照 {{ref}} 不可用，暫時顯示{{fallback}}。",
+            noMergeBase: "{{ref}} 與 HEAD 沒有合併基準，暫時顯示{{fallback}}。",
+            notRepository: "此工作區不是 Git 儲存庫。",
+          },
+          label: "差異基準",
+          session: "自工作階段開始",
+          turn: "自上一輪開始",
+          unstaged: "僅未暫存",
+          worktree: "未提交變更",
+        },
         dockInSidebar: "停靠到側欄",
         empty: {
           checksUnavailable: "檢查不可用",

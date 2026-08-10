@@ -1,5 +1,6 @@
 import type {
   WorkspaceFileReadResult,
+  WorkspaceGitDiffBaseKind,
   WorkspaceGitDiffResult,
 } from "@angel-engine/daemon-api/workspace-tools";
 import type { WorkspaceToolSurfaceDynamicTab } from "@shared/workspace-tool-surface";
@@ -7,6 +8,7 @@ import type { WorkspaceToolSurfaceDynamicTab } from "@shared/workspace-tool-surf
 import { FileText, GitBranch } from "@phosphor-icons/react";
 import is from "@sindresorhus/is";
 import { useQuery } from "@tanstack/react-query";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import {
@@ -14,6 +16,10 @@ import {
   formatUnsupportedFileReason,
   getErrorMessage,
 } from "@/app/workspace/workspace-file-display";
+import {
+  formatWorkspaceGitDiffUnavailableReason,
+  WorkspaceGitBaseSelect,
+} from "@/app/workspace/workspace-git-base-select";
 import {
   WorkspaceToolBanner,
   WorkspaceToolEmpty,
@@ -63,11 +69,23 @@ export function WorkspaceGitDiffTool({
 }: {
   tab: Extract<WorkspaceToolSurfaceDynamicTab, { kind: "git-diff" }>;
 }) {
-  const { api } = useWorkspaceToolSurface();
+  const { api, chatId } = useWorkspaceToolSurface();
   const { t } = useTranslation();
+  const [baseKind, setBaseKind] =
+    useState<WorkspaceGitDiffBaseKind>("worktree");
   const gitQuery = useQuery({
-    queryFn: async () => api.workspaceTools.gitDiff({ root: tab.root }),
-    queryKey: queryKeys.workspaceTools.gitDiff(tab.root),
+    queryFn: async () =>
+      api.workspaceTools.gitDiff({
+        baseKind,
+        chatId: chatId ?? undefined,
+        root: tab.root,
+      }),
+    queryKey: queryKeys.workspaceTools.gitDiff(
+      tab.root,
+      baseKind,
+      null,
+      chatId,
+    ),
     retry: false,
     staleTime: 5_000,
   });
@@ -87,7 +105,12 @@ export function WorkspaceGitDiffTool({
   }
 
   return (
-    <WorkspaceGitDiffResultView data={gitQuery.data} pathFilter={tab.path} />
+    <WorkspaceGitDiffResultView
+      baseKind={baseKind}
+      data={gitQuery.data}
+      pathFilter={tab.path}
+      onBaseKindChange={setBaseKind}
+    />
   );
 }
 
@@ -138,11 +161,15 @@ function WorkspaceFileReadResultView({
 }
 
 function WorkspaceGitDiffResultView({
+  baseKind,
   data,
   pathFilter,
+  onBaseKindChange,
 }: {
+  baseKind: WorkspaceGitDiffBaseKind;
   data?: WorkspaceGitDiffResult;
   pathFilter?: string;
+  onBaseKindChange: (kind: WorkspaceGitDiffBaseKind) => void;
 }) {
   const { t } = useTranslation();
   if (!data?.isGitRepository) {
@@ -155,8 +182,8 @@ function WorkspaceGitDiffResultView({
   }
 
   const patchList = buildWorkspaceToolPatchList(
-    data.stagedPatch,
-    data.unstagedPatch,
+    "",
+    data.patch,
     data.skippedFiles,
   );
   const files = is.nonEmptyString(pathFilter)
@@ -165,6 +192,24 @@ function WorkspaceGitDiffResultView({
 
   return (
     <div className="h-full min-h-0 overflow-auto p-3">
+      <div className="mb-3">
+        <WorkspaceGitBaseSelect
+          bases={data.availableBases}
+          resolvedBase={data.resolvedBase}
+          value={baseKind}
+          onChange={onBaseKindChange}
+        />
+      </div>
+      {data.resolvedBase.unavailableReason ? (
+        <WorkspaceToolBanner className="mb-3" tone="attention">
+          {formatWorkspaceGitDiffUnavailableReason({
+            fallbackKind: data.resolvedBase.kind,
+            reason: data.resolvedBase.unavailableReason,
+            requestedKind: data.requestedBaseKind,
+            t,
+          })}
+        </WorkspaceToolBanner>
+      ) : null}
       {data.warnings.length > 0 ? (
         <WorkspaceToolBanner className="mb-3" tone="attention">
           {data.warnings.map((warning) => (

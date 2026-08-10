@@ -61,8 +61,15 @@ export const queryKeys = {
   workspaceTools: {
     fileTree: (root: string | null) =>
       ["workspace-tools", "file-tree", root] as const,
-    gitDiff: (root: string | null) =>
+    gitDiffRoot: (root: string | null) =>
       ["workspace-tools", "git-diff", root] as const,
+    gitDiff: (
+      root: string | null,
+      baseKind = "worktree",
+      baseRef: string | null = null,
+      chatId: string | null = null,
+    ) =>
+      ["workspace-tools", "git-diff", root, baseKind, baseRef, chatId] as const,
     readFile: (root: string | null, path: string | null) =>
       ["workspace-tools", "read-file", root, path] as const,
   },

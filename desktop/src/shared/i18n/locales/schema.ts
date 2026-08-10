@@ -92,6 +92,23 @@ export interface LocaleResourceTranslationWorkspaceToolsGit {
   pushing: string;
 }
 
+export interface LocaleResourceTranslationWorkspaceToolsDiffBase {
+  branch: string;
+  fallback: {
+    anchorMissing: string;
+    anchorUnavailable: string;
+    defaultBranchUnavailable: string;
+    gitRefUnavailable: string;
+    noMergeBase: string;
+    notRepository: string;
+  };
+  label: string;
+  session: string;
+  turn: string;
+  unstaged: string;
+  worktree: string;
+}
+
 export interface LocaleResourceTranslationWorkspaceToolsEmpty {
   checksUnavailable: string;
   fileTreeUnavailable: string;
@@ -159,6 +176,7 @@ export interface LocaleResourceTranslationWorkspaceTools {
   checks: LocaleResourceTranslationWorkspaceToolsChecks;
   comments: LocaleResourceTranslationWorkspaceToolsComments;
   commit: LocaleResourceTranslationWorkspaceToolsCommit;
+  diffBase: LocaleResourceTranslationWorkspaceToolsDiffBase;
   dockInSidebar: string;
   empty: LocaleResourceTranslationWorkspaceToolsEmpty;
   git: LocaleResourceTranslationWorkspaceToolsGit;

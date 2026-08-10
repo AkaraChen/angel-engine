@@ -180,6 +180,27 @@ export const ko = {
           filesSelected: "{{total}}개 중 {{selected}}개 선택됨",
           summaryPlaceholder: "요약",
         },
+        diffBase: {
+          branch: "기본 브랜치 기준",
+          fallback: {
+            anchorMissing:
+              "{{base}} 기준점 {{sha}}이(가) 더 이상 없습니다. 임시로 {{fallback}}을(를) 표시합니다.",
+            anchorUnavailable:
+              "이 채팅에서는 {{base}}을(를) 사용할 수 없습니다. 임시로 {{fallback}}을(를) 표시합니다.",
+            defaultBranchUnavailable:
+              "기본 브랜치를 확인할 수 없습니다. 임시로 {{fallback}}을(를) 표시합니다.",
+            gitRefUnavailable:
+              "Git 참조 {{ref}}을(를) 사용할 수 없습니다. 임시로 {{fallback}}을(를) 표시합니다.",
+            noMergeBase:
+              "{{ref}}과(와) HEAD의 병합 기준점이 없습니다. 임시로 {{fallback}}을(를) 표시합니다.",
+            notRepository: "이 작업 공간은 Git 저장소가 아닙니다.",
+          },
+          label: "Diff 기준",
+          session: "세션 시작 이후",
+          turn: "이전 턴 이후",
+          unstaged: "스테이지되지 않은 변경만",
+          worktree: "커밋되지 않은 변경",
+        },
         dockInSidebar: "사이드바에 고정",
         empty: {
           checksUnavailable: "검사를 사용할 수 없습니다",

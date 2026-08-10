@@ -185,6 +185,27 @@ export const es = {
           filesSelected: "{{selected}} de {{total}} archivos seleccionados",
           summaryPlaceholder: "Resumen",
         },
+        diffBase: {
+          branch: "Relativo a la rama predeterminada",
+          fallback: {
+            anchorMissing:
+              "La base {{sha}} de {{base}} ya no existe. Se muestra temporalmente {{fallback}}.",
+            anchorUnavailable:
+              "{{base}} no está disponible para este chat. Se muestra temporalmente {{fallback}}.",
+            defaultBranchUnavailable:
+              "No se pudo resolver la rama predeterminada. Se muestra temporalmente {{fallback}}.",
+            gitRefUnavailable:
+              "La referencia Git {{ref}} no está disponible. Se muestra temporalmente {{fallback}}.",
+            noMergeBase:
+              "No hay una base de fusión para {{ref}} y HEAD. Se muestra temporalmente {{fallback}}.",
+            notRepository: "Este espacio de trabajo no es un repositorio Git.",
+          },
+          label: "Base de diferencias",
+          session: "Desde el inicio de la sesión",
+          turn: "Desde el turno anterior",
+          unstaged: "Solo sin preparar",
+          worktree: "Cambios sin confirmar",
+        },
         dockInSidebar: "Acoplar a la barra lateral",
         empty: {
           checksUnavailable: "Checks no disponibles",
