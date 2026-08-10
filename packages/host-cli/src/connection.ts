@@ -19,11 +19,14 @@ export interface ConnectionOverrides {
 /**
  * Resolve daemon base URL + bearer token.
  *
- * Precedence:
- * 1. `--url` + `--token` (token may still come from env/file if only URL set)
- * 2. `ANGEL_DAEMON_URL` + `ANGEL_DAEMON_TOKEN`
+ * Precedence for each field (URL and token independently):
+ * 1. CLI flags (`--url` / `--token`)
+ * 2. Env (`ANGEL_DAEMON_URL` / `ANGEL_DAEMON_TOKEN`)
  * 3. `--info` / `ANGEL_DAEMON_INFO` JSON file
  * 4. Well-known / app userData `daemon.json` candidates
+ *
+ * A present `--token` always wins over env/file tokens (agent auth tests
+ * and operator overrides depend on this when host control injects env).
  */
 export function resolveDaemonConnection(
   overrides: ConnectionOverrides = {},
@@ -32,31 +35,68 @@ export function resolveDaemonConnection(
 ): DaemonConnection {
   const flagUrl = normalizeUrl(overrides.url);
   const flagToken = nonEmpty(overrides.token);
+  const envUrl = normalizeUrl(env.ANGEL_DAEMON_URL);
+  const envToken = nonEmpty(env.ANGEL_DAEMON_TOKEN);
+
   if (flagUrl !== undefined && flagToken !== undefined) {
     return { source: "flags", token: flagToken, url: flagUrl };
   }
 
-  const envUrl = normalizeUrl(env.ANGEL_DAEMON_URL);
-  const envToken = nonEmpty(env.ANGEL_DAEMON_TOKEN);
-  if (flagUrl !== undefined && envToken !== undefined) {
-    return { source: "flags+env", token: envToken, url: flagUrl };
-  }
-  if (envUrl !== undefined && envToken !== undefined) {
-    return { source: "env", token: envToken, url: envUrl };
-  }
-  if (flagUrl !== undefined && flagToken === undefined) {
+  const infoPath =
+    nonEmpty(overrides.infoPath) ?? nonEmpty(env.ANGEL_DAEMON_INFO);
+
+  // Partial flags: complete the missing half from env, then daemon.json.
+  if (flagUrl !== undefined || flagToken !== undefined) {
+    let url = flagUrl ?? envUrl;
+    let token = flagToken ?? envToken;
+    let source =
+      flagUrl !== undefined && flagToken === undefined
+        ? "flags+env"
+        : flagToken !== undefined && flagUrl === undefined
+          ? "flags+env"
+          : "flags";
+
+    if (url === undefined || token === undefined) {
+      const fileConn = firstInfoConnection(infoPath, homeDir, env);
+      if (fileConn !== undefined) {
+        if (url === undefined) {
+          url = fileConn.url;
+          source = flagToken !== undefined ? "flags+file" : fileConn.source;
+        }
+        if (token === undefined) {
+          token = fileConn.token;
+          source = flagUrl !== undefined ? "flags+file" : fileConn.source;
+        }
+      }
+    }
+
+    if (url !== undefined && token !== undefined) {
+      return { source, token, url };
+    }
+    if (url === undefined) {
+      throw new ConnectionError(
+        "Missing daemon URL. Pass --url or set ANGEL_DAEMON_URL.",
+      );
+    }
     throw new ConnectionError(
       "Missing daemon token. Pass --token or set ANGEL_DAEMON_TOKEN.",
     );
+  }
+
+  if (envUrl !== undefined && envToken !== undefined) {
+    return { source: "env", token: envToken, url: envUrl };
   }
   if (envUrl !== undefined && envToken === undefined) {
     throw new ConnectionError(
       "ANGEL_DAEMON_URL is set but ANGEL_DAEMON_TOKEN is missing.",
     );
   }
+  if (envToken !== undefined && envUrl === undefined) {
+    throw new ConnectionError(
+      "ANGEL_DAEMON_TOKEN is set but ANGEL_DAEMON_URL is missing.",
+    );
+  }
 
-  const infoPath =
-    nonEmpty(overrides.infoPath) ?? nonEmpty(env.ANGEL_DAEMON_INFO);
   if (infoPath !== undefined) {
     return connectionFromInfoFile(infoPath, `info:${infoPath}`);
   }
@@ -79,6 +119,28 @@ export function resolveDaemonConnection(
       "or ensure a daemon.json exists (e.g. ~/.angel-engine/daemon.json).",
     ].join(" "),
   );
+}
+
+function firstInfoConnection(
+  infoPath: string | undefined,
+  homeDir: string,
+  env: NodeJS.ProcessEnv,
+): DaemonConnection | undefined {
+  const candidates =
+    infoPath !== undefined ? [infoPath] : defaultDaemonInfoPaths(homeDir, env);
+  for (const candidate of candidates) {
+    try {
+      const source =
+        infoPath !== undefined ? `info:${candidate}` : `file:${candidate}`;
+      return connectionFromInfoFile(candidate, source);
+    } catch (error) {
+      if (error instanceof ConnectionError && error.code === "not_found") {
+        continue;
+      }
+      throw error;
+    }
+  }
+  return undefined;
 }
 
 export function defaultDaemonInfoPaths(

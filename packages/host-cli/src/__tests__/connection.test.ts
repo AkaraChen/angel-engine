@@ -36,6 +36,48 @@ describe("resolveDaemonConnection", () => {
     });
   });
 
+  it("lets --token override env token when host injects ANGEL_DAEMON_*", () => {
+    // Agent process trees get URL+token via env; operators/tests must still be
+    // able to force a wrong token for auth regression without also passing --url.
+    const connection = resolveDaemonConnection(
+      { token: "wrong-token" },
+      {
+        ANGEL_DAEMON_TOKEN: "env-token",
+        ANGEL_DAEMON_URL: "http://127.0.0.1:14184",
+      },
+      "/tmp/home",
+    );
+    expect(connection.token).toBe("wrong-token");
+    expect(connection.url).toBe("http://127.0.0.1:14184");
+    expect(connection.source).toBe("flags+env");
+  });
+
+  it("lets --token override daemon.json token from --info", async () => {
+    const dir = await mkdtemp(path.join(os.tmpdir(), "angelctl-info-token-"));
+    tempDirs.push(dir);
+    const infoPath = path.join(dir, "daemon.json");
+    await writeFile(
+      infoPath,
+      JSON.stringify({
+        host: "127.0.0.1",
+        pid: 1,
+        port: 5555,
+        token: "file-token",
+        version: "1.0.0",
+      }),
+      "utf8",
+    );
+
+    const connection = resolveDaemonConnection(
+      { infoPath, token: "override-token" },
+      {},
+      "/tmp/missing-home",
+    );
+    expect(connection.token).toBe("override-token");
+    expect(connection.url).toBe("http://127.0.0.1:5555");
+    expect(connection.source).toBe("flags+file");
+  });
+
   it("reads env when flags are absent", () => {
     const connection = resolveDaemonConnection(
       {},
