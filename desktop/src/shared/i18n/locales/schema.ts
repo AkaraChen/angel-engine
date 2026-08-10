@@ -282,6 +282,38 @@ export interface LocaleResourceTranslationWorkspaceToolsPullRequest {
   ready: string;
   refresh: string;
   resolve: string;
+  shepherd: {
+    actionFailed: string;
+    hold: {
+      ambiguous: string;
+      queuedRun: string;
+      waitingForYou: string;
+    };
+    invalidUrl: string;
+    noChat: string;
+    queued: string;
+    resume: string;
+    resumeFailed: string;
+    rounds: string;
+    settled: {
+      blocked: { detail: string; title: string };
+      budget: { detail: string; title: string };
+      closed: { detail: string; title: string };
+      green: { detail: string; title: string };
+      stopped: { detail: string; title: string };
+    };
+    shepherdingStop: string;
+    sourceCollapse: string;
+    sourceExpand: string;
+    start: string;
+    startFailed: string;
+    started: string;
+    stopped: string;
+    title: string;
+    working: string;
+    yielded: string;
+    yieldedDetail: string;
+  };
   title: string;
   unresolvedTitle: string;
 }
@@ -552,6 +584,7 @@ export interface LocaleResourceTranslationSidebar {
   refreshProjects: string;
   retryWorktreeCreation: string;
   settings: string;
+  shepherding: string;
   toggleChats: string;
   mobileDescription: string;
   title: string;
@@ -1252,6 +1285,7 @@ export interface LocaleResourceTranslationUi {
   commandNoResults: string;
   commandPalette: string;
   commandSessions: string;
+  commandShepherdPr: string;
 }
 
 export interface LocaleResourceTranslationPromptInput {

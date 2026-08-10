@@ -42,6 +42,7 @@ import {
   optionalFailedChecks,
   type MergeBlocker,
 } from "@/features/pull-request/derive-merge-blockers";
+import { ShepherdSection } from "@/features/shepherd/shepherd-section";
 import { useWorkspaceToolSurface } from "@/app/workspace/workspace-tool-surface-model";
 
 const mergeMethods: GitHubMergeMethod[] = ["squash", "merge", "rebase"];
@@ -300,6 +301,8 @@ export const PullRequestPanel: FC<{ root: string }> = ({ root }) => {
             ))}
           </section>
         ) : null}
+
+        <ShepherdSection status={status} />
 
         <div className="mt-1 space-y-2 border-t border-border-subtle pt-3">
           <div className="flex gap-2">

@@ -69,6 +69,56 @@ export const pullRequestEn = {
   ready: "Ready to merge",
   refresh: "Refresh",
   resolve: "Mark resolved",
+  shepherd: {
+    actionFailed: "Shepherd action failed",
+    hold: {
+      ambiguous: "Shepherd is waiting until the ambiguous send is resolved.",
+      queuedRun: "Shepherd is waiting for a queued message to finish.",
+      waitingForYou: "Shepherd is waiting for your input before continuing.",
+    },
+    invalidUrl: "Could not parse the pull request URL.",
+    noChat: "Open a workspace chat before starting shepherd.",
+    queued: "Waiting for the current reply to finish, then shepherd continues.",
+    resume: "Resume",
+    resumeFailed: "Could not resume shepherd",
+    rounds: "{{round}} / {{max}}",
+    settled: {
+      blocked: {
+        detail:
+          "No progress after repeated attempts. Take over or adjust the PR.",
+        title: "Shepherd blocked",
+      },
+      budget: {
+        detail:
+          "The round budget was reached. Resume or raise the limit later.",
+        title: "Round budget reached",
+      },
+      closed: {
+        detail: "The pull request was merged or closed.",
+        title: "Pull request closed",
+      },
+      green: {
+        detail: "Required checks are green and review threads are clear.",
+        title: "Ready to merge",
+      },
+      stopped: {
+        detail: "Shepherd paused. Resume when you want it to take over again.",
+        title: "Shepherd stopped",
+      },
+    },
+    shepherdingStop: "Shepherding… (click to stop)",
+    sourceCollapse: "Collapse shepherd source",
+    sourceExpand: "Expand shepherd source",
+    start: "Shepherd this PR",
+    startFailed: "Could not start shepherd",
+    started: "Shepherd started",
+    stopped: "Shepherd stopped",
+    title: "Shepherd",
+    working: "Working…",
+    yielded: "Shepherd paused — you took over the session.",
+    yieldedDetail:
+      "Resume when you want shepherd to continue watching this PR.",
+  },
   title: "Pull request",
   unresolvedTitle: "Unresolved conversations ({{count}})",
 } satisfies LocaleResourceTranslationWorkspaceToolsPullRequest;
@@ -139,6 +189,53 @@ export const pullRequestZhCN = {
   ready: "可以合并",
   refresh: "刷新",
   resolve: "标记为已解决",
+  shepherd: {
+    actionFailed: "Shepherd 操作失败",
+    hold: {
+      ambiguous: "Shepherd 在等待歧义发送被解决。",
+      queuedRun: "Shepherd 在等待队列中的消息完成。",
+      waitingForYou: "Shepherd 在等待你的输入后再继续。",
+    },
+    invalidUrl: "无法解析拉取请求链接。",
+    noChat: "请先打开工作区会话再启动 Shepherd。",
+    queued: "等当前回复结束后继续。",
+    resume: "恢复",
+    resumeFailed: "无法恢复 Shepherd",
+    rounds: "{{round}} / {{max}}",
+    settled: {
+      blocked: {
+        detail: "连续尝试后仍无进展，请接管或调整 PR。",
+        title: "Shepherd 已阻塞",
+      },
+      budget: {
+        detail: "已达轮次上限。需要时可恢复或提高上限。",
+        title: "轮次预算已用尽",
+      },
+      closed: {
+        detail: "拉取请求已合并或关闭。",
+        title: "拉取请求已关闭",
+      },
+      green: {
+        detail: "必需检查已通过，审阅对话已清空。",
+        title: "可以合并",
+      },
+      stopped: {
+        detail: "Shepherd 已暂停。需要时再恢复盯盘。",
+        title: "Shepherd 已停止",
+      },
+    },
+    shepherdingStop: "Shepherding…（点击停止）",
+    sourceCollapse: "收起来源卡片",
+    sourceExpand: "展开来源卡片",
+    start: "Shepherd this PR",
+    startFailed: "无法启动 Shepherd",
+    started: "已启动 Shepherd",
+    stopped: "已停止 Shepherd",
+    title: "Shepherd",
+    working: "处理中…",
+    yielded: "Shepherd paused — 你接管了会话。",
+    yieldedDetail: "需要时点恢复，继续盯这个 PR。",
+  },
   title: "拉取请求",
   unresolvedTitle: "未解决的评论（{{count}}）",
 } satisfies LocaleResourceTranslationWorkspaceToolsPullRequest;
@@ -209,6 +306,53 @@ export const pullRequestZhTW = {
   ready: "可以合併",
   refresh: "重新整理",
   resolve: "標記為已解決",
+  shepherd: {
+    actionFailed: "Shepherd 操作失敗",
+    hold: {
+      ambiguous: "Shepherd 正在等待歧義傳送被解決。",
+      queuedRun: "Shepherd 正在等待佇列中的訊息完成。",
+      waitingForYou: "Shepherd 正在等待你的輸入後再繼續。",
+    },
+    invalidUrl: "無法解析提取要求連結。",
+    noChat: "請先開啟工作區對話再啟動 Shepherd。",
+    queued: "等目前回覆結束後繼續。",
+    resume: "恢復",
+    resumeFailed: "無法恢復 Shepherd",
+    rounds: "{{round}} / {{max}}",
+    settled: {
+      blocked: {
+        detail: "連續嘗試後仍無進展，請接手或調整 PR。",
+        title: "Shepherd 已阻塞",
+      },
+      budget: {
+        detail: "已達輪次上限。需要時可恢復或提高上限。",
+        title: "輪次預算已用盡",
+      },
+      closed: {
+        detail: "提取要求已合併或關閉。",
+        title: "提取要求已關閉",
+      },
+      green: {
+        detail: "必要檢查已通過，審閱對話已清空。",
+        title: "可以合併",
+      },
+      stopped: {
+        detail: "Shepherd 已暫停。需要時再恢復盯盤。",
+        title: "Shepherd 已停止",
+      },
+    },
+    shepherdingStop: "Shepherding…（點擊停止）",
+    sourceCollapse: "收起來源卡片",
+    sourceExpand: "展開來源卡片",
+    start: "Shepherd this PR",
+    startFailed: "無法啟動 Shepherd",
+    started: "已啟動 Shepherd",
+    stopped: "已停止 Shepherd",
+    title: "Shepherd",
+    working: "處理中…",
+    yielded: "Shepherd paused — 你接管了對話。",
+    yieldedDetail: "需要時點恢復，繼續盯這個 PR。",
+  },
   title: "提取要求",
   unresolvedTitle: "未解決的留言（{{count}}）",
 } satisfies LocaleResourceTranslationWorkspaceToolsPullRequest;

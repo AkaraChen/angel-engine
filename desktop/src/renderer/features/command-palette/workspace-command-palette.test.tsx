@@ -51,6 +51,71 @@ vi.mock("@/platform/keymap/provider", () => ({
   useContextKey: () => {},
 }));
 
+vi.mock("@/platform/use-api", () => ({
+  useApi: () => ({
+    github: {
+      pullRequestStatus: vi.fn(async () => ({
+        state: "OPEN",
+        url: "https://github.com/acme/widgets/pull/1",
+      })),
+    },
+    shepherd: {
+      get: vi.fn(async () => ({ session: null })),
+      start: vi.fn(async () => ({
+        id: "s1",
+        chatId: "chat-1",
+        state: "watching",
+      })),
+      stop: vi.fn(),
+    },
+  }),
+}));
+
+vi.mock("@/components/ui/toast", () => ({
+  useToast: () => vi.fn(),
+}));
+
+vi.mock("@/app/workspace/workspace-ui-store", () => ({
+  useWorkspaceUiStore: (
+    selector: (state: { setRightSidebarOpen: () => void }) => unknown,
+  ) => selector({ setRightSidebarOpen: vi.fn() }),
+}));
+
+vi.mock("@/app/workspace/workspace-tool-store", () => ({
+  useWorkspaceToolStore: (
+    selector: (state: {
+      context: { chatId: string; contextKey: string; root: string };
+      updateWorkspaceToolSnapshot: () => void;
+    }) => unknown,
+  ) =>
+    selector({
+      context: {
+        chatId: "chat-1",
+        contextKey: "ctx-1",
+        root: "/tmp/repo",
+      },
+      updateWorkspaceToolSnapshot: vi.fn(),
+    }),
+  workspaceToolPullRequestTabId: "pr",
+}));
+
+vi.mock("@tanstack/react-query", async () => {
+  const actual = await vi.importActual<typeof import("@tanstack/react-query")>(
+    "@tanstack/react-query",
+  );
+  return {
+    ...actual,
+    useMutation: () => ({
+      isPending: false,
+      mutateAsync: vi.fn(async () => undefined),
+    }),
+    useQueryClient: () => ({
+      invalidateQueries: vi.fn(),
+      setQueryData: vi.fn(),
+    }),
+  };
+});
+
 import { WorkspaceCommandPalette } from "./workspace-command-palette";
 
 class TestResizeObserver {

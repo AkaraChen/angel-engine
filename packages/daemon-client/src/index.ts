@@ -107,6 +107,12 @@ import type {
   TaskLinkResolveInput,
 } from "@angel-engine/daemon-api/links";
 import type {
+  ShepherdResumeInput,
+  ShepherdSession,
+  ShepherdStartInput,
+  ShepherdStopInput,
+} from "@angel-engine/daemon-api/shepherd";
+import type {
   CreateProjectInput,
   ProjectCloneEvent,
   ProjectCloneInput,
@@ -676,6 +682,24 @@ export function createDaemonClient(options: DaemonClientOptions) {
       viewPullRequest: (input: GitHubViewPullRequestInput) =>
         request<GitHubPullRequestDetail>(
           `/api/github/pull-requests/${encodeURIComponent(String(input.number))}?${query({ cwd: input.cwd })}`,
+        ),
+    },
+    shepherd: {
+      get: (chatId: string) =>
+        request<{ session: ShepherdSession | null }>(
+          `/api/shepherd?${query({ chatId })}`,
+        ),
+      resume: (input: ShepherdResumeInput) =>
+        request<ShepherdSession>(
+          `/api/shepherd/${encodeURIComponent(input.id)}/resume`,
+          json("POST", {}),
+        ),
+      start: (input: ShepherdStartInput) =>
+        request<ShepherdSession>("/api/shepherd/start", json("POST", input)),
+      stop: (input: ShepherdStopInput) =>
+        request<ShepherdSession>(
+          `/api/shepherd/${encodeURIComponent(input.id)}/stop`,
+          json("POST", {}),
         ),
     },
     links: {
