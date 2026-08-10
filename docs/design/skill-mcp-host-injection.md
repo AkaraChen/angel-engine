@@ -438,8 +438,8 @@ Do **not** design schedules/browser/voice tools now.
 
 ### Stage 5 — Verify + MCP follow-up
 
-- [ ] Regression checklist  
-- [ ] Short MCP implementation plan pointing at §7  
+- [x] Regression checklist — `desktop/docs/qa-checklist.md` § Host control (Skill path); automated tests under `packages/host-cli`, `packages/host-skill`, `packages/daemon` host-control  
+- [x] Short MCP implementation plan — [`mcp-host-control-followup.md`](./mcp-host-control-followup.md) (extension points, order, coexistence; no MCP server code)  
 
 ## 10. Open questions (do not block Stages 2–3)
 
@@ -565,4 +565,16 @@ Disable with `ANGEL_HOST_CONTROL=0`.
 ### 13.4 MCP
 
 **Not implemented.** Host control is Skill + CLI only. Engine `mcp_injection` remains an empty extension slot from Stage 3.
+
+## 14. Stage 5 verification (KIT-834)
+
+Status: Skill-path regression locked + MCP follow-up written; MCP server still not implemented.
+
+| Deliverable | Location |
+| --- | --- |
+| Automated regression | `packages/host-cli` tests (help/auth/health/chat/skill/write mocks); `packages/host-skill` layout; `packages/daemon` host-control materialize/env/install |
+| Manual QA checklist | `desktop/docs/qa-checklist.md` § Host control (Skill path) |
+| MCP follow-up | [`mcp-host-control-followup.md`](./mcp-host-control-followup.md) |
+
+KIT-828 acceptance (research, CLI bundle, skill inject, MCP extension clarity) is met without shipping MCP tools.
 
