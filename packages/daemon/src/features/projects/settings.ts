@@ -10,9 +10,9 @@ import { Effect } from "effect";
 
 import { DaemonError } from "../../platform/errors";
 import {
-  loadProjectSetupConfig,
+  loadProjectLifecycleConfig,
   projectConfigPath,
-  saveProjectSetupScript,
+  saveProjectLifecycleConfig,
 } from "./config";
 import { projectGitStatus } from "./git";
 
@@ -30,14 +30,16 @@ export function readProjectConfig(
     const configPath = projectConfigPath(root);
     const config = yield* Effect.tryPromise({
       catch: (cause) => DaemonError.projectConfigInvalid(messageOf(cause)),
-      try: () => loadProjectSetupConfig(root),
+      try: () => loadProjectLifecycleConfig(root),
     });
 
     return {
       configPath,
       exists: config !== undefined,
       projectId: input.projectId,
-      setupScript: config?.scripts ?? [],
+      runScript: config?.runScript ?? "",
+      setupScript: config?.setupScript ?? [],
+      teardownScript: config?.teardownScript ?? [],
     };
   });
 }
@@ -51,18 +53,18 @@ export function updateProjectConfig(
     // than an I/O error, and is never silently replaced.
     yield* Effect.tryPromise({
       catch: (cause) => DaemonError.projectConfigInvalid(messageOf(cause)),
-      try: () => loadProjectSetupConfig(root),
+      try: () => loadProjectLifecycleConfig(root),
     });
-    const setupScript = yield* Effect.tryPromise({
+    const config = yield* Effect.tryPromise({
       catch: (cause) => DaemonError.projectConfigWriteFailed(cause),
-      try: () => saveProjectSetupScript(root, input.setupScript),
+      try: () => saveProjectLifecycleConfig(root, input),
     });
 
     return {
       configPath: projectConfigPath(root),
       exists: true,
       projectId: input.projectId,
-      setupScript,
+      ...config,
     };
   });
 }

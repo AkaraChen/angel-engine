@@ -67,6 +67,18 @@ export const DESKTOP_WINDOW_CONTENT_READY_CHANNEL =
 export const DESKTOP_INSTALL_UPDATE_CHANNEL = "desktop-window:update:install";
 export const DESKTOP_OPEN_CHAT_FROM_NOTIFICATION_CHANNEL =
   "desktop-window:notification:open-chat";
+export const DESKTOP_NOTIFICATION_HISTORY_CHANGED_CHANNEL =
+  "desktop-window:notification:history-changed";
+export const DESKTOP_NOTIFICATION_HISTORY_CLEAR_CHANNEL =
+  "desktop-window:notification:history:clear";
+export const DESKTOP_NOTIFICATION_HISTORY_GET_CHANNEL =
+  "desktop-window:notification:history:get";
+export const DESKTOP_NOTIFICATION_HISTORY_MARK_READ_CHANNEL =
+  "desktop-window:notification:history:mark-read";
+export const DESKTOP_NOTIFICATION_PREFERENCES_GET_CHANNEL =
+  "desktop-window:notification:preferences:get";
+export const DESKTOP_NOTIFICATION_PREFERENCES_SET_CHANNEL =
+  "desktop-window:notification:preferences:set";
 export const DESKTOP_SETTINGS_OPEN_CHANNEL = "desktop-window:settings:open";
 export const DESKTOP_THEME_SET_CHANNEL = "desktop-window:theme:set";
 export const DESKTOP_UPDATE_DOWNLOADED_CHANNEL =

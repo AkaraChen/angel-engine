@@ -6,6 +6,8 @@ export interface DaemonOptions {
   port?: number;
   token?: string;
   version?: string;
+  /** Regular expressions matched against the lower-cased Host header. */
+  blockedHostPatterns?: readonly string[];
   /**
    * Absolute path to the built mobile web bundle (the directory containing
    * `index.html`). When set together with `serveMobile`, the daemon serves

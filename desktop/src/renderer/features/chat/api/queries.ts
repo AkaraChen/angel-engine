@@ -31,6 +31,19 @@ interface ChatLoadQueryParams {
   staleTime?: number;
 }
 
+interface ChatAmbiguousRunQueryParams {
+  api: ApiClient;
+  chatId: string;
+  enabled?: boolean;
+  staleTime?: number;
+}
+
+interface ClearChatAmbiguousRunMutationParams {
+  api: ApiClient;
+  chatId: string;
+  queryClient: QueryClient;
+}
+
 interface ChatRuntimeConfigQueryParams {
   api: ApiClient;
   cwd?: string | null;
@@ -169,6 +182,36 @@ export function chatLoadSuspenseQueryOptions({
     queryKey: queryKeys.chats.detail(chatId),
     retry: false,
     staleTime,
+  });
+}
+
+export function chatAmbiguousRunQueryOptions({
+  api,
+  chatId,
+  enabled = true,
+  staleTime = 30_000,
+}: ChatAmbiguousRunQueryParams) {
+  return queryOptions({
+    enabled,
+    queryFn: async () => api.chats.ambiguousRun(chatId),
+    queryKey: queryKeys.chats.ambiguousRun(chatId),
+    retry: false,
+    staleTime,
+  });
+}
+
+export function clearChatAmbiguousRunMutationOptions({
+  api,
+  chatId,
+  queryClient,
+}: ClearChatAmbiguousRunMutationParams) {
+  return mutationOptions({
+    mutationFn: async () => api.chats.clearAmbiguousRun(chatId),
+    onSuccess: () => {
+      queryClient.setQueryData(queryKeys.chats.ambiguousRun(chatId), {
+        run: null,
+      });
+    },
   });
 }
 

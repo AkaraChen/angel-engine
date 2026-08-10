@@ -111,7 +111,9 @@ function ProjectSettingsForm({
         try {
           await saveMutation.mutateAsync({
             projectId: project.id,
+            runScript: configQuery.data.runScript,
             setupScript,
+            teardownScript: configQuery.data.teardownScript,
           });
           toast({ title: t("projects.settingsSaved") });
           onClose();

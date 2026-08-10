@@ -32,6 +32,10 @@ export function projectDraftRoutePath(projectId: string) {
   return `/project/${encodeURIComponent(projectId)}`;
 }
 
+export function projectPullRequestsRoutePath(projectId: string) {
+  return `/project/${encodeURIComponent(projectId)}/pulls`;
+}
+
 export function isChatOpenableInWorkspaceMode(
   chat: Chat,
   workspaceMode: WorkspaceMode,
