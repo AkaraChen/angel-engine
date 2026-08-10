@@ -648,6 +648,8 @@ export const ko = {
         osNotificationsNeedsInputDescription:
           "백그라운드 채팅이 권한이나 입력을 기다릴 때 알립니다.",
         osNotificationsNeedsInputLabel: "입력 필요",
+        osNotificationsLoadFailed: "알림 설정을 불러오지 못했습니다.",
+        osNotificationsRetry: "다시 시도",
         osNotificationsRunCompletedDescription:
           "백그라운드 채팅이 성공적으로 끝났을 때 알립니다.",
         osNotificationsRunCompletedLabel: "실행 완료",

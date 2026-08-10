@@ -660,6 +660,9 @@ export const es = {
         osNotificationsNeedsInputDescription:
           "Avisar cuando un chat en segundo plano espera permiso o entrada.",
         osNotificationsNeedsInputLabel: "Necesita entrada",
+        osNotificationsLoadFailed:
+          "No se pudieron cargar las preferencias de notificación.",
+        osNotificationsRetry: "Inténtalo de nuevo",
         osNotificationsRunCompletedDescription:
           "Avisar cuando un chat en segundo plano termina correctamente.",
         osNotificationsRunCompletedLabel: "Ejecución completada",

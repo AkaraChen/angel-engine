@@ -662,6 +662,9 @@ export const fr = {
         osNotificationsNeedsInputDescription:
           "Notifier lorsqu'un chat en arrière-plan attend une permission ou une saisie.",
         osNotificationsNeedsInputLabel: "Saisie requise",
+        osNotificationsLoadFailed:
+          "Impossible de charger les préférences de notification.",
+        osNotificationsRetry: "Réessayer",
         osNotificationsRunCompletedDescription:
           "Notifier lorsqu'un chat en arrière-plan se termine avec succès.",
         osNotificationsRunCompletedLabel: "Exécution terminée",

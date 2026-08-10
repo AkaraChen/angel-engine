@@ -394,7 +394,7 @@ function WorkspaceSettings() {
   );
 }
 
-function OsNotificationSettings() {
+export function OsNotificationSettings() {
   const { t } = useTranslation();
   const [preferences, setPreferences] = useState({
     needsInput: true,
@@ -402,27 +402,43 @@ function OsNotificationSettings() {
     runCompleted: true,
     sound: true,
   });
-  const [ready, setReady] = useState(false);
+  // Mutations stay disabled until the authoritative main-process value loads;
+  // a failed load is retryable rather than leaving dead controls.
+  const [loadState, setLoadState] = useState<"failed" | "loading" | "ready">(
+    "loading",
+  );
   const [saveState, setSaveState] = useState<"idle" | "saved" | "failed">(
     "idle",
   );
+  const loadRetryRef = useRef<() => void>(() => {});
 
   useEffect(() => {
     let cancelled = false;
-    void window.desktopWindow.getNotificationPreferences().then((prefs) => {
-      if (cancelled) return;
-      setPreferences({
-        needsInput: prefs.needsInput,
-        osEnabled: prefs.osEnabled,
-        runCompleted: prefs.runCompleted,
-        sound: prefs.sound,
-      });
-      setReady(true);
-    });
+    const load = () => {
+      setLoadState("loading");
+      void window.desktopWindow
+        .getNotificationPreferences()
+        .then((prefs) => {
+          if (cancelled) return;
+          setPreferences({
+            needsInput: prefs.needsInput,
+            osEnabled: prefs.osEnabled,
+            runCompleted: prefs.runCompleted,
+            sound: prefs.sound,
+          });
+          setLoadState("ready");
+        })
+        .catch(() => {
+          if (!cancelled) setLoadState("failed");
+        });
+    };
+    loadRetryRef.current = load;
+    load();
     return () => {
       cancelled = true;
     };
   }, []);
+  const ready = loadState === "ready";
 
   const persist = async (
     patch: Partial<{
@@ -522,6 +538,24 @@ function OsNotificationSettings() {
         <p className="text-status-danger px-1 text-xs" role="alert">
           {t("settings.workspace.osNotificationsSaveFailed")}
         </p>
+      ) : null}
+      {loadState === "failed" ? (
+        <div
+          className="flex items-center justify-between gap-3 px-1"
+          role="alert"
+        >
+          <p className="text-status-danger text-xs">
+            {t("settings.workspace.osNotificationsLoadFailed")}
+          </p>
+          <Button
+            onClick={() => loadRetryRef.current()}
+            size="sm"
+            type="button"
+            variant="outline"
+          >
+            {t("settings.workspace.osNotificationsRetry")}
+          </Button>
+        </div>
       ) : null}
     </>
   );

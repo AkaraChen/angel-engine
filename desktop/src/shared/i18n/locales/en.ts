@@ -653,6 +653,8 @@ export const en = {
         osNotificationsNeedsInputDescription:
           "Notify when a background chat is waiting for permission or input.",
         osNotificationsNeedsInputLabel: "Needs input",
+        osNotificationsLoadFailed: "Could not load notification preferences.",
+        osNotificationsRetry: "Try again",
         osNotificationsRunCompletedDescription:
           "Notify when a background chat finishes successfully.",
         osNotificationsRunCompletedLabel: "Run completed",

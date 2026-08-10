@@ -104,6 +104,7 @@ export const PromptGitHubAttachButton: FC<PromptGitHubAttachButtonProps> = ({
     onAttached({
       ...resolved,
       id: `github-${resolved.kind}-${resolved.owner}-${resolved.repo}-${resolved.number}-${crypto.randomUUID()}`,
+      provider: "github",
     });
     handleOpenChange(false);
   };

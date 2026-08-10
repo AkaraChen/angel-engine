@@ -766,6 +766,8 @@ export interface LocaleResourceTranslationSettingsWorkspace {
   osNotificationsDescription: string;
   osNotificationsNeedsInputDescription: string;
   osNotificationsNeedsInputLabel: string;
+  osNotificationsLoadFailed: string;
+  osNotificationsRetry: string;
   osNotificationsRunCompletedDescription: string;
   osNotificationsRunCompletedLabel: string;
   osNotificationsSaveFailed: string;

@@ -3,7 +3,6 @@ import type { DesktopNotificationPreferences } from "../shared/notification-pref
 import { readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { app } from "electron";
-import log from "electron-log/main";
 
 import {
   DEFAULT_NOTIFICATION_PREFERENCES,
@@ -24,23 +23,22 @@ export function readNotificationPreferences(): DesktopNotificationPreferences {
   }
 }
 
+/**
+ * Persists preferences to disk. A failure throws: callers must not report a
+ * save that a restart would silently revert.
+ */
 export function writeNotificationPreferences(
   preferences: DesktopNotificationPreferences,
 ) {
-  try {
-    writeFileSync(
-      preferencesPath(),
-      `${JSON.stringify({
-        needsInput: preferences.needsInput,
-        osEnabled: preferences.osEnabled,
-        runCompleted: preferences.runCompleted,
-        runFailed: preferences.runFailed,
-        sound: preferences.sound,
-        version: preferences.version,
-      })}\n`,
-    );
-  } catch (error: unknown) {
-    // The preference still applies to this session; only persistence is lost.
-    log.warn("Could not persist notification preferences.", error);
-  }
+  writeFileSync(
+    preferencesPath(),
+    `${JSON.stringify({
+      needsInput: preferences.needsInput,
+      osEnabled: preferences.osEnabled,
+      runCompleted: preferences.runCompleted,
+      runFailed: preferences.runFailed,
+      sound: preferences.sound,
+      version: preferences.version,
+    })}\n`,
+  );
 }

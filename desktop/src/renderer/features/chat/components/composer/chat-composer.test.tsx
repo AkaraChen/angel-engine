@@ -39,6 +39,7 @@ const githubAttachment: ComposerGitHubAttachment = {
   kind: "pullRequest",
   number: 42,
   owner: "owner",
+  provider: "github",
   repo: "repo",
   state: "open",
   title: "PR #42",

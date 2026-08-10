@@ -633,6 +633,8 @@ export const zhTW = {
           "在背景工作階段完成、失敗或需要你處理時顯示系統通知。關閉後仍可在應用內查看歷史。",
         osNotificationsNeedsInputDescription: "背景對話等待許可或輸入時通知。",
         osNotificationsNeedsInputLabel: "需要輸入",
+        osNotificationsLoadFailed: "無法載入通知偏好設定。",
+        osNotificationsRetry: "重試",
         osNotificationsRunCompletedDescription: "背景對話成功完成時通知。",
         osNotificationsRunCompletedLabel: "執行完成",
         osNotificationsSaveFailed: "無法儲存通知偏好。",

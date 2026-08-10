@@ -2,6 +2,8 @@ import type { GitHubResolvedItem } from "@angel-engine/daemon-api/github";
 
 export type ComposerGitHubAttachment = GitHubResolvedItem & {
   id: string;
+  /** Discriminator for multi-provider attachment drafts in the composer. */
+  provider: "github";
 };
 
 export function appendGitHubContexts(

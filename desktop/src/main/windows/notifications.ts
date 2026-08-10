@@ -7,6 +7,7 @@ import type {
 import type { DesktopOpenChatFromNotificationEvent } from "../../shared/desktop-window";
 import is from "@sindresorhus/is";
 import { app, BrowserWindow, ipcMain, Notification } from "electron";
+import log from "electron-log/main";
 import {
   DESKTOP_ACTIVE_CHAT_SET_CHANNEL,
   DESKTOP_NOTIFICATION_HISTORY_CLEAR_CHANNEL,
@@ -90,9 +91,17 @@ export function getNotificationPreferences(): DesktopNotificationPreferences {
 export function setNotificationPreferences(
   input: unknown,
 ): DesktopNotificationPreferences {
-  preferences = mergeNotificationPreferences(currentPreferences(), input);
-  writeNotificationPreferences(preferences);
-  return { ...preferences };
+  const next = mergeNotificationPreferences(currentPreferences(), input);
+  try {
+    // Persist before touching the in-memory cache: a failed write rejects the
+    // IPC and leaves both caches on the last durable value.
+    writeNotificationPreferences(next);
+  } catch (error: unknown) {
+    log.warn("Could not persist notification preferences.", error);
+    throw new Error("Could not save notification preferences.");
+  }
+  preferences = next;
+  return { ...next };
 }
 
 function currentPreferences(): DesktopNotificationPreferences {

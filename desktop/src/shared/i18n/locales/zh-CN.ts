@@ -631,6 +631,8 @@ export const zhCN = {
           "在后台会话完成、失败或需要你处理时显示系统通知。关闭后仍可在应用内查看历史。",
         osNotificationsNeedsInputDescription: "后台对话等待许可或输入时通知。",
         osNotificationsNeedsInputLabel: "需要输入",
+        osNotificationsLoadFailed: "无法加载通知偏好设置。",
+        osNotificationsRetry: "重试",
         osNotificationsRunCompletedDescription: "后台对话成功完成时通知。",
         osNotificationsRunCompletedLabel: "运行完成",
         osNotificationsSaveFailed: "无法保存通知偏好。",

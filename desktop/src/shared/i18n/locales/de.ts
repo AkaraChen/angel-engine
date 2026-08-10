@@ -660,6 +660,9 @@ export const de = {
         osNotificationsNeedsInputDescription:
           "Benachrichtigen, wenn ein Hintergrund-Chat auf Freigabe oder Eingabe wartet.",
         osNotificationsNeedsInputLabel: "Eingabe erforderlich",
+        osNotificationsLoadFailed:
+          "Mitteilungseinstellungen konnten nicht geladen werden.",
+        osNotificationsRetry: "Erneut versuchen",
         osNotificationsRunCompletedDescription:
           "Benachrichtigen, wenn ein Hintergrund-Chat erfolgreich endet.",
         osNotificationsRunCompletedLabel: "Lauf abgeschlossen",

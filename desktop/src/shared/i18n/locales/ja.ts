@@ -660,6 +660,8 @@ export const ja = {
         osNotificationsNeedsInputDescription:
           "バックグラウンドのチャットが許可や入力を待っているときに通知します。",
         osNotificationsNeedsInputLabel: "入力が必要",
+        osNotificationsLoadFailed: "通知設定を読み込めませんでした。",
+        osNotificationsRetry: "もう一度試す",
         osNotificationsRunCompletedDescription:
           "バックグラウンドのチャットが正常に終了したときに通知します。",
         osNotificationsRunCompletedLabel: "実行完了",
