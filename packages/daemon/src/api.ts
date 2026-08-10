@@ -62,6 +62,11 @@ import {
   workspaceToolWriteFileInputSchema,
 } from "@angel-engine/daemon-api/workspace-tools";
 import {
+  shepherdResumeInputSchema,
+  shepherdStartInputSchema,
+  shepherdStopInputSchema,
+} from "@angel-engine/daemon-api/shepherd";
+import {
   buildGitHubPrChecksFixPrompt,
   listGitHubPrChecks,
 } from "./features/github/checks";
@@ -93,6 +98,7 @@ import { listSkillsForAgent } from "./features/agents/skills";
 import { ChatActivityStore } from "./features/chat/activity";
 import { ChatEngine } from "./features/chat/engine-runtime";
 import { ChatRunRegistry } from "./features/chat/run-registry";
+import { ShepherdService } from "./features/shepherd/service";
 import {
   archiveChat,
   deleteAllChats,
@@ -155,9 +161,6 @@ export function registerApi(
   runtime: DaemonRuntime,
   chatEvents: ChatEventsApi,
 ) {
-  const activity = new ChatActivityStore({
-    onChange: (chatId) => chatEvents.activityChanged(chatId),
-  });
   const run = <A>(
     effect: Effect.Effect<A, DaemonError, Db | ChatEngine>,
   ): Promise<A> => runDaemonApi(runtime, effect);
@@ -166,6 +169,15 @@ export function registerApi(
       chatEngine: Effect.Effect.Success<typeof ChatEngine>,
     ) => Effect.Effect<A, DaemonError, Db>,
   ) => Effect.flatMap(ChatEngine, use);
+
+  // Late-bound so activity onChange can notify shepherd without a circular init.
+  let shepherd: ShepherdService | undefined;
+  const activity = new ChatActivityStore({
+    onChange: (chatId) => {
+      chatEvents.activityChanged(chatId);
+      void shepherd?.onActivityChanged(chatId);
+    },
+  });
   const chatRuns = new ChatRunRegistry({
     execute: async (input, onEvent, signal, controls, runId) => {
       await run(engine((e) => e.waitForChatSetup(input.chatId, signal)));
@@ -198,6 +210,13 @@ export function registerApi(
       }
     },
   });
+  shepherd = new ShepherdService({
+    activity,
+    chatRuns,
+    chatEvents,
+    run: (effect) => run(effect),
+  });
+  void shepherd.start().catch(() => undefined);
   const queuedRunRecovery = run(
     engine((chatEngine) => chatEngine.restoreQueuedChatRuns()),
   ).then((queuedRuns) => {
@@ -461,6 +480,10 @@ export function registerApi(
   });
   app.post("/api/chats/send", async (context) => {
     const input = parseSendInput(await context.req.json());
+    await shepherd?.maybeYieldToUser({
+      chatId: input.chatId,
+      origin: input.origin,
+    });
     const result = await run(engine((e) => e.sendChat(input)));
     return context.json(result);
   });
@@ -774,6 +797,37 @@ export function registerApi(
     return context.json(await run(buildGitHubPrChecksFixPrompt(input)));
   });
 
+  app.post("/api/shepherd/start", async (context) => {
+    const input = shepherdStartInputSchema(await context.req.json());
+    if (input instanceof arkType.errors)
+      throw DaemonError.invalidRequest("Shepherd start input is invalid.");
+    if (!Number.isInteger(input.prNumber) || input.prNumber <= 0) {
+      throw DaemonError.invalidRequest("Pull request number is required.");
+    }
+    return context.json(await shepherd!.startSession(input));
+  });
+  app.post("/api/shepherd/:id/stop", async (context) => {
+    const input = shepherdStopInputSchema({
+      id: requirePath(context.req.param("id"), "id"),
+    });
+    if (input instanceof arkType.errors)
+      throw DaemonError.invalidRequest("Shepherd stop input is invalid.");
+    return context.json(await shepherd!.stopSession(input.id));
+  });
+  app.post("/api/shepherd/:id/resume", async (context) => {
+    const input = shepherdResumeInputSchema({
+      id: requirePath(context.req.param("id"), "id"),
+    });
+    if (input instanceof arkType.errors)
+      throw DaemonError.invalidRequest("Shepherd resume input is invalid.");
+    return context.json(await shepherd!.resumeSession(input.id));
+  });
+  app.get("/api/shepherd", async (context) => {
+    const chatId = requireQuery(context.req.query("chatId"), "chatId");
+    const session = await shepherd!.getByChatId(chatId);
+    return context.json({ session });
+  });
+
   app.get("/api/projects", async (context) =>
     context.json(await run(listProjects())),
   );
@@ -1036,6 +1090,10 @@ export function registerApi(
   app.post("/api/chat-runs/:runId", async (context) => {
     const runId = requirePath(context.req.param("runId"), "runId");
     const input = parseRunStartInput(await context.req.json());
+    await shepherd?.maybeYieldToUser({
+      chatId: input.chatId,
+      origin: input.origin,
+    });
     await queuedRunRecovery;
     chatRuns.reserve(runId, input);
     try {
@@ -1164,6 +1222,7 @@ function parseRunStartInput(value: unknown): ChatRunStartInput {
     chatId: value.chatId,
     mode: value.mode,
     model: value.model,
+    origin: value.origin,
     permissionMode: value.permissionMode,
     reasoningEffort: value.reasoningEffort,
     text: value.text,

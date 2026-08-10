@@ -7,6 +7,7 @@ const validEvents: DaemonGlobalEvent[] = [
   { chatIds: ["chat-1"], type: "chat-attention-changed" },
   { chatIds: ["chat-1"], type: "chat-conversation-changed" },
   { chatIds: ["chat-1"], type: "chat-metadata-changed" },
+  { chatIds: ["chat-1"], type: "shepherd-changed" },
 ];
 
 describe("isDaemonGlobalEvent", () => {

@@ -57,6 +57,13 @@
       "when": 1786322627259,
       "tag": "0007_lonely_absorbing_man",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "6",
+      "when": 1786329423762,
+      "tag": "0008_new_misty_knight",
+      "breakpoints": true
     }
   ]
 }

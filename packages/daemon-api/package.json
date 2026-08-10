@@ -30,10 +30,13 @@
       "types": "./dist/mime.d.ts",
       "import": "./dist/mime.js"
     },
-
     "./projects": {
       "types": "./dist/projects.d.ts",
       "import": "./dist/projects.js"
+    },
+    "./shepherd": {
+      "types": "./dist/shepherd.d.ts",
+      "import": "./dist/shepherd.js"
     },
     "./terminal": {
       "types": "./dist/terminal.d.ts",

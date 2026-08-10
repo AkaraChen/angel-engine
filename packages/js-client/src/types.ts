@@ -245,6 +245,8 @@ export interface ChatSendInput {
   chatId?: string;
   model?: string;
   mode?: string | null;
+  /** Who initiated the send. Shepherd auto-turns set this to `"shepherd"`. */
+  origin?: "shepherd";
   permissionMode?: string | null;
   prewarmId?: string;
   projectId?: string;

@@ -91,6 +91,33 @@ export const queuedChatRuns = sqliteTable(
   (table) => [index("queued_chat_runs_chat_id_idx").on(table.chatId)],
 );
 
+/** One active PR shepherd per chat (enforced by unique chatId). */
+export const shepherdSessions = sqliteTable("shepherd_sessions", {
+  id: text("id").primaryKey(),
+  chatId: text("chat_id")
+    .notNull()
+    .unique()
+    .references(() => chats.id, { onDelete: "cascade" }),
+  owner: text("owner").notNull(),
+  repo: text("repo").notNull(),
+  prNumber: integer("pr_number").notNull(),
+  headSha: text("head_sha"),
+  state: text("state").notNull(),
+  settledReason: text("settled_reason"),
+  round: integer("round").notNull().default(0),
+  maxRounds: integer("max_rounds").notNull().default(10),
+  consecutiveNoProgress: integer("consecutive_no_progress")
+    .notNull()
+    .default(0),
+  handledFingerprints: text("handled_fingerprints").notNull(),
+  baselineSnapshot: text("baseline_snapshot"),
+  pendingPrompt: text("pending_prompt"),
+  pendingFingerprints: text("pending_fingerprints").notNull(),
+  lastSentHeadSha: text("last_sent_head_sha"),
+  createdAt: text("created_at").notNull(),
+  updatedAt: text("updated_at").notNull(),
+});
+
 export type ProjectRow = typeof projects.$inferSelect;
 export type NewProjectRow = typeof projects.$inferInsert;
 export type CustomAgentRow = typeof customAgents.$inferSelect;
@@ -100,3 +127,4 @@ export type NewChatRow = typeof chats.$inferInsert;
 export type ChatDiffAnchorRow = typeof chatDiffAnchors.$inferSelect;
 export type WorktreeCreationJobRow = typeof worktreeCreationJobs.$inferSelect;
 export type QueuedChatRunRow = typeof queuedChatRuns.$inferSelect;
+export type ShepherdSessionRow = typeof shepherdSessions.$inferSelect;

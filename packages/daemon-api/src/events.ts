@@ -31,11 +31,17 @@ export interface DaemonChatActivityChangedEvent {
   type: "chat-activity-changed";
 }
 
+export interface DaemonShepherdChangedEvent {
+  chatIds: string[];
+  type: "shepherd-changed";
+}
+
 export type DaemonGlobalEvent =
   | DaemonChatActivityChangedEvent
   | DaemonChatAttentionChangedEvent
   | DaemonChatConversationChangedEvent
-  | DaemonChatMetadataChangedEvent;
+  | DaemonChatMetadataChangedEvent
+  | DaemonShepherdChangedEvent;
 
 export function isDaemonGlobalEvent(
   value: unknown,
@@ -46,6 +52,7 @@ export function isDaemonGlobalEvent(
     case "chat-attention-changed":
     case "chat-conversation-changed":
     case "chat-metadata-changed":
+    case "shepherd-changed":
       return (
         Array.isArray(value.chatIds) &&
         value.chatIds.length > 0 &&

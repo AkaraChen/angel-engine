@@ -12,7 +12,7 @@ export default defineConfig({
     "src/github.ts",
     "src/mime.ts",
     "src/projects.ts",
-
+    "src/shepherd.ts",
     "src/terminal.ts",
     "src/workspace-tools.ts",
   ],
