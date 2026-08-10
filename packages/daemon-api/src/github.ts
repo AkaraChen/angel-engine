@@ -1,5 +1,7 @@
 import { type as arkType } from "arktype";
 
+import type { DaemonErrorCode } from "./daemon";
+
 export type GitHubItemKind = "issue" | "pullRequest";
 
 export interface GitHubResolveUrlInput {
