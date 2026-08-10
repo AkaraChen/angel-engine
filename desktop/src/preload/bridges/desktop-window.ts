@@ -33,6 +33,7 @@ import type {
   DesktopUpdateStatus,
 } from "../../shared/update-channel";
 import { contextBridge, ipcRenderer } from "electron";
+import { KEYMAP_USER_BINDINGS_CHANGED_CHANNEL } from "../../shared/keybindings/channels";
 import {
   DESKTOP_ACTIVE_CHAT_SET_CHANNEL,
   DESKTOP_COMMAND_CHANNEL,
@@ -128,6 +129,34 @@ export function exposeDesktopWindowBridge() {
       ipcRenderer.on(DESKTOP_COMMAND_CHANNEL, listener);
       return () => {
         ipcRenderer.removeListener(DESKTOP_COMMAND_CHANNEL, listener);
+      };
+    },
+    onKeymapUserBindingsChanged(
+      handler: (state: {
+        file: { version: 1; bindings: unknown[] };
+        warnings: unknown[];
+        fatal?: unknown;
+        path: string;
+      }) => void,
+    ) {
+      const listener = (_event: IpcRendererEvent, payload: unknown) => {
+        if (!payload || typeof payload !== "object") return;
+        handler(
+          payload as {
+            file: { version: 1; bindings: unknown[] };
+            warnings: unknown[];
+            fatal?: unknown;
+            path: string;
+          },
+        );
+      };
+
+      ipcRenderer.on(KEYMAP_USER_BINDINGS_CHANGED_CHANNEL, listener);
+      return () => {
+        ipcRenderer.removeListener(
+          KEYMAP_USER_BINDINGS_CHANGED_CHANNEL,
+          listener,
+        );
       };
     },
     onOpenChatFromNotification(

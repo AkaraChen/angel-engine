@@ -27,6 +27,7 @@ import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { useAgentCatalog } from "@/features/agents/agent-catalog-context";
 import { useKeybindingHintsStore } from "@/features/keybindings/keybinding-hints-store";
+import { KeyboardSettings } from "@/features/keybindings/keyboard-settings";
 import { ArchivedSettingsPanel } from "@/features/settings/archived-settings-panel";
 import { BuiltinAgentsSettingsGroup } from "@/features/settings/builtin-agent-settings";
 import { CustomAgentsSettingsGroup } from "@/features/settings/custom-agent-settings";
@@ -164,6 +165,14 @@ export function SettingsPage({
             tabPanelId={tabPanelId}
           >
             <AppearanceSettings />
+          </SettingsTabPanel>
+
+          <SettingsTabPanel
+            activeTab={activeTab}
+            tab="keyboard"
+            tabPanelId={tabPanelId}
+          >
+            <KeyboardSettings />
           </SettingsTabPanel>
 
           <SettingsTabPanel

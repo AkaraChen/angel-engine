@@ -50,6 +50,7 @@ import {
   useChatRunStore,
 } from "@/features/chat/state/chat-run-store";
 import i18n from "@/i18n";
+import { KeymapScope, useContextKey } from "@/platform/keymap/provider";
 
 interface ActiveChatThreadProps {
   draftAgentConfig: DraftAgentConfig;
@@ -398,41 +399,45 @@ function ChatThreadRuntime({
     ],
   );
 
+  useContextKey("chat.running", isRunning);
+
   return (
-    <ChatOptionsProvider value={chatOptions}>
-      <AppRuntimeProvider
-        chatId={selectedChat.id}
-        cwd={selectedChat.cwd ?? undefined}
-        historyMessages={historyMessages}
-        historyRevision={historyRevision}
-        key={chatRuntimeProviderKey(selectedChat.id, chatRuntime, keySuffix)}
-        model={modelOverride}
-        mode={undefined}
-        onChatCreated={onChatCreated}
-        onChatMessagesUpdated={onChatMessagesUpdated}
-        onChatUpdated={onChatUpdated}
-        projectId={projectContext.id ?? selectedChat.projectId ?? null}
-        projectPath={projectContext.path ?? undefined}
-        permissionMode={undefined}
-        reasoningEffort={reasoningEffortOverride}
-        runtime={chatRuntime}
-        runtimeConfig={runtimeConfig}
-        slotKey={slotKey}
-      >
-        <div className="flex h-full min-h-0 flex-col">
-          <AmbiguousSendBanner chatId={selectedChat.id} />
-          <SetupLifecycleBanner
-            chatId={selectedChat.id}
-            enabled={projectContext.isWorktree === true}
-            onDiscarded={() => onSetupDiscarded(projectContext.id)}
-            projectId={projectContext.id ?? selectedChat.projectId ?? ""}
-          />
-          <div className="min-h-0 flex-1">
-            <AssistantThread projectName={projectContext.name} />
+    <KeymapScope scope="panel" id="chat.panel">
+      <ChatOptionsProvider value={chatOptions}>
+        <AppRuntimeProvider
+          chatId={selectedChat.id}
+          cwd={selectedChat.cwd ?? undefined}
+          historyMessages={historyMessages}
+          historyRevision={historyRevision}
+          key={chatRuntimeProviderKey(selectedChat.id, chatRuntime, keySuffix)}
+          model={modelOverride}
+          mode={undefined}
+          onChatCreated={onChatCreated}
+          onChatMessagesUpdated={onChatMessagesUpdated}
+          onChatUpdated={onChatUpdated}
+          projectId={projectContext.id ?? selectedChat.projectId ?? null}
+          projectPath={projectContext.path ?? undefined}
+          permissionMode={undefined}
+          reasoningEffort={reasoningEffortOverride}
+          runtime={chatRuntime}
+          runtimeConfig={runtimeConfig}
+          slotKey={slotKey}
+        >
+          <div className="flex h-full min-h-0 flex-col">
+            <AmbiguousSendBanner chatId={selectedChat.id} />
+            <SetupLifecycleBanner
+              chatId={selectedChat.id}
+              enabled={projectContext.isWorktree === true}
+              onDiscarded={() => onSetupDiscarded(projectContext.id)}
+              projectId={projectContext.id ?? selectedChat.projectId ?? ""}
+            />
+            <div className="min-h-0 flex-1">
+              <AssistantThread projectName={projectContext.name} />
+            </div>
           </div>
-        </div>
-      </AppRuntimeProvider>
-    </ChatOptionsProvider>
+        </AppRuntimeProvider>
+      </ChatOptionsProvider>
+    </KeymapScope>
   );
 }
 
