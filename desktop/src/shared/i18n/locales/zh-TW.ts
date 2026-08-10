@@ -746,6 +746,18 @@ export const zhTW = {
     },
     dialog: {
       chatName: "聊天名稱",
+      confirm: {
+        deleteCustomAgentDetail_one: "這還會刪除 {{count}} 個相關工作階段。",
+        deleteCustomAgentDetail_other: "這還會刪除 {{count}} 個相關工作階段。",
+        deleteCustomAgentDetailNone: "沒有工作階段使用這個自訂 Agent。",
+        deleteCustomAgentTitle: "要刪除 {{label}} 嗎？",
+        discard: "捨棄",
+        dontSave: "不儲存",
+        kill: "結束處理程序",
+        killProcessTitle: "要結束 {{name}}（{{pid}}）嗎？",
+        saveFileChangesDetail: "如果不儲存，你的變更將會遺失。",
+        saveFileChangesTitle: "要儲存對 {{path}} 的變更嗎？",
+      },
       importSession: {
         cwdLabel: "目錄：{{cwd}}",
         description:

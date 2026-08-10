@@ -23,6 +23,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useReducer, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
+import { confirmAction } from "@/components/ui/confirm-dialog";
 import { getProjectDisplayName } from "@/app/workspace/workspace-display";
 import {
   Dialog,
@@ -133,16 +134,18 @@ export const SchedulePage: FC<SchedulePageProps> = ({ projects }) => {
 
   const deleteSelected = () => {
     if (!selectedAutomation) return;
-    if (
-      !window.confirm(
-        t("schedule.deleteConfirm", { name: selectedAutomation.name }),
-      )
-    ) {
-      return;
-    }
-    deleteMutation.mutate(selectedAutomation.id);
-    setSelectedAutomationId(undefined);
-    setMobileDetailOpen(false);
+    const automation = selectedAutomation;
+    void confirmAction({
+      cancelLabel: t("common.cancel"),
+      confirmLabel: t("common.delete"),
+      title: t("schedule.deleteConfirm", { name: automation.name }),
+      tone: "danger",
+    }).then((confirmed) => {
+      if (!confirmed) return;
+      deleteMutation.mutate(automation.id);
+      setSelectedAutomationId(undefined);
+      setMobileDetailOpen(false);
+    });
   };
 
   return (
@@ -563,8 +566,19 @@ function CreateAutomationDialog({
     state.projectId.length > 0;
 
   const requestOpenChange = (nextOpen: boolean) => {
-    if (!nextOpen && isDirty && !window.confirm(t("schedule.discardConfirm")))
+    if (!nextOpen && isDirty) {
+      void confirmAction({
+        cancelLabel: t("common.cancel"),
+        confirmLabel: t("dialog.confirm.discard"),
+        title: t("schedule.discardConfirm"),
+        tone: "danger",
+      }).then((confirmed) => {
+        if (!confirmed) return;
+        dispatch({ type: "reset" });
+        onOpenChange(false);
+      });
       return;
+    }
     if (!nextOpen) dispatch({ type: "reset" });
     onOpenChange(nextOpen);
   };

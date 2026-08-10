@@ -6,6 +6,7 @@ import is from "@sindresorhus/is";
 import { useQueryClient } from "@tanstack/react-query";
 import { useCallback } from "react";
 
+import { confirmSaveWorkspaceFileChanges } from "@/app/workspace/confirm-save-workspace-file-changes";
 import { getErrorMessage } from "@/app/workspace/workspace-file-display";
 import {
   isWorkspaceWindowFileStateDirty,
@@ -88,9 +89,7 @@ export async function confirmWorkspaceWindowFilesExit({
       continue;
     }
 
-    const action = await window.desktopWindow.confirmSaveWorkspaceFileChanges({
-      path,
-    });
+    const action = await confirmSaveWorkspaceFileChanges({ path });
     if (action === "cancel") {
       return false;
     }

@@ -779,6 +779,21 @@ export const es = {
     },
     dialog: {
       chatName: "Nombre del chat",
+      confirm: {
+        deleteCustomAgentDetail_one:
+          "Esto también eliminará {{count}} chat relacionado.",
+        deleteCustomAgentDetail_other:
+          "Esto también eliminará {{count}} chats relacionados.",
+        deleteCustomAgentDetailNone:
+          "Ningún chat usa este agente personalizado.",
+        deleteCustomAgentTitle: "¿Eliminar {{label}}?",
+        discard: "Descartar",
+        dontSave: "No guardar",
+        kill: "Finalizar",
+        killProcessTitle: "¿Finalizar {{name}} ({{pid}})?",
+        saveFileChangesDetail: "Perderás los cambios si no los guardas.",
+        saveFileChangesTitle: "¿Guardar los cambios en {{path}}?",
+      },
       importSession: {
         cwdLabel: "Directorio: {{cwd}}",
         description:

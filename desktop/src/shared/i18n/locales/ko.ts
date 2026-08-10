@@ -764,6 +764,20 @@ export const ko = {
     },
     dialog: {
       chatName: "채팅 이름",
+      confirm: {
+        deleteCustomAgentDetail_one: "관련 채팅 {{count}}개도 함께 삭제됩니다.",
+        deleteCustomAgentDetail_other:
+          "관련 채팅 {{count}}개도 함께 삭제됩니다.",
+        deleteCustomAgentDetailNone:
+          "이 사용자 지정 에이전트를 사용하는 채팅이 없습니다.",
+        deleteCustomAgentTitle: "{{label}}을(를) 삭제할까요?",
+        discard: "취소하고 버리기",
+        dontSave: "저장하지 않음",
+        kill: "종료",
+        killProcessTitle: "{{name}}({{pid}})을(를) 종료할까요?",
+        saveFileChangesDetail: "저장하지 않으면 변경 내용이 사라집니다.",
+        saveFileChangesTitle: "{{path}}의 변경 내용을 저장할까요?",
+      },
       importSession: {
         cwdLabel: "디렉터리: {{cwd}}",
         description: "선택한 에이전트의 세션을 검색해 Angel Engine에서 엽니다.",

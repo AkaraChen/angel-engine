@@ -1,13 +1,9 @@
 import type { IpcRendererEvent } from "electron";
 import type {
-  DesktopConfirmDeleteArchivedChatsInput,
-  DesktopConfirmDeleteCustomAgentInput,
-  DesktopConfirmDeleteManagedWorktreesInput,
-  DesktopConfirmSaveWorkspaceFileChangesInput,
-  DesktopConfirmSaveWorkspaceFileChangesResult,
   DesktopOpenChatFromNotificationEvent,
   DesktopThemeSetInput,
   DesktopUpdateDownloadedEvent,
+  DesktopUpdateMessageEvent,
   DesktopWindowCommand,
 } from "../../shared/desktop-window";
 import type {
@@ -37,11 +33,6 @@ import { KEYMAP_USER_BINDINGS_CHANGED_CHANNEL } from "../../shared/keybindings/c
 import {
   DESKTOP_ACTIVE_CHAT_SET_CHANNEL,
   DESKTOP_COMMAND_CHANNEL,
-  DESKTOP_CONFIRM_DELETE_ALL_CHATS_CHANNEL,
-  DESKTOP_CONFIRM_DELETE_ARCHIVED_CHATS_CHANNEL,
-  DESKTOP_CONFIRM_DELETE_CUSTOM_AGENT_CHANNEL,
-  DESKTOP_CONFIRM_DELETE_MANAGED_WORKTREES_CHANNEL,
-  DESKTOP_CONFIRM_SAVE_WORKSPACE_FILE_CHANGES_CHANNEL,
   DESKTOP_INSTALL_UPDATE_CHANNEL,
   DESKTOP_NOTIFICATION_HISTORY_CHANGED_CHANNEL,
   DESKTOP_NOTIFICATION_HISTORY_CLEAR_CHANNEL,
@@ -55,6 +46,7 @@ import {
   DESKTOP_UPDATE_CHANNEL_SET_CHANNEL,
   DESKTOP_UPDATE_CHECK_CHANNEL,
   DESKTOP_UPDATE_DOWNLOADED_CHANNEL,
+  DESKTOP_UPDATE_MESSAGE_CHANNEL,
   DESKTOP_UPDATE_STATUS_CHANGED_CHANNEL,
   DESKTOP_UPDATE_STATUS_GET_CHANNEL,
   DESKTOP_WINDOW_CLOSE_CURRENT_CHANNEL,
@@ -77,43 +69,6 @@ import { isDesktopNotificationHistory } from "../../shared/notification-preferen
 
 export function exposeDesktopWindowBridge() {
   contextBridge.exposeInMainWorld("desktopWindow", {
-    async confirmDeleteAllChats() {
-      return ipcRenderer.invoke(
-        DESKTOP_CONFIRM_DELETE_ALL_CHATS_CHANNEL,
-      ) as Promise<boolean>;
-    },
-    async confirmDeleteArchivedChats(
-      input: DesktopConfirmDeleteArchivedChatsInput,
-    ) {
-      return ipcRenderer.invoke(
-        DESKTOP_CONFIRM_DELETE_ARCHIVED_CHATS_CHANNEL,
-        input,
-      ) as Promise<boolean>;
-    },
-    async confirmDeleteCustomAgent(
-      input: DesktopConfirmDeleteCustomAgentInput,
-    ) {
-      return ipcRenderer.invoke(
-        DESKTOP_CONFIRM_DELETE_CUSTOM_AGENT_CHANNEL,
-        input,
-      ) as Promise<boolean>;
-    },
-    async confirmDeleteManagedWorktrees(
-      input: DesktopConfirmDeleteManagedWorktreesInput,
-    ) {
-      return ipcRenderer.invoke(
-        DESKTOP_CONFIRM_DELETE_MANAGED_WORKTREES_CHANNEL,
-        input,
-      ) as Promise<boolean>;
-    },
-    async confirmSaveWorkspaceFileChanges(
-      input: DesktopConfirmSaveWorkspaceFileChangesInput,
-    ) {
-      return ipcRenderer.invoke(
-        DESKTOP_CONFIRM_SAVE_WORKSPACE_FILE_CHANGES_CHANNEL,
-        input,
-      ) as Promise<DesktopConfirmSaveWorkspaceFileChangesResult>;
-    },
     closeCurrent() {
       ipcRenderer.send(DESKTOP_WINDOW_CLOSE_CURRENT_CHANNEL);
     },
@@ -229,6 +184,17 @@ export function exposeDesktopWindowBridge() {
       ipcRenderer.on(DESKTOP_UPDATE_DOWNLOADED_CHANNEL, listener);
       return () => {
         ipcRenderer.removeListener(DESKTOP_UPDATE_DOWNLOADED_CHANNEL, listener);
+      };
+    },
+    onUpdateMessage(handler: (event: DesktopUpdateMessageEvent) => void) {
+      const listener = (_event: IpcRendererEvent, payload: unknown) => {
+        if (!isUpdateMessageEvent(payload)) return;
+        handler(payload);
+      };
+
+      ipcRenderer.on(DESKTOP_UPDATE_MESSAGE_CHANNEL, listener);
+      return () => {
+        ipcRenderer.removeListener(DESKTOP_UPDATE_MESSAGE_CHANNEL, listener);
       };
     },
     onUpdateStatusChanged(handler: (status: DesktopUpdateStatus) => void) {
@@ -396,6 +362,25 @@ function isUpdateStatus(value: unknown): value is DesktopUpdateStatus {
   if (typeof value !== "object" || value === null) return false;
   const status = value as { channel?: unknown; state?: unknown };
   return typeof status.channel === "string" && typeof status.state === "string";
+}
+
+function isUpdateMessageEvent(
+  value: unknown,
+): value is DesktopUpdateMessageEvent {
+  if (typeof value !== "object" || value === null) return false;
+  const event = value as {
+    actions?: unknown;
+    detail?: unknown;
+    message?: unknown;
+    tone?: unknown;
+  };
+  return (
+    Array.isArray(event.actions) &&
+    event.actions.every((action) => action === "install") &&
+    typeof event.detail === "string" &&
+    typeof event.message === "string" &&
+    (event.tone === "error" || event.tone === "info")
+  );
 }
 
 function isUpdateDownloadedEvent(
