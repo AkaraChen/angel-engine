@@ -79,7 +79,9 @@ describe("readProjectConfig", () => {
       configPath: configPathOf(root),
       exists: false,
       projectId: "project-1",
+      runScript: "",
       setupScript: [],
+      teardownScript: [],
     });
   });
 
@@ -94,7 +96,9 @@ describe("readProjectConfig", () => {
     const config = await readConfig();
 
     expect(config.exists).toBe(true);
+    expect(config.runScript).toBe("");
     expect(config.setupScript).toEqual(["bun install", "bun run build"]);
+    expect(config.teardownScript).toEqual([]);
   });
 
   it("treats a missing setup_script key as an empty setup script", async () => {
@@ -141,13 +145,17 @@ describe("updateProjectConfig", () => {
     const result = await run(
       updateProjectConfig({
         projectId: "project-1",
+        runScript: "",
         setupScript: ["bun install"],
+        teardownScript: [],
       }),
     );
 
     expect(result.exists).toBe(true);
     await expect(readConfigFileOf(root)).resolves.toEqual({
+      run_script: "",
       setup_script: ["bun install"],
+      teardown_script: [],
     });
   });
 
@@ -166,11 +174,14 @@ describe("updateProjectConfig", () => {
     await run(
       updateProjectConfig({
         projectId: "project-1",
+        runScript: "bun dev",
         setupScript: ["bun install"],
+        teardownScript: ["docker compose down"],
       }),
     );
 
     await expect(readConfigFileOf(root)).resolves.toEqual({
+      run_script: "bun dev",
       setup_script: ["bun install"],
       teardown_script: ["docker compose down"],
       terminal_templates: [{ commands: ["bun start"], name: "Start" }],
@@ -183,13 +194,19 @@ describe("updateProjectConfig", () => {
     const result = await run(
       updateProjectConfig({
         projectId: "project-1",
+        runScript: "  bun dev  ",
         setupScript: ["  bun install  ", "", "   ", "bun run build"],
+        teardownScript: ["  docker compose down  ", ""],
       }),
     );
 
     expect(result.setupScript).toEqual(["bun install", "bun run build"]);
+    expect(result.runScript).toBe("bun dev");
+    expect(result.teardownScript).toEqual(["docker compose down"]);
     await expect(readConfigFileOf(root)).resolves.toEqual({
+      run_script: "bun dev",
       setup_script: ["bun install", "bun run build"],
+      teardown_script: ["docker compose down"],
     });
   });
 
@@ -201,7 +218,9 @@ describe("updateProjectConfig", () => {
       run(
         updateProjectConfig({
           projectId: "project-1",
+          runScript: "",
           setupScript: ["bun install"],
+          teardownScript: [],
         }),
       ),
     ).rejects.toMatchObject({ code: "project-config-invalid" });
@@ -216,7 +235,9 @@ describe("updateProjectConfig", () => {
     await run(
       updateProjectConfig({
         projectId: "project-1",
+        runScript: "",
         setupScript: ["bun install"],
+        teardownScript: [],
       }),
     );
 

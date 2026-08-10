@@ -17,6 +17,13 @@ const attention: ChatAttention = {
 describe("chat attention boundary guards", () => {
   it("accepts canonical snapshots and read envelopes", () => {
     expect(isChatAttention(attention)).toBe(true);
+    expect(
+      isChatAttention({
+        ...attention,
+        id: "run-1:failed",
+        status: "failed",
+      }),
+    ).toBe(true);
     expect(isChatAttentionListResult({ attentions: [attention] })).toBe(true);
     expect(isChatAttentionReadInput({ attentionId: attention.id })).toBe(true);
     expect(isChatAttentionReadResult({ read: true })).toBe(true);

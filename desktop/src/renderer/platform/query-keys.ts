@@ -9,6 +9,8 @@ export const queryKeys = {
   },
   chats: {
     all: () => ["chats"] as const,
+    ambiguousRun: (id: string | null) =>
+      ["chats", "ambiguous-run", id] as const,
     archived: () => ["chats", "archived"] as const,
     detail: (id: string | null) => ["chats", "detail", id] as const,
     details: () => ["chats", "detail"] as const,
@@ -24,6 +26,15 @@ export const queryKeys = {
   github: {
     items: (cwd: string | null, query: string) =>
       ["github", "items", cwd, query] as const,
+    pullRequestDetail: (cwd: string | null, number: number | null) =>
+      ["github", "pull-request", cwd, number] as const,
+    pullRequestTemplate: (cwd: string | null) =>
+      ["github", "pull-request-template", cwd] as const,
+    pullRequests: (cwd: string | null, state: string, query: string) =>
+      ["github", "pull-requests", cwd, state, query] as const,
+    repositories: (owner: string | null) =>
+      ["github", "repositories", owner] as const,
+    repositoryOwners: () => ["github", "repository-owners"] as const,
     resolve: (url: string | null) => ["github", "resolve", url] as const,
   },
   projects: {
@@ -42,6 +53,8 @@ export const queryKeys = {
   },
   worktrees: {
     all: () => ["worktrees"] as const,
+    lifecycle: (chatId: string | null) =>
+      ["worktrees", "lifecycle", chatId] as const,
     managedEligible: () => ["worktrees", "managed", "eligible"] as const,
   },
   workspaceTools: {

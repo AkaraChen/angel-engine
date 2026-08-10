@@ -24,10 +24,16 @@ import type {
   WorkspaceToolSurfaceState,
 } from "../../shared/workspace-tool-surface";
 import type {
+  DesktopNotificationHistory,
+  DesktopNotificationPreferences,
+  DesktopNotificationPreferencesSetInput,
+} from "../../shared/notification-preferences";
+import type {
   DesktopUpdateChannelSetInput,
   DesktopUpdateStatus,
 } from "../../shared/update-channel";
 import { contextBridge, ipcRenderer } from "electron";
+import { KEYMAP_USER_BINDINGS_CHANGED_CHANNEL } from "../../shared/keybindings/channels";
 import {
   DESKTOP_ACTIVE_CHAT_SET_CHANNEL,
   DESKTOP_COMMAND_CHANNEL,
@@ -37,6 +43,12 @@ import {
   DESKTOP_CONFIRM_DELETE_MANAGED_WORKTREES_CHANNEL,
   DESKTOP_CONFIRM_SAVE_WORKSPACE_FILE_CHANGES_CHANNEL,
   DESKTOP_INSTALL_UPDATE_CHANNEL,
+  DESKTOP_NOTIFICATION_HISTORY_CHANGED_CHANNEL,
+  DESKTOP_NOTIFICATION_HISTORY_CLEAR_CHANNEL,
+  DESKTOP_NOTIFICATION_HISTORY_GET_CHANNEL,
+  DESKTOP_NOTIFICATION_HISTORY_MARK_READ_CHANNEL,
+  DESKTOP_NOTIFICATION_PREFERENCES_GET_CHANNEL,
+  DESKTOP_NOTIFICATION_PREFERENCES_SET_CHANNEL,
   DESKTOP_OPEN_CHAT_FROM_NOTIFICATION_CHANNEL,
   DESKTOP_SETTINGS_OPEN_CHANNEL,
   DESKTOP_THEME_SET_CHANNEL,
@@ -61,6 +73,7 @@ import {
   DESKTOP_WORKSPACE_TOOL_WINDOW_GET_CHANNEL,
   DESKTOP_WORKSPACE_TOOL_WINDOW_OPEN_CHANNEL,
 } from "../../shared/desktop-window";
+import { isDesktopNotificationHistory } from "../../shared/notification-preferences";
 
 export function exposeDesktopWindowBridge() {
   contextBridge.exposeInMainWorld("desktopWindow", {
@@ -118,6 +131,34 @@ export function exposeDesktopWindowBridge() {
         ipcRenderer.removeListener(DESKTOP_COMMAND_CHANNEL, listener);
       };
     },
+    onKeymapUserBindingsChanged(
+      handler: (state: {
+        file: { version: 1; bindings: unknown[] };
+        warnings: unknown[];
+        fatal?: unknown;
+        path: string;
+      }) => void,
+    ) {
+      const listener = (_event: IpcRendererEvent, payload: unknown) => {
+        if (!payload || typeof payload !== "object") return;
+        handler(
+          payload as {
+            file: { version: 1; bindings: unknown[] };
+            warnings: unknown[];
+            fatal?: unknown;
+            path: string;
+          },
+        );
+      };
+
+      ipcRenderer.on(KEYMAP_USER_BINDINGS_CHANGED_CHANNEL, listener);
+      return () => {
+        ipcRenderer.removeListener(
+          KEYMAP_USER_BINDINGS_CHANGED_CHANNEL,
+          listener,
+        );
+      };
+    },
     onOpenChatFromNotification(
       handler: (event: DesktopOpenChatFromNotificationEvent) => void,
     ) {
@@ -133,6 +174,51 @@ export function exposeDesktopWindowBridge() {
           listener,
         );
       };
+    },
+    onNotificationHistoryChanged(
+      handler: (history: DesktopNotificationHistory) => void,
+    ) {
+      const listener = (_event: IpcRendererEvent, payload: unknown) => {
+        if (!isDesktopNotificationHistory(payload)) return;
+        handler(payload);
+      };
+
+      ipcRenderer.on(DESKTOP_NOTIFICATION_HISTORY_CHANGED_CHANNEL, listener);
+      return () => {
+        ipcRenderer.removeListener(
+          DESKTOP_NOTIFICATION_HISTORY_CHANGED_CHANNEL,
+          listener,
+        );
+      };
+    },
+    async getNotificationHistory() {
+      return ipcRenderer.invoke(
+        DESKTOP_NOTIFICATION_HISTORY_GET_CHANNEL,
+      ) as Promise<DesktopNotificationHistory>;
+    },
+    async clearNotificationHistory() {
+      return ipcRenderer.invoke(
+        DESKTOP_NOTIFICATION_HISTORY_CLEAR_CHANNEL,
+      ) as Promise<DesktopNotificationHistory>;
+    },
+    async markNotificationHistoryRead(ids: string[]) {
+      return ipcRenderer.invoke(
+        DESKTOP_NOTIFICATION_HISTORY_MARK_READ_CHANNEL,
+        { ids },
+      ) as Promise<DesktopNotificationHistory>;
+    },
+    async getNotificationPreferences() {
+      return ipcRenderer.invoke(
+        DESKTOP_NOTIFICATION_PREFERENCES_GET_CHANNEL,
+      ) as Promise<DesktopNotificationPreferences>;
+    },
+    async setNotificationPreferences(
+      input: DesktopNotificationPreferencesSetInput,
+    ) {
+      return ipcRenderer.invoke(
+        DESKTOP_NOTIFICATION_PREFERENCES_SET_CHANNEL,
+        input,
+      ) as Promise<DesktopNotificationPreferences>;
     },
     onUpdateDownloaded(handler: (event: DesktopUpdateDownloadedEvent) => void) {
       const listener = (_event: IpcRendererEvent, payload: unknown) => {

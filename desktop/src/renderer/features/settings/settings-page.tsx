@@ -14,12 +14,26 @@ import {
 import { Trash as Trash2 } from "@phosphor-icons/react";
 
 import { useQueryClient } from "@tanstack/react-query";
-import { useCallback, useId, useMemo, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useId,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { useAgentCatalog } from "@/features/agents/agent-catalog-context";
+import { useWorkspaceUiStore } from "@/app/workspace/workspace-ui-store";
+import {
+  TRANSCRIPT_DENSITY_VALUES,
+  type TranscriptDensity,
+} from "@/features/chat/transcript-density";
+import { useTranscriptDensityStore } from "@/features/chat/transcript-density-store";
 import { useKeybindingHintsStore } from "@/features/keybindings/keybinding-hints-store";
+import { KeyboardSettings } from "@/features/keybindings/keyboard-settings";
 import { ArchivedSettingsPanel } from "@/features/settings/archived-settings-panel";
 import { BuiltinAgentsSettingsGroup } from "@/features/settings/builtin-agent-settings";
 import { CustomAgentsSettingsGroup } from "@/features/settings/custom-agent-settings";
@@ -162,6 +176,14 @@ export function SettingsPage({
 
           <SettingsTabPanel
             activeTab={activeTab}
+            tab="keyboard"
+            tabPanelId={tabPanelId}
+          >
+            <KeyboardSettings />
+          </SettingsTabPanel>
+
+          <SettingsTabPanel
+            activeTab={activeTab}
             tab="workspace"
             tabPanelId={tabPanelId}
           >
@@ -257,6 +279,13 @@ function AppearanceSettings() {
     (state) => state.setEnabled,
   );
   const setLanguage = useSettingsStore((state) => state.setLanguage);
+  const workspaceMode = useWorkspaceUiStore((state) => state.workspaceMode);
+  const transcriptDensity = useTranscriptDensityStore((state) =>
+    state.densityFor(workspaceMode),
+  );
+  const setTranscriptDensity = useTranscriptDensityStore(
+    (state) => state.setDensity,
+  );
 
   return (
     <SettingsGroup>
@@ -287,6 +316,23 @@ function AppearanceSettings() {
           />
         }
         title={t("settings.appearance.language")}
+      />
+      <SettingsRow
+        after={
+          <SettingsSelect
+            label={t("settings.appearance.transcriptDensityLabel")}
+            onValueChange={(value) =>
+              setTranscriptDensity(workspaceMode, value as TranscriptDensity)
+            }
+            options={TRANSCRIPT_DENSITY_VALUES.map((value) => ({
+              label: t(`settings.appearance.transcriptDensityOptions.${value}`),
+              value,
+            }))}
+            value={transcriptDensity}
+          />
+        }
+        description={t("settings.appearance.transcriptDensityDescription")}
+        title={t("settings.appearance.transcriptDensityTitle")}
       />
       <SettingsRow
         after={
@@ -363,7 +409,46 @@ function WorkspaceSettings() {
         description={t("settings.workspace.trayEnabledDescription")}
         title={t("settings.workspace.trayEnabledTitle")}
       />
+      <OsNotificationSettings />
     </SettingsGroup>
+  );
+}
+
+function OsNotificationSettings() {
+  const { t } = useTranslation();
+  const [osEnabled, setOsEnabled] = useState(true);
+  const [ready, setReady] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    void window.desktopWindow.getNotificationPreferences().then((prefs) => {
+      if (cancelled) return;
+      setOsEnabled(prefs.osEnabled);
+      setReady(true);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  return (
+    <SettingsRow
+      after={
+        <Switch
+          aria-label={t("settings.workspace.osNotificationsSwitchLabel")}
+          checked={osEnabled}
+          disabled={!ready}
+          onCheckedChange={(checked) => {
+            setOsEnabled(checked);
+            void window.desktopWindow.setNotificationPreferences({
+              osEnabled: checked,
+            });
+          }}
+        />
+      }
+      description={t("settings.workspace.osNotificationsDescription")}
+      title={t("settings.workspace.osNotificationsTitle")}
+    />
   );
 }
 

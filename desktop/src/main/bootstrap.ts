@@ -10,6 +10,11 @@ import {
 import { startTray, stopTray } from "./features/tray/service";
 import { registerAllIpc } from "./ipc/register";
 import { configureApplicationMenu } from "./platform/application-menu";
+import {
+  loadKeybindingsFromDisk,
+  startKeybindingsWatcher,
+  stopKeybindingsWatcher,
+} from "./platform/keybindings-store";
 import { configureAutoUpdates } from "./updater";
 import { createMainWindow } from "./windows/main-window";
 import { openSettingsWindow } from "./windows/settings-window";
@@ -19,6 +24,8 @@ export async function bootstrap() {
   await startMobileDevServer();
   await startDaemonSupervisor();
   registerAllIpc({ openSettingsWindow });
+  loadKeybindingsFromDisk();
+  startKeybindingsWatcher();
   configureApplicationMenu({ openSettingsWindow });
   configureAutoUpdates();
   startTray();
@@ -27,6 +34,7 @@ export async function bootstrap() {
 
 export async function beforeQuit() {
   stopTray();
+  stopKeybindingsWatcher();
   stopDaemonEvents();
   await stopMobileDevServer();
   await stopDaemonSupervisor();

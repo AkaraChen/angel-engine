@@ -5,20 +5,22 @@ import type {
 import type {
   Chat,
   ChatCreateInput,
+  ChatRunStartInput,
   WorktreeCreationState,
 } from "@angel-engine/daemon-api/chat";
+import { isChatRunStartInput } from "@angel-engine/daemon-api/chat";
 import { randomUUID } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 
 import is from "@sindresorhus/is";
-import { and, desc, eq } from "drizzle-orm";
+import { and, desc, eq, inArray } from "drizzle-orm";
 import { Effect } from "effect";
 import {
   isAgentRuntime,
   isCustomAgentRuntime,
 } from "@angel-engine/daemon-api/agents";
-import { chats, worktreeCreationJobs } from "../../db/schema";
+import { chats, queuedChatRuns, worktreeCreationJobs } from "../../db/schema";
 import { type Db, withDatabase } from "../../platform/db";
 import { DaemonError } from "../../platform/errors";
 import { getCustomAgent } from "../agents/repository";
@@ -117,6 +119,165 @@ export function deleteAllChats(): Effect.Effect<number, DaemonError, Db> {
     yield* withDatabase((database) => database.delete(chats).run());
     return existingChats.length;
   });
+}
+
+export interface PersistedQueuedChatRun {
+  createdAt: string;
+  input: ChatRunStartInput;
+  runId: string;
+  state: QueuedChatRunState;
+}
+
+export type QueuedChatRunState = "dispatching" | "queued";
+export type QueuedChatRunDispatchClaim =
+  | "claimed"
+  | "dispatching"
+  | "not_queued";
+
+export function createQueuedChatRun(run: PersistedQueuedChatRun) {
+  return withDatabase((database) =>
+    database
+      .insert(queuedChatRuns)
+      .values({
+        chatId: run.input.chatId,
+        createdAt: run.createdAt,
+        input: JSON.stringify(run.input),
+        runId: run.runId,
+        state: run.state,
+      })
+      .run(),
+  );
+}
+
+export function beginQueuedChatRunDispatch(runId: string) {
+  return withDatabase(async (database) => {
+    const result = await database
+      .update(queuedChatRuns)
+      .set({ state: "dispatching" })
+      .where(
+        and(
+          eq(queuedChatRuns.runId, runId),
+          eq(queuedChatRuns.state, "queued"),
+        ),
+      )
+      .run();
+    if (result.rowsAffected === 1) return "claimed" as const;
+    const row = await database
+      .select({ state: queuedChatRuns.state })
+      .from(queuedChatRuns)
+      .where(eq(queuedChatRuns.runId, runId))
+      .limit(1)
+      .get();
+    return row?.state === "dispatching"
+      ? ("dispatching" as const)
+      : ("not_queued" as const);
+  });
+}
+
+export function completeQueuedChatRun(runId: string) {
+  return withDatabase((database) =>
+    database
+      .delete(queuedChatRuns)
+      .where(
+        and(
+          eq(queuedChatRuns.runId, runId),
+          eq(queuedChatRuns.state, "dispatching"),
+        ),
+      )
+      .run(),
+  );
+}
+
+export function cancelQueuedChatRun(runId: string) {
+  return withDatabase((database) =>
+    database
+      .delete(queuedChatRuns)
+      .where(eq(queuedChatRuns.runId, runId))
+      .returning({ chatId: queuedChatRuns.chatId })
+      .get()
+      .then((row) => row ?? null),
+  );
+}
+
+export function cancelAmbiguousQueuedChatRun(chatId: string) {
+  return withDatabase((database) =>
+    database
+      .delete(queuedChatRuns)
+      .where(
+        and(
+          eq(queuedChatRuns.chatId, chatId),
+          eq(queuedChatRuns.state, "dispatching"),
+        ),
+      )
+      .returning({ runId: queuedChatRuns.runId })
+      .get()
+      .then((row) => row ?? null),
+  );
+}
+
+export function listQueuedChatRuns() {
+  return Effect.gen(function* () {
+    const rows = yield* withDatabase((database) =>
+      database
+        .select()
+        .from(queuedChatRuns)
+        .orderBy(queuedChatRuns.createdAt)
+        .all(),
+    );
+    const invalidRunIds: string[] = [];
+    const valid: PersistedQueuedChatRun[] = [];
+    for (const row of rows) {
+      try {
+        const input: unknown = JSON.parse(row.input);
+        if (
+          !isChatRunStartInput(input) ||
+          (row.state !== "queued" && row.state !== "dispatching")
+        ) {
+          invalidRunIds.push(row.runId);
+          continue;
+        }
+        valid.push({
+          createdAt: row.createdAt,
+          input,
+          runId: row.runId,
+          state: row.state,
+        });
+      } catch {
+        invalidRunIds.push(row.runId);
+      }
+    }
+    if (invalidRunIds.length > 0) {
+      yield* withDatabase((database) =>
+        database
+          .delete(queuedChatRuns)
+          .where(inArray(queuedChatRuns.runId, invalidRunIds))
+          .run(),
+      );
+    }
+    return valid;
+  });
+}
+
+/**
+ * Only never-dispatched rows are safe for automatic recovery. A dispatching
+ * row is durable evidence of an ambiguous provider boundary and must remain
+ * stored until an explicit cancel/retry decision, never auto-send again.
+ */
+export function listRecoverableQueuedChatRuns() {
+  return listQueuedChatRuns().pipe(
+    Effect.map((runs) => runs.filter((run) => run.state === "queued")),
+  );
+}
+
+export function getAmbiguousQueuedChatRun(chatId: string) {
+  return listQueuedChatRuns().pipe(
+    Effect.map(
+      (runs) =>
+        runs.find(
+          (run) => run.input.chatId === chatId && run.state === "dispatching",
+        ) ?? null,
+    ),
+  );
 }
 
 export interface PersistedWorktreeCreationJob {

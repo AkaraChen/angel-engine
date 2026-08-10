@@ -6,6 +6,7 @@ import { GitBranch } from "@phosphor-icons/react";
 import { useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
 
+import { WorkspaceDiffCommentPanel } from "@/app/workspace/workspace-diff-comment-panel";
 import { getErrorMessage } from "@/app/workspace/workspace-file-display";
 import {
   useWorkspaceGitPanelState,
@@ -171,7 +172,10 @@ export function WorkspaceGitPanel({
     return (
       <div className="flex h-full min-h-0 flex-col">
         {statusBar}
-        {changeColumn}
+        <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+          {changeColumn}
+        </div>
+        <WorkspaceDiffCommentPanel root={root} />
       </div>
     );
   }
@@ -192,8 +196,9 @@ export function WorkspaceGitPanel({
           value={gitListWidth}
           onChange={updateGitListWidth}
         />
-        <div className="min-w-0 flex-1 overflow-hidden">
+        <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
           <WorkspaceGitDiffViewer file={activeFile} />
+          <WorkspaceDiffCommentPanel root={root} />
         </div>
       </div>
     </div>

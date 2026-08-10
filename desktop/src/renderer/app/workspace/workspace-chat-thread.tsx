@@ -38,6 +38,8 @@ import {
   chatRuntimeConfigQueryOptions,
 } from "@/features/chat/api/queries";
 import { AssistantThread } from "@/features/chat/components/assistant-thread";
+import { AmbiguousSendBanner } from "@/features/chat/components/ambiguous-send-banner";
+import { SetupLifecycleBanner } from "@/features/projects/components/setup-lifecycle-banner";
 import { workspaceContentColumnClass } from "@/features/chat/components/thread-styles";
 import { AppRuntimeProvider } from "@/features/chat/runtime/app-runtime-provider";
 import { ChatOptionsProvider } from "@/features/chat/runtime/chat-options-context";
@@ -48,12 +50,14 @@ import {
   useChatRunStore,
 } from "@/features/chat/state/chat-run-store";
 import i18n from "@/i18n";
+import { KeymapScope, useContextKey } from "@/platform/keymap/provider";
 
 interface ActiveChatThreadProps {
   draftAgentConfig: DraftAgentConfig;
   onChatCreated: (chat: Chat) => void;
   onChatMessagesUpdated: ChatMessagesUpdateHandler;
   onChatUpdated: ChatUpdateHandler;
+  onSetupDiscarded: (projectId?: string) => void;
   projects: Project[];
   routeProjectId?: string;
   runtimeOptions: Array<{
@@ -98,6 +102,7 @@ export function ActiveChatThread({
   onChatCreated,
   onChatMessagesUpdated,
   onChatUpdated,
+  onSetupDiscarded,
   projects,
   routeProjectId,
   runtimeOptions,
@@ -118,6 +123,7 @@ export function ActiveChatThread({
       onChatCreated={onChatCreated}
       onChatMessagesUpdated={onChatMessagesUpdated}
       onChatUpdated={onChatUpdated}
+      onSetupDiscarded={onSetupDiscarded}
       projects={projects}
       routeProjectId={routeProjectId}
       runtimeOptions={runtimeOptions}
@@ -139,6 +145,7 @@ export function RestoredChatThread({
   onChatCreated,
   onChatMessagesUpdated,
   onChatUpdated,
+  onSetupDiscarded,
   projects,
   routeProjectId,
   runtimeOptions,
@@ -180,6 +187,7 @@ export function RestoredChatThread({
       onChatCreated={onChatCreated}
       onChatMessagesUpdated={onChatMessagesUpdated}
       onChatUpdated={onChatUpdated}
+      onSetupDiscarded={onSetupDiscarded}
       projects={projects}
       routeProjectId={routeProjectId}
       runtimeOptions={runtimeOptions}
@@ -202,6 +210,7 @@ function ChatThreadRuntime({
   onChatCreated,
   onChatMessagesUpdated,
   onChatUpdated,
+  onSetupDiscarded,
   projects,
   routeProjectId,
   runtimeOptions,
@@ -390,30 +399,45 @@ function ChatThreadRuntime({
     ],
   );
 
+  useContextKey("chat.running", isRunning);
+
   return (
-    <ChatOptionsProvider value={chatOptions}>
-      <AppRuntimeProvider
-        chatId={selectedChat.id}
-        cwd={selectedChat.cwd ?? undefined}
-        historyMessages={historyMessages}
-        historyRevision={historyRevision}
-        key={chatRuntimeProviderKey(selectedChat.id, chatRuntime, keySuffix)}
-        model={modelOverride}
-        mode={undefined}
-        onChatCreated={onChatCreated}
-        onChatMessagesUpdated={onChatMessagesUpdated}
-        onChatUpdated={onChatUpdated}
-        projectId={projectContext.id ?? selectedChat.projectId ?? null}
-        projectPath={projectContext.path ?? undefined}
-        permissionMode={undefined}
-        reasoningEffort={reasoningEffortOverride}
-        runtime={chatRuntime}
-        runtimeConfig={runtimeConfig}
-        slotKey={slotKey}
-      >
-        <AssistantThread projectName={projectContext.name} />
-      </AppRuntimeProvider>
-    </ChatOptionsProvider>
+    <KeymapScope scope="panel" id="chat.panel">
+      <ChatOptionsProvider value={chatOptions}>
+        <AppRuntimeProvider
+          chatId={selectedChat.id}
+          cwd={selectedChat.cwd ?? undefined}
+          historyMessages={historyMessages}
+          historyRevision={historyRevision}
+          key={chatRuntimeProviderKey(selectedChat.id, chatRuntime, keySuffix)}
+          model={modelOverride}
+          mode={undefined}
+          onChatCreated={onChatCreated}
+          onChatMessagesUpdated={onChatMessagesUpdated}
+          onChatUpdated={onChatUpdated}
+          projectId={projectContext.id ?? selectedChat.projectId ?? null}
+          projectPath={projectContext.path ?? undefined}
+          permissionMode={undefined}
+          reasoningEffort={reasoningEffortOverride}
+          runtime={chatRuntime}
+          runtimeConfig={runtimeConfig}
+          slotKey={slotKey}
+        >
+          <div className="flex h-full min-h-0 flex-col">
+            <AmbiguousSendBanner chatId={selectedChat.id} />
+            <SetupLifecycleBanner
+              chatId={selectedChat.id}
+              enabled={projectContext.isWorktree === true}
+              onDiscarded={() => onSetupDiscarded(projectContext.id)}
+              projectId={projectContext.id ?? selectedChat.projectId ?? ""}
+            />
+            <div className="min-h-0 flex-1">
+              <AssistantThread projectName={projectContext.name} />
+            </div>
+          </div>
+        </AppRuntimeProvider>
+      </ChatOptionsProvider>
+    </KeymapScope>
   );
 }
 

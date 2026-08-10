@@ -132,6 +132,32 @@ describe("chatRuns", () => {
     );
   });
 
+  it("discovers and clears an ambiguous run by chat id", async () => {
+    const ambiguous = {
+      run: {
+        chatId: "chat-1",
+        createdAt: "2026-08-10T00:00:00.000Z",
+        runId: "run-ambiguous",
+        status: "dispatching",
+      },
+    };
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(jsonResponse(ambiguous))
+      .mockResolvedValueOnce(jsonResponse({ cleared: true }));
+    vi.stubGlobal("fetch", fetchMock);
+    const client = createDaemonClient({ baseUrl: "", token: null });
+
+    await expect(client.chats.ambiguousRun("chat-1")).resolves.toEqual(
+      ambiguous,
+    );
+    await expect(client.chats.clearAmbiguousRun("chat-1")).resolves.toEqual({
+      cleared: true,
+    });
+    expect(fetchMock.mock.calls[0][0]).toBe("/api/chats/chat-1/ambiguous-run");
+    expect(fetchMock.mock.calls[1][1]).toMatchObject({ method: "DELETE" });
+  });
+
   it.each([
     [
       "an event before the snapshot",
@@ -195,6 +221,53 @@ describe("chatRuns", () => {
     expect(fetchMock.mock.calls[0][0]).toBe("/api/chat-runs/run-1");
     expect(fetchMock.mock.calls[0][1]).toMatchObject({ method: "DELETE" });
     expect(fetchMock.mock.calls[1][0]).toBe("/api/chat-runs/run-1/elicitation");
+  });
+});
+
+describe("projects.clone", () => {
+  it("streams progress through the terminal clone event", async () => {
+    const events = [
+      {
+        detail: null,
+        percent: 0,
+        stage: "cloning",
+        targetPath: "/tmp/repo",
+        type: "progress",
+      },
+      {
+        project: { id: "project-1", path: "/tmp/repo" },
+        reusedExistingCheckout: false,
+        type: "completed",
+      },
+    ] as const;
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(sseResponse(events)));
+    const client = createDaemonClient({ baseUrl: "", token: null });
+
+    await expect(
+      collect(client.projects.clone({ url: "owner/repo" })),
+    ).resolves.toEqual(events);
+  });
+
+  it("rejects a clone stream that closes before a terminal event", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(
+        sseResponse([
+          {
+            detail: null,
+            percent: 10,
+            stage: "cloning",
+            targetPath: "/tmp/repo",
+            type: "progress",
+          },
+        ]),
+      ),
+    );
+    const client = createDaemonClient({ baseUrl: "", token: null });
+
+    await expect(
+      collect(client.projects.clone({ url: "owner/repo" })),
+    ).rejects.toThrow(/without a terminal event/);
   });
 });
 
