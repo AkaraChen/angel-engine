@@ -1,6 +1,7 @@
 import type { Chat } from "@angel-engine/daemon-api/chat";
 import type { ReactElement } from "react";
 import type { SidebarChatDateGroupKey } from "@/app/workspace/workspace-ui-store";
+import type { ChatContextMenuAction } from "@/features/chat/api/queries";
 import {
   CaretRight as ChevronRight,
   SpinnerGap as Loader2,
@@ -23,6 +24,7 @@ import {
   AnimatedSidebarMenuItem,
   WorkspaceSidebarMenuButton,
 } from "@/components/workspace-sidebar-primitives";
+import { ChatContextMenu } from "@/features/chat/components/chat-context-menu";
 import { ChatSidebarItem } from "@/features/chat/components/chat-sidebar-item";
 
 type MaybeAsync = void | Promise<void>;
@@ -38,7 +40,7 @@ interface SimpleChatSidebarSectionProps {
   isLoading: boolean;
   onArchiveChat: (chat: Chat) => MaybeAsync;
   onOpenChat: (chat: Chat) => MaybeAsync;
-  onShowChatContextMenu: (chat: Chat) => MaybeAsync;
+  onChatContextMenuAction: (chat: Chat, action: ChatContextMenuAction) => void;
   selectedChatId?: string;
 }
 
@@ -64,7 +66,7 @@ export function SimpleChatSidebarSection({
   isLoading,
   onArchiveChat,
   onOpenChat,
-  onShowChatContextMenu,
+  onChatContextMenuAction,
   selectedChatId,
 }: SimpleChatSidebarSectionProps): ReactElement {
   const { t } = useTranslation();
@@ -153,23 +155,28 @@ export function SimpleChatSidebarSection({
                           <SidebarMenu>
                             {group.chats.map((chat) => (
                               <AnimatedSidebarMenuItem key={chat.id}>
-                                <ChatSidebarItem
-                                  chatId={chat.id}
-                                  isActive={chat.id === selectedChatId}
-                                  onArchiveChat={async () =>
-                                    onArchiveChat(chat)
-                                  }
-                                  onOpenChat={() => void onOpenChat(chat)}
-                                  onShowContextMenu={async () =>
-                                    onShowChatContextMenu(chat)
-                                  }
-                                  pinned={chat.pinned}
-                                  runtime={chat.runtime}
-                                  title={displayChatTitle(chat.title, t)}
-                                  tooltip={
-                                    chat.cwd ?? displayChatTitle(chat.title, t)
-                                  }
-                                />
+                                <ChatContextMenu
+                                  chat={chat}
+                                  onAction={onChatContextMenuAction}
+                                >
+                                  <div>
+                                    <ChatSidebarItem
+                                      chatId={chat.id}
+                                      isActive={chat.id === selectedChatId}
+                                      onArchiveChat={async () =>
+                                        onArchiveChat(chat)
+                                      }
+                                      onOpenChat={() => void onOpenChat(chat)}
+                                      pinned={chat.pinned}
+                                      runtime={chat.runtime}
+                                      title={displayChatTitle(chat.title, t)}
+                                      tooltip={
+                                        chat.cwd ??
+                                        displayChatTitle(chat.title, t)
+                                      }
+                                    />
+                                  </div>
+                                </ChatContextMenu>
                               </AnimatedSidebarMenuItem>
                             ))}
                           </SidebarMenu>

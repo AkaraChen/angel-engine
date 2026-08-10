@@ -3,8 +3,11 @@ import type { Project } from "@angel-engine/daemon-api/projects";
 import type { IconProps } from "@phosphor-icons/react";
 import type { ComponentType, ReactElement } from "react";
 
+import type { PathLauncherActionId } from "@shared/path-launcher";
 import type { WorkspaceMode } from "@/app/workspace/workspace-ui-store";
+import type { ChatContextMenuAction } from "@/features/chat/api/queries";
 import type { ProjectWorktreeChatGroup } from "@/features/chat/worktree-grouping";
+import type { ProjectContextMenuAction } from "@/features/projects/api/queries";
 import {
   Folder,
   GitPullRequest,
@@ -82,12 +85,20 @@ interface WorkspaceSidebarProps {
     worktreeGroup: ProjectWorktreeChatGroup,
   ) => MaybeAsync;
   onRetryWorktreeCreation: (chat: Chat) => MaybeAsync;
-  onShowChatContextMenu: (chat: Chat) => MaybeAsync;
-  onShowProjectContextMenu: (project: Project) => MaybeAsync;
-  onShowWorktreeContextMenu: (
+  onChatContextMenuAction: (chat: Chat, action: ChatContextMenuAction) => void;
+  onProjectContextMenuAction: (
+    project: Project,
+    action: ProjectContextMenuAction,
+  ) => void;
+  onProjectPathLauncherAction: (
+    project: Project,
+    action: PathLauncherActionId,
+  ) => void;
+  onWorktreePathLauncherAction: (
     project: Project,
     worktreeGroup: ProjectWorktreeChatGroup,
-  ) => MaybeAsync;
+    action: PathLauncherActionId,
+  ) => void;
   onWorkspaceModeChange: (workspaceMode: WorkspaceMode) => void;
   projectChatsByProjectId: Map<string, Chat[]>;
   projects: Project[];
@@ -244,9 +255,10 @@ function WorkspaceSidebarContent({
   onOpenSettings,
   onOpenWorktree,
   onRetryWorktreeCreation,
-  onShowChatContextMenu,
-  onShowProjectContextMenu,
-  onShowWorktreeContextMenu,
+  onChatContextMenuAction,
+  onProjectContextMenuAction,
+  onProjectPathLauncherAction,
+  onWorktreePathLauncherAction,
   onWorkspaceModeChange,
   projectChatsByProjectId,
   projects,
@@ -362,7 +374,7 @@ function WorkspaceSidebarContent({
             isLoading={isChatsLoading}
             onArchiveChat={onArchiveChat}
             onOpenChat={onOpenChat}
-            onShowChatContextMenu={onShowChatContextMenu}
+            onChatContextMenuAction={onChatContextMenuAction}
             selectedChatId={selectedChatId}
           />
         ) : null}
@@ -377,8 +389,9 @@ function WorkspaceSidebarContent({
             onOpenWorktree={onOpenWorktree}
             onOpenChat={onOpenChat}
             onRetryWorktreeCreation={onRetryWorktreeCreation}
-            onShowProjectContextMenu={onShowProjectContextMenu}
-            onShowWorktreeContextMenu={onShowWorktreeContextMenu}
+            onProjectContextMenuAction={onProjectContextMenuAction}
+            onProjectPathLauncherAction={onProjectPathLauncherAction}
+            onWorktreePathLauncherAction={onWorktreePathLauncherAction}
             projectChatsByProjectId={projectChatsByProjectId}
             projects={projects}
           />
@@ -394,8 +407,9 @@ function WorkspaceSidebarContent({
             onCreateProjectChat={onCreateProjectChat}
             onOpenChat={onOpenChat}
             onRetryWorktreeCreation={onRetryWorktreeCreation}
-            onShowChatContextMenu={onShowChatContextMenu}
-            onShowProjectContextMenu={onShowProjectContextMenu}
+            onChatContextMenuAction={onChatContextMenuAction}
+            onProjectContextMenuAction={onProjectContextMenuAction}
+            onProjectPathLauncherAction={onProjectPathLauncherAction}
             projectChatsByProjectId={projectChatsByProjectId}
             projects={projects}
             selectedChatId={selectedChatId}

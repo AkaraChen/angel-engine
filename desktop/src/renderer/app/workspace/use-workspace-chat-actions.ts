@@ -6,7 +6,10 @@ import type {
   ChatRuntimeConfig,
 } from "@angel-engine/daemon-api/chat";
 import type { Project } from "@angel-engine/daemon-api/projects";
-import type { PathLauncherTargetRef } from "@shared/path-launcher";
+import type {
+  PathLauncherActionId,
+  PathLauncherTargetRef,
+} from "@shared/path-launcher";
 import type { WorkspaceNavigation } from "@/app/workspace/use-workspace-navigation";
 import type { WorkspacePageModel } from "@/app/workspace/use-workspace-page-model";
 import type { ChatRunOrigin } from "@/app/workspace/workspace-thread-types";
@@ -26,6 +29,8 @@ import {
   draftAgentConfigFromExplicitOverrides,
 } from "@/app/workspace/workspace-draft-agent-config";
 import { currentHashRoutePath } from "@/app/workspace/workspace-route-paths";
+import type { ChatContextMenuAction } from "@/features/chat/api/queries";
+import type { ProjectContextMenuAction } from "@/features/projects/api/queries";
 import {
   archiveChatMutationOptions,
   chatContextMenuMutationOptions,
@@ -310,15 +315,17 @@ export function useWorkspaceChatActions({
     }
   }, [api, createProjectMutation, t, toast]);
 
-  const showProjectContextMenu = useCallback(
-    async (project: Project) => {
+  const runProjectContextMenuAction = useCallback(
+    async (project: Project, action: ProjectContextMenuAction) => {
       try {
-        const action =
-          await showProjectContextMenuMutation.mutateAsync(project);
-        if (action === "settings") {
+        const result = await showProjectContextMenuMutation.mutateAsync({
+          action,
+          project,
+        });
+        if (result === "settings") {
           setSettingsProjectId(project.id);
         } else if (
-          action === "deleted" &&
+          result === "deleted" &&
           (routeProjectId ?? routeDraftProjectId) === project.id
         ) {
           navigate("/", { replace: true });
@@ -340,16 +347,10 @@ export function useWorkspaceChatActions({
       toast,
     ],
   );
-  const showPathLauncherContextMenu = useCallback(
-    async (
-      ref: PathLauncherTargetRef,
-      options: { includeAngelTerminal?: boolean } = {},
-    ) => {
+  const runPathLauncherAction = useCallback(
+    async (ref: PathLauncherTargetRef, action: PathLauncherActionId) => {
       try {
-        return await api.pathLauncher.showContextMenu({
-          includeAngelTerminal: options.includeAngelTerminal,
-          target: ref,
-        });
+        return await api.pathLauncher.invoke({ action, target: ref });
       } catch (error) {
         toast({
           description: getErrorMessage(error),
@@ -380,15 +381,18 @@ export function useWorkspaceChatActions({
   const openSessionHandoffDialog = useCallback((chat: Chat) => {
     setHandoffChatId(chat.id);
   }, []);
-  const showChatContextMenu = useCallback(
-    async (chat: Chat) => {
+  const runChatContextMenuAction = useCallback(
+    async (chat: Chat, action: ChatContextMenuAction) => {
       try {
-        const action = await showChatContextMenuMutation.mutateAsync(chat);
-        if (action === "rename") {
+        const result = await showChatContextMenuMutation.mutateAsync({
+          action,
+          chat,
+        });
+        if (result === "rename") {
           openRenameChatDialog(chat);
-        } else if (action === "handoff") {
+        } else if (result === "handoff") {
           openSessionHandoffDialog(chat);
-        } else if (action === "deleted") {
+        } else if (result === "deleted") {
           removeChatFromCache(chat.id);
         }
       } catch (error) {
@@ -575,9 +579,9 @@ export function useWorkspaceChatActions({
     setChatMessagesInCache,
     setPersistedChatRuntime,
     settingsTargetProject,
-    showChatContextMenu,
-    showPathLauncherContextMenu,
-    showProjectContextMenu,
+    runChatContextMenuAction,
+    runPathLauncherAction,
+    runProjectContextMenuAction,
     updateChatFromRun,
   };
 }

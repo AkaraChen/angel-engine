@@ -52,9 +52,15 @@ interface CreateProjectMutationParams {
   queryClient: QueryClient;
 }
 
-type ProjectContextMenuResult = Awaited<
-  ReturnType<ApiClient["projects"]["showContextMenu"]>
->;
+/** Items the project context menu offers beyond the path-launcher rows. */
+export type ProjectContextMenuAction = "delete" | "settings";
+
+export type ProjectContextMenuResult = "deleted" | "settings";
+
+export interface ProjectContextMenuVariables {
+  action: ProjectContextMenuAction;
+  project: Project;
+}
 
 interface ProjectContextMenuMutationParams {
   api: ApiClient;
@@ -216,14 +222,20 @@ export function projectContextMenuMutationOptions({
   queryClient,
 }: ProjectContextMenuMutationParams) {
   return mutationOptions({
-    mutationFn: async (project: Project) =>
-      api.projects.showContextMenu(project.id),
+    mutationFn: async ({
+      action,
+      project,
+    }: ProjectContextMenuVariables): Promise<ProjectContextMenuResult> => {
+      if (action === "settings") return "settings";
+      await api.projects.delete(project.id);
+      return "deleted";
+    },
     onSuccess: async (data, variables) => {
       if (data === "deleted") {
         await invalidateProjectQueries(queryClient);
         await invalidateChatQueries(queryClient);
       }
-      await onSuccess?.(data, variables);
+      await onSuccess?.(data, variables.project);
     },
   });
 }
