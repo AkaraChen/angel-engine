@@ -411,6 +411,8 @@ export function OsNotificationSettings() {
     "idle",
   );
   const loadRetryRef = useRef<() => void>(() => {});
+  const preferencesRef = useRef(preferences);
+  preferencesRef.current = preferences;
 
   useEffect(() => {
     let cancelled = false;
@@ -448,19 +450,27 @@ export function OsNotificationSettings() {
       sound: boolean;
     }>,
   ) => {
-    const next = { ...preferences, ...patch };
+    const previous = preferencesRef.current;
+    const next = { ...previous, ...patch };
+    preferencesRef.current = next;
     setPreferences(next);
     setSaveState("idle");
     try {
       const saved = await window.desktopWindow.setNotificationPreferences(next);
-      setPreferences({
+      const durable = {
         needsInput: saved.needsInput,
         osEnabled: saved.osEnabled,
         runCompleted: saved.runCompleted,
         sound: saved.sound,
-      });
+      };
+      preferencesRef.current = durable;
+      setPreferences(durable);
       setSaveState("saved");
     } catch {
+      // The write never landed: put the controls back on the durable value so
+      // the UI cannot claim a preference the daemon does not have.
+      preferencesRef.current = previous;
+      setPreferences(previous);
       setSaveState("failed");
     }
   };
