@@ -82,6 +82,10 @@ export function DaemonEventSync() {
         case "chat-metadata-changed":
           // Archive/restore moves a row between the two lists, so both are stale.
           invalidateChatLists();
+          return;
+        case "shepherd-changed":
+          // Stage 3 will invalidate the shepherd panel query. No consumer yet.
+          return;
       }
     };
 
