@@ -1,0 +1,15 @@
+{
+  "name": "@angel-engine/host-skill",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Bundled angel-host skill that teaches agents to drive the host CLI (Skill-first; no MCP).",
+  "exports": {
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "angel-host"
+  ],
+  "scripts": {
+    "test": "node --test test/layout.test.mjs"
+  }
+}
