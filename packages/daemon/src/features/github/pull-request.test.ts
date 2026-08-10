@@ -1,7 +1,8 @@
 import { Effect } from "effect";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { Db } from "../../platform/db";
+import { createGhRunner, type GhExecutor } from "./gh-cli";
 import {
   createPullRequest,
   type GitRunner,
@@ -10,6 +11,11 @@ import {
 } from "./pull-request";
 
 const testDb = new Db({ database: Effect.die("Database must not be used.") });
+const ansi = (value: string) => `\u001B[1;37m${value}\u001B[0m`;
+
+afterEach(() => {
+  vi.unstubAllEnvs();
+});
 
 function withTestDb<A, E>(effect: Effect.Effect<A, E, Db>) {
   return Effect.runPromise(effect.pipe(Effect.provideService(Db, testDb)));
@@ -60,7 +66,70 @@ const pr = {
   url: "https://github.com/acme/widgets/pull/42",
 };
 
+function forcedColorGhRunner(existing: boolean) {
+  const execute: GhExecutor = async (_executable, args, options) => {
+    expect(options.env.FORCE_COLOR).toBeUndefined();
+    expect(options.env.CLICOLOR_FORCE).toBeUndefined();
+    expect(options.env.NO_COLOR).toBe("1");
+    return {
+      stderr: ansi("diagnostic"),
+      stdout: ansi(
+        JSON.stringify(
+          args[0] === "repo"
+            ? { defaultBranchRef: { name: "main" } }
+            : existing
+              ? [pr]
+              : [],
+        ),
+      ),
+    };
+  };
+  return createGhRunner(execute);
+}
+
 describe("pullRequestPreflight", () => {
+  it("parses preflight output when the parent environment forces color", async () => {
+    vi.stubEnv("FORCE_COLOR", "1");
+    vi.stubEnv("CLICOLOR_FORCE", "1");
+
+    const result = await withTestDb(
+      pullRequestPreflight("/repos/widgets", undefined, {
+        runGh: forcedColorGhRunner(false),
+        runGit: gitRunner(),
+        saveRecord: async (record) => record,
+        whichGh: async () => "/usr/bin/gh",
+      }),
+    );
+
+    expect(result).toMatchObject({
+      canCreate: true,
+      defaultBranch: "main",
+      existing: null,
+      head: "feature/create-pr",
+    });
+  });
+
+  it("parses an existing PR when the parent environment forces color", async () => {
+    vi.stubEnv("FORCE_COLOR", "1");
+    vi.stubEnv("CLICOLOR_FORCE", "1");
+    const saved: string[] = [];
+
+    const result = await withTestDb(
+      pullRequestPreflight("/repos/widgets", undefined, {
+        runGh: forcedColorGhRunner(true),
+        runGit: gitRunner(),
+        saveRecord: async (record) => {
+          saved.push(record.url);
+          return record;
+        },
+        whichGh: async () => "/usr/bin/gh",
+      }),
+    );
+
+    expect(result.existing?.url).toBe(pr.url);
+    expect(saved).toEqual([pr.url]);
+  });
+
   it("builds deterministic prefills and base branches", async () => {
     const result = await withTestDb(
       pullRequestPreflight("/repos/widgets", undefined, {
