@@ -247,6 +247,11 @@ export const zhTW = {
         waitingForYou: "等待你處理",
       },
       title: "艦隊",
+      viewMode: "艦隊檢視",
+      views: {
+        board: "看板檢視",
+        list: "列表檢視",
+      },
     },
     pullRequests: {
       commentPlaceholder: "寫一則評論…",

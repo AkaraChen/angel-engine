@@ -250,6 +250,11 @@ export const ko = {
         waitingForYou: "응답 대기 중",
       },
       title: "플릿",
+      viewMode: "플릿 보기",
+      views: {
+        board: "보드 보기",
+        list: "목록 보기",
+      },
     },
     pullRequests: {
       commentPlaceholder: "Write a comment…",

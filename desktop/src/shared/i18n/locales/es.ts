@@ -255,6 +255,11 @@ export const es = {
         waitingForYou: "Esperándote",
       },
       title: "Flota",
+      viewMode: "Vista de la flota",
+      views: {
+        board: "Vista de tablero",
+        list: "Vista de lista",
+      },
     },
     pullRequests: {
       commentPlaceholder: "Write a comment…",

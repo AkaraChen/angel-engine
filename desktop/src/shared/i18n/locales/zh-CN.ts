@@ -247,6 +247,11 @@ export const zhCN = {
         waitingForYou: "等待你处理",
       },
       title: "舰队",
+      viewMode: "舰队视图",
+      views: {
+        board: "看板视图",
+        list: "列表视图",
+      },
     },
     pullRequests: {
       commentPlaceholder: "写一条评论…",

@@ -254,6 +254,11 @@ export const fr = {
         waitingForYou: "En attente de vous",
       },
       title: "Flotte",
+      viewMode: "Vue de la flotte",
+      views: {
+        board: "Vue en tableau",
+        list: "Vue en liste",
+      },
     },
     pullRequests: {
       commentPlaceholder: "Write a comment…",
