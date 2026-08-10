@@ -24,6 +24,19 @@ import { useEffect } from "react";
 
 const commandHandlers = new Map<CommandId, (args?: unknown) => unknown>();
 
+const toolContext = {
+  chatId: "chat-1" as string | null,
+  contextKey: "ctx-1" as string | null,
+  root: "/tmp/repo-1" as string | null,
+};
+
+const startShepherd = vi.fn();
+const stopShepherd = vi.fn();
+const getShepherd = vi.fn();
+const pullRequestStatus = vi.fn();
+const toast = vi.fn();
+const updateWorkspaceToolSnapshot = vi.fn();
+
 vi.mock("react-i18next", () => ({
   useTranslation: () => ({ t: (key: string) => key }),
 }));
@@ -50,6 +63,62 @@ vi.mock("@/platform/keymap/provider", () => ({
   },
   useContextKey: () => {},
 }));
+
+vi.mock("@/platform/use-api", () => ({
+  useApi: () => ({
+    github: {
+      pullRequestStatus,
+    },
+    shepherd: {
+      get: getShepherd,
+      start: startShepherd,
+      stop: stopShepherd,
+    },
+  }),
+}));
+
+vi.mock("@/components/ui/toast", () => ({
+  useToast: () => toast,
+}));
+
+vi.mock("@/app/workspace/workspace-ui-store", () => ({
+  useWorkspaceUiStore: (
+    selector: (state: { setRightSidebarOpen: () => void }) => unknown,
+  ) => selector({ setRightSidebarOpen: vi.fn() }),
+}));
+
+vi.mock("@/app/workspace/workspace-tool-store", () => ({
+  useWorkspaceToolStore: (
+    selector: (state: {
+      context: typeof toolContext;
+      updateWorkspaceToolSnapshot: typeof updateWorkspaceToolSnapshot;
+    }) => unknown,
+  ) =>
+    selector({
+      context: toolContext,
+      updateWorkspaceToolSnapshot,
+    }),
+  workspaceToolPullRequestTabId: "pr",
+}));
+
+vi.mock("@tanstack/react-query", async () => {
+  const actual = await vi.importActual<typeof import("@tanstack/react-query")>(
+    "@tanstack/react-query",
+  );
+  return {
+    ...actual,
+    useMutation: (options: {
+      mutationFn: (input: unknown) => Promise<unknown>;
+    }) => ({
+      isPending: false,
+      mutateAsync: (input: unknown) => options.mutationFn(input),
+    }),
+    useQueryClient: () => ({
+      invalidateQueries: vi.fn(),
+      setQueryData: vi.fn(),
+    }),
+  };
+});
 
 import { WorkspaceCommandPalette } from "./workspace-command-palette";
 
@@ -114,6 +183,25 @@ async function openPaletteViaCommand() {
 beforeEach(() => {
   window.desktopEnvironment.platform = "win32";
   commandHandlers.clear();
+  toolContext.chatId = "chat-1";
+  toolContext.contextKey = "ctx-1";
+  toolContext.root = "/tmp/repo-1";
+  startShepherd.mockReset();
+  stopShepherd.mockReset();
+  getShepherd.mockReset();
+  pullRequestStatus.mockReset();
+  toast.mockReset();
+  updateWorkspaceToolSnapshot.mockReset();
+  getShepherd.mockResolvedValue({ session: null });
+  pullRequestStatus.mockResolvedValue({
+    state: "OPEN",
+    url: "https://github.com/acme/widgets/pull/1",
+  });
+  startShepherd.mockResolvedValue({
+    id: "s1",
+    chatId: "chat-1",
+    state: "watching",
+  });
 });
 afterEach(cleanup);
 afterAll(() => {
@@ -180,5 +268,89 @@ describe("WorkspaceCommandPalette", () => {
     fireEvent.click(screen.getByText("ui.commandNewWorkspace"));
 
     expect(onNewWorkspace).toHaveBeenCalledTimes(1);
+  });
+
+  it("Shepherd PR starts against the current workspace context", async () => {
+    render(
+      <WorkspaceCommandPalette
+        chats={[]}
+        onNewWorkspace={vi.fn()}
+        onOpenSession={vi.fn()}
+        onOpenSettings={vi.fn()}
+      />,
+    );
+
+    await openPaletteViaCommand();
+    await act(async () => {
+      fireEvent.click(screen.getByText("ui.commandShepherdPr"));
+    });
+
+    await waitFor(() => {
+      expect(startShepherd).toHaveBeenCalledWith({
+        chatId: "chat-1",
+        owner: "acme",
+        prNumber: 1,
+        repo: "widgets",
+      });
+    });
+    expect(pullRequestStatus).toHaveBeenCalledWith({ cwd: "/tmp/repo-1" });
+    expect(updateWorkspaceToolSnapshot).toHaveBeenCalled();
+  });
+
+  it("uses the latest tool context after switching chat/workspace", async () => {
+    const view = render(
+      <WorkspaceCommandPalette
+        chats={[]}
+        onNewWorkspace={vi.fn()}
+        onOpenSession={vi.fn()}
+        onOpenSettings={vi.fn()}
+      />,
+    );
+
+    await openPaletteViaCommand();
+    await act(async () => {
+      fireEvent.click(screen.getByText("ui.commandShepherdPr"));
+    });
+    await waitFor(() => {
+      expect(startShepherd).toHaveBeenCalledWith(
+        expect.objectContaining({ chatId: "chat-1" }),
+      );
+    });
+
+    // Switch workspace context without changing chats/t (the stale-closure bug).
+    toolContext.chatId = "chat-2";
+    toolContext.contextKey = "ctx-2";
+    toolContext.root = "/tmp/repo-2";
+    pullRequestStatus.mockResolvedValue({
+      state: "OPEN",
+      url: "https://github.com/acme/other/pull/9",
+    });
+    startShepherd.mockClear();
+    pullRequestStatus.mockClear();
+
+    // Force a re-render so useCallback picks up new toolContext deps.
+    view.rerender(
+      <WorkspaceCommandPalette
+        chats={[]}
+        onNewWorkspace={vi.fn()}
+        onOpenSession={vi.fn()}
+        onOpenSettings={vi.fn()}
+      />,
+    );
+
+    await openPaletteViaCommand();
+    await act(async () => {
+      fireEvent.click(screen.getByText("ui.commandShepherdPr"));
+    });
+
+    await waitFor(() => {
+      expect(startShepherd).toHaveBeenCalledWith({
+        chatId: "chat-2",
+        owner: "acme",
+        prNumber: 9,
+        repo: "other",
+      });
+    });
+    expect(pullRequestStatus).toHaveBeenCalledWith({ cwd: "/tmp/repo-2" });
   });
 });

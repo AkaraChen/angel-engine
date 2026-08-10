@@ -42,6 +42,11 @@ export const queryKeys = {
     pullRequestPreflight: (root: string | null, base?: string) =>
       ["github", "pull-request", "preflight", root, base] as const,
   },
+  shepherd: {
+    all: () => ["shepherd"] as const,
+    session: (chatId: string | null) =>
+      ["shepherd", "session", chatId] as const,
+  },
   projects: {
     all: () => ["projects"] as const,
     config: (id: string | null) => ["projects", "config", id] as const,

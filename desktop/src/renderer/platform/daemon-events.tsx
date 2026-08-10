@@ -81,6 +81,14 @@ export function DaemonEventSync() {
           void queryClient.invalidateQueries({
             queryKey: queryKeys.chatActivity.all(),
           });
+          // Shepherd holdReason is projected from activity/gate on GET.
+          if (event.type === "chat-activity-changed") {
+            for (const chatId of event.chatIds) {
+              void queryClient.invalidateQueries({
+                queryKey: queryKeys.shepherd.session(chatId),
+              });
+            }
+          }
           return;
         case "chat-conversation-changed":
           queueConversations(event.chatIds);
@@ -90,7 +98,11 @@ export function DaemonEventSync() {
           invalidateChatLists();
           return;
         case "shepherd-changed":
-          // Stage 3 will invalidate the shepherd panel query. No consumer yet.
+          for (const chatId of event.chatIds) {
+            void queryClient.invalidateQueries({
+              queryKey: queryKeys.shepherd.session(chatId),
+            });
+          }
           return;
       }
     };
@@ -118,6 +130,9 @@ export function DaemonEventSync() {
         invalidateChatLists();
         void queryClient.invalidateQueries({
           queryKey: scheduleQueryKeys.automations.all(),
+        });
+        void queryClient.invalidateQueries({
+          queryKey: queryKeys.shepherd.all(),
         });
         // Conversation hints published while the socket was down are simply gone
         // — there is no replay — so every open chat reconciles on reconnect.

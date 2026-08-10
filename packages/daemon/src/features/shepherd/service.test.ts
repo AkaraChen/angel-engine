@@ -103,6 +103,7 @@ function createMemoryPorts(options: {
         headSha: input.headSha,
         state: "watching",
         settledReason: null,
+        holdReason: null,
         round: 0,
         maxRounds: input.maxRounds,
         consecutiveNoProgress: 0,
@@ -129,6 +130,7 @@ function createMemoryPorts(options: {
         ...session,
         state: "settled",
         settledReason: reason,
+        holdReason: null,
         pendingPrompt: null,
         pendingFingerprints: [],
         updatedAt: now(),
@@ -298,7 +300,7 @@ describe("ShepherdService", () => {
     expect(sessions.get(session.id)?.pendingPrompt).toBeNull();
   });
 
-  it("yields to a user message and settles stopped", async () => {
+  it("yields to a user message and settles yielded (not manual stopped)", async () => {
     const failed = checkItem({ name: "build", checkRunId: "1" });
     const { ports, sessions } = createMemoryPorts({
       snapshot: {
@@ -326,7 +328,7 @@ describe("ShepherdService", () => {
     expect(yielded).toBe(true);
     expect(sessions.get(session.id)).toMatchObject({
       state: "settled",
-      settledReason: "stopped",
+      settledReason: "yielded",
     });
 
     // Shepherd origin must not yield.
@@ -372,6 +374,10 @@ describe("ShepherdService", () => {
     expect(started).toHaveLength(0);
     expect(sessions.get(session.id)?.state).toBe("watching");
     expect(sessions.get(session.id)?.pendingPrompt).toBeNull();
+    await expect(service.getByChatId("chat-1")).resolves.toMatchObject({
+      holdReason: "queued_run",
+      state: "watching",
+    });
   });
 
   it("holds without queueing when an ambiguous run exists", async () => {
@@ -405,6 +411,46 @@ describe("ShepherdService", () => {
     expect(started).toHaveLength(0);
     expect(sessions.get(session.id)?.state).toBe("watching");
     expect(sessions.get(session.id)?.pendingPrompt).toBeNull();
+    await expect(service.getByChatId("chat-1")).resolves.toMatchObject({
+      holdReason: "ambiguous_run",
+      state: "watching",
+    });
+  });
+
+  it("manual stop settles stopped; yield settles yielded", async () => {
+    const { ports, sessions } = createMemoryPorts({
+      snapshot: {
+        cwd: "/tmp/repo",
+        prState: "OPEN",
+        checks: checksSnapshot({ requiredAllGreen: true }),
+        threads: threadsResult(),
+      },
+    });
+    const { service } = createService(ports);
+    const session = await service.startSession({
+      chatId: "chat-1",
+      owner: "acme",
+      prNumber: 1,
+      repo: "app",
+    });
+
+    const stopped = await service.stopSession(session.id);
+    expect(stopped).toMatchObject({
+      settledReason: "stopped",
+      state: "settled",
+    });
+    expect(sessions.get(session.id)?.settledReason).toBe("stopped");
+
+    await service.resumeSession(session.id);
+    const yielded = await service.maybeYieldToUser({
+      chatId: "chat-1",
+      origin: undefined,
+    });
+    expect(yielded).toBe(true);
+    expect(sessions.get(session.id)?.settledReason).toBe("yielded");
+    await expect(service.resumeSession(session.id)).resolves.toMatchObject({
+      state: "watching",
+    });
   });
 
   it("keeps comment fingerprints across headSha changes", async () => {

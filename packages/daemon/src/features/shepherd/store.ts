@@ -34,6 +34,7 @@ export function createShepherdSession(input: CreateShepherdSessionInput) {
       headSha: input.headSha,
       state: "watching",
       settledReason: null,
+      holdReason: null,
       round: 0,
       maxRounds: input.maxRounds,
       consecutiveNoProgress: 0,
@@ -112,6 +113,7 @@ export function settleShepherdSession(
     ...session,
     state: "settled",
     settledReason: reason,
+    holdReason: null,
     pendingPrompt: null,
     pendingFingerprints: [],
   });
@@ -165,6 +167,8 @@ function fromRow(row: typeof shepherdSessions.$inferSelect): ShepherdSession {
     headSha: row.headSha,
     state: row.state as ShepherdState,
     settledReason: (row.settledReason as ShepherdSettledReason | null) ?? null,
+    // Live-projected on read by ShepherdService.getByChatId — not persisted.
+    holdReason: null,
     round: row.round,
     maxRounds: row.maxRounds,
     consecutiveNoProgress: row.consecutiveNoProgress,

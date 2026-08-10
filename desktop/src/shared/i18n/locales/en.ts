@@ -425,6 +425,7 @@ export const en = {
       refreshProjects: "Refresh projects",
       retryWorktreeCreation: "Retry worktree creation",
       settings: "Settings",
+      shepherding: "Shepherding this session",
       toggleChats: "Toggle chats",
       mobileDescription: "Displays the mobile sidebar.",
       title: "Sidebar",
@@ -1078,6 +1079,7 @@ export const en = {
       commandNoResults: "No matching commands or sessions.",
       commandPalette: "Command Palette",
       commandSessions: "Sessions",
+      commandShepherdPr: "Shepherd PR",
     },
     promptInput: {
       addPhotosOrFiles: "Add photos or files",

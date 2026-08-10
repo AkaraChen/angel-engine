@@ -9,7 +9,17 @@ export type ShepherdSettledReason =
   | "blocked"
   | "budget"
   | "stopped"
+  | "yielded"
   | "closed";
+
+/**
+ * Why a watching session is not sending right now.
+ * Projected live by the daemon from the send gate — not renderer-inferred.
+ */
+export type ShepherdHoldReason =
+  | "waiting_for_you"
+  | "queued_run"
+  | "ambiguous_run";
 
 export interface ShepherdSession {
   id: string;
@@ -20,6 +30,11 @@ export interface ShepherdSession {
   headSha: string | null;
   state: ShepherdState;
   settledReason: ShepherdSettledReason | null;
+  /**
+   * Live gate hold while `state === "watching"`. Always projected on read;
+   * null when not held or not watching.
+   */
+  holdReason: ShepherdHoldReason | null;
   round: number;
   maxRounds: number;
   consecutiveNoProgress: number;

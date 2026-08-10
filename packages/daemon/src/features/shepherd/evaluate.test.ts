@@ -62,6 +62,7 @@ function session(overrides: Partial<ShepherdSession> = {}): ShepherdSession {
     headSha: "sha-a",
     state: "watching",
     settledReason: null,
+    holdReason: null,
     round: 0,
     maxRounds: 10,
     consecutiveNoProgress: 0,
