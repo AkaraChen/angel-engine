@@ -26,30 +26,20 @@ export function isValidCron(value: string): boolean {
 
 /** Returns the first matching local-time minute strictly after `after`. */
 export function nextCronRun(value: string, after: Date): Date | undefined {
-  const until = new Date(after);
-  until.setFullYear(until.getFullYear() + MAX_SEARCH_YEARS);
-  return upcomingCronRuns(value, after, until, 1)[0];
-}
-
-/** Returns matching local-time minutes in `(after, until]`. */
-export function upcomingCronRuns(
-  value: string,
-  after: Date,
-  until: Date,
-  limit = 10_000,
-): Date[] {
   const cron = parseCron(value);
-  if (cron === undefined || limit <= 0 || until <= after) return [];
+  if (cron === undefined) return undefined;
 
   const candidate = new Date(after);
   candidate.setSeconds(0, 0);
   candidate.setMinutes(candidate.getMinutes() + 1);
-  const runs: Date[] = [];
-  while (candidate <= until && runs.length < limit) {
-    if (matches(cron, candidate)) runs.push(new Date(candidate));
+  const limit = new Date(candidate);
+  limit.setFullYear(limit.getFullYear() + MAX_SEARCH_YEARS);
+
+  while (candidate <= limit) {
+    if (matches(cron, candidate)) return new Date(candidate);
     candidate.setMinutes(candidate.getMinutes() + 1);
   }
-  return runs;
+  return undefined;
 }
 
 function parseCron(value: string): CronExpression | undefined {

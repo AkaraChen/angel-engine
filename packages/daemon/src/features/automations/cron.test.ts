@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { isValidCron, nextCronRun, upcomingCronRuns } from "./cron";
+import { isValidCron, nextCronRun } from "./cron";
 
 describe("automation cron", () => {
   it.each([
@@ -25,16 +25,5 @@ describe("automation cron", () => {
       second?.getMinutes(),
       third?.getMinutes(),
     ]).toEqual([15, 20, 25]);
-  });
-
-  it("expands a custom expression over a bounded preview window", () => {
-    const after = new Date(2026, 7, 10, 9, 1, 30);
-    const until = new Date(2026, 7, 10, 9, 16);
-
-    expect(upcomingCronRuns("*/5 * * * *", after, until)).toEqual([
-      new Date(2026, 7, 10, 9, 5),
-      new Date(2026, 7, 10, 9, 10),
-      new Date(2026, 7, 10, 9, 15),
-    ]);
   });
 });

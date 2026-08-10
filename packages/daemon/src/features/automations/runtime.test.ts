@@ -24,7 +24,6 @@ const automation: Automation = {
   ...record,
   runs: [],
   status: "active",
-  upcomingOccurrences: [],
 };
 const chat: Chat = {
   archived: false,

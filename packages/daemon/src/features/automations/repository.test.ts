@@ -88,13 +88,11 @@ describe("automation repository", () => {
     );
     const listed = await run(listAutomations());
     expect(listed).toMatchObject([{ id: created.id, status: "active" }]);
-    expect(listed[0]?.upcomingOccurrences).toHaveLength(1);
 
     const paused = await run(
       updateAutomationRecord(created.id, { enabled: false }, null),
     );
     expect(paused).toMatchObject({ nextRunAt: null, status: "paused" });
-    expect(paused.upcomingOccurrences).toEqual([]);
 
     const history = await run(
       createAutomationRun({

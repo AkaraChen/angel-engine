@@ -35,7 +35,6 @@ export interface Automation {
   runs: AutomationRun[];
   runtime: string;
   status: AutomationStatus;
-  upcomingOccurrences: string[];
   updatedAt: string;
   workspaceKind: AutomationWorkspaceKind;
 }

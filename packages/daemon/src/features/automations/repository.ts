@@ -15,7 +15,6 @@ import { Effect } from "effect";
 import { automationRuns, automations } from "../../db/schema";
 import { type Db, withDatabase } from "../../platform/db";
 import { DaemonError } from "../../platform/errors";
-import { upcomingCronRuns } from "./cron";
 
 const DEFAULT_HISTORY_LIMIT = 100;
 
@@ -275,17 +274,10 @@ function toAutomation(
   runRows: AutomationRunRow[],
 ): Automation {
   const runs = runRows.map(toAutomationRun);
-  const now = new Date();
-  const previewEnd = new Date(now.getTime() + 24 * 60 * 60 * 1_000);
   return {
     ...record,
     runs,
     status: automationStatus(record.enabled, runs),
-    upcomingOccurrences: record.enabled
-      ? upcomingCronRuns(record.cron, now, previewEnd).map((run) =>
-          run.toISOString(),
-        )
-      : [],
   };
 }
 
