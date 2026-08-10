@@ -38,7 +38,9 @@ afterEach(() => {
 
 describe("AboutSection diagnostics copy", () => {
   it("confirms a successful copy", async () => {
-    const writeText = vi.fn<() => Promise<void>>().mockResolvedValue();
+    const writeText = vi
+      .fn<(text: string) => Promise<void>>()
+      .mockResolvedValue();
     vi.stubGlobal("navigator", { ...navigator, clipboard: { writeText } });
 
     renderSection();
@@ -46,7 +48,7 @@ describe("AboutSection diagnostics copy", () => {
 
     await screen.findByText("Copied");
     expect(writeText).toHaveBeenCalledOnce();
-    const copied = writeText.mock.calls[0]?.[0] as unknown as string;
+    const copied = writeText.mock.calls[0]?.[0];
     expect(copied).toContain("app=");
     expect(copied).toContain("daemon=1.2.3");
     // Secret-free by contract: no token material ever leaves in diagnostics.
