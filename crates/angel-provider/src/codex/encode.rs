@@ -10,6 +10,20 @@ impl CodexAdapter {
         effect: &angel_engine::ProtocolEffect,
         options: &TransportOptions,
     ) -> Result<Value, angel_engine::EngineError> {
+        // Codex app-server does not accept host MCP server descriptors yet.
+        // Reject non-empty inject with a structured capability error rather
+        // than silently dropping servers.
+        match &effect.method {
+            ProtocolMethod::StartConversation
+            | ProtocolMethod::ResumeConversation
+            | ProtocolMethod::ForkConversation => {
+                angel_engine::ensure_mcp_injection_allowed(
+                    &options.mcp_injection,
+                    &self.capabilities().mcp.inject,
+                )?;
+            }
+            _ => {}
+        }
         match &effect.method {
             ProtocolMethod::Initialize => Ok(json!({
                 "clientInfo": client_info_json(&options.client_info),

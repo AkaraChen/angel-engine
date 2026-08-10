@@ -5,7 +5,7 @@ pub(super) fn ready_client() -> (Client, String) {
     let mut client = ClientOptions::builder()
         .acp("fake-agent")
         .need_auth(false)
-        .build_client();
+        .build_client().expect("client");
     let initialize = client.initialize().expect("initialize");
     client
         .receive_json_value(response(
@@ -55,7 +55,7 @@ pub(super) fn ready_uri_mode_client() -> (Client, String) {
     let mut client = ClientOptions::builder()
         .acp("fake-agent")
         .need_auth(false)
-        .build_client();
+        .build_client().expect("client");
     let initialize = client.initialize().expect("initialize");
     client
         .receive_json_value(response(
@@ -99,7 +99,7 @@ pub(super) fn ready_uri_mode_client() -> (Client, String) {
 pub(super) fn ready_codex_client() -> (Client, String) {
     let mut client = ClientOptions::builder()
         .codex_app_server("codex")
-        .build_client();
+        .build_client().expect("client");
     let initialize = client.initialize().expect("initialize");
     client
         .receive_json_value(response(

@@ -11,6 +11,30 @@ use std::path::PathBuf;
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 
+use crate::capabilities::CapabilitySupport;
+use crate::error::EngineError;
+
+/// Capability id returned by [`CapabilitySupport::require`] / client errors when
+/// MCP host injection is not available on the adapter.
+pub const MCP_INJECT_CAPABILITY: &str = "mcp.inject";
+
+/// Capability id for host skill package injection (filesystem materialization).
+pub const SKILL_INJECT_CAPABILITY: &str = "skills.inject";
+
+/// Reject non-empty MCP injection when the adapter does not support it.
+///
+/// Empty config is always allowed (no-op). Non-empty config requires
+/// [`CapabilitySupport::is_supported`] on `mcp.inject`.
+pub fn ensure_mcp_injection_allowed(
+    injection: &McpInjectionConfig,
+    support: &CapabilitySupport,
+) -> Result<(), EngineError> {
+    if injection.is_empty() {
+        return Ok(());
+    }
+    support.require(MCP_INJECT_CAPABILITY)
+}
+
 /// Host-owned skill injection for a runtime or conversation scope.
 ///
 /// Lifecycle: apply **before** the first turn of a new session (and re-apply
@@ -211,5 +235,38 @@ mod tests {
         let value = serde_json::to_value(&config).unwrap();
         let back: SkillInjectionConfig = serde_json::from_value(value).unwrap();
         assert_eq!(back, config);
+    }
+
+    #[test]
+    fn empty_mcp_injection_is_allowed_even_when_unsupported() {
+        ensure_mcp_injection_allowed(
+            &McpInjectionConfig::default(),
+            &CapabilitySupport::Unsupported,
+        )
+        .expect("empty inject is a no-op");
+    }
+
+    #[test]
+    fn non_empty_mcp_injection_requires_support() {
+        let injection = McpInjectionConfig {
+            servers: vec![McpServerConfig {
+                name: "stub".into(),
+                transport: McpServerTransport::Stdio {
+                    command: "true".into(),
+                    args: Vec::new(),
+                    env: BTreeMap::new(),
+                },
+            }],
+        };
+        let err = ensure_mcp_injection_allowed(&injection, &CapabilitySupport::Unsupported)
+            .expect_err("unsupported inject must fail");
+        assert_eq!(
+            err,
+            EngineError::CapabilityUnsupported {
+                capability: MCP_INJECT_CAPABILITY.to_string(),
+            }
+        );
+        ensure_mcp_injection_allowed(&injection, &CapabilitySupport::Supported)
+            .expect("supported inject ok");
     }
 }

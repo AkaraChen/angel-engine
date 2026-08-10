@@ -473,26 +473,45 @@ Status: implemented on the protocol-neutral + client + ACP path.
 
 ### 12.2 Capabilities
 
-| Flag | Meaning |
-| --- | --- |
-| `skills.inject` | Host may inject skill packages (FS materialization path) |
-| `mcp.inject` | Adapter accepts MCP server descriptors on session start/load/fork |
+| Flag | Constant | Meaning |
+| --- | --- | --- |
+| `skills.inject` | `SKILL_INJECT_CAPABILITY` | Host may inject skill packages (FS materialization path) |
+| `mcp.inject` | `MCP_INJECT_CAPABILITY` | Adapter accepts MCP server descriptors on session start/load/fork |
 
-ACP: both `Supported`. Codex: `skills.inject` Supported, `mcp.inject` Unsupported (not wired).
+| Adapter / protocol | `mcp.inject` |
+| --- | --- |
+| ACP + ACP variants (OpenCode, Kimi, Gemini, Copilot, Qoder, Cursor, Cline) | **Supported** — encodes `mcpServers` |
+| Codex app-server | **Unsupported** — non-empty inject returns `CapabilityUnsupported { capability: "mcp.inject" }` |
+| Custom / unknown | **Unknown** until an explicit adapter is provided |
+
+Empty `McpInjectionConfig` is always a no-op and never errors.
 
 ### 12.3 Client API (`angel-engine-client`)
 
 | Surface | Notes |
 | --- | --- |
+| `mcp_injection_capability(options)` / `can_inject_mcp(options)` | **Queryable before session** — use to pick Skill vs MCP per agent |
+| `ensure_mcp_injection_for_options` / `inject_mcp_into_options` | Validate or apply config with structured errors |
+| `Client::mcp_injection_capability` / `Client::inject_mcp` | Live client apply path |
 | `ClientOptions.skill_injection` / `mcp_injection` | Runtime-level; forwarded into `TransportOptions` |
-| `RuntimeOptionsOverrides.skill_injection` / `mcp_injection` | Desktop/daemon overrides |
+| `RuntimeOptionsOverrides.skill_injection` / `mcp_injection` | Desktop/daemon overrides; `create_runtime_options` rejects unsupported non-empty MCP |
 | `list_agent_skills_with_injection` | Merges host roots as `System` scope after project/user |
 | `materialize_skill_injection` | Symlink/copy `ensure` skills into runtime global dirs |
-| `SkillsSnapshot.can_inject` / `can_inject_mcp` | Snapshot capability bits |
+| `SkillsSnapshot.can_inject` / `can_inject_mcp` | Snapshot capability bits after conversation exists |
+
+Structured error on unsupported inject:
+
+```text
+EngineError::CapabilityUnsupported { capability: "mcp.inject" }
+```
+
+(surfaced as `ClientError::Engine(...)`).
 
 ### 12.4 ACP plumbing
 
 `session/new`, `session/load`/`resume`, and fork encode `mcpServers` from `TransportOptions.mcp_injection` (empty array by default). No host MCP server process.
+
+Codex encode path **rejects** non-empty `mcp_injection` with the same capability error (defense in depth).
 
 ### 12.5 Agent implementer minimum (Skill path)
 

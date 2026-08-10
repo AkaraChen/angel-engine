@@ -74,7 +74,7 @@ fn acp_model_variants_do_not_infer_reasoning_options() {
     let mut client = ClientOptions::builder()
         .acp("fake-agent")
         .need_auth(false)
-        .build_client();
+        .build_client().expect("client");
     let initialize = client.initialize().expect("initialize");
     client
         .receive_json_value(response(

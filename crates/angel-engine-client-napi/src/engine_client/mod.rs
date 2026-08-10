@@ -23,7 +23,7 @@ impl AngelEngineClient {
         trace_napi_sync_result("AngelEngineClient.new", detail, || {
             let adapter = NapiRuntimeAdapter::new(&options, adapter)?;
             Ok(Self {
-                client: EngineClient::new_with_adapter(options, adapter),
+                client: client_result(EngineClient::new_with_adapter(options, adapter))?,
             })
         })
     }

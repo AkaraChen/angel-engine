@@ -13,6 +13,7 @@ mod core;
 mod error;
 mod event;
 mod importable;
+mod injection_api;
 mod process;
 mod process_manager;
 mod runtime;
@@ -57,8 +58,12 @@ pub use settings::{
     ReasoningLevelSettingSnapshot, ThreadSettingsSnapshot,
 };
 pub use angel_engine::{
-    HostInjectionConfig, McpInjectionConfig, McpServerConfig, McpServerTransport,
-    SkillInjectionConfig,
+    HostInjectionConfig, MCP_INJECT_CAPABILITY, McpInjectionConfig, McpServerConfig,
+    McpServerTransport, SKILL_INJECT_CAPABILITY, SkillInjectionConfig, ensure_mcp_injection_allowed,
+};
+pub use injection_api::{
+    can_inject_mcp, ensure_mcp_injection_for_options, inject_mcp_into_options,
+    mcp_injection_capability, mcp_inject_unsupported_error,
 };
 pub use skills::{
     SkillMaterializeReport, find_skill_package_dir, list_agent_skills,

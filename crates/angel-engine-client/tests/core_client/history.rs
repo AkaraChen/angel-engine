@@ -53,7 +53,7 @@ fn codex_slash_compact_is_request_backed_without_starting_turn() {
 fn codex_resume_projects_raw_tool_history_into_display_messages() {
     let mut client = ClientOptions::builder()
         .codex_app_server("codex")
-        .build_client();
+        .build_client().expect("client");
     let initialize = client.initialize().expect("initialize");
     client
         .receive_json_value(response(
@@ -187,7 +187,7 @@ fn acp_resume_projects_tool_history_into_display_messages() {
     let mut client = ClientOptions::builder()
         .acp("fake-agent")
         .need_auth(false)
-        .build_client();
+        .build_client().expect("client");
     let initialize = client.initialize().expect("initialize");
     client
         .receive_json_value(response(

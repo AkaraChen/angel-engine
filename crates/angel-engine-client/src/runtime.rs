@@ -273,6 +273,8 @@ pub fn create_runtime_options(
         client.mcp_injection = mcp_injection;
     }
 
+    crate::ensure_mcp_injection_for_options(&client)?;
+
     Ok(RuntimeOptions {
         client,
         runtime,
@@ -494,5 +496,37 @@ mod tests {
         );
         assert_eq!(options.client.mcp_injection.servers.len(), 1);
         assert_eq!(options.client.mcp_injection.servers[0].name, "stub");
+        assert!(crate::can_inject_mcp(&options.client));
+    }
+
+    #[test]
+    fn codex_runtime_rejects_non_empty_mcp_injection() {
+        use angel_engine::{McpInjectionConfig, McpServerConfig, McpServerTransport, MCP_INJECT_CAPABILITY};
+        use std::collections::BTreeMap;
+
+        let err = create_runtime_options(
+            Some("codex"),
+            RuntimeOptionsOverrides {
+                mcp_injection: Some(McpInjectionConfig {
+                    servers: vec![McpServerConfig {
+                        name: "stub".into(),
+                        transport: McpServerTransport::Stdio {
+                            command: "true".into(),
+                            args: Vec::new(),
+                            env: BTreeMap::new(),
+                        },
+                    }],
+                }),
+                ..RuntimeOptionsOverrides::default()
+            },
+        )
+        .expect_err("codex mcp inject must fail");
+
+        match err {
+            ClientError::Engine(angel_engine::EngineError::CapabilityUnsupported { capability }) => {
+                assert_eq!(capability, MCP_INJECT_CAPABILITY);
+            }
+            other => panic!("expected CapabilityUnsupported, got {other}"),
+        }
     }
 }
