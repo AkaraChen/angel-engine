@@ -42,6 +42,7 @@ const gitHubPullRequestPayloadSchema = arkType({
   body: "string | null",
   headRefName: "string > 0",
   isDraft: "boolean",
+  "isCrossRepository?": "boolean",
   number: positiveInteger,
   state: "string > 0",
   title: "string > 0",
@@ -166,7 +167,7 @@ export function resolveGitHubUrl(
     const fields =
       parsed.kind === "issue"
         ? "number,title,body,state,author,url"
-        : "number,title,body,state,author,url,baseRefName,headRefName,isDraft";
+        : "number,title,body,state,author,url,baseRefName,headRefName,isDraft,isCrossRepository";
     const command =
       parsed.kind === "issue"
         ? (["issue", "view", parsed.url, "--json", fields] as const)
@@ -231,6 +232,7 @@ function buildResolvedItem(
     body,
     headRefName: payload.headRefName,
     isDraft: payload.isDraft,
+    isCrossRepository: payload.isCrossRepository,
     state: payload.state,
     title: payload.title,
     url: payload.url,

@@ -1,5 +1,6 @@
 import type {
   Chat,
+  ChatCreateInput,
   ChatCreationLocation,
   ChatElicitationResponse,
   ChatHistoryMessage,
@@ -107,6 +108,8 @@ export interface StartRunOptions {
   runtime?: string;
   /** Optional title for chats created by this run (e.g. session handoff). */
   title?: string;
+  sourceLink?: ChatCreateInput["sourceLink"];
+  worktreeRef?: ChatCreateInput["worktreeRef"];
   worktreeSetupApproval?: string;
 }
 

@@ -59,6 +59,27 @@ describe("chat create input", () => {
     expect(input).toMatchObject({ remoteThreadId: "remote-1" });
   });
 
+  it("carries source metadata and a pull request head ref", () => {
+    const input = chatCreateInputSchema({
+      sourceLink: {
+        kind: "pullRequest",
+        provider: "github",
+        url: "https://github.com/acme/widgets/pull/42",
+      },
+      worktreeRef: {
+        remoteRef: "pull/42/head",
+        type: "existingBranch",
+        value: "fix/widgets",
+      },
+    });
+
+    expect(input).not.toBeInstanceOf(arkType.errors);
+    expect(input).toMatchObject({
+      sourceLink: { kind: "pullRequest", provider: "github" },
+      worktreeRef: { type: "existingBranch", value: "fix/widgets" },
+    });
+  });
+
   it("rejects an empty remoteThreadId instead of silently dropping it", () => {
     expect(chatCreateInputSchema({ remoteThreadId: "" })).toBeInstanceOf(
       arkType.errors,

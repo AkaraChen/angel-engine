@@ -38,6 +38,45 @@ const result: ChatSendResult = {
   text: "done",
 };
 
+describe("daemon internal bridge", () => {
+  it("authenticates with captured configuration instead of process.env", async () => {
+    const previous = process.env.ANGEL_MAIN_BRIDGE_SECRET;
+    process.env.ANGEL_MAIN_BRIDGE_SECRET = "leaked-env-secret";
+    try {
+      const app = new Hono();
+      registerApi(
+        app,
+        fakeDaemonRuntime(),
+        createChatEvents({ publish: vi.fn() }),
+        { internalBridgeSecret: "captured-secret" },
+      );
+
+      const rejected = await app.request("/api/internal/secrets/linear", {
+        body: JSON.stringify({ token: "linear-token" }),
+        headers: {
+          "content-type": "application/json",
+          "x-angel-main-secret": "leaked-env-secret",
+        },
+        method: "PUT",
+      });
+      expect(rejected.status).not.toBe(200);
+
+      const accepted = await app.request("/api/internal/secrets/linear", {
+        body: JSON.stringify({ token: "linear-token" }),
+        headers: {
+          "content-type": "application/json",
+          "x-angel-main-secret": "captured-secret",
+        },
+        method: "PUT",
+      });
+      expect(accepted.status).toBe(200);
+    } finally {
+      if (previous === undefined) delete process.env.ANGEL_MAIN_BRIDGE_SECRET;
+      else process.env.ANGEL_MAIN_BRIDGE_SECRET = previous;
+    }
+  });
+});
+
 describe("daemon chat runs", () => {
   it("makes a restart-ambiguous send discoverable and clearable by chat", async () => {
     let ambiguous: ChatAmbiguousRunSnapshot | null = {

@@ -5,6 +5,7 @@ import type {
   ChatPrewarmResult,
   ChatRuntimeConfig,
 } from "@angel-engine/daemon-api/chat";
+import type { ResolvedTaskLink } from "@angel-engine/daemon-api/links";
 
 import type { QueryClient } from "@tanstack/react-query";
 import type { ApiClient } from "@/platform/api-client";
@@ -75,6 +76,8 @@ interface GitHubResolveQueryParams {
   staleTime?: number;
   url: string | null;
 }
+
+interface TaskLinkResolveQueryParams extends GitHubResolveQueryParams {}
 
 interface ChatPrewarmQueryParams {
   api: ApiClient;
@@ -288,6 +291,22 @@ export function githubResolveQueryOptions({
     enabled: enabled && is.nonEmptyString(url),
     queryFn: async () => api.github.resolveUrl({ url: url ?? "" }),
     queryKey: queryKeys.github.resolve(url),
+    retry: false,
+    staleTime,
+  });
+}
+
+export function taskLinkResolveQueryOptions({
+  api,
+  enabled = true,
+  staleTime = 30_000,
+  url,
+}: TaskLinkResolveQueryParams) {
+  return queryOptions({
+    enabled: enabled && is.nonEmptyString(url),
+    queryFn: async (): Promise<ResolvedTaskLink> =>
+      api.links.resolve({ url: url ?? "" }),
+    queryKey: ["task-link", "resolve", url],
     retry: false,
     staleTime,
   });

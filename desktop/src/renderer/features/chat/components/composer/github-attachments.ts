@@ -1,6 +1,6 @@
-import type { GitHubResolvedItem } from "@angel-engine/daemon-api/github";
+import type { ResolvedTaskLink } from "@angel-engine/daemon-api/links";
 
-export type ComposerGitHubAttachment = GitHubResolvedItem & {
+export type ComposerGitHubAttachment = ResolvedTaskLink & {
   id: string;
 };
 
@@ -16,5 +16,7 @@ export function appendGitHubContexts(
 }
 
 export function githubAttachmentLabel(item: ComposerGitHubAttachment): string {
-  return `#${item.number} · ${item.title}`;
+  return item.provider === "github"
+    ? `#${item.number} · ${item.title}`
+    : `${item.identifier} · ${item.title}`;
 }

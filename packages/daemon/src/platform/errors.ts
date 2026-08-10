@@ -13,6 +13,7 @@ interface DaemonErrorProps {
   cause?: unknown;
   code: DaemonErrorCode;
   message: string;
+  relatedChatId?: string;
   status: DaemonErrorStatus;
 }
 
@@ -288,6 +289,72 @@ export class DaemonError extends Data.TaggedError(
       code: "github-fetch-failed",
       message: gitMessageFromCause(cause, fallback),
       status: 500,
+    });
+  }
+
+  static linkUnsupported() {
+    return new DaemonError({
+      code: "link-unsupported",
+      message: "Use a GitHub issue, GitHub pull request, or Linear issue link.",
+      status: 400,
+    });
+  }
+
+  static linearTokenMissing() {
+    return new DaemonError({
+      code: "linear-token-missing",
+      message: "Connect Linear in Settings before resolving this issue.",
+      status: 400,
+    });
+  }
+
+  static linearUnauthorized() {
+    return new DaemonError({
+      code: "linear-unauthorized",
+      message: "Linear rejected the configured API token.",
+      status: 403,
+    });
+  }
+
+  static linearItemNotFound() {
+    return new DaemonError({
+      code: "linear-item-not-found",
+      message: "Linear issue was not found or is not visible to this token.",
+      status: 404,
+    });
+  }
+
+  static linearFetchFailed(cause: unknown) {
+    return new DaemonError({
+      cause,
+      code: "linear-fetch-failed",
+      message: messageFromCause(cause, "Linear fetch failed."),
+      status: 500,
+    });
+  }
+
+  static prFromForkUnsupported() {
+    return new DaemonError({
+      code: "pr-from-fork-unsupported",
+      message: "Pull requests from forks are not supported yet.",
+      status: 400,
+    });
+  }
+
+  static worktreeBranchConflict(branch: string) {
+    return new DaemonError({
+      code: "worktree-branch-conflict",
+      message: `Local branch ${branch} has commits that are not in the pull request head. Rename or reconcile it before retrying.`,
+      status: 409,
+    });
+  }
+
+  static worktreeBranchInUse(branch: string, relatedChatId?: string) {
+    return new DaemonError({
+      code: "worktree-branch-in-use",
+      message: `Branch ${branch} is already checked out in another worktree.`,
+      relatedChatId,
+      status: 409,
     });
   }
 

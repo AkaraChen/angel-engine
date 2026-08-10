@@ -63,6 +63,7 @@ export const en = {
       proposed: "Proposed",
       question: "Question",
       reload: "Reload",
+      retry: "Retry",
       running: "Running",
       save: "Save",
       saving: "Saving",
@@ -376,6 +377,7 @@ export const en = {
       noChats: "No chats",
       noProjects: "No projects yet",
       noStandaloneChats: "No standalone chats",
+      openBranchChat: "Open chat using this branch",
       projects: "Projects",
       powerWorktreeHome: "Home",
       powerWorktreeHistoricalChat: "Historical Chat",
@@ -529,6 +531,21 @@ export const en = {
         sourceUser: "User",
         sourceUserOverride: "User · overridden",
         warningsCount: "{{count}} warning(s) while loading keybindings",
+      },
+      linear: {
+        apiConnection: "API connection",
+        connect: "Connect",
+        connected: "Connected",
+        connectFailed: "Could not connect Linear.",
+        description:
+          "The token is encrypted by the desktop main process and is never exposed back to the renderer.",
+        disconnect: "Disconnect",
+        disconnectFailed: "Could not disconnect Linear.",
+        notConnected: "Not connected",
+        replaceToken: "Replace token",
+        title: "Linear",
+        tokenLabel: "Linear API token",
+        tokenPlaceholder: "lin_api_…",
       },
       mobile: {
         copied: "Copied",
@@ -746,6 +763,9 @@ export const en = {
       fileTypeBlocked: "File type blocked",
       fileTooLarge: "File is too large",
       files: "Files",
+      fromLink: "From link",
+      fromLinkPlaceholder:
+        "Paste a GitHub or Linear issue link, or search GitHub",
       githubErrors: {
         cliMissing:
           "GitHub CLI (gh) is not installed or not on PATH. Install it and try again.",
@@ -758,6 +778,10 @@ export const en = {
       },
       githubIssue: "Issue",
       githubPullRequest: "Pull request",
+      linearConnectAction: "Connect Linear",
+      linearConnectDescription: "Connect Linear before resolving this issue.",
+      linearIssue: "Linear issue",
+      linearItemMeta: "{{identifier}} · Linear · {{state}}",
       loadingCommands: "Loading commands",
       loadingSkills: "Loading skills",
       loadingValue: "Loading...",
@@ -786,6 +810,23 @@ export const en = {
       skills: "Skills",
       switchToBuild: "Switch to build mode",
       switchToPlan: "Switch to plan mode",
+      taskLinkErrors: {
+        linearFetchFailed: "Could not fetch that Linear issue.",
+        linearNotFound: "Linear issue was not found.",
+        linearUnauthorized: "Linear rejected the configured API token.",
+        prForkUnsupported: "Pull requests from forks are not supported yet.",
+        unsupported: "That task link is not supported.",
+      },
+      taskLinkHintComplete:
+        "Paste a complete GitHub issue, pull request, or Linear issue link.",
+      taskLinkHintGitHubPath:
+        "This is a GitHub link, but it is not an issue or pull request.",
+      taskLinkHintLinearPath: "This is a Linear link, but it is not an issue.",
+      taskLinkHintSupported:
+        "Supported links: GitHub issues, GitHub pull requests, and Linear issues.",
+      taskLinkStateClosed: "Closed",
+      taskLinkStateMerged: "Merged",
+      taskLinkStateOpen: "Open",
       toasts: {
         couldNotChangeMode: "Could not change mode",
         couldNotReadFile: "Could not read file",

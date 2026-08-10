@@ -63,6 +63,7 @@ export const ko = {
       proposed: "제안됨",
       question: "질문",
       reload: "다시 로드",
+      retry: "다시 시도",
       running: "실행 중",
       save: "저장",
       saving: "저장 중",
@@ -375,6 +376,7 @@ export const ko = {
       noChats: "채팅이 없습니다",
       noProjects: "아직 프로젝트가 없습니다",
       noStandaloneChats: "독립 채팅이 없습니다",
+      openBranchChat: "이 브랜치를 사용 중인 채팅 열기",
       projects: "프로젝트",
       powerWorktreeHome: "홈",
       powerWorktreeHistoricalChat: "채팅 기록",
@@ -528,6 +530,21 @@ export const ko = {
         sourceUser: "User",
         sourceUserOverride: "User · overridden",
         warningsCount: "{{count}} warning(s) while loading keybindings",
+      },
+      linear: {
+        apiConnection: "API 연결",
+        connect: "연결",
+        connected: "연결됨",
+        connectFailed: "Linear에 연결할 수 없습니다.",
+        description:
+          "토큰은 데스크톱 메인 프로세스에서 암호화되며 렌더러에 다시 노출되지 않습니다.",
+        disconnect: "연결 해제",
+        disconnectFailed: "Linear 연결을 해제할 수 없습니다.",
+        notConnected: "연결되지 않음",
+        replaceToken: "토큰 교체",
+        title: "Linear",
+        tokenLabel: "Linear API 토큰",
+        tokenPlaceholder: "lin_api_…",
       },
       mobile: {
         copied: "복사됨",
@@ -742,6 +759,9 @@ export const ko = {
       fileTypeBlocked: "파일 형식 차단됨",
       fileTooLarge: "파일이 너무 큽니다",
       files: "파일",
+      fromLink: "링크에서",
+      fromLinkPlaceholder:
+        "GitHub 또는 Linear 이슈 링크를 붙여넣거나 GitHub 검색",
       githubErrors: {
         cliMissing: "GitHub CLI(gh)가 설치되지 않았거나 PATH에 없습니다.",
         cliUnauthenticated:
@@ -752,6 +772,10 @@ export const ko = {
       },
       githubIssue: "Issue",
       githubPullRequest: "Pull request",
+      linearConnectAction: "Linear 연결",
+      linearConnectDescription: "이 이슈를 확인하기 전에 Linear에 연결하세요.",
+      linearIssue: "Linear 이슈",
+      linearItemMeta: "{{identifier}} · Linear · {{state}}",
       loadingCommands: "명령 로드 중",
       loadingSkills: "스킬 로드 중",
       loadingValue: "로드 중...",
@@ -781,6 +805,23 @@ export const ko = {
       skills: "스킬",
       switchToBuild: "실행 모드로 전환",
       switchToPlan: "계획 모드로 전환",
+      taskLinkErrors: {
+        linearFetchFailed: "Linear 이슈를 가져올 수 없습니다.",
+        linearNotFound: "Linear 이슈를 찾을 수 없습니다.",
+        linearUnauthorized: "Linear가 설정된 API 토큰을 거부했습니다.",
+        prForkUnsupported: "fork에서 온 Pull Request는 아직 지원되지 않습니다.",
+        unsupported: "이 작업 링크는 지원되지 않습니다.",
+      },
+      taskLinkHintComplete:
+        "GitHub 이슈, Pull Request 또는 Linear 이슈의 전체 링크를 붙여넣으세요.",
+      taskLinkHintGitHubPath:
+        "GitHub 링크이지만 이슈나 Pull Request가 아닙니다.",
+      taskLinkHintLinearPath: "Linear 링크이지만 이슈가 아닙니다.",
+      taskLinkHintSupported:
+        "GitHub 이슈, GitHub Pull Request 및 Linear 이슈 링크를 지원합니다.",
+      taskLinkStateClosed: "닫힘",
+      taskLinkStateMerged: "병합됨",
+      taskLinkStateOpen: "열림",
       toasts: {
         couldNotChangeMode: "모드를 변경할 수 없습니다",
         couldNotReadFile: "파일을 읽을 수 없습니다",

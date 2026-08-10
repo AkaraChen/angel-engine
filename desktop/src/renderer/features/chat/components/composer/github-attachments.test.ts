@@ -13,6 +13,7 @@ const sample: ComposerGitHubAttachment = {
   kind: "issue",
   number: 1,
   owner: "acme",
+  provider: "github",
   repo: "widgets",
   state: "OPEN",
   title: "title",

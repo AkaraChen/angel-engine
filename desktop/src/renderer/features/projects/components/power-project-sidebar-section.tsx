@@ -9,8 +9,6 @@ import {
   GitBranch,
   SpinnerGap as Loader2,
   Plus,
-  ArrowClockwise,
-  X,
 } from "@phosphor-icons/react";
 import { AnimatePresence, m } from "framer-motion";
 import { useEffect, useMemo } from "react";
@@ -30,6 +28,7 @@ import {
 } from "@/components/workspace-sidebar-primitives";
 import { groupProjectChatsByWorktree } from "@/features/chat/worktree-grouping";
 import { AddProjectMenu } from "@/features/projects/components/add-project-menu";
+import { WorktreeCreationActions } from "@/features/projects/components/worktree-creation-actions";
 
 type MaybeAsync = void | Promise<void>;
 
@@ -43,6 +42,7 @@ interface PowerProjectSidebarSectionProps {
     project: Project,
     worktreeGroup: ProjectWorktreeChatGroup,
   ) => MaybeAsync;
+  onOpenChat: (chat: Chat) => MaybeAsync;
   onRetryWorktreeCreation: (chat: Chat) => MaybeAsync;
   onShowProjectContextMenu: (project: Project) => MaybeAsync;
   onShowWorktreeContextMenu: (
@@ -60,6 +60,7 @@ export function PowerProjectSidebarSection({
   onCreateProjectChat,
   onCancelWorktreeCreation,
   onOpenWorktree,
+  onOpenChat,
   onRetryWorktreeCreation,
   onShowProjectContextMenu,
   onShowWorktreeContextMenu,
@@ -242,32 +243,13 @@ export function PowerProjectSidebarSection({
                                           progress: creation.progress,
                                         })}
                                   </span>
-                                  {failed && (
-                                    <button
-                                      aria-label={t(
-                                        "sidebar.retryWorktreeCreation",
-                                      )}
-                                      className="rounded p-1 hover:bg-sidebar-accent"
-                                      onClick={() =>
-                                        void onRetryWorktreeCreation(chat)
-                                      }
-                                      title={t("sidebar.retryWorktreeCreation")}
-                                      type="button"
-                                    >
-                                      <ArrowClockwise className="size-3" />
-                                    </button>
-                                  )}
-                                  <button
-                                    aria-label={t("common.cancel")}
-                                    className="rounded p-1 hover:bg-sidebar-accent"
-                                    onClick={() =>
-                                      void onCancelWorktreeCreation(chat)
-                                    }
-                                    title={t("common.cancel")}
-                                    type="button"
-                                  >
-                                    <X className="size-3" />
-                                  </button>
+                                  <WorktreeCreationActions
+                                    chat={chat}
+                                    onCancel={onCancelWorktreeCreation}
+                                    onOpenChat={onOpenChat}
+                                    onRetry={onRetryWorktreeCreation}
+                                    projectChats={projectChats}
+                                  />
                                 </div>
                               </AnimatedSidebarMenuItem>
                             );

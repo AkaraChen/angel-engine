@@ -1,4 +1,9 @@
 import { index, integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
+import type {
+  ChatSourceLink,
+  WorktreeCreationState,
+} from "@angel-engine/daemon-api/chat";
+import type { ProjectWorktreeCreateInput } from "@angel-engine/daemon-api/projects";
 
 export const projects = sqliteTable("projects", {
   id: text("id").primaryKey(),
@@ -30,6 +35,7 @@ export const chats = sqliteTable(
     cwd: text("cwd"),
     runtime: text("runtime").notNull(),
     remoteThreadId: text("remote_thread_id"),
+    sourceLink: text("source_link", { mode: "json" }).$type<ChatSourceLink>(),
     createdAt: text("created_at").notNull(),
     updatedAt: text("updated_at").notNull(),
     archived: integer("archived", { mode: "boolean" }).notNull().default(false),
@@ -67,9 +73,14 @@ export const worktreeCreationJobs = sqliteTable("worktree_creation_jobs", {
     .primaryKey()
     .references(() => chats.id, { onDelete: "cascade" }),
   error: text("error"),
+  errorCode: text("error_code").$type<WorktreeCreationState["errorCode"]>(),
   jobId: text("job_id").notNull(),
   progress: integer("progress").notNull(),
+  relatedChatId: text("related_chat_id"),
   setupApproval: text("setup_approval"),
+  worktreeRef: text("worktree_ref", { mode: "json" }).$type<
+    ProjectWorktreeCreateInput["ref"]
+  >(),
   stage: text("stage").notNull(),
   status: text("status").notNull(),
 });

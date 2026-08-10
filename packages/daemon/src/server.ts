@@ -234,7 +234,9 @@ export async function createDaemon(options: DaemonOptions): Promise<Daemon> {
     return context.json({ code: "internal", error: error.message }, 500);
   });
 
-  registerApi(app, runtime, chatEvents);
+  registerApi(app, runtime, chatEvents, {
+    internalBridgeSecret: options.internalBridgeSecret,
+  });
 
   app.put("/api/process-registry", async (context) => {
     const body = await context.req.json<unknown>();
