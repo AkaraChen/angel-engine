@@ -119,30 +119,35 @@ function SessionHandoffForm({
     staleTime: 15_000,
   });
 
-  const dirtyStatus: SessionHandoffDirtyStatus | null = dirtyQuery.data
-    ? {
-        branch: dirtyQuery.data.branch,
-        isDirty: dirtyQuery.data.isDirty,
-      }
-    : null;
+  // Derive from query `data` (reference-stable when unchanged). Do not build a
+  // fresh object each render — that fails react-hooks/exhaustive-deps on pack.
+  const dirtyStatus = useMemo((): SessionHandoffDirtyStatus | null => {
+    const status = dirtyQuery.data;
+    if (!status) return null;
+    return {
+      branch: status.branch,
+      isDirty: status.isDirty,
+    };
+  }, [dirtyQuery.data]);
 
+  const historyMessages = messagesQuery.data?.messages;
   const pack = useMemo(() => {
-    if (!messagesQuery.data) return null;
+    if (!historyMessages) return null;
     return buildSessionHandoffContextPack({
       dirtyStatus,
-      messages: messagesQuery.data.messages,
+      messages: historyMessages,
       notes,
       sourceChat: chat,
       targetRuntime: sameAgentRuntime ?? chat.runtime,
     });
-  }, [chat, dirtyStatus, messagesQuery.data, notes, sameAgentRuntime]);
+  }, [chat, dirtyStatus, historyMessages, notes, sameAgentRuntime]);
 
   // Recompute pack preview for a chosen target without mutating shared state.
   const previewFor = (targetRuntime: string) => {
-    if (!messagesQuery.data) return null;
+    if (!historyMessages) return null;
     return buildSessionHandoffContextPack({
       dirtyStatus,
-      messages: messagesQuery.data.messages,
+      messages: historyMessages,
       notes,
       sourceChat: chat,
       targetRuntime,
