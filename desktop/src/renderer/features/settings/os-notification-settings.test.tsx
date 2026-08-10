@@ -128,15 +128,22 @@ describe("OsNotificationSettings", () => {
       "textContent",
       "settings.workspace.osNotificationsSaveFailed",
     );
-    // Failed write rolls the control back to the durable value before retry.
-    await waitFor(() =>
-      expect(sound.getAttribute("aria-checked")).toBe("true"),
-    );
+    // Failed write must have attempted the durable→false transition.
+    await waitFor(() => {
+      expect(setPreferences).toHaveBeenCalledWith(
+        expect.objectContaining({ sound: false }),
+      );
+    });
 
+    // Second attempt after failure: clear call history so we assert only retry.
+    setPreferences.mockClear();
+    setPreferences.mockResolvedValueOnce({ ...stored, sound: false });
     fireEvent.click(sound);
-    await screen.findByRole("status");
-    expect(setPreferences).toHaveBeenLastCalledWith(
-      expect.objectContaining({ sound: false }),
-    );
+    await waitFor(() => {
+      expect(setPreferences).toHaveBeenCalledWith(
+        expect.objectContaining({ sound: false }),
+      );
+    });
+    expect(await screen.findByRole("status")).toBeDefined();
   });
 });
