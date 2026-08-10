@@ -4,6 +4,7 @@ import { describe, expect, it } from "vitest";
 import {
   deriveMergeBlockers,
   optionalFailedChecks,
+  type MergeBlocker,
 } from "./derive-merge-blockers";
 
 const readyStatus: GitHubPullRequestStatus = {
@@ -30,8 +31,59 @@ const readyStatus: GitHubPullRequestStatus = {
 };
 
 describe("deriveMergeBlockers", () => {
-  it("returns no blockers for a ready pull request", () => {
-    expect(deriveMergeBlockers(readyStatus)).toEqual([]);
+  it.each([
+    {
+      expected: [],
+      label: "ready pull request",
+      patch: {},
+    },
+    {
+      expected: [],
+      label: "branch behind a base that does not require freshness",
+      patch: { behindBy: 2 },
+    },
+    {
+      expected: [{ count: 2, kind: "behind-base" }],
+      label: "branch blocked by an up-to-date policy",
+      patch: { behindBy: 2, mergeStateStatus: "BEHIND" },
+    },
+    {
+      expected: [
+        {
+          checks: [
+            {
+              name: "build",
+              required: true,
+              state: "pending",
+              url: "https://example.test/build",
+            },
+          ],
+          kind: "required-checks-pending",
+        },
+      ],
+      label: "required check still running",
+      patch: {
+        checks: [
+          {
+            name: "build",
+            required: true,
+            state: "pending",
+            url: "https://example.test/build",
+          },
+        ],
+      },
+    },
+    {
+      expected: [{ kind: "repository-policy" }],
+      label: "otherwise unexplained repository policy",
+      patch: { mergeStateStatus: "BLOCKED" },
+    },
+  ] satisfies {
+    expected: MergeBlocker[];
+    label: string;
+    patch: Partial<GitHubPullRequestStatus>;
+  }[])("returns readable blockers for $label", ({ expected, patch }) => {
+    expect(deriveMergeBlockers({ ...readyStatus, ...patch })).toEqual(expected);
   });
 
   it("returns every readable blocker in severity order", () => {
@@ -67,11 +119,25 @@ describe("deriveMergeBlockers", () => {
     expect(blockers).toEqual([
       { kind: "conflict" },
       { kind: "draft" },
-      { kind: "required-checks-failed", names: ["typecheck"] },
-      { kind: "required-checks-pending", names: ["build"] },
+      {
+        checks: [
+          {
+            name: "typecheck",
+            required: true,
+            state: "failure",
+            url: null,
+          },
+        ],
+        kind: "required-checks-failed",
+      },
+      {
+        checks: [
+          { name: "build", required: true, state: "pending", url: null },
+        ],
+        kind: "required-checks-pending",
+      },
       { kind: "changes-requested" },
       { count: 1, kind: "unresolved-threads" },
-      { count: 4, kind: "behind-base" },
       { kind: "permission-denied" },
     ]);
   });
@@ -88,11 +154,5 @@ describe("deriveMergeBlockers", () => {
     expect(optionalFailedChecks(status).map((check) => check.name)).toEqual([
       "preview",
     ]);
-  });
-
-  it("surfaces an otherwise unexplained repository policy block", () => {
-    expect(
-      deriveMergeBlockers({ ...readyStatus, mergeStateStatus: "BLOCKED" }),
-    ).toEqual([{ kind: "repository-policy" }]);
   });
 });

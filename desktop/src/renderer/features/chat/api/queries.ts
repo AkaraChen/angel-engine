@@ -107,7 +107,7 @@ interface ArchiveWorkspaceMutationParams {
   api: ApiClient;
   onSuccess?: (
     data: Awaited<ReturnType<ApiClient["chats"]["archiveWorkspace"]>>,
-    chat: Chat,
+    chatId: string,
   ) => Promise<void> | void;
   queryClient: QueryClient;
 }
@@ -404,7 +404,7 @@ export function archiveWorkspaceMutationOptions({
   queryClient,
 }: ArchiveWorkspaceMutationParams) {
   return mutationOptions({
-    mutationFn: async (chat: Chat) => api.chats.archiveWorkspace(chat.id),
+    mutationFn: async (chatId: string) => api.chats.archiveWorkspace(chatId),
     onSuccess: async (data, variables) => {
       queryClient.setQueryData<Chat[]>(queryKeys.chats.list(), (current = []) =>
         current.filter((chat) => chat.id !== data.chat.id),

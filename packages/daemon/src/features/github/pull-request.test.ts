@@ -135,6 +135,32 @@ describe("GitHub pull request operations", () => {
     expect(calls.some((args) => args.includes(".behind_by"))).toBe(true);
   });
 
+  it.each([
+    "HTTP 403: Resource not accessible by integration",
+    "HTTP 404: Branch protection not found",
+  ])("keeps pull request status available when required checks cannot be read: %s", async (stderr) => {
+    const baseRunner = statusRunner([]);
+    const result = await Effect.runPromise(
+      getGitHubPullRequestStatus(
+        { cwd: "/repos/widgets" },
+        {
+          isDirty: async () => false,
+          runGh: async (args, options) => {
+            if (args.includes(".contexts")) throw { stderr };
+            return baseRunner(args, options);
+          },
+          whichGh: async () => "/usr/bin/gh",
+        },
+      ),
+    );
+
+    expect(result.viewerCanMerge).toBe(true);
+    expect(result.checks).toEqual([
+      expect.objectContaining({ name: "typecheck", required: false }),
+      expect.objectContaining({ name: "preview", required: false }),
+    ]);
+  });
+
   it("uses the selected merge method, branch deletion, and extended timeout", async () => {
     const calls: { args: string[]; timeoutMs?: number }[] = [];
     const runGh: GhRunner = async (args, options) => {

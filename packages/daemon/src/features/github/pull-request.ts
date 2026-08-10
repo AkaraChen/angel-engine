@@ -459,7 +459,7 @@ function getRequiredContexts({
       const failure = Cause.failureOption(exit.cause);
       if (
         failure._tag === "Some" &&
-        failure.value.code === "github-item-not-found"
+        failure.value.code !== "github-cli-unauthenticated"
       ) {
         return new Set<string>();
       }

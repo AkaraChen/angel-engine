@@ -217,16 +217,20 @@ export interface LocaleResourceTranslationWorkspaceToolsPullRequest {
   archiveUnavailable: string;
   blocked: string;
   blockers: {
-    behindBase: string;
+    behindBase_one: string;
+    behindBase_other: string;
     changesRequested: string;
-    checksFailed: string;
-    checksPending: string;
+    checksFailed_one: string;
+    checksFailed_other: string;
+    checksPending_one: string;
+    checksPending_other: string;
     conflict: string;
     draft: string;
     permissionDenied: string;
     repositoryPolicy: string;
     reviewRequired: string;
-    unresolvedThreads: string;
+    unresolvedThreads_one: string;
+    unresolvedThreads_other: string;
   };
   checking: string;
   checkingMergeability: string;
@@ -256,7 +260,8 @@ export interface LocaleResourceTranslationWorkspaceToolsPullRequest {
   noOpen: string;
   noOpenDetail: string;
   open: string;
-  optionalChecksFailed: string;
+  optionalChecksFailed_one: string;
+  optionalChecksFailed_other: string;
   ready: string;
   refresh: string;
   resolve: string;

@@ -1,6 +1,6 @@
 import type { LocaleResource } from "./schema";
 import { scheduleTranslation } from "./schedule";
-import { pullRequestZhCN } from "./pull-request";
+import { pullRequestZhTW } from "./pull-request";
 
 export const zhTW = {
   translation: {
@@ -216,7 +216,7 @@ export const zhTW = {
           },
           pushing: "推送中",
         },
-        pullRequest: pullRequestZhCN,
+        pullRequest: pullRequestZhTW,
         listeningPorts: "監聽連接埠",
         resizeFileTree: "調整檔案樹寬度",
         resizeGitList: "調整變更清單寬度",

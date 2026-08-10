@@ -1,5 +1,6 @@
 import type {
   GitHubMergeMethod,
+  GitHubPullRequestCheck,
   GitHubPullRequestStatus,
   GitHubReviewThread,
 } from "@angel-engine/daemon-api/github";
@@ -8,8 +9,10 @@ import { DaemonRequestError } from "@angel-engine/daemon-client";
 import {
   ArrowSquareOut,
   CheckCircle,
+  Clock,
   GitPullRequest,
   SpinnerGap,
+  WarningCircle,
   XCircle,
 } from "@phosphor-icons/react";
 import is from "@sindresorhus/is";
@@ -38,7 +41,6 @@ import {
   optionalFailedChecks,
   type MergeBlocker,
 } from "@/features/pull-request/derive-merge-blockers";
-import { queryKeys } from "@/platform/query-keys";
 import { useWorkspaceToolSurface } from "@/app/workspace/workspace-tool-surface-model";
 
 const mergeMethods: GitHubMergeMethod[] = ["squash", "merge", "rebase"];
@@ -105,21 +107,13 @@ export const PullRequestPanel: FC<{ root: string }> = ({ root }) => {
         onArchive={async () => {
           if (!is.nonEmptyString(chatId)) return;
           try {
-            const chat = queryClient.getQueryData<{
-              chat: Parameters<typeof archiveMutation.mutateAsync>[0];
-            }>(queryKeys.chats.detail(chatId))?.chat;
-            if (chat === undefined) {
-              throw new Error(
-                t("workspace.tools.pullRequest.archiveUnavailable"),
-              );
-            }
             const confirmed =
               await window.desktopWindow.confirmArchiveWorkspace({
                 hasUncommittedChanges: status.worktreeDirty,
                 path: root,
               });
             if (!confirmed) return;
-            await archiveMutation.mutateAsync(chat);
+            await archiveMutation.mutateAsync(chatId);
           } catch (error) {
             toast({
               description:
@@ -151,6 +145,7 @@ export const PullRequestPanel: FC<{ root: string }> = ({ root }) => {
     ? selectedMethod
     : status.defaultMergeMethod;
   const blockers = deriveMergeBlockers(status);
+  const optionalChecks = optionalFailedChecks(status);
   const checkingMergeability = status.mergeable === "UNKNOWN";
   const effectiveDeleteBranch = deleteBranch ?? status.deleteBranchOnMerge;
   const canMerge =
@@ -229,26 +224,47 @@ export const PullRequestPanel: FC<{ root: string }> = ({ root }) => {
             </div>
             <ul className="space-y-1">
               {blockers.map((blocker) => (
-                <BlockerRow blocker={blocker} key={blocker.kind} />
+                <BlockerRow
+                  blocker={blocker}
+                  key={blocker.kind}
+                  onOpen={openBrowserTab}
+                />
               ))}
             </ul>
           </WorkspaceToolBanner>
         ) : (
           <div className="flex items-center gap-2 text-xs text-status-success">
-            <CheckCircle weight="fill" />
+            <CheckCircle className="size-4 shrink-0" weight="fill" />
             {t("workspace.tools.pullRequest.ready")}
           </div>
         )}
 
-        {optionalFailedChecks(status).length > 0 ? (
+        {status.behindBy > 0 && status.mergeStateStatus !== "BEHIND" ? (
+          <WorkspaceToolBanner tone="attention">
+            <div className="flex items-start gap-1.5">
+              <WarningCircle
+                className="mt-0.5 size-4 shrink-0 text-status-attention"
+                weight="fill"
+              />
+              <span>
+                {t("workspace.tools.pullRequest.blockers.behindBase", {
+                  count: status.behindBy,
+                })}
+              </span>
+            </div>
+          </WorkspaceToolBanner>
+        ) : null}
+
+        {optionalChecks.length > 0 ? (
           <WorkspaceToolBanner tone="attention">
             {t("workspace.tools.pullRequest.optionalChecksFailed", {
-              count: optionalFailedChecks(status).length,
-              names: optionalFailedChecks(status)
+              count: optionalChecks.length,
+              names: optionalChecks
                 .slice(0, 3)
                 .map((check) => check.name)
                 .join(", "),
             })}
+            <CheckLinks checks={optionalChecks} onOpen={openBrowserTab} />
           </WorkspaceToolBanner>
         ) : null}
 
@@ -327,7 +343,10 @@ export const PullRequestPanel: FC<{ root: string }> = ({ root }) => {
   );
 };
 
-const BlockerRow: FC<{ blocker: MergeBlocker }> = ({ blocker }) => {
+const BlockerRow: FC<{
+  blocker: MergeBlocker;
+  onOpen: (url: string) => void;
+}> = ({ blocker, onOpen }) => {
   const { t } = useTranslation();
   let text: string;
   switch (blocker.kind) {
@@ -351,14 +370,20 @@ const BlockerRow: FC<{ blocker: MergeBlocker }> = ({ blocker }) => {
       break;
     case "required-checks-failed":
       text = t("workspace.tools.pullRequest.blockers.checksFailed", {
-        count: blocker.names.length,
-        names: blocker.names.slice(0, 3).join(", "),
+        count: blocker.checks.length,
+        names: blocker.checks
+          .slice(0, 3)
+          .map((check) => check.name)
+          .join(", "),
       });
       break;
     case "required-checks-pending":
       text = t("workspace.tools.pullRequest.blockers.checksPending", {
-        count: blocker.names.length,
-        names: blocker.names.slice(0, 3).join(", "),
+        count: blocker.checks.length,
+        names: blocker.checks
+          .slice(0, 3)
+          .map((check) => check.name)
+          .join(", "),
       });
       break;
     case "review-required":
@@ -371,11 +396,57 @@ const BlockerRow: FC<{ blocker: MergeBlocker }> = ({ blocker }) => {
       );
       break;
   }
+  const checks = "checks" in blocker ? blocker.checks : [];
+  const icon =
+    blocker.kind === "required-checks-pending" ? (
+      <Clock
+        className="mt-0.5 size-4 shrink-0 text-status-attention"
+        weight="fill"
+      />
+    ) : blocker.kind === "behind-base" ? (
+      <WarningCircle
+        className="mt-0.5 size-4 shrink-0 text-status-attention"
+        weight="fill"
+      />
+    ) : (
+      <XCircle className="mt-0.5 size-4 shrink-0" weight="fill" />
+    );
   return (
     <li className="flex gap-1.5">
-      <XCircle className="mt-0.5 shrink-0" weight="fill" />
-      <span>{text}</span>
+      {icon}
+      <div className="min-w-0">
+        <span>{text}</span>
+        <CheckLinks checks={checks} onOpen={onOpen} />
+      </div>
     </li>
+  );
+};
+
+const CheckLinks: FC<{
+  checks: GitHubPullRequestCheck[];
+  onOpen: (url: string) => void;
+}> = ({ checks, onOpen }) => {
+  const { t } = useTranslation();
+  const linkedChecks = checks.filter(
+    (check): check is GitHubPullRequestCheck & { url: string } =>
+      is.nonEmptyString(check.url),
+  );
+  if (linkedChecks.length === 0) return null;
+  return (
+    <div className="flex flex-wrap gap-1 pt-1">
+      {linkedChecks.map((check) => (
+        <Button
+          aria-label={`${t("workspace.tools.pullRequest.open")}: ${check.name}`}
+          key={`${check.name}:${check.url}`}
+          onClick={() => onOpen(check.url)}
+          size="xs"
+          variant="link"
+        >
+          <ArrowSquareOut />
+          {check.name}
+        </Button>
+      ))}
+    </div>
   );
 };
 
