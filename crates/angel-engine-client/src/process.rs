@@ -76,7 +76,7 @@ impl AngelClient {
             child,
             child_stdin,
             lines: rx,
-            core: AngelClientCore::new(options),
+            core: AngelClientCore::new(options)?,
             runtime_model_catalog_command,
             runtime_model_catalog: RuntimeModelCatalogCache::NotLoaded,
         })

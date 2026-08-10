@@ -1,3 +1,4 @@
+use angel_engine::{CapabilitySupport, McpInjectionConfig};
 use angel_provider::ProtocolAdapter;
 
 use crate::ClientCommandResult;
@@ -24,10 +25,10 @@ impl Client<RuntimeAdapter> {
         ClientOptions::builder()
     }
 
-    pub fn new(options: ClientOptions) -> Self {
-        Self {
-            core: AngelClientCore::new(options),
-        }
+    pub fn new(options: ClientOptions) -> ClientResult<Self> {
+        Ok(Self {
+            core: AngelClientCore::new(options)?,
+        })
     }
 }
 
@@ -35,10 +36,31 @@ impl<A> Client<A>
 where
     A: ProtocolAdapter,
 {
-    pub fn new_with_adapter(options: ClientOptions, adapter: A) -> Self {
-        Self {
-            core: AngelClientCore::new_with_adapter(options, adapter),
-        }
+    pub fn new_with_adapter(options: ClientOptions, adapter: A) -> ClientResult<Self> {
+        Ok(Self {
+            core: AngelClientCore::new_with_adapter(options, adapter)?,
+        })
+    }
+
+    /// Query MCP host-injection support for this client's adapter.
+    pub fn mcp_injection_capability(&self) -> CapabilitySupport {
+        self.core.mcp_injection_capability()
+    }
+
+    pub fn can_inject_mcp(&self) -> bool {
+        self.core.can_inject_mcp()
+    }
+
+    pub fn mcp_injection(&self) -> &McpInjectionConfig {
+        self.core.mcp_injection()
+    }
+
+    /// Inject MCP server descriptors for subsequent session start/load/fork.
+    ///
+    /// Returns structured [`angel_engine::EngineError::CapabilityUnsupported`]
+    /// with capability `mcp.inject` when the adapter cannot apply them.
+    pub fn inject_mcp(&mut self, injection: McpInjectionConfig) -> ClientResult<()> {
+        self.core.inject_mcp(injection)
     }
 
     pub fn initialize(&mut self) -> ClientResult<ClientCommandResult> {
@@ -207,7 +229,7 @@ impl ClientBuilder {
         &mut self.options
     }
 
-    pub fn build(self) -> Client {
+    pub fn build(self) -> ClientResult<Client> {
         Client::new(self.options)
     }
 
@@ -217,7 +239,7 @@ impl ClientBuilder {
 }
 
 impl ClientOptionsBuilder {
-    pub fn build_client(self) -> Client {
+    pub fn build_client(self) -> ClientResult<Client> {
         ClientBuilder::new(self.build()).build()
     }
 

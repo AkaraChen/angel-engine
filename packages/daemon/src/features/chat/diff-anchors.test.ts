@@ -28,6 +28,7 @@ beforeEach(async () => {
       cwd TEXT,
       runtime TEXT NOT NULL,
       remote_thread_id TEXT,
+      source_link TEXT,
       created_at TEXT NOT NULL,
       updated_at TEXT NOT NULL,
       archived INTEGER NOT NULL DEFAULT 0,

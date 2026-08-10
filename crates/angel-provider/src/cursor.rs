@@ -1,18 +1,21 @@
+#[cfg(feature = "cursor-history")]
 use std::path::PathBuf;
 
+#[cfg(feature = "cursor-history")]
+use angel_engine::PendingRequest;
 use angel_engine::event::EngineEvent;
 use angel_engine::ids::ConversationId;
-use angel_engine::state::{
-    ContentDelta, HistoryReplayEntry, HistoryRole, SessionPermissionMode,
-    SessionPermissionModeState,
-};
-use angel_engine::transport::{
-    JsonRpcMessage, TransportLogKind, TransportOptions, TransportOutput,
-};
+#[cfg(feature = "cursor-history")]
+use angel_engine::state::{ContentDelta, HistoryReplayEntry, HistoryRole};
+use angel_engine::state::{SessionPermissionMode, SessionPermissionModeState};
+#[cfg(feature = "cursor-history")]
+use angel_engine::transport::TransportLogKind;
+use angel_engine::transport::{JsonRpcMessage, TransportOptions, TransportOutput};
 use angel_engine::{
-    AngelEngine, ConversationCapabilities, EngineError, PendingRequest, ProtocolEffect,
-    ProtocolFlavor, SessionModelState, UserInput,
+    AngelEngine, ConversationCapabilities, EngineError, ProtocolEffect, ProtocolFlavor,
+    SessionModelState, UserInput,
 };
+#[cfg(feature = "cursor-history")]
 use rusqlite::Connection;
 use serde_json::Value;
 
@@ -46,8 +49,8 @@ impl CursorAdapter {
 
     fn normalize_cursor_output(
         &self,
-        engine: &AngelEngine,
-        message: &JsonRpcMessage,
+        _engine: &AngelEngine,
+        _message: &JsonRpcMessage,
         mut output: TransportOutput,
     ) -> TransportOutput {
         let permission_mode_updates = output
@@ -64,10 +67,12 @@ impl CursorAdapter {
             })
             .collect::<Vec<_>>();
         output.events.extend(permission_mode_updates);
-        self.append_cursor_local_hydration(engine, message, &mut output);
+        #[cfg(feature = "cursor-history")]
+        self.append_cursor_local_hydration(_engine, _message, &mut output);
         output
     }
 
+    #[cfg(feature = "cursor-history")]
     fn append_cursor_local_hydration(
         &self,
         engine: &AngelEngine,
@@ -222,6 +227,7 @@ fn cursor_permission_mode_wire_id(mode: CursorPermissionMode) -> String {
     id
 }
 
+#[cfg(feature = "cursor-history")]
 fn cursor_hydrate_response<'a>(
     engine: &'a AngelEngine,
     message: &JsonRpcMessage,
@@ -241,6 +247,7 @@ fn cursor_hydrate_response<'a>(
     Some((conversation_id, remote_id))
 }
 
+#[cfg(feature = "cursor-history")]
 fn cursor_session_store_path(remote_id: &str) -> Option<PathBuf> {
     if !cursor_safe_path_component(remote_id) {
         return None;
@@ -252,6 +259,7 @@ fn cursor_session_store_path(remote_id: &str) -> Option<PathBuf> {
     path.is_file().then_some(path)
 }
 
+#[cfg(feature = "cursor-history")]
 fn cursor_share_dir() -> Option<PathBuf> {
     if let Some(path) = std::env::var_os("CURSOR_SHARE_DIR")
         && !path.is_empty()
@@ -261,6 +269,7 @@ fn cursor_share_dir() -> Option<PathBuf> {
     Some(PathBuf::from(std::env::var_os("HOME")?).join(".cursor"))
 }
 
+#[cfg(feature = "cursor-history")]
 fn cursor_safe_path_component(value: &str) -> bool {
     !value.is_empty()
         && value
@@ -268,6 +277,7 @@ fn cursor_safe_path_component(value: &str) -> bool {
             .all(|ch| ch.is_ascii_alphanumeric() || matches!(ch, '-' | '_'))
 }
 
+#[cfg(feature = "cursor-history")]
 fn cursor_store_history_entries(path: &PathBuf) -> rusqlite::Result<Vec<HistoryReplayEntry>> {
     let connection = Connection::open_with_flags(path, rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY)?;
     let mut statement = connection.prepare("select data from blobs order by rowid")?;
@@ -287,6 +297,7 @@ fn cursor_store_history_entries(path: &PathBuf) -> rusqlite::Result<Vec<HistoryR
     Ok(entries)
 }
 
+#[cfg(feature = "cursor-history")]
 fn cursor_store_record_entry(value: &Value) -> Option<HistoryReplayEntry> {
     match value.get("role").and_then(Value::as_str) {
         Some("user") => cursor_store_user_entry(value),
@@ -295,6 +306,7 @@ fn cursor_store_record_entry(value: &Value) -> Option<HistoryReplayEntry> {
     }
 }
 
+#[cfg(feature = "cursor-history")]
 fn cursor_store_user_entry(value: &Value) -> Option<HistoryReplayEntry> {
     let text = cursor_user_message_text(value.get("content")?);
     if text.trim().is_empty() || cursor_internal_user_message(&text) {
@@ -307,6 +319,7 @@ fn cursor_store_user_entry(value: &Value) -> Option<HistoryReplayEntry> {
     })
 }
 
+#[cfg(feature = "cursor-history")]
 fn cursor_store_assistant_entry(value: &Value) -> Option<HistoryReplayEntry> {
     let text = cursor_content_value_text(value.get("content")?, false);
     if text.trim().is_empty() {
@@ -319,11 +332,13 @@ fn cursor_store_assistant_entry(value: &Value) -> Option<HistoryReplayEntry> {
     })
 }
 
+#[cfg(feature = "cursor-history")]
 fn cursor_user_message_text(value: &Value) -> String {
     let text = cursor_content_value_text(value, true);
     cursor_user_query_text(&text).unwrap_or(text)
 }
 
+#[cfg(feature = "cursor-history")]
 fn cursor_content_value_text(value: &Value, include_wrapped_text: bool) -> String {
     match value {
         Value::String(text) => text.clone(),
@@ -354,6 +369,7 @@ fn cursor_content_value_text(value: &Value, include_wrapped_text: bool) -> Strin
     }
 }
 
+#[cfg(feature = "cursor-history")]
 fn cursor_user_query_text(text: &str) -> Option<String> {
     let start = text.find("<user_query>")? + "<user_query>".len();
     let end = text[start..].find("</user_query>")? + start;
@@ -361,6 +377,7 @@ fn cursor_user_query_text(text: &str) -> Option<String> {
     (!query.is_empty()).then(|| query.to_string())
 }
 
+#[cfg(feature = "cursor-history")]
 fn cursor_internal_user_message(text: &str) -> bool {
     text.contains("<user_info>")
         || text.contains("<git_status>")
@@ -435,6 +452,7 @@ mod tests {
         );
     }
 
+    #[cfg(feature = "cursor-history")]
     #[test]
     fn cursor_store_records_replay_user_query_and_assistant_text() {
         let user = json!({

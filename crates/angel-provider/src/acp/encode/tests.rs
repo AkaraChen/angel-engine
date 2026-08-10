@@ -143,6 +143,50 @@ fn session_resume_encodes_common_remote_conversation_id() {
 }
 
 #[test]
+fn session_new_encodes_mcp_injection_servers() {
+    use angel_engine::{McpInjectionConfig, McpServerConfig, McpServerTransport};
+    use std::collections::BTreeMap;
+
+    let adapter = AcpAdapter::standard();
+    let engine = AngelEngine::new(angel_engine::ProtocolFlavor::Acp, adapter.capabilities());
+    let effect = angel_engine::ProtocolEffect::new(
+        angel_engine::ProtocolFlavor::Acp,
+        ProtocolMethod::StartConversation,
+    )
+    .field("cwd", "/tmp/project");
+    let options = TransportOptions {
+        mcp_injection: McpInjectionConfig {
+            servers: vec![McpServerConfig {
+                name: "angel-host".into(),
+                transport: McpServerTransport::Stdio {
+                    command: "angel-mcp".into(),
+                    args: vec!["serve".into()],
+                    env: BTreeMap::from([("TOKEN".into(), "x".into())]),
+                },
+            }],
+        },
+        ..TransportOptions::default()
+    };
+
+    let params = adapter
+        .encode_params(&engine, &effect, &options)
+        .expect("session new params");
+
+    assert_eq!(
+        params,
+        json!({
+            "cwd": "/tmp/project",
+            "mcpServers": [{
+                "name": "angel-host",
+                "command": "angel-mcp",
+                "args": ["serve"],
+                "env": { "TOKEN": "x" },
+            }]
+        })
+    );
+}
+
+#[test]
 fn session_load_uses_conversation_cwd_when_effect_omits_it() {
     let adapter = AcpAdapter::standard();
     let mut engine = AngelEngine::new(angel_engine::ProtocolFlavor::Acp, adapter.capabilities());

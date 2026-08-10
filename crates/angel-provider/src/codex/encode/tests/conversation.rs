@@ -49,6 +49,48 @@ fn thread_start_enables_raw_response_events() {
 }
 
 #[test]
+fn thread_start_rejects_non_empty_mcp_injection() {
+    use angel_engine::{
+        MCP_INJECT_CAPABILITY, McpInjectionConfig, McpServerConfig, McpServerTransport,
+    };
+    use std::collections::BTreeMap;
+
+    let adapter = CodexAdapter::app_server();
+    let engine = AngelEngine::new(
+        angel_engine::ProtocolFlavor::CodexAppServer,
+        adapter.capabilities(),
+    );
+    let effect = angel_engine::ProtocolEffect::new(
+        angel_engine::ProtocolFlavor::CodexAppServer,
+        ProtocolMethod::StartConversation,
+    )
+    .field("cwd", "/tmp/project");
+    let options = TransportOptions {
+        mcp_injection: McpInjectionConfig {
+            servers: vec![McpServerConfig {
+                name: "stub".into(),
+                transport: McpServerTransport::Stdio {
+                    command: "true".into(),
+                    args: Vec::new(),
+                    env: BTreeMap::new(),
+                },
+            }],
+        },
+        ..TransportOptions::default()
+    };
+
+    let err = adapter
+        .encode_params(&engine, &effect, &options)
+        .expect_err("codex must reject mcp inject");
+    assert_eq!(
+        err,
+        angel_engine::EngineError::CapabilityUnsupported {
+            capability: MCP_INJECT_CAPABILITY.to_string(),
+        }
+    );
+}
+
+#[test]
 fn thread_start_uses_sandbox_policy_override_shape() {
     let adapter = CodexAdapter::app_server();
     let mut engine = AngelEngine::with_available_runtime(

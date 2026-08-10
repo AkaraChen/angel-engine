@@ -155,6 +155,8 @@ mod tests {
             skills: SkillsSnapshot {
                 can_list: false,
                 can_mention: false,
+                can_inject: false,
+                can_inject_mcp: false,
                 skills: Vec::new(),
             },
             usage: None,

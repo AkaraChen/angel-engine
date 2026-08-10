@@ -207,6 +207,12 @@ pub fn codex_app_server_capabilities() -> ConversationCapabilities {
         skills: angel_engine::SkillsCapabilities {
             list: CapabilitySupport::Supported,
             mention: CapabilitySupport::Supported,
+            // Host skill inject is filesystem materialization (client-owned).
+            inject: CapabilitySupport::Supported,
+        },
+        mcp: angel_engine::McpCapabilities {
+            // Codex app-server MCP config is not wired yet — config slot only.
+            inject: CapabilitySupport::Unsupported,
         },
     }
 }

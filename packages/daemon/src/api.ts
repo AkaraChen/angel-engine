@@ -218,7 +218,7 @@ export function registerApi(
   const activity = new ChatActivityStore({
     onChange: (chatId) => {
       chatEvents.activityChanged(chatId);
-      void shepherd?.onActivityChanged(chatId);
+      void shepherd?.onActivityChanged(chatId).catch(() => undefined);
     },
   });
   const chatRuns = new ChatRunRegistry({

@@ -178,6 +178,13 @@ pub fn acp_standard_capabilities() -> ConversationCapabilities {
             // ACP has no skill input type; mentions pass through as prompt
             // text and the runtime's own skill loader resolves the name.
             mention: CapabilitySupport::Supported,
+            // Host injects skills via filesystem roots / materialization
+            // (client-owned). Adapter does not need a wire method.
+            inject: CapabilitySupport::Supported,
+        },
+        mcp: angel_engine::McpCapabilities {
+            // ACP session/new, session/load, and fork accept mcpServers.
+            inject: CapabilitySupport::Supported,
         },
     }
 }

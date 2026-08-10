@@ -1,12 +1,13 @@
 use angel_engine::{
-    AngelEngine, EngineCommand, EngineExtensionCommand, JsonRpcMessage, TransportClientInfo,
-    TransportOptions, TransportOutput,
+    AngelEngine, CapabilitySupport, EngineCommand, EngineExtensionCommand, JsonRpcMessage,
+    McpInjectionConfig, TransportClientInfo, TransportOptions, TransportOutput,
+    ensure_mcp_injection_allowed,
 };
 use angel_provider::ProtocolAdapter;
 
 use crate::adapter::RuntimeAdapter;
 use crate::config::ClientOptions;
-use crate::error::ClientResult;
+use crate::error::{ClientError, ClientResult};
 use crate::event::{
     ClientLog, ClientLogKind, ClientUpdate, JsonRpcOutbound, events_from_engine_event, log_event,
     stream_deltas_from_engine_event,
@@ -17,7 +18,7 @@ use super::AngelClientCore;
 use super::types::ClientCommandResult;
 
 impl AngelClientCore<RuntimeAdapter> {
-    pub fn new(options: ClientOptions) -> Self {
+    pub fn new(options: ClientOptions) -> ClientResult<Self> {
         let adapter = RuntimeAdapter::from_options(&options);
         Self::new_with_adapter(options, adapter)
     }
@@ -27,7 +28,9 @@ impl<A> AngelClientCore<A>
 where
     A: ProtocolAdapter,
 {
-    pub fn new_with_adapter(options: ClientOptions, adapter: A) -> Self {
+    pub fn new_with_adapter(options: ClientOptions, adapter: A) -> ClientResult<Self> {
+        ensure_mcp_injection_allowed(&options.mcp_injection, &adapter.capabilities().mcp.inject)
+            .map_err(ClientError::from)?;
         let mut client_info = TransportClientInfo::new(
             options.identity.name,
             options
@@ -37,15 +40,41 @@ where
         );
         client_info.title = options.identity.title;
         let engine = AngelEngine::new(adapter.protocol_flavor(), adapter.capabilities());
-        Self {
+        Ok(Self {
             engine,
             adapter,
             options: TransportOptions {
                 client_info,
                 experimental_api: options.experimental_api,
+                mcp_injection: options.mcp_injection,
+                skill_injection: options.skill_injection,
             },
             auto_authenticate: options.auth.auto_authenticate,
-        }
+        })
+    }
+
+    /// Whether this client may pass MCP server descriptors into sessions.
+    pub fn mcp_injection_capability(&self) -> CapabilitySupport {
+        self.adapter.capabilities().mcp.inject
+    }
+
+    pub fn can_inject_mcp(&self) -> bool {
+        self.mcp_injection_capability().is_supported()
+    }
+
+    pub fn mcp_injection(&self) -> &McpInjectionConfig {
+        &self.options.mcp_injection
+    }
+
+    /// Set host MCP injection config.
+    ///
+    /// Empty config always succeeds. Non-empty config requires `mcp.inject`
+    /// support; otherwise returns [`angel_engine::EngineError::CapabilityUnsupported`].
+    pub fn inject_mcp(&mut self, injection: McpInjectionConfig) -> ClientResult<()> {
+        ensure_mcp_injection_allowed(&injection, &self.mcp_injection_capability())
+            .map_err(ClientError::from)?;
+        self.options.mcp_injection = injection;
+        Ok(())
     }
 
     pub fn auto_authenticate(&self) -> bool {

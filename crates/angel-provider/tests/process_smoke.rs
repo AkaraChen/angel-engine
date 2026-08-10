@@ -73,6 +73,7 @@ where
                     env!("CARGO_PKG_VERSION"),
                 ),
                 experimental_api: true,
+                ..TransportOptions::default()
             },
         })
     }

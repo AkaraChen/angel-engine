@@ -13,7 +13,8 @@ fn client_hides_engine_behind_thread_updates_and_snapshots() {
         .arg("acp")
         .need_auth(false)
         .client_name("ide-test")
-        .build_client();
+        .build_client()
+        .expect("client");
 
     let initialize = client.initialize().expect("initialize command");
     assert_eq!(
@@ -267,7 +268,7 @@ fn client_builder_and_thread_event_api_keep_ids_on_the_thread_handle() {
         .need_auth(false)
         .client_name("ide-test")
         .build();
-    let mut client = ClientBuilder::new(options).build();
+    let mut client = ClientBuilder::new(options).build().expect("client");
 
     let initialize = client.initialize().expect("initialize");
     client

@@ -26,6 +26,7 @@ where
             client_info: TransportClientInfo::new(config.client_name, env!("CARGO_PKG_VERSION"))
                 .title(config.client_title),
             experimental_api: true,
+            ..TransportOptions::default()
         };
 
         Ok(Self {
