@@ -14,6 +14,7 @@ import {
   chats,
   customAgents,
   projects,
+  pullRequests,
   queuedChatRuns,
   worktreeCreationJobs,
 } from "../../db/schema";
@@ -67,6 +68,7 @@ beforeEach(async () => {
       chats,
       customAgents,
       projects,
+      pullRequests,
       queuedChatRuns,
       worktreeCreationJobs,
     },
