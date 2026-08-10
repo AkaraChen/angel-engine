@@ -333,6 +333,26 @@
         "vitest": "^4.1.9",
       },
     },
+    "packages/host-cli": {
+      "name": "@angel-engine/host-cli",
+      "version": "0.1.0",
+      "bin": {
+        "angelctl": "./dist/bin/angelctl",
+      },
+      "dependencies": {
+        "@angel-engine/daemon-api": "workspace:*",
+        "@angel-engine/daemon-client": "workspace:*",
+      },
+      "devDependencies": {
+        "@types/node": "^24.10.1",
+        "oxlint": "^1.73.0",
+        "oxlint-tsgolint": "^0.24.0",
+        "tsup": "^8.5.1",
+        "tsx": "^4.21.0",
+        "typescript": "^7.0.2",
+        "vitest": "^4.1.9",
+      },
+    },
     "packages/js-client": {
       "name": "@angel-engine/js-client",
       "version": "0.1.0",
@@ -438,6 +458,8 @@
     "@angel-engine/daemon-api": ["@angel-engine/daemon-api@workspace:packages/daemon-api"],
 
     "@angel-engine/daemon-client": ["@angel-engine/daemon-client@workspace:packages/daemon-client"],
+
+    "@angel-engine/host-cli": ["@angel-engine/host-cli@workspace:packages/host-cli"],
 
     "@angel-engine/js-client": ["@angel-engine/js-client@workspace:packages/js-client"],
 

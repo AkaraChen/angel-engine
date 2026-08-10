@@ -12,6 +12,7 @@ Scope: `packages/*` only. See root `AGENTS.md` for global architecture rules.
 | ------------------------------- | ------------------------ | --------------------------------- |
 | Protocol-neutral JS client APIs | `packages/js-client`     | Shared model/projection/utilities |
 | Claude-specific client behavior | `packages/claude-client` | Provider-focused package          |
+| Host control CLI (`angelctl`)   | `packages/host-cli`      | Bundled into desktop Resources/bin |
 
 ## Conventions
 

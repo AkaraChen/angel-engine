@@ -28,29 +28,47 @@ afterEach(async () => {
 describe("createDaemon", () => {
   it("protects health and shutdown with the handshake token", async () => {
     const dataDir = await mkdtemp(path.join(os.tmpdir(), "angel-daemon-"));
-    const daemon = await createDaemon({
-      dataDir,
-      token: "secret",
-      version: "test",
-    });
-    daemons.push(daemon);
-    const baseUrl = `http://${daemon.info.host}:${daemon.info.port}`;
+    const stateHome = await mkdtemp(path.join(os.tmpdir(), "angel-state-"));
+    const previousHome = process.env.ANGEL_ENGINE_HOME;
+    process.env.ANGEL_ENGINE_HOME = stateHome;
+    try {
+      const daemon = await createDaemon({
+        dataDir,
+        token: "secret",
+        version: "test",
+      });
+      daemons.push(daemon);
+      const baseUrl = `http://${daemon.info.host}:${daemon.info.port}`;
 
-    expect((await fetch(`${baseUrl}/api/health`)).status).toBe(401);
-    const response = await fetch(`${baseUrl}/api/health`, {
-      headers: { authorization: "Bearer secret" },
-    });
-    expect(response.status).toBe(200);
-    await expect(response.json()).resolves.toMatchObject({ version: "test" });
+      expect((await fetch(`${baseUrl}/api/health`)).status).toBe(401);
+      const response = await fetch(`${baseUrl}/api/health`, {
+        headers: { authorization: "Bearer secret" },
+      });
+      expect(response.status).toBe(200);
+      await expect(response.json()).resolves.toMatchObject({ version: "test" });
 
-    const persisted = JSON.parse(
-      await readFile(path.join(dataDir, "daemon.json"), "utf8"),
-    );
-    expect(persisted).toEqual(daemon.info);
-    if (process.platform !== "win32") {
-      expect((await stat(path.join(dataDir, "daemon.json"))).mode & 0o777).toBe(
-        0o600,
+      const persisted = JSON.parse(
+        await readFile(path.join(dataDir, "daemon.json"), "utf8"),
       );
+      expect(persisted).toEqual(daemon.info);
+      if (process.platform !== "win32") {
+        expect(
+          (await stat(path.join(dataDir, "daemon.json"))).mode & 0o777,
+        ).toBe(0o600);
+      }
+
+      const wellKnown = path.join(stateHome, "daemon.json");
+      const wellKnownBody = JSON.parse(await readFile(wellKnown, "utf8"));
+      expect(wellKnownBody).toEqual(daemon.info);
+      if (process.platform !== "win32") {
+        expect((await stat(wellKnown)).mode & 0o777).toBe(0o600);
+      }
+    } finally {
+      if (previousHome === undefined) {
+        delete process.env.ANGEL_ENGINE_HOME;
+      } else {
+        process.env.ANGEL_ENGINE_HOME = previousHome;
+      }
     }
   });
 

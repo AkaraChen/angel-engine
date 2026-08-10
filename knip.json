@@ -59,6 +59,10 @@
       "entry": ["src/index.ts"],
       "project": ["src/**/*.ts"]
     },
+    "packages/host-cli": {
+      "entry": ["src/main.ts", "scripts/stage-bin.mjs"],
+      "project": ["src/**/*.ts", "scripts/**/*.mjs"]
+    },
     "packages/claude-client": {
       "entry": ["src/index.ts", "src/adapter.ts", "src/context.ts"],
       "project": ["src/**/*.ts"]

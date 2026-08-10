@@ -7,6 +7,7 @@ import type { DaemonOptions } from "./types";
 
 import { randomBytes } from "node:crypto";
 import { chmod, mkdir, rename, writeFile } from "node:fs/promises";
+import os from "node:os";
 import path from "node:path";
 import { serve } from "@hono/node-server";
 import { Effect, Layer, ManagedRuntime } from "effect";
@@ -428,8 +429,30 @@ export async function createDaemon(options: DaemonOptions): Promise<Daemon> {
 }
 
 async function writeDaemonInfo(dataDir: string, info: DaemonInfo) {
-  await mkdir(dataDir, { recursive: true });
-  const target = path.join(dataDir, "daemon.json");
+  await writeDaemonInfoFile(path.join(dataDir, "daemon.json"), info);
+  // Stable discovery path for host CLI / agents (KIT-830).
+  await writeDaemonInfoFile(wellKnownDaemonInfoPath(), info);
+}
+
+/**
+ * Well-known handshake file for host CLI discovery.
+ * Override root with `ANGEL_ENGINE_HOME` (tests / custom installs).
+ * Default: `~/.angel-engine/daemon.json`. Mode 0600; never log the token.
+ */
+export function wellKnownDaemonInfoPath(
+  homeDir: string = os.homedir(),
+  env: NodeJS.ProcessEnv = process.env,
+): string {
+  const root =
+    typeof env.ANGEL_ENGINE_HOME === "string" &&
+    env.ANGEL_ENGINE_HOME.trim().length > 0
+      ? env.ANGEL_ENGINE_HOME.trim()
+      : path.join(homeDir, ".angel-engine");
+  return path.join(root, "daemon.json");
+}
+
+async function writeDaemonInfoFile(target: string, info: DaemonInfo) {
+  await mkdir(path.dirname(target), { recursive: true });
   const temporary = `${target}.${process.pid}.tmp`;
   await writeFile(temporary, `${JSON.stringify(info)}\n`, { mode: 0o600 });
   await chmod(temporary, 0o600);

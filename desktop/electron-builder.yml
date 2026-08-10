@@ -7,6 +7,9 @@ files: []
 extraResources:
   - from: build/app-update.yml
     to: app-update.yml
+  # Host CLI (also copied by Forge package); keep for builder-only paths.
+  - from: ../packages/host-cli/dist/bin
+    to: bin
 artifactBuildCompleted: scripts/notarize-dmg-artifact.cjs
 # Signs/notarizes dmg + zip artifacts built from the already-.app-signed
 # prepackaged app; forge osxSign/osxNotarize signs the .app.
