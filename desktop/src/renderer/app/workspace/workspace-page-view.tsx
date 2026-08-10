@@ -40,7 +40,10 @@ import { ImportSessionDialog } from "@/features/chat/components/import-session-d
 import { RenameChatDialog } from "@/features/chat/components/rename-chat-dialog";
 import { WorkspaceCommandPalette } from "@/features/command-palette/workspace-command-palette";
 import { FleetPage } from "@/features/fleet/fleet-page";
+import { CloneProgressDialog } from "@/features/projects/components/clone-progress-dialog";
+import { CloneRepositoryDialog } from "@/features/projects/components/clone-repository-dialog";
 import { ProjectSettingsDialog } from "@/features/projects/components/project-settings-dialog";
+import { PullRequestsPage } from "@/features/pull-requests/pull-requests-page";
 import { queryKeys } from "@/platform/query-keys";
 
 interface WorkspacePageViewProps {
@@ -51,6 +54,7 @@ interface WorkspacePageViewProps {
   model: WorkspacePageModel;
   navigation: WorkspaceNavigation;
   powerTabs: PowerWorktreeTabs;
+  pullRequestsActive: boolean;
 }
 
 export const WorkspacePageView: FC<WorkspacePageViewProps> = ({
@@ -61,6 +65,7 @@ export const WorkspacePageView: FC<WorkspacePageViewProps> = ({
   model,
   navigation,
   powerTabs,
+  pullRequestsActive,
 }) => {
   const queryClient = useQueryClient();
   const [importSessionOpen, setImportSessionOpen] = useState(false);
@@ -69,6 +74,18 @@ export const WorkspacePageView: FC<WorkspacePageViewProps> = ({
   }, []);
   const closeImportSession = useCallback(() => {
     setImportSessionOpen(false);
+  }, []);
+  const [cloneDialogOpen, setCloneDialogOpen] = useState(false);
+  const [cloneUrl, setCloneUrl] = useState<string | null>(null);
+  const openCloneDialog = useCallback(() => {
+    setCloneDialogOpen(true);
+  }, []);
+  const startClone = useCallback((url: string) => {
+    setCloneDialogOpen(false);
+    setCloneUrl(url);
+  }, []);
+  const closeCloneProgress = useCallback(() => {
+    setCloneUrl(null);
   }, []);
 
   const {
@@ -153,13 +170,19 @@ export const WorkspacePageView: FC<WorkspacePageViewProps> = ({
     createChatForSelection,
     createStandaloneWorkspace,
     navigateToChat,
+    navigateToDraft,
     openChat,
     openChatFromFleet,
     openFleet,
     openPowerWorktree,
+    openPullRequests,
     openSettings,
     selectDraftProject,
   } = navigation;
+  const pullRequestsProject =
+    pullRequestsActive && is.nonEmptyString(selectedProjectId)
+      ? projects.find((project) => project.id === selectedProjectId)
+      : undefined;
   const handleImportedSession = useCallback(
     async (chatId: string) => {
       await queryClient.invalidateQueries({ queryKey: queryKeys.chats.list() });
@@ -290,6 +313,7 @@ export const WorkspacePageView: FC<WorkspacePageViewProps> = ({
             isMacOS={isMacOS}
             isProjectsLoading={projectsQuery.isPending}
             onArchiveChat={archiveChat}
+            onCloneRepository={openCloneDialog}
             onCancelWorktreeCreation={cancelWorktreeCreation}
             onCreateProject={() => void createProjectFromPicker()}
             onCreateProjectChat={createChatForProject}
@@ -297,6 +321,7 @@ export const WorkspacePageView: FC<WorkspacePageViewProps> = ({
             onImportSession={openImportSession}
             onOpenChat={openChat}
             onOpenFleet={openFleet}
+            onOpenPullRequests={openPullRequests}
             onOpenSettings={openSettings}
             onOpenWorktree={openPowerWorktree}
             onRetryWorktreeCreation={retryWorktreeCreation}
@@ -306,6 +331,7 @@ export const WorkspacePageView: FC<WorkspacePageViewProps> = ({
             onWorkspaceModeChange={changeWorkspaceMode}
             projectChatsByProjectId={projectChatsByProjectId}
             projects={projects}
+            pullRequestsActive={pullRequestsActive}
             selectedChatId={selectedChatId}
             selectedProjectId={selectedProjectId}
           />
@@ -316,6 +342,7 @@ export const WorkspacePageView: FC<WorkspacePageViewProps> = ({
             isMacOS={isMacOS}
             isProjectsLoading={projectsQuery.isPending}
             onArchiveChat={archiveChat}
+            onCloneRepository={openCloneDialog}
             onCancelWorktreeCreation={cancelWorktreeCreation}
             onCreateProject={() => void createProjectFromPicker()}
             onCreateProjectChat={createChatForProject}
@@ -323,6 +350,7 @@ export const WorkspacePageView: FC<WorkspacePageViewProps> = ({
             onImportSession={openImportSession}
             onOpenChat={openChat}
             onOpenFleet={openFleet}
+            onOpenPullRequests={openPullRequests}
             onOpenSettings={openSettings}
             onOpenWorktree={openPowerWorktree}
             onRetryWorktreeCreation={retryWorktreeCreation}
@@ -332,6 +360,7 @@ export const WorkspacePageView: FC<WorkspacePageViewProps> = ({
             onWorkspaceModeChange={changeWorkspaceMode}
             projectChatsByProjectId={projectChatsByProjectId}
             projects={projects}
+            pullRequestsActive={pullRequestsActive}
             selectedChatId={selectedChatId}
             selectedProjectId={selectedProjectId}
           />
@@ -365,6 +394,19 @@ export const WorkspacePageView: FC<WorkspacePageViewProps> = ({
             onClose={closeProjectSettingsDialog}
             project={settingsTargetProject}
           />
+          <CloneRepositoryDialog
+            onClone={startClone}
+            onOpenChange={setCloneDialogOpen}
+            open={cloneDialogOpen}
+          />
+          <CloneProgressDialog
+            onClose={closeCloneProgress}
+            onOpenProject={(project) => {
+              closeCloneProgress();
+              createChatForProject(project);
+            }}
+            url={cloneUrl}
+          />
           <WorktreeDirtyDialog
             checked={rememberWorktreeDirtyChoice}
             onCheckedChange={setRememberWorktreeDirtyChoice}
@@ -389,7 +431,13 @@ export const WorkspacePageView: FC<WorkspacePageViewProps> = ({
                 (rightSidebarOpen || workspaceToolHost !== "sidebar")
               }
               rightSidebarToggleLabel={workspaceToolsToggleLabel}
-              title={fleetActive ? t("fleet.title") : workspaceTitle}
+              title={
+                pullRequestsActive
+                  ? t("pullRequests.title")
+                  : fleetActive
+                    ? t("fleet.title")
+                    : workspaceTitle
+              }
               onShowContextMenu={
                 currentLauncherTarget === undefined
                   ? undefined
@@ -420,7 +468,12 @@ export const WorkspacePageView: FC<WorkspacePageViewProps> = ({
                 className="flex min-h-0 min-w-0 flex-1 flex-col"
                 data-workspace-mode={workspaceMode}
               >
-                {fleetActive ? (
+                {pullRequestsActive && pullRequestsProject ? (
+                  <PullRequestsPage
+                    onOpenChat={openChat}
+                    project={pullRequestsProject}
+                  />
+                ) : fleetActive ? (
                   <FleetPage
                     chats={chats}
                     isMetadataError={
@@ -453,6 +506,9 @@ export const WorkspacePageView: FC<WorkspacePageViewProps> = ({
                       onChatCreated={updateChatFromRun}
                       onChatMessagesUpdated={setChatMessagesInCache}
                       onChatUpdated={updateChatFromRun}
+                      onSetupDiscarded={(projectId) =>
+                        navigateToDraft(projectId, { replace: true })
+                      }
                       projects={projects}
                       routeProjectId={routeProjectId}
                       runtimeOptions={runtimeOptions}
@@ -472,6 +528,9 @@ export const WorkspacePageView: FC<WorkspacePageViewProps> = ({
                           onChatCreated={updateChatFromRun}
                           onChatMessagesUpdated={setChatMessagesInCache}
                           onChatUpdated={updateChatFromRun}
+                          onSetupDiscarded={(projectId) =>
+                            navigateToDraft(projectId, { replace: true })
+                          }
                           projects={projects}
                           routeProjectId={routeProjectId}
                           runtimeOptions={runtimeOptions}

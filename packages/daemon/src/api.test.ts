@@ -1,4 +1,9 @@
-import type { Chat, ChatSendResult } from "@angel-engine/daemon-api/chat";
+import type {
+  Chat,
+  ChatAmbiguousRunSnapshot,
+  ChatSendInput,
+  ChatSendResult,
+} from "@angel-engine/daemon-api/chat";
 import type { DaemonGlobalEvent } from "@angel-engine/daemon-api";
 import type { DaemonRuntime } from "./platform/runtime";
 
@@ -34,6 +39,181 @@ const result: ChatSendResult = {
 };
 
 describe("daemon chat runs", () => {
+  it("makes a restart-ambiguous send discoverable and clearable by chat", async () => {
+    let ambiguous: ChatAmbiguousRunSnapshot | null = {
+      chatId: chat.id,
+      createdAt: "2026-08-10T00:00:00.000Z",
+      runId: "run-ambiguous",
+      status: "dispatching" as const,
+    };
+    const queueChatRun = vi.fn(() => Effect.succeed(true));
+    const streamChat = vi.fn(() => Effect.succeed(result));
+    const app = new Hono();
+    registerApi(
+      app,
+      fakeDaemonRuntime({
+        ambiguousQueuedChatRun: () => Effect.succeed({ run: ambiguous }),
+        beginQueuedChatRunDispatch: () => Effect.succeed("claimed" as const),
+        cancelAmbiguousQueuedChatRun: () =>
+          Effect.sync(() => {
+            const cancelled = ambiguous ? { runId: ambiguous.runId } : null;
+            ambiguous = null;
+            return cancelled;
+          }),
+        completeQueuedChatRun: () => Effect.succeed(undefined as never),
+        queueChatRun,
+        streamChat,
+      }),
+      createChatEvents({ publish: vi.fn() }),
+    );
+
+    await expect(
+      (await app.request(`/api/chats/${chat.id}/active-run`)).json(),
+    ).resolves.toEqual({ run: null });
+    await expect(
+      (await app.request(`/api/chats/${chat.id}/ambiguous-run`)).json(),
+    ).resolves.toMatchObject({ run: { runId: "run-ambiguous" } });
+    await expect(
+      (
+        await app.request(`/api/chats/${chat.id}/ambiguous-run`, {
+          method: "DELETE",
+        })
+      ).json(),
+    ).resolves.toEqual({ cleared: true });
+    await expect(
+      (await app.request(`/api/chats/${chat.id}/ambiguous-run`)).json(),
+    ).resolves.toEqual({ run: null });
+
+    const response = await app.request("/api/chat-runs/run-replacement", {
+      body: JSON.stringify({ chatId: chat.id, text: "send again" }),
+      headers: { "content-type": "application/json" },
+      method: "POST",
+    });
+    expect(response.status).toBe(200);
+    await vi.waitFor(() => expect(streamChat).toHaveBeenCalledOnce());
+    expect(queueChatRun).toHaveBeenCalledOnce();
+  });
+
+  it.each([
+    "running",
+    "failed",
+  ] as const)("restores a queued first input exactly once after a daemon restart during setup %s", async (setupStatus) => {
+    let currentSetupStatus: "failed" | "ready" | "running" = setupStatus;
+    let releaseSetup!: () => void;
+    const setupGate = new Promise<void>((resolve) => {
+      releaseSetup = resolve;
+    });
+    const beginQueuedChatRunDispatch = vi.fn((_runId: string) =>
+      Effect.succeed("claimed" as const),
+    );
+    const completeQueuedChatRun = vi.fn((_runId: string) =>
+      Effect.succeed(undefined as never),
+    );
+    let streamedInput: ChatSendInput | undefined;
+    const streamChat = vi.fn((input: ChatSendInput) => {
+      streamedInput = input;
+      return Effect.succeed(result);
+    });
+    const waitForChatSetup = vi.fn((_chatId: string, _signal?: AbortSignal) =>
+      Effect.promise(async () => {
+        expect(currentSetupStatus).toBe(setupStatus);
+        await setupGate;
+        expect(currentSetupStatus).toBe("ready");
+        return undefined;
+      }),
+    );
+    const app = new Hono();
+    registerApi(
+      app,
+      fakeDaemonRuntime({
+        beginQueuedChatRunDispatch,
+        completeQueuedChatRun,
+        restoreQueuedChatRuns: () =>
+          Effect.succeed([
+            {
+              createdAt: "2026-08-10T00:00:00.000Z",
+              input: { chatId: chat.id, text: "queued input" },
+              runId: "run-restored",
+              state: "queued" as const,
+            },
+          ]),
+        streamChat,
+        waitForChatSetup,
+      }),
+      createChatEvents({ publish: vi.fn() }),
+    );
+
+    await vi.waitFor(() => expect(waitForChatSetup).toHaveBeenCalledOnce());
+    expect(streamChat).not.toHaveBeenCalled();
+
+    currentSetupStatus = "ready";
+    releaseSetup();
+
+    await vi.waitFor(() => expect(streamChat).toHaveBeenCalledOnce());
+    expect(beginQueuedChatRunDispatch).toHaveBeenCalledOnce();
+    expect(completeQueuedChatRun).toHaveBeenCalledOnce();
+    expect(streamedInput).toMatchObject({
+      chatId: chat.id,
+      text: "queued input",
+    });
+  });
+
+  it("sends the original queued input once after worktree creation retry succeeds", async () => {
+    let creationState: "failed" | "ready" = "failed";
+    let releaseRetry!: () => void;
+    const retryGate = new Promise<void>((resolve) => {
+      releaseRetry = resolve;
+    });
+    const streamChat = vi.fn((_input: ChatSendInput) => Effect.succeed(result));
+    const waitForChatSetup = vi.fn(() =>
+      Effect.promise(async () => {
+        expect(creationState).toBe("failed");
+        await retryGate;
+        expect(creationState).toBe("ready");
+        return undefined;
+      }),
+    );
+    const app = new Hono();
+    registerApi(
+      app,
+      fakeDaemonRuntime({
+        beginQueuedChatRunDispatch: () => Effect.succeed("claimed" as const),
+        completeQueuedChatRun: () => Effect.succeed(undefined as never),
+        queueChatRun: () => Effect.succeed(true),
+        retryWorktreeCreation: () => {
+          creationState = "ready";
+          releaseRetry();
+          return Effect.succeed(chat);
+        },
+        streamChat,
+        waitForChatSetup,
+      }),
+      createChatEvents({ publish: vi.fn() }),
+    );
+
+    const response = await app.request("/api/chat-runs/run-retry", {
+      body: JSON.stringify({ chatId: chat.id, text: "original input" }),
+      headers: { "content-type": "application/json" },
+      method: "POST",
+    });
+    const body = response.text();
+    await vi.waitFor(() => expect(waitForChatSetup).toHaveBeenCalledOnce());
+    expect(streamChat).not.toHaveBeenCalled();
+
+    const retried = await app.request(
+      `/api/chats/${chat.id}/worktree-creation/retry`,
+      { method: "POST" },
+    );
+
+    expect(retried.status).toBe(200);
+    await expect(body).resolves.toContain('"type":"done"');
+    expect(streamChat).toHaveBeenCalledOnce();
+    expect(streamChat.mock.calls[0]?.[0]).toMatchObject({
+      chatId: chat.id,
+      text: "original input",
+    });
+  });
+
   it("starts a daemon-owned run with a snapshot-first observer stream", async () => {
     const publish = vi.fn();
     const app = new Hono();
@@ -517,9 +697,14 @@ function fakeDaemonRuntime(
   const unsupported = () =>
     Effect.die(DaemonError.internal(new Error("Not used in this test.")));
   const engine: ChatEngineValue = {
+    ambiguousQueuedChatRun: () => Effect.succeed({ run: null }),
+    beginQueuedChatRunDispatch: () => Effect.succeed("not_queued" as const),
+    cancelAmbiguousQueuedChatRun: () => Effect.succeed(null),
     cancelWorktreeCreation: unsupported,
     cancelWorktreeCreationForDelete: () => Effect.void,
+    cancelQueuedChatRun: () => Effect.succeed(null),
     closeChatSession: () => Effect.void,
+    completeQueuedChatRun: () => Effect.succeed(undefined as never),
     createChatFromInput: unsupported,
     decorateChats: (chats) => Effect.succeed(chats),
     finishChatDeletion: () => Effect.void,
@@ -528,6 +713,8 @@ function fakeDaemonRuntime(
     listImportableSessions: unsupported,
     loadChatSession: unsupported,
     prewarmChat: unsupported,
+    queueChatRun: () => Effect.succeed(false),
+    restoreQueuedChatRuns: () => Effect.succeed([]),
     retryWorktreeCreation: unsupported,
     sendChat: unsupported,
     setChatMode: unsupported,
@@ -538,6 +725,7 @@ function fakeDaemonRuntime(
         onEvent?.({ part: "text", text: "hello", type: "delta" });
         return result;
       }),
+    waitForChatSetup: () => Effect.succeed(undefined),
     ...overrides,
   };
 

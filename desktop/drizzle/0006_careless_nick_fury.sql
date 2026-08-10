@@ -1,0 +1,1 @@
+ALTER TABLE `queued_chat_runs` ADD `state` text DEFAULT 'queued' NOT NULL;
